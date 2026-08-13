@@ -57,7 +57,13 @@
   --z-panel-header: calc(var(--z-elevated) + 1);
 
   /* Navigation */
-  --z-navbar: var(--z-sticky);
+  /* 950 e non `--z-sticky` (100): il rail delle Properties monta un overlay `position: fixed`
+     a z-index 900 (`properties-with-tree-view.scss:1426`), e i dropdown della navbar vivono
+     dentro il contesto di impilamento della navbar stessa, quindi non possono superarlo
+     qualunque z-index abbiano. Misurato: `.nav-container` a 100 contro `.properties-tree-overlay`
+     a 900, col menu utente coperto dal rail. Abbassare il rail non e' una via: rc-dock arriva
+     a 400. 950 tiene la navbar sopra il rail e sotto `--z-dropdown` (1000) e i modali. */
+  --z-navbar: 950;
   --z-footer: var(--z-sticky);
 
   /* Menus & Dropdowns */

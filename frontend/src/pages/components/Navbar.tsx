@@ -1811,7 +1811,7 @@ function NavbarComponent(props: AllProps) {
     }, [showOverflow]);
 
     return(<>
-        <nav id={'navbar'} className={'w-100 nav-container d-flex appbar'} style={{zIndex: 99}}>
+        <nav id={'navbar'} className={'w-100 nav-container d-flex appbar'}>
             <div className='nav-logo' onClick={() => R.navigate('/allProjects')}>
                 <div className={"aligner"}>
                     <img
