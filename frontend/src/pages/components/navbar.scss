@@ -2293,3 +2293,35 @@ $transition-menu: 150ms ease;
     }
   }
 }
+
+/* ============================================
+   DARK MODE — dropdown della navbar
+   (Jjodel / File / Edit / View / Tools / Analyze / Help)
+   Additive block: nessuna regola light viene toccata.
+
+   Stessi due difetti del menu utente, vedi il blocco gemello in
+   pages/components/menu/menu.scss:
+   - `.content > ul` usa `--color-bg-elevated`, che in dark e' un token
+     glass (rgba(255,255,255,0.04)) applicato senza `backdrop-filter`;
+   - l'hover della voce e' `--color-accent` (slate-400 in dark) con
+     `color: white`, ~2.7:1.
+   ============================================ */
+:root[data-theme="dark"] {
+
+  .nav-container .content > ul {
+    background-color: var(--color-ctx-menu-bg);
+    border-color: var(--color-ctx-menu-divider);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .nav-container .content.context-menu ul > li:hover > label,
+  .nav-container .content.context-menu ul > li:focus-within > label {
+    background-color: var(--color-ctx-menu-hover);
+    color: var(--color-ctx-menu-text);
+
+    .bi,
+    svg {
+      color: var(--color-ctx-menu-text);
+    }
+  }
+}

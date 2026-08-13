@@ -329,3 +329,52 @@ hr.divisor {
   flex-shrink: 0 !important;
   font-size: 1.4em !important;
 }
+
+/* ============================================
+   DARK MODE — user menu dropdown + Theme submenu
+   Additive block: nessuna regola light viene toccata.
+
+   Difetto 1 (superficie translucida). In dark `--color-bg-elevated` vale
+   rgba(255, 255, 255, 0.04): e' un token glass, pensato per pannelli che
+   applicano anche `backdrop-filter`. .dropdown e .submenu non hanno blur,
+   quindi il pannello risultava trasparente e il contenuto sottostante
+   (card dei metamodelli) traspariva attraverso il sottomenu Theme.
+   Qui si usa la superficie opaca della famiglia ctx-menu, la stessa dei
+   pannelli flottanti del canvas.
+
+   Difetto 2 (hover illeggibile). In dark `--color-accent` e' slate-400
+   (#94a3b8): la coppia ereditata sfondo accent + `color: white` dava un
+   contrasto di ~2.7:1. Chip slate-700 + testo slate-200 porta a ~8:1.
+   ============================================ */
+:root[data-theme="dark"] {
+
+  .dropdown,
+  .dropdown > div.item.has-submenu > .submenu {
+    background-color: var(--color-ctx-menu-bg);
+    border-color: var(--color-ctx-menu-divider);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .dropdown > div.item:hover:not(.disabled),
+  .submenu-item:hover {
+    background-color: var(--color-ctx-menu-hover);
+    color: var(--color-ctx-menu-text);
+
+    .submenu-check {
+      color: inherit;
+    }
+  }
+
+  /* --color-border-secondary in dark e' rgba(255,255,255,0.04): invisibile
+     sulla nuova superficie opaca. */
+  .dropdown hr.divisor,
+  .dropdown .user-header {
+    border-color: var(--color-ctx-menu-divider);
+  }
+
+  /* --color-text-tertiary (#606060) su #1e293b sta a ~2.2:1. */
+  .dropdown .user-header .user-email,
+  .dropdown > div.item > span.keystroke {
+    color: var(--color-text-secondary);
+  }
+}
