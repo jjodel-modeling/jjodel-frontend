@@ -68,12 +68,28 @@ export function syncPositionBatchToJjom(updates: Array<{ id: string; x: number; 
 
 /**
  * Write a vertex's new size to JjOM (after resize).
+ * Also raises `isResized` so the JjOM→RF transformers restore the explicit
+ * width/height on reload (w/h alone can't be the gate: every DVertex gets
+ * default w/h at creation, so unresized nodes must keep auto-sizing).
  */
 export function syncSizeToJjom(vertexId: string, w: number, h: number): void {
     markCanvasUpdated(vertexId);
     TRANSACTION('EditorV2 resize', () => {
         SetFieldAction.new(vertexId as any, 'w' as any, w, undefined, false);
         SetFieldAction.new(vertexId as any, 'h' as any, h, undefined, false);
+        SetFieldAction.new(vertexId as any, 'isResized' as any, true, undefined, false);
+    });
+}
+
+/**
+ * Clear the manual-resize flag after a "Reset size", so the vertex renders
+ * content-driven again on the next load (w/h keep their last values but the
+ * transformers ignore them while `isResized` is false).
+ */
+export function syncSizeResetToJjom(vertexId: string): void {
+    markCanvasUpdated(vertexId);
+    TRANSACTION('EditorV2 reset size', () => {
+        SetFieldAction.new(vertexId as any, 'isResized' as any, false, undefined, false);
     });
 }
 
@@ -88,6 +104,7 @@ export function syncSizeBatchToJjom(sizes: Array<{ vertexId: string; w: number; 
         for (const { vertexId, w, h } of sizes) {
             SetFieldAction.new(vertexId as any, 'w' as any, w, undefined, false);
             SetFieldAction.new(vertexId as any, 'h' as any, h, undefined, false);
+            SetFieldAction.new(vertexId as any, 'isResized' as any, true, undefined, false);
         }
     });
 }

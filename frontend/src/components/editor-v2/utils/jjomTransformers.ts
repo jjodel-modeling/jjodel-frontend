@@ -36,6 +36,26 @@ import { displayTypeLabel } from '../types';
 // The property names are documented and stable.
 
 /**
+ * Explicit node dimensions for a manually-resized vertex, or {} for
+ * content-driven auto-sizing.
+ *
+ * Gate on `isResized` (not on w/h presence): every DVertex is created with
+ * default w/h, so restoring them unconditionally would freeze auto-sized
+ * nodes at the default size. `isResized` is raised by syncSizeToJjom on a
+ * NodeResizer drag and cleared by syncSizeResetToJjom ("Reset size"), so a
+ * resized class/enum/object node reloads at its persisted dimensions —
+ * top-level width/height, the same fields a NodeResizer drag writes via
+ * applyNodeChanges (and the same ones resetNodeSize drops).
+ */
+function manualSizeOf(raw: any): { width?: number; height?: number } {
+    if (!raw?.isResized) return {};
+    const w = typeof raw.w === 'number' && raw.w > 0 ? raw.w : undefined;
+    const h = typeof raw.h === 'number' && raw.h > 0 ? raw.h : undefined;
+    if (w === undefined || h === undefined) return {};
+    return { width: w, height: h };
+}
+
+/**
  * Map a JjOM vertex (LVertex with LClass model) to a React Flow classNode.
  */
 function classVertexToRFNode(vertex: any): Node<ClassNodeData> {
@@ -161,6 +181,7 @@ function classVertexToRFNode(vertex: any): Node<ClassNodeData> {
         id: vertex.id,
         type: 'classNode',
         position: { x, y },
+        ...manualSizeOf(raw),
         data: {
             label: lClass?.name ?? 'Class',
             isAbstract: !!lClass?.abstract,
@@ -202,6 +223,7 @@ function enumVertexToRFNode(vertex: any): Node<EnumNodeData> {
         id: vertex.id,
         type: 'enumNode',
         position: { x, y },
+        ...manualSizeOf(raw),
         data: {
             label: lEnum?.name ?? 'Enum',
             literals,
@@ -329,6 +351,7 @@ function objectVertexToRFNode(vertex: any): Node<ObjectNodeData> {
         id: vertex.id,
         type: 'objectNode',
         position: { x, y },
+        ...manualSizeOf(raw),
         data: {
             label: lObject?.name ?? 'obj',
             instanceOfClassName,

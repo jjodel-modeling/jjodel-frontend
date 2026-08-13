@@ -72,6 +72,7 @@ import {
     syncPositionBatchToJjom,
     syncSizeToJjom,
     syncSizeBatchToJjom,
+    syncSizeResetToJjom,
     syncIREdgeLayoutToJjom,
     syncInheritanceEdge,
     syncReferenceEdge,
@@ -2326,9 +2327,15 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 const { width, height, measured, ...rest } = n as any;
                 return rest as Node;
             }));
+            // Clear the persisted manual-resize flag and save, so the reset
+            // survives a reload (the transformers gate width/height on it).
+            if (isJjomMode) {
+                syncSizeResetToJjom(nodeId);
+                scheduleLayoutSave();
+            }
             requestAnimationFrame(() => requestAnimationFrame(() => updateNodeInternals(nodeId)));
         },
-        [setNodes, takeSnapshot, updateNodeInternals]
+        [setNodes, takeSnapshot, updateNodeInternals, isJjomMode, scheduleLayoutSave]
     );
 
     // Duplicate all selected nodes
@@ -3608,14 +3615,21 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 // -- Resize sync (only on explicit user resize, NOT on RF
                 // auto-measurement which fires dimensions for every setNodes) --
                 if (hasResize) {
+                    let sizeSynced = false;
                     for (const c of changes.filter((ch: any) => ch.type === 'dimensions' && ch.resizing)) {
                         const node = getNodes().find((n) => n.id === c.id);
                         const w = c.dimensions?.width ?? node?.measured?.width;
                         const h = c.dimensions?.height ?? node?.measured?.height;
                         if (w !== undefined && h !== undefined) {
                             syncSizeToJjom(c.id, w, h);
+                            sizeSynced = true;
                         }
                     }
+                    // Sizes are now committed to the D-layer — debounce a full
+                    // project save so the resize survives a reload (same
+                    // pattern as the drag-end path above; without it the new
+                    // w/h live only in Redux until the next drag or Ctrl+S).
+                    if (sizeSynced) scheduleLayoutSave();
                 }
             }
 
