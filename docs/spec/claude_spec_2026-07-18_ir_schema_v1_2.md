@@ -190,6 +190,8 @@ Per la Fase 4 (migration inversa, VersionFixer):
 
 **Delega delle default migrate (normativo, emendamento 2026-07-18)**: le view con `migratedFrom: 'classic-default'` che restano strutturalmente identiche alla factory `defaultObjectViewIR()` rendono col rendering astratto nativo di EditorV2 (delega: parità con "nessun viewpoint" garantita per costruzione). Un edit successivo le fa divergere dalla factory e tornano all'interprete come view custom, con stile proprio. Lo stesso vale per la default wildcard built-in (`IR_DEFAULT_OBJECT_VIEW_ID`). L'interprete rende solo le view IR non-default.
 
+**Amendment (2026-08-13, R-IRN-3)**: the explicit canvas placeholder for unrecognized custom views is superseded. Degradation is signaled in the authoring surface: the Template tab is read-only with a notice, keyed on `irLegacyClassic`. The element renders through the native abstract rendering as per section 10; this is the normative fallback, not an error state. A marker in the tree view list is a possible future addition and is not prescribed here.
+
 ## 12. Persistenza (invariata, con nota ReadCtx)
 
 Come v1.1 sez. 8 (`ir?` additivo, serializzazione generica, IR master, identità = id del DViewElement). Nota di implementazione: gli accessor compilati leggono attraverso l'interfaccia stretta `ReadCtx` con due backend intercambiabili (proxy L / D-diretto, default proxy L). Lo switch resta swappabile finché il benchmark comparativo (Fase 4) non decide; la differenza semantica (il proxy coerce/tronca a upperBound) è documentata nel modulo.

@@ -588,6 +588,40 @@ Le sigle `Q1..Q7` sono le domande aperte di quel report; le `U-1..U-8` i punti d
   dei quali sulle superfici dell'arco 3. Conseguenza operativa immediata: la definition of done
   dell'arco 3 si misura in **un tema**, light.
 
+## Serie R-IRN — Collasso IR-nativo delle view (ratifiche 2026-08-13)
+
+Base di evidenza: `docs/discovery/discovery_2026-08-13_view_creation_sites_ir_native.md`.
+
+- **R-IRN-1** (2026-08-13) — **`ir` significa notazione autorata, non "view viva".**
+  Invariante: ogni view autorata dall'utente nasce con `ir`. Le view di default create all'init
+  dello store (23 per progetto, `redux/defaults/views.ts` + `redux/store.tsx`) restano senza
+  `ir` per progetto, non per rinvio: rappresentano l'assenza di notazione e rendono astratto per
+  costruzione (spec §10). Nessun seed su di esse, nessun uso di `migratedFrom` fuori dalla
+  migration.
+- **R-IRN-2** (2026-08-13) — **Legacy è definito da `irLegacyClassic`, non dall'assenza di
+  `ir`.** La categoria legacy sono le view marcate dal flag (168 sul corpus misurato), chiusa
+  per costruzione. `templateLegacy` in `ViewData.tsx` verrà retargetato sul flag (slice 3). La
+  bonifica dei 60 progetti flaggati per errore pre-S1 è prerequisito o coda immediata della
+  slice 3.
+- **R-IRN-3** (2026-08-13) — **Emendamento spec §11.** Il placeholder a canvas per le view
+  custom non riconosciute è superato: il degrado si segnala nella superficie di authoring (tab
+  Template read-only con avviso, keyed sul flag), non sul canvas; l'elemento rende astratto come
+  da §10, che è il fallback normativo e non uno stato di errore. Un badge nella lista view del
+  tree è voce futura separata, non prescritta.
+- **R-IRN-4** (2026-08-13) — **Seed IR alla creazione.** A1 (`newDefault`): `DClass` → vertex,
+  `DAttribute` → row, `DReference` → edge; altri casi nessun seed. A2
+  (`createViewInWorkbench`): class-like → vertex; `DModel`/`DPackage` nessun seed (graph e
+  graphVertex non sono kind autorabili, R-6 2026-08-04). Il seed scrive anche il pin di identità
+  dove il pointer è disponibile (`elementId` in A2, `forData.id` in A1) e non passa mai da
+  `appliableToClasses` né da `resolveMetaclassNames`. A3 (blank dal «+»): la scelta del kind si
+  sposta nel gesto di creazione; la metaclasse può restare wildcard e stringersi dopo.
+- **R-IRN-5** (2026-08-13) — **Ritiro di `EnableIRPanel`** e della clausola legacy di
+  `showIRTab`, con aggiornamento dell'avviso S2 (slice 2, dopo A3). Chiude anche il buco del
+  gate `readOnly` sulle default di init.
+- **R-IRN-6** (2026-08-13) — **Nessuna unificazione Source/Template.** Due superfici per due
+  popolazioni disgiunte: Source (`<pre>` JSON, advanced-gated) per le view IR; Template
+  read-only con avviso per le legacy. Nessun assorbimento.
+
 ## Superate
 
 - **D3** (2026-07-26, routing congelato in v1) — superata da E-route il 2026-08-06.
