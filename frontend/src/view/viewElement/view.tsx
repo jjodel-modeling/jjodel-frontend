@@ -48,6 +48,8 @@ import type {ViewpointType} from "../viewPoint/viewpoint";
 import {labeltype} from "../../model/dataStructure/GraphDataElements";
 import {DEFAULT_VIEW_JSX_STRING} from "../../utils/defaultViewTemplate";
 import {collectViewSubtree} from "./viewSubtree";
+import {computeCreationSeed} from "../../components/editor-v2/viewpoint/ir/irCreationSeed";
+import type {AnyViewIR} from "../../components/editor-v2/viewpoint/ir/irTypes";
 
 let CSS_Units0 = {'Local-font relative':{
         'cap':     'cap - (Cap height) the nominal height of capital letters of the element\'s font.',
@@ -314,7 +316,6 @@ export class DViewElement extends DPointerTargetable {
 
     static newDefault(forData?: DModelElement | DGraphElement, forSelf: boolean = false): DViewElement{
         /* Jjodel Default View 2.2 - minimal clean + edge-like (sessione 2026-05-03) */
-        const jsx = DEFAULT_VIEW_JSX_STRING;
         const palettes: PaletteType = {};
         const css = '';
         let query = '';
@@ -352,11 +353,73 @@ export class DViewElement extends DPointerTargetable {
             name = U.increaseEndingNumber( 'view_'+(forData?.className ? '_'+forData.className : '') + 0, false, false, newName => names.indexOf(newName) >= 0);
         }
 
+        // IR seed (R-IRN-4): the view is born with the notation it is for, instead of
+        // rendering abstract until someone opens the Enable IR gate. Name and id are read
+        // from the proxy captured above, never from appliableToClasses (which this path
+        // does not even write).
+        //
+        // Only when forSelf is false. A forSelf view targets THAT element by id
+        // ('inv: self.id = ...'), while an IR keyed on the metaclass name targets every
+        // instance of it: seeding there would build a view whose OCL and whose ir say two
+        // different things. No live call site reaches this combination today
+        // (addViewKeybind routes DClass/DAttribute/DReference to addViewInstances, i.e.
+        // forSelf false), but newDefault is a public static and the guard is one term.
+        let seed: AnyViewIR | null = null;
+        if (forData && !forSelf) {
+            switch (forData.className) {
+                case 'DClass':
+                    seed = computeCreationSeed({
+                        kind: 'vertex',
+                        metaclassName: (l as any)?.name,
+                        metaclassId: forData.id,
+                        label: name,
+                    });
+                    break;
+                case 'DAttribute':
+                    // A row carries no metaclass by construction (the author picks it in
+                    // RowAuthoringPanel), so nothing of the attribute is seeded but the kind.
+                    seed = computeCreationSeed({ kind: 'row' });
+                    break;
+                case 'DReference': {
+                    // An edge view's `metaclasses` is the SOURCE metaclass, which for a
+                    // reference is its owning class: LStructuralFeature.father. The
+                    // className check reads the D-layer name ('DClass'), never the L-name,
+                    // which would always be false (CLAUDE.md §3.13). If the owner does not
+                    // resolve, the edge is seeded without metaclass and the author sets it.
+                    let ownerName: string | undefined;
+                    let ownerId: string | undefined;
+                    try {
+                        const owner: any = (l as any)?.father;
+                        if (owner && owner.className === 'DClass') {
+                            ownerName = owner.name;
+                            ownerId = owner.id;
+                        }
+                    } catch { /* dangling or malformed father — fall through unseeded */ }
+                    seed = computeCreationSeed({
+                        kind: 'edge',
+                        metaclassName: ownerName,
+                        metaclassId: ownerId,
+                    });
+                    break;
+                }
+                default:
+                    break;
+            }
+        }
+
+        // A view born with an `ir` renders through the interpreter: a classic template
+        // would be dead text carried forever. Unseeded cases keep the template they had.
+        const jsx = seed ? '' : DEFAULT_VIEW_JSX_STRING;
+
         return DViewElement.new2(name, jsx, parentView.__raw, (d)=>{
             d.css = css;
             d.palette = palettes;
             d.css_MUST_RECOMPILE = true;
             d.oclCondition = query;
+            // Set inside the callback, which Constructors.end() runs BEFORE persist
+            // (joiner/classes.ts:683,688): the view is persisted with its ir already on
+            // it, in one action.
+            if (seed) (d as any).ir = seed;
         }, true);
     }
 }
