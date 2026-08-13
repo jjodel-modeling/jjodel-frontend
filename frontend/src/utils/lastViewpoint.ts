@@ -9,6 +9,8 @@ import { toast } from '../components/Toast/toastDispatch';
 import { JjodelEvents } from '../events/registry';
 import { DEFAULT_VIEW_JSX_STRING } from './defaultViewTemplate';
 import { auditGlobalCss, markWarned, type ViewCssDescriptor } from './globalCssAudit';
+import { computeCreationSeed } from '../components/editor-v2/viewpoint/ir/irCreationSeed';
+import type { AnyViewIR } from '../components/editor-v2/viewpoint/ir/irTypes';
 
 let lastEditedViewpointId: string | null = null;
 let lastEditedViewpointName: string | null = null;
@@ -213,16 +215,43 @@ export function createViewInWorkbench(elementId: string, elementName: string, cl
     let query = '';
     let appliableTo: string = 'Vertex';
     let appliableToClasses: string[] = [];
+    // IR seed (R-IRN-4): the class-like branches are born with a vertex ir, so the view
+    // produces notation from the start instead of rendering abstract until someone opens
+    // the Enable IR gate. `ir` stays undefined on DModel/DPackage: graph and graphVertex
+    // are not authorable kinds (R-6, 2026-08-04), and those branches are untouched.
+    // The metaclass identity comes from this function's own arguments, never from
+    // `appliableToClasses` — that field holds D-level type names here, which the pin and
+    // the resolver cannot use.
+    let seed: AnyViewIR | null = null;
+    // Hoisted above the switch (it used to sit just below it): the seed reuses it as the
+    // vertex `label`, and one expression is better than three copies of it.
+    const viewName = 'View for ' + (elementName || 'unnamed');
     switch (className) {
         case 'DClass':
             query = `context DObject inv: self.instanceof.id = '${elementId}'`;
             appliableToClasses = ['DObject'];
             appliableTo = 'Vertex';
+            seed = computeCreationSeed({
+                kind: 'vertex',
+                metaclassName: elementName,
+                metaclassId: elementId,
+                label: viewName,
+            });
             break;
         case 'DEnumerator':
             query = `context DEnumerator inv: self.id = '${elementId}'`;
             appliableToClasses = ['DEnumerator'];
             appliableTo = 'Vertex';
+            // No pin: the pin is defined as a DClass pointer (irTypes.ts:124-125) and the
+            // resolution chain checks it against the project's classes only
+            // (metaclassPin.ts:80), which never contain enumerators. An enum id would be
+            // discarded at every read — worse than absent, because it would claim an
+            // authority it does not have. The name alone is seeded (Fase 0, punto 2).
+            seed = computeCreationSeed({
+                kind: 'vertex',
+                metaclassName: elementName,
+                label: viewName,
+            });
             break;
         case 'DModel':
             query = `context DModel inv: self.id = '${elementId}'`;
@@ -240,19 +269,25 @@ export function createViewInWorkbench(elementId: string, elementName: string, cl
             return false;
     }
 
-    const viewName = 'View for ' + (elementName || 'unnamed');
     // console.log('[createViewInWorkbench] creating:', viewName, 'query:', query, 'father:', dViewpoint.id);
 
     try {
-        // Same JSX template and pattern as DViewElement.newDefault()
+        // Same JSX template and pattern as DViewElement.newDefault(), except on the seeded
+        // branches: a view born with an `ir` renders through the interpreter, so a classic
+        // template would be dead text carried forever. It is created empty instead, as
+        // createBlankViewInViewpoint already does. Unseeded branches keep the template.
         const newView = DViewElement.new2(viewName,
-            DEFAULT_VIEW_JSX_STRING,
+            seed ? '' : DEFAULT_VIEW_JSX_STRING,
             dViewpoint,
             (d) => {
                 d.oclCondition = query;
                 d.appliableTo = appliableTo as any;
                 d.appliableToClasses = appliableToClasses;
                 d.css_MUST_RECOMPILE = true;
+                // Written inside the callback, which Constructors.end() runs BEFORE
+                // persist (joiner/classes.ts:683,688): the view is persisted with its ir
+                // already on it, in one action. Same pattern as irDemoFixture.ts:106.
+                if (seed) (d as any).ir = seed;
             },
             true
         );
