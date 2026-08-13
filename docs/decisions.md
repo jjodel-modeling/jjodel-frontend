@@ -587,6 +587,29 @@ Le sigle `Q1..Q7` sono le domande aperte di quel report; le `U-1..U-8` i punti d
   erode senza che nessuno lo decida. Nel solo foglio del rail i blocchi dark sono dieci, cinque
   dei quali sulle superfici dell'arco 3. Conseguenza operativa immediata: la definition of done
   dell'arco 3 si misura in **un tema**, light.
+- **R-RAIL-45** (2026-08-13) — **Un ordine si legge nel dato, mai nella posizione, e un prompt
+  che scrive una posizione come regola trasferisce un'ipotesi con l'autorità di un'istruzione.**
+  Il caso che l'ha prodotta: il prompt di R-RAIL-44 dichiarava che l'ordine di
+  `docs/claude-code-log.md` è newest-first e che le entry più vecchie stanno in fondo, e da lì
+  ordinava di archiviare le quattro in coda. Era vero su HEAD, 23 entry, ed era falso nel
+  working tree, 25, perché una sessione concorrente aveva appeso in fondo la entry delle 16:00,
+  la più recente di tutte. Applicata a quell'albero, la regola avrebbe archiviato la entry più
+  nuova, e **il danno sarebbe stato indistinguibile da un'esecuzione corretta**: nessun errore di
+  gate, nessun conflitto, una rotazione dall'aspetto regolare. L'esecutore ha calcolato su HEAD e
+  ha dichiarato l'inversione invece di assorbirla. Conseguenza operativa: una rotazione ordina
+  per la data dell'intestazione, mai per posizione; e in un file che più sessioni scrivono, ogni
+  affermazione della forma «X sta in cima, in fondo, in posizione N» è una misura con una data
+  di scadenza, da riderivare al momento dell'esecuzione e non da ereditare dal prompt. Ne
+  segue una regola su come si scrivono i prompt, non solo su come si eseguono: **si dà il
+  criterio e si lascia che l'esecutore ne derivi le posizioni.** Nota sull'invariante vero del
+  log, che il caso ha portato alla luce: il file è newest-first **per giorno**, non ordinato per
+  timestamp, e dentro una giornata l'ordine non è monotono. Il criterio di rotazione è quindi la
+  data, e il file **non va riordinato** oltre a ciò che rompe l'invariante di giorno. Rapporto
+  con le regole vicine, da non lasciare implicito: è la stessa specie del conteggio preso su una
+  finestra troncata (CLAUDE.md §5), perché in entrambi i casi si misura la disposizione al posto
+  del contenuto; R-RAIL-28 copre le asserzioni di assenza e di presenza, R-RAIL-36 il caso in cui
+  si misura l'elemento sbagliato, R-RAIL-43 la stima mai eseguita; questa copre **l'osservazione
+  promossa a invariante**.
 
 ## Serie R-IRN — Collasso IR-nativo delle view (ratifiche 2026-08-13)
 
