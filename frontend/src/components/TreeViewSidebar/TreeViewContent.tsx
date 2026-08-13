@@ -22,6 +22,7 @@ import type { Pointer } from '../../joiner';
 import type { ViewpointType } from '../../view/viewPoint/viewpoint';
 import { useTreeViewPanel, ElementAction } from '../../contexts/TreeViewPanelContext';
 import { getLastEditedViewpointId, createViewInWorkbench, createBlankViewInViewpoint } from '../../utils/lastViewpoint';
+import { isAdvancedMode } from '../../hooks/useInterfaceMode';
 import { JjodelEvents, SystemEvents } from '../../events/registry';
 import { useNodeProblems } from '../editor-v2/problems/useNodeProblems';
 import { getTypeName, getMultiplicity, formatFeatureSignature } from '../../common/featureSignature';
@@ -463,6 +464,8 @@ function useClassifierContextMenu(elementId: string, name: string, className: st
     const handleContextMenu = useCallback((e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
+        // The only entry (Create View) is view authoring: Advanced mode only
+        if (!isAdvancedMode()) return;
         const menuWidth = 200;
         const menuHeight = 40;
         let x = e.clientX;

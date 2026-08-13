@@ -1468,7 +1468,8 @@ function NavbarComponent(props: AllProps) {
                 {name: 'divisor', function: placeholder},
                 {name: `${isFullscreen ? 'Exit Fullscreen Mode' : 'Fullscreen Mode [F11]'}`, function: toggleFullScreen, icon: <i className="bi bi-arrows-fullscreen" />},
                 {name: 'divisor', function: placeholder},
-                {name: showSingletons ? 'Show singleton instances  \u2713' : 'Show singleton instances',
+                /* Advanced-only: singleton instances are an expert concept */
+                !props.advanced ? null : {name: showSingletons ? 'Show singleton instances  \u2713' : 'Show singleton instances',
                     function: toggleShowSingletons,
                     icon: <i className={`bi ${showSingletons ? 'bi-diamond-fill' : 'bi-diamond'}`} />,
                     disabled: isDashboard || !isActiveTabModel
@@ -1496,8 +1497,9 @@ function NavbarComponent(props: AllProps) {
                     icon: <i className="bi bi-highlighter" />,
                     disabled: isDashboard
                 },
-                {name: 'divisor', function: placeholder},
-                {name: props.debug ? 'Debug Mode  \u2713' : 'Debug Mode',
+                /* Advanced-only: diagnostic toggle */
+                !props.advanced ? null : {name: 'divisor', function: placeholder},
+                !props.advanced ? null : {name: props.debug ? 'Debug Mode  \u2713' : 'Debug Mode',
                     function: () => {
                         TRANSACTION('debug', ()=>SetRootFieldAction.new('debug', !props.debug), props.debug, !props.debug);
                         U.debug = !props.debug;
@@ -1507,8 +1509,8 @@ function NavbarComponent(props: AllProps) {
             ]
         },
 
-        /* Tools - hidden entirely on dashboard; in editor with no metamodels shows only empty-state hint */
-        isDashboard ? null : {name: 'Tools',
+        /* Tools - hidden entirely on dashboard and in Basic mode; in editor with no metamodels shows only empty-state hint */
+        (isDashboard || !props.advanced) ? null : {name: 'Tools',
             subItems: [
                 ...(metamodels.length === 0 ? [
                     {name: 'No metamodel tools', disabled: true, icon: <i className="bi bi-tools" />}

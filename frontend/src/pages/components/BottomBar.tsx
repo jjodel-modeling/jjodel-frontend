@@ -104,7 +104,8 @@ function BottomBarComponent(props: AllProps): JSX.Element {
 
     return (
         <footer className={'footer'} role="contentinfo">
-            <div className={'coordinates'} hidden={!node}>
+            {/* Node coordinates readout is diagnostic info: Advanced mode only */}
+            <div className={'coordinates'} hidden={!node || !props.advanced}>
                 {data?.name}&nbsp;
                 {nodepos}
             </div>

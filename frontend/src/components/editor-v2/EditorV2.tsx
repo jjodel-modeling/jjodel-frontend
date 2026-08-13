@@ -1,6 +1,7 @@
 import React, { useCallback, useRef, useState, useMemo, useEffect, useLayoutEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { createPortal } from 'react-dom';
+import { isAdvancedMode } from '../../hooks/useInterfaceMode';
 import {
     ReactFlow,
     MiniMap,
@@ -3027,8 +3028,9 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 },
             );
 
-            // "Create View" — only for classifiers (classNode, enumNode), not objectNode/packageNode
-            if (node?.type === 'classNode' || node?.type === 'enumNode') {
+            // "Create View" — only for classifiers (classNode, enumNode), not objectNode/packageNode.
+            // View authoring is an Advanced-mode feature (hidden in Basic).
+            if ((node?.type === 'classNode' || node?.type === 'enumNode') && isAdvancedMode()) {
                 const resolved = resolveParentViewpoint();
                 const vpName = resolved?.vpName;
                 const data = node.data as any;

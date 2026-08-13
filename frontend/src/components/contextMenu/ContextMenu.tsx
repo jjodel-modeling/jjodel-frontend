@@ -49,6 +49,7 @@ import { Logo } from '../logo';
 import { forEach } from 'lodash';
 import './ContextMenu.scss';
 import { getLastEditedViewpointId, getLastEditedViewpointName, createViewInWorkbench } from '../../utils/lastViewpoint';
+import { isAdvancedMode } from '../../hooks/useInterfaceMode';
 import { toast } from '../Toast/toastDispatch';
 import { JjodelEvents } from '../../events/registry';
 import { createVertexForObject, createCompositionEdgeForObjects } from '../editor-v2/sync/canvasToJjom';
@@ -481,8 +482,8 @@ function ContextMenuComponentInner(props: AllProps) {
             close();
         }, []);
 
-        // Create View — only for M2 classifiers (classNode/enumNode equivalents)
-        if (isM2 && (cname === 'DModel' || cname === 'DClass' || cname === 'DPackage')) {
+        // Create View — only for M2 classifiers (classNode/enumNode equivalents). Advanced mode only.
+        if (isAdvancedMode() && isM2 && (cname === 'DModel' || cname === 'DClass' || cname === 'DPackage')) {
             const hasWorkbenchVP = !!getLastEditedViewpointId();
             ContextEntry('createview', <i className="bi bi-eye" />,
                 hasWorkbenchVP ? 'Create View' : 'Create View — open a viewpoint first',
@@ -497,7 +498,7 @@ function ContextMenuComponentInner(props: AllProps) {
         let preClassicOnlyLen = jsxList.length;
         addDynamicEntries(jsxList, nodeid, data, node);
 
-        if (ddata && !U.isOffline()) {
+        if (isAdvancedMode() && ddata && !U.isOffline()) {
             if (ddata.className === 'DClass') {
                 jsxList.push(<div key='ai-c' onClick={structuralFeature} className={'col item'} tabIndex={0}>
                     {icon['ai']}
@@ -522,17 +523,17 @@ function ContextMenuComponentInner(props: AllProps) {
             ContextEntry('ext', icon['extend'], 'Extend', key_bindings.extend.function, []);
         }
 
-        if (ldata && model?.isMetamodel) {
+        if (isAdvancedMode() && ldata && model?.isMetamodel) {
             ContextEntry('analytic', icon['metrics'], 'Analytics', key_bindings.metrics.function, []);
         }
 
-        if (isM2 && (cname === 'DModel' || cname === 'DClass' || cname === 'DPackage' || cname === 'DAttribute' || cname === 'DReference')) {
+        if (isAdvancedMode() && isM2 && (cname === 'DModel' || cname === 'DClass' || cname === 'DPackage' || cname === 'DAttribute' || cname === 'DReference')) {
             const hasWorkbenchVP = !!getLastEditedViewpointId();
             ContextEntry('view+m2', icon['add'],
                 hasWorkbenchVP ? 'Add view' : 'Add view — open a viewpoint first',
                 hasWorkbenchVP ? addViewInstances : null,
                 [], !hasWorkbenchVP);
-        } else if (!isM2) {
+        } else if (isAdvancedMode() && !isM2) {
             ContextEntry('view+', icon['add'], 'Add view', addViewSelf, []);
         }
 
