@@ -1660,13 +1660,15 @@ body[data-active-tab="documentation"] .properties-tree-overlay {
 .properties-with-tree-view--rail-focus .properties-panel-container .props-header:not(.props-header--view) {
     padding: 18px 14px 14px;   // design §7, Focus
 
-    .props-header__glyph {
-        width: 34px;
-        height: 34px;
-        font-size: var(--font-size-lg);   // design 15px, snapped (R-RAIL-10)
-    }
-
-    .props-header__name { font-size: var(--font-size-xl); }   // design 19px, snapped
+    // Arco 3, rifinitura del 2026-08-13: il blocco identita' NON cresce in Focus.
+    // Il design §7 vuole badge 34x34 e titolo 19px in postura Focus; a schermo la
+    // differenza di scala fra le due posture legge come due schermate diverse invece
+    // che come lo stesso pannello piu' alto, che e' l'opposto di quello che la
+    // definition of done chiede («switching posture moves nothing but the tree pane's
+    // height»). Restano i 18/14/14 di padding: la postura si sente nello spazio, non
+    // nel corpo del testo. Le transizioni su width/height/font-size restano dichiarate
+    // nel blocco base e diventano inerti: non si tolgono, perche' tornerebbero servendo
+    // se la scala rientrasse.
 }
 
 // ─── Focus breadcrumb bar (only while the tree pane is collapsed) ────────────
@@ -1893,10 +1895,13 @@ body[data-active-tab="documentation"] .properties-tree-overlay {
 
         &:hover { border-color: $pc-slate-400; }
 
+        // Stesso trattamento del chip acceso, e per la stessa ragione: e' uno stato
+        // «selezionato», che nel progetto si dice con la pastiglia tinta cyan.
         &.is-selected {
-            background: $pc-slate-700;
-            border-color: $pc-slate-700;
-            color: #fff;
+            background: var(--color-selection-bg);
+            border-color: $pc-accent;
+            color: $pc-slate-800;
+            font-weight: 600;
         }
 
         &:focus-visible {
@@ -1961,10 +1966,16 @@ body[data-active-tab="documentation"] .properties-tree-overlay {
 
         &:hover { border-color: var(--color-slate-500); }
 
+        // Lo stato selezionato VA ridichiarato, anche se `--color-selection-bg` ha gia'
+        // la sua meta' scura: la regola base di questo blocco porta `[data-theme]` in
+        // piu' e vale (0,5,0), quindi batte la `.is-selected` del blocco chiaro a
+        // (0,4,0) e le sovrascrive fondo e bordo. Misurato prima della correzione:
+        // acceso a `rgba(255,255,255,0.06)` con anello `rgb(51,65,85)`, cioe' lo stato
+        // spento. Il token porta il valore, la ridichiarazione porta la specificita'.
         &.is-selected {
-            background: var(--color-slate-300);
-            border-color: var(--color-slate-300);
-            color: #1e1e1e;
+            background: var(--color-selection-bg);
+            border-color: $pc-accent;
+            color: var(--color-slate-100);
         }
     }
 
@@ -2063,10 +2074,23 @@ body[data-active-tab="documentation"] .properties-tree-overlay {
             color: inherit;
         }
 
+        // Acceso = la stessa pastiglia tinta che la sintassi astratta usa per la
+        // selezione, con gli stessi due token: `--color-selection-bg` per il fondo e
+        // `--color-selection-bar` per l'anello. Non sono valori nuovi e non sono un
+        // cyan «simile»: sono i due token che `.tree-row--selected` usa oggi, e il
+        // commento che li dichiara (`_colors-light.scss:373-375`) rinviava proprio a
+        // questo — «estendere alle altre selezioni del progetto in un task futuro».
+        // Seguono il tema da soli, quindi il blocco dark non li ridichiara.
+        //
+        // Il testo resta scuro e diventa semibold, come fa la riga selezionata del
+        // tree: un riempimento cyan saturo con testo bianco costa 3.7:1 di contrasto
+        // contro i 10.3:1 dello slate di ieri, e a 12px non passa AA. Qui il contrasto
+        // misura 8.8:1 e il canale del colore resta cyan.
         &.is-on {
-            background: $pc-slate-700;
-            border-color: $pc-slate-700;
-            color: #fff;
+            background: var(--color-selection-bg);
+            border-color: $pc-accent;
+            color: $pc-slate-800;
+            font-weight: 600;
         }
 
         &:hover:not(.is-on) { border-color: $pc-slate-300; }
@@ -2108,7 +2132,20 @@ body[data-active-tab="documentation"] .properties-tree-overlay {
         font-size: 13px;
 
         &:first-child { border-top: none; }
-        &.is-on { background: transparent; color: $pc-slate-700; }
+
+        // La riga accesa si evidenzia con il fondo, non con una linea. Il
+        // `border-color: $pc-slate-700` che le righe accese mostravano non era voluto:
+        // arrivava dal blocco Browse per omissione, perche' questo blocco ridichiarava
+        // `background` e `color` ma non `border-color`, e a parita' di specificita' la
+        // proprieta' non ridichiarata resta quella di prima. Misurato: righe accese a
+        // `1px rgb(51,65,85)`, righe spente a `1px rgb(248,250,252)`.
+        &.is-on {
+            background: var(--color-selection-bg);
+            border-top-color: #f8fafc;
+            color: $pc-slate-800;
+            font-weight: 600;
+        }
+
         &:hover:not(.is-on) { border-color: transparent; }
 
         > i { font-size: 12px; color: $pc-slate-400; }
@@ -2120,30 +2157,42 @@ body[data-active-tab="documentation"] .properties-tree-overlay {
         color: $pc-slate-400;
     }
 
+    // I numeri non sono quelli del design §7 (30x18, pollice 14): sono quelli del
+    // componente `ui/Toggle` in taglia `xs`, misurati a schermo dentro questo stesso
+    // pannello (`24x14`, `padding: 2px`, pollice `10x10`, spento `#cbd5e1`, acceso
+    // `#0ea5e9`). La sezione INHERITANCE, che sta due blocchi sopra, monta quel
+    // componente: due interruttori di taglia e colore diversi nella stessa colonna
+    // sono la stessa forma per due significati, cioe' il difetto che il redesign
+    // toglie. Il design perde qui perche' il pannello ha gia' un interruttore.
     .jj-flag__track {
         display: inline-flex;
         align-items: center;
         margin-left: auto;
         flex: none;
-        width: 30px;
-        height: 18px;
+        width: 24px;
+        height: 14px;
         padding: 2px;
-        border-radius: 99px;
+        border-radius: 9999px;
         background: $pc-slate-300;
-        transition: background-color 150ms cubic-bezier(0, 0, 0.2, 1);
+        transition: background-color 200ms ease;
     }
 
     .jj-flag__knob {
-        width: 14px;
-        height: 14px;
-        border-radius: 99px;
+        width: 10px;
+        height: 10px;
+        border-radius: 9999px;
         background: #fff;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
         transform: translateX(0);
-        transition: transform 150ms cubic-bezier(0, 0, 0.2, 1);
+        transition: transform 200ms ease;
     }
 
-    .jj-flag.is-on .jj-flag__track { background: $pc-slate-700; }
-    .jj-flag.is-on .jj-flag__knob { transform: translateX(12px); }
+    // Sulla traccia non poggia testo, quindi il cyan pieno si usa per intero: e'
+    // l'indicatore attivo, ed e' lo stesso valore che `Toggle.module.css:90` da' al
+    // proprio stato acceso. Nessun override dark, perche' il componente non ne ha:
+    // due interruttori affiancati devono restare identici anche cambiando tema.
+    .jj-flag.is-on .jj-flag__track { background: $pc-accent; }
+    .jj-flag.is-on .jj-flag__knob { transform: translateX(10px); }   // 24 - 10 - 2*2
 }
 
 // Chi chiede di non animare non viene animato (design, sezione Motion).
@@ -2167,10 +2216,12 @@ body[data-active-tab="documentation"] .properties-tree-overlay {
         border-color: var(--color-panel-border);
         color: var(--color-slate-300);
 
+        // Stessa ragione del segmentato qui sopra: la specificita' di questo blocco
+        // impone di ridichiarare fondo e anello, non solo il testo.
         &.is-on {
-            background: var(--color-slate-300);
-            border-color: var(--color-slate-300);
-            color: #1e1e1e;
+            background: var(--color-selection-bg);
+            border-color: $pc-accent;
+            color: var(--color-slate-100);
         }
 
         &:hover:not(.is-on) { border-color: var(--color-slate-500); }
@@ -2185,14 +2236,21 @@ body[data-active-tab="documentation"] .properties-tree-overlay {
         border-top-color: var(--color-panel-border);
         color: var(--color-slate-200);
 
-        &.is-on { background: transparent; color: var(--color-slate-200); }
+        // Il fondo della riga accesa arriva da `--color-selection-bg`, che in dark e'
+        // gia' una velatura (`rgba(8,145,178,0.18)`) e non un colore pieno: si posa
+        // sul pannello scuro senza schiarirlo. Si corregge il bordo, che qui e' l'unico
+        // valore che il blocco light non puo' indovinare.
+        &.is-on {
+            background: var(--color-selection-bg);
+            border-top-color: var(--color-panel-border);
+            color: var(--color-slate-100);
+        }
         > i { color: var(--color-slate-400); }
     }
 
     .jj-flag__hint { color: var(--color-slate-400); }
-    .jj-flag__track { background: var(--color-slate-600); }
-    .jj-flag.is-on .jj-flag__track { background: var(--color-slate-300); }
-    .jj-flag.is-on .jj-flag__knob { background: #1e1e1e; }
+    // La traccia non si ridichiara in dark: `ui/Toggle` non ha meta' scura, e i due
+    // interruttori che convivono nella stessa colonna devono restare identici.
 }
 
 // ─── Arco 3, passo D: la disclosure Advanced (design §7) ─────────────────────
@@ -2267,4 +2325,56 @@ body[data-active-tab="documentation"] .properties-tree-overlay {
     .props-section__title,
     .props-section__chevron,
     .jj-disclosure__summary { color: var(--color-slate-400); }
+}
+
+// ─── Le card delle view alla stessa scala dell'inspector (2026-08-13) ────────
+// L'ancora è `.view-editor-root` (`views/ViewData.tsx:202`), che esiste solo nel ramo
+// view: non tocca il form del ramo model element, non tocca il popup del menu
+// contestuale. Le regole battute stanno nella pelle B4 di questo stesso foglio, scopata
+// a `.properties-panel-container` (`:559` e `:576` per input e select, `:582` per lo
+// stepper): quella pelle vale per tutto il rail, quindi i controlli delle card sono
+// rimasti alla scala grande mentre l'inspector scendeva a 13px e 30px.
+.properties-with-tree-view--rail .view-editor-root {
+
+    // Il testo dei campi eredita 13px. Serve per le voci che non hanno una classe
+    // propria e vivono dentro uno `style` inline, come l'elenco delle metaclassi in
+    // `MatchingSection.tsx:90-94`, dove il nome è uno `<span style="flex:1">`.
+    // `.jj-field-label` dichiara la sua misura e non viene toccata.
+    .jj-field { font-size: 13px; }
+
+    // Il trigger del select scende alla misura del campo Type dell'inspector. Le voci
+    // del menu non si toccano: `Select` monta un `<select>` nativo, e le sue `<option>`
+    // le disegna il sistema operativo. Il rapporto «voci un filo più grandi del valore
+    // scelto» che ti piace in `JjSelect` viene da lì, non da una regola.
+    .jj-field select {
+        height: 30px;
+        padding: 0 30px 0 9px;
+        font-size: 13px;
+        border-radius: 6px;
+    }
+
+    // Lo stepper torna alla geometria del componente (`ui/NumberInput/NumberInput.module.css`:
+    // 32px di altezza, raggio 6, bottoni 28, valore 13px). La pelle del rail lo allargava
+    // a raggio 12 con bottoni da 38 e valore 15, che è la pastiglia che si vede oggi.
+    // Raggiunto strutturalmente, come già fa `:582`, perché `NumberInput` è CSS-module e
+    // le sue classi hashate non sono raggiungibili da un foglio esterno.
+    .jj-field > div:has(> button:not([role="checkbox"]) + input),
+    .jj-field div:has(> button:not([role="checkbox"]) + input) {
+        height: 32px;
+        border-radius: 6px;
+
+        > button:not([role="checkbox"]) {
+            width: 28px;
+            min-width: 28px;
+        }
+
+        > input {
+            font-size: 13px;
+            font-weight: 500;
+            border: 1px solid $pc-slate-300 !important;
+            font-family: var(--font-mono);
+            min-width: 30px;
+            width: 30px;
+        }
+    }
 }
