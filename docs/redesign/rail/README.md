@@ -241,9 +241,11 @@ separate breadcrumb in Browse posture — the tree row already shows the positio
 
 **Form body** — `flex: 1`, `overflow-y: auto`, `padding: 4px 14px 18px`.
 
-The core density move: `display: grid; grid-template-columns: 84px 1fr;
+The core density move: `display: grid; grid-template-columns: 84px minmax(0, 1fr);
 align-items: center; gap: 8px 10px`. Labels are 12px `#475569`, **right-aligned**,
-in the left column; each field is one 30px row instead of a 3-row stack.
+in the left column; each field is one 30px row instead of a 3-row stack. The second
+track is `minmax(0, 1fr)` and not `1fr`: a `1fr` track has `min-width: auto`, refuses
+to shrink below min-content, and produces horizontal scroll in a narrow rail.
 
 - **Name** — text input, 30px, `border: 1px solid #cbd5e1`, `radius: 6px`,
   `padding: 0 9px`, 13px `#0f172a`. Focus: `border-color: #64748b;
