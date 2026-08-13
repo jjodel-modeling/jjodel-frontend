@@ -1052,6 +1052,7 @@ function PropertiesHeader(props: { data: LModelElement; className: string; isMet
 }
 
 // Overview stats for Model/Metamodel
+// TODO: cleanup: no longer rendered (Overview cards removed from the properties panel, 2026-08-13)
 function PropertiesOverview(props: { data: LModel; isMetamodel: boolean; onViewAnalytics?: () => void }) {
     const { data, isMetamodel, onViewAnalytics } = props;
 
@@ -1472,9 +1473,6 @@ function InfoComponent(props: AllProps) {
                 <section className="properties-tab properties-panel">
                     {/* Header: name + badge, then signature + breadcrumb */}
                     <PropertiesHeader data={data} className={ddata.className} isMetamodel={isMetamodel} breadcrumb={breadcrumb} />
-
-                    {/* Overview - only for Models */}
-                    {showOverview && <PropertiesOverview data={data as LModel} isMetamodel={isMetamodel} onViewAnalytics={openM2Analytics} />}
 
                     {/* Fields (builder methods now include their own CollapsibleSections) */}
                     <div className="properties-fields">

@@ -1,5 +1,18 @@
 # Claude Code Session Log
 
+## 2026-08-13 — fix: rimozione delle card Overview dal pannello Properties (modello e metamodello)
+**Prompt**: richiesta diretta via Cowork (con screenshot): togliere le card Overview dal rail Properties, sia per il modello (card "Instances") sia per il metamodello (card Packages/Classes/Enumerators e box "View Analytics"). Modifica diretta al codice, non prompt per Claude Code.
+**Files touched**: `frontend/src/components/editors/Info.tsx`; `docs/claude-code-log.md` (questa entry).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown — typecheck NON eseguito: il bridge Cowork non può tenere processi oltre la singola chiamata (45s) e tsc non ci sta. La modifica è sola rimozione di JSX senza nuovi simboli e lo smoke visivo è passato, ma la baseline dei 33 va riverificata a mano prima del push.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessun file di §3.1 toccato.
+**Smoke visivo**: passato (conferma di Alfonso su localhost:3001, hard-refresh).
+**Notes**: (1) `PropertiesOverview` resta nel file con `// TODO: cleanup` (Regola 9); `openM2Analytics` resta definito ma senza chiamanti da questo pannello: l'entry point "View Analytics" verso Metamodel Analytics dal rail non è più raggiungibile da qui. (2) Task eseguito via Cowork con device-bridge: git non può cancellare i propri lock file dal bridge (`unlink` negato), quindi `.git/index.lock` stale e un `tmp_obj` residuo sono stati spostati in `_to_delete/` alla radice del repo — cartella da svuotare a mano, non va committata. (3) Sessione concorrente attiva sul log durante questa entry (rotazione R-RAIL-45): entry inserita con guard sull'mtime, senza toccare il resto del file.
+**Prompt document name**: 2026-08-13 16:30
+
 ## 2026-08-13 — docs: R-RAIL-45, la entry fuori posto e la rotazione del ventiquattresimo lotto
 
 **Prompt**: documento «2026-08-13 16:33», tre commit di soli documenti su tre file. (1) R-RAIL-45 in `docs/decisions.md` — un ordine si legge nel dato e mai nella posizione, e un prompt che scrive una posizione come regola trasferisce un'ipotesi con l'autorità di un'istruzione. (2) Rimettere in cima la entry `2026-08-13 16:00`, che una sessione concorrente aveva appeso in fondo e che era stata committata lì, senza riordinare nient'altro. (3) Questa entry più la rotazione a 20 attive, con le tre da spostare scelte **per data e non per posizione**. Regola zero: nessuna discovery, testo fornito verbatim, fermarsi se una misura di controllo non torna.
