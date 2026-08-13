@@ -37,7 +37,7 @@ import {connect} from 'react-redux';
 import {AuthApi, ProjectsApi} from '../../api/persistance';
 import DockManager from "../../components/abstract/DockManager";
 
-import {Divisor, Item, Menu, UserHeader, SubMenu, SubMenuItem} from '../components/menu/Menu';
+import {Item, Menu, UserHeader} from '../components/menu/Menu';
 
 import Collaborative from "../../components/collaborative/Collaborative";
 import { isProjectModified } from '../../common/libraries/projectModified';
@@ -56,7 +56,6 @@ import { M2AnalyticsModal, M2AnalyticsData } from '../../components/M2AnalyticsM
 import { ShortcutsReference } from '../../components/ShortcutsReference';
 import { useGlobalDrawer } from '../../contexts/GlobalDrawerContext';
 import { useSettingsModal } from '../../contexts/SettingsModalContext';
-import { useTheme } from '../../services/ThemeService';
 import { buildProjectExportJson } from '../../model/megamodelPersistence';
 import { getRuntimeMegamodel } from '../../model/megamodelRuntime';
 import { useAvatar } from '../../hooks/useAvatar';
@@ -595,7 +594,6 @@ function NavbarComponent(props: AllProps) {
     // See comment at line ~1162 about MainLogo having the same issue.
     const { openDrawer } = useGlobalDrawer();
     const { openSettings } = useSettingsModal();
-    const [theme, setTheme] = useTheme();
     const [avatarConfig] = useAvatar();
 
     // TreeViewToggle state (hoisted)
@@ -1604,7 +1602,7 @@ function NavbarComponent(props: AllProps) {
     // (TreeView renders nothing, LayoutControls moved to EditorV2 Toolbar).
 
     // UserMenu — inlined below to avoid inner component flicker.
-    // Hooks (useGlobalDrawer, useSettingsModal, useTheme, useAvatar) are hoisted above.
+    // Hooks (useGlobalDrawer, useSettingsModal, useAvatar) are hoisted above.
     const userName = `${user?.name || ''} ${user?.surname || ''}`.trim();
     const userEmail = user?.email || '';
     const userInitials = userName.split(' ').map(n => n[0] || '').join('');
@@ -1997,23 +1995,6 @@ function NavbarComponent(props: AllProps) {
                                 R.navigate('/auth');
                             }
                         }}>Sign out</Item>
-                        <Divisor />
-                        <SubMenu icon={<i className="bi bi-circle-half" />} label="Theme">
-                            <SubMenuItem
-                                icon={<i className="bi bi-sun" />}
-                                action={() => setTheme('light')}
-                                active={theme === 'light'}
-                            >
-                                Light
-                            </SubMenuItem>
-                            <SubMenuItem
-                                icon={<i className="bi bi-moon" />}
-                                action={() => setTheme('dark')}
-                                active={theme === 'dark'}
-                            >
-                                Dark
-                            </SubMenuItem>
-                        </SubMenu>
                     </Menu>
                 </div>
             </div>
