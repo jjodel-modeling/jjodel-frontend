@@ -1774,3 +1774,497 @@ body[data-active-tab="documentation"] .properties-tree-overlay {
 
     .rail-focusbar__current { color: var(--color-slate-100); }
 }
+
+// ─── Arco 3, passo A: la griglia dei campi (design §7) ───────────────────────
+// La mossa di densità del design: label a destra in una colonna da 84px, campo su una
+// riga sola invece di uno stack da tre.
+//
+// L'ancora è `.properties-fields`, non il rail. Dentro il rail rende anche la superficie
+// di authoring IR, per la via del ramo view (`ViewData.tsx:95,98,133,137`), e quella usa
+// `.jj-field` esattamente come questo form: scopare al solo rail avrebbe ristrutturato
+// un'area che `CLAUDE.md` §2.5 dichiara in sviluppo. `.properties-fields` esiste solo nel
+// ramo model element in modalità tab (`Info.tsx:1381`): non nel popup del menu contestuale
+// (`Info.tsx:1412`), non nel ramo view (`Info.tsx:1236`). Vedi
+// `docs/discovery/discovery_2026-08-13_form_inspector_griglia_84.md` §2.
+.properties-with-tree-view--rail .properties-fields {
+    padding-bottom: 18px;
+
+    .jj-field {
+        display: grid;
+        // `minmax(0, 1fr)` e non `1fr`: una traccia `1fr` ha `min-width: auto`, quindi non
+        // scende sotto il min-content del proprio contenuto. Misurato a rail stretto: la
+        // seconda colonna restava a 244px anche con il campo a 250px, e il pannello prendeva
+        // 74px di scroll orizzontale a 280px di rail. Il design chiede zero scrollbar da
+        // 360px in su, dove infatti non compariva: questa riga la toglie anche sotto.
+        grid-template-columns: 84px minmax(0, 1fr);
+        align-items: center;
+        gap: 8px 10px;
+        margin-bottom: 8px;
+
+        &:last-child { margin-bottom: 0; }
+    }
+
+    // La label smette di essere un blocco sopra il campo e diventa la colonna sinistra.
+    // Resta `display:flex` (da `_form-system.scss:951`) perché ospita l'asterisco e il
+    // tooltip; `justify-self: end` la porta a filo destro della colonna, che è ciò che il
+    // design chiede con «right-aligned».
+    .jj-field-label {
+        justify-self: end;
+        margin-bottom: 0;
+        font-size: 12px;
+        line-height: 1.2;
+        text-align: right;
+    }
+
+    // Terzo figlio, dove c'è: l'hint sta sotto il campo, non sotto la label. Senza questa
+    // riga cadrebbe nella colonna da 84px della riga successiva (`Info.tsx:369-378`).
+    .jj-field-hint {
+        grid-column: 2;
+        margin-top: 2px;
+    }
+
+    // Campo su riga da 30px. La regola battuta è
+    // `.properties-panel-container .jj-field input:not([type=color]):not([type=checkbox])`
+    // a `:559`, che vale (0,4,1) e mette `border` in `!important`: i due `:not()` sono
+    // ripetuti qui per pareggiare la specificità, e `!important` torna sul solo bordo,
+    // che è la convenzione dichiarata a `:299` per questo foglio.
+    .jj-field input:not([type="color"]):not([type="checkbox"]) {
+        height: 30px;
+        padding: 0 9px;
+        font-size: 13px;
+        border-radius: 6px;
+        border: 1px solid $pc-slate-300 !important;
+
+        &:focus {
+            border-color: $pc-slate-500 !important;
+            box-shadow: 0 0 0 3px rgba(51, 65, 85, 0.06);
+        }
+    }
+
+    // Il campo Type non è un `<select>`: è `JjSelect`, cioè react-select con gli stili
+    // inline co-locati in `ui/JjSelect/JjSelect.tsx:34-37` (`minHeight: 36, height: 36`).
+    // Gli stili inline si battono solo con `!important`, e il controllo è il primo div
+    // del contenitore, che è l'unico appiglio stabile: `classNamePrefix` non è impostato,
+    // quindi le classi BEM di react-select non esistono. Il componente condiviso non si
+    // tocca: il raggio d'azione sarebbe l'intero pannello.
+    .jj-field .jj-select > div:first-of-type {
+        min-height: 30px !important;
+        height: 30px !important;
+    }
+
+    // `_form-system.scss:1166-1169` mette 20px di `padding-bottom` su `.jj-select`, senza
+    // commento e senza consumatore dichiarato. Nello stack a tre righe faceva da spaziatore;
+    // nella griglia lo spazio lo dà `gap`, e quei 20px alzavano la riga Type a 56px contro i
+    // 30px delle altre. Misurato: `.jj-select` computava `padding: 0px 0px 20px`. Azzerato
+    // qui dentro, non nel foglio globale, che ha consumatori fuori dal rail.
+    .jj-field .jj-select { padding-bottom: 0; }
+}
+
+// ─── Arco 3, passo B: multiplicity segmentato (design §7) ────────────────────
+// Cinque preset mutuamente esclusivi al posto dei due stepper e della pastiglia
+// read-only. `flex: 1 1 0` più `min-width: 0` è prescritto dal design con la sua
+// motivazione: senza `min-width: 0` le label mono si rifiutano di stringersi e la riga
+// sfonda il rail. `role="radiogroup"` e `aria-checked` stanno nel TSX.
+.properties-with-tree-view--rail .properties-fields {
+
+    .jj-mult__segments {
+        display: flex;
+        gap: 4px;
+        width: 100%;
+    }
+
+    .jj-mult__seg {
+        flex: 1 1 0;
+        min-width: 0;
+        overflow: hidden;   // con `min-width: 0` da solo il testo mono spingeva comunque
+        height: 28px;
+        padding: 0 2px;
+        border: 1px solid $pc-slate-300;
+        border-radius: 6px;
+        background: #fff;
+        color: $pc-slate-600;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        line-height: 1;
+        cursor: pointer;
+        transition: background-color 150ms cubic-bezier(0, 0, 0.2, 1),
+                    border-color 150ms cubic-bezier(0, 0, 0.2, 1),
+                    color 150ms cubic-bezier(0, 0, 0.2, 1);
+
+        &:hover { border-color: $pc-slate-400; }
+
+        &.is-selected {
+            background: $pc-slate-700;
+            border-color: $pc-slate-700;
+            color: #fff;
+        }
+
+        &:focus-visible {
+            outline: 2px solid $pc-slate-600;
+            outline-offset: 2px;
+        }
+    }
+
+    // La riga Custom: gli stepper sopravvivono qui e solo qui (design §7).
+    .jj-mult__custom {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 6px;
+
+        .jj-mult__custom-label {
+            font-size: 11px;
+            color: $pc-slate-500;
+        }
+
+        .jj-mult__custom-value {
+            margin-left: auto;
+            font-family: var(--font-mono);
+            font-size: 12px;
+            color: $pc-slate-500;
+        }
+
+        // Lo stepper è il wrapper di `NumberInput`, raggiunto strutturalmente come già
+        // fa questo foglio a `:582`. Qui è più stretto: il valore sta in 30px, non in 42.
+        > div:has(> button:not([role="checkbox"]) + input) {
+            height: 28px;
+            border: 1px solid $pc-slate-300;
+            border-radius: 6px;
+            overflow: hidden;
+
+            > button:not([role="checkbox"]) { width: 24px; }
+
+            > input {
+                min-width: 30px;
+                width: 30px;
+                height: 26px;
+                font-family: var(--font-mono);
+                font-size: 12px;
+                padding: 0;
+                text-align: center;
+                border: none !important;
+            }
+        }
+    }
+}
+
+// Il segmentato in dark. Superficie nuova: R-RAIL-42 impone di guardarla nei due temi
+// prima di dichiararla finita, e i valori del design sono disegnati in light. Il fondo
+// bianco del non selezionato sarebbe una pastiglia chiara su pannello scuro, e lo slate-700
+// del selezionato sparirebbe dentro il fondo. Qui il rapporto si inverte: il selezionato
+// prende il grado chiaro e il testo scuro, che è la stessa mossa già fatta per la Focus bar.
+[data-theme="dark"] .properties-with-tree-view--rail .properties-fields {
+    .jj-mult__seg {
+        background: var(--color-bg-hover);
+        border-color: var(--color-panel-border);
+        color: var(--color-slate-300);
+
+        &:hover { border-color: var(--color-slate-500); }
+
+        &.is-selected {
+            background: var(--color-slate-300);
+            border-color: var(--color-slate-300);
+            color: #1e1e1e;
+        }
+    }
+
+    .jj-mult__custom {
+        .jj-mult__custom-label,
+        .jj-mult__custom-value { color: var(--color-slate-400); }
+
+        > div:has(> button:not([role="checkbox"]) + input) {
+            border-color: var(--color-panel-border);
+        }
+    }
+}
+
+// ─── Arco 3, passo C: i flag, chip in Browse e switch in Focus (design §7) ───
+// Un solo DOM e due vestiti. La postura non viaggia in JavaScript: il guscio scrive
+// `--rail-focus` su di sé e la cascata fa il resto (R-RAIL-40), quindi `hint` e `track`
+// esistono sempre nel markup e in Browse sono spenti da qui. In Browse il chip è una
+// pastiglia da 26px; in Focus la stessa `<button>` diventa una riga da 36px dentro un
+// riquadro, con la traccia a destra.
+.properties-with-tree-view--rail .properties-fields {
+
+    // I 14px orizzontali pareggiano `.props-section__body`, che li dichiara a
+    // `info-improvements.scss` con `padding: 4px 14px 12px`: senza, l'eyebrow e i chip
+    // partivano dal bordo del pannello mentre i campi rientravano di 14px. Misurato:
+    // `.jj-flags` a x=1193 contro il campo Name a x=1207.
+    .jj-flags {
+        margin-top: 18px;
+        padding: 0 14px;
+    }
+
+    // Eyebrow: label, filetto che riempie il mezzo, riepilogo live a destra. È il
+    // riepilogo che permette di saltare la sezione senza aprirla.
+    .jj-flags__eyebrow {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 9px;
+    }
+
+    .jj-flags__title {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: $pc-slate-400;
+    }
+
+    .jj-flags__rule {
+        flex: 1 1 auto;
+        height: 1px;
+        background: #eef2f7;
+    }
+
+    .jj-flags__summary {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: $pc-slate-400;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 55%;
+    }
+
+    .jj-flags__group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+    }
+
+    .jj-flag {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        height: 26px;
+        padding: 0 9px 0 7px;
+        border: 1px solid $pc-slate-200;
+        border-radius: 99px;
+        background: #fff;
+        color: $pc-slate-600;
+        font-size: 12px;
+        line-height: 1;
+        cursor: pointer;
+        transition: background-color 150ms cubic-bezier(0, 0, 0.2, 1),
+                    border-color 150ms cubic-bezier(0, 0, 0.2, 1),
+                    color 150ms cubic-bezier(0, 0, 0.2, 1);
+
+        // `color: inherit` e non un valore: `styles/style.scss:790` dichiara
+        // `i.bi { color: var(--font-color-1) }`, e una dichiarazione batte l'ereditarieta',
+        // quindi il colore del chip non raggiungeva il glifo e i chip accesi restavano con
+        // l'icona scura su fondo scuro. E' la stessa trappola di R-RAIL-36, dove a dipingere
+        // era l'`<i>` e non il contenitore che si stava misurando. Questa regola vale (0,4,1)
+        // contro (0,1,1), quindi vince anche sullo `:hover` di `i.bi` senza `!important`.
+        > i {
+            font-size: 10px;
+            line-height: 1;
+            color: inherit;
+        }
+
+        &.is-on {
+            background: $pc-slate-700;
+            border-color: $pc-slate-700;
+            color: #fff;
+        }
+
+        &:hover:not(.is-on) { border-color: $pc-slate-300; }
+
+        &:focus-visible {
+            outline: 2px solid $pc-slate-600;
+            outline-offset: 2px;
+        }
+    }
+
+    // In Browse l'hint e la traccia non esistono per l'utente: `display: none` li toglie
+    // anche dall'albero di accessibilità, che è il comportamento voluto (il chip porta già
+    // `role="switch"` e `aria-checked`).
+    .jj-flag__hint,
+    .jj-flag__track { display: none; }
+}
+
+// ─── Gli stessi flag in postura Focus: righe con switch ──────────────────────
+.properties-with-tree-view--rail-focus .properties-fields {
+
+    .jj-flags__group {
+        display: block;
+        border: 1px solid #eef2f7;
+        border-radius: 9px;
+        overflow: hidden;
+    }
+
+    .jj-flag {
+        display: flex;
+        width: 100%;
+        height: 36px;
+        padding: 0 10px;
+        gap: 8px;
+        border: none;
+        border-radius: 0;
+        border-top: 1px solid #f8fafc;
+        background: transparent;
+        color: $pc-slate-700;
+        font-size: 13px;
+
+        &:first-child { border-top: none; }
+        &.is-on { background: transparent; color: $pc-slate-700; }
+        &:hover:not(.is-on) { border-color: transparent; }
+
+        > i { font-size: 12px; color: $pc-slate-400; }
+    }
+
+    .jj-flag__hint {
+        display: inline;
+        font-size: 12px;
+        color: $pc-slate-400;
+    }
+
+    .jj-flag__track {
+        display: inline-flex;
+        align-items: center;
+        margin-left: auto;
+        flex: none;
+        width: 30px;
+        height: 18px;
+        padding: 2px;
+        border-radius: 99px;
+        background: $pc-slate-300;
+        transition: background-color 150ms cubic-bezier(0, 0, 0.2, 1);
+    }
+
+    .jj-flag__knob {
+        width: 14px;
+        height: 14px;
+        border-radius: 99px;
+        background: #fff;
+        transform: translateX(0);
+        transition: transform 150ms cubic-bezier(0, 0, 0.2, 1);
+    }
+
+    .jj-flag.is-on .jj-flag__track { background: $pc-slate-700; }
+    .jj-flag.is-on .jj-flag__knob { transform: translateX(12px); }
+}
+
+// Chi chiede di non animare non viene animato (design, sezione Motion).
+@media (prefers-reduced-motion: reduce) {
+    .properties-with-tree-view--rail .properties-fields {
+        .jj-flag, .jj-flag__track, .jj-flag__knob, .jj-mult__seg { transition-duration: 0ms; }
+    }
+}
+
+// I flag in dark. Superficie nuova, quindi misurata nei due temi prima di dichiararla
+// finita (R-RAIL-42): il chip spento a fondo bianco sarebbe una pastiglia chiara su
+// pannello scuro, e il chip acceso a slate-700 sparirebbe nel fondo. Stessa inversione
+// già adottata per il segmentato del passo B e per la Focus bar dell'arco 2.
+[data-theme="dark"] .properties-with-tree-view--rail .properties-fields {
+    .jj-flags__rule { background: var(--color-panel-border); }
+    .jj-flags__title,
+    .jj-flags__summary { color: var(--color-slate-400); }
+
+    .jj-flag {
+        background: var(--color-bg-hover);
+        border-color: var(--color-panel-border);
+        color: var(--color-slate-300);
+
+        &.is-on {
+            background: var(--color-slate-300);
+            border-color: var(--color-slate-300);
+            color: #1e1e1e;
+        }
+
+        &:hover:not(.is-on) { border-color: var(--color-slate-500); }
+    }
+}
+
+[data-theme="dark"] .properties-with-tree-view--rail-focus .properties-fields {
+    .jj-flags__group { border-color: var(--color-panel-border); }
+
+    .jj-flag {
+        background: transparent;
+        border-top-color: var(--color-panel-border);
+        color: var(--color-slate-200);
+
+        &.is-on { background: transparent; color: var(--color-slate-200); }
+        > i { color: var(--color-slate-400); }
+    }
+
+    .jj-flag__hint { color: var(--color-slate-400); }
+    .jj-flag__track { background: var(--color-slate-600); }
+    .jj-flag.is-on .jj-flag__track { background: var(--color-slate-300); }
+    .jj-flag.is-on .jj-flag__knob { background: #1e1e1e; }
+}
+
+// ─── Arco 3, passo D: la disclosure Advanced (design §7) ─────────────────────
+// Il design fonde `ADVANCED` e `ADVANCED STATE` in una sola voce «Advanced», resa come
+// riga da 30px: caret, eyebrow, filetto che riempie il mezzo, riepilogo a destra.
+// Dopo il passo C `ADVANCED` non esiste più (i suoi otto flag sono chip), quindi qui
+// resta la sola voce di stato, rinominata e restilata.
+//
+// `NODE` non entra: resta nel guscio, gated su `advanced`, per R-RAIL-12. L'inspector ha
+// due voci, Flags e Advanced, e nessuna «Appearance». È uno scostamento dichiarato dal
+// design §7 ultimo paragrafo, non una dimenticanza.
+//
+// Il riordino è di sola presentazione: il DOM di `CollapsibleSection` mette il titolo
+// prima del chevron, il design vuole il caret prima. `order` sui figli del flex lo
+// sistema senza toccare il componente, che ha altri undici chiamanti in questo file.
+.properties-with-tree-view--rail .jj-disclosure {
+    margin-top: 18px;
+    padding: 0 14px;   // stesso rientro dei corpi di sezione, vedi la nota sui flag
+
+    .props-section__header-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .props-section__header {
+        flex: 1 1 auto;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        height: 30px;
+        background: transparent;
+        border: none;
+
+        &::after {
+            content: '';
+            order: 1;
+            flex: 1 1 auto;
+            height: 1px;
+            background: #eef2f7;
+        }
+    }
+
+    .props-section__chevron {
+        order: -1;
+        font-size: 10px;
+        color: $pc-slate-400;
+    }
+
+    .props-section__title {
+        order: 0;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: $pc-slate-400;
+    }
+
+    .jj-disclosure__summary {
+        font-size: 11px;
+        color: $pc-slate-400;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 160px;
+        display: inline-block;
+    }
+}
+
+[data-theme="dark"] .properties-with-tree-view--rail .jj-disclosure {
+    .props-section__header::after { background: var(--color-panel-border); }
+    .props-section__title,
+    .props-section__chevron,
+    .jj-disclosure__summary { color: var(--color-slate-400); }
+}

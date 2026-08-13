@@ -149,6 +149,147 @@ function PropertiesNumberInput(props: { data: LModelElement; field: string; min?
     );
 }
 
+// Flag — chip in postura Browse, righe switch in postura Focus (design §7, arco 3 passo C).
+//
+// Una sola resa nel DOM, due vestiti: la postura arriva per cascata dal modificatore
+// `--rail-focus` che il guscio scrive su di se' (R-RAIL-40), quindi hint e track esistono
+// sempre e in Browse sono nascosti dal foglio. Nessuna prop attraversa `Info`.
+//
+// I nomi e la semantica dei flag restano quelli del modello: `Changeable` resta
+// `Changeable` e non diventa `Read-only`, che avrebbe voluto scrivere `changeable = !on`.
+// Un'inversione sul write path e' il punto dove un errore corrompe un modello senza dare
+// errore di compilazione, e il beneficio era la sola aderenza letterale al design §7.
+// I sei che il design nomina vengono per primi; gli altri seguono nell'ordine del modello.
+type FlagDef = { field: string; label: string; icon: string; hint: string; advancedOnly?: boolean };
+
+const FEATURE_FLAGS: FlagDef[] = [
+    { field: 'unique',     label: 'Unique',     icon: 'bi-fingerprint', hint: 'no duplicates',    advancedOnly: true },
+    { field: 'ordered',    label: 'Ordered',    icon: 'bi-sort-down',   hint: 'position matters', advancedOnly: true },
+    { field: 'derived',    label: 'Derived',    icon: 'bi-calculator',  hint: 'computed',         advancedOnly: true },
+    { field: 'transient',  label: 'Transient',  icon: 'bi-cloud-slash', hint: 'not persisted',    advancedOnly: true },
+    { field: 'changeable', label: 'Changeable', icon: 'bi-pencil',      hint: 'can be edited',    advancedOnly: true },
+    { field: 'volatile',   label: 'Volatile',   icon: 'bi-lightning',   hint: 'not stored',       advancedOnly: true },
+    { field: 'unsettable', label: 'Unsettable', icon: 'bi-eraser',      hint: 'can be unset',     advancedOnly: true },
+    { field: 'allowCrossReference', label: 'Cross Reference', icon: 'bi-box-arrow-up-right', hint: 'across models', advancedOnly: true },
+];
+const ATTRIBUTE_ID_FLAG: FlagDef[] = [
+    { field: 'isID', label: 'ID', icon: 'bi-key', hint: 'identifies instances', advancedOnly: true },
+];
+const ATTRIBUTE_IOT_FLAG: FlagDef[] = [
+    { field: 'isIoT', label: 'IoT', icon: 'bi-cpu', hint: 'device bound', advancedOnly: true },
+];
+const REFERENCE_FLAGS: FlagDef[] = [
+    { field: 'composition', label: 'Composition', icon: 'bi-diamond-fill', hint: 'owns the target' },
+    { field: 'aggregation', label: 'Aggregation', icon: 'bi-diamond',      hint: 'shares the target' },
+];
+const CLASS_FLAGS: FlagDef[] = [
+    { field: 'final',     label: 'Final',     icon: 'bi-shield-lock', hint: 'no subclasses' },
+    { field: 'singleton', label: 'Singleton', icon: 'bi-1-circle',    hint: 'one instance' },
+    { field: 'rootable',  label: 'Rootable',  icon: 'bi-diagram-2',   hint: 'can be a root' },
+    { field: 'partial',   label: 'Partial',   icon: 'bi-puzzle',      hint: 'partial definition' },
+];
+
+function FlagChip(props: { data: LModelElement; def: FlagDef }) {
+    const { data, def } = props;
+    const on = !!(data as any)[def.field];
+    return (
+        <button type="button" role="switch" aria-checked={on}
+                className={'jj-flag' + (on ? ' is-on' : '')}
+                onClick={() => { (data as any)[def.field] = !on; }}>
+            <i className={'bi ' + def.icon} aria-hidden="true" />
+            <span className="jj-flag__label">{def.label}</span>
+            <span className="jj-flag__hint">{def.hint}</span>
+            <span className="jj-flag__track"><span className="jj-flag__knob" /></span>
+        </button>
+    );
+}
+
+// La sezione non si rende affatto quando la lista e' vuota: e' il caso di un attributo in
+// modalita' Basic, dove oggi entrambi i gruppi di flag sono gated su `advanced`. Il gating
+// resta quello di prima, flag per flag: questa sezione cambia dove i flag si vedono, non
+// quando (R-RAIL-12 applicata alla lettera anche qui).
+function FlagsSection(props: { data: LModelElement; defs: FlagDef[]; advanced: boolean }) {
+    const { data, defs, advanced } = props;
+    const visible = defs.filter(d => advanced || !d.advancedOnly);
+    if (!visible.length) return null;
+    const on = visible.filter(d => !!(data as any)[d.field]).map(d => d.label.toLowerCase());
+    return (
+        <div className="jj-flags">
+            <div className="jj-flags__eyebrow">
+                <span className="jj-flags__title">Flags</span>
+                <span className="jj-flags__rule" />
+                <span className="jj-flags__summary">{on.length ? on.join(' \u00b7 ') : 'none set'}</span>
+            </div>
+            <div className="jj-flags__group">
+                {visible.map(d => <FlagChip key={d.field} data={data} def={d} />)}
+            </div>
+        </div>
+    );
+}
+
+// Multiplicity — segmented control (design §7, arco 3 passo B). Sostituisce i due stepper
+// e la pastiglia read-only con cinque preset mutuamente esclusivi piu' Custom.
+//
+// Convenzione dei bound, letta sul write path (`model/logicWrapper/LModelElement.tsx:1504-1529`)
+// e non sul render: `-1` e' l'illimitato, `lowerBound` e' clampato a zero, e ciascun setter
+// corregge l'altro bound quando l'intervallo si invertirebbe. Il `999` che compare altrove in
+// questo file (`:522`, `:622`) e' normalizzazione di rendering degli slot M1, non la convenzione
+// del modello: qui non entra. I preset scrivono prima l'upper e poi il lower; verificate le
+// transizioni fra i quattro preset, nessun ordine produce un valore diverso da quello atteso,
+// ma partire dall'upper evita che la clausola correttiva di `set_lowerBound` sollevi l'upper
+// su un valore intermedio in transito.
+const MULTIPLICITY_PRESETS: { key: string; label: string; lower: number; upper: number }[] = [
+    { key: '0..1', label: '[0..1]', lower: 0, upper: 1 },
+    { key: '1..1', label: '[1..1]', lower: 1, upper: 1 },
+    { key: '0..*', label: '[0..*]', lower: 0, upper: -1 },
+    { key: '1..*', label: '[1..*]', lower: 1, upper: -1 },
+];
+
+function MultiplicityControl(props: { data: LModelElement }) {
+    const { data } = props;
+    const lower = Number((data as any).lowerBound ?? 0);
+    const upper = Number((data as any).upperBound ?? -1);
+    const preset = MULTIPLICITY_PRESETS.find(p => p.lower === lower && p.upper === upper);
+    // `Custom` e' anche uno stato dell'interfaccia: un valore che coincide con un preset non
+    // dice se l'utente vuole vedere gli stepper. Il pannello se lo ricorda finche' la selezione
+    // non cambia — il chiamante passa `key={id}`, quindi il componente si rimonta per elemento.
+    const [customOpen, setCustomOpen] = useState(false);
+    const showCustom = customOpen || !preset;
+
+    const applyPreset = (p: { lower: number; upper: number }) => {
+        setCustomOpen(false);
+        (data as any).upperBound = p.upper;
+        (data as any).lowerBound = p.lower;
+    };
+
+    return (
+        <div className="jj-mult">
+            <div className="jj-mult__segments" role="radiogroup" aria-label="Multiplicity">
+                {MULTIPLICITY_PRESETS.map(p => {
+                    const on = !showCustom && preset?.key === p.key;
+                    return (
+                        <button key={p.key} type="button" role="radio" aria-checked={on}
+                                className={'jj-mult__seg' + (on ? ' is-selected' : '')}
+                                onClick={() => applyPreset(p)}>{p.label}</button>
+                    );
+                })}
+                <button type="button" role="radio" aria-checked={showCustom}
+                        className={'jj-mult__seg' + (showCustom ? ' is-selected' : '')}
+                        onClick={() => setCustomOpen(true)}>Custom</button>
+            </div>
+            {showCustom && (
+                <div className="jj-mult__custom">
+                    <span className="jj-mult__custom-label">Lower</span>
+                    <PropertiesNumberInput data={data} field={'lowerBound'} min={0} />
+                    <span className="jj-mult__custom-label">Upper</span>
+                    <PropertiesNumberInput data={data} field={'upperBound'} min={-1} />
+                    <span className="jj-mult__custom-value">{formatMultiplicity(lower, upper)}</span>
+                </div>
+            )}
+        </div>
+    );
+}
+
 // Type / Return-type select — custom JjSelect reusing the joiner <Select field='type'> binding.
 // Identical read/options/write to forEndUser/Input.tsx's Select path (no new write path):
 //   - options: data.validTargetOptions (grouped: Primitives, then metamodel types) === getSelectOptions_raw(data,'type')
@@ -394,15 +535,7 @@ class builder {
             <InheritanceSection lclass={lclass} advanced={advanced} hasDependencies={hasDependencies}
                 extendValue={extendValue} extendOptions={extendOptions} />
 
-            <CollapsibleSection title="FLAGS">
-                <PropertiesToggle data={lclass} field={'final'} label="Final" />
-                <div className="jj-divider" />
-                <PropertiesToggle data={data} field={'singleton'} label="Singleton" />
-                <div className="jj-divider" />
-                <PropertiesToggle data={data} field={'rootable'} label="Rootable" />
-                <div className="jj-divider" />
-                <PropertiesToggle data={data} field={'partial'} label="Partial" />
-            </CollapsibleSection>
+            <FlagsSection data={data} defs={CLASS_FLAGS} advanced={advanced} />
         </>);
     }
     static enum(data: LModelElement, advanced: boolean, skipTitle: boolean = false): JSX.Element {
@@ -414,7 +547,8 @@ class builder {
         </>);
     }
 
-    static feature(data: LModelElement, advanced: boolean, skipTitle: boolean = false): JSX.Element {
+    static feature(data: LModelElement, advanced: boolean, skipTitle: boolean = false,
+                   leadingFlags: FlagDef[] = [], trailingFlags: FlagDef[] = []): JSX.Element {
         return (<>
             <CollapsibleSection title="GENERAL">
                 {this.named(data, advanced, true)}
@@ -425,60 +559,25 @@ class builder {
                     <div className="jj-field-label">Type <span className="jj-field-required">*</span></div>
                     <TypeSelect data={data} />
                 </div>
-                <div className="jj-bounds-row">
-                    <div className="jj-bounds-field">
-                        <div className="jj-field-label">Lower</div>
-                        <PropertiesNumberInput data={data} field={'lowerBound'} min={-1} />
-                    </div>
-                    <div className="jj-bounds-field">
-                        <div className="jj-field-label">Upper</div>
-                        <PropertiesNumberInput data={data} field={'upperBound'} min={-1} />
-                    </div>
-                    <div className="jj-bounds-badge">
-                        {formatMultiplicity((data as any).lowerBound, (data as any).upperBound)}
-                    </div>
+                <div className="jj-field">
+                    <div className="jj-field-label">Multiplicity</div>
+                    <MultiplicityControl key={(data as any).id} data={data} />
                 </div>
             </CollapsibleSection>
 
-            {advanced && <CollapsibleSection title="ADVANCED" defaultOpen={false}>
-                <PropertiesToggle data={data} field={'unique'} label="Unique" />
-                <div className="jj-divider" />
-                <PropertiesToggle data={data} field={'ordered'} label="Ordered" />
-                <div className="jj-divider" />
-                <PropertiesToggle data={data} field={'changeable'} label="Changeable" />
-                <div className="jj-divider" />
-                <PropertiesToggle data={data} field={'volatile'} label="Volatile" />
-                <div className="jj-divider" />
-                <PropertiesToggle data={data} field={'transient'} label="Transient" />
-                <div className="jj-divider" />
-                <PropertiesToggle data={data} field={'unsettable'} label="Unsettable" />
-                <div className="jj-divider" />
-                <PropertiesToggle data={data} field={'derived'} label="Derived" />
-                <div className="jj-divider" />
-                <PropertiesToggle data={data} field={'allowCrossReference'} label="Cross Reference" />
-            </CollapsibleSection>}
+            <FlagsSection data={data} advanced={advanced}
+                          defs={[...leadingFlags, ...FEATURE_FLAGS, ...trailingFlags]} />
         </>);
     }
 
     static attribute(data: LModelElement, advanced: boolean, skipTitle: boolean = false): JSX.Element {
         return (<>
-            {this.feature(data, advanced, true)}
-            {advanced && <CollapsibleSection title="FLAGS" defaultOpen={false}>
-                <PropertiesToggle data={data} field={'isID'} label="ID" />
-                <div className="jj-divider" />
-                <PropertiesToggle data={data} field={'isIoT'} label="IoT" />
-            </CollapsibleSection>}
+            {this.feature(data, advanced, true, ATTRIBUTE_ID_FLAG, ATTRIBUTE_IOT_FLAG)}
         </>);
     }
     static reference(data: LModelElement, advanced: boolean, skipTitle: boolean = false): JSX.Element {
         return (<>
-            {this.feature(data, advanced, true)}
-
-            <CollapsibleSection title="FLAGS">
-                <PropertiesToggle data={data} field={'composition'} label="Composition" />
-                <div className="jj-divider" />
-                <PropertiesToggle data={data} field={'aggregation'} label="Aggregation" />
-            </CollapsibleSection>
+            {this.feature(data, advanced, true, [], REFERENCE_FLAGS)}
         </>);
     }
     static operation(data: LModelElement, advanced: boolean, skipTitle: boolean = false): JSX.Element {
@@ -1384,15 +1483,22 @@ function InfoComponent(props: AllProps) {
 
                     {/* Advanced State — collapsed by default, advanced mode only */}
                     {advanced && (
-                        <CollapsibleSection title="ADVANCED STATE" defaultOpen={false}>
-                            {!ddata || Object.keys(ddata._state).length === 0 ? (
-                                <div className="props-empty-state">No custom state defined</div>
-                            ) : (
-                                <div className="object-state" style={{ margin: 0, border: 'none' }}>
-                                    <JsonViewer src={ddata._state} collapsed={1} name={"state"} />
-                                </div>
-                            )}
-                        </CollapsibleSection>
+                        <div className="jj-disclosure">
+                            <CollapsibleSection title="Advanced" defaultOpen={false}
+                                headerRight={<span className="jj-disclosure__summary">
+                                    {!ddata || Object.keys(ddata._state).length === 0
+                                        ? 'default'
+                                        : Object.keys(ddata._state).slice(0, 3).join(' \u00b7 ')}
+                                </span>}>
+                                {!ddata || Object.keys(ddata._state).length === 0 ? (
+                                    <div className="props-empty-state">No custom state defined</div>
+                                ) : (
+                                    <div className="object-state" style={{ margin: 0, border: 'none' }}>
+                                        <JsonViewer src={ddata._state} collapsed={1} name={"state"} />
+                                    </div>
+                                )}
+                            </CollapsibleSection>
+                        </div>
                     )}
 
                     {/* TODO: Duplicate/Delete available via toolbar and context menu.
