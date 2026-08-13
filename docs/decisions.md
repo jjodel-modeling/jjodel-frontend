@@ -557,6 +557,9 @@ Le sigle `Q1..Q7` sono le domande aperte di quel report; le `U-1..U-8` i punti d
   scuro. Nessuno l'aveva vista perché nessuno l'aveva aperta in dark. È la stessa specie del debito
   già a registro sul caret `--color-slate-400`. Rimedio adottato: i valori del design restano per
   light, e un blocco `[data-theme="dark"]` corregge i soli colori che il tema deve cambiare.
+  **Emendata da R-RAIL-44** (2026-08-13): la clausola dei due temi come condizione di chiusura è
+  sospesa insieme al dark theme; la seconda metà, sui grade `--color-slate-*` come palette
+  grezza, resta viva e non dipende dal tema.
 - **R-RAIL-43** (2026-08-13) — **Un rinvio che ripete la motivazione di un rinvio precedente la
   rimette alla prova, oppure la cita come ereditata e non verificata.** Una stima di costo non
   provata non è una misura, e propagandola la fa degradare. Il caso che l'ha prodotta: i tre
@@ -571,6 +574,19 @@ Le sigle `Q1..Q7` sono le domande aperte di quel report; le `U-1..U-8` i punti d
   di assenza e di presenza, R-RAIL-36 il caso in cui si misura l'elemento sbagliato; R-RAIL-43
   copre il terzo caso, **la stima mai eseguita**, e ha in più la parte sulla propagazione, che le
   altre due non hanno.
+- **R-RAIL-44** (2026-08-13) — **Il dark theme è sospeso: i componenti nuovi non scrivono
+  varianti dark.** Sospeso e non deprecato: i blocchi `[data-theme="dark"]` esistenti restano in
+  albero e non si rimuovono (Regola 9), semplicemente non si manutengono e non si verificano. Il
+  freeze era già vero a codice prima di essere scritto qui: `e682047a1` toglie il sottomenu Theme
+  dalla navbar, quindi il dark non è raggiungibile dall'interfaccia e resta accessibile solo
+  scrivendo `localStorage.theme`, che è quello che fa l'harness Playwright. **Emenda R-RAIL-42**:
+  cade la clausola dei due temi come condizione di chiusura di una superficie nuova; sopravvive
+  intatta la seconda metà, cioè che i grade `--color-slate-*` sono palette grezza e non seguono
+  il tema. La ragione per cui la sospensione va scritta invece che sottintesa è che senza questa
+  voce ogni prompt SCSS futuro continua ad aggiungere blocchi dark per abitudine, e il freeze si
+  erode senza che nessuno lo decida. Nel solo foglio del rail i blocchi dark sono dieci, cinque
+  dei quali sulle superfici dell'arco 3. Conseguenza operativa immediata: la definition of done
+  dell'arco 3 si misura in **un tema**, light.
 
 ## Superate
 
