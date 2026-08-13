@@ -210,3 +210,18 @@ Registro dei debiti tecnici noti. Ogni entry deve indicare: data, origine, stato
 **Riferimenti:**
 - `docs/decisions.md` — R-RAIL-30, R-RAIL-33, R-RAIL-34
 - `docs/discovery/discovery_2026-08-12_harness_visivo_e_scala_entity_nel_tree.md` §5
+
+---
+
+## L'undo di un preset di multiplicity può ripristinarne metà
+
+**Registrato:** 2026-08-13
+**Origine:** verifica a posteriori dell'arco 3 (`docs/discovery/discovery_2026-08-13_arco3_fase1_griglia_84.md`, Q4). Non è un difetto dell'arco 3: è una proprietà preesistente che il controllo segmentato rende raggiungibile con un gesto solo.
+**Stato attuale:** `applyPreset` in `Info.tsx` esegue due assegnazioni consecutive, `upperBound` e poi `lowerBound`. Ciascuna entra in un setter che apre una `TRANSACTION` propria (`LModelElement.tsx`, `set_upperBound` e `set_lowerBound`), quindi un preset è due transazioni e non una. Un solo Ctrl-Z ripristinerebbe soltanto la seconda. Non verificato a runtime: la lettura è statica. I due stepper che il segmentato ha sostituito facevano già due scritture separate, quindi la classe di bug non è nuova; quello che cambia è che prima servivano due gesti deliberati e ora basta un click. Un preset applicato a metà è uno stato del modello, non un artefatto visivo: non dà errore di compilazione e non si vede in una verifica a schermo.
+**Fix strutturale raccomandato:** prima misurare. Applicare `[1..*]` a un attributo `[0..1]`, un solo Ctrl-Z, leggere i due bound in `windoww.store.getState().idlookup[<id>]` e confrontarli con lo stato di partenza. Se l'undo è parziale, la direzione è una transazione sola che porti entrambi i bound, non due chiamate in fila; da valutare contro CLAUDE.md §3.3, che vieta di avvolgere un `super` in una `TRANSACTION` esterna.
+**Priorità:** media — il danno è nel modello e invisibile a schermo, ma richiede una sequenza precisa per manifestarsi.
+**Effort stimato:** un'ora per la misura; il fix dipende da cosa dice.
+**Riferimenti:**
+- `frontend/src/components/editors/Info.tsx` — `MULTIPLICITY_PRESETS`, `applyPreset`
+- `frontend/src/model/logicWrapper/LModelElement.tsx` — `set_lowerBound`, `set_upperBound`
+- `CLAUDE.md` §3.3
