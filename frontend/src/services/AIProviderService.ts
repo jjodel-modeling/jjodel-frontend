@@ -400,7 +400,7 @@ export class AIProviderService {
         });
 
         // Use proxy endpoint to avoid CORS issues
-        const proxyUrl = `${AI.Gemini.getEndpoint()}/${model}/generateContent?key=${apiKey}`;
+        const proxyUrl = `${AI.Gemini.getEndpoint()}/${model}:generateContent?key=${apiKey}`;
 
         const response = await fetch(proxyUrl, {
             method: 'POST',

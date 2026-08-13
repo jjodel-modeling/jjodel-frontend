@@ -302,7 +302,8 @@ AI.DeepSeek
     .add('deepseek-chat',             'DeepSeek Chat',    false, false)
     .add('deepseek-coder',            'DeepSeek Coder',   false, false)
 AI.Gemini
-    .add('gemini-3.5-flash',          'Gemini 3.5 Flash', true,  true)
+    .add('gemini-3.6-flash',          'Gemini 3.6 Flash', true,  true)
+    .add('gemini-3.5-flash-lite',     'Gemini 3.5 Flash Lite',   true,  true)
     // Legacy — kept for users with persisted selections on older IDs
     .add('gemini-2.0-flash-exp',      'Gemini 2.0 Flash', false, false, true)
     .add('gemini-1.5-pro',            'Gemini 1.5 Pro',   true,  true, true)
