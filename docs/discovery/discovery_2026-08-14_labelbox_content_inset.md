@@ -107,3 +107,72 @@ Questo, e non la label centrata nel rombo, e' il difetto che un utente incontra 
 ## 7. Riproducibilita'
 
 Harness e script di misura: `docs/discovery/harness/labelbox_2026-08-14.html` e `labelbox_2026-08-14.mjs`. Si eseguono con `node labelbox_2026-08-14.mjs` avendo Playwright e un Chromium disponibile; stampano la tabella di F4 e salvano uno screenshot comparativo.
+
+---
+
+## 8. Addendum, seconda passata: misura sull'applicazione reale
+
+La prima passata misurava un harness che **replicava** il CSS. Collegata la cartella, il repo e' stato portato in un container Linux (`git archive` del working tree, `npm ci`), dove i gate di progetto girano. La misura e' stata rifatta sull'applicazione vera: `irStyle.ts` importato dal dev server (quindi `BASE_CSS` entra con l'ordine di cascata reale) e markup montato dentro un `.react-flow__node` reale, raggiunto con l'offline mode dello smoke.
+
+Le due passate concordano sui meccanismi. Divergono su **quale sia il difetto**.
+
+### A1. I gate di progetto sono eseguibili, e sono verdi `[misurato]`
+
+| gate | esito | nota |
+|------|-------|------|
+| `npm run typecheck` | **14 errori** | la baseline dichiarata e' 33, di cui 19 di casing (`Settings/` vs `settings/`). Su filesystem case-sensitive quei 19 non esistono: 33 − 19 = 14, e i 14 coincidono file per file con gli "scattered" documentati (`Measurable.tsx` x6, `api/data.ts` x3, `Dummy.ts`, `EditorV2.tsx`, `ChatMessages.tsx`, `ProjectEditor.tsx`, `Dashboard.tsx`). Zero errori nei file toccati dal lavoro sulle forme |
+| `npx vitest run` | **1169 passed, 0 failed** | 9 suite non collezionano per `ReferenceError: window is not defined`, le stesse 9 documentate come known failures |
+| `npm run build` | **exit 0** | 3m06s, solo il warning di chunk size preesistente |
+| `npm run smoke` | 7 pass, 3 fail | i 3 fallimenti sono tutti A4 (console) e portano due sole voci nuove, `ERR_CONNECTION_RESET` e `Failed to fetch notifications`: assenza del backend nel container, non regressione di codice. A1, A2 e A3 passano su tutti gli stati |
+
+I 12 test di `shapeRegistry.test.ts`, mai eseguiti dalla superficie precedente, passano.
+
+### A2. La cascata reale differisce dall'harness per una regola sola `[misurato]`
+
+Esiste `.mm-object { min-width: 140px }`, che l'harness non aveva. E' neutralizzata sulle forme geometriche da `.mm-node:has(> .ir-node-content.ir-shape--ellipse)`, (0,2,0) contro (0,1,0), quindi non cambia i numeri. Confermate le due assunzioni portanti: `.react-flow__node` e' `position: absolute` senza dimensioni dichiarate (shrink-to-fit, come lo stand-in), e `.mm-object` riceve davvero il solo `height: 100%`.
+
+### A3. Il criterio di contenimento va misurato sui glifi, non sullo span `[correzione di metodo]`
+
+La prima verifica di contenimento usava gli angoli dello `<span>`. E' sbagliata per l'ellisse, dove lo span e' largo quanto il box per costruzione (`align-items` a `stretch`) mentre il testo e' centrato e sta comodamente dentro il contorno. Rifatta con un `Range` sui contenuti del nodo di testo. Con il criterio sbagliato l'ellisse risultava fuori contorno **sempre**, anche a 6 caratteri.
+
+### A4. Dove il testo esce davvero dal contorno `[misurato]`
+
+Nodo 170x80, etichetta 11px centrata, larghezza dell'inchiostro:
+
+| caratteri | inchiostro | rombo | ellisse |
+|-----------|-----------|-------|---------|
+| 22 | 126 px | dentro | dentro |
+| 26 | 150 px | **fuori** | dentro |
+| 30 | 174 px | fuori | **fuori** |
+
+Il rombo perde il contenimento a 26 caratteri, l'ellisse a 30.
+
+### A5. Il difetto del rombo non e' un problema di inset `[misurato]`
+
+Sotto `align-items: center` la label e' auto-width: `overflow: hidden` e `text-overflow: ellipsis` non scattano **mai**, la larghezza dello span segue il testo (37, 54, 78, 102, 126, 150, 174, 210 px al crescere dei caratteri) e oltre il limite il testo viene semplicemente dipinto fuori dal rombo, che ha `overflow: visible`.
+
+Una sola dichiarazione, `max-width: 100%` sulla label, restituisce l'ellissi e chiude il difetto al bordo del box. L'inset a banda sposta poi il taglio dal box al contorno, e sul rombo vale circa 28 px su 168.
+
+### A6. L'ellisse dimensionata e' corretta quasi per caso `[misurato]`
+
+Lo span e' bloccato a 166 px (stretch sul box), quindi l'ellissi scatta a 166. Il contorno, alla banda occupata dalla riga, ne consente 165,2. Lo scarto e' **0,8 px** a questo aspect ratio, e cresce sulle ellissi piu' rotonde. Il taglio al bordo del box, che e' concettualmente sbagliato, qui e' numericamente quasi giusto.
+
+### A7. Correzione della priorita'
+
+La sezione 6 chiedeva se il floor dell'ellisse in content-hug fosse un bug a se'. La seconda passata dice di si', e aggiunge che non e' il solo. L'ordine misurato dei difetti:
+
+1. **Content-hug su forma geometrica**: ellisse reale 116 x 16,3 px con testo da 114 px, mentre il contorno alla banda della riga ne consente 55,6. Fattore due. Non c'e' alcuna relazione fra la dimensione del contenuto e quella della forma.
+2. **Rombo con etichette lunghe**: nessuna ellissi, testo fuori dal contorno oltre i 22 caratteri (A5).
+3. **Taglio al box invece che al contorno**: 0,8 px sull'ellisse 170x80, circa 28 px sul rombo. E' l'unico dei tre che il `labelBox` della roadmap risolve, ed e' il meno grave.
+
+Il punto 3 della roadmap attaccava il terzo difetto per primo, con il primitivo sbagliato.
+
+### A8. Riproducibilita' della seconda passata
+
+`frontend/scripts/probe/labelbox.ts` e `labelbox-sweep.ts`, che riusano `scripts/smoke/states.ts` per raggiungere l'app. Si eseguono con il dev server attivo:
+
+```
+node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/probe/labelbox-sweep.ts
+```
+
+Nota di scope: `frontend/scripts/probe/` e' una directory nuova, sorella di `scripts/smoke/`. Non era nel perimetro dichiarato.
