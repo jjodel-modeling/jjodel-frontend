@@ -947,7 +947,10 @@
 
   // Gallery variant — smaller cards, denser grid
   &--gallery {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    /* auto-fill instead of a fixed count (2026-08-14): four columns once the dashboard has
+       no right rail, three when the viewport cannot fit them. Mirrors .projects-grid in
+       project-card.scss, which already uses this pattern. */
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 12px;
 
     @media (max-width: 767px) {

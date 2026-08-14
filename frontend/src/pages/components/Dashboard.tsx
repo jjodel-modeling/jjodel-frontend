@@ -16,7 +16,6 @@ import {
     Try, TRANSACTION, L
 } from '../../joiner';
 import {LeftBar, Navbar} from './';
-import { RightPanel } from './RightPanel';
 import { Badge } from '../../components/common/Badge';
 
 import '../dashboard.scss'
@@ -305,10 +304,12 @@ function GenericDashboard(props: DashProps): any {
         }
     };
 
-    // Determine layout mode: three-column for dashboard pages, two-column for project editing
-    const hasProjects = user?.projects && user.projects.length > 0;
-    const showRightPanel = active !== 'Project' && hasProjects;
-    const layoutClass = showRightPanel ? 'three-column' : active !== 'Project' ? 'two-column' : 'two-column';
+    // Two-column layout on every dashboard page. The right context panel was removed on
+    // 2026-08-14: each of its blocks restated something already on screen (project count,
+    // favourites, recently modified, New Project, Documentation), and the fourth Overview
+    // cell rendered a hardcoded placeholder. The component is kept in the tree for the
+    // parked "Continue" variant. See docs/discovery/discovery_2026-08-14_dashboard_right_panel.md
+    const layoutClass = 'two-column';
 
     return (<>
         <Navbar />
@@ -334,11 +335,6 @@ function GenericDashboard(props: DashProps): any {
                 )}
                 <Catalog children={children}/>
             </div>
-
-            {/* Right Panel - Only visible when there are projects (three-column layout) */}
-            {showRightPanel && (
-                <RightPanel user={user} projects={user?.projects} onNewProject={props.onNewProject} />
-            )}
 
             {/* Drop Overlay */}
             {isDragging && (

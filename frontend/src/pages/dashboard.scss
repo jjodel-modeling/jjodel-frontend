@@ -9,7 +9,9 @@
 
 .dashboard-main-content {
   width: 100%;
-  max-width: 1200px;
+  /* Raised from 1200px on 2026-08-14: with the 360px right panel gone, the old cap turned
+     the reclaimed width into empty margin instead of extra grid columns. */
+  max-width: 1440px;
   margin: 0 auto;
   padding: var(--space-6);
 }
@@ -329,6 +331,9 @@
 
   /* ============================================
      THREE-COLUMN LAYOUT (Dashboard pages)
+     TODO: cleanup. No longer emitted since the right context panel was removed on
+     2026-08-14; kept for the parked "Continue" panel variant. See
+     docs/discovery/discovery_2026-08-14_dashboard_right_panel.md
      ============================================ */
   &.three-column {
     display: grid;
