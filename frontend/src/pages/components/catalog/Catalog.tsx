@@ -35,6 +35,10 @@ type ListViewProps = {
 
 const PROJECTS_PER_BATCH = 12;
 
+// A gallery batch is this many complete rows. The number of cards it stands for depends on
+// how many columns the grid actually laid out, which is a function of the container width.
+const GRID_ROWS_PER_BATCH = 4;
+
 const ListViewWithLoadMore = ({
     projects,
     projectNames,
@@ -196,14 +200,28 @@ const Catalog = (props: ChildrenType) => {
     // Add tag dialog state
     const [showAddTagDialog, setShowAddTagDialog] = useState(false);
 
-    // Track window width for responsive slider grid
-    const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1024);
+    // Column count of the gallery grid, measured instead of re-derived. The grid uses
+    // repeat(auto-fill, ...) in catalog.scss, so the count follows the container width, not
+    // the window width: a breakpoint table in JS would disagree with the layout whenever the
+    // surrounding chrome changes. getComputedStyle resolves gridTemplateColumns to the used
+    // track list, one entry per column, so this asks the browser what it actually did.
+    const gridRef = useRef<HTMLDivElement>(null);
+    const [gridColumns, setGridColumns] = useState(3);
 
     useEffect(() => {
-        const handleResize = () => setWindowWidth(window.innerWidth);
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
+        const el = gridRef.current;
+        if (!el || typeof ResizeObserver === 'undefined') return;
+        const measure = () => {
+            const tracks = getComputedStyle(el).gridTemplateColumns;
+            if (!tracks || tracks === 'none') return;
+            const count = tracks.split(' ').filter(Boolean).length;
+            if (count > 0) setGridColumns(prev => (prev === count ? prev : count));
+        };
+        measure();
+        const observer = new ResizeObserver(measure);
+        observer.observe(el);
+        return () => observer.disconnect();
+    }, [viewMode]);
 
     // Clear selection when switching view modes or filters
     useEffect(() => {
@@ -335,17 +353,15 @@ const Catalog = (props: ChildrenType) => {
     // ≥1200px: 3 cols × 3 rows = 9 cards
     // 768-1199px: 2 cols × 3 rows = 6 cards
     // <768px: 1 col × 3 rows = 3 cards
-    const cardsPerPage = useMemo(() => {
-        if (windowWidth >= 1200) return 9;  // 3×3 (max)
-        if (windowWidth >= 768) return 6;   // 2×3
-        return 3;                            // 1×3
-    }, [windowWidth]);
+    // One batch is a whole number of rows, whatever the column count turns out to be.
+    const cardsPerPage = gridColumns * GRID_ROWS_PER_BATCH;
 
-    // Reset page/grid count when cardsPerPage changes (prevents out-of-bounds page on resize)
+    // On a column change, keep what is already loaded and round it up to the new column count,
+    // so the last row stays complete instead of collapsing back to the first batch.
     useEffect(() => {
         setCurrentPage(0);
-        setVisibleGridCount(PROJECTS_PER_BATCH);
-    }, [cardsPerPage]);
+        setVisibleGridCount(prev => Math.max(cardsPerPage, Math.ceil(prev / gridColumns) * gridColumns));
+    }, [cardsPerPage, gridColumns]);
 
     // Collect all unique tags from projects, sorted by frequency
     const tagStats = useMemo(() => {
@@ -448,7 +464,7 @@ const Catalog = (props: ChildrenType) => {
 
             return (
                 <div className="projects-slider">
-                    <div className="slider-page slider-page--gallery">
+                    <div className="slider-page slider-page--gallery" ref={gridRef}>
                         {visibleGridProjects.map((p, i) => (
                             <Project
                                 key={p.id || i}
