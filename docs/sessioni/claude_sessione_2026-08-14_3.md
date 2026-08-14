@@ -20,6 +20,7 @@ Sette commit, di cui **uno solo tocca il codice** ed e' stato verificato a scher
 | `837698e22` | flush dell'entry di log di una sessione concorrente (incidente, §7) | docs |
 | `c3854314c` | entry di log del fix | docs |
 | `eaed495f6` | questo checkpoint | docs |
+| `3f918cd1f` | **non mia**: contratto `contentRect` / `boxForContent` nel registry (§3, D8 e D9) | 22 test, non cablato |
 
 Working tree pulito salvo `.claude/settings.local.json` e `_to_delete/`, entrambi untracked di proposito. Niente pushato.
 
@@ -69,7 +70,9 @@ B_w = max( ceil(w / (1 − 2·inset(t))), ceil(aspetto_min · B_h) )
 
 `w`, `h` sono le dimensioni dell'**inchiostro** (Range sui nodi di testo), non dello span. `k` = √2 per ellisse e cerchio, 2 per il rombo. `aspetto_min` = 0,8. Su `rect` e `rounded` l'inset e' nullo e la formula degenera nell'identita'. Arrotondamento **per eccesso**: con `round` il caso a etichetta corta perdeva 0,2 px e usciva dal contorno. Verificata sull'app reale, 8 casi su 8 con l'inchiostro dentro il contorno.
 
-`H_min` **proposto a 64** dopo il confronto visivo (48 da' un rombo 225x48 che legge come un nastro, 64 da' 204x64, 80 da' 193x80 e spreca altezza). **Non ancora ratificato.**
+`H_min` **ratificato a 64** dopo il confronto visivo (48 da' un rombo 225x48 che legge come un nastro, 64 da' 204x64, 80 da' 193x80 e spreca altezza). La ratifica e' arrivata in una sessione concorrente; la costante e' `GEOMETRIC_MIN_BOX_HEIGHT`.
+
+**Emendamento a D8, deciso nel diff di `3f918cd1f`**: i quattro parametri di taglia (`heightFactor`, `minBoxWidth`, `minBoxHeight`, `minAspect`) stanno **per forma**, non in una policy globale. Su `rect` e `rounded` valgono `1 / 140 / 40 / 0`, cioe' i pavimenti gia' in `irStyle.ts`, e la regola degenera nell'identita' come D8 dichiarava. Con una policy unica a `H_min` 64 un nodo rettangolare avrebbe cambiato altezza, che non e' quel che D8 diceva.
 
 **D9. Il contratto della taglia e' un rettangolo posizionato, non uno scalare simmetrico.**
 
@@ -81,6 +84,8 @@ boxForContent(cw, ch, p): Size      // inversa; default per bisezione, forma chi
 Motivo misurato: sulle 13 forme del catalogo previsto, nove sono simmetriche sui due assi e quattro no (cilindro, folder, nota, chevron, cioe' la famiglia `pathTemplate` piu' il chevron). Su **cilindro e folder il rettangolo centrato collassa a zero** dove la risposta vera e' la larghezza piena, perche' il centro geometrico cade dentro il coperchio o la linguetta. Non e' una stima imprecisa, e' una risposta priva di senso.
 
 `insetFractionAt` resta, ma **cambia stato**: da premessa del sistema a ottimizzazione dichiarata per famiglia. Il commento del modulo («tutte e cinque le forme attuali sono simmetriche sui due assi») va riscritto come precondizione, non come constatazione. Nessun numero cambia sulle cinque forme in produzione.
+
+**Implementata in `3f918cd1f`** da una sessione concorrente, mentre questo checkpoint veniva chiuso: tipi `Rect`, `Size`, `ShapeSizing`, campo `sizing` sui cinque descriptor, `contentRect`, `boxForContent` e `boxForContentNumeric` (inversione per bisezione, che assume solo la monotonia e fa da oracolo alla forma chiusa). 22 test verdi, typecheck fermo a 14. **Non e' cablata a nessun file di produzione**, quindi non cambia un pixel: manca il consumatore, cioe' la misura del contenuto in `IRNodeContent`. `insetFractionAt` e' rimasta obbligatoria perche' renderla opzionale richiederebbe un ripiego in `DynamicHandles`, e nessuna forma asimmetrica esiste ancora.
 
 **D10. Il picker e' catalogo e wizard insieme, e un preset e' un valore, non un tipo.** Scegliere «gateway esclusivo» dal catalogo produce esattamente lo `ShapeRef` che produrrebbe il wizard con rombo, bordo normale, marker x. Il catalogo si organizza per notazione (indice molti-a-molti sopra un unico spazio di valori, non tassonomia) e vive come **tabella dati**, non come codice: aggiungere una notazione e' un dato in piu'. I primitivi restano nel registry a codice, come da D2. Un percorso solo con due ingressi: dal catalogo il pannello di ritocco si apre gia' popolato sul preset; da vuoto e' il wizard. In Jjodel il wizard non e' la via di fuga, e' il caso centrale, perche' gli utenti inventano notazioni: un simbolo costruito e salvato diventa un preset come gli altri.
 
@@ -124,7 +129,7 @@ Motivo misurato: sulle 13 forme del catalogo previsto, nove sono simmetriche sui
 
 ## 6. Prossimi passi
 
-1. **Ratificare `H_min`** (proposto 64) e dare il via a D8: `contentRect` / `boxForContent` piu' la misura in `IRNodeContent`. E' il pezzo che cambia l'aspetto dei nodi geometrici gia' esistenti, quindi serve il GO visivo.
+1. **Cablare il contratto**, che esiste ma non ha consumatori: la misura dell'inchiostro del contenuto in `IRNodeContent` (wrapper a `width: max-content` per evitare il ciclo) che chiama `boxForContent` e applica la taglia. E' il pezzo che cambia l'aspetto dei nodi geometrici gia' esistenti, quindi serve il GO visivo. Fino ad allora `3f918cd1f` e' codice corretto e inerte.
 2. **Assi di stile piu' picker, insieme**: 6 trattamenti di bordo e i marker non sono visibili finche' non c'e' un modo per sceglierli. E' la leva piu' forte (36 simboli su 90) e sta fuori dalla critical zone.
 3. **Contorni mancanti in ordine di resa**: prima `pathTemplate` (12 simboli), poi poligono e shearRect (6). Unificare i cinque profili esistenti sotto la superellisse quando conviene, tenendo `rect` e `rounded` fuori.
 4. **Composizione (Fase 4)** per i quattro compositi (attore, terminazione a X, parentesi, box 3D) e per gli ornamenti strutturali (compartimenti, banda, token, linea di vita).
