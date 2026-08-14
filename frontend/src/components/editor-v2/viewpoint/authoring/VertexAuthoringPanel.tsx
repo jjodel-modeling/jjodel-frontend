@@ -6,6 +6,7 @@ import { getMetaclassInfo, type MetaclassInfo } from '../../hooks/useEditorMode'
 import { validateIR } from '../ir/irValidate';
 import { defaultObjectViewIR } from '../ir/irDefaults';
 import type { VertexViewIR, ShapeForm } from '../ir/irTypes';
+import { MARKER_REGISTRY } from '../ir/markerRegistry';
 import { resolveMetaclassId, withMetaclassPins, type MetaclassRef } from '../ir/metaclassPin';
 import { defaultResizableForForm } from '../../nodes/nodeSizing';
 import { LabelListEditor } from './LabelListEditor';
@@ -42,6 +43,13 @@ const BORDER_STYLE_OPTIONS = [
     { value: 'solid', label: 'Solid' },
     { value: 'dashed', label: 'Dashed' },
     { value: 'dotted', label: 'Dotted' },
+    { value: 'double', label: 'Double' },
+];
+/** Marker interni delle notazioni (asse marker): opzioni dalla tabella dati.
+ *  '' = nessun marker; la chiave viene rimossa dall'IR, non persistita vuota. */
+const MARKER_OPTIONS = [
+    { value: '', label: 'None' },
+    ...Object.values(MARKER_REGISTRY).map((m) => ({ value: m.id, label: m.label })),
 ];
 
 const DEFAULT_BORDER = { color: '#334155', width: 1, style: 'solid' as const };
@@ -243,6 +251,7 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
     const shape = draft.shape;
     const form = shape.form;
     const fill = shape.fill;
+    const marker = shape.marker;
     const labels = shape.labels ?? [];
     const badges = shape.badges ?? [];
     const fieldCompartments = draft.fieldCompartments ?? [];
@@ -358,7 +367,30 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                     <label className="jj-field-label" style={{ marginTop: 'var(--space-2)' }}>Width</label>
                     <NumberInput value={border.width} min={0} onChange={(w) => patchBorder({ width: w })} />
                     <label className="jj-field-label" style={{ marginTop: 'var(--space-2)' }}>Style</label>
-                    <Select options={BORDER_STYLE_OPTIONS} value={border.style} onChange={(e) => patchBorder({ style: e.target.value as 'solid' | 'dashed' | 'dotted' })} />
+                    <Select options={BORDER_STYLE_OPTIONS} value={border.style} onChange={(e) => patchBorder({ style: e.target.value as 'solid' | 'dashed' | 'dotted' | 'double' })} />
+                    {/* Nessuna riscrittura silenziosa della width: e' CSS nativo che sotto
+                        i 3px il double non mostra due linee, quindi lo si dice e basta. */}
+                    {border.style === 'double' && border.width < 3 && (
+                        <HelpText icon={false}>Double shows two lines from width 3 up.</HelpText>
+                    )}
+                </div>
+            </FormSection>
+
+            {/* Marker — notation symbol inside the shape (gateway x, timer clock,
+                history H). Conditional like Fill: the same view can switch marker
+                per instance in Advanced. None removes the key from the IR. */}
+            <FormSection title="Marker" divider={false}>
+                <div className="jj-field">
+                    <ConditionalEditor
+                        value={marker ?? ''}
+                        onChange={(next) => patchShape({ marker: next === '' ? undefined : next })}
+                        renderValue={(v, onCh) => <Select options={MARKER_OPTIONS} value={v} onChange={(e) => onCh(e.target.value)} />}
+                        defaultValue={''}
+                        features={features}
+                        featuresHint={FEATURES_HINT}
+                        classNames={classNames}
+                        allowConditional={advanced}
+                    />
                 </div>
             </FormSection>
 

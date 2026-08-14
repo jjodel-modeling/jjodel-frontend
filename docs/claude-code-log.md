@@ -1,5 +1,21 @@
 # Claude Code Session Log
 
+## 2026-08-15 — docs: bonifica del Project Knowledge e clausola P10
+
+**Prompt**: sessione Cowork su richiesta di Alfonso, «il mio KB e' cresciuto troppo, cerchiamo di capire e razionalizzare per mantenere le performance e l'accuratezza alte». Diagnosi, archiviazione nel repo dei documenti mai archiviati, cancellazione dal Project Knowledge, riscrittura dell'indice di contesto.
+**Files touched**: 62 file nuovi sotto `docs/prompts/` (32), `docs/ratifiche/` (15), `docs/archivio/` (7), `docs/archivio/artefatti/` (4), `docs/sessioni/` (3), `docs/discovery/` (1); `docs/PROTOCOL.md` (clausola P10, versione a 1.1). Nessun file sotto `frontend/`.
+**Outcome**: ✅ completed.
+**Corregge**: —
+**Causa**: —
+**Cosa e' stato misurato**: 339 documenti, 1.167.678 byte. Di questi **257 erano gia' nel repo** (confronto per nome normalizzando il prefisso `claude_`) e **82 no**: 47 prompt e memo del 10-14 agosto, 22 patch `.patch` e `.mbox` del 20-21 luglio, 13 vari. Prova del danno, prima della bonifica: alla query «stato corrente e prossimi passi» il RAG restituiva un design doc del 3 maggio, `contesto_progetto.md` fermo al 10 agosto e un archivio del 16 aprile, senza mai pescare `sessione_CORRENTE.md`, che era di quella notte.
+**Cosa e' stato fatto**: archiviati 60 documenti secondo la mappa del triage precedente; scartate le 22 patch, perche' git e' la fonte di verita' e una patch salvata a parte e' un duplicato inerte; verificata l'integrita' dell'archivio esistente su sei campioni, uno per categoria, con corrispondenza byte per byte in tutti e sei; cancellati 335 documenti dal KB con guardia sulla data di creazione, per non toccare quanto prodotto da sessioni concorrenti dopo lo snapshot; riscritto `contesto_progetto.md`, fermo al 10 agosto; caricato `spec_attive.md`, previsto dal triage precedente e mai messo; creato `INDICE_ARCHIVIO.md`. Il KB e' passato da 339 documenti a 6.
+**Regressions**: no. Nessun file di codice toccato, nessuna dipendenza, nessun cambio visivo possibile.
+**Out-of-scope changes**: no. `docs/PROTOCOL.md` e' l'unico file tracciato modificato: aggiunta della clausola P10, riga di versione a 1.1, riga di intestazione dei prompt da P1..P9 a P1..P10. Nessuna clausola esistente riformattata.
+**Layer Impact Report**: not-required.
+**Smoke visivo**: non applicabile.
+**Notes**: (0) **Questo task rimedia a una procedura eseguita a meta'.** Il prompt `docs/prompts/claude_2026-08-09_prompt_kb_archivio_repo.md` copriva la sola copia nel repo, perche' Claude Code non puo' cancellare dal Project Knowledge: la cancellazione restava manuale e non avvenne, e sei giorni dopo il KB era a 339 documenti. `**Corregge**` resta al sentinella perche' quel prompt non porta HH:mm nel nome e il gate rifiuta i puntatori ai prompt senza orario, limite gia' noto e registrato. (1) **La whitelist del KB e' per nome, non per prefisso.** I documenti scritti da un agente finiscono sotto il namespace `claude/` per costruzione dello strumento, quindi `spec_attive.md` e `INDICE_ARCHIVIO.md` compaiono come `claude/spec_attive.md` e `claude/INDICE_ARCHIVIO.md`: una bonifica futura che cancellasse tutto cio' che sta sotto `claude/` distruggerebbe due dei sei file da tenere. (2) **La rotazione del log non e' stata fatta**, pur essendo dovuta (34 entry contro soglia 20): sullo stesso file lavorano sessioni concorrenti, e la rotazione e' un task a se' da fare a repo fermo. (3) Resoconto completo in `docs/archivio/triage_kb_2026-08-15.md`.
+**Prompt document name**: 2026-08-15 01:40
+
 ## 2026-08-14 — feat(editor-v2): contratto `contentRect` / `boxForContent` nel registry delle forme
 
 **Prompt**: sessione Cowork sul sistema forme, ripresa dal checkpoint `docs/sessioni/claude_sessione_2026-08-14_3.md`, chiuso tre minuti prima. Scelta di Alfonso fra quattro opzioni: **solo il contratto nel registry**, senza collegare alcun consumatore. Dà seguito a D8 (la taglia di una forma geometrica è contenuto più supplemento) e D9 (il contratto è un rettangolo posizionato, non uno scalare simmetrico).
