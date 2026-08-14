@@ -19,6 +19,7 @@ Sette commit, di cui **uno solo tocca il codice** ed e' stato verificato a scher
 | **`fe5db5ab8`** | **fix: label IR vincolate al box, l'ellissi puo' scattare** | **a schermo, passato** |
 | `837698e22` | flush dell'entry di log di una sessione concorrente (incidente, §7) | docs |
 | `c3854314c` | entry di log del fix | docs |
+| `eaed495f6` | questo checkpoint | docs |
 
 Working tree pulito salvo `.claude/settings.local.json` e `_to_delete/`, entrambi untracked di proposito. Niente pushato.
 
@@ -142,6 +143,8 @@ Motivo misurato: sulle 13 forme del catalogo previsto, nove sono simmetriche sui
 **I lock di git** vanno spostati in `_to_delete/git-locks/` come da sessione precedente; e' successo due volte.
 
 **Identita' git assente** nella VM: i commit vanno fatti con `git -c user.name=... -c user.email=...`.
+
+**Residui da cancellare a mano**: `_to_delete/transfer/` contiene `jjodel-head.tgz` (53 MB, l'archivio del working tree usato per portare il repo nel container) piu' `addendum.md`, `a9.md` ed `entry.md`, che erano solo veicoli di trasporto e il cui contenuto vive ormai dentro i file di destinazione. Da questa superficie i file non si possono cancellare, quindi la pulizia resta ad Alfonso.
 
 ---
 
