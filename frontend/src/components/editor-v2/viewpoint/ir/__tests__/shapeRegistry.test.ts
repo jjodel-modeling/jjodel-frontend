@@ -11,7 +11,11 @@
 
 import { describe, it, expect } from 'vitest';
 import type { ShapeForm } from '../irTypes';
-import { SHAPE_REGISTRY, SVG_BORDER_DASH, getShapeDescriptor } from '../shapeRegistry';
+import type { ShapeSizing } from '../shapeRegistry';
+import {
+    SHAPE_REGISTRY, SVG_BORDER_DASH, getShapeDescriptor,
+    contentRect, boxForContent, boxForContentNumeric,
+} from '../shapeRegistry';
 
 const ALL_FORMS: ShapeForm[] = ['rect', 'rounded', 'ellipse', 'circle', 'diamond'];
 
@@ -123,5 +127,169 @@ describe('shapeRegistry', () => {
         expect(getShapeDescriptor(undefined).keepAspectRatio).toBe(wasAspectLocked(undefined));
         expect(getShapeDescriptor(undefined).insetFractionAt(0.25)).toBe(0);
         expect(getShapeDescriptor('nope' as ShapeForm).id).toBe('rect');
+    });
+});
+
+/**
+ * Content rectangle and its inverse.
+ *
+ * These are not equivalence tests: there is no previous behaviour to preserve,
+ * the geometry is new. They pin three different things. The golden cases come
+ * from the measurement on the running app (eight out of eight with the ink
+ * inside the outline) and would catch a change of formula. The agreement
+ * between the closed form and the numeric inverse would catch an algebra slip
+ * in either. The containment property would catch both at once, on inputs
+ * nobody measured.
+ */
+describe('shapeRegistry: taglia da contenuto', () => {
+    /** Half-width profile as a function of the band, `v` in [0,1]. */
+    const availableAt = (form: ShapeForm, v: number) =>
+        1 - 2 * getShapeDescriptor(form).insetFractionAt(0.5 + v / 2);
+
+    const CONTENT_GRID: Array<[number, number]> = [
+        [0, 0], [1, 1], [27, 14], [60, 43], [114, 14], [188, 14], [300, 60], [12, 120], [1000, 11],
+    ];
+
+    it('heightFactor e il reciproco dell argmax di v*avail(v), non un numero scelto', () => {
+        // Il supplemento verticale e' geometria: il rettangolo inscritto di area
+        // massima ha altezza v* volte quella del box, quindi per ospitare un
+        // contenuto alto ch serve un box alto ch/v*. Ricerca a griglia, l'argmax
+        // e' entro un passo dal migliore punto campionato.
+        for (const form of ALL_FORMS) {
+            let best = 0;
+            let argmax = 1;
+            for (let i = 1; i <= 10000; i++) {
+                const v = i / 10000;
+                const area = v * availableAt(form, v);
+                if (area > best) { best = area; argmax = v; }
+            }
+            expect(1 / argmax).toBeCloseTo(SHAPE_REGISTRY[form].sizing.heightFactor, 2);
+        }
+    });
+
+    it('riproduce gli otto casi misurati sull applicazione', () => {
+        // Politica della misura: H_min 48. Passata esplicitamente perche' il
+        // valore in tabella e' una decisione aperta e i numeri qui no.
+        const measured = (form: ShapeForm): ShapeSizing =>
+            ({ ...SHAPE_REGISTRY[form].sizing, minBoxHeight: 48 });
+        const cases: Array<[ShapeForm, number, number, number, number]> = [
+            ['ellipse', 27, 14, 39, 48],
+            ['ellipse', 114, 14, 120, 48],
+            ['ellipse', 188, 14, 197, 48],
+            ['ellipse', 60, 43, 85, 61],
+            ['diamond', 27, 14, 39, 48],
+            ['diamond', 114, 14, 161, 48],
+            ['diamond', 188, 14, 266, 48],
+            ['diamond', 60, 43, 120, 86],
+        ];
+        for (const [form, cw, ch, w, h] of cases) {
+            expect(boxForContent(getShapeDescriptor(form), cw, ch, measured(form))).toEqual({ w, h });
+        }
+    });
+
+    it('forma chiusa e inversa numerica danno lo stesso box', () => {
+        for (const form of ALL_FORMS) {
+            const desc = getShapeDescriptor(form);
+            for (const [cw, ch] of CONTENT_GRID) {
+                expect(boxForContentNumeric(desc, cw, ch)).toEqual(boxForContent(desc, cw, ch));
+            }
+        }
+    });
+
+    it('il box restituito contiene davvero il contenuto', () => {
+        for (const form of ALL_FORMS) {
+            const desc = getShapeDescriptor(form);
+            for (const [cw, ch] of CONTENT_GRID) {
+                const box = boxForContent(desc, cw, ch);
+                const usable = contentRect(desc, box.w, box.h, ch);
+                expect(box.h).toBeGreaterThanOrEqual(ch);
+                // Arrotondamento per eccesso: mai sotto, nemmeno di un decimo di pixel.
+                expect(usable.w).toBeGreaterThanOrEqual(cw);
+                expect(usable.h).toBe(ch);
+            }
+        }
+    });
+
+    it('nessuna forma in tabella arriva alla guardia di larghezza nulla', () => {
+        // La guardia in boxForContent scatta se la banda riempie il box, cioe' se
+        // heightFactor e' troppo piccolo per il profilo della forma. Qui non deve
+        // mai succedere, altrimenti il box tornerebbe dalla via degenere.
+        for (const form of ALL_FORMS) {
+            const desc = getShapeDescriptor(form);
+            for (const [, ch] of CONTENT_GRID) {
+                const box = boxForContent(desc, 100, ch);
+                expect(contentRect(desc, 1000, box.h, ch).w).toBeGreaterThan(0);
+            }
+        }
+    });
+
+    it('rect e rounded: identita, salvo i pavimenti gia in CSS', () => {
+        for (const form of ['rect', 'rounded'] as ShapeForm[]) {
+            const desc = getShapeDescriptor(form);
+            for (const [cw, ch] of CONTENT_GRID) {
+                expect(boxForContent(desc, cw, ch)).toEqual({
+                    w: Math.max(140, Math.ceil(cw)),   // irStyle.ts min-width
+                    h: Math.max(40, Math.ceil(ch)),    // irStyle.ts min-height
+                });
+            }
+            // e il contorno non toglie nulla al contenuto, a nessuna banda
+            for (const ch of [0, 10, 40, 80]) {
+                expect(contentRect(desc, 170, 80, ch).w).toBe(170);
+                expect(contentRect(desc, 170, 80, ch).x).toBe(0);
+            }
+        }
+    });
+
+    it('il cerchio resta quadrato', () => {
+        const desc = getShapeDescriptor('circle');
+        for (const [cw, ch] of CONTENT_GRID) {
+            const box = boxForContent(desc, cw, ch);
+            expect(box.w).toBe(box.h);
+        }
+    });
+
+    it('contentRect segue le formule di banda note, e non il rettangolo inscritto', () => {
+        // Riga singola alta 14 in un nodo 170x80 (il caso misurato).
+        const w = 170, h = 80, hL = 14;
+        const ellipse = contentRect(getShapeDescriptor('ellipse'), w, h, hL);
+        const diamond = contentRect(getShapeDescriptor('diamond'), w, h, hL);
+        expect(ellipse.w).toBeCloseTo(w * Math.sqrt(1 - (hL / h) ** 2), 6);
+        expect(diamond.w).toBeCloseTo(w * (1 - hL / h), 6);
+        // Il rettangolo inscritto statico darebbe 120,2 e 85: molto meno.
+        expect(ellipse.w).toBeGreaterThan(w / Math.SQRT2);
+        expect(diamond.w).toBeGreaterThan(w / 2);
+    });
+
+    it('contentRect e centrato e si stringe al crescere della banda', () => {
+        for (const form of ALL_FORMS) {
+            const desc = getShapeDescriptor(form);
+            let previous = Infinity;
+            for (const ch of [0, 10, 20, 40, 60, 80]) {
+                const r = contentRect(desc, 170, 80, ch);
+                expect(r.x).toBeCloseTo((170 - r.w) / 2, 10);
+                expect(r.y).toBeCloseTo((80 - ch) / 2, 10);
+                expect(r.w).toBeLessThanOrEqual(previous + 1e-9);
+                previous = r.w;
+            }
+        }
+    });
+
+    it('input degeneri non producono NaN ne misure negative', () => {
+        for (const form of ALL_FORMS) {
+            const desc = getShapeDescriptor(form);
+            for (const bad of [NaN, Infinity, -Infinity, -50]) {
+                const box = boxForContent(desc, bad, bad);
+                expect(Number.isFinite(box.w) && Number.isFinite(box.h)).toBe(true);
+                expect(box.w).toBeGreaterThanOrEqual(0);
+                expect(box.h).toBeGreaterThanOrEqual(0);
+                const r = contentRect(desc, bad, bad, bad);
+                expect(Number.isFinite(r.x) && Number.isFinite(r.y)).toBe(true);
+                expect(r.w).toBeGreaterThanOrEqual(0);
+                expect(r.h).toBeGreaterThanOrEqual(0);
+            }
+            // contenuto piu' alto del box: larghezza nulla, non negativa
+            expect(contentRect(desc, 170, 80, 500).h).toBe(80);
+            expect(contentRect(desc, 170, 80, 500).w).toBeGreaterThanOrEqual(0);
+        }
     });
 });
