@@ -176,3 +176,51 @@ node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/pr
 ```
 
 Nota di scope: `frontend/scripts/probe/` e' una directory nuova, sorella di `scripts/smoke/`. Non era nel perimetro dichiarato.
+
+---
+
+## 9. Politica di taglia ratificata: contenuto piu' supplemento
+
+**Decisione di Alfonso, 2026-08-14**: una forma geometrica non nasce con una taglia fissa e non fa content-hug puro. Ha una dimensione **ulteriore al contenuto**: il box si ricava dal contenuto piu' il supplemento che il contorno richiede.
+
+### 9.1 La formula
+
+```
+B_h = max(H_min, k_forma · h)                  supplemento verticale (headroom)
+B_w = max( ceil(w / (1 − 2·inset(t))),         larghezza dal contorno
+           ceil(aspetto_min · B_h) )           pavimento d'aspetto
+    con t = 0.5 + h / (2·B_h)
+```
+
+`w` e `h` sono le dimensioni dell'inchiostro del contenuto, non dello span. `inset` e' `insetFractionAt` del descriptor, cioe' il profilo di semilarghezza gia' in `shapeRegistry.ts`: **terzo consumatore della stessa funzione**, dopo il rientro degli handle e il ritaglio a banda.
+
+Parametri misurati in questa passata: `H_min` = 48, `k` = √2 per ellisse e cerchio e 2 per il rombo (i fattori del rettangolo inscritto di area minima), `aspetto_min` = 0,8. Su `rect` e `rounded` l'inset e' nullo e la formula degenera nell'identita': nessun cambiamento.
+
+Due dettagli che sembrano cosmetici e non lo sono. L'arrotondamento e' per **eccesso**: con `round` il caso "label corta" perdeva 0,2 px e usciva dal contorno. Il **pavimento d'aspetto** serve perche' senza di esso un'etichetta corta produce una lente verticale (28 x 48 px per un testo largo 27).
+
+### 9.2 Verifica sull'app reale `[misurato]`
+
+Contenimento controllato sull'inchiostro, non sullo span. Otto casi su otto dentro il contorno:
+
+| forma | contenuto | contenuto (px) | box (px) | crescita |
+|-------|-----------|----------------|----------|----------|
+| ellisse | label corta | 27 x 14 | 39 x 48 | 1,44x 3,43x |
+| ellisse | label media | 114 x 14 | 120 x 48 | 1,05x 3,43x |
+| ellisse | label lunga | 188 x 14 | 197 x 48 | 1,05x 3,43x |
+| ellisse | label + 2 righe | 60 x 43 | 85 x 61 | 1,42x 1,41x |
+| rombo | label corta | 27 x 14 | 39 x 48 | 1,44x 3,43x |
+| rombo | label media | 114 x 14 | 161 x 48 | 1,41x 3,43x |
+| rombo | label lunga | 188 x 14 | 266 x 48 | 1,41x 3,43x |
+| rombo | label + 2 righe | 60 x 43 | 120 x 86 | 2,00x 2,00x |
+
+La crescita orizzontale dell'ellisse a riga singola e' del 5%: il contorno, alla banda della riga, e' quasi alla sua larghezza massima. Il rombo paga il 41%, che e' il costo geometrico del rombo e non un difetto della politica. Quando il contenuto e' alto (due righe) entrambe le forme convergono ai fattori del rettangolo inscritto, cioe' la politica degrada con continuita' nella soluzione di area minima.
+
+### 9.3 Vincolo di meccanismo
+
+Il CSS da solo non basta e la ragione e' misurata: su un box shrink-to-fit le percentuali di padding valgono zero nel calcolo intrinseco, quindi il box **non cresce** attorno al contenuto (misurato: resta 135,8 px e a crescere e' il rientro, non la scatola). Serve una misura del contenuto.
+
+Perche' la misura non produca un ciclo, il contenuto va reso indipendente dalla larghezza del box: wrapper a `width: max-content`, cosi' la sua dimensione e' dettata dal testo e il punto fisso si raggiunge in un passo. Nel repo non esiste oggi alcun `ResizeObserver` sul contenuto dei nodi (`grep`: solo `MappingLinesOverlay.tsx` e `Catalog.tsx`), quindi e' macchinario nuovo, ma locale a `IRNodeContent`.
+
+### 9.4 Riproducibilita'
+
+`frontend/scripts/probe/hug-supplement.ts`, dev server attivo.
