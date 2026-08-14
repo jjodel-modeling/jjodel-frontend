@@ -126,11 +126,41 @@ Due condizioni, entrambe da verificare prima di scrivere il codice:
    `useUpdateNodeInternals()` sul cambio di forma, altrimenti il bordo misurato resta
    quello precedente. **Non verificato.**
 
-**B6.** Sul diamante gli archi si agganciano al **rettangolo circoscritto**, non al rombo.
-Dedotto dal codice (§B2: l'asse trasversale è al bordo del box, e la forma non entra nel
-calcolo), non osservato a schermo. Un commento indipendente in `irStyle.ts` afferma la
-stessa cosa: «React Flow piazza gli handle sulla box `.mm-node` con il floor applicato →
-gli archi mancano il bordo visibile». **Da confermare visivamente.**
+**B6 — CONFERMATO A SCHERMO (2026-08-14).** Sul diamante gli archi si agganciano al
+**rettangolo circoscritto**, non al rombo: l'atterraggio lascia il vuoto fra la punta della
+freccia e il profilo della forma. Verdetto visivo di Alfonso. Coerente con la deduzione da
+codice (§B2: l'asse trasversale è al bordo del box e la forma non entra nel calcolo) e con
+il commento indipendente in `irStyle.ts` («React Flow piazza gli handle sulla box `.mm-node`
+con il floor applicato → gli archi mancano il bordo visibile»).
+
+Nota sulla visibilità del difetto: l'arco che atterra sulla **metà** di un lato non mostra
+il vuoto, perché i vertici del rombo cadono esattamente sui punti medi dei lati del box. Il
+difetto emerge quando su uno stesso lato arrivano più archi e `computeSidePositions` li
+distribuisce fuori dal centro. Vale per ogni forma inscritta, non solo per il rombo.
+
+**B7 — React Flow rimisura gli handle a dimensioni invariate? NO.** Letto sul sorgente
+installato, `@xyflow/react` **12.10.2**, `@xyflow/system/dist/esm/index.js:1797` e seguenti:
+
+```js
+const dimensionChanged = node.measured.width  !== dimensions.width
+                      || node.measured.height !== dimensions.height;
+const doUpdate = !!(dimensions.width && dimensions.height &&
+    (dimensionChanged || !node.internals.handleBounds || update.force));
+```
+
+I bound sono ricalcolati solo se cambiano le dimensioni del nodo, se non esistono ancora, o
+se l'aggiornamento arriva con `force: true`. Spostare un handle **dentro** un nodo di
+dimensioni invariate non fa scattare nulla.
+
+La buona notizia è che la misura è puramente DOM (`:870`): `getHandleBounds` fa
+`querySelectorAll` sugli handle e ne legge `getBoundingClientRect()`, relativizzando al
+box del nodo. Qualunque offset applicato via CSS **viene onorato**, purché una rimisura
+avvenga. `useUpdateNodeInternals()` (`react/dist/esm/index.js:3730-3762`) è la via
+supportata e passa `force: true`.
+
+**Conseguenza operativa**: l'innesto di B5 funziona, ma va accompagnato da una rimisura
+esplicita a ogni cambio della forma risolta (e dei suoi parametri geometrici), non solo al
+resize del nodo.
 
 **Nota.** `ir/edgeEndpoints.ts` non riguarda la geometria: decide quale elemento del
 modello sia l'estremo di un edge view (`natureOf`, `isUsableEndpointExpr`).
@@ -151,7 +181,7 @@ idempotente per costruzione. Costo e rischio bassi.
 
 | Rischio | Impatto | Nota |
 |---------|---------|------|
-| Handle sul box rettangolare (§5) | Alto | Punto di innesto individuato; resta da verificare il re-measure di React Flow. |
+| Handle sul box rettangolare (§5) | Alto | **Difetto confermato a schermo.** Punto di innesto individuato (B5) e re-measure chiarito (B7): serve `useUpdateNodeInternals` sul cambio di forma. |
 | Risoluzione per istanza in hot path (§2.1) | Medio | Memoizzazione necessaria. |
 | Caps non statiche (§2.2) | Medio | Invalida il gate di authoring nella forma disegnata in chat. |
 | Contenuto HTML non clippato (§4) | Medio | Richiede `labelBox` come inset inline. |
@@ -162,7 +192,7 @@ idempotente per costruzione. Costo e rischio bassi.
    (avviso se almeno una forma possibile non è contenitore), o la composizione va
    permessa e il problema lasciato all'autore della view?
 2. `collapsedForm` eredita i parametri geometrici della forma espansa o li ridichiara?
-3. B6 va confermato a schermo prima di aprire il capitolo ancore.
+3. ~~B6 va confermato a schermo~~ **fatto, 2026-08-14: il vuoto c'è.** La domanda aperta diventa come calcolare l'inset: contorno campionato generico, oppure `insetAt(side, t)` in forma chiusa per descriptor.
 
 ## 9. File letti
 
