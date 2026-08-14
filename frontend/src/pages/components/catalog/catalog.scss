@@ -103,6 +103,41 @@
   }
 }
 
+/* Sort control - height 40px, matches .view-toggle and .projects-search */
+.catalog-sort {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 8px 0 12px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  transition: all 150ms ease;
+
+  &:focus-within {
+    border-color: #d1d5db;
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(107, 114, 128, 0.1);
+  }
+
+  > i {
+    color: #9ca3af;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  select {
+    border: none;
+    background: none;
+    outline: none;
+    font-family: 'Inter Variable', -apple-system, sans-serif;
+    font-size: 14px;
+    color: #1f2937;
+    cursor: pointer;
+  }
+}
+
 /* Projects Search Bar - height 40px */
 .projects-search {
   display: flex;

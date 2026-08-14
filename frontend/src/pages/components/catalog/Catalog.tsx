@@ -10,7 +10,6 @@ import { ProjectsApi } from "../../../api/persistance";
 import { buildProjectExportJson } from '../../../model/megamodelPersistence';
 import { getRuntimeMegamodel } from '../../../model/megamodelRuntime';
 import "./catalog.scss"
-import _ from "lodash";
 
 // Hidden - using empty state instead
 export const CatalogInfoCard = (props: any) => null;
@@ -38,6 +37,31 @@ const PROJECTS_PER_BATCH = 12;
 // A gallery batch is this many complete rows. The number of cards it stands for depends on
 // how many columns the grid actually laid out, which is a function of the container width.
 const GRID_ROWS_PER_BATCH = 4;
+
+type SortMode = 'modified' | 'oldest' | 'created' | 'name' | 'name-desc';
+
+const SORT_DEFAULT: SortMode = 'modified';
+
+// Numeric and case insensitive: the list mixes "Testbed 3", "testbed2" and "testbed 4", which a
+// plain code-unit comparison would order by capitalisation before it orders by name.
+const nameCollator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+
+// Projects saved before the creation timestamp existed carry no value for it; they sort last
+// under "Recently created" rather than poisoning the comparator with NaN.
+const timeOf = (value: unknown): number => {
+    const t = typeof value === 'number' ? value : Date.parse(String(value ?? ''));
+    return Number.isFinite(t) ? t : 0;
+};
+
+const SORT_MODES: Record<SortMode, { label: string; compare: (a: LProject, b: LProject) => number }> = {
+    modified:    { label: 'Last modified',    compare: (a, b) => timeOf(b.lastModified) - timeOf(a.lastModified) },
+    oldest:      { label: 'Oldest modified',  compare: (a, b) => timeOf(a.lastModified) - timeOf(b.lastModified) },
+    created:     { label: 'Recently created', compare: (a, b) => timeOf(b.creation) - timeOf(a.creation) },
+    name:        { label: 'Name (A to Z)',    compare: (a, b) => nameCollator.compare(a.name || '', b.name || '') },
+    'name-desc': { label: 'Name (Z to A)',    compare: (a, b) => nameCollator.compare(b.name || '', a.name || '') },
+};
+
+const SORT_ORDER: SortMode[] = ['modified', 'oldest', 'created', 'name', 'name-desc'];
 
 const ListViewWithLoadMore = ({
     projects,
@@ -187,6 +211,17 @@ const Catalog = (props: ChildrenType) => {
         } else {
             searchParams.set('filter', tab);
         }
+        setSearchParams(searchParams);
+    }, [searchParams, setSearchParams]);
+
+    // Sort mode lives in the URL like the tab filter above: it survives a reload and can be
+    // shared, and it needs no extra client-side storage.
+    const sortParam = searchParams.get('sort') as SortMode | null;
+    const sortMode: SortMode = sortParam && sortParam in SORT_MODES ? sortParam : SORT_DEFAULT;
+
+    const setSortMode = useCallback((mode: SortMode) => {
+        if (mode === SORT_DEFAULT) searchParams.delete('sort');
+        else searchParams.set('sort', mode);
         setSearchParams(searchParams);
     }, [searchParams, setSearchParams]);
 
@@ -418,8 +453,7 @@ const Catalog = (props: ChildrenType) => {
             );
         }
 
-        // Sort by last modified (default)
-        return _.sortBy(items, (obj: LProject) => -new Date(obj.lastModified).getTime());
+        return [...items].sort(SORT_MODES[sortMode].compare);
     };
 
     const filteredProjects = getFilteredProjects();
@@ -660,8 +694,21 @@ const Catalog = (props: ChildrenType) => {
                             </button>
                         </div>
 
-                        {/* Controls: View Toggle + Search */}
+                        {/* Controls: Sort + View Toggle + Search */}
                         <div className="catalog-controls">
+                            <div className="catalog-sort">
+                                <i className="bi bi-sort-down" aria-hidden="true" />
+                                <select
+                                    value={sortMode}
+                                    onChange={(e) => setSortMode(e.target.value as SortMode)}
+                                    aria-label="Sort projects"
+                                >
+                                    {SORT_ORDER.map(mode => (
+                                        <option key={mode} value={mode}>{SORT_MODES[mode].label}</option>
+                                    ))}
+                                </select>
+                            </div>
+
                             <div className="view-toggle">
                                 <button
                                     className={`view-btn ${viewMode === 'slider' ? 'active' : ''}`}
