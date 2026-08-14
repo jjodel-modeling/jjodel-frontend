@@ -9,8 +9,66 @@ import {
     FormSection,
     forPredicateKind,
     type PathBuilderFeatures,
+    type SelectOptionGroup,
 } from '../../../ui';
-import type { VertexViewIR } from '../ir/irTypes';
+import type { AuthoringMetaclassPins, VertexViewIR } from '../ir/irTypes';
+
+/**
+ * One entry of the metaclass picker: a class, and the metamodel that declares it.
+ *
+ * `ir.metaclasses` holds NAMES, so the name alone cannot say which class was picked
+ * when two metamodels declare the same one. The picker therefore carries the id and
+ * writes it as the authoring pin, while the name keeps going into `metaclasses`.
+ */
+export interface MetaclassChoice {
+    id: string;
+    name: string;
+    metamodelName: string;
+}
+
+/**
+ * The picker options, grouped by metamodel. `value` is the class ID (the name is
+ * ambiguous by construction — that is the whole point), `label` the class name.
+ *
+ * `taken` are the names already in the view's list: excluding by NAME is correct
+ * even though the options are keyed by id, because adding `B.Person` when `Person`
+ * is already listed would write the same string into `metaclasses` twice.
+ */
+export function metaclassGroups(choices: MetaclassChoice[], taken: string[]): SelectOptionGroup[] {
+    const groups: SelectOptionGroup[] = [];
+    const byMetamodel = new Map<string, SelectOptionGroup>();
+    for (const c of choices) {
+        if (taken.includes(c.name)) continue;
+        let g = byMetamodel.get(c.metamodelName);
+        if (!g) {
+            g = { label: c.metamodelName, options: [] };
+            byMetamodel.set(c.metamodelName, g);
+            groups.push(g);
+        }
+        g.options.push({ value: c.id, label: c.name });
+    }
+    return groups.filter((g) => g.options.length > 0);
+}
+
+/**
+ * How a selected metaclass reads in the list: the bare name, qualified with its
+ * metamodel only when more than one metamodel declares that name.
+ *
+ * The qualification comes from the PIN, not from the first candidate: the pin is
+ * what says which of the homonyms was picked. Without a pin (view authored before
+ * pins existed) the name stays bare — inventing a metamodel there would be a guess.
+ */
+export function metaclassChipLabel(
+    name: string,
+    pins: AuthoringMetaclassPins | undefined,
+    choices: MetaclassChoice[],
+): string {
+    const homonyms = choices.filter((c) => c.name === name);
+    if (homonyms.length < 2) return name;
+    const pinned = pins?.[name];
+    const hit = pinned ? homonyms.find((c) => c.id === pinned) : undefined;
+    return hit ? `${hit.metamodelName}.${name}` : name;
+}
 
 export interface MatchingSectionProps {
     draft: VertexViewIR;
@@ -18,6 +76,8 @@ export interface MatchingSectionProps {
     features: PathBuilderFeatures | null;
     featuresHint: string;
     classNames: string[];
+    /** Every class of every project metamodel, with the metamodel that declares it. */
+    metaclassChoices: MetaclassChoice[];
 }
 
 /**
@@ -39,11 +99,12 @@ export const MatchingSection: React.FC<MatchingSectionProps> = ({
     features,
     featuresHint,
     classNames,
+    metaclassChoices,
 }) => {
     const mcs = draft.metaclasses;
     const isWildcard = mcs === '*';
     const list = Array.isArray(mcs) ? mcs : [];
-    const available = classNames.filter((n) => !list.includes(n));
+    const available = metaclassGroups(metaclassChoices, list);
     const hasPredicate = draft.predicate !== undefined;
 
     // --- metaclasses handlers ---
@@ -51,9 +112,17 @@ export const MatchingSection: React.FC<MatchingSectionProps> = ({
         patch({ ...draft, metaclasses: checked ? '*' : [] });
     const removeMetaclass = (idx: number) =>
         patch({ ...draft, metaclasses: list.filter((_, i) => i !== idx) });
-    const addMetaclass = (name: string) => {
-        if (!name || list.includes(name)) return;
-        patch({ ...draft, metaclasses: [...list, name] });
+    // The picker yields a class ID: the name goes into `metaclasses` as always, the
+    // id into the pin map, so the choice between two homonyms survives the patch
+    // (withMetaclassPins honours a pin the caller declares on `next`).
+    const addMetaclass = (classId: string) => {
+        const hit = metaclassChoices.find((c) => c.id === classId);
+        if (!hit || list.includes(hit.name)) return;
+        patch({
+            ...draft,
+            metaclasses: [...list, hit.name],
+            authoringMetaclassPins: { ...(draft.authoringMetaclassPins ?? {}), [hit.name]: hit.id },
+        });
     };
 
     // --- predicate handlers ---
@@ -90,7 +159,9 @@ export const MatchingSection: React.FC<MatchingSectionProps> = ({
                                 key={name}
                                 style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-1)', marginTop: 4 }}
                             >
-                                <span style={{ flex: 1 }}>{name}</span>
+                                <span style={{ flex: 1 }}>
+                                    {metaclassChipLabel(name, draft.authoringMetaclassPins, metaclassChoices)}
+                                </span>
                                 <Button variant="ghost" size="sm" onClick={() => removeMetaclass(idx)} title="Remove">
                                     <i className="bi bi-x" aria-hidden="true" />
                                 </Button>
@@ -101,7 +172,7 @@ export const MatchingSection: React.FC<MatchingSectionProps> = ({
                         )}
                         <div style={{ marginTop: 4 }}>
                             <Select
-                                options={available.map((n) => ({ value: n, label: n }))}
+                                options={available}
                                 value=""
                                 placeholder="Add metaclass…"
                                 onChange={(e) => addMetaclass(e.target.value)}

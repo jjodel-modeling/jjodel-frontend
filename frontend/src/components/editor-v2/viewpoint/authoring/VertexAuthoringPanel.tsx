@@ -11,7 +11,7 @@ import { defaultResizableForForm } from '../../nodes/nodeSizing';
 import { LabelListEditor } from './LabelListEditor';
 import { FieldCompartmentListEditor } from './FieldCompartmentListEditor';
 import { BadgeListEditor } from './BadgeListEditor';
-import { MatchingSection } from './MatchingSection';
+import { MatchingSection, type MetaclassChoice } from './MatchingSection';
 import { metaclassAmbiguityWarning } from './authoringMessages';
 import { IRIdentityFields, IRSourceBody, irTabBodyStyle, type IRIdentityProps, type IRTabId } from './irTabs';
 import { JjodelEvents } from '../../../../events/registry';
@@ -102,19 +102,28 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
     }, [draft, view.id]);
 
     // Identity universe for the metaclass pin, read once per mount: every class of
-    // every project metamodel, in project iteration order. `classNames` below stays
-    // the deduped NAME list the PredicateBuilder wants; this one keeps the pointer.
-    const allClasses = useMemo<MetaclassRef[]>(() => {
+    // every project metamodel, in project iteration order, each with the metamodel
+    // that declares it — what the picker groups its options by, and what lets it
+    // write the pin of the class actually chosen. `classNames` below stays the
+    // deduped NAME list the PredicateBuilder wants.
+    const metaclassChoices = useMemo<MetaclassChoice[]>(() => {
         const metamodels = LProject.getProject()?.metamodels ?? [];
-        const out: MetaclassRef[] = [];
+        const out: MetaclassChoice[] = [];
         for (const mm of metamodels) {
             let info;
             try { info = getMetaclassInfo((mm as any).id, (mm as any).id); } catch { continue; }
-            for (const c of info.allClasses) out.push({ id: c.id, name: c.name });
+            const metamodelName = (mm as any).name || 'unnamed metamodel';
+            for (const c of info.allClasses) out.push({ id: c.id, name: c.name, metamodelName });
         }
         return out;
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    /** The same universe reduced to what pin resolution matches on, same order. */
+    const allClasses = useMemo<MetaclassRef[]>(
+        () => metaclassChoices.map((c) => ({ id: c.id, name: c.name })),
+        [metaclassChoices],
+    );
 
     // Legacy identity: the classes this view is applied to. appliableToClasses mixes
     // D-level type names with M2 class pointers (cf. EnableIRPanel), so only real
@@ -283,6 +292,7 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                     features={features}
                     featuresHint={FEATURES_HINT}
                     classNames={classNames}
+                    metaclassChoices={metaclassChoices}
                 />
                 <div className="jj-field" style={{ marginTop: 'var(--space-2)' }}>
                     <HelpText>Multiple rules are not yet editable here. Single conditional fields (when/then/else) are edited now directly in Basic, next to each field.</HelpText>

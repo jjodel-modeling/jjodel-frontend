@@ -20,6 +20,7 @@ import { validateIR } from '../ir/irValidate';
 import { defaultEdgeViewIR } from '../ir/irDefaults';
 import type { EdgeViewIR, TextSource, EdgeTermination } from '../ir/irTypes';
 import { resolveMetaclassId, withMetaclassPins, type MetaclassRef } from '../ir/metaclassPin';
+import { metaclassChipLabel, metaclassGroups, type MetaclassChoice } from './MatchingSection';
 import {
     natureOf,
     isUsableEndpointExpr,
@@ -168,19 +169,28 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
     }, [draft, view.id]);
 
     // Identity universe for the metaclass pin, read once per mount: every class of
-    // every project metamodel, in project iteration order. `classNames` below stays
-    // the deduped NAME list the PredicateBuilder wants; this one keeps the pointer.
-    const allClasses = useMemo<MetaclassRef[]>(() => {
+    // every project metamodel, in project iteration order, each with the metamodel
+    // that declares it — what the picker groups its options by, and what lets it
+    // write the pin of the class actually chosen. `classNames` below stays the
+    // deduped NAME list the PredicateBuilder wants.
+    const metaclassChoices = useMemo<MetaclassChoice[]>(() => {
         const metamodels = LProject.getProject()?.metamodels ?? [];
-        const out: MetaclassRef[] = [];
+        const out: MetaclassChoice[] = [];
         for (const mm of metamodels) {
             let info;
             try { info = getMetaclassInfo((mm as any).id, (mm as any).id); } catch { continue; }
-            for (const c of info.allClasses) out.push({ id: c.id, name: c.name });
+            const metamodelName = (mm as any).name || 'unnamed metamodel';
+            for (const c of info.allClasses) out.push({ id: c.id, name: c.name, metamodelName });
         }
         return out;
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    /** The same universe reduced to what pin resolution matches on, same order. */
+    const allClasses = useMemo<MetaclassRef[]>(
+        () => metaclassChoices.map((c) => ({ id: c.id, name: c.name })),
+        [metaclassChoices],
+    );
 
     // Legacy identity: the classes this view is applied to. appliableToClasses mixes
     // D-level type names with M2 class pointers (cf. EnableIRPanel), so only real
@@ -345,12 +355,19 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
     const mcs = draft.metaclasses;
     const isWildcard = mcs === '*';
     const list = Array.isArray(mcs) ? mcs : [];
-    const available = classNames.filter((n) => !list.includes(n));
+    const available = metaclassGroups(metaclassChoices, list);
     const setWildcard = (checked: boolean) => patch({ ...draft, metaclasses: checked ? '*' : [] });
     const removeMetaclass = (idx: number) => patch({ ...draft, metaclasses: list.filter((_, i) => i !== idx) });
-    const addMetaclass = (name: string) => {
-        if (!name || list.includes(name)) return;
-        patch({ ...draft, metaclasses: [...list, name] });
+    // The picker yields a class ID: the name goes into `metaclasses` as always, the
+    // id into the pin map, so the choice between two homonyms survives the patch.
+    const addMetaclass = (classId: string) => {
+        const hit = metaclassChoices.find((c) => c.id === classId);
+        if (!hit || list.includes(hit.name)) return;
+        patch({
+            ...draft,
+            metaclasses: [...list, hit.name],
+            authoringMetaclassPins: { ...(draft.authoringMetaclassPins ?? {}), [hit.name]: hit.id },
+        });
     };
 
     // --- matching (reference) ---
@@ -495,7 +512,9 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
                                 key={name}
                                 style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-1)', marginTop: 4 }}
                             >
-                                <span style={{ flex: 1 }}>{name}</span>
+                                <span style={{ flex: 1 }}>
+                                    {metaclassChipLabel(name, draft.authoringMetaclassPins, metaclassChoices)}
+                                </span>
                                 <Button variant="ghost" size="sm" onClick={() => removeMetaclass(idx)} title="Remove">
                                     <i className="bi bi-x" aria-hidden="true" />
                                 </Button>
@@ -508,7 +527,7 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
                         )}
                         <div style={{ marginTop: 4 }}>
                             <Select
-                                options={available.map((n) => ({ value: n, label: n }))}
+                                options={available}
                                 value=""
                                 placeholder="Add metaclass…"
                                 onChange={(e) => addMetaclass(e.target.value)}

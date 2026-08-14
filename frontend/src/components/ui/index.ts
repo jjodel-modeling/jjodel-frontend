@@ -11,7 +11,7 @@ export { Input } from './Input';
 export type { InputProps } from './Input';
 
 export { Select } from './Select';
-export type { SelectProps, SelectOption, SelectSize } from './Select';
+export type { SelectProps, SelectOption, SelectOptionGroup, SelectOptions, SelectSize } from './Select';
 
 export { JjSelect } from './JjSelect';
 export type { JjSelectProps } from './JjSelect';
