@@ -1,14 +1,14 @@
 # PROTOCOL.md — protocollo di esecuzione per Claude Code
 
 Posizione: `docs/PROTOCOL.md` nel repo `jjodel-frontend`.
-Versione: 1.0 (2026-08-01)
+Versione: 1.1 (2026-08-15)
 
 Questo file contiene le clausole che prima venivano ricopiate per esteso in ogni prompt. I prompt ora le citano per numero. Se una clausola cambia, cambia qui e vale ovunque da subito.
 
 Riga da mettere in testa a ogni prompt Claude Code:
 
 ```
-Protocollo: docs/PROTOCOL.md — clausole P1..P9 applicabili (tutte salvo deroga esplicita nel prompt).
+Protocollo: docs/PROTOCOL.md — clausole P1..P10 applicabili (tutte salvo deroga esplicita nel prompt).
 ```
 
 Le deroghe si scrivono così: `Deroga: P4 non si applica (motivo: ...)`.
@@ -106,6 +106,21 @@ Formato:
 La semantica dei campi di autovalutazione, incluse le regole di compilazione di `Corregge` e `Causa` e la tassonomia dei valori ammessi, è definita in `CLAUDE.md` §21.3. Questo file non la duplica. Il blocco di formato qui sopra è verificato byte a byte contro `CLAUDE.md` §21.2 da `npm run check:docs`.
 
 Il log non sostituisce i commit message, e il discovery report non sostituisce il log: sono tre artefatti distinti.
+
+## P10 — Dove vivono i documenti
+
+Il Project Knowledge tiene lo stato corrente, il repo tiene la storia. Sei documenti nel KB, per
+nome: `contesto_progetto.md`, `sessione_CORRENTE.md`, `spec_attive.md`, `INDICE_ARCHIVIO.md`,
+`template-ir-authoring`, `template-task-visivi`.
+
+Tutto il resto si salva in `docs/`: prompt in `docs/prompts/`, memo di ratifica in
+`docs/ratifiche/`, checkpoint in `docs/sessioni/`, discovery in `docs/discovery/`, materiale di
+lavoro in `docs/archivio/`, allegati non testuali in `docs/archivio/artefatti/`. Il prefisso e'
+`claude_` ovunque tranne che per i discovery report, che seguono il naming di P4.
+
+Archiviare non e' ripulire: la copia nel repo e la cancellazione dal KB sono due passi distinti, e
+un documento lasciato in entrambi i posti continua a competere in retrieval con la propria versione
+piu' recente. Storia in `docs/archivio/triage_kb_2026-08-15.md`.
 
 ---
 
