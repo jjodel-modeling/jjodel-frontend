@@ -245,6 +245,10 @@ export function compileView(viewId: string, ir: NodeViewIR): CompiledView {
     const form = compileConditional(ir.shape.form, 'rect' as const, deps);
     const fill = ir.shape.fill !== undefined ? compileConditional(ir.shape.fill, '', deps) : null;
     const border = ir.shape.border ?? null;
+    // Marker (asse marker, 2026-08-15): same compile shape as fill — '' means
+    // "no marker" when a conditional has no matching branch. Predicates inside
+    // the conditional extend `deps` through compileConditional as usual.
+    const marker = ir.shape.marker !== undefined ? compileConditional(ir.shape.marker, '', deps) : null;
 
     const labels: CompiledLabel[] = (ir.shape.labels ?? []).map(l => {
         let text: CompiledAccessor;
@@ -326,6 +330,7 @@ export function compileView(viewId: string, ir: NodeViewIR): CompiledView {
         form,
         fill,
         border,
+        marker,
         labels,
         badges,
         fieldCompartments,

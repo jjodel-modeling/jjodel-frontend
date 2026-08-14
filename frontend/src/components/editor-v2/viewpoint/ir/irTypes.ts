@@ -115,7 +115,19 @@ export interface FieldCompartmentSpec {
 export interface ShapeSpec {
     form: Conditional<ShapeForm>;
     fill?: Conditional<string>;
-    border?: { color: string; width: number; style: 'solid' | 'dashed' | 'dotted' };
+    /** `double` (asse bordo, 2026-08-15): CSS-native sulle forme CSS (due linee da
+     *  width >= 3), overdraw a due polygon sulle forme SVG (IRNodeContent). */
+    border?: { color: string; width: number; style: 'solid' | 'dashed' | 'dotted' | 'double' };
+    /**
+     * Notation marker drawn inside the shape (asse marker, 2026-08-15): id from
+     * markerRegistry.ts (gateway x/plus, timer clock, history H, ...). Open
+     * vocabulary like BadgeSpec.icon — an id outside the registry renders
+     * nothing. Conditional so the same view can switch marker per instance
+     * (e.g. gateway kind by attribute). Absent = no marker. Additive optional
+     * field: no irVersion bump, no VersionFixer migration (same precedent as
+     * authoringMetaclassPins).
+     */
+    marker?: Conditional<string>;
     labels?: LabelSpec[];
     badges?: BadgeSpec[];
 }
@@ -351,6 +363,8 @@ export interface CompiledView {
     form: CompiledConditional<ShapeForm>;
     fill: CompiledConditional<string> | null;
     border: { color: string; width: number; style: string } | null;
+    /** Compiled marker id ('' = none); null when the view declares no marker. */
+    marker: CompiledConditional<string> | null;
     labels: CompiledLabel[];
     badges: CompiledBadge[];
     fieldCompartments: CompiledFieldCompartment[];

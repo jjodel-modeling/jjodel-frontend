@@ -183,6 +183,9 @@ export const SVG_BORDER_DASH: Readonly<Record<string, string | undefined>> = {
     solid: undefined,
     dashed: '6 4',
     dotted: '1 4',
+    // double (asse bordo, 2026-08-15): linee piene; il raddoppio non e' un dash
+    // ma un overdraw a due polygon, reso da IRNodeContent per le forme SVG.
+    double: undefined,
 };
 
 export const SHAPE_REGISTRY: Readonly<Record<ShapeForm, ShapeDescriptor>> = {

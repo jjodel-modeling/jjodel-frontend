@@ -27,6 +27,16 @@ const BASE_CSS = `
 .ir-node-content .ir-label--center { order: 1; text-align: center; margin: auto 0; font-weight: 600; }
 .ir-node-content .ir-label--inside { order: 2; text-align: left; padding: 0 8px; }
 .ir-node-content .ir-label--bottom { order: 4; text-align: center; margin-top: auto; }
+/* Marker layer (asse marker, 2026-08-15): notation symbol inside the shape.
+   "meet" scales the glyph with min(w,h) and centres it, so the marker grows
+   with the shape (BPMN-like). Stacking: shape paint (element background, or
+   the shape SVG at z 0 painted DOM-first) < marker (z 0, DOM-later) < text
+   (z 1, rule below) < badges (z 2) < collapse chip (z 3). */
+.ir-node-content > .ir-marker-svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+/* Text above the marker on every shape: without this, a positioned layer at
+   z 0 paints over in-flow inline content. Same plane the diamond rule already
+   assigns to its children (z 1), generalized to the CSS-painted shapes. */
+.ir-node-content .ir-label, .ir-node-content .ir-compartment { position: relative; z-index: 1; }
 .ir-node-content .ir-badge { position: absolute; font-size: 12px; line-height: 1; z-index: 2; }
 .ir-node-content .ir-badge--tl { top: 2px; left: 4px; }
 .ir-node-content .ir-badge--tr { top: 2px; right: 4px; }
@@ -83,7 +93,11 @@ const BASE_CSS = `
    the collapse-chip (z 3) stay above both. */
 .ir-node-content.ir-shape--diamond { background: transparent; border-color: transparent; box-shadow: none; overflow: visible; justify-content: center; align-items: center; min-width: 0; min-height: 0; }
 .ir-node-content.ir-shape--diamond > .ir-diamond-svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; z-index: 0; }
-.ir-node-content.ir-shape--diamond > :not(.ir-diamond-svg) { position: relative; z-index: 1; }
+/* :not(.ir-marker-svg): il layer marker resta absolute anche nel rombo — questa
+   regola sta a (0,3,0) e senza l'esclusione riposizionerebbe (relative) il
+   marker, battendo la sua regola base a (0,2,0). Misurato in sessione: un
+   wrapper a specificita' inferiore viene ignorato in silenzio. */
+.ir-node-content.ir-shape--diamond > :not(.ir-diamond-svg):not(.ir-marker-svg) { position: relative; z-index: 1; }
 .mm-node:has(> .ir-node-content.ir-shape--diamond) { min-width: 0; min-height: 0; width: 100%; height: 100%; }
 /* Fase 2 (2026-07-28): gate the fill-neutralizer on an EXPLICIT size, not merely on the
    resizable flag. ObjectNode emits the ir-sized class on the .mm-node when the node carries

@@ -18,6 +18,7 @@ import type { ReadCtx } from './irReadCtx';
 import { makeReadCtx } from './irReadCtxLproxy';
 import { rowRenderedChildren } from './irContainment';
 import { getShapeDescriptor, SVG_BORDER_DASH } from './shapeRegistry';
+import { getMarkerDef, MARKER_STROKE_WIDTH, MARKER_VIEWBOX } from './markerRegistry';
 import IRRow from './IRRow';
 
 /** FontFamilyToken -> design-system CSS var. */
@@ -176,6 +177,23 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx }: IRNodeContentP
     const svgStroke = compiled.border?.color ?? 'var(--border-default)';
     const svgStrokeWidth = compiled.border?.width ?? 1;
     const svgDash = SVG_BORDER_DASH[compiled.border?.style ?? 'solid'];
+    // double (asse bordo, 2026-08-15). CSS shapes get it for free from the
+    // inline `border` above (native `border-style: double`, two lines from
+    // width >= 3). SVG shapes overdraw: the same polygon stroked at 3w in the
+    // border color, then at w in the fill color — two w-wide lines with a
+    // w-wide gap, uniform at any aspect ratio thanks to non-scaling-stroke
+    // (a polygon inset in the 0..100 viewBox would scale non-uniformly under
+    // preserveAspectRatio="none"). Declared limit: a translucent fill makes
+    // the gap translucent too.
+    const svgDouble = (compiled.border?.style ?? 'solid') === 'double';
+
+    // Marker (asse marker, 2026-08-15): resolved per instance like form/fill.
+    // Unknown or empty id => no layer (open vocabulary, badge-icon precedent).
+    // Drawn in the border color, as notations do; scales with min(w,h) via
+    // preserveAspectRatio="meet" (irStyle.ts positions the layer).
+    const markerId = compiled.marker ? compiled.marker(readCtx, objectId) : '';
+    const markerDef = getMarkerDef(markerId ? String(markerId) : undefined);
+    const markerColor = compiled.border?.color ?? 'var(--border-default)';
 
     return (
         <div
@@ -184,14 +202,48 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx }: IRNodeContentP
         >
             {svgPainter && (
                 <svg className={svgPainter.svgClassName} viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-                    <polygon
-                        points={svgPainter.points}
-                        vectorEffect="non-scaling-stroke"
-                        fill={svgFill}
-                        stroke={svgStroke}
-                        strokeWidth={svgStrokeWidth}
-                        strokeDasharray={svgDash}
-                    />
+                    {svgDouble ? (
+                        <>
+                            <polygon
+                                points={svgPainter.points}
+                                vectorEffect="non-scaling-stroke"
+                                fill={svgFill}
+                                stroke={svgStroke}
+                                strokeWidth={svgStrokeWidth * 3}
+                            />
+                            <polygon
+                                points={svgPainter.points}
+                                vectorEffect="non-scaling-stroke"
+                                fill="none"
+                                stroke={svgFill}
+                                strokeWidth={svgStrokeWidth}
+                            />
+                        </>
+                    ) : (
+                        <polygon
+                            points={svgPainter.points}
+                            vectorEffect="non-scaling-stroke"
+                            fill={svgFill}
+                            stroke={svgStroke}
+                            strokeWidth={svgStrokeWidth}
+                            strokeDasharray={svgDash}
+                        />
+                    )}
+                </svg>
+            )}
+            {markerDef && (
+                <svg className="ir-marker-svg" viewBox={MARKER_VIEWBOX} preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+                    {markerDef.paths.map((p, i) => (
+                        <path
+                            key={i}
+                            d={p.d}
+                            fill={p.fill ? markerColor : 'none'}
+                            stroke={p.fill ? 'none' : markerColor}
+                            strokeWidth={MARKER_STROKE_WIDTH}
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                        />
+                    ))}
                 </svg>
             )}
             {compiled.badges.map((b, i) => {
