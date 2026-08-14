@@ -17,6 +17,7 @@ import type { CompiledView, CompiledTextStyle } from './irTypes';
 import type { ReadCtx } from './irReadCtx';
 import { makeReadCtx } from './irReadCtxLproxy';
 import { rowRenderedChildren } from './irContainment';
+import { getShapeDescriptor, SVG_BORDER_DASH } from './shapeRegistry';
 import IRRow from './IRRow';
 
 /** FontFamilyToken -> design-system CSS var. */
@@ -153,36 +154,38 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx }: IRNodeContentP
         else if (e.key === 'Escape') { setEditingRow(null); setEditingLabel(null); }
     }, []);
 
-    const isDiamond = form === 'diamond';
+    // Le forme dipinte in SVG (oggi: diamond) sopprimono la box CSS in irStyle.ts.
+    // `svgPainter` non nullo == questa forma e' dipinta da un layer SVG.
+    const shapeDescriptor = getShapeDescriptor(form);
+    const svgPainter = shapeDescriptor.painter.kind === 'svg' ? shapeDescriptor.painter : null;
     const inlineStyle: React.CSSProperties = {};
-    // Diamond paints fill/border in its SVG layer (below). The inline box would
-    // win over the CSS box suppression (irStyle.ts) and show a square behind the
-    // rhombus, so it is not emitted for diamond.
-    if (fill && !isDiamond) inlineStyle.background = fill;
+    // An SVG-painted form paints fill/border in its own layer (below). The inline
+    // box would win over the CSS box suppression (irStyle.ts) and show a square
+    // behind the shape, so it is not emitted for those forms.
+    if (fill && !svgPainter) inlineStyle.background = fill;
     // Fase B: authored border painted inline on .ir-node-content (per-field
     // fallback). When compiled.border is null the CSS box border applies —
     // covers demo/migrated views without an authored border.
     const b = compiled.border;
-    if (b && !isDiamond) inlineStyle.border = `${b.width ?? 1}px ${b.style ?? 'solid'} ${b.color ?? 'var(--border-default)'}`;
+    if (b && !svgPainter) inlineStyle.border = `${b.width ?? 1}px ${b.style ?? 'solid'} ${b.color ?? 'var(--border-default)'}`;
 
-    // Diamond SVG paints: the same resolved fill/border, with the box-base
+    // The SVG layer paints the same resolved fill/border, with the box-base
     // fallbacks (irStyle.ts:44) when nothing is authored. The polygon stretches
     // to any aspect ratio; non-scaling-stroke keeps the border a constant width.
-    const DIAMOND_DASH: Record<string, string | undefined> = { solid: undefined, dashed: '6 4', dotted: '1 4' };
     const svgFill = fill || 'var(--node-bg)';
     const svgStroke = compiled.border?.color ?? 'var(--border-default)';
     const svgStrokeWidth = compiled.border?.width ?? 1;
-    const svgDash = DIAMOND_DASH[compiled.border?.style ?? 'solid'];
+    const svgDash = SVG_BORDER_DASH[compiled.border?.style ?? 'solid'];
 
     return (
         <div
             className={`ir-node-content ir-shape--${form}`}
             style={inlineStyle}
         >
-            {isDiamond && (
-                <svg className="ir-diamond-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+            {svgPainter && (
+                <svg className={svgPainter.svgClassName} viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
                     <polygon
-                        points="50,0 100,50 50,100 0,50"
+                        points={svgPainter.points}
                         vectorEffect="non-scaling-stroke"
                         fill={svgFill}
                         stroke={svgStroke}

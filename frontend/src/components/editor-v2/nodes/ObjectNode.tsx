@@ -21,7 +21,7 @@ import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useSelector } from 'react-redux';
 import { NodeResizer, useReactFlow, useStore, type NodeProps, type Node } from '@xyflow/react';
 import DynamicHandles from '../components/DynamicHandles';
-import { isNodeResizable, SHAPE_MIN_SIZE, defaultResizableForForm } from './nodeSizing';
+import { isNodeResizable, SHAPE_MIN_SIZE, defaultResizableForForm, keepAspectRatioForForm } from './nodeSizing';
 import InlineEnumSelect from '../components/InlineEnumSelect';
 import { useEditorContextSafe } from '../contexts/EditorContext';
 import { useNodeHighlightClass } from '../contexts/HighlightContext';
@@ -399,7 +399,7 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                         isVisible={selected}
                         minWidth={SHAPE_MIN_SIZE}
                         minHeight={SHAPE_MIN_SIZE}
-                        keepAspectRatio={shapeForm === 'circle'}
+                        keepAspectRatio={keepAspectRatioForForm(shapeForm)}
                         lineClassName="node-resize-line"
                         handleClassName="node-resize-handle"
                     />

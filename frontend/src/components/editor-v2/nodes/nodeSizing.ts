@@ -4,6 +4,7 @@
 // plumbing R6, decisione D4). Quando il sizing passera' nell'IR, QUESTA mappa e'
 // il punto unico da sostituire.
 import type { ShapeForm } from '../viewpoint/ir/irTypes';
+import { getShapeDescriptor } from '../viewpoint/ir/shapeRegistry';
 
 export interface NodeSizing { adaptWidth: boolean; adaptHeight: boolean; }
 
@@ -29,8 +30,16 @@ export function isNodeResizable(type: string | undefined, hasGeometricShape = fa
 }
 
 // Forme geometriche ridimensionabili di default (unico punto di verita', usato da
-// ObjectNode e dal VertexAuthoringPanel per evitare drift). rect/rounded NON sono
-// qui: diventano resizable solo col flag esplicito `resizable` sulla VertexViewIR.
+// ObjectNode e dal VertexAuthoringPanel per evitare drift). rect/rounded NON lo
+// sono: diventano resizable solo col flag esplicito `resizable` sulla VertexViewIR.
+// Il dato vive ora nel descriptor della forma (viewpoint/ir/shapeRegistry.ts);
+// questa resta la porta d'ingresso per il lato nodes/.
 export function defaultResizableForForm(form: ShapeForm | undefined): boolean {
-    return form === 'ellipse' || form === 'circle' || form === 'diamond';
+    return getShapeDescriptor(form).defaultResizable;
+}
+
+// Il resize mantiene il rapporto d'aspetto (oggi: solo circle). Stessa fonte di
+// verita' del gate sopra, cosi' ObjectNode non ricabla il caso a mano.
+export function keepAspectRatioForForm(form: ShapeForm | undefined): boolean {
+    return getShapeDescriptor(form).keepAspectRatio;
 }
