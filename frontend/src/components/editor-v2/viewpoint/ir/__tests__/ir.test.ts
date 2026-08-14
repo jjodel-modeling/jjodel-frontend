@@ -424,6 +424,87 @@ describe('irResolveCore row context (Fase R1)', () => {
 });
 
 /**
+ * Two metamodels, both declaring `State`: the case the index cannot tell apart on
+ * its own, since its buckets are keyed by name. `A_State` also has a subclass, to
+ * check that pinning does not break inheritance.
+ */
+function homonymWorld() {
+    const idlookup: Record<string, any> = {
+        A_State: { id: 'A_State', name: 'State', extends: [] },
+        A_Sub: { id: 'A_Sub', name: 'SubState', extends: ['A_State'] },
+        B_State: { id: 'B_State', name: 'State', extends: [] },
+        a1: { id: 'a1', name: 'obj_a1', instanceof: 'A_State', features: [] },
+        b1: { id: 'b1', name: 'obj_b1', instanceof: 'B_State', features: [] },
+        asub: { id: 'asub', name: 'obj_asub', instanceof: 'A_Sub', features: [] },
+    };
+    return { idlookup, ctx: makeDrawReadCtx(idlookup) };
+}
+
+describe('irResolveCore metaclass identity (pin-aware matching, 2026-08-13)', () => {
+    it('a pinned view applies to its own metamodel only', () => {
+        const { idlookup, ctx } = homonymWorld();
+        const state = stateWith([
+            { id: 'V_a', ir: vertexIR({ metaclasses: ['State'], authoringMetaclassPins: { State: 'A_State' } }) },
+        ], idlookup);
+        const index = getIRIndex(state, 'sig_pin_1')!;
+        expect(resolveIRView('a1', 'A_State', index, ctx, state.idlookup)!.viewId).toBe('V_a');
+        expect(resolveIRView('b1', 'B_State', index, ctx, state.idlookup)).toBeNull();
+    });
+
+    it('an unpinned view still matches by name, in both metamodels', () => {
+        const { idlookup, ctx } = homonymWorld();
+        const state = stateWith([
+            { id: 'V_any', ir: vertexIR({ metaclasses: ['State'] }) },
+        ], idlookup);
+        const index = getIRIndex(state, 'sig_pin_2')!;
+        expect(resolveIRView('a1', 'A_State', index, ctx, state.idlookup)!.viewId).toBe('V_any');
+        expect(resolveIRView('b1', 'B_State', index, ctx, state.idlookup)!.viewId).toBe('V_any');
+    });
+
+    it('each metamodel gets its own view when both are pinned', () => {
+        const { idlookup, ctx } = homonymWorld();
+        const state = stateWith([
+            { id: 'V_a', ir: vertexIR({ metaclasses: ['State'], authoringMetaclassPins: { State: 'A_State' } }) },
+            { id: 'V_b', ir: vertexIR({ metaclasses: ['State'], authoringMetaclassPins: { State: 'B_State' } }) },
+        ], idlookup);
+        const index = getIRIndex(state, 'sig_pin_3')!;
+        expect(resolveIRView('a1', 'A_State', index, ctx, state.idlookup)!.viewId).toBe('V_a');
+        expect(resolveIRView('b1', 'B_State', index, ctx, state.idlookup)!.viewId).toBe('V_b');
+    });
+
+    it('pinning does not break inheritance: the subclass still matches', () => {
+        const { idlookup, ctx } = homonymWorld();
+        const state = stateWith([
+            { id: 'V_a', ir: vertexIR({ metaclasses: ['State'], authoringMetaclassPins: { State: 'A_State' } }) },
+        ], idlookup);
+        const index = getIRIndex(state, 'sig_pin_4')!;
+        // asub is an A_Sub, which reaches the `State` bucket through its A_State ancestor.
+        expect(resolveIRView('asub', 'A_Sub', index, ctx, state.idlookup)!.viewId).toBe('V_a');
+    });
+
+    it('a pin never overrides the wildcard fallback', () => {
+        const { idlookup, ctx } = homonymWorld();
+        const state = stateWith([
+            { id: 'V_a', ir: vertexIR({ metaclasses: ['State'], authoringMetaclassPins: { State: 'A_State' } }) },
+            { id: 'V_wild', ir: vertexIR({ metaclasses: '*' }) },
+        ], idlookup);
+        const index = getIRIndex(state, 'sig_pin_5')!;
+        // b1 is refused by the pinned view and lands on the wildcard, not on nothing.
+        expect(resolveIRView('b1', 'B_State', index, ctx, state.idlookup)!.viewId).toBe('V_wild');
+    });
+
+    it('row views obey the same pin', () => {
+        const { idlookup, ctx } = homonymWorld();
+        const state = stateWith([
+            { id: 'V_row_a', ir: rowIR({ metaclasses: ['State'], authoringMetaclassPins: { State: 'A_State' } }) as any },
+        ], idlookup);
+        const index = getIRIndex(state, 'sig_pin_6')!;
+        expect(resolveRowView('a1', 'A_State', index, ctx, state.idlookup)!.viewId).toBe('V_row_a');
+        expect(resolveRowView('b1', 'B_State', index, ctx, state.idlookup)).toBeNull();
+    });
+});
+
+/**
  * Containment world: Region contains States (composition ref), transitions
  * between states as edges.
  *   r1 (Region) ⊃ { s_a, s_b }   r2 (Region) ⊃ { s_c }

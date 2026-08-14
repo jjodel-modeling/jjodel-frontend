@@ -158,4 +158,37 @@ describe('withMetaclassPins — written by the same patch as metaclasses', () =>
         const next = withMetaclassPins(prev, irWith(['State', 'Nowhere']), CTX);
         expect(next.authoringMetaclassPins).toEqual({ State: B_STATE.id });
     });
+
+    it('honours the pin the caller declares on next, over the name match', () => {
+        // What the grouped picker does: the author picks A.State, so the patch
+        // carries `metaclasses: ['State']` AND the pin on A. Without this the
+        // chain would answer B (this fixture's appliesTo) and the choice would be
+        // lost between the click and the draft.
+        const prev = irWith([]);
+        const next = withMetaclassPins(
+            prev,
+            irWith(['State'], { State: A_STATE.id }),
+            CTX,
+        );
+        expect(next.authoringMetaclassPins).toEqual({ State: A_STATE.id });
+    });
+
+    it('a pin declared on next beats the one carried by prev', () => {
+        const prev = irWith(['Machine'], { State: B_STATE.id, Machine: A_MACHINE.id });
+        const next = withMetaclassPins(
+            prev,
+            irWith(['Machine', 'State'], { State: A_STATE.id }),
+            CTX,
+        );
+        expect(next.authoringMetaclassPins).toEqual({
+            Machine: A_MACHINE.id,
+            State: A_STATE.id,
+        });
+    });
+
+    it('ignores a declared pin that no metamodel declares any more', () => {
+        const prev = irWith([]);
+        const next = withMetaclassPins(prev, irWith(['State'], { State: 'ptr_gone' }), CTX);
+        expect(next.authoringMetaclassPins).toEqual({ State: B_STATE.id });
+    });
 });

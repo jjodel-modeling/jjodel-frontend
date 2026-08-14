@@ -115,6 +115,10 @@ function samePins(a: AuthoringMetaclassPins | undefined, b: AuthoringMetaclassPi
  * returned as it came, so editing a colour never writes a pin into a view that
  * had none. That is the no-backfill rule — step 2 of the chain stays a read.
  *
+ * A pin already present on `next` is honoured before the one on `prev`: that is how
+ * the picker hands over the class it actually selected among homonyms. Everything
+ * else is unchanged, and a caller that sets no pin sees the previous behaviour.
+ *
  * The map is rebuilt for the new list rather than patched: names dropped from the
  * list lose their pin (a stale entry is exactly the divergence to avoid), names
  * already pinned keep theirs (step 1 of the chain returns it), names just added
@@ -132,10 +136,20 @@ export function withMetaclassPins<T extends PinnableIR>(
 ): T {
     if (JSON.stringify(prev.metaclasses) === JSON.stringify(next.metaclasses)) return next;
 
+    // A pin declared on `next` is the author's explicit choice, made in the same
+    // patch that adds the name: it wins over the one carried by `prev`, which is
+    // history. Without this the picker could not say WHICH of two homonymous
+    // classes was selected — step 3 of the chain would answer "the first one" and
+    // the choice would be lost on the way in.
+    const declaredPins: AuthoringMetaclassPins = {
+        ...(prev.authoringMetaclassPins ?? {}),
+        ...(next.authoringMetaclassPins ?? {}),
+    };
+
     const list = Array.isArray(next.metaclasses) ? next.metaclasses : [];
     const pins: AuthoringMetaclassPins = {};
     for (const name of list) {
-        const hit = resolveMetaclassId(name, { ...ctx, pins: prev.authoringMetaclassPins });
+        const hit = resolveMetaclassId(name, { ...ctx, pins: declaredPins });
         if (hit) pins[name] = hit.id;
     }
 

@@ -81,9 +81,22 @@ export function navigateRefHop(
     return null; // whole-array 'values' intermediate hop: no navigation
 }
 
-/** Ancestor walk over DClass.extends (transitive, cycle-safe). */
-export function classAncestryNames(idlookup: Idlookup, classId: string): string[] {
-    const names: string[] = [];
+/** One step of the ancestor walk: the class, by identity and by name. */
+export interface ClassAncestor {
+    id: string;
+    name: string;
+}
+
+/**
+ * Ancestor walk over DClass.extends (transitive, cycle-safe), keeping the class
+ * ID next to each name.
+ *
+ * The id is what tells two homonymous classes apart: the IR index is keyed by
+ * name, and a view pinned to one specific class matches an entry only when the
+ * ancestor that produced the name is that same class (`irResolveCore`).
+ */
+export function classAncestry(idlookup: Idlookup, classId: string): ClassAncestor[] {
+    const out: ClassAncestor[] = [];
     const seen = new Set<string>();
     const queue: string[] = [classId];
     while (queue.length > 0) {
@@ -92,13 +105,18 @@ export function classAncestryNames(idlookup: Idlookup, classId: string): string[
         seen.add(cid);
         const dClass = idlookup[cid];
         if (!dClass) continue;
-        if (typeof dClass.name === 'string') names.push(dClass.name);
+        if (typeof dClass.name === 'string') out.push({ id: cid, name: dClass.name });
         const ext = dClass.extends;
         if (Array.isArray(ext)) {
             for (const e of ext) if (typeof e === 'string') queue.push(e);
         }
     }
-    return names;
+    return out;
+}
+
+/** The same walk, names only — the `isKind` backend and every pre-pin caller. */
+export function classAncestryNames(idlookup: Idlookup, classId: string): string[] {
+    return classAncestry(idlookup, classId).map((a) => a.name);
 }
 
 function metaclassIdOf(idlookup: Idlookup, elementId: string): string | null {

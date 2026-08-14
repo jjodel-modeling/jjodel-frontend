@@ -7,23 +7,47 @@
  */
 
 import { compileEdgeView, compileRowView, compileView } from './irCompile';
-import { classAncestryNames, type ReadCtx } from './irReadCtx';
-import type { AnyViewIR, CompiledEdgeView, CompiledRowView, CompiledView, EdgeViewIR, RowViewIR } from './irTypes';
+import { classAncestry, type ClassAncestor, type ReadCtx } from './irReadCtx';
+import type { AnyViewIR, AuthoringMetaclassPins, CompiledEdgeView, CompiledRowView, CompiledView, EdgeViewIR, RowViewIR } from './irTypes';
 import { ensureViewCss, removeViewCss } from './irStyle';
 
 export interface IndexEntry {
     compiled: CompiledView;
     declarationIndex: number;
+    /** The view's metaclass pins, verbatim from its ir. See `pinAccepts`. */
+    pins?: AuthoringMetaclassPins;
 }
 
 export interface EdgeIndexEntry {
     compiled: CompiledEdgeView;
     declarationIndex: number;
+    pins?: AuthoringMetaclassPins;
 }
 
 export interface RowIndexEntry {
     compiled: CompiledRowView;
     declarationIndex: number;
+    pins?: AuthoringMetaclassPins;
+}
+
+/**
+ * Whether an entry filed under `name` accepts the ancestor that carried that name.
+ *
+ * The buckets are keyed by NAME, and a project can hold two metamodels that both
+ * declare `Person`: without this check a view authored on one of them applies to
+ * the instances of the other. The pin, written by the authoring panels next to
+ * `metaclasses`, says which class was meant; the ancestor's ID says which class
+ * the instance actually descends from.
+ *
+ * A view with no pin for that name matches by name exactly as before: every view
+ * authored before the pin existed, and every ir written by hand, keeps working.
+ * The comparison is per ancestor, so inheritance is untouched — a view pinned to
+ * `A.Person` still matches an instance of `A.Employee`, which reaches the bucket
+ * through the `A.Person` ancestor.
+ */
+function pinAccepts(entry: { pins?: AuthoringMetaclassPins }, name: string, classId: string): boolean {
+    const pinned = entry.pins?.[name];
+    return !pinned || pinned === classId;
 }
 
 /**
@@ -121,7 +145,7 @@ export function getIRIndex(state: any, signature: string): IRViewpointIndex | nu
                 console.warn('[ir] edge compile failed for view', vid, e);
                 continue;
             }
-            const entry: EdgeIndexEntry = { compiled: compiledE, declarationIndex: declarationIndex++ };
+            const entry: EdgeIndexEntry = { compiled: compiledE, declarationIndex: declarationIndex++, pins: ir.authoringMetaclassPins };
             if (compiledE.isObjectAsEdge) {
                 if (ir.metaclasses !== '*') {
                     for (const mc of ir.metaclasses ?? []) {
@@ -151,7 +175,7 @@ export function getIRIndex(state: any, signature: string): IRViewpointIndex | nu
                 console.warn('[ir] row compile failed for view', vid, e);
                 continue;
             }
-            const entry: RowIndexEntry = { compiled: compiledR, declarationIndex: declarationIndex++ };
+            const entry: RowIndexEntry = { compiled: compiledR, declarationIndex: declarationIndex++, pins: ir.authoringMetaclassPins };
             if (ir.metaclasses === '*') {
                 rowWildcard.push(entry);
             } else {
@@ -174,7 +198,7 @@ export function getIRIndex(state: any, signature: string): IRViewpointIndex | nu
             console.warn('[ir] compile failed for view', vid, e);
             continue;
         }
-        const entry: IndexEntry = { compiled, declarationIndex: declarationIndex++ };
+        const entry: IndexEntry = { compiled, declarationIndex: declarationIndex++, pins: ir.authoringMetaclassPins };
         if (ir.metaclasses === '*') {
             wildcard.push(entry);
         } else {
@@ -217,18 +241,21 @@ export function resolveIRView(
     readCtx: ReadCtx,
     idlookup: Record<string, any>,
 ): CompiledView | null {
-    const ancestry = classAncestryNames(idlookup, metaclassId); // [self, ...ancestors]
+    const ancestry = classAncestry(idlookup, metaclassId); // [self, ...ancestors]
     if (ancestry.length === 0) return null;
-    const selfName = ancestry[0];
+    const self = ancestry[0];
 
     type Candidate = { entry: IndexEntry; specificity: number };
     const candidates: Candidate[] = [];
     const seen = new Set<IndexEntry>();
-    const exact = index.byMetaclass.get(selfName);
-    if (exact) for (const e of exact) { if (!seen.has(e)) { seen.add(e); candidates.push({ entry: e, specificity: 2 }); } }
+    // An entry rejected by the pin at one tier is NOT marked seen: the same view may
+    // legitimately match through another ancestor it pinned correctly.
+    const exact = index.byMetaclass.get(self.name);
+    if (exact) for (const e of exact) { if (!seen.has(e) && pinAccepts(e, self.name, self.id)) { seen.add(e); candidates.push({ entry: e, specificity: 2 }); } }
     for (let i = 1; i < ancestry.length; i++) {
-        const inh = index.byMetaclass.get(ancestry[i]);
-        if (inh) for (const e of inh) { if (!seen.has(e)) { seen.add(e); candidates.push({ entry: e, specificity: 1 }); } }
+        const a = ancestry[i];
+        const inh = index.byMetaclass.get(a.name);
+        if (inh) for (const e of inh) { if (!seen.has(e) && pinAccepts(e, a.name, a.id)) { seen.add(e); candidates.push({ entry: e, specificity: 1 }); } }
     }
     for (const e of index.wildcard) { if (!seen.has(e)) { seen.add(e); candidates.push({ entry: e, specificity: 0 }); } }
     if (candidates.length === 0) return null;
@@ -261,24 +288,27 @@ export function resolveEdgeView(
     readCtx: ReadCtx,
     idlookup: Record<string, any>,
 ): CompiledEdgeView | null {
-    const ancestry = classAncestryNames(idlookup, sourceMetaclassId);
+    const ancestry = classAncestry(idlookup, sourceMetaclassId);
     if (ancestry.length === 0) return null;
     type Candidate = { entry: EdgeIndexEntry; specificity: number };
     const candidates: Candidate[] = [];
     const seen = new Set<EdgeIndexEntry>();
-    const push = (entries: EdgeIndexEntry[] | undefined, spec: number) => {
+    // `via` is the ancestor whose name keyed the bucket, or null for the wildcard
+    // bucket, which no name (and therefore no pin) filed.
+    const push = (via: ClassAncestor | null, entries: EdgeIndexEntry[] | undefined, spec: number) => {
         if (!entries) return;
         for (const e of entries) {
             if (seen.has(e)) continue;
+            if (via && !pinAccepts(e, via.name, via.id)) continue;
             const ref = e.compiled.reference;
             if (ref !== null && ref !== referenceName) continue;
             seen.add(e);
             candidates.push({ entry: e, specificity: spec + (ref !== null ? 0.5 : 0) });
         }
     };
-    push(index.edgeByMetaclass.get(ancestry[0]), 2);
-    for (let i = 1; i < ancestry.length; i++) push(index.edgeByMetaclass.get(ancestry[i]), 1);
-    push(index.edgeWildcard, 0);
+    push(ancestry[0], index.edgeByMetaclass.get(ancestry[0].name), 2);
+    for (let i = 1; i < ancestry.length; i++) push(ancestry[i], index.edgeByMetaclass.get(ancestry[i].name), 1);
+    push(null, index.edgeWildcard, 0);
     if (candidates.length === 0) return null;
     candidates.sort(compareCandidates);
     for (const c of candidates) {
@@ -298,15 +328,16 @@ export function resolveObjectAsEdgeView(
     idlookup: Record<string, any>,
 ): CompiledEdgeView | null {
     if (index.objectAsEdgeByMetaclass.size === 0) return null;
-    const ancestry = classAncestryNames(idlookup, metaclassId);
+    const ancestry = classAncestry(idlookup, metaclassId);
     type Candidate = { entry: EdgeIndexEntry; specificity: number };
     const candidates: Candidate[] = [];
     const seen = new Set<EdgeIndexEntry>();
     for (let i = 0; i < ancestry.length; i++) {
-        const entries = index.objectAsEdgeByMetaclass.get(ancestry[i]);
+        const a = ancestry[i];
+        const entries = index.objectAsEdgeByMetaclass.get(a.name);
         if (!entries) continue;
         for (const e of entries) {
-            if (!seen.has(e)) { seen.add(e); candidates.push({ entry: e, specificity: i === 0 ? 2 : 1 }); }
+            if (!seen.has(e) && pinAccepts(e, a.name, a.id)) { seen.add(e); candidates.push({ entry: e, specificity: i === 0 ? 2 : 1 }); }
         }
     }
     if (candidates.length === 0) return null;
@@ -333,18 +364,19 @@ export function resolveRowView(
     readCtx: ReadCtx,
     idlookup: Record<string, any>,
 ): CompiledRowView | null {
-    const ancestry = classAncestryNames(idlookup, metaclassId); // [self, ...ancestors]
+    const ancestry = classAncestry(idlookup, metaclassId); // [self, ...ancestors]
     if (ancestry.length === 0) return null;
-    const selfName = ancestry[0];
+    const self = ancestry[0];
 
     type Candidate = { entry: RowIndexEntry; specificity: number };
     const candidates: Candidate[] = [];
     const seen = new Set<RowIndexEntry>();
-    const exact = index.rowByMetaclass.get(selfName);
-    if (exact) for (const e of exact) { if (!seen.has(e)) { seen.add(e); candidates.push({ entry: e, specificity: 2 }); } }
+    const exact = index.rowByMetaclass.get(self.name);
+    if (exact) for (const e of exact) { if (!seen.has(e) && pinAccepts(e, self.name, self.id)) { seen.add(e); candidates.push({ entry: e, specificity: 2 }); } }
     for (let i = 1; i < ancestry.length; i++) {
-        const inh = index.rowByMetaclass.get(ancestry[i]);
-        if (inh) for (const e of inh) { if (!seen.has(e)) { seen.add(e); candidates.push({ entry: e, specificity: 1 }); } }
+        const a = ancestry[i];
+        const inh = index.rowByMetaclass.get(a.name);
+        if (inh) for (const e of inh) { if (!seen.has(e) && pinAccepts(e, a.name, a.id)) { seen.add(e); candidates.push({ entry: e, specificity: 1 }); } }
     }
     for (const e of index.rowWildcard) { if (!seen.has(e)) { seen.add(e); candidates.push({ entry: e, specificity: 0 }); } }
     if (candidates.length === 0) return null;
