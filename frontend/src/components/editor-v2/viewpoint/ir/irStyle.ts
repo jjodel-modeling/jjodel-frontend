@@ -16,7 +16,13 @@ const STYLE_TAG_ID = 'ir-views-css';
 /** Base styles for the IR node content, shape-agnostic. Injected once. */
 const BASE_CSS = `
 .ir-node-content { position: relative; display: flex; flex-direction: column; min-width: 0; width: 100%; height: 100%; }
-.ir-node-content .ir-label { font-size: 11px; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* max-width: sotto align-items:center (forme geometriche) il flex item prende la
+   larghezza naturale del testo, quindi overflow/ellipsis non scattano MAI e il testo
+   viene dipinto fuori dal contorno (misurato: oltre i 22 caratteri su un rombo 170x80,
+   con overflow:visible, la label esce dai fianchi senza limite). Vincolarla al box
+   restituisce l'ellissi. Il taglio resta al bordo del box, non al contorno: quello e'
+   un lavoro separato. Sulle forme a stretch (rect, rounded, ellisse) e' un no-op. */
+.ir-node-content .ir-label { font-size: 11px; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
 .ir-node-content .ir-label--top { order: 0; text-align: center; font-weight: 600; }
 .ir-node-content .ir-label--center { order: 1; text-align: center; margin: auto 0; font-weight: 600; }
 .ir-node-content .ir-label--inside { order: 2; text-align: left; padding: 0 8px; }
