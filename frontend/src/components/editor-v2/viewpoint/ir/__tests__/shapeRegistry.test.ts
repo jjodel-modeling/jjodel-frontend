@@ -64,10 +64,64 @@ describe('shapeRegistry', () => {
         expect(SVG_BORDER_DASH['stile-inesistente']).toBeUndefined();
     });
 
+    it('rientro nullo per le forme che riempiono il box', () => {
+        for (const form of ['rect', 'rounded'] as ShapeForm[]) {
+            for (const t of [0, 0.25, 0.5, 0.75, 1]) {
+                expect(getShapeDescriptor(form).insetFractionAt(t)).toBe(0);
+            }
+        }
+    });
+
+    it('rombo: rientro lineare dalla mezzeria', () => {
+        const f = getShapeDescriptor('diamond').insetFractionAt;
+        expect(f(0.5)).toBe(0);          // vertice del rombo, sulla mezzeria del lato
+        expect(f(0.25)).toBeCloseTo(0.25, 10);
+        expect(f(0.75)).toBeCloseTo(0.25, 10);
+        expect(f(0)).toBeCloseTo(0.5, 10);   // spigolo del box: il rombo e' al centro
+        expect(f(1)).toBeCloseTo(0.5, 10);
+    });
+
+    it('ellisse e cerchio: rientro secondo la radice, non lineare', () => {
+        for (const form of ['ellipse', 'circle'] as ShapeForm[]) {
+            const f = getShapeDescriptor(form).insetFractionAt;
+            expect(f(0.5)).toBe(0);
+            // u = -0.5 -> (1 - sqrt(0.75)) / 2
+            expect(f(0.25)).toBeCloseTo((1 - Math.sqrt(0.75)) / 2, 10);
+            expect(f(0.75)).toBeCloseTo((1 - Math.sqrt(0.75)) / 2, 10);
+            expect(f(0)).toBeCloseTo(0.5, 10);
+            // sempre piu' dentro del rombo alla stessa quota: l'ellisse e' piu' larga
+            expect(f(0.25)).toBeLessThan(getShapeDescriptor('diamond').insetFractionAt(0.25));
+        }
+    });
+
+    it('rientro simmetrico e limitato a [0, 0.5] su tutte le forme', () => {
+        for (const form of ALL_FORMS) {
+            const f = getShapeDescriptor(form).insetFractionAt;
+            for (let i = 0; i <= 20; i++) {
+                const t = i / 20;
+                const v = f(t);
+                expect(v).toBeGreaterThanOrEqual(0);
+                expect(v).toBeLessThanOrEqual(0.5);
+                expect(v).toBeCloseTo(f(1 - t), 10);
+            }
+        }
+    });
+
+    it('input degeneri non producono NaN', () => {
+        for (const form of ALL_FORMS) {
+            const f = getShapeDescriptor(form).insetFractionAt;
+            for (const t of [NaN, Infinity, -Infinity, -3, 7]) {
+                expect(Number.isFinite(f(t))).toBe(true);
+            }
+            expect(f(NaN)).toBe(0);   // ricade sulla mezzeria
+        }
+    });
+
     it('forma assente o sconosciuta ricade su rect, come prima', () => {
         expect(getShapeDescriptor(undefined).id).toBe('rect');
         expect(getShapeDescriptor(undefined).defaultResizable).toBe(wasResizable(undefined));
         expect(getShapeDescriptor(undefined).keepAspectRatio).toBe(wasAspectLocked(undefined));
+        expect(getShapeDescriptor(undefined).insetFractionAt(0.25)).toBe(0);
         expect(getShapeDescriptor('nope' as ShapeForm).id).toBe('rect');
     });
 });

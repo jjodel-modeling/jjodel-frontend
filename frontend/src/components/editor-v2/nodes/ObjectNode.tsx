@@ -404,7 +404,7 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                         handleClassName="node-resize-handle"
                     />
                 )}
-                <DynamicHandles nodeId={id} />
+                <DynamicHandles nodeId={id} shapeForm={shapeForm} />
                 {/* Singleton stereotype — same label as the native branch. The IR
                     branch has no header (the name is an IR label inside
                     IRNodeContent), so it sits in the wrapper, ahead of the

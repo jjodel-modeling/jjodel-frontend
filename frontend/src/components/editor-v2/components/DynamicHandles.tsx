@@ -2,6 +2,8 @@ import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { Handle, Position, useEdges, useStoreApi } from '@xyflow/react';
 import { MAX_HANDLES_PER_SIDE, type Side } from '../utils/portDistribution';
 import { computeSideEndpoints, computeSidePositions } from '../utils/handlePosition';
+import { getShapeDescriptor } from '../viewpoint/ir/shapeRegistry';
+import type { ShapeForm } from '../viewpoint/ir/irTypes';
 
 const SIDES: readonly Side[] = ['top', 'right', 'bottom', 'left'];
 
@@ -14,6 +16,13 @@ const SIDE_TO_POSITION: Record<Side, Position> = {
 
 interface DynamicHandlesProps {
     nodeId: string;
+    /**
+     * Forma risolta del nodo, quando ne ha una (view IR). Serve solo a rientrare
+     * gli handle dal lato del box fino al contorno: senza, l'arco atterra sul
+     * rettangolo circoscritto e su un rombo lascia il vuoto. Assente sui tipi di
+     * nodo senza forma geometrica, che ricadono su `rect`, cioe' rientro nullo.
+     */
+    shapeForm?: ShapeForm;
 }
 
 /** Distance in px from node edge within which a side is considered "hovered". */
@@ -31,9 +40,10 @@ const HOVER_THRESHOLD = 15;
  * "bottom-1", that handle already exists in the DOM with a known measured position.
  * React keys are stable (${side}-${index}) so handles never mount/unmount.
  */
-function DynamicHandles({ nodeId }: DynamicHandlesProps) {
+function DynamicHandles({ nodeId, shapeForm }: DynamicHandlesProps) {
     const edges = useEdges();
     const storeApi = useStoreApi();
+    const shape = getShapeDescriptor(shapeForm);
 
     // --- Hover state for ghost-like behavior on inactive handles ---
     const [hoveredSide, setHoveredSide] = useState<Side | null>(null);
@@ -164,9 +174,15 @@ function DynamicHandles({ nodeId }: DynamicHandlesProps) {
     }, []); // DOM ref-based — stable closures via refs + state setters
 
     // --- updateNodeInternals when handle positions change ---
+    // The shape is part of the key, not just the active set: the inset that pulls
+    // each handle in to the outline depends on it, and `form` is a Conditional in
+    // the IR, so it can flip at runtime on the same node with unchanged dimensions.
+    // React Flow only re-measures handle bounds on a dimension change or with
+    // force:true (@xyflow/system updateNodeInternals), so a form change alone would
+    // otherwise leave the measured bounds stale.
     const activeHandlesKey = useMemo(() => {
-        return Array.from(activeHandles).sort().join(',');
-    }, [activeHandles]);
+        return `${shapeForm ?? ''}|${Array.from(activeHandles).sort().join(',')}`;
+    }, [activeHandles, shapeForm]);
 
     const lastCommittedKeyRef = useRef<string>('');
 
@@ -263,8 +279,20 @@ function DynamicHandles({ nodeId }: DynamicHandlesProps) {
                     const ghostClassName = 'mm-anchor mm-anchor--ghost mm-anchor--ghost-visible';
                     const ghostStyle: React.CSSProperties = { [positionProp]: '50%' };
                     const connectedClassName = 'mm-anchor mm-anchor--connected';
-                    const sourceConnectedStyle: React.CSSProperties = { [positionProp]: `${sourcePercent * 100}%` };
-                    const targetConnectedStyle: React.CSSProperties = { [positionProp]: `${targetPercent * 100}%` };
+                    // Second axis: pull the handle in from the box edge to the shape
+                    // outline. The property is the side itself (left/right resolve the
+                    // percentage against the node width, top/bottom against its height),
+                    // so no measured size is needed here. Zero for box-like forms, which
+                    // keeps every existing node pixel-identical.
+                    const insetPct = (t: number) => `${(shape.insetFractionAt(t) * 100).toFixed(3)}%`;
+                    const sourceConnectedStyle: React.CSSProperties = {
+                        [positionProp]: `${sourcePercent * 100}%`,
+                        [side]: insetPct(sourcePercent),
+                    };
+                    const targetConnectedStyle: React.CSSProperties = {
+                        [positionProp]: `${targetPercent * 100}%`,
+                        [side]: insetPct(targetPercent),
+                    };
                     const poolClassName = 'mm-anchor mm-anchor--pool-inactive';
 
                     // --- Target Handle ---
