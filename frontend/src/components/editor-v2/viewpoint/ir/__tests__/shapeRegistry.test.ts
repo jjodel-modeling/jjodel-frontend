@@ -15,6 +15,7 @@ import type { ShapeSizing } from '../shapeRegistry';
 import {
     SHAPE_REGISTRY, SVG_BORDER_DASH, getShapeDescriptor,
     contentRect, boxForContent, boxForContentNumeric,
+    boxFromIntrinsic, hasSizeSupplement, MEASURE_SLACK,
 } from '../shapeRegistry';
 
 const ALL_FORMS: ShapeForm[] = ['rect', 'rounded', 'ellipse', 'circle', 'diamond'];
@@ -290,6 +291,111 @@ describe('shapeRegistry: taglia da contenuto', () => {
             // contenuto piu' alto del box: larghezza nulla, non negativa
             expect(contentRect(desc, 170, 80, 500).h).toBe(80);
             expect(contentRect(desc, 170, 80, 500).w).toBeGreaterThanOrEqual(0);
+        }
+    });
+});
+
+/**
+ * Da una misura del DOM al box (cablaggio D8/D9, 2026-08-15).
+ *
+ * `boxFromIntrinsic` e' l'anello fra la misura presa da useContentSize e il
+ * contratto. Il caso che ha motivato la funzione: su `rect` la regola degenera
+ * nell'identita' e nulla assorbe la differenza fra coordinate del contenuto e
+ * border box, quindi il box tornava piu' stretto del contenuto di esattamente i
+ * due bordi da 1px (misurato: 170 contro 172 necessari).
+ */
+describe('shapeRegistry: dalla misura del DOM al box', () => {
+    /** Chrome tipico di .ir-node-content: bordo 1px, nessun padding. */
+    const CHROME = { chromeX: 2, chromeY: 2 };
+    const MEASURES = [
+        { w: 40, h: 20, ...CHROME },
+        { w: 172, h: 42, ...CHROME },
+        { w: 294, h: 72, ...CHROME },
+        { w: 60, h: 300, ...CHROME },
+        // bordo `double` a 3px per lato, il caso in cui il chrome non e' 2
+        { w: 172, h: 42, chromeX: 6, chromeY: 6 },
+        // chrome asimmetrico: non si presenta oggi, ma il cerchio ci si appoggia
+        { w: 172, h: 42, chromeX: 2, chromeY: 10 },
+    ];
+
+    it('quali forme portano un supplemento', () => {
+        expect(ALL_FORMS.filter(f => hasSizeSupplement(getShapeDescriptor(f))))
+            .toEqual(['ellipse', 'circle', 'diamond']);
+    });
+
+    it('il box non e\' mai piu\' piccolo del contenuto misurato', () => {
+        for (const form of ALL_FORMS) {
+            const desc = getShapeDescriptor(form);
+            for (const m of MEASURES) {
+                const box = boxFromIntrinsic(desc, m);
+                expect(box.w, `${form} ${m.w}x${m.h} chrome ${m.chromeX}`).toBeGreaterThanOrEqual(m.w);
+                expect(box.h, `${form} ${m.w}x${m.h} chrome ${m.chromeY}`).toBeGreaterThanOrEqual(m.h);
+            }
+        }
+    });
+
+    it('l\'inchiostro sta dentro il contorno alla banda che occupa', () => {
+        for (const form of ALL_FORMS) {
+            const desc = getShapeDescriptor(form);
+            for (const m of MEASURES) {
+                const inkW = m.w - m.chromeX + MEASURE_SLACK;
+                const inkH = m.h - m.chromeY + MEASURE_SLACK;
+                const bare = boxForContent(desc, inkW, inkH);
+                expect(contentRect(desc, bare.w, bare.h, inkH).w, `${form} ${m.w}x${m.h}`)
+                    .toBeGreaterThanOrEqual(inkW - 1e-9);
+            }
+        }
+    });
+
+    it('il chrome si somma dopo il supplemento, non prima', () => {
+        // Sommarlo prima lo farebbe moltiplicare per heightFactor (2 sul rombo).
+        const desc = getShapeDescriptor('diamond');
+        const bare = boxForContent(desc, 100 + MEASURE_SLACK, 20 + MEASURE_SLACK);
+        expect(boxFromIntrinsic(desc, { w: 102, h: 22, chromeX: 2, chromeY: 2 }))
+            .toEqual({ w: bare.w + 2, h: bare.h + 2 });
+    });
+
+    it('il cerchio resta quadrato anche con chrome asimmetrico', () => {
+        const box = boxFromIntrinsic(getShapeDescriptor('circle'), { w: 172, h: 42, chromeX: 2, chromeY: 10 });
+        expect(box.w).toBe(box.h);
+    });
+
+    it('le forme che riempiono il box conservano i floor del content-hug', () => {
+        for (const form of ['rect', 'rounded'] as ShapeForm[]) {
+            const box = boxFromIntrinsic(getShapeDescriptor(form), { w: 10, h: 8, ...CHROME });
+            expect(box.w).toBe(140 + 2);
+            expect(box.h).toBe(40 + 2);
+        }
+    });
+
+    it('monotona: piu\' contenuto non produce mai un box piu\' piccolo', () => {
+        for (const form of ALL_FORMS) {
+            const desc = getShapeDescriptor(form);
+            let prev = boxFromIntrinsic(desc, { w: 20, h: 20, ...CHROME });
+            for (let w = 30; w <= 400; w += 37) {
+                const box = boxFromIntrinsic(desc, { w, h: 20, ...CHROME });
+                expect(box.w, `${form} w=${w}`).toBeGreaterThanOrEqual(prev.w);
+                prev = box;
+            }
+        }
+    });
+
+    it('input degeneri non producono NaN', () => {
+        for (const form of ALL_FORMS) {
+            const desc = getShapeDescriptor(form);
+            for (const m of [
+                { w: NaN, h: 10, chromeX: 2, chromeY: 2 },
+                { w: 10, h: 10, chromeX: NaN, chromeY: 2 },
+                { w: -50, h: -50, chromeX: 2, chromeY: 2 },
+                { w: 0, h: 0, chromeX: 0, chromeY: 0 },
+                { w: 5, h: 5, chromeX: 100, chromeY: 100 },
+            ]) {
+                const box = boxFromIntrinsic(desc, m);
+                expect(Number.isFinite(box.w), `${form} ${JSON.stringify(m)}`).toBe(true);
+                expect(Number.isFinite(box.h), `${form} ${JSON.stringify(m)}`).toBe(true);
+                expect(box.w).toBeGreaterThanOrEqual(0);
+                expect(box.h).toBeGreaterThanOrEqual(0);
+            }
         }
     });
 });

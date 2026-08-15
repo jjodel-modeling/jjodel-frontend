@@ -9,7 +9,7 @@
  * highlight classes stay in ObjectNode.
  */
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { U } from '../../../../joiner';
 import { syncNodeLabel, syncUpdateFeatureValue } from '../../sync/canvasToJjom';
@@ -18,6 +18,7 @@ import type { ReadCtx } from './irReadCtx';
 import { makeReadCtx } from './irReadCtxLproxy';
 import { rowRenderedChildren } from './irContainment';
 import { getShapeDescriptor, SVG_BORDER_DASH } from './shapeRegistry';
+import { useContentDrivenSize } from './useContentSize';
 import { getMarkerDef, MARKER_STROKE_WIDTH, MARKER_VIEWBOX } from './markerRegistry';
 import IRRow from './IRRow';
 
@@ -68,6 +69,12 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx }: IRNodeContentP
     const [editingRow, setEditingRow] = useState<{ key: string; name: string } | null>(null);
     const [editingLabel, setEditingLabel] = useState<number | null>(null);
     const [editValue, setEditValue] = useState('');
+
+    // Content-driven box (D8/D9): the shapes that carry a geometric supplement
+    // take the size their ink needs inside the outline. Inert on the shapes that
+    // fill their box and on a vertex resized by hand. See useContentSize.ts.
+    const contentRef = useRef<HTMLDivElement>(null);
+    useContentDrivenSize(vertexId, form, contentRef);
 
     // Compartment rows come from the object's D-layer features (name/type/value).
     const compartmentSig = useSelector((state: any) => {
@@ -197,6 +204,7 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx }: IRNodeContentP
 
     return (
         <div
+            ref={contentRef}
             className={`ir-node-content ir-shape--${form}`}
             style={inlineStyle}
         >

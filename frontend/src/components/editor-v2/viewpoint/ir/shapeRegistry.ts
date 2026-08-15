@@ -230,13 +230,27 @@ export function getShapeDescriptor(form: ShapeForm | undefined): ShapeDescriptor
     return (form && SHAPE_REGISTRY[form]) || FALLBACK;
 }
 
+/**
+ * Whether the sizing rule is more than the identity, that is whether the outline
+ * asks for a supplement over the content it holds. True for the shapes whose
+ * bounding box is larger than the rectangle they can hold (ellipse, circle,
+ * diamond), false for the shapes that fill their box, which keep the CSS
+ * content-hug of irStyle.ts.
+ *
+ * Read off the policy rather than off a list of ids, so a shape that lands with
+ * a supplement opts in by declaring one.
+ */
+export function hasSizeSupplement(desc: ShapeDescriptor): boolean {
+    return desc.sizing.heightFactor > 1 || desc.sizing.minAspect > 0;
+}
+
 /* ------------------------------------------------------------------------- */
 /* Content rectangle and its inverse (D9, 2026-08-14)                         */
 /*                                                                            */
 /* Two questions, one geometry. `contentRect` answers "given this box, where  */
 /* can content of this height sit"; `boxForContent` is its inverse, "given    */
-/* this content, how big must the box be". Nothing here is wired to a         */
-/* consumer yet.                                                              */
+/* this content, how big must the box be". Their consumer is `boxFromIntrinsic` */
+/* at the foot of this file, called by useContentSize.ts (wired 2026-08-15).   */
 /*                                                                            */
 /* Both are BANDED: they take the height of the content, not just the box.    */
 /* That is the correction the measurement forced. The static maximum-area      */
@@ -386,4 +400,60 @@ export function boxForContentNumeric(
         if (fits(mid)) hi = mid; else lo = mid + 1;
     }
     return applyBoxFloors(desc, lo, boxH, sizing);
+}
+
+/* ------------------------------------------------------------------------- */
+/* From a DOM measurement to a box (D8/D9, wired 2026-08-15)                  */
+/* ------------------------------------------------------------------------- */
+
+/**
+ * One pixel of slack on each axis of the ink.
+ *
+ * A consumer measures with `offsetWidth`/`offsetHeight`, which are integers and
+ * round to nearest, so up to half a pixel of ink can be lost, while every
+ * rounding here is upwards on purpose (a short label that lost 0.2px ended up
+ * outside the outline). One pixel restores that direction, at a cost of at most
+ * one pixel of width and `heightFactor` pixels of height.
+ */
+export const MEASURE_SLACK = 1;
+
+/** Border box of a content element at its intrinsic size, plus its own chrome. */
+export interface IntrinsicMeasure {
+    /** intrinsic border-box width, px */
+    readonly w: number;
+    /** intrinsic border-box height, px */
+    readonly h: number;
+    /** border plus padding, horizontal, px */
+    readonly chromeX: number;
+    /** border plus padding, vertical, px */
+    readonly chromeY: number;
+}
+
+/**
+ * Border box that holds a measured content inside the outline of `desc`.
+ *
+ * `boxForContent` answers in CONTENT coordinates while a consumer sets a border
+ * box, so the chrome is subtracted before and added back after. Measured on
+ * `rect`, where the rule is the identity and nothing absorbs the difference:
+ * `boxForContent` answered 170 where the DOM stopped truncating at 172, exactly
+ * the two 1px borders. Adding the chrome first instead would let the supplement
+ * multiply the border as well (factor 2 on the diamond).
+ *
+ * Pure, so the arithmetic around `boxForContent` is testable without a layout
+ * engine.
+ */
+export function boxFromIntrinsic(desc: ShapeDescriptor, m: IntrinsicMeasure): Size {
+    const inkW = Math.max(0, finiteOr(m.w, 0) - finiteOr(m.chromeX, 0)) + MEASURE_SLACK;
+    const inkH = Math.max(0, finiteOr(m.h, 0) - finiteOr(m.chromeY, 0)) + MEASURE_SLACK;
+    const box = boxForContent(desc, inkW, inkH);
+    const w = box.w + Math.max(0, finiteOr(m.chromeX, 0));
+    const h = box.h + Math.max(0, finiteOr(m.chromeY, 0));
+    // The chrome need not be equal on the two axes, so a square answered by
+    // boxForContent would stop being one. Growing the shorter side preserves
+    // containment: a taller box can only widen the band the content sits in.
+    if (desc.keepAspectRatio) {
+        const s = Math.max(w, h);
+        return { w: s, h: s };
+    }
+    return { w, h };
 }
