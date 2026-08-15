@@ -7,7 +7,9 @@ import { validateIR } from '../ir/irValidate';
 import { defaultObjectViewIR } from '../ir/irDefaults';
 import type { VertexViewIR, ShapeForm } from '../ir/irTypes';
 import { MARKER_REGISTRY } from '../ir/markerRegistry';
+import { applyPresetToShape } from '../ir/notationCatalog';
 import { resolveMetaclassId, withMetaclassPins, type MetaclassRef } from '../ir/metaclassPin';
+import { SymbolCatalogPicker } from './SymbolCatalogPicker';
 import { defaultResizableForForm } from '../../nodes/nodeSizing';
 import { LabelListEditor } from './LabelListEditor';
 import { FieldCompartmentListEditor } from './FieldCompartmentListEditor';
@@ -326,6 +328,14 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
 
             {/* ─────────── Appearance ─────────── */}
             <div style={body('ir-appearance')}>
+
+            {/* Symbol catalog (D10): applying a preset populates the controls
+                below — the retouch panel opens already set on the preset. */}
+            <FormSection title="Symbol" divider={false}>
+                <SymbolCatalogPicker
+                    onApply={(preset) => patch({ ...draft, shape: applyPresetToShape(draft.shape, preset) })}
+                />
+            </FormSection>
 
             {/* Shape form */}
             <FormSection title="Shape" divider={false}>
