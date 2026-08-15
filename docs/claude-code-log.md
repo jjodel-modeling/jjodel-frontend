@@ -1,5 +1,19 @@
 # Claude Code Session Log
 
+## 2026-08-15 — feat(editor-v2): structural symbol recognition in the authoring panel (D14)
+
+**Prompt**: sessione Cowork diretta, attuazione di D14 dal memo `claude_2026-08-15_memo_ratifica_symbol_due_superfici_stencil.md`: identita' del simbolo derivata confrontando gli assi col catalogo, mai memorizzata; chip di riconoscimento nella sezione Symbol del pannello.
+**Files touched**: commit `901ebadee`: `viewpoint/ir/symbolRecognition.ts` (nuovo), `viewpoint/authoring/VertexAuthoringPanel.tsx` (chip, 24 righe), `viewpoint/ir/__tests__/symbolRecognition.test.ts` (nuovo, 9 test), `docs/discovery/discovery_2026-08-15_riconoscimento_strutturale.md` (nuovo).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no sui gate, eseguiti nel container da `git archive` + overlay dei file modificati, sha256 device/container confrontati prima del commit: typecheck 14 (elenco identico alla baseline Linux), vitest 1216 passed 0 failed (1207 + 9 nuovi), build exit 0.
+**Out-of-scope changes**: no — quattro file, dichiarati prima del diff.
+**Layer Impact Report**: not-required — modulo puro in `viewpoint/ir/` + chip nel pannello di authoring, nessun file di §3.2.
+**Smoke visivo**: passato (GO visivo di Alfonso, 2026-08-15) — criteri: (a) applicando «Exclusive gateway» il chip dice «Exclusive gateway · BPMN»; (b) rombo senza marker dice «Choice · UML · Flowchart · ER · also: Decision, Relationship»; (c) width a 2 dice «Custom symbol»; (d) il colore del bordo non cambia il riconoscimento.
+**Notes**: (1) Equivalenza = specchio esatto di `applyPresetToShape`: conta cio' che un preset scrive, si ignora cio' che conserva (colore del bordo incluso, da cui il criterio (d) per costruzione). (2) Risultato a INSIEME: il catalogo e' molti-a-molti per costruzione, sei gruppi di ambiguita' reali asseriti nei test. (3) «Modificato da X» non derivabile (Start/End event differiscono solo sulla width): sara' stato effimero del picker, slice D15. (4) Nella stessa finestra di GO (2026-08-15) Alfonso ha dichiarato passato anche lo smoke arretrato del picker a catalogo (`0a691b5fd`, sessione (2)): campo Smoke aggiornato in quella entry, nessun'altra riga toccata. (5) Rotazione log ancora dovuta: 39 entry attive con questa, soglia 20, rinviata a repo fermo come nelle entry precedenti.
+**Prompt document name**: — (sessione Cowork diretta, 2026-08-15 15:57)
+
 ## 2026-08-15 — docs: HARNESS-DOCS, la norma dell'organizzazione documentale
 
 **Prompt**: sessione Cowork, richiesta di Alfonso: «fammi un documento md che descriva in dettaglio ed in maniera molto precisa la completa organizzazione documentale (prompt, discovery report, KN) del mio harness». Registro normativo operativo, e assorbimento di `INDICE_ARCHIVIO.md`, creato poche ore prima.
@@ -39,7 +53,7 @@
 **Regressions**: no sui gate, eseguiti nel container su HEAD `32a4994bd` + i sei file: typecheck 14 (baseline Linux invariata, zero nei file nuovi), vitest 1199 passed 0 failed (1188 + 11 nuovi), build exit 0. UI additiva: nessun percorso esistente cambia finche' non si clicca un preset. Smoke visivo in-app in attesa.
 **Out-of-scope changes**: no — sei file, elencati prima del diff.
 **Layer Impact Report**: not-required — authoring UI e tabelle dati pure, nessun file di §3.2.
-**Smoke visivo**: in attesa — criterio: (a) sezione Symbol in testa ad Appearance, Browse apre filtro+ricerca+griglia; (b) click su «Exclusive gateway» ⇒ rombo con x sul canvas e controlli sotto popolati, colore del bordo dell'autore conservato; (c) un preset senza marker dopo uno con marker lo rimuove; (d) «Initial pseudostate» campisce, «Weak entity» raddoppia il bordo; (e) ricerca «decisione» trova il rombo flowchart; (f) anteprime leggibili in light e dark.
+**Smoke visivo**: passato (GO visivo di Alfonso, 2026-08-15) — criteri: (a) sezione Symbol in testa ad Appearance, Browse apre filtro+ricerca+griglia; (b) click su «Exclusive gateway» ⇒ rombo con x sul canvas e controlli sotto popolati, colore del bordo dell'autore conservato; (c) un preset senza marker dopo uno con marker lo rimuove; (d) «Initial pseudostate» campisce, «Weak entity» raddoppia il bordo; (e) ricerca «decisione» trova il rombo flowchart; (f) anteprime leggibili in light e dark.
 **Notes**: (1) P5 chiusa per il perimetro v1: 36 preset su 5 notazioni verificati sulle specifiche (report in discovery); gli inespressi (stadio, parallelogramma, cilindro, event-based gateway, predefined process ISO, key attribute ER) sono ESCLUSI, non approssimati. (2) Un preset e' un valore (D10): `applyPresetToShape` scrive form/border.style+width/marker, conserva il colore del bordo dell'autore, rimuove il marker quando il preset non lo dichiara, scrive fill solo dove e' semantica del simbolo. Nessun tipo nuovo persistito. (3) Anteprime dai path veri di markerRegistry riscalati + overdraw del double: anteprima e resa non possono divergere. (4) Niente Modal (export commentato nel barrel ui): sezione a disclosure con Select+Input+griglia; i preset double portano width 3 nei DATI, il vincolo CSS sta nella riga e non nel motore. (5) Limite dichiarato: eventi BPMN in variante catch (glifi vuoti); i throw arrivano come glifi campiti in tabella marker. (6) Trasferimento interrotto dalla caduta del bridge (Mac offline) a gate gia' verdi: file consegnati in chat con uuid, ripresa eseguita al turno successivo senza riscritture (sha256 identici alla tabella di ripresa); add e commit nella stessa invocazione (lezione dell'incidente della notte). (7) Rotazione log ancora dovuta.
 **Prompt document name**: — (sessione Cowork diretta, 2026-08-15 02:15)
 
