@@ -27,6 +27,7 @@ import {VertexAuthoringPanel} from "../../editor-v2/viewpoint/authoring/VertexAu
 import {RowAuthoringPanel} from "../../editor-v2/viewpoint/authoring/RowAuthoringPanel";
 import {EdgeAuthoringPanel} from "../../editor-v2/viewpoint/authoring/EdgeAuthoringPanel";
 import {EnableIRPanel} from "../../editor-v2/viewpoint/authoring/EnableIRPanel";
+import {SymbolCard} from "../../editor-v2/viewpoint/authoring/SymbolCard";
 import {HelpText} from "../../ui";
 import {
     IR_TAB_LABELS,
@@ -104,7 +105,11 @@ function ViewDataComponent(props: AllProps) {
     const tabs: TabDescriptor[] = irKind ? irTabsForKind(irKind, props.advanced).map((id) => ({
         id,
         label: IR_TAB_LABELS[id],
-        render: () => renderIRPanel(id),
+        // The Symbol tab is the light identity card (D15), not an authoring body:
+        // the anatomy is re-hosted by SymbolEditorModal on the same panel.
+        render: () => id === 'ir-symbol'
+            ? <Try><SymbolCard view={view} /></Try>
+            : renderIRPanel(id),
     })) : [
         {
             id: 'apply-to',

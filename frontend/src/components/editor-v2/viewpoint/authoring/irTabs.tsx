@@ -17,6 +17,7 @@ import { InfoTooltip } from '../../../ui';
 export type IRTabId =
     | 'ir-applies-to'
     | 'ir-structure'
+    | 'ir-symbol'
     | 'ir-appearance'
     | 'ir-text'
     | 'ir-source';
@@ -28,6 +29,7 @@ export type IRAuthoringKind = 'vertex' | 'row' | 'edge';
 export const IR_TAB_LABELS: Record<IRTabId, string> = {
     'ir-applies-to': 'Applies to',
     'ir-structure': 'Structure',
+    'ir-symbol': 'Symbol',
     'ir-appearance': 'Appearance',
     'ir-text': 'Text',
     'ir-source': 'Source',
@@ -43,9 +45,14 @@ export const IR_TAB_LABELS: Record<IRTabId, string> = {
  * included.
  */
 export const irTabsForKind = (kind: IRAuthoringKind, advanced: boolean): IRTabId[] => {
+    // D15: the vertex anatomy (Appearance and Text bodies) is re-hosted by the
+    // symbol editor modal; the rail offers the Symbol identity card instead. The
+    // edge keeps the pre-D15 bar until its own re-hosting slice.
     const content: IRTabId[] = kind === 'row'
         ? ['ir-applies-to', 'ir-text']
-        : ['ir-applies-to', 'ir-structure', 'ir-appearance', 'ir-text'];
+        : kind === 'edge'
+            ? ['ir-applies-to', 'ir-structure', 'ir-appearance', 'ir-text']
+            : ['ir-applies-to', 'ir-structure', 'ir-symbol'];
     return advanced ? [...content, 'ir-source'] : content;
 };
 

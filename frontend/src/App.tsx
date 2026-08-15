@@ -55,6 +55,7 @@ import HelpDrawer from './components/HelpDrawer';
 import ExplainModal from './components/ExplainModal';
 import WelcomeModal from './components/WelcomeModal';
 import ImportSummaryModal from './components/import/ImportSummaryModal';
+import SymbolEditorModal from './components/editor-v2/viewpoint/authoring/SymbolEditorModal';
 
 let firstLoading = true;
 let browserData = U.getOSBrowserData();
@@ -175,6 +176,7 @@ function App(props: AllProps): JSX.Element {
                 {user && <Try><DonationBanner/></Try>}
                 {user && <Try><WelcomeModal/></Try>}
                 <Try><ImportSummaryModal/></Try>
+                <Try><SymbolEditorModal/></Try>
 
             </div>
         </TreeViewPanelProvider>

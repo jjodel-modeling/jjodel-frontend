@@ -1,0 +1,88 @@
+/* SymbolCard — light identity card of the vertex symbol in the rail (D15).
+   Fixed metrics on the recognition row: the card must not shift when the
+   recognition set changes (criterion f of the D15 prompt). */
+
+.symbol-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2, 8px);
+
+    &__row {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3, 12px);
+    }
+
+    &__thumb {
+        width: 56px;
+        height: 40px;
+        flex: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--color-bg-primary, #f8fafc);
+        border: 1px solid var(--color-border-secondary, #e2e8f0);
+        border-radius: 6px;
+        color: var(--color-text-secondary, #64748b);
+        font-size: 16px;
+    }
+
+    &__meta {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+        min-height: 32px;
+        justify-content: center;
+    }
+
+    &__name {
+        font-size: 12px;
+        font-weight: 650;
+        color: var(--color-text-primary, #0f172a);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    &__sub {
+        font-size: 11px;
+        color: var(--color-text-secondary, #64748b);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    &__axis {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2, 8px);
+    }
+
+    &__axis-value {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    &__swatch {
+        width: 16px;
+        height: 16px;
+        border-radius: 4px;
+        border: 1px solid var(--color-border-primary, #cbd5e1);
+        display: inline-block;
+        flex: none;
+    }
+
+    &__hex {
+        font-size: 11px;
+        color: var(--color-text-secondary, #64748b);
+        font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+    }
+
+    &__launch {
+        width: 100%;
+        justify-content: center;
+        margin-top: var(--space-1, 4px);
+    }
+}

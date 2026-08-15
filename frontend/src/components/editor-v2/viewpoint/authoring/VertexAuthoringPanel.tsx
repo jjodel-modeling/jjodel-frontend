@@ -7,7 +7,7 @@ import { validateIR } from '../ir/irValidate';
 import { defaultObjectViewIR } from '../ir/irDefaults';
 import type { VertexViewIR, ShapeForm } from '../ir/irTypes';
 import { MARKER_REGISTRY } from '../ir/markerRegistry';
-import { applyPresetToShape } from '../ir/notationCatalog';
+import { applyPresetToShape, type SymbolPreset } from '../ir/notationCatalog';
 import { recognizeSymbol } from '../ir/symbolRecognition';
 import { resolveMetaclassId, withMetaclassPins, type MetaclassRef } from '../ir/metaclassPin';
 import { SymbolCatalogPicker } from './SymbolCatalogPicker';
@@ -89,13 +89,52 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
     const advanced = useSelector((s: any) => !!s.advanced);
     const dirtyRef = useRef(false);
 
+    // D15: two mounts of this panel can edit the same view (the rail tabs and
+    // the symbol editor modal) and the commit is a whole-object replace, so
+    // each mount tracks the ir object it derives from. `get_ir` returns
+    // `c.data.ir` as-is (view.tsx:549): referential identity is the change signal.
+    const irObj = (view as any).ir;
+    const lastSeenIrRef = useRef<unknown>(irObj);
+    const lastCommittedRef = useRef<VertexViewIR | null>(null);
+    // Latest draft/view for the unmount flush below (refs: no re-render, no
+    // stale closure). draftViewIdRef guards against flushing a draft onto a
+    // view it was not seeded from.
+    const draftRef = useRef(draft);
+    draftRef.current = draft;
+    const viewRef = useRef(view);
+    viewRef.current = view;
+    const draftViewIdRef = useRef<string>(view.id as string);
+
+    // «Modified from X» is picker session state (memo D14): it exists only
+    // after an application in THIS mount, never persisted, never derived.
+    const [lastApplied, setLastApplied] = useState<SymbolPreset | null>(null);
+
     // Reset the draft when the selected view changes (no commit on reset).
     useEffect(() => {
         dirtyRef.current = false;
         setDraft(seed());
         setError(null);
+        setLastApplied(null);
+        draftViewIdRef.current = view.id as string;
+        lastSeenIrRef.current = (view as any).ir;
+        lastCommittedRef.current = null;
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [view.id]);
+
+    // D15: re-seed when the ir changed OUTSIDE this mount (the other surface
+    // committed). Without this, the next local edit would write back a stale
+    // clone and silently revert the other surface's work. A local uncommitted
+    // edit keeps priority (last-writer-wins, unchanged from today).
+    useEffect(() => {
+        if (irObj === lastSeenIrRef.current) return;
+        const clean = !dirtyRef.current || draft === lastCommittedRef.current;
+        lastSeenIrRef.current = irObj;
+        if (!clean) return;
+        dirtyRef.current = false;
+        setDraft(seed());
+        setError(null);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [irObj]);
 
     // Eager validate + debounced immutable commit — only on genuine user edits.
     useEffect(() => {
@@ -107,10 +146,29 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
             // Whole-object immutable replace via set_ir (view.tsx:484 → SetFieldAction,
             // which dispatches): flips the refToken WeakMap → recompile → live preview.
             (view as any).ir = draft;
+            lastCommittedRef.current = draft;
+            lastSeenIrRef.current = draft;
         }, COMMIT_DEBOUNCE_MS);
         return () => clearTimeout(t);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [draft, view.id]);
+
+    // D15: this mount can now disappear with a debounced commit pending (the
+    // modal closes, the rail switches to the Symbol card). The commit effect's
+    // cleanup cancels the timer, so the unmount flushes the last valid dirty
+    // draft synchronously. Nothing changes for the tab switch, which never
+    // unmounts the panel (R-A).
+    useEffect(() => () => {
+        const v = viewRef.current;
+        const d = draftRef.current;
+        if (!dirtyRef.current) return;
+        if (d === lastCommittedRef.current) return;
+        if (draftViewIdRef.current !== (v.id as string)) return;
+        const res = validateIR(v.id, d);
+        if (!res.ok) return;
+        try { (v as any).ir = d; } catch { /* view already gone: nothing to flush onto */ }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     // Identity universe for the metaclass pin, read once per mount: every class of
     // every project metamodel, in project iteration order, each with the metamodel
@@ -340,9 +398,26 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                 {(() => {
                     const matches = recognizeSymbol(draft.shape);
                     const notations = [...new Set(matches.map(m => m.notation))].join(' · ');
+                    // «Modified from X» (D15): session state, shown only when a preset
+                    // was applied in this mount and the axes have since diverged.
+                    const la = lastApplied;
+                    const modified = la !== null && !matches.some((m) => m.id === la.id);
                     return (
                         <div className="jj-field" style={{ fontSize: 11, display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
-                            {matches.length > 0 ? (
+                            {modified && la ? (
+                                <>
+                                    <strong>{la.label}</strong>
+                                    <span style={{ color: '#64748b' }}>{la.notation} · modified</span>
+                                    <Button
+                                        variant="secondary"
+                                        size="sm"
+                                        title="Reapply the preset axes; the border color stays yours"
+                                        onClick={() => patch({ ...draft, shape: applyPresetToShape(draft.shape, la) })}
+                                    >
+                                        Reset to preset
+                                    </Button>
+                                </>
+                            ) : matches.length > 0 ? (
                                 <>
                                     <strong>{matches[0].label}</strong>
                                     <span style={{ color: '#64748b' }}>
@@ -357,7 +432,10 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                     );
                 })()}
                 <SymbolCatalogPicker
-                    onApply={(preset) => patch({ ...draft, shape: applyPresetToShape(draft.shape, preset) })}
+                    onApply={(preset) => {
+                        setLastApplied(preset);
+                        patch({ ...draft, shape: applyPresetToShape(draft.shape, preset) });
+                    }}
                 />
             </FormSection>
 

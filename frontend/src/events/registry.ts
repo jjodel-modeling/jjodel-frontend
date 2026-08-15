@@ -62,6 +62,8 @@ export const JjodelEvents = {
   ACTIVITY_LOGGED: 'jjodel:activity-logged',
   // Import summary modal (post-import feedback for .ecore / .xmi)
   IMPORT_SUMMARY_SHOW: 'jjodel:import-summary-show',
+  // Symbol editor modal (D15): launch only; closing is local state of the modal
+  SYMBOL_EDITOR_OPEN: 'jjodel:symbol-editor-open',
 } as const;
 
 // ─── JjScript ───────────────────────────────────────────────────
