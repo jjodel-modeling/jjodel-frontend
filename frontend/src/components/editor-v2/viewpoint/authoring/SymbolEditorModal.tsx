@@ -24,7 +24,7 @@ import { JjodelEvents } from '../../../../events/registry';
 import { recognizeSymbol } from '../ir/symbolRecognition';
 import {
     applyPresetToShape,
-    CATALOG_NOTATIONS,
+    CATALOG_FAMILIES,
     NOTATION_CATALOG,
     type SymbolPreset,
 } from '../ir/notationCatalog';
@@ -260,7 +260,7 @@ export const SymbolEditorModal: React.FC = () => {
                     <aside className="symbol-editor-modal__catalog">
                         <SymbolCatalogPicker variant="column" onApply={applyPreset} recentIds={recentIds} />
                         <div className="symbol-editor-modal__catalog-foot">
-                            {NOTATION_CATALOG.length} presets · {CATALOG_NOTATIONS.length} notations
+                            {NOTATION_CATALOG.length} presets · {CATALOG_FAMILIES.length} families
                         </div>
                     </aside>
 

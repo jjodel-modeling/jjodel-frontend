@@ -12,18 +12,26 @@
  * vede il nodo cambiare sul canvas.
  *
  * D18 (column variant only): search-first column with notation chips instead
- * of the Select, a recents strip fed by the host, and one collapsible section
- * per notation with counters. The index is derived (catalogSections): the data
- * table is untouched. The disclosure variant keeps the pre-D18 flat rendering.
+ * of the Select, a recents strip fed by the host, and collapsible sections
+ * with counters. The index is derived: the data table is untouched. The
+ * disclosure variant keeps the pre-D18 flat rendering.
+ *
+ * D24 (column variant only): sections are semantic FAMILIES
+ * (catalogFamilySections), the notation degrades to provenance: a tag on the
+ * tile in mixed families, and the chips become an orthogonal filter that
+ * narrows tiles inside every section with the same suspension semantics as
+ * the search.
  */
 
 import React, { useMemo, useState } from 'react';
 import { Button, Input, Select } from '../../../ui';
 import {
+    CATALOG_FAMILIES,
     CATALOG_NOTATIONS,
-    catalogSections,
+    catalogFamilySections,
     filterCatalog,
     getCatalogPreset,
+    NOTATION_CATALOG,
     type SymbolPreset,
 } from '../ir/notationCatalog';
 import SymbolPreview from './SymbolPreview';
@@ -50,6 +58,16 @@ const NOTATION_OPTIONS = [
     ...CATALOG_NOTATIONS.map((n) => ({ value: n, label: n })),
 ];
 
+/**
+ * Families whose presets span more than one notation (D24): only there the
+ * tile shows its provenance tag; in a pure family the tag would repeat the
+ * section header. Derived once from the table, no new export needed.
+ */
+const MIXED_FAMILIES: ReadonlySet<string> = new Set(
+    CATALOG_FAMILIES.filter((f) =>
+        new Set(NOTATION_CATALOG.filter((p) => p.family === f).map((p) => p.notation)).size > 1),
+);
+
 const cellStyle: React.CSSProperties = {
     display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
     background: 'transparent', border: '1px solid var(--border-default)',
@@ -66,20 +84,29 @@ export const SymbolCatalogPicker: React.FC<SymbolCatalogPickerProps> = ({ onAppl
     const [open, setOpen] = useState(false);
     const [notation, setNotation] = useState('');
     const [query, setQuery] = useState('');
-    // D18: per-notation collapse, alive exactly as long as the picker is
+    // D18/D24: per-family collapse, alive exactly as long as the picker is
     // mounted (the modal unmounts it on close: collapse persists for the
-    // duration of the modal by construction). Mockup-faithful default: first
-    // section expanded, the others collapsed.
+    // duration of the modal by construction). Default per go-ahead D24:
+    // first family (Base) expanded, the others collapsed.
     const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(
-        () => new Set(CATALOG_NOTATIONS.slice(1)),
+        () => new Set(CATALOG_FAMILIES.slice(1)),
     );
 
     const presets = useMemo(() => filterCatalog(notation, query), [notation, query]);
     const searching = query.trim() !== '';
-    // Derived section index (D18). The index keeps empty sections; hiding them
-    // under a search is a UI choice made below: a "0" row in a 264px column is
-    // noise, and clearing the query brings the section back.
-    const sections = useMemo(() => (column ? catalogSections(query) : []), [column, query]);
+    // D24: with family sections the notation chip is no longer a section
+    // selector, it filters tiles INSIDE every section, composing with the
+    // query. Both filters share the same suspension semantics below.
+    const filtering = notation !== '';
+    const filtersActive = searching || filtering;
+    // Derived family-section index (D24). The index keeps empty sections;
+    // hiding them under an active filter is a UI choice made below: a "0" row
+    // in a 264px column is noise, and clearing the filters brings the section
+    // back.
+    const sections = useMemo(
+        () => (column ? catalogFamilySections(query, notation) : []),
+        [column, query, notation],
+    );
     const recents = useMemo(
         () => (column ? (recentIds ?? []).map(getCatalogPreset).filter((p): p is SymbolPreset => p !== undefined) : []),
         [column, recentIds],
@@ -151,10 +178,10 @@ export const SymbolCatalogPicker: React.FC<SymbolCatalogPickerProps> = ({ onAppl
         return next;
     });
 
-    // Chip semantics = the old Select: single selection, '' means all, and
-    // clicking the active chip clears it back to All.
-    const visibleSections = sections.filter((s) =>
-        (notation === '' || s.notation === notation) && (!searching || s.presets.length > 0));
+    // Chip semantics (D24): single selection with toggle as in D18, but the
+    // active chip filters tiles across the family sections instead of
+    // selecting a section; sections emptied by the filters are hidden.
+    const visibleSections = sections.filter((s) => !filtersActive || s.presets.length > 0);
 
     return (
         <div className="jj-field symbol-catalog">
@@ -196,24 +223,24 @@ export const SymbolCatalogPicker: React.FC<SymbolCatalogPickerProps> = ({ onAppl
             )}
             <div className="symbol-catalog__sections">
                 {visibleSections.map((s) => {
-                    // While searching, collapse is suspended: a search that
-                    // hides its own results behind a closed header reads as
-                    // broken. The user's collapse map is untouched and comes
-                    // back when the query clears.
-                    const isCollapsed = !searching && collapsed.has(s.notation);
+                    // While a filter is active (search or chip), collapse is
+                    // suspended: a filter that hides its own results behind a
+                    // closed header reads as broken. The user's collapse map
+                    // is untouched and comes back when the filters clear.
+                    const isCollapsed = !filtersActive && collapsed.has(s.family);
                     return (
-                        <section key={s.notation} className="symbol-catalog__section">
+                        <section key={s.family} className="symbol-catalog__section">
                             <button
                                 type="button"
                                 className="symbol-catalog__section-head"
                                 aria-expanded={!isCollapsed}
-                                disabled={searching}
-                                onClick={() => toggleSection(s.notation)}
+                                disabled={filtersActive}
+                                onClick={() => toggleSection(s.family)}
                             >
                                 <i className={`bi bi-chevron-${isCollapsed ? 'right' : 'down'}`} aria-hidden="true" />
-                                <span>{s.notation}</span>
+                                <span>{s.family}</span>
                                 <span className="symbol-catalog__section-count">
-                                    {searching ? s.presets.length : s.total}
+                                    {filtersActive ? s.presets.length : s.total}
                                 </span>
                             </button>
                             {!isCollapsed && (
@@ -227,6 +254,9 @@ export const SymbolCatalogPicker: React.FC<SymbolCatalogPickerProps> = ({ onAppl
                                             aria-label={`Apply ${p.label} (${p.notation})`}
                                             onClick={() => onApply(p)}
                                         >
+                                            {MIXED_FAMILIES.has(s.family) && (
+                                                <span className="symbol-catalog__tag" aria-hidden="true">{p.notation}</span>
+                                            )}
                                             <SymbolPreview preset={p} width={44} />
                                             <span className="symbol-catalog__tile-name">{p.label}</span>
                                         </button>
@@ -236,7 +266,7 @@ export const SymbolCatalogPicker: React.FC<SymbolCatalogPickerProps> = ({ onAppl
                         </section>
                     );
                 })}
-                {searching && visibleSections.length === 0 && (
+                {filtersActive && visibleSections.length === 0 && (
                     <span className="symbol-catalog__empty">No symbol matches this search.</span>
                 )}
             </div>

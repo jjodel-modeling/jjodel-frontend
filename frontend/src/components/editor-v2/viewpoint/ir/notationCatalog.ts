@@ -24,10 +24,23 @@
 
 import type { ShapeForm, ShapeSpec } from './irTypes';
 
+/**
+ * Le famiglie semantiche delle sezioni del catalogo (D24): cosa si modella,
+ * non lo standard di provenienza. L'ordine qui e' l'ordine delle sezioni.
+ */
+export type CatalogFamily = 'Base' | 'Process' | 'Data (ER)' | 'Flowchart';
+
+export const CATALOG_FAMILIES: readonly CatalogFamily[] =
+    ['Base', 'Process', 'Data (ER)', 'Flowchart'];
+
 export interface SymbolPreset {
     readonly id: string;
     readonly label: string;
     readonly notation: string;
+    /** Famiglia della sezione (D24). Opzionale perche' i preset sintetici
+     *  (il valore corrente degli assi nella modale) non ne hanno una; ogni
+     *  riga di tabella la dichiara. */
+    readonly family?: CatalogFamily;
     /** Termini di ricerca aggiuntivi (minuscoli), oltre a label e notation. */
     readonly keywords?: readonly string[];
     /** Il punto nello spazio degli assi. Assenza di `border` = normale (solid 1);
@@ -44,49 +57,57 @@ export interface SymbolPreset {
 const INK = '#334155';
 
 export const NOTATION_CATALOG: readonly SymbolPreset[] = [
+    // ---- Base: le forme pure del registry (D24) ----
+    { id: 'base-rect', label: 'Rectangle', notation: 'Base', family: 'Base', keywords: ['rettangolo'], values: { form: 'rect' } },
+    { id: 'base-rounded', label: 'Rounded rectangle', notation: 'Base', family: 'Base', keywords: ['arrotondato'], values: { form: 'rounded' } },
+    { id: 'base-ellipse', label: 'Ellipse', notation: 'Base', family: 'Base', keywords: ['ellisse'], values: { form: 'ellipse' } },
+    { id: 'base-circle', label: 'Circle', notation: 'Base', family: 'Base', keywords: ['cerchio'], values: { form: 'circle' } },
+    { id: 'base-diamond', label: 'Diamond', notation: 'Base', family: 'Base', keywords: ['rombo'], values: { form: 'diamond' } },
     // ---- BPMN: eventi (cerchio; catch variant, vedi header) ----
-    { id: 'bpmn-start-event', label: 'Start event', notation: 'BPMN', keywords: ['evento iniziale', 'inizio'], values: { form: 'circle' } },
-    { id: 'bpmn-intermediate-event', label: 'Intermediate event', notation: 'BPMN', keywords: ['evento intermedio'], values: { form: 'circle', border: { style: 'double', width: 3 } } },
-    { id: 'bpmn-end-event', label: 'End event', notation: 'BPMN', keywords: ['evento finale', 'fine'], values: { form: 'circle', border: { style: 'solid', width: 3 } } },
-    { id: 'bpmn-message-event', label: 'Message event', notation: 'BPMN', keywords: ['messaggio', 'busta'], values: { form: 'circle', marker: 'envelope' } },
-    { id: 'bpmn-timer-event', label: 'Timer event', notation: 'BPMN', keywords: ['orologio', 'tempo'], values: { form: 'circle', marker: 'clock' } },
-    { id: 'bpmn-signal-event', label: 'Signal event', notation: 'BPMN', keywords: ['segnale'], values: { form: 'circle', marker: 'triangle' } },
-    { id: 'bpmn-error-event', label: 'Error event', notation: 'BPMN', keywords: ['errore'], values: { form: 'circle', marker: 'lightning' } },
+    { id: 'bpmn-start-event', label: 'Start event', notation: 'BPMN', family: 'Process', keywords: ['evento iniziale', 'inizio'], values: { form: 'circle' } },
+    { id: 'bpmn-intermediate-event', label: 'Intermediate event', notation: 'BPMN', family: 'Process', keywords: ['evento intermedio'], values: { form: 'circle', border: { style: 'double', width: 3 } } },
+    { id: 'bpmn-end-event', label: 'End event', notation: 'BPMN', family: 'Process', keywords: ['evento finale', 'fine'], values: { form: 'circle', border: { style: 'solid', width: 3 } } },
+    { id: 'bpmn-message-event', label: 'Message event', notation: 'BPMN', family: 'Process', keywords: ['messaggio', 'busta'], values: { form: 'circle', marker: 'envelope' } },
+    { id: 'bpmn-timer-event', label: 'Timer event', notation: 'BPMN', family: 'Process', keywords: ['orologio', 'tempo'], values: { form: 'circle', marker: 'clock' } },
+    { id: 'bpmn-signal-event', label: 'Signal event', notation: 'BPMN', family: 'Process', keywords: ['segnale'], values: { form: 'circle', marker: 'triangle' } },
+    { id: 'bpmn-error-event', label: 'Error event', notation: 'BPMN', family: 'Process', keywords: ['errore'], values: { form: 'circle', marker: 'lightning' } },
     // ---- BPMN: gateway (rombo) ----
-    { id: 'bpmn-exclusive-gateway', label: 'Exclusive gateway', notation: 'BPMN', keywords: ['gateway esclusivo', 'xor', 'decisione'], values: { form: 'diamond', marker: 'x' } },
-    { id: 'bpmn-parallel-gateway', label: 'Parallel gateway', notation: 'BPMN', keywords: ['gateway parallelo', 'and'], values: { form: 'diamond', marker: 'plus' } },
-    { id: 'bpmn-inclusive-gateway', label: 'Inclusive gateway', notation: 'BPMN', keywords: ['gateway inclusivo', 'or'], values: { form: 'diamond', marker: 'circle' } },
-    { id: 'bpmn-complex-gateway', label: 'Complex gateway', notation: 'BPMN', keywords: ['gateway complesso'], values: { form: 'diamond', marker: 'asterisk' } },
+    { id: 'bpmn-exclusive-gateway', label: 'Exclusive gateway', notation: 'BPMN', family: 'Process', keywords: ['gateway esclusivo', 'xor', 'decisione'], values: { form: 'diamond', marker: 'x' } },
+    { id: 'bpmn-parallel-gateway', label: 'Parallel gateway', notation: 'BPMN', family: 'Process', keywords: ['gateway parallelo', 'and'], values: { form: 'diamond', marker: 'plus' } },
+    { id: 'bpmn-inclusive-gateway', label: 'Inclusive gateway', notation: 'BPMN', family: 'Process', keywords: ['gateway inclusivo', 'or'], values: { form: 'diamond', marker: 'circle' } },
+    { id: 'bpmn-complex-gateway', label: 'Complex gateway', notation: 'BPMN', family: 'Process', keywords: ['gateway complesso'], values: { form: 'diamond', marker: 'asterisk' } },
     // ---- BPMN: task (rounded) ----
-    { id: 'bpmn-task', label: 'Task', notation: 'BPMN', keywords: ['attivita'], values: { form: 'rounded' } },
-    { id: 'bpmn-service-task', label: 'Service task', notation: 'BPMN', keywords: ['servizio', 'ingranaggio'], values: { form: 'rounded', marker: 'gear' } },
-    { id: 'bpmn-user-task', label: 'User task', notation: 'BPMN', keywords: ['utente', 'persona'], values: { form: 'rounded', marker: 'person' } },
-    { id: 'bpmn-script-task', label: 'Script task', notation: 'BPMN', keywords: ['script', 'documento'], values: { form: 'rounded', marker: 'document' } },
-    { id: 'bpmn-loop-task', label: 'Loop task', notation: 'BPMN', keywords: ['ciclo'], values: { form: 'rounded', marker: 'loop' } },
-    { id: 'bpmn-multi-instance-task', label: 'Multi-instance task', notation: 'BPMN', keywords: ['multi istanza'], values: { form: 'rounded', marker: 'bars' } },
-    // ---- UML: state machine ----
-    { id: 'uml-state', label: 'State', notation: 'UML', keywords: ['stato'], values: { form: 'rounded' } },
-    { id: 'uml-initial-state', label: 'Initial pseudostate', notation: 'UML', keywords: ['stato iniziale', 'inizio'], values: { form: 'circle', fill: INK } },
-    { id: 'uml-final-state', label: 'Final state', notation: 'UML', keywords: ['stato finale', 'fine', 'bullseye'], values: { form: 'circle', marker: 'dot' } },
-    { id: 'uml-shallow-history', label: 'Shallow history', notation: 'UML', keywords: ['storia', 'history h'], values: { form: 'circle', marker: 'history' } },
-    { id: 'uml-deep-history', label: 'Deep history', notation: 'UML', keywords: ['storia profonda', 'h*'], values: { form: 'circle', marker: 'history-deep' } },
-    { id: 'uml-choice', label: 'Choice', notation: 'UML', keywords: ['scelta', 'decisione'], values: { form: 'diamond' } },
-    { id: 'uml-use-case', label: 'Use case', notation: 'UML', keywords: ['caso d\'uso'], values: { form: 'ellipse' } },
+    { id: 'bpmn-task', label: 'Task', notation: 'BPMN', family: 'Process', keywords: ['attivita'], values: { form: 'rounded' } },
+    { id: 'bpmn-service-task', label: 'Service task', notation: 'BPMN', family: 'Process', keywords: ['servizio', 'ingranaggio'], values: { form: 'rounded', marker: 'gear' } },
+    { id: 'bpmn-user-task', label: 'User task', notation: 'BPMN', family: 'Process', keywords: ['utente', 'persona'], values: { form: 'rounded', marker: 'person' } },
+    { id: 'bpmn-script-task', label: 'Script task', notation: 'BPMN', family: 'Process', keywords: ['script', 'documento'], values: { form: 'rounded', marker: 'document' } },
+    { id: 'bpmn-loop-task', label: 'Loop task', notation: 'BPMN', family: 'Process', keywords: ['ciclo'], values: { form: 'rounded', marker: 'loop' } },
+    { id: 'bpmn-multi-instance-task', label: 'Multi-instance task', notation: 'BPMN', family: 'Process', keywords: ['multi istanza'], values: { form: 'rounded', marker: 'bars' } },
+    // ---- UML: state machine e activity ----
+    { id: 'uml-state', label: 'State', notation: 'UML', family: 'Process', keywords: ['stato'], values: { form: 'rounded' } },
+    { id: 'uml-initial-state', label: 'Initial pseudostate', notation: 'UML', family: 'Process', keywords: ['stato iniziale', 'inizio'], values: { form: 'circle', fill: INK } },
+    { id: 'uml-final-state', label: 'Final state', notation: 'UML', family: 'Process', keywords: ['stato finale', 'fine', 'bullseye'], values: { form: 'circle', marker: 'dot' } },
+    { id: 'uml-shallow-history', label: 'Shallow history', notation: 'UML', family: 'Process', keywords: ['storia', 'history h'], values: { form: 'circle', marker: 'history' } },
+    { id: 'uml-deep-history', label: 'Deep history', notation: 'UML', family: 'Process', keywords: ['storia profonda', 'h*'], values: { form: 'circle', marker: 'history-deep' } },
+    { id: 'uml-choice', label: 'Choice', notation: 'UML', family: 'Process', keywords: ['scelta', 'decisione'], values: { form: 'diamond' } },
+    { id: 'uml-flow-final', label: 'Flow final', notation: 'UML', family: 'Process', keywords: ['fine flusso', 'activity'], values: { form: 'circle', marker: 'x' } },
+    { id: 'uml-fork-join', label: 'Fork/Join', notation: 'UML', family: 'Process', keywords: ['barra', 'concorrenza'], values: { form: 'rect', fill: INK } },
+    { id: 'uml-use-case', label: 'Use case', notation: 'UML', family: 'Process', keywords: ['caso d\'uso'], values: { form: 'ellipse' } },
     // ---- Flowchart (ISO 5807) ----
-    { id: 'flow-process', label: 'Process', notation: 'Flowchart', keywords: ['processo'], values: { form: 'rect' } },
-    { id: 'flow-decision', label: 'Decision', notation: 'Flowchart', keywords: ['decisione'], values: { form: 'diamond' } },
+    { id: 'flow-process', label: 'Process', notation: 'Flowchart', family: 'Flowchart', keywords: ['processo'], values: { form: 'rect' } },
+    { id: 'flow-decision', label: 'Decision', notation: 'Flowchart', family: 'Flowchart', keywords: ['decisione'], values: { form: 'diamond' } },
     // ---- Reti di Petri ----
-    { id: 'petri-place', label: 'Place', notation: 'Petri net', keywords: ['posto'], values: { form: 'circle' } },
-    { id: 'petri-marked-place', label: 'Marked place', notation: 'Petri net', keywords: ['posto marcato', 'token'], values: { form: 'circle', marker: 'dot' } },
-    { id: 'petri-transition', label: 'Transition', notation: 'Petri net', keywords: ['transizione', 'barra'], values: { form: 'rect', fill: INK } },
+    { id: 'petri-place', label: 'Place', notation: 'Petri net', family: 'Process', keywords: ['posto'], values: { form: 'circle' } },
+    { id: 'petri-marked-place', label: 'Marked place', notation: 'Petri net', family: 'Process', keywords: ['posto marcato', 'token'], values: { form: 'circle', marker: 'dot' } },
+    { id: 'petri-transition', label: 'Transition', notation: 'Petri net', family: 'Process', keywords: ['transizione', 'barra'], values: { form: 'rect', fill: INK } },
     // ---- ER (Chen) ----
-    { id: 'er-entity', label: 'Entity', notation: 'ER', keywords: ['entita'], values: { form: 'rect' } },
-    { id: 'er-weak-entity', label: 'Weak entity', notation: 'ER', keywords: ['entita debole'], values: { form: 'rect', border: { style: 'double', width: 3 } } },
-    { id: 'er-relationship', label: 'Relationship', notation: 'ER', keywords: ['relazione'], values: { form: 'diamond' } },
-    { id: 'er-identifying-relationship', label: 'Identifying relationship', notation: 'ER', keywords: ['relazione identificante'], values: { form: 'diamond', border: { style: 'double', width: 3 } } },
-    { id: 'er-attribute', label: 'Attribute', notation: 'ER', keywords: ['attributo'], values: { form: 'ellipse' } },
-    { id: 'er-derived-attribute', label: 'Derived attribute', notation: 'ER', keywords: ['attributo derivato'], values: { form: 'ellipse', border: { style: 'dashed', width: 1 } } },
-    { id: 'er-multivalued-attribute', label: 'Multivalued attribute', notation: 'ER', keywords: ['attributo multivalore'], values: { form: 'ellipse', border: { style: 'double', width: 3 } } },
+    { id: 'er-entity', label: 'Entity', notation: 'ER', family: 'Data (ER)', keywords: ['entita'], values: { form: 'rect' } },
+    { id: 'er-weak-entity', label: 'Weak entity', notation: 'ER', family: 'Data (ER)', keywords: ['entita debole'], values: { form: 'rect', border: { style: 'double', width: 3 } } },
+    { id: 'er-relationship', label: 'Relationship', notation: 'ER', family: 'Data (ER)', keywords: ['relazione'], values: { form: 'diamond' } },
+    { id: 'er-identifying-relationship', label: 'Identifying relationship', notation: 'ER', family: 'Data (ER)', keywords: ['relazione identificante'], values: { form: 'diamond', border: { style: 'double', width: 3 } } },
+    { id: 'er-attribute', label: 'Attribute', notation: 'ER', family: 'Data (ER)', keywords: ['attributo'], values: { form: 'ellipse' } },
+    { id: 'er-derived-attribute', label: 'Derived attribute', notation: 'ER', family: 'Data (ER)', keywords: ['attributo derivato'], values: { form: 'ellipse', border: { style: 'dashed', width: 1 } } },
+    { id: 'er-multivalued-attribute', label: 'Multivalued attribute', notation: 'ER', family: 'Data (ER)', keywords: ['attributo multivalore'], values: { form: 'ellipse', border: { style: 'double', width: 3 } } },
 ];
 
 /** Le notazioni presenti, nell'ordine di prima apparizione nel catalogo. */
@@ -168,4 +189,34 @@ const PRESET_BY_ID: ReadonlyMap<string, SymbolPreset> =
 /** The table row for an id, or undefined: unknown ids are the caller's to drop. */
 export function getCatalogPreset(id: string): SymbolPreset | undefined {
     return PRESET_BY_ID.get(id);
+}
+
+/**
+ * A derived family section (D24): the semantic family, the presets matching
+ * BOTH filters, and the full cardinality of the family (filter-independent).
+ */
+export interface CatalogFamilySection {
+    readonly family: CatalogFamily;
+    /** The presets of this family matching query AND notation ('' = all). */
+    readonly presets: readonly SymbolPreset[];
+    /** Full cardinality of the family, independent of the filters. */
+    readonly total: number;
+}
+
+/**
+ * Derived family-section index over the catalog (D24): one section per
+ * family, in CATALOG_FAMILIES order (a declared order, not first appearance:
+ * the families are a closed vocabulary). `notation` is the chip filter and
+ * narrows the presets exactly like the query does, never the totals; the two
+ * filters compose. Sections left empty by the filters are NOT dropped here,
+ * hiding them is a UI choice, not a property of the index (same contract as
+ * catalogSections, D18).
+ */
+export function catalogFamilySections(query: string, notation: string): CatalogFamilySection[] {
+    const matches = filterCatalog(notation, query);
+    return CATALOG_FAMILIES.map((family) => ({
+        family,
+        presets: matches.filter((p) => p.family === family),
+        total: NOTATION_CATALOG.reduce((n, p) => n + (p.family === family ? 1 : 0), 0),
+    }));
 }

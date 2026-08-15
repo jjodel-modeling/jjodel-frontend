@@ -42,13 +42,18 @@ describe('symbolRecognition: round-trip con applyPresetToShape', () => {
 
 describe('symbolRecognition: i gruppi di ambiguita\' sono noti e stabili', () => {
     const plain = (form: ShapeSpec['form']): ShapeSpec => ({ form });
+    // D24: le forme pure guadagnano il preset Base in testa (ordine di
+    // tabella); fork/join e transizione Petri sono lo stesso punto degli assi.
     const CASES: Array<[ShapeSpec, string[]]> = [
-        [plain('rect'), ['flow-process', 'er-entity']],
-        [plain('rounded'), ['bpmn-task', 'uml-state']],
-        [plain('diamond'), ['uml-choice', 'flow-decision', 'er-relationship']],
-        [plain('circle'), ['bpmn-start-event', 'petri-place']],
+        [plain('rect'), ['base-rect', 'flow-process', 'er-entity']],
+        [plain('rounded'), ['base-rounded', 'bpmn-task', 'uml-state']],
+        [plain('diamond'), ['base-diamond', 'uml-choice', 'flow-decision', 'er-relationship']],
+        [plain('circle'), ['base-circle', 'bpmn-start-event', 'petri-place']],
         [{ form: 'circle', marker: 'dot' }, ['uml-final-state', 'petri-marked-place']],
-        [plain('ellipse'), ['uml-use-case', 'er-attribute']],
+        [plain('ellipse'), ['base-ellipse', 'uml-use-case', 'er-attribute']],
+        // fill ignorato dove il preset non lo dichiara: il rect campito
+        // matcha anche i rect senza fill (semantica gia' testata sotto).
+        [{ form: 'rect', fill: '#334155' }, ['base-rect', 'uml-fork-join', 'flow-process', 'petri-transition', 'er-entity']],
     ];
     it('gli insiemi coincidono, nell\'ordine del catalogo', () => {
         for (const [shape, expected] of CASES) {
@@ -64,12 +69,13 @@ describe('symbolRecognition: i gruppi di ambiguita\' sono noti e stabili', () =>
         }
         const groups = [...seen.values()].filter(g => g.length > 1);
         expect(groups).toEqual([
-            ['bpmn-start-event', 'petri-place'],
-            ['bpmn-task', 'uml-state'],
+            ['base-rect', 'flow-process', 'er-entity'],
+            ['base-rounded', 'bpmn-task', 'uml-state'],
+            ['base-ellipse', 'uml-use-case', 'er-attribute'],
+            ['base-circle', 'bpmn-start-event', 'petri-place'],
+            ['base-diamond', 'uml-choice', 'flow-decision', 'er-relationship'],
             ['uml-final-state', 'petri-marked-place'],
-            ['uml-choice', 'flow-decision', 'er-relationship'],
-            ['uml-use-case', 'er-attribute'],
-            ['flow-process', 'er-entity'],
+            ['uml-fork-join', 'petri-transition'],
         ]);
     });
 });
@@ -87,10 +93,10 @@ describe('symbolRecognition: perturbazioni e condizionali', () => {
     });
     it('fill condizionale e\' ignorato dove il preset non lo dichiara, e fallisce dove lo dichiara', () => {
         const out = ids({ form: 'circle', fill: { when: { kind: 'always' } as any, then: '#334155' } });
-        expect(out).toEqual(['bpmn-start-event', 'petri-place']);
+        expect(out).toEqual(['base-circle', 'bpmn-start-event', 'petri-place']);
         expect(out).not.toContain('uml-initial-state');
     });
     it('marker vuoto equivale ad assente', () => {
-        expect(ids({ form: 'rounded', marker: '' })).toEqual(['bpmn-task', 'uml-state']);
+        expect(ids({ form: 'rounded', marker: '' })).toEqual(['base-rounded', 'bpmn-task', 'uml-state']);
     });
 });

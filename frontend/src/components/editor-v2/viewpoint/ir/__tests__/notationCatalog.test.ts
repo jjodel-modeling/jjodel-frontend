@@ -11,8 +11,8 @@
 
 import { describe, it, expect } from 'vitest';
 import {
-    NOTATION_CATALOG, CATALOG_NOTATIONS, applyPresetToShape, filterCatalog,
-    catalogSections, getCatalogPreset,
+    NOTATION_CATALOG, CATALOG_NOTATIONS, CATALOG_FAMILIES, applyPresetToShape,
+    filterCatalog, catalogSections, catalogFamilySections, getCatalogPreset,
 } from '../notationCatalog';
 import { MARKER_REGISTRY } from '../markerRegistry';
 import { SHAPE_REGISTRY } from '../shapeRegistry';
@@ -49,8 +49,8 @@ describe('notationCatalog: integrita della tabella', () => {
         }
     });
 
-    it('le cinque notazioni verificate in P5 sono tutte rappresentate', () => {
-        expect([...CATALOG_NOTATIONS].sort()).toEqual(['BPMN', 'ER', 'Flowchart', 'Petri net', 'UML'].sort());
+    it('le notazioni rappresentate: le cinque di P5 piu Base (D24)', () => {
+        expect([...CATALOG_NOTATIONS].sort()).toEqual(['BPMN', 'Base', 'ER', 'Flowchart', 'Petri net', 'UML'].sort());
     });
 });
 
@@ -161,5 +161,56 @@ describe('notationCatalog: catalogSections e getCatalogPreset (D18)', () => {
         expect(p).toBe(NOTATION_CATALOG.find(x => x.id === 'bpmn-timer-event'));
         expect(getCatalogPreset('project-stencil-not-yet')).toBeUndefined();
         expect(getCatalogPreset('')).toBeUndefined();
+    });
+});
+
+describe('notationCatalog: famiglie e catalogFamilySections (D24)', () => {
+    it('ogni riga dichiara una famiglia del vocabolario ordinato', () => {
+        for (const p of NOTATION_CATALOG) {
+            expect(p.family).toBeDefined();
+            expect(CATALOG_FAMILIES).toContain(p.family);
+        }
+    });
+
+    it('una sezione per famiglia, in ordine dichiarato, coi totali che coprono la tabella', () => {
+        const sections = catalogFamilySections('', '');
+        expect(sections.map(s => s.family)).toEqual([...CATALOG_FAMILIES]);
+        for (const s of sections) {
+            expect(s.presets.length).toBe(s.total);
+            expect(s.presets.every(p => p.family === s.family)).toBe(true);
+            // l'ordine dentro una sezione e' l'ordine di tabella
+            expect(s.presets.map(p => p.id))
+                .toEqual(NOTATION_CATALOG.filter(p => p.family === s.family).map(p => p.id));
+        }
+        expect(sections.reduce((n, s) => n + s.total, 0)).toBe(NOTATION_CATALOG.length);
+    });
+
+    it('il filtro di notazione (chip) restringe i preset ma mai i totali', () => {
+        const sections = catalogFamilySections('', 'Petri net');
+        const process = sections.find(s => s.family === 'Process');
+        expect(process?.presets.map(p => p.id))
+            .toEqual(['petri-place', 'petri-marked-place', 'petri-transition']);
+        expect(process?.total).toBe(NOTATION_CATALOG.filter(p => p.family === 'Process').length);
+        const data = sections.find(s => s.family === 'Data (ER)');
+        expect(data?.presets).toEqual([]);
+        expect(data?.total).toBe(7);
+    });
+
+    it('query e chip si compongono, e le sezioni vuote restano nell indice', () => {
+        const sections = catalogFamilySections('gateway', 'UML');
+        expect(sections.length).toBe(CATALOG_FAMILIES.length);
+        expect(sections.every(s => s.presets.length === 0)).toBe(true);
+        const both = catalogFamilySections('gateway', 'BPMN');
+        expect(both.find(s => s.family === 'Process')?.presets.map(p => p.id)).toEqual([
+            'bpmn-exclusive-gateway', 'bpmn-parallel-gateway',
+            'bpmn-inclusive-gateway', 'bpmn-complex-gateway',
+        ]);
+    });
+
+    it('i preset nuovi (D24/D26) risolvono per id e citano solo primitivi esistenti', () => {
+        expect(getCatalogPreset('base-rect')?.values.form).toBe('rect');
+        expect(getCatalogPreset('base-diamond')?.family).toBe('Base');
+        expect(getCatalogPreset('uml-flow-final')?.values).toEqual({ form: 'circle', marker: 'x' });
+        expect(getCatalogPreset('uml-fork-join')?.values).toEqual({ form: 'rect', fill: '#334155' });
     });
 });
