@@ -788,6 +788,17 @@ describe('irInteraction (Fase 3)', () => {
             { edgeMetaclass: 'Transition', sourceFeature: 'src', targetFeature: 'tgt' },
         ]);
     });
+    it('a wildcard node view lifts the restriction even alongside dedicated views', () => {
+        const { idlookup } = world();
+        const state = stateWith([
+            { id: 'V_def', ir: defaultObjectViewIR() },
+            { id: 'V_state', ir: vertexIR({ metaclasses: ['State'] }) },
+        ], idlookup);
+        const index = getIRIndex(state, 'sig_plan_3')!;
+        // The wildcard renders every metaclass, so restricting to 'State' would hide
+        // classes the viewpoint does render.
+        expect(deriveIRInteraction(index).paletteMetaclasses).toBeNull();
+    });
     it('wildcard-only viewpoints impose no palette restriction', () => {
         const { idlookup } = world();
         const state = stateWith([{ id: 'V_def', ir: defaultObjectViewIR() }], idlookup);
@@ -884,20 +895,27 @@ describe('applyIRPaletteFilter (palette fallback, spec v1.2 sez. 6)', () => {
         expect(res.classes).toEqual([{ name: 'State' }]);
         expect(res.fallback).toBe(false);
     });
+    it('the filtered-out rootable classes are reported, not dropped', () => {
+        const res = applyIRPaletteFilter(rootable, planFor(['State', 'Transition']));
+        expect(res.undeclared).toEqual([{ name: 'Region' }]);
+    });
     it('empty intersection falls back to the full rootable palette with notice flag', () => {
         const res = applyIRPaletteFilter(rootable, planFor(['Transition']));
         expect(res.classes).toEqual(rootable);
         expect(res.fallback).toBe(true);
+        // Every rootable class is already in `classes`: nothing left to report.
+        expect(res.undeclared).toEqual([]);
     });
     it('null plan or null paletteMetaclasses is a pass-through without fallback', () => {
-        expect(applyIRPaletteFilter(rootable, null)).toEqual({ classes: rootable, fallback: false });
+        expect(applyIRPaletteFilter(rootable, null)).toEqual({ classes: rootable, fallback: false, undeclared: [] });
         const noRestriction = { paletteMetaclasses: null, connectRules: [], dropContainers: [] };
-        expect(applyIRPaletteFilter(rootable, noRestriction)).toEqual({ classes: rootable, fallback: false });
+        expect(applyIRPaletteFilter(rootable, noRestriction)).toEqual({ classes: rootable, fallback: false, undeclared: [] });
     });
     it('no rootable classes at all → empty palette, no fallback notice', () => {
         const res = applyIRPaletteFilter([], planFor(['Transition']));
         expect(res.classes).toEqual([]);
         expect(res.fallback).toBe(false);
+        expect(res.undeclared).toEqual([]);
     });
 });
 

@@ -3933,6 +3933,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     editorMode={modeInfo.mode}
                     rootableClasses={irPalette.classes}
                     irPaletteFallback={irPalette.fallback}
+                    undeclaredClasses={irPalette.undeclared}
                     allClasses={modeInfo.allClasses}
                     selectedDObjectId={lastSelectedModelElement ?? null}
                 />

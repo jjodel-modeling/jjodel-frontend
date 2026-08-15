@@ -76,8 +76,13 @@ export function deriveIRInteraction(index: IRViewpointIndex): IRInteractionPlan 
             });
         }
     }
+    // A wildcard node view (metaclasses '*') renders EVERY metaclass, so such a
+    // viewpoint declares no palette restriction at all. Without this the plan would
+    // restrict the palette to the metaclasses that happen to also carry a dedicated
+    // view, hiding classes the viewpoint actually renders.
+    const hasWildcardNodeView = index.wildcard.length > 0;
     return {
-        paletteMetaclasses: palette.size > 0 ? Array.from(palette) : null,
+        paletteMetaclasses: !hasWildcardNodeView && palette.size > 0 ? Array.from(palette) : null,
         connectRules,
         dropContainers: Array.from(dropContainers),
     };
@@ -91,6 +96,12 @@ export function deriveIRInteraction(index: IRViewpointIndex): IRInteractionPlan 
  * only an explicit `interaction.palette` may restrict down to empty.
  * `fallback` stays false when there are no rootable classes at all (nothing
  * to show either way — the empty state is not a fallback).
+ *
+ * `undeclared` carries the rootable classes the filter removed: they are creatable
+ * (the drop gate reads the unfiltered rootable list) and render abstract per spec
+ * §10, so the caller shows them as a secondary group rather than dropping them
+ * silently. Empty when no restriction applies and on the fallback path, where every
+ * rootable class is already in `classes`.
  */
 /** True when `classId` conforms to the reference's declared target (direct or concrete descendant). */
 function conformsToRefTarget(ref: MetaclassReference, classId: string, classById: Map<string, MetaclassInfo>): boolean {
@@ -166,9 +177,15 @@ export function deriveDroppableChildMetaclasses(
 export function applyIRPaletteFilter<T extends { name: string }>(
     rootable: T[],
     plan: IRInteractionPlan | null,
-): { classes: T[]; fallback: boolean } {
-    if (!plan?.paletteMetaclasses) return { classes: rootable, fallback: false };
+): { classes: T[]; fallback: boolean; undeclared: T[] } {
+    if (!plan?.paletteMetaclasses) return { classes: rootable, fallback: false, undeclared: [] };
     const filtered = rootable.filter(c => plan.paletteMetaclasses!.includes(c.name));
-    if (filtered.length > 0) return { classes: filtered, fallback: false };
-    return { classes: rootable, fallback: rootable.length > 0 };
+    if (filtered.length > 0) {
+        return {
+            classes: filtered,
+            fallback: false,
+            undeclared: rootable.filter(c => !plan.paletteMetaclasses!.includes(c.name)),
+        };
+    }
+    return { classes: rootable, fallback: rootable.length > 0, undeclared: [] };
 }

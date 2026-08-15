@@ -72,9 +72,13 @@ interface PalettePanelProps {
     /** True when the IR palette filter fell back to the full rootable list because the
      *  active viewpoint declares no views for creatable root classes (spec v1.2 sez. 6). */
     irPaletteFallback?: boolean;
+    /** Rootable classes the active IR viewpoint declares no view for. Creatable all the
+     *  same (the drop gate reads the unfiltered rootable list) and rendered abstract per
+     *  spec §10, so they get a secondary group instead of disappearing without a trace. */
+    undeclaredClasses?: MetaclassInfo[];
 }
 
-function PalettePanel({ editorMode = 'metamodel', rootableClasses = [], allClasses = [], selectedDObjectId = null, irPaletteFallback = false }: PalettePanelProps) {
+function PalettePanel({ editorMode = 'metamodel', rootableClasses = [], allClasses = [], selectedDObjectId = null, irPaletteFallback = false, undeclaredClasses = [] }: PalettePanelProps) {
     const onDragStart = useCallback((event: React.DragEvent, type: string, metaclassId?: string) => {
         event.dataTransfer.setData('application/reactflow', type);
         if (metaclassId) {
@@ -144,6 +148,26 @@ function PalettePanel({ editorMode = 'metamodel', rootableClasses = [], allClass
                                     <span>{cls.name}</span>
                                 </div>
                             ))}
+                        </div>
+                    )}
+                    {undeclaredClasses.length > 0 && (
+                        <div className="palette-instances__undeclared">
+                            <div className="palette-instances__subtitle">Not in this viewpoint</div>
+                            <div className="palette-instances__list">
+                                {undeclaredClasses.map((cls) => (
+                                    <div
+                                        key={cls.id}
+                                        className="palette-instances__item palette-instances__item--undeclared"
+                                        title="No view declared in the active viewpoint: instances render abstract until one is authored."
+                                        draggable
+                                        onDragStart={(e) => onDragStart(e, 'objectNode', cls.id)}
+                                        onDragEnd={onDragEnd}
+                                    >
+                                        <i className="bi bi-box" />
+                                        <span>{cls.name}</span>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     )}
                 </div>
