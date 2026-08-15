@@ -1,5 +1,20 @@
 # Claude Code Session Log
 
+## 2026-08-15 — docs: HARNESS-DOCS, la norma dell'organizzazione documentale
+
+**Prompt**: sessione Cowork, richiesta di Alfonso: «fammi un documento md che descriva in dettaglio ed in maniera molto precisa la completa organizzazione documentale (prompt, discovery report, KN) del mio harness». Registro normativo operativo, e assorbimento di `INDICE_ARCHIVIO.md`, creato poche ore prima.
+**Files touched**: `docs/HARNESS-DOCS.md` (nuovo, 32 KB), `docs/PROTOCOL.md` (P10: riferimento rinominato, rinvio alla norma completa), `docs/archivio/triage_kb_2026-08-15.md` (whitelist aggiornata). Nel Project Knowledge: `HARNESS-DOCS.md` caricato integrale, `INDICE_ARCHIVIO.md` cancellato, `contesto_progetto.md` aggiornato in tre punti.
+**Outcome**: ✅ completed.
+**Corregge**: —
+**Causa**: —
+**Cosa contiene**: dodici sezioni. Attori e depositi; la whitelist dei sei documenti del KB; la mappa di `docs/` con conteggi reali; una scheda per ciascuno dei dieci tipi documentali (prompt, discovery report, memo di ratifica, riga di decisione, entry di log, checkpoint, spec e indice, materiale di lavoro, artefatti, normativi) con produttore, consumatore, path, naming, formato verbatim, gate e ciclo di vita; la gerarchia di precedenza fra normativi; cosa verifica una macchina e cosa la disciplina; il ciclo di vita di un task documento per documento nelle due corsie; la tabella completa dei pattern di naming con esempi reali; come muore ogni tipo di documento; la mappa tematica dell'archivio; le trappole note; sette invarianti.
+**Regressions**: no. Nessun file di codice, nessuna clausola di `PROTOCOL.md` riformattata: P10 cambia un nome di file e aggiunge un rinvio.
+**Out-of-scope changes**: no.
+**Layer Impact Report**: not-required.
+**Smoke visivo**: non applicabile.
+**Notes**: (1) **Il documento registra due incoerenze aperte invece di nasconderle**: le serie D (forme, dashboard) e R-J (JjEL) sono ratificate in memo ma non iscritte in `docs/decisions.md`, e per R-J esiste già un prompt esecutivo che le cita come governanti; solo 29 prompt su 194 portano l'orario nel nome, quindi gli altri non sono puntabili da `**Corregge**` (RC-7). (2) **§11 elenca i documenti che sembrano normativi e non lo sono**: `docs/ai-agents/README.md` è fermo al 2026-01-24, indica `CLAUDE_DEVELOPMENT_GUIDE.md` come prima lettura, descrive `CLAUDE.md` come «UI/UX design system» e prescrive un focus rosso `#ef4444`. Nessuna delle tre cose è vera oggi. Con i 58 `.md` sciolti nella radice di `docs/` è la superficie di errore più grande rimasta per un agente che entra senza guida. (3) `check:docs` resta rosso sul check B per entry preesistenti del 14 agosto, non toccate qui.
+**Prompt document name**: 2026-08-15 02:40
+
 ## 2026-08-15 — feat(editor-v2): la taglia delle forme geometriche dal contenuto (D8/D9)
 
 **Prompt**: sessione Cowork, «procediamo con il cablaggio della taglia», poi «procedi autonomamente con la discovery ed il resto». Passo 2 della roadmap di fine sessione: cablare `boxForContent` in `IRNodeContent`. Perimetro deciso da Alfonso in chat sui due punti aperti dalla discovery: solo forme geometriche, `GEOMETRIC_MIN_BOX_HEIGHT` confermata a 64.
