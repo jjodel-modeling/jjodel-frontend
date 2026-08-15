@@ -5,8 +5,8 @@
  * mounted once at the app root, CustomEvent dispatcher + local useState
  * listener, no Redux state. Two panes (approved mockup scene): the persistent
  * catalog column on the left (SymbolCatalogPicker in 'column' variant,
- * sectioned per D18, with per-project recents), and on the right a simplified
- * preview strip,
+ * sectioned per D18, with per-project recents), and on the right the realistic
+ * preview strip (D8 wiring: the box of the canvas node, derived or manual),
  * the Appearance/Text mini-bar and VertexAuthoringPanel re-hosted UNCHANGED
  * (same component, no editorial fork: the Editor V3 lesson).
  *
@@ -32,11 +32,22 @@ import type { VertexViewIR } from '../ir/irTypes';
 import { VertexAuthoringPanel } from './VertexAuthoringPanel';
 import { SymbolCatalogPicker } from './SymbolCatalogPicker';
 import SymbolPreview from './SymbolPreview';
+import { SymbolBoxPreview, captionForBox } from './SymbolBoxPreview';
+import { useCanvasNodeBox } from './useCanvasNodeBox';
 import { IR_TAB_LABELS, type IRTabId } from './irTabs';
 import './SymbolEditorModal.scss';
 
 /** The two anatomy bodies the modal re-hosts (memo D15). */
 const MODAL_TABS: readonly IRTabId[] = ['ir-appearance', 'ir-text'];
+
+/**
+ * Stage bounds of the preview strip (D8 wiring). The strip keeps its FIXED
+ * 132px height (no layout shifts): a large box scales down to fit these
+ * bounds, it never stretches the strip. Height leaves room for the Preview
+ * tag above and the caption below; width stays inside the main pane.
+ */
+const PREVIEW_MAX_W = 560;
+const PREVIEW_MAX_H = 88;
 
 /**
  * Recents (D18): per-project preset ids, most recent first, persisted in
@@ -137,6 +148,21 @@ export const SymbolEditorModal: React.FC = () => {
     const ir = useSelector((s: any): VertexViewIR | undefined =>
         viewId ? s?.idlookup?.[viewId]?.ir : undefined);
 
+    // Realistic preview (D8 wiring): the box of the canvas node rendering this
+    // view, read from the DOM (the canvas stays mounted under the modal).
+    const nodeBox = useCanvasNodeBox(viewId);
+    // Manual-size facts of the representative vertex, as a primitive signature
+    // so the subscription cannot re-render the modal on unrelated store
+    // updates. '' = not resized; 'WxH' with manualSizeOf's exact gate (both
+    // dimensions positive), '0x0'-shaped = resized but invalid D-layer size.
+    const manualSig = useSelector((s: any): string => {
+        const raw = nodeBox ? s?.idlookup?.[nodeBox.vertexId] : undefined;
+        if (!raw?.isResized) return '';
+        const w = typeof raw.w === 'number' && raw.w > 0 ? raw.w : 0;
+        const h = typeof raw.h === 'number' && raw.h > 0 ? raw.h : 0;
+        return `${w}x${h}`;
+    });
+
     if (!viewId) return null;
 
     let view: LViewElement | null = null;
@@ -155,6 +181,20 @@ export const SymbolEditorModal: React.FC = () => {
     const target = Array.isArray(ir.metaclasses) && ir.metaclasses.length > 0 ? ir.metaclasses[0] : null;
     const previewPreset = currentAxesPreset(ir.shape);
     const previewLabel = (typeof ir.label === 'string' && ir.label !== '') ? ir.label : (view.name as string);
+
+    // Preview box (D8 wiring). Precedence mirrors the engine: the manual size
+    // wins and switches the derivation off (useContentSize gates on
+    // !isResized). Manual numbers come from the D-layer, per the acceptance
+    // criterion; a raised isResized with an invalid D-layer size keeps the
+    // manual caption on the DOM numbers (the flag is the user's intent).
+    // Without a canvas node there is no box: the strip degrades to the
+    // symbolic glyph and says so, no number is invented.
+    const isResized = manualSig !== '';
+    const [manualW, manualH] = isResized ? manualSig.split('x').map(Number) : [0, 0];
+    const manualValid = manualW > 0 && manualH > 0;
+    const previewBox = nodeBox
+        ? (isResized && manualValid ? { w: manualW, h: manualH } : { w: nodeBox.w, h: nodeBox.h })
+        : null;
 
     // Same canonical write path as the panel (set_ir, whole-object replace);
     // the hosted panel realigns via its external-change reseed.
@@ -228,12 +268,32 @@ export const SymbolEditorModal: React.FC = () => {
                         <div className="symbol-editor-modal__preview">
                             <span className="symbol-editor-modal__preview-tag">Preview</span>
                             {previewPreset ? (
-                                <div className="symbol-editor-modal__preview-stage">
-                                    <SymbolPreview preset={previewPreset} width={168} />
-                                    {previewLabel ? (
-                                        <span className="symbol-editor-modal__preview-label">{previewLabel}</span>
-                                    ) : null}
-                                </div>
+                                previewBox ? (
+                                    <>
+                                        <SymbolBoxPreview
+                                            preset={previewPreset}
+                                            box={previewBox}
+                                            label={previewLabel}
+                                            maxW={PREVIEW_MAX_W}
+                                            maxH={PREVIEW_MAX_H}
+                                        />
+                                        <span className="symbol-editor-modal__preview-caption">
+                                            {captionForBox(previewBox, isResized ? 'manual' : 'derived')}
+                                        </span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="symbol-editor-modal__preview-stage">
+                                            <SymbolPreview preset={previewPreset} width={168} />
+                                            {previewLabel ? (
+                                                <span className="symbol-editor-modal__preview-label">{previewLabel}</span>
+                                            ) : null}
+                                        </div>
+                                        <span className="symbol-editor-modal__preview-caption">
+                                            symbolic preview · no node on canvas
+                                        </span>
+                                    </>
+                                )
                             ) : (
                                 <span className="symbol-editor-modal__preview-empty">
                                     Conditional form: no static preview

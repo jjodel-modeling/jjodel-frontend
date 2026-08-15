@@ -362,6 +362,17 @@
         color: var(--color-text-secondary, #64748b);
     }
 
+    /* D8 wiring: caption of the realistic preview, bottom-right corner of the
+       fixed-height strip as in the mockup (10px, mono, secondary). */
+    &__preview-caption {
+        position: absolute;
+        right: 10px;
+        bottom: 8px;
+        font-size: 10px;
+        color: var(--color-text-secondary, #64748b);
+        font-family: var(--font-mono, 'IBM Plex Mono', Monaco, Consolas, monospace);
+    }
+
     &__tabs {
         display: flex;
         gap: var(--space-1, 4px);
