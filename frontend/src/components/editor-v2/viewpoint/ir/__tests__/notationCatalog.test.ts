@@ -10,7 +10,10 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { NOTATION_CATALOG, CATALOG_NOTATIONS, applyPresetToShape, filterCatalog } from '../notationCatalog';
+import {
+    NOTATION_CATALOG, CATALOG_NOTATIONS, applyPresetToShape, filterCatalog,
+    catalogSections, getCatalogPreset,
+} from '../notationCatalog';
 import { MARKER_REGISTRY } from '../markerRegistry';
 import { SHAPE_REGISTRY } from '../shapeRegistry';
 import type { ShapeSpec } from '../irTypes';
@@ -112,5 +115,51 @@ describe('notationCatalog: filterCatalog', () => {
         expect(filterCatalog('', 'decisione').map(p => p.id)).toContain('flow-decision');
         expect(filterCatalog('BPMN', 'timer').map(p => p.id)).toEqual(['bpmn-timer-event']);
         expect(filterCatalog('', 'zzz-niente')).toEqual([]);
+    });
+});
+
+describe('notationCatalog: catalogSections e getCatalogPreset (D18)', () => {
+    it('una sezione per notazione, nell ordine di CATALOG_NOTATIONS, coi totali pieni', () => {
+        const sections = catalogSections('');
+        expect(sections.map(s => s.notation)).toEqual([...CATALOG_NOTATIONS]);
+        for (const s of sections) {
+            expect(s.presets.length).toBe(s.total);
+            expect(s.presets.every(p => p.notation === s.notation)).toBe(true);
+        }
+        expect(sections.reduce((n, s) => n + s.total, 0)).toBe(NOTATION_CATALOG.length);
+    });
+
+    it('la query filtra i presets ma non i totali; le sezioni vuote restano nell indice', () => {
+        const sections = catalogSections('gateway');
+        expect(sections.length).toBe(CATALOG_NOTATIONS.length);
+        const bpmn = sections.find(s => s.notation === 'BPMN');
+        expect(bpmn?.presets.map(p => p.id)).toEqual([
+            'bpmn-exclusive-gateway', 'bpmn-parallel-gateway',
+            'bpmn-inclusive-gateway', 'bpmn-complex-gateway',
+        ]);
+        expect(bpmn?.total).toBe(filterCatalog('BPMN', '').length);
+        const flow = sections.find(s => s.notation === 'Flowchart');
+        expect(flow?.presets).toEqual([]);
+        expect(flow?.total).toBe(filterCatalog('Flowchart', '').length);
+    });
+
+    it('l ordine dentro una sezione e l ordine di tabella', () => {
+        const er = catalogSections('').find(s => s.notation === 'ER');
+        expect(er?.presets.map(p => p.id))
+            .toEqual(NOTATION_CATALOG.filter(p => p.notation === 'ER').map(p => p.id));
+    });
+
+    it('una query multi-notazione pesca nelle sole sezioni giuste, in ordine di indice', () => {
+        const nonEmpty = catalogSections('decisione')
+            .filter(s => s.presets.length > 0)
+            .map(s => s.notation);
+        expect(nonEmpty).toEqual(['BPMN', 'UML', 'Flowchart']);
+    });
+
+    it('getCatalogPreset: id noto risolve alla riga di tabella, id ignoto a undefined', () => {
+        const p = getCatalogPreset('bpmn-timer-event');
+        expect(p).toBe(NOTATION_CATALOG.find(x => x.id === 'bpmn-timer-event'));
+        expect(getCatalogPreset('project-stencil-not-yet')).toBeUndefined();
+        expect(getCatalogPreset('')).toBeUndefined();
     });
 });

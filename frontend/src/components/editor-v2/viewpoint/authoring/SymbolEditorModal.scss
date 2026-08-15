@@ -127,7 +127,7 @@
         min-height: 0;
     }
 
-    /* ── catalog column (flat: the sectioned catalog is D18) ── */
+    /* ── catalog column (sectioned per D18) ── */
 
     &__catalog {
         width: 264px;
@@ -137,9 +137,159 @@
         border-right: 1px solid var(--color-border-secondary);
         background: var(--color-bg-primary, #f8fafc);
         padding: var(--space-3, 12px);
-        overflow-y: auto;
+        /* D18: the sections list is the scroller; frame, search, chips and
+           recents stay fixed. No layout shift of the modal frame on collapse
+           or filtering (fixed-height rule above). */
+        overflow: hidden;
 
-        .jj-field { display: flex; flex-direction: column; }
+        .jj-field {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-height: 0;
+            gap: var(--space-2, 8px);
+        }
+    }
+
+    /* ── D18: sectioned catalog (column variant of the picker; modal context
+       only, the disclosure variant keeps its inline flat rendering) ── */
+
+    .symbol-catalog {
+
+        &__chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        &__chip {
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--color-text-primary, #334155);
+            background: var(--color-bg-primary, #f1f5f9);
+            border: 1px solid var(--color-border-secondary, #e2e8f0);
+            border-radius: 10px;
+            padding: 2px 8px;
+            cursor: pointer;
+
+            /* cyan only as selection tint, per the design system chips */
+            &.is-active {
+                background: rgba(14, 165, 233, 0.08);
+                border-color: rgba(14, 165, 233, 0.3);
+            }
+            &:focus-visible { outline: 2px solid #334155; outline-offset: 1px; }
+        }
+
+        &__recents {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            min-height: 24px;
+        }
+
+        &__recents-label {
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: var(--color-text-secondary, #64748b);
+            margin-right: 2px;
+        }
+
+        &__recent {
+            display: inline-flex;
+            border: 1px solid var(--color-border-secondary, #e2e8f0);
+            background: var(--color-bg-secondary, #fff);
+            border-radius: 5px;
+            padding: 1px 3px;
+            cursor: pointer;
+
+            &:hover { border-color: var(--color-text-secondary, #64748b); }
+            &:focus-visible { outline: 2px solid #334155; outline-offset: 1px; }
+        }
+
+        &__sections {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+        }
+
+        &__section {
+            border-top: 1px solid var(--color-border-secondary, #e2e8f0);
+
+            &:first-child { border-top: none; }
+        }
+
+        &__section-head {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            border: none;
+            background: transparent;
+            padding: var(--space-2, 8px) 2px;
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: var(--color-text-secondary, #64748b);
+            cursor: pointer;
+
+            i { font-size: 10px; }
+
+            /* A search suspends collapse: the head stays legible, not greyed. */
+            &:disabled {
+                cursor: default;
+                opacity: 1;
+                color: var(--color-text-secondary, #64748b);
+            }
+            &:focus-visible { outline: 2px solid #334155; outline-offset: -2px; }
+        }
+
+        &__section-count {
+            margin-left: auto;
+            font-weight: 500;
+            color: var(--color-text-secondary, #64748b);
+        }
+
+        &__tiles {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 6px;
+            padding: 2px 0 var(--space-2, 8px);
+        }
+
+        &__tile {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            background: var(--color-bg-secondary, #fff);
+            border: 1px solid var(--color-border-secondary, #e2e8f0);
+            border-radius: 6px;
+            padding: 6px 2px 4px;
+            cursor: pointer;
+            min-width: 0;
+
+            &:hover { border-color: var(--color-text-secondary, #64748b); }
+            &:focus-visible { outline: 2px solid #334155; outline-offset: 1px; }
+        }
+
+        &__tile-name {
+            font-size: 10px;
+            line-height: 1.2;
+            color: var(--color-text-primary, #334155);
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        &__empty {
+            font-size: 10px;
+            color: var(--color-text-secondary, #64748b);
+            padding: var(--space-2, 8px) 0;
+        }
     }
 
     &__catalog-foot {

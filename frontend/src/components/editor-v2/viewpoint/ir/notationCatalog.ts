@@ -134,3 +134,38 @@ export function filterCatalog(notation: string, query: string): SymbolPreset[] {
         return (p.keywords ?? []).some(k => k.includes(q));
     });
 }
+
+/**
+ * A derived catalog section (D18): the notation, the presets matching the
+ * query, and the full cardinality of the section (query-independent).
+ */
+export interface CatalogSection {
+    readonly notation: string;
+    /** The presets of this notation matching the query ('' = all of them). */
+    readonly presets: readonly SymbolPreset[];
+    /** Full cardinality of the section, independent of the query. */
+    readonly total: number;
+}
+
+/**
+ * Derived section index over the catalog (D18): one section per notation, in
+ * CATALOG_NOTATIONS order (order of first appearance in the table). The table
+ * stays the single source; sections left empty by the query are NOT filtered
+ * here, hiding them is a UI choice, not a property of the index.
+ */
+export function catalogSections(query: string): CatalogSection[] {
+    return CATALOG_NOTATIONS.map((notation) => ({
+        notation,
+        presets: filterCatalog(notation, query),
+        total: NOTATION_CATALOG.reduce((n, p) => n + (p.notation === notation ? 1 : 0), 0),
+    }));
+}
+
+/** Id lookup, built once over the table (resolves the D18 recents strip). */
+const PRESET_BY_ID: ReadonlyMap<string, SymbolPreset> =
+    new Map(NOTATION_CATALOG.map((p) => [p.id, p]));
+
+/** The table row for an id, or undefined: unknown ids are the caller's to drop. */
+export function getCatalogPreset(id: string): SymbolPreset | undefined {
+    return PRESET_BY_ID.get(id);
+}

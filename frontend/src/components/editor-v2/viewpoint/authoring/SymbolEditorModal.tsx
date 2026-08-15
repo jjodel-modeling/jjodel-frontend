@@ -4,8 +4,9 @@
  * Canonical cross-cutting pattern (CLAUDE.md 8.7, cf. ImportSummaryModal):
  * mounted once at the app root, CustomEvent dispatcher + local useState
  * listener, no Redux state. Two panes (approved mockup scene): the persistent
- * catalog column on the left (SymbolCatalogPicker in 'column' variant, flat:
- * the sectioned catalog is D18), and on the right a simplified preview strip,
+ * catalog column on the left (SymbolCatalogPicker in 'column' variant,
+ * sectioned per D18, with per-project recents), and on the right a simplified
+ * preview strip,
  * the Appearance/Text mini-bar and VertexAuthoringPanel re-hosted UNCHANGED
  * (same component, no editorial fork: the Editor V3 lesson).
  *
@@ -18,7 +19,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { useSelector } from 'react-redux';
-import { LPointerTargetable, type LViewElement } from '../../../../joiner';
+import { LPointerTargetable, U, type LViewElement } from '../../../../joiner';
 import { JjodelEvents } from '../../../../events/registry';
 import { recognizeSymbol } from '../ir/symbolRecognition';
 import {
@@ -36,6 +37,40 @@ import './SymbolEditorModal.scss';
 
 /** The two anatomy bodies the modal re-hosts (memo D15). */
 const MODAL_TABS: readonly IRTabId[] = ['ir-appearance', 'ir-text'];
+
+/**
+ * Recents (D18): per-project preset ids, most recent first, persisted in
+ * localStorage under the documented key idiom (cf. EditorSwitch,
+ * `jjodel.editorPrefs.${modelid}`). Modal state is the source of truth while
+ * the app runs; storage is read on every open (the project can differ between
+ * opens) and written on every apply. Storage failures (privacy mode, quota)
+ * are swallowed: recents are a convenience, never load-bearing. Ids are
+ * resolved against the catalog at render, so stale ids simply disappear.
+ */
+const RECENTS_KEY_PREFIX = 'jjodel.symbolRecents.';
+const RECENTS_CAP = 6;
+
+function readRecents(projectId: string | null): string[] {
+    if (!projectId) return [];
+    try {
+        const raw = localStorage.getItem(RECENTS_KEY_PREFIX + projectId);
+        if (!raw) return [];
+        const parsed: unknown = JSON.parse(raw);
+        if (!Array.isArray(parsed)) return [];
+        return parsed.filter((x): x is string => typeof x === 'string').slice(0, RECENTS_CAP);
+    } catch {
+        return [];
+    }
+}
+
+function writeRecents(projectId: string | null, ids: readonly string[]): void {
+    if (!projectId) return;
+    try {
+        localStorage.setItem(RECENTS_KEY_PREFIX + projectId, JSON.stringify(ids));
+    } catch {
+        // best-effort persistence, the in-memory state keeps working
+    }
+}
 
 /**
  * The current authored axes as a preset VALUE for SymbolPreview, or null when
@@ -63,6 +98,8 @@ export const SymbolEditorModal: React.FC = () => {
     // «Modified from X» (memo D14): remembered only after an application in
     // THIS modal session; reset on every open.
     const [lastApplied, setLastApplied] = useState<SymbolPreset | null>(null);
+    // Recents (D18): reloaded per project on open, NOT reset like lastApplied.
+    const [recentIds, setRecentIds] = useState<readonly string[]>([]);
     const closeBtnRef = useRef<HTMLButtonElement | null>(null);
 
     useEffect(() => {
@@ -72,6 +109,7 @@ export const SymbolEditorModal: React.FC = () => {
                 setViewId(detail.viewId);
                 setTab('ir-appearance');
                 setLastApplied(null);
+                setRecentIds(readRecents(U.getProjectID_URL()));
             }
         };
         window.addEventListener(JjodelEvents.SYMBOL_EDITOR_OPEN, handler);
@@ -124,6 +162,13 @@ export const SymbolEditorModal: React.FC = () => {
         const current = (view as any).ir as VertexViewIR;
         (view as any).ir = { ...current, shape: applyPresetToShape(current.shape, preset) };
         setLastApplied(preset);
+        // Recents (D18): dedupe, most recent first, capped; applying from the
+        // strip itself re-applies and moves the preset back to the front.
+        setRecentIds((prev) => {
+            const next = [preset.id, ...prev.filter((id) => id !== preset.id)].slice(0, RECENTS_CAP);
+            writeRecents(U.getProjectID_URL(), next);
+            return next;
+        });
     };
 
     const close = () => setViewId(null);
@@ -173,7 +218,7 @@ export const SymbolEditorModal: React.FC = () => {
 
                 <div className="symbol-editor-modal__body">
                     <aside className="symbol-editor-modal__catalog">
-                        <SymbolCatalogPicker variant="column" onApply={applyPreset} />
+                        <SymbolCatalogPicker variant="column" onApply={applyPreset} recentIds={recentIds} />
                         <div className="symbol-editor-modal__catalog-foot">
                             {NOTATION_CATALOG.length} presets · {CATALOG_NOTATIONS.length} notations
                         </div>
