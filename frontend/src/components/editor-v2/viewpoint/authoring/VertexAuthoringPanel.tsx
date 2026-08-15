@@ -8,6 +8,7 @@ import { defaultObjectViewIR } from '../ir/irDefaults';
 import type { VertexViewIR, ShapeForm } from '../ir/irTypes';
 import { MARKER_REGISTRY } from '../ir/markerRegistry';
 import { applyPresetToShape } from '../ir/notationCatalog';
+import { recognizeSymbol } from '../ir/symbolRecognition';
 import { resolveMetaclassId, withMetaclassPins, type MetaclassRef } from '../ir/metaclassPin';
 import { SymbolCatalogPicker } from './SymbolCatalogPicker';
 import { defaultResizableForForm } from '../../nodes/nodeSizing';
@@ -332,6 +333,29 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
             {/* Symbol catalog (D10): applying a preset populates the controls
                 below — the retouch panel opens already set on the preset. */}
             <FormSection title="Symbol" divider={false}>
+                {/* Structural recognition (D14): where the authored axes sit in the
+                    catalog space. Derived on every render, never stored (a preset is
+                    a value, not a type: D10). Set-valued because the catalog is a
+                    many-to-many index: the first match leads, the rest are the tail. */}
+                {(() => {
+                    const matches = recognizeSymbol(draft.shape);
+                    const notations = [...new Set(matches.map(m => m.notation))].join(' · ');
+                    return (
+                        <div className="jj-field" style={{ fontSize: 11, display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
+                            {matches.length > 0 ? (
+                                <>
+                                    <strong>{matches[0].label}</strong>
+                                    <span style={{ color: '#64748b' }}>
+                                        {notations}
+                                        {matches.length > 1 ? ` · also: ${matches.slice(1).map(m => m.label).join(', ')}` : ''}
+                                    </span>
+                                </>
+                            ) : (
+                                <span style={{ color: '#64748b' }}>Custom symbol · no catalog preset matches these axes</span>
+                            )}
+                        </div>
+                    );
+                })()}
                 <SymbolCatalogPicker
                     onApply={(preset) => patch({ ...draft, shape: applyPresetToShape(draft.shape, preset) })}
                 />
