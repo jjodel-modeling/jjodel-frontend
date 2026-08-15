@@ -18,12 +18,12 @@
     background: var(--color-bg-secondary, #fff);
     border-radius: 12px;
     box-shadow: 0 24px 64px rgba(15, 23, 42, 0.4);
-    width: 940px;
+    width: 1040px;
     max-width: 96%;
     /* FIXED height: the box never follows the content (design system: no
        layout shifts). Tab switches, catalog filtering and recognition changes
        scroll INSIDE the panes; the modal frame does not move. */
-    height: min(680px, 88vh);
+    height: min(760px, 90vh);
     display: flex;
     flex-direction: column;
     overflow: hidden;
