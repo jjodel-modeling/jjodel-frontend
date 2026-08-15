@@ -284,7 +284,15 @@ function DynamicHandles({ nodeId, shapeForm }: DynamicHandlesProps) {
                     // percentage against the node width, top/bottom against its height),
                     // so no measured size is needed here. Zero for box-like forms, which
                     // keeps every existing node pixel-identical.
-                    const insetPct = (t: number) => `${(shape.insetFractionAt(t) * 100).toFixed(3)}%`;
+                    // `handleInsetAt` quando la forma lo dichiara (profilo per lato:
+                    // esagono, parallelogramma), altrimenti il profilo di mezza
+                    // larghezza, che sulle cinque forme storiche vale su ogni lato.
+                    const insetPct = (t: number) => {
+                        const inset = shape.handleInsetAt
+                            ? shape.handleInsetAt(t, side)
+                            : shape.insetFractionAt(t);
+                        return `${(inset * 100).toFixed(3)}%`;
+                    };
                     const sourceConnectedStyle: React.CSSProperties = {
                         [positionProp]: `${sourcePercent * 100}%`,
                         [side]: insetPct(sourcePercent),

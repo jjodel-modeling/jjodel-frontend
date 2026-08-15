@@ -33,6 +33,18 @@ function contourEl(form: SymbolPreset['values']['form'], props: React.SVGProps<a
         case 'ellipse': return <ellipse cx={CX} cy={CY} rx={26} ry={16} {...props} />;
         case 'circle': return <circle cx={CX} cy={CY} r={16} {...props} />;
         case 'diamond': return <polygon points={`${CX},4 ${VB_W - 6},${CY} ${CX},${VB_H - 4} 6,${CY}`} {...props} />;
+        case 'stadium': return <rect x={10} y={8} width={52} height={32} rx={16} {...props} />;
+        case 'hexagon': return <polygon points="23,8 49,8 62,24 49,40 23,40 10,24" {...props} />;
+        case 'parallelogram': return <polygon points="23,8 62,8 49,40 10,40" {...props} />;
+        // Il cilindro e' due elementi: la silhouette e il coperchio, che non va
+        // mai riempito. Gli attributi di presentazione stanno sul gruppo e i
+        // figli ereditano, cosi' l'overdraw del double resta una sola chiamata.
+        case 'cylinder': return (
+            <g {...props}>
+                <path d="M10,14 A26,6 0 0 1 62,14 L62,34 A26,6 0 0 1 10,34 Z" />
+                <path d="M10,14 A26,6 0 0 0 62,14" fill="none" />
+            </g>
+        );
         case 'rect':
         default: return <rect x={10} y={8} width={52} height={32} {...props} />;
     }

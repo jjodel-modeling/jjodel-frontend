@@ -10,9 +10,11 @@
  *
  * Perimetro v1: SOLO simboli esprimibili con i primitivi correnti, verificati
  * sulle specifiche in docs/discovery/discovery_2026-08-15_p5_verifica_preset_notazioni.md
- * (P5). Gli esclusi (stadio, parallelogramma, cilindro, event-based gateway,
- * predefined process, ...) NON sono approssimati: entrano quando arriva il
- * contorno o l'ornamento che li esprime davvero.
+ * (P5). Gli esclusi (event-based gateway, predefined process, ...) NON sono
+ * approssimati: entrano quando arriva il contorno o l'ornamento che li esprime
+ * davvero. Stadio, parallelogramma, esagono e cilindro sono usciti da questa
+ * lista il 2026-08-15: i quattro primitivi corrispondenti sono arrivati nel
+ * registry, quindi i preset che li usano sono forme vere e non approssimazioni.
  *
  * I preset `double` dichiarano `width: 3` nei dati perche' sotto i 3px il
  * double CSS non mostra due linee: il vincolo sta nella riga, non nel motore.
@@ -60,9 +62,13 @@ export const NOTATION_CATALOG: readonly SymbolPreset[] = [
     // ---- Base: le forme pure del registry (D24) ----
     { id: 'base-rect', label: 'Rectangle', notation: 'Base', family: 'Base', keywords: ['rettangolo'], values: { form: 'rect' } },
     { id: 'base-rounded', label: 'Rounded rectangle', notation: 'Base', family: 'Base', keywords: ['arrotondato'], values: { form: 'rounded' } },
+    { id: 'base-stadium', label: 'Stadium', notation: 'Base', family: 'Base', keywords: ['stadio', 'pillola', 'terminator'], values: { form: 'stadium' } },
     { id: 'base-ellipse', label: 'Ellipse', notation: 'Base', family: 'Base', keywords: ['ellisse'], values: { form: 'ellipse' } },
     { id: 'base-circle', label: 'Circle', notation: 'Base', family: 'Base', keywords: ['cerchio'], values: { form: 'circle' } },
     { id: 'base-diamond', label: 'Diamond', notation: 'Base', family: 'Base', keywords: ['rombo'], values: { form: 'diamond' } },
+    { id: 'base-parallelogram', label: 'Parallelogram', notation: 'Base', family: 'Base', keywords: ['parallelogramma', 'input', 'output'], values: { form: 'parallelogram' } },
+    { id: 'base-hexagon', label: 'Hexagon', notation: 'Base', family: 'Base', keywords: ['esagono'], values: { form: 'hexagon' } },
+    { id: 'base-cylinder', label: 'Cylinder', notation: 'Base', family: 'Base', keywords: ['cilindro', 'database', 'storage', 'disco'], values: { form: 'cylinder' } },
     // ---- BPMN: eventi (cerchio; catch variant, vedi header) ----
     { id: 'bpmn-start-event', label: 'Start event', notation: 'BPMN', family: 'Process', keywords: ['evento iniziale', 'inizio'], values: { form: 'circle' } },
     { id: 'bpmn-intermediate-event', label: 'Intermediate event', notation: 'BPMN', family: 'Process', keywords: ['evento intermedio'], values: { form: 'circle', border: { style: 'double', width: 3 } } },

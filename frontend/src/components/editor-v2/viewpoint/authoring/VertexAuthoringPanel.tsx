@@ -39,6 +39,10 @@ const FORM_OPTIONS = [
     { value: 'ellipse', label: 'Ellipse' },
     { value: 'circle', label: 'Circle' },
     { value: 'diamond', label: 'Diamond' },
+    { value: 'stadium', label: 'Stadium' },
+    { value: 'hexagon', label: 'Hexagon' },
+    { value: 'parallelogram', label: 'Parallelogram' },
+    { value: 'cylinder', label: 'Cylinder' },
 ];
 const BORDER_STYLE_OPTIONS = [
     { value: 'solid', label: 'Solid' },

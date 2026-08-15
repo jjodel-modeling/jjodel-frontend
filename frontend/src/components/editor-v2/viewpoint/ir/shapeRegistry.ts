@@ -36,6 +36,18 @@ export type ShapePainter =
         readonly svgClassName: string;
         /** punti del `<polygon>` nel viewBox `0 0 100 100`, preserveAspectRatio="none" */
         readonly points: string;
+    }
+    | {
+        /**
+         * Come `svg`, ma il contorno e' un `<path>`: serve alle forme che gli archi
+         * li hanno davvero (il cilindro), che un `<polygon>` non sa esprimere.
+         */
+        readonly kind: 'svgPath';
+        readonly svgClassName: string;
+        /** silhouette chiusa, riempita e contornata come il poligono */
+        readonly silhouette: string;
+        /** ornamenti sopra la silhouette: solo tratto, mai riempiti (il coperchio) */
+        readonly ornaments?: readonly string[];
     };
 
 /** Axis-aligned rectangle in box coordinates: origin at the box's top-left, pixels. */
@@ -107,15 +119,39 @@ export interface ShapeDescriptor {
      * states that it is symmetric about both axes, so only the distance from the
      * midline matters. All five shapes shipped today satisfy it. Sampling the
      * thirteen shapes of the planned catalogue shows nine that satisfy it and
-     * four that do not (cylinder, folder, note, chevron); on the cylinder and
-     * the folder a centred rectangle collapses to zero where the true answer is
-     * the full width, because the geometric centre falls inside the lid or the
-     * tab. Those shapes will not declare this function and will go through the
-     * numeric path of `boxForContentNumeric` instead, at which point the field
-     * becomes optional and `DynamicHandles` (its single consumer today) needs a
-     * fallback. Not before: no such shape exists yet.
+     * four that do not (cylinder, folder, note, chevron); on the folder a centred
+     * rectangle collapses to zero where the true answer is the full width,
+     * because the geometric centre falls inside the tab. Those shapes will not
+     * declare this function and will go through the numeric path of
+     * `boxForContentNumeric` instead, at which point the field becomes optional
+     * and `DynamicHandles` needs a fallback.
+     *
+     * Emendamento 2026-08-15, quattro forme nuove. Il cilindro come e' arrivato
+     * NON e' fra quei casi: il coperchio e' dipinto dentro il box e non e'
+     * sottratto alla banda, quindi il corpo tocca i fianchi a ogni quota e il
+     * profilo e' nullo, esatto. Il parallelogramma invece rompe la precondizione
+     * davvero, ma per gli ANCHOR, non per il sizing: la banda centrata resta
+     * centrata (il taglio a sinistra in alto e a destra in basso si compensa),
+     * quindi `insetFractionAt` continua a valere e la deroga vive in
+     * `handleInsetAt`, che e' il campo aggiunto qui sotto. L'esagono e' il terzo
+     * caso ancora: simmetrico su entrambi gli assi ma con profili DIVERSI per
+     * asse, che una funzione senza il lato non puo' esprimere.
      */
     insetFractionAt(t: number): number;
+    /**
+     * Rientro degli anchor, quando il profilo del contorno visto dal LATO non
+     * coincide con la mezza larghezza. `insetFractionAt` resta il profilo di
+     * mezza larghezza, che e' cio' che il sizing chiede; questa funzione risponde
+     * invece alla domanda di `DynamicHandles`, che ha il lato come parametro.
+     *
+     * Le cinque forme storiche non la dichiarano: sui due assi il loro profilo
+     * coincide, quindi il default (`insetFractionAt` su ogni lato) le lascia
+     * pixel-identiche. La dichiara chi ha profili diversi per asse (l'esagono) e
+     * chi non e' simmetrico rispetto a un asse e quindi non puo' rientrare in
+     * modo sensato da nessun lato (il parallelogramma: rientro nullo, anchor sul
+     * bounding box).
+     */
+    handleInsetAt?(t: number, side: 'top' | 'right' | 'bottom' | 'left'): number;
     /** Content-plus-supplement sizing parameters. See `boxForContent`. */
     readonly sizing: ShapeSizing;
 }
@@ -146,6 +182,30 @@ const ELLIPSE_INSET = (t: number): number => {
 const DIAMOND_INSET = (t: number): number => Math.abs(normT(t) - 0.5);
 
 /**
+ * Esagono con smusso al 25%: alla quota di mezzeria il contorno tocca i fianchi
+ * del box, agli estremi rientra di 0.25 per lato. Lineare, come il rombo.
+ */
+const HEXAGON_INSET = (t: number): number => 0.25 * Math.abs(normT(t) * 2 - 1);
+
+/**
+ * Esagono, lati orizzontali: piatti nella meta' centrale (rientro nullo), poi in
+ * salita fino alla punta, dove il contorno e' alto la sola mezzeria. E' il caso
+ * che ha richiesto `handleInsetAt`: qui il profilo per asse non coincide.
+ */
+const HEXAGON_CROSS_INSET = (t: number): number => Math.max(0, Math.abs(normT(t) * 2 - 1) - 0.5);
+
+/**
+ * Parallelogramma con skew del 25%. La banda centrata di altezza b perde il
+ * taglio fisso (0.25 in totale) piu' il proprio dislivello, quindi la larghezza
+ * disponibile vale 0.75 - 0.25b e il rientro per lato 0.125 * (1 + b).
+ *
+ * Vale per la BANDA CENTRATA, cioe' per il sizing. Il contorno non e' simmetrico
+ * rispetto a nessuno dei due assi (al bordo alto il taglio sta tutto a sinistra),
+ * quindi gli anchor non usano questo profilo: vedi `handleInsetAt` nella riga.
+ */
+const PARALLELOGRAM_INSET = (t: number): number => 0.125 * (1 + Math.abs(normT(t) * 2 - 1));
+
+/**
  * Height floor for the shapes that carry a supplement. Ratified at 64 on
  * 2026-08-15, out of a visual comparison: at 48 a diamond holding a single line
  * comes out 225x48 and reads as a ribbon, 64 gives 204x64, 80 gives 193x80 and
@@ -172,6 +232,17 @@ const ELLIPSE_SIZING: ShapeSizing = {
 /** Diamond: max-area inscribed rectangle is w/2 x h/2. */
 const DIAMOND_SIZING: ShapeSizing = {
     heightFactor: 2, minBoxWidth: 0, minBoxHeight: GEOMETRIC_MIN_BOX_HEIGHT, minAspect: 0.8,
+};
+
+/**
+ * Esagono, parallelogramma e cilindro: nessun supplemento VERTICALE (il contorno
+ * riempie il box in altezza, quindi `heightFactor` resta 1, come impone
+ * l'invariante 1/argmax), ma un supplemento orizzontale che esce dal profilo. Il
+ * pavimento e l'aspect floor sono quelli delle altre forme geometriche: senza
+ * di essi una label corta produce una lente verticale.
+ */
+const GEOMETRIC_BOX_SIZING: ShapeSizing = {
+    heightFactor: 1, minBoxWidth: 0, minBoxHeight: GEOMETRIC_MIN_BOX_HEIGHT, minAspect: 0.8,
 };
 
 /**
@@ -219,6 +290,57 @@ export const SHAPE_REGISTRY: Readonly<Record<ShapeForm, ShapeDescriptor>> = {
         keepAspectRatio: false,
         insetFractionAt: DIAMOND_INSET,
         sizing: DIAMOND_SIZING,
+    },
+    // stadium: `rounded` col raggio portato alla pillola. Il raggio delle calotte
+    // vale h/2, quindi il profilo dipende dal rapporto d'aspetto del box, che la
+    // firma non vede: rientro approssimato a zero, stessa approssimazione gia'
+    // accettata per `rounded` (raggio 10px) e registrata li'.
+    stadium: {
+        id: 'stadium', painter: { kind: 'css' },
+        defaultResizable: false, keepAspectRatio: false, insetFractionAt: NO_INSET,
+        sizing: BOX_SIZING,
+    },
+    hexagon: {
+        id: 'hexagon',
+        painter: { kind: 'svg', svgClassName: 'ir-hexagon-svg', points: '25,0 75,0 100,50 75,100 25,100 0,50' },
+        defaultResizable: true,
+        keepAspectRatio: false,
+        insetFractionAt: HEXAGON_INSET,
+        handleInsetAt: (t, side) =>
+            (side === 'top' || side === 'bottom') ? HEXAGON_CROSS_INSET(t) : HEXAGON_INSET(t),
+        sizing: GEOMETRIC_BOX_SIZING,
+    },
+    parallelogram: {
+        id: 'parallelogram',
+        painter: { kind: 'svg', svgClassName: 'ir-parallelogram-svg', points: '25,0 100,0 75,100 0,100' },
+        defaultResizable: true,
+        keepAspectRatio: false,
+        insetFractionAt: PARALLELOGRAM_INSET,
+        // Il taglio sta tutto da una parte a ogni quota, quindi un rientro
+        // simmetrico porterebbe meta' degli anchor FUORI dal contorno. Restano
+        // sul bounding box, che e' la scelta conservativa: l'arco che li lega al
+        // nodo non buca mai la figura.
+        handleInsetAt: () => 0,
+        sizing: GEOMETRIC_BOX_SIZING,
+    },
+    // cylinder: silhouette con archi, quindi painter a path. Il coperchio e'
+    // dipinto DENTRO il box e non e' sottratto alla banda del contenuto: con il
+    // pavimento a 64px una label su una riga sta nel corpo, un contenuto alto
+    // oltre meta' box attraversa la linea del coperchio. Sottrarlo davvero
+    // vorrebbe dire una riserva verticale in ShapeSizing, che questa slice non
+    // introduce.
+    cylinder: {
+        id: 'cylinder',
+        painter: {
+            kind: 'svgPath', svgClassName: 'ir-cylinder-svg',
+            silhouette: 'M0,14 A50,14 0 0 1 100,14 L100,86 A50,14 0 0 1 0,86 Z',
+            ornaments: ['M0,14 A50,14 0 0 0 100,14'],
+        },
+        defaultResizable: true,
+        keepAspectRatio: false,
+        // Il corpo tocca i fianchi del box a ogni quota: nessun rientro.
+        insetFractionAt: NO_INSET,
+        sizing: GEOMETRIC_BOX_SIZING,
     },
 };
 
@@ -286,8 +408,8 @@ function availableWidthFraction(desc: ShapeDescriptor, boxH: number, contentH: n
  * `boxW x boxH` box, and where it sits. Box coordinates, origin top-left.
  *
  * The rectangle carries its position because the scalar profile cannot express
- * every shape: on the cylinder and the folder the centred rectangle collapses
- * to zero where the true answer is the full width. For a shape that declares
+ * every shape: on the folder the centred rectangle collapses to zero where the
+ * true answer is the full width. For a shape that declares
  * `insetFractionAt` (symmetric about both axes) the widest rectangle is the
  * centred one, so `x` and `y` are always the centred values here. Vertical
  * alignment of the actual content is a CSS question, not this contract's: on a

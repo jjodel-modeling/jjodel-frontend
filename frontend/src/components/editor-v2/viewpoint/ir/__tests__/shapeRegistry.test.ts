@@ -18,7 +18,17 @@ import {
     boxFromIntrinsic, hasSizeSupplement, MEASURE_SLACK,
 } from '../shapeRegistry';
 
-const ALL_FORMS: ShapeForm[] = ['rect', 'rounded', 'ellipse', 'circle', 'diamond'];
+const ALL_FORMS: ShapeForm[] = [
+    'rect', 'rounded', 'ellipse', 'circle', 'diamond',
+    'stadium', 'hexagon', 'parallelogram', 'cylinder',
+];
+/**
+ * Le cinque forme che esistevano prima del registry. I tre test di equivalenza
+ * qui sotto confrontano la tabella coi predicati storici, che parlano solo di
+ * queste: una forma arrivata dopo non ha un comportamento precedente da
+ * riprodurre. Gli invarianti geometrici restano su ALL_FORMS.
+ */
+const LEGACY_FORMS: ShapeForm[] = ['rect', 'rounded', 'ellipse', 'circle', 'diamond'];
 
 /** Predicato storico: nodeSizing.ts prima del registry. */
 const wasResizable = (f: ShapeForm | undefined) => f === 'ellipse' || f === 'circle' || f === 'diamond';
@@ -37,19 +47,19 @@ describe('shapeRegistry', () => {
     });
 
     it('riproduce il gate di resize precedente', () => {
-        for (const form of ALL_FORMS) {
+        for (const form of LEGACY_FORMS) {
             expect(getShapeDescriptor(form).defaultResizable).toBe(wasResizable(form));
         }
     });
 
     it('riproduce il lock di aspect ratio precedente', () => {
-        for (const form of ALL_FORMS) {
+        for (const form of LEGACY_FORMS) {
             expect(getShapeDescriptor(form).keepAspectRatio).toBe(wasAspectLocked(form));
         }
     });
 
     it('riproduce quali forme sono dipinte in SVG', () => {
-        for (const form of ALL_FORMS) {
+        for (const form of LEGACY_FORMS) {
             expect(getShapeDescriptor(form).painter.kind === 'svg').toBe(wasSvgPainted(form));
         }
     });
@@ -60,6 +70,57 @@ describe('shapeRegistry', () => {
         if (painter.kind !== 'svg') return;
         expect(painter.points).toBe('50,0 100,50 50,100 0,50');
         expect(painter.svgClassName).toBe('ir-diamond-svg');
+    });
+
+    it('le quattro forme del 2026-08-15 dichiarano il painter atteso', () => {
+        expect(SHAPE_REGISTRY.stadium.painter.kind).toBe('css');
+        expect(SHAPE_REGISTRY.hexagon.painter.kind).toBe('svg');
+        expect(SHAPE_REGISTRY.parallelogram.painter.kind).toBe('svg');
+        const cyl = SHAPE_REGISTRY.cylinder.painter;
+        expect(cyl.kind).toBe('svgPath');
+        if (cyl.kind !== 'svgPath') return;
+        // La silhouette e' chiusa e il coperchio e' un ornamento a se': se
+        // finisse nella silhouette verrebbe riempito e coprirebbe il corpo.
+        expect(cyl.silhouette.endsWith('Z')).toBe(true);
+        expect(cyl.ornaments).toHaveLength(1);
+        expect(cyl.svgClassName).toBe('ir-cylinder-svg');
+    });
+
+    it('esagono: profilo diverso per asse, ed e per questo che dichiara handleInsetAt', () => {
+        const hex = SHAPE_REGISTRY.hexagon;
+        // Mezza larghezza: piena in mezzeria, 0.25 per lato agli estremi.
+        expect(hex.insetFractionAt(0.5)).toBeCloseTo(0, 10);
+        expect(hex.insetFractionAt(0)).toBeCloseTo(0.25, 10);
+        expect(hex.insetFractionAt(1)).toBeCloseTo(0.25, 10);
+        // Lati verticali: il profilo di mezza larghezza.
+        expect(hex.handleInsetAt!(0, 'left')).toBeCloseTo(0.25, 10);
+        expect(hex.handleInsetAt!(0.25, 'right')).toBeCloseTo(hex.insetFractionAt(0.25), 10);
+        // Lati orizzontali: piatti nella meta' centrale, punta a 0.5.
+        expect(hex.handleInsetAt!(0.5, 'top')).toBeCloseTo(0, 10);
+        expect(hex.handleInsetAt!(0.25, 'top')).toBeCloseTo(0, 10);
+        expect(hex.handleInsetAt!(0, 'top')).toBeCloseTo(0.5, 10);
+        expect(hex.handleInsetAt!(1, 'bottom')).toBeCloseTo(0.5, 10);
+    });
+
+    it('parallelogramma: profilo per il sizing, anchor sul bounding box', () => {
+        const par = SHAPE_REGISTRY.parallelogram;
+        // Banda di altezza nulla: perde il solo taglio, 0.125 per lato.
+        expect(par.insetFractionAt(0.5)).toBeCloseTo(0.125, 10);
+        // Banda alta quanto il box: 0.25 per lato, cioe' meta' larghezza.
+        expect(par.insetFractionAt(1)).toBeCloseTo(0.25, 10);
+        for (const side of ['top', 'right', 'bottom', 'left'] as const) {
+            for (const t of [0, 0.3, 0.5, 0.8, 1]) {
+                expect(par.handleInsetAt!(t, side)).toBe(0);
+            }
+        }
+    });
+
+    it('stadium e cylinder riempiono il box in larghezza: nessun rientro, nessuna deroga', () => {
+        for (const form of ['stadium', 'cylinder'] as ShapeForm[]) {
+            const desc = getShapeDescriptor(form);
+            expect(desc.handleInsetAt).toBeUndefined();
+            for (const t of [0, 0.25, 0.5, 0.75, 1]) expect(desc.insetFractionAt(t)).toBe(0);
+        }
     });
 
     it('conserva la mappa dei tratteggi (ex DIAMOND_DASH)', () => {
@@ -118,7 +179,10 @@ describe('shapeRegistry', () => {
             for (const t of [NaN, Infinity, -Infinity, -3, 7]) {
                 expect(Number.isFinite(f(t))).toBe(true);
             }
-            expect(f(NaN)).toBe(0);   // ricade sulla mezzeria
+            // Ricade sulla mezzeria: il valore atteso e' quello della mezzeria,
+            // non zero. Sulle cinque forme storiche i due coincidono, sul
+            // parallelogramma no (la banda perde il taglio anche a quota nulla).
+            expect(f(NaN)).toBe(f(0.5));
         }
     });
 
@@ -319,8 +383,10 @@ describe('shapeRegistry: dalla misura del DOM al box', () => {
     ];
 
     it('quali forme portano un supplemento', () => {
+        // Lo stadium riempie il proprio box come rect e rounded, quindi resta
+        // fuori; le tre forme geometriche nuove entrano per l'aspect floor.
         expect(ALL_FORMS.filter(f => hasSizeSupplement(getShapeDescriptor(f))))
-            .toEqual(['ellipse', 'circle', 'diamond']);
+            .toEqual(['ellipse', 'circle', 'diamond', 'hexagon', 'parallelogram', 'cylinder']);
     });
 
     it('il box non e\' mai piu\' piccolo del contenuto misurato', () => {

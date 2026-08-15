@@ -17,7 +17,26 @@ import type { CompiledView, CompiledTextStyle } from './irTypes';
 import type { ReadCtx } from './irReadCtx';
 import { makeReadCtx } from './irReadCtxLproxy';
 import { rowRenderedChildren } from './irContainment';
-import { getShapeDescriptor, SVG_BORDER_DASH } from './shapeRegistry';
+import { getShapeDescriptor, SVG_BORDER_DASH, type ShapePainter } from './shapeRegistry';
+
+/**
+ * Il contorno di una forma dipinta in SVG: `<polygon>` per i profili spezzati,
+ * `<path>` per quelli con archi (il cilindro). Stessi attributi nei due casi,
+ * cosi' l'overdraw del double resta una sola scrittura.
+ */
+type SvgOutlinePainter = Extract<ShapePainter, { kind: 'svg' | 'svgPath' }>;
+/** Gli attributi che il contorno riceve: gli stessi per il poligono e per il path. */
+interface SvgOutlineProps {
+    fill: string;
+    stroke: string;
+    strokeWidth: number;
+    strokeDasharray?: string;
+}
+function svgOutline(painter: SvgOutlinePainter, props: SvgOutlineProps): React.ReactElement {
+    return painter.kind === 'svg'
+        ? <polygon points={painter.points} vectorEffect="non-scaling-stroke" {...props} />
+        : <path d={painter.silhouette} vectorEffect="non-scaling-stroke" {...props} />;
+}
 import { useContentDrivenSize } from './useContentSize';
 import { getMarkerDef, MARKER_STROKE_WIDTH, MARKER_VIEWBOX } from './markerRegistry';
 import IRRow from './IRRow';
@@ -165,7 +184,9 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx }: IRNodeContentP
     // Le forme dipinte in SVG (oggi: diamond) sopprimono la box CSS in irStyle.ts.
     // `svgPainter` non nullo == questa forma e' dipinta da un layer SVG.
     const shapeDescriptor = getShapeDescriptor(form);
-    const svgPainter = shapeDescriptor.painter.kind === 'svg' ? shapeDescriptor.painter : null;
+    const painter = shapeDescriptor.painter;
+    const svgPainter: SvgOutlinePainter | null =
+        painter.kind === 'svg' || painter.kind === 'svgPath' ? painter : null;
     const inlineStyle: React.CSSProperties = {};
     // An SVG-painted form paints fill/border in its own layer (below). The inline
     // box would win over the CSS box suppression (irStyle.ts) and show a square
@@ -212,31 +233,32 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx }: IRNodeContentP
                 <svg className={svgPainter.svgClassName} viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
                     {svgDouble ? (
                         <>
-                            <polygon
-                                points={svgPainter.points}
-                                vectorEffect="non-scaling-stroke"
-                                fill={svgFill}
-                                stroke={svgStroke}
-                                strokeWidth={svgStrokeWidth * 3}
-                            />
-                            <polygon
-                                points={svgPainter.points}
-                                vectorEffect="non-scaling-stroke"
-                                fill="none"
-                                stroke={svgFill}
-                                strokeWidth={svgStrokeWidth}
-                            />
+                            {svgOutline(svgPainter, {
+                                fill: svgFill, stroke: svgStroke, strokeWidth: svgStrokeWidth * 3,
+                            })}
+                            {svgOutline(svgPainter, {
+                                fill: 'none', stroke: svgFill, strokeWidth: svgStrokeWidth,
+                            })}
                         </>
                     ) : (
-                        <polygon
-                            points={svgPainter.points}
+                        svgOutline(svgPainter, {
+                            fill: svgFill, stroke: svgStroke, strokeWidth: svgStrokeWidth,
+                            strokeDasharray: svgDash,
+                        })
+                    )}
+                    {/* Ornamenti (il coperchio del cilindro): sopra la silhouette,
+                        solo tratto. Nel caso double restano a spessore normale. */}
+                    {svgPainter.kind === 'svgPath' && (svgPainter.ornaments ?? []).map((d, i) => (
+                        <path
+                            key={`ir-ornament-${i}`}
+                            d={d}
                             vectorEffect="non-scaling-stroke"
-                            fill={svgFill}
+                            fill="none"
                             stroke={svgStroke}
                             strokeWidth={svgStrokeWidth}
                             strokeDasharray={svgDash}
                         />
-                    )}
+                    ))}
                 </svg>
             )}
             {markerDef && (

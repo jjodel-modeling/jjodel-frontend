@@ -35,7 +35,8 @@ export type Conditional<T> =
     | { when: Predicate; then: T; else?: T }
     | { rules: { when: Predicate; then: T }[]; default?: T };
 
-export type ShapeForm = 'rect' | 'rounded' | 'ellipse' | 'circle' | 'diamond';
+export type ShapeForm = 'rect' | 'rounded' | 'ellipse' | 'circle' | 'diamond'
+    | 'stadium' | 'hexagon' | 'parallelogram' | 'cylinder';
 export type LabelPosition = 'top' | 'center' | 'inside' | 'bottom';
 export type BadgePosition = 'tl' | 'tr' | 'bl' | 'br';
 
