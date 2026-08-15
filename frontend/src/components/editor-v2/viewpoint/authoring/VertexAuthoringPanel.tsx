@@ -7,10 +7,8 @@ import { validateIR } from '../ir/irValidate';
 import { defaultObjectViewIR } from '../ir/irDefaults';
 import type { VertexViewIR, ShapeForm } from '../ir/irTypes';
 import { MARKER_REGISTRY } from '../ir/markerRegistry';
-import { applyPresetToShape, type SymbolPreset } from '../ir/notationCatalog';
 import { recognizeSymbol } from '../ir/symbolRecognition';
 import { resolveMetaclassId, withMetaclassPins, type MetaclassRef } from '../ir/metaclassPin';
-import { SymbolCatalogPicker } from './SymbolCatalogPicker';
 import { defaultResizableForForm } from '../../nodes/nodeSizing';
 import { LabelListEditor } from './LabelListEditor';
 import { FieldCompartmentListEditor } from './FieldCompartmentListEditor';
@@ -105,16 +103,11 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
     viewRef.current = view;
     const draftViewIdRef = useRef<string>(view.id as string);
 
-    // «Modified from X» is picker session state (memo D14): it exists only
-    // after an application in THIS mount, never persisted, never derived.
-    const [lastApplied, setLastApplied] = useState<SymbolPreset | null>(null);
-
     // Reset the draft when the selected view changes (no commit on reset).
     useEffect(() => {
         dirtyRef.current = false;
         setDraft(seed());
         setError(null);
-        setLastApplied(null);
         draftViewIdRef.current = view.id as string;
         lastSeenIrRef.current = (view as any).ir;
         lastCommittedRef.current = null;
@@ -348,7 +341,11 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
             )}
 
             {/* ─────────── Applies to ─────────── */}
-            <div style={body('ir-applies-to')}>
+            {/* Stable classes on the tab bodies (D15b): FormSection's CSS modules are
+                hashed, so a host that restyles a body (the modal's two-column
+                anatomy) needs an addressable container. Visibility is still the
+                inline style of irTabBodyStyle, which wins over any stylesheet. */}
+            <div className="ir-tab-body ir-tab-body--applies-to" style={body('ir-applies-to')}>
                 {/* Authoritative controls of the legacy Apply-to tab, which the
                     five-tab bar no longer offers to an IR view (R-H). */}
                 {identity && <IRIdentityFields view={view} {...identity} />}
@@ -370,7 +367,7 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
             </div>
 
             {/* ─────────── Structure ─────────── */}
-            <div style={body('ir-structure')}>
+            <div className="ir-tab-body ir-tab-body--structure" style={body('ir-structure')}>
                 {/* Field compartments — the data round-trips verbatim either way: the
                     whole cloned ir (draft.fieldCompartments included) is written back
                     on every commit. */}
@@ -386,10 +383,11 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
             </div>
 
             {/* ─────────── Appearance ─────────── */}
-            <div style={body('ir-appearance')}>
+            <div className="ir-tab-body ir-tab-body--appearance" style={body('ir-appearance')}>
 
-            {/* Symbol catalog (D10): applying a preset populates the controls
-                below — the retouch panel opens already set on the preset. */}
+            {/* Symbol identity (D14). The catalog picker and the «modified from X»
+                session state moved to SymbolEditorModal (D15b): the modal hosts the
+                persistent catalog column and owns the last-applied preset. */}
             <FormSection title="Symbol" divider={false}>
                 {/* Structural recognition (D14): where the authored axes sit in the
                     catalog space. Derived on every render, never stored (a preset is
@@ -398,26 +396,9 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                 {(() => {
                     const matches = recognizeSymbol(draft.shape);
                     const notations = [...new Set(matches.map(m => m.notation))].join(' · ');
-                    // «Modified from X» (D15): session state, shown only when a preset
-                    // was applied in this mount and the axes have since diverged.
-                    const la = lastApplied;
-                    const modified = la !== null && !matches.some((m) => m.id === la.id);
                     return (
                         <div className="jj-field" style={{ fontSize: 11, display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
-                            {modified && la ? (
-                                <>
-                                    <strong>{la.label}</strong>
-                                    <span style={{ color: '#64748b' }}>{la.notation} · modified</span>
-                                    <Button
-                                        variant="secondary"
-                                        size="sm"
-                                        title="Reapply the preset axes; the border color stays yours"
-                                        onClick={() => patch({ ...draft, shape: applyPresetToShape(draft.shape, la) })}
-                                    >
-                                        Reset to preset
-                                    </Button>
-                                </>
-                            ) : matches.length > 0 ? (
+                            {matches.length > 0 ? (
                                 <>
                                     <strong>{matches[0].label}</strong>
                                     <span style={{ color: '#64748b' }}>
@@ -431,12 +412,6 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                         </div>
                     );
                 })()}
-                <SymbolCatalogPicker
-                    onApply={(preset) => {
-                        setLastApplied(preset);
-                        patch({ ...draft, shape: applyPresetToShape(draft.shape, preset) });
-                    }}
-                />
             </FormSection>
 
             {/* Shape form */}
@@ -546,7 +521,7 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
             </div>
 
             {/* ─────────── Text ─────────── */}
-            <div style={body('ir-text')}>
+            <div className="ir-tab-body ir-tab-body--text" style={body('ir-text')}>
                 {/* View label (IR label field, distinct from the DViewElement name,
                     which the relocated Name field of Applies to writes) */}
                 <FormSection title="General" divider={false}>
@@ -570,7 +545,7 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
             </div>
 
             {/* ─────────── Source ─────────── */}
-            <div style={body('ir-source')}>
+            <div className="ir-tab-body ir-tab-body--source" style={body('ir-source')}>
                 <FormSection title="Source" divider={false}>
                     <IRSourceBody ir={(view as any).ir} />
                 </FormSection>

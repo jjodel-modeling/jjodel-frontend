@@ -19,6 +19,13 @@ import SymbolPreview from './SymbolPreview';
 
 export interface SymbolCatalogPickerProps {
     onApply: (preset: SymbolPreset) => void;
+    /**
+     * 'disclosure' (default): Browse/Hide gate, the pre-D15b behavior, kept for
+     * any other mount. 'column': always open, no gate and no Hide button — the
+     * persistent catalog column of the symbol editor modal (D15b); the host
+     * provides the container and its styling.
+     */
+    variant?: 'disclosure' | 'column';
 }
 
 const NOTATION_OPTIONS = [
@@ -37,14 +44,15 @@ const cellLabelStyle: React.CSSProperties = {
     maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
 };
 
-export const SymbolCatalogPicker: React.FC<SymbolCatalogPickerProps> = ({ onApply }) => {
+export const SymbolCatalogPicker: React.FC<SymbolCatalogPickerProps> = ({ onApply, variant = 'disclosure' }) => {
+    const column = variant === 'column';
     const [open, setOpen] = useState(false);
     const [notation, setNotation] = useState('');
     const [query, setQuery] = useState('');
 
     const presets = useMemo(() => filterCatalog(notation, query), [notation, query]);
 
-    if (!open) {
+    if (!column && !open) {
         return (
             <div className="jj-field">
                 <Button variant="secondary" onClick={() => setOpen(true)}>
@@ -63,7 +71,7 @@ export const SymbolCatalogPicker: React.FC<SymbolCatalogPickerProps> = ({ onAppl
                     onChange={(e) => setNotation(e.target.value)}
                     aria-label="Notation filter"
                 />
-                <Button variant="secondary" onClick={() => setOpen(false)}>Hide</Button>
+                {!column && <Button variant="secondary" onClick={() => setOpen(false)}>Hide</Button>}
             </div>
             <Input
                 value={query}
