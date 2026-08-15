@@ -421,6 +421,15 @@
         min-height: 0;
     }
 
+    /* White main pane (ratified 2026-08-15). The hosted panel root
+       (`section.properties-tab.properties-panel`, VertexAuthoringPanel) carries
+       `background-color: #f8fafc !important` from its rail context
+       (_form-system.scss). Same-importance conflict resolves by specificity,
+       so this scoped rule wins here and the rail keeps its gray. */
+    &__panel .properties-tab {
+        background-color: var(--color-bg-secondary, #fff) !important;
+    }
+
     /* Two-column anatomy (mockup scene): grid over the FormSections of the
        Appearance body, Symbol identity spanning full width. Addressed through
        the stable ir-tab-body classes (FormSection classes are CSS modules).
