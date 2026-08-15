@@ -1,35 +1,35 @@
 /**
  * SymbolBoxPreview — realistic preview of the Symbol modal strip (D8 wiring).
  *
- * Draws the current scalar axes at the real proportions of the box the
- * content-driven size produced for the canvas node (or the manual size when a
- * resize won). The box is a FACT read from the canvas (useCanvasNodeBox),
- * never recomputed here: the sizing engine is consumed, not duplicated.
+ * Renders the box the content-driven size produced (or the manual size when a
+ * resize won) as a REPLICA of the canvas node: the same global classes
+ * irStyle.ts injects (`ir-node-content ir-shape--<form>`, `ir-label`,
+ * `ir-marker-svg`), the same inline border/fill emission as IRNodeContent, the
+ * same SVG polygon overdraw for the svg-painted shapes. What the canvas paints
+ * through CSS (dashed and double borders, radii, shadow, typography, ellipsis)
+ * the preview paints identically by construction. The box itself is a FACT
+ * read from the canvas (useCanvasNodeBox), never recomputed here: the sizing
+ * engine is consumed, not duplicated.
  *
- * Rendering mirrors the real painters so preview and canvas cannot diverge in
- * kind: double is the same two-stroke overdraw IRNodeContent uses, dashes come
- * from SVG_BORDER_DASH, the marker is the registry glyph scaled the way
- * .ir-marker-svg scales it (min(w, h), centred), corner radii are the
- * irStyle.ts ones (4 on rect, 10 on rounded). Strokes are non-scaling-stroke
- * so a scaled-down box keeps a legible border; a large box scales DOWN to fit
+ * The replica sets min-width/min-height 0 inline: on the canvas an explicit
+ * size lifts the 140x40 content-hug floors through `.mm-node.ir-sized`
+ * (irStyle.ts); without a .mm-node ancestor the inline zeros reproduce exactly
+ * that lifted state.
+ *
+ * Declared limit: per-instance content (compartment rows, conditional axes,
+ * badge visibility) needs an instance and stays out; the preview is the view
+ * with its label, not the clone of one node. A large box scales DOWN to fit
  * the strip and never scales up.
  *
- * Pure presentation: no state, no model access, layout styles inline because
- * this component mounts only inside the modal strip. SymbolPreview (the 72x48
- * tile glyph) is untouched: catalog tiles, recents and the rail card render
- * exactly as before.
+ * Pure presentation: no state, no model access. SymbolPreview (the 72x48 tile
+ * glyph) is untouched: catalog tiles, recents and the rail card render exactly
+ * as before.
  */
 
 import React from 'react';
-import { MARKER_STROKE_WIDTH, getMarkerDef } from '../ir/markerRegistry';
-import { SVG_BORDER_DASH } from '../ir/shapeRegistry';
+import { MARKER_STROKE_WIDTH, MARKER_VIEWBOX, getMarkerDef } from '../ir/markerRegistry';
+import { SVG_BORDER_DASH, getShapeDescriptor } from '../ir/shapeRegistry';
 import type { SymbolPreset } from '../ir/notationCatalog';
-
-const STROKE = 'var(--color-text-primary, #334155)';
-const BG = 'var(--node-bg, #ffffff)';
-
-/** Inset of the contour from the viewBox edge, px (mockup: 2). */
-const CONTOUR_INSET = 2;
 
 /** Box dimensions in canvas pixels. */
 export interface PreviewBox {
@@ -57,115 +57,106 @@ export function captionForBox(box: PreviewBox, source: 'derived' | 'manual'): st
     return `${Math.round(box.w)} × ${Math.round(box.h)} px · ${tail}`;
 }
 
-/** The contour at the box proportions, as a reusable element for the double overdraw. */
-function contourEl(
-    form: SymbolPreset['values']['form'],
-    w: number,
-    h: number,
-    props: React.SVGProps<any>,
-): React.ReactElement {
-    const i = CONTOUR_INSET;
-    switch (form) {
-        case 'rounded': return <rect x={i} y={i} width={w - 2 * i} height={h - 2 * i} rx={10} {...props} />;
-        case 'ellipse': return <ellipse cx={w / 2} cy={h / 2} rx={w / 2 - i} ry={h / 2 - i} {...props} />;
-        case 'circle': return <circle cx={w / 2} cy={h / 2} r={Math.min(w, h) / 2 - i} {...props} />;
-        case 'diamond': return <polygon points={`${w / 2},${i} ${w - i},${h / 2} ${w / 2},${h - i} ${i},${h / 2}`} {...props} />;
-        case 'rect':
-        default: return <rect x={i} y={i} width={w - 2 * i} height={h - 2 * i} rx={4} {...props} />;
-    }
-}
-
 export interface SymbolBoxPreviewProps {
     preset: SymbolPreset;
     box: PreviewBox;
     label?: string;
+    /**
+     * Authored border color of the view. It travels separately because the
+     * preset VALUE cannot carry it: recognition (D14) deliberately ignores the
+     * border color, so `currentAxesPreset` strips it. Absent = the canvas
+     * default, exactly as IRNodeContent falls back.
+     */
+    borderColor?: string;
     /** Stage bounds the preview must fit in, px. */
     maxW: number;
     maxH: number;
 }
 
-export const SymbolBoxPreview: React.FC<SymbolBoxPreviewProps> = ({ preset, box, label, maxW, maxH }) => {
+export const SymbolBoxPreview: React.FC<SymbolBoxPreviewProps> = ({ preset, box, label, borderColor, maxW, maxH }) => {
     const v = preset.values;
-    const style = v.border?.style ?? 'solid';
-    const sw = v.border?.width ?? 1;
-    const isDouble = style === 'double';
-    const dash = SVG_BORDER_DASH[style];
-    const fill = v.fill ?? BG;
+    const desc = getShapeDescriptor(v.form);
+    const svgPainter = desc.painter.kind === 'svg' ? desc.painter : null;
     const markerDef = getMarkerDef(v.marker);
-    const mk = Math.min(box.w, box.h) / 100;
 
     const s = fitScale(box, maxW, maxH);
     const dw = Math.max(1, Math.round(box.w * s));
     const dh = Math.max(1, Math.round(box.h * s));
 
+    // Same inline emission as IRNodeContent: border and background only when
+    // authored, and never for an svg-painted form (irStyle.ts suppresses the
+    // CSS box there and the polygon carries the resolved values).
+    const b = v.border;
+    const replicaStyle: React.CSSProperties = {
+        width: box.w,
+        height: box.h,
+        minWidth: 0,
+        minHeight: 0,
+        transform: `scale(${s})`,
+        transformOrigin: 'top left',
+    };
+    if (!svgPainter) {
+        if (v.fill) replicaStyle.background = v.fill;
+        if (b) replicaStyle.border = `${b.width ?? 1}px ${b.style ?? 'solid'} ${borderColor ?? 'var(--border-default)'}`;
+    }
+    const svgFill = v.fill || 'var(--node-bg)';
+    const svgStroke = borderColor ?? 'var(--border-default)';
+    const svgStrokeWidth = b?.width ?? 1;
+    const svgDash = SVG_BORDER_DASH[b?.style ?? 'solid'];
+    const svgDouble = (b?.style ?? 'solid') === 'double';
+    const markerColor = borderColor ?? 'var(--border-default)';
+
     return (
-        <div style={{ position: 'relative', width: dw, height: dh }}>
-            <svg
-                width={dw}
-                height={dh}
-                viewBox={`0 0 ${box.w} ${box.h}`}
-                style={{ overflow: 'visible', display: 'block' }}
-                aria-hidden="true"
-                focusable="false"
-            >
-                {isDouble ? (
-                    <>
-                        {contourEl(v.form, box.w, box.h, {
-                            fill, stroke: STROKE, strokeWidth: sw * 3, vectorEffect: 'non-scaling-stroke',
-                        })}
-                        {contourEl(v.form, box.w, box.h, {
-                            fill: 'none', stroke: fill, strokeWidth: sw, vectorEffect: 'non-scaling-stroke',
-                        })}
-                    </>
-                ) : (
-                    contourEl(v.form, box.w, box.h, {
-                        fill, stroke: STROKE, strokeWidth: sw, strokeDasharray: dash, vectorEffect: 'non-scaling-stroke',
-                    })
+        <div style={{ position: 'relative', width: dw, height: dh }} aria-hidden="true">
+            <div className={`ir-node-content ir-shape--${v.form}`} style={replicaStyle}>
+                {svgPainter && (
+                    <svg className={svgPainter.svgClassName} viewBox="0 0 100 100" preserveAspectRatio="none">
+                        {svgDouble ? (
+                            <>
+                                <polygon
+                                    points={svgPainter.points}
+                                    vectorEffect="non-scaling-stroke"
+                                    fill={svgFill}
+                                    stroke={svgStroke}
+                                    strokeWidth={svgStrokeWidth * 3}
+                                />
+                                <polygon
+                                    points={svgPainter.points}
+                                    vectorEffect="non-scaling-stroke"
+                                    fill="none"
+                                    stroke={svgFill}
+                                    strokeWidth={svgStrokeWidth}
+                                />
+                            </>
+                        ) : (
+                            <polygon
+                                points={svgPainter.points}
+                                vectorEffect="non-scaling-stroke"
+                                fill={svgFill}
+                                stroke={svgStroke}
+                                strokeWidth={svgStrokeWidth}
+                                strokeDasharray={svgDash}
+                            />
+                        )}
+                    </svg>
                 )}
                 {markerDef && (
-                    <g transform={`translate(${(box.w - 100 * mk) / 2}, ${(box.h - 100 * mk) / 2}) scale(${mk})`}>
+                    <svg className="ir-marker-svg" viewBox={MARKER_VIEWBOX} preserveAspectRatio="xMidYMid meet">
                         {markerDef.paths.map((p, i) => (
                             <path
                                 key={i}
                                 d={p.d}
-                                fill={p.fill ? STROKE : 'none'}
-                                stroke={p.fill ? 'none' : STROKE}
+                                fill={p.fill ? markerColor : 'none'}
+                                stroke={p.fill ? 'none' : markerColor}
                                 strokeWidth={MARKER_STROKE_WIDTH}
                                 strokeLinecap="round"
                                 strokeLinejoin="round"
                             />
                         ))}
-                    </g>
+                    </svg>
                 )}
-            </svg>
-            {label ? (
-                <span
-                    style={{
-                        position: 'absolute',
-                        left: 0,
-                        top: 0,
-                        width: box.w,
-                        height: box.h,
-                        transform: `scale(${s})`,
-                        transformOrigin: 'top left',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxSizing: 'border-box',
-                        padding: '0 8px',
-                        fontSize: 11,
-                        fontWeight: 600,
-                        color: STROKE,
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        textAlign: 'center',
-                        pointerEvents: 'none',
-                    }}
-                >
-                    {label}
-                </span>
-            ) : null}
+                {label ? <span className="ir-label ir-label--center">{label}</span> : null}
+            </div>
         </div>
     );
 };

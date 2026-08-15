@@ -274,6 +274,8 @@ export const SymbolEditorModal: React.FC = () => {
                                             preset={previewPreset}
                                             box={previewBox}
                                             label={previewLabel}
+                                            borderColor={typeof ir.shape.border?.color === 'string' && ir.shape.border.color !== ''
+                                                ? ir.shape.border.color : undefined}
                                             maxW={PREVIEW_MAX_W}
                                             maxH={PREVIEW_MAX_H}
                                         />

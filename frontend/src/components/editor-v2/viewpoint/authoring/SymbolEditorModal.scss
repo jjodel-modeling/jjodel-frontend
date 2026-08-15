@@ -127,6 +127,19 @@
         min-height: 0;
     }
 
+    /* Compact density for the hosted kit controls, modal context only. The kit
+       components (Input, Select, Button) are CSS Modules sized by the design
+       tokens, so the override is a scoped token redefinition rather than a
+       reach into hashed classes; rail and every other host keep the defaults.
+       NumberInput carries a hardcoded 32px frame and is left as is. */
+    &__catalog,
+    &__panel {
+        --font-size-lg: 12px;      /* Input text; kit default 16px */
+        --input-height-base: 30px; /* md control frame; kit default 40px */
+        --input-height-sm: 26px;   /* sm control frame; kit default 32px */
+        --input-height-lg: 34px;   /* lg control frame; kit default 48px */
+    }
+
     /* ── catalog column (sectioned per D18) ── */
 
     &__catalog {
@@ -212,6 +225,11 @@
             flex: 1;
             min-height: 0;
             overflow-y: auto;
+            /* Air between the tiles and the scrollbar; the stable gutter keeps
+               the tiles from shifting when the bar appears or disappears. */
+            padding-right: 8px;
+            scrollbar-width: thin;
+            scrollbar-gutter: stable;
         }
 
         &__section {
