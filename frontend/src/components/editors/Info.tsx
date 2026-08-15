@@ -685,7 +685,11 @@ class builder {
                     me.instanceof = event.target.value === 'undefined' ? undefined : event.target.value as any;
                 } } value={me.instanceof?.id || 'undefined'}>
                     <optgroup label={mm.name}>
-                        {(mm.classes || []).map( c =>
+                        {/* Only instantiable metaclasses can shape an instance: LClass.instantiable
+                            is `!(abstract || interface || isSingleton)`. The current instanceof is
+                            kept regardless, so a class turned abstract after the fact still matches
+                            the select value instead of leaving the field blank. */}
+                        {(mm.classes || []).filter( c => c.instantiable || c.id === me.instanceof?.id ).map( c =>
                                 <option key={c.id} value={c.id}>{c?.name || c.id}</option>
                         )}
                         <option value={'undefined'}>Object</option>
