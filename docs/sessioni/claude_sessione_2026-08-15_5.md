@@ -12,13 +12,19 @@ del checkpoint _4, poi estensione D15b decisa in chat).
 |--------|-----------|-----------|
 | `c4aee51da` | docs(log): entry D14 + campo Smoke del picker D10 a «passato» | GO di Alfonso a inizio sessione |
 | `89fe02c95` | docs(discovery): report Fase 1 D15 (hosting, pattern modale, collisioni, z) | — |
-| `36a789a53` | feat: **D15**: SymbolEditorModal + SymbolCard, evento `jjodel:symbol-editor-open`, tab «Symbol» al posto di Appearance+Text (solo vertex), reseed + flush nel pannello | **smoke visivo in attesa** |
+| `36a789a53` | feat: **D15**: SymbolEditorModal + SymbolCard, evento `jjodel:symbol-editor-open`, tab «Symbol» al posto di Appearance+Text (solo vertex), reseed + flush nel pannello | GO visivo di Alfonso |
 | `12c4f63a5` | docs(discovery): mini-discovery D15b (layout a due pannelli) | — |
-| `c45ccd5a5` | feat: **D15b**: modale 940px a due pannelli: colonna catalogo persistente (picker `variant='column'`), striscia anteprima semplificata, anatomia a due colonne, header con chip di stato e «Reset to preset» | **smoke visivo in attesa** |
+| `c45ccd5a5` | feat: **D15b**: modale a due pannelli: colonna catalogo persistente (picker `variant='column'`), striscia anteprima semplificata, anatomia a due colonne, header con chip di stato e «Reset to preset» | GO visivo di Alfonso |
+| `0c4e699ba` | docs(sessioni): questo checkpoint (prima versione, pre-GO) | — |
+| `bf7a2b59b` | fix: altezza FISSA della modale (richiesta di Alfonso: la scatola non segue il contenuto) | GO visivo di Alfonso |
+| `d3018e652` | docs(log): entry D15/D15b, Smoke «passato» dopo il GO | check:docs: soli 8 errori preesistenti |
+| `70c33827d` | fix: modale piu' grande, 1040 × min(760px, 90vh), sempre fissa | confermato da Alfonso |
 
 Gate su ogni commit feat (container, sha256 device/container prima del commit): typecheck **14**
 (elenco identico riga per riga alla baseline Linux), vitest **1216 passed / 0 failed** (le 9 suite
-`window is not defined` note), build **exit 0**. HEAD `c45ccd5a5`, **25 commit avanti a origin**.
+`window is not defined` note), build **exit 0**. HEAD `70c33827d` + prompt D18 in coda,
+**~30 commit avanti a origin**. **GO VISIVO RICEVUTO su tutto l'arco D15** (2026-08-15, a valle
+della correzione dell'altezza fissa): l'arco e' CHIUSO, entry di log compresa.
 
 ## Decisioni prese (in chat, questa sessione)
 
@@ -48,26 +54,28 @@ Gate su ogni commit feat (container, sha256 device/container prima del commit): 
 - **Picker**: prop additiva `variant?: 'disclosure' | 'column'` (default invariato).
 - La modale scrive con il set_ir canonico (apply e reset); nessun evento oltre il lancio.
 
-## Smoke visivo in attesa (criteri per il GO, su localhost:3000 con hard refresh; P8: la 3001 puo' essere stale)
+## Smoke visivo: GO RICEVUTO (2026-08-15)
 
-(a) card Symbol nel rail con riconoscimento, swatch, «Open symbol editor»; pannello pieno non piu'
-nel rail; (b) il bottone apre la modale a due pannelli col pannello funzionante; (c) un edit nella
-modale si vede subito sul canvas; (d) Esc e X non perdono nulla, anche subito dopo un edit;
-(e) sintassi astratta invariata pixel per pixel; (f) niente layout shift nel rail. Extra D15b:
-colonna catalogo sempre aperta con click sui preset che applica; anteprima con forma+assi+label;
-chip preset/modified/custom nell'header; «Reset to preset» che riapplica conservando il colore.
+Tutti i criteri (a)-(f) del prompt D15 piu' i criteri D15b, verificati da Alfonso dopo la
+correzione dell'altezza fissa (`bf7a2b59b`) e l'allargamento a 1040 (`70c33827d`). Entry di log
+scritta e committata (`d3018e652`): Smoke «passato», LIR «produced», divergenze dal mockup
+dichiarate nelle Notes.
+
+## Prompt generati
+
+- `docs/prompts/claude_2026-08-15_2120_prompt_D18_catalogo_sezioni.md` — **da eseguire** nella
+  prossima sessione: catalogo a sezioni nella colonna della modale (ricerca primaria, recenti,
+  sezioni per notazione con contatori e collasso, chip di notazione). Two-phase con discovery
+  obbligatoria; sezione Progetto ESCLUSA (arriva con D17); domanda aperta chiave per Alfonso:
+  dove vivono i recenti (sessione vs persistenza).
 
 ## Todo e debiti
 
-1. **Entry di log D15/D15a+b**: DOPO il GO visivo (formato §21.2, LIR «produced», Causa —; note da
-   includere: rilocazione D15a→D15b dello stato di sessione, divergenze dichiarate dal mockup
-   (Select non chip, niente recenti, anteprima senza misura D8), EdgeAuthoringPanel slice futura).
-   Poi `check:docs` (noti 8 errori preesistenti sulle entry del 14/8, non correggerli).
-2. Push dell'arco (25 commit), rotazione log (40 entry attive), pulizia `_to_delete/` (ora anche
+1. Push dell'arco (~30 commit), rotazione log (41 entry attive), pulizia `_to_delete/` (ora anche
    `transfer/gate_2026-08-15_d15_163426.tar`, 87 MB), registro `decisions.md` (serie D mai iscritta).
-3. Prossime slice del fronte: D18 (catalogo a sezioni: ricerca primaria, recenti, sezione
-   Progetto, chip di notazione), anteprima realistica (cablaggio misura D8), edge authoring
-   (stesso ri-hosting), poi D17 (stencil, unica che tocca la persistenza).
+2. Prossime slice del fronte, in ordine: **D18** (prompt sopra), anteprima realistica (cablaggio
+   misura D8 nella striscia della modale), edge authoring (stesso ri-hosting di D15), poi D17
+   (stencil, unica che tocca la persistenza). D19 chiusa finche' la condizione non scatta.
 
 ## Info strutturali scoperte
 
@@ -86,5 +94,8 @@ GO di Alfonso su chip D14 e picker D10 → debito di log chiuso (`c4aee51da`) �
 (report committato) → Layer Impact Report in chat → GO → D15a: modale minimale + card + evento +
 guardie reseed/flush, gate verdi, commit → Alfonso confronta con il mockup e chiede la qualita'
 della scena → mini-discovery D15b (picker a colonna senza fork, classi sui body) → D15b: due
-pannelli, anteprima semplificata, chip di stato e reset in header, gate verdi, commit. In attesa
-del GO visivo complessivo; checkpoint per soglia di contesto.
+pannelli, anteprima semplificata, chip di stato e reset in header, gate verdi, commit →
+checkpoint per soglia di contesto → richiesta di Alfonso: altezza fissa della modale (mal di mare
+da resize) → fix committato → **GO visivo su tutto l'arco** → entry di log → ritocco finale
+(modale 1040 × 760) confermato → prompt D18 generato e checkpoint aggiornato. La sessione chiude
+qui; la prossima riparte dal prompt D18 con questo file come stato.
