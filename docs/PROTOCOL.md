@@ -110,7 +110,7 @@ Il log non sostituisce i commit message, e il discovery report non sostituisce i
 ## P10 — Dove vivono i documenti
 
 Il Project Knowledge tiene lo stato corrente, il repo tiene la storia. Sei documenti nel KB, per
-nome: `contesto_progetto.md`, `sessione_CORRENTE.md`, `spec_attive.md`, `INDICE_ARCHIVIO.md`,
+nome: `contesto_progetto.md`, `sessione_CORRENTE.md`, `spec_attive.md`, `HARNESS-DOCS.md`,
 `template-ir-authoring`, `template-task-visivi`.
 
 Tutto il resto si salva in `docs/`: prompt in `docs/prompts/`, memo di ratifica in
@@ -120,7 +120,8 @@ lavoro in `docs/archivio/`, allegati non testuali in `docs/archivio/artefatti/`.
 
 Archiviare non e' ripulire: la copia nel repo e la cancellazione dal KB sono due passi distinti, e
 un documento lasciato in entrambi i posti continua a competere in retrieval con la propria versione
-piu' recente. Storia in `docs/archivio/triage_kb_2026-08-15.md`.
+piu' recente. La mappa completa dei tipi documentali, con formati, gate e ciclo di vita, e' in
+`docs/HARNESS-DOCS.md`; la storia della bonifica in `docs/archivio/triage_kb_2026-08-15.md`.
 
 ---
 
