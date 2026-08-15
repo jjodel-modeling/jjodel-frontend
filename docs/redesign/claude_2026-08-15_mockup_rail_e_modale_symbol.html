@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mockup — rail snello e modale Symbol</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css">
+<style>
+  :root{
+    --slate-900:#0f172a; --slate-700:#334155; --slate-500:#64748b; --slate-300:#cbd5e1;
+    --slate-200:#e2e8f0; --slate-100:#f1f5f9; --slate-50:#f8fafc;
+    --cyan:#0ea5e9; --cyan-soft:rgba(14,165,233,.08); --cyan-ring:rgba(14,165,233,.35);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#e9edf3;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:var(--slate-700)}
+  .page{max-width:1180px;margin:0 auto;padding:28px 20px 60px}
+  h1{font-size:18px;font-weight:650;color:var(--slate-900);margin:0 0 4px}
+  .sub{font-size:12px;color:var(--slate-500);margin-bottom:24px}
+  h2{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--slate-500);margin:36px 0 12px}
+  .frames{display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap}
+  .frame{display:flex;flex-direction:column;gap:8px}
+  .frame-cap{font-size:11.5px;color:var(--slate-500);max-width:300px;line-height:1.45}
+  .frame-cap b{color:var(--slate-700)}
+
+  /* ---------- rail ---------- */
+  .rail{width:300px;height:560px;background:var(--slate-50);border:1px solid var(--slate-200);border-radius:10px;
+        display:flex;flex-direction:column;gap:8px;padding:8px;box-shadow:0 1px 3px rgba(15,23,42,.06)}
+  .card{background:#fff;border:1px solid var(--slate-200);border-radius:8px;overflow:hidden;display:flex;flex-direction:column}
+  .card-h{padding:7px 10px;font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;
+          color:var(--slate-500);border-bottom:1px solid var(--slate-100);display:flex;justify-content:space-between;align-items:center}
+  .card-h i{font-size:11px}
+
+  .tree{padding:6px 4px;font-size:12px;overflow:hidden}
+  .trow{display:flex;align-items:center;gap:6px;padding:3px 8px;border-radius:5px;color:var(--slate-700);border-left:2px solid transparent}
+  .trow i{font-size:12px;color:var(--slate-500);width:14px;text-align:center}
+  .trow.sel{background:var(--cyan-soft);border-left-color:var(--cyan)}
+  .trow .muted{color:var(--slate-500);font-size:11px;margin-left:auto;font-family:'IBM Plex Mono',Monaco,Consolas,monospace}
+  .ind1{padding-left:22px}.ind2{padding-left:38px}.ind3{padding-left:54px}
+
+  .idblock{padding:10px 12px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--slate-100)}
+  .kind{font-size:9.5px;font-weight:700;letter-spacing:.06em;background:var(--slate-700);color:#fff;border-radius:4px;padding:2px 6px}
+  .idname{font-size:13px;font-weight:650;color:var(--slate-900)}
+  .sig{font-size:10.5px;color:var(--slate-500);font-family:'IBM Plex Mono',Monaco,monospace;background:var(--slate-100);
+       border:1px solid var(--slate-200);border-radius:4px;padding:1px 6px;margin-left:auto}
+
+  .form{padding:10px 12px;display:grid;grid-template-columns:84px 1fr;gap:8px 10px;align-items:center;font-size:11px}
+  .form label{color:var(--slate-500)}
+  .inp{border:1px solid var(--slate-300);border-radius:4px;padding:4px 8px;font-size:11.5px;color:var(--slate-900);background:#fff;width:100%}
+  .inp:focus{outline:2px solid var(--slate-700)}
+  .sect{grid-column:1/-1;font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--slate-500);
+        border-top:1px solid var(--slate-100);padding-top:8px;margin-top:2px}
+
+  .switch{width:36px;height:20px;border-radius:10px;background:var(--slate-300);position:relative;flex:none}
+  .switch.on{background:var(--slate-700)}
+  .switch::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;
+                 box-shadow:0 1px 2px rgba(0,0,0,.2);transition:left .1s}
+  .switch.on::after{left:18px}
+
+  .seg{display:inline-flex;border:1px solid var(--slate-300);border-radius:5px;overflow:hidden}
+  .seg span{font-size:10.5px;padding:3px 8px;color:var(--slate-500);border-right:1px solid var(--slate-200);background:#fff}
+  .seg span:last-child{border-right:none}
+  .seg .on{background:var(--slate-700);color:#fff}
+
+  .chip{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;color:var(--slate-700);background:var(--slate-100);
+        border:1px solid var(--slate-200);border-radius:10px;padding:2px 8px}
+  .chip.cy{background:var(--cyan-soft);border-color:rgba(14,165,233,.3)}
+  .chip.dash{background:#fff;border-style:dashed}
+
+  .btn{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;border-radius:6px;padding:6px 12px;border:none;cursor:default}
+  .btn-primary{background:linear-gradient(135deg,#334155,#1e293b);color:#fff}
+  .btn-ghost{background:transparent;color:var(--slate-700);border:1px solid var(--slate-300)}
+
+  .swatch{width:18px;height:18px;border-radius:4px;border:1px solid var(--slate-300);display:inline-block;vertical-align:middle}
+
+  /* symbol light card (rail B) */
+  .symrow{display:flex;align-items:center;gap:10px;padding:10px 12px}
+  .symthumb{width:56px;height:38px;background:var(--slate-50);border:1px solid var(--slate-200);border-radius:6px;
+            display:flex;align-items:center;justify-content:center;flex:none}
+  .symmeta{display:flex;flex-direction:column;gap:3px;min-width:0}
+  .symname{font-size:12px;font-weight:650;color:var(--slate-900);white-space:nowrap}
+  .symsub{font-size:10.5px;color:var(--slate-500)}
+  .symact{padding:0 12px 12px}
+  .quick{display:grid;grid-template-columns:84px 1fr;gap:8px 10px;align-items:center;font-size:11px;padding:0 12px 10px}
+  .quick label{color:var(--slate-500)}
+
+  .hintbox{margin-top:auto;background:#fff;border:1px dashed var(--slate-300);border-radius:8px;padding:10px 12px;
+           font-size:11px;color:var(--slate-500);line-height:1.5}
+
+  /* ---------- modal scene ---------- */
+  .scene{position:relative;height:660px;border-radius:12px;overflow:hidden;border:1px solid var(--slate-200);
+         background:#fdfdfe;background-image:radial-gradient(circle,#d8dee9 1px,transparent 1px);background-size:22px 22px}
+  .cnode{position:absolute;background:#fff;border:1px solid var(--slate-300);border-radius:4px;font-size:11px;font-weight:600;
+         display:flex;align-items:center;justify-content:center;color:var(--slate-700);box-shadow:0 1px 3px rgba(15,23,42,.08)}
+  .backdrop{position:absolute;inset:0;background:rgba(15,23,42,.34)}
+  .modal{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:940px;max-width:96%;background:#fff;
+         border-radius:12px;box-shadow:0 24px 64px rgba(15,23,42,.4);display:flex;flex-direction:column;overflow:hidden}
+  .m-head{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--slate-100)}
+  .m-ico{width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,#334155,#1e293b);color:#fff;
+         display:flex;align-items:center;justify-content:center;font-size:14px;flex:none}
+  .m-title{font-size:13px;font-weight:650;color:var(--slate-900)}
+  .m-sub{font-size:10.5px;color:var(--slate-500)}
+  .m-close{margin-left:auto;color:var(--slate-500);font-size:16px}
+  .m-body{display:flex;min-height:470px}
+  .m-cat{width:264px;border-right:1px solid var(--slate-100);display:flex;flex-direction:column;background:var(--slate-50)}
+  .m-search{margin:12px 12px 8px;display:flex;align-items:center;gap:6px;border:1px solid var(--slate-300);border-radius:6px;
+            background:#fff;padding:5px 8px;font-size:11.5px;color:var(--slate-500)}
+  .m-not{display:flex;flex-wrap:wrap;gap:5px;padding:0 12px 10px}
+  .tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 12px 12px;overflow:hidden}
+  .tile{background:#fff;border:1px solid var(--slate-200);border-radius:7px;padding:7px 4px 5px;display:flex;flex-direction:column;
+        align-items:center;gap:4px}
+  .tile.sel{outline:2px solid var(--cyan);outline-offset:-1px;background:var(--cyan-soft)}
+  .tile .tname{font-size:9px;color:var(--slate-500);text-align:center;line-height:1.2;height:20px;overflow:hidden}
+  .m-catfoot{margin-top:auto;padding:8px 12px;font-size:10px;color:var(--slate-500);border-top:1px solid var(--slate-100)}
+  .m-main{flex:1;padding:14px 18px;display:flex;flex-direction:column;gap:12px;overflow:hidden}
+  .prev{background:var(--slate-50);border:1px solid var(--slate-200);border-radius:8px;height:132px;position:relative;
+        display:flex;align-items:center;justify-content:center}
+  .prev-cap{position:absolute;right:10px;bottom:8px;font-size:10px;color:var(--slate-500);
+            font-family:'IBM Plex Mono',Monaco,monospace}
+  .prev-tag{position:absolute;left:10px;top:8px;font-size:10px;color:var(--slate-500);text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+  .anat{display:grid;grid-template-columns:1fr 1fr;gap:6px 28px}
+  .a-sec{display:flex;flex-direction:column;gap:8px;padding:8px 0}
+  .a-h{font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--slate-500);
+       border-bottom:1px solid var(--slate-100);padding-bottom:5px}
+  .a-row{display:grid;grid-template-columns:84px 1fr;gap:8px 10px;align-items:center;font-size:11px}
+  .a-row label{color:var(--slate-500)}
+  .glyphs{display:flex;gap:5px;flex-wrap:wrap}
+  .g{width:26px;height:26px;border:1px solid var(--slate-200);border-radius:5px;background:#fff;display:flex;
+     align-items:center;justify-content:center;color:var(--slate-700);font-size:12px}
+  .g.sel{outline:2px solid var(--cyan);outline-offset:-1px;background:var(--cyan-soft)}
+  .m-foot{display:flex;align-items:center;padding:10px 16px;border-top:1px solid var(--slate-100);font-size:11px;color:var(--slate-500)}
+  .m-foot .btn{margin-left:auto}
+
+  /* callouts */
+  .co{position:absolute;width:18px;height:18px;border-radius:50%;background:var(--slate-900);color:#fff;font-size:10.5px;
+      font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 3px rgba(255,255,255,.85);z-index:5}
+  .legend{font-size:11.5px;color:var(--slate-500);line-height:1.6;max-width:940px;margin-top:10px}
+  .legend b{color:var(--slate-700)}
+  .legend .n{display:inline-flex;width:15px;height:15px;border-radius:50%;background:var(--slate-900);color:#fff;font-size:9.5px;
+             font-weight:700;align-items:center;justify-content:center;margin-right:4px;vertical-align:1px}
+
+  /* recognition strip */
+  .recs{display:flex;gap:16px;flex-wrap:wrap}
+  .rec{background:#fff;border:1px solid var(--slate-200);border-radius:9px;padding:10px 14px;display:flex;align-items:center;
+       gap:10px;min-width:280px;box-shadow:0 1px 3px rgba(15,23,42,.05)}
+  .foot-note{margin-top:40px;font-size:11px;color:var(--slate-500);border-top:1px solid var(--slate-300);padding-top:12px;line-height:1.6}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <h1>Rail snello e modale Symbol — mockup di discussione</h1>
+  <div class="sub">Tre stati del rail a confronto, la modale di authoring, gli stati del riconoscimento. Solo light (dark congelato, R-RAIL-44).
+  Preset e glifi letti da <code>notationCatalog.ts</code> e <code>markerRegistry.ts</code> su HEAD. Palette entity del tree omessa.</div>
+
+  <h2>1 · Il rail: tre varianti</h2>
+  <div class="frames">
+
+    <!-- A: sintassi astratta, invariato -->
+    <div class="frame">
+      <div class="rail">
+        <div class="card" style="flex:0 0 218px">
+          <div class="card-h"><span>Model</span><i class="bi bi-three-dots"></i></div>
+          <div class="tree">
+            <div class="trow"><i class="bi bi-diagram-3"></i>orders</div>
+            <div class="trow ind1"><i class="bi bi-folder2"></i>shop</div>
+            <div class="trow ind2 sel"><i class="bi bi-box"></i>Order<span class="muted">C</span></div>
+            <div class="trow ind3"><i class="bi bi-dash-lg"></i>customerName<span class="muted">EString</span></div>
+            <div class="trow ind3"><i class="bi bi-dash-lg"></i>id<span class="muted">EInt</span></div>
+            <div class="trow ind3"><i class="bi bi-link-45deg"></i>lines<span class="muted">0..*</span></div>
+            <div class="trow ind2"><i class="bi bi-box"></i>Payment<span class="muted">C</span></div>
+            <div class="trow ind2"><i class="bi bi-list-ol"></i>OrderStatus<span class="muted">E</span></div>
+          </div>
+        </div>
+        <div class="card" style="flex:1">
+          <div class="idblock">
+            <span class="kind">CLASS</span><span class="idname">Order</span><span class="sig">shop::Order</span>
+          </div>
+          <div class="form">
+            <label>Name</label><input class="inp" value="Order" readonly>
+            <label>Abstract</label><span class="switch"></span>
+            <div class="sect">Attributes</div>
+            <label>customerName</label>
+            <div style="display:flex;gap:6px;align-items:center">
+              <span class="seg"><span>0..1</span><span class="on">1</span><span>0..*</span><span>1..*</span></span>
+            </div>
+            <label></label>
+            <div style="display:flex;gap:5px"><span class="chip">ordered</span><span class="chip cy">unique</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="frame-cap"><b>A · Sintassi astratta: invariato.</b> Glance-and-tweak ad alta frequenza, resta nel rail
+      (identity block, griglia 84px, multiplicity segmentata: l'Arco 3 com'è oggi).</div>
+    </div>
+
+    <!-- B: view, card leggera (consigliata) -->
+    <div class="frame">
+      <div class="rail">
+        <div class="card" style="flex:0 0 218px">
+          <div class="card-h"><span>Viewpoint</span><i class="bi bi-three-dots"></i></div>
+          <div class="tree">
+            <div class="trow"><i class="bi bi-palette"></i>bpmn-like</div>
+            <div class="trow ind1 sel"><i class="bi bi-eye"></i>gateway_view<span class="muted">V</span></div>
+            <div class="trow ind1"><i class="bi bi-eye"></i>task_view<span class="muted">V</span></div>
+            <div class="trow ind1"><i class="bi bi-eye"></i>event_view<span class="muted">V</span></div>
+            <div class="trow ind1"><i class="bi bi-share"></i>flow_edge<span class="muted">E</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-h"><span>Symbol</span><i class="bi bi-shapes"></i></div>
+          <div class="symrow" style="position:relative">
+            <span class="co" style="right:-8px;top:-8px;left:auto">1</span>
+            <div class="symthumb">
+              <svg width="44" height="30" viewBox="0 0 44 30">
+                <polygon points="22,1 43,15 22,29 1,15" fill="#fff" stroke="#334155" stroke-width="1.4"/>
+                <path d="M17 10 L27 20 M27 10 L17 20" stroke="#334155" stroke-width="1.8" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <div class="symmeta">
+              <span class="symname">Exclusive gateway</span>
+              <span class="symsub">BPMN · <span class="chip cy" style="font-size:9.5px;padding:1px 6px">preset</span></span>
+            </div>
+          </div>
+          <div class="quick">
+            <label>Border</label>
+            <span><span class="swatch" style="background:#334155"></span>&nbsp; <span style="color:#94a3b8">#334155</span></span>
+          </div>
+          <div class="symact">
+            <button class="btn btn-primary" style="width:100%;justify-content:center">
+              <i class="bi bi-arrows-fullscreen"></i> Apri editor simbolo
+            </button>
+          </div>
+        </div>
+        <div class="hintbox">La card dichiara <b>che cosa</b> è il simbolo (riconoscimento) e lascia il <b>come</b> alla modale.
+        Qui restano solo le proprietà che il preset conserva (il colore dell'autore).</div>
+      </div>
+      <div class="frame-cap"><b>B · View, card leggera (consigliata).</b> Il rail tiene tree + identità del simbolo.
+      L'anatomia (form, marker, assi del bordo, fill, testo) esce dal rail ed entra nella modale.</div>
+    </div>
+
+    <!-- B': solo tree -->
+    <div class="frame">
+      <div class="rail">
+        <div class="card" style="flex:1">
+          <div class="card-h"><span>Viewpoint</span><i class="bi bi-three-dots"></i></div>
+          <div class="tree">
+            <div class="trow"><i class="bi bi-palette"></i>bpmn-like</div>
+            <div class="trow ind1 sel"><i class="bi bi-eye"></i>gateway_view<span class="muted">V</span></div>
+            <div class="trow ind1"><i class="bi bi-eye"></i>task_view<span class="muted">V</span></div>
+            <div class="trow ind1"><i class="bi bi-eye"></i>event_view<span class="muted">V</span></div>
+            <div class="trow ind1"><i class="bi bi-share"></i>flow_edge<span class="muted">E</span></div>
+            <div class="trow" style="margin-top:8px"><i class="bi bi-palette"></i>uml-state</div>
+            <div class="trow ind1"><i class="bi bi-eye"></i>state_view<span class="muted">V</span></div>
+          </div>
+        </div>
+        <div class="hintbox">Apertura dell'editor: doppio clic sul nodo, voce di menu contestuale, o icona sul tree row.
+        <br><br><span style="color:#94a3b8">Costo: sparisce il colpo d'occhio. Per sapere che <i>gateway_view</i> è un
+        gateway esclusivo devi aprire la modale.</span></div>
+      </div>
+      <div class="frame-cap"><b>B′ · Solo tree (la proposta di partenza).</b> Massima pulizia, ma il rail perde la funzione
+      di riconoscimento: nessuna risposta a «che simbolo è?» senza aprire.</div>
+    </div>
+  </div>
+
+  <h2>2 · La modale Symbol</h2>
+  <div class="scene">
+    <!-- canvas mock -->
+    <div class="cnode" style="left:80px;top:90px;width:150px;height:44px;border-radius:8px">Receive order</div>
+    <svg style="position:absolute;left:230px;top:105px" width="120" height="30"><path d="M0 15 H112 M112 15 l-7 -4 v8 z" stroke="#94a3b8" fill="#94a3b8" stroke-width="1.2"/></svg>
+    <div style="position:absolute;left:352px;top:76px;width:150px;height:72px">
+      <svg width="150" height="72" viewBox="0 0 150 72">
+        <polygon points="75,1 149,36 75,71 1,36" fill="#fff" stroke="#334155" stroke-width="1.4"/>
+        <path d="M60 21 L90 51 M90 21 L60 51" stroke="#334155" stroke-width="3" stroke-linecap="round" opacity=".85"/>
+      </svg>
+      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#334155">authorised?</div>
+    </div>
+    <div class="cnode" style="left:600px;top:60px;width:130px;height:40px;border-radius:8px">Ship order</div>
+    <div class="cnode" style="left:600px;top:150px;width:130px;height:40px;border-radius:8px">Cancel order</div>
+
+    <div class="backdrop"></div>
+
+    <div class="modal">
+      <div class="m-head" style="position:relative">
+        <span class="co" style="left:212px;top:-7px">1</span>
+        <div class="m-ico"><i class="bi bi-shapes"></i></div>
+        <div>
+          <div class="m-title">Symbol · <span style="color:#0ea5e9">Exclusive gateway</span>
+            <span class="chip" style="margin-left:6px;vertical-align:2px">modificato</span></div>
+          <div class="m-sub">gateway_view · si applica a <b>Gateway</b> · BPMN</div>
+        </div>
+        <button class="btn btn-ghost" style="margin-left:auto;font-size:11px"><i class="bi bi-arrow-counterclockwise"></i> Ripristina preset</button>
+        <i class="bi bi-x-lg m-close"></i>
+      </div>
+
+      <div class="m-body">
+        <div class="m-cat" style="position:relative">
+          <span class="co" style="left:-9px;top:120px">2</span>
+          <div class="m-search"><i class="bi bi-search"></i> Cerca simbolo…</div>
+          <div class="m-not">
+            <span class="chip">Tutte</span><span class="chip cy">BPMN</span><span class="chip">UML</span>
+            <span class="chip">ER</span><span class="chip">Flowchart</span><span class="chip">Petri net</span>
+          </div>
+          <div class="tiles">
+            <div class="tile"><svg width="38" height="26" viewBox="0 0 38 26"><circle cx="19" cy="13" r="11" fill="#fff" stroke="#334155" stroke-width="1.2"/></svg><span class="tname">Start event</span></div>
+            <div class="tile"><svg width="38" height="26" viewBox="0 0 38 26"><circle cx="19" cy="13" r="11" fill="#fff" stroke="#334155" stroke-width="3"/></svg><span class="tname">End event</span></div>
+            <div class="tile"><svg width="38" height="26" viewBox="0 0 38 26"><circle cx="19" cy="13" r="11" fill="#fff" stroke="#334155" stroke-width="1.2"/><rect x="13" y="9" width="12" height="8" fill="none" stroke="#334155" stroke-width="1.1"/><path d="M13 9 l6 4 l6 -4" fill="none" stroke="#334155" stroke-width="1.1"/></svg><span class="tname">Message event</span></div>
+            <div class="tile sel"><svg width="38" height="26" viewBox="0 0 38 26"><polygon points="19,1 37,13 19,25 1,13" fill="#fff" stroke="#334155" stroke-width="1.2"/><path d="M15 9 l8 8 M23 9 l-8 8" stroke="#334155" stroke-width="1.6" stroke-linecap="round"/></svg><span class="tname">Exclusive gateway</span></div>
+            <div class="tile"><svg width="38" height="26" viewBox="0 0 38 26"><polygon points="19,1 37,13 19,25 1,13" fill="#fff" stroke="#334155" stroke-width="1.2"/><path d="M19 7 v12 M13 13 h12" stroke="#334155" stroke-width="1.6" stroke-linecap="round"/></svg><span class="tname">Parallel gateway</span></div>
+            <div class="tile"><svg width="38" height="26" viewBox="0 0 38 26"><polygon points="19,1 37,13 19,25 1,13" fill="#fff" stroke="#334155" stroke-width="1.2"/><circle cx="19" cy="13" r="5" fill="none" stroke="#334155" stroke-width="1.4"/></svg><span class="tname">Inclusive gateway</span></div>
+            <div class="tile"><svg width="38" height="26" viewBox="0 0 38 26"><rect x="2" y="3" width="34" height="20" rx="5" fill="#fff" stroke="#334155" stroke-width="1.2"/></svg><span class="tname">Task</span></div>
+            <div class="tile"><svg width="38" height="26" viewBox="0 0 38 26"><rect x="2" y="3" width="34" height="20" rx="5" fill="#fff" stroke="#334155" stroke-width="1.2"/><circle cx="10" cy="10" r="2.4" fill="none" stroke="#334155" stroke-width="1.1"/><path d="M6 17 c1 -3 7 -3 8 0" fill="none" stroke="#334155" stroke-width="1.1"/></svg><span class="tname">User task</span></div>
+            <div class="tile"><svg width="38" height="26" viewBox="0 0 38 26"><circle cx="19" cy="13" r="10" fill="#334155"/></svg><span class="tname">Initial pseudostate</span></div>
+            <div class="tile"><svg width="38" height="26" viewBox="0 0 38 26"><circle cx="19" cy="13" r="11" fill="#fff" stroke="#334155" stroke-width="1.2"/><circle cx="19" cy="13" r="6" fill="#334155"/></svg><span class="tname">Final state</span></div>
+            <div class="tile"><svg width="38" height="26" viewBox="0 0 38 26"><rect x="2" y="3" width="34" height="20" fill="#fff" stroke="#334155" stroke-width="1.2"/><rect x="5" y="6" width="28" height="14" fill="none" stroke="#334155" stroke-width="1.1"/></svg><span class="tname">Weak entity</span></div>
+            <div class="tile"><svg width="38" height="26" viewBox="0 0 38 26"><ellipse cx="19" cy="13" rx="16" ry="10" fill="#fff" stroke="#334155" stroke-width="1.2"/></svg><span class="tname">Attribute</span></div>
+          </div>
+          <div class="m-catfoot">36 preset · 5 notazioni · gli inesprimibili sono esclusi, non approssimati (P5)</div>
+        </div>
+
+        <div class="m-main">
+          <div class="prev" style="position:relative">
+            <span class="co" style="right:-8px;top:-8px;left:auto">3</span>
+            <span class="prev-tag">Anteprima</span>
+            <div style="position:relative;width:222px;height:66px">
+              <svg width="222" height="66" viewBox="0 0 222 66">
+                <polygon points="111,1 221,33 111,65 1,33" fill="#fff" stroke="#334155" stroke-width="1.4"/>
+                <path d="M97 19 L125 47 M125 19 L97 47" stroke="#334155" stroke-width="3.5" stroke-linecap="round" opacity=".28"/>
+              </svg>
+              <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#334155">is the payment authorised?</div>
+            </div>
+            <div class="prev-cap">222 × 66 px · derivata dall'inchiostro (D8)</div>
+          </div>
+
+          <div class="anat" style="position:relative">
+            <span class="co" style="left:-9px;top:6px">4</span>
+            <div class="a-sec">
+              <div class="a-h">Shape</div>
+              <div class="a-row"><label>Form</label>
+                <select class="inp"><option>Diamond</option></select></div>
+              <div class="a-row"><label>Resizable</label><span class="switch on"></span></div>
+            </div>
+            <div class="a-sec">
+              <div class="a-h">Border</div>
+              <div class="a-row"><label>Color</label>
+                <span><span class="swatch" style="background:#334155"></span>&nbsp;<span style="color:#94a3b8;font-size:10.5px">#334155 · conservato dal preset</span></span></div>
+              <div class="a-row"><label>Width</label>
+                <span class="seg"><span>1</span><span class="on">2</span><span>3</span><span>4</span></span></div>
+              <div class="a-row"><label>Style</label>
+                <span class="seg"><span class="on">solid</span><span>dashed</span><span>dotted</span><span>double</span></span></div>
+            </div>
+            <div class="a-sec">
+              <div class="a-h">Marker</div>
+              <div class="a-row"><label>Glyph</label>
+                <div class="glyphs">
+                  <span class="g"><i class="bi bi-slash-circle" style="opacity:.35"></i></span>
+                  <span class="g sel"><i class="bi bi-x-lg"></i></span>
+                  <span class="g"><i class="bi bi-plus-lg"></i></span>
+                  <span class="g"><i class="bi bi-circle"></i></span>
+                  <span class="g"><i class="bi bi-asterisk"></i></span>
+                  <span class="g"><i class="bi bi-envelope"></i></span>
+                  <span class="g"><i class="bi bi-clock"></i></span>
+                  <span class="g"><i class="bi bi-lightning"></i></span>
+                  <span class="g"><i class="bi bi-person"></i></span>
+                  <span class="g" style="color:#94a3b8;font-size:10px">+7</span>
+                </div>
+              </div>
+            </div>
+            <div class="a-sec">
+              <div class="a-h">Fill &amp; Text</div>
+              <div class="a-row"><label>Fill</label>
+                <span><span class="swatch" style="background:#fff"></span>&nbsp;<span style="color:#94a3b8;font-size:10.5px">none · <i class="bi bi-braces"></i> conditional…</span></span></div>
+              <div class="a-row"><label>Text</label>
+                <span style="color:#94a3b8;font-size:10.5px">Sans · 11 · Semibold · <i class="bi bi-sliders"></i></span></div>
+            </div>
+          </div>
+
+          <div style="flex:1"></div>
+        </div>
+      </div>
+
+      <div class="m-foot" style="position:relative">
+        <span class="co" style="left:150px;top:-9px">5</span>
+        <span><i class="bi bi-info-circle"></i>&nbsp; Le modifiche si applicano subito al canvas · Esc chiude</span>
+        <button class="btn btn-primary">Chiudi</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <span class="n">1</span><b>Riconoscimento strutturale (D14):</b> il titolo dichiara dove sei nello spazio del catalogo. Derivato
+    confrontando gli assi correnti con i 36 preset (conta ciò che il preset scrive, non ciò che conserva); mai memorizzato, D10 resta intatta.
+    «Ripristina preset» ha senso solo nello stato «modificato».
+    &nbsp;&nbsp;<span class="n">2</span><b>Catalogo sempre presente</b> a sinistra: non è un wizard una tantum ma il sistema di coordinate;
+    un clic su una tile applica il preset (valore, non tipo) e il colore dell'autore sopravvive.
+    &nbsp;&nbsp;<span class="n">3</span><b>Anteprima con label realistica:</b> mostra il box che la taglia da contenuto produrrà davvero
+    (qui 222 × 66, dal cablaggio D8), non un glifo decorativo. Mitiga l'occlusione del canvas.
+    &nbsp;&nbsp;<span class="n">4</span><b>Anatomia:</b> gli stessi assi di oggi (Shape, Border, Marker, Fill, Text), griglia 84px, nessun
+    asse nuovo. Cambia solo la superficie che li ospita.
+    &nbsp;&nbsp;<span class="n">5</span><b>Semantica live, niente apply/cancel:</b> le scritture passano dal percorso canonico come oggi;
+    una modale bufferizzata aggiungerebbe una terza semantica di undo sopra il debito del dual undo-system.
+  </div>
+
+  <h2>3 · Gli stati del riconoscimento (header della card e della modale)</h2>
+  <div class="recs">
+    <div class="rec">
+      <svg width="34" height="24" viewBox="0 0 38 26"><polygon points="19,1 37,13 19,25 1,13" fill="#fff" stroke="#334155" stroke-width="1.2"/><path d="M15 9 l8 8 M23 9 l-8 8" stroke="#334155" stroke-width="1.6" stroke-linecap="round"/></svg>
+      <div><div style="font-size:12px;font-weight:650;color:#0f172a">Exclusive gateway</div>
+      <div style="font-size:10.5px;color:#64748b">gli assi coincidono con il preset</div></div>
+      <span class="chip cy" style="margin-left:auto">preset</span>
+    </div>
+    <div class="rec">
+      <svg width="34" height="24" viewBox="0 0 38 26"><polygon points="19,1 37,13 19,25 1,13" fill="#fff" stroke="#334155" stroke-width="2.6"/><path d="M15 9 l8 8 M23 9 l-8 8" stroke="#334155" stroke-width="1.6" stroke-linecap="round"/></svg>
+      <div><div style="font-size:12px;font-weight:650;color:#0f172a">Exclusive gateway</div>
+      <div style="font-size:10.5px;color:#64748b">width 2 ≠ preset · «Ripristina» attivo</div></div>
+      <span class="chip" style="margin-left:auto">modificato</span>
+    </div>
+    <div class="rec">
+      <svg width="34" height="24" viewBox="0 0 38 26"><ellipse cx="19" cy="13" rx="16" ry="10" fill="#fff" stroke="#334155" stroke-width="1.2" stroke-dasharray="4 3"/><path d="M14 8 l10 10" stroke="#334155" stroke-width="1.4"/></svg>
+      <div><div style="font-size:12px;font-weight:650;color:#0f172a">Custom</div>
+      <div style="font-size:10.5px;color:#64748b">nessun preset corrispondente</div></div>
+      <span class="chip dash" style="margin-left:auto">custom</span>
+    </div>
+  </div>
+
+  <div class="foot-note">
+    Decisioni che il mockup incarna e che finirebbero nel memo: <b>D14</b> riconoscimento strutturale (identità derivata, mai
+    memorizzata); <b>D15</b> due superfici (rail = tree + identità del simbolo; modale = anatomia, con la sintassi astratta che
+    resta nel rail); <b>D16</b> regola d'ingresso degli assi (una capacità nuova entra come valore di un asse esistente o come
+    asse ortogonale, mai come caso speciale). Aperture da decidere guardando: B contro B′; catalogo a colonna (qui) contro
+    catalogo a striscia in alto; stesso trattamento per <code>EdgeAuthoringPanel</code>; larghezza modale (qui 940px).
+  </div>
+</div>
+</body>
+</html>

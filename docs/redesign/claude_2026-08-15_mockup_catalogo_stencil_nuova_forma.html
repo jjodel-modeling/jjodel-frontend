@@ -1,0 +1,385 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mockup v2 — catalogo a sezioni, stencil di progetto, Nuova forma</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css">
+<style>
+  :root{
+    --slate-900:#0f172a; --slate-700:#334155; --slate-500:#64748b; --slate-300:#cbd5e1;
+    --slate-200:#e2e8f0; --slate-100:#f1f5f9; --slate-50:#f8fafc;
+    --cyan:#0ea5e9; --cyan-soft:rgba(14,165,233,.08);
+    --ok:#15803d; --err:#b91c1c;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#e9edf3;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:var(--slate-700)}
+  .page{max-width:1180px;margin:0 auto;padding:28px 20px 60px}
+  h1{font-size:18px;font-weight:650;color:var(--slate-900);margin:0 0 4px}
+  .sub{font-size:12px;color:var(--slate-500);margin-bottom:24px}
+  h2{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--slate-500);margin:38px 0 12px}
+  .mono{font-family:'IBM Plex Mono',Monaco,Consolas,monospace}
+
+  .chip{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;color:var(--slate-700);background:var(--slate-100);
+        border:1px solid var(--slate-200);border-radius:10px;padding:2px 8px}
+  .chip.cy{background:var(--cyan-soft);border-color:rgba(14,165,233,.3)}
+  .chip.dash{background:#fff;border-style:dashed}
+  .btn{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;border-radius:6px;padding:6px 12px;border:none;cursor:default}
+  .btn-primary{background:linear-gradient(135deg,#334155,#1e293b);color:#fff}
+  .btn-primary.dis{opacity:.4}
+  .btn-ghost{background:transparent;color:var(--slate-700);border:1px solid var(--slate-300)}
+  .swatch{width:18px;height:18px;border-radius:4px;border:1px solid var(--slate-300);display:inline-block;vertical-align:middle}
+  .switch{width:36px;height:20px;border-radius:10px;background:var(--slate-300);position:relative;flex:none;display:inline-block;vertical-align:middle}
+  .switch.on{background:var(--slate-700)}
+  .switch::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+  .switch.on::after{left:18px}
+  .seg{display:inline-flex;border:1px solid var(--slate-300);border-radius:5px;overflow:hidden}
+  .seg span{font-size:10.5px;padding:3px 8px;color:var(--slate-500);border-right:1px solid var(--slate-200);background:#fff}
+  .seg span:last-child{border-right:none}
+  .seg .on{background:var(--slate-700);color:#fff}
+  .inp{border:1px solid var(--slate-300);border-radius:4px;padding:4px 8px;font-size:11.5px;color:var(--slate-900);background:#fff;width:100%}
+
+  .scene{position:relative;border-radius:12px;overflow:hidden;border:1px solid var(--slate-200);
+         background:#fdfdfe;background-image:radial-gradient(circle,#d8dee9 1px,transparent 1px);background-size:22px 22px;padding:36px 0}
+  .backdrop{position:absolute;inset:0;background:rgba(15,23,42,.30)}
+  .modal{position:relative;margin:0 auto;width:960px;max-width:96%;background:#fff;border-radius:12px;
+         box-shadow:0 24px 64px rgba(15,23,42,.4);display:flex;flex-direction:column;overflow:hidden;z-index:2}
+  .m-head{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--slate-100)}
+  .m-ico{width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,#334155,#1e293b);color:#fff;
+         display:flex;align-items:center;justify-content:center;font-size:14px;flex:none}
+  .m-title{font-size:13px;font-weight:650;color:var(--slate-900)}
+  .m-sub{font-size:10.5px;color:var(--slate-500)}
+  .m-close{margin-left:6px;color:var(--slate-500);font-size:16px}
+  .m-body{display:flex;min-height:480px}
+  .m-foot{display:flex;align-items:center;gap:10px;padding:10px 16px;border-top:1px solid var(--slate-100);font-size:11px;color:var(--slate-500)}
+
+  /* catalog v2 */
+  .m-cat{width:288px;border-right:1px solid var(--slate-100);display:flex;flex-direction:column;background:var(--slate-50)}
+  .m-search{margin:12px 12px 8px;display:flex;align-items:center;gap:6px;border:1px solid var(--slate-300);border-radius:6px;
+            background:#fff;padding:5px 8px;font-size:11.5px;color:var(--slate-500)}
+  .recents{display:flex;align-items:center;gap:6px;padding:0 12px 10px;font-size:10px;color:var(--slate-500)}
+  .catlist{overflow:hidden;flex:1}
+  .csec{border-top:1px solid var(--slate-100)}
+  .csec-h{display:flex;align-items:center;gap:6px;padding:7px 12px;font-size:10.5px;font-weight:600;letter-spacing:.04em;
+          text-transform:uppercase;color:var(--slate-500)}
+  .csec-h .cnt{margin-left:auto;font-weight:500;color:#94a3b8;font-size:10px}
+  .csec-h i{font-size:10px}
+  .tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:2px 12px 12px}
+  .tile{background:#fff;border:1px solid var(--slate-200);border-radius:7px;padding:7px 4px 5px;display:flex;flex-direction:column;
+        align-items:center;gap:4px}
+  .tile.sel{outline:2px solid var(--cyan);outline-offset:-1px;background:var(--cyan-soft)}
+  .tile .tname{font-size:9px;color:var(--slate-500);text-align:center;line-height:1.2;height:20px;overflow:hidden}
+  .tsym{position:relative;width:38px;height:26px;display:flex;align-items:center;justify-content:center}
+  .tsym .ov{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--slate-700)}
+  .fromview{display:flex;align-items:center;gap:7px;margin:0 12px 10px;padding:7px 9px;background:#fff;border:1px dashed var(--slate-300);
+            border-radius:7px;font-size:10.5px;color:var(--slate-500)}
+  .m-catfoot{padding:9px 12px;font-size:10.5px;color:var(--slate-500);border-top:1px solid var(--slate-100);display:flex;align-items:center;gap:6px}
+
+  .m-main{flex:1;padding:14px 18px;display:flex;flex-direction:column;gap:12px}
+  .prev{background:var(--slate-50);border:1px solid var(--slate-200);border-radius:8px;height:128px;position:relative;
+        display:flex;align-items:center;justify-content:center}
+  .prev-cap{position:absolute;right:10px;bottom:8px;font-size:10px;color:var(--slate-500)}
+  .prev-tag{position:absolute;left:10px;top:8px;font-size:10px;color:var(--slate-500);text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+  .anat{display:grid;grid-template-columns:1fr 1fr;gap:4px 28px}
+  .a-sec{display:flex;flex-direction:column;gap:8px;padding:8px 0}
+  .a-h{font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--slate-500);
+       border-bottom:1px solid var(--slate-100);padding-bottom:5px}
+  .a-row{display:grid;grid-template-columns:84px 1fr;gap:8px 10px;align-items:center;font-size:11px}
+  .a-row label{color:var(--slate-500)}
+
+  .co{position:absolute;width:18px;height:18px;border-radius:50%;background:var(--slate-900);color:#fff;font-size:10.5px;
+      font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 3px rgba(255,255,255,.85);z-index:5}
+  .legend{font-size:11.5px;color:var(--slate-500);line-height:1.65;max-width:960px;margin-top:10px}
+  .legend b{color:var(--slate-700)}
+  .legend .n{display:inline-flex;width:15px;height:15px;border-radius:50%;background:var(--slate-900);color:#fff;font-size:9.5px;
+             font-weight:700;align-items:center;justify-content:center;margin-right:4px;vertical-align:1px}
+
+  .recs{display:flex;gap:16px;flex-wrap:wrap}
+  .rec{background:#fff;border:1px solid var(--slate-200);border-radius:9px;padding:10px 14px;display:flex;align-items:center;
+       gap:10px;min-width:300px;box-shadow:0 1px 3px rgba(15,23,42,.05)}
+
+  /* nuova forma */
+  .gate{display:flex;align-items:flex-start;gap:8px;font-size:11px;padding:6px 0}
+  .gate i{font-size:12px;margin-top:1px}
+  .gate.ok i{color:var(--ok)} .gate.err i{color:var(--err)}
+  .gate .gd{color:#94a3b8;font-size:10.5px;line-height:1.4}
+  .pathbox{border:1px solid var(--slate-300);border-radius:6px;background:#fff;padding:8px 10px;font-size:11px;line-height:1.6;color:var(--slate-900)}
+  .failcard{background:#fff;border:1px solid var(--slate-200);border-radius:10px;padding:14px 16px;width:430px;box-shadow:0 1px 3px rgba(15,23,42,.06)}
+  .foot-note{margin-top:40px;font-size:11px;color:var(--slate-500);border-top:1px solid var(--slate-300);padding-top:12px;line-height:1.6}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <h1>Modale Symbol v2 — catalogo a sezioni, stencil di progetto, Nuova forma</h1>
+  <div class="sub">Evoluzione del mockup precedente sui due dubbi aperti: struttura del catalogo e gestione dei simboli nuovi.
+  I tre stadi: pathTemplate curati (già in roadmap), stencil di progetto (valori con nome, D10 intatta), contorni autorabili con gate (riapre D1, dietro condizione).</div>
+
+  <h2>1 · La modale con catalogo a sezioni e stencil di progetto</h2>
+  <div class="scene">
+    <div class="backdrop"></div>
+    <div class="modal">
+      <div class="m-head" style="position:relative">
+        <span class="co" style="left:196px;top:-7px">1</span>
+        <div class="m-ico"><i class="bi bi-shapes"></i></div>
+        <div>
+          <div class="m-title">Symbol · <span style="color:#0ea5e9">Sensor node</span>
+            <span class="chip" style="margin-left:6px;vertical-align:2px"><i class="bi bi-folder2"></i> stencil di progetto</span></div>
+          <div class="m-sub">sensor_view · si applica a <b>Sensor</b> · progetto iot-lab</div>
+        </div>
+        <button class="btn btn-ghost" style="margin-left:auto;font-size:11px"><i class="bi bi-arrow-counterclockwise"></i> Ripristina stencil</button>
+        <i class="bi bi-x-lg m-close"></i>
+      </div>
+
+      <div class="m-body">
+        <div class="m-cat" style="position:relative">
+          <span class="co" style="left:-9px;top:18px">2</span>
+          <div class="m-search"><i class="bi bi-search"></i> Cerca simbolo o notazione…</div>
+          <div class="recents">
+            <span style="text-transform:uppercase;letter-spacing:.04em;font-weight:600">Recenti</span>
+            <span class="tsym" style="width:26px;height:18px"><svg width="26" height="18" viewBox="0 0 38 26"><polygon points="19,1 37,13 19,25 1,13" fill="#fff" stroke="#334155" stroke-width="1.6"/><path d="M15 9 l8 8 M23 9 l-8 8" stroke="#334155" stroke-width="2"/></svg></span>
+            <span class="tsym" style="width:26px;height:18px"><svg width="26" height="18" viewBox="0 0 38 26"><circle cx="19" cy="13" r="11" fill="#fff" stroke="#334155" stroke-width="3"/></svg></span>
+            <span class="tsym" style="width:26px;height:18px"><svg width="26" height="18" viewBox="0 0 38 26"><rect x="2" y="3" width="34" height="20" rx="5" fill="#fff" stroke="#334155" stroke-width="1.6"/></svg></span>
+          </div>
+
+          <div class="catlist" style="position:relative">
+            <span class="co" style="left:-9px;top:8px">3</span>
+            <div class="csec">
+              <div class="csec-h"><i class="bi bi-chevron-down"></i> Progetto <span class="cnt">3</span></div>
+              <div class="tiles">
+                <div class="tile sel">
+                  <span class="tsym">
+                    <svg width="38" height="26" viewBox="0 0 38 26"><rect x="2" y="2" width="34" height="22" rx="6" fill="#fff" stroke="#334155" stroke-width="1.1"/><rect x="5" y="5" width="28" height="16" rx="4" fill="none" stroke="#334155" stroke-width="1.1"/></svg>
+                    <span class="ov"><i class="bi bi-gear"></i></span>
+                  </span>
+                  <span class="tname">Sensor node</span>
+                </div>
+                <div class="tile">
+                  <span class="tsym">
+                    <svg width="38" height="26" viewBox="0 0 38 26"><rect x="2" y="3" width="34" height="20" fill="#fff" stroke="#334155" stroke-width="1.2"/></svg>
+                    <span class="ov"><i class="bi bi-lightning"></i></span>
+                  </span>
+                  <span class="tname">Actuator</span>
+                </div>
+                <div class="tile">
+                  <span class="tsym">
+                    <svg width="38" height="26" viewBox="0 0 38 26"><ellipse cx="19" cy="13" rx="16" ry="10" fill="#fff" stroke="#334155" stroke-width="1.2" stroke-dasharray="4 3"/></svg>
+                    <span class="ov"><i class="bi bi-broadcast" style="font-size:9px"></i></span>
+                  </span>
+                  <span class="tname">Gateway radio</span>
+                </div>
+              </div>
+              <div class="fromview"><i class="bi bi-eye"></i> Copia da una view del progetto… <span style="margin-left:auto" class="mono">task_view ▾</span></div>
+            </div>
+
+            <div class="csec">
+              <div class="csec-h"><i class="bi bi-chevron-down"></i> BPMN <span class="cnt">17</span></div>
+              <div class="tiles">
+                <div class="tile"><span class="tsym"><svg width="38" height="26" viewBox="0 0 38 26"><circle cx="19" cy="13" r="11" fill="#fff" stroke="#334155" stroke-width="1.2"/></svg></span><span class="tname">Start event</span></div>
+                <div class="tile"><span class="tsym"><svg width="38" height="26" viewBox="0 0 38 26"><polygon points="19,1 37,13 19,25 1,13" fill="#fff" stroke="#334155" stroke-width="1.2"/><path d="M15 9 l8 8 M23 9 l-8 8" stroke="#334155" stroke-width="1.6"/></svg></span><span class="tname">Exclusive gateway</span></div>
+                <div class="tile"><span class="tsym"><svg width="38" height="26" viewBox="0 0 38 26"><rect x="2" y="3" width="34" height="20" rx="5" fill="#fff" stroke="#334155" stroke-width="1.2"/></svg></span><span class="tname">Task</span></div>
+              </div>
+            </div>
+
+            <div class="csec"><div class="csec-h"><i class="bi bi-chevron-right"></i> UML <span class="cnt">7</span></div></div>
+            <div class="csec"><div class="csec-h"><i class="bi bi-chevron-right"></i> ER <span class="cnt">7</span></div></div>
+            <div class="csec"><div class="csec-h"><i class="bi bi-chevron-right"></i> Flowchart <span class="cnt">2</span></div></div>
+            <div class="csec"><div class="csec-h"><i class="bi bi-chevron-right"></i> Petri net <span class="cnt">3</span></div></div>
+          </div>
+
+          <div class="m-catfoot" style="position:relative">
+            <span class="co" style="left:-9px;top:6px">5</span>
+            <i class="bi bi-plus-circle"></i> Nuova forma… <span class="chip" style="margin-left:auto;font-size:9px">avanzato</span>
+          </div>
+        </div>
+
+        <div class="m-main">
+          <div class="prev">
+            <span class="prev-tag">Anteprima</span>
+            <div style="position:relative;width:190px;height:58px">
+              <svg width="190" height="58" viewBox="0 0 190 58">
+                <rect x="2" y="2" width="186" height="54" rx="12" fill="#fff" stroke="#334155" stroke-width="1.3"/>
+                <rect x="7" y="7" width="176" height="44" rx="9" fill="none" stroke="#334155" stroke-width="1.3"/>
+              </svg>
+              <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:7px;font-size:11px;font-weight:600;color:#334155">
+                <i class="bi bi-gear" style="opacity:.45;font-size:15px"></i> temperature_sensor_01
+              </div>
+            </div>
+            <div class="prev-cap mono">190 × 58 px · derivata dall'inchiostro (D8)</div>
+          </div>
+
+          <div class="anat">
+            <div class="a-sec">
+              <div class="a-h">Shape</div>
+              <div class="a-row"><label>Form</label><select class="inp"><option>Rounded</option></select></div>
+              <div class="a-row"><label>Resizable</label><span class="switch"></span></div>
+            </div>
+            <div class="a-sec">
+              <div class="a-h">Border</div>
+              <div class="a-row"><label>Color</label><span><span class="swatch" style="background:#334155"></span>&nbsp;<span style="color:#94a3b8;font-size:10.5px">#334155</span></span></div>
+              <div class="a-row"><label>Style</label><span class="seg"><span>solid</span><span>dashed</span><span>dotted</span><span class="on">double</span></span></div>
+            </div>
+            <div class="a-sec">
+              <div class="a-h">Marker</div>
+              <div class="a-row"><label>Glyph</label><span style="display:flex;gap:5px;align-items:center"><span class="chip cy"><i class="bi bi-gear"></i> gear</span><span style="color:#94a3b8;font-size:10.5px">· cambia…</span></span></div>
+            </div>
+            <div class="a-sec">
+              <div class="a-h">Fill &amp; Text</div>
+              <div class="a-row"><label>Fill</label><span><span class="swatch" style="background:#fff"></span>&nbsp;<span style="color:#94a3b8;font-size:10.5px">none</span></span></div>
+              <div class="a-row"><label>Text</label><span style="color:#94a3b8;font-size:10.5px">Sans · 11 · Semibold</span></div>
+            </div>
+          </div>
+          <div style="flex:1"></div>
+        </div>
+      </div>
+
+      <div class="m-foot" style="position:relative">
+        <span class="co" style="left:250px;top:-9px">4</span>
+        <span><i class="bi bi-info-circle"></i>&nbsp; Le modifiche si applicano subito</span>
+        <button class="btn btn-ghost" style="margin-left:auto;font-size:11px"><i class="bi bi-bookmark-plus"></i> Salva come stencil…</button>
+        <button class="btn btn-primary">Chiudi</button>
+      </div>
+    </div>
+  </div>
+  <div class="legend">
+    <span class="n">1</span><b>Riconoscimento con precedenza:</b> preset di piattaforma → stencil di progetto → custom. Qui gli assi
+    coincidono con lo stencil «Sensor node», e l'header lo dichiara col badge di provenienza (cartella = vive nel progetto, viaggia con esso).
+    &nbsp;<span class="n">2</span><b>Ricerca come gesto primario</b> e recenti in testa: a 90+ preset la griglia piatta muore, la ricerca no.
+    &nbsp;<span class="n">3</span><b>Sezione Progetto</b> sopra le notazioni standard: gli stencil sono fasci di valori con nome (D10 intatta,
+    D1 intatta: il registry non si tocca), più la mossa gemella «copia da una view», che è gratis perché ogni view autorata è già una definizione di simbolo.
+    &nbsp;<span class="n">4</span><b>«Salva come stencil»</b> nel footer: attivo negli stati modificato e custom; uno stencil si aggiorna
+    risalvandolo con lo stesso nome.
+    &nbsp;<span class="n">5</span><b>«Nuova forma»</b> è l'ultimo elemento del catalogo, marcato avanzato: l'ingresso allo stadio due sta
+    dentro il sistema di coordinate, non in un menu nascosto.
+  </div>
+
+  <h2>2 · Gli stati dell'header, con la precedenza di riconoscimento</h2>
+  <div class="recs">
+    <div class="rec">
+      <svg width="34" height="24" viewBox="0 0 38 26"><polygon points="19,1 37,13 19,25 1,13" fill="#fff" stroke="#334155" stroke-width="1.2"/><path d="M15 9 l8 8 M23 9 l-8 8" stroke="#334155" stroke-width="1.6"/></svg>
+      <div><div style="font-size:12px;font-weight:650;color:#0f172a">Exclusive gateway</div>
+      <div style="font-size:10.5px;color:#64748b">catalogo standard, verificato sulle spec</div></div>
+      <span class="chip cy" style="margin-left:auto">preset</span>
+    </div>
+    <div class="rec">
+      <span class="tsym" style="width:34px;height:24px"><svg width="34" height="24" viewBox="0 0 38 26"><rect x="2" y="2" width="34" height="22" rx="6" fill="#fff" stroke="#334155" stroke-width="1.1"/><rect x="5" y="5" width="28" height="16" rx="4" fill="none" stroke="#334155" stroke-width="1.1"/></svg><span class="ov"><i class="bi bi-gear" style="font-size:9px"></i></span></span>
+      <div><div style="font-size:12px;font-weight:650;color:#0f172a">Sensor node</div>
+      <div style="font-size:10.5px;color:#64748b">definito qui, viaggia col progetto</div></div>
+      <span class="chip" style="margin-left:auto"><i class="bi bi-folder2"></i> stencil</span>
+    </div>
+    <div class="rec">
+      <svg width="34" height="24" viewBox="0 0 38 26"><ellipse cx="19" cy="13" rx="16" ry="10" fill="#fff" stroke="#334155" stroke-width="1.2" stroke-dasharray="4 3"/></svg>
+      <div><div style="font-size:12px;font-weight:650;color:#0f172a">Custom</div>
+      <div style="font-size:10.5px;color:#64748b">«Salva come stencil…» attivo nel footer</div></div>
+      <span class="chip dash" style="margin-left:auto">custom</span>
+    </div>
+  </div>
+
+  <h2>3 · «Nuova forma» (stadio due): il contorno è un contratto, e i gate lo dicono</h2>
+  <div class="scene" style="padding:36px 0">
+    <div class="backdrop"></div>
+    <div class="modal" style="width:960px">
+      <div class="m-head">
+        <div class="m-ico"><i class="bi bi-bezier2"></i></div>
+        <div>
+          <div class="m-title">Nuova forma · <span style="color:#0ea5e9">stadium</span>
+            <span class="chip" style="margin-left:6px;vertical-align:2px">avanzato</span></div>
+          <div class="m-sub">entra negli stencil del progetto, non nel catalogo standard</div>
+        </div>
+        <i class="bi bi-x-lg m-close" style="margin-left:auto"></i>
+      </div>
+
+      <div class="m-body" style="min-height:400px">
+        <div style="width:400px;border-right:1px solid var(--slate-100);padding:14px 18px;display:flex;flex-direction:column;gap:12px;position:relative">
+          <span class="co" style="right:-9px;top:88px;left:auto">6</span>
+          <div class="a-row"><label>Nome</label><input class="inp" value="stadium" readonly></div>
+          <div>
+            <div class="a-h" style="margin-bottom:6px">Contorno (viewBox 0 0 100 100)</div>
+            <div class="pathbox mono">M 25 0 H 75<br>A 25 50 0 0 1 75 100<br>H 25<br>A 25 50 0 0 1 25 0 Z</div>
+          </div>
+          <div class="a-row"><label>Simmetrica</label>
+            <span style="display:flex;align-items:center;gap:8px"><span class="switch on"></span>
+            <span style="font-size:10px;color:#94a3b8">sui due assi: abilita la forma chiusa; spenta, tutto passa dal percorso numerico</span></span></div>
+          <div>
+            <div class="a-h" style="margin-bottom:2px">Gate di qualità</div>
+            <div class="gate ok"><i class="bi bi-check-circle-fill"></i><div>Path chiuso</div></div>
+            <div class="gate ok"><i class="bi bi-check-circle-fill"></i><div>Nessuna autointersezione</div></div>
+            <div class="gate ok"><i class="bi bi-check-circle-fill"></i><div>Profilo di larghezza monotono
+              <div class="gd">campionato su 64 punti · heightFactor stimato 1.18 · minAspect 0.8</div></div></div>
+          </div>
+        </div>
+
+        <div class="m-main" style="position:relative">
+          <span class="co" style="left:-9px;top:20px">7</span>
+          <div class="prev" style="height:190px">
+            <span class="prev-tag">Obblighi derivati</span>
+            <div style="position:relative;width:240px;height:92px">
+              <svg width="240" height="92" viewBox="0 0 240 92">
+                <rect x="3" y="3" width="234" height="86" rx="43" fill="#fff" stroke="#334155" stroke-width="1.4"/>
+                <rect x="34" y="22" width="172" height="48" fill="none" stroke="#0ea5e9" stroke-width="1" stroke-dasharray="4 3"/>
+                <g fill="#334155">
+                  <circle cx="120" cy="3" r="3.2"/><circle cx="120" cy="89" r="3.2"/>
+                  <circle cx="3" cy="46" r="3.2"/><circle cx="237" cy="46" r="3.2"/>
+                  <circle cx="48" cy="9" r="3.2"/><circle cx="192" cy="9" r="3.2"/>
+                  <circle cx="48" cy="83" r="3.2"/><circle cx="192" cy="83" r="3.2"/>
+                </g>
+              </svg>
+              <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#334155">wait for payment</div>
+            </div>
+            <div class="prev-cap"><span style="color:#0ea5e9">banda del contenuto</span> · <span style="color:#334155">● handle dal profilo campionato</span></div>
+          </div>
+          <div style="font-size:11px;color:var(--slate-500);line-height:1.6">
+            La forma nuova nasce con i tre obblighi già assolti: gli handle si posizionano dal profilo campionato,
+            la taglia deriva dal contenuto attraverso il percorso numerico (nessuna forma chiusa richiesta),
+            il ritaglio segue la banda. Per il riconoscimento resta uno stencil del progetto.
+          </div>
+          <div style="flex:1"></div>
+        </div>
+      </div>
+
+      <div class="m-foot">
+        <span><i class="bi bi-info-circle"></i>&nbsp; La forma sarà disponibile nella sezione Progetto del catalogo</span>
+        <button class="btn btn-primary" style="margin-left:auto">Crea forma</button>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:20px;align-items:flex-start;margin-top:16px;flex-wrap:wrap">
+    <div class="failcard" style="position:relative">
+      <span class="co" style="right:-8px;top:-8px;left:auto">8</span>
+      <div style="font-size:11px;font-weight:650;color:var(--slate-900);margin-bottom:8px"><i class="bi bi-bezier2"></i> Il rifiuto spiegato</div>
+      <div style="display:flex;gap:14px;align-items:flex-start">
+        <svg width="86" height="60" viewBox="0 0 100 70" style="flex:none">
+          <path d="M5 5 L95 65 L95 5 L5 65 Z" fill="none" stroke="#334155" stroke-width="1.4"/>
+          <circle cx="50" cy="35" r="5" fill="none" stroke="#b91c1c" stroke-width="1.6"/>
+        </svg>
+        <div>
+          <div class="gate ok" style="padding:2px 0"><i class="bi bi-check-circle-fill"></i><div>Path chiuso</div></div>
+          <div class="gate err" style="padding:2px 0"><i class="bi bi-x-circle-fill"></i><div>Autointersezione a t ≈ 0.37
+            <div class="gd">il contorno si incrocia al centro: handle e banda del contenuto non sarebbero definiti.
+            Correggi il path o dividilo in due forme.</div></div></div>
+          <div class="gate" style="padding:2px 0;color:#94a3b8"><i class="bi bi-dash-circle"></i><div>Profilo monotono · non valutato</div></div>
+        </div>
+      </div>
+      <div style="margin-top:10px;text-align:right"><button class="btn btn-primary dis">Crea forma</button></div>
+    </div>
+    <div class="legend" style="max-width:640px;margin-top:0">
+      <span class="n">6</span><b>La definizione è dichiarativa:</b> un path normalizzato più la dichiarazione di simmetria. Niente codice:
+      gli obblighi si derivano, non si scrivono.
+      &nbsp;<span class="n">7</span><b>L'anteprima mostra gli obblighi, non solo il disegno:</b> handle campionati sul contorno e banda del
+      contenuto. È la differenza fra questa strada e l'upload di un SVG: la forma nasce dentro il contratto, non accanto.
+      &nbsp;<span class="n">8</span><b>I gate rifiutano spiegando:</b> un path che fallisce non entra e il messaggio dice quale obbligo
+      non sarebbe definito e come rimediare. «Crea» resta disattivo finché i tre gate non sono verdi.
+    </div>
+  </div>
+
+  <div class="foot-note">
+    Mappa sulle decisioni da mettere a memo: <b>D17</b> stencil di progetto (fasci di valori con nome, salvati nel progetto; il registry
+    non si tocca); <b>D18</b> catalogo a sezioni con ricerca primaria, recenti, sezione Progetto e precedenza di riconoscimento
+    preset → stencil → custom; <b>D19</b> contorni autorabili: path dichiarativo + gate di qualità con rifiuto spiegato, obblighi derivati
+    dal percorso numerico; stadio due, si apre solo a domanda dimostrata e la condizione di riapertura va scritta nel memo.
+    Il pannello «Nuova forma» qui è il mock di come apparirebbe QUANDO si aprisse: mostrarlo non lo decide.
+  </div>
+</div>
+</body>
+</html>
