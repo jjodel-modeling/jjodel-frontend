@@ -1,5 +1,57 @@
 # Claude Code Session Log
 
+## 2026-08-16 — feat: mutable IR kind with reversible per-kind stash (slice B)
+**Prompt**: `docs/prompts/claude_2026-08-16_1621_prompt_B_selettore_kind_e_stash.md` (rigenerazione fedele del prompt originale perso col workspace della sessione precedente, D6..D13), eseguito in sessione Cowork diretta su go-ahead esplicito di Alfonso («procedi tu autonomamente»).
+**Files touched**: commit `ca73c564a` (3 file: `viewpoint/ir/irKindConvert.ts` nuovo modulo puro, `view/viewElement/view.tsx` campo `irStash` D+L, `viewpoint/authoring/irTabs.tsx` selettore Kind in `IRIdentityFields`).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no sui gate, eseguiti nel container su clone shallow di `origin/alfonso-frontend-jjtl` (HEAD `1932c21ff`, identico al device) + overlay dei 3 file: typecheck 14 prima e 14 dopo, misurati entrambi nello stesso ambiente sull'output completo (la baseline dichiarata 33 = 19 errori di casing solo su filesystem case-insensitive + questi 14); vitest 1274 passed 0 failed (le 9 suite `window is not defined` note; **la baseline vitest per le prossime sessioni è 1274**); build exit 0 in 2m43s con `--max-old-space-size=6144`, solo il warning chunk-size preesistente.
+**Out-of-scope changes**: no — diff limitata ai tre file dichiarati; i tre pannelli di authoring non toccati (montano già `IRIdentityFields`).
+**Layer Impact Report**: not-required — nessun file di §3.2; le scritture passano dai setter L (`set_irStash` è un `SetFieldAction` semplice, la derivazione di `appliableTo` resta nel `set_ir` esistente e non è stata toccata).
+**Smoke visivo**: passato (GO visivo di Alfonso, 2026-08-16, «funziona tutto») — switch di kind nei due sensi con restauro dallo stash, riga di stato e Discard, condivisi (`metaclasses`/pins/`label`) che seguono l'ir attivo.
+**Notes**: (1) Hard stop rispettato: diff, gate e collisioni nomi riportati in chat prima del commit; commit solo dopo il go-ahead. (2) Grep collisioni (`irKindConvert`, `IRKindStash`, `convertIRKind`, `stashedKinds`, `irStash`): zero occorrenze preesistenti, con controllo positivo implicito (le stesse ricerche trovano i nuovi identificatori a file scritti). (3) Slot del target consumato al restauro, così la riga di stato riflette sempre ciò che uno switch recupererebbe; stash vuoto scritto come `undefined`, mai `{}`. (4) Idioma lock del mount applicato (mv in `_to_delete/` prima e dopo ogni comando git); un `index.lock` orfano lasciato da `git diff` è stato spostato allo stesso modo. (5) Rotazione log ancora dovuta: 49 entry attive con le quattro di questa sessione (conteggio su file completo), soglia 20, rinviata a repo fermo come nelle entry precedenti.
+**Prompt document name**: 2026-08-16 16:21
+
+## 2026-08-16 — test: B4 e B6 chiudono i rami row ed edge della derivazione (entry di recupero)
+**Prompt**: primo passo della ripresa dal checkpoint (`docs/sessioni/claude_sessione_2026-08-16_2.md`, «Verifiche non chiuse»): i rami row ed edge della mappatura D2 non erano coperti da nessun test, A1/A2 bloccati dal bug del keybind macOS. Eseguiti in sessione Cowork via Chrome (estensione), progetto usa-e-getta `test_B4_B6`.
+**Files touched**: nessuno — verifica runtime pura.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — nessuna modifica.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato — B4: view `Class` (ir null, `appliableTo 'Vertex'`) → Enable IR kind row → `ir.kind 'row'`, `appliableTo 'Field'`. B6: view `Package` (`'GraphVertex'`) → Enable IR kind edge → `ir.kind 'edge'`, `appliableTo 'Edge'`. Asserzioni lette da `windoww.store.getState().idlookup`, non dallo schermo.
+**Notes**: (1) Con B4/B6 la derivazione di `76b521726` è verificata su tutti e tre i rami (vertex era coperto dal flusso già in uso). (2) **Due freeze dell'editor osservati durante i test**, main thread saturo senza recupero e senza errori in console: il primo dopo il click su «Add view» (`+` sulla riga Viewpoint), il secondo subito dopo l'Enable IR edge, a valle della TRANSACTION (la scrittura risulta infatti persistita e coerente). `validateIR`/`compileEdgeView` esclusi come causa (lineari su `edge: {}`). In entrambi i casi erano aperti due tab sullo stesso progetto (overview + editor): non escluso un loop di sync fra tab. Root cause analysis da aprire come task separato. (3) In B6 la lettura dello store fatta subito dopo il click mostrava ancora lo stato vecchio: la conferma è arrivata dalla rilettura successiva. Le asserzioni vanno prese a valle della propagazione, non nel frame del click.
+**Prompt document name**: — (sessione Cowork diretta, 2026-08-16)
+
+## 2026-08-16 — fix: guard IR panel unmount flush against a kind change (entry di recupero)
+**Prompt**: `2026-08-16_1621_A_guardia_flush_unmount.md` (slice A, eseguita nella sessione Cowork del 2026-08-16; entry registrata a posteriori: era il debito dichiarato nel checkpoint).
+**Files touched**: commit `634bc0ea2` (`viewpoint/authoring/VertexAuthoringPanel.tsx`).
+**Outcome**: ⚠️ partial — esito corretto e committato, ma la premessa del prompt era errata: dichiarava il flush all'unmount presente nei tre pannelli di authoring, esiste solo in Vertex. L'esecuzione si è fermata correttamente all'incongruenza e ha ridotto il perimetro a un file su conferma.
+**Corregge**: —
+**Causa**: (a)
+**Regressions**: no — build exit 0, typecheck Δ0 su baseline 33 (gate della sessione che ha prodotto il commit).
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — quarta guardia su un flush di unmount, nessun cambiamento osservabile a codice attuale; la sua funzione si attiva col selettore di kind (slice B).
+**Notes**: (0) Causa (a): specifica del prompt basata su un'assunzione non verificata sui pannelli Row ed Edge. (1) La guardia: `if ((v as any).ir?.kind !== d.kind) return;` accanto alle tre esistenti (dirty, last-committed, view-id). (2) Conseguenza aperta tracciata nel checkpoint (P2): `RowAuthoringPanel` ed `EdgeAuthoringPanel` non hanno alcun flush all'unmount, uno smontaggio con draft sporco lì perde l'edit; difetto preesistente, fuori dal perimetro della slice.
+**Prompt document name**: 2026-08-16 16:21
+
+## 2026-08-16 — refactor: derive appliableTo from ir.kind, single writer (entry di recupero)
+**Prompt**: `2026-08-16_1356_derivazione_appliableTo_da_ir_kind.md` (eseguito nella sessione Cowork del 2026-08-16; entry registrata a posteriori: era il debito dichiarato nel checkpoint).
+**Files touched**: commit `76b521726` (`view/viewElement/view.tsx`: `appliableToForIRKind`, derivazione in `set_ir` dentro la TRANSACTION esistente e nella callback di `new2` in `newDefault`).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — build exit 0, typecheck Δ0 su baseline 33 (gate della sessione che ha prodotto il commit); i rami row ed edge della mappatura verificati a runtime il 2026-08-16 (test B4/B6, entry sopra).
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced — nella sessione che ha prodotto il commit (modifica al core autorizzata esplicitamente, D1..D5 del checkpoint).
+**Smoke visivo**: passato — ramo vertex nel flusso ordinario; row ed edge chiusi da B4/B6.
+**Notes**: (1) Mappatura D2: `vertex → 'Vertex'`, `edge → 'Edge'`, `row → 'Field'`; kind sconosciuto o ir assente non toccano il campo. (2) `appliableTo` derivato, non ritirato (D1): `VersionFixer.tsx:862,892` lo usa come filtro di migrazione su dati persistiti. (3) Niente backfill (D5): le view IR preesistenti si sanano alla prima riscrittura di `ir`. (4) Invariante reale: writer unico fra i percorsi L; `VersionFixer.tsx:1042` e `updateDefaultView` scrivono `ir` sul D bypassando `set_ir` senza produrre divergenza oggi (dettaglio nel checkpoint).
+**Prompt document name**: 2026-08-16 13:56
+
 ## 2026-08-16 — docs: discovery dei due viewpoint di sistema, `Default` e `Default Validation`
 **Prompt**: domanda di Alfonso in sessione Cowork diretta, «ha ancora senso portarci dietro i viewpoint Default e Default validation?», seguita da «procedi lì e vai avanti autonomamente» dopo la condivisione della cartella del repo. Fase 1 read-only su quattro aree: che cosa fanno oggi i due viewpoint seminati all'init dello store; quali agganci nel codice sono portanti; se le loro funzioni sono coperte da sottosistemi più recenti; che cosa costerebbe rimuoverli. Nessuna modifica al codice, hard stop dopo il report.
 **Files touched**: `docs/discovery/discovery_2026-08-16_viewpoint_default_e_validation.md` (nuovo); `docs/claude-code-log.md` (questa entry).
