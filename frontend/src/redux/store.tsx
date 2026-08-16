@@ -321,11 +321,8 @@ otherwise you would click the edge container instead of the graph-elements benea
 .edges { z-index: 101; position: absolute; top: 0; left: 0; height: 0; width: 0; overflow: visible; }
 `
             }, true, Defaults.Pointer_ViewPointDefault);
-            const validationViewpoint = DViewPoint.newVP('Default Validation',
-                (vp)=>{ vp.isExclusiveView = false; vp.isValidation = true;}, true, Defaults.Pointer_ViewPointValidation);
-
             Log.exDev(viewpoint.id !== Defaults.viewpoints[0], "wrong vp id initialization", {viewpoint, def:Defaults.viewpoints});
-            const views: DViewElement[] = makeDefaultGraphViews(viewpoint, validationViewpoint);
+            const views: DViewElement[] = makeDefaultGraphViews(viewpoint);
 
             for (let view of views) { CreateElementAction.new(view); }
 
@@ -358,91 +355,7 @@ otherwise you would click the edge container instead of the graph-elements benea
 }
 
 
-function makeDefaultGraphViews(vp: DViewPoint, validationVP: DViewPoint): DViewElement[] {
-    let errorOverlayView: DViewElement = DViewElement.new2('Generic error view', DV.semanticErrorOverlay(), validationVP, (v) => {
-        v.jsCondition = 'let nstate = node?.state || {};\nObject.keys(nstate).filter(k => k.indexOf("error_")===0 && nstate[k]).length>0';
-        v.usageDeclarations = "(ret)=>{\n" +
-        "// ** preparations and default behaviour here ** //\n" +
-        "// add preparation code here (like for loops to count something), then list the dependencies below.\n" +
-        "// ** declarations here ** //\n" +
-        "// console.log('overlayView ud inner ' + data.name, {errs:node.state, node, noder:node.r, data});\n" +
-        "ret.nstate = node.state\n" +
-        // "ret.errors = Object.keys(ret.nstate).filter(k => k.indexOf(\"error_\")===0).map(k=>ret.nstate[k])\n" +
-        "ret.errors = Object.keys(ret.nstate).map(k => k.indexOf(\"error_\")===0 ? ret.nstate[k] : '').filter(e=>e)\n" +
-        "\n}";
-        v.isExclusiveView = false;
-        v.css =
-`/* -- v2.0 - */
-&.mainView { text-decoration-line: spelling-error; }
-&.decorativeView {
-    text-decoration-line: spelling-error;
-    
-    .overlap{
-      outline: 1px dotted var(--failure);
-      display: flex;
-    }
-
-    .error-message{
-        color: var(--color-accent);
-        background: var(--bg-2-5);
-        border-radius: var(--radius);
-        margin: auto;
-        padding: 8px 14px 16px 10px;
-        position:absolute;
-        top:50%; right:0;
-        transform: translate(calc(100% + 20px), calc(-50%));
-
-    }
-    .error-message::before {
-      position: relative;
-      top: 4px;
-      font-family: bootstrap-icons;
-      font-size: 1.2rem;
-      content: '\\F333';
-      margin-right: 10px;
-      padding-top: 10px!important;
-    }
-}
-`
-    }, false, Defaults.Pointer_ViewOverlay );
-
-    let errorCheckName: DViewElement = DViewElement.new2('Naming error view', DV.invisibleJsx(), validationVP, (v) => {
-        v.isExclusiveView = false;
-        v.usageDeclarations = "(ret)=>{ // scope: data, node, view, state, \n" +
-            "// ** preparations and default behaviour here ** //\n" +
-            "// add preparation code here (like for loops to count something), then list the dependencies below.\n" +
-            "// ** declarations here ** //\n" +
-            "ret.name = data && data.name || '';\n"+
-            "ret.type = data && data.className.substring(1) || 'shapeless object';\n"+
-            "}";
-        v.onDataUpdate = `
-if (!data) return;
-let err = undefined;
-if (name.length === 0) err = type + " must be named.";
-else if (!name[0].match(/[\\p{L}_$]/u)) err = type + " names must begin with a letter or $_ symbols.";
-else if (!name.match(/^[\\p{L}_$]+[\\p{L}\\p{N}$_\\s'\\u2019]*$/u)) err = type + " names can only contain letters, digits, spaces, apostrophes, or $_ symbols";
-if (node.state.error_naming !== err) node.state = {error_naming: err};
-`.trim();}, false, Defaults.Pointer_ViewCheckName );
-
-    let errorCheckLowerbound: DViewElement = DViewElement.new2('Lowerbound error view', DV.invisibleJsx(), validationVP, (v) => {
-            // v.jsCondition = '(data, node)=> {\nnode.state.errors?.length>0';
-            v.appliableToClasses = ['DValue'];
-            v.isExclusiveView = false;
-            v.usageDeclarations = "(ret)=>{ // scope: data, node, view, state, \n" +
-                "// ** preparations and default behaviour here ** //\n" +
-                "// add preparation code here (like for loops to count something), then list the dependencies below.\n" +
-                "// ** declarations here ** //\n" +
-                "ret.valuesLength = data.values.filter(v=>v!==undefined).length;\n"+
-                "ret.missingLowerbound = Math.max(0, data.lowerBound - ret.valuesLength);\n" +
-                "}";
-            v.onDataUpdate = `
-let err = undefined;\n
-if (missingLowerbound > 0) err = (data.className.substring(1))\n
-\t\t+ ' Lowerbound violation, missing ' + missingLowerbound + ' values.';\n
-node.state = {error_lowerbound: err};\n
-`.trim();
-    }, false, Defaults.Pointer_ViewLowerbound );
-    // errorOverlayView.oclCondition = 'context DValue inv: self.value < 0';
+function makeDefaultGraphViews(vp: DViewPoint): DViewElement[] {
 
     let valuecolormap: GObject = {};
     valuecolormap[ShortAttribETypes.EBoolean] = "orange";
@@ -529,10 +442,8 @@ ret.parentView = L.from(component?.props?.parentviewid);
         DefaultViews.edgepoint(model),
         anchorView];
 
-    let validation_subviews = [errorOverlayView, errorCheckLowerbound, errorCheckName];
     // SetFieldAction.new(vp, 'subViews', U.objectFromArrayValues(dv_subviews.map(dv=>dv.id), 1.5));
-    // SetFieldAction.new(validationVP, 'subViews', U.objectFromArrayValues(validation_subviews.map(dv=>dv.id), 1.5));
-    const ret = [...dv_subviews, ...validation_subviews];
+    const ret = [...dv_subviews];
     for (let v of ret) Log.e(!v.events, "missing events on view " + v.name, {v, ret});
     for (let v of ret) Log.w(!!!v.events, "found events on view " + v.name, {v, ret});
     return ret;

@@ -23,12 +23,8 @@ export class Defaults { /// TODO: this really needs to become dynamically genera
         "Pointer_ViewAnchors",
         "Pointer_ViewSingleton",
         "Pointer_ViewFallback",
-        // validation
-        "Pointer_ViewCheckName",
-        "Pointer_ViewOverlay",
-        "Pointer_ViewLowerbound",
     ];
-    static viewpoints: Pointer<DViewPoint>[] = ["Pointer_ViewPointDefault", "Pointer_ViewPointValidation"];
+    static viewpoints: Pointer<DViewPoint>[] = ["Pointer_ViewPointDefault"];
     static types: Pointer<DViewPoint>[] = [
         "Pointer_EVOID",
         "Pointer_ECHAR",
@@ -66,7 +62,9 @@ export class Defaults { /// TODO: this really needs to become dynamically genera
     static Pointer_ViewSingleton: Pointer<DViewElement> = 'Pointer_ViewSingleton';
     static Pointer_ViewFallback: Pointer<DViewElement> = 'Pointer_ViewFallback';
     // static Pointer_fallback = 'Pointer_fallback'; // legacy
-    // validation vp
+    // Retired validation viewpoint. The four ids below are NOT seeded any more (they left
+    // `views` and `viewpoints` above), but the constants stay: they are the ids the migration
+    // needs in order to find the records inside already-saved projects. Do not reuse them.
     static Pointer_ViewPointValidation: Pointer<DViewPoint> = 'Pointer_ViewPointValidation';
     static Pointer_ViewCheckName: Pointer<DViewElement> = 'Pointer_ViewCheckName';
     static Pointer_ViewOverlay: Pointer<DViewElement> = 'Pointer_ViewOverlay';
