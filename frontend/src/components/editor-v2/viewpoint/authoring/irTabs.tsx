@@ -2,7 +2,9 @@ import React from 'react';
 import type { CSSProperties } from 'react';
 import { Input, type LViewElement, type LViewPoint } from '../../../../joiner';
 import { ViewParentingFields } from '../../../viewParenting/ViewParentingFields';
-import { InfoTooltip } from '../../../ui';
+import { Button, InfoTooltip, Select } from '../../../ui';
+import { convertIRKind, stashedKinds, type AuthorableIRKind, type IRKindStash } from '../ir/irKindConvert';
+import type { AnyViewIR } from '../ir/irTypes';
 
 /**
  * irTabs — the five-tab partition of the IR authoring panels (ratifica 2026-08-04).
@@ -96,7 +98,34 @@ export interface IRIdentityFieldsProps extends IRIdentityProps {
  * voce 4 (2026-08-07) by making the viewpoint derived and `father` single-writer, and
  * the block now lives in `ViewParentingFields`, shared with `InfoData.tsx`.
  */
+/** Same labels as EnableIRPanel: the two selectors must read as the same choice. */
+const IR_KIND_OPTIONS = [
+    { value: 'vertex', label: 'Vertex (node)' },
+    { value: 'row', label: 'Row (inline)' },
+    { value: 'edge', label: 'Edge (line)' },
+];
+
+const isAuthorableKind = (k: unknown): k is AuthorableIRKind =>
+    k === 'vertex' || k === 'row' || k === 'edge';
+
 export const IRIdentityFields: React.FC<IRIdentityFieldsProps> = ({ view, viewpoints, readOnly }) => {
+    // Kind selector (slice B, D8..D10): rendered only for an ir of an authorable
+    // kind — a classic view goes through EnableIRPanel, a graphVertex has no panel.
+    const ir = (view as any).ir as AnyViewIR | undefined;
+    const kindSelectable = !!ir && isAuthorableKind(ir.kind);
+    const stash = (view as any).irStash as IRKindStash | undefined;
+    const stashed = stashedKinds(stash);
+
+    const changeKind = (next: string) => {
+        if (readOnly || !ir || !isAuthorableKind(next) || next === ir.kind) return;
+        const conv = convertIRKind(ir, next, stash);
+        // Stash first, ir second: `set_ir` derives `appliableTo` in its own
+        // TRANSACTION and re-renders ViewData, which swaps the authoring panel.
+        // An empty stash is written as undefined, never as {}.
+        (view as any).irStash = stashedKinds(conv.stash).length > 0 ? conv.stash : undefined;
+        (view as any).ir = conv.ir;
+    };
+
     return (
         <>
             {/* Name */}
@@ -107,6 +136,39 @@ export const IRIdentityFields: React.FC<IRIdentityFieldsProps> = ({ view, viewpo
                 </label>
                 <Input data={view} field={'name'} readOnly={readOnly} />
             </div>
+
+            {/* Kind (slice B): mutable after creation, reversible via the per-kind
+                stash — hence no confirmation modal (D10). Visible in Basic (D9). */}
+            {kindSelectable && (
+                <div className="jj-field">
+                    <label className="jj-field-label">
+                        Kind
+                        <InfoTooltip text="How this view renders: node, inline row, or edge. Switching keeps the fields of the kind you leave in a stash, restored when you switch back; metaclasses, pins and label always follow the active view." />
+                    </label>
+                    <Select
+                        options={IR_KIND_OPTIONS}
+                        value={ir!.kind}
+                        onChange={(e) => changeKind(e.target.value)}
+                        disabled={readOnly}
+                    />
+                    {stashed.length > 0 && (
+                        <div
+                            className="jj-field-hint"
+                            style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}
+                        >
+                            <span>Stashed: {stashed.join(', ')}</span>
+                            <Button
+                                variant="secondary"
+                                size="sm"
+                                disabled={readOnly}
+                                onClick={() => { (view as any).irStash = undefined; }}
+                            >
+                                Discard
+                            </Button>
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Viewpoint (derived) + Parent view + Move to viewpoint — voce 4, 2026-08-07.
                 The two selects that both wrote `father` are gone: one block, one writer.

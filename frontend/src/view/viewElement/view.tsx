@@ -230,6 +230,11 @@ export class DViewElement extends DPointerTargetable {
     // ViewpointIR (EditorV2 interpreter contract, spike 2026-07-17). Optional and additive:
     // undefined for classic views; serialization is generic, no VersionFixer needed (spec IR sez. 8).
     ir?: GObject;
+    // Per-kind stash of the reversible IR kind conversion (slice B, 2026-08-16): an
+    // IRKindStash (irKindConvert.ts). Sibling of `ir` BY DESIGN (D6): a key inside
+    // `ir` would change irHash and silently break the compile cache and
+    // irDefaults.isMigratedDefaultView. Undefined when no slot is occupied.
+    irStash?: GObject;
     // Explicit legacy mark for classic-only custom views (inverse migration
     // VersionFixer 2.225 -> 2.226, spec v1.2 sez. 11): rendered as abstract
     // nodes with a visible status, never silently dropped.
@@ -590,6 +595,14 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
             if (derived !== undefined && derived !== c.data.appliableTo) SetFieldAction.new(c.data, "appliableTo", derived, '', false);
         })
         return true;
+    }
+
+    irStash?: GObject;
+    __info_of__irStash: Info = {type: 'GObject | undefined', txt: <div>Per-kind stash of the reversible IR kind conversion (IRKindStash, irKindConvert.ts). Undefined when no slot is occupied.</div>};
+    get_irStash(c: Context): this["irStash"] { return c.data.irStash; }
+    set_irStash(val: this["irStash"], c: Context): boolean {
+        // No TRANSACTION and no derivation here: `appliableTo` belongs to `set_ir`.
+        return SetFieldAction.new(c.data, "irStash", val as any, '', false);
     }
 
     constants!: GObject;
