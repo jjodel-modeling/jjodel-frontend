@@ -71,6 +71,13 @@ function measureIntrinsic(el: HTMLElement): IntrinsicMeasure {
 }
 
 /**
+ * How many consecutive commits this hook may write the same size before it gives
+ * up on that vertex. Three is one more than the two a legitimate settle needs
+ * (write, then confirm) and far below React's nested-update limit.
+ */
+const MAX_UNACCEPTED_WRITES = 3;
+
+/**
  * Keep the React Flow node sized after the content of its IR view.
  *
  * The size is written in session only, on the same channel the size propagation
@@ -96,6 +103,11 @@ export function useContentDrivenSize(
     const active = hasSizeSupplement(desc) && !isResized;
     /** The last size this hook wrote, to tell our own size from somebody else's. */
     const written = useRef<Size | null>(null);
+    /**
+     * Consecutive commits in which the store did NOT come back with the size this
+     * hook wrote, while the measurement had not moved. See the budget below.
+     */
+    const unaccepted = useRef(0);
     const [, remeasure] = useState(0);
 
     // On a cold load the fonts can land after the first paint, and every
@@ -115,6 +127,7 @@ export function useContentDrivenSize(
     useLayoutEffect(() => {
         if (!active) {
             written.current = null;
+            unaccepted.current = 0;
             return;
         }
         const el = ref.current;
@@ -124,18 +137,65 @@ export function useContentDrivenSize(
         // width/height on every pointer move while `isResized` only lands on
         // commit, so during the gesture the node carries a size that is not ours.
         const node = getNode(vertexId);
-        const curW = node?.width;
-        const curH = node?.height;
+        // A vertex the React Flow store does not hold cannot be sized. Without
+        // this the `curW == null` branch below reads as "nobody owns the size",
+        // the write goes through, `nds.map` matches nothing, and `setNodes` still
+        // hands the store a fresh array — a commit per commit, forever. React
+        // kills the tree at the 50th nested update and the canvas goes white.
+        if (!node) {
+            written.current = null;
+            unaccepted.current = 0;
+            return;
+        }
+        const curW = node.width;
+        const curH = node.height;
         const mine = written.current;
         const ours = curW == null || curH == null
             || (mine !== null && curW === mine.w && curH === mine.h);
-        if (!ours) return;
+        if (!ours) {
+            unaccepted.current = 0;
+            return;
+        }
 
         const size = boxFromIntrinsic(desc, measureIntrinsic(el));
+        // Same answer as last commit: the measurement has not moved, so if the
+        // store still disagrees it is not going to start agreeing.
+        const sameTarget = mine !== null && mine.w === size.w && mine.h === size.h;
         written.current = size;
-        if (curW === size.w && curH === size.h) return;
-        setNodes(nds => nds.map(n => (n.id === vertexId
-            ? { ...n, width: size.w, height: size.h, measured: undefined }
-            : n)));
+        if (curW === size.w && curH === size.h) {
+            unaccepted.current = 0;
+            return;
+        }
+        if (!sameTarget) unaccepted.current = 0;
+
+        // Write budget. The effect has no dependency array on purpose (the trigger
+        // is a commit of the content), so its only guarantee of termination is
+        // that the next commit observes the size just written. When another writer
+        // resets it on every cycle that guarantee is void and the two ping-pong.
+        // Yielding costs a node drawn at the CSS content-hug size; not yielding
+        // costs the whole canvas.
+        unaccepted.current += 1;
+        if (unaccepted.current > MAX_UNACCEPTED_WRITES) {
+            if (unaccepted.current === MAX_UNACCEPTED_WRITES + 1) {
+                console.warn(
+                    '[useContentDrivenSize] size write not adopted by the store, yielding',
+                    { vertexId, form, store: { w: curW, h: curH }, derived: size },
+                );
+            }
+            return;
+        }
+
+        setNodes(nds => {
+            let changed = false;
+            const next = nds.map(n => {
+                if (n.id !== vertexId) return n;
+                if (n.width === size.w && n.height === size.h) return n;
+                changed = true;
+                return { ...n, width: size.w, height: size.h, measured: undefined };
+            });
+            // Same reference when nothing moved: the store skips the update and the
+            // commit that would have re-run this effect never happens.
+            return changed ? next : nds;
+        });
     });
 }
