@@ -10,6 +10,7 @@ import type {
     ConformanceViolation,
     ConformanceStatus,
 } from './ConformanceTypes';
+import { checkNameShape, nameShapeMessage } from './nameShape';
 
 /**
  * Pure function: validates whether a model conforms to its metamodel.
@@ -54,6 +55,34 @@ export function validateConformance(
             const objId = obj.id;
             const objName = obj.name;
             const metaClass: LClass | undefined = obj.instanceof as LClass | undefined;
+
+            // CHECK 12: missing_name / invalid_name_format — the name must be lexically
+            // well formed. Runs before CHECK 1 on purpose: the rule does not depend on the
+            // metaclass, so an orphan object is still told that its name is unusable.
+            // Severity is 'warning', not 'error': this is Jjodel well-formedness, not a
+            // violation against the metamodel, and it must not turn an otherwise conformant
+            // model into 'errors'.
+            try {
+                const nameVerdict = checkNameShape(objName);
+                if (nameVerdict !== 'ok') {
+                    violations.push({
+                        objectId: objId,
+                        objectName: objName,
+                        violationType: nameVerdict === 'empty' ? 'missing_name' : 'invalid_name_format',
+                        severity: 'warning',
+                        message: nameShapeMessage(nameVerdict, objName || objId),
+                    });
+                }
+            } catch (e) {
+                console.warn('[ConformanceValidator] CHECK 12 (name shape) failed:', e);
+                violations.push({
+                    objectId: objId,
+                    objectName: objName,
+                    violationType: 'check_failed',
+                    severity: 'warning',
+                    message: `CHECK 12 (name shape) could not be evaluated for object "${objName || objId}": ${e instanceof Error ? e.message : String(e)}`,
+                });
+            }
 
             // CHECK 1: orphan_object — object has no metaclass or metaclass not found in metamodel
             if (!metaClass) {

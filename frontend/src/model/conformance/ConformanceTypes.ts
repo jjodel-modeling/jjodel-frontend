@@ -51,6 +51,11 @@ export interface ConformanceViolation {
         | 'attr_multiplicity_below_min'
         | 'invalid_enum_literal'
         | 'duplicate_id_value'
+        // Name well-formedness (CHECK 12) — re-hosted from the `Naming error view` of the
+        // seeded `Default Validation` viewpoint, inert since the classic shutdown (Fase 5a).
+        // Additive: values above are unchanged (tooltip API).
+        | 'missing_name'
+        | 'invalid_name_format'
         // Fail-visible meta-check (WP1): a per-check catch fired, so that check could not be
         // evaluated. Emitted as 'warning' so status is never 'conformant' with a skipped check.
         | 'check_failed';

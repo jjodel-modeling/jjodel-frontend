@@ -490,3 +490,51 @@ describe('CHECK 2 — missing_required_attr (raw presence)', () => {
         expect(types(requiredWith('EInt', null))).toContain('missing_required_attr');
     });
 });
+
+// ==================================================================
+// CHECK 12 — missing_name / invalid_name_format
+// Re-hosted from the `Naming error view` of the seeded `Default Validation`
+// viewpoint, inert since the classic shutdown (Fase 5a).
+// ==================================================================
+describe('CHECK 12 — name shape', () => {
+    const C = klass({ id: 'C', name: 'Person' });
+
+    it('flags an object with no name', () => {
+        const res = run([obj({ id: 'o1', name: '', instanceof: C })], [C]);
+        expect(types(res)).toContain('missing_name');
+    });
+
+    it('flags a name that does not begin with a letter', () => {
+        const res = run([obj({ id: 'o1', name: '1st', instanceof: C })], [C]);
+        expect(types(res)).toContain('invalid_name_format');
+    });
+
+    it('flags a name carrying a forbidden character', () => {
+        const res = run([obj({ id: 'o1', name: 'a-b', instanceof: C })], [C]);
+        expect(types(res)).toContain('invalid_name_format');
+    });
+
+    it('accepts a well-formed name', () => {
+        const res = run([obj({ id: 'o1', name: 'alice', instanceof: C })], [C]);
+        expect(types(res)).not.toContain('missing_name');
+        expect(types(res)).not.toContain('invalid_name_format');
+    });
+
+    it('is a warning, so a name problem alone never reports errors', () => {
+        const res = run([obj({ id: 'o1', name: '', instanceof: C })], [C]);
+        expect(res.status).toBe('warnings');
+    });
+
+    it('runs before CHECK 1, so an unnamed orphan is told both things', () => {
+        const res = run([obj({ id: 'o1', name: '', instanceof: undefined })], []);
+        expect(types(res)).toContain('missing_name');
+        expect(types(res)).toContain('orphan_object');
+    });
+
+    it('attaches the violation to the object, with the id as fallback label', () => {
+        const res = run([obj({ id: 'o1', name: '', instanceof: C })], [C]);
+        const v = res.violations.find((x: AnyObj) => x.violationType === 'missing_name')!;
+        expect(v.objectId).toBe('o1');
+        expect(v.message).toContain('o1');
+    });
+});
