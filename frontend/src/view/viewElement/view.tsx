@@ -163,6 +163,29 @@ export type PathControl = {type:'path', value: string, x: string, y: string, fil
 export type PaletteType = Dictionary<string, PaletteControl | NumberControl | StringControl | PathControl>;
 
 
+/**
+ * `appliableTo` derivato da `ir.kind` (ratifica 2026-08-16).
+ *
+ * Il campo legacy non è ritirabile: VersionFixer.tsx:862,892 lo legge come filtro
+ * di migrazione sulle edge view già salvate, e irValidate.ts:16-19 ricorda che
+ * quelle view non hanno un VersionFixer proprio. Resta quindi scritto, ma da un
+ * writer solo: il kind dell'ir.
+ *
+ * `row` mappa su 'Field' come analogo legacy più vicino: una riga IR è una riga
+ * di compartimento. `graphVertex` non è un kind autorabile (R-6, 2026-08-04) e
+ * cade nel ramo undefined insieme a ogni kind sconosciuto, dove il campo NON
+ * viene toccato: meglio un valore vecchio di un valore inventato.
+ */
+function appliableToForIRKind(kind: unknown): DViewElement['appliableTo'] | undefined {
+    switch (kind) {
+        case 'vertex': return 'Vertex';
+        case 'edge': return 'Edge';
+        case 'row': return 'Field';
+        default: return undefined;
+    }
+}
+
+
 @RuntimeAccessible('DViewElement')
 export class DViewElement extends DPointerTargetable {
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
@@ -419,7 +442,14 @@ export class DViewElement extends DPointerTargetable {
             // Set inside the callback, which Constructors.end() runs BEFORE persist
             // (joiner/classes.ts:683,688): the view is persisted with its ir already on
             // it, in one action.
-            if (seed) (d as any).ir = seed;
+            if (seed) {
+                (d as any).ir = seed;
+                // Stessa derivazione di set_ir, applicata qui perché il seed scrive sul D e
+                // non passa dal proxy L. La callback è eseguita da Constructors.end() PRIMA
+                // della persist (joiner/classes.ts:683,688): la view è persistita coerente.
+                const derived = appliableToForIRKind(seed.kind);
+                if (derived) d.appliableTo = derived;
+            }
         }, true);
     }
 }
@@ -547,7 +577,20 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     ir?: GObject;
     __info_of__ir: Info = {type: 'GObject | undefined', txt: <div>ViewpointIR of the view (EditorV2 interpreter contract). Undefined for classic views.</div>};
     get_ir(c: Context): this["ir"] { return c.data.ir; }
-    set_ir(val: this["ir"], c: Context): boolean { return SetFieldAction.new(c.data, "ir", val as any, '', false); }
+    set_ir(val: this["ir"], c: Context): boolean {
+        // `ir.kind` è il writer unico di `appliableTo` (ratifica 2026-08-16): i due campi
+        // viaggiano nella stessa TRANSACTION, così non esiste uno stato intermedio in cui
+        // il discriminatore legacy contraddice l'ir. La scrittura NON passa dal setter L
+        // `set_appliableTo`, che accoppierebbe anche `forceNodeType` (letto solo da
+        // DefaultNode, cioè dal canvas classico non più montato da Fase 5a).
+        const derived = appliableToForIRKind((val as any)?.kind);
+        TRANSACTION('change '+this.get_name(c)+'.ir', ()=>{
+            SetFieldAction.new(c.data, "ir", val as any, '', false);
+            // Kind sconosciuto o `ir` disabilitato: il campo resta com'era.
+            if (derived !== undefined && derived !== c.data.appliableTo) SetFieldAction.new(c.data, "appliableTo", derived, '', false);
+        })
+        return true;
+    }
 
     constants!: GObject;
     __info_of__constants: Info = {todo:true, isGlobal: true, type: "Function():Object", label:"constants declaration",
