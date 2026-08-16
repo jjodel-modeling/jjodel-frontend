@@ -645,6 +645,25 @@ Base di evidenza: `docs/discovery/discovery_2026-08-13_view_creation_sites_ir_na
   popolazioni disgiunte: Source (`<pre>` JSON, advanced-gated) per le view IR; Template
   read-only con avviso per le legacy. Nessun assorbimento.
 
+- **R-IRN-7** (2026-08-16) — **Il canvas v1 non è raggiungibile dall'utente, e la migrazione a
+  v2 è decisa.** Trascrizione a registro di quanto Alfonso ha dichiarato il 2026-08-16, e della
+  «decisione B» del 2026-07-17 che finora viveva solo nei commenti del codice
+  (`EditorSwitch.tsx:42,123`, `ModelTab.tsx:39`, `Toolbar.tsx:449`, `joiner/components.tsx:8`,
+  `TemplateData.tsx:57`). Conseguenza operativa: una view priva di `ir` non ha interprete, quindi
+  toccare le 20 view di default del viewpoint `Default` non può produrre regressioni visive. Il
+  gradino `VP_Default` di `selectors.ts:557` e la cascata `viewScores`/`stackViews` restano
+  vincolanti per il codice classico, non per il canvas. Base di evidenza:
+  `docs/discovery/discovery_2026-08-16_2_le_23_view_di_default.md`.
+- **R-IRN-8** (2026-08-16) — **Il viewpoint `Default Validation` non si semina più.** Le sue tre
+  view erano un circuito chiuso (`error_*` prodotto e consumato solo da loro) e inerte per
+  R-IRN-7. La regola lessicale del nome, che non aveva sostituto, è stata prima ri-ospitata come
+  CHECK 12 del `ConformanceValidator` (`missing_name`, `invalid_name_format`, severità
+  `warning`), poi il seed è stato rimosso da `Defaults.views`/`viewpoints` e da `store.tsx`. Le
+  quattro costanti `Pointer_*` restano in `Defaults.ts` perché sono gli id che la migrazione dei
+  salvataggi deve cercare: non vanno riusate. La migrazione condizionata (purga solo i record
+  identici al seed, conserva quelli modificati dall'autore) è dovuta e non ancora scritta. Base
+  di evidenza: `docs/discovery/discovery_2026-08-16_viewpoint_default_e_validation.md`.
+
 ## Superate
 
 - **D3** (2026-07-26, routing congelato in v1) — superata da E-route il 2026-08-06.
