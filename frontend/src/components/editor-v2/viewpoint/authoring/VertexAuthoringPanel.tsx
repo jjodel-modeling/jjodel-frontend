@@ -161,6 +161,11 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
         if (!dirtyRef.current) return;
         if (d === lastCommittedRef.current) return;
         if (draftViewIdRef.current !== (v.id as string)) return;
+        // Il draft appartiene al kind con cui il pannello è stato montato. Se l'ir sulla
+        // view non è più di quel kind, qualcun altro l'ha convertita mentre eravamo
+        // montati (selettore di kind, slice B) e questo flush la riporterebbe indietro.
+        // Non è roba nostra: si scarta.
+        if ((v as any).ir?.kind !== d.kind) return;
         const res = validateIR(v.id, d);
         if (!res.ok) return;
         try { (v as any).ir = d; } catch { /* view already gone: nothing to flush onto */ }
