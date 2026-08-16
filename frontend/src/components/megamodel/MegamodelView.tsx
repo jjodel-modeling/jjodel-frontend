@@ -29,7 +29,14 @@ import {
     EDGE_STYLES,
     getPort, spreadAnchors, routePoints, buildRoundedPath, labelMidpoint, computeAdaptiveSides,
 } from './MegamodelEdge';
+import { Defaults } from '../../joiner';
 import './MegamodelView.scss';
+
+/** Ids of the viewpoints Jjodel seeds itself, excluded from the megamodel.
+ *  Matched by pointer and not by name: the previous name test also swallowed a
+ *  user viewpoint that happened to be called "Default". `Defaults.viewpoints`
+ *  is the single source of truth for which ids are seeded. */
+const SYSTEM_VIEWPOINT_IDS = new Set<string>(Defaults.viewpoints as unknown as string[]);
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -137,10 +144,10 @@ function buildGraph(
         }
     }
 
-    // Add user-defined viewpoints (exclude Default / Default Validation)
+    // Add user-defined viewpoints (the seeded system viewpoints are excluded)
     if (viewpoints) {
         for (const vp of viewpoints) {
-            if (vp.name === 'Default' || vp.name === 'Validation default' || vp.name === 'Default Validation') continue;
+            if (SYSTEM_VIEWPOINT_IDS.has(vp.id)) continue;
             if (!nodeMap.has(vp.id)) {
                 const badge = BADGE.viewpoint;
                 nodeMap.set(vp.id, {
