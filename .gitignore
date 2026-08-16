@@ -60,3 +60,4 @@ frontend/src/todo_others
 /frontend/dist
 /CLAUDE.md
 _to_delete/
+.claude/settings.local.json
