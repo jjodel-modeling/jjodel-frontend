@@ -7,7 +7,10 @@ IR ... emenda la spec §9 e tocca `pathExpr.ts` + `irReadCtx.ts` + `irCrossDeps.
 **Base di evidenza**: `docs/discovery/discovery_2026-08-17_state_attributes_data_node.md`
 (Q5b, Q8 R1..R9), più lettura diretta di `irTypes.ts:24-36`, `irCompile.ts:126-185`,
 `irReadCtx.ts:17-32`, `pathExpr.ts:23`, `sim/simRunState.ts`.
-**Stato**: proposta di ratifica.
+**Stato**: **ratificata il 2026-08-18**, a registro in `docs/decisions.md` come serie R-MK
+(R-MK-1..R-MK-9; la nona sigla porta a registro lo staging e la corsia della sezione finale).
+Ratificata nella forma qui scritta, che devia dall'inquadramento iniziale della domanda in chat
+(«identificatore legato `run`»): la deviazione e le sue quattro ragioni stanno in R-MK-1.
 
 ---
 

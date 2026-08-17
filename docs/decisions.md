@@ -181,6 +181,9 @@ citare l'id con la data. Le decisioni sostituite si spostano in "Superate", con 
   il dependency set non acquisisce una nozione esplicita di dipendenza dal contenitore
   (estensione futura, ratifica propria). La connect rule resta spenta sull'estremo `container`:
   creare un figlio contenuto non è connettere; è comportamento dichiarato, non bug.
+  **Aggiornamento 2026-08-18**: l'«estensione futura con ratifica propria» annunciata qui è
+  R-MK-5, che assorbe la dipendenza dal contenitore nella nozione unica di canale dichiarato. Il
+  debito non prende una ratifica separata; la migrazione è la fetta M3 di R-MK-9.
 
 ## Uniformazione delle due property card (arco U, dal 2026-08-08)
 
@@ -796,6 +799,74 @@ dell'interprete) non si apre senza go-ahead dedicato.
   d'unione. Origine: in un mese la stessa cucitura ha accumulato tre pressioni di estensione
   (`parent` previsto, `container` spedito, `state` in arrivo) su una grammatica progettata chiusa
   (`STEP_RE` di `pathExpr.ts`, che accetta solo `$feature | value | values | values[N]`).
+
+## Serie R-MK — La marcatura come predicato dell'IR (ratifiche 2026-08-18)
+
+Base di evidenza: `docs/discovery/discovery_2026-08-17_state_attributes_data_node.md` (Q5b, Q8
+R1..R9), più lettura diretta di `irTypes.ts:24-36`, `irCompile.ts:126-185`, `irReadCtx.ts:17-32`,
+`pathExpr.ts:23`, `sim/simRunState.ts`. Memo:
+`docs/ratifiche/claude_2026-08-18_memo_ratifica_marcatura_predicato_ir.md`. Chiude l'estensione
+futura dichiarata da R-SIM-4, in forma diversa dalla sua lettura letterale: la sorgente non è il
+bag `_state`, che non contiene affatto il run-state.
+
+- **R-MK-1** (2026-08-18) — **La marcatura è un predicato, non un valore.** Si introduce
+  `{ op: 'marked'; path?: PathExpr }` in `Predicate`, sul precedente esatto di `isKind`
+  (`irTypes.ts:30`, compilato in `irCompile.ts:154-163`, con lo stesso `path?` opzionale per
+  interrogare un altro elemento invece di quello corrente). **Non** un identificatore nudo
+  `run.active`, **non** un allargamento di `STEP_RE`, **non** un membro d'unione accanto a
+  `PathExpr`: la grammatica delle espressioni non si tocca, quindi R-J7 resta intatta e la feature
+  non aspetta J2. Una marcatura è booleana per costruzione: non c'è valore da interpolare in una
+  label. `marked` compone con `and`/`or`/`not` e si innesta in ogni `Conditional<T>` già nello
+  schema (`fill`, `color`, `visible`, `marker`, `form`, `lineColor`, `lineWidth`, `lineStyle`,
+  `fontWeight`, …).
+- **R-MK-2** (2026-08-18) — **La sorgente è la marcatura effimera, mai il bag persistito.**
+  `isMarked` legge il singleton di run-state (`sim/simRunState.ts`, R-SIM-1); `_state` resta
+  invisibile alle espressioni IR. Tutti i rischi Q8 della discovery (R1 spazio piatto già
+  affollato, R2 stringhe riavvolte in proxy L, R3 mutazioni annidate che bypassano il macchinario,
+  R4 nessuna GC su un bag persistito e trasmesso, R6 pollution dell'undo) sono proprietà del bag,
+  nessuno del singleton. Asimmetria di costo: esporre `_state` più avanti è una ratifica additiva;
+  ritirarlo dopo che dei viewpoint salvati ci dipendono è una migrazione su view che per R-B9 non
+  hanno VersionFixer.
+- **R-MK-3** (2026-08-18) — **Nome neutro: `marked`, non `sim`.** Il costrutto è una marcatura,
+  non un dettaglio di simulazione. Punto di estensione **riservato e non implementato**: un futuro
+  `mark?: string` per marcature nominate, con default sull'unica marcatura di oggi; si dichiara
+  perché la forma dello schema lo permetta senza rottura, non si scrive ora.
+- **R-MK-4** (2026-08-18) — **`ReadCtx` cresce di `isMarked(elementId): boolean`.** Semantica
+  totale (non marcato è `false`, mai `null`), lookup su Set nel singleton, contesto che resta lazy.
+  **Coordinamento su tre ratifiche sullo stesso punto di crescita**: R-B14 riserva la superficie di
+  `ReadCtx` «all'estensione `state` (R-SIM-4)» e questa serie *è* quell'estensione; R-J5 vuole
+  aggiungerci `getParent`. Chi arriva secondo rilegge la superficie prima di scrivere.
+- **R-MK-5** (2026-08-18) — **Il dependency set acquisisce UNA nozione di dipendenza non-feature:
+  i canali dichiarati.** Insieme chiuso, allargabile per ratifica, due membri alla nascita: `mark`
+  (version counter del singleton, `getSimVersion`) e `container` (il debito di R-B16, che **si
+  chiude qui** invece di prendersi una ratifica propria). Due vincoli di forma: (1) i canali sono
+  un insieme **separato** dal feature set, mai pseudo-feature prefissate — `irCrossDeps`
+  (`irCrossDeps.ts:1-28`) concretizza il feature set in id di DValue e una `@mark` avvelenerebbe
+  quella concretizzazione; operativamente `compilePredicate` riceve un secondo insieme accanto a
+  `deps`; (2) **emendamento alla spec §9**: il dependency set ha due parti, feature e canali
+  dichiarati, e la clausola restrittiva («NON DEVE re-renderizzare per feature fuori dal set») si
+  conserva su entrambe.
+- **R-MK-6** (2026-08-18) — **Granularità di v1 grossa e dichiarata.** Un bump di canale invalida
+  ogni elemento che quel canale lo dichiara: uno step di simulazione re-renderizza tutti i nodi la
+  cui view legge `marked`. È lo stesso ordine di grandezza dell'highlight di R-SIM-3, quindi non è
+  una regressione ma il costo corrente reso autorabile. La granularità per elemento è un
+  raffinamento futuro con ratifica propria, da aprire su una misura e non su un'intuizione.
+- **R-MK-7** (2026-08-18) — **Fallback espliciti (spec §10).** Elemento senza marcatura: `false`,
+  mai `undefined`. `path` che si esaurisce: `false`, con la ragione visibile nella diagnostica di
+  authoring. Nessun default silenzioso; `marked` non lancia, e un IR malformato mostra l'errore in
+  authoring come le altre regole di `validateIR`.
+- **R-MK-8** (2026-08-18) — **L'highlight di R-SIM-3 non si rimuove ora.** La classe `sim-active`
+  su `ObjectNode` resta: è il default per i viewpoint che non autorano `marked`. Il ritiro è una
+  fetta separata con ratifica propria, da aprire solo quando `marked` ha un consumatore reale
+  (comportamento committato e verificato non si degrada, CLAUDE.md regola 3).
+- **R-MK-9** (2026-08-18) — **Staging e corsia.** M1 (interprete: `ReadCtx.isMarked` sui due
+  backend, `{op:'marked'}` in `irTypes`/`irCompile`, insieme dei canali, emendamento §9, test,
+  **nessuna UI**) → M2 (`PredicateBuilder`: voce «È marcato» con `path` opzionale e diagnostica) →
+  M3 (`container` migra sul canale e chiude il debito R-B16). **M2 dopo M1, non negoziabile**:
+  un'UI che autora un operatore non ancora compilato salva IR che non rende, e per R-B9 le view IR
+  non hanno VersionFixer per ripulirlo. M1 e M3 sono in critical zone (§3.1: `editor-v2/viewpoint/
+  ir/` per M1, `useJjomSync`/`useM1ReferenceEdges` per M3): corsia completa, two-phase con report
+  in `docs/discovery/`, **Layer Impact Report obbligatorio prima del diff**, effort xhigh.
 
 ## Superate
 
