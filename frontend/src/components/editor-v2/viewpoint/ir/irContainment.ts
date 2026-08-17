@@ -38,6 +38,14 @@ export interface ContainmentModel {
     childrenOf: Map<string, string[]>;
     /** child objectId → container objectId */
     parentOf: Map<string, string>;
+    /** child objectId → container objectId, from the COMPLETE composition walk:
+     *  no view filter, so it also covers objects that have no vertex of their own
+     *  (R-B14). Distinct from `parentOf`, which stays restricted to the children of
+     *  graphVertex containers and is not reused for endpoint resolution. */
+    containerOf?: Map<string, string>;
+    /** Every object reached by that walk, seeds included — the candidate pool the
+     *  object-as-edge synthesis iterates instead of the RF nodes (R-B14). */
+    walkedObjects?: Set<string>;
     /** vertexId → objectId for all object nodes on canvas */
     objByVertex: Map<string, string>;
     /** objectId → vertexId (reverse) */
@@ -61,6 +69,44 @@ export function containmentChildren(idlookup: Idlookup, objectId: string): strin
         }
     }
     return out;
+}
+
+/**
+ * Complete composition walk from the canvas roots (R-B14): the child → container
+ * map and the set of every object reached, seeds included.
+ *
+ * Reads slots only, never `father`: an object created by the canvas keeps
+ * `father = DModel` (canvasToJjom, "fatherType — MUST be DModel") so the backward
+ * link does not carry the containment, while the pointer in the container's
+ * composition slot is there in both forms. The walk therefore also reaches the
+ * nested form (`father = DValue`), whose objects are absent from DModel.objects and
+ * have no DVertex — the form the endpoint token exists for.
+ *
+ * First container wins (one parent per child in a well-formed model); a cycle in
+ * the slots terminates the walk instead of hanging it.
+ */
+function walkContainment(
+    idlookup: Idlookup,
+    roots: Iterable<string>,
+): { containerOf: Map<string, string>; walkedObjects: Set<string> } {
+    const containerOf = new Map<string, string>();
+    const walkedObjects = new Set<string>();
+    const queue: string[] = [];
+    for (const rootId of roots) {
+        if (walkedObjects.has(rootId)) continue;
+        walkedObjects.add(rootId);
+        queue.push(rootId);
+    }
+    for (let i = 0; i < queue.length; i++) {
+        const objectId = queue[i];
+        for (const childId of containmentChildren(idlookup, objectId)) {
+            if (!containerOf.has(childId)) containerOf.set(childId, objectId);
+            if (walkedObjects.has(childId)) continue;   // seed, or already walked
+            walkedObjects.add(childId);
+            queue.push(childId);
+        }
+    }
+    return { containerOf, walkedObjects };
 }
 
 /**
@@ -163,6 +209,13 @@ export function buildContainmentModel(
         model.objByVertex.set(n.id, objectId);
         model.vertexByObj.set(objectId, n.id);
     }
+    // Complete containment walk (R-B14), seeded by the objects on canvas: every
+    // DModel.objects entry gets a DVertex, so those are the model roots, and the
+    // walk continues through composition slots down to the vertex-less nested
+    // objects. Independent of `index`: no view has to resolve for a parent to exist.
+    const walk = walkContainment(idlookup, model.objByVertex.values());
+    model.containerOf = walk.containerOf;
+    model.walkedObjects = walk.walkedObjects;
     for (const [vertexId, objectId] of model.objByVertex) {
         const metaclassId = idlookup[objectId]?.instanceof;
         if (typeof metaclassId !== 'string') continue;

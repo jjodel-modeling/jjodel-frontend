@@ -11,11 +11,15 @@
  *    drawn path, absent / 'orthogonal' keep the Manhattan router.
  *
  * 2. Object-as-edge synthesis (Transition pattern): objects whose resolved
- *    edge view has source/target PathExprs are hidden as nodes and drawn as a
- *    synthetic edge between the resolved endpoint vertices. The object's own
- *    reference edges toward the two endpoints are suppressed (they would
- *    duplicate the synthetic edge). Read-only visualization: interaction on
- *    synthetic edges is Fase 3 scope.
+ *    edge view has a complete endpoint pair are drawn as a synthetic edge between
+ *    the resolved endpoint vertices. An endpoint is a PathExpr or the reserved
+ *    `container` token, resolved against the containment map (R-B13). The pass
+ *    iterates OBJECTS, not nodes (R-B14): an object with a vertex is hidden as a
+ *    node and its own reference edges toward the endpoints are suppressed (they
+ *    would duplicate the synthetic edge); a nested object has no vertex, nothing
+ *    to hide and no edge to suppress. The vertex is required only at the two
+ *    ENDPOINTS. Read-only visualization: interaction on synthetic edges is Fase 3
+ *    scope.
  *
  * Pure module (no joiner/react): unit-tested in ir.test.ts.
  */
@@ -172,22 +176,53 @@ export function synthesizeObjectAsEdges(
     idlookup: Idlookup,
     /** Session anchor overrides (user-chosen handles, side pins, waypoints), keyed by edge-object id. */
     anchorOverrides?: Map<string, { sourceHandle?: string; targetHandle?: string; sourceSide?: string; targetSide?: string; waypoints?: unknown[] }>,
+    /** child objectId → container objectId (complete composition walk, irContainment):
+     *  resolves the `container` endpoint token (R-B13). */
+    containerOf?: Map<string, string>,
+    /** Every object of that walk: the vertex-less nested objects reach the synthesis
+     *  through this set and through it only (R-B14). */
+    walkedObjects?: Set<string>,
 ): ObjectAsEdgeResult {
     if (index.objectAsEdgeByMetaclass.size === 0) return { nodes, edges, edgeObjects: new Set(), edgeObjectDeps: [] };
+    // Candidates (R-B14): the objects on canvas first, in node order (handle indices
+    // stay what they were), then the walked objects with no vertex whose metaclass
+    // carries an object-as-edge view — the nested form, which has no RF node to
+    // iterate. The name pre-filter is exact, the same trade-off oaeSlotsSig already
+    // takes: a vertex-less instance of a SUBCLASS of a metaclass carrying the view is
+    // not a candidate. Objects WITH a vertex are unfiltered, as before.
+    const candidates: string[] = [];
+    const candidateSeen = new Set<string>();
+    for (const objectId of objByVertex.values()) {
+        if (candidateSeen.has(objectId)) continue;
+        candidateSeen.add(objectId);
+        candidates.push(objectId);
+    }
+    if (walkedObjects) {
+        for (const objectId of walkedObjects) {
+            if (candidateSeen.has(objectId) || vertexByObj.has(objectId)) continue;
+            const metaclass = idlookup[idlookup[objectId]?.instanceof];
+            if (!metaclass || !index.objectAsEdgeByMetaclass.has(metaclass.name)) continue;
+            candidateSeen.add(objectId);
+            candidates.push(objectId);
+        }
+    }
     const edgeObjects = new Set<string>();
     const edgeObjectDeps: ObjectAsEdgeResult['edgeObjectDeps'] = [];
     const synthetic: Edge[] = [];
-    for (const n of nodes) {
-        const objectId = objByVertex.get(n.id);
-        if (!objectId) continue;
+    for (const objectId of candidates) {
         const metaclassId = idlookup[objectId]?.instanceof;
         if (typeof metaclassId !== 'string') continue;
         const cv = resolveObjectAsEdgeView(objectId, metaclassId, index, readCtx, idlookup);
-        if (!cv || !cv.sourceExpr || !cv.targetExpr) continue;
+        if (!cv) continue;
+        // Each end is a compiled accessor or the container token; an incomplete pair
+        // is a reference-as-edge view and never lands in this bucket anyway.
+        const srcIsContainer = !!cv.sourceIsContainer;
+        const tgtIsContainer = !!cv.targetIsContainer;
+        if ((!cv.sourceExpr && !srcIsContainer) || (!cv.targetExpr && !tgtIsContainer)) continue;
         let srcTarget: unknown, tgtTarget: unknown;
         try {
-            srcTarget = cv.sourceExpr(readCtx, objectId);
-            tgtTarget = cv.targetExpr(readCtx, objectId);
+            srcTarget = cv.sourceExpr ? cv.sourceExpr(readCtx, objectId) : undefined;
+            tgtTarget = cv.targetExpr ? cv.targetExpr(readCtx, objectId) : undefined;
         } catch { continue; }
         // Endpoint normalization: the draw backend yields pointer strings, the
         // L-proxy backend resolves reference slots to proxy objects — accept
@@ -195,11 +230,15 @@ export function synthesizeObjectAsEdges(
         const toId = (x: unknown): string | null =>
             typeof x === 'string' ? x
             : (x && typeof x === 'object' && typeof (x as any).id === 'string' ? (x as any).id : null);
-        const srcId = toId(srcTarget);
-        const tgtId = toId(tgtTarget);
+        const container = containerOf?.get(objectId) ?? null;
+        const srcId = srcIsContainer ? container : toId(srcTarget);
+        const tgtId = tgtIsContainer ? container : toId(tgtTarget);
         const srcVertex = srcId ? vertexByObj.get(srcId) : undefined;
         const tgtVertex = tgtId ? vertexByObj.get(tgtId) : undefined;
-        if (!srcVertex || !tgtVertex) continue; // fallback: keep the node rendered
+        // Fallback: an object WITH a vertex stays rendered as a node (spec sez. 10);
+        // a nested one has no node to fall back to and stays invisible, exactly as it
+        // is today — deroga to sez. 10 declared in the ratification (R-B14).
+        if (!srcVertex || !tgtVertex) continue;
         edgeObjects.add(objectId);
         if (cv.crossPaths.length > 0) edgeObjectDeps.push({ objectId, viewId: cv.viewId, crossPaths: cv.crossPaths });
         const base: Edge = {

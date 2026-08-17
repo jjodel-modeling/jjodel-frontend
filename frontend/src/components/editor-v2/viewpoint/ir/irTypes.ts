@@ -214,6 +214,22 @@ export type EdgeTermination =
     | 'hollowDiamond';
 
 /**
+ * Reserved endpoint token of an object-as-edge view (R-B13): resolves to the
+ * containment parent of the edge-object instead of navigating a PathExpr.
+ *
+ * The endpoint type is conceptually `EndpointExpr = PathExpr | 'container'`; the
+ * two fields below stay declared `PathExpr` here because the formal spec
+ * amendment (v1.2 sez. 7) belongs to a later slice. `PathExpr` itself (spec v1.1
+ * sez. 3.1) is NOT widened: the token is illegal in predicates, labels,
+ * conditionals, TextSource and childFilter, and `$container.value` remains an
+ * ordinary feature path — the two spellings do not collide.
+ *
+ * Persisted verbatim in the saved IR, which has no VersionFixer: the spelling
+ * (lowercase, bare) is definitive (R-B9).
+ */
+export const CONTAINER_ENDPOINT = 'container' as const;
+
+/**
  * Edge view (spec v1.2 sez. 7). Two substrates:
  * - reference-as-edge: styles the RF edges derived from M1 references.
  *   `metaclasses` = metaclass of the SOURCE object; `reference` restricts to a
@@ -235,8 +251,12 @@ export interface EdgeViewIR {
     exclusive?: boolean;
     label?: string;
     edge: {
-        source?: PathExpr;           // object-as-edge only
-        target?: PathExpr;           // object-as-edge only
+        /** object-as-edge only. A PathExpr, or the reserved CONTAINER_ENDPOINT
+         *  token — see its doc above for the `PathExpr | 'container'` union. */
+        source?: PathExpr;
+        /** object-as-edge only. Same vocabulary as `source`; both ends may carry
+         *  the token (self-loop on the container, legitimate — R-B13). */
+        target?: PathExpr;
         line?: {
             color?: Conditional<string>;
             width?: Conditional<number>;
@@ -314,6 +334,11 @@ export interface CompiledEdgeView {
     isObjectAsEdge: boolean;
     sourceExpr: CompiledAccessor | null;   // object-as-edge
     targetExpr: CompiledAccessor | null;   // object-as-edge
+    /** Endpoint declared as CONTAINER_ENDPOINT (R-B13): the matching *Expr stays
+     *  null (the token never reaches the PathExpr parser) and the endpoint is
+     *  resolved at synthesis time against the containment map, not by an accessor. */
+    sourceIsContainer?: boolean;
+    targetIsContainer?: boolean;
     lineColor: CompiledConditional<string> | null;
     lineWidth: CompiledConditional<number> | null;
     lineStyle: CompiledConditional<'solid' | 'dashed' | 'dotted'> | null;

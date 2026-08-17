@@ -342,6 +342,7 @@ export function compileView(viewId: string, ir: NodeViewIR): CompiledView {
 // ---- edge views (Fase 2c) --------------------------------------------------
 
 import type { CompiledEdgeView, EdgeViewIR, TextSource } from './irTypes';
+import { CONTAINER_ENDPOINT } from './irTypes';
 
 function compileTextSource(src: TextSource | undefined, deps: Set<string>): CompiledAccessor | null {
     if (!src) return null;
@@ -383,8 +384,15 @@ export function compileEdgeView(viewId: string, ir: EdgeViewIR): CompiledEdgeVie
         featureNames.forEach(f => deps.add(f));
         return fn;
     };
-    const sourceExpr = compileExpr(e.source);
-    const targetExpr = compileExpr(e.target);
+    // Container endpoint (R-B13): the reserved token is not a PathExpr, so it never
+    // reaches parsePathExpr — which would throw and, through irResolveCore's catch,
+    // drop the WHOLE view. This is the permissive render R-B15 requires before the
+    // token becomes authorable; every other invalid endpoint keeps throwing as
+    // before. The token adds nothing to the dependency set: it is not a feature.
+    const sourceIsContainer = e.source === CONTAINER_ENDPOINT;
+    const targetIsContainer = e.target === CONTAINER_ENDPOINT;
+    const sourceExpr = sourceIsContainer ? null : compileExpr(e.source);
+    const targetExpr = targetIsContainer ? null : compileExpr(e.target);
     const compiled: CompiledEdgeView = {
         viewId,
         ir,
@@ -393,9 +401,13 @@ export function compileEdgeView(viewId: string, ir: EdgeViewIR): CompiledEdgeVie
         dependencySet: [],
         crossPaths: [],
         reference: ir.reference ?? null,
-        isObjectAsEdge: !!(sourceExpr && targetExpr),
+        // A complete endpoint pair, in every combination: each end is either a
+        // compiled accessor or the container token (both ends `container` included).
+        isObjectAsEdge: !!((sourceExpr || sourceIsContainer) && (targetExpr || targetIsContainer)),
         sourceExpr,
         targetExpr,
+        sourceIsContainer,
+        targetIsContainer,
         lineColor: e.line?.color !== undefined ? compileConditional(e.line.color, '', deps) : null,
         lineWidth: e.line?.width !== undefined ? compileConditional(e.line.width, 1, deps) : null,
         lineStyle: e.line?.style !== undefined ? compileConditional(e.line.style, 'solid' as const, deps) : null,

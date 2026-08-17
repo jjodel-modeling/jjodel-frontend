@@ -155,8 +155,12 @@ export function useIRContainment(nodes: Node[], edges: Edge[]): IRContainmentDec
             const ov = getIREdgeAnchorOverride(objectId);
             if (ov) overrides.set(objectId, ov);
         }
+        // containerOf/walkedObjects (R-B14): the complete composition walk resolves the
+        // `container` endpoint token and carries the vertex-less nested objects into the
+        // synthesis, which no longer iterates the RF nodes.
         const oae = synthesizeObjectAsEdges(
             outNodes, outEdges, model.objByVertex, model.vertexByObj, index, readCtx, state.idlookup, overrides,
+            model.containerOf, model.walkedObjects,
         );
         outNodes = oae.nodes;
         // Re-apply RF selection to synthetic edges (tracked in irEdgeInteraction:

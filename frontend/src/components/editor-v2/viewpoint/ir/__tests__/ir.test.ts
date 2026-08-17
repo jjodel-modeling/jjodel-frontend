@@ -27,6 +27,7 @@ import {
 import { assignGeometricHandles, decorateReferenceEdges, synthesizeObjectAsEdges } from '../irEdgeViews';
 import { applyIRPaletteFilter, deriveDroppableChildMetaclasses, deriveIRInteraction, matchConnectRules } from '../irInteraction';
 import type { EdgeViewIR, GraphVertexViewIR, RowViewIR, VertexViewIR } from '../irTypes';
+import { CONTAINER_ENDPOINT } from '../irTypes';
 
 /** Build a minimal D-layer world: metamodel classes + objects with slots. */
 function world() {
@@ -763,6 +764,129 @@ describe('irEdgeViews (Fase 2c)', () => {
         expect(res.edgeObjects.size).toBe(0);
         expect(res.nodes).toBe(nodes);
         expect(res.edges).toBe(edges);
+    });
+});
+
+/**
+ * Container-endpoint world (R-B13/R-B14): the NESTED containment form measured on
+ * the test project — the Transition is created through the containment slot editor,
+ * so it has `father = DValue`, is absent from DModel.objects and therefore has no
+ * DVertex and no RF node. It is reachable only through the container's composition
+ * slot, which is why the walk reads slots and never `father`.
+ *   s1 (State) ⊃ t1 (Transition), t1.next → s2 (State)
+ *   canvas: V1 (s1) and V2 (s2) only, spread horizontally; no node and no edge for t1.
+ */
+function containerWorld() {
+    const idlookup: Record<string, any> = {
+        C_State: { id: 'C_State', name: 'State', extends: [] },
+        C_Trans: { id: 'C_Trans', name: 'Transition', extends: [] },
+        R_transitions: { id: 'R_transitions', name: 'transitions', className: 'DReference', composition: true },
+        R_next: { id: 'R_next', name: 'next', className: 'DReference', composition: false },
+        s1: { id: 's1', name: 'S1', instanceof: 'C_State', features: ['v_trans'] },
+        v_trans: { id: 'v_trans', instanceof: 'R_transitions', values: ['t1'] },
+        s2: { id: 's2', name: 'S2', instanceof: 'C_State', features: [] },
+        t1: { id: 't1', name: 'go', instanceof: 'C_Trans', features: ['v_next'] },
+        v_next: { id: 'v_next', instanceof: 'R_next', values: ['s2'] },
+        V1: { id: 'V1', model: 's1' }, V2: { id: 'V2', model: 's2' },
+    };
+    const nodes: any[] = ['V1', 'V2'].map((id, i) => ({
+        id, type: 'objectNode', position: { x: i * 500, y: 0 }, data: {},
+    }));
+    return { idlookup, nodes, edges: [] as any[] };
+}
+
+/** containerWorld + one edge view on Transition: index, ctx and containment model. */
+function containerSetup(edge: EdgeViewIR['edge'], sig: string, tweak?: (idlookup: Record<string, any>) => void) {
+    const { idlookup, nodes, edges } = containerWorld();
+    tweak?.(idlookup);
+    const view: EdgeViewIR = { irVersion: 'ir-1.2', kind: 'edge', metaclasses: ['Transition'], edge };
+    const state = { viewpoint: 'VP', viewelements: ['V_cont'], idlookup: { ...idlookup, V_cont: { id: 'V_cont', viewpoint: 'VP', ir: view } } };
+    const ctx = makeDrawReadCtx(state.idlookup);
+    const index = getIRIndex(state, sig)!;
+    const model = buildContainmentModel(nodes as any, state.idlookup, index, ctx);
+    const synth = () => synthesizeObjectAsEdges(
+        nodes as any, edges as any, model.objByVertex, model.vertexByObj, index, ctx, state.idlookup,
+        undefined, model.containerOf, model.walkedObjects,
+    );
+    return { state, ctx, index, model, nodes, edges, synth };
+}
+
+describe('container endpoint (R-B13 / R-B14)', () => {
+    it('compiles the token without parsing it as a PathExpr, and keeps the view object-as-edge', () => {
+        const ir: EdgeViewIR = {
+            irVersion: 'ir-1.2', kind: 'edge', metaclasses: ['Transition'],
+            edge: { source: CONTAINER_ENDPOINT, target: '$next.value' },
+        };
+        // No throw: the permissive compile (R-B15) is what keeps the WHOLE view alive.
+        const cv = compileEdgeView('V_cont_compile', ir);
+        expect(cv.isObjectAsEdge).toBe(true);
+        expect(cv.sourceIsContainer).toBe(true);
+        expect(cv.targetIsContainer).toBe(false);
+        expect(cv.sourceExpr).toBeNull();
+        expect(typeof cv.targetExpr).toBe('function');
+        // The token is not a feature: it adds nothing to the dependency set.
+        expect(cv.dependencySet).toEqual(['next']);
+    });
+    it('synthesizes the edge of a NESTED object that has no vertex (form (b))', () => {
+        const { model, nodes, synth } = containerSetup(
+            { source: CONTAINER_ENDPOINT, target: '$next.value', labels: { center: { from: 'intrinsic', prop: 'name' } } },
+            'sig_container_b',
+        );
+        // The complete walk sees the nested object; parentOf (graphVertex-filtered,
+        // no such view here) does not — the two maps are deliberately distinct.
+        expect(model.containerOf!.get('t1')).toBe('s1');
+        expect(model.walkedObjects!.has('t1')).toBe(true);
+        expect(model.parentOf.size).toBe(0);
+
+        const res = synth();
+        expect(res.edgeObjects).toEqual(new Set(['t1']));
+        expect(res.edges.length).toBe(1);
+        const syn = res.edges.find(e => e.id === 'irobj_t1')!;
+        expect(syn.source).toBe('V1');       // the container's vertex
+        expect(syn.target).toBe('V2');       // $next.value
+        expect(syn.label).toBe('go');
+        expect(syn.sourceHandle).toBe('right-0');
+        // Nothing to hide and nothing to suppress: the object never had a node.
+        expect(res.nodes.length).toBe(nodes.length);
+        expect(res.nodes.some(n => n.hidden)).toBe(false);
+        // R-B16, declared behavior: firstFeatureOf('container') is null.
+        expect((syn.data as any).irSourceFeature).toBeNull();
+        expect((syn.data as any).irTargetFeature).toBe('next');
+    });
+    it('container on both endpoints is a self-loop on the container vertex', () => {
+        const { synth } = containerSetup(
+            { source: CONTAINER_ENDPOINT, target: CONTAINER_ENDPOINT }, 'sig_container_self');
+        const res = synth();
+        expect(res.edgeObjects).toEqual(new Set(['t1']));
+        const syn = res.edges.find(e => e.id === 'irobj_t1')!;
+        expect(syn.source).toBe('V1');
+        expect(syn.target).toBe('V1');
+        expect((syn.data as any).irSourceFeature).toBeNull();
+        expect((syn.data as any).irTargetFeature).toBeNull();
+    });
+    it('an unresolvable endpoint on a vertex-less object yields no edge and no throw', () => {
+        const { nodes, edges, synth } = containerSetup(
+            { source: CONTAINER_ENDPOINT, target: '$next.value' }, 'sig_container_dead',
+            l => { l.v_next = { id: 'v_next', instanceof: 'R_next', values: [] }; });
+        const res = synth();
+        // Invisible as it is today: no node to fall back to (deroga to spec sez. 10).
+        expect(res.edgeObjects.size).toBe(0);
+        expect(res.nodes).toBe(nodes);
+        expect(res.edges).toBe(edges);
+    });
+    it('a lone container endpoint stays a reference-as-edge view (unchanged behavior)', () => {
+        const ir: EdgeViewIR = {
+            irVersion: 'ir-1.2', kind: 'edge', metaclasses: ['Transition'],
+            edge: { source: CONTAINER_ENDPOINT },
+        };
+        const cv = compileEdgeView('V_cont_lone', ir);
+        expect(cv.isObjectAsEdge).toBe(false);
+        expect(cv.sourceIsContainer).toBe(true);
+        const { idlookup } = containerWorld();
+        const state = { viewpoint: 'VP', viewelements: ['V_lone'], idlookup: { ...idlookup, V_lone: { id: 'V_lone', viewpoint: 'VP', ir } } };
+        const index = getIRIndex(state, 'sig_container_lone')!;
+        expect(index.objectAsEdgeByMetaclass.size).toBe(0);
+        expect(index.edgeByMetaclass.get('Transition')?.length).toBe(1);
     });
 });
 
