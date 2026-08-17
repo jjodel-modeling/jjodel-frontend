@@ -1877,16 +1877,23 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                         const featName = movedEnd === 'source'
                             ? (oldEdge.data as any).irSourceFeature
                             : (oldEdge.data as any).irTargetFeature;
-                        if (!featName) return;
-                        const droppedVertex: any = LPointerTargetable.fromPointer(newVertexId);
-                        const newObjId: string | undefined = droppedVertex?.model?.id;
-                        if (!newObjId) return;
-                        const rawObj = (store.getState() as any).idlookup[newObjId];
-                        if (!rawObj || rawObj.className !== 'DObject') return;   // only M1 objects
-                        const lObj: any = LPointerTargetable.fromPointer(objectId);
-                        const slot = lObj?.['$' + featName];
-                        if (!slot) return;
-                        slot.value = newObjId;
+                        // No feature on that end = a `container` endpoint (R-B13): there
+                        // is no slot to rewrite, and re-parenting is not what this gesture
+                        // does (R-B16, connect rule off on that end). The model write is
+                        // skipped — the anchor override below is NOT: aborting the whole
+                        // callback here dropped the side pin along with the write, which
+                        // is the only half of the gesture that end can still carry.
+                        if (featName) {
+                            const droppedVertex: any = LPointerTargetable.fromPointer(newVertexId);
+                            const newObjId: string | undefined = droppedVertex?.model?.id;
+                            if (!newObjId) return;
+                            const rawObj = (store.getState() as any).idlookup[newObjId];
+                            if (!rawObj || rawObj.className !== 'DObject') return;   // only M1 objects
+                            const lObj: any = LPointerTargetable.fromPointer(objectId);
+                            const slot = lObj?.['$' + featName];
+                            if (!slot) return;
+                            slot.value = newObjId;
+                        }
                     }
                     setIREdgeAnchorOverride(objectId, {
                         sourceHandle: newConnection.sourceHandle ?? undefined,

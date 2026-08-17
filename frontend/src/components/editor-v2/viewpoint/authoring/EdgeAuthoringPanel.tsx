@@ -18,6 +18,7 @@ import {
 import { getMetaclassInfo, type MetaclassInfo } from '../../hooks/useEditorMode';
 import { validateIR } from '../ir/irValidate';
 import { defaultEdgeViewIR } from '../ir/irDefaults';
+import { CONTAINER_ENDPOINT } from '../ir/irTypes';
 import type { EdgeViewIR, TextSource, EdgeTermination } from '../ir/irTypes';
 import { resolveMetaclassId, withMetaclassPins, type MetaclassRef } from '../ir/metaclassPin';
 import { metaclassChipLabel, metaclassGroups, type MetaclassChoice } from './MatchingSection';
@@ -61,6 +62,32 @@ const NATURE_OPTIONS = [
     { value: 'reference', label: 'Reference (styles an M1 reference)' },
     { value: 'object', label: 'Object (object rendered as a line)' },
 ];
+
+/**
+ * Which vocabulary an endpoint of an object-as-edge view speaks: a PathExpr picked
+ * with the PathBuilder, or the reserved `container` token (R-B13). UI state only —
+ * and DERIVED, never stored: the mode IS the endpoint value, so a persisted token
+ * lands on the container mode by construction and the two cannot desync.
+ */
+type EndpointMode = 'path' | 'container';
+const endpointModeOf = (expr: string): EndpointMode =>
+    (expr === CONTAINER_ENDPOINT ? 'container' : 'path');
+/**
+ * "Reference path" is deliberately NOT listed here: the shared `Select` always
+ * prepends an empty option (nota Select condiviso, 2026-08-08), so listing it would
+ * render two entries dropping the same choice — the very ambiguity the routing menu
+ * below was fixed to remove. The empty option carries the path mode, labelled through
+ * `placeholder`.
+ */
+const ENDPOINT_MODE_OPTIONS = [
+    { value: CONTAINER_ENDPOINT, label: 'Containing element' },
+];
+const ENDPOINT_MODE_PATH_LABEL = 'Reference path';
+// Replaces the PathBuilder on the container mode: there is nothing to pick, and the
+// widget must not see the token at all (it would show it as an empty picker and
+// overwrite it on the first interaction — R5 of the discovery, dissolved by keeping
+// the shared component out of this branch).
+const CONTAINER_ENDPOINT_DESCRIPTION = 'This end is the element that contains the object: it follows the containment parent, whatever holds the object at the time, so there is no path to pick.';
 
 const LINE_STYLE_OPTIONS = [
     { value: 'solid', label: 'Solid' },
@@ -238,6 +265,24 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
     };
 
     /**
+     * Endpoint mode switch (R-B13), symmetric on the two ends. The token is written
+     * through the SAME atomic writer as a picked path, so the pair still reaches the
+     * ir together or not at all; switching back to the path mode empties the local
+     * expression only, which leaves a committed pair — token included — alone until a
+     * new valid pair exists (R-D). A persisted `container` is therefore never
+     * sanitized by this panel: the inverse discipline of `dropInvalidRouting`.
+     */
+    const changeEndpointMode = (end: 'source' | 'target', raw: string) => {
+        // The empty option of the shared Select is not a third mode: it IS the path
+        // mode (see ENDPOINT_MODE_OPTIONS).
+        const next: EndpointMode = raw === CONTAINER_ENDPOINT ? 'container' : 'path';
+        if (next === endpointModeOf(end === 'source' ? sourceExpr : targetExpr)) return;
+        const expr = next === 'container' ? CONTAINER_ENDPOINT : '';
+        if (end === 'source') applyEndpoints(expr, targetExpr);
+        else applyEndpoints(sourceExpr, expr);
+    };
+
+    /**
      * Nature switch, explicit and symmetric: each direction drops the keys that
      * belong to the other substrate, so the ir never carries both a `reference`
      * restriction (ignored by the object resolver) and a pair of endpoints.
@@ -264,6 +309,11 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
     // this component.
     const { diverges: endpointsDiverge, unsavedSingleEndpoint } =
         endpointDraftState(draft.edge, sourceExpr, targetExpr);
+
+    // Derived from the expressions themselves, so the seed and the reset on view.id
+    // (which already re-read both endpoints from the ir) initialize them for free.
+    const sourceMode = endpointModeOf(sourceExpr);
+    const targetMode = endpointModeOf(targetExpr);
 
     // Resolve the PathBuilder feature set from the edge view's first (source)
     // metaclass — same identity-first resolution as RowAuthoringPanel (a project
@@ -622,28 +672,56 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
                 <>
                     <FormSection title="Endpoints" divider={false}>
                     <HelpText>With both endpoints set, the instances of this metaclass are drawn as lines: they no longer appear as nodes on the canvas and their references towards the endpoints are no longer drawn.</HelpText>
+                    {/* Each end picks its vocabulary first: a reference path, or the
+                        containing element (R-B13). On the container mode the
+                        PathBuilder does not mount — it is a shared component and must
+                        never see the token. */}
                     <div className="jj-field">
                         <label className="jj-field-label">Source endpoint</label>
-                        <PathBuilder
-                            features={endpointFeatures}
-                            value={sourceExpr}
-                            disabledHint={ENDPOINT_FEATURES_HINT}
-                            onChange={(expr) => applyEndpoints(expr, targetExpr)}
+                        <Select
+                            options={ENDPOINT_MODE_OPTIONS}
+                            placeholder={ENDPOINT_MODE_PATH_LABEL}
+                            value={sourceMode === 'container' ? CONTAINER_ENDPOINT : ''}
+                            onChange={(e) => changeEndpointMode('source', e.target.value)}
                         />
-                        {sourceExpr !== '' && !isUsableEndpointExpr(sourceExpr) && (
-                            <ErrorText>{ENDPOINT_ARRAY_ERROR}</ErrorText>
+                        {sourceMode === 'container' ? (
+                            <HelpText>{CONTAINER_ENDPOINT_DESCRIPTION}</HelpText>
+                        ) : (
+                            <div style={{ marginTop: 4 }}>
+                                <PathBuilder
+                                    features={endpointFeatures}
+                                    value={sourceExpr}
+                                    disabledHint={ENDPOINT_FEATURES_HINT}
+                                    onChange={(expr) => applyEndpoints(expr, targetExpr)}
+                                />
+                                {sourceExpr !== '' && !isUsableEndpointExpr(sourceExpr) && (
+                                    <ErrorText>{ENDPOINT_ARRAY_ERROR}</ErrorText>
+                                )}
+                            </div>
                         )}
                     </div>
                     <div className="jj-field">
                         <label className="jj-field-label">Target endpoint</label>
-                        <PathBuilder
-                            features={endpointFeatures}
-                            value={targetExpr}
-                            disabledHint={ENDPOINT_FEATURES_HINT}
-                            onChange={(expr) => applyEndpoints(sourceExpr, expr)}
+                        <Select
+                            options={ENDPOINT_MODE_OPTIONS}
+                            placeholder={ENDPOINT_MODE_PATH_LABEL}
+                            value={targetMode === 'container' ? CONTAINER_ENDPOINT : ''}
+                            onChange={(e) => changeEndpointMode('target', e.target.value)}
                         />
-                        {targetExpr !== '' && !isUsableEndpointExpr(targetExpr) && (
-                            <ErrorText>{ENDPOINT_ARRAY_ERROR}</ErrorText>
+                        {targetMode === 'container' ? (
+                            <HelpText>{CONTAINER_ENDPOINT_DESCRIPTION}</HelpText>
+                        ) : (
+                            <div style={{ marginTop: 4 }}>
+                                <PathBuilder
+                                    features={endpointFeatures}
+                                    value={targetExpr}
+                                    disabledHint={ENDPOINT_FEATURES_HINT}
+                                    onChange={(expr) => applyEndpoints(sourceExpr, expr)}
+                                />
+                                {targetExpr !== '' && !isUsableEndpointExpr(targetExpr) && (
+                                    <ErrorText>{ENDPOINT_ARRAY_ERROR}</ErrorText>
+                                )}
+                            </div>
                         )}
                     </div>
                     {/* Same slot, three messages. The generic one is only true when

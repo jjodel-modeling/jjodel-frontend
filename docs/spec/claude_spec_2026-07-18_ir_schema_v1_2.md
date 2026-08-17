@@ -41,6 +41,8 @@ Il **wildcard** `metaclasses: '*'` esiste per le default view (erede della seman
 
 **Precisazione PathExpr multi-hop**: la navigazione concatenata (`$ref.value.$name.value`) è nel contratto, ma la reattività cross-oggetto richiede il dependency set esteso (sez. 9). Fino a quel punto l'interprete valuta i multi-hop eagerly senza garanzia di invalidazione sul target navigato (limite dichiarato, ereditato dallo spike).
 
+**`EndpointExpr` (nuova primitiva, emendamento 2026-08-17, R-B13)**: `EndpointExpr = PathExpr | 'container'`, tipo dei soli endpoint di un edge (sez. 7). `PathExpr` non si allarga: il token resta illegale in predicati, label, `Conditional`, `TextSource` e `childFilter`, dove non avrebbe semantica. La grafia `$container.value` continua a essere un `PathExpr` ordinario su una feature di nome `container`: le due grafie non collidono.
+
 ## 4. Struttura di alto livello
 
 Come v1.1 sez. 4 (`ViewpointIR`, `ViewIR` unione discriminata sui 5 kind, `ViewCommon`), con questi delta:
@@ -111,6 +113,8 @@ interface InteractionSpec {
 
 Il default "assente = derivato" è normativo: un viewpoint senza `interaction` è pienamente editabile con i gesti derivati dalla struttura. `interaction` esplicito serve a restringere o rietichettare. Dettagli finali dopo la micro-discovery write path (Fase 3).
 
+**Connect rule su endpoint `container` (normativo, emendamento 2026-08-17, R-B16)**: la connect rule derivata da una view object-as-edge legge la feature del primo hop di ciascun endpoint. Il token `container` non è una feature e non ne ha una: su quell'estremo la regola non è derivabile, e una regola incompleta non viene registrata. Conseguenza dichiarata: il gesto di connessione non crea un figlio contenuto. Creare il contenimento non è connettere. Comportamento dichiarato, non difetto.
+
 **Fallback della palette derivata (normativo, emendamento 2026-07-18)**: se l'insieme derivato dalle view, intersecato con le metaclassi instanziabili alla radice, è vuoto, l'interprete mostra la palette completa (tutte le rootable) con una notice; il filtro derivato è un aiuto di focusing, non una restrizione. Solo `interaction.palette` esplicita può restringere la palette fino a vuoto.
 
 ## 7. Edge (delta sulla v1.1)
@@ -118,9 +122,11 @@ Il default "assente = derivato" è normativo: un viewpoint senza `interaction` �
 `EdgeCap`/`EdgeSpec` come v1.1 sez. 5.7 con questi delta:
 
 ```typescript
+type EndpointExpr = PathExpr | 'container';   // NUOVO (2026-08-17, R-B13): sez. 3
+
 interface EdgeSpec {
-  source?: PathExpr;
-  target?: PathExpr;
+  source?: EndpointExpr;
+  target?: EndpointExpr;
   line?: { color?: Conditional<ColorToken>; width?: Conditional<number>;
            style?: Conditional<'solid' | 'dashed' | 'dotted'> };
   terminations?: { sourceEnd?: EdgeTermination; targetEnd?: EdgeTermination };
@@ -141,6 +147,7 @@ interface EdgeSpec {
   - endpoint nascosto (es. dentro un graphVertex collassato) → **lift-to-ancestor**: l'edge si aggancia al primo antenato renderizzato (semantica UML del collasso);
   - entrambi gli endpoint nascosti sotto lo stesso antenato → soppressione dell'edge;
   - espressione endpoint che non risolve → **card di fallback esplicita** (erede della EdgeFallbackCard), MAI sparizione silenziosa.
+- **Endpoint `container` (normativo, emendamento 2026-08-17, R-B13)**: il token riservato `container`, minuscolo e nudo, è un valore di `EndpointExpr` e risolve al parent di contenimento dell'oggetto-edge invece di navigare un `PathExpr`. Ammesso su `source`, su `target` o su entrambi: due token producono un self-loop sul contenitore, forma legittima e non un errore di grammatica. Il token è persistito verbatim e la grafia è definitiva, perché le view IR salvate non hanno VersionFixer (R-B9). L'oggetto-edge non deve possedere un vertice proprio: il vertice resta obbligatorio ai soli endpoint (R-B14), quindi anche un oggetto annidato, assente da `DModel.objects`, si rende come linea.
 - **Fuori scope dichiarato** (invariato): anchor su Field, `DEdgePoint`, bending Arc/QT/CS, label per-segmento, zoom per-elemento.
 
 ## 8. graphVertex e collasso (delta)
@@ -167,6 +174,8 @@ Per ogni view compilata, l'interprete deriva staticamente dai PathExpr l'insieme
 - **self**: nomi di feature letti sul primo hop → subscription sullo snapshot dell'elemento (implementato nello spike);
 - **cross-oggetto** (multi-hop): coppie (hop, feature) → subscription sugli oggetti navigati. NON implementato nello spike (limite noto); richiesto per Fase 2b/2c (i predicati dei graphVertex e gli endpoint edge navigano). L'interprete DEVE invalidare il render di un elemento quando cambia una feature nel suo dependency set, e NON DEVE re-renderizzare per feature fuori dal set.
 
+**Endpoint `container` e dependency set (normativo, emendamento 2026-08-17, R-B13/R-B16)**: il token non è una feature e non contribuisce al dependency set, che resta derivato dai soli `PathExpr`. L'invalidazione di un endpoint `container` passa quindi dai canali generici del sync, l'hash per-vertice di `useJjomSync` e `m1RefValuesSig` di `useM1ReferenceEdges`, misurati sul re-parent il 2026-08-17 prima dell'adozione. Le ottimizzazioni future di quei due hash devono preservare questa invalidazione (R-B16). Una nozione esplicita di dipendenza dal contenitore dentro il dependency set è estensione futura, con ratifica propria.
+
 Il dependency set è derivato, mai dichiarato nello schema. La navigazione multi-hop (sia il render sia la concretizzazione del dependency set) è draw-semantic per costruzione, via l'helper unico `navigateRefHop` / `ReadCtx.getRef`: vedi la nota in sez. 12.
 
 ## 10. Fallback espliciti (contratto dell'interprete)
@@ -178,6 +187,8 @@ Artefatti standard, non campi dello schema:
 - **elemento senza view IR applicabile** → rendering astratto di EditorV2 (comportamento identico a "nessun viewpoint").
 
 Mai sparizioni silenziose: ogni degrado ha un artefatto visibile o un log.
+
+**Deroga per l'oggetto-edge senza vertice (dichiarata, emendamento 2026-08-17, R-B14)**: un oggetto-edge privo di vertice proprio (forma annidata, `father` di className `DValue`) i cui endpoint non risolvono resta invisibile, senza card di fallback. Non è una sparizione introdotta qui: quegli oggetti non rendono nulla nemmeno prima del token, e la card richiederebbe un ancoraggio a canvas che per costruzione manca. La regola generale della sezione resta valida per gli oggetti-edge che un vertice ce l'hanno.
 
 ## 11. Migrazione e marcatura (nuovo)
 

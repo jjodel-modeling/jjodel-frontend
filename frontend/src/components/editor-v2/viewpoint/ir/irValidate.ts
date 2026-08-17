@@ -11,6 +11,8 @@
  */
 
 import { compileView, compileEdgeView, compileRowView } from './irCompile';
+import { CONTAINER_ENDPOINT } from './irTypes';
+import { isUsableEndpointExpr } from './edgeEndpoints';
 import type { AnyViewIR, EdgeViewIR, RowViewIR } from './irTypes';
 
 /**
@@ -37,6 +39,38 @@ export function validateIR(viewId: string, ir: AnyViewIR): { ok: true } | { ok: 
                 ok: false,
                 error: `[ir] edge.routing must be one of ${VALID_ROUTING_VALUES.join(' | ')}, or absent for the Manhattan default — read ${JSON.stringify(routing)}`,
             };
+        }
+
+        // Endpoint vocabulary (R-B13/R-B15): the FIRST endpoint rule of validateIR,
+        // and authoring-time by the R-B9-bis criterion — the render stays permissive
+        // towards what is already persisted, the authoring surface applies the
+        // vocabulary. Two halves:
+        //  - the reserved `container` token is a legal endpoint value. It never
+        //    reaches the PathExpr parser (compileEdgeView recognises it first), so
+        //    this branch states the rule rather than enabling it;
+        //  - an endpoint that reads a WHOLE array is rejected. That rule already
+        //    existed as `isUsableEndpointExpr`, but only the panel consumed it, so an
+        //    ir carrying `source: '$ref.values'` passed validateIR: it compiles,
+        //    resolves to nothing, and leaves the object drawn as a node with no
+        //    diagnostic. The predicate is IMPORTED, never mirrored — a copy of these
+        //    branches is exactly what let panel and tests drift apart once already
+        //    (see the module doc of edgeEndpoints.ts).
+        // Read as unknown for the same reason as `routing` above. A falsy endpoint is
+        // deliberately NOT rejected: everywhere else in the pipeline it means "no
+        // endpoint" (compileExpr, natureOf, endpointDraftState all test truthiness),
+        // and failing on it would gate every later edit of a view whose endpoint the
+        // panel does not even show — the same trap the routing rule avoids by leaving
+        // the ABSENT key out of its vocabulary.
+        const edge = (ir as EdgeViewIR).edge;
+        for (const end of ['source', 'target'] as const) {
+            const expr: unknown = edge?.[end];
+            if (!expr || expr === CONTAINER_ENDPOINT) continue;
+            if (typeof expr !== 'string' || !isUsableEndpointExpr(expr)) {
+                return {
+                    ok: false,
+                    error: `[ir] edge.${end} must be a single-valued PathExpr or the reserved '${CONTAINER_ENDPOINT}' endpoint — an endpoint cannot read the whole array (.values): choose values[N] (for example values[0]) or a single-valued reference. Read ${JSON.stringify(expr)}`,
+                };
+            }
         }
     }
 

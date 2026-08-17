@@ -6,6 +6,7 @@ import { describe, it, expect } from 'vitest';
 import { validateIR, VALID_ROUTING_VALUES } from '../irValidate';
 import { clearCompileCache } from '../irCompile';
 import { defaultObjectViewIR, defaultEdgeViewIR } from '../irDefaults';
+import { CONTAINER_ENDPOINT } from '../irTypes';
 import type { EdgeViewIR, RowViewIR, VertexViewIR } from '../irTypes';
 
 describe('validateIR', () => {
@@ -107,5 +108,60 @@ describe('validateIR — edge.routing closed vocabulary (R-B9)', () => {
             expect(r.error).toContain('edge.routing');
             expect(r.error).toContain('"foo"');
         }
+    });
+});
+
+describe('validateIR — edge endpoints (R-B13, first endpoint rule)', () => {
+    /**
+     * Endpoints are typed `PathExpr`, and the values this rule exists to catch come
+     * from outside the type system (a hand-written ir, an import, a direct store
+     * edit), so the pair is written through `unknown` like `routing` above.
+     */
+    const edgeWithEndpoints = (source: unknown, target: unknown): EdgeViewIR => ({
+        ...defaultEdgeViewIR(),
+        metaclasses: ['Transition'],
+        edge: { source, target } as EdgeViewIR['edge'],
+    });
+
+    it('accepts the reserved container token on source, on target, and on both', () => {
+        for (const [i, pair] of ([
+            [CONTAINER_ENDPOINT, '$next.value'],
+            ['$from.value', CONTAINER_ENDPOINT],
+            [CONTAINER_ENDPOINT, CONTAINER_ENDPOINT],
+        ] as const).entries()) {
+            clearCompileCache();
+            expect(validateIR(`e-container-${i}`, edgeWithEndpoints(pair[0], pair[1])))
+                .toEqual({ ok: true });
+        }
+    });
+
+    it('accepts an indexed array read (values[N]) on either end', () => {
+        clearCompileCache();
+        expect(validateIR('e-indexed', edgeWithEndpoints('$next.values[0]', '$prev.values[1]')))
+            .toEqual({ ok: true });
+    });
+
+    it('rejects a whole-array read on the source, naming the field and the value', () => {
+        clearCompileCache();
+        const r = validateIR('e-src-values', edgeWithEndpoints('$next.values', '$prev.value'));
+        expect(r.ok).toBe(false);
+        if (!r.ok) {
+            expect(r.error).toContain('edge.source');
+            expect(r.error).toContain('"$next.values"');
+        }
+    });
+
+    it('rejects a whole-array read on the target', () => {
+        clearCompileCache();
+        const r = validateIR('e-tgt-values', edgeWithEndpoints('$prev.value', '$next.values'));
+        expect(r.ok).toBe(false);
+        if (!r.ok) expect(r.error).toContain('edge.target');
+    });
+
+    it('accepts an edge with NO endpoint keys (reference-as-edge substrate)', () => {
+        clearCompileCache();
+        const ir = defaultEdgeViewIR();
+        expect('source' in ir.edge).toBe(false);
+        expect(validateIR('e-no-endpoints', ir)).toEqual({ ok: true });
     });
 });
