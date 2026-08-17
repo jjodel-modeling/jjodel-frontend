@@ -1,5 +1,18 @@
 # Claude Code Session Log
 
+## 2026-08-17 — docs: analisi ratificata del report state-attributes, memo pannello di simulazione e serie R-SIM
+**Prompt**: rianalisi in chat delle tre domande bloccanti del report state-attributes (persistenza, undo, sync della simulazione) più la collocazione del pannello, con verifica indipendente delle evidenze su clone di origin (`77d468c99`); ratifica di Alfonso; produzione di memo, serie R-SIM-1..6 e addendum al report.
+**Files touched**: `docs/ratifiche/claude_2026-08-17_memo_ratifica_pannello_simulazione.md` (nuovo); `docs/decisions.md` (serie R-SIM-1..6 prima di «Superate»); `docs/discovery/discovery_2026-08-17_state_attributes_data_node.md` (addendum A1..A4 in coda); `docs/claude-code-log.md` (questa entry). Nessun file sorgente.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — solo docs, nessun sorgente nel diff.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — letti (mai modificati) `joiner/classes.ts`, `redux/reducer/reducer.ts`, `redux/action/action.ts`, `components/collaborative/Collaborative.ts`, `common/U.tsx`, `viewpoint/ir/pathExpr.ts`, `irReadCtx.ts`, `irCollapseState.ts`, `hooks/useHistory.ts`, `editors/MetaData.tsx`, `forEndUser/Control.tsx`, `project/ProjectEditor.tsx`.
+**Smoke visivo**: non applicabile
+**Notes**: (1) Decisione chiave: split degli strati — configurazione dei ruoli nel bag `data.state` del modello M2 (chiavi piatte `sim*`, valori pointer), run-state fuori Redux in singleton stile `irCollapseState`; risolve per costruzione persistenza (voluta solo per la configurazione), undo (run-state mai in history) e collaborativo (simulazione locale in v1). Pannello fuori dall'IR, forma `MetaData.tsx`; highlight via wrapper nodo, pattern problems overlay. Zero modifiche core. (2) Verifica indipendente: tutte le evidenze del report confermate; quattro integrazioni in addendum — A1 `U.throttle` gate di debug (già collaterale della discovery tab-sync, qui pesato su Q4: emissione socket per azione, senza batching), A2 finestra di fusione della history a 450ms che ingloba il delta nell'entry precedente (`reducer.ts:1250,1278`; `isRelevantChangeCheck` non è un opt-out), A3 `set_state` deduplica le scritture invariate (`classes.ts:2230,2236`, mitiga R8), A4 history per utente (`reducer.ts:1128,1203`) con indicizzazione incrociata su `statehistory.all` a `:1204`, anomala in collaborativo. (3) Sessione eseguita in chat Cowork via bridge (eccezione documentata): produttore di memo, righe e addendum è l'architetto; commit ad Alfonso dal terminale. (4) Rotazione log ancora dovuta: 52 entry attive con questa, soglia 20.
+**Prompt document name**: 2026-08-17 15:25
+
 ## 2026-08-17 — docs: discovery sync fra tab e riclassificazione P1 (freeze) come artefatto di misura
 **Prompt**: sessione Cowork di RCA su P1 (i due freeze della sessione (3)): falsificare l'ipotesi «loop di sync fra due tab dello stesso progetto», poi tentata riproduzione live via estensione Chrome con strumentazione in pagina (wrapper su dispatch con breaker, PerformanceObserver longtask, heartbeat, tracer dei reload).
 **Files touched**: `docs/discovery/discovery_2026-08-17_tab_sync_loop.md` (nuovo); `docs/claude-code-log.md` (questa entry). Nessun file sorgente.

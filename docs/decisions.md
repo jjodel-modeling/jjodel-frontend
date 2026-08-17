@@ -664,6 +664,38 @@ Base di evidenza: `docs/discovery/discovery_2026-08-13_view_creation_sites_ir_na
   identici al seed, conserva quelli modificati dall'autore) è dovuta e non ancora scritta. Base
   di evidenza: `docs/discovery/discovery_2026-08-16_viewpoint_default_e_validation.md`.
 
+## Serie R-SIM — Pannello di simulazione e attributi di stato (ratifiche 2026-08-17)
+
+Base di evidenza: `docs/discovery/discovery_2026-08-17_state_attributes_data_node.md` (con
+addendum A1..A4). Memo: `docs/ratifiche/claude_2026-08-17_memo_ratifica_pannello_simulazione.md`.
+
+- **R-SIM-1** (2026-08-17) — **Split degli strati.** Il run-state della simulazione (flag
+  `active` sulle istanze M1) vive fuori da Redux, in un singleton di modulo stile
+  `irCollapseState` (Set di elementId + version counter + `useSyncExternalStore`); mai nel bag
+  `_state`, mai in azioni. Per costruzione: niente persistenza, niente undo, niente socket.
+- **R-SIM-2** (2026-08-17) — **Configurazione nel bag del modello M2.** I ruoli di simulazione
+  stanno in `data.state` del modello M2 con chiavi piatte prefissate `simNode`, `simInitial`,
+  `simTerminal`, `simTransition`, `simOwnedTransitions`, `simNextState`; valori pointer, mai
+  proxy. Vietato il sotto-oggetto annidato (R3 del report: la copia shallow fa scappare le
+  mutazioni annidate dal macchinario).
+- **R-SIM-3** (2026-08-17) — **Pannello fuori dall'IR.** Componente React `connect`-ato nella
+  forma di `MetaData.tsx`, montato in editor-v2, mai nello scope dei template. Highlight dello
+  stato attivo al wrapper del nodo via hook di versione (pattern problems overlay), senza toccare
+  l'interprete né il dependency set.
+- **R-SIM-4** (2026-08-17) — **Nessuna modifica al core per la v1.** `set_state`, reducer/history
+  e canale collaborativo restano come sono. Il namespace `state` nelle espressioni IR e la
+  simulazione condivisa sono estensioni future con ratifica dedicata: la prima emenda la spec §9
+  e tocca `pathExpr.ts` + `irReadCtx.ts` + `irCrossDeps.ts` + `IRNodeContent.tsx`; la seconda
+  passa da un canale socket dedicato, non dalle azioni di modello.
+- **R-SIM-5** (2026-08-17) — **Reset e limiti noti.** Il singleton di run-state si azzera al
+  cambio di progetto/modello. `isRelevantChangeCheck` non è una leva di opt-out dalla history:
+  entro la finestra di 450ms fonde il delta nell'entry precedente (addendum A2); ogni futura
+  esclusione per campo passa dal filtro del delta nel core, con ratifica.
+- **R-SIM-6** (2026-08-17) — **`Control.tsx` si riscrive, la semantica si recupera.** Ruoli,
+  reset/step/stop e l'invariante «la simulazione non tocca il modello» restano; il codice rinasce
+  come pannello connesso. La spec del pannello fissa prima del codice il comportamento su
+  deadlock (stato attivo senza transizioni uscenti) e il criterio di terminazione.
+
 ## Superate
 
 - **D3** (2026-07-26, routing congelato in v1) — superata da E-route il 2026-08-06.

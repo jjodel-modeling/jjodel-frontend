@@ -621,3 +621,46 @@ Non è un rischio del bag: è un pezzo mancante a monte del bag.
    metamodello ed esecuzione su M1 con l'invariante «non toccare il modello» già rispettata. È
    codice conservato e non raggiungibile: la scelta fra recuperarlo e riscriverlo cambia molto il
    perimetro di una eventuale Fase 2.
+
+---
+
+## Addendum 2026-08-17 — verifica indipendente e integrazioni (analisi di ratifica)
+
+Verifica indipendente delle evidenze in sessione di analisi (chat di progetto), su clone di
+origin a `77d468c99` (codice identico a `3a6436ff6`: i commit intermedi sono solo docs). Ogni
+catena citata nelle otto domande è stata riletta sui file reali: nessuna affermazione del report
+è risultata errata. Quattro integrazioni non coperte dal corpo del report:
+
+**A1 — `U.throttle` è un gate di debug, non un throttle.** `U.tsx:2859-2861`:
+`if (id !== window.dd && window.dd !== 'all') { f(); return; }`. Con `window.dd` non settato ogni
+chiamata esegue subito. Già registrato come collaterale nella discovery
+`discovery_2026-08-17_tab_sync_loop.md`; qui pesa su Q4: `Collaborative.send` emette una
+emissione socket per azione, senza batching, malgrado i parametri (330ms, decay) suggeriscano il
+contrario. Un `resetSimulation` su N istanze sono N transazioni e N emissioni.
+
+**A2 — La finestra di fusione della history ingloba il delta nell'entry precedente.**
+`isRelevantChangeCheck` scarta i delta entro `mergeTolerance = U.UpdatingTimer*1.5 = 450ms` dal
+precedente (`reducer.ts:1278`), ma l'esito non è l'esclusione: è la fusione dentro l'entry
+precedente con `U.objectMergeInPlace(pastDelta, delta)` (`reducer.ts:1250`). Due conseguenze: uno
+step di simulazione entro 450ms da un edit di modello si fonde nell'entry di undo di quell'edit,
+che non è più annullabile da solo; la fusione aggiorna il timestamp dell'entry, quindi passi
+ravvicinati scorrono la finestra e accumulano in un'unica entry crescente. Conseguenza operativa,
+recepita in R-SIM-5: `isRelevantChangeCheck` non è una leva di opt-out dalla history; l'esclusione
+vera di un campo passa dal filtro del delta (`reducer.ts:1199`), cioè dal core.
+
+**A3 — `set_state` deduplica le scritture invariate.** `oldState[k] === val[k]` salta la chiave e
+senza cambi effettivi non si apre nessuna TRANSACTION (`classes.ts:2230, 2236`). Mitiga R8: le N
+transazioni sono per i cambi effettivi, non per le assegnazioni. La ridondanza di
+`Control.tsx:293` (`active: false` una volta per transizione) è assorbita.
+
+**A4 — La history è per utente, con una indicizzazione incrociata.** I delta finiscono nel bucket
+del sender (`statehistory[action.sender]`, `reducer.ts:1203`) e l'undo estrae dal bucket di
+`forUser` (`reducer.ts:1128`), che la UI valorizza con l'utente locale (`Navbar.tsx:1194`). In
+collaborativo i passi remoti non entrano nel Ctrl+Z locale; entrano in stato, salvataggio e
+`statehistory.all`. Nota: `pastDelta` è letto dal bucket per-utente con l'indice calcolato su
+`statehistory.all` (`reducer.ts:1204`); in offline i due array crescono in tandem e l'indice
+coincide, in collaborativo divergono. Anomalia preesistente, fuori perimetro, registrata.
+
+Le otto domande aperte sono decise: memo
+`docs/ratifiche/claude_2026-08-17_memo_ratifica_pannello_simulazione.md`, righe R-SIM-1..6 in
+`docs/decisions.md`.
