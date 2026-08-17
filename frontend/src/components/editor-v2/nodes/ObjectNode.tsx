@@ -36,6 +36,7 @@ import type { VertexViewIR } from '../viewpoint/ir/irTypes';
 import IRNodeContent from '../viewpoint/ir/IRNodeContent';
 import { containmentChildren } from '../viewpoint/ir/irContainment';
 import { isCollapsed, toggleCollapsed, useCollapseVersion } from '../viewpoint/ir/irCollapseState';
+import { isSimActive, useSimVersion } from '../sim/simRunState';
 import '../viewpoint/ir/irDemoFixture'; // dev-only: registers window.__jjodelInstallIRDemo
 
 export type ObjectNodeType = Node<ObjectNodeData, 'objectNode'>;
@@ -186,6 +187,13 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
     }, [metaclassAttrSig, coveredAttrIds]);
 
     const isProblemHighlighted = useIsHighlighted(id);
+
+    // Simulation run-state (R-SIM-3): the singleton is keyed on the DObject id,
+    // this component on the vertex id — `idlookup[vertexId].model` is the map
+    // (same read as irResolve.ts:55). Both hooks unconditional (rules of hooks).
+    const simObjectId = useSelector((state: any) => state.idlookup?.[id]?.model ?? null);
+    useSimVersion();
+    const isSimActiveNode = typeof simObjectId === 'string' && isSimActive(simObjectId);
 
     // Header editing
     const [editing, setEditing] = useState(false);
@@ -391,7 +399,7 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
         const canResize = resolvedResizable ?? hasGeometricShape;
         return (
             <div
-                className={`mm-node mm-object ${selected ? 'selected' : ''}${isProblemHighlighted ? ' mm-object--problem-highlighted' : ''} ${hlClass} ir-view-${irResolution.compiled.viewId}${canResize ? ' ir-resizable' : ''}${hasExplicitSize ? ' ir-sized' : ''}`}
+                className={`mm-node mm-object ${selected ? 'selected' : ''}${isProblemHighlighted ? ' mm-object--problem-highlighted' : ''} ${hlClass} ir-view-${irResolution.compiled.viewId}${canResize ? ' ir-resizable' : ''}${hasExplicitSize ? ' ir-sized' : ''}${isSimActiveNode ? ' sim-active' : ''}`}
                 data-viewid={irResolution.compiled.viewId}
             >
                 {isNodeResizable('objectNode', canResize) && (
@@ -446,7 +454,7 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
     }
 
     return (
-        <div className={`mm-node mm-object ${selected ? 'selected' : ''} ${isOrphan ? 'mm-object--orphan' : ''}${isProblemHighlighted ? ' mm-object--problem-highlighted' : ''} ${hlClass}`}>
+        <div className={`mm-node mm-object ${selected ? 'selected' : ''} ${isOrphan ? 'mm-object--orphan' : ''}${isProblemHighlighted ? ' mm-object--problem-highlighted' : ''} ${hlClass}${isSimActiveNode ? ' sim-active' : ''}`}>
             {isNodeResizable('objectNode') && (
                 <NodeResizer
                     isVisible={selected}

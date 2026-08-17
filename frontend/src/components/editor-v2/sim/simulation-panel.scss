@@ -1,0 +1,256 @@
+// Simulation panel (R-SIM-3) — floating panel, closed to a chip.
+//
+// The panel is portaled to <body> by EditorV2, so the theme variables declared
+// on `.editor-v2.theme-dark/.theme-light` do NOT reach it (same constraint as
+// `.context-menu`, EditorV2.scss:3295). Only the design-system tokens are used
+// here: they live on `:root` / `:root[data-theme="dark"]` (styles/tokens/), so
+// they resolve for body-level content in both themes. No variable is DEFINED in
+// this file (design-system rule).
+//
+// z-index 850: above the rc-dock drop layers (max 400) and the canvas, below the
+// navbar (950, tokens/_z-index.scss) and every dropdown/modal (>= 1000). The
+// panel sits bottom-LEFT because the MiniMap owns the bottom-right corner
+// (EditorV2.tsx:3869).
+//
+// bottom 48px = the 32px status bar (StatusBar.scss:13, in normal flow at the
+// viewport bottom) + a 16px gutter. A fixed element measured from the viewport
+// bottom would otherwise sit ON the bar — which is exactly what smoke assertion
+// A3 checks (PROTOCOL P8), and what it caught at bottom: 16px.
+
+.sim-panel {
+    position: fixed;
+    left: 16px;
+    bottom: 48px;
+    z-index: 850;
+    font-family: inherit;
+    color: var(--color-text-primary);
+
+    &--open {
+        width: 288px;
+        background: var(--color-bg-secondary);
+        border: 1px solid var(--color-border-primary);
+        border-radius: 8px;
+        box-shadow: 0 4px 16px rgba(15, 23, 42, 0.18);
+        overflow: hidden;
+    }
+
+    // -- closed: chip -------------------------------------------------------
+    &__chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        height: 32px;
+        padding: 0 12px;
+        background: var(--color-bg-secondary);
+        border: 1px solid var(--color-border-primary);
+        border-radius: 999px;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12);
+        color: var(--color-text-secondary);
+        font-size: 12px;
+        font-weight: 500;
+        line-height: 1;
+        cursor: pointer;
+
+        &:hover {
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid #0ea5e9;
+            outline-offset: 2px;
+        }
+
+        i {
+            font-size: 13px;
+            line-height: 1;
+        }
+    }
+
+    // -- open: header -------------------------------------------------------
+    &__header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--color-border-secondary);
+        background: var(--color-bg-tertiary);
+
+        i {
+            font-size: 13px;
+            line-height: 1;
+            color: var(--color-text-tertiary);
+        }
+    }
+
+    &__title {
+        flex: 1;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--color-text-primary);
+    }
+
+    &__collapse {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+        height: 20px;
+        padding: 0;
+        border: none;
+        border-radius: 4px;
+        background: transparent;
+        color: var(--color-text-tertiary);
+        cursor: pointer;
+
+        &:hover {
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid #0ea5e9;
+            outline-offset: 1px;
+        }
+    }
+
+    // -- open: body ---------------------------------------------------------
+    &__body {
+        padding: 8px 12px 12px;
+    }
+
+    &__section {
+        margin: 4px 0 8px;
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--color-text-tertiary);
+    }
+
+    &__hint {
+        padding: 4px 0;
+        font-size: 11px;
+        line-height: 1.5;
+        color: var(--color-text-tertiary);
+    }
+
+    &__row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+
+        &:last-child {
+            margin-bottom: 0;
+        }
+    }
+
+    &__label {
+        flex: 0 0 96px;
+        font-size: 11px;
+        color: var(--color-text-tertiary);
+    }
+
+    &__select {
+        flex: 1 1 auto;
+        min-width: 0;
+        height: 24px;
+        padding: 0 4px;
+        border: 1px solid var(--color-border-primary);
+        border-radius: 4px;
+        background: var(--color-bg-primary);
+        color: var(--color-text-primary);
+        font-family: inherit;
+        font-size: 11px;
+        cursor: pointer;
+
+        &:hover {
+            border-color: var(--color-border-hover);
+        }
+
+        &:focus {
+            outline: none;
+            border-color: #0ea5e9;
+            box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.18);
+        }
+    }
+
+    // -- open: run controls (M1) --------------------------------------------
+    &__actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 4px 0 8px;
+    }
+
+    &__btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        padding: 0;
+        border: none;
+        border-radius: 4px;
+        background: linear-gradient(135deg, #334155, #1e293b);
+        color: #ffffff;
+        cursor: pointer;
+
+        i {
+            font-size: 13px;
+            line-height: 1;
+        }
+
+        &:hover:not(:disabled) {
+            background: linear-gradient(135deg, #1e293b, #0f172a);
+        }
+
+        &:focus-visible {
+            outline: 2px solid #0ea5e9;
+            outline-offset: 2px;
+        }
+
+        &:disabled {
+            opacity: 0.45;
+            cursor: default;
+        }
+    }
+
+    &__status {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding-top: 8px;
+        border-top: 1px solid var(--color-border-secondary);
+    }
+
+    &__status-text {
+        font-size: 11px;
+        color: var(--color-text-secondary);
+    }
+
+    // Status dot — an indicator, so cyan is allowed here (design system §7.1:
+    // cyan never as a button background).
+    &__dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #94a3b8;
+
+        &--running { background: #0ea5e9; }
+        &--terminated { background: #22c55e; }
+        &--deadlock { background: #f59e0b; }
+    }
+}
+
+// Active instance on the canvas (R-SIM-3): the class is appended to the node
+// wrapper by ObjectNode when the node's DObject is in the run-state singleton.
+// The interpreter and the IR dependency set are untouched. Kept in this
+// stylesheet because the trigger is the simulation, not a node-intrinsic state
+// (same reasoning as problems/NodeProblemIndicator.scss:91-99).
+.mm-node.sim-active {
+    outline: 2px solid #0ea5e9;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.18);
+}

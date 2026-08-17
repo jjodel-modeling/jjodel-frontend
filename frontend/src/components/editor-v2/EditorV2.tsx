@@ -103,6 +103,7 @@ import { useTheme } from '../../services/ThemeService';
 import { getDraggedMetaclassId } from './utils/dragState';
 import { PolymetricView } from '../polymetric';
 import { createViewInWorkbench, resolveParentViewpoint } from '../../utils/lastViewpoint';
+import SimulationPanel from './sim/SimulationPanel';
 // BottomDrawer import removed — bottom property drawer disabled (duplicates right Properties panel)
 // ElementPropertiesDrawer import removed — bottom drawer disabled (see BottomDrawer removal)
 
@@ -4052,6 +4053,11 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                         modelName={modelInfoData?.name ?? 'Model'}
                         target={isModelMode ? 'model' : 'metamodel'}
                     />,
+                    document.body,
+                )}
+
+                {modelid && createPortal(
+                    <SimulationPanel modelid={modelid} isModelMode={isModelMode} />,
                     document.body,
                 )}
 
