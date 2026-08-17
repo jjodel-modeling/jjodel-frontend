@@ -728,6 +728,75 @@ addendum A1..A4). Memo: `docs/ratifiche/claude_2026-08-17_memo_ratifica_pannello
   come pannello connesso. La spec del pannello fissa prima del codice il comportamento su
   deadlock (stato attivo senza transizioni uscenti) e il criterio di terminazione.
 
+## Serie R-J — JjEL come linguaggio delle espressioni dell'IR (ratifiche 2026-08-18)
+
+Base di evidenza: `docs/discovery/discovery_2026-08-14_jjel_come_linguaggio_espressioni_ir.md`
+(con spike eseguibile). Memo: `docs/ratifiche/claude_2026-08-14_memo_ratifica_jjel_linguaggio_ir.md`,
+proposto il 2026-08-14 e ratificato il 2026-08-18 con l'emendamento a R-J2 registrato qui sotto.
+**Ratificare non è schedulare**: lo staging J1..J4 del memo resta non calendarizzato, e J2 (cuore
+dell'interprete) non si apre senza go-ahead dedicato.
+
+- **R-J1** (2026-08-18) — **JjEL è il linguaggio delle espressioni dell'IR.** Non si introduce un
+  campo «espressione libera» accanto al `PathBuilder`: un'espressione che il compilatore non sa
+  decomporre non produce `dependencySet` né `crossPaths`, quindi la view renderebbe una volta e
+  poi resterebbe stale. JjEL non è codice arbitrario ma un AST camminabile, ed è la ragione per
+  cui R-6 (2026-08-03) vieta JS e non vieta questo. Direzione dichiarata: il progetto **toglie**
+  grammatiche invece di aggiungerne (il conto reale delle copie è sei, inclusa
+  `utils/edgeExpressionEval.ts`, viva e divergente).
+- **R-J2** (2026-08-18, **emendata in ratifica**) — **Profilo dichiarato, chiuso, allargabile per
+  ratifica.** Il profilo v1 accetta `Identifier`, `MemberAccess`, `IndexAccess` con indice
+  letterale intero, e gli identificatori nudi legati `parent` e `container`. Tutto il resto è
+  rifiutato dal validatore con un messaggio che dice perché: `MethodCall`, `FunctionCall`,
+  `ForAll`, `Exists`, `IfThenElse`, `NullCoalesce`, `Binary`, `Lambda`, `WithDo`, `IsType`,
+  `InterpolatedString`, `ArrayLiteral`, `ObjectLiteral`. Motivo del profilo: i costrutti a
+  dipendenza non limitata staticamente rendono il `dependencySet` non un insieme finito di nomi
+  di feature ma «tutto il modello»; oggi PathExpr non può esprimere una dipendenza illimitata per
+  costruzione, e quella garanzia con JjEL va ricomprata. **Emendamento**: il memo del 2026-08-14
+  elencava il solo `parent`; il 2026-08-17 R-B13 ha spedito `container` come membro d'unione fuori
+  grammatica (`EndpointExpr = PathExpr | 'container'`, verificato a codice in `irTypes.ts:220`
+  e `:230`). Quando J2 atterra, quell'unione collassa dentro la grammatica delle espressioni e
+  `container` resta legale **solo negli endpoint**, come oggi: il profilo lega l'identificatore,
+  non lo rende universale (R-B13 tiene: il token non è legale in predicati, label, conditional,
+  `TextSource`, `childFilter`).
+- **R-J3** (2026-08-18) — **Il multi-hop legacy si migra, JjEL non si tocca.** `$a.value.$b.value`
+  diventa `a.b`; `$a.values[0].$b.value` diventa `a[0].b`. Non si allarga `postfix()` ad accettare
+  `DOLLAR_IDENT` dopo il punto: costerebbe una riga ma congelerebbe in un linguaggio condiviso
+  (console, Jodie, JjTL) proprio la forma da far sparire, e legittimerebbe `$x.value` nella
+  console, dove il contesto JjEL non lega i nomi col dollaro e il risultato sarebbe `null`
+  silenzioso. Una sintassi accettata dal parser e morta nel valutatore è la peggiore delle tre.
+- **R-J4** (2026-08-18) — **La retrocompatibilità vive nel walker dell'IR, non nel contesto.** Il
+  walker normalizza `$f` + `.value` nello stesso step di `f`: ogni PathExpr single-hop persistito
+  continua a compilare senza toccare né JjEL né il contesto di valutazione, e nessun binding di
+  `$feature` va aggiunto da nessuna parte. Il ramo legacy del walker è temporaneo e dichiarato
+  tale: muore quando la migrazione R-J3 ha riscritto i path persistiti.
+- **R-J5** (2026-08-18) — **`ReadCtx` cresce di un metodo, e il contesto resta lazy.** `ReadCtx`
+  acquisisce `getParent(elementId): string | null` sui due backend, con la semantica già scritta
+  in `resolveParentHandle` (`eval.ts:766-784`): due salti sulla catena grezza `DObject.father` →
+  `DValue` → `father` → `DObject`, `null` esplicito sulle radici; `irCrossDeps` acquisisce il ramo
+  `parent` nella concretizzazione degli hop, accanto a `navigateRefHop`. Vincolo dominante: il
+  contesto di valutazione dell'IR è un adattatore lazy sul `ReadCtx` e non passa **mai** da
+  `buildEvalContext` (`eval.ts:93`), che materializza l'intero modello. Il costo non è la
+  valutazione (misurato: 62-161 ns per valutazione JjEL contro 11-17 ns per la closure, circa
+  0,25 ms per un canvas da 500 nodi a 5 espressioni): è il contesto. **Coordinamento**: R-B14
+  riserva la superficie di `ReadCtx` all'estensione `state` (R-SIM-4). Le due estensioni crescono
+  sullo stesso punto e si sequenziano fra loro; chi arriva secondo rilegge la superficie prima di
+  scrivere.
+- **R-J6** (2026-08-18) — **Diagnostica sempre accesa, mai la variante silenziosa.** L'IR usa
+  **sempre** `jjelEvalWithDiagnostics` e porta i warning nel pannello di authoring, mai
+  `jjelEval`. Motivo: `evaluateIdentifier` ritorna `null` in silenzio sugli identificatori non
+  legati (`evaluator.ts:211-260`), mentre oggi `parsePathExpr` lancia e `validateIR` mostra il
+  messaggio. Senza questa clausola, `nmae` invece di `name` smetterebbe di essere un errore
+  visibile e diventerebbe una label vuota: è l'unica regressione seria che la migrazione può
+  introdurre, ed è evitabile per costruzione.
+- **R-J7** (2026-08-18, non nel memo del 14/8) — **Il profilo è l'unico punto di estensione della
+  grammatica delle espressioni.** Una forma nuova non entra come membro d'unione accanto a
+  `PathExpr` — `EndpointExpr` resta l'unico, e per R-J2 è transitorio — ma come identificatore
+  legato o costrutto ammesso nel profilo, con ratifica propria. Vale in particolare per il
+  namespace `state` (R-SIM-4), che si progetta su questo terreno e non come quarto membro
+  d'unione. Origine: in un mese la stessa cucitura ha accumulato tre pressioni di estensione
+  (`parent` previsto, `container` spedito, `state` in arrivo) su una grammatica progettata chiusa
+  (`STEP_RE` di `pathExpr.ts`, che accetta solo `$feature | value | values | values[N]`).
+
 ## Superate
 
 - **D3** (2026-07-26, routing congelato in v1) — superata da E-route il 2026-08-06.

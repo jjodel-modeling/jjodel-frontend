@@ -4,8 +4,10 @@
 **Origine**: domanda di Alfonso in chat Cowork, discovery
 `docs/discovery/discovery_2026-08-14_jjel_come_linguaggio_espressioni_ir.md`, spike eseguibile
 allegato.
-**Stato**: proposta di ratifica. Le sei voci qui sotto sono decisioni, non opzioni; ognuna
-porta la misura o il riferimento a codice che la giustifica.
+**Stato**: **ratificata il 2026-08-18**, a registro in `docs/decisions.md` come serie R-J
+(R-J1..R-J7). Le sei voci qui sotto sono decisioni, non opzioni; ognuna porta la misura o il
+riferimento a codice che la giustifica. Il corpo del memo resta **come scritto il 2026-08-14**:
+quanto e' cambiato in ratifica sta nell'addendum in coda, non riscritto qui.
 
 ---
 
@@ -133,3 +135,37 @@ introdurre, ed e' evitabile per costruzione.
 L'ordine non e' negoziabile su un punto: **le label prima degli endpoint**. Un
 `dependencySet` sbagliato su una label costa una label stale; sugli endpoint costa un arco
 attaccato all'oggetto sbagliato, o sparito.
+
+
+---
+
+## Addendum di ratifica — 2026-08-18
+
+Il memo e' andato a registro con un emendamento e una sigla in piu'. Il corpo sopra non e' stato
+riscritto: e' l'artefatto del 2026-08-14 e resta leggibile come tale.
+
+**Emendamento a R-J2 — il profilo lega `parent` *e* `container`.** Il memo elencava il solo
+`parent` perche' il 14/8 era l'unico identificatore nudo previsto. Il 2026-08-17 la serie R-B13
+ha spedito `container` come membro d'unione fuori grammatica: `EndpointExpr = PathExpr |
+'container'`, verificato a codice in `irTypes.ts:220` (commento del contratto) e `:230`
+(`CONTAINER_ENDPOINT`). Ratificare il profilo alla lettera avrebbe messo a registro una
+descrizione gia' falsa rispetto al codice. Il profilo v1 lega quindi entrambi; quando J2 atterra,
+l'unione collassa dentro la grammatica delle espressioni e `container` **resta legale solo negli
+endpoint**, come oggi. R-B13 tiene per intero: il token non e' legale in predicati, label,
+conditional, `TextSource`, `childFilter`.
+
+**Coordinamento su `ReadCtx` (tocca R-J5).** R-B14 riserva la superficie di `ReadCtx`
+all'estensione `state` (R-SIM-4); R-J5 vuole aggiungerci `getParent`. Non e' un conflitto — sono
+due metodi — ma e' lo stesso punto di crescita: le due estensioni si sequenziano fra loro, e chi
+arriva secondo rilegge la superficie prima di scrivere.
+
+**R-J7, sigla nuova.** Il profilo e' l'unico punto di estensione della grammatica delle
+espressioni: una forma nuova entra come identificatore legato o costrutto ammesso, mai come
+ulteriore membro d'unione accanto a `PathExpr`. Origine della regola: in un mese la stessa
+cucitura ha accumulato tre pressioni di estensione — `parent` previsto, `container` spedito,
+`state` in arrivo — su una grammatica progettata chiusa (`STEP_RE` di `pathExpr.ts`, che accetta
+solo `$feature | value | values | values[N]`). Conseguenza operativa immediata: il namespace
+`state` di R-SIM-4 si progetta su questo terreno, non come quarto membro d'unione.
+
+**Cosa la ratifica non fa.** Non schedula. Lo staging J1..J4 resta non calendarizzato; J2, che il
+memo classifica «medio, cuore dell'interprete», non si apre senza go-ahead dedicato.

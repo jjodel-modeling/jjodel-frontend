@@ -204,3 +204,22 @@ slice.
   semantica di `parent` da replicare in J2)
 - spike eseguibile allegato al memo: `spike_2026-08-14_jjel_walker.ts`. **Non e' codice da
   copiare**: e' la prova che il contratto regge, scritta fuori dal repo e senza i tipi veri.
+
+
+---
+
+## Addendum 2026-08-18 — il prompt e' eseguibile, e `container` resta fuori da J1
+
+Quando questo prompt e' stato scritto, le sigle R-J1..R-J6 erano «proposta di ratifica» e non
+comparivano in `docs/decisions.md`: il prompt le citava come governanti senza che lo fossero.
+L'incoerenza e' chiusa. Le sigle sono a registro dal 2026-08-18 come serie R-J (R-J1..R-J7), e
+questo prompt e' eseguibile senza altri passaggi.
+
+**Una sola cosa da sapere, ed e' un divieto, non un'aggiunta.** R-J2 e' stata emendata in
+ratifica: gli identificatori nudi legati dal profilo sono `parent` **e `container`**. `container`
+e' pero' legale **solo negli endpoint** (R-B13, 2026-08-17) e gli endpoint sono la slice J4.
+Quindi J1 resta esattamente com'e' descritto sopra: il walker conosce `parent` e non conosce
+`container`, e un'espressione di label che lo usa e' fuori profilo come qualunque altro
+identificatore non legato. Non anticiparlo, non aggiungerlo ai test, non «prepararlo».
+Se ti sembra un buco, e' voluto: segnalalo, non colmarlo (stessa regola della riga «Non allargare
+il profilo» qui sopra).
