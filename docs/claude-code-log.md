@@ -1,5 +1,18 @@
 # Claude Code Session Log
 
+## 2026-08-17 — docs: ratifica endpoint `container` (R-B13..R-B16), addendum di misura, prompt slice 2a
+**Prompt**: analisi in chat della discovery endpoint `container` (verifica a campione su clone di origin: forme di contenimento, `synthesizeObjectAsEdges`, base di R3/R4 — tutte confermate verbatim); misura in console di Alfonso sulla domanda aperta 1 (5/5 `Transition` in forma (b), `father = DValue`); ratifica delle sette posizioni con la posizione 1 aggiornata; produzione di memo, righe R-B13..R-B16, addendum al report e prompt della slice 2a.
+**Files touched**: `docs/ratifiche/claude_2026-08-17_memo_ratifica_edge_endpoint_container.md` (nuovo); `docs/decisions.md` (R-B13..R-B16 in coda alla serie Edge IR); `docs/discovery/discovery_2026-08-17_edge_source_container.md` (addendum di misura in coda); `docs/prompts/claude_2026-08-17_1735_prompt_edge_container_fase2a.md` (nuovo); `docs/claude-code-log.md` (questa entry). Nessun file sorgente.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — solo docs.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessuna modifica al codice.
+**Smoke visivo**: non applicabile
+**Notes**: (1) Decisione chiave, aggiornata dalla misura: la forma (b) è il percorso di authoring naturale per gli oggetti contenuti, quindi la sintesi object-as-edge si disaccoppia dai vertici (R-B14: iterazione sui candidati del walk di composizione, vertice obbligatorio solo agli endpoint) invece di pretendere la precondizione forma (a). (2) `containerOf` come seconda mappa completa in `ContainmentModel`, `parentOf` intatta, `ReadCtx` intonso (superficie riservata a R-SIM-4). (3) Ordine vincolante R-B15: compile permissivo → render → misura di reattività → validateIR → UI → guard R4 → spec; slice 2a fino alla misura, hard stop, poi 2b. (4) Reattività v1 per canale dichiarato (R-B16): i due hash generici del sync, con protezione contro ottimizzazioni future. (5) Doppio `container` ammesso (self-loop sul contenitore); grafia definitiva `container` per R-B9.
+**Prompt document name**: 2026-08-17 17:35
+
 ## 2026-08-17 — docs: discovery endpoint «container» per l'irKind Edge (Fase 1, read-only)
 **Prompt**: Fase 1 read-only sul tema «endpoint `container` (semantica eContainer) per l'irKind Edge»: sette domande con citazione file:riga — pipeline object-as-edge oggi, punto di risoluzione del parent, reattività degli endpoint e re-parent, grammatica e validazione del token, superficie di authoring, sezioni di spec e righe R-B da emendare, criterio di accettazione dal caso d'uso State/Transition. Report obbligatorio in `docs/discovery/`, hard stop senza modifiche al codice né proposte di diff.
 **Files touched**: `docs/discovery/discovery_2026-08-17_edge_source_container.md` (nuovo); `docs/claude-code-log.md` (questa entry). **Nessun file sorgente**: `git status` sui path di `frontend/src` è vuoto a fine task.

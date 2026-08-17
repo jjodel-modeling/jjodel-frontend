@@ -669,3 +669,26 @@ Nella forma (b) il criterio è irraggiungibile per la ragione in R1, e non per c
 **Hard stop**: nessuna riga di codice applicativo modificata in questa sessione; nessun diff
 proposto. `STEP_RE` non è stata toccata. Le uniche esecuzioni sono state letture: il parser caricato
 in un processo node fuori dal repo, senza scritture.
+
+---
+
+## Addendum 2026-08-17 — misura della domanda aperta 1 (forma degli oggetti)
+
+Misura eseguita da Alfonso in console sul progetto di test, tab del modello attiva, con lo
+snippet proposto in analisi: le cinque istanze di `Transition` hanno tutte `father` di
+className **`DValue`** — forma (b), annidata, prodotte dall'editor dello slot di containment.
+
+Conseguenze, recepite in ratifica
+(`docs/ratifiche/claude_2026-08-17_memo_ratifica_edge_endpoint_container.md`, righe
+R-B13..R-B16): la forma (b) è il percorso di authoring naturale per gli oggetti contenuti,
+quindi la precondizione «forma (a)» del §Q7 è stata scartata e la sintesi object-as-edge viene
+disaccoppiata dai vertici (iterazione sui candidati del walk di composizione, vertice
+obbligatorio solo agli endpoint). Il criterio di accettazione del §Q7 si aggiorna così: oggi
+una `Transition` in forma (b) mostra **zero** elementi sul canvas; con
+`edge.source = 'container'` e `edge.target = '$next.value'`, esattamente **una** linea dallo
+`State` contenitore allo `State` in `next` per ciascuna istanza
+(`document.querySelectorAll('[data-id^="irobj_"]').length === 5` sul progetto di test).
+
+Nota collaterale: la simulazione del pannello (serie R-SIM) ha funzionato su oggetti in forma
+(b), confermando che la navigazione via proxy è indifferente alla forma; il gap era solo del
+canvas.

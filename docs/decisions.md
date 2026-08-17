@@ -150,6 +150,38 @@ citare l'id con la data. Le decisioni sostituite si spostano in "Superate", con 
   edge non ortogonale. Stato attuale: gli edge non ortogonali non registrano nulla: il
   crossing detection li ignora.
 
+- **R-B13** (2026-08-17) — **Endpoint `container` per l'irKind Edge.** Il tipo degli endpoint
+  diventa `EndpointExpr = PathExpr | 'container'` (spec v1.2 §7); `PathExpr` (§3.1 v1.1) non si
+  allarga: il token non è legale in predicati, label, conditional, `TextSource`, `childFilter`.
+  Grafia definitiva `container`, minuscolo, nudo (R-B9: nessun VersionFixer per le view IR);
+  vocabolario in costante esportata sul precedente di `VALID_ROUTING_VALUES`. Risolve il parent
+  di contenimento dell'oggetto-edge; ammesso su source, target o entrambi (self-loop sul
+  contenitore, legittimo). `$container.value` resta una feature ordinaria: le due grafie non
+  collidono. Memo: `docs/ratifiche/claude_2026-08-17_memo_ratifica_edge_endpoint_container.md`.
+- **R-B14** (2026-08-17) — **La sintesi object-as-edge itera oggetti, non nodi.** I candidati
+  vengono dal walk di composizione dalle radici del modello, lo stesso che costruisce
+  `containerOf` (seconda mappa completa in `ContainmentModel`; la `parentOf` esistente, filtrata
+  su graphVertex, resta intatta e non si riusa per gli endpoint). Il vertice è obbligatorio solo
+  agli endpoint, mai sull'oggetto-edge: forma (a) come oggi (nodo nascosto, edge propri
+  filtrati), forma (b) (`father = DValue`, senza vertice) senza nulla da nascondere. `ReadCtx`
+  non si tocca: la sua superficie resta riservata all'estensione `state` (R-SIM-4). Oggetto-edge
+  senza vertice con endpoint irrisolvibile: resta invisibile, deroga a §10 dichiarata nella spec.
+- **R-B15** (2026-08-17) — **Ordine di implementazione vincolante** (da R6 della discovery):
+  render permissivo verso il token prima della sua autorabilità; poi misura di reattività,
+  regola in `validateIR` (prima regola di validazione endpoint), UI (controllo dedicato
+  «Reference path / Containing element» accanto al `PathBuilder`, mai voce sentinella dentro il
+  componente condiviso), guard di `handleReconnect` (trascinare un estremo `container` non
+  riparenta ma non deve perdere `setIREdgeAnchorOverride`), emendamenti spec (§3, §6, §7, §9,
+  §10). Due slice: 2a fino alla misura inclusa, hard stop, poi 2b. Un `container` già persistito
+  si preserva sempre nella UI, mai sanificato.
+- **R-B16** (2026-08-17) — **Reattività v1 per canale dichiarato.** L'invalidazione degli
+  endpoint `container` passa dai due hash generici del sync (`useM1ReferenceEdges.
+  m1RefValuesSig`; hash per-vertice `ch:` di `useJjomSync`), misurata prima dell'adozione (slice
+  2a). Le ottimizzazioni future di quei due hash devono preservare questa invalidazione finché
+  il dependency set non acquisisce una nozione esplicita di dipendenza dal contenitore
+  (estensione futura, ratifica propria). La connect rule resta spenta sull'estremo `container`:
+  creare un figlio contenuto non è connettere; è comportamento dichiarato, non bug.
+
 ## Uniformazione delle due property card (arco U, dal 2026-08-08)
 
 Discovery di Fase 1: `docs/discovery/discovery_2026-08-08_uniformazione_card_properties.md`.
