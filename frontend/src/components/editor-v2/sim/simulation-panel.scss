@@ -16,6 +16,20 @@
 // viewport bottom) + a 16px gutter. A fixed element measured from the viewport
 // bottom would otherwise sit ON the bar — which is exactly what smoke assertion
 // A3 checks (PROTOCOL P8), and what it caught at bottom: 16px.
+//
+// ICON COLOUR — declared ON the icon, never inherited (CLAUDE.md §5 gotcha).
+// `i.bi` (styles/style.scss:790) sets `color` directly on the tag, and `i.bi:hover`
+// (:792) sets a second one: a direct declaration always beats inheritance, so a
+// colour put on the button alone leaves the glyph slate-on-slate. Every icon rule
+// below therefore targets `.bi` itself, with a `:hover` twin to outrank the hover
+// variant. Specificity: `i.bi` is (0,1,1) and `i.bi:hover` is (0,2,1); `.sim-panel__x .bi`
+// is (0,2,0) and `.sim-panel__x .bi:hover` is (0,3,0) — both win, whatever the
+// stylesheet load order. `color: inherit` funnels the value back to the host
+// element, which is the single place each colour is declared.
+// `--color-text-inverse` is NOT usable for the run buttons: it flips to #08090a in
+// dark mode (tokens/_colors-dark.scss:32) while the slate gradient stays dark in
+// both themes, so the white on them is a literal — design system §7.1, "primary
+// buttons: slate gradient, white icons".
 
 .sim-panel {
     position: fixed;
@@ -61,9 +75,15 @@
             outline-offset: 2px;
         }
 
-        i {
+        .bi {
             font-size: 13px;
             line-height: 1;
+        }
+
+        // Follows the chip's own colour, hover included.
+        .bi,
+        .bi:hover {
+            color: inherit;
         }
     }
 
@@ -76,9 +96,15 @@
         border-bottom: 1px solid var(--color-border-secondary);
         background: var(--color-bg-tertiary);
 
-        i {
+        .bi {
             font-size: 13px;
             line-height: 1;
+        }
+
+        // Decorative glyph: fixed tertiary, and it must not react to a direct
+        // hover on the icon (`i.bi:hover`).
+        > .bi,
+        > .bi:hover {
             color: var(--color-text-tertiary);
         }
     }
@@ -111,6 +137,12 @@
         &:focus-visible {
             outline: 2px solid #0ea5e9;
             outline-offset: 1px;
+        }
+
+        // Follows the button's own colour, hover included.
+        .bi,
+        .bi:hover {
+            color: inherit;
         }
     }
 
@@ -197,9 +229,16 @@
         color: #ffffff;
         cursor: pointer;
 
-        i {
+        .bi {
             font-size: 13px;
             line-height: 1;
+        }
+
+        // The reported bug: without these two the glyph stayed slate on slate.
+        // White inherited from the button, on hover too.
+        .bi,
+        .bi:hover {
+            color: inherit;
         }
 
         &:hover:not(:disabled) {
