@@ -1917,7 +1917,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     static updateDefaultView(v: DViewElement | DViewPoint, state?: DState): void {
         let s = state || store.getState();
         let newView: DViewElement | DViewPoint = Defaults.defaultViewPointsMap[v.id]||Defaults.defaultViewsMap[v.id];
-        if (!newView) return; // not a default view
+        if (!newView || typeof newView !== 'object') return; // not a default view, or a registry entry never resolved to an object (R-IRN-15)
         newView = {...newView} as DViewElement & DViewPoint;
         newView.css_MUST_RECOMPILE = true;
         newView.pointedBy = PointedBy.merge(newView, v);

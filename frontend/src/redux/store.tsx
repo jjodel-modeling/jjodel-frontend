@@ -322,9 +322,11 @@ otherwise you would click the edge container instead of the graph-elements benea
 `
             }, true, Defaults.Pointer_ViewPointDefault);
             Log.exDev(viewpoint.id !== Defaults.viewpoints[0], "wrong vp id initialization", {viewpoint, def:Defaults.viewpoints});
-            const views: DViewElement[] = makeDefaultGraphViews(viewpoint);
-
-            for (let view of views) { CreateElementAction.new(view); }
+            // R-IRN-15: the seed no longer creates the twenty-one default views. The `Default`
+            // viewpoint above is still created, empty, on purpose: see the scope decision below.
+            // `makeDefaultGraphViews` stays in place, uncalled, for reversibility.
+            // const views: DViewElement[] = makeDefaultGraphViews(viewpoint);
+            // for (let view of views) { CreateElementAction.new(view); }
 
             for (let primitiveType of Object.values(ShortAttribETypes)) {
                 let dPrimitiveType;

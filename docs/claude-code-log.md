@@ -1,5 +1,18 @@
 # Claude Code Session Log
 
+## 2026-08-19 — refactor: il seed non crea piu' le ventuno view di default (R-IRN-15)
+**Prompt**: prompt del 2026-08-19 00:15, Fase 2 di `2.227 -> 2.228`, slice 1 di 3. Un commit, tre modifiche: seed commentato in `store.tsx`, loop di coda rimosso da `VersionFixer.tsx`, `updateDefaultView` resa inerte per costruzione con una guardia di tipo. Prerequisiti confermati: verifica visiva della slice 0 (revisione +0.1) e rilettura di R-IRN-11..22 dal file.
+**Files touched**: `frontend/src/redux/store.tsx`, `frontend/src/redux/VersionFixer.tsx`, `frontend/src/view/viewElement/view.tsx`, `docs/discovery/discovery_2026-08-19_slice1_ritiro_seed.md`, `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — scenari 1, 2 e 4 eseguiti in pagina con controllo positivo sul codice base (21 view trovate senza le modifiche, 0 con); scenario 3 su `State Machine v1` pendente su Alfonso. Gate tutti allineati: typecheck 33, test 1315/9 rosse, build exit 0, smoke 10/0/2, check:docs 3/3, check:agents pass.
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced — vale `docs/discovery/discovery_2026-08-18_4_lir_versionfixer_2228.md` §4.2 e §5.2, riletto prima del diff; il prompt vieta di produrne un altro.
+**Smoke visivo**: passato (automatico) — 3 stati, 10 assert, 0 falliti, 2 skip. Le tre righe `IMPROVED` sui duplicate key sono preesistenti: verificate identiche con le modifiche in stash.
+**Notes**: Il TypeError di `PointedBy.merge` che la guardia previene e' stato riprodotto sul runtime di oggi, non ricordato: con il registro a booleani `{...true}` da' `{}` e la merge solleva `d1.pointedBy is not iterable`; con la guardia non solleva e non scrive. Dettagli, numeri e istruzione per lo scenario 3 nel report di slice `discovery_2026-08-19_slice1_ritiro_seed.md`.
+**Prompt document name**: 2026-08-19 00:15
+
 ## 2026-08-18 — fix: la revisione utente non viene piu' sovrascritta dalla versione di schema (R-IRN-17)
 **Prompt**: prompt del 2026-08-18 16:56, Fase 2 di `2.227 -> 2.228`, slice 0. Un commit, una riga: rimuovere `VersionFixer.tsx:134` piu' le due righe che calcolano `pid` e `project` se restano senza altri usi. Prerequisito soddisfatto: Alfonso ha eseguito il controllo in dashboard e riporta `2.3`, che conferma la diagnosi.
 **Files touched**: `frontend/src/redux/VersionFixer.tsx` (3 righe rimosse), `docs/claude-code-log.md`

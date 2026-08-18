@@ -142,14 +142,6 @@ everytime you put hands into a D-Object shape or valid values, you should docume
             }
         }
 
-        // add new default views
-        for (let k in Defaults.defaultViewsMap) {
-            if (!s.idlookup[k]) s.idlookup[k] = Defaults.defaultViewsMap[k];
-        }
-        for (let k in Defaults.defaultViewPointsMap) {
-            if (!s.idlookup[k]) s.idlookup[k] = Defaults.defaultViewPointsMap[k];
-        }
-
         if (canAutocorrect) s = VersionFixer.autocorrect(s, false, false);
         return s;
     }
