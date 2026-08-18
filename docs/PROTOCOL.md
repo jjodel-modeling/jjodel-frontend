@@ -127,12 +127,17 @@ piu' recente. La mappa completa dei tipi documentali, con formati, gate e ciclo 
 
 ## Nota di implementazione per P8
 
-Lo smoke non esiste ancora. Va creato una volta sola, con Playwright, installato come devDependency dal commit che introduce lo smoke, in `frontend/scripts/smoke/`. Serve:
+Lo smoke **esiste** e gira con `npm run smoke` (`frontend/package.json:102`). Vive in
+`frontend/scripts/smoke/`: `states.ts` elenca gli stati da aprire, `run.ts` li apre ed esegue le
+asserzioni, `assertions.ts` le contiene, `calibrate.ts` ritara le soglie, `console-baseline.json`
+tiene i pattern di console gia' noti. Non serve piu' nessuna deroga: i prompt riportano l'esito, e
+se una slice non e' verificabile dallo smoke lo dicono con il motivo.
 
-- `states.ts`: elenco degli stati da aprire, ognuno con URL, azioni di setup e soglie attese
-- `run.ts`: apre ogni stato, esegue le cinque asserzioni, stampa un report a righe
-- comando `npm run smoke` in `frontend/package.json`
-
-Gli stati iniziali suggeriti, scelti perché coprono le regressioni realmente occorse a luglio: progetto vuoto; viewpoint con class diagram popolato; pannello Properties aperto; modalità Advanced attiva. Le soglie si tarano una volta sullo stato buono corrente e si versionano.
-
-Finché P8 non è implementata, i prompt riportano `Deroga: P8 non applicabile (smoke non ancora implementato)`.
+**Quello che lo smoke non copre, e che va dichiarato invece che dato per coperto.** I tre stati di
+`states.ts` (`empty-project`, `empty-metamodel-tab`, `advanced-mode`) partono tutti da un progetto
+creato ex novo da `createProject` (`states.ts:177`), che lo crea e poi ci naviga sopra: **nessuno
+apre un progetto salvato in precedenza**. Lo smoke quindi non esercita mai `SaveManager.load` su uno
+stato persistito, e non vede niente di cio' che riguarda migrazioni di `VersionFixer`, seed delle
+view di default e normalizzazione degli stati salvati. Per quel perimetro la verifica resta manuale
+finche' `states.ts` non impara ad aprire uno stato salvato. Rilevato il 2026-08-18 dalla discovery
+di Fase 1 su `2.227 -> 2.228`, §3.1.
