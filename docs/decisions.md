@@ -732,7 +732,7 @@ Base di evidenza: `docs/discovery/discovery_2026-08-13_view_creation_sites_ir_na
   `Pointer_ViewDefaultPackage` (39, e nel sorgente solo una costante commentata). Non e' un
   rischio teorico di manutenzione: l'allowlist sarebbe **gia' oggi** indietro, e terrebbe il
   viewpoint visibile per sempre anche dopo lo spostamento delle view autorate. (b) `subViews`
-  porta una chiave `clonedCounter` iniettata dal reducer (`reducer.ts:104`), che
+  porta una chiave `clonedCounter` iniettata dal reducer (`redux/reducer/reducer.ts:104`), che
   `get_SubViews`/`get_allSubViews` cancellano prima di enumerare (`view.tsx:1074,1110`):
   senza saltarla il predicato risponderebbe `false` per sempre su qualunque viewpoint toccato,
   disabilitando in silenzio l'intera ratifica. Non era previsto dal prompt.
@@ -792,7 +792,7 @@ Base di evidenza: `docs/discovery/discovery_2026-08-13_view_creation_sites_ir_na
   `idlookup` ogni id presente in `Defaults.defaultViewsMap` che manchi; una purga scritta dentro
   l'adapter verrebbe annullata dal loop di coda nella stessa chiamata. Purgare i salvataggi e
   ritirare il seed dal codice sono quindi la stessa mossa, non due. Conseguenza gia' nota e da
-  trattare in Fase 1: la guardia di `reducer.ts:1104` si sblocca solo quando
+  trattare in Fase 1: la guardia di `redux/reducer/reducer.ts:1104` si sblocca solo quando
   `Pointer_ViewPointDefault` diventa un oggetto, quindi senza seed non si sblocca mai e
   `Defaults.check()` cambia risposta in silenzio. Base di evidenza:
   `docs/discovery/discovery_2026-08-18_3_corpus_persistito_e_due_migrazioni.md`, finding F3 e F4.
@@ -835,7 +835,7 @@ Base di evidenza: `docs/discovery/discovery_2026-08-13_view_creation_sites_ir_na
   gliele rimette. Senza quel pezzo il ritiro e' annullato dal primo salva-e-riapri. Il terzo e' il
   punto di rottura piu' vicino e il piu' silenzioso: con i registri di booleani `view.tsx:1919`
   prende `true`, `{...true}` da' `{}`, e `PointedBy.merge({}, v)` solleva un TypeError a
-  `view.tsx:1923` che risale fino al `catch` di `reducer.ts:1577`, dove non fa crashare la pagina ma
+  `view.tsx:1923` che risale fino al `catch` di `redux/reducer/reducer.ts:1577`, dove non fa crashare la pagina ma
   **impedisce al progetto di caricarsi**. Va reso inerte per costruzione, con uscita anticipata su
   `typeof !== 'object'`, non per condizione di contesto. Il loop di coda si **rimuove**, non si rende
   condizionale: una condizione e' un interruttore che qualcuno riaccendera', e una eventuale view di
@@ -875,6 +875,15 @@ Base di evidenza: `docs/discovery/discovery_2026-08-13_view_creation_sites_ir_na
   Fase 2, e **precede** la spedizione di `2.228`, altrimenti la migrazione propaga il numero a tutto
   il corpus. Prima di scriverla va fatto il controllo da trenta secondi in dashboard: aprire un
   progetto, salvare una volta, guardare la revisione. `2.3` conferma, `2.6` smentisce.
+  **Due precisazioni dal LIR** (2026-08-18 sera). (a) La riga **non** e' load-bearing per il
+  sentinella `-1` di `classes.ts:1232`: a risolverlo e' `projects.ts:229`,
+  `SetFieldAction.new(project.id, 'version', project.version || 1.0)`, sul percorso della dashboard.
+  Verificato prima del go-ahead, perche' rimuovere l'unico writer di un campo produrrebbe revisioni
+  negative (`getNextVersionNumber(-1)` da' `-0.9`). (b) `projects.ts:372` (`Online.save`) e' un
+  **secondo** sito che potrebbe scrivere la versione di schema sulla revisione. E' guardato da
+  `!project.version`, e' morto oggi e resta morto dopo la rimozione perche' il valore che sopravvive
+  e' truthy. Non si tocca in `2.228`, ma va saputo: rimuovere la riga 134 non elimina **ogni**
+  percorso.
 - **R-IRN-18** (2026-08-18) — **`null` da entrambi i lati del proxy, e `activateViewpoint` entra nel
   perimetro.** Il getter L espone `LViewPoint | null` (forma misurata funzionante, §5.1), non
   `undefined` normalizzato sul solo lato L: due forme del vuoto ai due lati del proxy sono
@@ -895,6 +904,48 @@ Base di evidenza: `docs/discovery/discovery_2026-08-13_view_creation_sites_ir_na
   file, oltre la soglia di cinque della Rule 19. `2.228` porta quindi il fronte B e il ritiro
   effettivo; `2.229` portera' la purga dei record e la decisione sui puntatori, su un corpus
   misurato invece che su uno.
+
+- **R-IRN-20** (2026-08-18) — **Il test dell'adapter entra nel perimetro di `2.228`.** Il LIR dice che
+  nessun gate si accorge di nessuna delle tre modifiche, e che l'area non ha copertura ne' rossa ne'
+  verde: lo smoke crea un progetto nuovo e non lo salva mai. Un test vitest e' quindi **l'unica**
+  verifica automatica che questo fronte puo' avere, e vale piu' del difetto che si porta dietro. Il
+  difetto e' noto: `VersionFixer.tsx` non e' importabile in vitest node, quindi il corpo dell'adapter
+  va duplicato nel test e le due copie possono divergere. Si accetta, con due mitigazioni
+  obbligatorie: il file porta in testa un commento che nomina la sorgente (`VersionFixer.tsx`,
+  adapter `2.227 -> 2.228`) e dichiara che il corpo e' una copia, cosi' chi tocca l'adapter sa di
+  dover aggiornare anche il test; e le due copie nascono nello stesso commit, quindi partono
+  allineate. File: `frontend/src/redux/__tests__/versionfixer_2228_migration.test.ts`, sul modello di
+  `versionfixer_2227_migration.test.ts`. Deve coprire: viewpoint di sistema che diventa `null`,
+  viewpoint utente invariato, doppio run deep-equal (idempotenza), fixture pulita no-op, e una
+  fixture con `idlookup.clonedCounter` numerico per esercitare la guardia `typeof e !== 'object'`.
+  **Estrarre l'adapter in un modulo puro importabile** toglierebbe la duplicazione, ma e'
+  architettura nuova e non si decide dentro questa passata: e' candidata per `2.229`, previa verifica
+  del grafo di import.
+- **R-IRN-21** (2026-08-18) — **La root `state.viewpoint` si allinea a `null`, nel commit 2a.** Il
+  campo e' distinto da `DProject.activeViewpoint`, e lasciarlo a stringa vuota avrebbe prodotto due
+  forme del vuoto nello stato persistito, cioe' esattamente quello che R-IRN-11 e' stata decisa per
+  impedire. L'allineamento era in dubbio solo per il costo, e il costo e' ora misurato: i lettori
+  della root sono **quattro**, `EditorSwitch.tsx:55`, `Toolbar.tsx:202`, `irResolveCore.ts:117` e
+  `irResolveCore.ts:139`, e **nessuno confronta con la stringa vuota** (ricerca eseguita su `=== ''`,
+  `!== ''`, `=== ""` e `!== ""` nei tre file: zero risultati). Tutti passano da un test di verita',
+  dove `null` e `''` si comportano identicamente. L'unico punto che richiede intervento e' il confine
+  di resa di `Toolbar.tsx`, dove `shownViewpointId` alimenta il `value` di un `<select>` controllato:
+  li' serve una coercizione a stringa, perche' `value={null}` renderebbe il controllo non
+  controllato. Quella e' **l'unica** riga che si tocca in `Toolbar.tsx`, che resta territorio di
+  R-IRN-10 appena spedito, e la verifica visiva dopo 2a include il selettore. In `activateViewpoint`
+  (`utils/lastViewpoint.ts:59`) cade di conseguenza la coercizione `viewpointId || ''`.
+- **R-IRN-22** (2026-08-18) — **Il bottone di aggiornamento delle view di default si nasconde con lo
+  stesso predicato che rende inerte `updateDefaultView`.** La Fase 1 ha trovato che
+  `updateDefaultView` ha **due** chiamanti, non uno: oltre a `VersionFixer.tsx:144` c'e'
+  `NestedView.tsx:399`, il bottone «una nuova versione dagli sviluppatori e' disponibile». Con i
+  registri conservati (R-IRN-14) `Defaults.check` risponde ancora `true` e le default vecchie restano
+  a `2.227` contro `highestVersion` `2.228`, quindi dopo il ritiro **il bottone continuerebbe ad
+  apparire e non farebbe piu' niente**. Non si rimanda a `2.229`: un controllo che dichiara una cosa
+  e non la fa e' un difetto visibile, e rimandarlo senza data e' il rinvio indefinito che questo
+  progetto ha gia' pagato altrove. Si chiude dentro `2.228`, in un commit suo, e `NestedView.tsx` e'
+  gia' nel perimetro della slice 2. La condizione di visibilita' usa **lo stesso test** dell'uscita
+  anticipata della funzione, cosi' esiste una sola definizione di «c'e' qualcosa da rigenerare»
+  invece di due che possono divergere.
 
 ## Serie R-SIM — Pannello di simulazione e attributi di stato (ratifiche 2026-08-17)
 
