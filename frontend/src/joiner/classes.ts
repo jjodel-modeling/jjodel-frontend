@@ -3327,12 +3327,15 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
         const seeded = Defaults.viewpoints.filter(
             id => !Defaults.holdsOnlySystemViews(DPointerTargetable.fromPointer(id) as any)
         );
-        // Belt, not requirement: measured on the two serialized projects in the repo,
-        // the seeded pointer is never inside `data.viewpoints` (the DViewPoint
-        // constructor returns before registering, :1210, and `set_viewpoints` has zero
-        // callers). It covers the saved projects the repo does not contain, and it also
-        // keeps the concatenation duplicate-free, which `get_views` does explicitly and
-        // this getter never has.
+        // NOT a belt: the seeded pointer really is in `data.viewpoints` on any project
+        // created through the UI. Measured on a fresh one — `data.viewpoints` reads
+        // ["Pointer_ViewPointDefault"] — so the old `[...Defaults.viewpoints, ...data]`
+        // returned that id TWICE, which is where the duplicate-React-key warnings in the
+        // smoke console baseline came from (18 and 20 occurrences, now 0).
+        // The two serialized projects in `examples/` do NOT have it, which is what the
+        // phase 1 discovery measured; that finding holds for those old saves only. The
+        // constructor guard at :1210 explains the store-init seed, not this path.
+        // `get_views` has had an explicit duplicateRemover all along; this getter never did.
         const own = (context.data.viewpoints || []).filter(
             (id: any) => !Defaults.isSystemViewpoint(id)
         );

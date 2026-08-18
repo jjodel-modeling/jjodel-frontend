@@ -454,44 +454,6 @@
     }
 }
 
-// ── Abstract / Concrete syntax pill ──
-.toolbar-syntax-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 3px 9px;
-    border-radius: 10px;
-    font-size: 11px;
-    font-weight: 400;
-    border: 0.5px solid transparent;
-    background: transparent;
-    color: var(--text-dim, #94a3b8);
-    cursor: default;
-    transition: all 150ms ease;
-    white-space: nowrap;
-    flex-shrink: 0;
-
-    &--active {
-        color: var(--accent, #0ea5e9);
-        background: rgba(14, 165, 233, 0.06);
-        border-color: rgba(14, 165, 233, 0.15);
-    }
-
-    &--concrete {
-        color: #0F6E56;
-        background: rgba(16, 185, 129, 0.06);
-        border-color: rgba(16, 185, 129, 0.15);
-    }
-
-    &__dot {
-        width: 5px;
-        height: 5px;
-        border-radius: 50%;
-        background: currentColor;
-        flex-shrink: 0;
-    }
-}
-
 // ── Viewpoint editor badge + back button ──
 .toolbar-vp-editor-group {
     gap: 6px;

@@ -698,6 +698,83 @@ Base di evidenza: `docs/discovery/discovery_2026-08-13_view_creation_sites_ir_na
   salvataggi deve cercare: non vanno riusate. La migrazione condizionata (purga solo i record
   identici al seed, conserva quelli modificati dall'autore) è dovuta e non ancora scritta. Base
   di evidenza: `docs/discovery/discovery_2026-08-16_viewpoint_default_e_validation.md`.
+- **R-IRN-9** (2026-08-18) — **Il viewpoint `Default` e' un layer di sistema, non un viewpoint
+  in lista, e sparisce dalle superfici utente finche' e' vuoto di contenuto autorato.**
+  L'esclusione ha una sola definizione (`Defaults.isSystemViewpoint`), per puntatore e mai per
+  nome. La condizione (`Defaults.holdsOnlySystemViews`) esiste perche' la misura sugli stati
+  salvati ha trovato quattro view autorate parcheggiate dentro `Default` in
+  `examples/statechartplus.ts`, e discrimina sul **namespace del puntatore** e non su
+  `Defaults.views`: il registro elenca cio' che il tool semina oggi, mentre i progetti
+  salvati portano anche view di sistema che ne sono uscite o che non ci sono mai entrate
+  (`Pointer_ViewEdge`, trovata dalla misura sul progetto reale). Resta un confronto per
+  puntatore e mai per nome; non va stretto a un elenco di id: nasconderne il contenitore le renderebbe irraggiungibili, e
+  il bottone «Move to viewpoint…» di `ViewParentingFields` e' la via con cui l'utente lo
+  svuota e lo fa sparire. Il rubinetto e' chiuso a meta': `resolveParentViewpoint` non usa
+  piu' il `Default` come padre di ripiego, mentre il fallback di `DViewElement.new`
+  (`classes.ts:1181`) resta e apre una discussione sua. Restano intatti il seed, le venti view
+  di default, `Defaults.check`, il gradino `VP_Default` di `selectors.ts:557`, la cardinalita'
+  1..1 di `activeViewpoint` e ogni percorso di persistenza. Difetti chiusi per strada: la
+  delete per nome di `Dashboard.tsx:482` (un viewpoint utente chiamato «Default» non era
+  cancellabile) e la duplicate senza guardia sul viewpoint di sistema. Effetto dichiarato:
+  `viewpointsNumber` (`projects.ts:97`) smette di contare il `Default` e scende di uno al
+  prossimo salvataggio, correggendo un conteggio finora inflazionato. Restano dovuti e non
+  aperti: `activeViewpoint` a 0..1 e il ritiro del seed insieme alle venti view, che va dopo
+  la bonifica dei sessanta progetti di R-IRN-2. Base di evidenza:
+  `docs/discovery/discovery_2026-08-16_viewpoint_default_e_validation.md` (domanda 3),
+  `docs/discovery/discovery_2026-08-16_2_le_23_view_di_default.md`,
+  `docs/discovery/discovery_2026-08-18_2_viewpoint_default_fuori_dalle_liste.md`, e le due
+  misure sugli stati serializzati fatte in chat il 2026-08-18.
+  **Emendamenti in sede di attuazione** (2026-08-18, commit `b7cb457bf`), entrambi da misura:
+  (a) la scelta del namespace contro l'allowlist ha ora un numero, ed e' piu' forte di come
+  era argomentata qui sopra: sul `Default` di `statechartplus` le subViews sono 39, 35 di
+  sistema e 4 autorate, e un'allowlist costruita da `Defaults.views` ne mancherebbe **3 su
+  35** — `Pointer_ViewVoid` (37 occorrenze nel corpus salvato, **zero** nel sorgente) e
+  `Pointer_ViewDefaultPackage` (39, e nel sorgente solo una costante commentata). Non e' un
+  rischio teorico di manutenzione: l'allowlist sarebbe **gia' oggi** indietro, e terrebbe il
+  viewpoint visibile per sempre anche dopo lo spostamento delle view autorate. (b) `subViews`
+  porta una chiave `clonedCounter` iniettata dal reducer (`reducer.ts:104`), che
+  `get_SubViews`/`get_allSubViews` cancellano prima di enumerare (`view.tsx:1074,1110`):
+  senza saltarla il predicato risponderebbe `false` per sempre su qualunque viewpoint toccato,
+  disabilitando in silenzio l'intera ratifica. Non era previsto dal prompt.
+  (c) **Il filtro su `data.viewpoints` non e' una cintura, e la Fase 1 su questo punto vale
+  solo per i due salvataggi vecchi in repo.** Misurato su un progetto creato dalla UI:
+  `data.viewpoints` legge `["Pointer_ViewPointDefault"]`, quindi il vecchio
+  `[...Defaults.viewpoints, ...data.viewpoints]` restituiva quell'id **due volte**. E' l'origine
+  dei warning React «two children with the same key» che stavano nella baseline di console dello
+  smoke (18 e 20 occorrenze, ora **0**): il filtro chiude un difetto vivo su ogni progetto nuovo,
+  non copre un caso ipotetico. La guardia del costruttore a `classes.ts:1210` spiega il seed di
+  init dello store, non questo percorso. Sulla stessa misura: `activeViewpoint` vale
+  `Pointer_ViewPointDefault` **anche su un progetto appena creato**, quindi la normalizzazione di
+  R-IRN-10 serve a ogni progetto nuovo e non solo a `statechartplus`.
+  **Quello che NON e' stato fatto**: la rimozione del terzo fallback di
+  `resolveParentViewpoint` — cioe' la meta' chiusa del «rubinetto» descritta sopra — **non e'
+  avvenuta**. Il prompt la subordinava a `createViewInWorkbench` unico chiamante, con hard stop
+  in caso contrario; i chiamanti sono due (`lastViewpoint.ts:205` e `EditorV2.tsx:3049`). La
+  frase «`resolveParentViewpoint` non usa piu' il `Default` come padre di ripiego» descrive
+  quindi l'intenzione, non il codice: il rubinetto e' ancora **aperto per intero**, e chiuderlo
+  e' fetta a se'.
+- **R-IRN-10** (2026-08-18) — **Il selettore di viewpoint e' il controllo della sintassi, e la
+  pill si ritira.** L'opzione vuota si legge «Abstract syntax» invece di «No viewpoint»:
+  scegliere un viewpoint e' scegliere la sintassi concreta, e non serve un secondo indicatore
+  che lo ripeta. La pill `toolbar-syntax-pill` esce dalla toolbar insieme al suo blocco SCSS;
+  lo stato acceso resta leggibile da `toolbar-viewpoint-selector--active`. Il selettore
+  compare **anche sui metamodelli**, con la sola voce «Abstract syntax» e disabilitato: in
+  editor-v2 i viewpoint non toccano il canvas M2 (`ClassNode` non risolve IR, il ramo
+  `jsxString` e' irraggiungibile, `getIRIndex` alimenta solo `ObjectNode`) e
+  `activateViewpoint` scrive stato globale di progetto. La resa del metamodello resta
+  governata dal selettore `notation`. Nella root `state.viewpoints` il filtro e'
+  incondizionato, a differenza di `LProject.viewpoints`: l'asimmetria e' voluta, perche' un
+  `Default` che contiene view autorate va raggiunto dall'albero, non attivato come viewpoint
+  di resa. Riapertura prevista se e quando `ClassNode` acquisira' la risoluzione IR.
+  **Emendamento in sede di attuazione** (2026-08-18): la normalizzazione del valore attivo
+  serve su **due** fronti, non uno. Il primo e' quello previsto (un viewpoint di sistema
+  salvato come attivo, misurato su `statechartplus`). Il secondo e' emerso scrivendo il punto
+  4c: su M2 la lista non viene resa, quindi un viewpoint attivo qualunque lascerebbe il
+  `<select>` con un `value` senza `<option>` e `selectedIndex` a -1, cioe' lo stesso controllo
+  vuoto, raggiunto dall'altra direzione. Il valore mostrato collassa a stringa vuota anche
+  quando `isMetamodel`, il che spegne pure la classe `--active`: corretto, perche' M2 rende in
+  sintassi astratta qualunque sia il viewpoint globale. Nessuna scrittura nello store da qui,
+  su entrambi i fronti.
 
 ## Serie R-SIM — Pannello di simulazione e attributi di stato (ratifiche 2026-08-17)
 

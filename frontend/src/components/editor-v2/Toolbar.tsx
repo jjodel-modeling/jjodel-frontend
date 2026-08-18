@@ -5,7 +5,7 @@ import ColorSchemeSelector from './components/ColorSchemeSelector';
 import HighlightPalette from './components/HighlightPalette';
 import { LayoutMode, getSavedLayoutMode, saveLayoutMode } from '../abstract/Dock';
 import { isProjectOverviewPage } from '../../utils/navigationUtils';
-import { LPointerTargetable, LViewPoint } from '../../joiner';
+import { Defaults, LPointerTargetable, LViewPoint } from '../../joiner';
 import { activateViewpoint } from '../../utils/lastViewpoint';
 import { JjodelEvents } from '../../events/registry';
 import { ValidationPill } from './problems/ValidationPill';
@@ -69,7 +69,10 @@ const NOTATION_OPTIONS: Array<{ id: NotationMode; name: string; desc: string; ic
  * Compact toolbar (Row 2) for the editor.
  *
  * Layout:
- * [↶][↷][⧉][🗑] | VIEW [Structured ▾] [Theme: X ▾] | LAYOUT [⊞][⊟] | [● Abstract syntax] | ——spacer—— | [−] 100% [+] [⤢] | [⤢/⊞]
+ * [↶][↷][⧉][🗑] | VIEW [Structured ▾] [Theme: X ▾] | LAYOUT [⊞][⊟] | [👁 Abstract syntax ▾] | ——spacer—— | [−] 100% [+] [⤢] | [⤢/⊞]
+ *
+ * The viewpoint selector is the syntax control (R-IRN-10): it replaced the separate
+ * [● Abstract syntax] pill that used to sit beside it and only restated its state.
  */
 // SVG icons for alignment tools (moved from AlignmentToolbar)
 const AlignIcons = {
@@ -187,14 +190,43 @@ function Toolbar({
     const currentNotation = NOTATION_OPTIONS.find(n => n.id === notation) ?? NOTATION_OPTIONS[0];
 
     // ── Viewpoint selector ──
-    const activeViewpointId = useSelector((state: any) => state.viewpoint) as string;
+    // The root `state.viewpoints` array is a different source from LProject.viewpoints:
+    // the reducer pushes every DViewPoint into it (reducer.ts:465-469) and R-IRN-9 does
+    // not reach it, so the seeded ids are filtered again here. Not a redundancy.
+    //
+    // The filter here is UNCONDITIONAL, unlike LProject.viewpoints, which keeps a
+    // seeded viewpoint that holds authored views. The asymmetry is deliberate: this
+    // array feeds a rendering selector, not a navigation tree. A `Default` holding
+    // authored views is reached through the view tree, not activated as the viewpoint
+    // things render through.
+    const rawActiveViewpointId = useSelector((state: any) => state.viewpoint) as string;
     const viewpointPointers = useSelector((state: any) => state.viewpoints) as string[];
-    const viewpoints = (viewpointPointers || []).map(ptr => {
-        try {
-            const lVp = LPointerTargetable.fromPointer(ptr) as LViewPoint;
-            return lVp ? { id: ptr, name: lVp.name || 'Unnamed' } : null;
-        } catch { return null; }
-    }).filter(Boolean) as Array<{ id: string; name: string }>;
+    const viewpoints = (viewpointPointers || [])
+        .filter(ptr => !Defaults.isSystemViewpoint(ptr))
+        .map(ptr => {
+            try {
+                const lVp = LPointerTargetable.fromPointer(ptr) as LViewPoint;
+                return lVp ? { id: ptr, name: lVp.name || 'Unnamed' } : null;
+            } catch { return null; }
+        }).filter(Boolean) as Array<{ id: string; name: string }>;
+
+    // A saved project can carry a system viewpoint as the active one: measured,
+    // examples/statechartplus.ts has activeViewpoint = Pointer_ViewPointDefault, and
+    // get_activeViewpoint falls back to the seeded id when the field is empty
+    // (classes.ts:3334). Since the filter above leaves it without an <option>, a
+    // controlled <select> would set selectedIndex to -1 and draw EMPTY rather than
+    // falling back to the first entry. Reading it as "no viewpoint" shows
+    // "Abstract syntax" instead. Read-only on purpose: writing here would mutate
+    // activeViewpoint on every open of an old project.
+    const activeViewpointId = Defaults.isSystemViewpoint(rawActiveViewpointId)
+        ? '' : rawActiveViewpointId;
+
+    // On a metamodel the list is not rendered, so an active viewpoint would be a value
+    // without an <option> — the same empty-select failure the line above exists to
+    // prevent, reached from the other direction. Collapsing it to '' also keeps the
+    // --active state off, which is correct: M2 renders in abstract syntax whatever the
+    // project-global viewpoint happens to be. The store is not written.
+    const shownViewpointId = isMetamodel ? '' : activeViewpointId;
 
     const handleViewpointChange = useCallback((vpId: string) => {
         activateViewpoint(vpId || null);
@@ -414,30 +446,32 @@ function Toolbar({
 
             <div className="toolbar-separator" />
 
-            {/* ── Viewpoint selector + syntax pill ── */}
+            {/* ── Viewpoint selector: this IS the syntax control (R-IRN-10) ──
+                Choosing a viewpoint is choosing the concrete syntax, so the empty option
+                reads "Abstract syntax" and the retired pill said nothing this does not.
+                The lit state stays legible through toolbar-viewpoint-selector--active.
+
+                Rendered on metamodels too, but inert: in editor-v2 viewpoints do not
+                reach the M2 canvas (ClassNode resolves no IR, its jsxString branch is
+                unreachable, getIRIndex feeds ObjectNode only), and activateViewpoint
+                writes project-global state, so an active selector here would change how
+                the M1 tabs render without changing a pixel where it was used. The
+                metamodel's own rendering stays governed by the notation selector. */}
             <div className="toolbar-viewpoint-group">
-                {!isMetamodel && (
-                    <div className={`toolbar-viewpoint-selector${activeViewpointId ? ' toolbar-viewpoint-selector--active' : ''}`}>
-                        <i className="bi bi-eye" />
-                        <select
-                            value={activeViewpointId || ''}
-                            onChange={(e) => handleViewpointChange(e.target.value)}
-                            title="Select viewpoint"
-                        >
-                            <option value="">No viewpoint</option>
-                            {viewpoints.map(vp => (
-                                <option key={vp.id} value={vp.id}>{vp.name}</option>
-                            ))}
-                        </select>
-                    </div>
-                )}
-                <button
-                    className={`toolbar-syntax-pill ${!isMetamodel && activeViewpointId ? 'toolbar-syntax-pill--concrete' : 'toolbar-syntax-pill--active'}`}
-                    title={isMetamodel ? 'Metamodels use abstract syntax only' : (activeViewpointId ? 'Concrete syntax active (viewpoint selected)' : 'Currently viewing abstract syntax')}
-                >
-                    <span className="toolbar-syntax-pill__dot" />
-                    {!isMetamodel && activeViewpointId ? 'Concrete syntax' : 'Abstract syntax'}
-                </button>
+                <div className={`toolbar-viewpoint-selector${shownViewpointId ? ' toolbar-viewpoint-selector--active' : ''}`}>
+                    <i className="bi bi-eye" />
+                    <select
+                        value={shownViewpointId}
+                        onChange={(e) => handleViewpointChange(e.target.value)}
+                        disabled={isMetamodel}
+                        title={isMetamodel ? 'Metamodels use abstract syntax only' : 'Select viewpoint'}
+                    >
+                        <option value="">Abstract syntax</option>
+                        {!isMetamodel && viewpoints.map(vp => (
+                            <option key={vp.id} value={vp.id}>{vp.name}</option>
+                        ))}
+                    </select>
+                </div>
             </div>
 
             {/* ── Spacer ── */}
