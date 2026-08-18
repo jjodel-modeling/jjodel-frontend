@@ -836,6 +836,14 @@ bag `_state`, che non contiene affatto il run-state.
   **Coordinamento su tre ratifiche sullo stesso punto di crescita**: R-B14 riserva la superficie di
   `ReadCtx` «all'estensione `state` (R-SIM-4)» e questa serie *è* quell'estensione; R-J5 vuole
   aggiungerci `getParent`. Chi arriva secondo rilegge la superficie prima di scrivere.
+  **Aggiornamento 2026-08-18 (post-discovery M1)**: la forma è l'**iniezione nel dispatcher**.
+  `makeDrawReadCtx(idlookup, isMarked = () => false)`; `makeReadCtx` (`irReadCtxLproxy.ts`, già
+  impuro: importa il joiner) importa `sim/simRunState` e inietta `isSimActive` in entrambi i
+  backend. `irReadCtx.ts` resta a **zero import**; i 6 siti di chiamata di `makeReadCtx` non si
+  toccano; il default `false` è confinato alle costruzioni dirette del draw nei test. Il metodo è
+  obbligatorio sull'interfaccia: la deroga alla regola 11 (aggiunta non opzionale a interfaccia
+  esportata, entrambi gli implementor in-repo aggiornati nello stesso diff) si dichiara nel Layer
+  Impact Report, non si prende in silenzio.
 - **R-MK-5** (2026-08-18) — **Il dependency set acquisisce UNA nozione di dipendenza non-feature:
   i canali dichiarati.** Insieme chiuso, allargabile per ratifica, due membri alla nascita: `mark`
   (version counter del singleton, `getSimVersion`) e `container` (il debito di R-B16, che **si
@@ -846,6 +854,17 @@ bag `_state`, che non contiene affatto il run-state.
   `deps`; (2) **emendamento alla spec §9**: il dependency set ha due parti, feature e canali
   dichiarati, e la clausola restrittiva («NON DEVE re-renderizzare per feature fuori dal set») si
   conserva su entrambe.
+  **Emendamento 2026-08-18 (post-discovery M1)**: la clausola operativa «`compilePredicate` riceve
+  un secondo insieme accanto a `deps`» è sostituita dal **sink module-scoped** sul precedente
+  esatto di `crossPathSink` (`irCompile.ts:47`, motivazione scritta nel commento :37-46: threading
+  un secondo accumulatore «would touch every signature»). Il vincolo normativo resta pieno:
+  insieme separato dal feature set, mai pseudo-feature prefissate. Due addenda dalla discovery
+  (`docs/discovery/discovery_2026-08-18_m1_marcatura_predicato_interprete.md`, Q1-Q2): (1) il
+  `dependencySet` delle view di nodo e di riga è un **dead write** (unica lettura applicativa:
+  `useIRContainment.ts:87`, solo edge object-as-edge), quindi depositare `channels` non basta —
+  l'effetto lo danno solo gli innesti in `useIRView` / `useIRRowView` / `useIRContainment`, e i
+  test devono asserire il consumo, non il deposito; (2) il campo `channels` sui `Compiled*` nasce
+  **opzionale**, per il precedente della 2a sulla regola 11.
 - **R-MK-6** (2026-08-18) — **Granularità di v1 grossa e dichiarata.** Un bump di canale invalida
   ogni elemento che quel canale lo dichiara: uno step di simulazione re-renderizza tutti i nodi la
   cui view legge `marked`. È lo stesso ordine di grandezza dell'highlight di R-SIM-3, quindi non è
@@ -855,6 +874,13 @@ bag `_state`, che non contiene affatto il run-state.
   mai `undefined`. `path` che si esaurisce: `false`, con la ragione visibile nella diagnostica di
   authoring. Nessun default silenzioso; `marked` non lancia, e un IR malformato mostra l'errore in
   authoring come le altre regole di `validateIR`.
+  **Interpretazione 2026-08-18 (post-discovery M1)**: un canale runtime→pannello non esiste
+  (discovery M1, R4: le uniche diagnostiche del percorso IR sono la stringa statica di
+  `validateIR` e i `console.warn` one-shot di `irCrossDeps`). «Ragione visibile nella diagnostica
+  di authoring» si legge quindi: parte **statica** (path malformato o fuori profilo) in
+  `validateIR`; esaurimento a **runtime** con warn one-shot sul modello di
+  `warnUnresolvedCrossDeps` (`irCrossDeps.ts:176-190`). Il canale verso il pannello è una fetta a
+  sé, non un requisito di M1.
 - **R-MK-8** (2026-08-18) — **L'highlight di R-SIM-3 non si rimuove ora.** La classe `sim-active`
   su `ObjectNode` resta: è il default per i viewpoint che non autorano `marked`. Il ritiro è una
   fetta separata con ratifica propria, da aprire solo quando `marked` ha un consumatore reale
@@ -867,6 +893,29 @@ bag `_state`, che non contiene affatto il run-state.
   non hanno VersionFixer per ripulirlo. M1 e M3 sono in critical zone (§3.1: `editor-v2/viewpoint/
   ir/` per M1, `useJjomSync`/`useM1ReferenceEdges` per M3): corsia completa, two-phase con report
   in `docs/discovery/`, **Layer Impact Report obbligatorio prima del diff**, effort xhigh.
+- **R-MK-10** (2026-08-18) — **`marked.path` risolve con `getRef`, single-hop in v1; `isKind` non
+  si tocca.** Il ramo `path` di `isKind` legge il terminale con `ctx.getValue`, che sul backend di
+  produzione (lproxy) restituisce un proxy L e non un pointer (`LModelElement.tsx:7308`): il
+  predicato torna sempre `false` (discovery M1, Q7/R3; tracciato a codice, non ancora eseguito
+  contro lproxy). `marked.path` **non eredita la forma**: risolve con `ctx.getRef(id, feature,
+  take)` (semantica draw su entrambi i backend, `null` sui casi di esaurimento → il fallback di
+  R-MK-7 è soddisfatto per costruzione) ed è ristretto a **un solo hop su reference** in v1 —
+  multi-hop rifiutato a compile con messaggio, perché non esiste un modo di compilazione
+  «PathExpr → element id» e costruirlo è fuori M1. La marcatura del target non richiede
+  `crossPaths`: la porta il canale (globale); l'identità del target la porta la feature in
+  `deps`. Il difetto di `isKind` è registrato in `docs/TECH-DEBT.md`; la micro-slice di
+  convergenza (anche `isKind` su `getRef`) parte solo dopo la verifica in console di Alfonso che
+  conferma il difetto sul backend reale. Due `path?` con semantiche diverse a parità di aspetto
+  sono una divergenza temporanea e dichiarata, non un design.
+- **R-MK-11** (2026-08-18) — **`validateIR` acquisisce la regola del vocabolario chiuso di
+  `Predicate.op`.** Camminata ricorsiva dei predicati (inclusi `and`/`or`/`not` annidati e i
+  `Conditional`): un `op` fuori dal vocabolario produce un messaggio leggibile
+  (`[ir] unknown predicate operator "<op>"` con il contesto), al posto del `TypeError` nudo del
+  ramo `default` di `compilePredicate` che oggi butta via l'intera view al render
+  (`irResolveCore.ts:198`) e congela l'authoring (commit gated su `v.ok`,
+  `VertexAuthoringPanel.tsx:141`). Seconda regola authoring-time dopo quella degli endpoint,
+  coerente con R-B9-bis. Il ramo `default` in sé resta com'è (rischio R2 della discovery,
+  registrato): chiuderlo è fuori M1.
 
 ## Superate
 

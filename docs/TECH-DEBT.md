@@ -225,3 +225,16 @@ Registro dei debiti tecnici noti. Ogni entry deve indicare: data, origine, stato
 - `frontend/src/components/editors/Info.tsx` — `MULTIPLICITY_PRESETS`, `applyPreset`
 - `frontend/src/model/logicWrapper/LModelElement.tsx` — `set_lowerBound`, `set_upperBound`
 - `CLAUDE.md` §3.3
+
+---
+
+## `isKind` con `path` verosimilmente inerte sul backend lproxy
+
+**Registrato:** 2026-08-18
+**Origine:** discovery M1 della marcatura (`docs/discovery/discovery_2026-08-18_m1_marcatura_predicato_interprete.md`, Q7/R3), aperta per decidere la forma di `marked.path` (R-MK-10).
+**Stato attuale:** il ramo `path` di `isKind` (`irCompile.ts:156-161`) legge il terminale con l'accessor di `compilePath`, cioè `ctx.getValue`; sul backend di produzione (`IR_READ_BACKEND = 'lproxy'`) una reference torna un proxy L e non un pointer (`LModelElement.tsx:7308`), quindi `typeof target === 'string'` è `false` e il predicato ritorna sempre `false`. Il codebase documenta l'insidia (`irReadCtxLproxy.ts:42-44`) e per questo delega `getRef` al draw; i 30 usi di `isKind` nei test girano tutti su `makeDrawReadCtx` e non la vedono. **Grado di certezza: tracciato a codice e per catena di tipi, non eseguito contro lproxy** (serve il browser).
+**Riproduzione (1 minuto, console):** una view IR con `predicate: {op:'isKind', class:'<X>', path:'$ref.value'}` dove `$ref` punta a un'istanza di `X`: attesa applicabile, osservata (se il difetto è confermato) mai applicata. `isKind` **senza** path non è affetto (usa `ctx.isKindOf(id, cls)` direttamente).
+**Fix strutturale raccomandato:** il ramo `path` risolve con `ctx.getRef` come fa `marked.path` (R-MK-10), convergendo le due semantiche. Micro-slice dedicata; **gate: la verifica in console di Alfonso** che conferma il difetto sul backend reale. Cambia comportamento committato (da sempre-false a funzionante): serve go-ahead esplicito, non è un fix di straforo dentro M1.
+**Priorità:** media (nessun consumatore noto in produzione usa `isKind` con `path`; il rischio è chi lo autora domani fidandosi della spec).
+**Effort stimato:** un'ora inclusi i test, dopo la conferma.
+**Riferimenti:** discovery M1 Q7 («Il difetto che `marked.path?` non deve ereditare»); R-MK-10 in `docs/decisions.md`.
