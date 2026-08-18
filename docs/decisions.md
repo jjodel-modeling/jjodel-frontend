@@ -815,6 +815,87 @@ Base di evidenza: `docs/discovery/discovery_2026-08-13_view_creation_sites_ir_na
   l'argomento va appoggiato su quello e non sui due assenti. Base di evidenza:
   `docs/discovery/discovery_2026-08-18_3_corpus_persistito_e_due_migrazioni.md`, sezione 7.
 
+- **R-IRN-14** (2026-08-18) — **`Defaults.views` e `Defaults.viewpoints` sono registri di identita',
+  non manifesti del seed, e restano pieni.** I due array fanno oggi due lavori distinti: dire quali
+  id sono di sistema, e dire che cosa il tool crea all'init. Il ritiro toglie il secondo lavoro, non
+  il primo. Che non siano la stessa lista e' gia' vero: `store.tsx:423` semina `Pointer_ViewEdge`,
+  che in nessun registro compare (R-IRN-13), quindi svuotare l'array per smettere di seminare
+  correggerebbe la lista sbagliata. Svuotarlo, per giunta, romperebbe `isSystemViewpoint`
+  (`Defaults.ts:106` legge quell'array) e con essa **in silenzio** il filtro di R-IRN-9
+  (`classes.ts:3327`) e la normalizzazione di R-IRN-10 (`Toolbar.tsx:221`), e farebbe diventare
+  `undefined` il `Defaults.viewpoints[0]` di `view.tsx:339-340`. Il precedente e' R-IRN-8, che ha
+  lasciato in `Defaults.ts:65-71` le quattro costanti `Pointer_*` di `Default Validation` proprio
+  perche' sono gli id che la migrazione deve cercare. Base di evidenza:
+  `docs/discovery/discovery_2026-08-18_2228_seed_e_activeviewpoint.md`, §4.4 e §6.1.
+- **R-IRN-15** (2026-08-18) — **Il ritiro del seed sono tre interventi, e il loop di coda va
+  neutralizzato anche se non si purga niente.** I tre: smettere di seminare all'init; neutralizzare
+  il loop di coda di `VersionFixer.update` (righe 148-154); rendere inerte `updateDefaultView`
+  (`view.tsx:1917`). Il secondo non e' opzionale e non dipende dalla purga: un progetto nuovo,
+  salvato e riaperto, passa da `SaveManager.load` con uno stato privo delle venti default, e il loop
+  gliele rimette. Senza quel pezzo il ritiro e' annullato dal primo salva-e-riapri. Il terzo e' il
+  punto di rottura piu' vicino e il piu' silenzioso: con i registri di booleani `view.tsx:1919`
+  prende `true`, `{...true}` da' `{}`, e `PointedBy.merge({}, v)` solleva un TypeError a
+  `view.tsx:1923` che risale fino al `catch` di `reducer.ts:1577`, dove non fa crashare la pagina ma
+  **impedisce al progetto di caricarsi**. Va reso inerte per costruzione, con uscita anticipata su
+  `typeof !== 'object'`, non per condizione di contesto. Il loop di coda si **rimuove**, non si rende
+  condizionale: una condizione e' un interruttore che qualcuno riaccendera', e una eventuale view di
+  sistema futura arrivera' con la sua migration, che e' il posto giusto. Base di evidenza: §4.3 e
+  §4.4 dello stesso report.
+- **R-IRN-16** (2026-08-18) — **La purga usa `clonedCounter`, non tocca il viewpoint `Default`, e
+  lascia stare i puntatori di `DGraphElement.view`.** Tre scelte con una logica sola, la prudenza
+  dove le opzioni si equivalgono su un corpus di n=1. **(a) Condizione**: `clonedCounter` non
+  definito, lo stesso predicato di `VersionFixer.tsx:143`, invece di una tabella di 21 firme
+  congelate che nessuno rigenerera' mai perche' il seed non esistera' piu'. Sbaglia nella direzione
+  sicura, perche' `clonedCounter` e' un contatore di clonazione del reducer e sovrastima le
+  modifiche; e la sovra-conservazione e' **invisibile**, perche' con i registri conservati (R-IRN-14)
+  un `Default` che resta pieno di sole view di sistema continua a essere nascosto da
+  `isSystemViewpoint` piu' `holdsOnlySystemViews`. Vincolo: la migration **logga quante default ha
+  conservato e perche'**, altrimenti il primo progetto che finisce nel ramo conservativo si scopre
+  per caso. **(b) Il viewpoint `Default` non si purga**, mai, nemmeno condizionatamente: e' il padre
+  di tutte le `subViews`, il bersaglio di `view.tsx:339-340` e il fallback di `classes.ts:1181`, il
+  predicato regge sia sul presente sia sull'assente, e il rubinetto e' ancora aperto per intero
+  (R-IRN-9, «Quello che NON e' stato fatto»), quindi nuove view autorate possono ancora nascerci
+  dentro. Svuotare un contenitore mentre il rubinetto cola e' la sequenza sbagliata. Cade con questo
+  anche la domanda «dove finiscono le view autorate rimaste». **(c) I 122 puntatori pendenti su
+  `DGraphElement.view`** (`model/dataStructure/GraphDataElements.tsx:100`, campo
+  `Pointer<DViewElement, 1, 1>`, 122 occorrenze su 156 nel censimento §6.2) restano dove sono.
+  Azzerarli violerebbe un tipo `1,1` per un beneficio a runtime nullo: ricerca eseguita il 18/8,
+  `grep -rc "get_view" frontend/src` da' diciotto chiamate in `GraphDataElements.tsx`, cinque in
+  `classes.ts`, tre in `view/viewElement/view.tsx`, una in `viewSubtree.ts`, e **zero in
+  `components/editor-v2`**; le due occorrenze fuori dal layer classico
+  (`edges/routing/manhattan/markers.ts:18`, `viewParentingOptions.ts:13`) sono commenti. Quel campo
+  e' letto solo dal renderer classico, che R-IRN-7 dichiara irraggiungibile.
+- **R-IRN-17** (2026-08-18) — **`VersionFixer.tsx:134` si rimuove.** La riga scrive `s.version.n`,
+  cioe' la versione di **schema**, sul campo `version` del `DProject`, che `projects.ts:101-104`
+  tratta come **revisione utente**. L'effetto non e' uno scarto una tantum ma un contatore congelato:
+  `Math.round(2.27)` e `Math.round(2.28)` valgono entrambi 2, quindi ogni apertura riscrive `2.227` e
+  ogni salvataggio riporta a `v2.3`, per sempre e su ogni progetto. Il valore che la riga sovrascrive
+  e' gia' quello giusto, e nessun lettore di `DProject.version` si aspetta la versione di schema
+  (verificato su tutti i lettori, §6.5). La correzione e' una riga, va in un commit suo dentro la
+  Fase 2, e **precede** la spedizione di `2.228`, altrimenti la migrazione propaga il numero a tutto
+  il corpus. Prima di scriverla va fatto il controllo da trenta secondi in dashboard: aprire un
+  progetto, salvare una volta, guardare la revisione. `2.3` conferma, `2.6` smentisce.
+- **R-IRN-18** (2026-08-18) — **`null` da entrambi i lati del proxy, e `activateViewpoint` entra nel
+  perimetro.** Il getter L espone `LViewPoint | null` (forma misurata funzionante, §5.1), non
+  `undefined` normalizzato sul solo lato L: due forme del vuoto ai due lati del proxy sono
+  esattamente la confusione che R-IRN-11 e' stata decisa per chiudere. E `activateViewpoint`
+  (`utils/lastViewpoint.ts:49-64`) **non scrive quando il valore e' vuoto**, quindi oggi `null` non
+  e' raggiungibile dall'interfaccia: e' un difetto gia' vivo, e il fronte B senza di esso e' meta'
+  feature, nullable e non scrivibile. Va corretto nella stessa fase, in un commit suo appaiato al
+  cambio di tipo.
+- **R-IRN-19** (2026-08-18) — **La purga esce da `2.228` e diventa `2.229`. Emendamento a
+  R-IRN-12.** R-IRN-12 resta valida nel suo principio, che e' un vincolo di precedenza: una purga
+  non puo' precedere la neutralizzazione del loop di coda, altrimenti si annulla da sola. R-IRN-15
+  soddisfa quel vincolo, e da li' la purga diventa separabile. Cambia la sequenza, non la regola.
+  Le ragioni per separarla: **non compra funzione, compra igiene**, perche' toglie record che
+  nessuno produce piu' senza far funzionare niente di nuovo; **poggia su n=1**, e ogni stima di
+  quante default siano toccate viene da un solo progetto, mentre il ritiro in uso reale genera
+  proprio il corpus che serve a dimensionarla; **nessun gate copre i due fronti** (§3.1), quindi la
+  verifica e' manuale e una diff piu' piccola e' una diff verificabile; e il fronte tocca gia' nove
+  file, oltre la soglia di cinque della Rule 19. `2.228` porta quindi il fronte B e il ritiro
+  effettivo; `2.229` portera' la purga dei record e la decisione sui puntatori, su un corpus
+  misurato invece che su uno.
+
 ## Serie R-SIM — Pannello di simulazione e attributi di stato (ratifiche 2026-08-17)
 
 Base di evidenza: `docs/discovery/discovery_2026-08-17_state_attributes_data_node.md` (con
