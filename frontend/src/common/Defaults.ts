@@ -100,6 +100,47 @@ export class Defaults { /// TODO: this really needs to become dynamically genera
         return !!(Defaults.defaultViewsMap[id] || Defaults.defaultViewPointsMap[id] || Defaults.defaultTypesMap[id]); // id.indexOf('Pointer_View') !== -1
     }
 
+    /** True for the viewpoints Jjodel seeds itself. Matched by pointer and never by
+     *  name, so a user viewpoint called "Default" is unaffected. */
+    static isSystemViewpoint(id: Pointer): boolean {
+        return (Defaults.viewpoints as string[]).includes(id as string);
+    }
+
+    /** A seeded viewpoint is hidden from user-facing lists only while it holds nothing
+     *  but system views. Authored views can end up inside `Default` (a view is parented
+     *  to the active viewpoint, falling back to the seeded one), and hiding their
+     *  container would make them unreachable: four such views sit inside `Default` in
+     *  `examples/statechartplus.ts`.
+     *
+     *  The test is on the pointer NAMESPACE, not on `Defaults.views`. That registry
+     *  lists what the tool seeds TODAY, while saved projects also carry system views
+     *  that left it or that never entered it. Measured on the `Default` of
+     *  `examples/statechartplus.ts`: 39 subViews, 35 system and 4 authored, and an
+     *  allowlist built from `Defaults.views` would MISS 3 of the 35 —
+     *  `Pointer_ViewVoid` (37 occurrences across the saved-state corpus, zero in the
+     *  source) and `Pointer_ViewDefaultPackage` (39, and only a commented-out constant
+     *  at line 42 here). Such an allowlist would keep the viewpoint visible even after
+     *  the authored views were moved out, which is the whole point of the predicate.
+     *  `Pointer_ViewEdge` — the unnamed sixth edge view of `store.tsx:423`, id built as
+     *  `'Pointer_ViewEdge' + name` in `DV.tsx:1066` — is the same case seen from the
+     *  other side: seeded today, in no registry. Same convention `VersionFixer.tsx:861`
+     *  already uses, and the one the commented-out alternative next to `check()` had in
+     *  mind. Still matching by pointer, never by name.
+     *
+     *  Two shapes, both real: `subViews` is a Dictionary in current code
+     *  (`view.tsx:255`) and an ARRAY in saved states (measured: 39 entries in
+     *  `examples/statechartplus.ts`). `clonedCounter` is skipped because the reducer
+     *  injects it into that dictionary as a version counter (`reducer.ts:104`) —
+     *  `get_SubViews` and `get_allSubViews` delete it before enumerating for the same
+     *  reason (`view.tsx:1074,1110`). Without that skip the predicate would answer
+     *  `false` forever on any touched viewpoint and silently disable R-IRN-9. */
+    static holdsOnlySystemViews(vp: DViewPoint | undefined): boolean {
+        const subs: any = vp && (vp as any).subViews;
+        const ids: string[] = Array.isArray(subs) ? subs : (subs ? Object.keys(subs) : []);
+        return ids.every(id => id === 'clonedCounter'
+            || (typeof id === 'string' && id.startsWith('Pointer_View')));
+    }
+
     // Store fresh views - should only be called once during init with newly created views
     static storeFreshViews(views: DViewElement[], viewpoints: DViewPoint[]): void {
         if (Defaults.freshViewsInitialized) return; // Only store once

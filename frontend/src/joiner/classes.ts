@@ -3321,7 +3321,22 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
         }*/
 
     protected get_viewpoints(context: Context): this['viewpoints'] {
-        return LViewPoint.fromPointer([...Defaults.viewpoints, ...(context.data.viewpoints || [])]);
+        // The seeded `Default` is a system layer, not an authored viewpoint (R-IRN-9).
+        // It is dropped from the list, but only while it is empty of authored content:
+        // views parented to it would otherwise become unreachable.
+        const seeded = Defaults.viewpoints.filter(
+            id => !Defaults.holdsOnlySystemViews(DPointerTargetable.fromPointer(id) as any)
+        );
+        // Belt, not requirement: measured on the two serialized projects in the repo,
+        // the seeded pointer is never inside `data.viewpoints` (the DViewPoint
+        // constructor returns before registering, :1210, and `set_viewpoints` has zero
+        // callers). It covers the saved projects the repo does not contain, and it also
+        // keeps the concatenation duplicate-free, which `get_views` does explicitly and
+        // this getter never has.
+        const own = (context.data.viewpoints || []).filter(
+            (id: any) => !Defaults.isSystemViewpoint(id)
+        );
+        return LViewPoint.fromPointer([...seeded, ...own]);
     }
     protected set_viewpoints(val0: PackArr<this['viewpoints']>, c: Context): boolean {
         let val = Pointers.from(val0);

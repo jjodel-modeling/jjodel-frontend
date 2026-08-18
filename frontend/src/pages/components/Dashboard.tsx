@@ -1,4 +1,5 @@
 import {
+    Defaults,
     Dictionary, DProject,
     DState,
     DUser,
@@ -366,28 +367,39 @@ const ProjectInfoCard = (props: ProjectProps) => {
                 <h5>{project.name ? project.name : 'Unnamed Project'}</h5>
                 {project.description && <p>{project.description}</p>}
                 {project.metamodels.length === 0 && <img src={colors000} width={220} style={{paddingBottom: '10px'}}/>}
-                {project.metamodels.length > 0 && project.models.length === 0 && project.viewpoints.length <= 2 && <img src={colors100} width={220} style={{paddingBottom: '10px'}}/>}
-                {project.metamodels.length > 0 && project.models.length === 0 && project.viewpoints.length > 2 && <img src={colors101} width={220} style={{paddingBottom: '10px'}}/>}
-                {project.metamodels.length > 0 && project.models.length > 0 && project.viewpoints.length <= 2 && <img src={colors110} width={220} style={{paddingBottom: '10px'}}/>}
-                {project.metamodels.length > 0 && project.models.length > 0 && project.viewpoints.length > 2 && <img src={colors111} width={220} style={{paddingBottom: '10px'}}/>}
+                {/* Thresholds were <= 2 / > 2 while `viewpoints` still counted the seeded
+                    `Default` and its length was 1 + N. Since R-IRN-9 it is N, so 1 is the
+                    same cut expressed on the new count: the illustration does not change
+                    for any project. This is not a design change. */}
+                {project.metamodels.length > 0 && project.models.length === 0 && project.viewpoints.length <= 1 && <img src={colors100} width={220} style={{paddingBottom: '10px'}}/>}
+                {project.metamodels.length > 0 && project.models.length === 0 && project.viewpoints.length > 1 && <img src={colors101} width={220} style={{paddingBottom: '10px'}}/>}
+                {project.metamodels.length > 0 && project.models.length > 0 && project.viewpoints.length <= 1 && <img src={colors110} width={220} style={{paddingBottom: '10px'}}/>}
+                {project.metamodels.length > 0 && project.models.length > 0 && project.viewpoints.length > 1 && <img src={colors111} width={220} style={{paddingBottom: '10px'}}/>}
 
 
 
 
                 {project.metamodels.length === 0 ?
-                    <p>This project does not contain any metamodel and consequently no models yet; it only contains the default viewpoints.</p>
+                    <p>This project does not contain any metamodel and consequently no models yet.</p>
                     :
                     <p>
                     {project.metamodels.length === 1 && <>In this project, <b>one metamodel</b> is defined</>}
                     {project.metamodels.length > 1 && <>In this project, <b>{project.metamodels.length} metamodels</b> are defined </>}
                     {project.models.length === 0  ?
-                        <> and does not contain any model (it only includes the default viewpoints).</>
+                        <> and does not contain any model yet.</>
                         :
                         <>
                         {project.models.length === 1  && <>, from which <b>one model</b> is instantiated. </>}
                         {project.models.length > 1  && <>, from which <b>{project.models.length}</b> models are instantiated. </>}
 
-                        <>These models are explored and analyzed through <b>{project.viewpoints.length} viewpoints</b> (including the default ones), each offering a distinct perspective on different system concerns. </>
+                        {/* The parenthetical "(including the default ones)" is gone with the
+                            count that justified it (R-IRN-9). The zero branch is new and
+                            reachable for the same reason: the number no longer has the seeded
+                            `Default` propping it up above zero. Same one/many split the
+                            metamodel and model sentences above already use. */}
+                        {project.viewpoints.length === 0 && <>No viewpoint is defined yet, so these models render in abstract syntax. </>}
+                        {project.viewpoints.length === 1 && <>These models are explored and analyzed through <b>one viewpoint</b>, offering a distinct perspective on system concerns. </>}
+                        {project.viewpoints.length > 1 && <>These models are explored and analyzed through <b>{project.viewpoints.length} viewpoints</b>, each offering a distinct perspective on different system concerns. </>}
                         </>
                     }
 
@@ -478,8 +490,12 @@ function ProjectCatalog(props: ProjectProps) {
                                 <Btn icon={'minispace'}/>
                                 <Btn icon={'copy'} action={e => vp.duplicate()} tip={'Duplicate viewpoint'}/>
                                 <Sep/>
+                                {/* By pointer, never by name: the previous test also froze a
+                                    user viewpoint that happened to be called "Default", and
+                                    named a "Validation default" that is no longer seeded
+                                    (R-IRN-8). Same fix already applied in MegamodelView. */}
                                 <Btn icon={'delete'} action={e => vp.delete()} tip={'Delete viewpoint'}
-                                     disabled={name === 'Default' || name === 'Validation default'}/>
+                                     disabled={Defaults.isSystemViewpoint(vp.id)}/>
                             </CommandBar>
                         </div>
                     </div>)

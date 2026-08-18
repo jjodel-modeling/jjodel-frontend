@@ -32,11 +32,14 @@ import {
 import { Defaults } from '../../joiner';
 import './MegamodelView.scss';
 
-/** Ids of the viewpoints Jjodel seeds itself, excluded from the megamodel.
- *  Matched by pointer and not by name: the previous name test also swallowed a
- *  user viewpoint that happened to be called "Default". `Defaults.viewpoints`
- *  is the single source of truth for which ids are seeded. */
-const SYSTEM_VIEWPOINT_IDS = new Set<string>(Defaults.viewpoints as unknown as string[]);
+// The viewpoints Jjodel seeds itself are excluded from the megamodel, through
+// `Defaults.isSystemViewpoint` so the exclusion has one definition and not two.
+// Matched by pointer and not by name: the previous name test also swallowed a
+// user viewpoint that happened to be called "Default".
+//
+// Defence in depth: since R-IRN-9 the list arrives already filtered by
+// `LProject.viewpoints`. Kept because this component also accepts a caller that
+// has not been through that getter.
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -147,7 +150,7 @@ function buildGraph(
     // Add user-defined viewpoints (the seeded system viewpoints are excluded)
     if (viewpoints) {
         for (const vp of viewpoints) {
-            if (SYSTEM_VIEWPOINT_IDS.has(vp.id)) continue;
+            if (Defaults.isSystemViewpoint(vp.id)) continue;
             if (!nodeMap.has(vp.id)) {
                 const badge = BADGE.viewpoint;
                 nodeMap.set(vp.id, {
