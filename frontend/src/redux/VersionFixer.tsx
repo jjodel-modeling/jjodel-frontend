@@ -129,9 +129,6 @@ everytime you put hands into a D-Object shape or valid values, you should docume
             Log.exDev(currVer <= prevVer, "version updater found loop at version \""+currVer+"\", please notify the developers.");
             prevVer = currVer;
         }
-        let pid = U.getProjectID_URL() as Pointer;
-        let project = s.idlookup[pid] as DProject;
-        if (project) project.version = s.version.n;
 
         // update default views (only actual view elements, skip DClass/DPackage/etc.)
         for (let k in s.idlookup) {

@@ -1,5 +1,18 @@
 # Claude Code Session Log
 
+## 2026-08-18 — fix: la revisione utente non viene piu' sovrascritta dalla versione di schema (R-IRN-17)
+**Prompt**: prompt del 2026-08-18 16:56, Fase 2 di `2.227 -> 2.228`, slice 0. Un commit, una riga: rimuovere `VersionFixer.tsx:134` piu' le due righe che calcolano `pid` e `project` se restano senza altri usi. Prerequisito soddisfatto: Alfonso ha eseguito il controllo in dashboard e riporta `2.3`, che conferma la diagnosi.
+**Files touched**: `frontend/src/redux/VersionFixer.tsx` (3 righe rimosse), `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown — gate e smoke allineati alla baseline (typecheck 33, test 1315/9 rosse, build exit 0, smoke 10/0/2), ma nessuno di essi apre un salvataggio: la verifica che conta e' quella manuale di Alfonso, aprire e salvare due volte e vedere la revisione avanzare di un decimo.
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced — `docs/discovery/discovery_2026-08-18_4_lir_versionfixer_2228.md` §4.1, prodotto prima del diff e committato in `6ea762783`.
+**Smoke visivo**: passato (automatico) — 3 stati, 10 assert passati, 0 falliti, 2 skip per costruzione. Non sostituisce la verifica manuale.
+**Notes**: La rimozione sblocca il contatore, non ricostruisce la storia persa: un progetto fermo a `2.3` riparte da `2.3` e il prossimo salvataggio da' `2.4`. Resta un secondo scrittore, `projects.ts:372` in `Online.save`, guardato da `!version` e oggi irraggiungibile perche' `getNextVersionNumber` non restituisce mai un valore falsy: censito nel LIR §5.4, non toccato.
+**Prompt document name**: 2026-08-18 16:56
+
 ## 2026-08-18 — docs: Layer Impact Report per le tre modifiche a `VersionFixer.tsx` della `2.228`
 **Prompt**: prompt del 2026-08-18 16:56, Fase 2 di `2.227 -> 2.228`, Passo 0: un solo LIR a copertura delle tre slice che toccano `VersionFixer.tsx` (rimozione della riga 134, rimozione del loop di coda 148-154, nuovo adapter `2.227 -> 2.228`), con le quattro domande obbligatorie per ciascuna. Hard stop al termine, nessuna riga di codice.
 **Files touched**: `docs/discovery/discovery_2026-08-18_4_lir_versionfixer_2228.md` (nuovo), `docs/claude-code-log.md`
