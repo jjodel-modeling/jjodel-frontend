@@ -18,7 +18,8 @@ import { describe, it, expect } from 'vitest';
 import { compileView, compileEdgeView, compileRowView, clearCompileCache } from '../irCompile';
 import { makeDrawReadCtx } from '../irReadCtx';
 import { validateIR } from '../irValidate';
-import type { EdgeViewIR, RowViewIR, VertexViewIR } from '../irTypes';
+import { getIRIndex } from '../irResolveCore';
+import type { AnyViewIR, EdgeViewIR, RowViewIR, VertexViewIR } from '../irTypes';
 
 /** s1 --next--> s2, s1 --many--> [s2, s3]; s3 has no slots at all. */
 function world(marked: Set<string> = new Set()) {
@@ -297,5 +298,116 @@ describe('validateIR — closed vocabulary of Predicate.op (R-MK-11)', () => {
             clearCompileCache();
             expect(validateIR(`v-vocab-${i}`, withPredicate(predicate))).toEqual({ ok: true });
         }
+    });
+});
+
+// ---------------------------------------------------------------------------
+// M1b — the consumption half. The tests above assert that the channel is
+// DEPOSITED; these assert that the index EXPOSES it and that the gate the three
+// resolution surfaces carry has the semantics the restrictive clause requires.
+// ---------------------------------------------------------------------------
+
+/** Fake DState slice for getIRIndex (same shape as ir.test.ts's builder). */
+function stateWith(views: { id: string; ir: AnyViewIR }[]) {
+    const idlookup: Record<string, any> = { ...world().idlookup };
+    const viewelements: string[] = [];
+    for (const v of views) {
+        idlookup[v.id] = { id: v.id, viewpoint: 'VP', ir: v.ir };
+        viewelements.push(v.id);
+    }
+    return { viewpoint: 'VP', viewelements, idlookup };
+}
+
+describe('channelsInUse — the index-level union (R-MK-5/R-MK-6)', () => {
+    it('unions the channels of node, row and edge entries', () => {
+        clearCompileCache();
+        const state = stateWith([
+            { id: 'V_plain', ir: vertexIR({ predicate: { op: 'isKind', class: 'State' } }) },
+            { id: 'V_marked', ir: vertexIR({ shape: { form: 'rect', fill: { when: { op: 'marked' }, then: '#ef4444' } } }) },
+            { id: 'R_marked', ir: rowIR({ visible: { when: { op: 'marked' }, then: true, else: false } }) },
+            { id: 'E_plain', ir: edgeIR({}) },
+        ]);
+        const index = getIRIndex(state, 'sig-ch-mixed')!;
+        expect(index).not.toBeNull();
+        expect([...(index.channelsInUse ?? [])]).toEqual(['mark']);
+    });
+
+    it('is EMPTY when no view of the viewpoint declares a channel', () => {
+        clearCompileCache();
+        const state = stateWith([
+            { id: 'V_a', ir: vertexIR({}) },
+            { id: 'R_a', ir: rowIR({}) },
+            { id: 'E_a', ir: edgeIR({}) },
+        ]);
+        const index = getIRIndex(state, 'sig-ch-empty')!;
+        expect(index.channelsInUse?.size).toBe(0);
+        expect(index.channelsInUse?.has('mark')).toBe(false);
+    });
+
+    it('picks the channel up from an EDGE view alone (the surface oaeSlotsSig cannot see)', () => {
+        clearCompileCache();
+        const state = stateWith([
+            { id: 'V_b', ir: vertexIR({}) },
+            { id: 'E_marked', ir: edgeIR({ edge: { line: { color: { when: { op: 'marked' }, then: '#ef4444' } } } }) },
+        ]);
+        const index = getIRIndex(state, 'sig-ch-edge-only')!;
+        expect(index.channelsInUse?.has('mark')).toBe(true);
+    });
+
+    it('picks the channel up from a view whose predicate reads a marked TARGET', () => {
+        clearCompileCache();
+        const state = stateWith([
+            { id: 'V_path', ir: vertexIR({ predicate: { op: 'marked', path: '$next.value' } }) },
+        ]);
+        const index = getIRIndex(state, 'sig-ch-path')!;
+        expect(index.channelsInUse?.has('mark')).toBe(true);
+    });
+});
+
+describe('the declared-channel gate (R-MK-5, restrictive clause of spec sez. 9)', () => {
+    /**
+     * MIRRORED LITERAL, not the production expression. useIRView, useIRRowView and
+     * useIRContainment are React hooks and are not import-safe in the node vitest env,
+     * so — as edgeAuthoring.test.ts does for the authoring panels — the gate is
+     * asserted here as the same one-line expression the three of them carry:
+     *
+     *     const markDep = index?.channelsInUse?.has('mark') ? markVersion : 0;
+     *
+     * What this pins is the SEMANTICS, which the smoke then confirms on screen: the
+     * resolution signature MOVES with the bump when the channel is declared, and is a
+     * constant when it is not. The second assertion is the restrictive clause, not a
+     * detail: it is what keeps a viewpoint that never reads `marked` re-resolving
+     * exactly as it did before this slice.
+     */
+    const gate = (index: { channelsInUse?: ReadonlySet<string> } | null, markVersion: number): number =>
+        (index?.channelsInUse?.has('mark') ? markVersion : 0);
+
+    const indexOf = (views: { id: string; ir: AnyViewIR }[], sig: string) => {
+        clearCompileCache();
+        return getIRIndex(stateWith(views), sig);
+    };
+
+    it('moves with the bump when the index declares the channel', () => {
+        const index = indexOf(
+            [{ id: 'V_m', ir: vertexIR({ predicate: { op: 'marked' } }) }],
+            'sig-gate-declared',
+        );
+        expect(gate(index, 7)).toBe(7);
+        expect(gate(index, 8)).toBe(8);
+        expect(gate(index, 8)).not.toBe(gate(index, 7));
+    });
+
+    it('is a constant across bumps when the index does NOT declare it', () => {
+        const index = indexOf(
+            [{ id: 'V_n', ir: vertexIR({ predicate: { op: 'isKind', class: 'State' } }) }],
+            'sig-gate-undeclared',
+        );
+        expect(gate(index, 7)).toBe(0);
+        expect(gate(index, 8)).toBe(0);
+        expect(gate(index, 8)).toBe(gate(index, 7));
+    });
+
+    it('is a constant when there is no IR index at all (non-IR viewpoint)', () => {
+        expect(gate(null, 42)).toBe(0);
     });
 });

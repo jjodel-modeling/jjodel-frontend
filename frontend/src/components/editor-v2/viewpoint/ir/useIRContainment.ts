@@ -12,6 +12,7 @@ import { useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import type { Edge, Node } from '@xyflow/react';
 import { store } from '../../../../joiner';
+import { useSimVersion } from '../../sim/simRunState';
 import { computeIRSignature, getIRIndex } from './irResolveCore';
 import { makeReadCtx } from './irReadCtxLproxy';
 import {
@@ -110,6 +111,19 @@ export function useIRContainment(nodes: Node[], edges: Edge[]): IRContainmentDec
         return parts.join('|');
     });
 
+    // Declared-channel gate (R-MK-5/R-MK-6), the decoration counterpart of the one in
+    // irResolve.ts. Without it a `marked` in an edge view's line.color never updates:
+    // this memo is the only thing that re-decorates the synthetic edges, and a channel
+    // bump is invisible to `oaeSlotsSig`, which observes model slots. Unconditional
+    // subscription, gated value: when no view of the index declares the channel the
+    // dep is a constant 0 and this memo's invalidation is byte-identical to before.
+    const markVersion = useSimVersion();
+    const markDeclared = useMemo(() => {
+        const index = irSig ? getIRIndex(store.getState(), irSig) : null;
+        return !!index?.channelsInUse?.has('mark');
+    }, [irSig]);
+    const markDep = markDeclared ? markVersion : 0;
+
     return useMemo(() => {
         // Drop the cross-dep registry on a viewpoint (irSig) change before any
         // observer re-publishes. This memo (EditorV2's) renders before the
@@ -184,7 +198,8 @@ export function useIRContainment(nodes: Node[], edges: Edge[]): IRContainmentDec
         return { nodes: outNodes, edges: outEdges, model, names };
         // collapseVersion / edgeInteractionVersion / oaeSlotsSig are the
         // invalidation signals for collapse state, anchors+selection, and
-        // object-as-edge endpoint slots respectively.
+        // object-as-edge endpoint slots respectively; markDep is the declared
+        // channel (0, hence inert, when no view of the index declares it).
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [nodes, edges, irSig, collapseVersion, edgeInteractionVersion, oaeSlotsSig]);
+    }, [nodes, edges, irSig, collapseVersion, edgeInteractionVersion, oaeSlotsSig, markDep]);
 }

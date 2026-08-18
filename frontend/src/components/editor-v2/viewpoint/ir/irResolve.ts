@@ -11,6 +11,7 @@
 import { useEffect, useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import { store } from '../../../../joiner';
+import { useSimVersion } from '../../sim/simRunState';
 import { type ReadCtx } from './irReadCtx';
 import { makeReadCtx } from './irReadCtxLproxy';
 import type { CompiledRowView, CompiledView } from './irTypes';
@@ -70,6 +71,30 @@ export function useIRView(vertexId: string, instanceOfClassId: string | null | u
         return crossSig ? `${snap.join(';')};X${crossSig}` : snap.join(';');
     });
 
+    // Declared-channel gate (R-MK-5/R-MK-6). The subscription is UNCONDITIONAL —
+    // rules of hooks, same reason ObjectNode.tsx states at :191-193 — but the VALUE
+    // only reaches the memo when the active index declares the channel. A viewpoint
+    // whose views never read `marked` therefore feeds a constant 0 and re-resolves
+    // exactly as it did before this slice: that constant is the restrictive clause of
+    // spec sez. 9 ("NON DEVE re-renderizzare per ... fuori dal set") on the channel
+    // half of the dependency set, not a detail.
+    //
+    // The gate reads the INDEX, not the resolved view: at this point the view is not
+    // resolved yet (the resolve lives inside the memo below, by construction), so the
+    // granularity is per index. That is the v1 granularity R-MK-6 declares, and the
+    // refinement to per element is a later ratification, on a measurement.
+    //
+    // Recomputed only when `signature` changes — which embeds irSig, so it changes
+    // whenever the index can change — never on a channel bump.
+    const markVersion = useSimVersion();
+    const markDeclared = useMemo(() => {
+        const state: any = store.getState();
+        const irSig = computeIRSignature(state);
+        const index = irSig ? getIRIndex(state, irSig) : null;
+        return !!index?.channelsInUse?.has('mark');
+    }, [signature]);
+    const markDep = markDeclared ? markVersion : 0;
+
     // Drop this node's published cross-object deps when it unmounts.
     useEffect(() => () => clearCrossDeps(vertexId), [vertexId]);
 
@@ -92,7 +117,7 @@ export function useIRView(vertexId: string, instanceOfClassId: string | null | u
         if (cross.unresolved.length) warnUnresolvedCrossDeps(cross.unresolved, compiled.viewId);
         if (cross.capped) warnCappedCrossDeps(compiled.viewId);
         return { compiled, objectId, readCtx };
-    }, [signature, vertexId, instanceOfClassId]);
+    }, [signature, vertexId, instanceOfClassId, markDep]);
 }
 
 export interface IRRowResolution {
@@ -128,6 +153,16 @@ export function useIRRowView(childObjectId: string): IRRowResolution | null {
         return crossSig ? `${snap.join(';')};X${crossSig}` : snap.join(';');
     });
 
+    // Same declared-channel gate as useIRView above, keyed on the row's own object.
+    const markVersion = useSimVersion();
+    const markDeclared = useMemo(() => {
+        const state: any = store.getState();
+        const irSig = computeIRSignature(state);
+        const index = irSig ? getIRIndex(state, irSig) : null;
+        return !!index?.channelsInUse?.has('mark');
+    }, [signature]);
+    const markDep = markDeclared ? markVersion : 0;
+
     useEffect(() => () => clearCrossDeps(childObjectId), [childObjectId]);
 
     return useMemo(() => {
@@ -148,5 +183,5 @@ export function useIRRowView(childObjectId: string): IRRowResolution | null {
         if (cross.unresolved.length) warnUnresolvedCrossDeps(cross.unresolved, compiled.viewId);
         if (cross.capped) warnCappedCrossDeps(compiled.viewId);
         return { compiled, objectId: childObjectId, readCtx };
-    }, [signature, childObjectId]);
+    }, [signature, childObjectId, markDep]);
 }

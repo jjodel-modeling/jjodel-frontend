@@ -81,6 +81,22 @@ export interface IRViewpointIndex {
     rowWildcard: RowIndexEntry[];
     /** all IR view ids, for style lifecycle */
     viewIds: string[];
+    /**
+     * Union of the CHANNELS declared by every compiled entry of this index —
+     * nodes, rows and edges together (R-MK-5). A channel is a non-feature
+     * dependency: a global version counter the resolvers subscribe to.
+     *
+     * Union at index level, not per element, and that is the declared v1
+     * granularity (R-MK-6): the resolvers need to know whether to append a
+     * channel version BEFORE resolving, and at that point they do not yet know
+     * which view will win. The precedent is `oaeSlotsSig`, which unions the
+     * dependency sets of the object-as-edge views the same way. Per-element
+     * granularity is a future refinement, to be opened on a measurement.
+     *
+     * Optional by rule 11 (exported interface): always populated by getIRIndex,
+     * the only constructor in the repo.
+     */
+    channelsInUse?: ReadonlySet<string>;
 }
 
 /** Structural-change signature of the ir objects of the active viewpoint (WeakMap: D-layer replaces refs on change). */
@@ -130,6 +146,7 @@ export function getIRIndex(state: any, signature: string): IRViewpointIndex | nu
     const rowByMetaclass = new Map<string, RowIndexEntry[]>();
     const rowWildcard: RowIndexEntry[] = [];
     const viewIds: string[] = [];
+    const channelsInUse = new Set<string>();
     let declarationIndex = 0;
     const list: string[] = state.viewelements ?? [];
     for (const vid of list) {
@@ -145,6 +162,7 @@ export function getIRIndex(state: any, signature: string): IRViewpointIndex | nu
                 console.warn('[ir] edge compile failed for view', vid, e);
                 continue;
             }
+            for (const ch of compiledE.channels ?? []) channelsInUse.add(ch);
             const entry: EdgeIndexEntry = { compiled: compiledE, declarationIndex: declarationIndex++, pins: ir.authoringMetaclassPins };
             if (compiledE.isObjectAsEdge) {
                 if (ir.metaclasses !== '*') {
@@ -175,6 +193,7 @@ export function getIRIndex(state: any, signature: string): IRViewpointIndex | nu
                 console.warn('[ir] row compile failed for view', vid, e);
                 continue;
             }
+            for (const ch of compiledR.channels ?? []) channelsInUse.add(ch);
             const entry: RowIndexEntry = { compiled: compiledR, declarationIndex: declarationIndex++, pins: ir.authoringMetaclassPins };
             if (ir.metaclasses === '*') {
                 rowWildcard.push(entry);
@@ -198,6 +217,7 @@ export function getIRIndex(state: any, signature: string): IRViewpointIndex | nu
             console.warn('[ir] compile failed for view', vid, e);
             continue;
         }
+        for (const ch of compiled.channels ?? []) channelsInUse.add(ch);
         const entry: IndexEntry = { compiled, declarationIndex: declarationIndex++, pins: ir.authoringMetaclassPins };
         if (ir.metaclasses === '*') {
             wildcard.push(entry);
@@ -224,7 +244,7 @@ export function getIRIndex(state: any, signature: string): IRViewpointIndex | nu
     const idx: IRViewpointIndex = {
         viewpointId: vp, byMetaclass, wildcard,
         edgeByMetaclass, edgeWildcard, objectAsEdgeByMetaclass,
-        rowByMetaclass, rowWildcard, viewIds,
+        rowByMetaclass, rowWildcard, viewIds, channelsInUse,
     };
     indexCache.set(signature, idx);
     return idx;

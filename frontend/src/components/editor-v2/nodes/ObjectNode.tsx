@@ -192,6 +192,9 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
     // this component on the vertex id — `idlookup[vertexId].model` is the map
     // (same read as irResolve.ts:55). Both hooks unconditional (rules of hooks).
     const simObjectId = useSelector((state: any) => state.idlookup?.[id]?.model ?? null);
+    // Also the free invalidation channel for `marked` conditionals of an already
+    // resolved IR view (R5, discovery 2026-08-18): retiring sim-active (R-MK-8)
+    // must first verify that the M1b channel covers this path.
     useSimVersion();
     const isSimActiveNode = typeof simObjectId === 'string' && isSimActive(simObjectId);
 
