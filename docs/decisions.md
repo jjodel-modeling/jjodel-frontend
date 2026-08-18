@@ -884,6 +884,21 @@ Base di evidenza: `docs/discovery/discovery_2026-08-13_view_creation_sites_ir_na
   `!project.version`, e' morto oggi e resta morto dopo la rimozione perche' il valore che sopravvive
   e' truthy. Non si tocca in `2.228`, ma va saputo: rimuovere la riga 134 non elimina **ogni**
   percorso.
+  **Terminologia, perche' la collisione non si ripeta** (2026-08-18 sera, sollevata da Alfonso). I
+  numeri in gioco sono **tre**, non due, e due di essi si chiamano `version`:
+  (1) **versione dell'engine**, `APP_VERSION` in `frontend/src/version.ts`, iniettata come
+  `__APP_VERSION__`; `frontend/package.json` dice `3.0.0-beta`. Avanza quando si rilascia l'app.
+  (2) **versione di schema dello stato persistito**, `DState.version.n` (`store.tsx:104`), oggi
+  `2.227`. Avanza **solo** quando uno sviluppatore aggiunge un adapter a `VersionFixer`, e serve a
+  decidere quali migrazioni far girare su un salvataggio.
+  (3) **revisione del progetto**, `DProject.version` (`classes.ts:1232`, commentata «Content
+  version»), oggi mostrata come `Rev X.Y`. Avanza di un decimo a ogni salvataggio dell'utente.
+  La (2) e la (3) portano lo stesso nome di campo su oggetti diversi, e `getNextVersionNumber`
+  accetta qualunque numero: assegnare l'una all'altra **compila e gira**, ed e' esattamente il
+  difetto che questa ratifica chiude. R-IRN-17 ferma l'assegnazione, **non la rende impossibile**.
+  Renderla impossibile vuol dire rinominare il campo o dargli un tipo branded, ed e' candidata per
+  `2.229` o oltre: non si fa dentro `2.228`, dove un rename di identificatore esistente sarebbe
+  fuori perimetro.
 - **R-IRN-18** (2026-08-18) — **`null` da entrambi i lati del proxy, e `activateViewpoint` entra nel
   perimetro.** Il getter L espone `LViewPoint | null` (forma misurata funzionante, §5.1), non
   `undefined` normalizzato sul solo lato L: due forme del vuoto ai due lati del proxy sono
