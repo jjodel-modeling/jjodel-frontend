@@ -1,5 +1,18 @@
 # Claude Code Session Log
 
+## 2026-08-18 — docs: Layer Impact Report per le tre modifiche a `VersionFixer.tsx` della `2.228`
+**Prompt**: prompt del 2026-08-18 16:56, Fase 2 di `2.227 -> 2.228`, Passo 0: un solo LIR a copertura delle tre slice che toccano `VersionFixer.tsx` (rimozione della riga 134, rimozione del loop di coda 148-154, nuovo adapter `2.227 -> 2.228`), con le quattro domande obbligatorie per ciascuna. Hard stop al termine, nessuna riga di codice.
+**Files touched**: `docs/discovery/discovery_2026-08-18_4_lir_versionfixer_2228.md` (nuovo), `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — nessun sorgente nel diff; `git status --porcelain frontend/` vuoto a fine task.
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced — e' il deliverable stesso, in `docs/discovery/`, non in chat.
+**Smoke visivo**: non applicabile — nessuna superficie toccata.
+**Notes**: Tre findings nuovi, in §5 del LIR. (1) Senza seed i registri restano booleani, quindi il loop di coda inietterebbe `true` in `idlookup`, non oggetti: la rimozione vale piu' di quanto R-IRN-15 argomenti. (2) `updateDefaultView` ha un secondo chiamante, `NestedView.tsx:399`, il cui bottone restera' visibile e muto. (3) `projects.ts:372` e' un secondo scrittore della versione di schema sulla revisione, guardato e oggi morto. Tre domande aperte in §7.
+**Prompt document name**: 2026-08-18 16:56
+
 ## 2026-08-18 — docs: discovery di Fase 1 per la migration `2.227 -> 2.228`
 **Prompt**: prompt del 2026-08-18 16:17, Fase 1 read-only su ritiro del seed del viewpoint `Default` e `activeViewpoint` a 0..1. Blocchi A (blast radius del seed), B (cardinalita' e `null`), C (forma della migration), D (baseline e gate). Hard stop al termine, nessuna decisione architetturale.
 **Files touched**: `docs/discovery/discovery_2026-08-18_2228_seed_e_activeviewpoint.md` (nuovo), `docs/claude-code-log.md`
