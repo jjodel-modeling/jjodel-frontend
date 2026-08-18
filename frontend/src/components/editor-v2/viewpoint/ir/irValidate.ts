@@ -13,7 +13,7 @@
 import { compileView, compileEdgeView, compileRowView } from './irCompile';
 import { CONTAINER_ENDPOINT } from './irTypes';
 import { isUsableEndpointExpr } from './edgeEndpoints';
-import type { AnyViewIR, EdgeViewIR, RowViewIR } from './irTypes';
+import type { AnyViewIR, EdgeViewIR, Predicate, RowViewIR } from './irTypes';
 
 /**
  * Closed vocabulary of `edge.routing` (R-B9, 2026-08-03): the persisted identifiers,
@@ -27,7 +27,78 @@ import type { AnyViewIR, EdgeViewIR, RowViewIR } from './irTypes';
 export const VALID_ROUTING_VALUES: ReadonlyArray<NonNullable<EdgeViewIR['edge']['routing']>> =
     ['orthogonal', 'straight', 'curved'];
 
+/**
+ * Closed vocabulary of `Predicate.op` (R-MK-11, 2026-08-18).
+ *
+ * A Record keyed on the union, not a list: TypeScript then requires every branch
+ * of `Predicate` to appear here, so an operator added to the schema without being
+ * added to this vocabulary fails to compile instead of being rejected as unknown
+ * by a validator the compiler already supports.
+ */
+export const VALID_PREDICATE_OPS: Record<Predicate['op'], true> = {
+    and: true, or: true, not: true,
+    eq: true, neq: true, lt: true, lte: true, gt: true, gte: true,
+    exists: true, empty: true, isKind: true, marked: true, literal: true,
+};
+
+/**
+ * The first predicate operator outside the vocabulary, or null.
+ *
+ * Generic over the ir's JSON rather than a walk targeted per field: `op` is a key
+ * of `Predicate` and of nothing else in the schema (measured on irTypes.ts — the
+ * seven occurrences of the key are the seven branches of the union), so every
+ * object carrying a string `op` IS a predicate wherever it sits: the view's own
+ * `predicate`, the `when` of any Conditional (fill, form, marker, visible,
+ * line.*, each TextStyle axis), the args of and/or/not at any depth, a
+ * fieldCompartment `children` filter, a graphVertex `containment.childFilter`. A
+ * targeted walk would have to enumerate all of them, and would silently miss the
+ * next Conditional the schema grows.
+ *
+ * `seen` is not decoration: this scan runs BEFORE the compile-as-validator, and a
+ * hand-built cyclic object — which today fails gracefully inside that try/catch —
+ * would otherwise recurse until the stack gives out.
+ *
+ * A non-string `op` is deliberately out of scope: it stays what it is today, an
+ * error surfaced by the compile.
+ */
+function findUnknownPredicateOp(node: unknown, seen: Set<object>): string | null {
+    if (!node || typeof node !== 'object') return null;
+    if (seen.has(node)) return null;
+    seen.add(node);
+    if (Array.isArray(node)) {
+        for (const item of node) {
+            const bad = findUnknownPredicateOp(item, seen);
+            if (bad !== null) return bad;
+        }
+        return null;
+    }
+    const op = (node as { op?: unknown }).op;
+    if (typeof op === 'string' && !Object.prototype.hasOwnProperty.call(VALID_PREDICATE_OPS, op)) return op;
+    for (const value of Object.values(node as Record<string, unknown>)) {
+        const bad = findUnknownPredicateOp(value, seen);
+        if (bad !== null) return bad;
+    }
+    return null;
+}
+
 export function validateIR(viewId: string, ir: AnyViewIR): { ok: true } | { ok: false; error: string } {
+    // Predicate operator vocabulary (R-MK-11): the second authoring-time rule after
+    // the endpoint one, by the same R-B9-bis criterion, and the only one that is not
+    // edge-specific. Without it an operator outside the union falls into
+    // compilePredicate's `default` branch, which compiles `left`/`right` that are not
+    // there and throws a bare TypeError ("Cannot read properties of undefined
+    // (reading 'split')"): at render the WHOLE view leaves the index with a console
+    // warning, and in authoring the panel stops committing anything at all, because
+    // the commit is gated on this function. Run BEFORE the compile-as-validator, so
+    // for this class of error the author reads the operator name instead.
+    const unknownOp = findUnknownPredicateOp(ir, new Set<object>());
+    if (unknownOp !== null) {
+        return {
+            ok: false,
+            error: `[ir] unknown predicate operator "${unknownOp}" in view ${viewId} — must be one of ${Object.keys(VALID_PREDICATE_OPS).join(' | ')}`,
+        };
+    }
+
     // Read as unknown on purpose: the values this rule exists to catch (the empty
     // string of a Select placeholder, an AI provider's guess, a direct store edit)
     // are outside the declared union, so the compiler's view of the field is not

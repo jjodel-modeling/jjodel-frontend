@@ -290,7 +290,14 @@ export const PredicateBuilder: React.FC<PredicateBuilderProps> = ({
             }
             default: {
                 // The six comparators (eq/neq/lt/lte/gt/gte): two operands.
-                const c = value;
+                // The residual of this switch is PINNED to the comparator branch
+                // (2026-08-18): `marked` joined Predicate without a case here, so the
+                // type TypeScript infers for `value` in this default is no longer the
+                // comparators alone. Type-only and behaviour-preserving — an operator
+                // this builder does not know still renders two operand editors on
+                // absent operands, exactly as it did before. The authoring surface for
+                // `marked` is slice M2 (R-MK-9), which is what retires this pin.
+                const c = value as Extract<Predicate, { left: PathExpr | Literal }>;
                 return (
                     <div className={styles.operands}>
                         <div className={styles.operandBlock}>

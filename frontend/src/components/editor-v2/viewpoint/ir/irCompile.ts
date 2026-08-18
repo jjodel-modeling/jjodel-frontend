@@ -64,6 +64,34 @@ function dedupeCrossPaths(list: CompiledCrossPath[]): CompiledCrossPath[] {
 }
 
 /**
+ * Channels declared during a single compileView / compileEdgeView / compileRowView
+ * pass (R-MK-5): non-feature dependencies, named in a closed vocabulary, that the
+ * resolvers subscribe to. Module-scoped for exactly the reason crossPathSink is
+ * (see the comment above): compilePredicate is reached through several nested
+ * helpers — compileOperand, compileConditional (called ~25 times), compileTextSource
+ * — and threading a second accumulator through all of them would touch every
+ * signature. Compile is synchronous and non-reentrant (compileView never calls
+ * compileView/compileEdgeView), so a fresh set is installed at the start of each
+ * top-level compile and harvested at the end; the previous sink is saved/restored
+ * defensively.
+ *
+ * Kept separate from `deps` by the constraint of R-MK-5: a channel is never a
+ * prefixed pseudo-feature, because irCrossDeps concretizes the feature set into
+ * DValue ids and would report the pseudo-feature as unresolved.
+ */
+let channelSink: Set<string> | null = null;
+
+/**
+ * Harvest the channels of the current pass: the array to deposit, or null when the
+ * view declares none. Null, not []: a view without `marked` leaves the Compiled*
+ * field ABSENT, so its compiled shape is identical to the one produced before this
+ * operator existed.
+ */
+function harvestChannels(): string[] | null {
+    return channelSink && channelSink.size > 0 ? Array.from(channelSink) : null;
+}
+
+/**
  * Compile a PathExpr into an accessor closure.
  * KNOWN LIMIT (v1.1, to be fixed in spec v1.2 dependency-set work): only
  * single-hop self paths are fully reactive; multi-hop navigation reads the
@@ -162,6 +190,36 @@ function compilePredicate(p: Predicate | undefined, deps: Set<string>): Compiled
             }
             return (ctx, id) => ctx.isKindOf(id, cls);
         }
+        case 'marked': {
+            // The marking is not a feature: it never enters `deps`, it declares the
+            // 'mark' CHANNEL (R-MK-5), which the resolvers gate their invalidation
+            // on. Both forms declare it — asking the marking of another element is
+            // still the same global signal.
+            channelSink?.add('mark');
+            if (!p.path) return (ctx, id) => ctx.isMarked(id);
+            // Single reference hop only, in v1 (R-MK-10). There is no
+            // "PathExpr -> element id" compilation mode — compilePath always reads a
+            // VALUE at the terminal step — and building one is outside this slice.
+            // Rejected at compile, so validateIR surfaces the reason in the panel
+            // instead of the view silently never matching.
+            const { steps } = parsePathExpr(p.path);
+            const step = steps.length === 1 ? steps[0] : null;
+            if (!step || !step.feature) {
+                throw new Error('[ir] marked.path supports a single reference hop in v1: ' + p.path);
+            }
+            const feature = step.feature;
+            const take = step.take;
+            // The IDENTITY of the target is a feature read, so it belongs in `deps`;
+            // its MARKING is carried by the channel. No crossPaths: the hop is
+            // navigated with getRef (draw semantics on both backends, `null` on every
+            // exhaustion case), never with the value accessor of compilePath — which
+            // is the defect isKind's path branch has and this one must not inherit.
+            deps.add(feature);
+            return (ctx, id) => {
+                const target = ctx.getRef(id, feature, take);
+                return target !== null && ctx.isMarked(target);
+            };
+        }
         default: {
             const { op } = p as any;
             const left = compileOperand((p as any).left, deps);
@@ -241,6 +299,8 @@ export function compileView(viewId: string, ir: NodeViewIR): CompiledView {
     const deps = new Set<string>();
     const prevSink = crossPathSink;
     crossPathSink = [];
+    const prevChannels = channelSink;
+    channelSink = new Set<string>();
     const predicate = compilePredicate(ir.predicate, deps);
     const form = compileConditional(ir.shape.form, 'rect' as const, deps);
     const fill = ir.shape.fill !== undefined ? compileConditional(ir.shape.fill, '', deps) : null;
@@ -316,7 +376,9 @@ export function compileView(viewId: string, ir: NodeViewIR): CompiledView {
     }
 
     const crossPaths = dedupeCrossPaths(crossPathSink ?? []);
+    const channels = harvestChannels();
     crossPathSink = prevSink;
+    channelSink = prevChannels;
 
     const compiled: CompiledView = {
         viewId,
@@ -326,6 +388,7 @@ export function compileView(viewId: string, ir: NodeViewIR): CompiledView {
         priority: typeof ir.priority === 'number' ? ir.priority : 0,
         predicate,
         dependencySet: Array.from(deps),
+        ...(channels ? { channels } : {}),
         crossPaths,
         form,
         fill,
@@ -376,6 +439,8 @@ export function compileEdgeView(viewId: string, ir: EdgeViewIR): CompiledEdgeVie
     const deps = new Set<string>();
     const prevSink = crossPathSink;
     crossPathSink = [];
+    const prevChannels = channelSink;
+    channelSink = new Set<string>();
     const predicate = compilePredicate(ir.predicate, deps);
     const e = ir.edge ?? {};
     const compileExpr = (expr: string | undefined): CompiledAccessor | null => {
@@ -422,7 +487,10 @@ export function compileEdgeView(viewId: string, ir: EdgeViewIR): CompiledEdgeVie
     };
     compiled.dependencySet = Array.from(deps);
     compiled.crossPaths = dedupeCrossPaths(crossPathSink ?? []);
+    const channels = harvestChannels();
+    if (channels) compiled.channels = channels;
     crossPathSink = prevSink;
+    channelSink = prevChannels;
     edgeCompileCache.set(key, compiled);
     return compiled;
 }
@@ -450,11 +518,15 @@ export function compileRowView(viewId: string, ir: RowViewIR): CompiledRowView {
     const deps = new Set<string>();
     const prevSink = crossPathSink;
     crossPathSink = [];
+    const prevChannels = channelSink;
+    channelSink = new Set<string>();
     const predicate = compilePredicate(ir.predicate, deps);
     const template: CompiledAccessor[] = ir.template.map(seg => compileTextSource(seg, deps) ?? (() => ''));
     const visible = compileConditional(ir.visible, true, deps);
     const crossPaths = dedupeCrossPaths(crossPathSink ?? []);
+    const channels = harvestChannels();
     crossPathSink = prevSink;
+    channelSink = prevChannels;
 
     const compiled: CompiledRowView = {
         viewId,
@@ -463,6 +535,7 @@ export function compileRowView(viewId: string, ir: RowViewIR): CompiledRowView {
         priority: typeof ir.priority === 'number' ? ir.priority : 0,
         predicate,
         dependencySet: Array.from(deps),
+        ...(channels ? { channels } : {}),
         crossPaths,
         template,
         visible,

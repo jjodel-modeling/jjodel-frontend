@@ -28,6 +28,23 @@ export type Predicate =
     | { op: 'exists'; path: PathExpr }
     | { op: 'empty'; path: PathExpr }
     | { op: 'isKind'; class: string; path?: PathExpr }
+    /**
+     * Marking predicate (R-MK-1): true when the element carries the ephemeral
+     * marking of the session — today the simulation run-state singleton, read
+     * through ReadCtx.isMarked. Not a value: a marking is boolean by
+     * construction, so it composes with and/or/not and slots into every
+     * Conditional<T> of the schema, but never interpolates into a label.
+     *
+     * `path` (optional, R-MK-10) asks the marking of ANOTHER element: a single
+     * reference hop from self, resolved with ReadCtx.getRef (draw semantics on
+     * both backends). Multi-hop is rejected at compile in v1. A path that
+     * dead-ends yields false, never a throw (R-MK-7).
+     *
+     * Reserved, NOT implemented (R-MK-3): a future `mark?: string` for named
+     * markings, defaulting to today's single one. Declared so the shape can grow
+     * without a break; saved IR has no VersionFixer (R-B9).
+     */
+    | { op: 'marked'; path?: PathExpr }
     | { op: 'literal'; value: boolean };
 
 export type Conditional<T> =
@@ -328,6 +345,21 @@ export interface CompiledEdgeView {
     priority: number;
     predicate: CompiledPredicate;
     dependencySet: string[];
+    /**
+     * Non-feature dependencies of this view: the CHANNELS it declares (R-MK-5).
+     *
+     * A channel is a global version counter the interpreter can subscribe to,
+     * named in a closed vocabulary — `mark` (the marking singleton) at birth.
+     * Kept SEPARATE from `dependencySet` on purpose: irCrossDeps concretizes
+     * feature names into DValue ids, and a prefixed pseudo-feature (`@mark`)
+     * would poison that concretization with a spurious `unresolved`.
+     *
+     * Optional and additive: absent (never []) when the view declares none, so
+     * an ir without `marked` compiles exactly as before. The restrictive clause
+     * of spec sez. 9 holds on this half too — an element must NOT re-render for a
+     * channel it does not declare, which is why the consumers gate on it.
+     */
+    channels?: string[];
     /** Multi-hop paths read by this edge view (spec v1.2 sez. 9); [] when none. */
     crossPaths: CompiledCrossPath[];
     reference: string | null;
@@ -363,6 +395,8 @@ export interface CompiledRowView {
     predicate: CompiledPredicate;
     /** Feature names read by every PathExpr in this view (self only). */
     dependencySet: string[];
+    /** Channels declared by this view — see CompiledEdgeView.channels (R-MK-5). */
+    channels?: string[];
     /** Multi-hop paths read by this view (spec v1.2 sez. 9); [] when self-only. */
     crossPaths: CompiledCrossPath[];
     /** One accessor per template segment, rooted on the row's object. */
@@ -384,6 +418,8 @@ export interface CompiledView {
     predicate: CompiledPredicate;
     /** Feature names read by every PathExpr in this view (flat; includes hop and terminal names). */
     dependencySet: string[];
+    /** Channels declared by this view — see CompiledEdgeView.channels (R-MK-5). */
+    channels?: string[];
     /** Multi-hop paths read by this view (spec v1.2 sez. 9); [] when the view reads only self. */
     crossPaths: CompiledCrossPath[];
     form: CompiledConditional<ShapeForm>;

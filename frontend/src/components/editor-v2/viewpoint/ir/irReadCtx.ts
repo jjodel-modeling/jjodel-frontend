@@ -29,6 +29,17 @@ export interface ReadCtx {
      *  (no proxy coercion), honoring `take`. Used to navigate non-terminal PathExpr
      *  hops identically on both backends; null when the hop dead-ends. */
     getRef(elementId: string, featureName: string, take: 'value' | 'values' | number): string | null;
+    /**
+     * True when the element carries the ephemeral marking of the session — the
+     * source the `marked` predicate reads (R-MK-1/R-MK-4).
+     *
+     * TOTAL by contract: an unmarked or unknown element is `false`, never
+     * `undefined` and never `null`, so a compiled predicate never has to defend
+     * itself. The marking is NOT model data: it lives in the run-state singleton
+     * outside Redux (sim/simRunState.ts, R-SIM-1), and this module stays free of
+     * imports — the function is injected by makeReadCtx, which is impure already.
+     */
+    isMarked(elementId: string): boolean;
 }
 
 type Idlookup = Record<string, any>;
@@ -125,8 +136,21 @@ function metaclassIdOf(idlookup: Idlookup, elementId: string): string | null {
     return typeof inst === 'string' ? inst : null;
 }
 
-/** D-layer direct backend ('draw'): raw values, no proxy coercion. */
-export function makeDrawReadCtx(idlookup: Idlookup): ReadCtx {
+/**
+ * D-layer direct backend ('draw'): raw values, no proxy coercion.
+ *
+ * `isMarked` is INJECTED rather than imported (R-MK-4): reading the run-state
+ * singleton here would give this module its first import, and through it a
+ * transitive dependency on react — the very thing the split with
+ * irReadCtxLproxy.ts exists to avoid. The `() => false` default is the honest
+ * neutral element of a total predicate, and applies only to direct draw
+ * constructions (the tests); production always goes through makeReadCtx, which
+ * injects isSimActive.
+ */
+export function makeDrawReadCtx(
+    idlookup: Idlookup,
+    isMarked: (elementId: string) => boolean = () => false,
+): ReadCtx {
     const getValue = (elementId: string, featureName: string): unknown => {
         const dValue = findFeatureRaw(idlookup, elementId, featureName);
         const vals = dValue?.values;
@@ -160,6 +184,7 @@ export function makeDrawReadCtx(idlookup: Idlookup): ReadCtx {
         getRef(elementId, featureName, take) {
             return navigateRefHop(idlookup, elementId, featureName, take);
         },
+        isMarked,
     };
 }
 
