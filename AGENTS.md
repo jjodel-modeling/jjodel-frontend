@@ -910,11 +910,17 @@ Codex maintains `docs/claude-code-log.md` as an append-only operational log.
 **Out-of-scope changes**: yes | no
 **Layer Impact Report**: produced | not-required | skipped
 **Smoke visivo**: passato | fallito (dettaglio) | non applicabile
-**Notes**: (optional)
+**Notes**: (optional, max 500 characters; longer reasoning goes in the cited document)
 **Prompt document name**: YYYY-MM-DD HH:mm
 ```
 
 This block is the canonical format, mirrored verbatim in `docs/PROTOCOL.md` P9.
+
+The cap on `Notes` is a budget, not a style rule. Measured 2026-08-18: 26 active entries, 136518
+bytes or roughly 33k tokens, median entry 4050 bytes, three `Notes` above 6000 characters. Beyond
+500 characters the reasoning goes in the discovery report, the ratification memo or the session
+file, and `Notes` cites that document by name. The rotation threshold is set in `docs/PROTOCOL.md`
+P9, not here.
 
 ### 21.3 Self-assessment — fill the metrics honestly
 

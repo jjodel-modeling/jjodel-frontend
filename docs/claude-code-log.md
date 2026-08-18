@@ -1,5 +1,18 @@
 # Claude Code Session Log
 
+## 2026-08-18 — docs: tetto di 500 caratteri su `Notes` e rotazione a 40
+**Prompt**: prompt inline del 2026-08-18 14:07: tetto di 500 caratteri sul campo `Notes` del formato entry in `CLAUDE.md` §21.2 e `docs/PROTOCOL.md` P9, soglia di rotazione da 20 a 40, Check C nel gate `check:docs`.
+**Files touched**: `CLAUDE.md` (§21.2, §21), `AGENTS.md` (rigenerato), `docs/PROTOCOL.md` (P9, riga 87), `frontend/scripts/gates/check-docs.ts` (Check C), `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: yes — `AGENTS.md`, quinto file: e' la proiezione generata di `CLAUDE.md`, e `check:agents` va rosso senza `npm run gen:agents` (§17). Espansione riportata all'hard stop.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Il gate non linta le 26 entry esistenti: `NOTES_LINT_FROM_DATE` e' 2026-08-19, e tre `Notes` in log misurano 6393, 7485 e 7946 caratteri. Check C misura lo span multiriga, non `fields.get('Notes')` che tiene solo la prima riga: controllo positivo su fixture, nota da 764 caratteri con prima riga da 41 intercettata. La soglia 20 e' anche in `docs/HARNESS-DOCS.md`: 262, 449, piu' l'invariante 7 di §12, in lettere e invisibile a una grep numerica. Fuori dai file dichiarati, non toccata.
+**Prompt document name**: 2026-08-18 14:07
+
 ## 2026-08-18 — feat: il `Default` fuori dalle liste e il selettore come controllo della sintassi (R-IRN-9, R-IRN-10)
 
 **Prompt**: prompt inline del 2026-08-18 12:15, Fase 2, che sostituisce la sezione «Fase 2» del prompt del 10:52. Tre commit: C1 chiusura documentale del commit misto, C2 il `Default` fuori dalle liste (R-IRN-9), C3 il selettore come controllo della sintassi (R-IRN-10). Go-ahead dato in chat dopo la lettura del report di Fase 1.

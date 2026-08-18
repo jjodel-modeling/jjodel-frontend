@@ -84,7 +84,7 @@ Lo smoke non sostituisce la verifica di Alfonso, che riguarda proporzioni, gerar
 
 ## P9 — Prompt log
 
-Al termine di ogni task, aggiungi un'entry a `docs/claude-code-log.md`. Leggi il log a inizio sessione per il contesto sulle modifiche recenti. Oltre le 20 entry, sposta le più vecchie in `docs/claude-code-log-archive.md`.
+Al termine di ogni task, aggiungi un'entry a `docs/claude-code-log.md`. Leggi il log a inizio sessione per il contesto sulle modifiche recenti. Oltre le 40 entry, sposta le più vecchie in `docs/claude-code-log-archive.md`.
 
 Formato:
 
@@ -99,7 +99,7 @@ Formato:
 **Out-of-scope changes**: yes | no
 **Layer Impact Report**: produced | not-required | skipped
 **Smoke visivo**: passato | fallito (dettaglio) | non applicabile
-**Notes**: (optional)
+**Notes**: (optional, max 500 characters; longer reasoning goes in the cited document)
 **Prompt document name**: YYYY-MM-DD HH:mm
 ```
 

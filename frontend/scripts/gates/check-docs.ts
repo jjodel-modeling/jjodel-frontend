@@ -1,7 +1,7 @@
 /**
  * check-docs.ts — documentation gates.
  *
- * Two independent checks. Both always run and both always report: no fail-fast,
+ * Three independent checks. All always run and all always report: no fail-fast,
  * because one run must give the whole picture. Exit code is non-zero if at
  * least one fails. Warnings never fail the run.
  *
@@ -11,6 +11,11 @@
  *
  * Check B — entries in docs/claude-code-log.md dated on or after the threshold
  *           carry Corregge and Causa, with values inside the vocabulary.
+ *
+ * Check C — the Notes field of an entry stays within its character cap. The log
+ *           is an index, not a fourth copy of the reasoning: past the cap the
+ *           text belongs in the document Notes cites. Active log only, never
+ *           the archive.
  *
  * This script only reads. It never rewrites, reorders or normalizes the log.
  *
@@ -39,6 +44,12 @@ const BLOCK_END = '**Prompt document name**: YYYY-MM-DD HH:mm';
 
 /** Entries dated before this are ignored without warning: no back-filling. */
 const LINT_FROM_DATE = '2026-08-02';
+
+/** Notes cap applies from here forward: the log is append-only, no back-filling. */
+const NOTES_LINT_FROM_DATE = '2026-08-19';
+
+/** CLAUDE.md §21.2: Notes is capped, longer reasoning goes in the cited document. */
+const NOTES_MAX_CHARS = 500;
 
 /** The sentinel is an em dash U+2014, not '-' and not an en dash. */
 const SENTINEL = '—';
@@ -360,6 +371,127 @@ function checkLog(): CheckOutcome {
     return out;
 }
 
+// ── Check C — Notes length ──────────────────────────────────────────────────
+
+interface NotesSpan {
+    heading: string;
+    date: string;
+    entryLine: number;
+    notesLine: number;
+    text: string;
+}
+
+interface EntrySpan {
+    bytes: number;
+}
+
+/**
+ * Notes spans, read straight off the lines rather than off parseEntries: the
+ * field map keeps only the first line of a field, so a note written across
+ * several lines would be measured at a fraction of its real length. The span
+ * runs from the `**Notes**:` line to the last line before the next field line,
+ * the next entry heading, or the end of file. parseEntries and LogEntry stay
+ * untouched — Check B rests on them.
+ */
+function collectNotesSpans(text: string): NotesSpan[] {
+    const lines = text.split('\n');
+    const spans: NotesSpan[] = [];
+    let heading = '';
+    let date = '';
+    let entryLine = 0;
+    let seenInEntry = false;
+
+    for (let i = 0; i < lines.length; i++) {
+        const h = ENTRY_HEADING.exec(lines[i]);
+        if (h) {
+            heading = lines[i];
+            date = h[1];
+            entryLine = i + 1;
+            seenInEntry = false;
+            continue;
+        }
+        if (!heading || seenInEntry) continue;
+
+        const f = FIELD_LINE.exec(lines[i]);
+        if (!f || f[1] !== 'Notes') continue;
+
+        // First Notes of the entry wins, mirroring parseEntries.
+        seenInEntry = true;
+        const body: string[] = [f[2]];
+        for (let j = i + 1; j < lines.length; j++) {
+            if (ENTRY_HEADING.test(lines[j]) || FIELD_LINE.test(lines[j])) break;
+            body.push(lines[j]);
+        }
+        while (body.length > 0 && body[body.length - 1].trim() === '') body.pop();
+
+        spans.push({ heading, date, entryLine, notesLine: i + 1, text: body.join('\n').trim() });
+    }
+    return spans;
+}
+
+/** Byte size of every entry, heading included, for the telemetry lines. */
+function entrySpans(text: string): EntrySpan[] {
+    const lines = text.split('\n');
+    const starts: number[] = [];
+    for (let i = 0; i < lines.length; i++) {
+        if (ENTRY_HEADING.test(lines[i])) starts.push(i);
+    }
+    return starts.map((s, k) => {
+        const end = k + 1 < starts.length ? starts[k + 1] : lines.length;
+        return { bytes: Buffer.byteLength(lines.slice(s, end).join('\n'), 'utf8') };
+    });
+}
+
+function median(values: number[]): number {
+    if (values.length === 0) return 0;
+    const s = [...values].sort((a, b) => a - b);
+    const mid = Math.floor(s.length / 2);
+    return s.length % 2 === 1 ? s[mid] : Math.round((s[mid - 1] + s[mid]) / 2);
+}
+
+function checkNotesLength(): CheckOutcome {
+    const out: CheckOutcome = {
+        name: `C — Notes length <= ${NOTES_MAX_CHARS} chars (entries dated >= ${NOTES_LINT_FROM_DATE})`,
+        ok: true,
+        lines: [],
+        problems: [],
+        warnings: [],
+    };
+
+    // The active log only. The archive is never linted and never emended.
+    const text = read(LOG_MD);
+    const entries = entrySpans(text);
+    const spans = collectNotesSpans(text);
+    const inScope = spans.filter((s) => s.date >= NOTES_LINT_FROM_DATE);
+
+    // Telemetry, printed whether the check passes or fails: the cap is a budget,
+    // and a budget nobody measures goes back to being a memory.
+    out.lines.push(
+        `    ${entries.length} entr${entries.length === 1 ? 'y' : 'ies'} in ${rel(LOG_MD)}, ` +
+        `${Buffer.byteLength(text, 'utf8')} bytes total`,
+    );
+    out.lines.push(`    median entry: ${median(entries.map((e) => e.bytes))} bytes`);
+    out.lines.push(
+        `    ${inScope.length} Notes field(s) in scope; ` +
+        `${spans.length - inScope.length} older than ${NOTES_LINT_FROM_DATE}, ignored without warning`,
+    );
+
+    for (const s of inScope) {
+        if (s.text.length <= NOTES_MAX_CHARS) continue;
+        out.ok = false;
+        out.problems.push({
+            file: `${rel(LOG_MD)}:${s.notesLine}`,
+            entry: `${s.heading}  (${rel(LOG_MD)}:${s.entryLine})`,
+            field: '**Notes**',
+            found: `${s.text.length} characters`,
+            allowed: `at most ${NOTES_MAX_CHARS} characters — longer reasoning goes in the discovery report, the ratification memo or the session file, cited here by name`,
+            message: 'Notes exceeds the cap set by CLAUDE.md §21.2',
+        });
+    }
+
+    return out;
+}
+
 // ── Report ──────────────────────────────────────────────────────────────────
 
 function printOutcome(o: CheckOutcome): void {
@@ -389,9 +521,10 @@ function main(): void {
     console.log(`repo: ${REPO}`);
 
     const outcomes: CheckOutcome[] = [];
-    // Both checks always run: a single run must give the whole picture.
+    // Every check always runs: a single run must give the whole picture.
     outcomes.push(checkBlockIdentity());
     outcomes.push(checkLog());
+    outcomes.push(checkNotesLength());
 
     for (const o of outcomes) printOutcome(o);
 
