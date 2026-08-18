@@ -1,7 +1,7 @@
 # HARNESS-DOCS — organizzazione documentale dell'harness Jjodel
 
 Posizione: `docs/HARNESS-DOCS.md` nel repo `jjodel-frontend`.
-Versione: 1.0 (2026-08-15).
+Versione: 1.1 (2026-08-18).
 Copia nel Project Knowledge: sì, integrale. Sostituisce `INDICE_ARCHIVIO.md`.
 
 Questo file dice, per ogni tipo di documento che l'harness produce, chi lo scrive, chi lo legge, dove
@@ -203,15 +203,17 @@ sezione **Superate**, dove le decisioni sostituite si spostano con la data.
 
 **Disambiguazione**: quando due serie condividono una sigla, si cita l'id con la data.
 
-**Errore tipico**: sigle nate in un memo e mai iscritte. Al 15 agosto 2026 le serie D (forme,
-dashboard) e R-J (JjEL) sono in questo stato, e per R-J esiste già un prompt esecutivo che le cita
-come governanti. O si iscrivono, o il prompt non va eseguito.
+**Errore tipico**: sigle nate in un memo e mai iscritte. R-J (JjEL) ne è uscita il 2026-08-18 con
+R-J1..R-J7 a registro, quindi il prompt J1 non è più bloccato; va però riletto contro R-J2, emendata
+in ratifica, e contro R-J7, che nel memo del 14 agosto non esisteva. Le serie D (forme, simboli,
+dashboard) sono ancora solo nei memo: è il debito di registro più vecchio aperto.
 
 ### 4.5 Entry di prompt log
 
 **Definizione.** Il registro append-only di cosa è stato fatto, con l'autovalutazione.
-`docs/claude-code-log.md`, 199 KB, 38 entry attive; l'archivio `docs/claude-code-log-archive.md`
-pesa 2,4 MB e ne contiene 760.
+`docs/claude-code-log.md`, 138 KB, 27 entry attive; l'archivio `docs/claude-code-log-archive.md`
+pesa 2,6 MB e ne contiene 799. Le cifre sono al 2026-08-18. Quelle correnti le stampa il Check C di
+`npm run check:docs` a ogni esecuzione: si leggono lì, non qui.
 
 **Produttore**: Claude Code al termine di ogni task, dopo la conferma visiva. **Consumatore**: Claude
 Code a inizio sessione, e la misura del processo.
@@ -230,7 +232,7 @@ blocchi sono confrontati byte a byte dal gate `check:docs`, check A:
 **Out-of-scope changes**: yes | no
 **Layer Impact Report**: produced | not-required | skipped
 **Smoke visivo**: passato | fallito (dettaglio) | non applicabile
-**Notes**: (optional)
+**Notes**: (optional, max 500 characters; longer reasoning goes in the cited document)
 **Prompt document name**: YYYY-MM-DD HH:mm
 ```
 
@@ -251,6 +253,9 @@ entry dal 2026-08-02 in poi:
 - `Out-of-scope changes`: aggiungere un import mancante in un file dichiarato non conta; toccare un
   file adiacente per migliorarlo conta, a prescindere dall'intenzione.
 - `Layer Impact Report`: `skipped` è una violazione di processo. Si marca onestamente.
+- `Notes`: al massimo 500 caratteri, verificati dal Check C sulle entry dal 2026-08-19 in poi. Oltre
+  il tetto il ragionamento va nel discovery report, nel memo o nel file di sessione, e `Notes` ne
+  cita il nome. Il log è l'indice, non la quarta copia del ragionamento.
 
 **Principio di onestà**: nel dubbio si marca l'opzione peggiore. Un segnale negativo onesto vale più
 di una entry conforme che nasconde un problema. Nessuno assegna voti: i campi servono a far emergere
@@ -259,9 +264,11 @@ pattern nel tempo.
 **Ordinamento**: newest-first **per giorno** (R-RAIL-45). L'ordine si legge nella data, mai nella
 posizione.
 
-**Rotazione**: oltre le 20 entry attive, le più vecchie si spostano in `claude-code-log-archive.md`.
-Oggi sono 38: la rotazione è dovuta e rinviata, perché sullo stesso file lavorano sessioni
-concorrenti e va fatta a repo fermo.
+**Rotazione**: oltre le 40 entry attive, le più vecchie si spostano in `claude-code-log-archive.md`.
+La soglia è fissata in `PROTOCOL.md` P9 e vale da lì. Era 20 fino al 2026-08-18, e non ha mai
+descritto la pratica: 799 entry archiviate in 23 lotti fanno circa 35 entry per lotto, quindi il log
+arrivava a 55 prima che la rotazione scattasse. Va fatta a repo fermo, perché sullo stesso file
+lavorano sessioni concorrenti.
 
 **Staging in un file denso** (`CLAUDE.md` §6.1): `git add -p` presenta un unico hunk gigante. Si usa
 invece il pattern backup, `git checkout HEAD --`, reincollo delle sole entry da committare, commit,
@@ -362,12 +369,12 @@ byte a byte. Ogni altra duplicazione è un difetto: `PROTOCOL.md` non ripete la 
 
 I documenti generati sono verificati da un gate, non dalla disciplina (ratifica RC-7).
 
-| Comando | Cosa verifica | Stato al 2026-08-15 |
+| Comando | Cosa verifica | Stato al 2026-08-18 |
 |---|---|---|
-| `npm run check:docs` | **A**: identità byte a byte del blocco di formato fra `CLAUDE.md` §21.2 e `PROTOCOL.md` P9. **B**: campi delle entry di log dal 2026-08-02 in poi, con tassonomia e forma dei valori | A passa, B fallisce su cinque entry preesistenti del 14 agosto |
+| `npm run check:docs` | **A**: identità byte a byte del blocco di formato fra `CLAUDE.md` §21.2 e `PROTOCOL.md` P9. **B**: campi delle entry di log dal 2026-08-02 in poi, con tassonomia e forma dei valori. **C**: tetto di 500 caratteri su `Notes`, entry dal 2026-08-19 in poi, più la telemetria di dimensione del log | 3/3, 0 warning |
 | `npm run check:agents` | rigenera in una temp di sistema e confronta con **tutti** i file prodotti dal generatore (`AGENTS.md` e `frontend/src/jjtl/AGENTS.md`), mai il solo root | da eseguire dopo ogni tocco a un `CLAUDE.md` |
 | `npm run typecheck` | `tsc --noEmit`. Baseline: 33 su macOS, 14 su Linux, ed è lo stesso numero (19 errori di casing non esistono su filesystem case-sensitive) | verde rispetto alla baseline |
-| `npx vitest run` | test unitari | 1179 passed, 0 failed; nove suite non collezionano per `window is not defined`, note |
+| `npx vitest run` | test unitari | 1315 passed; nove suite non collezionano per `window is not defined`, note |
 | `npm run build` | build di produzione | verde |
 | `npm run smoke` | cinque asserzioni su stati noti: console pulita, larghezza del canvas sopra soglia, nodi renderizzati sopra zero, nessun `position: fixed` che interseca la status bar, nessun figlio clippato oltre tolleranza | implementato; i prompt che non lo usano dichiarano la deroga |
 
@@ -446,7 +453,7 @@ chat, tranne i discovery report, che seguono il naming di P4 perché li produce 
 | discovery report | resta; un report successivo sullo stesso tema si aggiunge in coda come addendum, non lo riscrive |
 | memo di ratifica | resta; la decisione può finire in **Superate** dentro `decisions.md`, il memo no |
 | riga di decisione | si sposta in **Superate** con la data quando una ratifica successiva la sostituisce |
-| entry di log | ruota in `claude-code-log-archive.md` oltre le 20 attive |
+| entry di log | ruota in `claude-code-log-archive.md` oltre le 40 attive |
 | checkpoint | esce dal KB alla sostituzione, entra in `docs/sessioni/`, resta |
 | spec | passa a SUPERATA nell'indice, il file resta in `docs/spec/` come riferimento storico |
 | spec parcheggiata | in `docs/spec/parcheggiate/`, si riattiva per decisione esplicita |
@@ -542,5 +549,5 @@ Le sette righe che reggono tutto il resto.
 5. Ogni task chiude con una entry di log, compilata onestamente. Nel dubbio si marca l'opzione
    peggiore.
 6. Un documento che dice «fatto» non è una prova che sia fatto. La verifica batte il documento.
-7. Se il conteggio del KB supera sei, o le entry attive del log superano venti, il ciclo è rotto e
+7. Se il conteggio del KB supera sei, o le entry attive del log superano quaranta, il ciclo è rotto e
    serve un triage, non una deroga.
