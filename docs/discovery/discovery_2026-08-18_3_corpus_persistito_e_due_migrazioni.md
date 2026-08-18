@@ -83,7 +83,9 @@ descrivono i progetti reali, e non vanno riusate come baseline. Le due misure ci
 chat il 2026-08-18» e quella «su un progetto creato dalla UI» sono l'evidenza buona.
 
 **Conseguenza operativa**: nessuna delle due migrazioni si puo' dimensionare da qui. Serve una misura
-in pagina prima di scrivere codice, e va fatta una volta sola per entrambi i fronti.
+in pagina prima di scrivere codice, e va fatta una volta sola per entrambi i fronti. **Eseguita in
+serata: vedi la sezione 7.** Ha confermato che `examples/` non descrive i progetti reali, e ha
+corretto tre cifre che da li' erano entrate in R-IRN-9.
 
 ### F2. La migrazione e' pigra e per progetto, non e' una bonifica del corpus
 
@@ -284,5 +286,112 @@ sopra, ma la conferma va fatta sul cruscotto prima di spedire.
 
 ## 6. Stato
 
-Fase 1 chiusa. Nessun file di codice modificato, nessun commit. Nessun go-ahead richiesto: le cinque
-domande di sopra vanno risolte prima di scrivere il prompt di Fase 2.
+Fase 1 chiusa. Nessun file di codice modificato. Nessun go-ahead richiesto: le domande di sopra vanno
+risolte prima di scrivere il prompt di Fase 2. La sezione 7 e' stata aggiunta dopo, con la misura in
+pagina che la sezione 5 chiedeva.
+
+---
+
+## 7. La misura in pagina (aggiunta 2026-08-18, sera)
+
+**Metodo.** Chrome pilotato da Cowork sul dev server dell'ambiente di Alfonso,
+`http://localhost:3000/#/allProjects`, con `localStorage['projects']` letto direttamente e gli stati
+decompressi in pagina da una copia sincrona di `lz-string` iniettata per l'occasione. Nessuna
+scrittura: sola lettura, nessun `Storage.write`, nessuna azione Redux.
+
+**Nota di metodo che risolve un problema noto.** La decompressione sincrona di uno stato da 58652
+caratteri costa **19 ms**. Il censimento del 2026-08-04 aveva registrato che `async-lz-string`, che
+e' quello che il codice usa (`U.tsx:424`), non finiva entro 45 secondi sullo stesso ordine di
+grandezza, perche' fa `setTimeout(0)` per simbolo. Il divario e' confermato e non era un artefatto
+del contesto isolato: **una bonifica bulk in pagina e' praticabile a costo trascurabile purche' non
+passi da `U.decompressState`.**
+
+### 7.1 Il corpus misurabile oggi e' di due progetti, non di ottanta
+
+| Misura | Valore |
+|---|---|
+| Progetti in `localStorage['projects']` | 2 |
+| Con stato non vuoto | 1 (`State Machine v1`, 58652 caratteri compressi) |
+| Altre sedi nella stessa origine | nessuna: unico IndexedDB e' `jjodie_rag`, nessun'altra chiave sopra 500 byte |
+| `offline` | `true` |
+
+Il censimento del 2026-08-04 ne contava 80, di cui 64 con stato, e 60 flaggati `irLegacyClassic` per
+errore. **Oggi non ci sono.** Sul progetto misurato, `irLegacyClassic` e' presente su **zero** view.
+
+Tre ipotesi, nessuna verificata: la storage e' stata svuotata; il censimento girava su un altro
+profilo o browser; oppure girava su un'altra **origine**. La terza merita attenzione, perche'
+`localStorage` e' per origine e `http://localhost:3001` e `http://localhost:3000` sono origini
+diverse: se il dev server ha girato sulla 3001 (come le custom instructions del progetto dicono
+ancora oggi), quel corpus e' raggiungibile solo rimettendo in ascolto un server su quella porta.
+
+**Conseguenza sulla pianificazione**: R-IRN-2 mette la bonifica dei sessanta progetti come
+prerequisito del ritiro del seed. Se quei sessanta non esistono piu', il prerequisito e' soddisfatto
+per attrito e il fronte del seed si sblocca subito. Da chiarire prima di pianificare, perche' cambia
+l'ordine dei lavori.
+
+### 7.2 Sul progetto reale, i conti tornano e correggono tre cifre
+
+| Misura | Valore |
+|---|---|
+| `DState.version.n` | 2.227 (testa), `conversionList` vuota |
+| `idlookup` | 110 chiavi |
+| `DViewElement` / `DViewPoint` | 25 / 2 |
+| View con `ir` | 4 |
+| View con `irLegacyClassic` | 0 |
+| Le venti view di default presenti | **20 su 20** |
+| Di queste, toccate (`clonedCounter` definito) | **0** |
+| View toccate in totale | 5, tutte nel viewpoint utente |
+| `Pointer_ViewEdge` presente | **si'** |
+| `Pointer_ViewVoid`, `Pointer_ViewDefaultPackage` | **assenti** |
+| `subViews` del `Default` | dizionario di **2** voci, `Pointer_ViewFallback` e `Pointer_ViewModel`, entrambe di sistema |
+| `activeViewpoint` del progetto | `Pointer1786998762380_USER_193`, cioe' un viewpoint **utente** |
+| `state.viewpoint` (root) | lo stesso id |
+| `state.viewpoints` (root) | `["Pointer_ViewPointDefault", "Pointer1786998762380_USER_193"]` |
+
+Le prime due colonne quadrano fra loro: 20 default piu' `Pointer_ViewEdge` piu' il `Default`
+viewpoint fanno 22 oggetti non toccati, e 22 piu' 5 toccati fanno i 27 elementi di vista totali.
+
+**Tre correzioni a cifre in circolazione.**
+
+1. **`Pointer_ViewVoid` e `Pointer_ViewDefaultPackage` non ci sono.** R-IRN-9, emendamento (a), li
+   conta rispettivamente 37 e 39 volte «nel corpus salvato» e li usa come argomento decisivo contro
+   l'allowlist. Quelle occorrenze vengono da `examples/`, cioe' da codice morto (F1). Sul progetto
+   reale l'unico id di sistema fuori registro e' `Pointer_ViewEdge`. **La conclusione di R-IRN-9
+   resta giusta** (un id fuori registro basta a rompere l'allowlist, e ce n'e' uno), ma l'argomento
+   va appoggiato su `Pointer_ViewEdge`, non sui due assenti.
+2. **Le 39 subViews del `Default` sono 2.** Stessa origine dell'errore.
+3. **Il tetto della purga e' zero, non ignoto.** Nessuna delle venti default e' stata toccata, quindi
+   sarebbero tutte purgabili come identiche al seed. Un solo progetto non fa una statistica, ma
+   sposta l'aspettativa: la purga condizionata potrebbe non avere casi da conservare.
+
+### 7.3 `clonedCounter` sta anche dentro `idlookup`, non solo dentro `subViews`
+
+`s.idlookup.clonedCounter` vale **178**, ed e' un numero. R-IRN-9, emendamento (b), documenta
+`clonedCounter` come chiave iniettata dentro `subViews`; sta anche a livello di `idlookup`, dove ogni
+codice che itera `Object.keys(idlookup)` trattando i valori come oggetti lo incontra. I due iteratori
+del percorso di caricamento se ne difendono gia' (`VersionFixer.tsx:139` e `reducer.ts:1106`,
+entrambi con `typeof e !== 'object'`), il che spiega perche' quelle guardie esistono. Qualunque
+migration nuova deve avere la stessa guardia, e conviene scriverla come primo termine del ciclo, non
+in fondo.
+
+### 7.4 F9 ha una verifica decisiva da trenta secondi
+
+Sul progetto misurato, `DState.version.n` e' `2.227` e il campo `version` del `DProject` dentro
+`idlookup` e' **2.5**. Se F9 descrive il meccanismo vero, `formatVersion(2.227)` da' `v2.2`, quindi
+il progetto e' stato salvato tre volte dopo l'ultimo caricamento.
+
+**Chiuso senza salvare, il 18/8 sera.** Il pezzo incerto non era `getNextVersionNumber`, che dal
+codice restituisce `2.3` con certezza, ma se la riga 134 scrivesse davvero. Le sue due condizioni
+sono ora entrambe verificate: `U.getProjectID_URL()` legge il parametro di hash `id`
+(`U.tsx:2806-2812`), e **ogni** navigazione a un progetto usa la forma `/project?id=<pid>` (otto siti
+concordi: `Dashboard.tsx:93`, `LeftBar.tsx:132`, `Navbar.tsx:1295`, `Project.tsx:195`,
+`ActivityItem.tsx:72`, `GroupedActivityItem.tsx:23`, `shareUtils.ts:12`, piu' il formato pubblico di
+condivisione); e `idlookup` contiene quel `DProject`, misurato in 7.2. **F9 e' confermato**: aprire un
+progetto gli riscrive il campo `version` con la versione di schema, e il primo salvataggio successivo
+lo porta a `2.3` qualunque fosse la revisione reale.
+
+Resta da guardare una cosa sola, e non e' un blocco: che il numero mostrato in dashboard sia
+effettivamente questo campo. Aprire `State Machine v1` e salvare una volta lo dice in trenta secondi
+(2.3 conferma, 2.6 smentisce). **La correzione va fatta prima di spedire `2.228`**, altrimenti la
+migrazione propaga il numero a tutto il corpus.
+

@@ -776,6 +776,45 @@ Base di evidenza: `docs/discovery/discovery_2026-08-13_view_creation_sites_ir_na
   sintassi astratta qualunque sia il viewpoint globale. Nessuna scrittura nello store da qui,
   su entrambi i fronti.
 
+- **R-IRN-11** (2026-08-18) — **La forma canonica del viewpoint vuoto e' `null`.** Non stringa vuota,
+  non `undefined`. `Pointer<T, 0, 1>` si espande gia' in `NotAString<...> | null`
+  (`joiner/classes.ts:3707-3711`), quindi `null` e' la forma che il tipo dichiara. La stringa vuota,
+  che e' quella oggi usata dalla root `state.viewpoint` (`store.tsx:160`) e resa visibile da R-IRN-10
+  come «Abstract syntax», ha il difetto che la ratifica vuole togliere di mezzo: e' falsy, quindi
+  passa in silenzio dentro ogni `||` di fallback, cioe' dentro esattamente la classe di bug che
+  chiudere il rubinetto deve eliminare. `undefined` e' escluso perche' non e' rappresentabile in JSON
+  e sparirebbe dai salvataggi invece di essere persistito, perdendo la distinzione fra «vuoto» e
+  «campo assente». Costo accettato: una passata sui siti che oggi confrontano con stringa vuota.
+- **R-IRN-12** (2026-08-18) — **Il ritiro del seed e `activeViewpoint` a 0..1 stanno nella stessa
+  passata `2.228`.** La ragione non e' l'economia di una migration sola, che con un corpus di due
+  progetti non esiste piu' (R-IRN-13): e' che **una purga da sola sarebbe un no-op**.
+  `VersionFixer.update` esegue la catena degli adapter e poi, alle righe 148-154, reinietta in
+  `idlookup` ogni id presente in `Defaults.defaultViewsMap` che manchi; una purga scritta dentro
+  l'adapter verrebbe annullata dal loop di coda nella stessa chiamata. Purgare i salvataggi e
+  ritirare il seed dal codice sono quindi la stessa mossa, non due. Conseguenza gia' nota e da
+  trattare in Fase 1: la guardia di `reducer.ts:1104` si sblocca solo quando
+  `Pointer_ViewPointDefault` diventa un oggetto, quindi senza seed non si sblocca mai e
+  `Defaults.check()` cambia risposta in silenzio. Base di evidenza:
+  `docs/discovery/discovery_2026-08-18_3_corpus_persistito_e_due_migrazioni.md`, finding F3 e F4.
+- **R-IRN-13** (2026-08-18) — **La bonifica dei sessanta progetti di R-IRN-2 e' chiusa per attrito, e
+  tre cifre di R-IRN-9 vanno ritirate.** Misura in pagina sul dev server reale, `localStorage` alla
+  origine `http://localhost:3000`: **due** progetti, uno con stato, `irLegacyClassic` su **zero**
+  view. Gli 80 progetti del censimento del 2026-08-04, e i 60 flaggati per errore che R-IRN-2 poneva
+  come prerequisito del ritiro del seed, non esistono piu'; confermato da Alfonso. Il prerequisito e'
+  soddisfatto e il fronte del seed e' sbloccato. Sullo stesso progetto reale: le venti view di default
+  sono presenti **tutte e venti** e **nessuna e' stata toccata** (`clonedCounter` non definito),
+  quindi la purga condizionata potrebbe non avere casi da conservare; `Pointer_ViewEdge` e' presente,
+  a conferma che il seed crea ventuno view e il registro ne elenca venti (`store.tsx:423`);
+  `clonedCounter` compare **anche come chiave di `idlookup`**, valore misurato 178, e non solo dentro
+  `subViews` come diceva l'emendamento (b) di R-IRN-9. **Le tre cifre da ritirare** sono
+  nell'emendamento (a) di R-IRN-9 e venivano tutte da `frontend/src/examples/`, che il censimento del
+  2026-08-05 aveva gia' dichiarato codice morto senza importatori (riverificato il 18/8, zero
+  risultati): le 39 subViews del `Default` sul progetto vero sono **2**, e `Pointer_ViewVoid` e
+  `Pointer_ViewDefaultPackage` sono **assenti**. **La conclusione di R-IRN-9 resta valida**, perche'
+  basta un solo id di sistema fuori registro a rompere un'allowlist e `Pointer_ViewEdge` lo e', ma
+  l'argomento va appoggiato su quello e non sui due assenti. Base di evidenza:
+  `docs/discovery/discovery_2026-08-18_3_corpus_persistito_e_due_migrazioni.md`, sezione 7.
+
 ## Serie R-SIM — Pannello di simulazione e attributi di stato (ratifiche 2026-08-17)
 
 Base di evidenza: `docs/discovery/discovery_2026-08-17_state_attributes_data_node.md` (con
