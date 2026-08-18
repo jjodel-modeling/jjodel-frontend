@@ -238,3 +238,19 @@ Registro dei debiti tecnici noti. Ogni entry deve indicare: data, origine, stato
 **Priorità:** media (nessun consumatore noto in produzione usa `isKind` con `path`; il rischio è chi lo autora domani fidandosi della spec).
 **Effort stimato:** un'ora inclusi i test, dopo la conferma.
 **Riferimenti:** discovery M1 Q7 («Il difetto che `marked.path?` non deve ereditare»); R-MK-10 in `docs/decisions.md`.
+
+---
+
+## Una scrittura su `ir` fa merge e non replace: una chiave annidata non è rimovibile
+
+**Registrato:** 2026-08-18
+**Origine:** smoke di M1 (la marcatura come predicato), eseguito in browser sul progetto «State Machine v1». Il comportamento è emerso ripristinando i fixture, non è introdotto da M1.
+**Stato attuale:** riscrivere `ir` con un oggetto che **non** contiene una chiave annidata non la rimuove. Misurato su `DViewElement.ir` con `edge.line` iniettato e poi assente dal payload di ripristino, per quattro vie: assegnazione sulla L-proxy (`view.ir = draft`, la via che usano `VertexAuthoringPanel.tsx:145`, `EdgeAuthoringPanel.tsx:192`, `RowAuthoringPanel.tsx:93`), `SetFieldAction.new(id,'ir',val,'',true)` diretta, `edge.line = undefined` esplicito, `edge.line = null` esplicito. In tutti e quattro i casi `edge.line` è rimasto nello store. Il contenuto è tornato corretto solo con un reload, perché nessuna di quelle scritture era stata persistita.
+**Perché conta:** i pannelli di authoring hanno funzioni che servono a **togliere** parte dell'ir, non solo a cambiarla; `dropInvalidRouting` (`EdgeAuthoringPanel.tsx:125`) è quella dichiarata. Se il canale di scrittura fa merge, quelle rimozioni non arrivano allo store, e il difetto è invisibile perché non produce errori: produce un ir che conserva una chiave che l'autore crede di aver tolto.
+**Grado di certezza:** il merge è **eseguito e misurato** in console sul backend reale. La conseguenza su `dropInvalidRouting` è **dedotta**, non riprodotta: nessuno ha ancora provato il caso routing.
+**Fix strutturale raccomandato:** prima verificare se `dropInvalidRouting` è davvero inefficace (ir con routing invalido, edit dal pannello, lettura dello store), perché è la sola conseguenza nota e potrebbe essere protetta da qualcosa che questa misura non ha guardato. Solo dopo decidere se serve una semantica di replace esplicita sul campo `ir` (per esempio una modalità dedicata di `SetFieldAction`) oppure una convenzione di schema in cui l'assenza si scrive con un valore sentinella.
+**Priorità:** media — nessun difetto osservato a schermo oggi, ma tocca il canale di scrittura di tutti i pannelli di authoring IR.
+**Effort stimato:** mezza giornata per la verifica; la decisione sulla semantica è la parte cara.
+**Riferimenti:**
+- `docs/claude-code-log.md` — entry del 2026-08-18 sullo smoke di M1, nota (7)
+- `frontend/src/view/viewElement/view.tsx:584-593` (`get_ir` / `set_ir`)

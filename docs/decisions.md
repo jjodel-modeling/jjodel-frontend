@@ -917,6 +917,32 @@ bag `_state`, che non contiene affatto il run-state.
   coerente con R-B9-bis. Il ramo `default` in sé resta com'è (rischio R2 della discovery,
   registrato): chiuderlo è fuori M1.
 
+- **R-MK-12** (2026-08-18) — **La metà runtime della diagnostica di R-MK-7 non si implementa, ed è
+  una decisione, non un residuo.** L'interpretazione di R-MK-7 prevedeva un warn one-shot sul modello
+  di `warnUnresolvedCrossDeps` quando un `path` si esaurisce a runtime. Misurato sul codice:
+  `ReadCtx.getRef(elementId, featureName, take): string | null` (`irReadCtx.ts:31`) restituisce lo
+  stesso `null` per «feature inesistente sulla metaclasse», che è un errore di authoring, e per «slot
+  presente ma vuoto», che è l'esito ordinario di `marked` con `path`. Un warn sull'esaurimento
+  colpirebbe quindi il caso normale a ogni bump. La via statica è chiusa a sua volta:
+  `validateIR(viewId, ir)` (`irValidate.ts:84`) non riceve il tipo target della view e non può
+  verificare l'esistenza della feature. Riaprirla significa distinguere i due `null` nel contratto di
+  `getRef` su entrambi i backend: fetta propria con Layer Impact Report, non coda di M1. Spec §10
+  emendata di conseguenza, e dichiara «non si implementa» con la ragione invece di «non implementato».
+- **R-MK-13** (2026-08-18) — **Il pin di `PredicateBuilder` è temporaneo, e la sua scadenza sta qui,
+  non solo nel commento a codice.** `const c = value as Extract<Predicate, { left: PathExpr | Literal }>`
+  nel ramo `default:` di `PredicateBuilder.tsx` esiste perché il ramo `marked`, privo di `left`/`right`,
+  entra nel residuo che TypeScript assegna a quel `default` e rompe sei accessi (33 → 39 errori,
+  misurato). È di soli tipi ed è erasa al build. **M2 lo ritira**: la fetta che porta `marked` in
+  `PREDICATE_KIND_OPTIONS` deve dare all'operatore un `case` proprio e togliere il cast, non estenderlo.
+  Un M2 che lascia il pin in piedi non è completo.
+- **R-MK-14** (2026-08-18) — **`marked` non quantifica, e questo è il perimetro vero di M2.**
+  `marked.path` con `take: 'values'`, cioè l'hop sull'intera collezione, fa tornare `null` a `getRef` e
+  quindi `false`: l'operatore risponde solo sul **singolo** elemento riferito. «Un figlio qualsiasi è
+  marcato» e «tutti i figli sono marcati» non sono esprimibili in v1. È un asse diverso da R-MK-10, che
+  limita il **numero di hop**: qui il limite è la **quantificazione**. M2 decide se aprirlo (forma
+  `any`/`all` sul path) prima o dopo l'UI di authoring; aprirlo dopo significa consegnare all'utente un
+  operatore che nel caso d'uso più naturale della simulazione risponde sempre `false`.
+
 ## Superate
 
 - **D3** (2026-07-26, routing congelato in v1) — superata da E-route il 2026-08-06.
