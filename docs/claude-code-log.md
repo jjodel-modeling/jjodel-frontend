@@ -1,5 +1,18 @@
 # Claude Code Session Log
 
+## 2026-08-18 — docs: discovery di Fase 1 per la migration `2.227 -> 2.228`
+**Prompt**: prompt del 2026-08-18 16:17, Fase 1 read-only su ritiro del seed del viewpoint `Default` e `activeViewpoint` a 0..1. Blocchi A (blast radius del seed), B (cardinalita' e `null`), C (forma della migration), D (baseline e gate). Hard stop al termine, nessuna decisione architetturale.
+**Files touched**: `docs/discovery/discovery_2026-08-18_2228_seed_e_activeviewpoint.md` (nuovo), `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — nessun sorgente nel diff; la modifica sperimentale di B5 e' stata scartata e l'identita' di `classes.ts` verificata byte a byte.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — `VersionFixer.tsx` letto, mai modificato.
+**Smoke visivo**: non applicabile — nessuna superficie toccata.
+**Notes**: Quattro ipotesi del prompt falsificate, dettagli nel report §0. Il primo guasto senza seed non e' `Defaults.check` ma `updateDefaultView`, con TypeError a `view.tsx:1923` assorbito da `reducer.ts:1577`: il progetto non carica, in silenzio. Il gradino `VP_Default` e' in una funzione senza chiamanti vivi. La categoria dominante di puntatore pendente e' `DGraphElement.view` (122/156 su censimento eseguito), assente dal prompt. B5 misurato: 41 errori contro 33 di baseline.
+**Prompt document name**: 2026-08-18 16:17
+
 ## 2026-08-18 — docs: tetto di 500 caratteri su `Notes` e rotazione a 40
 **Prompt**: prompt inline del 2026-08-18 14:07: tetto di 500 caratteri sul campo `Notes` del formato entry in `CLAUDE.md` §21.2 e `docs/PROTOCOL.md` P9, soglia di rotazione da 20 a 40, Check C nel gate `check:docs`.
 **Files touched**: `CLAUDE.md` (§21.2, §21), `AGENTS.md` (rigenerato), `docs/PROTOCOL.md` (P9, riga 87), `frontend/scripts/gates/check-docs.ts` (Check C), `docs/claude-code-log.md`
