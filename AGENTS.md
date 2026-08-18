@@ -443,6 +443,7 @@ A search scope written into a prompt is a claim about what the command does. If 
 
 ### 6.1 Staging
 
+- `git add <paths>` is not enough: `git commit` commits the whole index, including work another session staged. Either pass the pathspec to the commit itself (`git commit -- <paths>`) or diff `git diff --cached --name-only` against the declared file list before committing.
 - For sparse changes in dense log files (e.g., `docs/claude-code-log.md`), `git add -p` tends to present one giant hunk. Use this pattern instead:
   ```bash
   cp docs/claude-code-log.md /tmp/log-backup.md
@@ -493,7 +494,7 @@ A search scope written into a prompt is a claim about what the command does. If 
 - `--radius`
 - `--color` (ambiguous — use `--color-text-primary` or `--color-accent`)
 
-**Current state**: 1 residual `var(--accent)` in `frontend/src/components/editor-v2/EditorV2.scss` awaiting cleanup. Do not add new occurrences; the open ticket is for removal, not propagation.
+**Current state**: 5 residual `var(--accent)` in `frontend/src/components/editor-v2/EditorV2.scss` awaiting cleanup — lines 475, 900, 2298, 2327, 2343, measured 2026-08-18 with a regex that separates the bare token from `--accent-muted` / `--accent-subtle`, which are different tokens and not legacy. The count claimed here until then was 1. Two more live occurrences sit outside that file, in `redux/defaults/views.ts` (249, 659). Removing the `toolbar-syntax-pill` block takes `EditorV2.scss` from 5 to 4: the ticket does not close with it. Do not add new occurrences; the open ticket is for removal, not propagation.
 
 **Rules for new tokens**:
 - `grep -r` before adding, to avoid collisions
