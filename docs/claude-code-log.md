@@ -1,5 +1,18 @@
 # Claude Code Session Log
 
+## 2026-08-20 — docs: censimento dei token CSS nel contesto portalato
+**Prompt**: prompt del 2026-08-20 00:25, discovery pura fuori sequenza che precede la Fase 2 di C. Sei punti: perimetro portalato, dove sono definiti i token di tema, censimento statico di `var(--`, verifica dinamica in pagina con controllo positivo, conseguenze visibili, dark mode. Piu' una sezione «Opzioni di fix» con almeno due strade e nessuna scelta. Hard stop al termine, nessun file di codice.
+**Files touched**: `docs/discovery/discovery_2026-08-20_token_css_portalati.md` (nuovo), `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — nessun sorgente nel diff. Le quattro sonde Playwright temporanee sono state rimosse e la loro assenza verificata: `git status --porcelain frontend/` a fine task elenca gli stessi undici file non tracciati presenti a inizio sessione, nessuno in piu'.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessun file di §3.1 nel diff.
+**Smoke visivo**: non applicabile — nessuna superficie toccata. Screenshot presi solo come misura.
+**Notes**: Tre premesse del prompt falsificate, in §0 del report: il rail sinistro non e' portalato; il dark arriva ai portal per meta' (58 nomi su 234 cambiano nel rail, `data-theme` sta su `<html>`); il nero di `GENERAL` viene dal `<button>`, non dal rail. Popolazione reale **una** variabile, `--text-muted`, e una delle due occorrenze e' morta per specificita'. Quarto scostamento, su una ratifica: R-RAIL-44 dice il dark irraggiungibile dalla UI, misurato che non lo e' (§6.3).
+**Prompt document name**: 2026-08-20 00:25
+
 ## 2026-08-19 — fix: `activateViewpoint` sa disattivare, e la root porta `null` (R-IRN-18, R-IRN-21)
 **Prompt**: prompt del 2026-08-19 01:15, Fase 2 di `2.227 -> 2.228`, slice 2 di 3, commit 2a. Due file: la guardia di `activateViewpoint` passa da `viewpointId && projectId` a `projectId` e scrive `null`, cade la coercizione `|| ''` sulla root, e `Toolbar.tsx:229` coerce a stringa al confine di resa del `<select>` controllato.
 **Files touched**: `frontend/src/utils/lastViewpoint.ts`, `frontend/src/components/editor-v2/Toolbar.tsx`, `docs/claude-code-log.md`
