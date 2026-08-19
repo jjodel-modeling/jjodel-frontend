@@ -226,7 +226,11 @@ function Toolbar({
     // prevent, reached from the other direction. Collapsing it to '' also keeps the
     // --active state off, which is correct: M2 renders in abstract syntax whatever the
     // project-global viewpoint happens to be. The store is not written.
-    const shownViewpointId = isMetamodel ? '' : activeViewpointId;
+    // The `|| ''` is the render boundary, not a normalization: the root carries `null` for "no
+    // viewpoint" since 2.228 (R-IRN-21), isSystemViewpoint(null) is false so the line above lets it
+    // through, and value={null} would turn the controlled <select> into an uncontrolled one — React
+    // warns and the selection stops tracking the store. Coerced here and nowhere upstream.
+    const shownViewpointId = isMetamodel ? '' : (activeViewpointId || '');
 
     const handleViewpointChange = useCallback((vpId: string) => {
         activateViewpoint(vpId || null);

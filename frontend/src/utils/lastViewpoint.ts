@@ -50,13 +50,23 @@ export function activateViewpoint(viewpointId: string | null): void {
     const project = LProject.getProject();
     const projectId = (project as any).__raw?.id;
 
-    // 1. Set project.activeViewpoint via direct SetFieldAction (no L-proxy, no async TRANSACTION)
-    if (viewpointId && projectId) {
-        SetFieldAction.new(projectId, 'activeViewpoint', viewpointId, '', true);
+    // 1. Set project.activeViewpoint via direct SetFieldAction (no L-proxy, no async TRANSACTION).
+    //    The guard is on projectId ALONE. Guarding on viewpointId too — as this line did until
+    //    2.228 — meant that deactivating ("Abstract syntax" in the toolbar selector, which calls
+    //    activateViewpoint(null)) skipped the write entirely: the root went empty and
+    //    project.activeViewpoint stayed on the previous viewpoint. `null` was therefore not
+    //    reachable from the UI at all (R-IRN-18).
+    if (projectId) {
+        SetFieldAction.new(projectId, 'activeViewpoint', viewpointId || null, '', true);
     }
 
-    // 2. Update state.viewpoint (used by EditorSwitch for split view toggle)
-    SetRootFieldAction.new('viewpoint', viewpointId || '', '', true);
+    // 2. Update state.viewpoint (used by EditorSwitch for split view toggle). Same empty form as
+    //    the project field — `null`, never '' (R-IRN-11, R-IRN-21): two shapes of empty in the
+    //    persisted state is exactly what R-IRN-11 was decided to prevent. All four readers of the
+    //    root (EditorSwitch.tsx:55, Toolbar.tsx:202, irResolveCore.ts:117,139) go through a
+    //    truthiness test, where '' and null behave identically; the one place that needs a string
+    //    is the controlled <select>, and it coerces at the render boundary (Toolbar.tsx:229).
+    SetRootFieldAction.new('viewpoint', viewpointId || null, '', true);
 
     // 3. Warn once per distinct set of author-modified global CSS (micro-slice 3.6).
     //    Informative only: nothing is written back to the model.

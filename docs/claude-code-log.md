@@ -1,5 +1,18 @@
 # Claude Code Session Log
 
+## 2026-08-19 — fix: `activateViewpoint` sa disattivare, e la root porta `null` (R-IRN-18, R-IRN-21)
+**Prompt**: prompt del 2026-08-19 01:15, Fase 2 di `2.227 -> 2.228`, slice 2 di 3, commit 2a. Due file: la guardia di `activateViewpoint` passa da `viewpointId && projectId` a `projectId` e scrive `null`, cade la coercizione `|| ''` sulla root, e `Toolbar.tsx:229` coerce a stringa al confine di resa del `<select>` controllato.
+**Files touched**: `frontend/src/utils/lastViewpoint.ts`, `frontend/src/components/editor-v2/Toolbar.tsx`, `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — verifica in pagina con controllo positivo (`git stash`): scegliendo «Abstract syntax» il codice base lascia `activeViewpoint` sul viewpoint precedente e la root a `""`, con le modifiche entrambi vanno a `null`. Zero warning React di controllo non controllato, zero page error, in entrambe le colonne. Gate: typecheck exit 2 con 33 errori (insieme identico alla baseline), build exit 0, vitest 1315 passati / 9 suite rosse, smoke 10/0/2.
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced — vale `discovery_2026-08-18_4_lir_versionfixer_2228.md` §4.3, riletto prima del diff; il prompt vieta di produrne un altro.
+**Smoke visivo**: passato (automatico) — 10 assert, 0 falliti. Verifica visiva di Alfonso sul selettore: HARD STOP dichiarato dal prompt, pendente.
+**Notes**: Trovato un difetto **preesistente** e non introdotto qui: `DProject.activeViewpoint` non viene mai persistito correttamente. Misurato su entrambe le colonne del controllo positivo — dopo attiva+salva lo store porta l'id del viewpoint utente e lo stato compresso porta `Pointer_ViewPointDefault`. La root invece si persiste e si ricarica giusta. Dettagli e numeri in `discovery_2026-08-19_slice2_activeviewpoint.md`.
+**Prompt document name**: 2026-08-19 01:15
+
 ## 2026-08-19 — docs: ratifica R-IRN-23..24 e rimando cieco corretto in `store.tsx`
 **Prompt**: prompt del 2026-08-19 01:15, Fase 2 di `2.227 -> 2.228`, slice 2 di 3, commit preliminare. Due cose non di prodotto: sostituire il commento cieco lasciato dalla slice 1 in `store.tsx` (rimandava a una «scope decision below» che nel file non esiste) e appendere verbatim le due ratifiche nuove alla serie R-IRN.
 **Files touched**: `frontend/src/redux/store.tsx` (1 riga di commento), `docs/decisions.md` (R-IRN-23, R-IRN-24), `docs/claude-code-log.md`
