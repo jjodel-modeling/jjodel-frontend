@@ -1274,6 +1274,24 @@ bag `_state`, che non contiene affatto il run-state.
   `any`/`all` sul path) prima o dopo l'UI di authoring; aprirlo dopo significa consegnare all'utente un
   operatore che nel caso d'uso più naturale della simulazione risponde sempre `false`.
 
+## Serie D-UI — redesign UI (ratifiche dal 2026-08-20)
+
+- **D-UI-10** (2026-08-20) — **I token di tema sono pubblicati anche su `:root` e
+  `:root[data-theme="dark"]`, in forma additiva e da sorgente unica.** I 91 nomi di
+  `components/editor-v2/_themes.scss` non risolvono in nessun sottoalbero portalato su `document.body`
+  (misurato: 89 stringa vuota, 2 col valore legacy), e il rail destro e' sempre portalato. I due blocchi
+  `.editor-v2.theme-light` e `.editor-v2.theme-dark` **restano dove sono**: si aggiunge una sorgente
+  piu' esterna, non se ne sposta una. L'insieme pubblicato e' **completo**, tutti e 91 i nomi compresi i
+  18 mai referenziati, perche' un insieme parziale ricrea la stessa trappola sul primo token oggi
+  inutilizzato che qualcuno decidera' di usare. Nome e valore esistono in **un solo punto del sorgente**,
+  la mappa per tema, e i quattro selettori la emettono per interpolazione: due blocchi scritti a mano
+  divergerebbero in silenzio, che e' esattamente il difetto che questa ratifica chiude. **Le mappature
+  legacy su `body` non sono toccate**, quindi `--accent` (`#334155` invece di `#0284c7`) e `--danger`
+  (`#ef4444` invece di `#dc2626`) **restano un difetto aperto** dentro i portal: l'ereditarieta' delle
+  custom property prende l'antenato piu' vicino, e `body` e' piu' vicino di `:root` per tutto. Il fix di
+  quei due e' un giro a parte, legato al ticket `--accent` di `CLAUDE.md` §7.2. Censimento e misure:
+  `docs/discovery/discovery_2026-08-20_token_css_portalati.md`.
+
 ## Superate
 
 - **D3** (2026-07-26, routing congelato in v1) — superata da E-route il 2026-08-06.
