@@ -962,6 +962,29 @@ Base di evidenza: `docs/discovery/discovery_2026-08-13_view_creation_sites_ir_na
   anticipata della funzione, cosi' esiste una sola definizione di «c'e' qualcosa da rigenerare»
   invece di due che possono divergere.
 
+- **R-IRN-23** (2026-08-19) — **Il fallback di `newDefault` passa dal viewpoint, non dalla view
+  `Model`.** `view.tsx:375` risolve `Defaults.Pointer_ViewModel`, che dopo il ritiro del seed non
+  esiste in un progetto nuovo: `LPointerTargetable.wrap` restituisce `undefined` (`classes.ts:259`
+  su `DPointerTargetable.from` che non trova nulla) e non logga, perche' `canThrow` e' `false`.
+  Il ramo prosegue e dereferenzia `parentView.subViews` e `parentView.__raw`. Oggi il percorso e'
+  raggiungibile solo dal menu contestuale del renderer classico, dove le due voci su M2 sono guardate
+  da `hasWorkbenchVP` (`ContextMenu.tsx:487,531`), che pero' legge `getLastEditedViewpointId()`,
+  **una variabile diversa** da quella che `newDefault` interroga: la protezione e' accidentale, non
+  progettata. Misurato il 2026-08-19: la creazione via menu contestuale su M2 con un viewpoint aperto
+  funziona, e sull'istanza la voce non compare. Tutti i percorsi vivi passano invece da
+  `createViewInWorkbench`, il cui fallback e' gia' il viewpoint (`lastViewpoint.ts:147`) e che il
+  ritiro non tocca. Si allinea `newDefault` a quel fallback. Alternativa scartata: ricreare
+  `Pointer_ViewModel` solo per fare da padre, che rimetterebbe in piedi un pezzo del seed appena
+  ritirato.
+- **R-IRN-24** (2026-08-19) — **Il test unico di «c'e' qualcosa da rigenerare» vive in `Defaults`,
+  in deroga alla regola che teneva `Defaults.ts` fuori dal perimetro.** R-IRN-22 chiede che la
+  visibilita' del bottone di `NestedView` e l'uscita anticipata di `updateDefaultView` usino lo stesso
+  test, e un test condiviso ha bisogno di una sede sola. La sede e' `Defaults`, dove gia' stanno
+  `check` e `isSystemViewpoint`, cioe' la conoscenza dei registri. La deroga e' stretta: R-IRN-14
+  vieta di **svuotare** i due array, non di aggiungere un predicato che li legge, e nessuna riga
+  esistente di `Defaults.ts` viene modificata. Alternativa scartata: duplicare il test nei due siti,
+  che e' esattamente la divergenza che R-IRN-22 vuole impedire.
+
 ## Serie R-SIM — Pannello di simulazione e attributi di stato (ratifiche 2026-08-17)
 
 Base di evidenza: `docs/discovery/discovery_2026-08-17_state_attributes_data_node.md` (con

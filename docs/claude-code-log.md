@@ -1,5 +1,18 @@
 # Claude Code Session Log
 
+## 2026-08-19 — docs: ratifica R-IRN-23..24 e rimando cieco corretto in `store.tsx`
+**Prompt**: prompt del 2026-08-19 01:15, Fase 2 di `2.227 -> 2.228`, slice 2 di 3, commit preliminare. Due cose non di prodotto: sostituire il commento cieco lasciato dalla slice 1 in `store.tsx` (rimandava a una «scope decision below» che nel file non esiste) e appendere verbatim le due ratifiche nuove alla serie R-IRN.
+**Files touched**: `frontend/src/redux/store.tsx` (1 riga di commento), `docs/decisions.md` (R-IRN-23, R-IRN-24), `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: 2026-08-19 00:15
+**Causa**: (a)
+**Regressions**: no — nessun codice eseguibile toccato. Gate ridotti come da prompt: typecheck exit 2 con **33** errori su output completo (baseline invariata), build exit 0 con il solo warning di chunk-size.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — il commento non e' codice; il LIR della slice 2 e' `discovery_2026-08-18_4_lir_versionfixer_2228.md` §4.3, che il prompt vieta di riprodurre.
+**Smoke visivo**: non applicabile — nessuna superficie toccata.
+**Notes**: `Corregge` punta alla slice 1 benche' il suo esito fosse ✅: il rimando cieco era gia' censito come scostamento 3 in `discovery_2026-08-19_slice1_ritiro_seed.md` §3, scritto verbatim su richiesta del prompt di allora. Causa (a): la forma prescritta citava una sezione del prompt, non del codice. R-IRN-23 e R-IRN-24 sono state rilette dal file dopo l'inserimento, insieme a R-IRN-11..22.
+**Prompt document name**: 2026-08-19 01:15
+
 ## 2026-08-19 — refactor: il seed non crea piu' le ventuno view di default (R-IRN-15)
 **Prompt**: prompt del 2026-08-19 00:15, Fase 2 di `2.227 -> 2.228`, slice 1 di 3. Un commit, tre modifiche: seed commentato in `store.tsx`, loop di coda rimosso da `VersionFixer.tsx`, `updateDefaultView` resa inerte per costruzione con una guardia di tipo. Prerequisiti confermati: verifica visiva della slice 0 (revisione +0.1) e rilettura di R-IRN-11..22 dal file.
 **Files touched**: `frontend/src/redux/store.tsx`, `frontend/src/redux/VersionFixer.tsx`, `frontend/src/view/viewElement/view.tsx`, `docs/discovery/discovery_2026-08-19_slice1_ritiro_seed.md`, `docs/claude-code-log.md`
