@@ -79,7 +79,7 @@ function NestedViewComponent(props: AllProps) {
     // }
 
     const getSubElements = (v: DViewElement) => v?.subViews || {}; //
-    let activeViewpointId: Pointer<DPointerTargetable> = project.activeViewpoint.id;
+    let activeViewpointId: Pointer<DPointerTargetable> | undefined = project.activeViewpoint?.id;
 
     let [collapseAll, setCollapseAll] = useState<boolean | undefined>( undefined );
 function renderEntry(d: DViewElement, childrens: GObject, isExpanded: boolean, toggleExpansion: () => any, depth: number, path: number[], metadata?: Metadata): ReactNode {
@@ -529,7 +529,9 @@ interface OwnProps {
 interface StateProps {
     project: LProject;
     viewpoints: LViewPoint[];
-    active: LViewPoint;
+    // Fed by mapStateToProps and read nowhere: the only consumer is `const active` at the top of
+    // the component, which is never used. Stays threaded but inert. TODO: cleanup.
+    active: LViewPoint | null;
     isAdvanced: boolean;
 }
 interface DispatchProps { }

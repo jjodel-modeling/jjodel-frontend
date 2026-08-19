@@ -143,7 +143,7 @@ export function resolveParentViewpoint(): { dViewpoint: DViewElement; vpName: st
 
     // 2. Fallback: active project viewpoint (same logic as newDefault)
     try {
-        const activeVP: LViewPoint | undefined = LProject.getProject()?.activeViewpoint;
+        const activeVP: LViewPoint | null | undefined = LProject.getProject()?.activeViewpoint;
         if (activeVP && activeVP.id !== Defaults.Pointer_ViewPointDefault) {
             const d = activeVP.__raw;
             if (d?.className) {

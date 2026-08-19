@@ -526,7 +526,7 @@ export class Selectors{
 
         //const user = LUser.getUser();
         const project = LProject.getProject();
-        let activevpid: Pointer<DViewElement> = project.activeViewpoint.id;
+        let activevpid: Pointer<DViewElement> | undefined = project.activeViewpoint?.id;
         // check if scores needs to be updated
         for (const dview of allViews) {
             let vid = dview.id;

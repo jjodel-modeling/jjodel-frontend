@@ -1178,7 +1178,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         if (thiss.className !== 'DViewElement') return this;
         const user: LUser = LUser.getUser();;
         // const project = user?.project; if(!project) return this;
-        if (!vp) vp = LProject.getProject()?.activeViewpoint.id || Defaults.viewpoints[0];
+        if (!vp) vp = LProject.getProject()?.activeViewpoint?.id || Defaults.viewpoints[0];
         if (vp !== 'skip') {
             // let dvp = DPointerTargetable.fromPointer(vp);
             // let subviews = {...dvp.subViews}; subviews[thiss.id] = 1.5;
@@ -2896,7 +2896,7 @@ export class ProjectPointers{
     models: Pointer<DModel, 0, 'N'> = [];
     graphs: Pointer<DGraph, 0, 'N'> = [];
     viewpoints: Pointer<DViewPoint, 0, 'N'> = [];
-    activeViewpoint: Pointer<DViewPoint, 1, 1> = Defaults.viewpoints[0];
+    activeViewpoint: Pointer<DViewPoint, 0, 1> = Defaults.viewpoints[0];
     favorite!: Dictionary<Pointer<DUser>, true | undefined>;
     author!: Pointer<DUser>;
 }
@@ -2921,7 +2921,7 @@ export class DProject extends DPointerTargetable {
     models: Pointer<DModel, 0, 'N'> = [];
     graphs: Pointer<DGraph, 0, 'N'> = [];
     viewpoints: Pointer<DViewPoint, 0, 'N'> = [];
-    activeViewpoint: Pointer<DViewPoint, 1, 1> = Defaults.viewpoints[0];
+    activeViewpoint: Pointer<DViewPoint, 0, 1> = Defaults.viewpoints[0];
     /* come collaborators */favorite!: Dictionary<Pointer<DUser>, true | undefined>;
 
 
@@ -3014,7 +3014,7 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     graphs!: LGraph[];
     // stackViews!: LViewElement[];
     viewpoints!: LViewPoint[];
-    activeViewpoint!: LViewPoint;
+    activeViewpoint!: LViewPoint | null;
     favorite!: boolean;
 
     description!: string;
@@ -3352,8 +3352,11 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     protected get_activeViewpoint(context: Context): this['activeViewpoint'] {
         return LViewPoint.fromPointer(context.data.activeViewpoint || Defaults.viewpoints[0]);
     }
-    protected set_activeViewpoint(val0: Pack1<this['activeViewpoint']>, c: Context): boolean {
-        let val = Pointers.from(val0);
+    protected set_activeViewpoint(val0: Pack1<NonNullable<this['activeViewpoint']>> | null, c: Context): boolean {
+        // The cast is on the null arm only: `Pointers.from` declares an overload for null and one for
+        // Pack1, but overload resolution does not distribute over a union. Runtime is unaffected —
+        // `Pointers.from(null)` returns null (its implementation opens with `if (!data) return null`).
+        let val = Pointers.from(val0 as Pack1<NonNullable<this['activeViewpoint']>>);
         TRANSACTION(this.get_name(c)+'.activeViewpoint', ()=>{
             SetFieldAction.new(c.data.id, 'activeViewpoint', val, '', true);
         })

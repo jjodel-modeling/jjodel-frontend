@@ -370,7 +370,7 @@ export class DViewElement extends DPointerTargetable {
         // const project = LProject.getProject(); if(!project) return this;
         let name: string;
         let parentView: LViewElement;
-        let activeVP: LViewPoint | undefined = LProject.getProject()?.activeViewpoint;
+        let activeVP: LViewPoint | null | undefined = LProject.getProject()?.activeViewpoint;
         if (activeVP && activeVP?.id !== Defaults.Pointer_ViewPointDefault) parentView = activeVP;
         else parentView = LPointerTargetable.fromPointer(Defaults.Pointer_ViewModel);
 

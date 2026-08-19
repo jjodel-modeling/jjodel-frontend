@@ -984,6 +984,51 @@ Base di evidenza: `docs/discovery/discovery_2026-08-13_view_creation_sites_ir_na
   vieta di **svuotare** i due array, non di aggiungere un predicato che li legge, e nessuna riga
   esistente di `Defaults.ts` viene modificata. Alternativa scartata: duplicare il test nei due siti,
   che e' esattamente la divergenza che R-IRN-22 vuole impedire.
+- **R-IRN-25** (2026-08-19) — **Il commit 2b si spezza in due, e l'allargamento del tipo e' l'oracolo
+  dell'enumerazione dei siti.** Il perimetro delle dereferenziazioni di `activeViewpoint` non si
+  dichiara per grep. La ricerca dell'architetto ne aveva censite due, `classes.ts:1181` e
+  `selectors.ts:529`; una terza, `NestedView.tsx:82`, e' emersa solo mappando i chiamanti fino alla
+  superficie (tab «Viewpoints» del pannello destro classico, confermato aperto da Alfonso il
+  2026-08-19); le ultime tre, `lastViewpoint.ts:146`, `view.tsx:373` e `NestedView.tsx:544`, le ha
+  trovate il compilatore. Sei in tutto, contro due dichiarate all'inizio. L'enumerazione affidabile la
+  fa quindi il tipo: allargato `LProject.activeViewpoint` a `LViewPoint | null` e i due campi D da
+  `Pointer<DViewPoint, 1, 1>` a 0..1, ogni lettura non compatibile diventa un errore, e il commit si
+  chiude solo quando il typecheck torna **all'insieme di baseline byte a byte**, non a un conteggio
+  simile. Un settimo errore e' atteso e non e' un sito: `Pack1` vincola a
+  `orArr<LPointerTargetable> | undefined` e non ammette `null`, quindi `set_activeViewpoint` prende
+  `Pack1<NonNullable<this['activeViewpoint']>> | null`. Da qui la divisione. **2b-i** allarga il tipo
+  e ripara i siti, lasciando invariati il fallback del getter e i valori dei due inizializzatori: non
+  cambia niente a runtime, e ha per gate l'identita' con la baseline su tutti i controlli, schermo
+  compreso. **2b-ii** porta a `null` il fallback del getter e **entrambi** gli inizializzatori, e
+  aggiunge adapter e test di R-IRN-20. Dei due inizializzatori uno solo ha effetto osservabile,
+  `DProject.activeViewpoint`: `ProjectPointers` viene costruita con `{} as any` nel suo unico sito
+  (`projects.ts:331`) e i suoi inizializzatori non girano mai. Si allineano lo stesso, perche' due
+  dichiarazioni dello stesso campo che dicono cose diverse sono una trappola per chi legge, e perche'
+  un `Pointer_ViewPointDefault` che ricomparisse non deve poter essere attribuito a un
+  inizializzatore dimenticato. Hard stop fra i due commit. Alternativa scartata: un commit unico, che
+  avrebbe messo nella stessa diff l'igiene e il cambio di comportamento, rendendo ambigua la
+  bisezione proprio dove il fronte e' piu' fragile.
+- **R-IRN-26** (2026-08-19) — **La migrazione agisce sullo stato decompresso, e il campo omonimo in
+  cima al record di progetto resta censito e non toccato.** `activeViewpoint` finisce su disco due
+  volte: `ProjectsApi.save` fa `{...project.__raw}` e `U.compressedState` scrive quell'oggetto dentro
+  il blob (`state.idlookup[id] = {...dproject, state: ''}`), poi `Offline.save` mette il record
+  intero in `localStorage['projects']`. In rilettura non ne sopravvive niente, in **nessuno** dei due
+  rami, per due ragioni diverse. Offline: `Offline.getAll` ricostruisce con `DProject.new(...)` e
+  ricopia nove campi per nome, fra i quali `activeViewpoint` non c'e', quindi il valore top-level e'
+  scritto e mai riletto e il campo rinasce all'inizializzatore. Online: `projects.ts:338` assegna
+  `pointers.activeViewpoint = raw.activeViewpoint`, ma `DTOProjectGetAll` **non dichiara quel campo**
+  e `DProject.new2` non lo legge, quindi l'unico effetto vivo e' creare la chiave e sopprimere la
+  copia successiva via `if (k in pointers) continue` (Fase 1 §5.4); il ramo online non e' comunque
+  quello esercitato, il corpus di lavoro e' `localStorage['projects']`. L'adapter di R-IRN-20 opera
+  percio' sulla copia **dentro lo stato decompresso**, l'unica che `VersionFixer.update` vede da
+  `SaveManager.ts:56`. Il campo top-level **non si tocca** e `Offline.getAll` neppure: dopo 2b-ii
+  l'inizializzatore e' `null`, quindi lo scarto in rilettura produce esattamente il valore voluto e il
+  difetto diventa innocuo. Censito, non rimosso (Rule 9). Resta aperta e fuori perimetro una
+  discrepanza di misura: nel controllo di 2a lo store vivo portava l'id del viewpoint utente mentre il
+  blob portava `Pointer_ViewPointDefault`, il che con la catena di scrittura appena descritta non
+  torna. Si risolve con una lettura sola, store e blob nella stessa esecuzione subito dopo attiva e
+  salva, e **non blocca 2b**, perche' R-IRN-20 prescrive gia' di riscrivere solo i puntatori di
+  sistema e di lasciare invariati gli id utente.
 
 ## Serie R-SIM — Pannello di simulazione e attributi di stato (ratifiche 2026-08-17)
 
