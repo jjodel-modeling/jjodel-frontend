@@ -10,9 +10,9 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    height: 32px;
-    min-height: 32px;
-    max-height: 32px;
+    height: var(--jj-statusbar-height);
+    min-height: var(--jj-statusbar-height);
+    max-height: var(--jj-statusbar-height);
     padding: 0 12px;
     background: #f8fafc;
     border-top: 1px solid #e2e8f0;

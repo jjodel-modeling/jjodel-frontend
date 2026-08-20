@@ -1,0 +1,20 @@
+/**
+ * LAYOUT TOKENS — altezze del chrome applicativo
+ *
+ * Sorgente unica per le tre bande fisse dell'app: app bar, toolbar del canvas,
+ * status bar. Chi ha bisogno di sapere dove finisce il chrome compone questi nomi
+ * invece di ricopiare i numeri.
+ *
+ * Il motivo per cui questo file esiste: l'app bar e' passata da 60px a 50px e due
+ * fogli separati hanno continuato a sottrarre 60, uno spostando il rail destro di
+ * 9.73px e l'altro mettendo il layout in overflow di 22px (2026-08-20).
+ *
+ * Su `:root`, non su `body`: i sottoalberi portalati risolvono le custom property
+ * dall'antenato piu' vicino, e una dichiarazione su `body` batterebbe `:root`.
+ */
+
+:root {
+  --jj-appbar-height: 50px;      /* .nav-container.appbar */
+  --jj-toolbar-height: 40px;     /* .editor-v2-toolbar */
+  --jj-statusbar-height: 32px;   /* .app-statusbar */
+}

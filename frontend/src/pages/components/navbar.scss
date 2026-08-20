@@ -1589,7 +1589,7 @@ $transition-menu: 150ms ease;
 // ============================================
 
 .nav-container.appbar {
-  height: 50px !important;
+  height: var(--jj-appbar-height) !important;
   padding: 0 16px 0 20px !important;
   border-bottom: 0.5px solid var(--color-border-tertiary, #e2e8f0);
   box-shadow: none !important;
