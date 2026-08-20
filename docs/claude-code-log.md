@@ -1,5 +1,31 @@
 # Claude Code Session Log
 
+## 2026-08-20 — feat: i token di tema pubblicati su `:root` (D-UI-10)
+**Prompt**: prompt del 2026-08-20 00:58, strada C del report sui token portalati. Commit 1, sorgente unica per i 91 nomi con output CSS invariato byte per byte; commit 2, gli stessi token emessi anche su `:root` e `:root[data-theme="dark"]`, additivi, tutti e 91. Piu' il commit del report lasciato non tracciato e la ratifica D-UI-10.
+**Files touched**: `frontend/src/components/editor-v2/_themes.scss`, `docs/decisions.md`, `docs/discovery/discovery_2026-08-20_token_css_portalati.md` (committato), `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: 2026-08-20 00:25
+**Causa**: (a)
+**Regressions**: no — controllo positivo su due colonne (`git stash`) misurato in pagina: dentro `.editor-v2` **zero** valori cambiati su 91, in light e in dark. Nel rail portalato i non risolventi passano da 89 a 0. Commit 1 verificato compilando l'intero `EditorV2.scss` prima e dopo: 97318 byte identici, `cmp` silenzioso. Gate: build exit 0, typecheck 33 su output completo, vitest 1315 passati / 9 suite rosse, smoke 10/0/2.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessun file di §3.1 nel diff.
+**Smoke visivo**: passato (automatico) — 10 assert, 0 falliti. Verifica di Alfonso in light e dark: raggruppata nell'unico hard stop di fine sessione.
+**Notes**: Test 4 confermato: `--accent` dentro il portal resta `#334155` (light) e `#94a3b8` (dark) contro `#0284c7` dell'editor. Difetto aperto, come D-UI-10 dichiara. Trovato un difetto **preesistente**: `AppearanceSettings.tsx:8` scrive `data-theme` e `localStorage` a mano invece di `ThemeService.set`, quindi `jjodel:theme-changed` non parte e `.editor-v2` resta `theme-light` fino al reload. Con dark scelto prima del load, rail ed editor coincidono su 90 nomi su 91.
+**Prompt document name**: 2026-08-20 00:58
+
+## 2026-08-20 — fix: rail destro a filo, overlay e toast (D-UI-1, Fase 2 di A)
+**Prompt**: documento di chiusura del 2026-08-20 01:49. Tre commit di fila senza hard stop intermedi: rail destro a filo dalla toolbar alla status bar con il bordo del rail sinistro; overlay in basso a sinistra che non si accavallano piu' e riga di aiuto leggibile intera; toast che non copre la status bar. Le due domande aperte di A chiuse da solo con i criteri dati.
+**Files touched**: `frontend/src/components/editors/properties-with-tree-view.scss`, `frontend/src/components/editor-v2/EditorV2.scss`, `frontend/src/components/editor-v2/sim/simulation-panel.scss`, `frontend/src/components/Jodie/JodieWindow.css`, `frontend/src/components/Toast/toast.scss`, `frontend/src/components/Toast/ToastContainer.tsx`, `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — misurato in pagina sul tab M1, viewport 1440x900. Rail x=1040..1440 y=100..868, `border-left rgba(0,0,0,0.06)`, radius 0, shadow none. `.editor-v2` da 900 a 817px, dentro lo slot: le tre righe di aiuto stanno a y=759..853, nessuna clippata, nessuna sotto la status bar. FAB a x=230, pill a x=216, entrambi disgiunti dal blocco hint (destro a 186). Toast da `bottom:16px` a 48px, sovrapposizione con la status bar da 16px a 0. Gate: build exit 0, typecheck 33, vitest 1315/9, smoke 10/0/2.
+**Out-of-scope changes**: yes
+**Layer Impact Report**: not-required — nessun file di §3.1 nel diff.
+**Smoke visivo**: passato (automatico) — A3 «no overlay on the status bar» 0 intersecanti in tutti e tre gli stati. Verifica di Alfonso: hard stop unico, pendente.
+**Notes**: Out-of-scope dichiarato: `ToastContainer.tsx`, non nel report di Fase 1. Il solo fix SCSS rendeva il toast **invisibile**: `#root` e' `position:fixed`, quindi contesto di impilamento, e `--z-toast` ordinava solo dentro `#root` mentre il rail, fratello di `body` a 900, ci passava sopra. Il toast si vedeva solo nella striscia sotto il rail, che e' la striscia sulla status bar. Portalato su `body`. Trovato in pixel, non in stile.
+**Prompt document name**: 2026-08-20 01:49
+
 ## 2026-08-20 — docs: censimento dei token CSS nel contesto portalato
 **Prompt**: prompt del 2026-08-20 00:25, discovery pura fuori sequenza che precede la Fase 2 di C. Sei punti: perimetro portalato, dove sono definiti i token di tema, censimento statico di `var(--`, verifica dinamica in pagina con controllo positivo, conseguenze visibili, dark mode. Piu' una sezione «Opzioni di fix» con almeno due strade e nessuna scelta. Hard stop al termine, nessun file di codice.
 **Files touched**: `docs/discovery/discovery_2026-08-20_token_css_portalati.md` (nuovo), `docs/claude-code-log.md`
