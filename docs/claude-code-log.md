@@ -1,5 +1,19 @@
 # Claude Code Session Log
 
+## 2026-08-20 — docs: censimento dei 162 siti di testo e dei due fogli di bordo (D-UI-13 arco 3)
+
+**Prompt**: prompt UI K del 2026-08-20 20:55, arco 3 di D-UI-13, Fase 1 read-only. Tre censimenti in un report: A, tutti i 162 usi di `--color-text-tertiary` con proprieta' CSS, selettore e smistamento caption/subtle/altro secondo un criterio dichiarato in testa; B, i due fogli dove le famiglie `--color-border-primary` e `--color-panel-border` coesistono, con la domanda su quali coppie si vedono insieme a schermo; C, i sedici nomi che `_colors-light.scss` dichiara e `_colors-dark.scss` no, ricavati e non copiati, con misura di che cosa risolvono in dark.
+**Files touched**: commit `e35132977` (1 file: `docs/discovery/discovery_2026-08-20_censimento_testo_e_bordi.md`, nuovo). Nessun file di codice o di stile toccato.
+**Outcome**: ✅ completed — censiti 162 + 20 + 16 siti; 7 dubbi lasciati aperti come chiede il prompt, piu' 7 domande in coda al report.
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — discovery read-only, nessun sorgente nel diff. Numeri: A si scompone in 55 caption, 43 subtle (16 disabled, 8 placeholder, 19 icone), 41 altro (il token non dipinge testo), 12 alias, 2 morti, 2 commentati, 7 dubbi. B: `--color-border-primary` ha 3 usi vivi in `info-improvements.scss` e **0** in `properties-with-tree-view.scss` (l'unico e' commentato in un blocco `// TODO: cleanup`), contro 18 di `--color-panel-border`. C: 16 confermati per differenza (199 - 183), 9 dei quali senza alcun consumatore.
+**Out-of-scope changes**: no — un solo file, il report.
+**Layer Impact Report**: not-required — nessun file di §3.1 letto in scrittura, nessuna modifica.
+**Smoke visivo**: non applicabile — nessuna superficie toccata. Le due sonde live sono misura, non verifica visiva.
+**Notes**: (1) Metodo: maschera commenti a livello di carattere, validata su 4 casi noti prima dell'uso; ha smentito due mie letture (`style.scss:297,477` stanno dentro blocchi 231-302 e 437-488). (2) 162 = occorrenze; la 163a grep e' `--color-text-tertiary-dark`, altro nome mai dichiarato. (3) Ogni asserzione di assenza ha il suo controllo positivo in linea. (4) Sonde `_tmp_censusB/C/reconTabs.ts` non committate; censusB apre un progetto (dichiarato), contesto effimero. (5) Rotazione log dovuta.
+**Prompt document name**: 2026-08-20 20:55 claude_2026-08-20_2055_prompt_ui_K_arco3_censimento_testo_bordi.md
+
 ## 2026-08-20 — refactor: i 16 token identici tolti da tokens.css (D-UI-13 arco 1)
 
 **Prompt**: prompt UI I del 2026-08-20 17:05, arco 1 di D-UI-13. Togliere da `styles/tokens.css` i 16 nomi che dichiara con lo stesso identico valore di `styles/tokens/`, lasciando intatti i 17 divergenti (archi 2-4) e i nomi esclusivi interposti (`--radius-base`, `--input-height-base`); commento di intestazione che spiega la sottrazione; citazione ora falsa corretta in un commento SCSS. Gate obbligatorio: controllo positivo sui 33 nomi collisi nei tre regimi di tema, prima e dopo.
