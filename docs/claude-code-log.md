@@ -1,5 +1,18 @@
 # Claude Code Session Log
 
+## 2026-08-20 — fix: un solo colore per gli hairline del rail destro (D-UI-11)
+**Prompt**: prompt UI F del 2026-08-20 09:46, solo SCSS, senza two-phase. Uniformare i sei hairline interni al rail destro su `--color-panel-border`, eliminando i quattro valori divergenti (`#d1d9e3`, `#e2e8f0`, `#e9eff6`, `#eef2f7`) e l'uso di `--color-bg-hover` come colore di bordo. Bordo esterno del rail fuori scope.
+**Files touched**: `frontend/src/components/editors/properties-with-tree-view.scss`, `frontend/src/components/editors/info-improvements.scss`, `docs/decisions.md`, `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — gate 2 eseguito come doppia build (`git stash` sui due file) con diff del CSS compilato rule-by-rule: **sei sole hunk**, tutte previste — le cinque ricolorazioni piu' la rimozione dell'override dark ora ridondante. Nessun'altra regola cambia in 1.81 MB di CSS. Build exit 0 in entrambe le colonne, solo il warning chunk-size noto.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessun file di §3.1 nel diff.
+**Smoke visivo**: pendente — verifica di Alfonso in light e dark. Nota operativa: il dev server risponde su **3000**, non su 3001 come dice il prompt (`vite.config` dichiara `port: 3000`; 3001 e 3002 non rispondono).
+**Notes**: (1) Ognuna delle cinque dichiarazioni verificata col valore atteso **prima** della sostituzione, come chiede il prompt: tutte corrispondevano. Le asserzioni erano anche sui numeri di riga e una ha fatto fallire il primo tentativo (il commento dark sta a 1241, non a 1240); l'abort ha lasciato i file intatti. (2) Cascata e specificita' dell'override su `.tree-search`, e la correzione di `.jj-conformance-bar` anche fuori dal rail: ratificate in D-UI-11. (3) Rotazione log ancora dovuta.
+**Prompt document name**: 2026-08-20 09:46 claude_2026-08-20_0946_prompt_ui_F_hairline_rail.md
+
 ## 2026-08-20 — feat: i token di tema pubblicati su `:root` (D-UI-10)
 **Prompt**: prompt del 2026-08-20 00:58, strada C del report sui token portalati. Commit 1, sorgente unica per i 91 nomi con output CSS invariato byte per byte; commit 2, gli stessi token emessi anche su `:root` e `:root[data-theme="dark"]`, additivi, tutti e 91. Piu' il commit del report lasciato non tracciato e la ratifica D-UI-10.
 **Files touched**: `frontend/src/components/editor-v2/_themes.scss`, `docs/decisions.md`, `docs/discovery/discovery_2026-08-20_token_css_portalati.md` (committato), `docs/claude-code-log.md`

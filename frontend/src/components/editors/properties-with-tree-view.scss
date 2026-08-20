@@ -1209,7 +1209,7 @@ $pc-hint-indent: 26px;        // 18px checkbox + 8px gap (the design-system Chec
         flex: 1;
         min-width: var(--space-2);
         height: 1px;
-        background: var(--color-bg-hover);
+        background: var(--color-panel-border);
     }
 
     &__content {
@@ -1238,7 +1238,7 @@ $pc-hint-indent: 26px;        // 18px checkbox + 8px gap (the design-system Chec
     }
 
     // The disclosure row has no fill and no top border left to re-colour, and its
-    // hairline uses `--color-bg-hover`, which does follow the theme. Only the hover
+    // hairline uses `--color-panel-border`, which does follow the theme. Only the hover
     // needs flipping: `--color-slate-*` is a raw palette, so the light rule would
     // darken the label against a dark surface instead of lifting it.
     .properties-node-section__header:hover {
@@ -1465,6 +1465,11 @@ body[data-active-tab="documentation"] .properties-tree-overlay {
     // cleanly below it instead of showing through/around/above it.
     .tree-search {
         z-index: 5;
+        // Il foglio della sidebar dichiara qui `--color-border-secondary` (#d1d9e3),
+        // il valore piu' scuro del rail. Ricolorata solo dentro il rail: la sidebar
+        // standalone tiene il suo.
+        border-bottom-color: var(--color-panel-border);
+        border-left-color: var(--color-panel-border);
     }
     // Properties handle stays on the LEFT edge → controls the overlay column width
     // (cursor col-resize is already set on the base .properties-panel-resize-handle).
@@ -1567,7 +1572,7 @@ body[data-active-tab="documentation"] .properties-tree-overlay {
     flex: none;
     height: 44px;   // literal by R-RAIL-9 — see the block at the top of this file
     padding: 0 var(--space-2) 0 var(--space-3);
-    border-bottom: 1px solid var(--color-bg-hover);
+    border-bottom: 1px solid var(--color-panel-border);
     background: var(--color-panel-bg);
     user-select: none;
 
@@ -2294,7 +2299,7 @@ body[data-active-tab="documentation"] .properties-tree-overlay {
             order: 1;
             flex: 1 1 auto;
             height: 1px;
-            background: #eef2f7;
+            background: var(--color-panel-border);
         }
     }
 
@@ -2325,7 +2330,6 @@ body[data-active-tab="documentation"] .properties-tree-overlay {
 }
 
 [data-theme="dark"] .properties-with-tree-view--rail .jj-disclosure {
-    .props-section__header::after { background: var(--color-panel-border); }
     .props-section__title,
     .props-section__chevron,
     .jj-disclosure__summary { color: var(--color-slate-400); }

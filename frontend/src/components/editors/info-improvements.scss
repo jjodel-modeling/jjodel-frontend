@@ -1389,7 +1389,7 @@ section .property-panel {
   gap: 8px;
   padding: 10px 16px;
   background: #f0fdf4;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--color-panel-border);
   font-size: 12px;
   color: #166534;
 

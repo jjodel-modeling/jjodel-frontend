@@ -1292,6 +1292,20 @@ bag `_state`, che non contiene affatto il run-state.
   quei due e' un giro a parte, legato al ticket `--accent` di `CLAUDE.md` §7.2. Censimento e misure:
   `docs/discovery/discovery_2026-08-20_token_css_portalati.md`.
 
+- **D-UI-11** (2026-08-20) — **Ogni linea di separazione interna al rail destro usa
+  `--color-panel-border`.** Gli hairline del rail erano dichiarati in cinque punti con quattro
+  valori diversi (`#d1d9e3` sotto `Filter...`, `#e9eff6` sotto l'header e dopo `NODE`, `#eef2f7`
+  dopo `ADVANCED`, `#e2e8f0` letterale sotto `Conforms to`), e la differenza si vedeva a occhio.
+  Un solo token per tutte, nessun letterale. In particolare **`--color-bg-hover` non si usa mai
+  come colore di bordo**: e' un token di sfondo hover, per questo derivava. Il **bordo esterno**
+  del rail resta su `--border-subtle`, che e' un'altra cosa: lo tiene accoppiato al rail sinistro
+  per D-UI-1, e non va unificato con gli hairline interni. `.tree-search` e' ricolorata in
+  **override** dentro `.properties-with-tree-view--floating`, mai nel foglio della sidebar, che
+  serve anche la sidebar standalone; l'override raggiunge il rail perche' `--floating` e `--rail`
+  stanno sullo stesso elemento (`PropertiesWithTreeView.tsx:515`) e vince per specificita', non per
+  ordine. `.jj-conformance-bar` vive anche fuori dal rail: la si corregge comunque, perche' il
+  letterale era lo stesso difetto ovunque e in dark era proprio sbagliato.
+
 ## Superate
 
 - **D3** (2026-07-26, routing congelato in v1) — superata da E-route il 2026-08-06.
