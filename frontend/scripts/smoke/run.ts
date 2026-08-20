@@ -29,6 +29,7 @@ import {
 import type { AssertionId, SmokeState } from './states.ts';
 import {
     assertCanvasGeometry,
+    assertChromeStackContiguous,
     assertConsoleAgainstBaseline,
     assertNoStatusbarOverlay,
     assertStructureMounted,
@@ -115,6 +116,18 @@ async function runState(
         results.push(cmp.result);
         improvements = cmp.improvements;
     }
+
+    const a5Skip = skipReason(state, 'A5');
+    results.push(
+        a5Skip
+            ? {
+                  id: 'A5',
+                  title: 'chrome stack contiguo: nessun vuoto fra app bar, toolbar, rail e status bar',
+                  status: 'skipped',
+                  detail: a5Skip,
+              }
+            : assertChromeStackContiguous(m),
+    );
 
     await opened.ctx.close();
     return { state, reached: true, results, improvements, pageErrors: opened.pageErrors };

@@ -6,7 +6,13 @@
  */
 
 import type { Page } from '@playwright/test';
-import { CANVAS_MAIN_RATIO_MIN, FIXED_ALLOWLIST, STATUSBAR_INTERSECT_TOLERANCE_PX } from './states.ts';
+import {
+    CANVAS_MAIN_RATIO_MIN,
+    CHROME_GAP_TOLERANCE_PX,
+    DOCK_PANEL_BORDER_PX,
+    FIXED_ALLOWLIST,
+    STATUSBAR_INTERSECT_TOLERANCE_PX,
+} from './states.ts';
 
 export interface Rect {
     x: number;
@@ -32,6 +38,10 @@ export interface Measurements {
     reactFlowCount: number;
     statusbar: Rect | null;
     statusbarPosition: string | null;
+    /** A5 — le tre bande sopra la status bar, per il controllo di contiguita'. */
+    appbar: Rect | null;
+    toolbar: Rect | null;
+    rail: Rect | null;
     canvasOverMainRatio: number | null;
     nodeCount: number;
     edgeCount: number;
@@ -133,6 +143,9 @@ export async function measure(
                 reactFlowCount: document.querySelectorAll('.react-flow').length,
                 statusbar: sbRect,
                 statusbarPosition: statusbarEl ? window.getComputedStyle(statusbarEl).position : null,
+                appbar: rectOf('.nav-container.appbar'),
+                toolbar: rectOf('.editor-v2-toolbar'),
+                rail: rectOf('.properties-tree-overlay'),
                 canvasOverMainRatio: canvas && main && main.w > 0 ? canvas.w / main.w : null,
                 nodeCount: document.querySelectorAll('.react-flow__node').length,
                 edgeCount: document.querySelectorAll('.react-flow__edge').length,
@@ -229,6 +242,100 @@ export function assertNoStatusbarOverlay(m: Measurements): AssertionResult {
         detail:
             `statusbar ${fmtRect(m.statusbar)}; ${offenders.length} offending element(s):\n` +
             lines.join('\n'),
+    };
+}
+
+/**
+ * A5 — the chrome stack is contiguous: no gap between app bar, canvas toolbar,
+ * right rail and status bar.
+ *
+ * Exists because the same defect came back twice in two months and nothing
+ * watched it: the app bar went 60px -> 50px while two other sheets kept
+ * subtracting 60, which pushed the rail 9.73px below the toolbar. Seams are
+ * asserted as relations between measured rects, never as absolute values — an
+ * absolute expectation inherits the model that produced it and fails without
+ * saying what stopped matching.
+ *
+ * The app bar -> toolbar seam is the one legitimately non-zero gap: rc-dock's
+ * .dock-panel border-top, DOCK_PANEL_BORDER_PX.
+ */
+export function assertChromeStackContiguous(m: Measurements): AssertionResult {
+    const id = 'A5';
+    const title = 'chrome stack contiguo: nessun vuoto fra app bar, toolbar, rail e status bar';
+
+    const missing: string[] = [];
+    if (!m.appbar) missing.push('.nav-container.appbar');
+    if (!m.toolbar) missing.push('.editor-v2-toolbar');
+    if (!m.rail) missing.push('.properties-tree-overlay');
+    if (!m.statusbar) missing.push('.app-statusbar');
+    if (missing.length > 0) {
+        // Not a failure: a state that opens no project has no toolbar and no rail.
+        return {
+            id,
+            title,
+            status: 'skipped',
+            detail: `absent in this state: ${missing.join(', ')}`,
+        };
+    }
+
+    const appbar = m.appbar as Rect;
+    const toolbar = m.toolbar as Rect;
+    const rail = m.rail as Rect;
+    const statusbar = m.statusbar as Rect;
+
+    const seams = [
+        {
+            name: 'app bar -> toolbar',
+            measured: toolbar.y - (appbar.y + appbar.h),
+            expected: DOCK_PANEL_BORDER_PX,
+            note: 'rc-dock .dock-panel border-top',
+        },
+        {
+            name: 'toolbar -> rail',
+            measured: rail.y - (toolbar.y + toolbar.h),
+            expected: 0,
+            note: 'flush',
+        },
+        {
+            name: 'rail -> status bar',
+            measured: statusbar.y - (rail.y + rail.h),
+            expected: 0,
+            note: 'flush',
+        },
+    ];
+
+    const lines = seams.map(
+        (s) =>
+            `${s.name} = ${s.measured.toFixed(2)}px (atteso ${s.expected}, ${s.note})`,
+    );
+    const offenders = seams.filter(
+        (s) => Math.abs(s.measured - s.expected) > CHROME_GAP_TOLERANCE_PX,
+    );
+
+    if (offenders.length === 0) {
+        return {
+            id,
+            title,
+            status: 'passed',
+            detail: `${lines.join('; ')} — tolleranza ${CHROME_GAP_TOLERANCE_PX}px`,
+        };
+    }
+
+    return {
+        id,
+        title,
+        status: 'failed',
+        detail:
+            `${offenders.length} giunzione/i fuori tolleranza (${CHROME_GAP_TOLERANCE_PX}px):\n` +
+            offenders
+                .map(
+                    (s) =>
+                        `      ${s.name} = ${s.measured.toFixed(2)}px, atteso ${s.expected} ` +
+                        `(scarto ${(s.measured - s.expected).toFixed(2)}px) — ${s.note}`,
+                )
+                .join('\n') +
+            `\n      rects: appbar ${fmtRect(appbar)}; toolbar ${fmtRect(toolbar)}; ` +
+            `rail ${fmtRect(rail)}; statusbar ${fmtRect(statusbar)}`,
     };
 }
 

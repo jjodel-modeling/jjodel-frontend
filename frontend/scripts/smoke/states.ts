@@ -31,6 +31,21 @@ export const CANVAS_MAIN_RATIO_MIN = 0.95;
 export const STATUSBAR_INTERSECT_TOLERANCE_PX = 0;
 
 /**
+ * A5 — slack allowed on each seam of the chrome stack. Sub-pixel only: the seams
+ * are meant to be exact, and 0.5px absorbs device-pixel rounding without letting
+ * a real gap through (the bug A5 exists for measured 9.73px).
+ */
+export const CHROME_GAP_TOLERANCE_PX = 0.5;
+
+/**
+ * The one seam that is legitimately not zero: rc-dock paints a 1px border-top on
+ * .dock-panel between the app bar and the canvas toolbar. Library CSS, not ours —
+ * `.properties-tree-overlay`'s `top` composes this literal on purpose
+ * (properties-with-tree-view.scss). If rc-dock changes it, A5 fails and points here.
+ */
+export const DOCK_PANEL_BORDER_PX = 1;
+
+/**
  * Elements exempt from A3.
  *
  * `#root` is position:fixed at full viewport (src/index.scss:31), so it
@@ -107,7 +122,7 @@ export const OFFLINE_USER = {
     __isDUser: true,
 };
 
-export type AssertionId = 'A1' | 'A2' | 'A3' | 'A4';
+export type AssertionId = 'A1' | 'A2' | 'A3' | 'A4' | 'A5';
 
 export interface SkipDeclaration {
     assertion: AssertionId;
