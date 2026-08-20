@@ -2040,7 +2040,7 @@ body[data-active-tab="documentation"] .properties-tree-overlay {
     .jj-flags__rule {
         flex: 1 1 auto;
         height: 1px;
-        background: #eef2f7;
+        background: var(--color-panel-border);
     }
 
     .jj-flags__summary {
@@ -2221,7 +2221,6 @@ body[data-active-tab="documentation"] .properties-tree-overlay {
 // pannello scuro, e il chip acceso a slate-700 sparirebbe nel fondo. Stessa inversione
 // già adottata per il segmentato del passo B e per la Focus bar dell'arco 2.
 [data-theme="dark"] .properties-with-tree-view--rail .properties-fields {
-    .jj-flags__rule { background: var(--color-panel-border); }
     .jj-flags__title,
     .jj-flags__summary { color: var(--color-slate-400); }
 

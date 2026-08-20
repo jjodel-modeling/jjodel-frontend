@@ -12,7 +12,7 @@
 **Layer Impact Report**: not-required — nessun file di §3.1 nel diff.
 **Smoke visivo**: passato (automatico, A5 inclusa) — verifica a vista di Alfonso pendente, light e dark con sfondo canvas attivo.
 **Notes**: (1) L'hard stop ha intercettato un modello sbagliato: la colonna flex e' `.router-wrapper`, non `#root`, e `.dashboard-container` e' fratello di entrambe le bande; sottrarne una sola ha portato l'overflow da 22 a 32px. (2) Passata la prova A: non conosce i fratelli, B li ricopia. L'1px di rc-dock: D-UI-12. (3) Gate relazionali in PROTOCOL.md P8: il controllo positivo sta in CLAUDE.md §5, non qui. (4) P8 dichiara il dev server su 3000; i prompt F e G dicono 3001. (5) Rotazione log dovuta.
-**Prompt document name**: 2026-08-20 12:40 claude_2026-08-20_1240_emendamento_G_commit2_3.md
+**Prompt document name**: 2026-08-20 12:01 (prompt UI G) + emendamento 2026-08-20 12:40 claude_2026-08-20_1240_emendamento_G_commit2_3.md
 
 ## 2026-08-20 — fix: un solo colore per gli hairline del rail destro (D-UI-11)
 **Prompt**: prompt UI F del 2026-08-20 09:46, solo SCSS, senza two-phase. Uniformare i sei hairline interni al rail destro su `--color-panel-border`, eliminando i quattro valori divergenti (`#d1d9e3`, `#e2e8f0`, `#e9eff6`, `#eef2f7`) e l'uso di `--color-bg-hover` come colore di bordo. Bordo esterno del rail fuori scope.
@@ -23,7 +23,8 @@
 **Regressions**: no — gate 2 eseguito come doppia build (`git stash` sui due file) con diff del CSS compilato rule-by-rule: **sei sole hunk**, tutte previste — le cinque ricolorazioni piu' la rimozione dell'override dark ora ridondante. Nessun'altra regola cambia in 1.81 MB di CSS. Build exit 0 in entrambe le colonne, solo il warning chunk-size noto.
 **Out-of-scope changes**: no
 **Layer Impact Report**: not-required — nessun file di §3.1 nel diff.
-**Smoke visivo**: pendente — verifica di Alfonso in light e dark. Nota operativa: il dev server risponde su **3000**, non su 3001 come dice il prompt (`vite.config` dichiara `port: 3000`; 3001 e 3002 non rispondono).
+**Smoke visivo**: ✅ eseguito 2026-08-20 su localhost:3000, light e dark con reload completo (dark impostato prima del load, non a caldo). Stato: progetto nuovo, metamodel_1 + model_1, tab model_1 aperta — la banda `Conforms to` esiste solo li', `Info.tsx:467` la gatta su `!l.isMetamodel`. Sei linee su sei a `--color-panel-border`: rgb(226,232,240) in light, rgb(51,65,85) in dark. Misura da computed style, non da campionamento di pixel.
+**Seguito**: `.jj-flags__rule`, settima linea non inventariata, portata sul token (prompt H). D-UI-11 non ha piu' eccezioni.
 **Notes**: (1) Ognuna delle cinque dichiarazioni verificata col valore atteso **prima** della sostituzione, come chiede il prompt: tutte corrispondevano. Le asserzioni erano anche sui numeri di riga e una ha fatto fallire il primo tentativo (il commento dark sta a 1241, non a 1240); l'abort ha lasciato i file intatti. (2) Cascata e specificita' dell'override su `.tree-search`, e la correzione di `.jj-conformance-bar` anche fuori dal rail: ratificate in D-UI-11. (3) Rotazione log ancora dovuta.
 **Prompt document name**: 2026-08-20 09:46 claude_2026-08-20_0946_prompt_ui_F_hairline_rail.md
 
