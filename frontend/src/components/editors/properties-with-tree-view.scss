@@ -1416,16 +1416,21 @@ body[data-active-tab="documentation"] .properties-tree-overlay {
 .properties-tree-overlay {
     position: fixed;
     // Start just below the canvas toolbar so it never covers the VIEW/Theme controls.
-    // No CSS vars exist for these heights, so compose the known literals:
-    // navbar 60px (navbar.scss:178) + .editor-v2-toolbar 40px (EditorV2.scss), flush.
-    top: calc(60px + 40px);
+    // Le altezze del chrome vengono da tokens/_layout.scss. L'1px in mezzo non e'
+    // nostro: e' il border-top di .dock-panel (rc-dock, CSS di libreria), fra app bar
+    // e toolbar. Misurato risalendo la catena degli antenati il 2026-08-20: tutti
+    // fino a .dock-panel stanno a top 50, da .dock-panel in giu' a 51. Resta un
+    // letterale apposta. Se rc-dock cambia quel bordo, questo calc va rimisurato:
+    // l'asserzione A5 dello smoke lo dice.
+    top: calc(var(--jj-appbar-height) + 1px + var(--jj-toolbar-height));
     // Flush with the viewport edge (D-UI-1). This supersedes the 8px gutter of the
     // F2 floating overlay, which the comment here used to call ratified: the rail is
     // no longer a card floating on the canvas, it is a side of the window.
     right: 0;
-    // Stop flush against the top edge of the status bar (StatusBar.scss height
-    // 32px), with no gap. top+bottom bound the column height; width stays inline.
-    bottom: 32px;
+    // Stop flush against the top edge of the status bar, with no gap. L'altezza
+    // arriva da tokens/_layout.scss, non ricopiata. top+bottom bound the column
+    // height; width stays inline.
+    bottom: var(--jj-statusbar-height);
     z-index: 900; // above canvas + rc-dock, below canvas context-menu (1000) and modals
     display: flex;
     // NB: the wrapper stays pointer-events:auto (normal). An earlier experiment set it
