@@ -1353,6 +1353,48 @@ bag `_state`, che non contiene affatto il run-state.
   si aggiusta passando dal letterale al token. Censimento e misure:
   `docs/discovery/discovery_2026-08-20_riconciliazione_token.md`.
 
+  **Emendamento 1 (2026-08-20, dopo l'arco 1).** L'arco 1 e' chiuso (`c00c1e660`, `PRIMA == DOPO`
+  su 99 valori, con il controllo che il foglio servito fosse quello nuovo). La scaletta degli archi
+  2, 3 e 4 qui sopra **e' sostituita**, perche' due misure fatte per prepararla dicono che la
+  consegna dei colori non e' meccanica.
+
+  **La scala del testo non e' sfalsata di un gradino: e' un'altra scala.** `tokens/` dichiara cinque
+  gradi con i ruoli scritti nel file (900 primary, 700 secondary, 600 tertiary «Labels, captions»,
+  500 placeholder, 400 disabled); `tokens.css` ne dichiara tre (900, 600, 400). Il suo
+  `--color-text-tertiary` a `#94a3b8` **e' il `--color-text-disabled` di `tokens/`**, non il suo
+  tertiary. Una sottrazione secca assegnerebbe tutti e 162 i siti a «didascalia» per omissione.
+  Ratificato: **i 162 siti si smistano** fra `--color-text-tertiary` e `--color-text-disabled`.
+
+  **`--color-border-primary` oggi vale `#e2e8f0`, cioe' esattamente `--color-panel-border`**, che e'
+  dichiarato solo in `tokens/` e vale `$slate-200` in tutti i regimi. La consegna lo porta a
+  `#cbd5e1` e separa le due famiglie di un gradino visibile. I due file dove le due famiglie
+  **coesistono sono `info-improvements.scss` e `properties-with-tree-view.scss`**, cioe' i due fogli
+  del rail destro, gli stessi che D-UI-11 ha appena unificato perche' quattro grigi diversi si
+  vedevano a occhio. Ratificato: **prima il censimento di dove si incontrano a schermo**, poi la
+  decisione sulla scala a due livelli.
+
+  **La copertura dark diventa prerequisito, non coda.** I nomi che `_colors-light.scss` dichiara e
+  `_colors-dark.scss` no sono **sedici**: `--color-bg-active`, `--color-border-focus`,
+  `--color-error-bg`, `--color-info-bg`, `--color-interactive-active|-default|-disabled|-hover`,
+  `--color-success-bg`, `--color-text-disabled`, `--color-text-placeholder`, `--color-warning-bg`,
+  `--gradient-card|-hover|-panel|-sidebar`. Lo smistamento del testo **porta siti su
+  `--color-text-disabled`**, che in dark non risolve: farlo prima della copertura significa
+  fabbricare il difetto mentre si chiude quello accanto. L'insieme si copre **completo**, non solo i
+  due nomi che servono qui, per la stessa ragione di D-UI-10: un insieme parziale ricrea la trappola
+  sul primo nome scoperto che qualcuno decidera' di usare.
+
+  **`--color-border-focus` esce dalla serie.** Sei siti, oggi `#06b6d4`, `tokens/` dice `#64748b`, il
+  design system del progetto dice `#334155`, e in dark non e' dichiarato affatto. Nessuno dei due
+  candidati e' quello giusto: va al ticket `--accent` di `CLAUDE.md` §7.2, dove vive gia' lo stesso
+  difetto.
+
+  **Ordine vincolante emendato**: **1** i 16 identici, fatto; **2** copertura dark dei sedici nomi
+  solo-light; **3** censimento read-only dei 162 siti di testo e dei due fogli di bordo, con
+  discovery report; **4** smistamento del testo; **5** bordi, sulla base del censimento; **6**
+  sfondi, l'inversione `--color-bg-primary` / `--color-bg-secondary` su 226 siti, che resta
+  meccanica; **7** ombre e transizioni, 105 siti; **8** scala z nuova, che chiude anche il `9000`
+  letterale di `.donation-banner`.
+
 ## Superate
 
 - **D3** (2026-07-26, routing congelato in v1) — superata da E-route il 2026-08-06.
