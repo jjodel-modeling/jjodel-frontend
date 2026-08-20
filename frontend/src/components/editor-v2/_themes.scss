@@ -5,6 +5,19 @@
 // Name and value of every theme token live in the two maps below, which are
 // the single source. The selectors emit them, they never restate them: two
 // hand-written blocks carrying the same 91 names drift apart in silence.
+//
+// The maps are emitted on four selectors, on purpose (D-UI-10):
+//   .editor-v2.theme-dark / .theme-light   the editor subtree, unchanged
+//   :root / :root[data-theme="dark"]       everywhere else, portals included
+// Subtrees mounted with createPortal on document.body sit outside .editor-v2,
+// so without the :root pair every var() of a theme token resolves to nothing
+// there. The addition is inert inside the editor: a declaration set on
+// .editor-v2 itself always beats one inherited from :root, whatever the
+// specificity, because the two never apply to the same element.
+//
+// Not repaired here: --accent and --danger are also legacy mappings on body,
+// and body is a nearer ancestor than :root for everything under it, so inside
+// a portal those two still resolve to the dock values. Separate job.
 
 // === DARK THEME (default) ===
 $editor-v2-theme-dark: (
@@ -311,4 +324,14 @@ $editor-v2-theme-light: (
 
 .editor-v2.theme-light {
   @include editor-v2-theme-vars($editor-v2-theme-light);
+}
+
+// Same tokens, published where portals can reach them. Light on bare :root,
+// matching how styles/tokens/ ships the design system.
+:root {
+  @include editor-v2-theme-vars($editor-v2-theme-light);
+}
+
+:root[data-theme="dark"] {
+  @include editor-v2-theme-vars($editor-v2-theme-dark);
 }
