@@ -11,7 +11,11 @@
 
 .editor-v2 {
     display: flex;
-    height: 100vh;
+    // 100% of the rc-dock slot, not 100vh. The slot is the viewport minus navbar
+    // and status bar, so 100vh overflowed it by exactly their height and pushed
+    // the palette's hint block under the status bar, where it could not be
+    // scrolled back into view.
+    height: 100%;
     width: 100%;
     background: var(--canvas-bg);
     color: var(--text-primary);

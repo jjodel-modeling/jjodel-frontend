@@ -915,6 +915,14 @@
     }
 }
 
+/* Editor tabs: no .leftbar, but a 200px palette rail whose hint block sits at the
+   very bottom of the column. Same shape as the rule above, different rail width. */
+@media (min-width: 769px) {
+    body:has(.editor-v2-palette) .jodie-minimized {
+        left: calc(200px + 30px);
+    }
+}
+
 .jodie-minimized.jodie-has-unread::after {
     content: '';
     position: absolute;

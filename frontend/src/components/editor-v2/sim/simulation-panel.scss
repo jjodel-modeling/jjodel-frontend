@@ -33,7 +33,9 @@
 
 .sim-panel {
     position: fixed;
-    left: 16px;
+    // Clear of the 200px palette rail (EditorV2.scss .editor-v2-palette): the chip
+    // floats on the canvas, not on the rail's hint block.
+    left: calc(200px + 16px);
     bottom: 48px;
     z-index: 850;
     font-family: inherit;
