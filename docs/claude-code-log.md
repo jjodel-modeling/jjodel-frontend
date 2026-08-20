@@ -1,5 +1,19 @@
 # Claude Code Session Log
 
+## 2026-08-20 — refactor: i 16 token identici tolti da tokens.css (D-UI-13 arco 1)
+
+**Prompt**: prompt UI I del 2026-08-20 17:05, arco 1 di D-UI-13. Togliere da `styles/tokens.css` i 16 nomi che dichiara con lo stesso identico valore di `styles/tokens/`, lasciando intatti i 17 divergenti (archi 2-4) e i nomi esclusivi interposti (`--radius-base`, `--input-height-base`); commento di intestazione che spiega la sottrazione; citazione ora falsa corretta in un commento SCSS. Gate obbligatorio: controllo positivo sui 33 nomi collisi nei tre regimi di tema, prima e dopo.
+**Files touched**: commit `c00c1e660` (2 file: `frontend/src/styles/tokens.css`, `frontend/src/components/editors/properties-with-tree-view.scss`)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — controllo positivo passato: `getComputedStyle(:root)` sui 33 nomi collisi nei tre regimi (`data-theme` assente / `light` / `dark`), su `#/allProjects` senza progetto aperto, **identico su tutti e 99 i valori** prima e dopo. Il modello della discovery regge. Gate: build exit 0 (solo il warning chunk-size noto e le deprecation Sass preesistenti), typecheck **33** contato sull'output completo (baseline), smoke **12 passed / 0 failed / 3 skipped** con A5 PASS sui due stati con progetto aperto e SKIP su `empty-project`, `check:docs` 3/3 senza warning.
+**Out-of-scope changes**: no — due file, entrambi dichiarati dal prompt. Nessun file di `styles/tokens/`, `_themes.scss` o `variables.scss` toccato.
+**Layer Impact Report**: not-required — nessun file di §3.1 nel diff.
+**Smoke visivo**: passato (automatico, smoke A1-A5) — verifica a vista di Alfonso pendente; per costruzione non deve mostrare alcuna differenza, ed e' questo il punto dell'arco 1.
+**Notes**: (1) Controllo positivo: PRIMA=DOPO su 99 valori (33 nomi x 3 regimi), `data-theme` assente e ripristinato assente; sonda `_tmp_tokens33.ts`, non committata. (2) Controllo sul controllo: il CSS servito da Vite non ha piu' i 16 nomi e ha ancora `--radius-base` e `--input-height-base`, quindi il DOPO non e' stantio. (3) Residuo: il commento `Transition timing functions` resta senza dichiarazioni sotto; toglierlo era una 17a sottrazione, va all'arco 3. (4) Rotazione log dovuta.
+**Prompt document name**: 2026-08-20 17:05 claude_2026-08-20_1705_prompt_ui_I_arco1_token_identici.md
+
 ## 2026-08-20 — fix: altezze del chrome a token, rail a filo, asserzione A5 (D-UI-12)
 
 **Prompt**: prompt UI G del 2026-08-20 12:01 piu' l'emendamento del 12:40 dopo l'hard stop. Quattro commit: token delle altezze del chrome; `.dashboard-container` che prende il resto del flex; rail a filo di toolbar e status bar; asserzione smoke A5.
