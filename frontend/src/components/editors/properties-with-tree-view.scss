@@ -7,7 +7,7 @@
 // rules is a literal: every colour, radius, font size and duration is a token.
 //
 // (a) The three control heights of R-RAIL-9. The token scales have no step for
-//     them — `_spacing.scss:33-35` and `tokens.css:229-231` offer 32 / 40 / 48 px
+//     them — `_spacing.scss:33-35` offers 32 / 40 / 48 px
 //     only — so a control between 26 and 44 has no near step to snap to, and
 //     adding height tokens for a single component was ruled out.
 //

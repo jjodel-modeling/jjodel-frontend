@@ -7,6 +7,14 @@
  * Usage: var(--color-slate-500), var(--spacing-4), etc.
  */
 
+/*
+ * D-UI-13: the semantic layer belongs to styles/tokens/, the primitive layer
+ * belongs here. Names declared by both files are being withdrawn from this one
+ * in arcs. Arc 1 (2026-08-20) removed the 16 names whose value was identical in
+ * both, so no computed value changed. Colours, shadows, transitions and z-index
+ * that still collide are arcs 2 to 4; see docs/decisions.md.
+ */
+
 :root {
   /* ========================================
      COLORS - Slate (Base)
@@ -100,17 +108,14 @@
   /* ========================================
      SEMANTIC COLORS - Text
      ======================================== */
-  --color-text-primary: #0f172a;     /* slate-900 */
   --color-text-secondary: #475569;   /* slate-600 */
   --color-text-tertiary: #94a3b8;    /* slate-400 */
-  --color-text-inverse: #ffffff;
 
   /* ========================================
      SEMANTIC COLORS - Backgrounds
      ======================================== */
   --color-bg-primary: #ffffff;
   --color-bg-secondary: #f8fafc;     /* slate-50 */
-  --color-bg-tertiary: #f1f5f9;      /* slate-100 */
   --color-bg-overlay: rgba(0, 0, 0, 0.5);
 
   /* ========================================
@@ -180,13 +185,7 @@
   /* ========================================
      BORDER RADIUS
      ======================================== */
-  --radius-none: 0;
-  --radius-sm: 4px;
   --radius-base: 6px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
-  --radius-full: 9999px;
 
   /* ========================================
      SHADOWS
@@ -201,8 +200,6 @@
   /* ========================================
      Z-INDEX LAYERS
      ======================================== */
-  --z-base: 0;
-  --z-dropdown: 1000;
   --z-sticky: 1020;
   --z-fixed: 1030;
   --z-modal-backdrop: 1040;
@@ -219,16 +216,11 @@
   --transition-slower: 400ms ease;
 
   /* Transition timing functions */
-  --ease-in: cubic-bezier(0.4, 0, 1, 1);
-  --ease-out: cubic-bezier(0, 0, 0.2, 1);
-  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
 
   /* ========================================
      FORM ELEMENT HEIGHTS
      ======================================== */
-  --input-height-sm: 32px;
   --input-height-base: 40px;
-  --input-height-lg: 48px;
 
   /* ========================================
      FORM ELEMENT PADDING
