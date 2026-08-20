@@ -1,5 +1,19 @@
 # Claude Code Session Log
 
+## 2026-08-20 — fix: altezze del chrome a token, rail a filo, asserzione A5 (D-UI-12)
+
+**Prompt**: prompt UI G del 2026-08-20 12:01 piu' l'emendamento del 12:40 dopo l'hard stop. Quattro commit: token delle altezze del chrome; `.dashboard-container` che prende il resto del flex; rail a filo di toolbar e status bar; asserzione smoke A5.
+**Files touched**: `frontend/src/styles/tokens/_layout.scss` (nuovo), `frontend/src/styles/tokens/index.scss`, `frontend/src/pages/components/navbar.scss`, `frontend/src/components/editor-v2/EditorV2.scss`, `frontend/src/components/StatusBar.scss`, `frontend/src/pages/dashboard.scss`, `frontend/src/components/editors/properties-with-tree-view.scss`, `frontend/scripts/smoke/{assertions,states,run}.ts`, `docs/decisions.md`, `docs/PROTOCOL.md`, `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: 2026-08-20 12:01
+**Causa**: (c)
+**Regressions**: no — gap toolbar->rail misurato **9.73px prima**, **10.05px dopo il commit 2 come specificato** (peggiorato: l'hard stop ha fermato la sequenza), **0.00px alla fine**. Le tre relazioni del gate a zero: `overlay.top - toolbar.bottom = 0`, `statusbar.top - overlay.bottom = 0`, `viewport.width - overlay.right = 0`. App bar da 48.95 a **50 esatti**. Commit 1 verificato a doppia build: 4 hunk nel CSS compilato, tutte risolte agli stessi valori. Gate: build exit 0 dopo ogni commit, typecheck **33** contato sull'output completo (baseline, 0 in `scripts/smoke`), smoke **12 passed / 0 failed / 3 skipped** (era 10/0/2; A5 passa sui due stati con progetto aperto, skipped su `empty-project`), conteggio stati invariato a 3.
+**Out-of-scope changes**: no — sette file del prompt G piu' i tre dello smoke e i due doc, tutti autorizzati dall'emendamento.
+**Layer Impact Report**: not-required — nessun file di §3.1 nel diff.
+**Smoke visivo**: passato (automatico, A5 inclusa) — verifica a vista di Alfonso pendente, light e dark con sfondo canvas attivo.
+**Notes**: (1) L'hard stop ha intercettato un modello sbagliato: la colonna flex e' `.router-wrapper`, non `#root`, e `.dashboard-container` e' fratello di entrambe le bande; sottrarne una sola ha portato l'overflow da 22 a 32px. (2) Passata la prova A: non conosce i fratelli, B li ricopia. L'1px di rc-dock: D-UI-12. (3) Gate relazionali in PROTOCOL.md P8: il controllo positivo sta in CLAUDE.md §5, non qui. (4) P8 dichiara il dev server su 3000; i prompt F e G dicono 3001. (5) Rotazione log dovuta.
+**Prompt document name**: 2026-08-20 12:40 claude_2026-08-20_1240_emendamento_G_commit2_3.md
+
 ## 2026-08-20 — fix: un solo colore per gli hairline del rail destro (D-UI-11)
 **Prompt**: prompt UI F del 2026-08-20 09:46, solo SCSS, senza two-phase. Uniformare i sei hairline interni al rail destro su `--color-panel-border`, eliminando i quattro valori divergenti (`#d1d9e3`, `#e2e8f0`, `#e9eff6`, `#eef2f7`) e l'uso di `--color-bg-hover` come colore di bordo. Bordo esterno del rail fuori scope.
 **Files touched**: `frontend/src/components/editors/properties-with-tree-view.scss`, `frontend/src/components/editors/info-improvements.scss`, `docs/decisions.md`, `docs/claude-code-log.md`

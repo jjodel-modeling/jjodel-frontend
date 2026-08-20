@@ -78,6 +78,10 @@ Lo smoke apre gli stati noti definiti in `frontend/scripts/smoke/states.ts` e ve
 4. nessun elemento in `position: fixed` interseca la status bar
 5. nessun contenitore con overflow ha figli clippati oltre la tolleranza
 
+I gate asserzionano **relazioni fra misure, non valori assoluti**. Un gate che dice
+`bottom === 90` eredita il modello che ha prodotto quel 90 e fallisce senza spiegare;
+`overlay.top === toolbar.bottom` fallisce dicendo cosa non combacia.
+
 Se uno smoke fallisce, il commit resta ma l'hard stop riporta il fallimento in cima. Non tentare di aggiustare a occhio: segnala.
 
 Lo smoke non sostituisce la verifica di Alfonso, che riguarda proporzioni, gerarchia visiva e comportamento percepito.

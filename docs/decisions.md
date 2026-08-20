@@ -1306,6 +1306,18 @@ bag `_state`, che non contiene affatto il run-state.
   ordine. `.jj-conformance-bar` vive anche fuori dal rail: la si corregge comunque, perche' il
   letterale era lo stesso difetto ovunque e in dark era proprio sbagliato.
 
+- **D-UI-12** (2026-08-20) — **Le altezze del chrome applicativo vivono in
+  `styles/tokens/_layout.scss` su `:root`; nessun foglio ricopia quei numeri.** Un flex item
+  **non deduce la propria altezza da `100vh`** dentro una colonna alta `100vh`: prende il resto
+  con `flex: 1 1 auto; min-height: 0`. Dedurla significa conoscere i propri fratelli e
+  ricopiarne le altezze, che e' esattamente come `calc(100vh - 60px)` e' sopravvissuto al
+  passaggio dell'app bar da 60px a 50px, spingendo il rail 9.73px sotto la toolbar. Il rail
+  destro e' **a filo su tutti e quattro i lati**, con l'unico letterale residuo — l'1px del
+  `border-top` di `.dock-panel` (rc-dock, CSS di libreria) fra app bar e toolbar — dichiarato
+  nel commento e sorvegliato dall'asserzione **A5** dello smoke. Quell'1px **non e' tokenizzato
+  apposta**: un token lo farebbe sembrare un valore sotto il nostro controllo, e chi lo
+  cambiasse sposterebbe il rail senza spostare il bordo.
+
 ## Superate
 
 - **D3** (2026-07-26, routing congelato in v1) — superata da E-route il 2026-08-06.
