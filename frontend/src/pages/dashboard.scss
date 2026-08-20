@@ -317,7 +317,7 @@
 
 .dashboard-container {
   width: 100% !important;
-  height: calc(100vh - 60px); /* Subtract navbar height */
+  height: calc(100vh - var(--jj-appbar-height)); /* Sotto l'app bar */
   display: flex;
   container-type: inline-size;
   flex-flow: row wrap;
@@ -357,8 +357,8 @@
       .leftbar {
         position: fixed;
         left: -240px;
-        top: 60px;
-        height: calc(100vh - 60px);
+        top: var(--jj-appbar-height);
+        height: calc(100vh - var(--jj-appbar-height));
         z-index: 100;
         transition: left var(--duration-normal, 250ms) var(--ease-out, ease-out);
         box-shadow: var(--shadow-lg);
@@ -390,8 +390,8 @@
       .leftbar {
         position: fixed;
         left: -240px;
-        top: 60px;
-        height: calc(100vh - 60px);
+        top: var(--jj-appbar-height);
+        height: calc(100vh - var(--jj-appbar-height));
         z-index: 100;
         transition: left var(--duration-normal, 250ms) var(--ease-out, ease-out);
         box-shadow: var(--shadow-lg);
