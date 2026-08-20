@@ -317,7 +317,13 @@
 
 .dashboard-container {
   width: 100% !important;
-  height: calc(100vh - var(--jj-appbar-height)); /* Sotto l'app bar */
+  /* Flex item della colonna .router-wrapper, alta 100vh: prende il resto invece di
+     dedurlo da 100vh. Dedurlo significava conoscere i fratelli (app bar e status
+     bar) e ricopiarne le altezze, che e' come il -60px era sopravvissuto al
+     redesign dell'app bar. `min-height: 0` perche' un item flex non scende sotto
+     l'altezza intrinseca del contenuto senza. */
+  flex: 1 1 auto;
+  min-height: 0;
   display: flex;
   container-type: inline-size;
   flex-flow: row wrap;
