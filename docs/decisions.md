@@ -1306,6 +1306,24 @@ bag `_state`, che non contiene affatto il run-state.
   ordine. `.jj-conformance-bar` vive anche fuori dal rail: la si corregge comunque, perche' il
   letterale era lo stesso difetto ovunque e in dark era proprio sbagliato.
 
+  **Emendamento 1 (2026-08-20, dal censimento dell'arco 3).** L'inventario che ha prodotto questa
+  decisione era **incompleto per una seconda ragione**, oltre alla settima linea di `d5e773047`.
+  Due linee del rail non usano `--color-panel-border` ma **`--color-border-primary`**:
+  `.props-header` e `.properties-section-header`, tutte e due in `info-improvements.scss`, il foglio
+  dell'inspector che veste il contenuto del rail mentre `properties-with-tree-view.scss` ne veste il
+  contenitore. In `properties-with-tree-view.scss` gli usi vivi di `--color-border-primary` sono
+  **zero**: l'unico e' a riga 869, commentato, dentro un blocco gia' marcato non piu' reso.
+  L'inventario non le ha viste perche' e' stato costruito **in regime A**, dove le due famiglie
+  risolvono tutte e due `#e2e8f0` e la differenza non esiste a schermo. In regime B
+  (`data-theme="light"`) esiste da sempre: misurata sonda alla mano, `.props-header` dipinge
+  `rgb(203,213,225)` mentre le sue cinque vicine della stessa colonna dipingono `rgb(226,232,240)`,
+  con la linea di mezzo piu' scura a y=527 fra quattro sorelle sopra e una sotto. **Chi ha scelto
+  «Light» nelle impostazioni vede il difetto oggi.** E' lo stesso errore della settima linea: allora
+  invisibile per stato, qui invisibile per regime. La chiusura e' uno **scambio di token**, non un
+  cambio di valore, e vale anche per la terza occorrenza su `.props-header__badge` (riga 914) che e'
+  regola morta: si corregge comunque, perche' una regola morta con il token sbagliato rinasce
+  sbagliata. Misure: `docs/discovery/discovery_2026-08-20_censimento_testo_e_bordi.md` §4.1 e §4.2.
+
 - **D-UI-12** (2026-08-20) — **Le altezze del chrome applicativo vivono in
   `styles/tokens/_layout.scss` su `:root`; nessun foglio ricopia quei numeri.** Un flex item
   **non deduce la propria altezza da `100vh`** dentro una colonna alta `100vh`: prende il resto
@@ -1394,6 +1412,57 @@ bag `_state`, che non contiene affatto il run-state.
   sfondi, l'inversione `--color-bg-primary` / `--color-bg-secondary` su 226 siti, che resta
   meccanica; **7** ombre e transizioni, 105 siti; **8** scala z nuova, che chiude anche il `9000`
   letterale di `.donation-banner`.
+
+  **Emendamento 2 (2026-08-20, dopo il censimento dell'arco 3).** Tre premesse dell'Emendamento 1
+  erano sbagliate, e la misura le corregge. Restano le conclusioni, per ragioni diverse da quelle
+  che avevo scritto.
+
+  **Il buco dark non e' un buco.** Avevo promosso la copertura a prerequisito credendo che i sedici
+  nomi solo-light non risolvessero sotto `data-theme="dark"`. Risolvono: `_colors-light.scss`
+  dichiara su `:root, :root[data-theme="light"]` in un blocco solo dalla riga 75 alla 379, quindi il
+  ramo nudo non si spegne mai e **quindici nomi su sedici portano il valore chiaro dentro il tema
+  scuro** (il sedicesimo, `--color-border-focus`, risolve al ciano di `tokens.css`). Non e' un vuoto,
+  e' un tema chiaro che non si spegne, che e' peggio: un vuoto si vede, un valore plausibile no.
+  **Il prerequisito resta**, per un motivo migliore: i 43 siti `subtle` oggi in dark dipingono
+  `#606060`, attenuati e corretti; dopo lo smistamento dipingerebbero `#94a3b8`, cioe' **piu'
+  prominenti del testo secondario**. L'arco 4 fabbricherebbe un'inversione di gerarchia, non un
+  vuoto. L'arco 2 e' pero' **minuscolo**: sedici usi vivi in tutto, e **nove nomi su sedici non
+  hanno alcun consumatore**. La copertura resta **completa** (ragione di D-UI-10), e i quattro
+  `--gradient-*` si **derivano** dalle superfici scure esistenti invece di essere inventati:
+  derivare non e' speculare.
+
+  **La coesistenza dei bordi non e' fra due file.** `properties-with-tree-view.scss` ha zero usi
+  vivi di `--color-border-primary`. La coesistenza e' fra **due fogli che vestono lo stesso
+  sottoalbero**, contenitore e contenuto, e si risolve chiudendo D-UI-11 (vedi il suo Emendamento 1).
+  **Fatto questo, il rail esce dall'arco 5**: `--color-border-primary` potra' prendere qualunque
+  valore senza toccare nessuna delle sei linee, e la scala dei bordi si sgancia dal rail.
+
+  **Lo smistamento del testo ha tre destinazioni, non due**, e a deciderlo e' il contrasto misurato,
+  non il gusto. `#94a3b8` sta a **2.34-2.56:1**. I 16 siti `disabled` restano su `$slate-400`,
+  esentati dalle soglie. Gli 8 `placeholder` vanno su `--color-text-placeholder` (`#64748b`, 4.6:1),
+  che non e' esentato. Le **19 icone** vanno anch'esse su `#64748b`: a `#94a3b8` non passano la
+  soglia **3:1** del non testo. I 55 `caption` vanno su `--color-text-tertiary` a `#475569`
+  (6.9-7.6:1). Nello **stesso commit** si corregge il disaccordo fra `styles/tokens/README.md:77`
+  («Placeholders, disabled») e `_colors-light.scss:100` («Labels, captions»): quel disaccordo e'
+  l'origine documentale di tutta la confusione, e lasciarne uno dei due in piedi la ricrea.
+
+  **Lo smistamento non tocca il rail.** Uno solo dei 162 siti sta nei due fogli, ed e' morto
+  (`.props-header__badge`). L'arco 4 non e' falsificabile guardando il rail: la verifica visiva va
+  fatta sulle superfici a densita' maggiore, `pages/dashboard.scss`, `forEndUser/control.scss`,
+  `editors/console.scss`, `TreeViewSidebar/tree-view-sidebar.scss`.
+
+  **Registrati e non risolti**: i tre `CHIP: React.CSSProperties` identici
+  (`FieldCompartmentListEditor.tsx:62`, `FieldSegmentEditor.tsx:13`, `LabelEntryEditor.tsx:15`)
+  accoppiano `--color-text-tertiary` e `--color-border-primary` nello stesso oggetto e **cambiano su
+  due archi diversi**; i 41 siti in cui un token `text-*` dipinge sfondi o bordi sono un arco a se';
+  i 14 fallback `#94a3b8` sono inerti e falsi; `--color-text-tertiary-dark` non e' dichiarato da
+  nessuna parte (`EditorToolbar.scss:166`).
+
+  **Ordine vincolante, seconda emissione**: **1** i 16 identici, fatto (`c00c1e660`); **1bis**
+  chiusura di D-UI-11 sulle due linee del rail, che non e' un arco nuovo ma l'applicazione di una
+  decisione gia' ratificata; **2** copertura dark dei sedici nomi; **4** smistamento del testo a tre
+  destinazioni; **5** bordi, ormai senza il rail dentro; **6** sfondi; **7** ombre e transizioni;
+  **8** scala z. L'arco **3** e' chiuso: `e35132977`.
 
 ## Superate
 
