@@ -1318,6 +1318,41 @@ bag `_state`, che non contiene affatto il run-state.
   apposta**: un token lo farebbe sembrare un valore sotto il nostro controllo, e chi lo
   cambiasse sposterebbe il rail senza spostare il bordo.
 
+- **D-UI-13** (2026-08-20) — **Il livello semantico dei token appartiene a `styles/tokens/`, il
+  livello primitivo a `styles/tokens.css`, e nessun nome resta con due dichiaranti.** I due file
+  dichiarano 33 nomi in comune, 17 con valore diverso, e oggi vince `tokens.css` **per ordine di
+  import**, non per una decisione: `App.tsx:2` inlinea `tokens/index` via `App.scss:6`, `App.tsx:8`
+  carica `tokens.css`, e nel bundle il blocco di `tokens.css` sta dopo (offset 691470 contro 579428).
+  La parita' esiste perche' `_colors-light.scss:75-76` dichiara su `:root, :root[data-theme="light"]`
+  e non solo sull'attributo: il ramo nudo ha la stessa specificita' di `tokens.css`. Da qui **tre
+  regimi**, non due, misurati in pagina: senza attributo vince `tokens.css`, con `data-theme="light"`
+  vince `tokens/`, e sette dei dieci nomi di colore cambiano valore fra i due. **Scegliere "Light"
+  nelle impostazioni non riporta al default, porta in un terzo posto.**
+
+  Vince `tokens/` sul semantico per due ragioni misurate, non estetiche. **Solo `tokens/` ha un
+  tema scuro**: i dodici nomi semantici di `tokens.css` non hanno alcun valore dark, mentre
+  `_colors-dark.scss` ne porta 183, e il dark e' un fronte vivo. **E l'app parla gia' quel
+  vocabolario**: circa 1800 riferimenti a nomi esclusivi di `tokens/` contro le 33 collisioni.
+  `tokens.css` conserva invece il livello primitivo, 61 nomi di palette piu' tipografia, taglie e
+  token di input, che `tokens/` non ha mai avuto e che `components/ui/**` consuma con **212
+  riferimenti** contro 6: cancellare `tokens.css` spegnerebbe quella libreria.
+
+  **Deroga esplicita sugli z-index.** Il ramo non cromatico non si consegna per coerenza. Delle due
+  scale, `tokens.css` mette `--z-tooltip` 1070 sopra `--z-modal` 1050, mentre `_z-index.scss` mette
+  tooltip 1050 **sotto** modal 9999. Consegnare quel ramo introdurrebbe un difetto che oggi non
+  c'e'. I quattro z-index vogliono una scala nuova, decisa a parte, ed e' quella che chiude il
+  `z-index: 9000` letterale di `.donation-banner`, tarato sulla scala di `_z-index.scss` che a
+  runtime non arriva mai.
+
+  **L'ordine e' vincolante**: arco 1 i **16 nomi con valore identico**, che non cambiano niente a
+  schermo e servono da controllo positivo del modello; arco 2 i **sette colori divergenti**, 741
+  siti, l'unico che richiede l'occhio del direttore; arco 3 **ombre e transizioni**, 105 siti; arco
+  4 la scala z nuova. Fuori serie e **prima** del lavoro sul dark: i **16 nomi che
+  `_colors-light.scss` dichiara e `_colors-dark.scss` no**, fra cui `--color-success-bg`, che vale
+  `#f0fdf4` anche in regime scuro (misurato). Finche' restano scoperti, la banda `Conforms to` non
+  si aggiusta passando dal letterale al token. Censimento e misure:
+  `docs/discovery/discovery_2026-08-20_riconciliazione_token.md`.
+
 ## Superate
 
 - **D3** (2026-07-26, routing congelato in v1) — superata da E-route il 2026-08-06.
