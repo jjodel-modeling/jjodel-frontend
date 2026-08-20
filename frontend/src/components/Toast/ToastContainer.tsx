@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { Toast } from './Toast';
 import type { ToastMessage, ToastPosition } from './toastTypes';
 import './toast.scss';
@@ -16,7 +17,12 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({
 }) => {
     if (toasts.length === 0) return null;
 
-    return (
+    // Portaled to <body>. #root is position:fixed (index.scss), which makes it a
+    // stacking context, so --z-toast only ranked the container inside #root: the
+    // right rail, a body-level sibling at z-index 900, painted over it. The toast
+    // was only ever visible in the strip below the rail, which is the strip that
+    // covers the status bar.
+    return createPortal(
         <div className={`jj-toast-container jj-toast-container--${position}`}>
             {toasts.map(toast => (
                 <Toast
@@ -32,7 +38,8 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({
                     onClose={onRemove}
                 />
             ))}
-        </div>
+        </div>,
+        document.body,
     );
 };
 

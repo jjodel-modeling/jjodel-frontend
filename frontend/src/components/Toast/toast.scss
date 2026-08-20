@@ -15,8 +15,12 @@
 
   &--top-right    { top: var(--space-4); right: var(--space-4); }
   &--top-left     { top: var(--space-4); left:  var(--space-4); }
-  &--bottom-right { bottom: var(--space-4); right: var(--space-4); }
-  &--bottom-left  { bottom: var(--space-4); left:  var(--space-4); }
+  /* Clear the status bar (StatusBar.scss height 32px) instead of sitting on top
+     of it: at z-index 999998 a transient toast was hiding the persistent version
+     string. No token exists for that height yet, so the literal is composed the
+     same way properties-with-tree-view.scss composes it. */
+  &--bottom-right { bottom: calc(32px + var(--space-4)); right: var(--space-4); }
+  &--bottom-left  { bottom: calc(32px + var(--space-4)); left:  var(--space-4); }
 }
 
 /* ============================================
@@ -215,7 +219,7 @@
     &--top-right,
     &--top-left  { top: var(--space-3); }
     &--bottom-right,
-    &--bottom-left { bottom: var(--space-3); }
+    &--bottom-left { bottom: calc(32px + var(--space-3)); }
   }
 
   .jj-toast { width: 100%; }
