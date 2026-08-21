@@ -464,7 +464,7 @@ select.form-select {
     align-items: center;
     justify-content: space-between;
     padding-bottom: 12px;
-    border-bottom: 1px solid var(--color-border-primary);
+    border-bottom: 1px solid var(--color-panel-border);
 
     &:hover .properties-section-title {
       color: #3b82f6;
@@ -869,7 +869,7 @@ html[data-theme="dark"] {
   height: 40px;
   padding: 0 12px;
   background: var(--color-bg-elevated);
-  border-bottom: 0px solid var(--color-border-primary);
+  border-bottom: 0px solid var(--color-panel-border);
   margin-bottom: 0;
   position: sticky;
   top: 0;
@@ -911,7 +911,7 @@ html[data-theme="dark"] {
   flex-shrink: 0;
   background: transparent;
   color: var(--color-text-tertiary, #94a3b8);
-  border: 0.5px solid var(--color-border-primary, #e2e8f0);
+  border: 0.5px solid var(--color-panel-border, #e2e8f0);
 }
 
 /* --- Collapsible Sections --- */
