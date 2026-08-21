@@ -1590,6 +1590,51 @@ bag `_state`, che non contiene affatto il run-state.
   regime A **le didascalie restano `#94a3b8`**: scritto qui perche' a schermo sembra un arco che non
   ha funzionato.
 
+  **Emendamento 6 (2026-08-21, dopo l'arco 4).** L'arco 4 e' chiuso (`85c4398f6`, 24 file, 47
+  scambi). Tre cose che l'esecuzione ha trovato e che valgono piu' del commit.
+
+  **Il contratto dell'arco era scritto con un pattern che non era il suo.** Il prompt chiedeva 115
+  occorrenze di `var(--color-text-tertiary`, che e' un **prefisso**: cattura anche
+  `--color-text-tertiary-dark` (`EditorToolbar.scss:166`), nome mai dichiarato e dichiarato fuori
+  perimetro dal prompt stesso. Per prefisso sono 116, per token esatto 115, e il censimento contava
+  per token esatto. Il contratto regge; **la sua espressione no**, ed e' un difetto dell'architetto:
+  un conteggio che definisce una consegna si scrive con lo stesso criterio con cui e' stato prodotto.
+
+  **Il censimento dichiarava una completezza che non aveva.** §3.1 dice che le 19 icone sono
+  «elencate per intero», ma la tabella `subtle` di §3.8 **non ha la colonna della sotto-etichetta**:
+  la ripartizione 16 / 8 / 19 non e' nel report. L'esecutore l'ha **riderivata** applicando il
+  criterio nell'ordine dichiarato (R3 prima di R4 prima di R5) e i totali sono tornati esatti, il che
+  e' un indizio forte ma non una prova: **due scambi compensativi darebbero lo stesso totale**.
+  Ratificato: (1) **l'ordine R3 prima di R5 e' una regola, non un'inferenza** (un'icona dentro un
+  elemento disabilitato appartiene al controllo disabilitato, quindi e' `disabled` ed e' esentata
+  dalle soglie); i due casi esposti, `menu.scss:117` e `navbar.scss:537`, restano `disabled`. (2) La
+  ripartizione vive ora nella entry di log dell'arco 4, che diventa la fonte. (3) **Un report che
+  rivendica una completezza che non ha e' peggio di uno che dichiara il buco**: e' un difetto della
+  discovery, a registro.
+
+  **Un sito puo' essere in perimetro, corretto, e non arrivare al pixel.**
+  `tree-view-sidebar.scss:420`, `input::placeholder`, e' stato scambiato giusto e dipinge
+  `rgb(156,163,175)` prima e dopo, perche' un letterale in `styles/forms.scss` vince. Sotto c'e' un
+  fatto piu' grosso della singola riga: **`styles/forms.scss` e' fuori dal sistema dei token e su
+  un'altra palette**. 410 righe, **58 letterali di colore contro 4 `var(--)`**, e i letterali sono la
+  rampa **gray** di Tailwind (`#9ca3af`, `#6b7280`, `#d1d5db`, `#374151`, `#111827`), non la rampa
+  slate del design system; e' importato da `App.tsx:7`, quindi globale e vivo. E' la superficie dove
+  l'utente scrive. Non e' materia di D-UI-13: e' un arco suo, e va deciso a parte.
+
+  **Go-ahead al ritiro, e i due nomi vanno insieme.** `tokens.css` dichiara ancora
+  `--color-text-secondary` (`#475569`) e `--color-text-tertiary` (`#94a3b8`) e in regime A vince lui.
+  **Ritirare solo `tertiary` collasserebbe la scala**: in regime A `secondary` resterebbe `#475569` e
+  `tertiary` diventerebbe `#475569`, cioe' didascalia e corpo dello stesso identico colore. I due nomi
+  sono una scala sola e si consegnano in un commit solo: dopo, `secondary` vale `#334155` (10.35:1) e
+  `tertiary` `#475569` (7.58:1), un gradino di distanza come il chiaro e' disegnato. Raggio misurato:
+  148 siti su `secondary`, 115 su `tertiary`, **piu' i 41 «altro»**, dove il token non dipinge testo
+  ma sfondi e bordi, e dove il salto e' il piu' visibile.
+
+  **Il ritiro non inventa un aspetto: propaga quello che il regime B ha gia'.** Da qui l'asserzione
+  che governa quell'arco, ed e' la prima volta che si puo' scrivere: **dopo il commit, per la
+  famiglia del testo, regime A e regime B devono risolvere identici**. Non e' una verifica di valori,
+  e' la convergenza di due dei tre regimi, cioe' il punto di tutta D-UI-13.
+
 ## Superate
 
 - **D3** (2026-07-26, routing congelato in v1) — superata da E-route il 2026-08-06.
