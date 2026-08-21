@@ -4,7 +4,8 @@
  * history (warning + error) backed by `toastHistory` (localStorage-backed).
  */
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import ReactDOM from 'react-dom';
 import { toastHistory, type HistoryEntry } from './Toast/toastHistory';
 import { formatRelativeTime } from './Toast/useRelativeTime';
 import { JjodelEvents } from '../events/registry';
@@ -12,6 +13,10 @@ import './NotificationCenter.scss';
 
 const ASK_JJODIE_PROMPT = (message: string) =>
     `Can you explain this error and how to fix it?\n\n"${message}"`;
+
+// Kept in sync with NotificationCenter.scss (`width`, `max-height` on .app-notif-popover).
+const POPOVER_W = 320;
+const POPOVER_MAX_H = 360;
 
 const ICON_MAP: Record<HistoryEntry['type'], string> = {
     warning: 'bi-exclamation-triangle-fill',
@@ -43,6 +48,7 @@ export function useToastHistorySnapshot(): { entries: HistoryEntry[]; unreadCoun
 
 const NotificationCenter: React.FC<NotificationCenterProps> = ({ open, onClose, anchorRef }) => {
     const popoverRef = useRef<HTMLDivElement>(null);
+    const [pos, setPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
     const { entries } = useToastHistorySnapshot();
 
     useEffect(() => {
@@ -66,6 +72,25 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ open, onClose, 
             document.removeEventListener('keydown', handleEsc);
         };
     }, [open, onClose, anchorRef]);
+
+    // Anchored from the bell's own rect, since the portal removes it from the bell's
+    // layout flow. Opens upward, so the gap is the popover's *own* height plus the 6px
+    // that `bottom: calc(100% + 6px)` used to compose. The height is measured after
+    // mount, not taken from `max-height`: the list is short when there is little in it,
+    // and using the cap would float the box hundreds of pixels above the bell.
+    useLayoutEffect(() => {
+        if (!open) return;
+        const anchor = anchorRef?.current;
+        if (!anchor) return;
+        const place = () => {
+            const r = anchor.getBoundingClientRect();
+            const h = popoverRef.current?.offsetHeight || POPOVER_MAX_H;
+            setPos({ top: r.top - h - 6, left: r.right - POPOVER_W });
+        };
+        place();
+        window.addEventListener('resize', place);
+        return () => window.removeEventListener('resize', place);
+    }, [open, anchorRef, entries.length]);
 
     useEffect(() => {
         if (open) {
@@ -101,8 +126,20 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ open, onClose, 
         toastHistory.remove(id);
     };
 
-    return (
-        <div className="app-notif-popover" ref={popoverRef} role="dialog" aria-label="Notifications">
+    // Portalled onto document.body, like Navbar.tsx's tab-overflow menu. The reason is
+    // not the status bar: #root is position:fixed (index.scss:31) and therefore a
+    // stacking context, while the rail's overlay is its *sibling* at z-index 900. Any
+    // z-index written inside #root loses to it, six digits included. Outside #root the
+    // comparison is real and --z-dropdown-menu wins. See
+    // docs/discovery/discovery_2026-08-21_z_index_popup_rail.md.
+    return ReactDOM.createPortal(
+        <div
+            className="app-notif-popover"
+            ref={popoverRef}
+            role="dialog"
+            aria-label="Notifications"
+            style={{ top: pos.top, left: pos.left }}
+        >
             <div className="app-notif-popover__header">
                 <span className="app-notif-popover__title">
                     Notifications
@@ -167,7 +204,8 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ open, onClose, 
                     ))
                 )}
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
 

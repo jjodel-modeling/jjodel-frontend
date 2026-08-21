@@ -4,16 +4,19 @@
  */
 
 .app-notif-popover {
-    position: absolute;
-    bottom: calc(100% + 6px);
-    right: 0;
+    // Portalled onto document.body (NotificationCenter.tsx), so `fixed` with top/left
+    // set inline from the bell's rect. `absolute` + `bottom: calc(100% + 6px)` no longer
+    // has the bell as an offset parent.
+    position: fixed;
     width: 320px;
     max-height: 360px;
     background: var(--color-bg-secondary);
     border: 1px solid var(--color-border-secondary);
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-lg);
-    z-index: var(--z-toast);
+    // Not --z-toast: an anchored popover is not a toast, and out of #root it does not
+    // need six digits. 1000 sits above the rail's overlay (900) and below --z-modal.
+    z-index: var(--z-dropdown-menu);
     display: flex;
     flex-direction: column;
     overflow: hidden;

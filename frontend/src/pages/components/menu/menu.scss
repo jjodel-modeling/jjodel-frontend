@@ -68,6 +68,17 @@
   }
 }
 
+/* Portalled variant: only the `trigger` branch of Menu (the user menu) renders onto
+   document.body, to leave #root's stacking context — see
+   docs/discovery/discovery_2026-08-21_z_index_popup_rail.md. `fixed` because the
+   trigger is no longer an offset parent; top/right/left arrive inline from its rect.
+   The `!important` matches the one on `.dropdown`'s own `position`, which would
+   otherwise win. */
+.dropdown--portal {
+  position: fixed!important;
+  z-index: var(--z-dropdown-menu);
+}
+
 /* Menu items */
 .dropdown > div.item {
   display: flex;
@@ -300,9 +311,16 @@ hr.divisor {
 /* ============================================
    USER MENU STYLING
    Slightly larger dropdown for user menu (10% increase)
+
+   `.dropdown--portal` is listed alongside the two descendant selectors because the
+   portal moves the node onto document.body, out of `.user-menu-container`, and the
+   descendant rules would stop matching — measured: the box shrank 242x234 to 220x216
+   and lost the 15px type. The portal branch of Menu has exactly one consumer, the user
+   menu, so the two selectors describe the same element.
    ============================================ */
 .user-menu-container .dropdown,
-.nav-container .user-menu-container .dropdown {
+.nav-container .user-menu-container .dropdown,
+.dropdown--portal {
   min-width: 242px;
   font-size: 15px;
   padding: 9px 0;
@@ -310,7 +328,8 @@ hr.divisor {
 }
 
 .user-menu-container .dropdown div.item,
-.nav-container .user-menu-container .dropdown div.item {
+.nav-container .user-menu-container .dropdown div.item,
+.dropdown--portal div.item {
   padding: 9px 13px;
   margin: 0 5px;
   margin-left: 12px;
@@ -319,7 +338,8 @@ hr.divisor {
 }
 
 .user-menu-container .dropdown div.item i,
-.nav-container .user-menu-container .dropdown div.item i {
+.nav-container .user-menu-container .dropdown div.item i,
+.dropdown--portal div.item i {
   display: inline-block !important;
 
 
