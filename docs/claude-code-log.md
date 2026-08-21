@@ -1,5 +1,20 @@
 # Claude Code Session Log
 
+## 2026-08-21 — fix: le ultime due linee del rail sul token panel-border (D-UI-11)
+
+**Prompt**: prompt UI M del 2026-08-20 21:45, applicazione di D-UI-11 Emendamento 1 e non arco nuovo di D-UI-13. Tre scambi di token in `info-improvements.scss`, da `--color-border-primary` a `--color-panel-border`, su `.properties-section-header` (467), `.props-header` (872) e `.props-header__badge` (914, regola morta corretta lo stesso). Gate relazionale nei due regimi chiari, non su valori assoluti.
+**Files touched**: commit `9139887f1` (1 file: `frontend/src/components/editors/info-improvements.scss`, 3 righe)
+**Outcome**: ✅ completed — con una correzione a una premessa che avevo prodotto io, vedi Notes.
+**Corregge**: 2026-08-20 20:55 (censimento arco 3, §4.2)
+**Causa**: (c)
+**Regressions**: no — gate relazionale eseguito prima e dopo su stato costruito con la ricetta di `_tmp_uiH.ts` (metamodello + Class sul canvas + nodo selezionato), viewport 1440x900, attributo `data-theme` `null` all'inizio e ripristinato `null`. **Regime A: cinque valori su cinque invariati fra PRIMA e DOPO**, il controllo tiene. **Regime B: `.props-header` da `rgb(203,213,225)` (match=NO) a `rgb(226,232,240)` (match=SI)**, unica cella mossa. In entrambi i regimi, dopo: tutte le linee presenti combaciano col valore di `--color-panel-border` risolto sull'elemento stesso, e l'insieme dei colori distinti fra quelle che dipingono davvero ha cardinalita' 1. Gate: build exit 0 (solo il warning chunk-size noto), typecheck **33** sull'output completo (baseline), smoke **12 passed / 0 failed / 3 skipped** con A5 invariata, `check:docs` 3/3 senza warning.
+**Out-of-scope changes**: no — un solo file di stile, tre dichiarazioni. `properties-with-tree-view.scss:869` (letterale + token commentato) lasciato intatto come chiede il prompt, insieme ai 18 bordi letterali dei due fogli.
+**Layer Impact Report**: not-required — nessun file di §3.1 nel diff.
+**Smoke visivo**: non applicabile in senso stretto — per costruzione **nessun pixel cambia in nessuno dei due regimi chiari**, perche' nessuna delle tre regole dipinge (vedi Notes). Verifica a vista di Alfonso non richiesta da questo commit.
+**Copertura dichiarata mancante**: `.properties-section-header` **non misurata**, e la ricetta di `_tmp_uiH.ts` non basta: la sola componente che la rende, `PropertiesOverview`, non ha call site. Non misurate nemmeno `.jj-conformance-bar` (serve una tab `model_*`), `.props-header__badge` (classe mai resa). Misurate e combacianti: `.rail-header`, `.tree-search`, `.tree-view-panel-container`, `.props-header`, `.properties-node-section__rule`, piu' `.rail-header__btn`, `.jj-flags__rule` e l'`::after` di ADVANCED.
+**Notes**: (1) **CORREZIONE al censimento §4.2 e a D-UI-11 Em.1**: `.props-header` e' `border-bottom: 0px solid`, quindi in regime B *risolve* rgb(203,213,225) ma non dipinge; `.properties-section-header` e' resa solo da `PropertiesOverview`, mai chiamata (`Info.tsx:1059`, con controllo positivo). Nessuna delle tre regole toccate dipinge oggi: la divergenza chiusa e' **latente**, non visibile. Avevo letto il colore senza spessore ne' renderer, il difetto di CLAUDE.md §5. (2) Gate relazionale, non assoluto.
+**Prompt document name**: 2026-08-20 21:45 claude_2026-08-20_2145_prompt_ui_M_chiusura_dui11_regime_b.md
+
 ## 2026-08-20 — docs: censimento dei 162 siti di testo e dei due fogli di bordo (D-UI-13 arco 3)
 
 **Prompt**: prompt UI K del 2026-08-20 20:55, arco 3 di D-UI-13, Fase 1 read-only. Tre censimenti in un report: A, tutti i 162 usi di `--color-text-tertiary` con proprieta' CSS, selettore e smistamento caption/subtle/altro secondo un criterio dichiarato in testa; B, i due fogli dove le famiglie `--color-border-primary` e `--color-panel-border` coesistono, con la domanda su quali coppie si vedono insieme a schermo; C, i sedici nomi che `_colors-light.scss` dichiara e `_colors-dark.scss` no, ricavati e non copiati, con misura di che cosa risolvono in dark.
