@@ -1,5 +1,42 @@
 # Claude Code Session Log
 
+## 2026-08-21 — fix: menu utente e popup notifiche portati sopra il rail destro
+
+**Prompt**: prompt UI Q del 2026-08-21 16:50, Fase 1 (misura read-only, report) e Fase 2 (rimedio) nello stesso prompt con hard stop in mezzo. Con il rail destro aperto i due popup venivano disegnati sotto. Ipotesi da falsificare: difetto di contesto di impilamento, non di valore.
+**Files touched**: commit `e1a65282d` (Fase 1, 1 file: `docs/discovery/discovery_2026-08-21_z_index_popup_rail.md`, nuovo) e commit `73d30adf0` (Fase 2, 4 file: `components/NotificationCenter.tsx`, `components/NotificationCenter.scss`, `pages/components/menu/Menu.tsx`, `pages/components/menu/menu.scss`)
+**Outcome**: ✅ completed — ipotesi confermata nella tesi e **falsificata in entrambi i colpevoli che nominava**; rimedio comunque corretto, per una ragione diversa da quella scritta.
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gate: build exit 0, typecheck **33** sull'output completo (baseline, exit 2 atteso), smoke **12 passed / 0 failed / 3 skipped** con A5 invariata, `check:docs` 3/3 senza warning. Geometria dei due popup **identica a prima del fix**, verificata (vedi sotto): il commit cambia l'ordine di disegno, non la posizione.
+**Out-of-scope changes**: no — due componenti e i loro due fogli, come da vincolo. Non toccati: lo z-index 900 del rail, le due scale z di `tokens.css` e `_z-index.scss`, gli altri z-index letterali del foglio navbar, i letterali di colore di `StatusBar.scss`.
+**Layer Impact Report**: not-required — nessun file di §3.1 nel diff.
+
+**Le tre catene di antenati** (progetto + tab metamodello, rail visibile, 1440x900). `CONTESTO` marca chi crea un contesto di impilamento.
+
+| catena | antenati, dal popup alla radice |
+|---|---|
+| **rail** | `.properties-with-tree-view--floating` rel/auto → `.properties-tree-overlay` **fixed z=900 CONTESTO** → `body` → `html` |
+| **menu utente** | `.dropdown.left` **abs z=1000 CONTESTO** → `.menu-container` **rel z=200 CONTESTO** → `#navusermenu` → `.main-header-right` → `nav#navbar` **rel z=950 CONTESTO** → `.router-wrapper` → **`#root` fixed z=auto** → `body` |
+| **popup notifiche** | `.app-notif-popover` **abs z=999998 CONTESTO** → `.sb-rz__bell-wrapper` → `.sb-rz` → `.app-statusbar__right` → `.app-statusbar` static z=50 (**inerte**) → `.router-wrapper` → **`#root` fixed z=auto** → `body` |
+
+**Il meccanismo**: `#root` e' `position: fixed` (`index.scss:31`), quindi un contesto, e `.properties-tree-overlay` non gli sta dentro ma **gli sta accanto**, figlio di `body`, a 900. Tutta l'app e' confinata in `#root`, che a livello `body` vale `auto` = 0. **900 batte 0 e nessun numero scritto dentro `#root` partecipa al confronto.** I figli di `body` misurati: `#root` (fixed, auto), `.properties-tree-overlay` (fixed, 900), `.sim-panel` (fixed, 850).
+
+**Che cosa l'ipotesi sbagliava**: `.app-statusbar { z-index: 50 }` e' su elemento **statico**, quindi inerte, e non crea contesto; e il `100` di `navbar.scss:170` non e' nemmeno il valore vivo — vince `var(--z-navbar)` di `:187` e il calcolato e' **950**, che comunque non arriva al confronto. Se `#root` non fosse un contesto, 950 batterebbe 900 e il menu si vedrebbe: e' la misura a dimostrare che lo e'.
+
+**`elementFromPoint` dentro l'intersezione, prima e dopo**
+
+| popup | rect popup | punto | PRIMA: elemento colpito | DOPO: elemento colpito |
+|---|---|---|---|---|
+| menu utente | x=1166 y=39 w=242 h=234 | (1287, 182) | `span.tree-section__label` — **dentro il rail** | `div.item` — **dentro il popup** |
+| popup notifiche | x=999 y=773 w=320 h=97 | (1179, 820) | `button.properties-node-section__header` — **dentro il rail** | `div.app-notif-popover__empty` — **dentro il popup** |
+| modale su menu aperto | backdrop 1440x900 | (1287, 156) | — | `h3.settings-section-title` — **dentro il modale**, il menu resta sotto |
+
+Le rect sono **le stesse prima e dopo**: la posizione non si e' mossa, si e' mosso l'ordine.
+**Falso allarme scartato**: alla prima misura il punto del popover restituiva `div.jj-toast__row` — un toast, aperto dal `Cmd+S` usato per generare la notifica, copriva il punto. Rifatta dopo il ritiro (`.jj-toast` a zero).
+**Due regressioni intercettate dal gate e corrette prima del commit**: (1) posizionando il popover da `max-height` invece che dall'altezza misurata galleggiava a y=510 invece di y=773 — ora l'altezza si legge dopo il mount; (2) il portale usciva da `.user-menu-container`, e le tre regole di dimensione del menu utente in `menu.scss` smettevano di combaciare: il box passava da 242x234 a 220x216 e perdeva il corpo a 15px. Riagganciate aggiungendo `.dropdown--portal` ai selettori esistenti, senza rinominarne nessuno.
+**Notes**: (1) Il portale non serve a scavalcare status bar o navbar: serve a **uscire da `#root`**. Rimedio giusto, diagnosi no. (2) Solo il ramo `props.trigger` di `Menu` va su body: un consumatore solo, il menu utente; il ramo legacy ne ha undici, verificato. (3) `useClickOutside` guarda anche il nodo portato fuori, o un click su una voce leggerebbe «fuori» e chiuderebbe prima dell'azione. (4) Il dark di `menu.scss` e' su `:root[data-theme="dark"] .dropdown`, non sotto la navbar: il portale lo tiene.
+**Prompt document name**: 2026-08-21 16:50 claude_2026-08-21_1650_prompt_ui_Q_popup_sotto_rail.md
+
 ## 2026-08-21 — refactor: la famiglia del testo ritirata da tokens.css (D-UI-13)
 
 **Prompt**: prompt UI P del 2026-08-21 16:20, go-ahead dell'Emendamento 6. Un file solo: via le due dichiarazioni `--color-text-secondary` (`#475569`) e `--color-text-tertiary` (`#94a3b8`), via il commento di sezione `SEMANTIC COLORS - Text` che dopo la sottrazione intesta l'insieme vuoto, e aggiornata la frase superata del commento di testa (diceva «arcs 2 to 4»). I due nomi si consegnano insieme: ritirare il solo `tertiary` collasserebbe la scala.
