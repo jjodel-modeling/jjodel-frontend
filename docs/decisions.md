@@ -1522,6 +1522,74 @@ bag `_state`, che non contiene affatto il run-state.
   `--color-text-tertiary` in dark**; **5** bordi; **6** sfondi; **7** ombre e transizioni; **8** scala
   z. L'arco **3** e' chiuso: `e35132977`.
 
+  **Emendamento 4 (2026-08-21, il prerequisito dark cade).** L'arco 2 e' **archiviato senza essere
+  eseguito**. Il prompt `docs/prompts/claude_2026-08-21_1520_prompt_ui_N_arco2_copertura_dark.md`
+  resta in albero marcato in testa come non eseguibile (Regola 9), e le misure dell'Emendamento 3
+  restano valide per il giorno che il tema scuro si riprende.
+
+  **La ragione e' che il dark e' sospeso dal 2026-08-13**, per **R-RAIL-44**, seicento righe piu' su
+  in questo stesso file. D-UI-13 e' del 2026-08-20 e dice, fra le sue due ragioni, che «il dark e' un
+  fronte vivo»: **e' falso da una settimana**, e ne' l'Emendamento 2 ne' il 3 se ne sono accorti.
+  Nessuno dei due ha letto R-RAIL-44, che dichiara esplicitamente di esistere perche' «senza questa
+  voce ogni prompt SCSS futuro continua ad aggiungere blocchi dark per abitudine, e il freeze si erode
+  senza che nessuno lo decida». Il prompt dell'arco 2 aggiungeva sedici dichiarazioni dark, cioe'
+  esattamente l'erosione che quella voce prevedeva. **Il meccanismo dell'errore va registrato piu'
+  del suo effetto**: si e' letta la decisione locale invece del record, e una contraddizione fra due
+  voci ratificate dello stesso file e' sopravvissuta a tre emendamenti perche' nessuno ha guardato
+  sopra.
+
+  **Cosa regge di D-UI-13.** Perde una delle due gambe, quella del tema scuro; la conclusione tiene
+  sulla seconda, che era gia' quella misurata forte (circa 1800 riferimenti a nomi esclusivi di
+  `tokens/` contro 33 collisioni). Nessuna riconciliazione da rifare.
+
+  **Cosa cambia a valle.** L'arco 4 **non ha piu' prerequisiti** e parte quando si vuole. Il suo gate
+  si misura in **un tema solo**, light, come R-RAIL-44 impone alle superfici nuove: cadono la
+  ricalibratura di `--color-text-tertiary` in dark, la verifica dark dei 43 siti subtle e il vincolo
+  che l'Emendamento 3 aveva appena scritto. **Ordine vincolante, quarta emissione**: **1** fatto
+  (`c00c1e660`); **1bis** fatto (`9139887f1`); **2** archiviato; **4** smistamento del testo a tre
+  destinazioni, in light; **5** bordi; **6** sfondi; **7** ombre e transizioni; **8** scala z.
+
+  **Correzione a R-RAIL-44, che non ne cambia la sostanza.** La sua premessa di fatto e' parzialmente
+  falsa: `e682047a1` ha tolto la voce Theme dal menu utente della navbar, ma ha chiuso **una porta su
+  tre**. `pages/settings/AppearanceSettings.tsx`, con il radio Dark e l'icona della luna, e' montata
+  anche da `components/GlobalDrawer/SettingsDrawerContent.tsx` e dalla rotta `/settings`
+  (`App.tsx:150`), tutte e due precedenti di mesi al commit che avrebbe chiuso l'accesso. Il dark e'
+  quindi **sospeso ma selezionabile**, e chi lo seleziona entra in un tema che nessuno manutiene.
+  Verificato per struttura (mount point e rotta), **non a schermo**. La sospensione resta: e' una
+  scelta di risorse, non una conseguenza dell'irraggiungibilita'. Ne segue pero' una mossa piccola e
+  a registro: chiudere le porte rimaste vale piu' di qualunque manutenzione del tema dietro, e non
+  tocca l'harness Playwright, che scrive `localStorage.theme` e non passa dal picker.
+
+  **Emendamento 5 (2026-08-21, i sette dubbi del censimento sono decisi).** §3.7 del censimento
+  lasciava sette siti senza secchio e osservava che **sono due domande, non sette**. Si decidono
+  applicando il criterio gia' ratificato, cioe' la soglia di contrasto, non il gusto.
+
+  **I quattro «dato dipinto del grigio del cromo»** (`dashboard.scss:909` un `h1` di occhiello,
+  `RightPanel.scss:753` un nome accanto a un orario, `pages/components/style.scss:228` i segmenti di
+  un percorso, `JodieWindow.css:2584` un valore dell'ispettore) sono **contenuto**, e il contenuto si
+  legge: restano a livello didascalia, cioe' `--color-text-tertiary`, che dopo il ritiro varra'
+  `#475569` a 7.58:1. Nessun edit su questi quattro. Che un **nome** meriti `--color-text-secondary`
+  invece della didascalia e' una domanda di design, non di smistamento: fuori da questo arco.
+
+  **I tre «cromo che pero' e' testo che si legge»** (`tree-view-sidebar.scss:1803`, i marcatori che
+  sono l'unico portatore del tipo di riga; `menu.scss:100` e `GlobalSearch.scss:97`, due scorciatoie
+  da tastiera) vanno a **`--color-text-placeholder`**, `#64748b`, 4.76:1: la casella «leggibile ma
+  arretrato». A `#94a3b8` i marcatori non passerebbero nemmeno la soglia 3:1 del non testo, che e' la
+  stessa ragione per cui ci sono andate le 19 icone.
+
+  **Gli alias.** Undici dei dodici restano dove sono, compresi i tre morti e `--neutral` con i suoi
+  tre dichiaranti. L'unico in perimetro e' `--color-disabled` (`styles/variables.scss:46`): il suo
+  unico consumatore vivo e' `input.prefix:disabled`, che per il criterio e' disabled, quindi la
+  dichiarazione si risorsa da `--color-text-disabled`.
+
+  **L'arco 4 si consegna in un tema.** R-RAIL-44 sospende il dark, quindi cadono la verifica dark, la
+  ricalibratura di `--color-text-tertiary` scuro e il vincolo scritto nell'Emendamento 3. E si
+  consegna **senza toccare `tokens.css`**: il ritiro di `--color-text-secondary` e
+  `--color-text-tertiary` da li' e' il passo successivo, con 148 siti di raggio sul solo `secondary`,
+  ed e' quello che spegne il regime A per la famiglia del testo. Finche' non arriva, dopo l'arco 4 in
+  regime A **le didascalie restano `#94a3b8`**: scritto qui perche' a schermo sembra un arco che non
+  ha funzionato.
+
 ## Superate
 
 - **D3** (2026-07-26, routing congelato in v1) — superata da E-route il 2026-08-06.

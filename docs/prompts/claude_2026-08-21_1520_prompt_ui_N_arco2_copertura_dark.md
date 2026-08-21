@@ -1,5 +1,10 @@
 # Prompt Claude Code, 2026-08-21 15:20: arco 2 di D-UI-13, copertura dark dei sedici nomi
 
+> **ARCHIVIATO IL 2026-08-21, NON ESEGUIRE.** Il tema scuro e' sospeso da **R-RAIL-44**
+> (2026-08-13) e questo prompt aggiunge sedici dichiarazioni dark, cioe' esattamente l'erosione del
+> freeze che quella decisione prevedeva. Resta in albero perche' le misure che contiene valgono il
+> giorno che il dark si riprende. Vedi **D-UI-13 Emendamento 4**.
+
 **Fase**: 2, implementazione. **Un solo commit, un solo file di stile.** Nessuna discovery: le misure
 sono qui dentro, prese il 2026-08-21 e ratificate in **D-UI-13 Emendamento 3**.
 **Zona critica**: no. **Branch**: `alfonso-frontend-jjtl`. **Base**: `24e2dc3a6` o successivo.
