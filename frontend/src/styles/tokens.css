@@ -11,8 +11,10 @@
  * D-UI-13: the semantic layer belongs to styles/tokens/, the primitive layer
  * belongs here. Names declared by both files are being withdrawn from this one
  * in arcs. Arc 1 (2026-08-20) removed the 16 names whose value was identical in
- * both, so no computed value changed. Colours, shadows, transitions and z-index
- * that still collide are arcs 2 to 4; see docs/decisions.md.
+ * both, so no computed value changed. Arc 4 (2026-08-21) sorted the tertiary text
+ * sites onto three roles and then withdrew the text family from here, which is why
+ * the "SEMANTIC COLORS - Text" section is gone. Backgrounds, borders, shadows,
+ * transitions and the z scale still collide: arcs 5 to 8, see docs/decisions.md.
  */
 
 :root {
@@ -104,12 +106,6 @@
   --color-blue-700: #1d4ed8;
   --color-blue-800: #1e40af;
   --color-blue-900: #1e3a8a;
-
-  /* ========================================
-     SEMANTIC COLORS - Text
-     ======================================== */
-  --color-text-secondary: #475569;   /* slate-600 */
-  --color-text-tertiary: #94a3b8;    /* slate-400 */
 
   /* ========================================
      SEMANTIC COLORS - Backgrounds
