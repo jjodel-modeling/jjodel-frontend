@@ -1,5 +1,50 @@
 # Claude Code Session Log
 
+## 2026-08-21 — refactor: la famiglia del testo ritirata da tokens.css (D-UI-13)
+
+**Prompt**: prompt UI P del 2026-08-21 16:20, go-ahead dell'Emendamento 6. Un file solo: via le due dichiarazioni `--color-text-secondary` (`#475569`) e `--color-text-tertiary` (`#94a3b8`), via il commento di sezione `SEMANTIC COLORS - Text` che dopo la sottrazione intesta l'insieme vuoto, e aggiornata la frase superata del commento di testa (diceva «arcs 2 to 4»). I due nomi si consegnano insieme: ritirare il solo `tertiary` collasserebbe la scala.
+**Files touched**: commit `1036930b7` (1 file: `frontend/src/styles/tokens.css`, 4 inserzioni / 8 cancellazioni)
+**Outcome**: ✅ completed — quattro asserzioni su quattro, con una copertura dichiarata mancante sull'asserzione 3 (vedi sotto).
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gate: build exit 0 (solo warning chunk-size e deprecation Sass noti), typecheck **33** sull'output completo (baseline, exit 2 atteso), smoke **12 passed / 0 failed / 3 skipped** con A5 invariata, `check:docs` 3/3 senza warning.
+**Out-of-scope changes**: no — un solo file, e le uniche righe preesistenti toccate sono le due dichiarazioni, il loro commento di sezione e la frase superata del commento di testa. `Transition timing functions`, orfano dall'arco 1, lasciato dov'e' come chiede il prompt. Nessun altro nome di `tokens.css`, `styles/forms.scss` non toccato, nessun blocco dark.
+**Layer Impact Report**: not-required — nessun file di §3.1 nel diff.
+
+**Asserzione 1, la convergenza** (`document.documentElement`, misurata identica in tutti e tre gli stati: `#/allProjects` vuoto, progetto + tab metamodello, `#/allProjects` con un progetto)
+
+| nome | A prima | B prima | A dopo | B dopo |
+|---|---|---|---|---|
+| `--color-text-primary` | `#0f172a` | `#0f172a` | `#0f172a` | `#0f172a` |
+| `--color-text-secondary` | `#475569` | `#334155` | **`#334155`** | `#334155` |
+| `--color-text-tertiary` | `#94a3b8` | `#475569` | **`#475569`** | `#475569` |
+| `--color-text-placeholder` | `#64748b` | `#64748b` | `#64748b` | `#64748b` |
+| `--color-text-disabled` | `#94a3b8` | `#94a3b8` | `#94a3b8` | `#94a3b8` |
+| `--color-text-inverse` | `#ffffff` | `#ffffff` | `#ffffff` | `#ffffff` |
+
+Da **4/6** convergenti a **6/6**. E' la prima famiglia su cui due dei tre regimi coincidono.
+
+**Asserzione 2, la non-collassata**: dopo, in regime A, `secondary` `#334155` e `tertiary` `#475569` sono **diversi**, con `secondary` piu' scuro. La mezza consegna avrebbe dato `#475569` su entrambi.
+
+**Asserzione 3, forma forte (A dopo == B prima), sito per sito**
+
+| sito | famiglia | A prima | B prima | A dopo | forma forte | B dopo |
+|---|---|---|---|---|---|---|
+| `dashboard.scss:909` `.leftbar .menu-header h1` | caption | `rgb(148,163,184)` | `rgb(71,85,105)` | `rgb(71,85,105)` | **SI** | `rgb(71,85,105)` |
+| `dashboard.scss:981` `.leftbar .recmod-time` | caption | `rgb(148,163,184)` | `rgb(71,85,105)` | `rgb(71,85,105)` | **SI** | `rgb(71,85,105)` |
+| `tree-view-sidebar.scss:1581` `.tree-counter` | caption | `rgb(148,163,184)` | `rgb(71,85,105)` | `rgb(71,85,105)` | **SI** | `rgb(71,85,105)` |
+| `toast.scss:115` `.jj-toast__time` | caption | `rgb(148,163,184)` | `rgb(71,85,105)` | `rgb(71,85,105)` | **SI** | `rgb(71,85,105)` |
+| `navbar.scss:1687` `.project-icon` | secondary | `rgb(71,85,105)` | `rgb(51,65,85)` | `rgb(51,65,85)` | **SI** | `rgb(51,65,85)` |
+
+Cinque su cinque. **Controllo negativo**: B prima == B dopo su tutti e cinque, il regime B non si e' mosso.
+
+**Asserzione 4, il controllo sul controllo**: `/src/styles/tokens.css` servito dal dev server, da 10256 a **10210 byte**; `--color-text-secondary:` e `--color-text-tertiary:` **assenti**, `--radius-base:` e `--input-height-base:` **presenti**. La stringa `SEMANTIC COLORS - Text` risulta ancora presente perche' il nuovo commento di testa la cita fra virgolette: e' il commento, non la sezione.
+
+**Copertura dichiarata mancante — l'asserzione 3 non e' stata soddisfatta nella forma richiesta.** Il prompt chiede sei siti da **tre** famiglie, due dei quali fra i 41 «altro». Misurati **cinque siti da due famiglie**: **nessuno dei 41 «altro» e' risultato raggiungibile**. Selettori cercati e assenti in ogni stato provato: `.project-version` (dashboard:158), `project-card .tip` (555), `.timeline-dot` (RightPanel:411), `.jjodel-panel` (control.scss:349), `.node-editor .object-state` (info:384), `.properties-tab .object-state` (style.scss:316), `.appbar-tabs__overflow-btn` (navbar:1876), `.group.result-container .output-row` (console:32), `.toggle .toggle-label` (widgets:78). Ricette provate: `#/allProjects` vuoto e con un progetto, progetto + tab metamodello, nodo Class rilasciato e selezionato, click destro sul nodo, dialog New Project, rotta `/settings`, tentativo di vista lista. Non raggiunti anche `.tree-search__count`, `.nav-tab`, `.nav-help-btn`, `.tree-view-search-toggle`.
+**Smoke visivo**: da fare da Alfonso, e il salto grosso e' proprio dove la sonda non arriva: i 41 siti «altro», sfondi e bordi che in regime A passano da `#94a3b8` a `#475569`. Superfici indicate dal prompt: `forEndUser/control.scss`, `editors/console.scss`, `pages/dashboard.scss`.
+**Notes**: (1) La convergenza A/B e' 6/6 in tutti e tre gli stati, e la forma forte tiene su tutti e cinque i siti misurati: il regime A e' esattamente diventato il regime B per questa famiglia. (2) **La copertura sui 41 «altro» e' zero**, non parziale: nessuna delle sette ricette provate li raggiunge. E' la parte del commit che solo l'occhio puo' validare. (3) `data-theme` `null` all'inizio e ripristinato `null` in tutte e sei le misure. (4) Sonde `_tmp_uiP*.ts` non committate.
+**Prompt document name**: 2026-08-21 16:20 claude_2026-08-21_1620_prompt_ui_P_ritiro_testo_tokenscss.md
+
 ## 2026-08-21 — refactor: i 162 siti di testo tertiary smistati su tre ruoli (D-UI-13 arco 4)
 
 **Prompt**: prompt UI O del 2026-08-21 15:45, arco 4 di D-UI-13 in un tema solo (R-RAIL-44 sospende il dark). 47 scambi di token dentro le `var()`, ricavati dai secchi del censimento `e35132977`: 16 `disabled` e l'alias `--color-disabled` a `--color-text-disabled`, 8 `placeholder` + 19 icone + 3 dei sette dubbi a `--color-text-placeholder`. Piu' la correzione della scala del testo in `styles/tokens/README.md`. `tokens.css` non toccato.
