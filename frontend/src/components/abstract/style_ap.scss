@@ -122,7 +122,7 @@ body > .dragging-layer > div:last-child {
 
 .dock-tab-btn-disabled {
   cursor: default;
-  color: var(--color-text-tertiary);
+  color: var(--color-text-disabled);
 }
 
 .dock-nav-animated {
@@ -185,11 +185,11 @@ body > .dragging-layer > div:last-child {
 
 .dock-tab-disabled {
   cursor: default;
-  color: var(--color-text-tertiary);
+  color: var(--color-text-disabled);
 }
 
 .dock-tab-disabled:hover {
-  color: var(--color-text-tertiary);
+  color: var(--color-text-disabled);
 }
 
 /* ============================================
@@ -465,7 +465,7 @@ body > .dragging-layer > div:last-child {
 
 .dock-dropdown-menu-item-disabled,
 .dock-dropdown-menu-item-disabled:hover {
-  color: var(--color-text-tertiary);
+  color: var(--color-text-disabled);
   background: 0 0;
   cursor: not-allowed;
 }

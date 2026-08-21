@@ -534,7 +534,7 @@
   }
 
   & label.disabled .bi {
-    color: var(--color-text-tertiary) !important;
+    color: var(--color-text-disabled) !important;
   }
 
   & label.disabled:hover {
@@ -633,7 +633,7 @@
 
         &.disabled {
           background-color: transparent !important;
-          color: var(--color-text-tertiary) !important;
+          color: var(--color-text-disabled) !important;
           cursor: not-allowed;
         }
       }
@@ -1843,7 +1843,7 @@ $transition-menu: 150ms ease;
     height: 14px;
     min-width: 14px;
     font-size: 10px;
-    color: var(--color-text-tertiary, #94a3b8);
+    color: var(--color-text-placeholder, #94a3b8);
     opacity: 0;
     transition: opacity 150ms ease, color 150ms ease;
     flex-shrink: 0;
@@ -2049,7 +2049,7 @@ $transition-menu: 150ms ease;
     margin-left: auto;
     align-self: center;
     font-size: 10px;
-    color: var(--color-text-tertiary, #94a3b8);
+    color: var(--color-text-placeholder, #94a3b8);
     flex-shrink: 0;
   }
 

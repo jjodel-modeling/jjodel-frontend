@@ -107,7 +107,7 @@
         // hover on the icon (`i.bi:hover`).
         > .bi,
         > .bi:hover {
-            color: var(--color-text-tertiary);
+            color: var(--color-text-placeholder);
         }
     }
 
@@ -128,7 +128,7 @@
         border: none;
         border-radius: 4px;
         background: transparent;
-        color: var(--color-text-tertiary);
+        color: var(--color-text-placeholder);
         cursor: pointer;
 
         &:hover {

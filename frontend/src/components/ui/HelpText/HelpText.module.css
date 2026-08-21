@@ -26,6 +26,6 @@ html[data-theme="dark"] {
   }
 
   .helpText i {
-    color: var(--color-text-tertiary);
+    color: var(--color-text-placeholder);
   }
 }

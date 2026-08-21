@@ -402,7 +402,7 @@ $transition-normal: 250ms ease;
     > i.bi-search {
         flex: none;
         font-size: 12px;
-        color: var(--color-text-tertiary);
+        color: var(--color-text-placeholder);
     }
 
     &__input {
@@ -417,7 +417,7 @@ $transition-normal: 250ms ease;
         height: 28px!important;
 
         &::placeholder {
-            color: var(--color-text-tertiary);
+            color: var(--color-text-placeholder);
         }
     }
 
@@ -438,7 +438,7 @@ $transition-normal: 250ms ease;
         padding: 0;
         border: none;
         background: none;
-        color: var(--color-text-tertiary);
+        color: var(--color-text-placeholder);
         cursor: pointer;
 
         i { font-size: 13px; }
@@ -1800,7 +1800,7 @@ html[data-theme="dark"] {
 .tree-edge-marker,
 .tree-stack-marker {
     font-size: 12px;
-    color: var(--color-text-tertiary);
+    color: var(--color-text-placeholder);
     flex-shrink: 0;
     margin-left: 2px;
     line-height: 1;

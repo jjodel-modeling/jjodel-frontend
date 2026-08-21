@@ -543,7 +543,7 @@
    ============================================ */
 
 .legenda .disabled {
-  color: var(--color-text-tertiary);
+  color: var(--color-text-disabled);
 }
 
 /* ============================================
@@ -917,7 +917,7 @@ project-card .tip {
 
     .bi-chevron-down,
     .bi-chevron-right {
-      color: var(--color-text-tertiary);
+      color: var(--color-text-placeholder);
       font-size: var(--text-xs);
       transition: var(--transition-fast);
     }
@@ -1202,7 +1202,7 @@ project-card .tip {
     color: var(--color-text-tertiary);
     font-size: 12px;
 
-    .bi { color: var(--color-text-tertiary); }
+    .bi { color: var(--color-text-placeholder); }
 
     &:hover {
       color: var(--color-text-secondary);

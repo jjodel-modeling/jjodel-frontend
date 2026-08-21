@@ -97,7 +97,7 @@
   /* Keystroke on right */
   > span.keystroke {
     margin-left: auto;
-    color: var(--color-text-tertiary, #9ca3af);
+    color: var(--color-text-placeholder, #9ca3af);
     font-size: var(--text-xs, 12px);
   }
 
@@ -109,12 +109,12 @@
 
   /* Disabled state */
   &.disabled {
-    color: var(--color-text-tertiary, #9ca3af);
+    color: var(--color-text-disabled, #9ca3af);
     cursor: not-allowed;
 
     > .bi,
     > i {
-      color: var(--color-text-tertiary, #9ca3af);
+      color: var(--color-text-disabled, #9ca3af);
     }
 
     &:hover {

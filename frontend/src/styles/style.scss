@@ -79,13 +79,13 @@ button, input, select, textarea {
 
   &:disabled {
     background: var(--color-bg-tertiary);
-    color: var(--color-text-tertiary);
+    color: var(--color-text-disabled);
     cursor: not-allowed;
     opacity: 0.6;
   }
 
   &::placeholder {
-    color: var(--color-text-tertiary);
+    color: var(--color-text-placeholder);
   }
 }
 .input[type="checkbox"]:focus, .input[type="radio"]:focus { border: none; }
@@ -932,7 +932,7 @@ i.bi {
   }
 
   & input::placeholder {
-    color: var(--color-text-tertiary);
+    color: var(--color-text-placeholder);
     font-style: italic;
   }
 

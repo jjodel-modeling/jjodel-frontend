@@ -58,7 +58,7 @@
 
 /* States */
 .input::placeholder {
-  color: var(--color-text-tertiary);
+  color: var(--color-text-placeholder);
 }
 
 .input:hover:not(:disabled):not(:read-only):not(.input-error) {
@@ -93,7 +93,7 @@
 .input:disabled,
 .input:read-only {
   background-color: var(--color-bg-secondary);
-  color: var(--color-text-tertiary);
+  color: var(--color-text-disabled);
   cursor: var(--disabled-cursor);
   opacity: var(--disabled-opacity);
 }
@@ -142,7 +142,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-text-tertiary);
+  color: var(--color-text-placeholder);
   pointer-events: none;
   font-size: var(--icon-size-base);
 }

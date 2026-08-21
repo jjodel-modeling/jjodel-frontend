@@ -74,7 +74,9 @@ Visit `/test-tokens` route to see all tokens visually with the theme switcher.
 **Text Colors:**
 - `--color-text-primary` - Headings, main text
 - `--color-text-secondary` - Body text
-- `--color-text-tertiary` - Placeholders, disabled
+- `--color-text-tertiary` - Labels, captions
+- `--color-text-placeholder` - Placeholder text
+- `--color-text-disabled` - Disabled text
 - `--color-text-inverse` - Text on dark backgrounds
 
 **Accent (Brand Teal):**

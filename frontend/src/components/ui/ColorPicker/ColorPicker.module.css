@@ -72,7 +72,7 @@
 
 .hex:disabled {
   background-color: var(--color-bg-secondary);
-  color: var(--color-text-tertiary);
+  color: var(--color-text-disabled);
   cursor: var(--disabled-cursor);
   opacity: var(--disabled-opacity);
 }

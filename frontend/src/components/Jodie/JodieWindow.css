@@ -2518,7 +2518,7 @@
     cursor: pointer;
     padding: 0 4px;
     margin-left: 2px;
-    color: var(--color-text-tertiary, #64748b);
+    color: var(--color-text-placeholder, #64748b);
     font-size: 10px;
     display: inline-flex;
     align-items: center;

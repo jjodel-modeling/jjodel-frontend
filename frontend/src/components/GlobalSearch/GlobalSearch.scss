@@ -30,7 +30,7 @@
 
 .global-search .search-icon {
   font-size: var(--text-sm);
-  color: var(--color-text-tertiary);
+  color: var(--color-text-placeholder);
   flex-shrink: 0;
 }
 
@@ -44,7 +44,7 @@
   min-width: 0;
 
   &::placeholder {
-    color: var(--color-text-tertiary);
+    color: var(--color-text-placeholder);
   }
 
   &:focus {
@@ -60,7 +60,7 @@
   border: none;
   background: transparent;
   cursor: pointer;
-  color: var(--color-text-tertiary);
+  color: var(--color-text-placeholder);
   transition: var(--transition-fast);
 
   &:hover {
@@ -94,7 +94,7 @@
     padding: 2px 5px;
     min-width: 18px;
 
-    color: var(--color-text-tertiary);
+    color: var(--color-text-placeholder);
   }
 }
 

@@ -1100,7 +1100,7 @@
   }
 
   .changelog li.info::before {
-    color: var(--color-text-tertiary, gray);
+    color: var(--color-text-placeholder, gray);
   }
 
   .changelog li.feature::before {
