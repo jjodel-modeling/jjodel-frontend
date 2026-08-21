@@ -1464,6 +1464,64 @@ bag `_state`, che non contiene affatto il run-state.
   destinazioni; **5** bordi, ormai senza il rail dentro; **6** sfondi; **7** ombre e transizioni;
   **8** scala z. L'arco **3** e' chiuso: `e35132977`.
 
+  **Emendamento 3 (2026-08-21, misure per l'arco 2).** La copertura dark si consegna con quattro
+  correzioni alle premesse dell'Emendamento 2 e una scoperta che vincola l'arco 4.
+
+  **I nomi senza consumatori sono dieci, non nove**: i quattro `--color-interactive-*`,
+  `--color-success-bg`, `--color-warning-bg` e i quattro `--gradient-*`. I sedici usi vivi si
+  concentrano in sei nomi: `--color-border-focus` 6, `--color-text-disabled` 4, `--color-bg-active`
+  3, e uno ciascuno `--color-error-bg`, `--color-info-bg`, `--color-text-placeholder`.
+
+  **L'inversione di gerarchia ha un numero, e riguarda uno solo dei due nomi di testo.**
+  `--color-text-disabled`, che porta il valore chiaro dentro il tema scuro, dipinge `#94a3b8`: su
+  `--color-bg-primary` dark (`#08090a`) sta a **7.77:1**, cioe' **sopra** il testo secondario dark
+  (`#a0a0a0`, 7.62:1). Il disabled sarebbe piu' prominente del secondario. `--color-text-placeholder`,
+  con la stessa perdita, dipinge `#64748b` a **4.19:1**, cioe' dove il ruolo lo vuole (in chiaro sta
+  a 4.76:1). Uno solo dei due e' patologico; l'altro si dichiara per renderlo esplicito, non per
+  correggerlo.
+
+  **La scala di testo dark non e' quella chiara riflessa, e questo vincola l'arco 4.** Misurate su
+  `#08090a`: primary 17.49, secondary 7.62, tertiary 3.17. In chiaro su bianco: primary 17.85,
+  secondary 10.35, tertiary 7.58, placeholder 4.76, disabled 2.56. Il secondario dark sta dove il
+  chiaro mette il **tertiary**, e il tertiary dark sta dove il chiaro mette il **disabled**: tre gradi
+  contro cinque, e sfalsati. Conseguenza diretta: i 55 siti caption che l'arco 4 manda su
+  `--color-text-tertiary`, in chiaro a 7.58:1, in dark atterrerebbero a **3.17:1**. Con lo stesso
+  ragionamento sulle soglie che ha deciso lo smistamento chiaro, **l'arco 4 non e' consegnabile in
+  dark finche' `--color-text-tertiary` dark resta li'**. E' un arco di valore su 43 siti vivi e vuole
+  l'occhio del direttore: non entra dentro una copertura.
+
+  **Le derivazioni non inventano valori, continuano rampe che esistono gia'.** I quattro `-bg`
+  semantici sono il rispettivo `-subtle` composito su `--color-bg-secondary` (`#0f1012`): e' la stessa
+  relazione che i `-50` di Tailwind hanno col bianco in chiaro, verificata all'8% su tutti e quattro
+  con errore massimo di 3 unita' per canale. `--color-bg-active` e' `rgba(255, 255, 255, 0.08)`, che
+  continua il passo di 0.02 fra elevated (0.04) e hover (0.06). I quattro `--color-interactive-*` sono
+  la rampa slate del chiaro specchiata sulla stessa palette (`#cbd5e1`, `#e2e8f0`, `#f1f5f9`, disabled
+  `#475569`), e hanno zero consumatori. I quattro `--gradient-*` spendono un gradino della rampa di
+  superfici scure ciascuno, nella stessa posizione relativa che il gemello chiaro occupa nella rampa
+  chiara; il quarto gradino (`#1d1f22`) estende la rampa con lo stesso delta che i tre esistenti gia'
+  usano (+7, +7, +8). Derivare non e' speculare, e nessuno di questi valori e' scelto a occhio.
+
+  **`--color-border-focus` si copre senza scegliere.** Il nome resta al ticket `--accent`, ma lasciarlo
+  scoperto viola il principio di completezza di D-UI-10 su un nome con sei usi vivi. In dark si
+  dichiara **`var(--color-accent)`**: non e' un valore scelto, e' un aggancio. `--color-accent` e'
+  dichiarato solo in `styles/tokens/` (verificato: nessuna ridichiarazione altrove, e le mappe di
+  `editor-v2/_themes.scss` generano `--accent`, non `--color-accent`), quindi risolve
+  deterministicamente a `#94a3b8`, 7.77:1, ben sopra la soglia 3:1 del non testo. Quando il ticket
+  decidera' l'accento dark, l'anello di focus segue senza che nessuno debba ricordarsene. Costo
+  dichiarato: e' il primo riferimento a un altro token dentro un file di soli letterali, e i sei anelli
+  in dark passano oggi dal ciano `#06b6d4` di `tokens.css` allo slate.
+
+  **I gemelli stanno nei file gemelli.** I quattro `--gradient-*` vanno in `_colors-dark.scss`, dove
+  sta il loro gemello chiaro, e non nel blocco dark di `_gradients.scss` che ospita i
+  `--gradient-primary*`. Separare un gemello dall'altro e' il meccanismo della divergenza silenziosa
+  che D-UI-10 ha chiuso altrove.
+
+  **Ordine vincolante, terza emissione**: **1** i 16 identici, fatto (`c00c1e660`); **1bis** chiusura
+  di D-UI-11 sulle due linee del rail, fatto (`9139887f1`); **2** copertura dark dei sedici nomi;
+  **4** smistamento del testo a tre destinazioni, che ora **richiede prima la ricalibratura di
+  `--color-text-tertiary` in dark**; **5** bordi; **6** sfondi; **7** ombre e transizioni; **8** scala
+  z. L'arco **3** e' chiuso: `e35132977`.
+
 ## Superate
 
 - **D3** (2026-07-26, routing congelato in v1) — superata da E-route il 2026-08-06.
