@@ -1,5 +1,19 @@
 # Claude Code Session Log
 
+## 2026-08-22 — docs: discovery layout per viewpoint, arresto su D0
+
+**Prompt**: prompt del 2026-08-22 10:30, Fase 1 read-only in nove domande (D0..D8) sul layout indicizzato per viewpoint. D0 chiedeva di cercare a registro una decisione viva sul tema e, se trovata, di fermarsi lì. Deroga P8 dichiarata nel prompt.
+**Files touched**: `docs/discovery/discovery_2026-08-22_layout_per_viewpoint.md` (nuovo), `docs/claude-code-log.md`
+**Outcome**: ⚠️ partial — arresto su D0 come prescritto. D1..D8 **non eseguite**.
+**Corregge**: —
+**Causa**: (a)
+**Regressions**: no — zero file di codice toccati, fase read-only senza eccezioni.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessuna scrittura; i file di §3.1 letti soltanto (`canvasToJjom.ts`).
+**Smoke visivo**: non applicabile (deroga P8 dichiarata nel prompt).
+**Notes**: Decisione viva: R-2 in `docs/ratifiche/claude_ratifiche_2026-08-03_state_actions_events.md:28`, su decisione di Alfonso del 2026-07-19. Dice l'opposto della tesi del fronte: il layout è proprietà del disegno del modello, condivisa fra viewpoint, «con la stessa semantica delle posizioni dei nodi». Viva per tre riscontri posteriori e per il codice. Non è a registro in `decisions.md`. Ricerche, controlli positivi e Q0 per l'architetto nel report.
+**Prompt document name**: 2026-08-22 10:30
+
 ## 2026-08-21 — fix: menu utente e popup notifiche portati sopra il rail destro
 
 **Prompt**: prompt UI Q del 2026-08-21 16:50, Fase 1 (misura read-only, report) e Fase 2 (rimedio) nello stesso prompt con hard stop in mezzo. Con il rail destro aperto i due popup venivano disegnati sotto. Ipotesi da falsificare: difetto di contesto di impilamento, non di valore.
