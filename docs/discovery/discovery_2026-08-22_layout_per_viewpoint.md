@@ -282,3 +282,447 @@ edge sintetici, non la posizione dei nodi.
 
 Raggiunto su D0, come prescritto. Nessun file di codice modificato. Nessun progetto proposto.
 Nessun branch aperto. La ripresa di D1..D8 attende la risposta dell'architetto a **Q0**.
+
+---
+
+# Addendum Fase 1bis: i tre fatti di Q0
+
+**Data**: 2026-08-22 (seconda sessione)
+**Prompt document name**: 2026-08-22 11:45
+**Deroga**: P8 non si applica (fase read only, nessuna modifica al codice, nessuno smoke).
+**Perimetro**: solo Q0.a..Q0.d. D1..D8 restano sospese. **Nessuna risposta a Q0.**
+
+## A.0 Esito sull'ipotesi
+
+L'ipotesi da falsificare era: *la decisione del 2026-07-19 e' stata presa su un dominio che nel
+frattempo e' cambiato, e il codice spedito oggi la contraddice gia' in due punti.*
+
+**Confermata sul dominio, confermata su un punto di contraddizione, e il secondo punto e' piu'
+debole di come l'ipotesi lo descrive.** In sintesi, prima delle prove:
+
+| | esito |
+|---|---|
+| il dominio e' cambiato | **si'**, due volte e in date verificabili: l'authoring object-as-edge e' del **2026-08-02** (`d1dc55649`), la taglia derivata dal contenuto del **2026-08-15** (`115e8484d`). Entrambe **dopo** il 2026-07-19 |
+| primo punto di contraddizione (taglia) | **confermato**, e sta scritto nel codice |
+| secondo punto (`Eobj`) | **non e' una contraddizione**: e' un caso che la decisione non prevedeva e che il codice gestisce per convivenza, non per conflitto |
+
+Una precisazione che cambia il bersaglio, e va detta subito perche' regge tutto il resto.
+**La contraddizione non colpisce la decisione del 2026-07-19, colpisce la sua generalizzazione del
+2026-08-03.** La decisione del 19/7 parla di `irEdgeLayout` e `irCollapsed` su `DVertex`, e su
+quelli e' rispettata. E' il memo del 3/8 che la estende a «il layout» come categoria unica, «con la
+stessa semantica delle posizioni dei nodi»: e' quella frase che il codice del 15/8 contraddice,
+perche' spedisce una taglia derivata per notazione, cioe' per viewpoint.
+
+## A.1 File letti in questa sessione (path completi)
+
+- `/Users/alfonso/jjodel/docs/discovery/discovery_2026-07-19_persistenza_edge_sintetici.md` (righe 1-12)
+- `/Users/alfonso/jjodel/docs/ratifiche/claude_ratifiche_2026-08-03_state_actions_events.md` (righe 20-40)
+- `/Users/alfonso/jjodel/frontend/src/components/editor-v2/viewpoint/ir/useContentSize.ts` (intero, 201 righe)
+- `/Users/alfonso/jjodel/frontend/src/components/editor-v2/viewpoint/ir/shapeRegistry.ts` (righe 215-240, 465-495; indice dei simboli su tutto il file)
+- `/Users/alfonso/jjodel/frontend/src/components/editor-v2/viewpoint/ir/__tests__/shapeRegistry.test.ts` (righe 225-258)
+- `/Users/alfonso/jjodel/frontend/src/components/editor-v2/sync/canvasToJjom.ts` (righe 30-110)
+- `/Users/alfonso/jjodel/frontend/src/components/editor-v2/utils/jjomTransformers.ts` (righe 170-190, 236-258; indice su `position`, `isResized`)
+- `/Users/alfonso/jjodel/frontend/src/components/editor-v2/EditorV2.tsx` (righe 405-440, 3249-3345, 3478-3492)
+- `/Users/alfonso/jjodel/frontend/src/model/dataStructure/GraphDataElements.tsx` (righe 85-110, 148-182)
+- `/Users/alfonso/jjodel/frontend/src/common/Geom.ts` (righe 660-700)
+- `/Users/alfonso/jjodel/frontend/src/components/editor-v2/viewpoint/ir/irEdgeViews.ts` (indice su `hidden`, riga 266)
+
+Tutti in sola lettura. Nessun file di codice modificato.
+
+## A.2 — Q0.a. Le citazioni integrali
+
+### A.2.1 `discovery_2026-07-19_persistenza_edge_sintetici.md`, righe 3-9
+
+Righe 1-2 sono il titolo e una riga vuota; do le tre che precedono la 6 e le tre che seguono, come
+richiesto, verbatim e senza elisioni:
+
+```
+**Data**: 2026-07-19
+**Branch**: `alfonso-frontend-jjtl`
+**Tipo**: Fase 1, discovery read-only. Nessuna modifica al codice. HARD STOP a report scritto.
+**Decisione a monte (Alfonso, 2026-07-19)**: persistenza su campi opzionali additivi del DVertex — edge sintetico sul DVertex del nodo nascosto dell'oggetto; collasso sul DVertex del contenitore. Layout condiviso tra viewpoint, niente entità nuove, niente VersionFixer, rispetto di `persistWaypoints: false`, scrittura solo via write path canonico a fine gesto, undo/redo funzionante.
+
+---
+
+## 0. Obiettivo
+```
+
+**Il fatto che il prompt chiedeva di stabilire, senza interpretarlo.** «Layout condiviso tra
+viewpoint» **non e' una proposizione autonoma**. E' il terzo elemento di un elenco separato da
+virgole, dentro una riga di intestazione del documento etichettata `**Decisione a monte**`, che
+elenca sei vincoli di seguito: `Layout condiviso tra viewpoint, niente entita' nuove, niente
+VersionFixer, rispetto di persistWaypoints: false, scrittura solo via write path canonico a fine
+gesto, undo/redo funzionante`. Gli altri cinque sono tutti vincoli di costo e di disciplina
+implementativa. Non c'e' un paragrafo che argomenti il punto, e non c'e' una sezione dedicata: la
+riga sta fra `**Tipo**` e `---`, cioe' nel blocco di metadati che apre il file.
+
+Per completezza va detto che una proposizione autonoma sul tema **esiste** nello stesso documento,
+ma e' §3.6 (righe 125-127, gia' citata nel corpo del report), ed e' **la discovery che conferma il
+meccanismo**, non il testo della decisione. La distinzione conta: §3.6 argomenta da un fatto di
+codice (`il DGraph v2-flow e' per modello`), la riga 6 no.
+
+### A.2.2 `claude_ratifiche_2026-08-03_state_actions_events.md`, righe 20-40
+
+Verbatim, senza elisioni (le righe 21-40 nel file; la 20 e' la prima riga di R-1):
+
+```
+Riattivare il canale events (Opzione H del report) richiederebbe di ricostruire `evalContext` da zero e di reintrodurre `new Function` su stringa utente dentro il flow editor, cioe' esattamente cio' che la Fase 5a ha spento. Ucciderebbe inoltre l'analizzabilita' statica delle dipendenze (`dependencySet`, `crossPaths`), che e' il fondamento della reattivita' IR.
+
+Il modello di azione nascera' dentro l'IR (Opzione G). Il tab Events resta come superficie legacy.
+
+**Conseguenza immediata e indipendente**: R1 del report e' una trappola utente attiva oggi. Il tab accetta codice, lo persiste, lo ricompila, e `ViewProperties.tsx:325-357` mostra un indicatore di stato "attivo" per gli handler definiti. Va marcato subito (slice 3), senza attendere il resto del capitolo. Nessuna rimozione del tab, nessuna rimozione dei campi, nessun tocco alla persistenza: solo onesta' verso chi lo apre.
+
+## R-2 — Scope dello stato concreto: default per-viewpoint, condivisione dichiarata
+
+Il caso gia' deciso indica la regola. `irEdgeLayout` e' condiviso fra viewpoint perche' il layout e' proprieta' del disegno del modello, con la stessa semantica delle posizioni dei nodi (decisione 2026-07-19, confermata dal codice). Il collasso e' cosa diversa: e' proprieta' di come si sta guardando adesso, e due viewpoint sullo stesso modello hanno ragioni legittime per divergere.
+
+**Ratificato**: lo stato dichiarato sulla sintassi concreta e' **per-viewpoint per default**. La condivisione fra viewpoint e' una scelta esplicita dichiarata nell'IR (`shared: true` o equivalente), mai un default implicito.
+
+Implementazione attesa additiva: `_state` sul carrier con namespace per viewpoint nella chiave; il flag dichiarato collassa il namespace. Nessuna entita' nuova.
+
+Questo trasforma R3 del report (scope condiviso ereditato senza decisione) da accidente in decisione. Non retroagisce su `irCollapsed` e `irEdgeLayout` esistenti: quelli restano come sono finche' il dogfooding non dimostri che il collasso condiviso e' una frizione reale.
+
+## R-3 — Persistenza: doppio regime dichiarato, default non persistito
+```
+
+## A.3 — Q0.b. L'asimmetria taglia / posizione e' viva a schermo
+
+### A.3.1 (1) La posizione persistita e' un **angolo**, non un centro
+
+Tre righe, tre livelli.
+
+**Scrittura.** `frontend/src/components/editor-v2/sync/canvasToJjom.ts:43-49`, verbatim:
+
+```typescript
+export function syncPositionToJjom(vertexId: string, x: number, y: number): void {
+    markCanvasUpdated(vertexId);
+    TRANSACTION('EditorV2 drag', () => {
+        SetFieldAction.new(vertexId as any, 'x' as any, x, undefined, false);
+        SetFieldAction.new(vertexId as any, 'y' as any, y, undefined, false);
+    });
+}
+```
+
+**Lettura.** `frontend/src/components/editor-v2/utils/jjomTransformers.ts:172-183`, verbatim
+(estratto contiguo, il commento incluso perche' e' la ragione del `__raw`):
+
+```typescript
+    const raw = vertex.__raw ?? vertex;
+    const x = typeof raw.x === 'number' ? raw.x : 0;
+    const y = typeof raw.y === 'number' ? raw.y : 0;
+```
+```typescript
+        position: { x, y },
+        ...manualSizeOf(raw),
+```
+
+`position` in React Flow e' l'**angolo alto-sinistra** del nodo: e' il contratto della libreria, e il
+codice non applica nessuna traslazione fra il campo D e `position` (le due righe sopra sono
+l'identita').
+
+**Conferma indipendente nel modello geometrico del progetto.** `frontend/src/common/Geom.ts:680-685`,
+verbatim:
+
+```typescript
+    public static fromPoints(firstPt: GraphPoint, secondPt: GraphPoint): GraphSize {
+        const minX = Math.min(firstPt.x, secondPt.x);
+        const maxX = Math.max(firstPt.x, secondPt.x);
+        const minY = Math.min(firstPt.y, secondPt.y);
+        const maxY = Math.max(firstPt.y, secondPt.y);
+        return new GraphSize(minX, minY, maxX - minX, maxY - minY); }
+```
+
+`GraphSize(x, y, w, h)` costruita da `minX, minY` piu' le estensioni: `x, y` e' l'angolo alto-sinistra.
+
+**Conseguenza, che e' il punto della domanda**: una taglia maggiore cresce **verso il basso a
+destra**. L'angolo alto-sinistra resta fisso, il bordo destro e quello inferiore avanzano. Non c'e'
+crescita simmetrica che ammortizzi meta' della differenza.
+
+### A.3.2 (2) Non esiste anti collisione fra nodi. Nessuno snap, nessun reflow che assorba
+
+**Prima, un errore di misura commesso in questa sessione e corretto, perche' e' il caso da manuale
+di CLAUDE.md §5.** La prima batteria di ricerche e' stata scritta cosi':
+
+```
+command grep -rniI "$t" --include=*.ts --include=*.tsx .
+```
+
+e ha risposto **0 per tutti gli undici termini**, `dagre` ed `elkjs` inclusi. Era una ricerca
+rotta: zsh non espande `--include=*.ts` senza virgolette e aborta con `no matches found`. Riscritta
+con i glob quotati, gli stessi undici termini danno `dagre` **15**, `elkjs` **3**, `autoLayout`
+**18**. **Un auto layout ELK esiste e girava mentre la ricerca diceva che non esisteva.** Ogni
+asserzione di assenza qui sotto e' quella della seconda batteria, con il controllo positivo nella
+stessa invocazione.
+
+**Ricerche dichiarate** (cwd `/Users/alfonso/jjodel/frontend/src`, `command grep` = BSD grep
+2.6.0-FreeBSD, non il wrapper `ugrep` della shell):
+
+```
+command grep -rniI "<termine>" --include="*.ts" --include="*.tsx" components/editor-v2/ | wc -l
+```
+
+| termine | hit | esito |
+|---|---|---|
+| `avoidOverlap` | 0 | assente |
+| `separateNodes` | 0 | assente |
+| `pushApart` | 0 | assente |
+| `repel` | 0 | assente |
+| `resolveOverlap` | 0 | assente |
+| `noOverlap` | 0 | assente |
+| `declutter` | 1 | **non pertinente**: `nodes/ClassNode.tsx:546`, riguarda un connettore di edge |
+| `nudge` | 6 | **non pertinente**: tutte e sei sono lo scostamento perpendicolare della **label** di un edge (`edges/UnifiedEdge.tsx:46-48`, `utils/edgeUtils.ts:791`) |
+| `collision` | 34 (repo), tutte in editor-v2 su handle/anchor | **non pertinente**: `utils/handlePosition.ts:173` — *«Collision-freedom is by construction: N endpoints on N distinct uniform slots»* — riguarda gli **handle**, non i box dei nodi |
+
+**Controllo positivo, stessa invocazione e stesso perimetro**: `applyDistribution` -> **43** hit. Il
+comando ha segnale sulla cartella su cui le nove ricerche rispondono zero o non pertinente.
+
+**Lo snap esiste ma non e' un assorbitore.** `frontend/src/components/editor-v2/EditorV2.tsx:3840-3841`,
+verbatim:
+
+```tsx
+                snapToGrid={snapEnabled}
+                snapGrid={[16, 16]}
+```
+
+E' lo snap di trascinamento di React Flow: vincola dove l'utente **lascia** un nodo a una griglia di
+16px. Non conosce gli altri nodi e non interviene quando a cambiare e' la taglia.
+
+**L'auto layout esiste, ed e' l'unica cosa che potrebbe assorbire — ma non si innesca al cambio di
+viewpoint.** `handleAutoLayout` (`EditorV2.tsx:3249-3303`) ricalcola con ELK e riscrive **tutte** le
+posizioni sul D layer (`:3262`, verbatim: `if (updates.length > 0) syncPositionBatchToJjom(updates);`).
+Ha due soli innesti:
+
+1. il bottone in toolbar — `EditorV2.tsx:3953`, verbatim: `onAutoLayout={handleAutoLayout}`;
+2. il ramo `justCreated` alla prima init — `EditorV2.tsx:421-428`, verbatim:
+
+```typescript
+            if (justCreatedGraphRef.current) {
+                justCreatedGraphRef.current = false;
+                if (autoLayoutRef.current) {
+                    await autoLayoutRef.current();
+                    // The M1 reference edges materialize asynchronously AFTER this first
+                    // layout; watch for them and re-run the layout once when they land.
+                    armReLayoutRef.current?.();
+                    return; // autoLayout already does fitView + distribution
+                }
+            }
+```
+
+Nessuno dei due e' il cambio di viewpoint. E anche se lo fosse, non sarebbe un assorbitore ma un
+sostituto: sovrascriverebbe il layout dell'utente su tutto il grafo.
+
+**Conclusione di (2)**: la collisione **resta possibile**. Nulla la previene e nulla la corregge.
+
+### A.3.3 Perche' la taglia diverge per viewpoint mentre la posizione no — sta scritto nel codice
+
+`frontend/src/components/editor-v2/viewpoint/ir/useContentSize.ts:80-93`, verbatim. E' la prova
+piu' diretta dell'asimmetria, ed e' il commento che il codice si porta addosso:
+
+```
+/**
+ * Keep the React Flow node sized after the content of its IR view.
+ *
+ * The size is written in session only, on the same channel the size propagation
+ * uses (top-level width/height with `measured` reset). Nothing reaches the
+ * D-layer: `syncSizeToJjom` would raise `isResized`, which is exactly the flag
+ * that tells `manualSizeOf` a human chose that size, and the derived size is a
+ * function of the content, to be recomputed rather than stored. That also means
+ * no write-back loop: the persistence filter in EditorV2 keys on
+ * `resizing !== undefined`, which a programmatic write never sets.
+ *
+ * A manual resize wins and switches the derivation off for that vertex, because
+ * it raises `isResized`; "Reset size" clears the flag and gives the derived size
+ * back.
+ */
+```
+
+Il gate, riga 103, verbatim: `const active = hasSizeSupplement(desc) && !isResized;`.
+
+Il filtro di persistenza citato dal commento e' vivo, `EditorV2.tsx:3485-3487`, verbatim:
+
+```typescript
+            const hasResize = changes.some(
+                (c) => c.type === 'dimensions' && (c as any).resizing !== undefined
+            );
+```
+
+**Quindi**: la taglia derivata e' funzione del contenuto reso, cioe' della notazione, cioe' del
+viewpoint, e vive **in sessione**; la posizione e' persistita e condivisa. Le due meta' del «layout»
+hanno gia' oggi due regimi diversi. Perimetro onesto: la derivazione vale per le forme con
+supplemento (`hasSizeSupplement`: ellisse, cerchio, rombo); le forme il cui contorno riempie il box
+restano al content-hug CSS (`shapeRegistry.ts:222-223`, verbatim: *«Shapes whose outline fills the box:
+no supplement, so the sizing rule is the identity up to the existing CSS floors»*), che pero'
+dipende anch'esso dal contenuto reso, quindi dal viewpoint, per un'altra strada.
+
+### A.3.4 (3) La misura
+
+(1) e (2) lasciano la collisione possibile, quindi il caso non e' impossibile e la misura va fatta.
+
+**Da dove vengono i numeri, e cosa sono.** Non li ho prodotti io a runtime: li prendo da
+`frontend/src/components/editor-v2/viewpoint/ir/__tests__/shapeRegistry.test.ts:235-249`, il cui
+titolo e', verbatim, `'riproduce gli otto casi misurati sull applicazione'`. Sono **otto misure
+prese sull'app in esecuzione** e committate come golden. Verbatim:
+
+```typescript
+        const cases: Array<[ShapeForm, number, number, number, number]> = [
+            ['ellipse', 27, 14, 39, 48],
+            ['ellipse', 114, 14, 120, 48],
+            ['ellipse', 188, 14, 197, 48],
+            ['ellipse', 60, 43, 85, 61],
+            ['diamond', 27, 14, 39, 48],
+            ['diamond', 114, 14, 161, 48],
+            ['diamond', 188, 14, 266, 48],
+            ['diamond', 60, 43, 120, 86],
+        ];
+```
+
+Le colonne sono `[forma, contentW, contentH, boxW, boxH]`.
+
+**Il caso minimo.** Un model element il cui contenuto reso misura **188 x 14** px. Viewpoint A lo
+rende `ellipse`, viewpoint B lo rende `diamond`. Stesso oggetto, stesso inchiostro, stessa `x`
+persistita.
+
+| | box in A (ellipse) | box in B (diamond) | delta |
+|---|---|---|---|
+| 188 x 14 | **197 x 48** | **266 x 48** | **+69 px in larghezza** |
+| 60 x 43 | **85 x 61** | **120 x 86** | **+35 px larghezza, +25 px altezza** |
+
+**L'aritmetica della collisione**, con l'angolo alto-sinistra fisso (A.3.1). Due nodi affiancati,
+contenuto 188 x 14, posti in viewpoint A a `x = 0` e `x = 220`. In A: il primo occupa `[0, 197]`, il
+secondo parte a 220, **gap di 23 px**. In B, senza che nessuno abbia toccato una posizione: il primo
+occupa `[0, 266]`, il secondo parte sempre a 220, **sovrapposizione di 46 px**. Il secondo nodo
+entra nel primo per 46 px su 266, cioe' il 17% della sua larghezza.
+
+La soglia esatta: due nodi con questo contenuto restano separati in entrambi i viewpoint solo se la
+distanza fra gli angoli sinistri e' **>= 266**, cioe' il box del viewpoint piu' largo. Un utente che
+dispone il diagramma in A vede 197 e non ha modo di sapere che deve lasciarne 266.
+
+**Il limite di questa misura, dichiarato.** I numeri sono misure reali dell'app ma **prese in altra
+sede e in altra data** (golden del 2026-08-15), e l'aritmetica della sovrapposizione e' mia,
+derivata dai due box e dall'ancoraggio all'angolo. **Non ho aperto l'app in questa sessione**: la
+fase e' read only con P8 in deroga. Vale come CLAUDE.md §5 impone di leggerla — una misura di
+contratto, non una misura a schermo. La prova a schermo (aprire un modello, cambiare viewpoint fra
+due notazioni di taglia diversa, misurare i due `getBoundingClientRect`) resta da fare e costa
+pochi minuti quando il fronte riprende.
+
+Una cautela ulteriore. Le due righe usate come caso minimo sono `ellipse` e `diamond`, cioe' due
+forme che nel viewpoint A e B avrebbero taglia diversa **solo se la notazione cambia forma**. Il
+caso e' quindi legittimo ma non e' il piu' generale: la stessa asimmetria si presenta, con numeri
+che non ho, ogni volta che due viewpoint rendono contenuti di ingombro diverso nella stessa forma.
+
+## A.4 — Q0.c. `Eobj` e il layout condiviso
+
+### A.4.1 (1) La divergenza e' raggiungibile oggi
+
+Si', e da poco. Il commit che apre l'authoring e' `d1dc55649`, **2026-08-02**, verbatim dal messaggio:
+
+```
+feat(editor-v2): object-as-edge authoring in the edge view panel
+
+The edge panel now authors both substrates. The nature is not a field of
+the IR and none is added: a view IS object-as-edge exactly when both
+endpoint PathExprs are present, so the panel derives it and keeps it in
+UI state.
+```
+
+Da quel commit un autore compila i due endpoint nel pannello edge e la view **e'** object-as-edge.
+Niente vieta a un secondo viewpoint di avere una view vertex sulla stessa classe: sono due
+`DViewElement` distinti in due viewpoint distinti. La divergenza e' quindi raggiungibile per
+composizione di due atti di authoring entrambi supportati.
+
+**Non ho eseguito il percorso utente end-to-end**: e' una lettura del substrato di authoring, non
+una verifica a runtime. La distinzione fra «lo schema lo prevede» e «l'utente ci arriva» e' risolta
+dal commit sopra, che e' authoring, non schema; ma il click-through non e' stato fatto.
+
+### A.4.2 (2) Che cosa succede al layout persistito: **convivono**, nessuno sovrascrive l'altro
+
+Il meccanismo di soppressione della forma nodo e' una **maschera di sessione**, non una scrittura.
+`frontend/src/components/editor-v2/viewpoint/ir/irEdgeViews.ts:266`, verbatim:
+
+```typescript
+    const outNodes = nodes.map(n => (edgeObjectVertices.has(n.id) && !n.hidden ? { ...n, hidden: true } : n));
+```
+
+`hidden` e' un campo del nodo React Flow. Il D layer non viene toccato: `x`, `y`, `w`, `h`,
+`isResized` restano sulla `DVertex` esattamente come erano. Non c'e' cancellazione, e non ho trovato
+nessun percorso che azzeri quei campi al passaggio di forma.
+
+I due layout finiscono quindi su **campi diversi dello stesso carrier**:
+
+| forma | dove vive il layout | campo |
+|---|---|---|
+| nodo | `DVertex` | `x`, `y`, `w`, `h`, `isResized` |
+| edge | la **stessa** `DVertex` (del nodo nascosto) | `irEdgeLayout` (`sourceSide`, `targetSide`, `waypoints`) |
+
+Non collidono perche' non condividono un campo. Tornando alla forma nodo, `hidden` torna falso e la
+posizione riemerge invariata. E' la stessa cosa che la discovery del 19/7 aveva previsto in §3.6
+(*«i campi restano inutilizzati ma agganciati a un'identita' viva»*), qui verificata sull'altro verso
+del passaggio.
+
+**Conseguenza per il fronte, senza proporre niente**: la forma del record di layout di un oggetto
+gia' oggi **dipende dal viewpoint**, perche' dipende dalla forma in cui quel viewpoint lo rende.
+Non e' una contraddizione della decisione del 19/7 — quella decisione ha messo `irEdgeLayout`
+proprio li' — ma e' un fatto che la formula «il layout e' proprieta' del disegno del modello» non
+descrive: qui non c'e' un layout, ce ne sono due, e quale sia attivo lo decide il viewpoint.
+
+### A.4.3 (3) Datazione rispetto al 2026-07-19
+
+```
+b8eeedb27 2026-07-18 feat: IR edge views — reference-as-edge styling and object-as-edge synthesis
+e0414a452 2026-07-18 fix: object-as-edge endpoints via lproxy objects + identity-slot name parity
+a5a322e75 2026-07-20 feat(editor-v2): wire IR connect gesture (object-as-edge) and containment drop
+d1dc55649 2026-08-02 feat(editor-v2): object-as-edge authoring in the edge view panel
+65b979ede 2026-08-17 feat(editor-v2): container endpoint for object-as-edge views (slice 2a)
+```
+
+(`git log --all --grep="object-as-edge" -i`; il file `irEdgeViews.ts` e' creato da `b8eeedb27`,
+verificato con `--diff-filter=A`.)
+
+**La risposta ha due meta' e vanno tenute separate.** La **sintesi** object-as-edge e' del
+**2026-07-18**, un giorno **prima** della decisione: il codice c'era. L'**authoring** e' del
+**2026-08-02**, due settimane **dopo**: fino ad allora un utente non poteva creare una view
+object-as-edge dal pannello. Al momento della decisione, quindi, la divergenza nodo/edge fra due
+viewpoint esisteva nello schema e nel motore, ma non era una cosa che un autore potesse produrre.
+Il dominio su cui la decisione e' stata presa e' cambiato il 2 agosto.
+
+## A.5 — Q0.d. R-2 **cita**, non poggia
+
+Letto il ragionamento e non la frase: la premessa del layout condiviso e' un **termine di paragone**,
+non un presupposto da cui la conclusione discende.
+
+La struttura di R-2 e' un contrasto in tre mosse. (i) *«Il caso gia' deciso indica la regola»* pone il
+layout come polo condiviso; (ii) *«Il collasso e' cosa diversa: e' proprieta' di come si sta guardando
+adesso»* stacca il collasso da quel polo; (iii) il **Ratificato** conclude: *«lo stato dichiarato
+sulla sintassi concreta e' per-viewpoint per default»*.
+
+Il passaggio che regge (iii) e' (ii), ed e' una proposizione **sullo stato**, non sul layout: lo
+stato dichiarato e' per-viewpoint perche' e' proprieta' di come si sta guardando adesso. Se cadesse
+(i) — se cioe' il layout risultasse anch'esso per-viewpoint — la conclusione non verrebbe
+falsificata: verrebbe **estesa**, perche' il default per-viewpoint diventerebbe uniforme invece che
+per contrasto. Un default non ha bisogno che esista un'eccezione per essere il default.
+
+Resta una dipendenza minore, e la segnalo perche' esiste davvero: il meccanismo di deroga ratificato
+subito dopo (*«La condivisione fra viewpoint e' una scelta esplicita dichiarata nell'IR (`shared:
+true` o equivalente)»*) perderebbe il suo esempio canonico. Perderebbe l'esempio, non la funzione:
+il flag serve a dichiarare la condivisione di qualunque stato, e il layout ne era l'illustrazione,
+non la giustificazione.
+
+**Rettifica a quanto ho scritto nella Fase 1.** Nel corpo del report, §3.1 punto 2, avevo scritto che
+*«Ribaltarla non lascia R-2 intatta: ne toglie il termine di paragone»*. Letto il ragionamento come
+Q0.d chiede, la formulazione e' troppo forte: **le toglie il termine di paragone e le lascia intatta
+la conclusione**. R-2 non va rimisurata se la premessa cade.
+
+## A.6 Domande aperte lasciate da questo addendum
+
+1. La misura a schermo di A.3.4 non e' stata presa (fase read only). Un'apertura dell'app con due
+   viewpoint di forma diversa sullo stesso modello la chiuderebbe in pochi minuti, e vale la pena
+   farla prima di decidere Q0: e' la differenza fra una sovrapposizione dedotta e una vista.
+2. Il percorso utente di A.4.1 e' dedotto dal substrato di authoring, non eseguito.
+3. Fuori dal perimetro di questo prompt ma emerso leggendo: `handleAutoLayout` **riscrive tutte le
+   posizioni sul D layer** (`EditorV2.tsx:3262`). E' uno scrittore di layout di massa che la Fase 1
+   non aveva censito perche' D4 non e' stata eseguita. Chi riprendera' D4 parta da li'.
+
+## A.7 Hard stop
+
+Raggiunto alla fine di Q0.d. Nessuna proposta, nessun progetto, nessuna revoca. Nessun file di
+codice modificato. D1..D8 restano sospese in attesa della risposta dell'architetto a Q0.

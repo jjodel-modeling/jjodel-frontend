@@ -1,5 +1,19 @@
 # Claude Code Session Log
 
+## 2026-08-22 — docs: Fase 1bis, i tre fatti di Q0 sul layout per viewpoint
+
+**Prompt**: prompt del 2026-08-22 11:45, Fase 1bis read-only. Quattro domande (Q0.a..Q0.d) per raccogliere i fatti senza cui Q0 sarebbe un'opinione: la citazione integrale della decisione, l'asimmetria taglia/posizione a schermo, `Eobj`, e se R-2 poggi o citi. Deroga P8 dichiarata. Vietato rispondere a Q0.
+**Files touched**: `docs/discovery/discovery_2026-08-22_layout_per_viewpoint.md` (addendum in coda, R-E/E-1), `docs/claude-code-log.md`
+**Outcome**: ✅ completed — Q0.a..Q0.d chiuse, hard stop rispettato, nessuna risposta a Q0.
+**Corregge**: 2026-08-22 10:30
+**Causa**: (c)
+**Regressions**: no — zero file di codice toccati.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessuna scrittura; `canvasToJjom.ts`, `EditorV2.tsx`, `jjomTransformers.ts` letti soltanto.
+**Smoke visivo**: non applicabile (deroga P8). La misura a schermo di Q0.b(3) non è stata presa: i px vengono dagli otto golden misurati sull'app, l'aritmetica della sovrapposizione è derivata. Dichiarato nel report.
+**Notes**: Ipotesi confermata sul dominio (authoring Eobj `d1dc55649` 2026-08-02, taglia da contenuto `115e8484d` 2026-08-15: entrambe dopo il 19/7) e su un punto: la taglia è già derivata per notazione e vive in sessione, la posizione è persistita e condivisa. Contraddetta è la generalizzazione del 3/8, non la decisione del 19/7. Q0.d: R-2 cita, non poggia — rettifica al §3.1 della Fase 1. Prima batteria di grep rotta da glob non quotati (0 hit su `dagre`, in realtà 15).
+**Prompt document name**: 2026-08-22 11:45
+
 ## 2026-08-22 — docs: discovery layout per viewpoint, arresto su D0
 
 **Prompt**: prompt del 2026-08-22 10:30, Fase 1 read-only in nove domande (D0..D8) sul layout indicizzato per viewpoint. D0 chiedeva di cercare a registro una decisione viva sul tema e, se trovata, di fermarsi lì. Deroga P8 dichiarata nel prompt.
