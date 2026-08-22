@@ -1,5 +1,19 @@
 # Claude Code Session Log
 
+## 2026-08-22 — docs: D1..D8 non eseguite, arresto al passo zero
+
+**Prompt**: prompt del 2026-08-22 17:05, D1..D8 più D10 con il gate D9 dichiarato chiuso. Passo zero obbligatorio: `grep -c "R-LAY" docs/decisions.md` con `R-IRN` come controllo positivo, e arresto se il primo torna 0. Deroga P8 dichiarata.
+**Files touched**: `docs/discovery/discovery_2026-08-22_layout_per_viewpoint.md` (addendum in coda), `docs/claude-code-log.md`
+**Outcome**: ⚠️ partial — arresto al passo zero come prescritto. D1..D8 e D10 **non eseguite**.
+**Corregge**: 2026-08-22 14:20
+**Causa**: (a)
+**Regressions**: no — zero file di codice toccati.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessun file letto oltre a `docs/`.
+**Smoke visivo**: non applicabile (deroga P8).
+**Notes**: `R-LAY` → 0 in `docs/decisions.md`; controllo positivo `R-IRN` → 57, il valore atteso dal prompt. In tutto il repo `R-LAY` compare solo in questo report e nella sua entry di log, che ne segnalano l'assenza (controllo positivo `R-IRN` → 41 file). Il memo del 22/8 non esiste. Working tree pulito, HEAD `caa08d91d`. Manca il travaso nel repo, non la decisione: seconda volta oggi sullo stesso fronte.
+**Prompt document name**: 2026-08-22 17:05
+
 ## 2026-08-22 — docs: Fase 1 ripresa, arresto condizionato su D9
 
 **Prompt**: prompt del 2026-08-22 14:20, ripresa read-only della Fase 1. D9 in testa (l'attivazione di un viewpoint è esclusiva o multipla?) con hard stop condizionato se più viewpoint possono rendere insieme, poi D1..D8. Deroga P8 dichiarata.

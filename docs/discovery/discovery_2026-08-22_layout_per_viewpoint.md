@@ -1108,3 +1108,37 @@ pochi minuti.
 
 Raggiunto su D9, per la condizione dichiarata nel prompt. Nessuna proposta di progetto, nessuna scelta
 di sede, nessuno schema, nessun codice. D1..D8 attendono la riformulazione della chiave.
+
+---
+
+# Addendum Fase 1: D1..D8 e D10
+
+**Data**: 2026-08-22 (quarta sessione)
+**Prompt document name**: 2026-08-22 17:05
+**Esito**: **arresto al PASSO ZERO.** `R-LAY` non e' a registro. D1..D8 e D10 **non eseguite**.
+
+Il prompt prescrive: *«Se il primo torna 0, fermati: la serie non e' a registro e questo prompt non ha
+le sue premesse. Scrivi una riga nel report e restituisci il controllo.»* Questa e' quella riga.
+
+**Misura** (cwd `/Users/alfonso/jjodel`, `command grep` = BSD grep, non il wrapper `ugrep`):
+
+| comando | output |
+|---|---|
+| `command grep -c "R-LAY" docs/decisions.md` | **0** |
+| `command grep -c "R-IRN" docs/decisions.md` | **57** ← controllo positivo, coincide col valore atteso dal prompt |
+| `command grep -rl "R-LAY" . --exclude-dir=node_modules --exclude-dir=.git` | **solo `docs/discovery/discovery_2026-08-22_layout_per_viewpoint.md` e `docs/claude-code-log.md`**, cioe' questo stesso report e la sua entry di log, che la citano per segnalarne l'assenza |
+| `command grep -rl "R-IRN" . --exclude-dir=node_modules --exclude-dir=.git \| wc -l` | **41** ← controllo positivo, stessa invocazione |
+| `find docs/ratifiche -iname "*2026-08-22*"` | **vuoto** |
+| `find docs/ratifiche -iname "*2026-08-1*" \| wc -l` | **19** ← controllo positivo, stessa invocazione |
+
+Il memo `docs/ratifiche/claude_2026-08-22_memo_ratifica_layout_per_viewpoint.md`, citato in
+RIFERIMENTI insieme al suo addendum §8, non esiste. Working tree pulito, `HEAD` = `caa08d91d`, nessun
+commit di terzi fra la sessione precedente e questa.
+
+**Nota, la stessa gia' scritta in B.0.2 e non ripetuta oltre**: non sto affermando che la ratifica non
+sia avvenuta. Il prompt riassume dieci righe `R-LAY-1..10` e cita fatti che solo il direttore poteva
+stabilire (l'emendamento del 19/7, la chiusura di D9 su R-LAY-6 e R-LAY-8, il perimetro di R-LAY-9, il
+divieto di R-LAY-10). Manca il **travaso nel repo**, non la decisione. E' la seconda volta oggi sullo
+stesso fronte, dopo l'arresto delle 14:20.
+
+D1..D8 e D10 sono pronte a partire e non dipendono da altro che dall'iscrizione della serie.
