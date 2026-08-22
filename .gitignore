@@ -61,3 +61,6 @@ frontend/src/todo_others
 /CLAUDE.md
 _to_delete/
 .claude/settings.local.json
+
+# Sonde temporanee dello smoke: restano su disco, fuori da git
+frontend/scripts/smoke/_tmp_*

@@ -1635,6 +1635,37 @@ bag `_state`, che non contiene affatto il run-state.
   famiglia del testo, regime A e regime B devono risolvere identici**. Non e' una verifica di valori,
   e' la convergenza di due dei tre regimi, cioe' il punto di tutta D-UI-13.
 
+- **D-UI-14** (2026-08-21) — **Gli z-index di questa app vivono in due universi, e quello che conta
+  non e' quello scritto nei fogli.** `#root` e' `position: fixed` (`index.scss:31`), quindi **crea un
+  contesto di impilamento**, e a livello `body` vale `auto`, cioe' **0**. Il rail non gli sta dentro:
+  `.properties-tree-overlay` e' **fratello** di `#root`, figlio di `body`, a **900**. Ne segue che
+  **nessun numero scritto dentro l'app partecipa al confronto col rail**: il `950` della navbar, il
+  `1000` del menu utente e il `999998` del popover delle notifiche sono tutti confinati dentro uno
+  zero. Misurato: i figli di `body` sono `#root` (fixed, auto), `.sim-panel` (fixed, 850),
+  `.properties-tree-overlay` (fixed, 900).
+
+  **Regola.** Un overlay che deve stare sopra il rail **deve essere figlio di `body`**, cioe' passare
+  da un portale, e il suo numero si legge sulla **scala di livello body**, non su quella interna. La
+  scala di livello body, oggi e per misura: `#root` 0, `.sim-panel` 850, il rail 900, i popup portati
+  fuori `--z-dropdown-menu` (1000), i modali sopra (verificato con `elementFromPoint` a menu aperto).
+  Il pattern del portale esiste gia' nel repo (`Navbar.tsx:1902`) e si riusa quello.
+
+  **Corollario su D-UI-13.** La deroga sugli z-index resta, ma **l'arco 8 si sgonfia**: le due scale
+  divergenti (`tokens.css` con `--z-tooltip` 1070 sopra `--z-modal` 1050, `_z-index.scss` con tooltip
+  1050 sotto modal 9999) vivono tutte e due **dentro `#root`**, quindi unificarle non avrebbe cambiato
+  nulla di questo difetto. Resta igiene interna, col suo difetto vero (il tooltip sotto la modale) che
+  morde solo fra fratelli dentro `#root`.
+
+  **Nota di metodo, registrata perche' e' stata pagata.** L'ipotesi dell'architetto era **giusta nella
+  tesi** (contesto e non valore, dedotta dal fatto che un 999998 perdeva contro un 900) e **sbagliata
+  in entrambi i colpevoli che nominava**: `.app-statusbar { z-index: 50 }` sta su elemento **statico**,
+  quindi e' inerte e non crea contesto; e il `100` di `navbar.scss:170` non e' nemmeno il valore vivo,
+  perche' vince `var(--z-navbar)` = 950. Il rimedio era giusto per una ragione diversa da quella
+  scritta. Ha tenuto perche' la Fase 1 chiedeva **le catene di antenati complete**, non la verifica del
+  sospetto: un prompt che chiede «controlla se e' colpa di X» avrebbe fatto fermare la misura al primo
+  sospetto plausibile. **Nominare il sospetto va bene solo se la misura richiesta e' piu' larga del
+  sospetto.**
+
 ## Superate
 
 - **D3** (2026-07-26, routing congelato in v1) — superata da E-route il 2026-08-06.
