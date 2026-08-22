@@ -1,5 +1,19 @@
 # Claude Code Session Log
 
+## 2026-08-22 — docs: Fase 1 ripresa, arresto condizionato su D9
+
+**Prompt**: prompt del 2026-08-22 14:20, ripresa read-only della Fase 1. D9 in testa (l'attivazione di un viewpoint è esclusiva o multipla?) con hard stop condizionato se più viewpoint possono rendere insieme, poi D1..D8. Deroga P8 dichiarata.
+**Files touched**: `docs/discovery/discovery_2026-08-22_layout_per_viewpoint.md` (addendum in coda, R-E/E-1), `docs/claude-code-log.md`
+**Outcome**: ⚠️ partial — hard stop condizionato **scattato** su D9. D1..D8 **non eseguite**, come prescrive il prompt.
+**Corregge**: —
+**Causa**: (c)
+**Regressions**: no — zero file di codice toccati.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessuna scrittura; `selectors.ts`, `classes.ts`, `irResolveCore.ts` letti soltanto.
+**Smoke visivo**: non applicabile (deroga P8). Il rischio di disallineamento fra i due scrittori dell'attivazione (`NestedView.tsx:111`/`:315` non aggiornano `state.viewpoint`) resta non verificato a runtime e registrato come tale.
+**Notes**: `selectors.ts:552-559`: il renderer classico applica insieme viewpoint attivo, Default e **ogni viewpoint non esclusivo**; esclude solo gli esclusivi non attivi. editor-v2 filtra invece su un id solo (`irResolveCore.ts:139`). Due semantiche diverse. L'occhio non è il comando: apre per l'authoring (`ProjectEditor.tsx:1179`); l'attivazione è il `vp-toggle` di `NestedView.tsx:364`. **`R-LAY` e il memo del 22/8 non sono nel repo** (controlli positivi nel report): nulla verificato contro di essi.
+**Prompt document name**: 2026-08-22 14:20
+
 ## 2026-08-22 — docs: Fase 1bis, i tre fatti di Q0 sul layout per viewpoint
 
 **Prompt**: prompt del 2026-08-22 11:45, Fase 1bis read-only. Quattro domande (Q0.a..Q0.d) per raccogliere i fatti senza cui Q0 sarebbe un'opinione: la citazione integrale della decisione, l'asimmetria taglia/posizione a schermo, `Eobj`, e se R-2 poggi o citi. Deroga P8 dichiarata. Vietato rispondere a Q0.

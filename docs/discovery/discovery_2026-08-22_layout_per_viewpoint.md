@@ -726,3 +726,385 @@ la conclusione**. R-2 non va rimisurata se la premessa cade.
 
 Raggiunto alla fine di Q0.d. Nessuna proposta, nessun progetto, nessuna revoca. Nessun file di
 codice modificato. D1..D8 restano sospese in attesa della risposta dell'architetto a Q0.
+
+---
+
+# Addendum Fase 1 ripresa: D9 e D1..D8
+
+**Data**: 2026-08-22 (terza sessione)
+**Prompt document name**: 2026-08-22 14:20
+**Deroga**: P8 non si applica (fase read only, nessuna modifica al codice, nessuno smoke).
+**Esito**: **HARD STOP CONDIZIONATO SCATTATO su D9.** Piu' viewpoint **possono** essere applicati
+contemporaneamente al rendering. **D1..D8 non eseguite**, come prescrive il prompt.
+
+## B.0 Due cose in testa, in ordine di urgenza
+
+### B.0.1 La condizione di arresto e' verificata
+
+`frontend/src/redux/selectors/selectors.ts:552-559`, verbatim — il commento e' dell'autore, non mio:
+
+```typescript
+            // don't match exclusive views from other vp
+            let dvp: DViewPoint = DPointerTargetable.fromPointer(dview.viewpoint, state);
+            let oldVpMatch: number = tnv.viewPointMatch;
+            // console.log("vp matching " +vid, {vid, dvp, activevpid });
+            if (dvp.id === activevpid) tnv.viewPointMatch = ViewEClassMatch.VP_Explicit;
+            else if (dvp.id === 'Pointer_ViewPointDefault') tnv.viewPointMatch = ViewEClassMatch.VP_Default;
+            else if (!dvp.isExclusiveView) tnv.viewPointMatch = ViewEClassMatch.VP_Decorative;
+            else tnv.viewPointMatch = ViewEClassMatch.VP_MISMATCH;
+```
+
+Il ramo che conta e' il terzo: **un viewpoint non esclusivo entra nel rendering senza essere
+attivo**, per il solo fatto di esistere nel progetto. Solo il quarto ramo esclude, e esclude i soli
+viewpoint **esclusivi e non attivi**. Il commento dell'autore lo dice per intero: *«don't match
+exclusive views from other vp»* — quelle non esclusive, da altri vp, **matchano**.
+
+L'insieme applicato al rendering in un dato istante e' quindi:
+
+```
+{ viewpoint attivo }  ∪  { Pointer_ViewPointDefault }  ∪  { ogni viewpoint non esclusivo del progetto }
+```
+
+Non e' un id. La chiave del layout, se seguisse cio' che rende, non sarebbe un id.
+
+### B.0.2 `R-LAY` e il memo di ratifica **non esistono nel repo**
+
+Il prompt chiede di rileggere la serie `R-LAY` righe 1..7 in `docs/decisions.md` e di non fidarsi del
+riassunto. Ho ubbidito, e non c'e' niente da rileggere.
+
+| ricerca (cwd `/Users/alfonso/jjodel`) | output |
+|---|---|
+| `command grep -c "R-LAY" docs/decisions.md` | **0**, exit 1 |
+| `command grep -rl "R-LAY" docs/` | **nessun file**, exit 1 |
+| `find docs -iname "*layout_per_viewpoint*"` | **solo questo report**; il memo `docs/ratifiche/claude_2026-08-22_memo_ratifica_layout_per_viewpoint.md` non esiste |
+| `ls docs/ratifiche/ \| grep -i "2026-08-22"` | vuoto, exit 1 |
+
+**Controlli positivi, stessi comandi**: `command grep -c "R-IRN" docs/decisions.md` -> **57**;
+`command grep -rl "R-RAIL-28" docs/` -> **3 file**; `find docs/ratifiche -iname "*memo_ratifica*" |
+wc -l` -> **13**. I comandi hanno segnale sui file su cui `R-LAY` risponde zero.
+
+Working tree pulito, `HEAD` = `b65849183` (l'addendum di Fase 1bis), nessun commit di terzi
+intervenuto.
+
+**Come va letto, senza sovrainterpretare.** Non sto dicendo che la ratifica non sia avvenuta: il
+prompt la riporta e il direttore la dichiara, e per P10 il Project Knowledge tiene lo stato corrente
+mentre il repo tiene la storia. Sto dicendo che **la sua copia nel repo manca**, quindi ogni verifica
+di questa sessione contro `R-LAY-1..7` sarebbe stata una verifica contro un testo che non ho potuto
+leggere. Non ho verificato nulla contro `R-LAY`, e dove il prompt chiede di farlo (domanda aperta 3)
+lo dichiaro invece di simularlo.
+
+E' lo stesso schema gia' visto il 2026-08-17 con `R-SIM` (entry di log del 2026-08-17): un fronte
+ratificato in chat, il repo indietro di un passo. Vale la pena chiudere il travaso prima della
+prossima slice, perche' `R-LAY-6` — a quanto riporta il prompt — e' proprio la riga che vieta di
+implementare, ed e' la meno utile da tenere in un solo posto.
+
+## B.1 Ipotesi e obiettivo
+
+**Obiettivo**: eseguire D9 e, se non scattava l'arresto, D1..D8.
+
+**Ipotesi che D9 falsifica**: che l'attivazione di un viewpoint sia esclusiva, cioe' che in ogni
+istante un solo viewpoint governi la resa, e che `activeViewpoint` sia quindi la chiave naturale di
+un eventuale layout indicizzato.
+
+**Falsificata.** L'ipotesi e' vera **del controllo di attivazione** e falsa **della resa**: il
+controllo scrive un id singolo, il renderer classico ne applica tre categorie insieme. La distanza
+fra le due cose e' il finding di questa sessione.
+
+## B.2 File letti (path completi)
+
+- `/Users/alfonso/jjodel/docs/decisions.md` (ricerche su `R-LAY`; nessun blocco da leggere)
+- `/Users/alfonso/jjodel/frontend/src/redux/selectors/selectors.ts` (righe 410-440, 535-585)
+- `/Users/alfonso/jjodel/frontend/src/joiner/classes.ts` (righe 1116, 2895-2930, 3345-3365, 3990-4076)
+- `/Users/alfonso/jjodel/frontend/src/utils/lastViewpoint.ts` (righe 1-165)
+- `/Users/alfonso/jjodel/frontend/src/view/viewPoint/viewpoint.ts` (righe 1-60)
+- `/Users/alfonso/jjodel/frontend/src/components/editors/views/NestedView.tsx` (righe 78-140, 355-375, 490-525)
+- `/Users/alfonso/jjodel/frontend/src/components/project/ProjectEditor.tsx` (righe 1179-1216, 2615-2680)
+- `/Users/alfonso/jjodel/frontend/src/components/TreeViewSidebar/TreeViewContent.tsx` (righe 483-500, 555-575, 2285-2335)
+- `/Users/alfonso/jjodel/frontend/src/components/editor-v2/viewpoint/ir/irResolveCore.ts` (righe 100-175)
+
+Tutti in sola lettura.
+
+## B.3 — D9.1. Il componente, l'handler, e tre occhi che non sono quello che sembrano
+
+Il prompt parla di «un'icona a occhio» per viewpoint. Nel codice `bi-eye` compare tre volte in zona
+viewpoint, e **nessuna delle tre e' il comando di attivazione**. Vale la pena separarle, perche' e'
+esattamente il tipo di deduzione-dal-nome che il prompt vieta.
+
+| occorrenza | file:riga | che cosa fa davvero |
+|---|---|---|
+| badge di tipo nell'albero | `TreeViewContent.tsx:564` | voce di una tabella di icone: `'tree-viewpoint': { icon: 'bi-eye', label: 'Viewpoint' }`. Decorativa |
+| icona di testata del pannello | `NestedView.tsx:500` | dentro `viewpoints-header__icon`, accanto al titolo `Viewpoints`. Decorativa |
+| bottone azione in ProjectEditor | `ProjectEditor.tsx:2667-2669` | `title="View"`, ma **apre per l'authoring**, non attiva |
+
+Il terzo e' il piu' insidioso, perche' ha `title="View"`. Verbatim, `ProjectEditor.tsx:2666-2670`:
+
+```tsx
+                                        <button className="icon-btn" title="View"
+                                                onClick={() => handleOpenViewpoint(vp)}>
+                                            <i className="bi bi-eye" />
+                                        </button>
+```
+
+E il corpo dell'handler, `ProjectEditor.tsx:1179-1182`, verbatim — letto, non dedotto dal nome:
+
+```typescript
+    const handleOpenViewpoint = async (vp: LViewPoint) => {
+        // TODO: redirect to panels/viewpoint-editor
+        DockManager.openViewpoint(vp);
+    };
+```
+
+Apre una tab. Non tocca `activeViewpoint`.
+
+**Il comando vero e' un interruttore, non un occhio.** `NestedView.tsx:364-376`, verbatim:
+
+```tsx
+                    {isVP && d.isExclusiveView && (
+                        <div className="viewpoint-active-toggle" onClick={preventClick}>
+                            <Tooltip tooltip={isActive ? 'Active viewpoint' : 'Click to activate'} inline={true} position={'top'} offsetY={10}>
+                                <div
+                                    className={`vp-toggle ${isActive ? 'active' : ''}`}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        e.preventDefault();
+                                        select(d.id);
+                                    }}
+                                    role="switch"
+                                    aria-checked={isActive}
+```
+
+Due cose da notare, entrambe portanti.
+
+1. Il gate e' `isVP && d.isExclusiveView`: **i viewpoint overlay non hanno alcun interruttore.** Non
+   si attivano perche' non ne hanno bisogno — rendono comunque (B.0.1).
+2. `role="switch"` con `aria-checked={isActive}`, e `isActive` e' definito a `NestedView.tsx:130`,
+   verbatim: `let isActive = d.id === activeViewpointId;`. Un confronto di uguaglianza contro un id
+   solo.
+
+L'handler, `NestedView.tsx:110-111`, verbatim:
+
+```typescript
+            const previousViewpoint = project.activeViewpoint;
+            project.activeViewpoint = ptr as any;
+```
+
+Assegnazione singola. Il resto della funzione e' logging di attivita'.
+
+## B.4 — D9.2. Lo stato scritto e' un id singolo; l'insieme che rende e' derivato
+
+**Quello che si scrive e' un id.** `frontend/src/joiner/classes.ts:2899`, verbatim, e la riga 2924 e'
+identica su `DProject`:
+
+```typescript
+    activeViewpoint: Pointer<DViewPoint, 0, 1> = Defaults.viewpoints[0];
+```
+
+Cardinalita' `0, 1`. Il setter, `classes.ts:3355-3362`, scrive un valore solo dentro `TRANSACTION`:
+
+```typescript
+        TRANSACTION(this.get_name(c)+'.activeViewpoint', ()=>{
+            SetFieldAction.new(c.data.id, 'activeViewpoint', val, '', true);
+```
+
+E il percorso alternativo, `utils/lastViewpoint.ts:59-69`, scrive **due** campi con lo stesso id
+singolo, deliberatamente fuori da `TRANSACTION` (verbatim, commento compreso perche' e' la ragione):
+
+```typescript
+    if (projectId) {
+        SetFieldAction.new(projectId, 'activeViewpoint', viewpointId || null, '', true);
+    }
+```
+```typescript
+    SetRootFieldAction.new('viewpoint', viewpointId || null, '', true);
+```
+
+**Quello che rende e' un insieme, e non e' memorizzato da nessuna parte: e' ricalcolato a ogni
+scoring** dai quattro rami di `selectors.ts:556-559`. Quanti elementi puo' contenere: `1 + 1 + K`,
+dove K e' il numero di viewpoint non esclusivi del progetto — cioe' **illimitato dal punto di vista
+dello schema**, perche' nulla limita quanti viewpoint overlay un progetto possa avere.
+
+Chi lo legge: `NodeTransientProperties.sort` (`joiner/classes.ts:4051-4076`), che dei punteggi cosi'
+calcolati fa due liste. Verbatim, `classes.ts:4060-4063`:
+
+```typescript
+            const score = tnv.finalScore = Selectors.getFinalScore(tnv, vid, pv, dview);
+            if (!(score > 0)) continue; // do not flip to <=, because undefined and NEGATIVE_INFINITY always compute to false.
+            (dview.isExclusiveView ? mainViews : decorativeViews).push( {element:vid, score, view: LPointerTargetable.fromD(dview)} );
+```
+
+I pesi che entrano nel prodotto, `joiner/classes.ts:3995-3998`, verbatim:
+
+```typescript
+    static VP_MISMATCH: number = Number.NEGATIVE_INFINITY;
+    static VP_Default = 1;
+    static VP_Decorative = 1;
+    static VP_Explicit = 2;
+```
+
+Il viewpoint attivo pesa il doppio del Default e degli overlay, ma **non li spegne**: e' un fattore
+moltiplicativo in `getFinalScore` (`selectors.ts:434`, verbatim: `return entry.viewPointMatch *
+entry.metaclassScore * pvScore * explicitprio + defualtViewMalus;`), non un filtro. Solo
+`VP_MISMATCH`, che vale `-Infinity`, esce dalla gara — e la riga 4061 e' scritta apposta per
+quell'infinito negativo, come dice il suo commento.
+
+## B.5 — D9.3. `activeViewpoint`, `state.viewpoint` e `getLastEditedViewpointId()`: tre cose diverse
+
+Il prompt avverte sul precedente di `hasWorkbenchVP`. L'avvertimento e' fondato e c'e' un terzo
+livello che non era nominato.
+
+| variabile | dove vive | chi la scrive | chi la legge |
+|---|---|---|---|
+| `DProject.activeViewpoint` | **D layer, persistito** — `classes.ts:2899`, `Pointer<DViewPoint, 0, 1>` | `set_activeViewpoint` (`classes.ts:3355`) e `activateViewpoint` (`lastViewpoint.ts:60`) | il renderer **classico**, via `activevpid` in `selectors.ts:556` |
+| `state.viewpoint` | **root dello stato Redux** | solo `activateViewpoint` (`lastViewpoint.ts:69`) | **editor-v2 / IR**: `irResolveCore.ts:117` e `:139` |
+| `lastEditedViewpointId` | **variabile di modulo in memoria** — `lastViewpoint.ts:15`, verbatim: `let lastEditedViewpointId: string | null = null;` | `setLastEditedViewpoint` | `resolveParentViewpoint` (`lastViewpoint.ts:135`) e `hasWorkbenchVP` |
+
+`hasWorkbenchVP`, `TreeViewContent.tsx:483`, verbatim: `const hasWorkbenchVP =
+!!getLastEditedViewpointId();`. Non ha niente a che vedere con l'attivazione: dice solo se in questa
+sessione l'utente ha aperto un viewpoint in workbench, e serve ad abilitare la voce «Create View».
+Non e' persistita e non sopravvive a un reload.
+
+Le prime due sono scritte insieme e restano allineate perche' hanno **un solo scrittore comune**
+(`activateViewpoint`), che pero' e' deliberatamente **fuori da `TRANSACTION`** — commento verbatim
+a `lastViewpoint.ts:43-45`:
+
+```
+ * Uses direct SetFieldAction instead of the L-proxy setter to avoid async
+ * TRANSACTION batching issues that caused the SetRootFieldAction to interfere
+ * with the project.activeViewpoint update.
+```
+
+Ma **non hanno un solo scrittore in assoluto**: `NestedView.tsx:111` e `:315` scrivono
+`project.activeViewpoint = ptr` direttamente, senza passare da `activateViewpoint`, quindi
+**senza aggiornare `state.viewpoint`**. Il toggle del viewpoint classico muove la variabile che
+legge il renderer classico e lascia ferma quella che legge editor-v2. Non l'ho verificato a runtime
+e non e' oggetto di questo prompt: lo registro come rischio in B.8, non come finding chiuso.
+
+## B.6 — D9.4. Che cosa vede il canvas. E l'asimmetria fra i due renderer
+
+### B.6.1 Renderer classico: un main piu' una pila
+
+`joiner/classes.ts:4071-4073`, verbatim:
+
+```typescript
+        tn.mainView = mainViews[0]?.view;
+        tn.validMainViews = mainViews.map((s)=> s.view); // this have duplicates of newly created elements
+        tn.stackViews = decorativeViews.map((s)=> s.view);
+```
+
+Il canvas vede, **per ogni nodo**: **una** main view — la esclusiva col punteggio piu' alto fra
+quelle sopravvissute — piu' **tutte** le decorative con punteggio positivo, ordinate per punteggio
+(`classes.ts:4065-4066`, verbatim: `decorativeViews.sort((s1, s2)=> s2.score - s1.score);`, idem per
+`mainViews`). La dichiarazione del campo lo mette per iscritto, `classes.ts:4031`, verbatim:
+
+```typescript
+    stackViews!: LViewElement[]; // for each parentview, an array of Decorative Views[] sorted by score (including parent view influence).
+```
+
+Quindi: **la main view viene da un viewpoint solo** (l'attivo, o il Default, o un overlay se e' lui
+a portare l'unica esclusiva applicabile), **ma le decorative impilate sopra possono venire da
+viewpoint diversi contemporaneamente**, senza che l'utente abbia attivato nulla.
+
+### B.6.2 editor-v2 / IR: un viewpoint solo, e il confronto e' secco
+
+`components/editor-v2/viewpoint/ir/irResolveCore.ts:139-155`, verbatim (estratto contiguo):
+
+```typescript
+    const vp = state.viewpoint as string;
+```
+```typescript
+    for (const vid of list) {
+        const d = lookup?.[vid];
+        if (!d || d.viewpoint !== vp) continue;
+```
+
+Un solo id, un confronto di disuguaglianza, `continue`. Stessa forma nella firma di invalidazione,
+`irResolveCore.ts:117-125`, verbatim:
+
+```typescript
+export function computeIRSignature(state: any): string {
+    const vp = state.viewpoint;
+    if (!vp) return '';
+    const lookup = state.idlookup;
+    const parts: string[] = [vp];
+    const list: string[] = state.viewelements ?? [];
+    for (const vid of list) {
+        const d = lookup?.[vid];
+        if (!d || d.viewpoint !== vp) continue;
+```
+
+**Le due meta' dell'applicazione hanno due semantiche di viewpoint diverse**, e la differenza non e'
+di grado: editor-v2 e' esclusivo per costruzione, il classico e' cumulativo per costruzione. Nessuna
+delle due e' un bug — sono due modelli — ma un layout «indicizzato per viewpoint» ha bisogno di
+sapere quale dei due sta descrivendo, e la risposta non e' la stessa.
+
+### B.6.3 Perche' questo ferma D1..D8
+
+Il prompt lo anticipa e ha ragione: *«In quel caso la chiave del layout non e' un id ma un insieme e
+R-LAY-1 va riformulata»*. Aggiungo la ragione che ho misurato, che e' un po' peggiore di come la
+condizione era formulata: la chiave non e' nemmeno un insieme stabile, perche' **l'insieme che rende
+non e' memorizzato**. E' ricalcolato per nodo, per view, a ogni scoring, e dipende da `metaclassScore`,
+`pvScore` e `explicitprio` oltre che dal viewpoint. Due nodi dello stesso modello, nello stesso
+istante, possono avere pile decorative diverse.
+
+Eseguire D1..D8 adesso significherebbe censire lettori e scrittori (D3, D4) e misurare un costo (D8)
+contro un contratto di chiave che non regge. Mi fermo qui.
+
+## B.7 Quello che questa sessione **non** ha accertato
+
+D1..D8 **non eseguite**. In particolare restano ignote la sede dei campi (D1), la molteplicita'
+misurata dei graph element per view (D2 — e resta valido l'avvertimento dell'addendum di Fase 1bis:
+i tre documenti che dicono «il DGraph e' per modello» sono citazioni, non misure), lettori e
+scrittori (D3, D4), la meta' persistita della taglia (D5), lo stato dei waypoint (D6), versione e
+migrazione (D7), il costo in stato (D8).
+
+Non ho verificato nulla contro `R-LAY-1..7`, per la ragione di B.0.2.
+
+## B.8 Dipendenze e rischi
+
+- **Rischio di contratto**: `R-LAY-1`, per come il prompt la riassume, poggia su una chiave a id
+  singolo. B.0.1 la contraddice sul renderer classico. Va riformulata prima che D1..D8 abbiano un
+  bersaglio.
+- **Rischio di disallineamento fra i due scrittori dell'attivazione** (B.5): `NestedView.tsx:111` e
+  `:315` scrivono `project.activeViewpoint` senza aggiornare `state.viewpoint`. Se confermato a
+  runtime, il viewpoint attivo per il classico e quello attivo per editor-v2 possono divergere. **Non
+  verificato a runtime**, registrato come rischio.
+- **Rischio documentale** (B.0.2): il travaso della ratifica dal KB al repo e' in arretrato di un
+  passo. Precedente identico: `R-SIM`, 2026-08-17.
+- **Nessun rischio tecnico introdotto**: zero file di codice modificati.
+
+## B.9 Domande aperte per l'architetto
+
+Le tre prescritte dal prompt, piu' quella che l'arresto solleva.
+
+**Q4 (nuova, ed e' quella che blocca).** Il layout va indicizzato su **cio' che si attiva** o su
+**cio' che rende**? Sono due cose diverse e il codice le tiene separate. Se si sceglie cio' che si
+attiva, la chiave e' `activeViewpoint`, e' un id, e L-1 regge — al prezzo che il layout non descrive
+la resa effettiva, perche' le decorative di altri viewpoint continuano a impilarsi sopra. Se si
+sceglie cio' che rende, la chiave non e' un id ne' un insieme stabile, ed e' il caso in cui il fronte
+va ripensato. Notare che **su editor-v2 le due risposte coincidono** (B.6.2): la divergenza e' tutta
+del renderer classico, e quanto pesi dipende da quanto il classico sia ancora un bersaglio.
+
+**Q1 — Sulla base di D1 e D2, qual e' la sede giusta del record, e perche' le altre due sono
+peggiori?**
+*Non rispondibile, e il prompt stesso vieta di scegliere una sede.* D1 e D2 non sono state eseguite.
+Va aggiunto che la domanda presuppone tre candidate (sede attuale, tabella di progetto, dizionario su
+`DViewPoint`) tutte indicizzate da un id: se Q4 si risolve verso «cio' che rende», nessuna delle tre
+e' esprimibile cosi' com'e' scritta.
+
+**Q2 — Esiste un percorso che scrive layout senza passare dagli scrittori censiti in D4?**
+*Non rispondibile*: D4 non e' stata eseguita, quindi non c'e' un censimento rispetto a cui definire
+un «fuori». Resta agli atti dall'addendum di Fase 1bis l'unico scrittore emerso incidentalmente e non
+previsto dal prompt originale, `handleAutoLayout` (`EditorV2.tsx:3262`), che il prompt di oggi ha
+infatti promosso a punto di partenza di D4.
+
+**Q3 — Quale delle righe `R-LAY-1..7` il codice contraddice o rende piu' cara?**
+*Non rispondibile per indisponibilita' della fonte* (B.0.2): le sette righe non sono nel repo e non le
+ho lette. Sulla sola `R-LAY-1` come il prompt la riassume — chiave `viewpointId | ABSTRACT` — il
+finding B.0.1 e' pertinente e la contraddice **sul renderer classico**, non su editor-v2. Sulle altre
+sei non dico nulla: non le ho viste. Quando il memo sara' nel repo, questa domanda si richiude in
+pochi minuti.
+
+## B.10 Hard stop
+
+Raggiunto su D9, per la condizione dichiarata nel prompt. Nessuna proposta di progetto, nessuna scelta
+di sede, nessuno schema, nessun codice. D1..D8 attendono la riformulazione della chiave.
