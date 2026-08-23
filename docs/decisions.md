@@ -1692,6 +1692,8 @@ Report: `docs/discovery/discovery_2026-08-22_layout_per_viewpoint.md` e i suoi a
 
 **R-LAY-10** (2026-08-22) — Nessuna implementazione finché non è accertato che esista **una sola sorgente** del viewpoint attivo. `NestedView.tsx:111` e `:315` scrivono `project.activeViewpoint` senza passare da `activateViewpoint`, quindi senza aggiornare `state.viewpoint`: se confermato, la chiave del layout è ambigua alla radice. Verifica e rimedio in perimetro `2.228` slice 2, non in un fronte a parte.
 
+**R-LAY-11** (2026-08-23) — La condizione «una sola sorgente» di R-LAY-10 è soddisfatta quando `activateViewpoint` (`lastViewpoint.ts:49`) è l'unico scrittore vivo di `project.activeViewpoint` e di `state.viewpoint`. La terza sorgente osservata a schermo il 2026-08-23, `lastEditedViewpointId` (`lastViewpoint.ts:15`), è dichiarata morta per misura: `setLastEditedViewpoint` e `clearLastEditedViewpoint` hanno zero call site in `frontend/src` (chiamanti rimossi con l'editor v3, `5999f50c6` del 2026-04-06 e `bb0bc6c58` del 2026-04-11; già censita «dormant/write-less» nella entry di log di `49b7524cd`, 2026-06-11). Non è una sorgente dell'attivazione e resta fuori dalla condizione. I tre gate che la leggono (`ContextMenu.tsx:487`, `:531`, `TreeViewContent.tsx:483`) sono affordance permanentemente disabilitate: difetto UX distinto, non bloccante per il fronte layout, rimedio in un fronte suo. La macchineria morta non si rimuove dentro `2.228` (Rule 9).
+
 ## Superate
 
 - **D3** (2026-07-26, routing congelato in v1) — superata da E-route il 2026-08-06.
