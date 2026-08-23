@@ -19,10 +19,10 @@
 **Outcome**: ✅ completed
 **Corregge**: —
 **Causa**: —
-**Regressions**: unknown
+**Regressions**: no — verifica visiva di Alfonso il 2026-08-23 (sera), hard-refresh su `4c9953fe2`: su un modello, con un viewpoint diverso da «Abstract syntax» attivo dal select, VIEW e Theme sono disabilitati e i menu aperti si chiudono; tornando su «Abstract syntax» si riattivano.
 **Out-of-scope changes**: no
 **Layer Impact Report**: not-required
-**Smoke visivo**: non applicabile
+**Smoke visivo**: passato (Alfonso, 2026-08-23), vedi Regressions.
 **Notes**: Condizione `viewControlsDisabled = !!shownViewpointId` (Toolbar.tsx:240), non la root grezza: `''` e' esattamente «Abstract syntax» e il caso metamodello vi collassa una riga sopra, quindi su M2 i controlli restano vivi. `disabled` opzionale su `ColorSchemeSelectorProps` (Rule 11); due effetti chiudono i menu aperti sotto un trigger che si disabilita. `.toolbar-dropdown-btn` non aveva stile disabled: aggiunto. Gate: tsc diff vuoto, build 0, test 1323/1323.
 **Prompt document name**: —
 
