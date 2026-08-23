@@ -109,11 +109,20 @@ citata altrove come fatto misurato.
 ## §8 — Addendum: lacuna dichiarata
 
 Il prompt `claude_2026-08-22_1705_prompt_layout_per_viewpoint_d1_d8_d10.md` cita in RIFERIMENTI
-«questo memo e il suo addendum §8». **L'addendum §8 non è stato ricostruito**: non compare in nessun
-documento del repo, e la sessione che mette a terra il memo non ha il testo originale della chat.
+«questo memo e il suo addendum §8».
 
-Chi lo ha (Alfonso) lo incolla qui. Finché la sezione resta vuota, un prompt che la cita in
-RIFERIMENTI **non ha quel riferimento** e deve dirlo invece di procedere come se ce l'avesse.
+**L'addendum §8 è perduto.** Non compare in nessun documento del repo, la sessione che mette a terra
+il memo non ha il testo originale della chat, e Alfonso lo ha cercato il 2026-08-23 senza trovarlo.
+Non è una lacuna in attesa di essere colmata: è chiuso così.
+
+**Conseguenza operativa, che vale come clausola.** Un prompt che cita «l'addendum §8» in RIFERIMENTI
+sta citando un documento inesistente. Chi lo legge lo dichiara nel report e procede sul resto, invece
+di trattare come noto ciò che quella sezione avrebbe dovuto contenere. Se emerge che una decisione
+poggiava su §8 e su nient'altro, quella decisione va rifatta, non ricostruita.
+
+**Precedente da non ripetere.** §8 è andato perso perché il memo è stato consegnato in chat e non
+messo a terra lo stesso giorno. È esattamente il rischio che la clausola di processo (b) della serie
+`RC` è destinata a chiudere.
 
 ---
 

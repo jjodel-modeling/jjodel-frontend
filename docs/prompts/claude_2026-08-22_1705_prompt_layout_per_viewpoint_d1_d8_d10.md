@@ -14,8 +14,8 @@ consegnato in chat e mai messo a terra. È il file che
 `docs/claude-code-log.md` (entry «2026-08-22 — docs: D1..D8 non eseguite, arresto al passo zero») e
 `docs/discovery/discovery_2026-08-22_layout_per_viewpoint.md` §1114 citano come «prompt del
 2026-08-22 17:05». Il passo zero, i vincoli e le otto domande D1..D8 sono ricostruiti fedelmente
-dalle sezioni §5 e §B.7 della discovery, che le enumera. **D10 non è ricostruibile**: vedi la sezione
-apposita, che è un blocco e non un dettaglio.
+dalle sezioni §5 e §B.7 della discovery, che le enumera. **D10 è invece perduta e riscritta da capo il
+2026-08-23**: la sua sezione dichiara la provenienza e non va letta come recupero dell'originale.
 
 ---
 
@@ -121,14 +121,34 @@ Il fattore moltiplicativo sullo stato persistito, **misurato su un progetto real
 è un rischio teorico: la persistenza passa da `localStorage` con `compressToUTF16`. Se ti serve un
 progetto e non ce l'hai, dillo e fermati su questa sola domanda invece di stimare.
 
-### D10 — DA COMPLETARE, non eseguire
+### D10 — I due casi limite della chiave
 
-**Il testo di D10 non è ricostruibile.** Il log e la discovery la citano («D1..D8 più D10») senza
-enunciarla, e nessun altro documento del repo la contiene.
+**Provenienza, da dichiarare.** L'enunciato originale di D10 è perduto: log e discovery la citano
+(«D1..D8 più D10») senza mai enunciarla, non compare in nessun file del repo, e la ricerca in chat
+del 2026-08-23 non l'ha trovata. Quella che segue è una **riformulazione scritta il 2026-08-23**, non
+un recupero. È stata costruita cercando che cosa la serie `R-LAY` presuppone e nessuna delle D1..D8
+misura. Se l'originale riemerge e chiedeva altro, questa va sostituita e non fusa.
 
-Finché questa sezione resta così, **D10 non si esegue e non si inventa**. Esegui D1..D8, riporta nel
-report che D10 è priva di enunciato, e restituisci il controllo su quella sola domanda. Chi ha
-l'enunciato (Alfonso) lo incolla qui, e D10 riparte da sola.
+`R-LAY-6` dice che la chiave è l'id del viewpoint esclusivo attivo «con una sentinella per la
+sintassi astratta». Due casi limite di quella chiave non sono coperti da nessun'altra domanda, e
+tutti e due possono rendere impraticabile una delle tre sedi candidate.
+
+**D10.a — La sentinella.** Che valore rappresenta oggi «nessun viewpoint attivo, sintassi astratta»?
+Dopo la slice 2 di `2.228` è `null` (`R-IRN-11`, `R-IRN-18`), ma il campo persistito e la chiave di un
+dizionario sono cose diverse: `null` non è una chiave. Misura quali valori il campo può assumere oggi
+e quali forme del vuoto convivono (`''`, `null`, l'id di un viewpoint di sistema), e verifica se
+esista già una sentinella in uso altrove nel codebase da riusare invece di inventarne una. Se la sede
+scelta fosse un dizionario, una sentinella che collide con un id reale è un difetto silenzioso: cerca
+la collisione, con controllo positivo.
+
+**D10.b — La sopravvivenza del record.** `R-LAY-5` dice che il record di layout non si cancella
+quando l'elemento non è renderizzato nel viewpoint corrente, perché `NOT IN THIS VIEWPOINT` è
+reversibile. Che cosa succede **oggi** al layout persistito di un elemento che smette di rendere?
+Interessa il percorso completo: chi decide che l'elemento non rende, se qualcuno cancelli o azzeri il
+suo record, e se il ritorno lo ritrovi. Se oggi il record sopravvive per costruzione, `R-LAY-5` è
+gratis e va detto; se sopravvive per caso, è una riga da difendere con un test.
+
+**Fuori perimetro anche qui**: non proporre la sentinella, non proporre lo schema. Misura.
 
 ---
 
