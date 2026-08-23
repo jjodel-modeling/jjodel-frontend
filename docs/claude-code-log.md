@@ -1,5 +1,18 @@
 # Claude Code Session Log
 
+## 2026-08-24 — docs: R-LAY-13 a registro, R-LAY-9 emendata
+**Prompt**: decisione presa in chat di progetto sul report della Fase 1b (`f33965ea7`), ratificata da Alfonso con «vai» il 2026-08-24 ~01:10. Solo docs, commit dal bridge Cowork.
+**Files touched**: docs/decisions.md, docs/claude-code-log.md
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — zero file di codice toccati.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — nessun diff di codice.
+**Notes**: `storeSize` indicizza per radice dei padri della view, mai per `activeViewpoint`: non è la macchina di R-LAY-6, se ne riusa solo `GraphSize`. Sede del layout: asse nuovo sul vertice. R-LAY-9 emendata nella clausola sul classico, falsa a codice letto. Gesto a schermo di Alfonso resta come conferma (b). Prossimo: prompt delle 00:50 (grafia legacy), poi progetto della slice 1.
+**Prompt document name**: —
+
 ## 2026-08-24 — test: fase 1b, la macchina `storeSize` non e' osservabile a runtime
 **Prompt**: `claude_2026-08-24_0040_prompt_layout_fase1b_storesize_runtime.md`. Fase 1b, misura di caratterizzazione: un file di test Vitest che fotografa la catena scrittura/lettura di `storeSize` fra due viewpoint esclusivi, cinque domande. Passo zero obbligatorio, hard stop dopo il commit. Deroga P8 dichiarata.
 **Files touched**: docs/discovery/discovery_2026-08-24_layout_fase1b_storesize_runtime.md (nuovo), docs/claude-code-log.md
