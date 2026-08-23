@@ -1,5 +1,18 @@
 # Claude Code Session Log
 
+## 2026-08-23 — docs: aperto il fronte R-DEAD, perimetro di rimozione di `NestedView`
+**Prompt**: «apri un fronte per rimuovere NestedView dal censimento». Misura read-only del perimetro di rimozione e apertura del fronte a registro. Nessuna modifica al codice: il fronte è aperto, non eseguito.
+**Files touched**: docs/discovery/discovery_2026-08-23_perimetro_rimozione_nestedview.md (nuovo), docs/decisions.md, docs/claude-code-log.md
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — zero file di codice toccati.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — nessun diff di codice.
+**Notes**: Il censimento del codice morto **non esiste come artefatto**: le uniche due occorrenze della frase nel repo sono di oggi (§0). Trabocchetto: `nestedView.scss`, 3736 righe, è importato anche da `ViewData.tsx:24`, vivo nell'authoring IR — non si cancella (R-DEAD-2). Tre orfani in cascata, ma i file che li ospitano restano (R-DEAD-3). La prima batteria assumeva import su una riga sola: rifatta sul simbolo nudo. Il barrel `editors` ha 5 righe su 10 che nessuno importa, registrate ma non deliberate.
+**Prompt document name**: —
+
 ## 2026-08-23 — docs: R-LAY-12, NestedView è UI irraggiungibile
 **Prompt**: prompt del 2026-08-23 21:39. Fase 0 read-only di raggiungibilità con `command grep` e controllo positivo per ogni asserzione di assenza, poi commit unico di docs: R-LAY-12 a registro, discovery report, entry di log. Nessuna modifica al codice.
 **Files touched**: docs/discovery/discovery_2026-08-23_nestedview_ui_morta.md (nuovo), docs/decisions.md, docs/claude-code-log.md
