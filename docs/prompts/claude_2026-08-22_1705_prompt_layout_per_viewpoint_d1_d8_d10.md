@@ -17,6 +17,27 @@ consegnato in chat e mai messo a terra. È il file che
 dalle sezioni §5 e §B.7 della discovery, che le enumera. **D10 è invece perduta e riscritta da capo il
 2026-08-23**: la sua sezione dichiara la provenienza e non va letta come recupero dell'originale.
 
+
+## Riallineamento del 2026-08-23 (sera), da leggere prima del passo zero
+
+Questo prompt è stato scritto quando la serie era `R-LAY-1..10` e la slice 2 di `2.228` era aperta.
+Da allora il registro è cambiato. **Dove questa tabella e il corpo del prompt divergono, vale la
+tabella.** Il corpo non è stato riscritto per lasciare leggibile la provenienza.
+
+| Nel corpo del prompt | Stato reale a `3cb33eb3f` |
+|---|---|
+| Serie `R-LAY-1..10`, righe 1675-1693 | **`R-LAY-1..12`**, righe 1692-1714. `R-LAY-11`: la terza sorgente `lastEditedViewpointId` è morta per misura, fuori dalla condizione di `R-LAY-10`. `R-LAY-12`: `NestedView` non è montato da nessun sito, `activateViewpoint` è l'unico scrittore vivo e raggiungibile di `project.activeViewpoint` e `state.viewpoint`. **Leggi tutte e dodici.** |
+| `R-LAY-10` «da sciogliere nel perimetro di `2.228` slice 2» | **Sciolta.** La condizione «una sola sorgente» è soddisfatta (`R-LAY-11`, `R-LAY-12`, commit `052966df8`). |
+| `R-LAY-7`: prima slice di codice «dopo la slice 2 di `2.228`» | **Condizione soddisfatta.** La slice 2 è chiusa con 2a e 2b; il 2c è decaduto (`R-IRN-27`). Questo prompt resta read only per sua natura, non per dipendenza. |
+| Passo zero: `grep -c "R-LAY"` atteso **11**, `grep -c "R-IRN"` atteso **57** | Attesi **19** e **62** (misurati a `3cb33eb3f`). Controllo positivo aggiuntivo: `command grep -c "R-DEAD" docs/decisions.md` deve tornare **11**. Valori diversi: arresto, come nel corpo. |
+| `docs/prompts/claude_2026-08-18_1656_prompt_2228_fase2.md`, slice 2, come dipendenza | Riferimento storico, non più pendente. |
+| Qualunque riferimento a `NestedView.tsx` come writer di `activeViewpoint` nella discovery del 22 (§B.4, §B.6) | Codice **morto e irraggiungibile**, in rimozione nel fronte `R-DEAD-1..6`. Se una risposta a D1..D8 o D10 passa da `NestedView`, dichiaralo e non contarlo fra le superfici vive. Il tab «Viewpoints» del pannello classico è reso da `Info.tsx:1341-1356`, non da `NestedView`. |
+| D10.a: il vuoto «dopo la slice 2» | La slice 2 è a codice: misura il campo **com'è ora**, non come sarebbe. |
+
+Il resto del prompt (vincoli, D1..D8, D10, formato del report, hard stop) resta com'è. Il discovery
+report si salva in `docs/discovery/` come `discovery_2026-08-23_layout_d1_d8_d10.md` (o con data del
+giorno di esecuzione), naming standard.
+
 ---
 
 ## Passo zero, obbligatorio
