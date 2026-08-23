@@ -17,13 +17,13 @@
 **Prompt**: decisione presa in chat di progetto (architetto), ratificata da Alfonso con «vai» il 2026-08-23 sera, sulla base della risposta di Claude Code che segue R-LAY-12 e R-DEAD-1..6. Solo docs, commit dal bridge Cowork.
 **Files touched**: docs/decisions.md, docs/claude-code-log.md
 **Outcome**: ✅ completed
-**Corregge**: R-IRN-22 (premessa falsa per misura), R-IRN-25 (attribuzione di `NestedView.tsx:82` alla superficie: il tab «Viewpoints» lo rende `Info.tsx:1341-1356`, non `NestedView`)
-**Causa**: (c)
+**Corregge**: —
+**Causa**: —
 **Regressions**: no — zero file di codice toccati.
 **Out-of-scope changes**: no
 **Layer Impact Report**: not-required
 **Smoke visivo**: non applicabile — nessun diff di codice.
-**Notes**: Chiude la slice 2 di `2.228` senza il 2c e sblocca R-LAY-7. Il prompt `claude_2026-08-18_1656_prompt_2228_fase2.md` non e' piu' pendente: la sua parte 2c e' decaduta. Restano fuori: i commenti stale di `TabDataMaker.tsx` (fronte R-DEAD), i gate «Create View» (fronte UX di R-LAY-11), la rotazione del log (49 entry contro soglia 40).
+**Notes**: Emenda R-IRN-22 (premessa falsa per misura) e R-IRN-25 (attribuzione di `NestedView.tsx:82`: il tab «Viewpoints» lo rende `Info.tsx:1341-1356`, non `NestedView`); nessun prompt corretto, quindi `Corregge` vuoto. Chiude la slice 2 di `2.228` senza il 2c e sblocca R-LAY-7. Il prompt `claude_2026-08-18_1656_prompt_2228_fase2.md` non e' piu' pendente: la sua parte 2c e' decaduta. Restano fuori: i commenti stale di `TabDataMaker.tsx` (fronte R-DEAD), i gate «Create View» (fronte UX di R-LAY-11), la rotazione del log (49 entry contro soglia 40).
 **Prompt document name**: —
 
 ## 2026-08-23 — docs: aperto il fronte R-DEAD, perimetro di rimozione di `NestedView`
