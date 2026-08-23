@@ -1666,6 +1666,32 @@ bag `_state`, che non contiene affatto il run-state.
   sospetto plausibile. **Nominare il sospetto va bene solo se la misura richiesta e' piu' larga del
   sospetto.**
 
+## R-LAY — layout per viewpoint
+
+Verbale: `docs/ratifiche/claude_2026-08-22_memo_ratifica_layout_per_viewpoint.md`, con l'addendum §8.
+Report: `docs/discovery/discovery_2026-08-22_layout_per_viewpoint.md` e i suoi addenda
+(commit `13b69dc76`, `b65849183`, `caa08d91d`, `de9c15b3b`).
+
+**R-LAY-1** (2026-08-22) — La posizione persistita di un nodo è per **viewpoint esclusivo**. Un gesto di disposizione compiuto mentre un viewpoint esclusivo è attivo non modifica la disposizione sotto gli altri viewpoint esclusivi.
+
+**R-LAY-2** (2026-08-22) — La sintassi astratta è un viewpoint ai fini del layout e ha un record proprio. Non è il record condiviso su cui gli altri ricadono.
+
+**R-LAY-3** (2026-08-22) — Emendamento a `claude_ratifiche_2026-08-03_state_actions_events.md:28`: la clausola «con la stessa semantica delle posizioni dei nodi» è ritirata. La decisione del 2026-07-19 su `irEdgeLayout` e `irCollapsed` resta vigente e non toccata; R-2 dello stesso memo resta intatta (cita la premessa, non ci poggia).
+
+**R-LAY-4** (2026-08-22) — La taglia scelta dall'umano e il flag `isResized` sono per viewpoint esclusivo. La taglia derivata dal contenuto resta in sessione e non raggiunge il D-layer (`useContentSize.ts:82-89`), quindi è già per viewpoint per costruzione.
+
+**R-LAY-5** (2026-08-22) — Il record di layout non si cancella quando l'elemento non è renderizzato nel viewpoint corrente. `NOT IN THIS VIEWPOINT` è reversibile e il layout deve sopravvivere al ritorno.
+
+**R-LAY-6** (2026-08-22) — La chiave del layout è l'id del viewpoint esclusivo attivo, con una sentinella per la sintassi astratta. Non è l'insieme di ciò che rende: quell'insieme (`selectors.ts:552-559`) non è memorizzato, è ricalcolato per nodo e per view a ogni scoring, e le sue componenti non attive sono invarianti rispetto alla navigazione dell'utente, quindi non discriminano. Chiude il gate D9.
+
+**R-LAY-7** (2026-08-22) — La prima slice di codice apre dopo la slice 2 di `2.228`: la chiave è definita in termini di `activeViewpoint` a 0..1. La discovery non ha questa dipendenza.
+
+**R-LAY-8** (2026-08-22) — Solo i viewpoint esclusivi hanno un record di layout. I non esclusivi entrano nel rendering senza essere attivi (`selectors.ts:552-559`, terzo ramo) e non hanno interruttore (`NestedView.tsx:364` è gated su `isVP && d.isExclusiveView`): non sono navigabili, quindi non sono una dimensione della chiave.
+
+**R-LAY-9** (2026-08-22) — Perimetro: `editor-v2`, dove attivazione e resa coincidono (`irResolveCore.ts:139`). Il renderer classico, la cui resa è cumulativa, non è esente ma governato: scrive sul record del viewpoint esclusivo attivo come editor-v2, e il fatto che la sua resa cumulativa non sia catturata dalla chiave è accettato e dichiarato. Un'esenzione lascerebbe due scrittori sullo stesso campo persistito con due contratti.
+
+**R-LAY-10** (2026-08-22) — Nessuna implementazione finché non è accertato che esista **una sola sorgente** del viewpoint attivo. `NestedView.tsx:111` e `:315` scrivono `project.activeViewpoint` senza passare da `activateViewpoint`, quindi senza aggiornare `state.viewpoint`: se confermato, la chiave del layout è ambigua alla radice. Verifica e rimedio in perimetro `2.228` slice 2, non in un fronte a parte.
+
 ## Superate
 
 - **D3** (2026-07-26, routing congelato in v1) — superata da E-route il 2026-08-06.
