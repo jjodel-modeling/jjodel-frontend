@@ -989,7 +989,10 @@ Base di evidenza: `docs/discovery/discovery_2026-08-13_view_creation_sites_ir_na
   dichiara per grep. La ricerca dell'architetto ne aveva censite due, `classes.ts:1181` e
   `selectors.ts:529`; una terza, `NestedView.tsx:82`, e' emersa solo mappando i chiamanti fino alla
   superficie (tab «Viewpoints» del pannello destro classico, confermato aperto da Alfonso il
-  2026-08-19); le ultime tre, `lastViewpoint.ts:146`, `view.tsx:373` e `NestedView.tsx:544`, le ha
+  2026-08-19; **rettifica del 2026-08-23**: il tab esiste ed e' aperto, ma lo rende
+  `Info.tsx:1341-1356` con `ViewpointProperties` / `ViewData`, non `NestedView`, che non e' montato
+  da nessun sito (R-LAY-12); i commenti «(NestedView + ViewData)» di `TabDataMaker.tsx:6-7` e
+  `:36-39` sono stale e vanno al fronte R-DEAD. La tesi di questa decisione non cambia); le ultime tre, `lastViewpoint.ts:146`, `view.tsx:373` e `NestedView.tsx:544`, le ha
   trovate il compilatore. Sei in tutto, contro due dichiarate all'inizio. L'enumerazione affidabile la
   fa quindi il tipo: allargato `LProject.activeViewpoint` a `LViewPoint | null` e i due campi D da
   `Pointer<DViewPoint, 1, 1>` a 0..1, ogni lettura non compatibile diventa un errore, e il commit si
@@ -1029,6 +1032,20 @@ Base di evidenza: `docs/discovery/discovery_2026-08-13_view_creation_sites_ir_na
   torna. Si risolve con una lettura sola, store e blob nella stessa esecuzione subito dopo attiva e
   salva, e **non blocca 2b**, perche' R-IRN-20 prescrive gia' di riscrivere solo i puntatori di
   sistema e di lasciare invariati gli id utente.
+
+- **R-IRN-27** (2026-08-23) — **Il commit 2c decade; la slice 2 di `2.228` e' chiusa con 2a e 2b.**
+  La premessa di R-IRN-22, «dopo il ritiro il bottone continuerebbe ad apparire e non farebbe piu'
+  niente», e' falsa per misura: `NestedView` non e' montato da nessun sito (R-LAY-12,
+  `discovery_2026-08-23_nestedview_ui_morta.md`), quindi il bottone di `NestedView.tsx:397-400` non
+  puo' apparire e il difetto visibile non e' visibile. Tolto quel chiamante, `updateDefaultView` ha un
+  solo consumatore vivo, `VersionFixer.tsx:141`, e il test «c'e' qualcosa da rigenerare» ha gia' una
+  sede sola: la deroga di R-IRN-24 su `Defaults.ts` resta a registro come deroga non esercitata e
+  `Defaults.ts` non si tocca. Il 2c non si scrive nemmeno come hardening, sulla falsariga di
+  `052966df8`: la slice 1 di R-DEAD (R-DEAD-5) cancella il file, e scrivere per poi cancellare non e'
+  un ordine, e' una collisione. Se R-DEAD-1 venisse ritirata e il pannello rimontato, il 2c tornerebbe
+  reale con una premessa nuova, motivata sul pannello futuro, non su R-IRN-22. Conseguenza: la
+  condizione di R-LAY-7 («dopo la slice 2 di `2.228`») e' soddisfatta; il fronte layout riparte dal
+  prompt del 2026-08-22 17:05, da riallineare a R-LAY-11, R-LAY-12 e R-DEAD prima del lancio.
 
 ## Serie R-SIM — Pannello di simulazione e attributi di stato (ratifiche 2026-08-17)
 
