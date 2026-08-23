@@ -147,7 +147,7 @@ esercita `SaveManager.load`** e non vede migrazioni, seed, né normalizzazione d
 
 **Difetto preesistente da non scambiare per una regressione**: `DProject.activeViewpoint` non viene
 mai persistito correttamente (misurato il 2026-08-19 su entrambe le colonne del controllo positivo;
-la root invece si persiste giusta). Dettagli in `discovery_2026-08-19_slice2_activeviewpoint.md`. Se
+la root invece si persiste giusta). Dettagli in `discovery_2026-08-19_2228_2b_perimetro_activeviewpoint.md`. Se
 lo incontri, va **citato**, non riparato qui.
 
 ---
@@ -172,6 +172,6 @@ lo incontri, va **citato**, non riparato qui.
 - `docs/decisions.md`: `R-IRN-11..24`, `R-LAY-1..10`
 - `docs/discovery/discovery_2026-08-18_2228_seed_e_activeviewpoint.md` §5.1, §5.3, §5.4
 - `docs/discovery/discovery_2026-08-18_4_lir_versionfixer_2228.md` §4.3 (il LIR, da non rifare)
-- `docs/discovery/discovery_2026-08-19_slice2_activeviewpoint.md` (il difetto preesistente)
+- `docs/discovery/discovery_2026-08-19_2228_2b_perimetro_activeviewpoint.md` (il difetto preesistente)
 - `docs/discovery/discovery_2026-08-22_layout_per_viewpoint.md` §B.5 e §B.8 (il rischio che
   `R-LAY-10` codifica)
