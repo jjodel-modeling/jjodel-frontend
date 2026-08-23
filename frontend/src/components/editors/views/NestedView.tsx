@@ -35,6 +35,7 @@ import {VersionFixer} from "../../../redux/VersionFixer";
 import ActivityLogger from '../../../services/ActivityLogger';
 import { ActivityType } from '../../../types/activity';
 import { LockedFeature } from '../../ModeSystem';
+import { activateViewpoint } from '../../../utils/lastViewpoint';
 
 type Metadata = {setView: (p: Pointer)=>any, scoreBoost: number}
 function NestedViewComponent(props: AllProps) {
@@ -108,7 +109,7 @@ function renderEntry(d: DViewElement, childrens: GObject, isExpanded: boolean, t
 
         function select(ptr: Pointer<DViewPoint>) {
             const previousViewpoint = project.activeViewpoint;
-            project.activeViewpoint = ptr as any;
+            activateViewpoint(ptr);
 
             if (ptr !== previousViewpoint?.id) {
                 try {
@@ -312,7 +313,7 @@ function renderEntry(d: DViewElement, childrens: GObject, isExpanded: boolean, t
 
         function select(ptr: Pointer<DViewPoint>){
             const previousViewpoint = project.activeViewpoint;
-            project.activeViewpoint = ptr as any;
+            activateViewpoint(ptr);
 
             // Log activity for viewpoint change
             if (ptr !== previousViewpoint?.id) {
