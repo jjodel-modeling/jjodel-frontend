@@ -1,5 +1,18 @@
 # Claude Code Session Log
 
+## 2026-08-24 — docs: D1..D8 e D10 eseguite, l'asse per viewpoint esiste già
+**Prompt**: `claude_2026-08-22_1705_prompt_layout_per_viewpoint_d1_d8_d10.md` con il riallineamento del 2026-08-23 sera, che prevale sul corpo. Fase 1 read only, passo zero obbligatorio, report in `docs/discovery/`, hard stop finale. Deroga P8 dichiarata.
+**Files touched**: docs/discovery/discovery_2026-08-24_layout_d1_d8_d10.md (nuovo), docs/claude-code-log.md
+**Outcome**: ✅ completed — D1..D8 e D10 eseguite, prime dopo tre sessioni fermate su D0, Q0 e D9.
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — zero file di codice toccati, fase read only senza eccezioni.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessuna scrittura; `GraphDataElements.tsx`, `view.tsx`, `canvasToJjom.ts`, `jjomTransformers.ts`, `useContentSize.ts`, `useJjomSync.ts` letti soltanto.
+**Smoke visivo**: non applicabile (deroga P8).
+**Notes**: Passo zero 19/62/11. §8 del memo perduto, dichiarato. **Finding principale**: l'asse per viewpoint **esiste già** — `view.tsx:1462`, `size` per elemento, con lettura, scrittura e fallback view→viewpoint→scalari D, gate `storeSize` raggiungibile a schermo. E ce l'ha il renderer **classico**: editor-v2 lo scavalca per progetto esplicito (`GraphDataElements.tsx:1398-1401`), rovesciando la premessa di R-LAY-9. D8 su dump reali: layout <1% dello stato. Limiti al §12. `check:docs` 1/3, rossi altrui.
+**Prompt document name**: 2026-08-22 17:05
+
 ## 2026-08-23 — docs: R-IRN-27, il commit 2c decade; rettifica di R-IRN-25
 **Prompt**: decisione presa in chat di progetto (architetto), ratificata da Alfonso con «vai» il 2026-08-23 sera, sulla base della risposta di Claude Code che segue R-LAY-12 e R-DEAD-1..6. Solo docs, commit dal bridge Cowork.
 **Files touched**: docs/decisions.md, docs/claude-code-log.md
