@@ -1,5 +1,18 @@
 # Claude Code Session Log
 
+## 2026-08-24 — test: fase 1b, la macchina `storeSize` non e' osservabile a runtime
+**Prompt**: `claude_2026-08-24_0040_prompt_layout_fase1b_storesize_runtime.md`. Fase 1b, misura di caratterizzazione: un file di test Vitest che fotografa la catena scrittura/lettura di `storeSize` fra due viewpoint esclusivi, cinque domande. Passo zero obbligatorio, hard stop dopo il commit. Deroga P8 dichiarata.
+**Files touched**: docs/discovery/discovery_2026-08-24_layout_fase1b_storesize_runtime.md (nuovo), docs/claude-code-log.md
+**Outcome**: ⚠️ partial — il test non e' stato scritto perche' non e' scrivibile; la condizione di arresto prevista dal prompt si e' verificata ed e' stata misurata, non dedotta.
+**Corregge**: —
+**Causa**: g
+**Regressions**: no — zero file di produzione toccati, e nessun file di test aggiunto: `npm run test` identico alla baseline (1323 pass, 9 file rossi preesistenti).
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — `view.tsx` e `classes.ts` letti soltanto, nessuna scrittura.
+**Smoke visivo**: non applicabile (deroga P8, nessun pixel cambia).
+**Notes**: Passo zero 19/7 OK. Cinque sonde eseguite: `view.tsx` e `common/Geom.ts` non si caricano sotto l'env node (monaco); con shim `window`/`document` il muro passa a jQuery, che pretende un DOM vero; jsdom assente (con controllo positivo). 9 file gia' rossi in baseline, stessa causa. Il mock del barrel e' scartato per ragione semantica: stubberebbe `c.proxyObject.viewpoint`, cioe' la risposta. Scostamento con R-LAY-6/9 rilevato, non risolto. Tabella e limiti nel report, §3, §5, §8.
+**Prompt document name**: 2026-08-24 00:40
+
 ## 2026-08-24 — docs: D1..D8 e D10 eseguite, l'asse per viewpoint esiste già
 **Prompt**: `claude_2026-08-22_1705_prompt_layout_per_viewpoint_d1_d8_d10.md` con il riallineamento del 2026-08-23 sera, che prevale sul corpo. Fase 1 read only, passo zero obbligatorio, report in `docs/discovery/`, hard stop finale. Deroga P8 dichiarata.
 **Files touched**: docs/discovery/discovery_2026-08-24_layout_d1_d8_d10.md (nuovo), docs/claude-code-log.md
