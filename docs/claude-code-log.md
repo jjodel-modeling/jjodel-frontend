@@ -1,5 +1,18 @@
 # Claude Code Session Log
 
+## 2026-08-23 — docs: R-LAY-12, NestedView è UI irraggiungibile
+**Prompt**: prompt del 2026-08-23 21:39. Fase 0 read-only di raggiungibilità con `command grep` e controllo positivo per ogni asserzione di assenza, poi commit unico di docs: R-LAY-12 a registro, discovery report, entry di log. Nessuna modifica al codice.
+**Files touched**: docs/discovery/discovery_2026-08-23_nestedview_ui_morta.md (nuovo), docs/decisions.md, docs/claude-code-log.md
+**Outcome**: ✅ completed
+**Corregge**: 2026-08-23 16:47 (claude_2026-08-23_1647_prompt_rlay11_sorgente_unica_attivazione.md)
+**Causa**: (c)
+**Regressions**: no — zero file di codice toccati.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — il soggetto della misura è che il pixel da guardare non esiste.
+**Notes**: Zero consumatori di `NestedView`/`NestedViewConnected`, nessun import dinamico (controllo positivo 938 file), ricerca su ogni tipo di file di `src`. Due scostamenti dall'Atteso (§4), sottoposti ad Alfonso prima di iscrivere: gli importatori del barrel sono due (`Dock.tsx:8`, vivo, e `ContextMenu.tsx:45`), nessuno per `NestedView`; il commento di `TabDataMaker` è a riga 7, non 6. Commit altrui a metà Fase 0: misure rieseguite, §5. `check:docs` 2/3, Check C già rosso a HEAD su entry altrui.
+**Prompt document name**: 2026-08-23 21:39
+
 ## 2026-08-23 — feat(editor-v2): VIEW e Theme inerti mentre un viewpoint e' attivo
 **Prompt**: «quando un viewpoint diverso da "Abstract Syntax" e' attivo, i dropdown VIEW e Theme devono disabilitarsi».
 **Files touched**: frontend/src/components/editor-v2/Toolbar.tsx, frontend/src/components/editor-v2/components/ColorSchemeSelector.tsx, frontend/src/components/editor-v2/EditorV2.scss
