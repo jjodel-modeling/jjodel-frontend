@@ -1,5 +1,18 @@
 # Claude Code Session Log
 
+## 2026-08-23 — fix(viewpoint): sorgente unica dell'attivazione, R-LAY-11 a registro
+**Prompt**: rimedio di R-LAY-10. Fase 0 read-only di verifica premesse con `command grep` e controllo positivo; commit A con R-LAY-11 in `decisions.md`; commit B che instrada i due `select` di `NestedView.tsx` su `activateViewpoint`, unico scrittore vivo di `project.activeViewpoint` e `state.viewpoint`.
+**Files touched**: docs/decisions.md, docs/discovery/discovery_2026-08-23_rlay10_verifica_premesse.md, frontend/src/components/editors/views/NestedView.tsx
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: 4 premesse su 4 confermate, dettaglio in `discovery_2026-08-23_rlay10_verifica_premesse.md`. Diff di 3 righe: 1 import + le 2 scritture (111, 315). Gate: tsc 33 errori, composizione identica alla baseline §17; build exit 0; test 1323/1323, le 9 suite rosse sono le note `window is not defined`. `check:docs` 2/3, Check C già rosso a HEAD su una entry altrui e non toccato. `unknown` perché il cambio di meccanismo si vede solo a schermo: hard stop, verifica di Alfonso.
+**Prompt document name**: 2026-08-23 16:47
+
 ## 2026-08-23 — feat: `activeViewpoint` vuoto a `null`, adapter `2.227 -> 2.228` (R-IRN-18, R-IRN-20, R-IRN-23)
 
 **Prompt**: prompt del 2026-08-23 14:25, slice 2 di `2.228`, commit 2b in un commit solo. Riallineamento delle premesse del prompt normativo del 18, accertamento di `R-LAY-10` (misura e referto, non rimedio), discovery report obbligatorio, hard stop finale.
