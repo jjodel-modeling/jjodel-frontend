@@ -1,5 +1,18 @@
 # Claude Code Session Log
 
+## 2026-08-23 — feat(editor-v2): VIEW e Theme inerti mentre un viewpoint e' attivo
+**Prompt**: «quando un viewpoint diverso da "Abstract Syntax" e' attivo, i dropdown VIEW e Theme devono disabilitarsi».
+**Files touched**: frontend/src/components/editor-v2/Toolbar.tsx, frontend/src/components/editor-v2/components/ColorSchemeSelector.tsx, frontend/src/components/editor-v2/EditorV2.scss
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Condizione `viewControlsDisabled = !!shownViewpointId` (Toolbar.tsx:240), non la root grezza: `''` e' esattamente «Abstract syntax» e il caso metamodello vi collassa una riga sopra, quindi su M2 i controlli restano vivi. `disabled` opzionale su `ColorSchemeSelectorProps` (Rule 11); due effetti chiudono i menu aperti sotto un trigger che si disabilita. `.toolbar-dropdown-btn` non aveva stile disabled: aggiunto. Gate: tsc diff vuoto, build 0, test 1323/1323.
+**Prompt document name**: —
+
 ## 2026-08-23 — fix(viewpoint): sorgente unica dell'attivazione, R-LAY-11 a registro
 **Prompt**: rimedio di R-LAY-10. Fase 0 read-only di verifica premesse con `command grep` e controllo positivo; commit A con R-LAY-11 in `decisions.md`; commit B che instrada i due `select` di `NestedView.tsx` su `activateViewpoint`, unico scrittore vivo di `project.activeViewpoint` e `state.viewpoint`.
 **Files touched**: docs/decisions.md, docs/discovery/discovery_2026-08-23_rlay10_verifica_premesse.md, frontend/src/components/editors/views/NestedView.tsx
