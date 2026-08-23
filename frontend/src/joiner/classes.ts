@@ -2896,7 +2896,7 @@ export class ProjectPointers{
     models: Pointer<DModel, 0, 'N'> = [];
     graphs: Pointer<DGraph, 0, 'N'> = [];
     viewpoints: Pointer<DViewPoint, 0, 'N'> = [];
-    activeViewpoint: Pointer<DViewPoint, 0, 1> = Defaults.viewpoints[0];
+    activeViewpoint: Pointer<DViewPoint, 0, 1> = null;
     favorite!: Dictionary<Pointer<DUser>, true | undefined>;
     author!: Pointer<DUser>;
 }
@@ -2921,7 +2921,7 @@ export class DProject extends DPointerTargetable {
     models: Pointer<DModel, 0, 'N'> = [];
     graphs: Pointer<DGraph, 0, 'N'> = [];
     viewpoints: Pointer<DViewPoint, 0, 'N'> = [];
-    activeViewpoint: Pointer<DViewPoint, 0, 1> = Defaults.viewpoints[0];
+    activeViewpoint: Pointer<DViewPoint, 0, 1> = null;
     /* come collaborators */favorite!: Dictionary<Pointer<DUser>, true | undefined>;
 
 
@@ -3350,7 +3350,12 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     }
 
     protected get_activeViewpoint(context: Context): this['activeViewpoint'] {
-        return LViewPoint.fromPointer(context.data.activeViewpoint || Defaults.viewpoints[0]);
+        // R-IRN-18: no fallback. An empty project has no active viewpoint, and `null` is the one
+        // shape of empty (R-IRN-11). The cast is needed because `fromPointer` infers `undefined`
+        // for a `null` argument (none of its `T extends Pointer<...>` arms unify), while at
+        // runtime `LPointerTargetable.wrap` returns the falsy value untouched: `null` in, `null`
+        // out. Type and runtime disagree on the name of the empty, not on its truthiness.
+        return LViewPoint.fromPointer(context.data.activeViewpoint as any) as any as this['activeViewpoint'];
     }
     protected set_activeViewpoint(val0: Pack1<NonNullable<this['activeViewpoint']>> | null, c: Context): boolean {
         // The cast is on the null arm only: `Pointers.from` declares an overload for null and one for

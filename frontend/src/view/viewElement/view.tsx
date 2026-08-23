@@ -372,7 +372,13 @@ export class DViewElement extends DPointerTargetable {
         let parentView: LViewElement;
         let activeVP: LViewPoint | null | undefined = LProject.getProject()?.activeViewpoint;
         if (activeVP && activeVP?.id !== Defaults.Pointer_ViewPointDefault) parentView = activeVP;
-        else parentView = LPointerTargetable.fromPointer(Defaults.Pointer_ViewModel);
+        // R-IRN-23: the fallback goes through the viewpoint, not through the `Model` view.
+        // After the seed withdrawal (R-IRN-15) `Pointer_ViewModel` does not exist in a new
+        // project: `fromPointer` returns undefined and does not log (canThrow is false), and the
+        // branch went on to dereference `parentView.subViews`. The seeded `Default` viewpoint is
+        // still created (slice 1 kept the container), and it is the same third fallback that
+        // `resolveParentViewpoint` already uses (utils/lastViewpoint.ts:156).
+        else parentView = LPointerTargetable.fromPointer(Defaults.Pointer_ViewPointDefault);
 
         let l = forData && L.from(forData);
         if (l?.name) name = 'View for ' + l.name;

@@ -1,5 +1,19 @@
 # Claude Code Session Log
 
+## 2026-08-23 — feat: `activeViewpoint` vuoto a `null`, adapter `2.227 -> 2.228` (R-IRN-18, R-IRN-20, R-IRN-23)
+
+**Prompt**: prompt del 2026-08-23 14:25, slice 2 di `2.228`, commit 2b in un commit solo. Riallineamento delle premesse del prompt normativo del 18, accertamento di `R-LAY-10` (misura e referto, non rimedio), discovery report obbligatorio, hard stop finale.
+**Files touched**: `frontend/src/joiner/classes.ts`, `frontend/src/view/viewElement/view.tsx`, `frontend/src/redux/VersionFixer.tsx`, `frontend/src/redux/__tests__/versionfixer_2228_migration.test.ts` (nuovo), `docs/discovery/discovery_2026-08-23_2228_slice2b_riallineamento.md` (nuovo), `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown — typecheck identico byte a byte alla baseline (33, `sha256 e8f17cee…21e`), build exit 0, vitest 1323/1323 con le 9 rosse note, smoke 12/0/3. Nessun gate copre `SaveManager.load`, quindi adapter e getter restano da verificare a mano.
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced — `docs/discovery/discovery_2026-08-18_4_lir_versionfixer_2228.md` §4.3, riletto prima del diff e non riprodotto, come il prompt del 18 prescrive.
+**Smoke visivo**: passato — 12 passati, 0 falliti, 3 skip. Lo scarto dalla baseline del 19 (10/0/2) è di `5ac2449e6`, non di questo diff.
+**Notes**: Il commit 2b-i era già in repo (`363e121c0`, `R-IRN-25`) e senza entry di log: questo è di fatto il 2b-ii, tre file invece di sette. `R-LAY-10`: la divergenza `state.viewpoint` / `project.activeViewpoint` è possibile ed è già viva; tre gesti in `NestedView` (radio 150, dblclick 341, toggle 372/380) la producono. Rimedio a due righe **non scritto**, chiesto. Dettagli e domande nel report citato §4 e §6.
+**Prompt document name**: 2026-08-23 14:25
+
 ## 2026-08-22 — docs: D1..D8 non eseguite, arresto al passo zero
 
 **Prompt**: prompt del 2026-08-22 17:05, D1..D8 più D10 con il gate D9 dichiarato chiuso. Passo zero obbligatorio: `grep -c "R-LAY" docs/decisions.md` con `R-IRN` come controllo positivo, e arresto se il primo torna 0. Deroga P8 dichiarata.

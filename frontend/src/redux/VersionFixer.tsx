@@ -1172,6 +1172,41 @@ everytime you put hands into a D-Object shape or valid values, you should docume
         return s;
     }
 
+    /** `activeViewpoint` normalized to the one shape of empty (R-IRN-11).
+     *
+     *  A project saved before 2.228 carries `Pointer_ViewPointDefault` in that field, because the
+     *  D initializer used to be `Defaults.viewpoints[0]` and the L getter used to fall back to it.
+     *  Both are gone in 2.228, so the saved value is the last place the seeded id survives: left
+     *  alone it would keep the toolbar selector off «Abstract syntax» on every old project.
+     *
+     *  Only system viewpoints are rewritten — a user viewpoint id stays exactly as it is
+     *  (R-IRN-20). No purge of the default records: that is 2.229 (R-IRN-19).
+     *
+     *  Pure `DState -> DState`, no Redux actions and no L-proxies, and idempotent by
+     *  construction: `isSystemViewpoint(null)` is false, so a second pass writes nothing.
+     */
+    private ['2.227 -> 2.228'](s: DState): DState {
+        const idlookup: any = s.idlookup;
+        if (!idlookup || typeof idlookup !== 'object') return s;
+
+        let normalized = 0;
+        for (const k in idlookup) {
+            const e = idlookup[k];
+            // R-IRN-13: `idlookup.clonedCounter` is a number sitting among the records.
+            if (!e || typeof e !== 'object') continue;
+            if (e.className !== 'DProject') continue;
+            if (!Defaults.isSystemViewpoint(e.activeViewpoint)) continue;
+            e.activeViewpoint = null;
+            normalized++;
+        }
+
+        if (normalized) {
+            console.log(`[VersionFixer 2.227 -> 2.228] activeViewpoint: ${normalized} progetto/i `
+                + `riportato/i a null (era un viewpoint di sistema).`);
+        }
+        return s;
+    }
+
 }
 
 
