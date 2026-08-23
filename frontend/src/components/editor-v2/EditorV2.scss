@@ -400,9 +400,16 @@
     transition: all 150ms ease;
     white-space: nowrap;
 
-    &:hover {
+    &:hover:not(:disabled) {
         border-color: var(--text-dim, #94a3b8);
         color: var(--text-primary);
+    }
+
+    // Same treatment as .toolbar-btn:disabled, so the two kinds of inert control in the
+    // toolbar read alike.
+    &:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
     }
 
     &__chevron {

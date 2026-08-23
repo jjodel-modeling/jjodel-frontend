@@ -9,6 +9,8 @@ interface ColorSchemeSelectorProps {
     onCreateCustomPalette: (name: string, seed: string) => void;
     onRenamePalette: (id: string, name: string) => void;
     onDeletePalette: (id: string) => void;
+    /** Inert while a concrete-syntax viewpoint is active: the theme stops governing the render. */
+    disabled?: boolean;
 }
 
 interface SchemeOption {
@@ -49,7 +51,7 @@ const ALL_OPTIONS = new Map<ColorScheme, { name: string; icon: string }>([
 // Lower-cased built-in labels — reserved names a custom palette cannot reuse.
 const BUILTIN_NAMES = [...MAIN_OPTIONS, ...PALETTE_OPTIONS].map(o => o.name.toLowerCase());
 
-function ColorSchemeSelector({ colorScheme, onColorSchemeChange, customPalettes, onCreateCustomPalette, onRenamePalette, onDeletePalette }: ColorSchemeSelectorProps) {
+function ColorSchemeSelector({ colorScheme, onColorSchemeChange, customPalettes, onCreateCustomPalette, onRenamePalette, onDeletePalette, disabled = false }: ColorSchemeSelectorProps) {
     const [open, setOpen] = useState(false);
     const [submenuOpen, setSubmenuOpen] = useState(false);
     const [creating, setCreating] = useState(false);
@@ -63,6 +65,11 @@ function ColorSchemeSelector({ colorScheme, onColorSchemeChange, customPalettes,
     const creatingRef = useRef(false);
     const actionActiveRef = useRef(false);  // true while a rename/delete row action is open
     const editRowRef = useRef<HTMLDivElement>(null);
+
+    // A menu left hanging open under a now-disabled trigger would still take clicks.
+    useEffect(() => {
+        if (disabled) { setOpen(false); setSubmenuOpen(false); }
+    }, [disabled]);
 
     const customActive = customPalettes.find(p => p.id === colorScheme);
     const current = customActive
@@ -219,7 +226,8 @@ function ColorSchemeSelector({ colorScheme, onColorSchemeChange, customPalettes,
             <button
                 className="toolbar-dropdown-btn scheme-selector__trigger"
                 onClick={() => setOpen(prev => !prev)}
-                title="Color scheme"
+                disabled={disabled}
+                title={disabled ? 'The active viewpoint defines the colors — switch to Abstract syntax to change them' : 'Color scheme'}
             >
                 <span>Theme: {current.name}</span>
                 <i className="bi bi-chevron-down toolbar-dropdown-btn__chevron" />

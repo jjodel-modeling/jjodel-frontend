@@ -232,6 +232,15 @@ function Toolbar({
     // warns and the selection stops tracking the store. Coerced here and nowhere upstream.
     const shownViewpointId = isMetamodel ? '' : (activeViewpointId || '');
 
+    // ── VIEW group enablement ──
+    // Notation and Theme govern the abstract-syntax rendering. As soon as a concrete-syntax
+    // viewpoint is active they no longer decide how anything draws — the viewpoint does
+    // (R-IRN-10: the viewpoint selector IS the syntax control) — so leaving them live would
+    // offer a choice with no effect. Keyed on shownViewpointId, not on the raw root: '' is
+    // exactly "Abstract syntax", and the metamodel case collapses to '' one line above, which
+    // keeps the controls live on M2 where abstract syntax is all there is.
+    const viewControlsDisabled = !!shownViewpointId;
+
     const handleViewpointChange = useCallback((vpId: string) => {
         activateViewpoint(vpId || null);
     }, []);
@@ -284,6 +293,11 @@ function Toolbar({
         document.addEventListener('keydown', handleKey);
         return () => document.removeEventListener('keydown', handleKey);
     }, [notationOpen]);
+
+    // A dropdown left hanging open under a now-disabled trigger would still take clicks.
+    useEffect(() => {
+        if (viewControlsDisabled) setNotationOpen(false);
+    }, [viewControlsDisabled]);
 
     const handleSelect = useCallback((id: NotationMode) => {
         onNotationChange(id);
@@ -376,7 +390,8 @@ function Toolbar({
                     <button
                         className="toolbar-dropdown-btn"
                         onClick={() => setNotationOpen(prev => !prev)}
-                        title="Notation mode"
+                        disabled={viewControlsDisabled}
+                        title={viewControlsDisabled ? 'The active viewpoint defines the notation — switch to Abstract syntax to change it' : 'Notation mode'}
                     >
                         <span>{currentNotation.name}</span>
                         <i className="bi bi-chevron-down toolbar-dropdown-btn__chevron" />
@@ -402,6 +417,7 @@ function Toolbar({
 
                 {/* Theme/Color scheme dropdown */}
                 <ColorSchemeSelector
+                    disabled={viewControlsDisabled}
                     colorScheme={colorScheme}
                     onColorSchemeChange={onColorSchemeChange}
                     customPalettes={customPalettes}
