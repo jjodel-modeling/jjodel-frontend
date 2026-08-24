@@ -1,6 +1,11 @@
 # Memo di proposta, 2026-08-24 01:50: la slice 1 del layout per viewpoint
 
-**Stato: PROPOSTA, non ratificata.** Scritto dall'architetto nella notte fra il 23 e il 24, su mandato
+**Stato: RATIFICATA il 2026-08-24**, con tre emendamenti (materializzazione completa al primo
+gesto; regola per vp nullo/non esclusivo; record orfani accettati). Righe iscritte come
+R-LAY-14..17 e RC-8..10; verbale: `claude_2026-08-24_memo_ratifica_layout_slice1.md`. Il testo
+sotto resta com'era alla proposta.
+
+Scritto dall'architetto nella notte fra il 23 e il 24, su mandato
 di lavoro autonomo meccanico. Niente qui è a registro. Le righe marcate «R-LAY-14 (candidata)» e
 seguenti sono testi pronti per la ratifica, da leggere come domande. Base: `R-LAY-1..13`,
 `discovery_2026-08-24_layout_d1_d8_d10.md` (D1..D8, D10),
