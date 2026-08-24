@@ -112,3 +112,39 @@ importato da nessun file fuori dalla sua cartella — grep con controllo positiv
   metamodelli per una trasformazione. `TreeViewScopeBar` ha già `scope: string[]`.
 - Toggle "mostra tutto", se dopo l'uso reale il dimming risulterà troppo: schema
   `DProject.expandedTreeNodes` + migration `VersionFixer`.
+
+## Appendice — cleanup della shell TreeViewSidebar (commit separato)
+
+`TreeViewSidebar.tsx` (la shell: sidebar desktop + overlay laptop) era morto.
+Controllo positivo su ogni grep prima di dichiarare l'assenza:
+`<PropertiesWithTreeView` risolve a `Dashboard.tsx:639`, `useNodeProblems` a 5
+file. Il componente non era importato da nulla fuori dalla sua cartella, e
+nemmeno il barrel `index.ts` aveva consumatori.
+
+Rimossi: il componente, l'export morto dal barrel, e dalla scss le sole regole
+`.tree-view-sidebar*` / `.tree-view-overlay*` — incluse le sei nei due blocchi
+dark-mode (`[data-theme="dark"]` e `html[data-theme="dark"] body:not(...)`).
+−356 righe, nessun selettore vivo toccato. Restano `.tree-view-content` e
+`.tree-search` (vivi) e `.tree-view-search-toggle` (ora orfano, ma fuori dal
+perimetro dichiarato del cleanup).
+
+Corretto il commento `Dock.tsx:281`, che indicava il componente eliminato come
+sostituto della tab Tree View rimossa: il sostituto reale è
+`PropertiesWithTreeView` montato in `Dashboard.tsx`.
+
+Smoke ripetuto dopo la rimozione: rail identico — scope bar `top` 135px,
+container 399×392 a `top` 135, `.tree-search` presente, le stesse quattro righe
+dimmed, zero `pageerror`. Screenshot sovrapponibile a quello pre-cleanup.
+
+### Debito segnalato e non toccato
+
+- `hooks/useResolution.ts` resta senza consumatori. Non rimosso su indicazione.
+- `TreeViewContent.tsx:463` cerca lo scroll container con
+  `.tree-view-sidebar__body, .tree-view-overlay__body`. Quel selettore non ha
+  mai fatto match nel rail (che usa `.tree-view-panel-body`): il menu contestuale
+  non si chiude allo scroll. Difetto pre-esistente, reso visibile dalla
+  rimozione, non introdotto da essa. Correggerlo cambierebbe un comportamento,
+  non lo ripristinerebbe.
+- `Tooltip.tsx:167` elenca le stesse due classi morte in una lista di selettori.
+- `properties-with-tree-view.scss:413` cita `tree-view-sidebar.scss:1763`:
+  riferimento di riga ora sfasato di 356 righe.

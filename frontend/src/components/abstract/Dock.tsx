@@ -278,7 +278,8 @@ function DockComponent(props: AllProps) {
     // `<PropertiesWithTreeView mode='floating'/>`). Removed here so it is never rendered
     // twice. The other editors-group tab consts below are left in place (orphaned).
     const metadata = {id: id(), title: <TabHeader tid={tid()}>Metadata</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><MetaData /></TabContent>};
-    // Tree View tab removed - now using dedicated TreeViewSidebar component
+    // Tree View tab removed - the tree now renders inside PropertiesWithTreeView,
+    // mounted as the floating rail in Dashboard.tsx (see the F2 note above).
     const node = {id: id(), title: <TabHeader tid={tid()}>Node</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><NodeEditor /></TabContent>};
     // Viewpoint/view editing is rendered inline by the Properties tab (Info.tsx)
     // when a view or viewpoint is selected in the Tree View sidebar.

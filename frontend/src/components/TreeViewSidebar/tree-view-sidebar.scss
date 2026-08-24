@@ -32,292 +32,6 @@ $transition-fast: 150ms ease;
 $transition-normal: 250ms ease;
 
 // ============================================
-// SIDEBAR (Desktop/Monitor Mode)
-// ============================================
-
-.tree-view-sidebar {
-    position: fixed;
-    // Align with tab content area (navbar 60px + tab header ~40px)
-    top: 100px;
-    right: 0;
-    bottom: 0;
-    // Lower z-index so navbar dropdowns (z-index: 200) appear above
-    z-index: 50;
-    display: flex;
-    flex-direction: column;
-    background-color: $color-bg-primary;
-    border-left: 1px solid $color-border;
-    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-
-    // Collapsed state
-    &--collapsed {
-        width: 40px;
-
-        .tree-view-sidebar__toggle {
-            left: 50%;
-            transform: translateX(-50%);
-        }
-    }
-
-    // Open state
-    &--open {
-        // Width set via inline style (dynamic)
-    }
-
-    // Dragging state (disable transitions during resize)
-    &--dragging {
-        transition: none;
-        user-select: none;
-    }
-}
-
-// Toggle button
-.tree-view-sidebar__toggle {
-    position: absolute;
-    top: 8px;
-    left: 8px;
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: $color-bg-secondary;
-    border: 1px solid $color-border;
-    border-radius: $radius-sm;
-    cursor: pointer;
-    color: $color-text-secondary;
-    transition: all $transition-fast;
-    z-index: 10;
-
-    &:hover {
-        background-color: $color-bg-tertiary;
-        color: $color-text-primary;
-        border-color: $color-border-hover;
-    }
-
-    i {
-        font-size: 12px;
-    }
-}
-
-// Collapsed state indicator
-.tree-view-sidebar__collapsed-label {
-    position: absolute;
-    top: 44px;
-    left: 50%;
-    transform: translateX(-50%);
-    color: $color-text-tertiary;
-
-    i {
-        font-size: 16px;
-    }
-}
-
-// Resize handle (polish 2026-05-12: 1px visual + 6px hit zone, cyan hover.
-// La sidebar è ancorata a right:0, quindi l'handle vive sul bordo SINISTRO
-// del container — l'edge che separa la sidebar dal canvas, quello che
-// l'utente percepisce come "lato grabbabile".
-.tree-view-sidebar__resize-handle {
-    position: absolute;
-    top: 0;
-    // 6px hit zone, sporgente 3px verso il canvas per facilitare il grab
-    left: -3px;
-    width: 6px;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: col-resize;
-    background-color: transparent;
-    z-index: 10;
-
-    // L'icona grip legacy (`bi-grip-vertical`) viene nascosta visivamente:
-    // il nuovo visual è la linea 1px qui sotto. La JSX resta invariata
-    // (constraint "no opportunistic refactor"), ma il rendering è clean.
-    i { display: none; }
-
-    // Linea 1px visibile, centrata nella hit zone (3px da sinistra in 6px)
-    &::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        bottom: 0;
-        left: 3px;
-        width: 1px;
-        background-color: var(--color-border-secondary);
-        transition: background-color $transition-fast;
-        pointer-events: none;
-    }
-
-    &:hover::before {
-        background-color: var(--accent-cyan, #0ea5e9);
-    }
-
-    // Touch device: handle non operativo, nasconderlo
-    @media (hover: none) {
-        display: none;
-    }
-}
-
-// Durante il drag, la linea resta cyan anche se il cursore esce dalla hit zone
-.tree-view-sidebar--dragging .tree-view-sidebar__resize-handle::before {
-    background-color: var(--accent-cyan, #0ea5e9);
-}
-
-// Header
-.tree-view-sidebar__header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
-    padding-left: 40px; // Space for toggle button
-    border-bottom: 1px solid $color-border;
-    font-size: 12px;
-    font-weight: 600;
-    color: $color-text-secondary;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-
-    i {
-        font-size: 14px;
-        color: $color-accent;
-    }
-}
-
-// Body (scrollable content area)
-.tree-view-sidebar__body {
-    flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding: 4px 0;
-
-    // Custom scrollbar
-    &::-webkit-scrollbar {
-        width: 6px;
-    }
-
-    &::-webkit-scrollbar-track {
-        background: transparent;
-    }
-
-    &::-webkit-scrollbar-thumb {
-        background-color: $color-border;
-        border-radius: 3px;
-
-        &:hover {
-            background-color: $color-border-hover;
-        }
-    }
-}
-
-// ============================================
-// OVERLAY (Laptop Mode)
-// ============================================
-
-.tree-view-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 1000;
-    display: flex;
-    justify-content: flex-end;
-    background-color: rgba(0, 0, 0, 0.4);
-    animation: overlayFadeIn 0.2s ease;
-}
-
-@keyframes overlayFadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-.tree-view-overlay__content {
-    width: 280px;
-    max-width: 90vw;
-    height: 100%;
-    background-color: $color-bg-primary;
-    box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
-    display: flex;
-    flex-direction: column;
-    animation: overlaySlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-@keyframes overlaySlideIn {
-    from { transform: translateX(100%); }
-    to { transform: translateX(0); }
-}
-
-.tree-view-overlay__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px 16px;
-    border-bottom: 1px solid $color-border;
-}
-
-.tree-view-overlay__title {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 13px;
-    font-weight: 600;
-    color: $color-text-primary;
-
-    i {
-        font-size: 16px;
-        color: $color-accent;
-    }
-}
-
-.tree-view-overlay__close {
-    width: 28px;
-    height: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: transparent;
-    border: none;
-    border-radius: $radius-sm;
-    cursor: pointer;
-    color: $color-text-secondary;
-    transition: all $transition-fast;
-
-    &:hover {
-        background-color: $color-bg-tertiary;
-        color: $color-text-primary;
-    }
-
-    i {
-        font-size: 14px;
-    }
-}
-
-.tree-view-overlay__body {
-    flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding: 4px 0;
-
-    &::-webkit-scrollbar {
-        width: 6px;
-    }
-
-    &::-webkit-scrollbar-track {
-        background: transparent;
-    }
-
-    &::-webkit-scrollbar-thumb {
-        background-color: $color-border;
-        border-radius: 3px;
-
-        &:hover {
-            background-color: $color-border-hover;
-        }
-    }
-}
-
-// ============================================
 // TREE CONTENT
 // ============================================
 
@@ -359,30 +73,11 @@ $transition-normal: 250ms ease;
     }
 }
 
-// Sidebar header: push the toggle to the far right and beat the header's own
-// `i` rule (which otherwise pins the icon to 14px / $color-accent).
-.tree-view-sidebar__header .tree-view-search-toggle {
-    margin-left: auto;
-
-    i {
-        font-size: 13px;
-        color: inherit;
-    }
-}
-
-// Overlay header: cluster the search toggle next to the close button.
-.tree-view-overlay__actions {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-
 // ─── Search bar (sticky, compact filter row) ─────────────────────────────────
 // Single 28px row — lens · input · match count · clear, all inline. No border or
 // radius on the input: the row is delimited only by its border-bottom. Sticks to
-// the top of the scroll container (.tree-view-sidebar__body /
-// .tree-view-overlay__body) with a full opaque background so rows scroll under
-// it. Negative horizontal margin cancels the .tree-view-content 8px side padding
+// the top of the scroll container (.tree-view-panel-body, the rail) with a full
+// opaque background so rows scroll under it. Negative horizontal margin cancels the .tree-view-content 8px side padding
 // so the bar and its separator span the full panel width.
 .tree-search {
     position: sticky;
@@ -897,32 +592,9 @@ $color-highlight-unknown: #f59e0b; // Amber - unknown action
 // ============================================
 
 [data-theme="dark"] {
-    .tree-view-sidebar,
-    .tree-view-overlay__content {
-        background-color: #1e1e1e;
-        border-color: #333;
-    }
-
-    .tree-view-sidebar__header,
-    .tree-view-overlay__header {
-        border-color: #333;
-        color: #888;
-    }
-
     .tree-search {
         // border-bottom uses the theme-aware --color-border-secondary token.
         background-color: #1e1e1e;
-    }
-
-    .tree-view-sidebar__toggle {
-        background-color: #2d2d2d;
-        border-color: #444;
-        color: #999;
-
-        &:hover {
-            background-color: #3d3d3d;
-            color: #e0e0e0;
-        }
     }
 
     .tree-node__header {
@@ -1101,29 +773,6 @@ $color-highlight-unknown: #f59e0b; // Amber - unknown action
 // Also support prefers-color-scheme for system dark mode
 html[data-theme="dark"] {
     body:not([data-theme="light"]) {
-        .tree-view-sidebar,
-        .tree-view-overlay__content {
-            background-color: #1e1e1e;
-            border-color: #333;
-        }
-
-        .tree-view-sidebar__header,
-        .tree-view-overlay__header {
-            border-color: #333;
-            color: #888;
-        }
-
-        .tree-view-sidebar__toggle {
-            background-color: #2d2d2d;
-            border-color: #444;
-            color: #999;
-
-            &:hover {
-                background-color: #3d3d3d;
-                color: #e0e0e0;
-            }
-        }
-
         .tree-node__header {
             &:hover {
                 background-color: #2a2a2a;
@@ -1980,7 +1629,6 @@ html[data-theme="dark"] {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Tree view — redesign additivo (rail).
-// Importare in coda a tree-view-sidebar.scss:  @import './tree-view-redesign';
 // Tutto additivo: nessuna regola esistente viene riscritta.
 // ─────────────────────────────────────────────────────────────────────────────
 
