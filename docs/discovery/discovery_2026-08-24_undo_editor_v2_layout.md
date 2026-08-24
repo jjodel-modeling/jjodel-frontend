@@ -527,3 +527,145 @@ fuori dal perimetro del prompt, da autorizzare.
 Report chiuso. Nessun file di codice modificato. **Fase 2 solo dopo il GO esplicito di Alfonso**,
 che deve rispondere almeno alla domanda **A** — perché da essa dipende se il fronte chiude il
 punto 3 del prompt o lo dichiara aperto.
+
+---
+
+## 12. Addendum 2026-08-24 (dopo il GO delle 19:10) — le quattro misure, e una correzione
+
+Il GO ha scartato A1/A2/A3 per **A4**: un solo sistema di undo in modalità JjOM, quello del
+D-layer. Snapshot a inizio gesto, write-back per resolver e `clear()` di `useHistory` **decadono**
+(§2, §3, §4 restano validi come misura, non come piano). Qui le quattro misure chieste dal GO,
+più una correzione a questo stesso report.
+
+### 12.0 Correzione al §1.4 — la causa regge, l'effetto no
+
+Il §1.4 concludeva che un ⌘Z «riporta il progetto all'inizio della sessione». **È sbagliato**, e
+la prova 0 di Alfonso (2026-08-24, 19:30 — ⌘Z non fa niente, icona spenta) lo ha mostrato prima
+del diff. La catena completa, che il §1.4 aveva letto a metà:
+
+```
+reducer.ts:1208    let shouldMerge = !isRelevantChange;      // flag falso → sempre true
+reducer.ts:1211    if (!pastDelta) shouldMerge = false;      // stack vuoto → torna false
+reducer.ts:1225    if (shouldMerge && allowMerge) { ...fonde... }
+reducer.ts:1257    else if (isRelevantChange) { ...spinge... }   // sempre false
+```
+
+Con `U.userHasInteracted === false`, `isRelevantChange` è **sempre** falso, quindi il ramo che
+spinge non gira mai; e `pastDelta` — letto a `:1207` dallo stack — resta `undefined` perché niente
+viene mai spinto, quindi nemmeno il ramo che fonde gira. **Il delta viene scartato**: nessuno dei
+due rami lo prende. Lo stack resta vuoto per sempre e `UndoAction` è un no-op.
+
+La causa (`U.userHasInteracted` con un solo scrittore, `MetamodelTab.tsx:164`) resta esatta; la
+conseguenza no. Il §1.4 aveva letto la clausola di merge senza la riga `:1211` che la disinnesca
+a stack vuoto. Errore di lettura parziale, non di misura.
+
+### 12.1 Misura 1 — dove alzare il flag
+
+**La sede proposta dal GO (il callback di sync iniziale, `:417-438`) non è sicura.** Misurato:
+quel callback, nel ramo `justCreatedGraphRef`, **attende `autoLayoutRef.current()`**, cioè
+`handleAutoLayout`, che scrive posizioni nel D-layer con `syncPositionBatchToJjom` (`:3262` nel
+file pre-diff). E arma `armReLayoutRef` (`:427` → `:3346`), che ri-lancia il layout quando gli
+archi M1 si materializzano, **dopo** il callback e senza alcun gesto. Alzando il flag lì, la
+disposizione ELK di un grafo appena creato diventerebbe il primo passo di undo: il primo ⌘Z
+scombinerebbe il layout. È esattamente il caso che il GO chiedeva di escludere.
+
+**Sede scelta: la prima interazione utente col pannello di editor-v2.** È l'analogo vero di
+`MetamodelTab.tsx:164` — lì il flag si alza su un *drop*, cioè su un gesto — e per costruzione
+esclude ogni scrittura programmatica di boot, qualunque sia il suo istante. Implementazione:
+`onPointerDownCapture` e `onKeyDownCapture` sul `<div className="editor-v2">`, entrambi su
+`markUserInteracted`. In cattura perché nessun figlio che fermi la propagazione possa saltarlo.
+
+Conseguenza rispetto alla prova 2 del protocollo («rinomina, poi sposta, poi ⌘Z»): la rinomina
+resta undoable, perché per selezionare il nodo da rinominare si clicca sulla tela e il
+`pointerdown` alza già il flag. **Dichiarato**: una modifica fatta da un pannello esterno senza
+mai toccare la tela, in una sessione appena aperta, non è undoable. Il classico ha lo stesso
+limite prima del primo drop.
+
+**Dichiarato**: se il re-layout armato scatta *dopo* che l'utente ha già interagito (archi M1 che
+atterrano tardi), la sua scrittura diventa un passo di undo. Non osservato nelle prove; da
+riportare se la verifica visiva lo mostra.
+
+### 12.2 Misura 2 — persistenza dopo ⌘Z
+
+**La via proposta dal GO non è praticabile.** `state.action_title` non viene scritto da
+`doUndoRedo`: il blocco che assegnerebbe `'undone N steps'` è **commentato**
+(`reducer.ts:1139-1146`, dentro `if (steps > 1)`). Non c'è nessun marcatore dell'undo nello stato.
+
+**Via trovata, dentro `EditorV2.tsx`**: si osserva lo **stack**, non lo stato.
+`statehistory` (`redux/store.tsx:76`, esportato da `joiner/index.ts:204`) è un singleton di
+modulo, quindi non selezionabile in senso proprio; ma il corpo di un `useSelector` gira a **ogni
+notifica dello store**, e `UndoAction`/`RedoAction` passano dallo store, quindi leggerlo lì è una
+lettura-dopo-dispatch.
+
+Il discriminante è esatto, non euristico:
+
+| evento | `undoable` | `redoable` |
+|---|---|---|
+| azione ordinaria | `push` (`reducer.ts:1259`), o invariato se fusa | **mai toccato** |
+| undo | `pop` (`:1128`) | `push` (`:1335`, `key='redoable'`) |
+| redo | `push` (`:1335`, `key='undoable'`) | `pop` (`:1128`) |
+
+Verificato con grep che **nessuna azione ordinaria svuota `redoable`** (unici scrittori:
+`:1128`, `:1130`, `:1335-1338`). Il superamento di `MAX_HISTORY` fa `shift` dopo un `push`, quindi
+la lunghezza resta uguale ma non cala mai. Quindi «una delle due lunghezze è **diminuita**» scatta
+su undo e redo e **su nient'altro**. Su quella transizione si chiama `scheduleLayoutSave()`.
+
+### 12.3 Misura 3 — stack vuoto
+
+`doUndoRedo` (`reducer.ts:1118`) **non lancia** con lo stack vuoto: `pop()` dà `undefined` e la
+riga `:1129` fa `if (!delta) continue`. Ritorna `oldState` mutato solo su `VIEWS_RECOMPILE_all`.
+
+Ma `statehistory[forUser]` **non esiste** finché il primo delta non lo crea (`reducer.ts:1207`),
+e `:1128` lo indicizza senza guardia: `statehistory[forUser].undoable.pop()` lancia un
+`TypeError` su un utente mai visto. **I pulsanti guardano quindi lo stack prima di dispatchare**,
+come fa `undoredocomponent.tsx`. Lo stesso vale per `canUndo`/`canRedo`.
+
+**Dichiarato, non risolto**: il percorso da tastiera (`Navbar.tsx:1194`) non ha quella guardia. Un
+⌘Z premuto prima di qualunque modifica, su una sessione dove `statehistory[DUser.current]` non è
+ancora nato, può lanciare. Preesistente, in `Navbar.tsx`, fuori perimetro; la prova 7 del
+protocollo lo tocca.
+
+### 12.4 Misura 4 — il contesto di `Navbar`
+
+La seconda causa concorrente ipotizzata dal GO è **esclusa per lettura**, senza bisogno del
+`console.log` temporaneo. `detectCurrentContext()` (`utils/keyboardShortcuts.ts:31-64`) su
+`#/project?id=…` dà `path = '/project?id=…'`, che:
+
+- non è `'/allProjects'`, `'/dashboard'`, `'/'`, `''` (confronti di **uguaglianza**, `:37`);
+- non contiene `/account`, `/profile`, `/settings` (`:42`);
+- contiene `/project` (`:53`, `:58`).
+
+Quindi il ritorno è `METAMODEL_EDITOR` se `.GraphContainer` / `.Graph` /
+`[data-context="metamodel-editor"]` è nel DOM, `PROJECT_EDITOR` altrimenti — e **i due valori
+entrano nello stesso ramo** a `Navbar.tsx:1189`. Il contesto non può essere la causa: qualunque
+dei due sia, l'`UndoAction` parte. Nessuna modifica a `detectCurrentContext`, nessun secondo GO.
+
+L'osservazione «⌘Z non fa niente» è spiegata per intero dal §12.0: l'`UndoAction` parte e trova
+lo stack vuoto.
+
+### 12.5 Il diff — un file
+
+`frontend/src/components/editor-v2/EditorV2.tsx`.
+
+1. Import esteso: `U`, `DUser`, `UndoAction`, `RedoAction`, `statehistory` da `'../../joiner'`
+   (riga già esistente, nessun import nuovo).
+2. `markUserInteracted` + `onPointerDownCapture` / `onKeyDownCapture` sul div radice (§12.1).
+3. `dHistorySig` via `useSelector` che campiona `statehistory[DUser.current]`, e l'effetto che
+   chiama `scheduleLayoutSave()` quando una delle due lunghezze cala (§12.2).
+4. `handleUndo` / `handleRedo`: in `isJjomMode`, guardia sullo stack e
+   `UndoAction`/`RedoAction`.new(1, DUser.current, false).commit()`, poi `return`. Il ramo
+   esistente resta **intatto** sotto, per la modalità non JjOM.
+5. `canUndo`/`canRedo` passati alla `Toolbar`: in JjOM dalle lunghezze del D-layer, altrimenti da
+   `useHistory` come prima.
+
+Nessuna riga tolta. I due rami di undo/redo dell'`onKeyDown` (`:2511`, `:2517`) restano morti per
+costruzione e vanno nel censimento R-DEAD, non in questo diff. `useHistory.ts` **non è toccato**.
+
+### 12.6 Gate
+
+`tsc` **33**, lista byte-identica alla baseline: confronto su output completo con numeri di riga e
+colonna normalizzati, `diff` vuoto tranne il PID in un `ExperimentalWarning` di node. L'unico
+errore in `EditorV2.tsx` è quello preesistente (`TS2339 Property 'model' does not exist on type
+'never'`), spostato da `:2902` a `:2969` dalle 67 righe aggiunte. `vitest` **1349 passed**, le
+stesse **9** suite rosse. `build` **exit 0**, solo il warning di chunk size preesistente.
+Nessun test nuovo: il diff è cablaggio di store e toolbar.

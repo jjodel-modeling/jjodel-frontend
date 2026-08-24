@@ -97,7 +97,7 @@ import {
 import { computeElkLayout } from './utils/elkLayout';
 import { rafThrottle, cancelThrottle } from '../../utils/DragThrottle';
 import { getCompositionChildOptions, getCompatibleReferences, getCompatibleContainmentRefs, isDropCompatible, type CompatibleReference } from './utils/compositionCompat';
-import { LPointerTargetable, store, DState, SetRootFieldAction, DVertex, GraphSize, GraphPoint, SetFieldAction, TRANSACTION } from '../../joiner';
+import { LPointerTargetable, store, DState, SetRootFieldAction, DVertex, GraphSize, GraphPoint, SetFieldAction, TRANSACTION, U, DUser, UndoAction, RedoAction, statehistory } from '../../joiner';
 import { jjomVertexToRFNode } from './utils/jjomTransformers';
 import { useTheme } from '../../services/ThemeService';
 import { getDraggedMetaclassId } from './utils/dragState';
@@ -933,6 +933,57 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     const { takeSnapshot, undo, redo, canUndo, canRedo } = useHistory(getNodes, getEdges);
     // Force re-render to update canUndo/canRedo
     const [, forceUpdate] = useState({});
+
+    // ── D-layer undo/redo in JjOM mode (R-UNDO-1) ────────────────────────
+    // In JjOM mode editor-v2 runs NO history of its own: Cmd+Z is swallowed by
+    // Navbar, which listens in the CAPTURE phase on `window` (Navbar.tsx:1278-1279)
+    // and calls stopImmediatePropagation for 'Z' (Navbar.tsx:962-964) before any
+    // context logic, so the onKeyDown below never fires for it and the keystroke
+    // becomes an UndoAction on the D-layer. A session history would therefore be a
+    // second, divergent undo that the keyboard never reaches. The toolbar buttons
+    // drive the same D-layer stack instead. `useHistory` above stays in force for
+    // non-JjOM mode, untouched.
+
+    // `U.userHasInteracted` gates the entire D-layer history: while it is false,
+    // isRelevantChangeCheck (reducer.ts:1277) always returns false, so each delta is
+    // either merged into the previous one or — with an empty stack, i.e. no pastDelta
+    // (reducer.ts:1211) — dropped outright, and the undo stack never grows at all.
+    // Its ONLY writer in the codebase is the classic canvas drop
+    // (MetamodelTab.tsx:164), a path editor-v2 never takes.
+    //
+    // Raising it on the first real user interaction with the panel is that same
+    // gesture, and it deliberately excludes every programmatic boot write — the ELK
+    // auto-layout of a just-created graph and the re-layout armed for when the M1
+    // reference edges land (both write positions through syncPositionBatchToJjom) —
+    // which would otherwise become the first undo step and make the first Cmd+Z
+    // scramble the layout.
+    const markUserInteracted = useCallback(() => {
+        if (!U.userHasInteracted) U.userHasInteracted = true;
+    }, []);
+
+    // `statehistory` is a module singleton, not part of the Redux state, so it cannot
+    // be selected in the ordinary sense. It can be SAMPLED: a useSelector body runs on
+    // every store notification, and UndoAction/RedoAction go through the store, so this
+    // is a read-after-dispatch. Format "undoable:redoable".
+    const dHistorySig = useSelector(() => {
+        const h = (statehistory as any)[DUser.current];
+        return `${h?.undoable?.length ?? 0}:${h?.redoable?.length ?? 0}`;
+    });
+    const [dUndoLen, dRedoLen] = dHistorySig.split(':').map(Number);
+
+    // Persistence after an undo/redo. The Navbar path does not call scheduleLayoutSave,
+    // and doUndoRedo cannot be observed through the state: the branch that would write
+    // `action_title = 'undone N steps'` is commented out (reducer.ts:1139-1146). What is
+    // observable is the stack itself. An ordinary action only ever GROWS `undoable` and
+    // never touches `redoable`; an undo pops `undoable` and pushes `redoable`, a redo the
+    // mirror. So "either length decreased" fires on undo/redo and on nothing else.
+    const prevHistLenRef = useRef<{ u: number; r: number } | null>(null);
+    useEffect(() => {
+        const prev = prevHistLenRef.current;
+        prevHistLenRef.current = { u: dUndoLen, r: dRedoLen };
+        if (!prev) return; // first render: nothing happened yet
+        if (dUndoLen < prev.u || dRedoLen < prev.r) scheduleLayoutSave();
+    }, [dUndoLen, dRedoLen, scheduleLayoutSave]);
 
     // Alignment tools
     const {
@@ -2357,6 +2408,16 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
 
     // Undo handler
     const handleUndo = useCallback(() => {
+        // JjOM mode: a single undo system, the D-layer's (R-UNDO-1) — the very stack the
+        // keyboard already drives through Navbar, so button and Cmd+Z can never diverge.
+        // doUndoRedo tolerates an empty stack (reducer.ts:1129, `if (!delta) continue`),
+        // but `statehistory[forUser]` itself is undefined until the first delta lands,
+        // and indexing it would throw: guard on the stack, as undoredocomponent does.
+        if (isJjomMode) {
+            if (!(statehistory as any)[DUser.current]?.undoable?.length) return;
+            UndoAction.new(1, DUser.current, false).commit();
+            return;
+        }
         const state = undo();
         if (state) {
             setNodes(state.nodes);
@@ -2393,6 +2454,12 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
 
     // Redo handler
     const handleRedo = useCallback(() => {
+        // Mirror of handleUndo (R-UNDO-1).
+        if (isJjomMode) {
+            if (!(statehistory as any)[DUser.current]?.redoable?.length) return;
+            RedoAction.new(1, DUser.current, false).commit();
+            return;
+        }
         const state = redo();
         if (state) {
             setNodes(state.nodes);
@@ -3934,7 +4001,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
 
     return (
         <EditorContext.Provider value={editorContextValue}>
-            <div className={`editor-v2 theme-${theme} notation-${notation}${colorScheme !== 'default' ? ` scheme-${colorScheme}` : ''}${showEdgeLabels ? ' show-edge-labels' : ''}${showBackground ? '' : ' hide-background'}${highlightModeActive ? ' highlight-mode' : ''}`} tabIndex={0} onKeyDown={onKeyDown}>
+            <div className={`editor-v2 theme-${theme} notation-${notation}${colorScheme !== 'default' ? ` scheme-${colorScheme}` : ''}${showEdgeLabels ? ' show-edge-labels' : ''}${showBackground ? '' : ' hide-background'}${highlightModeActive ? ' highlight-mode' : ''}`} tabIndex={0} onKeyDown={onKeyDown} onPointerDownCapture={markUserInteracted} onKeyDownCapture={markUserInteracted}>
                 <UniquenessProblemSync modelid={modelid} />
                 <ConformanceProblemSync modelid={modelid} graphId={graphId} />
                 <PalettePanel
@@ -3955,8 +4022,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                         onDeleteSelected={deleteSelected}
                         onUndo={handleUndo}
                         onRedo={handleRedo}
-                        canUndo={canUndo}
-                        canRedo={canRedo}
+                        canUndo={isJjomMode ? dUndoLen > 0 : canUndo}
+                        canRedo={isJjomMode ? dRedoLen > 0 : canRedo}
                         notation={notation}
                         onNotationChange={setNotation}
                         colorScheme={colorScheme}
