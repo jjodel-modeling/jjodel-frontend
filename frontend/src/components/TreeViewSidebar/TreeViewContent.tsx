@@ -25,7 +25,7 @@ import { getLastEditedViewpointId, createViewInWorkbench, createBlankViewInViewp
 import { isAdvancedMode } from '../../hooks/useInterfaceMode';
 import { JjodelEvents, SystemEvents } from '../../events/registry';
 import { useNodeProblems } from '../editor-v2/problems/useNodeProblems';
-import { getTypeName, getMultiplicity, formatFeatureSignature } from '../../common/featureSignature';
+import { getTypeName, getMultiplicity } from '../../common/featureSignature';
 import type { NodeProblem } from '../editor-v2/problems/registry';
 import { computeTreeViewScope } from './treeViewScope';
 
@@ -793,7 +793,14 @@ const StructuralFeatureRow = memo(function StructuralFeatureRow({
                 nameOverride={(
                     <>
                         <span className="tree-feature__name">{renderHighlightedName(feature.name, highlightQuery)}</span>
-                        <span className="tree-feature__type">{formatFeatureSignature(feature.typeName, feature.multiplicity)}</span>
+                        {/* Type and multiplicity are two spans, not the one string
+                            `formatFeatureSignature` composes, so the rail can drop the
+                            multiplicity via CSS when it is too narrow to carry it
+                            (`[data-density="compact"]`). The two values already arrive
+                            separated on `feature`, so `formatFeatureSignature` — still
+                            the single source for the properties shell — is untouched. */}
+                        <span className="tree-feature__type">{feature.typeName}</span>
+                        <span className="tree-feature__mult">[{feature.multiplicity}]</span>
                     </>
                 )}
             />

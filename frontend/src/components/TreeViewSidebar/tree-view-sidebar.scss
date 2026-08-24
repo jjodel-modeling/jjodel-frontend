@@ -1488,6 +1488,18 @@ html[data-theme="dark"] {
     padding-right: 4px;
 }
 
+// Multiplicity, split out of the type so a narrow rail can drop it (see the
+// `[data-density]` rules in properties-with-tree-view.scss). Same metrics as the
+// type: the pair must read as one column, and hiding this span must not change the
+// row height. The type's own `padding-right: 4px` is the gap between the two.
+.tree-feature__mult {
+    font-size: 11px;
+    font-family: var(--font-mono);
+    color: var(--color-text-tertiary);
+    white-space: nowrap;
+    padding-right: 4px;
+}
+
 // ─── Documentation empty state ───────────────────────────────────────────────
 
 .tree-empty-doc {
@@ -1596,7 +1608,8 @@ html[data-theme="dark"] {
 
     .tree-counter,
     .tree-empty-doc-label,
-    .tree-feature__type {
+    .tree-feature__type,
+    .tree-feature__mult {
         color: #6b7280;
     }
 
@@ -1643,6 +1656,12 @@ html[data-theme="dark"] {
     max-width: 55%;
 }
 
+// The multiplicity follows the type inside the same right-hand column: `margin-left:
+// auto` stays on the type, which is the one that pushes the pair right.
+.tree-feature__mult {
+    flex-shrink: 0;
+}
+
 .tree-feature__name {
     flex-shrink: 1;
     min-width: 0;
@@ -1659,7 +1678,8 @@ html[data-theme="dark"] {
     }
 
     .tree-node__icon,
-    .tree-feature__type {
+    .tree-feature__type,
+    .tree-feature__mult {
         opacity: 0.55;
     }
 

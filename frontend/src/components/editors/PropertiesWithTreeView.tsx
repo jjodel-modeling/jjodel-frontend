@@ -56,18 +56,74 @@ const MAX_OVERLAY_WIDTH = 640;
 const STORAGE_KEY_OVERLAY_WIDTH = 'jjodel_property_overlay_width';
 
 /**
+ * First-open width by viewport class. Read ONLY when nothing is persisted yet: a
+ * width the user has already dragged wins at every resolution, forever. 400 is
+ * `DEFAULT_OVERLAY_WIDTH` unchanged, so the middle band behaves exactly as before.
+ */
+function firstOpenOverlayWidth(): number {
+    if (typeof window === 'undefined') return DEFAULT_OVERLAY_WIDTH;
+    const vw = window.innerWidth;
+    if (vw < 1600) return 360;
+    if (vw < 2200) return DEFAULT_OVERLAY_WIDTH;
+    return 560;
+}
+
+/**
+ * Metadata density of the tree rows, driven by the rail's own width — the one the
+ * user controls with the drag handle, not the viewport. It rides on the shell as a
+ * `data-density` attribute and the tree rows read it through the cascade: no prop
+ * drilling, and the rail root is already an ancestor of every row.
+ *
+ * A CSS container query would have been the obvious tool, but `container-type`
+ * makes the query container a containing block for `position: fixed` descendants,
+ * and the tree's own context menu (`useClassifierContextMenu`) is fixed-positioned
+ * with viewport coordinates and rendered inline — it would jump. Hence an attribute.
+ *
+ * Density never changes WHAT the tree lists, only what the right-hand column carries,
+ * and never the row height. With the attribute absent, everything shows: the
+ * degraded state is today's behaviour.
+ */
+type RailDensity = 'compact' | 'default' | 'full';
+
+function densityForWidth(w: number): RailDensity {
+    if (w < 400) return 'compact';   // type only
+    if (w < 520) return 'default';   // type + multiplicity (today)
+    return 'full';                   // everything, incl. future documentation markers
+}
+
+/**
  * Rail layout preset. Arc 1 ships exactly one (`2a`), so this type carries only
  * the values the shell actually reads — no gate flags, which would be branches
  * that can never go the other way (R-RAIL-3 / C3.2).
  */
 export type RailPreset = {
-    /** Height of the tree pane in Browse posture, px. Focus posture is always 0. */
-    treePaneHeight: number;
+    /**
+     * Height of the tree pane in Browse posture, as a CSS length. Focus posture is
+     * always 0, and the transition between the two interpolates because `clamp()`
+     * resolves to an absolute length at computed-value time.
+     */
+    treePaneHeight: string;
 };
 
 /** Preset `2a` — "Adaptive rail". The only preset of the arc, and the default. */
 export const PRESET_2A: RailPreset = {
-    treePaneHeight: 392,
+    // Viewport-relative, not the 392px fixed height it replaced: on a 900px viewport
+    // the rail is 777px tall (viewport minus app bar + toolbar + status bar), so 392
+    // took more than half of it and squeezed the inspector; on a 1440px viewport it
+    // wasted half the column.
+    //
+    // The formula is defined by three points, and is NOT a rounded `Nvh` — do not
+    // "simplify" it into one, it would break the middle point, which is the reference
+    // tier ("on a standard screen nothing changes"). Values measured in Chromium,
+    // with the intent they serve:
+    //   900px  viewport → 299px  (~300: the inspector gets room back on a 14" laptop)
+    //   1080px viewport → 391px  (~392, today's height: the reference tier)
+    //   1440px viewport → 574px  (~576: grows visibly on a 27" monitor)
+    // The 1-2px below each round target is the slope rounded from 51.11% to 51%.
+    // The 640px cap protects viewports above ~1570px; it is deliberately never
+    // reached at 1440 and is not a target to hit. The 240px floor keeps the pane
+    // usable on a short window.
+    treePaneHeight: 'clamp(240px, calc(51vh - 160px), 640px)',
 };
 
 /**
@@ -113,9 +169,9 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
     // handlers so they can list it in their useCallback deps (no TDZ). Clamp + NaN guard.
     const [overlayWidth, setOverlayWidth] = useState<number>(() => {
         const saved = localStorage.getItem(STORAGE_KEY_OVERLAY_WIDTH);
-        if (!saved) return DEFAULT_OVERLAY_WIDTH;
+        if (!saved) return firstOpenOverlayWidth();
         const parsed = parseInt(saved, 10);
-        if (Number.isNaN(parsed)) return DEFAULT_OVERLAY_WIDTH;
+        if (Number.isNaN(parsed)) return firstOpenOverlayWidth();
         return Math.min(MAX_OVERLAY_WIDTH, Math.max(MIN_OVERLAY_WIDTH, parsed));
     });
 
@@ -503,7 +559,7 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
     const treePaneStyle: React.CSSProperties = !treePaneShown
         ? { height: '0px', opacity: 0 }
         : showPropertiesPanel
-            ? { height: `${preset.treePaneHeight}px`, opacity: 1 }
+            ? { height: preset.treePaneHeight, opacity: 1 }
             : { flex: '1 1 auto', minHeight: 0, opacity: 1 };
 
     // The Focus bar stands in for the tree pane: it says where the inspected element
@@ -514,6 +570,7 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
         <div
             ref={containerRef}
             className={`properties-with-tree-view${isFloating ? ' properties-with-tree-view--floating properties-with-tree-view--rail' : ''}${isFloating && posture === 'focus' ? ' properties-with-tree-view--rail-focus' : ''}`}
+            data-density={densityForWidth(overlayWidth)}
         >
             {/* Rail width handle: left edge of the column. Dragging left widens the rail. */}
             <div

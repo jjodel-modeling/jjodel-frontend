@@ -1,5 +1,18 @@
 # Claude Code Session Log
 
+## 2026-08-25 — feat(rail): tree pane relativa al viewport, densita' dei metadati, default per classe di schermo
+**Prompt**: il rail deve funzionare sia su 14" (~1440x900) sia su 27" (~2560x1440). Tre cambi, semantica invariata (cosa l'albero elenca non dipende dallo schermo): (1) `treePaneHeight` da 392px fissi a relativa al viewport; (2) densita' dei metadati guidata dalla LARGHEZZA DEL RAIL, non del viewport (<400 solo tipo, 400-519 tipo+molteplicita', >=520 tutto); (3) default di prima apertura per classe di viewport (360/400/560), solo in assenza di larghezza persistita. Fase 1 di investigazione obbligatoria prima del codice.
+**Files touched**: `frontend/src/components/editors/PropertiesWithTreeView.tsx`, `frontend/src/components/editors/properties-with-tree-view.scss`, `frontend/src/components/TreeViewSidebar/TreeViewContent.tsx`, `frontend/src/components/TreeViewSidebar/tree-view-sidebar.scss`, `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — tsc 33 = baseline esatta, 0 nei file toccati; vitest 1349 passed con le stesse 9 suite rosse pre-esistenti (verificato via stash dei 4 file); build exit 0, solo il chunk-warning pre-esistente.
+**Out-of-scope changes**: no — i 4 file previsti piu' il log. Rimosso da `TreeViewContent` il solo import di `formatFeatureSignature`, diventato morto li' per la modifica stessa; `featureSignature.ts` e `Info.tsx` intatti come da vincolo.
+**Layer Impact Report**: not-required — nessun layer D/L, nessun file critical-zone §3.1.
+**Smoke visivo**: passato — due sonde Playwright one-shot (`scripts/smoke/_tmp_rail_adaptive.ts`, `_tmp_rail_density_rows.ts`, non committate), 27 assertion verdi. Tre viewport: larghezza di prima apertura 360/400/560, tree pane 299/391/574, inspector 434/522/699, `data-density` compact/default/full, Focus collassa a 0 ovunque. Larghezza persistita 480: vince a tutte e tre le risoluzioni. Drag reale 600->360, 53 campioni: densita' corretta a ogni step, molteplicita' `display:none` sotto 400 e presente sopra, altezza riga costante 26px, zero overflow orizzontale.
+**Notes**: Formula `clamp(240px, calc(51vh - 160px), 640px)` e il divieto di semplificarla in un `Nvh` (romperebbe il tier di riferimento a 1080) sono sulla costante `PRESET_2A.treePaneHeight`. Misurata 1-2px sotto i target tondi (pendenza esatta 51.11%). Densita' via attributo, non container query: `container-type` renderebbe la shell containing block per il context menu dell'albero, `position: fixed`. DEBITO non toccato: `instanceCount` dead write a `TreeViewContent.tsx:105, 2163-2166, 2175`.
+**Prompt document name**: 2026-08-25 01:30
+
 ## 2026-08-25 — fix: il menu contestuale dell'albero si chiude allo scroll; riferimenti a selettori morti
 **Prompt**: prompt del 2026-08-25, coda del cleanup. Tre punti in un commit: correggere il selettore dello scroll container in `TreeViewContent`, togliere le due classi morte dalla lista di `Tooltip`, sostituire un riferimento `file:riga` in un commento scss con il nome del selettore. `useResolution` resta com'e', senza deprecation comment.
 **Files touched**: `frontend/src/components/TreeViewSidebar/TreeViewContent.tsx`, `frontend/src/components/forEndUser/Tooltip.tsx`, `frontend/src/components/editors/properties-with-tree-view.scss`, `docs/claude-code-log.md`

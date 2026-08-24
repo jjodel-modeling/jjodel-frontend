@@ -38,10 +38,18 @@
 //     second exception of R-RAIL-10. The NODE eyebrow's hairline rule is the same
 //     1px, drawn as a box because it has to grow into the rest of the row.
 //
-// (d) 392px — the tree pane height in Browse posture. It is not declared in this
-//     sheet: it comes inline from `PRESET_2A.treePaneHeight`
-//     (`PropertiesWithTreeView.tsx`), listed here so the block stays the single
-//     audit point for the rail's literals. In Focus the height is 0, also inline.
+// (d) `clamp(240px, calc(51vh - 160px), 640px)` — the tree pane height in Browse
+//     posture. It is not declared in this sheet: it comes inline from
+//     `PRESET_2A.treePaneHeight` (`PropertiesWithTreeView.tsx`), listed here so the
+//     block stays the single audit point for the rail's literals. It replaced a flat
+//     392px, which took more than half the rail on a 900px viewport and wasted half
+//     the column on a 1440px one. The three points that define the formula, and the
+//     reason it must not be rounded into an `Nvh`, are on the constant itself. In
+//     Focus the height is 0, also inline.
+//
+//     400px / 520px — the two rail widths at which the tree rows change metadata
+//     density (`[data-density]`, rules at the end of this sheet). They are widths of
+//     THIS column, which the user drags between 360 and 640, not viewport widths.
 //
 // 34px (Focus bar height) is deliberately NOT here: it HAS a near step, so it
 // snaps per R-RAIL-10 to `--input-height-sm` (32px, Δ2 — 32 in both token
@@ -2388,5 +2396,28 @@ body[data-active-tab="documentation"] .properties-tree-overlay {
             min-width: 30px;
             width: 30px;
         }
+    }
+}
+
+// ─── Metadata density of the tree rows ───────────────────────────────────────
+// Driven by the rail's own width, which the user owns via the drag handle
+// (360-640, persisted in `jjodel_property_overlay_width`) — not by the viewport.
+// `data-density` is written by `PropertiesWithTreeView` on this same element;
+// `densityForWidth` there holds the two thresholds and the reason this is an
+// attribute rather than a container query (`container-type` would make the shell a
+// containing block for the tree's fixed-positioned context menu).
+//
+// Semantics never change with density: the tree lists the same rows in the same
+// order at every width. Only what the right-hand column carries changes, and the
+// row height does not move — the hidden span is out of flow, and the type span next
+// to it keeps the same metrics and sets the line.
+//
+// No rule for `default` and `full`: they are the full row, which is what renders
+// when the attribute is missing. The degraded state is the behaviour of today.
+.properties-with-tree-view--rail[data-density="compact"] {
+    // Below 400px the rail cannot carry `Transition [0..1]` without eating the name.
+    // The type survives — it is the column that gets scanned vertically.
+    .tree-feature__mult {
+        display: none;
     }
 }
