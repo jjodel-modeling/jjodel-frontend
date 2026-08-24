@@ -1258,6 +1258,11 @@ export function useJjomSync(
         const patchedNodeData = new Map<string, any>();
         const patchedNodePositions = new Map<string, { x: number; y: number }>();
         const patchedNodeStyles = new Map<string, Record<string, any>>();
+        // Top-level width/height, which class/enum/object nodes carry (packageNode uses
+        // style.width/height and goes through patchedNodeStyles instead). A value patches the
+        // size on; `null` drops it so the card hugs its content again. Presence is tested with
+        // `has()`, never with the truthiness of the value: `null` IS an instruction.
+        const patchedNodeSizes = new Map<string, { width: number; height: number } | null>();
         const patchedEdges = new Map<string, Edge>();
 
         // --- Structural changes: additions ---
@@ -1368,12 +1373,29 @@ export function useJjomSync(
                             const oldH = (existing.style as any)?.height;
                             const sizeChanged = (newW !== undefined || oldW !== undefined)
                                              && (newW !== oldW || newH !== oldH);
+                            // Per-layout size (slice 1c): manualSizeOf puts width/height
+                            // top-level on the transformer output, and nothing here used to
+                            // compare or patch them — so at a layout change the position
+                            // followed and the size stayed at whatever the last gesture left,
+                            // under every key. Compare transformer against cache, like
+                            // position: rfNodeCache only ever holds transformer output (never
+                            // a measured RF node), so this fires exactly when the layout in
+                            // force changes the effective size, and never during a NodeResizer
+                            // drag or a content-driven write.
+                            const newSize = rfNode.width !== undefined && rfNode.height !== undefined
+                                ? { width: rfNode.width, height: rfNode.height } : null;
+                            const oldSize = existing.width !== undefined && existing.height !== undefined
+                                ? { width: existing.width, height: existing.height } : null;
+                            const topSizeChanged = (newSize === null) !== (oldSize === null)
+                                || (newSize !== null && oldSize !== null
+                                    && (newSize.width !== oldSize.width || newSize.height !== oldSize.height));
 
                             if (!posChanged) rfNode.position = existing.position;
                             if (!sizeChanged && existing.style) rfNode.style = existing.style;
 
                             if (posChanged) patchedNodePositions.set(id, rfNode.position);
                             if (sizeChanged && rfNode.style) patchedNodeStyles.set(id, rfNode.style as Record<string, any>);
+                            if (topSizeChanged) patchedNodeSizes.set(id, newSize);
                         }
                         rfNodeCache.current.set(id, rfNode);
                         // Only patch data if something actually changed — avoids
@@ -1421,7 +1443,8 @@ export function useJjomSync(
         // only what actually changed.
 
         const hasNodeChanges = addedNodes.length > 0 || removedNodeIds.size > 0
-            || patchedNodeData.size > 0 || patchedNodePositions.size > 0 || patchedNodeStyles.size > 0;
+            || patchedNodeData.size > 0 || patchedNodePositions.size > 0 || patchedNodeStyles.size > 0
+            || patchedNodeSizes.size > 0;
         const hasEdgeChanges = addedEdges.length > 0 || removedEdgeIds.size > 0 || patchedEdges.size > 0;
 
         if (hasNodeChanges) {
@@ -1432,6 +1455,7 @@ export function useJjomSync(
             const _patchedNodeData = new Map(patchedNodeData);
             const _patchedNodePositions = new Map(patchedNodePositions);
             const _patchedNodeStyles = new Map(patchedNodeStyles);
+            const _patchedNodeSizes = new Map(patchedNodeSizes);
 
             pendingNodePatchRef.current.push(prev => {
                 let result = prev;
@@ -1440,20 +1464,36 @@ export function useJjomSync(
                     result = result.filter(n => !_removedNodeIds.has(n.id));
                 }
 
-                if (_patchedNodeData.size > 0 || _patchedNodePositions.size > 0 || _patchedNodeStyles.size > 0) {
+                if (_patchedNodeData.size > 0 || _patchedNodePositions.size > 0
+                    || _patchedNodeStyles.size > 0 || _patchedNodeSizes.size > 0) {
                     result = result.map(n => {
                         const newData = _patchedNodeData.get(n.id);
                         const newPos = _patchedNodePositions.get(n.id);
                         const newStyle = _patchedNodeStyles.get(n.id);
-                        if (newData || newPos || newStyle) {
-                            return {
-                                ...n,
-                                ...(newData ? { data: newData } : {}),
-                                ...(newPos ? { position: newPos } : {}),
-                                ...(newStyle ? { style: newStyle } : {}),
-                            };
+                        // `has()`, not the value: `null` means "drop the size".
+                        const hasSize = _patchedNodeSizes.has(n.id);
+                        const newSize = hasSize ? _patchedNodeSizes.get(n.id)! : undefined;
+                        if (!newData && !newPos && !newStyle && !hasSize) return n;
+                        const patched = {
+                            ...n,
+                            ...(newData ? { data: newData } : {}),
+                            ...(newPos ? { position: newPos } : {}),
+                            ...(newStyle ? { style: newStyle } : {}),
+                        };
+                        // `measured` goes in BOTH branches, and it is not optional:
+                        // getNodeDimensions (@xyflow/system) prefers measured over
+                        // width/height, so a stale one would keep the edges anchored on the
+                        // previous size. Dropping it also resets handleBounds (parseHandles
+                        // returns undefined without it), which is what makes React Flow's own
+                        // ResizeObserver recompute them — no updateNodeInternals needed here.
+                        // The `null` branch drops the same three keys resetNodeSize does
+                        // (EditorV2.tsx:2334-2335), so the card hugs its content again.
+                        if (!hasSize) return patched;
+                        if (newSize === null) {
+                            const { width, height, measured, ...rest } = patched as any;
+                            return rest as Node;
                         }
-                        return n;
+                        return { ...patched, ...newSize, measured: undefined };
                     });
                 }
 

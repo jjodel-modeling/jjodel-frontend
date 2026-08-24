@@ -51,8 +51,24 @@ export const ABSTRACT_SYNTAX_LAYOUT_KEY = '__abstract__';
  * here: editor-v2 does not rewrite the seed.
  */
 export function getActiveLayoutKey(): string {
+    return getLayoutKeyOf(store.getState());
+}
+
+/**
+ * The same answer, on a state the caller already holds.
+ *
+ * Exists for `useSelector` bodies, which are handed the state and must not reach for the store
+ * themselves: a selector that read `store.getState()` would not re-run when the activation
+ * changes, because react-redux compares what the selector RETURNS over the state it was GIVEN.
+ * Reading `state.viewpoint` through this function is what makes a selector re-evaluate at every
+ * layout change with no extra dependency (slice 1c: `useContentSize.ts`,
+ * `SymbolEditorModal.tsx`).
+ *
+ * `getActiveLayoutKey` is this function applied to the live store, and nothing else — the two
+ * can never disagree.
+ */
+export function getLayoutKeyOf(state: any): string {
     try {
-        const state: any = store.getState();
         const vp = state?.viewpoint;
         if (typeof vp !== 'string' || !vp) return ABSTRACT_SYNTAX_LAYOUT_KEY;
         const d: any = state?.idlookup?.[vp];
