@@ -79,6 +79,16 @@ questo diff.
 3. **Stack vuoto.** Cosa fa `doUndoRedo` (`reducer.ts:1118`) con `undoable` vuoto: se lancia,
    i pulsanti devono guardare `statehistory[user]?.undoable.length` prima di dispatchare;
    `undoredocomponent.tsx:85,115` è il precedente da copiare.
+4. **Il contesto di `Navbar`** (aggiunta dopo la prova 0 del 2026-08-24, 19:30). A schermo ⌘Z
+   non fa **niente**, non riporta all'inizio della sessione: con il flag falso il delta non
+   viene né fuso (manca un `pastDelta`, `reducer.ts:1211`) né spinto, quindi lo stack è sempre
+   vuoto e `UndoAction` è un no-op. Questo spiega l'osservazione, ma non esclude una seconda
+   causa concorrente: `detectCurrentContext()` (`utils/keyboardShortcuts.ts`) potrebbe non
+   riconoscere editor-v2 come `METAMODEL_EDITOR`/`PROJECT_EDITOR`, e allora `UndoAction` non
+   parte affatto (`Navbar.tsx:1190`). Misurare leggendo `detectCurrentContext` e, se serve, con
+   un `console.log` temporaneo nel ramo di `:1190` da togliere prima del commit. Se il contesto
+   non è riconosciuto, il rimedio sta in `detectCurrentContext`, non in `Navbar`: dichiararlo e
+   fermarsi, perché è un secondo file fuori da editor-v2 e vuole un GO suo.
 
 ### Diff (un file: `EditorV2.tsx`; Regola 19 se ne emergono altri)
 
@@ -106,10 +116,10 @@ testabile senza DOM.
 
 ### Verifica visiva (Alfonso, hard refresh)
 
-0. **Prima del diff**, una volta sola: rinomina un attributo, sposta un nodo, ⌘Z. Se il
-   progetto torna all'inizio della sessione (rinomina e spostamento entrambi spariti, o peggio),
-   §1 del report è confermato a schermo e A4 è giustificata. Se invece si disfa solo lo
-   spostamento, fermarsi e riaprire in chat: la lettura statica era sbagliata.
+0. **Eseguita il 2026-08-24 alle 19:30, prima del diff.** Esito: rinomina, ⌘Z: niente, icona
+   spenta; spostamento, ⌘Z: niente; click sull'icona: il nodo resta dov'è e si seleziona. Non
+   «inizio della sessione» ma «stack sempre vuoto» (vedi misura 4): la causa del report regge,
+   l'effetto previsto no. A4 confermata, con la misura 4 aggiunta.
 1. Dopo il diff: sposta un nodo, ⌘Z: torna dov'era, e basta. ⌘⇧Z: torna spostato.
 2. Rinomina un attributo, sposta un nodo, ⌘Z: si disfa solo lo spostamento; secondo ⌘Z: si
    disfa la rinomina.
