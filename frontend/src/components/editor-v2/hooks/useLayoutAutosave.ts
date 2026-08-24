@@ -13,7 +13,16 @@ import { ProjectsApi } from '../../../api/persistance';
  * This hook bridges that gap: `scheduleLayoutSave()` debounces and coalesces
  * rapid drags into a single full project save, gated by the current user's
  * `autosaveLayout` preference. It reuses the existing `ProjectsApi.save` path
- * (full state serialization) — no new persistence infrastructure.
+ * (full state serialization) — no new persistence infrastructure — in its SILENT
+ * form: same serialization, but the project version does not advance and nothing
+ * is written back into the store.
+ *
+ * The silence is load-bearing, not cosmetic. The version bump of an ordinary save
+ * is a `SetFieldAction` into Redux, and this save fires 1000ms after the gesture,
+ * past the 450ms coalescing window of the D-layer history: it would land as an undo
+ * step of its own, so the first Cmd+Z after a drag would undo an invisible version
+ * bump instead of the drag. The project version advances only on an explicit save
+ * (Cmd+S, toolbar) — ratified 2026-08-24.
  *
  * A pending save in the debounce window is flushed on unmount, so a node moved
  * just before closing the metamodel tab is not lost.
@@ -47,7 +56,7 @@ export function useLayoutAutosave(): { scheduleLayoutSave: () => void } {
         isSavingRef.current = true;
         pendingRef.current = false;
         try {
-            await ProjectsApi.save(project);
+            await ProjectsApi.save(project, { silent: true });
         } catch (e) {
             console.warn('[useLayoutAutosave] Layout autosave failed:', e);
         } finally {
