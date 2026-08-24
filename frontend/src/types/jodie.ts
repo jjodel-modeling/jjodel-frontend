@@ -274,7 +274,7 @@ AI.Ollama.requiresKey = false;
 AI.GPT     .addGUIinfo('GPT','sk-...',      '#059669', '#D1FAE5', openaiLogo);
 AI.Claude  .addGUIinfo('C',  'sk-ant-...',  '#D97706', '#FEF3C7', anthropicLogo);
 AI.Mistral .addGUIinfo('M',  '',            '#ff7000', '#EDE9FE', mistralLogo);
-AI.Gemini  .addGUIinfo('Gm', 'AIza...',     '#7C3AED', '#EDE9FE', geminiLogo);
+AI.Gemini  .addGUIinfo('Gm', '',            '#7C3AED', '#EDE9FE', geminiLogo);
 AI.DeepSeek.addGUIinfo('D',  'sk-...',      '#2563EB', '#DBEAFE', deepseekLogo);
 AI.Groq    .addGUIinfo('Gq', 'gsk_...',     '#EF4444', '#FEE2E2', groqLogo);
 AI.Kimi    .addGUIinfo('K',  '',            '#0891B2', '#CFFAFE', kimiLogo);
@@ -302,9 +302,12 @@ AI.DeepSeek
     .add('deepseek-chat',             'DeepSeek Chat',    false, false)
     .add('deepseek-coder',            'DeepSeek Coder',   false, false)
 AI.Gemini
-    .add('gemini-2.0-flash-exp',      'Gemini 2.0 Flash', true,  true)
-    .add('gemini-1.5-pro',            'Gemini 1.5 Pro',   true,  true)
-    .add('gemini-1.5-flash',          'Gemini 1.5 Flash', true,  true)
+    .add('gemini-3.6-flash',          'Gemini 3.6 Flash', true,  true)
+    .add('gemini-3.5-flash-lite',     'Gemini 3.5 Flash Lite',   true,  true)
+    // Legacy — kept for users with persisted selections on older IDs
+    .add('gemini-2.0-flash-exp',      'Gemini 2.0 Flash', false, false, true)
+    .add('gemini-1.5-pro',            'Gemini 1.5 Pro',   true,  true, true)
+    .add('gemini-1.5-flash',          'Gemini 1.5 Flash', true,  true, true)
     .add('gemini-pro',                'Gemini Pro',       false, false, true)
 AI.Mistral
     .add('mistral-large-latest',      'Mistral Large',    false, false)
@@ -361,6 +364,8 @@ AI.Groq // NB: groq is infrastructure provider, not llm. but have a LLM made of 
     // arabic language ai is too niche .add('canopylabs/orpheus-arabic-saudi', 'Canopy Labs Orpheus Arabic Saudi', unkn, unkn)
     .add('canopylabs/orpheus-v1-english', 'Canopy Labs Orpheus V1 English', unkn, unkn)
 
+AI.Custom.add('custom', 'Custom', false, false);
+
 /*AI.???
     .add('mixtral-8x7b-32768',               'Mixtral 8x7B',        false, false)
     .add('llava-v1.5-7b-4096-preview',       'LLaVA 1.5 7B',        true,  false)
@@ -368,7 +373,7 @@ AI.Groq // NB: groq is infrastructure provider, not llm. but have a LLM made of 
     .add('llava-v1.5-7b-4096-preview',       'LLaVA 1.5 7B',        true,  false)
 */
 AI.Claude.proxy = '/v1/anthropic/messages';
-AI.Gemini.proxy = '/v1/gemini';
+//AI.Gemini.proxy = '/v1/gemini';
 
 AI.GPT.endpoint = 'https://api.openai.com/v1/chat/completions';
 AI.Claude.endpoint = 'https://api.anthropic.com/v1/messages';
@@ -731,7 +736,7 @@ export class AIConfig{
 /*new AIConfig(AIProvider.Claude, 'claude-sonnet-4-20250514');
 new AIConfig(AIProvider.GPT, 'gpt-4o');
 new AIConfig(AIProvider.DeepSeek, 'deepseek-chat');
-new AIConfig(AIProvider.Gemini, 'gemini-2.0-flash-exp');
+new AIConfig(AIProvider.Gemini, 'gemini-3.5-flash');
 new AIConfig(AIProvider.Mistral, 'mistral-large-latest');
 new AIConfig(AIProvider.Groq, 'llama-3.3-70b-versatile');
 new AIConfig(AIProvider.Kimi, 'moonshot-v1-8k');
