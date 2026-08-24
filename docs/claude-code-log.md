@@ -1,5 +1,57 @@
 # Claude Code Session Log
 
+## 2026-08-24 — fix(editor-v2): kill-switch, `userHasInteracted` non si alza piu'
+**Prompt**: prompt del 2026-08-24 23:30, Parte A. Dopo la verifica visiva di `952d3cb94` (6 prove su 7): il corpo di `markUserInteracted` diventa un no-op, la funzione e i due handler in cattura restano cablati.
+**Files touched**: `frontend/src/components/editor-v2/EditorV2.tsx`, `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: 2026-08-24 19:10
+**Causa**: (c)
+**Regressions**: unknown — gate verdi (tsc 33 con lista byte-identica, `diff` vuoto; vitest 1349 passed e le stesse 9 suite rosse; build exit 0), ma nessuna verifica a schermo dopo il kill-switch. Ripristina per costruzione lo stato pre-`398a71293`: stack del D-layer sempre vuoto.
+**Out-of-scope changes**: no — il solo file previsto piu' il log.
+**Layer Impact Report**: not-required
+**Smoke visivo**: in attesa — il comportamento atteso e' quello di prima di `398a71293`: ⌘Z e i due pulsanti inerti, salvataggio silenzioso attivo.
+**Notes**: Il flag esponeva un difetto latente del D-layer undo su una modifica non geometrica: rinomina + ⌘Z non torna indietro e blocca ogni scrittura successiva sull'attributo, sul tree view come sul canvas. Il tree non passa da editor-v2, quindi la corruzione e' nello stato. Il ramo commentato resta come punto di riarmo. Discovery della Parte B: `docs/discovery/discovery_2026-08-24_undo_reducer_rename.md`.
+**Prompt document name**: 2026-08-24 23:30
+
+## 2026-08-24 — fix(persistence): autosave di layout silenzioso, senza bump di versione
+**Prompt**: prompt del 2026-08-24 22:55, corsia veloce, due file. `ProjectsApi.save` prende `opts?: { silent?: boolean }` additivo; `useLayoutAutosave` passa `{ silent: true }`.
+**Files touched**: `frontend/src/api/persistance/projects.ts`, `frontend/src/components/editor-v2/hooks/useLayoutAutosave.ts`
+**Outcome**: ⚠️ partial — chiude i tre difetti che mirava a chiudere, ma la prova 2 del protocollo resta rossa per una causa piu' profonda (vedi Smoke visivo).
+**Corregge**: 2026-08-24 19:10
+**Causa**: (c)
+**Regressions**: no — tsc 33 con lista byte-identica (`diff` vuoto), vitest 1349 passed e le stesse 9 suite rosse, build exit 0. Senza `opts` il percorso e' byte-identico, quindi i chiamanti del salvataggio esplicito non cambiano.
+**Out-of-scope changes**: no — i due file del prompt.
+**Layer Impact Report**: not-required — nessun file di §3.1 toccato.
+**Smoke visivo**: parziale — 6 prove su 7: un solo ⌘Z per spostamento e multi-selezione, taglia persistita dopo reload, versione ferma sui drag e avanzata da ⌘S, nessuna tempesta di salvataggi, cambio di viewpoint atteso. **Prova 2 fallita**: rinomina + ⌘Z non torna indietro e da li' in poi le scritture sull'attributo non raggiungono piu' ne' canvas ne' tree view.
+**Notes**: Il bump di versione non e' solo un numero: e' una `SetFieldAction` in Redux, cioe' un delta. L'autosave scatta a 1000 ms, oltre i 450 ms di coalescenza (`reducer.ts:1278`), quindi diventava un passo di undo a se'; e l'osservatore dello stack richiamava `scheduleLayoutSave` dopo ogni undo, spingendone un altro. Ratificato: la versione avanza solo al salvataggio esplicito.
+**Prompt document name**: 2026-08-24 22:55
+
+## 2026-08-24 — fix(editor-v2): undo e redo instradati sul D-layer in modalita' JjOM
+**Prompt**: GO del 2026-08-24 19:10, opzione A4 (un solo sistema di undo in JjOM). Snapshot a inizio gesto, write-back per resolver e `clear()` di `useHistory` decaduti.
+**Files touched**: `frontend/src/components/editor-v2/EditorV2.tsx`, `docs/discovery/discovery_2026-08-24_undo_editor_v2_layout.md` (addendum §12)
+**Outcome**: ⚠️ partial — ha esposto un difetto latente del D-layer undo, disinnescato dal kill-switch della Parte A.
+**Corregge**: 2026-08-24 18:45
+**Causa**: (c)
+**Regressions**: yes — la rinomina + ⌘Z corrompe lo stato (prova 2). Non introdotta da questo diff ma **resa raggiungibile** da esso: alzando `U.userHasInteracted` lo stack del D-layer smette di essere vuoto. Gate verdi: tsc 33 byte-identico, vitest 1349 passed con le stesse 9 rosse, build exit 0.
+**Out-of-scope changes**: no — un solo file di codice.
+**Layer Impact Report**: not-required — nessun file di §3.1 toccato; il quadro per layer e' nel §6 del report.
+**Smoke visivo**: fallito (parziale) — vedi l'entry di `952d3cb94`, che ha corretto i due ⌘Z e lasciato scoperta la prova 2.
+**Notes**: Le quattro misure del GO sono nel §12 del report. Due correzioni di rotta: la sede del flag non e' il callback di sync iniziale (attende l'auto-layout ELK e arma il re-layout M1, due scritture senza gesto), ed e' la prima interazione utente col pannello; la persistenza dopo ⌘Z si osserva sullo stack, non su `action_title`, il cui ramo e' commentato.
+**Prompt document name**: 2026-08-24 19:10
+
+## 2026-08-24 — docs: discovery di Fase 1 sull'undo di editor-v2 per i gesti di disposizione
+**Prompt**: prompt del 2026-08-24 18:45, Fase 1 read-only con report obbligatorio e hard stop.
+**Files touched**: `docs/discovery/discovery_2026-08-24_undo_editor_v2_layout.md` (nuovo)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — nessuna modifica al codice.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — read-only; il quadro per layer e' nel §6 del report.
+**Smoke visivo**: non applicabile
+**Notes**: L'ipotesi del prompt (doppio undo, rimedio `stopPropagation`) e' falsa: `Navbar` ascolta in cattura su `window` e chiama `stopImmediatePropagation` per 'Z', quindi l'`onKeyDown` di editor-v2 non gira mai. Misurato inoltre che `U.userHasInteracted` ha un solo scrittore (`MetamodelTab.tsx:164`). Il §12.0 corregge il §1.4: a stack vuoto manca `pastDelta`, quindi il delta e' scartato e ⌘Z e' un no-op.
+**Prompt document name**: 2026-08-24 18:45
+
 ## 2026-08-24 — fix(layout): le taglie seguono il layout in forza (slice 1c)
 **Prompt**: prompt del 2026-08-24 14:30 «Layout per viewpoint, slice 1c (taglie)», due fasi. Fase 1 read-only con LIR salvato su file e hard stop; Fase 2 dopo il GO delle 16:55, che ha risposto alle tre domande del LIR. Difetto riprodotto a schermo da Alfonso dopo `cd8363ccc`: la posizione segue il layout, la taglia no.
 **Files touched**: `frontend/src/components/editor-v2/hooks/useJjomSync.ts`, `frontend/src/components/editor-v2/viewpoint/layout/vertexLayoutAdapter.ts`, `frontend/src/components/editor-v2/viewpoint/layout/__tests__/vertexLayoutAdapter.test.ts` (nuovo), `frontend/src/components/editor-v2/viewpoint/ir/useContentSize.ts`, `frontend/src/components/editor-v2/viewpoint/authoring/SymbolEditorModal.tsx`, `docs/discovery/discovery_2026-08-24_layout_slice1c_taglie_lir.md` (nuovo, con addendum §12), `docs/claude-code-log.md`

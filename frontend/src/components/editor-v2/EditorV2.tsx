@@ -957,8 +957,26 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // reference edges land (both write positions through syncPositionBatchToJjom) —
     // which would otherwise become the first undo step and make the first Cmd+Z
     // scramble the layout.
+    //
+    // KILL-SWITCH (2026-08-24). The body is deliberately a NO-OP: the flag is NOT
+    // raised. Raising it exposed a latent defect of the D-layer undo on a non-geometric
+    // change — after renaming an object and pressing Cmd+Z the name does not revert, and
+    // from that point on every further write to the attribute stops reaching both the
+    // canvas AND the tree view, which does not go through editor-v2 at all, so the
+    // corruption is in the state. Nobody had ever seen it because the flag had a single
+    // writer (the classic drop) and the undo stack was therefore always empty.
+    // Reproduced on screen: prova 2 of 2026-08-24, on 952d3cb94.
+    //
+    // Consequence, accepted: the D-layer undo stack stays empty, so Cmd+Z and the two
+    // toolbar buttons are no-ops again (the buttons already guard on the stack). The
+    // silent layout autosave stays, it is right regardless.
+    //
+    // The function and its two capture handlers stay wired ON PURPOSE: re-enabling is
+    // one line, and the call sites are the measured-correct place to raise the flag.
+    // See docs/prompts/claude_2026-08-24_2330_prompt_undo_killswitch_discovery_reducer.md
+    // and the discovery report it mandates on the reducer defect.
     const markUserInteracted = useCallback(() => {
-        if (!U.userHasInteracted) U.userHasInteracted = true;
+        // if (!U.userHasInteracted) U.userHasInteracted = true;   // re-enable with the fix
     }, []);
 
     // `statehistory` is a module singleton, not part of the Redux state, so it cannot
