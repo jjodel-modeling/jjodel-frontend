@@ -1836,6 +1836,7 @@ html[data-theme="dark"] {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    padding-right: 4px;
 }
 
 // ─── Documentation empty state ───────────────────────────────────────────────
@@ -1975,4 +1976,140 @@ html[data-theme="dark"] {
             color: #e0e0e0;
         }
     }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Tree view — redesign additivo (rail).
+// Importare in coda a tree-view-sidebar.scss:  @import './tree-view-redesign';
+// Tutto additivo: nessuna regola esistente viene riscritta.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── 1. Il tipo diventa una colonna a destra ──────────────────────────────────
+// Il nome tronca prima del tipo: con 24+ classifier è il tipo la colonna che si
+// scansiona verticalmente, e deve restare leggibile.
+
+.tree-feature__type {
+    margin-left: auto;
+    padding-left: 12px;
+    flex-shrink: 0;
+    max-width: 55%;
+}
+
+.tree-feature__name {
+    flex-shrink: 1;
+    min-width: 0;
+}
+
+// ── 2. Stato "non reso dal viewpoint attivo" ─────────────────────────────────
+// Dimmed al proprio posto nella gerarchia, feature collassate. NON usare per i
+// classifier di altri metamodelli: quelli sono fuori scopo, non "non resi".
+
+.tree-row--not-rendered {
+    .tree-row__name,
+    .tree-feature__name {
+        color: var(--color-text-disabled);
+    }
+
+    .tree-node__icon,
+    .tree-feature__type {
+        opacity: 0.55;
+    }
+
+    .tree-row__not-rendered-hint {
+        margin-left: auto;
+        padding-left: 12px;
+        font-size: 10px;
+        font-family: var(--font-mono);
+        color: var(--color-text-disabled);
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+}
+
+// ── 3. Riga di scopo del filtro ──────────────────────────────────────────────
+
+.tree-scope-bar {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 12px;
+    background: #ecfeff;
+    border-bottom: 1px solid #cffafe;
+    font-size: 11px;
+    color: #155e75;
+    flex-shrink: 0;
+
+    &__icon {
+        font-size: 11px;
+        flex-shrink: 0;
+    }
+
+    &__label {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+
+        strong {
+            font-weight: 600;
+        }
+    }
+
+    &__action {
+        margin-left: auto;
+        flex-shrink: 0;
+        border: 0;
+        background: none;
+        padding: 0;
+        font: inherit;
+        color: var(--color-link);
+        cursor: pointer;
+
+        &:hover { text-decoration: underline; }
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 2px; }
+    }
+
+    // Conteggio senza azione: stessa posizione di __action, ma non finge di
+    // essere un link. Il toggle "mostra tutto" non esiste ancora.
+    &__count {
+        margin-left: auto;
+        flex-shrink: 0;
+        opacity: 0.8;
+    }
+}
+
+// ── 4. Famiglia vuota: una riga silenziosa, non un'intestazione con 0 ─────────
+
+.tree-empty-family {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 12px;
+    font-size: 11px;
+    color: var(--color-text-disabled);
+
+    &__icon { font-size: 11px; opacity: 0.7; }
+
+    &__action {
+        margin-left: auto;
+        border: 0;
+        background: none;
+        padding: 0;
+        font: inherit;
+        color: var(--color-link);
+        cursor: pointer;
+
+        &:hover { text-decoration: underline; }
+    }
+}
+
+// ── 5. Indicatore di elemento documentato ────────────────────────────────────
+// Solo sui classifier: sulle feature diventerebbe rumore.
+
+.tree-doc-marker {
+    font-size: 10px;
+    margin-left: 4px;
+    color: var(--color-text-disabled);
+    flex-shrink: 0;
+    line-height: 1;
 }

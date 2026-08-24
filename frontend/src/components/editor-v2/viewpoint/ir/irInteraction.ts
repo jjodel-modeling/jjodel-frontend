@@ -189,3 +189,48 @@ export function applyIRPaletteFilter<T extends { name: string }>(
     }
     return { classes: rootable, fallback: rootable.length > 0, undeclared: [] };
 }
+
+/**
+ * Names of the metaclasses the active viewpoint RENDERS — the union of every
+ * authorable view kind: vertex/graphVertex (`byMetaclass`), object-as-edge,
+ * reference-as-edge (keyed by SOURCE metaclass) and row views.
+ *
+ * Deliberately WIDER than `IRInteractionPlan.paletteMetaclasses`, which answers a
+ * different question — "what can I create from the palette" — and therefore omits
+ * row views and reference-as-edge views. A class rendered only as a row inside a
+ * compartment IS rendered by the viewpoint, and reporting it as excluded would be
+ * false. The two sets are meant to differ; the surfaces that show them label the
+ * two states differently ("Not in this viewpoint" in the palette, "not rendered"
+ * in the tree).
+ *
+ * `null` means NO OPINION, and callers must mark nothing as not-rendered:
+ * - `index` is null (no active IR viewpoint — a classic jsxString viewpoint, or
+ *   none at all: nothing here can speak for it);
+ * - the index carries a wildcard view of any kind (`metaclasses: '*'`), which
+ *   renders across the board;
+ * - the index is metaclass-keyed but empty.
+ *
+ * Keys are NAMES, matching `ir.metaclasses`. Two metamodels declaring a class of
+ * the same name therefore collide. The exit is `metaclassPin.ts` /
+ * `resolveMetaclassId`, which resolves a name to one concrete class through the
+ * view's pin map; consumers that restrict themselves to a single metamodel of
+ * scope reduce the collision to the homonym-within-scope case and can defer it.
+ *
+ * Memoized on the index object, which `getIRIndex` already caches per signature.
+ */
+const renderedNamesCache = new WeakMap<IRViewpointIndex, Set<string>>();
+
+export function renderedMetaclassNames(index: IRViewpointIndex | null): Set<string> | null {
+    if (!index) return null;
+    if (index.wildcard.length > 0 || index.edgeWildcard.length > 0 || index.rowWildcard.length > 0) return null;
+    const cached = renderedNamesCache.get(index);
+    if (cached) return cached;
+    const names = new Set<string>();
+    for (const mc of index.byMetaclass.keys()) names.add(mc);
+    for (const mc of index.objectAsEdgeByMetaclass.keys()) names.add(mc);
+    for (const mc of index.edgeByMetaclass.keys()) names.add(mc);
+    for (const mc of index.rowByMetaclass.keys()) names.add(mc);
+    if (names.size === 0) return null;
+    renderedNamesCache.set(index, names);
+    return names;
+}

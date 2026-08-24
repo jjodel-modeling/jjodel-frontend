@@ -1,5 +1,18 @@
 # Claude Code Session Log
 
+## 2026-08-25 — feat(tree-view): stato di resa per viewpoint (scope bar + dimming not-rendered)
+**Prompt**: prompt del 2026-08-25, due fasi. Fase 1 investigativa (4 domande su API di resa, riuso dalla palette, viewpoint attivo/artefatto aperto, multi-metamodello); Fase 2 su tre decisioni ratificate: "reso" = unione completa delle view IR, scopo al solo caso Redux con un metamodello, toggle "mostra tutto" fuori dal giro.
+**Files touched**: `frontend/src/components/editor-v2/viewpoint/ir/irInteraction.ts`, `frontend/src/components/TreeViewSidebar/treeViewScope.ts` (nuovo), `frontend/src/components/TreeViewSidebar/TreeViewScopeBar.tsx` (nuovo), `frontend/src/components/TreeViewSidebar/TreeViewContent.tsx`, `frontend/src/components/TreeViewSidebar/TreeViewSidebar.tsx`, `frontend/src/components/TreeViewSidebar/index.ts`, `frontend/src/components/TreeViewSidebar/tree-view-sidebar.scss`, `frontend/src/components/TreeViewSidebar/tree-view-redesign.scss` (eliminato), `frontend/src/components/editors/PropertiesWithTreeView.tsx`, `docs/sessioni/sessione_2026-08-25_tree_view_viewpoint_filter.md`, `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — tsc 33 = baseline, 0 nei file toccati; vitest 1349 passed con le stesse 9 suite rosse in raccolta (`window is not defined`, pre-esistente); build exit 0, solo il chunk-warning.
+**Out-of-scope changes**: yes — il prompt elencava 4 file, ne sono stati toccati 9 piu' 1 eliminato. Overrun della regola 19 senza pausa preventiva; approvato a posteriori dall'utente.
+**Layer Impact Report**: not-required — nessun file della lista §3.2; `irInteraction.ts` e' in critical zone §3.1 ma l'aggiunta e' una funzione pura read-only sull'indice, fuori da ogni write path.
+**Smoke visivo**: passato su 4 scenari (nessun viewpoint / viewpoint IR attivo / scroll / click su riga dimmed). Copertura parziale dichiarata: verificato solo il montaggio nel rail.
+**Notes**: `renderedMetaclassNames` e' deliberatamente piu' larga di `paletteMetaclasses` — la palette risponde a "cosa posso creare", l'albero a "cosa il viewpoint rende". Viewpoint attivo letto dal root `state.viewpoint`, lo stesso di `computeIRSignature`; `activeViewpointId` inerte rimosso. Chiavatura per nome: collisione fra omonimi accettata, via d'uscita `resolveMetaclassId`. Dettaglio in `docs/sessioni/sessione_2026-08-25_tree_view_viewpoint_filter.md`.
+**Prompt document name**: 2026-08-25 00:05
+
 ## 2026-08-24 — fix(editor-v2): kill-switch, `userHasInteracted` non si alza piu'
 **Prompt**: prompt del 2026-08-24 23:30, Parte A. Dopo la verifica visiva di `952d3cb94` (6 prove su 7): il corpo di `markUserInteracted` diventa un no-op, la funzione e i due handler in cattura restano cablati.
 **Files touched**: `frontend/src/components/editor-v2/EditorV2.tsx`, `docs/claude-code-log.md`

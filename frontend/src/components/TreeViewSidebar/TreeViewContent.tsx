@@ -27,6 +27,7 @@ import { JjodelEvents, SystemEvents } from '../../events/registry';
 import { useNodeProblems } from '../editor-v2/problems/useNodeProblems';
 import { getTypeName, getMultiplicity, formatFeatureSignature } from '../../common/featureSignature';
 import type { NodeProblem } from '../editor-v2/problems/registry';
+import { computeTreeViewScope } from './treeViewScope';
 
 /**
  * TreeViewContent — redesign 2026-05-08.
@@ -104,6 +105,13 @@ interface TreeClassData {
     instanceCount: number;
     attributes: TreeStructuralFeatureData[];
     references: TreeStructuralFeatureData[];
+    /**
+     * Il viewpoint attivo non rende questo classifier, ed e' dentro lo scopo del
+     * filtro (cfr. treeViewScope.ts). False anche per i classifier FUORI scopo:
+     * quelli non sono "non resi", sono elementi su cui il viewpoint non ha
+     * opinioni, e vanno lasciati in chiaro.
+     */
+    notRendered?: boolean;
 }
 
 interface TreeStructuralFeatureData {
@@ -591,6 +599,13 @@ interface EntityRowProps {
     actions?: ReactNode;           // hover-reveal slot (e.g. add/duplicate/delete buttons)
     nameOverride?: ReactNode;      // custom name renderer (e.g. inline rename input)
     highlightQuery?: string;       // search substring to <mark> in the name
+    /**
+     * Il viewpoint attivo non rende questo elemento (dimming + hint "not rendered").
+     * L'hint dice `not rendered` e non "Not in this viewpoint": quest'ultima e' la
+     * label della palette, che risponde a "cosa posso creare". Le due domande danno
+     * insiemi diversi per costruzione e non devono sembrare la stessa cosa.
+     */
+    notRendered?: boolean;
 }
 
 const EntityRow = memo(function EntityRow(props: EntityRowProps): ReactElement {
@@ -598,7 +613,7 @@ const EntityRow = memo(function EntityRow(props: EntityRowProps): ReactElement {
         badge, badgeClassName, name, nameClassName, pillText, expandKey, isLeaf,
         expanded, onToggle, extraIcon, selected,
         onClick, onDoubleClick, onContextMenu, depth, dataElementId, highlightAction, isHighlighted, showNewBadge,
-        actions, nameOverride, highlightQuery,
+        actions, nameOverride, highlightQuery, notRendered,
     } = props;
 
     const hasChevron = !!expandKey && !isLeaf;
@@ -630,7 +645,7 @@ const EntityRow = memo(function EntityRow(props: EntityRowProps): ReactElement {
 
     const rowContent = (
         <div
-            className={`tree-row ${selected ? 'tree-row--selected' : ''} ${highlightClass}`.trim()}
+            className={`tree-row ${selected ? 'tree-row--selected' : ''} ${notRendered ? 'tree-row--not-rendered' : ''} ${highlightClass}`.trim()}
             style={{ paddingLeft: `${depth * TREE_INDENT_STEP}px` }}
             data-element-id={dataElementId}
             onContextMenu={onContextMenu}
@@ -680,6 +695,14 @@ const EntityRow = memo(function EntityRow(props: EntityRowProps): ReactElement {
                 {showNewBadge && (
                     <span className="tree-node__badge tree-node__badge--new">NEW</span>
                 )}
+                {notRendered && (
+                    <span
+                        className="tree-row__not-rendered-hint"
+                        title="The active viewpoint declares no view for this classifier."
+                    >
+                        not rendered
+                    </span>
+                )}
             </div>
             {actions && <span className="tree-row__actions">{actions}</span>}
         </div>
@@ -721,7 +744,7 @@ const FeatureRow = memo(function FeatureRow({
             <span className="tree-node__toggle is-leaf" aria-hidden />
             <div className={`tree-row__content ${selected ? 'tree-row__content--selected' : ''}`} onClick={handleClick}>
                 <span className="tree-feature__name">{renderHighlightedName(instance.name, highlightQuery)}</span>
-                <span className="tree-feature__type">: {instance.metaclassName}</span>
+                <span className="tree-feature__type">{instance.metaclassName}</span>
             </div>
         </div>
     );
@@ -808,7 +831,11 @@ const ClassNode = memo(function ClassNode({
         }, '', false);
     }, [cls.id]);
 
-    const hasStructuralFeatures = cls.attributes.length > 0 || cls.references.length > 0;
+    // Le feature di un classifier non reso non si renderizzano: la riga resta al
+    // proprio posto nella gerarchia, dimmed e senza chevron. Nessun riordino,
+    // nessun auto-espandere: l'unica cosa che cambia e' lo stile.
+    const notRendered = !!cls.notRendered;
+    const hasStructuralFeatures = !notRendered && (cls.attributes.length > 0 || cls.references.length > 0);
 
     return (
         <div ref={nodeRef} className="tree-node" data-element-id={cls.id}>
@@ -831,6 +858,7 @@ const ClassNode = memo(function ClassNode({
                 showNewBadge={isHighlighted && highlightedAction === 'create'}
                 expandKey={cls.id}
                 highlightQuery={highlightQuery}
+                notRendered={notRendered}
             />
             {popup}
             {isExpanded && hasStructuralFeatures && (
@@ -1303,7 +1331,6 @@ const ViewpointNode = memo(function ViewpointNode({
     onToggleFn,
     onSelect,
     selectedViewId,
-    activeViewpointId,
     highlightQuery,
     startRenameView,
     renamingViewId,
@@ -1319,14 +1346,15 @@ const ViewpointNode = memo(function ViewpointNode({
     onToggleFn: (key: string) => void;
     onSelect?: () => void;
     selectedViewId?: string;
-    activeViewpointId?: string;
     highlightQuery?: string;
 } & ViewpointRenameProps): ReactElement {
     const hasSubViews = vp.subViews.length > 0;
     const expanded = isExpandedFn(vp.id);
     // Highlight the viewpoint when it is the one open in Properties (selection
     // pill, 2026-07-28 round 2 refinement). The active-in-editor dot was removed
-    // earlier; activeViewpointId stays threaded but inert. TODO: cleanup.
+    // earlier, and the inert `activeViewpointId` thread that survived it is gone
+    // with it: il viewpoint attivo che conta ora e' il root `state.viewpoint`, letto
+    // da treeViewScope.ts — lo stesso contro cui risolve il canvas.
     const isSelected = !!selectedViewId && vp.id === selectedViewId;
 
     const handleClick = useCallback((e: React.MouseEvent) => {
@@ -1532,7 +1560,6 @@ interface StateProps {
     viewpoints: TreeViewpointData[];
     selectedElementId?: string;
     selectedViewId?: string;
-    activeViewpointId?: string;
     projectId?: Pointer<DProject>;
     expandedTreeNodes: string[];
 }
@@ -1544,7 +1571,7 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 function TreeViewContentComponent(props: AllProps) {
     const {
         metamodels, standaloneModels, viewpoints, selectedElementId,
-        selectedViewId, activeViewpointId, projectId, expandedTreeNodes, onSelect,
+        selectedViewId, projectId, expandedTreeNodes, onSelect,
         searchOpen, onSearchClose,
     } = props;
 
@@ -1948,7 +1975,6 @@ function TreeViewContentComponent(props: AllProps) {
                                     onToggleFn={onToggleFn}
                                     onSelect={onSelect}
                                     selectedViewId={selectedViewId}
-                                    activeViewpointId={activeViewpointId}
                                     highlightQuery={highlightQuery}
                                     startRenameView={startRenameView}
                                     renamingViewId={renamingViewId}
@@ -1979,7 +2005,6 @@ function TreeViewContentComponent(props: AllProps) {
                                     onToggleFn={onToggleFn}
                                     onSelect={onSelect}
                                     selectedViewId={selectedViewId}
-                                    activeViewpointId={activeViewpointId}
                                     highlightQuery={highlightQuery}
                                     startRenameView={startRenameView}
                                     renamingViewId={renamingViewId}
@@ -2001,7 +2026,6 @@ function TreeViewContentComponent(props: AllProps) {
                             onToggleFn={onToggleFn}
                             onSelect={onSelect}
                             selectedViewId={selectedViewId}
-                            activeViewpointId={activeViewpointId}
                             highlightQuery={highlightQuery}
                             startRenameView={startRenameView}
                             renamingViewId={renamingViewId}
@@ -2069,7 +2093,13 @@ function resolveActiveModelId(state: DState): string | null {
     return null;
 }
 
-function buildPackageData(lPkg: any, parentFqn: string): TreePackageData {
+/**
+ * `rendered` e' l'insieme dei classifier resi dal viewpoint attivo, o null quando
+ * il metamodello e' FUORI scopo oppure l'informazione non esiste (viewpoint
+ * classico, view wildcard, artefatto aperto non determinabile). Null ⇒ nessun
+ * `notRendered` viene marcato, che e' esattamente il comportamento di prima.
+ */
+function buildPackageData(lPkg: any, parentFqn: string, rendered: ReadonlySet<string> | null): TreePackageData {
     const fqn = parentFqn ? `${parentFqn}.${lPkg.name || 'unnamed'}` : (lPkg.name || 'unnamed');
     const subPackages: TreePackageData[] = [];
     const classes: TreeClassData[] = [];
@@ -2078,7 +2108,7 @@ function buildPackageData(lPkg: any, parentFqn: string): TreePackageData {
         const subs = lPkg.subpackages || [];
         for (const sub of subs) {
             if (!sub) continue;
-            subPackages.push(buildPackageData(sub, fqn));
+            subPackages.push(buildPackageData(sub, fqn, rendered));
         }
     } catch { /* ignore */ }
 
@@ -2124,15 +2154,17 @@ function buildPackageData(lPkg: any, parentFqn: string): TreePackageData {
                 const instances = (c as any).instances;
                 if (Array.isArray(instances)) instanceCount = instances.length;
             } catch { /* ignore */ }
+            const className = c.name || 'unnamed';
             classes.push({
                 id: c.id,
-                name: c.name || 'unnamed',
-                fqn: `${fqn}.${c.name || 'unnamed'}`,
+                name: className,
+                fqn: `${fqn}.${className}`,
                 isAbstract: !!(c as any).abstract,
                 isEdgeView,
                 instanceCount,
                 attributes,
                 references,
+                notRendered: rendered ? !rendered.has(className) : false,
             });
         }
     } catch { /* ignore */ }
@@ -2240,15 +2272,22 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
         }
     }
 
+    // Filtro per viewpoint: `rendered` viene applicato SOLO ai metamodelli in
+    // scopo. Gli altri restano in chiaro — il viewpoint non ha opinioni su di
+    // loro, e dimmarli sarebbe una bugia (cfr. treeViewScope.ts).
+    const scope = computeTreeViewScope(state);
+    const scopeIds = new Set(scope?.scopeMetamodelIds ?? []);
+
     // Build metamodel tree data
     ret.metamodels = metamodels.map((mm) => {
         const mmName = mm.name || 'Unnamed Metamodel';
+        const mmRendered = scope && scopeIds.has(mm.id) ? scope.rendered : null;
         const rootPackages: TreePackageData[] = [];
         try {
             const pkgs = (mm as any).packages || [];
             for (const pkg of pkgs) {
                 if (!pkg) continue;
-                rootPackages.push(buildPackageData(pkg, mmName));
+                rootPackages.push(buildPackageData(pkg, mmName, mmRendered));
             }
         } catch { /* ignore */ }
 
@@ -2320,13 +2359,6 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     // view or viewpoint currently open in Properties with the same selection pill
     // used for model-element rows (2026-07-28 round 2 refinement).
     ret.selectedViewId = state._lastSelected?.view || undefined;
-
-    // Active viewpoint id (DProject.activeViewpoint). Used to highlight the
-    // currently-open VP in the tree with the cyan selection pattern.
-    try {
-        const project = LProject.getProject();
-        ret.activeViewpointId = project?.activeViewpoint?.id || undefined;
-    } catch { /* ignore */ }
 
     return ret;
 }

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useResolution, Resolution } from '../../hooks/useResolution';
 import { TreeViewContent } from './TreeViewContent';
 import { JjodelEvents } from '../../events/registry';
+import { TreeViewScopeBarLive } from './TreeViewScopeBar';
 import './tree-view-sidebar.scss';
 
 /**
@@ -179,6 +180,7 @@ export const TreeViewSidebar: React.FC<TreeViewSidebarProps> = ({ className }) =
                             </button>
                         </div>
                     </div>
+                    <TreeViewScopeBarLive />
                     <div className="tree-view-overlay__body">
                         <TreeViewContent searchOpen={searchOpen} onSearchClose={() => setSearchOpen(false)} onSelect={handleOverlaySelect} />
                     </div>
@@ -235,6 +237,9 @@ export const TreeViewSidebar: React.FC<TreeViewSidebarProps> = ({ className }) =
                             <i className="bi bi-search" />
                         </button>
                     </div>
+
+                    {/* Scope bar: fuori dal body, così non scorre via con l'albero. */}
+                    <TreeViewScopeBarLive />
 
                     {/* Tree content */}
                     <div className="tree-view-sidebar__body">

@@ -5,6 +5,7 @@ import { Info } from './Info';
 import { NodeEditor } from './NodeEditor';
 import HelpButton from '../HelpButton';
 import { TreeViewContent } from '../TreeViewSidebar/TreeViewContent';
+import { TreeViewScopeBarLive } from '../TreeViewSidebar/TreeViewScopeBar';
 import { useTreeViewPanel } from '../../contexts/TreeViewPanelContext';
 import './properties-with-tree-view.scss';
 // Import tree view styles for icon colors and tree node styling
@@ -584,6 +585,9 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
                             Executing
                         </span>
                     )}
+                    {/* Scope bar: dentro il container e fuori dal body, così non
+                        scorre via con l'albero. */}
+                    <TreeViewScopeBarLive />
                     <div className="tree-view-panel-body">
                         <TreeViewContent />
                     </div>
