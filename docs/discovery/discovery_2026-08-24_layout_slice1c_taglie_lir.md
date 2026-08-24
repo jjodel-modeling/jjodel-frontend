@@ -485,3 +485,85 @@ editor-v2, cartelle sorelle. Lo stesso arco che `utils/jjomTransformers.ts:33-34
 3. Il resto del piano di Fase 2 è quello del prompt, confermato riga per riga.
 
 **HARD STOP.** Fase 2 solo dopo il GO esplicito.
+
+---
+
+## 12. Addendum di Fase 2 (2026-08-24, dopo il GO) — cosa è stato deciso e cosa è stato fatto
+
+### 12.1 La regressione di `useContentSize.ts:101`, nominata come tale
+
+Il §5.1 la descriveva come «un difetto vivo, non introdotto qui». Il GO l'ha qualificata meglio,
+e la qualifica va a registro: è una **regressione della rettifica del 2026-08-24** (`cd8363ccc`),
+non un difetto latente che la 1c ha incontrato per caso.
+
+La catena, in tre righe. Prima di `cd8363ccc` gli scalari erano il layout della sintassi astratta
+*e* il fondo di ogni viewpoint senza record, quindi un resize li scriveva e `isResized` sul
+D-object era vero. Dopo `cd8363ccc` gli scalari sono il **seme**, che nessun gesto di editor-v2
+riscrive più: da quel commit `idlookup[vertexId].isResized` è falso sotto **ogni** layout su ogni
+progetto che non lo avesse già vero. `useContentSize.ts:101` leggeva esattamente quello scalare,
+quindi da `cd8363ccc` la derivazione da contenuto è rimasta attiva anche su un nodo
+ridimensionato a mano — su ellisse, cerchio e rombo, le forme con supplemento.
+
+Non era stata vista nella verifica visiva della 1b perché la prova 1 usava nodi rettangolari, che
+non hanno supplemento e non passano da questo hook. È il caso, ancora una volta, in cui uno
+schermo che mostra un solo tipo di forma non prova nulla sull'altro (CLAUDE.md §5).
+
+Conseguenza sul perimetro, accettata al GO: i punti (2) e (3) del prompt **non** sono rifiniture
+della 1c ma la chiusura di quella regressione, e stanno nello stesso commit. Col solo fix (1)
+sarebbero peggiorati: il patch avrebbe messo la taglia manuale sul nodo e il hook l'avrebbe
+riscritta al commit successivo, fino a bruciare `MAX_UNACCEPTED_WRITES = 3` e cedere con un
+`console.warn` (`useContentSize.ts:180`) — taglia manuale ignorata e console sporca.
+
+### 12.2 Le tre risposte del GO, come implementate
+
+1. **Refresh degli archi: omesso**, secondo il §4. Il GO ha aggiunto una misura che il LIR non
+   aveva preso e che vale la pena mettere a registro: `fitView` in `EditorV2.tsx` scatta solo nel
+   callback della sync iniziale (`:417-438`, con `setTimeout` 50 ms) e su gesti espliciti
+   (`:3134`, `:3136`, `:3302`), senza alcuna dipendenza da `nodesInitialized` — quindi togliere
+   `measured` a un nodo esistente **non** ri-adatta la vista. Il rimedio dichiarato, se la prova 3
+   mostrasse handle staccati, resta il doppio rAF + `updateNodeInternals` di `resetNodeSize`, in
+   un commit separato.
+2. **Test dell'adapter: fatto, col mock del barrel.**
+   `__tests__/vertexLayoutAdapter.test.ts`, `vi.mock('../../../../../joiner', …)` in testa, così
+   monaco non viene mai caricato. Il mock regge: **7 test verdi, nessuna decima suite rossa**
+   (2 file, 26 test nella cartella `layout/`: 19 del modulo puro invariati più 7 nuovi). Niente
+   file gemello puro: R-LAY-16 come emendata mette il predicato di esclusività nell'adapter, e
+   spostarlo per comodità di test ne contraddirebbe la lettera. `getActiveLayoutKey` non è
+   testato di proposito — è `getLayoutKeyOf(store.getState())` e nient'altro, testarlo sarebbe
+   testare il mock.
+3. **Piano confermato**, con le due precisazioni del GO. La presenza nella mappa si testa con
+   `has()` (`useJjomSync.ts:1474-1475`), perché `null` è il valore legittimo che dice «togli
+   `width`, `height`, `measured`». Sull'anti-bounce: `BOUNCE_WINDOW_MS = 300`
+   (`syncState.ts:78`) e l'effetto si riesegue a ogni render, quindi la cache raggiunge il
+   trasformatore entro il primo render dopo la finestra; il fallback dichiarato (leggere anche il
+   nodo React Flow vivo via `getNodes`) **non** è stato implementato, perché nessun caso di cache
+   stantìa è emerso nel diff.
+
+### 12.3 Il diff, cinque file
+
+| File | Cosa cambia |
+|---|---|
+| `hooks/useJjomSync.ts` | `patchedNodeSizes` (`:1261-1265`), confronto top-level (`:1376-1391`) e `set` (`:1398`), `hasNodeChanges` (`:1446-1447`), copia locale (`:1458`), ramo nel patch differito (`:1467-1496`). Nessuna riga esistente cambia semantica. |
+| `viewpoint/layout/vertexLayoutAdapter.ts` | `getLayoutKeyOf(state)`; `getActiveLayoutKey()` vi delega. Nessun rename. |
+| `viewpoint/ir/useContentSize.ts` | Il gate `isResized` passa dal resolver (`:111-114`), più la nota sulla regressione nel doc del hook. |
+| `viewpoint/authoring/SymbolEditorModal.tsx` | `manualSig` passa dal resolver (`:163-170`), stessa gate e stessa firma primitiva. |
+| `viewpoint/layout/__tests__/vertexLayoutAdapter.test.ts` | Nuovo: 7 test su stato sintetico. |
+
+Invariati come dichiarato: `Date.now()` in dipendenza e `prevModel = {}`; il proxy L e
+`LVoidVertex`; i sei siti dichiarati del censimento, `ViewportCulling.ts` compreso; l'undo;
+`style.width/height` del `packageNode`; il modulo puro `vertexLayout.ts` e i suoi 19 test.
+
+### 12.4 Gate misurati
+
+| Gate | Esito |
+|---|---|
+| `npm run typecheck` | **33**, `diff` contro la baseline **vuoto** (lista byte-identica) |
+| `npx vitest run` | **1349 passed** (1342 + 7), **le stesse 9 suite** rosse in import, 53/62 file verdi |
+| `npm run build` | **exit 0**, solo il warning di chunk-size preesistente |
+| `npm run check:docs` | exit 0. Le due FAIL riportate (B: `Corregge`/`Causa` assenti su una entry del 2026-08-03; C: `Notes` di 545 e 3314 caratteri su due entry del 2026-08-23) sono **preesistenti** e non toccate da questa slice: misurate identiche prima del diff. |
+
+### 12.5 Cosa resta da fare
+
+La verifica visiva di Alfonso (sei prove del prompt delle 14:30; la prova 6 è quella che esercita
+i punti 2 e 3), e poi la entry in `docs/claude-code-log.md`. Nessun altro lavoro previsto su
+questo fronte.
