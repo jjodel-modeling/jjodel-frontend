@@ -441,3 +441,126 @@ docs/claude-code-log.md                                            (prime 40 rig
 ```
 
 Nessun sorgente modificato in questa fase. `git status --short` vuoto alla chiusura del report.
+
+---
+
+## 10. Addendum 2026-08-24 (dopo la verifica visiva) — il finding C era sbagliato, e la rettifica che ne è seguita
+
+### 10.1 Correzione del §4: il layout segue il viewpoint dal vivo
+
+Il §4 di questo report afferma che un cambio di viewpoint non ri-trasforma i nodi e che la
+1b consegna «persistenza corretta senza resa reattiva». **È falso**, e la verifica visiva di
+Alfonso l'ha smentito allo schermo (prova 4). Le misure che il §4 non aveva preso:
+
+```
+useJjomSync.ts:1344   prevModel = {} as any;   // "forcing to update by giving it a different object"
+useJjomSync.ts:1349   if (prevD === dElement && prevModel === currModel && currHash === prevHash) continue;
+useJjomSync.ts:1528   }, [isJjomMode, elementSnapshots, subElementIds, scheduleFlush, Date.now()]);
+```
+
+`prevModel` è forzato a un oggetto nuovo a ogni giro, quindi `prevModel === currModel` è
+**sempre falso** e la `continue` non scatta mai; e `Date.now()` nelle dipendenze fa girare
+l'effetto a **ogni render**. Ne segue che ogni vertice viene ri-trasformato di continuo e il
+transformer legge il record del layout in forza in quel momento. Il §4 si era fermato alla
+guardia `prevD === dElement` senza leggere le due righe sopra (dove peraltro un commento
+`damiano: this is wrong` segnala l'hack), e aveva dedotto un'assenza da una lettura parziale —
+esattamente l'errore che CLAUDE.md §5 descrive.
+
+Conseguenze: la **slice 1c** proposta al §4.3 **decade**, non c'è nulla da armare. Nota di costo,
+non difetto: `effectiveLayoutOf` esegue una `store.getState()` per vertice, e ora è misurato che
+gira molto più spesso di quanto il §4 assumesse; su modelli grandi vale una misura.
+
+### 10.2 Esito della verifica visiva
+
+| Prova | Esito |
+|---|---|
+| 1 — persistenza e divergenza fra `A`, `B` e sintassi astratta | **passata**, con un rilievo (§10.3) |
+| 2 — primo gesto di solo drag | **passata** |
+| 3 — ⌘Z | **fallita**, per due difetti preesistenti e indipendenti dalla slice (§10.4) |
+| 4 — layout che cambia al cambio di viewpoint | **comportamento voluto**, e smentisce il §4 (§10.1) |
+
+### 10.3 La rettifica ratificata: la sintassi astratta è un layout come gli altri
+
+Rilievo di Alfonso sulla prova 1: i viewpoint sono indipendenti fra loro, la sintassi astratta no.
+Causa: i quattro scalari avevano **due ruoli insieme** — il layout della sintassi astratta *e* il
+fondo su cui cade ogni viewpoint senza record. Il secondo ruolo faceva colare il primo: muovere un
+nodo in sintassi astratta lo muoveva sotto ogni viewpoint non ancora toccato. Non era un difetto
+del diff: era la conseguenza dichiarata di R-LAY-15, vista a schermo e giudicata inaccettabile.
+
+Ratificata in chat il 2026-08-24, con lo stesso difetto misurato anche sulle **taglie** (§10.5):
+
+- gli scalari diventano il **seme**: il layout di nascita, mai più riscritto da editor-v2;
+- la sintassi astratta prende una chiave sua, `ABSTRACT_SYNTAX_LAYOUT_KEY = '__abstract__'`,
+  letterale riservato e non `Defaults.Pointer_ViewPointDefault`, che porterebbe la doppia grafia
+  del vuoto (D10.a) dentro la chiave del layout;
+- il **metamodello** usa la stessa chiave: è un modello che ha solo la sintassi astratta. Cambia
+  la sede di memorizzazione del suo layout, non ciò che si vede (il fallback sul seme copre i
+  progetti esistenti). La «regressione zero» della prova 4 vale come *nessun cambiamento
+  visibile*, non più alla lettera;
+- **nessuna migrazione**: un progetto esistente non ha dizionario, quindi ogni layout parte dal
+  seme, cioè dal layout che ha oggi, e si stacca al primo gesto.
+
+Costo dichiarato: `x/y/w/h` sul `DVertex` non seguono più la sintassi astratta, restano al seme.
+Misurato chi li legge fuori da editor-v2: solo gli accessor del proxy L in
+`GraphDataElements.tsx` (già fuori dal resolver per decisione al GO) e `polymetricLayouts.ts`,
+che lavora su una struttura ad albero propria e non sul `DVertex`. Nessun esportatore, nessun
+servizio.
+
+Alternativa scartata (di nuovo): copia di massa all'attivazione, cioè materializzare un record per
+ogni vertice a ogni attivazione. Dà la stessa indipendenza scrivendo anche i nodi mai toccati; era
+già stata scartata quando si ratificò R-LAY-15.
+
+**R-LAY-14 e R-LAY-15 vanno emendate**: «i quattro scalari sono il record della sintassi astratta»
+e «la sentinella è l'assenza di chiave» non descrivono più il codice. L'emendamento è di chat.
+
+### 10.4 ⌘Z: due difetti preesistenti, fuori dal perimetro
+
+L'undo di editor-v2 non passa da Redux: è una storia di sessione su nodi e archi RF
+(`useHistory.ts`, due `useRef`). Misurato:
+
+1. **Lo snapshot è preso a fine gesto**, non all'inizio (`EditorV2.tsx:3489-3490`, dentro
+   `if (hasDragEnd || hasResize)`): salva lo stato in cui il nodo si è **già** spostato. Il primo
+   ⌘Z rimette quello stato — nessun effetto visibile — e il secondo torna a prima del gesto
+   precedente. Sfasamento di uno.
+2. **`handleUndo` non riscrive nulla su JjOM** (`:2359-2391`: `setNodes`, `setEdges`, e una
+   riconciliazione dei soli attributi). Con la ri-trasformazione continua del §10.1, qualunque
+   ripristino di sola sessione viene subito sovrascritto dal valore persistito: in modalità JjOM
+   l'undo di uno spostamento non può funzionare, per costruzione.
+
+Il ⌘Z da tastiera è inoltre un `onKeyDown` di React sul pannello (`:2499`, `:2511`): vuole il
+fuoco dentro la tela e non scatta su `INPUT`/`SELECT`.
+
+Entrambi preesistono alla slice e valgono anche senza viewpoint. R-LAY-16 dava per buona la
+lettura statica del reducer «con il gesto ⌘Z nella verifica visiva della 1b»: quel ⌘Z al reducer
+non arriva mai. Rimedio (snapshot a inizio gesto **più** un write-back che passi dal resolver):
+fronte suo, non questa slice.
+
+### 10.5 Taglie: indipendenti, con lo stesso difetto e lo stesso rimedio
+
+Misura richiesta da Alfonso.
+`command grep -rnE "SetFieldAction\.new\([^,]+, *['\"](w|h|isResized)['\"]"` su `frontend/src`:
+fuori da `canvasToJjom.ts` gli unici scrittori sono i setter del proxy L
+(`GraphDataElements.tsx:680-681`, `:873`, `:1393`, `:1417`, `:1423`), cioè il non-obiettivo già
+dichiarato. Tutte le vie vive — resize, propagate size, «Reset size» — passano dal resolver, e in
+lettura `manualSizeOf` e la taglia del package pure. Taglia e `isResized` divergono quindi per
+layout esattamente come la posizione, «Reset size» incluso. La coppia con la sintassi astratta era
+la stessa del §10.3 e la rettifica la chiude in un colpo solo.
+
+### 10.6 Il diff della rettifica
+
+Cinque file di codice, tutti già nel perimetro del GO tranne i **commenti** del modulo puro:
+
+1. `viewpoint/layout/vertexLayoutAdapter.ts` — la costante `ABSTRACT_SYNTAX_LAYOUT_KEY` e
+   `getActiveExclusiveVpId` → **`getActiveLayoutKey`**, che ora ritorna `string` e mai `null`.
+   Il nome vecchio sarebbe diventato una bugia (ritornava `'__abstract__'`): rinominato un giorno
+   dopo averlo introdotto, e dichiarato qui perché la Regola 2 vuole che si dica.
+2. `sync/canvasToJjom.ts` — call site e il parametro `vpId` → `layoutKey`. Il ramo `'scalars'`
+   resta solo come fallback quando il D-object non si risolve.
+3. `utils/jjomTransformers.ts` — call site e commenti.
+4. `abstract/tabs/MetamodelTab.tsx` — call site e il commento sull'esito atteso.
+5. `viewpoint/layout/vertexLayout.ts` — **commenti**, più il parametro `activeExclusiveVpId` →
+   `layoutKey` nelle due funzioni. Nessun cambiamento di comportamento: i 19 test passano
+   invariati.
+
+Gate: tsc **33** con lista byte-identica (`diff` vuoto), vitest **1342 passed** e le stesse 9
+suite rosse, build exit 0.

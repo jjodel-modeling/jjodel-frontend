@@ -3,19 +3,23 @@
  * (R-LAY-16). Slice 1a: the module only, no call site is wired yet.
  *
  * The model, in one paragraph. A vertex carries four scalars (`x`, `y`, `w`, `h`) plus
- * `isResized`: that IS its abstract-syntax record. Under an exclusive viewpoint it may also
- * carry a record of the same shape in `DVertex.layoutByViewpoint`, keyed by the id of the
- * viewpoint that was active when the gesture happened (R-LAY-14). The sentinel for "abstract
- * syntax" is the ABSENCE of a key, never a reserved id — which is why existing projects are
- * already conformant and no migration exists (R-LAY-14; no version bump either, not even a
- * no-op: a bump regenerates every untouched default view, VersionFixer.tsx:133-143).
+ * `isResized`: that is its SEED — the layout it is born with, and the fallback of every layout
+ * that has no record yet. It may also carry records of the same shape in
+ * `DVertex.layoutByViewpoint`, one per layout: keyed by the id of the exclusive viewpoint that
+ * was active when the gesture happened, or by `ABSTRACT_SYNTAX_LAYOUT_KEY`
+ * (`vertexLayoutAdapter.ts`) when none was (R-LAY-14). Abstract syntax is a layout like any
+ * other, NOT the scalars: until the rectification of 2026-08-24 it was both a layout and the
+ * fallback, and the second role made the first one leak — moving a node in abstract syntax moved
+ * it under every viewpoint not yet touched. Existing projects have no dictionary at all, so
+ * every layout falls back to the seed and no migration exists (R-LAY-14; no version bump either,
+ * not even a no-op: a bump regenerates every untouched default view, VersionFixer.tsx:133-143).
  *
- * Reading is read-through: no record for the active viewpoint means read the scalars
- * (R-LAY-15). Nothing is copied at activation time. The first gesture under a viewpoint
- * materializes the COMPLETE record from the effective values and only then applies the patch,
- * so a record is never partial and the fallback is per-record, not per-field (R-LAY-15 as
- * amended 2026-08-24). Records left behind by a deleted viewpoint are inert garbage that
- * read-through never consults, by construction (R-LAY-17).
+ * Reading is read-through: no record for the layout in force means read the seed (R-LAY-15).
+ * Nothing is copied at activation time. The first gesture under a layout materializes the
+ * COMPLETE record from the effective values and only then applies the patch, so a record is
+ * never partial and the fallback is per-record, not per-field (R-LAY-15 as amended
+ * 2026-08-24). Records left behind by a deleted viewpoint are inert garbage that read-through
+ * never consults, by construction (R-LAY-17).
  *
  * Purity (R-LAY-16). This module has NO imports — not even `import type`. In particular it does
  * not borrow `GraphSize` (common/Geom.ts:677), whose shape `{x, y, w, h}` `VertexLayout`
@@ -28,7 +32,7 @@
  * `resolveVertexLayoutWrite` for how a call site turns the description into an action.
  */
 
-/** Position and size of a vertex under one viewpoint. Same shape as GraphSize plus isResized. */
+/** Position and size of a vertex under one layout. Same shape as GraphSize plus isResized. */
 export interface VertexLayout {
     x: number;
     y: number;
@@ -39,7 +43,7 @@ export interface VertexLayout {
 
 /**
  * The read model of a `DVertex` as far as layout is concerned: the four scalars and
- * `isResized` (the abstract-syntax record), plus the optional per-viewpoint dictionary.
+ * `isResized` (the seed), plus the optional per-layout dictionary.
  * A `DVertex` satisfies this structurally — the resolver never needs the D-object itself.
  */
 export interface VertexLayoutSource extends VertexLayout {
@@ -47,34 +51,37 @@ export interface VertexLayoutSource extends VertexLayout {
 }
 
 /**
- * Effective layout of `src` under the given viewpoint.
+ * Effective layout of `src` under the given layout key.
  *
- * `activeExclusiveVpId` is the id of the active EXCLUSIVE viewpoint, or `null`. The impure
- * adapter (slice 1b) collapses BOTH "no viewpoint active" and "active viewpoint is not
- * exclusive" to `null` BEFORE calling in: here `null` means "the abstract-syntax record",
- * i.e. the scalars (R-LAY-16 as amended). This module never reads the store and never decides
- * exclusivity — that predicate does not exist as a function in the codebase and is a direct
- * read of `isExclusiveView` on the viewpoint's D-object (lastViewpoint.ts:96,
- * selectors.ts:558).
+ * `layoutKey` is the id of the active EXCLUSIVE viewpoint, or `ABSTRACT_SYNTAX_LAYOUT_KEY`, or
+ * `null` for "the seed itself". The impure adapter (`vertexLayoutAdapter.ts`) decides which,
+ * and collapses BOTH "no viewpoint active" and "active viewpoint is not exclusive" to the
+ * abstract-syntax key BEFORE calling in — it never returns `null`, because editor-v2 does not
+ * rewrite the seed. This module never reads the store and never decides exclusivity: that
+ * predicate does not exist as a function in the codebase and is a direct read of
+ * `isExclusiveView` on the viewpoint's D-object (lastViewpoint.ts:96, selectors.ts:558).
  *
- * Read-through (R-LAY-15): a missing key falls back to the scalars, as a whole record.
+ * Read-through (R-LAY-15): a missing key falls back to the seed, as a whole record.
  */
-export function readVertexLayout(src: VertexLayoutSource, activeExclusiveVpId: string | null): VertexLayout {
-    const scalars: VertexLayout = { x: src.x, y: src.y, w: src.w, h: src.h, isResized: src.isResized };
-    if (activeExclusiveVpId === null) return scalars;
-    const record = src.layoutByViewpoint?.[activeExclusiveVpId];
-    return record ? { ...record } : scalars;
+export function readVertexLayout(src: VertexLayoutSource, layoutKey: string | null): VertexLayout {
+    const seed: VertexLayout = { x: src.x, y: src.y, w: src.w, h: src.h, isResized: src.isResized };
+    if (layoutKey === null) return seed;
+    const record = src.layoutByViewpoint?.[layoutKey];
+    return record ? { ...record } : seed;
 }
 
 /**
  * What a layout write should do, described rather than performed.
  *
- * `scalars` — write the patched fields onto the vertex's own x/y/w/h/isResized, exactly as
- * every call site does today. This is the abstract-syntax case, and the one that keeps the
- * classic renderer governed rather than exempt (R-LAY-9, R-LAY-16).
+ * `scalars` — write the patched fields onto the vertex's own x/y/w/h/isResized, i.e. onto the
+ * seed, exactly as every call site did before slice 1b. Reachable only with a `null` key, which
+ * the adapter never produces: it survives as the safe fallback for a call site that cannot
+ * resolve the D-object.
  *
- * `dictionary` — write `record` under `vpId`. `record` is always COMPLETE, so the call site
- * never has to merge anything itself.
+ * `dictionary` — write `record` under `vpId` (the layout key: a viewpoint id, or the
+ * abstract-syntax key). `record` is always COMPLETE, so the call site never has to merge
+ * anything itself. This is the case that keeps the classic renderer governed rather than
+ * exempt (R-LAY-9, R-LAY-16).
  */
 export type VertexLayoutWrite =
     | { target: 'scalars'; patch: Partial<VertexLayout> }
@@ -83,7 +90,7 @@ export type VertexLayoutWrite =
 /**
  * Resolves a layout patch into the write that should happen.
  *
- * With `null` the patch goes to the scalars untouched. With a viewpoint id the result carries
+ * With `null` the patch goes to the seed untouched. With a layout key the result carries
  * the complete record — the effective layout read through `readVertexLayout`, with the patch
  * applied on top. "Materialize, then patch" is an ORDER OF COMPUTATION, not two writes
  * (R-LAY-15 as amended): a first drag-only gesture must not leave `w`/`h`/`isResized`
@@ -95,7 +102,7 @@ export type VertexLayoutWrite =
  *     SetFieldAction.new(vertexId, 'layoutByViewpoint', { [vpId]: record }, '+=', false)
  *
  * because `'+='` on an object is a shallow per-key merge (reducer.ts:240-252), so the records
- * of other viewpoints survive untouched; and on an ABSENT field it falls through to acting as
+ * of the other layouts survive untouched; and on an ABSENT field it falls through to acting as
  * a plain `'='` (reducer.ts:186-188), so the dictionary needs no seeding and there is no
  * intermediate partial state. Both are properties of the reducer documented nowhere else —
  * hence the line references. Undo restores the whole dictionary, since the reducer snapshots
@@ -103,7 +110,7 @@ export type VertexLayoutWrite =
  *
  * A key present in `patch` with an explicit `undefined` value is IGNORED rather than copied
  * over: a plain spread would punch a hole in the materialized record, which is the very
- * failure mode the R-LAY-15 amendment exists to prevent. The scalars case passes the patch
+ * failure mode the R-LAY-15 amendment exists to prevent. The seed case passes the patch
  * through untouched instead, since there the call site writes field by field and an absent
  * field simply is not written.
  *
@@ -112,14 +119,14 @@ export type VertexLayoutWrite =
 export function resolveVertexLayoutWrite(
     src: VertexLayoutSource,
     patch: Partial<VertexLayout>,
-    activeExclusiveVpId: string | null
+    layoutKey: string | null
 ): VertexLayoutWrite {
-    if (activeExclusiveVpId === null) return { target: 'scalars', patch: { ...patch } };
-    const record: VertexLayout = readVertexLayout(src, activeExclusiveVpId);
+    if (layoutKey === null) return { target: 'scalars', patch: { ...patch } };
+    const record: VertexLayout = readVertexLayout(src, layoutKey);
     if (patch.x !== undefined) record.x = patch.x;
     if (patch.y !== undefined) record.y = patch.y;
     if (patch.w !== undefined) record.w = patch.w;
     if (patch.h !== undefined) record.h = patch.h;
     if (patch.isResized !== undefined) record.isResized = patch.isResized;
-    return { target: 'dictionary', vpId: activeExclusiveVpId, record };
+    return { target: 'dictionary', vpId: layoutKey, record };
 }

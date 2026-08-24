@@ -1,5 +1,18 @@
 # Claude Code Session Log
 
+## 2026-08-24 — fix(layout): la sintassi astratta e' un layout come gli altri (rettifica della slice 1b)
+**Prompt**: verifica visiva di Alfonso sulla slice 1b e sua ratifica in chat. Prove 1 e 2 passate, prova 4 comportamento voluto; rilievo: la sintassi astratta deve avere un layout indipendente da quello dei viewpoint, e le taglie vanno verificate. Ratificati la chiave sentinella `'__abstract__'` e il metamodello sulla stessa chiave.
+**Files touched**: `frontend/src/components/editor-v2/viewpoint/layout/vertexLayoutAdapter.ts`, `frontend/src/components/editor-v2/viewpoint/layout/vertexLayout.ts` (commenti e nome di un parametro), `frontend/src/components/editor-v2/sync/canvasToJjom.ts`, `frontend/src/components/editor-v2/utils/jjomTransformers.ts`, `frontend/src/components/abstract/tabs/MetamodelTab.tsx`, `docs/reports/2026-08-24-lir-layout-slice1b.md` (addendum §10), `docs/claude-code-log.md`
+**Outcome**: ✅ completed — in attesa della riverifica visiva di Alfonso
+**Corregge**: 2026-08-24 15:22 — il finding C del LIR della slice 1b
+**Causa**: (c)
+**Regressions**: unknown — gate verdi (tsc 33 con lista byte-identica, `diff` vuoto; vitest 1342 passed e le stesse 9 suite rosse; build exit 0), i 19 test del modulo puro invariati, ma il comportamento sotto viewpoint non e' coperto da test.
+**Out-of-scope changes**: no — i 4 file del GO piu' i commenti del modulo puro, autorizzati in chat.
+**Layer Impact Report**: produced — addendum §10 di `docs/reports/2026-08-24-lir-layout-slice1b.md`.
+**Smoke visivo**: in attesa — prove 1, 2 e 4 gia' passate sulla slice 1b; la prova 3 (⌘Z) resta fallita per due difetti preesistenti fuori perimetro (LIR §10.4).
+**Notes**: Gli scalari diventano il **seme** (mai piu' riscritto da editor-v2) e la sintassi astratta prende `ABSTRACT_SYNTAX_LAYOUT_KEY = '__abstract__'`: i due ruoli che gli scalari cumulavano si separano e la colatura sparisce. Nessuna migrazione, metamodello sulla stessa chiave. `getActiveExclusiveVpId` -> `getActiveLayoutKey` (Regola 2, dichiarata). Il finding C era falso: `Date.now()` nelle deps e la guardia morta `prevModel` ri-trasformano a ogni render (LIR §10.1), quindi la 1c decade.
+**Prompt document name**: 2026-08-24 (layout slice 1b, rettifica)
+
 ## 2026-08-24 — feat(layout): i call site del layout passano dai resolver per viewpoint (slice 1b)
 **Prompt**: prompt del 2026-08-24 «Layout per viewpoint, slice 1b», Fase B dopo il GO di Alfonso sulle tre domande del LIR. Adapter impuro `getActiveExclusiveVpId`, cinque scritture di `canvasToJjom` e sette letture di `jjomTransformers` instradate, drop del classico instradato, `LVoidVertex` lasciato sugli scalari (opzione (a)), `useJjomSync` non toccato (la resa reattiva è la 1c).
 **Files touched**: `frontend/src/components/editor-v2/viewpoint/layout/vertexLayoutAdapter.ts` (nuovo), `frontend/src/components/editor-v2/sync/canvasToJjom.ts`, `frontend/src/components/editor-v2/utils/jjomTransformers.ts`, `frontend/src/components/abstract/tabs/MetamodelTab.tsx`, `frontend/src/utils/lastViewpoint.ts` (solo il commento :63-69), `docs/claude-code-log.md`

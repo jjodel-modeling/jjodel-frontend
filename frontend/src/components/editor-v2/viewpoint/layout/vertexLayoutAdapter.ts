@@ -5,17 +5,39 @@
  * `irResolveCore.ts`: everything that needs the store lives here, so the resolver stays a module
  * with no imports at all (R-LAY-16 as amended 2026-08-24).
  *
- * It maps BOTH "no active viewpoint" AND "the active viewpoint is not exclusive" to `null`
- * BEFORE the pure module is called: downstream, `null` means "the abstract-syntax record", i.e.
- * the vertex's own x/y/w/h/isResized scalars. That single mapping is what makes the classic
- * renderer governed rather than exempt (R-LAY-9): its drop goes through the same resolver and
- * simply always lands on the scalars.
+ * It answers one question — which layout record is in force right now — and every reader and
+ * writer of vertex geometry asks it. Abstract syntax is NOT a special case here: it is a layout
+ * like any other, under its own key (see `ABSTRACT_SYNTAX_LAYOUT_KEY`).
  */
 
 import { store } from '../../../../joiner';
 
 /**
- * Id of the active EXCLUSIVE viewpoint, or `null`.
+ * The key abstract syntax stores its layout under — a layout of its own, independent of every
+ * viewpoint's (ratified 2026-08-24, after the visual verification of slice 1b).
+ *
+ * WHY A KEY AND NOT THE SCALARS. Until that rectification the four scalars played two roles at
+ * once: the abstract-syntax layout AND the fallback every viewpoint without a record read from.
+ * The second role made the first one leak — moving a node in abstract syntax moved it under
+ * every viewpoint that had not been touched yet. Splitting the roles fixes it: the scalars are
+ * now the SEED (the layout a vertex is born with, never rewritten by editor-v2) and abstract
+ * syntax is just another key. Every layout then starts from the seed and forks at its first
+ * gesture, symmetrically.
+ *
+ * The spelling is a reserved literal, deliberately NOT `Defaults.Pointer_ViewPointDefault`: it
+ * can never collide with a viewpoint id, and it keeps the two spellings of "empty viewpoint"
+ * (D10.a) out of the layout key.
+ *
+ * No migration: an existing project has no dictionary at all, so every viewpoint AND abstract
+ * syntax fall back to the seed, i.e. to the exact layout the project has today.
+ */
+export const ABSTRACT_SYNTAX_LAYOUT_KEY = '__abstract__';
+
+/**
+ * The layout key in force: the id of the active EXCLUSIVE viewpoint, or
+ * `ABSTRACT_SYNTAX_LAYOUT_KEY` when no viewpoint is active, when the active one is decorative
+ * rather than exclusive, or on a metamodel (where the viewpoint selector is not rendered by
+ * design — a metamodel is simply a model that only ever has abstract syntax).
  *
  * The activation source is the root `state.viewpoint` — the same one `irResolveCore.ts:139`
  * reads, never a second reading of the activation (R-LAY-11). Exclusivity is a direct read of
@@ -23,18 +45,20 @@ import { store } from '../../../../joiner';
  * the two existing readings are `lastViewpoint.ts:96` and `selectors.ts:558` (measured in
  * `docs/discovery/discovery_2026-08-24_layout_slice1a_sede_resolver.md` §5.2).
  *
- * Deliberately defensive: any missing piece of state collapses to `null`, i.e. to today's
- * behavior. A layout gesture must never throw because a viewpoint could not be resolved.
+ * Deliberately defensive: any missing piece of state collapses to abstract syntax, never to a
+ * half-resolved viewpoint. A layout gesture must not throw because a viewpoint could not be
+ * resolved. Note that `null` — the pure module's "write the seed" case — is never returned from
+ * here: editor-v2 does not rewrite the seed.
  */
-export function getActiveExclusiveVpId(): string | null {
+export function getActiveLayoutKey(): string {
     try {
         const state: any = store.getState();
         const vp = state?.viewpoint;
-        if (typeof vp !== 'string' || !vp) return null;
+        if (typeof vp !== 'string' || !vp) return ABSTRACT_SYNTAX_LAYOUT_KEY;
         const d: any = state?.idlookup?.[vp];
-        if (!d) return null;
-        return d.isExclusiveView ? vp : null;
+        if (!d) return ABSTRACT_SYNTAX_LAYOUT_KEY;
+        return d.isExclusiveView ? vp : ABSTRACT_SYNTAX_LAYOUT_KEY;
     } catch {
-        return null;
+        return ABSTRACT_SYNTAX_LAYOUT_KEY;
     }
 }

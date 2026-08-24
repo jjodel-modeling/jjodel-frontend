@@ -31,15 +31,17 @@ import type {
 import { setEdgeRefId } from '../sync/syncState';
 import { displayTypeLabel } from '../types';
 import { readVertexLayout, type VertexLayout, type VertexLayoutSource } from '../viewpoint/layout/vertexLayout';
-import { getActiveExclusiveVpId } from '../viewpoint/layout/vertexLayoutAdapter';
+import { getActiveLayoutKey } from '../viewpoint/layout/vertexLayoutAdapter';
 
 // L-proxy types — using `any` for property access to avoid coupling to
 // the exact proxy shape which uses runtime magic getters.
 // The property names are documented and stable.
 
 /**
- * Effective layout of a vertex: the record of the active exclusive viewpoint if there is one,
- * the abstract-syntax scalars otherwise (read-through, R-LAY-15). EVERY geometry read in this
+ * Effective layout of a vertex: the record of the layout in force — the active exclusive
+ * viewpoint, or abstract syntax, which has a record of its own and is not a special case. A
+ * layout with no record yet falls back to the seed, i.e. the scalars the vertex was born with
+ * (read-through, R-LAY-15 as rectified 2026-08-24). EVERY geometry read in this
  * file goes through here — positions, sizes, and the geometry `computeOptimalHandles` uses to
  * pick anchors — so a node never ends up placed on one record and anchored on the other.
  *
@@ -50,7 +52,7 @@ import { getActiveExclusiveVpId } from '../viewpoint/layout/vertexLayoutAdapter'
  * record, which those same guards turn into the very defaults the `sRaw?.x` form used to give.
  */
 function effectiveLayoutOf(raw: any): VertexLayout {
-    return readVertexLayout((raw ?? {}) as VertexLayoutSource, getActiveExclusiveVpId());
+    return readVertexLayout((raw ?? {}) as VertexLayoutSource, getActiveLayoutKey());
 }
 
 /**
@@ -67,8 +69,9 @@ function effectiveLayoutOf(raw: any): VertexLayout {
  */
 function manualSizeOf(raw: any): { width?: number; height?: number } {
     if (!raw) return {};
-    // Per-viewpoint read-through: `isResized` and w/h are read off the SAME record, never mixed
-    // between a viewpoint record and the scalars (the fallback is per record, R-LAY-15).
+    // Per-layout read-through: `isResized` and w/h are read off the SAME record, never mixed
+    // between a layout record and the seed (the fallback is per record, R-LAY-15). Sizes are
+    // therefore independent per layout, "Reset size" included.
     const eff = effectiveLayoutOf(raw);
     if (!eff.isResized) return {};
     const w = typeof eff.w === 'number' && eff.w > 0 ? eff.w : undefined;

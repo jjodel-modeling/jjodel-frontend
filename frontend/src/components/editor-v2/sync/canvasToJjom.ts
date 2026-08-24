@@ -30,7 +30,7 @@ import type { Node } from '@xyflow/react';
 import type { ClassNodeData } from '../types';
 import { markCanvasUpdated, markCanvasUpdatedBatch, markCanvasEdgePair, clearCanvasEdgePair } from './syncState';
 import { resolveVertexLayoutWrite, type VertexLayout, type VertexLayoutSource, type VertexLayoutWrite } from '../viewpoint/layout/vertexLayout';
-import { getActiveExclusiveVpId } from '../viewpoint/layout/vertexLayoutAdapter';
+import { getActiveLayoutKey } from '../viewpoint/layout/vertexLayoutAdapter';
 import { captureAttributeOrphanValues } from '../hooks/useOrphanFeatures';
 import { sweepAllM1ReferenceGraphs } from './m1EdgeSweep';
 
@@ -39,32 +39,31 @@ import { sweepAllM1ReferenceGraphs } from './m1EdgeSweep';
 // ---------------------------------------------------------------------------
 
 /**
- * Turns a layout patch into the write that should happen for `vertexId`, under the viewpoint
- * `vpId` (already collapsed to `null` by the adapter when there is no ACTIVE EXCLUSIVE
- * viewpoint). Callers compute `vpId` once per gesture and pass it down, so a batch of N
- * vertices still reads the activation once.
+ * Turns a layout patch into the write that should happen for `vertexId`, under the layout key
+ * `layoutKey` — the active exclusive viewpoint, or `ABSTRACT_SYNTAX_LAYOUT_KEY`. Abstract syntax
+ * is a layout like any other and gets a record of its own, so no gesture in editor-v2 rewrites
+ * the seed (the scalars). Callers read the key once per gesture and pass it down, so a batch of
+ * N vertices still reads the activation once.
  *
- * Two short-circuits, both landing on today's behavior:
- * - `vpId === null` — the abstract-syntax case, and the overwhelmingly common one. The store is
- *   not read at all: a drag under no viewpoint costs exactly what it costs today.
- * - the D-object cannot be resolved — never throw inside a TRANSACTION over a layout gesture.
+ * One short-circuit: if the D-object cannot be resolved there is nothing to materialize a
+ * complete record from, so the patch falls back to the scalars — the pre-1b behavior. A layout
+ * gesture must never throw inside a TRANSACTION.
  */
 function resolveLayoutWriteFor(
     vertexId: string,
     patch: Partial<VertexLayout>,
-    vpId: string | null,
+    layoutKey: string,
 ): VertexLayoutWrite {
-    if (vpId === null) return { target: 'scalars', patch };
     const src: any = store.getState()?.idlookup?.[vertexId];
     if (!src) return { target: 'scalars', patch };
-    return resolveVertexLayoutWrite(src as VertexLayoutSource, patch, vpId);
+    return resolveVertexLayoutWrite(src as VertexLayoutSource, patch, layoutKey);
 }
 
 /**
  * Emits the ONE action a `dictionary` write translates into.
  *
  * `'+='` on an object is a shallow per-key merge (reducer.ts:240-252), so the records of the
- * other viewpoints survive untouched; on an ABSENT field it falls through to acting as a plain
+ * other layouts survive untouched; on an ABSENT field it falls through to acting as a plain
  * `'='` (reducer.ts:186-188), so the dictionary needs no seeding and there is never an
  * intermediate partial state. `record` is always complete — the resolver materializes it from
  * the effective values before applying the patch (R-LAY-15 as amended).
@@ -86,7 +85,7 @@ function writeLayoutDictionary(vertexId: string, write: VertexLayoutWrite): void
  */
 export function syncPositionToJjom(vertexId: string, x: number, y: number): void {
     markCanvasUpdated(vertexId);
-    const write = resolveLayoutWriteFor(vertexId, { x, y }, getActiveExclusiveVpId());
+    const write = resolveLayoutWriteFor(vertexId, { x, y }, getActiveLayoutKey());
     TRANSACTION('EditorV2 drag', () => {
         if (write.target === 'dictionary') { writeLayoutDictionary(vertexId, write); return; }
         SetFieldAction.new(vertexId as any, 'x' as any, x, undefined, false);
@@ -100,10 +99,10 @@ export function syncPositionToJjom(vertexId: string, x: number, y: number): void
 export function syncPositionBatchToJjom(updates: Array<{ id: string; x: number; y: number }>): void {
     if (updates.length === 0) return;
     markCanvasUpdatedBatch(updates.map(u => u.id));
-    const vpId = getActiveExclusiveVpId();
+    const layoutKey = getActiveLayoutKey();
     TRANSACTION('EditorV2 drag batch', () => {
         for (const { id, x, y } of updates) {
-            const write = resolveLayoutWriteFor(id, { x, y }, vpId);
+            const write = resolveLayoutWriteFor(id, { x, y }, layoutKey);
             if (write.target === 'dictionary') { writeLayoutDictionary(id, write); continue; }
             SetFieldAction.new(id as any, 'x' as any, x, undefined, false);
             SetFieldAction.new(id as any, 'y' as any, y, undefined, false);
@@ -123,7 +122,7 @@ export function syncPositionBatchToJjom(updates: Array<{ id: string; x: number; 
  */
 export function syncSizeToJjom(vertexId: string, w: number, h: number): void {
     markCanvasUpdated(vertexId);
-    const write = resolveLayoutWriteFor(vertexId, { w, h, isResized: true }, getActiveExclusiveVpId());
+    const write = resolveLayoutWriteFor(vertexId, { w, h, isResized: true }, getActiveLayoutKey());
     TRANSACTION('EditorV2 resize', () => {
         if (write.target === 'dictionary') { writeLayoutDictionary(vertexId, write); return; }
         SetFieldAction.new(vertexId as any, 'w' as any, w, undefined, false);
@@ -139,7 +138,7 @@ export function syncSizeToJjom(vertexId: string, w: number, h: number): void {
  */
 export function syncSizeResetToJjom(vertexId: string): void {
     markCanvasUpdated(vertexId);
-    const write = resolveLayoutWriteFor(vertexId, { isResized: false }, getActiveExclusiveVpId());
+    const write = resolveLayoutWriteFor(vertexId, { isResized: false }, getActiveLayoutKey());
     TRANSACTION('EditorV2 reset size', () => {
         if (write.target === 'dictionary') { writeLayoutDictionary(vertexId, write); return; }
         SetFieldAction.new(vertexId as any, 'isResized' as any, false, undefined, false);
@@ -153,10 +152,10 @@ export function syncSizeResetToJjom(vertexId: string): void {
 export function syncSizeBatchToJjom(sizes: Array<{ vertexId: string; w: number; h: number }>): void {
     if (sizes.length === 0) return;
     markCanvasUpdatedBatch(sizes.map(s => s.vertexId));
-    const vpId = getActiveExclusiveVpId();
+    const layoutKey = getActiveLayoutKey();
     TRANSACTION('EditorV2 propagate size', () => {
         for (const { vertexId, w, h } of sizes) {
-            const write = resolveLayoutWriteFor(vertexId, { w, h, isResized: true }, vpId);
+            const write = resolveLayoutWriteFor(vertexId, { w, h, isResized: true }, layoutKey);
             if (write.target === 'dictionary') { writeLayoutDictionary(vertexId, write); continue; }
             SetFieldAction.new(vertexId as any, 'w' as any, w, undefined, false);
             SetFieldAction.new(vertexId as any, 'h' as any, h, undefined, false);

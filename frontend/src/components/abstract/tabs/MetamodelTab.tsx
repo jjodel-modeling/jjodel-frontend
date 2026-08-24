@@ -26,7 +26,7 @@ import { CanvasExportService, ExportFormat } from "../../../services/CanvasExpor
 import { EditorSwitch } from "./EditorSwitch";
 import { JjodelEvents } from '../../../events/registry';
 import { resolveVertexLayoutWrite, type VertexLayoutSource } from "../../editor-v2/viewpoint/layout/vertexLayout";
-import { getActiveExclusiveVpId } from "../../editor-v2/viewpoint/layout/vertexLayoutAdapter";
+import { getActiveLayoutKey } from "../../editor-v2/viewpoint/layout/vertexLayoutAdapter";
 
 
 function MetamodelTabComponent(props: AllProps) {
@@ -139,9 +139,10 @@ function MetamodelTabComponent(props: AllProps) {
                         // Governed, not exempt (R-LAY-9): the classic drop goes through the same
                         // resolver as editor-v2. On a metamodel the viewpoint selector is not
                         // rendered by design (EditorSwitch/Toolbar gate on isMetamodel), so the
-                        // outcome here is always 'scalars' — i.e. today's two actions.
+                        // key here is always ABSTRACT_SYNTAX_LAYOUT_KEY — a metamodel is a model
+                        // that only ever has abstract syntax (ratified 2026-08-24).
                         const raw: any = tm.node!.__raw;
-                        const write = resolveVertexLayoutWrite(raw as VertexLayoutSource, { x: dropX, y: dropY }, getActiveExclusiveVpId());
+                        const write = resolveVertexLayoutWrite(raw as VertexLayoutSource, { x: dropX, y: dropY }, getActiveLayoutKey());
                         TRANSACTION('Set drop position', () => {
                             if (write.target === 'dictionary') {
                                 SetFieldAction.new(raw, 'layoutByViewpoint', { [write.vpId]: write.record }, '+=', false);
