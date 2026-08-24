@@ -625,3 +625,45 @@ Tre file di prova sono stati creati ed eliminati nella stessa esecuzione (§2.2-
    dell'attivazione è quella di `irResolveCore.ts:139`; il predicato di esclusività è la lettura
    diretta di `isExclusiveView` sul D-object del viewpoint, come a `utils/lastViewpoint.ts:96`»?
    (§5.2)
+
+---
+
+## 11. Addendum 2026-08-24 (Fase A della slice 1b) — il censimento dei siti va corretto
+
+Aggiunto in coda a questo report e non in un report nuovo, per R-E/E-1. Misure prese a
+`474809b55`, materiale completo in `docs/reports/2026-08-24-lir-layout-slice1b.md`.
+
+**1. Le letture di `jjomTransformers.ts` sono sette, non quattro.** Il censimento di
+`discovery_2026-08-24_layout_d1_d8_d10.md` §4 e la tabella del memo di proposta §4 elencano
+«`manualSizeOf` (`:50-57`) e tre coppie di posizione (`:173-174`, `:219-220`, `:241-242`)».
+A codice letto mancano tre siti:
+
+- `objectVertexToRFNode` — posizione a **`:346-348`**. È il transformer dei nodi **M1**: senza
+  questo, su un *modello* (l'unico contesto dove il selettore di viewpoint è reso) il layout per
+  viewpoint non sarebbe visibile.
+- `packageVertexToRFNode` — taglia a **`:243-244`**, con default 400/300, che **non** passa da
+  `manualSizeOf` e finisce in `style.width/height`.
+- `computeOptimalHandles` — geometria di sorgente e destinazione a **`:404-413`**, con default
+  180/80. Sceglie gli handle: se legge gli scalari mentre i nodi sono posizionati sul record del
+  viewpoint, gli archi si ancorano dal lato sbagliato.
+
+**2. `LVoidVertex`: il blocco è `:1398-1425`, non `:1403-1425`** (`:1398-1401` commento, `:1402`
+`get_x`, `:1403` `set_x`). E i suoi consumatori **non sono censibili per grep**: le otto funzioni
+sono raggiunte dal proxy come accesso a proprietà (`lvertex.x`), non chiamate per nome — la
+ricerca di `get_x(` su `components/`, `model/`, `view/`, `common/` non trova un solo call-site
+fuori da `GraphDataElements.tsx`.
+
+**3. Le scritture di `canvasToJjom.ts` e il drop di `MetamodelTab.tsx` sono confermati riga per
+riga** (`:46-47`, `:59-60`, `:78-80`, `:92`, `:105-107`; `:138-139`). Nota operativa: le cinque
+funzioni di `canvasToJjom` ricevono un `vertexId`, non il D-object, quindi la materializzazione
+del record richiede una lettura dallo store (idioma già in uso nello stesso file, 9 occorrenze);
+`MetamodelTab` invece passa già `tm.node!.__raw`.
+
+**4. Fatto nuovo, che nessuna riga a registro copriva.** Un cambio di viewpoint **non
+ri-trasforma** i nodi: `useJjomSync.ts` non nomina mai `viewpoint` (0 occorrenze, controllo
+positivo `modelid` = 27) e la ri-trasformazione integrale è armata solo dal cambio di `modelid`,
+dall'uscita da JjOM mode e dall'unmount (`:1168-1188`, `:1538-1548`); il ramo incrementale salta
+l'elemento quando il riferimento al D-object è invariato (`:1349`). Conseguenza: la slice 1b, come
+specificata, produce **persistenza corretta senza resa reattiva** — il read-through è osservabile
+dopo un reload o una mutazione del vertice, non all'attivazione di un altro viewpoint. Le opzioni
+sono al §4.3 del LIR; la decisione è di Alfonso.

@@ -1,5 +1,18 @@
 # Claude Code Session Log
 
+## 2026-08-24 — docs: Layer Impact Report della slice 1b del layout per viewpoint (Fase A)
+**Prompt**: prompt del 2026-08-24 «Layout per viewpoint, slice 1b: i call site passano dai resolver», Fase A read-only. Riverifica riga per riga dei sette siti del censimento, la domanda nuova sull'arco `model/` -> `editor-v2/`, impatto per layer, piano dei diff. Hard stop prima della Fase B.
+**Files touched**: `docs/reports/2026-08-24-lir-layout-slice1b.md` (nuovo), `docs/discovery/discovery_2026-08-24_layout_slice1a_sede_resolver.md` (addendum §11, R-E/E-1), `docs/claude-code-log.md`
+**Outcome**: ✅ completed — Fase A chiusa, tre domande al GO, nessun sorgente toccato
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — nessun sorgente nel diff. Baseline riprodotte prima del report: tsc 33 (output integrale, exit 2), vitest 1342 passed / 9 suite rosse su 61 (exit 1).
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced — `docs/reports/2026-08-24-lir-layout-slice1b.md`, prima del diff, come prescrive §3.2 per `canvasToJjom.ts`.
+**Smoke visivo**: non applicabile — fase read-only.
+**Notes**: Tre scostamenti misurati, dettaglio nel LIR §0 e §7 e nell'addendum §11 del report di discovery della 1a. (A) Le letture di `jjomTransformers.ts` sono sette, non quattro: manca fra le altre quella dei nodi M1. (B) L'arco `model/` -> `editor-v2/` sarebbe nuovo, ma l'argomento decisivo su `LVoidVertex` e' un altro: i suoi consumatori passano dal proxy e non sono censibili per grep. (C) Un cambio di viewpoint non ri-trasforma i nodi: persistenza corretta senza resa reattiva. Nessuna scelta presa.
+**Prompt document name**: 2026-08-24 (layout slice 1b, Fase A)
+
 ## 2026-08-24 — feat: `DVertex.layoutByViewpoint` e resolver puro del layout (slice 1a)
 **Prompt**: prompt del 2026-08-24, Fase 2 della slice 1a su go-ahead dopo l'analisi della Fase 1. Campo opzionale sul `DVertex`, modulo puro `vertexLayout.ts` con `readVertexLayout` / `resolveVertexLayoutWrite`, test senza DOM. Nessun call site, nessun adapter: sono della 1b.
 **Files touched**: `frontend/src/model/dataStructure/GraphDataElements.tsx` (una dichiarazione), `frontend/src/components/editor-v2/viewpoint/layout/vertexLayout.ts` (nuovo), `frontend/src/components/editor-v2/viewpoint/layout/__tests__/vertexLayout.test.ts` (nuovo), `docs/claude-code-log.md`
