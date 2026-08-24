@@ -410,8 +410,8 @@ $pc-hint-indent: 26px;        // 18px checkbox + 8px gap (the design-system Chec
         }
 
         // D10: abstract metaclasses in italic, the same channel the tree uses on its own
-        // names (`tree-view-sidebar.scss:1763`). The badge stays on the kind: modifiers
-        // do not get a badge of their own.
+        // names (`.tree-row__name.is-abstract` in tree-view-sidebar.scss). The badge
+        // stays on the kind: modifiers do not get a badge of their own.
         .props-header__name.is-abstract { font-style: italic; }
 
         // The kind as text, in the entity foreground. It reuses the same modifier as the

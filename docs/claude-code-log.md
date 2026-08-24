@@ -1,5 +1,18 @@
 # Claude Code Session Log
 
+## 2026-08-25 — fix: il menu contestuale dell'albero si chiude allo scroll; riferimenti a selettori morti
+**Prompt**: prompt del 2026-08-25, coda del cleanup. Tre punti in un commit: correggere il selettore dello scroll container in `TreeViewContent`, togliere le due classi morte dalla lista di `Tooltip`, sostituire un riferimento `file:riga` in un commento scss con il nome del selettore. `useResolution` resta com'e', senza deprecation comment.
+**Files touched**: `frontend/src/components/TreeViewSidebar/TreeViewContent.tsx`, `frontend/src/components/forEndUser/Tooltip.tsx`, `frontend/src/components/editors/properties-with-tree-view.scss`, `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — tsc 33 = baseline, 0 nei file toccati; vitest 1349 passed con le stesse 9 suite rosse pre-esistenti; build exit 0.
+**Out-of-scope changes**: no — i 3 file previsti piu' il log.
+**Layer Impact Report**: not-required — nessun layer D/L, nessun file critical-zone §3.1.
+**Smoke visivo**: passato — verifica a mano del menu contestuale, dettaglio in Notes.
+**Notes**: Bugfix, non cambio di comportamento: `handleScroll` esisteva gia' e non e' mai stato raggiunto, perche' `closest` cercava `.tree-view-sidebar__body, .tree-view-overlay__body`, classi della shell mai montata. Controllo negativo nel DOM reale: entrambe assenti, `.tree-view-panel-body` presente. Verifica end-to-end in modalita' advanced (il menu e' gated su `isAdvancedMode`): tasto destro su una riga classe -> menu aperto; rotella vera sopra l'albero, fuori dal menu (che e' `position: fixed` sul punto del click, e al primo tentativo intercettava il puntatore) -> `scrollTop` 0 -> 250 e menu chiuso. Zero pageerror.
+**Prompt document name**: 2026-08-25 01:00
+
 ## 2026-08-25 — cleanup(tree-view): rimossa la shell TreeViewSidebar, morta
 **Prompt**: prompt del 2026-08-25, commit separato dopo la feature del filtro per viewpoint. La shell `TreeViewSidebar` (non il contenuto) e' morta: eliminarla invece di tenerla cablata, con grep di controllo positivo prima di ogni rimozione.
 **Files touched**: `frontend/src/components/TreeViewSidebar/TreeViewSidebar.tsx` (eliminato), `frontend/src/components/TreeViewSidebar/index.ts`, `frontend/src/components/TreeViewSidebar/tree-view-sidebar.scss`, `frontend/src/components/abstract/Dock.tsx`, `docs/claude-code-log.md`

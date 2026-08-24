@@ -460,7 +460,11 @@ function useClassifierContextMenu(elementId: string, name: string, className: st
         const handleScroll = () => setCtxMenu(null);
         document.addEventListener('click', handleClick);
         document.addEventListener('keydown', handleKeyDown);
-        const scrollContainer = nodeRef.current?.closest('.tree-view-sidebar__body, .tree-view-overlay__body');
+        // Il container che scorre davvero e' quello del rail. I due selettori
+        // precedenti appartenevano alla shell TreeViewSidebar, che non e' mai
+        // stata montata: il closest non trovava nulla e il menu non si chiudeva
+        // allo scroll, comportamento che questa logica esiste per garantire.
+        const scrollContainer = nodeRef.current?.closest('.tree-view-panel-body');
         scrollContainer?.addEventListener('scroll', handleScroll);
         return () => {
             document.removeEventListener('click', handleClick);
