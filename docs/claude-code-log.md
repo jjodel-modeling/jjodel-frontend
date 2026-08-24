@@ -1,5 +1,18 @@
 # Claude Code Session Log
 
+## 2026-08-24 — feat(layout): i call site del layout passano dai resolver per viewpoint (slice 1b)
+**Prompt**: prompt del 2026-08-24 «Layout per viewpoint, slice 1b», Fase B dopo il GO di Alfonso sulle tre domande del LIR. Adapter impuro `getActiveExclusiveVpId`, cinque scritture di `canvasToJjom` e sette letture di `jjomTransformers` instradate, drop del classico instradato, `LVoidVertex` lasciato sugli scalari (opzione (a)), `useJjomSync` non toccato (la resa reattiva è la 1c).
+**Files touched**: `frontend/src/components/editor-v2/viewpoint/layout/vertexLayoutAdapter.ts` (nuovo), `frontend/src/components/editor-v2/sync/canvasToJjom.ts`, `frontend/src/components/editor-v2/utils/jjomTransformers.ts`, `frontend/src/components/abstract/tabs/MetamodelTab.tsx`, `frontend/src/utils/lastViewpoint.ts` (solo il commento :63-69), `docs/claude-code-log.md`
+**Outcome**: ✅ completed — in attesa della verifica visiva di Alfonso
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown — gate tutti verdi (tsc 33 con lista byte-identica alla baseline, `diff` vuoto; vitest 1342 passed e le stesse 9 suite rosse per lista; build exit 0, solo il chunk-warning pre-esistente), ma il comportamento sotto viewpoint esclusivo non è coperto da test: la copertura è la verifica visiva.
+**Out-of-scope changes**: no — i 6 file confermati al GO. Nessun test unitario sull'adapter: servirebbe lo store (dichiarato nel prompt).
+**Layer Impact Report**: produced — `docs/reports/2026-08-24-lir-layout-slice1b.md`, commit `2812b1f04`, prima del diff.
+**Smoke visivo**: in attesa — piano riscritto dal GO (l'osservabile è il reload, non il cambio di viewpoint a schermo).
+**Notes**: NON-OBIETTIVI dichiarati, attesi e non regressioni, dettaglio nel LIR §4 e §2: (i) cambiare viewpoint **senza reload** non sposta i nodi a schermo, `useJjomSync` non ri-trasforma sull'attivazione — arriva con la **slice 1c**; (ii) `set_size` e gli override di `LVoidVertex:1398-1425` restano sulla sintassi astratta. Senza viewpoint esclusivo attivo le action emesse sono le stesse di prima per costruzione: il ramo `'scalars'` non legge nemmeno lo store.
+**Prompt document name**: 2026-08-24 (layout slice 1b, Fase B)
+
 ## 2026-08-24 — docs: Layer Impact Report della slice 1b del layout per viewpoint (Fase A)
 **Prompt**: prompt del 2026-08-24 «Layout per viewpoint, slice 1b: i call site passano dai resolver», Fase A read-only. Riverifica riga per riga dei sette siti del censimento, la domanda nuova sull'arco `model/` -> `editor-v2/`, impatto per layer, piano dei diff. Hard stop prima della Fase B.
 **Files touched**: `docs/reports/2026-08-24-lir-layout-slice1b.md` (nuovo), `docs/discovery/discovery_2026-08-24_layout_slice1a_sede_resolver.md` (addendum §11, R-E/E-1), `docs/claude-code-log.md`

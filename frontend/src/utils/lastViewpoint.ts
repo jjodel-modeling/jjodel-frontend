@@ -62,8 +62,9 @@ export function activateViewpoint(viewpointId: string | null): void {
 
     // 2. Update state.viewpoint (used by EditorSwitch for split view toggle). Same empty form as
     //    the project field — `null`, never '' (R-IRN-11, R-IRN-21): two shapes of empty in the
-    //    persisted state is exactly what R-IRN-11 was decided to prevent. All four readers of the
-    //    root (EditorSwitch.tsx:55, Toolbar.tsx:202, irResolveCore.ts:117,139) go through a
+    //    persisted state is exactly what R-IRN-11 was decided to prevent. All five readers of the
+    //    root (EditorSwitch.tsx:55, Toolbar.tsx:202, irResolveCore.ts:117,139,
+    //    vertexLayoutAdapter.ts:32 — the per-viewpoint layout, R-LAY-11) go through a
     //    truthiness test, where '' and null behave identically; the one place that needs a string
     //    is the controlled <select>, and it coerces at the render boundary (Toolbar.tsx:229).
     SetRootFieldAction.new('viewpoint', viewpointId || null, '', true);
