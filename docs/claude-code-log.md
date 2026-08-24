@@ -1,5 +1,18 @@
 # Claude Code Session Log
 
+## 2026-08-24 — fix(layout): le taglie seguono il layout in forza (slice 1c)
+**Prompt**: prompt del 2026-08-24 14:30 «Layout per viewpoint, slice 1c (taglie)», due fasi. Fase 1 read-only con LIR salvato su file e hard stop; Fase 2 dopo il GO delle 16:55, che ha risposto alle tre domande del LIR. Difetto riprodotto a schermo da Alfonso dopo `cd8363ccc`: la posizione segue il layout, la taglia no.
+**Files touched**: `frontend/src/components/editor-v2/hooks/useJjomSync.ts`, `frontend/src/components/editor-v2/viewpoint/layout/vertexLayoutAdapter.ts`, `frontend/src/components/editor-v2/viewpoint/layout/__tests__/vertexLayoutAdapter.test.ts` (nuovo), `frontend/src/components/editor-v2/viewpoint/ir/useContentSize.ts`, `frontend/src/components/editor-v2/viewpoint/authoring/SymbolEditorModal.tsx`, `docs/discovery/discovery_2026-08-24_layout_slice1c_taglie_lir.md` (nuovo, con addendum §12), `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: 2026-08-24 15:22 — slice 1b e la sua rettifica `cd8363ccc`. Il warning non bloccante di `check:docs` e' corretto e non e' di questa entry: la 1b registro' il nome «2026-08-24 (layout slice 1b, Fase B)» invece del timestamp, quindi il riferimento non risolve.
+**Causa**: (c)
+**Regressions**: no — verifica visiva di Alfonso **sei prove su sei**, la 6 (forme con supplemento) inclusa. Gate: tsc 33 con lista byte-identica (`diff` vuoto), vitest 1349 passed (1342 + 7 nuovi) e le stesse 9 suite rosse, build exit 0.
+**Out-of-scope changes**: no — i 4 file di codice del piano più il test, confermati al GO (Regola 19: cinque, elencati prima del diff).
+**Layer Impact Report**: produced — `docs/discovery/discovery_2026-08-24_layout_slice1c_taglie_lir.md` §6, commit `3d48fcf9c`, prima del diff.
+**Smoke visivo**: passato — 6/6: taglie distinte per layout senza reload e dopo reload, tre taglie su A/B/astratta con archi che seguono, «Reset size» locale al layout, zero regressione su un progetto senza dizionario, forme con supplemento senza oscillazioni.
+**Notes**: `useJjomSync` confrontava solo `style.width/height` (packageNode), mai il `width/height` top-level di `manualSizeOf`. Rimedio: confronto trasformatore-contro-cache come per la posizione; `null` toglie le tre chiavi di `resetNodeSize`. `measured` va tolto in entrambi i rami — `getNodeDimensions` lo preferisce, e toglierlo fa ricalcolare gli `handleBounds` al `ResizeObserver` di RF. Il gate di `useContentSize.ts` era una **regressione di `cd8363ccc`**: addendum §12.1 del report.
+**Prompt document name**: 2026-08-24 14:30
+
 ## 2026-08-24 — fix(layout): la sintassi astratta e' un layout come gli altri (rettifica della slice 1b)
 **Prompt**: verifica visiva di Alfonso sulla slice 1b e sua ratifica in chat. Prove 1 e 2 passate, prova 4 comportamento voluto; rilievo: la sintassi astratta deve avere un layout indipendente da quello dei viewpoint, e le taglie vanno verificate. Ratificati la chiave sentinella `'__abstract__'` e il metamodello sulla stessa chiave.
 **Files touched**: `frontend/src/components/editor-v2/viewpoint/layout/vertexLayoutAdapter.ts`, `frontend/src/components/editor-v2/viewpoint/layout/vertexLayout.ts` (commenti e nome di un parametro), `frontend/src/components/editor-v2/sync/canvasToJjom.ts`, `frontend/src/components/editor-v2/utils/jjomTransformers.ts`, `frontend/src/components/abstract/tabs/MetamodelTab.tsx`, `docs/reports/2026-08-24-lir-layout-slice1b.md` (addendum §10), `docs/claude-code-log.md`
