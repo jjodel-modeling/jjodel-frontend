@@ -199,6 +199,9 @@ create instance of ClassName "instanceName"
 - The \`of\` keyword is mandatory.
 - Always pass an explicit quoted \`"instanceName"\` so the instance can be referenced later by \`set\`.
 - **Identity rule**: the quoted creation name IS the instance's name — both its display label and the handle you use in later \`set\`/\`rename\` lines. Do NOT emit \`set <inst>.name = "..."\`: writing the \`name\` attribute changes the instance's identity mid-script and breaks every later reference to it (and is redundant with the creation name). Create each instance directly with its final name, using a single token with no spaces so it stays addressable.
+- **The creation name MUST be a bare identifier** — letters, digits and underscores only, with NO spaces, accents, punctuation or parentheses — because that name is the handle \`set\`/\`delete\`/\`rename\` use to address the instance. A name containing spaces or symbols is rejected by the parser with \`Expected qualified name or identifier, found '...'\`. Turn any descriptive label into such a token (e.g. \`"pbl"\`, \`"project_based_learning"\`) and put the human-readable text in a descriptive attribute (\`description\`, \`title\`, …), never in the name.
+  - WRONG: \`create instance of Methodology "Apprendimento basato su progetti (PBL)"\` — the later \`set "Apprendimento basato su progetti (PBL)".description = "..."\` fails.
+  - RIGHT: \`create instance of Methodology "pbl"\` then \`set pbl.description = "Apprendimento basato su progetti (PBL): gli studenti lavorano su progetti reali in team."\`
 
 **Set an attribute value:**
 \`\`\`jjscript
@@ -259,6 +262,13 @@ The user is working on a specific project. Here is the structural context of the
 {{projectContext}}
 
 Use this context to give precise, relevant answers. When the user asks about their classes, attributes, or references, refer to the actual elements listed above — do NOT give generic or hypothetical answers.
+
+## MODEL RECOMMENDATIONS (M1)
+
+When the context above contains a \`model\` (an M1 instance, marked \`"level": "M1 model"\`) together with a \`conformance\` object, you can act as a model reviewer:
+- Ground every recommendation in \`conformance.violations\`: cite the offending object by name, its \`violationType\`, and the related \`metamodelElementName\`. Prioritise \`severity: "error"\` over \`"warning"\`.
+- You may also point out modelling smells visible in \`model\` (duplicate or orphan objects, inconsistent values), but keep them clearly separated from the hard conformance violations.
+- Give recommendations in prose. Do NOT bundle model-mutating JjScript into a recommendation — the user requests executable refactoring scripts as a separate, explicit step.
 {{/if}}
 
 ## RESPONSE STYLE
@@ -673,10 +683,12 @@ export const DEFAULT_PROMPTS: Record<PromptType, string> = {
 
 export const DEFAULT_PROMPT_VERSIONS: Record<PromptType, { version: number; changelog: PromptChangelogEntry[] }> = {
     chat: {
-        version: 2,
+        version: 4,
         changelog: [
             { version: 1, note: 'Initial JjScript-based metamodeling assistant' },
             { version: 2, note: 'Significant revision: project-context injection, JjScript hardening, M1 instance commands' },
+            { version: 3, note: 'Add M1 model-recommendation guidance grounded on conformance violations' },
+            { version: 4, note: 'Require M1 instance names to be bare identifiers (no spaces/symbols) so set/delete can address them' },
         ],
     },
     documentation: { version: 1, changelog: [{ version: 1, note: 'Initial version' }] },
