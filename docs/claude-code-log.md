@@ -1,5 +1,18 @@
 # Claude Code Session Log
 
+## 2026-08-24 — feat: `DVertex.layoutByViewpoint` e resolver puro del layout (slice 1a)
+**Prompt**: prompt del 2026-08-24, Fase 2 della slice 1a su go-ahead dopo l'analisi della Fase 1. Campo opzionale sul `DVertex`, modulo puro `vertexLayout.ts` con `readVertexLayout` / `resolveVertexLayoutWrite`, test senza DOM. Nessun call site, nessun adapter: sono della 1b.
+**Files touched**: `frontend/src/model/dataStructure/GraphDataElements.tsx` (una dichiarazione), `frontend/src/components/editor-v2/viewpoint/layout/vertexLayout.ts` (nuovo), `frontend/src/components/editor-v2/viewpoint/layout/__tests__/vertexLayout.test.ts` (nuovo), `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — tsc 33 errori con lista byte-identica alla baseline (`diff` vuoto); vitest 1342 passed (1323 + 19 nuovi), 9 suite rosse identiche per lista alla baseline; build exit 0. Nessun call site tocca il modulo: zero effetto a runtime.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessun file della critical zone toccato. `GraphDataElements.tsx` non e' in §3.1; la modifica e' una dichiarazione di campo opzionale, senza write path.
+**Smoke visivo**: non applicabile — modulo non cablato, zero effetto a schermo per costruzione.
+**Notes**: Eseguite le quattro decisioni dell'addendum §7 del memo di ratifica: interfaccia autonoma senza import (`GraphSize` e' nominale), literal inline sul `DVertex` per non aprire l'arco `model/` -> `editor-v2/`, sede `viewpoint/layout/`, nessun bump di versione. Oltre la lettera del prompt: `resolveVertexLayoutWrite` ignora un `undefined` esplicito nella patch, che uno spread copierebbe bucando il record — il guasto che l'emendamento a R-LAY-15 vieta. Sotto test.
+**Prompt document name**: 2026-08-24 (layout slice 1a, Fase 2)
+
 ## 2026-08-24 — docs: discovery di Fase 1 per la slice 1a del layout per viewpoint (sede del resolver)
 **Prompt**: prompt del 2026-08-24, Fase 1 read-only della slice 1a (R-LAY-14..17). D1 sede del modulo resolver, D2 import-safety modulo e test, D3 idioma di dichiarazione del campo su `DVertex`, D4 forma della scrittura sul dizionario, D5 viewpoint attivo ed esclusivita', D6 precedente di test senza DOM e baseline, D7 grep di collisione. Hard stop al termine.
 **Files touched**: `docs/discovery/discovery_2026-08-24_layout_slice1a_sede_resolver.md` (nuovo), `docs/claude-code-log.md`

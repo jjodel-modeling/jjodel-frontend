@@ -1694,6 +1694,12 @@ export class DVertex extends DGraphElement { // DVoidVertex
     };
     // Persisted collapse state of an IR graphVertex container. undefined = expanded.
     irCollapsed?: boolean;
+    // Per-viewpoint layout, keyed by the id of the exclusive viewpoint active when the gesture
+    // happened (R-LAY-14). Absent key = fall back to the scalars x/y/w/h/isResized (R-LAY-15).
+    // Born undefined: a '+=' SetFieldAction auto-creates it (reducer.ts:186-188). Structurally
+    // identical to VertexLayout in editor-v2/viewpoint/layout/vertexLayout.ts — kept inline on
+    // purpose, like ghostOffsets and irEdgeLayout above.
+    layoutByViewpoint?: { [viewpointId: string]: { x: number; y: number; w: number; h: number; isResized: boolean } };
     // size!: GraphSize; // virtual, gets extracted from this. x and y are stored directly here as it extends GraphSize
     // personal attributes
     __isDVertex!: true;
