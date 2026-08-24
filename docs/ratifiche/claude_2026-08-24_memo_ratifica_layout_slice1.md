@@ -80,3 +80,30 @@ La slice 1a parte con un prompt two-phase: Fase 1 discovery read-only (sede del 
 `ghostOffsets`) con report obbligatorio in `docs/discovery/`
 (`discovery_<data>_<descrizione>.md`), hard stop, poi Fase 2 su go-ahead. `canvasToJjom.ts` non si
 tocca nella 1a (solo nella 1b, con LIR).
+
+## 7. Addendum 2026-08-24 (dopo la Fase 1 della slice 1a)
+
+La Fase 1 (`discovery_2026-08-24_layout_slice1a_sede_resolver.md`, commit `04b13ab37`) ha
+misurato cinque scostamenti dalla lettera delle righe ratificate, nessuno dall'impianto.
+Decisioni di Alfonso in chat, 2026-08-24:
+
+1. **Emendamento a R-LAY-13 e R-LAY-14**: di `GraphSize` si riusa la forma `{x, y, w, h}`, non la
+   classe (nominale per il membro `private`, TS2740 misurato, discovery §2.3). `VertexLayout` è
+   un'interfaccia autonoma nel modulo, senza `import type`; su `DVertex` il tipo è il literal
+   strutturale inline (precedente `ghostOffsets`, `irEdgeLayout`), per non aprire l'arco
+   `model/` → `editor-v2/`.
+2. **Precisazione a R-LAY-15**: una sola action `'+='` (merge superficiale, `reducer.ts:240-252`;
+   su campo assente agisce come `'='`, `reducer.ts:186-188`); «materializza poi applica» è ordine
+   di calcolo. Divieto di bump di versione, anche no-op: rigenererebbe le default view non
+   toccate (`VersionFixer.tsx:133-143`).
+3. **Emendamento a R-LAY-16**: sorgente (`state.viewpoint`, `irResolveCore.ts:139`) separata dal
+   predicato di esclusività, che non esiste come funzione e viene scritto nella 1b dentro
+   l'adapter impuro, accanto al resolver (modello `irResolve.ts`/`irResolveCore.ts`); l'adapter
+   mappa nullo o non esclusivo su `null` prima del modulo puro.
+4. **Sede**: `components/editor-v2/viewpoint/layout/` (sorella di `ir/`, stesso perimetro di
+   dipendenza, discovery §1.2-1.3). Il resolver descrive la scrittura
+   (`resolveVertexLayoutWrite`) e non la esegue.
+5. **Undo**: lettura statica del reducer sufficiente per la 1a; il gesto ⌘Z entra nelle prove
+   della verifica visiva della 1b. Nessun test sul reducer nella 1a.
+
+Le note di emendamento in place sono in `docs/decisions.md` sulle quattro righe, stile R-LAY-9.
