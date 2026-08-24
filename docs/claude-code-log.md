@@ -1,5 +1,18 @@
 # Claude Code Session Log
 
+## 2026-08-24 — docs: discovery di Fase 1 per la slice 1a del layout per viewpoint (sede del resolver)
+**Prompt**: prompt del 2026-08-24, Fase 1 read-only della slice 1a (R-LAY-14..17). D1 sede del modulo resolver, D2 import-safety modulo e test, D3 idioma di dichiarazione del campo su `DVertex`, D4 forma della scrittura sul dizionario, D5 viewpoint attivo ed esclusivita', D6 precedente di test senza DOM e baseline, D7 grep di collisione. Hard stop al termine.
+**Files touched**: `docs/discovery/discovery_2026-08-24_layout_slice1a_sede_resolver.md` (nuovo), `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — nessun sorgente nel diff. Tre file di prova creati ed eliminati nella stessa esecuzione, `git status --porcelain` verificato vuoto dopo ciascuna rimozione.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — `VersionFixer.tsx`, `reducer.ts`, `GraphDataElements.tsx` letti, mai modificati.
+**Smoke visivo**: non applicabile — nessuna superficie toccata.
+**Notes**: Cinque attese da correggere, dettaglio nel report §0.1 e cinque domande aperte al §10. La piu' pesante: `GraphSize` (`common/Geom.ts:677`, non `joiner/types/`) e' una classe con membro `private`, un record piatto non le e' assegnabile (TS2740, prova eseguita): R-LAY-13/14 non sono eseguibili alla lettera. Poi: `irResolveCore.ts` non nomina mai `isExclusiveView`. D3 e D7 confermati; D4 risolto in una sola action (`'+='` = merge superficiale, e `'='` su dizionario assente).
+**Prompt document name**: 2026-08-24 (layout slice 1a, Fase 1)
+
 ## 2026-08-24 — docs: rotazione del log a 40 entry attive (ventiquattresimo lotto), entry di recupero per `363e121c0`
 **Prompt**: lavoro notturno autonomo dell'architetto (chat di progetto, bridge Cowork), su mandato di Alfonso del 2026-08-24 ~01:20: solo lavoro meccanico. Rotazione per posizione, 53 + 1 (recupero) + 1 (questa) - 15 = 40. Nessuna entry riscritta nel passaggio.
 **Files touched**: docs/claude-code-log.md (tolte le 15 entry più vecchie per posizione, aggiunte questa e la entry di recupero di `363e121c0`), docs/claude-code-log-archive.md (le 15 entry appese in coda più il paragrafo di lotto nel preambolo)
