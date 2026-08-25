@@ -35,6 +35,11 @@ export const JjodelEvents = {
   OPEN_MEGAMODEL: 'jjodel:openMegamodel',
   MEGAMODEL_OPEN_ARTIFACT: 'jjodel:megamodel:open-artifact',
   PROPERTIES_PIN_VIEW: 'jjodel:properties-pin-view',
+  // Expand the Properties zone of the rail when it is collapsed. Distinct from
+  // PROPERTIES_PIN_VIEW, which expands as a side effect but also *pins* the panel on a
+  // view (and toggles the pin off when the same view comes back). Navigation entries that
+  // just need the panel on screen dispatch this one and leave the pin alone.
+  PROPERTIES_SHOW: 'jjodel:properties-show',
   // Project
   NEW_PROJECT: 'jjodel:new-project',
   CREATE_MODEL: 'jjodel:createModel',

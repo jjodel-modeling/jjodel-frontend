@@ -416,6 +416,19 @@
         font-size: 8px;
         opacity: 0.6;
     }
+
+    // Icon-only variant (views menu next to the viewpoint <select>). The 120px min-width
+    // above exists to stop the notation label from shifting the layout as it changes;
+    // a button that carries a single glyph and no label has nothing to shift, and at
+    // 120px it would dwarf the selector it sits beside.
+    &--icon {
+        min-width: 0;
+        padding: 4px 7px;
+
+        i {
+            font-size: 13px;
+        }
+    }
 }
 
 // ── Viewpoint selector group ──

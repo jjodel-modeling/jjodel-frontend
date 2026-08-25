@@ -1,5 +1,19 @@
 # Claude Code Session Log
 
+## 2026-08-25 — feat(views-editor): due ingressi all'editor viste (canvas, toolbar)
+
+**Prompt**: Fase 2 sugli ingressi all'editor viste, decisioni chiuse. §3 apri sulla vista piu' specifica, voce singola `Edit view · <nome>`, niente submenu. §5 bottone-menu affiancato al `<select>` del viewpoint, forma `.notation-selector`, icona `bi-pencil`, `<select>` intatto. §6 `createViewInWorkbench` ritorna `string | null` e prende un `viewpointId?` opzionale. Ingresso 3 (rail) gia' soddisfatto, non toccarlo. Requisiti aggiunti: riapertura della rail collassata e helper unico `DockManager.openView`.
+**Files touched**: `frontend/src/utils/lastViewpoint.ts`, `frontend/src/events/registry.ts`, `frontend/src/components/editors/PropertiesWithTreeView.tsx`, `frontend/src/components/abstract/DockManager.tsx`, `frontend/src/components/editor-v2/EditorV2.tsx`, `frontend/src/components/editor-v2/Toolbar.tsx`, `frontend/src/components/editor-v2/EditorV2.scss`, `docs/prompts/claude_2026-08-25_0930_prompt_views_editor_fase2_ingressi.md`, `docs/claude-code-log.md`
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown — tsc 33 = baseline, 0 errori nei file toccati; vitest 1349 passed con le stesse 9 suite rosse pre-esistenti; build exit 0 col solo chunk-warning; `npm run smoke` 12 passed 0 failed. Nessuno di questi esercita pero' un progetto con viewpoint IR attivo, che e' esattamente il perimetro dei due ingressi nuovi: verifica a schermo non eseguita.
+**Out-of-scope changes**: no — i 7 file dichiarati e confermati prima del diff (Rule 19), piu' prompt e log.
+**Layer Impact Report**: not-required — nessun file di §3.1, nessuna scrittura D/L oltre a `SetRootFieldAction` su `_lastSelected` (canale di selezione gia' in uso) e alla `DViewElement.new2` che `createViewInWorkbench` gia' faceva.
+**Smoke visivo**: non applicabile — i tre stati di `states.ts` nascono da `createProject` e non attivano viewpoint (nota di implementazione P8), quindi non vedono ne' la voce di menu ne' il bottone. La verifica delle cinque righe del prompt resta da fare a mano.
+**Notes**: Tre scelte da leggere nel prompt citato sotto, §«Risposte alle domande di apertura». In breve: il viewpoint attivo si prende da `IRViewpointIndex.viewpointId`, non da `state.viewpoint` (R-LAY-19), e `index === null` fa da gate «viewpoint classico o assente»; `Create view for <X>` e' gated su `isAdvancedMode()` come il `Create View` adiacente, scelta mia; la rail si riapre con un evento nuovo `PROPERTIES_SHOW`, perche' `PROPERTIES_PIN_VIEW` si porta dietro il pin.
+**Prompt document name**: 2026-08-25 09:30
+
 ## 2026-08-25 — feat(rail): tree pane relativa al viewport, densita' dei metadati, default per classe di schermo
 **Prompt**: il rail deve funzionare sia su 14" (~1440x900) sia su 27" (~2560x1440). Tre cambi, semantica invariata (cosa l'albero elenca non dipende dallo schermo): (1) `treePaneHeight` da 392px fissi a relativa al viewport; (2) densita' dei metadati guidata dalla LARGHEZZA DEL RAIL, non del viewport (<400 solo tipo, 400-519 tipo+molteplicita', >=520 tutto); (3) default di prima apertura per classe di viewport (360/400/560), solo in assenza di larghezza persistita. Fase 1 di investigazione obbligatoria prima del codice.
 **Files touched**: `frontend/src/components/editors/PropertiesWithTreeView.tsx`, `frontend/src/components/editors/properties-with-tree-view.scss`, `frontend/src/components/TreeViewSidebar/TreeViewContent.tsx`, `frontend/src/components/TreeViewSidebar/tree-view-sidebar.scss`, `docs/claude-code-log.md`

@@ -5,8 +5,10 @@ import ColorSchemeSelector from './components/ColorSchemeSelector';
 import HighlightPalette from './components/HighlightPalette';
 import { LayoutMode, getSavedLayoutMode, saveLayoutMode } from '../abstract/Dock';
 import { isProjectOverviewPage } from '../../utils/navigationUtils';
-import { Defaults, LPointerTargetable, LViewPoint } from '../../joiner';
+import { Defaults, LPointerTargetable, LViewPoint, store } from '../../joiner';
+import type { DViewPoint } from '../../joiner';
 import { activateViewpoint } from '../../utils/lastViewpoint';
+import DockManager from '../abstract/DockManager';
 import { JjodelEvents } from '../../events/registry';
 import { ValidationPill } from './problems/ValidationPill';
 
@@ -244,6 +246,66 @@ function Toolbar({
     const handleViewpointChange = useCallback((vpId: string) => {
         activateViewpoint(vpId || null);
     }, []);
+
+    // ── Views menu (edit entry next to the selector) ──
+    // The list is built at render straight from the store instead of through a selector:
+    // it is only ever read while the menu is open, and opening it goes through this
+    // component's own state, so the read always happens on a fresh render. `d.viewpoint`
+    // is the same field the IR signature groups views by (irResolveCore.ts).
+    // `hasIr` is what separates an IR viewpoint from a classic one: the menu edits IR
+    // views, so a viewpoint with none of them gets no button at all.
+    const [viewsMenuOpen, setViewsMenuOpen] = useState(false);
+    const viewsMenuRef = useRef<HTMLDivElement>(null);
+
+    const viewpointViews: Array<{ id: string; name: string; hasIr: boolean }> = [];
+    if (shownViewpointId) {
+        const st: any = store.getState();
+        const lookup: any = st?.idlookup ?? {};
+        for (const vid of (st?.viewelements ?? []) as string[]) {
+            const d: any = lookup[vid];
+            if (!d || d.viewpoint !== shownViewpointId) continue;
+            viewpointViews.push({
+                id: vid,
+                name: d.name || 'Unnamed',
+                hasIr: !!d.ir && typeof d.ir === 'object',
+            });
+        }
+    }
+    const showViewsMenu = !isMetamodel && !!shownViewpointId && viewpointViews.some(v => v.hasIr);
+
+    const handleOpenViewsEditor = useCallback(() => {
+        setViewsMenuOpen(false);
+        const dVp = (store.getState() as any)?.idlookup?.[shownViewpointId];
+        if (dVp) DockManager.openViewpoint(dVp as DViewPoint);
+        // openViewpoint predates the rail's collapse model and does not expand it, and its
+        // three existing callers are left alone. The expansion is asked for here, where the
+        // entry needs to land on screen.
+        window.dispatchEvent(new CustomEvent(JjodelEvents.PROPERTIES_SHOW));
+    }, [shownViewpointId]);
+
+    // Same two guards the notation dropdown has: click outside, and Escape.
+    useEffect(() => {
+        if (!viewsMenuOpen) return;
+        const handleClick = (e: MouseEvent) => {
+            if (viewsMenuRef.current && !viewsMenuRef.current.contains(e.target as Node)) {
+                setViewsMenuOpen(false);
+            }
+        };
+        const handleKey = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') setViewsMenuOpen(false);
+        };
+        document.addEventListener('mousedown', handleClick, true);
+        document.addEventListener('keydown', handleKey);
+        return () => {
+            document.removeEventListener('mousedown', handleClick, true);
+            document.removeEventListener('keydown', handleKey);
+        };
+    }, [viewsMenuOpen]);
+
+    // A menu left hanging open after its trigger stops rendering would still take clicks.
+    useEffect(() => {
+        if (!showViewsMenu) setViewsMenuOpen(false);
+    }, [showViewsMenu]);
 
     // ── Layout mode state (synced via CustomEvent + localStorage) ──
     const [layoutMode, setLayoutMode] = useState<LayoutMode>(getSavedLayoutMode);
@@ -492,6 +554,50 @@ function Toolbar({
                         ))}
                     </select>
                 </div>
+
+                {/* Views menu — the way into the views editor from the canvas toolbar.
+                    Borrows the .notation-selector shape (relative wrapper + absolute
+                    dropdown) so it behaves like the other toolbar menus; the <select>
+                    beside it is untouched. aria-haspopup/aria-expanded are on this button
+                    only: the older .notation-selector is not retrofitted here. */}
+                {showViewsMenu && (
+                    <div className="notation-selector" ref={viewsMenuRef}>
+                        <button
+                            className="toolbar-dropdown-btn toolbar-dropdown-btn--icon"
+                            onClick={() => setViewsMenuOpen(prev => !prev)}
+                            title="Edit the views of this viewpoint"
+                            aria-haspopup="menu"
+                            aria-expanded={viewsMenuOpen}
+                        >
+                            <i className="bi bi-pencil" />
+                        </button>
+                        {viewsMenuOpen && (
+                            <div className="notation-selector__dropdown">
+                                {viewpointViews.map(v => (
+                                    <button
+                                        key={v.id}
+                                        className="notation-selector__option"
+                                        onClick={() => { setViewsMenuOpen(false); DockManager.openView(v.id); }}
+                                    >
+                                        <i className="bi bi-eye" />
+                                        <div>
+                                            <div className="notation-selector__option-name">{v.name}</div>
+                                        </div>
+                                    </button>
+                                ))}
+                                <button
+                                    className="notation-selector__option"
+                                    onClick={handleOpenViewsEditor}
+                                >
+                                    <i className="bi bi-pencil-square" />
+                                    <div>
+                                        <div className="notation-selector__option-name">Open views editor</div>
+                                    </div>
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
 
             {/* ── Spacer ── */}

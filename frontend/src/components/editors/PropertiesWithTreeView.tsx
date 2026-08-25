@@ -527,6 +527,18 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
         };
     }, [pinnedSelected]);
 
+    // Bring the Properties zone back from its collapsed rail, without touching the pin.
+    // Reuses the same setter the pin handler above and the reopen pill (:747) already use —
+    // it is the one mechanism the rail has for expanding, and this listener is only the
+    // door onto it for callers outside this component (DockManager.openView).
+    useEffect(() => {
+        const handleShow = () => setIsPropertiesVisible(true);
+        window.addEventListener(JjodelEvents.PROPERTIES_SHOW, handleShow);
+        return () => {
+            window.removeEventListener(JjodelEvents.PROPERTIES_SHOW, handleShow);
+        };
+    }, []);
+
     // Listen for external toggle events (e.g., from keyboard shortcut)
     useEffect(() => {
         const handleExternalToggle = () => {

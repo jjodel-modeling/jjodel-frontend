@@ -103,6 +103,7 @@ import { useTheme } from '../../services/ThemeService';
 import { getDraggedMetaclassId } from './utils/dragState';
 import { PolymetricView } from '../polymetric';
 import { createViewInWorkbench, resolveParentViewpoint } from '../../utils/lastViewpoint';
+import DockManager from '../abstract/DockManager';
 import SimulationPanel from './sim/SimulationPanel';
 // BottomDrawer import removed — bottom property drawer disabled (duplicates right Properties panel)
 // ElementPropertiesDrawer import removed — bottom drawer disabled (see BottomDrawer removal)
@@ -3152,6 +3153,54 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                         },
                     },
                 );
+            }
+
+            // ── Views editor, canvas entry (Fase 2) ──
+            // Object nodes only: the IR resolver answers for M1 instances, and the whole
+            // block is gated on `index`, which getIRIndex returns null for whenever no IR
+            // viewpoint is active. That single null IS the "no viewpoint / classic
+            // viewpoint" gate, and it costs no second read of `state.viewpoint` — the
+            // active id is carried by the index itself (R-LAY-19, 2026-08-25).
+            // Degradation is by absence: anything that does not resolve adds no item.
+            if (node?.type === 'objectNode') {
+                const st: any = store.getState();
+                const lookup = st?.idlookup;
+                const index = lookup ? getIRIndex(st, computeIRSignature(st)) : null;
+                const objectId = lookup?.[node.id]?.model;
+                const classId = (node.data as any)?.instanceOfClassId;
+                if (index && typeof objectId === 'string' && classId) {
+                    const viewId = resolveIRView(objectId, classId, index, makeReadCtx(lookup), lookup)?.viewId;
+                    if (viewId) {
+                        const viewName = lookup?.[viewId]?.name || 'view';
+                        items.push(
+                            { divider: true },
+                            {
+                                label: `Edit view · ${viewName}`,
+                                icon: 'bi-eye',
+                                onClick: () => DockManager.openView(viewId),
+                            },
+                        );
+                    } else if (isAdvancedMode()) {
+                        // No declared view for this metaclass. Authoring one is the same
+                        // Advanced-mode feature the classifier-side "Create View" above is
+                        // gated on, so the same gate applies here rather than a second policy.
+                        const metaclassName = (node.data as any)?.instanceOfClassName || 'class';
+                        items.push(
+                            { divider: true },
+                            {
+                                label: `Create view for ${metaclassName}`,
+                                icon: 'bi-eye',
+                                onClick: () => {
+                                    // The draft is born in the ACTIVE viewpoint, the one the
+                                    // user is looking at — not in the "last edited workbench"
+                                    // viewpoint the no-argument resolution would pick.
+                                    const newViewId = createViewInWorkbench(classId, metaclassName, 'DClass', index.viewpointId);
+                                    if (newViewId) DockManager.openView(newViewId);
+                                },
+                            },
+                        );
+                    }
+                }
             }
 
             return items;
