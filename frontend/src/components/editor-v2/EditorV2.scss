@@ -1074,15 +1074,15 @@
 
 .node-resize-handle,
 .react-flow__resize-control.handle {
-    width: 8px !important;
-    height: 8px !important;
-    min-width: 8px !important;
-    min-height: 8px !important;
-    max-width: 8px !important;
-    max-height: 8px !important;
-    background: var(--resize-handle-bg) !important;
-    background-color: var(--resize-handle-bg) !important;
-    border: 2px solid var(--resize-handle-border) !important;
+    width: 9px !important;
+    height: 9px !important;
+    min-width: 9px !important;
+    min-height: 9px !important;
+    max-width: 9px !important;
+    max-height: 9px !important;
+    background: var(--node-bg) !important;
+    background-color: var(--node-bg) !important;
+    border: 1.5px solid var(--node-selection-stroke) !important;
     border-radius: 2px !important;
     opacity: 1 !important;
     box-shadow: none !important;
@@ -1249,8 +1249,8 @@
 
     &.selected {
         outline: 2px solid var(--node-selection-stroke);
-        outline-offset: 1px;
-        box-shadow: 0 0 0 2px var(--accent-muted), 0 4px 16px var(--node-shadow-deep, rgba(0, 0, 0, 0.12));
+        outline-offset: 3px;
+        box-shadow: 0 0 14px 7px var(--node-selection-halo), 0 4px 16px var(--node-shadow-deep, rgba(0, 0, 0, 0.12));
     }
 
     &.drop-target {

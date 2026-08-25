@@ -1,5 +1,18 @@
 # Claude Code Session Log
 
+## 2026-08-25 — fix(editor-v2): l'anello di selezione e' uno solo, staccato, con alone sfumato
+**Prompt**: trascrivere i valori tarati dalla chat sul Chrome di Alfonso via CSSOM. Quattro punti: `node-selection-stroke` a `#0ea5e9` light e `#38bdf8` dark, nuovo `node-selection-halo`; `.mm-node.selected` con `outline-offset: 3px` e alone `0 0 14px 7px`, via il livello `--accent-muted`; `irStyle.ts:65` con `outline: none` (il fix del doppio anello) e lo stesso alone, `:137` a `offset 3px`; handle del resizer 9x9 a fondo di superficie con bordo ciano `1.5px`. Valori non da rivalutare.
+**Files touched**: `frontend/src/components/editor-v2/_themes.scss`, `frontend/src/components/editor-v2/EditorV2.scss`, `frontend/src/components/editor-v2/viewpoint/ir/irStyle.ts`, `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: 2026-08-25 21:10
+**Causa**: (d)
+**Regressions**: no. Gate: `npm run typecheck` 33 errori = baseline esatta, 0 nei file toccati; `npm run build` exit 0 col solo chunk-warning; `npm run smoke` 12 passed / 0 failed / 3 skipped. `check:docs` resta rossa come al baseline (due errori su entry di altre sessioni, nessuno su questa). Il doppio anello quadrato sul wrapper IR, che era il difetto di `e3d05c4a5`, e' chiuso e verificato con un assert dedicato (AC-6). Resta aperto, e non e' di questo giro, il doppio anello di `.mm-enum/.mm-object/.mm-package`, che dichiarano `border-color` e `box-shadow` propri: prompt `..._2220_` gia' previsto.
+**Out-of-scope changes**: no. I tre file sono quelli del prompt; conteggio nel commento di testata di `_themes.scss` da 92 a 93 nomi, che la riga nuova rendeva falso. Modifiche di altre sessioni (`StatusBar.*`, `featureSignature.ts`) non toccate, commit per pathspec.
+**Layer Impact Report**: not-required (nessun file di §3.1; sole regole CSS, nessun write path D/L)
+**Smoke visivo**: passato — verifica della chat, non a mano di Alfonso: sonda Playwright su Chromium headless contro `http://localhost:3000/` (P8). `_tmp_selection_class.png` e `_tmp_selection_ir.png` (rect): anello unico staccato dal bordo, alone morbido, nessun handle. `_tmp_selection_ir_ellipse.png`: anello che segue l'ellisse, nessun anello quadrato sul wrapper, handle bianchi con bordo ciano agli angoli.
+**Notes**: Misure (light, sonda `_tmp_selection_stroke.ts`, 16/16). Classe e `.ir-node-content`: `outline 2px solid rgb(14,165,233)` a `offset 3px`; wrapper IR `outline-style none`, anello quadrato spento; alone `rgba(14,165,233,.18) 0 0 14px 7px` sui due wrapper; zero handle sulla classe. Handle 9x9, fondo bianco, bordo dichiarato `1.5px solid var(--node-selection-stroke)`: `getComputedStyle` ne riporta 1px, arrotonda al pixel di device a dpr 1. `--resize-handle-bg` e `-border` restano senza consumatori.
+**Prompt document name**: 2026-08-25 23:30
+
 ## 2026-08-25 — fix(editor-v2): la selezione di ogni nodo e' un tratto ciano con alone
 **Prompt**: uniformare la selezione di `ClassNode` a quella del nodo IR. Passo 1 di misura a schermo, poi Passo 2 su tre file: alias `--node-selection-stroke` in `_themes.scss` con lo stesso letterale di `--resize-handle-bg` per tema, `.mm-node.selected` che passa da `border-color` a `outline: 2px solid var(--node-selection-stroke)` con `outline-offset: 1px`, `irStyle.ts:137` che consuma lo stesso token e `:65-66` separata nei due selettori, con l'alone `--accent-muted` reso al ramo `.selected`. `irStyle.ts:64`, `nodeSizing.ts`, `ClassNode.tsx` e `ObjectNode.tsx` non toccati.
 **Files touched**: `frontend/src/components/editor-v2/_themes.scss`, `frontend/src/components/editor-v2/EditorV2.scss`, `frontend/src/components/editor-v2/viewpoint/ir/irStyle.ts`, `docs/claude-code-log.md`
