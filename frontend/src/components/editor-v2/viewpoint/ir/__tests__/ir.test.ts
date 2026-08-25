@@ -1310,3 +1310,53 @@ describe('compile di shape.padding (asse padding, 2026-08-25)', () => {
         expect(cv.marker).not.toBeNull();
     });
 });
+
+describe('compile di shape.text (radice della cascata tipografica, 2026-08-25)', () => {
+    it('assente => compiled.text undefined (nessun override sulla radice)', () => {
+        clearCompileCache();
+        const cv = compileView('v_text_absent', vertexIR({}));
+        expect(cv.text).toBeUndefined();
+    });
+
+    it('assi scalari => valori risolti per ogni istanza', () => {
+        clearCompileCache();
+        const { ctx } = world();
+        const cv = compileView('v_text_scalar', vertexIR({
+            shape: { form: 'rect', text: { fontSize: 16, fontFamily: 'mono' } },
+        }));
+        expect(cv.text).toBeDefined();
+        expect(cv.text!.fontSize!(ctx, 's1')).toBe(16);
+        expect(cv.text!.fontFamily!(ctx, 's1')).toBe('mono');
+        // Un asse non autorato resta undefined: la superficie eredita il default CSS.
+        expect(cv.text!.fontWeight).toBeUndefined();
+        expect(cv.text!.color).toBeUndefined();
+    });
+
+    it('asse condizionale => valore per istanza, e il predicato entra nel dependencySet', () => {
+        clearCompileCache();
+        const { ctx } = world();
+        const cv = compileView('v_text_cond', vertexIR({
+            shape: {
+                form: 'rect',
+                text: { fontSize: { when: { op: 'exists', path: '$isInitial.value' }, then: 18 } },
+            },
+        }));
+        expect(cv.dependencySet).toContain('isInitial');
+        expect(cv.text!.fontSize!(ctx, 's1')).toBe(18); // slot valorizzato
+        expect(cv.text!.fontSize!(ctx, 's3')).toBe(0);  // nessuno slot => 0, cioe' nessun override
+    });
+
+    it('convive con lo stile della label senza confondersi con esso', () => {
+        clearCompileCache();
+        const { ctx } = world();
+        const cv = compileView('v_text_both', vertexIR({
+            shape: {
+                form: 'rect',
+                text: { fontSize: 16 },
+                labels: [{ position: 'top', source: { from: 'intrinsic', prop: 'name' }, style: { fontSize: 20 } }],
+            },
+        }));
+        expect(cv.text!.fontSize!(ctx, 's1')).toBe(16);
+        expect(cv.labels[0].style!.fontSize!(ctx, 's1')).toBe(20);
+    });
+});

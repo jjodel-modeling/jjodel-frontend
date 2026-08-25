@@ -313,6 +313,10 @@ export function compileView(viewId: string, ir: NodeViewIR): CompiledView {
     // materializes its default here instead of compiling to a value function. The
     // renderer turns anything but 'normal' into an ir-pad--* class (irStyle.ts).
     const padding = ir.shape.padding ?? 'normal';
+    // Node-level text style (ir-1.3, cascade root): same per-axis compile as a label
+    // style, and compileTextStyle already returns undefined for an absent input and
+    // extends `deps` with the predicates of its conditional axes.
+    const text = compileTextStyle(ir.shape.text, deps);
 
     const labels: CompiledLabel[] = (ir.shape.labels ?? []).map(l => {
         let text: CompiledAccessor;
@@ -399,6 +403,7 @@ export function compileView(viewId: string, ir: NodeViewIR): CompiledView {
         border,
         marker,
         padding,
+        text,
         labels,
         badges,
         fieldCompartments,

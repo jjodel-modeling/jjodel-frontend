@@ -197,6 +197,16 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx }: IRNodeContentP
     // covers demo/migrated views without an authored border.
     const b = compiled.border;
     if (b && !svgPainter) inlineStyle.border = `${b.width ?? 1}px ${b.style ?? 'solid'} ${b.color ?? 'var(--border-default)'}`;
+    // Node-level text style (ir-1.3 cascade root): inline on the root so every
+    // text surface inherits it (irStyle.ts uses `inherit` on labels, rows and
+    // inline editors). A label's own style, inline on its span, still wins.
+    // fontWeight does NOT reach the top/center labels: their 600 is a class rule
+    // (irStyle.ts) and a class rule beats inheritance. That is deliberate: the
+    // header keeps its weight, and it is changed from the label's own style.
+    // Compartment rows declare no weight, so there it does propagate.
+    // resolveTextStyle returns undefined when there is nothing to emit, and
+    // Object.assign with undefined is a no-op: no guard needed.
+    Object.assign(inlineStyle, resolveTextStyle(compiled.text, readCtx, objectId));
 
     // The SVG layer paints the same resolved fill/border, with the box-base
     // fallbacks (irStyle.ts:44) when nothing is authored. The polygon stretches
@@ -301,6 +311,11 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx }: IRNodeContentP
                         <input
                             key={`label_${i}`}
                             className={`ir-label ir-label--${l.position} ir-label__input`}
+                            // Same authored style as the span it replaces: the node-level
+                            // style already reaches the field by inheritance, this carries
+                            // the label's own one, so the text does not change face on
+                            // entering the edit.
+                            style={resolveTextStyle(l.style, readCtx, objectId)}
                             autoFocus
                             value={editValue}
                             onChange={(e) => setEditValue(e.target.value)}

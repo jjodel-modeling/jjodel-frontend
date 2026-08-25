@@ -11,6 +11,7 @@ import { recognizeSymbol } from '../ir/symbolRecognition';
 import { resolveMetaclassId, withMetaclassPins, type MetaclassRef } from '../ir/metaclassPin';
 import { defaultResizableForForm } from '../../nodes/nodeSizing';
 import { LabelListEditor } from './LabelListEditor';
+import { TextStyleField } from './TextStyleField';
 import { FieldCompartmentListEditor } from './FieldCompartmentListEditor';
 import { BadgeListEditor } from './BadgeListEditor';
 import { MatchingSection, type MetaclassChoice } from './MatchingSection';
@@ -564,6 +565,20 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                         <label className="jj-field-label">Label</label>
                         <Input value={draft.label ?? ''} onChange={(e) => patch({ ...draft, label: e.target.value })} />
                     </div>
+                </FormSection>
+
+                {/* Symbol text, root of the typographic cascade (ir-1.3): the way to
+                    resize every text of the symbol at once, without going label by
+                    label. Reachable in Basic on purpose, unlike Padding. */}
+                <FormSection title="Symbol text" divider={false}>
+                    <TextStyleField
+                        value={shape.text}
+                        onChange={(next) => patchShape({ text: next })}
+                        features={features}
+                        featuresHint={FEATURES_HINT}
+                        classNames={classNames}
+                    />
+                    <HelpText icon={false}>Applies to every text of the symbol. A label's own style overrides it.</HelpText>
                 </FormSection>
 
                 {/* Labels — full list (includes the former primary label at index 0) */}

@@ -156,6 +156,13 @@ export interface ShapeSpec {
      * (same precedent as `marker`).
      */
     padding?: PaddingToken;
+    /**
+     * Typographic style of the whole symbol (ir-1.3, node-level cascade root).
+     * Applied inline on `.ir-node-content` and inherited by every text surface
+     * (labels, compartment rows, inline editors). A label's own `style` wins over
+     * it (inline on the span). Absent = CSS defaults of irStyle.ts. Additive.
+     */
+    text?: TextStyle;
     labels?: LabelSpec[];
     badges?: BadgeSpec[];
 }
@@ -439,6 +446,8 @@ export interface CompiledView {
     marker: CompiledConditional<string> | null;
     /** shape.padding ?? 'normal' */
     padding: PaddingToken;
+    /** Compiled node-level text style; undefined when the view declares none. */
+    text?: CompiledTextStyle;
     labels: CompiledLabel[];
     badges: CompiledBadge[];
     fieldCompartments: CompiledFieldCompartment[];
