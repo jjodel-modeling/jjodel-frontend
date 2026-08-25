@@ -100,3 +100,33 @@ Ogni fase è una fetta verticale completa (tipi + compile + render + authoring),
 - **TS1 / sizing**: il fix del misuratore `nodeSizing.ts` tocca il content-hug. Va verificato che un fontSize maggiore allarghi il nodo e uno minore non lasci padding fantasma; il misuratore deve leggere lo stile reso, non una costante. Non è critical-zone formale ma è sensibile: se il fix esce dal perimetro della label, hard stop e conferma.
 - **Dead-write**: ogni asse/aggancio aggiunto ai tipi deve avere consumo al render nella stessa fase. Mai un campo di stile nei tipi senza render corrispondente.
 - **Divergenza spec residua**: `edge.labels.source/target` restano non implementati (solo `center`). Questo addendum non li aggiunge: fuori scope, coerente col codice.
+
+## 11. Addendum 2026-08-25: radice della cascata e preset di spaziatura
+
+Ratificato in chat il 2026-08-25 su richiesta di Alfonso; implementato in `0864c8824` (commit A),
+`97c5a65e0` (commit B) e `d59cb06c9` (rettifica dell'input di riga).
+
+- **`ShapeSpec.text?: TextStyle`**: stile tipografico del nodo, quinto aggancio di sez. 3 e radice
+  della cascata. Reso inline su `.ir-node-content`; le superfici di testo (`.ir-label`, `.ir-row`,
+  gli input inline) ereditano (`font-size: inherit` in `irStyle.ts`). Precedenza: default CSS <
+  `shape.text` < `LabelSpec.style` (TS1) e, quando arrivera', `rowFormat.style` /
+  `RowViewIR.style` (TS2). `fontWeight` non raggiunge le label top/center, che tengono il 600 di
+  classe: si cambia dalla label.
+- **Default CSS**: 13px (era 11px) su tutte le superfici di testo del simbolo; `.ir-badge`,
+  `.ir-collapse-chip`, `.ir-hull__*` invariati.
+- **`ShapeSpec.padding?: 'small' | 'normal' | 'large'`**: preset di spaziatura, scalare come
+  `border`, su intestazione (top/bottom), label inside e compartimenti, tramite `--ir-pad-x` /
+  `--ir-pad-y` (4/2, 8/4, 16/8 px). Prima l'intestazione non aveva padding. Authoring solo in
+  Advanced; `normal` non viene persistito. Vocabolario chiuso in `VALID_PADDING_VALUES`
+  (`irValidate.ts`), regola authoring-time per il criterio R-B9-bis.
+- **Editor inline**: l'input della label riceve lo stesso stile della label (`resolveTextStyle` su
+  `l.style`, come lo span che sostituisce) e il padding a token meno 1px di bordo, cosi' il box in
+  edit ha l'altezza della label. L'input di riga tiene il padding piatto `0 4px`: la riga di
+  compartimento e' un flex a `line-height: 1.4` e un input padded ne diventerebbe l'elemento piu'
+  alto, facendo crescere la riga all'ingresso in edit (misurato: 22px -> 38px a padding Large).
+- Entrambi additivi: nessun bump di `irVersion`, nessuna migrazione (precedente: `marker`,
+  2026-08-15).
+- Sez. 4 e sez. 10 vanno lette con questa correzione: il misuratore del content-hug
+  (`useContentSize.ts`, `measureIntrinsic`) legge gia' il DOM (`offsetWidth`/`offsetHeight` a
+  `max-content`, chrome da `getComputedStyle`) e non una costante di font, quindi il fix di
+  `nodeSizing.ts` che TS1 annunciava come debito non serve.
