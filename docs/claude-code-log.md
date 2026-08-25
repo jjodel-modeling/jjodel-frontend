@@ -1,5 +1,18 @@
 # Claude Code Session Log
 
+## 2026-08-26 — discovery: gli handle cardinali si posizionano ma non ridimensionano
+**Prompt**: parte 2 del prompt delle 00:20 — sulle forme non rettangolari i quattro handle del resizer vanno ai punti cardinali invece che agli spigoli. Fase 1 read-only sul predicato di «contorno non rettangolare», poi implementazione in `ObjectNode.tsx` con `NodeResizeControl`.
+**Files touched**: `docs/claude-code-log.md` (questa entry). Nessun sorgente: il diff di `ObjectNode.tsx` e' stato scritto, misurato e riportato a HEAD.
+**Outcome**: ⚠️ partial — posizione risolta, comportamento no. Nessun commit di codice.
+**Corregge**: —
+**Causa**: (c)
+**Regressions**: no (niente e' stato committato). `npm run typecheck` sul diff scartato dava 33 = baseline, 0 in `ObjectNode.tsx`.
+**Out-of-scope changes**: no.
+**Layer Impact Report**: not-required (`ObjectNode.tsx` non e' in §3.1; il diff scartato non toccava sync ne' D/L)
+**Smoke visivo**: non applicabile — il difetto e' comportamentale e si misura per drag, non a schermo.
+**Notes**: Numeri: ellisse con il codice di HEAD, angolo bottom-right +40+30 => 54x66 -> 86x98. Con gli handle cardinali, est +40 => 54x66 invariato, in 4 giri; idem la linea destra, e idem senza le linee (ipotesi del conflitto fra i due control allo stesso controlPosition, esclusa). Controllo positivo sul rect, angolo bottom-right => 142x42 -> 190x74. La linea destra del rect ha mosso 1 volta su 3, quindi il lato non e' morto: e' condizionato. Sonda `_tmp_selection_stroke.ts`, gitignored.
+**Prompt document name**: 2026-08-26 00:20
+
 ## 2026-08-26 — fix(editor-v2): anello di selezione piatto con banda trasparente
 **Prompt**: quattro correzioni dettate dal direttore a schermo, parte 1 di 2. Ciano piu' chiaro (`node-selection-stroke` `#38bdf8` light, `#7dd3fc` dark; `node-selection-halo` `rgba(56,189,248,.22)` e `rgba(125,211,252,.25)`); via il blur dallo stato selezionato; banda trasparente di 4px oltre l'anello, resa con `0 0 0 9px` a spread pieno. L'ombra profonda della classe resta, perche' e' la stessa dello stato deselezionato. Valori non da rivalutare.
 **Files touched**: `frontend/src/components/editor-v2/_themes.scss`, `frontend/src/components/editor-v2/EditorV2.scss`, `frontend/src/components/editor-v2/viewpoint/ir/irStyle.ts`, `docs/claude-code-log.md`
