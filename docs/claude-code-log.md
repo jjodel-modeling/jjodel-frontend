@@ -1,5 +1,18 @@
 # Claude Code Session Log
 
+## 2026-08-25 — fix(editor-v2): ritiro del kill-switch dell'undo dopo la misura a runtime
+**Prompt**: prompt del 2026-08-25 00:30. Parte A: quattro commit per pathspec dei documenti del 24/8 (addendum §8 del report sul reducer, R-LAY-19, checkpoint di sessione, il prompt stesso), nessuna modifica al contenuto. Parte B: `markUserInteracted` torna ad alzare `U.userHasInteracted`, commento sopra riscritto in tre righe, nessun'altra riga.
+**Files touched**: `frontend/src/components/editor-v2/EditorV2.tsx`, `docs/claude-code-log.md` (Parte A, soli commit: `docs/discovery/discovery_2026-08-24_undo_reducer_rename.md`, `docs/decisions.md`, `docs/sessioni/sessione_2026-08-24_2.md`, `docs/prompts/claude_2026-08-25_0030_prompt_undo_ritiro_killswitch.md`)
+**Outcome**: ✅ completed
+**Corregge**: 2026-08-24 23:30
+**Causa**: (c)
+**Regressions**: unknown — gate verdi (tsc 33 con lo stesso insieme di errori: l'unica differenza e' la riga di `EditorV2.tsx`, da 2988 a 2960, per le 28 righe di commento tolte sopra l'errore; vitest 1349 passed con le stesse 9 suite rosse di jjscript/jjtl/UDComparator; build exit 0 col solo chunk-warning), ma nessuna verifica a schermo: le sette prove del prompt delle 22:55 restano da fare, la 2 giudicata su tree e pannello.
+**Out-of-scope changes**: no — in `EditorV2.tsx` era gia' presente un hunk non committato e non di questo fronte (`metaclassKind` in `createViewInWorkbench`, riga 3197): messo in staging il solo hunk di `markUserInteracted` con `git apply --cached`, l'altro resta nel working tree com'era. `StatusBar.*`, `featureSignature.ts` e il prompt `_2330_` (untracked) non toccati.
+**Layer Impact Report**: not-required
+**Smoke visivo**: in attesa — sette prove (spostamento, rinomina su tree e pannello, multi-selezione, taglia e reload, versione ferma sui drag, cinque ⌘Z lenti, cambio viewpoint).
+**Notes**: Causa (c) perche' la lettura statica del 24/8 aveva previsto una corruzione dello stato che la misura a runtime (addendum §8) ha smentito: l'undo del D-layer funziona, il nome fermo sul canvas e' un difetto IR preesistente (`signature` di `useIRView` senza `DObject.name`), fronte suo. Commit: Parte A `ad4ecf5e5`, `e82a17149`, `098bbe366`, `e59687ef7`; Parte B `4ef0db973`. Gate e commit eseguiti sul Mac dalla chat (osascript), non nel VM del bridge, i cui `node_modules` sono darwin-arm64.
+**Prompt document name**: 2026-08-25 00:30
+
 ## 2026-08-25 — feat(views-editor): due ingressi all'editor viste (canvas, toolbar)
 
 **Prompt**: Fase 2 sugli ingressi all'editor viste, decisioni chiuse. §3 apri sulla vista piu' specifica, voce singola `Edit view · <nome>`, niente submenu. §5 bottone-menu affiancato al `<select>` del viewpoint, forma `.notation-selector`, icona `bi-pencil`, `<select>` intatto. §6 `createViewInWorkbench` ritorna `string | null` e prende un `viewpointId?` opzionale. Ingresso 3 (rail) gia' soddisfatto, non toccarlo. Requisiti aggiunti: riapertura della rail collassata e helper unico `DockManager.openView`.
