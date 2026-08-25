@@ -1282,3 +1282,31 @@ describe('rowRenderedChildren + children compartment (Fase R2)', () => {
         expect(def.template[0](ctx, 'op_greet')).toBe('greet'); // intrinsic name fallback
     });
 });
+
+describe('compile di shape.padding (asse padding, 2026-08-25)', () => {
+    it('assente => compiled.padding vale il default normal', () => {
+        clearCompileCache();
+        const cv = compileView('v_pad_absent', vertexIR({}));
+        expect(cv.padding).toBe('normal');
+    });
+
+    it('autorato => il preset arriva alla compile verbatim', () => {
+        clearCompileCache();
+        const cv = compileView('v_pad_large', vertexIR({ shape: { form: 'rect', padding: 'large' } }));
+        expect(cv.padding).toBe('large');
+    });
+
+    it('normal esplicito compila come l assenza (stessa resa, chiave inutile)', () => {
+        clearCompileCache();
+        const cv = compileView('v_pad_normal', vertexIR({ shape: { form: 'rect', padding: 'normal' } }));
+        expect(cv.padding).toBe('normal');
+    });
+
+    it('e scalare: non entra nel dependencySet e non tocca gli altri assi', () => {
+        clearCompileCache();
+        const cv = compileView('v_pad_small', vertexIR({ shape: { form: 'diamond', padding: 'small', marker: 'x' } }));
+        expect(cv.padding).toBe('small');
+        expect(cv.dependencySet).toEqual([]);
+        expect(cv.marker).not.toBeNull();
+    });
+});

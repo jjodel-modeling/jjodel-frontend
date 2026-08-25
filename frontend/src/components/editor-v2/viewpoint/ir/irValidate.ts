@@ -13,7 +13,7 @@
 import { compileView, compileEdgeView, compileRowView } from './irCompile';
 import { CONTAINER_ENDPOINT } from './irTypes';
 import { isUsableEndpointExpr } from './edgeEndpoints';
-import type { AnyViewIR, EdgeViewIR, Predicate, RowViewIR } from './irTypes';
+import type { AnyViewIR, EdgeViewIR, NodeViewIR, PaddingToken, Predicate, RowViewIR } from './irTypes';
 
 /**
  * Closed vocabulary of `edge.routing` (R-B9, 2026-08-03): the persisted identifiers,
@@ -26,6 +26,17 @@ import type { AnyViewIR, EdgeViewIR, Predicate, RowViewIR } from './irTypes';
  */
 export const VALID_ROUTING_VALUES: ReadonlyArray<NonNullable<EdgeViewIR['edge']['routing']>> =
     ['orthogonal', 'straight', 'curved'];
+
+/**
+ * Closed vocabulary of `shape.padding` (2026-08-25), same shape and same reasoning as
+ * VALID_ROUTING_VALUES: the persisted identifiers of a spacing preset, typed against the
+ * IR so a value outside the union fails to compile here rather than at the call site.
+ *
+ * The ABSENT key is deliberately not in the list: absence is the 'normal' default the
+ * compile materializes, and the shape the authoring panel writes (it drops the key
+ * instead of writing 'normal'). Only a PRESENT out-of-vocabulary value is an error.
+ */
+export const VALID_PADDING_VALUES: ReadonlyArray<PaddingToken> = ['small', 'normal', 'large'];
 
 /**
  * Closed vocabulary of `Predicate.op` (R-MK-11, 2026-08-18).
@@ -97,6 +108,21 @@ export function validateIR(viewId: string, ir: AnyViewIR): { ok: true } | { ok: 
             ok: false,
             error: `[ir] unknown predicate operator "${unknownOp}" in view ${viewId} — must be one of ${Object.keys(VALID_PREDICATE_OPS).join(' | ')}`,
         };
+    }
+
+    // Padding vocabulary (2026-08-25): authoring-time by the R-B9-bis criterion, like
+    // routing below. The render stays permissive towards what is already persisted
+    // (compileView falls back to 'normal' for anything it does not know, so a bad value
+    // draws the default instead of dropping the view), and the authoring surface applies
+    // the vocabulary. Read as unknown for the same reason as routing.
+    if (ir.kind === 'vertex' || ir.kind === 'graphVertex') {
+        const padding: unknown = (ir as NodeViewIR).shape?.padding;
+        if (padding !== undefined && !(VALID_PADDING_VALUES as readonly unknown[]).includes(padding)) {
+            return {
+                ok: false,
+                error: `[ir] shape.padding must be one of ${VALID_PADDING_VALUES.join(' | ')}, or absent for the normal default, read ${JSON.stringify(padding)}`,
+            };
+        }
     }
 
     // Read as unknown on purpose: the values this rule exists to catch (the empty

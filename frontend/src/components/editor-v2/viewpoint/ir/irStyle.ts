@@ -15,18 +15,25 @@ const STYLE_TAG_ID = 'ir-views-css';
 
 /** Base styles for the IR node content, shape-agnostic. Injected once. */
 const BASE_CSS = `
-.ir-node-content { position: relative; display: flex; flex-direction: column; min-width: 0; width: 100%; height: 100%; }
+/* Symbol typography and spacing, in tokens (2026-08-25). font-size sits on the node
+   and every text surface inherits it: the root of the cascade is .ir-node-content,
+   where IRNodeContent emits the inline style of shape.text, and the default grows
+   from 11 to 13px. --ir-pad-x / --ir-pad-y feed the header, the inside label and the
+   compartments with the same values, which the header did not have at all before. */
+.ir-node-content { position: relative; display: flex; flex-direction: column; min-width: 0; width: 100%; height: 100%; font-size: 13px; --ir-pad-x: 8px; --ir-pad-y: 4px; }
+.ir-node-content.ir-pad--small { --ir-pad-x: 4px; --ir-pad-y: 2px; }
+.ir-node-content.ir-pad--large { --ir-pad-x: 16px; --ir-pad-y: 8px; }
 /* max-width: sotto align-items:center (forme geometriche) il flex item prende la
    larghezza naturale del testo, quindi overflow/ellipsis non scattano MAI e il testo
    viene dipinto fuori dal contorno (misurato: oltre i 22 caratteri su un rombo 170x80,
    con overflow:visible, la label esce dai fianchi senza limite). Vincolarla al box
    restituisce l'ellissi. Il taglio resta al bordo del box, non al contorno: quello e'
    un lavoro separato. Sulle forme a stretch (rect, rounded, ellisse) e' un no-op. */
-.ir-node-content .ir-label { font-size: 11px; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
-.ir-node-content .ir-label--top { order: 0; text-align: center; font-weight: 600; }
-.ir-node-content .ir-label--center { order: 1; text-align: center; margin: auto 0; font-weight: 600; }
-.ir-node-content .ir-label--inside { order: 2; text-align: left; padding: 0 8px; }
-.ir-node-content .ir-label--bottom { order: 4; text-align: center; margin-top: auto; }
+.ir-node-content .ir-label { font-size: inherit; line-height: 1.3; box-sizing: border-box; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.ir-node-content .ir-label--top { order: 0; text-align: center; font-weight: 600; padding: var(--ir-pad-y) var(--ir-pad-x); }
+.ir-node-content .ir-label--center { order: 1; text-align: center; margin: auto 0; font-weight: 600; padding: 0 var(--ir-pad-x); }
+.ir-node-content .ir-label--inside { order: 2; text-align: left; padding: 0 var(--ir-pad-x); }
+.ir-node-content .ir-label--bottom { order: 4; text-align: center; margin-top: auto; padding: var(--ir-pad-y) var(--ir-pad-x); }
 /* Marker layer (asse marker, 2026-08-15): notation symbol inside the shape.
    "meet" scales the glyph with min(w,h) and centres it, so the marker grows
    with the shape (BPMN-like). Stacking: shape paint (element background, or
@@ -42,9 +49,9 @@ const BASE_CSS = `
 .ir-node-content .ir-badge--tr { top: 2px; right: 4px; }
 .ir-node-content .ir-badge--bl { bottom: 2px; left: 4px; }
 .ir-node-content .ir-badge--br { bottom: 2px; right: 4px; }
-.ir-node-content .ir-compartment { order: 3; border-top: 1px solid rgba(51,65,85,0.15); padding: 4px 8px; }
+.ir-node-content .ir-compartment { order: 3; border-top: 1px solid rgba(51,65,85,0.15); padding: var(--ir-pad-y) var(--ir-pad-x); }
 .ir-node-content .ir-compartment--no-separator { border-top: none; }
-.ir-node-content .ir-compartment .ir-row { font-size: 11px; line-height: 1.4; display: flex; gap: 4px; min-width: 0; }
+.ir-node-content .ir-compartment .ir-row { font-size: inherit; line-height: 1.4; display: flex; gap: 4px; min-width: 0; }
 .ir-node-content .ir-compartment .ir-row > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* Box painting for IR nodes lives on .ir-node-content (Fase B): authored
    border/fill are applied inline by IRNodeContent, shape radius via
@@ -135,7 +142,7 @@ const BASE_CSS = `
 .ir-hull__toggle:hover { color: #0ea5e9; }
 .ir-collapse-chip { display: inline-flex; align-items: center; gap: 4px; border: none; background: rgba(51,65,85,0.08); border-radius: 8px; cursor: pointer; font-size: 10px; color: #334155; padding: 2px 6px; margin-left: 6px; line-height: 1.4; }
 .ir-collapse-chip:hover { background: rgba(14,165,233,0.12); }
-.ir-node-content .ir-label__input, .ir-node-content .ir-row__input { font-size: 11px; border: 1px solid #334155; border-radius: 3px; padding: 0 4px; min-width: 40px; width: 90%; outline: none; }
+.ir-node-content .ir-label__input, .ir-node-content .ir-row__input { font-size: inherit; border: 1px solid #334155; border-radius: 3px; padding: 0 4px; min-width: 40px; width: 90%; outline: none; }
 .ir-node-content .ir-row__value--editable { cursor: text; }
 .ir-node-content .ir-row__value--editable:hover { background: rgba(14,165,233,0.08); border-radius: 3px; }
 `;

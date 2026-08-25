@@ -5,7 +5,7 @@ import { Input, Select, NumberInput, ColorPicker, ErrorText, Button, HelpText, C
 import { getMetaclassInfo, type MetaclassInfo } from '../../hooks/useEditorMode';
 import { validateIR } from '../ir/irValidate';
 import { defaultObjectViewIR } from '../ir/irDefaults';
-import type { VertexViewIR, ShapeForm } from '../ir/irTypes';
+import type { VertexViewIR, ShapeForm, PaddingToken } from '../ir/irTypes';
 import { MARKER_REGISTRY } from '../ir/markerRegistry';
 import { recognizeSymbol } from '../ir/symbolRecognition';
 import { resolveMetaclassId, withMetaclassPins, type MetaclassRef } from '../ir/metaclassPin';
@@ -55,6 +55,13 @@ const BORDER_STYLE_OPTIONS = [
 const MARKER_OPTIONS = [
     { value: '', label: 'None' },
     ...Object.values(MARKER_REGISTRY).map((m) => ({ value: m.id, label: m.label })),
+];
+
+/** Spacing preset (asse padding): vocabolario chiuso, 'normal' non viene persistito. */
+const PADDING_OPTIONS = [
+    { value: 'small', label: 'Small' },
+    { value: 'normal', label: 'Normal' },
+    { value: 'large', label: 'Large' },
 ];
 
 const DEFAULT_BORDER = { color: '#334155', width: 1, style: 'solid' as const };
@@ -471,6 +478,25 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                     )}
                 </div>
             </FormSection>
+
+            {/* Padding (Advanced only): spacing preset for header, inside label and
+                compartments. Normal removes the key from the IR, like None for the marker.
+                The placeholder of the shared Select resolves to the default too (nota
+                Select condiviso, 2026-08-08): a closed vocabulary never persists ''. */}
+            {advanced && (
+                <FormSection title="Padding" divider={false}>
+                    <div className="jj-field">
+                        <Select
+                            options={PADDING_OPTIONS}
+                            value={shape.padding ?? 'normal'}
+                            onChange={(e) => {
+                                const v = e.target.value as PaddingToken | '';
+                                patchShape({ padding: v === 'normal' || v === '' ? undefined : v });
+                            }}
+                        />
+                    </div>
+                </FormSection>
+            )}
 
             {/* Marker — notation symbol inside the shape (gateway x, timer clock,
                 history H). Conditional like Fill: the same view can switch marker

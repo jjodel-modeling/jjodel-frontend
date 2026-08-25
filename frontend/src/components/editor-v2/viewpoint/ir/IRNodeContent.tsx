@@ -223,10 +223,14 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx }: IRNodeContentP
     const markerDef = getMarkerDef(markerId ? String(markerId) : undefined);
     const markerColor = compiled.border?.color ?? 'var(--border-default)';
 
+    // Spacing preset (2026-08-25): 'normal' carries no class, so the tokens declared on
+    // .ir-node-content itself apply and the markup of an unauthored view is unchanged.
+    const padClass = compiled.padding === 'normal' ? '' : ` ir-pad--${compiled.padding}`;
+
     return (
         <div
             ref={contentRef}
-            className={`ir-node-content ir-shape--${form}`}
+            className={`ir-node-content ir-shape--${form}${padClass}`}
             style={inlineStyle}
         >
             {svgPainter && (

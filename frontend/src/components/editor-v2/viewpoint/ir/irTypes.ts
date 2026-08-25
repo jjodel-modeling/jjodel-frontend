@@ -57,6 +57,9 @@ export type ShapeForm = 'rect' | 'rounded' | 'ellipse' | 'circle' | 'diamond'
 export type LabelPosition = 'top' | 'center' | 'inside' | 'bottom';
 export type BadgePosition = 'tl' | 'tr' | 'bl' | 'br';
 
+/** Spacing preset of the symbol (header, compartments, inside label). Absent = 'normal'. */
+export type PaddingToken = 'small' | 'normal' | 'large';
+
 /**
  * Text source of a label. 'intrinsic' reads element-level properties that are
  * not feature slots (spec v1.2: needed by default views — DObject.name is the
@@ -146,6 +149,13 @@ export interface ShapeSpec {
      * authoringMetaclassPins).
      */
     marker?: Conditional<string>;
+    /**
+     * Spacing preset applied to every padded surface of the symbol (top/bottom
+     * label, inside label, compartments). Scalar like `border`, never Conditional.
+     * Absent = 'normal'. Additive optional field: no irVersion bump, no migration
+     * (same precedent as `marker`).
+     */
+    padding?: PaddingToken;
     labels?: LabelSpec[];
     badges?: BadgeSpec[];
 }
@@ -427,6 +437,8 @@ export interface CompiledView {
     border: { color: string; width: number; style: string } | null;
     /** Compiled marker id ('' = none); null when the view declares no marker. */
     marker: CompiledConditional<string> | null;
+    /** shape.padding ?? 'normal' */
+    padding: PaddingToken;
     labels: CompiledLabel[];
     badges: CompiledBadge[];
     fieldCompartments: CompiledFieldCompartment[];

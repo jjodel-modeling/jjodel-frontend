@@ -309,6 +309,10 @@ export function compileView(viewId: string, ir: NodeViewIR): CompiledView {
     // "no marker" when a conditional has no matching branch. Predicates inside
     // the conditional extend `deps` through compileConditional as usual.
     const marker = ir.shape.marker !== undefined ? compileConditional(ir.shape.marker, '', deps) : null;
+    // Padding (2026-08-25): a scalar preset like `border`, never Conditional, so it
+    // materializes its default here instead of compiling to a value function. The
+    // renderer turns anything but 'normal' into an ir-pad--* class (irStyle.ts).
+    const padding = ir.shape.padding ?? 'normal';
 
     const labels: CompiledLabel[] = (ir.shape.labels ?? []).map(l => {
         let text: CompiledAccessor;
@@ -394,6 +398,7 @@ export function compileView(viewId: string, ir: NodeViewIR): CompiledView {
         fill,
         border,
         marker,
+        padding,
         labels,
         badges,
         fieldCompartments,
