@@ -1000,8 +1000,8 @@ function elementSignature(data: LModelElement, className: string): string {
 }
 
 // Header component with name, badge, signature and breadcrumb (two rows)
-function PropertiesHeader(props: { data: LModelElement; className: string; isMetamodel?: boolean; breadcrumb?: ReactNode }) {
-    const { data, className, isMetamodel, breadcrumb } = props;
+function PropertiesHeader(props: { data: LModelElement; className: string; isMetamodel?: boolean; breadcrumb?: ReactNode; subjectShownInRailHeader?: boolean }) {
+    const { data, className, isMetamodel, breadcrumb, subjectShownInRailHeader } = props;
     const typeInfo = getElementTypeInfo(className);
 
     // Override badge for DModel: distinguish Model vs Metamodel
@@ -1034,6 +1034,30 @@ function PropertiesHeader(props: { data: LModelElement; className: string; isMet
     // introduces no palette of its own (R-RAIL-30).
     const entityType = resolveEntityType(badgeClass === 'literal' ? 'enumLiteral' : badgeClass);
     const letter = entityType ? entityLetter(entityType) : (badge.charAt(0) || '?');
+
+    // The rail header above already names this element (see `subjectShownInRailHeader`
+    // in OwnProps): repeating name, letter and kind here made the two read as two
+    // detached panels. What is left is a section label, in the rail's own eyebrow —
+    // the panel still needs to say where the form below begins.
+    //
+    // Nothing else is lost in this branch: the host only ever reports a match on the
+    // element the rail header names, which is a DModel, and for a DModel
+    // `elementSignature` returns '' (default case) and the breadcrumb is empty (no
+    // father, and D9 drops the DModel segment anyway). The guard on both stays because
+    // this component must not depend on that coincidence holding forever.
+    if (subjectShownInRailHeader) {
+        return (
+            <div className="props-header props-header--deduped">
+                <span className="properties-node-section__label">Properties</span>
+                {signature && (
+                    <span className={`props-header__signature${isTypedFeature ? ' props-header__signature--chip' : ''}`}>
+                        {signature}
+                    </span>
+                )}
+                {breadcrumb && <div className="props-header__context">{breadcrumb}</div>}
+            </div>
+        );
+    }
 
     return (
         <div className="props-header">
@@ -1476,7 +1500,7 @@ function InfoComponent(props: AllProps) {
             <>
                 <section className="properties-tab properties-panel">
                     {/* Header: name + badge, then signature + breadcrumb */}
-                    <PropertiesHeader data={data} className={ddata.className} isMetamodel={isMetamodel} breadcrumb={breadcrumb} />
+                    <PropertiesHeader data={data} className={ddata.className} isMetamodel={isMetamodel} breadcrumb={breadcrumb} subjectShownInRailHeader={props.subjectShownInRailHeader} />
 
                     {/* Fields (builder methods now include their own CollapsibleSections) */}
                     <div className="properties-fields">
@@ -1543,6 +1567,13 @@ interface OwnProps {
     // view close). Both optional — untouched consumers (popup/inline/non-tab) are unaffected.
     overrideSelected?: { node?: string; view?: string; modelElement?: string };
     onInternalNavigate?: (sel: { node: string; view: string; modelElement: string }) => void;
+    // De-duplication (2026-08-25): the host tells this panel when the element it is
+    // showing is the one already named by the rail header above it. The panel then
+    // drops its own name + badge for a section eyebrow, instead of repeating a title
+    // that is on screen a few dozen px higher. Computed by the host, which is the only
+    // one that knows what its header shows; absent means "no header above me", which
+    // is the state of every consumer outside the rail (popup, inline).
+    subjectShownInRailHeader?: boolean;
 }
 
 interface StateProps {

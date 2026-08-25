@@ -377,9 +377,43 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
         return '';
     });
 
+    // Same walk, returning the id it lands on: the SUBJECT of the header, as opposed
+    // to its text. A second selector rather than one returning `{id, name}` — the
+    // contract stated above is that every selector here returns a primitive, and an
+    // object would be a new identity on every store write and re-render the rail.
+    const railSubjectId = useSelector((state: any) => {
+        const lookup = state.idlookup || {};
+        let id: string | undefined = state._lastSelected?.modelElement;
+        for (let hops = 0; id && hops < 64; hops++) {
+            const e = lookup[id];
+            if (!e) return '';
+            if (e.className === 'DModel') return id;
+            id = e.father;
+        }
+        return '';
+    });
+
     // Selected element: its id drives the posture switch, its className says whether
     // it is a leaf, and its name + owner feed the Focus breadcrumb bar.
     const selectedElementId = useSelector((state: any) => state._lastSelected?.modelElement || '');
+
+    // The inspector repeats the header when the two show the same element — the state
+    // the rail opens in, since the default selection of a model tab is the model
+    // itself. Measured 2026-08-25: two `model_1` titles 324.5px apart in Browse and
+    // 64.5px apart in Focus, at equal visual weight, reading as two detached panels.
+    // The inspector then drops name and badge and keeps a section eyebrow.
+    //
+    // The comparison is against the inspector's ACTUAL subject, not against the
+    // selection: with the panel pinned on the model and the selection moved onto a
+    // child, the header still follows the selection up to the same model and the two
+    // titles are identical again — a `selectedElementId === railSubjectId` test would
+    // read that case as fine and leave the duplication on screen.
+    //
+    // Same move already on record for the breadcrumb (D9, Info.tsx): the segment
+    // naming the owning DModel was dropped because this header carries it, at the top
+    // of the same column and always on screen.
+    const inspectorSubjectId = effectivePin?.modelElement ?? selectedElementId;
+    const subjectShownInRailHeader = !!railSubjectId && inspectorSubjectId === railSubjectId;
     const selectedIsLeaf = useSelector((state: any) => {
         const id = state._lastSelected?.modelElement;
         const cn = id ? state.idlookup?.[id]?.className : undefined;
@@ -708,6 +742,7 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
                             mode={isFloating ? 'tab' : mode}
                             overrideSelected={effectivePin}
                             onInternalNavigate={isPinned ? handleInternalNavigate : undefined}
+                            subjectShownInRailHeader={subjectShownInRailHeader}
                         />
 
                         {/* NODE section — Expert mode only (R-RAIL-12: it stays in the

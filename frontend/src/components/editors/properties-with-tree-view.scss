@@ -487,6 +487,26 @@ $pc-hint-indent: 26px;        // 18px checkbox + 8px gap (the design-system Chec
     // own sheet. It does not: it comes from the global one.
     .properties-panel-body { padding-bottom: 18px; }
 
+    // ─── De-duplicated header ───
+    // When the inspector is showing the element the rail header already names, name,
+    // letter and kind go and a section eyebrow stays (`subjectShownInRailHeader`, see
+    // Info.tsx). The label reuses `.properties-node-section__label`, the rail's own
+    // eyebrow, on purpose: it is the class that MEANS "section label here", and the
+    // alternative with the right values out of the box (`.jj-flags__title`) is named
+    // for the Flags section — borrowing it would make the next edit to the flags
+    // redraw this eyebrow by accident, which is the inverse of the mistake D9 fixed.
+    //
+    // The one thing that class does not carry standalone is its colour: inside
+    // `.properties-node-section` it inherits slate-400 from the `__header` row. Stated
+    // here, and only here, so the NODE eyebrow keeps taking it by inheritance.
+    .props-header--deduped {
+        align-items: baseline;
+
+        .properties-node-section__label {
+            color: $pc-slate-400;
+        }
+    }
+
     // ─── Header row 2: breadcrumb + VIEW chip ───
     // No `.command-bar` rules here: inside the card the view panel is mounted with
     // `showBack={false}` (the Tree above it is what navigates away), so this row hosts

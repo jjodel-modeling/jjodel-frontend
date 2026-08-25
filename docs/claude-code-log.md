@@ -7593,3 +7593,16 @@ Dark mode overrides for `.toolbar-btn` also scoped under `.documentation-toolbar
 **Smoke visivo**: passato (sonda: pura 6/6 verdi con zero warn del clamp, `--mixed` 4/4, `--tall` 3/3 sull'assert dell'ereditarietà; screenshot `_tmp_pool_F3.png`: ventaglio non più impacchettato, detour dello spill visibile e dichiarato)
 **Notes**: perimetro ridotto in LIR: lo spill vive in computePortDistribution, dove confluiscono le 4 elezioni di lato, e la guardia reattiva EditorV2:1221 lo porta al caricamento senza aprire useJjomSync/jjomTransformers. Due difetti trovati dai test prima del disegno: non idempotenza per pareggio nell'ordinamento (chiusa col tiebreak per id) e spill anche senza dimensioni. Troncatura dichiarata: sui nodi alti la capienza (9) supera il pool (4), lo spill allevia fino al pool. Dettagli in §13.
 **Prompt document name**: 2026-08-25 pool_saturation_D1
+
+## 2026-08-25 — fix(rail): niente doppio header quando il Properties mostra il soggetto della testata
+**Prompt**: difetto UI a schermo — all'apertura di una tab modello la rail mostra due header `model_1` a poche decine di px (testata della rail + testata del Properties), perché la selezione di default è il modello stesso. Decisione (a): de-duplicazione condizionale, il Properties degrada a etichetta di sezione in stile eyebrow con testo PROPERTIES quando il suo soggetto coincide con quello della testata; in tutti gli altri casi header invariato. Fase 1 di investigazione, poi GO con scelta della classe eyebrow.
+**Files touched**: editors/PropertiesWithTreeView.tsx (selettore railSubjectId + confronto col soggetto effettivo del Properties + prop passata a Info), editors/Info.tsx (prop opzionale su OwnProps, ramo condizionale in PropertiesHeader), editors/properties-with-tree-view.scss (blocco .props-header--deduped con la riga di colore), docs/claude-code-log.md.
+**Outcome**: ✅ completed
+**Corregge**: — 
+**Causa**: —
+**Regressions**: no (typecheck 33 = baseline, 0 nei file toccati; build ✓ 46.7s solo chunk-warning pre-esistente; vitest 1381 passed identico con e senza la modifica, verificato via stash; sonda 10/10 verdi)
+**Out-of-scope changes**: no (i 3 file previsti dalla Fase 1 + log; tree pane, scope bar, densità e postura non toccati)
+**Layer Impact Report**: not-required (nessun file critical-zone §3.1; nessun lettore nuovo del root state e in particolare nessun lettore di `state.viewpoint`, R-LAY-19 rispettata alla lettera)
+**Smoke visivo**: passato (`_tmp_rail_dup_model_default.png`: la testata della rail resta `m SynthM1`, al posto del secondo blocco d'identità c'è l'eyebrow PROPERTIES, la colonna legge come un pannello solo)
+**Notes**: il confronto è fra il soggetto EFFETTIVO del Properties (`effectivePin?.modelElement ?? selectedElementId`) e l'id terminale della risalita, non fra selezione e soggetto: col pin sul modello e la selezione altrove la duplicazione c'è e il confronto ingenuo la mancherebbe (assert SI-3). Due mie diagnosi di Fase 1 corrette dalla misura: le righe dell'albero si cliccano (bersaglio `.tree-row__content`), e la prima `revealTreeRow` richiudeva le sezioni aperte falsando il censimento.
+**Prompt document name**: 2026-08-25 rail_doppio_header
