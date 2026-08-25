@@ -130,3 +130,35 @@ Ratificato in chat il 2026-08-25 su richiesta di Alfonso; implementato in `0864c
   (`useContentSize.ts`, `measureIntrinsic`) legge gia' il DOM (`offsetWidth`/`offsetHeight` a
   `max-content`, chrome da `getComputedStyle`) e non una costante di font, quindi il fix di
   `nodeSizing.ts` che TS1 annunciava come debito non serve.
+
+## 12. TS2 implementata (2026-08-25)
+
+Implementata in `4962a303a`, verificata a schermo (prove R1-R5) sul progetto «State Machine v1».
+
+- **Agganci**, i due di sez. 3 punti 2 e 3: `FieldCompartmentSpec.rowFormat.style?: TextStyle` e
+  `RowViewIR.style?: TextStyle`. Compilati corrispondenti: `CompiledFieldCompartment.rowStyle?` e
+  `CompiledRowView.style?`, entrambi da `compileTextStyle`, lo stesso helper di TS1.
+- **Resa**: `rowFormat.style` va inline sul `.ir-compartment`, non riga per riga. Per le righe
+  slot-mode il risultato e' identico per ereditarieta' (`irStyle.ts` da' a `.ir-row`
+  `font-size: inherit` e non dichiara nessun altro asse di testo in regola di classe).
+  **Scostamento dichiarato da sez. 3.2**: per un compartimento `children` la spec diceva che
+  `rowFormat` e' ignorato, mentre qui lo stile vale come livello di cascata del compartimento, che
+  la row view del figlio puo' ancora sovrascrivere. Confermato a schermo dalle prove R1-R4, che la
+  fixture ha esercitato proprio su un compartimento `children`. `RowViewIR.style` va inline sul
+  `.ir-row` di `IRRow`.
+- **Precedenza finale**, dal basso: default CSS < `shape.text` (nodo) < `rowFormat.style`
+  (compartimento) < `RowViewIR.style` (row view del figlio). Per la label resta
+  default < `shape.text` < `LabelSpec.style`.
+- **Reattivita' degli assi condizionali**: poggia sullo snapshot degli slot di
+  `useIRView`/`useIRRowView` (tutti i valori propri dell'oggetto piu' `crossDepsSignature`), non
+  sul `dependencySet`, il cui unico consumatore e' `useIRContainment.ts:88`. Una futura
+  restrizione della firma al solo `dependencySet` resta corretta, perche' il set si estende con i
+  predicati degli assi, ma va verificata e non data per scontata. Misura e corollario in
+  `docs/discovery/discovery_2026-08-25_ts2_row_textstyle.md` §3.3.
+- **Nota di struttura**: `resolveTextStyle` e' esportata da `IRNodeContent.tsx` e riusata da
+  `IRRow.tsx`, mai copiata. Ne nasce un ciclo di import `IRNodeContent -> IRRow ->
+  IRNodeContent`, innocuo (dichiarazione di funzione hoistata, chiamata a render) e dichiarato. Se
+  un domani da' noia, la funzione va in un modulo proprio.
+- Additivi entrambi: nessun bump di `irVersion`, nessuna migrazione. Nessuna regola CSS nuova.
+- **Resta fuori**: TS3, la label di edge (`edge.labels.style`), ultima per il rischio E0b di
+  sez. 10.
