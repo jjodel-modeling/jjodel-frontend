@@ -560,3 +560,93 @@ effetti da verificare su una sequenza che fonda davvero due delta con `idlookup`
 e in `'clonedCounter' in idlookup`): da capire se è voluta. E al load compaiono tre warning
 `[useContentDrivenSize] size write not adopted by the store, yielding` (uno per ellisse), con i
 nodi a `54x66`: la derivazione da contenuto cede al boot; da verificare se preesiste alla 1c.
+
+---
+
+## 9. Addendum 2026-08-25, 11:30: la rinomina di un oggetto con slot `name` (chat, via Chrome sul progetto «State Machine v1»)
+
+Misura fatta dopo il ritiro del kill-switch (`4ef0db973`), build del working tree, flag alzato dal
+primo pointerdown sul pannello (la Parte B fa il suo mestiere: `U.userHasInteracted` passa a `true`
+al primo click, senza intervento manuale). Sonde in pagina: `store.subscribe` con lettura del delta
+in cima allo stack a ogni notifica, `SetFieldAction.new`, `UndoAction.new`,
+`stopImmediatePropagation` di `KeyboardEvent`.
+
+**Prova 2 sul metamodello: passa.** Metamodello `State Machine`, sintassi astratta, rinomina
+`Final → Fine` dall'editor inline del nodo (`mm-node__input`), Invio, un ⌘Z con focus su `BODY`:
+un solo delta (`idlookup[Final].name = 'Final'`), il D-layer torna a `Final`, `.tree-row__name` e
+il pannello proprietà mostrano `Final`. Il nodo sul canvas resta `Fine` (`mm-node__name`): stesso
+sintomo dell'addendum §8 ma in un renderer diverso da `useIRView`, quindi il fronte «canvas fermo
+sulla rinomina» ha almeno due sedi.
+
+**Prova 2 sul modello: fallisce, e la causa è misurata.** `model_1` conforme a `Class Diagram`,
+viewpoint `Class Diagram v1`, rinomina `Person → Persona` (e poi `Permission → Permesso`)
+dall'editor inline IR (`ir-label__input`). Digitare non scrive nulla. Invio produce **due dispatch
+distinti a 100-300 ms di distanza**, per costruzione:
+
+1. `syncNodeLabel` (`canvasToJjom.ts:605-616`) assegna `model.name = newName`, cioè
+   `LObject.set_name` (`LModelElement.tsx:6145`): `TRANSACTION` con
+   `SetFieldAction(obj, 'name', 'Persona')` (`:6163`). Primo dispatch; delta in cima allo stack
+   `{ idlookup[obj]: { name: 'Person' } }`, stack +1.
+2. Lo stesso `set_name` differisce la scrittura dello slot con `AFTER_UPDATE` (`:6174-6197`, la
+   «Direction A» del 2026-06-19, `docs/discovery/2026-06-19_slot_write_failure.md`: lo slot non
+   può essere scritto dentro la transazione di `set_name`, farebbe rollback). Il callback fa
+   `slot.value = newName` (`:6188`), cioè `setValueAtPosition` (`:7515`), la cui `TRANSACTION`
+   (`:7595`) scrive `SetFieldAction(slot, 'values.0', 'Persona')` **e**, essendo lo slot `name`
+   all'indice 0, di nuovo `SetFieldAction(father, 'name', 'Persona')` (`:7602-7603`). Secondo
+   dispatch, titolo `name.setValue(0: index): Person -> Persona`.
+
+Il secondo dispatch cade entro i 450 ms di `mergeTolerance` e viene **fuso nel primo**: il delta
+in cima acquista `mergeCounter` e il suo `idlookup` **resta byte-identico** a prima
+(`{ [obj]: { name: 'Person' } }`). `U.objectMergeInPlace` è superficiale e first-wins: la chiave
+`idlookup` del primo delta vince per intero e il sotto-albero del secondo, con il valore precedente
+dello slot, va perso. È la sequenza del §2.3, che l'addendum §8 non aveva potuto riprodurre
+(oggetto senza slot).
+
+**Controprova: la scrittura del solo slot produce un delta completo.** Da console,
+`lobj['$name'].value = 'PermessoX'` con lo stack fermo da 700 ms: un dispatch solo, delta
+`{ [obj]: { name: 'Permesso' }, [slot]: { values: { 0: 'Permesso' } } }`. ⌘Z riporta **entrambi**
+i campi e **tutte** le superfici, canvas IR compreso (`ir-label--top = Permesso : Class`,
+`tree-feature__name`, `props-header__name`, `jj-slot-value-input`): il valore dello slot è nella
+`signature` di `useIRView`, quindi il canvas segue. Il calcolo del delta non ha colpe; la perdita
+sta solo nella fusione.
+
+**Effetto di ⌘Z sulla rinomina da editor inline** (via `Navbar`, `UndoAction.new(1,
+'Pointer_OfflineUser')`, notifica dello store a 16 ms): `DObject.name` torna `Person`, lo slot
+resta `['Persona']`. Le tre superfici che l'utente guarda leggono lo slot: `tree-feature__name =
+Persona`, `props-header__name = Persona`, canvas `Persona : Class`; solo la status bar mostra
+`Person`. Da qui il «non succede nulla» della prova 2, e da qui la divergenza già presente nel
+progetto prima della misura: l'oggetto `Role` ha `DObject.name = 'Role'` e slot `name =
+['Ruolo']`, residuo della prova del 2026-08-24. `Person` e `Permission` sono stati riallineati
+a fine misura con una scrittura dello slot; `Role`/`Ruolo` è lasciato com'è, perché non so quale
+dei due volesse Alfonso.
+
+**Prova 6: il salvataggio silenzioso costa 0,9 s ma non blocca.** `ProjectsApi.save(project,
+{silent: true})` su questo progetto: 870-883 ms, tutti in `U.compressedState` (78 KB di stato),
+versione ferma a 11.9; il gap massimo di un `setInterval` a 10 ms durante il salvataggio è di
+40 ms, quindi la compressione è asincrona e non congela il thread. Lo spinner visto da Alfonso al
+secondo ⌘Z non si è ripresentato e nel DOM non c'è nessun elemento `spinner`/`saving` dopo tre
+salvataggi silenziosi: da capire dove compariva prima di attribuirlo all'autosave. Il drag
+sintetico dello strumento non muove i nodi di React Flow (niente `mousemove` intermedi), quindi
+la sequenza «spostamento + cinque ⌘Z lenti» non è stata riprodotta dalla chat.
+
+**Artefatto di misura, da sapere.** Con la scheda Chrome in background (`document.visibilityState
+= 'hidden'`) Chrome congela i timer della pagina e non le consegna i tasti: le pressioni di ⌘Z
+non arrivano a `Navbar`, un `setTimeout` da 300 ms non scatta e la sonda va in timeout dopo 45 s.
+Le misure di questa sessione fra le 10:56 e le 11:05 erano invalide per questo motivo e sono state
+rifatte con la scheda in primo piano. Nel frattempo la pagina era stata ricaricata, quindi il
+caso `S0 → S9` in `State Machine v2` (due delta non fusi, il secondo senza `idlookup`) resta
+un'osservazione singola non ripetuta; il caso `Person`/`Permission` è quello riproducibile.
+
+**Conseguenze.** L'undo del D-layer resta corretto: annulla esattamente quello che il delta
+contiene. Il difetto è a monte, nel modo in cui una rinomina IR arriva al reducer: due dispatch
+per un gesto, per una scelta documentata (Direction A), e una fusione che perde stato. Le vie di
+chiusura, da decidere in chat: (a) `syncNodeLabel` scrive lo slot (`lobj['$' +
+identityAttribute.name].value = newName`) quando l'oggetto ha uno slot identità popolato, e
+`name` solo altrimenti: un dispatch, un delta completo, misurato sopra; da verificare la
+validazione di unicità che oggi sta in `set_name` (`:6149-6160`) e chi altro chiama `set_name`
+da editor-v2 (pannello proprietà, tree). (b) Fusione profonda di `idlookup` in
+`objectMergeInPlace`, core, tocca ogni coalescenza. (c) Il secondo dispatch marcato come non
+fondibile, altro percorso nuovo nel reducer. La (a) è la più piccola e resta fuori dal core. Il
+canvas fermo dopo l'undo di `DObject.name` resta il fronte IR dell'addendum §8, con
+`mm-node__name` aggiunto al perimetro; con la (a) il caso IR sparisce da solo, perché lo slot è
+nella firma.
