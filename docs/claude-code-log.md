@@ -1,5 +1,18 @@
 # Claude Code Session Log
 
+## 2026-08-25 — feat(editor-v2): canvas Fase 2 — nodo neutro, label d'arco, minimap, viewport
+**Prompt**: Fase 1 di discovery sui cinque punti canvas deferiti, poi Fase 2 sulla partizione approvata. Entrano 5 (nodo neutro per metaclasse non resa), 2a (`irLabelPlacement` letto), 2b (alone sul solo `.edge-label__text`), 4 (toggle minimap + token), 3 (viewport persistito per `(modello, viewpoint)`). Punto 1 (routing/floating edges) e 2c (de-overlap label) rinviati da Alfonso.
+**Files touched**: `frontend/src/components/editor-v2/nodes/ObjectNode.tsx`, `frontend/src/components/editor-v2/viewpoint/ir/irResolve.ts`, `frontend/src/components/editor-v2/edges/UnifiedEdge.tsx`, `frontend/src/components/editor-v2/EditorV2.tsx`, `frontend/src/components/editor-v2/EditorV2.scss`, `frontend/src/events/registry.ts`, `frontend/src/pages/components/Navbar.tsx`, `docs/prompts/claude_2026-08-25_1130_prompt_canvas_fase2.md`, `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — tsc 33 = baseline (in `EditorV2.tsx` resta il solo errore pre-esistente, da :2886 a :3012 per lo scorrimento delle righe); vitest 1349 passed con le stesse 9 suite rosse pre-esistenti; build exit 0 col solo chunk-warning; sonda dedicata 18/18.
+**Out-of-scope changes**: no — i 7 file dichiarati e confermati prima del diff (Rule 19), più prompt e log. `StatusBar.*` e `featureSignature.ts`, già modificati nel working tree e non di questo fronte, non toccati e non messi in staging (commit per pathspec).
+**Layer Impact Report**: not-required — nessun file di §3.1, nessuna scrittura D/L: il viewport vive in `localStorage`, mai nel D-layer e mai nell'undo.
+**Smoke visivo**: passato — sonda `scripts/smoke/_tmp_canvas_fase2.ts` (gitignored come tutte le `_tmp_`), 18 check verdi + 1 SKIP dichiarato, fixture sintetica costruita in pagina (M2 `Alpha`/`Beta`, M1 con istanze linkate, viewpoint IR dichiarato su `Alpha` sola, edge view con `placement: 'below'`). Screenshot light e dark. SKIP: il trascinamento del tab in un altro pannello — i nodi del tab riportano rect nullo a quel punto della corsa, quindi la gesture non è stata eseguita; il caso resta **non misurato**, ma i suoi due esiti possibili sono già coperti (remount = V1d, nessun remount = viewport intatto per costruzione).
+**Notes**: Smentita da registrare: `rc-dock` **non** smonta i tab inattivi (`DockTabPane.js:72`, `cached` assente ⇒ `isRender = this.visited`), quindi il cambio tab non rifaceva il fit. Il punto 3 resta con la motivazione ridotta (chiusura/riapertura, reload), decisa da Alfonso. Difetto trovato dalla sonda: il salvataggio in unmount leggeva `getViewport()` a store RF gia' in teardown e riscriveva l'origine; ora scrive l'ultimo viewport osservato via `onMove`. Decisioni nel prompt citato.
+**Prompt document name**: 2026-08-25 11:30
+
 ## 2026-08-25 — fix(editor-v2): ritiro del kill-switch dell'undo dopo la misura a runtime
 **Prompt**: prompt del 2026-08-25 00:30. Parte A: quattro commit per pathspec dei documenti del 24/8 (addendum §8 del report sul reducer, R-LAY-19, checkpoint di sessione, il prompt stesso), nessuna modifica al contenuto. Parte B: `markUserInteracted` torna ad alzare `U.userHasInteracted`, commento sopra riscritto in tre righe, nessun'altra riga.
 **Files touched**: `frontend/src/components/editor-v2/EditorV2.tsx`, `docs/claude-code-log.md` (Parte A, soli commit: `docs/discovery/discovery_2026-08-24_undo_reducer_rename.md`, `docs/decisions.md`, `docs/sessioni/sessione_2026-08-24_2.md`, `docs/prompts/claude_2026-08-25_0030_prompt_undo_ritiro_killswitch.md`)
