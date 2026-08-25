@@ -1,5 +1,18 @@
 # Claude Code Session Log
 
+## 2026-08-26 — fix(editor-v2): anello e banda seguono la sagoma anche sulle forme SVG
+**Prompt**: istruzione in chat con screenshot di un'ellisse selezionata. Il bordo ciano e quello piu' chiaro devono seguire **sempre** il contorno della forma, con il tratteggio all'esterno; il tratteggio resta assente sulle forme dove coinciderebbe in gran parte col bordo ciano (rect, rounded), come gia' fatto.
+**Files touched**: `frontend/src/components/editor-v2/viewpoint/ir/IRNodeContent.tsx`, `frontend/src/components/editor-v2/viewpoint/ir/irStyle.ts`, `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: 2026-08-26 (istruzione in chat, screenshot stadio)
+**Causa**: (f)
+**Regressions**: no, ma lo smoke non e' verde e non per questa modifica. `npm run typecheck` 33 = baseline, 0 nei file toccati; `npm run build` exit 0 col solo chunk-warning; `vitest` sui 12 file di `viewpoint/ir/` 325 passed. `npm run smoke` ROSSO: A4 conta come regressioni i messaggi `[vite] hot updated` di `PropertiesWithTreeView.tsx`, `TreeViewPanelContext.tsx`, `Dashboard.tsx`, `Toolbar.tsx` — file che un'altra sessione stava salvando durante la corsa, e A1/A2 cadono dietro a un reload HMR a meta' stato. Controllo positivo: con le mie due modifiche in stash lo smoke resta rosso con le stesse righe. Ambientale, non causato da qui (P8, R-RAIL-27).
+**Out-of-scope changes**: no (i due file della resa piu' il log)
+**Layer Impact Report**: not-required. `viewpoint/ir/` e' nella tabella §3.1 ma non fra i file che §3.2 elenca per il report; la modifica e' due elementi SVG in piu' nel render e regole CSS, nessun write path D/L e nessun tocco a compile/IR types.
+**Smoke visivo**: la verifica finale spetta ad Alfonso a schermo. La chat ha misurato e fotografato con la sonda: `_tmp_selection_ir_diamond.png` mostra anello e banda sul profilo del rombo, col tratteggio del bounding box fuori; `_tmp_selection_ir_ellipse.png` invariata.
+**Notes**: Misure (light, sonda `_tmp_selection_stroke.ts`, 26/26). Rombo: `.ir-node-content` con `outline: none` e `box-shadow: none` (via la coppia CSS spenta sulle 4 forme SVG), e sul layer SVG `ir-sel-ring` `rgba(56,189,248,.55) w=10` piu' `ir-sel-band` `rgba(56,189,248,.22) w=6`. Meta' di ogni tratto cade fuori dal contorno: 5px e 3px, gli stessi rientri del CSS. Ellisse invariata, nessuna copia SVG. Le due copie si disegnano sempre e restano `stroke: none` finche' il nodo non e' selezionato.
+**Prompt document name**: 2026-08-26 (istruzione in chat, screenshot ellisse)
+
 ## 2026-08-26 — fix(editor-v2): tratto di selezione translucido e box tratteggiato sulle forme
 **Prompt**: istruzione in chat con screenshot di uno stadio selezionato. Ciano meno brillante e anello translucido, visto che sta fuori dal contorno chiuso del nodo. Piu' una valutazione richiesta: se unire i quattro handle con linee tratteggiate.
 **Files touched**: `frontend/src/components/editor-v2/_themes.scss`, `frontend/src/components/editor-v2/EditorV2.scss`, `docs/claude-code-log.md`

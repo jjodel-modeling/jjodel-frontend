@@ -28,15 +28,35 @@ type SvgOutlinePainter = Extract<ShapePainter, { kind: 'svg' | 'svgPath' }>;
 /** Gli attributi che il contorno riceve: gli stessi per il poligono e per il path. */
 interface SvgOutlineProps {
     fill: string;
-    stroke: string;
+    stroke?: string;
     strokeWidth: number;
     strokeDasharray?: string;
+    className?: string;
 }
 function svgOutline(painter: SvgOutlinePainter, props: SvgOutlineProps): React.ReactElement {
     return painter.kind === 'svg'
         ? <polygon points={painter.points} vectorEffect="non-scaling-stroke" {...props} />
         : <path d={painter.silhouette} vectorEffect="non-scaling-stroke" {...props} />;
 }
+
+/**
+ * Anello e banda di selezione per le forme dipinte in SVG.
+ *
+ * Sulle forme CSS (rect, ellisse, stadio...) li disegnano `outline` e
+ * `box-shadow`, che seguono il `border-radius`. Qui non c'e' raggio da seguire:
+ * la sagoma e' un poligono, e una box-shadow tornerebbe il rettangolo del
+ * bounding box. Si ridisegna allora la stessa sagoma piu' larga SOTTO quella
+ * piena, che poi ne copre la meta' interna — l'idioma e' gia' quello del bordo
+ * `double` qui sotto. Con `non-scaling-stroke` le larghezze sono in pixel di
+ * schermo, quindi meta' di ognuna e' esattamente il rientro voluto: 5px per
+ * l'anello (offset 3 + tratto 2) e 3px per la banda, gli stessi numeri della
+ * regola CSS.
+ *
+ * Il colore NON e' qui: lo mette irStyle solo sotto `.mm-node.selected`, cosi'
+ * IRNodeContent non ha bisogno di sapere se il nodo e' selezionato.
+ */
+const SEL_RING_STROKE_WIDTH = 10;
+const SEL_BAND_STROKE_WIDTH = 6;
 import { useContentDrivenSize } from './useContentSize';
 import { getMarkerDef, MARKER_STROKE_WIDTH, MARKER_VIEWBOX } from './markerRegistry';
 import IRRow from './IRRow';
@@ -248,6 +268,16 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx }: IRNodeContentP
         >
             {svgPainter && (
                 <svg className={svgPainter.svgClassName} viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                    {/* Selezione: prima l'anello, poi la banda che ne copre la
+                        parte interna, poi la sagoma piena che copre entrambe
+                        dentro il contorno. Senza colore finche' il nodo non e'
+                        selezionato (irStyle). */}
+                    {svgOutline(svgPainter, {
+                        fill: 'none', strokeWidth: SEL_RING_STROKE_WIDTH, className: 'ir-sel-ring',
+                    })}
+                    {svgOutline(svgPainter, {
+                        fill: 'none', strokeWidth: SEL_BAND_STROKE_WIDTH, className: 'ir-sel-band',
+                    })}
                     {svgDouble ? (
                         <>
                             {svgOutline(svgPainter, {

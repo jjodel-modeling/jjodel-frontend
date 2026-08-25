@@ -142,6 +142,20 @@ const BASE_CSS = `
 /* Banda e anello sulla forma. Le ombre di riposo vanno ripetute qui: box-shadow
    e' una proprieta' sola, e dichiarare la banda da sola le cancellerebbe. */
 .mm-node.selected > .ir-node-content { outline: 2px solid var(--node-selection-stroke); outline-offset: 3px; box-shadow: 0 0 0 3px var(--node-selection-halo), 0 1px 3px var(--node-shadow), 0 4px 12px var(--node-shadow-deep, rgba(0, 0, 0, 0.08)); }
+/* Forme dipinte in SVG: la coppia CSS qui sopra tornerebbe il rettangolo del
+   bounding box, perche' su queste .ir-node-content non ha raggio da seguire (la
+   sagoma sta nel layer SVG). Si spegne, e al suo posto valgono le due copie del
+   contorno che IRNodeContent disegna sotto la sagoma piena: incolori di loro,
+   prendono il colore solo qui, a nodo selezionato. Le larghezze (10 e 6, in px
+   di schermo grazie a non-scaling-stroke) mettono meta' tratto fuori dal
+   contorno: 5px e 3px, gli stessi rientri della coppia CSS. */
+.mm-node.selected > .ir-node-content.ir-shape--diamond,
+.mm-node.selected > .ir-node-content.ir-shape--hexagon,
+.mm-node.selected > .ir-node-content.ir-shape--parallelogram,
+.mm-node.selected > .ir-node-content.ir-shape--cylinder { outline: none; box-shadow: none; }
+.ir-sel-ring, .ir-sel-band { stroke: none; }
+.mm-node.selected > .ir-node-content .ir-sel-ring { stroke: var(--node-selection-stroke); }
+.mm-node.selected > .ir-node-content .ir-sel-band { stroke: var(--node-selection-halo); }
 .mm-node.drop-target > .ir-node-content { outline: 2px solid var(--color-accent); }
 .ir-hull { border: 1.5px dashed rgba(51,65,85,0.45); border-radius: 12px; background: rgba(51,65,85,0.03); }
 .ir-hull__header { display: flex; align-items: center; justify-content: space-between; padding: 0 8px; font-size: 11px; font-weight: 600; color: #334155; }
