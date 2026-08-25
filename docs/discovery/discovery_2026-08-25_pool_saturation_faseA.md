@@ -521,3 +521,145 @@ programmazione: un nodo rimontato nel frattempo sarebbe altrimenti misurato
 attraverso un elemento staccato dal documento. Il batch e' indicizzato sull'oggetto
 `storeApi`, stabile per `ReactFlowProvider`, cosi' due flow a schermo non si
 mescolano.
+
+---
+
+## 13. Giro D1 — esito (2026-08-25)
+
+Criterio deciso da Alfonso: **capienza fisica = lunghezza del lato / spaziatura
+minima**. Meccanismo: (d) come criterio + (c) spill sul lato adiacente. Perimetro
+ridotto e approvato: lo spill vive in `computePortDistribution`, dove confluiscono
+tutte e quattro le elezioni di lato, e la guardia reattiva di `EditorV2.tsx:1221`
+lo porta al percorso di caricamento senza aprire `useJjomSync.ts` né
+`jjomTransformers.ts`.
+
+### 13.1 F3 chiuso
+
+Corsa `_tmp_pool_saturation.ts` sulla stessa fixture della Fase A: **6/6 verdi**,
+e **nessun warn del clamp emesso in tutta la corsa**.
+
+| stadio | prima (Fase A) | dopo |
+|---|---|---|
+| R0-2 / R0-3 / R0-4 | 17,6 / 13,2-13,3 / 10,6×3 | **identico, stesse `ys`** |
+| **F3-5** | 10,6×3 + **0** | right 4 a 10,6 + **1 spillato su top**; minima 10,6 |
+| **F3-6** | 10,6×3 + **0** + **0** | right 4 a 10,6 + **2 su top** a 46,6; minima 10,6 |
+| **MIX-6+3** (9 archi) | 12 coppie sotto soglia | right 4 (10,6), top 3 (35), bottom 2 (46,6); **minima 10,6** |
+
+Lo spill è simmetrico: la foglia più in alto esce da `top`, la più in bassa da
+`bottom` — ognuna verso dove già puntava. Nessun arco perso: `rf_edges` resta
+1500/1500 al benchmark, cioè la vittoria di `2ddedca53` è conservata.
+
+### 13.2 R0 doppio, come richiesto
+
+- **Non saturi invariati al pixel**: le `ys` di 2/3/4 archi sono le stesse byte per
+  byte. È vero *per costruzione*, non per fortuna: su un nodo neutro alto 53px
+  `sideCapacity` vale 4, cioè esattamente il vecchio cap. C'è un assert dedicato
+  (`R0 by construction: on the neutral node the capacity IS the old fixed cap`):
+  se quel numero cambia, il test cade prima del disegno.
+- **Assert di B1 ancora verdi**: `--mixed` **4/4**, scarto attacco↔ancora **0px su
+  ogni nodo, ogni lato, ogni stadio** in entrambe le corse. Lo spill non ha
+  riaperto D2.
+
+Una differenza da dichiarare: il caso `--mixed` a 6 archi non produce più «6 ancore
+distinte a 7,5px» ma 4 sul lato a 10,6px più 2 spillate. È il criterio che lo
+impone — 7,5px sta **sotto** la spaziatura minima di 10px, quindi quella
+configurazione era già fuori politica. Il criterio meccanico (nessuna coppia sotto
+6px, scarto 0px) resta soddisfatto, con margine maggiore di prima.
+
+### 13.3 Domanda 2 — ereditarietà: l'attacco non si muove
+
+Corsa `--tall` su un canvas M2 con `Alpha` alto **140x160**, sei referenze verso
+sei classi distinte e tre sottoclassi che ereditano da lui. Misurato a 4 referenze
+(nessuno spill) e a 6 (spill attivo):
+
+| attacco dell'ereditarietà | 4 referenze | 6 referenze |
+|---|---|---|
+| `Alpha:bottom` (fan-in, 3 archi su un porto) | 135,3 / 135,3 / 135,3 | **identico** |
+| `Sub2:top` | 960 | **identico** |
+| `Sub3:top` | 534 | **identico** |
+
+3/3 verdi. Lo spill delle referenze non sposta il punto su cui `useTreeLayout`
+atterra. Il meccanismo che lo garantisce è esplicito nel codice, non emergente:
+`isSpillable` esclude gli archi di ereditarietà, e STEP 1 li collassa comunque in
+un solo porto per `(nodo, lato, ruolo)`, quindi non possono nemmeno saturare un
+lato da soli.
+
+**Quello che questa corsa NON misura, e non riporto come misurato.** Il verdetto F3
+sulla scena M2 non è attendibile: il canvas annida le classi dentro il nodo del
+pacchetto e l'attribuzione degli attacchi per prossimità assegna ad `Alpha` più
+punti di quanti archi la tocchino (15 contro 9). Il confronto prima/dopo
+dell'ereditarietà regge lo stesso — è la stessa grandezza misurata due volte nella
+stessa scena, quindi un errore costante si cancella — ma il conteggio delle coppie
+no. La troncatura sui nodi alti è misurata dove è deterministica, nel test unitario.
+
+Nota sul criterio: le tre coppie a 0px che `--tall` segnala sono i tre archi di
+ereditarietà che **condividono un porto per convenzione UML**. È il comportamento
+voluto, non un difetto: F3 andrebbe raffinato per escludere il fan-in di
+ereditarietà dal confronto a coppie. Non l'ho fatto in questo giro.
+
+### 13.4 Il pool tronca il beneficio sui nodi alti — misura
+
+Su un lato verticale di 100px `sideCapacity` vale **9**, ma ogni bucket di ruolo
+deve restare entro i **4** `<Handle>` pre-allocati da `DynamicHandles`. Lo spill
+quindi allevia il lato **fino al pool, non fino alla geometria**: con 9 referenze
+uscenti su un nodo alto, al massimo 4 restano sul lato e le altre 5 spillano, pur
+essendocene spazio per 9. Assert dedicato nel test unitario
+(`the pool truncates the benefit on tall nodes`), che verifica anche che nessun
+arco collassi comunque.
+
+A quante incidenze scatta: **alla quinta per ruolo su un lato qualsiasi**, cioè
+sempre alla stessa soglia di prima, indipendentemente dall'altezza. Dimensionare il
+pool a `max(capienza)` è la via per rimuoverla, e non è banale: `DynamicHandles`
+garantisce oggi chiavi stabili e nessun mount/unmount degli handle, ed è quella
+stabilità a tenere buona la misura di React Flow. Rinviata, con la ragione.
+
+### 13.5 Costo
+
+Harness a scala 500/1000, tre run, mediane.
+
+| variante | `t_edges_settle_ms` | `commits_open` | `edit_flow.ms` | `commits_edit` | `rf_edges` |
+|---|---|---|---|---|---|
+| prima di B1 | 39 492 | 2 010 | 6 406 | 22 | 1500 |
+| B1 | 41 386 | 1 607 | 7 406 | 22 | 1500 |
+| **D1** | 43 475 | **1 611** | 7 257 | **22** | **1500** |
+
+Lo spill non costa: i conteggi di commit sono quelli di B1 e i tempi restano dentro
+la dispersione (che su questa metrica copre 14–45 s). Nessun arco perso.
+
+### 13.6 Smoke visivo
+
+`_tmp_pool_F3.png`: il ventaglio non è più impacchettato su un punto; i due archi
+spillati escono dalla cima di `a1` e risalgono prima di piegare a est. **Il costo
+percorso-contro-sovrapposizione è visibile**, come dichiarato nel LIR: un arco
+diretto a est che parte da `top` fa un giro. In questa fixture nessun tracciato
+attraversa il corpo di un terzo nodo, quindi F1b non riemerge — ma la fixture non è
+costruita per provocarlo, e non lo dichiaro escluso in generale.
+
+### 13.7 Le tre nozioni di «pieno», dopo
+
+Unificate come deciso. `sideCapacity` è la sola politica; `useAutoAnchor:589` ora la
+usa al posto della costante; `MAX_HANDLES_PER_SIDE` resta con il significato che ha
+davvero — quanti `<Handle>` il pool pre-alloca — e come tetto duro del fallback.
+
+Conseguenza da registrare: la soglia oltre cui `useAutoAnchor` ammette la U sullo
+stesso lato **cambia con l'altezza del nodo**. Su rettangoli 180x80 passa da 4 a 7.
+È il comportamento voluto (un nodo più alto regge più archi prima che la U diventi
+una via d'uscita legittima), ed è la ragione per cui il test
+`(b) frontal side over capacity` è stato riscritto sui numeri nuovi: codificava la
+vecchia politica, non un invariante.
+
+### 13.8 Due difetti trovati dai test, prima del disegno
+
+1. **Non idempotenza per pareggio nell'ordinamento.** Gruppi con lo stesso
+   centroide conservavano l'ordine di *inserzione*, diverso fra la prima passata
+   (ordine degli archi) e la seconda (ordine in cui lo spill li ha accodati):
+   `distribute(distribute(x)) !== distribute(x)`, e la guardia reattiva non sarebbe
+   mai andata a riposo. Chiuso con il tiebreak canonico per id d'arco, che tocca
+   **solo** i pareggi.
+2. **Spill anche senza dimensioni.** `sideCapacity` ricade su `MAX_HANDLES_PER_SIDE`
+   quando la taglia manca, e questo faceva scattare lo spill anche per i chiamanti
+   che non passano le taglie — contro quanto dichiarato nel LIR. Chiuso saltando del
+   tutto i nodi di taglia ignota.
+
+Entrambi trovati dal test unitario, non dal disegno: è la ragione per cui la
+condizione di idempotenza è stata scritta come assert e non come commento.

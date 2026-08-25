@@ -102,8 +102,9 @@ describe('computeBestAnchorsWithContext — same-side U gate on frontal saturati
 
     it('(a) 4 references out of one node onto right, none saturated → no same-side U', () => {
         // Family with 4 references, all currently on right-0, all targets to the right.
-        // Frontal (right) occupancy = 4 = MAX_HANDLES_PER_SIDE → NOT over capacity, so the
-        // U candidate must not be admitted: no edge may end up same-side.
+        // Frontal (right) occupancy = 4, under the 80px side's physical capacity of 7
+        // (sideCapacity: floor(80/10) - 1) → NOT over capacity, so the U candidate must
+        // not be admitted: no edge may end up same-side.
         const rects = new Map<string, NodeRect>([
             ['Family', rect(0, 200)],
             ['M0', rect(600, 0)],
@@ -147,17 +148,22 @@ describe('computeBestAnchorsWithContext — same-side U gate on frontal saturati
         return { rects, edges };
     }
 
-    it('(b) frontal side over capacity (>MAX) → same-side U is admitted and chosen', () => {
-        // 5 refs already on H-right + the HT edge itself = 6 > 4: right is over capacity.
+    it('(b) frontal side over capacity → same-side U is admitted and chosen', () => {
+        // 7 refs already on H-right + the HT edge itself = 8 > 7: right is over its
+        // PHYSICAL capacity. The gate migrated from the fixed pool constant to
+        // sideCapacity, so on these 180x80 rects the threshold is 7 anchors
+        // (floor(80/10) - 1), not 4 — a taller node legitimately holds more before
+        // the U becomes a legitimate escape.
         // With top/bottom also full, the least-penalised option is the same-side U.
-        const { rects, edges } = denseHub(5);
+        const { rects, edges } = denseHub(7);
         const res = computeAnchorsWithHysteresis(edges, rects, edges);
         expect(isU(res.get('HT')!)).toBe(true);
     });
 
     it('(b-boundary) same hub with frontal exactly at capacity → U withheld', () => {
-        // 3 refs on H-right + HT = 4 = MAX: not over capacity, U stays out of the running.
-        const { rects, edges } = denseHub(3);
+        // 6 refs on H-right + HT = 7 = the physical capacity of the side: exactly full
+        // still fits (strict >), so the U stays out of the running.
+        const { rects, edges } = denseHub(6);
         const res = computeAnchorsWithHysteresis(edges, rects, edges);
         expect(isU(res.get('HT')!)).toBe(false);
     });

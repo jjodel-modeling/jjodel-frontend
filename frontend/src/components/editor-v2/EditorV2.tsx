@@ -1104,14 +1104,20 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
 
 
     // Helper: build node positions map for spatial port ordering
+    // The measured size travels with the centre: portDistribution needs the side
+    // LENGTH to know how many anchors physically fit on it (sideCapacity), and
+    // without it falls back to the fixed pool capacity. Both values were already
+    // read here to compute the centre — they were just being discarded.
     const buildNodePositions = useCallback((nodeList: Node[]) => {
-        const map = new Map<string, { centerX: number; centerY: number }>();
+        const map = new Map<string, { centerX: number; centerY: number; width: number; height: number }>();
         for (const n of nodeList) {
             const w = ((n.measured?.width ?? (n as any).width ?? 180) as number);
             const h = ((n.measured?.height ?? (n as any).height ?? 80) as number);
             map.set(n.id, {
                 centerX: n.position.x + w / 2,
                 centerY: n.position.y + h / 2,
+                width: w,
+                height: h,
             });
         }
         return map;
@@ -1125,7 +1131,19 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         const nodeIds = currentNodes.map(n => n.id);
         const positions = buildNodePositions(currentNodes);
 
-        const { edgeHandles } = computePortDistribution(edgeList, nodeIds, positions);
+        // Pinned endpoints are declared to the distribution so the capacity spill
+        // leaves them where the user put them. A pin is explicit — written only by
+        // a manual EndpointHandles gesture — so an absent flag means "auto".
+        const distributable = edgeList.map(e => {
+            const d = e.data as { sourceAnchor?: AnchorConfig; targetAnchor?: AnchorConfig } | undefined;
+            return {
+                ...e,
+                sourcePinned: d?.sourceAnchor?.mode === 'pinned',
+                targetPinned: d?.targetAnchor?.mode === 'pinned',
+            };
+        });
+
+        const { edgeHandles } = computePortDistribution(distributable, nodeIds, positions);
 
         const handleIdx = (h?: string | null): number => {
             const m = h?.match(/-(\d+)$/);
