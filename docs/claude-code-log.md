@@ -1,5 +1,18 @@
 # Claude Code Session Log
 
+## 2026-08-26 — fix(editor-v2): la banda di selezione segue la forma e si stringe a 3px
+**Prompt**: istruzione in chat, tre punti. La banda esterna deve stare attaccata al bordo interno, avere la stessa forma del contorno interno, e ridursi a 3px. Prima era uno spread di 9px sul wrapper, quindi rettangolare e staccata anche sotto un'ellisse.
+**Files touched**: `frontend/src/components/editor-v2/EditorV2.scss`, `frontend/src/components/editor-v2/viewpoint/ir/irStyle.ts`, `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: 2026-08-26 00:20
+**Causa**: (f)
+**Regressions**: no. Gate: `npm run typecheck` 33 = baseline; `npm run build` exit 0 col solo chunk-warning; `npm run smoke` 12 passed / 0 failed / 3 skipped. `check:docs` rossa come al baseline, nessun errore su questa entry.
+**Out-of-scope changes**: no (i due file della regola piu' il log)
+**Layer Impact Report**: not-required (nessun file di §3.1; sole regole CSS)
+**Smoke visivo**: la verifica finale spetta ad Alfonso a schermo. La chat ha misurato e fotografato con la sonda Playwright su Chromium headless contro `http://localhost:3000/`: `_tmp_selection_ir_ellipse.png` mostra anello e banda che seguono l'ellisse, senza piu' l'alone rettangolare sul bounding box.
+**Notes**: Misure (light, sonda `_tmp_selection_stroke.ts`, 19/19). Classe: banda su `.mm-node`, raggio 4px. Ellisse: banda su `.ir-node-content`, raggio 50%, quindi ellittica; wrapper `box-shadow: none`. Le due ombre di riposo sono ripetute nella regola selezionata, o la banda le cancellerebbe. Limite misurato sul rombo: `.ir-node-content` ha raggio 4px perche' la silhouette e' un layer SVG, quindi banda E anello restano rettangoli sul bounding box. Valeva gia' per l'anello prima di questo giro.
+**Prompt document name**: 2026-08-26 (istruzione in chat)
+
 ## 2026-08-26 — discovery: gli handle cardinali si posizionano ma non ridimensionano
 **Prompt**: parte 2 del prompt delle 00:20 — sulle forme non rettangolari i quattro handle del resizer vanno ai punti cardinali invece che agli spigoli. Fase 1 read-only sul predicato di «contorno non rettangolare», poi implementazione in `ObjectNode.tsx` con `NodeResizeControl`.
 **Files touched**: `docs/claude-code-log.md` (questa entry). Nessun sorgente: il diff di `ObjectNode.tsx` e' stato scritto, misurato e riportato a HEAD.

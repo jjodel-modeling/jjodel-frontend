@@ -62,12 +62,12 @@ const BASE_CSS = `
    .selected/.drop-target neutralizers outrank EditorV2.scss (0,2,0) by
    specificity. Box values replicate the .mm-node base with the same tokens. */
 .mm-node:has(> .ir-node-content) { background: transparent; border-color: transparent; box-shadow: none; }
-/* Il wrapper porta solo la banda, mai l'anello: l'anello sta sulla forma
-   (.ir-node-content, sotto), e senza outline:none la regola condivisa ne
-   disegnerebbe un secondo, rettangolare, attorno al primo. La banda invece
-   segue il wrapper e resta rettangolare anche sotto una forma geometrica.
+/* Il wrapper non porta nulla della selezione: anello e banda stanno sulla forma
+   (.ir-node-content, sotto), che e' l'elemento col raggio giusto. Senza
+   outline:none la regola condivisa disegnerebbe un secondo anello rettangolare
+   attorno al primo, e senza box-shadow:none una seconda banda rettangolare.
    Niente backtick in questo blocco: BASE_CSS e' un template literal. */
-.mm-node.selected:has(> .ir-node-content) { border-color: transparent; outline: none; box-shadow: 0 0 0 9px var(--node-selection-halo); }
+.mm-node.selected:has(> .ir-node-content) { border-color: transparent; outline: none; box-shadow: none; }
 .mm-node.drop-target:has(> .ir-node-content) { border-color: transparent; box-shadow: none; }
 .ir-node-content { box-sizing: border-box; background: var(--node-bg); border: 1px solid var(--border-default); border-radius: 4px; box-shadow: 0 1px 3px var(--node-shadow), 0 4px 12px var(--node-shadow-deep, rgba(0, 0, 0, 0.08)); overflow: hidden; }
 /* Fase 2 (2026-07-28): reconcile the visible box with the .mm-node layout box. In
@@ -139,7 +139,9 @@ const BASE_CSS = `
    ir-resizable class (now inert) - left in place, separate cleanup. */
 .mm-node.ir-sized { min-width: 0; min-height: 0; width: 100%; height: 100%; }
 .mm-node.ir-sized .ir-node-content { min-width: 0; min-height: 0; }
-.mm-node.selected > .ir-node-content { outline: 2px solid var(--node-selection-stroke); outline-offset: 3px; }
+/* Banda e anello sulla forma. Le ombre di riposo vanno ripetute qui: box-shadow
+   e' una proprieta' sola, e dichiarare la banda da sola le cancellerebbe. */
+.mm-node.selected > .ir-node-content { outline: 2px solid var(--node-selection-stroke); outline-offset: 3px; box-shadow: 0 0 0 3px var(--node-selection-halo), 0 1px 3px var(--node-shadow), 0 4px 12px var(--node-shadow-deep, rgba(0, 0, 0, 0.08)); }
 .mm-node.drop-target > .ir-node-content { outline: 2px solid var(--color-accent); }
 .ir-hull { border: 1.5px dashed rgba(51,65,85,0.45); border-radius: 12px; background: rgba(51,65,85,0.03); }
 .ir-hull__header { display: flex; align-items: center; justify-content: space-between; padding: 0 8px; font-size: 11px; font-weight: 600; color: #334155; }

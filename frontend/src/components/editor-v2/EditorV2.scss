@@ -1247,15 +1247,14 @@
     box-shadow: 0 1px 3px var(--node-shadow), 0 4px 12px var(--node-shadow-deep, rgba(0, 0, 0, 0.08));
     cursor: default;
 
-    // Anello a 3..5px dal bordo (offset 3 piu' 2 di tratto) e banda trasparente
-    // fino a 9px. La banda e' uno spread pieno senza blur, quindi riempie da 0 a
-    // 9px: tinge anche il gap fra bordo e anello, ed e' la resa voluta (gap
-    // velato, anello, banda). Separare i due tratti richiederebbe un secondo
-    // elemento; non si fa qui.
+    // Banda trasparente di 3px attaccata al bordo, poi l'anello a 3..5px (offset
+    // 3 piu' 2 di tratto): i due si toccano. Banda e anello stanno entrambi
+    // sull'elemento che porta la FORMA, cosi' seguono il suo raggio invece del
+    // rettangolo del wrapper (box-shadow e outline rispettano border-radius).
     &.selected {
         outline: 2px solid var(--node-selection-stroke);
         outline-offset: 3px;
-        box-shadow: 0 0 0 9px var(--node-selection-halo), 0 4px 16px var(--node-shadow-deep, rgba(0, 0, 0, 0.12));
+        box-shadow: 0 0 0 3px var(--node-selection-halo), 0 4px 16px var(--node-shadow-deep, rgba(0, 0, 0, 0.12));
     }
 
     &.drop-target {
