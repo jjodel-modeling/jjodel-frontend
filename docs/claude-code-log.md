@@ -1,5 +1,18 @@
 # Claude Code Session Log
 
+## 2026-08-25 — measure(editor-v2): undo dei due ingressi «views editor» del canvas
+**Prompt**: misurare l'undo dei due ingressi all'editor viste sul canvas e chiudere secondo l'albero di decisioni gia' dato. Caso A (sola apertura): se conforme nessuna riga, se il delta viene scartato registrare la misura senza toccare il reducer. Caso B (creazione + apertura): se i due dispatch si fondono con delta completo, riga di conformita'; altrimenti un solo dispatch per il gesto, `_lastSelected` nella stessa `TRANSACTION` della creazione dentro il handler di `EditorV2`. Registrare come R-UNDO-7.
+**Files touched**: `docs/decisions.md`, `docs/prompts/claude_2026-08-25_1216_prompt_undo_ingressi_views_editor.md`, `docs/claude-code-log.md` (nessun file sorgente: entrambi i rami che avrebbero richiesto codice sono esclusi dalla misura)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — nessuna modifica al sorgente. Gate rieseguiti comunque: tsc 33 = baseline, build exit 0 col solo chunk-warning, vitest 1349 passed con le stesse 9 suite rosse pre-esistenti.
+**Out-of-scope changes**: no — solo documenti; la sonda `_tmp_` e' gitignored. `StatusBar.*` e `featureSignature.ts`, gia' modificati nel working tree, non toccati (commit per pathspec).
+**Layer Impact Report**: not-required — nessun file di §3.1 modificato; il reducer e' stato solo letto e misurato, mai toccato (core, Rule 5).
+**Smoke visivo**: passato — sonda `scripts/smoke/_tmp_undo_view_entry.ts`, 9/10, fixture sintetica costruita in pagina, gesti reali sul menu' contestuale. L'unico rosso e' il caso A, che *e'* la misura: la scrittura di sola selezione viene scartata.
+**Notes**: Caso B conforme: i due dispatch si fondono, il delta porta `viewelements`, i due id nuovi e `_lastSelected`, un solo ⌘Z rimuove la view e riporta la selezione. Caso A: scarto con `userHasInteracted = true` e stack non vuoto; controllo positivo nella stessa corsa (la stessa scrittura sopravvive se accompagnata da una chiave non transitoria) attribuisce lo scarto all'arieta' del delta, `isOnlyTransientTopLevelChange`. Ne discende la rettifica di R-UNDO-4 registrata in R-UNDO-7.
+**Prompt document name**: 2026-08-25 12:16
+
 ## 2026-08-25 — feat(editor-v2): canvas Fase 2 — nodo neutro, label d'arco, minimap, viewport
 **Prompt**: Fase 1 di discovery sui cinque punti canvas deferiti, poi Fase 2 sulla partizione approvata. Entrano 5 (nodo neutro per metaclasse non resa), 2a (`irLabelPlacement` letto), 2b (alone sul solo `.edge-label__text`), 4 (toggle minimap + token), 3 (viewport persistito per `(modello, viewpoint)`). Punto 1 (routing/floating edges) e 2c (de-overlap label) rinviati da Alfonso.
 **Files touched**: `frontend/src/components/editor-v2/nodes/ObjectNode.tsx`, `frontend/src/components/editor-v2/viewpoint/ir/irResolve.ts`, `frontend/src/components/editor-v2/edges/UnifiedEdge.tsx`, `frontend/src/components/editor-v2/EditorV2.tsx`, `frontend/src/components/editor-v2/EditorV2.scss`, `frontend/src/events/registry.ts`, `frontend/src/pages/components/Navbar.tsx`, `docs/prompts/claude_2026-08-25_1130_prompt_canvas_fase2.md`, `docs/claude-code-log.md`
