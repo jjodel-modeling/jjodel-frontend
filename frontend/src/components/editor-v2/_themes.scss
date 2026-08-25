@@ -141,9 +141,11 @@ $editor-v2-theme-dark: (
   'resize-handle-border': #1e293b,
 
   // Node selection — anello e banda esterna, tarati a schermo (2026-08-26).
-  // `halo` e' rimasto il nome del secondo token quando l'alone sfumato e'
-  // diventato una banda piatta: si tinge con spread, non con blur.
-  'node-selection-stroke': #7dd3fc,
+  // Lo stroke e' translucido, non pieno: l'anello sta FUORI dal contorno chiuso
+  // del nodo, e lasciandolo pieno squillava sopra la figura. `halo` e' rimasto
+  // il nome del secondo token quando l'alone sfumato e' diventato una banda
+  // piatta: si tinge con spread, non con blur.
+  'node-selection-stroke': rgba(125, 211, 252, 0.5),
   'node-selection-halo': rgba(125, 211, 252, 0.25),
 
   // Surface hierarchy
@@ -293,9 +295,11 @@ $editor-v2-theme-light: (
   'resize-handle-border': #ffffff,
 
   // Node selection — anello e banda esterna, tarati a schermo (2026-08-26).
-  // `halo` e' rimasto il nome del secondo token quando l'alone sfumato e'
-  // diventato una banda piatta: si tinge con spread, non con blur.
-  'node-selection-stroke': #38bdf8,
+  // Lo stroke e' translucido, non pieno: l'anello sta FUORI dal contorno chiuso
+  // del nodo, e lasciandolo pieno squillava sopra la figura. `halo` e' rimasto
+  // il nome del secondo token quando l'alone sfumato e' diventato una banda
+  // piatta: si tinge con spread, non con blur.
+  'node-selection-stroke': rgba(56, 189, 248, 0.55),
   'node-selection-halo': rgba(56, 189, 248, 0.22),
 
   // Surface hierarchy

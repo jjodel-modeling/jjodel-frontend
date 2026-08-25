@@ -1099,6 +1099,25 @@
     opacity: 0 !important;
 }
 
+// Forme non rettangolari: i quattro handle stanno sugli spigoli del bounding
+// box, che sotto un'ellisse o uno stadio non si vede, e leggono come quattro
+// punti sciolti attorno alla figura. Le linee del resizer coprono gia' quel
+// box: rese tratteggiate e tenui lo disegnano senza un solo elemento nuovo.
+// Escluse rect e rounded, dove il box coincide col contorno e il tratteggio
+// finirebbe addosso all'anello.
+// Specificita' (0,6,0) piu' !important: la regola sopra azzera opacity e bordo
+// con !important a (0,2,0), e senza entrambi non si vedrebbe nulla.
+.mm-node:has(> .ir-node-content:not(.ir-shape--rect):not(.ir-shape--rounded)) {
+    > .react-flow__resize-control.line {
+        opacity: 1 !important;
+
+        &.top { border-top: 1px dashed var(--node-selection-stroke) !important; }
+        &.bottom { border-bottom: 1px dashed var(--node-selection-stroke) !important; }
+        &.left { border-left: 1px dashed var(--node-selection-stroke) !important; }
+        &.right { border-right: 1px dashed var(--node-selection-stroke) !important; }
+    }
+}
+
 // ============================================
 // ANCHOR HANDLES — Dynamic context-aware system
 // ============================================

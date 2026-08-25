@@ -1,5 +1,18 @@
 # Claude Code Session Log
 
+## 2026-08-26 — fix(editor-v2): tratto di selezione translucido e box tratteggiato sulle forme
+**Prompt**: istruzione in chat con screenshot di uno stadio selezionato. Ciano meno brillante e anello translucido, visto che sta fuori dal contorno chiuso del nodo. Piu' una valutazione richiesta: se unire i quattro handle con linee tratteggiate.
+**Files touched**: `frontend/src/components/editor-v2/_themes.scss`, `frontend/src/components/editor-v2/EditorV2.scss`, `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: 2026-08-26 (istruzione in chat)
+**Causa**: (f)
+**Regressions**: no. Gate: `npm run typecheck` 33 = baseline; `npm run build` exit 0 col solo chunk-warning; `npm run smoke` 12 passed / 0 failed / 3 skipped. `check:docs` rossa come al baseline, nessun errore su questa entry.
+**Out-of-scope changes**: no (i due file della resa piu' il log)
+**Layer Impact Report**: not-required (nessun file di §3.1; sole regole CSS e due valori di token)
+**Smoke visivo**: la verifica finale spetta ad Alfonso a schermo. La chat ha misurato e fotografato con la sonda Playwright su Chromium headless contro `http://localhost:3000/`: `_tmp_selection_ir_ellipse.png` mostra anello tenue sull'ellisse e rettangolo tratteggiato che unisce i quattro handle.
+**Notes**: Misure (light, sonda `_tmp_selection_stroke.ts`, 23/23). Tratto `2px solid rgba(56,189,248,.55)` su classe ed ellisse; banda invariata a `.22`. Linee del resizer: ellisse e rombo `opacity 1`, `border-style dashed`, colore dello stroke; rect `opacity 0`. Il tratteggio riusa le linee gia' montate dal NodeResizer, nessun elemento nuovo, e sta a (0,6,0) con !important perche' la regola che le azzera ha gia' !important a (0,2,0). Su rect e rounded resta escluso: il box coincide col contorno.
+**Prompt document name**: 2026-08-26 (istruzione in chat, screenshot stadio)
+
 ## 2026-08-26 — fix(editor-v2): la banda di selezione segue la forma e si stringe a 3px
 **Prompt**: istruzione in chat, tre punti. La banda esterna deve stare attaccata al bordo interno, avere la stessa forma del contorno interno, e ridursi a 3px. Prima era uno spread di 9px sul wrapper, quindi rettangolare e staccata anche sotto un'ellisse.
 **Files touched**: `frontend/src/components/editor-v2/EditorV2.scss`, `frontend/src/components/editor-v2/viewpoint/ir/irStyle.ts`, `docs/claude-code-log.md`
@@ -12,6 +25,19 @@
 **Smoke visivo**: la verifica finale spetta ad Alfonso a schermo. La chat ha misurato e fotografato con la sonda Playwright su Chromium headless contro `http://localhost:3000/`: `_tmp_selection_ir_ellipse.png` mostra anello e banda che seguono l'ellisse, senza piu' l'alone rettangolare sul bounding box.
 **Notes**: Misure (light, sonda `_tmp_selection_stroke.ts`, 19/19). Classe: banda su `.mm-node`, raggio 4px. Ellisse: banda su `.ir-node-content`, raggio 50%, quindi ellittica; wrapper `box-shadow: none`. Le due ombre di riposo sono ripetute nella regola selezionata, o la banda le cancellerebbe. Limite misurato sul rombo: `.ir-node-content` ha raggio 4px perche' la silhouette e' un layer SVG, quindi banda E anello restano rettangoli sul bounding box. Valeva gia' per l'anello prima di questo giro.
 **Prompt document name**: 2026-08-26 (istruzione in chat)
+
+## 2026-08-26 — discovery: gli handle cardinali collidono con gli handle di connessione
+**Prompt**: ripresa della sola Parte 2 del prompt delle 00:20 (la Parte 1 era gia' in `e8d554b9a`), a valle della entry ⚠️ di `7d17367cb`.
+**Files touched**: `docs/discovery/discovery_2026-08-26_handle_cardinali_collisione_connessione.md` (nuovo), `docs/decisions.md` (serie R-HND, quattro righe), `docs/claude-code-log.md` (questa entry). Nessun sorgente.
+**Outcome**: ✅ completed come discovery — hard stop deliberato, nessun codice per scelta di Alfonso.
+**Corregge**: 2026-08-26 00:20 (la entry di discovery di `7d17367cb`, la cui diagnosi e' rettificata)
+**Causa**: (c)
+**Regressions**: no. Nessun sorgente toccato: l'istrumentazione `[diagRS]` su `ObjectNode.tsx` e' stata rimossa e verificata a `git diff` nullo prima di scrivere il report. Gate non eseguiti perche' il diff e' di soli documenti.
+**Out-of-scope changes**: no. Modifiche di altre sessioni nel working tree (`StatusBar.*`, `featureSignature.ts`, piu' il ritocco non committato di `EditorV2.scss`/`irStyle.ts`) non toccate, commit per pathspec.
+**Layer Impact Report**: not-required (nessun file di §3.1; nessuna scrittura D/L)
+**Smoke visivo**: non applicabile — il difetto e' di hit-testing e si misura sul bersaglio del `mousedown`, non a schermo. Anzi: il report registra che `elementsFromPoint` e uno screenshot danno entrambi la risposta sbagliata su questa domanda, perche' letti prima dell'hover.
+**Notes**: Rettifica: non e' «si posiziona e non ridimensiona», e' il gesto che non comincia. I quattro punti cardinali del bounding box portano gia' 32 `.react-flow__handle` 8x8 impilati a otto per lato sulle mezzerie (ellisse 54x66: est a (54,33)); l'hover li arma e il `mousedown` va a loro, `onResizeStart` 4/4 sugli angoli e 1/8 sui lati. Prova decisiva: sonda in cattura su `window` piu' bubble su `document` (nessuno ferma la propagazione sul lato, quindi `d3-drag` non entra). Numeri, tabella del predicato mancante e le tre vie nel report citato.
+**Prompt document name**: 2026-08-26 00:20
 
 ## 2026-08-26 — discovery: gli handle cardinali si posizionano ma non ridimensionano
 **Prompt**: parte 2 del prompt delle 00:20 — sulle forme non rettangolari i quattro handle del resizer vanno ai punti cardinali invece che agli spigoli. Fase 1 read-only sul predicato di «contorno non rettangolare», poi implementazione in `ObjectNode.tsx` con `NodeResizeControl`.
