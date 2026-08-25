@@ -142,9 +142,14 @@ const BASE_CSS = `
 .ir-hull__toggle:hover { color: #0ea5e9; }
 .ir-collapse-chip { display: inline-flex; align-items: center; gap: 4px; border: none; background: rgba(51,65,85,0.08); border-radius: 8px; cursor: pointer; font-size: 10px; color: #334155; padding: 2px 6px; margin-left: 6px; line-height: 1.4; }
 .ir-collapse-chip:hover { background: rgba(14,165,233,0.12); }
-/* The inline editor keeps the box of the text it replaces: the same padding tokens
+/* Shared chrome of the two inline editors; only the padding differs, below. */
+.ir-node-content .ir-label__input, .ir-node-content .ir-row__input { font-size: inherit; border: 1px solid #334155; border-radius: 3px; min-width: 40px; width: 90%; outline: none; }
+/* The label editor keeps the box of the text it replaces: the same padding tokens
    as the label, minus the 1px the input's own border adds on each side. */
-.ir-node-content .ir-label__input, .ir-node-content .ir-row__input { font-size: inherit; border: 1px solid #334155; border-radius: 3px; padding: calc(var(--ir-pad-y) - 1px) calc(var(--ir-pad-x) - 1px); min-width: 40px; width: 90%; outline: none; }
+.ir-node-content .ir-label__input { padding: calc(var(--ir-pad-y) - 1px) calc(var(--ir-pad-x) - 1px); }
+/* The compartment row is a flex line at line-height 1.4, and a padded editor would
+   become its tallest item: this one stays flat so the row does not grow on edit. */
+.ir-node-content .ir-row__input { padding: 0 4px; }
 .ir-node-content .ir-row__value--editable { cursor: text; }
 .ir-node-content .ir-row__value--editable:hover { background: rgba(14,165,233,0.08); border-radius: 3px; }
 `;
