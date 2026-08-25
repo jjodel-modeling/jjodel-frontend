@@ -511,3 +511,52 @@ raggiungibile** e questo report non lo cambia.
 
 La prossima mossa non è un diff: è il §6.2, che costa due incollature in console e sceglie fra (d)
 e (b). Senza quella lettura ogni opzione del §7 è una scommessa. Nessuna Parte C senza GO.
+
+---
+
+## 8. Addendum 2026-08-24, 23:55: misura a runtime (chat, via Chrome sul progetto «test layout»)
+
+Eseguita dalla chat con il browser di Alfonso, build `e3ff525a9`, progetto «test layout»
+(viewpoint `A` attivo, oggetto `PPP` di classe `A`; la classe non ha attributi, quindi **nessuno
+slot `$name` esiste**: `features: []`, zero `DValue` nello stato). Flag alzato a mano con
+`windoww.U.userHasInteracted = true`.
+
+**Esito sull'undo del D-layer: funziona, e non corrompe niente.** Rinomina `RRR → SSS` dall'editor
+inline del nodo: un solo delta (`{name: 'RRR', clonedCounter: 4}` sotto `idlookup[id]`), stack
+`undo 3`. ⌘Z da tastiera (percorso `Navbar`): `name` torna `RRR`, riferimento nuovo
+(`after.ref !== before.ref`), nessuna chiave `__jj*` né sull'oggetto né su `idlookup`,
+`idlookup` non è un array, stack `undo 2 / redo 1`, il tree mostra `RRR`. Rinomina successiva
+`RRR → TTT`: D-layer e tree aggiornati. Nessun `asserteq`, nessun warning di `canvasToJjom`.
+Le ipotesi (a), (b), (d) di §3 sono **tutte scartate a runtime** per questo caso; (d) non era
+nemmeno applicabile, mancando lo slot.
+
+**La causa del sintomo a schermo è un'altra, e non riguarda l'undo.** Il canvas mostrava
+`PPP : A` mentre D-layer, tree e pannello dicevano `QQQ`, poi `RRR`, poi `TTT`; è rimasto
+`PPP : A` anche dopo **due reload**, con la stringa `PPP` assente da tutto lo store
+(ricerca su ogni chiave di `idlookup` e sulle chiavi radice: zero hit). L'etichetta è
+`.ir-label--top` di `IRNodeContent.tsx:312`, che chiama `l.text(readCtx, objectId)` con il
+`readCtx` restituito dal `useMemo` di `useIRView` (`irResolve.ts:101-120`), costruito con
+`makeReadCtx(lookup)` sull'`idlookup` catturato **al momento del resolve**. Il memo si
+ricalcola solo quando cambia `signature` (`:49-71`), che contiene `irSig`, `objectId`,
+`instanceof`, i valori degli slot e le cross-deps, ma **non `DObject.name`**: la rinomina di un
+oggetto senza slot `name` non invalida la view IR, e `getName` (`irReadCtx.ts:166-173`) legge
+`d.name` da un `idlookup` stantio. Dopo il reload lo stato iniziale (progetto salvato, `PPP`)
+viene risolto prima che lo snapshot più recente (`TTT`) arrivi, e la firma non cambia: da qui
+`PPP` a schermo con `TTT` nello store. È la finestra localStorage/snapshot già descritta nel LIR
+della 1c, vista da un'altra angolazione. Difetto **preesistente e indipendente dall'undo**:
+la prova 2 del 2026-08-24 lo ha attribuito all'undo perché era il primo gesto che rendeva
+visibile la divergenza.
+
+**Conseguenze.** Il kill-switch di `5a75b2e09` può rientrare: la Parte A era una precauzione
+contro una corruzione che a runtime non esiste. Restano da chiudere, in un fronte IR e non
+undo: (1) `name` (e `initialName`) nella `signature` di `useIRView`, oppure il `readCtx`
+ricostruito sullo stato corrente a ogni render; (2) la ricostruzione dopo l'arrivo dello
+snapshot al load. Le opzioni (i), (ii), (ii-bis) del §7 decadono per questo difetto; la
+fusione superficiale di `objectMergeInPlace` (§2.3) resta un fatto misurato sul codice, con
+effetti da verificare su una sequenza che fonda davvero due delta con `idlookup` diversi
+(non riprodotta qui: i delta della rinomina non si sono mai fusi).
+
+**Due osservazioni a margine.** `idlookup` contiene una chiave `clonedCounter` (compare nei delta
+e in `'clonedCounter' in idlookup`): da capire se è voluta. E al load compaiono tre warning
+`[useContentDrivenSize] size write not adopted by the store, yielding` (uno per ellisse), con i
+nodi a `54x66`: la derivazione da contenuto cede al boot; da verificare se preesiste alla 1c.
