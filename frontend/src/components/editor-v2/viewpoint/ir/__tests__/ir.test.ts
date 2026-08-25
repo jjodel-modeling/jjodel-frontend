@@ -9,7 +9,7 @@
  * All fixtures are plain D-layer shapes (idlookup records); no store, no React.
  */
 import { describe, it, expect } from 'vitest';
-import { compileView, compileEdgeView, compileRowView, clearCompileCache } from '../irCompile';
+import { compileView, compileEdgeView, compileRowView, clearCompileCache, irHash } from '../irCompile';
 import { getIREdgeAnchorOverride, hydrateIREdgeAnchorOverrides, irEdgeLayoutFromOverride, setIREdgeAnchorOverride } from '../irEdgeInteraction';
 import { getCollapsedSet, hydrateCollapsed } from '../irCollapseState';
 import { makeDrawReadCtx, classAncestryNames, navigateRefHop } from '../irReadCtx';
@@ -1358,5 +1358,87 @@ describe('compile di shape.text (radice della cascata tipografica, 2026-08-25)',
         }));
         expect(cv.text!.fontSize!(ctx, 's1')).toBe(16);
         expect(cv.labels[0].style!.fontSize!(ctx, 's1')).toBe(20);
+    });
+});
+
+describe('compile di TS2, stile tipografico delle righe (2026-08-25)', () => {
+    it('rowFormat.style assente => rowStyle undefined', () => {
+        clearCompileCache();
+        const cv = compileView('v_rowstyle_absent', vertexIR({
+            fieldCompartments: [{ id: 'attrs', source: { from: 'attributes' }, rowFormat: { segments: [{ kind: 'name' }] } }],
+        }));
+        expect(cv.fieldCompartments[0].rowStyle).toBeUndefined();
+    });
+
+    it('rowFormat.style scalare => assi risolti sul compartimento', () => {
+        clearCompileCache();
+        const { ctx } = world();
+        const cv = compileView('v_rowstyle_scalar', vertexIR({
+            fieldCompartments: [{
+                id: 'attrs',
+                source: { from: 'attributes' },
+                rowFormat: { segments: [{ kind: 'name' }], style: { fontSize: 11, fontStyle: 'italic' } },
+            }],
+        }));
+        const rs = cv.fieldCompartments[0].rowStyle;
+        expect(rs).toBeDefined();
+        expect(rs!.fontSize!(ctx, 's1')).toBe(11);
+        expect(rs!.fontStyle!(ctx, 's1')).toBe('italic');
+        expect(rs!.color).toBeUndefined();
+    });
+
+    it('asse condizionale in rowFormat.style => il predicato entra nel dependencySet della view ospite', () => {
+        clearCompileCache();
+        const cv = compileView('v_rowstyle_cond', vertexIR({
+            fieldCompartments: [{
+                id: 'attrs',
+                source: { from: 'attributes' },
+                rowFormat: {
+                    segments: [{ kind: 'name' }],
+                    style: { color: { when: { op: 'exists', path: '$note.value' }, then: '#b91c1c' } },
+                },
+            }],
+        }));
+        expect(cv.dependencySet).toContain('note');
+    });
+
+    it('RowViewIR.style => compilato sulla row view, assente => undefined', () => {
+        clearCompileCache();
+        const { ctx } = world();
+        const bold = compileRowView('r_bold', rowIR({ style: { fontWeight: 'bold' } }));
+        expect(bold.style!.fontWeight!(ctx, 's1')).toBe('bold');
+        const plain = compileRowView('r_plain', rowIR({}));
+        expect(plain.style).toBeUndefined();
+    });
+
+    it('asse condizionale in RowViewIR.style => il predicato entra nel dependencySet della row view', () => {
+        clearCompileCache();
+        const { ctx } = world();
+        const cr = compileRowView('r_cond', rowIR({
+            style: { fontWeight: { when: { op: 'eq', left: '$isInitial.value', right: { kind: 'boolean', value: true } }, then: 'bold' } },
+        }));
+        expect(cr.dependencySet).toContain('isInitial');
+        expect(cr.style!.fontWeight!(ctx, 's1')).toBe('bold'); // isInitial true
+        expect(cr.style!.fontWeight!(ctx, 's2')).toBe('');     // isInitial false => nessun override
+    });
+
+    it('lo stile di riga entra in irHash: due IR che differiscono solo per esso non condividono la cache', () => {
+        const withStyle = vertexIR({
+            fieldCompartments: [{
+                id: 'attrs', source: { from: 'attributes' },
+                rowFormat: { segments: [{ kind: 'name' }], style: { fontSize: 11 } },
+            }],
+        });
+        const without = vertexIR({
+            fieldCompartments: [{
+                id: 'attrs', source: { from: 'attributes' },
+                rowFormat: { segments: [{ kind: 'name' }] },
+            }],
+        });
+        expect(irHash(withStyle)).not.toBe(irHash(without));
+        // Stessa view id, due ir diversi: la seconda compile non riusa la prima.
+        clearCompileCache();
+        expect(compileView('v_same_id', withStyle).fieldCompartments[0].rowStyle).toBeDefined();
+        expect(compileView('v_same_id', without).fieldCompartments[0].rowStyle).toBeUndefined();
     });
 });

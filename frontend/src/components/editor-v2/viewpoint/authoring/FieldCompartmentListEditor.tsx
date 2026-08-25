@@ -1,7 +1,8 @@
 import React from 'react';
 import { ListEditor, Input, Select, Toggle, HelpText, ConditionalEditor, forPredicateKind, type PathBuilderFeatures } from '../../../ui';
 import { FieldSegmentEditor } from './FieldSegmentEditor';
-import type { FieldCompartmentSpec, FieldSegment, Predicate } from '../ir/irTypes';
+import { TextStyleField } from './TextStyleField';
+import type { FieldCompartmentSpec, FieldSegment, Predicate, TextStyle } from '../ir/irTypes';
 
 const SOURCE_OPTIONS = [
     { value: 'attributes', label: 'Attributes' },
@@ -55,6 +56,19 @@ export function withCompartmentSource(comp: FieldCompartmentSpec, from: string):
  */
 export function withChildFilter(comp: FieldCompartmentSpec, next: Predicate | undefined): FieldCompartmentSpec {
     return { ...comp, source: next === undefined ? { from: 'children' } : { from: 'children', filter: next } };
+}
+
+/**
+ * Rebuild a compartment's `rowFormat` for a row-style edit (ir-1.3 TS2). `undefined`
+ * drops the `style` KEY instead of writing it empty, so a compartment whose style is
+ * reset round-trips byte-identical to one authored without any style, exactly as
+ * `withChildFilter` does for the filter.
+ */
+export function withRowStyle(comp: FieldCompartmentSpec, style: TextStyle | undefined): FieldCompartmentSpec {
+    const rowFormat = { ...comp.rowFormat };
+    if (style === undefined) delete rowFormat.style;
+    else rowFormat.style = style;
+    return { ...comp, rowFormat };
 }
 
 /** Read-only chip for values not representable in Basic (preserved verbatim). Same
@@ -235,6 +249,18 @@ export const FieldCompartmentListEditor: React.FC<FieldCompartmentListEditorProp
                                 <HelpText>Rows are rendered by the row view of each child (dispatch by metaclass); the format is defined in the views of kind "row", not here.</HelpText>
                             </div>
                         ) : null}
+
+                        {/* Row style (ir-1.3 TS2): offered for every source kind, the
+                            dispatch one included, because it is rendered on the
+                            compartment and a child's row view can still override it. */}
+                        <TextStyleField
+                            label="Row style"
+                            value={comp.rowFormat.style}
+                            onChange={(style) => replace(index, withRowStyle(comp, style))}
+                            features={features}
+                            featuresHint={featuresHint}
+                            classNames={classNames}
+                        />
 
                         <div className="jj-field">
                             <label className="jj-field-label">Row separators</label>

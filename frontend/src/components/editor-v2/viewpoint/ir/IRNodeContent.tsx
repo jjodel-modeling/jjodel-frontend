@@ -52,8 +52,11 @@ const FONT_WEIGHT_NUM: Record<string, number> = { normal: 400, medium: 500, semi
  * so an absent axis — or a conditional axis whose branch does not match — inherits
  * the surface's CSS default (irStyle.ts BASE_CSS). An authored axis is always
  * emitted (even when its value equals a CSS default) so it overrides the class rule.
+ *
+ * Exported since TS2: IRRow renders the dispatched rows outside this component and
+ * must resolve their style with the same function, not a copy of it.
  */
-function resolveTextStyle(cs: CompiledTextStyle | undefined, ctx: ReadCtx, id: string): React.CSSProperties | undefined {
+export function resolveTextStyle(cs: CompiledTextStyle | undefined, ctx: ReadCtx, id: string): React.CSSProperties | undefined {
     if (!cs) return undefined;
     const s: React.CSSProperties = {};
     if (cs.fontFamily) { const v = cs.fontFamily(ctx, id); if (v) s.fontFamily = FONT_FAMILY_VAR[v]; }
@@ -351,6 +354,11 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx }: IRNodeContentP
                         <div
                             key={fc.id}
                             className={`ir-compartment${fc.separator ? '' : ' ir-compartment--no-separator'}`}
+                            // Row style (ir-1.3 TS2) on the compartment, not on each row:
+                            // the rows inherit it (irStyle.ts gives .ir-row font-size:
+                            // inherit and declares no other text axis), and a dispatched
+                            // row view can still override it inline on its own .ir-row.
+                            style={resolveTextStyle(fc.rowStyle, readCtx, objectId)}
                         >
                             {rowChildIds.map(childId => (
                                 <IRRow key={childId} childObjectId={childId} />
@@ -364,6 +372,7 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx }: IRNodeContentP
                     <div
                         key={fc.id}
                         className={`ir-compartment${fc.separator ? '' : ' ir-compartment--no-separator'}`}
+                        style={resolveTextStyle(fc.rowStyle, readCtx, objectId)}
                     >
                         {source.map(row => (
                             <div key={row.key} className="ir-row">

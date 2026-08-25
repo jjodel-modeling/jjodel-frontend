@@ -364,6 +364,12 @@ export function compileView(viewId: string, ir: NodeViewIR): CompiledView {
             : {}),
         visible: compileConditional(fc.visible, true, deps),
         separator: fc.separator !== false,
+        // Row style (ir-1.3 TS2): compiled for every source kind, `children`
+        // included, because it is rendered on the compartment and not on the row
+        // (see FieldCompartmentSpec.rowFormat). Predicates inside its conditional
+        // axes extend the HOST view's deps, which is the right owner: the
+        // compartment is drawn by the host node.
+        rowStyle: compileTextStyle(fc.rowFormat.style, deps),
     }));
 
     let containment: CompiledContainment | null = null;
@@ -533,6 +539,10 @@ export function compileRowView(viewId: string, ir: RowViewIR): CompiledRowView {
     const predicate = compilePredicate(ir.predicate, deps);
     const template: CompiledAccessor[] = ir.template.map(seg => compileTextSource(seg, deps) ?? (() => ''));
     const visible = compileConditional(ir.visible, true, deps);
+    // Row style (ir-1.3 TS2): rendered inline on this row's own `.ir-row`, so it
+    // wins over the host compartment and the host node. Its conditional predicates
+    // extend THIS view's deps and crossPaths, which useIRRowView already resolves.
+    const style = compileTextStyle(ir.style, deps);
     const crossPaths = dedupeCrossPaths(crossPathSink ?? []);
     const channels = harvestChannels();
     crossPathSink = prevSink;
@@ -549,6 +559,7 @@ export function compileRowView(viewId: string, ir: RowViewIR): CompiledRowView {
         crossPaths,
         template,
         visible,
+        style,
     };
     rowCompileCache.set(key, compiled);
     return compiled;
