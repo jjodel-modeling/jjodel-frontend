@@ -1752,6 +1752,29 @@
         }
     }
 
+    // Not rendered by the active viewpoint — canvas counterpart of the tree's
+    // `tree-row--not-rendered` dimming (commit 6f8cd3909). Slate, dashed, header
+    // only (the body is dropped in ObjectNode, as the tree drops the chevron and the
+    // features): an object the viewpoint does not render must not read like one it
+    // does, so every entity colour is neutralised, selection included.
+    &.mm-object--not-rendered {
+        border: 1.5px dashed var(--border-default);
+
+        .mm-object__header {
+            background: var(--surface-2);
+        }
+
+        .mm-object__instance-name,
+        .mm-object__class-name {
+            color: var(--text-muted);
+        }
+
+        &.selected {
+            border-color: var(--text-muted);
+            box-shadow: 0 0 0 2px var(--surface-3), 0 2px 8px var(--node-shadow);
+        }
+    }
+
     &.selected {
         border-color: var(--object-accent, #f59e0b);
         box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.3), 0 2px 8px var(--node-shadow);
@@ -2164,12 +2187,17 @@
 // ============================================
 
 // Edge label text
+// The halo sits on the TEXT, not on .edge-label: that wrapper carries the
+// perpendicular nudge and the hit area, so a background there would paint a box
+// wider than the words. --color-edge-label-bg is the design-system token for this
+// (rgba white .9 in light, slate .9 in dark) and had no consumer until now.
 .edge-label__text {
     font-family: var(--font-sans);
     font-size: 10px;
     color: var(--text-secondary);
-    padding: 1px 5px;
-    border-radius: 3px;
+    background: var(--color-edge-label-bg);
+    padding: 1px 4px;
+    border-radius: var(--radius-sm);
     border: none;
     white-space: nowrap;
     box-shadow: none;
@@ -3569,6 +3597,17 @@ body.header-variant-c {
 // MINIMAP (portal — rendered in document.body)
 // ============================================
 
+// The mounted minimap: background and mask arrive from the tokens through React
+// Flow's own custom properties (EditorV2.tsx), which leaves the frame to CSS. Without
+// it the panel reads as a hole in the canvas in light theme, where slate-100 sits a
+// hair off the canvas background — measured on screen 2026-08-25.
+.editor-v2 .react-flow__minimap {
+    border: 1px solid var(--border-default);
+    box-shadow: 0 2px 8px var(--node-shadow);
+}
+
+// TODO: cleanup — dead since the minimap stopped being portalled: no element carries
+// this class (measured 2026-08-25, zero consumers in src). Left in place per Rule 9.
 .editor-v2-minimap-portal {
     .react-flow__minimap {
         background: var(--surface-1, #f8fafc);

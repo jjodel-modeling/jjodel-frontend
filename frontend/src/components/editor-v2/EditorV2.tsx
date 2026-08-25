@@ -48,6 +48,7 @@ import { useAutoAnchor, computeAnchorsWithHysteresis, getNodeRect, computeGeomet
 import { reduceReLayout, countReferenceEdges, INITIAL_RELAYOUT_STATE, type ReLayoutState, type ReLayoutEvent } from './utils/reLayoutWatcher';
 // Viewport-only helper (F3): reserve room for the floating overlay in fit/centering.
 import { fitPadding, getCanvasRightInset } from './viewportInset';
+import { getActiveLayoutKey } from './viewpoint/layout/vertexLayoutAdapter';
 import { EditorContext } from './contexts/EditorContext';
 import { HighlightProvider, type HighlightState } from './contexts/HighlightContext';
 import { getNextFreeHandleIndex, computePortDistribution } from './utils/portDistribution';
@@ -124,6 +125,40 @@ const nodeTypes: NodeTypes = {
 // De-overlap steps for edge labels (assigned in applyDistribution, consumed by UnifiedEdge):
 const CARD_STAGGER_STEP = 11; // px extra depth per extra cardinality on the same target side
 const ROLE_ARC_STEP = 22;     // px arc-length separation between bundled roles
+
+// ─── Viewport persistence ────────────────────────────────────────────
+// Pan and zoom are pure view state: they live in localStorage, never in the D-layer
+// and never in undo. The key is (model, layout key), where the layout key is the
+// active exclusive viewpoint id — or ABSTRACT_SYNTAX_LAYOUT_KEY when there is none,
+// exactly what the layout resolver keys records by (R-LAY-14, R-LAY-16). Two exclusive
+// viewpoints on one model therefore keep two viewports, and when the canvas owns its
+// viewpoint (R-LAY-19 slice 2) this key follows for free: it never reads
+// `state.viewpoint` itself. Two NON-exclusive viewpoints share one viewport, the same
+// way they already share one layout.
+// Restore-if-present, fit otherwise: a stored viewport is never overwritten by a fit.
+const VIEWPORT_KEY_PREFIX = 'jjodel.viewport.';
+
+function readStoredViewport(modelid: string | undefined, layoutKey: string): { x: number; y: number; zoom: number } | null {
+    if (!modelid) return null;   // standalone canvas: nothing to key a viewport by
+    try {
+        const raw = localStorage.getItem(`${VIEWPORT_KEY_PREFIX}${modelid}.${layoutKey}`);
+        if (!raw) return null;
+        const v = JSON.parse(raw);
+        const ok = (n: any) => typeof n === 'number' && Number.isFinite(n);
+        if (!ok(v?.x) || !ok(v?.y) || !ok(v?.zoom) || v.zoom <= 0) return null;
+        return { x: v.x, y: v.y, zoom: v.zoom };
+    } catch { return null; }
+}
+
+function writeStoredViewport(modelid: string | undefined, layoutKey: string, v: { x: number; y: number; zoom: number }): void {
+    if (!modelid) return;
+    try {
+        localStorage.setItem(
+            `${VIEWPORT_KEY_PREFIX}${modelid}.${layoutKey}`,
+            JSON.stringify({ x: v.x, y: v.y, zoom: v.zoom }),
+        );
+    } catch { /* quota / private mode: the viewport is not worth failing a session for */ }
+}
 
 const edgeTypes: EdgeTypes = {
     reference: UnifiedEdge,
@@ -407,6 +442,14 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // onInit callback fires after init, but fitView and applyDistribution
     // are defined later.
     const fitViewRef = useRef<(() => void) | null>(null);
+    // Viewport restored from a previous session, read ONCE at mount: it feeds
+    // `defaultViewport` (so the canvas opens where it was left, with no flash at the
+    // origin) and suppresses the opening fit. Null = first ever opening under this
+    // (model, layout key) → the fit is the fallback, unchanged.
+    const restoredViewportRef = useRef<{ x: number; y: number; zoom: number } | null | undefined>(undefined);
+    if (restoredViewportRef.current === undefined) {
+        restoredViewportRef.current = readStoredViewport(modelid, getActiveLayoutKey());
+    }
     const applyDistributionRef = useRef<((eds: Edge[]) => Edge[]) | null>(null);
     const setEdgesRef = useRef(setEdges);
     setEdgesRef.current = setEdges;
@@ -429,7 +472,10 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     return; // autoLayout already does fitView + distribution
                 }
             }
-            fitViewRef.current?.();
+            // Restore-if-present, fit otherwise. A stored viewport already came in
+            // through `defaultViewport`, so there is nothing to re-apply here — the
+            // only thing to do is NOT fit over it (R-LAY-18: no new fitView sites).
+            if (!restoredViewportRef.current) fitViewRef.current?.();
             // Apply port distribution to edges loaded from JjOM.
             // Initial sync assigns all edges handle index 0; distribution
             // assigns correct indices based on spatial ordering.
@@ -599,17 +645,23 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     const [showBackground, setShowBackground] = useState(() => {
         try { return localStorage.getItem('jjodel.showBackground') !== 'false'; } catch { return true; }
     });
+    const [minimapVisible, setMinimapVisible] = useState(() => {
+        try { return localStorage.getItem('jjodel.showMinimap') !== 'false'; } catch { return true; }
+    });
     useEffect(() => {
         const handleGrid = (e: Event) => setGridVisible(!!(e as CustomEvent).detail?.show);
         const handleEdgeLabels = (e: Event) => setShowEdgeLabels(!!(e as CustomEvent).detail?.show);
         const handleBackground = (e: Event) => setShowBackground(!!(e as CustomEvent).detail?.show);
+        const handleMinimap = (e: Event) => setMinimapVisible(!!(e as CustomEvent).detail?.show);
         window.addEventListener(JjodelEvents.TOGGLE_GRID, handleGrid);
         window.addEventListener(JjodelEvents.TOGGLE_EDGE_LABELS, handleEdgeLabels);
         window.addEventListener(JjodelEvents.TOGGLE_BACKGROUND, handleBackground);
+        window.addEventListener(JjodelEvents.TOGGLE_MINIMAP, handleMinimap);
         return () => {
             window.removeEventListener(JjodelEvents.TOGGLE_GRID, handleGrid);
             window.removeEventListener(JjodelEvents.TOGGLE_EDGE_LABELS, handleEdgeLabels);
             window.removeEventListener(JjodelEvents.TOGGLE_BACKGROUND, handleBackground);
+            window.removeEventListener(JjodelEvents.TOGGLE_MINIMAP, handleMinimap);
         };
     }, []);
 
@@ -3245,6 +3297,34 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     }, [fitView]);
     const handleFitView = useCallback(() => fitView({ padding: fitPadding(), maxZoom: 1, duration: 200 }), [fitView]);
 
+    // Persist pan/zoom at the end of every move (React Flow fires onMoveEnd once per
+    // gesture, so no debounce is needed) and once more on unmount, which covers a
+    // programmatic change — zoom buttons, fit, centre-on-element — still in flight when
+    // the tab closes. The key is read at write time, so a viewpoint switch mid-session
+    // writes under the new key.
+    //
+    // The unmount write uses the LAST OBSERVED viewport, not `getViewport()`: measured
+    // 2026-08-25, closing the tab and reopening it came back at the origin, because at
+    // unmount React Flow is already tearing its store down and `getViewport()` answers
+    // the identity transform — which was then written over the good value. `onMove`
+    // fires for user gestures and for programmatic transitions alike, so the ref is
+    // always the last viewport the canvas actually had.
+    const lastViewportRef = useRef<{ x: number; y: number; zoom: number } | null>(null);
+    const handleMove = useCallback((_e: unknown, vp: { x: number; y: number; zoom: number }) => {
+        lastViewportRef.current = { x: vp.x, y: vp.y, zoom: vp.zoom };
+    }, []);
+    const saveViewport = useCallback(() => {
+        const vp = getViewport();
+        lastViewportRef.current = { x: vp.x, y: vp.y, zoom: vp.zoom };
+        writeStoredViewport(modelid, getActiveLayoutKey(), vp);
+    }, [modelid, getViewport]);
+    const modelidRef = useRef(modelid);
+    modelidRef.current = modelid;
+    useEffect(() => () => {
+        const vp = lastViewportRef.current;
+        if (vp) writeStoredViewport(modelidRef.current, getActiveLayoutKey(), vp);
+    }, []);
+
     // Register the flow editor as a ZoomController with the active-editor context.
     useEffect(() => {
         const controller: ZoomController = {
@@ -3944,9 +4024,11 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 edgeTypes={edgeTypes}
                 defaultEdgeOptions={defaultEdgeOptions}
                 connectionMode={ConnectionMode.Loose}
-                fitView={!isJjomMode && nodes.length > 0}
+                onMove={handleMove}
+                onMoveEnd={saveViewport}
+                fitView={!isJjomMode && nodes.length > 0 && !restoredViewportRef.current}
                 fitViewOptions={{ padding: fitPadding(), maxZoom: 1 }}
-                defaultViewport={{ x: 0, y: 0, zoom: 1 }}
+                defaultViewport={restoredViewportRef.current ?? { x: 0, y: 0, zoom: 1 }}
                 snapToGrid={snapEnabled}
                 snapGrid={[16, 16]}
                 multiSelectionKeyCode="Shift"
@@ -3981,6 +4063,12 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     />
                 )}
                 {/* Zoom controls moved to toolbar */}
+                {/* Background and mask come from the design-system tokens (--color-minimap-bg,
+                    --minimap-mask); React Flow routes both through CSS custom properties, so a
+                    var() reaches the paint and the theme swap costs no JS branch. The per-type
+                    node colours stay literal on purpose: colouring them by metaclass depends on
+                    the IR resolution and is a front of its own. */}
+                {minimapVisible && (
                 <MiniMap
                     pannable
                     zoomable
@@ -3993,8 +4081,10 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                         if (node.type === 'objectNode') return theme === 'dark' ? '#f59e0b' : '#d97706';
                         return theme === 'dark' ? '#334155' : '#e2e8f0';
                     }}
-                    maskColor={theme === 'dark' ? 'rgba(30, 41, 59, 0.8)' : 'rgba(241, 245, 249, 0.8)'}
+                    bgColor="var(--color-minimap-bg)"
+                    maskColor="var(--minimap-mask)"
                 />
+                )}
             </ReactFlow>
 
             {pendingConnection && (

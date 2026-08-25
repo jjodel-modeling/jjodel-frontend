@@ -120,6 +120,28 @@ export function useIRView(vertexId: string, instanceOfClassId: string | null | u
     }, [signature, vertexId, instanceOfClassId, markDep]);
 }
 
+/**
+ * True when the active viewpoint publishes an IR index — i.e. when a `null` from
+ * `useIRView` means "this metaclass has no view" rather than "there is no IR
+ * viewpoint at all". The two cases are indistinguishable from the resolution alone
+ * (null carries no fields), and they must render differently: no viewpoint → the
+ * object renders in full, as it always did; viewpoint without a view for it →
+ * neutral node (the canvas counterpart of the tree's `not rendered` dimming).
+ *
+ * Reads nothing beyond `computeIRSignature` + `getIRIndex`, the same index gate the
+ * canvas already uses for the views-editor entry (EditorV2.tsx, Fase 2): the active
+ * viewpoint id is carried by the index, so this is not a second reader of
+ * `state.viewpoint` (R-LAY-19, 2026-08-25). Subscribed on the signature string only,
+ * so it recomputes exactly when the index can change.
+ */
+export function useIRViewpointActive(): boolean {
+    const irSig = useSelector((state: any) => computeIRSignature(state) || '');
+    return useMemo(() => {
+        if (!irSig) return false;
+        return !!getIRIndex(store.getState(), irSig);
+    }, [irSig]);
+}
+
 export interface IRRowResolution {
     compiled: CompiledRowView;
     objectId: string;

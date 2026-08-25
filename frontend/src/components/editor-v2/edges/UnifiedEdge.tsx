@@ -115,6 +115,10 @@ function UnifiedEdge(props: EdgeProps) {
     const irSourceTermination = irData.irSourceTermination as string | undefined;
     const irTargetTermination = irData.irTargetTermination as string | undefined;
     const irLabelAlwaysVisible = !!irData.irLabelAlwaysVisible;
+    // Authored label placement (irCompile defaults it to 'auto'). Written by
+    // irEdgeViews.applyEdgeStyle since the E0 slice; this is its first consumer —
+    // until now the field was a dead write. Read here, applied in labelOffset.
+    const irLabelPlacement = irData.irLabelPlacement as 'auto' | 'above' | 'below' | undefined;
     // E-route: authored routing style. Absent / null / 'orthogonal' all render
     // exactly as before — every existing view is byte-identical on screen.
     const irRouting = irData.irRoutingHint as 'orthogonal' | 'straight' | 'curved' | undefined;
@@ -346,10 +350,19 @@ function UnifiedEdge(props: EdgeProps) {
     }, [spreadPath, isSelfLoop, selfLoopGeom, irRoutedGeom, roleArcShift, sourceX, sourceY, targetX, targetY]);
 
     // Small perpendicular nudge off the line. No cross-edge de-overlap here (see 2c).
+    // The authored placement sets the SIGN of that nudge: 'above' / 'below' on a
+    // horizontal segment move the label in Y, on a vertical one in X (left reads as
+    // above, right as below — the only reading of above/below a vertical line that
+    // stays perpendicular to it). 'auto', and every classic edge (field absent), keep
+    // the historical nudge: above on a horizontal segment, right on a vertical one.
     const labelOffset = useMemo(() => {
         if (isSelfLoop) return { x: 0, y: 0 };
-        return labelPos.isHorizontal ? { x: 10, y: -ROLE_LINE_GAP_PY } : { x: ROLE_LINE_GAP_PX, y: 0 };
-    }, [isSelfLoop, labelPos]);
+        const sign = irLabelPlacement === 'above' ? -1 : irLabelPlacement === 'below' ? 1 : 0;
+        if (labelPos.isHorizontal) {
+            return { x: 10, y: (sign === 0 ? -1 : sign) * ROLE_LINE_GAP_PY };
+        }
+        return { x: (sign === 0 ? 1 : sign) * ROLE_LINE_GAP_PX, y: 0 };
+    }, [isSelfLoop, labelPos, irLabelPlacement]);
 
     // ─── Cardinality positioning ───
     const cardinalityTransform = useMemo(() => {

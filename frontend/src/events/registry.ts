@@ -13,6 +13,7 @@ export const JjodelEvents = {
   TOGGLE_EDGE_LABELS: 'jjodel:toggle-edge-labels',
   TOGGLE_BACKGROUND: 'jjodel:toggle-background',
   TOGGLE_GRID: 'jjodel:toggle-grid',
+  TOGGLE_MINIMAP: 'jjodel:toggle-minimap',
   TOGGLE_HIGHLIGHT_MODE: 'jjodel:toggle-highlight-mode',
   // Canvas
   CANVAS_ELEMENT_SELECTED: 'jjodel:canvas-element-selected',
