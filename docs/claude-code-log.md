@@ -1,5 +1,18 @@
 # Claude Code Session Log
 
+## 2026-08-25 — measure(editor-v2): routing archi, Fase A (riproduzione e misura)
+**Prompt**: riaperto il punto 1 canvas con specifica formale (F1 attraversamento del corpo, F2 U-detour su box adiacenti, R0 non regressione). Fase A: sonda `_tmp_` con fixture sintetica che riproduce i casi, criteri meccanici sul path finale, screenshot, numeri, e conferma o correzione del perimetro del fix. Fermarsi al report, nessun fix.
+**Files touched**: `docs/discovery/discovery_2026-08-25_routing_faseA.md`, `docs/prompts/claude_2026-08-25_1256_prompt_routing_faseA.md`, `docs/claude-code-log.md` (nessun file sorgente: la Fase A misura e basta)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — nessuna modifica al sorgente. Gate: `npm run smoke` 12 passed / 0 failed / 3 skip dichiarati; build, typecheck 33 e vitest 1349 verificati poco prima nella stessa sessione e non riesposti da questa fase.
+**Out-of-scope changes**: no — solo documenti; sonda e baseline sono `_tmp_`, gitignored. `StatusBar.*` e `featureSignature.ts` non toccati (commit per pathspec).
+**Layer Impact Report**: not-required — nessun file di §3.1 modificato; `edgeUtils.ts` e `UnifiedEdge.tsx` solo letti.
+**Smoke visivo**: passato — sonda `scripts/smoke/_tmp_routing.ts`: R0 5/5 verdi (baseline dei path salvata), F1a/F1b/F2 rossi con i numeri, tre screenshot.
+**Notes**: Due correzioni di metodo, misurate: spostare i nodi scrivendo x/y sul DVertex lascia i lati degli ancoraggi fermi alla configurazione precedente e produceva un rosso falso su un caso sano — la sonda ora trascina col mouse; il canvas aggancia a una griglia da 16px, quindi la validita' di un caso si giudica sulla geometria reale, non sulle coordinate chieste. I tre rossi stanno in tre rami diversi: la variante piccola ne chiude due.
+**Prompt document name**: 2026-08-25 12:56
+
 ## 2026-08-25 — measure(editor-v2): undo dei due ingressi «views editor» del canvas
 **Prompt**: misurare l'undo dei due ingressi all'editor viste sul canvas e chiudere secondo l'albero di decisioni gia' dato. Caso A (sola apertura): se conforme nessuna riga, se il delta viene scartato registrare la misura senza toccare il reducer. Caso B (creazione + apertura): se i due dispatch si fondono con delta completo, riga di conformita'; altrimenti un solo dispatch per il gesto, `_lastSelected` nella stessa `TRANSACTION` della creazione dentro il handler di `EditorV2`. Registrare come R-UNDO-7.
 **Files touched**: `docs/decisions.md`, `docs/prompts/claude_2026-08-25_1216_prompt_undo_ingressi_views_editor.md`, `docs/claude-code-log.md` (nessun file sorgente: entrambi i rami che avrebbero richiesto codice sono esclusi dalla misura)
