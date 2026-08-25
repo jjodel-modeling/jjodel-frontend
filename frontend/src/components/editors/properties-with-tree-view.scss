@@ -1159,7 +1159,12 @@ $pc-hint-indent: 26px;        // 18px checkbox + 8px gap (the design-system Chec
         // (0,2,0) e sono le due pastiglie ratificate dall'emendamento (2) a
         // R-RAIL-33: ne spegnerebbe il fondo. Il :not() non abbassa la specificita',
         // la alza a (0,5,0); quello che fa e' escludere le due classi dal match.
-        [data-theme="dark"] &:not(.tree-viewpoint):not(.tree-leaf-view) {
+        // I tre badge per kind delle view foglia (tree-view-vertex/-row/-edge) sono
+        // pastiglie della stessa famiglia delle due sopra: sostituiscono
+        // `tree-leaf-view` sulle stesse righe, e senza l'esclusione perderebbero il
+        // fondo solo in dark. Misurato: fondo rgba(0,0,0,0) contro il rgb(36,46,61)
+        // che tree-leaf-view conserva sulla riga accanto.
+        [data-theme="dark"] &:not(.tree-viewpoint):not(.tree-leaf-view):not(.tree-view-vertex):not(.tree-view-row):not(.tree-view-edge) {
             background: transparent;
         }
 

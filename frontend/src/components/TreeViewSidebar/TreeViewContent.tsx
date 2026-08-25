@@ -28,6 +28,8 @@ import { useNodeProblems } from '../editor-v2/problems/useNodeProblems';
 import { getTypeName, getMultiplicity } from '../../common/featureSignature';
 import type { NodeProblem } from '../editor-v2/problems/registry';
 import { computeTreeViewScope } from './treeViewScope';
+import { natureOf } from '../editor-v2/viewpoint/ir/edgeEndpoints';
+import type { AnyViewIR, EdgeViewIR } from '../editor-v2/viewpoint/ir/irTypes';
 
 /**
  * TreeViewContent — redesign 2026-05-08.
@@ -143,9 +145,49 @@ interface TreeMetamodelData {
     childModels: TreeModelData[];
 }
 
+/**
+ * What the leaf view under a Viewpoint actually describes, derived from its IR.
+ * Every leaf used to carry the same easel glyph, which said "a view" and nothing
+ * about what it draws; the tree is where the author picks one out of a dozen, so
+ * the kind belongs on the row.
+ *
+ * `unknown` is not a failure mode: a view without an IR (or with a kind this map
+ * does not know) keeps the historic easel badge. The two edge natures are kept
+ * apart here even though they share a glyph today, because the distinction is
+ * free at the point where it is derived and expensive to recover later.
+ */
+type SubViewKind = 'vertex' | 'row' | 'edge-object' | 'edge-reference' | 'unknown';
+
+/**
+ * `graphVertex` counts as a vertex: it is a vertex that also carries containment,
+ * and the tree row is not where that difference is worth a separate glyph.
+ * The edge nature is derived exactly as the authoring panel derives it — via
+ * `natureOf`, which reads the endpoint pair — and never from a field: the IR has
+ * no nature field by design (see edgeEndpoints.ts).
+ */
+function subViewKindOf(ir: AnyViewIR | undefined): SubViewKind {
+    switch (ir?.kind) {
+        case 'vertex':
+        case 'graphVertex': return 'vertex';
+        case 'row': return 'row';
+        case 'edge': return natureOf(ir as EdgeViewIR) === 'object' ? 'edge-object' : 'edge-reference';
+        default: return 'unknown';
+    }
+}
+
+/** Colour class of the badge, which is also the BADGE_ICON key. */
+const SUBVIEW_BADGE_CLASS: Record<SubViewKind, string> = {
+    'vertex': 'tree-view-vertex',
+    'row': 'tree-view-row',
+    'edge-object': 'tree-view-edge',
+    'edge-reference': 'tree-view-edge',
+    'unknown': 'tree-leaf-view',
+};
+
 interface TreeSubViewData {
     id: string;
     name: string;
+    kind: SubViewKind;
     children: TreeSubViewData[];
 }
 
@@ -575,6 +617,9 @@ const BADGE_ICON: Record<string, { icon: string; label: string }> = {
     'tree-nested-model': { icon: 'bi-file-earmark', label: 'Model' },
     'tree-viewpoint': { icon: 'bi-eye', label: 'Viewpoint' },
     'tree-leaf-view': { icon: 'bi-easel', label: 'View' },
+    'tree-view-vertex': { icon: 'bi-app', label: 'Vertex view' },
+    'tree-view-row': { icon: 'bi-input-cursor-text', label: 'Row view' },
+    'tree-view-edge': { icon: 'bi-arrow-right', label: 'Edge view' },
     'tree-transformation': { icon: 'bi-arrow-left-right', label: 'Transformation' },
     'tree-rule': { icon: 'bi-list-check', label: 'Rule' },
     'tree-helper': { icon: 'bi-wrench', label: 'Helper' },
@@ -1290,7 +1335,7 @@ const SubViewItem = memo(function SubViewItem({
         <div className="tree-node" data-element-id={view.id}>
             <EntityRow
                 badge="v"
-                badgeClassName="tree-leaf-view"
+                badgeClassName={SUBVIEW_BADGE_CLASS[view.kind] ?? 'tree-leaf-view'}
                 name={view.name}
                 nameOverride={nameOverride}
                 expandKey={view.id}
@@ -2330,9 +2375,14 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
             const subs = lView.subViews || [];
             for (const sv of subs) {
                 if (!sv) continue;
+                // `get_ir` is a plain D-layer field read (view.tsx), so this costs a
+                // property access per view and adds no new layer to the tree's read set.
+                let kind: SubViewKind = 'unknown';
+                try { kind = subViewKindOf((sv as any).ir); } catch { /* view without ir: stays 'unknown' */ }
                 children.push({
                     id: sv.id,
                     name: sv.name || 'Unnamed View',
+                    kind,
                     children: buildSubViewTree(sv),
                 });
             }

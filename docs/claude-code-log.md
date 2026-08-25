@@ -7632,3 +7632,16 @@ Dark mode overrides for `.toolbar-btn` also scoped under `.documentation-toolbar
 **Smoke visivo**: passato (`_tmp_rail_fade_mid.png`: le righe sfumano sotto la filter row e sopra il bordo inferiore, la colonna legge come una lista che continua; `_tmp_rail_fade_short.png`: albero corto, nessuna banda)
 **Notes**: due cose misurate contro l'intuizione. (1) La filter row `.tree-search` è sticky e opaca in cima allo scroller: il fade alto parte dal suo bordo inferiore misurato con `getBoundingClientRect` (41px in fixture), mai da 0, o tingerebbe la barra. (2) Lo scroller sta in state con callback ref, non in `useRef`: la rail monta il suo portal solo con una tab attiva, e con un ref l'effetto restava agganciato a `null` per sempre — la prima esecuzione della sonda dava 2/9 esattamente per questo. Il verdetto va su `data-fade-*` del wrapper, non in state: zero re-render per tick di scroll.
 **Prompt document name**: 2026-08-25 rail_scroll_affordance
+
+## 2026-08-25 — feat(tree): il badge della view foglia dice che tipo di view è
+**Prompt**: tutte le view foglia sotto un Viewpoint usano `BADGE_ICON['tree-leaf-view'] = 'bi-easel'`. Differenziare in base a `ir.kind` (vertex/graphVertex → bi-app rosso, row → bi-input-cursor-text verde, edge → bi-arrow-right ciano, natura derivata con `natureOf`), campo `kind` su `TreeSubViewData` popolato in `buildSubViewTree`, fallback `tree-leaf-view`/bi-easel. Viewpoint root, badge letterale `v` e logica rename/duplicate/delete invariati.
+**Files touched**: TreeViewSidebar/TreeViewContent.tsx (`SubViewKind` + `subViewKindOf` + `SUBVIEW_BADGE_CLASS`, 3 voci in BADGE_ICON, `kind` su TreeSubViewData e in buildSubViewTree, badgeClassName in SubViewItem), TreeViewSidebar/tree-view-sidebar.scss (3 blocchi pastiglia + regola `> i.bi`), editors/properties-with-tree-view.scss (`:not()` esteso, fuori perimetro, autorizzato in chat), docs/claude-code-log.md.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (typecheck 33 = baseline, 0 nei file toccati; build ✓ exit 0; vitest 1387 passed = identico; smoke 12 passed / 0 failed; sonda 10/10 verdi)
+**Out-of-scope changes**: yes (properties-with-tree-view.scss: una riga, il `:not()` che in dark spegne il fondo di ogni badge non ratificato da R-RAIL-33 — senza l'estensione i tre badge nuovi perdevano la pastiglia solo al buio. Misurato prima di chiedere, scelta confermata dall'utente)
+**Layer Impact Report**: not-required (nessun file critical-zone §3.1; `get_ir` è una lettura di campo D dentro mapStateToProps, nessun nuovo layer nel read set dell'albero)
+**Smoke visivo**: passato (`_tmp_tree_view_kind_light.png`: K_vertex/K_graphVertex rossi, K_row verde, K_edgeobject ciano, in colonna e distinguibili a colpo d'occhio; `_tmp_tree_view_kind_dark.png` per il caso scuro)
+**Notes**: il colore va dichiarato due volte e a dipingere è la seconda. `styles/style.scss` ha un `i.bi { color: … }` diretto sull'`<i>`, che batte per costruzione l'ereditarietà dallo `<span>` (CLAUDE.md §5, misurato 2026-08-12): senza la regola figlia `> i.bi` la metà «saturata» della specifica sarebbe stata inerte, e la sonda l'avrebbe vista verde leggendo lo span. Controprova nella misura stessa: sul fallback `tree-leaf-view` il glifo è `rgb(15,23,42)` mentre lo span dice `rgb(69,86,111)`.
+**Prompt document name**: 2026-08-25 tree_view_kind_badges
