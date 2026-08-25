@@ -437,6 +437,19 @@
     align-items: center;
     gap: 6px;
     flex-shrink: 0;
+
+    // The views menu opens LEFTWARDS from its trigger. Left-anchored (the shared
+    // default) it measured x 1012..1212 at 1440px wide, while the rail overlay starts
+    // at 1080: 132px of a 200px menu sat under it, and elementFromPoint at the centre
+    // of every entry returned .rail-header. z-index does not decide this — the rail is
+    // position:fixed portaled to <body>, a stacking context above the toolbar's, so
+    // its 900 still paints over the dropdown's 1000. Anchoring right keeps the menu
+    // inside the span the toolbar already owns. Scoped here: the notation and theme
+    // menus sit further left and keep the shared left-anchored rule.
+    .notation-selector__dropdown {
+        left: auto;
+        right: 0;
+    }
 }
 
 .toolbar-viewpoint-selector {

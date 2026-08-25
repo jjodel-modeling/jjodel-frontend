@@ -3166,7 +3166,11 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                                     // The draft is born in the ACTIVE viewpoint, the one the
                                     // user is looking at — not in the "last edited workbench"
                                     // viewpoint the no-argument resolution would pick.
-                                    const newViewId = createViewInWorkbench(classId, metaclassName, 'DClass', index.viewpointId);
+                                    // The D-layer discriminator comes off the metaclass itself,
+                                    // as the "Create View" branch above already reads it, rather
+                                    // than being assumed from the node type.
+                                    const metaclassKind = lookup?.[classId]?.className ?? 'DClass';
+                                    const newViewId = createViewInWorkbench(classId, metaclassName, metaclassKind, index.viewpointId);
                                     if (newViewId) DockManager.openView(newViewId);
                                 },
                             },
