@@ -62,7 +62,12 @@ const BASE_CSS = `
    .selected/.drop-target neutralizers outrank EditorV2.scss (0,2,0) by
    specificity. Box values replicate the .mm-node base with the same tokens. */
 .mm-node:has(> .ir-node-content) { background: transparent; border-color: transparent; box-shadow: none; }
-.mm-node.selected:has(> .ir-node-content) { border-color: transparent; outline: none; box-shadow: 0 0 14px 7px var(--node-selection-halo); }
+/* Il wrapper porta solo la banda, mai l'anello: l'anello sta sulla forma
+   (.ir-node-content, sotto), e senza outline:none la regola condivisa ne
+   disegnerebbe un secondo, rettangolare, attorno al primo. La banda invece
+   segue il wrapper e resta rettangolare anche sotto una forma geometrica.
+   Niente backtick in questo blocco: BASE_CSS e' un template literal. */
+.mm-node.selected:has(> .ir-node-content) { border-color: transparent; outline: none; box-shadow: 0 0 0 9px var(--node-selection-halo); }
 .mm-node.drop-target:has(> .ir-node-content) { border-color: transparent; box-shadow: none; }
 .ir-node-content { box-sizing: border-box; background: var(--node-bg); border: 1px solid var(--border-default); border-radius: 4px; box-shadow: 0 1px 3px var(--node-shadow), 0 4px 12px var(--node-shadow-deep, rgba(0, 0, 0, 0.08)); overflow: hidden; }
 /* Fase 2 (2026-07-28): reconcile the visible box with the .mm-node layout box. In

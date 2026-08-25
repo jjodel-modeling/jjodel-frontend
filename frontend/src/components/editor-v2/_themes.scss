@@ -140,10 +140,11 @@ $editor-v2-theme-dark: (
   'resize-handle-bg': #0ea5e9,
   'resize-handle-border': #1e293b,
 
-  // Node selection — anello e alone, tarati a schermo (2026-08-25). Non piu'
-  // agganciati a resize-handle-bg: sono la resa della selezione, non del resize.
-  'node-selection-stroke': #38bdf8,
-  'node-selection-halo': rgba(56, 189, 248, 0.22),
+  // Node selection — anello e banda esterna, tarati a schermo (2026-08-26).
+  // `halo` e' rimasto il nome del secondo token quando l'alone sfumato e'
+  // diventato una banda piatta: si tinge con spread, non con blur.
+  'node-selection-stroke': #7dd3fc,
+  'node-selection-halo': rgba(125, 211, 252, 0.25),
 
   // Surface hierarchy
   'topbar-bg': #0f172a,
@@ -291,10 +292,11 @@ $editor-v2-theme-light: (
   'resize-handle-bg': #0284c7,
   'resize-handle-border': #ffffff,
 
-  // Node selection — anello e alone, tarati a schermo (2026-08-25). Non piu'
-  // agganciati a resize-handle-bg: sono la resa della selezione, non del resize.
-  'node-selection-stroke': #0ea5e9,
-  'node-selection-halo': rgba(14, 165, 233, 0.18),
+  // Node selection — anello e banda esterna, tarati a schermo (2026-08-26).
+  // `halo` e' rimasto il nome del secondo token quando l'alone sfumato e'
+  // diventato una banda piatta: si tinge con spread, non con blur.
+  'node-selection-stroke': #38bdf8,
+  'node-selection-halo': rgba(56, 189, 248, 0.22),
 
   // Surface hierarchy
   'topbar-bg': #1e293b,

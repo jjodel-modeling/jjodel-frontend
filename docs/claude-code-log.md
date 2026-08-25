@@ -1,5 +1,18 @@
 # Claude Code Session Log
 
+## 2026-08-26 — fix(editor-v2): anello di selezione piatto con banda trasparente
+**Prompt**: quattro correzioni dettate dal direttore a schermo, parte 1 di 2. Ciano piu' chiaro (`node-selection-stroke` `#38bdf8` light, `#7dd3fc` dark; `node-selection-halo` `rgba(56,189,248,.22)` e `rgba(125,211,252,.25)`); via il blur dallo stato selezionato; banda trasparente di 4px oltre l'anello, resa con `0 0 0 9px` a spread pieno. L'ombra profonda della classe resta, perche' e' la stessa dello stato deselezionato. Valori non da rivalutare.
+**Files touched**: `frontend/src/components/editor-v2/_themes.scss`, `frontend/src/components/editor-v2/EditorV2.scss`, `frontend/src/components/editor-v2/viewpoint/ir/irStyle.ts`, `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: 2026-08-25 23:30
+**Causa**: (f)
+**Regressions**: no. Gate: `npm run typecheck` 33 = baseline esatta (l'unico errore che nomina EditorV2 e' il preesistente di `EditorV2.tsx:3030`, file non toccato); `npm run build` exit 0 col solo chunk-warning; `npm run smoke` 12 passed / 0 failed / 3 skipped. `check:docs` rossa come al baseline, nessun errore su questa entry.
+**Out-of-scope changes**: no. I tre file del prompt piu' il log. Il commento dei due token in `_themes.scss` e' stato riscritto perche' diceva «alone», che ora e' una banda piatta; il nome del token resta `halo` per non toccare i consumatori, come da prompt.
+**Layer Impact Report**: not-required (nessun file di §3.1; sole regole CSS, nessun write path D/L)
+**Smoke visivo**: la verifica finale spetta ad Alfonso a schermo (bridge Chrome della chat fuori uso in questa sessione). La chat ha comunque misurato e fotografato con la sonda Playwright su Chromium headless contro `http://localhost:3000/`: `_tmp_selection_ir_ellipse.png` mostra anello sull'ellisse, banda piatta rettangolare sul wrapper e nessun blur; `_tmp_selection_class.png` e `_tmp_selection_ir.png` lo stesso su classe e rect.
+**Notes**: Misure (light, sonda `_tmp_selection_stroke.ts`, 16/16): anello `2px solid rgb(56,189,248)` a `offset 3px` su classe, ellisse e rect; banda `rgba(56,189,248,.22) 0 0 0 9px`, blur 0; wrapper IR `outline-style none`. Un backtick dentro il commento nuovo di `irStyle.ts` chiudeva `BASE_CSS`, che e' un template literal: dev server a 500 e sonda ferma alla dashboard finche' non l'ho tolto. Colto dalla gate di build prima del commit; avviso lasciato a codice nel commento stesso.
+**Prompt document name**: 2026-08-26 00:20
+
 ## 2026-08-25 — fix(editor-v2): l'anello di selezione e' uno solo, staccato, con alone sfumato
 **Prompt**: trascrivere i valori tarati dalla chat sul Chrome di Alfonso via CSSOM. Quattro punti: `node-selection-stroke` a `#0ea5e9` light e `#38bdf8` dark, nuovo `node-selection-halo`; `.mm-node.selected` con `outline-offset: 3px` e alone `0 0 14px 7px`, via il livello `--accent-muted`; `irStyle.ts:65` con `outline: none` (il fix del doppio anello) e lo stesso alone, `:137` a `offset 3px`; handle del resizer 9x9 a fondo di superficie con bordo ciano `1.5px`. Valori non da rivalutare.
 **Files touched**: `frontend/src/components/editor-v2/_themes.scss`, `frontend/src/components/editor-v2/EditorV2.scss`, `frontend/src/components/editor-v2/viewpoint/ir/irStyle.ts`, `docs/claude-code-log.md`
