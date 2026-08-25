@@ -30,6 +30,7 @@ import {
     unregisterEdgePath,
     getEdgeCrossings,
     buildFinalPath,
+    avoidNodeRects,
     type Side,
 } from '../utils/edgeUtils';
 import { MAX_HANDLES_PER_SIDE } from '../utils/portDistribution';
@@ -249,7 +250,33 @@ function UnifiedEdge(props: EdgeProps) {
         if (isInheritance || isSelfLoop || waypoints.length > 0) return adjustedPoints;
         return applyBundleSpread(adjustedPoints, bundleCenter);
     }, [adjustedPoints, bundleCenter, isInheritance, isSelfLoop, waypoints]);
-    const spreadPath = useMemo(() => pointsToPath(spreadPoints), [spreadPoints]);
+    // Anti-collisione (Fase B del punto 1, 2026-08-25): il router resta intatto e
+    // questo passaggio guarda la polilinea gia' pronta — dopo i waypoint e dopo lo
+    // spread, cioe' dove il criterio si misura davvero — e la ri-instrada solo se
+    // attraversa un corpo. Se non c'e' niente da fare torna lo stesso riferimento,
+    // quindi un caso sano resta byte-identico e le memo a valle non si invalidano.
+    //
+    // I rect sono gia' in mano al componente: `getNodes()` e' la stessa lettura
+    // imperativa (locale al tab, senza sottoscrizione nuova) che serve gli incroci
+    // fra archi qui sotto — nessun lettore nuovo del root state (R-LAY-19).
+    //
+    // Fuori perimetro per costruzione: self-loop, archi IR non ortogonali
+    // (R-B9/R-B12) e archi con waypoint dell'utente, che vincono sempre
+    // sull'evitamento (R-B10). Limite noto: il ricalcolo scatta sugli stessi
+    // trigger degli incroci, quindi un nodo SENZA archi trascinato nel corridoio
+    // aggiorna il tracciato al primo ricalcolo utile, non a ogni frame.
+    const routedPoints = useMemo(() => {
+        if (isSelfLoop || isNonOrthogonalIR || waypoints.length > 0) return spreadPoints;
+        if (isInheritance && isGrouped) return spreadPoints;
+        const rects = getNodes()
+            .filter(n => !n.hidden)
+            .map(n => getNodeRect(n))
+            .filter(r => r.width > 0 && r.height > 0);
+        return avoidNodeRects(spreadPoints, rects);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [spreadPoints, allEdges, isSelfLoop, isNonOrthogonalIR, waypoints, isInheritance, isGrouped]);
+
+    const spreadPath = useMemo(() => pointsToPath(routedPoints), [routedPoints]);
 
     // ─── Register path for crossing detection ───
     // Grouped inheritance edges skip individual registration: their Manhattan
@@ -265,9 +292,9 @@ function UnifiedEdge(props: EdgeProps) {
     useEffect(() => {
         if (isInheritance && isGrouped) return;
         if (isNonOrthogonalIR) return;
-        registerEdgePath(id, spreadPoints, source, target, treeGroupId);
+        registerEdgePath(id, routedPoints, source, target, treeGroupId);
         return () => unregisterEdgePath(id);
-    }, [id, spreadPoints, source, target, treeGroupId, isInheritance, isGrouped, isNonOrthogonalIR]);
+    }, [id, routedPoints, source, target, treeGroupId, isInheritance, isGrouped, isNonOrthogonalIR]);
 
     // ─── Detect crossings with other edges ───
     // Scope detection to the current React Flow canvas by passing the active node IDs.
@@ -276,9 +303,9 @@ function UnifiedEdge(props: EdgeProps) {
     // re-rendering this edge on unrelated node changes. Recompute triggers: own
     // path (spreadPoints) and any edges-array change (allEdges).
     const crossings = useMemo(
-        () => (isNonOrthogonalIR ? [] : getEdgeCrossings(id, spreadPoints, new Set(getNodes().map(n => n.id)))),
+        () => (isNonOrthogonalIR ? [] : getEdgeCrossings(id, routedPoints, new Set(getNodes().map(n => n.id)))),
         // eslint-disable-next-line react-hooks/exhaustive-deps
-        [id, spreadPoints, allEdges, isNonOrthogonalIR]
+        [id, routedPoints, allEdges, isNonOrthogonalIR]
     );
 
     // ─── Self-loop corner geometry (source === target) ───
@@ -320,10 +347,10 @@ function UnifiedEdge(props: EdgeProps) {
         // Corner rounding and bridge arcs are Manhattan-only concepts.
         if (irRoutedGeom) return irRoutedGeom.d;
         if (crossings.length > 0) {
-            return buildFinalPath(spreadPoints, crossings, 4, 6);
+            return buildFinalPath(routedPoints, crossings, 4, 6);
         }
         return roundManhattanPath(spreadPath, 4);
-    }, [spreadPath, spreadPoints, crossings, isSelfLoop, selfLoopGeom, irRoutedGeom, sourceX, sourceY, targetX, targetY]);
+    }, [spreadPath, routedPoints, crossings, isSelfLoop, selfLoopGeom, irRoutedGeom, sourceX, sourceY, targetX, targetY]);
 
     // De-overlap shifts precomputed in EditorV2.applyDistribution (0 when no bundle/collision).
     const roleArcShift = edgeData?.roleArcShift ?? 0;

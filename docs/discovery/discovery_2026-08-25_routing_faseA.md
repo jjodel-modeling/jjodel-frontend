@@ -174,3 +174,117 @@ attraversato.
    (`useAutoAnchor`). Nessuno dei tre rossi misurati qui dipende da loro: in tutti e
    tre i casi i lati scelti sono quelli giusti per la disposizione, ed e' il tracciato
    fra i due ancoraggi a essere sbagliato.
+
+---
+
+# Fase B — implementazione e verifica (2026-08-25)
+
+GO di Alfonso sull'**opzione (ii)**, estremi + nodi visibili, con la **forma a valle**
+vincolante: router intatto, criterio sulla polilinea, ri-instradamento solo se violato.
+
+## 6. Cosa e' stato scritto
+
+Due file di sorgente, piu' un test.
+
+**`utils/edgeUtils.ts`** — in coda, un blocco nuovo che non tocca nulla di esistente:
+
+- `pathBlockingRects(points, rects)` — i rettangoli attraversati dalla polilinea,
+  esclusa la finestra di stub di 8px alle due estremita'. Lista vuota = criterio
+  rispettato. E' lo stesso criterio della sonda, portato dentro il prodotto.
+- `avoidNodeRects(points, rects)` — il passaggio a valle. Se non c'e' violazione
+  **ritorna lo stesso riferimento** ricevuto; altrimenti tenta **un solo**
+  ri-instradamento e, se anche quello viola, torna l'originale.
+- `routeAroundRects` (interna) — ri-instradamento ortogonale su una griglia di
+  corsie: ascisse e ordinate candidate sono quelle degli stub e dei bordi degli
+  ostacoli scostati di una clearance, che e' la griglia minima che contiene un
+  ottimo ortogonale attorno a rettangoli assiali. Dijkstra con costo
+  `lunghezza + penale di svolta + penale di corsia stretta`. La penale di corsia
+  stretta e' la forma generale della politica «si aggira dal lato con piu' spazio
+  libero»: vale anche quando gli ostacoli sono piu' di uno, dove il confronto fra due
+  soli lati non sarebbe definito.
+
+Costanti: clearance 8px (criterio F2), corsie posate a 9px (il criterio chiede
+`>= 8`, non `> 8`), rilevazione a 7,5px (mezzo pixel sotto, cosi' una corsia posata a
+distanza di sicurezza non si auto-denuncia al ricontrollo), tetto di 10 ostacoli.
+
+**`edges/UnifiedEdge.tsx`** — una memo nuova, `routedPoints`, fra `spreadPoints` e
+`spreadPath`; i tre consumatori della polilinea (registrazione per gli incroci,
+rilevazione incroci, path finale) leggono la nuova. I rect vengono da `getNodes()`,
+la stessa lettura imperativa gia' usata per gli incroci: nessun lettore nuovo del
+root state (R-LAY-19). Il passaggio si applica **dopo lo spread**, che e' dove il
+criterio si misura, e non si applica affatto a self-loop, archi IR non ortogonali e
+archi con waypoint dell'utente (R-B10).
+
+**`utils/__tests__/nodeAvoidance.test.ts`** — cinque prove sulle geometrie misurate.
+
+## 7. Verifica
+
+Sonda `_tmp_routing.ts`, corsa del 2026-08-25: **12/12 PASS**.
+
+| caso | prima (Fase A) | dopo |
+|---|---|---|
+| R0 ×5 | nessuna intersezione | nessuna intersezione |
+| F1a box sovrapposti | 30 campioni dentro a1, 30 dentro b1 | **nessuna, clearance 9px** |
+| F1b terzo nodo | 55 campioni dentro c1 | **nessuna, clearance 12,1px** |
+| F2 U su box adiacenti | 9 + 9 campioni, clearance 0 | **nessuna, clearance 9px** |
+| F2-degenere | — | criterio insoddisfacibile, si tiene il path del router |
+| W1a waypoint | non misurato | il trascinamento della maniglia cambia il tracciato |
+| W1b waypoint vs evitamento | non misurato | **path identico con c1 nel corridoio** |
+| P1 archi paralleli + ostacolo | non misurato | nessuno dei due archi attraversa un corpo |
+
+Test unitari: 5/5. Il primo e' quello che regge R0 — `avoidNodeRects` ritorna
+**lo stesso riferimento** quando non c'e' violazione, quindi ogni memo a valle
+produce la stessa stringa e un caso sano e' byte-identico per costruzione.
+
+### 7.1 Perche' R0 non si confronta byte a byte fra due corse
+
+Il confronto proposto in Fase A e' stato eseguito e poi **ritirato**, con la misura:
+a parita' di posizioni finali dei nodi, due corse diverse possono scegliere lati
+d'ancoraggio diversi (misurato su R0-sud: stesse coordinate, `M 528 186.5 …` in una
+corsa e `M 454 217 …` nell'altra). La scelta dipende dai gesti di trascinamento, non
+solo dalla geometria finale, quindi il `d` cambia per ragioni che col fix non
+c'entrano e un confronto fra corse produrrebbe rossi falsi. La byte-identita' e' stata
+spostata dove e' deterministica: l'identita' di riferimento nel test unitario. A
+schermo resta il criterio, che su R0 e' verde.
+
+### 7.2 Tre punti aperti della Fase A, chiusi
+
+1. **Waypoint utente**: misurato. Si seleziona l'arco cliccando sul tracciato (il
+   punto medio in coordinate di flusso convertito in coordinate schermo: il click al
+   centro del bounding box di un path a Z cade fuori dal tratto), si trascina la
+   maniglia di segmento, il tracciato cambia; poi si porta il terzo nodo nel
+   corridoio e il tracciato **non cambia di un byte**. I waypoint vincono, R-B10
+   rispettata.
+2. **bundleSpread**: misurato sul canvas **M2**, non M1 — due referenze fra la stessa
+   coppia di istanze danno un arco solo (chiave per coppia, CLAUDE.md §3.4), mentre
+   sul metamodello la chiave e' composita e le due `DReference` producono due archi
+   che lo spread distribuisce davvero. Con un terzo nodo nel corridoio, nessuno dei
+   due archi attraversa un corpo: il passaggio a valle applicato **dopo** lo spread
+   e' la collocazione giusta, e non serve dichiarare un limite.
+3. **Confronto a posizioni coincidenti**: superato dal punto 7.1.
+
+## 8. Limiti dichiarati
+
+1. **Ancoraggio sepolto.** Quando un ancoraggio nasce a meno di 8px dal corpo
+   dell'altro nodo — box molto sovrapposti alla stessa altezza — il criterio e'
+   insoddisfacibile: qualunque tracciato che parta da li' e' dentro un corpo oltre la
+   finestra di stub. Il codice se ne accorge (lo stub del ri-instradamento nascerebbe
+   dentro un ostacolo) e tiene il path del router. E' il caso `F2-degenere`, ed e' la
+   politica «corridoio saturo ⇒ si degrada» applicata alla lettera.
+2. **Trigger di ricalcolo.** L'evitamento si ricalcola sugli stessi trigger della
+   rilevazione degli incroci (la propria polilinea e l'array degli archi). Un nodo
+   **senza archi** trascinato dentro il corridoio aggiorna il tracciato al primo
+   ricalcolo utile, non a ogni frame del trascinamento. Renderlo reattivo vorrebbe
+   una sottoscrizione ai nodi, cioe' la `useNodes()` rimossa per il trickle di
+   rendering: non si tocca senza una misura sua.
+3. **Un solo giro, tetto di 10 ostacoli.** Per prompt e per prudenza: niente cicli di
+   tentativi, e sopra i 10 rettangoli in gioco non e' piu' un corridoio.
+
+## 9. Nota di metodo sulla sonda
+
+I trascinamenti fallivano in modo silenzioso quando il punto di presa finiva **sotto
+il pannello delle proprieta'** (misurato: presa a x≈1141-1236, fuori dalla tela). La
+sonda ora se ne accorge con `elementFromPoint`, lo scrive, e ritenta dopo un
+«Fit to view». Senza quel ritentativo tre casi su dodici misuravano una geometria che
+non era quella dichiarata — e uno di essi (F1a) risultava rosso per la posizione
+sbagliata, non per il codice.

@@ -1,5 +1,18 @@
 # Claude Code Session Log
 
+## 2026-08-25 — feat(editor-v2): anti-collisione degli archi, passaggio a valle del router
+**Prompt**: GO Fase B sul punto 1 canvas, opzione (ii) (estremi + nodi visibili), forma a valle vincolante: router intatto, criterio sulla polilinea, ri-instradamento solo se violato. Politica del corridoio occupato: lato con piu' spazio libero, clearance 8px, un solo giro, altrimenti si tiene il path originale. Chiudere i tre buchi della Fase A: waypoint utente, bundleSpread, confronto a posizioni coincidenti.
+**Files touched**: `frontend/src/components/editor-v2/utils/edgeUtils.ts`, `frontend/src/components/editor-v2/edges/UnifiedEdge.tsx`, `frontend/src/components/editor-v2/utils/__tests__/nodeAvoidance.test.ts`, `docs/discovery/discovery_2026-08-25_routing_faseA.md`, `docs/prompts/claude_2026-08-25_1400_prompt_routing_faseB.md`, `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — build exit 0 col solo chunk-warning; typecheck 33 = baseline; vitest 1354 passed (i 1349 di prima piu' i 5 nuovi) con le stesse 9 suite rosse pre-esistenti; smoke 12 passed / 0 failed / 3 skip dichiarati. Nessun ramo del router modificato: un caso sano non attraversa il codice nuovo e riceve indietro lo stesso riferimento.
+**Out-of-scope changes**: no — due file di sorgente piu' il test, tutti dentro il perimetro del GO; sonda e baseline sono `_tmp_`, gitignored. `StatusBar.*` e `featureSignature.ts` non toccati (commit per pathspec).
+**Layer Impact Report**: not-required — nessun file di §3.1: `edgeUtils.ts` e `UnifiedEdge.tsx` sono geometria e resa, nessuna scrittura D/L, nessun `useAutoAnchor`/`portDistribution`/`handlePosition`.
+**Smoke visivo**: passato — sonda `scripts/smoke/_tmp_routing.ts` 12/12 su fixture sintetica con gesti reali: R0 5/5 senza intersezioni, F1a/F1b/F2 (i tre rossi della Fase A) verdi, F2-degenere riconosciuto insoddisfacibile col degrado previsto, W1a/W1b sui waypoint, P1 sugli archi paralleli dopo lo spread. Cinque screenshot.
+**Notes**: Due scostamenti argomentati nel report: il confronto byte a byte di R0 fra corse diverse e' ritirato (a parita' di posizioni due corse scelgono lati d'ancoraggio diversi: rossi falsi), sostituito dall'identita' di riferimento provata nel test unitario; il caso degli archi paralleli vive sul canvas M2, perche' su M1 due referenze fra la stessa coppia danno un arco solo (§3.4). Limiti dichiarati: ancoraggio sepolto, trigger di ricalcolo, tetto di 10 ostacoli.
+**Prompt document name**: 2026-08-25 14:00
+
 ## 2026-08-25 — measure(editor-v2): routing archi, Fase A (riproduzione e misura)
 **Prompt**: riaperto il punto 1 canvas con specifica formale (F1 attraversamento del corpo, F2 U-detour su box adiacenti, R0 non regressione). Fase A: sonda `_tmp_` con fixture sintetica che riproduce i casi, criteri meccanici sul path finale, screenshot, numeri, e conferma o correzione del perimetro del fix. Fermarsi al report, nessun fix.
 **Files touched**: `docs/discovery/discovery_2026-08-25_routing_faseA.md`, `docs/prompts/claude_2026-08-25_1256_prompt_routing_faseA.md`, `docs/claude-code-log.md` (nessun file sorgente: la Fase A misura e basta)
