@@ -36,7 +36,7 @@
 **Out-of-scope changes**: no. Modifiche di altre sessioni nel working tree (`StatusBar.*`, `featureSignature.ts`, piu' il ritocco non committato di `EditorV2.scss`/`irStyle.ts`) non toccate, commit per pathspec.
 **Layer Impact Report**: not-required (nessun file di §3.1; nessuna scrittura D/L)
 **Smoke visivo**: non applicabile — il difetto e' di hit-testing e si misura sul bersaglio del `mousedown`, non a schermo. Anzi: il report registra che `elementsFromPoint` e uno screenshot danno entrambi la risposta sbagliata su questa domanda, perche' letti prima dell'hover.
-**Notes**: Rettifica: non e' «si posiziona e non ridimensiona», e' il gesto che non comincia. I quattro punti cardinali del bounding box portano gia' 32 `.react-flow__handle` 8x8 impilati a otto per lato sulle mezzerie (ellisse 54x66: est a (54,33)); l'hover li arma e il `mousedown` va a loro, `onResizeStart` 4/4 sugli angoli e 1/8 sui lati. Prova decisiva: sonda in cattura su `window` piu' bubble su `document` (nessuno ferma la propagazione sul lato, quindi `d3-drag` non entra). Numeri, tabella del predicato mancante e le tre vie nel report citato.
+**Notes**: Rettifica: non e' «si posiziona e non ridimensiona», e' il gesto che non comincia. Le mezzerie dei lati portano gia' 32 `.react-flow__handle` 8x8 (ellisse 54x66: est a (54,33)); l'hover li arma e il `mousedown` va a loro. `onResizeStart` 4/4 sugli angoli, 1/8 sui lati. Prova: sonda in cattura su `window` piu' bubble su `document`. Numeri e vie nel report citato.
 **Prompt document name**: 2026-08-26 00:20
 
 ## 2026-08-26 — discovery: gli handle cardinali si posizionano ma non ridimensionano
