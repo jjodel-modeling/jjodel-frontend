@@ -184,6 +184,26 @@ const SUBVIEW_BADGE_CLASS: Record<SubViewKind, string> = {
     'unknown': 'tree-leaf-view',
 };
 
+/**
+ * Textual kind, right-aligned on the row like the type of an M2 feature. The badge
+ * already carries the kind as a glyph, but a glyph is only readable once its legend
+ * is known: the label is what makes the row self-describing on first sight, and it
+ * is the same treatment (`tree-feature__type`) the metamodel rows use, so the two
+ * halves of the tree keep one right-hand column.
+ *
+ * `unknown` gets no label rather than the word "unknown": a view whose kind could not
+ * be derived says nothing, and a label saying nothing is worse than no label.
+ * The two edge natures collapse onto one glyph but not onto one word — telling an
+ * object edge from a reference edge is exactly what the badge cannot do.
+ */
+const SUBVIEW_KIND_LABEL: Record<SubViewKind, string | null> = {
+    'vertex': 'Vertex',
+    'row': 'Row',
+    'edge-object': 'Edge (object)',
+    'edge-reference': 'Edge',
+    'unknown': null,
+};
+
 interface TreeSubViewData {
     id: string;
     name: string;
@@ -1300,6 +1320,13 @@ const SubViewItem = memo(function SubViewItem({
         lView.delete();
     }, [lView]);
 
+    // The kind label rides on `nameOverride`, which this row already uses for the
+    // rename input: the two are mutually exclusive by construction — while renaming
+    // the row is an input, and appending a label next to it would leave the type
+    // hanging beside a text field. `unknown` falls back to `undefined`, i.e. the
+    // plain name EntityRow renders on its own.
+    const kindLabel = SUBVIEW_KIND_LABEL[view.kind] ?? null;
+
     const nameOverride = isRenaming ? (
         <input
             ref={renameInputRef}
@@ -1310,6 +1337,11 @@ const SubViewItem = memo(function SubViewItem({
             onKeyDown={(e) => handleRenameKeyDown(e, lView)}
             onClick={(e) => e.stopPropagation()}
         />
+    ) : kindLabel ? (
+        <>
+            <span className="tree-row__name">{renderHighlightedName(view.name || 'unnamed', highlightQuery)}</span>
+            <span className="tree-feature__type">{kindLabel}</span>
+        </>
     ) : undefined;
 
     const actions = (

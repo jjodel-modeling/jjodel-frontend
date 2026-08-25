@@ -7645,3 +7645,16 @@ Dark mode overrides for `.toolbar-btn` also scoped under `.documentation-toolbar
 **Smoke visivo**: passato (`_tmp_tree_view_kind_light.png`: K_vertex/K_graphVertex rossi, K_row verde, K_edgeobject ciano, in colonna e distinguibili a colpo d'occhio; `_tmp_tree_view_kind_dark.png` per il caso scuro)
 **Notes**: il colore va dichiarato due volte e a dipingere è la seconda. `styles/style.scss` ha un `i.bi { color: … }` diretto sull'`<i>`, che batte per costruzione l'ereditarietà dallo `<span>` (CLAUDE.md §5, misurato 2026-08-12): senza la regola figlia `> i.bi` la metà «saturata» della specifica sarebbe stata inerte, e la sonda l'avrebbe vista verde leggendo lo span. Controprova nella misura stessa: sul fallback `tree-leaf-view` il glifo è `rgb(15,23,42)` mentre lo span dice `rgb(69,86,111)`.
 **Prompt document name**: 2026-08-25 tree_view_kind_badges
+
+## 2026-08-25 — feat(tree): accanto alla view foglia il kind si legge come testo
+**Prompt**: mostrare il tipo della view foglia come label testuale allineata a destra, stesso trattamento dei feature row del metamodello (`<span className="tree-feature__type">` dentro `nameOverride`). Mappa kind → label: vertex → "Vertex", row → "Row", edge-object → "Edge (object)", edge-reference → "Edge", unknown → nessuna label. La label solo nel ramo non-renaming; icone/badge del commit precedente e riga viewpoint root invariati.
+**Files touched**: TreeViewSidebar/TreeViewContent.tsx (`SUBVIEW_KIND_LABEL`, `kindLabel` + terzo ramo di `nameOverride` in `SubViewItem`), TreeViewSidebar/tree-view-sidebar.scss (una regola additiva `.tree-row__name:has(+ .tree-feature__type)`), docs/claude-code-log.md.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown (typecheck 33 = baseline su output completo, build ✓ exit 0 solo chunk-warning pre-esistente, smoke 12 passed / 0 failed — ma nessuna sonda DOM sulle righe view: la verifica visiva non è stata eseguita in questa sessione)
+**Out-of-scope changes**: no (il prompt cita tree-view-sidebar.scss come sede dello stile esistente; l'unica regola aggiunta serve all'ellipsis del nome, che altrimenti spingerebbe la label fuori riga)
+**Layer Impact Report**: not-required (nessun file critical-zone §3.1; `view.kind` era già su `TreeSubViewData`, nessun nuovo lettore del D-layer)
+**Smoke visivo**: non eseguito
+**Notes**: il nome resta `tree-row__name` (13px), non `tree-feature__name` (11px): riusare la classe della feature avrebbe rimpicciolito ogni nome di view. Da qui `:has(+ .tree-feature__type)`, che dà `min-width: 0` solo dove la coppia esiste. In compact `[data-density]` cade solo `.tree-feature__mult`: il type sopravvive per costruzione. Il commit citato dal prompt (`1a0a2b0`) non esiste: quello dei badge è `b0fa445b6`.
+**Prompt document name**: 2026-08-25 tree_view_kind_text_label

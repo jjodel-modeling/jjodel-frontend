@@ -1710,6 +1710,15 @@ html[data-theme="dark"] {
     min-width: 0;
 }
 
+// Le view foglia riusano `tree-feature__type` come colonna del kind, ma il loro nome
+// resta `tree-row__name` (13px): e' il nome di una entita', non di una feature. Senza
+// `min-width: 0` un nome lungo non tronca e spinge la label fuori dalla riga, quindi
+// la regola si applica solo dove la coppia esiste davvero.
+.tree-row__name:has(+ .tree-feature__type) {
+    flex-shrink: 1;
+    min-width: 0;
+}
+
 // ── 2. Stato "non reso dal viewpoint attivo" ─────────────────────────────────
 // Dimmed al proprio posto nella gerarchia, feature collassate. NON usare per i
 // classifier di altri metamodelli: quelli sono fuori scopo, non "non resi".
