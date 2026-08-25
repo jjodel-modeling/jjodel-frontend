@@ -7554,3 +7554,16 @@ Dark mode overrides for `.toolbar-btn` also scoped under `.documentation-toolbar
 **Smoke visivo**: non applicabile (sonda dedicata con criterio meccanico; screenshot `_tmp_pool_F3.png`, `_tmp_pool_MIX.png`, `_tmp_pool_MIXA.png` accanto alla sonda).
 **Notes**: due difetti, non uno. D1 e' il clamp atteso (5+ archi stesso ruolo/lato: coppie a 0px su `right-3`, warn emesso). D2 e' nuovo e scatta prima, a 4 archi e senza warn: le ancore rese sono giuste ma i path usano bounds React Flow non rimisurate, e gli entranti cadono tutti sul centro del nodo; un trascinamento ripara, l'attesa no. Baseline R0: 2/3/4 archi = passi 17,6/13,25/10,6 px. Raccomandazione: rimisurare anche sulle percentuali prima di toccare il cap. Numeri e 4 domande nel report.
 **Prompt document name**: 2026-08-25 pool_saturation_faseA
+
+## 2026-08-25 — fix(editor-v2): la rimisura degli handle si invalida sulle posizioni, non sugli id
+**Prompt**: GO Fase B1, solo la (e) della discovery pool_saturation_faseA: invalidazione della rimisura sulle percentuali. In piu': chiudere la domanda 1 (sonda estesa a tutti i nodi, rimisurare le tre coppie a 0px sulle foglie), misurare il costo con t_edges_settle_ms sulla scala 500/1000 e dichiarare la scelta se percettibile, R0 invariato al pixel, il caso --mixed a 6 ancore 7,5px come nuovo assert verde. Hard stop dopo B1 con i numeri. D1 solo dopo un GO separato con LIR.
+**Files touched**: frontend/src/components/editor-v2/components/DynamicHandles.tsx (chiave di invalidazione da activeHandles a sidePositionsBySide + coalescenza per frame di updateNodeInternals), docs/discovery/discovery_2026-08-25_pool_saturation_faseA.md (§12, esito B1), docs/claude-code-log.md (questa entry). Sonda estesa a tutti i nodi ma gitignored (`frontend/scripts/smoke/_tmp_pool_*`).
+**Outcome**: ✅ completed
+**Corregge**: — 
+**Causa**: —
+**Regressions**: no (typecheck 33 = baseline esatta, 0 nel file toccato; build ✓ solo chunk-warning pre-esistente; vitest 1354 passed / 9 file falliti = identico al baseline verificato via stash; benchmark: rf_edges 1500/1500 invariato, commits_open_flow 2010 -> 1607, commits_edit_flow 22 -> 22)
+**Out-of-scope changes**: no (un file di codice + report + log)
+**Layer Impact Report**: not-required (DynamicHandles.tsx non e' nella tabella §3.1; portDistribution/handlePosition/useAutoAnchor solo letti, non modificati)
+**Smoke visivo**: passato (sonda `_tmp_pool_saturation.ts`: `--mixed` da 1/4 a 4/4 verdi, scarto attacco↔ancora 0px su ogni nodo e ogni lato; R0 2/3/4 archi byte-identico; F3-5/F3-6 ancora rossi come atteso, D1 non toccato)
+**Notes**: la chiave vecchia era un Set di handle id SENZA ruolo: un arco entrante su un `right-0` gia' usato come source la lasciava invariata, e i 426,5 su cui cadevano tutti gli entranti erano il 50% con cui React Flow aveva misurato quell'handle da inattivo. Domanda 1 chiusa: le coppie a 0px sulle foglie erano D2, ora 17,6px. Domanda 4: il costo era reale (+134 commit all'apertura) e la coalescenza lo riassorbe — scelta in §12.5, non debounce, per non allungare la latenza. Numeri nel report.
+**Prompt document name**: 2026-08-25 pool_saturation_faseB1

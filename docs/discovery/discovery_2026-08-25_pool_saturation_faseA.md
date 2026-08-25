@@ -439,3 +439,85 @@ node --disable-warning=ExperimentalWarning --experimental-strip-types \
 ```
 
 Esito atteso su questo HEAD: `3/6 verdi` la prima, `1/4 verdi` la seconda.
+
+---
+
+## 12. Fase B1 — esito (2026-08-25)
+
+GO ricevuto sulla sola (e). Diff in `DynamicHandles.tsx`, un file, fuori dalla
+tabella §3.1: la chiave di invalidazione passa dall'insieme degli handle id alle
+**posizioni calcolate** (`sidePositionsBySide`, chiave `handleId:role`), piu' una
+coalescenza per frame delle chiamate a `updateNodeInternals`.
+
+**Perche' la chiave vecchia non scattava.** `activeHandles` e' un `Set` di handle
+id **senza ruolo**. Un arco entrante che atterra su `right-0`, gia' presente come
+source, lascia l'insieme invariato: nessuna rimisura, mentre `computeSidePositions`
+aveva appena ridistribuito ogni endpoint del lato su N+1 slot. E il valore 426,5 su
+cui cadevano tutti gli entranti (§3.2) e' il 50% con cui React Flow aveva misurato
+quell'handle **da inattivo**, l'unica volta che l'ha misurato.
+
+### 12.1 D2 chiuso
+
+| caso | prima | dopo |
+|---|---|---|
+| `--mixed` (3 uscenti + 3 entranti) | 1/4 verdi, attacchi 413,3 / **426,5 ×4** / 439,8 | **4/4 verdi**, attacchi a passo 7,5 / 7,6 / 7,6 / 7,5 / 7,6 |
+| scarto attacco↔ancora, ogni nodo e ogni lato | fino a 19px sull'hub, 0,5 sul centro per gli entranti | **0px ovunque, in ogni stadio di ogni corsa** |
+
+### 12.2 Domanda 1 chiusa: era D2
+
+La sonda ora registra le ancore rese per **tutti** i nodi, non solo per l'hub. Le
+tre coppie a 0px su `b4:left`, `b5:left`, `b6:left` **spariscono**: 17,6px di
+distanza, due ancore distinte (`left-0` target e `left-0` source), scarto
+attacco↔ancora 0px. Non era la deconfliction, che resta intatta e non e' stata
+toccata.
+
+### 12.3 R0 invariato al pixel
+
+| archi | prima | dopo |
+|---|---|---|
+| 2 | ys 417,7 / 435,3 — passo 17,6 | identico |
+| 3 | ys 413,3 / 426,5 / 439,8 — passi 13,2 / 13,3 | identico |
+| 4 | ys 410,6 / 421,2 / 431,8 / 442,4 — passi 10,6 ×3 | identico |
+
+### 12.4 D1 intatto e ora isolato
+
+`F3-5` e `F3-6` restano rossi con gli stessi numeri di prima (10,6 ×3 poi 0, 0) e il
+warn del clamp e' ancora emesso. Nella coda `MIX-6+3` il lato porta sette endpoint
+distinti a 6,6px — sopra la soglia — e le uniche tre coppie a 0px sono esattamente
+i tre archi tosati su `right-3`. Il bersaglio del prossimo giro e' pulito.
+
+### 12.5 Domanda 4 chiusa: il costo c'era, la coalescenza lo riassorbe
+
+Harness `docs/benchmarks/` a scala 500/1000 (1500 archi), tre run per variante,
+mediane. Ambiente: M3, build di produzione su `vite preview`.
+
+| variante | `t_edges_settle_ms` | `commits_open_flow` | `edit_flow.ms` | `commits_edit_flow` |
+|---|---|---|---|---|
+| prima | 39 492 | 2 010 | 6 406 | 22 |
+| (e) senza coalescenza | 50 265 | **2 144** | 8 743 | 26 |
+| **(e) con coalescenza** | 41 386 | **1 607** | 7 406 | **22** |
+
+I tempi hanno una dispersione che copre la differenza (prima 32,5–49,2 s di settle,
+dopo 14,0–45,1 s): sui millisecondi non si puo' dichiarare nulla, e non lo si
+dichiara. I **conteggi di commit** invece non si sovrappongono fra le tre serie, ed
+e' li' che si legge il segnale: la chiave piu' fine costava 134 commit in piu'
+all'apertura e 4 alla mutazione singola.
+
+**Scelta dichiarata: coalescenza, non debounce.** Ogni nodo programmava il proprio
+doppio rAF e la propria `updateNodeInternals` da una voce sola; ora i nodi di uno
+stesso flow confluiscono in una `Map` unica, svuotata da un solo doppio rAF
+(`updateNodeInternals` accetta gia' una Map). Nessun ritardo aggiunto: la latenza
+resta esattamente due frame, come prima. Un debounce l'avrebbe allungata, e su un
+aggiornamento che l'utente vede come «l'arco si attacca al pallino» il ritardo e'
+proprio la cosa da non introdurre.
+
+Effetto collaterale voluto: la coalescenza raccoglie anche le invalidazioni che
+esistevano gia' prima della (e), quindi `commits_open_flow` scende **sotto** la
+baseline (1 607 contro 2 010, −20%) e `commits_edit_flow` torna a 22, il valore di
+partenza. `rf_edges` resta 1500/1500: la vittoria del clamp (`2ddedca53`) e' intatta.
+
+L'elemento del nodo si risolve al momento dello svuotamento e non a quello della
+programmazione: un nodo rimontato nel frattempo sarebbe altrimenti misurato
+attraverso un elemento staccato dal documento. Il batch e' indicizzato sull'oggetto
+`storeApi`, stabile per `ReactFlowProvider`, cosi' due flow a schermo non si
+mescolano.
