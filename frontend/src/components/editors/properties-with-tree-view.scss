@@ -1164,7 +1164,12 @@ $pc-hint-indent: 26px;        // 18px checkbox + 8px gap (the design-system Chec
         // `tree-leaf-view` sulle stesse righe, e senza l'esclusione perderebbero il
         // fondo solo in dark. Misurato: fondo rgba(0,0,0,0) contro il rgb(36,46,61)
         // che tree-leaf-view conserva sulla riga accanto.
-        [data-theme="dark"] &:not(.tree-viewpoint):not(.tree-leaf-view):not(.tree-view-vertex):not(.tree-view-row):not(.tree-view-edge) {
+        // Stessa ragione per i badge delle istanze M1 (`tree-m1-icon`, sezione
+        // in coda a tree-view-sidebar.scss): sono pastiglie, una per metaclasse,
+        // e senza l'esclusione perderebbero il fondo solo in dark. Misurato
+        // 2026-08-26: fondo rgba(0,0,0,0) contro il rgb(254,226,226) del chiaro.
+        // Basta la classe comune: le cinque varianti la portano tutte.
+        [data-theme="dark"] &:not(.tree-viewpoint):not(.tree-leaf-view):not(.tree-view-vertex):not(.tree-view-row):not(.tree-view-edge):not(.tree-m1-icon) {
             background: transparent;
         }
 

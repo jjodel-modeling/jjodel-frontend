@@ -1833,3 +1833,125 @@ html[data-theme="dark"] {
     flex-shrink: 0;
     line-height: 1;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Sezione modello (M1): istanze annidate per containment
+// Additivo. Nessuna regola esistente viene riscritta: il badge e' un
+// `.tree-node__icon` con una classe in piu' (specificita' 0,2,0, come i badge
+// view foglia poco sopra), e nome e tipo restano `.tree-feature__name` /
+// `.tree-feature__type`, gia' la colonna destra del tree.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Il discriminante `.tree-row--feature` non e' decorativo: la rail dichiara una
+// sua `.tree-node__icon` a (0,2,0) (properties-with-tree-view.scss:1130) che
+// rimette 14px, raggio 3 e fondo trasparente. Alla pari la spunta chi viene
+// dopo nel bundle, cioe' l'ordine degli @import; a (0,3,0) la questione non si
+// pone. Le righe M1 sono le sole a portare `tree-m1-icon`, e sono per
+// costruzione dentro `.tree-row--feature`.
+//
+// Il badge dell'istanza e' piu' grande di quello dei classifier (20 contro 14):
+// la sezione M1 e' la lista che si scorre per prima, e il glifo e' il suo indice.
+// La riga NON cresce: `.tree-row` resta a 26px (R-RAIL-9) e i 20px stanno dentro
+// la pastiglia inset (24px) senza spostare nulla.
+.tree-row--feature .tree-node__icon.tree-m1-icon {
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    border-radius: 5px;
+    font-size: 11px;
+    font-weight: 600;
+    border: none;
+
+    > i.bi { font-size: 11px; }
+}
+
+// Palette entita'. Il colore del glifo e' dichiarato due volte di proposito:
+// `styles/style.scss` porta un `i.bi { color: … }` diretto sull'<i>, che batte
+// per cascata qualunque colore lo <span> passi per ereditarieta' (misurato
+// 2026-08-12, CLAUDE.md §5). E' la regola `> i.bi` a dipingere; il `color`
+// sullo span copre il caso del badge reso come lettera.
+.tree-row--feature .tree-node__icon.tree-m1-class {
+    background-color: #fee2e2;
+    color: #dc2626;
+
+    > i.bi { color: #dc2626; }
+}
+
+.tree-row--feature .tree-node__icon.tree-m1-attribute {
+    background-color: #dcfce7;
+    color: #16a34a;
+
+    > i.bi { color: #16a34a; }
+}
+
+.tree-row--feature .tree-node__icon.tree-m1-reference {
+    background-color: #cffafe;
+    color: #0891b2;
+
+    > i.bi { color: #0891b2; }
+}
+
+// Metaclassi non mappate: slate con l'iniziale del nome della metaclasse.
+.tree-row--feature .tree-node__icon.tree-m1-other {
+    background-color: #f1f5f9;
+    color: #64748b;
+
+    > i.bi { color: #64748b; }
+}
+
+// Istanze auto-generate da classi singleton: stesso slate, glifo `braces`.
+.tree-row--feature .tree-node__icon.tree-m1-singleton {
+    background-color: #f1f5f9;
+    color: #64748b;
+
+    > i.bi { color: #64748b; }
+}
+
+// Un contenitore porta un peso in piu' del suo contenuto: e' l'unico segnale
+// gerarchico oltre all'indentazione quando l'albero e' chiuso.
+.tree-feature__name.is-container {
+    font-weight: 600;
+}
+
+.tree-feature__name.is-singleton {
+    color: #64748b;
+}
+
+// Conteggio figli: precede il tipo dentro la stessa colonna destra. E' questo
+// span a portare `margin-left: auto` quando c'e', e il tipo che lo perde —
+// altrimenti i due auto si spartirebbero lo spazio libero e il conteggio
+// resterebbe attaccato al nome.
+.tree-feature__count {
+    font-size: 11px;
+    font-family: var(--font-mono);
+    color: #cbd5e1;
+    margin-left: auto;
+    padding-left: 12px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.tree-feature__count + .tree-feature__type {
+    margin-left: 0;
+    padding-left: 6px;
+}
+
+// Densita' dei metadati: il blocco gemello sta in
+// components/editors/properties-with-tree-view.scss (soglie e ragioni li').
+// Sotto i 400px la colonna destra tiene il tipo e lascia andare il conteggio,
+// che e' ridondante — l'albero aperto lo dice contando le righe.
+.properties-with-tree-view--rail[data-density="compact"] {
+    .tree-feature__count {
+        display: none;
+    }
+}
+
+[data-theme="dark"] {
+    .tree-feature__count {
+        color: #4b5563;
+    }
+
+    .tree-feature__name.is-singleton {
+        color: #94a3b8;
+    }
+}
