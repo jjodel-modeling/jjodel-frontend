@@ -1,5 +1,18 @@
 # Claude Code Session Log
 
+## 2026-08-26 — feat(editor-v2): topbar e header del rail, variante 1c
+**Prompt**: adozione del mockup 1c. L'header dedicato della rail sparisce e il pannello destro parte dalla banda filtro e dal campo Filter; nome e badge del modello salgono in topbar a filo destro col chevron di switch; zoom e collapse-rail in un solo gruppo bordato con hairline e divider 1x22; fuori dalla topbar il badge notifiche e il fullscreen. Invarianti dichiarate: zoom, collapse/riapertura della rail, dark mode, densita' compact.
+**Files touched**: `frontend/src/contexts/TreeViewPanelContext.tsx`, `frontend/src/components/editor-v2/Toolbar.tsx`, `frontend/src/components/editor-v2/EditorV2.scss`, `frontend/src/components/editors/PropertiesWithTreeView.tsx`, `frontend/src/components/editors/properties-with-tree-view.scss`, `frontend/src/components/TreeViewSidebar/tree-view-sidebar.scss`, `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gate: `npm run typecheck` 33 = baseline esatta, 0 errori nei file toccati; `npm run build` exit 0 col solo chunk-warning; `npm run smoke` 12 passed / 0 failed / 3 skipped, A5 (stack del chrome contiguo) ancora a 0.00px fra toolbar e rail. Sonda dedicata `_tmp_topbar_rail_1c.ts`, 12/12.
+**Out-of-scope changes**: no. Sette file, tutti confermati in apertura sotto la Regola 19. Dentro quei file: `subjectShownInRailHeader` non viene piu' passato a `Info` (l'header che lo giustificava non c'e' piu'; senza questo l'inspector resterebbe senza nome col modello selezionato), e la chiave `jjodel_property_panel_visible` cambia proprietario da `PropertiesWithTreeView` al context.
+**Layer Impact Report**: not-required (nessun file di §3.1; nessun write path D/L — le sole letture Redux nuove sono selector di sola lettura su `idlookup`)
+**Smoke visivo**: la verifica finale spetta ad Alfonso a schermo. La chat ha misurato con Playwright su Chromium headless contro `http://localhost:3000/`: `_tmp_topbar_rail_1c_light.png` e `_tmp_topbar_rail_1c_dark.png`.
+**Notes**: Tre scoperte dalla sonda. (1) L'icona che il prompt chiamava «collapse-all» era il toggle Focus/Browse (R-RAIL-38); un collapse-all vero non esiste e resta da fare. (2) Il fullscreen ritirato era l'unico scrittore e l'unica uscita di `canvas-only`, che in CSS nasconde rail e pillola: normalizzato a `split` al mount. (3) `style.scss:790` dipinge ogni `i.bi` a (0,1,1) e batteva il chevron, misurato slate-900; risolto raddoppiando `.bi`. Badge sui token entita', non ambra.
+**Prompt document name**: 2026-08-26 (istruzione in chat)
+
 ## 2026-08-26 — fix(editor-v2): anello e banda seguono la sagoma anche sulle forme SVG
 **Prompt**: istruzione in chat con screenshot di un'ellisse selezionata. Il bordo ciano e quello piu' chiaro devono seguire **sempre** il contorno della forma, con il tratteggio all'esterno; il tratteggio resta assente sulle forme dove coinciderebbe in gran parte col bordo ciano (rect, rounded), come gia' fatto.
 **Files touched**: `frontend/src/components/editor-v2/viewpoint/ir/IRNodeContent.tsx`, `frontend/src/components/editor-v2/viewpoint/ir/irStyle.ts`, `docs/claude-code-log.md`

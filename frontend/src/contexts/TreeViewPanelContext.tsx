@@ -53,11 +53,25 @@ interface TreeViewPanelContextType {
     activeEditorType: EditorType;
     /** Set active editor type */
     setActiveEditorType: (type: EditorType) => void;
+
+    // ─── Inspector zone of the right rail ───
+    /** Inspector (Properties) zone is expanded */
+    isInspectorVisible: boolean;
+    /** Expand the inspector zone */
+    showInspector: () => void;
+    /** Toggle the inspector zone */
+    toggleInspector: () => void;
 }
 
 const TreeViewPanelContext = createContext<TreeViewPanelContextType | null>(null);
 
 const STORAGE_KEY_VISIBLE = 'jjodel_treeview_visible';
+// Inspector visibility. Historically local state inside PropertiesWithTreeView; it moved
+// here when the rail header was retired (2026-08-26) and its collapse control went up into
+// the canvas topbar, which lives in a different subtree: two components read the same zone,
+// so the state cannot stay private to one of them. Same key as before, so a user's
+// persisted preference survives the move untouched.
+const STORAGE_KEY_INSPECTOR_VISIBLE = 'jjodel_property_panel_visible';
 
 /**
  * Extract action from JjScript command
@@ -75,6 +89,13 @@ export const TreeViewPanelProvider: React.FC<{ children: React.ReactNode }> = ({
     const [isVisible, setIsVisible] = useState(() => {
         const stored = localStorage.getItem(STORAGE_KEY_VISIBLE);
         return stored !== null ? stored === 'true' : true; // Default: visible
+    });
+
+    // Inspector zone visibility. Default true, as it has always been.
+    const [isInspectorVisible, setIsInspectorVisible] = useState(() => {
+        if (typeof window === 'undefined') return true;
+        const stored = window.localStorage.getItem(STORAGE_KEY_INSPECTOR_VISIBLE);
+        return stored !== null ? stored === 'true' : true;
     });
 
     const [isHighlighted, setIsHighlighted] = useState(false);
@@ -110,6 +131,22 @@ export const TreeViewPanelProvider: React.FC<{ children: React.ReactNode }> = ({
 
     const toggle = useCallback(() => {
         setIsVisible(prev => !prev);
+    }, []);
+
+    // Persist inspector visibility. Kept separate from the tree's own key: the two zones
+    // collapse independently (R-RAIL-11) and always have.
+    useEffect(() => {
+        try {
+            localStorage.setItem(STORAGE_KEY_INSPECTOR_VISIBLE, String(isInspectorVisible));
+        } catch { /* ignore */ }
+    }, [isInspectorVisible]);
+
+    const showInspector = useCallback(() => {
+        setIsInspectorVisible(true);
+    }, []);
+
+    const toggleInspector = useCallback(() => {
+        setIsInspectorVisible(prev => !prev);
     }, []);
 
     // Fire a brief attention pulse on the collapsed tree toggle (~2.5s).
@@ -333,6 +370,9 @@ export const TreeViewPanelProvider: React.FC<{ children: React.ReactNode }> = ({
             toggleNode,
             activeEditorType,
             setActiveEditorType,
+            isInspectorVisible,
+            showInspector,
+            toggleInspector,
         }}>
             {children}
         </TreeViewPanelContext.Provider>

@@ -526,7 +526,186 @@
     }
 }
 
+// ── Command group + editor identity (right end of the toolbar, 2026-08-26) ──
+//
+// One bordered box holds the controls that act on the canvas as a surface: zoom out,
+// the level, zoom in, fit, a hairline, and the rail collapse. Grouping them is what
+// lets the identity of the open model sit beside them and still read as a separate
+// thing — the border does the separating, so the identity needs no chrome of its own
+// beyond the 1x22 divider.
+//
+// Sizes are the mockup's: 28x26 per slot, 12-13px glyphs, 8px radius on the box and a
+// 2px inset so the slots never touch the border.
+.toolbar-commands {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    flex-shrink: 0;
+    padding: 2px;
+    border: 1px solid var(--border-default, #e2e8f0);
+    border-radius: 8px;
+
+    &__btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 26px;
+        padding: 0;
+        border: none;
+        background: transparent;
+        color: var(--text-secondary, #64748b);
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 13px;
+        transition: background 0.15s, color 0.15s;
+
+        &:hover:not(:disabled) {
+            background: var(--surface-1, #ffffff);
+            color: var(--text-primary);
+        }
+
+        &:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+    }
+
+    // The zoom level is a button too — clicking it resets to 100%. Wider than a slot
+    // because it carries text; tabular figures so 90%/100%/110% do not shift it.
+    &__level {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 42px;
+        height: 26px;
+        padding: 0 2px;
+        border: none;
+        background: transparent;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 500;
+        font-variant-numeric: tabular-nums;
+        color: var(--text-secondary, #64748b);
+        cursor: pointer;
+        text-align: center;
+        transition: background 0.15s, color 0.15s;
+
+        &:hover {
+            background: var(--surface-1, #ffffff);
+            color: var(--text-primary);
+        }
+    }
+
+    // Separates zoom from the rail collapse INSIDE the box: a hairline, not the 1x22
+    // divider, which is reserved for the boundary between the box and the identity.
+    &__hairline {
+        width: 1px;
+        height: 16px;
+        margin: 0 3px;
+        background: var(--border-default, #e2e8f0);
+        flex-shrink: 0;
+    }
+}
+
+// Boundary between the command box and the identity. Taller than the in-box hairline
+// (22 vs 16) because it separates two groups and not two slots.
+.toolbar-identity-divider {
+    width: 1px;
+    height: 22px;
+    margin: 0 10px;
+    background: var(--border-default, #e2e8f0);
+    flex-shrink: 0;
+}
+
+// Identity of the open model: badge, name, and the switch affordance. Not a button —
+// there is no model-selection dropdown to open yet (see Toolbar.tsx), so it takes no
+// hover and no pointer, and promises nothing it cannot do.
+.toolbar-identity {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 1;
+    min-width: 0;
+
+    // Same letter, same palette and same radius as the badge the rail header carried:
+    // the entity tokens are the single source for what a model looks like. Only the
+    // size grows, 18 -> 22, now that it stands alone at the end of the bar.
+    &__badge {
+        flex: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        border-radius: 5px;
+        font-size: var(--font-size-xs);
+        font-weight: var(--font-weight-bold);
+        line-height: 1;
+
+        &--metamodel {
+            background: var(--color-entity-metamodel-bg);
+            color: var(--color-entity-metamodel-fg);
+        }
+
+        &--model {
+            background: var(--color-entity-model-bg);
+            color: var(--color-entity-model-fg);
+        }
+    }
+
+    // The only flexible item of the block, so a long model name truncates instead of
+    // pushing the badge or the chevron off the bar.
+    //
+    // Colour is the theme token, not the mockup's raw `--color-slate-900`: the slate
+    // scale in `styles/tokens.css` is primitive and theme-invariant, so slate-900 on a
+    // dark toolbar is near-black on near-black. Same defect the rail's Focus bar had to
+    // repair after the fact (properties-with-tree-view.scss:1856); not repeated here.
+    // `--text-primary` is #1e293b in light — one step off the mockup's #0f172a, which is
+    // the price of the theme following.
+    &__name {
+        min-width: 0;
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--text-primary);
+        letter-spacing: -0.01em;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    // `--text-dim` IS the mockup's slate-400 in light (#94a3b8), and follows the theme
+    // in dark.
+    //
+    // The class is doubled with `.bi` on purpose, and the hover is pinned. `style.scss`
+    // carries `i.bi { color: var(--font-color-1); &:hover { color: var(--palette-1-hover) } }`,
+    // which is (0,1,1) and lands on this same <i> as a direct declaration — a bare
+    // `.toolbar-identity__chevron` at (0,1,0) loses to it and never paints. Measured
+    // 2026-08-26 before this line existed: the chevron computed rgb(15,23,42) in light,
+    // i.e. slate-900, the same weight as the name it is supposed to sit under. `.bi`
+    // takes the selector to (0,2,0) and wins. Same trap as the tree glyph in CLAUDE.md
+    // §5; the hover clause matters too, because this block is not a button and a colour
+    // that moves under the pointer would promise a click that does nothing.
+    //
+    // The command group's own glyphs are deliberately NOT rescued this way: every other
+    // icon in this toolbar is painted by that same `i.bi` rule (measured: rgb(15,23,42)
+    // light, rgb(100,116,139) dark, identical on the old .toolbar-btn and on the new
+    // .toolbar-commands__btn), so forcing slate-600 here alone would make the new group
+    // the one odd cluster in the bar.
+    &__chevron.bi {
+        flex: none;
+        font-size: 12px;
+        color: var(--text-dim, #94a3b8);
+
+        &:hover {
+            color: var(--text-dim, #94a3b8);
+        }
+    }
+}
+
 // ── Zoom controls ──
+// TODO: cleanup — `.toolbar-zoom` has had no markup since the command group above
+// replaced it (2026-08-26). Kept until the group is settled at screen.
 .toolbar-zoom {
     display: flex;
     align-items: center;

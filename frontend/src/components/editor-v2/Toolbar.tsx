@@ -10,7 +10,10 @@ import type { DViewPoint } from '../../joiner';
 import { activateViewpoint } from '../../utils/lastViewpoint';
 import DockManager from '../abstract/DockManager';
 import { JjodelEvents } from '../../events/registry';
-import { ValidationPill } from './problems/ValidationPill';
+import { useTreeViewPanel } from '../../contexts/TreeViewPanelContext';
+// TODO: cleanup — `ValidationPill` is no longer rendered here (2026-08-26). The import is
+// dropped, the component is not: it is the only conformance summary in the codebase and
+// the aggregated Problems panel it defers to (WP2-D) is still to be built.
 
 interface ToolbarProps {
     snapEnabled: boolean;
@@ -46,8 +49,9 @@ interface ToolbarProps {
     onAlignBottom?: () => void;
     onDistributeH?: () => void;
     onDistributeV?: () => void;
+    /** Metamodel tab. Also picks the `M` / `m` letter of the identity badge. */
     isMetamodel?: boolean;
-    /** Open model id — drives the conformance validation pill (undefined ⇒ no pill). */
+    /** Open model id — resolves the model name shown in the identity block, flush right. */
     modelId?: string;
     editorMode?: 'flow' | 'classic' | 'split';
     hasViewpoint?: boolean;
@@ -71,10 +75,15 @@ const NOTATION_OPTIONS: Array<{ id: NotationMode; name: string; desc: string; ic
  * Compact toolbar (Row 2) for the editor.
  *
  * Layout:
- * [↶][↷][⧉][🗑] | VIEW [Structured ▾] [Theme: X ▾] | LAYOUT [⊞][⊟] | [👁 Abstract syntax ▾] | ——spacer—— | [−] 100% [+] [⤢] | [⤢/⊞]
+ * [↶][↷][⧉][🗑] | VIEW [Structured ▾] [Theme: X ▾] | LAYOUT [⊞][⊟] | [👁 Abstract syntax ▾] | ——spacer—— | ┌[−] 100% [+] [⤢] ┊ [»]┐ │ (m) model_1 ⌄
  *
  * The viewpoint selector is the syntax control (R-IRN-10): it replaced the separate
  * [● Abstract syntax] pill that used to sit beside it and only restated its state.
+ *
+ * The right end is the chrome of the canvas as a surface (2026-08-26): one bordered
+ * group for zoom and the rail collapse, then the identity of the open model, flush
+ * right. It absorbed the rail's own 44px header, which used to repeat that identity a
+ * second time one column over.
  */
 // SVG icons for alignment tools (moved from AlignmentToolbar)
 const AlignIcons = {
@@ -187,6 +196,7 @@ function Toolbar({
     const layoutDisabled = editorMode === 'classic';
     const [notationOpen, setNotationOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
+    // TODO: cleanup — no reader since the fullscreen toggle was retired (2026-08-26).
     const prevPanelMode = useRef<LayoutMode>('sidebar');
 
     const currentNotation = NOTATION_OPTIONS.find(n => n.id === notation) ?? NOTATION_OPTIONS[0];
@@ -308,6 +318,9 @@ function Toolbar({
     }, [showViewsMenu]);
 
     // ── Layout mode state (synced via CustomEvent + localStorage) ──
+    // TODO: cleanup — `layoutMode` is written by the listener below and read by nobody
+    // since the fullscreen toggle was retired (2026-08-26). `handleLayoutModeChange` IS
+    // still live: the `canvas-only` escape hatch below calls it.
     const [layoutMode, setLayoutMode] = useState<LayoutMode>(getSavedLayoutMode);
 
     useEffect(() => {
@@ -328,11 +341,57 @@ function Toolbar({
         }));
     }, []);
 
+    // TODO: cleanup — no call site since the fullscreen toggle was retired (2026-08-26).
     const handleLayoutModeDoubleClick = useCallback((mode: LayoutMode) => {
         handleLayoutModeChange(mode, true);
     }, [handleLayoutModeChange]);
 
+    // TODO: cleanup — same, `showLayoutControls` gated the fullscreen toggle only.
     const showLayoutControls = !isProjectOverviewPage();
+
+    /**
+     * Escape hatch for `canvas-only`, once (2026-08-26).
+     *
+     * The retired fullscreen button was the ONLY writer of that layout mode and the only
+     * way out of it: `Navbar`'s own `handleLayoutModeChange` has no call site either, and
+     * `properties-with-tree-view.scss:1487` hides BOTH the rail and its reopen pill under
+     * `body[data-layout-mode="canvas-only"]`. Anyone whose localStorage holds that value
+     * would open the app with no right column and no control able to bring it back.
+     *
+     * So the mode is normalised to the default on mount. It is not a migration in the
+     * VersionFixer sense — the value is in localStorage, not in project state — and it is
+     * self-clearing: with no writer left, nobody reaches `canvas-only` again.
+     */
+    useEffect(() => {
+        if (getSavedLayoutMode() !== 'canvas-only') return;
+        handleLayoutModeChange('split');
+    }, [handleLayoutModeChange]);
+
+    // Rail chrome that lives here now: the inspector zone's visibility, shared with the
+    // rail itself through TreeViewPanelContext (the rail is portaled to <body>, so the
+    // two are in different subtrees and cannot share component state).
+    const { isInspectorVisible, toggleInspector } = useTreeViewPanel();
+
+    /**
+     * Name of the model this editor tab is open on. Bounded walk up `father` to the
+     * owning DModel — the raw D-layer read of CLAUDE.md §3.6, which does not wait on the
+     * L-layer forward collections. Returns a primitive, so the toolbar does not re-render
+     * on unrelated store writes.
+     *
+     * `modelId` is already the DModel in the common case; the walk covers the tab being
+     * opened on something below it.
+     */
+    const editorTitle = useSelector((state: any) => {
+        const lookup = state.idlookup || {};
+        let id: string | undefined = modelId;
+        for (let hops = 0; id && hops < 64; hops++) {
+            const e = lookup[id];
+            if (!e) return '';
+            if (e.className === 'DModel') return e.name || '';
+            id = e.father;
+        }
+        return '';
+    });
 
     // Close dropdown on click outside
     useEffect(() => {
@@ -603,79 +662,98 @@ function Toolbar({
             {/* ── Spacer ── */}
             <div className="toolbar-spacer" />
 
-            {/* ── Conformance validation pill (silent when conformant; never for metamodels) ── */}
-            {modelId && <ValidationPill modelId={modelId} />}
+            {/* Retired from this bar on 2026-08-26, and not relocated:
+                — the conformance pill (`ValidationPill`), whose counts read as a
+                  notifications badge next to the identity of the open model. The
+                  per-node badges on the canvas and the status bar's conformance dot
+                  remain. `ValidationPill` itself is left in the tree, unrendered.
+                — the fullscreen / show-panel toggle, which drove layout mode
+                  `canvas-only`. It read as a second way of doing what the rail
+                  collapse below does, so one of the two had to go. See the
+                  `canvas-only` normalisation effect above for the escape hatch. */}
 
             {/* Classic shutdown (Fase 5a): the flow/classic/split mode toggle is
                 gone — concrete syntax renders via the IR interpreter behind the
                 active viewpoint. TODO: cleanup — remove editorMode/hasViewpoint/
                 onEditorModeChange plumbing once the removal layer lands. */}
 
-            {/* ── Zoom controls (right-aligned) ── */}
-            {onZoomOut && onZoomIn && onResetZoom && zoomLevel !== undefined && (
-                <div className="toolbar-zoom">
-                    <button
-                        className="toolbar-btn"
-                        onClick={onZoomOut}
-                        title="Zoom out"
-                    >
-                        <i className="bi bi-dash" />
-                    </button>
-                    <button
-                        className="toolbar-zoom__level"
-                        onClick={onResetZoom}
-                        title="Reset zoom to 100%"
-                    >
-                        {zoomLevel}%
-                    </button>
-                    <button
-                        className="toolbar-btn"
-                        onClick={onZoomIn}
-                        title="Zoom in"
-                    >
-                        <i className="bi bi-plus" />
-                    </button>
-                    <button
-                        className="toolbar-btn"
-                        onClick={onFitView}
-                        title="Fit to view"
-                    >
-                        <i className="bi bi-arrows-fullscreen" />
-                    </button>
-                </div>
-            )}
-            {/* Fallback: fit view button when zoom props not provided */}
-            {(!onZoomIn || !onZoomOut) && (
+            {/* ── Command group: one bordered box, right-aligned ──
+                Zoom out / level / zoom in / fit, a hairline, then the rail collapse.
+                The two families sit together because they are the only two controls
+                that act on the CANVAS AS A SURFACE rather than on its contents. */}
+            <div className="toolbar-commands">
+                {onZoomOut && onZoomIn && onResetZoom && zoomLevel !== undefined && (
+                    <>
+                        <button
+                            className="toolbar-commands__btn"
+                            onClick={onZoomOut}
+                            title="Zoom out"
+                        >
+                            <i className="bi bi-dash" />
+                        </button>
+                        <button
+                            className="toolbar-commands__level"
+                            onClick={onResetZoom}
+                            title="Reset zoom to 100%"
+                        >
+                            {zoomLevel}%
+                        </button>
+                        <button
+                            className="toolbar-commands__btn"
+                            onClick={onZoomIn}
+                            title="Zoom in"
+                        >
+                            <i className="bi bi-plus" />
+                        </button>
+                    </>
+                )}
+                {/* Fit to view. Outside the zoom guard on purpose: it is the fallback
+                    the old layout already had when the zoom props were absent, and it
+                    has no keyboard shortcut, so this is its only way in. */}
                 <button
-                    className="toolbar-btn"
+                    className="toolbar-commands__btn"
                     onClick={onFitView}
                     title="Fit to view"
                 >
                     <i className="bi bi-arrows-fullscreen" />
                 </button>
-            )}
 
-            {/* ── Panel toggle (after zoom) ── */}
-            {showLayoutControls && (
+                <div className="toolbar-commands__hairline" aria-hidden="true" />
+
+                {/* Rail collapse. Commutes the INSPECTOR zone only, never the tree —
+                    the semantics R-RAIL-23 gave the rail header's own button, which
+                    this replaces verbatim. The tree keeps ⌘B. */}
+                <button
+                    className="toolbar-commands__btn"
+                    onClick={toggleInspector}
+                    aria-label={isInspectorVisible ? 'Hide properties' : 'Show properties'}
+                    aria-pressed={!isInspectorVisible}
+                    title={isInspectorVisible ? 'Hide properties' : 'Show properties'}
+                >
+                    <i className={`bi ${isInspectorVisible ? 'bi-chevron-double-right' : 'bi-chevron-double-left'}`} />
+                </button>
+            </div>
+
+            {/* ── Identity of the open editor, flush right ──
+                Subject is the TAB's model, not the owner of the selection: a tab's
+                subject must not move when the selection does. The retired rail header
+                walked up from `_lastSelected` instead, which is why it went blank with
+                nothing selected. The chevron is an affordance for switching model and
+                is inert for now — there is no model-selection dropdown to hang it on
+                (open models are switched through the dock tabs). */}
+            {editorTitle && (
                 <>
-                    <div className="toolbar-separator" />
-                    <button
-                        className="toolbar-btn"
-                        onClick={() => {
-                            if (layoutMode === 'canvas-only') {
-                                // Restore previous panel mode
-                                const prev = prevPanelMode.current;
-                                handleLayoutModeChange(prev);
-                            } else {
-                                // Save current mode and go fullscreen
-                                prevPanelMode.current = layoutMode;
-                                handleLayoutModeChange('canvas-only');
-                            }
-                        }}
-                        title={layoutMode === 'canvas-only' ? 'Show panel' : 'Fullscreen'}
-                    >
-                        <i className={layoutMode === 'canvas-only' ? 'bi bi-layout-sidebar-reverse' : 'bi bi-fullscreen'} />
-                    </button>
+                    <div className="toolbar-identity-divider" aria-hidden="true" />
+                    <div className="toolbar-identity" title={editorTitle}>
+                        <span
+                            className={`toolbar-identity__badge toolbar-identity__badge--${isMetamodel ? 'metamodel' : 'model'}`}
+                            aria-hidden="true"
+                        >
+                            {isMetamodel ? 'M' : 'm'}
+                        </span>
+                        <span className="toolbar-identity__name">{editorTitle}</span>
+                        <i className="bi bi-chevron-expand toolbar-identity__chevron" aria-hidden="true" />
+                    </div>
                 </>
             )}
         </div>

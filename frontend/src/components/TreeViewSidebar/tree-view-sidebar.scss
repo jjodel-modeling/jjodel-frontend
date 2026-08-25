@@ -1954,4 +1954,24 @@ html[data-theme="dark"] {
     .tree-feature__name.is-singleton {
         color: #94a3b8;
     }
+
+    // ── Filter band in dark ──
+    //
+    // `.tree-scope-bar` declares three raw literals from the light cyan family
+    // (`#ecfeff` ground, `#cffafe` hairline, `#155e75` text). Raw palette does not
+    // follow the theme, so in dark the band rendered a near-white ground carrying
+    // near-black text, in a column that is otherwise dark. It got away with it while it
+    // sat under the rail's 44px header; from 2026-08-26 the header is gone and this
+    // band IS the top edge of the rail, which is what makes it worth repairing now.
+    //
+    // Same shape as the repair the Focus bar needed (properties-with-tree-view.scss,
+    // "Focus bar and posture button in dark"): the dark values are corrected here and
+    // the light rendering is left byte for byte as it was. The band keeps its cyan
+    // identity — it is the only tinted row of the column and the tint is what says
+    // "this is a filter, not content".
+    .tree-scope-bar {
+        background: rgba(6, 182, 212, 0.10);   // --color-cyan-500 at low alpha
+        border-bottom-color: rgba(6, 182, 212, 0.22);
+        color: var(--color-cyan-300);
+    }
 }

@@ -1653,97 +1653,24 @@ body[data-active-tab="documentation"] .properties-tree-overlay {
     }
 }
 
-// ─── Rail header (44px, flex:none) ───────────────────────────────────────────
-.properties-with-tree-view--rail .rail-header {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    flex: none;
-    height: 44px;   // literal by R-RAIL-9 — see the block at the top of this file
-    padding: 0 var(--space-2) 0 var(--space-3);
-    border-bottom: 1px solid var(--color-panel-border);
-    background: var(--color-panel-bg);
-    user-select: none;
-
-    &__badge {
-        flex: none;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 18px;
-        height: 18px;
-        border-radius: var(--radius-sm);
-        font-size: var(--font-size-xs);
-        font-weight: var(--font-weight-bold);
-        line-height: 1;
-
-        &--metamodel {
-            background: var(--color-entity-metamodel-bg);
-            color: var(--color-entity-metamodel-fg);
-        }
-
-        &--model {
-            background: var(--color-entity-model-bg);
-            color: var(--color-entity-model-fg);
-        }
-    }
-
-    // The title is the ONLY flexible item: everything after it is flex:none, so the
-    // controls never wrap or shrink and the name truncates instead.
-    &__title {
-        min-width: 0;
-        font-size: var(--font-size-base);
-        font-weight: var(--font-weight-semibold);
-        color: var(--color-text-primary);
-        letter-spacing: -0.01em;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        text-transform: none;
-    }
-
-    &__spacer {
-        flex: 1;
-        min-width: var(--space-2);
-    }
-
-    &__btn {
-        flex: none;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 26px;
-        height: 26px;
-        padding: 0;
-        border: 1px solid var(--color-panel-border);
-        border-radius: var(--radius-base);
-        background: var(--color-panel-bg);
-        color: var(--color-slate-600);
-        cursor: pointer;
-        transition: border-color var(--duration-fast) var(--ease-out),
-                    color var(--duration-fast) var(--ease-out);
-
-        &:hover {
-            border-color: var(--color-slate-400);
-            color: var(--color-text-primary);
-        }
-
-        i { font-size: var(--font-size-sm); }
-    }
-
-    // Host-owned help button, kept in its historic wrapper (Q4).
-    .properties-panel-header__actions {
-        flex: none;
-        display: flex;
-        align-items: center;
-    }
-
-    // The pin and collapse buttons keep their own classes and base styling.
-    .properties-panel-pin-btn,
-    .properties-panel-toggle-btn {
-        flex: none;
-    }
-}
+// ─── Rail header: RETIRED (2026-08-26) ───────────────────────────────────────
+//
+// The 44px bar that opened the rail is gone, markup and rules together. What it
+// carried went two ways: the model badge and name, and the control that collapses the
+// inspector, moved up into the canvas topbar (`editor-v2/Toolbar.tsx`, rules in
+// `EditorV2.scss`), where the identity is stated once for the tab instead of once per
+// column; the contextual help, the pin button and the Focus/Browse button were
+// retired outright — help lives in the app bar's Help menu, and the pin and the
+// posture keep their state machines without a button of their own (see the TODOs in
+// `PropertiesWithTreeView.tsx`).
+//
+// The rail therefore starts on `.tree-scope-bar`, the filter band, whose own rules and
+// dark counterpart live in `TreeViewSidebar/tree-view-sidebar.scss` — it is that
+// sheet's element, and it is now the rail's top edge.
+//
+// `.properties-panel-pin-btn` and `.properties-panel-toggle-btn` keep their base rules
+// further up this file (:231, :257) and their dark block at :1358: unrendered, like the
+// `.properties-panel-header` family above them, and left standing for the same reason.
 
 // ─── Identity block in Focus posture (design §7) ─────────────────────────────
 // Written as a full selector and not nested in the block above, because that block is
@@ -1866,9 +1793,9 @@ body[data-active-tab="documentation"] .properties-tree-overlay {
         border-bottom-color: var(--color-panel-border);
     }
 
+    // `.rail-header__btn` dropped from this list with the header (2026-08-26).
     .rail-focusbar__back,
-    .rail-focusbar__step,
-    .rail-header__btn {
+    .rail-focusbar__step {
         color: var(--color-slate-300);
     }
 

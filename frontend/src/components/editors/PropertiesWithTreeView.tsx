@@ -3,7 +3,6 @@ import { createPortal } from 'react-dom';
 import { useSelector, useStore } from 'react-redux';
 import { Info } from './Info';
 import { NodeEditor } from './NodeEditor';
-import HelpButton from '../HelpButton';
 import { TreeViewContent } from '../TreeViewSidebar/TreeViewContent';
 import { TreeViewScopeBarLive } from '../TreeViewSidebar/TreeViewScopeBar';
 import { useTreeViewPanel } from '../../contexts/TreeViewPanelContext';
@@ -16,14 +15,19 @@ import { JjodelEvents } from '../../events/registry';
  * PropertiesWithTreeView Component
  *
  * The right rail: a single continuous shell (arc 1, 2026-08-10) holding, top to
- * bottom, a header, the structure tree pane and the inspector. It replaced the two
- * stacked floating cards ("TREE VIEW" and "PROPERTIES"), each of which used to
- * carry its own header, border and shadow.
+ * bottom, the structure tree pane and the inspector. It replaced the two stacked
+ * floating cards ("TREE VIEW" and "PROPERTIES"), each of which used to carry its own
+ * header, border and shadow.
+ *
+ * It had a header of its own until 2026-08-26, when the column's chrome went up into
+ * the canvas topbar: the model badge and name, and the control that collapses the
+ * inspector, are rendered there by `editor-v2/Toolbar.tsx`. The rail now opens
+ * directly on the filter band and the Filter field.
  *
  * Layout is preset `2a` ("Adaptive rail"), and from arc 2 (R-RAIL-38) it carries the
  * posture again: the tree pane collapses to 0px when a leaf is selected (Focus) and
- * returns on Escape or on the Focus/Browse button (Browse). Nothing else moves —
- * header, inspector and footer keep their place, so the switch reads as a change of
+ * returns on Escape or on the Focus bar's Structure chip (Browse). Nothing else
+ * moves — inspector and footer keep their place, so the switch reads as a change of
  * height and not as a change of screen. Nothing is draggable.
  */
 
@@ -34,9 +38,10 @@ const MIN_WIDTH = 200;
 const MAX_WIDTH = 500;
 const STORAGE_KEY = 'jjodel_property_tree_view_width';
 
-// Properties panel visibility (2026-05-13): toggle indipendente dal tree.
-// Default: visible (preserva comportamento storico per utenti esistenti).
-const STORAGE_KEY_PROPERTIES_VISIBLE = 'jjodel_property_panel_visible';
+// Properties panel visibility (2026-05-13): il toggle resta indipendente dal tree, ma
+// dal 2026-08-26 lo stato e la sua chiave `jjodel_property_panel_visible` vivono in
+// TreeViewPanelContext — il controllo che lo commuta sta nella topbar del canvas, che e'
+// un altro sottoalbero React. Vedi il commento su `useTreeViewPanel` qui sotto.
 
 // Properties panel width (2026-07-06): larghezza fissa e indipendente dal tree.
 // range 400-700px, default 440. Chiave propria, clamp + NaN guard come il tree.
@@ -247,38 +252,16 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
         localStorage.setItem(STORAGE_KEY_PROPERTIES_WIDTH, String(propsWidth));
     }, [propsWidth]);
 
-    // Properties panel visibility: state locale + persistenza localStorage.
-    // Default true (preserva comportamento storico). Snake_case key per
-    // coerenza col pattern jjodel_treeview_visible esistente.
-    const [isPropertiesVisible, setIsPropertiesVisible] = useState<boolean>(() => {
-        if (typeof window === 'undefined') return true;
-        const stored = window.localStorage.getItem(STORAGE_KEY_PROPERTIES_VISIBLE);
-        if (stored === null) return true;
-        return stored === 'true';
-    });
-
-    useEffect(() => {
-        try {
-            window.localStorage.setItem(STORAGE_KEY_PROPERTIES_VISIBLE, String(isPropertiesVisible));
-        } catch { /* ignore */ }
-    }, [isPropertiesVisible]);
-
-    // Header control (R-RAIL-23): it commutes the INSPECTOR only, never the tree. The
-    // header belongs to the shell (R-RAIL-18) and survives as long as either pane is
-    // mounted, so hiding the inspector is reversible from here — there is no dead end
-    // left to escape by collapsing both zones at once. The tree keeps its own key and
-    // its ⌘B: this component never writes `jjodel_treeview_visible` and never calls the
-    // TreeViewPanelContext setters (R-RAIL-11). When the tree is already hidden, hiding
-    // the inspector empties the shell, which unmounts and hands over to the reopen pill.
-    const toggleInspector = useCallback(() => {
-        setIsPropertiesVisible(v => !v);
-    }, []);
-
     // Posture (preset 2a, R-RAIL-38): session-only, always starts in Browse. Never
     // persisted — reopening a project must show the structure, not the last element
     // inspected. It is a state of the shell, so it never travels through `Info` as a
     // prop: the zones read it from here.
     const [posture, setPosture] = useState<RailPosture>('browse');
+    // TODO: cleanup — no call site since the rail header was retired (2026-08-26). The
+    // header's own button and its double-click gesture were the two callers. Entering
+    // Focus is now only automatic (leaf selection); leaving it goes through
+    // `setPosture('browse')` on Escape and on the Focus bar's Structure chip. Kept
+    // because a deliberate Focus control is a plausible tenant of the new topbar group.
     const togglePosture = useCallback(() => {
         setPosture(p => (p === 'browse' ? 'focus' : 'browse'));
     }, []);
@@ -300,6 +283,15 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
     // (with Monaco editors for Template/Style) inside the inspector zone.
 
     // Get tree view state from context. `show` riapre il tree dalla rail collassata.
+    //
+    // The inspector's own visibility now comes from the same context (2026-08-26). It
+    // commutes the INSPECTOR only, never the tree — the semantics R-RAIL-23 gave the
+    // retired header button, unchanged. What changed is where the control sits: the rail
+    // header is gone and the collapse control lives in the canvas topbar, a different
+    // React subtree, so the state cannot stay private to this component. The tree keeps
+    // its own key and its ⌘B: this component still never writes `jjodel_treeview_visible`
+    // and never calls the tree setters (R-RAIL-11). When the tree is already hidden,
+    // hiding the inspector empties the shell, which unmounts and hands over to the pill.
     const {
         isVisible: isTreeViewVisible,
         show: showTree,
@@ -307,6 +299,8 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
         isHighlighted,
         isScriptExecuting,
         activeEditorType,
+        isInspectorVisible: isPropertiesVisible,
+        showInspector,
     } = useTreeViewPanel();
 
     // ─── Pin (2026-07-05 fase 2): freeze Properties content on a captured selection triple
@@ -333,6 +327,10 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
         if (pinnedSelected && !pinnedResolvable) setPinnedSelected(null);
     }, [pinnedSelected, pinnedResolvable]);
 
+    // TODO: cleanup — no call site since the rail header was retired (2026-08-26); the
+    // header's pin button was the only one. The pin itself is NOT retired: double
+    // clicking a view row in the tree still pins and unpins through PROPERTIES_PIN_VIEW
+    // (handler below), and the dangling guard still auto-unpins on delete.
     const togglePin = useCallback(() => {
         setPinnedSelected(prev => {
             if (prev) return null;
@@ -363,57 +361,23 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
     // Every selector returns a primitive so the rail does not re-render on unrelated
     // store writes.
 
-    // Header title: the name of the DModel that owns the current selection.
-    const railTitle = useSelector((state: any) => {
-        const lookup = state.idlookup || {};
-        let id: string | undefined = state._lastSelected?.modelElement;
-        // Bounded walk: a corrupt father chain must not hang the render.
-        for (let hops = 0; id && hops < 64; hops++) {
-            const e = lookup[id];
-            if (!e) return '';
-            if (e.className === 'DModel') return e.name || '';
-            id = e.father;
-        }
-        return '';
-    });
-
-    // Same walk, returning the id it lands on: the SUBJECT of the header, as opposed
-    // to its text. A second selector rather than one returning `{id, name}` — the
-    // contract stated above is that every selector here returns a primitive, and an
-    // object would be a new identity on every store write and re-render the rail.
-    const railSubjectId = useSelector((state: any) => {
-        const lookup = state.idlookup || {};
-        let id: string | undefined = state._lastSelected?.modelElement;
-        for (let hops = 0; id && hops < 64; hops++) {
-            const e = lookup[id];
-            if (!e) return '';
-            if (e.className === 'DModel') return id;
-            id = e.father;
-        }
-        return '';
-    });
+    // The two walks that fed the retired header — the owning DModel's name, and the id
+    // it landed on — are gone with it (2026-08-26). The name is now the canvas topbar's
+    // to compute, and it names the OPEN EDITOR rather than the owner of the selection:
+    // a tab's subject does not move when the selection does.
+    //
+    // With them goes `subjectShownInRailHeader`, the flag that told the inspector to drop
+    // its own name and badge because the header was already showing them a few pixels
+    // above (measured 2026-08-25: two `model_1` titles 324.5px apart in the same column).
+    // There is no header above the inspector any more, so the flag is no longer passed
+    // and `Info` renders its identity block in full — including the state the rail opens
+    // in, where the selection is the model itself. `Info` keeps the prop and its branch:
+    // this stops feeding it, it does not remove it.
 
     // Selected element: its id drives the posture switch, its className says whether
     // it is a leaf, and its name + owner feed the Focus breadcrumb bar.
     const selectedElementId = useSelector((state: any) => state._lastSelected?.modelElement || '');
 
-    // The inspector repeats the header when the two show the same element — the state
-    // the rail opens in, since the default selection of a model tab is the model
-    // itself. Measured 2026-08-25: two `model_1` titles 324.5px apart in Browse and
-    // 64.5px apart in Focus, at equal visual weight, reading as two detached panels.
-    // The inspector then drops name and badge and keeps a section eyebrow.
-    //
-    // The comparison is against the inspector's ACTUAL subject, not against the
-    // selection: with the panel pinned on the model and the selection moved onto a
-    // child, the header still follows the selection up to the same model and the two
-    // titles are identical again — a `selectedElementId === railSubjectId` test would
-    // read that case as fine and leave the duplication on screen.
-    //
-    // Same move already on record for the breadcrumb (D9, Info.tsx): the segment
-    // naming the owning DModel was dropped because this header carries it, at the top
-    // of the same column and always on screen.
-    const inspectorSubjectId = effectivePin?.modelElement ?? selectedElementId;
-    const subjectShownInRailHeader = !!railSubjectId && inspectorSubjectId === railSubjectId;
     const selectedIsLeaf = useSelector((state: any) => {
         const id = state._lastSelected?.modelElement;
         const cn = id ? state.idlookup?.[id]?.className : undefined;
@@ -553,7 +517,7 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
             }
             setPinnedSelected(selected);
             // A pin nobody can see is useless: bring the panel back from its collapsed rail.
-            setIsPropertiesVisible(true);
+            showInspector();
         };
         window.addEventListener(JjodelEvents.PROPERTIES_PIN_VIEW, handlePinView);
         return () => {
@@ -566,7 +530,7 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
     // it is the one mechanism the rail has for expanding, and this listener is only the
     // door onto it for callers outside this component (DockManager.openView).
     useEffect(() => {
-        const handleShow = () => setIsPropertiesVisible(true);
+        const handleShow = () => showInspector();
         window.addEventListener(JjodelEvents.PROPERTIES_SHOW, handleShow);
         return () => {
             window.removeEventListener(JjodelEvents.PROPERTIES_SHOW, handleShow);
@@ -695,53 +659,17 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
                 aria-label="Resize properties panel"
             />
 
-            {/* Header (44px): one bar for the whole rail, alive while either pane is.
-                Double click switches posture — an expert shortcut; the labelled button
-                next to it carries discovery. */}
-            <div className="rail-header" onDoubleClick={togglePosture}>
-                {railTitle && (
-                    <span
-                        className={`rail-header__badge rail-header__badge--${activeEditorType === 'metamodel' ? 'metamodel' : 'model'}`}
-                        aria-hidden="true"
-                    >
-                        {activeEditorType === 'metamodel' ? 'M' : 'm'}
-                    </span>
-                )}
-                <span className="rail-header__title" title={railTitle}>{railTitle}</span>
-                <div className="rail-header__spacer" />
-                <button
-                    type="button"
-                    className="rail-header__btn"
-                    onClick={togglePosture}
-                    aria-label={posture === 'browse' ? 'Focus on the selected element' : 'Browse the structure'}
-                    title={posture === 'browse' ? 'Focus' : 'Browse'}
-                >
-                    <i className={`bi ${posture === 'browse' ? 'bi-arrows-collapse' : 'bi-arrows-expand'}`} />
-                </button>
-                {/* Contextual help of the rail, owned by the host (Q4): the same
-                    `properties-panel` help whatever the inspector is showing. */}
-                <div className="properties-panel-header__actions">
-                    <HelpButton helpKey="properties-panel" />
-                </div>
-                <button
-                    className={`properties-panel-pin-btn${isPinned ? ' is-active' : ''}`}
-                    onClick={togglePin}
-                    aria-label={isPinned ? 'Unpin properties panel' : 'Pin properties panel'}
-                    aria-pressed={isPinned}
-                    title={isPinned ? 'Unpin — follow selection' : 'Pin — freeze content'}
-                >
-                    <i className={`bi ${isPinned ? 'bi-pin-angle-fill' : 'bi-pin-angle'}`} />
-                </button>
-                <button
-                    className="properties-panel-toggle-btn"
-                    onClick={toggleInspector}
-                    aria-label={showPropertiesPanel ? 'Hide properties' : 'Show properties'}
-                    aria-pressed={!showPropertiesPanel}
-                    title={showPropertiesPanel ? 'Hide properties' : 'Show properties'}
-                >
-                    <i className={`bi ${showPropertiesPanel ? 'bi-chevron-double-right' : 'bi-chevron-double-left'}`} />
-                </button>
-            </div>
+            {/* No header row (2026-08-26). The rail used to open with a 44px bar carrying
+                the model name, a badge, the Focus/Browse posture button, the contextual
+                help, the pin and the inspector collapse. The name and the badge moved up
+                into the canvas topbar, where they name the open editor once instead of
+                once per column; the collapse control went with them. Help lives in the
+                app bar's Help menu; the pin button and the posture button are retired —
+                their state machines are not (see `pinnedSelected` above, still driven by
+                PROPERTIES_PIN_VIEW, and `posture`, still switched by leaf selection, by
+                Escape and by the Focus bar's own Structure chip).
+
+                The rail therefore opens on the filter band, then the Filter field. */}
 
             {/* Tree pane. Keeps its container/body classes so TreeViewContent's styling
                 and the sticky filter rule keep matching. */}
@@ -818,7 +746,6 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
                             mode={isFloating ? 'tab' : mode}
                             overrideSelected={effectivePin}
                             onInternalNavigate={isPinned ? handleInternalNavigate : undefined}
-                            subjectShownInRailHeader={subjectShownInRailHeader}
                         />
 
                         {/* NODE section — Expert mode only (R-RAIL-12: it stays in the
@@ -867,7 +794,7 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
                 <button
                     type="button"
                     className="properties-tree-floating-cluster__btn"
-                    onClick={() => setIsPropertiesVisible(true)}
+                    onClick={() => showInspector()}
                     aria-label="Show properties"
                     title="Show properties"
                 >
