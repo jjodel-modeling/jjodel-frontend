@@ -612,6 +612,74 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
     // sits and gets the user back. Only meaningful when the tree could be shown at all.
     const showFocusBar = showTreePanel && posture === 'focus' && !!selectedElementId;
 
+    /**
+     * Overflow affordance of the tree pane. The pane is clamped to a fraction of the
+     * viewport, so the last visible row is routinely cut mid-height and nothing says
+     * the list continues. Two gradients, top and bottom, appear only when there is
+     * content past that edge.
+     *
+     * The verdict is written straight onto the DOM as data attributes instead of going
+     * through state: it is recomputed on every scroll frame, and a re-render of the
+     * whole rail per scroll tick would be paid for nothing — the fades are pure CSS.
+     */
+    const treeScrollRef = useRef<HTMLDivElement>(null);
+    const treeFadeTopRef = useRef<HTMLDivElement>(null);
+    // The scroller is held in STATE, not in a ref: the rail only renders its portal
+    // once an editor tab is active, so at first mount the node does not exist yet and
+    // a ref would leave the effect below wired to nothing, forever. A callback ref
+    // re-runs the effect on the render that actually attaches the node.
+    const [treeBodyEl, setTreeBodyEl] = useState<HTMLDivElement | null>(null);
+
+    const measureTreeFade = useCallback(() => {
+        const body = treeBodyEl;
+        const wrap = treeScrollRef.current;
+        if (!body || !wrap) return;
+        // Sub-pixel slack: scrollHeight/clientHeight round differently under browser
+        // zoom, and a 1px residue would leave a fade lit at the very bottom forever.
+        const EPS = 2;
+        const max = body.scrollHeight - body.clientHeight;
+        const scrollable = max > EPS;
+        wrap.dataset.fadeTop = scrollable && body.scrollTop > EPS ? '1' : '0';
+        wrap.dataset.fadeBottom = scrollable && body.scrollTop < max - EPS ? '1' : '0';
+        // The filter row is sticky and opaque at the top of the scroller: the top fade
+        // starts where that row ends, so it dissolves the rows sliding under it and
+        // never tints the row itself. Measured, never a literal — the row can be absent.
+        const bar = body.querySelector('.tree-search') as HTMLElement | null;
+        const offset = bar
+            ? Math.max(0, bar.getBoundingClientRect().bottom - body.getBoundingClientRect().top)
+            : 0;
+        if (treeFadeTopRef.current) treeFadeTopRef.current.style.top = `${Math.round(offset)}px`;
+    }, [treeBodyEl]);
+
+    useEffect(() => {
+        const body = treeBodyEl;
+        if (!body) return;
+        // One measurement per frame at most, whatever fired it.
+        let frame = 0;
+        const schedule = () => {
+            if (frame) return;
+            frame = requestAnimationFrame(() => { frame = 0; measureTreeFade(); });
+        };
+        schedule();
+        body.addEventListener('scroll', schedule, { passive: true });
+        window.addEventListener('resize', schedule);
+        // Height of the viewport (density bands, Focus posture, window) and height of
+        // the content (expand/collapse, which changes scrollHeight with no scroll event).
+        const ro = new ResizeObserver(schedule);
+        ro.observe(body);
+        const content = body.firstElementChild;
+        if (content) ro.observe(content);
+        const mo = new MutationObserver(schedule);
+        mo.observe(body, { childList: true, subtree: true });
+        return () => {
+            if (frame) cancelAnimationFrame(frame);
+            body.removeEventListener('scroll', schedule);
+            window.removeEventListener('resize', schedule);
+            ro.disconnect();
+            mo.disconnect();
+        };
+    }, [treeBodyEl, measureTreeFade]);
+
     const splitPanel = (
         <div
             ref={containerRef}
@@ -691,8 +759,16 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
                     {/* Scope bar: dentro il container e fuori dal body, così non
                         scorre via con l'albero. */}
                     <TreeViewScopeBarLive />
-                    <div className="tree-view-panel-body">
-                        <TreeViewContent />
+                    {/* Overflow affordance: the scroller plus the two fades that say
+                        there is more above / below. The wrapper exists only to be the
+                        positioning context of the fades — the body keeps its class,
+                        its scroll and its role as the queried scroll container. */}
+                    <div className="tree-view-panel-scroll" ref={treeScrollRef}>
+                        <div className="tree-view-panel-body" ref={setTreeBodyEl}>
+                            <TreeViewContent />
+                        </div>
+                        <div className="tree-view-panel-fade tree-view-panel-fade--top" ref={treeFadeTopRef} aria-hidden="true" />
+                        <div className="tree-view-panel-fade tree-view-panel-fade--bottom" aria-hidden="true" />
                     </div>
                 </div>
             )}

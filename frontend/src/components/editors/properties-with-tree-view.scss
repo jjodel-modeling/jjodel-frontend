@@ -1004,6 +1004,52 @@ $pc-hint-indent: 26px;        // 18px checkbox + 8px gap (the design-system Chec
     }
 }
 
+// ─── Tree pane scroll + overflow affordance ──────────────────────────────────
+// The pane is clamped to a fraction of the viewport, so its last visible row is
+// routinely cut mid-height. Two gradients say the list continues: they appear only
+// when there is content past that edge, and they never take a click — the rows they
+// dissolve stay fully interactive underneath.
+//
+// The wrapper exists only to be the positioning context of the fades: the scroll,
+// the class and the padding stay on `.tree-view-panel-body`, which is still what
+// `TreeViewContent` and the rail query as the scroll container.
+.tree-view-panel-scroll {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.tree-view-panel-fade {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 28px;
+    pointer-events: none;   // never intercepts a click or a wheel
+    opacity: 0;
+    transition: opacity var(--duration-fast, 120ms) var(--ease-out, ease);
+    z-index: 2;             // over the rows, under the sticky filter row's own stack
+
+    // `top` is overwritten inline by the component with the bottom edge of the sticky
+    // filter row, so the fade dissolves the rows sliding UNDER that row and never
+    // tints the row itself. 0 is the correct value when the row is absent.
+    &--top {
+        top: 0;
+        background: linear-gradient(to bottom, var(--color-panel-bg), transparent);
+    }
+
+    &--bottom {
+        bottom: 0;
+        background: linear-gradient(to top, var(--color-panel-bg), transparent);
+    }
+}
+
+.tree-view-panel-scroll[data-fade-top='1'] .tree-view-panel-fade--top,
+.tree-view-panel-scroll[data-fade-bottom='1'] .tree-view-panel-fade--bottom {
+    opacity: 1;
+}
+
 .tree-view-panel-body {
     flex: 1;
     overflow-y: auto;

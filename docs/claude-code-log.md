@@ -7606,3 +7606,16 @@ Dark mode overrides for `.toolbar-btn` also scoped under `.documentation-toolbar
 **Smoke visivo**: passato (`_tmp_rail_dup_model_default.png`: la testata della rail resta `m SynthM1`, al posto del secondo blocco d'identità c'è l'eyebrow PROPERTIES, la colonna legge come un pannello solo)
 **Notes**: il confronto è fra il soggetto EFFETTIVO del Properties (`effectivePin?.modelElement ?? selectedElementId`) e l'id terminale della risalita, non fra selezione e soggetto: col pin sul modello e la selezione altrove la duplicazione c'è e il confronto ingenuo la mancherebbe (assert SI-3). Due mie diagnosi di Fase 1 corrette dalla misura: le righe dell'albero si cliccano (bersaglio `.tree-row__content`), e la prima `revealTreeRow` richiudeva le sezioni aperte falsando il censimento.
 **Prompt document name**: 2026-08-25 rail_doppio_header
+
+## 2026-08-25 — feat(rail): affordance di scroll sul tree pane, fade di overflow
+**Prompt**: difetto UI a schermo — il tree pane clampato all'altezza di viewport finisce a mezza riga e nulla segnala che sotto c'è altro. Decisione presa: fade di overflow (~24-32px, dal trasparente al colore di fondo del pane), simmetrico in cima quando si è scrollati, nessun fade quando l'albero ci sta; scrollbar invariata. Fase 1 breve di investigazione, poi implementazione nella stessa corsa se nulla esce dall'attesa (PropertiesWithTreeView + scss).
+**Files touched**: editors/PropertiesWithTreeView.tsx (wrapper `.tree-view-panel-scroll`, due div di fade, `measureTreeFade` + effetto con scroll/ResizeObserver/MutationObserver coalescati in un rAF), editors/properties-with-tree-view.scss (blocco `.tree-view-panel-scroll` / `.tree-view-panel-fade`), docs/claude-code-log.md.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (typecheck 33 = baseline, 0 nei file toccati; build ✓ exit 0 solo chunk-warning pre-esistente; vitest 1387 passed, 9 file falliti all'import per `window is not defined` = baseline noto; smoke 12 passed / 0 failed; sonda 10/10 verdi)
+**Out-of-scope changes**: no (i 2 file previsti dalla Fase 1 + log; clamp delle tre fasce, densità, postura Focus, scope bar, dedup dell'header e scrollbar non toccati)
+**Layer Impact Report**: not-required (nessun file critical-zone §3.1; nessun lettore nuovo del D-layer né del root state — la misura legge solo geometria del DOM)
+**Smoke visivo**: passato (`_tmp_rail_fade_mid.png`: le righe sfumano sotto la filter row e sopra il bordo inferiore, la colonna legge come una lista che continua; `_tmp_rail_fade_short.png`: albero corto, nessuna banda)
+**Notes**: due cose misurate contro l'intuizione. (1) La filter row `.tree-search` è sticky e opaca in cima allo scroller: il fade alto parte dal suo bordo inferiore misurato con `getBoundingClientRect` (41px in fixture), mai da 0, o tingerebbe la barra. (2) Lo scroller sta in state con callback ref, non in `useRef`: la rail monta il suo portal solo con una tab attiva, e con un ref l'effetto restava agganciato a `null` per sempre — la prima esecuzione della sonda dava 2/9 esattamente per questo. Il verdetto va su `data-fade-*` del wrapper, non in state: zero re-render per tick di scroll.
+**Prompt document name**: 2026-08-25 rail_scroll_affordance
