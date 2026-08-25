@@ -4,7 +4,7 @@
 //
 // Name and value of every theme token live in the two maps below, which are
 // the single source. The selectors emit them, they never restate them: two
-// hand-written blocks carrying the same 91 names drift apart in silence.
+// hand-written blocks carrying the same 92 names drift apart in silence.
 //
 // The maps are emitted on four selectors, on purpose (D-UI-10):
 //   .editor-v2.theme-dark / .theme-light   the editor subtree, unchanged
@@ -139,6 +139,10 @@ $editor-v2-theme-dark: (
   // Resize handles
   'resize-handle-bg': #0ea5e9,
   'resize-handle-border': #1e293b,
+
+  // Node selection — same literal as resize-handle-bg, own name so the two can
+  // diverge later without one dragging the other.
+  'node-selection-stroke': #0ea5e9,
 
   // Surface hierarchy
   'topbar-bg': #0f172a,
@@ -285,6 +289,10 @@ $editor-v2-theme-light: (
   // Resize handles
   'resize-handle-bg': #0284c7,
   'resize-handle-border': #ffffff,
+
+  // Node selection — same literal as resize-handle-bg, own name so the two can
+  // diverge later without one dragging the other.
+  'node-selection-stroke': #0284c7,
 
   // Surface hierarchy
   'topbar-bg': #1e293b,

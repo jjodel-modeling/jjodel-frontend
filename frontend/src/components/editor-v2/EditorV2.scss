@@ -1248,7 +1248,8 @@
     cursor: default;
 
     &.selected {
-        border-color: var(--color-accent);
+        outline: 2px solid var(--node-selection-stroke);
+        outline-offset: 1px;
         box-shadow: 0 0 0 2px var(--accent-muted), 0 4px 16px var(--node-shadow-deep, rgba(0, 0, 0, 0.12));
     }
 

@@ -62,7 +62,7 @@ const BASE_CSS = `
    .selected/.drop-target neutralizers outrank EditorV2.scss (0,2,0) by
    specificity. Box values replicate the .mm-node base with the same tokens. */
 .mm-node:has(> .ir-node-content) { background: transparent; border-color: transparent; box-shadow: none; }
-.mm-node.selected:has(> .ir-node-content),
+.mm-node.selected:has(> .ir-node-content) { border-color: transparent; box-shadow: 0 0 0 2px var(--accent-muted); }
 .mm-node.drop-target:has(> .ir-node-content) { border-color: transparent; box-shadow: none; }
 .ir-node-content { box-sizing: border-box; background: var(--node-bg); border: 1px solid var(--border-default); border-radius: 4px; box-shadow: 0 1px 3px var(--node-shadow), 0 4px 12px var(--node-shadow-deep, rgba(0, 0, 0, 0.08)); overflow: hidden; }
 /* Fase 2 (2026-07-28): reconcile the visible box with the .mm-node layout box. In
@@ -134,7 +134,7 @@ const BASE_CSS = `
    ir-resizable class (now inert) - left in place, separate cleanup. */
 .mm-node.ir-sized { min-width: 0; min-height: 0; width: 100%; height: 100%; }
 .mm-node.ir-sized .ir-node-content { min-width: 0; min-height: 0; }
-.mm-node.selected > .ir-node-content { outline: 2px solid var(--color-accent); outline-offset: 1px; }
+.mm-node.selected > .ir-node-content { outline: 2px solid var(--node-selection-stroke); outline-offset: 1px; }
 .mm-node.drop-target > .ir-node-content { outline: 2px solid var(--color-accent); }
 .ir-hull { border: 1.5px dashed rgba(51,65,85,0.45); border-radius: 12px; background: rgba(51,65,85,0.03); }
 .ir-hull__header { display: flex; align-items: center; justify-content: space-between; padding: 0 8px; font-size: 11px; font-weight: 600; color: #334155; }
