@@ -529,7 +529,7 @@
 // ── Command group + editor identity (right end of the toolbar, 2026-08-26) ──
 //
 // One bordered box holds the controls that act on the canvas as a surface: zoom out,
-// the level, zoom in, fit, a hairline, and the rail collapse. Grouping them is what
+// the level, zoom in, a hairline, and the rail collapse. Grouping them is what
 // lets the identity of the open model sit beside them and still read as a separate
 // thing — the border does the separating, so the identity needs no chrome of its own
 // beyond the 1x22 divider.
@@ -628,9 +628,22 @@
     flex-shrink: 1;
     min-width: 0;
 
-    // Same letter, same palette and same radius as the badge the rail header carried:
-    // the entity tokens are the single source for what a model looks like. Only the
-    // size grows, 18 -> 22, now that it stands alone at the end of the bar.
+    // Same letter and the same radius as the badge the rail header carried; the size
+    // grows, 18 -> 22, now that it stands alone at the end of the bar.
+    //
+    // The model half no longer reads from `--color-entity-model-*`. Measured
+    // 2026-08-26: those tokens alias `--color-entity-container-bg/fg` in both themes
+    // (tokens/_colors-light.scss:356-357, _colors-dark.scss:261-262), i.e. the SAME
+    // slate as package, viewpoint, transformation and metamodel — the entity pair for
+    // a model has no colour of its own to be the single source of. The amber below is
+    // the pair the M/m/T/V badges of the project sidebar already use
+    // (`.psb-badge--m`, pages/dashboard.scss:1125) with the glyph taken one step
+    // brighter, amber-600 #d97706 instead of that badge's amber-800 #92400e.
+    //
+    // Literal and not a token because repainting `--color-entity-model-*` would also
+    // repaint `.jj-type-badge--model`, i.e. the rail's Properties header
+    // (_form-system.scss:1259, consumed by Info.tsx:1064) — a wider change than this
+    // bar, to be decided on its own.
     &__badge {
         flex: none;
         display: inline-flex;
@@ -648,9 +661,12 @@
             color: var(--color-entity-metamodel-fg);
         }
 
+        // One pair for both themes, like the M/m/T/V badges it echoes: amber-100 on
+        // the dark toolbar keeps the contrast the letter needs, and a theme-following
+        // variant would have to be invented rather than borrowed.
         &--model {
-            background: var(--color-entity-model-bg);
-            color: var(--color-entity-model-fg);
+            background: #fef3c7;
+            color: #d97706;
         }
     }
 

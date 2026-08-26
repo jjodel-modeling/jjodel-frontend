@@ -18,6 +18,10 @@ import { useTreeViewPanel } from '../../contexts/TreeViewPanelContext';
 interface ToolbarProps {
     snapEnabled: boolean;
     onToggleSnap: () => void;
+    // TODO: cleanup — `onFitView` has had no call site since the fit button left the
+    // command group (2026-08-26). Kept, with the prop EditorV2 passes, until the bar
+    // is settled at screen: the handler behind it is one line and reinstating the
+    // button must not mean re-plumbing it.
     onFitView: () => void;
     onDeleteSelected: () => void;
     onUndo: () => void;
@@ -709,16 +713,11 @@ function Toolbar({
                         </button>
                     </>
                 )}
-                {/* Fit to view. Outside the zoom guard on purpose: it is the fallback
-                    the old layout already had when the zoom props were absent, and it
-                    has no keyboard shortcut, so this is its only way in. */}
-                <button
-                    className="toolbar-commands__btn"
-                    onClick={onFitView}
-                    title="Fit to view"
-                >
-                    <i className="bi bi-arrows-fullscreen" />
-                </button>
+                {/* Fit to view retired from this group on 2026-08-26 (mockup 1c): the
+                    group is zoom and nothing else. Nothing is lost with it — the level
+                    button beside it runs `handleResetZoom`, which is the SAME call as
+                    `handleFitView` (`fitView({padding, maxZoom: 1, duration: 200})`,
+                    EditorV2.tsx:3313-3316), so the affordance survives under the `%`. */}
 
                 <div className="toolbar-commands__hairline" aria-hidden="true" />
 
