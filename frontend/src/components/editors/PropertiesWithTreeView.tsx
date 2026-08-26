@@ -20,9 +20,9 @@ import { JjodelEvents } from '../../events/registry';
  * header, border and shadow.
  *
  * It had a header of its own until 2026-08-26, when the column's chrome went up into
- * the canvas topbar: the model badge and name, and the control that collapses the
- * inspector, are rendered there by `editor-v2/Toolbar.tsx`. The rail now opens
- * directly on the filter band and the Filter field.
+ * the canvas topbar: the model badge and name, and the control that takes the whole
+ * column off screen and brings it back, are rendered there by `editor-v2/Toolbar.tsx`.
+ * The rail now opens directly on the filter band and the Filter field.
  *
  * Layout is preset `2a` ("Adaptive rail"), and from arc 2 (R-RAIL-38) it carries the
  * posture again: the tree pane collapses to 0px when a leaf is selected (Focus) and
@@ -663,7 +663,8 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
                 the model name, a badge, the Focus/Browse posture button, the contextual
                 help, the pin and the inspector collapse. The name and the badge moved up
                 into the canvas topbar, where they name the open editor once instead of
-                once per column; the collapse control went with them. Help lives in the
+                once per column; the collapse control went with them and widened on the
+                way, from the inspector alone to the whole rail. Help lives in the
                 app bar's Help menu; the pin button and the posture button are retired —
                 their state machines are not (see `pinnedSelected` above, still driven by
                 PROPERTIES_PIN_VIEW, and `posture`, still switched by leaf selection, by

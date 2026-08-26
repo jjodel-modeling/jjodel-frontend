@@ -1,5 +1,18 @@
 # Claude Code Session Log
 
+## 2026-08-26 — feat(editor-v2): il » della topbar toglie e rimette tutta la rail
+**Prompt**: «rimetti il collapse-all», poi la rettifica: «intendevo un pulsante che toglieva / rimetteva il rail». Un giro precedente aveva rimesso il toggle Focus/Browse e va scartato: non era quello.
+**Files touched**: `frontend/src/contexts/TreeViewPanelContext.tsx`, `frontend/src/components/editor-v2/Toolbar.tsx`, `frontend/src/components/editors/PropertiesWithTreeView.tsx`, `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: (a)
+**Regressions**: no. Gate: `npm run typecheck` 33 = baseline, 0 nei file toccati; `npm run build` exit 0 col solo chunk-warning; `npm run smoke` 12 passed / 0 failed / 3 skipped. Sonda `_tmp_topbar_rail_1c.ts` 12/12, con P8 riscritta per la colonna intera.
+**Out-of-scope changes**: no. Tre sorgenti piu' il log. `toggleInspector` resta sul context senza call site, con TODO: e' l'unico modo rimasto di commutare il solo inspector.
+**Layer Impact Report**: not-required (nessun file di §3.1; nessun write path D/L)
+**Smoke visivo**: la verifica finale spetta ad Alfonso a schermo. Misurato in chat con Playwright headless: chiusa rail 0 / albero 0 / inspector 0 / pillola 1 / `--jj-canvas-right-inset` 0px; riaperta 1 / 1 / 1 / 0 / 448px.
+**Notes**: Non e' un `Corregge`: il giro prima aveva consegnato la semantica scelta a domanda esplicita, qui la decisione cambia. `Causa` (a) e' l'ambiguita' di «collapse-all», che mi ha fatto costruire il controllo sbagliato una volta (Focus/Browse, scartato con `git checkout`, mai committato). `isRailVisible` non e' stato nuovo ma il predicato che la rail gia' usava (`bothCollapsed` negato): un flag a parte sarebbe una seconda verita' che ⌘B farebbe divergere.
+**Prompt document name**: 2026-08-26 (istruzione in chat)
+
 ## 2026-08-26 — feat(editor-v2): topbar e header del rail, variante 1c
 **Prompt**: adozione del mockup 1c. L'header dedicato della rail sparisce e il pannello destro parte dalla banda filtro e dal campo Filter; nome e badge del modello salgono in topbar a filo destro col chevron di switch; zoom e collapse-rail in un solo gruppo bordato con hairline e divider 1x22; fuori dalla topbar il badge notifiche e il fullscreen. Invarianti dichiarate: zoom, collapse/riapertura della rail, dark mode, densita' compact.
 **Files touched**: `frontend/src/contexts/TreeViewPanelContext.tsx`, `frontend/src/components/editor-v2/Toolbar.tsx`, `frontend/src/components/editor-v2/EditorV2.scss`, `frontend/src/components/editors/PropertiesWithTreeView.tsx`, `frontend/src/components/editors/properties-with-tree-view.scss`, `frontend/src/components/TreeViewSidebar/tree-view-sidebar.scss`, `docs/claude-code-log.md`

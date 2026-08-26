@@ -59,8 +59,16 @@ interface TreeViewPanelContextType {
     isInspectorVisible: boolean;
     /** Expand the inspector zone */
     showInspector: () => void;
-    /** Toggle the inspector zone */
+    /** TODO: cleanup — no call site since the topbar control became a whole-rail
+     *  toggle (2026-08-26). Kept: it is the only way left to commute the inspector
+     *  alone, and the tree still has its own `toggle` beside it. */
     toggleInspector: () => void;
+
+    // ─── The rail as a whole ───
+    /** The rail is on screen iff at least one of its two zones is */
+    isRailVisible: boolean;
+    /** Hide the whole rail, or bring it back exactly as it was */
+    toggleRail: () => void;
 }
 
 const TreeViewPanelContext = createContext<TreeViewPanelContextType | null>(null);
@@ -148,6 +156,37 @@ export const TreeViewPanelProvider: React.FC<{ children: React.ReactNode }> = ({
     const toggleInspector = useCallback(() => {
         setIsInspectorVisible(prev => !prev);
     }, []);
+
+    /**
+     * The rail as one thing (2026-08-26).
+     *
+     * It is not a third piece of state: the rail IS its two zones, and it is on screen
+     * exactly when one of them is — the same predicate `PropertiesWithTreeView` already
+     * used, under the name `bothCollapsed`, to decide between rendering the column and
+     * handing over to the reopen pill. A separate `isRailVisible` flag would be a second
+     * source of truth for a question the zones already answer, and the two would drift
+     * the first time ⌘B changed one of them behind its back.
+     *
+     * Closing remembers the pair, so reopening restores what was there rather than
+     * asserting a default: a user who works with the inspector hidden gets the tree back
+     * alone, not a column they have to re-collapse. With nothing remembered — the rail
+     * was already closed when the session started — both zones come back, which is the
+     * state the app ships in.
+     */
+    const railRestoreRef = useRef<{ tree: boolean; inspector: boolean } | null>(null);
+    const isRailVisible = isVisible || isInspectorVisible;
+
+    const toggleRail = useCallback(() => {
+        if (isVisible || isInspectorVisible) {
+            railRestoreRef.current = { tree: isVisible, inspector: isInspectorVisible };
+            setIsVisible(false);
+            setIsInspectorVisible(false);
+            return;
+        }
+        const prev = railRestoreRef.current;
+        setIsVisible(prev ? prev.tree : true);
+        setIsInspectorVisible(prev ? prev.inspector : true);
+    }, [isVisible, isInspectorVisible]);
 
     // Fire a brief attention pulse on the collapsed tree toggle (~2.5s).
     // Replaces force-opening the panel: visibility belongs to the user.
@@ -373,6 +412,8 @@ export const TreeViewPanelProvider: React.FC<{ children: React.ReactNode }> = ({
             isInspectorVisible,
             showInspector,
             toggleInspector,
+            isRailVisible,
+            toggleRail,
         }}>
             {children}
         </TreeViewPanelContext.Provider>

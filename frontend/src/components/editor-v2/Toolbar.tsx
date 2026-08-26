@@ -367,10 +367,10 @@ function Toolbar({
         handleLayoutModeChange('split');
     }, [handleLayoutModeChange]);
 
-    // Rail chrome that lives here now: the inspector zone's visibility, shared with the
-    // rail itself through TreeViewPanelContext (the rail is portaled to <body>, so the
-    // two are in different subtrees and cannot share component state).
-    const { isInspectorVisible, toggleInspector } = useTreeViewPanel();
+    // Rail chrome that lives here now: whether the right rail is on screen at all,
+    // shared with the rail itself through TreeViewPanelContext (the rail is portaled to
+    // <body>, so the two are in different subtrees and cannot share component state).
+    const { isRailVisible, toggleRail } = useTreeViewPanel();
 
     /**
      * Name of the model this editor tab is open on. Bounded walk up `father` to the
@@ -680,7 +680,9 @@ function Toolbar({
             {/* ── Command group: one bordered box, right-aligned ──
                 Zoom out / level / zoom in / fit, a hairline, then the rail collapse.
                 The two families sit together because they are the only two controls
-                that act on the CANVAS AS A SURFACE rather than on its contents. */}
+                that act on the CANVAS AS A SURFACE rather than on its contents — the
+                hairline keeps "how big is what I see" apart from "how much room does
+                it get". */}
             <div className="toolbar-commands">
                 {onZoomOut && onZoomIn && onResetZoom && zoomLevel !== undefined && (
                     <>
@@ -720,17 +722,25 @@ function Toolbar({
 
                 <div className="toolbar-commands__hairline" aria-hidden="true" />
 
-                {/* Rail collapse. Commutes the INSPECTOR zone only, never the tree —
-                    the semantics R-RAIL-23 gave the rail header's own button, which
-                    this replaces verbatim. The tree keeps ⌘B. */}
+                {/* Rail collapse — the WHOLE column, both zones, not the inspector
+                    alone. This is where it differs from the rail header's own button,
+                    which under R-RAIL-23 commuted the inspector and left the tree
+                    standing: with the header gone, a control that empties half the
+                    column reads as broken rather than as deliberate, and the thing a
+                    user wants from the canvas is the canvas at full width.
+
+                    The tree keeps its own ⌘B, so the two zones are still independently
+                    reachable; and closing remembers the pair, so « restores what was
+                    there (see `toggleRail`). The floating reopen pill stays as a second
+                    door back, on the edge where the column used to be. */}
                 <button
                     className="toolbar-commands__btn"
-                    onClick={toggleInspector}
-                    aria-label={isInspectorVisible ? 'Hide properties' : 'Show properties'}
-                    aria-pressed={!isInspectorVisible}
-                    title={isInspectorVisible ? 'Hide properties' : 'Show properties'}
+                    onClick={toggleRail}
+                    aria-label={isRailVisible ? 'Hide the side panel' : 'Show the side panel'}
+                    aria-pressed={!isRailVisible}
+                    title={isRailVisible ? 'Hide panel' : 'Show panel'}
                 >
-                    <i className={`bi ${isInspectorVisible ? 'bi-chevron-double-right' : 'bi-chevron-double-left'}`} />
+                    <i className={`bi ${isRailVisible ? 'bi-chevron-double-right' : 'bi-chevron-double-left'}`} />
                 </button>
             </div>
 
