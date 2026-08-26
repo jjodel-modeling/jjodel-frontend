@@ -1,5 +1,18 @@
 # Claude Code Session Log
 
+## 2026-08-26 — feat(editor-v2): via la pillola di riapertura della rail
+**Prompt**: rimuovere dal canvas i due comandi che comparivano nascondendo la rail (screenshot: il cluster flottante con `bi-sliders` e `bi-diagram-2`).
+**Files touched**: `frontend/src/components/editors/PropertiesWithTreeView.tsx`, `frontend/src/components/editors/properties-with-tree-view.scss`, `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gate: `npm run typecheck` 33 = baseline, 0 nei file toccati; `npm run build` exit 0 col solo chunk-warning; `npm run smoke` 12 passed / 0 failed / 3 skipped. Sonda `_tmp_topbar_rail_1c.ts` 12/12: P8 ora misura pillola 0 sia a rail chiusa sia a rail riaperta.
+**Out-of-scope changes**: no. I due file della pillola piu' il log. Dentro `PropertiesWithTreeView.tsx` cadono con essa `showFloatingCluster` e la lettura di `show` dal context, che non avevano altri lettori.
+**Layer Impact Report**: not-required (nessun file di §3.1; nessun write path D/L)
+**Smoke visivo**: la verifica finale spetta ad Alfonso a schermo. Misurato in chat con Playwright headless: a rail chiusa `.properties-tree-floating-cluster` 0, canvas a piena larghezza (`--jj-canvas-right-inset` 0px).
+**Notes**: Nessun vicolo cieco: topbar e rail sono gated sullo stesso `activeEditorType`, quindi dove appariva la pillola c'e' il controllo. I due stati del kill-switch CSS non fanno eccezione: `canvas-only` e' normalizzato al mount, e sulla tab Documentation la rail e' nascosta senza cambio di stato, quindi torna da sola uscendo dalla tab. Meta' del kill-switch resta: copre anche `.properties-tree-overlay`, che si rende ancora.
+**Prompt document name**: 2026-08-26 (istruzione in chat)
+
 ## 2026-08-26 — feat(editor-v2): il » della topbar toglie e rimette tutta la rail
 **Prompt**: «rimetti il collapse-all», poi la rettifica: «intendevo un pulsante che toglieva / rimetteva il rail». Un giro precedente aveva rimesso il toggle Focus/Browse e va scartato: non era quello.
 **Files touched**: `frontend/src/contexts/TreeViewPanelContext.tsx`, `frontend/src/components/editor-v2/Toolbar.tsx`, `frontend/src/components/editors/PropertiesWithTreeView.tsx`, `docs/claude-code-log.md`

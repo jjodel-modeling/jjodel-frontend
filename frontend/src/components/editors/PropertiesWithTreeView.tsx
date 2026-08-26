@@ -294,7 +294,6 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
     // hiding the inspector empties the shell, which unmounts and hands over to the pill.
     const {
         isVisible: isTreeViewVisible,
-        show: showTree,
         toggle: toggleTreeView,
         isHighlighted,
         isScriptExecuting,
@@ -473,15 +472,10 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
     const showPropertiesPanel = isPropertiesVisible;
     const showTreePanel = isTreeViewVisible;
 
-    // Reopen pill gate (floating overlay): the pill appears exactly when the rail is
-    // NOT visible. The rail renders iff !bothCollapsed, so `bothCollapsed` (neither
-    // zone shown) IS "rail hidden". Gated on an active model/metamodel editor, so the
-    // pill is absent on dashboard/transformation/summary. A CSS kill-switch (properties-
-    // with-tree-view.scss) additionally hides it in canvas-only and on the documentation
-    // tab. Pill and rail are therefore mutually exclusive in every combination.
+    // The rail renders iff at least one zone is shown, so `bothCollapsed` IS "rail
+    // hidden". It used to gate the reopen pill as well; that cluster is gone (see the
+    // note at the render below) and this is now purely the render gate.
     const bothCollapsed = !showPropertiesPanel && !showTreePanel;
-    const showFloatingCluster = bothCollapsed &&
-        (activeEditorType === 'model' || activeEditorType === 'metamodel');
 
     // Canvas right-inset writer (F3 2026-07-29): publish the rail's right footprint
     // (column width + 8px gutter) onto <body> as --jj-canvas-right-inset so the canvas
@@ -526,7 +520,7 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
     }, [pinnedSelected]);
 
     // Bring the Properties zone back from its collapsed rail, without touching the pin.
-    // Reuses the same setter the pin handler above and the reopen pill (:747) already use —
+    // Reuses the same setter the pin handler above already uses —
     // it is the one mechanism the rail has for expanding, and this listener is only the
     // door onto it for callers outside this component (DockManager.openView).
     useEffect(() => {
@@ -787,32 +781,19 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
                 document.body
               ))
             : splitPanel}
-        {/* Reopen pill: floating cluster, portaled to <body>. Shown only while the rail
-            is hidden (both zones collapsed) over a model/metamodel editor; the CSS adds a
-            kill-switch for canvas-only / documentation. Mutually exclusive with the rail. */}
-        {showFloatingCluster && createPortal(
-            <div className="properties-tree-floating-cluster" role="group" aria-label="Reopen panels">
-                <button
-                    type="button"
-                    className="properties-tree-floating-cluster__btn"
-                    onClick={() => showInspector()}
-                    aria-label="Show properties"
-                    title="Show properties"
-                >
-                    <i className="bi bi-sliders" aria-hidden="true" />
-                </button>
-                <button
-                    type="button"
-                    className="properties-tree-floating-cluster__btn"
-                    onClick={showTree}
-                    aria-label="Show tree"
-                    title="Show tree"
-                >
-                    <i className="bi bi-diagram-2" aria-hidden="true" />
-                </button>
-            </div>,
-            document.body
-        )}
+        {/* No reopen pill (2026-08-26). A floating cluster of two buttons used to
+            appear on the right edge while the rail was hidden, one to bring back the
+            inspector and one the tree. It was the only way back when the rail's own
+            header was the thing that collapsed it; now the topbar's own control is the
+            way in and the way out, always in the same place, so the cluster was a
+            second door onto a room that already has one — and one that sat on the
+            canvas, which is exactly the surface the user asked to clear.
+
+            No dead end follows. The topbar renders wherever the rail can: both are
+            gated on a model/metamodel editor. The two states the CSS kill-switch
+            covered are not exceptions either — `canvas-only` is normalised away at
+            mount (Toolbar.tsx), and on the documentation tab the rail is hidden by
+            CSS without any state change, so leaving the tab brings it back by itself. */}
         </>
     );
 };

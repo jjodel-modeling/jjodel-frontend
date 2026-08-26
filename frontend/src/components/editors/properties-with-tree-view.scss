@@ -754,9 +754,10 @@ $pc-hint-indent: 26px;        // 18px checkbox + 8px gap (the design-system Chec
 // R2 both-collapsed (2026-07-06 addendum): NON si renderizzano più toggle in-panel
 // quando entrambi i pannelli sono chiusi. Il tab va a 0px (vedi abstract/style.scss,
 // body[data-properties-tree-both-collapsed]) e i due controlli diventano il cluster
-// flottante `.properties-tree-floating-cluster` (portal su <body>, in fondo a questo
-// file). La vecchia regola `:has()` di strip trasparente è quindi superflua (il
-// pannello a 0 non è visibile) ed è stata rimossa.
+// flottante `.properties-tree-floating-cluster` (portal su <body>), a sua volta
+// ritirata il 2026-08-26: oggi la rail si riapre dal solo controllo in topbar. La
+// vecchia regola `:has()` di strip trasparente è comunque superflua (il pannello a 0
+// non è visibile) ed è stata rimossa.
 
 // ============================================
 // TREE VIEW PANEL (RIGHT) - FIXED WIDTH
@@ -1420,72 +1421,24 @@ $pc-hint-indent: 26px;        // 18px checkbox + 8px gap (the design-system Chec
 // la context-menu editor-v2 (1000) e sotto modal/context-menu app (9999+).
 // I valori top/right sono tarabili (clearance navbar+toolbar+canvas-toolbar).
 // ============================================
-.properties-tree-floating-cluster {
-    position: fixed;
-    top: 150px;   // ~ sotto navbar(60)+toolbar(50)+canvas-toolbar(40); tunable
-    right: 16px;
-    z-index: 900;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    padding: 4px;
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
-
-    &__btn {
-        width: 28px;
-        height: 28px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: transparent;
-        border: none;
-        border-radius: 6px;
-        cursor: pointer;
-        color: $color-accent; // slate #475569
-        transition: background-color 120ms ease, color 120ms ease;
-
-        &:hover {
-            background-color: $color-bg-tertiary; // slate-100
-            color: $color-text-primary;
-        }
-
-        &:focus-visible {
-            outline: 1px solid $color-highlight;
-            outline-offset: -1px;
-        }
-
-        i.bi {
-            font-size: 15px;
-            line-height: 1;
-        }
-    }
-}
-
-// Dark: palette float del canvas (coerente con le context-menu portalizzate).
-[data-theme="dark"] .properties-tree-floating-cluster {
-    background: #1e293b;
-    border-color: #334155;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-
-    .properties-tree-floating-cluster__btn {
-        color: #cbd5e1;
-
-        &:hover {
-            background-color: #334155;
-            color: #e2e8f0;
-        }
-    }
-}
+// REOPEN PILL: RETIRED (2026-08-26)
+//
+// A floating cluster of two buttons (`.properties-tree-floating-cluster`) used to sit
+// on the right edge of the canvas while the rail was hidden, offering the inspector
+// and the tree back. It existed because the control that collapsed the rail lived
+// INSIDE the rail and went away with it; since the collapse moved to the canvas topbar
+// the same button is the way out and the way back, always in the same place, and the
+// cluster was a second door onto a room that already has one — sitting on the canvas,
+// which is the surface it was meant to free.
+//
+// Markup and rules removed together. What is left of it below is the half of the
+// kill-switch that also covers `.properties-tree-overlay`, which is still rendered.
+// ============================================
 
 // Kill-switch: mai in canvas-only né sulla tab Documentation (il gate JS su
 // activeEditorType model/metamodel non copre questi due stati, che non sono
 // editor-type). Vedi abstract/style.scss per data-layout-mode / data-active-tab.
-body[data-layout-mode="canvas-only"] .properties-tree-floating-cluster,
 body[data-layout-mode="canvas-only"] .properties-tree-overlay,
-body[data-active-tab="documentation"] .properties-tree-floating-cluster,
 body[data-active-tab="documentation"] .properties-tree-overlay {
     display: none !important;
 }
