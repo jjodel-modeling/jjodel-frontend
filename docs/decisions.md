@@ -1884,6 +1884,34 @@ cascata di `Dummy.get_delete` non raggiunge gli archi M1 di un `DObject` cancell
 'end'/'start'` è un no-op (`Dummy.ts:142-144`) e il loro `model` punta alla `DReference`, non
 all'oggetto. In A è chiuso localmente dentro `_removeSingletonInstances` (archi, poi vertice, poi
 oggetto); resta aperto per ogni cancellazione di `DObject` che non passa da `syncDeleteVertex`.
+(g) `useJjomSync.ts:670` e `:764` chiamano `isSingletonSuppressed(objId)` con un id di `DObject`
+contro un Set di id di `DVertex`: sempre falso, mascherato dal `continue` precedente. Entra nel
+fronte (β) di R-SGL-10.
+
+**R-SGL-10** (2026-08-26, Alfonso) — **Perimetro del commit B.** Report:
+`docs/discovery/discovery_2026-08-26_singleton_reference_select.md`. (1) B è solo ramo IR: il ramo
+nativo di `ObjectNode` non ha righe reference (`:387`, solo attributi), quindi con un viewpoint
+classic la reference verso un singleton nascosto resta non assegnabile. (2) Tipo singleton-conforme:
+classe singleton, oppure classe con `concreteSubclasses.length > 0` tutti singleton (mai per
+vacuità). Candidati: istanze conformi al tipo (`conformsToRefTarget`), metaclasse singleton, **stesso
+M1** dell'oggetto (`DClass.instances` è piatto). (3) Il write path è un entry point nuovo
+`syncSetReferenceValue(vertexId, featureName, targetObjectId | null, 'replace' | 'append')` sulla
+forma canonica `slot.values = [...]`: `.value =` è un no-op sugli slot vuoti (misura del
+2026-07-20, `EditorV2.tsx:1897`). (4) Lo stato «nascosti» viaggia come `showEdgeLabels`: mirror in
+EditorV2 (blocco `:635-666`, filtrato per `modelId`, risemina con `useEffect` su `modelid`) ed
+`EditorContext`, insieme al Set dei tipi conformi (derivato una volta da `modeInfo`) e a `modelId`.
+Mai `getMetaclassInfo` per render, mai `localStorage` dentro `viewpoint/ir/`. (5) Due passi di undo
+(valore, poi arco da `useM1ReferenceEdges`) accettati: è il comportamento del pannello Slots, e
+l'alternativa metterebbe un creatore dentro la transazione (§3.3 di `CLAUDE.md`). (6) **Perimetro
+(α)**: B scrive il valore e basta. L'incoerenza della soppressione in `useJjomSync` (archi non
+filtrati in incrementale `:1302`, nessun `setEdges` nel ramo `hide`, archi esclusi in init che non
+tornano al `show`) è pre-esistente e diventa il fronte **(β)**, critical zone con LIR, da aprire
+subito dopo B. (7) Popover in portal su `body` con posizione calcolata (precedenti in-repo:
+`TextStyleField.tsx`, `NodeProblemOverlay.tsx`), non `overflow: visible` condizionale. (8)
+Componente nuovo `InlineObjectSelect`, clone di `InlineEnumSelect` sulle classi
+`.inline-type-select*` condivise; `InlineEnumSelect` non si tocca; unificazione a debito. (9) Una
+riga in `irStyle.ts`, `.ir-row__value--select { cursor: pointer }`, in aggiunta all'hover di
+`--editable`.
 
 ## Superate
 
