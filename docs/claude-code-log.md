@@ -7931,3 +7931,16 @@ Dark mode overrides for `.toolbar-btn` also scoped under `.documentation-toolbar
 **Smoke visivo**: passato (9/9 dei punti della §4 del prompt, verificati da Alfonso: palette, rimozione osservata in `idlookup` su entrambi gli M1, undo singolo, chip Final, riaccensione per modello, menu contestuale e connect gesture, JjScript, stereotipo nei due rami, toggle Show singletons)
 **Notes**: due scoperte a registro (R-SGL-9e), non corrette qui: `Dummy.ts:254` `lDeleted.nodes.map(n=>n.delete())` è una scrittura morta — `DataTransientProperties.nodes` non è mai popolato — e il commento a `canvasToJjom.ts:449-455` afferma il contrario. Da qui la scansione esplicita. Correzione mia: `set_singleton` non ha early-return sul valore invariato, quindi la rimozione è guardata su `c.data.isSingleton` come negli altri due writer.
 **Prompt document name**: 2026-08-26 15:55
+
+## 2026-08-26 — docs: form rendering delle view, discovery per la Slice 1 (host rail Properties)
+**Prompt**: Fase 1 read-only sul form rendering delle view. Dodici domande (pannello proprietà attuale, write path dell'edit inline, stato dell'IR dopo TS2, row dispatch, accesso al metamodello per derivare i widget, registry problems, mappa dei token dell'handoff, controlli condivisi riusabili, persistenza della modalità, collisioni di nomi, validateIR/VersionFixer, critical zone), più la forma proposta di `FormSpec` e il piano dei file. Hard stop a report scritto.
+**Files touched**: docs/discovery/discovery_2026-08-26_form_views_slice1.md (nuovo, il report), docs/claude-code-log.md (questa entry).
+**Outcome**: ✅ completed — dodici domande chiuse, hard stop rispettato.
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (read-only; nessuna modifica al codice applicativo).
+**Out-of-scope changes**: no (report + log; nessun sorgente).
+**Layer Impact Report**: not-required (nessun file modificato; il report dichiara che la Fase 2 richiede il LIR di §3.2 per `editor-v2/problems/`, unico file di critical zone nel perimetro della Slice 1).
+**Smoke visivo**: non applicabile (fase di sola lettura).
+**Notes**: tre risultati contro l'attesa, tutti in §3 del report. (1) `components/ui/` e' gia' una libreria di form completa: il `editor-v2/Select.tsx` citato dal prompt non esiste perche' il kit sta altrove. (2) `syncUpdateFeatureValue` non serve alla form — vertexId, solo indice 0, niente add/remove: il contratto e' `LValue.setValueAtPosition`. (3) `conformanceToProblems.ts:50` scarta `metamodelElementName`, quindi la diagnostica per campo chiede due righe in critical zone.
+**Prompt document name**: 2026-08-26 20:17
