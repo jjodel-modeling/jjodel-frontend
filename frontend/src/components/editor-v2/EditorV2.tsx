@@ -4090,7 +4090,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 <MiniMap
                     pannable
                     zoomable
-                    style={{ position: 'absolute', margin: 0, right: 'calc(var(--jj-canvas-right-inset, 0px) + 20px)', bottom: '100px', borderRadius: '4px', opacity: 0.8 }}
+                    style={{ position: 'absolute', margin: 0, right: 'calc(var(--jj-canvas-right-inset, 0px) + 16px)', bottom: '16px', borderRadius: '4px', opacity: 0.8 }}
                     nodeStrokeWidth={3}
                     nodeColor={(node) => {
                         if (node.type === 'classNode') return theme === 'dark' ? '#0ea5e9' : '#0284c7';
