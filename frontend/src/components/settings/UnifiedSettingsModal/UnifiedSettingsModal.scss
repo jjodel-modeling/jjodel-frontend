@@ -59,10 +59,15 @@ $transition-normal: 200ms ease-out;
 // ============================================
 
 .unified-settings-modal {
-    width: calc(100vw - 80px);
-    height: calc(100vh - 80px);
+    // Sized to the content, not to the viewport: the panels are dense but narrow,
+    // and the near-fullscreen box (100vw/100vh - 80px) left the rows stranded in it.
+    width: min(960px, calc(100vw - 80px));
+    // 780 and not 700: at 700 the eleven provider rows overflow the list by 34px with
+    // one section and by 78px with two (Configured + Available), and that panel is
+    // designed to show them all at once. 780 leaves ~30px of headroom in both states.
+    height: min(780px, calc(100vh - 80px));
     min-width: 900px;
-    max-width: 1400px;
+    max-width: 960px;
     background: $color-bg-primary;
     border-radius: $radius-xl;
     box-shadow: $shadow-lg;

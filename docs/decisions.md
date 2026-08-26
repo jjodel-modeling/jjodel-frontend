@@ -1879,7 +1879,11 @@ probabilmente inerte da sempre, da provare a runtime. (c) Riparazione all'apertu
 senza istanza: feature a sé, il fallback del toggle è advanced-only. (d) Duplicate/paste sul
 canvas creano nodi solo React Flow senza `DObject` (`EditorV2.tsx:2415`, `:2579`): difetto
 pre-esistente. (e) `syncDeleteVertex` non cancella mai il `DVertex` e il commento a
-`canvasToJjom.ts:449-455` lo afferma: falso, da correggere quando si riapre quel file.
+`canvasToJjom.ts:449-455` lo afferma: falso, da correggere quando si riapre quel file. (f) La
+cascata di `Dummy.get_delete` non raggiunge gli archi M1 di un `DObject` cancellato: `case
+'end'/'start'` è un no-op (`Dummy.ts:142-144`) e il loro `model` punta alla `DReference`, non
+all'oggetto. In A è chiuso localmente dentro `_removeSingletonInstances` (archi, poi vertice, poi
+oggetto); resta aperto per ogni cancellazione di `DObject` che non passa da `syncDeleteVertex`.
 
 ## Superate
 

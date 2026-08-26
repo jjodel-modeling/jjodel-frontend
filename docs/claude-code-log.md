@@ -1,5 +1,18 @@
 # Claude Code Session Log
 
+## 2026-08-26 — feat(settings): i provider AI diventano righe per stato, il modale si stringe
+**Prompt**: prompt 2026-08-26 19:00 (mockup 5a). Il pannello Providers mostrava undici card da 68px con lo stesso chip «Not configured» undici volte. Due sezioni per stato, righe dense e cliccabili, modelli inline, dot verde col modello attivo, footer con lucchetto, Custom senza separatore. Modale ~960x700.
+**Files touched**: `frontend/src/components/Settings/AISettingsContent.tsx`, `frontend/src/components/Settings/AISettingsContent.scss`, `frontend/src/components/Settings/UnifiedSettingsModal/UnifiedSettingsModal.scss`, `docs/prompts/claude_2026-08-26_1900_prompt_settings_providers_5a.md`, `docs/claude-code-log.md`. Sonde `_tmp_settings_providers_5a*.ts` e screenshot restano gitignored.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gate: `npm run typecheck` 33 = baseline su output completo, 0 nei file toccati; `npm run build` exit 0 col solo chunk-warning; `npm run smoke` 12 passed / 0 failed / 3 skipped. Sonde: `_tmp_settings_providers_5a` 20/20 nello stato misto e 19/19 in quello vuoto, `_tmp_settings_providers_5a_focus` 13/13.
+**Out-of-scope changes**: no. I tre sorgenti del prompt piu' prompt e log. Le classi condivise (`.provider-card`, `.providers-list`, `.settings-footer`) restano intatte per `pages/settings/AIAssistantSettings` e `Jodie/SettingsModal`: il nuovo blocco e' tutto sotto `.ai-settings-content`.
+**Layer Impact Report**: not-required (nessun file di §3.1; nessun write path D/L, sola presentazione)
+**Smoke visivo**: la verifica finale spetta ad Alfonso a schermo. Misurato con Playwright headless: modale 960x780, righe 46/42, logo 28x28, lista 570/570 senza scroll in entrambi gli stati, footer a 32px dal fondo del modale, zero chip «Not configured», zero separatori. Le altre sei sezioni non sbordano nel modale piu' stretto.
+**Notes**: Due misure hanno cambiato il prompt. (1) A 700px la lista sborda di 34px con una sezione e di 78 con due: il modale sta a 780, ~30px di margine in entrambi gli stati. (2) Il modale non ha tema dark, zero regole `[data-theme]` in `UnifiedSettingsModal.scss`; tolte le card scure, il form aperto restava un'isola scura con la label «API Key» misurata a `rgba(255,255,255,0.6)`, bianca su bianco. Riportato al chiaro sotto `.ai-settings-content`; tema dark del modale da fare.
+**Prompt document name**: 2026-08-26 19:00
+
 ## 2026-08-26 — feat(rail): l'albero torna sempre, si riapre da una riga sua, e lo splitter e' tornato
 **Prompt**: tre punti in chat. Riaprendo la rail deve tornare l'albero; deve esistere un modo evidente per riaprirlo; e uno splitter orizzontale fra albero e proprieta'. Piu' la segnalazione che «quando si chiude funziona meno bene».
 **Files touched**: `frontend/src/contexts/TreeViewPanelContext.tsx`, `frontend/src/components/editors/PropertiesWithTreeView.tsx`, `frontend/src/components/editors/properties-with-tree-view.scss`, `docs/claude-code-log.md`
