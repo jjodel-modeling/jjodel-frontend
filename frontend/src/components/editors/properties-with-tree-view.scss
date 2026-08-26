@@ -2497,3 +2497,44 @@ body[data-active-tab="documentation"] .properties-tree-overlay {
         display: none;
     }
 }
+
+/* ---------------------------------------------------------------------------
+   Inspector tabs (2026-08-26) — Properties | Form.
+   The active tab is marked by an inset rule at its foot, the same treatment the
+   IR authoring panel's tab row uses, so the two read as one idiom. Present only
+   when the subject is an M1 object; on everything else the inspector has a single
+   rendering and no bar is drawn.
+   --------------------------------------------------------------------------- */
+.inspector-tabs {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    border-bottom: 1px solid var(--color-form-border);
+    background: var(--color-form-surface);
+}
+
+.inspector-tabs__tab {
+    appearance: none;
+    border: none;
+    background: transparent;
+    padding: 8px 12px;
+    font-family: var(--font-sans);
+    font-size: var(--text-xs);
+    font-weight: var(--font-medium);
+    color: var(--color-form-muted);
+    cursor: pointer;
+    transition: color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.inspector-tabs__tab:hover { color: var(--color-text-primary); }
+
+.inspector-tabs__tab--active {
+    font-weight: var(--font-semibold);
+    color: var(--color-text-primary);
+    box-shadow: inset 0 -2px 0 var(--color-accent);
+}
+
+.inspector-tabs__tab:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring), inset 0 -2px 0 var(--color-accent);
+}

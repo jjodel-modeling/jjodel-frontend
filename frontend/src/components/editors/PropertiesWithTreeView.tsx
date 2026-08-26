@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useSelector, useStore } from 'react-redux';
 import { Info } from './Info';
 import { NodeEditor } from './NodeEditor';
+import IRForm from '../editor-v2/viewpoint/ir/IRForm';
 import { TreeViewContent } from '../TreeViewSidebar/TreeViewContent';
 import { TreeViewScopeBarLive } from '../TreeViewSidebar/TreeViewScopeBar';
 import { useTreeViewPanel } from '../../contexts/TreeViewPanelContext';
@@ -454,6 +455,28 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
     // Selected element: its id drives the posture switch, its className says whether
     // it is a leaf, and its name + owner feed the Focus breadcrumb bar.
     const selectedElementId = useSelector((state: any) => state._lastSelected?.modelElement || '');
+
+    // Inspector tab (2026-08-26). `Form` renders the SAME subject as `Properties` through
+    // the view's form supplement; the two are alternative renderings of one element, not
+    // two panels, so the tab is a state of the shell and travels through neither.
+    //
+    // The subject is the EFFECTIVE one, not the raw selection: with a pin active the
+    // inspector shows the pinned element while `_lastSelected` points elsewhere, and a tab
+    // keyed on the selection would offer Form for one element and render another. Same
+    // distinction the header de-duplication had to make (2026-08-25).
+    const formSubjectId: string = (effectivePin?.modelElement as string) || selectedElementId;
+    // Only an M1 object has a form: the fields are its slots. A DClass and the rest of M2
+    // keep the classic panel, which is what edits them.
+    const formSubjectIsObject = useSelector((state: any) => {
+        const id = (effectivePin?.modelElement as string) || state._lastSelected?.modelElement;
+        return !!id && state.idlookup?.[id]?.className === 'DObject';
+    });
+    const [inspectorTab, setInspectorTab] = useState<'properties' | 'form'>('properties');
+    // A subject that stops being an object takes the Form tab with it: leaving it active
+    // would render an empty form over a selection the classic panel could have shown.
+    useEffect(() => {
+        if (!formSubjectIsObject) setInspectorTab('properties');
+    }, [formSubjectIsObject]);
 
     const selectedIsLeaf = useSelector((state: any) => {
         const id = state._lastSelected?.modelElement;
@@ -937,16 +960,41 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
             {renderPropertiesPanel && (
                 <div className="properties-panel-container">
                     <div className="properties-panel-body">
-                        <Info
-                            mode={isFloating ? 'tab' : mode}
-                            overrideSelected={effectivePin}
-                            onInternalNavigate={isPinned ? handleInternalNavigate : undefined}
-                        />
+                        {formSubjectIsObject && (
+                            <div className="inspector-tabs" role="tablist" aria-label="Inspector">
+                                <button
+                                    type="button"
+                                    role="tab"
+                                    aria-selected={inspectorTab === 'properties'}
+                                    className={`inspector-tabs__tab${inspectorTab === 'properties' ? ' inspector-tabs__tab--active' : ''}`}
+                                    onClick={() => setInspectorTab('properties')}
+                                >
+                                    Properties
+                                </button>
+                                <button
+                                    type="button"
+                                    role="tab"
+                                    aria-selected={inspectorTab === 'form'}
+                                    className={`inspector-tabs__tab${inspectorTab === 'form' ? ' inspector-tabs__tab--active' : ''}`}
+                                    onClick={() => setInspectorTab('form')}
+                                >
+                                    Form
+                                </button>
+                            </div>
+                        )}
+
+                        {inspectorTab === 'form' && formSubjectIsObject
+                            ? <IRForm objectId={formSubjectId} />
+                            : <Info
+                                mode={isFloating ? 'tab' : mode}
+                                overrideSelected={effectivePin}
+                                onInternalNavigate={isPinned ? handleInternalNavigate : undefined}
+                            />}
 
                         {/* NODE section — Expert mode only (R-RAIL-12: it stays in the
                             shell, so `advanced` keeps deciding WHEN it appears, not only
                             where). Disclosure row: caret, eyebrow label, hairline rule. */}
-                        {advanced && (
+                        {advanced && inspectorTab !== 'form' && (
                             <div className="properties-node-section">
                                 <button
                                     className="properties-node-section__header"
