@@ -1,5 +1,18 @@
 # Claude Code Session Log
 
+## 2026-08-27 — fix(settings): il modale Settings torna a 1120 di larghezza
+**Prompt**: «riallarga un po' il modale, mi sembra troppo piccolo», dopo la revisione 5a che lo aveva portato da 1360x820 a 960x780.
+**Files touched**: `frontend/src/components/Settings/UnifiedSettingsModal/UnifiedSettingsModal.scss`, `docs/claude-code-log.md`. Sonde `_tmp_settings_providers_5a*.ts` gitignored, gate aggiornati al nuovo numero.
+**Outcome**: ✅ completed
+**Corregge**: 2026-08-26 19:00
+**Causa**: (a)
+**Regressions**: no. Gate: `npm run build` exit 0 col solo chunk-warning; `npm run typecheck` non rieseguito (sole due righe SCSS, nessun TS toccato). Sonde: `_tmp_settings_providers_5a` 20/20 nello stato misto, `_tmp_settings_providers_5a_focus` 13/13.
+**Out-of-scope changes**: no. Due valori in un file piu' il log.
+**Layer Impact Report**: not-required (nessun file di §3.1; due valori CSS)
+**Smoke visivo**: la verifica finale spetta ad Alfonso a schermo. Misurato con Playwright headless: modale 1120x780, lista 570/570 senza scroll nello stato misto, nessuna delle sette sezioni sborda in orizzontale (`oltreIlBordo` 0, `scrollX` false).
+**Notes**: L'altezza resta 780: e' quella che fa stare le undici righe senza scroll, e la larghezza non la tocca. 1120 sta fra i 960 di 5a e i 1360 di prima (a viewport 1440 il modale occupava tutto meno 80px per lato). `max-width` segue a 1120, `min-width` resta 900 e il breakpoint a 960px continua a passare a schermo intero.
+**Prompt document name**: 2026-08-27 (istruzione in chat)
+
 ## 2026-08-26 — feat(settings): i provider AI diventano righe per stato, il modale si stringe
 **Prompt**: prompt 2026-08-26 19:00 (mockup 5a). Il pannello Providers mostrava undici card da 68px con lo stesso chip «Not configured» undici volte. Due sezioni per stato, righe dense e cliccabili, modelli inline, dot verde col modello attivo, footer con lucchetto, Custom senza separatore. Modale ~960x700.
 **Files touched**: `frontend/src/components/Settings/AISettingsContent.tsx`, `frontend/src/components/Settings/AISettingsContent.scss`, `frontend/src/components/Settings/UnifiedSettingsModal/UnifiedSettingsModal.scss`, `docs/prompts/claude_2026-08-26_1900_prompt_settings_providers_5a.md`, `docs/claude-code-log.md`. Sonde `_tmp_settings_providers_5a*.ts` e screenshot restano gitignored.
