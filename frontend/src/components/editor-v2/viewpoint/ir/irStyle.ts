@@ -173,6 +173,9 @@ const BASE_CSS = `
 .ir-node-content .ir-row__input { padding: 0 4px; }
 .ir-node-content .ir-row__value--editable { cursor: text; }
 .ir-node-content .ir-row__value--editable:hover { background: rgba(14,165,233,0.08); border-radius: 3px; }
+/* A reference row that opens a select carries --editable too, for the hover, but its cursor
+   must not promise a caret: the double click opens a list, it does not start typing. */
+.ir-node-content .ir-row__value--select { cursor: pointer; }
 `;
 
 function ensureStyleTag(): HTMLStyleElement | null {

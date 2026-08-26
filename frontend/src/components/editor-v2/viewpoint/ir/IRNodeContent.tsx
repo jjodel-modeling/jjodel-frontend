@@ -11,8 +11,10 @@
 
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { useSelector } from 'react-redux';
-import { U } from '../../../../joiner';
-import { syncNodeLabel, syncUpdateFeatureValue } from '../../sync/canvasToJjom';
+import { store, U } from '../../../../joiner';
+import { syncNodeLabel, syncSetReferenceValue, syncUpdateFeatureValue } from '../../sync/canvasToJjom';
+import { useEditorContextSafe } from '../../contexts/EditorContext';
+import InlineObjectSelect, { type InlineObjectOption } from '../../components/InlineObjectSelect';
 import type { CompiledView, CompiledTextStyle } from './irTypes';
 import type { ReadCtx } from './irReadCtx';
 import { makeReadCtx } from './irReadCtxLproxy';
@@ -96,11 +98,29 @@ export interface IRNodeContentProps {
 }
 
 interface CompartmentRowData {
+    /** DValue (slot) id — NOT the metafeature id; the DReference is reached via its `instanceof`. */
     key: string;
     name: string;
     typeName: string;
+    /** Declared type id of the feature. Carried per row so the singleton-select gate is a Set
+     *  lookup instead of a store walk (R-SGL-10(4)). */
+    typeId: string;
     value: string;
     editableValue: boolean;
+}
+
+/** Open singleton select: everything it needs, resolved once at open — never per render. */
+interface SelectingRowState {
+    /** DValue id of the row being assigned. */
+    key: string;
+    /** Reference name — the write path is keyed by name, like every other slot write. */
+    name: string;
+    typeName: string;
+    mode: 'replace' | 'append';
+    allowNone: boolean;
+    options: InlineObjectOption[];
+    value: string | null;
+    anchorRect: DOMRect;
 }
 
 function IRNodeContent({ compiled, objectId, vertexId, readCtx }: IRNodeContentProps) {
@@ -111,6 +131,11 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx }: IRNodeContentP
     const [editingRow, setEditingRow] = useState<{ key: string; name: string } | null>(null);
     const [editingLabel, setEditingLabel] = useState<number | null>(null);
     const [editValue, setEditValue] = useState('');
+    // Singleton select (R-SGL-4). Disjoint from editingRow by construction: a reference row is
+    // never `editableValue` (that stays `kind === 'A'`), so the two can never be open together.
+    const [selectingRow, setSelectingRow] = useState<SelectingRowState | null>(null);
+    // Null outside a provider — the authoring preview mounts this component without one.
+    const editorCtx = useEditorContextSafe();
 
     // Content-driven box (D8/D9): the shapes that carry a geometric supplement
     // take the size their ink needs inside the outline. Inert on the shapes that
@@ -137,7 +162,11 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx }: IRNodeContentP
                 if (typeof v === 'string' && lookup?.[v]?.name) return lookup[v].name;
                 return v == null ? '' : String(v);
             }).join(', ');
-            parts.push(`${kind};${fid};${feat.name ?? ''};${typeObj?.name ?? ''};${display}`);
+            // The type ID rides along with its name: the singleton-select gate matches on the id
+            // (names collide across metamodels). Side effect on the signature, declared: a retarget
+            // of the feature towards a class of the SAME name now invalidates the memo, where
+            // before only a rename did.
+            parts.push(`${kind};${fid};${feat.name ?? ''};${typeObj?.name ?? ''};${feat.type ?? ''};${display}`);
         }
         return parts.join('|');
     });
@@ -147,8 +176,8 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx }: IRNodeContentP
         const references: CompartmentRowData[] = [];
         if (!compartmentSig) return { attributes, references };
         for (const entry of compartmentSig.split('|')) {
-            const [kind, fid, name, typeName, value] = entry.split(';');
-            const row: CompartmentRowData = { key: fid, name, typeName, value, editableValue: kind === 'A' };
+            const [kind, fid, name, typeName, typeId, value] = entry.split(';');
+            const row: CompartmentRowData = { key: fid, name, typeName, typeId, value, editableValue: kind === 'A' };
             if (kind === 'R') references.push(row); else attributes.push(row);
         }
         return { attributes, references };
@@ -203,6 +232,61 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx }: IRNodeContentP
         if (e.key === 'Enter') commit();
         else if (e.key === 'Escape') { setEditingRow(null); setEditingLabel(null); }
     }, []);
+
+    /**
+     * Open the singleton select for a reference row. Everything is resolved HERE, once, and
+     * frozen into state: the per-render cost of the feature stays the Set lookup that gated
+     * the row, and the store is walked only on the gesture.
+     *
+     * Candidates come from `DModel.objects` — the same source useM1ReferenceEdges and
+     * useJjomSync read — and NOT from a scan of idlookup filtered on a `model` field: DObject
+     * has no raw `model` (it declares `father: Pointer<DModel> | Pointer<DValue>`; `model` is
+     * an L getter that walks the father chain). Singleton instances are roots of their model
+     * by construction (addObject with `father = model.id`), so `objects` holds them.
+     */
+    const openRowSelect = useCallback((row: CompartmentRowData, anchorRect: DOMRect) => {
+        const modelId = editorCtx?.modelId;
+        const classIds = editorCtx?.singletonClassIdsByType?.get(row.typeId);
+        if (!modelId || !classIds) return;
+
+        const lookup: any = (store.getState() as any).idlookup ?? {};
+        const dValue: any = lookup[row.key];
+        const dRef: any = dValue?.instanceof ? lookup[dValue.instanceof] : null;
+        // A to-one reference replaces; anything else appends. Unknown bound → append is the
+        // conservative choice: it never silently drops a value the user had already assigned.
+        const mode: 'replace' | 'append' = dRef?.upperBound === 1 ? 'replace' : 'append';
+        const assigned: string[] = Array.isArray(dValue?.values)
+            ? dValue.values.filter((v: any) => typeof v === 'string' && v !== '')
+            : [];
+
+        const options: InlineObjectOption[] = [];
+        for (const objId of (lookup[modelId]?.objects ?? [])) {
+            if (typeof objId !== 'string') continue;
+            const o = lookup[objId];
+            if (!o || typeof o !== 'object') continue;
+            if (!classIds.has(o.instanceof)) continue;
+            if (mode === 'append' && assigned.includes(objId)) continue;
+            options.push({ id: objId, name: o.name ?? objId });
+        }
+
+        setSelectingRow({
+            key: row.key,
+            name: row.name,
+            typeName: row.typeName,
+            mode,
+            allowNone: mode === 'replace',
+            options,
+            value: mode === 'replace' ? (assigned[0] ?? null) : null,
+            anchorRect,
+        });
+    }, [editorCtx]);
+
+    const commitRowSelect = useCallback((objectId: string | null) => {
+        if (!selectingRow) return;
+        syncSetReferenceValue(vertexId, selectingRow.name, objectId, selectingRow.mode);
+        U.isProjectModified = true;
+        setSelectingRow(null);
+    }, [selectingRow, vertexId]);
 
     // Le forme dipinte in SVG (oggi: diamond) sopprimono la box CSS in irStyle.ts.
     // `svgPainter` non nullo == questa forma e' dipinta da un layer SVG.
@@ -396,7 +480,8 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx }: IRNodeContentP
                         </div>
                     );
                 }
-                const source = fc.source === 'references' ? rows.references : rows.attributes;
+                const isReferenceCompartment = fc.source === 'references';
+                const source = isReferenceCompartment ? rows.references : rows.attributes;
                 if (source.length === 0) return null;
                 return (
                     <div
@@ -412,6 +497,36 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx }: IRNodeContentP
                                         case 'type': return <span key={si}>{row.typeName}</span>;
                                         case 'value': {
                                             const editable = row.editableValue && (seg as any).editable !== false;
+                                            // A reference row becomes a select ONLY while the
+                                            // singletons are hidden: with them on screen the
+                                            // gesture stays the arrow (R-SGL-4). `=== false` and
+                                            // not `!...`: an absent context means no opinion.
+                                            const selectable = isReferenceCompartment
+                                                && editorCtx?.showSingletons === false
+                                                && !!editorCtx.singletonConformTypeIds?.has(row.typeId)
+                                                && (seg as any).editable !== false;
+                                            if (selectable) {
+                                                return (
+                                                    <span
+                                                        key={si}
+                                                        className="ir-row__value--editable ir-row__value--select"
+                                                        onDoubleClick={(e) => openRowSelect(row, e.currentTarget.getBoundingClientRect())}
+                                                    >
+                                                        {row.value}
+                                                        {selectingRow?.key === row.key && (
+                                                            <InlineObjectSelect
+                                                                value={selectingRow.value}
+                                                                typeName={selectingRow.typeName || row.typeName}
+                                                                options={selectingRow.options}
+                                                                allowNone={selectingRow.allowNone}
+                                                                anchorRect={selectingRow.anchorRect}
+                                                                onChange={commitRowSelect}
+                                                                onClose={() => setSelectingRow(null)}
+                                                            />
+                                                        )}
+                                                    </span>
+                                                );
+                                            }
                                             if (editable && editingRow?.key === row.key) {
                                                 return (
                                                     <input
