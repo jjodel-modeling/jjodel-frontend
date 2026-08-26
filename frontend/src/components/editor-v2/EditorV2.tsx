@@ -726,7 +726,10 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     } catch { /* skip */ }
                 }
 
-                // 3. For singleton classes without a DVertex, create DObject + DVertex
+                // 3. Fallback, not the primary path: after R-SGL-2 instances exist by
+                //    construction. This branch repairs M1s saved before the feature and
+                //    M1s re-pointed via LModel.set_instanceof, which does not seed
+                //    singletons. For those, create DObject + DVertex.
                 const existingNodes = getNodes();
                 let maxY = 0;
                 for (const n of existingNodes) {
@@ -1497,7 +1500,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             if (droppable.size > 0) {
                 const present = new Set(candidates.map(c => c.id));
                 const extra = modeInfo.allClasses.filter(
-                    c => !present.has(c.id) && !c.isAbstract && droppable.has(c.name),
+                    c => !present.has(c.id) && !c.isAbstract && !c.isSingleton && droppable.has(c.name),
                 );
                 if (extra.length > 0) candidates = [...candidates, ...extra];
             }

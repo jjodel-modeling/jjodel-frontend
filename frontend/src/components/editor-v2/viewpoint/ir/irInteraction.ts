@@ -113,8 +113,9 @@ function conformsToRefTarget(ref: MetaclassReference, classId: string, classById
 /**
  * Connect rules applicable to a gesture from an instance of `sourceClassId` to
  * an instance of `targetClassId` (wiring cantiere 2026-07-20). A rule matches
- * when its edge metaclass resolves to a concrete class whose source/target
- * references (by name) accept the two endpoint metaclasses, with the same
+ * when its edge metaclass resolves to a concrete, non-singleton class (the gesture
+ * CREATES the edge-object, and a singleton is not instantiable — R-SGL-1) whose
+ * source/target references (by name) accept the two endpoint metaclasses, with the same
  * conformance used by getCompatibleReferences (direct match or concrete
  * descendant). Malformed rules (unknown metaclass, missing feature) are
  * skipped. Cross-MM targets absent from `allClasses` do not match (declared
@@ -133,7 +134,7 @@ export function matchConnectRules(
     for (const rule of plan.connectRules) {
         if (!rule.sourceFeature || !rule.targetFeature) continue;
         const edgeClass = classByName.get(rule.edgeMetaclass);
-        if (!edgeClass || edgeClass.isAbstract) continue;
+        if (!edgeClass || edgeClass.isAbstract || edgeClass.isSingleton) continue;
         const sourceRef = edgeClass.references.find(r => r.name === rule.sourceFeature);
         const targetRef = edgeClass.references.find(r => r.name === rule.targetFeature);
         if (!sourceRef || !targetRef) continue;
@@ -145,8 +146,10 @@ export function matchConnectRules(
 }
 
 /**
- * Names of the concrete metaclasses droppable inside the plan's drop
- * containers (containment-reference targets + their concrete descendants).
+ * Names of the concrete, non-singleton metaclasses droppable inside the plan's drop
+ * containers (containment-reference targets + their concrete descendants). Singletons
+ * are excluded because this set feeds the palette, and they are not instantiable
+ * (R-SGL-1).
  * Used to extend the IR palette beyond the rootable classes (decision D4,
  * discovery 2026-07-20): without it, contained-only classes (e.g. State in a
  * Machine) have no palette entry and the containment drop gesture cannot be
@@ -167,8 +170,8 @@ export function deriveDroppableChildMetaclasses(
             if (!ref.containment) continue;
             const target = classById.get(ref.targetClassId);
             if (!target) continue;
-            if (!target.isAbstract) out.add(target.name);
-            for (const sub of target.concreteSubclasses) out.add(sub.name);
+            if (!target.isAbstract && !target.isSingleton) out.add(target.name);
+            for (const sub of target.concreteSubclasses) { if (!sub.isSingleton) out.add(sub.name); }
         }
     }
     return out;

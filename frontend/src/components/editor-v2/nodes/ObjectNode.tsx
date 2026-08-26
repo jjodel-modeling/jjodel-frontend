@@ -77,15 +77,14 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
         return containmentChildren(state.idlookup ?? {}, irResolution.objectId).length;
     });
 
-    // Live metaclass name + singleton flag from Redux (reacts to metamodel changes)
+    // Live metaclass name from Redux (reacts to metamodel changes)
     const liveMetaclassInfo = useSelector((state: any) => {
         const classId = data.instanceOfClassId;
-        if (!classId) return { name: null, isSingleton: false };
+        if (!classId) return { name: null };
         const dClass = (state.idlookup?.[classId] as any);
-        return { name: dClass?.name ?? null, isSingleton: !!dClass?.isSingleton };
+        return { name: dClass?.name ?? null };
     });
     const liveMetaclassName = liveMetaclassInfo.name;
-    const isSingleton = liveMetaclassInfo.isSingleton;
     const metaclassName = liveMetaclassName
         ?? (data.instanceOfClassId ? data.instanceOfClassName : 'Orphan');
 
@@ -427,13 +426,6 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                     />
                 )}
                 <DynamicHandles nodeId={id} shapeForm={shapeForm} />
-                {/* Singleton stereotype — same label as the native branch. The IR
-                    branch has no header (the name is an IR label inside
-                    IRNodeContent), so it sits in the wrapper, ahead of the
-                    interpreted content. */}
-                {isSingleton && (
-                    <span className="mm-node__stereotype">«singleton»</span>
-                )}
                 <NodeProblemIndicator nodeId={id} />
                 <IRNodeContent
                     compiled={irResolution.compiled}
@@ -489,13 +481,6 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                 onDoubleClick={handleDoubleClick}
                 onClick={() => { if (selected && !editing) setEditing(true); }}
             >
-                {/* Singleton stereotype — own line above the name; the header
-                    stacks vertically via .mm-node__header:has(.mm-node__stereotype).
-                    The name itself stays underlined (UML instance convention,
-                    shared by every M1 object). */}
-                {isSingleton && (
-                    <span className="mm-node__stereotype">«singleton»</span>
-                )}
                 {editing ? (
                     <input
                         className="mm-node__input"

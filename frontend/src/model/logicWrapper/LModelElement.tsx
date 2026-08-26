@@ -2849,6 +2849,8 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
             if (list.length) {
                 SetFieldAction.new(c.data, 'isSingleton', false);
                 SetFieldAction.new(c.data, 'final', false);
+                // The flag goes off here too, so the instances go with it (R-SGL-7).
+                if (c.data.isSingleton) this._removeSingletonInstances(c);
             } else {
                 SetFieldAction.new(c.data, 'final', true);
             }
@@ -2864,16 +2866,87 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         TRANSACTION(this.get_name(c)+'.final', ()=>{
             SetFieldAction.new(c.data, 'final', val);
             SetFieldAction.new(c.data, 'sealed', [], '', true);
-            if (!val) SetFieldAction.new(c.data, 'isSingleton', false);
+            if (!val) {
+                SetFieldAction.new(c.data, 'isSingleton', false);
+                // The flag goes off here too, so the instances go with it (R-SGL-7).
+                if (c.data.isSingleton) this._removeSingletonInstances(c);
+            }
         }, c.data.final, val);
         return true;
     }
     get_isSingleton(c: Context): LClass['isSingleton'] { return this.get_singleton(c); }
     get_singleton(c: Context): LClass['isSingleton'] { return c.data.isSingleton; }
     set_isSingleton(val: boolean, c: Context): boolean { return this.set_singleton(val, c); }
+    /** Remove every instance of this class, each with its graph vertices and the edges
+     *  connected to them. Called by the three writers that turn `isSingleton` off
+     *  (R-SGL-7), from INSIDE their TRANSACTION: the TRANSACTIONs the cascade opens for
+     *  itself run at depth > 0 and close nothing, so the whole removal commits as one
+     *  CompositeAction — a single undo step (R-SGL-2). Does not write the flag: the
+     *  caller does. */
+    private _removeSingletonInstances(c: Context): void {
+        const instances: LObject[] = this.get_instances(c);
+        if (!instances.length) return;
+        const instanceIds = new Set<string>();
+        for (const o of instances) { if (o?.id) instanceIds.add(o.id); }
+        if (!instanceIds.size) return;
+
+        // Vertices of those instances, in ONE pass over idlookup. The cascade cannot find
+        // them by itself: Dummy.get_delete reads `lDeleted.nodes`, whose transient registry
+        // is never populated (dead write). The className predicate is the one the singleton
+        // toggle and useJjomSync.isVertexClassName use — it must cover DVertex subtypes,
+        // not one literal name. `typeof e === 'object'` because idlookup also holds scalars.
+        const vertexIdsByObject = new Map<string, string[]>();
+        const idlookup: GObject = (store.getState().idlookup ?? {}) as GObject;
+        for (const id in idlookup) {
+            const e: GObject = idlookup[id];
+            if (!e || typeof e !== 'object') continue;
+            if (typeof e.className !== 'string' || !e.className.includes('Vertex')) continue;
+            if (!instanceIds.has(e.model)) continue;
+            const arr = vertexIdsByObject.get(e.model) ?? [];
+            arr.push(id);
+            vertexIdsByObject.set(e.model, arr);
+        }
+
+        for (const o of instances) {
+            if (!o?.id) continue;
+            for (const vertexId of (vertexIdsByObject.get(o.id) ?? [])) {
+                const lVertex: GObject = LPointerTargetable.fromPointer(vertexId) as any;
+                if (!lVertex) continue;
+                // Connected edges first: the vertex cascade treats `start`/`end` dependents
+                // as a no-op, so an edge whose endpoint dies here would linger in
+                // graph.subElements with both ends dead. Predicate from syncDeleteVertex.
+                const graphProxy: GObject = lVertex.graph;
+                if (graphProxy) {
+                    const allEdges: any[] = graphProxy.edges ?? [];
+                    const connectedEdges = allEdges.filter((e: any) => {
+                        const startId = e?.start?.id ?? e?.__raw?.start;
+                        const endId = e?.end?.id ?? e?.__raw?.end;
+                        return startId === vertexId || endId === vertexId;
+                    });
+                    for (const edge of connectedEdges) edge?.delete();
+                }
+                lVertex.delete();
+            }
+            singletonInstancesBeingRemoved.add(o.id);
+            o.delete();
+        }
+    }
+
     set_singleton(val: boolean, c: Context): boolean {
         val = U.fromBoolString(val);
-        if (c.data.instances.length > 1) { U.alert('e', 'Class cannot become a singleton since there are multiple instances already.','Delete some and retry.'); return true; }
+        // Counted PER MODEL (R-SGL-8): DClass.instances is flat over the whole project, so
+        // two M1s with one legitimate instance each — the normal state of a singleton —
+        // used to make the flag impossible to turn on. Only turning it ON is guarded:
+        // turning it OFF is the way out of a model that already holds several instances.
+        if (val) {
+            const instanceCountByModel: Dictionary<string, number> = {};
+            for (const o of this.get_instances(c)) {
+                const mid: string | undefined = o?.model?.id;
+                if (!mid) continue;
+                instanceCountByModel[mid] = (instanceCountByModel[mid] ?? 0) + 1;
+                if (instanceCountByModel[mid] > 1) { U.alert('e', 'Class cannot become a singleton since a model already has multiple instances.','Delete some and retry.'); return true; }
+            }
+        }
         if (this.get_extendedBy(c).length > 0) { U.alert('e', 'Class cannot become a singleton unless is also final, and is currently extended.', 'Remove the subclasses before.'); return true; }
         TRANSACTION(this.get_name(c)+'.singleton', ()=>{
             SetFieldAction.new(c.data, 'isSingleton', val);
@@ -2887,6 +2960,10 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
                     m1.addObject({name: c.data.name}, c.data, true);
                 }
             }
+            // Guarded on the CURRENT value like the other two writers: set_singleton has no
+            // early return on an unchanged value, and without this a set_singleton(false) on
+            // a class that was never a singleton would wipe every instance it has.
+            else if (c.data.isSingleton) this._removeSingletonInstances(c);
         }, c.data.isSingleton, val);
         return true;
     }
@@ -5836,6 +5913,14 @@ export class DObject extends DModelElement { // extends DNamedElement, m1 class 
 
 }
 
+/** Ids of the singleton instances LClass._removeSingletonInstances is removing right now.
+ *  LObject.get_delete consumes an entry to let the canonical cascade through.
+ *  Why a token and not an ordering: the actions of a TRANSACTION queue up until FINAL_END
+ *  (action.ts, `t.hasBegun` → pendingActions), so writing the flag before the delete does
+ *  NOT make the guard see it off — the guard reads the committed state, where it is still
+ *  on. Entries are per-object and consumed on read, so the bypass can never stay armed. */
+const singletonInstancesBeingRemoved = new Set<Pointer<DObject>>();
+
 @RuntimeAccessible('LObject')
 export class LObject<Context extends LogicContext<DObject> = any, C extends Context = Context, D extends DObject = DObject> extends LNamedElement { // extends DNamedElement, m1 class instance
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
@@ -6424,6 +6509,12 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
 
     protected get_delete(context: Context): () => void {
         return () => {
+            // Lifecycle removal (R-SGL-2): the flag is being turned off in this very
+            // TRANSACTION, so the guard below would still read it as on. Consume the token.
+            if (singletonInstancesBeingRemoved.delete(context.data.id)) {
+                super.get_delete(context)();
+                return;
+            }
             let c: LClass | undefined = this.get_instanceof(context);
             if(c && c.isSingleton) {
                 Log.ww('Object is a singleton and cannot be removed, remove his singleton flag in m2 first.', context.data);

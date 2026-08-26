@@ -240,6 +240,22 @@ export async function executeCreateInstance(
         };
     }
 
+    // Singleton pre-check (R-SGL-1): a singleton class is not instantiable by any user
+    // route. Unlike the classic addObject path, DObject.new below has no D-layer guard,
+    // so without this the command would succeed. Reads the SAME flag as the delete
+    // pre-check below — no divergent logic.
+    if ((metaclass as any).isSingleton) {
+        return {
+            success: false,
+            command: 'create',
+            message: `Cannot instantiate singleton class '${className}'`,
+            errors: [{
+                code: 'SINGLETON_CLASS',
+                message: `'${className}' is a singleton — its instance already exists, one per model. Remove the singleton flag in the metamodel first.`
+            }]
+        };
+    }
+
     const targetModel = resolveTargetModel(context, project);
     if (!targetModel) {
         return {

@@ -2172,9 +2172,10 @@
         box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.25), inset 0 0 16px rgba(245, 158, 11, 0.05);
     }
 
-    // The singleton diamond badge was replaced by the «singleton» stereotype
-    // line in the header (ObjectNode, both the native and the IR branch); its
-    // only two consumers are gone, so the rule went with them.
+    // No singleton marker on the instance. The diamond badge went first, with its two
+    // consumers; the «singleton» stereotype line that replaced it now lives only on the
+    // metaclass (ClassNode, R-SGL-3). `.mm-node__stereotype` therefore stays defined
+    // under `.mm-node`, and nothing scoped to `.mm-object` is needed here.
 }
 
 // ============================================
