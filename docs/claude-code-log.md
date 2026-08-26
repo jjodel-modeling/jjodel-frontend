@@ -1,5 +1,31 @@
 # Claude Code Session Log
 
+## 2026-08-26 — fix(editor-v2): la minimap torna a 16px dal fondo del canvas
+**Prompt**: prompt 2026-08-26 11:25. Una riga: `bottom: '100px'` sulla prop `style` della `<MiniMap>` in `EditorV2.tsx` e' un residuo di quando i controlli zoom di React Flow stavano nell'angolo in basso a destra (oggi in toolbar, commento `{/* Zoom controls moved to toolbar */}`). Portare bottom e margine destro a 16px, griglia 8px, margini simmetrici.
+**Files touched**: `frontend/src/components/editor-v2/EditorV2.tsx`, `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gate: `npm run build` exit 0 col solo chunk-warning; `npm run typecheck` 33 = baseline (l'unico errore in `EditorV2.tsx` e' quello di baseline, ora a riga 3030 invece di 2886 per scorrimento).
+**Out-of-scope changes**: no. Una riga in un file, piu' il log. Nessun tocco a `EditorV2.scss`, `simulation-panel.scss` o alle prop colore.
+**Layer Impact Report**: not-required (nessun file di §3.1 e nessun write path D/L: solo due valori nello style inline della MiniMap)
+**Smoke visivo**: la verifica finale spetta ad Alfonso a schermo. La chat ha misurato con Playwright headless (`scripts/smoke/_tmp_minimap_offset.ts`, stato `empty-metamodel-tab`): `.react-flow`.bottom − minimap.bottom = 16.00px; gap destro = 384.00px con `--jj-canvas-right-inset` a 368px, cioe' inset + 16; portando l'inset a 520px il gap va a 536.00px e la minimap trasla di 152px, quindi il margine destro segue il ridimensionamento del pannello proprieta'.
+**Notes**: Il criterio 2 del prompt («16px dal bordo sinistro del pannello proprieta'») misura 24px sul DOM: `--jj-canvas-right-inset` e' larghezza colonna + 8px di gutter (`PropertiesWithTreeView.tsx:481`), quindi i 16px partono dal bordo utile del canvas, non dal pannello. Convenzione preesistente, non introdotta qui (col vecchio 20px erano 28px). Pannello di simulazione: `left: 216px`, `width: 288px`, bordo destro a 504px contro minimap left 853px — nessuna sovrapposizione possibile. Fuori perimetro, solo segnalato: il commento in `sim/simulation-panel.scss:13` cita `EditorV2.tsx:3869` per la MiniMap, che oggi sta a ~4090.
+**Prompt document name**: 2026-08-26 11:25
+
+## 2026-08-26 — fix(editor-v2): il gruppo comandi è solo zoom, il badge del modello è ambra
+**Prompt**: due fix sulla topbar rispetto al mockup 1c approvato. (1) togliere `bi-arrows-fullscreen` dal gruppo comandi: il gruppo è zoom (−/%/+), hairline, » collapse-rail. (2) il badge del modello accanto al nome usa la coppia entità model ambra — fondo `#fef3c7`, lettera `#d97706`, come i badge M/m/T/V già in uso — non slate; e in dark la pastiglia non deve essere spenta dal solito `:not()` di `properties-with-tree-view.scss`.
+**Files touched**: `frontend/src/components/editor-v2/Toolbar.tsx`, `frontend/src/components/editor-v2/EditorV2.scss`, `docs/claude-code-log.md`. Sonda `_tmp_topbar_1c.ts` e i due screenshot restano gitignored.
+**Outcome**: ✅ completed
+**Corregge**: 2026-08-26 (istruzione in chat, mockup 1c — cc203a525)
+**Causa**: (a)
+**Regressions**: no. Gate: `npm run typecheck` 33 = baseline esatta su output completo, 0 nei file toccati; `npm run build` exit 0 col solo chunk-warning; `npm run smoke` 12 passed / 0 failed / 3 skipped. `vitest` non eseguito: nessun test cita `Toolbar`.
+**Out-of-scope changes**: no. I due sorgenti del prompt piu' il log. Fuori restano i token `--color-entity-model-*`, il badge del metamodello e `.jj-type-badge--model`; la prop `onFitView` resta con TODO: cleanup (Regola 9).
+**Layer Impact Report**: not-required (nessun file di §3.1; nessun write path D/L, sola presentazione)
+**Smoke visivo**: la verifica finale spetta ad Alfonso a schermo. Sonda `_tmp_topbar_1c.ts` 9/9 con `_tmp_topbar_1c_light.png` e `_tmp_topbar_1c_dark.png`.
+**Notes**: Col bottone non si perde niente: sotto il `%` c'e' `handleResetZoom`, la stessa chiamata di `handleFitView` (EditorV2.tsx:3313-3316). Ambra literal e non token: `--color-entity-model-*` e' alias di `--color-entity-container-*` nei due temi, e ridipingerlo tingerebbe anche `.jj-type-badge--model` del Properties. Il `:not()` di properties-with-tree-view.scss:1173 e' scopato a `.tree-view-panel-body .tree-node__icon`, non raggiunge la topbar: controllo positivo in dark nella stessa corsa.
+**Prompt document name**: 2026-08-26 (istruzione in chat)
+
 ## 2026-08-26 — feat(editor-v2): via la pillola di riapertura della rail
 **Prompt**: rimuovere dal canvas i due comandi che comparivano nascondendo la rail (screenshot: il cluster flottante con `bi-sliders` e `bi-diagram-2`).
 **Files touched**: `frontend/src/components/editors/PropertiesWithTreeView.tsx`, `frontend/src/components/editors/properties-with-tree-view.scss`, `docs/claude-code-log.md`
