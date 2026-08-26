@@ -1817,13 +1817,20 @@ canvas, menu contestuale dei figli di composizione, comandi. L'istanza esiste pe
 La fonte del predicato è `LClass.instantiable`, che già dice il vero; editor-v2 deve leggerla o
 replicarla in `MetaclassInfo`, non reinventarla.
 
-**R-SGL-2** (2026-08-26, Alfonso) — **Il ciclo di vita dell'istanza segue il flag.** Flag acceso:
-un'istanza in ogni M1 del metamodello (già così in `set_singleton` e in `classes.ts:942` alla
-creazione del modello). Flag spento: **l'istanza va rimossa**, oggi non succede. La rimozione
-passa dal percorso canonico di cancellazione, che però a `LModelElement.tsx:6429` rifiuta di
-cancellare l'istanza finché la classe è singleton: l'ordine dentro la `TRANSACTION` è flag prima,
-cancellazione poi. La creazione lazy del toggle (`EditorV2.tsx:729`) resta come fallback per i
-modelli salvati senza istanza o decade: lo decide la discovery del commit A.
+**R-SGL-2** (2026-08-26, Alfonso; emendata lo stesso giorno dalla discovery) — **Il ciclo di
+vita dell'istanza segue il flag.** Flag acceso: un'istanza in ogni M1 del metamodello (già così in
+`set_singleton` e in `classes.ts:942` alla creazione del modello). Flag spento: **tutte le istanze
+vanno rimosse** (`get_instances` per intero: `DClass.instances` è piatto sul progetto), oggi non
+succede. La versione originale di questa riga prescriveva «flag prima, cancellazione poi nella
+stessa `TRANSACTION`»: **sbagliata**, le azioni si accodano fino a `FINAL_END` (`action.ts:329`,
+`:153`) e il guard di `LObject.get_delete` (`LModelElement.tsx:6428`) rilegge lo stato committato,
+dove il flag è ancora acceso. Il bypass è un **token di rientranza per oggetto** (Set di modulo con
+gli id delle istanze in rimozione, consumato dal guard). La cascata canonica **non cancella il
+`DVertex`** (`Dummy.ts:254` è una scrittura morta: `DataTransientProperties.nodes` non è mai
+popolato): la rimozione lo cancella esplicitamente, e il canvas segue da sé via
+`graph.subElements`. Il ramo di creazione del toggle (`EditorV2.tsx:729`) resta come fallback
+dichiarato per i modelli salvati prima della feature e per `LModel.set_instanceof`.
+Report: `docs/discovery/discovery_2026-08-26_singleton_instantiability.md`.
 
 **R-SGL-3** (2026-08-26, Alfonso) — **Lo stereotipo «singleton» sta solo sulla sintassi
 astratta.** `ClassNode` invariato; in `ObjectNode` sparisce in entrambi i rami (IR `:434`, nativo
@@ -1842,6 +1849,37 @@ verso il nodo). Two-phase con Layer Impact Report: tocca `viewpoint/ir/` e `canv
 `compositionCompat`, `ObjectNode`, `set_singleton`, eventualmente il toggle). B: R-SGL-4. A
 precede B e ha il suo hard stop visivo. Il tipo è `feat` perché cambia il contratto (cosa
 l'utente può fare), non perché corregge una spec o rifinisce un comportamento già giusto.
+
+**R-SGL-6** (2026-08-26, Alfonso) — **La non-instanziabilità copre sei filtri di editor-v2 e
+JjScript.** I filtri: `rootableClasses` (`useEditorMode.ts:499`), palette IR ramo extra
+(`EditorV2.tsx:1499`), drop gate, drop in container e opzioni dei figli di composizione
+(`compositionCompat.ts:48`, `:164`), connect gesture (`irInteraction.ts:136`, crea l'edge-object).
+`MetaclassInfo.isSingleton?: boolean`, opzionale (regola 11), applicato **al consumo**:
+`concreteSubclasses` non si filtra perché serve alla conformità degli endpoint, su cui poggia
+R-SGL-4. `isSingleton` entra nella firma di reattività (`useEditorMode.ts:173`). JjScript `create
+instance` riceve il check gemello di `abstract` (`instance.ts:231`). Fuori: JjTL (`ProjectEditor.tsx:1750`,
+la classe la sceglie la trasformazione) e import XMI (il flag non è serializzato in Ecore).
+
+**R-SGL-7** (2026-08-26, Alfonso) — **La rimozione si aggancia a tutte e tre le scritture che
+spengono il flag**: `set_singleton`, `set_final(false)`, `set_sealed([...])`
+(`LModelElement.tsx:2874`, `:2867`, `:2850`), tramite un helper unico nello stesso file. Il
+vincolo «un solo passo di undo» vale per lo spegnimento; l'accensione ne fa due per il
+`setTimeout` di `addObject` fase 4 (`:7062`): debito registrato, fronte separato.
+
+**R-SGL-8** (2026-08-26, Alfonso) — **Il guard di accensione conta per modello, non per
+progetto.** `set_singleton(true)` rifiuta se un singolo M1 ha più di un'istanza, non se
+`instances.length > 1` sul progetto: con due M1 da un'istanza ciascuno (lo stato normale) il flag
+oggi non si accende. Corretto dentro il commit A perché la funzione è già in riscrittura.
+
+**R-SGL-9** (2026-08-26) — **Registrati, non chiusi.** (a) `LClass.get_rootable` e `resolveM1Info`
+calcolano due nozioni diverse di rootable, e il chip «Rootable» esplicito (`Info.tsx:188`) vince
+sul singleton: pre-esistente, più largo di A. (b) JjScript `set <Classe>.singleton` scrive il
+campo `singleton`, non `isSingleton` (`commands/set.ts:105`, `mapPropertyName` senza voce):
+probabilmente inerte da sempre, da provare a runtime. (c) Riparazione all'apertura di un M1
+senza istanza: feature a sé, il fallback del toggle è advanced-only. (d) Duplicate/paste sul
+canvas creano nodi solo React Flow senza `DObject` (`EditorV2.tsx:2415`, `:2579`): difetto
+pre-esistente. (e) `syncDeleteVertex` non cancella mai il `DVertex` e il commento a
+`canvasToJjom.ts:449-455` lo afferma: falso, da correggere quando si riapre quel file.
 
 ## Superate
 
