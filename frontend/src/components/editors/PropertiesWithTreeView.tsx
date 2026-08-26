@@ -60,6 +60,16 @@ const MIN_OVERLAY_WIDTH = 360;
 const MAX_OVERLAY_WIDTH = 640;
 const STORAGE_KEY_OVERLAY_WIDTH = 'jjodel_property_overlay_width';
 
+// Height of the tree pane once the user has dragged the splitter (2026-08-26). Absent
+// until then, and absent is NOT a number: it means "follow the preset", the viewport
+// formula of PRESET_2A. Storing a default here instead would freeze every rail at
+// whatever the first screen happened to compute, which is the thing the preset exists
+// to avoid. Bounds are generous on purpose — the point of a splitter is that the user
+// decides — but neither zone may be squeezed to nothing.
+const STORAGE_KEY_TREE_PANE_HEIGHT = 'jjodel_property_tree_pane_height';
+const MIN_TREE_PANE_HEIGHT = 120;
+const MIN_INSPECTOR_HEIGHT = 160;
+
 /**
  * How long the rail takes to slide in or out. It exists in TWO places on purpose and
  * they must agree: the stylesheet owns the MOTION (`--duration-normal`, 250ms) and this
@@ -168,6 +178,64 @@ interface PropertiesWithTreeViewProps {
 export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ mode }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const preset = PRESET_2A;
+
+    /**
+     * Tree pane height, once dragged. `null` means "follow the preset" and is the state
+     * every rail starts in — see the storage constant above for why that is not a number.
+     */
+    const [treePaneHeight, setTreePaneHeight] = useState<number | null>(() => {
+        if (typeof window === 'undefined') return null;
+        const stored = window.localStorage.getItem(STORAGE_KEY_TREE_PANE_HEIGHT);
+        if (stored === null) return null;
+        const n = parseFloat(stored);
+        return Number.isFinite(n) && n >= MIN_TREE_PANE_HEIGHT ? n : null;
+    });
+
+    useEffect(() => {
+        try {
+            if (treePaneHeight === null) window.localStorage.removeItem(STORAGE_KEY_TREE_PANE_HEIGHT);
+            else window.localStorage.setItem(STORAGE_KEY_TREE_PANE_HEIGHT, String(treePaneHeight));
+        } catch { /* ignore */ }
+    }, [treePaneHeight]);
+
+    /**
+     * The horizontal splitter between the two zones.
+     *
+     * The upper bound is not a constant: it is the shell's own height minus what the
+     * inspector needs, measured at grab time. A literal maximum would be wrong on every
+     * screen but the one it was written on — the rail is bounded by the viewport, and
+     * the same 640px that leaves room on a 27" monitor buries the inspector on a laptop.
+     *
+     * Double click restores the preset, which is the only way back to "follow the
+     * viewport" once a pixel height has been set.
+     */
+    const handleTreePaneResizeStart = useCallback((e: React.MouseEvent) => {
+        e.preventDefault();
+        const shell = containerRef.current;
+        const pane = shell?.querySelector('.tree-view-panel-container') as HTMLElement | null;
+        if (!shell || !pane) return;
+        const startY = e.clientY;
+        const startHeight = pane.getBoundingClientRect().height;
+        const maxHeight = Math.max(
+            MIN_TREE_PANE_HEIGHT,
+            shell.getBoundingClientRect().height - MIN_INSPECTOR_HEIGHT,
+        );
+
+        const handleMouseMove = (moveEvent: MouseEvent) => {
+            const next = startHeight + (moveEvent.clientY - startY);
+            setTreePaneHeight(Math.min(maxHeight, Math.max(MIN_TREE_PANE_HEIGHT, next)));
+        };
+        const handleMouseUp = () => {
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+        };
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+        document.body.style.cursor = 'row-resize';
+        document.body.style.userSelect = 'none';
+    }, []);
 
     // Width persistita: clamp + NaN guard al caricamento per protezione da
     // localStorage corrotto o da bound changes in versioni future.
@@ -303,6 +371,7 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
     // hiding the inspector empties the shell, which unmounts and hands over to the pill.
     const {
         isVisible: isTreeViewVisible,
+        show: showTree,
         toggle: toggleTreeView,
         isHighlighted,
         isScriptExecuting,
@@ -606,6 +675,28 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
     const [railMounted, setRailMounted] = useState(railShouldShow);
     const [railOpen, setRailOpen] = useState(railShouldShow);
 
+    /**
+     * What the column shows WHILE it is leaving.
+     *
+     * The zones are gated on `showTreePanel` / `showPropertiesPanel`, and those go false
+     * in the very commit that starts the exit — so without this the portal stayed mounted
+     * for 250ms rendering nothing, and what slid off screen was an empty white rectangle.
+     * Measured 2026-08-26: 120ms into the exit, tree 0, inspector 0, 0 rows, against
+     * 1/1/6 at rest. That is what "closing works less well than opening" was.
+     *
+     * The pair is therefore latched at its last on-screen value and replayed for the
+     * duration of the exit. The ref is written during render on purpose: an effect runs
+     * AFTER the commit that already blanked the column, so it would arrive one frame too
+     * late — the frame the user sees. The write is idempotent and derived only from this
+     * render's own values, so a double render cannot corrupt it.
+     */
+    const lastShownZonesRef = useRef({ tree: showTreePanel, props: showPropertiesPanel });
+    if (railShouldShow) {
+        lastShownZonesRef.current = { tree: showTreePanel, props: showPropertiesPanel };
+    }
+    const renderTreePanel = railShouldShow ? showTreePanel : lastShownZonesRef.current.tree;
+    const renderPropertiesPanel = railShouldShow ? showPropertiesPanel : lastShownZonesRef.current.props;
+
     useEffect(() => {
         if (railShouldShow) {
             setRailMounted(true);
@@ -625,17 +716,19 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
     // survives at height 0 is also what lets the Focus bar's sibling steppers read the
     // order the tree renders instead of recomputing it (R-RAIL-7).
     // Geometry, in order of precedence: Focus collapses to 0; with the inspector hidden
-    // the tree is the only zone left and takes the rest; otherwise the preset height.
-    const treePaneShown = showTreePanel && posture === 'browse';
+    // the tree is the only zone left and takes the rest; otherwise a height the user has
+    // dragged, and failing that the preset. The user's number wins over the preset and
+    // loses to both the others, which are not preferences but states of the shell.
+    const treePaneShown = renderTreePanel && posture === 'browse';
     const treePaneStyle: React.CSSProperties = !treePaneShown
         ? { height: '0px', opacity: 0 }
-        : showPropertiesPanel
-            ? { height: preset.treePaneHeight, opacity: 1 }
+        : renderPropertiesPanel
+            ? { height: treePaneHeight !== null ? `${treePaneHeight}px` : preset.treePaneHeight, opacity: 1 }
             : { flex: '1 1 auto', minHeight: 0, opacity: 1 };
 
     // The Focus bar stands in for the tree pane: it says where the inspected element
     // sits and gets the user back. Only meaningful when the tree could be shown at all.
-    const showFocusBar = showTreePanel && posture === 'focus' && !!selectedElementId;
+    const showFocusBar = renderTreePanel && posture === 'focus' && !!selectedElementId;
 
     /**
      * Overflow affordance of the tree pane. The pane is clamped to a fraction of the
@@ -733,9 +826,28 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
 
                 The rail therefore opens on the filter band, then the Filter field. */}
 
+            {/* The way back to the structure (2026-08-26). Rendered ONLY while the tree
+                is hidden, which is the one state that had no way out of itself: ⌘B can
+                close the tree, and with the rail header retired and the reopen pill gone
+                nothing on screen said the structure existed, let alone how to get it
+                back. Absent while the tree is open, so the rail keeps opening on the
+                filter band and this adds no chrome to the common case. */}
+            {!renderTreePanel && (
+                <button
+                    type="button"
+                    className="rail-structurebar"
+                    onClick={showTree}
+                    title="Show the structure"
+                >
+                    <i className="bi bi-chevron-right rail-structurebar__caret" aria-hidden="true" />
+                    <i className="bi bi-diagram-3 rail-structurebar__icon" aria-hidden="true" />
+                    <span className="rail-structurebar__label">Structure</span>
+                </button>
+            )}
+
             {/* Tree pane. Keeps its container/body classes so TreeViewContent's styling
                 and the sticky filter rule keep matching. */}
-            {showTreePanel && (
+            {renderTreePanel && (
                 <div
                     className={`tree-view-panel-container ${isHighlighted ? 'tree-view-panel-container--highlighted' : ''} ${isScriptExecuting ? 'tree-view-panel-container--executing' : ''}`}
                     style={treePaneStyle}
@@ -761,6 +873,27 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
                         <div className="tree-view-panel-fade tree-view-panel-fade--bottom" aria-hidden="true" />
                     </div>
                 </div>
+            )}
+
+            {/* Horizontal splitter (2026-08-26). Reinstates `.tree-view-panel-vsplit`,
+                retired in rail arc 1 on the ground that "one shell has nothing to split"
+                (R-RAIL-14): the pane's height was the preset's business alone. It comes
+                back because the preset can only know the viewport, not what this user is
+                doing in it — a wide metamodel wants tree, a deep form wants inspector.
+                The preset stays as the default and as the double-click home.
+
+                Only between two zones that are both on screen: with one of them gone
+                there is nothing to divide, and in Focus the pane is 0 by design. */}
+            {renderTreePanel && renderPropertiesPanel && posture === 'browse' && (
+                <div
+                    className="tree-view-panel-vsplit"
+                    onMouseDown={handleTreePaneResizeStart}
+                    onDoubleClick={() => setTreePaneHeight(null)}
+                    role="separator"
+                    aria-orientation="horizontal"
+                    aria-label="Resize the structure pane"
+                    title="Drag to resize · double click to reset"
+                />
             )}
 
             {/* Focus breadcrumb bar (34px): only while the tree pane is collapsed. */}
@@ -801,7 +934,7 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
 
             {/* Inspector zone. Keeps `.properties-panel-container` so the whole B4 skin
                 (2026-07-30) that is anchored on it keeps applying to the form below. */}
-            {showPropertiesPanel && (
+            {renderPropertiesPanel && (
                 <div className="properties-panel-container">
                     <div className="properties-panel-body">
                         <Info

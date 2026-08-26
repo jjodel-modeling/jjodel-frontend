@@ -1,5 +1,18 @@
 # Claude Code Session Log
 
+## 2026-08-26 — feat(rail): l'albero torna sempre, si riapre da una riga sua, e lo splitter e' tornato
+**Prompt**: tre punti in chat. Riaprendo la rail deve tornare l'albero; deve esistere un modo evidente per riaprirlo; e uno splitter orizzontale fra albero e proprieta'. Piu' la segnalazione che «quando si chiude funziona meno bene».
+**Files touched**: `frontend/src/contexts/TreeViewPanelContext.tsx`, `frontend/src/components/editors/PropertiesWithTreeView.tsx`, `frontend/src/components/editors/properties-with-tree-view.scss`, `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: (c)
+**Regressions**: no. Gate: `npm run typecheck` 33 = baseline, 0 nei file toccati; `npm run build` exit 0 col solo chunk-warning; `npm run smoke` 12 passed / 0 failed / 3 skipped. Sonda `_tmp_topbar_rail_1c.ts` 18/18.
+**Out-of-scope changes**: no. I tre sorgenti piu' il log, committato con la ricetta §6.1 perche' un'altra sessione ci aveva gia' aggiunto una entry propria.
+**Layer Impact Report**: not-required (nessun file di §3.1; nessun write path D/L)
+**Smoke visivo**: la verifica finale spetta ad Alfonso a schermo. Misurato con Playwright headless: uscita a 120ms con albero 1 / inspector 1 / 6 righe; riga Structure `<BUTTON>` 32px in cima alla rail, che riapre l'albero; splitter 5px `row-resize`, pane 299 -> 419 al trascinamento -> 299 al doppio click.
+**Notes**: Corregge un difetto del commit precedente che il campo `Corregge` non sa nominare (prompt in chat, senza orario): la colonna usciva VUOTA — misurato albero 0 / inspector 0 / 0 righe a 120ms, contro 1/1/6 a riposo. Il paio di zone ora si aggancia durante l'uscita, e la ref si scrive in render perche' un effetto arriverebbe un frame dopo, cioe' proprio quello che si vede. La riga Structure misura 32px e non i 34 del design: `--input-height-sm` e' snappato da R-RAIL-10.
+**Prompt document name**: 2026-08-26 (istruzione in chat)
+
 ## 2026-08-26 — feat(editor-v2): la rail scorre in apertura e chiusura
 **Prompt**: «il movimento di apertura / chiusura puo essere fatto con un effetto transition?». Non poteva: la colonna veniva smontata alla chiusura, e una transizione non ha nulla da animare su un nodo che sparisce.
 **Files touched**: `frontend/src/components/editors/PropertiesWithTreeView.tsx`, `frontend/src/components/editors/properties-with-tree-view.scss`, `docs/claude-code-log.md`

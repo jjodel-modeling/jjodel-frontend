@@ -167,11 +167,13 @@ export const TreeViewPanelProvider: React.FC<{ children: React.ReactNode }> = ({
      * source of truth for a question the zones already answer, and the two would drift
      * the first time ⌘B changed one of them behind its back.
      *
-     * Closing remembers the pair, so reopening restores what was there rather than
-     * asserting a default: a user who works with the inspector hidden gets the tree back
-     * alone, not a column they have to re-collapse. With nothing remembered — the rail
-     * was already closed when the session started — both zones come back, which is the
-     * state the app ships in.
+     * Closing remembers the pair, but reopening does NOT restore it wholesale: the tree
+     * always comes back (2026-08-26). Restoring a hidden tree was the letter of "put it
+     * back as it was" and the wrong thing in practice — the column returned carrying only
+     * the inspector, which reads as the rail having lost its contents rather than as a
+     * preference being honoured, and the structure is the reason the column exists. The
+     * inspector keeps the remembered value, because that one CAN be a deliberate state.
+     * With nothing remembered, both come back: the state the app ships in.
      */
     const railRestoreRef = useRef<{ tree: boolean; inspector: boolean } | null>(null);
     const isRailVisible = isVisible || isInspectorVisible;
@@ -184,7 +186,7 @@ export const TreeViewPanelProvider: React.FC<{ children: React.ReactNode }> = ({
             return;
         }
         const prev = railRestoreRef.current;
-        setIsVisible(prev ? prev.tree : true);
+        setIsVisible(true);
         setIsInspectorVisible(prev ? prev.inspector : true);
     }, [isVisible, isInspectorVisible]);
 

@@ -1675,6 +1675,88 @@ body[data-active-tab="documentation"] .properties-tree-overlay {
     // se la scala rientrasse.
 }
 
+// ─── Structure bar: the way back to a hidden tree (2026-08-26) ───────────────
+//
+// Same height and the same hairline as the Focus bar right below, on purpose: they are
+// the two rows that stand in for the tree pane when it is not there, and two different
+// heights would read as two different mechanisms. It is a <button>, not a div with a
+// handler, so it is reachable by keyboard and announces itself as a control.
+.properties-with-tree-view--rail .rail-structurebar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex: none;
+    width: 100%;
+    // The Focus bar's own token, so the two rows that stand in for the tree pane are
+    // the same height by construction. It resolves to 32px, not the design's 34: that
+    // snapping is R-RAIL-10's and predates this row — measured, not assumed, because
+    // the Focus bar's comment still names 34 and naming it again here would have
+    // propagated a number the stylesheet does not produce.
+    height: var(--input-height-sm);
+    padding: 0 var(--space-3);
+    border: 0;
+    border-bottom: 1px solid var(--color-bg-hover);
+    background: var(--color-slate-50);
+    color: var(--color-slate-600);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-medium);
+    text-align: left;
+    cursor: pointer;
+    transition: background var(--duration-fast) var(--ease-out);
+
+    &:hover {
+        background: var(--color-bg-hover);
+        color: var(--color-text-primary);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--color-border-focus);
+        outline-offset: -2px;
+    }
+
+    // The two glyphs are painted by `style.scss`'s `i.bi` at (0,1,1), which beats a bare
+    // class on the same element — the trap of CLAUDE.md §5, already paid for once on the
+    // topbar chevron. `.bi` doubles the selector to (0,2,0) and wins.
+    &__caret.bi { font-size: 10px; color: var(--color-slate-400); }
+    &__icon.bi { font-size: 12px; color: var(--color-slate-500); }
+    &__label { letter-spacing: 0.02em; }
+}
+
+// ─── Horizontal splitter between the two zones (2026-08-26) ──────────────────
+//
+// A 5px grab strip carrying a 1px line, not a 1px strip: a hairline is a target nobody
+// can hit. The line is the zones' own separator, so the tree pane drops its bottom
+// border while the splitter is between them — otherwise the seam is two lines.
+.properties-with-tree-view--rail .tree-view-panel-vsplit {
+    flex: none;
+    position: relative;
+    height: 5px;
+    margin-top: -1px;   // sits ON the seam rather than pushing the zones apart
+    cursor: row-resize;
+    background: transparent;
+
+    &::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 2px;
+        height: 1px;
+        background: var(--color-panel-border);
+        transition: background var(--duration-fast) var(--ease-out);
+    }
+
+    &:hover::after,
+    &:active::after {
+        background: var(--color-accent);
+    }
+}
+
+// With the splitter present the pane's own bottom border would double the line above.
+.properties-with-tree-view--rail .tree-view-panel-container:has(+ .tree-view-panel-vsplit) {
+    border-bottom-width: 0;
+}
+
 // ─── Focus breadcrumb bar (only while the tree pane is collapsed) ────────────
 .properties-with-tree-view--rail .rail-focusbar {
     display: flex;
@@ -1776,6 +1858,18 @@ body[data-active-tab="documentation"] .properties-tree-overlay {
     .rail-focusbar__back,
     .rail-focusbar__step {
         color: var(--color-slate-300);
+    }
+
+    // Same correction for the Structure bar, and for the same reason: `--color-slate-50`
+    // and the slate text grades are raw palette and do not follow the theme.
+    .rail-structurebar {
+        background: var(--color-bg-hover);
+        border-bottom-color: var(--color-panel-border);
+        color: var(--color-slate-300);
+
+        &:hover { background: var(--color-bg-elevated); }
+        .rail-structurebar__caret.bi { color: var(--color-slate-500); }
+        .rail-structurebar__icon.bi { color: var(--color-slate-400); }
     }
 
     .rail-focusbar__current { color: var(--color-slate-100); }
