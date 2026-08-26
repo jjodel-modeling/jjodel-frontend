@@ -10,7 +10,9 @@
      ============================================ */
 
   --radius-none: 0;           /* 0px - Sharp corners */
+  --radius-xs: 3px;           /* Extra small - checkbox, letter badges (form views) */
   --radius-sm: 4px;           /* Small - inputs, tags */
+  --radius-control: 6px;      /* Cards, popovers, selected rows (form views) */
   --radius-md: 8px;           /* Medium - buttons, cards */
   --radius-lg: 12px;          /* Large - panels, modals */
   --radius-xl: 16px;          /* Extra large - dialogs */

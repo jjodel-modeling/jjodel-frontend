@@ -376,4 +376,30 @@ $gradient-hover: linear-gradient(180deg, $slate-100 0%, $slate-200 100%);
   --color-selection-bg: #e0f7fa;
   --color-selection-bar: #0891b2;
 
+  /* ============================================
+     FORM VIEWS (2026-08-26)
+     Roles of the form rendering of a view (rail Properties, form document,
+     widget node). Prefixed `form` on purpose: the handoff asks for roles whose
+     obvious names (--color-bg-primary, --color-border-primary) are among the 15
+     declared BOTH here and in styles/tokens.css with different values, so which
+     one wins depends on cascade order and none of them has a dependable meaning.
+     See docs/discovery/discovery_2026-08-26_form_views_slice1.md finding 7.
+     Where an existing semantic role matches exactly, these reference it instead
+     of restating the value, so the two stay in step by construction.
+     ============================================ */
+  --color-form-surface: var(--color-bg-secondary);   /* input and card fill (#ffffff) */
+  --color-form-panel: var(--color-bg-primary);       /* card-theme panel, sub-form header (#f8fafc) */
+  --color-form-border: #{$slate-200};                /* input border — $slate-200, NOT $slate-250 */
+  --color-form-border-strong: var(--color-border-primary); /* checkbox, dashed Add (#cbd5e1) */
+  --color-form-summary: #fcfdfe;                     /* problem summary strip; no existing role */
+  --color-form-label: var(--color-text-tertiary);    /* field label 11px (#475569) */
+  --color-form-muted: #{$slate-400};                 /* multiplicity, eyebrow, placeholder.
+                                                        NOT --color-text-disabled, which has the
+                                                        same value but the wrong meaning here. */
+  --color-form-section: #{$slate-500};               /* plain section title (#64748b) */
+  --color-marker-required: #0ea5e9;                  /* required dot and dirty marker.
+                                                        Red stays reserved for diagnostics. */
+  --color-error-text: #b91c1c;                       /* red-700; the scale stops at $red-600 */
+  --color-warning-text: #b45309;                     /* amber-700; the scale stops at $amber-600 */
+
 }

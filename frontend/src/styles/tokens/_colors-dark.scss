@@ -279,4 +279,24 @@
   --color-selection-bg: rgba(8, 145, 178, 0.18);
   --color-selection-bar: #22D3EE;
 
+  /* ============================================
+     FORM VIEWS (2026-08-26)
+     Dark counterparts of the light block. Same derivation rule: reference the
+     neighbouring semantic role where one exists, literal only where none does.
+     The three literals are the ones the light palette also had to spell out.
+     Surface sits ONE step lighter than panel, mirroring the light side where the
+     input (#ffffff) sits on the panel (#f8fafc).
+     ============================================ */
+  --color-form-surface: var(--color-bg-tertiary);     /* #16181a — input and card fill */
+  --color-form-panel: var(--color-bg-secondary);      /* #0f1012 — panel under the cards */
+  --color-form-border: var(--color-border-primary);   /* rgba(255,255,255,0.08) */
+  --color-form-border-strong: rgba(255, 255, 255, 0.16); /* one step past --color-border-hover */
+  --color-form-summary: #121416;                      /* a hair lighter than the panel */
+  --color-form-label: var(--color-text-secondary);    /* #a0a0a0 */
+  --color-form-muted: var(--color-text-tertiary);     /* #606060 */
+  --color-form-section: var(--color-text-tertiary);   /* #606060 */
+  --color-marker-required: #38bdf8;                   /* sky-400: #0ea5e9 loses contrast on #0f1012 */
+  --color-error-text: #fca5a5;                        /* red-300, readable on a dark panel */
+  --color-warning-text: #fcd34d;                      /* amber-300, readable on a dark panel */
+
 }

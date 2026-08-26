@@ -21,6 +21,14 @@
   --shadow-glow: 0 0 20px var(--color-accent-muted);   /* Accent glow */
   --shadow-inner: inset 0 2px 4px rgba(0, 0, 0, 0.2);  /* Inner shadow */
   --shadow-none: none;
+
+  /* Form views (2026-08-26). Declared per theme, not in the semantic block below,
+     because both are alpha over the surface and a light-theme alpha vanishes on a
+     dark panel. --shadow-popover is spelled out rather than aliased to --shadow-md:
+     the name --shadow-md is declared by styles/tokens.css too, with a different
+     value, so which one an alias resolves to depends on cascade order. */
+  --shadow-popover: 0 4px 12px rgba(0, 0, 0, 0.45);
+  --focus-ring: 0 0 0 3px rgba(148, 163, 184, 0.25);
 }
 
 /* ============================================
@@ -40,6 +48,10 @@
   --shadow-glow: 0 0 20px var(--color-accent-muted);   /* Accent glow */
   --shadow-inner: inset 0 2px 4px rgba(0, 0, 0, 0.06); /* Inner shadow */
   --shadow-none: none;
+
+  /* Form views (2026-08-26) — see the note in the dark block above. */
+  --shadow-popover: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --focus-ring: 0 0 0 3px rgba(51, 65, 85, 0.15);
 }
 
 /* ============================================

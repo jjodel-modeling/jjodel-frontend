@@ -25,9 +25,12 @@
    ============================================ */
 
 :root {
+  --text-2xs: 0.625rem;   /* 10px - Multiplicity, micro labels (form views) */
   --text-xs: 0.6875rem;   /* 11px - Very small labels, captions */
+  --text-md: 0.75rem;     /* 12px - Section titles, compact values (form views) */
   --text-sm: 0.8125rem;   /* 13px - Small text, secondary info */
   --text-base: 0.9375rem; /* 15px - Base body text */
+  --text-title: 1rem;     /* 16px - Form document title (form views) */
   --text-lg: 1.125rem;    /* 18px - Large body text, subtitles */
   --text-xl: 1.5rem;      /* 24px - Page headings */
   --text-2xl: 2rem;       /* 32px - Large headings (rarely used) */

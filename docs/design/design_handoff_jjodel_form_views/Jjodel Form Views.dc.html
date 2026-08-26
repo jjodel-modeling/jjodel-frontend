@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/tokens/colors.css">
+<link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/tokens/typography.css">
+<link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/tokens/spacing.css">
+<link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/tokens/radius.css">
+<link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/tokens/entities.css">
+<link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/tokens/shadows.css">
+<link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/tokens/transitions.css">
+<link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/tokens/gradients.css">
+<link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/styles.css">
+<script src="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/_ds_bundle.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+<style>
+body{margin:0;background:#eef2f6;font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#0ea5e9;text-decoration:none}a:hover{color:#0284c7;text-decoration:underline}
+.dv-tid{font:600 10.5px 'IBM Plex Mono',monospace;padding:3px 7px;background:#334155;color:#fff;border-radius:4px;text-decoration:none}
+.dv-tid:hover{color:#fff;text-decoration:none}
+.dv-oid{font:600 10.5px 'IBM Plex Mono',monospace;padding:2px 7px;background:rgba(51,65,85,.1);color:#334155;border-radius:5px;text-decoration:none}
+.dv-oid:hover{text-decoration:none;background:rgba(51,65,85,.18);color:#334155}
+</style>
+</helmet>
+<section id="t1" style="padding:44px 48px 56px;display:flex;flex-direction:column;gap:44px">
+<div style="display:flex;align-items:baseline;gap:12px"><a class="dv-tid" href="#t1">1</a><span style="font-size:14px;font-weight:600;color:#0f172a">Jjodel form views: rail, document, node, authoring</span><span style="font-size:11px;color:#94a3b8">Statechart example · State and Transition</span></div>
+
+<!-- ============ 1a / 1b : Properties rail, plain, Basic + Advanced ============ -->
+<div style="display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;align-items:baseline;gap:8px"><a class="dv-oid" href="#1a">1a</a><a class="dv-oid" href="#1b">1b</a><span style="font-size:12px;font-weight:600;color:#334155">Properties rail · plain theme · Basic vs Advanced</span><span style="font-size:11px;color:#94a3b8">320px, labels above</span></div>
+<div style="display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap">
+
+<div id="1a" style="display:flex;flex-direction:column;gap:8px">
+<span style="font-size:11px;color:#64748b">Basic</span>
+<div style="width:320px;background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;flex:none">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid #e2e8f0">
+    <span style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#94a3b8">Properties</span>
+    <div style="display:flex;background:#f1f5f9;border-radius:4px;padding:2px">
+      <span style="padding:2px 8px;font-size:11px;font-weight:500;color:#0f172a;background:#ffffff;border-radius:3px;box-shadow:0 1px 2px rgba(0,0,0,0.06)">Basic</span>
+      <span style="padding:2px 8px;font-size:11px;color:#94a3b8">Advanced</span>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid #e2e8f0">
+    <span style="width:18px;height:18px;border-radius:4px;background:#fef3c7;color:#b45309;font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">S</span>
+    <span style="font-size:13px;font-weight:600;color:#0f172a">Running</span>
+    <span style="font-size:11px;color:#94a3b8">State</span>
+  </div>
+  <div style="height:32px;display:flex;align-items:center;gap:8px;padding:0 12px;border-bottom:1px solid #e2e8f0;background:#fcfdfe">
+    <sc-if value="{{ summaryHasIssues }}" hint-placeholder-val="{{ true }}">
+      <a href="#3a" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:500;color:#b91c1c"><i class="bi bi-x-circle-fill" style="font-size:10px"></i>1 error</a>
+      <a href="#3a" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:500;color:#b45309"><i class="bi bi-exclamation-triangle-fill" style="font-size:10px"></i>1 warning</a>
+    </sc-if>
+    <sc-if value="{{ summaryClean }}" hint-placeholder-val="{{ false }}">
+      <span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:#94a3b8"><i class="bi bi-check-circle" style="font-size:10px"></i>No issues</span>
+    </sc-if>
+  </div>
+  <div style="padding:12px;display:flex;flex-direction:column;gap:12px">
+    <div style="display:flex;flex-direction:column;gap:4px">
+      <div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;font-weight:500;color:#475569">Name</span><span style="width:4px;height:4px;border-radius:2px;background:#0ea5e9;flex:none"></span><span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#94a3b8">1..1</span></div>
+      <div style="height:28px;padding:0 8px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff;font-size:13px;color:#0f172a;display:flex;align-items:center">Running</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:4px">
+      <div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;font-weight:500;color:#475569">Kind</span><span style="width:4px;height:4px;border-radius:2px;background:#0ea5e9;flex:none"></span><span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#94a3b8">1..1</span></div>
+      <div style="height:28px;padding:0 8px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff;font-size:13px;color:#0f172a;display:flex;align-items:center">normal<i class="bi bi-chevron-down" style="margin-left:auto;font-size:11px;color:#94a3b8"></i></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:4px">
+      <div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;font-weight:500;color:#475569">Outgoing</span><span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#94a3b8">0..*</span></div>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <div style="display:flex;align-items:center;gap:6px;height:28px;padding:0 8px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff"><span style="width:14px;height:14px;border-radius:3px;background:#cffafe;color:#0e7490;font-size:9px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">T</span><span style="font-size:13px;color:#0f172a">pause</span><span style="font-size:11px;color:#94a3b8">to Paused</span><i class="bi bi-x" style="margin-left:auto;font-size:13px;color:#94a3b8"></i></div>
+        <div style="display:flex;align-items:center;gap:6px;height:28px;padding:0 8px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff"><span style="width:14px;height:14px;border-radius:3px;background:#cffafe;color:#0e7490;font-size:9px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">T</span><span style="font-size:13px;color:#0f172a">finish</span><span style="font-size:11px;color:#94a3b8">to Done</span><i class="bi bi-x" style="margin-left:auto;font-size:13px;color:#94a3b8"></i></div>
+        <button style="height:24px;padding:0 8px;border:1px dashed #cbd5e1;border-radius:4px;background:transparent;font-size:11px;color:#475569;display:inline-flex;align-items:center;gap:4px;cursor:pointer;align-self:flex-start;font-family:inherit"><i class="bi bi-plus"></i>Add</button>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<div id="1b" style="display:flex;flex-direction:column;gap:8px">
+<span style="font-size:11px;color:#64748b">Advanced</span>
+<div style="width:320px;background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;flex:none">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid #e2e8f0">
+    <span style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#94a3b8">Properties</span>
+    <div style="display:flex;background:#f1f5f9;border-radius:4px;padding:2px">
+      <span style="padding:2px 8px;font-size:11px;color:#94a3b8">Basic</span>
+      <span style="padding:2px 8px;font-size:11px;font-weight:500;color:#0f172a;background:#ffffff;border-radius:3px;box-shadow:0 1px 2px rgba(0,0,0,0.06)">Advanced</span>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid #e2e8f0">
+    <span style="width:18px;height:18px;border-radius:4px;background:#fef3c7;color:#b45309;font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">S</span>
+    <span style="font-size:13px;font-weight:600;color:#0f172a">Running</span>
+    <span style="font-size:11px;color:#94a3b8">State</span>
+  </div>
+  <div style="height:32px;display:flex;align-items:center;gap:8px;padding:0 12px;border-bottom:1px solid #e2e8f0;background:#fcfdfe">
+    <span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:#94a3b8"><i class="bi bi-check-circle" style="font-size:10px"></i>No issues</span>
+  </div>
+  <div style="padding:12px;display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <span style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#64748b">Identity</span>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;font-weight:500;color:#475569">Name</span><span style="width:4px;height:4px;border-radius:2px;background:#0ea5e9;flex:none"></span><span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#94a3b8">1..1</span></div>
+        <div style="height:28px;padding:0 8px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff;font-size:13px;color:#0f172a;display:flex;align-items:center">Running</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;font-weight:500;color:#475569">Kind</span><span style="width:4px;height:4px;border-radius:2px;background:#0ea5e9;flex:none"></span><span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#94a3b8">1..1</span></div>
+        <div style="height:28px;padding:0 8px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff;font-size:13px;color:#0f172a;display:flex;align-items:center">normal<i class="bi bi-chevron-down" style="margin-left:auto;font-size:11px;color:#94a3b8"></i></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;font-weight:500;color:#475569">Tags</span><span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#94a3b8">0..5</span></div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;min-height:28px;padding:4px 6px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff">
+          <span style="display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 6px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:4px;font-size:11px;color:#334155">core<i class="bi bi-x" style="font-size:10px;color:#94a3b8"></i></span>
+          <span style="display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 6px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:4px;font-size:11px;color:#334155">runtime<i class="bi bi-x" style="font-size:10px;color:#94a3b8"></i></span>
+          <span style="display:inline-flex;align-items:center;gap:3px;height:20px;padding:0 6px;border:1px dashed #cbd5e1;border-radius:4px;font-size:11px;color:#64748b"><i class="bi bi-plus" style="font-size:11px"></i>Add</span>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;border-top:1px solid #f1f5f9;padding-top:12px">
+      <span style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#64748b">Behavior</span>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;font-weight:500;color:#475569">Entry action</span><span style="font-size:10px;color:#94a3b8;font-family:'IBM Plex Mono',monospace">JjEL</span><span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#94a3b8">0..1</span></div>
+        <div style="height:56px;padding:6px 8px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff;font-family:'IBM Plex Mono',monospace;font-size:12px;color:#0f172a;line-height:1.5;box-sizing:border-box">startTimer(self.timeout)</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;font-weight:500;color:#475569">Timeout</span><span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#94a3b8">0..1</span></div>
+        <div style="height:28px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff;display:flex;align-items:center;overflow:hidden;box-sizing:border-box"><span style="flex:1;padding:0 8px;font-size:13px;color:#0f172a">30</span><span style="width:24px;height:100%;display:flex;align-items:center;justify-content:center;border-left:1px solid #e2e8f0;color:#64748b"><i class="bi bi-dash" style="font-size:13px"></i></span><span style="width:24px;height:100%;display:flex;align-items:center;justify-content:center;border-left:1px solid #e2e8f0;color:#64748b"><i class="bi bi-plus" style="font-size:13px"></i></span></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;height:24px">
+        <span style="width:14px;height:14px;border:1px solid #cbd5e1;border-radius:3px;background:#ffffff;flex:none"></span>
+        <span style="font-size:13px;color:#0f172a">History state</span>
+        <span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#94a3b8">isHistory</span>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;border-top:1px solid #f1f5f9;padding-top:12px">
+      <div style="display:flex;align-items:center;gap:6px"><span style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#64748b">Transitions</span><span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#94a3b8">0..*</span></div>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <div style="display:flex;align-items:center;gap:6px;height:28px;padding:0 8px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff"><span style="width:14px;height:14px;border-radius:3px;background:#cffafe;color:#0e7490;font-size:9px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">T</span><span style="font-size:13px;color:#0f172a">pause</span><span style="font-size:11px;color:#94a3b8">to Paused</span><i class="bi bi-x" style="margin-left:auto;font-size:13px;color:#94a3b8"></i></div>
+        <div style="display:flex;align-items:center;gap:6px;height:28px;padding:0 8px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff"><span style="width:14px;height:14px;border-radius:3px;background:#cffafe;color:#0e7490;font-size:9px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">T</span><span style="font-size:13px;color:#0f172a">finish</span><span style="font-size:11px;color:#94a3b8">to Done</span><i class="bi bi-x" style="margin-left:auto;font-size:13px;color:#94a3b8"></i></div>
+        <button style="height:24px;padding:0 8px;border:1px dashed #cbd5e1;border-radius:4px;background:transparent;font-size:11px;color:#475569;display:inline-flex;align-items:center;gap:4px;cursor:pointer;align-self:flex-start;font-family:inherit"><i class="bi bi-plus"></i>Add</button>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;border-top:1px solid #f1f5f9;padding-top:12px">
+      <div style="display:flex;align-items:center;gap:6px"><span style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#64748b">Substates</span><span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#94a3b8">0..*</span></div>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <div style="border:1px solid #e2e8f0;border-radius:4px;background:#ffffff;overflow:hidden">
+          <div style="display:flex;align-items:center;gap:6px;height:28px;padding:0 8px;background:#f8fafc;border-bottom:1px solid #e2e8f0"><i class="bi bi-chevron-down" style="font-size:10px;color:#64748b"></i><span style="width:14px;height:14px;border-radius:3px;background:#fef3c7;color:#b45309;font-size:9px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">S</span><span style="font-size:13px;font-weight:500;color:#0f172a">Warmup</span><i class="bi bi-x" style="margin-left:auto;font-size:13px;color:#94a3b8"></i></div>
+          <div style="padding:8px;display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;font-weight:500;color:#475569">Name</span><span style="width:4px;height:4px;border-radius:2px;background:#0ea5e9;flex:none"></span></div>
+              <div style="height:24px;padding:0 8px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff;font-size:12px;color:#0f172a;display:flex;align-items:center">Warmup</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;font-weight:500;color:#475569">Kind</span><span style="width:4px;height:4px;border-radius:2px;background:#0ea5e9;flex:none"></span></div>
+              <div style="height:24px;padding:0 8px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff;font-size:12px;color:#0f172a;display:flex;align-items:center">initial<i class="bi bi-chevron-down" style="margin-left:auto;font-size:10px;color:#94a3b8"></i></div>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;height:28px;padding:0 8px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff"><i class="bi bi-chevron-right" style="font-size:10px;color:#64748b"></i><span style="width:14px;height:14px;border-radius:3px;background:#fef3c7;color:#b45309;font-size:9px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">S</span><span style="font-size:13px;color:#0f172a">Steady</span><span style="font-size:11px;color:#94a3b8">normal</span><i class="bi bi-x" style="margin-left:auto;font-size:13px;color:#94a3b8"></i></div>
+        <button style="height:24px;padding:0 8px;border:1px dashed #cbd5e1;border-radius:4px;background:transparent;font-size:11px;color:#475569;display:inline-flex;align-items:center;gap:4px;cursor:pointer;align-self:flex-start;font-family:inherit"><i class="bi bi-plus"></i>Add</button>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- ============ 2a-2d : four themes ============ -->
+<div style="display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;align-items:baseline;gap:8px"><a class="dv-oid" href="#2a">2a</a><a class="dv-oid" href="#2b">2b</a><a class="dv-oid" href="#2c">2c</a><a class="dv-oid" href="#2d">2d</a><span style="font-size:12px;font-weight:600;color:#334155">Rail themes · plain, card, compact, inspector</span><span style="font-size:11px;color:#94a3b8">all Advanced, 320px</span></div>
+<div style="display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap">
+
+<div id="2a" style="display:flex;flex-direction:column;gap:8px">
+<span style="font-size:11px;color:#64748b">plain · fields in column, thin separators</span>
+<div style="width:320px;background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;flex:none">
+  <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid #e2e8f0"><span style="width:18px;height:18px;border-radius:4px;background:#fef3c7;color:#b45309;font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">S</span><span style="font-size:13px;font-weight:600;color:#0f172a">Running</span><span style="font-size:11px;color:#94a3b8">State</span></div>
+  <div style="padding:12px;display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <span style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#64748b">Identity</span>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;font-weight:500;color:#475569">Name</span><span style="width:4px;height:4px;border-radius:2px;background:#0ea5e9;flex:none"></span><span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#94a3b8">1..1</span></div>
+        <div style="height:28px;padding:0 8px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff;font-size:13px;color:#0f172a;display:flex;align-items:center">Running</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;font-weight:500;color:#475569">Kind</span><span style="width:4px;height:4px;border-radius:2px;background:#0ea5e9;flex:none"></span><span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#94a3b8">1..1</span></div>
+        <div style="height:28px;padding:0 8px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff;font-size:13px;color:#0f172a;display:flex;align-items:center">normal<i class="bi bi-chevron-down" style="margin-left:auto;font-size:11px;color:#94a3b8"></i></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;font-weight:500;color:#475569">Tags</span><span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#94a3b8">0..5</span></div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;min-height:28px;padding:4px 6px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff"><span style="display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 6px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:4px;font-size:11px;color:#334155">core<i class="bi bi-x" style="font-size:10px;color:#94a3b8"></i></span><span style="display:inline-flex;align-items:center;gap:3px;height:20px;padding:0 6px;border:1px dashed #cbd5e1;border-radius:4px;font-size:11px;color:#64748b"><i class="bi bi-plus" style="font-size:11px"></i>Add</span></div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;border-top:1px solid #f1f5f9;padding-top:12px">
+      <span style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#64748b">Behavior</span>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;font-weight:500;color:#475569">Entry action</span><span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#94a3b8">0..1</span></div>
+        <div style="height:44px;padding:6px 8px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff;font-family:'IBM Plex Mono',monospace;font-size:12px;color:#0f172a;box-sizing:border-box">startTimer(self.timeout)</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;font-weight:500;color:#475569">Timeout</span><span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#94a3b8">0..1</span></div>
+        <div style="height:28px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff;display:flex;align-items:center;overflow:hidden;box-sizing:border-box"><span style="flex:1;padding:0 8px;font-size:13px;color:#0f172a">30</span><span style="width:24px;height:100%;display:flex;align-items:center;justify-content:center;border-left:1px solid #e2e8f0;color:#64748b"><i class="bi bi-dash"></i></span><span style="width:24px;height:100%;display:flex;align-items:center;justify-content:center;border-left:1px solid #e2e8f0;color:#64748b"><i class="bi bi-plus"></i></span></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;height:24px"><span style="width:14px;height:14px;border:1px solid #cbd5e1;border-radius:3px;background:#ffffff;flex:none"></span><span style="font-size:13px;color:#0f172a">History state</span></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;border-top:1px solid #f1f5f9;padding-top:12px">
+      <span style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#64748b">Transitions</span>
+      <div style="display:flex;align-items:center;gap:6px;height:28px;padding:0 8px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff"><span style="width:14px;height:14px;border-radius:3px;background:#cffafe;color:#0e7490;font-size:9px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">T</span><span style="font-size:13px;color:#0f172a">pause</span><span style="font-size:11px;color:#94a3b8">to Paused</span><i class="bi bi-x" style="margin-left:auto;font-size:13px;color:#94a3b8"></i></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<div id="2b" style="display:flex;flex-direction:column;gap:8px">
+<span style="font-size:11px;color:#64748b">card · one card per section</span>
+<div style="width:320px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;flex:none">
+  <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid #e2e8f0;background:#ffffff"><span style="width:18px;height:18px;border-radius:4px;background:#fef3c7;color:#b45309;font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">S</span><span style="font-size:13px;font-weight:600;color:#0f172a">Running</span><span style="font-size:11px;color:#94a3b8">State</span></div>
+  <div style="padding:12px;display:flex;flex-direction:column;gap:10px">
+    <div style="border:1px solid #e2e8f0;border-radius:6px;background:#ffffff;overflow:hidden">
+      <div style="padding:8px 10px;border-bottom:1px solid #e2e8f0;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#64748b">Identity</div>
+      <div style="padding:10px;display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;font-weight:500;color:#475569">Name</span><span style="width:4px;height:4px;border-radius:2px;background:#0ea5e9;flex:none"></span><span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#94a3b8">1..1</span></div>
+          <div style="height:28px;padding:0 8px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff;font-size:13px;color:#0f172a;display:flex;align-items:center">Running</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;font-weight:500;color:#475569">Kind</span><span style="width:4px;height:4px;border-radius:2px;background:#0ea5e9;flex:none"></span><span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#94a3b8">1..1</span></div>
+          <div style="height:28px;padding:0 8px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff;font-size:13px;color:#0f172a;display:flex;align-items:center">normal<i class="bi bi-chevron-down" style="margin-left:auto;font-size:11px;color:#94a3b8"></i></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;font-weight:500;color:#475569">Tags</span><span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#94a3b8">0..5</span></div>
+          <div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;min-height:28px;padding:4px 6px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff"><span style="display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 6px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:4px;font-size:11px;color:#334155">core<i class="bi bi-x" style="font-size:10px;color:#94a3b8"></i></span><span style="display:inline-flex;align-items:center;gap:3px;height:20px;padding:0 6px;border:1px dashed #cbd5e1;border-radius:4px;font-size:11px;color:#64748b"><i class="bi bi-plus" style="font-size:11px"></i>Add</span></div>
+        </div>
+      </div>
+    </div>
+    <div style="border:1px solid #e2e8f0;border-radius:6px;background:#ffffff;overflow:hidden">
+      <div style="padding:8px 10px;border-bottom:1px solid #e2e8f0;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#64748b">Behavior</div>
+      <div style="padding:10px;display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;font-weight:500;color:#475569">Entry action</span><span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#94a3b8">0..1</span></div>
+          <div style="height:44px;padding:6px 8px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff;font-family:'IBM Plex Mono',monospace;font-size:12px;color:#0f172a;box-sizing:border-box">startTimer(self.timeout)</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;font-weight:500;color:#475569">Timeout</span><span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#94a3b8">0..1</span></div>
+          <div style="height:28px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff;display:flex;align-items:center;overflow:hidden;box-sizing:border-box"><span style="flex:1;padding:0 8px;font-size:13px;color:#0f172a">30</span><span style="width:24px;height:100%;display:flex;align-items:center;justify-content:center;border-left:1px solid #e2e8f0;color:#64748b"><i class="bi bi-dash"></i></span><span style="width:24px;height:100%;display:flex;align-items:center;justify-content:center;border-left:1px solid #e2e8f0;color:#64748b"><i class="bi bi-plus"></i></span></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;height:24px"><span style="width:14px;height:14px;border:1px solid #cbd5e1;border-radius:3px;background:#ffffff;flex:none"></span><span style="font-size:13px;color:#0f172a">History state</span></div>
+      </div>
+    </div>
+    <div style="border:1px solid #e2e8f0;border-radius:6px;background:#ffffff;overflow:hidden">
+      <div style="padding:8px 10px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center"><span style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#64748b">Transitions</span><span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#94a3b8">2</span></div>
+      <div style="padding:10px;display:flex;flex-direction:column;gap:4px">
+        <div style="display:flex;align-items:center;gap:6px;height:28px;padding:0 8px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff"><span style="width:14px;height:14px;border-radius:3px;background:#cffafe;color:#0e7490;font-size:9px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">T</span><span style="font-size:13px;color:#0f172a">pause</span><span style="font-size:11px;color:#94a3b8">to Paused</span><i class="bi bi-x" style="margin-left:auto;font-size:13px;color:#94a3b8"></i></div>
+        <button style="height:24px;padding:0 8px;border:1px dashed #cbd5e1;border-radius:4px;background:transparent;font-size:11px;color:#475569;display:inline-flex;align-items:center;gap:4px;cursor:pointer;align-self:flex-start;font-family:inherit"><i class="bi bi-plus"></i>Add</button>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<div id="2c" style="display:flex;flex-direction:column;gap:8px">
+<span style="font-size:11px;color:#64748b">compact · labels left, 24px fields</span>
+<div style="width:320px;background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;flex:none">
+  <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid #e2e8f0"><span style="width:16px;height:16px;border-radius:3px;background:#fef3c7;color:#b45309;font-size:9px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">S</span><span style="font-size:12px;font-weight:600;color:#0f172a">Running</span><span style="font-size:11px;color:#94a3b8">State</span></div>
+  <div style="padding:8px 12px;display:flex;flex-direction:column;gap:10px">
+    <div style="display:flex;flex-direction:column;gap:4px">
+      <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#94a3b8">Identity</span>
+      <div style="display:flex;align-items:center;gap:8px"><span style="width:88px;flex:none;font-size:11px;color:#475569;display:inline-flex;align-items:center;gap:4px">Name<span style="width:4px;height:4px;border-radius:2px;background:#0ea5e9"></span></span><div style="flex:1;height:24px;padding:0 6px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff;font-size:12px;color:#0f172a;display:flex;align-items:center;box-sizing:border-box">Running</div></div>
+      <div style="display:flex;align-items:center;gap:8px"><span style="width:88px;flex:none;font-size:11px;color:#475569;display:inline-flex;align-items:center;gap:4px">Kind<span style="width:4px;height:4px;border-radius:2px;background:#0ea5e9"></span></span><div style="flex:1;height:24px;padding:0 6px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff;font-size:12px;color:#0f172a;display:flex;align-items:center;box-sizing:border-box">normal<i class="bi bi-chevron-down" style="margin-left:auto;font-size:10px;color:#94a3b8"></i></div></div>
+      <div style="display:flex;align-items:flex-start;gap:8px"><span style="width:88px;flex:none;font-size:11px;color:#475569;padding-top:5px">Tags</span><div style="flex:1;display:flex;flex-wrap:wrap;gap:3px;align-items:center;min-height:24px;padding:2px 4px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff;box-sizing:border-box"><span style="display:inline-flex;align-items:center;gap:3px;height:18px;padding:0 5px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:3px;font-size:10px;color:#334155">core</span><span style="display:inline-flex;align-items:center;gap:3px;height:18px;padding:0 5px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:3px;font-size:10px;color:#334155">runtime</span><span style="display:inline-flex;align-items:center;height:18px;padding:0 4px;font-size:10px;color:#64748b"><i class="bi bi-plus"></i></span></div></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:4px;border-top:1px solid #f1f5f9;padding-top:8px">
+      <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#94a3b8">Behavior</span>
+      <div style="display:flex;align-items:flex-start;gap:8px"><span style="width:88px;flex:none;font-size:11px;color:#475569;padding-top:5px">Entry action</span><div style="flex:1;height:38px;padding:4px 6px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#0f172a;box-sizing:border-box">startTimer(self.timeout)</div></div>
+      <div style="display:flex;align-items:center;gap:8px"><span style="width:88px;flex:none;font-size:11px;color:#475569">Timeout</span><div style="flex:1;height:24px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff;display:flex;align-items:center;overflow:hidden;box-sizing:border-box"><span style="flex:1;padding:0 6px;font-size:12px;color:#0f172a">30</span><span style="width:20px;height:100%;display:flex;align-items:center;justify-content:center;border-left:1px solid #e2e8f0;color:#64748b"><i class="bi bi-dash" style="font-size:11px"></i></span><span style="width:20px;height:100%;display:flex;align-items:center;justify-content:center;border-left:1px solid #e2e8f0;color:#64748b"><i class="bi bi-plus" style="font-size:11px"></i></span></div></div>
+      <div style="display:flex;align-items:center;gap:8px"><span style="width:88px;flex:none;font-size:11px;color:#475569">History</span><span style="width:13px;height:13px;border:1px solid #cbd5e1;border-radius:3px;background:#ffffff"></span></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:4px;border-top:1px solid #f1f5f9;padding-top:8px">
+      <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#94a3b8">Transitions</span>
+      <div style="display:flex;align-items:center;gap:6px;height:24px;padding:0 6px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff;box-sizing:border-box"><span style="width:13px;height:13px;border-radius:3px;background:#cffafe;color:#0e7490;font-size:8px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">T</span><span style="font-size:12px;color:#0f172a">pause</span><span style="font-size:10px;color:#94a3b8">to Paused</span><i class="bi bi-x" style="margin-left:auto;font-size:12px;color:#94a3b8"></i></div>
+      <div style="display:flex;align-items:center;gap:6px;height:24px;padding:0 6px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff;box-sizing:border-box"><span style="width:13px;height:13px;border-radius:3px;background:#cffafe;color:#0e7490;font-size:8px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">T</span><span style="font-size:12px;color:#0f172a">finish</span><span style="font-size:10px;color:#94a3b8">to Done</span><i class="bi bi-x" style="margin-left:auto;font-size:12px;color:#94a3b8"></i></div>
+      <button style="height:20px;padding:0 6px;border:1px dashed #cbd5e1;border-radius:4px;background:transparent;font-size:10px;color:#475569;display:inline-flex;align-items:center;gap:3px;cursor:pointer;align-self:flex-start;font-family:inherit"><i class="bi bi-plus"></i>Add</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:4px;border-top:1px solid #f1f5f9;padding-top:8px">
+      <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#94a3b8">Substates</span>
+      <div style="display:flex;align-items:center;gap:6px;height:24px;padding:0 6px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff;box-sizing:border-box"><i class="bi bi-chevron-right" style="font-size:9px;color:#64748b"></i><span style="font-size:12px;color:#0f172a">Warmup</span><span style="font-size:10px;color:#94a3b8">initial</span><i class="bi bi-x" style="margin-left:auto;font-size:12px;color:#94a3b8"></i></div>
+      <div style="display:flex;align-items:center;gap:6px;height:24px;padding:0 6px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff;box-sizing:border-box"><i class="bi bi-chevron-right" style="font-size:9px;color:#64748b"></i><span style="font-size:12px;color:#0f172a">Steady</span><span style="font-size:10px;color:#94a3b8">normal</span><i class="bi bi-x" style="margin-left:auto;font-size:12px;color:#94a3b8"></i></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<div id="2d" style="display:flex;flex-direction:column;gap:8px">
+<span style="font-size:11px;color:#64748b">inspector · collapsible sections, Substates collapsed</span>
+<div style="width:320px;background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;flex:none">
+  <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid #e2e8f0"><span style="width:18px;height:18px;border-radius:4px;background:#fef3c7;color:#b45309;font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">S</span><span style="font-size:13px;font-weight:600;color:#0f172a">Running</span><span style="font-size:11px;color:#94a3b8">State</span></div>
+  <div style="display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;gap:6px;height:28px;padding:0 12px;background:#f8fafc;border-bottom:1px solid #e2e8f0"><i class="bi bi-chevron-down" style="font-size:10px;color:#64748b"></i><span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:#475569">Identity</span></div>
+    <div style="padding:10px 12px;display:flex;flex-direction:column;gap:8px;border-bottom:1px solid #f1f5f9">
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;font-weight:500;color:#475569">Name</span><span style="width:4px;height:4px;border-radius:2px;background:#0ea5e9;flex:none"></span><span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#94a3b8">1..1</span></div>
+        <div style="height:26px;padding:0 8px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff;font-size:13px;color:#0f172a;display:flex;align-items:center;box-sizing:border-box">Running</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;font-weight:500;color:#475569">Kind</span><span style="width:4px;height:4px;border-radius:2px;background:#0ea5e9;flex:none"></span><span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#94a3b8">1..1</span></div>
+        <div style="height:26px;padding:0 8px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff;font-size:13px;color:#0f172a;display:flex;align-items:center;box-sizing:border-box">normal<i class="bi bi-chevron-down" style="margin-left:auto;font-size:11px;color:#94a3b8"></i></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;font-weight:500;color:#475569">Tags</span><span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#94a3b8">0..5</span></div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;min-height:26px;padding:3px 5px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff;box-sizing:border-box"><span style="display:inline-flex;align-items:center;gap:4px;height:19px;padding:0 6px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:4px;font-size:11px;color:#334155">core<i class="bi bi-x" style="font-size:10px;color:#94a3b8"></i></span><span style="display:inline-flex;align-items:center;gap:3px;height:19px;padding:0 6px;border:1px dashed #cbd5e1;border-radius:4px;font-size:11px;color:#64748b"><i class="bi bi-plus" style="font-size:11px"></i>Add</span></div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;height:28px;padding:0 12px;background:#f8fafc;border-bottom:1px solid #e2e8f0"><i class="bi bi-chevron-down" style="font-size:10px;color:#64748b"></i><span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:#475569">Behavior</span></div>
+    <div style="padding:10px 12px;display:flex;flex-direction:column;gap:8px;border-bottom:1px solid #f1f5f9">
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;font-weight:500;color:#475569">Entry action</span><span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#94a3b8">0..1</span></div>
+        <div style="height:44px;padding:6px 8px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff;font-family:'IBM Plex Mono',monospace;font-size:12px;color:#0f172a;box-sizing:border-box">startTimer(self.timeout)</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;font-weight:500;color:#475569">Timeout</span><span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#94a3b8">0..1</span></div>
+        <div style="height:26px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff;display:flex;align-items:center;overflow:hidden;box-sizing:border-box"><span style="flex:1;padding:0 8px;font-size:13px;color:#0f172a">30</span><span style="width:24px;height:100%;display:flex;align-items:center;justify-content:center;border-left:1px solid #e2e8f0;color:#64748b"><i class="bi bi-dash"></i></span><span style="width:24px;height:100%;display:flex;align-items:center;justify-content:center;border-left:1px solid #e2e8f0;color:#64748b"><i class="bi bi-plus"></i></span></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;height:22px"><span style="width:14px;height:14px;border:1px solid #cbd5e1;border-radius:3px;background:#ffffff;flex:none"></span><span style="font-size:13px;color:#0f172a">History state</span></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;height:28px;padding:0 12px;background:#f8fafc;border-bottom:1px solid #e2e8f0"><i class="bi bi-chevron-down" style="font-size:10px;color:#64748b"></i><span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:#475569">Transitions</span><span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#94a3b8">2</span></div>
+    <div style="padding:10px 12px;display:flex;flex-direction:column;gap:4px;border-bottom:1px solid #f1f5f9">
+      <div style="display:flex;align-items:center;gap:6px;height:26px;padding:0 8px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff;box-sizing:border-box"><span style="width:14px;height:14px;border-radius:3px;background:#cffafe;color:#0e7490;font-size:9px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">T</span><span style="font-size:13px;color:#0f172a">pause</span><span style="font-size:11px;color:#94a3b8">to Paused</span><i class="bi bi-x" style="margin-left:auto;font-size:13px;color:#94a3b8"></i></div>
+      <div style="display:flex;align-items:center;gap:6px;height:26px;padding:0 8px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff;box-sizing:border-box"><span style="width:14px;height:14px;border-radius:3px;background:#cffafe;color:#0e7490;font-size:9px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">T</span><span style="font-size:13px;color:#0f172a">finish</span><span style="font-size:11px;color:#94a3b8">to Done</span><i class="bi bi-x" style="margin-left:auto;font-size:13px;color:#94a3b8"></i></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;height:28px;padding:0 12px;background:#f8fafc"><i class="bi bi-chevron-right" style="font-size:10px;color:#64748b"></i><span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:#475569">Substates</span><span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#94a3b8">2</span></div>
+  </div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- ============ 3a : validation states ============ -->
+<div id="3a" style="display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;align-items:baseline;gap:8px"><a class="dv-oid" href="#3a">3a</a><span style="font-size:12px;font-weight:600;color:#334155">Validation states · plain theme</span><span style="font-size:11px;color:#94a3b8">diagnostic, never blocking; messages live in a reserved 16px slot, no layout shift</span></div>
+<div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;padding:20px;display:grid;grid-template-columns:340px 260px;gap:14px 28px;align-items:start;width:fit-content">
+
+  <div style="height:32px;display:flex;align-items:center;gap:10px;padding:0 10px;border:1px solid #e2e8f0;border-radius:6px;background:#fcfdfe">
+    <a href="#3a" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:500;color:#b91c1c"><i class="bi bi-x-circle-fill" style="font-size:10px"></i>2 errors</a>
+    <a href="#3a" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:500;color:#b45309"><i class="bi bi-exclamation-triangle-fill" style="font-size:10px"></i>1 warning</a>
+    <span style="margin-left:auto;font-size:10px;color:#94a3b8">click to jump to field</span>
+  </div>
+  <span style="font-size:11px;color:#94a3b8;line-height:1.5;padding-top:8px">Problem summary. The 32px slot is always reserved; with no issues it shows a muted "No issues", so appearing or clearing never moves the fields.</span>
+
+  <div style="display:flex;flex-direction:column;gap:2px">
+    <div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;font-weight:500;color:#475569">Name</span><span style="width:4px;height:4px;border-radius:2px;background:#0ea5e9;flex:none"></span><span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#94a3b8">1..1</span></div>
+    <div style="height:28px;padding:0 8px;border:1px solid #ef4444;border-radius:4px;background:#ffffff;font-size:13px;color:#94a3b8;display:flex;align-items:center;box-sizing:border-box">State name</div>
+    <div style="height:16px;display:flex;align-items:center;gap:4px"><i class="bi bi-x-circle-fill" style="font-size:9px;color:#ef4444"></i><span style="font-size:11px;color:#b91c1c">Required</span></div>
+  </div>
+  <span style="font-size:11px;color:#94a3b8;line-height:1.5;padding-top:8px">Required field, empty. Red border plus message in the reserved slot.</span>
+
+  <div style="display:flex;flex-direction:column;gap:2px">
+    <div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;font-weight:500;color:#475569">Timeout</span><span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#94a3b8">0..1</span></div>
+    <div style="height:28px;border:1px solid #ef4444;border-radius:4px;background:#ffffff;display:flex;align-items:center;overflow:hidden;box-sizing:border-box"><span style="flex:1;padding:0 8px;font-size:13px;color:#0f172a">-5</span><span style="width:24px;height:100%;display:flex;align-items:center;justify-content:center;border-left:1px solid #e2e8f0;color:#64748b"><i class="bi bi-dash"></i></span><span style="width:24px;height:100%;display:flex;align-items:center;justify-content:center;border-left:1px solid #e2e8f0;color:#64748b"><i class="bi bi-plus"></i></span></div>
+    <div style="height:16px;display:flex;align-items:center;gap:4px"><i class="bi bi-x-circle-fill" style="font-size:9px;color:#ef4444"></i><span style="font-size:11px;color:#b91c1c">timeout must be positive</span></div>
+  </div>
+  <span style="font-size:11px;color:#94a3b8;line-height:1.5;padding-top:8px">Invalid value with a specific message. Editing continues, the model is simply non conforming.</span>
+
+  <div style="display:flex;flex-direction:column;gap:2px">
+    <div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;font-weight:500;color:#475569">Outgoing</span><span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#94a3b8">0..*</span></div>
+    <div style="min-height:28px;padding:0 8px;border:1px solid #f59e0b;border-radius:4px;background:#ffffff;font-size:12px;color:#94a3b8;display:flex;align-items:center;box-sizing:border-box">No transitions</div>
+    <div style="height:16px;display:flex;align-items:center;gap:4px"><i class="bi bi-exclamation-triangle-fill" style="font-size:9px;color:#f59e0b"></i><span style="font-size:11px;color:#b45309">State has no outgoing transitions</span></div>
+  </div>
+  <span style="font-size:11px;color:#94a3b8;line-height:1.5;padding-top:8px">Non blocking warning, amber. Same slot as errors.</span>
+
+  <div style="display:flex;flex-direction:column;gap:2px">
+    <div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;font-weight:500;color:#475569">Tags</span><span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#94a3b8">5..5 of 0..5</span></div>
+    <div style="position:relative;display:flex;flex-wrap:wrap;gap:4px;align-items:center;min-height:28px;padding:4px 6px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff;box-sizing:border-box">
+      <span style="display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 6px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:4px;font-size:11px;color:#334155">core<i class="bi bi-x" style="font-size:10px;color:#94a3b8"></i></span>
+      <span style="display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 6px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:4px;font-size:11px;color:#334155">runtime<i class="bi bi-x" style="font-size:10px;color:#94a3b8"></i></span>
+      <span style="display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 6px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:4px;font-size:11px;color:#334155">timed<i class="bi bi-x" style="font-size:10px;color:#94a3b8"></i></span>
+      <span style="display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 6px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:4px;font-size:11px;color:#334155">v2<i class="bi bi-x" style="font-size:10px;color:#94a3b8"></i></span>
+      <span style="display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 6px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:4px;font-size:11px;color:#334155">draft<i class="bi bi-x" style="font-size:10px;color:#94a3b8"></i></span>
+      <span style="position:relative;display:inline-flex;align-items:center;gap:3px;height:20px;padding:0 6px;border:1px dashed #e2e8f0;border-radius:4px;font-size:11px;color:#cbd5e1;cursor:not-allowed"><i class="bi bi-plus" style="font-size:11px"></i>Add
+        <span style="position:absolute;left:calc(100% + 8px);top:50%;transform:translateY(-50%);background:#334155;color:#ffffff;font-size:10px;padding:3px 7px;border-radius:4px;white-space:nowrap;z-index:3">Maximum 5</span>
+      </span>
+    </div>
+    <div style="height:16px"></div>
+  </div>
+  <span style="font-size:11px;color:#94a3b8;line-height:1.5;padding-top:8px">Upper bound reached. Add is disabled at 50% opacity with a tooltip, shown here open.</span>
+
+  <div style="display:flex;flex-direction:column;gap:2px">
+    <div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;font-weight:500;color:#475569">Target</span><span style="width:4px;height:4px;border-radius:2px;background:#0ea5e9;flex:none"></span><span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#94a3b8">1..1</span></div>
+    <div style="height:28px;padding:0 8px;border:1px solid #ef4444;border-radius:4px;background:#ffffff;font-size:13px;color:#94a3b8;display:flex;align-items:center;gap:6px;box-sizing:border-box"><i class="bi bi-link-45deg" style="font-size:13px;color:#cbd5e1"></i>Select a State<i class="bi bi-chevron-down" style="margin-left:auto;font-size:11px;color:#94a3b8"></i></div>
+    <div style="height:16px;display:flex;align-items:center;gap:4px"><i class="bi bi-x-circle-fill" style="font-size:9px;color:#ef4444"></i><span style="font-size:11px;color:#b91c1c">Required reference not set</span></div>
+  </div>
+  <span style="font-size:11px;color:#94a3b8;line-height:1.5;padding-top:8px">Required reference unresolved (Transition.target). The picker stays clickable.</span>
+
+  <div style="display:flex;flex-direction:column;gap:2px">
+    <div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;font-weight:500;color:#475569">Source</span><span style="width:4px;height:4px;border-radius:2px;background:#0ea5e9;flex:none"></span><span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#94a3b8">1..1</span></div>
+    <div style="position:relative">
+      <div style="height:28px;padding:0 8px;border:1px solid #334155;border-radius:4px;background:#ffffff;font-size:13px;color:#0f172a;display:flex;align-items:center;gap:6px;box-shadow:0 0 0 3px rgba(51,65,85,0.15);box-sizing:border-box"><span style="width:14px;height:14px;border-radius:3px;background:#fef3c7;color:#b45309;font-size:9px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">S</span>Running<i class="bi bi-chevron-up" style="margin-left:auto;font-size:11px;color:#94a3b8"></i></div>
+      <div style="position:absolute;top:32px;left:0;right:0;background:#ffffff;border:1px solid #e2e8f0;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,0.08);z-index:5;overflow:hidden">
+        <div style="display:flex;align-items:center;gap:6px;height:28px;padding:0 8px;border-bottom:1px solid #f1f5f9"><i class="bi bi-search" style="font-size:11px;color:#94a3b8"></i><span style="font-size:12px;color:#0f172a">run</span><span style="width:1px;height:12px;background:#334155"></span></div>
+        <div style="display:flex;align-items:center;gap:6px;height:26px;padding:0 8px;background:#e0f7fa;border-left:2px solid #0891b2"><span style="width:14px;height:14px;border-radius:3px;background:#fef3c7;color:#b45309;font-size:9px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">S</span><span style="font-size:12px;color:#0f172a">Running</span><span style="margin-left:auto;font-size:10px;color:#94a3b8">normal</span></div>
+        <div style="display:flex;align-items:center;gap:6px;height:26px;padding:0 8px"><span style="width:14px;height:14px;border-radius:3px;background:#fef3c7;color:#b45309;font-size:9px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">S</span><span style="font-size:12px;color:#0f172a">Warmup</span><span style="margin-left:auto;font-size:10px;color:#94a3b8">initial</span></div>
+      </div>
+    </div>
+    <div style="height:130px"></div>
+  </div>
+  <span style="font-size:11px;color:#94a3b8;line-height:1.5;padding-top:8px">Focus state on a reference picker, open: slate border, 3px slate shadow ring, candidate list with search. Selected candidate uses the canvas cyan.</span>
+
+  <div style="display:flex;flex-direction:column;gap:2px">
+    <div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;font-weight:500;color:#475569">Qualified name</span><i class="bi bi-lock-fill" style="font-size:9px;color:#94a3b8"></i><span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#94a3b8">derived</span></div>
+    <div style="height:28px;padding:0 8px;border:1px solid #e2e8f0;border-radius:4px;background:#f1f5f9;font-size:13px;color:#64748b;display:flex;align-items:center;font-family:'IBM Plex Mono',monospace;box-sizing:border-box">machine.Running</div>
+    <div style="height:16px"></div>
+  </div>
+  <span style="font-size:11px;color:#94a3b8;line-height:1.5;padding-top:8px">Read only derived value: slate 100 fill, lock glyph by the label, no cursor.</span>
+
+  <div style="display:flex;flex-direction:column;gap:2px">
+    <div style="display:flex;align-items:center;gap:6px"><span style="width:4px;height:4px;border-radius:50%;background:#0ea5e9;flex:none;box-shadow:0 0 0 2px rgba(14,165,233,0.2)"></span><span style="font-size:11px;font-weight:500;color:#475569">Entry action</span><span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#94a3b8">0..1</span></div>
+    <div style="height:44px;padding:6px 8px;border:1px solid #7dd3fc;border-radius:4px;background:#ffffff;font-family:'IBM Plex Mono',monospace;font-size:12px;color:#0f172a;box-sizing:border-box">startTimer(self.timeout * 2)</div>
+    <div style="height:16px;display:flex;align-items:center;gap:4px"><span style="font-size:11px;color:#0284c7">Modified, not saved</span></div>
+  </div>
+  <span style="font-size:11px;color:#94a3b8;line-height:1.5;padding-top:8px">Dirty: cyan dot before the label plus a light cyan border until the change is committed.</span>
+
+  <div style="display:flex;flex-direction:column;gap:2px">
+    <div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;font-weight:500;color:#475569">Trigger</span><span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#94a3b8">0..1</span></div>
+    <div style="height:28px;padding:0 8px;border:1px solid #334155;border-radius:4px;background:#ffffff;font-size:13px;color:#0f172a;display:flex;align-items:center;box-shadow:0 0 0 3px rgba(51,65,85,0.15);box-sizing:border-box">pause<span style="width:1px;height:14px;background:#334155;margin-left:1px"></span></div>
+    <div style="height:16px"></div>
+  </div>
+  <span style="font-size:11px;color:#94a3b8;line-height:1.5;padding-top:8px">Focus on a text field: slate 700 border with the 15% slate shadow ring.</span>
+
+</div>
+</div>
+
+<!-- ============ 4a : form document ============ -->
+<div id="4a" style="display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;align-items:baseline;gap:8px"><a class="dv-oid" href="#4a">4a</a><span style="font-size:12px;font-weight:600;color:#334155">Form document · 1440x900 · card theme</span><span style="font-size:11px;color:#94a3b8">workbench tab without canvas</span></div>
+<div style="width:1440px;height:900px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;display:flex;flex-direction:column;flex:none">
+  <div style="height:38px;display:flex;align-items:flex-end;gap:2px;padding:0 12px;background:#f1f5f9;border-bottom:1px solid #e2e8f0;flex:none">
+    <div style="display:flex;align-items:center;gap:6px;height:30px;padding:0 14px;font-size:12px;color:#64748b;border-radius:6px 6px 0 0"><i class="bi bi-diagram-3" style="font-size:12px"></i>Diagram</div>
+    <div style="display:flex;align-items:center;gap:6px;height:30px;padding:0 14px;font-size:12px;font-weight:500;color:#0f172a;background:#f8fafc;border:1px solid #e2e8f0;border-bottom:none;border-radius:6px 6px 0 0;position:relative"><i class="bi bi-ui-checks" style="font-size:12px"></i>States<span style="position:absolute;left:0;right:0;bottom:-1px;height:1px;background:#f8fafc"></span></div>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:8px;height:30px"><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#94a3b8">Rev 2.2</span></div>
+  </div>
+  <div style="flex:1;display:flex;min-height:0">
+    <div style="width:300px;flex:none;background:#ffffff;border-right:1px solid #e2e8f0;display:flex;flex-direction:column">
+      <div style="padding:12px;display:flex;flex-direction:column;gap:8px;border-bottom:1px solid #f1f5f9">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#94a3b8">States</span><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#94a3b8">4</span>
+          <button style="margin-left:auto;width:24px;height:24px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff;color:#475569;display:flex;align-items:center;justify-content:center;cursor:pointer"><i class="bi bi-plus" style="font-size:13px"></i></button>
+        </div>
+        <div style="height:28px;padding:0 8px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff;display:flex;align-items:center;gap:6px;box-sizing:border-box"><i class="bi bi-search" style="font-size:11px;color:#94a3b8"></i><span style="font-size:12px;color:#94a3b8">Search states</span></div>
+      </div>
+      <div style="flex:1;overflow:hidden;padding:6px">
+        <div style="display:flex;align-items:center;gap:8px;height:34px;padding:0 8px;border-radius:5px"><span style="width:16px;height:16px;border-radius:3px;background:#fef3c7;color:#b45309;font-size:9px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">S</span><span style="font-size:13px;color:#0f172a">Idle</span><span style="height:16px;padding:0 6px;border-radius:8px;background:#ede9fe;color:#6d28d9;font-size:10px;font-weight:500;display:inline-flex;align-items:center">initial</span></div>
+        <div style="display:flex;align-items:center;gap:8px;height:34px;padding:0 8px;border-radius:5px;background:#e0f7fa;border-left:2px solid #0891b2"><span style="width:16px;height:16px;border-radius:3px;background:#fef3c7;color:#b45309;font-size:9px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">S</span><span style="font-size:13px;font-weight:500;color:#0f172a">Running</span><span style="height:16px;padding:0 6px;border-radius:8px;background:#f1f5f9;color:#475569;font-size:10px;font-weight:500;display:inline-flex;align-items:center">normal</span></div>
+        <div style="display:flex;align-items:center;gap:8px;height:34px;padding:0 8px;border-radius:5px"><span style="width:16px;height:16px;border-radius:3px;background:#fef3c7;color:#b45309;font-size:9px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">S</span><span style="font-size:13px;color:#0f172a">Paused</span><span style="height:16px;padding:0 6px;border-radius:8px;background:#f1f5f9;color:#475569;font-size:10px;font-weight:500;display:inline-flex;align-items:center">normal</span><span style="margin-left:auto;display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:500;color:#b45309"><i class="bi bi-exclamation-triangle-fill" style="font-size:9px"></i>1</span></div>
+        <div style="display:flex;align-items:center;gap:8px;height:34px;padding:0 8px;border-radius:5px"><span style="width:16px;height:16px;border-radius:3px;background:#fef3c7;color:#b45309;font-size:9px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">S</span><span style="font-size:13px;color:#0f172a">Done</span><span style="height:16px;padding:0 6px;border-radius:8px;background:#d1fae5;color:#047857;font-size:10px;font-weight:500;display:inline-flex;align-items:center">final</span></div>
+      </div>
+    </div>
+    <div style="flex:1;overflow:hidden;padding:24px;display:flex;justify-content:center">
+      <div style="width:760px;display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="width:22px;height:22px;border-radius:5px;background:#fef3c7;color:#b45309;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">S</span>
+          <span style="font-size:16px;font-weight:600;color:#0f172a">Running</span>
+          <span style="font-size:12px;color:#94a3b8">State · machine.Running</span>
+          <div style="margin-left:auto;display:flex;background:#f1f5f9;border-radius:4px;padding:2px"><span style="padding:2px 8px;font-size:11px;color:#94a3b8">Basic</span><span style="padding:2px 8px;font-size:11px;font-weight:500;color:#0f172a;background:#ffffff;border-radius:3px;box-shadow:0 1px 2px rgba(0,0,0,0.06)">Advanced</span></div>
+        </div>
+        <div style="height:32px;display:flex;align-items:center;gap:8px;padding:0 10px;border:1px solid #e2e8f0;border-radius:6px;background:#ffffff"><span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:#94a3b8"><i class="bi bi-check-circle" style="font-size:10px"></i>No issues</span></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start">
+          <div style="border:1px solid #e2e8f0;border-radius:6px;background:#ffffff;overflow:hidden">
+            <div style="padding:8px 12px;border-bottom:1px solid #e2e8f0;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#64748b">Identity</div>
+            <div style="padding:12px;display:flex;flex-direction:column;gap:10px">
+              <div style="display:flex;flex-direction:column;gap:4px">
+                <div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;font-weight:500;color:#475569">Name</span><span style="width:4px;height:4px;border-radius:2px;background:#0ea5e9;flex:none"></span><span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#94a3b8">1..1</span></div>
+                <div style="height:28px;padding:0 8px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff;font-size:13px;color:#0f172a;display:flex;align-items:center;box-sizing:border-box">Running</div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:4px">
+                <div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;font-weight:500;color:#475569">Kind</span><span style="width:4px;height:4px;border-radius:2px;background:#0ea5e9;flex:none"></span><span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#94a3b8">1..1</span></div>
+                <div style="height:28px;padding:0 8px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff;font-size:13px;color:#0f172a;display:flex;align-items:center;box-sizing:border-box">normal<i class="bi bi-chevron-down" style="margin-left:auto;font-size:11px;color:#94a3b8"></i></div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:4px">
+                <div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;font-weight:500;color:#475569">Tags</span><span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#94a3b8">0..5</span></div>
+                <div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;min-height:28px;padding:4px 6px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff;box-sizing:border-box"><span style="display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 6px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:4px;font-size:11px;color:#334155">core<i class="bi bi-x" style="font-size:10px;color:#94a3b8"></i></span><span style="display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 6px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:4px;font-size:11px;color:#334155">runtime<i class="bi bi-x" style="font-size:10px;color:#94a3b8"></i></span><span style="display:inline-flex;align-items:center;gap:3px;height:20px;padding:0 6px;border:1px dashed #cbd5e1;border-radius:4px;font-size:11px;color:#64748b"><i class="bi bi-plus" style="font-size:11px"></i>Add</span></div>
+              </div>
+            </div>
+          </div>
+          <div style="border:1px solid #e2e8f0;border-radius:6px;background:#ffffff;overflow:hidden">
+            <div style="padding:8px 12px;border-bottom:1px solid #e2e8f0;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#64748b">Behavior</div>
+            <div style="padding:12px;display:flex;flex-direction:column;gap:10px">
+              <div style="display:flex;flex-direction:column;gap:4px">
+                <div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;font-weight:500;color:#475569">Entry action</span><span style="font-size:10px;color:#94a3b8;font-family:'IBM Plex Mono',monospace">JjEL</span><span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#94a3b8">0..1</span></div>
+                <div style="height:56px;padding:6px 8px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff;font-family:'IBM Plex Mono',monospace;font-size:12px;color:#0f172a;line-height:1.5;box-sizing:border-box">startTimer(self.timeout)</div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:4px">
+                <div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;font-weight:500;color:#475569">Timeout</span><span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#94a3b8">0..1</span></div>
+                <div style="height:28px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff;display:flex;align-items:center;overflow:hidden;box-sizing:border-box"><span style="flex:1;padding:0 8px;font-size:13px;color:#0f172a">30</span><span style="width:24px;height:100%;display:flex;align-items:center;justify-content:center;border-left:1px solid #e2e8f0;color:#64748b"><i class="bi bi-dash"></i></span><span style="width:24px;height:100%;display:flex;align-items:center;justify-content:center;border-left:1px solid #e2e8f0;color:#64748b"><i class="bi bi-plus"></i></span></div>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;height:24px"><span style="width:14px;height:14px;border:1px solid #cbd5e1;border-radius:3px;background:#ffffff;flex:none"></span><span style="font-size:13px;color:#0f172a">History state</span></div>
+            </div>
+          </div>
+          <div style="border:1px solid #e2e8f0;border-radius:6px;background:#ffffff;overflow:hidden">
+            <div style="padding:8px 12px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center"><span style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#64748b">Transitions</span><span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#94a3b8">2 · 0..*</span></div>
+            <div style="padding:12px;display:flex;flex-direction:column;gap:4px">
+              <div style="display:flex;align-items:center;gap:6px;height:28px;padding:0 8px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff;box-sizing:border-box"><span style="width:14px;height:14px;border-radius:3px;background:#cffafe;color:#0e7490;font-size:9px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">T</span><span style="font-size:13px;color:#0f172a">pause</span><span style="font-size:11px;color:#94a3b8">to Paused</span><i class="bi bi-x" style="margin-left:auto;font-size:13px;color:#94a3b8"></i></div>
+              <div style="display:flex;align-items:center;gap:6px;height:28px;padding:0 8px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff;box-sizing:border-box"><span style="width:14px;height:14px;border-radius:3px;background:#cffafe;color:#0e7490;font-size:9px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">T</span><span style="font-size:13px;color:#0f172a">finish</span><span style="font-size:11px;color:#94a3b8">to Done</span><i class="bi bi-x" style="margin-left:auto;font-size:13px;color:#94a3b8"></i></div>
+              <button style="height:24px;padding:0 8px;border:1px dashed #cbd5e1;border-radius:4px;background:transparent;font-size:11px;color:#475569;display:inline-flex;align-items:center;gap:4px;cursor:pointer;align-self:flex-start;font-family:inherit"><i class="bi bi-plus"></i>Add</button>
+            </div>
+          </div>
+          <div style="border:1px solid #e2e8f0;border-radius:6px;background:#ffffff;overflow:hidden">
+            <div style="padding:8px 12px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center"><span style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#64748b">Substates</span><span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#94a3b8">2 · 0..*</span></div>
+            <div style="padding:12px;display:flex;flex-direction:column;gap:4px">
+              <div style="display:flex;align-items:center;gap:6px;height:28px;padding:0 8px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff;box-sizing:border-box"><i class="bi bi-chevron-right" style="font-size:10px;color:#64748b"></i><span style="width:14px;height:14px;border-radius:3px;background:#fef3c7;color:#b45309;font-size:9px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">S</span><span style="font-size:13px;color:#0f172a">Warmup</span><span style="font-size:11px;color:#94a3b8">initial</span><i class="bi bi-x" style="margin-left:auto;font-size:13px;color:#94a3b8"></i></div>
+              <div style="display:flex;align-items:center;gap:6px;height:28px;padding:0 8px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff;box-sizing:border-box"><i class="bi bi-chevron-right" style="font-size:10px;color:#64748b"></i><span style="width:14px;height:14px;border-radius:3px;background:#fef3c7;color:#b45309;font-size:9px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">S</span><span style="font-size:13px;color:#0f172a">Steady</span><span style="font-size:11px;color:#94a3b8">normal</span><i class="bi bi-x" style="margin-left:auto;font-size:13px;color:#94a3b8"></i></div>
+              <button style="height:24px;padding:0 8px;border:1px dashed #cbd5e1;border-radius:4px;background:transparent;font-size:11px;color:#475569;display:inline-flex;align-items:center;gap:4px;cursor:pointer;align-self:flex-start;font-family:inherit"><i class="bi bi-plus"></i>Add</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<sc-if value="{{ showEmptyDocument }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-direction:column;gap:8px">
+<span style="font-size:11px;color:#64748b">Empty state, no instance selected</span>
+<div style="width:1440px;height:560px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;display:flex;flex-direction:column;flex:none">
+  <div style="height:38px;display:flex;align-items:flex-end;gap:2px;padding:0 12px;background:#f1f5f9;border-bottom:1px solid #e2e8f0;flex:none">
+    <div style="display:flex;align-items:center;gap:6px;height:30px;padding:0 14px;font-size:12px;color:#64748b"><i class="bi bi-diagram-3" style="font-size:12px"></i>Diagram</div>
+    <div style="display:flex;align-items:center;gap:6px;height:30px;padding:0 14px;font-size:12px;font-weight:500;color:#0f172a;background:#f8fafc;border:1px solid #e2e8f0;border-bottom:none;border-radius:6px 6px 0 0"><i class="bi bi-ui-checks" style="font-size:12px"></i>States</div>
+  </div>
+  <div style="flex:1;display:flex;min-height:0">
+    <div style="width:300px;flex:none;background:#ffffff;border-right:1px solid #e2e8f0;display:flex;flex-direction:column">
+      <div style="padding:12px;display:flex;flex-direction:column;gap:8px;border-bottom:1px solid #f1f5f9">
+        <div style="display:flex;align-items:center;gap:8px"><span style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#94a3b8">States</span><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#94a3b8">4</span><button style="margin-left:auto;width:24px;height:24px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff;color:#475569;display:flex;align-items:center;justify-content:center;cursor:pointer"><i class="bi bi-plus" style="font-size:13px"></i></button></div>
+        <div style="height:28px;padding:0 8px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff;display:flex;align-items:center;gap:6px;box-sizing:border-box"><i class="bi bi-search" style="font-size:11px;color:#94a3b8"></i><span style="font-size:12px;color:#94a3b8">Search states</span></div>
+      </div>
+      <div style="flex:1;overflow:hidden;padding:6px">
+        <div style="display:flex;align-items:center;gap:8px;height:34px;padding:0 8px"><span style="width:16px;height:16px;border-radius:3px;background:#fef3c7;color:#b45309;font-size:9px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">S</span><span style="font-size:13px;color:#0f172a">Idle</span><span style="height:16px;padding:0 6px;border-radius:8px;background:#ede9fe;color:#6d28d9;font-size:10px;font-weight:500;display:inline-flex;align-items:center">initial</span></div>
+        <div style="display:flex;align-items:center;gap:8px;height:34px;padding:0 8px"><span style="width:16px;height:16px;border-radius:3px;background:#fef3c7;color:#b45309;font-size:9px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">S</span><span style="font-size:13px;color:#0f172a">Running</span><span style="height:16px;padding:0 6px;border-radius:8px;background:#f1f5f9;color:#475569;font-size:10px;font-weight:500;display:inline-flex;align-items:center">normal</span></div>
+        <div style="display:flex;align-items:center;gap:8px;height:34px;padding:0 8px"><span style="width:16px;height:16px;border-radius:3px;background:#fef3c7;color:#b45309;font-size:9px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">S</span><span style="font-size:13px;color:#0f172a">Paused</span><span style="height:16px;padding:0 6px;border-radius:8px;background:#f1f5f9;color:#475569;font-size:10px;font-weight:500;display:inline-flex;align-items:center">normal</span><span style="margin-left:auto;display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:500;color:#b45309"><i class="bi bi-exclamation-triangle-fill" style="font-size:9px"></i>1</span></div>
+        <div style="display:flex;align-items:center;gap:8px;height:34px;padding:0 8px"><span style="width:16px;height:16px;border-radius:3px;background:#fef3c7;color:#b45309;font-size:9px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">S</span><span style="font-size:13px;color:#0f172a">Done</span><span style="height:16px;padding:0 6px;border-radius:8px;background:#d1fae5;color:#047857;font-size:10px;font-weight:500;display:inline-flex;align-items:center">final</span></div>
+      </div>
+    </div>
+    <div style="flex:1;display:flex;align-items:center;justify-content:center">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:10px">
+        <i class="bi bi-ui-checks" style="font-size:28px;color:#cbd5e1"></i>
+        <span style="font-size:13px;font-weight:500;color:#475569">No state selected</span>
+        <span style="font-size:12px;color:#94a3b8">Select a state from the list or create a new one</span>
+        <button style="height:28px;padding:0 12px;border:none;border-radius:6px;background:#334155;color:#ffffff;font-size:12px;font-weight:500;display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-family:inherit"><i class="bi bi-plus"></i>New state</button>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+</sc-if>
+</div>
+
+<!-- ============ 5a : form inside node ============ -->
+<div id="5a" style="display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;align-items:baseline;gap:8px"><a class="dv-oid" href="#5a">5a</a><span style="font-size:12px;font-weight:600;color:#334155">Form inside the node · 800x500 canvas</span><span style="font-size:11px;color:#94a3b8">classic symbol vs widget form (compact) vs collapsed form</span></div>
+<div style="position:relative;width:800px;height:500px;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;background-color:#f8fafc;background-image:radial-gradient(#dbe3ec 1px, transparent 1px);background-size:16px 16px;flex:none">
+  <svg width="800" height="500" style="position:absolute;inset:0" viewBox="0 0 800 500">
+    <defs><marker id="arr5a" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#64748b"></path></marker></defs>
+    <path d="M 210 150 C 250 150 260 165 296 175" stroke="#64748b" stroke-width="1.5" fill="none" marker-end="url(#arr5a)"></path>
+    <rect x="228" y="140" width="42" height="16" rx="3" fill="rgba(255,255,255,0.9)"></rect><text x="249" y="152" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" fill="#475569">start</text>
+    <path d="M 556 190 C 600 180 610 172 636 162" stroke="#64748b" stroke-width="1.5" fill="none" marker-end="url(#arr5a)"></path>
+    <rect x="572" y="164" width="48" height="16" rx="3" fill="rgba(255,255,255,0.9)"></rect><text x="596" y="176" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" fill="#475569">pause</text>
+    <path d="M 640 210 C 610 240 590 250 558 255" stroke="#64748b" stroke-width="1.5" fill="none" marker-end="url(#arr5a)"></path>
+    <rect x="570" y="240" width="54" height="16" rx="3" fill="rgba(255,255,255,0.9)"></rect><text x="597" y="252" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" fill="#475569">resume</text>
+  </svg>
+  <div style="position:absolute;left:60px;top:100px;width:150px;background:#ffffff;border:1px solid #cbd5e1;border-radius:8px;overflow:hidden">
+    <div style="padding:8px 10px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:50%;background:#6d28d9;flex:none"></span><span style="font-size:13px;font-weight:600;color:#0f172a">Idle</span></div>
+    <div style="padding:6px 10px;display:flex;flex-direction:column;gap:3px">
+      <span style="font-size:11px;color:#475569">kind = initial</span>
+      <span style="font-size:11px;color:#475569;font-family:'IBM Plex Mono',monospace">entry: reset()</span>
+      <span style="font-size:11px;color:#94a3b8">0 substates</span>
+    </div>
+  </div>
+  <span style="position:absolute;left:60px;top:214px;font-size:10px;color:#94a3b8">symbol view</span>
+  <div style="position:absolute;left:296px;top:96px;width:260px;background:#ffffff;border:1.5px solid #06b6d4;border-radius:8px;overflow:hidden;box-shadow:0 0 0 3px rgba(6,182,212,0.12)">
+    <div style="padding:6px 10px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;gap:6px;background:#f8fafc"><span style="width:14px;height:14px;border-radius:3px;background:#fef3c7;color:#b45309;font-size:9px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">S</span><span style="font-size:12px;font-weight:600;color:#0f172a">Running</span><i class="bi bi-chevron-up" style="margin-left:auto;font-size:10px;color:#64748b"></i></div>
+    <div style="padding:8px 10px;display:flex;flex-direction:column;gap:5px">
+      <div style="display:flex;align-items:center;gap:8px"><span style="width:64px;flex:none;font-size:10px;color:#475569">name</span><div style="flex:1;height:22px;padding:0 6px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff;font-size:11px;color:#0f172a;display:flex;align-items:center;box-sizing:border-box">Running</div></div>
+      <div style="display:flex;align-items:center;gap:8px"><span style="width:64px;flex:none;font-size:10px;color:#475569">kind</span><div style="flex:1;height:22px;padding:0 6px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff;font-size:11px;color:#0f172a;display:flex;align-items:center;box-sizing:border-box">normal<i class="bi bi-chevron-down" style="margin-left:auto;font-size:9px;color:#94a3b8"></i></div></div>
+      <div style="display:flex;align-items:center;gap:8px"><span style="width:64px;flex:none;font-size:10px;color:#475569">timeout</span><div style="flex:1;height:22px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff;display:flex;align-items:center;overflow:hidden;box-sizing:border-box"><span style="flex:1;padding:0 6px;font-size:11px;color:#0f172a">30</span><span style="width:18px;height:100%;display:flex;align-items:center;justify-content:center;border-left:1px solid #e2e8f0;color:#64748b"><i class="bi bi-dash" style="font-size:10px"></i></span><span style="width:18px;height:100%;display:flex;align-items:center;justify-content:center;border-left:1px solid #e2e8f0;color:#64748b"><i class="bi bi-plus" style="font-size:10px"></i></span></div></div>
+      <div style="display:flex;align-items:center;gap:8px"><span style="width:64px;flex:none;font-size:10px;color:#475569">history</span><span style="width:12px;height:12px;border:1px solid #cbd5e1;border-radius:3px;background:#ffffff"></span></div>
+      <div style="display:flex;align-items:flex-start;gap:8px"><span style="width:64px;flex:none;font-size:10px;color:#475569;padding-top:4px">outgoing</span><div style="flex:1;display:flex;flex-direction:column;gap:3px"><div style="height:20px;padding:0 6px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff;font-size:10px;color:#0f172a;display:flex;align-items:center;gap:4px;box-sizing:border-box">pause<span style="color:#94a3b8">to Paused</span></div><div style="height:20px;padding:0 6px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff;font-size:10px;color:#0f172a;display:flex;align-items:center;gap:4px;box-sizing:border-box">finish<span style="color:#94a3b8">to Done</span></div></div></div>
+      <span style="font-size:10px;color:#94a3b8;align-self:flex-end">+3 more fields</span>
+    </div>
+  </div>
+  <span style="position:absolute;left:296px;top:330px;font-size:10px;color:#94a3b8">form view, compact, selected</span>
+  <div style="position:absolute;left:636px;top:120px;width:130px;background:#ffffff;border:1px solid #cbd5e1;border-radius:8px;overflow:hidden">
+    <div style="padding:6px 10px;display:flex;align-items:center;gap:6px"><span style="width:14px;height:14px;border-radius:3px;background:#fef3c7;color:#b45309;font-size:9px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">S</span><span style="font-size:12px;font-weight:600;color:#0f172a">Paused</span><i class="bi bi-chevron-down" style="margin-left:auto;font-size:10px;color:#64748b"></i></div>
+    <div style="padding:0 10px 6px;display:flex;align-items:center;gap:6px"><span style="font-size:10px;color:#94a3b8">8 fields</span><span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:500;color:#b45309"><i class="bi bi-exclamation-triangle-fill" style="font-size:9px"></i>1</span></div>
+  </div>
+  <span style="position:absolute;left:636px;top:186px;font-size:10px;color:#94a3b8">form view, collapsed</span>
+</div>
+</div>
+
+<!-- ============ 6a / 6b : authoring ============ -->
+<div style="display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;align-items:baseline;gap:8px"><a class="dv-oid" href="#6a">6a</a><a class="dv-oid" href="#6b">6b</a><span style="font-size:12px;font-weight:600;color:#334155">View authoring · Form tab · Basic vs Advanced</span><span style="font-size:11px;color:#94a3b8">320px rail</span></div>
+<div style="display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap">
+
+<div id="6a" style="display:flex;flex-direction:column;gap:8px">
+<span style="font-size:11px;color:#64748b">Basic</span>
+<div style="width:320px;background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;flex:none">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid #e2e8f0">
+    <div style="display:flex;align-items:center;gap:8px"><i class="bi bi-eye" style="font-size:13px;color:#db2777"></i><span style="font-size:13px;font-weight:600;color:#0f172a">StateView</span><span style="font-size:11px;color:#94a3b8">View</span></div>
+    <div style="display:flex;background:#f1f5f9;border-radius:4px;padding:2px"><span style="padding:2px 8px;font-size:11px;font-weight:500;color:#0f172a;background:#ffffff;border-radius:3px;box-shadow:0 1px 2px rgba(0,0,0,0.06)">Basic</span><span style="padding:2px 8px;font-size:11px;color:#94a3b8">Advanced</span></div>
+  </div>
+  <div style="display:flex;gap:2px;padding:0 12px;border-bottom:1px solid #e2e8f0">
+    <span style="padding:8px 6px;font-size:11px;color:#64748b">Applies to</span>
+    <span style="padding:8px 6px;font-size:11px;color:#64748b">Structure</span>
+    <span style="padding:8px 6px;font-size:11px;color:#64748b">Symbol</span>
+    <span style="padding:8px 6px;font-size:11px;font-weight:600;color:#0f172a;box-shadow:inset 0 -2px 0 #334155">Form</span>
+    <span style="padding:8px 6px;font-size:11px;color:#64748b">Source</span>
+  </div>
+  <div style="padding:12px;display:flex;flex-direction:column;gap:12px">
+    <div style="display:flex;flex-direction:column;gap:4px">
+      <span style="font-size:11px;font-weight:500;color:#475569">Theme</span>
+      <div style="height:28px;padding:0 8px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff;font-size:13px;color:#0f172a;display:flex;align-items:center;box-sizing:border-box">plain<i class="bi bi-chevron-down" style="margin-left:auto;font-size:11px;color:#94a3b8"></i></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:4px">
+      <span style="font-size:11px;font-weight:500;color:#475569">Labels</span>
+      <div style="display:flex;background:#f1f5f9;border-radius:4px;padding:2px;align-self:flex-start"><span style="padding:3px 12px;font-size:11px;font-weight:500;color:#0f172a;background:#ffffff;border-radius:3px;box-shadow:0 1px 2px rgba(0,0,0,0.06)">Above</span><span style="padding:3px 12px;font-size:11px;color:#94a3b8">Left</span></div>
+    </div>
+    <div style="padding:8px 10px;border:1px solid #e2e8f0;border-radius:4px;background:#f8fafc;display:flex;gap:8px;align-items:flex-start"><i class="bi bi-info-circle" style="font-size:11px;color:#64748b;padding-top:1px"></i><span style="font-size:11px;color:#64748b;line-height:1.5">Widgets are derived from feature types. Switch to Advanced to override per feature.</span></div>
+  </div>
+</div>
+</div>
+
+<div id="6b" style="display:flex;flex-direction:column;gap:8px">
+<span style="font-size:11px;color:#64748b">Advanced</span>
+<div style="width:320px;background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;flex:none">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid #e2e8f0">
+    <div style="display:flex;align-items:center;gap:8px"><i class="bi bi-eye" style="font-size:13px;color:#db2777"></i><span style="font-size:13px;font-weight:600;color:#0f172a">StateView</span><span style="font-size:11px;color:#94a3b8">View</span></div>
+    <div style="display:flex;background:#f1f5f9;border-radius:4px;padding:2px"><span style="padding:2px 8px;font-size:11px;color:#94a3b8">Basic</span><span style="padding:2px 8px;font-size:11px;font-weight:500;color:#0f172a;background:#ffffff;border-radius:3px;box-shadow:0 1px 2px rgba(0,0,0,0.06)">Advanced</span></div>
+  </div>
+  <div style="display:flex;gap:2px;padding:0 12px;border-bottom:1px solid #e2e8f0">
+    <span style="padding:8px 6px;font-size:11px;color:#64748b">Applies to</span>
+    <span style="padding:8px 6px;font-size:11px;color:#64748b">Structure</span>
+    <span style="padding:8px 6px;font-size:11px;color:#64748b">Symbol</span>
+    <span style="padding:8px 6px;font-size:11px;font-weight:600;color:#0f172a;box-shadow:inset 0 -2px 0 #334155">Form</span>
+    <span style="padding:8px 6px;font-size:11px;color:#64748b">Source</span>
+  </div>
+  <div style="padding:12px;display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;gap:8px">
+      <div style="flex:1;display:flex;flex-direction:column;gap:4px">
+        <span style="font-size:11px;font-weight:500;color:#475569">Theme</span>
+        <div style="height:28px;padding:0 8px;border:1px solid #e2e8f0;border-radius:4px;background:#ffffff;font-size:13px;color:#0f172a;display:flex;align-items:center;box-sizing:border-box">plain<i class="bi bi-chevron-down" style="margin-left:auto;font-size:11px;color:#94a3b8"></i></div>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:4px">
+        <span style="font-size:11px;font-weight:500;color:#475569">Labels</span>
+        <div style="display:flex;background:#f1f5f9;border-radius:4px;padding:2px;height:28px;box-sizing:border-box;align-items:center"><span style="flex:1;text-align:center;padding:3px 0;font-size:11px;font-weight:500;color:#0f172a;background:#ffffff;border-radius:3px;box-shadow:0 1px 2px rgba(0,0,0,0.06)">Above</span><span style="flex:1;text-align:center;padding:3px 0;font-size:11px;color:#94a3b8">Left</span></div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <span style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#64748b">Widgets</span>
+      <div style="border:1px solid #e2e8f0;border-radius:4px;overflow:hidden">
+        <div style="display:grid;grid-template-columns:1fr 110px;gap:8px;align-items:center;height:24px;padding:0 8px;background:#f8fafc;border-bottom:1px solid #e2e8f0"><span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#94a3b8">Feature</span><span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#94a3b8">Widget</span></div>
+        <div style="display:grid;grid-template-columns:1fr 110px;gap:8px;align-items:center;height:30px;padding:0 8px;border-bottom:1px solid #f1f5f9"><span style="font-size:12px;color:#0f172a;font-family:'IBM Plex Mono',monospace">name</span><div style="height:22px;padding:0 6px;border:1px solid #e2e8f0;border-radius:4px;font-size:11px;color:#64748b;display:flex;align-items:center;box-sizing:border-box">Text<i class="bi bi-chevron-down" style="margin-left:auto;font-size:9px;color:#94a3b8"></i></div></div>
+        <div style="display:grid;grid-template-columns:1fr 110px;gap:8px;align-items:center;height:30px;padding:0 8px;border-bottom:1px solid #f1f5f9"><span style="font-size:12px;color:#0f172a;font-family:'IBM Plex Mono',monospace">kind</span><div style="height:22px;padding:0 6px;border:1px solid #e2e8f0;border-radius:4px;font-size:11px;color:#64748b;display:flex;align-items:center;box-sizing:border-box">Select<i class="bi bi-chevron-down" style="margin-left:auto;font-size:9px;color:#94a3b8"></i></div></div>
+        <div style="display:grid;grid-template-columns:1fr 110px;gap:8px;align-items:center;height:30px;padding:0 8px;border-bottom:1px solid #f1f5f9"><span style="font-size:12px;color:#0f172a;font-family:'IBM Plex Mono',monospace;display:inline-flex;align-items:center;gap:5px">entryAction<span style="width:5px;height:5px;border-radius:50%;background:#0ea5e9" title="overridden"></span></span><div style="height:22px;padding:0 6px;border:1px solid #cbd5e1;border-radius:4px;font-size:11px;color:#0f172a;display:flex;align-items:center;box-sizing:border-box">Code<i class="bi bi-chevron-down" style="margin-left:auto;font-size:9px;color:#94a3b8"></i></div></div>
+        <div style="display:grid;grid-template-columns:1fr 110px;gap:8px;align-items:center;height:30px;padding:0 8px;border-bottom:1px solid #f1f5f9"><span style="font-size:12px;color:#0f172a;font-family:'IBM Plex Mono',monospace">timeout</span><div style="height:22px;padding:0 6px;border:1px solid #e2e8f0;border-radius:4px;font-size:11px;color:#64748b;display:flex;align-items:center;box-sizing:border-box">Stepper<i class="bi bi-chevron-down" style="margin-left:auto;font-size:9px;color:#94a3b8"></i></div></div>
+        <div style="display:grid;grid-template-columns:1fr 110px;gap:8px;align-items:center;height:30px;padding:0 8px;border-bottom:1px solid #f1f5f9"><span style="font-size:12px;color:#0f172a;font-family:'IBM Plex Mono',monospace">isHistory</span><div style="height:22px;padding:0 6px;border:1px solid #e2e8f0;border-radius:4px;font-size:11px;color:#64748b;display:flex;align-items:center;box-sizing:border-box">Checkbox<i class="bi bi-chevron-down" style="margin-left:auto;font-size:9px;color:#94a3b8"></i></div></div>
+        <div style="display:grid;grid-template-columns:1fr 110px;gap:8px;align-items:center;height:30px;padding:0 8px"><span style="font-size:12px;color:#0f172a;font-family:'IBM Plex Mono',monospace">tags</span><div style="height:22px;padding:0 6px;border:1px solid #e2e8f0;border-radius:4px;font-size:11px;color:#64748b;display:flex;align-items:center;box-sizing:border-box">Chips<i class="bi bi-chevron-down" style="margin-left:auto;font-size:9px;color:#94a3b8"></i></div></div>
+      </div>
+      <span style="font-size:10px;color:#94a3b8;display:inline-flex;align-items:center;gap:5px"><span style="width:5px;height:5px;border-radius:50%;background:#0ea5e9"></span>overridden default</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <span style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#64748b">References and children</span>
+      <div style="border:1px solid #e2e8f0;border-radius:4px;overflow:hidden">
+        <div style="display:grid;grid-template-columns:1fr 130px;gap:8px;align-items:center;height:30px;padding:0 8px;border-bottom:1px solid #f1f5f9"><span style="font-size:12px;color:#0f172a;font-family:'IBM Plex Mono',monospace">outgoing</span><div style="display:flex;background:#f1f5f9;border-radius:4px;padding:1px"><span style="flex:1;text-align:center;padding:2px 0;font-size:10px;color:#94a3b8">Inline</span><span style="flex:1;text-align:center;padding:2px 0;font-size:10px;font-weight:500;color:#0f172a;background:#ffffff;border-radius:3px">List</span><span style="flex:1;text-align:center;padding:2px 0;font-size:10px;color:#94a3b8">Hidden</span></div></div>
+        <div style="display:grid;grid-template-columns:1fr 130px;gap:8px;align-items:center;height:30px;padding:0 8px"><span style="font-size:12px;color:#0f172a;font-family:'IBM Plex Mono',monospace">substates</span><div style="display:flex;background:#f1f5f9;border-radius:4px;padding:1px"><span style="flex:1;text-align:center;padding:2px 0;font-size:10px;font-weight:500;color:#0f172a;background:#ffffff;border-radius:3px">Inline</span><span style="flex:1;text-align:center;padding:2px 0;font-size:10px;color:#94a3b8">List</span><span style="flex:1;text-align:center;padding:2px 0;font-size:10px;color:#94a3b8">Hidden</span></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- ============ 7a : recommendations ============ -->
+<div id="7a" style="display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;align-items:baseline;gap:8px"><a class="dv-oid" href="#7a">7a</a><span style="font-size:12px;font-weight:600;color:#334155">Raccomandazioni</span></div>
+<div style="width:640px;background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;padding:20px 24px;display:flex;flex-direction:column;gap:12px">
+  <div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:12px;font-weight:600;color:#0f172a">Label: sopra nel rail a 320px</span><span style="font-size:12px;color:#475569;line-height:1.6">A 320px la label a sinistra ruba 88-100px al valore: input, picker e chip vanno spesso a capo o troncano. Label sopra da larghezza piena al valore e rende il wrapping prevedibile. Label a sinistra solo nel tema compact, dove la densita e il punto e i valori sono corti.</span></div>
+  <div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:12px;font-weight:600;color:#0f172a">Obbligatorieta e molteplicita</span><span style="font-size:12px;color:#475569;line-height:1.6">Punto cyan 4px accanto alla label per lower bound maggiore o uguale a 1: visibile in scansione, muto quando non serve, e lascia il rosso solo alla diagnostica. Molteplicita in IBM Plex Mono 10px grigio a destra della label (1..1, 0..5): allineata a destra sparisce finche non la cerchi. Nel tema compact la molteplicita puo scendere a tooltip.</span></div>
+  <div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:12px;font-weight:600;color:#0f172a">Temi di default</span><span style="font-size:12px;color:#475569;line-height:1.6">Rail: plain (<a class="dv-oid" href="#2a">2a</a>). In 320px i contenitori card sono rumore che costa 20-24px per sezione. Documento: card (<a class="dv-oid" href="#4a">4a</a>), dove lo spazio permette sezioni scansionabili su due colonne. Inspector (<a class="dv-oid" href="#2d">2d</a>) e la migliore alternativa al rail per modelli con molte sezioni. Compact resta opt-in per utenti esperti e per il nodo.</span></div>
+  <div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:12px;font-weight:600;color:#0f172a">Nodo a widget: sostenibile con limiti</span><span style="font-size:12px;color:#475569;line-height:1.6">Leggibile solo in tema compact, con 5-6 campi visibili e larghezza minima 240px (<a class="dv-oid" href="#5a">5a</a>). Oltre quel budget il nodo domina il diagramma e gli archi diventano illeggibili: degradare a form collassata (intestazione piu contatore campi e problemi) e delegare l'editing completo al rail o al documento. Suggerisco un cap di default a 6 campi con "+N more fields" che apre il rail.</span></div>
+</div>
+</div>
+
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;summaryHasIssues&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Demo&quot;,&quot;description&quot;:&quot;Toggle the problem summary in 1a to verify no layout shift&quot;},&quot;showEmptyDocument&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Demo&quot;,&quot;description&quot;:&quot;Show the empty-selection frame of the form document&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const issues = this.props.summaryHasIssues ?? true;
+    return {
+      summaryHasIssues: issues,
+      summaryClean: !issues,
+      showEmptyDocument: this.props.showEmptyDocument ?? true
+    };
+  }
+}
+</script>
+</body>
+</html>
