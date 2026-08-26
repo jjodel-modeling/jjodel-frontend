@@ -61,6 +61,15 @@ const MAX_OVERLAY_WIDTH = 640;
 const STORAGE_KEY_OVERLAY_WIDTH = 'jjodel_property_overlay_width';
 
 /**
+ * How long the rail takes to slide in or out. It exists in TWO places on purpose and
+ * they must agree: the stylesheet owns the MOTION (`--duration-normal`, 250ms) and this
+ * owns the UNMOUNT that follows it. Neither can read the other — a JS read of the token
+ * would resolve against whatever element it queried, and CSS cannot delay a React
+ * unmount — so the duplication is the interface between them, not an oversight.
+ */
+const RAIL_MOTION_MS = 250;
+
+/**
  * First-open width by viewport class. Read ONLY when nothing is persisted yet: a
  * width the user has already dragged wins at every resolution, forever. 400 is
  * `DEFAULT_OVERLAY_WIDTH` unchanged, so the middle band behaves exactly as before.
@@ -563,6 +572,54 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
     // tier z ~900) so it escapes the dock DOM.
     const overlayActive = activeEditorType === 'model' || activeEditorType === 'metamodel';
 
+    /**
+     * Slide in and out (2026-08-26).
+     *
+     * The column is a `position: fixed` overlay, so sliding it costs no layout and
+     * nothing on the canvas reflows — but it is also UNMOUNTED when collapsed, and a
+     * transition has nothing to animate on a node that stops existing. Hence two states
+     * instead of one:
+     *
+     *   `railMounted`  whether the portal renders at all. It goes true immediately on
+     *                  open and false only AFTER the exit has played.
+     *   `railOpen`     which class the node carries. One modifier, both directions:
+     *                  `--collapsed` is the off-screen position, and the entry is the
+     *                  same declaration removed.
+     *
+     * The entry needs the collapsed position to be PAINTED before it is removed, and
+     * that takes two frames, not one. A single `requestAnimationFrame` callback runs
+     * before the pending frame paints, so React's second commit lands in the same frame
+     * as the first and the browser resolves one computed style instead of two — nothing
+     * to interpolate. Measured 2026-08-26 with one rAF: the column was at `tx=0` 120ms
+     * after mounting, i.e. already home, while the exit in the same run read `tx=333`
+     * of 440 at the same delay. The nested call puts the un-collapse in the frame after
+     * the collapsed one has been painted, which is what makes it a transition.
+     *
+     * The exit is timed, not driven by `transitionend`: that event does not fire when
+     * the element is display:none'd mid-flight — which the canvas-only / documentation
+     * kill-switch in this file's stylesheet does — and a missed event would leave the
+     * rail mounted and off-screen forever. A timer cannot be missed. The cost is that
+     * RAIL_MOTION_MS must agree with the duration the stylesheet declares; both cite
+     * each other, and the value is the `--duration-normal` token either way.
+     */
+    const railShouldShow = overlayActive && !bothCollapsed;
+    const [railMounted, setRailMounted] = useState(railShouldShow);
+    const [railOpen, setRailOpen] = useState(railShouldShow);
+
+    useEffect(() => {
+        if (railShouldShow) {
+            setRailMounted(true);
+            let inner = 0;
+            const outer = requestAnimationFrame(() => {
+                inner = requestAnimationFrame(() => setRailOpen(true));
+            });
+            return () => { cancelAnimationFrame(outer); cancelAnimationFrame(inner); };
+        }
+        setRailOpen(false);
+        const timer = setTimeout(() => setRailMounted(false), RAIL_MOTION_MS);
+        return () => clearTimeout(timer);
+    }, [railShouldShow]);
+
     // The tree pane is a height, not a mount: collapsing it in Focus must animate, so
     // the rows stay mounted (and keep their scroll position) at height 0. That the DOM
     // survives at height 0 is also what lets the Focus bar's sibling steppers read the
@@ -784,8 +841,11 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
     return (
         <>
         {isFloating
-            ? (overlayActive && !bothCollapsed && createPortal(
-                <div className="properties-tree-overlay" style={{ width: `${overlayWidth}px` }}>
+            ? (railMounted && createPortal(
+                <div
+                    className={`properties-tree-overlay${railOpen ? '' : ' properties-tree-overlay--collapsed'}`}
+                    style={{ width: `${overlayWidth}px` }}
+                >
                     {splitPanel}
                 </div>,
                 document.body

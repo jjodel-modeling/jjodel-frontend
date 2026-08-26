@@ -1,5 +1,18 @@
 # Claude Code Session Log
 
+## 2026-08-26 — feat(editor-v2): la rail scorre in apertura e chiusura
+**Prompt**: «il movimento di apertura / chiusura puo essere fatto con un effetto transition?». Non poteva: la colonna veniva smontata alla chiusura, e una transizione non ha nulla da animare su un nodo che sparisce.
+**Files touched**: `frontend/src/components/editors/PropertiesWithTreeView.tsx`, `frontend/src/components/editors/properties-with-tree-view.scss`, `docs/claude-code-log.md`
+**Outcome**: ⚠️ partial — la colonna scorre; i due lettori della sua larghezza (`.toolbar-rail-cell`, minimap) saltano ancora. Misurato e riportato in chat, non corretto: vivono in file di un'altra sessione, sporchi al momento del commit.
+**Corregge**: —
+**Causa**: (e)
+**Regressions**: no. Gate: `npm run typecheck` 33 = baseline, 0 nei file toccati; `npm run build` exit 0 col solo chunk-warning; `npm run smoke` 12 passed / 0 failed / 3 skipped. Sonda `_tmp_topbar_rail_1c.ts` 13/13.
+**Out-of-scope changes**: no. I due file della rail piu' il log.
+**Smoke visivo**: la verifica finale spetta ad Alfonso a schermo. Misurato con Playwright headless, colonna da 440px: a riposo tx=0; uscita a 120ms tx=301 con `pointer-events: none`, smontata entro 620ms; rientro a 120ms tx=138, a regime tx=0.
+**Layer Impact Report**: not-required (nessun file di §3.1; nessun write path D/L)
+**Notes**: Due misure che hanno cambiato il codice. Con un solo `requestAnimationFrame` l'entrata non transiva (tx=0 a 120ms): il callback gira prima del paint del frame pendente, quindi il browser risolve un computed style solo. Doppio rAF, e a 120ms tx=138. L'uscita e' a timer e non su `transitionend`, che non scatta se il kill-switch CSS mette `display:none` a meta' volo: un evento mancato lascerebbe la rail montata e fuori schermo per sempre.
+**Prompt document name**: 2026-08-26 (istruzione in chat)
+
 ## 2026-08-26 — fix(editor-v2): la minimap torna a 16px dal fondo del canvas
 **Prompt**: prompt 2026-08-26 11:25. Una riga: `bottom: '100px'` sulla prop `style` della `<MiniMap>` in `EditorV2.tsx` e' un residuo di quando i controlli zoom di React Flow stavano nell'angolo in basso a destra (oggi in toolbar, commento `{/* Zoom controls moved to toolbar */}`). Portare bottom e margine destro a 16px, griglia 8px, margini simmetrici.
 **Files touched**: `frontend/src/components/editor-v2/EditorV2.tsx`, `docs/claude-code-log.md`

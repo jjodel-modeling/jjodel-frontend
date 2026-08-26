@@ -1470,10 +1470,36 @@ body[data-active-tab="documentation"] .properties-tree-overlay {
     bottom: var(--jj-statusbar-height);
     z-index: 900; // above canvas + rc-dock, below canvas context-menu (1000) and modals
     display: flex;
+    // Slide in and out (2026-08-26). `transform` only: the column is fixed-positioned,
+    // so this is a compositor move that reflows nothing — animating `width` or `right`
+    // here would relayout the rail's whole subtree, tree rows included, on every frame.
+    //
+    // The duration is `--duration-normal` and is ALSO written in
+    // `PropertiesWithTreeView.tsx` as RAIL_MOTION_MS, which times the unmount that
+    // follows this motion. Change one, change the other; the comment there says why
+    // neither can read the other.
+    transition: transform var(--duration-normal) var(--ease-out);
     // NB: the wrapper stays pointer-events:auto (normal). An earlier experiment set it
     // to `none` (+ auto on the cards) for canvas click-through in the gaps, but that
     // subtly broke the resize handles' hit-testing. Reliable controls win; the MiniMap
     // sits left of this column anyway, so it is unaffected.
+}
+
+// Off-screen position, and the only declaration that separates the two directions:
+// entering is this rule removed. `pointer-events` because a column on its way out must
+// not take the click that the canvas underneath it is about to receive.
+.properties-tree-overlay--collapsed {
+    transform: translateX(100%);
+    pointer-events: none;
+}
+
+// Chi chiede di non animare non viene animato (design, sezione Motion). The rail still
+// leaves and returns — only instantly, and the timed unmount in the component simply
+// finds it already gone.
+@media (prefers-reduced-motion: reduce) {
+    .properties-tree-overlay {
+        transition-duration: 0ms;
+    }
 }
 
 .properties-with-tree-view--floating {
