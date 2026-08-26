@@ -1800,6 +1800,49 @@ Prompt: `2026-08-26 00:20`, Parte 2.
 
 **R-HND-4** (2026-08-26, Alfonso) — Fronte **non aperto**: alla misura di R-HND-1 la scelta è stata «report e basta», nessun codice. Le tre vie restano a registro, non deliberate: (a) quattro `NodeResizeControl` a N/E/S/O spostati in fuori di ~9px, cioè sulla banda di selezione di `e8d554b9a`, che lascia intatte tutte e due le affordance ed è un offset di stile; (b) il resize vince sulla mezzeria, al costo della creazione di archi da quel punto; (c) handle sui punti diagonali proiettati sul contorno, che però non sono i punti cardinali richiesti. Nessuna slice parte senza un prompt suo.
 
+## R-SGL — il singleton come valore del linguaggio (ratifiche 2026-08-26)
+
+Contesto: lo stereotipo «singleton» dell'8/8 (`a96254f87`, entry in archivio) aveva reso la
+notazione identica su metaclasse e istanza; il fronte si riapre sul comportamento, non sulla
+resa. Letture di partenza: `LModelElement.tsx:2874-2892` (`set_singleton` crea già l'istanza in
+ogni M1 all'accensione del flag e non fa nulla allo spegnimento; `get_instantiable` esclude già
+`isSingleton`), `useEditorMode.ts:432` e `:500` (editor-v2 non legge `instantiable`: `isAbstract`
+è `abstract || interface` e basta), `EditorV2.tsx:729-760` (il toggle View > Show singletons crea
+DObject+DVertex per i singleton senza vertice), `IRNodeContent.tsx:151` (le righe reference non
+sono editabili: `editableValue: kind === 'A'`).
+
+**R-SGL-1** (2026-08-26, Alfonso) — **Il singleton è un valore del linguaggio, non un oggetto che
+l'utente crea.** Una classe singleton non è instanziabile per nessuna via: palette M1, drop sul
+canvas, menu contestuale dei figli di composizione, comandi. L'istanza esiste per costruzione.
+La fonte del predicato è `LClass.instantiable`, che già dice il vero; editor-v2 deve leggerla o
+replicarla in `MetaclassInfo`, non reinventarla.
+
+**R-SGL-2** (2026-08-26, Alfonso) — **Il ciclo di vita dell'istanza segue il flag.** Flag acceso:
+un'istanza in ogni M1 del metamodello (già così in `set_singleton` e in `classes.ts:942` alla
+creazione del modello). Flag spento: **l'istanza va rimossa**, oggi non succede. La rimozione
+passa dal percorso canonico di cancellazione, che però a `LModelElement.tsx:6429` rifiuta di
+cancellare l'istanza finché la classe è singleton: l'ordine dentro la `TRANSACTION` è flag prima,
+cancellazione poi. La creazione lazy del toggle (`EditorV2.tsx:729`) resta come fallback per i
+modelli salvati senza istanza o decade: lo decide la discovery del commit A.
+
+**R-SGL-3** (2026-08-26, Alfonso) — **Lo stereotipo «singleton» sta solo sulla sintassi
+astratta.** `ClassNode` invariato; in `ObjectNode` sparisce in entrambi i rami (IR `:434`, nativo
+`:496`). Emenda la ratifica dell'8/8 sul punto «identico su metaclasse e istanza». Tree M1
+(`bi-braces`, singleton in testa) e view classic `Singleton` invariati.
+
+**R-SGL-4** (2026-08-26, Alfonso) — **Con i singleton nascosti, la reference si assegna da una
+select.** Una riga reference il cui tipo dichiarato è singleton-conforme (classe singleton, o
+classe i cui sottotipi concreti sono tutti singleton) diventa editabile quando i singleton sono
+nascosti: il doppio click apre una select con le istanze singleton conformi al tipo, sottotipi
+inclusi, e la scelta scrive via write path canonico. Select singola anche per le reference a
+molti: la scelta aggiunge. Con i singleton visibili il comportamento resta quello di oggi (edge
+verso il nodo). Two-phase con Layer Impact Report: tocca `viewpoint/ir/` e `canvasToJjom.ts`.
+
+**R-SGL-5** (2026-08-26) — **Due commit, entrambi `feat`.** A: R-SGL-1, 2, 3 (`useEditorMode`,
+`compositionCompat`, `ObjectNode`, `set_singleton`, eventualmente il toggle). B: R-SGL-4. A
+precede B e ha il suo hard stop visivo. Il tipo è `feat` perché cambia il contratto (cosa
+l'utente può fare), non perché corregge una spec o rifinisce un comportamento già giusto.
+
 ## Superate
 
 - **D3** (2026-07-26, routing congelato in v1) — superata da E-route il 2026-08-06.

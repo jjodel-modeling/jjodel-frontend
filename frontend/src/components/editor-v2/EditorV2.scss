@@ -311,6 +311,107 @@
     flex: 1;
 }
 
+// ── Canvas zone under pressure (revision 2b, 2026-08-26) ──
+//
+// Since 2b the bar ends in a cell as wide as the right rail, and at common window
+// sizes the two do not both fit. Measured, viewport 1440 (the toolbar gets 1238 of
+// it — `.editor-v2-palette` takes the first 201) with the rail at its 440 default:
+// the canvas zone needs 948px of hard content and the cell 451 including its gap, so
+// the row overflows by 162px and, nothing being able to yield, the cell landed at
+// x=1165 with its hairline 165px to the right of the rail's. Above ~1650px of window
+// everything fits and none of this fires; at 1800 it was already exact before this
+// block existed.
+//
+// So the canvas zone yields, in a deliberate order, and the cell never does: what a
+// user loses first is a word that names a group whose icons are still there, and what
+// they never lose is a control. Flex gives the ordering for free — an item that hits
+// its floor freezes and the rest of the deficit is redistributed — provided each item
+// HAS a floor, which is what `min-width` is doing here. Every one of these elements
+// has `flex-shrink: 1` already and never shrank a pixel, because `min-width: auto`
+// floors a flex item at its min-content width.
+//
+// The order, and what each step can give at 1440:
+//   1. the group labels VIEW and LAYOUT       72.8px   (shrink 200 → they go first)
+//   2. the notation and theme dropdowns      112px     (120 → 64 each)
+//   3. the viewpoint select                   48px     (120 → 72)
+// 232.8px available against a 162px deficit, so step 3 is only partly spent and the
+// three text controls end around 89px each: truncated, still legible, still clickable.
+//
+// Scoped under `.editor-v2-toolbar` and written here rather than in the component
+// sheets: `.notation-selector` and `.scheme-selector` are shared widgets that declare
+// `width: fit-content !important` (_notations.scss, _color-schemes.scss), and they are
+// only wrong about it INSIDE this bar. Hence the descendant selector — (0,2,0) beats
+// their (0,1,0), which is what lets one `!important` override another — and hence no
+// edit to two sheets whose other consumers are fine as they are.
+.editor-v2-toolbar {
+    // The groups themselves must be able to shrink before anything inside them can.
+    .toolbar-group,
+    .toolbar-viewpoint-group,
+    .toolbar-viewpoint-selector {
+        min-width: 0;
+        flex-shrink: 1;
+    }
+
+    // Step 1. A high shrink factor, not a separate breakpoint: the label is spent
+    // almost entirely before the controls give anything, which is the whole ordering.
+    .toolbar-group__label {
+        min-width: 0;
+        flex-shrink: 200;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    // Step 2. The elastic item is the WRAPPER, not the button: `.notation-selector` and
+    // `.scheme-selector` are the flex children of the group, and the button inside each
+    // is an ordinary block child. `flex-basis` on the button is therefore inert — put
+    // there first, it measured 84.8px and 109.7px at EVERY window width, i.e. the two
+    // dropdowns had silently lost the fixed 120 that keeps the notation label from
+    // shifting the layout as it changes ("Structured" ↔ "ER", the base rule's own
+    // comment). The basis belongs on the wrapper, and the button follows it at 100%.
+    //
+    // `flex: 0 1 120px` says exactly what the base `min-width: 120px` was reaching for:
+    // 120 is the preferred width, not a floor. The floor is `min-width` here, and it is
+    // on the wrapper for the same reason.
+    //
+    // Scoped to `--labeled` so it cannot reach the OTHER `.notation-selector` in this
+    // bar — the views menu beside the viewpoint select, whose trigger is one glyph and
+    // would be stretched to 120px by a basis meant for a label.
+    .toolbar-group--labeled {
+        .notation-selector,
+        .scheme-selector {
+            width: auto !important;
+            flex: 0 1 120px;
+            min-width: 64px;
+        }
+
+        .toolbar-dropdown-btn {
+            width: 100%;
+            min-width: 0;
+            overflow: hidden;
+        }
+    }
+
+    .toolbar-dropdown-btn {
+        // The label truncates; the chevron is 8px and never does, or the control stops
+        // reading as a dropdown.
+        > span {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        &__chevron {
+            flex: none;
+        }
+    }
+
+    // Step 3. The native select clips its own text, so it needs a floor and nothing
+    // else. Last to give: it is the syntax control (R-IRN-10).
+    .toolbar-viewpoint-selector select {
+        min-width: 72px;
+    }
+}
+
 // ── Alignment inline group extras ──
 .toolbar-group--align {
     gap: 2px;
@@ -608,14 +709,73 @@
     }
 }
 
-// Boundary between the command box and the identity. Taller than the in-box hairline
-// (22 vs 16) because it separates two groups and not two slots.
+// TODO: cleanup — no markup carries this class since revision 2b (2026-08-26): the
+// boundary between the two zones of the bar is now the cell's own border-left, which
+// continues the rail's, and a second vertical rule 10px to its left read as a stutter.
+// Kept until the bar is settled at screen, per Rule 9.
 .toolbar-identity-divider {
     width: 1px;
     height: 22px;
     margin: 0 10px;
     background: var(--border-default, #e2e8f0);
     flex-shrink: 0;
+}
+
+// ── The rail cell (revision 2b, 2026-08-26) ──
+//
+// The last cell of the bar is the top of the RAIL's column, not the end of the canvas
+// zone: same width, same left hairline, and it tracks the drag handle live. What makes
+// that possible is `--jj-rail-width`, published on <body> by PropertiesWithTreeView —
+// the rail's own single writer — as the bare column width. It is deliberately NOT
+// `--jj-canvas-right-inset`, which is the same number plus a canvas gutter of 8.
+//
+// Two numbers here are measured, not chosen (viewport 1440, rail 440, 2026-08-26):
+//
+//   · `- 1px`. `.dock-panel` (rc-dock, library CSS) carries a 1px border-left and
+//     border-right, so this toolbar ends at x=1439 while the rail — `position: fixed;
+//     right: 0` — ends at 1440. Anchored to the toolbar's right edge, the cell must
+//     therefore be one pixel narrower for its LEFT edge, the seam that is actually
+//     visible, to land on the rail's at 1000. The rail's own `top` composes the same
+//     literal for the same reason (properties-with-tree-view.scss); if rc-dock ever
+//     drops that border, both need re-measuring, and smoke A5 says so.
+//
+//   · `-12px` of margin cancels the toolbar's own `padding-right`, which is what keeps
+//     every other item off the window edge and is exactly what this one must reach.
+//
+// Background is transparent rather than a repeated token: "same white as the topbar" is
+// then true by construction, in both themes, and cannot drift from it.
+//
+// The hairline takes `--border-subtle`, the token the rail's `border-left` already
+// takes, so the two are ONE continuous line across the seam at y=91. The 2b mockup
+// names #e2e8f0, which is `--color-panel-border` in light — a step darker than what
+// the rail paints (rgba(0,0,0,0.06), ~#f0f0f0 over white). Matching the rail was the
+// call: a topbar hairline darker than the rail hairline directly under it would show
+// the join instead of hiding it. Changing the pair is one line here and one at
+// properties-with-tree-view.scss `.properties-with-tree-view--rail`.
+.toolbar-rail-cell {
+    flex: none;
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    // `align-self: stretch` and not a height: the hairline must run the full band, so
+    // that it meets the rail's with no gap at either end. The negative bottom margin is
+    // what makes "the full band" true — the toolbar's 40px include a 1px `border-bottom`,
+    // so a stretched child gets 39 and the hairline stopped one pixel above the rail's.
+    // Measured 2026-08-26: cella h=39 contro topbar h=40.
+    align-self: stretch;
+    margin-bottom: -1px;
+    width: calc(var(--jj-rail-width, 0px) - 1px);
+    min-width: 0;
+    margin-right: -12px;
+    // 4px of that is the toolbar's own `gap`; the rest keeps the command group's border
+    // off the hairline, so the two do not read as one bracket.
+    margin-left: 8px;
+    padding: 0 12px;
+    border-left: 1px solid var(--border-subtle);
+    background: transparent;
+    // A cell narrower than its contents (a long model name, a rail dragged to its 360px
+    // minimum) clips instead of pushing the command group left.
+    overflow: hidden;
 }
 
 // Identity of the open model: badge, name, and the switch affordance. Not a button —
@@ -625,7 +785,10 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    flex-shrink: 1;
+    // Fills the cell so the chevron reaches its right edge. `flex-shrink: 1` was the
+    // whole story while this sat in the bar's flex row and had to yield to the group
+    // beside it; inside a cell of its own the growth direction is the one that matters.
+    flex: 1;
     min-width: 0;
 
     // Same letter and the same radius as the badge the rail header carried; the size
@@ -680,6 +843,11 @@
     // `--text-primary` is #1e293b in light — one step off the mockup's #0f172a, which is
     // the price of the theme following.
     &__name {
+        // `flex: 1` since 2b: the name is what absorbs the cell's spare width, which is
+        // what pushes the chevron onto the cell's right edge. With `min-width: 0` alone
+        // the three items huddled next to the badge and the chevron floated in the
+        // middle of a 440px box.
+        flex: 1;
         min-width: 0;
         font-size: 15px;
         font-weight: 600;

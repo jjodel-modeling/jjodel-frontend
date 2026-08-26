@@ -79,15 +79,21 @@ const NOTATION_OPTIONS: Array<{ id: NotationMode; name: string; desc: string; ic
  * Compact toolbar (Row 2) for the editor.
  *
  * Layout:
- * [↶][↷][⧉][🗑] | VIEW [Structured ▾] [Theme: X ▾] | LAYOUT [⊞][⊟] | [👁 Abstract syntax ▾] | ——spacer—— | ┌[−] 100% [+] [⤢] ┊ [»]┐ │ (m) model_1 ⌄
+ * [↶][↷][⧉][🗑] | VIEW [Structured ▾] [Theme: X ▾] | LAYOUT [⊞][⊟] | [👁 Abstract syntax ▾] | ——spacer—— | ┌[−] 100% [+] ┊ [»]┐ │(m) model_1            ⌄
  *
  * The viewpoint selector is the syntax control (R-IRN-10): it replaced the separate
  * [● Abstract syntax] pill that used to sit beside it and only restated its state.
  *
  * The right end is the chrome of the canvas as a surface (2026-08-26): one bordered
- * group for zoom and the rail collapse, then the identity of the open model, flush
- * right. It absorbed the rail's own 44px header, which used to repeat that identity a
- * second time one column over.
+ * group for zoom and the rail collapse, then the identity of the open model. It
+ * absorbed the rail's own 44px header, which used to repeat that identity a second
+ * time one column over.
+ *
+ * Revision 2b: that identity is no longer an item flush with the bar's right edge but
+ * a CELL the width of the rail below it (`--jj-rail-width`), sharing the rail's left
+ * hairline — so the bar is split into a canvas zone, which the command group closes,
+ * and a rail zone, which the model name heads. Collapse the rail and the cell goes
+ * with it, leaving the group flush right as before.
  */
 // SVG icons for alignment tools (moved from AlignmentToolbar)
 const AlignIcons = {
@@ -681,12 +687,18 @@ function Toolbar({
                 active viewpoint. TODO: cleanup — remove editorMode/hasViewpoint/
                 onEditorModeChange plumbing once the removal layer lands. */}
 
-            {/* ── Command group: one bordered box, right-aligned ──
-                Zoom out / level / zoom in / fit, a hairline, then the rail collapse.
+            {/* ── Command group: one bordered box, at the right end of the CANVAS zone ──
+                Zoom out / level / zoom in, a hairline, then the rail collapse.
                 The two families sit together because they are the only two controls
                 that act on the CANVAS AS A SURFACE rather than on its contents — the
                 hairline keeps "how big is what I see" apart from "how much room does
-                it get". */}
+                it get".
+
+                Since 2b it is no longer flush with the toolbar's right edge: the rail
+                cell below claims that end, and the group stops just short of the rail
+                boundary. With the rail collapsed the cell is not rendered and the group
+                falls back to being the last item, i.e. flush right again — the spacer
+                above it does that on its own, no branch here. */}
             <div className="toolbar-commands">
                 {onZoomOut && onZoomIn && onResetZoom && zoomLevel !== undefined && (
                     <>
@@ -743,16 +755,28 @@ function Toolbar({
                 </button>
             </div>
 
-            {/* ── Identity of the open editor, flush right ──
+            {/* ── Identity of the open editor, in the rail's own column (2b) ──
                 Subject is the TAB's model, not the owner of the selection: a tab's
                 subject must not move when the selection does. The retired rail header
                 walked up from `_lastSelected` instead, which is why it went blank with
                 nothing selected. The chevron is an affordance for switching model and
                 is inert for now — there is no model-selection dropdown to hang it on
-                (open models are switched through the dock tabs). */}
-            {editorTitle && (
-                <>
-                    <div className="toolbar-identity-divider" aria-hidden="true" />
+                (open models are switched through the dock tabs).
+
+                What 2b changes is where it sits. It was flush with the toolbar's right
+                edge, separated from the command group by a 1x22 divider; it is now a
+                CELL as wide as the rail below it, sharing its left hairline, so the
+                model name reads as the header of that column rather than as one more
+                item in the bar. The width comes from `--jj-rail-width` (published by
+                PropertiesWithTreeView, the rail's own writer), so the cell follows the
+                drag handle live — see EditorV2.scss for the geometry.
+
+                Gated on `isRailVisible`, the same predicate the rail itself is gated
+                on: a cell that outlived its column would be a header over nothing. The
+                title is still gated too — with no editorTitle there is nothing to put
+                in the cell, and an empty 440px box would eat the bar. */}
+            {editorTitle && isRailVisible && (
+                <div className="toolbar-rail-cell">
                     <div className="toolbar-identity" title={editorTitle}>
                         <span
                             className={`toolbar-identity__badge toolbar-identity__badge--${isMetamodel ? 'metamodel' : 'model'}`}
@@ -763,7 +787,7 @@ function Toolbar({
                         <span className="toolbar-identity__name">{editorTitle}</span>
                         <i className="bi bi-chevron-expand toolbar-identity__chevron" aria-hidden="true" />
                     </div>
-                </>
+                </div>
             )}
         </div>
     );

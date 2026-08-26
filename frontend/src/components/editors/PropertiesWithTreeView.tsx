@@ -484,14 +484,24 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
     // back to their historic full-width behaviour. Floating mode only; single writer.
     // NOTE: this is NOT the retired width-lock var — it does not size the dock, and it
     // never touches the data-properties-tree-* body attributes.
+    //
+    // Second name published by the same writer (2026-08-26, topbar 2b): --jj-rail-width,
+    // the BARE column width, no gutter added. The canvas topbar ends in a cell that must
+    // be exactly as wide as the rail underneath it and move with the drag handle, and it
+    // cannot compose that from the inset above — the +8 there is breathing room the canvas
+    // wants, not a fact about the column, and a reader that subtracted it would inherit a
+    // constant it has no reason to know. Two names, one writer, one effect: they can never
+    // disagree about whether the rail is on screen.
     useEffect(() => {
         if (mode !== 'floating') return;
         const overlayShown = (activeEditorType === 'model' || activeEditorType === 'metamodel')
             && (showPropertiesPanel || showTreePanel);
         const inset = overlayShown ? overlayWidth + 8 : 0;
         document.body.style.setProperty('--jj-canvas-right-inset', `${inset}px`);
+        document.body.style.setProperty('--jj-rail-width', `${overlayShown ? overlayWidth : 0}px`);
         return () => {
             document.body.style.removeProperty('--jj-canvas-right-inset');
+            document.body.style.removeProperty('--jj-rail-width');
         };
     }, [mode, activeEditorType, showPropertiesPanel, showTreePanel, overlayWidth]);
 
