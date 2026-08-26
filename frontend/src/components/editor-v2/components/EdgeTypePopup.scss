@@ -78,4 +78,14 @@
     &__label {
         flex: 1;
     }
+
+    // Il tipo del bersaglio accanto al nome della reference (M1ReferencePopup).
+    // Era un `opacity: 0.5` inline sul testo di riga: su fondo bianco quello dava
+    // un grigio che non e' nella scala, e sulla riga rossa avrebbe slavato il
+    // rosso. Il token muto della superficie e' lo stesso in entrambi i temi.
+    &__label-type {
+        margin-left: 4px;
+        font-size: 0.9em;
+        color: var(--float-text-muted);
+    }
 }

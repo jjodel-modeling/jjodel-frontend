@@ -7866,3 +7866,16 @@ Dark mode overrides for `.toolbar-btn` also scoped under `.documentation-toolbar
 **Smoke visivo**: passato (`_tmp_canvas_menus_ctx_light/dark.png`, `_tmp_canvas_menus_edge_light/dark.png`; il fondo del picker al buio verificato al pixel, 30,41,59, perche' a occhio sulla miniatura sembrava chiaro)
 **Notes**: (1) `.context-menu` e' condivisa: `contextMenu/ContextMenu.scss:226` porta `.context-menu__item i { color: white !important }` per i menu dell'app, e la regola BEM a (0,2,1) non arrivava mai — glifi bianchi. Da qui il blocco a (0,3,1) con `!important`. (2) Il picker sta dentro `.editor-v2`, il contestuale e' portato su `<body>`: il primo legge `.theme-*`, il secondo `:root`. Stessa sorgente (`useTheme`), ma chi scrive solo `data-theme` ne muove uno solo.
 **Prompt document name**: 2026-08-26 canvas_menus_light
+
+## 2026-08-26 — fix(editor-v2): anche il popup «link reference» sulla stessa superficie
+**Prompt**: seguito immediato del commit `3a07155fe`: mantenere il tipo di commit `fix` e allineare anche `M1ReferencePopup` alla superficie comune dei due menu del canvas.
+**Files touched**: editor-v2/components/M1ReferencePopup.tsx (i tre glifi ridisegnati 26x10 nella lingua di EdgeTypePopup; costanti di ribaltamento aggiornate alla nuova geometria; il tipo del bersaglio da `style` inline a classe), editor-v2/components/EdgeTypePopup.scss (regola additiva `&__label-type`), docs/claude-code-log.md.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (typecheck 33 = baseline su output completo, 0 nei file toccati; build ✓ exit 0 solo chunk-warning pre-esistente; vitest 1387 passed identico; smoke 12 passed / 0 failed; sonda 25/25 verdi)
+**Out-of-scope changes**: no (il popup e i suoi stili, che vivono nello scss gia' condiviso)
+**Layer Impact Report**: not-required (nessun file critical-zone §3.1; solo presentazione)
+**Smoke visivo**: passato (`_tmp_canvas_menus_m1ref_light.png` / `_tmp_canvas_menus_m1ref_dark.png`: stessa superficie, stesso eyebrow, glifi della stessa famiglia del picker EDGE TYPE)
+**Notes**: la superficie era gia' condivisa per costruzione (il popup porta le classi `.edge-type-popup`); disallineati erano i glifi, a 16x16, e il tipo del bersaglio, un `opacity: 0.5` inline che su fondo bianco dava un grigio fuori scala. Il caso (C) della sonda ha richiesto una seconda reference nella fixture: con una sola compatibile `EditorV2.tsx:1565` auto-seleziona e il popup non si apre — misurato, non dedotto (archi=1, popup=false).
+**Prompt document name**: 2026-08-26 canvas_menus_m1ref
