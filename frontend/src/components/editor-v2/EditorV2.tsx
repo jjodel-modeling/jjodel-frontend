@@ -3002,7 +3002,10 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                             });
                         } else {
                             // Multiple options → header + sub-items
-                            items.push({ label: `── ${ref.name} ──`, icon: isFull ? 'bi-slash-circle' : 'bi-arrow-down-right', disabled: isFull, onClick: () => {} });
+                            // Section header for the reference the options below belong to.
+                            // The two em-dashes that used to fake the rule are now hairlines
+                            // drawn by `.context-menu__header`; the icon logic is unchanged.
+                            items.push({ header: true, label: ref.name, icon: isFull ? 'bi-slash-circle' : 'bi-arrow-down-right' });
                             for (const cls of concreteOptions) {
                                 items.push({
                                     label: `  Add ${cls.name}`,

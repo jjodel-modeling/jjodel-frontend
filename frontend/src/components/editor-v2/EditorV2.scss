@@ -3706,67 +3706,149 @@
     z-index: 999;
 }
 
-// Context menu is portaled to <body> via createPortal, so CSS variables
-// defined on .editor-v2.theme-dark/.theme-light are NOT inherited.
-// Every var() MUST have a hardcoded fallback matching the dark float palette.
+// Context menu is portaled to <body> via createPortal, so CSS variables defined
+// on `.editor-v2.theme-dark/.theme-light` are NOT inherited. The float tokens are
+// also emitted on `:root` / `:root[data-theme="dark"]` (_themes.scss, D-UI-10),
+// which is where these var() resolve from: no hardcoded fallback is needed, and
+// the ones that used to sit here pinned the menu to the dark palette in both
+// themes. The fallbacks below therefore carry the LIGHT values, matching what
+// bare `:root` publishes.
+//
+// The glyph colours are NOT here: they need a selector this block cannot give
+// them. See the ICON COLOUR note under the block.
 .context-menu {
     position: fixed;
     z-index: 1000;
-    background: var(--float-bg, #1e293b);
-    border: 1px solid var(--float-border, #334155);
-    border-radius: 8px;
-    padding: 4px;
+    background: var(--float-bg, #ffffff);
+    border: 1px solid var(--float-border, #e2e8f0);
+    border-radius: 12px;
+    padding: 6px;
     min-width: 160px;
-    box-shadow: 0 2px 12px var(--float-shadow, rgba(0, 0, 0, 0.3));
+    box-shadow: 0 4px 12px var(--float-shadow, rgba(0, 0, 0, 0.08));
 
     &__item {
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 10px;
         width: 100%;
-        padding: 5px 8px;
+        height: 34px;
+        padding: 0 10px;
         border: none;
         background: transparent;
-        color: var(--float-text, #cbd5e1);
-        font-size: 12px;
-        border-radius: 4px;
+        color: var(--float-text, #0f172a);
+        font-size: 14px;
+        border-radius: 6px;
         cursor: pointer;
         text-align: left;
         transition: background 0.15s;
 
         &:hover {
-            background: var(--float-hover, rgba(255, 255, 255, 0.06));
+            background: var(--float-hover, #f1f5f9);
         }
 
         &.disabled {
-            opacity: 0.45;
+            // Was `opacity: .45` on the whole row: with the icon now carrying its
+            // own colour, the disabled state is a colour of its own, not a veil.
+            color: var(--float-disabled, #cbd5e1);
             cursor: not-allowed;
             // pointer-events kept enabled so the HTML `title` tooltip
             // shows on hover; the `disabled` attribute already prevents
             // click and keyboard activation.
-        }
-
-        &.danger {
-            color: var(--float-danger, #f87171);
 
             &:hover {
-                background: var(--float-danger-bg, rgba(239, 68, 68, 0.12));
+                background: transparent;
             }
         }
 
-        i {
-            font-size: 13px;
+        &.danger {
+            color: var(--float-danger, #dc2626);
+
+            &:hover {
+                background: var(--float-danger-bg, rgba(220, 38, 38, 0.08));
+            }
+        }
+
+        i.bi {
+            font-size: 16px;
             width: 16px;
             text-align: center;
-            color: inherit;
+            flex-shrink: 0;
         }
     }
 
-    &__divider {
-        height: 0.5px;
-        background: var(--float-divider, rgba(255, 255, 255, 0.08));
-        margin: 3px 0;
+    // Section header: the name of the element the items below belong to. No
+    // background; the rule that used to be two em-dashes in the label is now a
+    // hairline on each side, drawn with flex pseudo-elements.
+    &__header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        height: 34px;
+        padding: 0 10px;
+        user-select: none;
+        cursor: default;
+
+        // The hairline on each side. `::before` is the first flex child, so the
+        // row reads: rule — arrow — name — rule, which is where the two em-dashes
+        // of the old label used to sit.
+        &::before,
+        &::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--float-divider, #e2e8f0);
+        }
+
+        i.bi {
+            font-size: 14px;
+            width: 16px;
+            text-align: center;
+            flex-shrink: 0;
+        }
     }
+
+    &__header-label {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--float-text-muted, #64748b);
+        white-space: nowrap;
+    }
+
+    &__divider {
+        height: 1px;
+        background: var(--float-divider, #e2e8f0);
+        margin: 6px 4px;
+    }
+}
+
+// ICON COLOUR — the one place the menu glyphs are tinted, and it needs both the
+// extra class and `!important` to get there. `.context-menu` is a shared class:
+// `components/contextMenu/ContextMenu.scss:226` carries
+// `.context-menu__item i { color: white !important }` for the app-level menus
+// (ProjectEditor, TransformationsList), which live on a dark surface. Measured
+// 2026-08-26 on the canvas menu: with the plain `.context-menu__item i.bi` rule
+// the computed colour was rgb(255,255,255) — `!important` beats specificity, so
+// the (0,2,1) rule never applied. These selectors are (0,3,1) AND important, so
+// they win outright, whatever the stylesheet load order. Each has a `:hover` twin
+// to outrank `i.bi:hover` (styles/style.scss:790) the same way.
+.context-menu .context-menu__item i.bi,
+.context-menu .context-menu__item i.bi:hover {
+    color: var(--float-icon, #64748b) !important;
+}
+
+.context-menu .context-menu__item.disabled i.bi,
+.context-menu .context-menu__item.disabled i.bi:hover {
+    color: var(--float-disabled, #cbd5e1) !important;
+}
+
+.context-menu .context-menu__item.danger i.bi,
+.context-menu .context-menu__item.danger i.bi:hover {
+    color: var(--float-danger, #dc2626) !important;
+}
+
+.context-menu .context-menu__header i.bi,
+.context-menu .context-menu__header i.bi:hover {
+    color: var(--float-header-arrow, #94a3b8) !important;
 }
 
 // ============================================

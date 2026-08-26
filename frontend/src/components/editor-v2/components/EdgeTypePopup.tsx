@@ -19,42 +19,47 @@ const EDGE_TYPE_OPTIONS: Array<{ value: EdgeTypeChoice; label: string }> = [
     { value: 'inheritance', label: 'Inheritance' },
 ];
 
-// --- SVG Icons (inline, 16x16) ---
+// --- SVG Icons ---
+//
+// The four UML line ends, drawn as a 26x10 strip: the glyph IS the edge it
+// creates, so it reads as a line with a decoration on each end rather than as a
+// pictogram in a square. `currentColor` funnels the colour back to the host
+// button, where `--float-icon` declares it once for both themes.
 
 function AssociationIcon({ className }: { className?: string }) {
     return (
-        <svg width="16" height="16" viewBox="0 0 16 16" className={className}>
-            <line x1="1" y1="8" x2="12" y2="8" stroke="currentColor" strokeWidth="1.5" />
-            <polyline points="10,5 13,8 10,11" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+        <svg width="26" height="10" viewBox="0 0 26 10" className={className} aria-hidden="true">
+            <line x1="1" y1="5" x2="19" y2="5" stroke="currentColor" strokeWidth="1.3" />
+            <polyline points="18,1.5 24.5,5 18,8.5" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" strokeLinecap="round" />
         </svg>
     );
 }
 
 function CompositionIcon({ className }: { className?: string }) {
     return (
-        <svg width="16" height="16" viewBox="0 0 16 16" className={className}>
-            <polygon points="1,8 4,5 7,8 4,11" fill="currentColor" stroke="currentColor" strokeWidth="1" />
-            <line x1="7" y1="8" x2="12" y2="8" stroke="currentColor" strokeWidth="1.5" />
-            <polyline points="10,5 13,8 10,11" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+        <svg width="26" height="10" viewBox="0 0 26 10" className={className} aria-hidden="true">
+            <polygon points="1,5 5,1.8 9,5 5,8.2" fill="currentColor" stroke="currentColor" strokeWidth="1" strokeLinejoin="round" />
+            <line x1="9" y1="5" x2="19" y2="5" stroke="currentColor" strokeWidth="1.3" />
+            <polyline points="18,1.5 24.5,5 18,8.5" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" strokeLinecap="round" />
         </svg>
     );
 }
 
 function AggregationIcon({ className }: { className?: string }) {
     return (
-        <svg width="16" height="16" viewBox="0 0 16 16" className={className}>
-            <polygon points="1,8 4,5 7,8 4,11" fill="none" stroke="currentColor" strokeWidth="1.2" />
-            <line x1="7" y1="8" x2="12" y2="8" stroke="currentColor" strokeWidth="1.5" />
-            <polyline points="10,5 13,8 10,11" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+        <svg width="26" height="10" viewBox="0 0 26 10" className={className} aria-hidden="true">
+            <polygon points="1,5 5,1.8 9,5 5,8.2" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
+            <line x1="9" y1="5" x2="19" y2="5" stroke="currentColor" strokeWidth="1.3" />
+            <polyline points="18,1.5 24.5,5 18,8.5" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" strokeLinecap="round" />
         </svg>
     );
 }
 
 function InheritanceIcon({ className }: { className?: string }) {
     return (
-        <svg width="16" height="16" viewBox="0 0 16 16" className={className}>
-            <line x1="1" y1="8" x2="9" y2="8" stroke="currentColor" strokeWidth="1.5" />
-            <polygon points="9,4.5 14,8 9,11.5" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
+        <svg width="26" height="10" viewBox="0 0 26 10" className={className} aria-hidden="true">
+            <line x1="1" y1="5" x2="17.5" y2="5" stroke="currentColor" strokeWidth="1.3" />
+            <polygon points="17,1 24.5,5 17,9" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
         </svg>
     );
 }
@@ -80,7 +85,9 @@ export function EdgeTypePopup({ position, containerRef, onSelect, onCancel }: Ed
         let top = position.y - containerRect.top + 8;
 
         const popupWidth = 170;
-        const popupHeight = 140;
+        // 6px padding + eyebrow + 4 rows of 34px + 6px padding. Tracks the row
+        // geometry in EdgeTypePopup.scss: it is what decides the flip-up.
+        const popupHeight = 176;
 
         if (left + popupWidth > containerRect.width) {
             left = position.x - containerRect.left - popupWidth - 8;
