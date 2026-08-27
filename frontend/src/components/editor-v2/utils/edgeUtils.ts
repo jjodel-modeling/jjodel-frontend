@@ -1138,34 +1138,92 @@ export function applyWaypoints(
     points: { x: number; y: number }[],
     waypoints: EdgeWaypoint[]
 ): { x: number; y: number }[] {
-    if (!waypoints || waypoints.length === 0) return points;
+    return applyWaypointsWithMap(points, waypoints).points;
+}
+
+/**
+ * Come `applyWaypoints`, ma ritorna anche la **corrispondenza fra i segmenti in
+ * ingresso e quelli in uscita**.
+ *
+ * Serve alle maniglie. Una maniglia appartiene a un segmento della polilinea che il
+ * router ha prodotto — quello che l'indice del waypoint identifica — ma va disegnata
+ * dove quel segmento si trova **dopo** la trasformazione. Senza la mappa i due
+ * riferimenti divergono appena un waypoint terminale inserisce un punto, e la
+ * maniglia finisce a governare un segmento diverso da quello che tocca.
+ *
+ * `segmentMap[i]` e' l'indice, nella polilinea in uscita, del segmento che in
+ * ingresso stava alla posizione `i`. Vale -1 se quel segmento e' degenerato.
+ */
+export function applyWaypointsWithMap(
+    points: { x: number; y: number }[],
+    waypoints: EdgeWaypoint[]
+): { points: { x: number; y: number }[]; segmentMap: number[] } {
+    const identity = () => points.slice(0, Math.max(0, points.length - 1)).map((_, i) => i);
+    if (!waypoints || waypoints.length === 0 || points.length < 2) {
+        return { points, segmentMap: identity() };
+    }
+
+    const nSeg = points.length - 1;
+    const offsets = new Map<number, number>();
+    for (const wp of waypoints) {
+        if (wp.segmentIndex < 0 || wp.segmentIndex >= nSeg) continue;
+        if (wp.offset !== 0) offsets.set(wp.segmentIndex, wp.offset);
+    }
+    if (offsets.size === 0) return { points, segmentMap: identity() };
 
     const adjusted = points.map((p) => ({ ...p }));
-    const lastSeg = adjusted.length - 2; // index of the last segment
+    const horizontal = (i: number) => Math.abs(points[i + 1].y - points[i].y) < 1;
 
-    for (const wp of waypoints) {
-        const i = wp.segmentIndex;
-        if (i < 0 || i >= adjusted.length - 1) continue;
-
-        // Skip first/last segments — anchor endpoints must stay fixed
-        if (i === 0 || i === lastSeg) continue;
-
-        const p1 = adjusted[i];
-        const p2 = adjusted[i + 1];
-        const isHorizontal = Math.abs(p2.y - p1.y) < 1;
-
-        if (isHorizontal) {
-            // Move horizontal segment vertically
-            p1.y += wp.offset;
-            p2.y += wp.offset;
-        } else {
-            // Move vertical segment horizontally
-            p1.x += wp.offset;
-            p2.x += wp.offset;
+    // 1. Ogni segmento con un waypoint si sposta perpendicolarmente, muovendo
+    //    entrambi i suoi estremi: e' il comportamento di sempre, invariato.
+    for (const [i, offset] of offsets) {
+        const isH = horizontal(i);
+        for (const k of [i, i + 1]) {
+            if (isH) adjusted[k].y += offset;
+            else adjusted[k].x += offset;
         }
     }
 
-    return adjusted;
+    // 2. I segmenti terminali sono l'aggiunta del 2026-08-27 (decisione B). L'ancora
+    //    non si muove — spostarla la staccherebbe dal punto d'aggancio — e il tratto
+    //    perpendicolare che ne esce va conservato, altrimenti l'arco lascerebbe il
+    //    nodo dal verso sbagliato. Il tracciato ci arriva quindi con una gomitata:
+    //    la L diventa una Z, e nessun waypoint viene perso per strada.
+    const head: { x: number; y: number }[] = [];
+    const tail: { x: number; y: number }[] = [];
+    let startShift = 0;
+
+    const startOffset = offsets.get(0);
+    if (startOffset !== undefined) {
+        const isH = horizontal(0);
+        const a = points[0];
+        const run = isH ? Math.abs(points[1].x - a.x) : Math.abs(points[1].y - a.y);
+        const k = Math.min(MIN_APPROACH_RUN, run / 2);
+        const heel = isH
+            ? { x: a.x + Math.sign(points[1].x - a.x) * k, y: a.y }
+            : { x: a.x, y: a.y + Math.sign(points[1].y - a.y) * k };
+        head.push({ ...a }, heel, isH ? { x: heel.x, y: heel.y + startOffset } : { x: heel.x + startOffset, y: heel.y });
+        startShift = 2;
+        adjusted[0] = head[head.length - 1];
+    }
+
+    const endOffset = offsets.get(nSeg - 1);
+    if (endOffset !== undefined) {
+        const isH = horizontal(nSeg - 1);
+        const b = points[nSeg];
+        const run = isH ? Math.abs(b.x - points[nSeg - 1].x) : Math.abs(b.y - points[nSeg - 1].y);
+        const k = Math.min(MIN_APPROACH_RUN, run / 2);
+        const toe = isH
+            ? { x: b.x + Math.sign(points[nSeg - 1].x - b.x) * k, y: b.y }
+            : { x: b.x, y: b.y + Math.sign(points[nSeg - 1].y - b.y) * k };
+        tail.push(isH ? { x: toe.x, y: toe.y + endOffset } : { x: toe.x + endOffset, y: toe.y }, toe, { ...b });
+        adjusted[nSeg] = tail[0];
+    }
+
+    const body = adjusted.slice(startOffset !== undefined ? 1 : 0, endOffset !== undefined ? nSeg : nSeg + 1);
+    const out = [...head, ...body, ...tail];
+    const segmentMap = Array.from({ length: nSeg }, (_, i) => i + startShift);
+    return { points: out, segmentMap };
 }
 
 /**
@@ -2106,15 +2164,28 @@ function routeAroundRects(points: Pt[], rects: Rect[]): Pt[] | null {
     const T1 = { x: T.x + dT.x * AVOID_STUB_OUT, y: T.y + dT.y * AVOID_STUB_OUT };
     if (insideRects(S1, rects, AVOID_DETECT) || insideRects(T1, rects, AVOID_DETECT)) return null;
 
-    const uniq = (v: number[]) => Array.from(new Set(v.map((n) => Math.round(n * 2) / 2))).sort((a, b) => a - b);
-    const xs = uniq([S1.x, T1.x, ...rects.flatMap((r) => [r.x - AVOID_LANE, r.x + r.width + AVOID_LANE])]);
-    const ys = uniq([S1.y, T1.y, ...rects.flatMap((r) => [r.y - AVOID_LANE, r.y + r.height + AVOID_LANE])]);
+    // Le corsie degli **ostacoli** si arrotondano al mezzo pixel; le coordinate degli
+    // **stub** no, entrano esatte.
+    //
+    // Prima entravano anche loro nell'arrotondamento, e le ancore hanno coordinate
+    // frazionarie per costruzione — `(k+1)/(N+1)` dell'altezza del nodo, vedi
+    // `handlePosition.computeHandlePositionForNode`. Il tracciato partiva quindi da
+    // `y = 430.3333` e la prima corsia stava a `430.5`, mentre `cleanPoints` rimetteva
+    // l'estremo vero: restava un segmento di 12px inclinato di 0,17px. Misurato il
+    // 2026-08-27 sul canvas, 5 archi su 18 (report
+    // `discovery_2026-08-27_2_dense_diagram_routing.md` §2).
+    const lane = (n: number) => Math.round(n * 2) / 2;
+    const sortUniq = (v: number[]) => Array.from(new Set(v)).sort((a, b) => a - b);
+    const obstacleXs = rects.flatMap((r) => [lane(r.x - AVOID_LANE), lane(r.x + r.width + AVOID_LANE)]);
+    const obstacleYs = rects.flatMap((r) => [lane(r.y - AVOID_LANE), lane(r.y + r.height + AVOID_LANE)]);
+    const xs = sortUniq([S1.x, T1.x, ...obstacleXs]);
+    const ys = sortUniq([S1.y, T1.y, ...obstacleYs]);
     const nx = xs.length, ny = ys.length;
     const idx = (i: number, j: number) => i * ny + j;
     const at = (i: number, j: number): Pt => ({ x: xs[i], y: ys[j] });
 
-    const si = xs.indexOf(Math.round(S1.x * 2) / 2), sj = ys.indexOf(Math.round(S1.y * 2) / 2);
-    const ti = xs.indexOf(Math.round(T1.x * 2) / 2), tj = ys.indexOf(Math.round(T1.y * 2) / 2);
+    const si = xs.indexOf(S1.x), sj = ys.indexOf(S1.y);
+    const ti = xs.indexOf(T1.x), tj = ys.indexOf(T1.y);
     if (si < 0 || sj < 0 || ti < 0 || tj < 0) return null;
 
     // Stato = (nodo, direzione d'arrivo): serve a far pagare le svolte.
@@ -2167,6 +2238,56 @@ function routeAroundRects(points: Pt[], rects: Rect[]): Pt[] | null {
 }
 
 /**
+ * Scarto massimo, in px, che `snapAxial` considera errore di quantizzazione e non
+ * una svolta vera. Un segmento con uno scarto sotto questa misura su un asse viene
+ * appiattito sull'altro.
+ */
+const SNAP_AXIAL_TOL = 1;
+
+/**
+ * Appiattisce sugli assi una polilinea che dovrebbe essere ortogonale, **senza mai
+ * muovere i due estremi**: sono i punti d'aggancio veri, e spostarli staccherebbe
+ * l'arco dall'ancora.
+ *
+ * Serve da cintura al criterio del prompt — «ogni segmento deve avere x1 === x2
+ * oppure y1 === y2» — dopo il ri-instradamento. Con la griglia delle corsie che
+ * ormai tiene esatte le coordinate degli stub questa passata dovrebbe essere un
+ * no-op; resta perche' un no-op verificabile vale piu' di un invariante sperato, e
+ * perche' torna **lo stesso riferimento** quando non c'e' nulla da correggere.
+ *
+ * Il primo segmento si allinea al primo punto, l'ultimo all'ultimo: i due estremi
+ * restano quelli ricevuti, carattere per carattere.
+ */
+export function snapAxial(points: Pt[], tol: number = SNAP_AXIAL_TOL): Pt[] {
+    if (points.length < 2) return points;
+    const needs = (a: Pt, b: Pt) => {
+        const dx = Math.abs(b.x - a.x), dy = Math.abs(b.y - a.y);
+        return dx > 0 && dy > 0 && Math.min(dx, dy) <= tol;
+    };
+    let dirty = false;
+    for (let i = 1; i < points.length && !dirty; i++) dirty = needs(points[i - 1], points[i]);
+    if (!dirty) return points;
+
+    const out = points.map((p) => ({ ...p }));
+    // In avanti fino al penultimo: ogni punto si allinea al precedente.
+    for (let i = 1; i < out.length - 1; i++) {
+        const a = out[i - 1], b = out[i];
+        const dx = Math.abs(b.x - a.x), dy = Math.abs(b.y - a.y);
+        if (dx > 0 && dy > 0 && Math.min(dx, dy) <= tol) {
+            if (dx < dy) b.x = a.x; else b.y = a.y;
+        }
+    }
+    // L'ultimo segmento si allinea all'ULTIMO punto, che non si tocca.
+    const n = out.length;
+    const last = out[n - 1], prev = out[n - 2];
+    const dx = Math.abs(last.x - prev.x), dy = Math.abs(last.y - prev.y);
+    if (dx > 0 && dy > 0 && Math.min(dx, dy) <= tol) {
+        if (dx < dy) prev.x = last.x; else prev.y = last.y;
+    }
+    return out;
+}
+
+/**
  * Il passaggio a valle: polilinea invariata se il criterio e' rispettato, altrimenti
  * un solo tentativo di ri-instradamento. Se anche quello viola, torna l'originale.
  *
@@ -2178,6 +2299,7 @@ export function avoidNodeRects(points: Pt[], rects: Rect[]): Pt[] {
     if (pathBlockingRects(points, rects).length === 0) return points;
     const rerouted = routeAroundRects(points, rects);
     if (!rerouted || rerouted.length < 2) return points;
-    if (pathBlockingRects(rerouted, rects).length > 0) return points;
-    return rerouted;
+    const snapped = snapAxial(rerouted);
+    if (pathBlockingRects(snapped, rects).length > 0) return points;
+    return snapped;
 }

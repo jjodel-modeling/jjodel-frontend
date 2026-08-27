@@ -14,7 +14,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { avoidNodeRects, pathBlockingRects } from '../edgeUtils';
+import { avoidNodeRects, pathBlockingRects, snapAxial } from '../edgeUtils';
 
 const rect = (x: number, y: number, width = 140, height = 53) => ({ x, y, width, height });
 
@@ -77,5 +77,66 @@ describe('avoidNodeRects', () => {
         expect(avoidNodeRects(points, [])).toBe(points);
         const many = Array.from({ length: 40 }, (_, i) => rect(i * 10, 0, 20, 20));
         expect(avoidNodeRects(points, many)).toBe(points);
+    });
+});
+
+describe('ortogonalita\' del ri-instradamento', () => {
+    /** Ogni segmento della polilinea e' assiale: x1 === x2 oppure y1 === y2. */
+    const nonAxial = (pts: { x: number; y: number }[]) => {
+        const out: string[] = [];
+        for (let i = 1; i < pts.length; i++) {
+            const dx = Math.abs(pts[i].x - pts[i - 1].x);
+            const dy = Math.abs(pts[i].y - pts[i - 1].y);
+            if (dx > 0.01 && dy > 0.01) out.push(`(${pts[i - 1].x},${pts[i - 1].y})->(${pts[i].x},${pts[i].y})`);
+        }
+        return out;
+    };
+
+    it('con ancore a coordinate frazionarie il tracciato resta assiale', () => {
+        // Le ancore hanno coordinate frazionarie per costruzione: `computeSidePositions`
+        // distribuisce a `(k+1)/(N+1)` dell'altezza del nodo, e su un nodo alto 53 con
+        // due ancore la y e' `…,6666`. Prima della correzione la griglia delle corsie
+        // arrotondava al mezzo pixel anche gli stub, e il primo segmento usciva
+        // inclinato di frazioni di pixel — misurato a schermo, 5 archi su 18.
+        const a1 = rect(96, 304);
+        const b1 = rect(624, 176);
+        const c1 = rect(352, 304);          // nel corridoio: forza il ri-instradamento
+        const sy = 304 + 53 / 3;            // 321.6666…
+        const ty = 176 + 53 * 2 / 3;        // 211.3333…
+        const points = [
+            { x: 236, y: sy }, { x: 430, y: sy }, { x: 430, y: ty }, { x: 620, y: ty },
+        ];
+        const rects = [a1, b1, c1];
+        expect(pathBlockingRects(points, rects).length).toBeGreaterThan(0);
+
+        const out = avoidNodeRects(points, rects);
+        expect(out).not.toBe(points);
+        expect(nonAxial(out)).toEqual([]);
+        // I due estremi restano esattamente quelli ricevuti: sono gli ancoraggi.
+        expect(out[0]).toEqual(points[0]);
+        expect(out[out.length - 1]).toEqual(points[points.length - 1]);
+    });
+
+    it('snapAxial non tocca una polilinea gia\' assiale, e torna lo stesso riferimento', () => {
+        const clean = [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 50 }];
+        expect(snapAxial(clean)).toBe(clean);
+    });
+
+    it('snapAxial appiattisce lo scarto di quantizzazione senza muovere gli estremi', () => {
+        const skewed = [
+            { x: 0, y: 10.3333 }, { x: 100, y: 10.5 }, { x: 100, y: 200 }, { x: 240.25, y: 200.4 },
+        ];
+        const out = snapAxial(skewed);
+        expect(out).not.toBe(skewed);
+        expect(out[0]).toEqual(skewed[0]);
+        expect(out[out.length - 1]).toEqual(skewed[skewed.length - 1]);
+        // primo segmento orizzontale sulla y del primo punto, ultimo sulla y dell'ultimo
+        expect(out[1].y).toBe(skewed[0].y);
+        expect(out[2].y).toBe(skewed[3].y);
+    });
+
+    it('snapAxial lascia stare una svolta vera, sopra la tolleranza', () => {
+        const real = [{ x: 0, y: 0 }, { x: 100, y: 40 }];
+        expect(snapAxial(real)).toBe(real);
     });
 });

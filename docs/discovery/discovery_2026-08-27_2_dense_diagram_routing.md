@@ -249,3 +249,131 @@ disegnata, non `adjustedPath`), più i due file di test già esistenti.
 Fuori perimetro in entrambe: `portDistribution.ts` e `handlePosition.ts` — a meno che
 la risposta a B sia «sposta l'ancora», nel qual caso `handlePosition.ts` entra e con
 esso la critical zone di CLAUDE.md §3.1, quindi Layer Impact Report.
+
+---
+
+# Fase 2, fetta 1 — difetti 1 e 5 (2026-08-27)
+
+GO di Alfonso: sonda che importa il fixture per il difetto 2; maniglia sulla L che
+**spezza in Z** (decisione B, `EdgeWaypoint` invariato, l'ancora non si muove); due
+fette, prima 1+5+2.
+
+## 9. La sonda: `scripts/smoke/_tmp_dense.ts`
+
+La macchina Heater ricostruita in pagina con le API pubbliche — dieci oggetti,
+diciotto archi — e cinque criteri sul `d` letto dal DOM. Gitignorata come tutte le
+`_tmp_`.
+
+**Due correzioni di metodo, entrambe misurate e entrambe decisive.**
+
+1. **La selezione va verificata prima di leggere le maniglie.** La prima corsa
+   dichiarava «0 maniglie» su un arco a 11 segmenti. Con la verifica aggiunta si e'
+   visto che il click cadeva su un **altro** arco (`selezionato=false`, ma un arco
+   selezionato in pagina c'era): una selezione mancata e un difetto delle maniglie
+   producono lo stesso silenzio. La sonda ora misura **l'arco che risulta davvero
+   selezionato**, non quello mirato.
+2. **La tolleranza di ortogonalita' era troppo larga.** Con 0,5px la sonda dichiarava
+   verde un tratto di 12px inclinato di 0,19px — che a schermo si vede. Il criterio del
+   prompt e' `x1 === x2 oppure y1 === y2`: portata a 0,01px, con i raccordi esclusi per
+   lunghezza (sopra 8px, cioe' sopra ogni raggio in uso).
+
+Con la tolleranza giusta il difetto 1 si e' riprodotto sul canvas: **5 archi su 18**,
+tutti sul tratto d'approccio da 12px (`AVOID_STUB_OUT`):
+
+```
+(210.859375, 71.1875)   -> (223, 71)        dx = 12.1  dy = 0.19
+(874, 60.5)             -> (886, 60.59375)  dx = 12    dy = 0.09
+(89.203125, 107)        -> (89, 119)        dx = 0.20  dy = 12
+```
+
+Ancora frazionaria da una parte (`(k+1)/(N+1)` dell'altezza), corsia a mezzo pixel
+dall'altra.
+
+## 10. Difetto 1 — corretto
+
+**`routeAroundRects`**: la griglia arrotonda al mezzo pixel le corsie **degli
+ostacoli**, e lascia esatte le coordinate degli **stub**. Prima entravano
+nell'arrotondamento anche loro, e `cleanPoints` rimetteva l'estremo vero: restava lo
+scarto.
+
+**`snapAxial`** (nuova, esportata): cintura a valle che appiattisce sugli assi uno
+scarto sotto 1px **senza mai muovere i due estremi** — il primo segmento si allinea al
+primo punto, l'ultimo all'ultimo. Torna lo stesso riferimento quando non c'e' nulla da
+correggere, quindi un caso sano resta byte-identico.
+
+Verifica: sul canvas D1 passa, 18 archi su 18. In unita', quattro prove nuove in
+`nodeAvoidance.test.ts`, e la prima e' passata dal **controllo negativo**: rimettendo
+l'arrotondamento sugli stub fallisce (1 failed / 8 passed), con la correzione passa.
+
+## 11. Difetto 5 — corretto, e la causa non era quella che avevo scritto in §5
+
+La misura sul canvas ha corretto la mia diagnosi. Non erano solo le L a due segmenti:
+archi con **sei e sette segmenti resi** mostravano **zero** maniglie. La causa vera e'
+che `SegmentHandles` riceveva `adjustedPath`, la polilinea **prima** dell'evitamento
+degli ostacoli: su un arco ri-instradato quella ha meno di tre segmenti, e sotto i tre
+non compariva niente. La L a due segmenti e' un caso particolare dello stesso difetto,
+non la sua causa.
+
+Tre cambiamenti:
+
+1. **I waypoint chiudono la catena.** Erano applicati subito dopo il router; ora dopo
+   lo spread e l'evitamento. Il loro indice di segmento si riferisce cosi' alla
+   polilinea che l'utente vede. `applyBundleSpread` conserva il numero di punti (agisce
+   solo su polilinee a quattro), quindi **gli indici gia' persistiti restano validi**.
+   L'evitamento resta saltato quando ci sono waypoint: R-B10 invariata.
+2. **`applyWaypointsWithMap`** (nuova) ritorna anche la corrispondenza fra i segmenti
+   in ingresso e quelli in uscita. Le maniglie si **contano** sulla polilinea del router
+   e si **disegnano** su quella resa: senza la mappa i due riferimenti divergono appena
+   un waypoint terminale inserisce un punto.
+3. **Maniglie su ogni segmento, terminali compresi.** Trascinare un terminale non
+   sposta l'ancora: inserisce una gomitata che conserva il tratto perpendicolare, e la
+   L diventa una Z (decisione B). Il segmento interno mantiene la semantica di sempre —
+   due punti spostati, nessuno inserito — e una prova lo confronta con la vecchia firma.
+
+Verifica sul canvas, stessi archi di prima:
+
+| arco | prima | dopo |
+|---|---|---|
+| 7 segmenti | 0 maniglie | **4** |
+| 6 segmenti | 0 maniglie | **4** |
+| 5 segmenti | 1 maniglia | **5** |
+
+## 12. Difetto 2 — non riprodotto nemmeno sul canvas
+
+D2a (nessun `d` con piu' di un `M`) e D2b (ogni capo d'arco su un handle) passano su
+tutti e diciotto gli archi, prima e dopo la fetta. Il frammento a L non si vede in
+questa scena.
+
+Cosa vuol dire, e cosa no: la sonda ricostruisce la macchina Heater **con una
+disposizione scelta da me**, non quella dello screenshot, e senza passare
+dall'importazione da file. Non e' la riproduzione dello stato di Alfonso, e il difetto
+resta aperto. Il candidato del §3 — trabocco del pool di handle — non e' escluso: con
+320 handle nel pool e sette composizioni su Heater la scena non arriva a saturare.
+**Serve la disposizione vera**: lo screenshot con l'elemento ispezionato, oppure le
+coordinate dei nodi come stanno nel progetto di Alfonso.
+
+## 13. Verifica della fetta 1
+
+| gate | esito |
+|---|---|
+| `npx tsc --noEmit` | **33**, baseline invariata |
+| `npm run build` | verde, solo l'avviso preesistente sui chunk |
+| vitest `editor-v2` | **628/628** su 31 file (+10 prove) |
+| vitest intero | **1525** passate |
+| `npm run smoke` | 12 passate, 0 fallite, 3 saltate |
+| sonda `_tmp_dense.ts` | **9/10**: D1, D2a, D2b, D4 e tutti i D5 verdi; resta rosso il solo D3 |
+
+D3 resta rosso per costruzione: e' la fetta 2. Misura invariata, 44 coppie di segmenti
+paralleli sotto gli 8px su 95 segmenti, con minimi a 0,00px.
+
+## 14. Cambiamenti di comportamento dichiarati
+
+1. **`applyBundleSpread` ora si applica anche agli archi con waypoint**, prima saltati.
+   Conserva il numero di punti, quindi nessun indice persistito si sposta; l'effetto
+   visivo e' che un arco con waypoint dentro un fascio ora prende anche lo scostamento
+   di corridoio.
+2. **Le maniglie compaiono su ogni segmento**, terminali inclusi. Un arco a una svolta
+   passa da zero maniglie a due.
+3. **Registrazione degli incroci e rilevazione** ora leggono la polilinea **resa** (dopo
+   i waypoint) invece di quella pre-waypoint: gli archi-ponte finiscono dove la linea
+   passa davvero.

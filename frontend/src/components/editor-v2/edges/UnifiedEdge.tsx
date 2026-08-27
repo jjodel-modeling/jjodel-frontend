@@ -20,12 +20,12 @@ import {
     getNodeRect,
     computeLabelPosition,
     computeLabelAnchor,
+    applyWaypointsWithMap,
     computeCardinalityPosition,
     computeCardinalityAnchor,
     CARD_BOX_GAP,
     MARKER_APPROACH_RUN,
     parsePathPoints,
-    applyWaypoints,
     pointsToPath,
     getSideFromHandle,
     registerEdgePath,
@@ -228,13 +228,16 @@ function UnifiedEdge(props: EdgeProps) {
         return { d, labelX, labelY };
     }, [isNonOrthogonalIR, irRouting, sourceX, sourceY, sourceSide, targetX, targetY, targetSide]);
 
-    // ─── Pipeline: parse → apply waypoints → bundle spread → round corners ───
+    // ─── Pipeline: parse → bundle spread → evitamento → waypoint → round corners ───
+    //
+    // I waypoint dell'utente sono passati **in fondo** (prima stavano subito dopo il
+    // router). Cosi' il loro indice di segmento si riferisce alla polilinea che
+    // l'utente vede davvero, ed e' quello che permette alle maniglie di comparire su
+    // ogni segmento reso invece che su quelli del tracciato pre-evitamento — dove un
+    // arco ri-instradato ne aveva meno di tre e non ne mostrava nessuna.
+    // `applyBundleSpread` conserva il numero di punti (agisce solo su polilinee a 4),
+    // quindi gli indici gia' persistiti restano validi.
     const rawPoints = useMemo(() => parsePathPoints(rawPath), [rawPath]);
-    const adjustedPoints = useMemo(
-        () => (waypoints.length > 0 ? applyWaypoints(rawPoints, waypoints) : rawPoints),
-        [rawPoints, waypoints]
-    );
-    const adjustedPath = useMemo(() => pointsToPath(adjustedPoints), [adjustedPoints]);
 
     // Bundle center: midpoint between the two node centers. A single reference
     // shared by every edge of the pair, so applyBundleSpread orders each edge's
@@ -255,9 +258,9 @@ function UnifiedEdge(props: EdgeProps) {
     // (waypoints empty) and the edge is not inheritance (which uses tree layout).
     // For self-loop / L-shape / U-detour, applyBundleSpread returns input unchanged.
     const spreadPoints = useMemo(() => {
-        if (isInheritance || isSelfLoop || waypoints.length > 0) return adjustedPoints;
-        return applyBundleSpread(adjustedPoints, bundleCenter);
-    }, [adjustedPoints, bundleCenter, isInheritance, isSelfLoop, waypoints]);
+        if (isInheritance || isSelfLoop) return rawPoints;
+        return applyBundleSpread(rawPoints, bundleCenter);
+    }, [rawPoints, bundleCenter, isInheritance, isSelfLoop]);
     // Anti-collisione (Fase B del punto 1, 2026-08-25): il router resta intatto e
     // questo passaggio guarda la polilinea gia' pronta — dopo i waypoint e dopo lo
     // spread, cioe' dove il criterio si misura davvero — e la ri-instrada solo se
@@ -284,7 +287,16 @@ function UnifiedEdge(props: EdgeProps) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [spreadPoints, allEdges, isSelfLoop, isNonOrthogonalIR, waypoints, isInheritance, isGrouped]);
 
-    const spreadPath = useMemo(() => pointsToPath(routedPoints), [routedPoints]);
+    // I waypoint chiudono la catena: sono l'ultima parola sul tracciato (R-B10).
+    // `segmentMap` dice dove ogni segmento del router e' finito dopo la
+    // trasformazione, ed e' quello che tiene allineate maniglia e segmento governato.
+    const waypointed = useMemo(
+        () => applyWaypointsWithMap(routedPoints, waypoints),
+        [routedPoints, waypoints],
+    );
+    const drawnPoints = waypointed.points;
+    const spreadPath = useMemo(() => pointsToPath(drawnPoints), [drawnPoints]);
+    const basePath = useMemo(() => pointsToPath(routedPoints), [routedPoints]);
 
     // ─── Register path for crossing detection ───
     // Grouped inheritance edges skip individual registration: their Manhattan
@@ -300,9 +312,9 @@ function UnifiedEdge(props: EdgeProps) {
     useEffect(() => {
         if (isInheritance && isGrouped) return;
         if (isNonOrthogonalIR) return;
-        registerEdgePath(id, routedPoints, source, target, treeGroupId);
+        registerEdgePath(id, drawnPoints, source, target, treeGroupId);
         return () => unregisterEdgePath(id);
-    }, [id, routedPoints, source, target, treeGroupId, isInheritance, isGrouped, isNonOrthogonalIR]);
+    }, [id, drawnPoints, source, target, treeGroupId, isInheritance, isGrouped, isNonOrthogonalIR]);
 
     // ─── Detect crossings with other edges ───
     // Scope detection to the current React Flow canvas by passing the active node IDs.
@@ -311,9 +323,9 @@ function UnifiedEdge(props: EdgeProps) {
     // re-rendering this edge on unrelated node changes. Recompute triggers: own
     // path (spreadPoints) and any edges-array change (allEdges).
     const crossings = useMemo(
-        () => (isNonOrthogonalIR ? [] : getEdgeCrossings(id, routedPoints, new Set(getNodes().map(n => n.id)))),
+        () => (isNonOrthogonalIR ? [] : getEdgeCrossings(id, drawnPoints, new Set(getNodes().map(n => n.id)))),
         // eslint-disable-next-line react-hooks/exhaustive-deps
-        [id, routedPoints, allEdges, isNonOrthogonalIR]
+        [id, drawnPoints, allEdges, isNonOrthogonalIR]
     );
 
     // ─── Self-loop corner geometry (source === target) ───
@@ -359,10 +371,10 @@ function UnifiedEdge(props: EdgeProps) {
         // useTreeLayout, che non passa nessuna politica.
         const rounding = isInheritance ? undefined : REFERENCE_ROUNDING;
         if (crossings.length > 0) {
-            return buildFinalPath(routedPoints, crossings, 4, 6, rounding);
+            return buildFinalPath(drawnPoints, crossings, 4, 6, rounding);
         }
         return roundManhattanPath(spreadPath, 4, rounding);
-    }, [spreadPath, routedPoints, crossings, isSelfLoop, selfLoopGeom, irRoutedGeom, isInheritance, sourceX, sourceY, targetX, targetY]);
+    }, [spreadPath, drawnPoints, crossings, isSelfLoop, selfLoopGeom, irRoutedGeom, isInheritance, sourceX, sourceY, targetX, targetY]);
 
     // De-overlap shifts precomputed in EditorV2.applyDistribution (0 when no bundle/collision).
     const roleArcShift = edgeData?.roleArcShift ?? 0;
@@ -413,8 +425,8 @@ function UnifiedEdge(props: EdgeProps) {
         // Just outside the target box at the entry handle, per-side corner clearance.
         // `routedPoints` dice da che parte arriva il tracciato: la molteplicita' si
         // posa sul fianco opposto, quello che la linea non occupa.
-        return computeCardinalityAnchor(targetX, targetY, targetSide, CARD_BOX_GAP, cardinalityShift, routedPoints);
-    }, [isSelfLoop, selfLoopGeom, spreadPath, routedPoints, targetX, targetY, targetSide, cardinalityShift]);
+        return computeCardinalityAnchor(targetX, targetY, targetSide, CARD_BOX_GAP, cardinalityShift, drawnPoints);
+    }, [isSelfLoop, selfLoopGeom, spreadPath, drawnPoints, targetX, targetY, targetSide, cardinalityShift]);
 
     // ─── ISA label midpoint (inheritance ER notation) ───
     const midPoint = useMemo(() => {
@@ -882,7 +894,9 @@ function UnifiedEdge(props: EdgeProps) {
             {!isSelfLoop && !isNonOrthogonalIR && (
                 <SegmentHandles
                     edgeId={id}
-                    adjustedPath={adjustedPath}
+                    basePath={basePath}
+                    drawnPath={spreadPath}
+                    segmentMap={waypointed.segmentMap}
                     waypoints={waypoints}
                     selected={!!selected}
                 />

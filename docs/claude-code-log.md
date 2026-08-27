@@ -8113,3 +8113,16 @@ Dark mode overrides for `.toolbar-btn` also scoped under `.documentation-toolbar
 **Smoke visivo**: non applicabile
 **Notes**: sonda deterministica (LCG seminato), 40 scene da 10 nodi e 18 archi. Difetto 1: l'inclinazione nasce **solo** in `avoidNodeRects` (0 dopo il router, 0 dopo lo spread, 113/720 dopo), dalla griglia a mezzo pixel di `edgeUtils.ts:2109` contro ancore a frazione `(k+1)/(N+1)`. Difetto 5: 412/720 archi senza maniglie contro 14/720 con la regola dei lati precedente — la L a due segmenti non ne ha nessuna. Difetto 2 **non riprodotto**, zero spur: serve il DOM.
 **Prompt document name**: 2026-08-27 14:10 dense_diagram_five_defects
+
+## 2026-08-27 — fix(editor-v2): tracciati assiali e maniglie su ogni segmento (fetta 1)
+**Prompt**: fetta 1 dei cinque difetti del diagramma denso — quantizzazione ortogonale (difetto 1), maniglie di segmento sugli archi auto-instradati con la maniglia sulla L che spezza in Z (difetto 5, decisione B), e sonda che importa il fixture per lo stub orfano (difetto 2).
+**Files touched**: editor-v2/utils/edgeUtils.ts (griglia delle corsie coi soli ostacoli arrotondati, `snapAxial` nuova, `applyWaypointsWithMap` nuova coi waypoint sui segmenti terminali), editor-v2/edges/SegmentHandles.tsx (indici sulla polilinea del router, posizioni su quella resa, una maniglia per ogni segmento), editor-v2/edges/UnifiedEdge.tsx (i waypoint chiudono la catena invece di aprirla; incroci e registrazione sulla polilinea resa), utils/__tests__/nodeAvoidance.test.ts (+4), utils/__tests__/edgeUtils.test.ts (+6), docs/discovery/discovery_2026-08-27_2_dense_diagram_routing.md, docs/claude-code-log.md.
+**Outcome**: ⚠️ partial (difetti 1 e 5 chiusi e verificati; il 2 non si riproduce nemmeno sul canvas e resta aperto; 3 e 4 sono la fetta 2)
+**Corregge**: 2026-08-27 13:10 (il difetto 5 nasce dalla L preferita da quel commit, ma la causa misurata e' piu' vecchia)
+**Causa**: (c)
+**Regressions**: no (typecheck 33 = baseline; build exit 0; vitest editor-v2 628/628, suite intera 1525 passate; smoke 12/0/3; sonda del diagramma denso 9/10, rosso il solo D3 che e' la fetta 2)
+**Out-of-scope changes**: no (i tre file di sorgente e i due di test del perimetro confermato al hard stop)
+**Layer Impact Report**: not-required (nessun file di §3.1)
+**Smoke visivo**: passato. Sonda `_tmp_dense.ts` sulla macchina Heater, dieci nodi e diciotto archi: D1 verde su 18 archi su 18 (prima 5 inclinati), D5 verde su tutti gli archi provati (7 segmenti 0→4 maniglie, 6 segmenti 0→4, 5 segmenti 1→5). D2a e D2b verdi prima e dopo: il frammento orfano non si vede in questa scena.
+**Notes**: la misura ha corretto la mia diagnosi. Non erano le L a due segmenti: archi con sei e sette segmenti resi mostravano zero maniglie, perche' `SegmentHandles` leggeva la polilinea **prima** dell'evitamento. Due trappole di metodo, entrambe misurate: la selezione dell'arco andava verificata (il click cadeva altrove) e la tolleranza di ortogonalita' a 0,5px dichiarava verde un tratto inclinato di 0,19px. Dettagli in `discovery_2026-08-27_2_dense_diagram_routing.md` §9-14.
+**Prompt document name**: 2026-08-27 14:40 dense_slice1_axial_handles

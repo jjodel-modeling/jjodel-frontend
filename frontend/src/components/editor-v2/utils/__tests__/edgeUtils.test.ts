@@ -13,6 +13,9 @@
  */
 import { describe, it, expect } from 'vitest';
 import {
+    applyWaypoints,
+    applyWaypointsWithMap,
+    getPathSegments,
     roundManhattanPath,
     buildFinalPath,
     computeManhattanPath,
@@ -221,5 +224,62 @@ describe('molteplicità dal lato che il tracciato non occupa', () => {
         const straight = [{ x: 100, y: 100 }, { x: 100, y: 200 }];
         expect(computeCardinalityAnchor(100, 200, 'top', 8, 0, straight))
             .toBe(computeCardinalityAnchor(100, 200, 'top', 8));
+    });
+});
+
+describe('waypoint sui segmenti terminali', () => {
+    // Una L: esce orizzontale da A, entra verticale in B.
+    const L = [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 300 }];
+
+    it('senza waypoint torna lo stesso riferimento e la mappa identita\'', () => {
+        const r = applyWaypointsWithMap(L, []);
+        expect(r.points).toBe(L);
+        expect(r.segmentMap).toEqual([0, 1]);
+    });
+
+    it('un segmento interno si sposta in blocco, come da sempre', () => {
+        // Questa e' la semantica preesistente, e resta byte-identica: due punti
+        // spostati, nessun punto inserito.
+        const Z = [{ x: 0, y: 0 }, { x: 50, y: 0 }, { x: 50, y: 200 }, { x: 150, y: 200 }];
+        const r = applyWaypointsWithMap(Z, [{ segmentIndex: 1, offset: 25 }]);
+        expect(pointsToPath(r.points)).toBe('M 0 0 L 75 0 L 75 200 L 150 200');
+        expect(r.points).toHaveLength(Z.length);
+        expect(r.segmentMap).toEqual([0, 1, 2]);
+        // e la vecchia firma concorda con la nuova
+        expect(applyWaypoints(Z, [{ segmentIndex: 1, offset: 25 }])).toEqual(r.points);
+    });
+
+    it('il primo segmento si sposta con una gomitata, l\'ancora non si muove', () => {
+        const r = applyWaypointsWithMap(L, [{ segmentIndex: 0, offset: 20 }]);
+        expect(pointsToPath(r.points)).toBe('M 0 0 L 16 0 L 16 20 L 100 20 L 100 300');
+        // L'ancora sorgente e' esattamente quella ricevuta...
+        expect(r.points[0]).toEqual(L[0]);
+        // ...e il tratto che ne esce e' ancora perpendicolare al suo lato.
+        expect(r.points[1].y).toBe(L[0].y);
+        // La L e' diventata una Z: il segmento interno ora esiste.
+        expect(r.points.length).toBeGreaterThan(L.length);
+    });
+
+    it('l\'ultimo segmento fa lo stesso dalla parte dell\'arrowhead', () => {
+        const r = applyWaypointsWithMap(L, [{ segmentIndex: 1, offset: 30 }]);
+        expect(pointsToPath(r.points)).toBe('M 0 0 L 130 0 L 130 284 L 100 284 L 100 300');
+        expect(r.points[r.points.length - 1]).toEqual(L[2]);
+        // L'ingresso resta verticale, come il lato del target chiede.
+        expect(r.points[r.points.length - 2].x).toBe(L[2].x);
+    });
+
+    it('la mappa punta al segmento che il waypoint governa davvero', () => {
+        const r = applyWaypointsWithMap(L, [{ segmentIndex: 0, offset: 20 }]);
+        const segs = getPathSegments(pointsToPath(r.points));
+        const governed = segs[r.segmentMap[0]];
+        // Il segmento 0 in ingresso e' l'orizzontale spostato a y = 20.
+        expect(governed.isHorizontal).toBe(true);
+        expect(governed.midY).toBe(20);
+    });
+
+    it('con varco stretto la gomitata non supera meta\' del tratto', () => {
+        const shortL = [{ x: 0, y: 0 }, { x: 20, y: 0 }, { x: 20, y: 300 }];
+        const r = applyWaypointsWithMap(shortL, [{ segmentIndex: 0, offset: 12 }]);
+        expect(r.points[1].x).toBe(10); // min(16, 20/2)
     });
 });
