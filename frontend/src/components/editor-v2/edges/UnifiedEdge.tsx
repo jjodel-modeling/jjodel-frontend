@@ -37,6 +37,7 @@ import {
 } from '../utils/edgeUtils';
 import { MAX_HANDLES_PER_SIDE } from '../utils/portDistribution';
 import { applyBundleSpread } from './bundleSpread';
+import { applyLaneShifts, getLaneShifts, laneShiftsRevision } from '../utils/edgeLanes';
 import { useEditorContextSafe } from '../contexts/EditorContext';
 import { useEdgeHighlightClass } from '../contexts/HighlightContext';
 import { useTreeLayout } from '../hooks/useTreeLayout';
@@ -257,6 +258,10 @@ function UnifiedEdge(props: EdgeProps) {
     // Bundle spread: only applied when the user hasn't customized the routing
     // (waypoints empty) and the edge is not inheritance (which uses tree layout).
     // For self-loop / L-shape / U-detour, applyBundleSpread returns input unchanged.
+    // Lo scostamento di corsia arriva da `EditorV2.applyDistribution`, che e' l'unico
+    // punto che vede tutti gli archi insieme: il ventaglio di `applyBundleSpread`
+    // separa i corridoi della stessa coppia di nodi, la corsia quelli di coppie
+    // diverse. Fuori dalla Z a quattro punti sono entrambi no-op per riferimento.
     const spreadPoints = useMemo(() => {
         if (isInheritance || isSelfLoop) return rawPoints;
         return applyBundleSpread(rawPoints, bundleCenter);
@@ -287,16 +292,32 @@ function UnifiedEdge(props: EdgeProps) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [spreadPoints, allEdges, isSelfLoop, isNonOrthogonalIR, waypoints, isInheritance, isGrouped]);
 
+    // Le corsie: separano i corridoi contesi da archi DIVERSI, e arrivano da
+    // `EditorV2.applyDistribution`, l'unico punto che vede tutti gli archi insieme.
+    // Si applicano dopo l'evitamento — e' li' che nascono i segmenti interni che si
+    // contendono i corridoi — e prima dei waypoint, che restano l'ultima parola.
+    // Un arco con waypoint non prende corsie: il suo tracciato e' dell'utente.
+    // Il registro si rilegge quando cambia l'array degli archi — la stessa
+    // dipendenza con cui questo componente rilegge il registro dei tracciati per gli
+    // incroci — oppure quando la polilinea cambia. `laneShiftsRevision()` entra fra
+    // le dipendenze perche' una riscrittura del registro a parita' di archi (nodi
+    // spostati, handle invariati) si veda comunque.
+    const lanedPoints = useMemo(() => {
+        if (isSelfLoop || isNonOrthogonalIR || waypoints.length > 0) return routedPoints;
+        return applyLaneShifts(routedPoints, getLaneShifts(id));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [id, routedPoints, allEdges, laneShiftsRevision(), isSelfLoop, isNonOrthogonalIR, waypoints]);
+
     // I waypoint chiudono la catena: sono l'ultima parola sul tracciato (R-B10).
     // `segmentMap` dice dove ogni segmento del router e' finito dopo la
     // trasformazione, ed e' quello che tiene allineate maniglia e segmento governato.
     const waypointed = useMemo(
-        () => applyWaypointsWithMap(routedPoints, waypoints),
-        [routedPoints, waypoints],
+        () => applyWaypointsWithMap(lanedPoints, waypoints),
+        [lanedPoints, waypoints],
     );
     const drawnPoints = waypointed.points;
     const spreadPath = useMemo(() => pointsToPath(drawnPoints), [drawnPoints]);
-    const basePath = useMemo(() => pointsToPath(routedPoints), [routedPoints]);
+    const basePath = useMemo(() => pointsToPath(lanedPoints), [lanedPoints]);
 
     // ─── Register path for crossing detection ───
     // Grouped inheritance edges skip individual registration: their Manhattan

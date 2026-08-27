@@ -8126,3 +8126,16 @@ Dark mode overrides for `.toolbar-btn` also scoped under `.documentation-toolbar
 **Smoke visivo**: passato. Sonda `_tmp_dense.ts` sulla macchina Heater, dieci nodi e diciotto archi: D1 verde su 18 archi su 18 (prima 5 inclinati), D5 verde su tutti gli archi provati (7 segmenti 0→4 maniglie, 6 segmenti 0→4, 5 segmenti 1→5). D2a e D2b verdi prima e dopo: il frammento orfano non si vede in questa scena.
 **Notes**: la misura ha corretto la mia diagnosi. Non erano le L a due segmenti: archi con sei e sette segmenti resi mostravano zero maniglie, perche' `SegmentHandles` leggeva la polilinea **prima** dell'evitamento. Due trappole di metodo, entrambe misurate: la selezione dell'arco andava verificata (il click cadeva altrove) e la tolleranza di ortogonalita' a 0,5px dichiarava verde un tratto inclinato di 0,19px. Dettagli in `discovery_2026-08-27_2_dense_diagram_routing.md` §9-14.
 **Prompt document name**: 2026-08-27 14:40 dense_slice1_axial_handles
+
+## 2026-08-27 — feat(editor-v2): corsie separate per i corridoi condivisi (fetta 2)
+**Prompt**: fetta 2 dei difetti del diagramma denso — segmenti paralleli di archi diversi nello stesso corridoio distanziati almeno 8px, con offset stabile e deterministico; il tratto d'approccio (12-16px ai due capi) escluso dalle corsie condivise. Criterio di chiusura: D3 e D4 verdi sulla sonda del diagramma denso, gli altri nove check invariati.
+**Files touched**: editor-v2/utils/edgeLanes.ts (nuovo: raccolta dei segmenti, corridoi per componenti connesse, scala di corsie con veto sugli ostacoli d'approccio, registro a livello di modulo, ricostruzione della geometria), editor-v2/EditorV2.tsx (`applyDistribution` riempie il registro), editor-v2/edges/UnifiedEdge.tsx (legge il registro e applica gli scostamenti dopo l'evitamento e prima dei waypoint), utils/__tests__/edgeLanes.test.ts (nuovo, 12 prove), docs/discovery/discovery_2026-08-27_2_dense_diagram_routing.md, docs/claude-code-log.md.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (typecheck 33 = baseline; build exit 0; vitest editor-v2 640/640 su 32 file, suite intera 1537 passate coi 9 file rotti all'import = baseline nota; smoke 12/0/3; sonda del diagramma denso 10/10)
+**Out-of-scope changes**: no (il modulo nuovo, i due file del perimetro confermato e il suo test)
+**Layer Impact Report**: not-required (nessun file di §3.1: il registro a livello di modulo esiste proprio per non toccare `useJjomSync.ts`)
+**Smoke visivo**: passato. Sonda `_tmp_dense.ts`, macchina Heater: D3 da 44 coppie sotto gli 8px su 95 segmenti a **zero**, D4 verde, gli altri otto check invariati. 10/10.
+**Notes**: due misure hanno cambiato il disegno. (1) `applyDistribution` non puo' scrivere su `edge.data`: `useJjomSync.ts:1411-1415` preserva **solo** gli handle, e le chiavi di data sull'arco reso sono `["referenceName","referenceId"]`. Da qui il registro a livello di modulo, che evita la critical zone. (2) L'ancora resa sta 4px fuori dal bordo mentre `computeHandlePositionForNode` la da' sul bordo. Ricadute a parte in `discovery_2026-08-27_2_dense_diagram_routing.md` §16.
+**Prompt document name**: 2026-08-27 21:50 dense_slice2_lanes

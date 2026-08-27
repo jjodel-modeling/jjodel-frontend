@@ -45,6 +45,7 @@ import ContextMenu, { type ContextMenuItem } from './ContextMenu';
 import { useHistory } from './hooks/useHistory';
 import { useAlignment } from './hooks/useAlignment';
 import { useAutoAnchor, computeAnchorsWithHysteresis, getNodeRect, computeGeometricAnchorsForAllEdges } from './hooks/useAutoAnchor';
+import { computeLaneShifts, laneEdgesFromLayout, setLaneShifts } from './utils/edgeLanes';
 import { reduceReLayout, countReferenceEdges, INITIAL_RELAYOUT_STATE, type ReLayoutState, type ReLayoutEvent } from './utils/reLayoutWatcher';
 // Viewport-only helper (F3): reserve room for the floating overlay in fit/centering.
 import { fitPadding, getCanvasRightInset } from './viewportInset';
@@ -1235,6 +1236,25 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             const center = (ids.length - 1) / 2;
             ids.forEach((id, i) => roleShift.set(id, (i - center) * ROLE_ARC_STEP));
         }
+
+        // (C) Corsie — separazione dei corridoi condivisi da archi DIVERSI.
+        // `applyBundleSpread` copre solo gli archi della stessa coppia di nodi; fra
+        // coppie diverse i corridoi si sovrapponevano (misurato: 44 coppie sotto gli
+        // 8px su 95 segmenti). Qui la geometria si ricostruisce con la stessa catena
+        // che `UnifiedEdge` percorre — gli handle appena distribuiti, non quelli
+        // dell'arco in ingresso — e i tratti d'approccio entrano come ostacoli fissi.
+        setLaneShifts(computeLaneShifts(laneEdgesFromLayout(
+            edgeList.map(e => ({
+                id: e.id,
+                source: e.source,
+                target: e.target,
+                sourceHandle: edgeHandles.get(e.id)?.sourceHandle ?? e.sourceHandle,
+                targetHandle: edgeHandles.get(e.id)?.targetHandle ?? e.targetHandle,
+                type: e.type,
+            })),
+            positions,
+            currentNodes.filter(n => !n.hidden).map(n => getNodeRect(n)).filter(r => r.width > 0 && r.height > 0),
+        )));
 
         return edgeList.map(edge => {
             const distributed = edgeHandles.get(edge.id);

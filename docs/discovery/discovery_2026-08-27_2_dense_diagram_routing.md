@@ -377,3 +377,149 @@ paralleli sotto gli 8px su 95 segmenti, con minimi a 0,00px.
 3. **Registrazione degli incroci e rilevazione** ora leggono la polilinea **resa** (dopo
    i waypoint) invece di quella pre-waypoint: gli archi-ponte finiscono dove la linea
    passa davvero.
+
+---
+
+# Fase 2, fetta 2 — corsie e tratto d'approccio (2026-08-27)
+
+Via libera di Alfonso col criterio di chiusura: D3 verde sulla sonda (zero coppie sotto
+gli 8px), D4 verde, gli altri nove check invariati.
+
+## 15. Cosa è stato scritto
+
+**`utils/edgeLanes.ts` (nuovo, puro)**. Raccoglie i segmenti in gioco, li raggruppa in
+corridoi contesi, e assegna a ciascun segmento interno uno scostamento perpendicolare.
+
+- **Mobili**: tutti i segmenti *interni*, quelli che non toccano un'ancora.
+- **Fissi**: i due tratti d'approccio di ogni arco, troncati a 16px. Non si spostano —
+  staccherebbero la linea dall'ancora — e sono i corridoi a scansarli. Un arco a due
+  soli segmenti (una L) contribuisce quindi solo ostacoli.
+- **Ordine**: posizione fisica sull'asse trasversale, poi id dell'arco, poi indice di
+  segmento. Nessuno dei tre dipende dall'ordine di rendering. La posizione fisica viene
+  prima dell'id di proposito: è la stessa grandezza su cui `computeSidePositions`
+  ordina le ancore, e mettere l'id davanti farebbe incrociare i corridoi invece di
+  annidarli — il difetto S1 che `applyBundleSpread` esiste per evitare.
+- **Passo**: un pixel sopra il criterio, per la stessa ragione di `AVOID_LANE` in
+  `avoidNodeRects` — il criterio chiede `>= 8`, non `> 8`, e la geometria su cui la
+  scala si calcola è ricostruita, non letta dal DOM. Senza quel pixel una coppia
+  restava a 7,86px: misurato.
+- **Applicazione**: `applyLaneShifts` delega ad `applyWaypoints`. Spostare un segmento
+  interno perpendicolarmente è la stessa identica operazione del trascinamento di una
+  maniglia, e riusare la funzione garantisce che corsia automatica e correzione manuale
+  non possano divergere. Una prova lo asserisce.
+
+**`EditorV2.tsx`**: `applyDistribution` ricostruisce le polilinee e riempie il registro.
+
+**`UnifiedEdge.tsx`**: legge il registro e applica gli scostamenti **dopo**
+l'evitamento — è lì che nascono i segmenti interni che si contendono i corridoi — e
+**prima** dei waypoint, che restano l'ultima parola (R-B10). Un arco con waypoint non
+prende corsie.
+
+## 16. Due misure che hanno cambiato il disegno
+
+### 16.1 `applyDistribution` non può scrivere su `edge.data`: la sincro lo cancella
+
+Il primo disegno passava gli scostamenti su `edge.data.laneShift`, come già fanno
+`cardinalityShift` e `roleArcShift`. Misurato: **arrivavano zero**. Le chiavi di
+`data` sull'arco reso sono `["referenceName","referenceId"]` e nient'altro — cioè
+esattamente quello che `jjomEdgeToRFEdge` costruisce.
+
+La causa è a `useJjomSync.ts:1411-1415`, e il commento la dichiara:
+
+```typescript
+const rfEdge = jjomEdgeToRFEdge(lProxy);
+if (rfEdge) {
+    // Preserve handles from applyDistribution
+    const existing = rfEdgeCache.current.get(id);
+    if (existing) {
+        rfEdge.sourceHandle = existing.sourceHandle;
+        rfEdge.targetHandle = existing.targetHandle;
+    }
+```
+
+Si preservano **solo** gli handle. Tutto `data` viene sostituito dall'oggetto nuovo. E
+la rete di sicurezza di `EditorV2` non recupera: il suo `topologyKey` è fatto di id e
+handle, che non cambiano, quindi non riesegue la distribuzione.
+
+Da qui la scelta del **registro a livello di modulo** invece di `edge.data`: è lo
+stesso schema che il codebase usa già per i tracciati e gli incroci
+(`registerEdgePath` / `getEdgeCrossings`), scritto da chi vede tutti gli archi e letto
+in render dentro una memo che dipende dall'array degli archi. Soprattutto, resta fuori
+dalla critical zone: preservare `data` attraverso la sincro vorrebbe toccare
+`useJjomSync.ts`, che è §3.1 e richiede go-ahead e Layer Impact Report.
+
+**Ricaduta da guardare, fuori da questa fetta**: sullo stesso percorso si perdono anche
+`cardinalityShift`, `roleArcShift`, `sourceAnchor` e `targetAnchor`. I primi due sono
+calcolati solo per `type === 'reference'` (M2) mentre la scena misurata è M1, quindi
+**non ho verificato se siano morti anche sul metamodello**: lì la misura va rifatta,
+non dedotta.
+
+### 16.2 L'ancora resa sta 4px fuori dal bordo
+
+`computeHandlePositionForNode` restituisce il punto **sul** bordo del nodo; React Flow
+consegna all'arco il centro dell'handle, che il pool disegna appena fuori. Misurato su
+tutti e diciotto gli archi della scena, senza eccezioni:
+
+```
+bottom  n=11  scarto = +4
+left    n= 6  scarto = -4
+top     n=14  scarto = -4
+right   n= 5  scarto = +4
+```
+
+Con la ricostruzione sul bordo, le polilinee ricostruite avevano una forma diversa da
+quelle rese e gli indici di segmento finivano su un altro segmento: 4 coppie restavano
+sotto soglia. Aggiunto lo scarto, la corrispondenza è esatta.
+
+**Ricaduta da guardare, fuori da questa fetta**: `useTreeLayout` usa la stessa funzione
+per far atterrare i rami del connettore d'ereditarietà, quindi ha presumibilmente lo
+stesso scarto di 4px. Non l'ho misurato e non l'ho toccato.
+
+## 17. Verifica
+
+| gate | esito |
+|---|---|
+| `npx tsc --noEmit` | **33**, baseline invariata |
+| `npm run build` | verde, solo l'avviso preesistente sui chunk |
+| vitest `editor-v2` | **640/640** su 32 file (+12 prove) |
+| vitest intero | **1537** passate; i 9 file rotti all'import restano la baseline nota |
+| `npm run smoke` | 12 passate, 0 fallite, 3 saltate |
+| sonda `_tmp_dense.ts` | **10/10 PASS** |
+
+Progressione misurata di D3, sulla stessa scena:
+
+| stato | coppie sotto gli 8px |
+|---|---|
+| prima della fetta | **44** su 95 segmenti |
+| corsie su `edge.data` (scritte e cancellate) | 44 |
+| corsie dal registro, ricostruzione sul bordo | 4 |
+| più lo scarto di 4px dell'ancora | 1 (a 7,86px) |
+| più il passo a criterio + 1 | **0** |
+
+## 18. Il verde di D4 sulla sonda è vuoto, e la prova che lo riempie
+
+D4 era verde **prima e dopo**: quella scena non produce nessuna sovrapposizione sul
+tratto d'approccio, quindi da sola non dimostra nulla (CLAUDE.md §5). La prova che vale
+è unitaria e costruisce apposta lo stato in cui il criterio fallirebbe — due corridoi
+sulla stessa ascissa e un ostacolo d'approccio proprio lì — e verifica che la scala si
+scosti. Ha il suo **controllo negativo**: disattivando la ricerca della traslazione,
+fallisce (1 failed / 11 passed).
+
+## 19. Limiti dichiarati
+
+1. **Corridoio insoddisfacibile**: quando nessuna traslazione libera gli ostacoli, la
+   scala resta dov'è. Si degrada al tracciato di prima invece di produrne uno peggiore
+   — la stessa politica di `avoidNodeRects`.
+2. **Gli archi con waypoint non prendono corsie**: il loro tracciato è dell'utente
+   (R-B10). Contribuiscono però i loro ostacoli d'approccio, quindi gli altri li
+   scansano.
+3. **Le L non si separano fra loro**: un arco a due segmenti non ha segmenti interni,
+   quindi nella scena misurata contribuisce solo ostacoli. Se due L finissero
+   affiancate, l'unica leva sarebbe spostare l'ancora lungo il lato — la multi-porta
+   che il prompt cita come fallback. Non è servita qui e non l'ho implementata:
+   toccherebbe `portDistribution.ts`, che è critical zone.
+4. **La ricostruzione è una seconda copia della catena**. Router, ventaglio ed
+   evitamento vengono rieseguiti in `applyDistribution` per sapere dove cadono i
+   corridoi. Se la catena in `UnifiedEdge` cambia senza che cambi qui, gli indici di
+   segmento si disallineano — e il sintomo è silenzioso, il tracciato semplicemente non
+   si sposta. La sonda lo intercetta, ed è la ragione per cui esiste.
