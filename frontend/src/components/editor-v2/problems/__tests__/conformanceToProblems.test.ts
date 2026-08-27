@@ -35,6 +35,22 @@ describe('aggregateConformanceByObject', () => {
         expect(aggregateConformanceByObject(r)).toEqual([]);
     });
 
+    it('carries metamodelElementName through to the aggregate', () => {
+        // The name of the violated metamodel element is what lets a consumer attach the
+        // violation to a field. It was being dropped in the push, which is why the form
+        // could count problems but never point at one.
+        const r = result('m', [
+            v({ objectId: 'A', violationType: 'missing_required_attr', severity: 'error', message: 'kind is required', metamodelElementName: 'kind' }),
+            // A check that names a CLASS, not a feature: same field, different meaning, and
+            // the aggregate must not try to tell them apart.
+            v({ objectId: 'A', violationType: 'abstract_instantiation', severity: 'error', message: 'abstract', metamodelElementName: 'State' }),
+            // A violation that names nothing stays undefined rather than becoming ''.
+            v({ objectId: 'A', violationType: 'check_failed', severity: 'warning', message: 'skipped' }),
+        ]);
+        const out = aggregateConformanceByObject(r);
+        expect(out[0].violations.map(x => x.metamodelElementName)).toEqual(['kind', 'State', undefined]);
+    });
+
     it('aggregates multiple violations of one object into a single entry', () => {
         const r = result('m', [
             v({ objectId: 'A', objectName: 'A_0', violationType: 'missing_required_attr', severity: 'error', message: 'e1' }),

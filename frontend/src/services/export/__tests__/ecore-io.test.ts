@@ -249,3 +249,77 @@ describe('XMI M1 import — riuso conformity slot (fix duplicati DValue)', () =>
         expect(m![0]).toMatch(/SetFieldAction\.new\(conformitySlot\.id,\s*'values',\s*target,\s*'\+=',\s*true\)/);
     });
 });
+
+
+/**
+ * StateMachine fixture (form views, slice 1b).
+ *
+ * Structural only, on the files themselves: no end-to-end import runs here, because the
+ * importer needs the store and the L layer, which this suite is deliberately free of. The
+ * import is verified on the browser (criterion V1 of the slice).
+ *
+ * What is worth pinning is that the fixture keeps DECLARING the shapes the form needs. Each
+ * assertion below stands for a widget or a diagnostic, and if someone simplifies the fixture
+ * the form silently loses coverage instead of failing — which is exactly how V3 of slice 1a
+ * ended up unexercised for want of a model with a number in it.
+ */
+describe('Ecore I/O — StateMachine fixture (form views 1b)', () => {
+    const ECORE = path.join(FIXTURE_DIR, 'StateMachine.ecore');
+    const XMI = path.join(FIXTURE_DIR, 'sample-StateMachine.xmi');
+
+    it('both files exist and are well-formed enough to parse as XML', () => {
+        for (const f of [ECORE, XMI]) {
+            expect(fs.existsSync(f)).toBe(true);
+            const xml = fs.readFileSync(f, 'utf8');
+            expect(xml.startsWith('<?xml version="1.0" encoding="UTF-8"?>')).toBe(true);
+            // Tags balance: every '<' that opens an element has a matching close or is
+            // self-closing. A cheap check, but it catches the hand-edit that breaks the file.
+            const opens = (xml.match(/<[A-Za-z][^!?>]*[^/?]>/g) ?? []).length;
+            const closes = (xml.match(/<\/[A-Za-z][^>]*>/g) ?? []).length;
+            expect(opens).toBe(closes);
+        }
+    });
+
+    it('declares one widget-bearing type per form control', () => {
+        const xml = fs.readFileSync(ECORE, 'utf8');
+        expect(xml).toContain('nsURI="http://jjodel.io/fixtures/statemachine"');
+        // select
+        expect(xml).toMatch(/xsi:type="ecore:EEnum"\s+name="StateKind"/);
+        expect((xml.match(/<eLiterals /g) ?? []).length).toBe(3);
+        // number stepper, checkbox
+        expect(xml).toContain('Ecore#//EInt');
+        expect(xml).toContain('Ecore#//EBoolean');
+        // read-only field with the lock glyph
+        expect(xml).toMatch(/name="depth"[\s\S]*?derived="true"/);
+        expect(xml).toMatch(/name="depth"[\s\S]*?changeable="false"/);
+        // a REACHABLE upper bound, so the disabled Add and its tooltip can be reached
+        expect(xml).toMatch(/name="outgoing"[\s\S]*?upperBound="5"/);
+        // chips
+        expect(xml).toMatch(/name="tags"[\s\S]*?upperBound="-1"/);
+        // the required marker
+        expect(xml).toMatch(/name="kind"[\s\S]*?lowerBound="1"/);
+    });
+
+    it('the model instance omits Broken.kind, which is what produces the diagnostic', () => {
+        const xml = fs.readFileSync(XMI, 'utf8');
+        const broken = xml.match(/<states[^>]*name="Broken"[^>]*\/>/);
+        expect(broken).not.toBeNull();
+        // The whole point of that instance: `kind` is [1..1] and absent, so the validator
+        // raises on it and the form has a real message to project onto a real field.
+        expect(broken![0]).not.toContain('kind=');
+        // Every other state does declare it, so exactly one violation is expected.
+        expect((xml.match(/kind="/g) ?? []).length).toBe(5);
+    });
+
+    it('the rich instance carries a value for every widget kind', () => {
+        const xml = fs.readFileSync(XMI, 'utf8');
+        const running = xml.match(/<states[^>]*name="Running"[\s\S]*?<\/states>/);
+        expect(running).not.toBeNull();
+        expect(running![0]).toContain('isHistory="true"');
+        expect(running![0]).toContain('timeout="30"');
+        expect(running![0]).toContain('tags="hot monitored"');
+        expect(running![0]).toContain('entryAction="heater.on()"');
+        expect(running![0]).toMatch(/outgoing="t_stop t_fault"/);
+        expect((running![0].match(/<substates /g) ?? []).length).toBe(2);
+    });
+});

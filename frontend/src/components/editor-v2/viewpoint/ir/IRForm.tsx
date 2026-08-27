@@ -18,14 +18,16 @@
  * the Basic/Advanced mode, which is a property of the viewer, not of the model.
  */
 
-import { useCallback, useMemo, useState } from 'react';
-import { LPointerTargetable } from '../../../../joiner';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { LPointerTargetable, U } from '../../../../joiner';
 import { entityLetter, resolveEntityType } from '../../../../common/entityMeta';
 import { getInterfaceMode } from '../../../../hooks/useInterfaceMode';
 import { SegmentedControl } from '../../../ui';
 import { useIRFormView } from './useIRFormView';
 import { describeSlots, isBasicField, type FormFieldDescriptor } from './useFormWidgets';
 import { setObjectName } from './formWrite';
+import { useNodeProblems } from '../../problems/useNodeProblems';
+import { collectFormDiagnostics } from './formDiagnostics';
 import type { CompiledFieldCompartment, FormSpec, FormTheme } from './irTypes';
 import IRFormField from './IRFormField';
 import TextWidget from './widgets/TextWidget';
@@ -153,6 +155,52 @@ export function IRForm({ objectId, defaultTheme = 'plain' }: IRFormProps) {
     );
 
     const visible = mode === 'advanced' ? fields : fields.filter(f => isBasicField(f, spec));
+
+    // The registry is keyed by node id, and the conformance producer registers every violated
+    // object TWICE — once under its DObject id for the tree, once under its DVertex id for the
+    // canvas (ConformanceProblemSync). The form asks for the DObject id, which is the half that
+    // exists whether or not the object is on a canvas: the rail's subject may have no vertex.
+    const problems = useNodeProblems(objectId);
+    const fieldNames = useMemo(() => new Set(visible.map(f => f.name)), [visible]);
+    const diagnostics = useMemo(
+        () => collectFormDiagnostics(problems, fieldNames),
+        [problems, fieldNames],
+    );
+
+    // Dirty fields, keyed by slot id ('name' for the intrinsic identity field).
+    //
+    // Reset is EVENTUALLY CONSISTENT, and deliberately so: there is no save event to listen
+    // to. `SaveManager.save()` sets `U.isProjectModified = false` and nothing else — no
+    // action, no custom event, no store field — so the flag going false is the only trace a
+    // save leaves. The form reads it on render and empties the set when it finds it false,
+    // which means the markers clear on the first re-render after a save rather than at the
+    // instant of it. Subscribing to the flag is not possible (it is a plain static), and
+    // adding an event to SaveManager is out of this slice's scope.
+    const [dirtyFields, setDirtyFields] = useState<Set<string>>(() => new Set());
+    const markDirty = useCallback((key: string) => {
+        setDirtyFields(prev => (prev.has(key) ? prev : new Set(prev).add(key)));
+    }, []);
+    const projectModified = (U as any).isProjectModified;
+    useEffect(() => {
+        if (!projectModified) setDirtyFields(prev => (prev.size ? new Set() : prev));
+    }, [projectModified]);
+    // A new subject starts clean: the marks belong to the object being edited, not to the panel.
+    useEffect(() => { setDirtyFields(new Set()); }, [objectId]);
+
+    // Scroll-to-field from a summary chip. Keyed by field name, filled during the render below.
+    const fieldRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+    const focusFirstOf = useCallback((severity: 'error' | 'warning') => {
+        for (const f of visible) {
+            const ds = diagnostics.byField.get(f.name);
+            if (!ds || !ds.some(d => d.severity === severity)) continue;
+            const el = fieldRefs.current.get(f.name);
+            if (!el) continue;
+            el.scrollIntoView({ block: 'nearest' });
+            // The control, not the wrapper: focus has to land where typing would fix it.
+            (el.querySelector('input, select, textarea, button') as HTMLElement | null)?.focus();
+            return;
+        }
+    }, [visible, diagnostics]);
     const sections = buildSections(visible, resolution?.compiled?.fieldCompartments ?? [])
         .filter(s => s.fields.length > 0);   // an empty section renders nothing
 
@@ -195,21 +243,50 @@ export function IRForm({ objectId, defaultTheme = 'plain' }: IRFormProps) {
                 {metaclassName && <span className="ir-form__metaclass">{metaclassName}</span>}
             </div>
 
-            {/* Fixed 32px, reserved whether or not there is anything to say. Slice 1a has
-                no per-field diagnostics yet (the problems registry does not carry the
-                feature name), so this always reads "No issues" — at its final height, so
-                nothing moves when 1b fills it. */}
+            {/* Fixed 32px, occupied or not. The counts are the ones NodeProblemIndicator puts
+                in the canvas badge — one unit per violation — so the rail and the node can
+                never report a different number for the same object. */}
             <div className="ir-form__summary">
-                <i className="bi bi-check-circle ir-form__summary-icon" aria-hidden="true" />
-                <span className="ir-form__summary-text">No issues</span>
+                {diagnostics.errorCount === 0 && diagnostics.warningCount === 0 ? (
+                    <>
+                        <i className="bi bi-check-circle ir-form__summary-icon" aria-hidden="true" />
+                        <span className="ir-form__summary-text">No issues</span>
+                    </>
+                ) : (
+                    <>
+                        {diagnostics.errorCount > 0 && (
+                            <button
+                                type="button"
+                                className="ir-form__chip ir-form__chip--error"
+                                onClick={() => focusFirstOf('error')}
+                            >
+                                <i className="bi bi-x-circle-fill" aria-hidden="true" />
+                                {diagnostics.errorCount} {diagnostics.errorCount === 1 ? 'error' : 'errors'}
+                            </button>
+                        )}
+                        {diagnostics.warningCount > 0 && (
+                            <button
+                                type="button"
+                                className="ir-form__chip ir-form__chip--warning"
+                                onClick={() => focusFirstOf('warning')}
+                            >
+                                <i className="bi bi-exclamation-triangle-fill" aria-hidden="true" />
+                                {diagnostics.warningCount} {diagnostics.warningCount === 1 ? 'warning' : 'warnings'}
+                            </button>
+                        )}
+                    </>
+                )}
             </div>
 
             <div className="ir-form__body">
                 {!hasNameSlot && (
                     <div className="ir-form__group">
                         <div className="ir-form__group-title">Identity</div>
-                        <div className="ir-field">
+                        <div className={`ir-field${dirtyFields.has('name') ? ' ir-field--dirty' : ''}`}>
                             <div className="ir-field__labelrow">
+                                {dirtyFields.has('name') && (
+                                    <span className="ir-field__dirty-dot" title="Modified, not saved" aria-hidden="true" />
+                                )}
                                 <label className="ir-field__label" htmlFor="ir-field-name">name</label>
                                 <span className="ir-field__spacer" />
                             </div>
@@ -217,9 +294,11 @@ export function IRForm({ objectId, defaultTheme = 'plain' }: IRFormProps) {
                                 id="ir-field-name"
                                 ariaLabel="name"
                                 value={name}
-                                onCommit={(next) => setObjectName(objectId, next)}
+                                onCommit={(next) => { if (setObjectName(objectId, next)) markDirty('name'); }}
                             />
-                            <div className="ir-field__message" />
+                            <div className="ir-field__message">
+                                {dirtyFields.has('name') ? 'Modified, not saved' : null}
+                            </div>
                         </div>
                     </div>
                 )}
@@ -227,7 +306,19 @@ export function IRForm({ objectId, defaultTheme = 'plain' }: IRFormProps) {
                 {sections.map(s => (
                     <div className="ir-form__group" key={s.key}>
                         <div className="ir-form__group-title">{s.title}</div>
-                        {s.fields.map(f => <IRFormField key={f.slotId} field={f} />)}
+                        {s.fields.map(f => (
+                            <div
+                                key={f.slotId}
+                                ref={el => { if (el) fieldRefs.current.set(f.name, el); else fieldRefs.current.delete(f.name); }}
+                            >
+                                <IRFormField
+                                    field={f}
+                                    diagnostics={diagnostics.byField.get(f.name)}
+                                    dirty={dirtyFields.has(f.slotId)}
+                                    onCommitted={markDirty}
+                                />
+                            </div>
+                        ))}
                     </div>
                 ))}
 

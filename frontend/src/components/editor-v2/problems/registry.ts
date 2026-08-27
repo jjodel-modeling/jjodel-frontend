@@ -39,6 +39,23 @@ export interface ConformanceProblemDetail {
     violationType: string;
     severity: NodeProblemSeverity;
     message: string;
+    /**
+     * Name of the METAMODEL element the violation is about, copied verbatim from
+     * `ConformanceViolation.metamodelElementName` (model/conformance/ConformanceTypes.ts).
+     * Absent when the producing check does not name one.
+     *
+     * NOT called `featureName`, though that is what it holds for the per-feature checks
+     * and what the form matches fields on. Two checks put a CLASS name in it instead —
+     * `orphan_object` and `abstract_instantiation` (ConformanceValidator.ts, both in the
+     * per-object preamble) — so a name promising a feature would be a lie in exactly the
+     * cases a reader would trust it most. The consumer draws the distinction: the form
+     * matches it against its field names and treats whatever does not match as a
+     * problem of the object rather than of a field.
+     *
+     * Additive optional property: existing consumers read `p.conformance?.length`
+     * (NodeProblemIndicator) and `d.message` (NodeProblemOverlay), so neither sees it.
+     */
+    metamodelElementName?: string;
 }
 
 export interface NodeProblem {

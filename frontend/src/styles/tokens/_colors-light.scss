@@ -400,6 +400,9 @@ $gradient-hover: linear-gradient(180deg, $slate-100 0%, $slate-200 100%);
   --color-marker-required: #0ea5e9;                  /* required dot and dirty marker.
                                                         Red stays reserved for diagnostics. */
   --color-error-text: #b91c1c;                       /* red-700; the scale stops at $red-600 */
+  --color-form-dirty-border: #7dd3fc;                 /* sky-300: edited, not saved */
+  --color-form-dirty-text: #0284c7;                   /* sky-600 */
+  --color-form-dirty-halo: rgba(14, 165, 233, 0.2);   /* halo of the 6px dirty dot */
   --color-warning-text: #b45309;                     /* amber-700; the scale stops at $amber-600 */
 
 }

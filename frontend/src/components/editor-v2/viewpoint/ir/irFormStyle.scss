@@ -152,6 +152,40 @@
 
 .ir-form__summary-icon { font-size: 11px; line-height: 1; }
 
+/* Summary chips. Buttons, not spans: they move the focus to the offending field, so they
+   have to be reachable by keyboard like any other control. Their height is fixed and well
+   under the slot's 32px, so a summary that goes from "No issues" to two chips does not
+   change the height of anything. */
+.ir-form__chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 20px;
+    padding: 0 6px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    font-family: inherit;
+    font-size: var(--text-xs);
+    font-weight: var(--font-medium);
+    line-height: 1;
+    cursor: pointer;
+    transition: background var(--transition-fast);
+
+    > i { font-size: 10px; line-height: 1; }
+}
+
+.ir-form__chip--error { color: var(--color-error-text); }
+.ir-form__chip--error:hover { background: var(--color-error-subtle); }
+.ir-form__chip--warning { color: var(--color-warning-text); }
+.ir-form__chip--warning:hover { background: var(--color-warning-subtle); }
+
+.ir-form__chip:focus-visible {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow: var(--focus-ring);
+}
+
 .ir-form__body {
     flex: 1 1 auto;
     min-height: 0;
@@ -280,10 +314,35 @@
 .ir-field--error .ir-field__message { color: var(--color-error-text); }
 .ir-field--warning .ir-field__message { color: var(--color-warning-text); }
 
+/* The border of whatever control the field is carrying. Listed rather than wildcarded so a
+   future control has to opt in deliberately; `--dirty` is last on purpose — see below. */
 .ir-field--error .ir-field__control,
-.ir-field--error .ir-field__stepper { border-color: var(--color-error); }
+.ir-field--error .ir-field__stepper,
+.ir-field--error .ir-field__readonly { border-color: var(--color-error); }
 .ir-field--warning .ir-field__control,
-.ir-field--warning .ir-field__stepper { border-color: var(--color-warning); }
+.ir-field--warning .ir-field__stepper,
+.ir-field--warning .ir-field__readonly { border-color: var(--color-warning); }
+
+/* --- dirty ------------------------------------------------------------------
+   A field can be dirty AND in error at once. The message slot resolves that in the
+   component (a diagnostic wins the one line available); the BORDER is resolved here, by
+   order: these rules come before the two blocks above in the cascade, so at equal
+   specificity the diagnostic colour wins. Being unsaved is not being wrong, and the
+   stronger signal should survive. */
+.ir-field--dirty .ir-field__control,
+.ir-field--dirty .ir-field__stepper { border-color: var(--color-form-dirty-border); }
+.ir-field--dirty .ir-field__message { color: var(--color-form-dirty-text); }
+
+/* 6px, with a 2px halo, so it reads as a state and not as the 4px required dot it sits
+   next to — the two can appear on the same label row. */
+.ir-field__dirty-dot {
+    flex: 0 0 auto;
+    width: 6px;
+    height: 6px;
+    border-radius: var(--radius-full);
+    background: var(--color-marker-required);
+    box-shadow: 0 0 0 2px var(--color-form-dirty-halo);
+}
 
 /* Focus. The ring is the same on every control of the form, including the ones drawn
    here, so it is declared once against the token. */

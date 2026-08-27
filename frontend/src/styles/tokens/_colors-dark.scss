@@ -297,6 +297,9 @@
   --color-form-section: var(--color-text-tertiary);   /* #606060 */
   --color-marker-required: #38bdf8;                   /* sky-400: #0ea5e9 loses contrast on #0f1012 */
   --color-error-text: #fca5a5;                        /* red-300, readable on a dark panel */
+  --color-form-dirty-border: #0ea5e9;                 /* sky-500: sky-300 greys out on #0f1012 */
+  --color-form-dirty-text: #7dd3fc;                   /* sky-300, readable on a dark panel */
+  --color-form-dirty-halo: rgba(56, 189, 248, 0.28);  /* sky-400 at the alpha the dark bg needs */
   --color-warning-text: #fcd34d;                      /* amber-300, readable on a dark panel */
 
 }

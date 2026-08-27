@@ -25,20 +25,25 @@ import { store } from '../../../../joiner';
 import type { FormFieldDescriptor } from './useFormWidgets';
 import { multiplicityLabel } from './useFormWidgets';
 import { setSlotValue } from './formWrite';
+import { worstSeverity, type FieldDiagnostic } from './formDiagnostics';
 import TextWidget from './widgets/TextWidget';
 import NumberWidget from './widgets/NumberWidget';
 import CheckboxWidget from './widgets/CheckboxWidget';
 import SelectWidget from './widgets/SelectWidget';
 
-export interface FieldDiagnostic {
-    severity: 'error' | 'warning';
-    message: string;
-}
+/** Re-exported so the widgets and the host keep importing it from here, as in Slice 1a;
+ *  the single definition now lives with the projection that produces them. */
+export type { FieldDiagnostic };
 
 export interface IRFormFieldProps {
     field: FormFieldDescriptor;
-    /** Slice 1a always passes none; the slot is reserved regardless. */
+    /** Projected from the problems registry by the host; the slot is reserved either way. */
     diagnostics?: FieldDiagnostic[];
+    /** True when this field was edited and the project has not been saved since. */
+    dirty?: boolean;
+    /** Called after a commit that actually changed something, so the host can mark the
+     *  field dirty. The host owns the set: a field does not remember its own history. */
+    onCommitted?: (slotId: string) => void;
 }
 
 /**
@@ -59,11 +64,10 @@ function displayValue(raw: unknown): string {
     return String(raw);
 }
 
-export function IRFormField({ field, diagnostics }: IRFormFieldProps) {
+export function IRFormField({ field, diagnostics, dirty, onCommitted }: IRFormFieldProps) {
     const fieldId = `ir-field-${field.slotId}`;
     const first = field.values[0];
-    const worst = diagnostics?.some(d => d.severity === 'error') ? 'error'
-        : diagnostics?.length ? 'warning' : null;
+    const worst = worstSeverity(diagnostics);
 
     const rowTexts = useMemo(
         () => field.values.map(displayValue).filter(t => t !== ''),
@@ -78,7 +82,7 @@ export function IRFormField({ field, diagnostics }: IRFormFieldProps) {
     const commitScalar = (next: string | number | boolean | null) => {
         // isPtr false: this branch only ever runs for attributes, whose values are
         // primitives. Enums and references take the pointer branch below.
-        setSlotValue(field.slot, 0, next, false);
+        if (setSlotValue(field.slot, 0, next, false)) onCommitted?.(field.slotId);
     };
 
     let control: React.ReactNode;
@@ -111,7 +115,7 @@ export function IRFormField({ field, diagnostics }: IRFormFieldProps) {
                 value={typeof first === 'string' ? first : ''}
                 options={field.options}
                 invalid={worst === 'error'}
-                onCommit={(v) => setSlotValue(field.slot, 0, v, true)}
+                onCommit={(v) => { if (setSlotValue(field.slot, 0, v, true)) onCommitted?.(field.slotId); }}
             />
         );
     } else if (editable) {
@@ -144,8 +148,12 @@ export function IRFormField({ field, diagnostics }: IRFormFieldProps) {
     }
 
     return (
-        <div className={`ir-field${worst ? ` ir-field--${worst}` : ''}`}>
+        <div className={`ir-field${worst ? ` ir-field--${worst}` : ''}${dirty ? ' ir-field--dirty' : ''}`}>
             <div className="ir-field__labelrow">
+                {/* Before the label, not after: it marks the whole field, and the reader
+                    should meet it on the way in. A diagnostic still wins the border and the
+                    message slot below — being unsaved is not being wrong. */}
+                {dirty && <span className="ir-field__dirty-dot" title="Modified, not saved" aria-hidden="true" />}
                 <label className="ir-field__label" htmlFor={fieldId}>{field.name}</label>
                 {/* Required is a 4px cyan dot, never a red asterisk: red is reserved for
                     diagnostics, so a field that is merely mandatory must not look wrong. */}
@@ -170,7 +178,10 @@ export function IRFormField({ field, diagnostics }: IRFormFieldProps) {
 
             {control}
 
-            {/* Fixed height, always present. See the module comment. */}
+            {/* Fixed height, always present. See the module comment. A diagnostic wins over
+                the dirty note: a field can be both, and "this value is invalid" is worth
+                more of the one line available than "you have not saved yet", which the dot
+                and the border already say. */}
             <div className="ir-field__message" role={worst ? 'alert' : undefined}>
                 {worst && diagnostics?.length ? (
                     <>
@@ -178,8 +189,10 @@ export function IRFormField({ field, diagnostics }: IRFormFieldProps) {
                             className={`bi ${worst === 'error' ? 'bi-x-circle-fill' : 'bi-exclamation-triangle-fill'} ir-field__message-icon`}
                             aria-hidden="true"
                         />
-                        <span className="ir-field__message-text">{diagnostics[0].message}</span>
+                        <span className="ir-field__message-text" title={diagnostics[0].message}>{diagnostics[0].message}</span>
                     </>
+                ) : dirty ? (
+                    <span className="ir-field__message-text">Modified, not saved</span>
                 ) : null}
             </div>
         </div>

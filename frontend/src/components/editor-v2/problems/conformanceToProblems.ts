@@ -51,6 +51,10 @@ export function aggregateConformanceByObject(
             violationType: v.violationType,
             severity: v.severity,
             message: v.message,
+            // Carried through so a consumer can attach the violation to the feature it is
+            // about. It was being dropped here, which is why the form could show a count
+            // but never say WHICH field was wrong.
+            metamodelElementName: v.metamodelElementName,
         });
         if (v.severity === 'error') agg.severity = 'error';
         if (!agg.objectName && v.objectName) agg.objectName = v.objectName;
