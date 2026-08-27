@@ -2491,10 +2491,11 @@
     // The kind (composition/aggregation) is shown via markers, not stroke color
 }
 
+// Same declarations as .reference-edge above, on purpose: an inheritance line and
+// an association line are the same stroke, and pointing at the same tokens is what
+// keeps them identical in every theme instead of by coincidence.
 .inheritance-edge {
-    stroke: var(--inheritance-stroke);
-    // 1, like the outline of the triangle that closes the line: the connector is
-    // one drawing, and a bus heavier than its own marker reads as two.
+    stroke: var(--edge-color);
     stroke-width: 1;
     fill: none;
 
@@ -2508,7 +2509,7 @@
 // inheritance. Filled with the line colour, so it reads as a thickening of the
 // stroke and tells a connection apart from a crossing, which stays bare.
 .inheritance-junction {
-    fill: var(--inheritance-stroke);
+    fill: var(--edge-color);
     stroke: none;
     pointer-events: none;
 
@@ -2540,8 +2541,8 @@
 
 // Inheritance edge marker (hollow triangle) — same stroke as the line it closes
 .inheritance-marker {
-    fill: var(--inheritance-marker-fill);
-    stroke: var(--inheritance-stroke);
+    fill: var(--edge-marker-fill);
+    stroke: var(--edge-marker-stroke);
     // 1, the same weight as the line. Inside a marker this is a marker-space unit,
     // so raising it thickens the outline of a shape only 12x10 units wide.
     stroke-width: 1;

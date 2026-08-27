@@ -11,9 +11,9 @@ import {
     parsePathSubPaths,
     pointsToPath,
     treeBusCornerRadius,
+    treeBranchAnchor,
     type TreeBranch,
 } from '../utils/edgeUtils';
-import { computeHandlePositionForNode } from '../utils/handlePosition';
 
 // Stable empty array returned by the nodes selector for non-inheritance edges,
 // so their subscription never fires (Object.is-equal on every store notification).
@@ -114,53 +114,34 @@ export function useTreeLayout(
     const treeGeometry = useMemo((): TreeGeometry | null => {
         if (!isGrouped) return null;
 
-        const nodeMap = new Map(allNodes.map(n => [n.id, n]));
         const branches: TreeBranch[] = [];
 
-        // Centroid map for the geometry-aware inheritance ordering (S7). Built the
-        // SAME way DynamicHandles does (nodeLookup + positionAbsolute) so the branch
-        // landing and the rendered handle resolve to the identical fraction.
-        const nodePositions = new Map<string, { centerX: number; centerY: number }>();
-        for (const [id, n] of storeApi.getState().nodeLookup) {
-            const p = n.internals?.positionAbsolute ?? n.position;
-            const nw = n.measured?.width ?? 180;
-            const nh = n.measured?.height ?? 80;
-            nodePositions.set(id, { centerX: p.x + nw / 2, centerY: p.y + nh / 2 });
-        }
+        // Boxes read from nodeLookup, not from the `nodes` array: `positionAbsolute`
+        // is the coordinate the paths are drawn in, while `node.position` is relative
+        // to the parent and is wrong for every node inside a package container.
+        const lookup = storeApi.getState().nodeLookup;
 
         for (const edge of group) {
-            const childNode = nodeMap.get(edge.source);
-            if (!childNode) continue;
+            const n = lookup.get(edge.source);
+            if (!n) continue;
 
-            const w = (childNode.measured?.width ?? (childNode as any).width ?? 180) as number;
-            const h = (childNode.measured?.height ?? (childNode as any).height ?? 80) as number;
-            const childY = sourceSide === 'top'
-                ? (childNode.position?.y ?? 0)
-                : (childNode.position?.y ?? 0) + h;
+            // Measured only. A branch placed on a 180x80 placeholder lands off the
+            // node it belongs to; skipping it costs at most one frame, because this
+            // memo depends on allNodes and re-runs the moment the measure arrives.
+            const width = n.measured?.width;
+            const height = n.measured?.height;
+            if (width === undefined || height === undefined) continue;
 
-            // Land the branch on the handle assigned to this inheritance edge
-            // (child side = source), not the node center — so it no longer
-            // overlaps references sharing the same side. Single source of truth
-            // with DynamicHandles: computeHandlePositionForNode rebuilds the side's
-            // endpoints from the current edge set (allEdges) and positions them.
-            const childHandleId = edge.sourceHandle ?? `${sourceSide}-0`;
-            const handlePos = computeHandlePositionForNode({
-                edges: allEdges,
-                nodeId: edge.source,
-                nodeX: childNode.position?.x ?? 0,
-                nodeY: childNode.position?.y ?? 0,
-                nodeWidth: w,
-                nodeHeight: h,
-                handleId: childHandleId,
-                role: 'source',
-                nodePositions,
-            });
+            const p = n.internals?.positionAbsolute ?? n.position;
+            const anchor = treeBranchAnchor({ x: p.x, y: p.y, width, height }, sourceSide);
 
-            branches.push({ childX: handlePos.x, childY, edgeId: edge.id });
+            branches.push({ childX: anchor.x, childY: anchor.y, edgeId: edge.id });
         }
 
         return computeTreeConnectorPath(targetX, targetY, branches, [], treeExcludeIds);
-    }, [isGrouped, group, allNodes, allEdges, storeApi, targetX, targetY, sourceSide, treeExcludeIds]);
+        // allNodes is the reactivity source (moves and measures), not a value read here.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isGrouped, group, allNodes, storeApi, targetX, targetY, sourceSide, treeExcludeIds]);
 
     // Register tree geometry paths for crossing detection.
     // All segments use treeGroupId = target (parent node ID) so that

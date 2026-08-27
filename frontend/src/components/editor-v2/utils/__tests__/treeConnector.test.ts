@@ -6,6 +6,7 @@ import {
     parsePathSubPaths,
     TREE_BUS_CORNER_RADIUS,
     treeBusCornerRadius,
+    treeBranchAnchor,
     type TreeBranch,
 } from '../edgeUtils';
 
@@ -132,6 +133,45 @@ describe('computeTreeConnectorPath — shared inheritance bus', () => {
                 { x: b.childX, y: CHILD_Y },
             ]);
         }
+    });
+});
+
+// Where each branch leaves its child. The hook feeds these coordinates to
+// computeTreeConnectorPath, so a branch that lands off-centre is decided here and
+// nowhere else.
+describe('branch anchoring — centre of the child side, from the measured box', () => {
+    const box = (x: number, y: number, width: number, height = 60) => ({ x, y, width, height });
+
+    it('the branch leaves from the centre of the top side', () => {
+        expect(treeBranchAnchor(box(100, 460, 140), 'top')).toEqual({ x: 170, y: 460 });
+    });
+
+    it('and from the centre of the bottom side when the children sit above the parent', () => {
+        expect(treeBranchAnchor(box(100, 460, 140), 'bottom')).toEqual({ x: 170, y: 520 });
+    });
+
+    it('the centre follows the real width — a default would put it elsewhere', () => {
+        expect(treeBranchAnchor(box(0, 0, 140), 'top').x).toBe(70);
+        expect(treeBranchAnchor(box(0, 0, 260), 'top').x).toBe(130);
+        // 90 is where the 180px placeholder used to put it, whatever the node measured.
+        expect(treeBranchAnchor(box(0, 0, 260), 'top').x).not.toBe(90);
+    });
+
+    it('children of different widths: the bus runs from the first centre to the last', () => {
+        const boxes = [box(100, 460, 140), box(400, 460, 200), box(700, 460, 140)];
+        const branches: TreeBranch[] = boxes.map((b, i) => {
+            const a = treeBranchAnchor(b, 'top');
+            return { childX: a.x, childY: a.y, edgeId: `e${i}` };
+        });
+        // Parent handle at 500 — the centre of the middle child, so that one is the
+        // collinear case and must stay a bare T.
+        const g = computeTreeConnectorPath(500, 100, branches);
+        const bus = busByChildX(g.barAndBranchesPath);
+
+        expect([...bus.keys()].sort((a, b) => a - b)).toEqual([170, 500, 770]);
+        expect(busSpan(g.barAndBranchesPath)).toEqual({ min: 170, max: 770 });
+        expect(bus.get(500)).toHaveLength(2);
+        expect(g.junction).toEqual({ x: 500, y: 280 });
     });
 });
 

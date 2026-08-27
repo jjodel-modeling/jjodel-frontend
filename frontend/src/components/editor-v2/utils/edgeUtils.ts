@@ -1078,6 +1078,30 @@ export interface TreeBranch {
     edgeId: string;
 }
 
+export interface TreeChildBox {
+    /** Absolute X of the child's left edge (positionAbsolute, not the parent-relative position). */
+    x: number;
+    /** Absolute Y of the child's top edge. */
+    y: number;
+    /** Measured width — the rendered one, never a placeholder. */
+    width: number;
+    /** Measured height. */
+    height: number;
+}
+
+/**
+ * Where a child's branch leaves its box: the centre of the side that faces the
+ * parent. Centre of the SIDE, so the branch reads as the axis of the node, and it
+ * has to come from the measured width — a fixed default puts the line off-centre
+ * on every node that is not exactly that wide.
+ */
+export function treeBranchAnchor(box: TreeChildBox, side: string): { x: number; y: number } {
+    return {
+        x: box.x + box.width / 2,
+        y: side === 'top' ? box.y : box.y + box.height,
+    };
+}
+
 export interface TreeConnectorGeometry {
     /** Path from bar up to parent — gets markerEnd triangle */
     trunkPath: string;

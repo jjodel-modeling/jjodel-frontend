@@ -4,7 +4,7 @@
 //
 // Name and value of every theme token live in the two maps below, which are
 // the single source. The selectors emit them, they never restate them: two
-// hand-written blocks carrying the same 97 names drift apart in silence.
+// hand-written blocks carrying the same 95 names drift apart in silence.
 //
 // The maps are emitted on four selectors, on purpose (D-UI-10):
 //   .editor-v2.theme-dark / .theme-light   the editor subtree, unchanged
@@ -96,12 +96,6 @@ $editor-v2-theme-dark: (
   'edge-label-bg': #334155,
   'edge-marker-fill': #1e293b,
   'edge-marker-stroke': rgba(255, 255, 255, 0.5),
-  // Inheritance keeps its own pair so the shared bus can be restyled without
-  // touching reference edges. Dark holds the values the edges already had: the
-  // black of the light map would sink into the canvas here, so the dark side
-  // keeps the white the other edges use.
-  'inheritance-stroke': rgba(255, 255, 255, 0.5),
-  'inheritance-marker-fill': #1e293b,
 
   // Input
   'input-bg': rgba(0, 0, 0, 0.25),
@@ -260,9 +254,6 @@ $editor-v2-theme-light: (
   'edge-label-bg': #ffffff,
   'edge-marker-fill': #f8fafc,
   'edge-marker-stroke': rgba(0, 0, 0, 0.5),
-  // Inheritance: black line, plain white triangle (see the dark map).
-  'inheritance-stroke': #000000,
-  'inheritance-marker-fill': #ffffff,
 
   // Input
   'input-bg': #ffffff,

@@ -11,8 +11,9 @@ import { resolve } from 'node:path';
  * consumes, which value the light map holds. It cannot resolve the cascade, so
  * it cannot prove the painted colour. The browser-side measurement of the
  * resolved stroke lives in `scripts/smoke/_tmp_inheritance_bus.ts`, which reads
- * getComputedStyle on a real tree (measured 2026-08-27: rgb(0, 0, 0) on a
- * non-selected edge in the light theme, rgb(2, 132, 199) on a selected one).
+ * getComputedStyle on a real tree, and compares it with a reference edge in the
+ * same scene (measured 2026-08-27: both rgba(0, 0, 0, 0.45) at 1px in the light
+ * theme; a selected inheritance edge is rgb(2, 132, 199)).
  */
 
 const read = (p: string) => readFileSync(resolve(__dirname, p), 'utf8');
@@ -36,38 +37,41 @@ const scssBlock = (selector: string) => {
 /** Declarations of a block, minus its nested rules (`&.selected` and friends). */
 const topLevelDecls = (block: string) => block.split(/&[.:]/)[0];
 
-describe('inheritance edge — colour wiring', () => {
-    it('the light map carries the black stroke and the white triangle', () => {
-        const light = themeMap('light');
-        expect(light).toMatch(/'inheritance-stroke':\s*#000000,/);
-        expect(light).toMatch(/'inheritance-marker-fill':\s*#ffffff,/);
+describe('inheritance edge — the same stroke as a reference edge', () => {
+    const declOf = (block: string, prop: string) => {
+        const m = block.match(new RegExp(`${prop}:\\s*([^;]+);`));
+        expect(m, `${prop} not declared`).not.toBeNull();
+        return m![1].trim();
+    };
+
+    it('line: the same colour token and the same width as .reference-edge', () => {
+        const ref = topLevelDecls(scssBlock('.reference-edge'));
+        const inh = topLevelDecls(scssBlock('.inheritance-edge'));
+        // Compared against the reference edge, not against a literal: the point is
+        // that the two stay identical in every theme, not that they are slate today.
+        expect(declOf(inh, 'stroke')).toBe(declOf(ref, 'stroke'));
+        expect(declOf(inh, 'stroke-width')).toBe(declOf(ref, 'stroke-width'));
+        expect(declOf(inh, 'stroke')).toBe('var(--edge-color)');
     });
 
-    it('the dark map defines the same two names — a token missing on one side paints nothing', () => {
-        const dark = themeMap('dark');
-        expect(dark).toMatch(/'inheritance-stroke':/);
-        expect(dark).toMatch(/'inheritance-marker-fill':/);
-    });
-
-    it('the non-selected edge consumes the inheritance token, and nothing else', () => {
-        const decls = topLevelDecls(scssBlock('.inheritance-edge'));
-        expect(decls).toMatch(/stroke:\s*var\(--inheritance-stroke\)/);
-        // The blue of selection is legitimate only under `&.selected`; the grey of
-        // the reference edges is not this edge's colour any more.
-        expect(decls).not.toMatch(/--edge-selected/);
-        expect(decls).not.toMatch(/--edge-color/);
+    it('no dedicated token is left behind for the two to drift on', () => {
+        expect(THEMES).not.toMatch(/inheritance-stroke/);
+        expect(THEMES).not.toMatch(/inheritance-marker-fill/);
+        expect(EDITOR_SCSS).not.toMatch(/--inheritance-stroke/);
+        expect(EDITOR_SCSS).not.toMatch(/--inheritance-marker-fill/);
     });
 
     it('selection keeps its own colour, and only there', () => {
         const block = scssBlock('.inheritance-edge');
+        expect(topLevelDecls(block)).not.toMatch(/--edge-selected/);
         expect(block).toMatch(/&\.selected\s*\{[^}]*stroke:\s*var\(--edge-selected\)/);
     });
 
-    it('the junction dot and the triangle take the stroke colour of the line', () => {
-        expect(topLevelDecls(scssBlock('.inheritance-junction'))).toMatch(/fill:\s*var\(--inheritance-stroke\)/);
+    it('the dot takes the colour of the line, the triangle the marker tokens', () => {
+        expect(topLevelDecls(scssBlock('.inheritance-junction'))).toMatch(/fill:\s*var\(--edge-color\)/);
         const marker = topLevelDecls(scssBlock('.inheritance-marker'));
-        expect(marker).toMatch(/stroke:\s*var\(--inheritance-stroke\)/);
-        expect(marker).toMatch(/fill:\s*var\(--inheritance-marker-fill\)/);
+        expect(marker).toMatch(/stroke:\s*var\(--edge-marker-stroke\)/);
+        expect(marker).toMatch(/fill:\s*var\(--edge-marker-fill\)/);
     });
 });
 
