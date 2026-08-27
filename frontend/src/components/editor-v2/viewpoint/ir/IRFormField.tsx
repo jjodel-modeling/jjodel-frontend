@@ -155,6 +155,13 @@ export function IRFormField({ field, diagnostics }: IRFormFieldProps) {
                 {field.isReadOnly && (
                     <i className="bi bi-lock-fill ir-field__lock" title="Read-only" aria-hidden="true" />
                 )}
+                {/* The multiline box is never DERIVED from a type — an EString derives to
+                    `text` — so a textarea here always means the view author asked for one,
+                    and what they asked for is a JjEL expression editor. The hint says so,
+                    since nothing else on the field distinguishes it from a long string. */}
+                {field.widget === 'textarea' && field.derivedWidget !== 'textarea' && (
+                    <span className="ir-field__hint">JjEL</span>
+                )}
                 <span className="ir-field__spacer" />
                 <span className="ir-field__mult">
                     {field.isDerived ? 'derived' : multiplicityLabel(field)}

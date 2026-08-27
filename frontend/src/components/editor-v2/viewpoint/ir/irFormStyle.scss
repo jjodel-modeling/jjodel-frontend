@@ -25,6 +25,27 @@
    nothing else in the app. Their own token file (styles/tokens.css) keeps its values.
    --------------------------------------------------------------------------- */
 .ir-form {
+    /* --form-input-* is a FOURTH token system, declared in styles/components/_form-system.scss
+       on :root with hardcoded values, and it is the one that actually wins on a bare input.
+       That file's rule at :44 selects `input[type="text"]`, `input[type="number"]` and friends
+       at specificity (0,1,1), which beats the (0,1,0) class of ui/Input's CSS module: the
+       control takes 36px / 14px / 8px 12px from these variables and the --input-* overrides
+       below never get a say. Measured 2026-08-27 by walking document.styleSheets and testing
+       `input.matches(rule.selectorText)`, after the field rendered 36px tall on screen.
+       Re-pointing them here reaches that rule; _form-system.scss is left alone, it has
+       consumers across the whole app. */
+    --form-input-height: var(--control-height-lg);
+    --form-input-padding-y: 4px;
+    --form-input-padding-x: 8px;
+    --form-input-font-size: var(--text-sm);
+    --form-input-border-radius: var(--radius-sm);
+    --form-input-border-color: var(--color-form-border);
+    --form-input-border-color-hover: var(--color-form-border-strong);
+    --form-input-border-color-focus: var(--color-accent);
+    --form-input-focus-shadow: var(--focus-ring);
+    --form-input-bg: var(--color-form-surface);
+    --form-input-color: var(--color-text-primary);
+
     --input-height-sm: var(--control-height-lg);       /* 32px -> 28px */
     --input-height-base: var(--control-height-lg);
     --input-padding-y-sm: 4px;
@@ -215,6 +236,16 @@
     color: var(--color-form-muted);
 }
 
+/* Sits with the label, not with the multiplicity: it names WHAT the field holds, which is
+   the label's job, while the right edge of the row belongs to the cardinality. */
+.ir-field__hint {
+    flex: 0 0 auto;
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    color: var(--color-form-muted);
+    line-height: 1;
+}
+
 .ir-field__spacer { flex: 1 1 auto; min-width: 0; }
 
 .ir-field__mult {
@@ -272,11 +303,17 @@
 .ir-form .ir-field__control--mono { transition: box-shadow var(--transition-fast), border-color var(--transition-fast); }
 
 /* JjEL and other multiline text. */
+/* The bare `textarea` rule in _form-system.scss:123 hands out `min-height: 80px` and
+   `resize: vertical` at (0,0,1). The heights below win on specificity (a class beats an
+   element), but `resize` is not contested by anything here, so the handle would survive
+   and let the box be dragged past the 56px the design fixes. Declared off on purpose:
+   the JjEL area is a sized surface, not a resizable one. */
 .ir-field__control--mono {
     font-family: var(--font-mono) !important;
     font-size: var(--text-md) !important;
     min-height: 44px;
     max-height: 56px;
+    resize: none;
 }
 
 /* --- number stepper -------------------------------------------------------- */
@@ -301,9 +338,14 @@
 .ir-field__stepper--invalid { border-color: var(--color-error); }
 .ir-field__stepper--readonly { background: var(--color-bg-tertiary); }
 
-.ir-field__stepper-value {
+/* `input.` prefix, not a bare class: this input is a `type="text"`, so the (0,1,1) rule of
+   _form-system.scss:44 reaches it and would give it a border, a radius and a 36px height of
+   its own INSIDE the stepper's border — a box drawn twice. Element+class is (0,1,1) too, so
+   `.ir-form` in front takes it to (0,2,1) and the question stops depending on import order. */
+.ir-form input.ir-field__stepper-value {
     flex: 1 1 auto;
     min-width: 0;
+    height: 100%;
     border: none;
     outline: none;
     background: transparent;
@@ -311,6 +353,7 @@
     font-family: var(--font-sans);
     font-size: var(--text-sm);
     color: var(--color-text-primary);
+    box-shadow: none;
 }
 
 /* The two segments sit INSIDE the field's border, separated from the value and from each
@@ -345,7 +388,14 @@
 
 .ir-field__checkbox--readonly { cursor: not-allowed; }
 
-.ir-field__checkbox-box {
+/* Same specificity problem as the stepper, from a different file and with hardcoded values
+   rather than variables, so there is nothing to re-point: styles/style.scss:221 sets
+   `input[type="checkbox"] { width: 20px; height: 20px; accent-color: white; outline: 1.5px
+   solid gray }` at (0,1,1). A bare class at (0,1,0) loses to it, and the box would render
+   20px with a white tick on a grey outline instead of 14px with the slate accent. Measured
+   by the stylesheet walk, NOT on screen: V3c was never exercised in the visual pass, so this
+   one would have shipped unseen. */
+.ir-form input.ir-field__checkbox-box {
     flex: 0 0 auto;
     width: 14px;
     height: 14px;
@@ -353,6 +403,7 @@
     accent-color: var(--color-accent);
     border: 1px solid var(--color-form-border-strong);
     border-radius: var(--radius-xs);
+    outline: none;
     cursor: inherit;
 }
 
