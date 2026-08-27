@@ -8178,3 +8178,16 @@ Dark mode overrides for `.toolbar-btn` also scoped under `.documentation-toolbar
 **Smoke visivo**: non eseguito da qui (la verifica a schermo la fa la chat sulla fixture `Form 1b fixture` con la viewpoint `IR Demo State`, come da prompt; `npm run smoke` non copre la form)
 **Notes**: La coda usa il prefisso `residual-`, che non puo' collidere con la chiave autorata `${id}-${indice}`: le chiavi sono quelle su cui si persiste il collasso delle sezioni, e cambiarne una riaprirebbe cio' che l'utente aveva piegato. Due compartimenti sullo stesso `source` continuano a rendere due volte, la deduplicazione decide solo cosa resta fuori. Motivazione per esteso nella spec, §7.
 **Prompt document name**: 2026-08-28 00:45
+
+## 2026-08-28 — docs: discovery su R-FRM-3, il canone del valore enum (Fase 1, read-only)
+**Prompt**: tredici domande sul disallineamento fra i tre attori del valore enum: l'importer XMI scrive il nome del literal, gli editor scrivono il pointer, il CHECK 10 del validatore confronta per nome e flagga ogni enum toccato da un editor. La spec del 2026-08-28 (ratifica R-FRM-3) fissa il pointer come canone e il nome come forma legacy accettata in lettura. La discovery serve a rendere chirurgici i due commit della Fase 2 (validatore tollerante, poi importer canonico). Hard stop a report scritto.
+**Files touched**: docs/discovery/discovery_2026-08-28_r_frm3_enum_canone.md (nuovo, il report), docs/claude-code-log.md (questa entry). Nessun file di codice.
+**Outcome**: ✅ completed — tredici domande chiuse, hard stop rispettato.
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (read-only sul codice; nessun `.ts`/`.tsx`/`.scss` toccato, come da hard stop 1).
+**Out-of-scope changes**: no (report + log).
+**Layer Impact Report**: not-required (nessun file modificato; `ConformanceValidator.ts`, `XMIService.ts`, `api/data.ts`, `LModelElement.tsx` e `VersionFixer.tsx` solo letti, e nessuno e' in critical zone §3.1).
+**Smoke visivo**: non applicabile (fase di sola lettura).
+**Notes**: Due risultati riducono la Fase 2 a poche righe. `attrType.literals` sono proxy `LEnumLiteral` con `id` E `name`: il validatore costruisce i due insiemi dall'array che gia' percorre, senza lookup ne' import nuovi, e l'importer risolve dallo stesso path. Terzo: `api/data.ts` normalizza gia' gli ordinali in pointer con la stessa politica, ma la sua guardia sul className sembra non farlo girare mai (R4, da misurare). Baseline: tsc 33, vitest 1589.
+**Prompt document name**: 2026-08-28 01:46
