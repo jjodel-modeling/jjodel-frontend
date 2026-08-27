@@ -604,7 +604,12 @@ function UnifiedEdge(props: EdgeProps) {
     // ═══════════════════════════════════════════════════════
     // CASE 2: Secondary inheritance in tree group → invisible
     // ═══════════════════════════════════════════════════════
-    if (isInheritance && !isPrimary && isGrouped && treeGeometry) {
+    // Only for an edge the tree actually draws. Going silent here is safe exactly
+    // as long as the connector carries this edge's branch: if it does not, this
+    // branch has no path at all and the child reads as disconnected while the model
+    // still holds the generalization. Without a branch the edge falls through to
+    // CASE 3 and draws its own line to the parent — not the bus, but visible.
+    if (isInheritance && !isPrimary && isGrouped && treeGeometry && treeGeometry.branchPaths.has(id)) {
         const branchPath = treeGeometry.branchPaths.get(id);
         const childEndpoint = { x: sourceX, y: sourceY };
 

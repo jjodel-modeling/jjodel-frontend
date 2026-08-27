@@ -12,6 +12,7 @@ import {
     pointsToPath,
     treeBusCornerRadius,
     treeBranchAnchor,
+    treeChildBox,
     type TreeBranch,
 } from '../utils/edgeUtils';
 
@@ -116,24 +117,37 @@ export function useTreeLayout(
 
         const branches: TreeBranch[] = [];
 
-        // Boxes read from nodeLookup, not from the `nodes` array: `positionAbsolute`
-        // is the coordinate the paths are drawn in, while `node.position` is relative
-        // to the parent and is wrong for every node inside a package container.
+        // Sizes come from the subscribed `nodes` array, positions from nodeLookup:
+        //   - allNodes is what re-runs this memo, so reading the size there keeps the
+        //     value and the trigger on the same snapshot — a size read only from the
+        //     imperative lookup can be newer than the render that asked for it;
+        //   - positionAbsolute is the coordinate the paths are drawn in, while
+        //     node.position is relative to the parent and is wrong for every node
+        //     inside a package container.
+        const nodeMap = new Map(allNodes.map(n => [n.id, n]));
         const lookup = storeApi.getState().nodeLookup;
 
         for (const edge of group) {
-            const n = lookup.get(edge.source);
-            if (!n) continue;
+            const node = nodeMap.get(edge.source) ?? (lookup.get(edge.source) as any);
+            // Only a child that is not on this canvas at all has nothing to connect to.
+            if (!node) continue;
 
-            // Measured only. A branch placed on a 180x80 placeholder lands off the
-            // node it belongs to; skipping it costs at most one frame, because this
-            // memo depends on allNodes and re-runs the moment the measure arrives.
-            const width = n.measured?.width;
-            const height = n.measured?.height;
-            if (width === undefined || height === undefined) continue;
+            const internals = lookup.get(edge.source) as any;
+            const p = internals?.internals?.positionAbsolute ?? node.position ?? { x: 0, y: 0 };
 
-            const p = n.internals?.positionAbsolute ?? n.position;
-            const anchor = treeBranchAnchor({ x: p.x, y: p.y, width, height }, sourceSide);
+            // treeChildBox always answers: an unmeasured child still gets its branch,
+            // anchored on the fallback width and corrected as soon as the measure
+            // arrives. Dropping it here would take the branch away AND shrink the bus
+            // to the children that remain.
+            const box = treeChildBox({
+                x: p.x,
+                y: p.y,
+                measuredWidth: node.measured?.width,
+                measuredHeight: node.measured?.height,
+                declaredWidth: (node as any).width,
+                declaredHeight: (node as any).height,
+            });
+            const anchor = treeBranchAnchor(box, sourceSide);
 
             branches.push({ childX: anchor.x, childY: anchor.y, edgeId: edge.id });
         }

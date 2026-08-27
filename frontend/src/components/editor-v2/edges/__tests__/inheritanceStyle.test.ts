@@ -115,3 +115,14 @@ describe('inheritance triangle — size is fixed, not a function of the line', (
         expect(topLevelDecls(scssBlock('.inheritance-marker'))).toMatch(/stroke-width:\s*1;/);
     });
 });
+
+// The failure mode this guards is "nothing is drawn", which no style assertion can
+// catch: an inheritance edge that goes silent because the tree was supposed to draw
+// it, while the tree has no branch for it.
+describe('every child of a tree draws something', () => {
+    it('the silent branch of UnifiedEdge is taken only when the tree carries this edge', () => {
+        const guard = UNIFIED_EDGE.match(/if \(isInheritance && !isPrimary && isGrouped && treeGeometry[^)]*\)/);
+        expect(guard, 'CASE 2 guard not found').not.toBeNull();
+        expect(guard![0]).toContain('branchPaths.has(id)');
+    });
+});

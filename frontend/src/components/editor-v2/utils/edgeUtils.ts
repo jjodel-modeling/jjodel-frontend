@@ -1089,6 +1089,35 @@ export interface TreeChildBox {
     height: number;
 }
 
+/** Last-resort size, for a child the canvas has not measured yet. */
+export const TREE_CHILD_FALLBACK_SIZE = { width: 180, height: 80 };
+
+/**
+ * The box a branch is anchored on, resolved from what the canvas knows about the
+ * child, in this order: measured size, declared size, fallback.
+ *
+ * It always returns a box, and that is the contract: every child of the tree gets
+ * a branch to the bus whatever the canvas knows about it. Returning nothing for an
+ * unmeasured child drops it from the connector — its branch is not drawn AND the
+ * bus stops at the remaining children — which is a worse failure than a branch
+ * momentarily anchored on a fallback width and corrected on the next measure.
+ */
+export function treeChildBox(input: {
+    x: number;
+    y: number;
+    measuredWidth?: number;
+    measuredHeight?: number;
+    declaredWidth?: number | null;
+    declaredHeight?: number | null;
+}): TreeChildBox {
+    return {
+        x: input.x,
+        y: input.y,
+        width: input.measuredWidth ?? input.declaredWidth ?? TREE_CHILD_FALLBACK_SIZE.width,
+        height: input.measuredHeight ?? input.declaredHeight ?? TREE_CHILD_FALLBACK_SIZE.height,
+    };
+}
+
 /**
  * Where a child's branch leaves its box: the centre of the side that faces the
  * parent. Centre of the SIDE, so the branch reads as the axis of the node, and it

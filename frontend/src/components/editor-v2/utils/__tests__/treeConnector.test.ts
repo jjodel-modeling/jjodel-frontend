@@ -7,6 +7,7 @@ import {
     TREE_BUS_CORNER_RADIUS,
     treeBusCornerRadius,
     treeBranchAnchor,
+    treeChildBox,
     type TreeBranch,
 } from '../edgeUtils';
 
@@ -172,6 +173,93 @@ describe('branch anchoring — centre of the child side, from the measured box',
         expect(busSpan(g.barAndBranchesPath)).toEqual({ min: 170, max: 770 });
         expect(bus.get(500)).toHaveLength(2);
         expect(g.junction).toEqual({ x: 500, y: 280 });
+    });
+});
+
+// A child that moves must keep its branch, and the bus must follow it. The
+// invariant is one line — every child has a path to the bus, wherever it sits —
+// and these are the three moves that broke it: the branch vanished AND the bus
+// shrank to the children that were left.
+describe('after a drag — every child keeps its branch', () => {
+    const PARENT_X = 470;
+    const PARENT_BOTTOM = 180;
+    const kid = (x: number, y: number, width = 140, height = 60) => ({ x, y, width, height });
+
+    const treeOf = (boxes: ReturnType<typeof kid>[]) => {
+        const anchors = boxes.map(b => treeBranchAnchor(b, 'top'));
+        const branches: TreeBranch[] = anchors.map((a, i) => ({ childX: a.x, childY: a.y, edgeId: `e${i}` }));
+        return { g: computeTreeConnectorPath(PARENT_X, PARENT_BOTTOM, branches), anchors };
+    };
+
+    /** Every child owns a sub-path that starts on it and ends on the bus. */
+    const eachChildReachesTheBus = (g: ReturnType<typeof computeTreeConnectorPath>, anchors: { x: number; y: number }[]) => {
+        const subs = parsePathSubPaths(g.barAndBranchesPath);
+        const busY = g.junction!.y;
+        for (const a of anchors) {
+            const own = subs.filter(pts => pts[0].x === a.x && pts[0].y === a.y);
+            expect(own, `no branch starting at (${a.x}, ${a.y})`).toHaveLength(1);
+            expect(own[0].some(p => p.y === busY), `branch at ${a.x} never reaches the bus`).toBe(true);
+        }
+        expect(subs).toHaveLength(anchors.length);
+    };
+
+    it('an interior child dragged below the others keeps its vertical, from the bus down to its top', () => {
+        // Red, the middle one, dragged straight down.
+        const boxes = [kid(120, 460), kid(400, 700), kid(680, 460)];
+        const { g, anchors } = treeOf(boxes);
+        const bus = busByChildX(g.barAndBranchesPath);
+
+        // barY still sits between the parent and the CLOSEST child, which is unchanged.
+        expect(g.junction).toEqual({ x: PARENT_X, y: 320 });
+        expect(bus.get(470)).toEqual([{ x: 470, y: 700 }, { x: 470, y: 320 }]);
+        eachChildReachesTheBus(g, anchors);
+    });
+
+    it('an outer child dragged past the old end: the bus follows it, with the elbow on the new end', () => {
+        // Green dragged down and to the right, well beyond where the bus used to stop.
+        const boxes = [kid(120, 460), kid(400, 460), kid(900, 700)];
+        const { g, anchors } = treeOf(boxes);
+
+        expect(busSpan(g.barAndBranchesPath)).toEqual({ min: 190, max: 970 });
+        eachChildReachesTheBus(g, anchors);
+
+        // The new end is an elbow, and it rounds at the nominal radius.
+        const moved = busByChildX(g.barAndBranchesPath).get(970)!;
+        expect(moved).toHaveLength(3);
+        const raw = 'M ' + moved.map(p => `${p.x} ${p.y}`).join(' L ');
+        expect(roundManhattanPath(raw, treeBusCornerRadius(moved))).toContain('A 4 4');
+    });
+
+    it('a child dragged above the bus still has its branch — it just enters from the other side', () => {
+        // Red dragged above the parent: it becomes the closest child, so the bus
+        // moves up with it, above the parent's own edge.
+        const boxes = [kid(120, 460), kid(400, 40), kid(680, 460)];
+        const { g, anchors } = treeOf(boxes);
+        const busY = g.junction!.y;
+
+        expect(busY).toBe(110);            // 180 + (40 - 180) / 2
+        expect(busY).toBeLessThan(PARENT_BOTTOM);
+        // The moved child hangs above the bus, the others below: both are branches.
+        expect(busByChildX(g.barAndBranchesPath).get(470)).toEqual([{ x: 470, y: 40 }, { x: 470, y: 110 }]);
+        eachChildReachesTheBus(g, anchors);
+    });
+
+    it('a child the canvas has not measured yet still gets a box, so it still gets a branch', () => {
+        // The regression: resolving to nothing dropped the child from the connector.
+        const unmeasured = treeChildBox({ x: 400, y: 460 });
+        expect(unmeasured.width).toBeGreaterThan(0);
+        expect(unmeasured.height).toBeGreaterThan(0);
+
+        // Measured wins over declared, declared over the fallback.
+        expect(treeChildBox({ x: 0, y: 0, measuredWidth: 200, declaredWidth: 140 }).width).toBe(200);
+        expect(treeChildBox({ x: 0, y: 0, declaredWidth: 140 }).width).toBe(140);
+
+        // `unmeasured` above is the middle child as the canvas hands it over before
+        // measuring it: a position and nothing else. It still anchors — on the
+        // fallback width, so its centre is 400 + 180/2 — and the bus still reaches it.
+        const { g, anchors } = treeOf([kid(120, 460), unmeasured, kid(680, 460)]);
+        expect(anchors[1]).toEqual({ x: 490, y: 460 });
+        eachChildReachesTheBus(g, anchors);
     });
 });
 
