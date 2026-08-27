@@ -246,7 +246,13 @@ export function IRFormField({ field, diagnostics, dirty, onCommitted }: IRFormFi
                     should meet it on the way in. A diagnostic still wins the border and the
                     message slot below, being unsaved is not being wrong. */}
                 {dirty && <span className="ir-field__dirty-dot" title="Modified, not saved" aria-hidden="true" />}
-                <label className="ir-field__label" htmlFor={fieldId}>{field.name}</label>
+                {/* The multiplicity also as a tooltip. The compact theme drops it from the row,
+                    where an 88px label column leaves no space for it, and this is where it goes
+                    (README: "multiplicity may drop to tooltip"). Unconditional rather than
+                    theme-aware: the label does not know the theme, and a tooltip repeating a
+                    value that is visible two centimetres away costs nothing. */}
+                <label className="ir-field__label" htmlFor={fieldId}
+                       title={field.isDerived ? 'derived' : multiplicityLabel(field)}>{field.name}</label>
                 {/* Required is a 4px cyan dot, never a red asterisk: red is reserved for
                     diagnostics, so a field that is merely mandatory must not look wrong. */}
                 {field.isRequired && (

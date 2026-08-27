@@ -53,25 +53,42 @@ export interface IRFormProps {
  */
 const PREF_PREFIX = 'jjodel.formPrefs.';
 
-function readMode(viewKey: string): FormMode {
+/** Everything the form remembers per view. One entry, not one key per concern: the comment
+ *  on PREF_PREFIX anticipated the collapse state landing beside the mode, and it does. */
+interface FormPrefs { mode?: FormMode; collapsed?: string[] }
+
+function readPrefs(viewKey: string): FormPrefs {
     try {
         const raw = localStorage.getItem(PREF_PREFIX + viewKey);
         if (raw) {
             const parsed = JSON.parse(raw);
-            if (parsed?.mode === 'basic' || parsed?.mode === 'advanced') return parsed.mode;
+            if (parsed && typeof parsed === 'object') return parsed as FormPrefs;
         }
     } catch {
         // A corrupt or unreadable entry is not worth a broken panel.
     }
+    return {};
+}
+
+function readMode(viewKey: string): FormMode {
+    const m = readPrefs(viewKey).mode;
+    if (m === 'basic' || m === 'advanced') return m;
     // No preference for THIS view yet: inherit the user's global interface mode rather
     // than hardcoding 'basic', so a form opened for the first time agrees with the rest
     // of the app instead of contradicting it.
     return getInterfaceMode();
 }
 
-function writeMode(viewKey: string, mode: FormMode): void {
+function readCollapsed(viewKey: string): Set<string> {
+    const c = readPrefs(viewKey).collapsed;
+    return new Set(Array.isArray(c) ? c.filter(x => typeof x === 'string') : []);
+}
+
+/** Merge one field into the stored entry, so writing the mode does not drop the collapse
+ *  state and the other way round. */
+function writePrefs(viewKey: string, patch: FormPrefs): void {
     try {
-        localStorage.setItem(PREF_PREFIX + viewKey, JSON.stringify({ mode }));
+        localStorage.setItem(PREF_PREFIX + viewKey, JSON.stringify({ ...readPrefs(viewKey), ...patch }));
     } catch {
         // Private mode, quota, disabled storage: the preference is a convenience.
     }
@@ -144,8 +161,23 @@ export function IRForm({ objectId, defaultTheme = 'plain' }: IRFormProps) {
     const [mode, setMode] = useState<FormMode>(() => readMode(viewKey));
     const onMode = useCallback((m: FormMode) => {
         setMode(m);
-        writeMode(viewKey, m);
+        writePrefs(viewKey, { mode: m });
     }, [viewKey]);
+
+    // Collapsed sections. Only the inspector theme exposes the control, but the state is kept
+    // for every theme: switching theme and back should not lose what the user folded away.
+    const [collapsed, setCollapsed] = useState<Set<string>>(() => readCollapsed(viewKey));
+    const toggleSection = useCallback((key: string) => {
+        setCollapsed(prev => {
+            const next = new Set(prev);
+            if (next.has(key)) next.delete(key); else next.add(key);
+            writePrefs(viewKey, { collapsed: Array.from(next) });
+            return next;
+        });
+    }, [viewKey]);
+    // A different view has its own entry; without this the sections of the previous one would
+    // stay folded over the new one's, which do not even have the same keys.
+    useEffect(() => { setCollapsed(readCollapsed(viewKey)); }, [viewKey]);
 
     const slots: any[] = lObject?.features ?? [];
     const fields = useMemo(
@@ -281,7 +313,16 @@ export function IRForm({ objectId, defaultTheme = 'plain' }: IRFormProps) {
             <div className="ir-form__body">
                 {!hasNameSlot && (
                     <div className="ir-form__group">
-                        <div className="ir-form__group-title">Identity</div>
+                        {/* Same heading markup as the sections below, so the inspector theme
+                            gives it the same 28px bar with its chevron and count instead of a
+                            bare line that looks like a different kind of thing. Not collapsible:
+                            folding away the only control that renames the object would hide the
+                            field this group exists for. */}
+                        <div className="ir-form__group-title ir-form__group-title--static">
+                            <i className="bi bi-chevron-down ir-form__group-chevron" aria-hidden="true" />
+                            <span className="ir-form__group-label">Identity</span>
+                            <span className="ir-form__group-count">1</span>
+                        </div>
                         <div className={`ir-field${dirtyFields.has('name') ? ' ir-field--dirty' : ''}`}>
                             <div className="ir-field__labelrow">
                                 {dirtyFields.has('name') && (
@@ -303,10 +344,26 @@ export function IRForm({ objectId, defaultTheme = 'plain' }: IRFormProps) {
                     </div>
                 )}
 
-                {sections.map(s => (
-                    <div className="ir-form__group" key={s.key}>
-                        <div className="ir-form__group-title">{s.title}</div>
-                        {s.fields.map(f => (
+                {sections.map(s => {
+                    const folded = collapsed.has(s.key);
+                    return (
+                    <div className={`ir-form__group${folded ? ' ir-form__group--collapsed' : ''}`} key={s.key}>
+                        {/* One heading element for every theme, and the theme decides what it
+                            looks like and whether it is interactive. A button in plain/card/compact
+                            too, rather than two markups to keep in step: the themes differ in
+                            appearance, and the collapse affordance is chrome the stylesheet shows
+                            or hides. */}
+                        <button
+                            type="button"
+                            className="ir-form__group-title"
+                            aria-expanded={!folded}
+                            onClick={() => toggleSection(s.key)}
+                        >
+                            <i className={`bi bi-chevron-${folded ? 'right' : 'down'} ir-form__group-chevron`} aria-hidden="true" />
+                            <span className="ir-form__group-label">{s.title}</span>
+                            <span className="ir-form__group-count">{s.fields.length}</span>
+                        </button>
+                        {!folded && s.fields.map(f => (
                             <div
                                 key={f.slotId}
                                 ref={el => { if (el) fieldRefs.current.set(f.name, el); else fieldRefs.current.delete(f.name); }}
@@ -320,7 +377,8 @@ export function IRForm({ objectId, defaultTheme = 'plain' }: IRFormProps) {
                             </div>
                         ))}
                     </div>
-                ))}
+                    );
+                })}
 
                 {sections.length === 0 && hasNameSlot === false && (
                     <div className="ir-form__placeholder">No fields to show</div>
