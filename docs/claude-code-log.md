@@ -8100,3 +8100,16 @@ Dark mode overrides for `.toolbar-btn` also scoped under `.documentation-toolbar
 **Smoke visivo**: passato con riserva. `npm run smoke` verde ma non copre il routing: i tre stati montano un canvas senza archi. La sonda del punto 1 misura sul canvas vero: R0 ×5 verdi, F1a e F2 verdi con clearance salita da 9 a 13,4 e 13,8px. F2-degenere segna rosso perché asserisce che il limite di Fase B — ancoraggio sepolto ⇒ si degrada — si osservi ancora: non si osserva più (nessuna intersezione, clearance 12,6px), il limite è caduto.
 **Notes**: la causa misurata non e' una regola che imponga `top → bottom` ma la dead zone angolare 30°-60° (`useAutoAnchor.ts:389`): congelava i lati precedenti e, senza, li faceva ripiegare entrambi su `right` — la U attorno al target, 560px contro i 360 della Z. Le rifiniture 2 e 3 passano da una `RoundingPolicy` opzionale: assente, le due funzioni sono byte-identiche, ed e' cosi' che `useTreeLayout` resta fuori. Dettagli in `discovery_2026-08-27_reference_edge_routing.md`.
 **Prompt document name**: 2026-08-27 13:10 reference_edge_routing_sides
+
+## 2026-08-27 — docs: diagramma denso, cinque difetti misurati (Fase 1, read-only)
+**Prompt**: cinque difetti sul metamodello StateMachine (Heater, ~10 nodi): segmenti quasi-orizzontali inclinati di pochi px, uno stub orfano a L di ~20px vicino all'angolo di Heater, due corsie verticali a 1-2px l'una dall'altra, il tratto d'approccio di un arco dentro la corsia di un altro all'ingresso di Steady, e le maniglie intermedie che non compaiono selezionando un arco.
+**Files touched**: docs/discovery/discovery_2026-08-27_2_dense_diagram_routing.md (nuovo), docs/claude-code-log.md.
+**Outcome**: ✅ completed (Fase 1; nessuna modifica al sorgente)
+**Corregge**: 2026-08-27 13:10 (il difetto 5 è una regressione di quel commit)
+**Causa**: (c)
+**Regressions**: no (fase read-only)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (nessuna modifica)
+**Smoke visivo**: non applicabile
+**Notes**: sonda deterministica (LCG seminato), 40 scene da 10 nodi e 18 archi. Difetto 1: l'inclinazione nasce **solo** in `avoidNodeRects` (0 dopo il router, 0 dopo lo spread, 113/720 dopo), dalla griglia a mezzo pixel di `edgeUtils.ts:2109` contro ancore a frazione `(k+1)/(N+1)`. Difetto 5: 412/720 archi senza maniglie contro 14/720 con la regola dei lati precedente — la L a due segmenti non ne ha nessuna. Difetto 2 **non riprodotto**, zero spur: serve il DOM.
+**Prompt document name**: 2026-08-27 14:10 dense_diagram_five_defects
