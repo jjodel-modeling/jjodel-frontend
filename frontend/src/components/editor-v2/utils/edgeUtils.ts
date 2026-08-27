@@ -1090,15 +1090,15 @@ export interface TreeConnectorGeometry {
 }
 
 /** Corner radius of the two outer elbows, where the bus turns toward the trunk. */
-export const TREE_BUS_CORNER_RADIUS = 16;
+export const TREE_BUS_CORNER_RADIUS = 4;
 
 /**
  * Radius to round one bus sub-path with: the nominal one, clamped to half of its
  * shortest segment.
  *
  * The clamp is the point. `roundManhattanPath` lets the first and last corner of a
- * path consume its whole end segment, which at radius 16 turns a short branch into
- * one long arc; half the segment always leaves a straight piece on both sides of
+ * path consume its whole end segment, which turns a branch shorter than the radius
+ * into one arc; half the segment always leaves a straight piece on both sides of
  * the elbow. Two-point sub-paths — every interior child — have no corner and get 0,
  * which keeps their T-junction square.
  */

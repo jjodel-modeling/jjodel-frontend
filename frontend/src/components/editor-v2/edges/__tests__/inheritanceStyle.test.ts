@@ -106,7 +106,8 @@ describe('inheritance triangle — size is fixed, not a function of the line', (
         expect(triangles.length).toBeGreaterThanOrEqual(2);
     });
 
-    it('the outline of the triangle keeps its pre-fix weight', () => {
+    it('the line and the outline of the triangle carry the same weight', () => {
+        expect(topLevelDecls(scssBlock('.inheritance-edge'))).toMatch(/stroke-width:\s*1;/);
         expect(topLevelDecls(scssBlock('.inheritance-marker'))).toMatch(/stroke-width:\s*1;/);
     });
 });

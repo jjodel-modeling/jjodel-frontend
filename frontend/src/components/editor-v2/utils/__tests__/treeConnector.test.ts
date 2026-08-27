@@ -146,15 +146,15 @@ describe('bus rendering — corner rounding as useTreeLayout applies it', () => 
             return roundManhattanPath(raw, treeBusCornerRadius(pts));
         });
 
-    it('the nominal radius is the wide one, not the first 8px try', () => {
-        expect(TREE_BUS_CORNER_RADIUS).toBe(16);
+    it('the nominal radius is the settled one', () => {
+        expect(TREE_BUS_CORNER_RADIUS).toBe(4);
     });
 
-    it('outer children get the wide arc, interior children get none', () => {
+    it('outer children get the arc, interior children get none', () => {
         const g = computeTreeConnectorPath(520, PARENT_Y, [child(400, 'e1'), child(600, 'e2'), child(800, 'e3')]);
         const paths = rounded(g.barAndBranchesPath);
 
-        const withArc = paths.filter(d => d.includes('A 16 16'));
+        const withArc = paths.filter(d => d.includes('A 4 4'));
         const straight = paths.filter(d => !d.includes('A'));
         expect(withArc).toHaveLength(2);
         expect(straight).toHaveLength(1);
@@ -166,10 +166,10 @@ describe('bus rendering — corner rounding as useTreeLayout applies it', () => 
         const g = computeTreeConnectorPath(500, PARENT_Y, [child(400, 'e1'), child(600, 'e2')]);
         const [left, right] = rounded(g.barAndBranchesPath);
 
-        // Left child: up to 16px short of the bar, quarter arc, then right to the trunk.
-        expect(left).toBe(`M 400 ${CHILD_Y} L 400 ${BAR_Y + TREE_BUS_CORNER_RADIUS} A 16 16 0 0 1 416 ${BAR_Y} L 500 ${BAR_Y}`);
+        // Left child: up to 4px short of the bar, quarter arc, then right to the trunk.
+        expect(left).toBe(`M 400 ${CHILD_Y} L 400 ${BAR_Y + TREE_BUS_CORNER_RADIUS} A 4 4 0 0 1 404 ${BAR_Y} L 500 ${BAR_Y}`);
         // Right child: mirrored, curving left.
-        expect(right).toBe(`M 600 ${CHILD_Y} L 600 ${BAR_Y + TREE_BUS_CORNER_RADIUS} A 16 16 0 0 0 584 ${BAR_Y} L 500 ${BAR_Y}`);
+        expect(right).toBe(`M 600 ${CHILD_Y} L 600 ${BAR_Y + TREE_BUS_CORNER_RADIUS} A 4 4 0 0 0 596 ${BAR_Y} L 500 ${BAR_Y}`);
     });
 
     it('the trunk survives rounding untouched — two points, nothing to round', () => {
@@ -184,17 +184,17 @@ describe('treeBusCornerRadius — the clamp on short segments', () => {
     });
 
     it('with room, the radius is the nominal one', () => {
-        expect(treeBusCornerRadius([{ x: 0, y: 100 }, { x: 0, y: 0 }, { x: 100, y: 0 }])).toBe(16);
+        expect(treeBusCornerRadius([{ x: 0, y: 100 }, { x: 0, y: 0 }, { x: 100, y: 0 }])).toBe(4);
     });
 
     it('with a short segment it is half of it, never more', () => {
         expect(treeBusCornerRadius([{ x: 0, y: 100 }, { x: 0, y: 0 }, { x: 5, y: 0 }])).toBe(2.5);
-        expect(treeBusCornerRadius([{ x: 0, y: 9 }, { x: 0, y: 0 }, { x: 100, y: 0 }])).toBe(4.5);
+        expect(treeBusCornerRadius([{ x: 0, y: 3 }, { x: 0, y: 0 }, { x: 100, y: 0 }])).toBe(1.5);
     });
 
     it('children packed against the trunk keep a straight piece on both sides', () => {
-        // Bar 5px long on the left of the trunk: at the nominal radius the elbow
-        // would swallow it whole and the branch would land as one arc.
+        // Bar 5px long on the left of the trunk: without the clamp the elbow would
+        // swallow it whole and the branch would land as one arc.
         const g = computeTreeConnectorPath(405, PARENT_Y, [child(400, 'e1'), child(410, 'e2')]);
         const pts = parsePathSubPaths(g.barAndBranchesPath)[0];
         const r = treeBusCornerRadius(pts);
