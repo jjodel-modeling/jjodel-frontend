@@ -112,6 +112,45 @@ describe('describeSlot classification', () => {
         expect(d.options[0].options[2]).toEqual({ value: 'p-final', label: 'final' });
     });
 
+    it('normalizes an enum value written as the literal NAME into the option id', () => {
+        // What the XMI importer writes: the name, not the pointer. The select is keyed by id,
+        // so before this the control rendered empty over a value that was there.
+        const d = describeSlot(slot({
+            name: 'kind', typeClass: 'DEnumerator', values: ['normal'],
+            options: [{ label: 'StateKind', options: [
+                { value: 'p-initial', label: 'initial' },
+                { value: 'p-normal', label: 'normal' },
+            ] }],
+        }))!;
+        expect(d.values).toEqual(['p-normal']);
+    });
+
+    it('leaves an enum value that already is an option id untouched', () => {
+        const d = describeSlot(slot({
+            name: 'kind', typeClass: 'DEnumerator', values: ['p-initial'],
+            options: [{ label: 'StateKind', options: [
+                { value: 'p-initial', label: 'initial' },
+                { value: 'p-normal', label: 'normal' },
+            ] }],
+        }))!;
+        expect(d.values).toEqual(['p-initial']);
+    });
+
+    it('leaves an unknown enum name alone, for the validator to report', () => {
+        // A literal removed from the enum since the model was written. Rewriting it here
+        // would hide a real conformance problem behind a blank control.
+        const d = describeSlot(slot({
+            name: 'kind', typeClass: 'DEnumerator', values: ['obsolete'],
+            options: [{ label: 'StateKind', options: [{ value: 'p-normal', label: 'normal' }] }],
+        }))!;
+        expect(d.values).toEqual(['obsolete']);
+    });
+
+    it('does not normalize a non-enum slot, even when a label happens to match', () => {
+        const d = describeSlot(slot({ name: 'trigger', values: ['normal'] }))!;
+        expect(d.values).toEqual(['normal']);
+    });
+
     it('derives reference for a DReference, and is NOT a composition', () => {
         const d = describeSlot(slot({
             name: 'outgoing', typeName: 'Transition', featureClass: 'DReference',

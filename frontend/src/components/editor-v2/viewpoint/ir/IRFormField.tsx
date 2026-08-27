@@ -21,7 +21,7 @@
  */
 
 import { useMemo } from 'react';
-import { store } from '../../../../joiner';
+import { LPointerTargetable } from '../../../../joiner';
 import type { FormFieldDescriptor } from './useFormWidgets';
 import { multiplicityLabel } from './useFormWidgets';
 import { setSlotValue } from './formWrite';
@@ -49,17 +49,29 @@ export interface IRFormFieldProps {
 /**
  * Display text of a single value.
  *
- * A pointer resolves to the target's name — the same resolution the canvas rows do
- * (`lookup[v].name` when the value is an id that lands on a named element), so a reference
- * reads as "Running" and not as a pointer id. Read straight from `idlookup`: this is a
- * render-time display of a value the caller's subscription already covers, so a proxy
- * would buy nothing and cost a wrap.
+ * A pointer resolves to the name of the element it points at, so a reference reads as
+ * "Running" and not as a pointer id.
+ *
+ * Through the L PROXY, not through `idlookup`. The two disagree, and visibly: `DObject.name`
+ * is the D-layer field, which the XMI importer leaves at its generated default (`State_0`),
+ * while the L getter reads the identity the user sees — the same one the form header shows a
+ * few pixels above. Reading the raw field made a row say `State_0` under a header saying
+ * `Running`, for the same object. The proxy costs a wrap per value; correctness of identity
+ * is worth more than that, and the reactivity is unchanged because the caller's subscription
+ * already covers the slot values this resolves.
+ *
+ * See CLAUDE.md 3.12 for why the two sides of the name binding are wired asymmetrically.
  */
 function displayValue(raw: unknown): string {
     if (raw == null) return '';
     if (typeof raw === 'string') {
-        const el = (store.getState() as any)?.idlookup?.[raw];
-        if (el?.name) return String(el.name);
+        try {
+            const l: any = LPointerTargetable.fromPointer(raw);
+            if (l?.name) return String(l.name);
+        } catch {
+            // Not a pointer, or a pointer to something that no longer exists: fall through
+            // and show the value itself rather than blanking the row.
+        }
     }
     return String(raw);
 }

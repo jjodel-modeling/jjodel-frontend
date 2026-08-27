@@ -7310,7 +7310,11 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
 
 
         if (dmeta?.derived) {
+            // reducer.ts:1093 keeps the line that would populate this map commented out, so the
+            // entry is missing for every element and this read used to throw on any derived
+            // feature. Same lazy-create idiom as ocl.tsx:80-81.
             let td = transientProperties.modelElement[dmeta.id];
+            if (!td) transientProperties.modelElement[dmeta.id] = td = new DataTransientProperties();
             if (!td.derived_read) {
                 try {
                     let txt = dmeta.derived_read || '(data, originalValues)=>{return originalValues}';
@@ -7711,7 +7715,11 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         let dmeta: DReference | DAttribute | undefined = meta?.__raw;
         let lname =  this.get_name(c);
         if (dmeta?.derived) {
+            // reducer.ts:1093 keeps the line that would populate this map commented out, so the
+            // entry is missing for every element and this read used to throw on any derived
+            // feature. Same lazy-create idiom as ocl.tsx:80-81.
             let td = transientProperties.modelElement[dmeta.id];
+            if (!td) transientProperties.modelElement[dmeta.id] = td = new DataTransientProperties();
             if (!td.derived_write) {
                 try {
                     let txt = dmeta.derived_write || '(values, data, oldValues)=>{ data.values = values; }';

@@ -254,3 +254,58 @@ Registro dei debiti tecnici noti. Ogni entry deve indicare: data, origine, stato
 **Riferimenti:**
 - `docs/claude-code-log.md` — entry del 2026-08-18 sullo smoke di M1, nota (7)
 - `frontend/src/view/viewElement/view.tsx:584-593` (`get_ir` / `set_ir`)
+
+---
+
+## Enum M1: gli editor scrivono per id, il validatore e l'importer ragionano per nome
+
+**Registrato:** 2026-08-27
+**Origine:** verifica visiva del commit D della Slice 1b (form views), finding F4. Modificare un
+enum da qualunque pannello fa comparire subito dopo un warning `invalid_enum_literal` sul valore
+appena scritto.
+**Stato attuale:** due convenzioni convivono sullo stesso slot. Gli **editor** scrivono il
+**pointer del literal**: `Info.tsx` costruisce le opzioni con `value: object.id` e il pannello
+classico produce lo stesso warning della form, quindi non e' un difetto introdotto dal form
+rendering. L'**importer XMI** scrive il **nome** (`values: ['normal']`). Il **validatore**
+(`ConformanceValidator.ts` CHECK 10) confronta per nome, e non riconosce un id. Effetto: un modello
+importato e' conforme finche' nessuno lo tocca, e ogni modifica di un enum lo rende non conforme
+agli occhi del validatore, senza che nulla sia cambiato nella semantica del modello.
+**Fix strutturale raccomandato:** scegliere il canone — id o nome — e allineare i tre scrittori.
+La scelta e' di Alfonso e non e' meccanica: l'id e' stabile a fronte di una rinomina del literal,
+il nome e' quello che l'XMI porta e che sopravvive a un round-trip fra progetti diversi. Qualunque
+sia la scelta, il validatore va reso tollerante ad entrambe le forme durante la transizione, o i
+modelli gia' salvati diventano non conformi in blocco.
+**Non fatto di lato:** la form NON e' stata allineata al validatore scrivendo per nome, perche'
+scriverebbe diversamente da `Info.tsx` e aggiungerebbe una quarta convenzione invece di togliere
+una delle tre. La form normalizza in LETTURA (nome -> id, `useFormWidgets.normalizeEnumValues`)
+per rendere il valore importato, e scrive per id come il pannello classico.
+**Priorita':** media.
+**Effort stimato:** mezza giornata per l'allineamento, una volta presa la decisione.
+**Riferimenti:** `model/conformance/ConformanceValidator.ts` (CHECK 10),
+`components/editors/Info.tsx` (opzioni degli enum), `services/export/XMIService.ts`,
+`components/editor-v2/viewpoint/ir/useFormWidgets.ts` (`normalizeEnumValues`).
+
+---
+
+## `DObject.name` e lo slot `name` non allineati sui modelli importati da XMI
+
+**Registrato:** 2026-08-27
+**Origine:** verifica visiva del commit D della Slice 1b (form views), finding F2. Le righe di
+riferimento della form mostravano `State_0` mentre l'header, per lo stesso oggetto, mostrava
+`Running`.
+**Stato attuale:** l'importer XMI popola lo slot `name` dell'istanza ma lascia `DObject.name` al
+default generato (`State_0`, `Transition_0`). Il binding di identita' descritto in `CLAUDE.md`
+3.12 propaga slot -> nome solo quando lo slot viene **scritto** attraverso `setValueAtPosition`,
+non al momento dell'import. Chi legge il campo D vede quindi un nome, chi legge il proxy L ne vede
+un altro, per lo stesso elemento e nello stesso istante.
+**Aggirato, non risolto:** la form legge il nome dal proxy L (`IRFormField.displayValue`), che e'
+la stessa lettura dell'header, quindi le due superfici concordano. Ogni altro consumatore che legge
+`idlookup[id].name` su un modello importato mostra ancora il default generato.
+**Fix strutturale raccomandato:** allineare i due lati all'import, applicando la stessa
+propagazione che l'edit applica — cioe' scrivendo lo slot `name` per la via che gia' porta al campo
+D, invece di popolarlo direttamente. Da valutare nell'importer, non nella form.
+**Priorita':** bassa (cosmetico finche' nessuno usa `DObject.name` per identificare).
+**Effort stimato:** mezza giornata, con un test di round-trip sull'import XMI.
+**Riferimenti:** `services/export/XMIService.ts`, `CLAUDE.md` 3.12,
+`components/editor-v2/viewpoint/ir/IRFormField.tsx` (`displayValue`).
+

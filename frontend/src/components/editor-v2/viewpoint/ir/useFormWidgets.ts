@@ -153,6 +153,43 @@ function readOptions(slot: any): FormFieldOptionGroup[] {
 }
 
 /**
+ * Normalize the values of an enum slot to option ids.
+ *
+ * The D layer holds whatever the writer put there, and the two writers disagree: the editors
+ * write the POINTER of the literal, while the XMI importer writes its NAME (`values: ['normal']`).
+ * The L-layer `.values` getter resolves the name; `__raw.values`, which this module reads to
+ * avoid the lowerBound padding, does not. The select is keyed by option id, so an imported
+ * model showed an empty control over a value that was there all along.
+ *
+ * A value that already is an option id passes through. A name that matches no option passes
+ * through too, unchanged: it may be a literal removed from the enum, and that is a conformance
+ * problem for the validator to report, not something to silently rewrite here.
+ *
+ * Only the READ is normalized. Writes stay by id (`setSlotValue(..., isPtr: true)`), which is
+ * what the classic panel does, so the form does not invent a third convention.
+ */
+function normalizeEnumValues(values: unknown[], options: FormFieldOptionGroup[]): unknown[] {
+    if (values.length === 0 || options.length === 0) return values;
+    const ids = new Set<string>();
+    const byLabel = new Map<string, string>();
+    for (const g of options) {
+        for (const o of g.options) {
+            ids.add(o.value);
+            if (!byLabel.has(o.label)) byLabel.set(o.label, o.value);
+        }
+    }
+    let changed = false;
+    const out = values.map(v => {
+        if (typeof v !== 'string' || ids.has(v)) return v;
+        const id = byLabel.get(v);
+        if (id === undefined) return v;
+        changed = true;
+        return id;
+    });
+    return changed ? out : values;
+}
+
+/**
  * Descriptor of one slot. Exported for the unit tests, which drive it on plain object
  * fixtures rather than on live proxies.
  */
@@ -199,6 +236,10 @@ export function describeSlot(slot: any, spec?: FormSpec): FormFieldDescriptor | 
     const isDerived = feature?.derived === true;
     const isReadOnly = isDerived || feature?.changeable === false;
 
+    const options = isEnum || isPlainRef || isCompositionRef ? readOptions(slot) : [];
+    const raw = rawValues(slot);
+    const values = isEnum ? normalizeEnumValues(raw, options) : raw;
+
     return {
         slotId: String(slot.id ?? ''),
         name,
@@ -215,8 +256,10 @@ export function describeSlot(slot: any, spec?: FormSpec): FormFieldDescriptor | 
         isComposition: isCompositionRef,
         isReadOnly,
         isDerived,
-        options: isEnum || isPlainRef || isCompositionRef ? readOptions(slot) : [],
-        values: rawValues(slot),
+        options,
+        values,
+        // Counted on the raw array: normalization only rewrites what a value IS, never how
+        // many there are, and `meaningfulValues` has to keep reading the slot itself.
         filled: meaningfulValues(slot),
         step,
         maxLength,
