@@ -665,3 +665,261 @@
 }
 
 // Capability badges now use unified jj-badge system (Badge component)
+
+// ============================================
+// PROVIDERS · DENSE ROWS (mockup 5a)
+// ============================================
+// Everything below is scoped to .ai-settings-content: the class names above
+// (.provider-card, .providers-list, .settings-footer, …) are shared with
+// pages/settings/AIAssistantSettings and components/Jodie/SettingsModal, which
+// keep the card layout.
+// Palette: literal, on purpose. The Settings modal shell is light-only —
+// UnifiedSettingsModal.scss carries no [data-theme] rule and paints #ffffff in
+// both themes — so a themed token would turn this text white on a white surface
+// in dark mode. `--border-color` is the sharpest case: variables.scss:4 resolves
+// it to rgba(255,255,255,0.08) under [data-theme=dark], invisible on white.
+// When the modal gets a real dark theme, this block moves onto tokens with it.
+
+.ai-settings-content {
+
+    .providers-list {
+        gap: 0;
+        padding-right: 0;
+        // Lets the list, and not the whole panel, take the scroll when the rows
+        // outgrow the modal: the footer stays anchored and the header stays put.
+        min-height: 0;
+    }
+
+    // Anchors the footer to the bottom of the panel: without a definite height on
+    // the section the flex column collapses to its content and the footer floats
+    // right under the last row.
+    .settings-footer {
+        margin-top: auto;
+        padding-top: 10px;
+    }
+
+    .footer-info i {
+        font-size: 13px;
+    }
+}
+
+// A definite height on the section is what anchors the footer: with height auto the
+// flex column collapses to its content and the footer follows the last row, ending
+// up below the fold of the modal.
+.unified-settings-content > .providers-section {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+
+    > .ai-settings-content {
+        flex: 1;
+        min-height: 0;
+    }
+
+    .settings-section-header {
+        margin-bottom: 12px;
+    }
+}
+
+.ai-provider-group {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+
+    & + & {
+        margin-top: 12px;
+    }
+}
+
+.ai-provider-group__label {
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.2;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #94a3b8;
+    padding: 0 10px 4px;
+}
+
+.ai-provider-row {
+    border-radius: 8px;
+
+    // The open row is outlined with an inset shadow and not with a border: a border
+    // would add 2px to every row's box and push the list past the modal.
+    &.expanded {
+        background: #ffffff;
+        box-shadow: inset 0 0 0 1px #e2e8f0;
+    }
+}
+
+.ai-provider-row__head {
+    width: 100%;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 10px;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.1s ease;
+
+    &:hover {
+        background: #f1f5f9;
+    }
+
+    &:focus-visible {
+        outline: 2px solid #0ea5e9;
+        outline-offset: -2px;
+    }
+}
+
+.ai-provider-row--configured .ai-provider-row__head {
+    height: 46px;
+}
+
+.ai-provider-row__logo {
+    flex: 0 0 28px;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    overflow: hidden;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #f1f5f9;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 700;
+
+    img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        display: block;
+    }
+
+    i {
+        font-size: 15px;
+    }
+}
+
+.ai-provider-row__name {
+    flex: 0 0 auto;
+    font-size: 14px;
+    font-weight: 600;
+    color: #1e293b;
+    white-space: nowrap;
+}
+
+.ai-provider-row__models {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 12px;
+    color: #94a3b8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ai-provider-row__state {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #94a3b8;
+    white-space: nowrap;
+
+    &--active {
+        color: #16a34a;
+    }
+
+    // A key that failed its last test keeps the same slot, in red: the row is
+    // configured, so "Set up" would be wrong and silence would hide the failure.
+    &--error {
+        color: #dc2626;
+    }
+}
+
+.ai-provider-row__dot {
+    flex: 0 0 7px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+.ai-provider-row__chevron {
+    flex: 0 0 auto;
+    font-size: 11px;
+    color: #94a3b8;
+    transition: transform 0.2s ease;
+}
+
+.ai-provider-row.expanded .ai-provider-row__chevron {
+    transform: rotate(180deg);
+}
+
+// The dark block higher up in this file was written when the panel was a stack of
+// dark cards: on the light modal surface it now leaves the expanded form as a dark
+// island — measured in dark, the "API Key" label computes to rgba(255,255,255,0.6),
+// i.e. white on white. Scoped back to the light palette, for this component only:
+// pages/settings/AIAssistantSettings and Jodie/SettingsModal keep those rules.
+[data-theme="dark"] .ai-settings-content {
+
+    .provider-content {
+        border-top-color: #e2e8f0;
+    }
+
+    .form-group {
+        label {
+            color: #475569;
+        }
+
+        input {
+            background: #f8fafc;
+            border-color: #e2e8f0;
+            color: #1e293b;
+
+            &:focus {
+                background: #ffffff;
+            }
+
+            &::placeholder {
+                color: #94a3b8;
+            }
+        }
+    }
+
+    .test-btn {
+        background: #ffffff;
+        border-color: #e2e8f0;
+        color: #64748b;
+
+        &:hover:not(:disabled) {
+            background: #f8fafc;
+            border-color: #cbd5e1;
+            color: #334155;
+        }
+
+        &.success {
+            background: #dcfce7;
+            border-color: #86efac;
+            color: #15803d;
+        }
+
+        &.error {
+            background: #fee2e2;
+            border-color: #fca5a5;
+            color: #dc2626;
+        }
+    }
+
+    .settings-footer {
+        border-color: #e2e8f0;
+    }
+}

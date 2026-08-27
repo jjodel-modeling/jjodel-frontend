@@ -15,18 +15,25 @@ const STYLE_TAG_ID = 'ir-views-css';
 
 /** Base styles for the IR node content, shape-agnostic. Injected once. */
 const BASE_CSS = `
-.ir-node-content { position: relative; display: flex; flex-direction: column; min-width: 0; width: 100%; height: 100%; }
+/* Symbol typography and spacing, in tokens (2026-08-25). font-size sits on the node
+   and every text surface inherits it: the root of the cascade is .ir-node-content,
+   where IRNodeContent emits the inline style of shape.text, and the default grows
+   from 11 to 13px. --ir-pad-x / --ir-pad-y feed the header, the inside label and the
+   compartments with the same values, which the header did not have at all before. */
+.ir-node-content { position: relative; display: flex; flex-direction: column; min-width: 0; width: 100%; height: 100%; font-size: 13px; --ir-pad-x: 8px; --ir-pad-y: 4px; }
+.ir-node-content.ir-pad--small { --ir-pad-x: 4px; --ir-pad-y: 2px; }
+.ir-node-content.ir-pad--large { --ir-pad-x: 16px; --ir-pad-y: 8px; }
 /* max-width: sotto align-items:center (forme geometriche) il flex item prende la
    larghezza naturale del testo, quindi overflow/ellipsis non scattano MAI e il testo
    viene dipinto fuori dal contorno (misurato: oltre i 22 caratteri su un rombo 170x80,
    con overflow:visible, la label esce dai fianchi senza limite). Vincolarla al box
    restituisce l'ellissi. Il taglio resta al bordo del box, non al contorno: quello e'
    un lavoro separato. Sulle forme a stretch (rect, rounded, ellisse) e' un no-op. */
-.ir-node-content .ir-label { font-size: 11px; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
-.ir-node-content .ir-label--top { order: 0; text-align: center; font-weight: 600; }
-.ir-node-content .ir-label--center { order: 1; text-align: center; margin: auto 0; font-weight: 600; }
-.ir-node-content .ir-label--inside { order: 2; text-align: left; padding: 0 8px; }
-.ir-node-content .ir-label--bottom { order: 4; text-align: center; margin-top: auto; }
+.ir-node-content .ir-label { font-size: inherit; line-height: 1.3; box-sizing: border-box; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.ir-node-content .ir-label--top { order: 0; text-align: center; font-weight: 600; padding: var(--ir-pad-y) var(--ir-pad-x); }
+.ir-node-content .ir-label--center { order: 1; text-align: center; margin: auto 0; font-weight: 600; padding: 0 var(--ir-pad-x); }
+.ir-node-content .ir-label--inside { order: 2; text-align: left; padding: 0 var(--ir-pad-x); }
+.ir-node-content .ir-label--bottom { order: 4; text-align: center; margin-top: auto; padding: var(--ir-pad-y) var(--ir-pad-x); }
 /* Marker layer (asse marker, 2026-08-15): notation symbol inside the shape.
    "meet" scales the glyph with min(w,h) and centres it, so the marker grows
    with the shape (BPMN-like). Stacking: shape paint (element background, or
@@ -42,9 +49,9 @@ const BASE_CSS = `
 .ir-node-content .ir-badge--tr { top: 2px; right: 4px; }
 .ir-node-content .ir-badge--bl { bottom: 2px; left: 4px; }
 .ir-node-content .ir-badge--br { bottom: 2px; right: 4px; }
-.ir-node-content .ir-compartment { order: 3; border-top: 1px solid rgba(51,65,85,0.15); padding: 4px 8px; }
+.ir-node-content .ir-compartment { order: 3; border-top: 1px solid rgba(51,65,85,0.15); padding: var(--ir-pad-y) var(--ir-pad-x); }
 .ir-node-content .ir-compartment--no-separator { border-top: none; }
-.ir-node-content .ir-compartment .ir-row { font-size: 11px; line-height: 1.4; display: flex; gap: 4px; min-width: 0; }
+.ir-node-content .ir-compartment .ir-row { font-size: inherit; line-height: 1.4; display: flex; gap: 4px; min-width: 0; }
 .ir-node-content .ir-compartment .ir-row > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* Box painting for IR nodes lives on .ir-node-content (Fase B): authored
    border/fill are applied inline by IRNodeContent, shape radius via
@@ -55,7 +62,12 @@ const BASE_CSS = `
    .selected/.drop-target neutralizers outrank EditorV2.scss (0,2,0) by
    specificity. Box values replicate the .mm-node base with the same tokens. */
 .mm-node:has(> .ir-node-content) { background: transparent; border-color: transparent; box-shadow: none; }
-.mm-node.selected:has(> .ir-node-content),
+/* Il wrapper non porta nulla della selezione: anello e banda stanno sulla forma
+   (.ir-node-content, sotto), che e' l'elemento col raggio giusto. Senza
+   outline:none la regola condivisa disegnerebbe un secondo anello rettangolare
+   attorno al primo, e senza box-shadow:none una seconda banda rettangolare.
+   Niente backtick in questo blocco: BASE_CSS e' un template literal. */
+.mm-node.selected:has(> .ir-node-content) { border-color: transparent; outline: none; box-shadow: none; }
 .mm-node.drop-target:has(> .ir-node-content) { border-color: transparent; box-shadow: none; }
 .ir-node-content { box-sizing: border-box; background: var(--node-bg); border: 1px solid var(--border-default); border-radius: 4px; box-shadow: 0 1px 3px var(--node-shadow), 0 4px 12px var(--node-shadow-deep, rgba(0, 0, 0, 0.08)); overflow: hidden; }
 /* Fase 2 (2026-07-28): reconcile the visible box with the .mm-node layout box. In
@@ -127,7 +139,23 @@ const BASE_CSS = `
    ir-resizable class (now inert) - left in place, separate cleanup. */
 .mm-node.ir-sized { min-width: 0; min-height: 0; width: 100%; height: 100%; }
 .mm-node.ir-sized .ir-node-content { min-width: 0; min-height: 0; }
-.mm-node.selected > .ir-node-content { outline: 2px solid var(--color-accent); outline-offset: 1px; }
+/* Banda e anello sulla forma. Le ombre di riposo vanno ripetute qui: box-shadow
+   e' una proprieta' sola, e dichiarare la banda da sola le cancellerebbe. */
+.mm-node.selected > .ir-node-content { outline: 2px solid var(--node-selection-stroke); outline-offset: 3px; box-shadow: 0 0 0 3px var(--node-selection-halo), 0 1px 3px var(--node-shadow), 0 4px 12px var(--node-shadow-deep, rgba(0, 0, 0, 0.08)); }
+/* Forme dipinte in SVG: la coppia CSS qui sopra tornerebbe il rettangolo del
+   bounding box, perche' su queste .ir-node-content non ha raggio da seguire (la
+   sagoma sta nel layer SVG). Si spegne, e al suo posto valgono le due copie del
+   contorno che IRNodeContent disegna sotto la sagoma piena: incolori di loro,
+   prendono il colore solo qui, a nodo selezionato. Le larghezze (10 e 6, in px
+   di schermo grazie a non-scaling-stroke) mettono meta' tratto fuori dal
+   contorno: 5px e 3px, gli stessi rientri della coppia CSS. */
+.mm-node.selected > .ir-node-content.ir-shape--diamond,
+.mm-node.selected > .ir-node-content.ir-shape--hexagon,
+.mm-node.selected > .ir-node-content.ir-shape--parallelogram,
+.mm-node.selected > .ir-node-content.ir-shape--cylinder { outline: none; box-shadow: none; }
+.ir-sel-ring, .ir-sel-band { stroke: none; }
+.mm-node.selected > .ir-node-content .ir-sel-ring { stroke: var(--node-selection-stroke); }
+.mm-node.selected > .ir-node-content .ir-sel-band { stroke: var(--node-selection-halo); }
 .mm-node.drop-target > .ir-node-content { outline: 2px solid var(--color-accent); }
 .ir-hull { border: 1.5px dashed rgba(51,65,85,0.45); border-radius: 12px; background: rgba(51,65,85,0.03); }
 .ir-hull__header { display: flex; align-items: center; justify-content: space-between; padding: 0 8px; font-size: 11px; font-weight: 600; color: #334155; }
@@ -135,7 +163,14 @@ const BASE_CSS = `
 .ir-hull__toggle:hover { color: #0ea5e9; }
 .ir-collapse-chip { display: inline-flex; align-items: center; gap: 4px; border: none; background: rgba(51,65,85,0.08); border-radius: 8px; cursor: pointer; font-size: 10px; color: #334155; padding: 2px 6px; margin-left: 6px; line-height: 1.4; }
 .ir-collapse-chip:hover { background: rgba(14,165,233,0.12); }
-.ir-node-content .ir-label__input, .ir-node-content .ir-row__input { font-size: 11px; border: 1px solid #334155; border-radius: 3px; padding: 0 4px; min-width: 40px; width: 90%; outline: none; }
+/* Shared chrome of the two inline editors; only the padding differs, below. */
+.ir-node-content .ir-label__input, .ir-node-content .ir-row__input { font-size: inherit; border: 1px solid #334155; border-radius: 3px; min-width: 40px; width: 90%; outline: none; }
+/* The label editor keeps the box of the text it replaces: the same padding tokens
+   as the label, minus the 1px the input's own border adds on each side. */
+.ir-node-content .ir-label__input { padding: calc(var(--ir-pad-y) - 1px) calc(var(--ir-pad-x) - 1px); }
+/* The compartment row is a flex line at line-height 1.4, and a padded editor would
+   become its tallest item: this one stays flat so the row does not grow on edit. */
+.ir-node-content .ir-row__input { padding: 0 4px; }
 .ir-node-content .ir-row__value--editable { cursor: text; }
 .ir-node-content .ir-row__value--editable:hover { background: rgba(14,165,233,0.08); border-radius: 3px; }
 `;

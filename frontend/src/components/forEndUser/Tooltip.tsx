@@ -164,7 +164,7 @@ export class TooltipClass extends React.Component<AllProps, State> {
     private static isTreeEditorElement(el?: Element | null): boolean {
         if (!el) return false;
         return !!el.closest(
-            '.tree-view-sidebar, .tree-view-overlay, .tree-view-panel-container, .tree-view-panel-body, .tree-view-sidebar__body, .tree-view-overlay__body, .tree-row, .tree-node, .tree-children'
+            '.tree-view-panel-container, .tree-view-panel-body, .tree-row, .tree-node, .tree-children'
         );
     }
 

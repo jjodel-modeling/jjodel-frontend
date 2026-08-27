@@ -25,8 +25,11 @@ import { getLastEditedViewpointId, createViewInWorkbench, createBlankViewInViewp
 import { isAdvancedMode } from '../../hooks/useInterfaceMode';
 import { JjodelEvents, SystemEvents } from '../../events/registry';
 import { useNodeProblems } from '../editor-v2/problems/useNodeProblems';
-import { getTypeName, getMultiplicity, formatFeatureSignature } from '../../common/featureSignature';
+import { getTypeName, getMultiplicity } from '../../common/featureSignature';
 import type { NodeProblem } from '../editor-v2/problems/registry';
+import { computeTreeViewScope } from './treeViewScope';
+import { natureOf } from '../editor-v2/viewpoint/ir/edgeEndpoints';
+import type { AnyViewIR, EdgeViewIR } from '../editor-v2/viewpoint/ir/irTypes';
 
 /**
  * TreeViewContent — redesign 2026-05-08.
@@ -78,11 +81,21 @@ function isSectionKey(key: string): boolean {
 
 // ─── Tree data structures ────────────────────────────────────────────────────
 
+/**
+ * Una istanza M1. Ricorsiva: `children` sono gli oggetti contenuti per
+ * containment (LObject.subObjects, che filtra le reference con `containment`
+ * vero e i valori shapeless che puntano a oggetti). Il primo livello della
+ * lista sono i soli root del modello — gli oggetti raggiunti come subObject di
+ * un altro oggetto vivono sotto il loro contenitore, non accanto ad esso.
+ */
 interface TreeFeatureData {
     id: string;
     name: string;
     metaclassName: string;
     modelId: string;
+    /** La metaclasse e' singleton: la riga e' foglia per costruzione. */
+    isSingleton: boolean;
+    children: TreeFeatureData[];
 }
 
 interface TreeModelData {
@@ -104,6 +117,13 @@ interface TreeClassData {
     instanceCount: number;
     attributes: TreeStructuralFeatureData[];
     references: TreeStructuralFeatureData[];
+    /**
+     * Il viewpoint attivo non rende questo classifier, ed e' dentro lo scopo del
+     * filtro (cfr. treeViewScope.ts). False anche per i classifier FUORI scopo:
+     * quelli non sono "non resi", sono elementi su cui il viewpoint non ha
+     * opinioni, e vanno lasciati in chiaro.
+     */
+    notRendered?: boolean;
 }
 
 interface TreeStructuralFeatureData {
@@ -135,9 +155,69 @@ interface TreeMetamodelData {
     childModels: TreeModelData[];
 }
 
+/**
+ * What the leaf view under a Viewpoint actually describes, derived from its IR.
+ * Every leaf used to carry the same easel glyph, which said "a view" and nothing
+ * about what it draws; the tree is where the author picks one out of a dozen, so
+ * the kind belongs on the row.
+ *
+ * `unknown` is not a failure mode: a view without an IR (or with a kind this map
+ * does not know) keeps the historic easel badge. The two edge natures are kept
+ * apart here even though they share a glyph today, because the distinction is
+ * free at the point where it is derived and expensive to recover later.
+ */
+type SubViewKind = 'vertex' | 'row' | 'edge-object' | 'edge-reference' | 'unknown';
+
+/**
+ * `graphVertex` counts as a vertex: it is a vertex that also carries containment,
+ * and the tree row is not where that difference is worth a separate glyph.
+ * The edge nature is derived exactly as the authoring panel derives it — via
+ * `natureOf`, which reads the endpoint pair — and never from a field: the IR has
+ * no nature field by design (see edgeEndpoints.ts).
+ */
+function subViewKindOf(ir: AnyViewIR | undefined): SubViewKind {
+    switch (ir?.kind) {
+        case 'vertex':
+        case 'graphVertex': return 'vertex';
+        case 'row': return 'row';
+        case 'edge': return natureOf(ir as EdgeViewIR) === 'object' ? 'edge-object' : 'edge-reference';
+        default: return 'unknown';
+    }
+}
+
+/** Colour class of the badge, which is also the BADGE_ICON key. */
+const SUBVIEW_BADGE_CLASS: Record<SubViewKind, string> = {
+    'vertex': 'tree-view-vertex',
+    'row': 'tree-view-row',
+    'edge-object': 'tree-view-edge',
+    'edge-reference': 'tree-view-edge',
+    'unknown': 'tree-leaf-view',
+};
+
+/**
+ * Textual kind, right-aligned on the row like the type of an M2 feature. The badge
+ * already carries the kind as a glyph, but a glyph is only readable once its legend
+ * is known: the label is what makes the row self-describing on first sight, and it
+ * is the same treatment (`tree-feature__type`) the metamodel rows use, so the two
+ * halves of the tree keep one right-hand column.
+ *
+ * `unknown` gets no label rather than the word "unknown": a view whose kind could not
+ * be derived says nothing, and a label saying nothing is worse than no label.
+ * The two edge natures collapse onto one glyph but not onto one word — telling an
+ * object edge from a reference edge is exactly what the badge cannot do.
+ */
+const SUBVIEW_KIND_LABEL: Record<SubViewKind, string | null> = {
+    'vertex': 'Vertex',
+    'row': 'Row',
+    'edge-object': 'Edge (object)',
+    'edge-reference': 'Edge',
+    'unknown': null,
+};
+
 interface TreeSubViewData {
     id: string;
     name: string;
+    kind: SubViewKind;
     children: TreeSubViewData[];
 }
 
@@ -284,23 +364,40 @@ function filterPackage(pkg: TreePackageData, q: string): PrunedNode<TreePackageD
     return null;
 }
 
-function filterModel(model: TreeModelData, q: string): PrunedNode<TreeModelData> | null {
-    const selfMatch = nameMatches(model.name, q);
-    const instances: TreeFeatureData[] = [];
-    let instMatch = 0;
+/**
+ * Le istanze M1 sono annidate per containment, quindi il filtro deve pescare
+ * anche nei figli: stessa semantica di `filterSubViews` (un nodo che matcha si
+ * porta dietro tutto il sottoalbero, uno che sopravvive solo per discendenza
+ * tiene i figli potati).
+ */
+function filterInstances(list: TreeFeatureData[], q: string): PrunedList<TreeFeatureData> {
+    const items: TreeFeatureData[] = [];
+    let matchCount = 0;
     let firstMatchId: string | null = null;
-    for (const inst of model.instances) {
-        if (nameMatches(inst.name, q)) {
-            instances.push(inst);
-            instMatch++;
+    for (const inst of list) {
+        const selfMatch = nameMatches(inst.name, q);
+        const childRes = filterInstances(inst.children, q);
+        if (selfMatch) {
+            items.push(inst);
+            matchCount += 1 + childRes.matchCount;
             if (!firstMatchId) firstMatchId = inst.id;
+        } else if (childRes.items.length > 0) {
+            items.push({ ...inst, children: childRes.items });
+            matchCount += childRes.matchCount;
+            if (!firstMatchId) firstMatchId = childRes.firstMatchId;
         }
     }
+    return { items, matchCount, firstMatchId };
+}
+
+function filterModel(model: TreeModelData, q: string): PrunedNode<TreeModelData> | null {
+    const selfMatch = nameMatches(model.name, q);
+    const instRes = filterInstances(model.instances, q);
     if (selfMatch) {
-        return { item: model, matchCount: 1 + instMatch, firstMatchId: model.id };
+        return { item: model, matchCount: 1 + instRes.matchCount, firstMatchId: model.id };
     }
-    if (instMatch > 0) {
-        return { item: { ...model, instances }, matchCount: instMatch, firstMatchId };
+    if (instRes.items.length > 0) {
+        return { item: { ...model, instances: instRes.items }, matchCount: instRes.matchCount, firstMatchId: instRes.firstMatchId };
     }
     return null;
 }
@@ -452,7 +549,11 @@ function useClassifierContextMenu(elementId: string, name: string, className: st
         const handleScroll = () => setCtxMenu(null);
         document.addEventListener('click', handleClick);
         document.addEventListener('keydown', handleKeyDown);
-        const scrollContainer = nodeRef.current?.closest('.tree-view-sidebar__body, .tree-view-overlay__body');
+        // Il container che scorre davvero e' quello del rail. I due selettori
+        // precedenti appartenevano alla shell TreeViewSidebar, che non e' mai
+        // stata montata: il closest non trovava nulla e il menu non si chiudeva
+        // allo scroll, comportamento che questa logica esiste per garantire.
+        const scrollContainer = nodeRef.current?.closest('.tree-view-panel-body');
         scrollContainer?.addEventListener('scroll', handleScroll);
         return () => {
             document.removeEventListener('click', handleClick);
@@ -563,6 +664,9 @@ const BADGE_ICON: Record<string, { icon: string; label: string }> = {
     'tree-nested-model': { icon: 'bi-file-earmark', label: 'Model' },
     'tree-viewpoint': { icon: 'bi-eye', label: 'Viewpoint' },
     'tree-leaf-view': { icon: 'bi-easel', label: 'View' },
+    'tree-view-vertex': { icon: 'bi-app', label: 'Vertex view' },
+    'tree-view-row': { icon: 'bi-input-cursor-text', label: 'Row view' },
+    'tree-view-edge': { icon: 'bi-arrow-right', label: 'Edge view' },
     'tree-transformation': { icon: 'bi-arrow-left-right', label: 'Transformation' },
     'tree-rule': { icon: 'bi-list-check', label: 'Rule' },
     'tree-helper': { icon: 'bi-wrench', label: 'Helper' },
@@ -591,6 +695,13 @@ interface EntityRowProps {
     actions?: ReactNode;           // hover-reveal slot (e.g. add/duplicate/delete buttons)
     nameOverride?: ReactNode;      // custom name renderer (e.g. inline rename input)
     highlightQuery?: string;       // search substring to <mark> in the name
+    /**
+     * Il viewpoint attivo non rende questo elemento (dimming + hint "not rendered").
+     * L'hint dice `not rendered` e non "Not in this viewpoint": quest'ultima e' la
+     * label della palette, che risponde a "cosa posso creare". Le due domande danno
+     * insiemi diversi per costruzione e non devono sembrare la stessa cosa.
+     */
+    notRendered?: boolean;
 }
 
 const EntityRow = memo(function EntityRow(props: EntityRowProps): ReactElement {
@@ -598,7 +709,7 @@ const EntityRow = memo(function EntityRow(props: EntityRowProps): ReactElement {
         badge, badgeClassName, name, nameClassName, pillText, expandKey, isLeaf,
         expanded, onToggle, extraIcon, selected,
         onClick, onDoubleClick, onContextMenu, depth, dataElementId, highlightAction, isHighlighted, showNewBadge,
-        actions, nameOverride, highlightQuery,
+        actions, nameOverride, highlightQuery, notRendered,
     } = props;
 
     const hasChevron = !!expandKey && !isLeaf;
@@ -630,7 +741,7 @@ const EntityRow = memo(function EntityRow(props: EntityRowProps): ReactElement {
 
     const rowContent = (
         <div
-            className={`tree-row ${selected ? 'tree-row--selected' : ''} ${highlightClass}`.trim()}
+            className={`tree-row ${selected ? 'tree-row--selected' : ''} ${notRendered ? 'tree-row--not-rendered' : ''} ${highlightClass}`.trim()}
             style={{ paddingLeft: `${depth * TREE_INDENT_STEP}px` }}
             data-element-id={dataElementId}
             onContextMenu={onContextMenu}
@@ -680,6 +791,14 @@ const EntityRow = memo(function EntityRow(props: EntityRowProps): ReactElement {
                 {showNewBadge && (
                     <span className="tree-node__badge tree-node__badge--new">NEW</span>
                 )}
+                {notRendered && (
+                    <span
+                        className="tree-row__not-rendered-hint"
+                        title="The active viewpoint declares no view for this classifier."
+                    >
+                        not rendered
+                    </span>
+                )}
             </div>
             {actions && <span className="tree-row__actions">{actions}</span>}
         </div>
@@ -688,20 +807,36 @@ const EntityRow = memo(function EntityRow(props: EntityRowProps): ReactElement {
     return rowContent;
 });
 
-// ─── Feature (leaf) row — M1 instance, no chevron, no tooltip ────────────────
+// ─── Feature row — M1 instance, ricorsiva per containment ───────────────────
+
+/**
+ * Palette entita' per le righe M1: le metaclassi note prendono colore e glifo
+ * degli omologhi badge view (stessa coppia pastello/saturo), le altre restano
+ * slate con l'iniziale della metaclasse. La mappa e' per nome perche' e' il
+ * nome della metaclasse M2 l'unica cosa che il tree conosce dell'istanza.
+ */
+const M1_BADGE: Readonly<Record<string, { cls: string; icon: string }>> = {
+    Class: { cls: 'tree-m1-class', icon: 'bi-app' },
+    Attribute: { cls: 'tree-m1-attribute', icon: 'bi-tag' },
+    Reference: { cls: 'tree-m1-reference', icon: 'bi-arrow-right' },
+};
 
 const FeatureRow = memo(function FeatureRow({
     instance,
-    selected,
+    selectedId,
     onSelect,
     depth,
     highlightQuery,
+    isExpandedFn,
+    onToggleFn,
 }: {
     instance: TreeFeatureData;
-    selected: boolean;
+    selectedId?: string;
     onSelect?: () => void;
     depth: number;
     highlightQuery?: string;
+    isExpandedFn: (key: string) => boolean;
+    onToggleFn: (key: string) => void;
 }): ReactElement {
     const handleClick = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
@@ -716,13 +851,64 @@ const FeatureRow = memo(function FeatureRow({
         onSelect?.();
     }, [instance.id, instance.modelId, onSelect]);
 
+    // Un singleton e' foglia per costruzione (vedi TreeFeatureData): il chevron
+    // non compare nemmeno se un giorno `children` arrivasse popolato.
+    const hasChildren = !instance.isSingleton && instance.children.length > 0;
+    const expanded = isExpandedFn(instance.id);
+    const selected = selectedId === instance.id;
+
+    const badge = instance.isSingleton
+        ? { cls: 'tree-m1-singleton', icon: 'bi-braces' }
+        : M1_BADGE[instance.metaclassName];
+    const badgeClass = badge ? badge.cls : 'tree-m1-other';
+    const initial = (instance.metaclassName || '?').charAt(0).toUpperCase();
+
     return (
-        <div className="tree-row tree-row--feature" data-element-id={instance.id} style={{ paddingLeft: `${depth * TREE_INDENT_STEP}px` }}>
-            <span className="tree-node__toggle is-leaf" aria-hidden />
-            <div className={`tree-row__content ${selected ? 'tree-row__content--selected' : ''}`} onClick={handleClick}>
-                <span className="tree-feature__name">{renderHighlightedName(instance.name, highlightQuery)}</span>
-                <span className="tree-feature__type">: {instance.metaclassName}</span>
+        <div className="tree-node" data-element-id={instance.id}>
+            <div className="tree-row tree-row--feature" data-element-id={instance.id} style={{ paddingLeft: `${depth * TREE_INDENT_STEP}px` }}>
+                {hasChildren ? (
+                    <button
+                        className="tree-node__toggle"
+                        onClick={(e) => { e.stopPropagation(); onToggleFn(instance.id); }}
+                    >
+                        <i className={`bi bi-chevron-${expanded ? 'down' : 'right'}`} />
+                    </button>
+                ) : (
+                    <span className="tree-node__toggle is-leaf" aria-hidden />
+                )}
+                <div className={`tree-row__content ${selected ? 'tree-row__content--selected' : ''}`} onClick={handleClick}>
+                    <span
+                        className={`tree-node__icon tree-m1-icon ${badgeClass}`}
+                        title={instance.metaclassName}
+                        aria-label={instance.metaclassName}
+                    >
+                        {badge ? <i className={`bi ${badge.icon}`} aria-hidden /> : initial}
+                    </span>
+                    <span className={`tree-feature__name ${hasChildren ? 'is-container' : ''} ${instance.isSingleton ? 'is-singleton' : ''}`.trim()}>
+                        {renderHighlightedName(instance.name, highlightQuery)}
+                    </span>
+                    {hasChildren && (
+                        <span className="tree-feature__count">{instance.children.length}</span>
+                    )}
+                    <span className="tree-feature__type">{instance.metaclassName}</span>
+                </div>
             </div>
+            {expanded && hasChildren && (
+                <div className="tree-children" style={{ '--tree-depth': depth } as any}>
+                    {instance.children.map(child => (
+                        <FeatureRow
+                            key={child.id}
+                            instance={child}
+                            selectedId={selectedId}
+                            onSelect={onSelect}
+                            depth={depth + 1}
+                            highlightQuery={highlightQuery}
+                            isExpandedFn={isExpandedFn}
+                            onToggleFn={onToggleFn}
+                        />
+                    ))}
+                </div>
+            )}
         </div>
     );
 });
@@ -766,7 +952,14 @@ const StructuralFeatureRow = memo(function StructuralFeatureRow({
                 nameOverride={(
                     <>
                         <span className="tree-feature__name">{renderHighlightedName(feature.name, highlightQuery)}</span>
-                        <span className="tree-feature__type">{formatFeatureSignature(feature.typeName, feature.multiplicity)}</span>
+                        {/* Type and multiplicity are two spans, not the one string
+                            `formatFeatureSignature` composes, so the rail can drop the
+                            multiplicity via CSS when it is too narrow to carry it
+                            (`[data-density="compact"]`). The two values already arrive
+                            separated on `feature`, so `formatFeatureSignature` — still
+                            the single source for the properties shell — is untouched. */}
+                        <span className="tree-feature__type">{feature.typeName}</span>
+                        <span className="tree-feature__mult">[{feature.multiplicity}]</span>
                     </>
                 )}
             />
@@ -808,7 +1001,11 @@ const ClassNode = memo(function ClassNode({
         }, '', false);
     }, [cls.id]);
 
-    const hasStructuralFeatures = cls.attributes.length > 0 || cls.references.length > 0;
+    // Le feature di un classifier non reso non si renderizzano: la riga resta al
+    // proprio posto nella gerarchia, dimmed e senza chevron. Nessun riordino,
+    // nessun auto-espandere: l'unica cosa che cambia e' lo stile.
+    const notRendered = !!cls.notRendered;
+    const hasStructuralFeatures = !notRendered && (cls.attributes.length > 0 || cls.references.length > 0);
 
     return (
         <div ref={nodeRef} className="tree-node" data-element-id={cls.id}>
@@ -831,6 +1028,7 @@ const ClassNode = memo(function ClassNode({
                 showNewBadge={isHighlighted && highlightedAction === 'create'}
                 expandKey={cls.id}
                 highlightQuery={highlightQuery}
+                notRendered={notRendered}
             />
             {popup}
             {isExpanded && hasStructuralFeatures && (
@@ -966,6 +1164,8 @@ const ModelNode = memo(function ModelNode({
     onToggle,
     onSelect,
     highlightQuery,
+    isExpandedFn,
+    onToggleFn,
 }: {
     model: TreeModelData;
     selectedId?: string;
@@ -974,6 +1174,8 @@ const ModelNode = memo(function ModelNode({
     onToggle: () => void;
     onSelect?: () => void;
     highlightQuery?: string;
+    isExpandedFn: (key: string) => boolean;
+    onToggleFn: (key: string) => void;
 }): ReactElement {
     const isSelected = selectedId === model.id;
 
@@ -1012,10 +1214,12 @@ const ModelNode = memo(function ModelNode({
                         <FeatureRow
                             key={inst.id}
                             instance={inst}
-                            selected={selectedId === inst.id}
+                            selectedId={selectedId}
                             onSelect={onSelect}
                             depth={depth + 1}
                             highlightQuery={highlightQuery}
+                            isExpandedFn={isExpandedFn}
+                            onToggleFn={onToggleFn}
                         />
                     ))}
                 </div>
@@ -1123,6 +1327,8 @@ const MetamodelNode = memo(function MetamodelNode({
                                 onToggle={() => onToggleFn(model.id)}
                                 onSelect={onSelect}
                                 highlightQuery={highlightQuery}
+                                isExpandedFn={isExpandedFn}
+                                onToggleFn={onToggleFn}
                             />
                         ))}
                     </SectionNode>
@@ -1216,6 +1422,13 @@ const SubViewItem = memo(function SubViewItem({
         lView.delete();
     }, [lView]);
 
+    // The kind label rides on `nameOverride`, which this row already uses for the
+    // rename input: the two are mutually exclusive by construction — while renaming
+    // the row is an input, and appending a label next to it would leave the type
+    // hanging beside a text field. `unknown` falls back to `undefined`, i.e. the
+    // plain name EntityRow renders on its own.
+    const kindLabel = SUBVIEW_KIND_LABEL[view.kind] ?? null;
+
     const nameOverride = isRenaming ? (
         <input
             ref={renameInputRef}
@@ -1226,6 +1439,11 @@ const SubViewItem = memo(function SubViewItem({
             onKeyDown={(e) => handleRenameKeyDown(e, lView)}
             onClick={(e) => e.stopPropagation()}
         />
+    ) : kindLabel ? (
+        <>
+            <span className="tree-row__name">{renderHighlightedName(view.name || 'unnamed', highlightQuery)}</span>
+            <span className="tree-feature__type">{kindLabel}</span>
+        </>
     ) : undefined;
 
     const actions = (
@@ -1251,7 +1469,7 @@ const SubViewItem = memo(function SubViewItem({
         <div className="tree-node" data-element-id={view.id}>
             <EntityRow
                 badge="v"
-                badgeClassName="tree-leaf-view"
+                badgeClassName={SUBVIEW_BADGE_CLASS[view.kind] ?? 'tree-leaf-view'}
                 name={view.name}
                 nameOverride={nameOverride}
                 expandKey={view.id}
@@ -1303,7 +1521,6 @@ const ViewpointNode = memo(function ViewpointNode({
     onToggleFn,
     onSelect,
     selectedViewId,
-    activeViewpointId,
     highlightQuery,
     startRenameView,
     renamingViewId,
@@ -1319,14 +1536,15 @@ const ViewpointNode = memo(function ViewpointNode({
     onToggleFn: (key: string) => void;
     onSelect?: () => void;
     selectedViewId?: string;
-    activeViewpointId?: string;
     highlightQuery?: string;
 } & ViewpointRenameProps): ReactElement {
     const hasSubViews = vp.subViews.length > 0;
     const expanded = isExpandedFn(vp.id);
     // Highlight the viewpoint when it is the one open in Properties (selection
     // pill, 2026-07-28 round 2 refinement). The active-in-editor dot was removed
-    // earlier; activeViewpointId stays threaded but inert. TODO: cleanup.
+    // earlier, and the inert `activeViewpointId` thread that survived it is gone
+    // with it: il viewpoint attivo che conta ora e' il root `state.viewpoint`, letto
+    // da treeViewScope.ts — lo stesso contro cui risolve il canvas.
     const isSelected = !!selectedViewId && vp.id === selectedViewId;
 
     const handleClick = useCallback((e: React.MouseEvent) => {
@@ -1532,7 +1750,6 @@ interface StateProps {
     viewpoints: TreeViewpointData[];
     selectedElementId?: string;
     selectedViewId?: string;
-    activeViewpointId?: string;
     projectId?: Pointer<DProject>;
     expandedTreeNodes: string[];
 }
@@ -1544,7 +1761,7 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 function TreeViewContentComponent(props: AllProps) {
     const {
         metamodels, standaloneModels, viewpoints, selectedElementId,
-        selectedViewId, activeViewpointId, projectId, expandedTreeNodes, onSelect,
+        selectedViewId, projectId, expandedTreeNodes, onSelect,
         searchOpen, onSearchClose,
     } = props;
 
@@ -1705,6 +1922,23 @@ function TreeViewContentComponent(props: AllProps) {
         if (!projectId) return;
 
         const validIds = new Set<string>();
+        // Le istanze M1 sono chiavi di espansione da quando la sezione modello e'
+        // annidata per containment: senza questo giro, il collasso di un
+        // contenitore scrive `!<id istanza>` e questo stesso effetto lo rimuove
+        // subito come orfano, annullando il gesto (misurato: il chevron non
+        // chiudeva). Solo il modello attivo porta istanze: quando smette di
+        // esserlo le sue chiavi tornano orfane e vengono pulite, come per ogni
+        // altra entita' che sparisce dall'albero.
+        const visitInstances = (list: TreeFeatureData[]) => {
+            for (const inst of list) {
+                validIds.add(inst.id);
+                visitInstances(inst.children);
+            }
+        };
+        const visitModel = (m: TreeModelData) => {
+            validIds.add(m.id);
+            visitInstances(m.instances);
+        };
         for (const mm of metamodels) {
             validIds.add(mm.id);
             const visit = (pkg: TreePackageData) => {
@@ -1713,9 +1947,9 @@ function TreeViewContentComponent(props: AllProps) {
                 for (const c of pkg.classes) validIds.add(c.id);
             };
             for (const pkg of mm.rootPackages) visit(pkg);
-            for (const m of mm.childModels) validIds.add(m.id);
+            for (const m of mm.childModels) visitModel(m);
         }
-        for (const m of standaloneModels) validIds.add(m.id);
+        for (const m of standaloneModels) visitModel(m);
         for (const vp of viewpoints) {
             validIds.add(vp.id);
             const visit = (sv: TreeSubViewData) => {
@@ -1915,6 +2149,8 @@ function TreeViewContentComponent(props: AllProps) {
                             onToggle={() => onToggleFn(model.id)}
                             onSelect={onSelect}
                             highlightQuery={highlightQuery}
+                            isExpandedFn={isExpandedFn}
+                            onToggleFn={onToggleFn}
                         />
                     ))}
                 </SectionNode>
@@ -1948,7 +2184,6 @@ function TreeViewContentComponent(props: AllProps) {
                                     onToggleFn={onToggleFn}
                                     onSelect={onSelect}
                                     selectedViewId={selectedViewId}
-                                    activeViewpointId={activeViewpointId}
                                     highlightQuery={highlightQuery}
                                     startRenameView={startRenameView}
                                     renamingViewId={renamingViewId}
@@ -1979,7 +2214,6 @@ function TreeViewContentComponent(props: AllProps) {
                                     onToggleFn={onToggleFn}
                                     onSelect={onSelect}
                                     selectedViewId={selectedViewId}
-                                    activeViewpointId={activeViewpointId}
                                     highlightQuery={highlightQuery}
                                     startRenameView={startRenameView}
                                     renamingViewId={renamingViewId}
@@ -2001,7 +2235,6 @@ function TreeViewContentComponent(props: AllProps) {
                             onToggleFn={onToggleFn}
                             onSelect={onSelect}
                             selectedViewId={selectedViewId}
-                            activeViewpointId={activeViewpointId}
                             highlightQuery={highlightQuery}
                             startRenameView={startRenameView}
                             renamingViewId={renamingViewId}
@@ -2069,7 +2302,86 @@ function resolveActiveModelId(state: DState): string | null {
     return null;
 }
 
-function buildPackageData(lPkg: any, parentFqn: string): TreePackageData {
+/**
+ * Costruisce la foresta delle istanze M1 di un modello.
+ *
+ * `LModel.objects` contiene i soli oggetti il cui `father` e' il DModel: un
+ * oggetto contenuto vive sotto `DValue.values`, non sotto `objects` (cfr.
+ * `getCollection` in joiner/classes.ts). Il primo livello e' quindi gia' fatto
+ * di root; il `contained` calcolato qui sotto e' una difesa contro uno stato
+ * incoerente (un oggetto che compare sia in `objects` sia come subObject),
+ * dove altrimenti la stessa istanza si vedrebbe due volte.
+ *
+ * I figli arrivano da `LObject.subObjects`, che e' gia' il containment: le
+ * reference con `containment` vero piu' i valori shapeless che puntano a
+ * oggetti. `seen` chiude i cicli di containment.
+ *
+ * I singleton (istanze auto-generate dalle classi con `isSingleton`, es.
+ * Integer / String / Boolean) restano in testa al primo livello e sono foglie.
+ */
+function buildInstanceForest(objects: LObject[], modelId: string): TreeFeatureData[] {
+    // `LObject.subObjects` filtra con un semplice `!!val` il ramo containment,
+    // mentre gia' controlla `className === 'DObject'` sul ramo shapeless: qui il
+    // controllo vale per entrambi, perche' `LValue.values` puo' restituire
+    // primitivi e letterali oltre agli oggetti. Il letterale e' 'DObject' e non
+    // 'LObject': un proxy L riporta il className del D-layer (CLAUDE.md §3.13).
+    const subObjectsOf = (obj: LObject): LObject[] => {
+        try {
+            const subs: any[] = (obj as any).subObjects || [];
+            return subs.filter(sub => !!sub && typeof sub.id === 'string' && sub.className === 'DObject');
+        } catch { return []; }
+    };
+
+    const contained = new Set<string>();
+    for (const obj of objects) {
+        if (!obj) continue;
+        for (const sub of subObjectsOf(obj)) contained.add(sub.id);
+    }
+
+    const seen = new Set<string>();
+    const build = (obj: LObject): TreeFeatureData | null => {
+        if (!obj || seen.has(obj.id)) return null;
+        seen.add(obj.id);
+        const metaclass = (obj as any).instanceof;
+        const isSingleton = !!metaclass?.isSingleton;
+        const children: TreeFeatureData[] = [];
+        if (!isSingleton) {
+            for (const sub of subObjectsOf(obj)) {
+                const node = build(sub);
+                if (node) children.push(node);
+            }
+        }
+        return {
+            id: obj.id,
+            name: obj.name || obj.id?.slice(0, 8) || 'unnamed',
+            metaclassName: metaclass?.name || 'Orphan',
+            modelId,
+            isSingleton,
+            children,
+        };
+    };
+
+    const roots: TreeFeatureData[] = [];
+    for (const obj of objects) {
+        if (!obj || contained.has(obj.id)) continue;
+        const node = build(obj);
+        if (node) roots.push(node);
+    }
+
+    // Testa della lista ai singleton, ordine relativo invariato dentro i due
+    // gruppi: non e' un raggruppamento, e' una partizione stabile.
+    const singletons = roots.filter(r => r.isSingleton);
+    const rest = roots.filter(r => !r.isSingleton);
+    return [...singletons, ...rest];
+}
+
+/**
+ * `rendered` e' l'insieme dei classifier resi dal viewpoint attivo, o null quando
+ * il metamodello e' FUORI scopo oppure l'informazione non esiste (viewpoint
+ * classico, view wildcard, artefatto aperto non determinabile). Null ⇒ nessun
+ * `notRendered` viene marcato, che e' esattamente il comportamento di prima.
+ */
+function buildPackageData(lPkg: any, parentFqn: string, rendered: ReadonlySet<string> | null): TreePackageData {
     const fqn = parentFqn ? `${parentFqn}.${lPkg.name || 'unnamed'}` : (lPkg.name || 'unnamed');
     const subPackages: TreePackageData[] = [];
     const classes: TreeClassData[] = [];
@@ -2078,7 +2390,7 @@ function buildPackageData(lPkg: any, parentFqn: string): TreePackageData {
         const subs = lPkg.subpackages || [];
         for (const sub of subs) {
             if (!sub) continue;
-            subPackages.push(buildPackageData(sub, fqn));
+            subPackages.push(buildPackageData(sub, fqn, rendered));
         }
     } catch { /* ignore */ }
 
@@ -2124,15 +2436,17 @@ function buildPackageData(lPkg: any, parentFqn: string): TreePackageData {
                 const instances = (c as any).instances;
                 if (Array.isArray(instances)) instanceCount = instances.length;
             } catch { /* ignore */ }
+            const className = c.name || 'unnamed';
             classes.push({
                 id: c.id,
-                name: c.name || 'unnamed',
-                fqn: `${fqn}.${c.name || 'unnamed'}`,
+                name: className,
+                fqn: `${fqn}.${className}`,
                 isAbstract: !!(c as any).abstract,
                 isEdgeView,
                 instanceCount,
                 attributes,
                 references,
+                notRendered: rendered ? !rendered.has(className) : false,
             });
         }
     } catch { /* ignore */ }
@@ -2209,16 +2523,7 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
             const objects: LObject[] = m1.objects || [];
             objectCount = objects.length;
             if (isActive) {
-                for (const obj of objects) {
-                    const metaclass = (obj as any).instanceof;
-                    const metaclassName = metaclass?.name || 'Orphan';
-                    instances.push({
-                        id: obj.id,
-                        name: obj.name || obj.id?.slice(0, 8) || 'unnamed',
-                        metaclassName,
-                        modelId: m1.id,
-                    });
-                }
+                instances.push(...buildInstanceForest(objects, m1.id));
             }
         } catch { /* ignore */ }
 
@@ -2240,15 +2545,22 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
         }
     }
 
+    // Filtro per viewpoint: `rendered` viene applicato SOLO ai metamodelli in
+    // scopo. Gli altri restano in chiaro — il viewpoint non ha opinioni su di
+    // loro, e dimmarli sarebbe una bugia (cfr. treeViewScope.ts).
+    const scope = computeTreeViewScope(state);
+    const scopeIds = new Set(scope?.scopeMetamodelIds ?? []);
+
     // Build metamodel tree data
     ret.metamodels = metamodels.map((mm) => {
         const mmName = mm.name || 'Unnamed Metamodel';
+        const mmRendered = scope && scopeIds.has(mm.id) ? scope.rendered : null;
         const rootPackages: TreePackageData[] = [];
         try {
             const pkgs = (mm as any).packages || [];
             for (const pkg of pkgs) {
                 if (!pkg) continue;
-                rootPackages.push(buildPackageData(pkg, mmName));
+                rootPackages.push(buildPackageData(pkg, mmName, mmRendered));
             }
         } catch { /* ignore */ }
 
@@ -2280,9 +2592,14 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
             const subs = lView.subViews || [];
             for (const sv of subs) {
                 if (!sv) continue;
+                // `get_ir` is a plain D-layer field read (view.tsx), so this costs a
+                // property access per view and adds no new layer to the tree's read set.
+                let kind: SubViewKind = 'unknown';
+                try { kind = subViewKindOf((sv as any).ir); } catch { /* view without ir: stays 'unknown' */ }
                 children.push({
                     id: sv.id,
                     name: sv.name || 'Unnamed View',
+                    kind,
                     children: buildSubViewTree(sv),
                 });
             }
@@ -2320,13 +2637,6 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     // view or viewpoint currently open in Properties with the same selection pill
     // used for model-element rows (2026-07-28 round 2 refinement).
     ret.selectedViewId = state._lastSelected?.view || undefined;
-
-    // Active viewpoint id (DProject.activeViewpoint). Used to highlight the
-    // currently-open VP in the tree with the cyan selection pattern.
-    try {
-        const project = LProject.getProject();
-        ret.activeViewpointId = project?.activeViewpoint?.id || undefined;
-    } catch { /* ignore */ }
 
     return ret;
 }

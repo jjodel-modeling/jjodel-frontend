@@ -4,7 +4,7 @@
 //
 // Name and value of every theme token live in the two maps below, which are
 // the single source. The selectors emit them, they never restate them: two
-// hand-written blocks carrying the same 91 names drift apart in silence.
+// hand-written blocks carrying the same 93 names drift apart in silence.
 //
 // The maps are emitted on four selectors, on purpose (D-UI-10):
 //   .editor-v2.theme-dark / .theme-light   the editor subtree, unchanged
@@ -140,6 +140,14 @@ $editor-v2-theme-dark: (
   'resize-handle-bg': #0ea5e9,
   'resize-handle-border': #1e293b,
 
+  // Node selection — anello e banda esterna, tarati a schermo (2026-08-26).
+  // Lo stroke e' translucido, non pieno: l'anello sta FUORI dal contorno chiuso
+  // del nodo, e lasciandolo pieno squillava sopra la figura. `halo` e' rimasto
+  // il nome del secondo token quando l'alone sfumato e' diventato una banda
+  // piatta: si tinge con spread, non con blur.
+  'node-selection-stroke': rgba(125, 211, 252, 0.5),
+  'node-selection-halo': rgba(125, 211, 252, 0.25),
+
   // Surface hierarchy
   'topbar-bg': #0f172a,
   'topbar-border': #1e293b,
@@ -154,9 +162,13 @@ $editor-v2-theme-dark: (
   'float-border': #334155,
   'float-shadow': rgba(0, 0, 0, 0.3),
   'float-text': #cbd5e1,
-  'float-text-muted': #475569,
-  'float-text-section': #475569,
-  'float-icon': #64748b,
+  'float-text-muted': #94a3b8,
+  'float-text-section': #94a3b8,
+  // Alzato da #64748b: da quando l'icona di riga porta un colore proprio invece di
+  // ereditare `float-text`, lo slate-500 su #1e293b stava a ~2,2:1 e spariva.
+  'float-icon': #94a3b8,
+  'float-disabled': #475569,
+  'float-header-arrow': #64748b,
   'float-hover': rgba(255, 255, 255, 0.06),
   'float-active-bg': rgba(14, 165, 233, 0.12),
   'float-active-text': #38bdf8,
@@ -286,6 +298,14 @@ $editor-v2-theme-light: (
   'resize-handle-bg': #0284c7,
   'resize-handle-border': #ffffff,
 
+  // Node selection — anello e banda esterna, tarati a schermo (2026-08-26).
+  // Lo stroke e' translucido, non pieno: l'anello sta FUORI dal contorno chiuso
+  // del nodo, e lasciandolo pieno squillava sopra la figura. `halo` e' rimasto
+  // il nome del secondo token quando l'alone sfumato e' diventato una banda
+  // piatta: si tinge con spread, non con blur.
+  'node-selection-stroke': rgba(56, 189, 248, 0.55),
+  'node-selection-halo': rgba(56, 189, 248, 0.22),
+
   // Surface hierarchy
   'topbar-bg': #1e293b,
   'topbar-border': #334155,
@@ -295,20 +315,25 @@ $editor-v2-theme-light: (
   'sidebar-bg': #f8fafc,
   'sidebar-border': #e2e8f0,
 
-  // Floating surfaces (dark in both themes)
-  'float-bg': #1e293b,
-  'float-border': #334155,
-  'float-shadow': rgba(0, 0, 0, 0.2),
-  'float-text': #cbd5e1,
-  'float-text-muted': #475569,
-  'float-text-section': #475569,
+  // Floating surfaces (context menu, edge type popup, popovers).
+  // Non piu' «dark in both themes»: i due menu del canvas seguono il tema come
+  // ogni altra superficie. Il valore chiaro e' la superficie comune del mockup
+  // approvato (bianco, hairline slate-200, ombra bassa).
+  'float-bg': #ffffff,
+  'float-border': #e2e8f0,
+  'float-shadow': rgba(0, 0, 0, 0.08),
+  'float-text': #0f172a,
+  'float-text-muted': #64748b,
+  'float-text-section': #94a3b8,
   'float-icon': #64748b,
-  'float-hover': rgba(255, 255, 255, 0.06),
-  'float-active-bg': rgba(14, 165, 233, 0.12),
-  'float-active-text': #38bdf8,
-  'float-danger': #f87171,
-  'float-danger-bg': rgba(239, 68, 68, 0.12),
-  'float-divider': rgba(255, 255, 255, 0.08),
+  'float-disabled': #cbd5e1,
+  'float-header-arrow': #94a3b8,
+  'float-hover': #f1f5f9,
+  'float-active-bg': rgba(2, 132, 199, 0.08),
+  'float-active-text': #0284c7,
+  'float-danger': #dc2626,
+  'float-danger-bg': rgba(220, 38, 38, 0.08),
+  'float-divider': #e2e8f0,
 );
 
 // Emits one custom property per entry, in map order.

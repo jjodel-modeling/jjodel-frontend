@@ -1621,3 +1621,223 @@ function emitLineWithBridges(
 
     return d;
 }
+
+// ═══════════════════════════════════════════════════════════════
+// Anti-collisione dei nodi — passaggio A VALLE del router
+// ═══════════════════════════════════════════════════════════════
+//
+// Fase B del punto 1 canvas (2026-08-25). Il router resta intatto: la polilinea
+// viene prodotta come sempre, poi si verifica il criterio contro i rettangoli dei
+// nodi e si ri-instrada SOLO se violato. Un caso sano non attraversa nemmeno
+// questo codice e resta byte-identico — e' la ragione della forma a valle.
+//
+// Misura che l'ha motivata (discovery_2026-08-25_routing_faseA.md): tre modi di
+// attraversare un corpo, in tre rami diversi del router. La U verticale col
+// padding fisso da 30px; la stessa U orizzontale che, quando sy === ty, ha tutti i
+// punti collineari e collassa in una retta; lo Z sano, cieco a un terzo nodo nel
+// corridoio. Correggere ramo per ramo voleva dire toccare tre volte anche i casi
+// che funzionano.
+//
+// Politica del corridoio occupato (decisa il 2026-08-25): si aggira dal lato con
+// piu' spazio libero, con 8px di clearance; se dopo UN solo ri-instradamento il
+// criterio e' ancora violato (corridoio saturo, nodi impilati) si tiene il path
+// originale. Degradare al comportamento di oggi e' accettabile, un path peggiore o
+// un ciclo di tentativi no.
+
+/** Clearance minima richiesta dal criterio F2. */
+export const AVOID_CLEARANCE = 8;
+/** Finestra esente alle due estremita': lo stub perpendicolare esce dal proprio nodo. */
+const AVOID_STUB = 8;
+/** Lunghezza dello stub costruito dal ri-instradamento (> AVOID_STUB). */
+const AVOID_STUB_OUT = 12;
+/** Le corsie si posano a clearance + 1: il criterio chiede >= 8, non > 8. */
+const AVOID_LANE = AVOID_CLEARANCE + 1;
+/** Margine di rilevazione: mezzo pixel sotto la clearance, cosi' una corsia posata
+ *  esattamente a distanza di sicurezza non si auto-denuncia al ricontrollo. */
+const AVOID_DETECT = AVOID_CLEARANCE - 0.5;
+/** Costo di una svolta, in pixel equivalenti: preferisce percorsi con meno spigoli. */
+const AVOID_BEND_COST = 40;
+/** Sotto questa distanza da un ostacolo una corsia e' "stretta" e costa di piu'. */
+const AVOID_TIGHT_LANE = 24;
+const AVOID_TIGHT_PENALTY = 0.6;
+/** Oltre questo numero di ostacoli si rinuncia: non e' piu' un corridoio. */
+const AVOID_MAX_RECTS = 10;
+
+type Pt = { x: number; y: number };
+
+/** Taglia `cut` pixel di lunghezza da ciascuna estremita' della polilinea. */
+function trimPolyline(points: Pt[], cut: number): Pt[] {
+    if (points.length < 2) return points;
+    const total = points.reduce((acc, p, i) => i === 0 ? 0 : acc + Math.hypot(p.x - points[i - 1].x, p.y - points[i - 1].y), 0);
+    if (total <= cut * 2) return [];
+    const walk = (pts: Pt[], from: number): Pt[] => {
+        // consuma `from` px dall'inizio di pts
+        const out: Pt[] = [];
+        let left = from;
+        for (let i = 1; i < pts.length; i++) {
+            const a = pts[i - 1], b = pts[i];
+            const len = Math.hypot(b.x - a.x, b.y - a.y);
+            if (left <= 0) { out.push(a); continue; }
+            if (len <= left) { left -= len; continue; }
+            const t = left / len;
+            out.push({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
+            left = 0;
+        }
+        out.push(pts[pts.length - 1]);
+        return out;
+    };
+    const head = walk(points, cut);
+    const tail = walk([...head].reverse(), cut);
+    return tail.reverse();
+}
+
+/**
+ * I rettangoli attraversati dalla polilinea, esclusa la finestra di stub alle due
+ * estremita'. Lista vuota = il criterio e' rispettato.
+ */
+export function pathBlockingRects(points: Pt[], rects: Rect[]): Rect[] {
+    const body = trimPolyline(points, AVOID_STUB);
+    if (body.length < 2) return [];
+    const hit: Rect[] = [];
+    for (const r of rects) {
+        for (let i = 1; i < body.length; i++) {
+            if (segmentHitsRect(body[i - 1].x, body[i - 1].y, body[i].x, body[i].y, r, AVOID_DETECT)) {
+                hit.push(r);
+                break;
+            }
+        }
+    }
+    return hit;
+}
+
+/** Direzione unitaria assiale del primo segmento non degenere a partire da `from`. */
+function axisDirection(points: Pt[], from: 'start' | 'end'): Pt | null {
+    const pts = from === 'start' ? points : [...points].reverse();
+    for (let i = 1; i < pts.length; i++) {
+        const dx = pts[i].x - pts[0].x;
+        const dy = pts[i].y - pts[0].y;
+        if (Math.abs(dx) > 1) return { x: Math.sign(dx), y: 0 };
+        if (Math.abs(dy) > 1) return { x: 0, y: Math.sign(dy) };
+    }
+    return null;
+}
+
+function insideRects(p: Pt, rects: Rect[], margin: number): boolean {
+    return rects.some((r) =>
+        p.x > r.x - margin && p.x < r.x + r.width + margin &&
+        p.y > r.y - margin && p.y < r.y + r.height + margin);
+}
+
+/** Distanza minima di un segmento assiale dai rettangoli (0 se lo tocca). */
+function segmentClearance(a: Pt, b: Pt, rects: Rect[]): number {
+    let best = Infinity;
+    for (const r of rects) {
+        const dxs = [r.x - Math.max(a.x, b.x), Math.min(a.x, b.x) - (r.x + r.width), 0];
+        const dys = [r.y - Math.max(a.y, b.y), Math.min(a.y, b.y) - (r.y + r.height), 0];
+        const dx = Math.max(...dxs);
+        const dy = Math.max(...dys);
+        best = Math.min(best, Math.hypot(dx, dy));
+    }
+    return best;
+}
+
+/**
+ * Ri-instradamento ortogonale attorno agli ostacoli, su una griglia di corsie.
+ *
+ * Le ascisse e le ordinate candidate sono quelle degli stub e dei bordi degli
+ * ostacoli scostati di una clearance: e' la griglia minima che contiene un
+ * percorso ottimo ortogonale attorno a rettangoli assiali. Su quella griglia gira
+ * un Dijkstra il cui costo somma lunghezza, una penale per ogni svolta e una
+ * penale per le corsie strette — quest'ultima e' la forma generale della politica
+ * «si aggira dal lato con piu' spazio libero», valida anche quando gli ostacoli
+ * sono piu' di uno.
+ *
+ * Ritorna null quando non c'e' percorso, o quando lo stub stesso nasce dentro un
+ * corpo (ancoraggio sepolto: nessun tracciato potrebbe rispettare il criterio).
+ */
+function routeAroundRects(points: Pt[], rects: Rect[]): Pt[] | null {
+    const S = points[0];
+    const T = points[points.length - 1];
+    const dS = axisDirection(points, 'start');
+    const dT = axisDirection(points, 'end');
+    if (!dS || !dT) return null;
+
+    const S1 = { x: S.x + dS.x * AVOID_STUB_OUT, y: S.y + dS.y * AVOID_STUB_OUT };
+    const T1 = { x: T.x + dT.x * AVOID_STUB_OUT, y: T.y + dT.y * AVOID_STUB_OUT };
+    if (insideRects(S1, rects, AVOID_DETECT) || insideRects(T1, rects, AVOID_DETECT)) return null;
+
+    const uniq = (v: number[]) => Array.from(new Set(v.map((n) => Math.round(n * 2) / 2))).sort((a, b) => a - b);
+    const xs = uniq([S1.x, T1.x, ...rects.flatMap((r) => [r.x - AVOID_LANE, r.x + r.width + AVOID_LANE])]);
+    const ys = uniq([S1.y, T1.y, ...rects.flatMap((r) => [r.y - AVOID_LANE, r.y + r.height + AVOID_LANE])]);
+    const nx = xs.length, ny = ys.length;
+    const idx = (i: number, j: number) => i * ny + j;
+    const at = (i: number, j: number): Pt => ({ x: xs[i], y: ys[j] });
+
+    const si = xs.indexOf(Math.round(S1.x * 2) / 2), sj = ys.indexOf(Math.round(S1.y * 2) / 2);
+    const ti = xs.indexOf(Math.round(T1.x * 2) / 2), tj = ys.indexOf(Math.round(T1.y * 2) / 2);
+    if (si < 0 || sj < 0 || ti < 0 || tj < 0) return null;
+
+    // Stato = (nodo, direzione d'arrivo): serve a far pagare le svolte.
+    const DIRS = 3; // 0 = nessuna, 1 = orizzontale, 2 = verticale
+    const dist = new Float64Array(nx * ny * DIRS).fill(Infinity);
+    const prev = new Int32Array(nx * ny * DIRS).fill(-1);
+    const state = (n: number, d: number) => n * DIRS + d;
+    const startState = state(idx(si, sj), 0);
+    dist[startState] = 0;
+
+    // Coda a estrazione lineare: la griglia e' minuscola (poche decine di nodi).
+    const visited = new Uint8Array(nx * ny * DIRS);
+    const total = nx * ny * DIRS;
+    let goal = -1;
+    for (;;) {
+        let best = -1, bestD = Infinity;
+        for (let s = 0; s < total; s++) if (!visited[s] && dist[s] < bestD) { bestD = dist[s]; best = s; }
+        if (best < 0) break;
+        visited[best] = 1;
+        const node = Math.floor(best / DIRS);
+        const dir = best % DIRS;
+        if (node === idx(ti, tj)) { goal = best; break; }
+        const i = Math.floor(node / ny), j = node % ny;
+        const from = at(i, j);
+        const neighbours: Array<[number, number, number]> = [
+            [i - 1, j, 1], [i + 1, j, 1], [i, j - 1, 2], [i, j + 1, 2],
+        ];
+        for (const [ni2, nj2, ndir] of neighbours) {
+            if (ni2 < 0 || ni2 >= nx || nj2 < 0 || nj2 >= ny) continue;
+            const to = at(ni2, nj2);
+            if (rects.some((r) => segmentHitsRect(from.x, from.y, to.x, to.y, r, AVOID_DETECT))) continue;
+            const len = Math.hypot(to.x - from.x, to.y - from.y);
+            const tight = segmentClearance(from, to, rects) < AVOID_TIGHT_LANE ? AVOID_TIGHT_PENALTY : 0;
+            const bend = dir !== 0 && dir !== ndir ? AVOID_BEND_COST : 0;
+            const cost = len * (1 + tight) + bend;
+            const ns = state(idx(ni2, nj2), ndir);
+            if (dist[best] + cost < dist[ns]) { dist[ns] = dist[best] + cost; prev[ns] = best; }
+        }
+    }
+    if (goal < 0) return null;
+
+    const back: Pt[] = [];
+    for (let s = goal; s >= 0; s = prev[s]) {
+        const node = Math.floor(s / DIRS);
+        back.push(at(Math.floor(node / ny), node % ny));
+        if (s === startState) break;
+    }
+    back.reverse();
+    return cleanPoints([S, ...back, T]);
+}
+
+/**
+ * Il passaggio a valle: polilinea invariata se il criterio e' rispettato, altrimenti
+ * un solo tentativo di ri-instradamento. Se anche quello viola, torna l'originale.
+ *
+ * Ritorna **lo stesso riferimento** quando non c'e' nulla da fare: e' cosi' che i
+ * casi sani restano byte-identici e le memo a valle non si invalidano.
+ */
+export function avoidNodeRects(points: Pt[], rects: Rect[]): Pt[] {
+    if (points.length < 2 || rects.length === 0 || rects.length > AVOID_MAX_RECTS) return points;
+    if (pathBlockingRects(points, rects).length === 0) return points;
+    const rerouted = routeAroundRects(points, rects);
+    if (!rerouted || rerouted.length < 2) return points;
+    if (pathBlockingRects(rerouted, rects).length > 0) return points;
+    return rerouted;
+}

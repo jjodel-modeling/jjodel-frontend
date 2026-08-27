@@ -3,34 +3,39 @@ import type { CompatibleReference } from '../utils/compositionCompat';
 import type { MetaclassReference } from '../hooks/useEditorMode';
 import './EdgeTypePopup.scss'; // reuse same styling
 
-// --- SVG Icons (inline, 16x16) ---
+// --- SVG Icons ---
+//
+// Same drawing language as the four UML glyphs of EdgeTypePopup.tsx: a 26x10
+// strip where the glyph IS the edge it creates, on `currentColor` so the colour
+// is declared once on the host button (`--float-icon`). Line ends, stroke widths
+// and the arrowhead are the ones used there; keep the two in step.
 
 function CompositionIcon({ className }: { className?: string }) {
     return (
-        <svg width="16" height="16" viewBox="0 0 16 16" className={className}>
-            <polygon points="1,8 4,5 7,8 4,11" fill="currentColor" stroke="currentColor" strokeWidth="1" />
-            <line x1="7" y1="8" x2="12" y2="8" stroke="currentColor" strokeWidth="1.5" />
-            <polyline points="10,5 13,8 10,11" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+        <svg width="26" height="10" viewBox="0 0 26 10" className={className} aria-hidden="true">
+            <polygon points="1,5 5,1.8 9,5 5,8.2" fill="currentColor" stroke="currentColor" strokeWidth="1" strokeLinejoin="round" />
+            <line x1="9" y1="5" x2="19" y2="5" stroke="currentColor" strokeWidth="1.3" />
+            <polyline points="18,1.5 24.5,5 18,8.5" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" strokeLinecap="round" />
         </svg>
     );
 }
 
 function ReferenceIcon({ className }: { className?: string }) {
     return (
-        <svg width="16" height="16" viewBox="0 0 16 16" className={className}>
-            <line x1="1" y1="8" x2="12" y2="8" stroke="currentColor" strokeWidth="1.5" />
-            <polyline points="10,5 13,8 10,11" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+        <svg width="26" height="10" viewBox="0 0 26 10" className={className} aria-hidden="true">
+            <line x1="1" y1="5" x2="19" y2="5" stroke="currentColor" strokeWidth="1.3" />
+            <polyline points="18,1.5 24.5,5 18,8.5" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" strokeLinecap="round" />
         </svg>
     );
 }
 
 function ObjectEdgeIcon({ className }: { className?: string }) {
     return (
-        <svg width="16" height="16" viewBox="0 0 16 16" className={className}>
-            <line x1="1" y1="8" x2="5" y2="8" stroke="currentColor" strokeWidth="1.5" />
-            <rect x="5.5" y="5.5" width="5" height="5" fill="none" stroke="currentColor" strokeWidth="1.2" />
-            <line x1="11" y1="8" x2="12" y2="8" stroke="currentColor" strokeWidth="1.5" />
-            <polyline points="10,5 13,8 10,11" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" transform="translate(1,0)" />
+        <svg width="26" height="10" viewBox="0 0 26 10" className={className} aria-hidden="true">
+            <line x1="1" y1="5" x2="8.5" y2="5" stroke="currentColor" strokeWidth="1.3" />
+            <rect x="8.5" y="1.8" width="6.4" height="6.4" rx="1" fill="none" stroke="currentColor" strokeWidth="1.2" />
+            <line x1="14.9" y1="5" x2="19" y2="5" stroke="currentColor" strokeWidth="1.3" />
+            <polyline points="18,1.5 24.5,5 18,8.5" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" strokeLinecap="round" />
         </svg>
     );
 }
@@ -68,9 +73,12 @@ export function M1ReferencePopup({ position, containerRef, options, onSelect, on
         let left = position.x - containerRect.left + 8;
         let top = position.y - containerRect.top + 8;
 
-        const popupWidth = 210;
+        // Le due costanti decidono il ribaltamento, e seguono la geometria di
+        // EdgeTypePopup.scss: 6px di padding + eyebrow + righe da 34px + 6px di
+        // padding, con il glifo a 26px invece dei 16 di prima.
+        const popupWidth = 228;
         const rowCount = options.length + (objectEdgeOptions?.length ?? 0);
-        const popupHeight = 32 + rowCount * 34; // header + rows
+        const popupHeight = 40 + rowCount * 34; // padding + eyebrow + righe
 
         if (left + popupWidth > containerRect.width) {
             left = position.x - containerRect.left - popupWidth - 8;
@@ -160,7 +168,7 @@ export function M1ReferencePopup({ position, containerRef, options, onSelect, on
                     }
                     <span className="edge-type-popup__label">
                         {ref.name}
-                        <span style={{ opacity: 0.5, marginLeft: 4, fontSize: '0.9em' }}>
+                        <span className="edge-type-popup__label-type">
                             : {ref.targetClassName}
                         </span>
                     </span>

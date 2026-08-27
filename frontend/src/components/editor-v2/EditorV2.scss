@@ -311,6 +311,107 @@
     flex: 1;
 }
 
+// ── Canvas zone under pressure (revision 2b, 2026-08-26) ──
+//
+// Since 2b the bar ends in a cell as wide as the right rail, and at common window
+// sizes the two do not both fit. Measured, viewport 1440 (the toolbar gets 1238 of
+// it — `.editor-v2-palette` takes the first 201) with the rail at its 440 default:
+// the canvas zone needs 948px of hard content and the cell 451 including its gap, so
+// the row overflows by 162px and, nothing being able to yield, the cell landed at
+// x=1165 with its hairline 165px to the right of the rail's. Above ~1650px of window
+// everything fits and none of this fires; at 1800 it was already exact before this
+// block existed.
+//
+// So the canvas zone yields, in a deliberate order, and the cell never does: what a
+// user loses first is a word that names a group whose icons are still there, and what
+// they never lose is a control. Flex gives the ordering for free — an item that hits
+// its floor freezes and the rest of the deficit is redistributed — provided each item
+// HAS a floor, which is what `min-width` is doing here. Every one of these elements
+// has `flex-shrink: 1` already and never shrank a pixel, because `min-width: auto`
+// floors a flex item at its min-content width.
+//
+// The order, and what each step can give at 1440:
+//   1. the group labels VIEW and LAYOUT       72.8px   (shrink 200 → they go first)
+//   2. the notation and theme dropdowns      112px     (120 → 64 each)
+//   3. the viewpoint select                   48px     (120 → 72)
+// 232.8px available against a 162px deficit, so step 3 is only partly spent and the
+// three text controls end around 89px each: truncated, still legible, still clickable.
+//
+// Scoped under `.editor-v2-toolbar` and written here rather than in the component
+// sheets: `.notation-selector` and `.scheme-selector` are shared widgets that declare
+// `width: fit-content !important` (_notations.scss, _color-schemes.scss), and they are
+// only wrong about it INSIDE this bar. Hence the descendant selector — (0,2,0) beats
+// their (0,1,0), which is what lets one `!important` override another — and hence no
+// edit to two sheets whose other consumers are fine as they are.
+.editor-v2-toolbar {
+    // The groups themselves must be able to shrink before anything inside them can.
+    .toolbar-group,
+    .toolbar-viewpoint-group,
+    .toolbar-viewpoint-selector {
+        min-width: 0;
+        flex-shrink: 1;
+    }
+
+    // Step 1. A high shrink factor, not a separate breakpoint: the label is spent
+    // almost entirely before the controls give anything, which is the whole ordering.
+    .toolbar-group__label {
+        min-width: 0;
+        flex-shrink: 200;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    // Step 2. The elastic item is the WRAPPER, not the button: `.notation-selector` and
+    // `.scheme-selector` are the flex children of the group, and the button inside each
+    // is an ordinary block child. `flex-basis` on the button is therefore inert — put
+    // there first, it measured 84.8px and 109.7px at EVERY window width, i.e. the two
+    // dropdowns had silently lost the fixed 120 that keeps the notation label from
+    // shifting the layout as it changes ("Structured" ↔ "ER", the base rule's own
+    // comment). The basis belongs on the wrapper, and the button follows it at 100%.
+    //
+    // `flex: 0 1 120px` says exactly what the base `min-width: 120px` was reaching for:
+    // 120 is the preferred width, not a floor. The floor is `min-width` here, and it is
+    // on the wrapper for the same reason.
+    //
+    // Scoped to `--labeled` so it cannot reach the OTHER `.notation-selector` in this
+    // bar — the views menu beside the viewpoint select, whose trigger is one glyph and
+    // would be stretched to 120px by a basis meant for a label.
+    .toolbar-group--labeled {
+        .notation-selector,
+        .scheme-selector {
+            width: auto !important;
+            flex: 0 1 120px;
+            min-width: 64px;
+        }
+
+        .toolbar-dropdown-btn {
+            width: 100%;
+            min-width: 0;
+            overflow: hidden;
+        }
+    }
+
+    .toolbar-dropdown-btn {
+        // The label truncates; the chevron is 8px and never does, or the control stops
+        // reading as a dropdown.
+        > span {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        &__chevron {
+            flex: none;
+        }
+    }
+
+    // Step 3. The native select clips its own text, so it needs a floor and nothing
+    // else. Last to give: it is the syntax control (R-IRN-10).
+    .toolbar-viewpoint-selector select {
+        min-width: 72px;
+    }
+}
+
 // ── Alignment inline group extras ──
 .toolbar-group--align {
     gap: 2px;
@@ -416,6 +517,19 @@
         font-size: 8px;
         opacity: 0.6;
     }
+
+    // Icon-only variant (views menu next to the viewpoint <select>). The 120px min-width
+    // above exists to stop the notation label from shifting the layout as it changes;
+    // a button that carries a single glyph and no label has nothing to shift, and at
+    // 120px it would dwarf the selector it sits beside.
+    &--icon {
+        min-width: 0;
+        padding: 4px 7px;
+
+        i {
+            font-size: 13px;
+        }
+    }
 }
 
 // ── Viewpoint selector group ──
@@ -424,6 +538,19 @@
     align-items: center;
     gap: 6px;
     flex-shrink: 0;
+
+    // The views menu opens LEFTWARDS from its trigger. Left-anchored (the shared
+    // default) it measured x 1012..1212 at 1440px wide, while the rail overlay starts
+    // at 1080: 132px of a 200px menu sat under it, and elementFromPoint at the centre
+    // of every entry returned .rail-header. z-index does not decide this — the rail is
+    // position:fixed portaled to <body>, a stacking context above the toolbar's, so
+    // its 900 still paints over the dropdown's 1000. Anchoring right keeps the menu
+    // inside the span the toolbar already owns. Scoped here: the notation and theme
+    // menus sit further left and keep the shared left-anchored rule.
+    .notation-selector__dropdown {
+        left: auto;
+        right: 0;
+    }
 }
 
 .toolbar-viewpoint-selector {
@@ -500,7 +627,269 @@
     }
 }
 
+// ── Command group + editor identity (right end of the toolbar, 2026-08-26) ──
+//
+// One bordered box holds the controls that act on the canvas as a surface: zoom out,
+// the level, zoom in, a hairline, and the rail collapse. Grouping them is what
+// lets the identity of the open model sit beside them and still read as a separate
+// thing — the border does the separating, so the identity needs no chrome of its own
+// beyond the 1x22 divider.
+//
+// Sizes are the mockup's: 28x26 per slot, 12-13px glyphs, 8px radius on the box and a
+// 2px inset so the slots never touch the border.
+.toolbar-commands {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    flex-shrink: 0;
+    padding: 2px;
+    border: 1px solid var(--border-default, #e2e8f0);
+    border-radius: 8px;
+
+    &__btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 26px;
+        padding: 0;
+        border: none;
+        background: transparent;
+        color: var(--text-secondary, #64748b);
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 13px;
+        transition: background 0.15s, color 0.15s;
+
+        &:hover:not(:disabled) {
+            background: var(--surface-1, #ffffff);
+            color: var(--text-primary);
+        }
+
+        &:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+    }
+
+    // The zoom level is a button too — clicking it resets to 100%. Wider than a slot
+    // because it carries text; tabular figures so 90%/100%/110% do not shift it.
+    &__level {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 42px;
+        height: 26px;
+        padding: 0 2px;
+        border: none;
+        background: transparent;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 500;
+        font-variant-numeric: tabular-nums;
+        color: var(--text-secondary, #64748b);
+        cursor: pointer;
+        text-align: center;
+        transition: background 0.15s, color 0.15s;
+
+        &:hover {
+            background: var(--surface-1, #ffffff);
+            color: var(--text-primary);
+        }
+    }
+
+    // Separates zoom from the rail collapse INSIDE the box: a hairline, not the 1x22
+    // divider, which is reserved for the boundary between the box and the identity.
+    &__hairline {
+        width: 1px;
+        height: 16px;
+        margin: 0 3px;
+        background: var(--border-default, #e2e8f0);
+        flex-shrink: 0;
+    }
+}
+
+// TODO: cleanup — no markup carries this class since revision 2b (2026-08-26): the
+// boundary between the two zones of the bar is now the cell's own border-left, which
+// continues the rail's, and a second vertical rule 10px to its left read as a stutter.
+// Kept until the bar is settled at screen, per Rule 9.
+.toolbar-identity-divider {
+    width: 1px;
+    height: 22px;
+    margin: 0 10px;
+    background: var(--border-default, #e2e8f0);
+    flex-shrink: 0;
+}
+
+// ── The rail cell (revision 2b, 2026-08-26) ──
+//
+// The last cell of the bar is the top of the RAIL's column, not the end of the canvas
+// zone: same width, same left hairline, and it tracks the drag handle live. What makes
+// that possible is `--jj-rail-width`, published on <body> by PropertiesWithTreeView —
+// the rail's own single writer — as the bare column width. It is deliberately NOT
+// `--jj-canvas-right-inset`, which is the same number plus a canvas gutter of 8.
+//
+// Two numbers here are measured, not chosen (viewport 1440, rail 440, 2026-08-26):
+//
+//   · `- 1px`. `.dock-panel` (rc-dock, library CSS) carries a 1px border-left and
+//     border-right, so this toolbar ends at x=1439 while the rail — `position: fixed;
+//     right: 0` — ends at 1440. Anchored to the toolbar's right edge, the cell must
+//     therefore be one pixel narrower for its LEFT edge, the seam that is actually
+//     visible, to land on the rail's at 1000. The rail's own `top` composes the same
+//     literal for the same reason (properties-with-tree-view.scss); if rc-dock ever
+//     drops that border, both need re-measuring, and smoke A5 says so.
+//
+//   · `-12px` of margin cancels the toolbar's own `padding-right`, which is what keeps
+//     every other item off the window edge and is exactly what this one must reach.
+//
+// Background is transparent rather than a repeated token: "same white as the topbar" is
+// then true by construction, in both themes, and cannot drift from it.
+//
+// The hairline takes `--border-subtle`, the token the rail's `border-left` already
+// takes, so the two are ONE continuous line across the seam at y=91. The 2b mockup
+// names #e2e8f0, which is `--color-panel-border` in light — a step darker than what
+// the rail paints (rgba(0,0,0,0.06), ~#f0f0f0 over white). Matching the rail was the
+// call: a topbar hairline darker than the rail hairline directly under it would show
+// the join instead of hiding it. Changing the pair is one line here and one at
+// properties-with-tree-view.scss `.properties-with-tree-view--rail`.
+.toolbar-rail-cell {
+    flex: none;
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    // `align-self: stretch` and not a height: the hairline must run the full band, so
+    // that it meets the rail's with no gap at either end. The negative bottom margin is
+    // what makes "the full band" true — the toolbar's 40px include a 1px `border-bottom`,
+    // so a stretched child gets 39 and the hairline stopped one pixel above the rail's.
+    // Measured 2026-08-26: cella h=39 contro topbar h=40.
+    align-self: stretch;
+    margin-bottom: -1px;
+    width: calc(var(--jj-rail-width, 0px) - 1px);
+    min-width: 0;
+    margin-right: -12px;
+    // 4px of that is the toolbar's own `gap`; the rest keeps the command group's border
+    // off the hairline, so the two do not read as one bracket.
+    margin-left: 8px;
+    padding: 0 12px;
+    border-left: 1px solid var(--border-subtle);
+    background: transparent;
+    // A cell narrower than its contents (a long model name, a rail dragged to its 360px
+    // minimum) clips instead of pushing the command group left.
+    overflow: hidden;
+}
+
+// Identity of the open model: badge, name, and the switch affordance. Not a button —
+// there is no model-selection dropdown to open yet (see Toolbar.tsx), so it takes no
+// hover and no pointer, and promises nothing it cannot do.
+.toolbar-identity {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    // Fills the cell so the chevron reaches its right edge. `flex-shrink: 1` was the
+    // whole story while this sat in the bar's flex row and had to yield to the group
+    // beside it; inside a cell of its own the growth direction is the one that matters.
+    flex: 1;
+    min-width: 0;
+
+    // Same letter and the same radius as the badge the rail header carried; the size
+    // grows, 18 -> 22, now that it stands alone at the end of the bar.
+    //
+    // The model half no longer reads from `--color-entity-model-*`. Measured
+    // 2026-08-26: those tokens alias `--color-entity-container-bg/fg` in both themes
+    // (tokens/_colors-light.scss:356-357, _colors-dark.scss:261-262), i.e. the SAME
+    // slate as package, viewpoint, transformation and metamodel — the entity pair for
+    // a model has no colour of its own to be the single source of. The amber below is
+    // the pair the M/m/T/V badges of the project sidebar already use
+    // (`.psb-badge--m`, pages/dashboard.scss:1125) with the glyph taken one step
+    // brighter, amber-600 #d97706 instead of that badge's amber-800 #92400e.
+    //
+    // Literal and not a token because repainting `--color-entity-model-*` would also
+    // repaint `.jj-type-badge--model`, i.e. the rail's Properties header
+    // (_form-system.scss:1259, consumed by Info.tsx:1064) — a wider change than this
+    // bar, to be decided on its own.
+    &__badge {
+        flex: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        border-radius: 5px;
+        font-size: var(--font-size-xs);
+        font-weight: var(--font-weight-bold);
+        line-height: 1;
+
+        &--metamodel {
+            background: var(--color-entity-metamodel-bg);
+            color: var(--color-entity-metamodel-fg);
+        }
+
+        // One pair for both themes, like the M/m/T/V badges it echoes: amber-100 on
+        // the dark toolbar keeps the contrast the letter needs, and a theme-following
+        // variant would have to be invented rather than borrowed.
+        &--model {
+            background: #fef3c7;
+            color: #d97706;
+        }
+    }
+
+    // The only flexible item of the block, so a long model name truncates instead of
+    // pushing the badge or the chevron off the bar.
+    //
+    // Colour is the theme token, not the mockup's raw `--color-slate-900`: the slate
+    // scale in `styles/tokens.css` is primitive and theme-invariant, so slate-900 on a
+    // dark toolbar is near-black on near-black. Same defect the rail's Focus bar had to
+    // repair after the fact (properties-with-tree-view.scss:1856); not repeated here.
+    // `--text-primary` is #1e293b in light — one step off the mockup's #0f172a, which is
+    // the price of the theme following.
+    &__name {
+        // `flex: 1` since 2b: the name is what absorbs the cell's spare width, which is
+        // what pushes the chevron onto the cell's right edge. With `min-width: 0` alone
+        // the three items huddled next to the badge and the chevron floated in the
+        // middle of a 440px box.
+        flex: 1;
+        min-width: 0;
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--text-primary);
+        letter-spacing: -0.01em;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    // `--text-dim` IS the mockup's slate-400 in light (#94a3b8), and follows the theme
+    // in dark.
+    //
+    // The class is doubled with `.bi` on purpose, and the hover is pinned. `style.scss`
+    // carries `i.bi { color: var(--font-color-1); &:hover { color: var(--palette-1-hover) } }`,
+    // which is (0,1,1) and lands on this same <i> as a direct declaration — a bare
+    // `.toolbar-identity__chevron` at (0,1,0) loses to it and never paints. Measured
+    // 2026-08-26 before this line existed: the chevron computed rgb(15,23,42) in light,
+    // i.e. slate-900, the same weight as the name it is supposed to sit under. `.bi`
+    // takes the selector to (0,2,0) and wins. Same trap as the tree glyph in CLAUDE.md
+    // §5; the hover clause matters too, because this block is not a button and a colour
+    // that moves under the pointer would promise a click that does nothing.
+    //
+    // The command group's own glyphs are deliberately NOT rescued this way: every other
+    // icon in this toolbar is painted by that same `i.bi` rule (measured: rgb(15,23,42)
+    // light, rgb(100,116,139) dark, identical on the old .toolbar-btn and on the new
+    // .toolbar-commands__btn), so forcing slate-600 here alone would make the new group
+    // the one odd cluster in the bar.
+    &__chevron.bi {
+        flex: none;
+        font-size: 12px;
+        color: var(--text-dim, #94a3b8);
+
+        &:hover {
+            color: var(--text-dim, #94a3b8);
+        }
+    }
+}
+
 // ── Zoom controls ──
+// TODO: cleanup — `.toolbar-zoom` has had no markup since the command group above
+// replaced it (2026-08-26). Kept until the group is settled at screen.
 .toolbar-zoom {
     display: flex;
     align-items: center;
@@ -1048,15 +1437,15 @@
 
 .node-resize-handle,
 .react-flow__resize-control.handle {
-    width: 8px !important;
-    height: 8px !important;
-    min-width: 8px !important;
-    min-height: 8px !important;
-    max-width: 8px !important;
-    max-height: 8px !important;
-    background: var(--resize-handle-bg) !important;
-    background-color: var(--resize-handle-bg) !important;
-    border: 2px solid var(--resize-handle-border) !important;
+    width: 9px !important;
+    height: 9px !important;
+    min-width: 9px !important;
+    min-height: 9px !important;
+    max-width: 9px !important;
+    max-height: 9px !important;
+    background: var(--node-bg) !important;
+    background-color: var(--node-bg) !important;
+    border: 1.5px solid var(--node-selection-stroke) !important;
     border-radius: 2px !important;
     opacity: 1 !important;
     box-shadow: none !important;
@@ -1071,6 +1460,25 @@
     background-color: transparent !important;
     border: none !important;
     opacity: 0 !important;
+}
+
+// Forme non rettangolari: i quattro handle stanno sugli spigoli del bounding
+// box, che sotto un'ellisse o uno stadio non si vede, e leggono come quattro
+// punti sciolti attorno alla figura. Le linee del resizer coprono gia' quel
+// box: rese tratteggiate e tenui lo disegnano senza un solo elemento nuovo.
+// Escluse rect e rounded, dove il box coincide col contorno e il tratteggio
+// finirebbe addosso all'anello.
+// Specificita' (0,6,0) piu' !important: la regola sopra azzera opacity e bordo
+// con !important a (0,2,0), e senza entrambi non si vedrebbe nulla.
+.mm-node:has(> .ir-node-content:not(.ir-shape--rect):not(.ir-shape--rounded)) {
+    > .react-flow__resize-control.line {
+        opacity: 1 !important;
+
+        &.top { border-top: 1px dashed var(--node-selection-stroke) !important; }
+        &.bottom { border-bottom: 1px dashed var(--node-selection-stroke) !important; }
+        &.left { border-left: 1px dashed var(--node-selection-stroke) !important; }
+        &.right { border-right: 1px dashed var(--node-selection-stroke) !important; }
+    }
 }
 
 // ============================================
@@ -1221,9 +1629,14 @@
     box-shadow: 0 1px 3px var(--node-shadow), 0 4px 12px var(--node-shadow-deep, rgba(0, 0, 0, 0.08));
     cursor: default;
 
+    // Banda trasparente di 3px attaccata al bordo, poi l'anello a 3..5px (offset
+    // 3 piu' 2 di tratto): i due si toccano. Banda e anello stanno entrambi
+    // sull'elemento che porta la FORMA, cosi' seguono il suo raggio invece del
+    // rettangolo del wrapper (box-shadow e outline rispettano border-radius).
     &.selected {
-        border-color: var(--color-accent);
-        box-shadow: 0 0 0 2px var(--accent-muted), 0 4px 16px var(--node-shadow-deep, rgba(0, 0, 0, 0.12));
+        outline: 2px solid var(--node-selection-stroke);
+        outline-offset: 3px;
+        box-shadow: 0 0 0 3px var(--node-selection-halo), 0 4px 16px var(--node-shadow-deep, rgba(0, 0, 0, 0.12));
     }
 
     &.drop-target {
@@ -1726,6 +2139,29 @@
         }
     }
 
+    // Not rendered by the active viewpoint — canvas counterpart of the tree's
+    // `tree-row--not-rendered` dimming (commit 6f8cd3909). Slate, dashed, header
+    // only (the body is dropped in ObjectNode, as the tree drops the chevron and the
+    // features): an object the viewpoint does not render must not read like one it
+    // does, so every entity colour is neutralised, selection included.
+    &.mm-object--not-rendered {
+        border: 1.5px dashed var(--border-default);
+
+        .mm-object__header {
+            background: var(--surface-2);
+        }
+
+        .mm-object__instance-name,
+        .mm-object__class-name {
+            color: var(--text-muted);
+        }
+
+        &.selected {
+            border-color: var(--text-muted);
+            box-shadow: 0 0 0 2px var(--surface-3), 0 2px 8px var(--node-shadow);
+        }
+    }
+
     &.selected {
         border-color: var(--object-accent, #f59e0b);
         box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.3), 0 2px 8px var(--node-shadow);
@@ -1736,9 +2172,10 @@
         box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.25), inset 0 0 16px rgba(245, 158, 11, 0.05);
     }
 
-    // The singleton diamond badge was replaced by the «singleton» stereotype
-    // line in the header (ObjectNode, both the native and the IR branch); its
-    // only two consumers are gone, so the rule went with them.
+    // No singleton marker on the instance. The diamond badge went first, with its two
+    // consumers; the «singleton» stereotype line that replaced it now lives only on the
+    // metaclass (ClassNode, R-SGL-3). `.mm-node__stereotype` therefore stays defined
+    // under `.mm-node`, and nothing scoped to `.mm-object` is needed here.
 }
 
 // ============================================
@@ -2138,12 +2575,17 @@
 // ============================================
 
 // Edge label text
+// The halo sits on the TEXT, not on .edge-label: that wrapper carries the
+// perpendicular nudge and the hit area, so a background there would paint a box
+// wider than the words. --color-edge-label-bg is the design-system token for this
+// (rgba white .9 in light, slate .9 in dark) and had no consumer until now.
 .edge-label__text {
     font-family: var(--font-sans);
     font-size: 10px;
     color: var(--text-secondary);
-    padding: 1px 5px;
-    border-radius: 3px;
+    background: var(--color-edge-label-bg);
+    padding: 1px 4px;
+    border-radius: var(--radius-sm);
     border: none;
     white-space: nowrap;
     box-shadow: none;
@@ -3265,67 +3707,149 @@
     z-index: 999;
 }
 
-// Context menu is portaled to <body> via createPortal, so CSS variables
-// defined on .editor-v2.theme-dark/.theme-light are NOT inherited.
-// Every var() MUST have a hardcoded fallback matching the dark float palette.
+// Context menu is portaled to <body> via createPortal, so CSS variables defined
+// on `.editor-v2.theme-dark/.theme-light` are NOT inherited. The float tokens are
+// also emitted on `:root` / `:root[data-theme="dark"]` (_themes.scss, D-UI-10),
+// which is where these var() resolve from: no hardcoded fallback is needed, and
+// the ones that used to sit here pinned the menu to the dark palette in both
+// themes. The fallbacks below therefore carry the LIGHT values, matching what
+// bare `:root` publishes.
+//
+// The glyph colours are NOT here: they need a selector this block cannot give
+// them. See the ICON COLOUR note under the block.
 .context-menu {
     position: fixed;
     z-index: 1000;
-    background: var(--float-bg, #1e293b);
-    border: 1px solid var(--float-border, #334155);
-    border-radius: 8px;
-    padding: 4px;
+    background: var(--float-bg, #ffffff);
+    border: 1px solid var(--float-border, #e2e8f0);
+    border-radius: 12px;
+    padding: 6px;
     min-width: 160px;
-    box-shadow: 0 2px 12px var(--float-shadow, rgba(0, 0, 0, 0.3));
+    box-shadow: 0 4px 12px var(--float-shadow, rgba(0, 0, 0, 0.08));
 
     &__item {
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 10px;
         width: 100%;
-        padding: 5px 8px;
+        height: 34px;
+        padding: 0 10px;
         border: none;
         background: transparent;
-        color: var(--float-text, #cbd5e1);
-        font-size: 12px;
-        border-radius: 4px;
+        color: var(--float-text, #0f172a);
+        font-size: 14px;
+        border-radius: 6px;
         cursor: pointer;
         text-align: left;
         transition: background 0.15s;
 
         &:hover {
-            background: var(--float-hover, rgba(255, 255, 255, 0.06));
+            background: var(--float-hover, #f1f5f9);
         }
 
         &.disabled {
-            opacity: 0.45;
+            // Was `opacity: .45` on the whole row: with the icon now carrying its
+            // own colour, the disabled state is a colour of its own, not a veil.
+            color: var(--float-disabled, #cbd5e1);
             cursor: not-allowed;
             // pointer-events kept enabled so the HTML `title` tooltip
             // shows on hover; the `disabled` attribute already prevents
             // click and keyboard activation.
-        }
-
-        &.danger {
-            color: var(--float-danger, #f87171);
 
             &:hover {
-                background: var(--float-danger-bg, rgba(239, 68, 68, 0.12));
+                background: transparent;
             }
         }
 
-        i {
-            font-size: 13px;
+        &.danger {
+            color: var(--float-danger, #dc2626);
+
+            &:hover {
+                background: var(--float-danger-bg, rgba(220, 38, 38, 0.08));
+            }
+        }
+
+        i.bi {
+            font-size: 16px;
             width: 16px;
             text-align: center;
-            color: inherit;
+            flex-shrink: 0;
         }
     }
 
-    &__divider {
-        height: 0.5px;
-        background: var(--float-divider, rgba(255, 255, 255, 0.08));
-        margin: 3px 0;
+    // Section header: the name of the element the items below belong to. No
+    // background; the rule that used to be two em-dashes in the label is now a
+    // hairline on each side, drawn with flex pseudo-elements.
+    &__header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        height: 34px;
+        padding: 0 10px;
+        user-select: none;
+        cursor: default;
+
+        // The hairline on each side. `::before` is the first flex child, so the
+        // row reads: rule — arrow — name — rule, which is where the two em-dashes
+        // of the old label used to sit.
+        &::before,
+        &::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--float-divider, #e2e8f0);
+        }
+
+        i.bi {
+            font-size: 14px;
+            width: 16px;
+            text-align: center;
+            flex-shrink: 0;
+        }
     }
+
+    &__header-label {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--float-text-muted, #64748b);
+        white-space: nowrap;
+    }
+
+    &__divider {
+        height: 1px;
+        background: var(--float-divider, #e2e8f0);
+        margin: 6px 4px;
+    }
+}
+
+// ICON COLOUR — the one place the menu glyphs are tinted, and it needs both the
+// extra class and `!important` to get there. `.context-menu` is a shared class:
+// `components/contextMenu/ContextMenu.scss:226` carries
+// `.context-menu__item i { color: white !important }` for the app-level menus
+// (ProjectEditor, TransformationsList), which live on a dark surface. Measured
+// 2026-08-26 on the canvas menu: with the plain `.context-menu__item i.bi` rule
+// the computed colour was rgb(255,255,255) — `!important` beats specificity, so
+// the (0,2,1) rule never applied. These selectors are (0,3,1) AND important, so
+// they win outright, whatever the stylesheet load order. Each has a `:hover` twin
+// to outrank `i.bi:hover` (styles/style.scss:790) the same way.
+.context-menu .context-menu__item i.bi,
+.context-menu .context-menu__item i.bi:hover {
+    color: var(--float-icon, #64748b) !important;
+}
+
+.context-menu .context-menu__item.disabled i.bi,
+.context-menu .context-menu__item.disabled i.bi:hover {
+    color: var(--float-disabled, #cbd5e1) !important;
+}
+
+.context-menu .context-menu__item.danger i.bi,
+.context-menu .context-menu__item.danger i.bi:hover {
+    color: var(--float-danger, #dc2626) !important;
+}
+
+.context-menu .context-menu__header i.bi,
+.context-menu .context-menu__header i.bi:hover {
+    color: var(--float-header-arrow, #94a3b8) !important;
 }
 
 // ============================================
@@ -3543,6 +4067,17 @@ body.header-variant-c {
 // MINIMAP (portal — rendered in document.body)
 // ============================================
 
+// The mounted minimap: background and mask arrive from the tokens through React
+// Flow's own custom properties (EditorV2.tsx), which leaves the frame to CSS. Without
+// it the panel reads as a hole in the canvas in light theme, where slate-100 sits a
+// hair off the canvas background — measured on screen 2026-08-25.
+.editor-v2 .react-flow__minimap {
+    border: 1px solid var(--border-default);
+    box-shadow: 0 2px 8px var(--node-shadow);
+}
+
+// TODO: cleanup — dead since the minimap stopped being portalled: no element carries
+// this class (measured 2026-08-25, zero consumers in src). Left in place per Rule 9.
 .editor-v2-minimap-portal {
     .react-flow__minimap {
         background: var(--surface-1, #f8fafc);

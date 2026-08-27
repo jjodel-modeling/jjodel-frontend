@@ -91,16 +91,38 @@ class ProjectsApi {
     }
 
 
-    static async save(project: LProject): Promise<DProject> {
+    /**
+     * Serialize and persist the project.
+     *
+     * `opts.silent` makes it a SILENT save: same serialization, same target, but the
+     * project version does not advance and nothing is written back into the store.
+     * Everything else — `lastModified`, the counters, `compressedState`, the
+     * Offline/Online branch, `U.isProjectModified` — is identical either way.
+     *
+     * WHY. The version bump is not only a number: it is a `SetFieldAction` into Redux,
+     * i.e. a state delta, i.e. a step of the D-layer undo history. The layout autosave
+     * fires 1000ms after a gesture (`useLayoutAutosave.ts`), well past the 450ms
+     * coalescing window of `isRelevantChangeCheck` (reducer.ts:1278), so each autosave
+     * became an undo step of its own: the first Cmd+Z undid an invisible version bump
+     * instead of the gesture. Ratified 2026-08-24: the project version advances only on
+     * an explicit save (Cmd+S, toolbar); a layout autosave is silent.
+     *
+     * Omitting `opts` keeps the pre-existing behavior byte for byte, so the explicit-save
+     * callers are unaffected and untouched.
+     */
+    static async save(project: LProject, opts?: { silent?: boolean }): Promise<DProject> {
         const dProject = {...project.__raw} as DProject;
         dProject.lastModified = Date.now();
         dProject.viewpointsNumber = project.viewpoints.length;
         dProject.metamodelsNumber = project.metamodels.length;
         dProject.modelsNumber = project.models.length;
 
-        // Auto-increment version on save (vX.Y format, stored as number e.g. 3.4)
+        // Auto-increment version on save (vX.Y format, stored as number e.g. 3.4).
+        // Skipped on a silent save: the version keeps its current value, in the
+        // serialized state too.
+        const silent = opts?.silent === true;
         const currentVersion = dProject.version;
-        const nextVersion = getNextVersionNumber(currentVersion);
+        const nextVersion = silent ? currentVersion : getNextVersionNumber(currentVersion);
         dProject.version = nextVersion;
         // console.log(`[Version] Project saved: ${formatVersion(currentVersion)} → ${formatVersion(nextVersion)}`);
 
@@ -110,8 +132,9 @@ class ProjectsApi {
         else await Online.save(dProject);
         U.isProjectModified = false;
 
-        // Update the version in Redux state
-        SetFieldAction.new(dProject.id, 'version', nextVersion, '', false);
+        // Update the version in Redux state. NOT on a silent save: this write is a
+        // state delta and would become a step of the D-layer undo history.
+        if (!silent) SetFieldAction.new(dProject.id, 'version', nextVersion, '', false);
 
         return dProject;
     }

@@ -264,6 +264,35 @@ class DockManager {
     }
 
     /**
+     * Select a view in the Properties panel, which is where views are edited: Info.tsx
+     * renders `ViewData` (Apply to / Template / Style / Events / Options) for a
+     * DViewElement sitting in `_lastSelected.view`.
+     *
+     * The triple is written whole and atomically, so opening the views editor on a view
+     * clears `node` and `modelElement`. That deselection is accepted behaviour, not an
+     * oversight: the panel shows one thing at a time and the view is the thing asked for.
+     *
+     * Also asks the rail to expand. A collapsed rail would swallow the whole action —
+     * the selection would be correct and nothing would be on screen.
+     */
+    static openView(viewId: string): void {
+        if (!viewId) {
+            console.warn('[DockManager] openView: invalid view id');
+            return;
+        }
+        try {
+            SetRootFieldAction.new('_lastSelected' as any, {
+                node: '',
+                view: viewId,
+                modelElement: '',
+            });
+            window.dispatchEvent(new CustomEvent(JjodelEvents.PROPERTIES_SHOW));
+        } catch (error) {
+            console.error('[DockManager] Error selecting view:', error);
+        }
+    }
+
+    /**
      * Open JjTL Transformation Editor Tab
      * @param transformation - The transformation to open
      * @param sourceMetamodel - Optional source metamodel data (MetamodelElement[])

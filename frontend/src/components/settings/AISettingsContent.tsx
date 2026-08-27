@@ -91,6 +91,11 @@ export function AISettingsContent({
     const [testStatus, setTestStatus] = useState<Dictionary<string, 'idle' | 'testing' | 'success' | 'error'>>({});
     const [testError, setTestError] = useState<Dictionary<string, string>>({});
     const [expandedProvider, setExpandedProvider] = useState<TAIProvider | null>(null);
+    // Section the expanded row belonged to when it was opened. A row is grouped by its
+    // configured state, which flips on the first character typed in the API key field: without
+    // this freeze the open row would move to the other list, React would unmount its subtree
+    // and the input would lose focus mid-typing.
+    const [expandedGroup, setExpandedGroup] = useState<'configured' | 'available' | null>(null);
     // Forces a re-render on non-key field edits (baseUrl/model) so the card reflects them live.
     const [, forceRefresh] = useState(0);
     // SINGLE SOURCE OF TRUTH for each provider's API key: seeded from persisted config on mount,
@@ -184,41 +189,61 @@ export function AISettingsContent({
         }
     };
 
+    // Derive configured-state from the single source of truth (key map), mirroring isConfigured()
+    // semantics: requiresKey providers → non-empty key; Ollama → baseUrl; Custom → key OR baseUrl.
+    const isProviderConfigured = (name: TAIProvider): boolean => {
+        const config = AIConfig.get(name);
+        const llm = AI[name];
+        const liveKey = (apiKeyByProvider[name] ?? '').trim();
+        const baseUrlConfigured = !!(config.baseUrl && String(config.baseUrl).trim());
+        return name === AIProvider.Custom ? (liveKey !== '' || baseUrlConfigured)
+            : llm.requiresKey ? liveKey !== ''
+            : baseUrlConfigured;
+    };
+
+    // Inline model list shown next to the provider name: first 3 non-deprecated models from the
+    // registry, truncated with "…". Source of truth for models is this registry — the Settings
+    // panel no longer selects per-provider model; the app-level picker chooses per-feature.
+    // Custom has a single placeholder version ('Custom'), which says nothing: name the shape of
+    // the endpoint instead.
+    const modelsSummary = (name: TAIProvider): string => {
+        if (name === AIProvider.Custom) return 'OpenAI-compatible endpoint';
+        const nonLegacyVersions = Object.values(AI[name].versions).filter(v => !v.deprecated);
+        const summary = nonLegacyVersions.slice(0, 3).map(e => e.label).join(', ') + (nonLegacyVersions.length > 3 ? "…" : "");
+        return summary || 'OpenAI-compatible endpoint';
+    };
+
+    // Label of the model this provider currently points at, shown only on configured rows.
+    // Falls back to the raw id for models outside the registry (custom / user-pulled tags).
+    const activeModelLabel = (name: TAIProvider): string => {
+        const config = AIConfig.get(name);
+        return AI[name].versions[config.model]?.label || config.model || '';
+    };
+
+    const toggleProvider = (name: TAIProvider) => {
+        if (expandedProvider === name) { setExpandedProvider(null); setExpandedGroup(null); }
+        else { setExpandedProvider(name); setExpandedGroup(isProviderConfigured(name) ? 'configured' : 'available'); }
+    };
+
     // Render provider card
     const renderProviderCard = (
         name: TAIProvider,
-        fields: {key: 'apiKey' | 'model' | 'baseUrl' /*| 'name'*/; label: string; type: 'text' | 'password' | 'model'; placeholder: string }[]
+        fields: {key: 'apiKey' | 'model' | 'baseUrl' /*| 'name'*/; label: string; type: 'text' | 'password' | 'model'; placeholder: string }[],
+        inConfiguredGroup: boolean
     ) => {
         const isExpanded = expandedProvider === name;
         const config = AIConfig.get(name);
         let llm = AI[name];
-        // Dynamic subtitle: first 3 non-deprecated models from the registry, truncated with "…".
-        // Source of truth for models is this registry — the Settings panel no longer selects
-        // per-provider model; the app-level picker chooses per-feature.
-        let nonLegacyVersions = Object.values(llm.versions).filter(v => !v.deprecated);
-        let description: string = nonLegacyVersions.slice(0, 3).map(e=>e.label).join(', ') + (nonLegacyVersions.length>3 ? "…" : "");
-        if (!description) description = 'OpenAI-compatible endpoint';
-        // Derive configured-state from the single source of truth (key map), mirroring isConfigured()
-        // semantics: requiresKey providers → non-empty key; Ollama → baseUrl; Custom → key OR baseUrl.
-        const liveKey = (apiKeyByProvider[name] ?? '').trim();
-        const baseUrlConfigured = !!(config.baseUrl && String(config.baseUrl).trim());
-        const isConfigured: boolean =
-            name === AIProvider.Custom ? (liveKey !== '' || baseUrlConfigured)
-            : llm.requiresKey ? liveKey !== ''
-            : baseUrlConfigured;
+        let description: string = modelsSummary(name);
+        const isConfigured: boolean = isProviderConfigured(name);
 
-        // 4-state status pill — persistent at-a-glance status (complements the transient test button):
-        //   no key → "Not configured" (muted) · key untested → "Configured" (slate, NOT green) ·
-        //   last test passed → "Connected" (green) · last test failed → "Invalid key" (red).
-        // Reactive: recomputes on key changes (liveKey) and on test completion (config.lastTested/Ok).
-        const tested = isConfigured && config.lastTested != null;
-        const statusPill = !isConfigured
-            ? { label: 'Not configured', category: 'context' as const, icon: 'bi-dash-circle' }
-            : tested && config.lastTestOk === true
-                ? { label: 'Connected', category: 'version' as const, icon: 'bi-check-circle-fill' }
-            : tested && config.lastTestOk === false
-                ? { label: 'Invalid key', category: 'state-danger' as const, icon: 'bi-x-circle' }
-                : { label: 'Configured', category: 'state' as const, icon: 'bi-key' };
+        // Row state — the persistent at-a-glance status (the transient test button complements it):
+        //   no key → "Set up" (muted) · last test failed → red dot + "Invalid key" ·
+        //   otherwise → green dot + the active model. The "Not configured" chip is gone: eleven
+        //   identical chips carried no information (mockup 5a).
+        // Reactive: recomputes on key changes (apiKeyByProvider) and on test completion
+        // (config.lastTested/Ok).
+        const keyInvalid = isConfigured && config.lastTested != null && config.lastTestOk === false;
 
         const status = testStatus[name] || 'idle';
 
@@ -226,69 +251,75 @@ export function AISettingsContent({
         const availableModels: AIVersion[] = Object.values(llm.versions);
         const selectedModel = llm.versions[config.model];
 
+        // Logos are normalized by the 28x28 tile around them (.ai-provider-row__logo): the image
+        // fills the tile, the glyph and the letter sit centered on the provider's pastel.
         const AIicon = (name: string) => {
 
             switch (name) {
-                case 'GPT': 
+                case 'GPT':
                     return <i className="bi bi-openai"></i>;
-                case 'Claude': 
-                    return <img style={{width: '24px', height: '24px', borderRadius: '3px'}} src={claudeLogo} />;
+                case 'Claude':
+                    return <img src={claudeLogo} alt="" />;
                 case 'Groq':
-                    return <img style={{width: '24px', height: '24px', borderRadius: '3px'}} src={groqLogo} />;
+                    return <img src={groqLogo} alt="" />;
                 case 'DeepSeek':
-                    return <img style={{width: '24px', height: '24px', borderRadius: '3px'}} src={deepseekLogo} />;
+                    return <img src={deepseekLogo} alt="" />;
                 case 'Gemini':
-                    return <img style={{width: '24px', height: '24px', borderRadius: '3px'}} src={geminiLogo} />;
+                    return <img src={geminiLogo} alt="" />;
                 case 'Mistral':
-                    return <img style={{width: '24px', height: '24px', borderRadius: '3px'}} src={mistralLogo} />;
+                    return <img src={mistralLogo} alt="" />;
                 case 'Ollama':
-                    return <img style={{width: '24px', height: '24px', borderRadius: '3px'}} src={ollamaLogo} />;
+                    return <img src={ollamaLogo} alt="" />;
                 case 'Llama':
                     return 'Llama';
                 case 'Copilot':
-                    return <img style={{width: '24px', height: '24px', borderRadius: '3px'}} src={copilotLogo} />;
+                    return <img src={copilotLogo} alt="" />;
                 case 'Kimi':
-                    return <img style={{width: '24px', height: '24px', backgroundColor: '#ccc', padding: '2px', borderRadius: '3px'}} src={kimiLogo} />;
+                    return <img src={kimiLogo} alt="" />;
                 case 'Custom':
                     return 'Custom';
                 default:
                     return null;
             }
-            
+
         }
 
         return (
             <div
                 key={name}
-                className={`provider-card ${isExpanded ? 'expanded' : ''} ${isConfigured ? 'configured' : ''}`}
+                className={`ai-provider-row ${isExpanded ? 'expanded' : ''} ${inConfiguredGroup ? 'ai-provider-row--configured' : ''}`}
             >
-                <div
-                    className="provider-header"
-                    onClick={() => setExpandedProvider(isExpanded ? null : name)}
+                <button
+                    type="button"
+                    className="ai-provider-row__head"
+                    onClick={() => toggleProvider(name)}
+                    aria-expanded={isExpanded}
                 >
-                    <div className="provider-info">
-
-                        {llm.logo ? (
-                            AIicon(name)
-                        ) : (
-                            <div className="provider-icon-letter" style={{ backgroundColor: llm.bgColor }}>
-                                {name === AIProvider.Custom ? <i className="bi bi-puzzle" /> : llm.initial}
-                            </div>
+                    {/* Custom has no pastel of its own (registry pair is #000 on #fff): let the
+                        tile keep its neutral default instead of painting it white on white. */}
+                    <span
+                        className="ai-provider-row__logo"
+                        style={name === AIProvider.Custom ? undefined : { background: llm.bgColor, color: llm.color }}
+                    >
+                        {llm.logo ? AIicon(name) : (
+                            name === AIProvider.Custom ? <i className="bi bi-puzzle" /> : llm.initial
                         )}
+                    </span>
 
-                        <div className="provider-details">
-                            <span className="provider-name">{name}</span>
-                            <span className="provider-description">{description}</span>
-                        </div>
-                    </div>
-                    <div className="provider-status">
-                        <Badge category={statusPill.category}>
-                            <i className={`bi ${statusPill.icon}`} />
-                            {statusPill.label}
-                        </Badge>
-                        <i className={`bi bi-chevron-${isExpanded ? 'up' : 'down'} chevron`} />
-                    </div>
-                </div>
+                    <span className="ai-provider-row__name">{name}</span>
+                    <span className="ai-provider-row__models">{description}</span>
+
+                    {isConfigured ? (
+                        <span className={`ai-provider-row__state ai-provider-row__state--active ${keyInvalid ? 'ai-provider-row__state--error' : ''}`}>
+                            <span className="ai-provider-row__dot" />
+                            {keyInvalid ? 'Invalid key' : activeModelLabel(name)}
+                        </span>
+                    ) : (
+                        <span className="ai-provider-row__state">Set up</span>
+                    )}
+
+                    <i className="bi bi-chevron-down ai-provider-row__chevron" />
+                </button>
 
                 {isExpanded && (
                     <div className="provider-content">
@@ -359,6 +390,32 @@ export function AISettingsContent({
         );
     };
 
+    // Fields of the expanded form, unchanged: credentials only (the model is chosen by the
+    // app-level picker), plus endpoint and model name for Custom.
+    const fieldsFor = (
+        name: TAIProvider
+    ): {key: 'apiKey' | 'model' | 'baseUrl'; label: string; type: 'text' | 'password' | 'model'; placeholder: string }[] =>
+        name === AIProvider.Custom
+            ? [
+                // { key: 'name', label: 'Provider Name', type: 'text', placeholder: 'My Custom Provider' },
+                { key: 'baseUrl', label: 'Base URL', type: 'text', placeholder: 'https://api.example.com/v1/chat/completions' },
+                { key: 'apiKey', label: 'API Key', type: 'password', placeholder: 'Your API key' },
+                { key: 'model', label: 'Model Name', type: 'text', placeholder: 'model-name' },
+            ]
+            : [
+                { key: 'apiKey', label: 'API Key', type: 'password', placeholder: AI[name].keyPlaceholder || "Your " + name + " API key" },
+            ];
+
+    // Two sections by state. The open row keeps the section it was opened in (see expandedGroup).
+    const configuredProviders: TAIProvider[] = [];
+    const availableProviders: TAIProvider[] = [];
+    for (const provider of ALL_AI_PROVIDERS) {
+        const configured = (provider === expandedProvider && expandedGroup)
+            ? expandedGroup === 'configured'
+            : isProviderConfigured(provider);
+        (configured ? configuredProviders : availableProviders).push(provider);
+    }
+
     return (
         <div className="ai-settings-content">
             {showHeader && (
@@ -369,34 +426,26 @@ export function AISettingsContent({
             )}
 
             <div className="providers-list">
-                {ALL_AI_PROVIDERS.map(provider => {
-                    const llm = AI[provider];
-                    return llm.name === AIProvider.Custom ? null :
-                        renderProviderCard(llm.name, [
-                            { key: 'apiKey', label: 'API Key', type: 'password', placeholder: llm.keyPlaceholder || "Your " + llm.name + " API key" },
-                        ]);
-                })}
+                {configuredProviders.length > 0 && (
+                    <div className="ai-provider-group">
+                        <div className="ai-provider-group__label">Configured · {configuredProviders.length}</div>
+                        {configuredProviders.map(provider => renderProviderCard(provider, fieldsFor(provider), true))}
+                    </div>
+                )}
 
-
-                {/* Custom Provider */}
-                <div className="providers-divider">
-                    <span>Custom Provider</span>
-                </div>
-
-                {renderProviderCard(
-                    AIProvider.Custom,
-                    [
-                        // { key: 'name', label: 'Provider Name', type: 'text', placeholder: 'My Custom Provider' },
-                        { key: 'baseUrl', label: 'Base URL', type: 'text', placeholder: 'https://api.example.com/v1/chat/completions' },
-                        { key: 'apiKey', label: 'API Key', type: 'password', placeholder: 'Your API key' },
-                        { key: 'model', label: 'Model Name', type: 'text', placeholder: 'model-name' },
-                    ]
+                {availableProviders.length > 0 && (
+                    <div className="ai-provider-group">
+                        <div className="ai-provider-group__label">Available · {availableProviders.length}</div>
+                        {/* Custom closes the list: it is last in ALL_AI_PROVIDERS and needs no divider
+                            of its own — the inline subtitle says what it is. */}
+                        {availableProviders.map(provider => renderProviderCard(provider, fieldsFor(provider), false))}
+                    </div>
                 )}
             </div>
 
             <div className="settings-footer">
                 <div className="footer-info">
-                    <i className="bi bi-info-circle" />
+                    <i className="bi bi-shield-lock" />
                     <span>API keys are stored locally in your browser.</span>
                 </div>
                 <div className="footer-actions">

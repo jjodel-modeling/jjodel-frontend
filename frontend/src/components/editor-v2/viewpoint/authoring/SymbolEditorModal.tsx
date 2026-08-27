@@ -34,6 +34,8 @@ import { SymbolCatalogPicker } from './SymbolCatalogPicker';
 import SymbolPreview from './SymbolPreview';
 import { SymbolBoxPreview, captionForBox } from './SymbolBoxPreview';
 import { useCanvasNodeBox } from './useCanvasNodeBox';
+import { readVertexLayout, type VertexLayoutSource } from '../layout/vertexLayout';
+import { getLayoutKeyOf } from '../layout/vertexLayoutAdapter';
 import { IR_TAB_LABELS, type IRTabId } from './irTabs';
 import './SymbolEditorModal.scss';
 
@@ -155,11 +157,15 @@ export const SymbolEditorModal: React.FC = () => {
     // so the subscription cannot re-render the modal on unrelated store
     // updates. '' = not resized; 'WxH' with manualSizeOf's exact gate (both
     // dimensions positive), '0x0'-shaped = resized but invalid D-layer size.
+    // Read PER LAYOUT (slice 1c): the manual size the preview must show is the one of the
+    // layout in force, not the seed. Reading the key inside the selector also makes the
+    // signature move at a layout change, with no extra dependency.
     const manualSig = useSelector((s: any): string => {
         const raw = nodeBox ? s?.idlookup?.[nodeBox.vertexId] : undefined;
-        if (!raw?.isResized) return '';
-        const w = typeof raw.w === 'number' && raw.w > 0 ? raw.w : 0;
-        const h = typeof raw.h === 'number' && raw.h > 0 ? raw.h : 0;
+        const eff = readVertexLayout((raw ?? {}) as VertexLayoutSource, getLayoutKeyOf(s));
+        if (!eff.isResized) return '';
+        const w = typeof eff.w === 'number' && eff.w > 0 ? eff.w : 0;
+        const h = typeof eff.h === 'number' && eff.h > 0 ? eff.h : 0;
         return `${w}x${h}`;
     });
 

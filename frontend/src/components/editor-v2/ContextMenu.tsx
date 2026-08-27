@@ -8,6 +8,12 @@ export interface ContextMenuItem {
     tooltip?: string;
     onClick?: () => void;
     divider?: boolean;
+    /**
+     * Section header: the name of the model element the items below belong to
+     * (e.g. a composition reference). Rendered as a non-interactive row with
+     * the label in the code font between two hairlines, never as a button.
+     */
+    header?: boolean;
 }
 
 interface ContextMenuProps {
@@ -33,6 +39,11 @@ function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
                 {items.map((item, i) =>
                     item.divider ? (
                         <div key={i} className="context-menu__divider" />
+                    ) : item.header ? (
+                        <div key={i} className="context-menu__header" title={item.tooltip}>
+                            {item.icon && <i className={`bi ${item.icon}`} />}
+                            <span className="context-menu__header-label">{item.label}</span>
+                        </div>
                     ) : (
                         <button
                             key={i}

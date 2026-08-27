@@ -309,6 +309,14 @@ export function compileView(viewId: string, ir: NodeViewIR): CompiledView {
     // "no marker" when a conditional has no matching branch. Predicates inside
     // the conditional extend `deps` through compileConditional as usual.
     const marker = ir.shape.marker !== undefined ? compileConditional(ir.shape.marker, '', deps) : null;
+    // Padding (2026-08-25): a scalar preset like `border`, never Conditional, so it
+    // materializes its default here instead of compiling to a value function. The
+    // renderer turns anything but 'normal' into an ir-pad--* class (irStyle.ts).
+    const padding = ir.shape.padding ?? 'normal';
+    // Node-level text style (ir-1.3, cascade root): same per-axis compile as a label
+    // style, and compileTextStyle already returns undefined for an absent input and
+    // extends `deps` with the predicates of its conditional axes.
+    const text = compileTextStyle(ir.shape.text, deps);
 
     const labels: CompiledLabel[] = (ir.shape.labels ?? []).map(l => {
         let text: CompiledAccessor;
@@ -356,6 +364,12 @@ export function compileView(viewId: string, ir: NodeViewIR): CompiledView {
             : {}),
         visible: compileConditional(fc.visible, true, deps),
         separator: fc.separator !== false,
+        // Row style (ir-1.3 TS2): compiled for every source kind, `children`
+        // included, because it is rendered on the compartment and not on the row
+        // (see FieldCompartmentSpec.rowFormat). Predicates inside its conditional
+        // axes extend the HOST view's deps, which is the right owner: the
+        // compartment is drawn by the host node.
+        rowStyle: compileTextStyle(fc.rowFormat.style, deps),
     }));
 
     let containment: CompiledContainment | null = null;
@@ -394,6 +408,8 @@ export function compileView(viewId: string, ir: NodeViewIR): CompiledView {
         fill,
         border,
         marker,
+        padding,
+        text,
         labels,
         badges,
         fieldCompartments,
@@ -523,6 +539,10 @@ export function compileRowView(viewId: string, ir: RowViewIR): CompiledRowView {
     const predicate = compilePredicate(ir.predicate, deps);
     const template: CompiledAccessor[] = ir.template.map(seg => compileTextSource(seg, deps) ?? (() => ''));
     const visible = compileConditional(ir.visible, true, deps);
+    // Row style (ir-1.3 TS2): rendered inline on this row's own `.ir-row`, so it
+    // wins over the host compartment and the host node. Its conditional predicates
+    // extend THIS view's deps and crossPaths, which useIRRowView already resolves.
+    const style = compileTextStyle(ir.style, deps);
     const crossPaths = dedupeCrossPaths(crossPathSink ?? []);
     const channels = harvestChannels();
     crossPathSink = prevSink;
@@ -539,6 +559,7 @@ export function compileRowView(viewId: string, ir: RowViewIR): CompiledRowView {
         crossPaths,
         template,
         visible,
+        style,
     };
     rowCompileCache.set(key, compiled);
     return compiled;

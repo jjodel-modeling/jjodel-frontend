@@ -44,6 +44,10 @@ export interface MetaclassInfo {
     id: string;
     name: string;
     isAbstract: boolean;
+    /** Singleton-ness of the metaclass; not folded into `isAbstract`, and not applied to
+     *  `concreteSubclasses` (endpoint conformance needs them). Optional so external
+     *  MetaclassInfo literals need not supply it (rule 11); resolveM1Info always populates it. */
+    isSingleton?: boolean;
     attributes: MetaclassAttribute[];
     /** Own + inherited attributes (folded up the extends chain), for feature-path authoring.
      *  Optional so external MetaclassInfo literals need not supply it (rule 11);
@@ -170,7 +174,7 @@ export function useEditorMode(
             const attrNames = Array.isArray(attrs)
                 ? attrs.map((aid: any) => (typeof aid === 'string' ? state.idlookup?.[aid]?.name : aid?.name) ?? '').join(',')
                 : '';
-            parts.push(`${id}:${cls.name}:${cls.abstract}:${refCount}:${refNames}:${attrNames}`);
+            parts.push(`${id}:${cls.name}:${cls.abstract}:${cls.isSingleton}:${refCount}:${refNames}:${attrNames}`);
         }
         return parts.join('|');
     });
@@ -430,6 +434,7 @@ function resolveM1Info(modelId: string, knownMetamodelId?: string): EditorModeIn
                 id: classId,
                 name: cls.name ?? 'Unnamed',
                 isAbstract: !!(cls.abstract || cls.interface),
+                isSingleton: !!cls.isSingleton,
                 attributes,
                 allAttributes,
                 references,
@@ -497,7 +502,7 @@ function resolveM1Info(modelId: string, knownMetamodelId?: string): EditorModeIn
         }
 
         const rootableClasses = rawClasses.filter(
-            c => !c.isAbstract && !compositionTargetIds.has(c.id)
+            c => !c.isAbstract && !c.isSingleton && !compositionTargetIds.has(c.id)
         );
 
         return {

@@ -9,6 +9,7 @@
  * consistency (no new style).
  */
 import { useIRRowView } from './irResolve';
+import { resolveTextStyle } from './IRNodeContent';
 
 export interface IRRowProps {
     /** DObject id of the containment child rendered by this row. */
@@ -20,8 +21,11 @@ function IRRow({ childObjectId }: IRRowProps) {
     if (!res) return null;
     const { compiled, objectId, readCtx } = res;
     if (!compiled.visible(readCtx, objectId)) return null;
+    // Row style (ir-1.3 TS2) inline on the row itself: it wins over the host
+    // compartment's rowFormat.style and the host node's shape.text, both of which
+    // reach here by inheritance.
     return (
-        <div className="ir-row">
+        <div className="ir-row" style={resolveTextStyle(compiled.style, readCtx, objectId)}>
             {compiled.template.map((seg, i) => {
                 const v = seg(readCtx, objectId);
                 return <span key={i}>{v == null ? '' : String(v)}</span>;

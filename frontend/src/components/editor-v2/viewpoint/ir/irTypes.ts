@@ -57,6 +57,9 @@ export type ShapeForm = 'rect' | 'rounded' | 'ellipse' | 'circle' | 'diamond'
 export type LabelPosition = 'top' | 'center' | 'inside' | 'bottom';
 export type BadgePosition = 'tl' | 'tr' | 'bl' | 'br';
 
+/** Spacing preset of the symbol (header, compartments, inside label). Absent = 'normal'. */
+export type PaddingToken = 'small' | 'normal' | 'large';
+
 /**
  * Text source of a label. 'intrinsic' reads element-level properties that are
  * not feature slots (spec v1.2: needed by default views — DObject.name is the
@@ -125,7 +128,16 @@ export interface FieldCompartmentSpec {
      * row view) but stays required by the contract.
      */
     source: { from: 'attributes' } | { from: 'references' } | { from: 'children'; filter?: Predicate };
-    rowFormat: { segments: FieldSegment[] };
+    /**
+     * `style` (ir-1.3 TS2): typographic style of the compartment rows. Rendered
+     * inline on the compartment and inherited by its rows, so it wins over
+     * `ShapeSpec.text` and loses to a dispatched row view's own `style`. Absent =
+     * the node style, or the CSS default. Unlike `segments` it is NOT ignored for a
+     * `children` source: there it is the compartment's level of the cascade, which
+     * the child's row view can still override. Additive optional field: no
+     * irVersion bump, no migration.
+     */
+    rowFormat: { segments: FieldSegment[]; style?: TextStyle };
     visible?: Conditional<boolean>;
     separator?: boolean;
 }
@@ -146,6 +158,20 @@ export interface ShapeSpec {
      * authoringMetaclassPins).
      */
     marker?: Conditional<string>;
+    /**
+     * Spacing preset applied to every padded surface of the symbol (top/bottom
+     * label, inside label, compartments). Scalar like `border`, never Conditional.
+     * Absent = 'normal'. Additive optional field: no irVersion bump, no migration
+     * (same precedent as `marker`).
+     */
+    padding?: PaddingToken;
+    /**
+     * Typographic style of the whole symbol (ir-1.3, node-level cascade root).
+     * Applied inline on `.ir-node-content` and inherited by every text surface
+     * (labels, compartment rows, inline editors). A label's own `style` wins over
+     * it (inline on the span). Absent = CSS defaults of irStyle.ts. Additive.
+     */
+    text?: TextStyle;
     labels?: LabelSpec[];
     badges?: BadgeSpec[];
 }
@@ -313,6 +339,13 @@ export interface RowViewIR {
     label?: string;
     template: TextSource[];
     visible?: Conditional<boolean>;
+    /**
+     * Typographic style of the dispatched row (ir-1.3 TS2). Rendered inline on the
+     * `.ir-row` of this row view, so it wins over both the host compartment's
+     * `rowFormat.style` and the host node's `ShapeSpec.text`. Absent = whatever the
+     * host cascade hands down. Additive.
+     */
+    style?: TextStyle;
 }
 
 export type NodeViewIR = VertexViewIR | GraphVertexViewIR;
@@ -402,6 +435,8 @@ export interface CompiledRowView {
     /** One accessor per template segment, rooted on the row's object. */
     template: CompiledAccessor[];
     visible: CompiledConditional<boolean>;
+    /** Compiled row style (ir-1.3 TS2); undefined when the row view declares none. */
+    style?: CompiledTextStyle;
 }
 
 /** Result of compiling a VertexViewIR / GraphVertexViewIR (see irCompile.ts). */
@@ -427,6 +462,10 @@ export interface CompiledView {
     border: { color: string; width: number; style: string } | null;
     /** Compiled marker id ('' = none); null when the view declares no marker. */
     marker: CompiledConditional<string> | null;
+    /** shape.padding ?? 'normal' */
+    padding: PaddingToken;
+    /** Compiled node-level text style; undefined when the view declares none. */
+    text?: CompiledTextStyle;
     labels: CompiledLabel[];
     badges: CompiledBadge[];
     fieldCompartments: CompiledFieldCompartment[];
@@ -475,6 +514,8 @@ export interface CompiledFieldCompartment {
     childFilter?: CompiledPredicate;
     visible: CompiledConditional<boolean>;
     separator: boolean;
+    /** Compiled rowFormat.style (ir-1.3 TS2); undefined when the compartment declares none. */
+    rowStyle?: CompiledTextStyle;
 }
 
 export interface CompiledContainment {

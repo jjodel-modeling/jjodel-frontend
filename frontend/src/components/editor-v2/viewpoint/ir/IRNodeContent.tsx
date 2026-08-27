@@ -28,15 +28,35 @@ type SvgOutlinePainter = Extract<ShapePainter, { kind: 'svg' | 'svgPath' }>;
 /** Gli attributi che il contorno riceve: gli stessi per il poligono e per il path. */
 interface SvgOutlineProps {
     fill: string;
-    stroke: string;
+    stroke?: string;
     strokeWidth: number;
     strokeDasharray?: string;
+    className?: string;
 }
 function svgOutline(painter: SvgOutlinePainter, props: SvgOutlineProps): React.ReactElement {
     return painter.kind === 'svg'
         ? <polygon points={painter.points} vectorEffect="non-scaling-stroke" {...props} />
         : <path d={painter.silhouette} vectorEffect="non-scaling-stroke" {...props} />;
 }
+
+/**
+ * Anello e banda di selezione per le forme dipinte in SVG.
+ *
+ * Sulle forme CSS (rect, ellisse, stadio...) li disegnano `outline` e
+ * `box-shadow`, che seguono il `border-radius`. Qui non c'e' raggio da seguire:
+ * la sagoma e' un poligono, e una box-shadow tornerebbe il rettangolo del
+ * bounding box. Si ridisegna allora la stessa sagoma piu' larga SOTTO quella
+ * piena, che poi ne copre la meta' interna — l'idioma e' gia' quello del bordo
+ * `double` qui sotto. Con `non-scaling-stroke` le larghezze sono in pixel di
+ * schermo, quindi meta' di ognuna e' esattamente il rientro voluto: 5px per
+ * l'anello (offset 3 + tratto 2) e 3px per la banda, gli stessi numeri della
+ * regola CSS.
+ *
+ * Il colore NON e' qui: lo mette irStyle solo sotto `.mm-node.selected`, cosi'
+ * IRNodeContent non ha bisogno di sapere se il nodo e' selezionato.
+ */
+const SEL_RING_STROKE_WIDTH = 10;
+const SEL_BAND_STROKE_WIDTH = 6;
 import { useContentDrivenSize } from './useContentSize';
 import { getMarkerDef, MARKER_STROKE_WIDTH, MARKER_VIEWBOX } from './markerRegistry';
 import IRRow from './IRRow';
@@ -52,8 +72,11 @@ const FONT_WEIGHT_NUM: Record<string, number> = { normal: 400, medium: 500, semi
  * so an absent axis — or a conditional axis whose branch does not match — inherits
  * the surface's CSS default (irStyle.ts BASE_CSS). An authored axis is always
  * emitted (even when its value equals a CSS default) so it overrides the class rule.
+ *
+ * Exported since TS2: IRRow renders the dispatched rows outside this component and
+ * must resolve their style with the same function, not a copy of it.
  */
-function resolveTextStyle(cs: CompiledTextStyle | undefined, ctx: ReadCtx, id: string): React.CSSProperties | undefined {
+export function resolveTextStyle(cs: CompiledTextStyle | undefined, ctx: ReadCtx, id: string): React.CSSProperties | undefined {
     if (!cs) return undefined;
     const s: React.CSSProperties = {};
     if (cs.fontFamily) { const v = cs.fontFamily(ctx, id); if (v) s.fontFamily = FONT_FAMILY_VAR[v]; }
@@ -197,6 +220,16 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx }: IRNodeContentP
     // covers demo/migrated views without an authored border.
     const b = compiled.border;
     if (b && !svgPainter) inlineStyle.border = `${b.width ?? 1}px ${b.style ?? 'solid'} ${b.color ?? 'var(--border-default)'}`;
+    // Node-level text style (ir-1.3 cascade root): inline on the root so every
+    // text surface inherits it (irStyle.ts uses `inherit` on labels, rows and
+    // inline editors). A label's own style, inline on its span, still wins.
+    // fontWeight does NOT reach the top/center labels: their 600 is a class rule
+    // (irStyle.ts) and a class rule beats inheritance. That is deliberate: the
+    // header keeps its weight, and it is changed from the label's own style.
+    // Compartment rows declare no weight, so there it does propagate.
+    // resolveTextStyle returns undefined when there is nothing to emit, and
+    // Object.assign with undefined is a no-op: no guard needed.
+    Object.assign(inlineStyle, resolveTextStyle(compiled.text, readCtx, objectId));
 
     // The SVG layer paints the same resolved fill/border, with the box-base
     // fallbacks (irStyle.ts:44) when nothing is authored. The polygon stretches
@@ -223,14 +256,28 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx }: IRNodeContentP
     const markerDef = getMarkerDef(markerId ? String(markerId) : undefined);
     const markerColor = compiled.border?.color ?? 'var(--border-default)';
 
+    // Spacing preset (2026-08-25): 'normal' carries no class, so the tokens declared on
+    // .ir-node-content itself apply and the markup of an unauthored view is unchanged.
+    const padClass = compiled.padding === 'normal' ? '' : ` ir-pad--${compiled.padding}`;
+
     return (
         <div
             ref={contentRef}
-            className={`ir-node-content ir-shape--${form}`}
+            className={`ir-node-content ir-shape--${form}${padClass}`}
             style={inlineStyle}
         >
             {svgPainter && (
                 <svg className={svgPainter.svgClassName} viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                    {/* Selezione: prima l'anello, poi la banda che ne copre la
+                        parte interna, poi la sagoma piena che copre entrambe
+                        dentro il contorno. Senza colore finche' il nodo non e'
+                        selezionato (irStyle). */}
+                    {svgOutline(svgPainter, {
+                        fill: 'none', strokeWidth: SEL_RING_STROKE_WIDTH, className: 'ir-sel-ring',
+                    })}
+                    {svgOutline(svgPainter, {
+                        fill: 'none', strokeWidth: SEL_BAND_STROKE_WIDTH, className: 'ir-sel-band',
+                    })}
                     {svgDouble ? (
                         <>
                             {svgOutline(svgPainter, {
@@ -297,6 +344,11 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx }: IRNodeContentP
                         <input
                             key={`label_${i}`}
                             className={`ir-label ir-label--${l.position} ir-label__input`}
+                            // Same authored style as the span it replaces: the node-level
+                            // style already reaches the field by inheritance, this carries
+                            // the label's own one, so the text does not change face on
+                            // entering the edit.
+                            style={resolveTextStyle(l.style, readCtx, objectId)}
                             autoFocus
                             value={editValue}
                             onChange={(e) => setEditValue(e.target.value)}
@@ -332,6 +384,11 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx }: IRNodeContentP
                         <div
                             key={fc.id}
                             className={`ir-compartment${fc.separator ? '' : ' ir-compartment--no-separator'}`}
+                            // Row style (ir-1.3 TS2) on the compartment, not on each row:
+                            // the rows inherit it (irStyle.ts gives .ir-row font-size:
+                            // inherit and declares no other text axis), and a dispatched
+                            // row view can still override it inline on its own .ir-row.
+                            style={resolveTextStyle(fc.rowStyle, readCtx, objectId)}
                         >
                             {rowChildIds.map(childId => (
                                 <IRRow key={childId} childObjectId={childId} />
@@ -345,6 +402,7 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx }: IRNodeContentP
                     <div
                         key={fc.id}
                         className={`ir-compartment${fc.separator ? '' : ' ir-compartment--no-separator'}`}
+                        style={resolveTextStyle(fc.rowStyle, readCtx, objectId)}
                     >
                         {source.map(row => (
                             <div key={row.key} className="ir-row">

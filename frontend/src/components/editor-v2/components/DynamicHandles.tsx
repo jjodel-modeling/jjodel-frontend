@@ -28,6 +28,59 @@ interface DynamicHandlesProps {
 /** Distance in px from node edge within which a side is considered "hovered". */
 const HOVER_THRESHOLD = 15;
 
+// --- Coalesced handle re-measurement, one store update per frame ---
+// Each node used to schedule its own double-rAF and its own single-entry
+// updateNodeInternals call, so a change touching N nodes produced N store
+// updates and N React commits. Measured 2026-08-25 on the 500-node / 1500-edge
+// harness (docs/benchmarks): making the invalidation key position-aware raised
+// commits_open_flow from ~2010 to ~2144 and the median single mutation from
+// 6.4s to 8.7s. React Flow's updateNodeInternals already takes a Map of
+// updates, so the nodes of one flow are collected into a single Map and flushed
+// together on one shared double-rAF.
+//
+// Keyed by the store api object (stable per ReactFlowProvider) so two flows on
+// screen never share a batch. Node elements are resolved at flush time, not at
+// schedule time: a node that remounted in between would otherwise be measured
+// through a detached element.
+const pendingInternals = new WeakMap<object, Set<string>>();
+const scheduledFlush = new WeakSet<object>();
+
+function scheduleNodeInternalsUpdate(storeApi: { getState: () => any }, nodeId: string): void {
+    let pending = pendingInternals.get(storeApi);
+    if (!pending) {
+        pending = new Set();
+        pendingInternals.set(storeApi, pending);
+    }
+    pending.add(nodeId);
+
+    if (scheduledFlush.has(storeApi)) return;
+    scheduledFlush.add(storeApi);
+
+    // Double-rAF: the first fires before the next paint, the second after it
+    // completes — guaranteeing the browser has resolved the CSS percentages
+    // before getBoundingClientRect reads them. Without it the measurement
+    // returns the 50% fallback.
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            scheduledFlush.delete(storeApi);
+            const ids = pendingInternals.get(storeApi);
+            if (!ids || ids.size === 0) return;
+            pendingInternals.set(storeApi, new Set());
+
+            const state = storeApi.getState();
+            const domNode = state.domNode;
+            if (!domNode) return;
+
+            const updates = new Map();
+            for (const id of ids) {
+                const nodeElement = domNode.querySelector(`.react-flow__node[data-id="${id}"]`);
+                if (nodeElement) updates.set(id, { id, nodeElement, force: true });
+            }
+            if (updates.size > 0) state.updateNodeInternals(updates);
+        });
+    });
+}
+
 /**
  * Pre-allocated Handle Pool for React Flow nodes.
  *
@@ -180,9 +233,34 @@ function DynamicHandles({ nodeId, shapeForm }: DynamicHandlesProps) {
     // React Flow only re-measures handle bounds on a dimension change or with
     // force:true (@xyflow/system updateNodeInternals), so a form change alone would
     // otherwise leave the measured bounds stale.
+    //
+    // The key is built from the computed POSITIONS, not from the set of active
+    // handle ids. Measured 2026-08-25 (docs/discovery/discovery_2026-08-25_pool_
+    // saturation_faseA.md, defect D2): the id set ignores the role, so an incoming
+    // edge landing on a `${side}-${index}` already used as a source left the key
+    // unchanged — no re-measure — while computeSidePositions had just redistributed
+    // every endpoint on that side over N+1 slots. The rendered anchors moved, the
+    // measured bounds did not: outgoing paths stayed on the previous grid and every
+    // incoming path fell back to the node center (the 50% of a handle React Flow
+    // had only ever measured while inactive). It took four edges on one side, with
+    // the pool half empty and no overflow warning.
+    //
+    // sidePositionsBySide is keyed `${handleId}:${role}` and holds exactly the
+    // active endpoints, so this key is strictly finer than the id set it replaces
+    // and no invalidation is lost. It is recomputed on edgeTopologyKey — never on
+    // node positions — so the no-cascade contract at the top of this file holds and
+    // the invalidation rate is unchanged; only its discrimination improves.
     const activeHandlesKey = useMemo(() => {
-        return `${shapeForm ?? ''}|${Array.from(activeHandles).sort().join(',')}`;
-    }, [activeHandles, shapeForm]);
+        const parts: string[] = [];
+        for (const side of SIDES) {
+            const positions = sidePositionsBySide.get(side);
+            if (!positions) continue;
+            for (const endpoint of Array.from(positions.keys()).sort()) {
+                parts.push(`${endpoint}=${positions.get(endpoint)!.toFixed(4)}`);
+            }
+        }
+        return `${shapeForm ?? ''}|${parts.join(',')}`;
+    }, [sidePositionsBySide, shapeForm]);
 
     const lastCommittedKeyRef = useRef<string>('');
 
@@ -200,21 +278,7 @@ function DynamicHandles({ nodeId, shapeForm }: DynamicHandlesProps) {
     useEffect(() => {
         if (activeHandlesKey !== lastCommittedKeyRef.current) {
             lastCommittedKeyRef.current = activeHandlesKey;
-            // Double-rAF: first rAF fires before next paint, second fires
-            // after that paint completes — guaranteeing CSS is resolved.
-            requestAnimationFrame(() => {
-                requestAnimationFrame(() => {
-                    const state = storeApi.getState();
-                    const domNode = state.domNode;
-                    if (!domNode) return;
-                    const nodeElement = domNode.querySelector(`.react-flow__node[data-id="${nodeId}"]`);
-                    if (nodeElement) {
-                        const updates = new Map();
-                        updates.set(nodeId, { id: nodeId, nodeElement, force: true });
-                        state.updateNodeInternals(updates);
-                    }
-                });
-            });
+            scheduleNodeInternalsUpdate(storeApi, nodeId);
         }
     }, [activeHandlesKey, nodeId, storeApi]);
 

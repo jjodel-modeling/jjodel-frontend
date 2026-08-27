@@ -9,7 +9,7 @@
  * All fixtures are plain D-layer shapes (idlookup records); no store, no React.
  */
 import { describe, it, expect } from 'vitest';
-import { compileView, compileEdgeView, compileRowView, clearCompileCache } from '../irCompile';
+import { compileView, compileEdgeView, compileRowView, clearCompileCache, irHash } from '../irCompile';
 import { getIREdgeAnchorOverride, hydrateIREdgeAnchorOverrides, irEdgeLayoutFromOverride, setIREdgeAnchorOverride } from '../irEdgeInteraction';
 import { getCollapsedSet, hydrateCollapsed } from '../irCollapseState';
 import { makeDrawReadCtx, classAncestryNames, navigateRefHop } from '../irReadCtx';
@@ -1280,5 +1280,165 @@ describe('rowRenderedChildren + children compartment (Fase R2)', () => {
         const def = compileRowView('def_row', defaultRowViewIR());
         expect(def.template).toHaveLength(1);
         expect(def.template[0](ctx, 'op_greet')).toBe('greet'); // intrinsic name fallback
+    });
+});
+
+describe('compile di shape.padding (asse padding, 2026-08-25)', () => {
+    it('assente => compiled.padding vale il default normal', () => {
+        clearCompileCache();
+        const cv = compileView('v_pad_absent', vertexIR({}));
+        expect(cv.padding).toBe('normal');
+    });
+
+    it('autorato => il preset arriva alla compile verbatim', () => {
+        clearCompileCache();
+        const cv = compileView('v_pad_large', vertexIR({ shape: { form: 'rect', padding: 'large' } }));
+        expect(cv.padding).toBe('large');
+    });
+
+    it('normal esplicito compila come l assenza (stessa resa, chiave inutile)', () => {
+        clearCompileCache();
+        const cv = compileView('v_pad_normal', vertexIR({ shape: { form: 'rect', padding: 'normal' } }));
+        expect(cv.padding).toBe('normal');
+    });
+
+    it('e scalare: non entra nel dependencySet e non tocca gli altri assi', () => {
+        clearCompileCache();
+        const cv = compileView('v_pad_small', vertexIR({ shape: { form: 'diamond', padding: 'small', marker: 'x' } }));
+        expect(cv.padding).toBe('small');
+        expect(cv.dependencySet).toEqual([]);
+        expect(cv.marker).not.toBeNull();
+    });
+});
+
+describe('compile di shape.text (radice della cascata tipografica, 2026-08-25)', () => {
+    it('assente => compiled.text undefined (nessun override sulla radice)', () => {
+        clearCompileCache();
+        const cv = compileView('v_text_absent', vertexIR({}));
+        expect(cv.text).toBeUndefined();
+    });
+
+    it('assi scalari => valori risolti per ogni istanza', () => {
+        clearCompileCache();
+        const { ctx } = world();
+        const cv = compileView('v_text_scalar', vertexIR({
+            shape: { form: 'rect', text: { fontSize: 16, fontFamily: 'mono' } },
+        }));
+        expect(cv.text).toBeDefined();
+        expect(cv.text!.fontSize!(ctx, 's1')).toBe(16);
+        expect(cv.text!.fontFamily!(ctx, 's1')).toBe('mono');
+        // Un asse non autorato resta undefined: la superficie eredita il default CSS.
+        expect(cv.text!.fontWeight).toBeUndefined();
+        expect(cv.text!.color).toBeUndefined();
+    });
+
+    it('asse condizionale => valore per istanza, e il predicato entra nel dependencySet', () => {
+        clearCompileCache();
+        const { ctx } = world();
+        const cv = compileView('v_text_cond', vertexIR({
+            shape: {
+                form: 'rect',
+                text: { fontSize: { when: { op: 'exists', path: '$isInitial.value' }, then: 18 } },
+            },
+        }));
+        expect(cv.dependencySet).toContain('isInitial');
+        expect(cv.text!.fontSize!(ctx, 's1')).toBe(18); // slot valorizzato
+        expect(cv.text!.fontSize!(ctx, 's3')).toBe(0);  // nessuno slot => 0, cioe' nessun override
+    });
+
+    it('convive con lo stile della label senza confondersi con esso', () => {
+        clearCompileCache();
+        const { ctx } = world();
+        const cv = compileView('v_text_both', vertexIR({
+            shape: {
+                form: 'rect',
+                text: { fontSize: 16 },
+                labels: [{ position: 'top', source: { from: 'intrinsic', prop: 'name' }, style: { fontSize: 20 } }],
+            },
+        }));
+        expect(cv.text!.fontSize!(ctx, 's1')).toBe(16);
+        expect(cv.labels[0].style!.fontSize!(ctx, 's1')).toBe(20);
+    });
+});
+
+describe('compile di TS2, stile tipografico delle righe (2026-08-25)', () => {
+    it('rowFormat.style assente => rowStyle undefined', () => {
+        clearCompileCache();
+        const cv = compileView('v_rowstyle_absent', vertexIR({
+            fieldCompartments: [{ id: 'attrs', source: { from: 'attributes' }, rowFormat: { segments: [{ kind: 'name' }] } }],
+        }));
+        expect(cv.fieldCompartments[0].rowStyle).toBeUndefined();
+    });
+
+    it('rowFormat.style scalare => assi risolti sul compartimento', () => {
+        clearCompileCache();
+        const { ctx } = world();
+        const cv = compileView('v_rowstyle_scalar', vertexIR({
+            fieldCompartments: [{
+                id: 'attrs',
+                source: { from: 'attributes' },
+                rowFormat: { segments: [{ kind: 'name' }], style: { fontSize: 11, fontStyle: 'italic' } },
+            }],
+        }));
+        const rs = cv.fieldCompartments[0].rowStyle;
+        expect(rs).toBeDefined();
+        expect(rs!.fontSize!(ctx, 's1')).toBe(11);
+        expect(rs!.fontStyle!(ctx, 's1')).toBe('italic');
+        expect(rs!.color).toBeUndefined();
+    });
+
+    it('asse condizionale in rowFormat.style => il predicato entra nel dependencySet della view ospite', () => {
+        clearCompileCache();
+        const cv = compileView('v_rowstyle_cond', vertexIR({
+            fieldCompartments: [{
+                id: 'attrs',
+                source: { from: 'attributes' },
+                rowFormat: {
+                    segments: [{ kind: 'name' }],
+                    style: { color: { when: { op: 'exists', path: '$note.value' }, then: '#b91c1c' } },
+                },
+            }],
+        }));
+        expect(cv.dependencySet).toContain('note');
+    });
+
+    it('RowViewIR.style => compilato sulla row view, assente => undefined', () => {
+        clearCompileCache();
+        const { ctx } = world();
+        const bold = compileRowView('r_bold', rowIR({ style: { fontWeight: 'bold' } }));
+        expect(bold.style!.fontWeight!(ctx, 's1')).toBe('bold');
+        const plain = compileRowView('r_plain', rowIR({}));
+        expect(plain.style).toBeUndefined();
+    });
+
+    it('asse condizionale in RowViewIR.style => il predicato entra nel dependencySet della row view', () => {
+        clearCompileCache();
+        const { ctx } = world();
+        const cr = compileRowView('r_cond', rowIR({
+            style: { fontWeight: { when: { op: 'eq', left: '$isInitial.value', right: { kind: 'boolean', value: true } }, then: 'bold' } },
+        }));
+        expect(cr.dependencySet).toContain('isInitial');
+        expect(cr.style!.fontWeight!(ctx, 's1')).toBe('bold'); // isInitial true
+        expect(cr.style!.fontWeight!(ctx, 's2')).toBe('');     // isInitial false => nessun override
+    });
+
+    it('lo stile di riga entra in irHash: due IR che differiscono solo per esso non condividono la cache', () => {
+        const withStyle = vertexIR({
+            fieldCompartments: [{
+                id: 'attrs', source: { from: 'attributes' },
+                rowFormat: { segments: [{ kind: 'name' }], style: { fontSize: 11 } },
+            }],
+        });
+        const without = vertexIR({
+            fieldCompartments: [{
+                id: 'attrs', source: { from: 'attributes' },
+                rowFormat: { segments: [{ kind: 'name' }] },
+            }],
+        });
+        expect(irHash(withStyle)).not.toBe(irHash(without));
+        // Stessa view id, due ir diversi: la seconda compile non riusa la prima.
+        clearCompileCache();
+        expect(compileView('v_same_id', withStyle).fieldCompartments[0].rowStyle).toBeDefined();
+        expect(compileView('v_same_id', without).fieldCompartments[0].rowStyle).toBeUndefined();
     });
 });

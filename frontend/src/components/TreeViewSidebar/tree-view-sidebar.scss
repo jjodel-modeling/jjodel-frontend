@@ -32,292 +32,6 @@ $transition-fast: 150ms ease;
 $transition-normal: 250ms ease;
 
 // ============================================
-// SIDEBAR (Desktop/Monitor Mode)
-// ============================================
-
-.tree-view-sidebar {
-    position: fixed;
-    // Align with tab content area (navbar 60px + tab header ~40px)
-    top: 100px;
-    right: 0;
-    bottom: 0;
-    // Lower z-index so navbar dropdowns (z-index: 200) appear above
-    z-index: 50;
-    display: flex;
-    flex-direction: column;
-    background-color: $color-bg-primary;
-    border-left: 1px solid $color-border;
-    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-
-    // Collapsed state
-    &--collapsed {
-        width: 40px;
-
-        .tree-view-sidebar__toggle {
-            left: 50%;
-            transform: translateX(-50%);
-        }
-    }
-
-    // Open state
-    &--open {
-        // Width set via inline style (dynamic)
-    }
-
-    // Dragging state (disable transitions during resize)
-    &--dragging {
-        transition: none;
-        user-select: none;
-    }
-}
-
-// Toggle button
-.tree-view-sidebar__toggle {
-    position: absolute;
-    top: 8px;
-    left: 8px;
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: $color-bg-secondary;
-    border: 1px solid $color-border;
-    border-radius: $radius-sm;
-    cursor: pointer;
-    color: $color-text-secondary;
-    transition: all $transition-fast;
-    z-index: 10;
-
-    &:hover {
-        background-color: $color-bg-tertiary;
-        color: $color-text-primary;
-        border-color: $color-border-hover;
-    }
-
-    i {
-        font-size: 12px;
-    }
-}
-
-// Collapsed state indicator
-.tree-view-sidebar__collapsed-label {
-    position: absolute;
-    top: 44px;
-    left: 50%;
-    transform: translateX(-50%);
-    color: $color-text-tertiary;
-
-    i {
-        font-size: 16px;
-    }
-}
-
-// Resize handle (polish 2026-05-12: 1px visual + 6px hit zone, cyan hover.
-// La sidebar è ancorata a right:0, quindi l'handle vive sul bordo SINISTRO
-// del container — l'edge che separa la sidebar dal canvas, quello che
-// l'utente percepisce come "lato grabbabile".
-.tree-view-sidebar__resize-handle {
-    position: absolute;
-    top: 0;
-    // 6px hit zone, sporgente 3px verso il canvas per facilitare il grab
-    left: -3px;
-    width: 6px;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: col-resize;
-    background-color: transparent;
-    z-index: 10;
-
-    // L'icona grip legacy (`bi-grip-vertical`) viene nascosta visivamente:
-    // il nuovo visual è la linea 1px qui sotto. La JSX resta invariata
-    // (constraint "no opportunistic refactor"), ma il rendering è clean.
-    i { display: none; }
-
-    // Linea 1px visibile, centrata nella hit zone (3px da sinistra in 6px)
-    &::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        bottom: 0;
-        left: 3px;
-        width: 1px;
-        background-color: var(--color-border-secondary);
-        transition: background-color $transition-fast;
-        pointer-events: none;
-    }
-
-    &:hover::before {
-        background-color: var(--accent-cyan, #0ea5e9);
-    }
-
-    // Touch device: handle non operativo, nasconderlo
-    @media (hover: none) {
-        display: none;
-    }
-}
-
-// Durante il drag, la linea resta cyan anche se il cursore esce dalla hit zone
-.tree-view-sidebar--dragging .tree-view-sidebar__resize-handle::before {
-    background-color: var(--accent-cyan, #0ea5e9);
-}
-
-// Header
-.tree-view-sidebar__header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
-    padding-left: 40px; // Space for toggle button
-    border-bottom: 1px solid $color-border;
-    font-size: 12px;
-    font-weight: 600;
-    color: $color-text-secondary;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-
-    i {
-        font-size: 14px;
-        color: $color-accent;
-    }
-}
-
-// Body (scrollable content area)
-.tree-view-sidebar__body {
-    flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding: 4px 0;
-
-    // Custom scrollbar
-    &::-webkit-scrollbar {
-        width: 6px;
-    }
-
-    &::-webkit-scrollbar-track {
-        background: transparent;
-    }
-
-    &::-webkit-scrollbar-thumb {
-        background-color: $color-border;
-        border-radius: 3px;
-
-        &:hover {
-            background-color: $color-border-hover;
-        }
-    }
-}
-
-// ============================================
-// OVERLAY (Laptop Mode)
-// ============================================
-
-.tree-view-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 1000;
-    display: flex;
-    justify-content: flex-end;
-    background-color: rgba(0, 0, 0, 0.4);
-    animation: overlayFadeIn 0.2s ease;
-}
-
-@keyframes overlayFadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-.tree-view-overlay__content {
-    width: 280px;
-    max-width: 90vw;
-    height: 100%;
-    background-color: $color-bg-primary;
-    box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
-    display: flex;
-    flex-direction: column;
-    animation: overlaySlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-@keyframes overlaySlideIn {
-    from { transform: translateX(100%); }
-    to { transform: translateX(0); }
-}
-
-.tree-view-overlay__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px 16px;
-    border-bottom: 1px solid $color-border;
-}
-
-.tree-view-overlay__title {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 13px;
-    font-weight: 600;
-    color: $color-text-primary;
-
-    i {
-        font-size: 16px;
-        color: $color-accent;
-    }
-}
-
-.tree-view-overlay__close {
-    width: 28px;
-    height: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: transparent;
-    border: none;
-    border-radius: $radius-sm;
-    cursor: pointer;
-    color: $color-text-secondary;
-    transition: all $transition-fast;
-
-    &:hover {
-        background-color: $color-bg-tertiary;
-        color: $color-text-primary;
-    }
-
-    i {
-        font-size: 14px;
-    }
-}
-
-.tree-view-overlay__body {
-    flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding: 4px 0;
-
-    &::-webkit-scrollbar {
-        width: 6px;
-    }
-
-    &::-webkit-scrollbar-track {
-        background: transparent;
-    }
-
-    &::-webkit-scrollbar-thumb {
-        background-color: $color-border;
-        border-radius: 3px;
-
-        &:hover {
-            background-color: $color-border-hover;
-        }
-    }
-}
-
-// ============================================
 // TREE CONTENT
 // ============================================
 
@@ -359,30 +73,11 @@ $transition-normal: 250ms ease;
     }
 }
 
-// Sidebar header: push the toggle to the far right and beat the header's own
-// `i` rule (which otherwise pins the icon to 14px / $color-accent).
-.tree-view-sidebar__header .tree-view-search-toggle {
-    margin-left: auto;
-
-    i {
-        font-size: 13px;
-        color: inherit;
-    }
-}
-
-// Overlay header: cluster the search toggle next to the close button.
-.tree-view-overlay__actions {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-
 // ─── Search bar (sticky, compact filter row) ─────────────────────────────────
 // Single 28px row — lens · input · match count · clear, all inline. No border or
 // radius on the input: the row is delimited only by its border-bottom. Sticks to
-// the top of the scroll container (.tree-view-sidebar__body /
-// .tree-view-overlay__body) with a full opaque background so rows scroll under
-// it. Negative horizontal margin cancels the .tree-view-content 8px side padding
+// the top of the scroll container (.tree-view-panel-body, the rail) with a full
+// opaque background so rows scroll under it. Negative horizontal margin cancels the .tree-view-content 8px side padding
 // so the bar and its separator span the full panel width.
 .tree-search {
     position: sticky;
@@ -897,32 +592,9 @@ $color-highlight-unknown: #f59e0b; // Amber - unknown action
 // ============================================
 
 [data-theme="dark"] {
-    .tree-view-sidebar,
-    .tree-view-overlay__content {
-        background-color: #1e1e1e;
-        border-color: #333;
-    }
-
-    .tree-view-sidebar__header,
-    .tree-view-overlay__header {
-        border-color: #333;
-        color: #888;
-    }
-
     .tree-search {
         // border-bottom uses the theme-aware --color-border-secondary token.
         background-color: #1e1e1e;
-    }
-
-    .tree-view-sidebar__toggle {
-        background-color: #2d2d2d;
-        border-color: #444;
-        color: #999;
-
-        &:hover {
-            background-color: #3d3d3d;
-            color: #e0e0e0;
-        }
     }
 
     .tree-node__header {
@@ -1101,29 +773,6 @@ $color-highlight-unknown: #f59e0b; // Amber - unknown action
 // Also support prefers-color-scheme for system dark mode
 html[data-theme="dark"] {
     body:not([data-theme="light"]) {
-        .tree-view-sidebar,
-        .tree-view-overlay__content {
-            background-color: #1e1e1e;
-            border-color: #333;
-        }
-
-        .tree-view-sidebar__header,
-        .tree-view-overlay__header {
-            border-color: #333;
-            color: #888;
-        }
-
-        .tree-view-sidebar__toggle {
-            background-color: #2d2d2d;
-            border-color: #444;
-            color: #999;
-
-            &:hover {
-                background-color: #3d3d3d;
-                color: #e0e0e0;
-            }
-        }
-
         .tree-node__header {
             &:hover {
                 background-color: #2a2a2a;
@@ -1413,6 +1062,49 @@ html[data-theme="dark"] {
     font-weight: 600;
     font-size: 10px;
     border: none;
+}
+
+// ─── View leaf badges, by IR kind ────────────────────────────────────────────
+// The easel above says "a view" and nothing about what the view draws. These three
+// say it: a vertex view, a row view, an edge view. Same pastel-fill / saturated-glyph
+// pattern as the entity badges, one hue each.
+//
+// The glyph colour is declared TWICE on purpose, and the second declaration is the
+// one that paints. `styles/style.scss` carries a bare `i.bi { color: … }`, a DIRECT
+// declaration on the <i>: it beats any colour this <span> merely passes down by
+// inheritance, whatever the specificity of the span rule (measured 2026-08-12,
+// CLAUDE.md §5 — removing every entity colour rule from the span changed zero
+// pixels). The `> i.bi` child rule below is what actually reaches the glyph; the
+// `color` on the span is kept for consistency with the badges above and to cover
+// a badge rendered as a letter instead of an icon.
+.tree-node__icon.tree-view-vertex {
+    background-color: #fee2e2;
+    color: #dc2626;
+    font-weight: 600;
+    font-size: 10px;
+    border: none;
+
+    > i.bi { color: #dc2626; }
+}
+
+.tree-node__icon.tree-view-row {
+    background-color: #dcfce7;
+    color: #16a34a;
+    font-weight: 600;
+    font-size: 10px;
+    border: none;
+
+    > i.bi { color: #16a34a; }
+}
+
+.tree-node__icon.tree-view-edge {
+    background-color: #cffafe;
+    color: #0891b2;
+    font-weight: 600;
+    font-size: 10px;
+    border: none;
+
+    > i.bi { color: #0891b2; }
 }
 
 // Viewpoint type badge (inline next to name)
@@ -1836,6 +1528,19 @@ html[data-theme="dark"] {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    padding-right: 4px;
+}
+
+// Multiplicity, split out of the type so a narrow rail can drop it (see the
+// `[data-density]` rules in properties-with-tree-view.scss). Same metrics as the
+// type: the pair must read as one column, and hiding this span must not change the
+// row height. The type's own `padding-right: 4px` is the gap between the two.
+.tree-feature__mult {
+    font-size: 11px;
+    font-family: var(--font-mono);
+    color: var(--color-text-tertiary);
+    white-space: nowrap;
+    padding-right: 4px;
 }
 
 // ─── Documentation empty state ───────────────────────────────────────────────
@@ -1946,7 +1651,8 @@ html[data-theme="dark"] {
 
     .tree-counter,
     .tree-empty-doc-label,
-    .tree-feature__type {
+    .tree-feature__type,
+    .tree-feature__mult {
         color: #6b7280;
     }
 
@@ -1974,5 +1680,298 @@ html[data-theme="dark"] {
             border-color: #666;
             color: #e0e0e0;
         }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Tree view — redesign additivo (rail).
+// Tutto additivo: nessuna regola esistente viene riscritta.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── 1. Il tipo diventa una colonna a destra ──────────────────────────────────
+// Il nome tronca prima del tipo: con 24+ classifier è il tipo la colonna che si
+// scansiona verticalmente, e deve restare leggibile.
+
+.tree-feature__type {
+    margin-left: auto;
+    padding-left: 12px;
+    flex-shrink: 0;
+    max-width: 55%;
+}
+
+// The multiplicity follows the type inside the same right-hand column: `margin-left:
+// auto` stays on the type, which is the one that pushes the pair right.
+.tree-feature__mult {
+    flex-shrink: 0;
+}
+
+.tree-feature__name {
+    flex-shrink: 1;
+    min-width: 0;
+}
+
+// Le view foglia riusano `tree-feature__type` come colonna del kind, ma il loro nome
+// resta `tree-row__name` (13px): e' il nome di una entita', non di una feature. Senza
+// `min-width: 0` un nome lungo non tronca e spinge la label fuori dalla riga, quindi
+// la regola si applica solo dove la coppia esiste davvero.
+.tree-row__name:has(+ .tree-feature__type) {
+    flex-shrink: 1;
+    min-width: 0;
+}
+
+// ── 2. Stato "non reso dal viewpoint attivo" ─────────────────────────────────
+// Dimmed al proprio posto nella gerarchia, feature collassate. NON usare per i
+// classifier di altri metamodelli: quelli sono fuori scopo, non "non resi".
+
+.tree-row--not-rendered {
+    .tree-row__name,
+    .tree-feature__name {
+        color: var(--color-text-disabled);
+    }
+
+    .tree-node__icon,
+    .tree-feature__type,
+    .tree-feature__mult {
+        opacity: 0.55;
+    }
+
+    .tree-row__not-rendered-hint {
+        margin-left: auto;
+        padding-left: 12px;
+        font-size: 10px;
+        font-family: var(--font-mono);
+        color: var(--color-text-disabled);
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+}
+
+// ── 3. Riga di scopo del filtro ──────────────────────────────────────────────
+
+.tree-scope-bar {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 12px;
+    background: #ecfeff;
+    border-bottom: 1px solid #cffafe;
+    font-size: 11px;
+    color: #155e75;
+    flex-shrink: 0;
+
+    &__icon {
+        font-size: 11px;
+        flex-shrink: 0;
+    }
+
+    &__label {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+
+        strong {
+            font-weight: 600;
+        }
+    }
+
+    &__action {
+        margin-left: auto;
+        flex-shrink: 0;
+        border: 0;
+        background: none;
+        padding: 0;
+        font: inherit;
+        color: var(--color-link);
+        cursor: pointer;
+
+        &:hover { text-decoration: underline; }
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 2px; }
+    }
+
+    // Conteggio senza azione: stessa posizione di __action, ma non finge di
+    // essere un link. Il toggle "mostra tutto" non esiste ancora.
+    &__count {
+        margin-left: auto;
+        flex-shrink: 0;
+        opacity: 0.8;
+    }
+}
+
+// ── 4. Famiglia vuota: una riga silenziosa, non un'intestazione con 0 ─────────
+
+.tree-empty-family {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 12px;
+    font-size: 11px;
+    color: var(--color-text-disabled);
+
+    &__icon { font-size: 11px; opacity: 0.7; }
+
+    &__action {
+        margin-left: auto;
+        border: 0;
+        background: none;
+        padding: 0;
+        font: inherit;
+        color: var(--color-link);
+        cursor: pointer;
+
+        &:hover { text-decoration: underline; }
+    }
+}
+
+// ── 5. Indicatore di elemento documentato ────────────────────────────────────
+// Solo sui classifier: sulle feature diventerebbe rumore.
+
+.tree-doc-marker {
+    font-size: 10px;
+    margin-left: 4px;
+    color: var(--color-text-disabled);
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Sezione modello (M1): istanze annidate per containment
+// Additivo. Nessuna regola esistente viene riscritta: il badge e' un
+// `.tree-node__icon` con una classe in piu' (specificita' 0,2,0, come i badge
+// view foglia poco sopra), e nome e tipo restano `.tree-feature__name` /
+// `.tree-feature__type`, gia' la colonna destra del tree.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Il discriminante `.tree-row--feature` non e' decorativo: la rail dichiara una
+// sua `.tree-node__icon` a (0,2,0) (properties-with-tree-view.scss:1130) che
+// rimette 14px, raggio 3 e fondo trasparente. Alla pari la spunta chi viene
+// dopo nel bundle, cioe' l'ordine degli @import; a (0,3,0) la questione non si
+// pone. Le righe M1 sono le sole a portare `tree-m1-icon`, e sono per
+// costruzione dentro `.tree-row--feature`.
+//
+// Il badge dell'istanza e' piu' grande di quello dei classifier (20 contro 14):
+// la sezione M1 e' la lista che si scorre per prima, e il glifo e' il suo indice.
+// La riga NON cresce: `.tree-row` resta a 26px (R-RAIL-9) e i 20px stanno dentro
+// la pastiglia inset (24px) senza spostare nulla.
+.tree-row--feature .tree-node__icon.tree-m1-icon {
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    border-radius: 5px;
+    font-size: 11px;
+    font-weight: 600;
+    border: none;
+
+    > i.bi { font-size: 11px; }
+}
+
+// Palette entita'. Il colore del glifo e' dichiarato due volte di proposito:
+// `styles/style.scss` porta un `i.bi { color: … }` diretto sull'<i>, che batte
+// per cascata qualunque colore lo <span> passi per ereditarieta' (misurato
+// 2026-08-12, CLAUDE.md §5). E' la regola `> i.bi` a dipingere; il `color`
+// sullo span copre il caso del badge reso come lettera.
+.tree-row--feature .tree-node__icon.tree-m1-class {
+    background-color: #fee2e2;
+    color: #dc2626;
+
+    > i.bi { color: #dc2626; }
+}
+
+.tree-row--feature .tree-node__icon.tree-m1-attribute {
+    background-color: #dcfce7;
+    color: #16a34a;
+
+    > i.bi { color: #16a34a; }
+}
+
+.tree-row--feature .tree-node__icon.tree-m1-reference {
+    background-color: #cffafe;
+    color: #0891b2;
+
+    > i.bi { color: #0891b2; }
+}
+
+// Metaclassi non mappate: slate con l'iniziale del nome della metaclasse.
+.tree-row--feature .tree-node__icon.tree-m1-other {
+    background-color: #f1f5f9;
+    color: #64748b;
+
+    > i.bi { color: #64748b; }
+}
+
+// Istanze auto-generate da classi singleton: stesso slate, glifo `braces`.
+.tree-row--feature .tree-node__icon.tree-m1-singleton {
+    background-color: #f1f5f9;
+    color: #64748b;
+
+    > i.bi { color: #64748b; }
+}
+
+// Un contenitore porta un peso in piu' del suo contenuto: e' l'unico segnale
+// gerarchico oltre all'indentazione quando l'albero e' chiuso.
+.tree-feature__name.is-container {
+    font-weight: 600;
+}
+
+.tree-feature__name.is-singleton {
+    color: #64748b;
+}
+
+// Conteggio figli: precede il tipo dentro la stessa colonna destra. E' questo
+// span a portare `margin-left: auto` quando c'e', e il tipo che lo perde —
+// altrimenti i due auto si spartirebbero lo spazio libero e il conteggio
+// resterebbe attaccato al nome.
+.tree-feature__count {
+    font-size: 11px;
+    font-family: var(--font-mono);
+    color: #cbd5e1;
+    margin-left: auto;
+    padding-left: 12px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.tree-feature__count + .tree-feature__type {
+    margin-left: 0;
+    padding-left: 6px;
+}
+
+// Densita' dei metadati: il blocco gemello sta in
+// components/editors/properties-with-tree-view.scss (soglie e ragioni li').
+// Sotto i 400px la colonna destra tiene il tipo e lascia andare il conteggio,
+// che e' ridondante — l'albero aperto lo dice contando le righe.
+.properties-with-tree-view--rail[data-density="compact"] {
+    .tree-feature__count {
+        display: none;
+    }
+}
+
+[data-theme="dark"] {
+    .tree-feature__count {
+        color: #4b5563;
+    }
+
+    .tree-feature__name.is-singleton {
+        color: #94a3b8;
+    }
+
+    // ── Filter band in dark ──
+    //
+    // `.tree-scope-bar` declares three raw literals from the light cyan family
+    // (`#ecfeff` ground, `#cffafe` hairline, `#155e75` text). Raw palette does not
+    // follow the theme, so in dark the band rendered a near-white ground carrying
+    // near-black text, in a column that is otherwise dark. It got away with it while it
+    // sat under the rail's 44px header; from 2026-08-26 the header is gone and this
+    // band IS the top edge of the rail, which is what makes it worth repairing now.
+    //
+    // Same shape as the repair the Focus bar needed (properties-with-tree-view.scss,
+    // "Focus bar and posture button in dark"): the dark values are corrected here and
+    // the light rendering is left byte for byte as it was. The band keeps its cyan
+    // identity — it is the only tinted row of the column and the tint is what says
+    // "this is a filter, not content".
+    .tree-scope-bar {
+        background: rgba(6, 182, 212, 0.10);   // --color-cyan-500 at low alpha
+        border-bottom-color: rgba(6, 182, 212, 0.22);
+        color: var(--color-cyan-300);
     }
 }

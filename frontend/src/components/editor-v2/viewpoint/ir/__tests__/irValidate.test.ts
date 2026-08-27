@@ -3,11 +3,11 @@
  * Pure: no store, no React — irValidate -> irCompile is joiner-free.
  */
 import { describe, it, expect } from 'vitest';
-import { validateIR, VALID_ROUTING_VALUES } from '../irValidate';
+import { validateIR, VALID_PADDING_VALUES, VALID_ROUTING_VALUES } from '../irValidate';
 import { clearCompileCache } from '../irCompile';
 import { defaultObjectViewIR, defaultEdgeViewIR } from '../irDefaults';
 import { CONTAINER_ENDPOINT } from '../irTypes';
-import type { EdgeViewIR, RowViewIR, VertexViewIR } from '../irTypes';
+import type { EdgeViewIR, GraphVertexViewIR, RowViewIR, VertexViewIR } from '../irTypes';
 
 describe('validateIR', () => {
     it('accepts a valid IR (defaultObjectViewIR)', () => {
@@ -163,5 +163,61 @@ describe('validateIR — edge endpoints (R-B13, first endpoint rule)', () => {
         const ir = defaultEdgeViewIR();
         expect('source' in ir.edge).toBe(false);
         expect(validateIR('e-no-endpoints', ir)).toEqual({ ok: true });
+    });
+});
+
+describe('validateIR: shape.padding closed vocabulary (asse padding, 2026-08-25)', () => {
+    /**
+     * Padding is typed as the union, but the values this rule catches come from outside
+     * the type system (the empty option of the shared Select, an import, a direct store
+     * edit), so the field is written through `unknown` here too, like `routing`.
+     */
+    const vertexWithPadding = (padding: unknown): VertexViewIR => ({
+        ...defaultObjectViewIR(),
+        shape: { ...defaultObjectViewIR().shape, padding } as VertexViewIR['shape'],
+    });
+
+    it('accepts a vertex with NO padding key (absent is the normal default)', () => {
+        clearCompileCache();
+        const ir = defaultObjectViewIR();
+        expect('padding' in ir.shape).toBe(false);
+        expect(validateIR('v-padding-absent', ir)).toEqual({ ok: true });
+    });
+
+    it('accepts each of the three vocabulary values', () => {
+        for (const value of VALID_PADDING_VALUES) {
+            clearCompileCache();
+            expect(validateIR(`v-padding-${value}`, vertexWithPadding(value))).toEqual({ ok: true });
+        }
+    });
+
+    it('rejects a value outside the vocabulary, naming the field and the value read', () => {
+        clearCompileCache();
+        const r = validateIR('v-padding-huge', vertexWithPadding('huge'));
+        expect(r.ok).toBe(false);
+        if (!r.ok) {
+            expect(r.error).toContain('shape.padding');
+            expect(r.error).toContain('"huge"');
+        }
+    });
+
+    it('rejects the empty string, which is what the shared Select placeholder would write', () => {
+        clearCompileCache();
+        const r = validateIR('v-padding-empty', vertexWithPadding(''));
+        expect(r.ok).toBe(false);
+        if (!r.ok) expect(r.error).toContain('shape.padding');
+    });
+
+    it('applies to graphVertex too, not only to vertex', () => {
+        clearCompileCache();
+        const outOfVocabulary: unknown = 'huge';
+        const gv: GraphVertexViewIR = {
+            irVersion: 'ir-1.2', kind: 'graphVertex', metaclasses: ['Package'],
+            shape: { form: 'rect', padding: outOfVocabulary } as GraphVertexViewIR['shape'],
+            containment: {},
+        };
+        const r = validateIR('gv-padding-huge', gv);
+        expect(r.ok).toBe(false);
+        if (!r.ok) expect(r.error).toContain('shape.padding');
     });
 });

@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { useNodes } from '@xyflow/react';
 import type { AnchorConfig, AnchorSide } from '../types';
-import { MAX_HANDLES_PER_SIDE } from '../utils/portDistribution';
+import { MAX_HANDLES_PER_SIDE, sideCapacity } from '../utils/portDistribution';
 
 const SIDES = ['top', 'right', 'bottom', 'left'] as const;
 type Side = (typeof SIDES)[number];
@@ -583,11 +583,20 @@ function computeBestAnchorsWithContext(
         else { frontalSrc = 'left'; frontalTgt = 'right'; }
     }
     // Saturated when the frontal side already holds more than a full side's worth
-    // of edges at either endpoint — i.e. this edge would overflow it. Exactly
-    // MAX_HANDLES_PER_SIDE still fits, so it is NOT saturated (strict >).
+    // of edges at either endpoint — i.e. this edge would overflow it. Exactly the
+    // capacity still fits, so it is NOT saturated (strict >).
+    //
+    // The capacity is the PHYSICAL one — how many anchors fit along that side at
+    // the minimum spacing — not the fixed pool size. Before, this was the third
+    // and last disagreeing notion of "full" in the codebase: portDistribution
+    // counted per role against a constant, this counted both roles against the
+    // same constant, and the geometry counted endpoints against the side length.
+    // They now share one policy (sideCapacity); MAX_HANDLES_PER_SIDE keeps its own
+    // meaning, the size of the pre-allocated DOM pool. The count here stays
+    // role-blind on purpose: a physical side is shared by both roles.
     const frontalSaturated =
-        sourceSideInfo[frontalSrc].count > MAX_HANDLES_PER_SIDE ||
-        targetSideInfo[frontalTgt].count > MAX_HANDLES_PER_SIDE;
+        sourceSideInfo[frontalSrc].count > sideCapacity(frontalSrc, sourceRect) ||
+        targetSideInfo[frontalTgt].count > sideCapacity(frontalTgt, targetRect);
 
     // Score each candidate pair — geometric fitness vs occupancy
     const candidates: Array<{ sourceSide: Side; targetSide: Side }> = [

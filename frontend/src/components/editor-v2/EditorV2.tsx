@@ -48,6 +48,7 @@ import { useAutoAnchor, computeAnchorsWithHysteresis, getNodeRect, computeGeomet
 import { reduceReLayout, countReferenceEdges, INITIAL_RELAYOUT_STATE, type ReLayoutState, type ReLayoutEvent } from './utils/reLayoutWatcher';
 // Viewport-only helper (F3): reserve room for the floating overlay in fit/centering.
 import { fitPadding, getCanvasRightInset } from './viewportInset';
+import { getActiveLayoutKey } from './viewpoint/layout/vertexLayoutAdapter';
 import { EditorContext } from './contexts/EditorContext';
 import { HighlightProvider, type HighlightState } from './contexts/HighlightContext';
 import { getNextFreeHandleIndex, computePortDistribution } from './utils/portDistribution';
@@ -97,12 +98,13 @@ import {
 import { computeElkLayout } from './utils/elkLayout';
 import { rafThrottle, cancelThrottle } from '../../utils/DragThrottle';
 import { getCompositionChildOptions, getCompatibleReferences, getCompatibleContainmentRefs, isDropCompatible, type CompatibleReference } from './utils/compositionCompat';
-import { LPointerTargetable, store, DState, SetRootFieldAction, DVertex, GraphSize, GraphPoint, SetFieldAction, TRANSACTION } from '../../joiner';
+import { LPointerTargetable, store, DState, SetRootFieldAction, DVertex, GraphSize, GraphPoint, SetFieldAction, TRANSACTION, U, DUser, UndoAction, RedoAction, statehistory } from '../../joiner';
 import { jjomVertexToRFNode } from './utils/jjomTransformers';
 import { useTheme } from '../../services/ThemeService';
 import { getDraggedMetaclassId } from './utils/dragState';
 import { PolymetricView } from '../polymetric';
 import { createViewInWorkbench, resolveParentViewpoint } from '../../utils/lastViewpoint';
+import DockManager from '../abstract/DockManager';
 import SimulationPanel from './sim/SimulationPanel';
 // BottomDrawer import removed — bottom property drawer disabled (duplicates right Properties panel)
 // ElementPropertiesDrawer import removed — bottom drawer disabled (see BottomDrawer removal)
@@ -123,6 +125,40 @@ const nodeTypes: NodeTypes = {
 // De-overlap steps for edge labels (assigned in applyDistribution, consumed by UnifiedEdge):
 const CARD_STAGGER_STEP = 11; // px extra depth per extra cardinality on the same target side
 const ROLE_ARC_STEP = 22;     // px arc-length separation between bundled roles
+
+// ─── Viewport persistence ────────────────────────────────────────────
+// Pan and zoom are pure view state: they live in localStorage, never in the D-layer
+// and never in undo. The key is (model, layout key), where the layout key is the
+// active exclusive viewpoint id — or ABSTRACT_SYNTAX_LAYOUT_KEY when there is none,
+// exactly what the layout resolver keys records by (R-LAY-14, R-LAY-16). Two exclusive
+// viewpoints on one model therefore keep two viewports, and when the canvas owns its
+// viewpoint (R-LAY-19 slice 2) this key follows for free: it never reads
+// `state.viewpoint` itself. Two NON-exclusive viewpoints share one viewport, the same
+// way they already share one layout.
+// Restore-if-present, fit otherwise: a stored viewport is never overwritten by a fit.
+const VIEWPORT_KEY_PREFIX = 'jjodel.viewport.';
+
+function readStoredViewport(modelid: string | undefined, layoutKey: string): { x: number; y: number; zoom: number } | null {
+    if (!modelid) return null;   // standalone canvas: nothing to key a viewport by
+    try {
+        const raw = localStorage.getItem(`${VIEWPORT_KEY_PREFIX}${modelid}.${layoutKey}`);
+        if (!raw) return null;
+        const v = JSON.parse(raw);
+        const ok = (n: any) => typeof n === 'number' && Number.isFinite(n);
+        if (!ok(v?.x) || !ok(v?.y) || !ok(v?.zoom) || v.zoom <= 0) return null;
+        return { x: v.x, y: v.y, zoom: v.zoom };
+    } catch { return null; }
+}
+
+function writeStoredViewport(modelid: string | undefined, layoutKey: string, v: { x: number; y: number; zoom: number }): void {
+    if (!modelid) return;
+    try {
+        localStorage.setItem(
+            `${VIEWPORT_KEY_PREFIX}${modelid}.${layoutKey}`,
+            JSON.stringify({ x: v.x, y: v.y, zoom: v.zoom }),
+        );
+    } catch { /* quota / private mode: the viewport is not worth failing a session for */ }
+}
 
 const edgeTypes: EdgeTypes = {
     reference: UnifiedEdge,
@@ -406,6 +442,14 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // onInit callback fires after init, but fitView and applyDistribution
     // are defined later.
     const fitViewRef = useRef<(() => void) | null>(null);
+    // Viewport restored from a previous session, read ONCE at mount: it feeds
+    // `defaultViewport` (so the canvas opens where it was left, with no flash at the
+    // origin) and suppresses the opening fit. Null = first ever opening under this
+    // (model, layout key) → the fit is the fallback, unchanged.
+    const restoredViewportRef = useRef<{ x: number; y: number; zoom: number } | null | undefined>(undefined);
+    if (restoredViewportRef.current === undefined) {
+        restoredViewportRef.current = readStoredViewport(modelid, getActiveLayoutKey());
+    }
     const applyDistributionRef = useRef<((eds: Edge[]) => Edge[]) | null>(null);
     const setEdgesRef = useRef(setEdges);
     setEdgesRef.current = setEdges;
@@ -428,7 +472,10 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     return; // autoLayout already does fitView + distribution
                 }
             }
-            fitViewRef.current?.();
+            // Restore-if-present, fit otherwise. A stored viewport already came in
+            // through `defaultViewport`, so there is nothing to re-apply here — the
+            // only thing to do is NOT fit over it (R-LAY-18: no new fitView sites).
+            if (!restoredViewportRef.current) fitViewRef.current?.();
             // Apply port distribution to edges loaded from JjOM.
             // Initial sync assigns all edges handle index 0; distribution
             // assigns correct indices based on spatial ordering.
@@ -598,17 +645,23 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     const [showBackground, setShowBackground] = useState(() => {
         try { return localStorage.getItem('jjodel.showBackground') !== 'false'; } catch { return true; }
     });
+    const [minimapVisible, setMinimapVisible] = useState(() => {
+        try { return localStorage.getItem('jjodel.showMinimap') !== 'false'; } catch { return true; }
+    });
     useEffect(() => {
         const handleGrid = (e: Event) => setGridVisible(!!(e as CustomEvent).detail?.show);
         const handleEdgeLabels = (e: Event) => setShowEdgeLabels(!!(e as CustomEvent).detail?.show);
         const handleBackground = (e: Event) => setShowBackground(!!(e as CustomEvent).detail?.show);
+        const handleMinimap = (e: Event) => setMinimapVisible(!!(e as CustomEvent).detail?.show);
         window.addEventListener(JjodelEvents.TOGGLE_GRID, handleGrid);
         window.addEventListener(JjodelEvents.TOGGLE_EDGE_LABELS, handleEdgeLabels);
         window.addEventListener(JjodelEvents.TOGGLE_BACKGROUND, handleBackground);
+        window.addEventListener(JjodelEvents.TOGGLE_MINIMAP, handleMinimap);
         return () => {
             window.removeEventListener(JjodelEvents.TOGGLE_GRID, handleGrid);
             window.removeEventListener(JjodelEvents.TOGGLE_EDGE_LABELS, handleEdgeLabels);
             window.removeEventListener(JjodelEvents.TOGGLE_BACKGROUND, handleBackground);
+            window.removeEventListener(JjodelEvents.TOGGLE_MINIMAP, handleMinimap);
         };
     }, []);
 
@@ -673,7 +726,10 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     } catch { /* skip */ }
                 }
 
-                // 3. For singleton classes without a DVertex, create DObject + DVertex
+                // 3. Fallback, not the primary path: after R-SGL-2 instances exist by
+                //    construction. This branch repairs M1s saved before the feature and
+                //    M1s re-pointed via LModel.set_instanceof, which does not seed
+                //    singletons. For those, create DObject + DVertex.
                 const existingNodes = getNodes();
                 let maxY = 0;
                 for (const n of existingNodes) {
@@ -934,6 +990,47 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // Force re-render to update canUndo/canRedo
     const [, forceUpdate] = useState({});
 
+    // ── D-layer undo/redo in JjOM mode (R-UNDO-1) ────────────────────────
+    // In JjOM mode editor-v2 runs NO history of its own: Cmd+Z is swallowed by
+    // Navbar, which listens in the CAPTURE phase on `window` (Navbar.tsx:1278-1279)
+    // and calls stopImmediatePropagation for 'Z' (Navbar.tsx:962-964) before any
+    // context logic, so the onKeyDown below never fires for it and the keystroke
+    // becomes an UndoAction on the D-layer. A session history would therefore be a
+    // second, divergent undo that the keyboard never reaches. The toolbar buttons
+    // drive the same D-layer stack instead. `useHistory` above stays in force for
+    // non-JjOM mode, untouched.
+
+    // `U.userHasInteracted` gates the D-layer undo (isRelevantChangeCheck, reducer.ts:1277).
+    // The 2026-08-24 kill-switch was retired after the runtime measurement of addendum §8 in docs/discovery/discovery_2026-08-24_undo_reducer_rename.md.
+    // Raising it on the first pointerdown/keydown on the panel keeps the programmatic boot writes (ELK auto-layout, deferred re-layout) out of the undo stack.
+    const markUserInteracted = useCallback(() => {
+        if (!U.userHasInteracted) U.userHasInteracted = true;
+    }, []);
+
+    // `statehistory` is a module singleton, not part of the Redux state, so it cannot
+    // be selected in the ordinary sense. It can be SAMPLED: a useSelector body runs on
+    // every store notification, and UndoAction/RedoAction go through the store, so this
+    // is a read-after-dispatch. Format "undoable:redoable".
+    const dHistorySig = useSelector(() => {
+        const h = (statehistory as any)[DUser.current];
+        return `${h?.undoable?.length ?? 0}:${h?.redoable?.length ?? 0}`;
+    });
+    const [dUndoLen, dRedoLen] = dHistorySig.split(':').map(Number);
+
+    // Persistence after an undo/redo. The Navbar path does not call scheduleLayoutSave,
+    // and doUndoRedo cannot be observed through the state: the branch that would write
+    // `action_title = 'undone N steps'` is commented out (reducer.ts:1139-1146). What is
+    // observable is the stack itself. An ordinary action only ever GROWS `undoable` and
+    // never touches `redoable`; an undo pops `undoable` and pushes `redoable`, a redo the
+    // mirror. So "either length decreased" fires on undo/redo and on nothing else.
+    const prevHistLenRef = useRef<{ u: number; r: number } | null>(null);
+    useEffect(() => {
+        const prev = prevHistLenRef.current;
+        prevHistLenRef.current = { u: dUndoLen, r: dRedoLen };
+        if (!prev) return; // first render: nothing happened yet
+        if (dUndoLen < prev.u || dRedoLen < prev.r) scheduleLayoutSave();
+    }, [dUndoLen, dRedoLen, scheduleLayoutSave]);
+
     // Alignment tools
     const {
         alignLeft,
@@ -1010,14 +1107,20 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
 
 
     // Helper: build node positions map for spatial port ordering
+    // The measured size travels with the centre: portDistribution needs the side
+    // LENGTH to know how many anchors physically fit on it (sideCapacity), and
+    // without it falls back to the fixed pool capacity. Both values were already
+    // read here to compute the centre — they were just being discarded.
     const buildNodePositions = useCallback((nodeList: Node[]) => {
-        const map = new Map<string, { centerX: number; centerY: number }>();
+        const map = new Map<string, { centerX: number; centerY: number; width: number; height: number }>();
         for (const n of nodeList) {
             const w = ((n.measured?.width ?? (n as any).width ?? 180) as number);
             const h = ((n.measured?.height ?? (n as any).height ?? 80) as number);
             map.set(n.id, {
                 centerX: n.position.x + w / 2,
                 centerY: n.position.y + h / 2,
+                width: w,
+                height: h,
             });
         }
         return map;
@@ -1031,7 +1134,19 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         const nodeIds = currentNodes.map(n => n.id);
         const positions = buildNodePositions(currentNodes);
 
-        const { edgeHandles } = computePortDistribution(edgeList, nodeIds, positions);
+        // Pinned endpoints are declared to the distribution so the capacity spill
+        // leaves them where the user put them. A pin is explicit — written only by
+        // a manual EndpointHandles gesture — so an absent flag means "auto".
+        const distributable = edgeList.map(e => {
+            const d = e.data as { sourceAnchor?: AnchorConfig; targetAnchor?: AnchorConfig } | undefined;
+            return {
+                ...e,
+                sourcePinned: d?.sourceAnchor?.mode === 'pinned',
+                targetPinned: d?.targetAnchor?.mode === 'pinned',
+            };
+        });
+
+        const { edgeHandles } = computePortDistribution(distributable, nodeIds, positions);
 
         const handleIdx = (h?: string | null): number => {
             const m = h?.match(/-(\d+)$/);
@@ -1385,7 +1500,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             if (droppable.size > 0) {
                 const present = new Set(candidates.map(c => c.id));
                 const extra = modeInfo.allClasses.filter(
-                    c => !present.has(c.id) && !c.isAbstract && droppable.has(c.name),
+                    c => !present.has(c.id) && !c.isAbstract && !c.isSingleton && droppable.has(c.name),
                 );
                 if (extra.length > 0) candidates = [...candidates, ...extra];
             }
@@ -2357,6 +2472,16 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
 
     // Undo handler
     const handleUndo = useCallback(() => {
+        // JjOM mode: a single undo system, the D-layer's (R-UNDO-1) — the very stack the
+        // keyboard already drives through Navbar, so button and Cmd+Z can never diverge.
+        // doUndoRedo tolerates an empty stack (reducer.ts:1129, `if (!delta) continue`),
+        // but `statehistory[forUser]` itself is undefined until the first delta lands,
+        // and indexing it would throw: guard on the stack, as undoredocomponent does.
+        if (isJjomMode) {
+            if (!(statehistory as any)[DUser.current]?.undoable?.length) return;
+            UndoAction.new(1, DUser.current, false).commit();
+            return;
+        }
         const state = undo();
         if (state) {
             setNodes(state.nodes);
@@ -2393,6 +2518,12 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
 
     // Redo handler
     const handleRedo = useCallback(() => {
+        // Mirror of handleUndo (R-UNDO-1).
+        if (isJjomMode) {
+            if (!(statehistory as any)[DUser.current]?.redoable?.length) return;
+            RedoAction.new(1, DUser.current, false).commit();
+            return;
+        }
         const state = redo();
         if (state) {
             setNodes(state.nodes);
@@ -2874,7 +3005,10 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                             });
                         } else {
                             // Multiple options → header + sub-items
-                            items.push({ label: `── ${ref.name} ──`, icon: isFull ? 'bi-slash-circle' : 'bi-arrow-down-right', disabled: isFull, onClick: () => {} });
+                            // Section header for the reference the options below belong to.
+                            // The two em-dashes that used to fake the rule are now hairlines
+                            // drawn by `.context-menu__header`; the icon logic is unchanged.
+                            items.push({ header: true, label: ref.name, icon: isFull ? 'bi-slash-circle' : 'bi-arrow-down-right' });
                             for (const cls of concreteOptions) {
                                 items.push({
                                     label: `  Add ${cls.name}`,
@@ -3069,6 +3203,58 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 );
             }
 
+            // ── Views editor, canvas entry (Fase 2) ──
+            // Object nodes only: the IR resolver answers for M1 instances, and the whole
+            // block is gated on `index`, which getIRIndex returns null for whenever no IR
+            // viewpoint is active. That single null IS the "no viewpoint / classic
+            // viewpoint" gate, and it costs no second read of `state.viewpoint` — the
+            // active id is carried by the index itself (R-LAY-19, 2026-08-25).
+            // Degradation is by absence: anything that does not resolve adds no item.
+            if (node?.type === 'objectNode') {
+                const st: any = store.getState();
+                const lookup = st?.idlookup;
+                const index = lookup ? getIRIndex(st, computeIRSignature(st)) : null;
+                const objectId = lookup?.[node.id]?.model;
+                const classId = (node.data as any)?.instanceOfClassId;
+                if (index && typeof objectId === 'string' && classId) {
+                    const viewId = resolveIRView(objectId, classId, index, makeReadCtx(lookup), lookup)?.viewId;
+                    if (viewId) {
+                        const viewName = lookup?.[viewId]?.name || 'view';
+                        items.push(
+                            { divider: true },
+                            {
+                                label: `Edit view · ${viewName}`,
+                                icon: 'bi-eye',
+                                onClick: () => DockManager.openView(viewId),
+                            },
+                        );
+                    } else if (isAdvancedMode()) {
+                        // No declared view for this metaclass. Authoring one is the same
+                        // Advanced-mode feature the classifier-side "Create View" above is
+                        // gated on, so the same gate applies here rather than a second policy.
+                        const metaclassName = (node.data as any)?.instanceOfClassName || 'class';
+                        items.push(
+                            { divider: true },
+                            {
+                                label: `Create view for ${metaclassName}`,
+                                icon: 'bi-eye',
+                                onClick: () => {
+                                    // The draft is born in the ACTIVE viewpoint, the one the
+                                    // user is looking at — not in the "last edited workbench"
+                                    // viewpoint the no-argument resolution would pick.
+                                    // The D-layer discriminator comes off the metaclass itself,
+                                    // as the "Create View" branch above already reads it, rather
+                                    // than being assumed from the node type.
+                                    const metaclassKind = lookup?.[classId]?.className ?? 'DClass';
+                                    const newViewId = createViewInWorkbench(classId, metaclassName, metaclassKind, index.viewpointId);
+                                    if (newViewId) DockManager.openView(newViewId);
+                                },
+                            },
+                        );
+                    }
+                }
+            }
+
             return items;
         }
 
@@ -3134,6 +3320,34 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         fitView({ padding: fitPadding(), maxZoom: 1, duration: 200 });
     }, [fitView]);
     const handleFitView = useCallback(() => fitView({ padding: fitPadding(), maxZoom: 1, duration: 200 }), [fitView]);
+
+    // Persist pan/zoom at the end of every move (React Flow fires onMoveEnd once per
+    // gesture, so no debounce is needed) and once more on unmount, which covers a
+    // programmatic change — zoom buttons, fit, centre-on-element — still in flight when
+    // the tab closes. The key is read at write time, so a viewpoint switch mid-session
+    // writes under the new key.
+    //
+    // The unmount write uses the LAST OBSERVED viewport, not `getViewport()`: measured
+    // 2026-08-25, closing the tab and reopening it came back at the origin, because at
+    // unmount React Flow is already tearing its store down and `getViewport()` answers
+    // the identity transform — which was then written over the good value. `onMove`
+    // fires for user gestures and for programmatic transitions alike, so the ref is
+    // always the last viewport the canvas actually had.
+    const lastViewportRef = useRef<{ x: number; y: number; zoom: number } | null>(null);
+    const handleMove = useCallback((_e: unknown, vp: { x: number; y: number; zoom: number }) => {
+        lastViewportRef.current = { x: vp.x, y: vp.y, zoom: vp.zoom };
+    }, []);
+    const saveViewport = useCallback(() => {
+        const vp = getViewport();
+        lastViewportRef.current = { x: vp.x, y: vp.y, zoom: vp.zoom };
+        writeStoredViewport(modelid, getActiveLayoutKey(), vp);
+    }, [modelid, getViewport]);
+    const modelidRef = useRef(modelid);
+    modelidRef.current = modelid;
+    useEffect(() => () => {
+        const vp = lastViewportRef.current;
+        if (vp) writeStoredViewport(modelidRef.current, getActiveLayoutKey(), vp);
+    }, []);
 
     // Register the flow editor as a ZoomController with the active-editor context.
     useEffect(() => {
@@ -3834,9 +4048,11 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 edgeTypes={edgeTypes}
                 defaultEdgeOptions={defaultEdgeOptions}
                 connectionMode={ConnectionMode.Loose}
-                fitView={!isJjomMode && nodes.length > 0}
+                onMove={handleMove}
+                onMoveEnd={saveViewport}
+                fitView={!isJjomMode && nodes.length > 0 && !restoredViewportRef.current}
                 fitViewOptions={{ padding: fitPadding(), maxZoom: 1 }}
-                defaultViewport={{ x: 0, y: 0, zoom: 1 }}
+                defaultViewport={restoredViewportRef.current ?? { x: 0, y: 0, zoom: 1 }}
                 snapToGrid={snapEnabled}
                 snapGrid={[16, 16]}
                 multiSelectionKeyCode="Shift"
@@ -3871,10 +4087,16 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     />
                 )}
                 {/* Zoom controls moved to toolbar */}
+                {/* Background and mask come from the design-system tokens (--color-minimap-bg,
+                    --minimap-mask); React Flow routes both through CSS custom properties, so a
+                    var() reaches the paint and the theme swap costs no JS branch. The per-type
+                    node colours stay literal on purpose: colouring them by metaclass depends on
+                    the IR resolution and is a front of its own. */}
+                {minimapVisible && (
                 <MiniMap
                     pannable
                     zoomable
-                    style={{ position: 'absolute', margin: 0, right: 'calc(var(--jj-canvas-right-inset, 0px) + 20px)', bottom: '100px', borderRadius: '4px', opacity: 0.8 }}
+                    style={{ position: 'absolute', margin: 0, right: 'calc(var(--jj-canvas-right-inset, 0px) + 16px)', bottom: '16px', borderRadius: '4px', opacity: 0.8 }}
                     nodeStrokeWidth={3}
                     nodeColor={(node) => {
                         if (node.type === 'classNode') return theme === 'dark' ? '#0ea5e9' : '#0284c7';
@@ -3883,8 +4105,10 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                         if (node.type === 'objectNode') return theme === 'dark' ? '#f59e0b' : '#d97706';
                         return theme === 'dark' ? '#334155' : '#e2e8f0';
                     }}
-                    maskColor={theme === 'dark' ? 'rgba(30, 41, 59, 0.8)' : 'rgba(241, 245, 249, 0.8)'}
+                    bgColor="var(--color-minimap-bg)"
+                    maskColor="var(--minimap-mask)"
                 />
+                )}
             </ReactFlow>
 
             {pendingConnection && (
@@ -3934,7 +4158,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
 
     return (
         <EditorContext.Provider value={editorContextValue}>
-            <div className={`editor-v2 theme-${theme} notation-${notation}${colorScheme !== 'default' ? ` scheme-${colorScheme}` : ''}${showEdgeLabels ? ' show-edge-labels' : ''}${showBackground ? '' : ' hide-background'}${highlightModeActive ? ' highlight-mode' : ''}`} tabIndex={0} onKeyDown={onKeyDown}>
+            <div className={`editor-v2 theme-${theme} notation-${notation}${colorScheme !== 'default' ? ` scheme-${colorScheme}` : ''}${showEdgeLabels ? ' show-edge-labels' : ''}${showBackground ? '' : ' hide-background'}${highlightModeActive ? ' highlight-mode' : ''}`} tabIndex={0} onKeyDown={onKeyDown} onPointerDownCapture={markUserInteracted} onKeyDownCapture={markUserInteracted}>
                 <UniquenessProblemSync modelid={modelid} />
                 <ConformanceProblemSync modelid={modelid} graphId={graphId} />
                 <PalettePanel
@@ -3955,8 +4179,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                         onDeleteSelected={deleteSelected}
                         onUndo={handleUndo}
                         onRedo={handleRedo}
-                        canUndo={canUndo}
-                        canRedo={canRedo}
+                        canUndo={isJjomMode ? dUndoLen > 0 : canUndo}
+                        canRedo={isJjomMode ? dRedoLen > 0 : canRedo}
                         notation={notation}
                         onNotationChange={setNotation}
                         colorScheme={colorScheme}

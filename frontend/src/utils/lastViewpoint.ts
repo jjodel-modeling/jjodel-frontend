@@ -62,8 +62,9 @@ export function activateViewpoint(viewpointId: string | null): void {
 
     // 2. Update state.viewpoint (used by EditorSwitch for split view toggle). Same empty form as
     //    the project field — `null`, never '' (R-IRN-11, R-IRN-21): two shapes of empty in the
-    //    persisted state is exactly what R-IRN-11 was decided to prevent. All four readers of the
-    //    root (EditorSwitch.tsx:55, Toolbar.tsx:202, irResolveCore.ts:117,139) go through a
+    //    persisted state is exactly what R-IRN-11 was decided to prevent. All five readers of the
+    //    root (EditorSwitch.tsx:55, Toolbar.tsx:202, irResolveCore.ts:117,139,
+    //    vertexLayoutAdapter.ts:32 — the per-viewpoint layout, R-LAY-11) go through a
     //    truthiness test, where '' and null behave identically; the one place that needs a string
     //    is the controlled <select>, and it coerces at the render boundary (Toolbar.tsx:229).
     SetRootFieldAction.new('viewpoint', viewpointId || null, '', true);
@@ -164,6 +165,20 @@ export function resolveParentViewpoint(): { dViewpoint: DViewElement; vpName: st
 }
 
 /**
+ * Same shape as `resolveParentViewpoint()`, but for a viewpoint the caller already
+ * knows. Returns null when the id does not resolve to a live D-object, so the caller
+ * degrades exactly as it does when no viewpoint is available at all.
+ */
+function resolveViewpointById(viewpointId: string): { dViewpoint: DViewElement; vpName: string } | null {
+    try {
+        const d = DPointerTargetable.from(viewpointId) as DViewElement | undefined;
+        if (d?.className) return { dViewpoint: d, vpName: d.name || 'Viewpoint' };
+    } catch { /* stale or unknown id */ }
+    console.warn('[createViewInWorkbench] viewpointId does not resolve:', viewpointId);
+    return null;
+}
+
+/**
  * Crea una View "vuota" come sub-view di un Viewpoint specifico.
  * Usata dal pulsante "+" inline sulle righe Viewpoint del Tree View.
  * Ritorna la DViewElement appena creata in modo da poter attivare
@@ -207,16 +222,24 @@ export function createBlankViewInViewpoint(
  *
  * Uses the same DViewElement.new2() mechanism as DViewElement.newDefault()
  * (see view/viewElement/view.tsx).
+ *
+ * @param viewpointId - when given, this viewpoint is the parent and
+ *   `resolveParentViewpoint()` is bypassed entirely. The canvas entries pass the
+ *   ACTIVE viewpoint so the draft is born where the user can see it; the older call
+ *   sites pass nothing and keep the "last edited workbench viewpoint" priority as is.
+ * @returns the id of the created view, or `null` on any failure. The three original
+ *   call sites ignore the value; the truthiness of the old `boolean` return is
+ *   preserved by an id being non-empty.
  */
-export function createViewInWorkbench(elementId: string, elementName: string, className: string): boolean {
+export function createViewInWorkbench(elementId: string, elementName: string, className: string, viewpointId?: string): string | null {
     // console.log('[createViewInWorkbench] called:', { elementId, elementName, className });
 
     // Resolve parent viewpoint
-    const resolved = resolveParentViewpoint();
+    const resolved = viewpointId ? resolveViewpointById(viewpointId) : resolveParentViewpoint();
     if (!resolved) {
         console.warn('[createViewInWorkbench] no viewpoint found');
         toast.error('No viewpoint available. Open a viewpoint first.', 'Cannot create view');
-        return false;
+        return null;
     }
     const { dViewpoint, vpName } = resolved;
     // console.log('[createViewInWorkbench] using viewpoint:', dViewpoint.id, vpName);
@@ -276,11 +299,12 @@ export function createViewInWorkbench(elementId: string, elementName: string, cl
         default:
             console.warn('[createViewInWorkbench] unhandled className:', className);
             toast.error(`Cannot create view for ${className}`, 'Unsupported type');
-            return false;
+            return null;
     }
 
     // console.log('[createViewInWorkbench] creating:', viewName, 'query:', query, 'father:', dViewpoint.id);
 
+    let newViewId: string | null = null;
     try {
         // Same JSX template and pattern as DViewElement.newDefault(), except on the seeded
         // branches: a view born with an `ir` renders through the interpreter, so a classic
@@ -302,10 +326,13 @@ export function createViewInWorkbench(elementId: string, elementName: string, cl
             true
         );
         // console.log('[createViewInWorkbench] created view:', newView?.id, newView?.name);
+        // `new2` hands back a live id (TreeViewContent.tsx:1391-1395 already starts an
+        // inline rename on it), so it is safe to return and to open the editor on.
+        newViewId = newView?.id ?? null;
     } catch (e) {
         console.error('[createViewInWorkbench] DViewElement.new2 threw:', e);
         toast.error('Failed to create view. Check console for details.', 'Error');
-        return false;
+        return null;
     }
 
     toast.success(`"${viewName}" added to "${vpName}"`, 'View created');
@@ -315,5 +342,5 @@ export function createViewInWorkbench(elementId: string, elementName: string, cl
         window.dispatchEvent(new CustomEvent(JjodelEvents.VIEW_CREATED, { detail: { viewpointId: dViewpoint.id } }));
     }, 300);
 
-    return true;
+    return newViewId;
 }

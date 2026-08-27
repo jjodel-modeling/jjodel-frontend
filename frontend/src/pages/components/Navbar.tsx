@@ -690,6 +690,20 @@ function NavbarComponent(props: AllProps) {
         });
     }, []);
 
+    // Minimap: visible by default (it has always been mounted unconditionally), so
+    // the stored value is read with the same !== 'false' polarity as the dot grid.
+    const [minimapVisible, setMinimapVisible] = useState<boolean>(() => {
+        try { return localStorage.getItem('jjodel.showMinimap') !== 'false'; } catch { return true; }
+    });
+    const toggleMinimapVisible = useCallback(() => {
+        setMinimapVisible(prev => {
+            const next = !prev;
+            try { localStorage.setItem('jjodel.showMinimap', String(next)); } catch {}
+            window.dispatchEvent(new CustomEvent(JjodelEvents.TOGGLE_MINIMAP, { detail: { show: next } }));
+            return next;
+        });
+    }, []);
+
     const [gridVisible, setGridVisible] = useState<boolean>(() => {
         try { return localStorage.getItem('jjodel.showGrid') !== 'false'; } catch { return true; }
     });
@@ -1490,6 +1504,11 @@ function NavbarComponent(props: AllProps) {
                     function: toggleGridVisible,
                     icon: <i className={`bi ${gridVisible ? 'bi-grid-3x3-gap-fill' : 'bi-grid-3x3-gap'}`} />,
                     shortcutPills: formatShortcutPills(SHORTCUTS.SHOW_DOT_GRID),
+                    disabled: isDashboard
+                },
+                {name: minimapVisible ? 'Show minimap  \u2713' : 'Show minimap',
+                    function: toggleMinimapVisible,
+                    icon: <i className={`bi ${minimapVisible ? 'bi-map-fill' : 'bi-map'}`} />,
                     disabled: isDashboard
                 },
                 {name: highlightMode ? 'Highlight mode  \u2713' : 'Highlight mode',

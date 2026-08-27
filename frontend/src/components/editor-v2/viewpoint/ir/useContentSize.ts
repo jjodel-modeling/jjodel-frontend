@@ -30,6 +30,8 @@ import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 're
 import { useSelector } from 'react-redux';
 import { useReactFlow } from '@xyflow/react';
 import { boxFromIntrinsic, getShapeDescriptor, hasSizeSupplement, type IntrinsicMeasure, type Size } from './shapeRegistry';
+import { readVertexLayout, type VertexLayoutSource } from '../layout/vertexLayout';
+import { getLayoutKeyOf } from '../layout/vertexLayoutAdapter';
 import type { ShapeForm } from './irTypes';
 
 const px = (v: string): number => {
@@ -91,6 +93,14 @@ const MAX_UNACCEPTED_WRITES = 3;
  * A manual resize wins and switches the derivation off for that vertex, because
  * it raises `isResized`; "Reset size" clears the flag and gives the derived size
  * back.
+ *
+ * `isResized` is read PER LAYOUT (slice 1c). It used to be read off the vertex's own scalar,
+ * which the rectification of 2026-08-24 turned into the seed — a field no gesture writes any
+ * more. The flag was therefore false under every layout, and the derivation stayed on over a
+ * node the user had resized by hand: a regression of that rectification, closed here. Reading
+ * through the resolver also makes this hook the exact complement of `manualSizeOf`
+ * (jjomTransformers.ts), which gates on the same record: at most one of the two owns a
+ * vertex's size under a given layout, never both.
  */
 export function useContentDrivenSize(
     vertexId: string,
@@ -98,7 +108,10 @@ export function useContentDrivenSize(
     ref: RefObject<HTMLDivElement | null>,
 ): void {
     const { getNode, setNodes } = useReactFlow();
-    const isResized = useSelector((s: any) => !!s?.idlookup?.[vertexId]?.isResized);
+    // Reading the layout key inside the selector is what makes it re-run at a layout change:
+    // the result is a primitive that depends on `s.viewpoint`, so react-redux sees it move.
+    const isResized = useSelector((s: any) => !!readVertexLayout(
+        (s?.idlookup?.[vertexId] ?? {}) as VertexLayoutSource, getLayoutKeyOf(s)).isResized);
     const desc = getShapeDescriptor(form);
     const active = hasSizeSupplement(desc) && !isResized;
     /** The last size this hook wrote, to tell our own size from somebody else's. */

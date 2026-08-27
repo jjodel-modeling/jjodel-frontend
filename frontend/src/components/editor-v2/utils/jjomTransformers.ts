@@ -30,10 +30,30 @@ import type {
 } from '../types';
 import { setEdgeRefId } from '../sync/syncState';
 import { displayTypeLabel } from '../types';
+import { readVertexLayout, type VertexLayout, type VertexLayoutSource } from '../viewpoint/layout/vertexLayout';
+import { getActiveLayoutKey } from '../viewpoint/layout/vertexLayoutAdapter';
 
 // L-proxy types — using `any` for property access to avoid coupling to
 // the exact proxy shape which uses runtime magic getters.
 // The property names are documented and stable.
+
+/**
+ * Effective layout of a vertex: the record of the layout in force — the active exclusive
+ * viewpoint, or abstract syntax, which has a record of its own and is not a special case. A
+ * layout with no record yet falls back to the seed, i.e. the scalars the vertex was born with
+ * (read-through, R-LAY-15 as rectified 2026-08-24). EVERY geometry read in this
+ * file goes through here — positions, sizes, and the geometry `computeOptimalHandles` uses to
+ * pick anchors — so a node never ends up placed on one record and anchored on the other.
+ *
+ * `raw` is the D-object (`vertex.__raw ?? vertex`), which satisfies `VertexLayoutSource`
+ * structurally. Missing or non-numeric fields are NOT patched here: the callers' existing
+ * `typeof … === 'number'` guards and defaults keep working exactly as before — and a nullish
+ * `raw` (computeOptimalHandles can be handed an unresolved endpoint) yields an all-undefined
+ * record, which those same guards turn into the very defaults the `sRaw?.x` form used to give.
+ */
+function effectiveLayoutOf(raw: any): VertexLayout {
+    return readVertexLayout((raw ?? {}) as VertexLayoutSource, getActiveLayoutKey());
+}
 
 /**
  * Explicit node dimensions for a manually-resized vertex, or {} for
@@ -48,9 +68,14 @@ import { displayTypeLabel } from '../types';
  * applyNodeChanges (and the same ones resetNodeSize drops).
  */
 function manualSizeOf(raw: any): { width?: number; height?: number } {
-    if (!raw?.isResized) return {};
-    const w = typeof raw.w === 'number' && raw.w > 0 ? raw.w : undefined;
-    const h = typeof raw.h === 'number' && raw.h > 0 ? raw.h : undefined;
+    if (!raw) return {};
+    // Per-layout read-through: `isResized` and w/h are read off the SAME record, never mixed
+    // between a layout record and the seed (the fallback is per record, R-LAY-15). Sizes are
+    // therefore independent per layout, "Reset size" included.
+    const eff = effectiveLayoutOf(raw);
+    if (!eff.isResized) return {};
+    const w = typeof eff.w === 'number' && eff.w > 0 ? eff.w : undefined;
+    const h = typeof eff.h === 'number' && eff.h > 0 ? eff.h : undefined;
     if (w === undefined || h === undefined) return {};
     return { width: w, height: h };
 }
@@ -170,8 +195,9 @@ function classVertexToRFNode(vertex: any): Node<ClassNodeData> {
     // Use __raw for reliable numeric coordinates (LProxy gotcha:
     // proxy getters return {} instead of numbers when stale)
     const raw = vertex.__raw ?? vertex;
-    const x = typeof raw.x === 'number' ? raw.x : 0;
-    const y = typeof raw.y === 'number' ? raw.y : 0;
+    const eff = effectiveLayoutOf(raw);
+    const x = typeof eff.x === 'number' ? eff.x : 0;
+    const y = typeof eff.y === 'number' ? eff.y : 0;
 
     // console.log('[DEBUG classVertexToRFNode] x:', x, 'y:', y, 'raw:', raw?.x, raw?.y, 'id:', vertex.id);
 
@@ -216,8 +242,9 @@ function enumVertexToRFNode(vertex: any): Node<EnumNodeData> {
 
     // Use __raw for reliable numeric coordinates (LProxy gotcha)
     const raw = vertex.__raw ?? vertex;
-    const x = typeof raw.x === 'number' ? raw.x : 0;
-    const y = typeof raw.y === 'number' ? raw.y : 0;
+    const eff = effectiveLayoutOf(raw);
+    const x = typeof eff.x === 'number' ? eff.x : 0;
+    const y = typeof eff.y === 'number' ? eff.y : 0;
 
     return {
         id: vertex.id,
@@ -238,10 +265,13 @@ function packageVertexToRFNode(vertex: any): Node<PackageNodeData> {
     const lPackage = vertex.model;
     // Use __raw for reliable numeric coordinates (LProxy gotcha)
     const raw = vertex.__raw ?? vertex;
-    const x = typeof raw.x === 'number' ? raw.x : 0;
-    const y = typeof raw.y === 'number' ? raw.y : 0;
-    const w = typeof raw.w === 'number' ? raw.w : 400;
-    const h = typeof raw.h === 'number' ? raw.h : 300;
+    const eff = effectiveLayoutOf(raw);
+    const x = typeof eff.x === 'number' ? eff.x : 0;
+    const y = typeof eff.y === 'number' ? eff.y : 0;
+    // Same record as the position above: a package moved AND resized under a viewpoint
+    // must not show that viewpoint's position with the abstract syntax's size.
+    const w = typeof eff.w === 'number' ? eff.w : 400;
+    const h = typeof eff.h === 'number' ? eff.h : 300;
 
     return {
         id: vertex.id,
@@ -344,8 +374,9 @@ function objectVertexToRFNode(vertex: any): Node<ObjectNodeData> {
 
     // Use __raw for reliable numeric coordinates (LProxy gotcha)
     const raw = vertex.__raw ?? vertex;
-    const x = typeof raw.x === 'number' ? raw.x : 0;
-    const y = typeof raw.y === 'number' ? raw.y : 0;
+    const eff = effectiveLayoutOf(raw);
+    const x = typeof eff.x === 'number' ? eff.x : 0;
+    const y = typeof eff.y === 'number' ? eff.y : 0;
 
     return {
         id: vertex.id,
@@ -403,14 +434,19 @@ function computeOptimalHandles(
     // instead of numbers, which causes NaN and wrong fallthrough.
     const sRaw = sourceVertex?.__raw ?? sourceVertex;
     const tRaw = targetVertex?.__raw ?? targetVertex;
-    const sx = typeof sRaw?.x === 'number' ? sRaw.x : 0;
-    const sy = typeof sRaw?.y === 'number' ? sRaw.y : 0;
-    const sw = typeof sRaw?.w === 'number' ? sRaw.w : 180;
-    const sh = typeof sRaw?.h === 'number' ? sRaw.h : 80;
-    const tx = typeof tRaw?.x === 'number' ? tRaw.x : 0;
-    const ty = typeof tRaw?.y === 'number' ? tRaw.y : 0;
-    const tw = typeof tRaw?.w === 'number' ? tRaw.w : 180;
-    const th = typeof tRaw?.h === 'number' ? tRaw.h : 80;
+    // Anchors are picked from the SAME geometry the nodes are placed on: reading the
+    // scalars here while the nodes sit on a viewpoint record would anchor edges on the
+    // wrong side without moving a single node.
+    const sEff = effectiveLayoutOf(sRaw);
+    const tEff = effectiveLayoutOf(tRaw);
+    const sx = typeof sEff?.x === 'number' ? sEff.x : 0;
+    const sy = typeof sEff?.y === 'number' ? sEff.y : 0;
+    const sw = typeof sEff?.w === 'number' ? sEff.w : 180;
+    const sh = typeof sEff?.h === 'number' ? sEff.h : 80;
+    const tx = typeof tEff?.x === 'number' ? tEff.x : 0;
+    const ty = typeof tEff?.y === 'number' ? tEff.y : 0;
+    const tw = typeof tEff?.w === 'number' ? tEff.w : 180;
+    const th = typeof tEff?.h === 'number' ? tEff.h : 80;
 
     const scx = sx + sw / 2;
     const scy = sy + sh / 2;

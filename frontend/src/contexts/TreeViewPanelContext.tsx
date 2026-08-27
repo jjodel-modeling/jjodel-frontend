@@ -53,11 +53,33 @@ interface TreeViewPanelContextType {
     activeEditorType: EditorType;
     /** Set active editor type */
     setActiveEditorType: (type: EditorType) => void;
+
+    // ─── Inspector zone of the right rail ───
+    /** Inspector (Properties) zone is expanded */
+    isInspectorVisible: boolean;
+    /** Expand the inspector zone */
+    showInspector: () => void;
+    /** TODO: cleanup — no call site since the topbar control became a whole-rail
+     *  toggle (2026-08-26). Kept: it is the only way left to commute the inspector
+     *  alone, and the tree still has its own `toggle` beside it. */
+    toggleInspector: () => void;
+
+    // ─── The rail as a whole ───
+    /** The rail is on screen iff at least one of its two zones is */
+    isRailVisible: boolean;
+    /** Hide the whole rail, or bring it back exactly as it was */
+    toggleRail: () => void;
 }
 
 const TreeViewPanelContext = createContext<TreeViewPanelContextType | null>(null);
 
 const STORAGE_KEY_VISIBLE = 'jjodel_treeview_visible';
+// Inspector visibility. Historically local state inside PropertiesWithTreeView; it moved
+// here when the rail header was retired (2026-08-26) and its collapse control went up into
+// the canvas topbar, which lives in a different subtree: two components read the same zone,
+// so the state cannot stay private to one of them. Same key as before, so a user's
+// persisted preference survives the move untouched.
+const STORAGE_KEY_INSPECTOR_VISIBLE = 'jjodel_property_panel_visible';
 
 /**
  * Extract action from JjScript command
@@ -75,6 +97,13 @@ export const TreeViewPanelProvider: React.FC<{ children: React.ReactNode }> = ({
     const [isVisible, setIsVisible] = useState(() => {
         const stored = localStorage.getItem(STORAGE_KEY_VISIBLE);
         return stored !== null ? stored === 'true' : true; // Default: visible
+    });
+
+    // Inspector zone visibility. Default true, as it has always been.
+    const [isInspectorVisible, setIsInspectorVisible] = useState(() => {
+        if (typeof window === 'undefined') return true;
+        const stored = window.localStorage.getItem(STORAGE_KEY_INSPECTOR_VISIBLE);
+        return stored !== null ? stored === 'true' : true;
     });
 
     const [isHighlighted, setIsHighlighted] = useState(false);
@@ -111,6 +140,55 @@ export const TreeViewPanelProvider: React.FC<{ children: React.ReactNode }> = ({
     const toggle = useCallback(() => {
         setIsVisible(prev => !prev);
     }, []);
+
+    // Persist inspector visibility. Kept separate from the tree's own key: the two zones
+    // collapse independently (R-RAIL-11) and always have.
+    useEffect(() => {
+        try {
+            localStorage.setItem(STORAGE_KEY_INSPECTOR_VISIBLE, String(isInspectorVisible));
+        } catch { /* ignore */ }
+    }, [isInspectorVisible]);
+
+    const showInspector = useCallback(() => {
+        setIsInspectorVisible(true);
+    }, []);
+
+    const toggleInspector = useCallback(() => {
+        setIsInspectorVisible(prev => !prev);
+    }, []);
+
+    /**
+     * The rail as one thing (2026-08-26).
+     *
+     * It is not a third piece of state: the rail IS its two zones, and it is on screen
+     * exactly when one of them is — the same predicate `PropertiesWithTreeView` already
+     * used, under the name `bothCollapsed`, to decide between rendering the column and
+     * handing over to the reopen pill. A separate `isRailVisible` flag would be a second
+     * source of truth for a question the zones already answer, and the two would drift
+     * the first time ⌘B changed one of them behind its back.
+     *
+     * Closing remembers the pair, but reopening does NOT restore it wholesale: the tree
+     * always comes back (2026-08-26). Restoring a hidden tree was the letter of "put it
+     * back as it was" and the wrong thing in practice — the column returned carrying only
+     * the inspector, which reads as the rail having lost its contents rather than as a
+     * preference being honoured, and the structure is the reason the column exists. The
+     * inspector keeps the remembered value, because that one CAN be a deliberate state.
+     * With nothing remembered, both come back: the state the app ships in.
+     */
+    const railRestoreRef = useRef<{ tree: boolean; inspector: boolean } | null>(null);
+    const isRailVisible = isVisible || isInspectorVisible;
+
+    const toggleRail = useCallback(() => {
+        if (isVisible || isInspectorVisible) {
+            railRestoreRef.current = { tree: isVisible, inspector: isInspectorVisible };
+            setIsVisible(false);
+            setIsInspectorVisible(false);
+            return;
+        }
+        const prev = railRestoreRef.current;
+        setIsVisible(true);
+        setIsInspectorVisible(prev ? prev.inspector : true);
+    }, [isVisible, isInspectorVisible]);
 
     // Fire a brief attention pulse on the collapsed tree toggle (~2.5s).
     // Replaces force-opening the panel: visibility belongs to the user.
@@ -333,6 +411,11 @@ export const TreeViewPanelProvider: React.FC<{ children: React.ReactNode }> = ({
             toggleNode,
             activeEditorType,
             setActiveEditorType,
+            isInspectorVisible,
+            showInspector,
+            toggleInspector,
+            isRailVisible,
+            toggleRail,
         }}>
             {children}
         </TreeViewPanelContext.Provider>

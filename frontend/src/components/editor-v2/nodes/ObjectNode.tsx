@@ -30,7 +30,7 @@ import { useLayoutAutosave } from '../hooks/useLayoutAutosave';
 import type { ObjectNodeData } from '../types';
 import { NodeProblemIndicator } from '../problems/NodeProblemIndicator';
 import { useIsHighlighted } from '../problems/useNodeProblems';
-import { useIRView } from '../viewpoint/ir/irResolve';
+import { useIRView, useIRViewpointActive } from '../viewpoint/ir/irResolve';
 import { isMigratedDefaultView } from '../viewpoint/ir/irDefaults';
 import type { VertexViewIR } from '../viewpoint/ir/irTypes';
 import IRNodeContent from '../viewpoint/ir/IRNodeContent';
@@ -59,6 +59,10 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
     // IR view resolution (spike 2026-07-17): non-null only when the active
     // viewpoint declares an applicable IR view for this object's metaclass.
     const irResolution = useIRView(id, data.instanceOfClassId);
+    // Is an IR viewpoint active at all? Only then does a null resolution mean "this
+    // metaclass is not rendered by the viewpoint" (neutral node below); with no IR
+    // viewpoint, or a wildcard one, the object keeps rendering in full.
+    const irViewpointActive = useIRViewpointActive();
     // Delegation (spec v1.2 sez. 11 amendment): migrated classic-default views
     // render through the native branch below — parity with "no viewpoint" by
     // construction. The view stays in the resolution index; only who renders
@@ -73,15 +77,14 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
         return containmentChildren(state.idlookup ?? {}, irResolution.objectId).length;
     });
 
-    // Live metaclass name + singleton flag from Redux (reacts to metamodel changes)
+    // Live metaclass name from Redux (reacts to metamodel changes)
     const liveMetaclassInfo = useSelector((state: any) => {
         const classId = data.instanceOfClassId;
-        if (!classId) return { name: null, isSingleton: false };
+        if (!classId) return { name: null };
         const dClass = (state.idlookup?.[classId] as any);
-        return { name: dClass?.name ?? null, isSingleton: !!dClass?.isSingleton };
+        return { name: dClass?.name ?? null };
     });
     const liveMetaclassName = liveMetaclassInfo.name;
-    const isSingleton = liveMetaclassInfo.isSingleton;
     const metaclassName = liveMetaclassName
         ?? (data.instanceOfClassId ? data.instanceOfClassName : 'Orphan');
 
@@ -384,6 +387,13 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
     const existingAttrs = data.features?.filter(f => f.featureKind === 'attribute') ?? [];
     const hasFeatures = existingAttrs.length > 0 || missingAttributes.length > 0;
     const isOrphan = !data.instanceOfClassId;
+    // Neutral node: an IR viewpoint is active, it declares no view applicable to this
+    // object's metaclass, and the object is not delegated to the native branch by a
+    // migrated default view (irDelegated implies irResolution !== null). Same rule the
+    // tree applies to a classifier the viewpoint does not render — header only, no
+    // features, no entity colour. An object with no metaclass at all (isOrphan) is a
+    // different defect, already signalled by mm-object--orphan, and stays out.
+    const notRendered = irViewpointActive && !irResolution && !isOrphan;
 
     if (irResolution && !irDelegated) {
         // IR render path: wrapper, resizer, handles and highlight class stay
@@ -416,13 +426,6 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                     />
                 )}
                 <DynamicHandles nodeId={id} shapeForm={shapeForm} />
-                {/* Singleton stereotype — same label as the native branch. The IR
-                    branch has no header (the name is an IR label inside
-                    IRNodeContent), so it sits in the wrapper, ahead of the
-                    interpreted content. */}
-                {isSingleton && (
-                    <span className="mm-node__stereotype">«singleton»</span>
-                )}
                 <NodeProblemIndicator nodeId={id} />
                 <IRNodeContent
                     compiled={irResolution.compiled}
@@ -457,7 +460,7 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
     }
 
     return (
-        <div className={`mm-node mm-object ${selected ? 'selected' : ''} ${isOrphan ? 'mm-object--orphan' : ''}${isProblemHighlighted ? ' mm-object--problem-highlighted' : ''} ${hlClass}${isSimActiveNode ? ' sim-active' : ''}`}>
+        <div className={`mm-node mm-object ${selected ? 'selected' : ''} ${isOrphan ? 'mm-object--orphan' : ''}${notRendered ? ' mm-object--not-rendered' : ''}${isProblemHighlighted ? ' mm-object--problem-highlighted' : ''} ${hlClass}${isSimActiveNode ? ' sim-active' : ''}`}>
             {isNodeResizable('objectNode') && (
                 <NodeResizer
                     isVisible={selected}
@@ -478,13 +481,6 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                 onDoubleClick={handleDoubleClick}
                 onClick={() => { if (selected && !editing) setEditing(true); }}
             >
-                {/* Singleton stereotype — own line above the name; the header
-                    stacks vertically via .mm-node__header:has(.mm-node__stereotype).
-                    The name itself stays underlined (UML instance convention,
-                    shared by every M1 object). */}
-                {isSingleton && (
-                    <span className="mm-node__stereotype">«singleton»</span>
-                )}
                 {editing ? (
                     <input
                         className="mm-node__input"
@@ -504,8 +500,11 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                 )}
             </div>
 
-            {/* Feature values (attributes) + lazy co-evolution placeholders */}
-            {hasFeatures && (
+            {/* Feature values (attributes) + lazy co-evolution placeholders.
+                A node the viewpoint does not render shows the header alone: showing
+                every feature of an object declared "not rendered" contradicts itself,
+                and the tree made the same call (no chevron, no features). */}
+            {hasFeatures && !notRendered && (
                 <div className="mm-node__body">
                     <div className="mm-node__fields">
                         {/* Existing (valorized) features */}
@@ -657,8 +656,8 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                 </div>
             )}
 
-            {/* Empty body */}
-            {!hasFeatures && (
+            {/* Empty body — also the whole body of a not-rendered node */}
+            {(!hasFeatures || notRendered) && (
                 <div className="mm-node__empty" />
             )}
         </div>

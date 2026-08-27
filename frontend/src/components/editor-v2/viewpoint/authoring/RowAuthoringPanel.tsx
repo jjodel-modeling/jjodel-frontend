@@ -18,10 +18,11 @@ import {
 import { getMetaclassInfo, type MetaclassInfo } from '../../hooks/useEditorMode';
 import { validateIR } from '../ir/irValidate';
 import { defaultRowViewIR } from '../ir/irDefaults';
-import type { RowViewIR, TextSource } from '../ir/irTypes';
+import type { RowViewIR, TextSource, TextStyle } from '../ir/irTypes';
 import { resolveMetaclassId, withMetaclassPins, type MetaclassRef } from '../ir/metaclassPin';
 import { metaclassChipLabel, metaclassGroups, type MetaclassChoice } from './MatchingSection';
 import { TextSourceEditor } from './TextSourceEditor';
+import { TextStyleField } from './TextStyleField';
 import { metaclassAmbiguityWarning } from './authoringMessages';
 import { IRIdentityFields, IRSourceBody, irTabBodyStyle, type IRIdentityProps, type IRTabId } from './irTabs';
 
@@ -257,6 +258,15 @@ export const RowAuthoringPanel: React.FC<RowAuthoringPanelProps> = ({ view, acti
     // --- template ---
     const template = draft.template ?? [];
     const setTemplate = (next: TextSource[]) => patch({ ...draft, template: next });
+    // Row style (ir-1.3 TS2). `undefined` drops the KEY instead of writing it empty,
+    // so a row view whose style is reset round-trips byte-identical to one authored
+    // without any style (same discipline as the predicate rest/spread above).
+    const setRowStyle = (style: TextStyle | undefined) => {
+        const next = { ...draft };
+        if (style === undefined) delete next.style;
+        else next.style = style;
+        patch(next);
+    };
     const removeSegment = (idx: number) => {
         const n = [...template];
         n.splice(idx, 1);
@@ -424,6 +434,19 @@ export const RowAuthoringPanel: React.FC<RowAuthoringPanelProps> = ({ view, acti
                 <label className="jj-field-label">Label</label>
                 <Input value={draft.label ?? ''} onChange={(e) => patch({ ...draft, label: e.target.value })} />
             </div>
+            </FormSection>
+
+            {/* Row style (ir-1.3 TS2): inline on this row's own `.ir-row`, so it wins
+                over the host compartment and the host node. */}
+            <FormSection title="Row style" divider={false}>
+                <TextStyleField
+                    value={draft.style}
+                    onChange={setRowStyle}
+                    features={features}
+                    featuresHint={FEATURES_HINT}
+                    classNames={classNames}
+                />
+                <HelpText icon={false}>Applies to this row wherever it is dispatched. Overrides the compartment and the node style.</HelpText>
             </FormSection>
             </div>
 

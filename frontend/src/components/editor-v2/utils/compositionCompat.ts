@@ -45,7 +45,7 @@ export function getCompatibleContainmentRefs(
         // Direct match: dropped class IS the target
         if (ref.targetClassId === droppedClassId) {
             const dropped = classById.get(droppedClassId);
-            if (dropped && !dropped.isAbstract) {
+            if (dropped && !dropped.isAbstract && !dropped.isSingleton) {
                 result.push({ ref, concreteOptions: [dropped] });
             }
             continue;
@@ -54,7 +54,7 @@ export function getCompatibleContainmentRefs(
         // Subclass match: dropped class is a concrete descendant of the target
         if (targetClass.concreteSubclasses.some(sub => sub.id === droppedClassId)) {
             const dropped = classById.get(droppedClassId);
-            if (dropped) {
+            if (dropped && !dropped.isSingleton) {
                 result.push({ ref, concreteOptions: [dropped] });
             }
         }
@@ -160,13 +160,17 @@ export function getCompositionChildOptions(
 
         const concreteOptions: MetaclassInfo[] = [];
 
-        // If target itself is concrete, include it
-        if (!targetClass.isAbstract) {
+        // If target itself is concrete, include it. Singletons are excluded HERE, at the
+        // consumption point, and not from `concreteSubclasses` itself: that list also
+        // answers endpoint conformance (getCompatibleReferences), where a singleton
+        // subtype IS a valid target.
+        if (!targetClass.isAbstract && !targetClass.isSingleton) {
             concreteOptions.push(targetClass);
         }
 
         // Add all concrete subclasses
         for (const sub of targetClass.concreteSubclasses) {
+            if (sub.isSingleton) continue;
             concreteOptions.push(sub);
         }
 
