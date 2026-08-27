@@ -504,6 +504,13 @@ function UnifiedEdge(props: EdgeProps) {
                             refY="5"
                             markerWidth="12"
                             markerHeight="10"
+                            // Without this, markerUnits is 'strokeWidth' and the SVG
+                            // viewport scales by the stroke-width of the path that
+                            // references the marker: the 1.5px line would render the
+                            // triangle at 18x15 instead of 12x10. The size of the
+                            // inheritance triangle is fixed, and does not follow the
+                            // line weight or the selection.
+                            markerUnits="userSpaceOnUse"
                             orient="auto"
                         >
                             <path
@@ -743,6 +750,8 @@ function UnifiedEdge(props: EdgeProps) {
                         refY="5"
                         markerWidth="12"
                         markerHeight="10"
+                        // Fixed size, as for the tree marker above.
+                        markerUnits="userSpaceOnUse"
                         orient="auto"
                     >
                         <path

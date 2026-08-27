@@ -2540,7 +2540,10 @@
 .inheritance-marker {
     fill: var(--inheritance-marker-fill);
     stroke: var(--inheritance-stroke);
-    stroke-width: 1.5;
+    // 1, as before the bus fix: the triangle changed colour, not weight. Inside a
+    // marker this is a marker-space unit, so raising it thickens the outline of a
+    // shape that is only 12x10 units wide.
+    stroke-width: 1;
 
     &.selected {
         stroke: var(--edge-selected);
