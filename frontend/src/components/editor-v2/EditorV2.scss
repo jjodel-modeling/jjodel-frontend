@@ -2492,13 +2492,26 @@
 }
 
 .inheritance-edge {
-    stroke: var(--edge-color);
-    stroke-width: 1;
+    stroke: var(--inheritance-stroke);
+    stroke-width: 1.5;
     fill: none;
 
     &.selected {
         stroke: var(--edge-selected);
         stroke-width: 1.5;
+    }
+}
+
+// Junction dot: the point where the trunk meets the shared bus of a grouped
+// inheritance. Filled with the line colour, so it reads as a thickening of the
+// stroke and tells a connection apart from a crossing, which stays bare.
+.inheritance-junction {
+    fill: var(--inheritance-stroke);
+    stroke: none;
+    pointer-events: none;
+
+    &.selected {
+        fill: var(--edge-selected);
     }
 }
 
@@ -2523,11 +2536,11 @@
     }
 }
 
-// Inheritance edge marker (hollow triangle)
+// Inheritance edge marker (hollow triangle) — same stroke as the line it closes
 .inheritance-marker {
-    fill: var(--edge-marker-fill);
-    stroke: var(--edge-marker-stroke);
-    stroke-width: 1;
+    fill: var(--inheritance-marker-fill);
+    stroke: var(--inheritance-stroke);
+    stroke-width: 1.5;
 
     &.selected {
         stroke: var(--edge-selected);

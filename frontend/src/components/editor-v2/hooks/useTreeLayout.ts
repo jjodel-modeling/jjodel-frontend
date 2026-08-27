@@ -10,6 +10,7 @@ import {
     parsePathPoints,
     parsePathSubPaths,
     pointsToPath,
+    TREE_BUS_CORNER_RADIUS,
     type TreeBranch,
 } from '../utils/edgeUtils';
 import { computeHandlePositionForNode } from '../utils/handlePosition';
@@ -22,6 +23,8 @@ export interface TreeGeometry {
     trunkPath: string;
     barAndBranchesPath: string;
     branchPaths: Map<string, string>;
+    /** Where the trunk meets the bar — null when there is no bar (single child) */
+    junction?: { x: number; y: number } | null;
 }
 
 export interface TreeLayoutResult {
@@ -216,11 +219,15 @@ export function useTreeLayout(
                 finalParts.push(pointsToPath(pts));
                 continue;
             }
+            // TREE_BUS_CORNER_RADIUS applies to the ONE corner an outer child's
+            // L sub-path carries. Interior children are two-point verticals: both
+            // helpers leave a path without corners alone, so the T-junctions stay
+            // square whatever radius is passed here.
             const segCrossings = getEdgeCrossings(`${edgeId}__tree_${idx}`, pts, activeNodeIds, []);
             if (segCrossings.length > 0) {
-                finalParts.push(buildFinalPath(pts, segCrossings, 4, 6));
+                finalParts.push(buildFinalPath(pts, segCrossings, TREE_BUS_CORNER_RADIUS, 6));
             } else {
-                finalParts.push(roundManhattanPath(pointsToPath(pts), 4));
+                finalParts.push(roundManhattanPath(pointsToPath(pts), TREE_BUS_CORNER_RADIUS));
             }
         }
         return finalParts.join(' ');

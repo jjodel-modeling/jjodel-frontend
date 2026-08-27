@@ -549,6 +549,18 @@ function UnifiedEdge(props: EdgeProps) {
                     />
                 )}
 
+                {/* Junction dot: marks where the trunk joins the bus, so the T there
+                    reads as a connection and not as one of the crossings the bridge
+                    arcs hop over — those stay bare. */}
+                {treeGeometry.junction && (
+                    <circle
+                        cx={treeGeometry.junction.x}
+                        cy={treeGeometry.junction.y}
+                        r={2.5}
+                        className={`inheritance-junction ${selectedClass} ${hlClass}`}
+                    />
+                )}
+
                 {/* Endpoint handles */}
                 {!isSelfLoop && (
                     <EndpointHandles

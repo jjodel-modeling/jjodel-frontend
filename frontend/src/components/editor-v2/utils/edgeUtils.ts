@@ -1085,17 +1085,38 @@ export interface TreeConnectorGeometry {
     barAndBranchesPath: string;
     /** Per-edge hit-test paths (edgeId → L-shaped route from trunk junction to child) */
     branchPaths: Map<string, string>;
+    /** Where the trunk meets the bar — null when there is no bar (single child) */
+    junction?: { x: number; y: number } | null;
 }
+
+/** Corner radius of the two outer elbows, where the bus turns toward the trunk. */
+export const TREE_BUS_CORNER_RADIUS = 8;
+
+/** Under this distance a child counts as collinear with the trunk (sharp T-junction). */
+const TRUNK_COLLINEAR_EPS = 0.5;
 
 /**
  * Computes the geometry of a tree connector for inheritance edges.
  *
  * Layout (parent above children — standard UML):
  *   parentX, parentY (bottom center of parent)
- *       │  trunk
- *   ────┼────  bar (horizontal, at barY)
- *   │       │  branches (vertical, to child tops)
- *   C1      C2
+ *        │  trunk
+ *    ╭───┴───╮  bar (horizontal, at barY) — rounded at its two ends only
+ *    │   │   │  branches (vertical, to child tops)
+ *   C1  C2  C3
+ *
+ * Three invariants the emitted paths carry:
+ *   1. The trunk is ONE straight segment from the bar to the parent handle, at
+ *      the same X as the branch of a child sitting on it — no gap and no elbow
+ *      at the junction, so the two verticals read as a single line.
+ *   2. The bar spans the children, from the first landing point to the last. It
+ *      grows past them only to reach the trunk when the parent sits outside that
+ *      span, the one case where stopping at the children would leave the trunk
+ *      disconnected.
+ *   3. Only the two ends of the bar are elbows, and each is emitted as an L
+ *      sub-path (child vertical → bar toward the trunk), so the corner rounding
+ *      applied downstream rounds those two and nothing else: an interior child
+ *      is a bare vertical, two points, no corner to round.
  *
  * @param parentX - X of the parent's target handle (bottom center)
  * @param parentY - Y of the parent's target handle (bottom edge)
@@ -1112,6 +1133,7 @@ export function computeTreeConnectorPath(
         trunkPath: '',
         barAndBranchesPath: '',
         branchPaths: new Map(),
+        junction: null,
     };
 
     if (branches.length === 0) return empty;
@@ -1129,7 +1151,7 @@ export function computeTreeConnectorPath(
         const trunkPath = `M ${child.childX} ${child.childY} L ${parentX} ${parentY}`;
         const branchPaths = new Map<string, string>();
         branchPaths.set(child.edgeId, trunkPath);
-        return { trunkPath, barAndBranchesPath: '', branchPaths };
+        return { trunkPath, barAndBranchesPath: '', branchPaths, junction: null };
     }
 
     // Multi-child: trunk + bar + branches
@@ -1147,37 +1169,47 @@ export function computeTreeConnectorPath(
         obstacleRects, excludeIds,
     );
 
-    // Trunk: from near-bar up to parent (markerEnd will be placed at the parent end).
-    // Shortened by CORNER_RADIUS so the trunk's straight line doesn't overlap the
-    // rounded corner arcs that branch paths draw at the (parentX, barY) junction.
-    const CORNER_RADIUS = 4;
-    const trunkLen = Math.abs(barY - parentY);
-    const trunkGap = Math.min(CORNER_RADIUS, trunkLen * 0.5);
-    const trunkDir = parentY < barY ? -1 : 1; // from barY toward parentY
-    const trunkStartY = barY + trunkDir * trunkGap;
-    const trunkPath = `M ${parentX} ${trunkStartY} L ${parentX} ${parentY}`;
+    // Trunk: bar → parent, full length (markerEnd lands on the parent end).
+    // It reaches the bar: the junction is a T, so nothing is shortened here to
+    // leave room for an arc.
+    const trunkPath = `M ${parentX} ${barY} L ${parentX} ${parentY}`;
 
-    // Branches: each branch starts near the bar (at trunkStartY) so that the
-    // trunk segment is drawn only ONCE (by trunkPath), avoiding opacity build-up
-    // when the stroke color has transparency (e.g. rgba).
-    // Each branch is a 4-point path with TWO corners:
-    //   1. At (parentX, barY): trunk → bar turn (provides rounded junction arc)
-    //   2. At (childX, barY): bar → child turn
-    let barAndBranches = '';
-
+    // Branches. The bar is not a segment of its own: the child at each end of
+    // the bus draws its own half, from its landing point to the trunk. The two
+    // halves meet at the junction, so the horizontal is stroked exactly once
+    // and a translucent stroke never builds up.
+    const lastIdx = sorted.length - 1;
+    const subPaths: string[] = [];
     const branchPaths = new Map<string, string>();
-    for (const child of sorted) {
-        // Route: trunkStart → bar → child (4 points, 2 corners)
-        const branchPath = `M ${parentX} ${trunkStartY} L ${parentX} ${barY} L ${child.childX} ${barY} L ${child.childX} ${child.childY}`;
-        if (barAndBranches) barAndBranches += ' ';
-        barAndBranches += branchPath;
+
+    for (let i = 0; i < sorted.length; i++) {
+        const child = sorted[i];
+        // A child terminates the bus only if it is the outermost one AND the
+        // trunk lies on its inner side. When the parent sits outside the child
+        // span, that end of the bar is the trunk itself and the child there is
+        // an ordinary T-junction.
+        const endsBusOnLeft = i === 0 && child.childX < parentX - TRUNK_COLLINEAR_EPS;
+        const endsBusOnRight = i === lastIdx && child.childX > parentX + TRUNK_COLLINEAR_EPS;
+
+        subPaths.push(
+            endsBusOnLeft || endsBusOnRight
+                // Outer child: vertical, then elbow toward the trunk (3 points, 1 corner)
+                ? `M ${child.childX} ${child.childY} L ${child.childX} ${barY} L ${parentX} ${barY}`
+                // Interior child, the trunk-collinear one included: sharp T (2 points)
+                : `M ${child.childX} ${child.childY} L ${child.childX} ${barY}`
+        );
 
         // Hit-test path: full route from parent for better click area
         const hitPath = `M ${parentX} ${parentY} L ${parentX} ${barY} L ${child.childX} ${barY} L ${child.childX} ${child.childY}`;
         branchPaths.set(child.edgeId, hitPath);
     }
 
-    return { trunkPath, barAndBranchesPath: barAndBranches, branchPaths };
+    return {
+        trunkPath,
+        barAndBranchesPath: subPaths.join(' '),
+        branchPaths,
+        junction: { x: parentX, y: barY },
+    };
 }
 
 // ── Helper: find a barY that avoids obstacle nodes ────────────────
