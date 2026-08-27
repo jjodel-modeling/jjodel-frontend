@@ -18,6 +18,39 @@ const DETOUR_PADDING = 30; // used only for same-side and backward U-shape routi
 /** Minimum perpendicular stub length (px) for orthogonal endpoint enforcement. */
 const STUB_LENGTH = 20;
 
+/**
+ * Sporgenza perpendicolare desiderata prima della prima svolta (e dopo l'ultima).
+ *
+ * Vive qui, non in `edgeRouting.ts`, perché è il router a doverla rispettare e
+ * `edgeRouting` importa da questo modulo (mai il contrario). La Z la soddisfa già per
+ * costruzione — lo scalino sta a metà del varco, cioè a `gap/2` da ciascun capo, che è
+ * `min(MIN_APPROACH_RUN, gap/2)` per ogni varco — e la degradazione sotto i 32px di
+ * varco è dichiarata: si prende metà del varco disponibile.
+ */
+export const MIN_APPROACH_RUN = 16;
+
+/**
+ * Sotto questo offset fra le due ancore lo scalino di una Z si sposta **a ridosso del
+ * source** invece di stare a metà strada.
+ *
+ * Misurato il 2026-08-27: con offset di 10px lo scalino a metà strada produce due
+ * raccordi da 4px separati da 2px di retta — la S con le due curve quasi a contatto.
+ * Spostare lo scalino non separa i due raccordi (ci pensa `interiorStraight` in
+ * RoundingPolicy) ma li toglie di mezzo alla corsa lunga, dove si notano.
+ */
+const TIGHT_JOG = 16;
+
+/**
+ * Retta minima da riservare accanto ai marker, prima di qualunque raccordo.
+ *
+ * Con l'ultimo tratto sotto questa misura il raccordo si stringe fino a sparire: è
+ * preferibile uno spigolo vivo a un arco che finisce **sull'**ultimo punto, che è ciò
+ * che produce l'uncino sotto la punta della freccia (il marker è `orient="auto"` e
+ * prende la tangente dall'arco). Non si applica da sola: la si chiede passando una
+ * RoundingPolicy, così il connettore d'ereditarietà resta byte-identico.
+ */
+export const MARKER_APPROACH_RUN = 12;
+
 export type Side = 'top' | 'right' | 'bottom' | 'left';
 
 /**
@@ -134,6 +167,28 @@ export function computeManhattanPath(
     return pointsToPath(cleanPoints(orthogonal));
 }
 
+/**
+ * Ascissa (o ordinata) dello scalino di una Z.
+ *
+ * Con offset fra le ancore pari o superiore a `TIGHT_JOG` resta il punto medio del
+ * varco, come da sempre. Sotto quella soglia lo scalino si avvicina al source fino a
+ * `MIN_APPROACH_RUN`, **senza mai superare il punto medio**: quando il varco è più
+ * stretto di `2 × MIN_APPROACH_RUN` il clamp restituisce esattamente il punto medio,
+ * cioè il valore di prima. Nessun caso sano cambia.
+ *
+ * @param from   coordinata dell'ancora sorgente sull'asse dello scalino
+ * @param to     coordinata dell'ancora destinazione sullo stesso asse
+ * @param offset distanza fra le due ancore sull'asse perpendicolare (il jog)
+ * @param ascending true quando il tracciato procede verso coordinate crescenti
+ */
+function tightJogBend(from: number, to: number, offset: number, ascending: boolean): number {
+    const mid = (from + to) / 2;
+    if (offset >= TIGHT_JOG) return mid;
+    return ascending
+        ? Math.min(from + MIN_APPROACH_RUN, mid)
+        : Math.max(from - MIN_APPROACH_RUN, mid);
+}
+
 function categorizeSidePair(s: Side, t: Side): 'opposite-horizontal' | 'opposite-vertical' | 'same' | 'adjacent' {
     if (s === t) return 'same';
     if ((s === 'right' && t === 'left') || (s === 'left' && t === 'right')) return 'opposite-horizontal';
@@ -155,8 +210,10 @@ function routeOppositeH(
             const avgY = (sy + ty) / 2;
             return [{ x: sx, y: avgY }, { x: tx, y: avgY }];
         }
-        // Z-shape: 3 segments, bend at midpoint X
-        const midX = (sx + tx) / 2;
+        // Z-shape: 3 segments, bend at midpoint X — salvo jog ravvicinato, dove lo
+        // scalino si sposta a ridosso del source (vedi TIGHT_JOG). Il clamp sul punto
+        // medio fa sì che con varchi sotto i 32px il risultato resti quello di sempre.
+        const midX = tightJogBend(sx, tx, Math.abs(ty - sy), goingRight);
         return [
             { x: sx, y: sy },
             { x: midX, y: sy },
@@ -197,8 +254,9 @@ function routeOppositeV(
             const avgX = (sx + tx) / 2;
             return [{ x: avgX, y: sy }, { x: avgX, y: ty }];
         }
-        // Z-shape: 3 segments, bend at midpoint Y
-        const midY = (sy + ty) / 2;
+        // Z-shape: 3 segments, bend at midpoint Y — stessa regola del jog ravvicinato
+        // dell'omologo orizzontale.
+        const midY = tightJogBend(sy, ty, Math.abs(tx - sx), goingDown);
         return [
             { x: sx, y: sy },
             { x: sx, y: midY },
@@ -502,14 +560,63 @@ function segmentHitsRect(
 }
 
 /**
+ * Politica di arrotondamento opzionale, condivisa da `roundManhattanPath` e
+ * `buildFinalPath`.
+ *
+ * Assente (o coi campi a zero) le due funzioni si comportano **esattamente** come
+ * prima: è così che il connettore d'ereditarietà, unico altro consumatore, resta
+ * byte-identico senza essere toccato.
+ */
+export interface RoundingPolicy {
+    /**
+     * Px di retta da riservare accanto ai due capi, prima di qualunque raccordo.
+     *
+     * Senza questo vincolo il raccordo terminale può consumare **tutto** il segmento
+     * finale (`maxR = len`, non `len/2` come per gli interni): l'arco finisce
+     * sull'ultimo punto, la `L` successiva è di lunghezza zero e il marker, che è
+     * `orient="auto"`, prende la tangente dall'arco. È l'uncino sotto la freccia.
+     */
+    approachRun?: number;
+    /**
+     * Frazione di un segmento **interno** che deve restare dritta fra i due raccordi
+     * che lo delimitano. 0.5 vuol dire: ogni raccordo si prende al più un quarto del
+     * segmento, e metà resta retta.
+     *
+     * Senza, i due raccordi di un segmento corto si toccano — la S con le due curve
+     * a contatto. Non morde sopra `4 × radius` (16px con raggio 4): lì il raggio
+     * pieno sta già dentro il quarto disponibile.
+     */
+    interiorStraight?: number;
+}
+
+/**
+ * Tetto del raggio su un segmento che confina con un capo del tracciato.
+ * Mai oltre metà del segmento (come per gli interni), e mai tanto da mangiare la
+ * retta d'approccio richiesta.
+ */
+function terminalRadiusCap(len: number, approachRun: number): number {
+    return Math.max(0, Math.min(len / 2, len - approachRun));
+}
+
+/** Tetto del raggio su un segmento interno, secondo la frazione di retta richiesta. */
+function interiorRadiusCap(len: number, interiorStraight: number): number {
+    return interiorStraight > 0 ? (len * (1 - interiorStraight)) / 2 : len / 2;
+}
+
+/**
  * Takes a Manhattan path with straight L segments and adds rounded
  * arcs at every 90-degree corner.
  *
  * @param path - SVG path like "M x y L x y L x y ..."
  * @param radius - Arc radius (default 8px)
+ * @param policy - Vincoli opzionali su retta d'approccio e segmenti interni.
+ *   Omesso = comportamento storico, byte per byte.
  * @returns SVG path with rounded arcs
  */
-export function roundManhattanPath(path: string, radius: number = 4): string {
+export function roundManhattanPath(path: string, radius: number = 4, policy?: RoundingPolicy): string {
+    const approachRun = policy?.approachRun ?? 0;
+    const interiorStraight = policy?.interiorStraight ?? 0;
+
     // Parse points from path
     let points: { x: number; y: number }[] = [];
     const commands = path.match(/[ML]\s*[-\d.]+\s+[-\d.]+/g);
@@ -559,8 +666,15 @@ export function roundManhattanPath(path: string, radius: number = 4): string {
         // Radius cannot exceed half of interior segments, but for the first/last
         // corner we allow the full length of the endpoint segment so the arc
         // doesn't shorten the segment toward the marker.
-        const maxR1 = (i === 1) ? len1 : len1 / 2;
-        const maxR2 = (i === points.length - 2) ? len2 : len2 / 2;
+        // Con una RoundingPolicy i due tetti diventano espliciti: retta riservata
+        // accanto ai capi, frazione dritta sugli interni. Senza, le due espressioni
+        // sono quelle di sempre.
+        const maxR1 = (i === 1)
+            ? (approachRun > 0 ? terminalRadiusCap(len1, approachRun) : len1)
+            : interiorRadiusCap(len1, interiorStraight);
+        const maxR2 = (i === points.length - 2)
+            ? (approachRun > 0 ? terminalRadiusCap(len2, approachRun) : len2)
+            : interiorRadiusCap(len2, interiorStraight);
         const r = Math.min(radius, maxR1, maxR2);
 
         if (r < 0.5) {
@@ -832,6 +946,73 @@ export function computeLabelPosition(
     return { x: mid.x, y: mid.y, isHorizontal: true };
 }
 
+/** Distanza minima della label dagli estremi del segmento che la ospita. */
+const LABEL_SEGMENT_MARGIN = 12;
+
+/**
+ * Ancora della label sul **punto medio del segmento più lungo** del tracciato.
+ *
+ * Differisce da `computeLabelPosition`, che prende il punto a metà lunghezza d'arco:
+ * su una polilinea a due segmenti i due criteri quasi sempre coincidono, ma su una
+ * U-detour a cinque segmenti il punto a metà arco cade sul tratto centrale corto,
+ * dove la label non ci sta. Il segmento più lungo è, per definizione, quello che la
+ * ospita meglio.
+ *
+ * A pari lunghezza vince il primo segmento incontrato: l'ordine è deterministico.
+ *
+ * L'ancora sta **sempre dentro il bounding box del tracciato**, perché sta su un suo
+ * segmento; il margine la tiene anche lontana dagli spigoli, così lo scostamento
+ * perpendicolare a valle non la porta sopra il raccordo.
+ *
+ * @param path  tracciato SVG ("M x y L x y ...")
+ * @param slide scostamento con segno lungo il segmento ospite: positivo verso la fine
+ *   del segmento. Serve a sfalsare le label degli archi in fascio. 0 = punto medio.
+ */
+export function computeLabelAnchor(
+    path: string,
+    slide: number = 0,
+): { x: number; y: number; isHorizontal: boolean } {
+    const points = parsePathPoints(path);
+    if (points.length < 2) return { x: 0, y: 0, isHorizontal: true };
+
+    let hostIndex = 0;
+    let hostLength = -1;
+    for (let i = 0; i < points.length - 1; i++) {
+        const len = Math.abs(points[i + 1].x - points[i].x) + Math.abs(points[i + 1].y - points[i].y);
+        if (len > hostLength) {
+            hostLength = len;
+            hostIndex = i;
+        }
+    }
+
+    const p1 = points[hostIndex];
+    const p2 = points[hostIndex + 1];
+    if (hostLength <= 0) return { x: p1.x, y: p1.y, isHorizontal: true };
+
+    const isHorizontal = Math.abs(p2.y - p1.y) < Math.abs(p2.x - p1.x);
+    const margin = Math.min(LABEL_SEGMENT_MARGIN, hostLength / 2);
+    const at = Math.max(margin, Math.min(hostLength - margin, hostLength / 2 + slide));
+    const t = at / hostLength;
+    return { x: p1.x + (p2.x - p1.x) * t, y: p1.y + (p2.y - p1.y) * t, isHorizontal };
+}
+
+/**
+ * Da che parte arriva il tracciato all'ultimo punto, sull'asse **parallelo** al lato
+ * d'ingresso. L'ultimo segmento è perpendicolare al lato, quindi il penultimo punto
+ * condivide la coordinata con l'ancora: si risale finché non cambia.
+ *
+ * Ritorna 0 quando il tracciato non dice nulla (retta perfettamente perpendicolare).
+ */
+function approachDirection(points: { x: number; y: number }[], axis: 'x' | 'y'): number {
+    if (points.length < 2) return 0;
+    const end = points[points.length - 1][axis];
+    for (let i = points.length - 2; i >= 0; i--) {
+        const delta = points[i][axis] - end;
+        if (Math.abs(delta) > 0.5) return Math.sign(delta);
+    }
+    return 0;
+}
+
 /**
  * Finds the position for cardinality (near the target).
  * Uses the last segment of the path, offset from the target.
@@ -882,17 +1063,32 @@ export function computeCardinalityAnchor(
     targetSide: Side,
     boxGap: number,
     depthShift: number = 0,
+    pathPoints?: { x: number; y: number }[],
 ): string {
     const gap = boxGap + depthShift;
-    switch (targetSide) {
-        // Vertical entry edge → shift sideways (top → right, bottom → left).
-        case 'top':    return `translate(0%, -100%) translate(${targetX + CARD_LINE_GAP}px, ${targetY - gap}px)`;
-        case 'bottom': return `translate(-100%, 0%) translate(${targetX - CARD_LINE_GAP}px, ${targetY + gap}px)`;
-        // Horizontal entry edge → shift vertically (right → up, left → down).
-        case 'left':   return `translate(-100%, 0%) translate(${targetX - gap}px, ${targetY + CARD_LINE_GAP}px)`;
-        case 'right':
-        default:       return `translate(0%, -100%) translate(${targetX + gap}px, ${targetY - CARD_LINE_GAP}px)`;
+    const vertical = targetSide === 'top' || targetSide === 'bottom';
+
+    // Verso laterale storico, per lato: top → destra, bottom → sinistra,
+    // right → su, left → giù. Resta il default quando il tracciato non è noto o
+    // arriva perfettamente perpendicolare.
+    const fallback = targetSide === 'top' || targetSide === 'left' ? 1 : -1;
+    // Col tracciato in mano si sceglie il fianco **opposto** a quello da cui arriva:
+    // è la parte che non collide con la linea.
+    const from = pathPoints ? approachDirection(pathPoints, vertical ? 'x' : 'y') : 0;
+    const lateral = from === 0 ? fallback : -from;
+
+    // La percentuale di translate segue il verso laterale, altrimenti la scatola
+    // scavalcherebbe la linea invece di affiancarla.
+    if (vertical) {
+        const y = targetSide === 'top' ? targetY - gap : targetY + gap;
+        const yPct = targetSide === 'top' ? '-100%' : '0%';
+        const xPct = lateral > 0 ? '0%' : '-100%';
+        return `translate(${xPct}, ${yPct}) translate(${targetX + lateral * CARD_LINE_GAP}px, ${y}px)`;
     }
+    const x = targetSide === 'left' ? targetX - gap : targetX + gap;
+    const xPct = targetSide === 'left' ? '-100%' : '0%';
+    const yPct = lateral > 0 ? '0%' : '-100%';
+    return `translate(${xPct}, ${yPct}) translate(${x}px, ${targetY + lateral * CARD_LINE_GAP}px)`;
 }
 
 // === Waypoint Types ===
@@ -1584,8 +1780,12 @@ export function buildFinalPath(
     crossings: CrossingPoint[],
     cornerRadius: number = 4,
     bridgeRadius: number = 6,
+    policy?: RoundingPolicy,
 ): string {
     if (inputPoints.length < 2) return '';
+
+    const approachRun = policy?.approachRun ?? 0;
+    const interiorStraight = policy?.interiorStraight ?? 0;
 
     // Clean degenerate segments (same as roundManhattanPath)
     let points: { x: number; y: number }[] = [inputPoints[0]];
@@ -1633,8 +1833,15 @@ export function buildFinalPath(
         const len1 = Math.abs(dx1) + Math.abs(dy1);
         const len2 = Math.abs(dx2) + Math.abs(dy2);
 
-        const maxR1 = (i === 1) ? len1 : len1 / 2;
-        const maxR2 = (i === points.length - 2) ? len2 : len2 / 2;
+        // Stessa politica di roundManhattanPath: senza `policy` le due espressioni
+        // restano quelle storiche. La duplicazione fra le due funzioni è preesistente
+        // (i due rami del rendering, con e senza archi-ponte) e non si unifica qui.
+        const maxR1 = (i === 1)
+            ? (approachRun > 0 ? terminalRadiusCap(len1, approachRun) : len1)
+            : interiorRadiusCap(len1, interiorStraight);
+        const maxR2 = (i === points.length - 2)
+            ? (approachRun > 0 ? terminalRadiusCap(len2, approachRun) : len2)
+            : interiorRadiusCap(len2, interiorStraight);
         const r = Math.min(cornerRadius, maxR1, maxR2);
 
         if (r < 0.5) {

@@ -32,6 +32,7 @@ import { setEdgeRefId } from '../sync/syncState';
 import { displayTypeLabel } from '../types';
 import { readVertexLayout, type VertexLayout, type VertexLayoutSource } from '../viewpoint/layout/vertexLayout';
 import { getActiveLayoutKey } from '../viewpoint/layout/vertexLayoutAdapter';
+import { chooseEdgeSides } from './edgeRouting';
 
 // L-proxy types — using `any` for property access to avoid coupling to
 // the exact proxy shape which uses runtime magic getters.
@@ -423,7 +424,11 @@ export function jjomVertexToRFNode(vertex: any): Node | null {
  * For inheritance edges, UML convention dictates the triangle marker is always
  * at the bottom of the parent (target). So we force vertical routing:
  * child (source) connects from top, parent (target) from bottom.
- * Horizontal routing is only used if classes are at nearly the same Y level.
+ *
+ * Per i reference, dal 2026-08-27 la scelta e' la stessa di `useAutoAnchor`:
+ * `edgeRouting.chooseEdgeSides`, minimo di svolte e poi lunghezza sui sedici
+ * accoppiamenti. Le due sedi devono concordare, altrimenti un progetto mostra lati
+ * diversi appena caricato e lati diversi dopo il primo trascinamento.
  */
 function computeOptimalHandles(
     sourceVertex: any,
@@ -448,34 +453,18 @@ function computeOptimalHandles(
     const tw = typeof tEff?.w === 'number' ? tEff.w : 180;
     const th = typeof tEff?.h === 'number' ? tEff.h : 80;
 
-    const scx = sx + sw / 2;
-    const scy = sy + sh / 2;
-    const tcx = tx + tw / 2;
-    const tcy = ty + th / 2;
-
-    const dx = tcx - scx;
-    const dy = tcy - scy;
-
     if (isInheritance) {
         // Inheritance always anchors child=top, parent=bottom
         // (consistent with EditorV2 creation and useAutoAnchor hysteresis)
         return { sourceHandle: 'top-0', targetHandle: 'bottom-0' };
     }
 
-    // Non-inheritance: use dominant axis
-    if (Math.abs(dy) >= Math.abs(dx)) {
-        if (dy < 0) {
-            return { sourceHandle: 'top-0', targetHandle: 'bottom-0' };
-        } else {
-            return { sourceHandle: 'bottom-0', targetHandle: 'top-0' };
-        }
-    } else {
-        if (dx > 0) {
-            return { sourceHandle: 'right-0', targetHandle: 'left-0' };
-        } else {
-            return { sourceHandle: 'left-0', targetHandle: 'right-0' };
-        }
-    }
+    // Non-inheritance: minimo di svolte, poi lunghezza.
+    const chosen = chooseEdgeSides(
+        { x: sx, y: sy, width: sw, height: sh },
+        { x: tx, y: ty, width: tw, height: th },
+    );
+    return { sourceHandle: `${chosen.sourceSide}-0`, targetHandle: `${chosen.targetSide}-0` };
 }
 
 /**

@@ -19,9 +19,11 @@ import {
     computeSelfLoopCornerPath,
     getNodeRect,
     computeLabelPosition,
+    computeLabelAnchor,
     computeCardinalityPosition,
     computeCardinalityAnchor,
     CARD_BOX_GAP,
+    MARKER_APPROACH_RUN,
     parsePathPoints,
     applyWaypoints,
     pointsToPath,
@@ -45,8 +47,14 @@ import { EndpointHandles } from './EndpointHandles';
 // corridor of parallel same-pair edges by physical anchor order (see that module).
 const LABEL_SPREAD_PX = 18;
 const ROLE_LINE_GAP = 10; // px, perpendicular nudge so the role text is off the line
-const ROLE_LINE_GAP_PX = 10; // px, perpendicular nudge so the role text is off the line
-const ROLE_LINE_GAP_PY = 10; // px, perpendicular nudge so the role text is off the line
+const ROLE_LINE_GAP_PX = 8; // px, perpendicular nudge so the role text is off the line
+const ROLE_LINE_GAP_PY = 8; // px, perpendicular nudge so the role text is off the line
+
+// Politica di arrotondamento dei reference edge: retta riservata accanto ai marker
+// (niente uncino sotto la freccia) e meta' di ogni segmento interno tenuta dritta
+// (niente S con le due curve a contatto). L'ereditarieta' non la usa: il suo
+// connettore resta byte-identico.
+const REFERENCE_ROUNDING = { approachRun: MARKER_APPROACH_RUN, interiorStraight: 0.5 } as const;
 
 // E-route: React Flow's Position enum carries the same four strings as the
 // codebase's Side type; the map keeps the conversion explicit instead of casting.
@@ -346,11 +354,15 @@ function UnifiedEdge(props: EdgeProps) {
         // E-route: the authored curve replaces the whole Manhattan pipeline output.
         // Corner rounding and bridge arcs are Manhattan-only concepts.
         if (irRoutedGeom) return irRoutedGeom.d;
+        // La politica passa solo ai reference: il connettore d'ereditarieta' (bus,
+        // tronco, T) e' fuori perimetro e resta byte-identico, qui come in
+        // useTreeLayout, che non passa nessuna politica.
+        const rounding = isInheritance ? undefined : REFERENCE_ROUNDING;
         if (crossings.length > 0) {
-            return buildFinalPath(routedPoints, crossings, 4, 6);
+            return buildFinalPath(routedPoints, crossings, 4, 6, rounding);
         }
-        return roundManhattanPath(spreadPath, 4);
-    }, [spreadPath, routedPoints, crossings, isSelfLoop, selfLoopGeom, irRoutedGeom, sourceX, sourceY, targetX, targetY]);
+        return roundManhattanPath(spreadPath, 4, rounding);
+    }, [spreadPath, routedPoints, crossings, isSelfLoop, selfLoopGeom, irRoutedGeom, isInheritance, sourceX, sourceY, targetX, targetY]);
 
     // De-overlap shifts precomputed in EditorV2.applyDistribution (0 when no bundle/collision).
     const roleArcShift = edgeData?.roleArcShift ?? 0;
@@ -373,7 +385,8 @@ function UnifiedEdge(props: EdgeProps) {
                 isHorizontal: Math.abs(targetX - sourceX) >= Math.abs(targetY - sourceY),
             };
         }
-        return computeLabelPosition(spreadPath, roleArcShift); // arc-length midpoint, slid for bundles
+        // Punto medio del segmento piu' lungo, scostato per gli archi in fascio.
+        return computeLabelAnchor(spreadPath, roleArcShift);
     }, [spreadPath, isSelfLoop, selfLoopGeom, irRoutedGeom, roleArcShift, sourceX, sourceY, targetX, targetY]);
 
     // Small perpendicular nudge off the line. No cross-edge de-overlap here (see 2c).
@@ -386,7 +399,7 @@ function UnifiedEdge(props: EdgeProps) {
         if (isSelfLoop) return { x: 0, y: 0 };
         const sign = irLabelPlacement === 'above' ? -1 : irLabelPlacement === 'below' ? 1 : 0;
         if (labelPos.isHorizontal) {
-            return { x: 10, y: (sign === 0 ? -1 : sign) * ROLE_LINE_GAP_PY };
+            return { x: 0, y: (sign === 0 ? -1 : sign) * ROLE_LINE_GAP_PY };
         }
         return { x: (sign === 0 ? 1 : sign) * ROLE_LINE_GAP_PX, y: 0 };
     }, [isSelfLoop, labelPos, irLabelPlacement]);
@@ -398,8 +411,10 @@ function UnifiedEdge(props: EdgeProps) {
             return `translate(-50%, -50%) translate(${p.x}px, ${p.y}px)`;
         }
         // Just outside the target box at the entry handle, per-side corner clearance.
-        return computeCardinalityAnchor(targetX, targetY, targetSide, CARD_BOX_GAP, cardinalityShift);
-    }, [isSelfLoop, selfLoopGeom, spreadPath, targetX, targetY, targetSide, cardinalityShift]);
+        // `routedPoints` dice da che parte arriva il tracciato: la molteplicita' si
+        // posa sul fianco opposto, quello che la linea non occupa.
+        return computeCardinalityAnchor(targetX, targetY, targetSide, CARD_BOX_GAP, cardinalityShift, routedPoints);
+    }, [isSelfLoop, selfLoopGeom, spreadPath, routedPoints, targetX, targetY, targetSide, cardinalityShift]);
 
     // ─── ISA label midpoint (inheritance ER notation) ───
     const midPoint = useMemo(() => {
@@ -896,7 +911,7 @@ function UnifiedEdge(props: EdgeProps) {
                         className={`edge-label ${selected ? 'selected' : ''} ${isM1Edge ? `edge-label--m1-hover${hovered || selected || (isIREdge && irLabelAlwaysVisible) ? ' edge-label--m1-visible' : ''}` : ''} ${hlClass}`}
                         style={{
                             position: 'absolute',
-                            transform: `translate(-50%, -50%) translate(${10+ labelPos.x + labelOffset.x}px, ${labelPos.y + labelOffset.y}px)`,
+                            transform: `translate(-50%, -50%) translate(${labelPos.x + labelOffset.x}px, ${labelPos.y + labelOffset.y}px)`,
                             pointerEvents: 'all',
                         }}
                         onDoubleClick={(e) => { e.stopPropagation(); if (!labelEditable) return; setEditing(true); }}
