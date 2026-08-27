@@ -106,19 +106,20 @@ describe('computeTreeConnectorPath — shared inheritance bus', () => {
         const g = computeTreeConnectorPath(900, PARENT_Y, [child(400, 'e1'), child(600, 'e2')]);
         const bus = busByChildX(g.barAndBranchesPath);
 
-        expect(bus.get(400)).toEqual([{ x: 400, y: CHILD_Y }, { x: 400, y: BAR_Y }, { x: 900, y: BAR_Y }]);
+        // The bar stops 4px short of the trunk: that last piece is the trunk's own
+        // elbow, drawn by the trunk path.
+        expect(bus.get(400)).toEqual([{ x: 400, y: CHILD_Y }, { x: 400, y: BAR_Y }, { x: 896, y: BAR_Y }]);
         expect(bus.get(600)).toEqual([{ x: 600, y: CHILD_Y }, { x: 600, y: BAR_Y }]);
-        expect(busSpan(g.barAndBranchesPath)).toEqual({ min: 400, max: 900 });
-        expect(g.junction).toEqual({ x: 900, y: BAR_Y });
+        expect(busSpan(g.barAndBranchesPath)).toEqual({ min: 400, max: 896 });
     });
 
     it('parent left of every child: mirror case, one elbow on the right', () => {
         const g = computeTreeConnectorPath(200, PARENT_Y, [child(400, 'e1'), child(600, 'e2')]);
         const bus = busByChildX(g.barAndBranchesPath);
 
-        expect(bus.get(600)).toEqual([{ x: 600, y: CHILD_Y }, { x: 600, y: BAR_Y }, { x: 200, y: BAR_Y }]);
+        expect(bus.get(600)).toEqual([{ x: 600, y: CHILD_Y }, { x: 600, y: BAR_Y }, { x: 204, y: BAR_Y }]);
         expect(bus.get(400)).toEqual([{ x: 400, y: CHILD_Y }, { x: 400, y: BAR_Y }]);
-        expect(busSpan(g.barAndBranchesPath)).toEqual({ min: 200, max: 600 });
+        expect(busSpan(g.barAndBranchesPath)).toEqual({ min: 204, max: 600 });
     });
 
     // ── Hit-test paths ──────────────────────────────────────────────
@@ -173,6 +174,75 @@ describe('branch anchoring — centre of the child side, from the measured box',
         expect(busSpan(g.barAndBranchesPath)).toEqual({ min: 170, max: 770 });
         expect(bus.get(500)).toHaveLength(2);
         expect(g.junction).toEqual({ x: 500, y: 280 });
+    });
+});
+
+// Where the trunk lands on the bar decides what that point is. Meeting it in the
+// middle is a junction and gets the dot; arriving at an END of the bar, with nothing
+// else there, is a corner and gets an elbow instead.
+describe('trunk meeting the bar — junction or corner', () => {
+    const both = [child(400, 'e1'), child(600, 'e2')];
+    /** The trunk path as it is finally drawn, rounded the way useTreeLayout rounds it. */
+    const drawnTrunk = (g: ReturnType<typeof computeTreeConnectorPath>) =>
+        roundManhattanPath(g.trunkPath, g.trunkElbowRadius ?? 0);
+
+    it('parent inside the child span: three ways meet, so the dot stays', () => {
+        const g = computeTreeConnectorPath(500, PARENT_Y, both);
+        expect(g.junction).toEqual({ x: 500, y: BAR_Y });
+        expect(g.trunkElbowRadius).toBe(0);
+        expect(parsePathPoints(g.trunkPath)).toHaveLength(2);   // straight, no corner
+        expect(drawnTrunk(g)).not.toContain('A');
+    });
+
+    it('parent left of every child: no dot, and the trunk turns into the bar with a 4px elbow', () => {
+        const g = computeTreeConnectorPath(200, PARENT_Y, both);
+        expect(g.junction ?? null).toBeNull();
+        expect(g.trunkElbowRadius).toBe(4);
+        // Starts on the bar, turns up: the corner belongs to the trunk.
+        expect(parsePathPoints(g.trunkPath)).toEqual([
+            { x: 204, y: BAR_Y }, { x: 200, y: BAR_Y }, { x: 200, y: PARENT_Y },
+        ]);
+        expect(drawnTrunk(g)).toContain('A 4 4');
+        // The far end of the bar is unaffected: it is still the outer child's elbow.
+        expect(busByChildX(g.barAndBranchesPath).get(600)).toHaveLength(3);
+    });
+
+    it('parent right of every child: the same, mirrored', () => {
+        const g = computeTreeConnectorPath(900, PARENT_Y, both);
+        expect(g.junction ?? null).toBeNull();
+        expect(parsePathPoints(g.trunkPath)).toEqual([
+            { x: 896, y: BAR_Y }, { x: 900, y: BAR_Y }, { x: 900, y: PARENT_Y },
+        ]);
+        expect(drawnTrunk(g)).toContain('A 4 4');
+        expect(busByChildX(g.barAndBranchesPath).get(400)).toHaveLength(3);
+    });
+
+    it('parent exactly on the first child: three ways again — square T, and the dot is back', () => {
+        const g = computeTreeConnectorPath(400, PARENT_Y, both);
+        expect(g.junction).toEqual({ x: 400, y: BAR_Y });
+        expect(g.trunkElbowRadius).toBe(0);
+        // Branch down, bar to the right, trunk up: the child on the trunk stays a T.
+        expect(busByChildX(g.barAndBranchesPath).get(400)).toEqual([
+            { x: 400, y: CHILD_Y }, { x: 400, y: BAR_Y },
+        ]);
+        expect(parsePathPoints(g.trunkPath)).toHaveLength(2);
+    });
+
+    it('parent exactly on the last child: mirrored, dot present', () => {
+        const g = computeTreeConnectorPath(600, PARENT_Y, both);
+        expect(g.junction).toEqual({ x: 600, y: BAR_Y });
+        expect(busByChildX(g.barAndBranchesPath).get(600)).toEqual([
+            { x: 600, y: CHILD_Y }, { x: 600, y: BAR_Y },
+        ]);
+    });
+
+    it('a bar that barely clears the children clamps the elbow instead of overshooting', () => {
+        // Trunk 5px past the last child: half of that is all the elbow can take.
+        const g = computeTreeConnectorPath(605, PARENT_Y, both);
+        expect(g.trunkElbowRadius).toBe(2.5);
+        expect(parsePathPoints(g.trunkPath)[0]).toEqual({ x: 602.5, y: BAR_Y });
+        // The bar still runs the right way round — it never doubles back on itself.
+        expect(busSpan(g.barAndBranchesPath)).toEqual({ min: 400, max: 602.5 });
     });
 });
 

@@ -24,8 +24,11 @@ export interface TreeGeometry {
     trunkPath: string;
     barAndBranchesPath: string;
     branchPaths: Map<string, string>;
-    /** Where the trunk meets the bar — null when there is no bar (single child) */
+    /** Where the trunk meets the bar — null with no bar, and null when the trunk
+     *  lands on an end of the bar, where nothing else meets it */
     junction?: { x: number; y: number } | null;
+    /** Radius of the trunk's own elbow, > 0 only when the trunk lands on a bar end */
+    trunkElbowRadius?: number;
 }
 
 export interface TreeLayoutResult {
@@ -196,11 +199,15 @@ export function useTreeLayout(
         if (!isPrimary || !isGrouped || !treeGeometry) return '';
         const trunkPts = parsePathPoints(treeGeometry.trunkPath);
         if (trunkPts.length < 2) return treeGeometry.trunkPath;
+        // The radius comes from the geometry: it is 0 unless the trunk lands on an
+        // end of the bar, and there it is already clamped to the segments it joins.
+        // A straight trunk is two points, which both helpers leave alone.
+        const elbow = treeGeometry.trunkElbowRadius ?? 0;
         const trunkCrossings = getEdgeCrossings(`${edgeId}__trunk`, trunkPts, activeNodeIds, []);
         if (trunkCrossings.length > 0) {
-            return buildFinalPath(trunkPts, trunkCrossings, 4, 6);
+            return buildFinalPath(trunkPts, trunkCrossings, elbow, 6);
         }
-        return roundManhattanPath(treeGeometry.trunkPath, 4);
+        return roundManhattanPath(treeGeometry.trunkPath, elbow);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [edgeId, isPrimary, isGrouped, treeGeometry, activeNodeIds, allEdges]);
 

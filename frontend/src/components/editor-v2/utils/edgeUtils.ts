@@ -1138,8 +1138,11 @@ export interface TreeConnectorGeometry {
     barAndBranchesPath: string;
     /** Per-edge hit-test paths (edgeId → L-shaped route from trunk junction to child) */
     branchPaths: Map<string, string>;
-    /** Where the trunk meets the bar — null when there is no bar (single child) */
+    /** Where the trunk meets the bar — null when there is no bar (single child), and
+     *  null when the trunk lands on an END of the bar, where nothing else meets it. */
     junction?: { x: number; y: number } | null;
+    /** Radius of the trunk's own elbow, > 0 only when the trunk lands on a bar end. */
+    trunkElbowRadius?: number;
 }
 
 /** Corner radius of the two outer elbows, where the bus turns toward the trunk. */
@@ -1242,10 +1245,34 @@ export function computeTreeConnectorPath(
         obstacleRects, excludeIds,
     );
 
-    // Trunk: bar → parent, full length (markerEnd lands on the parent end).
-    // It reaches the bar: the junction is a T, so nothing is shortened here to
-    // leave room for an arc.
-    const trunkPath = `M ${parentX} ${barY} L ${parentX} ${parentY}`;
+    // Where the trunk lands on the bar decides whether that point is a junction or
+    // just a corner. With the parent outside the child span the trunk arrives at an
+    // END of the bar and only two segments meet there: it gets the elbow the outer
+    // children get, and no dot. A trunk that lands on a child's branch instead is a
+    // three-way junction — branch down, bar inward, trunk up — so that child keeps
+    // its square T and the dot stays.
+    const trunkPastLeftEnd = parentX < leftX - TRUNK_COLLINEAR_EPS;
+    const trunkPastRightEnd = parentX > rightX + TRUNK_COLLINEAR_EPS;
+    const trunkAtBarEnd = trunkPastLeftEnd || trunkPastRightEnd;
+
+    // Clamped like every other elbow: never more than half the segments it joins,
+    // so a bar that barely reaches the trunk keeps a straight piece on both sides.
+    const barBeyondChildren = trunkPastLeftEnd ? leftX - parentX : trunkPastRightEnd ? parentX - rightX : 0;
+    const trunkElbowRadius = trunkAtBarEnd
+        ? Math.min(TREE_BUS_CORNER_RADIUS, barBeyondChildren / 2, Math.abs(barY - parentY) / 2)
+        : 0;
+
+    // Where the children's half of the bar stops: short of the trunk by the elbow,
+    // which the trunk path draws itself.
+    const barJoinX = trunkPastLeftEnd ? parentX + trunkElbowRadius
+        : trunkPastRightEnd ? parentX - trunkElbowRadius
+        : parentX;
+
+    // Trunk: bar → parent, full length (markerEnd lands on the parent end). With an
+    // elbow it carries the corner itself, so it starts on the bar and turns up.
+    const trunkPath = trunkElbowRadius > 0
+        ? `M ${barJoinX} ${barY} L ${parentX} ${barY} L ${parentX} ${parentY}`
+        : `M ${parentX} ${barY} L ${parentX} ${parentY}`;
 
     // Branches. The bar is not a segment of its own: the child at each end of
     // the bus draws its own half, from its landing point to the trunk. The two
@@ -1267,7 +1294,7 @@ export function computeTreeConnectorPath(
         subPaths.push(
             endsBusOnLeft || endsBusOnRight
                 // Outer child: vertical, then elbow toward the trunk (3 points, 1 corner)
-                ? `M ${child.childX} ${child.childY} L ${child.childX} ${barY} L ${parentX} ${barY}`
+                ? `M ${child.childX} ${child.childY} L ${child.childX} ${barY} L ${barJoinX} ${barY}`
                 // Interior child, the trunk-collinear one included: sharp T (2 points)
                 : `M ${child.childX} ${child.childY} L ${child.childX} ${barY}`
         );
@@ -1281,7 +1308,8 @@ export function computeTreeConnectorPath(
         trunkPath,
         barAndBranchesPath: subPaths.join(' '),
         branchPaths,
-        junction: { x: parentX, y: barY },
+        junction: trunkAtBarEnd ? null : { x: parentX, y: barY },
+        trunkElbowRadius,
     };
 }
 
