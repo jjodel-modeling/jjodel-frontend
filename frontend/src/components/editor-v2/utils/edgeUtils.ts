@@ -1090,7 +1090,27 @@ export interface TreeConnectorGeometry {
 }
 
 /** Corner radius of the two outer elbows, where the bus turns toward the trunk. */
-export const TREE_BUS_CORNER_RADIUS = 8;
+export const TREE_BUS_CORNER_RADIUS = 16;
+
+/**
+ * Radius to round one bus sub-path with: the nominal one, clamped to half of its
+ * shortest segment.
+ *
+ * The clamp is the point. `roundManhattanPath` lets the first and last corner of a
+ * path consume its whole end segment, which at radius 16 turns a short branch into
+ * one long arc; half the segment always leaves a straight piece on both sides of
+ * the elbow. Two-point sub-paths — every interior child — have no corner and get 0,
+ * which keeps their T-junction square.
+ */
+export function treeBusCornerRadius(points: { x: number; y: number }[]): number {
+    if (points.length < 3) return 0;
+    let shortest = Infinity;
+    for (let i = 0; i < points.length - 1; i++) {
+        const len = Math.abs(points[i + 1].x - points[i].x) + Math.abs(points[i + 1].y - points[i].y);
+        if (len < shortest) shortest = len;
+    }
+    return Math.min(TREE_BUS_CORNER_RADIUS, shortest / 2);
+}
 
 /** Under this distance a child counts as collinear with the trunk (sharp T-junction). */
 const TRUNK_COLLINEAR_EPS = 0.5;

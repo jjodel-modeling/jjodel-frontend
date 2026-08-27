@@ -11,8 +11,8 @@ import { resolve } from 'node:path';
  * consumes, which value the light map holds. It cannot resolve the cascade, so
  * it cannot prove the painted colour. The browser-side measurement of the
  * resolved stroke lives in `scripts/smoke/_tmp_inheritance_bus.ts`, which reads
- * getComputedStyle on a real tree (measured 2026-08-27: rgb(148, 163, 184) on a
- * non-selected edge in the light theme).
+ * getComputedStyle on a real tree (measured 2026-08-27: rgb(0, 0, 0) on a
+ * non-selected edge in the light theme, rgb(2, 132, 199) on a selected one).
  */
 
 const read = (p: string) => readFileSync(resolve(__dirname, p), 'utf8');
@@ -37,9 +37,9 @@ const scssBlock = (selector: string) => {
 const topLevelDecls = (block: string) => block.split(/&[.:]/)[0];
 
 describe('inheritance edge — colour wiring', () => {
-    it('the light map carries the slate stroke and the white triangle', () => {
+    it('the light map carries the black stroke and the white triangle', () => {
         const light = themeMap('light');
-        expect(light).toMatch(/'inheritance-stroke':\s*#94a3b8,/);
+        expect(light).toMatch(/'inheritance-stroke':\s*#000000,/);
         expect(light).toMatch(/'inheritance-marker-fill':\s*#ffffff,/);
     });
 

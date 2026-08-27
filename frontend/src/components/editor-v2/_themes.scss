@@ -98,8 +98,8 @@ $editor-v2-theme-dark: (
   'edge-marker-stroke': rgba(255, 255, 255, 0.5),
   // Inheritance keeps its own pair so the shared bus can be restyled without
   // touching reference edges. Dark holds the values the edges already had: the
-  // slate-400 of the light map is legible here too (~5.6:1 on the canvas), but
-  // nothing in the mockup asked for it, so the dark canvas stays as committed.
+  // black of the light map would sink into the canvas here, so the dark side
+  // keeps the white the other edges use.
   'inheritance-stroke': rgba(255, 255, 255, 0.5),
   'inheritance-marker-fill': #1e293b,
 
@@ -260,8 +260,8 @@ $editor-v2-theme-light: (
   'edge-label-bg': #ffffff,
   'edge-marker-fill': #f8fafc,
   'edge-marker-stroke': rgba(0, 0, 0, 0.5),
-  // Inheritance: slate-400 opaque, and a plain white triangle (see the dark map).
-  'inheritance-stroke': #94a3b8,
+  // Inheritance: black line, plain white triangle (see the dark map).
+  'inheritance-stroke': #000000,
   'inheritance-marker-fill': #ffffff,
 
   // Input
