@@ -19,7 +19,7 @@ import {
     multiplicityLabel,
     widgetForPrimitive,
 } from '../useFormWidgets';
-import { meaningfulValues, rawValues } from '../slotValues';
+import { assignableOptions, meaningfulValues, rawValues } from '../slotValues';
 import type { FormSpec } from '../irTypes';
 
 // --- fixtures ---------------------------------------------------------------
@@ -362,5 +362,48 @@ describe('isBasicField', () => {
 
     it('an empty declared list hides everything in Basic', () => {
         expect(isBasicField(name, { basic: [] })).toBe(false);
+    });
+});
+
+// --- candidati assegnabili (E3) ----------------------------------------------
+
+describe('assignableOptions', () => {
+    const OPTS = [{ label: 'Bound Objects', options: [
+        { value: 't_start', label: 'start' },
+        { value: 't_stop', label: 'stop' },
+        { value: 't_fault', label: 'fault' },
+    ] }];
+
+    it('drops the ids the list already holds', () => {
+        // The defect this closes: the Add popover of `outgoing` offered `stop` and `fault`
+        // while both were already assigned, so two clicks produced a duplicate.
+        const out = assignableOptions(OPTS, ['t_stop', 't_fault']);
+        expect(out[0].options.map(o => o.value)).toEqual(['t_start']);
+    });
+
+    it('ignores holes: undefined and null are not taken ids', () => {
+        // Removal leaves a hole rather than shortening (see formWrite.clearSlotValue), so the
+        // taken list routinely carries them.
+        const out = assignableOptions(OPTS, ['t_stop', null, undefined, '']);
+        expect(out[0].options.map(o => o.value)).toEqual(['t_start', 't_fault']);
+    });
+
+    it('returns the options untouched when nothing is taken', () => {
+        expect(assignableOptions(OPTS, [])).toBe(OPTS);
+        expect(assignableOptions(OPTS, [null, undefined])).toBe(OPTS);
+    });
+
+    it('drops a group whole when all of its options are taken', () => {
+        const two = [
+            { label: 'A', options: [{ value: 'a1', label: 'a1' }] },
+            { label: 'B', options: [{ value: 'b1', label: 'b1' }] },
+        ];
+        const out = assignableOptions(two, ['a1']);
+        expect(out.map(g => g.label)).toEqual(['B']);
+    });
+
+    it('returns an empty list when every candidate is taken, which is what disables Add', () => {
+        const out = assignableOptions(OPTS, ['t_start', 't_stop', 't_fault']);
+        expect(out).toEqual([]);
     });
 });

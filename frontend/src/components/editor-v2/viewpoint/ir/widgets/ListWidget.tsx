@@ -17,10 +17,11 @@
  * wrong value.
  */
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import type { FormFieldOptionGroup } from '../useFormWidgets';
+import { assignableOptions } from '../slotValues';
 import ReferencePicker from './ReferencePicker';
-import { referenceLetter, referenceName } from './ReferenceWidget';
+import { metaclassLetter, referenceName } from './ReferenceWidget';
 
 export interface ListWidgetProps {
     /** Raw values, holes included: the array index is the removal key. */
@@ -44,11 +45,17 @@ export function ListWidget(props: ListWidgetProps) {
     const [anchor, setAnchor] = useState<DOMRect | null>(null);
     const addRef = useRef<HTMLButtonElement>(null);
 
+    // Values already in the list, by raw position: `values` carries holes, and a hole is not
+    // a taken id.
+    const addable = useMemo(() => assignableOptions(options, values), [options, values]);
+    const nothingLeft = addable.length === 0;
+    const addBlocked = !!atUpperBound || nothingLeft;
+
     const openAdd = useCallback(() => {
-        if (readOnly || atUpperBound) return;
+        if (readOnly || addBlocked) return;
         const r = addRef.current?.getBoundingClientRect();
         if (r) setAnchor(r);
-    }, [readOnly, atUpperBound]);
+    }, [readOnly, addBlocked]);
 
     // Index preserved: `i` is the position in the raw array, which is what onRemove addresses.
     const rows = values
@@ -65,7 +72,7 @@ export function ListWidget(props: ListWidgetProps) {
                 const sub = secondary?.(target);
                 return (
                     <div className="ir-list__row" key={`${target}-${i}`}>
-                        <span className="ir-list__badge" aria-hidden="true">{referenceLetter(name)}</span>
+                        <span className="ir-list__badge" aria-hidden="true">{metaclassLetter(target, typeName)}</span>
                         <span className="ir-list__name" title={name}>{name}</span>
                         {sub && <span className="ir-list__secondary">{sub}</span>}
                         {!readOnly && (
@@ -87,12 +94,16 @@ export function ListWidget(props: ListWidgetProps) {
                 <button
                     ref={addRef}
                     type="button"
-                    className={`ir-list__add${atUpperBound ? ' ir-list__add--disabled' : ''}`}
-                    disabled={atUpperBound}
-                    // The native tooltip carries the reason. A slate bubble is drawn in the
-                    // mockup, but a custom tooltip is a piece of chrome with its own
-                    // positioning and dismissal, and this slice has no other use for one.
-                    title={atUpperBound ? `Maximum ${upperBound}` : `Add ${typeName || 'element'}`}
+                    className={`ir-list__add${addBlocked ? ' ir-list__add--disabled' : ''}`}
+                    disabled={addBlocked}
+                    // The native tooltip carries the reason, and the two reasons are different:
+                    // "full" and "nothing left to add" look the same on a disabled button and
+                    // are not the same situation. A slate bubble is drawn in the mockup, but a
+                    // custom tooltip is chrome with its own positioning and dismissal, and this
+                    // slice has no other use for one.
+                    title={atUpperBound ? `Maximum ${upperBound}`
+                        : nothingLeft ? 'No candidates left'
+                        : `Add ${typeName || 'element'}`}
                     onClick={openAdd}
                 >
                     <i className="bi bi-plus" aria-hidden="true" />
@@ -103,7 +114,7 @@ export function ListWidget(props: ListWidgetProps) {
             {anchor && onAppend && (
                 <ReferencePicker
                     anchor={anchor}
-                    options={options}
+                    options={addable}
                     value=""
                     // Appending has nothing to unset: "(none)" would mean "append nothing".
                     allowNone={false}

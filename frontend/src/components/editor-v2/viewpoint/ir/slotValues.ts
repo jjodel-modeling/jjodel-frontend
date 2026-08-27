@@ -33,3 +33,37 @@ export function rawValues(slot: SlotProxy): unknown[] {
 export function meaningfulValues(slot: SlotProxy): unknown[] {
     return rawValues(slot).filter(v => v != null && v !== '');
 }
+
+/** One option group of a select-like widget. Structurally identical to
+ *  `useFormWidgets.FormFieldOptionGroup`, restated here so this module stays free of any
+ *  import that could drag the framework barrel in. */
+interface OptionGroup { label: string; options: { value: string; label: string }[] }
+
+/**
+ * Candidates still assignable to a multivalued reference: the declared options minus the ids
+ * the slot already holds.
+ *
+ * A multivalued reference is a SET, not a bag - `unique` is EMF's default - so offering an
+ * element that is already in the list puts a duplicate one click away, and nothing downstream
+ * would object to it. Measured on the fixture: the Add popover of `outgoing` listed `stop` and
+ * `fault` while both were already assigned.
+ *
+ * Lives here, and not next to the widget that uses it, for the reason this module exists at
+ * all: `ListWidget` reaches the joiner barrel through `ReferenceWidget`, so a node test that
+ * imported it would die on `window is not defined` before running an assertion. Verified, not
+ * assumed.
+ *
+ * Holes in `taken` are ignored: `undefined` is not a taken id.
+ */
+export function assignableOptions(options: OptionGroup[], taken: readonly unknown[]): OptionGroup[] {
+    const used = new Set(taken.filter(v => typeof v === 'string') as string[]);
+    if (used.size === 0) return options;
+    const out: OptionGroup[] = [];
+    for (const g of options) {
+        const left = g.options.filter(o => !used.has(o.value));
+        // A group with nothing left is dropped whole: an empty heading would suggest the group
+        // is there but empty, which is not the same as "all of them are already assigned".
+        if (left.length) out.push({ label: g.label, options: left });
+    }
+    return out;
+}

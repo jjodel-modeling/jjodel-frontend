@@ -592,11 +592,19 @@
 
 .ir-picker__search-icon { font-size: 11px; color: var(--color-form-muted); }
 
-.ir-picker__search-input {
+/* `.ir-picker input.` and not the bare class: this input is a `type="text"`, so the (0,1,1)
+   rule of _form-system.scss reaches it and would give it a 36px height and a border of its own
+   inside the 28px search row. Worse here than anywhere else in the form, because the popover is
+   portalled onto <body> and therefore OUTSIDE `.ir-form`: the `--form-input-*` re-pointing done
+   there does not reach it, so the value that rule reads is the global 36px, not the form's 28. */
+.ir-picker input.ir-picker__search-input {
     flex: 1 1 auto;
     min-width: 0;
+    height: 100%;
+    padding: 0;
     border: none;
     outline: none;
+    box-shadow: none;
     background: transparent;
     font-family: inherit;
     font-size: var(--text-sm);
@@ -774,8 +782,12 @@
 .ir-chips__empty { font-size: var(--text-xs); color: var(--color-form-muted); font-style: italic; padding-left: 4px; }
 
 /* Same height as a chip, so turning Add into a field does not change the container's height:
-   the zero-shift rule holds inside a control too, not only between fields. */
-.ir-chips__input {
+   the zero-shift rule holds inside a control too, not only between fields.
+   `.ir-form input.` and not the bare class, for the third time in this file and for the same
+   reason: at (0,1,0) the 20px below loses to the 28px that `input[type="text"]` reads from
+   `--form-input-height`, the container grew to 36px on opening and everything under it dropped
+   by 8px. Measured on screen, not deduced. */
+.ir-form input.ir-chips__input {
     height: 20px;
     min-width: 80px;
     flex: 0 1 120px;
@@ -783,6 +795,7 @@
     border: 1px solid var(--color-accent);
     border-radius: var(--radius-sm);
     outline: none;
+    box-shadow: none;
     background: var(--color-form-surface);
     font-family: inherit;
     font-size: var(--text-xs);

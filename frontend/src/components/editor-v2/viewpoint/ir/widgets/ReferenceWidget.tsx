@@ -46,9 +46,30 @@ export function referenceName(id: string): string {
     return '';
 }
 
-/** Letter badge of a pointed element: first letter of its name, as the picker rows use. */
-export function referenceLetter(name: string): string {
-    return (name || '?').charAt(0).toUpperCase();
+/**
+ * Letter badge of a pointed element: the initial of its METACLASS, not of its own name.
+ *
+ * `S` for every State and `T` for every Transition, so the badge says what kind of thing the
+ * row holds. Keying it on the instance name instead gave three different letters to three
+ * States (`I`, `R`, `O`), which reads as three kinds and carries no information the name
+ * beside it does not already carry.
+ *
+ * `fallbackTypeName` is the DECLARED type of the reference, used when the target cannot be
+ * resolved: a dangling pointer still belongs to a known type, so the badge stays right even
+ * when the element is gone.
+ */
+export function metaclassLetter(id: string, fallbackTypeName?: string): string {
+    let source = fallbackTypeName ?? '';
+    if (id) {
+        try {
+            const l: any = LPointerTargetable.fromPointer(id);
+            const n = l?.instanceof?.name;
+            if (n) source = String(n);
+        } catch {
+            // Falls through to the declared type.
+        }
+    }
+    return (source || '?').charAt(0).toUpperCase();
 }
 
 export function ReferenceWidget(props: ReferenceWidgetProps) {
@@ -86,7 +107,7 @@ export function ReferenceWidget(props: ReferenceWidgetProps) {
                     </>
                 ) : (
                     <>
-                        <span className="ir-ref__badge" aria-hidden="true">{referenceLetter(name)}</span>
+                        <span className="ir-ref__badge" aria-hidden="true">{metaclassLetter(value, typeName)}</span>
                         <span className="ir-ref__name">{name}</span>
                     </>
                 )}

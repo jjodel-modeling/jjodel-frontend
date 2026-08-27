@@ -387,10 +387,18 @@ $gradient-hover: linear-gradient(180deg, $slate-100 0%, $slate-200 100%);
      Where an existing semantic role matches exactly, these reference it instead
      of restating the value, so the two stay in step by construction.
      ============================================ */
-  --color-form-surface: var(--color-bg-secondary);   /* input and card fill (#ffffff) */
-  --color-form-panel: var(--color-bg-primary);       /* card-theme panel, sub-form header (#f8fafc) */
+  /* Spelled out, NOT aliased to --color-bg-secondary / --color-bg-primary /
+     --color-border-primary, which is how these three were first written and how they came out
+     INVERTED. Those names are on the list of 15 declared by BOTH styles/tokens/ and
+     styles/tokens.css with different values (discovery finding 7), and tokens.css wins the
+     cascade: --color-form-surface painted #f8fafc and --color-form-panel painted #ffffff, each
+     other's value, while border-strong collapsed onto border. Measured 2026-08-27.
+     The rule that block states, never use one of the 15, covers reaching them through an alias
+     too. That is the half that was easy to miss. */
+  --color-form-surface: #ffffff;                     /* input and card fill */
+  --color-form-panel: #{$slate-50};                  /* card-theme panel, sub-form header */
   --color-form-border: #{$slate-200};                /* input border — $slate-200, NOT $slate-250 */
-  --color-form-border-strong: var(--color-border-primary); /* checkbox, dashed Add (#cbd5e1) */
+  --color-form-border-strong: #{$slate-300};         /* checkbox, dashed Add */
   --color-form-summary: #fcfdfe;                     /* problem summary strip; no existing role */
   --color-form-label: var(--color-text-tertiary);    /* field label 11px (#475569) */
   --color-form-muted: #{$slate-400};                 /* multiplicity, eyebrow, placeholder.

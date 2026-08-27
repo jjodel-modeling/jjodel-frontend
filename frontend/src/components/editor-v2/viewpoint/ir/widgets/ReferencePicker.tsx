@@ -17,6 +17,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { computeListStyle } from '../../../components/InlineObjectSelect';
+import { metaclassLetter } from './ReferenceWidget';
 import type { FormFieldOptionGroup } from '../useFormWidgets';
 
 export interface ReferenceCandidate {
@@ -140,7 +141,7 @@ export function ReferencePicker(props: ReferencePickerProps) {
                         {c.value === NONE
                             ? <span className="ir-picker__none">(none)</span>
                             : <>
-                                <span className="ir-picker__badge" aria-hidden="true">{(c.label || '?').charAt(0).toUpperCase()}</span>
+                                <span className="ir-picker__badge" aria-hidden="true">{metaclassLetter(c.value, typeName)}</span>
                                 <span className="ir-picker__name">{c.label}</span>
                                 {c.group && <span className="ir-picker__group">{c.group}</span>}
                             </>}

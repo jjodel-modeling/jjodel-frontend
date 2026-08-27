@@ -298,9 +298,14 @@ default generato (`State_0`, `Transition_0`). Il binding di identita' descritto 
 3.12 propaga slot -> nome solo quando lo slot viene **scritto** attraverso `setValueAtPosition`,
 non al momento dell'import. Chi legge il campo D vede quindi un nome, chi legge il proxy L ne vede
 un altro, per lo stesso elemento e nello stesso istante.
-**Aggirato, non risolto:** la form legge il nome dal proxy L (`IRFormField.displayValue`), che e'
-la stessa lettura dell'header, quindi le due superfici concordano. Ogni altro consumatore che legge
-`idlookup[id].name` su un modello importato mostra ancora il default generato.
+**Aggirato, non risolto:** la form legge il nome dal proxy L (`IRFormField.displayValue`,
+`ReferenceWidget.referenceName`), che e' la stessa lettura dell'header, quindi quelle superfici
+concordano. Ogni altro consumatore che legge `idlookup[id].name` su un modello importato mostra
+ancora il default generato.
+**Consumatori colpiti, censiti finora:** il **breadcrumb in testa al rail**, che mostra
+`Transition_0` / `State_0` mentre la form sotto, per lo stesso elemento, mostra `stop` / `Running`
+(osservato il 2026-08-27 durante la verifica del commit E; non corretto, perche' e' lo stesso
+difetto e va chiuso all'origine e non superficie per superficie).
 **Fix strutturale raccomandato:** allineare i due lati all'import, applicando la stessa
 propagazione che l'edit applica — cioe' scrivendo lo slot `name` per la via che gia' porta al campo
 D, invece di popolarlo direttamente. Da valutare nell'importer, non nella form.
