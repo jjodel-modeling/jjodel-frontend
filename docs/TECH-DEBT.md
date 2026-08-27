@@ -309,3 +309,63 @@ D, invece di popolarlo direttamente. Da valutare nell'importer, non nella form.
 **Riferimenti:** `services/export/XMIService.ts`, `CLAUDE.md` 3.12,
 `components/editor-v2/viewpoint/ir/IRFormField.tsx` (`displayValue`).
 
+---
+
+## `transientProperties.modelElement` non popolato: letture non guardate oltre i due siti corretti
+
+**Registrato:** 2026-08-27
+**Origine:** finding F3 della verifica del commit D della Slice 1b. La riga del reducer che
+popolerebbe la mappa e' commentata (`redux/reducer/reducer.ts:1093`), quindi l'entry manca per
+ogni elemento e chiunque legga `transientProperties.modelElement[id].<campo>` senza guardia
+esplode.
+**Stato attuale:** i due siti che rompevano il pannello classico su una feature `derived` sono
+stati guardati nel commit `9db0b03f8` (`LValue.get_values` e `LValue.set_values` in
+`model/logicWrapper/LModelElement.tsx`, idioma di `ocl/ocl.tsx:80-81`). **Resta almeno un sito
+non guardato**: `joiner/classes.ts:4160`, `transientProperties.modelElement[mid].nodes`, con la
+stessa esposizione. Non toccato perche' fuori dal perimetro autorizzato di quel commit, e perche'
+il percorso che lo raggiunge non e' stato mappato.
+**Fix strutturale raccomandato:** decidere da che parte si chiude. O si ripristina il popolamento
+nel reducer — e allora va capito perche' fu commentato, il commento accanto suggerisce ragioni di
+sostituzione dello stato — oppure si adotta la lazy-create come idioma unico e si guardano tutti i
+siti. La seconda e' quella gia' in uso in tre punti su quattro.
+**Priorita':** media (il difetto e' latente finche' nessuno percorre quella riga; quando la
+percorre, smonta un pannello).
+**Effort stimato:** un'ora per censire i siti e guardarli; la decisione sul reducer e' la parte
+che richiede un archeologo.
+**Riferimenti:** `redux/reducer/reducer.ts:1093`, `joiner/classes.ts:4160`,
+`model/logicWrapper/LModelElement.tsx` (i due siti guardati), `ocl/ocl.tsx:80-81`.
+
+---
+
+## `LValue.removeByIndex` non accorcia l'array quando non ci sono buchi
+
+**Registrato:** 2026-08-27
+**Origine:** micro-discovery del punto 10 della Slice 1b, misurata a schermo prima di scrivere la
+rimozione delle liste della form.
+**Stato attuale:** `removeByIndex` filtra l'array e passa quello piu' corto a `set_values`, che
+scrive i valori nuovi per posizione e poi tronca l'eccesso con
+`SetFieldAction.new(id, 'values', undefined, '-=', true)`. Quel `'-='` rimuove **per valore**:
+se l'array non contiene un `undefined`, non trova nulla da togliere e la coda sopravvive.
+Misurato su uno slot `[0..5]`:
+- da `["hot","cold","warm"]`, `removeByIndex(1)` produce **`["hot","warm","warm"]`** (lunghezza 3,
+  ultimo valore duplicato);
+- da `["hot",null,"warm"]` — cioe' un array che gia' contiene un buco — `removeByIndex(0)` produce
+  `["warm",null]`, lunghezza 2: li' il troncamento riesce, perche' un `undefined` da rimuovere
+  c'e'.
+Il difetto e' quindi intermittente rispetto allo stato dell'array, il che lo rende facile da non
+vedere.
+**Aggirato, non risolto:** la form NON usa `removeByIndex`. Rimuove con
+`setValueAtPosition(i, undefined)`, che lascia un buco alla posizione `i` senza accorciare — lo
+stesso che fa il pannello classico (`Info.tsx`), quindi le due superfici lasciano il modello nella
+stessa forma. I widget di lista e di chip saltano i buchi in rendering e conservano l'indice
+grezzo, che e' la chiave della rimozione successiva.
+**Fix strutturale raccomandato:** troncare per posizione invece che per valore in `set_values`
+(un `'-='` che accorci di uno, o una riscrittura dell'intero array). Va fatto con un test sui
+tre casi misurati sopra, perche' ogni scrittore di `values` passa di li'.
+**Priorita':** media. Nessun chiamante noto oggi si affida al troncamento, ma la funzione e'
+pubblica e il nome promette quello che non fa.
+**Effort stimato:** mezza giornata, quasi tutta di verifica sui chiamanti.
+**Riferimenti:** `model/logicWrapper/LModelElement.tsx` (`get_removeByIndex`, `set_values` e il
+suo blocco `excess`), `components/editor-v2/viewpoint/ir/formWrite.ts` (`clearSlotValue`, che
+documenta la misura), `components/editors/Info.tsx:736-741`.
+

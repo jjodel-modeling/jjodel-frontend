@@ -1,5 +1,5 @@
 /**
- * IRForm — renders a model object as a form of editable widgets.
+ * IRForm, renders a model object as a form of editable widgets.
  *
  * The second rendering mode of a view. The same view that draws a symbol on the canvas
  * (applies-to, predicate, priority, compartments) can also render as a form; what the
@@ -14,7 +14,7 @@
  * because the default differs per host (plain in the rail, card in the document).
  *
  * Reactivity comes entirely from `useIRFormView`, whose signature covers the object's
- * name, its metaclass and every slot's values. This component holds no model state — only
+ * name, its metaclass and every slot's values. This component holds no model state, only
  * the Basic/Advanced mode, which is a property of the viewer, not of the model.
  */
 
@@ -157,7 +157,7 @@ export function IRForm({ objectId, defaultTheme = 'plain' }: IRFormProps) {
     const visible = mode === 'advanced' ? fields : fields.filter(f => isBasicField(f, spec));
 
     // The registry is keyed by node id, and the conformance producer registers every violated
-    // object TWICE — once under its DObject id for the tree, once under its DVertex id for the
+    // object TWICE, once under its DObject id for the tree, once under its DVertex id for the
     // canvas (ConformanceProblemSync). The form asks for the DObject id, which is the half that
     // exists whether or not the object is on a canvas: the rail's subject may have no vertex.
     const problems = useNodeProblems(objectId);
@@ -170,8 +170,8 @@ export function IRForm({ objectId, defaultTheme = 'plain' }: IRFormProps) {
     // Dirty fields, keyed by slot id ('name' for the intrinsic identity field).
     //
     // Reset is EVENTUALLY CONSISTENT, and deliberately so: there is no save event to listen
-    // to. `SaveManager.save()` sets `U.isProjectModified = false` and nothing else — no
-    // action, no custom event, no store field — so the flag going false is the only trace a
+    // to. `SaveManager.save()` sets `U.isProjectModified = false` and nothing else, no
+    // action, no custom event, no store field, so the flag going false is the only trace a
     // save leaves. The form reads it on render and empties the set when it finds it false,
     // which means the markers clear on the first re-render after a save rather than at the
     // instant of it. Subscribing to the flag is not possible (it is a plain static), and
@@ -244,7 +244,7 @@ export function IRForm({ objectId, defaultTheme = 'plain' }: IRFormProps) {
             </div>
 
             {/* Fixed 32px, occupied or not. The counts are the ones NodeProblemIndicator puts
-                in the canvas badge — one unit per violation — so the rail and the node can
+                in the canvas badge, one unit per violation, so the rail and the node can
                 never report a different number for the same object. */}
             <div className="ir-form__summary">
                 {diagnostics.errorCount === 0 && diagnostics.warningCount === 0 ? (

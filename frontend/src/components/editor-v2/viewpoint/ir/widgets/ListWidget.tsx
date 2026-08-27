@@ -1,0 +1,120 @@
+/**
+ * ListWidget, a row per value, for a multivalued reference or for containment children.
+ *
+ * Two behaviours behind one shape, and the difference is deliberate:
+ *
+ *  - a multivalued REFERENCE gets an Add button, which opens the same picker the single
+ *    reference control uses, and appends by id;
+ *  - CONTAINMENT children get no Add in this slice. Adding a child means creating an object,
+ *    choosing its metaclass and placing it, which is a creation flow and not a value edit;
+ *    the rows are readable and removable, and the rest is deferred. Rendering a disabled Add
+ *    would promise a gesture that is not coming.
+ *
+ * Holes are rendered as nothing. `clearSlotValue` writes `undefined` into a position rather
+ * than splicing it out (measured; see formWrite.clearSlotValue), so a slot edited twice holds
+ * gaps, and this walks the raw array to keep the INDEX of each row, the index is what a
+ * removal is addressed by, so re-packing the list here would make the second removal hit the
+ * wrong value.
+ */
+
+import { useCallback, useRef, useState } from 'react';
+import type { FormFieldOptionGroup } from '../useFormWidgets';
+import ReferencePicker from './ReferencePicker';
+import { referenceLetter, referenceName } from './ReferenceWidget';
+
+export interface ListWidgetProps {
+    /** Raw values, holes included: the array index is the removal key. */
+    values: unknown[];
+    onRemove: (index: number) => void;
+    /** Absent for containment children, which have no Add in this slice. */
+    onAppend?: (id: string) => void;
+    options: FormFieldOptionGroup[];
+    typeName: string;
+    /** Secondary text of a row, e.g. "to Off" for a Transition. Absent = no secondary text. */
+    secondary?: (id: string) => string | undefined;
+    /** At the upper bound: Add stays visible but refuses, with the reason in its tooltip. */
+    atUpperBound?: boolean;
+    upperBound?: number;
+    readOnly?: boolean;
+    id?: string;
+}
+
+export function ListWidget(props: ListWidgetProps) {
+    const { values, onRemove, onAppend, options, typeName, secondary, atUpperBound, upperBound, readOnly, id } = props;
+    const [anchor, setAnchor] = useState<DOMRect | null>(null);
+    const addRef = useRef<HTMLButtonElement>(null);
+
+    const openAdd = useCallback(() => {
+        if (readOnly || atUpperBound) return;
+        const r = addRef.current?.getBoundingClientRect();
+        if (r) setAnchor(r);
+    }, [readOnly, atUpperBound]);
+
+    // Index preserved: `i` is the position in the raw array, which is what onRemove addresses.
+    const rows = values
+        .map((v, i) => ({ v, i }))
+        .filter(({ v }) => v != null && v !== '');
+
+    return (
+        <div className="ir-list" id={id}>
+            {rows.length === 0 && <div className="ir-field__row ir-field__empty">No values</div>}
+
+            {rows.map(({ v, i }) => {
+                const target = typeof v === 'string' ? v : String(v);
+                const name = referenceName(target) || target;
+                const sub = secondary?.(target);
+                return (
+                    <div className="ir-list__row" key={`${target}-${i}`}>
+                        <span className="ir-list__badge" aria-hidden="true">{referenceLetter(name)}</span>
+                        <span className="ir-list__name" title={name}>{name}</span>
+                        {sub && <span className="ir-list__secondary">{sub}</span>}
+                        {!readOnly && (
+                            <button
+                                type="button"
+                                className="ir-list__remove"
+                                aria-label={`Remove ${name}`}
+                                title={`Remove ${name}`}
+                                onClick={() => onRemove(i)}
+                            >
+                                <i className="bi bi-x" aria-hidden="true" />
+                            </button>
+                        )}
+                    </div>
+                );
+            })}
+
+            {onAppend && !readOnly && (
+                <button
+                    ref={addRef}
+                    type="button"
+                    className={`ir-list__add${atUpperBound ? ' ir-list__add--disabled' : ''}`}
+                    disabled={atUpperBound}
+                    // The native tooltip carries the reason. A slate bubble is drawn in the
+                    // mockup, but a custom tooltip is a piece of chrome with its own
+                    // positioning and dismissal, and this slice has no other use for one.
+                    title={atUpperBound ? `Maximum ${upperBound}` : `Add ${typeName || 'element'}`}
+                    onClick={openAdd}
+                >
+                    <i className="bi bi-plus" aria-hidden="true" />
+                    Add
+                </button>
+            )}
+
+            {anchor && onAppend && (
+                <ReferencePicker
+                    anchor={anchor}
+                    options={options}
+                    value=""
+                    // Appending has nothing to unset: "(none)" would mean "append nothing".
+                    allowNone={false}
+                    typeName={typeName}
+                    onPick={onAppend}
+                    onClear={() => { /* unreachable: allowNone is false */ }}
+                    onClose={() => setAnchor(null)}
+                />
+            )}
+        </div>
+    );
+}
+
+export default ListWidget;

@@ -1,12 +1,12 @@
 /**
- * IRFormField — one field of a form: label row, widget, message slot.
+ * IRFormField, one field of a form: label row, widget, message slot.
  *
  * Three rows, and the third one is the point. The message slot is a fixed 16px that is
  * ALWAYS in the layout, occupied or not, so a diagnostic appearing or clearing never
  * moves the fields below it. Zero layout shift is a hard requirement of the design, not a
  * nicety, and it is the reason this component does not use `ui/Field`: that wrapper
  * renders its message conditionally (`{error && <ErrorText/>}`), so the field's height
- * changes with its validity. The rest of `ui/Field` — label, help text, error text — is
+ * changes with its validity. The rest of `ui/Field`, label, help text, error text, is
  * exactly what is not wanted here either, since the label row carries a required marker
  * and a multiplicity that `ui/Label` knows nothing about.
  *
@@ -23,13 +23,16 @@
 import { useMemo } from 'react';
 import { LPointerTargetable } from '../../../../joiner';
 import type { FormFieldDescriptor } from './useFormWidgets';
-import { multiplicityLabel } from './useFormWidgets';
-import { setSlotValue } from './formWrite';
+import { isAtUpperBound, multiplicityLabel } from './useFormWidgets';
+import { appendSlotValue, clearSlotValue, setSlotValue } from './formWrite';
 import { worstSeverity, type FieldDiagnostic } from './formDiagnostics';
 import TextWidget from './widgets/TextWidget';
 import NumberWidget from './widgets/NumberWidget';
 import CheckboxWidget from './widgets/CheckboxWidget';
 import SelectWidget from './widgets/SelectWidget';
+import ReferenceWidget from './widgets/ReferenceWidget';
+import ListWidget from './widgets/ListWidget';
+import ChipsWidget from './widgets/ChipsWidget';
 
 /** Re-exported so the widgets and the host keep importing it from here, as in Slice 1a;
  *  the single definition now lives with the projection that produces them. */
@@ -54,7 +57,7 @@ export interface IRFormFieldProps {
  *
  * Through the L PROXY, not through `idlookup`. The two disagree, and visibly: `DObject.name`
  * is the D-layer field, which the XMI importer leaves at its generated default (`State_0`),
- * while the L getter reads the identity the user sees — the same one the form header shows a
+ * while the L getter reads the identity the user sees, the same one the form header shows a
  * few pixels above. Reading the raw field made a row say `State_0` under a header saying
  * `Running`, for the same object. The proxy costs a wrap per value; correctness of identity
  * is worth more than that, and the reactivity is unchanged because the caller's subscription
@@ -86,19 +89,102 @@ export function IRFormField({ field, diagnostics, dirty, onCommitted }: IRFormFi
         [field.values],
     );
 
-    // Single-valued and writable: the widget owns the value. Everything else is a
-    // read-only presentation in this slice.
+    // Scalars: single-valued, writable, and not pointing at anything. References and lists
+    // have their own branches below.
     const editable = !field.isMultivalued && !field.isReadOnly
         && !field.isReference && !field.isComposition;
+    const writable = !field.isReadOnly;
+
+    const commitAt = (index: number, value: string | number | boolean | null, isPtr: boolean) => {
+        if (setSlotValue(field.slot, index, value, isPtr)) onCommitted?.(field.slotId);
+    };
+    const clearAt = (index: number, isPtr: boolean) => {
+        if (clearSlotValue(field.slot, index, isPtr)) onCommitted?.(field.slotId);
+    };
+    const appendAt = (value: string | number | boolean, isPtr: boolean) => {
+        if (appendSlotValue(field.slot, value, isPtr)) onCommitted?.(field.slotId);
+    };
+
+    /**
+     * Secondary text of a reference row: where a Transition goes.
+     *
+     * Read off the pointed element's own `target` slot through the proxy, a single hop and
+     * only for the rows on screen. Absent when the element has no such feature, which is most
+     * of them: this is a courtesy for edge-like objects, not a contract.
+     */
+    const rowSecondary = (targetId: string): string | undefined => {
+        try {
+            const l: any = LPointerTargetable.fromPointer(targetId);
+            const t = l?.$target?.value ?? l?.$target?.values?.[0];
+            if (!t) return undefined;
+            const n: any = typeof t === 'string' ? LPointerTargetable.fromPointer(t) : t;
+            return n?.name ? `to ${n.name}` : undefined;
+        } catch {
+            return undefined;
+        }
+    };
 
     const commitScalar = (next: string | number | boolean | null) => {
         // isPtr false: this branch only ever runs for attributes, whose values are
         // primitives. Enums and references take the pointer branch below.
-        if (setSlotValue(field.slot, 0, next, false)) onCommitted?.(field.slotId);
+        commitAt(0, next, false);
     };
 
+    // Dispatch order, and it matters: read-only first (nothing below may offer an edit on a
+    // derived or frozen slot), then the list treatments, then the single reference, then the
+    // scalars. The branches are exclusive, so a feature never gets two controls.
     let control: React.ReactNode;
-    if (editable && field.widget === 'checkbox') {
+    if (field.isReadOnly && !field.isMultivalued) {
+        control = (
+            <div className="ir-field__readonly" id={fieldId}>
+                {displayValue(first) || <span className="ir-field__empty">empty</span>}
+            </div>
+        );
+    } else if (writable && field.treatment === 'list' && (field.isReference || field.isComposition)) {
+        control = (
+            <ListWidget
+                id={fieldId}
+                values={field.values}
+                options={field.options}
+                typeName={field.typeName}
+                secondary={field.isReference ? rowSecondary : undefined}
+                atUpperBound={isAtUpperBound(field)}
+                upperBound={field.upperBound}
+                onRemove={(i) => clearAt(i, true)}
+                // Containment children get no Add in this slice: creating one is a creation
+                // flow, not a value edit. See the ListWidget module comment.
+                onAppend={field.isReference ? (id) => appendAt(id, true) : undefined}
+            />
+        );
+    } else if (writable && field.isMultivalued && !field.isReference && !field.isComposition) {
+        control = (
+            <ChipsWidget
+                id={fieldId}
+                ariaLabel={field.name}
+                values={field.values}
+                atUpperBound={isAtUpperBound(field)}
+                upperBound={field.upperBound}
+                onRemove={(i) => clearAt(i, false)}
+                onAppend={(text) => appendAt(text, false)}
+            />
+        );
+    } else if (writable && (field.isReference || field.isComposition) && !field.isMultivalued) {
+        control = (
+            <ReferenceWidget
+                id={fieldId}
+                ariaLabel={field.name}
+                value={typeof first === 'string' ? first : ''}
+                options={field.options}
+                typeName={field.typeName}
+                // A required single reference cannot be unset: offering "(none)" would put the
+                // model in a state the metamodel forbids, in one click.
+                allowNone={field.lowerBound < 1}
+                invalid={worst === 'error'}
+                onPick={(id) => commitAt(0, id, true)}
+                onClear={() => clearAt(0, true)}
+            />
+        );
+    } else if (editable && field.widget === 'checkbox') {
         control = (
             <CheckboxWidget
                 id={fieldId}
@@ -142,14 +228,8 @@ export function IRFormField({ field, diagnostics, dirty, onCommitted }: IRFormFi
                 onCommit={(t) => commitScalar(t)}
             />
         );
-    } else if (field.isReadOnly && !field.isMultivalued) {
-        control = (
-            <div className="ir-field__readonly" id={fieldId}>
-                {displayValue(first) || <span className="ir-field__empty">empty</span>}
-            </div>
-        );
     } else {
-        // Multivalued, reference or composition: value rows, no controls (Slice 1a).
+        // What is left is read-only and multivalued: a derived list, shown as plain rows.
         control = (
             <div className="ir-field__rows" id={fieldId}>
                 {rowTexts.length === 0
@@ -164,7 +244,7 @@ export function IRFormField({ field, diagnostics, dirty, onCommitted }: IRFormFi
             <div className="ir-field__labelrow">
                 {/* Before the label, not after: it marks the whole field, and the reader
                     should meet it on the way in. A diagnostic still wins the border and the
-                    message slot below — being unsaved is not being wrong. */}
+                    message slot below, being unsaved is not being wrong. */}
                 {dirty && <span className="ir-field__dirty-dot" title="Modified, not saved" aria-hidden="true" />}
                 <label className="ir-field__label" htmlFor={fieldId}>{field.name}</label>
                 {/* Required is a 4px cyan dot, never a red asterisk: red is reserved for
@@ -175,8 +255,8 @@ export function IRFormField({ field, diagnostics, dirty, onCommitted }: IRFormFi
                 {field.isReadOnly && (
                     <i className="bi bi-lock-fill ir-field__lock" title="Read-only" aria-hidden="true" />
                 )}
-                {/* The multiline box is never DERIVED from a type — an EString derives to
-                    `text` — so a textarea here always means the view author asked for one,
+                {/* The multiline box is never DERIVED from a type, an EString derives to
+                    `text`, so a textarea here always means the view author asked for one,
                     and what they asked for is a JjEL expression editor. The hint says so,
                     since nothing else on the field distinguishes it from a long string. */}
                 {field.widget === 'textarea' && field.derivedWidget !== 'textarea' && (

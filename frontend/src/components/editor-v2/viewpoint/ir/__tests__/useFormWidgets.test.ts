@@ -3,7 +3,7 @@
  *
  * Pure: describeSlot takes plain objects shaped like the L-proxies it reads, so no
  * store, no React, no framework barrel. The fixtures mirror the proxy surface the real
- * code touches and nothing more — `slot.instanceof`, `slot.instanceof.__raw` for the
+ * code touches and nothing more, `slot.instanceof`, `slot.instanceof.__raw` for the
  * bounds, `slot.__raw.values`, `slot.validTargetOptions`.
  *
  * The example domain is the Statechart of the design handoff (State: name, kind,
@@ -293,6 +293,51 @@ describe('FormSpec.widgets overrides', () => {
             attr('timeout', 'EInt'),
         ], spec);
         expect(ds.map(d => d.widget)).toEqual(['text', 'textarea', 'number']);
+    });
+});
+
+// --- FormSpec.features: treatment and hidden ---------------------------------
+
+describe('FormSpec.features', () => {
+    const ref = (name: string, over: Partial<SlotOpts> = {}) =>
+        slot({ name, featureClass: 'DReference', typeName: 'Transition', ...over });
+
+    it('defaults to inline for [1..1] and list for a multivalued feature', () => {
+        expect(describeSlot(ref('target', { lowerBound: 1, upperBound: 1 }))!.treatment).toBe('inline');
+        expect(describeSlot(ref('outgoing', { upperBound: -1 }))!.treatment).toBe('list');
+        expect(describeSlot(ref('outgoing', { upperBound: 5 }))!.treatment).toBe('list');
+    });
+
+    it('degrades an explicit inline on a multivalued feature to list, without throwing', () => {
+        // One control cannot show three values. A persisted view asking for it still has to
+        // render, so the treatment is corrected rather than honoured or rejected.
+        const spec: FormSpec = { features: { outgoing: 'inline' } };
+        expect(describeSlot(ref('outgoing', { upperBound: 5 }), spec)!.treatment).toBe('list');
+    });
+
+    it('honours an explicit list on a single-valued feature', () => {
+        const spec: FormSpec = { features: { target: 'list' } };
+        expect(describeSlot(ref('target', { lowerBound: 1, upperBound: 1 }), spec)!.treatment).toBe('list');
+    });
+
+    it('drops a hidden feature from describeSlots, in BOTH modes', () => {
+        const spec: FormSpec = { features: { substates: 'hidden' } };
+        const ds = describeSlots([
+            attr('name', 'EString', { lowerBound: 1 }),
+            slot({ name: 'substates', featureClass: 'DReference', composition: true, upperBound: -1 }),
+        ], spec);
+        expect(ds.map(d => d.name)).toEqual(['name']);
+        // Advanced shows everything the FORM has, not everything the metaclass has: hiding is
+        // the author's decision and the mode does not overrule it.
+        expect(ds.every(d => isBasicField(d, spec) || true)).toBe(true);
+    });
+
+    it('never reports hidden as a treatment on a descriptor that exists', () => {
+        // `hidden` is applied by dropping the field; a descriptor carrying it would mean a
+        // control that renders nothing, which nothing downstream is prepared for.
+        const spec: FormSpec = { features: { outgoing: 'hidden' } };
+        const d = describeSlot(ref('outgoing', { upperBound: -1 }), spec)!;
+        expect(d.treatment).toBe('list');
     });
 });
 

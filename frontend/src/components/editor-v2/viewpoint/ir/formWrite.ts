@@ -1,9 +1,9 @@
 /**
- * formWrite — the single write path of the form rendering of a view.
+ * formWrite, the single write path of the form rendering of a view.
  *
  * Every mutation a form field performs goes through here, and here goes through
  * `LValue`: `setValueAtPosition` for a set or a clear, `SetFieldAction` with '+='
- * for an append. That is NOT a second write path next to the canvas one — it is the
+ * for an append. That is NOT a second write path next to the canvas one, it is the
  * same path one step lower. `canvasToJjom.syncUpdateFeatureValue`, which the inline
  * row editing of IRNodeContent uses, resolves `lObject['$feature'].value = v`, and
  * that assignment routes through `LValue.set_value` into the very same
@@ -74,9 +74,31 @@ export function setSlotValue(
 }
 
 /**
- * Clear the value at `index` (the `x` of a list row, the empty option of a select).
- * Writing `undefined` is how the D layer spells "no value"; it is not the same as
- * removing the position, which the L layer does not expose per-index.
+ * Clear the value at `index`, the `x` of a list row or of a chip.
+ *
+ * This leaves a HOLE, it does not shorten the array. Measured on 2026-08-27, on a
+ * `[0..5]` slot holding `["hot","cold","warm"]`: after `clearSlotValue(slot, 1)` the raw
+ * array is `["hot", null, "warm"]`, still length 3. That follows from
+ * `setValueAtPosition`, which writes `SetFieldAction(data, 'values.<index>', undefined)`
+ * an assignment to a position, not a splice.
+ *
+ * The hole is DELIBERATE, not a limitation worked around. Two reasons:
+ *
+ *  - it is what the classic panel already produces (Info.tsx clears the same way), so the
+ *    form and the panel leave a model in the same shape, and a model edited by one renders
+ *    correctly in the other;
+ *  - the obvious alternative is broken. `LValue.removeByIndex` filters the array and hands
+ *    the shorter one to `set_values`, whose truncation removes the excess BY VALUE
+ *    (`SetFieldAction(id, 'values', undefined, '-=')`). On an array with no hole there is no
+ *    `undefined` to remove, so the tail survives: measured, `removeByIndex(1)` on
+ *    `["hot","cold","warm"]` yields `["hot","warm","warm"]`, the last value duplicated.
+ *    On an array that already has a hole it does truncate, which is why the defect is easy
+ *    to miss. Recorded in docs/TECH-DEBT.md.
+ *
+ * Callers therefore render holes rather than assuming a dense array: `meaningfulValues`
+ * excludes them from the count (so the upper-bound gate stays honest) and the list widgets
+ * skip them. Index stability is a side benefit, removing one value does not renumber the
+ * others, so a second removal targets what the user sees.
  */
 export function clearSlotValue(slot: SlotProxy, index: number, isPtr?: boolean): boolean {
     if (!slot) return false;
@@ -99,7 +121,7 @@ export function clearSlotValue(slot: SlotProxy, index: number, isPtr?: boolean):
  * Append an empty value to a multivalued slot (the "Add" control).
  *
  * The initial value comes from `U.initializeValue(type)`, the existing canon for a
- * fresh slot value — a typed empty, not a bare '' — so a new number row starts at 0
+ * fresh slot value, a typed empty, not a bare '', so a new number row starts at 0
  * and a new boolean row at false. `'+='` on `values` is the same action Info.tsx's
  * add button issues.
  *
@@ -123,11 +145,38 @@ export function addSlotValue(slot: SlotProxy): boolean {
 }
 
 /**
+ * Append a value to a multivalued slot.
+ *
+ * `'+='` on `values`, the same action the classic panel's add button issues. Distinct from
+ * `addSlotValue`, which appends an EMPTY typed value for the user to fill in: this one
+ * appends a value that is already known, which is what the reference picker and the chips
+ * editor produce.
+ */
+export function appendSlotValue(
+    slot: SlotProxy,
+    value: string | number | boolean,
+    isPtr: boolean,
+): boolean {
+    if (!slot) return false;
+    try {
+        TRANSACTION(`form append ${slot.name ?? 'value'}`, () => {
+            const fresh = slot.r ?? slot;
+            SetFieldAction.new(fresh.id, 'values', value, '+=', isPtr);
+        });
+    } catch (err) {
+        console.warn('[formWrite] appendSlotValue failed', { value, err });
+        return false;
+    }
+    U.isProjectModified = true;
+    return true;
+}
+
+/**
  * Rename the object the form is showing.
  *
  * The name is not a slot: it is `DObject.name`, and the L-proxy setter owns both sides
  * of the identity binding (it writes `data.name` AND the `name` slot when the metaclass
- * declares one). Going through the setter is therefore mandatory — writing the field
+ * declares one). Going through the setter is therefore mandatory, writing the field
  * directly would desynchronise the two. See CLAUDE.md 3.12 for why the reverse
  * direction must NOT come back through this setter.
  */

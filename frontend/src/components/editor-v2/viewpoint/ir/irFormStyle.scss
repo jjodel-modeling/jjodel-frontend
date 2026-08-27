@@ -1,14 +1,14 @@
 /**
- * irFormStyle — the form rendering of a view (Slice 1a: the `plain` theme).
+ * irFormStyle, the form rendering of a view (Slice 1a: the `plain` theme).
  *
  * A static stylesheet, not runtime-injected CSS. `irStyle.ts` injects because it emits one
- * class PER VIEW, whose content depends on the authored IR; nothing here does — the form's
+ * class PER VIEW, whose content depends on the authored IR; nothing here does, the form's
  * look varies by THEME, of which there are four known at build time. Injecting it would
  * buy nothing and would put the form's appearance out of reach of the stylesheet tooling.
  *
  * Tokens: the semantic layer in styles/tokens/, plus the `--color-form-*` roles added with
  * this slice. None of the 15 names declared by BOTH styles/tokens/ and styles/tokens.css
- * is used here — with both files loaded at :root the winner depends on cascade order, so
+ * is used here, with both files loaded at :root the winner depends on cascade order, so
  * those names have no dependable value. See the discovery report, finding 7.
  */
 
@@ -133,7 +133,7 @@
     color: var(--color-form-muted);
 }
 
-/* Reserved whether or not it has anything to report — the counterpart of the 16px field
+/* Reserved whether or not it has anything to report, the counterpart of the 16px field
    slot, at the panel's scale. Its height is final now, so the counts that Slice 1b puts
    here will not move the fields below. */
 .ir-form__summary {
@@ -315,7 +315,7 @@
 .ir-field--warning .ir-field__message { color: var(--color-warning-text); }
 
 /* The border of whatever control the field is carrying. Listed rather than wildcarded so a
-   future control has to opt in deliberately; `--dirty` is last on purpose — see below. */
+   future control has to opt in deliberately; `--dirty` is last on purpose, see below. */
 .ir-field--error .ir-field__control,
 .ir-field--error .ir-field__stepper,
 .ir-field--error .ir-field__readonly { border-color: var(--color-error); }
@@ -334,7 +334,7 @@
 .ir-field--dirty .ir-field__message { color: var(--color-form-dirty-text); }
 
 /* 6px, with a 2px halo, so it reads as a state and not as the 4px required dot it sits
-   next to — the two can appear on the same label row. */
+   next to, the two can appear on the same label row. */
 .ir-field__dirty-dot {
     flex: 0 0 auto;
     width: 6px;
@@ -399,7 +399,7 @@
 
 /* `input.` prefix, not a bare class: this input is a `type="text"`, so the (0,1,1) rule of
    _form-system.scss:44 reaches it and would give it a border, a radius and a 36px height of
-   its own INSIDE the stepper's border — a box drawn twice. Element+class is (0,1,1) too, so
+   its own INSIDE the stepper's border, a box drawn twice. Element+class is (0,1,1) too, so
    `.ir-form` in front takes it to (0,2,1) and the question stops depending on import order. */
 .ir-form input.ir-field__stepper-value {
     flex: 1 1 auto;
@@ -416,7 +416,7 @@
 }
 
 /* The two segments sit INSIDE the field's border, separated from the value and from each
-   other by hairlines — the border belongs to the field, not to the buttons. */
+   other by hairlines, the border belongs to the field, not to the buttons. */
 .ir-field__stepper-btn {
     flex: 0 0 24px;
     width: 24px;
@@ -516,3 +516,277 @@
     color: var(--color-form-muted);
     font-style: italic;
 }
+
+/* --- reference control ------------------------------------------------------ */
+
+/* Carries `.ir-field__control` too, so it inherits the field's border, radius and focus ring
+   from the rules above; only what a button needs beyond an input is set here. */
+.ir-ref {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    height: var(--control-height-lg);
+    box-sizing: border-box;
+    padding: 0 6px 0 8px;
+    background: var(--color-form-surface);
+    border: 1px solid var(--color-form-border);
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: var(--text-sm);
+    color: var(--color-text-primary);
+    text-align: left;
+    cursor: pointer;
+}
+
+.ir-ref:disabled { background: var(--color-bg-tertiary); cursor: not-allowed; }
+.ir-ref:hover:not(:disabled) { border-color: var(--color-form-border-strong); }
+
+.ir-ref__badge {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: var(--radius-xs);
+    background: var(--color-entity-object-bg);
+    color: var(--color-entity-object-fg);
+    font-size: var(--text-2xs);
+    font-weight: var(--font-semibold);
+    line-height: 1;
+}
+
+.ir-ref__name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ir-ref__link { flex: 0 0 auto; font-size: 12px; color: var(--color-form-muted); }
+.ir-ref__placeholder { flex: 1 1 auto; min-width: 0; color: var(--color-form-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ir-ref__chevron { flex: 0 0 auto; font-size: 11px; color: var(--color-form-muted); }
+
+/* --- picker popover --------------------------------------------------------- */
+
+/* Positioned inline by computeListStyle (imported from InlineObjectSelect), which sets
+   position/left/top-or-bottom/maxHeight/zIndex. Everything else is here. The element is
+   portalled onto <body>, so it is NOT inside `.ir-form` and cannot inherit the token
+   re-pointing done there: every value below is a token read directly. */
+.ir-picker {
+    display: flex;
+    flex-direction: column;
+    min-width: 220px;
+    overflow: hidden;
+    background: var(--color-form-surface);
+    border: 1px solid var(--color-form-border);
+    border-radius: var(--radius-control);
+    box-shadow: var(--shadow-popover);
+    font-family: var(--font-sans);
+}
+
+.ir-picker__search {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: var(--control-height-lg);
+    flex: 0 0 auto;
+    padding: 0 8px;
+    border-bottom: 1px solid var(--color-form-border);
+}
+
+.ir-picker__search-icon { font-size: 11px; color: var(--color-form-muted); }
+
+.ir-picker__search-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-family: inherit;
+    font-size: var(--text-sm);
+    color: var(--color-text-primary);
+}
+
+.ir-picker__list { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 4px; }
+
+.ir-picker__row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: var(--control-height-md);
+    box-sizing: border-box;
+    padding: 0 6px;
+    border-left: 2px solid transparent;
+    border-radius: var(--radius-sm);
+    font-size: var(--text-sm);
+    color: var(--color-text-primary);
+    cursor: pointer;
+}
+
+/* The canvas selection tokens, not a colour of the form's own: picking a target here and
+   selecting that same element on the canvas are the same act, and they should look it. */
+.ir-picker__row--active {
+    background: var(--color-selection-bg);
+    border-left-color: var(--color-selection-bar);
+}
+
+.ir-picker__badge {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: var(--radius-xs);
+    background: var(--color-entity-object-bg);
+    color: var(--color-entity-object-fg);
+    font-size: var(--text-2xs);
+    font-weight: var(--font-semibold);
+    line-height: 1;
+}
+
+.ir-picker__name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ir-picker__group { flex: 0 0 auto; font-size: var(--text-2xs); color: var(--color-form-muted); }
+.ir-picker__none { flex: 1 1 auto; color: var(--color-form-muted); font-style: italic; }
+.ir-picker__empty { padding: 8px 6px; font-size: var(--text-md); color: var(--color-form-muted); text-align: center; }
+
+/* --- lists ------------------------------------------------------------------ */
+
+.ir-list { display: flex; flex-direction: column; gap: 2px; }
+
+.ir-list__row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: var(--control-height-lg);
+    box-sizing: border-box;
+    padding: 0 4px 0 8px;
+    background: var(--color-form-surface);
+    border: 1px solid var(--color-form-border);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-sm);
+}
+
+.ir-list__badge {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: var(--radius-xs);
+    background: var(--color-entity-object-bg);
+    color: var(--color-entity-object-fg);
+    font-size: var(--text-2xs);
+    font-weight: var(--font-semibold);
+    line-height: 1;
+}
+
+.ir-list__name { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ir-list__secondary { flex: 1 1 auto; min-width: 0; font-size: var(--text-xs); color: var(--color-form-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.ir-list__remove,
+.ir-chips__remove {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    margin-left: auto;
+    padding: 0;
+    border: none;
+    border-radius: var(--radius-xs);
+    background: transparent;
+    color: var(--color-form-muted);
+    font-size: 11px;
+    cursor: pointer;
+    transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.ir-list__remove:hover,
+.ir-chips__remove:hover { background: var(--color-bg-tertiary); color: var(--color-text-primary); }
+
+/* Dashed, so it reads as "there could be one more here" rather than as a filled row. */
+.ir-list__add,
+.ir-chips__add {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    height: var(--control-height-sm);
+    padding: 0 8px;
+    border: 1px dashed var(--color-form-border-strong);
+    border-radius: var(--radius-sm);
+    background: transparent;
+    font-family: inherit;
+    font-size: var(--text-xs);
+    color: var(--color-form-section);
+    cursor: pointer;
+    transition: background var(--transition-fast), border-color var(--transition-fast);
+
+    > i { font-size: 10px; }
+}
+
+.ir-list__add { align-self: flex-start; margin-top: 2px; }
+
+.ir-list__add:hover:not(:disabled),
+.ir-chips__add:hover:not(:disabled) { background: var(--color-bg-tertiary); border-color: var(--color-form-muted); }
+
+.ir-list__add--disabled,
+.ir-chips__add--disabled,
+.ir-list__add:disabled,
+.ir-chips__add:disabled {
+    border-color: var(--color-form-border);
+    color: var(--color-form-border-strong);
+    cursor: not-allowed;
+}
+
+/* --- chips ------------------------------------------------------------------ */
+
+.ir-chips {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    min-height: var(--control-height-lg);
+    box-sizing: border-box;
+    padding: 3px 4px;
+    background: var(--color-form-surface);
+    border: 1px solid var(--color-form-border);
+    border-radius: var(--radius-sm);
+}
+
+.ir-chips--readonly { background: var(--color-bg-tertiary); }
+
+.ir-chips__chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    height: 20px;
+    max-width: 100%;
+    padding: 0 2px 0 6px;
+    background: var(--color-bg-tertiary);
+    border: 1px solid var(--color-form-border);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-xs);
+    color: var(--color-text-primary);
+}
+
+.ir-chips__text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ir-chips__remove { width: 14px; height: 14px; margin-left: 0; font-size: 10px; }
+.ir-chips__empty { font-size: var(--text-xs); color: var(--color-form-muted); font-style: italic; padding-left: 4px; }
+
+/* Same height as a chip, so turning Add into a field does not change the container's height:
+   the zero-shift rule holds inside a control too, not only between fields. */
+.ir-chips__input {
+    height: 20px;
+    min-width: 80px;
+    flex: 0 1 120px;
+    padding: 0 4px;
+    border: 1px solid var(--color-accent);
+    border-radius: var(--radius-sm);
+    outline: none;
+    background: var(--color-form-surface);
+    font-family: inherit;
+    font-size: var(--text-xs);
+    color: var(--color-text-primary);
+}
+
+.ir-chips__add { height: 20px; padding: 0 6px; }

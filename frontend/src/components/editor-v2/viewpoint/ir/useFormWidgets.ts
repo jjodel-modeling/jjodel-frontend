@@ -1,9 +1,9 @@
 /**
- * useFormWidgets — derive the form field descriptor of each slot of an object.
+ * useFormWidgets, derive the form field descriptor of each slot of an object.
  *
  * The rule of the slice (prompt decision 3, spec v1.2 sez. 10): the widget follows the
  * FEATURE'S TYPE in the metamodel, and the view author overrides only where they want
- * something else. So a metamodel with no authored `form` still produces a usable form —
+ * something else. So a metamodel with no authored `form` still produces a usable form
  * the "default form" is a real fallback, not an empty state.
  *
  * The type-to-widget mapping and the attribute / enum / reference / composition
@@ -16,7 +16,7 @@
  * One classification detail is load-bearing and easy to get backwards: a reference whose
  * `composition` is true is a COMPOSITION, not a reference. Info.value spells it that way
  * (setting isReference true, then false again when composition holds) and the form must
- * agree, because the two render differently — a reference picks an existing element, a
+ * agree, because the two render differently, a reference picks an existing element, a
  * composition owns its children.
  *
  * Everything here is a pure function of (slot proxies, FormSpec). The hook wrapper only
@@ -25,7 +25,7 @@
  */
 
 import { useMemo } from 'react';
-import type { FormSpec, WidgetKind } from './irTypes';
+import type { FeatureTreatment, FormSpec, WidgetKind } from './irTypes';
 import { meaningfulValues, rawValues } from './slotValues';
 
 /** Option group for a select-like widget; the shape `ui/Select` consumes directly. */
@@ -36,7 +36,7 @@ export interface FormFieldOptionGroup {
 
 /** Everything a form field needs to know about one slot, resolved once per render. */
 export interface FormFieldDescriptor {
-    /** DValue (slot) id — the write key. */
+    /** DValue (slot) id, the write key. */
     slotId: string;
     /** Feature name. The key of `FormSpec.widgets` / `.features` / `.basic`. */
     name: string;
@@ -44,7 +44,7 @@ export interface FormFieldDescriptor {
     slot: any;
     /** Resolved widget: derived from the type, then overridden by FormSpec.widgets. */
     widget: WidgetKind;
-    /** Widget the TYPE alone would have produced — the mockup's authoring panel flags
+    /** Widget the TYPE alone would have produced, the mockup's authoring panel flags
      *  an overridden default with a cyan dot, and this is what that comparison needs. */
     derivedWidget: WidgetKind;
     /** Declared type name ('EString', 'EInt', a class name, an enum name). */
@@ -53,7 +53,7 @@ export interface FormFieldDescriptor {
     /** -1 means unbounded; kept raw rather than normalised to 999 so the multiplicity
      *  label can print '*' and the upper-bound gate can test it honestly. */
     upperBound: number;
-    /** upperBound !== 1 — the feature holds a list, whatever its bounds. */
+    /** upperBound !== 1, the feature holds a list, whatever its bounds. */
     isMultivalued: boolean;
     /** lowerBound >= 1: the required marker, and the Basic-mode heuristic. */
     isRequired: boolean;
@@ -63,11 +63,17 @@ export interface FormFieldDescriptor {
     /** Derived or non-changeable: rendered read-only, with the lock glyph. */
     isReadOnly: boolean;
     isDerived: boolean;
+    /**
+     * How a reference or containment feature renders: `inline` a single control, `list` a
+     * row per value. Resolved from `FormSpec.features`, defaulting on the multiplicity.
+     * `hidden` never reaches here, those features are dropped before a descriptor is built.
+     */
+    treatment: FeatureTreatment;
     /** Options for enum and reference widgets; empty otherwise. */
     options: FormFieldOptionGroup[];
     /** Unpadded values (see slotValues.rawValues). */
     values: unknown[];
-    /** Values that carry something — the count the multiplicity marker reports. */
+    /** Values that carry something, the count the multiplicity marker reports. */
     filled: unknown[];
     /** Numeric step for the number widget: 1 for integers, 0.1 / 0.01 for floats. */
     step: number;
@@ -104,7 +110,7 @@ export function widgetForPrimitive(typeName: string): { widget: WidgetKind; step
  * honoured or thrown on: a persisted view carrying `checkbox` on an EString (an author's
  * slip, a hand edit, an AI suggestion) must still render. Silently degrading to the
  * derived widget keeps the form usable, which is the same permissiveness the render side
- * of the IR applies everywhere else — compileView falls back to defaults for values it
+ * of the IR applies everywhere else, compileView falls back to defaults for values it
  * does not recognise instead of dropping the view.
  *
  * Note the asymmetry with irValidate: the AUTHORING surface may well want to refuse such
@@ -200,8 +206,8 @@ export function describeSlot(slot: any, spec?: FormSpec): FormFieldDescriptor | 
     if (!name) return null;
 
     // Bounds come from __raw, the direct D-layer field: it skips the proxy and it is what
-    // Info.value reads. An absent bound is not 0 by accident — a shapeless slot has no
-    // metafeature at all — so the fallbacks are explicit.
+    // Info.value reads. An absent bound is not 0 by accident, a shapeless slot has no
+    // metafeature at all, so the fallbacks are explicit.
     const rawFeature = feature?.__raw ?? feature ?? {};
     const lowerBound: number = typeof rawFeature.lowerBound === 'number' ? rawFeature.lowerBound : 0;
     const upperBound: number = typeof rawFeature.upperBound === 'number' ? rawFeature.upperBound : 1;
@@ -236,6 +242,18 @@ export function describeSlot(slot: any, spec?: FormSpec): FormFieldDescriptor | 
     const isDerived = feature?.derived === true;
     const isReadOnly = isDerived || feature?.changeable === false;
 
+    // Treatment. The default follows the multiplicity, which is what an author would have to
+    // write out otherwise; an explicit `inline` on a multivalued feature is DEGRADED to
+    // `list` rather than honoured or rejected, because a single control cannot show three
+    // values and a persisted view must still render (same permissiveness as the widget
+    // overrides above). `hidden` is handled by the caller: a hidden feature has no
+    // descriptor at all, so nothing downstream has to remember to skip it.
+    const declaredTreatment = spec?.features?.[name];
+    const defaultTreatment: FeatureTreatment = upperBound === 1 ? 'inline' : 'list';
+    let treatment: FeatureTreatment = declaredTreatment ?? defaultTreatment;
+    if (treatment === 'inline' && upperBound !== 1) treatment = 'list';
+    if (treatment === 'hidden') treatment = defaultTreatment;
+
     const options = isEnum || isPlainRef || isCompositionRef ? readOptions(slot) : [];
     const raw = rawValues(slot);
     const values = isEnum ? normalizeEnumValues(raw, options) : raw;
@@ -256,6 +274,7 @@ export function describeSlot(slot: any, spec?: FormSpec): FormFieldDescriptor | 
         isComposition: isCompositionRef,
         isReadOnly,
         isDerived,
+        treatment,
         options,
         values,
         // Counted on the raw array: normalization only rewrites what a value IS, never how
@@ -269,7 +288,7 @@ export function describeSlot(slot: any, spec?: FormSpec): FormFieldDescriptor | 
 /**
  * Is this field shown in Basic mode?
  *
- * `FormSpec.basic`, when the author declared it, is the whole answer — including when it
+ * `FormSpec.basic`, when the author declared it, is the whole answer, including when it
  * omits a required feature, which is a legitimate authoring choice and not a mistake to
  * paper over. Absent, the heuristic is `lowerBound >= 1`: the features the metamodel
  * says an instance cannot do without.
@@ -300,7 +319,13 @@ export function describeSlots(slots: any[], spec?: FormSpec): FormFieldDescripto
     const out: FormFieldDescriptor[] = [];
     for (const slot of slots ?? []) {
         const d = describeSlot(slot, spec);
-        if (d) out.push(d);
+        if (!d) continue;
+        // `hidden` is applied HERE and in both modes: it is the author saying the feature has
+        // no place in this form, which Advanced does not override, Advanced shows everything
+        // the form has, not everything the metaclass has. A diagnostic on a hidden feature is
+        // still counted, in the residue (formDiagnostics).
+        if (spec?.features?.[d.name] === 'hidden') continue;
+        out.push(d);
     }
     return out;
 }

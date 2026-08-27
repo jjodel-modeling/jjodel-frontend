@@ -39,7 +39,7 @@ const VIEWPORT_MARGIN = 8;
  * `top: auto` is explicit on the flipped branch: the class sets `top: 100%`, and a
  * `bottom` alone would not neutralize it.
  */
-function computeListStyle(rect: DOMRect): React.CSSProperties {
+export function computeListStyle(rect: DOMRect): React.CSSProperties {
     const spaceBelow = window.innerHeight - rect.bottom - VIEWPORT_MARGIN;
     const spaceAbove = rect.top - VIEWPORT_MARGIN;
     const openUp = spaceBelow < PREFERRED_HEIGHT && spaceAbove > spaceBelow;

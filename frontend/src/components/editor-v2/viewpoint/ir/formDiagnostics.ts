@@ -1,9 +1,9 @@
 /**
- * formDiagnostics — project the NodeProblem registry onto the fields of a form.
+ * formDiagnostics, project the NodeProblem registry onto the fields of a form.
  *
  * The form runs NO validation of its own (slice decision 2): every message it shows comes
  * from `editor-v2/problems/`, which `model/conformance/` fills. So this module does not
- * decide what is wrong, only WHERE to say it — which field a violation belongs to, and what
+ * decide what is wrong, only WHERE to say it, which field a violation belongs to, and what
  * is left over.
  *
  * Extracted from IRForm rather than left inline for the reason slotValues was: IRForm
@@ -12,7 +12,7 @@
  * distribution rule is testable directly.
  *
  * Matching is BY NAME, `field.name === detail.metamodelElementName`, because the registry
- * has no feature id to offer — the conformance validator names the metamodel element and
+ * has no feature id to offer, the conformance validator names the metamodel element and
  * stops there. Names are unique among a class's own features, which is what makes this
  * sound; a violation naming a class (`orphan_object`, `abstract_instantiation`) simply
  * matches no field and lands in the residue, which is the correct outcome rather than a
@@ -92,7 +92,7 @@ export function collectFormDiagnostics(
             continue;
         }
 
-        // Any other kind — `duplicate-name` today — is one unit with no field to attach to.
+        // Any other kind, `duplicate-name` today, is one unit with no field to attach to.
         // Its title is the useful half: the description repeats the object's name, which the
         // form header already shows.
         push(undefined, { severity: p.severity, message: p.title || p.description });
