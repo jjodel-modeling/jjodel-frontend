@@ -24,11 +24,12 @@ import { entityLetter, resolveEntityType } from '../../../../common/entityMeta';
 import { getInterfaceMode } from '../../../../hooks/useInterfaceMode';
 import { SegmentedControl } from '../../../ui';
 import { useIRFormView } from './useIRFormView';
-import { describeSlots, isBasicField, type FormFieldDescriptor } from './useFormWidgets';
+import { describeSlots, isBasicField } from './useFormWidgets';
 import { setObjectName } from './formWrite';
 import { useNodeProblems } from '../../problems/useNodeProblems';
 import { collectFormDiagnostics } from './formDiagnostics';
-import type { CompiledFieldCompartment, FormSpec, FormTheme } from './irTypes';
+import { buildFormSections } from './formSections';
+import type { FormSpec, FormTheme } from './irTypes';
 import IRFormField from './IRFormField';
 import TextWidget from './widgets/TextWidget';
 import './irFormStyle.scss';
@@ -98,50 +99,6 @@ const MODE_OPTIONS: { value: FormMode; label: string }[] = [
     { value: 'basic', label: 'Basic' },
     { value: 'advanced', label: 'Advanced' },
 ];
-
-/** Section heading: the authored title, else the compartment id made presentable. */
-function sectionTitle(c: Pick<CompiledFieldCompartment, 'id' | 'title'>): string {
-    if (c.title) return c.title;
-    const id = c.id ?? '';
-    return id ? id.charAt(0).toUpperCase() + id.slice(1) : 'Fields';
-}
-
-interface Section {
-    key: string;
-    title: string;
-    fields: FormFieldDescriptor[];
-}
-
-/**
- * Partition the fields into sections.
- *
- * With compartments, one section per compartment in the authored order, each taking the
- * fields its `source` selects. Without them, the three natural groups. A `children`
- * compartment takes the composition features: those ARE the object's containment
- * children as seen from its own slots. It is NOT the same set the canvas row-dispatch
- * renders (`rowRenderedChildren` resolves child OBJECTS and gives each its own row view);
- * the form reads the owning slots instead, because that is where the multiplicity and the
- * required marker live. The two converge on the same children, from opposite ends.
- */
-function buildSections(fields: FormFieldDescriptor[], compartments: CompiledFieldCompartment[]): Section[] {
-    const attributes = fields.filter(f => !f.isReference && !f.isComposition);
-    const references = fields.filter(f => f.isReference);
-    const children = fields.filter(f => f.isComposition);
-
-    if (compartments.length === 0) {
-        return [
-            { key: 'attributes', title: 'Attributes', fields: attributes },
-            { key: 'references', title: 'References', fields: references },
-            { key: 'children', title: 'Children', fields: children },
-        ];
-    }
-
-    return compartments.map((c, i) => ({
-        key: `${c.id}-${i}`,
-        title: sectionTitle(c),
-        fields: c.source === 'references' ? references : c.source === 'children' ? children : attributes,
-    }));
-}
 
 export function IRForm({ objectId, defaultTheme = 'plain' }: IRFormProps) {
     const resolution = useIRFormView(objectId);
@@ -233,7 +190,7 @@ export function IRForm({ objectId, defaultTheme = 'plain' }: IRFormProps) {
             return;
         }
     }, [visible, diagnostics]);
-    const sections = buildSections(visible, resolution?.compiled?.fieldCompartments ?? [])
+    const sections = buildFormSections(visible, resolution?.compiled?.fieldCompartments ?? [])
         .filter(s => s.fields.length > 0);   // an empty section renders nothing
 
     if (!resolution || !lObject) {
