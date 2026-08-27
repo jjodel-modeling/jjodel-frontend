@@ -44,11 +44,11 @@ Estende §7 della v1.2. Confine esplicito con la critical zone (§3): ogni fase 
 Primitiva `TextStyle` in `irTypes.ts`, aggancio additivo in quattro punti, semantica condizionale, `TextStyleEditor` riusabile. Persistenza con migration (§7): richiede bump VersionFixer se si tocca il default.
 
 ## Addendum FormSpec (ir-1.3)
-**File**: `docs/spec/claude_spec_2026-08-28_ir_formspec_addendum.md` · **Stato**: vigente; descrittivo sulle Slice 1a/1b implementate, con tre ratifiche non ancora nel codice
+**File**: `docs/spec/claude_spec_2026-08-28_ir_formspec_addendum.md` · **Stato**: vigente; descrittivo sulle Slice 1a/1b implementate. R-FRM-1 implementata (`4b7383dbf`, 2026-08-28), R-FRM-2 vigente per costruzione, R-FRM-3 ancora aperta
 
 Seconda resa della stessa view: `FormSpec` opzionale su vertex, graphVertex e row, additivo su ir-1.3 (nessun bump, nessuna migrazione). Passthrough in compilazione, non compile: niente PathExpr, niente Predicate, nessun dependency set. Chiavi per NOME di feature. Vincolo duro: nessuna chiave `op` stringa dentro la struttura, o `irValidate` respinge l'intera view.
 
-Le tre ratifiche da implementare (§12 del file integrale): **R-FRM-1** i `fieldCompartments` ordinano e intitolano ma non filtrano, le feature non reclamate vanno in una sezione di coda (oggi spariscono); **R-FRM-2** la rimozione da una lista lascia un buco e l'indice grezzo non è contrattuale, la lista logica è la sequenza dei valori pieni; **R-FRM-3** il canone di un attributo enum è il pointer al literal, il nome resta accettato solo in lettura come forma legacy dell'importer (apre due allineamenti: importer XMI e CHECK 10 della conformance).
+Le tre ratifiche (§12 del file integrale): **R-FRM-1** i `fieldCompartments` ordinano e intitolano ma non filtrano, i gruppi non reclamati vanno in coda con i titoli standard (fatto: `formSections.ts`, chiavi di sezione invariate, coda su `residual-<gruppo>`); **R-FRM-2** la rimozione da una lista lascia un buco e l'indice grezzo non è contrattuale, la lista logica è la sequenza dei valori pieni; **R-FRM-3** il canone di un attributo enum è il pointer al literal, il nome resta accettato solo in lettura come forma legacy dell'importer (apre due allineamenti: importer XMI e CHECK 10 della conformance).
 
 Slice 2 (authoring del FormSpec), Slice 3 (form document) e il rifiuto al commit di uno spec incoerente sono fuori dall'addendum.
 

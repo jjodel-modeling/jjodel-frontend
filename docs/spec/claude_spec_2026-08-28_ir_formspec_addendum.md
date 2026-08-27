@@ -99,7 +99,9 @@ Con `fieldCompartments`, ogni compartimento diventa una sezione nell'ordine auto
 
 Motivo: `features: 'hidden'` è già il gesto esplicito per togliere un campo, e deve restare l'unico. I compartimenti nascono per il **simbolo sul canvas**, dove lo spazio è finito e il filtro è il punto; una form è la superficie dove si edita tutto, e usare lo stesso costrutto come filtro implicito dà due meccanismi per una cosa sola, con l'effetto peggiore dei due: dati che non compaiono senza che nessuno l'abbia chiesto.
 
-La sezione di coda segue le regole di tutti: i suoi campi rispettano `hidden` e la partizione Basic/Advanced, e se resta vuota non rende nulla.
+Forma precisa della coda: `source` reclama un **gruppo intero** (`attributes`, `references`, `children`), non singole feature, quindi ciò che resta fuori sono gruppi interi. La coda è l'insieme dei gruppi che nessun compartimento reclama, reso con i titoli standard nell'ordine naturale (Attributes, References, Children), dopo tutte le sezioni autorate. Due compartimenti sullo stesso `source` lo reclamano una volta sola.
+
+Le sezioni di coda seguono le regole di tutte le altre: i loro campi rispettano `hidden` e la partizione Basic/Advanced, e una sezione vuota non rende nulla.
 
 Nota di corrispondenza: un compartimento `children` prende le **feature di composizione del soggetto**, viste dai suoi slot. Non è lo stesso insieme che il row-dispatch rende sul canvas, che risolve gli **oggetti** figli e dà a ciascuno la sua row view. I due convergono sugli stessi figli da capi opposti; la form legge gli slot posseduti perché è lì che vivono molteplicità e obbligatorietà.
 
@@ -146,15 +148,21 @@ Il tema è la pelle del pannello, non un altro insieme di campi: i quattro temi 
 
 Il campo di identità (il nome dell'oggetto) compare **solo quando la metaclasse non ha uno slot `name`**. Quando ce l'ha, quello slot è già l'editor del nome: scriverlo propaga su `DObject.name` attraverso il legame di identità (CLAUDE.md 3.12), e renderli entrambi metterebbe due controlli sullo stesso valore.
 
-## 12. Delta da implementare
+## 12. Stato dei delta
 
-| Id | Cosa | Dove |
-|---|---|---|
-| R-FRM-1 | Sezione di coda per le feature non reclamate dai compartimenti | `IRForm.buildSections` |
-| R-FRM-2 | Nessuno: ratifica il comportamento attuale e vincola i consumatori futuri | — |
-| R-FRM-3 | Importer XMI scrive l'id del literal; CHECK 10 tollerante a id e nome in transizione | importer XMI, `ConformanceValidator` |
+| Id | Cosa | Dove | Stato |
+|---|---|---|---|
+| R-FRM-1 | Gruppi non reclamati resi in coda | `formSections.buildFormSections` | **implementata**, `4b7383dbf` (2026-08-28) |
+| R-FRM-2 | Nessuno: ratifica il comportamento attuale e vincola i consumatori futuri | | vigente per costruzione |
+| R-FRM-3 | Importer XMI scrive l'id del literal; CHECK 10 tollerante a id e nome in transizione | importer XMI, `ConformanceValidator` | aperta |
 
 Nessuno dei tre tocca la critical zone. R-FRM-3 tocca il validatore, quindi vale il two-phase con discovery report.
+
+Note di implementazione di R-FRM-1, per chi legge la spec accanto al codice:
+
+- La partizione vive in `formSections.ts`, modulo puro, separato da `IRForm.tsx` per la ragione di `formDiagnostics` e `slotValues`: IRForm importa il barrel del framework, quindi Monaco, quindi `window` a import time, e un test in ambiente node non lo caricherebbe.
+- Le chiavi di sezione sono il contratto della persistenza del collasso. Quelle esistenti sono invariate (`attributes` / `references` / `children` senza compartimenti, `${id}-${i}` con); la coda usa `residual-<gruppo>`, che non può collidere perché una chiave autorata finisce sempre con `-<indice>`. Un test lo fissa sul caso peggiore, un compartimento di id `residual`.
+- Effetto collaterale voluto: un `source` che non è nessuno dei tre gruppi (ir persistita a mano, `from` sconosciuto) non cade più silenziosamente sugli attributi. La sua sezione resta vuota e gli attributi compaiono comunque in coda, perché nessun compartimento li ha reclamati. Nessun dato sparisce, che è il punto della ratifica.
 
 ## 13. Fallback espliciti (riepilogo)
 
