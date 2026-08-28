@@ -2,6 +2,32 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-08-28 — feat(editor-v2): l'ispettore dei renderer ha un'affordance visibile
+**Prompt**: l'ispettore serviva un modo visibile di entrarci. Icona `bi-sliders` 14px slate-400 al bordo destro della cella valore, rivelata sull'hover della riga con la transizione di casa; Alt+click resta come acceleratore. Tre vincoli: non cambiare l'altezza della riga ne' far scorrere il valore, fermare la propagazione come fa il chip `+k`, e mostrare l'icona anche sulle righe gia' `dichiarato`.
+**Files touched**: frontend/src/components/editor-v2/nodes/ObjectNode.tsx, frontend/src/components/editor-v2/nodes/instanceNode.scss, docs/sessioni/sessione_2026-08-28_row_view_library.md, docs/claude-code-log.md
+**Outcome**: ✅ completed
+**Corregge**: 2026-08-28 17:05
+**Causa**: (a)
+**Regressions**: no. `npm run typecheck` 33 = baseline, `npm run test` 1717 passati con gli stessi 9 file falliti all'import, `npm run build` exit 0. Regole nuove verificate sul bundle: `--duration-fast`/`--ease-out` risolvono a `150ms cubic-bezier(0,0,.2,1)`, la curva di casa, e `--color-inode-footer` e' slate-400 in chiaro. Nessuna verifica a schermo da qui.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (nessun file della critical zone §3.1)
+**Smoke visivo**: non eseguito da qui. Quattro punti aggiunti alla checklist di Alfonso.
+**Notes**: Due scostamenti dalla lettera del prompt, forzati dal DOM e motivati nel commento accanto a ciascuno. `.mm-object__row` non esiste — label e valore sono figli DIRETTI della griglia — quindi l'hover di riga viene da due selettori su fratelli adiacenti, non da un wrapper che romperebbe `grid-template-columns`. Slot riservato con `padding-right: 18px` fisso: nessun riflusso, e l'icona non cade mai sopra una stringa con l'ellissi. Dettaglio in `docs/sessioni/sessione_2026-08-28_row_view_library.md`.
+**Prompt document name**: 2026-08-28 17:45
+
+## 2026-08-28 — feat(editor-v2): la libreria Row view, nove renderer e la ladder ispezionabile
+**Prompt**: livello 3 dell'handoff. Nove renderer con una sola implementazione ciascuno, usati identicamente da riga e (per i tre il cui valore e' un oggetto) da nodo standalone; soglia fissa a 4 chip col `+k`; reference rotte con icona rossa e barratura; ispettore che mostra tutti e quattro i pioli della ladder, non solo l'esito, con override che promuove al metamodello.
+**Files touched**: frontend/src/components/editor-v2/nodes/valueRenderer.ts, frontend/src/components/editor-v2/nodes/RowValue.tsx (nuovo), frontend/src/components/editor-v2/nodes/RendererInspector.tsx (nuovo), frontend/src/components/editor-v2/nodes/rendererInspector.scss (nuovo), frontend/src/components/editor-v2/nodes/rowViewAnnotations.ts (nuovo), frontend/src/components/editor-v2/nodes/rowViewAnnotationsWrite.ts (nuovo), frontend/src/components/editor-v2/nodes/brokenRefMemory.ts (nuovo), frontend/src/components/editor-v2/nodes/ObjectNode.tsx, frontend/src/components/editor-v2/nodes/SingletonPill.tsx, frontend/src/components/editor-v2/nodes/singletonShape.ts, frontend/src/components/editor-v2/nodes/instanceNode.scss, frontend/src/components/editor-v2/utils/jjomTransformers.ts, frontend/src/components/editor-v2/types.ts, frontend/src/styles/tokens/_colors-light.scss, frontend/src/styles/tokens/_colors-dark.scss, frontend/src/components/editor-v2/nodes/__tests__/valueRenderer.test.ts, frontend/src/components/editor-v2/nodes/__tests__/rowViewAnnotations.test.ts (nuovo), docs/claude-code-log.md
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (a)
+**Regressions**: unknown. Gate verdi: `npm run typecheck` 33 = baseline (nessun errore nei file toccati), `npm run test` 1717 passati con gli stessi 9 file falliti all'import (`window is not defined`, noti), `npm run build` exit 0 col solo chunk-warning. Le regole CSS nuove sono state verificate sul bundle compilato, selettore per selettore, incluso l'ordine di cascata di `.mm-object__chip--more` dopo `.mm-object__chip`. Nessuna verifica a schermo da qui.
+**Out-of-scope changes**: yes. Tre file oltre l'elenco concordato: `SingletonPill.tsx` (prop opzionale `leading`, richiesta dal 5a — la forma canvas dello swatch e' «la pill col quadrato anteposto»), `singletonShape.ts` (`readSiblingSubclassNames`, perche' la regola 3 possa girare sulla codifica a singleton di un enum), e `rowViewAnnotationsWrite.ts`, che nell'elenco era dentro `rowViewAnnotations.ts`: il barrel del joiner trascina Monaco, che dereferenzia `window` all'import, e teneva la meta' pura non caricabile sotto vitest.
+**Layer Impact Report**: produced (in chat, prima del diff)
+**Smoke visivo**: non eseguito da qui. Checklist consegnata ad Alfonso, otto punti, uno per criterio di accettazione.
+**Notes**: Due lacune misurate e chiuse con decisione di Alfonso prima del diff, piu' il trigger Alt+click al posto del tasto destro, che il canvas usa gia'. Misure e opzioni in `docs/sessioni/sessione_2026-08-28_row_view_library.md`: le annotazioni del metamodello non funzionano (parser stub, `DAnnotationDetail` vuoto, zero writer) e sono codificate in `DAnnotation.source`; una reference rotta era scartata dal transformer e ora sopravvive, col nome preso da una mappa di sessione.
+**Prompt document name**: 2026-08-28 17:05
+
 ## 2026-08-28 — feat(authoring): il tab Form del pannello vertex (Slice 2a, commit 2)
 **Prompt**: secondo commit della Slice 2a. Tab `Form` (id `ir-form`) nella barra dell'authoring, solo per il kind vertex, fra Symbol e Source, raggiungibile in Basic. Theme e Labels sempre resi; in Advanced le righe raggruppate per sezione nell'ordine che la form rendera' (R-FRM-1), con override dei widget per attributo e trattamento inline/list/hidden per reference e containment. `basic` fuori scope (Slice 2b) e preservata verbatim.
 **Files touched**: frontend/src/components/editor-v2/viewpoint/authoring/irTabs.tsx, frontend/src/components/editor-v2/viewpoint/authoring/FormAuthoringBody.tsx (nuovo), frontend/src/components/editor-v2/viewpoint/authoring/FormAuthoringBody.scss (nuovo), frontend/src/components/editor-v2/viewpoint/authoring/VertexAuthoringPanel.tsx, frontend/src/components/editor-v2/viewpoint/authoring/__tests__/formAuthoring.test.ts (nuovo), docs/spec/claude_spec_2026-08-28_ir_formspec_addendum.md, docs/claude-code-log.md
