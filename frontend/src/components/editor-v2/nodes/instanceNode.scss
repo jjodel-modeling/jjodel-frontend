@@ -1,0 +1,355 @@
+/**
+ * instanceNode — the M1 instance node on the canvas.
+ *
+ * Design handoff: docs/design/design_handoff_instance_node/README.md.
+ *
+ * A static stylesheet, imported by ObjectNode.tsx, on the same footing as
+ * irFormStyle.scss: nothing here depends on authored content, so there is
+ * nothing to inject at runtime. The six style FIELDS that do vary per node ride
+ * on inline custom properties set by the component (`--inode-accent`,
+ * `--inode-badge-bg`, `--inode-badge-fg`) — three values, not three stylesheets.
+ *
+ * Colours come from the `--color-inode-*` roles in styles/tokens/. No literal
+ * hex below, and no `var(--…)` declared here: token names live in tokens/.
+ *
+ * Selectors carry `.mm-node` alongside `.mm-object` on purpose. EditorV2.scss
+ * styles `.mm-object` at (0,1,0) and bundle order between the two files is not
+ * guaranteed; (0,2,0) settles it by specificity instead of by luck. The two
+ * state variants that must still win — `--orphan` and `--not-rendered`, both
+ * (0,3,0) — are left above this file on purpose.
+ */
+
+.mm-node.mm-object {
+    // The accent bar is the first flex child; `overflow: hidden` is what clips
+    // it to the node's radius. `.mm-node` leaves overflow unset (its own rule is
+    // commented out), so this is additive, not an override.
+    display: flex;
+    overflow: hidden;
+    border-radius: 8px;   // NOT the 12px card radius: 12 reads too soft at diagram scale
+    background: var(--color-inode-surface);
+    border: 1px solid var(--color-inode-border);
+    box-shadow: 0 1px 2px var(--color-inode-shadow);
+    // 320px is the comfortable default in the reference and the node is
+    // user-resizable, so width stays content-driven; the floor only has to keep
+    // the two-column compartment readable.
+    min-width: 200px;
+    transition: box-shadow var(--duration-fast) var(--ease-out),
+                border-color var(--duration-fast) var(--ease-out);
+
+    // Nodes carry canvas coordinates: they must not drift on hover.
+    &:hover {
+        box-shadow: 0 4px 12px var(--color-inode-shadow-hover);
+    }
+
+    // ── Accent bar ───────────────────────────────────────────────────────────
+    // 3px on every placement. Colour arrives as --inode-accent; the element is
+    // only mounted when a placement is set, so there is no "none" case here.
+
+    .mm-object__accent {
+        flex: none;
+        background: var(--inode-accent);
+        transition: background var(--duration-fast) var(--ease-out);
+    }
+
+    .mm-object__accent--left {
+        width: 3px;
+        align-self: stretch;
+    }
+
+    .mm-object__accent--top {
+        height: 3px;
+    }
+
+    // The header + compartment column, second flex child.
+    .mm-object__column {
+        flex: 1;
+        min-width: 0;   // so long values ellipsize instead of forcing the node wider
+        display: flex;
+        flex-direction: column;
+    }
+
+    // ── Header ───────────────────────────────────────────────────────────────
+
+    .mm-object__header {
+        padding: 11px 14px;
+        min-height: 0;                  // base .mm-node__header sets 22px
+        border-bottom: 1px solid var(--color-inode-border);
+        background: transparent;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        // Dichiarato qui, non lasciato al default: `.mm-node__header` centra a
+        // (0,1,0) e senza questa riga il centraggio sopravviveva anche a chip e
+        // badge, che il handoff vuole allineati a sinistra. Misurato 2026-08-27
+        // con scripts/smoke/_tmp_instance_node_presets.ts (P-3b).
+        justify-content: flex-start;
+        transition: background var(--duration-fast) var(--ease-out),
+                    border-color var(--duration-fast) var(--ease-out);
+    }
+
+    // typeDisplay = "inline" centres the whole run; chip and badge need the name
+    // flush left, with the chip pushed right by its own margin.
+    &[data-type-display='inline'] .mm-object__header {
+        justify-content: center;
+    }
+
+    &[data-header-fill='true'] .mm-object__header {
+        background: var(--color-inode-header-fill);
+    }
+
+    .mm-object__name {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--color-inode-name);
+        // The underline is not decoration: it is the UML object-diagram
+        // convention for an instance specification. It stays in every
+        // configuration. (`text-decoration: underline` itself is inherited from
+        // the .mm-object rule in EditorV2.scss.)
+        text-underline-offset: 3px;
+    }
+
+    // 20×20 square before the name, single-letter glyph from entityMeta.ts.
+    .mm-object__type-badge {
+        width: 20px;
+        height: 20px;
+        flex: none;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--inode-badge-bg);
+        color: var(--inode-badge-fg);
+    }
+
+    // Type as a pill, pushed right.
+    .mm-object__type-chip {
+        margin-left: auto;
+        flex: none;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 999px;
+        white-space: nowrap;
+        background: var(--inode-badge-bg);
+        color: var(--inode-badge-fg);
+    }
+
+    // ── Compartment ──────────────────────────────────────────────────────────
+    // The grid is the fix for the ragged-`=` problem: labels and values form
+    // true columns, and the `=` is dropped entirely — the column boundary
+    // carries that meaning, and dropping it recovers horizontal space.
+    //
+    // `fit-content(45%)` is the clamp the handoff asks for in place of the
+    // reference's flat 66px: the label column takes the width of the widest
+    // label and stops at 45% of the node, so a long property name neither
+    // truncates at a magic constant nor eats the value column.
+
+    .mm-object__compartment {
+        padding: 10px 14px;
+        display: grid;
+        grid-template-columns: fit-content(45%) 1fr;
+        row-gap: 8px;
+        column-gap: 12px;
+        font-size: 13px;
+        align-items: center;
+    }
+
+    .mm-object__slot-label {
+        display: flex;
+        align-items: baseline;
+        gap: 4px;
+        min-width: 0;
+        color: var(--color-inode-label);
+    }
+
+    .mm-object__feature-name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-weight: 400;               // EditorV2.scss puts 500 on this class
+    }
+
+    // The ACTUAL count of values held, not the metamodel bound. This is what
+    // makes an empty collection legible.
+    .mm-object__cardinality {
+        flex: none;
+        font-size: 11px;
+        color: var(--color-inode-quiet);
+    }
+
+    .mm-object__slot-value {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        min-width: 0;
+        flex-wrap: wrap;
+    }
+
+    // ── Value renderers ──────────────────────────────────────────────────────
+
+    // Empty / unset. Deliberately the lowest contrast in the node: present so
+    // the model's shape stays visible, quiet enough not to compete with data.
+    .mm-object__dash {
+        color: var(--color-inode-quiet);
+    }
+
+    .mm-object__scalar {
+        color: var(--color-inode-name);
+        font-weight: 500;
+        font-style: normal;             // EditorV2.scss italicises feature values
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    // Swatch and text always travel together: the swatch annotates the value,
+    // it does not replace it.
+    .mm-object__swatch {
+        width: 10px;
+        height: 10px;
+        flex: none;
+        border-radius: 3px;
+        background: var(--inode-swatch);
+    }
+
+    // One chip per value; the label carries the count.
+    .mm-object__chip {
+        font-size: 11px;
+        font-weight: 500;
+        padding: 2px 8px;
+        border-radius: 4px;
+        background: var(--color-inode-chip-bg);
+        color: var(--color-inode-chip-fg);
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    // Overflow chip: the `+k` that stands for the values not rendered.
+    .mm-object__chip--more {
+        cursor: pointer;
+        font-weight: 600;
+    }
+
+    // Cyan is correct here: within the canvas, cyan is the interaction and
+    // navigation accent. The pill selects and reveals its target.
+    .mm-object__ref-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 12px;
+        font-weight: 500;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: var(--color-inode-ref-bg);
+        color: var(--color-inode-ref-fg);
+        border: 1px solid var(--color-inode-ref-border);
+        cursor: pointer;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        transition: background var(--duration-fast) var(--ease-out);
+
+        i {
+            flex: none;
+        }
+    }
+
+    // A reference drawn as an edge is duplicated graphically, not moved: the
+    // edge shows the topology, the row shows that THIS property holds THAT
+    // value. The row is never removed.
+    .mm-object__edge-marker {
+        flex: none;
+        font-size: 11px;
+        color: var(--color-inode-footer);
+    }
+
+    // ── Collapsed-slots footer ───────────────────────────────────────────────
+
+    .mm-object__collapsed-footer {
+        padding: 8px 14px;
+        border-top: 1px solid var(--color-inode-footer-rule);
+        font-size: 11px;
+        color: var(--color-inode-footer);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        cursor: pointer;
+        background: none;
+        border-left: none;
+        border-right: none;
+        border-bottom: none;
+        width: 100%;
+        text-align: left;
+        font-family: inherit;
+    }
+
+    // ── Inline editing ───────────────────────────────────────────────────────
+    // The compartment stays editable. `.mm-field__input` cannot be reused: its
+    // rules are nested under `.mm-field`, a class these rows do not carry, and
+    // it is sized for the 12px scale of the M2 nodes rather than this 13px one.
+
+    .mm-object__input {
+        flex: 1;
+        min-width: 0;
+        max-width: 100%;
+        height: 22px;
+        padding: 0 6px;
+        font: inherit;
+        font-size: 13px;
+        color: var(--color-inode-name);
+        background: var(--color-inode-surface);
+        border: 1px solid var(--color-inode-border);
+        border-radius: 4px;
+        outline: none;
+
+        &:focus {
+            border-color: var(--color-inode-selected-border);
+        }
+    }
+
+    // Same reason as the input: the chevron rule in EditorV2.scss is nested
+    // under `.mm-field` and cannot reach these rows. Without a rule of its own
+    // it would default to fully opaque and sit on every enum row at all times.
+    .mm-object__enum-chevron {
+        flex: none;
+        font-size: 8px;
+        margin-left: 1px;
+        color: var(--color-inode-footer);
+        opacity: 0;
+        transition: opacity var(--duration-fast) var(--ease-out);
+    }
+
+    .mm-object__slot-value:hover .mm-object__enum-chevron {
+        opacity: 1;
+    }
+
+    // Rows that accept an edit say so on hover, the way the old feature rows did
+    // with `cursor: text`.
+    .mm-object__slot-value--editable {
+        cursor: text;
+    }
+
+    // ── Selection — the cyan rule ────────────────────────────────────────────
+    // Selection owns the cyan, and the categorical accent yields to it for the
+    // duration (the swap happens in instanceNodeStyle.ts, at render time; the
+    // stored accent is never mutated). The generic node outline is dropped here
+    // so the node carries ONE ring: the outline plus this ring would read as two
+    // competing selection marks on the same 8px radius.
+
+    &.selected {
+        outline: none;
+        border-color: var(--color-inode-selected-border);
+        box-shadow: 0 0 0 3px var(--color-inode-selected-ring),
+                    0 1px 2px var(--color-inode-shadow);
+
+        .mm-object__header {
+            background: var(--color-inode-selected-header-bg);
+            border-bottom-color: var(--color-inode-selected-header-border);
+        }
+    }
+}

@@ -321,22 +321,42 @@ function objectVertexToRFNode(vertex: any): Node<ObjectNodeData> {
             let featureTypeId = '';
             let typeName = '';
             let enumLiterals: Array<{ name: string; value: number }> | undefined;
+            let values: string[] | undefined;
+            let refTargets: Array<{ id: string; name: string }> | undefined;
+
+            // Multi-valued in the metamodel. The instance node prints the ACTUAL
+            // count held, but it needs the declared bound to tell a single-valued
+            // slot from a collection that happens to hold one element.
+            let isMany = false;
+            try {
+                const ub = feature?.upperBound;
+                isMany = typeof ub === 'number' && ub !== 1;
+            } catch { /* proxy access can throw */ }
 
             if (isRef) {
                 // Reference: show resolved target names (handle both pointer IDs and objects)
                 try {
                     const vals = fv.values ?? [];
                     const names: string[] = [];
+                    const targets: Array<{ id: string; name: string }> = [];
                     for (const v of vals) {
                         const target = typeof v === 'string' ? null : v;
-                        if (target?.name) names.push(target.name);
+                        if (target?.name) {
+                            names.push(target.name);
+                            // The id is what the reference pill needs to select and
+                            // reveal the target; without it the pill is not navigable.
+                            if (target.id) targets.push({ id: target.id, name: target.name });
+                        }
                     }
+                    values = names;
+                    refTargets = targets;
                     value = names.join(', ') || '—';
                 } catch { value = '—'; }
             } else {
                 // Attribute: show primitive value
                 try {
                     const vals = fv.values ?? [];
+                    values = vals.map((v: unknown) => String(v ?? ''));
                     value = vals.length > 0 ? String(vals[0] ?? '') : '';
                 } catch { value = ''; }
 
@@ -369,6 +389,9 @@ function objectVertexToRFNode(vertex: any): Node<ObjectNodeData> {
                 typeName: typeName || undefined,
                 value,
                 enumLiterals,
+                values,
+                isMany,
+                refTargets,
             });
         }
     } catch { /* proxy access can throw */ }

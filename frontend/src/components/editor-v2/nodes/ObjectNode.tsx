@@ -17,7 +17,7 @@
  * - Auto-edit on drop from palette (data.autoEdit)
  */
 
-import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import { Fragment, useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useSelector } from 'react-redux';
 import { NodeResizer, useReactFlow, useStore, type NodeProps, type Node } from '@xyflow/react';
 import DynamicHandles from '../components/DynamicHandles';
@@ -37,12 +37,46 @@ import IRNodeContent from '../viewpoint/ir/IRNodeContent';
 import { containmentChildren } from '../viewpoint/ir/irContainment';
 import { isCollapsed, toggleCollapsed, useCollapseVersion } from '../viewpoint/ir/irCollapseState';
 import { isSimActive, useSimVersion } from '../sim/simRunState';
+import { entityLetter } from '../../../common/entityMeta';
+import { store } from '../../../joiner';
+import {
+    resolveInstanceNodeStyle,
+    instanceNodeChrome,
+    emptySlotsLabel,
+} from './instanceNodeStyle';
+import { detectValueRenderer, type RendererDecision } from './valueRenderer';
+import type { FeatureValueRow } from '../types';
 import '../viewpoint/ir/irDemoFixture'; // dev-only: registers window.__jjodelInstallIRDemo
+import './instanceNode.scss';
 
 export type ObjectNodeType = Node<ObjectNodeData, 'objectNode'>;
 
+/**
+ * Chips rendered before the `+k` overflow affordance. The handoff leaves the
+ * threshold open ("above ~4 chips") and states the requirement that decides it:
+ * a collection must not grow the node unbounded.
+ */
+const MAX_CHIPS = 4;
+
+/** One row of the compartment, after the renderer has been decided. */
+interface SlotRow {
+    key: string;
+    name: string;
+    /** The model slot, absent on a lazy co-evolution placeholder. */
+    feature?: FeatureValueRow;
+    /** The metaclass attribute this row stands in for, when it has no slot yet. */
+    placeholder?: { id: string; name: string; defaultDisplay: string; enumLiterals?: Array<{ name: string; value: number }> };
+    decision: RendererDecision;
+    values: string[];
+    /** `[n]` for a multi-valued slot: the actual count held, not the bound. */
+    cardinality: string | null;
+    /** The target is also drawn as an edge on this canvas. */
+    hasEdge: boolean;
+    isEmpty: boolean;
+}
+
 function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
-    const { setNodes } = useReactFlow();
+    const { setNodes, getNodes, setCenter, getZoom } = useReactFlow();
     const editorContext = useEditorContextSafe();
     const hlClass = useNodeHighlightClass(id);
 
@@ -189,6 +223,23 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
         return result;
     }, [metaclassAttrSig, coveredAttrIds]);
 
+    // Which reference slots of THIS node are also drawn as an edge. Serialized to
+    // a string so the selector returns a stable value: an array would be a new
+    // object on every store tick and would re-render the node continuously.
+    const edgeRefSig = useStore((s) => {
+        const names: string[] = [];
+        for (const e of s.edges) {
+            if (e.source !== id) continue;
+            const rn = (e.data as { referenceName?: unknown } | undefined)?.referenceName;
+            if (typeof rn === 'string') names.push(rn);
+        }
+        return names.sort().join('|');
+    });
+    const edgeRefNames = useMemo(
+        () => new Set(edgeRefSig ? edgeRefSig.split('|') : []),
+        [edgeRefSig],
+    );
+
     const isProblemHighlighted = useIsHighlighted(id);
 
     // Simulation run-state (R-SIM-3): the singleton is keyed on the DObject id,
@@ -215,6 +266,12 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
 
     // Enum popover: tracks which feature ID has its popover open (null = none)
     const [openEnumId, setOpenEnumId] = useState<string | null>(null);
+
+    // Per-node runtime state of the handoff: local, not persisted.
+    // `emptyRowsExpanded` only means anything under emptyBehavior = "collapse".
+    const [emptyRowsExpanded, setEmptyRowsExpanded] = useState(false);
+    // Which collections have had their `+k` chip clicked open.
+    const [expandedChips, setExpandedChips] = useState<ReadonlySet<string>>(() => new Set());
 
     useEffect(() => {
         if (data.label !== lastCommittedName.current) {
@@ -345,6 +402,35 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
         return slots;
     }, [data.features, missingAttributes]);
 
+    // ── Reference navigation ─────────────────────────────────────────────────
+
+    /**
+     * Select the object a reference points at, and bring it into view. The pill
+     * is the affordance that reaches the target even when it is off-canvas.
+     *
+     * The mapping target DObject → vertex is only needed on click, so it is read
+     * from the store here rather than subscribed to: `idlookup[vertexId].model`
+     * is the DObject of a vertex (same read as irResolve.ts), and scanning the
+     * rendered nodes once per click is cheaper than every node on the canvas
+     * holding a subscription to the whole lookup.
+     */
+    const revealReferenceTarget = useCallback((targetObjectId: string) => {
+        const lookup = (store.getState() as { idlookup?: Record<string, { model?: unknown }> }).idlookup ?? {};
+        const nodes = getNodes();
+        const target = nodes.find((n) => lookup[n.id]?.model === targetObjectId);
+        if (!target) return;
+
+        setNodes((nds) => nds.map((n) => ({ ...n, selected: n.id === target.id })));
+
+        const w = target.measured?.width ?? target.width ?? 0;
+        const h = target.measured?.height ?? target.height ?? 0;
+        setCenter(
+            target.position.x + w / 2,
+            target.position.y + h / 2,
+            { zoom: getZoom(), duration: 300 },
+        );
+    }, [getNodes, setNodes, setCenter, getZoom]);
+
     const advanceToNextSlot = useCallback((currentEditId: string) => {
         const idx = allEditableSlots.findIndex(s => s.editId === currentEditId);
         if (idx < 0 || idx >= allEditableSlots.length - 1) {
@@ -382,10 +468,89 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
         }
     }, [commitPlaceholderEdit, advanceToNextSlot]);
 
+    // ── Style resolution and slot rows ───────────────────────────────
+
+    // The cascade of the handoff — metamodel class default, then viewpoint
+    // override, then per-instance override. No authoring surface writes those
+    // layers yet, so the resolver folds nothing over the factory default; the
+    // call site is here so the next slice adds a source, not a mechanism.
+    const style = useMemo(() => resolveInstanceNodeStyle(), []);
+    const chrome = useMemo(() => instanceNodeChrome(style, !!selected), [style, selected]);
+
+    /**
+     * Every row of the compartment, in model order, with its renderer already
+     * decided. References come from the same `features` array as attributes and
+     * keep their position: the handoff is explicit that a reference drawn as an
+     * edge is duplicated graphically, never moved out of the node.
+     */
+    const slotRows = useMemo<SlotRow[]>(() => {
+        const rows: SlotRow[] = [];
+
+        for (const f of data.features ?? []) {
+            const liveName = liveFeatureNameMap.get(f.id) ?? f.featureName;
+            const isRef = f.featureKind === 'reference';
+            const held = isRef
+                ? (f.refTargets?.map(t => t.name) ?? [])
+                : (f.values ?? (f.value != null && f.value !== '' ? [String(f.value)] : []));
+
+            const decision = detectValueRenderer({
+                value: f.value ?? '',
+                values: f.values,
+                isReference: isRef,
+                isMany: f.isMany,
+                typeName: f.typeName,
+                enumLiteralNames: f.enumLiterals?.map(l => l.name),
+                featureName: liveName,
+            });
+
+            rows.push({
+                key: f.id,
+                name: liveName,
+                feature: f,
+                decision,
+                values: held,
+                // The ACTUAL count held, which is what makes `[0]` informative.
+                cardinality: f.isMany ? `[${held.length}]` : null,
+                hasEdge: isRef && edgeRefNames.has(liveName),
+                isEmpty: decision.kind === 'empty',
+            });
+        }
+
+        // Lazy co-evolution: optional metaclass attributes with no slot yet. They
+        // hold nothing, so they ARE empty slots and take the dash treatment —
+        // but they stay clickable, which is the whole point of the placeholder.
+        for (const attr of missingAttributes) {
+            rows.push({
+                key: `ph_${attr.id}`,
+                name: attr.name,
+                placeholder: attr,
+                decision: { kind: 'empty', reason: 'the metaclass declares it; this instance has no slot yet' },
+                values: [],
+                cardinality: null,
+                hasEdge: false,
+                isEmpty: true,
+            });
+        }
+
+        return rows;
+    }, [data.features, liveFeatureNameMap, missingAttributes, edgeRefNames]);
+
+    const emptyRowCount = useMemo(() => slotRows.filter(r => r.isEmpty).length, [slotRows]);
+
+    const visibleRows = useMemo(() => {
+        if (style.emptyBehavior === 'dash') return slotRows;
+        if (style.emptyBehavior === 'hide') return slotRows.filter(r => !r.isEmpty);
+        // collapse: the hidden rows come back in place, with the dash treatment
+        return emptyRowsExpanded ? slotRows : slotRows.filter(r => !r.isEmpty);
+    }, [slotRows, style.emptyBehavior, emptyRowsExpanded]);
+
+    const showCollapsedFooter = style.emptyBehavior === 'collapse'
+        && emptyRowCount > 0
+        && !emptyRowsExpanded;
+
     // ── Render ───────────────────────────────────────────────────────
 
-    const existingAttrs = data.features?.filter(f => f.featureKind === 'attribute') ?? [];
-    const hasFeatures = existingAttrs.length > 0 || missingAttributes.length > 0;
+    const hasFeatures = slotRows.length > 0;
     const isOrphan = !data.instanceOfClassId;
     // Neutral node: an IR viewpoint is active, it declares no view applicable to this
     // object's metaclass, and the object is not delegated to the native branch by a
@@ -459,8 +624,226 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
         );
     }
 
+    /**
+     * The value cell of one row. Each renderer is a distinct visual treatment;
+     * which one applies was settled by `detectValueRenderer` when the row was
+     * built, so this only paints.
+     */
+    const renderSlotValue = (row: SlotRow) => {
+        // ── A placeholder: no slot yet, so nothing to show but the affordance ──
+        if (row.placeholder) {
+            const attr = row.placeholder;
+            const placeholderId = `placeholder_${attr.id}`;
+            const hasEnumLits = attr.enumLiterals && attr.enumLiterals.length > 0;
+
+            if (editingFeature?.id === placeholderId) {
+                return hasEnumLits ? (
+                    <select
+                        className="mm-object__input"
+                        autoFocus
+                        value={editValue}
+                        onChange={(e) => {
+                            setEditValue(e.target.value);
+                            if (e.target.value) {
+                                const val = e.target.value;
+                                editorContext?.takeSnapshot();
+                                setNodes(nds => nds.map(n => {
+                                    if (n.id !== id) return n;
+                                    const nd = n.data as ObjectNodeData;
+                                    return { ...n, data: { ...nd, features: [...nd.features, { id: attr.id, featureName: attr.name, featureKind: 'attribute' as const, value: val, enumLiterals: attr.enumLiterals }] } };
+                                }));
+                                syncUpdateFeatureValue(id, attr.name, val);
+                                setEditingFeature(null);
+                            }
+                        }}
+                        onBlur={() => commitPlaceholderEdit(attr)}
+                        onKeyDown={(e) => handlePlaceholderKeyDown(e, attr)}
+                    >
+                        <option value="">-- Select --</option>
+                        {attr.enumLiterals!.map(lit => (
+                            <option key={lit.name} value={lit.name}>{lit.name}</option>
+                        ))}
+                    </select>
+                ) : (
+                    <input
+                        className="mm-object__input"
+                        autoFocus
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onFocus={(e) => e.target.select()}
+                        onBlur={() => commitPlaceholderEdit(attr)}
+                        onKeyDown={(e) => handlePlaceholderKeyDown(e, attr)}
+                    />
+                );
+            }
+
+            // Empty / unset: the em dash at the lowest contrast in the node.
+            // Present so the model's shape stays visible, quiet enough not to
+            // compete with real data — and still the click target that turns the
+            // placeholder into a real slot.
+            return <span className="mm-object__dash">—</span>;
+        }
+
+        const feature = row.feature!;
+
+        // ── Reference: a pill, and the row is never removed ──
+        if (row.decision.kind === 'reference') {
+            const targets = feature.refTargets ?? [];
+            return (
+                <>
+                    {targets.map((t, i) => (
+                        <span
+                            key={`${t.id}_${i}`}
+                            className="mm-object__ref-pill"
+                            title={`Vai a ${t.name}`}
+                            onClick={(e) => { e.stopPropagation(); revealReferenceTarget(t.id); }}
+                        >
+                            <i className="bi bi-link-45deg" />
+                            {t.name}
+                        </span>
+                    ))}
+                </>
+            );
+        }
+
+        // ── Empty ──
+        if (row.decision.kind === 'empty') {
+            return <span className="mm-object__dash">—</span>;
+        }
+
+        // ── Collection: one chip per value, the label carries the count ──
+        if (row.decision.kind === 'collection') {
+            const expanded = expandedChips.has(row.key);
+            const shown = expanded ? row.values : row.values.slice(0, MAX_CHIPS);
+            const hidden = row.values.length - shown.length;
+            return (
+                <>
+                    {shown.map((v, i) => (
+                        <span key={`${row.key}_${i}`} className="mm-object__chip">{v}</span>
+                    ))}
+                    {hidden > 0 && (
+                        <span
+                            className="mm-object__chip mm-object__chip--more"
+                            title={`Mostra gli altri ${hidden}`}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setExpandedChips(prev => new Set(prev).add(row.key));
+                            }}
+                        >
+                            +{hidden}
+                        </span>
+                    )}
+                </>
+            );
+        }
+
+        // ── Scalar and colour, both editable ──
+        const hasEnum = feature.enumLiterals && feature.enumLiterals.length > 0;
+        const isStaleEnum = hasEnum
+            && feature.value != null && feature.value !== ''
+            && !feature.enumLiterals!.some(l => l.name === feature.value);
+
+        // The swatch precedes the text and never replaces it: it annotates the value.
+        const swatch = row.decision.kind === 'color' && row.decision.swatch
+            ? (
+                <span
+                    className="mm-object__swatch"
+                    style={{ ['--inode-swatch' as string]: row.decision.swatch } as React.CSSProperties}
+                />
+            )
+            : null;
+
+        // Enum attributes keep the popover; there is no enum renderer in the
+        // handoff, so the literal reads as a scalar (or a colour, when the whole
+        // literal set qualifies) and only the affordance is enum-specific.
+        if (hasEnum) {
+            return (
+                <>
+                    {swatch}
+                    <span
+                        className={`mm-object__scalar mm-field__enum-value${isStaleEnum ? ' mm-field__enum-stale' : ''}`}
+                        onClick={(e) => { e.stopPropagation(); setOpenEnumId(openEnumId === feature.id ? null : feature.id); }}
+                        title={isStaleEnum ? `"${feature.value}" is no longer a valid enum literal` : row.decision.reason}
+                    >
+                        {isStaleEnum && <i className="bi bi-exclamation-triangle-fill mm-field__enum-stale-icon" />}
+                        {feature.value || '(none)'}
+                    </span>
+                    <i className="bi bi-chevron-down mm-object__enum-chevron" />
+                    {openEnumId === feature.id && (
+                        <InlineEnumSelect
+                            value={feature.value}
+                            enumName={feature.typeName ?? 'Enum'}
+                            literals={feature.enumLiterals!}
+                            isStale={!!isStaleEnum}
+                            onChange={(val) => {
+                                if (val !== feature.value) {
+                                    editorContext?.takeSnapshot();
+                                    setNodes(nds => nds.map(n => {
+                                        if (n.id !== id) return n;
+                                        const nd = n.data as ObjectNodeData;
+                                        return { ...n, data: { ...nd, features: nd.features.map(f => f.id === feature.id ? { ...f, value: val } : f) } };
+                                    }));
+                                    syncUpdateFeatureValue(id, row.name, val);
+                                }
+                                setOpenEnumId(null);
+                            }}
+                            onClose={() => setOpenEnumId(null)}
+                        />
+                    )}
+                </>
+            );
+        }
+
+        if (editingFeature?.id === feature.id) {
+            return (
+                <input
+                    className="mm-object__input"
+                    autoFocus
+                    value={editValue}
+                    onChange={(e) => setEditValue(e.target.value)}
+                    onFocus={(e) => e.target.select()}
+                    onBlur={commitFeatureEdit}
+                    onKeyDown={handleFeatureKeyDown}
+                />
+            );
+        }
+
+        return (
+            <>
+                {swatch}
+                <span className="mm-object__scalar" title={row.decision.reason}>
+                    {String(feature.value)}
+                </span>
+            </>
+        );
+    };
+
+    /** A row accepts an inline edit: attributes and placeholders, never references. */
+    const isRowEditable = (row: SlotRow) =>
+        !!row.placeholder || (row.feature?.featureKind === 'attribute' && !row.feature.enumLiterals?.length);
+
+    const startRowEdit = (row: SlotRow) => {
+        if (row.placeholder) {
+            setEditingFeature({ id: `placeholder_${row.placeholder.id}`, featureName: row.placeholder.name });
+            setEditValue('');
+            return;
+        }
+        if (row.feature && row.feature.featureKind === 'attribute') {
+            startEditFeature(row.feature.id, row.name, row.feature.value);
+        }
+    };
+
     return (
-        <div className={`mm-node mm-object ${selected ? 'selected' : ''} ${isOrphan ? 'mm-object--orphan' : ''}${notRendered ? ' mm-object--not-rendered' : ''}${isProblemHighlighted ? ' mm-object--problem-highlighted' : ''} ${hlClass}${isSimActiveNode ? ' sim-active' : ''}`}>
+        <div
+            className={`mm-node mm-object ${selected ? 'selected' : ''} ${isOrphan ? 'mm-object--orphan' : ''}${notRendered ? ' mm-object--not-rendered' : ''}${isProblemHighlighted ? ' mm-object--problem-highlighted' : ''} ${hlClass}${isSimActiveNode ? ' sim-active' : ''}`}
+            data-type-display={style.typeDisplay}
+            data-header-fill={style.headerFill ? 'true' : 'false'}
+            style={{
+                ['--inode-accent' as string]: chrome.accentColor ?? 'transparent',
+                ['--inode-badge-bg' as string]: chrome.badgeBg,
+                ['--inode-badge-fg' as string]: chrome.badgeFg,
+            } as React.CSSProperties}
+        >
             {isNodeResizable('objectNode') && (
                 <NodeResizer
                     isVisible={selected}
@@ -475,191 +858,117 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
 
             <NodeProblemIndicator nodeId={id} />
 
-            {/* Header: objectName : ClassName — underlined per UML convention */}
-            <div
-                className="mm-node__header mm-object__header"
-                onDoubleClick={handleDoubleClick}
-                onClick={() => { if (selected && !editing) setEditing(true); }}
-            >
-                {editing ? (
-                    <input
-                        className="mm-node__input"
-                        autoFocus
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        onFocus={(e) => e.target.select()}
-                        onBlur={handleBlur}
-                        onKeyDown={handleKeyDown}
-                    />
-                ) : (
-                    <span className="mm-node__name mm-object__name">
-                        <span className="mm-object__instance-name">{name}</span>
-                        <span className="mm-object__separator"> : </span>
-                        <span className="mm-object__class-name">{metaclassName}</span>
-                    </span>
+            {/* The left accent bar is the FIRST flex child, so it clips to the
+                node radius and runs the full height of the column beside it. */}
+            {chrome.accentPlacement === 'left' && (
+                <div className="mm-object__accent mm-object__accent--left" />
+            )}
+
+            <div className="mm-object__column">
+                {chrome.accentPlacement === 'top' && (
+                    <div className="mm-object__accent mm-object__accent--top" />
                 )}
-            </div>
 
-            {/* Feature values (attributes) + lazy co-evolution placeholders.
-                A node the viewpoint does not render shows the header alone: showing
-                every feature of an object declared "not rendered" contradicts itself,
-                and the tree made the same call (no chevron, no features). */}
-            {hasFeatures && !notRendered && (
-                <div className="mm-node__body">
-                    <div className="mm-node__fields">
-                        {/* Existing (valorized) features */}
-                        {existingAttrs.map((feature) => {
-                            const liveName = liveFeatureNameMap.get(feature.id) ?? feature.featureName;
-                            return (
-                            <div key={feature.id} className="mm-field mm-object__feature">
-                                <span className="mm-field__name mm-object__feature-name">
-                                    {liveName}
+                {/* Header: the instance name is underlined per the UML
+                    object-diagram convention, in every configuration. How the
+                    TYPE is presented is what `typeDisplay` changes. */}
+                <div
+                    className="mm-node__header mm-object__header"
+                    onDoubleClick={handleDoubleClick}
+                    onClick={() => { if (selected && !editing) setEditing(true); }}
+                >
+                    {editing ? (
+                        <input
+                            className="mm-node__input"
+                            autoFocus
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            onFocus={(e) => e.target.select()}
+                            onBlur={handleBlur}
+                            onKeyDown={handleKeyDown}
+                        />
+                    ) : (
+                        <>
+                            {style.typeDisplay === 'badge' && (
+                                <span className="mm-object__type-badge" title={metaclassName}>
+                                    {entityLetter('object')}
                                 </span>
-                                <span className="mm-field__separator">=</span>
-                                {(() => {
-                                    const hasEnum = feature.enumLiterals && feature.enumLiterals.length > 0;
-                                    const isStaleEnum = hasEnum
-                                        && feature.value != null && feature.value !== ''
-                                        && !feature.enumLiterals!.some(l => l.name === feature.value);
+                            )}
+                            <span className="mm-node__name mm-object__name" title={`${name} : ${metaclassName}`}>
+                                <span className="mm-object__instance-name">{name}</span>
+                                {style.typeDisplay === 'inline' && (
+                                    <>
+                                        <span className="mm-object__separator"> : </span>
+                                        <span className="mm-object__class-name">{metaclassName}</span>
+                                    </>
+                                )}
+                            </span>
+                            {style.typeDisplay === 'chip' && (
+                                <span className="mm-object__type-chip">{metaclassName}</span>
+                            )}
+                        </>
+                    )}
+                </div>
 
-                                    // Enum attributes: click to open popover (no inline <select>)
-                                    if (hasEnum) {
-                                        return (
-                                            <span
-                                                className={`mm-field__type mm-object__feature-value mm-field__enum-value${isStaleEnum ? ' mm-field__enum-stale' : ''}`}
-                                                onClick={(e) => { e.stopPropagation(); setOpenEnumId(openEnumId === feature.id ? null : feature.id); }}
-                                                title={isStaleEnum ? `"${feature.value}" is no longer a valid enum literal` : 'Click to change'}
-                                            >
-                                                {isStaleEnum && <i className="bi bi-exclamation-triangle-fill mm-field__enum-stale-icon" />}
-                                                {feature.value || '(none)'}
-                                                <i className="bi bi-chevron-down mm-field__enum-chevron" />
-                                                {openEnumId === feature.id && (
-                                                    <InlineEnumSelect
-                                                        value={feature.value}
-                                                        enumName={feature.typeName ?? 'Enum'}
-                                                        literals={feature.enumLiterals!}
-                                                        isStale={!!isStaleEnum}
-                                                        onChange={(val) => {
-                                                            if (val !== feature.value) {
-                                                                editorContext?.takeSnapshot();
-                                                                setNodes(nds => nds.map(n => {
-                                                                    if (n.id !== id) return n;
-                                                                    const nd = n.data as ObjectNodeData;
-                                                                    return { ...n, data: { ...nd, features: nd.features.map(f => f.id === feature.id ? { ...f, value: val } : f) } };
-                                                                }));
-                                                                syncUpdateFeatureValue(id, liveName, val);
-                                                            }
-                                                            setOpenEnumId(null);
-                                                        }}
-                                                        onClose={() => setOpenEnumId(null)}
-                                                    />
-                                                )}
-                                            </span>
-                                        );
-                                    }
-
-                                    // Non-enum attributes: existing inline edit behavior
-                                    return editingFeature?.id === feature.id ? (
-                                        <input
-                                            className="mm-field__input"
-                                            autoFocus
-                                            value={editValue}
-                                            onChange={(e) => setEditValue(e.target.value)}
-                                            onFocus={(e) => e.target.select()}
-                                            onBlur={commitFeatureEdit}
-                                            onKeyDown={handleFeatureKeyDown}
-                                        />
-                                    ) : (
-                                        <span
-                                            className="mm-field__type mm-object__feature-value"
-                                            onDoubleClick={() => startEditFeature(feature.id, liveName, feature.value)}
-                                            onClick={() => { if (selected) startEditFeature(feature.id, liveName, feature.value); }}
-                                        >
-                                            {feature.value != null ? String(feature.value) : '—'}
-                                        </span>
-                                    );
-                                })()}
-                            </div>
-                        )})}
-                        {/* Lazy co-evolution: optional attributes not yet valorized */}
-                        {missingAttributes.map((attr) => {
-                            const placeholderId = `placeholder_${attr.id}`;
-                            const isEditingThis = editingFeature?.id === placeholderId;
-                            const hasEnumLits = attr.enumLiterals && attr.enumLiterals.length > 0;
+                {/* Compartment: a two-column grid, and the `=` is dropped —
+                    the column boundary carries that meaning, and dropping it
+                    recovers horizontal space. A node the viewpoint does not
+                    render shows the header alone: showing every feature of an
+                    object declared "not rendered" contradicts itself, and the
+                    tree made the same call (no chevron, no features). */}
+                {hasFeatures && !notRendered && visibleRows.length > 0 && (
+                    <div className="mm-object__compartment">
+                        {visibleRows.map((row) => {
+                            const editable = isRowEditable(row);
                             return (
-                                <div key={`ph_${attr.id}`} className={`mm-field mm-object__feature ${isEditingThis ? '' : 'mm-object__feature--placeholder'}`}>
-                                    <span className="mm-field__name mm-object__feature-name">
-                                        {attr.name}
+                                <Fragment key={row.key}>
+                                    <span className="mm-object__slot-label">
+                                        <span className="mm-object__feature-name">{row.name}</span>
+                                        {row.cardinality && (
+                                            <span className="mm-object__cardinality">{row.cardinality}</span>
+                                        )}
                                     </span>
-                                    <span className="mm-field__separator">=</span>
-                                    {isEditingThis ? (
-                                        hasEnumLits ? (
-                                            <select
-                                                className="mm-field__input mm-field__enum-select"
-                                                autoFocus
-                                                value={editValue}
-                                                onChange={(e) => {
-                                                    setEditValue(e.target.value);
-                                                    if (e.target.value) {
-                                                        // Auto-commit placeholder with selected enum value
-                                                        const val = e.target.value;
-                                                        editorContext?.takeSnapshot();
-                                                        setNodes(nds => nds.map(n => {
-                                                            if (n.id !== id) return n;
-                                                            const nd = n.data as ObjectNodeData;
-                                                            return { ...n, data: { ...nd, features: [...nd.features, { id: attr.id, featureName: attr.name, featureKind: 'attribute' as const, value: val, enumLiterals: attr.enumLiterals }] } };
-                                                        }));
-                                                        syncUpdateFeatureValue(id, attr.name, val);
-                                                        setEditingFeature(null);
-                                                    }
-                                                }}
-                                                onBlur={() => commitPlaceholderEdit(attr)}
-                                                onKeyDown={(e) => handlePlaceholderKeyDown(e, attr)}
-                                            >
-                                                <option value="">-- Select --</option>
-                                                {attr.enumLiterals!.map(lit => (
-                                                    <option key={lit.name} value={lit.name}>{lit.name}</option>
-                                                ))}
-                                            </select>
-                                        ) : (
-                                            <input
-                                                className="mm-field__input"
-                                                autoFocus
-                                                value={editValue}
-                                                onChange={(e) => setEditValue(e.target.value)}
-                                                onFocus={(e) => e.target.select()}
-                                                onBlur={() => commitPlaceholderEdit(attr)}
-                                                onKeyDown={(e) => handlePlaceholderKeyDown(e, attr)}
+                                    <span
+                                        className={`mm-object__slot-value${editable ? ' mm-object__slot-value--editable' : ''}`}
+                                        onDoubleClick={editable ? () => startRowEdit(row) : undefined}
+                                        onClick={editable && selected ? () => startRowEdit(row) : undefined}
+                                    >
+                                        {renderSlotValue(row)}
+                                        {/* The marker says the target is ALSO drawn as an
+                                            edge. The row is not removed for it: the edge
+                                            shows the topology, the row shows that this
+                                            property holds this value. */}
+                                        {style.edgeMarker && row.hasEdge && (
+                                            <i
+                                                className="bi bi-arrow-up-right mm-object__edge-marker"
+                                                title="Reso anche come edge sul canvas"
                                             />
-                                        )
-                                    ) : (
-                                        <span
-                                            className="mm-field__type mm-object__feature-value"
-                                            onDoubleClick={() => {
-                                                setEditingFeature({ id: placeholderId, featureName: attr.name });
-                                                setEditValue('');
-                                            }}
-                                            onClick={() => {
-                                                if (selected) {
-                                                    setEditingFeature({ id: placeholderId, featureName: attr.name });
-                                                    setEditValue('');
-                                                }
-                                            }}
-                                        >
-                                            {attr.defaultDisplay}
-                                        </span>
-                                    )}
-                                </div>
+                                        )}
+                                    </span>
+                                </Fragment>
                             );
                         })}
                     </div>
-                </div>
-            )}
+                )}
 
-            {/* Empty body — also the whole body of a not-rendered node */}
-            {(!hasFeatures || notRendered) && (
-                <div className="mm-node__empty" />
-            )}
+                {/* Collapsed slots: how many are hidden, and the click that
+                    brings them back in place with the dash treatment. */}
+                {hasFeatures && !notRendered && showCollapsedFooter && (
+                    <button
+                        type="button"
+                        className="mm-object__collapsed-footer"
+                        onClick={(e) => { e.stopPropagation(); setEmptyRowsExpanded(true); }}
+                    >
+                        <i className="bi bi-chevron-down" />
+                        {emptySlotsLabel(emptyRowCount)}
+                    </button>
+                )}
+
+                {/* Empty body — also the whole body of a not-rendered node */}
+                {(!hasFeatures || notRendered) && (
+                    <div className="mm-node__empty" />
+                )}
+            </div>
         </div>
     );
 }

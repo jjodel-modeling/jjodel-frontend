@@ -211,6 +211,22 @@ export interface FeatureValueRow {
     value: string;                    // display value
     /** For enum-typed attributes: allowed literal names */
     enumLiterals?: Array<{ name: string; value: number }>;
+    /**
+     * Every value the slot holds, in order. `value` stays the display string of
+     * the first one, so existing consumers are untouched; this is what the
+     * instance node needs to render a collection and to print the ACTUAL count
+     * in the label — the cardinality suffix `[0]` is what makes an empty
+     * collection legible, and the metamodel bound cannot supply it.
+     */
+    values?: string[];
+    /** Declared multi-valued in the metamodel (upperBound ≠ 1). */
+    isMany?: boolean;
+    /**
+     * For reference slots: the resolved targets, with their DObject ids. `value`
+     * carries the same names joined; only the ids let the reference pill select
+     * and reveal the target.
+     */
+    refTargets?: Array<{ id: string; name: string }>;
 }
 
 // === M1 Edge Data ===

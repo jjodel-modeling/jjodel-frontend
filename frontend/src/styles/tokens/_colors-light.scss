@@ -413,4 +413,45 @@ $gradient-hover: linear-gradient(180deg, $slate-100 0%, $slate-200 100%);
   --color-form-dirty-halo: rgba(14, 165, 233, 0.2);   /* halo of the 6px dirty dot */
   --color-warning-text: #b45309;                     /* amber-700; the scale stops at $amber-600 */
 
+  /* ============================================
+     INSTANCE NODE (2026-08-27)
+     Roles of the M1 instance node on the canvas (design handoff
+     docs/design/design_handoff_instance_node/). Prefixed `inode` for the same
+     reason `form` is: the obvious names (--color-node-bg, --color-node-border)
+     are among the 15 declared BOTH here and in styles/tokens.css, so they carry
+     no dependable value — see the FORM VIEWS block above.
+
+     The cyan family is the canvas interaction accent, and it was not in the
+     token system: the node is the first consumer that needs the full ramp
+     (pill, selected header, selected badge, ring) rather than the single
+     --color-canvas-accent. Values are cyan-50..cyan-700, the same ramp
+     --color-selection-bg / --color-selection-bar already draw two steps from.
+     ============================================ */
+  --color-inode-surface: #ffffff;                    /* node fill */
+  --color-inode-border: #{$slate-300};               /* node border, header rule */
+  --color-inode-header-fill: #{$slate-100};          /* headerFill = true */
+  --color-inode-name: #{$slate-900};                 /* instance name, scalar values */
+  --color-inode-label: #{$slate-500};                /* property labels */
+  --color-inode-quiet: #{$slate-300};                /* empty dash, cardinality suffix */
+  --color-inode-footer: #{$slate-400};               /* collapsed-slots footer, edge marker */
+  --color-inode-footer-rule: #{$slate-100};          /* footer top hairline */
+  --color-inode-chip-bg: #{$slate-100};              /* collection chip */
+  --color-inode-chip-fg: #{$slate-600};
+  --color-inode-badge-bg: #{$slate-100};             /* neutral type badge / chip */
+  --color-inode-badge-fg: #{$slate-600};
+  --color-inode-accent-neutral: #{$slate-300};       /* accent bar, factory default */
+  --color-inode-shadow: rgba(0, 0, 0, 0.04);         /* resting */
+  --color-inode-shadow-hover: rgba(0, 0, 0, 0.08);   /* hover lift */
+
+  /* Cyan — selection owns it, and the reference pill borrows it for navigation */
+  --color-inode-ref-bg: #ecfeff;                     /* cyan-50 */
+  --color-inode-ref-border: #a5f3fc;                 /* cyan-200 */
+  --color-inode-ref-fg: #0891b2;                     /* cyan-600 */
+  --color-inode-selected-border: #0891b2;            /* also the accent bar while selected */
+  --color-inode-selected-header-bg: #e0f7fa;
+  --color-inode-selected-header-border: #a5f3fc;
+  --color-inode-selected-badge-bg: #cffafe;          /* cyan-100 */
+  --color-inode-selected-badge-fg: #0e7490;          /* cyan-700 */
+  --color-inode-selected-ring: rgba(6, 182, 212, 0.18);
+
 }

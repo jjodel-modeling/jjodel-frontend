@@ -2069,6 +2069,12 @@
 .mm-object {
     min-width: 140px;
 
+    // Superata dal 2026-08-27: nodes/instanceNode.scss dipinge l'header del nodo
+    // istanza a (0,3,0) con --color-inode-header-fill, e il fondo di default e'
+    // trasparente. Resta qui perche' `--object-header-bg` ha ancora consumatori
+    // (le varianti d'header su body, _color-schemes.scss) e perche' e' la regola
+    // che vale se instanceNode.scss non e' caricato.
+    // TODO: cleanup insieme alle varianti d'header.
     .mm-object__header {
         background: var(--object-header-bg, rgba(180, 130, 50, 0.35));
         border-bottom: 1px solid var(--node-separator);
@@ -2099,6 +2105,11 @@
         font-weight: 500;
     }
 
+    // Non piu' emessa dal 2026-08-27: il ramo nativo di ObjectNode rende i valori
+    // con i cinque renderer del handoff (.mm-object__scalar, __chip, __ref-pill,
+    // __swatch, __dash), non piu' con una sola classe in corsivo.
+    // TODO: cleanup — verificare prima styles/classic-object-view.scss, che la
+    // cita per riferimento a :164.
     .mm-object__feature-value {
         font-style: italic;
         cursor: text;
@@ -2162,6 +2173,11 @@
         }
     }
 
+    // Superata dal 2026-08-27: la selezione del nodo istanza e' la regola del
+    // ciano (instanceNode.scss, (0,3,0)) — bordo, anello e header ciano, e
+    // l'accento categoriale che cede per la durata. Questa resta come regola di
+    // ripiego. `drop-target`, sotto, non e' toccata.
+    // TODO: cleanup.
     &.selected {
         border-color: var(--object-accent, #f59e0b);
         box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.3), 0 2px 8px var(--node-shadow);
