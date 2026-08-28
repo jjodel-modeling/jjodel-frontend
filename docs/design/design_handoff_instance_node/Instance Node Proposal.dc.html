@@ -26,12 +26,141 @@
     a:hover { color: #0284c7; text-decoration: underline; }
   </style>
 </helmet>
+<section id="5" style="padding: 48px 56px; display: flex; flex-direction: column; gap: 32px; border-bottom: 1px solid #e2e8f0;">
+  <div style="max-width: 860px;">
+    <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8; margin-bottom: 8px;">Turno 5 · Livello 3 · Libreria Row view</div>
+    <h1 style="font-size: 24px; font-weight: 700; color: #0f172a; margin: 0 0 8px;">Nove renderer, un componente per ciascuno</h1>
+    <p style="font-size: 14px; color: #475569; margin: 0 0 10px; line-height: 1.6;">Ogni valore in un compartment passa per un renderer della libreria. Il renderer è scelto dalla ladder di detection (<a href="#5c">5c</a>) e sovrascrivibile. Nessun renderer introduce colore che non porti informazione: il colore appare solo dove <span style="font-weight: 600;">è</span> il dato (swatch) o dove segnala uno stato (reference rotta).</p>
+    <p style="font-size: 14px; color: #475569; margin: 0; line-height: 1.6;">La colonna <span style="font-weight: 600;">Nodo su canvas</span> è vuota per sei renderer su nove, e non è una lacuna: un booleano o una data non possono esistere come istanza autonoma, sono valori di uno slot. La parità riga↔canvas del livello 3 si applica solo ai renderer il cui valore <span style="font-weight: 600;">è</span> un oggetto — swatch, chip enum, pill reference.</p>
+  </div>
+
+  <div id="5a" style="display: flex; flex-direction: column; gap: 12px;">
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <span style="font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: #0f172a; color: #ffffff; letter-spacing: 0.04em;">5a</span>
+      <span style="font-size: 13px; font-weight: 600; color: #0f172a;">La libreria</span>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 250px 1fr 210px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+
+      <div style="padding: 10px 18px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #94a3b8;">Renderer · quando</div>
+      <div style="padding: 10px 18px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #94a3b8;">Riga nel compartment</div>
+      <div style="padding: 10px 18px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #94a3b8;">Nodo su canvas</div>
+
+      <div style="padding: 14px 18px; border-bottom: 1px solid #f1f5f9;"><div style="font-size: 13px; font-weight: 600; color: #0f172a;">Swatch colore</div><div style="font-size: 12px; color: #94a3b8; line-height: 1.5; margin-top: 3px;">Tipo <span style="font-family: 'IBM Plex Mono', monospace;">Color</span>, valore parsabile come colore, o enum i cui literal sono tutti colori CSS</div></div>
+      <div style="padding: 14px 18px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center;"><span style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #0f172a; font-weight: 500;"><span style="width: 10px; height: 10px; border-radius: 3px; background: #22c55e; flex: none; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.08);"></span>Green</span></div>
+      <div style="padding: 14px 18px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center;"><span style="display: inline-flex; align-items: baseline; gap: 0; padding: 7px 14px; border-radius: 999px; background: #ffffff; border: 1px solid #cbd5e1; box-shadow: 0 1px 2px rgba(0,0,0,0.04); font-size: 13px;"><span style="width: 9px; height: 9px; border-radius: 3px; background: #22c55e; margin-right: 7px; align-self: center; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.08);"></span><span style="color: #64748b; font-weight: 500;">Color</span><span style="color: #64748b; font-weight: 500;">::</span><span style="color: #0f172a; font-weight: 600; text-decoration: underline; text-underline-offset: 3px;">Green</span></span></div>
+
+      <div style="padding: 14px 18px; border-bottom: 1px solid #f1f5f9;"><div style="font-size: 13px; font-weight: 600; color: #0f172a;">Chip enum</div><div style="font-size: 12px; color: #94a3b8; line-height: 1.5; margin-top: 3px;">Attributo tipato su una enumerazione, literal non colore</div></div>
+      <div style="padding: 14px 18px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center;"><span style="font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 4px; background: #f1f5f9; color: #475569;">DASHED</span></div>
+      <div style="padding: 14px 18px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center;"><span style="display: inline-flex; align-items: baseline; padding: 7px 14px; border-radius: 999px; background: #ffffff; border: 1px solid #cbd5e1; box-shadow: 0 1px 2px rgba(0,0,0,0.04); font-size: 13px;"><span style="color: #64748b; font-weight: 500;">Stroke</span><span style="color: #64748b; font-weight: 500;">::</span><span style="color: #0f172a; font-weight: 600; text-decoration: underline; text-underline-offset: 3px;">DASHED</span></span></div>
+
+      <div style="padding: 14px 18px; border-bottom: 1px solid #f1f5f9;"><div style="font-size: 13px; font-weight: 600; color: #0f172a;">Pill reference</div><div style="font-size: 12px; color: #94a3b8; line-height: 1.5; margin-top: 3px;">Reference o association verso un altro oggetto. <span style="font-family: 'IBM Plex Mono', monospace;">↗</span> quando il target è anche sul canvas</div></div>
+      <div style="padding: 14px 18px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 6px;"><span style="display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; padding: 2px 8px; border-radius: 999px; background: #ecfeff; color: #0891b2; border: 1px solid #a5f3fc;"><i class="bi bi-link-45deg"></i>Config</span><i class="bi bi-arrow-up-right" style="font-size: 11px; color: #94a3b8;"></i></div>
+      <div style="padding: 14px 18px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center;"><span style="font-size: 12px; color: #cbd5e1;">l'oggetto stesso</span></div>
+
+      <div style="padding: 14px 18px; border-bottom: 1px solid #f1f5f9;"><div style="font-size: 13px; font-weight: 600; color: #0f172a;">Booleano</div><div style="font-size: 12px; color: #94a3b8; line-height: 1.5; margin-top: 3px;">Tipo <span style="font-family: 'IBM Plex Mono', monospace;">EBoolean</span>. Pieno = vero, vuoto = falso — leggibile anche in scala di grigi</div></div>
+      <div style="padding: 14px 18px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 18px;"><span style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #0f172a; font-weight: 500;"><span style="width: 9px; height: 9px; border-radius: 999px; background: #334155; flex: none;"></span>true</span><span style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #64748b;"><span style="width: 9px; height: 9px; border-radius: 999px; border: 1.5px solid #cbd5e1; flex: none;"></span>false</span></div>
+      <div style="padding: 14px 18px; border-bottom: 1px solid #f1f5f9;"></div>
+
+      <div style="padding: 14px 18px; border-bottom: 1px solid #f1f5f9;"><div style="font-size: 13px; font-weight: 600; color: #0f172a;">Numero con unità</div><div style="font-size: 12px; color: #94a3b8; line-height: 1.5; margin-top: 3px;">Tipo numerico. L'unità viene dal metamodello (annotazione), non è mai inferita dal nome</div></div>
+      <div style="padding: 14px 18px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 18px;"><span style="font-size: 13px; color: #0f172a; font-weight: 500;">240<span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #94a3b8; margin-left: 4px;">px</span></span><span style="font-size: 13px; color: #0f172a; font-weight: 500;">1.5<span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #94a3b8; margin-left: 4px;">s</span></span></div>
+      <div style="padding: 14px 18px; border-bottom: 1px solid #f1f5f9;"></div>
+
+      <div style="padding: 14px 18px; border-bottom: 1px solid #f1f5f9;"><div style="font-size: 13px; font-weight: 600; color: #0f172a;">Data</div><div style="font-size: 12px; color: #94a3b8; line-height: 1.5; margin-top: 3px;">Assoluta in mono, relativa in secondaria. Mai solo relativa: il modello è un documento, non un feed</div></div>
+      <div style="padding: 14px 18px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center;"><span style="display: inline-flex; align-items: baseline; gap: 7px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #0f172a;">2026-08-28</span><span style="font-size: 11px; color: #94a3b8;">19h</span></span></div>
+      <div style="padding: 14px 18px; border-bottom: 1px solid #f1f5f9;"></div>
+
+      <div style="padding: 14px 18px; border-bottom: 1px solid #f1f5f9;"><div style="font-size: 13px; font-weight: 600; color: #0f172a;">Testo lungo troncato</div><div style="font-size: 12px; color: #94a3b8; line-height: 1.5; margin-top: 3px;">Stringa oltre la larghezza della cella. Una riga, ellissi, valore intero nel tooltip</div></div>
+      <div style="padding: 14px 18px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; min-width: 0;"><span style="font-size: 13px; color: #0f172a; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 190px;">Rendered as a rounded rectangle with a hairline border</span></div>
+      <div style="padding: 14px 18px; border-bottom: 1px solid #f1f5f9;"></div>
+
+      <div style="padding: 14px 18px; border-bottom: 1px solid #f1f5f9;"><div style="font-size: 13px; font-weight: 600; color: #0f172a;">Barra di progresso</div><div style="font-size: 12px; color: #94a3b8; line-height: 1.5; margin-top: 3px;">Numerico con minimo e massimo dichiarati nel metamodello. Senza bounds resta un numero</div></div>
+      <div style="padding: 14px 18px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center;"><span style="display: inline-flex; align-items: center; gap: 8px;"><span style="width: 64px; height: 4px; border-radius: 999px; background: #e2e8f0; overflow: hidden; flex: none;"><span style="display: block; width: 68%; height: 100%; border-radius: 999px; background: #475569;"></span></span><span style="font-size: 12px; color: #0f172a; font-weight: 500;">0.68</span></span></div>
+      <div style="padding: 14px 18px; border-bottom: 1px solid #f1f5f9;"></div>
+
+      <div style="padding: 14px 18px; border-bottom: 1px solid #f1f5f9;"><div style="font-size: 13px; font-weight: 600; color: #0f172a;">Codice / mono</div><div style="font-size: 12px; color: #94a3b8; line-height: 1.5; margin-top: 3px;">Espressioni, path, identificatori. Annotato nel metamodello, mai inferito</div></div>
+      <div style="padding: 14px 18px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #0f172a; background: #f1f5f9; padding: 2px 7px; border-radius: 3px;">self.width &gt; 0</span></div>
+      <div style="padding: 14px 18px; border-bottom: 1px solid #f1f5f9;"></div>
+
+      <div style="padding: 14px 18px;"><div style="font-size: 13px; font-weight: 600; color: #0f172a;">Dash</div><div style="font-size: 12px; color: #94a3b8; line-height: 1.5; margin-top: 3px;">Slot senza valore. È il default confermato: la riga resta, il posto vuoto è informazione</div></div>
+      <div style="padding: 14px 18px; display: flex; align-items: center;"><span style="color: #cbd5e1; font-size: 13px;">—</span></div>
+      <div style="padding: 14px 18px;"></div>
+
+    </div>
+  </div>
+
+  <div style="display: flex; gap: 32px; flex-wrap: wrap; align-items: flex-start;">
+
+    <div id="5b" style="display: flex; flex-direction: column; gap: 12px; width: 340px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: #0f172a; color: #ffffff; letter-spacing: 0.04em;">5b</span>
+        <span style="font-size: 13px; font-weight: 600; color: #0f172a;">Collection e reference rotte</span>
+      </div>
+      <div style="background: #ffffff; border-radius: 8px; border: 1px solid #cbd5e1; box-shadow: 0 1px 2px rgba(0,0,0,0.04); overflow: hidden;">
+        <div style="padding: 11px 14px; border-bottom: 1px solid #cbd5e1; text-align: center;">
+          <span style="font-size: 14px; font-weight: 600; color: #0f172a; text-decoration: underline; text-underline-offset: 3px;">Shape_2 : Shape</span>
+        </div>
+        <div style="padding: 10px 14px; display: grid; grid-template-columns: 64px 1fr; row-gap: 9px; column-gap: 12px; font-size: 13px; align-items: center;">
+          <span style="color: #64748b;">tags <span style="color: #cbd5e1;">[7]</span></span>
+          <span style="display: flex; gap: 4px; flex-wrap: wrap; align-items: center;"><span style="font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 4px; background: #f1f5f9; color: #475569;">draft</span><span style="font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 4px; background: #f1f5f9; color: #475569;">review</span><span style="font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 4px; background: #f1f5f9; color: #475569;">urgent</span><span style="font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 4px; background: #f1f5f9; color: #475569;">v2</span><span style="font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 4px; background: #ffffff; border: 1px solid #cbd5e1; color: #64748b; cursor: pointer;">+3</span></span>
+          <span style="color: #64748b;">cfg</span>
+          <span style="display: inline-flex; align-items: center; gap: 6px;"><i class="bi bi-exclamation-circle-fill" style="font-size: 11px; color: #ef4444;"></i><span style="font-size: 13px; color: #94a3b8; text-decoration: line-through; text-decoration-color: #cbd5e1;">Config_old</span></span>
+        </div>
+      </div>
+      <div style="font-size: 12px; color: #94a3b8; line-height: 1.5;">Soglia a 4 chip, poi <span style="font-family: 'IBM Plex Mono', monospace;">+k</span> cliccabile — numero fisso, non larghezza disponibile: allo zoom una soglia elastica farebbe reflow del nodo. La reference rotta è barrata in slate con icona rossa: è un errore, non un allarme, e il canvas può averne dieci.</div>
+    </div>
+
+    <div id="5c" style="display: flex; flex-direction: column; gap: 12px; width: 400px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: #0f172a; color: #ffffff; letter-spacing: 0.04em;">5c</span>
+        <span style="font-size: 13px; font-weight: 600; color: #0f172a;">Inspector — perché questo renderer</span>
+      </div>
+      <div style="background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.04); overflow: hidden;">
+        <div style="padding: 12px 16px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: baseline; gap: 6px;">
+          <span style="font-size: 13px; font-weight: 600; color: #0f172a;">color</span>
+          <span style="font-size: 12px; color: #94a3b8;">· Shape</span>
+          <span style="margin-left: auto; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 4px; background: #f1f5f9; color: #475569;">auto</span>
+        </div>
+        <div style="padding: 12px 16px; display: flex; flex-direction: column; gap: 0;">
+          <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #94a3b8; margin-bottom: 10px;">Ladder di detection</div>
+
+          <div style="display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid #f8fafc;">
+            <span style="width: 16px; height: 16px; border-radius: 999px; border: 1px solid #e2e8f0; color: #cbd5e1; font-family: 'IBM Plex Mono', monospace; font-size: 9px; display: inline-flex; align-items: center; justify-content: center; flex: none; margin-top: 1px;">1</span>
+            <div style="min-width: 0;"><div style="font-size: 12px; color: #94a3b8;">Dichiarazione nel metamodello</div><div style="font-size: 11px; color: #cbd5e1; margin-top: 2px;">nessuna annotazione su <span style="font-family: 'IBM Plex Mono', monospace;">color</span></div></div>
+          </div>
+
+          <div style="display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid #f8fafc;">
+            <span style="width: 16px; height: 16px; border-radius: 999px; border: 1px solid #e2e8f0; color: #cbd5e1; font-family: 'IBM Plex Mono', monospace; font-size: 9px; display: inline-flex; align-items: center; justify-content: center; flex: none; margin-top: 1px;">2</span>
+            <div style="min-width: 0;"><div style="font-size: 12px; color: #94a3b8;">Valore parsato</div><div style="font-size: 11px; color: #cbd5e1; margin-top: 2px;"><span style="font-family: 'IBM Plex Mono', monospace;">"Green"</span> non è un colore letterale</div></div>
+          </div>
+
+          <div style="display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; margin: 4px -12px; background: #f8fafc; border-radius: 6px; border-left: 2px solid #334155;">
+            <span style="width: 16px; height: 16px; border-radius: 999px; background: #334155; color: #ffffff; font-family: 'IBM Plex Mono', monospace; font-size: 9px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; flex: none; margin-top: 1px;">3</span>
+            <div style="min-width: 0;"><div style="font-size: 12px; color: #0f172a; font-weight: 600;">Enum di colori CSS <span style="font-weight: 500; color: #64748b;">— regola vincente</span></div><div style="font-size: 11px; color: #64748b; margin-top: 3px; line-height: 1.5;">Tutti e 3 i literal di <span style="font-family: 'IBM Plex Mono', monospace;">Palette</span> sono nomi colore CSS: <span style="font-family: 'IBM Plex Mono', monospace;">Red</span>, <span style="font-family: 'IBM Plex Mono', monospace;">Green</span>, <span style="font-family: 'IBM Plex Mono', monospace;">Blue</span></div></div>
+          </div>
+
+          <div style="display: flex; gap: 10px; align-items: flex-start; padding: 8px 0;">
+            <span style="width: 16px; height: 16px; border-radius: 999px; border: 1px solid #e2e8f0; color: #cbd5e1; font-family: 'IBM Plex Mono', monospace; font-size: 9px; display: inline-flex; align-items: center; justify-content: center; flex: none; margin-top: 1px;">4</span>
+            <div style="min-width: 0;"><div style="font-size: 12px; color: #cbd5e1;">Nome dell'attributo <span style="font-size: 11px;">— non valutata</span></div></div>
+          </div>
+        </div>
+        <div style="padding: 12px 16px; border-top: 1px solid #f1f5f9; display: flex; align-items: center; gap: 10px; background: #f8fafc;">
+          <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #0f172a; font-weight: 500;"><span style="width: 10px; height: 10px; border-radius: 3px; background: #22c55e; flex: none; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.08);"></span>Swatch colore</span>
+          <span style="margin-left: auto; font-size: 12px; font-weight: 500; color: #0284c7; cursor: pointer;">Cambia renderer</span>
+        </div>
+      </div>
+      <div style="font-size: 12px; color: #94a3b8; line-height: 1.5;">Tutta la ladder, non solo l'esito: le regole scartate dicono perché, la vincente dice su quale evidenza. Cambiare renderer da qui promuove la scelta al metamodello e la ladder smette di girare per quella proprietà.<br><br>Si apre da un'icona <span style="font-family: 'IBM Plex Mono', monospace;">sliders</span> a 14px rivelata all'hover della riga, al bordo destro della cella valore — <span style="font-weight: 600;">Alt+click</span> resta come scorciatoia, non come unico accesso.</div>
+    </div>
+
+  </div>
+</section>
+
 <section id="4" style="padding: 48px 56px; display: flex; flex-direction: column; gap: 32px; border-bottom: 1px solid #e2e8f0;">
   <div style="max-width: 820px;">
     <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8; margin-bottom: 8px;">Turno 4 · Istanze singleton</div>
     <h1 style="font-size: 24px; font-weight: 700; color: #0f172a; margin: 0 0 8px;">Il singleton è una pill, non un rettangolo</h1>
-    <p style="font-size: 14px; color: #475569; margin: 0 0 10px; line-height: 1.6;">Un'istanza con <code style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; background: #f1f5f9; padding: 1px 5px; border-radius: 3px;">view.singleton = true</code> è un valore atomico: identità e tipo coincidono e non c'è compartment da mostrare. Riceve la stessa forma dei value renderer del livello 3 — pill, radius full, superficie bianca, bordo hairline slate — così che <span style="font-weight: 600;">Blue</span> dentro la riga <span style="font-weight: 600;">color</span> e <span style="font-weight: 600;">Blue</span> come nodo su canvas siano la stessa cosa.</p>
-    <p style="font-size: 14px; color: #475569; margin: 0; line-height: 1.6;">Etichetta: se la metaclasse ha una <span style="font-weight: 600;">superclasse astratta</span> la pill legge <code style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; background: #f1f5f9; padding: 1px 5px; border-radius: 3px;">Color : Red</code> — la superclasse è l'unica informazione non ridondante, perché dice a quale insieme chiuso il literal appartiene. Senza superclasse astratta, solo il nome: <code style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; background: #f1f5f9; padding: 1px 5px; border-radius: 3px;">Config : Config</code> è rumore, <code style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; background: #f1f5f9; padding: 1px 5px; border-radius: 3px;">Config</code> basta.</p>
+    <p style="font-size: 14px; color: #475569; margin: 0 0 10px; line-height: 1.6;">Un'istanza la cui metaclasse ha <code style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; background: #f1f5f9; padding: 1px 5px; border-radius: 3px;">isSingleton = true</code> è un valore atomico: identità e tipo coincidono e non c'è compartment da mostrare. Riceve la stessa forma dei value renderer del livello 3 — pill, radius full, superficie bianca, bordo hairline slate — così che <span style="font-weight: 600;">Blue</span> dentro la riga <span style="font-weight: 600;">color</span> e <span style="font-weight: 600;">Blue</span> come nodo su canvas siano la stessa cosa.</p>
+    <p style="font-size: 14px; color: #475569; margin: 0; line-height: 1.6;">Etichetta: se la metaclasse ha una <span style="font-weight: 600;">superclasse astratta</span> la pill legge <code style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; background: #f1f5f9; padding: 1px 5px; border-radius: 3px;">Color::Red</code> — la superclasse è l'unica informazione non ridondante, perché dice a quale insieme chiuso il literal appartiene. Senza superclasse astratta, solo il nome: <code style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; background: #f1f5f9; padding: 1px 5px; border-radius: 3px;">Config : Config</code> è rumore, <code style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; background: #f1f5f9; padding: 1px 5px; border-radius: 3px;">Config</code> basta.</p>
   </div>
 
   <div style="display: flex; gap: 32px; flex-wrap: wrap; align-items: flex-start;">
@@ -43,11 +172,11 @@
         <span style="font-size: 13px; font-weight: 600; color: #0f172a;">Con superclasse astratta</span>
       </div>
       <div style="display: flex; flex-direction: column; gap: 12px; align-items: flex-start; padding: 20px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
-        <span style="display: inline-flex; align-items: baseline; gap: 5px; padding: 7px 16px; border-radius: 999px; background: #ffffff; border: 1px solid #cbd5e1; box-shadow: 0 1px 2px rgba(0,0,0,0.04); font-size: 13px; white-space: nowrap;"><span style="color: #64748b; font-weight: 500;">Color</span><span style="color: #cbd5e1;">:</span><span style="color: #0f172a; font-weight: 600; text-decoration: underline; text-underline-offset: 3px;">Red</span></span>
-        <span style="display: inline-flex; align-items: baseline; gap: 5px; padding: 7px 16px; border-radius: 999px; background: #ffffff; border: 1px solid #cbd5e1; box-shadow: 0 1px 2px rgba(0,0,0,0.04); font-size: 13px; white-space: nowrap;"><span style="color: #64748b; font-weight: 500;">Color</span><span style="color: #cbd5e1;">:</span><span style="color: #0f172a; font-weight: 600; text-decoration: underline; text-underline-offset: 3px;">Green</span></span>
-        <span style="display: inline-flex; align-items: baseline; gap: 5px; padding: 7px 16px; border-radius: 999px; background: #ffffff; border: 1px solid #cbd5e1; box-shadow: 0 1px 2px rgba(0,0,0,0.04); font-size: 13px; white-space: nowrap;"><span style="color: #64748b; font-weight: 500;">Color</span><span style="color: #cbd5e1;">:</span><span style="color: #0f172a; font-weight: 600; text-decoration: underline; text-underline-offset: 3px;">Blue</span></span>
+        <span style="display: inline-flex; align-items: baseline; gap: 0; padding: 7px 16px; border-radius: 999px; background: #ffffff; border: 1px solid #cbd5e1; box-shadow: 0 1px 2px rgba(0,0,0,0.04); font-size: 13px; white-space: nowrap;"><span style="color: #64748b; font-weight: 500;">Color</span><span style="color: #64748b; font-weight: 500;">::</span><span style="color: #0f172a; font-weight: 600; text-decoration: underline; text-underline-offset: 3px;">Red</span></span>
+        <span style="display: inline-flex; align-items: baseline; gap: 0; padding: 7px 16px; border-radius: 999px; background: #ffffff; border: 1px solid #cbd5e1; box-shadow: 0 1px 2px rgba(0,0,0,0.04); font-size: 13px; white-space: nowrap;"><span style="color: #64748b; font-weight: 500;">Color</span><span style="color: #64748b; font-weight: 500;">::</span><span style="color: #0f172a; font-weight: 600; text-decoration: underline; text-underline-offset: 3px;">Green</span></span>
+        <span style="display: inline-flex; align-items: baseline; gap: 0; padding: 7px 16px; border-radius: 999px; background: #ffffff; border: 1px solid #cbd5e1; box-shadow: 0 1px 2px rgba(0,0,0,0.04); font-size: 13px; white-space: nowrap;"><span style="color: #64748b; font-weight: 500;">Color</span><span style="color: #64748b; font-weight: 500;">::</span><span style="color: #0f172a; font-weight: 600; text-decoration: underline; text-underline-offset: 3px;">Blue</span></span>
       </div>
-      <div style="font-size: 12px; color: #94a3b8; line-height: 1.5;">Superclasse a peso secondario, nome sottolineato: la convenzione UML resta sul nome dell'istanza.</div>
+      <div style="font-size: 12px; color: #94a3b8; line-height: 1.5;">Nome qualificato: <span style="font-family: 'IBM Plex Mono', monospace;">::</span> allo stesso peso della superclasse, sottolineatura solo sul nome del singleton.</div>
     </div>
 
     <!-- 4b -->
@@ -76,13 +205,13 @@
           </div>
           <div style="padding: 10px 14px; display: grid; grid-template-columns: 64px 1fr; row-gap: 8px; column-gap: 12px; font-size: 13px; align-items: center;">
             <span style="color: #64748b;">color</span>
-            <span><span style="display: inline-flex; align-items: baseline; gap: 4px; padding: 2px 10px; border-radius: 999px; background: #ffffff; border: 1px solid #cbd5e1; font-size: 12px;"><span style="color: #94a3b8;">Color</span><span style="color: #cbd5e1;">:</span><span style="color: #0f172a; font-weight: 600;">Blue</span></span></span>
+            <span><span style="display: inline-flex; align-items: baseline; gap: 0; padding: 2px 10px; border-radius: 999px; background: #ffffff; border: 1px solid #cbd5e1; font-size: 12px;"><span style="color: #94a3b8;">Color</span><span style="color: #64748b; font-weight: 500;">::</span><span style="color: #0f172a; font-weight: 600;">Blue</span></span></span>
             <span style="color: #64748b;">cfg</span>
             <span><span style="display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 999px; background: #ffffff; border: 1px solid #cbd5e1; font-size: 12px;"><span style="color: #0f172a; font-weight: 600;">Config</span></span></span>
           </div>
         </div>
         <div style="display: flex; gap: 12px; align-items: center; justify-content: center;">
-          <span style="display: inline-flex; align-items: baseline; gap: 5px; padding: 7px 16px; border-radius: 999px; background: #ffffff; border: 1px solid #cbd5e1; box-shadow: 0 1px 2px rgba(0,0,0,0.04); font-size: 13px; white-space: nowrap;"><span style="color: #64748b; font-weight: 500;">Color</span><span style="color: #cbd5e1;">:</span><span style="color: #0f172a; font-weight: 600; text-decoration: underline; text-underline-offset: 3px;">Blue</span></span>
+          <span style="display: inline-flex; align-items: baseline; gap: 0; padding: 7px 16px; border-radius: 999px; background: #ffffff; border: 1px solid #cbd5e1; box-shadow: 0 1px 2px rgba(0,0,0,0.04); font-size: 13px; white-space: nowrap;"><span style="color: #64748b; font-weight: 500;">Color</span><span style="color: #64748b; font-weight: 500;">::</span><span style="color: #0f172a; font-weight: 600; text-decoration: underline; text-underline-offset: 3px;">Blue</span></span>
           <span style="display: inline-flex; align-items: center; padding: 7px 16px; border-radius: 999px; background: #ffffff; border: 1px solid #cbd5e1; box-shadow: 0 1px 2px rgba(0,0,0,0.04); font-size: 13px; white-space: nowrap;"><span style="color: #0f172a; font-weight: 600; text-decoration: underline; text-underline-offset: 3px;">Config</span></span>
         </div>
       </div>
@@ -116,7 +245,7 @@
 
   <div style="max-width: 820px; padding: 16px 18px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
     <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8; margin-bottom: 8px;">Regola per l'IR</div>
-    <p style="font-size: 13px; color: #475569; margin: 0; line-height: 1.65;">Il label del singleton si risolve così: se esiste una superclasse diretta <span style="font-weight: 600;">astratta</span> → <span style="font-family: 'IBM Plex Mono', monospace;">«Super : Nome»</span>; altrimenti → <span style="font-family: 'IBM Plex Mono', monospace;">«Nome»</span>. Con più superclassi astratte si prende la prima dichiarata e le altre restano nell'inspector. La forma si risolve sul contenuto, non sul flag: <span style="font-family: 'IBM Plex Mono', monospace;">singleton && slot valorizzati === 0</span> → pill; altrimenti rettangolo con badge <span style="font-family: 'IBM Plex Mono', monospace;">1</span>. Nessun fill colorato in nessuno dei due casi.</p>
+    <p style="font-size: 13px; color: #475569; margin: 0; line-height: 1.65;">Il label del singleton si risolve così: se esiste una superclasse diretta <span style="font-weight: 600;">astratta</span> → <span style="font-family: 'IBM Plex Mono', monospace;">«Super::Nome»</span>; altrimenti → <span style="font-family: 'IBM Plex Mono', monospace;">«Nome»</span>. Con più superclassi astratte si prende la prima dichiarata e le altre restano nell'inspector. La forma si risolve sul contenuto, non sul flag: <span style="font-family: 'IBM Plex Mono', monospace;">isSingleton && slot valorizzati === 0</span> → pill; altrimenti rettangolo con badge <span style="font-family: 'IBM Plex Mono', monospace;">1</span>. Nessun fill colorato in nessuno dei due casi.</p>
   </div>
 </section>
 

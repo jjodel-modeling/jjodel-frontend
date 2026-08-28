@@ -2,10 +2,8 @@
 
 Prompt ricevuto in chat. Il testo integrale sta in
 `docs/design/design_handoff_instance_node/PROMPT_row_view_library.md`, arrivato col pull del bundle
-di handoff e **non ancora committato** al momento di questo lavoro: il bundle e' un artefatto unico
-e meta' dei suoi file sono modifiche non mie, quindi resta ad Alfonso versionarlo. Questo documento
-non duplica quel testo e registra invece cosa e' stato chiesto in piu', cosa e' stato deciso e con
-quale motivazione.
+di handoff e versionato subito dopo questo lavoro. Questo documento non duplica quel testo e
+registra invece cosa e' stato chiesto in piu', cosa e' stato deciso e con quale motivazione.
 
 ## Richiesta
 

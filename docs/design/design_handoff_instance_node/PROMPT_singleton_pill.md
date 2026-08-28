@@ -45,8 +45,9 @@ firstAbstractDirectSuperclass(metaclass)
 - Read direct superclasses from `DClass.extends` (`:2648`) — **not** `superclasses` or `extendsChain`, which are transitive and would surface an ancestor several levels up. Abstractness is the D-layer field `abstract`, **not** `isAbstract` (that name exists only as a transformer rename and reads `undefined` off `idlookup`).
 - Only **direct** superclasses are considered, and only **abstract** ones. A concrete superclass does not qualify — it would name a set the instance could have been an ordinary member of, which is not the information we want to surface.
 - With **more than one** abstract direct superclass, take the **first declared** one. The full list stays available in the inspector. This is a deliberate, accepted simplification — do not sort, disambiguate, or concatenate.
-- Typography: superclass at `font-weight: 500; color: <text-secondary>` (slate-500), separator `:` at slate-300, instance name at `font-weight: 600; color: <text-primary>` with `text-decoration: underline; text-underline-offset: 3px`.
-- **The underline goes on the instance name only, never on the whole run.** `Color : Red` must read as "a Red, which is a Color" — not as an instance literally named `Color : Red`. This is the same UML object-diagram rule already applied to the rectangle header; only its span changes.
+- Typography: superclass at `font-weight: 500; color: <text-secondary>` (slate-500), separator `::` at the **same** colour and weight as the superclass (`--color-inode-label`) and with **no surrounding spaces**, instance name at `font-weight: 600; color: <text-primary>` with `text-decoration: underline; text-underline-offset: 3px`.
+- **`Color::Red` is a qualified name, not an instance specification.** The order is deliberately the inverse of the rectangle header's `Shape_0 : Shape`, and it is not an inconsistency: the rectangle says "this instance, of that type"; the pill says "this member, of that closed set". `Red`'s type is `Red` — `Color` is its namespace. `::` is the separator that carries that reading, which is why it is not demoted to slate-300 like the rectangle's `:`.
+- **The underline goes on the instance name only, never on the whole run.** `Color::Red` must read as "the Red of Color" — not as an instance literally named `Color : Red`. This is the same UML object-diagram rule already applied to the rectangle header; only its span changes.
 
 ### 4. Row/canvas parity
 
@@ -59,7 +60,7 @@ Everything else — shape, border, surface, label resolution — comes from one 
 
 ## Acceptance
 
-- A `Red` singleton with abstract superclass `Color` renders as a white pill reading `Color : Red`, underline on `Red` only.
+- A `Red` singleton with abstract superclass `Color` renders as a white pill reading `Color::Red`, underline on `Red` only.
 - A `Config` singleton with no abstract superclass and no valued slots renders as a white pill reading `Config`.
 - The same `Config` with two valued slots renders as a rectangle with a `1` badge and a two-row compartment.
 - Selecting any of the three produces the cyan border + ring and nothing else; deselecting restores the white surface with no residual tint.
