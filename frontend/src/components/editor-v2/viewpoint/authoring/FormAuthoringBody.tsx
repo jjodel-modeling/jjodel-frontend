@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Checkbox, HelpText, Select, SegmentedControl, FormSection } from '../../../ui';
+import { Checkbox, HelpText, Select, SegmentedControl, FormSection, PRESERVED_CHIP } from '../../../ui';
 import type { MetaclassInfo } from '../../hooks/useEditorMode';
 import { JjodelEvents } from '../../../../events/registry';
 import { buildFormSections, type Section } from '../ir/formSections';
@@ -15,11 +15,11 @@ import type {
 import './FormAuthoringBody.scss';
 
 /**
- * FormAuthoringBody — the `Form` tab of the vertex authoring panel (Slice 2a, 2b).
+ * FormAuthoringBody: the `Form` tab of the vertex authoring panel (Slice 2a, 2b).
  *
  * Authors `FormSpec` (spec addendum 2026-08-28): the panel skin (`theme`), the label
  * placement, the per-feature widget overrides, how references and children render, and
- * — since Slice 2b — which features sit in Basic. Every write starts from a spread of
+ * (since Slice 2b) which features sit in Basic. Every write starts from a spread of
  * the current `form` instead of building a new object out of the controls: the
  * whole-object commit of the panel would otherwise drop a key it does not know about,
  * with nothing on screen to say so.
@@ -82,18 +82,6 @@ const LABEL_PLACEMENT_OPTIONS: { value: 'above' | 'left'; label: string }[] = [
     { value: 'left', label: 'Left' },
 ];
 
-/** Read-only chip for a value this surface preserves but does not edit. Same visual
- *  convention as FieldCompartmentListEditor's CHIP, inline style, no new CSS class. */
-const CHIP: React.CSSProperties = {
-    display: 'inline-block',
-    fontSize: 'var(--font-size-sm)',
-    color: 'var(--color-text-tertiary)',
-    fontStyle: 'italic',
-    padding: '2px 6px',
-    border: '1px dashed var(--color-border-primary)',
-    borderRadius: 'var(--radius-sm)',
-};
-
 export const widgetLabel = (kind: WidgetKind): string => WIDGET_LABEL[kind] ?? kind;
 
 /**
@@ -128,7 +116,7 @@ export const derivedTreatment = (upperBound: number): FeatureTreatment => (upper
  *
  * `basic: []` is NOT pruned, and that asymmetry with `widgets`/`features` is the point:
  * an empty map means "no override", which is the same thing as an absent map, while an
- * empty `basic` is a DECLARED answer — "nothing in Basic" — and absent means the
+ * empty `basic` is a DECLARED answer ("nothing in Basic"), while absent means the
  * heuristic instead. Only the explicit reset removes the key.
  */
 function pruneForm(next: FormSpec): FormSpec | undefined {
@@ -198,7 +186,7 @@ const derivedBasic = (rows: AuthoringFeatureRow[]): string[] => rows.filter(r =>
  *
  * With no `basic` on the ir the list is first MATERIALIZED from the heuristic and then
  * toggled: the first click turns the state from derived into declared, which the state row
- * says out loud. Anything else would be a silent half-state — a list that looks derived
+ * says out loud. Anything else would be a silent half-state: a list that looks derived
  * while one feature already disagrees with it.
  *
  * The result is rebuilt in ROW order, with names matching no row appended verbatim at the
@@ -421,7 +409,7 @@ export const FormAuthoringBody: React.FC<FormAuthoringBodyProps> = ({ draft, tar
         <div className="form-authoring__ignored">
             {unknownBasic.map(name => (
                 <div className="form-authoring__ignored-row" key={`basic:${name}`}>
-                    <span style={CHIP}>{`ignored: basic entry on unknown feature "${name}"`}</span>
+                    <span style={PRESERVED_CHIP}>{`ignored: basic entry on unknown feature "${name}"`}</span>
                     <button
                         type="button"
                         className="form-authoring__clear"
@@ -433,7 +421,7 @@ export const FormAuthoringBody: React.FC<FormAuthoringBodyProps> = ({ draft, tar
             ))}
             {ignored.map(ig => (
                 <div className="form-authoring__ignored-row" key={ig.name}>
-                    <span style={CHIP}>
+                    <span style={PRESERVED_CHIP}>
                         {ig.reason === 'unknown-feature'
                             ? `ignored: ${ig.value} on unknown feature "${ig.name}"`
                             : `ignored: ${ig.value} on ${ig.name} (${widgetLabel(ig.derived as WidgetKind)})`}
@@ -500,8 +488,8 @@ export const FormAuthoringBody: React.FC<FormAuthoringBodyProps> = ({ draft, tar
                     {row.name}
                     {row.isComposition && <span className="form-authoring__badge">child</span>}
                     {((declared !== undefined && declared !== derived) || basicDiffers(row)) && <span className="form-authoring__dot" aria-hidden="true" />}
-                    {degraded && <span style={CHIP}>declared inline, degraded to list</span>}
-                    {widgetPreserved && <span style={CHIP}>{`widget: ${widgetOverride} (preserved)`}</span>}
+                    {degraded && <span style={PRESERVED_CHIP}>declared inline, degraded to list</span>}
+                    {widgetPreserved && <span style={PRESERVED_CHIP}>{`widget: ${widgetOverride} (preserved)`}</span>}
                 </span>
                 {basicCell(row)}
                 <SegmentedControl<FeatureTreatment>

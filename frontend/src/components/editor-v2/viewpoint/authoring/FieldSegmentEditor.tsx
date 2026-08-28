@@ -1,5 +1,5 @@
 import React from 'react';
-import { Select, Input, Toggle } from '../../../ui';
+import { Select, Input, Toggle, PRESERVED_CHIP } from '../../../ui';
 import type { FieldSegment } from '../ir/irTypes';
 
 const KIND_OPTIONS = [
@@ -8,17 +8,6 @@ const KIND_OPTIONS = [
     { value: 'value', label: 'Value' },
     { value: 'literal', label: 'Literal' },
 ];
-
-/** Read-only chip for values not editable in Basic (preserved verbatim). */
-const CHIP: React.CSSProperties = {
-    display: 'inline-block',
-    fontSize: 'var(--font-size-sm)',
-    color: 'var(--color-text-tertiary)',
-    fontStyle: 'italic',
-    padding: '2px 6px',
-    border: '1px dashed var(--color-border-primary)',
-    borderRadius: 'var(--radius-sm)',
-};
 
 /** Clean segment of the chosen kind (kind switch resets kind-specific fields). */
 function forKind(kind: FieldSegment['kind']): FieldSegment {
@@ -63,7 +52,7 @@ export const FieldSegmentEditor: React.FC<FieldSegmentEditorProps> = ({ segment,
 
             {segment.kind === 'value' && (
                 editableIsWidget
-                    ? <span style={CHIP}>editable: advanced widget</span>
+                    ? <span style={PRESERVED_CHIP}>editable: advanced widget</span>
                     : <Toggle
                         checked={valueEditable === true}
                         onChange={(c) => onChange({ kind: 'value', editable: c })}

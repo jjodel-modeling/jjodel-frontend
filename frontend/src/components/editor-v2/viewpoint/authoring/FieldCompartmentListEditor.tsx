@@ -1,5 +1,5 @@
 import React from 'react';
-import { ListEditor, Input, Select, Toggle, HelpText, ConditionalEditor, forPredicateKind, type PathBuilderFeatures } from '../../../ui';
+import { ListEditor, Input, Select, Toggle, HelpText, ConditionalEditor, forPredicateKind, PRESERVED_CHIP, type PathBuilderFeatures } from '../../../ui';
 import { FieldSegmentEditor } from './FieldSegmentEditor';
 import { TextStyleField } from './TextStyleField';
 import type { FieldCompartmentSpec, FieldSegment, Predicate, TextStyle } from '../ir/irTypes';
@@ -85,18 +85,6 @@ export function withCompartmentTitle(comp: FieldCompartmentSpec, title: string):
     }
     return { ...comp, title };
 }
-
-/** Read-only chip for values not representable in Basic (preserved verbatim). Same
- *  visual convention as LabelEntryEditor's CHIP — inline style, no new CSS class. */
-const CHIP: React.CSSProperties = {
-    display: 'inline-block',
-    fontSize: 'var(--font-size-sm)',
-    color: 'var(--color-text-tertiary)',
-    fontStyle: 'italic',
-    padding: '2px 6px',
-    border: '1px dashed var(--color-border-primary)',
-    borderRadius: 'var(--radius-sm)',
-};
 
 /** New compartment default (prompt B2a): attributes source with a single name segment. */
 const newCompartment = (): FieldCompartmentSpec => ({
@@ -223,7 +211,7 @@ export const FieldCompartmentListEditor: React.FC<FieldCompartmentListEditorProp
                                     onChange={(e) => changeSource(e.target.value)}
                                 />
                             ) : (
-                                <span style={CHIP}>{`unsupported source: ${sourceFrom} (preserved)`}</span>
+                                <span style={PRESERVED_CHIP}>{`unsupported source: ${sourceFrom} (preserved)`}</span>
                             )}
                         </div>
 
@@ -231,7 +219,7 @@ export const FieldCompartmentListEditor: React.FC<FieldCompartmentListEditorProp
                             <div className="jj-field">
                                 <label className="jj-field-label">Filter by metaclass (isKind)</label>
                                 {isAdvancedFilter ? (
-                                    <span style={CHIP}>advanced predicate (preserved)</span>
+                                    <span style={PRESERVED_CHIP}>advanced predicate (preserved)</span>
                                 ) : (
                                     <>
                                         <Toggle

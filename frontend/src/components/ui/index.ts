@@ -68,6 +68,9 @@ export type { FormSectionProps } from './FormSection';
 export { EmptyState } from './EmptyState';
 export type { EmptyStateProps, EmptyStateHint, EmptyStateAction } from './EmptyState';
 
+// Shared inline styles
+export { PRESERVED_CHIP } from './preservedChip';
+
 // Additional components can be exported here as they are created:
 // export { Card } from './Card';
 // export { Badge } from './Badge';
