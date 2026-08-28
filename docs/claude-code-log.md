@@ -2,6 +2,32 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-08-28 — chore: il chip condiviso, i due token dark mancanti e gli em dash
+**Prompt**: `docs/prompts/claude_2026-08-28_1935_form_tab_slice2b_impl.md` sezioni 8 e 9, dopo il GO sullo smoke. In aggiunta dal GO: rimuovere i sei em dash introdotti dal commit precedente nei commenti di `FormAuthoringBody.tsx` (quattro) e `ViewData.tsx` (due).
+**Files touched**: frontend/src/components/ui/preservedChip.ts (nuovo), frontend/src/components/ui/index.ts, frontend/src/components/editor-v2/viewpoint/authoring/FieldCompartmentListEditor.tsx, FieldSegmentEditor.tsx, FormAuthoringBody.tsx, LabelEntryEditor.tsx, frontend/src/components/editors/views/ViewData.tsx, frontend/src/styles/tokens/_colors-dark.scss, CLAUDE.md, docs/claude-code-log.md
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Le quattro copie di `CHIP` verificate byte per byte con `diff` prima dell'estrazione. `npm run test` 1742 invariati, `npm run build` exit 0, i due token nuovi verificati sul CSS compilato.
+**Out-of-scope changes**: no. `ViewData.tsx` rientra nel perimetro per le sole due righe di commento chieste dal GO.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (nessun cambio di resa: `PRESERVED_CHIP` e' byte-identico alle quattro copie; i due token dark erano assenti, quindi le regole che li leggono non dipingevano nulla)
+**Notes**: La palette dark non usa la scala slate ma una rampa grigia piatta, quindi i due valori seguono quella (`#545454` placeholder, `#464646` disabled) sotto `--color-text-tertiary`, nell'ordine di visibilita' che usa la light. Il commento di `--color-text-tertiary` dark diceva «Placeholders, disabled text»: allineato a «Labels, captions» come in light, ora che i due ruoli hanno il token loro.
+**Prompt document name**: 2026-08-28 19:35
+
+## 2026-08-28 — feat: il tab Form autora basic, linka i compartimenti e ne titola le sezioni (slice 2b)
+**Prompt**: `docs/prompts/claude_2026-08-28_1935_form_tab_slice2b_impl.md` commit 1. Tre estensioni al tab `Form` del pannello vertex: authoring di `FormSpec.basic` con stato derived/declared e reset, link «Edit compartments» verso il tab Structure, campo `Title` dei compartimenti.
+**Files touched**: frontend/src/components/editor-v2/viewpoint/authoring/FormAuthoringBody.tsx, FormAuthoringBody.scss, FieldCompartmentListEditor.tsx, VertexAuthoringPanel.tsx, __tests__/formAuthoring.test.ts, frontend/src/components/editors/views/ViewData.tsx, frontend/src/events/registry.ts, docs/spec/claude_spec_2026-08-28_ir_formspec_addendum.md
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. `npm run typecheck` 33 = baseline con diff identico; `npx vitest run` 1742 passati (1717 + 25 nuovi), 9 file noti falliti all'import invariati; `npm run build` exit 0; regole CSS nuove verificate sul bundle compilato.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (nessun file della critical zone §3.1; `ViewData` e' UI di pannello)
+**Smoke visivo**: passato, otto punti su otto verificati da Alfonso su localhost:3000
+**Notes**: `basic: []` non viene potato: una mappa vuota e una assente dicono la stessa cosa, una lista vuota e una assente no. Il primo toggle materializza l'euristica e lo stato passa a «declared», detto dalla riga di stato. Griglia unificata a `1fr 40px 130px`: l'header era `1fr 110px` contro righe treatment `1fr 130px`, mai allineato in una sezione mista. Il `Checkbox` condiviso non espone `ariaLabel`/`title`, quindi il tooltip sta sul wrapper e il nome accessibile resta aperto (task suo).
+**Prompt document name**: 2026-08-28 19:35
+
 ## 2026-08-28 — feat(dev): fixture di smoke della libreria Row view, e due difetti veri
 **Prompt**: costruire la fixture visiva della libreria Row view e lasciarla a schermo — un entry point dev-only che crea progetto, metamodello e modello e apre il canvas, con `AllNine` che mostra tutti e nove i renderer in un nodo solo. Poi: risolvere le righe duplicate (bloccante per la verifica visiva) misurando prima di teorizzare, e misurare il DValue della reference rotta prima di scrivere codice.
 **Files touched**: frontend/src/examples/RowViewSmoke/index.ts (nuovo), frontend/src/components/devtools/SmokeBoot.tsx (nuovo), frontend/src/App.tsx, frontend/src/components/editor-v2/utils/jjomTransformers.ts, docs/claude-code-log.md

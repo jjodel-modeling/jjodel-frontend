@@ -895,7 +895,7 @@ These anti-patterns are consolidated in the canonical **NON-NEGOTIABLE RULES** b
 
 ## 21. Prompt log
 
-Codex maintains `docs/claude-code-log.md` as an append-only operational log.
+Codex maintains `docs/claude-code-log.md` as an add-only operational log: entries are never amended, and a new entry goes at the TOP of the file, newest-first per day (R-RAIL-45).
 
 ### 21.2 Entry format
 
