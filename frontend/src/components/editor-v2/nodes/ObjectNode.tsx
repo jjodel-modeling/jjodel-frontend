@@ -1147,7 +1147,7 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                                 <Fragment key={row.key}>
                                     <span
                                         className="mm-object__slot-label"
-                                        title={`${row.name} — Alt+click sul valore: perché questo renderer`}
+                                        title={`${row.name} — Alt+click the value: why this renderer`}
                                     >
                                         <span className="mm-object__feature-name">{row.name}</span>
                                         {row.cardinality && (

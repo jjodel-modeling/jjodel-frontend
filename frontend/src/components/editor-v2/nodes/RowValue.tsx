@@ -197,7 +197,7 @@ function Progress({ ratio, text, unit }: { ratio: number; text: string; unit?: s
  */
 function BrokenRef({ name }: { name: string }) {
     return (
-        <span className="mm-object__broken" title={`Il target «${name}» non esiste più`}>
+        <span className="mm-object__broken" title={`The target "${name}" no longer exists`}>
             <i className="bi bi-exclamation-circle-fill mm-object__broken-icon" />
             <span className="mm-object__broken-name">{name}</span>
         </span>
@@ -290,7 +290,7 @@ function RowValue(props: RowValueProps) {
                                     key={`${t.id}_${i}`}
                                     parts={{ superclassName: pillTargets.get(t.id) ?? null, instanceName: t.name }}
                                     variant={isNode ? 'node' : 'row'}
-                                    title={`Vai a ${t.name}`}
+                                    title={`Go to ${t.name}`}
                                     onClick={(e) => { e.stopPropagation(); onTargetClick?.(t.id); }}
                                 />
                             );
@@ -299,7 +299,7 @@ function RowValue(props: RowValueProps) {
                             <span
                                 key={`${t.id}_${i}`}
                                 className="mm-object__ref-pill"
-                                title={`Vai a ${t.name}`}
+                                title={`Go to ${t.name}`}
                                 onClick={(e) => { e.stopPropagation(); onTargetClick?.(t.id); }}
                             >
                                 <i className="bi bi-link-45deg" />
@@ -339,7 +339,7 @@ function RowValue(props: RowValueProps) {
                     {hidden > 0 && (
                         <span
                             className="mm-object__chip mm-object__chip--more"
-                            title={`Mostra gli altri ${hidden}`}
+                            title={`Show the other ${hidden}`}
                             onClick={(e) => { e.stopPropagation(); onExpand?.(); }}
                         >
                             +{hidden}

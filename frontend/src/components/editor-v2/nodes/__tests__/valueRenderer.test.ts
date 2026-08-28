@@ -338,8 +338,8 @@ describe('traceLadder — the whole ladder, not the outcome', () => {
 
     it('a discarded rung states WHY it did not fire, which is what makes rule 4 safe to keep', () => {
         const t = traceLadder(colourEnum);
-        expect(t.rungs[0].evidence).toContain('nessuna annotazione');
-        expect(t.rungs[1].evidence).toContain('non è un colore letterale');
+        expect(t.rungs[0].evidence).toContain('no annotation');
+        expect(t.rungs[1].evidence).toContain('is not a colour literal');
     });
 
     it('the winning rung states its evidence, not just its verdict', () => {

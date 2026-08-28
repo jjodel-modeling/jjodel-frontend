@@ -365,10 +365,10 @@ export interface LadderTrace {
 }
 
 const RUNG_TITLES = [
-    'Dichiarazione nel metamodello',
-    'Valore parsato',
-    'Enum di colori CSS',
-    "Nome dell'attributo",
+    'Metamodel declaration',
+    'Parsed value',
+    'CSS colour enum',
+    'Attribute name',
 ];
 
 /**
@@ -398,23 +398,23 @@ export function traceLadder(slot: SlotShape): LadderTrace {
 
     // Rung 1 — the metamodel declaration, the only authoritative source.
     if (slot.rendererOverride) {
-        fire(0, `annotazione jjodel/renderer=${slot.rendererOverride}`);
+        fire(0, `annotation jjodel/renderer=${slot.rendererOverride}`);
         return { rungs, swatch: slot.rendererOverride === 'swatch' ? painted : null, winner: 1 };
     }
     if (COLOR_TYPE_NAMES.has(declaredType) && painted) {
-        fire(0, `tipo dichiarato ${slot.typeName}`);
+        fire(0, `declared type ${slot.typeName}`);
         return { rungs, swatch: painted, winner: 1 };
     }
     miss(0, COLOR_TYPE_NAMES.has(declaredType)
-        ? `il tipo ${slot.typeName} è dichiarato colore, ma «${value}» non è dipingibile`
-        : (featureName ? `nessuna annotazione su ${featureName}` : 'nessuna annotazione sulla proprietà'));
+        ? `type ${slot.typeName} is declared a colour, but "${value}" is not paintable`
+        : (featureName ? `no annotation on ${featureName}` : 'no annotation on the property'));
 
     // Rung 2 — the value, parsed syntactically. A lexer, not a heuristic.
     if (isSyntacticColor(value) && painted) {
-        fire(1, `«${value}» è un colore letterale`);
+        fire(1, `"${value}" is a colour literal`);
         return { rungs, swatch: painted, winner: 2 };
     }
-    miss(1, value ? `«${value}» non è un colore letterale` : 'lo slot non ha valore');
+    miss(1, value ? `"${value}" is not a colour literal` : 'the slot has no value');
 
     // Rung 3 — EVERY literal of the enumeration is a colour name. Testing the
     // whole literal set rather than the single value is what makes this safe.
@@ -422,26 +422,26 @@ export function traceLadder(slot: SlotShape): LadderTrace {
         const offender = literals.find((l) => !isNamedColor(l));
         if (!offender && painted) {
             const shown = literals.slice(0, 6).join(', ');
-            const enumName = slot.typeName ? ` di ${slot.typeName}` : '';
-            fire(2, `Tutti e ${literals.length} i literal${enumName} sono nomi colore CSS: ${shown}`);
+            const enumName = slot.typeName ? ` of ${slot.typeName}` : '';
+            fire(2, `All ${literals.length} literals${enumName} are CSS colour names: ${shown}`);
             return { rungs, swatch: painted, winner: 3 };
         }
         miss(2, offender
-            ? `«${offender}» non è un nome colore CSS`
-            : `«${value}» non è dipingibile`);
+            ? `"${offender}" is not a CSS colour name`
+            : `"${value}" is not paintable`);
     } else {
-        miss(2, 'la proprietà non è tipata su una enumerazione');
+        miss(2, 'the property is not typed on an enumeration');
     }
 
     // Rung 4 — the attribute name, and ONLY as a tie-break: the value must
     // already name a colour, so this never triggers a colour on its own.
     if (painted && isNamedColor(value) && COLOR_NAME_HINTS.has(featureName.toLowerCase())) {
-        fire(3, `pareggio risolto sul nome «${featureName}»`);
+        fire(3, `tie broken on the name "${featureName}"`);
         return { rungs, swatch: painted, winner: 4 };
     }
     miss(3, !isNamedColor(value)
-        ? `«${value}» non nomina un colore, quindi non c'è pareggio da risolvere`
-        : `«${featureName || 'la proprietà'}» non è un nome che suggerisce un colore`);
+        ? `"${value}" does not name a colour, so there is no tie to break`
+        : `"${featureName || 'the property'}" is not a name that suggests a colour`);
 
     return { rungs, swatch: null, winner: null };
 }
@@ -481,19 +481,19 @@ function decide(kind: RendererKind, slot: SlotShape, reason: string): RendererDe
             // there is no swatch to draw and the value stays a string.
             return painted
                 ? { kind: 'swatch', swatch: painted, reason }
-                : { kind: 'truncatedText', reason: `${reason}, ma «${value}» non è dipingibile` };
+                : { kind: 'truncatedText', reason: `${reason}, but "${value}" is not paintable` };
         }
         case 'boolean': {
             const b = parseBoolean(value);
             return b === null
-                ? { kind: 'truncatedText', reason: `${reason}, ma «${value}» non è né true né false` }
+                ? { kind: 'truncatedText', reason: `${reason}, but "${value}" is neither true nor false` }
                 : { kind: 'boolean', boolValue: b, reason };
         }
         case 'date': {
             const iso = absoluteDate(value);
             return iso
                 ? { kind: 'date', dateIso: iso, reason }
-                : { kind: 'truncatedText', reason: `${reason}, ma «${value}» non è una data` };
+                : { kind: 'truncatedText', reason: `${reason}, but "${value}" is not a date` };
         }
         case 'progress': {
             const n = parseNumber(value);
@@ -529,7 +529,7 @@ export function detectValueRenderer(slot: SlotShape): RendererDecision {
     // A dangling pointer outranks emptiness: a reference that HELD something and
     // lost it is not the same fact as one never set, and the row has to say so.
     if (slot.isBroken) {
-        return { kind: 'brokenRef', reason: 'il target della reference non esiste più' };
+        return { kind: 'brokenRef', reason: 'the reference target no longer exists' };
     }
 
     if (isEmptySlot(slot)) {
@@ -552,7 +552,7 @@ export function detectValueRenderer(slot: SlotShape): RendererDecision {
     // mechanism behind «a user correction promotes to the metamodel, and the
     // heuristic stops running for that property».
     if (slot.rendererOverride && isDeclarableRenderer(slot.rendererOverride)) {
-        return decide(slot.rendererOverride, slot, `dichiarato jjodel/renderer=${slot.rendererOverride}`);
+        return decide(slot.rendererOverride, slot, `declared jjodel/renderer=${slot.rendererOverride}`);
     }
 
     // ── The model's own type, before any inference ──
@@ -560,12 +560,12 @@ export function detectValueRenderer(slot: SlotShape): RendererDecision {
     // A declared type is a fact, and it outranks a value that happens to read
     // like something else: `0xFF00AA` in an EInt is a number written in hex,
     // not a colour, and only rule 1 may say otherwise.
-    if (isBooleanType(slot.typeName)) return decide('boolean', slot, 'tipo EBoolean');
-    if (isDateType(slot.typeName)) return decide('date', slot, 'tipo data');
+    if (isBooleanType(slot.typeName)) return decide('boolean', slot, 'declared EBoolean type');
+    if (isDateType(slot.typeName)) return decide('date', slot, 'declared date type');
     if (isNumericType(slot.typeName)) {
         // Bounds decide between the two numeric renderers; the unit rides along
         // with either, and comes from the annotation or not at all.
-        return decide(slot.min != null && slot.max != null ? 'progress' : 'numberUnit', slot, 'tipo numerico');
+        return decide(slot.min != null && slot.max != null ? 'progress' : 'numberUnit', slot, 'declared numeric type');
     }
 
     // ── The colour ladder ──

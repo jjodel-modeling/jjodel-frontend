@@ -25,7 +25,7 @@
  * announces itself, states which name it matched, and can be overruled in one
  * click is a convenience. The display is what changes its character.
  *
- * A rung after the winner is marked `non valutata` rather than omitted:
+ * A rung after the winner is marked `not evaluated` rather than omitted:
  * "it did not apply" and "we never asked" are different facts about the model,
  * and collapsing them would misreport the ladder.
  *
@@ -69,14 +69,14 @@ function computePopoverStyle(rect: DOMRect): React.CSSProperties {
 
 /** Human names for the library members, as the change menu lists them. */
 const RENDERER_LABELS: Record<string, string> = {
-    swatch: 'Swatch colore',
-    enumChip: 'Chip enum',
-    boolean: 'Booleano',
-    numberUnit: 'Numero con unità',
-    date: 'Data',
-    truncatedText: 'Testo troncato',
-    progress: 'Barra di progresso',
-    code: 'Codice / mono',
+    swatch: 'Colour swatch',
+    enumChip: 'Enum chip',
+    boolean: 'Boolean',
+    numberUnit: 'Number with unit',
+    date: 'Date',
+    truncatedText: 'Truncated text',
+    progress: 'Progress bar',
+    code: 'Code / monospace',
 };
 
 export interface RendererInspectorProps {
@@ -132,18 +132,18 @@ function RendererInspector({ anchor, slot, featureId, className, onClose }: Rend
     return createPortal(
         <div ref={popoverRef} className="inode-inspector" style={computePopoverStyle(anchor)}>
             <div className="inode-inspector__header">
-                <span className="inode-inspector__prop">{slot.featureName ?? 'proprietà'}</span>
+                <span className="inode-inspector__prop">{slot.featureName ?? 'property'}</span>
                 {className ? <span className="inode-inspector__class">· {className}</span> : null}
-                {/* `auto` while the ladder decides, `dichiarato` once a rule-1
+                {/* `auto` while the ladder decides, `declared` once a rule-1
                     declaration exists — the badge is the fastest read of whether
                     the heuristic is still running for this property. */}
                 <span className={`inode-inspector__badge${declared ? ' inode-inspector__badge--declared' : ''}`}>
-                    {declared ? 'dichiarato' : 'auto'}
+                    {declared ? 'declared' : 'auto'}
                 </span>
             </div>
 
             <div className="inode-inspector__body">
-                <div className="inode-inspector__section">Ladder di detection</div>
+                <div className="inode-inspector__section">Detection ladder</div>
 
                 {trace.rungs.map((rung) => {
                     const won = rung.status === 'fired';
@@ -159,8 +159,8 @@ function RendererInspector({ anchor, slot, featureId, className, onClose }: Rend
                             <div className="inode-inspector__rung-body">
                                 <div className="inode-inspector__rung-title">
                                     {rung.title}
-                                    {won ? <span className="inode-inspector__won-tag"> — regola vincente</span> : null}
-                                    {unreached ? <span className="inode-inspector__unreached-tag"> — non valutata</span> : null}
+                                    {won ? <span className="inode-inspector__won-tag"> — winning rule</span> : null}
+                                    {unreached ? <span className="inode-inspector__unreached-tag"> — not evaluated</span> : null}
                                 </div>
                                 {/* Deliberately nothing for an unreached rung: it
                                     has no evidence, and inventing one would be the
@@ -186,7 +186,7 @@ function RendererInspector({ anchor, slot, featureId, className, onClose }: Rend
                     className="inode-inspector__action"
                     onClick={() => setMenuOpen((o) => !o)}
                 >
-                    Cambia renderer
+                    Change renderer
                 </button>
             </div>
 
@@ -208,7 +208,7 @@ function RendererInspector({ anchor, slot, featureId, className, onClose }: Rend
                             className="inode-inspector__menu-item inode-inspector__menu-item--reset"
                             onClick={reset}
                         >
-                            <i className="bi bi-arrow-counterclockwise" /> Torna automatico
+                            <i className="bi bi-arrow-counterclockwise" /> Back to automatic
                         </button>
                     )}
                 </div>
