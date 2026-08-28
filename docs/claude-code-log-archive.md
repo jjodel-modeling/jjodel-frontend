@@ -260,6 +260,49 @@ since the 2026-08-18 decision. Positional cut; position and heading date agree a
 (last kept: 2026-08-18 M1 discovery; first moved: 2026-08-17 twenty-third rotation), no
 inversion. Entries move verbatim. Appended below in their active-file order.
 
+Twenty-fifth batch (2026-08-28): the ninety-four entries whose heading date is earlier than
+2026-08-27, leaving 23 (22 kept plus this rotation's own entry). The cut is by heading date, not
+by position and not by "Prompt document name". Position is not an order in this file: it carries
+two at once, a prepended block at the top running from 2026-08-27 back to 2026-08-17, and an
+appended tail running from 2026-08-25 forward to 2026-08-28. The prompt names do not discriminate
+either: many carry a descriptive suffix with no HH:mm, some carry the sentinel, some are written as
+prose. The heading date is the only field present and well formed on all 116 entries the file held
+after the removal described below.
+
+Counts: active 566 to 23, archive 818 to 912. Of the 566, 450 were removed and 94 moved. The 450
+were not moved because the archive already held them, byte for byte. They were re-imported by
+merge `70e920492` (2026-08-24, `staging` into `alfonso-frontend-jjtl`), which brought back a
+contiguous block of 450 entries dated 2026-05-21 to 2026-07-30 and, stuck to the tail of the
+twenty-third rotation entry, four orphan lines belonging to the 2026-05-25 tree-view tooltip entry:
+its `Notes` line, its `Prompt document name` line, a blank line and a rule. Every one of the 450
+was checked against the archive copy, heading and body, byte for byte, before anything was deleted;
+so was the orphan `Notes` line. All of it was dropped, none of it moved.
+
+The same merge also brought three entries the archive did not have, dated 2026-07-31, 2026-08-01
+and 2026-08-03, all three on Jjodie. They are older than the cutoff, so they leave with this batch
+and are appended below in the position they held in the active file, between the twenty-third
+rotation entry and the 2026-08-25 tail.
+
+One inversion, measured and declared. The most recent moved entry with a well formed timestamp is
+named 2026-08-26 20:17 (the form rendering discovery). One kept entry is older than that: `feat(ir):
+la riga reference verso un singleton si assegna da una select`, named 2026-08-26 18:20. It is headed
+2026-08-27 because it was written the day after the prompt it closes. No other kept entry with a
+well formed timestamp falls below the boundary.
+
+Eight of the moved entries are the ones that kept `npm run check:docs` red, plus three that raised
+its warnings: three `Corregge` written as prose on 2026-08-26, a `Corregge` and a `Causa` missing on
+the 2026-08-03 Jjodie entry, four `Notes` over the 500 character cap on entries of 2026-08-23 and
+2026-08-25, and three unresolved `Corregge` keys on 2026-08-24 and 2026-08-25. They move verbatim
+and are not amended, by the decision of 2026-08-17: pre-existing format violations leave with the
+ordinary rotation cycle, §21.3 "no back-filling" stays in force and `check-docs.ts` is not touched.
+The gate goes green by rotation, and the rotation was due: 115 real entries against a threshold of
+40. The cut is by date and it is overdue. It was not reached for in order to cover those entries,
+which all sit well inside it.
+
+The twenty-third rotation entry leaves the active file with this batch. The twenty-fourth
+paragraph above names it as its own first moved entry; it stayed in the active file. That datum was
+imprecise. It is recorded here and the paragraph is left as written.
+
 ## 2026-07-29 — refactor: narrow PropertiesWithTreeView mode union to floating
 **Prompt**: Post-fase floating, Task 2 — restringere l'union `PropertiesWithTreeViewProps.mode` da `'popup' | 'tab' | 'inline' | 'floating'` a `'floating'` (unico valore istanziato). Fallout guidato dal compilatore: rimuovere solo i rami morti flaggati da typecheck.
 **Files touched**: `editors/PropertiesWithTreeView.tsx` (union ristretta a `'floating'` :65; rimosso il ramo dispatch popup/inline morto `if (mode !== 'tab' && mode !== 'floating') return <Info mode={mode}/>` alle righe 393-395 + la sua docstring a :391 — TS2367 su `mode !== 'tab'` era l'unico errore flaggato dal compilatore), `docs/claude-code-log.md`.
@@ -11119,3 +11162,1318 @@ Dark mode overrides for `.toolbar-btn` also scoped under `.documentation-toolbar
 **Smoke visivo**: passato (GO visivo di Alfonso, 2026-08-16) — criteri: (a) quattro sezioni per famiglia nell'ordine Base (aperta) / Process / Data (ER) / Flowchart con contatori 5/29/7/2 e footer «43 presets · 4 families»; (b) chip a filtro trasversale dentro le sezioni, sezioni svuotate nascoste, espansione forzata, contatori = match; (c) tag di provenienza (7px) solo nelle tile di Process; (d) ricerca invariata e componibile col chip; (e) recenti sopravvissuti (id invariati); (f) apply invariato.
 **Notes**: (1) Le famiglie sono un vocabolario chiuso (`CatalogFamily`, `CATALOG_FAMILIES`): l'indice derivato `catalogFamilySections(query, notation)` affianca `catalogSections` (D18) senza toccarne contratto e test; `family` e' opzionale su `SymbolPreset` (regola 11) e totale in tabella. (2) Ambiguita' nuova genuina scovata dal test: `uml-fork-join` e `petri-transition` sono lo stesso punto degli assi; la recognition a insieme li mostra entrambi, coerente con D14. (3) Finding di discovery che ricalibra D26: i tipi di evento/task BPMN esistono GIA' come asse marker (varianti catch, P5); la condizione di riapertura dei badge riguarda throw, boundary e marker multipli. (4) I preset di D26 rimandati a D25 con la forma mancante: Azione/Terminator (stadio), segnali (pentagoni), Data object (pagina), Data store (cilindro), I/O (parallelogramma), Obiettivi i* (stadio, esagono, nuvola). (5) Lock git della VM non cancellabili (unlink vietato): idioma `mv` in `_to_delete/` prima e dopo ogni commit, gia' applicato tre volte in sessione. (6) Rotazione log ancora dovuta: 44 entry attive con questa, soglia 20, rinviata a repo fermo.
 **Prompt document name**: 2026-08-15 23:45
+
+## 2026-08-26 — feat(settings): i provider AI diventano righe per stato, il modale si stringe
+**Prompt**: prompt 2026-08-26 19:00 (mockup 5a). Il pannello Providers mostrava undici card da 68px con lo stesso chip «Not configured» undici volte. Due sezioni per stato, righe dense e cliccabili, modelli inline, dot verde col modello attivo, footer con lucchetto, Custom senza separatore. Modale ~960x700.
+**Files touched**: `frontend/src/components/Settings/AISettingsContent.tsx`, `frontend/src/components/Settings/AISettingsContent.scss`, `frontend/src/components/Settings/UnifiedSettingsModal/UnifiedSettingsModal.scss`, `docs/prompts/claude_2026-08-26_1900_prompt_settings_providers_5a.md`, `docs/claude-code-log.md`. Sonde `_tmp_settings_providers_5a*.ts` e screenshot restano gitignored.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gate: `npm run typecheck` 33 = baseline su output completo, 0 nei file toccati; `npm run build` exit 0 col solo chunk-warning; `npm run smoke` 12 passed / 0 failed / 3 skipped. Sonde: `_tmp_settings_providers_5a` 20/20 nello stato misto e 19/19 in quello vuoto, `_tmp_settings_providers_5a_focus` 13/13.
+**Out-of-scope changes**: no. I tre sorgenti del prompt piu' prompt e log. Le classi condivise (`.provider-card`, `.providers-list`, `.settings-footer`) restano intatte per `pages/settings/AIAssistantSettings` e `Jodie/SettingsModal`: il nuovo blocco e' tutto sotto `.ai-settings-content`.
+**Layer Impact Report**: not-required (nessun file di §3.1; nessun write path D/L, sola presentazione)
+**Smoke visivo**: la verifica finale spetta ad Alfonso a schermo. Misurato con Playwright headless: modale 960x780, righe 46/42, logo 28x28, lista 570/570 senza scroll in entrambi gli stati, footer a 32px dal fondo del modale, zero chip «Not configured», zero separatori. Le altre sei sezioni non sbordano nel modale piu' stretto.
+**Notes**: Due misure hanno cambiato il prompt. (1) A 700px la lista sborda di 34px con una sezione e di 78 con due: il modale sta a 780, ~30px di margine in entrambi gli stati. (2) Il modale non ha tema dark, zero regole `[data-theme]` in `UnifiedSettingsModal.scss`; tolte le card scure, il form aperto restava un'isola scura con la label «API Key» misurata a `rgba(255,255,255,0.6)`, bianca su bianco. Riportato al chiaro sotto `.ai-settings-content`; tema dark del modale da fare.
+**Prompt document name**: 2026-08-26 19:00
+
+## 2026-08-26 — feat(rail): l'albero torna sempre, si riapre da una riga sua, e lo splitter e' tornato
+**Prompt**: tre punti in chat. Riaprendo la rail deve tornare l'albero; deve esistere un modo evidente per riaprirlo; e uno splitter orizzontale fra albero e proprieta'. Piu' la segnalazione che «quando si chiude funziona meno bene».
+**Files touched**: `frontend/src/contexts/TreeViewPanelContext.tsx`, `frontend/src/components/editors/PropertiesWithTreeView.tsx`, `frontend/src/components/editors/properties-with-tree-view.scss`, `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: (c)
+**Regressions**: no. Gate: `npm run typecheck` 33 = baseline, 0 nei file toccati; `npm run build` exit 0 col solo chunk-warning; `npm run smoke` 12 passed / 0 failed / 3 skipped. Sonda `_tmp_topbar_rail_1c.ts` 18/18.
+**Out-of-scope changes**: no. I tre sorgenti piu' il log, committato con la ricetta §6.1 perche' un'altra sessione ci aveva gia' aggiunto una entry propria.
+**Layer Impact Report**: not-required (nessun file di §3.1; nessun write path D/L)
+**Smoke visivo**: la verifica finale spetta ad Alfonso a schermo. Misurato con Playwright headless: uscita a 120ms con albero 1 / inspector 1 / 6 righe; riga Structure `<BUTTON>` 32px in cima alla rail, che riapre l'albero; splitter 5px `row-resize`, pane 299 -> 419 al trascinamento -> 299 al doppio click.
+**Notes**: Corregge un difetto del commit precedente che il campo `Corregge` non sa nominare (prompt in chat, senza orario): la colonna usciva VUOTA — misurato albero 0 / inspector 0 / 0 righe a 120ms, contro 1/1/6 a riposo. Il paio di zone ora si aggancia durante l'uscita, e la ref si scrive in render perche' un effetto arriverebbe un frame dopo, cioe' proprio quello che si vede. La riga Structure misura 32px e non i 34 del design: `--input-height-sm` e' snappato da R-RAIL-10.
+**Prompt document name**: 2026-08-26 (istruzione in chat)
+
+## 2026-08-26 — feat(editor-v2): la rail scorre in apertura e chiusura
+**Prompt**: «il movimento di apertura / chiusura puo essere fatto con un effetto transition?». Non poteva: la colonna veniva smontata alla chiusura, e una transizione non ha nulla da animare su un nodo che sparisce.
+**Files touched**: `frontend/src/components/editors/PropertiesWithTreeView.tsx`, `frontend/src/components/editors/properties-with-tree-view.scss`, `docs/claude-code-log.md`
+**Outcome**: ⚠️ partial — la colonna scorre; i due lettori della sua larghezza (`.toolbar-rail-cell`, minimap) saltano ancora. Misurato e riportato in chat, non corretto: vivono in file di un'altra sessione, sporchi al momento del commit.
+**Corregge**: —
+**Causa**: (e)
+**Regressions**: no. Gate: `npm run typecheck` 33 = baseline, 0 nei file toccati; `npm run build` exit 0 col solo chunk-warning; `npm run smoke` 12 passed / 0 failed / 3 skipped. Sonda `_tmp_topbar_rail_1c.ts` 13/13.
+**Out-of-scope changes**: no. I due file della rail piu' il log.
+**Smoke visivo**: la verifica finale spetta ad Alfonso a schermo. Misurato con Playwright headless, colonna da 440px: a riposo tx=0; uscita a 120ms tx=301 con `pointer-events: none`, smontata entro 620ms; rientro a 120ms tx=138, a regime tx=0.
+**Layer Impact Report**: not-required (nessun file di §3.1; nessun write path D/L)
+**Notes**: Due misure che hanno cambiato il codice. Con un solo `requestAnimationFrame` l'entrata non transiva (tx=0 a 120ms): il callback gira prima del paint del frame pendente, quindi il browser risolve un computed style solo. Doppio rAF, e a 120ms tx=138. L'uscita e' a timer e non su `transitionend`, che non scatta se il kill-switch CSS mette `display:none` a meta' volo: un evento mancato lascerebbe la rail montata e fuori schermo per sempre.
+**Prompt document name**: 2026-08-26 (istruzione in chat)
+
+## 2026-08-26 — fix(editor-v2): la minimap torna a 16px dal fondo del canvas
+**Prompt**: prompt 2026-08-26 11:25. Una riga: `bottom: '100px'` sulla prop `style` della `<MiniMap>` in `EditorV2.tsx` e' un residuo di quando i controlli zoom di React Flow stavano nell'angolo in basso a destra (oggi in toolbar, commento `{/* Zoom controls moved to toolbar */}`). Portare bottom e margine destro a 16px, griglia 8px, margini simmetrici.
+**Files touched**: `frontend/src/components/editor-v2/EditorV2.tsx`, `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gate: `npm run build` exit 0 col solo chunk-warning; `npm run typecheck` 33 = baseline (l'unico errore in `EditorV2.tsx` e' quello di baseline, ora a riga 3030 invece di 2886 per scorrimento).
+**Out-of-scope changes**: no. Una riga in un file, piu' il log. Nessun tocco a `EditorV2.scss`, `simulation-panel.scss` o alle prop colore.
+**Layer Impact Report**: not-required (nessun file di §3.1 e nessun write path D/L: solo due valori nello style inline della MiniMap)
+**Smoke visivo**: la verifica finale spetta ad Alfonso a schermo. La chat ha misurato con Playwright headless (`scripts/smoke/_tmp_minimap_offset.ts`, stato `empty-metamodel-tab`): `.react-flow`.bottom − minimap.bottom = 16.00px; gap destro = 384.00px con `--jj-canvas-right-inset` a 368px, cioe' inset + 16; portando l'inset a 520px il gap va a 536.00px e la minimap trasla di 152px, quindi il margine destro segue il ridimensionamento del pannello proprieta'.
+**Notes**: Il criterio 2 del prompt («16px dal pannello proprieta'») misura 24px sul DOM: `--jj-canvas-right-inset` e' larghezza colonna + 8px di gutter (`PropertiesWithTreeView.tsx:481`), quindi i 16px partono dal bordo utile del canvas. Convenzione preesistente (col vecchio 20px erano 28px). Pannello di simulazione: bordo destro 504px contro minimap left 853px, nessuna sovrapposizione. Fuori perimetro, segnalato: `sim/simulation-panel.scss:13` cita `EditorV2.tsx:3869` per la MiniMap, oggi ~4090.
+**Prompt document name**: 2026-08-26 11:25
+
+## 2026-08-26 — fix(editor-v2): il gruppo comandi è solo zoom, il badge del modello è ambra
+**Prompt**: due fix sulla topbar rispetto al mockup 1c approvato. (1) togliere `bi-arrows-fullscreen` dal gruppo comandi: il gruppo è zoom (−/%/+), hairline, » collapse-rail. (2) il badge del modello accanto al nome usa la coppia entità model ambra — fondo `#fef3c7`, lettera `#d97706`, come i badge M/m/T/V già in uso — non slate; e in dark la pastiglia non deve essere spenta dal solito `:not()` di `properties-with-tree-view.scss`.
+**Files touched**: `frontend/src/components/editor-v2/Toolbar.tsx`, `frontend/src/components/editor-v2/EditorV2.scss`, `docs/claude-code-log.md`. Sonda `_tmp_topbar_1c.ts` e i due screenshot restano gitignored.
+**Outcome**: ✅ completed
+**Corregge**: 2026-08-26 (istruzione in chat, mockup 1c — cc203a525)
+**Causa**: (a)
+**Regressions**: no. Gate: `npm run typecheck` 33 = baseline esatta su output completo, 0 nei file toccati; `npm run build` exit 0 col solo chunk-warning; `npm run smoke` 12 passed / 0 failed / 3 skipped. `vitest` non eseguito: nessun test cita `Toolbar`.
+**Out-of-scope changes**: no. I due sorgenti del prompt piu' il log. Fuori restano i token `--color-entity-model-*`, il badge del metamodello e `.jj-type-badge--model`; la prop `onFitView` resta con TODO: cleanup (Regola 9).
+**Layer Impact Report**: not-required (nessun file di §3.1; nessun write path D/L, sola presentazione)
+**Smoke visivo**: la verifica finale spetta ad Alfonso a schermo. Sonda `_tmp_topbar_1c.ts` 9/9 con `_tmp_topbar_1c_light.png` e `_tmp_topbar_1c_dark.png`.
+**Notes**: Col bottone non si perde niente: sotto il `%` c'e' `handleResetZoom`, la stessa chiamata di `handleFitView` (EditorV2.tsx:3313-3316). Ambra literal e non token: `--color-entity-model-*` e' alias di `--color-entity-container-*` nei due temi, e ridipingerlo tingerebbe anche `.jj-type-badge--model` del Properties. Il `:not()` di properties-with-tree-view.scss:1173 e' scopato a `.tree-view-panel-body .tree-node__icon`, non raggiunge la topbar: controllo positivo in dark nella stessa corsa.
+**Prompt document name**: 2026-08-26 (istruzione in chat)
+
+## 2026-08-26 — feat(editor-v2): via la pillola di riapertura della rail
+**Prompt**: rimuovere dal canvas i due comandi che comparivano nascondendo la rail (screenshot: il cluster flottante con `bi-sliders` e `bi-diagram-2`).
+**Files touched**: `frontend/src/components/editors/PropertiesWithTreeView.tsx`, `frontend/src/components/editors/properties-with-tree-view.scss`, `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gate: `npm run typecheck` 33 = baseline, 0 nei file toccati; `npm run build` exit 0 col solo chunk-warning; `npm run smoke` 12 passed / 0 failed / 3 skipped. Sonda `_tmp_topbar_rail_1c.ts` 12/12: P8 ora misura pillola 0 sia a rail chiusa sia a rail riaperta.
+**Out-of-scope changes**: no. I due file della pillola piu' il log. Dentro `PropertiesWithTreeView.tsx` cadono con essa `showFloatingCluster` e la lettura di `show` dal context, che non avevano altri lettori.
+**Layer Impact Report**: not-required (nessun file di §3.1; nessun write path D/L)
+**Smoke visivo**: la verifica finale spetta ad Alfonso a schermo. Misurato in chat con Playwright headless: a rail chiusa `.properties-tree-floating-cluster` 0, canvas a piena larghezza (`--jj-canvas-right-inset` 0px).
+**Notes**: Nessun vicolo cieco: topbar e rail sono gated sullo stesso `activeEditorType`, quindi dove appariva la pillola c'e' il controllo. I due stati del kill-switch CSS non fanno eccezione: `canvas-only` e' normalizzato al mount, e sulla tab Documentation la rail e' nascosta senza cambio di stato, quindi torna da sola uscendo dalla tab. Meta' del kill-switch resta: copre anche `.properties-tree-overlay`, che si rende ancora.
+**Prompt document name**: 2026-08-26 (istruzione in chat)
+
+## 2026-08-26 — feat(editor-v2): il » della topbar toglie e rimette tutta la rail
+**Prompt**: «rimetti il collapse-all», poi la rettifica: «intendevo un pulsante che toglieva / rimetteva il rail». Un giro precedente aveva rimesso il toggle Focus/Browse e va scartato: non era quello.
+**Files touched**: `frontend/src/contexts/TreeViewPanelContext.tsx`, `frontend/src/components/editor-v2/Toolbar.tsx`, `frontend/src/components/editors/PropertiesWithTreeView.tsx`, `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: (a)
+**Regressions**: no. Gate: `npm run typecheck` 33 = baseline, 0 nei file toccati; `npm run build` exit 0 col solo chunk-warning; `npm run smoke` 12 passed / 0 failed / 3 skipped. Sonda `_tmp_topbar_rail_1c.ts` 12/12, con P8 riscritta per la colonna intera.
+**Out-of-scope changes**: no. Tre sorgenti piu' il log. `toggleInspector` resta sul context senza call site, con TODO: e' l'unico modo rimasto di commutare il solo inspector.
+**Layer Impact Report**: not-required (nessun file di §3.1; nessun write path D/L)
+**Smoke visivo**: la verifica finale spetta ad Alfonso a schermo. Misurato in chat con Playwright headless: chiusa rail 0 / albero 0 / inspector 0 / pillola 1 / `--jj-canvas-right-inset` 0px; riaperta 1 / 1 / 1 / 0 / 448px.
+**Notes**: Non e' un `Corregge`: il giro prima aveva consegnato la semantica scelta a domanda esplicita, qui la decisione cambia. `Causa` (a) e' l'ambiguita' di «collapse-all», che mi ha fatto costruire il controllo sbagliato una volta (Focus/Browse, scartato con `git checkout`, mai committato). `isRailVisible` non e' stato nuovo ma il predicato che la rail gia' usava (`bothCollapsed` negato): un flag a parte sarebbe una seconda verita' che ⌘B farebbe divergere.
+**Prompt document name**: 2026-08-26 (istruzione in chat)
+
+## 2026-08-26 — feat(editor-v2): topbar e header del rail, variante 1c
+**Prompt**: adozione del mockup 1c. L'header dedicato della rail sparisce e il pannello destro parte dalla banda filtro e dal campo Filter; nome e badge del modello salgono in topbar a filo destro col chevron di switch; zoom e collapse-rail in un solo gruppo bordato con hairline e divider 1x22; fuori dalla topbar il badge notifiche e il fullscreen. Invarianti dichiarate: zoom, collapse/riapertura della rail, dark mode, densita' compact.
+**Files touched**: `frontend/src/contexts/TreeViewPanelContext.tsx`, `frontend/src/components/editor-v2/Toolbar.tsx`, `frontend/src/components/editor-v2/EditorV2.scss`, `frontend/src/components/editors/PropertiesWithTreeView.tsx`, `frontend/src/components/editors/properties-with-tree-view.scss`, `frontend/src/components/TreeViewSidebar/tree-view-sidebar.scss`, `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gate: `npm run typecheck` 33 = baseline esatta, 0 errori nei file toccati; `npm run build` exit 0 col solo chunk-warning; `npm run smoke` 12 passed / 0 failed / 3 skipped, A5 (stack del chrome contiguo) ancora a 0.00px fra toolbar e rail. Sonda dedicata `_tmp_topbar_rail_1c.ts`, 12/12.
+**Out-of-scope changes**: no. Sette file, tutti confermati in apertura sotto la Regola 19. Dentro quei file: `subjectShownInRailHeader` non viene piu' passato a `Info` (l'header che lo giustificava non c'e' piu'; senza questo l'inspector resterebbe senza nome col modello selezionato), e la chiave `jjodel_property_panel_visible` cambia proprietario da `PropertiesWithTreeView` al context.
+**Layer Impact Report**: not-required (nessun file di §3.1; nessun write path D/L — le sole letture Redux nuove sono selector di sola lettura su `idlookup`)
+**Smoke visivo**: la verifica finale spetta ad Alfonso a schermo. La chat ha misurato con Playwright su Chromium headless contro `http://localhost:3000/`: `_tmp_topbar_rail_1c_light.png` e `_tmp_topbar_rail_1c_dark.png`.
+**Notes**: Tre scoperte dalla sonda. (1) L'icona che il prompt chiamava «collapse-all» era il toggle Focus/Browse (R-RAIL-38); un collapse-all vero non esiste e resta da fare. (2) Il fullscreen ritirato era l'unico scrittore e l'unica uscita di `canvas-only`, che in CSS nasconde rail e pillola: normalizzato a `split` al mount. (3) `style.scss:790` dipinge ogni `i.bi` a (0,1,1) e batteva il chevron, misurato slate-900; risolto raddoppiando `.bi`. Badge sui token entita', non ambra.
+**Prompt document name**: 2026-08-26 (istruzione in chat)
+
+## 2026-08-26 — fix(editor-v2): anello e banda seguono la sagoma anche sulle forme SVG
+**Prompt**: istruzione in chat con screenshot di un'ellisse selezionata. Il bordo ciano e quello piu' chiaro devono seguire **sempre** il contorno della forma, con il tratteggio all'esterno; il tratteggio resta assente sulle forme dove coinciderebbe in gran parte col bordo ciano (rect, rounded), come gia' fatto.
+**Files touched**: `frontend/src/components/editor-v2/viewpoint/ir/IRNodeContent.tsx`, `frontend/src/components/editor-v2/viewpoint/ir/irStyle.ts`, `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: 2026-08-26 (istruzione in chat, screenshot stadio)
+**Causa**: (f)
+**Regressions**: no, ma lo smoke non e' verde e non per questa modifica. `npm run typecheck` 33 = baseline, 0 nei file toccati; `npm run build` exit 0 col solo chunk-warning; `vitest` sui 12 file di `viewpoint/ir/` 325 passed. `npm run smoke` ROSSO: A4 conta come regressioni i messaggi `[vite] hot updated` di `PropertiesWithTreeView.tsx`, `TreeViewPanelContext.tsx`, `Dashboard.tsx`, `Toolbar.tsx` — file che un'altra sessione stava salvando durante la corsa, e A1/A2 cadono dietro a un reload HMR a meta' stato. Controllo positivo: con le mie due modifiche in stash lo smoke resta rosso con le stesse righe. Ambientale, non causato da qui (P8, R-RAIL-27).
+**Out-of-scope changes**: no (i due file della resa piu' il log)
+**Layer Impact Report**: not-required. `viewpoint/ir/` e' nella tabella §3.1 ma non fra i file che §3.2 elenca per il report; la modifica e' due elementi SVG in piu' nel render e regole CSS, nessun write path D/L e nessun tocco a compile/IR types.
+**Smoke visivo**: la verifica finale spetta ad Alfonso a schermo. La chat ha misurato e fotografato con la sonda: `_tmp_selection_ir_diamond.png` mostra anello e banda sul profilo del rombo, col tratteggio del bounding box fuori; `_tmp_selection_ir_ellipse.png` invariata.
+**Notes**: Misure (light, sonda `_tmp_selection_stroke.ts`, 26/26). Rombo: `.ir-node-content` con `outline: none` e `box-shadow: none` (via la coppia CSS spenta sulle 4 forme SVG), e sul layer SVG `ir-sel-ring` `rgba(56,189,248,.55) w=10` piu' `ir-sel-band` `rgba(56,189,248,.22) w=6`. Meta' di ogni tratto cade fuori dal contorno: 5px e 3px, gli stessi rientri del CSS. Ellisse invariata, nessuna copia SVG. Le due copie si disegnano sempre e restano `stroke: none` finche' il nodo non e' selezionato.
+**Prompt document name**: 2026-08-26 (istruzione in chat, screenshot ellisse)
+
+## 2026-08-26 — fix(editor-v2): tratto di selezione translucido e box tratteggiato sulle forme
+**Prompt**: istruzione in chat con screenshot di uno stadio selezionato. Ciano meno brillante e anello translucido, visto che sta fuori dal contorno chiuso del nodo. Piu' una valutazione richiesta: se unire i quattro handle con linee tratteggiate.
+**Files touched**: `frontend/src/components/editor-v2/_themes.scss`, `frontend/src/components/editor-v2/EditorV2.scss`, `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: 2026-08-26 (istruzione in chat)
+**Causa**: (f)
+**Regressions**: no. Gate: `npm run typecheck` 33 = baseline; `npm run build` exit 0 col solo chunk-warning; `npm run smoke` 12 passed / 0 failed / 3 skipped. `check:docs` rossa come al baseline, nessun errore su questa entry.
+**Out-of-scope changes**: no (i due file della resa piu' il log)
+**Layer Impact Report**: not-required (nessun file di §3.1; sole regole CSS e due valori di token)
+**Smoke visivo**: la verifica finale spetta ad Alfonso a schermo. La chat ha misurato e fotografato con la sonda Playwright su Chromium headless contro `http://localhost:3000/`: `_tmp_selection_ir_ellipse.png` mostra anello tenue sull'ellisse e rettangolo tratteggiato che unisce i quattro handle.
+**Notes**: Misure (light, sonda `_tmp_selection_stroke.ts`, 23/23). Tratto `2px solid rgba(56,189,248,.55)` su classe ed ellisse; banda invariata a `.22`. Linee del resizer: ellisse e rombo `opacity 1`, `border-style dashed`, colore dello stroke; rect `opacity 0`. Il tratteggio riusa le linee gia' montate dal NodeResizer, nessun elemento nuovo, e sta a (0,6,0) con !important perche' la regola che le azzera ha gia' !important a (0,2,0). Su rect e rounded resta escluso: il box coincide col contorno.
+**Prompt document name**: 2026-08-26 (istruzione in chat, screenshot stadio)
+
+## 2026-08-26 — fix(editor-v2): la banda di selezione segue la forma e si stringe a 3px
+**Prompt**: istruzione in chat, tre punti. La banda esterna deve stare attaccata al bordo interno, avere la stessa forma del contorno interno, e ridursi a 3px. Prima era uno spread di 9px sul wrapper, quindi rettangolare e staccata anche sotto un'ellisse.
+**Files touched**: `frontend/src/components/editor-v2/EditorV2.scss`, `frontend/src/components/editor-v2/viewpoint/ir/irStyle.ts`, `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: 2026-08-26 00:20
+**Causa**: (f)
+**Regressions**: no. Gate: `npm run typecheck` 33 = baseline; `npm run build` exit 0 col solo chunk-warning; `npm run smoke` 12 passed / 0 failed / 3 skipped. `check:docs` rossa come al baseline, nessun errore su questa entry.
+**Out-of-scope changes**: no (i due file della regola piu' il log)
+**Layer Impact Report**: not-required (nessun file di §3.1; sole regole CSS)
+**Smoke visivo**: la verifica finale spetta ad Alfonso a schermo. La chat ha misurato e fotografato con la sonda Playwright su Chromium headless contro `http://localhost:3000/`: `_tmp_selection_ir_ellipse.png` mostra anello e banda che seguono l'ellisse, senza piu' l'alone rettangolare sul bounding box.
+**Notes**: Misure (light, sonda `_tmp_selection_stroke.ts`, 19/19). Classe: banda su `.mm-node`, raggio 4px. Ellisse: banda su `.ir-node-content`, raggio 50%, quindi ellittica; wrapper `box-shadow: none`. Le due ombre di riposo sono ripetute nella regola selezionata, o la banda le cancellerebbe. Limite misurato sul rombo: `.ir-node-content` ha raggio 4px perche' la silhouette e' un layer SVG, quindi banda E anello restano rettangoli sul bounding box. Valeva gia' per l'anello prima di questo giro.
+**Prompt document name**: 2026-08-26 (istruzione in chat)
+
+## 2026-08-26 — discovery: gli handle cardinali collidono con gli handle di connessione
+**Prompt**: ripresa della sola Parte 2 del prompt delle 00:20 (la Parte 1 era gia' in `e8d554b9a`), a valle della entry ⚠️ di `7d17367cb`.
+**Files touched**: `docs/discovery/discovery_2026-08-26_handle_cardinali_collisione_connessione.md` (nuovo), `docs/decisions.md` (serie R-HND, quattro righe), `docs/claude-code-log.md` (questa entry). Nessun sorgente.
+**Outcome**: ✅ completed come discovery — hard stop deliberato, nessun codice per scelta di Alfonso.
+**Corregge**: 2026-08-26 00:20 (la entry di discovery di `7d17367cb`, la cui diagnosi e' rettificata)
+**Causa**: (c)
+**Regressions**: no. Nessun sorgente toccato: l'istrumentazione `[diagRS]` su `ObjectNode.tsx` e' stata rimossa e verificata a `git diff` nullo prima di scrivere il report. Gate non eseguiti perche' il diff e' di soli documenti.
+**Out-of-scope changes**: no. Modifiche di altre sessioni nel working tree (`StatusBar.*`, `featureSignature.ts`, piu' il ritocco non committato di `EditorV2.scss`/`irStyle.ts`) non toccate, commit per pathspec.
+**Layer Impact Report**: not-required (nessun file di §3.1; nessuna scrittura D/L)
+**Smoke visivo**: non applicabile — il difetto e' di hit-testing e si misura sul bersaglio del `mousedown`, non a schermo. Anzi: il report registra che `elementsFromPoint` e uno screenshot danno entrambi la risposta sbagliata su questa domanda, perche' letti prima dell'hover.
+**Notes**: Rettifica: non e' «si posiziona e non ridimensiona», e' il gesto che non comincia. Le mezzerie dei lati portano gia' 32 `.react-flow__handle` 8x8 (ellisse 54x66: est a (54,33)); l'hover li arma e il `mousedown` va a loro. `onResizeStart` 4/4 sugli angoli, 1/8 sui lati. Prova: sonda in cattura su `window` piu' bubble su `document`. Numeri e vie nel report citato.
+**Prompt document name**: 2026-08-26 00:20
+
+## 2026-08-26 — discovery: gli handle cardinali si posizionano ma non ridimensionano
+**Prompt**: parte 2 del prompt delle 00:20 — sulle forme non rettangolari i quattro handle del resizer vanno ai punti cardinali invece che agli spigoli. Fase 1 read-only sul predicato di «contorno non rettangolare», poi implementazione in `ObjectNode.tsx` con `NodeResizeControl`.
+**Files touched**: `docs/claude-code-log.md` (questa entry). Nessun sorgente: il diff di `ObjectNode.tsx` e' stato scritto, misurato e riportato a HEAD.
+**Outcome**: ⚠️ partial — posizione risolta, comportamento no. Nessun commit di codice.
+**Corregge**: —
+**Causa**: (c)
+**Regressions**: no (niente e' stato committato). `npm run typecheck` sul diff scartato dava 33 = baseline, 0 in `ObjectNode.tsx`.
+**Out-of-scope changes**: no.
+**Layer Impact Report**: not-required (`ObjectNode.tsx` non e' in §3.1; il diff scartato non toccava sync ne' D/L)
+**Smoke visivo**: non applicabile — il difetto e' comportamentale e si misura per drag, non a schermo.
+**Notes**: Numeri: ellisse con il codice di HEAD, angolo bottom-right +40+30 => 54x66 -> 86x98. Con gli handle cardinali, est +40 => 54x66 invariato, in 4 giri; idem la linea destra, e idem senza le linee (ipotesi del conflitto fra i due control allo stesso controlPosition, esclusa). Controllo positivo sul rect, angolo bottom-right => 142x42 -> 190x74. La linea destra del rect ha mosso 1 volta su 3, quindi il lato non e' morto: e' condizionato. Sonda `_tmp_selection_stroke.ts`, gitignored.
+**Prompt document name**: 2026-08-26 00:20
+
+## 2026-08-26 — fix(editor-v2): anello di selezione piatto con banda trasparente
+**Prompt**: quattro correzioni dettate dal direttore a schermo, parte 1 di 2. Ciano piu' chiaro (`node-selection-stroke` `#38bdf8` light, `#7dd3fc` dark; `node-selection-halo` `rgba(56,189,248,.22)` e `rgba(125,211,252,.25)`); via il blur dallo stato selezionato; banda trasparente di 4px oltre l'anello, resa con `0 0 0 9px` a spread pieno. L'ombra profonda della classe resta, perche' e' la stessa dello stato deselezionato. Valori non da rivalutare.
+**Files touched**: `frontend/src/components/editor-v2/_themes.scss`, `frontend/src/components/editor-v2/EditorV2.scss`, `frontend/src/components/editor-v2/viewpoint/ir/irStyle.ts`, `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: 2026-08-25 23:30
+**Causa**: (f)
+**Regressions**: no. Gate: `npm run typecheck` 33 = baseline esatta (l'unico errore che nomina EditorV2 e' il preesistente di `EditorV2.tsx:3030`, file non toccato); `npm run build` exit 0 col solo chunk-warning; `npm run smoke` 12 passed / 0 failed / 3 skipped. `check:docs` rossa come al baseline, nessun errore su questa entry.
+**Out-of-scope changes**: no. I tre file del prompt piu' il log. Il commento dei due token in `_themes.scss` e' stato riscritto perche' diceva «alone», che ora e' una banda piatta; il nome del token resta `halo` per non toccare i consumatori, come da prompt.
+**Layer Impact Report**: not-required (nessun file di §3.1; sole regole CSS, nessun write path D/L)
+**Smoke visivo**: la verifica finale spetta ad Alfonso a schermo (bridge Chrome della chat fuori uso in questa sessione). La chat ha comunque misurato e fotografato con la sonda Playwright su Chromium headless contro `http://localhost:3000/`: `_tmp_selection_ir_ellipse.png` mostra anello sull'ellisse, banda piatta rettangolare sul wrapper e nessun blur; `_tmp_selection_class.png` e `_tmp_selection_ir.png` lo stesso su classe e rect.
+**Notes**: Misure (light, sonda `_tmp_selection_stroke.ts`, 16/16): anello `2px solid rgb(56,189,248)` a `offset 3px` su classe, ellisse e rect; banda `rgba(56,189,248,.22) 0 0 0 9px`, blur 0; wrapper IR `outline-style none`. Un backtick dentro il commento nuovo di `irStyle.ts` chiudeva `BASE_CSS`, che e' un template literal: dev server a 500 e sonda ferma alla dashboard finche' non l'ho tolto. Colto dalla gate di build prima del commit; avviso lasciato a codice nel commento stesso.
+**Prompt document name**: 2026-08-26 00:20
+
+## 2026-08-25 — fix(editor-v2): l'anello di selezione e' uno solo, staccato, con alone sfumato
+**Prompt**: trascrivere i valori tarati dalla chat sul Chrome di Alfonso via CSSOM. Quattro punti: `node-selection-stroke` a `#0ea5e9` light e `#38bdf8` dark, nuovo `node-selection-halo`; `.mm-node.selected` con `outline-offset: 3px` e alone `0 0 14px 7px`, via il livello `--accent-muted`; `irStyle.ts:65` con `outline: none` (il fix del doppio anello) e lo stesso alone, `:137` a `offset 3px`; handle del resizer 9x9 a fondo di superficie con bordo ciano `1.5px`. Valori non da rivalutare.
+**Files touched**: `frontend/src/components/editor-v2/_themes.scss`, `frontend/src/components/editor-v2/EditorV2.scss`, `frontend/src/components/editor-v2/viewpoint/ir/irStyle.ts`, `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: 2026-08-25 21:10
+**Causa**: (d)
+**Regressions**: no. Gate: `npm run typecheck` 33 errori = baseline esatta, 0 nei file toccati; `npm run build` exit 0 col solo chunk-warning; `npm run smoke` 12 passed / 0 failed / 3 skipped. `check:docs` resta rossa come al baseline (due errori su entry di altre sessioni, nessuno su questa). Il doppio anello quadrato sul wrapper IR, che era il difetto di `e3d05c4a5`, e' chiuso e verificato con un assert dedicato (AC-6). Resta aperto, e non e' di questo giro, il doppio anello di `.mm-enum/.mm-object/.mm-package`, che dichiarano `border-color` e `box-shadow` propri: prompt `..._2220_` gia' previsto.
+**Out-of-scope changes**: no. I tre file sono quelli del prompt; conteggio nel commento di testata di `_themes.scss` da 92 a 93 nomi, che la riga nuova rendeva falso. Modifiche di altre sessioni (`StatusBar.*`, `featureSignature.ts`) non toccate, commit per pathspec.
+**Layer Impact Report**: not-required (nessun file di §3.1; sole regole CSS, nessun write path D/L)
+**Smoke visivo**: passato — verifica della chat, non a mano di Alfonso: sonda Playwright su Chromium headless contro `http://localhost:3000/` (P8). `_tmp_selection_class.png` e `_tmp_selection_ir.png` (rect): anello unico staccato dal bordo, alone morbido, nessun handle. `_tmp_selection_ir_ellipse.png`: anello che segue l'ellisse, nessun anello quadrato sul wrapper, handle bianchi con bordo ciano agli angoli.
+**Notes**: Misure (light, sonda `_tmp_selection_stroke.ts`, 16/16). Classe e `.ir-node-content`: `outline 2px solid rgb(14,165,233)` a `offset 3px`; wrapper IR `outline-style none`, anello quadrato spento; alone `rgba(14,165,233,.18) 0 0 14px 7px` sui due wrapper; zero handle sulla classe. Handle 9x9, fondo bianco, bordo dichiarato `1.5px solid var(--node-selection-stroke)`: `getComputedStyle` ne riporta 1px, arrotonda al pixel di device a dpr 1. `--resize-handle-bg` e `-border` restano senza consumatori.
+**Prompt document name**: 2026-08-25 23:30
+
+## 2026-08-26 — feat(tree): la sezione modello si legge come albero di containment
+**Prompt**: ridisegnare la sezione M1 del tree (mockup approvato: comfortable, icone, singleton in testa). `TreeFeatureData` ricorsiva costruita per containment in `mapStateToProps`, `FeatureRow` ricorsiva con chevron e indentazione `TREE_INDENT_STEP`, badge 20px/raggio 5 dalla palette entita' per le metaclassi note (Class/Attribute/Reference) e slate con iniziale per le altre, singleton foglia con `bi-braces` e nome slate-500 in testa alla lista, conteggio figli discreto prima del tipo nella colonna destra. Invarianti dichiarate: selezione, evento `jjodel:selectNode`, `renderHighlightedName`, header del modello, resto dell'albero.
+**Files touched**: `frontend/src/components/TreeViewSidebar/TreeViewContent.tsx`, `frontend/src/components/TreeViewSidebar/tree-view-sidebar.scss`, `frontend/src/components/editors/properties-with-tree-view.scss`, `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: yes, introdotta e chiusa dentro il task. Rendere le istanze M1 espandibili le rende chiavi di `expandedTreeNodes`, e l'effetto di pulizia degli id orfani in `TreeViewContent.tsx` non le contava fra i `validIds`: il collasso scriveva `!<id istanza>` e l'effetto lo cancellava subito, quindi il chevron non chiudeva (misurato dalla sonda, rosso). Chiusa aggiungendo le istanze ai `validIds` in ricorsione. Gate a fine task: `npx tsc --noEmit` 33 = baseline esatta, 0 nei file toccati; `npm run build` exit 0 col solo chunk-warning; `npm run smoke` 12 passed / 0 failed / 3 skip dichiarati; nessun file di test esiste sotto `TreeViewSidebar/` (vitest: "No test files found").
+**Out-of-scope changes**: yes, un file. `properties-with-tree-view.scss:1167` dichiara `[data-theme="dark"] &:not(…)  { background: transparent }` a (0,8,0) sulle `.tree-node__icon` della rail, con una lista di esclusioni per le pastiglie ratificate. Senza aggiungerci `:not(.tree-m1-icon)` i badge nuovi perdevano il fondo **solo in dark** (misurato: `rgba(0,0,0,0)` contro `rgb(254,226,226)` del chiaro) — lo stesso caso che il commento di quella riga gia' descrive per i tre badge per kind. Aggiunto un solo token alla lista, piu' il commento. Nel working tree restavano modifiche di altre sessioni (`StatusBar.*`, `featureSignature.ts`): non toccate, commit per pathspec.
+**Layer Impact Report**: not-required — nessun file di §3.1. `mapStateToProps` legge `LObject.subObjects` e `instanceof.isSingleton`; nessuna scrittura D/L nuova (l'unica resta il `SetFieldAction` su `expandedTreeNodes` che l'albero gia' faceva).
+**Smoke visivo**: passato — verifica della chat, non a mano di Alfonso: sonda `scripts/smoke/_tmp_tree_m1_containment.ts` su Chromium headless contro `http://localhost:3000/`, 27/27 verdi, fixture sintetica con M2 (`Class`/`Attribute`/`Reference`/`Widget`/`Config` singleton, due reference di containment a molti) e M1 conforme (`Config` singleton, `Person` con `firstName`/`lastName`/`employer` contenuti, `Gizmo` a radice). Provati: discendenza DOM del contenuto, delta di indentazione 12px, chevron solo sui contenitori, i cinque badge (classe CSS, glifo, colore del glifo sull'<i>, fondo), iniziale `W` per la metaclasse ignota, geometria 20x20/raggio 5 con la riga ferma a 26px, peso 600 sul contenitore, nome del singleton slate-500, conteggio `3` fra nome e tipo, singleton in testa, collasso e riapertura, selezione della riga annidata, ricerca che pesca nel figlio con `<mark>`, `display:none` del conteggio a `data-density="compact"`, dark. Screenshot `_tmp_tree_m1_light.png` e `_tmp_tree_m1_dark.png`.
+**Notes**: Tre misure hanno cambiato il diff. (1) `LModel.objects` tiene i soli root (`getCollection`, classes.ts:2510): il set `contained` resta come difesa, non come filtro atteso. (2) La rail ridichiara `.tree-node__icon` a (0,2,0): a parita' vince l'ordine di `@import`, quindi le regole nuove sono scopate su `.tree-row--feature`. (3) `.tree-feature__type` ha `margin-left:auto`; il conteggio se lo prende e il tipo lo perde con `+`. Tipo del commit non dato dal prompt (P6): dedotto dai due che cita.
+**Prompt document name**: 2026-08-26 00:20
+
+## 2026-08-25 — fix(editor-v2): la selezione di ogni nodo e' un tratto ciano con alone
+**Prompt**: uniformare la selezione di `ClassNode` a quella del nodo IR. Passo 1 di misura a schermo, poi Passo 2 su tre file: alias `--node-selection-stroke` in `_themes.scss` con lo stesso letterale di `--resize-handle-bg` per tema, `.mm-node.selected` che passa da `border-color` a `outline: 2px solid var(--node-selection-stroke)` con `outline-offset: 1px`, `irStyle.ts:137` che consuma lo stesso token e `:65-66` separata nei due selettori, con l'alone `--accent-muted` reso al ramo `.selected`. `irStyle.ts:64`, `nodeSizing.ts`, `ClassNode.tsx` e `ObjectNode.tsx` non toccati.
+**Files touched**: `frontend/src/components/editor-v2/_themes.scss`, `frontend/src/components/editor-v2/EditorV2.scss`, `frontend/src/components/editor-v2/viewpoint/ir/irStyle.ts`, `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: 2026-08-25 19:40
+**Causa**: (a)
+**Regressions**: no. Gate: `npm run typecheck` 33 errori = baseline esatta, 0 nei file toccati; `npm run build` exit 0 col solo chunk-warning e le deprecation `@import` di Sass gia' presenti; `npm run smoke` 12 passed / 0 failed / 3 skipped. Effetto collaterale MISURATO e non risolto qui: un `mm-object` nativo selezionato somma ora il suo anello ambra (`rgb(245,158,11)`, `rgba(245,158,11,.3) 0 0 0 2px`) al nuovo tratto ciano, perche' `.mm-enum/.mm-object/.mm-package .selected` dichiarano `border-color` e `box-shadow` propri ma nessun `outline`, e non vengono quindi sostituite. Riportato in chat. Il caso enum/package non e' stato misurato (il nodo enum non e' comparso sul canvas della fixture): e' dedotto dalla forma identica della regola, non da un numero.
+**Out-of-scope changes**: no. I tre file sono quelli del prompt; nel working tree restavano modifiche di altre sessioni (`StatusBar.*`, `featureSignature.ts`) non toccate, commit per pathspec. Unica aggiunta non elencata: il conteggio nel commento di testata di `_themes.scss` da 91 a 92 nomi, che la mia stessa riga rendeva falso.
+**Layer Impact Report**: not-required (nessun file di §3.1; `irStyle.ts` non e' nella tabella della critical zone e la modifica e' sole regole CSS in `BASE_CSS`, nessun write path D/L)
+**Smoke visivo**: passato — verifica della chat, non a mano di Alfonso: sonda Playwright su Chromium headless contro `http://localhost:3000/` (P8), fixture sintetica con classe M2, nodo IR `ellipse` (resizer montato) e nodo IR `rect` (nessun resizer). Screenshot `_tmp_selection_ir_ellipse.png` (tratto ciano che segue l'ellisse, alone rettangolare sul wrapper, 4 handle agli angoli), `_tmp_selection_ir.png` (rect: tratto e alone, nessun handle), `_tmp_selection_class.png` (classe: tratto e alone, nessun handle).
+**Notes**: Misure (tema chiaro, sonda `_tmp_selection_stroke.ts`, 13/13 verdi). PRIMA: classe `border 1px rgb(51,65,85)` + alone `rgba(2,132,199,.12)`; IR `outline 2px rgb(51,65,85) @1px` sul figlio, wrapper `box-shadow none`; `.resize-control.line` ha `opacity 0` e `border 0px`, non dipinge: il ciano erano i 4 handle `#0284c7`. DOPO: tratto `2px solid rgb(2,132,199) @1px` uguale su classe, ellisse e rect; alone uguale sui due wrapper; `drop-target` invariato.
+**Prompt document name**: 2026-08-25 21:10
+
+## 2026-08-25 — feat(editor-v2): TS2, stile tipografico delle righe
+**Prompt**: TS2 della spec ir-1.3, l'anello sopra la cascata del nodo aperta da `97c5a65e0`. Due agganci, uno per percorso di render: `FieldCompartmentSpec.rowFormat.style` per le righe slot-mode e `RowViewIR.style` per le righe dispatch. Fase 1 di discovery obbligatoria (cinque verifiche), poi un solo commit e hard stop visivo. Precisazione chiesta dal prompt e applicata: `rowFormat.style` reso inline sul `.ir-compartment` e non riga per riga, cosi' vale come livello di cascata anche per i compartimenti `children`, dove sez. 3.2 della spec dichiarava `rowFormat` ignorato.
+**Files touched**: `frontend/src/components/editor-v2/viewpoint/ir/irTypes.ts`, `frontend/src/components/editor-v2/viewpoint/ir/irCompile.ts`, `frontend/src/components/editor-v2/viewpoint/ir/IRNodeContent.tsx`, `frontend/src/components/editor-v2/viewpoint/ir/IRRow.tsx`, `frontend/src/components/editor-v2/viewpoint/authoring/FieldCompartmentListEditor.tsx`, `frontend/src/components/editor-v2/viewpoint/authoring/RowAuthoringPanel.tsx`, `frontend/src/components/editor-v2/viewpoint/ir/__tests__/ir.test.ts`, `docs/discovery/discovery_2026-08-25_ts2_row_textstyle.md`, `docs/spec/claude_spec_2026-07-27_ir_textstyle_addendum.md`, `docs/prompts/claude_2026-08-25_1625_prompt_ts2_row_textstyle.md`, `docs/prompts/claude_2026-08-25_1745_go_finale_ts2_row_textstyle.md`, `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gate: tsc 33 = baseline, vitest 1387 passed (1381 piu' i 6 nuovi) con le stesse 9 suite rosse in raccolta, build exit 0 col solo chunk-warning. La prova R6 (editor inline di una riga) non e' stata esercitata per mancanza di una fixture con segmenti `value` editabili: la regola `.ir-row__input` di `d59cb06c9` e' pero' byte-identica, perche' il commit non contiene nessuna riga di CSS. Lacuna dichiarata, non coperta da misura.
+**Out-of-scope changes**: no, i sei file di sorgente e il file di test sono quelli della tabella del prompt. Nel working tree c'erano modifiche di altre sessioni in corso (`StatusBar.*`, `featureSignature.ts`, e per un tratto `PropertiesWithTreeView.*` e il log stesso): non toccate, commit per pathspec.
+**Layer Impact Report**: not-required, nessun file di §3.1 e nessuna scrittura D/L: l'unico write path e' il `view.ir = draft` che i due pannelli di authoring gia' facevano.
+**Smoke visivo**: passato, prove R1-R5 a mano di Alfonso su `http://localhost:3000/`, progetto «State Machine v1», view «Class» con compartimento `children` e row view «Attribute». R1 stile di compartimento inline (`font-size: 11px` piu' colore) con righe a 11px rosse, intestazione ferma e nodo che si restringe da 88 a 83px. R2 precedenza compartimento sopra nodo (righe a 11 contro i 16 del nodo, e 16 al ritorno). R3 precedenza row view sopra compartimento (righe blu su compartimento rosso, grassetto della row view). R4 asse condizionale sul colore della row view, reattivo nei due versi cambiando lo slot `name`. R5 persistenza dopo Save e reload, tab Source senza chiavi vuote. R6 non esercitata (vedi Regressions).
+**Notes**: Una verifica di Fase 1 ha risposta diversa dall'attesa: la reattivita' degli assi condizionali poggia sullo snapshot degli slot di `useIRView`/`useIRRowView`, non sul `dependencySet` (unico consumatore `useIRContainment.ts:88`). Proseguito senza hard stop perche' il meccanismo e' piu' largo, non piu' stretto; corollario nel report di discovery. Ciclo di import `IRNodeContent -> IRRow` per `resolveTextStyle`, innocuo e dichiarato. Osservazione D15 nel GO `_1745_` §2.
+**Prompt document name**: 2026-08-25 16:25
+
+## 2026-08-25 — feat(editor-v2): cascata tipografica del simbolo e preset di padding
+**Prompt**: quattro lacune del view designer sui simboli. Fase 1 di discovery obbligatoria (sei verifiche), poi due commit con hard stop visivo ciascuno. A: BASE_CSS in token, default del testo da 11 a 13px, padding dell'intestazione allineato ai compartimenti, asse `ShapeSpec.padding` scalare con controllo in Advanced e regola in `validateIR`. B: asse `ShapeSpec.text`, radice della cascata tipografica del nodo, reso inline su `.ir-node-content` ed ereditato da label, righe ed editor inline, con sezione "Symbol text" nel tab Text. Entrambi additivi, nessun bump di `irVersion`, nessuna migrazione.
+**Files touched**: `frontend/src/components/editor-v2/viewpoint/ir/irTypes.ts`, `frontend/src/components/editor-v2/viewpoint/ir/irCompile.ts`, `frontend/src/components/editor-v2/viewpoint/ir/irValidate.ts`, `frontend/src/components/editor-v2/viewpoint/ir/irStyle.ts`, `frontend/src/components/editor-v2/viewpoint/ir/IRNodeContent.tsx`, `frontend/src/components/editor-v2/viewpoint/authoring/VertexAuthoringPanel.tsx`, `frontend/src/components/editor-v2/viewpoint/ir/__tests__/ir.test.ts`, `frontend/src/components/editor-v2/viewpoint/ir/__tests__/irValidate.test.ts`, `docs/discovery/discovery_2026-08-25_symbol_text_cascade_padding.md`, `docs/spec/claude_spec_2026-07-27_ir_textstyle_addendum.md`, `docs/prompts/claude_2026-08-25_1320_prompt_symbol_text_cascade_padding.md`, `docs/prompts/claude_2026-08-25_1400_go_commit_B_symbol_text_cascade.md`, `docs/prompts/claude_2026-08-25_1530_go_finale_symbol_text_cascade.md`, `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: yes, introdotta e chiusa dentro il task. Il padding a token sull'editor inline valeva anche per `.ir-row__input`, che in una riga di compartimento (flex a `line-height: 1.4`) ne diventava l'elemento piu' alto: riga da 22px a 38px a padding Large entrando in edit, dove prima non si muoveva. Segnalata con l'aritmetica all'hard stop di B, misurata da Alfonso sul DOM, chiusa spezzando la lista di selettori in `d59cb06c9`. Gate a fine task: tsc 33 = baseline con lo stesso insieme di errori (l'unico scarto e' la riga dell'errore preesistente di `EditorV2.tsx`, 3012 -> 3030, spostata dal commit `2f58de915` di un'altra sessione, non da qui); vitest 1381 passed con le stesse 9 suite rosse in raccolta, di cui 8 nuovi test miei (i due file IR toccati passano da 104 a 108); build exit 0 col solo chunk-warning.
+**Out-of-scope changes**: no, i sei file di sorgente e i due di test sono quelli della tabella del prompt. `StatusBar.*` e `featureSignature.ts`, gia' modificati nel working tree e non di questo fronte, non toccati e non messi in staging (commit per pathspec).
+**Layer Impact Report**: not-required, nessun file di §3.1 e nessuna scrittura D/L: l'unico write path e' il `view.ir = draft` che il pannello di authoring gia' faceva.
+**Smoke visivo**: passato, due giri di prove a mano di Alfonso su `http://localhost:3000/`. A1-A5 su «State Machine v1» e «test layout»: header `4px 8px` pari ai compartimenti, ellisse con nome di 42 caratteri che cresce a 302px senza sforare, preset Large/Small misurati (143x106 e 140x82 su Person), nodo `ir-sized` immobile. B1-B5 su «Class»: Size 16 sulle righe con l'intestazione ferma al suo 13 autorato, label a 20 che vince sul nodo a 16, asse condizionale `eq($name.value,"Ruolo") then 22` reattivo nei due versi, persistenza dopo Save + reload senza chiavi `undefined` o `{}`, input della label in mono 400 alto quanto la label e altezza del nodo invariata a 97.
+**Notes**: Rettifica alla spec ir-1.3 §4/§10: il misuratore del content-hug legge gia' il DOM, il fix di `nodeSizing.ts` dato per debito non serve. Scostamenti: commenti in inglese e subject sotto i 72 (§5, §6.2); il placeholder del Select condiviso mappato sul default per non persistere '' (nota 2026-08-08). Causa non dovuta per regola (outcome ✅, Corregge —), ma sarebbe (d). Quattro osservazioni aperte nel GO `_1530_` §3.
+**Prompt document name**: 2026-08-25 13:20
+
+## 2026-08-25 — feat(editor-v2): anti-collisione degli archi, passaggio a valle del router
+**Prompt**: GO Fase B sul punto 1 canvas, opzione (ii) (estremi + nodi visibili), forma a valle vincolante: router intatto, criterio sulla polilinea, ri-instradamento solo se violato. Politica del corridoio occupato: lato con piu' spazio libero, clearance 8px, un solo giro, altrimenti si tiene il path originale. Chiudere i tre buchi della Fase A: waypoint utente, bundleSpread, confronto a posizioni coincidenti.
+**Files touched**: `frontend/src/components/editor-v2/utils/edgeUtils.ts`, `frontend/src/components/editor-v2/edges/UnifiedEdge.tsx`, `frontend/src/components/editor-v2/utils/__tests__/nodeAvoidance.test.ts`, `docs/discovery/discovery_2026-08-25_routing_faseA.md`, `docs/prompts/claude_2026-08-25_1400_prompt_routing_faseB.md`, `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — build exit 0 col solo chunk-warning; typecheck 33 = baseline; vitest 1354 passed (i 1349 di prima piu' i 5 nuovi) con le stesse 9 suite rosse pre-esistenti; smoke 12 passed / 0 failed / 3 skip dichiarati. Nessun ramo del router modificato: un caso sano non attraversa il codice nuovo e riceve indietro lo stesso riferimento.
+**Out-of-scope changes**: no — due file di sorgente piu' il test, tutti dentro il perimetro del GO; sonda e baseline sono `_tmp_`, gitignored. `StatusBar.*` e `featureSignature.ts` non toccati (commit per pathspec).
+**Layer Impact Report**: not-required — nessun file di §3.1: `edgeUtils.ts` e `UnifiedEdge.tsx` sono geometria e resa, nessuna scrittura D/L, nessun `useAutoAnchor`/`portDistribution`/`handlePosition`.
+**Smoke visivo**: passato — sonda `scripts/smoke/_tmp_routing.ts` 12/12 su fixture sintetica con gesti reali: R0 5/5 senza intersezioni, F1a/F1b/F2 (i tre rossi della Fase A) verdi, F2-degenere riconosciuto insoddisfacibile col degrado previsto, W1a/W1b sui waypoint, P1 sugli archi paralleli dopo lo spread. Cinque screenshot.
+**Notes**: Due scostamenti argomentati nel report: il confronto byte a byte di R0 fra corse diverse e' ritirato (a parita' di posizioni due corse scelgono lati d'ancoraggio diversi: rossi falsi), sostituito dall'identita' di riferimento provata nel test unitario; il caso degli archi paralleli vive sul canvas M2, perche' su M1 due referenze fra la stessa coppia danno un arco solo (§3.4). Limiti dichiarati: ancoraggio sepolto, trigger di ricalcolo, tetto di 10 ostacoli.
+**Prompt document name**: 2026-08-25 14:00
+
+## 2026-08-25 — measure(editor-v2): routing archi, Fase A (riproduzione e misura)
+**Prompt**: riaperto il punto 1 canvas con specifica formale (F1 attraversamento del corpo, F2 U-detour su box adiacenti, R0 non regressione). Fase A: sonda `_tmp_` con fixture sintetica che riproduce i casi, criteri meccanici sul path finale, screenshot, numeri, e conferma o correzione del perimetro del fix. Fermarsi al report, nessun fix.
+**Files touched**: `docs/discovery/discovery_2026-08-25_routing_faseA.md`, `docs/prompts/claude_2026-08-25_1256_prompt_routing_faseA.md`, `docs/claude-code-log.md` (nessun file sorgente: la Fase A misura e basta)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — nessuna modifica al sorgente. Gate: `npm run smoke` 12 passed / 0 failed / 3 skip dichiarati; build, typecheck 33 e vitest 1349 verificati poco prima nella stessa sessione e non riesposti da questa fase.
+**Out-of-scope changes**: no — solo documenti; sonda e baseline sono `_tmp_`, gitignored. `StatusBar.*` e `featureSignature.ts` non toccati (commit per pathspec).
+**Layer Impact Report**: not-required — nessun file di §3.1 modificato; `edgeUtils.ts` e `UnifiedEdge.tsx` solo letti.
+**Smoke visivo**: passato — sonda `scripts/smoke/_tmp_routing.ts`: R0 5/5 verdi (baseline dei path salvata), F1a/F1b/F2 rossi con i numeri, tre screenshot.
+**Notes**: Due correzioni di metodo, misurate: spostare i nodi scrivendo x/y sul DVertex lascia i lati degli ancoraggi fermi alla configurazione precedente e produceva un rosso falso su un caso sano — la sonda ora trascina col mouse; il canvas aggancia a una griglia da 16px, quindi la validita' di un caso si giudica sulla geometria reale, non sulle coordinate chieste. I tre rossi stanno in tre rami diversi: la variante piccola ne chiude due.
+**Prompt document name**: 2026-08-25 12:56
+
+## 2026-08-25 — measure(editor-v2): undo dei due ingressi «views editor» del canvas
+**Prompt**: misurare l'undo dei due ingressi all'editor viste sul canvas e chiudere secondo l'albero di decisioni gia' dato. Caso A (sola apertura): se conforme nessuna riga, se il delta viene scartato registrare la misura senza toccare il reducer. Caso B (creazione + apertura): se i due dispatch si fondono con delta completo, riga di conformita'; altrimenti un solo dispatch per il gesto, `_lastSelected` nella stessa `TRANSACTION` della creazione dentro il handler di `EditorV2`. Registrare come R-UNDO-7.
+**Files touched**: `docs/decisions.md`, `docs/prompts/claude_2026-08-25_1216_prompt_undo_ingressi_views_editor.md`, `docs/claude-code-log.md` (nessun file sorgente: entrambi i rami che avrebbero richiesto codice sono esclusi dalla misura)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — nessuna modifica al sorgente. Gate rieseguiti comunque: tsc 33 = baseline, build exit 0 col solo chunk-warning, vitest 1349 passed con le stesse 9 suite rosse pre-esistenti.
+**Out-of-scope changes**: no — solo documenti; la sonda `_tmp_` e' gitignored. `StatusBar.*` e `featureSignature.ts`, gia' modificati nel working tree, non toccati (commit per pathspec).
+**Layer Impact Report**: not-required — nessun file di §3.1 modificato; il reducer e' stato solo letto e misurato, mai toccato (core, Rule 5).
+**Smoke visivo**: passato — sonda `scripts/smoke/_tmp_undo_view_entry.ts`, 9/10, fixture sintetica costruita in pagina, gesti reali sul menu' contestuale. L'unico rosso e' il caso A, che *e'* la misura: la scrittura di sola selezione viene scartata.
+**Notes**: Caso B conforme: i due dispatch si fondono, il delta porta `viewelements`, i due id nuovi e `_lastSelected`, un solo ⌘Z rimuove la view e riporta la selezione. Caso A: scarto con `userHasInteracted = true` e stack non vuoto; controllo positivo nella stessa corsa (la stessa scrittura sopravvive se accompagnata da una chiave non transitoria) attribuisce lo scarto all'arieta' del delta, `isOnlyTransientTopLevelChange`. Ne discende la rettifica di R-UNDO-4 registrata in R-UNDO-7.
+**Prompt document name**: 2026-08-25 12:16
+
+## 2026-08-25 — feat(editor-v2): canvas Fase 2 — nodo neutro, label d'arco, minimap, viewport
+**Prompt**: Fase 1 di discovery sui cinque punti canvas deferiti, poi Fase 2 sulla partizione approvata. Entrano 5 (nodo neutro per metaclasse non resa), 2a (`irLabelPlacement` letto), 2b (alone sul solo `.edge-label__text`), 4 (toggle minimap + token), 3 (viewport persistito per `(modello, viewpoint)`). Punto 1 (routing/floating edges) e 2c (de-overlap label) rinviati da Alfonso.
+**Files touched**: `frontend/src/components/editor-v2/nodes/ObjectNode.tsx`, `frontend/src/components/editor-v2/viewpoint/ir/irResolve.ts`, `frontend/src/components/editor-v2/edges/UnifiedEdge.tsx`, `frontend/src/components/editor-v2/EditorV2.tsx`, `frontend/src/components/editor-v2/EditorV2.scss`, `frontend/src/events/registry.ts`, `frontend/src/pages/components/Navbar.tsx`, `docs/prompts/claude_2026-08-25_1130_prompt_canvas_fase2.md`, `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — tsc 33 = baseline (in `EditorV2.tsx` resta il solo errore pre-esistente, da :2886 a :3012 per lo scorrimento delle righe); vitest 1349 passed con le stesse 9 suite rosse pre-esistenti; build exit 0 col solo chunk-warning; sonda dedicata 18/18.
+**Out-of-scope changes**: no — i 7 file dichiarati e confermati prima del diff (Rule 19), più prompt e log. `StatusBar.*` e `featureSignature.ts`, già modificati nel working tree e non di questo fronte, non toccati e non messi in staging (commit per pathspec).
+**Layer Impact Report**: not-required — nessun file di §3.1, nessuna scrittura D/L: il viewport vive in `localStorage`, mai nel D-layer e mai nell'undo.
+**Smoke visivo**: passato — sonda `scripts/smoke/_tmp_canvas_fase2.ts` (gitignored come tutte le `_tmp_`), 18 check verdi + 1 SKIP dichiarato, fixture sintetica costruita in pagina (M2 `Alpha`/`Beta`, M1 con istanze linkate, viewpoint IR dichiarato su `Alpha` sola, edge view con `placement: 'below'`). Screenshot light e dark. SKIP: il trascinamento del tab in un altro pannello — i nodi del tab riportano rect nullo a quel punto della corsa, quindi la gesture non è stata eseguita; il caso resta **non misurato**, ma i suoi due esiti possibili sono già coperti (remount = V1d, nessun remount = viewport intatto per costruzione).
+**Notes**: Smentita da registrare: `rc-dock` **non** smonta i tab inattivi (`DockTabPane.js:72`, `cached` assente ⇒ `isRender = this.visited`), quindi il cambio tab non rifaceva il fit. Il punto 3 resta con la motivazione ridotta (chiusura/riapertura, reload), decisa da Alfonso. Difetto trovato dalla sonda: il salvataggio in unmount leggeva `getViewport()` a store RF gia' in teardown e riscriveva l'origine; ora scrive l'ultimo viewport osservato via `onMove`. Decisioni nel prompt citato.
+**Prompt document name**: 2026-08-25 11:30
+
+## 2026-08-25 — fix(editor-v2): ritiro del kill-switch dell'undo dopo la misura a runtime
+**Prompt**: prompt del 2026-08-25 00:30. Parte A: quattro commit per pathspec dei documenti del 24/8 (addendum §8 del report sul reducer, R-LAY-19, checkpoint di sessione, il prompt stesso), nessuna modifica al contenuto. Parte B: `markUserInteracted` torna ad alzare `U.userHasInteracted`, commento sopra riscritto in tre righe, nessun'altra riga.
+**Files touched**: `frontend/src/components/editor-v2/EditorV2.tsx`, `docs/claude-code-log.md` (Parte A, soli commit: `docs/discovery/discovery_2026-08-24_undo_reducer_rename.md`, `docs/decisions.md`, `docs/sessioni/sessione_2026-08-24_2.md`, `docs/prompts/claude_2026-08-25_0030_prompt_undo_ritiro_killswitch.md`)
+**Outcome**: ✅ completed
+**Corregge**: 2026-08-24 23:30
+**Causa**: (c)
+**Regressions**: unknown — gate verdi (tsc 33 con lo stesso insieme di errori: l'unica differenza e' la riga di `EditorV2.tsx`, da 2988 a 2960, per le 28 righe di commento tolte sopra l'errore; vitest 1349 passed con le stesse 9 suite rosse di jjscript/jjtl/UDComparator; build exit 0 col solo chunk-warning), ma nessuna verifica a schermo: le sette prove del prompt delle 22:55 restano da fare, la 2 giudicata su tree e pannello.
+**Out-of-scope changes**: no — in `EditorV2.tsx` era gia' presente un hunk non committato e non di questo fronte (`metaclassKind` in `createViewInWorkbench`, riga 3197): messo in staging il solo hunk di `markUserInteracted` con `git apply --cached`, l'altro resta nel working tree com'era. `StatusBar.*`, `featureSignature.ts` e il prompt `_2330_` (untracked) non toccati.
+**Layer Impact Report**: not-required
+**Smoke visivo**: parziale (Alfonso, 2026-08-25) — 1, 3, 4, 5, 7 passate; 6 passata nella sostanza (un solo salvataggio, versione ferma) con uno spinner al secondo ⌘Z non riprodotto dalla chat; **2 fallita sul modello**: la rinomina di un oggetto con slot `name` arriva al reducer in due dispatch (Direction A) e la fusione first-wins perde il vecchio valore dello slot, quindi ⌘Z riporta solo `DObject.name`, invisibile a tree, pannello e canvas. Sul metamodello la 2 passa. Misura e vie di chiusura nell addendum §9 di `docs/discovery/discovery_2026-08-24_undo_reducer_rename.md` (`861101d61`). Il ritiro del kill-switch resta valido: l undo del D-layer annulla esattamente quello che il delta contiene.
+**Notes**: Causa (c) perche' la lettura statica del 24/8 aveva previsto una corruzione dello stato che la misura a runtime (addendum §8) ha smentito: l'undo del D-layer funziona, il nome fermo sul canvas e' un difetto IR preesistente (`signature` di `useIRView` senza `DObject.name`), fronte suo. Commit: Parte A `ad4ecf5e5`, `e82a17149`, `098bbe366`, `e59687ef7`; Parte B `4ef0db973`. Gate e commit eseguiti sul Mac dalla chat (osascript), non nel VM del bridge, i cui `node_modules` sono darwin-arm64.
+**Prompt document name**: 2026-08-25 00:30
+
+## 2026-08-25 — feat(views-editor): due ingressi all'editor viste (canvas, toolbar)
+
+**Prompt**: Fase 2 sugli ingressi all'editor viste, decisioni chiuse. §3 apri sulla vista piu' specifica, voce singola `Edit view · <nome>`, niente submenu. §5 bottone-menu affiancato al `<select>` del viewpoint, forma `.notation-selector`, icona `bi-pencil`, `<select>` intatto. §6 `createViewInWorkbench` ritorna `string | null` e prende un `viewpointId?` opzionale. Ingresso 3 (rail) gia' soddisfatto, non toccarlo. Requisiti aggiunti: riapertura della rail collassata e helper unico `DockManager.openView`.
+**Files touched**: `frontend/src/utils/lastViewpoint.ts`, `frontend/src/events/registry.ts`, `frontend/src/components/editors/PropertiesWithTreeView.tsx`, `frontend/src/components/abstract/DockManager.tsx`, `frontend/src/components/editor-v2/EditorV2.tsx`, `frontend/src/components/editor-v2/Toolbar.tsx`, `frontend/src/components/editor-v2/EditorV2.scss`, `docs/prompts/claude_2026-08-25_0930_prompt_views_editor_fase2_ingressi.md`, `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — tsc 33 = baseline, 0 errori nei file toccati; vitest 1349 passed con le stesse 9 suite rosse pre-esistenti; build exit 0 col solo chunk-warning; `npm run smoke` 12 passed 0 failed; sonda dedicata 18/18 con 0 pageerror.
+**Out-of-scope changes**: no — i 7 file dichiarati e confermati prima del diff (Rule 19), piu' prompt e log.
+**Layer Impact Report**: not-required — nessun file di §3.1, nessuna scrittura D/L oltre a `SetRootFieldAction` su `_lastSelected` (canale di selezione gia' in uso) e alla `DViewElement.new2` che `createViewInWorkbench` gia' faceva.
+**Smoke visivo**: passato — sonda `scripts/smoke/_tmp_views_editor_entries.ts` (non committata), 18 check verdi, fixture sintetica costruita in pagina: M2 con due classi `Alpha`/`Beta`, M1 con un'istanza per classe, viewpoint IR dichiarato su `Alpha` sola. Nessun progetto esistente aperto. Trovato e corretto un difetto: il dropdown della toolbar finiva sotto la rail (misura in Notes).
+**Notes**: Le tre scelte (viewpoint da `IRViewpointIndex.viewpointId` invece che da `state.viewpoint` per R-LAY-19; `isAdvancedMode()` su Create view; evento nuovo `PROPERTIES_SHOW`) sono nel prompt citato, §«Risposte alle domande di apertura», approvate il 2026-08-25. Difetto trovato dalla sonda e corretto nello stesso giro: il dropdown del menu toolbar misurava x 1012..1212 contro la rail a x 1080 e `elementFromPoint` restituiva `.rail-header`; ancorato a destra (x 842..1040).
+**Prompt document name**: 2026-08-25 09:30
+
+## 2026-08-25 — feat(rail): tree pane relativa al viewport, densita' dei metadati, default per classe di schermo
+**Prompt**: il rail deve funzionare sia su 14" (~1440x900) sia su 27" (~2560x1440). Tre cambi, semantica invariata (cosa l'albero elenca non dipende dallo schermo): (1) `treePaneHeight` da 392px fissi a relativa al viewport; (2) densita' dei metadati guidata dalla LARGHEZZA DEL RAIL, non del viewport (<400 solo tipo, 400-519 tipo+molteplicita', >=520 tutto); (3) default di prima apertura per classe di viewport (360/400/560), solo in assenza di larghezza persistita. Fase 1 di investigazione obbligatoria prima del codice.
+**Files touched**: `frontend/src/components/editors/PropertiesWithTreeView.tsx`, `frontend/src/components/editors/properties-with-tree-view.scss`, `frontend/src/components/TreeViewSidebar/TreeViewContent.tsx`, `frontend/src/components/TreeViewSidebar/tree-view-sidebar.scss`, `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — tsc 33 = baseline esatta, 0 nei file toccati; vitest 1349 passed con le stesse 9 suite rosse pre-esistenti (verificato via stash dei 4 file); build exit 0, solo il chunk-warning pre-esistente.
+**Out-of-scope changes**: no — i 4 file previsti piu' il log. Rimosso da `TreeViewContent` il solo import di `formatFeatureSignature`, diventato morto li' per la modifica stessa; `featureSignature.ts` e `Info.tsx` intatti come da vincolo.
+**Layer Impact Report**: not-required — nessun layer D/L, nessun file critical-zone §3.1.
+**Smoke visivo**: passato — due sonde Playwright one-shot (`scripts/smoke/_tmp_rail_adaptive.ts`, `_tmp_rail_density_rows.ts`, non committate), 27 assertion verdi. Tre viewport: larghezza di prima apertura 360/400/560, tree pane 299/391/574, inspector 434/522/699, `data-density` compact/default/full, Focus collassa a 0 ovunque. Larghezza persistita 480: vince a tutte e tre le risoluzioni. Drag reale 600->360, 53 campioni: densita' corretta a ogni step, molteplicita' `display:none` sotto 400 e presente sopra, altezza riga costante 26px, zero overflow orizzontale.
+**Notes**: Formula `clamp(240px, calc(51vh - 160px), 640px)` e il divieto di semplificarla in un `Nvh` (romperebbe il tier di riferimento a 1080) sono sulla costante `PRESET_2A.treePaneHeight`. Misurata 1-2px sotto i target tondi (pendenza esatta 51.11%). Densita' via attributo, non container query: `container-type` renderebbe la shell containing block per il context menu dell'albero, `position: fixed`. DEBITO non toccato: `instanceCount` dead write a `TreeViewContent.tsx:105, 2163-2166, 2175`.
+**Prompt document name**: 2026-08-25 01:30
+
+## 2026-08-25 — fix: il menu contestuale dell'albero si chiude allo scroll; riferimenti a selettori morti
+**Prompt**: prompt del 2026-08-25, coda del cleanup. Tre punti in un commit: correggere il selettore dello scroll container in `TreeViewContent`, togliere le due classi morte dalla lista di `Tooltip`, sostituire un riferimento `file:riga` in un commento scss con il nome del selettore. `useResolution` resta com'e', senza deprecation comment.
+**Files touched**: `frontend/src/components/TreeViewSidebar/TreeViewContent.tsx`, `frontend/src/components/forEndUser/Tooltip.tsx`, `frontend/src/components/editors/properties-with-tree-view.scss`, `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — tsc 33 = baseline, 0 nei file toccati; vitest 1349 passed con le stesse 9 suite rosse pre-esistenti; build exit 0.
+**Out-of-scope changes**: no — i 3 file previsti piu' il log.
+**Layer Impact Report**: not-required — nessun layer D/L, nessun file critical-zone §3.1.
+**Smoke visivo**: passato — verifica a mano del menu contestuale, dettaglio in Notes.
+**Notes**: Bugfix, non cambio di comportamento: `handleScroll` esisteva gia' e non e' mai stato raggiunto, perche' `closest` cercava `.tree-view-sidebar__body, .tree-view-overlay__body`, classi della shell mai montata. Controllo negativo nel DOM reale: entrambe assenti, `.tree-view-panel-body` presente. Verifica end-to-end in modalita' advanced (il menu e' gated su `isAdvancedMode`): tasto destro su una riga classe -> menu aperto; rotella vera sopra l'albero, fuori dal menu (che e' `position: fixed` sul punto del click, e al primo tentativo intercettava il puntatore) -> `scrollTop` 0 -> 250 e menu chiuso. Zero pageerror.
+**Prompt document name**: 2026-08-25 01:00
+
+## 2026-08-25 — cleanup(tree-view): rimossa la shell TreeViewSidebar, morta
+**Prompt**: prompt del 2026-08-25, commit separato dopo la feature del filtro per viewpoint. La shell `TreeViewSidebar` (non il contenuto) e' morta: eliminarla invece di tenerla cablata, con grep di controllo positivo prima di ogni rimozione.
+**Files touched**: `frontend/src/components/TreeViewSidebar/TreeViewSidebar.tsx` (eliminato), `frontend/src/components/TreeViewSidebar/index.ts`, `frontend/src/components/TreeViewSidebar/tree-view-sidebar.scss`, `frontend/src/components/abstract/Dock.tsx`, `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — tsc 33 = baseline, 0 nei file toccati; vitest 1349 passed con le stesse 9 suite rosse pre-esistenti; build exit 0. Smoke ripetuto dopo la rimozione: rail identico (scope bar top 135px, container 399x392 a top 135, `.tree-search` presente, stesse 4 righe dimmed), zero pageerror.
+**Out-of-scope changes**: no — i 4 file previsti piu' il log.
+**Layer Impact Report**: not-required — nessun layer D/L, nessun file critical-zone §3.1.
+**Smoke visivo**: passato — screenshot del rail sovrapponibile a quello pre-cleanup.
+**Notes**: Controllo positivo su ogni grep prima di dichiarare l'assenza. Rimosse dalla scss le sole regole `.tree-view-sidebar*` / `.tree-view-overlay*`, incluse le sei nei due blocchi dark-mode: -356 righe, nessun selettore vivo toccato. Debito segnalato e non toccato (`useResolution` orfano, `TreeViewContent.tsx:463`, `Tooltip.tsx:167`, riferimento di riga in `properties-with-tree-view.scss:413`): appendice di `docs/sessioni/sessione_2026-08-25_tree_view_viewpoint_filter.md`.
+**Prompt document name**: 2026-08-25 00:45
+
+## 2026-08-25 — feat(tree-view): stato di resa per viewpoint (scope bar + dimming not-rendered)
+**Prompt**: prompt del 2026-08-25, due fasi. Fase 1 investigativa (4 domande su API di resa, riuso dalla palette, viewpoint attivo/artefatto aperto, multi-metamodello); Fase 2 su tre decisioni ratificate: "reso" = unione completa delle view IR, scopo al solo caso Redux con un metamodello, toggle "mostra tutto" fuori dal giro.
+**Files touched**: `frontend/src/components/editor-v2/viewpoint/ir/irInteraction.ts`, `frontend/src/components/TreeViewSidebar/treeViewScope.ts` (nuovo), `frontend/src/components/TreeViewSidebar/TreeViewScopeBar.tsx` (nuovo), `frontend/src/components/TreeViewSidebar/TreeViewContent.tsx`, `frontend/src/components/TreeViewSidebar/TreeViewSidebar.tsx`, `frontend/src/components/TreeViewSidebar/index.ts`, `frontend/src/components/TreeViewSidebar/tree-view-sidebar.scss`, `frontend/src/components/TreeViewSidebar/tree-view-redesign.scss` (eliminato), `frontend/src/components/editors/PropertiesWithTreeView.tsx`, `docs/sessioni/sessione_2026-08-25_tree_view_viewpoint_filter.md`, `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — tsc 33 = baseline, 0 nei file toccati; vitest 1349 passed con le stesse 9 suite rosse in raccolta (`window is not defined`, pre-esistente); build exit 0, solo il chunk-warning.
+**Out-of-scope changes**: yes — il prompt elencava 4 file, ne sono stati toccati 9 piu' 1 eliminato. Overrun della regola 19 senza pausa preventiva; approvato a posteriori dall'utente.
+**Layer Impact Report**: not-required — nessun file della lista §3.2; `irInteraction.ts` e' in critical zone §3.1 ma l'aggiunta e' una funzione pura read-only sull'indice, fuori da ogni write path.
+**Smoke visivo**: passato su 4 scenari (nessun viewpoint / viewpoint IR attivo / scroll / click su riga dimmed). Copertura parziale dichiarata: verificato solo il montaggio nel rail.
+**Notes**: `renderedMetaclassNames` e' deliberatamente piu' larga di `paletteMetaclasses` — la palette risponde a "cosa posso creare", l'albero a "cosa il viewpoint rende". Viewpoint attivo letto dal root `state.viewpoint`, lo stesso di `computeIRSignature`; `activeViewpointId` inerte rimosso. Chiavatura per nome: collisione fra omonimi accettata, via d'uscita `resolveMetaclassId`. Dettaglio in `docs/sessioni/sessione_2026-08-25_tree_view_viewpoint_filter.md`.
+**Prompt document name**: 2026-08-25 00:05
+
+## 2026-08-24 — fix(editor-v2): kill-switch, `userHasInteracted` non si alza piu'
+**Prompt**: prompt del 2026-08-24 23:30, Parte A. Dopo la verifica visiva di `952d3cb94` (6 prove su 7): il corpo di `markUserInteracted` diventa un no-op, la funzione e i due handler in cattura restano cablati.
+**Files touched**: `frontend/src/components/editor-v2/EditorV2.tsx`, `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: 2026-08-24 19:10
+**Causa**: (c)
+**Regressions**: unknown — gate verdi (tsc 33 con lista byte-identica, `diff` vuoto; vitest 1349 passed e le stesse 9 suite rosse; build exit 0), ma nessuna verifica a schermo dopo il kill-switch. Ripristina per costruzione lo stato pre-`398a71293`: stack del D-layer sempre vuoto.
+**Out-of-scope changes**: no — il solo file previsto piu' il log.
+**Layer Impact Report**: not-required
+**Smoke visivo**: in attesa — il comportamento atteso e' quello di prima di `398a71293`: ⌘Z e i due pulsanti inerti, salvataggio silenzioso attivo.
+**Notes**: Il flag esponeva un difetto latente del D-layer undo su una modifica non geometrica: rinomina + ⌘Z non torna indietro e blocca ogni scrittura successiva sull'attributo, sul tree view come sul canvas. Il tree non passa da editor-v2, quindi la corruzione e' nello stato. Il ramo commentato resta come punto di riarmo. Discovery della Parte B: `docs/discovery/discovery_2026-08-24_undo_reducer_rename.md`.
+**Prompt document name**: 2026-08-24 23:30
+
+## 2026-08-24 — fix(persistence): autosave di layout silenzioso, senza bump di versione
+**Prompt**: prompt del 2026-08-24 22:55, corsia veloce, due file. `ProjectsApi.save` prende `opts?: { silent?: boolean }` additivo; `useLayoutAutosave` passa `{ silent: true }`.
+**Files touched**: `frontend/src/api/persistance/projects.ts`, `frontend/src/components/editor-v2/hooks/useLayoutAutosave.ts`
+**Outcome**: ⚠️ partial — chiude i tre difetti che mirava a chiudere, ma la prova 2 del protocollo resta rossa per una causa piu' profonda (vedi Smoke visivo).
+**Corregge**: 2026-08-24 19:10
+**Causa**: (c)
+**Regressions**: no — tsc 33 con lista byte-identica (`diff` vuoto), vitest 1349 passed e le stesse 9 suite rosse, build exit 0. Senza `opts` il percorso e' byte-identico, quindi i chiamanti del salvataggio esplicito non cambiano.
+**Out-of-scope changes**: no — i due file del prompt.
+**Layer Impact Report**: not-required — nessun file di §3.1 toccato.
+**Smoke visivo**: parziale — 6 prove su 7: un solo ⌘Z per spostamento e multi-selezione, taglia persistita dopo reload, versione ferma sui drag e avanzata da ⌘S, nessuna tempesta di salvataggi, cambio di viewpoint atteso. **Prova 2 fallita**: rinomina + ⌘Z non torna indietro e da li' in poi le scritture sull'attributo non raggiungono piu' ne' canvas ne' tree view.
+**Notes**: Il bump di versione non e' solo un numero: e' una `SetFieldAction` in Redux, cioe' un delta. L'autosave scatta a 1000 ms, oltre i 450 ms di coalescenza (`reducer.ts:1278`), quindi diventava un passo di undo a se'; e l'osservatore dello stack richiamava `scheduleLayoutSave` dopo ogni undo, spingendone un altro. Ratificato: la versione avanza solo al salvataggio esplicito.
+**Prompt document name**: 2026-08-24 22:55
+
+## 2026-08-24 — fix(editor-v2): undo e redo instradati sul D-layer in modalita' JjOM
+**Prompt**: GO del 2026-08-24 19:10, opzione A4 (un solo sistema di undo in JjOM). Snapshot a inizio gesto, write-back per resolver e `clear()` di `useHistory` decaduti.
+**Files touched**: `frontend/src/components/editor-v2/EditorV2.tsx`, `docs/discovery/discovery_2026-08-24_undo_editor_v2_layout.md` (addendum §12)
+**Outcome**: ⚠️ partial — ha esposto un difetto latente del D-layer undo, disinnescato dal kill-switch della Parte A.
+**Corregge**: 2026-08-24 18:45
+**Causa**: (c)
+**Regressions**: yes — la rinomina + ⌘Z corrompe lo stato (prova 2). Non introdotta da questo diff ma **resa raggiungibile** da esso: alzando `U.userHasInteracted` lo stack del D-layer smette di essere vuoto. Gate verdi: tsc 33 byte-identico, vitest 1349 passed con le stesse 9 rosse, build exit 0.
+**Out-of-scope changes**: no — un solo file di codice.
+**Layer Impact Report**: not-required — nessun file di §3.1 toccato; il quadro per layer e' nel §6 del report.
+**Smoke visivo**: fallito (parziale) — vedi l'entry di `952d3cb94`, che ha corretto i due ⌘Z e lasciato scoperta la prova 2.
+**Notes**: Le quattro misure del GO sono nel §12 del report. Due correzioni di rotta: la sede del flag non e' il callback di sync iniziale (attende l'auto-layout ELK e arma il re-layout M1, due scritture senza gesto), ed e' la prima interazione utente col pannello; la persistenza dopo ⌘Z si osserva sullo stack, non su `action_title`, il cui ramo e' commentato.
+**Prompt document name**: 2026-08-24 19:10
+
+## 2026-08-24 — docs: discovery di Fase 1 sull'undo di editor-v2 per i gesti di disposizione
+**Prompt**: prompt del 2026-08-24 18:45, Fase 1 read-only con report obbligatorio e hard stop.
+**Files touched**: `docs/discovery/discovery_2026-08-24_undo_editor_v2_layout.md` (nuovo)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — nessuna modifica al codice.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — read-only; il quadro per layer e' nel §6 del report.
+**Smoke visivo**: non applicabile
+**Notes**: L'ipotesi del prompt (doppio undo, rimedio `stopPropagation`) e' falsa: `Navbar` ascolta in cattura su `window` e chiama `stopImmediatePropagation` per 'Z', quindi l'`onKeyDown` di editor-v2 non gira mai. Misurato inoltre che `U.userHasInteracted` ha un solo scrittore (`MetamodelTab.tsx:164`). Il §12.0 corregge il §1.4: a stack vuoto manca `pastDelta`, quindi il delta e' scartato e ⌘Z e' un no-op.
+**Prompt document name**: 2026-08-24 18:45
+
+## 2026-08-24 — fix(layout): le taglie seguono il layout in forza (slice 1c)
+**Prompt**: prompt del 2026-08-24 14:30 «Layout per viewpoint, slice 1c (taglie)», due fasi. Fase 1 read-only con LIR salvato su file e hard stop; Fase 2 dopo il GO delle 16:55, che ha risposto alle tre domande del LIR. Difetto riprodotto a schermo da Alfonso dopo `cd8363ccc`: la posizione segue il layout, la taglia no.
+**Files touched**: `frontend/src/components/editor-v2/hooks/useJjomSync.ts`, `frontend/src/components/editor-v2/viewpoint/layout/vertexLayoutAdapter.ts`, `frontend/src/components/editor-v2/viewpoint/layout/__tests__/vertexLayoutAdapter.test.ts` (nuovo), `frontend/src/components/editor-v2/viewpoint/ir/useContentSize.ts`, `frontend/src/components/editor-v2/viewpoint/authoring/SymbolEditorModal.tsx`, `docs/discovery/discovery_2026-08-24_layout_slice1c_taglie_lir.md` (nuovo, con addendum §12), `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: 2026-08-24 15:22 — slice 1b e la sua rettifica `cd8363ccc`. Il warning non bloccante di `check:docs` e' corretto e non e' di questa entry: la 1b registro' il nome «2026-08-24 (layout slice 1b, Fase B)» invece del timestamp, quindi il riferimento non risolve.
+**Causa**: (c)
+**Regressions**: no — verifica visiva di Alfonso **sei prove su sei**, la 6 (forme con supplemento) inclusa. Gate: tsc 33 con lista byte-identica (`diff` vuoto), vitest 1349 passed (1342 + 7 nuovi) e le stesse 9 suite rosse, build exit 0.
+**Out-of-scope changes**: no — i 4 file di codice del piano più il test, confermati al GO (Regola 19: cinque, elencati prima del diff).
+**Layer Impact Report**: produced — `docs/discovery/discovery_2026-08-24_layout_slice1c_taglie_lir.md` §6, commit `3d48fcf9c`, prima del diff.
+**Smoke visivo**: passato — 6/6: taglie distinte per layout senza reload e dopo reload, tre taglie su A/B/astratta con archi che seguono, «Reset size» locale al layout, zero regressione su un progetto senza dizionario, forme con supplemento senza oscillazioni.
+**Notes**: `useJjomSync` confrontava solo `style.width/height` (packageNode), mai il `width/height` top-level di `manualSizeOf`. Rimedio: confronto trasformatore-contro-cache come per la posizione; `null` toglie le tre chiavi di `resetNodeSize`. `measured` va tolto in entrambi i rami — `getNodeDimensions` lo preferisce, e toglierlo fa ricalcolare gli `handleBounds` al `ResizeObserver` di RF. Il gate di `useContentSize.ts` era una **regressione di `cd8363ccc`**: addendum §12.1 del report.
+**Prompt document name**: 2026-08-24 14:30
+
+## 2026-08-24 — fix(layout): la sintassi astratta e' un layout come gli altri (rettifica della slice 1b)
+**Prompt**: verifica visiva di Alfonso sulla slice 1b e sua ratifica in chat. Prove 1 e 2 passate, prova 4 comportamento voluto; rilievo: la sintassi astratta deve avere un layout indipendente da quello dei viewpoint, e le taglie vanno verificate. Ratificati la chiave sentinella `'__abstract__'` e il metamodello sulla stessa chiave.
+**Files touched**: `frontend/src/components/editor-v2/viewpoint/layout/vertexLayoutAdapter.ts`, `frontend/src/components/editor-v2/viewpoint/layout/vertexLayout.ts` (commenti e nome di un parametro), `frontend/src/components/editor-v2/sync/canvasToJjom.ts`, `frontend/src/components/editor-v2/utils/jjomTransformers.ts`, `frontend/src/components/abstract/tabs/MetamodelTab.tsx`, `docs/reports/2026-08-24-lir-layout-slice1b.md` (addendum §10), `docs/claude-code-log.md`
+**Outcome**: ✅ completed — in attesa della riverifica visiva di Alfonso
+**Corregge**: 2026-08-24 15:22 — il finding C del LIR della slice 1b
+**Causa**: (c)
+**Regressions**: unknown — gate verdi (tsc 33 con lista byte-identica, `diff` vuoto; vitest 1342 passed e le stesse 9 suite rosse; build exit 0), i 19 test del modulo puro invariati, ma il comportamento sotto viewpoint non e' coperto da test.
+**Out-of-scope changes**: no — i 4 file del GO piu' i commenti del modulo puro, autorizzati in chat.
+**Layer Impact Report**: produced — addendum §10 di `docs/reports/2026-08-24-lir-layout-slice1b.md`.
+**Smoke visivo**: in attesa — prove 1, 2 e 4 gia' passate sulla slice 1b; la prova 3 (⌘Z) resta fallita per due difetti preesistenti fuori perimetro (LIR §10.4).
+**Notes**: Gli scalari diventano il **seme** (mai piu' riscritto da editor-v2) e la sintassi astratta prende `ABSTRACT_SYNTAX_LAYOUT_KEY = '__abstract__'`: i due ruoli che gli scalari cumulavano si separano e la colatura sparisce. Nessuna migrazione, metamodello sulla stessa chiave. `getActiveExclusiveVpId` -> `getActiveLayoutKey` (Regola 2, dichiarata). Il finding C era falso: `Date.now()` nelle deps e la guardia morta `prevModel` ri-trasformano a ogni render (LIR §10.1), quindi la 1c decade.
+**Prompt document name**: 2026-08-24 (layout slice 1b, rettifica)
+
+## 2026-08-24 — feat(layout): i call site del layout passano dai resolver per viewpoint (slice 1b)
+**Prompt**: prompt del 2026-08-24 «Layout per viewpoint, slice 1b», Fase B dopo il GO di Alfonso sulle tre domande del LIR. Adapter impuro `getActiveExclusiveVpId`, cinque scritture di `canvasToJjom` e sette letture di `jjomTransformers` instradate, drop del classico instradato, `LVoidVertex` lasciato sugli scalari (opzione (a)), `useJjomSync` non toccato (la resa reattiva è la 1c).
+**Files touched**: `frontend/src/components/editor-v2/viewpoint/layout/vertexLayoutAdapter.ts` (nuovo), `frontend/src/components/editor-v2/sync/canvasToJjom.ts`, `frontend/src/components/editor-v2/utils/jjomTransformers.ts`, `frontend/src/components/abstract/tabs/MetamodelTab.tsx`, `frontend/src/utils/lastViewpoint.ts` (solo il commento :63-69), `docs/claude-code-log.md`
+**Outcome**: ✅ completed — in attesa della verifica visiva di Alfonso
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown — gate tutti verdi (tsc 33 con lista byte-identica alla baseline, `diff` vuoto; vitest 1342 passed e le stesse 9 suite rosse per lista; build exit 0, solo il chunk-warning pre-esistente), ma il comportamento sotto viewpoint esclusivo non è coperto da test: la copertura è la verifica visiva.
+**Out-of-scope changes**: no — i 6 file confermati al GO. Nessun test unitario sull'adapter: servirebbe lo store (dichiarato nel prompt).
+**Layer Impact Report**: produced — `docs/reports/2026-08-24-lir-layout-slice1b.md`, commit `2812b1f04`, prima del diff.
+**Smoke visivo**: in attesa — piano riscritto dal GO (l'osservabile è il reload, non il cambio di viewpoint a schermo).
+**Notes**: NON-OBIETTIVI dichiarati, attesi e non regressioni, dettaglio nel LIR §4 e §2: (i) cambiare viewpoint **senza reload** non sposta i nodi a schermo, `useJjomSync` non ri-trasforma sull'attivazione — arriva con la **slice 1c**; (ii) `set_size` e gli override di `LVoidVertex:1398-1425` restano sulla sintassi astratta. Senza viewpoint esclusivo attivo le action emesse sono le stesse di prima per costruzione: il ramo `'scalars'` non legge nemmeno lo store.
+**Prompt document name**: 2026-08-24 (layout slice 1b, Fase B)
+
+## 2026-08-24 — docs: Layer Impact Report della slice 1b del layout per viewpoint (Fase A)
+**Prompt**: prompt del 2026-08-24 «Layout per viewpoint, slice 1b: i call site passano dai resolver», Fase A read-only. Riverifica riga per riga dei sette siti del censimento, la domanda nuova sull'arco `model/` -> `editor-v2/`, impatto per layer, piano dei diff. Hard stop prima della Fase B.
+**Files touched**: `docs/reports/2026-08-24-lir-layout-slice1b.md` (nuovo), `docs/discovery/discovery_2026-08-24_layout_slice1a_sede_resolver.md` (addendum §11, R-E/E-1), `docs/claude-code-log.md`
+**Outcome**: ✅ completed — Fase A chiusa, tre domande al GO, nessun sorgente toccato
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — nessun sorgente nel diff. Baseline riprodotte prima del report: tsc 33 (output integrale, exit 2), vitest 1342 passed / 9 suite rosse su 61 (exit 1).
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced — `docs/reports/2026-08-24-lir-layout-slice1b.md`, prima del diff, come prescrive §3.2 per `canvasToJjom.ts`.
+**Smoke visivo**: non applicabile — fase read-only.
+**Notes**: Tre scostamenti misurati, dettaglio nel LIR §0 e §7 e nell'addendum §11 del report di discovery della 1a. (A) Le letture di `jjomTransformers.ts` sono sette, non quattro: manca fra le altre quella dei nodi M1. (B) L'arco `model/` -> `editor-v2/` sarebbe nuovo, ma l'argomento decisivo su `LVoidVertex` e' un altro: i suoi consumatori passano dal proxy e non sono censibili per grep. (C) Un cambio di viewpoint non ri-trasforma i nodi: persistenza corretta senza resa reattiva. Nessuna scelta presa.
+**Prompt document name**: 2026-08-24 (layout slice 1b, Fase A)
+
+## 2026-08-24 — feat: `DVertex.layoutByViewpoint` e resolver puro del layout (slice 1a)
+**Prompt**: prompt del 2026-08-24, Fase 2 della slice 1a su go-ahead dopo l'analisi della Fase 1. Campo opzionale sul `DVertex`, modulo puro `vertexLayout.ts` con `readVertexLayout` / `resolveVertexLayoutWrite`, test senza DOM. Nessun call site, nessun adapter: sono della 1b.
+**Files touched**: `frontend/src/model/dataStructure/GraphDataElements.tsx` (una dichiarazione), `frontend/src/components/editor-v2/viewpoint/layout/vertexLayout.ts` (nuovo), `frontend/src/components/editor-v2/viewpoint/layout/__tests__/vertexLayout.test.ts` (nuovo), `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — tsc 33 errori con lista byte-identica alla baseline (`diff` vuoto); vitest 1342 passed (1323 + 19 nuovi), 9 suite rosse identiche per lista alla baseline; build exit 0. Nessun call site tocca il modulo: zero effetto a runtime.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessun file della critical zone toccato. `GraphDataElements.tsx` non e' in §3.1; la modifica e' una dichiarazione di campo opzionale, senza write path.
+**Smoke visivo**: non applicabile — modulo non cablato, zero effetto a schermo per costruzione.
+**Notes**: Eseguite le quattro decisioni dell'addendum §7 del memo di ratifica: interfaccia autonoma senza import (`GraphSize` e' nominale), literal inline sul `DVertex` per non aprire l'arco `model/` -> `editor-v2/`, sede `viewpoint/layout/`, nessun bump di versione. Oltre la lettera del prompt: `resolveVertexLayoutWrite` ignora un `undefined` esplicito nella patch, che uno spread copierebbe bucando il record — il guasto che l'emendamento a R-LAY-15 vieta. Sotto test.
+**Prompt document name**: 2026-08-24 (layout slice 1a, Fase 2)
+
+## 2026-08-24 — docs: discovery di Fase 1 per la slice 1a del layout per viewpoint (sede del resolver)
+**Prompt**: prompt del 2026-08-24, Fase 1 read-only della slice 1a (R-LAY-14..17). D1 sede del modulo resolver, D2 import-safety modulo e test, D3 idioma di dichiarazione del campo su `DVertex`, D4 forma della scrittura sul dizionario, D5 viewpoint attivo ed esclusivita', D6 precedente di test senza DOM e baseline, D7 grep di collisione. Hard stop al termine.
+**Files touched**: `docs/discovery/discovery_2026-08-24_layout_slice1a_sede_resolver.md` (nuovo), `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — nessun sorgente nel diff. Tre file di prova creati ed eliminati nella stessa esecuzione, `git status --porcelain` verificato vuoto dopo ciascuna rimozione.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — `VersionFixer.tsx`, `reducer.ts`, `GraphDataElements.tsx` letti, mai modificati.
+**Smoke visivo**: non applicabile — nessuna superficie toccata.
+**Notes**: Cinque attese da correggere, dettaglio nel report §0.1 e cinque domande aperte al §10. La piu' pesante: `GraphSize` (`common/Geom.ts:677`, non `joiner/types/`) e' una classe con membro `private`, un record piatto non le e' assegnabile (TS2740, prova eseguita): R-LAY-13/14 non sono eseguibili alla lettera. Poi: `irResolveCore.ts` non nomina mai `isExclusiveView`. D3 e D7 confermati; D4 risolto in una sola action (`'+='` = merge superficiale, e `'='` su dizionario assente).
+**Prompt document name**: 2026-08-24 (layout slice 1a, Fase 1)
+
+## 2026-08-24 — docs: rotazione del log a 40 entry attive (ventiquattresimo lotto), entry di recupero per `363e121c0`
+**Prompt**: lavoro notturno autonomo dell'architetto (chat di progetto, bridge Cowork), su mandato di Alfonso del 2026-08-24 ~01:20: solo lavoro meccanico. Rotazione per posizione, 53 + 1 (recupero) + 1 (questa) - 15 = 40. Nessuna entry riscritta nel passaggio.
+**Files touched**: docs/claude-code-log.md (tolte le 15 entry più vecchie per posizione, aggiunte questa e la entry di recupero di `363e121c0`), docs/claude-code-log-archive.md (le 15 entry appese in coda più il paragrafo di lotto nel preambolo)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — zero file di codice toccati.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — nessun diff di codice.
+**Notes**: Taglio posizionale. Le 15 spostate vanno dal 2026-08-15 (D24) al 2026-08-17 (rotazione ventitreesima); la prima tenuta è del 2026-08-18. Nessuna inversione. Check C di `check:docs` resta rosso su due entry del 23/8, che non escono con questo lotto e non vengono riscritte.
+**Prompt document name**: —
+
+## 2026-08-24 — docs: R-LAY-13 a registro, R-LAY-9 emendata
+**Prompt**: decisione presa in chat di progetto sul report della Fase 1b (`f33965ea7`), ratificata da Alfonso con «vai» il 2026-08-24 ~01:10. Solo docs, commit dal bridge Cowork.
+**Files touched**: docs/decisions.md, docs/claude-code-log.md
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — zero file di codice toccati.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — nessun diff di codice.
+**Notes**: `storeSize` indicizza per radice dei padri della view, mai per `activeViewpoint`: non è la macchina di R-LAY-6, se ne riusa solo `GraphSize`. Sede del layout: asse nuovo sul vertice. R-LAY-9 emendata nella clausola sul classico, falsa a codice letto. Gesto a schermo di Alfonso resta come conferma (b). Prossimo: prompt delle 00:50 (grafia legacy), poi progetto della slice 1.
+**Prompt document name**: —
+
+## 2026-08-24 — test: fase 1b, la macchina `storeSize` non e' osservabile a runtime
+**Prompt**: `claude_2026-08-24_0040_prompt_layout_fase1b_storesize_runtime.md`. Fase 1b, misura di caratterizzazione: un file di test Vitest che fotografa la catena scrittura/lettura di `storeSize` fra due viewpoint esclusivi, cinque domande. Passo zero obbligatorio, hard stop dopo il commit. Deroga P8 dichiarata.
+**Files touched**: docs/discovery/discovery_2026-08-24_layout_fase1b_storesize_runtime.md (nuovo), docs/claude-code-log.md
+**Outcome**: ⚠️ partial — il test non e' stato scritto perche' non e' scrivibile; la condizione di arresto prevista dal prompt si e' verificata ed e' stata misurata, non dedotta.
+**Corregge**: —
+**Causa**: g
+**Regressions**: no — zero file di produzione toccati, e nessun file di test aggiunto: `npm run test` identico alla baseline (1323 pass, 9 file rossi preesistenti).
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — `view.tsx` e `classes.ts` letti soltanto, nessuna scrittura.
+**Smoke visivo**: non applicabile (deroga P8, nessun pixel cambia).
+**Notes**: Passo zero 19/7 OK. Cinque sonde eseguite: `view.tsx` e `common/Geom.ts` non si caricano sotto l'env node (monaco); con shim `window`/`document` il muro passa a jQuery, che pretende un DOM vero; jsdom assente (con controllo positivo). 9 file gia' rossi in baseline, stessa causa. Il mock del barrel e' scartato per ragione semantica: stubberebbe `c.proxyObject.viewpoint`, cioe' la risposta. Scostamento con R-LAY-6/9 rilevato, non risolto. Tabella e limiti nel report, §3, §5, §8.
+**Prompt document name**: 2026-08-24 00:40
+
+## 2026-08-24 — docs: D1..D8 e D10 eseguite, l'asse per viewpoint esiste già
+**Prompt**: `claude_2026-08-22_1705_prompt_layout_per_viewpoint_d1_d8_d10.md` con il riallineamento del 2026-08-23 sera, che prevale sul corpo. Fase 1 read only, passo zero obbligatorio, report in `docs/discovery/`, hard stop finale. Deroga P8 dichiarata.
+**Files touched**: docs/discovery/discovery_2026-08-24_layout_d1_d8_d10.md (nuovo), docs/claude-code-log.md
+**Outcome**: ✅ completed — D1..D8 e D10 eseguite, prime dopo tre sessioni fermate su D0, Q0 e D9.
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — zero file di codice toccati, fase read only senza eccezioni.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessuna scrittura; `GraphDataElements.tsx`, `view.tsx`, `canvasToJjom.ts`, `jjomTransformers.ts`, `useContentSize.ts`, `useJjomSync.ts` letti soltanto.
+**Smoke visivo**: non applicabile (deroga P8).
+**Notes**: Passo zero 19/62/11. §8 del memo perduto, dichiarato. **Finding principale**: l'asse per viewpoint **esiste già** — `view.tsx:1462`, `size` per elemento, con lettura, scrittura e fallback view→viewpoint→scalari D, gate `storeSize` raggiungibile a schermo. E ce l'ha il renderer **classico**: editor-v2 lo scavalca per progetto esplicito (`GraphDataElements.tsx:1398-1401`), rovesciando la premessa di R-LAY-9. D8 su dump reali: layout <1% dello stato. Limiti al §12. `check:docs` 1/3, rossi altrui.
+**Prompt document name**: 2026-08-22 17:05
+
+## 2026-08-23 — docs: R-IRN-27, il commit 2c decade; rettifica di R-IRN-25
+**Prompt**: decisione presa in chat di progetto (architetto), ratificata da Alfonso con «vai» il 2026-08-23 sera, sulla base della risposta di Claude Code che segue R-LAY-12 e R-DEAD-1..6. Solo docs, commit dal bridge Cowork.
+**Files touched**: docs/decisions.md, docs/claude-code-log.md
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — zero file di codice toccati.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — nessun diff di codice.
+**Notes**: Emenda R-IRN-22 (premessa falsa per misura) e R-IRN-25 (attribuzione di `NestedView.tsx:82`: il tab «Viewpoints» lo rende `Info.tsx:1341-1356`, non `NestedView`); nessun prompt corretto, quindi `Corregge` vuoto. Chiude la slice 2 di `2.228` senza il 2c e sblocca R-LAY-7. Il prompt `claude_2026-08-18_1656_prompt_2228_fase2.md` non e' piu' pendente: la sua parte 2c e' decaduta. Restano fuori: i commenti stale di `TabDataMaker.tsx` (fronte R-DEAD), i gate «Create View» (fronte UX di R-LAY-11), la rotazione del log (49 entry contro soglia 40).
+**Prompt document name**: —
+
+## 2026-08-23 — docs: aperto il fronte R-DEAD, perimetro di rimozione di `NestedView`
+**Prompt**: «apri un fronte per rimuovere NestedView dal censimento». Misura read-only del perimetro di rimozione e apertura del fronte a registro. Nessuna modifica al codice: il fronte è aperto, non eseguito.
+**Files touched**: docs/discovery/discovery_2026-08-23_perimetro_rimozione_nestedview.md (nuovo), docs/decisions.md, docs/claude-code-log.md
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — zero file di codice toccati.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — nessun diff di codice.
+**Notes**: Il censimento del codice morto **non esiste come artefatto**: le uniche due occorrenze della frase nel repo sono di oggi (§0). Trabocchetto: `nestedView.scss`, 3736 righe, è importato anche da `ViewData.tsx:24`, vivo nell'authoring IR — non si cancella (R-DEAD-2). Tre orfani in cascata, ma i file che li ospitano restano (R-DEAD-3). La prima batteria assumeva import su una riga sola: rifatta sul simbolo nudo. Il barrel `editors` ha 5 righe su 10 che nessuno importa, registrate ma non deliberate.
+**Prompt document name**: —
+
+## 2026-08-23 — docs: R-LAY-12, NestedView è UI irraggiungibile
+**Prompt**: prompt del 2026-08-23 21:39. Fase 0 read-only di raggiungibilità con `command grep` e controllo positivo per ogni asserzione di assenza, poi commit unico di docs: R-LAY-12 a registro, discovery report, entry di log. Nessuna modifica al codice.
+**Files touched**: docs/discovery/discovery_2026-08-23_nestedview_ui_morta.md (nuovo), docs/decisions.md, docs/claude-code-log.md
+**Outcome**: ✅ completed
+**Corregge**: 2026-08-23 16:47 (claude_2026-08-23_1647_prompt_rlay11_sorgente_unica_attivazione.md)
+**Causa**: (c)
+**Regressions**: no — zero file di codice toccati.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — il soggetto della misura è che il pixel da guardare non esiste.
+**Notes**: Zero consumatori di `NestedView`/`NestedViewConnected`, nessun import dinamico (controllo positivo 938 file), ricerca su ogni tipo di file di `src`. Due scostamenti dall'Atteso (§4), sottoposti ad Alfonso prima di iscrivere: gli importatori del barrel sono due (`Dock.tsx:8`, vivo, e `ContextMenu.tsx:45`), nessuno per `NestedView`; il commento di `TabDataMaker` è a riga 7, non 6. Commit altrui a metà Fase 0: misure rieseguite, §5. `check:docs` 2/3, Check C già rosso a HEAD su entry altrui.
+**Prompt document name**: 2026-08-23 21:39
+
+## 2026-08-23 — feat(editor-v2): VIEW e Theme inerti mentre un viewpoint e' attivo
+**Prompt**: «quando un viewpoint diverso da "Abstract Syntax" e' attivo, i dropdown VIEW e Theme devono disabilitarsi».
+**Files touched**: frontend/src/components/editor-v2/Toolbar.tsx, frontend/src/components/editor-v2/components/ColorSchemeSelector.tsx, frontend/src/components/editor-v2/EditorV2.scss
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — verifica visiva di Alfonso il 2026-08-23 (sera), hard-refresh su `4c9953fe2`: su un modello, con un viewpoint diverso da «Abstract syntax» attivo dal select, VIEW e Theme sono disabilitati e i menu aperti si chiudono; tornando su «Abstract syntax» si riattivano.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: passato (Alfonso, 2026-08-23), vedi Regressions.
+**Notes**: Condizione `viewControlsDisabled = !!shownViewpointId` (Toolbar.tsx:240), non la root grezza: `''` e' esattamente «Abstract syntax» e il caso metamodello vi collassa una riga sopra, quindi su M2 i controlli restano vivi. `disabled` opzionale su `ColorSchemeSelectorProps` (Rule 11); due effetti chiudono i menu aperti sotto un trigger che si disabilita. `.toolbar-dropdown-btn` non aveva stile disabled: aggiunto. Gate: tsc diff vuoto, build 0, test 1323/1323.
+**Prompt document name**: —
+
+## 2026-08-23 — fix(viewpoint): sorgente unica dell'attivazione, R-LAY-11 a registro
+**Prompt**: rimedio di R-LAY-10. Fase 0 read-only di verifica premesse con `command grep` e controllo positivo; commit A con R-LAY-11 in `decisions.md`; commit B che instrada i due `select` di `NestedView.tsx` su `activateViewpoint`, unico scrittore vivo di `project.activeViewpoint` e `state.viewpoint`.
+**Files touched**: docs/decisions.md, docs/discovery/discovery_2026-08-23_rlay10_verifica_premesse.md, frontend/src/components/editors/views/NestedView.tsx
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: 4 premesse su 4 confermate, dettaglio in `discovery_2026-08-23_rlay10_verifica_premesse.md`. Diff di 3 righe: 1 import + le 2 scritture (111, 315). Gate: tsc 33 errori, composizione identica alla baseline §17; build exit 0; test 1323/1323, le 9 suite rosse sono le note `window is not defined`. `check:docs` 2/3, Check C già rosso a HEAD su una entry altrui e non toccato. `unknown` perché il cambio di meccanismo si vede solo a schermo: hard stop, verifica di Alfonso.
+**Prompt document name**: 2026-08-23 16:47
+
+## 2026-08-23 — feat: `activeViewpoint` vuoto a `null`, adapter `2.227 -> 2.228` (R-IRN-18, R-IRN-20, R-IRN-23)
+
+**Prompt**: prompt del 2026-08-23 14:25, slice 2 di `2.228`, commit 2b in un commit solo. Riallineamento delle premesse del prompt normativo del 18, accertamento di `R-LAY-10` (misura e referto, non rimedio), discovery report obbligatorio, hard stop finale.
+**Files touched**: `frontend/src/joiner/classes.ts`, `frontend/src/view/viewElement/view.tsx`, `frontend/src/redux/VersionFixer.tsx`, `frontend/src/redux/__tests__/versionfixer_2228_migration.test.ts` (nuovo), `docs/discovery/discovery_2026-08-23_2228_slice2b_riallineamento.md` (nuovo), `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown — typecheck identico byte a byte alla baseline (33, `sha256 e8f17cee…21e`), build exit 0, vitest 1323/1323 con le 9 rosse note, smoke 12/0/3. Nessun gate copre `SaveManager.load`, quindi adapter e getter restano da verificare a mano.
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced — `docs/discovery/discovery_2026-08-18_4_lir_versionfixer_2228.md` §4.3, riletto prima del diff e non riprodotto, come il prompt del 18 prescrive.
+**Smoke visivo**: passato — 12 passati, 0 falliti, 3 skip. Lo scarto dalla baseline del 19 (10/0/2) è di `5ac2449e6`, non di questo diff. **Verifica visiva: PARZIALE al 2026-08-23** (entry aggiornata in place, precedente della slice 2a del 2026-08-17). Eseguita in automazione browser su progetto `test`, `localStorage` offline, **modalità Advanced**; il giudizio percettivo resta di Alfonso, questi sono osservabili misurati. **Scope deciso da Alfonso il 2026-08-23: la verifica visiva del 2b NON si fa in Basic** — in Basic `Create View` non è nemmeno esposta (`ContextMenu.tsx:486`, gate `isAdvancedMode()`), quindi la prova 3 non è riproducibile lì; le prove 1, 2 e 4 sono indipendenti dalla modalità perché girano su load e adapter. **Passate**: (1) progetto retrocesso a `2.227` con `activeViewpoint = Pointer_ViewPointDefault`, al reload l'adapter logga `[VersionFixer 2.227 -> 2.228] activeViewpoint: 1 progetto/i riportato/i a null`, `version.n` 2.227→2.228, `conversionList` []→[2.227], campo→`null`; (3) view creata dal menu contestuale del canvas **senza** viewpoint attivo nasce in `Default` (ramo `R-IRN-23`, nessun TypeError) e **con** viewpoint attivo nasce in quello, senza toccare l'altra; (5) `<select>` con `value: ""` che mostra «Abstract syntax», opzioni corrette, zero warning React di controllo non controllato (in console solo i due `React Router Future Flag` preesistenti). (2) controllo negativo **passato**, eseguito da Alfonso: dopo retrocessione a `2.227` con un viewpoint **utente** attivo e reload, l'adapter entra e **non** azzera il campo, che resta l'id utente. L'adapter non normalizza troppo. **(4) idempotenza sul percorso reale: NON verificata**, e dichiarata tale invece che chiusa. È coperta dal test unitario (`versionfixer_2228_migration.test.ts`, doppio run deep-equal) ma non dal percorso `SaveManager.load`, che nessun gate esercita. **Verifica visiva DICHIARATA CHIUSA da Alfonso il 2026-08-23** con questo residuo esplicito.
+**Notes**: Il commit 2b-i era già in repo (`363e121c0`, `R-IRN-25`) e senza entry di log: questo è di fatto il 2b-ii, tre file invece di sette. `R-LAY-10`: la divergenza `state.viewpoint` / `project.activeViewpoint` è possibile ed è già viva; tre gesti in `NestedView` (radio 150, dblclick 341, toggle 372/380) la producono. Rimedio a due righe **non scritto**, chiesto. Dettagli e domande nel report citato §4 e §6. **Misurato a schermo il 2026-08-23, e allarga R-LAY-10**: le sorgenti del «viewpoint corrente» sono **tre**, non due. Con `VP prova` attivo (confermato su `project.activeViewpoint` **e** su `state.viewpoint`, allineati perché l'attivazione è passata dalla toolbar) il menu contestuale del canvas offre «Create View in "VP prova"», mentre nello stesso istante il menu del tree resta disabilitato su «Create View — open a viewpoint first». Il gate di quella superficie è `!!getLastEditedViewpointId()` (`ContextMenu.tsx:487`, `:531`, `TreeViewContent.tsx:483`), cioè la variabile di modulo non persistita di `lastViewpoint.ts:15`, che l'attivazione non popola. È il terzo livello di §B.5 del report del 22, ora osservato: instradare i due `select` di `NestedView` su `activateViewpoint` **non basta** a produrre la «sola sorgente» che `R-LAY-10` pone come condizione di sblocco. Da valutare prima di fissare il perimetro del rimedio. **Falso allarme rettificato lo stesso giorno, e la rettifica vale più del sospetto**: era stato registrato che `File > Save Project` «non salva». **È falso.** Alfonso ha eseguito la stessa procedura a mano sullo stesso browser e il blob cambia a ogni salvataggio (13791 → 13788 → 13798): il Save funziona. Il difetto era nell'automazione browser, che dal click sintetico sulla voce di menu non innescava il salvataggio e lasciava il menu aperto. **Regola che ne segue**: un comportamento osservato solo attraverso l'automazione non è un difetto del prodotto finché un umano non lo riproduce a mano; il campo `Causa` per quel genere di osservazione è (g), ostacolo ambientale, non un difetto. Resta invece verificato e non spiegato che con il menu File aperto la cattura screenshot dell'automazione va in timeout — di nuovo un limite dello strumento, non del prodotto. **Voce di backlog aperta qui e non attribuita a una causa**: al boot della pagina l'adapter `2.227 -> 2.228` normalizza **cinque volte**, e ogni esecuzione riparte da uno stato in cui il campo è ancora `Pointer_ViewPointDefault`. `VersionFixer.update` ha un solo call site di produzione (`SaveManager.ts:56`), quindi sono cinque passaggi di caricamento per una singola apertura. Misura di contorno, con contatore avvolto su `VersionFixer.update`: navigando dentro la SPA (uscita su `#/allProjects` e rientro sul progetto) le invocazioni sono **zero**, quindi il fenomeno è confinato al bootstrap. **Fuori dal perimetro del 2b** (`SaveManager` non è stato toccato) e senza effetto sulla correttezza misurata: `conversionList` resta `[2.227]` e il campo finisce normalizzato. Registrato perché è il primo posto dove guardare se il boot diventa lento su un progetto grande. Non indagato oltre per scelta di scope. **Osservazione UI che sopravvive alla rettifica**: il quick tip annuncia «Press Ctrl+S» mentre il menu espone `⌘S`; su macOS `ctrl+s` non salva. Piccolo, ma è la prima cosa che un utente Mac prova.
+**Prompt document name**: 2026-08-23 14:25
+
+## 2026-08-22 — docs: D1..D8 non eseguite, arresto al passo zero
+
+**Prompt**: prompt del 2026-08-22 17:05, D1..D8 più D10 con il gate D9 dichiarato chiuso. Passo zero obbligatorio: `grep -c "R-LAY" docs/decisions.md` con `R-IRN` come controllo positivo, e arresto se il primo torna 0. Deroga P8 dichiarata.
+**Files touched**: `docs/discovery/discovery_2026-08-22_layout_per_viewpoint.md` (addendum in coda), `docs/claude-code-log.md`
+**Outcome**: ⚠️ partial — arresto al passo zero come prescritto. D1..D8 e D10 **non eseguite**.
+**Corregge**: 2026-08-22 14:20
+**Causa**: (a)
+**Regressions**: no — zero file di codice toccati.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessun file letto oltre a `docs/`.
+**Smoke visivo**: non applicabile (deroga P8).
+**Notes**: `R-LAY` → 0 in `docs/decisions.md`; controllo positivo `R-IRN` → 57, il valore atteso dal prompt. In tutto il repo `R-LAY` compare solo in questo report e nella sua entry di log, che ne segnalano l'assenza (controllo positivo `R-IRN` → 41 file). Il memo del 22/8 non esiste. Working tree pulito, HEAD `caa08d91d`. Manca il travaso nel repo, non la decisione: seconda volta oggi sullo stesso fronte.
+**Prompt document name**: 2026-08-22 17:05
+
+## 2026-08-22 — docs: Fase 1 ripresa, arresto condizionato su D9
+
+**Prompt**: prompt del 2026-08-22 14:20, ripresa read-only della Fase 1. D9 in testa (l'attivazione di un viewpoint è esclusiva o multipla?) con hard stop condizionato se più viewpoint possono rendere insieme, poi D1..D8. Deroga P8 dichiarata.
+**Files touched**: `docs/discovery/discovery_2026-08-22_layout_per_viewpoint.md` (addendum in coda, R-E/E-1), `docs/claude-code-log.md`
+**Outcome**: ⚠️ partial — hard stop condizionato **scattato** su D9. D1..D8 **non eseguite**, come prescrive il prompt.
+**Corregge**: —
+**Causa**: (c)
+**Regressions**: no — zero file di codice toccati.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessuna scrittura; `selectors.ts`, `classes.ts`, `irResolveCore.ts` letti soltanto.
+**Smoke visivo**: non applicabile (deroga P8). Il rischio di disallineamento fra i due scrittori dell'attivazione (`NestedView.tsx:111`/`:315` non aggiornano `state.viewpoint`) resta non verificato a runtime e registrato come tale.
+**Notes**: `selectors.ts:552-559`: il renderer classico applica insieme viewpoint attivo, Default e **ogni viewpoint non esclusivo**; esclude solo gli esclusivi non attivi. editor-v2 filtra invece su un id solo (`irResolveCore.ts:139`). Due semantiche diverse. L'occhio non è il comando: apre per l'authoring (`ProjectEditor.tsx:1179`); l'attivazione è il `vp-toggle` di `NestedView.tsx:364`. **`R-LAY` e il memo del 22/8 non sono nel repo** (controlli positivi nel report): nulla verificato contro di essi.
+**Prompt document name**: 2026-08-22 14:20
+
+## 2026-08-22 — docs: Fase 1bis, i tre fatti di Q0 sul layout per viewpoint
+
+**Prompt**: prompt del 2026-08-22 11:45, Fase 1bis read-only. Quattro domande (Q0.a..Q0.d) per raccogliere i fatti senza cui Q0 sarebbe un'opinione: la citazione integrale della decisione, l'asimmetria taglia/posizione a schermo, `Eobj`, e se R-2 poggi o citi. Deroga P8 dichiarata. Vietato rispondere a Q0.
+**Files touched**: `docs/discovery/discovery_2026-08-22_layout_per_viewpoint.md` (addendum in coda, R-E/E-1), `docs/claude-code-log.md`
+**Outcome**: ✅ completed — Q0.a..Q0.d chiuse, hard stop rispettato, nessuna risposta a Q0.
+**Corregge**: 2026-08-22 10:30
+**Causa**: (c)
+**Regressions**: no — zero file di codice toccati.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessuna scrittura; `canvasToJjom.ts`, `EditorV2.tsx`, `jjomTransformers.ts` letti soltanto.
+**Smoke visivo**: non applicabile (deroga P8). La misura a schermo di Q0.b(3) non è stata presa: i px vengono dagli otto golden misurati sull'app, l'aritmetica della sovrapposizione è derivata. Dichiarato nel report.
+**Notes**: Ipotesi confermata sul dominio (authoring Eobj `d1dc55649` 2026-08-02, taglia da contenuto `115e8484d` 2026-08-15: entrambe dopo il 19/7) e su un punto: la taglia è già derivata per notazione e vive in sessione, la posizione è persistita e condivisa. Contraddetta è la generalizzazione del 3/8, non la decisione del 19/7. Q0.d: R-2 cita, non poggia — rettifica al §3.1 della Fase 1. Prima batteria di grep rotta da glob non quotati (0 hit su `dagre`, in realtà 15).
+**Prompt document name**: 2026-08-22 11:45
+
+## 2026-08-22 — docs: discovery layout per viewpoint, arresto su D0
+
+**Prompt**: prompt del 2026-08-22 10:30, Fase 1 read-only in nove domande (D0..D8) sul layout indicizzato per viewpoint. D0 chiedeva di cercare a registro una decisione viva sul tema e, se trovata, di fermarsi lì. Deroga P8 dichiarata nel prompt.
+**Files touched**: `docs/discovery/discovery_2026-08-22_layout_per_viewpoint.md` (nuovo), `docs/claude-code-log.md`
+**Outcome**: ⚠️ partial — arresto su D0 come prescritto. D1..D8 **non eseguite**.
+**Corregge**: —
+**Causa**: (a)
+**Regressions**: no — zero file di codice toccati, fase read-only senza eccezioni.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessuna scrittura; i file di §3.1 letti soltanto (`canvasToJjom.ts`).
+**Smoke visivo**: non applicabile (deroga P8 dichiarata nel prompt).
+**Notes**: Decisione viva: R-2 in `docs/ratifiche/claude_ratifiche_2026-08-03_state_actions_events.md:28`, su decisione di Alfonso del 2026-07-19. Dice l'opposto della tesi del fronte: il layout è proprietà del disegno del modello, condivisa fra viewpoint, «con la stessa semantica delle posizioni dei nodi». Viva per tre riscontri posteriori e per il codice. Non è a registro in `decisions.md`. Ricerche, controlli positivi e Q0 per l'architetto nel report.
+**Prompt document name**: 2026-08-22 10:30
+
+## 2026-08-21 — fix: menu utente e popup notifiche portati sopra il rail destro
+
+**Prompt**: prompt UI Q del 2026-08-21 16:50, Fase 1 (misura read-only, report) e Fase 2 (rimedio) nello stesso prompt con hard stop in mezzo. Con il rail destro aperto i due popup venivano disegnati sotto. Ipotesi da falsificare: difetto di contesto di impilamento, non di valore.
+**Files touched**: commit `e1a65282d` (Fase 1, 1 file: `docs/discovery/discovery_2026-08-21_z_index_popup_rail.md`, nuovo) e commit `73d30adf0` (Fase 2, 4 file: `components/NotificationCenter.tsx`, `components/NotificationCenter.scss`, `pages/components/menu/Menu.tsx`, `pages/components/menu/menu.scss`)
+**Outcome**: ✅ completed — ipotesi confermata nella tesi e **falsificata in entrambi i colpevoli che nominava**; rimedio comunque corretto, per una ragione diversa da quella scritta.
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gate: build exit 0, typecheck **33** sull'output completo (baseline, exit 2 atteso), smoke **12 passed / 0 failed / 3 skipped** con A5 invariata, `check:docs` 3/3 senza warning. Geometria dei due popup **identica a prima del fix**, verificata (vedi sotto): il commit cambia l'ordine di disegno, non la posizione.
+**Out-of-scope changes**: no — due componenti e i loro due fogli, come da vincolo. Non toccati: lo z-index 900 del rail, le due scale z di `tokens.css` e `_z-index.scss`, gli altri z-index letterali del foglio navbar, i letterali di colore di `StatusBar.scss`.
+**Layer Impact Report**: not-required — nessun file di §3.1 nel diff.
+
+**Le tre catene di antenati** (progetto + tab metamodello, rail visibile, 1440x900). `CONTESTO` marca chi crea un contesto di impilamento.
+
+| catena | antenati, dal popup alla radice |
+|---|---|
+| **rail** | `.properties-with-tree-view--floating` rel/auto → `.properties-tree-overlay` **fixed z=900 CONTESTO** → `body` → `html` |
+| **menu utente** | `.dropdown.left` **abs z=1000 CONTESTO** → `.menu-container` **rel z=200 CONTESTO** → `#navusermenu` → `.main-header-right` → `nav#navbar` **rel z=950 CONTESTO** → `.router-wrapper` → **`#root` fixed z=auto** → `body` |
+| **popup notifiche** | `.app-notif-popover` **abs z=999998 CONTESTO** → `.sb-rz__bell-wrapper` → `.sb-rz` → `.app-statusbar__right` → `.app-statusbar` static z=50 (**inerte**) → `.router-wrapper` → **`#root` fixed z=auto** → `body` |
+
+**Il meccanismo**: `#root` e' `position: fixed` (`index.scss:31`), quindi un contesto, e `.properties-tree-overlay` non gli sta dentro ma **gli sta accanto**, figlio di `body`, a 900. Tutta l'app e' confinata in `#root`, che a livello `body` vale `auto` = 0. **900 batte 0 e nessun numero scritto dentro `#root` partecipa al confronto.** I figli di `body` misurati: `#root` (fixed, auto), `.properties-tree-overlay` (fixed, 900), `.sim-panel` (fixed, 850).
+
+**Che cosa l'ipotesi sbagliava**: `.app-statusbar { z-index: 50 }` e' su elemento **statico**, quindi inerte, e non crea contesto; e il `100` di `navbar.scss:170` non e' nemmeno il valore vivo — vince `var(--z-navbar)` di `:187` e il calcolato e' **950**, che comunque non arriva al confronto. Se `#root` non fosse un contesto, 950 batterebbe 900 e il menu si vedrebbe: e' la misura a dimostrare che lo e'.
+
+**`elementFromPoint` dentro l'intersezione, prima e dopo**
+
+| popup | rect popup | punto | PRIMA: elemento colpito | DOPO: elemento colpito |
+|---|---|---|---|---|
+| menu utente | x=1166 y=39 w=242 h=234 | (1287, 182) | `span.tree-section__label` — **dentro il rail** | `div.item` — **dentro il popup** |
+| popup notifiche | x=999 y=773 w=320 h=97 | (1179, 820) | `button.properties-node-section__header` — **dentro il rail** | `div.app-notif-popover__empty` — **dentro il popup** |
+| modale su menu aperto | backdrop 1440x900 | (1287, 156) | — | `h3.settings-section-title` — **dentro il modale**, il menu resta sotto |
+
+Le rect sono **le stesse prima e dopo**: la posizione non si e' mossa, si e' mosso l'ordine.
+**Falso allarme scartato**: alla prima misura il punto del popover restituiva `div.jj-toast__row` — un toast, aperto dal `Cmd+S` usato per generare la notifica, copriva il punto. Rifatta dopo il ritiro (`.jj-toast` a zero).
+**Due regressioni intercettate dal gate e corrette prima del commit**: (1) posizionando il popover da `max-height` invece che dall'altezza misurata galleggiava a y=510 invece di y=773 — ora l'altezza si legge dopo il mount; (2) il portale usciva da `.user-menu-container`, e le tre regole di dimensione del menu utente in `menu.scss` smettevano di combaciare: il box passava da 242x234 a 220x216 e perdeva il corpo a 15px. Riagganciate aggiungendo `.dropdown--portal` ai selettori esistenti, senza rinominarne nessuno.
+**Notes**: (1) Il portale non serve a scavalcare status bar o navbar: serve a **uscire da `#root`**. Rimedio giusto, diagnosi no. (2) Solo il ramo `props.trigger` di `Menu` va su body: un consumatore solo, il menu utente; il ramo legacy ne ha undici, verificato. (3) `useClickOutside` guarda anche il nodo portato fuori, o un click su una voce leggerebbe «fuori» e chiuderebbe prima dell'azione. (4) Il dark di `menu.scss` e' su `:root[data-theme="dark"] .dropdown`, non sotto la navbar: il portale lo tiene.
+**Prompt document name**: 2026-08-21 16:50 claude_2026-08-21_1650_prompt_ui_Q_popup_sotto_rail.md
+
+## 2026-08-21 — refactor: la famiglia del testo ritirata da tokens.css (D-UI-13)
+
+**Prompt**: prompt UI P del 2026-08-21 16:20, go-ahead dell'Emendamento 6. Un file solo: via le due dichiarazioni `--color-text-secondary` (`#475569`) e `--color-text-tertiary` (`#94a3b8`), via il commento di sezione `SEMANTIC COLORS - Text` che dopo la sottrazione intesta l'insieme vuoto, e aggiornata la frase superata del commento di testa (diceva «arcs 2 to 4»). I due nomi si consegnano insieme: ritirare il solo `tertiary` collasserebbe la scala.
+**Files touched**: commit `1036930b7` (1 file: `frontend/src/styles/tokens.css`, 4 inserzioni / 8 cancellazioni)
+**Outcome**: ✅ completed — quattro asserzioni su quattro, con una copertura dichiarata mancante sull'asserzione 3 (vedi sotto).
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gate: build exit 0 (solo warning chunk-size e deprecation Sass noti), typecheck **33** sull'output completo (baseline, exit 2 atteso), smoke **12 passed / 0 failed / 3 skipped** con A5 invariata, `check:docs` 3/3 senza warning.
+**Out-of-scope changes**: no — un solo file, e le uniche righe preesistenti toccate sono le due dichiarazioni, il loro commento di sezione e la frase superata del commento di testa. `Transition timing functions`, orfano dall'arco 1, lasciato dov'e' come chiede il prompt. Nessun altro nome di `tokens.css`, `styles/forms.scss` non toccato, nessun blocco dark.
+**Layer Impact Report**: not-required — nessun file di §3.1 nel diff.
+
+**Asserzione 1, la convergenza** (`document.documentElement`, misurata identica in tutti e tre gli stati: `#/allProjects` vuoto, progetto + tab metamodello, `#/allProjects` con un progetto)
+
+| nome | A prima | B prima | A dopo | B dopo |
+|---|---|---|---|---|
+| `--color-text-primary` | `#0f172a` | `#0f172a` | `#0f172a` | `#0f172a` |
+| `--color-text-secondary` | `#475569` | `#334155` | **`#334155`** | `#334155` |
+| `--color-text-tertiary` | `#94a3b8` | `#475569` | **`#475569`** | `#475569` |
+| `--color-text-placeholder` | `#64748b` | `#64748b` | `#64748b` | `#64748b` |
+| `--color-text-disabled` | `#94a3b8` | `#94a3b8` | `#94a3b8` | `#94a3b8` |
+| `--color-text-inverse` | `#ffffff` | `#ffffff` | `#ffffff` | `#ffffff` |
+
+Da **4/6** convergenti a **6/6**. E' la prima famiglia su cui due dei tre regimi coincidono.
+
+**Asserzione 2, la non-collassata**: dopo, in regime A, `secondary` `#334155` e `tertiary` `#475569` sono **diversi**, con `secondary` piu' scuro. La mezza consegna avrebbe dato `#475569` su entrambi.
+
+**Asserzione 3, forma forte (A dopo == B prima), sito per sito**
+
+| sito | famiglia | A prima | B prima | A dopo | forma forte | B dopo |
+|---|---|---|---|---|---|---|
+| `dashboard.scss:909` `.leftbar .menu-header h1` | caption | `rgb(148,163,184)` | `rgb(71,85,105)` | `rgb(71,85,105)` | **SI** | `rgb(71,85,105)` |
+| `dashboard.scss:981` `.leftbar .recmod-time` | caption | `rgb(148,163,184)` | `rgb(71,85,105)` | `rgb(71,85,105)` | **SI** | `rgb(71,85,105)` |
+| `tree-view-sidebar.scss:1581` `.tree-counter` | caption | `rgb(148,163,184)` | `rgb(71,85,105)` | `rgb(71,85,105)` | **SI** | `rgb(71,85,105)` |
+| `toast.scss:115` `.jj-toast__time` | caption | `rgb(148,163,184)` | `rgb(71,85,105)` | `rgb(71,85,105)` | **SI** | `rgb(71,85,105)` |
+| `navbar.scss:1687` `.project-icon` | secondary | `rgb(71,85,105)` | `rgb(51,65,85)` | `rgb(51,65,85)` | **SI** | `rgb(51,65,85)` |
+
+Cinque su cinque. **Controllo negativo**: B prima == B dopo su tutti e cinque, il regime B non si e' mosso.
+
+**Asserzione 4, il controllo sul controllo**: `/src/styles/tokens.css` servito dal dev server, da 10256 a **10210 byte**; `--color-text-secondary:` e `--color-text-tertiary:` **assenti**, `--radius-base:` e `--input-height-base:` **presenti**. La stringa `SEMANTIC COLORS - Text` risulta ancora presente perche' il nuovo commento di testa la cita fra virgolette: e' il commento, non la sezione.
+
+**Copertura dichiarata mancante — l'asserzione 3 non e' stata soddisfatta nella forma richiesta.** Il prompt chiede sei siti da **tre** famiglie, due dei quali fra i 41 «altro». Misurati **cinque siti da due famiglie**: **nessuno dei 41 «altro» e' risultato raggiungibile**. Selettori cercati e assenti in ogni stato provato: `.project-version` (dashboard:158), `project-card .tip` (555), `.timeline-dot` (RightPanel:411), `.jjodel-panel` (control.scss:349), `.node-editor .object-state` (info:384), `.properties-tab .object-state` (style.scss:316), `.appbar-tabs__overflow-btn` (navbar:1876), `.group.result-container .output-row` (console:32), `.toggle .toggle-label` (widgets:78). Ricette provate: `#/allProjects` vuoto e con un progetto, progetto + tab metamodello, nodo Class rilasciato e selezionato, click destro sul nodo, dialog New Project, rotta `/settings`, tentativo di vista lista. Non raggiunti anche `.tree-search__count`, `.nav-tab`, `.nav-help-btn`, `.tree-view-search-toggle`.
+**Smoke visivo**: da fare da Alfonso, e il salto grosso e' proprio dove la sonda non arriva: i 41 siti «altro», sfondi e bordi che in regime A passano da `#94a3b8` a `#475569`. Superfici indicate dal prompt: `forEndUser/control.scss`, `editors/console.scss`, `pages/dashboard.scss`.
+**Notes**: (1) La convergenza A/B e' 6/6 in tutti e tre gli stati, e la forma forte tiene su tutti e cinque i siti misurati: il regime A e' esattamente diventato il regime B per questa famiglia. (2) **La copertura sui 41 «altro» e' zero**, non parziale: nessuna delle sette ricette provate li raggiunge. E' la parte del commit che solo l'occhio puo' validare. (3) `data-theme` `null` all'inizio e ripristinato `null` in tutte e sei le misure. (4) Sonde `_tmp_uiP*.ts` non committate.
+**Prompt document name**: 2026-08-21 16:20 claude_2026-08-21_1620_prompt_ui_P_ritiro_testo_tokenscss.md
+
+## 2026-08-21 — refactor: i 162 siti di testo tertiary smistati su tre ruoli (D-UI-13 arco 4)
+
+**Prompt**: prompt UI O del 2026-08-21 15:45, arco 4 di D-UI-13 in un tema solo (R-RAIL-44 sospende il dark). 47 scambi di token dentro le `var()`, ricavati dai secchi del censimento `e35132977`: 16 `disabled` e l'alias `--color-disabled` a `--color-text-disabled`, 8 `placeholder` + 19 icone + 3 dei sette dubbi a `--color-text-placeholder`. Piu' la correzione della scala del testo in `styles/tokens/README.md`. `tokens.css` non toccato.
+**Files touched**: commit `85c4398f6` (24 file, 50 inserzioni / 48 cancellazioni): `components/{GlobalSearch/GlobalSearch,JjodieWidget/jjodie-widget,NotificationCenter,Toast/toast,TreeViewSidebar/tree-view-sidebar,abstract/style,abstract/style_ap,colorScheme/defaultColorScheme,editor-v2/sim/simulation-panel,editors/EditorToolbar,editors/info,import/ImportSummaryModal}.scss, `components/Jodie/JodieWindow.css`, `components/ui/{ColorPicker/ColorPicker,HelpText/HelpText,Input/Input}.module.css`, `pages/{auth,dashboard}.scss`, `pages/components/{RightPanel/RightPanel,menu/menu,navbar}.scss`, `styles/{style,variables}.scss`, `styles/tokens/README.md`.
+**Outcome**: ✅ completed — i tre conteggi dell'asserzione 1 tornano, con una precisazione sul primo (vedi Notes).
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gate: build exit 0 (solo warning chunk-size), typecheck **33** sull'output completo (baseline, exit 2 atteso), smoke **12 passed / 0 failed / 3 skipped** con A5 invariata, `check:docs` 3/3 senza warning. PRIMA misurato ripristinando i 24 file a HEAD e poi rimettendo il working tree, con la patch verificata byte-identica prima e dopo (`diff -q`, IDENTICA).
+**Out-of-scope changes**: no — solo file elencati nei secchi in perimetro, piu' `styles/variables.scss` e `styles/tokens/README.md` come autorizzato. Nessun fallback letterale corretto, nessun blocco dark toccato, `tokens.css` intatto.
+**Layer Impact Report**: not-required — nessun file di §3.1 nel diff.
+
+**Asserzione 1, i tre conteggi** (albero dopo il commit, `command grep -rIno` su `frontend/src`):
+`var(--color-text-placeholder` = **31** (atteso 31) · `var(--color-text-disabled` = **21** (atteso 21) · `var(--color-text-tertiary` = **116** con il prefisso, **115** contando il solo token esatto (atteso 115). La 116a e' `EditorToolbar.scss:166`, `var(--color-text-tertiary-dark`, che il prompt mette fuori perimetro e che il prefisso cattura per sottostringa. Scomposizione: 95 senza fallback + 20 con fallback = 115.
+
+**Asserzione 2, la lista dei 47 siti** (secchio -> destinazione; tutti verificati riga per riga prima dell'edit)
+- **disabled -> `--color-text-disabled`** (16): `abstract/style.scss` 121, 183, 187, 474 · `abstract/style_ap.scss` 125, 188, 192, 468 · `ui/ColorPicker/ColorPicker.module.css` 75 · `ui/Input/Input.module.css` 96 · `menu/menu.scss` 112, 117 · `navbar.scss` 537, 636 · `dashboard.scss` 546 · `styles/style.scss` 82.
+- **placeholder -> `--color-text-placeholder`** (8): `GlobalSearch.scss` 47 · `jjodie-widget.scss` 431 · `tree-view-sidebar.scss` 420 · `editors/info.scss` 159 · `Input.module.css` 61 · `auth.scss` 22 · `styles/style.scss` 88, 935.
+- **icone -> `--color-text-placeholder`** (19): `GlobalSearch.scss` 33, 63 · `JodieWindow.css` 2521 · `NotificationCenter.scss` 191 · `toast.scss` 131 · `tree-view-sidebar.scss` 405, 441 · `defaultColorScheme.scss` 1103 · `simulation-panel.scss` 110, 131 · `EditorToolbar.scss` 94 · `ImportSummaryModal.scss` 71 · `HelpText.module.css` 29 · `Input.module.css` 145 · `RightPanel.scss` 649 · `navbar.scss` 1846, 2052 · `dashboard.scss` 920, 1205.
+- **dubbi -> `--color-text-placeholder`** (3, Emendamento 5): `tree-view-sidebar.scss` 1803 · `menu.scss` 100 · `GlobalSearch.scss` 97.
+- **alias -> `--color-text-disabled`** (1): `styles/variables.scss` 46, `--color-disabled`.
+- **README**: `styles/tokens/README.md` 77, una riga falsa sostituita e due aggiunte.
+
+**Asserzione 3, misura in pagina, regime B, viewport 1440x900** (`_tmp_uiO.ts`, non committata; `data-theme` `null` all'inizio e ripristinato `null` in tutti e quattro i passaggi). Stato 1 = `#/allProjects`; stato 2 = progetto + tab metamodello + filtro digitato + un toast.
+
+| sito | secchio -> destinazione | PRIMA | DOPO | match |
+|---|---|---|---|---|
+| `dashboard.scss:920` `.menu-header .bi` | icona -> placeholder | `rgb(71,85,105)` | `rgb(100,116,139)` | SI |
+| `navbar.scss:1846` `.appbar-tab__close` | icona -> placeholder | `rgb(71,85,105)` | `rgb(100,116,139)` | SI |
+| `tree-view-sidebar.scss:405` `i.bi-search` | icona -> placeholder | `rgb(71,85,105)` | `rgb(100,116,139)` | SI |
+| `tree-view-sidebar.scss:441` `__clear` | icona -> placeholder | `rgb(71,85,105)` | `rgb(100,116,139)` | SI |
+| `toast.scss:131` `.jj-toast__close` | icona -> placeholder | `rgb(71,85,105)` | `rgb(100,116,139)` | SI |
+| `tree-view-sidebar.scss:420` `input::placeholder` | placeholder -> placeholder | `rgb(156,163,175)` | `rgb(156,163,175)` | **NO, vedi Notes** |
+| *controllo* `dashboard.scss:909` `h1` | caption, non toccato | `rgb(71,85,105)` | `rgb(71,85,105)` | invariato |
+| *controllo* `tree-view-sidebar.scss:428` `__count` | caption, non toccato | `rgb(71,85,105)` | `rgb(71,85,105)` | invariato |
+| *controllo* `toast.scss:115` `.jj-toast__time` | caption, non toccato | `rgb(71,85,105)` | `rgb(71,85,105)` | invariato |
+
+Il confronto e' col token risolto **sull'elemento stesso** (o sul genitore quando l'elemento e' un `input`, che non puo' avere figli: le custom property si ereditano, il valore e' lo stesso), mai con un letterale scritto nella sonda.
+
+**Copertura dichiarata mancante**: sei siti misurati su 47, gli altri 41 **non raggiunti**. Non raggiungibili con le ricette provate (`#/allProjects`, progetto + tab metamodello, dialog New Project, rotta `/settings`, menu `.new-document__btn`, campanella `.sb-rz__bell`, Ctrl+K): `navbar.scss:2052` (il chevron vuole un metamodello gia' esistente nel menu), `NotificationCenter.scss:191` (il popover non si e' aperto), `EditorToolbar.scss:94`, `abstract/style{,_ap}.scss` tutti e 8, `menu.scss` 100/112/117, `dashboard.scss` 546/1205, `GlobalSearch.scss` 33/47/63/97, `auth.scss:22`, `styles/style.scss` 82/88/935, `Input.module.css` 61/96/145, `ColorPicker`, `HelpText`, `RightPanel`, `simulation-panel`, `JodieWindow`, `ImportSummaryModal`, `jjodie-widget`, `defaultColorScheme`, `info.scss:159`, `variables.scss:46`. `dashboard.scss:1205` e' **morto a codice**: `item--muted` dipende dal prop `muted` di `LeftBar`, che non ha alcun call site (controllo positivo eseguito).
+**Smoke visivo**: da fare da Alfonso. In regime B trenta siti passano da `#475569` a `#64748b` e sedici a `#94a3b8`; **in regime A i 59 caption restano `#94a3b8`**, perche' `--color-text-tertiary` viene ancora da `tokens.css`: non e' un fallimento dell'arco, e' il pezzo che chiude l'arco successivo (D-UI-13 Em. 5).
+**Notes**: (1) **Difetto trovato per strada**: `tree-view-sidebar.scss:420` dichiara il token ma non arriva al pixel — un letterale `#9ca3af` di `styles/forms.scss` / `_form-system.scss` vince, prima e dopo. Sito in perimetro, edit corretto, resa invariata. (2) I sotto-secchi disabled/placeholder/icona **non sono nel censimento**: §3.1 dice che le 19 icone sono «elencate per intero», ma §3.8 non ha la colonna. Ricavati applicando R3>R4>R5; i totali tornano 16/8/19 esatti. (3) Log ruotato, vedi commit.
+**Prompt document name**: 2026-08-21 15:45 claude_2026-08-21_1545_prompt_ui_O_arco4_smistamento_testo.md
+
+## 2026-08-21 — fix: le ultime due linee del rail sul token panel-border (D-UI-11)
+
+**Prompt**: prompt UI M del 2026-08-20 21:45, applicazione di D-UI-11 Emendamento 1 e non arco nuovo di D-UI-13. Tre scambi di token in `info-improvements.scss`, da `--color-border-primary` a `--color-panel-border`, su `.properties-section-header` (467), `.props-header` (872) e `.props-header__badge` (914, regola morta corretta lo stesso). Gate relazionale nei due regimi chiari, non su valori assoluti.
+**Files touched**: commit `9139887f1` (1 file: `frontend/src/components/editors/info-improvements.scss`, 3 righe)
+**Outcome**: ✅ completed — con una correzione a una premessa che avevo prodotto io, vedi Notes.
+**Corregge**: 2026-08-20 20:55 (censimento arco 3, §4.2)
+**Causa**: (c)
+**Regressions**: no — gate relazionale eseguito prima e dopo su stato costruito con la ricetta di `_tmp_uiH.ts` (metamodello + Class sul canvas + nodo selezionato), viewport 1440x900, attributo `data-theme` `null` all'inizio e ripristinato `null`. **Regime A: cinque valori su cinque invariati fra PRIMA e DOPO**, il controllo tiene. **Regime B: `.props-header` da `rgb(203,213,225)` (match=NO) a `rgb(226,232,240)` (match=SI)**, unica cella mossa. In entrambi i regimi, dopo: tutte le linee presenti combaciano col valore di `--color-panel-border` risolto sull'elemento stesso, e l'insieme dei colori distinti fra quelle che dipingono davvero ha cardinalita' 1. Gate: build exit 0 (solo il warning chunk-size noto), typecheck **33** sull'output completo (baseline), smoke **12 passed / 0 failed / 3 skipped** con A5 invariata, `check:docs` 3/3 senza warning.
+**Out-of-scope changes**: no — un solo file di stile, tre dichiarazioni. `properties-with-tree-view.scss:869` (letterale + token commentato) lasciato intatto come chiede il prompt, insieme ai 18 bordi letterali dei due fogli.
+**Layer Impact Report**: not-required — nessun file di §3.1 nel diff.
+**Smoke visivo**: non applicabile in senso stretto — per costruzione **nessun pixel cambia in nessuno dei due regimi chiari**, perche' nessuna delle tre regole dipinge (vedi Notes). Verifica a vista di Alfonso non richiesta da questo commit.
+**Copertura dichiarata mancante**: `.properties-section-header` **non misurata**, e la ricetta di `_tmp_uiH.ts` non basta: la sola componente che la rende, `PropertiesOverview`, non ha call site. Non misurate nemmeno `.jj-conformance-bar` (serve una tab `model_*`), `.props-header__badge` (classe mai resa). Misurate e combacianti: `.rail-header`, `.tree-search`, `.tree-view-panel-container`, `.props-header`, `.properties-node-section__rule`, piu' `.rail-header__btn`, `.jj-flags__rule` e l'`::after` di ADVANCED.
+**Notes**: (1) **CORREZIONE al censimento §4.2 e a D-UI-11 Em.1**: `.props-header` e' `border-bottom: 0px solid`, quindi in regime B *risolve* rgb(203,213,225) ma non dipinge; `.properties-section-header` e' resa solo da `PropertiesOverview`, mai chiamata (`Info.tsx:1059`, con controllo positivo). Nessuna delle tre regole toccate dipinge oggi: la divergenza chiusa e' **latente**, non visibile. Avevo letto il colore senza spessore ne' renderer, il difetto di CLAUDE.md §5. (2) Gate relazionale, non assoluto.
+**Prompt document name**: 2026-08-20 21:45 claude_2026-08-20_2145_prompt_ui_M_chiusura_dui11_regime_b.md
+
+## 2026-08-20 — docs: censimento dei 162 siti di testo e dei due fogli di bordo (D-UI-13 arco 3)
+
+**Prompt**: prompt UI K del 2026-08-20 20:55, arco 3 di D-UI-13, Fase 1 read-only. Tre censimenti in un report: A, tutti i 162 usi di `--color-text-tertiary` con proprieta' CSS, selettore e smistamento caption/subtle/altro secondo un criterio dichiarato in testa; B, i due fogli dove le famiglie `--color-border-primary` e `--color-panel-border` coesistono, con la domanda su quali coppie si vedono insieme a schermo; C, i sedici nomi che `_colors-light.scss` dichiara e `_colors-dark.scss` no, ricavati e non copiati, con misura di che cosa risolvono in dark.
+**Files touched**: commit `e35132977` (1 file: `docs/discovery/discovery_2026-08-20_censimento_testo_e_bordi.md`, nuovo). Nessun file di codice o di stile toccato.
+**Outcome**: ✅ completed — censiti 162 + 20 + 16 siti; 7 dubbi lasciati aperti come chiede il prompt, piu' 7 domande in coda al report.
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — discovery read-only, nessun sorgente nel diff. Numeri: A si scompone in 55 caption, 43 subtle (16 disabled, 8 placeholder, 19 icone), 41 altro (il token non dipinge testo), 12 alias, 2 morti, 2 commentati, 7 dubbi. B: `--color-border-primary` ha 3 usi vivi in `info-improvements.scss` e **0** in `properties-with-tree-view.scss` (l'unico e' commentato in un blocco `// TODO: cleanup`), contro 18 di `--color-panel-border`. C: 16 confermati per differenza (199 - 183), 9 dei quali senza alcun consumatore.
+**Out-of-scope changes**: no — un solo file, il report.
+**Layer Impact Report**: not-required — nessun file di §3.1 letto in scrittura, nessuna modifica.
+**Smoke visivo**: non applicabile — nessuna superficie toccata. Le due sonde live sono misura, non verifica visiva.
+**Notes**: (1) Metodo: maschera commenti a livello di carattere, validata su 4 casi noti prima dell'uso; ha smentito due mie letture (`style.scss:297,477` stanno dentro blocchi 231-302 e 437-488). (2) 162 = occorrenze; la 163a grep e' `--color-text-tertiary-dark`, altro nome mai dichiarato. (3) Ogni asserzione di assenza ha il suo controllo positivo in linea. (4) Sonde `_tmp_censusB/C/reconTabs.ts` non committate; censusB apre un progetto (dichiarato), contesto effimero. (5) Rotazione log dovuta.
+**Prompt document name**: 2026-08-20 20:55 claude_2026-08-20_2055_prompt_ui_K_arco3_censimento_testo_bordi.md
+
+## 2026-08-20 — refactor: i 16 token identici tolti da tokens.css (D-UI-13 arco 1)
+
+**Prompt**: prompt UI I del 2026-08-20 17:05, arco 1 di D-UI-13. Togliere da `styles/tokens.css` i 16 nomi che dichiara con lo stesso identico valore di `styles/tokens/`, lasciando intatti i 17 divergenti (archi 2-4) e i nomi esclusivi interposti (`--radius-base`, `--input-height-base`); commento di intestazione che spiega la sottrazione; citazione ora falsa corretta in un commento SCSS. Gate obbligatorio: controllo positivo sui 33 nomi collisi nei tre regimi di tema, prima e dopo.
+**Files touched**: commit `c00c1e660` (2 file: `frontend/src/styles/tokens.css`, `frontend/src/components/editors/properties-with-tree-view.scss`)
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — controllo positivo passato: `getComputedStyle(:root)` sui 33 nomi collisi nei tre regimi (`data-theme` assente / `light` / `dark`), su `#/allProjects` senza progetto aperto, **identico su tutti e 99 i valori** prima e dopo. Il modello della discovery regge. Gate: build exit 0 (solo il warning chunk-size noto e le deprecation Sass preesistenti), typecheck **33** contato sull'output completo (baseline), smoke **12 passed / 0 failed / 3 skipped** con A5 PASS sui due stati con progetto aperto e SKIP su `empty-project`, `check:docs` 3/3 senza warning.
+**Out-of-scope changes**: no — due file, entrambi dichiarati dal prompt. Nessun file di `styles/tokens/`, `_themes.scss` o `variables.scss` toccato.
+**Layer Impact Report**: not-required — nessun file di §3.1 nel diff.
+**Smoke visivo**: passato (automatico, smoke A1-A5) — verifica a vista di Alfonso pendente; per costruzione non deve mostrare alcuna differenza, ed e' questo il punto dell'arco 1.
+**Notes**: (1) Controllo positivo: PRIMA=DOPO su 99 valori (33 nomi x 3 regimi), `data-theme` assente e ripristinato assente; sonda `_tmp_tokens33.ts`, non committata. (2) Controllo sul controllo: il CSS servito da Vite non ha piu' i 16 nomi e ha ancora `--radius-base` e `--input-height-base`, quindi il DOPO non e' stantio. (3) Residuo: il commento `Transition timing functions` resta senza dichiarazioni sotto; toglierlo era una 17a sottrazione, va all'arco 3. (4) Rotazione log dovuta.
+**Prompt document name**: 2026-08-20 17:05 claude_2026-08-20_1705_prompt_ui_I_arco1_token_identici.md
+
+## 2026-08-20 — fix: altezze del chrome a token, rail a filo, asserzione A5 (D-UI-12)
+
+**Prompt**: prompt UI G del 2026-08-20 12:01 piu' l'emendamento del 12:40 dopo l'hard stop. Quattro commit: token delle altezze del chrome; `.dashboard-container` che prende il resto del flex; rail a filo di toolbar e status bar; asserzione smoke A5.
+**Files touched**: `frontend/src/styles/tokens/_layout.scss` (nuovo), `frontend/src/styles/tokens/index.scss`, `frontend/src/pages/components/navbar.scss`, `frontend/src/components/editor-v2/EditorV2.scss`, `frontend/src/components/StatusBar.scss`, `frontend/src/pages/dashboard.scss`, `frontend/src/components/editors/properties-with-tree-view.scss`, `frontend/scripts/smoke/{assertions,states,run}.ts`, `docs/decisions.md`, `docs/PROTOCOL.md`, `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: 2026-08-20 12:01
+**Causa**: (c)
+**Regressions**: no — gap toolbar->rail misurato **9.73px prima**, **10.05px dopo il commit 2 come specificato** (peggiorato: l'hard stop ha fermato la sequenza), **0.00px alla fine**. Le tre relazioni del gate a zero: `overlay.top - toolbar.bottom = 0`, `statusbar.top - overlay.bottom = 0`, `viewport.width - overlay.right = 0`. App bar da 48.95 a **50 esatti**. Commit 1 verificato a doppia build: 4 hunk nel CSS compilato, tutte risolte agli stessi valori. Gate: build exit 0 dopo ogni commit, typecheck **33** contato sull'output completo (baseline, 0 in `scripts/smoke`), smoke **12 passed / 0 failed / 3 skipped** (era 10/0/2; A5 passa sui due stati con progetto aperto, skipped su `empty-project`), conteggio stati invariato a 3.
+**Out-of-scope changes**: no — sette file del prompt G piu' i tre dello smoke e i due doc, tutti autorizzati dall'emendamento.
+**Layer Impact Report**: not-required — nessun file di §3.1 nel diff.
+**Smoke visivo**: passato (automatico, A5 inclusa) — verifica a vista di Alfonso pendente, light e dark con sfondo canvas attivo.
+**Notes**: (1) L'hard stop ha intercettato un modello sbagliato: la colonna flex e' `.router-wrapper`, non `#root`, e `.dashboard-container` e' fratello di entrambe le bande; sottrarne una sola ha portato l'overflow da 22 a 32px. (2) Passata la prova A: non conosce i fratelli, B li ricopia. L'1px di rc-dock: D-UI-12. (3) Gate relazionali in PROTOCOL.md P8: il controllo positivo sta in CLAUDE.md §5, non qui. (4) P8 dichiara il dev server su 3000; i prompt F e G dicono 3001. (5) Rotazione log dovuta.
+**Prompt document name**: 2026-08-20 12:01 (prompt UI G) + emendamento 2026-08-20 12:40 claude_2026-08-20_1240_emendamento_G_commit2_3.md
+
+## 2026-08-20 — fix: un solo colore per gli hairline del rail destro (D-UI-11)
+**Prompt**: prompt UI F del 2026-08-20 09:46, solo SCSS, senza two-phase. Uniformare i sei hairline interni al rail destro su `--color-panel-border`, eliminando i quattro valori divergenti (`#d1d9e3`, `#e2e8f0`, `#e9eff6`, `#eef2f7`) e l'uso di `--color-bg-hover` come colore di bordo. Bordo esterno del rail fuori scope.
+**Files touched**: `frontend/src/components/editors/properties-with-tree-view.scss`, `frontend/src/components/editors/info-improvements.scss`, `docs/decisions.md`, `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — gate 2 eseguito come doppia build (`git stash` sui due file) con diff del CSS compilato rule-by-rule: **sei sole hunk**, tutte previste — le cinque ricolorazioni piu' la rimozione dell'override dark ora ridondante. Nessun'altra regola cambia in 1.81 MB di CSS. Build exit 0 in entrambe le colonne, solo il warning chunk-size noto.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessun file di §3.1 nel diff.
+**Smoke visivo**: ✅ eseguito 2026-08-20 su localhost:3000, light e dark con reload completo (dark impostato prima del load, non a caldo). Stato: progetto nuovo, metamodel_1 + model_1, tab model_1 aperta — la banda `Conforms to` esiste solo li', `Info.tsx:467` la gatta su `!l.isMetamodel`. Sei linee su sei a `--color-panel-border`: rgb(226,232,240) in light, rgb(51,65,85) in dark. Misura da computed style, non da campionamento di pixel.
+**Seguito**: `.jj-flags__rule`, settima linea non inventariata, portata sul token (prompt H). D-UI-11 non ha piu' eccezioni.
+**Notes**: (1) Ognuna delle cinque dichiarazioni verificata col valore atteso **prima** della sostituzione, come chiede il prompt: tutte corrispondevano. Le asserzioni erano anche sui numeri di riga e una ha fatto fallire il primo tentativo (il commento dark sta a 1241, non a 1240); l'abort ha lasciato i file intatti. (2) Cascata e specificita' dell'override su `.tree-search`, e la correzione di `.jj-conformance-bar` anche fuori dal rail: ratificate in D-UI-11. (3) Rotazione log ancora dovuta.
+**Prompt document name**: 2026-08-20 09:46 claude_2026-08-20_0946_prompt_ui_F_hairline_rail.md
+
+## 2026-08-20 — feat: i token di tema pubblicati su `:root` (D-UI-10)
+**Prompt**: prompt del 2026-08-20 00:58, strada C del report sui token portalati. Commit 1, sorgente unica per i 91 nomi con output CSS invariato byte per byte; commit 2, gli stessi token emessi anche su `:root` e `:root[data-theme="dark"]`, additivi, tutti e 91. Piu' il commit del report lasciato non tracciato e la ratifica D-UI-10.
+**Files touched**: `frontend/src/components/editor-v2/_themes.scss`, `docs/decisions.md`, `docs/discovery/discovery_2026-08-20_token_css_portalati.md` (committato), `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: 2026-08-20 00:25
+**Causa**: (a)
+**Regressions**: no — controllo positivo su due colonne (`git stash`) misurato in pagina: dentro `.editor-v2` **zero** valori cambiati su 91, in light e in dark. Nel rail portalato i non risolventi passano da 89 a 0. Commit 1 verificato compilando l'intero `EditorV2.scss` prima e dopo: 97318 byte identici, `cmp` silenzioso. Gate: build exit 0, typecheck 33 su output completo, vitest 1315 passati / 9 suite rosse, smoke 10/0/2.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessun file di §3.1 nel diff.
+**Smoke visivo**: passato (automatico) — 10 assert, 0 falliti. Verifica di Alfonso in light e dark: raggruppata nell'unico hard stop di fine sessione.
+**Notes**: Test 4 confermato: `--accent` dentro il portal resta `#334155` (light) e `#94a3b8` (dark) contro `#0284c7` dell'editor. Difetto aperto, come D-UI-10 dichiara. Trovato un difetto **preesistente**: `AppearanceSettings.tsx:8` scrive `data-theme` e `localStorage` a mano invece di `ThemeService.set`, quindi `jjodel:theme-changed` non parte e `.editor-v2` resta `theme-light` fino al reload. Con dark scelto prima del load, rail ed editor coincidono su 90 nomi su 91.
+**Prompt document name**: 2026-08-20 00:58
+
+## 2026-08-20 — fix: rail destro a filo, overlay e toast (D-UI-1, Fase 2 di A)
+**Prompt**: documento di chiusura del 2026-08-20 01:49. Tre commit di fila senza hard stop intermedi: rail destro a filo dalla toolbar alla status bar con il bordo del rail sinistro; overlay in basso a sinistra che non si accavallano piu' e riga di aiuto leggibile intera; toast che non copre la status bar. Le due domande aperte di A chiuse da solo con i criteri dati.
+**Files touched**: `frontend/src/components/editors/properties-with-tree-view.scss`, `frontend/src/components/editor-v2/EditorV2.scss`, `frontend/src/components/editor-v2/sim/simulation-panel.scss`, `frontend/src/components/Jodie/JodieWindow.css`, `frontend/src/components/Toast/toast.scss`, `frontend/src/components/Toast/ToastContainer.tsx`, `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — misurato in pagina sul tab M1, viewport 1440x900. Rail x=1040..1440 y=100..868, `border-left rgba(0,0,0,0.06)`, radius 0, shadow none. `.editor-v2` da 900 a 817px, dentro lo slot: le tre righe di aiuto stanno a y=759..853, nessuna clippata, nessuna sotto la status bar. FAB a x=230, pill a x=216, entrambi disgiunti dal blocco hint (destro a 186). Toast da `bottom:16px` a 48px, sovrapposizione con la status bar da 16px a 0. Gate: build exit 0, typecheck 33, vitest 1315/9, smoke 10/0/2.
+**Out-of-scope changes**: yes
+**Layer Impact Report**: not-required — nessun file di §3.1 nel diff.
+**Smoke visivo**: passato (automatico) — A3 «no overlay on the status bar» 0 intersecanti in tutti e tre gli stati. Verifica di Alfonso: hard stop unico, pendente.
+**Notes**: Out-of-scope dichiarato: `ToastContainer.tsx`, non nel report di Fase 1. Il solo fix SCSS rendeva il toast **invisibile**: `#root` e' `position:fixed`, quindi contesto di impilamento, e `--z-toast` ordinava solo dentro `#root` mentre il rail, fratello di `body` a 900, ci passava sopra. Il toast si vedeva solo nella striscia sotto il rail, che e' la striscia sulla status bar. Portalato su `body`. Trovato in pixel, non in stile.
+**Prompt document name**: 2026-08-20 01:49
+
+## 2026-08-20 — docs: censimento dei token CSS nel contesto portalato
+**Prompt**: prompt del 2026-08-20 00:25, discovery pura fuori sequenza che precede la Fase 2 di C. Sei punti: perimetro portalato, dove sono definiti i token di tema, censimento statico di `var(--`, verifica dinamica in pagina con controllo positivo, conseguenze visibili, dark mode. Piu' una sezione «Opzioni di fix» con almeno due strade e nessuna scelta. Hard stop al termine, nessun file di codice.
+**Files touched**: `docs/discovery/discovery_2026-08-20_token_css_portalati.md` (nuovo), `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — nessun sorgente nel diff. Le quattro sonde Playwright temporanee sono state rimosse e la loro assenza verificata: `git status --porcelain frontend/` a fine task elenca gli stessi undici file non tracciati presenti a inizio sessione, nessuno in piu'.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessun file di §3.1 nel diff.
+**Smoke visivo**: non applicabile — nessuna superficie toccata. Screenshot presi solo come misura.
+**Notes**: Tre premesse del prompt falsificate, in §0 del report: il rail sinistro non e' portalato; il dark arriva ai portal per meta' (58 nomi su 234 cambiano nel rail, `data-theme` sta su `<html>`); il nero di `GENERAL` viene dal `<button>`, non dal rail. Popolazione reale **una** variabile, `--text-muted`, e una delle due occorrenze e' morta per specificita'. Quarto scostamento, su una ratifica: R-RAIL-44 dice il dark irraggiungibile dalla UI, misurato che non lo e' (§6.3).
+**Prompt document name**: 2026-08-20 00:25
+
+## 2026-08-19 — refactor: `activeViewpoint` a 0..1, siti riparati (R-IRN-25) (entry di recupero)
+**Prompt**: commit 2b-i della slice 2 di `2.228`: allargamento di `LProject.activeViewpoint` a `LViewPoint | null` e dei due campi D a 0..1, con riparazione dei sei siti che il typecheck ha enumerato. Entry scritta il 2026-08-24 dal commit `363e121c0` (18:27 del 19/8), mai loggata (lacuna P9 rilevata il 23/8).
+**Files touched**: docs/decisions.md (R-IRN-25), docs/discovery/discovery_2026-08-19_2228_2b_perimetro_activeviewpoint.md (nuovo), frontend/src/components/editors/views/NestedView.tsx, frontend/src/joiner/classes.ts, frontend/src/redux/selectors/selectors.ts, frontend/src/utils/lastViewpoint.ts, frontend/src/view/viewElement/view.tsx
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown — gate non registrati al momento del commit; il 2b-ii (`fc9f8afda`, 23/8) ha misurato il typecheck identico byte a byte alla baseline (33) sopra questo commit.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — allargamento di tipo e riparazione dei siti, nessun pixel.
+**Notes**: Entry ricostruita da `git show --stat`, non dalla sessione. L'oracolo dei siti è il tipo (R-IRN-25): sei siti contro i due censiti a mano. `NestedView.tsx` è fra i toccati: dal 23/8 è UI irraggiungibile (R-LAY-12) e in rimozione (R-DEAD).
+**Prompt document name**: —
+
+## 2026-08-19 — fix: `activateViewpoint` sa disattivare, e la root porta `null` (R-IRN-18, R-IRN-21)
+**Prompt**: prompt del 2026-08-19 01:15, Fase 2 di `2.227 -> 2.228`, slice 2 di 3, commit 2a. Due file: la guardia di `activateViewpoint` passa da `viewpointId && projectId` a `projectId` e scrive `null`, cade la coercizione `|| ''` sulla root, e `Toolbar.tsx:229` coerce a stringa al confine di resa del `<select>` controllato.
+**Files touched**: `frontend/src/utils/lastViewpoint.ts`, `frontend/src/components/editor-v2/Toolbar.tsx`, `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — verifica in pagina con controllo positivo (`git stash`): scegliendo «Abstract syntax» il codice base lascia `activeViewpoint` sul viewpoint precedente e la root a `""`, con le modifiche entrambi vanno a `null`. Zero warning React di controllo non controllato, zero page error, in entrambe le colonne. Gate: typecheck exit 2 con 33 errori (insieme identico alla baseline), build exit 0, vitest 1315 passati / 9 suite rosse, smoke 10/0/2.
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced — vale `discovery_2026-08-18_4_lir_versionfixer_2228.md` §4.3, riletto prima del diff; il prompt vieta di produrne un altro.
+**Smoke visivo**: passato (automatico) — 10 assert, 0 falliti. **Verifica visiva di Alfonso: passata il 2026-08-23** (entry aggiornata in place, precedente della slice 2a del 2026-08-17). Verificati i due punti che appartengono al commit 2a: (1) il ritorno ad «Abstract syntax» dal selettore sopravvive a salva-e-riapri; (2) il selettore si comporta come prima di 2a, nessun `<select>` vuoto e nessun warning React di controllo non controllato. Il difetto preesistente su `DProject.activeViewpoint` (vedi Notes) non è stato trattato come fallimento, come prescritto.
+**Notes**: Trovato un difetto **preesistente** e non introdotto qui: `DProject.activeViewpoint` non viene mai persistito correttamente. Misurato su entrambe le colonne del controllo positivo — dopo attiva+salva lo store porta l'id del viewpoint utente e lo stato compresso porta `Pointer_ViewPointDefault`. La root invece si persiste e si ricarica giusta. Dettagli e numeri in `discovery_2026-08-19_2228_2b_perimetro_activeviewpoint.md`.
+**Prompt document name**: 2026-08-19 01:15
+
+## 2026-08-19 — docs: ratifica R-IRN-23..24 e rimando cieco corretto in `store.tsx`
+**Prompt**: prompt del 2026-08-19 01:15, Fase 2 di `2.227 -> 2.228`, slice 2 di 3, commit preliminare. Due cose non di prodotto: sostituire il commento cieco lasciato dalla slice 1 in `store.tsx` (rimandava a una «scope decision below» che nel file non esiste) e appendere verbatim le due ratifiche nuove alla serie R-IRN.
+**Files touched**: `frontend/src/redux/store.tsx` (1 riga di commento), `docs/decisions.md` (R-IRN-23, R-IRN-24), `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: 2026-08-19 00:15
+**Causa**: (a)
+**Regressions**: no — nessun codice eseguibile toccato. Gate ridotti come da prompt: typecheck exit 2 con **33** errori su output completo (baseline invariata), build exit 0 con il solo warning di chunk-size.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — il commento non e' codice; il LIR della slice 2 e' `discovery_2026-08-18_4_lir_versionfixer_2228.md` §4.3, che il prompt vieta di riprodurre.
+**Smoke visivo**: non applicabile — nessuna superficie toccata.
+**Notes**: `Corregge` punta alla slice 1 benche' il suo esito fosse ✅: il rimando cieco era gia' censito come scostamento 3 in `discovery_2026-08-19_slice1_ritiro_seed.md` §3, scritto verbatim su richiesta del prompt di allora. Causa (a): la forma prescritta citava una sezione del prompt, non del codice. R-IRN-23 e R-IRN-24 sono state rilette dal file dopo l'inserimento, insieme a R-IRN-11..22.
+**Prompt document name**: 2026-08-19 01:15
+
+## 2026-08-19 — refactor: il seed non crea piu' le ventuno view di default (R-IRN-15)
+**Prompt**: prompt del 2026-08-19 00:15, Fase 2 di `2.227 -> 2.228`, slice 1 di 3. Un commit, tre modifiche: seed commentato in `store.tsx`, loop di coda rimosso da `VersionFixer.tsx`, `updateDefaultView` resa inerte per costruzione con una guardia di tipo. Prerequisiti confermati: verifica visiva della slice 0 (revisione +0.1) e rilettura di R-IRN-11..22 dal file.
+**Files touched**: `frontend/src/redux/store.tsx`, `frontend/src/redux/VersionFixer.tsx`, `frontend/src/view/viewElement/view.tsx`, `docs/discovery/discovery_2026-08-19_slice1_ritiro_seed.md`, `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — scenari 1, 2 e 4 eseguiti in pagina con controllo positivo sul codice base (21 view trovate senza le modifiche, 0 con); scenario 3 su `State Machine v1` pendente su Alfonso. Gate tutti allineati: typecheck 33, test 1315/9 rosse, build exit 0, smoke 10/0/2, check:docs 3/3, check:agents pass.
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced — vale `docs/discovery/discovery_2026-08-18_4_lir_versionfixer_2228.md` §4.2 e §5.2, riletto prima del diff; il prompt vieta di produrne un altro.
+**Smoke visivo**: passato (automatico) — 3 stati, 10 assert, 0 falliti, 2 skip. Le tre righe `IMPROVED` sui duplicate key sono preesistenti: verificate identiche con le modifiche in stash.
+**Notes**: Il TypeError di `PointedBy.merge` che la guardia previene e' stato riprodotto sul runtime di oggi, non ricordato: con il registro a booleani `{...true}` da' `{}` e la merge solleva `d1.pointedBy is not iterable`; con la guardia non solleva e non scrive. Dettagli, numeri e istruzione per lo scenario 3 nel report di slice `discovery_2026-08-19_slice1_ritiro_seed.md`.
+**Prompt document name**: 2026-08-19 00:15
+
+## 2026-08-18 — fix: la revisione utente non viene piu' sovrascritta dalla versione di schema (R-IRN-17)
+**Prompt**: prompt del 2026-08-18 16:56, Fase 2 di `2.227 -> 2.228`, slice 0. Un commit, una riga: rimuovere `VersionFixer.tsx:134` piu' le due righe che calcolano `pid` e `project` se restano senza altri usi. Prerequisito soddisfatto: Alfonso ha eseguito il controllo in dashboard e riporta `2.3`, che conferma la diagnosi.
+**Files touched**: `frontend/src/redux/VersionFixer.tsx` (3 righe rimosse), `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown — gate e smoke allineati alla baseline (typecheck 33, test 1315/9 rosse, build exit 0, smoke 10/0/2), ma nessuno di essi apre un salvataggio: la verifica che conta e' quella manuale di Alfonso, aprire e salvare due volte e vedere la revisione avanzare di un decimo.
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced — `docs/discovery/discovery_2026-08-18_4_lir_versionfixer_2228.md` §4.1, prodotto prima del diff e committato in `6ea762783`.
+**Smoke visivo**: passato (automatico) — 3 stati, 10 assert passati, 0 falliti, 2 skip per costruzione. Non sostituisce la verifica manuale.
+**Notes**: La rimozione sblocca il contatore, non ricostruisce la storia persa: un progetto fermo a `2.3` riparte da `2.3` e il prossimo salvataggio da' `2.4`. Resta un secondo scrittore, `projects.ts:372` in `Online.save`, guardato da `!version` e oggi irraggiungibile perche' `getNextVersionNumber` non restituisce mai un valore falsy: censito nel LIR §5.4, non toccato.
+**Prompt document name**: 2026-08-18 16:56
+
+## 2026-08-18 — docs: Layer Impact Report per le tre modifiche a `VersionFixer.tsx` della `2.228`
+**Prompt**: prompt del 2026-08-18 16:56, Fase 2 di `2.227 -> 2.228`, Passo 0: un solo LIR a copertura delle tre slice che toccano `VersionFixer.tsx` (rimozione della riga 134, rimozione del loop di coda 148-154, nuovo adapter `2.227 -> 2.228`), con le quattro domande obbligatorie per ciascuna. Hard stop al termine, nessuna riga di codice.
+**Files touched**: `docs/discovery/discovery_2026-08-18_4_lir_versionfixer_2228.md` (nuovo), `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — nessun sorgente nel diff; `git status --porcelain frontend/` vuoto a fine task.
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced — e' il deliverable stesso, in `docs/discovery/`, non in chat.
+**Smoke visivo**: non applicabile — nessuna superficie toccata.
+**Notes**: Tre findings nuovi, in §5 del LIR. (1) Senza seed i registri restano booleani, quindi il loop di coda inietterebbe `true` in `idlookup`, non oggetti: la rimozione vale piu' di quanto R-IRN-15 argomenti. (2) `updateDefaultView` ha un secondo chiamante, `NestedView.tsx:399`, il cui bottone restera' visibile e muto. (3) `projects.ts:372` e' un secondo scrittore della versione di schema sulla revisione, guardato e oggi morto. Tre domande aperte in §7.
+**Prompt document name**: 2026-08-18 16:56
+
+## 2026-08-18 — docs: discovery di Fase 1 per la migration `2.227 -> 2.228`
+**Prompt**: prompt del 2026-08-18 16:17, Fase 1 read-only su ritiro del seed del viewpoint `Default` e `activeViewpoint` a 0..1. Blocchi A (blast radius del seed), B (cardinalita' e `null`), C (forma della migration), D (baseline e gate). Hard stop al termine, nessuna decisione architetturale.
+**Files touched**: `docs/discovery/discovery_2026-08-18_2228_seed_e_activeviewpoint.md` (nuovo), `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — nessun sorgente nel diff; la modifica sperimentale di B5 e' stata scartata e l'identita' di `classes.ts` verificata byte a byte.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — `VersionFixer.tsx` letto, mai modificato.
+**Smoke visivo**: non applicabile — nessuna superficie toccata.
+**Notes**: Quattro ipotesi del prompt falsificate, dettagli nel report §0. Il primo guasto senza seed non e' `Defaults.check` ma `updateDefaultView`, con TypeError a `view.tsx:1923` assorbito da `reducer.ts:1577`: il progetto non carica, in silenzio. Il gradino `VP_Default` e' in una funzione senza chiamanti vivi. La categoria dominante di puntatore pendente e' `DGraphElement.view` (122/156 su censimento eseguito), assente dal prompt. B5 misurato: 41 errori contro 33 di baseline.
+**Prompt document name**: 2026-08-18 16:17
+
+## 2026-08-18 — docs: tetto di 500 caratteri su `Notes` e rotazione a 40
+**Prompt**: prompt inline del 2026-08-18 14:07: tetto di 500 caratteri sul campo `Notes` del formato entry in `CLAUDE.md` §21.2 e `docs/PROTOCOL.md` P9, soglia di rotazione da 20 a 40, Check C nel gate `check:docs`.
+**Files touched**: `CLAUDE.md` (§21.2, §21), `AGENTS.md` (rigenerato), `docs/PROTOCOL.md` (P9, riga 87), `frontend/scripts/gates/check-docs.ts` (Check C), `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: yes — `AGENTS.md`, quinto file: e' la proiezione generata di `CLAUDE.md`, e `check:agents` va rosso senza `npm run gen:agents` (§17). Espansione riportata all'hard stop.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Il gate non linta le 26 entry esistenti: `NOTES_LINT_FROM_DATE` e' 2026-08-19, e tre `Notes` in log misurano 6393, 7485 e 7946 caratteri. Check C misura lo span multiriga, non `fields.get('Notes')` che tiene solo la prima riga: controllo positivo su fixture, nota da 764 caratteri con prima riga da 41 intercettata. La soglia 20 e' anche in `docs/HARNESS-DOCS.md`: 262, 449, piu' l'invariante 7 di §12, in lettere e invisibile a una grep numerica. Fuori dai file dichiarati, non toccata.
+**Prompt document name**: 2026-08-18 14:07
+
+## 2026-08-18 — feat: il `Default` fuori dalle liste e il selettore come controllo della sintassi (R-IRN-9, R-IRN-10)
+
+**Prompt**: prompt inline del 2026-08-18 12:15, Fase 2, che sostituisce la sezione «Fase 2» del prompt del 10:52. Tre commit: C1 chiusura documentale del commit misto, C2 il `Default` fuori dalle liste (R-IRN-9), C3 il selettore come controllo della sintassi (R-IRN-10). Go-ahead dato in chat dopo la lettura del report di Fase 1.
+**Files touched**: **C1** `CLAUDE.md` (§6.1, §7.2), `AGENTS.md`, `docs/claude-code-log.md`. **C2** `frontend/src/common/Defaults.ts`, `frontend/src/joiner/classes.ts`, `frontend/src/components/megamodel/MegamodelView.tsx`, `frontend/src/pages/components/Dashboard.tsx`. **C3** `frontend/src/components/editor-v2/Toolbar.tsx`, `frontend/src/components/editor-v2/EditorV2.scss`, `docs/decisions.md` (R-IRN-9, R-IRN-10), `CLAUDE.md` (§7.2, 5 → 4), `AGENTS.md`, `docs/claude-code-log.md`. **NON toccato**: `frontend/src/utils/lastViewpoint.ts` — vedi nota (1).
+**Outcome**: ⚠️ partial — nove punti su dieci fatti; il punto 3.5 non e' stato eseguito perche' ha fatto scattare la sua stessa condizione di stop.
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown — gate verdi e smoke automatico verde, ma le nove verifiche visive del punto 7 sono di Alfonso e non sono state eseguite da me.
+**Out-of-scope changes**: yes — `CLAUDE.md` §7.2 e' stato toccato una seconda volta in C3, fuori dal perimetro dichiarato per quel commit (che elencava solo `Toolbar.tsx` e `EditorV2.scss` piu' le ratifiche). Ragione: la nota scritta in C1 diceva «5 residual, la rimozione della pill porta a 4», e dopo C3 sarebbe stata stantia nello stesso task che l'ha resa tale. Misurata prima e dopo: 5 → 4.
+**Layer Impact Report**: produced — in chat prima del diff di C2, benche' `joiner/classes.ts` non sia in §3.1 e la lettera di §3.2 non lo imponga. Prodotto perche' la fetta modifica un getter di L-layer da cui dipende un campo persistito (`viewpointsNumber`).
+**Smoke visivo**: passato (automatico) — `npm run smoke` 3/3 stati, 0 errori di console, A1/A2/A3 verdi dove applicabili. **Non sostituisce** i nove controlli manuali del punto 7 del prompt, che restano dovuti.
+**Notes**: (1) **Il punto 3.5 non e' stato eseguito, e non e' una omissione ma la clausola del prompt che scatta.** Il prompt chiedeva di rimuovere il terzo fallback di `resolveParentViewpoint` (quello che restituisce il `Default` come padre di una view nuova) e aggiungeva: «Verificare che sia l'unico chiamante di `resolveParentViewpoint`; se non lo e', **fermarsi e riportare** invece di rimuovere». Misurato: i chiamanti sono **due**, `lastViewpoint.ts:205` (`createViewInWorkbench`) e `EditorV2.tsx:3049` (voce «Create View» del menu contestuale del canvas). Il file non e' stato toccato. Nota a favore della rimozione, per quando si riprendera': il secondo chiamante gia' gestisce il `null` senza rompersi — la voce di menu diventa `disabled` con etichetta «Create View — no viewpoint available» (`EditorV2.tsx:3055-3057`) — quindi la rimozione sarebbe probabilmente sicura, ma la decisione e' di Alfonso e la clausola era esplicita. **Conseguenza da non perdere di vista**: il rubinetto che produce le view parcheggiate resta **aperto per intero**, quindi la condizione di `holdsOnlySystemViews` continuera' a essere esercitata. (2) **La scelta del namespace contro l'allowlist ha ora un numero, e la misura e' piu' forte dell'argomento che la giustificava.** Il prompt la motivava come rischio di manutenzione futura. Misurato sul `Default` di `statechartplus.ts`: 39 subViews, 35 di sistema, 4 autorate; un'allowlist costruita da `Defaults.views` ne mancherebbe **3 su 35**, cioe' `Pointer_ViewVoid` (37 occorrenze nel corpus salvato, **zero** nel sorgente: esiste solo dentro i progetti) e `Pointer_ViewDefaultPackage` (39, nel sorgente solo una costante commentata a `Defaults.ts:42`). L'allowlist non sarebbe «a rischio di restare indietro»: sarebbe **gia' indietro oggi**, e terrebbe il viewpoint visibile per sempre anche dopo che l'utente ha spostato le quattro view autorate — cioe' fallirebbe esattamente nel caso d'uso che la ratifica descrive. (3) **Un difetto che il prompt non prevedeva, e che avrebbe disabilitato in silenzio l'intera fetta.** `subViews` porta una chiave `clonedCounter`, iniettata dal reducer come contatore di versione (`reducer.ts:104`); `get_SubViews` e `get_allSubViews` la cancellano prima di enumerare (`view.tsx:1074,1110`). Il predicato del prompt, `ids.every(id => id.startsWith('Pointer_View'))`, avrebbe risposto `false` per sempre su qualunque viewpoint toccato dall'utente, lasciando il `Default` visibile senza nessun errore e senza nessun warning. E' la stessa specie del typo `=== 'LValue'` di §3.13: una guardia che non fallisce, si limita a non fare niente. Saltata esplicitamente, con la ragione a commento. (3-bis) **Il filtro su `data.viewpoints` non e' la cintura che il prompt e la Fase 1 credevano: chiude un difetto vivo.** Il prompt lo presentava come difensivo e la Fase 1 aveva misurato che il puntatore seminato non sta mai in `data.viewpoints`. Quella misura era presa sui **due salvataggi vecchi in `examples/`**, e non si estende ai progetti che l'app crea oggi. Misurato su un progetto creato dalla UI: `data.viewpoints` legge `["Pointer_ViewPointDefault"]`, quindi il vecchio `[...Defaults.viewpoints, ...data.viewpoints]` restituiva quell'id **due volte**. La prova che l'effetto era osservabile: lo smoke segnala il warning React «Encountered two children with the same key» sceso da **18 a 0** e da **20 a 0** nei due stati che montano un canvas, e A4 propone di toglierlo dalla baseline. Non l'ho tolto: `console-baseline.json` e' fuori perimetro, e la modifica va fatta da chi ricalibra. Ricaduta sul commento a codice, che avevo scritto seguendo il prompt e che era **sbagliato**: corretto nello stesso commit. Ricaduta su R-IRN-10: `activeViewpoint` vale `Pointer_ViewPointDefault` **anche su un progetto appena creato**, quindi la normalizzazione del punto 4b serve a ogni progetto nuovo, non solo a `statechartplus`. (4) **`get_viewpoints` e' freddo, misurato e non stimato.** Il prompt chiedeva di misurare la frequenza prima di lasciare l'implementazione ingenua. Strumentato con un contatore temporaneo e guidato con Playwright attraverso l'app reale (ricetta dello smoke: utente offline, progetto creato dalla UI, tab metamodello): **5 chiamate all'apertura del progetto, 5 all'apertura del tab, ZERO in 5 secondi di inattivita'**, ~30 microsecondi l'una. Non e' per-nodo-per-render, quindi nessuna memoizzazione: l'implementazione resta semplice. La strumentazione e' stata rimossa prima del commit e la sua assenza verificata con ricerca. (5) **La normalizzazione del valore attivo serve su due fronti, non uno.** Il primo e' quello previsto dal punto 4b (un viewpoint di sistema salvato come attivo: `statechartplus` ha `activeViewpoint = Pointer_ViewPointDefault`). Il secondo e' emerso scrivendo il 4c e **non era nel prompt**: su M2 la lista non viene resa, quindi un viewpoint attivo qualunque lascerebbe il `<select>` con un `value` privo di `<option>` e `selectedIndex` a -1 — lo stesso controllo vuoto, raggiunto dall'altra direzione. Risolto con `shownViewpointId = isMetamodel ? '' : activeViewpointId`, che spegne anche la classe `--active`, il che e' corretto: M2 rende in sintassi astratta qualunque sia il viewpoint globale. Nessuna scrittura nello store, su entrambi i fronti. (6) **Le soglie della Dashboard sono la stessa soglia, non una nuova.** `<= 2`/`> 2` su un conteggio che valeva `1 + N` diventano `<= 1`/`> 1` su un conteggio che vale `N`: nessun progetto cambia illustrazione. Scritto a commento perche' un lettore futuro non lo legga come un cambio di design. (7) **Il copy ha guadagnato un ramo che il prompt non chiedeva, e la ragione e' che la fetta lo rende raggiungibile.** La riga 390 doveva solo perdere la parentetica «(including the default ones)»; ma senza il `Default` a puntellarlo il numero puo' ora valere **zero**, e la frase avrebbe letto «explored and analyzed through 0 viewpoints». Aggiunto un ramo zero («No viewpoint is defined yet, so these models render in abstract syntax»), con lo stesso split uno/molti che le due frasi sopra gia' usano. (8) **La duplicate di `Dashboard.tsx:479` e' stata lasciata senza guardia, come da prompt**: il viewpoint di sistema non compare piu' in quella lista se non quando contiene roba autorata, e in quel caso duplicarlo e' una via d'uscita e non un danno. (9) **Il conteggio `var(--accent)` e' stato rimisurato in questa sessione invece di essere ereditato dal report di Fase 1**, e lo conferma: 5 in `EditorV2.scss`, non 1. Dopo il ritiro della pill sono 4, verificati. Trovate per strada e aggiunte a §7.2: due occorrenze vive fuori da quel file, in `redux/defaults/views.ts` (249, 659), che la sezione non menzionava. Il ticket **non** si chiude. (10) **L'incidente di concorrenza e' stato chiuso senza toccare la storia** (C1), e la regola che ne discende e' stata applicata a tutti e tre i commit: `git commit -- <file>` con pathspec, piu' il confronto di `git diff --cached --name-only` con la lista dichiarata prima di ogni commit. C1 = 3 file, C2 = 4, C3 = 6. (11) **Un `.git/index.lock` di 0 byte vecchio di 33 minuti** ha bloccato il primo commit. Non e' stato rimosso di iniziativa — sarebbe stato lo stesso errore dell'incidente, agire su stato osservato in un'altra invocazione — ma sottoposto ad Alfonso con l'evidenza (0 byte, nessun processo git, indice vuoto e leggibile) e rimosso dopo il suo via libera. (12) **Rotazione log: dovuta e non fatta**, quarta entry di fila. 26 entry attive con questa, soglia 20 (P9). Stessa ragione: va fatta a repo fermo, in un commit suo. (13) **I nove controlli visivi del punto 7 restano interamente ad Alfonso**, e il piu' informativo e' il quinto: aprire `statechartplus`, verificare che il `Default` ci sia **ancora** con le sue quattro view raggiungibili, spostarle con «Move to viewpoint…» e vederlo sparire. E' l'unico che esercita la condizionalita', cioe' la parte della ratifica che un test di sola visibilita' non tocca.
+**Prompt document name**: 2026-08-18 12:15
+
+## 2026-08-18 — docs: dichiarazione della composizione reale di `8b9b290c4`
+
+**Prompt**: prompt inline del 2026-08-18 12:15, punto 1 («Preliminare: chiusura documentale del commit misto»). Chiudere l'incidente di concorrenza **senza toccare la storia**: nessun `reset`, nessun `amend`, nessuno sha si muove, perche' la sessione concorrente e' viva e riscrivere la storia rifarebbe lo stesso errore, cioe' agire su uno stato osservato in un'altra invocazione.
+**Files touched**: `docs/claude-code-log.md` (questa entry), `CLAUDE.md` (§6.1 regola di staging, §7.2 conteggio `var(--accent)`), `AGENTS.md` e `frontend/src/jjtl/AGENTS.md` (rigenerati da `npm run gen:agents`, mai a mano).
+**Outcome**: ✅ completed
+**Corregge**: 2026-08-18 10:52
+**Causa**: (e)
+**Regressions**: no — nessun sorgente nel diff.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessun sorgente, nessun file di §3.2.
+**Smoke visivo**: non applicabile — nessuna superficie toccata.
+**Notes**: (1) **La composizione reale di `8b9b290c4`**, verificata con `git show --stat`: cinque file, non due. Quelli previsti dal task di Fase 1 erano `docs/discovery/discovery_2026-08-18_2_viewpoint_default_fuori_dalle_liste.md` (366 righe, nuovo) e `docs/claude-code-log.md`. Erano gia' nell'indice, staged da un'altra sessione in attesa del proprio commit, `docs/TECH-DEBT.md` (+16), `docs/decisions.md` (+26, R-MK-12..14) e `docs/spec/claude_spec_2026-07-18_ir_schema_v1_2.md` (§10); e dentro le 31 righe di `claude-code-log.md` c'e' anche la entry di log di quell'altra sessione. Il subject del commit descrive solo il lavoro di Fase 1, quindi la separazione tematica di §6.2 e' saltata. Contenuto verificato integro: l'incidente e' di attribuzione, non di perdita. (2) **La regola che l'incidente ha reso necessaria e' ora in `CLAUDE.md` §6.1**, ed e' piu' stretta della regola 17: `git add <paths>` protegge da `git add .` ma **non** dal fatto che `git commit` committa l'intero indice, incluso cio' che un altro processo vi ha messo. La cura e' il pathspec sul commit (`git commit -- <paths>`) oppure il confronto di `git diff --cached --name-only` con la lista dichiarata, prima di committare. Vale a partire da questo commit stesso. (3) **§7.2 dichiarava un numero sbagliato.** Diceva «1 residual `var(--accent)`»; misurati oggi con `command grep -rnE "var\(--accent[,)]"`, che distingue il token nudo da `--accent-muted`/`--accent-subtle`, sono **5** in `EditorV2.scss` (475, 900, 2298, 2327, 2343). La misura e' stata rifatta in questa sessione invece di essere ereditata dal report di Fase 1, e lo conferma. Trovate per strada e aggiunte alla nota: due occorrenze vive fuori da quel file, in `redux/defaults/views.ts` (249, 659), che §7.2 non menzionava affatto. La nota e' stata **aggiornata, non cancellata**: il ticket resta aperto. (4) **Rotazione log: dovuta e non fatta**, per la terza entry di fila. 25 entry attive con questa, soglia 20 (P9). Resta rinviata per la stessa ragione dichiarata il 2026-08-18 11:15: la rotazione riscrive per intero il file su cui le sessioni concorrenti appendono, e va fatta a repo fermo in un commit suo.
+**Prompt document name**: 2026-08-18 12:15
+
+## 2026-08-18 — docs: discovery «il viewpoint Default fuori dalle liste, e il selettore come controllo della sintassi» (Fase 1, read-only)
+**Prompt**: prompt inline del 2026-08-18 10:52 (revisione 11:29, che aggiunge la fetta toolbar ai punti 3.3 e 3.5), sigle proposte R-IRN-9 e R-IRN-10, two-phase con hard stop. Fase 1 read-only su dieci domande con citazione `file:riga`: consumatori di `LProject.views` e `LProject.viewpoints`, `viewpointsNumber` inflazionato, root `state.viewpoints`, megamodel ed export JSON, presenza del `Default` in `data.viewpoints` dei salvataggi, duplicati, valore attivo residuo, inerzia del viewpoint sul canvas M2, perimetro della pill di sintassi. Report obbligatorio in `docs/discovery/`, nessuna modifica al codice.
+**Files touched**: `docs/discovery/discovery_2026-08-18_2_viewpoint_default_fuori_dalle_liste.md` (nuovo); `docs/claude-code-log.md` (questa entry). **Nessun file sorgente**: `git status --porcelain frontend/` vuoto a fine task.
+**Outcome**: ✅ completed — tutte e dieci le domande chiuse con evidenza, più nove rischi e cinque domande aperte.
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — discovery read-only, nessun sorgente nel diff.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — fase read-only. Letti e mai modificati: `common/Defaults.ts`, `joiner/classes.ts`, `redux/store.tsx`, `redux/reducer/reducer.ts`, `redux/selectors/selectors.ts`, `editor-v2/Toolbar.tsx`, `editor-v2/EditorV2.scss`, `editor-v2/types.ts`, `editor-v2/EditorV2.tsx`, `editor-v2/nodes/ClassNode.tsx`, `abstract/tabs/EditorSwitch.tsx`, `utils/lastViewpoint.ts`, `project/ProjectEditor.tsx`, `megamodel/MegamodelView.tsx`, `editors/views/` (NestedView, ViewData, InfoData), `viewParenting/ViewParentingFields.tsx`, `editors/Info.tsx`, `pages/components/` (Dashboard, LeftBar), `pages/Project.tsx`, `api/persistance/projects.ts`, `examples/`.
+**Smoke visivo**: non applicabile — nessuna superficie toccata.
+**Notes**: (1) **L'asse che il prompt temeva è libero: `LProject.views` non ha nessun consumatore funzionale.** Su 11 righe `.views` in `frontend/src` (escluso `examples/`), quattro sono commenti o stringhe d'errore in `classes.ts`, cinque sono commentate in `DockLayout.tsx`, una è `Defaults.views` e una è il falso positivo `props.viewsid`. Le due forme alternative sono `['views']` → 2 righe, entrambe le firme del getter/setter, e destructuring `{ views }` → 0 (controllo positivo con la stessa forma, `'viewpoints'` → 9). La clausola «se esiste una lettura funzionale, fermarsi» non scatta. (2) **`LProject.viewpoints` ne ha otto, e uno NON è contabile.** `Info.tsx:1352` → `ViewData` → `InfoData` → **`ViewParentingFields`**, dove la lista è l'insieme delle destinazioni di «Move to viewpoint…» (`:53`) e il bottone intero è gated su `moveTargets.length > 0` (`:99`). In un progetto con un solo viewpoint autorato, dopo la fetta quel bottone **sparisce**. La riga «Viewpoint» del pannello legge invece `readViewParenting`, quindi una view dentro il `Default` continua a mostrarlo correttamente. (3) **Due conseguenze fuori dalla cornice «sola visibilità», entrambe in `Dashboard.tsx`, che la Fase 2 non elenca**: le soglie che scelgono l'illustrazione (`viewpoints.length <= 2` / `> 2`, righe 369-372) si spostano di uno, perché oggi `length = 1 + N`; e la frase di riga 390 «through **N viewpoints** (including the default ones)» diventa **falsa**. Più una terza superficie utente non censita nei controlli visivi del prompt: `Dashboard.tsx:463` rende una card per viewpoint con Duplicate e Delete, quindi oggi il `Default` è duplicabile e cancellabile dall'utente. (4) **Q6 risolta con una misura, non con un ragionamento.** I sette file di `frontend/src/examples/` sono stati **parsati** per estrarre i record `DProject`: i due che hanno un campo `viewpoints` portano solo il puntatore autorato, mai `Pointer_ViewPointDefault`. **Controllo positivo che rende il risultato una prova**: quel token compare 37 volte in `shapes.ts` e 43 in `statechartplus.ts` — è nel corpus, e ciò nonostante non è in `DProject.viewpoints`. A codice la ragione è doppia: il costruttore `DViewPoint()` esce prima di registrarsi se il progetto non esiste (`classes.ts:1210`), e `set_viewpoints` — l'unica via per cui il prepend potrebbe rientrare nei dati — ha **zero chiamanti** (le cinque assegnazioni `.viewpoints =` sono tutte su `ret` di `mapStateToProps` o su un DTO piano). (5) **Q8, il reperto che cambia il peso di un passo del prompt**: `examples/statechartplus.ts` porta `"activeViewpoint": "Pointer_ViewPointDefault"`. Il punto 3b (normalizzazione del valore attivo) **non è un rifinimento, è un requisito**: senza, su quel progetto il `<select>` si presenterebbe vuoto — un controllato il cui `value` non ha `<option>` porta `selectedIndex` a -1 e non ripiega sulla prima voce. Grado di certezza dichiarato: derivato dalla specifica HTML, **non eseguito in browser** in questa sessione. (6) **Q9 confermata su cinque punti, ognuno col suo controllo positivo**: pattern IR in `ClassNode.tsx` → 0 contro 11 in `ObjectNode.tsx`; `jsxString:` sotto `editor-v2/` → 1 riga (la prop di `ViewpointRenderer`) contro 8 in `frontend/src`, e le costruzioni di `ClassNodeData` sono letterali senza spread; `getIRIndex` ha consumatori solo nel mondo M1; `activateViewpoint` scrive stato **globale** di progetto; `EditorSwitch` esce su `isMetamodel` alla prima riga dell'effetto. Residuo dichiarato: `ClassNodeData` ha un index signature `[key: string]: unknown`, quindi uno spread futuro potrebbe iniettare `jsxString` senza errore di tipo. (7) **Correzione a CLAUDE.md §7.2**: dichiara «1 residual `var(--accent)` in EditorV2.scss». Misurato con una regex che distingue il token nudo da `--accent-muted`/`--accent-subtle`: sono **5** (righe 475, 900, 2298, 2327, 2343), di cui una sola dentro il blocco della pill. Rimuovere la pill porta il residuo da 5 a 4: **non chiude il ticket**, e il commit della Fase 2 non deve dichiararlo. Avevo formulato l'ipotesi opposta e la misura l'ha smentita. (8) **Due sorgenti, due filtri, e non è ridondanza**: il passo 2 del prompt cambia `get_viewpoints`, che legge `data.viewpoints`; la **root array** `state.viewpoints` non è toccata e continua a contenere il `Default` (push generico da `reducer.ts:465-469`, `DViewPoint` → `viewpoints`). Ecco perché il passo 3a deve filtrare di nuovo dentro `Toolbar.tsx`. (9) **Due residui morti registrati e non toccati** (regola 9): `Selectors.getViewpoints()` (`selectors.ts:98`) ha zero chiamanti — controllo positivo con segnale, `Selectors.<metodo>(` fuori da quel file → 48 righe — e leggerebbe la root array non filtrata se qualcuno lo risvegliasse; e `pages/Project.tsx:72-77` calcola `vparr`/`allViews`/`viewsDeDuplicator` senza leggerne nessuno. (10) **Perimetro della pill pulito**: 3 occorrenze in tutto il repo su qualunque estensione, blocco SCSS 457-493, e **zero file `.snap`** nell'intero repo, quindi non esiste la categoria di artefatto che potrebbe dipenderne. (11) **Metodo**: `grep` in questa shell è una funzione (wrapper `ugrep --ignore-files`), `command grep` è BSD grep 2.6.0-FreeBSD dove `--include` filtra davvero; `examples/` escluso da ogni ricerca a tappeto come prescrive il prompt, ma **letto in modo mirato** per Q6/Q8, dove è l'unico corpus di progetti salvati che vive nel repo. (12) **Hard stop rispettato**: nessuna riga di codice applicativo, Fase 2 non iniziata. (13) **Rotazione log**: 23 entry attive con questa, soglia 20. Dovuta.
+**Prompt document name**: 2026-08-18 10:52
+
+## 2026-08-18 — docs: esito dello smoke di M1, R-MK-12..14, debito del merge su `ir`
+
+**Prompt**: sessione Cowork diretta. Eseguire al posto di Alfonso lo smoke di M1 (la marcatura come predicato) sull'istanza di sviluppo, poi riportare in repo i soli aggiornamenti di documentazione che ne discendono. Nessun file sorgente, nessun push.
+**Files touched**: `docs/spec/claude_spec_2026-07-18_ir_schema_v1_2.md` (§10, ultima frase del paragrafo di diagnostica di `marked`), `docs/decisions.md` (R-MK-12, R-MK-13, R-MK-14 in coda alla serie R-MK), `docs/TECH-DEBT.md` (voce nuova sul merge di `ir`), `docs/claude-code-log.md` (questa entry, più l'aggiornamento in place dei campi `Smoke visivo` e `Outcome` della entry M1a+M1b). **Nessun file sorgente**: `git status --porcelain frontend/` vuoto a fine task.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — solo documentazione, nessun sorgente nel diff. `npm run check:docs` **2/2, 0 warning** prima e dopo le modifiche, 23 entry in perimetro (era 22): il gate era verde in partenza e resta verde, quindi il verde non è un effetto della rotazione, che qui non è ancora avvenuta.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessun sorgente, nessun file di §3.2.
+**Smoke visivo**: non applicabile a questa entry, che è documentazione. L'esito dello smoke che registra sta nella entry M1a+M1b, aggiornata in place secondo il precedente della slice 2a.
+**Notes**: (1) **Il controllo negativo non era nella lista dei cinque, ed è quello che rende falsificabile il resto.** Gli scenari 4 e 5 verificano che il pregresso non si rompa, non che il gate **spenga**: se `channelsInUse` contenesse sempre `'mark'`, gli scenari 1, 2 e 3 passerebbero tutti e in più ogni view si ri-risolverebbe a ogni step, cioè un regresso di prestazioni travestito da successo, che è esattamente ciò che la sonda headless di M1b non poteva escludere sul progetto reale. Il controllo aggiunto: viewpoint senza nessun `marked`, Reset più 10 step, classi `ir-view-` di tutti i nodi identiche. Passato. (2) **Lo scenario 1 non è una prova di M1b, ed è dichiarato tale già nel report di Fase 1.** `ObjectNode.tsx:198` chiama `useSimVersion()` per la classe `sim-active`, quindi il nodo si ri-renderizza a ogni bump indipendentemente da M1b, e un `fill` condizionato cambia colore anche col gate rotto. Serve a provare M1a (compile, `isMarked`, il bump che arriva) e a null'altro. (3) **Il criterio d'accettazione usato non è il pixel ma la classe.** `ObjectNode.tsx:405` mette `ir-view-<viewId>` nella className del nodo: leggerla prima e dopo lo step distingue «la view cambia identità» da «il nodo si ri-renderizza con la risoluzione memoizzata stantia», che a occhio sono indistinguibili. È il modo di fallire interessante dello scenario 2, e non è fallito. (4) **Il colore è stato letto da `getComputedStyle`, non dallo screenshot**: il fill vive su `.ir-node-content.ir-shape--circle`, non su `.mm-object` (che è trasparente), e la forma è un div con border-radius, non un `<circle>` SVG. Chi rifà lo smoke parta da lì invece di cercare un attributo `fill`. (5) **Il Ctrl+Z non è stato eseguito, e la ragione è metodologica, non di fretta**: le scritture di fixture (`view.ir = …`) finiscono nello stack di undo, quindi un undo avrebbe disfatto le patch invece di testare che la marcatura non ci entri. L'invarianza del modello è comunque misurata per la via diretta, `idlookup` identico prima e dopo l'intera corsa. Il Ctrl+Z resta a chi esegue su un progetto pulito, ed è un check di trenta secondi. (6) **Il fixture non ha bisogno di UI di authoring, e questo chiude un dubbio aperto in chat**: `LPointerTargetable`, `SetFieldAction`, `DViewElement` e `windoww.store` sono tutti globali nel build dev, quindi `{op:'marked'}` si inietta da console pur non essendo in `PREDICATE_KIND_OPTIONS` (R-MK-9 vieta l'UI, non l'esistenza dell'operatore). (7) **Finding indipendente da M1, registrato in `docs/TECH-DEBT.md`: una scrittura su `ir` fa merge, non replace.** Riscrivere l'ir originale, che non contiene `edge.line`, non rimuove un `edge.line` iniettato: misurato per quattro vie diverse, compresa la `SetFieldAction` diretta e i valori `null`/`undefined` espliciti. Conta perché `dropInvalidRouting` (`EdgeAuthoringPanel.tsx:125`) esiste per togliere, non per cambiare. La conseguenza su quella funzione è dedotta e non riprodotta, ed è scritta come tale. (8) **R-MK-14 è nata disegnando lo scenario 3**: per rendere l'edge sensibile alla marcatura serviva chiedere la marcatura del target, e lì si vede che `marked` non quantifica. `take: 'values'` fa tornare `null` a `getRef`, quindi «un figlio qualsiasi è marcato» non è esprimibile. È l'asse su cui M2 deve decidere, più dell'UI. (9) **Il progetto di Alfonso è stato lasciato pulito, e verificato campo per campo**: nessuna scrittura di fixture è stata persistita, un reload ha ripristinato la copia server (`shape.fill` a `#ffffff`, nessun `predicate`, `edge` senza `line`). Un `model_1` vuoto creato per sbaglio con un doppio click sulla card del progetto è sparito con lo stesso reload; la lista modelli è tornata a `State Machine` più `model_1`. (10) **Nota d'ambiente per chi ripete lo smoke**: il browser dell'istanza è Microsoft Edge, non Chrome, e una scheda in background sospende `requestAnimationFrame` e strozza i timer, con l'effetto che l'app sembra congelata mentre non lo è. Portare la finestra in primo piano prima di misurare. (11) **Rotazione log**: dovuta e **non fatta**. Al momento della scrittura le entry attive erano 23 con questa, soglia 20; la rotazione è stata rinviata perché il coder stava lavorando in parallelo sullo stesso worktree e la rotazione riscrive per intero proprio il file su cui lui appende la sua entry a fine task. Va fatta a repo fermo, in un commit suo, per non mescolare rotazione e contenuto (§6.2). (12) **Questa entry non ha un commit proprio.** I quattro file di documentazione erano staged in attesa del commit quando il coder ha committato il suo task: essendo lo staging globale, sono finiti dentro `8b9b290c4` («docs: discovery on taking the Default viewpoint out of the lists»), il cui oggetto descrive solo il suo lavoro. Contenuto verificato integro nel commit, ma la separazione tematica di §6.2 è saltata. La lezione operativa, che vale oltre questo caso: con due agenti sullo stesso worktree, `git add <file specifico>` protegge da `git add .` ma non dal `git commit` di un altro processo. O si committa subito, o non si mette niente in stage.
+**Prompt document name**: — (sessione Cowork diretta, 2026-08-18 11:15)
+
+## 2026-08-18 — feat(editor-v2): la marcatura come predicato dell'interprete IR (M1a + M1b)
+
+**Prompt**: `docs/prompts/claude_2026-08-18_0224_prompt_M1_fase2_marcatura_interprete.md` — corsia completa RC-3, critical zone `editor-v2/viewpoint/ir/`, effort xhigh, Layer Impact Report obbligatorio prima del diff. Due commit: M1a deposito (ottavo ramo `{op:'marked', path?}` in `Predicate`, `channelSink` module-scoped sul modello di `crossPathSink`, `channels?` opzionale sui tre `Compiled*`, `ReadCtx.isMarked` con iniezione nel dispatcher, regola R-MK-11 del vocabolario chiuso in `validateIR`, test) e M1b consumo (`channelsInUse` a livello di indice, versione del canale nella firma di `useIRView`/`useIRRowView`/`useIRContainment` **gated** sul canale dichiarato, riga di commento in `ObjectNode.tsx`, emendamenti a spec §3/§9/§10, test del consumo).
+**Files touched**: 14 in due commit. **M1a `c0fe8e33f`** (8): `frontend/src/components/editor-v2/viewpoint/ir/irTypes.ts`, `irCompile.ts`, `irReadCtx.ts`, `irReadCtxLproxy.ts`, `irValidate.ts`, `__tests__/irMarked.test.ts` (nuovo), `frontend/src/components/ui/PredicateBuilder/PredicateBuilder.tsx` (**fuori perimetro**, una riga di soli tipi — vedi Notes 1), `docs/reports/2026-08-18-lir-m1-marcatura-predicato-ir.md` (nuovo, il Layer Impact Report). **M1b questo commit** (6): `irResolveCore.ts`, `irResolve.ts`, `useIRContainment.ts`, `frontend/src/components/editor-v2/nodes/ObjectNode.tsx` (3 righe di solo commento), `__tests__/irMarked.test.ts`, `docs/spec/claude_spec_2026-07-18_ir_schema_v1_2.md`; più `docs/claude-code-log.md` (questa entry). Regola 19 (oltre 5 file): l'elenco è quello del prompt, che li nomina uno per uno col cambiamento atteso, riesposto qui e all'hard stop.
+**Outcome**: ✅ completed — codice, test, spec e report completi, gate verdi su entrambi i commit. Resta fuori, e dichiarato: la verifica a schermo (Smoke visivo) e il warn one-shot runtime dell'interpretazione di R-MK-7, non richiesto dal prompt e dichiarato non implementato **dentro la spec** invece che taciuto (Notes 6). **Aggiornamento in place 2026-08-18**: lo smoke è stato eseguito e **passa** (dettaglio nel campo Smoke visivo), e il warn one-shot runtime è chiuso da R-MK-12 come deciso di non implementare, quindi non è più un punto aperto.
+**Corregge**: —
+**Causa**: —
+**Regressions**: no sui gate, eseguiti in locale su entrambi i commit. `npx tsc --noEmit` **33 errori su output integrale** = baseline dichiarata, Δ0, e la lista è **byte-identica** alla baseline (`diff` delle due liste vuoto), zero errori nei file toccati. `npx vitest run src/components/editor-v2` **21 file, 430 passed** = 399 + 31 nuovi. `npx vitest run` **1315 passed** = 1284 + 31, con le stesse 9 suite rosse note (`window is not defined`). `npm run build` **exit 0**, zero righe `error`, solo il warning chunk-size preesistente. `npm run check:docs` **2/2, 0 warning**. La verifica a schermo è in attesa: vedi Smoke visivo.
+**Out-of-scope changes**: **yes** — un solo file, `PredicateBuilder.tsx`, una riga di soli tipi, dichiarata prima del commit e non presa in silenzio. Vedi Notes 1.
+**Layer Impact Report**: produced — `docs/reports/2026-08-18-lir-m1-marcatura-predicato-ir.md`, scritto prima del diff, esposto in chat, GO di Alfonso ricevuto, e aggiornato in coda con la sezione sull'espansione di perimetro trovata durante il diff.
+**Smoke visivo**: passato — eseguito in browser il 2026-08-18 su `http://localhost:3000/`, progetto «State Machine v1», viewpoint «State Machines v1», 4 istanze (S0 initial, S1, S2, Final). Quattro dei cinque scenari del report di Fase 1 più un **controllo negativo** aggiunto in sede di esecuzione. Scenario 1 (fill su `marked`): S marcato `rgb(239,68,68)`, non marcato `rgb(226,232,240)`, e i due si scambiano allo step. Scenario 2 (`marked` nel `predicate`, il test vero di `useIRView`): a Reset S1 e S2 cadono sul rendering astratto, allo step 1 S1 acquista `ir-view-Pointer1786999807519_USER_168`, allo step 2 la view passa a S2; è la view che cambia identità, non solo il nodo che si ri-renderizza. Scenario 3 (`useIRContainment`, con `{op:'marked', path:'$nextState.value'}`): 0 archi rossi a Reset, 1 allo step 1, 3 allo step 2. Scenario 5 (pregresso): dopo il ripristino, stesse view e stessi fill del baseline. Controllo negativo (nessun `marked` autorato): classi `ir-view-` **identiche** attraverso Reset più 10 step, cioè il gate spegne davvero. Invarianza del modello misurata: `idlookup` identico prima e dopo (24 elementi, serializzazione di uguale lunghezza). **Non eseguito**, e dichiarato: il Ctrl+Z, perché le scritture di fixture avevano sporcato lo stack di undo (dettaglio nella entry di documentazione del 2026-08-18, nota 5).
+**Notes**: (1) **L'unica espansione di perimetro, e la ragione per cui era inevitabile.** Aggiunto il ramo `marked` a `Predicate`, `tsc` è passato da **33 a 39**: sei errori nuovi, tutti in `PredicateBuilder.tsx` (`:299,300,303,309,310,313`), `Property 'left' does not exist on type '... | { op: "marked"; path?: string }'`. La Fase 1 aveva verificato che nessuno dei quattro siti di dispatch usa un `never`-exhaustiveness check e ne aveva concluso «nessuno rompe a compile»: vero sull'exhaustiveness, **falso sul narrowing**. Il ramo `default:` di quello switch non enumera nulla, quindi il tipo che TypeScript gli dà è il **residuo** dell'unione — fino a ieri i soli sei comparatori, che `left`/`right` ce l'hanno. Non è aggirabile restando nel perimetro: qualunque ramo nuovo senza `left`/`right` fa lo stesso, e l'unica alternativa interna sarebbe dare a `marked` campi fittizi, cioè corrompere lo schema per compiacere un componente di UI. Con 39 errori non è committabile **niente** della fetta. Correzione: `const c = value as Extract<Predicate, { left: PathExpr | Literal }>` — **erasa al build** (il bundle non cambia di un byte), comportamento identico (un operatore ignoto rende due `OperandEditor` su operandi assenti, esattamente come prima), **zero capacità di authoring aggiunta**: `'marked'` non entra in `PREDICATE_KIND_OPTIONS`, il Select non lo propone, `forPredicateKind` non lo produce. Lo scopo del divieto di R-MK-9 («un'UI che autora un operatore non ancora compilato salva IR che non rende») resta intatto, e in M1 l'operatore *è* compilato. Se la valutazione è che andasse comunque fermato e chiesto, il pin si ritira con `git revert` della sola riga. (2) **Il commit 1 è inerte per costruzione, ed è scritto sia nel report sia nel doc del file di test.** R1 della discovery: il `dependencySet` delle view di nodo e di riga non ha consumatori, quindi un test che asserisce `compiled.channels` contiene `'mark'` **passa senza che la feature funzioni**. I 24 test di M1a asseriscono il deposito e lo dichiarano; i 7 di M1b asseriscono il consumo (`channelsInUse` sull'indice e la semantica del gate). (3) **R8 non è più «tracciato a codice»: è eseguito.** Sonda usa-e-getta in scratchpad (`node --experimental-strip-types` sui moduli puri copiati, repo intatto, nessuna strumentazione nel diff): attraverso un bump di marcatura l'**identità dell'indice** e l'**identità delle closure compilate** restano stabili — nessuna ricostruzione, nessuna ricompilazione, nessuna cache da invalidare. Costo della ri-risoluzione per bump misurato sullo stesso banco: **0.239 ms per 200 nodi con 5 view candidate** (~1.2 µs a nodo). E la view **cambia davvero** col bump (`V3` → `V_marked`), che è lo scenario 2 dello smoke riprodotto headless. Non misurato, e dichiarato tale: il costo di render/commit React nel browser, che richiede il progetto di Alfonso. Il `console.time` temporaneo che il prompt chiedeva non è servito e non è mai entrato nel repo. (4) **`channelsInUse` nasce opzionale contro la lettera del prompt**, per la regola 11 e per il precedente della 2a (nota 2 della entry 2026-08-17 17:35): è sempre popolato dall'unico costruttore in repo (`irResolveCore.ts:224`; misurato: nessun altro literal `IRViewpointIndex` in `frontend/src`, nemmeno nei test) e letto con `?.` nei tre siti. Così la **deroga alla regola 11 resta una sola**, quella che R-MK-4 ratifica per `ReadCtx.isMarked`. (5) **Il gate del canale non è nel selettore, ed è una scelta.** Metterlo lì avrebbe funzionato solo perché `useSelector` ricomputa quando la closure inline cambia identità a ogni render — un meccanismo vero ma sottile, che il primo «ottimizziamo estraendo il selettore a modulo» avrebbe rotto in silenzio. È invece un `useMemo` chiavato su `signature` (che embedda `irSig`, quindi cambia quando l'indice può cambiare) più `markDeclared ? markVersion : 0` come dep esplicita del memo: ricomputa sul cambio di viewpoint, mai sul bump. (6) **La spec dichiara ciò che il codice fa, non ciò che la ratifica auspica.** §10 scrive che la metà **statica** della diagnostica di R-MK-7 è implementata (`validateIR`: path malformato, multi-hop, `op` fuori vocabolario) e che la metà **runtime** oggi **è silenziosa**, con il warn one-shot alla `warnUnresolvedCrossDeps` esplicitamente **non implementato in M1**. Il prompt non lo chiedeva e sta in un percorso caldo di predicato; scriverlo in spec come esistente sarebbe stato più comodo e falso. **Punto aperto per Alfonso**, non un residuo dimenticato. (7) **`irReadCtx.ts` resta a zero import**, misurato dopo il diff (`grep -c '^import'` → 0; controllo positivo sullo stesso comando, `irCompile.ts` → 5). L'iniezione di `isSimActive` vive solo in `irReadCtxLproxy.ts`, già impuro, e i **6 siti di chiamata di `makeReadCtx` non sono stati toccati**. (8) **La regola R-MK-11 è una camminata generica sul JSON dell'ir**, non mirata per campo: verificato con grep che in `irTypes.ts` la chiave `op` appartiene **solo** ai rami di `Predicate` (7 occorrenze, i 7 rami), quindi ogni oggetto con `op` stringa *è* un predicato ovunque si trovi — `when` dei `Conditional`, argomenti di `and`/`or`/`not` a qualunque profondità, `childFilter` dei compartimenti e del containment. Una camminata mirata avrebbe dovuto enumerarli e avrebbe mancato in silenzio il prossimo `Conditional` che lo schema si fa crescere. Il vocabolario è un `Record<Predicate['op'], true>` e non una lista: TypeScript pretende che ogni ramo dell'unione ci sia, quindi un operatore aggiunto allo schema senza aggiungerlo qui **non compila**, invece di essere rifiutato da un validatore mentre il compilatore lo supporta. Aggiunto un guard `seen` sui cicli: la regola gira **prima** del compile, e un ir ciclico costruito a mano — che oggi fallisce con grazia dentro quel `try/catch` — sarebbe altrimenti diventato uno stack overflow. (9) **`marked.path` non eredita il difetto di `isKind`**: risolve con `ctx.getRef`, e `isKind` non è stato toccato (R-MK-10, il difetto resta in TECH-DEBT in attesa della verifica in console di Alfonso). Un test fissa che il `path` mette la **feature** in `dependencySet` e **nessun** `crossPath`: l'identità del target la porta la feature, la marcatura la porta il canale. (10) **Grep di collisione** su tutti i nomi nuovi prima di introdurli — `channelSink`, `channelsInUse`, `isMarked`, `channels` (word), `VALID_PREDICATE_OPS`, `findUnknownPredicateOp`, `irMarked.test.ts`: **zero occorrenze** ciascuno (l'unico `channels` in `frontend/src` è una parola in un commento di `edges/routing/manhattan/points.ts`); controllo positivo con la stessa forma di comando, `crossPathSink` → 15 righe e `VALID_ROUTING_VALUES` → 5, le ricerche avevano segnale. (11) **Lock git stale rimosso.** All'atto del commit 1, `.git/index.lock` esisteva da 18 minuti, 0 byte; verificato che nessun processo git era vivo (`pgrep -l git` vuoto, `lsof` sul file vuoto, `ps` senza `git-*`) prima di rimuoverlo. Le sessioni concorrenti sono la norma su questo repo: il lock è stato ispezionato, non cancellato d'ufficio. (12) **v1.1 §3.3 non toccata** (precedente R-B13: il delta vive in v1.2 §3) e **§13 non toccata** (non cita il dependency set). Gli accenti del testo nuovo sono stati allineati alla convenzione del file **solo sulle righe aggiunte**: le forme ASCII preesistenti sono tutte dentro blocchi di codice e sono rimaste intatte. (13) **Rotazione log**: 22 entry attive con questa, soglia 20. Dovuta, e rinviata a repo fermo come nelle entry precedenti.
+**Prompt document name**: 2026-08-18 02:24
+
+## 2026-08-18 — docs: discovery M1 «la marcatura come predicato dell'interprete IR» (Fase 1, read-only)
+**Prompt**: Fase 1 read-only della fetta M1 di R-MK-9 (corsia completa RC-3, critical zone `editor-v2/viewpoint/ir/`, effort xhigh): nove domande con citazione file:riga — residenza e consumatori del dependency set compilato, meccanica di invalidazione end-to-end, meccanica di sottoscrizione al canale, i due backend `ReadCtx` e tutti gli implementor, i punti che smistano su `Predicate.op`, forward-compat del ramo `default` di `compilePredicate`, cosa sanno fare i path nei predicati, le sezioni di spec da emendare, panorama test e import-safety. Report obbligatorio in `docs/discovery/`, hard stop senza modifiche ai sorgenti né proposte di diff.
+**Files touched**: `docs/discovery/discovery_2026-08-18_m1_marcatura_predicato_interprete.md` (nuovo); `docs/claude-code-log.md` (questa entry). **Nessun file sorgente**: `git status --porcelain` su `frontend/` vuoto a fine task.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — discovery read-only, nessun sorgente nel diff. Baseline test riprodotte e invariate: `npx vitest run` **1284 passed** (9 suite rosse note `window is not defined`), `npx vitest run src/components/editor-v2` **20 file, 399 passed**.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — fase read-only. Letti e mai modificati: `viewpoint/ir/` (irTypes, irCompile, irReadCtx, irReadCtxLproxy, pathExpr, irCrossDeps, irValidate, irResolve, irResolveCore, useIRContainment, IRNodeContent), `sim/simRunState.ts`, `nodes/ObjectNode.tsx`, `problems/useNodeProblems.ts`, `EditorV2.tsx`, `ui/PredicateBuilder/`, `ui/PathBuilder/`, `viewpoint/authoring/` (MatchingSection, VertexAuthoringPanel, FieldCompartmentListEditor), `model/logicWrapper/LModelElement.tsx`, `frontend/vitest.config.ts`.
+**Smoke visivo**: non applicabile — nessuna superficie toccata.
+**Notes**: (1) **Il finding che cambia la Fase 2: il `dependencySet` delle view di nodo e di riga non ha nessun consumatore in produzione.** Su 15 righe totali di `dependencySet` in `frontend/src`, 6 sono dichiarazioni/scritture, 6 sono asserzioni di test e **una sola** è una lettura applicativa, `useIRContainment.ts:87`, che legge solo il bucket `objectAsEdgeByMetaclass`, cioè solo le edge view object-as-edge (controllo positivo con la stessa forma di comando: `crossPaths` → 28 righe). Il selettore per-nodo (`irResolve.ts:48-71`) snapshotta **tutti** gli slot dell'oggetto e lo dichiara a `:51-53` («Kept unconditional (not filtered by dependency set)»). Un `channels` modellato accanto a `dependencySet` sarebbe corretto nella forma e inerte nell'effetto: R1 del report. (2) **Il costo di R-MK-6 sui nodi esiste già a schermo.** `ObjectNode.tsx:195` chiama `useSimVersion()` senza guard e in `editor-v2` non c'è nessun `React.memo` (`memo(` → 0 in `editor-v2/**/*.tsx`; **controllo positivo con la stessa forma su `frontend/src` → 21**, prima riga `jjscript/components/JjScriptOutput.tsx:19`), quindi un bump re-renderizza ogni `ObjectNode` e con lui `IRNodeContent`, che ricalcola `form`/`fill` in testa al corpo (:84-85) e applica il fill **inline** (:194). Conseguenza favorevole: un `fill` condizionato su `marked` si aggiornerebbe **già oggi**, gratis. Ciò che non arriva sono la ri-**risoluzione** della view (il predicato di applicabilità gira dentro il `useMemo` di `useIRView`, non nel selettore) e gli **edge** (la memo di `useIRContainment` non vede il bump): sono i due punti di innesto veri, più `useIRRowView`. (3) **Corollario di R-MK-8**: il percorso gratuito dei conditional dipende da quella riga. Il giorno del ritiro di `sim-active`, se il canale non è già innestato in `useIRView`, i viewpoint che autorano `marked` smettono di aggiornarsi in silenzio (R5). (4) **`{op:'marked'}` oggi non «passa»: fa saltare l'intera view.** Misurato **eseguendo** il compilatore, non leggendolo: i quattro moduli puri copiati in scratchpad (repo intatto) e caricati con `node --experimental-strip-types` → `TypeError: Cannot read properties of undefined (reading 'split')` per `{op:'marked'}` con e senza `path`, per un `op` inventato e per un `marked` dentro un `fill` condizionale; due controlli positivi (`eq`, `isKind`) verdi nella stessa sonda. È il ramo `default` di `compilePredicate` (`irCompile.ts:165-182`) che chiama `compileOperand` su `left`/`right` inesistenti. Intercettato da `getIRIndex` (`irResolveCore.ts:198`), che scarta la view **intera** con un warn, e da `validateIR`, con l'effetto secondario che il pannello di authoring **non committa più nulla** finché il predicato ignoto è lì (`VertexAuthoringPanel.tsx:141`, `:170`). (5) **`marked.path?` non può copiare `isKind` verbatim.** Il ramo `path` di `isKind` (`irCompile.ts:156-161`) legge il terminale con `ctx.getValue`; sul backend di produzione (`IR_READ_BACKEND = 'lproxy'`, `irReadCtx.ts:15`) una reference torna un **proxy L** e non un pointer (`LModelElement.tsx:7308`), quindi `typeof target === 'string'` è falso e il predicato torna sempre `false`. Il codebase documenta già l'insidia (`irReadCtxLproxy.ts:42-44`) e per questo delega `getRef` al draw; i test la mancano perché costruiscono il contesto con `makeDrawReadCtx`. **Tracciato a codice, non eseguito contro lproxy** (serve il browser): dichiarato come grado di certezza, non spacciato per misura. R3 del report, con tre uscite nella domanda aperta 4. (6) **`isMarked` costringe a toccare due soli file** (`irReadCtx.ts`, `irReadCtxLproxy.ts`): zero object literal tipizzati `ReadCtx` fuori dalle due fabbriche (`: ReadCtx = {` / `as ReadCtx` → 0; controllo positivo `ReadCtx` → 84 righe), e i due doppi di test (`ir.test.ts:200-208`, `:696-703`) sono spread di un contesto completo più `as any`, quindi sopravvivono. Il vincolo vero non è il conteggio ma la purezza: `irReadCtx.ts` ha **zero import** (misurato; controllo positivo `irCompile.ts` → 5). La fetta M1 nel suo insieme resta però a 7-8 file, sopra la soglia della regola 19: dichiarato come input per il perimetro della Fase 2, non come permesso di allargarlo. (7) **Precedente di forma già nel file per l'insieme dei canali**: `crossPathSink` (`irCompile.ts:47`) è module-scoped con la motivazione scritta «threading a second accumulator through all of them would touch every signature» — lo stesso bivio che R-MK-5 risolve con «un secondo insieme accanto a `deps`». Le due forme sono equivalenti nel risultato; la scelta è la domanda aperta 1. (8) **Spec, bersagli precisi**: `Predicate` è normato **per rinvio** in v1.2 §3 (riga 40) e nel corpo in v1.1 §3.3 (righe 75-89); il precedente identico R-B13 ha emendato con un delta in v1.2 §3 (riga 44) senza toccare la v1.1. §9 sta alle righe 170-179, con la clausola restrittiva in coda alla riga 175 e la **riga 177 da allineare** all'aggiornamento 2026-08-18 di R-B16 (dichiara «estensione futura con ratifica propria» una cosa che ora è R-MK-5). §10 alle righe 181-191. **§13 non cita il dependency set**: 0 occorrenze nelle righe 212-218, controllo positivo 6 sull'intero file. (9) **R-MK-7 chiede una diagnostica che non esiste**: le uniche diagnostiche del percorso IR sono la stringa statica di `validateIR` e i `console.warn` one-shot di `irCrossDeps.ts:170-200`; nessun canale runtime→pannello (`diagnos` sotto `editor-v2/viewpoint` → 5 righe, tutte commenti; controllo positivo `error` → 41). R4 e domanda aperta 6. (10) **Baseline test corretta**: il prompt cita 394 per il sottoinsieme editor-v2, che è la baseline della slice 2a; la 2b ha aggiunto 5 test in `irValidate.test.ts`, quindi il numero corrente misurato è **399** (394 + 5). L'intera suite resta a **1284**. (11) **Metodo, un controllo positivo sbagliato e rifatto**: cercando `React.memo` in editor-v2 avevo usato `useMemo(` come controllo, che **non ha segnale** perché contiene `Memo(` e non `memo(` (sonda: `memo` → 0, `Memo(` → 2, `emo(` → 2 sullo stesso file). Il sospetto di grep rotto era infondato; controllo rifatto con la stessa forma di comando su uno scope più largo, che segnale ce l'ha. (12) **Hard stop rispettato**: nessuna riga di codice applicativo, nessun test nuovo, Fase 2 non iniziata. La sonda di esecuzione vive solo nello scratchpad di sessione. (13) **Rotazione log**: 21 entry attive con questa, soglia 20 — dovuta al prossimo giro.
+**Prompt document name**: 2026-08-18 01:50
+
+## 2026-08-17 — docs: rotazione del log a 20 entry attive (ventitreesimo lotto)
+**Prompt**: rotazione standalone: le 39 entry più vecchie per posizione vanno in archivio col paragrafo di lotto, il log attivo torna a 20; effetto secondario ratificato, `check:docs` passa a 2/2 senza toccare né il gate né le entry (decisione del 2026-08-17).
+**Files touched**: docs/claude-code-log.md, docs/claude-code-log-archive.md
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: (1) `check:docs` da 1/2 (8 errori su 5 entry del 2026-08-14, 1 warning su una del 2026-08-12) a **2/2 con 0 warning**: tutte le violazioni stavano su entry che escono col lotto, e il gate linta il solo log attivo per design (`inScope` in `frontend/scripts/gates/check-docs.ts`; l'archivio serve solo a risolvere i `Corregge`). Rosso di partenza riprodotto prima del taglio, verde riprodotto dopo: misurato, non assunto. (2) Le entry violanti sono spostate **verbatim e non emendate**, per la decisione del 2026-08-17: le violazioni pregresse del formato escono col ciclo di rotazione ordinario, §21.3 «no back-filling» resta in vigore, `LINT_FROM_DATE` resta `2026-08-02` e il gate non si tocca. (3) Taglio **posizionale**; posizione e «Prompt document name» concordano al bordo (ultima tenuta 2026-08-15 15:57, prima spostata 2026-08-15 02:40, la più recente fra le spostate 2026-08-15 08:00), stessa data di heading sui due lati, nessuna inversione da dichiarare. Quattro entry al bordo portano il nome sentinella `—`: le ore nelle loro annotazioni concordano con la posizione, tie-break già dichiarato dal sedicesimo lotto. (4) Conteggi: attivo 58 → 20 (58 − 39 + 1, dove il +1 è questa entry), archivio 760 → 799. Verde del gate raggiunto per rotazione dovuta, non per copertura: a 58 entry il lotto era in ritardo di 38.
+**Prompt document name**: 2026-08-17 23:35
+
+## 2026-07-31 — refactor: contesto chat Jjodie come JSON jjodel-metamodel trimmed (pilota)
+**Prompt**: [[json-export-feature]] portare i prompt (e i tag interni) a usare oggetti JSON in stile export invece di rappresentazioni ad hoc. Scelte via AskUserQuestion: pilota = contesto chat Jjodie; variante = subset JSON trimmed. Poi discussione (no-impl) su selezione/navigazione del JSON. Infine verifica funzionale dell'utente + commit su branch dedicato.
+**Files touched**: frontend/src/services/export/JsonModelService.ts, frontend/src/services/JjodieContext.ts, frontend/src/components/Jodie/Jodie.tsx, docs/claude-code-log.md
+**Outcome**: ✅ completed — verifica funzionale confermata dall'utente
+**Regressions**: no (typecheck 14 = baseline esatta verificata via stash, 0 errori nei file toccati; build ✓ 37.5s solo chunk-warning pre-esistente; nessun test sul path chat-context)
+**Out-of-scope changes**: no (i 3 file previsti + log; getContextString/buildContextString lasciati intatti = ora dead ma non rimossi §9; prompt chat default invariato per non toccare il versioning dei prompt)
+**Layer Impact Report**: not-required (path read-only sui layer D/L; nessun file critical-zone §3.1)
+**Notes**: nuovo primitivo riusabile JsonModelService.buildMetamodelDocumentLight (riusa buildMetamodelDocument + stripKeysDeep ricorsivo su externalMetamodels/id/exportedAt/jjodelVersion/formatVersion — blanket strip sicuro perché nel doc M2 'id' compare solo in metadata e nelle classifier-ref cross-MM, mai su class/attribute/reference). getContextJSON avvolge il doc light in un envelope {currentlyEditing,{metamodel|metamodels}} riusando resolveMetamodelScope (stesso scoping M1/M2 di getContextString; M1→metamodello di conformità, M2→sé stesso; fallback su tutti i project.metamodels quando lo scope non risolve). Jodie.tsx: unico call-site swappato getContextString→getContextJSON. Il tag {{projectContext}} del template chat resta invariato (auto-descrittivo via format:'jjodel-metamodel'). Propagazione NON fatta per scelta di scope: mappings (AIMatcher.formatMetamodel), envgen, refactoring (dead code Navbar:230) riuseranno buildMetamodelDocumentLight. Discussione selezione/navigazione JSON catturata solo in chat (no discovery doc, no codice): 2 assi — selezione statica (proiezione JSON Pointer/query per nome) vs navigazione dinamica (b1 query programmatica / b2 UI picker sul megamodello / b3 agentic tools, oggi bloccato dall'assenza di tool-calling in AIProviderService.chat / b4 RAG esistente JjodieRagService).
+**Prompt document name**: 2026-07-31 jjodie_json_context
+
+## 2026-08-01 — feat(jjodie): raccomandazioni sui modelli M1 ancorate su conformance (Fase 1)
+**Prompt**: Jjodie deve fare raccomandazioni sui modelli M1 e (in Fase 2) generare script di refactoring, prendendo info anche dal metamodello di conformità. Scelte via AskUserQuestion: output=JjScript M1 (rimandato a Fase 2); grounding=conformance deterministico + LLM; perimetro=raccomandazioni prima, script dopo. Fase 1 = solo contesto M1 (modello+metamodello+conformance) + steer del prompt, nessuna generazione di script.
+**Files touched**: frontend/src/services/export/JsonModelService.ts, frontend/src/services/JjodieContext.ts, frontend/src/constants/defaultPrompts.ts, docs/claude-code-log.md
+**Outcome**: ✅ completed — smoke test dell'utente superato ("funziona tutto")
+**Regressions**: no (typecheck 14 = baseline esatta, 0 nei file toccati; build ✓ 43.6s solo chunk-warning pre-esistente; nessun test sul path chat-context)
+**Out-of-scope changes**: no (i 3 file previsti dal piano + log)
+**Layer Impact Report**: not-required (read-only sui layer D/L; validateConformance è puro; nessun file critical-zone §3.1)
+**Notes**: buildModelDocumentLight riusa buildModelDocument (metamodello già embedded) + stripKeysDeep con LIGHT_MODEL_OMIT_KEYS = {externalMetamodels,exportedAt,jjodelVersion,formatVersion} — SENZA 'id' (differenza chiave dal trim M2: id/$ref/name degli oggetti sono gli handle per gli script M1 di Fase 2, vanno preservati). getContextJSON: ramo activeArtifact.level==='M1' → risolve l'LModel del modello da project.models per id, envelope.model + envelope.conformance={status,violations} da validateConformance(model, scope); guardia (model && model.instanceof) con fallback graceful al ramo metamodel-only; conformance solo se scope (metamodello) risolve. Prompt chat: sezione MODEL RECOMMENDATIONS content-gated (attiva solo se il contesto contiene model+conformance) dentro il blocco {{#if projectContext}}, con vincolo esplicito "no JjScript di mutazione in questa fase"; bump DEFAULT_PROMPT_VERSIONS.chat 2→3 + voce changelog (nessun cambio di interfaccia — solo release-note per chi ha personalizzato; CRITICAL_MARKERS/PROMPT_VERSION non toccati). Env: node/npm non nel PATH del sandbox → typecheck/build eseguiti via nvm v22.22.2. FASE 2 (rimandata): generazione JjScript M1 eseguibile; verificare prima i gap dei verbi M1 (set slot reference tra istanze, merge, re-parenting) contro docs/discovery/2026-06-12_jjscript_m1_coverage.md; token budget per modelli grandi → selezione/navigazione.
+**Prompt document name**: 2026-08-01 m1_model_recommendations
+
+## 2026-08-03 — fix(jjodie): nomi istanza M1 devono essere identificatori (no spazi/simboli) nel prompt chat
+**Prompt**: errore reale di esecuzione JjScript `set "Apprendimento basato su progetti (PBL)".description = ...` → "Expected qualified name or identifier". Richiesta: rafforzare nel prompt la condizione che i nomi generati (usati come id) non contengano spazi.
+**Files touched**: frontend/src/constants/defaultPrompts.ts, docs/claude-code-log.md
+**Outcome**: ✅ completed — aggiunto alla PR #124 su richiesta (opzione a)
+**Regressions**: no (typecheck 14 = baseline, 0 nel file toccato; build verde; modifica solo-prompt + version bump)
+**Out-of-scope changes**: no (solo prompt + log, su richiesta esplicita)
+**Layer Impact Report**: not-required (nessun file critical-zone; nessun layer D/L)
+**Notes**: causa confermata — il nome dell'istanza è l'handle di indirizzamento di set/delete/rename; parseQualifiedNameToken (parser.ts:1183-1191) accetta solo IDENTIFIER/QUALIFIED_NAME, mai una STRING con spazi/parentesi. La regola esisteva già ma debole (riga 201, coda di un bullet: "single token with no spaces"); resa esplicita e prominente come bullet dedicato con esempio WRONG/RIGHT sul caso reale, ESTESA a "no spaces/accents/punctuation/parentheses" (il nome fallito aveva anche le parentesi). Testo descrittivo indirizzato a un attributo (description/title), coerente con la regola d'identità preesistente (vietato set .name). ASIMMETRIA del linguaggio: create instance accetta una STRING come nome (parser.ts:344), ma set/delete/rename indirizzano per identificatore. Prompt attivo confermato = CHAT_PROMPT in defaultPrompts.ts (jjscriptGenerationPrompt.ts è legacy: solo ri-esportato da jjodie-integration/index.ts, nessun chiamante nel path). Bump DEFAULT_PROMPT_VERSIONS.chat 3→4. Tensione residua non risolta: se il nome-identità del metamodello DEVE essere una frase descrittiva servirebbe l'opzione 2 (indirizzamento per stringa quotata in set/delete/rename = cambio lexer+parser), non richiesta ora.
+**Prompt document name**: 2026-08-03 m1_instance_name_identifier
+
+## 2026-08-25 — discovery: saturazione del pool di handle, Fase A (misura, nessun fix)
+**Prompt**: riaprire il fronte «saturazione del pool» (>4 archi per lato, MAX_HANDLES_PER_SIDE=4, clamp in portDistribution.ts:181) con lo stesso metodo del routing: specifica formale F3, sonda `_tmp_pool_saturation.ts` con fixture sintetica hub+6 foglie, misura del rosso, poi risposta su «perche' 4», sull'effetto della chiave role-aware (§3.10), sulle opzioni (a) alzare il cap / (b) pool dinamico / (c) spill sul lato adiacente / (d) altro, e sull'impatto su deconfliction, handlePosition, useTreeLayout e waypoint persistiti. Hard stop al report; nessuna riga di sorgente.
+**Files touched**: docs/discovery/discovery_2026-08-25_pool_saturation_faseA.md (nuovo, il report), docs/claude-code-log.md (questa entry). Sonda e misure grezze restano gitignored (`frontend/scripts/smoke/_tmp_pool_*`).
+**Outcome**: ✅ completed — F3 riprodotto e misurato, hard stop rispettato.
+**Corregge**: — 
+**Causa**: —
+**Regressions**: no (read-only; nessuna modifica al codice applicativo).
+**Out-of-scope changes**: no (report + log; nessun sorgente).
+**Layer Impact Report**: not-required (nessun file critical-zone modificato; portDistribution/handlePosition/DynamicHandles/useAutoAnchor solo letti — il report dichiara che ogni opzione futura tocca la critical zone e richiede il LIR di §3.2).
+**Smoke visivo**: non applicabile (sonda dedicata con criterio meccanico; screenshot `_tmp_pool_F3.png`, `_tmp_pool_MIX.png`, `_tmp_pool_MIXA.png` accanto alla sonda).
+**Notes**: due difetti, non uno. D1 e' il clamp atteso (5+ archi stesso ruolo/lato: coppie a 0px su `right-3`, warn emesso). D2 e' nuovo e scatta prima, a 4 archi e senza warn: le ancore rese sono giuste ma i path usano bounds React Flow non rimisurate, e gli entranti cadono tutti sul centro del nodo; un trascinamento ripara, l'attesa no. Baseline R0: 2/3/4 archi = passi 17,6/13,25/10,6 px. Raccomandazione: rimisurare anche sulle percentuali prima di toccare il cap. Numeri e 4 domande nel report.
+**Prompt document name**: 2026-08-25 pool_saturation_faseA
+
+## 2026-08-25 — fix(editor-v2): la rimisura degli handle si invalida sulle posizioni, non sugli id
+**Prompt**: GO Fase B1, solo la (e) della discovery pool_saturation_faseA: invalidazione della rimisura sulle percentuali. In piu': chiudere la domanda 1 (sonda estesa a tutti i nodi, rimisurare le tre coppie a 0px sulle foglie), misurare il costo con t_edges_settle_ms sulla scala 500/1000 e dichiarare la scelta se percettibile, R0 invariato al pixel, il caso --mixed a 6 ancore 7,5px come nuovo assert verde. Hard stop dopo B1 con i numeri. D1 solo dopo un GO separato con LIR.
+**Files touched**: frontend/src/components/editor-v2/components/DynamicHandles.tsx (chiave di invalidazione da activeHandles a sidePositionsBySide + coalescenza per frame di updateNodeInternals), docs/discovery/discovery_2026-08-25_pool_saturation_faseA.md (§12, esito B1), docs/claude-code-log.md (questa entry). Sonda estesa a tutti i nodi ma gitignored (`frontend/scripts/smoke/_tmp_pool_*`).
+**Outcome**: ✅ completed
+**Corregge**: — 
+**Causa**: —
+**Regressions**: no (typecheck 33 = baseline esatta, 0 nel file toccato; build ✓ solo chunk-warning pre-esistente; vitest 1354 passed / 9 file falliti = identico al baseline verificato via stash; benchmark: rf_edges 1500/1500 invariato, commits_open_flow 2010 -> 1607, commits_edit_flow 22 -> 22)
+**Out-of-scope changes**: no (un file di codice + report + log)
+**Layer Impact Report**: not-required (DynamicHandles.tsx non e' nella tabella §3.1; portDistribution/handlePosition/useAutoAnchor solo letti, non modificati)
+**Smoke visivo**: passato (sonda `_tmp_pool_saturation.ts`: `--mixed` da 1/4 a 4/4 verdi, scarto attacco↔ancora 0px su ogni nodo e ogni lato; R0 2/3/4 archi byte-identico; F3-5/F3-6 ancora rossi come atteso, D1 non toccato)
+**Notes**: la chiave vecchia era un Set di handle id SENZA ruolo: un arco entrante su un `right-0` gia' usato come source la lasciava invariata, e i 426,5 su cui cadevano tutti gli entranti erano il 50% con cui React Flow aveva misurato quell'handle da inattivo. Domanda 1 chiusa: le coppie a 0px sulle foglie erano D2, ora 17,6px. Domanda 4: il costo era reale (+134 commit all'apertura) e la coalescenza lo riassorbe — scelta in §12.5, non debounce, per non allungare la latenza. Numeri nel report.
+**Prompt document name**: 2026-08-25 pool_saturation_faseB1
+
+## 2026-08-25 — fix(editor-v2): la capienza di un lato è fisica, e l'eccedenza spilla sul lato adiacente
+**Prompt**: GO giro D1 con LIR §3.2 prima del diff. Criterio: capienza fisica = lunghezza utile del lato / spaziatura minima (~10px). Meccanismo (d)+(c): spill sul lato adiacente con più spazio, esteso al caricamento, ordine canonico per id d'arco. Unificare le tre nozioni di «pieno». Fixture estesa con nodi alti e albero di ereditarietà. R0 doppio (non saturi al pixel + assert verdi di B1). F3-5/F3-6 a verde con rf_edges pieni. Fallback a clamp quando tutti i lati sono saturi, mai un arco nascosto.
+**Files touched**: utils/portDistribution.ts (sideCapacity + spill STEP 2bis + tiebreak canonico + 3 campi opzionali), EditorV2.tsx (buildNodePositions propaga w/h; applyDistribution dichiara i pin), hooks/useAutoAnchor.ts (:589 migra alla capienza fisica), utils/__tests__/portDistribution.test.ts (nuovo, 14 test), hooks/__tests__/useAutoAnchor.test.ts (2 casi riscritti sui numeri della politica migrata — 7° file, fuori dall'elenco confermato), docs/discovery/discovery_2026-08-25_pool_saturation_faseA.md (§13), docs/claude-code-log.md.
+**Outcome**: ✅ completed
+**Corregge**: — 
+**Causa**: —
+**Regressions**: no (typecheck 33 = baseline; build ✓; vitest 1377 passed, e con il file nuovo escluso 1363 identico con e senza il codice D1 verificato via stash; benchmark rf_edges 1500/1500, commits_open 1607→1611, commits_edit 22→22)
+**Out-of-scope changes**: yes (useAutoAnchor.test.ts: 2 casi codificavano la vecchia politica del cap fisso che il prompt ordinava di migrare — riscritti sui numeri nuovi, intento invariato; dichiarato in chat e in §13.7)
+**Layer Impact Report**: produced (in chat prima del diff, con hard stop e conferma su perimetro ridotto, MAX_HANDLES_PER_SIDE e elenco file)
+**Smoke visivo**: passato (sonda: pura 6/6 verdi con zero warn del clamp, `--mixed` 4/4, `--tall` 3/3 sull'assert dell'ereditarietà; screenshot `_tmp_pool_F3.png`: ventaglio non più impacchettato, detour dello spill visibile e dichiarato)
+**Notes**: perimetro ridotto in LIR: lo spill vive in computePortDistribution, dove confluiscono le 4 elezioni di lato, e la guardia reattiva EditorV2:1221 lo porta al caricamento senza aprire useJjomSync/jjomTransformers. Due difetti trovati dai test prima del disegno: non idempotenza per pareggio nell'ordinamento (chiusa col tiebreak per id) e spill anche senza dimensioni. Troncatura dichiarata: sui nodi alti la capienza (9) supera il pool (4), lo spill allevia fino al pool. Dettagli in §13.
+**Prompt document name**: 2026-08-25 pool_saturation_D1
+
+## 2026-08-25 — fix(rail): niente doppio header quando il Properties mostra il soggetto della testata
+**Prompt**: difetto UI a schermo — all'apertura di una tab modello la rail mostra due header `model_1` a poche decine di px (testata della rail + testata del Properties), perché la selezione di default è il modello stesso. Decisione (a): de-duplicazione condizionale, il Properties degrada a etichetta di sezione in stile eyebrow con testo PROPERTIES quando il suo soggetto coincide con quello della testata; in tutti gli altri casi header invariato. Fase 1 di investigazione, poi GO con scelta della classe eyebrow.
+**Files touched**: editors/PropertiesWithTreeView.tsx (selettore railSubjectId + confronto col soggetto effettivo del Properties + prop passata a Info), editors/Info.tsx (prop opzionale su OwnProps, ramo condizionale in PropertiesHeader), editors/properties-with-tree-view.scss (blocco .props-header--deduped con la riga di colore), docs/claude-code-log.md.
+**Outcome**: ✅ completed
+**Corregge**: — 
+**Causa**: —
+**Regressions**: no (typecheck 33 = baseline, 0 nei file toccati; build ✓ 46.7s solo chunk-warning pre-esistente; vitest 1381 passed identico con e senza la modifica, verificato via stash; sonda 10/10 verdi)
+**Out-of-scope changes**: no (i 3 file previsti dalla Fase 1 + log; tree pane, scope bar, densità e postura non toccati)
+**Layer Impact Report**: not-required (nessun file critical-zone §3.1; nessun lettore nuovo del root state e in particolare nessun lettore di `state.viewpoint`, R-LAY-19 rispettata alla lettera)
+**Smoke visivo**: passato (`_tmp_rail_dup_model_default.png`: la testata della rail resta `m SynthM1`, al posto del secondo blocco d'identità c'è l'eyebrow PROPERTIES, la colonna legge come un pannello solo)
+**Notes**: il confronto è fra il soggetto EFFETTIVO del Properties (`effectivePin?.modelElement ?? selectedElementId`) e l'id terminale della risalita, non fra selezione e soggetto: col pin sul modello e la selezione altrove la duplicazione c'è e il confronto ingenuo la mancherebbe (assert SI-3). Due mie diagnosi di Fase 1 corrette dalla misura: le righe dell'albero si cliccano (bersaglio `.tree-row__content`), e la prima `revealTreeRow` richiudeva le sezioni aperte falsando il censimento.
+**Prompt document name**: 2026-08-25 rail_doppio_header
+
+## 2026-08-25 — feat(rail): affordance di scroll sul tree pane, fade di overflow
+**Prompt**: difetto UI a schermo — il tree pane clampato all'altezza di viewport finisce a mezza riga e nulla segnala che sotto c'è altro. Decisione presa: fade di overflow (~24-32px, dal trasparente al colore di fondo del pane), simmetrico in cima quando si è scrollati, nessun fade quando l'albero ci sta; scrollbar invariata. Fase 1 breve di investigazione, poi implementazione nella stessa corsa se nulla esce dall'attesa (PropertiesWithTreeView + scss).
+**Files touched**: editors/PropertiesWithTreeView.tsx (wrapper `.tree-view-panel-scroll`, due div di fade, `measureTreeFade` + effetto con scroll/ResizeObserver/MutationObserver coalescati in un rAF), editors/properties-with-tree-view.scss (blocco `.tree-view-panel-scroll` / `.tree-view-panel-fade`), docs/claude-code-log.md.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (typecheck 33 = baseline, 0 nei file toccati; build ✓ exit 0 solo chunk-warning pre-esistente; vitest 1387 passed, 9 file falliti all'import per `window is not defined` = baseline noto; smoke 12 passed / 0 failed; sonda 10/10 verdi)
+**Out-of-scope changes**: no (i 2 file previsti dalla Fase 1 + log; clamp delle tre fasce, densità, postura Focus, scope bar, dedup dell'header e scrollbar non toccati)
+**Layer Impact Report**: not-required (nessun file critical-zone §3.1; nessun lettore nuovo del D-layer né del root state — la misura legge solo geometria del DOM)
+**Smoke visivo**: passato (`_tmp_rail_fade_mid.png`: le righe sfumano sotto la filter row e sopra il bordo inferiore, la colonna legge come una lista che continua; `_tmp_rail_fade_short.png`: albero corto, nessuna banda)
+**Notes**: due cose misurate contro l'intuizione. (1) La filter row `.tree-search` è sticky e opaca in cima allo scroller: il fade alto parte dal suo bordo inferiore misurato con `getBoundingClientRect` (41px in fixture), mai da 0, o tingerebbe la barra. (2) Lo scroller sta in state con callback ref, non in `useRef`: la rail monta il suo portal solo con una tab attiva, e con un ref l'effetto restava agganciato a `null` per sempre — la prima esecuzione della sonda dava 2/9 esattamente per questo. Il verdetto va su `data-fade-*` del wrapper, non in state: zero re-render per tick di scroll.
+**Prompt document name**: 2026-08-25 rail_scroll_affordance
+
+## 2026-08-25 — feat(tree): il badge della view foglia dice che tipo di view è
+**Prompt**: tutte le view foglia sotto un Viewpoint usano `BADGE_ICON['tree-leaf-view'] = 'bi-easel'`. Differenziare in base a `ir.kind` (vertex/graphVertex → bi-app rosso, row → bi-input-cursor-text verde, edge → bi-arrow-right ciano, natura derivata con `natureOf`), campo `kind` su `TreeSubViewData` popolato in `buildSubViewTree`, fallback `tree-leaf-view`/bi-easel. Viewpoint root, badge letterale `v` e logica rename/duplicate/delete invariati.
+**Files touched**: TreeViewSidebar/TreeViewContent.tsx (`SubViewKind` + `subViewKindOf` + `SUBVIEW_BADGE_CLASS`, 3 voci in BADGE_ICON, `kind` su TreeSubViewData e in buildSubViewTree, badgeClassName in SubViewItem), TreeViewSidebar/tree-view-sidebar.scss (3 blocchi pastiglia + regola `> i.bi`), editors/properties-with-tree-view.scss (`:not()` esteso, fuori perimetro, autorizzato in chat), docs/claude-code-log.md.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (typecheck 33 = baseline, 0 nei file toccati; build ✓ exit 0; vitest 1387 passed = identico; smoke 12 passed / 0 failed; sonda 10/10 verdi)
+**Out-of-scope changes**: yes (properties-with-tree-view.scss: una riga, il `:not()` che in dark spegne il fondo di ogni badge non ratificato da R-RAIL-33 — senza l'estensione i tre badge nuovi perdevano la pastiglia solo al buio. Misurato prima di chiedere, scelta confermata dall'utente)
+**Layer Impact Report**: not-required (nessun file critical-zone §3.1; `get_ir` è una lettura di campo D dentro mapStateToProps, nessun nuovo layer nel read set dell'albero)
+**Smoke visivo**: passato (`_tmp_tree_view_kind_light.png`: K_vertex/K_graphVertex rossi, K_row verde, K_edgeobject ciano, in colonna e distinguibili a colpo d'occhio; `_tmp_tree_view_kind_dark.png` per il caso scuro)
+**Notes**: il colore va dichiarato due volte e a dipingere è la seconda. `styles/style.scss` ha un `i.bi { color: … }` diretto sull'`<i>`, che batte per costruzione l'ereditarietà dallo `<span>` (CLAUDE.md §5, misurato 2026-08-12): senza la regola figlia `> i.bi` la metà «saturata» della specifica sarebbe stata inerte, e la sonda l'avrebbe vista verde leggendo lo span. Controprova nella misura stessa: sul fallback `tree-leaf-view` il glifo è `rgb(15,23,42)` mentre lo span dice `rgb(69,86,111)`.
+**Prompt document name**: 2026-08-25 tree_view_kind_badges
+
+## 2026-08-25 — feat(tree): accanto alla view foglia il kind si legge come testo
+**Prompt**: mostrare il tipo della view foglia come label testuale allineata a destra, stesso trattamento dei feature row del metamodello (`<span className="tree-feature__type">` dentro `nameOverride`). Mappa kind → label: vertex → "Vertex", row → "Row", edge-object → "Edge (object)", edge-reference → "Edge", unknown → nessuna label. La label solo nel ramo non-renaming; icone/badge del commit precedente e riga viewpoint root invariati.
+**Files touched**: TreeViewSidebar/TreeViewContent.tsx (`SUBVIEW_KIND_LABEL`, `kindLabel` + terzo ramo di `nameOverride` in `SubViewItem`), TreeViewSidebar/tree-view-sidebar.scss (una regola additiva `.tree-row__name:has(+ .tree-feature__type)`), docs/claude-code-log.md.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown (typecheck 33 = baseline su output completo, build ✓ exit 0 solo chunk-warning pre-esistente, smoke 12 passed / 0 failed — ma nessuna sonda DOM sulle righe view: la verifica visiva non è stata eseguita in questa sessione)
+**Out-of-scope changes**: no (il prompt cita tree-view-sidebar.scss come sede dello stile esistente; l'unica regola aggiunta serve all'ellipsis del nome, che altrimenti spingerebbe la label fuori riga)
+**Layer Impact Report**: not-required (nessun file critical-zone §3.1; `view.kind` era già su `TreeSubViewData`, nessun nuovo lettore del D-layer)
+**Smoke visivo**: non eseguito
+**Notes**: il nome resta `tree-row__name` (13px), non `tree-feature__name` (11px): riusare la classe della feature avrebbe rimpicciolito ogni nome di view. Da qui `:has(+ .tree-feature__type)`, che dà `min-width: 0` solo dove la coppia esiste. In compact `[data-density]` cade solo `.tree-feature__mult`: il type sopravvive per costruzione. Il commit citato dal prompt (`1a0a2b0`) non esiste: quello dei badge è `b0fa445b6`.
+**Prompt document name**: 2026-08-25 tree_view_kind_text_label
+
+## 2026-08-26 — fix(editor-v2): i due menu del canvas seguono il tema
+**Prompt**: portare il menu contestuale (tasto destro su nodo/riga) e il picker EDGE TYPE dalla superficie navy fissa alla superficie chiara del mockup approvato (3a + 3b), identica per entrambi: bianco, hairline #e2e8f0, radius 12, ombra 0 4px 12px, padding 6, righe 34px/radius 6/testo 14px slate-900/icone 16px slate-500, hover #f1f5f9, disabled #cbd5e1, Delete #dc2626, separatori hairline con margine 6px 4px. Header contestuale in IBM Plex Mono 12px fra due hairline con freccia bi-arrow-down-right slate-400; eyebrow "EDGE TYPE" 11px/600/0.08em slate-400; glifi UML vettoriali ~26x10 slate-500. In dark i menu tornano su superficie scura usando i token esistenti. Invarianti: posizionamento, keyboard nav, dismiss, callback. Sonda con un caso per menu in light e dark + gate.
+**Files touched**: editor-v2/_themes.scss (blocco `float-*` chiaro riscritto sui valori del mockup + due token nuovi `float-disabled`/`float-header-arrow` in entrambe le mappe), editor-v2/EditorV2.scss (`.context-menu` superficie/righe/header/separatori + blocco dedicato per il colore dei glifi), editor-v2/ContextMenu.tsx (`header?: boolean` opzionale + ramo di render non interattivo), editor-v2/EditorV2.tsx (una riga: l'header passa da label con em-dash a voce `header`), editor-v2/components/EdgeTypePopup.tsx (i quattro glifi UML ridisegnati 26x10, stima d'altezza per il flip), editor-v2/components/EdgeTypePopup.scss (superficie e righe allineate al contestuale), docs/claude-code-log.md.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (typecheck 33 = baseline esatta su output completo; build ✓ exit 0 solo chunk-warning pre-esistente; vitest 1387 passed / 9 file falliti all'import per `window is not defined` = baseline noto; smoke 12 passed / 0 failed; sonda 18/18 verdi)
+**Out-of-scope changes**: no (i 6 file dei due menu + log; `properties-with-tree-view.scss` NON toccato — il `:not()` di :1173 e' scopato a `.tree-node__icon` della rail e nessuna classe dei menu ci passa, verificato)
+**Layer Impact Report**: not-required (nessun file critical-zone §3.1; solo presentazione, nessun lettore nuovo di D/L)
+**Smoke visivo**: passato (`_tmp_canvas_menus_ctx_light/dark.png`, `_tmp_canvas_menus_edge_light/dark.png`; il fondo del picker al buio verificato al pixel, 30,41,59, perche' a occhio sulla miniatura sembrava chiaro)
+**Notes**: (1) `.context-menu` e' condivisa: `contextMenu/ContextMenu.scss:226` porta `.context-menu__item i { color: white !important }` per i menu dell'app, e la regola BEM a (0,2,1) non arrivava mai — glifi bianchi. Da qui il blocco a (0,3,1) con `!important`. (2) Il picker sta dentro `.editor-v2`, il contestuale e' portato su `<body>`: il primo legge `.theme-*`, il secondo `:root`. Stessa sorgente (`useTheme`), ma chi scrive solo `data-theme` ne muove uno solo.
+**Prompt document name**: 2026-08-26 canvas_menus_light
+
+## 2026-08-26 — fix(editor-v2): anche il popup «link reference» sulla stessa superficie
+**Prompt**: seguito immediato del commit `3a07155fe`: mantenere il tipo di commit `fix` e allineare anche `M1ReferencePopup` alla superficie comune dei due menu del canvas.
+**Files touched**: editor-v2/components/M1ReferencePopup.tsx (i tre glifi ridisegnati 26x10 nella lingua di EdgeTypePopup; costanti di ribaltamento aggiornate alla nuova geometria; il tipo del bersaglio da `style` inline a classe), editor-v2/components/EdgeTypePopup.scss (regola additiva `&__label-type`), docs/claude-code-log.md.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (typecheck 33 = baseline su output completo, 0 nei file toccati; build ✓ exit 0 solo chunk-warning pre-esistente; vitest 1387 passed identico; smoke 12 passed / 0 failed; sonda 25/25 verdi)
+**Out-of-scope changes**: no (il popup e i suoi stili, che vivono nello scss gia' condiviso)
+**Layer Impact Report**: not-required (nessun file critical-zone §3.1; solo presentazione)
+**Smoke visivo**: passato (`_tmp_canvas_menus_m1ref_light.png` / `_tmp_canvas_menus_m1ref_dark.png`: stessa superficie, stesso eyebrow, glifi della stessa famiglia del picker EDGE TYPE)
+**Notes**: la superficie era gia' condivisa per costruzione (il popup porta le classi `.edge-type-popup`); disallineati erano i glifi, a 16x16, e il tipo del bersaglio, un `opacity: 0.5` inline che su fondo bianco dava un grigio fuori scala. Il caso (C) della sonda ha richiesto una seconda reference nella fixture: con una sola compatibile `EditorV2.tsx:1565` auto-seleziona e il popup non si apre — misurato, non dedotto (archi=1, popup=false).
+**Prompt document name**: 2026-08-26 canvas_menus_m1ref
+
+## 2026-08-26 — discovery: il singleton come valore del linguaggio, instanziabilità e ciclo di vita (Fase 1, read-only)
+**Prompt**: sei domande sul commit A della serie R-SGL — vie di instanziazione in editor-v2, chi costruisce `MetaclassInfo`, percorso di rimozione allo spegnimento del flag, coerenza col toggle Show singletons, stereotipo su `ObjectNode`, comportamento dei modelli salvati. Hard stop a report scritto, nessun file di prodotto.
+**Files touched**: docs/discovery/discovery_2026-08-26_singleton_instantiability.md (nuovo, il report), docs/claude-code-log.md (questa entry).
+**Outcome**: ✅ completed — sei domande chiuse, hard stop rispettato.
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (read-only; nessuna modifica al codice applicativo).
+**Out-of-scope changes**: no (report + log; nessun sorgente).
+**Layer Impact Report**: not-required (nessun file modificato; `LModelElement.tsx`, `Dummy.ts`, `action.ts`, `useJjomSync.ts` e `canvasToJjom.ts` solo letti — il report dichiara che la Fase 2 richiede il LIR di §3.2).
+**Smoke visivo**: non applicabile (fase di sola lettura).
+**Notes**: due risultati contro l'ipotesi di partenza. I filtri di instanziabilità in editor-v2 sono sei, non due, e il sesto (`irInteraction.ts:136`, la connect gesture) crea un edge-object. E l'ordine «flag prima, delete poi» di R-SGL-2 non libera il guard: le azioni si accodano fino a `FINAL_END`. Da qui l'emendamento a R-SGL-2 e le ratifiche R-SGL-6..9. Sette domande aperte in §9 del report.
+**Prompt document name**: 2026-08-26 14:35
+
+## 2026-08-26 — feat(m1): la classe singleton non è instanziabile e l'istanza segue il flag
+**Prompt**: Fase 2 del commit A, otto file di prodotto: `isSingleton` opzionale su `MetaclassInfo` e filtro nei sei siti di consumo, check gemello di quello su `abstract` in JjScript `create instance`, rimozione delle istanze agganciata ai tre writer che spengono il flag tramite token di rientranza, guard di accensione per modello (R-SGL-8), stereotipo via da `ObjectNode`. LIR obbligatorio prima di `LModelElement.tsx`, hard stop per la verifica visiva.
+**Files touched**: editor-v2/hooks/useEditorMode.ts (campo opzionale, popolamento, firma di reattività, `rootableClasses`), editor-v2/utils/compositionCompat.ts (drop gate su entrambi i rami, opzioni dei figli filtrate al consumo), editor-v2/viewpoint/ir/irInteraction.ts (`matchConnectRules`, `deriveDroppableChildMetaclasses`), editor-v2/EditorV2.tsx (palette IR ramo extra, commento di fallback sul ramo di creazione del toggle), editor-v2/nodes/ObjectNode.tsx (i due blocchi stereotipo, `isSingleton` e la chiave dal selettore), editor-v2/EditorV2.scss (solo il commento in `.mm-object`), jjscript/executor/commands/instance.ts (pre-check singleton su create), model/logicWrapper/LModelElement.tsx (token `singletonInstancesBeingRemoved`, guard di `LObject.get_delete`, `_removeSingletonInstances`, i tre writer, guard di accensione per modello), docs/claude-code-log.md.
+**Outcome**: ✅ completed — commit `c824dc237`
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (typecheck exit 2 con 33 errori = baseline esatta su output completo, e l'unico che nomina un file toccato è il noto «Add reference» di `EditorV2.tsx`, spostato di +3 righe; build exit 0, zero righe `error`, solo chunk-warning e deprecation Sass pre-esistenti; vitest 1387 passed con 9 file falliti all'import per `window is not defined` = baseline noto; `ir.test.ts` mirato 95 passed; `check:docs` esce 1, ma su 8 entry pre-esistenti fra il 2026-08-03 e il 2026-08-26 — nessuna delle due nuove è fra quelle segnalate, il conteggio degli errori non è salito)
+**Out-of-scope changes**: no (gli otto file della lista regola 19, elencata in chat prima di editare)
+**Layer Impact Report**: produced (in chat prima del diff, con hard stop e ACK su tre punti. D-layer: `SetFieldAction` sul flag; `DeleteElementAction` su `DObject`, i suoi `DValue`, il `DVertex` e gli archi connessi al vertice; `-=` su `model.objects`, `DClass.instances`, gli slot `values` di chi puntava l'istanza e `graph.subElements`. Tutto dentro la `TRANSACTION` del writer: quelle che la cascata apre per sé girano a profondità > 0, quindi un solo `CompositeAction` e un solo passo di undo. Nessun `.new()` avvolto — è il caso «TRANSACTION pura» di §3.3. Canvas: diff di `graph.subElements` in `useJjomSync.ts:1330`, nessun evento. Canale dei `DVertex`: scansione di `idlookup` con `className.includes('Vertex')`, il predicato del toggle singleton e di `useJjomSync.isVertexClassName`, non l'`=== 'DVertex'` di `findVertexIdForObject`; predicato degli archi copiato da `syncDeleteVertex`.)
+**Smoke visivo**: passato (9/9 dei punti della §4 del prompt, verificati da Alfonso: palette, rimozione osservata in `idlookup` su entrambi gli M1, undo singolo, chip Final, riaccensione per modello, menu contestuale e connect gesture, JjScript, stereotipo nei due rami, toggle Show singletons)
+**Notes**: due scoperte a registro (R-SGL-9e), non corrette qui: `Dummy.ts:254` `lDeleted.nodes.map(n=>n.delete())` è una scrittura morta — `DataTransientProperties.nodes` non è mai popolato — e il commento a `canvasToJjom.ts:449-455` afferma il contrario. Da qui la scansione esplicita. Correzione mia: `set_singleton` non ha early-return sul valore invariato, quindi la rimozione è guardata su `c.data.isSingleton` come negli altri due writer.
+**Prompt document name**: 2026-08-26 15:55
+
+## 2026-08-26 — docs: form rendering delle view, discovery per la Slice 1 (host rail Properties)
+**Prompt**: Fase 1 read-only sul form rendering delle view. Dodici domande (pannello proprietà attuale, write path dell'edit inline, stato dell'IR dopo TS2, row dispatch, accesso al metamodello per derivare i widget, registry problems, mappa dei token dell'handoff, controlli condivisi riusabili, persistenza della modalità, collisioni di nomi, validateIR/VersionFixer, critical zone), più la forma proposta di `FormSpec` e il piano dei file. Hard stop a report scritto.
+**Files touched**: docs/discovery/discovery_2026-08-26_form_views_slice1.md (nuovo, il report), docs/claude-code-log.md (questa entry).
+**Outcome**: ✅ completed — dodici domande chiuse, hard stop rispettato.
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (read-only; nessuna modifica al codice applicativo).
+**Out-of-scope changes**: no (report + log; nessun sorgente).
+**Layer Impact Report**: not-required (nessun file modificato; il report dichiara che la Fase 2 richiede il LIR di §3.2 per `editor-v2/problems/`, unico file di critical zone nel perimetro della Slice 1).
+**Smoke visivo**: non applicabile (fase di sola lettura).
+**Notes**: tre risultati contro l'attesa, tutti in §3 del report. (1) `components/ui/` e' gia' una libreria di form completa: il `editor-v2/Select.tsx` citato dal prompt non esiste perche' il kit sta altrove. (2) `syncUpdateFeatureValue` non serve alla form — vertexId, solo indice 0, niente add/remove: il contratto e' `LValue.setValueAtPosition`. (3) `conformanceToProblems.ts:50` scarta `metamodelElementName`, quindi la diagnostica per campo chiede due righe in critical zone.
+**Prompt document name**: 2026-08-26 20:17
