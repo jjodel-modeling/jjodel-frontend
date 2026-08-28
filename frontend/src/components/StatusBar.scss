@@ -109,6 +109,24 @@
         margin: 0 4px;
     }
 
+    &__conforms {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        white-space: nowrap;
+        color: #64748b;
+    }
+
+    &__conforms-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 999px;
+        background: var(--color-success, #22c55e);
+        flex-shrink: 0;
+    }
+
+
+
     // ── Right zone ──
 
     &__right {

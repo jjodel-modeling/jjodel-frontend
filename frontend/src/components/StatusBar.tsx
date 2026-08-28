@@ -344,11 +344,14 @@ const StatusBar: React.FC = () => {
                                         <>
                                             {editorStats.objectCount} instance{editorStats.objectCount !== 1 ? 's' : ''}
                                             {editorStats.conformsTo && (
-                                                <>
-                                                    <span className="app-statusbar__middot">·</span>
-                                                    {editorStats.conformsTo}
-                                                </>
-                                            )}
+                                                    <>
+                                                        <span className="app-statusbar__middot">·</span>
+                                                        <span className="app-statusbar__conforms">
+                                                            <span className="app-statusbar__conforms-dot" />
+                                                            conforms to {editorStats.conformsTo}
+                                                        </span>
+                                                    </>
+                                                )}
                                         </>
                                     )}
                                 </span>
