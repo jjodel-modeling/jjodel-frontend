@@ -44,14 +44,16 @@ import {
     instanceNodeChrome,
     emptySlotsLabel,
 } from './instanceNodeStyle';
-import { detectValueRenderer, type RendererDecision } from './valueRenderer';
+import { detectValueRenderer, detectColor, type RendererDecision, type SlotShape } from './valueRenderer';
+import RowValue, { MAX_CHIPS } from './RowValue';
+import RendererInspector from './RendererInspector';
 import {
     resolveInstanceShape,
     firstAbstractDirectSuperclass,
     readDirectSuperclasses,
     readIsSingleton,
     readSingletonInstanceInfo,
-    type SingletonLabelParts,
+    readSiblingSubclassNames,
 } from './singletonShape';
 import SingletonPill from './SingletonPill';
 import type { FeatureValueRow } from '../types';
@@ -59,13 +61,6 @@ import '../viewpoint/ir/irDemoFixture'; // dev-only: registers window.__jjodelIn
 import './instanceNode.scss';
 
 export type ObjectNodeType = Node<ObjectNodeData, 'objectNode'>;
-
-/**
- * Chips rendered before the `+k` overflow affordance. The handoff leaves the
- * threshold open ("above ~4 chips") and states the requirement that decides it:
- * a collection must not grow the node unbounded.
- */
-const MAX_CHIPS = 4;
 
 /** One row of the compartment, after the renderer has been decided. */
 interface SlotRow {
@@ -76,6 +71,12 @@ interface SlotRow {
     /** The metaclass attribute this row stands in for, when it has no slot yet. */
     placeholder?: { id: string; name: string; defaultDisplay: string; enumLiterals?: Array<{ name: string; value: number }> };
     decision: RendererDecision;
+    /**
+     * The exact input the renderer was decided from. Kept so the inspector can
+     * re-walk the ladder on the same evidence the row did — recomputing it from
+     * the feature would be a second derivation, and a second chance to disagree.
+     */
+    slot: SlotShape;
     values: string[];
     /** `[n]` for a multi-valued slot: the actual count held, not the bound. */
     cardinality: string | null;
@@ -149,10 +150,14 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
         return parts.join('|');
     });
 
-    const { liveFeatureNameMap, coveredAttrIds } = useMemo(() => {
+    const { liveFeatureNameMap, liveFeatureIdMap, coveredAttrIds } = useMemo(() => {
         const nameMap = new Map<string, string>();
+        // DValue id → the DAttribute it instantiates. The renderer override is
+        // a statement about the ATTRIBUTE — it governs every instance of the
+        // class — so this is the id the inspector writes to, never `f.id`.
+        const idMap = new Map<string, string>();
         const covered = new Set<string>();
-        if (!liveFeatureNameSig) return { liveFeatureNameMap: nameMap, coveredAttrIds: covered };
+        if (!liveFeatureNameSig) return { liveFeatureNameMap: nameMap, liveFeatureIdMap: idMap, coveredAttrIds: covered };
         for (const entry of liveFeatureNameSig.split('|')) {
             const first = entry.indexOf(':');
             const second = entry.indexOf(':', first + 1);
@@ -161,10 +166,11 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                 const attrId = entry.slice(first + 1, second);
                 const name = entry.slice(second + 1);
                 nameMap.set(fId, name);
+                idMap.set(fId, attrId);
                 covered.add(attrId);
             }
         }
-        return { liveFeatureNameMap: nameMap, coveredAttrIds: covered };
+        return { liveFeatureNameMap: nameMap, liveFeatureIdMap: idMap, coveredAttrIds: covered };
     }, [liveFeatureNameSig]);
 
     // Metaclass attributes from Redux — used for lazy co-evolution placeholders.
@@ -281,6 +287,19 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
     const [emptyRowsExpanded, setEmptyRowsExpanded] = useState(false);
     // Which collections have had their `+k` chip clicked open.
     const [expandedChips, setExpandedChips] = useState<ReadonlySet<string>>(() => new Set());
+    // The property whose detection ladder is open, with the box to anchor to.
+    const [inspecting, setInspecting] = useState<{ slot: SlotShape; featureId: string | null; anchor: DOMRect } | null>(null);
+
+    /**
+     * `now` for the relative half of a date, taken once per mount.
+     *
+     * A live clock would re-render every node on the canvas to move a label from
+     * `19h` to `20h`, which is a bad trade at any node count. The ages this
+     * renderer prints are coarse by design — hours, days, months — so a value
+     * fixed at mount is indistinguishable from a live one for the whole time a
+     * canvas is realistically open.
+     */
+    const now = useMemo(() => Date.now(), []);
 
     useEffect(() => {
         if (data.label !== lastCommittedName.current) {
@@ -514,6 +533,42 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
         return parts.join('|');
     });
 
+    /**
+     * The colour this instance denotes, when it denotes one — the `swatch`
+     * member of the library in its `node` form.
+     *
+     * A metamodel that writes `Color { Red, Green, Blue }` as an EEnum hands the
+     * ladder its literal set for free. One that writes it as an abstract `Color`
+     * with three singleton subclasses is expressing the SAME closed set, and
+     * rule 3 should reach the same answer either way — so the sibling concrete
+     * subclasses are the literal set here, and the whole set is tested, which is
+     * the property that makes rule 3 safe in the first place.
+     *
+     * A string, not an object: the selector runs on every store change, and a
+     * fresh object each time would re-render the node for nothing.
+     */
+    const ownPillSwatch = useSelector((state: any) => {
+        const lookup = state.idlookup ?? {};
+        const classId = data.instanceOfClassId;
+        if (!classId) return '';
+        // Two indexed gates BEFORE the scan, and they are not micro-optimisation.
+        // `readSiblingSubclassNames` walks the whole idlookup; run unguarded it
+        // would be one full scan per instance node per store change, which is
+        // quadratic in the size of the model. Only a singleton whose direct
+        // superclass is abstract can draw as a pill at all, and there is at most
+        // one instance per singleton class — so the scan runs a handful of times,
+        // not once per node.
+        if (!readIsSingleton(lookup, classId)) return '';
+        const sup = firstAbstractDirectSuperclass(readDirectSuperclasses(lookup, classId));
+        if (!sup) return '';
+        const colour = detectColor({
+            value: lookup[classId]?.name ?? data.label ?? '',
+            typeName: sup.name,
+            enumLiteralNames: readSiblingSubclassNames(lookup, sup.id),
+        });
+        return colour?.swatch ?? '';
+    });
+
     const { ownIsSingleton, ownSuperclassName, pillTargetSupers } = useMemo(() => {
         // Target id -> the superclass half of its label. Membership IS the
         // answer to "does this target draw as a pill": only pills are recorded.
@@ -563,7 +618,14 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                 ? (f.refTargets?.map(t => t.name) ?? [])
                 : (f.values ?? (f.value != null && f.value !== '' ? [String(f.value)] : []));
 
-            const decision = detectValueRenderer({
+            // A reference is broken when EVERY target it holds is a dangling
+            // pointer. One live target among several is not a broken row — it
+            // is a row with a live pill and a struck-through one beside it, and
+            // `RowValue` renders each target on its own terms.
+            const refs = f.refTargets ?? [];
+            const allBroken = isRef && refs.length > 0 && refs.every(t => t.broken);
+
+            const slot: SlotShape = {
                 value: f.value ?? '',
                 values: f.values,
                 isReference: isRef,
@@ -571,18 +633,27 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                 typeName: f.typeName,
                 enumLiteralNames: f.enumLiterals?.map(l => l.name),
                 featureName: liveName,
-            });
+                // The metamodel declarations. Absent unless annotated, which is
+                // exactly what makes a unit impossible to get by accident.
+                rendererOverride: f.rendererOverride,
+                unit: f.unit,
+                min: f.min,
+                max: f.max,
+                isBroken: allBroken,
+            };
+            const decision = detectValueRenderer(slot);
 
             rows.push({
                 key: f.id,
                 name: liveName,
                 feature: f,
                 decision,
+                slot,
                 values: held,
                 // The ACTUAL count held, which is what makes `[0]` informative.
                 cardinality: f.isMany ? `[${held.length}]` : null,
                 hasEdge: isRef && edgeRefNames.has(liveName),
-                isEmpty: decision.kind === 'empty',
+                isEmpty: decision.kind === 'dash',
             });
         }
 
@@ -594,7 +665,8 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                 key: `ph_${attr.id}`,
                 name: attr.name,
                 placeholder: attr,
-                decision: { kind: 'empty', reason: 'the metaclass declares it; this instance has no slot yet' },
+                decision: { kind: 'dash', reason: 'the metaclass declares it; this instance has no slot yet' },
+                slot: { value: '', featureName: attr.name },
                 values: [],
                 cardinality: null,
                 hasEdge: false,
@@ -775,114 +847,63 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
 
         const feature = row.feature!;
 
-        // ── Reference: a pill, and the row is never removed ──
-        if (row.decision.kind === 'reference') {
-            const targets = feature.refTargets ?? [];
+        // ── Inline editing, which is node interaction and not a renderer ──
+        //
+        // The library paints values; it does not own the affordances for
+        // changing them. So the edit states stay here, and everything that is
+        // merely a RENDERING goes through `RowValue` — the same component the
+        // inspector's footer and any future standalone Row-view node use, which
+        // is what keeps the compartment and the canvas from drifting apart.
+        if (editingFeature?.id === feature.id) {
             return (
-                <>
-                    {targets.map((t, i) => {
-                        // A target that draws as a pill on the canvas draws as
-                        // the SAME pill here, one size down: this is the level-3
-                        // parity requirement of the handoff, and the component
-                        // is shared precisely so the two cannot drift.
-                        //
-                        // A target that draws as a RECTANGLE — a singleton with
-                        // structure, or an ordinary instance — keeps the cyan
-                        // reference pill: a rectangle cannot be inlined in a
-                        // row, and the cyan one is the navigation affordance,
-                        // not a shape claim about the target.
-                        if (pillTargetSupers.has(t.id)) {
-                            const parts: SingletonLabelParts = {
-                                superclassName: pillTargetSupers.get(t.id) ?? null,
-                                instanceName: t.name,
-                            };
-                            return (
-                                <SingletonPill
-                                    key={`${t.id}_${i}`}
-                                    parts={parts}
-                                    variant="row"
-                                    title={`Vai a ${t.name}`}
-                                    onClick={(e) => { e.stopPropagation(); revealReferenceTarget(t.id); }}
-                                />
-                            );
-                        }
-                        return (
-                            <span
-                                key={`${t.id}_${i}`}
-                                className="mm-object__ref-pill"
-                                title={`Vai a ${t.name}`}
-                                onClick={(e) => { e.stopPropagation(); revealReferenceTarget(t.id); }}
-                            >
-                                <i className="bi bi-link-45deg" />
-                                {t.name}
-                            </span>
-                        );
-                    })}
-                </>
+                <input
+                    className="mm-object__input"
+                    autoFocus
+                    value={editValue}
+                    onChange={(e) => setEditValue(e.target.value)}
+                    onFocus={(e) => e.target.select()}
+                    onBlur={commitFeatureEdit}
+                    onKeyDown={handleFeatureKeyDown}
+                />
             );
         }
 
-        // ── Empty ──
-        if (row.decision.kind === 'empty') {
-            return <span className="mm-object__dash">—</span>;
-        }
+        const painted = (
+            <RowValue
+                decision={row.decision}
+                values={row.values}
+                variant="row"
+                targets={feature.refTargets}
+                pillTargets={pillTargetSupers}
+                hasEdge={style.edgeMarker && row.hasEdge}
+                onTargetClick={revealReferenceTarget}
+                expanded={expandedChips.has(row.key)}
+                onExpand={() => setExpandedChips(prev => new Set(prev).add(row.key))}
+                now={now}
+            />
+        );
 
-        // ── Collection: one chip per value, the label carries the count ──
-        if (row.decision.kind === 'collection') {
-            const expanded = expandedChips.has(row.key);
-            const shown = expanded ? row.values : row.values.slice(0, MAX_CHIPS);
-            const hidden = row.values.length - shown.length;
-            return (
-                <>
-                    {shown.map((v, i) => (
-                        <span key={`${row.key}_${i}`} className="mm-object__chip">{v}</span>
-                    ))}
-                    {hidden > 0 && (
-                        <span
-                            className="mm-object__chip mm-object__chip--more"
-                            title={`Mostra gli altri ${hidden}`}
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                setExpandedChips(prev => new Set(prev).add(row.key));
-                            }}
-                        >
-                            +{hidden}
-                        </span>
-                    )}
-                </>
-            );
-        }
-
-        // ── Scalar and colour, both editable ──
+        // ── Enum attributes keep their popover ──
+        //
+        // There is no enum-specific RENDERER decision to make here: the literal
+        // renders as an `enumChip`, or as a `swatch` when the whole literal set
+        // qualifies, and `detectValueRenderer` settled which. Only the
+        // affordance is enum-specific, so only the affordance is added.
         const hasEnum = feature.enumLiterals && feature.enumLiterals.length > 0;
         const isStaleEnum = hasEnum
             && feature.value != null && feature.value !== ''
             && !feature.enumLiterals!.some(l => l.name === feature.value);
 
-        // The swatch precedes the text and never replaces it: it annotates the value.
-        const swatch = row.decision.kind === 'color' && row.decision.swatch
-            ? (
-                <span
-                    className="mm-object__swatch"
-                    style={{ ['--inode-swatch' as string]: row.decision.swatch } as React.CSSProperties}
-                />
-            )
-            : null;
-
-        // Enum attributes keep the popover; there is no enum renderer in the
-        // handoff, so the literal reads as a scalar (or a colour, when the whole
-        // literal set qualifies) and only the affordance is enum-specific.
         if (hasEnum) {
             return (
                 <>
-                    {swatch}
                     <span
-                        className={`mm-object__scalar mm-field__enum-value${isStaleEnum ? ' mm-field__enum-stale' : ''}`}
+                        className={`mm-object__enum-slot${isStaleEnum ? ' mm-field__enum-stale' : ''}`}
                         onClick={(e) => { e.stopPropagation(); setOpenEnumId(openEnumId === feature.id ? null : feature.id); }}
                         title={isStaleEnum ? `"${feature.value}" is no longer a valid enum literal` : row.decision.reason}
                     >
                         {isStaleEnum && <i className="bi bi-exclamation-triangle-fill mm-field__enum-stale-icon" />}
-                        {feature.value || '(none)'}
+                        {painted}
                     </span>
                     <i className="bi bi-chevron-down mm-object__enum-chevron" />
                     {openEnumId === feature.id && (
@@ -910,28 +931,34 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
             );
         }
 
-        if (editingFeature?.id === feature.id) {
-            return (
-                <input
-                    className="mm-object__input"
-                    autoFocus
-                    value={editValue}
-                    onChange={(e) => setEditValue(e.target.value)}
-                    onFocus={(e) => e.target.select()}
-                    onBlur={commitFeatureEdit}
-                    onKeyDown={handleFeatureKeyDown}
-                />
-            );
-        }
+        return painted;
+    };
 
-        return (
-            <>
-                {swatch}
-                <span className="mm-object__scalar" title={row.decision.reason}>
-                    {String(feature.value)}
-                </span>
-            </>
-        );
+    /**
+     * Open the inspector for one row.
+     *
+     * Anchored to the row's own box, because the panel explains THAT row: a
+     * ladder floating in a side panel with no value in view would be arguing
+     * about something the reader cannot see.
+     *
+     * Reached with Alt+click. The obvious gesture, right-click, is already the
+     * canvas node menu, and shadowing it on the value cells would take a
+     * committed behaviour away from part of every instance node.
+     */
+    const openInspector = (row: SlotRow, e: React.MouseEvent) => {
+        e.stopPropagation();
+        e.preventDefault();
+        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        setInspecting({
+            slot: row.slot,
+            // The METAMODEL feature, which is where an override is written. A
+            // placeholder row already stands for one; a real slot's `feature.id`
+            // is its DValue, so the declared feature is `featureTypeId`'s owner
+            // — carried on the row as the placeholder id or resolved from the
+            // live feature-name map, both of which name the DAttribute.
+            featureId: row.placeholder?.id ?? liveFeatureIdMap.get(row.feature?.id ?? '') ?? null,
+            anchor: rect,
+        });
     };
 
     /** A row accepts an inline edit: attributes and placeholders, never references. */
@@ -996,6 +1023,16 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                         parts={{ superclassName: ownSuperclassName, instanceName: name }}
                         variant="node"
                         selected={!!selected}
+                        // Canvas parity for `swatch`: the standalone form of a
+                        // colour is this pill with the square prepended, so
+                        // `Color::Green` on the canvas and `Green` in a row
+                        // carry the same square from the same ladder.
+                        leading={ownPillSwatch
+                            ? <span
+                                className="mm-object__swatch mm-object__swatch--node"
+                                style={{ ['--inode-swatch' as string]: ownPillSwatch } as React.CSSProperties}
+                            />
+                            : undefined}
                     />
                 )}
             </div>
@@ -1105,7 +1142,10 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                             const editable = isRowEditable(row);
                             return (
                                 <Fragment key={row.key}>
-                                    <span className="mm-object__slot-label">
+                                    <span
+                                        className="mm-object__slot-label"
+                                        title={`${row.name} — Alt+click sul valore: perché questo renderer`}
+                                    >
                                         <span className="mm-object__feature-name">{row.name}</span>
                                         {row.cardinality && (
                                             <span className="mm-object__cardinality">{row.cardinality}</span>
@@ -1114,19 +1154,27 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                                     <span
                                         className={`mm-object__slot-value${editable ? ' mm-object__slot-value--editable' : ''}`}
                                         onDoubleClick={editable ? () => startRowEdit(row) : undefined}
-                                        onClick={editable && selected ? () => startRowEdit(row) : undefined}
+                                        // Alt+click, and NOT right-click: the canvas already
+                                        // binds the context menu on every node
+                                        // (`EditorV2.tsx:2749`), and taking it over on the
+                                        // value cell would delete that menu for part of the
+                                        // node. A modifier leaves every existing gesture
+                                        // exactly where it was — plain click still selects
+                                        // and edits, double-click still edits, right-click
+                                        // still opens the node menu.
+                                        onClick={(e) => {
+                                            if (e.altKey) { openInspector(row, e); return; }
+                                            if (editable && selected) startRowEdit(row);
+                                        }}
                                     >
+                                        {/* The edge marker moved INTO the library with
+                                            the rest of the refPill spec, and is passed as
+                                            `hasEdge`: it is part of how a reference renders,
+                                            not chrome the row adds around it. The row is
+                                            still never removed for it — the edge shows the
+                                            topology, the row shows that this property holds
+                                            this value. */}
                                         {renderSlotValue(row)}
-                                        {/* The marker says the target is ALSO drawn as an
-                                            edge. The row is not removed for it: the edge
-                                            shows the topology, the row shows that this
-                                            property holds this value. */}
-                                        {style.edgeMarker && row.hasEdge && (
-                                            <i
-                                                className="bi bi-arrow-up-right mm-object__edge-marker"
-                                                title="Reso anche come edge sul canvas"
-                                            />
-                                        )}
                                     </span>
                                 </Fragment>
                             );
@@ -1152,6 +1200,20 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                     <div className="mm-node__empty" />
                 )}
             </div>
+
+            {/* The ladder for the property under the pointer. A portal on
+                `body`, because the compartment sits inside a node the canvas
+                clips — the same reason `TextStyleField` and the problem overlay
+                portal theirs. */}
+            {inspecting && (
+                <RendererInspector
+                    anchor={inspecting.anchor}
+                    slot={inspecting.slot}
+                    featureId={inspecting.featureId}
+                    className={metaclassName}
+                    onClose={() => setInspecting(null)}
+                />
+            )}
         </div>
     );
 }

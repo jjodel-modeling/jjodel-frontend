@@ -346,6 +346,17 @@
   --color-inode-pill-hover: #475569;                   /* slate-600 */
 
   /* Cyan, inverted: tint on top, depth underneath */
+  /* Row view library (2026-08-28, livello 3). Il pieno/vuoto del dot booleano e
+     la traccia della barra devono restare distinguibili su #334155, quindi sono
+     alpha di bianco e non i grigi chiari, che su questo fondo collassano. */
+  --color-inode-swatch-hairline: rgba(255, 255, 255, 0.28);
+  --color-inode-bool-on: rgba(255, 255, 255, 0.8);
+  --color-inode-bool-off: rgba(255, 255, 255, 0.32);
+  --color-inode-progress-track: rgba(255, 255, 255, 0.14);
+  --color-inode-progress-fill: rgba(255, 255, 255, 0.62);
+  --color-inode-emphasis: rgba(255, 255, 255, 0.75);
+  --color-inode-broken: #f87171;                       /* red-400; il red-500 va cupo qui */
+
   --color-inode-ref-bg: rgba(6, 182, 212, 0.16);
   --color-inode-ref-border: rgba(103, 232, 249, 0.4);  /* cyan-300 at the alpha the dark bg needs */
   --color-inode-ref-fg: #67e8f9;                       /* cyan-300; #0891b2 goes muddy here */

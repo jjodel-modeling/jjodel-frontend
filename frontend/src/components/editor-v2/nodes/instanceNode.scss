@@ -206,12 +206,28 @@
 
     // Swatch and text always travel together: the swatch annotates the value,
     // it does not replace it.
+    //
+    // The hairline is INSET rather than a border, and that is load-bearing
+    // twice over. It keeps the 10px box at 10px — a border would make it 12 and
+    // knock the value column out of alignment with the rows above and below —
+    // and it is the only thing that makes `#ffffff` or `Yellow` visible against
+    // a white node. Without it a pale swatch reads as no swatch, and the row
+    // looks like a property holding nothing.
     .mm-object__swatch {
         width: 10px;
         height: 10px;
         flex: none;
         border-radius: 3px;
         background: var(--inode-swatch);
+        box-shadow: inset 0 0 0 1px var(--color-inode-swatch-hairline);
+    }
+
+    // Inside the singleton pill, where the type row sets a 13px scale.
+    .mm-object__swatch--node {
+        width: 9px;
+        height: 9px;
+        margin-right: 7px;
+        align-self: center;
     }
 
     // One chip per value; the label carries the count.
@@ -229,9 +245,179 @@
     }
 
     // Overflow chip: the `+k` that stands for the values not rendered.
+    //
+    // A different SURFACE rather than a different colour — white with a hairline
+    // where the value chips are filled — because `+3` is not a value of the
+    // collection and must not read as one. The count it shows is the values not
+    // drawn; the `[k]` on the label keeps showing the true total.
     .mm-object__chip--more {
         cursor: pointer;
         font-weight: 600;
+        background: var(--color-inode-surface);
+        border: 1px solid var(--color-inode-border);
+        color: var(--color-inode-label);
+    }
+
+    // ── Boolean ──────────────────────────────────────────────────────────────
+    //
+    // Filled for true, hollow for false. Legible in greyscale, and to a reader
+    // who cannot tell the two hues apart at all — which a two-colour dot would
+    // not be. NOT a checkbox: a checkbox is an affordance, and this row does not
+    // accept a click to toggle the value.
+    .mm-object__bool {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-weight: 500;
+        color: var(--color-inode-name);
+    }
+
+    .mm-object__bool-dot {
+        width: 9px;
+        height: 9px;
+        flex: none;
+        border-radius: 999px;
+    }
+
+    .mm-object__bool--true .mm-object__bool-dot {
+        background: var(--color-inode-bool-on);
+    }
+
+    .mm-object__bool--false {
+        color: var(--color-inode-label);
+
+        .mm-object__bool-dot {
+            border: 1.5px solid var(--color-inode-bool-off);
+        }
+    }
+
+    // ── Number with a unit ───────────────────────────────────────────────────
+    //
+    // The unit is mono and dimmed so the NUMBER is what the eye lands on: the
+    // unit is the same for every instance of the property, the number is not.
+    .mm-object__number {
+        color: var(--color-inode-name);
+        font-weight: 500;
+        white-space: nowrap;
+    }
+
+    .mm-object__unit {
+        font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+        font-size: 11px;
+        color: var(--color-inode-footer);
+        margin-left: 4px;
+    }
+
+    // ── Date ─────────────────────────────────────────────────────────────────
+    //
+    // Absolute first and always; the age is the dimmed annotation after it.
+    // Never relative alone — a model is a document, not a feed, and the date on
+    // a document is a fact that will still be quoted in a year.
+    .mm-object__date {
+        display: inline-flex;
+        align-items: baseline;
+        gap: 7px;
+        min-width: 0;
+    }
+
+    .mm-object__date-abs {
+        font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+        font-size: 12px;
+        color: var(--color-inode-name);
+    }
+
+    .mm-object__date-rel {
+        font-size: 11px;
+        color: var(--color-inode-footer);
+    }
+
+    // ── Progress ─────────────────────────────────────────────────────────────
+    //
+    // A fixed 64px track, not a percentage of the cell: two rows of the same
+    // node must be comparable by eye, and an elastic track makes 0.4 in a wide
+    // row look longer than 0.6 in a narrow one. The number always follows, so
+    // the exact value is never lost to the bar's rounding.
+    .mm-object__progress {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+    }
+
+    .mm-object__progress-track {
+        width: 64px;
+        height: 4px;
+        flex: none;
+        border-radius: 999px;
+        background: var(--color-inode-progress-track);
+        overflow: hidden;
+    }
+
+    .mm-object__progress-fill {
+        display: block;
+        height: 100%;
+        border-radius: 999px;
+        background: var(--color-inode-progress-fill);
+    }
+
+    .mm-object__progress-value {
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--color-inode-name);
+        white-space: nowrap;
+    }
+
+    // ── Code ─────────────────────────────────────────────────────────────────
+    //
+    // Declared in the metamodel, never inferred: a mono treatment applied by
+    // guess would put an expression face on a product name that happens to
+    // contain a dot.
+    .mm-object__code {
+        font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+        font-size: 12px;
+        color: var(--color-inode-name);
+        background: var(--color-inode-chip-bg);
+        padding: 2px 7px;
+        border-radius: 3px;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    // ── Broken reference ─────────────────────────────────────────────────────
+    //
+    // The red icon carries the severity, the strikethrough carries the meaning,
+    // and the row stays quiet enough that the model around it is still readable.
+    // One delete can break ten references; ten filled red pills would read as a
+    // system failure rather than as ten instances of one recoverable condition.
+    //
+    // Deliberately NOT the cyan reference treatment. A broken reference is not
+    // navigable, so it must not wear the affordance that says it is.
+    //
+    // Same 13px line box as the pill it replaces, so a target going missing
+    // never changes the row's height or the node's size.
+    .mm-object__broken {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-width: 0;
+        line-height: 20px;
+    }
+
+    .mm-object__broken-icon {
+        flex: none;
+        font-size: 11px;
+        color: var(--color-inode-broken);
+    }
+
+    .mm-object__broken-name {
+        color: var(--color-inode-footer);
+        text-decoration: line-through;
+        text-decoration-color: var(--color-inode-quiet);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     // Cyan is correct here: within the canvas, cyan is the interaction and
@@ -315,6 +501,31 @@
     // Same reason as the input: the chevron rule in EditorV2.scss is nested
     // under `.mm-field` and cannot reach these rows. Without a rule of its own
     // it would default to fully opaque and sit on every enum row at all times.
+    // The enum popover's trigger. It wraps whatever the library painted — a
+    // chip, or a swatch and its label — so the AFFORDANCE stays enum-specific
+    // while the RENDERING comes from the same component every other row uses.
+    // There is no enum renderer in the handoff: a literal reads as a chip, or as
+    // a swatch when the whole literal set qualifies, and only the popover is
+    // particular to an enumeration.
+    .mm-object__enum-slot {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-width: 0;
+        cursor: pointer;
+    }
+
+    // A literal the metamodel no longer declares. The warning colour has to be
+    // pushed onto the painted value rather than inherited: every renderer in
+    // the library sets its own colour, which is what keeps a row legible in
+    // both themes, and the same property makes it opaque to inheritance here.
+    .mm-object__enum-slot.mm-field__enum-stale {
+        .mm-object__scalar,
+        .mm-object__chip {
+            color: var(--color-warning);
+        }
+    }
+
     .mm-object__enum-chevron {
         flex: none;
         font-size: 8px;

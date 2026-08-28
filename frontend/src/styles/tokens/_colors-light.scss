@@ -448,6 +448,21 @@ $gradient-hover: linear-gradient(180deg, $slate-100 0%, $slate-200 100%);
      pill si scurirebbe lasciando trasparire la tela. */
   --color-inode-pill-hover: #{$slate-150};           /* = --color-bg-hover chiaro */
 
+  /* Row view library (2026-08-28, livello 3). One role per renderer that needs
+     a colour of its own; every other member of the library reuses the roles
+     above, because the handoff's rule is that no renderer introduces colour
+     which is not information. */
+  --color-inode-swatch-hairline: rgba(0, 0, 0, 0.08); /* inset, so #ffffff stays visible */
+  --color-inode-bool-on: #{$slate-700};              /* filled dot = true */
+  --color-inode-bool-off: #{$slate-300};             /* hollow dot border = false */
+  --color-inode-progress-track: #{$slate-200};
+  --color-inode-progress-fill: #{$slate-600};
+  --color-inode-emphasis: #{$slate-700};             /* winning rung: bar + index badge */
+  /* The one red in the node. A broken reference is an error, not an alarm: the
+     icon carries the severity and the strikethrough carries the meaning, so the
+     canvas stays readable with ten of them on it. */
+  --color-inode-broken: #ef4444;                     /* red-500 */
+
   /* Cyan — selection owns it, and the reference pill borrows it for navigation */
   --color-inode-ref-bg: #ecfeff;                     /* cyan-50 */
   --color-inode-ref-border: #a5f3fc;                 /* cyan-200 */

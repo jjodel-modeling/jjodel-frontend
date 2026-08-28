@@ -29,6 +29,8 @@ import type {
     ReferenceKind,
 } from '../types';
 import { setEdgeRefId } from '../sync/syncState';
+import { rememberRefTargetName, lastSeenRefTargetName } from '../nodes/brokenRefMemory';
+import { parseRowViewAnnotations } from '../nodes/rowViewAnnotations';
 import { displayTypeLabel } from '../types';
 import { readVertexLayout, type VertexLayout, type VertexLayoutSource } from '../viewpoint/layout/vertexLayout';
 import { getActiveLayoutKey } from '../viewpoint/layout/vertexLayoutAdapter';
@@ -338,15 +340,31 @@ function objectVertexToRFNode(vertex: any): Node<ObjectNodeData> {
                 try {
                     const vals = fv.values ?? [];
                     const names: string[] = [];
-                    const targets: Array<{ id: string; name: string }> = [];
+                    const targets: Array<{ id: string; name: string; broken?: boolean }> = [];
                     for (const v of vals) {
                         const target = typeof v === 'string' ? null : v;
                         if (target?.name) {
                             names.push(target.name);
                             // The id is what the reference pill needs to select and
                             // reveal the target; without it the pill is not navigable.
-                            if (target.id) targets.push({ id: target.id, name: target.name });
+                            if (target.id) {
+                                targets.push({ id: target.id, name: target.name });
+                                // Every resolving pass feeds the memory, so the name is
+                                // already known by the time the object is deleted.
+                                rememberRefTargetName(target.id, target.name);
+                            }
+                            continue;
                         }
+                        // A pointer that does not resolve. Deleting a DObject leaves
+                        // the inbound pointers in place (the reducer scrubs none), so
+                        // this is a BROKEN reference, not an empty slot — and it used
+                        // to be dropped here, which is why a deleted target looked
+                        // exactly like a property nobody had ever set.
+                        const danglingId = typeof v === 'string' ? v : (v?.id ?? '');
+                        if (!danglingId) continue;
+                        const lastKnown = lastSeenRefTargetName(danglingId);
+                        names.push(lastKnown);
+                        targets.push({ id: danglingId, name: lastKnown, broken: true });
                     }
                     values = names;
                     refTargets = targets;
@@ -381,6 +399,24 @@ function objectVertexToRFNode(vertex: any): Node<ObjectNodeData> {
                 } catch { /* proxy access can throw */ }
             }
 
+            // The metamodel declarations for this feature: the renderer override,
+            // and the unit and bounds the handoff forbids inferring from the name.
+            //
+            // Read through the L proxy, like every other metamodel fact in this
+            // function — `LModelElement.annotations` resolves the pointer list to
+            // LAnnotation proxies, so `.source` is there. A metamodel that
+            // declares nothing yields `{}` and every renderer falls back, which
+            // is the state of every model that predates this feature.
+            let declared: ReturnType<typeof parseRowViewAnnotations> = {};
+            try {
+                const anns = feature?.annotations ?? [];
+                if (anns.length > 0) {
+                    declared = parseRowViewAnnotations(
+                        anns.map((a: any) => (typeof a === 'string' ? undefined : a?.source)),
+                    );
+                }
+            } catch { /* proxy access can throw */ }
+
             features.push({
                 id: fv.id ?? `fv_${features.length}`,
                 featureName: feature?.name ?? 'unnamed',
@@ -392,6 +428,10 @@ function objectVertexToRFNode(vertex: any): Node<ObjectNodeData> {
                 values,
                 isMany,
                 refTargets,
+                rendererOverride: declared.renderer,
+                unit: declared.unit,
+                min: declared.min,
+                max: declared.max,
             });
         }
     } catch { /* proxy access can throw */ }

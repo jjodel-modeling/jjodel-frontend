@@ -48,13 +48,21 @@ export interface SingletonPillProps {
     selected?: boolean;
     title?: string;
     onClick?: (e: React.MouseEvent) => void;
+    /**
+     * Drawn before the label, inside the pill. The one caller is the `swatch`
+     * member of the Row view library, whose canvas form is «the singleton pill
+     * with the swatch square prepended» (Turno 5a). It goes inside rather than
+     * beside because the colour annotates the value and the pill IS the value —
+     * a square floating next to the pill would read as a second object.
+     */
+    leading?: React.ReactNode;
 }
 
 /**
  * The label, in two spans plus a separator, so the underline can span the name
  * alone and the two halves can carry different weights and colours.
  */
-function SingletonPill({ parts, variant, selected = false, title, onClick }: SingletonPillProps) {
+function SingletonPill({ parts, variant, selected = false, title, onClick, leading }: SingletonPillProps) {
     const { superclassName, instanceName } = parts;
 
     const className = [
@@ -69,6 +77,7 @@ function SingletonPill({ parts, variant, selected = false, title, onClick }: Sin
             title={title ?? (superclassName ? `${instanceName} : ${superclassName}` : instanceName)}
             onClick={onClick}
         >
+            {leading}
             {/* No abstract direct superclass means the name IS the complete
                 label: for a singleton the type carries no information the name
                 does not already carry, so nothing is printed in its place. */}

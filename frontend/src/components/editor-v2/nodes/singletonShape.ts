@@ -211,3 +211,36 @@ export function readSingletonInstanceInfo(
         label: singletonLabelParts(instanceName, readDirectSuperclasses(idlookup, classId)),
     };
 }
+
+/**
+ * The names of every concrete class that directly extends `superclassId`.
+ *
+ * This is the singleton encoding of an enumeration, and it exists so rule 3 of
+ * the colour ladder can run on a singleton drawn as a node. A metamodel that
+ * says `Color { Red, Green, Blue }` as an EEnum gives the ladder its literal
+ * set for free; one that says it as an abstract `Color` with three singleton
+ * subclasses is expressing the same closed set, and the same rule should reach
+ * the same answer. Testing the WHOLE set — not just the instance's own name —
+ * is the property that makes rule 3 safe, and it is preserved here.
+ *
+ * Backward-link iteration over `idlookup`, not `superclass.subclasses`: there
+ * is no such D field (the `static subclasses` on the runtime class is a
+ * different thing entirely), and a forward-link collection would be stale
+ * straight after a parse anyway (CLAUDE.md §3.6). The canonical shape of this
+ * scan is `buildImportSummary.ts`'s `countDescendantsByFather`.
+ */
+export function readSiblingSubclassNames(idlookup: Lookup, superclassId: string | null | undefined): string[] {
+    if (!idlookup || !superclassId) return [];
+    const out: string[] = [];
+    for (const id in idlookup) {
+        const e = idlookup[id];
+        if (e?.className !== 'DClass' || e.abstract) continue;
+        const ext = e.extends;
+        if (!Array.isArray(ext)) continue;
+        for (const supId of ext) {
+            const sid = typeof supId === 'string' ? supId : supId?.id;
+            if (sid === superclassId) { if (e.name) out.push(e.name); break; }
+        }
+    }
+    return out;
+}

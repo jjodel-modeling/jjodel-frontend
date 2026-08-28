@@ -2,11 +2,19 @@
  * valueRenderer — which visual treatment a slot of an instance node gets.
  *
  * Design handoff: docs/design/design_handoff_instance_node/README.md, "Value
- * renderers" and "Value-renderer detection".
+ * renderers" and "Value-renderer detection", and `Instance Node Proposal.dc.html`
+ * Turno 5a, which is the specimen every geometry and colour value comes from.
  *
- * Two of the five renderers are decided by the model, not inferred: a slot of a
- * DReference is a `reference`, a slot holding more than one value is a
- * `collection`. The inference only ever answers ONE question — is this scalar a
+ * This is the pure half of the Row view library: the nine renderers plus `dash`
+ * for an empty slot, `collection` for the chip layout, and `brokenRef` for a
+ * reference whose target is gone. The presentational half is `RowValue.tsx`,
+ * which paints what this module decides and nothing else — the same split as
+ * `singletonShape.ts` / `SingletonPill.tsx`, and for the same reason: one
+ * decision, two positions, no way for them to drift.
+ *
+ * Most of the library is settled by the MODEL rather than inferred. Brokenness,
+ * emptiness, reference-ness, cardinality, and the declared type all decide
+ * outright. The inference only ever answers ONE question — is this scalar a
  * colour — and it answers it with the handoff's priority ladder:
  *
  *   1. the metamodel declaration (the only authoritative source)
@@ -15,10 +23,15 @@
  *   4. the attribute name, only to break a tie between two already-plausible
  *      readings — never as a sole trigger
  *
- * Every decision carries the rule that produced it in `reason`. The handoff
- * requires the inference to be visible and reversible; this slice makes it
- * visible (the row's tooltip), and `reason` is the string the correction menu
- * of the next slice will show and then promote to a rule-1 declaration.
+ * Three renderers take no inference at all, by design: a unit, a pair of bounds
+ * and a mono treatment come from a metamodel annotation or they do not happen.
+ * The handoff says so three separate times, and the acceptance criterion is
+ * explicit that naming an attribute `durationSeconds` must not print a unit.
+ *
+ * Every decision carries the rule that produced it in `reason`, shown as the
+ * row's tooltip. `traceLadder` reports the SAME walk rung by rung, including
+ * the rungs that did not fire and the ones never reached, which is what the
+ * inspector shows and what makes rule 4 safe to keep in the ladder at all.
  */
 
 // ─── CSS colour names ────────────────────────────────────────────────────────
@@ -140,14 +153,147 @@ export function toCssColor(raw: string): string | null {
     return null;
 }
 
+// ─── Type families ───────────────────────────────────────────────────────────
+//
+// The metamodel primitives, from `ShortAttribETypes` (`common/U.tsx:3322`).
+// Matching is case-insensitive and covers the bare name, because an imported
+// metamodel may name a type `EInt` or carry a custom EDataType that shadows it;
+// only the exact primitive names decide, never a substring.
+
+const BOOLEAN_TYPE_NAMES: ReadonlySet<string> = new Set(['eboolean', 'boolean', 'bool']);
+
+const DATE_TYPE_NAMES: ReadonlySet<string> = new Set(['edate', 'date', 'datetime', 'timestamp']);
+
+const NUMERIC_TYPE_NAMES: ReadonlySet<string> = new Set([
+    'ebyte', 'eshort', 'eint', 'einteger', 'elong', 'efloat', 'edouble',
+    'ebigdecimal', 'ebiginteger', 'int', 'integer', 'long', 'float', 'double',
+    'number', 'decimal',
+]);
+
+const normType = (t: string | undefined | null): string => (t ?? '').trim().toLowerCase();
+
+export function isBooleanType(typeName?: string): boolean { return BOOLEAN_TYPE_NAMES.has(normType(typeName)); }
+export function isDateType(typeName?: string): boolean { return DATE_TYPE_NAMES.has(normType(typeName)); }
+export function isNumericType(typeName?: string): boolean { return NUMERIC_TYPE_NAMES.has(normType(typeName)); }
+
+/**
+ * `true` / `false` from a slot value. Returns null when the string is neither,
+ * which keeps a malformed EBoolean rendering as text instead of silently
+ * reading as false — a dot that says "false" about a value that says `maybe`
+ * would be a lie the row cannot be argued with.
+ */
+export function parseBoolean(raw: string): boolean | null {
+    const v = raw.trim().toLowerCase();
+    if (v === 'true' || v === '1' || v === 'yes') return true;
+    if (v === 'false' || v === '0' || v === 'no') return false;
+    return null;
+}
+
+/** A finite number from a slot value, or null. */
+export function parseNumber(raw: string): number | null {
+    const v = raw.trim();
+    if (v === '') return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+}
+
+// ─── Dates ───────────────────────────────────────────────────────────────────
+
+/**
+ * The absolute half of the date renderer: `2026-08-28`.
+ *
+ * The date is printed from the string's own calendar fields when it already is
+ * an ISO date, and only parsed when it is not. `new Date('2026-08-28')` is UTC
+ * midnight, and formatting that back in a timezone west of Greenwich prints
+ * `2026-08-27` — a model is a document, and a document that changes date when
+ * opened in another office is a bug, not a rounding.
+ */
+export function absoluteDate(raw: string): string | null {
+    const v = raw.trim();
+    if (!v) return null;
+    const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(v);
+    if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
+    const t = Date.parse(v);
+    if (Number.isNaN(t)) return null;
+    const d = new Date(t);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/**
+ * The relative half: `19h`, `3g`, `2 mesi`. Never shown alone — «a model is a
+ * document, not a feed» — so this is only ever the dimmed suffix after the ISO
+ * date, and returning null simply drops the suffix.
+ *
+ * `now` is a parameter rather than a `Date.now()` call so the renderer is a
+ * pure function of its inputs and the tests do not have to freeze the clock.
+ */
+export function relativeAge(raw: string, now: number): string | null {
+    const t = Date.parse(raw.trim());
+    if (Number.isNaN(t)) return null;
+    const secs = Math.round((now - t) / 1000);
+    const abs = Math.abs(secs);
+    if (abs < 60) return 'ora';
+    if (abs < 3600) return `${Math.floor(abs / 60)}min`;
+    if (abs < 86400) return `${Math.floor(abs / 3600)}h`;
+    if (abs < 2592000) return `${Math.floor(abs / 86400)}g`;
+    if (abs < 31536000) {
+        const m = Math.floor(abs / 2592000);
+        return m === 1 ? '1 mese' : `${m} mesi`;
+    }
+    const y = Math.floor(abs / 31536000);
+    return y === 1 ? '1 anno' : `${y} anni`;
+}
+
 // ─── The decision ────────────────────────────────────────────────────────────
 
-export type RendererKind = 'empty' | 'scalar' | 'color' | 'collection' | 'reference';
+/**
+ * The library, one member per renderer.
+ *
+ * `dash` is the confirmed default for an empty slot and `collection` is the
+ * layout the chips sit in, so the nine renderers of the handoff are the rest.
+ * `brokenRef` is a state of `refPill`, not a tenth notation: it renders where a
+ * pill would have and says why there is no pill.
+ */
+export type RendererKind =
+    | 'dash'
+    | 'swatch'
+    | 'enumChip'
+    | 'refPill'
+    | 'boolean'
+    | 'numberUnit'
+    | 'date'
+    | 'truncatedText'
+    | 'progress'
+    | 'code'
+    | 'collection'
+    | 'brokenRef';
+
+/** Every kind that can be declared by a rule-1 annotation. */
+export const DECLARABLE_RENDERERS: readonly RendererKind[] = [
+    'swatch', 'enumChip', 'boolean', 'numberUnit', 'date', 'truncatedText', 'progress', 'code',
+];
+
+export function isDeclarableRenderer(kind: string): kind is RendererKind {
+    return (DECLARABLE_RENDERERS as readonly string[]).includes(kind);
+}
 
 export interface RendererDecision {
     kind: RendererKind;
-    /** For `color`: a CSS colour string the swatch can paint. */
+    /** For `swatch`: a CSS colour string the square can paint. */
     swatch?: string;
+    /** For `numberUnit` and `progress`: the declared unit, never an inferred one. */
+    unit?: string;
+    /** For `boolean`: the parsed value. */
+    boolValue?: boolean;
+    /** For `date`: the absolute ISO half. The relative half is computed at render. */
+    dateIso?: string;
+    /** For `progress`: the declared bounds and the position between them, 0..1. */
+    min?: number;
+    max?: number;
+    ratio?: number;
+    /** For `numberUnit` and `progress`: the parsed number. */
+    numValue?: number;
     /** Which rule decided, in the handoff's own words. Shown as the row tooltip. */
     reason: string;
 }
@@ -167,6 +313,21 @@ export interface SlotShape {
     enumLiteralNames?: string[];
     /** Name of the metamodel feature, e.g. `color`, `tags`. */
     featureName?: string;
+    /**
+     * Rule-1 renderer declaration, from `jjodel/renderer=…`. Settles the
+     * question outright and stops the ladder — see `rowViewAnnotations.ts`.
+     */
+    rendererOverride?: string;
+    /**
+     * Unit suffix, from `jjodel/unit=…` and from nowhere else. The handoff is
+     * explicit: never inferred from the attribute name.
+     */
+    unit?: string;
+    /** Bounds, from `jjodel/min=…` and `jjodel/max=…`. `progress` needs BOTH. */
+    min?: number;
+    max?: number;
+    /** The reference points at an object that no longer resolves. */
+    isBroken?: boolean;
 }
 
 /** A slot holds nothing: no values, or a single blank one. */
@@ -177,64 +338,206 @@ export function isEmptySlot(slot: SlotShape): boolean {
     return slot.value == null || String(slot.value).trim() === '' || slot.value === '—';
 }
 
+// ─── The colour ladder, rung by rung ─────────────────────────────────────────
+
+export type RungStatus = 'fired' | 'not-fired' | 'not-evaluated';
+
+export interface LadderRung {
+    /** 1..4, the handoff's own numbering. */
+    index: number;
+    /** The rung's name, as the inspector prints it. */
+    title: string;
+    status: RungStatus;
+    /**
+     * What it found, or why it did not fire. Empty for a rung never reached:
+     * a rung that was not evaluated has no evidence to state, and inventing one
+     * would be the exact failure the whole-ladder display exists to prevent.
+     */
+    evidence: string;
+}
+
+export interface LadderTrace {
+    rungs: LadderRung[];
+    /** The colour the winning rung produced, when one did. */
+    swatch: string | null;
+    /** Index of the winning rung, or null when none fired. */
+    winner: number | null;
+}
+
+const RUNG_TITLES = [
+    'Dichiarazione nel metamodello',
+    'Valore parsato',
+    'Enum di colori CSS',
+    "Nome dell'attributo",
+];
+
 /**
- * The colour ladder. Returns the swatch and the rule that produced it, or null
- * when no rule fires. Exported on its own so the tests can walk the ladder rung
- * by rung, and so the correction menu of the next slice can re-run it.
+ * Walk all four rungs and report every one of them.
+ *
+ * This is the inspector's data, and it is deliberately NOT a by-product of
+ * `detectColor`: «a heuristic that shows only its answer cannot be argued with,
+ * and the user's only recourse is to override every property by hand. Showing
+ * the discarded rungs is what makes rule 4 safe to keep in the ladder at all.»
+ * So the trace states, for each rung, either what it found or why it did not
+ * fire — and rungs after the winner are marked `not-evaluated` rather than
+ * silently omitted, because "it did not apply" and "we never asked" are
+ * different facts about the model.
  */
-export function detectColor(slot: SlotShape): { swatch: string; reason: string } | null {
+export function traceLadder(slot: SlotShape): LadderTrace {
     const value = (slot.value ?? '').trim();
-    if (!value) return null;
-
-    const declaredType = (slot.typeName ?? '').trim().toLowerCase();
     const painted = toCssColor(value);
+    const declaredType = normType(slot.typeName);
+    const featureName = (slot.featureName ?? '').trim();
+    const literals = slot.enumLiteralNames ?? [];
 
-    // Rule 1 — the metamodel declares it. The only source that can be right for
-    // an enum literal carrying no RGB of its own. A declaration with a value the
-    // browser cannot paint yields no swatch, and the handoff is clear that the
-    // swatch never replaces the text: without one there is nothing to draw, so
-    // the slot falls through to `scalar` rather than rendering a blank chip.
+    const rungs: LadderRung[] = RUNG_TITLES.map((title, i) => ({
+        index: i + 1, title, status: 'not-evaluated' as RungStatus, evidence: '',
+    }));
+    const fire = (i: number, evidence: string) => { rungs[i].status = 'fired'; rungs[i].evidence = evidence; };
+    const miss = (i: number, evidence: string) => { rungs[i].status = 'not-fired'; rungs[i].evidence = evidence; };
+
+    // Rung 1 — the metamodel declaration, the only authoritative source.
+    if (slot.rendererOverride) {
+        fire(0, `annotazione jjodel/renderer=${slot.rendererOverride}`);
+        return { rungs, swatch: slot.rendererOverride === 'swatch' ? painted : null, winner: 1 };
+    }
     if (COLOR_TYPE_NAMES.has(declaredType) && painted) {
-        return { swatch: painted, reason: `declared ${slot.typeName} in the metamodel` };
+        fire(0, `tipo dichiarato ${slot.typeName}`);
+        return { rungs, swatch: painted, winner: 1 };
     }
+    miss(0, COLOR_TYPE_NAMES.has(declaredType)
+        ? `il tipo ${slot.typeName} è dichiarato colore, ma «${value}» non è dipingibile`
+        : (featureName ? `nessuna annotazione su ${featureName}` : 'nessuna annotazione sulla proprietà'));
 
-    // Rule 2 — the value parses. Unambiguous, no model knowledge needed.
+    // Rung 2 — the value, parsed syntactically. A lexer, not a heuristic.
     if (isSyntacticColor(value) && painted) {
-        return { swatch: painted, reason: 'parsed from the value syntax' };
+        fire(1, `«${value}» è un colore letterale`);
+        return { rungs, swatch: painted, winner: 2 };
     }
+    miss(1, value ? `«${value}» non è un colore letterale` : 'lo slot non ha valore');
 
-    // Rule 3 — every literal of the enumeration is a colour name. Testing the
-    // WHOLE literal set, not the single value, is what makes this safe.
-    const literals = slot.enumLiteralNames;
-    if (literals && literals.length > 0 && painted) {
-        if (literals.every((l) => isNamedColor(l))) {
-            return { swatch: painted, reason: 'inferred from: CSS colour enum' };
+    // Rung 3 — EVERY literal of the enumeration is a colour name. Testing the
+    // whole literal set rather than the single value is what makes this safe.
+    if (literals.length > 0) {
+        const offender = literals.find((l) => !isNamedColor(l));
+        if (!offender && painted) {
+            const shown = literals.slice(0, 6).join(', ');
+            const enumName = slot.typeName ? ` di ${slot.typeName}` : '';
+            fire(2, `Tutti e ${literals.length} i literal${enumName} sono nomi colore CSS: ${shown}`);
+            return { rungs, swatch: painted, winner: 3 };
         }
+        miss(2, offender
+            ? `«${offender}» non è un nome colore CSS`
+            : `«${value}» non è dipingibile`);
+    } else {
+        miss(2, 'la proprietà non è tipata su una enumerazione');
     }
 
-    // Rule 4 — the attribute name, and only as a tie-break: the value must
+    // Rung 4 — the attribute name, and ONLY as a tie-break: the value must
     // already name a colour, so this never triggers a colour on its own.
-    if (painted && isNamedColor(value)) {
-        const fname = (slot.featureName ?? '').trim().toLowerCase();
-        if (COLOR_NAME_HINTS.has(fname)) {
-            return { swatch: painted, reason: `tie-break on the name "${slot.featureName}"` };
-        }
+    if (painted && isNamedColor(value) && COLOR_NAME_HINTS.has(featureName.toLowerCase())) {
+        fire(3, `pareggio risolto sul nome «${featureName}»`);
+        return { rungs, swatch: painted, winner: 4 };
     }
+    miss(3, !isNamedColor(value)
+        ? `«${value}» non nomina un colore, quindi non c'è pareggio da risolvere`
+        : `«${featureName || 'la proprietà'}» non è un nome che suggerisce un colore`);
 
-    return null;
+    return { rungs, swatch: null, winner: null };
 }
 
 /**
- * The renderer for one slot. Order matters: emptiness and cardinality come from
- * the model and settle the question before any inference runs.
+ * The colour ladder. Returns the swatch and the rule that produced it, or null
+ * when no rule fires. Exported on its own so the tests can walk the ladder rung
+ * by rung, and so the inspector can re-run it after a correction.
+ */
+export function detectColor(slot: SlotShape): { swatch: string; reason: string } | null {
+    const trace = traceLadder(slot);
+    if (!trace.swatch || trace.winner == null) return null;
+    const reason = trace.winner === 1
+        ? (slot.rendererOverride ? 'declared in the metamodel' : `declared ${slot.typeName} in the metamodel`)
+        : trace.winner === 2
+            ? 'parsed from the value syntax'
+            : trace.winner === 3
+                ? 'inferred from: CSS colour enum'
+                : `tie-break on the name "${slot.featureName}"`;
+    return { swatch: trace.swatch, reason };
+}
+
+// ─── The renderer ────────────────────────────────────────────────────────────
+
+/**
+ * Build the decision for a kind that carries payload, so the override path and
+ * the inferred path produce byte-identical decisions. A declared `progress`
+ * with no bounds has to fall back exactly the way an inferred one does.
+ */
+function decide(kind: RendererKind, slot: SlotShape, reason: string): RendererDecision {
+    const value = (slot.value ?? '').trim();
+
+    switch (kind) {
+        case 'swatch': {
+            const painted = toCssColor(value);
+            // The swatch never replaces the text, so with nothing to paint
+            // there is no swatch to draw and the value stays a string.
+            return painted
+                ? { kind: 'swatch', swatch: painted, reason }
+                : { kind: 'truncatedText', reason: `${reason}, ma «${value}» non è dipingibile` };
+        }
+        case 'boolean': {
+            const b = parseBoolean(value);
+            return b === null
+                ? { kind: 'truncatedText', reason: `${reason}, ma «${value}» non è né true né false` }
+                : { kind: 'boolean', boolValue: b, reason };
+        }
+        case 'date': {
+            const iso = absoluteDate(value);
+            return iso
+                ? { kind: 'date', dateIso: iso, reason }
+                : { kind: 'truncatedText', reason: `${reason}, ma «${value}» non è una data` };
+        }
+        case 'progress': {
+            const n = parseNumber(value);
+            const { min, max } = slot;
+            // Both bounds, distinct, and a number to place between them.
+            // «Without bounds it falls back to numberUnit» — and to the SAME
+            // numberUnit, which is why this returns that decision rather than a
+            // progress one with a null ratio.
+            if (n == null || min == null || max == null || max === min) {
+                return decide('numberUnit', slot, reason);
+            }
+            const ratio = Math.min(1, Math.max(0, (n - min) / (max - min)));
+            return { kind: 'progress', numValue: n, min, max, ratio, unit: slot.unit, reason };
+        }
+        case 'numberUnit': {
+            const n = parseNumber(value);
+            return { kind: 'numberUnit', numValue: n ?? undefined, unit: slot.unit, reason };
+        }
+        default:
+            return { kind, reason };
+    }
+}
+
+/**
+ * The renderer for one slot.
+ *
+ * Order matters, and it is the handoff's own: what the MODEL settles comes
+ * before anything inferred. Brokenness, emptiness, reference-ness and
+ * cardinality are all facts about the slot; only after them does the ladder run
+ * and only ever to answer "is this a colour".
  */
 export function detectValueRenderer(slot: SlotShape): RendererDecision {
+    // A dangling pointer outranks emptiness: a reference that HELD something and
+    // lost it is not the same fact as one never set, and the row has to say so.
+    if (slot.isBroken) {
+        return { kind: 'brokenRef', reason: 'il target della reference non esiste più' };
+    }
+
     if (isEmptySlot(slot)) {
-        return { kind: 'empty', reason: 'the slot holds no value' };
+        return { kind: 'dash', reason: 'the slot holds no value' };
     }
 
     if (slot.isReference) {
-        return { kind: 'reference', reason: 'the slot is a reference to another object' };
+        return { kind: 'refPill', reason: 'the slot is a reference to another object' };
     }
 
     const count = slot.values?.length ?? 0;
@@ -242,8 +545,39 @@ export function detectValueRenderer(slot: SlotShape): RendererDecision {
         return { kind: 'collection', reason: 'the slot is multi-valued' };
     }
 
-    const colour = detectColor(slot);
-    if (colour) return { kind: 'color', swatch: colour.swatch, reason: colour.reason };
+    // ── Rule 1, the whole of it ──
+    //
+    // A renderer declaration is a rule-1 declaration exactly like a `Color`
+    // type is, so it is honoured here and the ladder never runs. This is the
+    // mechanism behind «a user correction promotes to the metamodel, and the
+    // heuristic stops running for that property».
+    if (slot.rendererOverride && isDeclarableRenderer(slot.rendererOverride)) {
+        return decide(slot.rendererOverride, slot, `dichiarato jjodel/renderer=${slot.rendererOverride}`);
+    }
 
-    return { kind: 'scalar', reason: 'no colour rule fired' };
+    // ── The model's own type, before any inference ──
+    //
+    // A declared type is a fact, and it outranks a value that happens to read
+    // like something else: `0xFF00AA` in an EInt is a number written in hex,
+    // not a colour, and only rule 1 may say otherwise.
+    if (isBooleanType(slot.typeName)) return decide('boolean', slot, 'tipo EBoolean');
+    if (isDateType(slot.typeName)) return decide('date', slot, 'tipo data');
+    if (isNumericType(slot.typeName)) {
+        // Bounds decide between the two numeric renderers; the unit rides along
+        // with either, and comes from the annotation or not at all.
+        return decide(slot.min != null && slot.max != null ? 'progress' : 'numberUnit', slot, 'tipo numerico');
+    }
+
+    // ── The colour ladder ──
+    const colour = detectColor(slot);
+    if (colour) return { kind: 'swatch', swatch: colour.swatch, reason: colour.reason };
+
+    // ── An enumeration whose literals are not colours ──
+    if ((slot.enumLiteralNames?.length ?? 0) > 0) {
+        return { kind: 'enumChip', reason: 'the slot is typed on an enumeration' };
+    }
+
+    // The string renderer, and the library's floor: one line, ellipsis, and the
+    // whole value in the tooltip. Every slot has a rendering.
+    return { kind: 'truncatedText', reason: 'no colour rule fired' };
 }

@@ -9,12 +9,16 @@
 
 import { describe, it, expect } from 'vitest';
 import {
+    absoluteDate,
     detectColor,
     detectValueRenderer,
     isEmptySlot,
     isNamedColor,
     isSyntacticColor,
+    parseBoolean,
+    relativeAge,
     toCssColor,
+    traceLadder,
 } from '../valueRenderer';
 
 describe('isSyntacticColor', () => {
@@ -161,15 +165,19 @@ describe('detectColor — rung 4, the name, only as a tie-break', () => {
     });
 });
 
-describe('detectValueRenderer', () => {
+
+describe('detectValueRenderer — what the model settles', () => {
     it('settles emptiness before anything else', () => {
-        expect(detectValueRenderer({ value: '', isReference: true }).kind).toBe('empty');
-        expect(detectValueRenderer({ value: '—', isReference: true }).kind).toBe('empty');
+        expect(detectValueRenderer({ value: '', isReference: true }).kind).toBe('dash');
+        expect(detectValueRenderer({ value: '—', isReference: true }).kind).toBe('dash');
+    });
+
+    it('a broken reference outranks emptiness: losing a target is not the same fact as never having one', () => {
+        expect(detectValueRenderer({ value: '', isReference: true, isBroken: true }).kind).toBe('brokenRef');
     });
 
     it('reads a reference from the model, not from the value', () => {
-        const d = detectValueRenderer({ value: 'Config', isReference: true });
-        expect(d.kind).toBe('reference');
+        expect(detectValueRenderer({ value: 'Config', isReference: true }).kind).toBe('refPill');
     });
 
     it('reads a collection from cardinality, and a declared many with one element is still a collection', () => {
@@ -178,27 +186,219 @@ describe('detectValueRenderer', () => {
     });
 
     it('a single-valued slot that happens to hold one value is not a collection', () => {
-        expect(detectValueRenderer({ value: 'Green', values: ['Green'] }).kind).toBe('scalar');
+        expect(detectValueRenderer({ value: 'Green', values: ['Green'] }).kind).toBe('truncatedText');
     });
 
     it('cardinality outranks the colour ladder: a colour list renders as chips', () => {
-        const d = detectValueRenderer({
-            value: 'Green',
-            values: ['Green', 'Red'],
-            typeName: 'Color',
-        });
+        const d = detectValueRenderer({ value: 'Green', values: ['Green', 'Red'], typeName: 'Color' });
         expect(d.kind).toBe('collection');
     });
 
     it('paints the swatch of a scalar colour and says which rule decided', () => {
         const d = detectValueRenderer({ value: '#22c55e', values: ['#22c55e'], featureName: 'color' });
-        expect(d.kind).toBe('color');
+        expect(d.kind).toBe('swatch');
         expect(d.swatch).toBe('#22c55e');
         expect(d.reason).toContain('syntax');
     });
 
-    it('falls back to scalar when no rung fires', () => {
-        const d = detectValueRenderer({ value: 'Shape_0', featureName: 'label' });
-        expect(d.kind).toBe('scalar');
+    it('falls back to the text renderer when no rung fires', () => {
+        expect(detectValueRenderer({ value: 'Shape_0', featureName: 'label' }).kind).toBe('truncatedText');
+    });
+
+    it('an enumeration whose literals are not colours renders as a chip', () => {
+        const d = detectValueRenderer({
+            value: 'DASHED', typeName: 'Stroke',
+            enumLiteralNames: ['SOLID', 'DASHED', 'DOTTED'],
+        });
+        expect(d.kind).toBe('enumChip');
+    });
+
+    it('an enumeration whose literals are ALL colours takes the swatch instead', () => {
+        const d = detectValueRenderer({
+            value: 'Green', typeName: 'Palette',
+            enumLiteralNames: ['Red', 'Green', 'Blue'],
+        });
+        expect(d.kind).toBe('swatch');
+    });
+});
+
+describe('detectValueRenderer — the typed renderers', () => {
+    it('EBoolean renders as a boolean, with the parsed value', () => {
+        expect(detectValueRenderer({ value: 'true', typeName: 'EBoolean' }))
+            .toMatchObject({ kind: 'boolean', boolValue: true });
+        expect(detectValueRenderer({ value: 'false', typeName: 'EBoolean' }))
+            .toMatchObject({ kind: 'boolean', boolValue: false });
+    });
+
+    it('an EBoolean holding neither true nor false stays text rather than claiming false', () => {
+        expect(detectValueRenderer({ value: 'maybe', typeName: 'EBoolean' }).kind).toBe('truncatedText');
+    });
+
+    it('EDate renders as a date, absolute half first', () => {
+        const d = detectValueRenderer({ value: '2026-08-28', typeName: 'EDate' });
+        expect(d.kind).toBe('date');
+        expect(d.dateIso).toBe('2026-08-28');
+    });
+
+    it('a numeric type with no unit annotation shows NO unit', () => {
+        // The acceptance criterion, stated as a test: naming the attribute after
+        // a unit must change nothing. Only `jjodel/unit=` puts a unit on a row.
+        const named = detectValueRenderer({ value: '240', typeName: 'EInt', featureName: 'widthPx' });
+        expect(named.kind).toBe('numberUnit');
+        expect(named.unit).toBeUndefined();
+
+        const declared = detectValueRenderer({ value: '240', typeName: 'EInt', featureName: 'width', unit: 'px' });
+        expect(declared.unit).toBe('px');
+    });
+
+    it('a numeric type with BOTH bounds renders progress, and the ratio is the position between them', () => {
+        const d = detectValueRenderer({ value: '0.68', typeName: 'EDouble', min: 0, max: 1 });
+        expect(d.kind).toBe('progress');
+        expect(d.ratio).toBeCloseTo(0.68, 5);
+    });
+
+    it('removing either bound falls back to numberUnit, with nothing else changed', () => {
+        const both = detectValueRenderer({ value: '5', typeName: 'EInt', min: 0, max: 10, unit: 'kg' });
+        const noMax = detectValueRenderer({ value: '5', typeName: 'EInt', min: 0, unit: 'kg' });
+        const noMin = detectValueRenderer({ value: '5', typeName: 'EInt', max: 10, unit: 'kg' });
+        expect(both.kind).toBe('progress');
+        expect(noMax.kind).toBe('numberUnit');
+        expect(noMin.kind).toBe('numberUnit');
+        // The unit rides along either way: the fallback changes the renderer and
+        // nothing else about how the value reads.
+        expect(noMax.unit).toBe('kg');
+        expect(noMin.unit).toBe('kg');
+    });
+
+    it('degenerate bounds fall back too rather than dividing by zero', () => {
+        expect(detectValueRenderer({ value: '5', typeName: 'EInt', min: 3, max: 3 }).kind).toBe('numberUnit');
+    });
+
+    it('the ratio is clamped, so a value outside its declared range still paints', () => {
+        expect(detectValueRenderer({ value: '99', typeName: 'EInt', min: 0, max: 10 }).ratio).toBe(1);
+        expect(detectValueRenderer({ value: '-5', typeName: 'EInt', min: 0, max: 10 }).ratio).toBe(0);
+    });
+
+    it('a declared type outranks a value that merely looks like something else', () => {
+        // `0xFF00AA` is a colour by rule 2, but in an EInt it is a number written
+        // in hex. Only a rule-1 declaration may say otherwise.
+        expect(detectValueRenderer({ value: '0xFF00AA', typeName: 'EInt' }).kind).toBe('numberUnit');
+    });
+});
+
+describe('detectValueRenderer — the rule-1 override', () => {
+    it('a declared renderer wins outright', () => {
+        const d = detectValueRenderer({ value: 'self.width > 0', typeName: 'EString', rendererOverride: 'code' });
+        expect(d.kind).toBe('code');
+    });
+
+    it('the override beats the declared type, which is what makes it an override', () => {
+        expect(detectValueRenderer({ value: '3', typeName: 'EInt', rendererOverride: 'truncatedText' }).kind)
+            .toBe('truncatedText');
+    });
+
+    it('a declared renderer whose value cannot support it degrades instead of drawing a lie', () => {
+        // Declaring `swatch` on `Bananas` yields no paintable colour, and the
+        // handoff is explicit that the swatch never replaces the text — so the
+        // value stays readable rather than becoming a blank chip.
+        expect(detectValueRenderer({ value: 'Bananas', rendererOverride: 'swatch' }).kind).toBe('truncatedText');
+    });
+
+    it('an unknown renderer name is ignored rather than blanking the row', () => {
+        expect(detectValueRenderer({ value: 'Shape_0', rendererOverride: 'hologram' }).kind).toBe('truncatedText');
+    });
+
+    it('brokenness and cardinality still outrank it: they are facts, not inferences', () => {
+        expect(detectValueRenderer({ value: 'x', isBroken: true, rendererOverride: 'code' }).kind).toBe('brokenRef');
+        expect(detectValueRenderer({ value: 'a', values: ['a', 'b'], rendererOverride: 'code' }).kind).toBe('collection');
+    });
+});
+
+describe('traceLadder — the whole ladder, not the outcome', () => {
+    const colourEnum = {
+        value: 'Green',
+        typeName: 'Palette',
+        featureName: 'color',
+        enumLiteralNames: ['Red', 'Green', 'Blue'],
+    };
+
+    it('reports four rungs, always', () => {
+        expect(traceLadder(colourEnum).rungs).toHaveLength(4);
+        expect(traceLadder({ value: '' }).rungs).toHaveLength(4);
+    });
+
+    it('the handoff worked example: rung 3 wins and rung 4 is never evaluated', () => {
+        const t = traceLadder(colourEnum);
+        expect(t.winner).toBe(3);
+        expect(t.rungs[0].status).toBe('not-fired');
+        expect(t.rungs[1].status).toBe('not-fired');
+        expect(t.rungs[2].status).toBe('fired');
+        expect(t.rungs[3].status).toBe('not-evaluated');
+    });
+
+    it('a discarded rung states WHY it did not fire, which is what makes rule 4 safe to keep', () => {
+        const t = traceLadder(colourEnum);
+        expect(t.rungs[0].evidence).toContain('nessuna annotazione');
+        expect(t.rungs[1].evidence).toContain('non è un colore letterale');
+    });
+
+    it('the winning rung states its evidence, not just its verdict', () => {
+        const t = traceLadder(colourEnum);
+        // «all 3 literals of Palette are CSS colour names: Red, Green, Blue»
+        expect(t.rungs[2].evidence).toContain('3');
+        expect(t.rungs[2].evidence).toContain('Palette');
+        expect(t.rungs[2].evidence).toContain('Red, Green, Blue');
+    });
+
+    it('an unreached rung carries no evidence: inventing one is the failure this panel prevents', () => {
+        const t = traceLadder(colourEnum);
+        expect(t.rungs[3].evidence).toBe('');
+    });
+
+    it('a rule-1 override stops the ladder at rung 1', () => {
+        const t = traceLadder({ ...colourEnum, rendererOverride: 'enumChip' });
+        expect(t.winner).toBe(1);
+        expect(t.rungs[0].evidence).toContain('jjodel/renderer=enumChip');
+        expect(t.rungs[1].status).toBe('not-evaluated');
+        expect(t.rungs[2].status).toBe('not-evaluated');
+        expect(t.rungs[3].status).toBe('not-evaluated');
+    });
+
+    it('rung 3 names the literal that disqualified the set', () => {
+        const t = traceLadder({ value: 'Green', typeName: 'Status', enumLiteralNames: ['Green', 'Pending'] });
+        expect(t.rungs[2].status).toBe('not-fired');
+        expect(t.rungs[2].evidence).toContain('Pending');
+    });
+
+    it('with no rung firing every one of the four is reported as asked and answered', () => {
+        const t = traceLadder({ value: 'Shape_0', featureName: 'label' });
+        expect(t.winner).toBeNull();
+        expect(t.rungs.every(r => r.status === 'not-fired')).toBe(true);
+    });
+});
+
+describe('boolean, date and age helpers', () => {
+    it('parses the words and the digits, and nothing else', () => {
+        expect(parseBoolean('TRUE')).toBe(true);
+        expect(parseBoolean('0')).toBe(false);
+        expect(parseBoolean('maybe')).toBeNull();
+    });
+
+    it('an ISO date is read from its own calendar fields, not through a timezone', () => {
+        // `new Date('2026-08-28')` is UTC midnight; formatting it back west of
+        // Greenwich prints the 27th. A model is a document, and a document must
+        // not change date when opened in another office.
+        expect(absoluteDate('2026-08-28')).toBe('2026-08-28');
+        expect(absoluteDate('2026-08-28T23:30:00Z')).toBe('2026-08-28');
+        expect(absoluteDate('not a date')).toBeNull();
+    });
+
+    it('the age is coarse, and it is only ever the suffix', () => {
+        const now = Date.parse('2026-08-28T20:00:00Z');
+        expect(relativeAge('2026-08-28T01:00:00Z', now)).toBe('19h');
+        expect(relativeAge('2026-08-25T20:00:00Z', now)).toBe('3g');
+        expect(relativeAge('2026-06-28T20:00:00Z', now)).toBe('2 mesi');
+        expect(relativeAge('2025-06-28T20:00:00Z', now)).toBe('1 anno');
+        expect(relativeAge('not a date', now)).toBeNull();
     });
 });
