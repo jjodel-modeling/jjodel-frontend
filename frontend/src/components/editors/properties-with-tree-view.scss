@@ -161,31 +161,33 @@ $radius-md: 6px;
 // per non pescare l'`ew-resize` del `.dock-divider` rc-dock adiacente. z-index 11
 // (> tree handle 10, > divider) così cattura lui il drag nell'area di confine.
 // Trascinare a sinistra allarga Properties → il tab cresce, il canvas cede spazio.
-.properties-panel-resize-handle {
+// Dal 2026-08-28 e' il `ResizeHandle` condiviso in verticale: linea, pill hover-reveal,
+// ciano del drag e chip `w NNN` stanno in `components/ResizeHandle/resize-handle.scss`.
+// Qui resta la geometria, che e' l'unica cosa che sa solo il rail. Selettore doppiato
+// (0,2,0) di proposito: deve battere `.resize-handle--vertical` senza dipendere
+// dall'ordine in cui i due fogli entrano nel bundle.
+.properties-panel-resize-handle.resize-handle {
     position: absolute;
     top: 0;
     bottom: 0;
     left: 0;     // niente protrusione a sinistra: evita la hit-zone del divider
     width: 6px;  // hit zone verso l'interno del pannello
-    cursor: col-resize;
     z-index: 11;
-    background: transparent;
 
+    // La hairline sta SUL bordo sinistro della colonna, non al centro della striscia:
+    // la striscia non puo' stare a cavallo della cucitura senza mangiarsi la hit-zone
+    // del `.dock-divider` rc-dock, quindi la linea si ancora alla cucitura e la
+    // striscia le sta dentro.
     &::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        bottom: 0;
-        left: 0;     // linea 1px sul bordo sinistro, sovrapposta al border-left del container
-        width: 1px;
-        background-color: $color-border;
-        transition: background-color $transition-fast;
-        pointer-events: none;
+        left: 0;
+        transform: none;
     }
 
-    &:hover::before,
-    &:active::before {
-        background-color: $color-highlight;
+    // Misurato: `.properties-with-tree-view--rail` ha `overflow: hidden`, quindi un chip
+    // centrato su un divider a x=0 perde la meta' sinistra. Spostato dentro la colonna.
+    .resize-handle__readout {
+        left: var(--space-1);
+        transform: none;
     }
 
     @media (hover: none) {
@@ -1724,32 +1726,14 @@ body[data-active-tab="documentation"] .properties-tree-overlay {
 
 // ─── Horizontal splitter between the two zones (2026-08-26) ──────────────────
 //
-// A 5px grab strip carrying a 1px line, not a 1px strip: a hairline is a target nobody
-// can hit. The line is the zones' own separator, so the tree pane drops its bottom
-// border while the splitter is between them — otherwise the seam is two lines.
+// The strip, the line and the grip pill are the shared `ResizeHandle` and live in
+// `components/ResizeHandle/resize-handle.scss` (restyled 2026-08-28): the divider is
+// that component with this class added, not a second implementation of it. What stays
+// here is the one thing only the rail knows — where the strip sits on the seam. The
+// zones' own separator is the handle's hairline, so the tree pane drops its bottom
+// border while the splitter is between them, otherwise the seam is two lines.
 .properties-with-tree-view--rail .tree-view-panel-vsplit {
-    flex: none;
-    position: relative;
-    height: 5px;
     margin-top: -1px;   // sits ON the seam rather than pushing the zones apart
-    cursor: row-resize;
-    background: transparent;
-
-    &::after {
-        content: '';
-        position: absolute;
-        left: 0;
-        right: 0;
-        top: 2px;
-        height: 1px;
-        background: var(--color-panel-border);
-        transition: background var(--duration-fast) var(--ease-out);
-    }
-
-    &:hover::after,
-    &:active::after {
-        background: var(--color-accent);
-    }
 }
 
 // With the splitter present the pane's own bottom border would double the line above.

@@ -6,6 +6,7 @@ import { NodeEditor } from './NodeEditor';
 import IRForm from '../editor-v2/viewpoint/ir/IRForm';
 import { TreeViewContent } from '../TreeViewSidebar/TreeViewContent';
 import { TreeViewScopeBarLive } from '../TreeViewSidebar/TreeViewScopeBar';
+import { ResizeHandle } from '../ResizeHandle';
 import { useTreeViewPanel } from '../../contexts/TreeViewPanelContext';
 import './properties-with-tree-view.scss';
 // Import tree view styles for icon colors and tree node styling
@@ -177,7 +178,21 @@ interface PropertiesWithTreeViewProps {
 }
 
 export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ mode }) => {
-    const containerRef = useRef<HTMLDivElement>(null);
+    // `| null` in the type parameter, not just in the initial value: the callback ref
+    // below writes `.current`, and the one-argument overload of `useRef` hands back a
+    // RefObject whose `current` is read-only.
+    const containerRef = useRef<HTMLDivElement | null>(null);
+    // The shell node is ALSO held in state, for the same reason the tree body is (see
+    // `treeBodyEl` below): the rail renders through a portal that only mounts once an
+    // editor tab is active, so an effect keyed on anything but the node itself runs
+    // once against a null ref and never again. The two are set together and mean the
+    // same thing — the ref for the handlers, which read it on demand, the state for the
+    // observer, which has to re-run when the node appears.
+    const [shellEl, setShellEl] = useState<HTMLDivElement | null>(null);
+    const setShellRef = useCallback((el: HTMLDivElement | null) => {
+        containerRef.current = el;
+        setShellEl(el);
+    }, []);
     const preset = PRESET_2A;
 
     /**
@@ -210,33 +225,67 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
      * Double click restores the preset, which is the only way back to "follow the
      * viewport" once a pixel height has been set.
      */
-    const handleTreePaneResizeStart = useCallback((e: React.MouseEvent) => {
-        e.preventDefault();
+    const [isTreePaneDragging, setIsTreePaneDragging] = useState(false);
+
+    /**
+     * The splitter's own numbers, observed rather than held: while the pane follows the
+     * preset there is no height in state to report, only one on screen, and the upper
+     * bound moves with the shell. They feed `aria-valuenow` / `aria-valuemax` and the
+     * readout chip. Kept fresh by the observer further down.
+     */
+    const [treePaneMetrics, setTreePaneMetrics] = useState<{ now: number; max: number }>({ now: 0, max: 0 });
+
+    /** The two ends of the split, measured at the moment they are asked for. */
+    const measureTreePaneBounds = useCallback(() => {
         const shell = containerRef.current;
         const pane = shell?.querySelector('.tree-view-panel-container') as HTMLElement | null;
-        if (!shell || !pane) return;
+        if (!shell || !pane) return null;
+        return {
+            height: pane.getBoundingClientRect().height,
+            max: Math.max(
+                MIN_TREE_PANE_HEIGHT,
+                shell.getBoundingClientRect().height - MIN_INSPECTOR_HEIGHT,
+            ),
+        };
+    }, []);
+
+    const handleTreePaneResizeStart = useCallback((e: React.MouseEvent) => {
+        e.preventDefault();
+        const bounds = measureTreePaneBounds();
+        if (!bounds) return;
         const startY = e.clientY;
-        const startHeight = pane.getBoundingClientRect().height;
-        const maxHeight = Math.max(
-            MIN_TREE_PANE_HEIGHT,
-            shell.getBoundingClientRect().height - MIN_INSPECTOR_HEIGHT,
-        );
+        const startHeight = bounds.height;
+        const maxHeight = bounds.max;
+        setIsTreePaneDragging(true);
 
         const handleMouseMove = (moveEvent: MouseEvent) => {
             const next = startHeight + (moveEvent.clientY - startY);
-            setTreePaneHeight(Math.min(maxHeight, Math.max(MIN_TREE_PANE_HEIGHT, next)));
+            setTreePaneHeight(Math.round(Math.min(maxHeight, Math.max(MIN_TREE_PANE_HEIGHT, next))));
         };
         const handleMouseUp = () => {
             document.removeEventListener('mousemove', handleMouseMove);
             document.removeEventListener('mouseup', handleMouseUp);
             document.body.style.cursor = '';
             document.body.style.userSelect = '';
+            setIsTreePaneDragging(false);
         };
         document.addEventListener('mousemove', handleMouseMove);
         document.addEventListener('mouseup', handleMouseUp);
         document.body.style.cursor = 'row-resize';
         document.body.style.userSelect = 'none';
-    }, []);
+    }, [measureTreePaneBounds]);
+
+    /**
+     * Keyboard resize, 8px a step. It reads the height from state when there is one and
+     * from the DOM otherwise, so the first arrow press on a rail still following the
+     * preset starts from what is on screen and not from zero.
+     */
+    const resizeTreePaneBy = useCallback((deltaPx: number) => {
+        const bounds = measureTreePaneBounds();
+        if (!bounds) return;
+        const current = treePaneHeight ?? bounds.height;
+        setTreePaneHeight(Math.round(Math.min(bounds.max, Math.max(MIN_TREE_PANE_HEIGHT, current + deltaPx))));
+    }, [measureTreePaneBounds, treePaneHeight]);
 
     // Width persistita: clamp + NaN guard al caricamento per protezione da
     // localStorage corrotto o da bound changes in versioni future.
@@ -276,8 +325,34 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
         return Math.min(MAX_PROPS_WIDTH, Math.max(MIN_PROPS_WIDTH, parsed));
     });
 
+    const [isPropsDragging, setIsPropsDragging] = useState(false);
+
+    /**
+     * The rail/canvas splitter's own numbers. Which pair is live depends on the mode:
+     * floating drags the overlay column, the tab mode drags the Properties pane, and
+     * the two have their own bounds and their own storage key.
+     */
+    const railWidthValue = mode === 'floating' ? overlayWidth : propsWidth;
+    const railWidthMin = mode === 'floating' ? MIN_OVERLAY_WIDTH : MIN_PROPS_WIDTH;
+    const railWidthMax = mode === 'floating' ? MAX_OVERLAY_WIDTH : MAX_PROPS_WIDTH;
+
+    /**
+     * Keyboard resize of the rail, 8px a step. The arrow moves the DIVIDER, so a
+     * positive delta walks it right and the column to its right gives up the space —
+     * the same convention the horizontal splitter follows, and the reason the sign is
+     * flipped on the way into the setters.
+     */
+    const resizeRailBy = useCallback((deltaPx: number) => {
+        if (mode === 'floating') {
+            setOverlayWidth(w => Math.min(MAX_OVERLAY_WIDTH, Math.max(MIN_OVERLAY_WIDTH, w - deltaPx)));
+            return;
+        }
+        setPropsWidth(w => Math.min(MAX_PROPS_WIDTH, Math.max(MIN_PROPS_WIDTH, w - deltaPx)));
+    }, [mode]);
+
     const handlePropsResizeStart = useCallback((e: React.MouseEvent) => {
         e.preventDefault();
+        setIsPropsDragging(true);
         // Floating (F2): this handle is the LEFT edge of the rail column (anchored to
         // the right of the viewport). Dragging LEFT widens it → `startWidth - delta`,
         // same sign as the tab-mode Properties handle.
@@ -293,6 +368,7 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
                 document.removeEventListener('mouseup', handleMouseUp);
                 document.body.style.cursor = '';
                 document.body.style.userSelect = '';
+                setIsPropsDragging(false);
             };
             document.addEventListener('mousemove', handleMouseMove);
             document.addEventListener('mouseup', handleMouseUp);
@@ -318,6 +394,7 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
             document.removeEventListener('mouseup', handleMouseUp);
             document.body.style.cursor = '';
             document.body.style.userSelect = '';
+            setIsPropsDragging(false);
         };
 
         document.addEventListener('mousemove', handleMouseMove);
@@ -746,12 +823,44 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
     const treePaneStyle: React.CSSProperties = !treePaneShown
         ? { height: '0px', opacity: 0 }
         : renderPropertiesPanel
-            ? { height: treePaneHeight !== null ? `${treePaneHeight}px` : preset.treePaneHeight, opacity: 1 }
+            ? {
+                height: treePaneHeight !== null ? `${treePaneHeight}px` : preset.treePaneHeight,
+                opacity: 1,
+                // The pane animates its height (250ms) so the posture switch reads as one
+                // movement. Under the pointer that same animation is lag — the line goes
+                // where the mouse is and the pane arrives a quarter second later — so it
+                // is off for the length of the drag, and only there.
+                ...(isTreePaneDragging ? { transition: 'none' } : {}),
+            }
             : { flex: '1 1 auto', minHeight: 0, opacity: 1 };
 
     // The Focus bar stands in for the tree pane: it says where the inspected element
     // sits and gets the user back. Only meaningful when the tree could be shown at all.
     const showFocusBar = renderTreePanel && posture === 'focus' && !!selectedElementId;
+
+    // Keeps `treePaneMetrics` on the truth. `aria-valuenow` has to be a real height, and
+    // for a rail still following the preset the only place that height exists is the
+    // layout: the formula is in `vh`, so it moves with the viewport, and the upper bound
+    // moves with the shell. The equality guard is what stops the observer re-entering
+    // itself — the rail resizes the pane it is watching.
+    useEffect(() => {
+        const shell = shellEl;
+        const pane = shell?.querySelector('.tree-view-panel-container') as HTMLElement | null;
+        if (!shell || !pane) return;
+        const measure = () => {
+            const now = Math.round(pane.getBoundingClientRect().height);
+            const max = Math.round(Math.max(
+                MIN_TREE_PANE_HEIGHT,
+                shell.getBoundingClientRect().height - MIN_INSPECTOR_HEIGHT,
+            ));
+            setTreePaneMetrics(prev => (prev.now === now && prev.max === max ? prev : { now, max }));
+        };
+        measure();
+        const observer = new ResizeObserver(measure);
+        observer.observe(shell);
+        observer.observe(pane);
+        return () => observer.disconnect();
+    }, [shellEl, renderTreePanel, renderPropertiesPanel, posture]);
 
     /**
      * Overflow affordance of the tree pane. The pane is clamped to a fraction of the
@@ -823,17 +932,26 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
 
     const splitPanel = (
         <div
-            ref={containerRef}
+            ref={setShellRef}
             className={`properties-with-tree-view${isFloating ? ' properties-with-tree-view--floating properties-with-tree-view--rail' : ''}${isFloating && posture === 'focus' ? ' properties-with-tree-view--rail-focus' : ''}`}
             data-density={densityForWidth(overlayWidth)}
         >
-            {/* Rail width handle: left edge of the column. Dragging left widens the rail. */}
-            <div
+            {/* Rail width handle: left edge of the column. Dragging left widens the rail.
+                Same `ResizeHandle` as the horizontal splitter, rotated (2026-08-28): the
+                pill is hover-reveal here, because this divider is full-height and always
+                on screen. Geometry stays in this file's own stylesheet — the 6px hit zone
+                must not grow leftward into rc-dock's `.dock-divider`. */}
+            <ResizeHandle
                 className="properties-panel-resize-handle"
+                orientation="vertical"
+                isDragging={isPropsDragging}
                 onMouseDown={handlePropsResizeStart}
-                role="separator"
-                aria-orientation="vertical"
-                aria-label="Resize properties panel"
+                onResizeBy={resizeRailBy}
+                label="Resize properties panel"
+                value={railWidthValue}
+                min={railWidthMin}
+                max={railWidthMax}
+                readoutPrefix="w"
             />
 
             {/* No header row (2026-08-26). The rail used to open with a 44px bar carrying
@@ -908,14 +1026,19 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
                 Only between two zones that are both on screen: with one of them gone
                 there is nothing to divide, and in Focus the pane is 0 by design. */}
             {renderTreePanel && renderPropertiesPanel && posture === 'browse' && (
-                <div
+                <ResizeHandle
                     className="tree-view-panel-vsplit"
+                    orientation="horizontal"
+                    isDragging={isTreePaneDragging}
                     onMouseDown={handleTreePaneResizeStart}
                     onDoubleClick={() => setTreePaneHeight(null)}
-                    role="separator"
-                    aria-orientation="horizontal"
-                    aria-label="Resize the structure pane"
-                    title="Drag to resize · double click to reset"
+                    onResizeBy={resizeTreePaneBy}
+                    label="Resize the structure pane"
+                    value={treePaneHeight ?? treePaneMetrics.now}
+                    min={MIN_TREE_PANE_HEIGHT}
+                    max={treePaneMetrics.max}
+                    readoutPrefix="h"
+                    hint="Drag to resize · double click to reset"
                 />
             )}
 

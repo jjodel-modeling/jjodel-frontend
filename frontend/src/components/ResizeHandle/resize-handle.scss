@@ -1,70 +1,230 @@
-// ResizeHandle - Minimal resize divider
-// Visually 1px line, 5px hit area
+// ResizeHandle - grip-pill divider (restyled 2026-08-28)
+//
+// A 10px grab strip carrying a 1px line, not a 1px strip: a hairline is a target
+// nobody can hit. At the centre of the line sits a 36x4 pill, the only part of the
+// divider that says it can be dragged at all; hover widens and darkens it, and the
+// drag turns the line cyan.
+//
+// The cyan is the canvas' active accent and the design system reserves it for that,
+// which is why it appears here ONLY while the pointer is down: at rest and on hover
+// the divider stays in the slate scale, like every other piece of panel chrome.
+//
+// Colours come from the token layer. Three literals remain, none of which has a token
+// to name it: the pill's geometry, the 10px readout (the type scale stops at 11px)
+// and the 600ms hover delay of the hint.
 
 .resize-handle {
-  background: transparent;
   position: relative;
   flex-shrink: 0;
+  background: transparent;
   user-select: none;
+  touch-action: none;
   z-index: 100;
+  transition: background var(--duration-fast) var(--ease-out);
 
+  // The hairline: the seam between the two panes.
+  &::before {
+    content: '';
+    position: absolute;
+    background: var(--color-panel-border);
+    transition:
+      background var(--duration-fast) var(--ease-out),
+      box-shadow var(--duration-fast) var(--ease-out),
+      width var(--duration-fast) var(--ease-out),
+      height var(--duration-fast) var(--ease-out);
+  }
+
+  // The grip. Geometry lives in the orientation blocks - it is the same pill rotated.
   &::after {
     content: '';
     position: absolute;
-    background: #e2e8f0;
-    transition: background 150ms ease;
+    border-radius: var(--radius-full);
+    background: var(--color-slate-300);
+    transition:
+      background var(--duration-fast) var(--ease-out),
+      opacity var(--duration-fast) var(--ease-out),
+      width var(--duration-fast) var(--ease-out),
+      height var(--duration-fast) var(--ease-out);
   }
 
-  &:hover::after,
-  &.dragging::after {
-    background: #94a3b8;
+  &:hover {
+    // Raw palette on purpose: `--color-bg-primary` is one of the names the primitive
+    // and the semantic layer still both declare (D-UI-13) and it resolves to #ffffff
+    // on this panel. The dark half is restated at the bottom, like `.rail-focusbar`.
+    background: var(--color-slate-50);
+
+    &::before { background: var(--color-slate-300); }
+    &::after { background: var(--color-slate-400); }
   }
 
-  &:focus {
-    outline: none;
+  &:focus { outline: none; }
 
-    &::after {
-      background: #94a3b8;
+  // System focus rule, not a tinted halo. `--color-border-focus` is NOT used here even
+  // though it names exactly this role: measured on the running app, it resolves to
+  // #64748b only while `data-theme="light"` is explicitly set and to #06b6d4 — cyan —
+  // in every other state, because `tokens.css:122` and `_colors-light.scss:93` both
+  // declare it on `:root` and only the light one carries the attribute that wins. Cyan
+  // is the canvas' accent and must not mark focus. `--color-slate-600` is the grade
+  // asked for, and it holds in both themes.
+  &:focus-visible {
+    outline: 2px solid var(--color-slate-600);
+    outline-offset: 2px;
+
+    &::after { background: var(--color-slate-400); }
+  }
+
+  // Dragging. After the hover block on purpose: same specificity, and the pointer is
+  // usually still over the strip while the drag runs.
+  &.dragging {
+    background: var(--color-slate-50);
+
+    &::before {
+      background: var(--color-canvas-accent);
+      box-shadow: 0 0 0 3px var(--color-canvas-accent-subtle);
     }
+
+    &::after { background: var(--color-cyan-600); }
   }
 
   // Horizontal: resizes height (row-resize)
   &--horizontal {
-    height: 5px;
+    height: 10px;
     cursor: row-resize;
 
-    &::after {
+    &::before {
       left: 0;
       right: 0;
-      top: 2px;
+      top: 50%;
       height: 1px;
+      transform: translateY(-50%);
     }
-  }
-
-  // Vertical: resizes width (col-resize)
-  &--vertical {
-    width: 5px;
-    cursor: col-resize;
 
     &::after {
-      top: 0;
-      bottom: 0;
-      left: 2px;
-      width: 1px;
-    }
-  }
-}
-
-html[data-theme="dark"] {
-  .resize-handle {
-    &::after {
-      background: #334155;
+      left: 50%;
+      top: 50%;
+      width: 36px;
+      height: 4px;
+      transform: translate(-50%, -50%);
     }
 
     &:hover::after,
-    &.dragging::after,
-    &:focus::after {
-      background: #64748b;
+    &:focus-visible::after,
+    &.dragging::after { width: 48px; }
+
+    &.dragging::before { height: 2px; }
+  }
+
+  // Vertical: resizes width (col-resize). Same graphic rotated, with one difference
+  // the horizontal one does not have: the pill is hover-reveal. A vertical divider runs
+  // the full height of the window and is always in view, so at rest it must weigh
+  // nothing — only the hairline. The grip appears when the pointer does.
+  &--vertical {
+    width: 10px;
+    cursor: col-resize;
+
+    &::before {
+      top: 0;
+      bottom: 0;
+      left: 50%;
+      width: 1px;
+      transform: translateX(-50%);
+    }
+
+    &::after {
+      left: 50%;
+      top: 50%;
+      width: 4px;
+      height: 48px;
+      opacity: 0;
+      transform: translate(-50%, -50%);
+    }
+
+    &:hover::after,
+    &:focus-visible::after,
+    &.dragging::after { opacity: 1; }
+
+    &.dragging::before { width: 2px; }
+  }
+
+  // The two chips. Never both at once: the hint hides as soon as the drag starts.
+  &__readout,
+  &__hint {
+    position: absolute;
+    z-index: 1;
+    padding: 3px 7px;
+    border-radius: var(--radius-sm);
+    background: var(--color-slate-900);
+    color: #ffffff;
+    font-size: 10px;
+    line-height: 1;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+
+  &__readout {
+    font-family: var(--font-mono);
+  }
+
+  &__hint {
+    opacity: 0;
+    transition: opacity var(--duration-fast) var(--ease-out);
+  }
+}
+
+// The hint waits out a deliberate hover instead of firing on every crossing of the
+// strip. It is what replaces the native `title`, which this component does not set.
+.resize-handle:hover:not(.dragging) .resize-handle__hint,
+.resize-handle:focus-visible:not(.dragging) .resize-handle__hint {
+  opacity: 1;
+  transition-delay: 600ms;
+}
+
+.resize-handle--horizontal {
+  .resize-handle__readout,
+  .resize-handle__hint {
+    right: var(--space-2);
+    top: 50%;
+    transform: translateY(-50%);
+  }
+}
+
+// Centred on the divider, near its bottom edge: on a full-height splitter the top is
+// where the window chrome is, and the bottom is empty.
+.resize-handle--vertical {
+  .resize-handle__readout,
+  .resize-handle__hint {
+    left: 50%;
+    bottom: var(--space-3);
+    transform: translateX(-50%);
+  }
+}
+
+// Dark. `--color-panel-border` and `--color-canvas-accent` already follow the theme;
+// the slate grades are raw palette and do not, so the pill is restated here. Cyan-600
+// goes muddy on a dark panel - same reason as `--color-inode-ref-fg` in the tokens.
+html[data-theme="dark"] {
+  .resize-handle {
+    &::after { background: var(--color-slate-600); }
+
+    &:hover {
+      background: var(--color-bg-hover);
+
+      &::before { background: var(--color-slate-600); }
+      &::after { background: var(--color-slate-400); }
+    }
+
+    // Slate-600 is the ring on a light panel; on #1e293b it disappears into it.
+    &:focus-visible {
+      outline-color: var(--color-slate-400);
+
+      &::after { background: var(--color-slate-400); }
+    }
+
+    &.dragging {
+      background: var(--color-bg-hover);
+
+      &::before { background: var(--color-canvas-accent); }
+      &::after { background: var(--color-cyan-400); }
     }
   }
 }
