@@ -23,12 +23,19 @@ import {
     rowsForMetaclass,
     sectionsForAuthoring,
     widgetLabel,
+    isBasicRow,
+    unknownBasicNames,
+    withBasic as withBasicToggle,
     withFormEntry,
     withFormKey,
+    withoutBasic,
+    withoutBasicName,
     WIDGET_LABEL,
     type AuthoringFeatureRow,
 } from '../FormAuthoringBody';
-import { overrideIsCompatible } from '../../ir/useFormWidgets';
+import { withCompartmentTitle } from '../FieldCompartmentListEditor';
+import { overrideIsCompatible, isBasicField } from '../../ir/useFormWidgets';
+import { JjodelEvents } from '../../../../../events/registry';
 import { validateIR } from '../../ir/irValidate';
 import { defaultObjectViewIR } from '../../ir/irDefaults';
 import type { FieldCompartmentSpec, FormSpec, VertexViewIR, WidgetKind } from '../../ir/irTypes';
@@ -352,5 +359,158 @@ describe('a feature named `op` inside FormSpec.widgets', () => {
     it('the same key inside `features` is rejected too, for the same reason', () => {
         const res = validateIR('v_op2', irWith({ features: { op: 'hidden' } as any }));
         expect(res.ok).toBe(false);
+    });
+});
+
+// --- 10. the Basic column (Slice 2b) -----------------------------------------------
+
+describe('isBasicRow', () => {
+    it('with no declared list, follows the multiplicity heuristic', () => {
+        expect(isBasicRow(row('name'), undefined)).toBe(true);
+        expect(isBasicRow(row('kind'), undefined)).toBe(false);
+        expect(isBasicRow(row('outgoing'), {})).toBe(false);
+    });
+
+    it('is the same rule the interpreter applies to a slot', () => {
+        for (const r of ROWS) {
+            const field = { name: r.name, isRequired: r.lowerBound >= 1 } as any;
+            expect(isBasicRow(r, undefined)).toBe(isBasicField(field, undefined));
+            expect(isBasicRow(r, { basic: ['kind'] })).toBe(isBasicField(field, { basic: ['kind'] }));
+        }
+    });
+
+    it('a declared list is the complete answer, even omitting a required feature', () => {
+        const form: FormSpec = { basic: ['kind'] };
+        expect(isBasicRow(row('kind'), form)).toBe(true);
+        expect(isBasicRow(row('name'), form)).toBe(false);
+    });
+
+    it('an empty declared list puts nothing in Basic', () => {
+        expect(ROWS.every(r => !isBasicRow(r, { basic: [] }))).toBe(true);
+    });
+});
+
+describe('withBasic', () => {
+    it('the first toggle materializes the heuristic in row order', () => {
+        const out = withBasicToggle(undefined, ROWS, 'kind', true);
+        expect(out?.basic).toEqual(['name', 'kind']);
+    });
+
+    it('unchecking a required feature materializes the list without it', () => {
+        expect(withBasicToggle(undefined, ROWS, 'name', false)?.basic).toEqual([]);
+    });
+
+    it('keeps row order however the list was written', () => {
+        const out = withBasicToggle({ basic: ['substates', 'kind'] }, ROWS, 'name', true);
+        expect(out?.basic).toEqual(['name', 'kind', 'substates']);
+    });
+
+    it('emptying the list yields [] and never undefined: it is a declared state', () => {
+        const out = withBasicToggle({ basic: ['kind'] }, ROWS, 'kind', false);
+        expect(out).toEqual({ basic: [] });
+    });
+
+    it('preserves names matching no row, appended in their original order', () => {
+        const out = withBasicToggle({ basic: ['ghost', 'kind', 'phantom'] }, ROWS, 'name', true);
+        expect(out?.basic).toEqual(['name', 'kind', 'ghost', 'phantom']);
+    });
+
+    it('does not mutate its input', () => {
+        const form: FormSpec = { basic: ['kind'], theme: 'card' };
+        const snapshot = JSON.parse(JSON.stringify(form));
+        withBasicToggle(form, ROWS, 'name', true);
+        expect(form).toEqual(snapshot);
+    });
+
+    it('leaves the other keys untouched', () => {
+        const out = withBasicToggle({ theme: 'compact', widgets: { entryAction: 'textarea' } }, ROWS, 'kind', true);
+        expect(out?.theme).toBe('compact');
+        expect(out?.widgets).toEqual({ entryAction: 'textarea' });
+    });
+});
+
+describe('withoutBasic', () => {
+    it('removes the key, which is the only way back to the heuristic', () => {
+        expect(withoutBasic({ basic: [], theme: 'plain' })).toEqual({ theme: 'plain' });
+    });
+
+    it('a FormSpec holding nothing but basic collapses to undefined', () => {
+        expect(withoutBasic({ basic: ['name'] })).toBeUndefined();
+    });
+
+    it('is a no-op on a FormSpec that never declared it', () => {
+        expect(withoutBasic({ theme: 'card' })).toEqual({ theme: 'card' });
+    });
+});
+
+describe('withoutBasicName', () => {
+    it('drops only the name asked for and keeps the original order', () => {
+        expect(withoutBasicName({ basic: ['ghost', 'name', 'kind'] }, 'name')?.basic)
+            .toEqual(['ghost', 'kind']);
+    });
+
+    it('dropping the last name yields [], not a removed key', () => {
+        expect(withoutBasicName({ basic: ['ghost'] }, 'ghost')).toEqual({ basic: [] });
+    });
+
+    it('never turns an absent basic into a declared one', () => {
+        expect(withoutBasicName({ theme: 'plain' }, 'ghost')).toEqual({ theme: 'plain' });
+        expect(withoutBasicName(undefined, 'ghost')).toBeUndefined();
+    });
+});
+
+describe('unknownBasicNames', () => {
+    it('reports the names matching no feature of the metaclass', () => {
+        expect(unknownBasicNames({ basic: ['name', 'ghost'] }, ROWS)).toEqual(['ghost']);
+    });
+
+    it('reports nothing when the list is absent or fully known', () => {
+        expect(unknownBasicNames(undefined, ROWS)).toEqual([]);
+        expect(unknownBasicNames({ basic: ['name', 'substates'] }, ROWS)).toEqual([]);
+    });
+});
+
+describe('a declared basic survives every other write', () => {
+    it('an empty list is not pruned by a theme change or a widget override', () => {
+        const themed = withFormKey({ basic: [] }, 'theme', 'inspector');
+        expect(themed).toEqual({ basic: [], theme: 'inspector' });
+        const overridden = withFormEntry(themed, 'widgets', 'entryAction', 'textarea');
+        expect(overridden?.basic).toEqual([]);
+        const cleared = withFormEntry(overridden, 'widgets', 'entryAction', undefined);
+        expect(cleared).toEqual({ basic: [], theme: 'inspector' });
+    });
+});
+
+// --- 11. compartment title (Slice 2b) ----------------------------------------------
+
+describe('withCompartmentTitle', () => {
+    const base = compartment('main', 'attributes');
+
+    it('sets the title', () => {
+        expect(withCompartmentTitle(base, 'Identity').title).toBe('Identity');
+    });
+
+    it('an empty string drops the KEY, so the form falls back to the id', () => {
+        const set = withCompartmentTitle(base, 'Identity');
+        const cleared = withCompartmentTitle(set, '');
+        expect('title' in cleared).toBe(false);
+    });
+
+    it('round-trips byte-identical to a compartment authored without a title', () => {
+        const virgin = { id: 'main', source: { from: 'attributes' }, rowFormat: { segments: [] } } as FieldCompartmentSpec;
+        expect(withCompartmentTitle(withCompartmentTitle(virgin, 'Identity'), ''))
+            .toEqual(virgin);
+    });
+
+    it('keeps whitespace: trimming per keystroke would make a space impossible to type', () => {
+        expect(withCompartmentTitle(base, ' ').title).toBe(' ');
+    });
+});
+
+// --- 12. the cross-tab event -------------------------------------------------------
+
+describe('the Form to Structure link', () => {
+    it('is a registry constant, not a hardcoded string (rule 25)', () => {
+        expect(JjodelEvents.IR_AUTHORING_TAB).toBe('jjodel:ir-authoring-tab');
     });
 });

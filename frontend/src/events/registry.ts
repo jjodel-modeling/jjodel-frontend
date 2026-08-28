@@ -7,6 +7,10 @@
 export const JjodelEvents = {
   // UI Navigation
   ACTIVE_TAB: 'jjodel:active-tab',
+  // Ask the host of the IR authoring bar (ViewData) to activate one of its tabs.
+  // detail: { viewId: string; tab: IRTabId }. Distinct from ACTIVE_TAB, which is the
+  // dock's own bar (Dock emits, StatusBar and Navbar listen).
+  IR_AUTHORING_TAB: 'jjodel:ir-authoring-tab',
   EDITOR_TYPE_CHANGE: 'jjodel:editor-type-change',
   TOGGLE_TREE_VIEW: 'jjodel:toggle-tree-view',
   TOGGLE_SINGLETONS: 'jjodel:toggle-singletons',

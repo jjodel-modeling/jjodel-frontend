@@ -1,4 +1,4 @@
-import React, {Dispatch, ReactElement, ReactNode, useState} from 'react';
+import React, {Dispatch, ReactElement, ReactNode, useEffect, useState} from 'react';
 import {
     Defaults,
     DState,
@@ -29,6 +29,7 @@ import {EdgeAuthoringPanel} from "../../editor-v2/viewpoint/authoring/EdgeAuthor
 import {EnableIRPanel} from "../../editor-v2/viewpoint/authoring/EnableIRPanel";
 import {SymbolCard} from "../../editor-v2/viewpoint/authoring/SymbolCard";
 import {HelpText} from "../../ui";
+import {JjodelEvents} from "../../../events/registry";
 import {
     IR_TAB_LABELS,
     irTabsForKind,
@@ -191,6 +192,23 @@ function ViewDataComponent(props: AllProps) {
 
     // Active tab state. Defaults to the first tab in the list (always 'apply-to').
     const [activeTab, setActiveTab] = useState<TabId>(tabs[0].id);
+
+    // Cross-tab navigation asked for from inside a body (the Form tab's «Edit
+    // compartments»). Two instances of this panel can be mounted at once — the
+    // Properties card and the standalone NestedView host — so the event is filtered on
+    // the view it names; a tab absent from the CURRENT list is ignored rather than
+    // activated, which would leave every body hidden and the panel blank.
+    const tabIds = tabs.map(t => t.id).join(',');
+    useEffect(() => {
+        const onTab = (e: Event) => {
+            const detail = (e as CustomEvent<{ viewId?: string; tab?: string }>).detail;
+            if (!detail || detail.viewId !== view.id) return;
+            if (!tabIds.split(',').includes(detail.tab ?? '')) return;
+            setActiveTab(detail.tab as TabId);
+        };
+        window.addEventListener(JjodelEvents.IR_AUTHORING_TAB, onTab);
+        return () => window.removeEventListener(JjodelEvents.IR_AUTHORING_TAB, onTab);
+    }, [view.id, tabIds]);
 
     // Fallback: if the currently-active tab is not in the list (e.g. switched
     // from a view to a viewpoint), snap to the first available.

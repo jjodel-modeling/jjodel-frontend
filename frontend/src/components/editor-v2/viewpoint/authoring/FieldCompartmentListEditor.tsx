@@ -71,6 +71,21 @@ export function withRowStyle(comp: FieldCompartmentSpec, style: TextStyle | unde
     return { ...comp, rowFormat };
 }
 
+/**
+ * Set or clear a compartment's section `title`. `''` drops the KEY rather than writing an
+ * empty string, so a title typed and erased round-trips byte-identical to a compartment
+ * authored without one and the form falls back to the id, as `buildFormSections` does.
+ * Removal is on the exactly-empty string, never on whitespace: trimming on every keystroke
+ * would make a space impossible to type.
+ */
+export function withCompartmentTitle(comp: FieldCompartmentSpec, title: string): FieldCompartmentSpec {
+    if (title === '') {
+        const { title: _dropped, ...rest } = comp;
+        return rest;
+    }
+    return { ...comp, title };
+}
+
 /** Read-only chip for values not representable in Basic (preserved verbatim). Same
  *  visual convention as LabelEntryEditor's CHIP — inline style, no new CSS class. */
 const CHIP: React.CSSProperties = {
@@ -188,6 +203,15 @@ export const FieldCompartmentListEditor: React.FC<FieldCompartmentListEditorProp
                         <div className="jj-field">
                             <label className="jj-field-label">Id</label>
                             <Input value={comp.id} onChange={(e) => replace(index, { ...comp, id: e.target.value })} />
+                        </div>
+
+                        <div className="jj-field">
+                            <label className="jj-field-label">Title</label>
+                            <Input
+                                value={comp.title ?? ''}
+                                placeholder="Defaults to the id"
+                                onChange={(e) => replace(index, withCompartmentTitle(comp, e.target.value))}
+                            />
                         </div>
 
                         <div className="jj-field">

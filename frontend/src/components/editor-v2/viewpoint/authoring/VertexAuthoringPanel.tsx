@@ -429,6 +429,7 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                     draft={draft}
                     target={featureInfo.target}
                     advanced={advanced}
+                    viewId={view.id as string}
                     onChange={(form: FormSpec | undefined) =>
                         patch(form === undefined ? omitForm(draft) : { ...draft, form })}
                 />

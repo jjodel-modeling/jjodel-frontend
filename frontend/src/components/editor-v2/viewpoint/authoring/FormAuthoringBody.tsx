@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
-import { HelpText, Select, SegmentedControl, FormSection } from '../../../ui';
+import { Checkbox, HelpText, Select, SegmentedControl, FormSection } from '../../../ui';
 import type { MetaclassInfo } from '../../hooks/useEditorMode';
+import { JjodelEvents } from '../../../../events/registry';
 import { buildFormSections, type Section } from '../ir/formSections';
 import { overrideIsCompatible, widgetForPrimitive } from '../ir/useFormWidgets';
 import type {
@@ -14,14 +15,14 @@ import type {
 import './FormAuthoringBody.scss';
 
 /**
- * FormAuthoringBody — the `Form` tab of the vertex authoring panel (Slice 2a).
+ * FormAuthoringBody — the `Form` tab of the vertex authoring panel (Slice 2a, 2b).
  *
  * Authors `FormSpec` (spec addendum 2026-08-28): the panel skin (`theme`), the label
- * placement, the per-feature widget overrides and how references and children render.
- * `basic` is deliberately NOT authored here (Slice 2b) and round-trips verbatim, which
- * is why every write starts from a spread of the current `form` instead of building a
- * new object out of the four controls: the whole-object commit of the panel would
- * otherwise drop the key with nothing on screen to say so.
+ * placement, the per-feature widget overrides, how references and children render, and
+ * — since Slice 2b — which features sit in Basic. Every write starts from a spread of
+ * the current `form` instead of building a new object out of the controls: the
+ * whole-object commit of the panel would otherwise drop a key it does not know about,
+ * with nothing on screen to say so.
  *
  * Purely presentational, no effect and no subscription (discovery 2026-08-28, R4): both
  * mounts of VertexAuthoringPanel keep every tab body mounted, so an effect here would
@@ -124,6 +125,11 @@ export const derivedTreatment = (upperBound: number): FeatureTreatment => (upper
  * An empty object is harmless at render (every reader uses optional chaining) but it is
  * persisted forever: the saved IR has no VersionFixer (R-B9), so a `form: {}` left behind
  * by an author who tried a theme and went back would stay in the file for good.
+ *
+ * `basic: []` is NOT pruned, and that asymmetry with `widgets`/`features` is the point:
+ * an empty map means "no override", which is the same thing as an absent map, while an
+ * empty `basic` is a DECLARED answer — "nothing in Basic" — and absent means the
+ * heuristic instead. Only the explicit reset removes the key.
  */
 function pruneForm(next: FormSpec): FormSpec | undefined {
     const out: FormSpec = { ...next };
@@ -168,6 +174,84 @@ export function withFormEntry(
     if (map === 'widgets') next.widgets = entries as Record<string, WidgetKind>;
     else next.features = entries as Record<string, FeatureTreatment>;
     return pruneForm(next);
+}
+
+/**
+ * Is a feature in Basic, by the rule the interpreter applies (`useFormWidgets.isBasicField`)
+ * read off the metamodel instead of a slot: a declared list is the COMPLETE answer, even
+ * when it omits a required feature and even when it is empty; absent means the multiplicity
+ * heuristic, which is literally how `describeSlot` computes `isRequired` (`lowerBound >= 1`).
+ * Duplicated here for the same reason `deriveAuthoringWidget` duplicates the widget cascade:
+ * authoring has no instance and no slot to ask.
+ */
+export function isBasicRow(row: Pick<AuthoringFeatureRow, 'name' | 'lowerBound'>, form: FormSpec | undefined): boolean {
+    const declared = form?.basic;
+    if (Array.isArray(declared)) return declared.includes(row.name);
+    return row.lowerBound >= 1;
+}
+
+/** The heuristic membership as a list, in row order: what the first toggle materializes. */
+const derivedBasic = (rows: AuthoringFeatureRow[]): string[] => rows.filter(r => r.lowerBound >= 1).map(r => r.name);
+
+/**
+ * Toggle one ROW in or out of Basic.
+ *
+ * With no `basic` on the ir the list is first MATERIALIZED from the heuristic and then
+ * toggled: the first click turns the state from derived into declared, which the state row
+ * says out loud. Anything else would be a silent half-state — a list that looks derived
+ * while one feature already disagrees with it.
+ *
+ * The result is rebuilt in ROW order, with names matching no row appended verbatim at the
+ * end, in their original order: a `basic` written by hand or by an AI is the author's to
+ * keep, exactly like an ignored widget override. Removing one of those is
+ * `withoutBasicName`, not this function.
+ */
+export function withBasic(
+    form: FormSpec | undefined,
+    rows: AuthoringFeatureRow[],
+    name: string,
+    checked: boolean,
+): FormSpec | undefined {
+    const next: FormSpec = { ...form };
+    const current = Array.isArray(next.basic) ? next.basic : derivedBasic(rows);
+    const member = new Set(current);
+    if (checked) member.add(name);
+    else member.delete(name);
+    const known = new Set(rows.map(r => r.name));
+    next.basic = [
+        ...rows.filter(r => member.has(r.name)).map(r => r.name),
+        ...current.filter(n => !known.has(n) && member.has(n)),
+    ];
+    return pruneForm(next);
+}
+
+/** Reset to the heuristic: removes the KEY, the one operation that undoes a declaration. */
+export function withoutBasic(form: FormSpec | undefined): FormSpec | undefined {
+    const next: FormSpec = { ...form };
+    delete next.basic;
+    return pruneForm(next);
+}
+
+/**
+ * Drop ONE name from a declared `basic`, whatever it names. Used by the Clear of an entry
+ * on an unknown feature: it never consults the rows and never materializes the heuristic,
+ * so clearing a stale name cannot turn an absent `basic` into a declared one.
+ */
+export function withoutBasicName(form: FormSpec | undefined, name: string): FormSpec | undefined {
+    const declared = form?.basic;
+    if (!Array.isArray(declared)) return form;
+    return pruneForm({ ...form, basic: declared.filter(n => n !== name) });
+}
+
+/**
+ * Names in `basic` that match no feature of the metaclass. Shown among the ignored
+ * overrides and never rewritten, for the reason `ignoredOverrides` gives.
+ */
+export function unknownBasicNames(form: FormSpec | undefined, rows: AuthoringFeatureRow[]): string[] {
+    const declared = form?.basic;
+    if (!Array.isArray(declared)) return [];
+    const known = new Set(rows.map(r => r.name));
+    return declared.filter(n => !known.has(n));
 }
 
 export interface IgnoredOverride {
@@ -257,22 +341,28 @@ export interface FormAuthoringBodyProps {
     target: MetaclassInfo | null;
     /** Global disclosure mode, read by the panel. Gates the two tables, not the tab. */
     advanced: boolean;
+    /** Id of the view being authored. Absent = no cross-tab link (the host cannot be
+     *  addressed, and ViewData is mounted more than once). */
+    viewId?: string;
     /** `undefined` means: drop the `form` key from the ir entirely. */
     onChange: (form: FormSpec | undefined) => void;
 }
 
-export const FormAuthoringBody: React.FC<FormAuthoringBodyProps> = ({ draft, target, advanced, onChange }) => {
+export const FormAuthoringBody: React.FC<FormAuthoringBodyProps> = ({ draft, target, advanced, viewId, onChange }) => {
     const form = draft.form;
     const compartments = draft.fieldCompartments;
 
-    const { rows, sections, ignored } = useMemo(() => {
+    const { rows, sections, ignored, unknownBasic } = useMemo(() => {
         const r = rowsForMetaclass(target);
         return {
             rows: r,
             sections: sectionsForAuthoring(compartments ?? [], r),
             ignored: ignoredOverrides(form, r),
+            unknownBasic: unknownBasicNames(form, r),
         };
     }, [target, compartments, form]);
+
+    const basicDeclared = Array.isArray(form?.basic);
 
     const theme = form?.theme;
     const placement = form?.labelPlacement ?? 'above';
@@ -290,13 +380,57 @@ export const FormAuthoringBody: React.FC<FormAuthoringBodyProps> = ({ draft, tar
     const ignoredHost = lastAttributeSection >= 0 ? lastAttributeSection : sections.length - 1;
 
     const anyOverride = rows.some(r => {
+        // A declared membership that disagrees with the heuristic is an override like the
+        // others, and wears the same dot: a second marker vocabulary would say nothing new.
+        if (basicDeclared && isBasicRow(r, form) !== (r.lowerBound >= 1)) return true;
         if (r.isReference || r.isComposition) return form?.features?.[r.name] !== undefined;
         const o = form?.widgets?.[r.name];
         return o !== undefined && o !== deriveAuthoringWidget(r);
     });
 
+    const anyIgnored = ignored.length > 0 || unknownBasic.length > 0;
+
+    const basicDiffers = (row: AuthoringFeatureRow) => basicDeclared && isBasicRow(row, form) !== (row.lowerBound >= 1);
+
+    /**
+     * The Basic cell of a row. `hidden` removes the feature from BOTH halves of the form,
+     * so the checkbox is locked there rather than lying: it keeps showing the real
+     * membership, and nothing rewrites `basic` when a feature becomes hidden or stops
+     * being hidden. The title sits on the cell because the shared Checkbox takes no
+     * label of its own here (the column header is the label) and no title prop.
+     */
+    const basicCell = (row: AuthoringFeatureRow) => {
+        const hidden = form?.features?.[row.name] === 'hidden';
+        return (
+            <span
+                className="form-authoring__basic"
+                title={hidden
+                    ? 'Hidden removes the feature in both Basic and Advanced'
+                    : `Show ${row.name} in Basic`}
+            >
+                <Checkbox
+                    checked={isBasicRow(row, form)}
+                    disabled={hidden}
+                    onChange={(checked) => onChange(withBasic(form, rows, row.name, checked))}
+                />
+            </span>
+        );
+    };
+
     const renderIgnored = () => (
         <div className="form-authoring__ignored">
+            {unknownBasic.map(name => (
+                <div className="form-authoring__ignored-row" key={`basic:${name}`}>
+                    <span style={CHIP}>{`ignored: basic entry on unknown feature "${name}"`}</span>
+                    <button
+                        type="button"
+                        className="form-authoring__clear"
+                        onClick={() => onChange(withoutBasicName(form, name))}
+                    >
+                        Clear
+                    </button>
+                </div>
+            ))}
             {ignored.map(ig => (
                 <div className="form-authoring__ignored-row" key={ig.name}>
                     <span style={CHIP}>
@@ -329,8 +463,9 @@ export const FormAuthoringBody: React.FC<FormAuthoringBodyProps> = ({ draft, tar
             <div className="form-authoring__row" key={row.name}>
                 <span className="form-authoring__name">
                     {row.name}
-                    {active !== '' && <span className="form-authoring__dot" aria-hidden="true" />}
+                    {(active !== '' || basicDiffers(row)) && <span className="form-authoring__dot" aria-hidden="true" />}
                 </span>
+                {basicCell(row)}
                 <Select
                     size="sm"
                     options={offered.map(k => ({ value: k, label: widgetLabel(k) }))}
@@ -364,10 +499,11 @@ export const FormAuthoringBody: React.FC<FormAuthoringBodyProps> = ({ draft, tar
                 <span className="form-authoring__name">
                     {row.name}
                     {row.isComposition && <span className="form-authoring__badge">child</span>}
-                    {declared !== undefined && declared !== derived && <span className="form-authoring__dot" aria-hidden="true" />}
+                    {((declared !== undefined && declared !== derived) || basicDiffers(row)) && <span className="form-authoring__dot" aria-hidden="true" />}
                     {degraded && <span style={CHIP}>declared inline, degraded to list</span>}
                     {widgetPreserved && <span style={CHIP}>{`widget: ${widgetOverride} (preserved)`}</span>}
                 </span>
+                {basicCell(row)}
                 <SegmentedControl<FeatureTreatment>
                     ariaLabel={`How ${row.name} renders in the form`}
                     value={value}
@@ -424,6 +560,29 @@ export const FormAuthoringBody: React.FC<FormAuthoringBodyProps> = ({ draft, tar
                 <HelpText icon={false}>Set a metaclass in the Applies to tab to list its features here.</HelpText>
             )}
 
+            {/* One state row for the whole tab, because `basic` is ONE key: it is declared
+                or it is not, and no row can be in a different state from its neighbours.
+                It renders with no section too (wildcard metaclass, every feature hidden):
+                a declared `basic` with no way to reset it would be a trap. */}
+            {advanced && (sections.length > 0 || basicDeclared) && (
+                <div className="form-authoring__state">
+                    {basicDeclared ? (
+                        <>
+                            <span>Basic: declared</span>
+                            <button
+                                type="button"
+                                className="form-authoring__link"
+                                onClick={() => onChange(withoutBasic(form))}
+                            >
+                                Reset to derived
+                            </button>
+                        </>
+                    ) : (
+                        <span>Basic: derived from multiplicity (required features)</span>
+                    )}
+                </div>
+            )}
+
             {advanced && sections.map((section, index) => {
                 const attributeSection = section.fields.some(f => !f.isReference && !f.isComposition);
                 const anyHidden = section.fields.some(f => form?.features?.[f.name] === 'hidden');
@@ -431,22 +590,35 @@ export const FormAuthoringBody: React.FC<FormAuthoringBodyProps> = ({ draft, tar
                     <FormSection key={section.key} title={section.title} divider={false}>
                         {section.key.startsWith('residual-') && (
                             <div className="form-authoring__residual">
-                                not claimed by any compartment: rendered after the authored sections. Edit compartments in the Structure tab
+                                not claimed by any compartment: rendered after the authored sections.{' '}
+                                {viewId !== undefined ? (
+                                    <button
+                                        type="button"
+                                        className="form-authoring__link"
+                                        onClick={() => window.dispatchEvent(new CustomEvent(JjodelEvents.IR_AUTHORING_TAB, {
+                                            detail: { viewId, tab: 'ir-structure' },
+                                        }))}
+                                    >
+                                        Edit compartments
+                                    </button>
+                                ) : 'Edit compartments in the Structure tab'}
                             </div>
                         )}
                         <div className="form-authoring__table">
-                            {attributeSection && (
-                                <div className="form-authoring__head">
-                                    <span>Feature</span>
-                                    <span>Widget</span>
-                                </div>
-                            )}
+                            {/* The header is rendered on EVERY section, not on attribute ones
+                                alone: the Basic column exists on all of them. A section can be
+                                mixed, so the third label follows the section, not the row. */}
+                            <div className="form-authoring__head">
+                                <span>Feature</span>
+                                <span>Basic</span>
+                                <span>{attributeSection ? 'Widget' : 'Render'}</span>
+                            </div>
                             {section.fields.map(f => (f.isReference || f.isComposition ? renderTreatmentRow(f) : renderWidgetRow(f)))}
                         </div>
                         {anyHidden && (
                             <HelpText icon={false}>Hidden removes the feature from the form in both Basic and Advanced.</HelpText>
                         )}
-                        {index === ignoredHost && ignored.length > 0 && renderIgnored()}
+                        {index === ignoredHost && anyIgnored && renderIgnored()}
                     </FormSection>
                 );
             })}
@@ -454,7 +626,7 @@ export const FormAuthoringBody: React.FC<FormAuthoringBodyProps> = ({ draft, tar
             {/* No section at all (wildcard metaclass, or every feature hidden) and still an
                 ignored override on the ir: it has no host section, and losing it would be the
                 one thing this block exists to prevent. */}
-            {advanced && sections.length === 0 && ignored.length > 0 && renderIgnored()}
+            {advanced && sections.length === 0 && anyIgnored && renderIgnored()}
 
             {advanced && anyOverride && (
                 <div className="form-authoring__legend">

@@ -1,7 +1,7 @@
 /* FormAuthoringBody — the Form tab of the vertex authoring panel (Slice 2a).
 
    Metrics from artboards 6a/6b of the form-views handoff: header row 24px, feature
-   rows 30px, feature name in mono 12px, widget control 110px, treatment control 130px.
+   rows 30px, feature name in mono 12px, control column 130px, unified 2026-08-28.
    Every value comes from styles/tokens/, and no variable is declared here (rule 28).
 
    A stylesheet of its own rather than inline styles: the tables are the first tabular
@@ -19,9 +19,13 @@
         overflow: hidden;
     }
 
+    /* One control width for every row kind (2026-08-28, Slice 2b): the header used to be
+       1fr 110px while a treatment row was 1fr 130px, so in a mixed section the header was
+       never aligned to the reference rows. A third column would have widened that gap
+       instead of introducing it; unifying at 130px closes it. */
     &__head {
         display: grid;
-        grid-template-columns: 1fr 110px;
+        grid-template-columns: 1fr 40px 130px;
         gap: var(--space-2, 8px);
         align-items: center;
         height: 24px;
@@ -39,7 +43,7 @@
        one that is not, and clipping the chip would hide what the row exists to show. */
     &__row {
         display: grid;
-        grid-template-columns: 1fr 110px;
+        grid-template-columns: 1fr 40px 130px;
         gap: var(--space-2, 8px);
         align-items: center;
         min-height: 30px;
@@ -49,9 +53,10 @@
         &:last-child { border-bottom: none; }
     }
 
-    &__row--treatment {
-        grid-template-columns: 1fr 130px;
-    }
+    /* Kept as a class hook now that both row kinds share the one column width above:
+       a treatment row differs by its content, not by its grid. Deliberately carrying no
+       declaration of its own rather than repeating the ones it already inherits. */
+    &__row--treatment { }
 
     /* Hidden is still authored, so the row stays readable and stays operable: dimmed,
        never removed, or the author would lose the control that puts it back. */
@@ -79,6 +84,44 @@
         height: 5px;
         border-radius: var(--radius-full);
         background: var(--color-marker-required);
+    }
+
+    /* The Basic cell. Centered on its 40px column so the checkboxes read as a column
+       and not as a ragged edge next to names of different lengths. */
+    &__basic {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* State of the `basic` key for the whole tab, plus its one way back to the
+       heuristic. A link, not a button: it undoes a declaration, it does not commit one. */
+    &__state {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-2, 8px);
+        font-size: var(--text-2xs);
+        color: var(--color-text-tertiary);
+    }
+
+    &__link {
+        appearance: none;
+        border: none;
+        background: none;
+        padding: 0;
+        font-family: var(--font-sans);
+        font-size: var(--text-2xs);
+        color: var(--color-accent);
+        text-decoration: underline;
+        cursor: pointer;
+
+        &:hover { color: var(--color-accent-hover); }
+
+        &:focus-visible {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(51, 65, 85, 0.18);
+            border-radius: var(--radius-xs);
+        }
     }
 
     &__badge {

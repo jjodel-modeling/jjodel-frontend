@@ -91,6 +91,8 @@ Per ogni slot del soggetto la form calcola un descrittore. Il widget si deriva d
 
 **Basic/Advanced è una proprietà del lettore, non del modello.** `basic`, quando l'autore lo dichiara, è la risposta completa, **anche quando omette una feature obbligatoria**: è una scelta di authoring legittima, non un errore da correggere in silenzio. Assente, l'euristica è `lowerBound >= 1`, cioè le feature senza le quali il metamodello dice che un'istanza non sta in piedi.
 
+In authoring (Slice 2b) il primo toggle della colonna Basic **materializza** la lista dall'euristica e poi applica il click: da quel momento lo stato è dichiarato, e la riga di stato del tab lo dice. Una lista vuota è uno stato dichiarato legittimo, «niente in Basic», e non viene potata; solo il reset esplicito rimuove la chiave e riporta all'euristica.
+
 ## 7. Sezioni e fieldCompartments
 
 Senza compartimenti la form usa i tre gruppi naturali: Attributes, References, Children. Un gruppo vuoto non rende nulla.
@@ -182,4 +184,4 @@ L'interprete non inventa default silenziosi. In ordine di frequenza:
 
 ## 14. Fuori da questo addendum
 
-Superficie di authoring del `FormSpec` (tabella widget, toggle Basic, ordinamento dei compartimenti): **Slice 2**. Stato al 2026-08-28: la **Slice 2a** implementa il tab `Form` del pannello vertex per `theme`, `labelPlacement`, `widgets` e `features`; restano alla **Slice 2b** l'authoring di `basic`, il link dal tab Form ai compartimenti nel tab Structure e il campo che scrive `FieldCompartmentSpec.title`, che oggi nessuna superficie offre. Form document a piena pagina: **Slice 3**. Rifiuto al commit di un `FormSpec` incoerente: Slice 2, criterio R-B9-bis. Widget `link`: dichiarato nel vocabolario, nessuna resa ancora. `EDate` mappa a `text`: inventare un widget data che nessun artboard specifica sarebbe progettare, non implementare.
+Superficie di authoring del `FormSpec` (tabella widget, toggle Basic, ordinamento dei compartimenti): **Slice 2**. Stato al 2026-08-28: la **Slice 2a** implementa il tab `Form` del pannello vertex per `theme`, `labelPlacement`, `widgets` e `features`; la **Slice 2b** aggiunge l'authoring di `basic` (colonna Basic per riga, stato derived/declared, reset all'euristica), il link «Edit compartments» dal tab Form al tab Structure (`JjodelEvents.IR_AUTHORING_TAB`, filtrato su `viewId` perché il pannello può essere montato due volte) e il campo che scrive `FieldCompartmentSpec.title`, che prima nessuna superficie offriva. Form document a piena pagina: **Slice 3**. Rifiuto al commit di un `FormSpec` incoerente: Slice 2, criterio R-B9-bis. Widget `link`: dichiarato nel vocabolario, nessuna resa ancora. `EDate` mappa a `text`: inventare un widget data che nessun artboard specifica sarebbe progettare, non implementare.
