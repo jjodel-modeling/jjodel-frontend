@@ -2,6 +2,19 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-08-28 — docs: discovery per il tab Form dell'authoring (Slice 2, Fase 1, read-only)
+**Prompt**: raccogliere i fatti di codice per la Fase 2 del tab `Form` (id `ir-form`, solo kind vertex) nell'authoring IR: consumatori della barra, navigazione cross-tab, ciclo di commit del draft, feature della metaclasse target, riuso di `useFormWidgets`, adattatore per `buildFormSections`, primitive UI, gating Advanced, test, rischi. Dieci domande D1..D10, nessuna modifica al codice.
+**Files touched**: docs/discovery/discovery_2026-08-28_form_tab_authoring_slice2.md, docs/claude-code-log.md
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Fase read-only. Quattro import seguiti fuori perimetro, dichiarati nel report (LModelElement, view.tsx, slotValues, token SCSS). Controllo positivo per D5: `npx vitest run` sui tre file puri, 61 test verdi. Cinque domande aperte per Alfonso: segmento disabilitato, stile della tabella widget, Rule 19 a sette file, titolo dei compartimenti non autorabile, una feature chiamata `op` rompe la view.
+**Prompt document name**: 2026-08-28 16:15
+
 ## 2026-08-28 — docs: rotazione del log a 23 entry attive (venticinquesimo lotto), rimosse 450 entry reimportate dal merge 70e920492
 **Prompt**: manutenzione del log: rimozione del blocco reintrodotto dal merge di staging (450 entry già in archivio, byte per byte, più il frammento orfano dell'entry 2026-05-25), rotazione per data di heading con cutoff 2026-08-27, ordine newest-first per giorno ripristinato, regola scritta in testa al file e in P9.
 **Files touched**: docs/claude-code-log.md, docs/claude-code-log-archive.md, docs/PROTOCOL.md
