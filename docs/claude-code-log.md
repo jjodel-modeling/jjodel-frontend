@@ -8191,3 +8191,16 @@ Dark mode overrides for `.toolbar-btn` also scoped under `.documentation-toolbar
 **Smoke visivo**: non applicabile (fase di sola lettura).
 **Notes**: Due risultati riducono la Fase 2 a poche righe. `attrType.literals` sono proxy `LEnumLiteral` con `id` E `name`: il validatore costruisce i due insiemi dall'array che gia' percorre, senza lookup ne' import nuovi, e l'importer risolve dallo stesso path. Terzo: `api/data.ts` normalizza gia' gli ordinali in pointer con la stessa politica, ma la sua guardia sul className sembra non farlo girare mai (R4, da misurare). Baseline: tsc 33, vitest 1589.
 **Prompt document name**: 2026-08-28 01:46
+
+## 2026-08-28 — fix(conformance): CHECK 10 accetta i pointer ai literal accanto ai nomi (R-FRM-3, Fase 2, commit 1)
+**Prompt**: primo dei due commit della Fase 2 di R-FRM-3. La spec del 2026-08-28 (§10) fissa il pointer al `DEnumLiteral` come canone del valore enum e il nome come forma legacy accettata in lettura, senza scadenza. CHECK 10 confrontava per nome soltanto, quindi flaggava come `invalid_enum_literal` ogni enum toccato da un editor (che scrive il pointer). Perimetro: due file, nessuna critical zone.
+**Files touched**: model/conformance/ConformanceValidator.ts (CHECK 10: due insiemi, nomi e id, costruiti dallo stesso `attrType.literals` che il check gia' percorre; il valore e' valido come nome O come id; oggetto valido su una delle sue due identita'; messaggio esteso a `... is not a literal (by name or id) of enum "..."`), model/conformance/__tests__/ConformanceValidator.test.ts (+9 casi).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (il file di test passa, 61 casi; il ramo violazione e' invariato per costruzione e coperto dai 9 casi nuovi)
+**Out-of-scope changes**: no (i due file dichiarati)
+**Layer Impact Report**: not-required (nessun file di §3.1: `ConformanceValidator.ts` e' una funzione pura con soli import di tipo, e resta tale — nessun `idlookup`, nessun import nuovo)
+**Smoke visivo**: passato sul falso positivo (verifica di Alfonso a schermo: enum assegnato dall'editor, banner Conforms verde, la violazione spuria sparita). Il controllo del **vero positivo** e' rimandato alla verifica del commit 2: gli editor non possono fabbricare una violazione, perche' i literal non sono cancellabili da UI e la select non offre valori fuori dall'enum; l'unico modo di produrne una e' un file XMI modificato a mano, che e' esattamente lo scenario 2 della verifica del commit 2. Il ramo violazione resta coperto dai 9 unit test.
+**Notes**: gli id sono filtrati come i nomi non perche' un literal vero possa non averne uno, ma perche' le fixture legacy dichiarano `{ name: 'RED' }` senza id: un insieme non filtrato accetterebbe `undefined` come valido. Restano violazioni, volutamente: il pointer a un literal di un ALTRO enum, il nome il cui literal e' stato rimosso, l'ordinale. `VersionFixer` non tocca mai `DValue.values` (`:277` commentata), quindi la tolleranza e' permanente. Dettagli in `discovery_2026-08-28_r_frm3_enum_canone.md`.
+**Prompt document name**: 2026-08-28 02:04
