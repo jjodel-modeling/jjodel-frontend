@@ -442,6 +442,11 @@ $gradient-hover: linear-gradient(180deg, $slate-100 0%, $slate-200 100%);
   --color-inode-accent-neutral: #{$slate-300};       /* accent bar, factory default */
   --color-inode-shadow: rgba(0, 0, 0, 0.04);         /* resting */
   --color-inode-shadow-hover: rgba(0, 0, 0, 0.08);   /* hover lift */
+  /* Hover della pill singleton. Ruolo a se' e OPACO invece di --color-bg-hover,
+     che in chiaro varrebbe lo stesso valore ma in scuro e' traslucido: usato
+     come `background` sostituirebbe la superficie invece di sovrapporsi, e la
+     pill si scurirebbe lasciando trasparire la tela. */
+  --color-inode-pill-hover: #{$slate-150};           /* = --color-bg-hover chiaro */
 
   /* Cyan — selection owns it, and the reference pill borrows it for navigation */
   --color-inode-ref-bg: #ecfeff;                     /* cyan-50 */

@@ -352,4 +352,148 @@
             border-bottom-color: var(--color-inode-selected-header-border);
         }
     }
+
+    // ── Singleton ────────────────────────────────────────────────────────────
+    // A singleton is the only member of its class and is born with that class's
+    // name, so `Red : Red` says nothing twice and the compartment under it says
+    // nothing at all. Two treatments follow from that, chosen on CONTENT: the
+    // pill when the instance holds nothing, the cardinality badge when it does
+    // and has to stay a rectangle to show what it holds.
+
+    // The badge for a singleton WITH structure. 18px circle before the name,
+    // mono glyph `1`: the class has exactly one instance, and this is it.
+    .mm-object__singleton-badge {
+        width: 18px;
+        height: 18px;
+        flex: none;
+        border-radius: 50%;
+        border: 1px solid var(--color-inode-border);
+        font-family: var(--font-mono);
+        font-size: 10px;
+        font-weight: 600;
+        line-height: 1;
+        color: var(--color-inode-label);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    // The pill itself. One rule for both positions: the canvas node and the
+    // value inside a compartment row are the SAME element, and only the two
+    // differences the handoff allows (scale, underline) are keyed off the
+    // variant below. Anything else added here must be added for both.
+    .mm-object__pill {
+        display: inline-flex;
+        align-items: baseline;
+        white-space: nowrap;
+        max-width: 100%;
+        border-radius: 999px;
+        background: var(--color-inode-surface);
+        border: 1px solid var(--color-inode-border);
+        box-shadow: 0 1px 2px var(--color-inode-shadow);
+        transition: background var(--duration-fast) var(--ease-out),
+                    border-color var(--duration-fast) var(--ease-out),
+                    box-shadow var(--duration-fast) var(--ease-out);
+
+        // Opaque, and not --color-bg-hover: that token is translucent in dark,
+        // and as a `background` it would replace the surface instead of sitting
+        // on it — the pill would darken and show the canvas through. Same class
+        // of defect measured on 2026-08-27 when --color-bg-secondary was
+        // aliased for the node ground. No lift: canvas objects carry
+        // coordinates and must not translate.
+        &:hover {
+            background: var(--color-inode-pill-hover);
+        }
+    }
+
+    // Difference 1 of 2 — scale.
+    .mm-object__pill--node {
+        font-size: 13px;
+        padding: 7px 16px;
+    }
+
+    .mm-object__pill--row {
+        font-size: 12px;
+        padding: 2px 10px;
+    }
+
+    // Selection reads the same on both shapes, which is the point: the pill
+    // takes the rectangle's border and ring, unchanged, so a selected singleton
+    // and a selected instance are the same gesture. No fill of any hue, at rest
+    // or selected — cyan belongs to selection and must stay unambiguous.
+    .mm-object__pill--selected {
+        border-color: var(--color-inode-selected-border);
+        box-shadow: 0 0 0 3px var(--color-inode-selected-ring),
+                    0 1px 2px var(--color-inode-shadow);
+    }
+
+    // Rename in place. `.mm-node__input` is already transparent and borderless
+    // and inherits the font, so the pill keeps its own surface underneath and
+    // only the alignment has to change: the label reads left-to-right, the
+    // rectangle's centred header does not apply here.
+    .mm-object__pill-input {
+        text-align: left;
+        max-width: 100%;
+    }
+
+    .mm-object__pill-super {
+        font-weight: 500;
+        color: var(--color-inode-label);
+    }
+
+    .mm-object__pill-sep {
+        color: var(--color-inode-quiet);
+        white-space: pre;   // the spaces around the colon are part of the label
+    }
+
+    .mm-object__pill-name {
+        font-weight: 600;
+        color: var(--color-inode-name);
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    // Difference 2 of 2 — the underline. The canvas node is an instance
+    // specification and takes the UML object-diagram underline; the inline row
+    // is a value sitting in a slot and does not. It spans the NAME alone:
+    // `Color : Red` must read "a Red, which is a Color", not "an instance named
+    // Color : Red". Same rule as the rectangle header, different span.
+    .mm-object__pill--node .mm-object__pill-name {
+        text-decoration: underline;
+        text-underline-offset: 3px;
+    }
+
+    // The canvas wrapper, stripped. `.mm-node.mm-object` paints a surface, a
+    // border, a shadow and a 200px floor; `.mm-node` adds 140px and 40px;
+    // `.mm-object` in EditorV2.scss adds `height: 100%`. All of them would turn
+    // the pill back into a rectangle with a pill drawn inside it, so the
+    // wrapper gives up its chrome entirely and the pill above is the only thing
+    // that paints. Precedent in-repo: `.mm-node.viewpoint-wrapper`
+    // (EditorV2.scss), same move for the same reason. At (0,3,0) this beats
+    // every rule listed; `overflow: visible` is what lets the selection ring
+    // out of the box.
+    &.mm-object--pill {
+        display: inline-flex;
+        width: fit-content;
+        height: auto;
+        min-width: 0;
+        min-height: 0;
+        overflow: visible;
+        background: none;
+        border: none;
+        border-radius: 999px;   // so the RF wrapper clips nothing at the corners
+        box-shadow: none;
+
+        &:hover {
+            box-shadow: none;   // the resting rule above lifts the rectangle only
+        }
+
+        // (0,4,0): the selected rectangle's border and ring live on the wrapper,
+        // and here they must live on the pill instead — otherwise the node shows
+        // two concentric rings.
+        &.selected {
+            border-color: transparent;
+            box-shadow: none;
+        }
+    }
 }

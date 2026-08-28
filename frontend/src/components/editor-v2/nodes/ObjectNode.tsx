@@ -45,6 +45,15 @@ import {
     emptySlotsLabel,
 } from './instanceNodeStyle';
 import { detectValueRenderer, type RendererDecision } from './valueRenderer';
+import {
+    resolveInstanceShape,
+    firstAbstractDirectSuperclass,
+    readDirectSuperclasses,
+    readIsSingleton,
+    readSingletonInstanceInfo,
+    type SingletonLabelParts,
+} from './singletonShape';
+import SingletonPill from './SingletonPill';
 import type { FeatureValueRow } from '../types';
 import '../viewpoint/ir/irDemoFixture'; // dev-only: registers window.__jjodelInstallIRDemo
 import './instanceNode.scss';
@@ -468,6 +477,67 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
         }
     }, [commitPlaceholderEdit, advanceToNextSlot]);
 
+    // ── Singleton facts, live from Redux ─────────────────────────────
+    //
+    // Two questions, both answered off `idlookup` rather than off the node data:
+    // is THIS instance's metaclass a singleton (and what abstract superclass
+    // does it name), and which of its REFERENCE TARGETS draw as pills. Reading
+    // them live is what makes the node react to the singleton toggle and to a
+    // superclass added after mount — `refTargets` carries only id and name, and
+    // the transformer that fills it does not re-run on a metamodel change.
+    //
+    // Serialized signature for the usual reason (same pattern as
+    // `liveFeatureNameSig` above): a fresh object every render would re-render
+    // on every unrelated store write.
+    const singletonSig = useSelector((state: any) => {
+        const lookup = state.idlookup;
+        if (!lookup) return '';
+
+        // `self` carries the flag and the superclass NAME only. The shape is not
+        // decided here: it needs `valuedSlotCount`, which comes from the slot
+        // rows below and must not be counted a second time from another source.
+        const ownSuper = firstAbstractDirectSuperclass(
+            readDirectSuperclasses(lookup, data.instanceOfClassId),
+        );
+        const parts: string[] = [
+            `self;${readIsSingleton(lookup, data.instanceOfClassId) ? '1' : '0'};${ownSuper?.name ?? ''}`,
+        ];
+
+        // A target answers the whole question for itself: it is another object,
+        // with its own slots, and its shape follows the same content rule.
+        for (const f of data.features ?? []) {
+            for (const t of f.refTargets ?? []) {
+                const info = readSingletonInstanceInfo(lookup, t.id, t.name);
+                parts.push(`${t.id};${info.shape};${info.label.superclassName ?? ''}`);
+            }
+        }
+        return parts.join('|');
+    });
+
+    const { ownIsSingleton, ownSuperclassName, pillTargetSupers } = useMemo(() => {
+        // Target id -> the superclass half of its label. Membership IS the
+        // answer to "does this target draw as a pill": only pills are recorded.
+        const pills = new Map<string, string | null>();
+        let isSingleton = false;
+        let superName: string | null = null;
+
+        for (const entry of singletonSig.split('|')) {
+            if (!entry) continue;
+            const sep1 = entry.indexOf(';');
+            const sep2 = entry.indexOf(';', sep1 + 1);
+            if (sep1 < 0 || sep2 < 0) continue;
+            const key = entry.slice(0, sep1);
+            const mid = entry.slice(sep1 + 1, sep2);
+            // The name goes last and is never split further: a class name may
+            // contain a semicolon, and truncating it would print a wrong label.
+            const sup = entry.slice(sep2 + 1) || null;
+
+            if (key === 'self') { isSingleton = mid === '1'; superName = sup; continue; }
+            if (mid === 'pill') pills.set(key, sup);
+        }
+        return { ownIsSingleton: isSingleton, ownSuperclassName: superName, pillTargetSupers: pills };
+    }, [singletonSig]);
+
     // ── Style resolution and slot rows ───────────────────────────────
 
     // The cascade of the handoff — metamodel class default, then viewpoint
@@ -537,6 +607,18 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
 
     const emptyRowCount = useMemo(() => slotRows.filter(r => r.isEmpty).length, [slotRows]);
 
+    // Slots actually holding something. NOT the `[k]` suffix (that is per-slot,
+    // the values inside ONE multi-valued slot) and not the collapsed footer's
+    // number (that is the complement). This is the count the shape rule reads:
+    // a singleton with structure has a compartment to show, and a pill cannot
+    // host one.
+    const valuedSlotCount = useMemo(() => slotRows.length - emptyRowCount, [slotRows.length, emptyRowCount]);
+
+    const instanceShape = useMemo(
+        () => resolveInstanceShape({ isSingleton: ownIsSingleton, valuedSlotCount }),
+        [ownIsSingleton, valuedSlotCount],
+    );
+
     const visibleRows = useMemo(() => {
         if (style.emptyBehavior === 'dash') return slotRows;
         if (style.emptyBehavior === 'hide') return slotRows.filter(r => !r.isEmpty);
@@ -559,6 +641,13 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
     // features, no entity colour. An object with no metaclass at all (isOrphan) is a
     // different defect, already signalled by mm-object--orphan, and stays out.
     const notRendered = irViewpointActive && !irResolution && !isOrphan;
+
+    // The pill is the native branch's shape for a singleton holding nothing. An
+    // orphan has no metaclass, so it cannot be one; a not-rendered node is
+    // already reduced to a neutral header by the rule the tree shares, and that
+    // treatment must keep winning — an object the viewpoint does not render must
+    // not read like one it does.
+    const isPill = instanceShape === 'pill' && !isOrphan && !notRendered;
 
     if (irResolution && !irDelegated) {
         // IR render path: wrapper, resizer, handles and highlight class stay
@@ -691,17 +780,44 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
             const targets = feature.refTargets ?? [];
             return (
                 <>
-                    {targets.map((t, i) => (
-                        <span
-                            key={`${t.id}_${i}`}
-                            className="mm-object__ref-pill"
-                            title={`Vai a ${t.name}`}
-                            onClick={(e) => { e.stopPropagation(); revealReferenceTarget(t.id); }}
-                        >
-                            <i className="bi bi-link-45deg" />
-                            {t.name}
-                        </span>
-                    ))}
+                    {targets.map((t, i) => {
+                        // A target that draws as a pill on the canvas draws as
+                        // the SAME pill here, one size down: this is the level-3
+                        // parity requirement of the handoff, and the component
+                        // is shared precisely so the two cannot drift.
+                        //
+                        // A target that draws as a RECTANGLE — a singleton with
+                        // structure, or an ordinary instance — keeps the cyan
+                        // reference pill: a rectangle cannot be inlined in a
+                        // row, and the cyan one is the navigation affordance,
+                        // not a shape claim about the target.
+                        if (pillTargetSupers.has(t.id)) {
+                            const parts: SingletonLabelParts = {
+                                superclassName: pillTargetSupers.get(t.id) ?? null,
+                                instanceName: t.name,
+                            };
+                            return (
+                                <SingletonPill
+                                    key={`${t.id}_${i}`}
+                                    parts={parts}
+                                    variant="row"
+                                    title={`Vai a ${t.name}`}
+                                    onClick={(e) => { e.stopPropagation(); revealReferenceTarget(t.id); }}
+                                />
+                            );
+                        }
+                        return (
+                            <span
+                                key={`${t.id}_${i}`}
+                                className="mm-object__ref-pill"
+                                title={`Vai a ${t.name}`}
+                                onClick={(e) => { e.stopPropagation(); revealReferenceTarget(t.id); }}
+                            >
+                                <i className="bi bi-link-45deg" />
+                                {t.name}
+                            </span>
+                        );
+                    })}
                 </>
             );
         }
@@ -833,6 +949,59 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
         }
     };
 
+    // ── Pill: a singleton holding nothing ────────────────────────────
+    //
+    // `Red : Red` is redundant twice over — the instance is born with its
+    // class's name (joiner/classes.ts:942), and the compartment under it is
+    // empty. So the type half of the header is dropped, the compartment with
+    // it, and what remains is the instance name and the abstract superclass
+    // that says what KIND of thing it is: `Color : Red`, "a Red, which is a
+    // Color".
+    //
+    // The wrapper keeps every class the rectangle carries (problem overlay,
+    // highlight, simulation) and gives up only its chrome, which
+    // `.mm-object--pill` strips: the pill inside is the only thing that paints.
+    if (isPill) {
+        return (
+            <div
+                className={`mm-node mm-object mm-object--pill ${selected ? 'selected' : ''}${isProblemHighlighted ? ' mm-object--problem-highlighted' : ''} ${hlClass}${isSimActiveNode ? ' sim-active' : ''}`}
+                onDoubleClick={handleDoubleClick}
+                onClick={() => { if (selected && !editing) setEditing(true); }}
+            >
+                <DynamicHandles nodeId={id} />
+                <NodeProblemIndicator nodeId={id} />
+
+                {/* Renaming stays reachable exactly as on the rectangle: the
+                    pill is a different shape for the same object, not a
+                    read-only one. The input wears the pill's own geometry so
+                    the node does not change size on entering the edit. */}
+                {editing ? (
+                    <span className="mm-object__pill mm-object__pill--node">
+                        <input
+                            className="mm-node__input mm-object__pill-input"
+                            autoFocus
+                            // Sized to the name instead of the ~20ch input
+                            // default, so entering the edit does not widen the
+                            // node under the pointer.
+                            size={Math.max(name.length, 3)}
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            onFocus={(e) => e.target.select()}
+                            onBlur={handleBlur}
+                            onKeyDown={handleKeyDown}
+                        />
+                    </span>
+                ) : (
+                    <SingletonPill
+                        parts={{ superclassName: ownSuperclassName, instanceName: name }}
+                        variant="node"
+                        selected={!!selected}
+                    />
+                )}
+            </div>
+        );
+    }
+
     return (
         <div
             className={`mm-node mm-object ${selected ? 'selected' : ''} ${isOrphan ? 'mm-object--orphan' : ''}${notRendered ? ' mm-object--not-rendered' : ''}${isProblemHighlighted ? ' mm-object--problem-highlighted' : ''} ${hlClass}${isSimActiveNode ? ' sim-active' : ''}`}
@@ -889,6 +1058,20 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                         />
                     ) : (
                         <>
+                            {/* A singleton that holds something stays a
+                                rectangle — the compartment is the reason it
+                                exists — so its singleton-ness moves to a badge:
+                                the class has exactly one instance, and this is
+                                it. Shown only here, never on the pill, where
+                                the shape already says it. */}
+                            {ownIsSingleton && (
+                                <span
+                                    className="mm-object__singleton-badge"
+                                    title={`${metaclassName} e' singleton: questa e' la sua unica istanza`}
+                                >
+                                    1
+                                </span>
+                            )}
                             {style.typeDisplay === 'badge' && (
                                 <span className="mm-object__type-badge" title={metaclassName}>
                                     {entityLetter('object')}
