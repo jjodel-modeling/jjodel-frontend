@@ -5,7 +5,7 @@ import { Input, Select, NumberInput, ColorPicker, ErrorText, Button, HelpText, C
 import { getMetaclassInfo, type MetaclassInfo } from '../../hooks/useEditorMode';
 import { validateIR } from '../ir/irValidate';
 import { defaultObjectViewIR } from '../ir/irDefaults';
-import type { VertexViewIR, ShapeForm, PaddingToken } from '../ir/irTypes';
+import type { VertexViewIR, ShapeForm, PaddingToken, FormSpec } from '../ir/irTypes';
 import { MARKER_REGISTRY } from '../ir/markerRegistry';
 import { recognizeSymbol } from '../ir/symbolRecognition';
 import { resolveMetaclassId, withMetaclassPins, type MetaclassRef } from '../ir/metaclassPin';
@@ -13,6 +13,7 @@ import { defaultResizableForForm } from '../../nodes/nodeSizing';
 import { LabelListEditor } from './LabelListEditor';
 import { TextStyleField } from './TextStyleField';
 import { FieldCompartmentListEditor } from './FieldCompartmentListEditor';
+import { FormAuthoringBody } from './FormAuthoringBody';
 import { BadgeListEditor } from './BadgeListEditor';
 import { MatchingSection, type MetaclassChoice } from './MatchingSection';
 import { metaclassAmbiguityWarning } from './authoringMessages';
@@ -249,10 +250,18 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
         features: PathBuilderFeatures | null;
         metamodelsWithClass: number;
         targetName: string | null;
+        /**
+         * The resolved target metaclass itself (Slice 2a). `features` is the PathBuilder's
+         * projection and is lossy on purpose: it drops lowerBound, containment and the enum
+         * flag, which the Form tab needs. Widening PathBuilderFeatures would push form
+         * concerns into a generic path control shared by five editors, so the whole
+         * MetaclassInfo travels alongside it and each consumer reads what it needs.
+         */
+        target: MetaclassInfo | null;
     }>(() => {
         const mcs = draft.metaclasses;
         if (mcs === '*' || !Array.isArray(mcs) || mcs.length === 0) {
-            return { features: null, metamodelsWithClass: 0, targetName: null };
+            return { features: null, metamodelsWithClass: 0, targetName: null, target: null };
         }
         const targetName = mcs[0];
 
@@ -283,7 +292,7 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
         // Identity match wins; fall back to the first name match only when the chain
         // cannot pin an id at all (no pin, and a name outside the Apply-to set).
         const target = byId ?? byNameFallback;
-        if (!target) return { features: null, metamodelsWithClass, targetName };
+        if (!target) return { features: null, metamodelsWithClass, targetName, target: null };
         return {
             features: {
                 attributes: (target.allAttributes ?? target.attributes ?? []).map((a) => ({
@@ -295,6 +304,7 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
             },
             metamodelsWithClass,
             targetName,
+            target,
         };
         // appliesToClasses is itself memoized on the stringified appliableToClasses,
         // so it carries the dependency this list used to spell out.
@@ -339,7 +349,17 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
         patchShape({ border: { ...base, ...partial } });
     };
 
-    /** Body visibility of the five-tab partition: `display: none` only (R-A). */
+    /**
+     * Drop the `form` key from the draft. Rest/spread and not `form: undefined`: the key
+     * must be ABSENT, so a view whose FormSpec was set and then emptied round-trips
+     * byte-identical to one that never carried it. Same idiom as `withChildFilter`.
+     */
+    const omitForm = (ir: VertexViewIR): VertexViewIR => {
+        const { form: _dropped, ...rest } = ir;
+        return rest as VertexViewIR;
+    };
+
+    /** Body visibility of the tab partition: `display: none` only (R-A). */
     const body = (id: IRTabId) => irTabBodyStyle(id, activeTab);
 
     return (
@@ -397,6 +417,21 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                         onChange={(next) => patch({ ...draft, fieldCompartments: next })}
                     />
                 </FormSection>
+            </div>
+
+            {/* ─────────── Form ─────────── */}
+            {/* Slice 2a. Vertex only (irTabsForKind): a row and an edge carry no `form`.
+                The body is mounted like every other one (strada B), so it stays purely
+                presentational — it also lives inside the symbol editor modal, where the
+                tab is not reachable. */}
+            <div className="ir-tab-body ir-tab-body--form" style={body('ir-form')}>
+                <FormAuthoringBody
+                    draft={draft}
+                    target={featureInfo.target}
+                    advanced={advanced}
+                    onChange={(form: FormSpec | undefined) =>
+                        patch(form === undefined ? omitForm(draft) : { ...draft, form })}
+                />
             </div>
 
             {/* ─────────── Appearance ─────────── */}

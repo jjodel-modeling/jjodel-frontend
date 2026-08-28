@@ -1,0 +1,142 @@
+/* FormAuthoringBody — the Form tab of the vertex authoring panel (Slice 2a).
+
+   Metrics from artboards 6a/6b of the form-views handoff: header row 24px, feature
+   rows 30px, feature name in mono 12px, widget control 110px, treatment control 130px.
+   Every value comes from styles/tokens/, and no variable is declared here (rule 28).
+
+   A stylesheet of its own rather than inline styles: the tables are the first tabular
+   rows in the authoring panel, which is built on the stacked `jj-field` and has no
+   pattern to reuse for them (discovery 2026-08-28, D7). */
+
+.form-authoring {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3, 12px);
+
+    &__table {
+        border: 1px solid var(--color-border-secondary);
+        border-radius: var(--radius-sm);
+        overflow: hidden;
+    }
+
+    &__head {
+        display: grid;
+        grid-template-columns: 1fr 110px;
+        gap: var(--space-2, 8px);
+        align-items: center;
+        height: 24px;
+        padding: 0 var(--space-2, 8px);
+        background: var(--color-bg-primary);
+        border-bottom: 1px solid var(--color-border-secondary);
+        font-size: var(--text-2xs);
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--color-text-tertiary);
+    }
+
+    /* min-height and not height: a row carrying a preserved-value chip is taller than
+       one that is not, and clipping the chip would hide what the row exists to show. */
+    &__row {
+        display: grid;
+        grid-template-columns: 1fr 110px;
+        gap: var(--space-2, 8px);
+        align-items: center;
+        min-height: 30px;
+        padding: 0 var(--space-2, 8px);
+        border-bottom: 1px solid var(--color-border-secondary);
+
+        &:last-child { border-bottom: none; }
+    }
+
+    &__row--treatment {
+        grid-template-columns: 1fr 130px;
+    }
+
+    /* Hidden is still authored, so the row stays readable and stays operable: dimmed,
+       never removed, or the author would lose the control that puts it back. */
+    &__row--muted {
+        opacity: 0.6;
+    }
+
+    &__name {
+        display: inline-flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 5px;
+        min-width: 0;
+        font-family: var(--font-mono);
+        font-size: var(--text-md);
+        color: var(--color-text-primary);
+        word-break: break-word;
+    }
+
+    /* 5px, the handoff's size for this marker. Same token as the form's required and
+       dirty dots: cyan marks state, red stays reserved for diagnostics. */
+    &__dot {
+        flex: 0 0 auto;
+        width: 5px;
+        height: 5px;
+        border-radius: var(--radius-full);
+        background: var(--color-marker-required);
+    }
+
+    &__badge {
+        flex: 0 0 auto;
+        padding: 0 4px;
+        border-radius: var(--radius-xs);
+        background: var(--color-bg-tertiary);
+        color: var(--color-text-tertiary);
+        font-family: var(--font-sans);
+        font-size: var(--text-2xs);
+        line-height: 1.6;
+    }
+
+    &__legend {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: var(--text-2xs);
+        color: var(--color-text-tertiary);
+    }
+
+    &__residual {
+        margin-bottom: var(--space-2, 8px);
+        font-size: var(--text-2xs);
+        line-height: 1.5;
+        color: var(--color-text-tertiary);
+    }
+
+    &__ignored {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-1, 4px);
+        margin-top: var(--space-2, 8px);
+    }
+
+    &__ignored-row {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2, 8px);
+        flex-wrap: wrap;
+    }
+
+    &__clear {
+        appearance: none;
+        border: 1px solid var(--color-border-primary);
+        border-radius: var(--radius-sm);
+        background: var(--color-bg-secondary);
+        padding: 1px 8px;
+        font-family: var(--font-sans);
+        font-size: var(--text-2xs);
+        color: var(--color-text-secondary);
+        cursor: pointer;
+
+        &:hover { background: var(--color-bg-hover); }
+
+        &:focus-visible {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(51, 65, 85, 0.18);
+        }
+    }
+}

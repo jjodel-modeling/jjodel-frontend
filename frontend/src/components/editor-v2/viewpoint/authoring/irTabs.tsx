@@ -7,7 +7,8 @@ import { convertIRKind, stashedKinds, type AuthorableIRKind, type IRKindStash } 
 import type { AnyViewIR } from '../ir/irTypes';
 
 /**
- * irTabs — the five-tab partition of the IR authoring panels (ratifica 2026-08-04).
+ * irTabs — the tab partition of the IR authoring panels (ratifica 2026-08-04; five tabs
+ * then, plus Form for the vertex since Slice 2a).
  *
  * The BAR lives in `ViewData` (it replaces the legacy one for every view carrying an
  * `ir`); the BODIES live inside each authoring panel. The panel therefore stays
@@ -20,6 +21,7 @@ export type IRTabId =
     | 'ir-applies-to'
     | 'ir-structure'
     | 'ir-symbol'
+    | 'ir-form'
     | 'ir-appearance'
     | 'ir-text'
     | 'ir-source';
@@ -32,6 +34,7 @@ export const IR_TAB_LABELS: Record<IRTabId, string> = {
     'ir-applies-to': 'Applies to',
     'ir-structure': 'Structure',
     'ir-symbol': 'Symbol',
+    'ir-form': 'Form',
     'ir-appearance': 'Appearance',
     'ir-text': 'Text',
     'ir-source': 'Source',
@@ -45,6 +48,13 @@ export const IR_TAB_LABELS: Record<IRTabId, string> = {
  * from the `display: none` of an inactive tab (V1). Source is the only
  * advanced-gated tab (R-3): every other tab is reachable in Basic, matching
  * included.
+ *
+ * Form (Slice 2a) is offered to the VERTEX alone, between Symbol and Source. It is
+ * reachable in Basic on purpose, which keeps R-3 intact: its Basic half (theme and
+ * label placement) is the whole of what a reader without Advanced can decide, and
+ * the two tables it hides are gated INSIDE the body, not at bar level. A row view
+ * and an edge view carry no `form` in the schema, so the tab would have nothing to
+ * author there.
  */
 export const irTabsForKind = (kind: IRAuthoringKind, advanced: boolean): IRTabId[] => {
     // D15: the vertex anatomy (Appearance and Text bodies) is re-hosted by the
@@ -54,7 +64,7 @@ export const irTabsForKind = (kind: IRAuthoringKind, advanced: boolean): IRTabId
         ? ['ir-applies-to', 'ir-text']
         : kind === 'edge'
             ? ['ir-applies-to', 'ir-structure', 'ir-appearance', 'ir-text']
-            : ['ir-applies-to', 'ir-structure', 'ir-symbol'];
+            : ['ir-applies-to', 'ir-structure', 'ir-symbol', 'ir-form'];
     return advanced ? [...content, 'ir-source'] : content;
 };
 

@@ -42,6 +42,8 @@ Due vincoli che non sono stilistici:
 - **Le chiavi sono nomi di feature, non PathExpr.** La form enumera gli slot propri del soggetto (`LObject.features`) e li scrive per indice; non naviga. Un percorso multi-hop non avrebbe un valore scrivibile in fondo. È anche la chiave che il resto del codebase usa già per le feature (`syncUpdateFeatureValue`, `resolveReferenceIdByName`, il `metamodelElementName` della conformance).
 - **Nessuna chiave `op` con valore stringa può comparire dentro `FormSpec`, a qualsiasi profondità.** `irValidate.findUnknownPredicateOp` percorre tutta la ir e tratta ogni `op` stringa come operatore di predicato, respingendo l'intera view con un messaggio sui predicati. Il vincolo vale per ogni estensione futura di questa struttura.
 
+  Il vincolo non è solo sulla struttura: **le chiavi di `widgets` e `features` sono nomi di feature**, quindi una metaclasse con una feature chiamata `op` produce `widgets: { op: 'text' }`, che ricade nel vincolo e fa respingere la view al commit. Misurato il 2026-08-28 con un test di caratterizzazione (`authoring/__tests__/formAuthoring.test.ts`). È un **limite noto e non corretto**: rendere mirata la scansione di `findUnknownPredicateOp` è esattamente ciò contro cui argomenta la doc di quel modulo, e la genericità vale più del caso limite. Chi incontra il problema rinomina la feature.
+
 Poiché la ir salvata non ha VersionFixer (R-B9), **ogni letterale scritto qui è definitivo una volta persistito**.
 
 ## 3. Compilazione: passthrough, non compile
@@ -180,4 +182,4 @@ L'interprete non inventa default silenziosi. In ordine di frequenza:
 
 ## 14. Fuori da questo addendum
 
-Superficie di authoring del `FormSpec` (tabella widget, toggle Basic, ordinamento dei compartimenti): **Slice 2**. Form document a piena pagina: **Slice 3**. Rifiuto al commit di un `FormSpec` incoerente: Slice 2, criterio R-B9-bis. Widget `link`: dichiarato nel vocabolario, nessuna resa ancora. `EDate` mappa a `text`: inventare un widget data che nessun artboard specifica sarebbe progettare, non implementare.
+Superficie di authoring del `FormSpec` (tabella widget, toggle Basic, ordinamento dei compartimenti): **Slice 2**. Stato al 2026-08-28: la **Slice 2a** implementa il tab `Form` del pannello vertex per `theme`, `labelPlacement`, `widgets` e `features`; restano alla **Slice 2b** l'authoring di `basic`, il link dal tab Form ai compartimenti nel tab Structure e il campo che scrive `FieldCompartmentSpec.title`, che oggi nessuna superficie offre. Form document a piena pagina: **Slice 3**. Rifiuto al commit di un `FormSpec` incoerente: Slice 2, criterio R-B9-bis. Widget `link`: dichiarato nel vocabolario, nessuna resa ancora. `EDate` mappa a `text`: inventare un widget data che nessun artboard specifica sarebbe progettare, non implementare.

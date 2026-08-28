@@ -2,6 +2,19 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-08-28 — feat(authoring): il tab Form del pannello vertex (Slice 2a, commit 2)
+**Prompt**: secondo commit della Slice 2a. Tab `Form` (id `ir-form`) nella barra dell'authoring, solo per il kind vertex, fra Symbol e Source, raggiungibile in Basic. Theme e Labels sempre resi; in Advanced le righe raggruppate per sezione nell'ordine che la form rendera' (R-FRM-1), con override dei widget per attributo e trattamento inline/list/hidden per reference e containment. `basic` fuori scope (Slice 2b) e preservata verbatim.
+**Files touched**: frontend/src/components/editor-v2/viewpoint/authoring/irTabs.tsx, frontend/src/components/editor-v2/viewpoint/authoring/FormAuthoringBody.tsx (nuovo), frontend/src/components/editor-v2/viewpoint/authoring/FormAuthoringBody.scss (nuovo), frontend/src/components/editor-v2/viewpoint/authoring/VertexAuthoringPanel.tsx, frontend/src/components/editor-v2/viewpoint/authoring/__tests__/formAuthoring.test.ts (nuovo), docs/spec/claude_spec_2026-08-28_ir_formspec_addendum.md, docs/claude-code-log.md
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown. Gate verdi: `npm run typecheck` 33 = baseline (diff identico), `npx vitest run` 1639 → 1677 passati (+38 nuovi) con gli stessi 9 file falliti all'import, `npm run build` exit 0 col solo chunk-warning. Nessuna verifica a schermo da qui: la checklist visiva e' nella nota finale ed e' di Alfonso.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (nessun file della critical zone §3.1)
+**Smoke visivo**: non eseguito da qui (checklist consegnata ad Alfonso, otto punti)
+**Notes**: Q5 misurata e confermata: una feature chiamata `op` fa respingere la view da `findUnknownPredicateOp`. Test di caratterizzazione, `irValidate.ts` non toccato, spec §2 aggiornata col limite noto e §14 con lo stato della slice. Il tab e' in Basic per non violare R-3: il gating Advanced e' dentro il corpo. Debiti in Slice 2b: `basic`, link ai compartimenti, `FieldCompartmentSpec.title` non autorabile.
+**Prompt document name**: 2026-08-28 16:35
+
 ## 2026-08-28 — feat(form): fondamenta additive per il tab Form dell'authoring (Slice 2a, commit 1)
 **Prompt**: primo dei due commit della Slice 2a. Quattro modifiche additive che non cambiano nessun comportamento: `isEnum` sugli attributi della metaclasse, `overrideIsCompatible` esportata, `buildFormSections` generica sul tipo del campo, opzioni disabilitate con tooltip nel `SegmentedControl`. Base: discovery `discovery_2026-08-28_form_tab_authoring_slice2.md` (D4, D5, D6, D7/Q1).
 **Files touched**: frontend/src/components/editor-v2/hooks/useEditorMode.ts, frontend/src/components/editor-v2/viewpoint/ir/useFormWidgets.ts, frontend/src/components/editor-v2/viewpoint/ir/formSections.ts, frontend/src/components/ui/SegmentedControl/SegmentedControl.tsx, frontend/src/components/ui/SegmentedControl/SegmentedControl.module.css, frontend/src/components/editor-v2/viewpoint/ir/__tests__/useFormWidgets.test.ts, docs/claude-code-log.md
