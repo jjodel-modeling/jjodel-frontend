@@ -26,5 +26,5 @@ export function getMultiplicity(feature: any): string {
 
 /** The rendered suffix, e.g. `: EString [0..1]`. */
 export function formatFeatureSignature(typeName: string, multiplicity: string): string {
-    return `: ${typeName} [${multiplicity}]`;
+    return ` ${typeName} [${multiplicity}]`;
 }
