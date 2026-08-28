@@ -103,8 +103,21 @@ Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right u
 **Out-of-scope changes**: no — i file della pill piu' il bundle di design, che Alfonso ha consegnato in questo turno ed e' il riferimento citato dai commenti gia' committati.
 **Layer Impact Report**: not-required — nessun file di §3.1.
 **Smoke visivo**: passato — `scripts/smoke/_tmp_singleton_pill.ts` (non committata) **31/31 verdi**, zero errori di pagina, due temi. Check nuovo P-2b sulla RUN completa e non sul solo separatore: `textContent` della pill === `Color::Red`, cosi' uno spazio che arrivasse dal markup attorno verrebbe visto.
-**Notes**: il bundle vero smentisce la nota del turno precedente: «Turno 4» esiste (Proposal a 47384 byte contro i 35239 della copia in repo, che era stale). Il riscontro visivo conferma geometria, selezione, parita' riga/canvas e badge come gia' implementati; il `PROMPT_singleton_pill.md` interno e' identico al testo di chat. Il prototipo 4a usa pero' un `:` singolo in un flex a `gap: 5px`: `::` senza spazi e' una divergenza deliberata, `::` essendo l'operatore di nome qualificato.
+**Notes**: il bundle vero smentisce la nota del turno precedente: «Turno 4» esiste (Proposal a 47384 byte contro i 35239 della copia in repo, che era stale). Il riscontro visivo conferma geometria, selezione, parita' riga/canvas e badge come gia' implementati; il `PROMPT_singleton_pill.md` interno e' identico al testo di chat. Sul separatore la forma scelta e' `::` senza spazi, l'operatore di nome qualificato.
 **Prompt document name**: 2026-08-28 15:50
+
+## 2026-08-28 — fix(editor-v2): il separatore `::` prende colore e peso della superclasse
+**Prompt**: alzare il separatore della pill singleton da slate-300 a `--color-inode-label`, stesso colore e stesso peso dello span della superclasse. Nessun cambio di geometria, di markup o di spaziatura; l'asserzione della sonda sulla run completa resta com'e'. Motivazione da registrare nel documento di prompt, insieme alla nota che l'ordine e' deliberatamente l'inverso di quello del rettangolo.
+**Files touched**: `editor-v2/nodes/instanceNode.scss` (superclasse e separatore diventano UNA regola, cosi' non possono divergere), `editor-v2/nodes/SingletonPill.tsx` (soli commenti: la ragione del colore e quella dell'ordine), `scripts/smoke/_tmp_singleton_pill.ts` (non committata), `docs/prompts/claude_2026-08-28_1500_prompt_singleton_pill.md`, `docs/discovery/discovery_2026-08-28_singleton_pill.md`, `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: 2026-08-28 15:50
+**Causa**: (d)
+**Regressions**: no — typecheck 33 = baseline con insieme di errori identico; vitest 1632 passed / 0 failed coi soliti 9 file rotti all'import; build exit 0; `npm run smoke` 12 passed / 0 failed / 3 skipped.
+**Out-of-scope changes**: no — una regola SCSS, due commenti e i documenti.
+**Layer Impact Report**: not-required — nessun file di §3.1, nessun codice eseguibile toccato.
+**Smoke visivo**: passato — `_tmp_singleton_pill.ts` **31/31 verdi**, zero errori di pagina. P-4 riscritto: prova l'UGUAGLIANZA fra separatore e superclasse (colore e peso) invece del confronto con una costante, piu' il controllo negativo `sepColor !== slate-300`. Cosi' fallisce anche se i due divergono restando entrambi plausibili.
+**Notes**: lo slate-300 e' giusto nell'header del rettangolo, dove il `:` separa due run di peso diverso ed e' punteggiatura di servizio; nella pill `::` fa parte del nome qualificato e demoto spezzava `Color::Red` in due parole staccate. Tolta dal log e dal codice la nota di divergenza dal prototipo: il bundle e' stato aggiornato a monte. La copia committata qui e' pero' ancora quella del primo zip (misurato: 4a con `gap: 5px`, `:` singolo, `#cbd5e1`), da reinstallare.
+**Prompt document name**: 2026-08-28 16:10
 
 ## 2026-08-27 — fix(settings): il modale Settings torna a 1120 di larghezza
 **Prompt**: «riallarga un po' il modale, mi sembra troppo piccolo», dopo la revisione 5a che lo aveva portato da 1360x820 a 960x780.

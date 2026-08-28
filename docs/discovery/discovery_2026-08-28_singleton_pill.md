@@ -525,6 +525,6 @@ riferimenti nei commenti di `instanceNode.scss` e `instanceNodeStyle.ts` non
 restano appesi.
 
 Il riscontro visivo conferma geometria, selezione, parita' e badge come
-implementati. L'unica divergenza dal prototipo e' deliberata: il separatore e'
-`::` senza spazi invece del `:` spaziato di 4a (decisione di Alfonso, motivata
-nel documento di prompt).
+implementati. Sul separatore la decisione e' `::` senza spazi, al colore e al
+peso della superclasse: motivazione e stato della copia del prototipo nel
+documento di prompt.

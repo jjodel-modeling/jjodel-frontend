@@ -28,6 +28,13 @@
  * has to read "a Red, which is a Color", not "an instance named Color::Red".
  * On the pill the name is the right-hand half, which is the only thing that
  * changes from the rectangle header — the rule itself is the same one.
+ *
+ * That inversion against the rectangle's `Shape_0 : Shape` is deliberate, and
+ * it is not an inconsistency to be tidied away later. The rectangle says "this
+ * instance, of that type". The pill says "this member, of that closed set" —
+ * `Red`'s type IS `Red`, and `Color` is its namespace, which is why the
+ * namespace comes first and why the operator is `::`. Both orders are correct
+ * for what they express.
  */
 
 import type { SingletonLabelParts } from './singletonShape';
@@ -68,15 +75,14 @@ function SingletonPill({ parts, variant, selected = false, title, onClick }: Sin
             {superclassName && (
                 <>
                     <span className="mm-object__pill-super">{superclassName}</span>
-                    {/* `::`, not ` : `. The design prototype draws a single
-                        spaced colon; the double colon was chosen over it
-                        (Alfonso, 2026-08-28) because it is the qualified-name
-                        operator, and a qualified name is exactly what this
-                        label is — `Color::Red` names the literal inside the
-                        closed set, where a spaced colon would read as the
-                        instance-of relation the rectangle header already
-                        carries. No surrounding spaces: they are part of the
-                        other reading, not this one. */}
+                    {/* `::`, the qualified-name operator, and no spaces around
+                        it: the label names a member inside a closed set, where
+                        the rectangle header's spaced `:` names the instance-of
+                        relation. Both readings are correct for what they
+                        express, and they are not interchangeable. The separator
+                        carries the superclass's own colour and weight because it
+                        is part of the name, not punctuation between two names —
+                        see instanceNode.scss. */}
                     <span className="mm-object__pill-sep">::</span>
                 </>
             )}

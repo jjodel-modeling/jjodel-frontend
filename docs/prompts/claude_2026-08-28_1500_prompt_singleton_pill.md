@@ -211,10 +211,29 @@ l'IR» che ripete la risoluzione su contenuto e non su flag. Il
 `PROMPT_singleton_pill.md` del bundle e' identico al testo consegnato in chat,
 salvo il token di hover, gia' emendato in chat sulla proposta del hard stop.
 
-**Una divergenza voluta dal prototipo.** Il markup di 4a separa le due meta' con
-un `:` singolo dentro uno span a `color: #cbd5e1`, dentro un flex a `gap: 5px`:
-rende `Color : Red`. Alfonso ha scelto **`Color::Red`** — doppio due punti, senza
-spazi — che e' la forma implementata. Motivo: `::` e' l'operatore di nome
-qualificato, e un nome qualificato e' esattamente cio' che l'etichetta e', mentre
-il due punti spaziato porta la relazione di istanziazione che l'header del
-rettangolo gia' esprime.
+**Il separatore: `::`, al colore e al peso della superclasse.** L'etichetta usa
+`Color::Red` — doppio due punti, nessuno spazio — e il separatore prende
+`color: var(--color-inode-label)` e `font-weight: 500`, cioe' esattamente colore
+e peso dello span della superclasse, dichiarati come una regola sola perche' non
+possano divergere.
+
+Lo slate-300 e' corretto nell'header del rettangolo, dove il `:` separa due run
+di peso diverso ed e' punteggiatura di servizio. Nella pill `::` fa parte del
+nome qualificato, non lo separa: demoto, `Color::Red` si legge come due parole
+staccate. E' l'effetto misurato a dimensione reale sul primo giro, e questa e' la
+correzione.
+
+**L'ordine e' deliberatamente l'inverso di quello del rettangolo**, e non e'
+un'incoerenza da sistemare piu' avanti. `Shape_0 : Shape` dice «questa istanza,
+di quel tipo». `Color::Red` dice «questo membro, di quell'insieme chiuso»: il
+tipo di `Red` **e'** `Red`, e `Color` e' il suo namespace — da cui il namespace
+per primo e l'operatore `::`. I due ordini sono entrambi corretti per quello che
+esprimono, e non sono intercambiabili.
+
+**Stato della copia del prototipo in repo.** Il bundle e' stato aggiornato a
+monte perche' 4a renda `::` senza spazi a slate-500 con `gap: 0`. La copia
+committata qui e' quella consegnata col primo zip e **non** porta ancora quella
+modifica: misurato il 2026-08-28, `Instance Node Proposal.dc.html` a 47384 byte,
+4a con `gap: 5px`, un `:` singolo e `color: #cbd5e1`. Il codice segue la
+decisione, non quella copia; chi confronta i due si aspetti la differenza finche'
+il bundle non viene reinstallato.

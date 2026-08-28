@@ -436,16 +436,21 @@
         max-width: 100%;
     }
 
-    .mm-object__pill-super {
+    // The superclass and the `::` are ONE unit and are declared as one rule, so
+    // they cannot drift apart.
+    //
+    // The separator is deliberately NOT at the `--color-inode-quiet` the
+    // rectangle header uses for its `:`. That demotion is right there, where the
+    // colon is service punctuation between two runs of different weight. Here
+    // `::` is the qualified-name operator and part of the name itself: demoted,
+    // `Color::Red` reads as two detached words instead of one qualified name.
+    //
+    // `white-space` is deliberately not set either: there is no whitespace in
+    // the separator to protect, and the pill already carries `nowrap`.
+    .mm-object__pill-super,
+    .mm-object__pill-sep {
         font-weight: 500;
         color: var(--color-inode-label);
-    }
-
-    // `::` — the qualified-name operator, with no spaces around it. `white-space`
-    // is deliberately NOT set: there is no whitespace in the separator to protect,
-    // and the pill already carries `nowrap`.
-    .mm-object__pill-sep {
-        color: var(--color-inode-quiet);
     }
 
     .mm-object__pill-name {
