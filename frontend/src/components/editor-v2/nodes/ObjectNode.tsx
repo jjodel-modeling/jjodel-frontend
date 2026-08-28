@@ -945,10 +945,13 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
      * canvas node menu, and shadowing it on the value cells would take a
      * committed behaviour away from part of every instance node.
      */
-    const openInspector = (row: SlotRow, e: React.MouseEvent) => {
+    const openInspector = (row: SlotRow, e: React.MouseEvent, anchorEl?: HTMLElement | null) => {
         e.stopPropagation();
         e.preventDefault();
-        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        // Both entry points anchor to the same box: the VALUE CELL, never the
+        // icon. Anchoring the panel to a 14px glyph would put it in a different
+        // place depending on how the user opened it, for the same row.
+        const rect = (anchorEl ?? (e.currentTarget as HTMLElement)).getBoundingClientRect();
         setInspecting({
             slot: row.slot,
             // The METAMODEL feature, which is where an override is written. A
@@ -1175,6 +1178,30 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                                             topology, the row shows that this property holds
                                             this value. */}
                                         {renderSlotValue(row)}
+                                        {/* The discoverable way in. Alt+click stays as the
+                                            accelerator for someone auditing many properties
+                                            in a row; this is what tells everyone else the
+                                            panel exists at all.
+
+                                            Shown on EVERY row, including one whose renderer
+                                            is already declared: the ladder panel is where an
+                                            override is undone, so hiding the icon there
+                                            would close the only exit from a declaration. */}
+                                        <button
+                                            type="button"
+                                            className="mm-object__inspect nodrag"
+                                            title="Perché questo renderer"
+                                            aria-label={`Perché questo renderer per ${row.name}`}
+                                            // Same contract as the `+k` chip: inspecting is
+                                            // not selecting, and the row's own click target
+                                            // stays whatever it was. `onMouseDown` too, or
+                                            // React Flow starts dragging the node under the
+                                            // press before the click ever lands.
+                                            onMouseDown={(e) => e.stopPropagation()}
+                                            onClick={(e) => openInspector(row, e, e.currentTarget.parentElement)}
+                                        >
+                                            <i className="bi bi-sliders" />
+                                        </button>
                                     </span>
                                 </Fragment>
                             );

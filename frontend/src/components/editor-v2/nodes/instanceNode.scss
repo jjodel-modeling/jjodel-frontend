@@ -185,6 +185,19 @@
         gap: 6px;
         min-width: 0;
         flex-wrap: wrap;
+        // Containing block for the inspect icon. Safe next to the enum popover:
+        // `.inline-type-select` is `position: relative` itself, so its list is
+        // positioned against that and not against whatever ancestor happens to
+        // be relative.
+        position: relative;
+        // The icon's slot, RESERVED and always present rather than made on
+        // hover. Reserving costs 18px of value width on every row; making room
+        // on hover would slide the value sideways under the pointer, and a
+        // value that moves when you approach it is worse than no affordance at
+        // all. It also means the icon never lands on top of an ellipsised
+        // string, which `truncatedText` — the library's floor, and so its most
+        // common member — would otherwise collide with constantly.
+        padding-right: 18px;
     }
 
     // ── Value renderers ──────────────────────────────────────────────────────
@@ -501,6 +514,55 @@
     // Same reason as the input: the chevron rule in EditorV2.scss is nested
     // under `.mm-field` and cannot reach these rows. Without a rule of its own
     // it would default to fully opaque and sit on every enum row at all times.
+    // ── The inspector's affordance ───────────────────────────────────────────
+    //
+    // Revealed on hover, the pattern the project cards already use for their
+    // action icons (`project-editor.scss:110`), so it costs no new vocabulary.
+    //
+    // Two selectors rather than one `.mm-object__row:hover`, because there is no
+    // row element to hang it on: the compartment is a two-column grid and the
+    // label and the value are DIRECT grid children, so wrapping them to get a
+    // row would break `grid-template-columns` for every node. They are adjacent
+    // siblings, though, which is enough — hovering either half reveals the icon,
+    // and the effect is the row hover the design asks for.
+    .mm-object__inspect {
+        position: absolute;
+        right: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        // Out of flow, so it can neither change the row's height nor reflow the
+        // value beside it. It sits in the padding reserved above.
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        border: none;
+        background: none;
+        font-size: 14px;
+        line-height: 1;
+        color: var(--color-inode-footer);
+        cursor: pointer;
+        opacity: 0;
+        transition: opacity var(--duration-fast) var(--ease-out);
+
+        &:hover {
+            color: var(--color-inode-name);
+        }
+    }
+
+    .mm-object__slot-value:hover .mm-object__inspect,
+    .mm-object__slot-label:hover + .mm-object__slot-value .mm-object__inspect {
+        opacity: 1;
+    }
+
+    // Keyboard reachability is not a hover state: an icon focused by Tab has to
+    // be visible, or the affordance exists only for a pointer.
+    .mm-object__inspect:focus-visible {
+        opacity: 1;
+        outline: 1px solid var(--color-inode-selected-border);
+        outline-offset: 1px;
+    }
+
     // The enum popover's trigger. It wraps whatever the library painted — a
     // chip, or a swatch and its label — so the AFFORDANCE stays enum-specific
     // while the RENDERING comes from the same component every other row uses.
