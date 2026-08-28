@@ -12,6 +12,9 @@ import Loader from "./components/loader/Loader";
 import {FakeStateProps} from "./joiner/types";
 import {HashRouter, Navigate, Route, Routes} from 'react-router-dom';
 import PathChecker from "./components/pathChecker/PathChecker";
+// Dev-only visual smoke fixtures. The component is inert unless
+// `import.meta.env.DEV`, and its fixture import is dropped in a production build.
+import SmokeBoot from "./components/devtools/SmokeBoot";
 
 import {
     AccountPage,
@@ -129,6 +132,7 @@ function App(props: AllProps): JSX.Element {
                 <Try><JjtlDialogManager/></Try>
                 <HashRouter>
                     <Try><PathChecker/></Try>
+                    <Try><SmokeBoot/></Try>
                     <Try><Routes>
                         {user ? <>
                             <Route path={'/'} element={<Navigate to="/allProjects" replace/>}/>

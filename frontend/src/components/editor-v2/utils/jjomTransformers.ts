@@ -336,35 +336,47 @@ function objectVertexToRFNode(vertex: any): Node<ObjectNodeData> {
             } catch { /* proxy access can throw */ }
 
             if (isRef) {
-                // Reference: show resolved target names (handle both pointer IDs and objects)
+                // Reference: resolved target names, and the pointers that no
+                // longer resolve to anything.
+                //
+                // The RAW values are the source of truth here, not `fv.values`.
+                // Measured 2026-08-28: deleting a DObject leaves the pointer in
+                // place — `DValue.values` still held `Pointer…_49` afterwards,
+                // and that id resolved to nothing — but the L proxy drops such an
+                // entry rather than handing back the string, so a loop over
+                // `fv.values` never sees it at all. Reading `__raw.values` is
+                // what makes a broken reference detectable; the proxy is then
+                // used only to put a NAME on the ones that do resolve.
                 try {
-                    const vals = fv.values ?? [];
+                    const raw: unknown[] = (fv.__raw?.values ?? fv.values ?? []) as unknown[];
+                    const resolved = new Map<string, string>();
+                    try {
+                        for (const rv of (fv.values ?? []) as any[]) {
+                            if (rv && typeof rv !== 'string' && rv.id && rv.name) resolved.set(rv.id, rv.name);
+                        }
+                    } catch { /* proxy access can throw */ }
+
                     const names: string[] = [];
                     const targets: Array<{ id: string; name: string; broken?: boolean }> = [];
-                    for (const v of vals) {
-                        const target = typeof v === 'string' ? null : v;
-                        if (target?.name) {
-                            names.push(target.name);
-                            // The id is what the reference pill needs to select and
-                            // reveal the target; without it the pill is not navigable.
-                            if (target.id) {
-                                targets.push({ id: target.id, name: target.name });
-                                // Every resolving pass feeds the memory, so the name is
-                                // already known by the time the object is deleted.
-                                rememberRefTargetName(target.id, target.name);
-                            }
+                    for (const v of raw) {
+                        const id = typeof v === 'string' ? v : ((v as any)?.id ?? '');
+                        if (!id) continue;
+                        const name = resolved.get(id) ?? (typeof v !== 'string' ? (v as any)?.name : undefined);
+                        if (name) {
+                            names.push(name);
+                            targets.push({ id, name });
+                            // Every resolving pass feeds the memory, so the name is
+                            // already known by the time the object is deleted.
+                            rememberRefTargetName(id, name);
                             continue;
                         }
-                        // A pointer that does not resolve. Deleting a DObject leaves
-                        // the inbound pointers in place (the reducer scrubs none), so
-                        // this is a BROKEN reference, not an empty slot — and it used
-                        // to be dropped here, which is why a deleted target looked
-                        // exactly like a property nobody had ever set.
-                        const danglingId = typeof v === 'string' ? v : (v?.id ?? '');
-                        if (!danglingId) continue;
-                        const lastKnown = lastSeenRefTargetName(danglingId);
+                        // A pointer that resolves to nothing: the target was
+                        // deleted and the reducer scrubbed no inbound pointer.
+                        // This used to be dropped, which is why a deleted target
+                        // looked exactly like a property nobody had ever set.
+                        const lastKnown = lastSeenRefTargetName(id);
                         names.push(lastKnown);
-                        targets.push({ id: danglingId, name: lastKnown, broken: true });
+                        targets.push({ id, name: lastKnown, broken: true });
                     }
                     values = names;
                     refTargets = targets;
