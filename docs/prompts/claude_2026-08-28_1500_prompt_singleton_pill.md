@@ -188,3 +188,33 @@ tipografia, risoluzione dell'etichetta, parita', criteri di accettazione), quind
 l'esecuzione e' stata fatta su quello. Resta senza il riscontro visivo che le
 quattro opzioni avrebbero dato: dove il testo non fissa una scelta, la resa e'
 un'interpretazione e non un riscontro sul disegno.
+
+---
+
+## Rettifica (2026-08-28 15:50)
+
+**Il «Turno 4» esiste.** La nota qui sopra vale per la copia che era su disco al
+momento dell'esecuzione — 35239 byte, `Turno 3` a riga 31 — non per il bundle
+vero. Alfonso ha consegnato `SIngleton.zip` con la versione corretta:
+`Instance Node Proposal.dc.html` a **47384 byte**, con `Turno 4 · Istanze
+singleton` a riga 31 (opzioni 4a-4d piu' la «Regola per l'IR»), e con
+`PROMPT_singleton_pill.md` dentro la cartella. Il bundle e' stato installato in
+`docs/design/design_handoff_instance_node/` e committato.
+
+**Il riscontro visivo conferma quanto costruito**, punto per punto: pill a
+`padding: 7px 16px` / `border-radius: 999px` / superficie `#ffffff` / bordo
+`#cbd5e1` / ombra `0 1px 2px rgba(0,0,0,0.04)` (4a); selezione a `#0891b2` con
+anello `0 0 0 3px rgba(6,182,212,0.18)` e nessun riempimento (4b); parita' riga
+/ canvas con le due sole differenze di scala e sottolineatura (4c); rettangolo
+con badge `1` quando il singleton ha slot valorizzati (4d); e la «Regola per
+l'IR» che ripete la risoluzione su contenuto e non su flag. Il
+`PROMPT_singleton_pill.md` del bundle e' identico al testo consegnato in chat,
+salvo il token di hover, gia' emendato in chat sulla proposta del hard stop.
+
+**Una divergenza voluta dal prototipo.** Il markup di 4a separa le due meta' con
+un `:` singolo dentro uno span a `color: #cbd5e1`, dentro un flex a `gap: 5px`:
+rende `Color : Red`. Alfonso ha scelto **`Color::Red`** — doppio due punti, senza
+spazi — che e' la forma implementata. Motivo: `::` e' l'operatore di nome
+qualificato, e un nome qualificato e' esattamente cio' che l'etichetta e', mentre
+il due punti spaziato porta la relazione di istanziazione che l'header del
+rettangolo gia' esprime.

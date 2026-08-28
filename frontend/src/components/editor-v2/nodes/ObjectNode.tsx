@@ -955,7 +955,7 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
     // class's name (joiner/classes.ts:942), and the compartment under it is
     // empty. So the type half of the header is dropped, the compartment with
     // it, and what remains is the instance name and the abstract superclass
-    // that says what KIND of thing it is: `Color : Red`, "a Red, which is a
+    // that says what KIND of thing it is: `Color::Red`, "a Red, which is a
     // Color".
     //
     // The wrapper keeps every class the rectangle carries (problem overlay,

@@ -513,3 +513,18 @@ ancora vuota — il ritardo di batching dei reducer sulle forward-link di §3.6 
 non crea nulla. La sonda prova la resa, non quel meccanismo; ma il meccanismo
 merita una verifica sua, perche' e' la via per cui i singleton nascono nell'uso
 reale.
+
+### 7.3 Rettifica su H2 (2026-08-28 15:50)
+
+**H2 era falsa sulla copia in repo, non sul bundle.** `SIngleton.zip` porta
+`Instance Node Proposal.dc.html` a 47384 byte con `Turno 4 · Istanze singleton`
+a riga 31 e le opzioni 4a-4d, piu' il `PROMPT_singleton_pill.md` di §3.1. La
+copia misurata in Fase 1 era ferma a 35239 byte: la misura era corretta, il
+soggetto era la copia sbagliata. Bundle installato e committato, cosi' i
+riferimenti nei commenti di `instanceNode.scss` e `instanceNodeStyle.ts` non
+restano appesi.
+
+Il riscontro visivo conferma geometria, selezione, parita' e badge come
+implementati. L'unica divergenza dal prototipo e' deliberata: il separatore e'
+`::` senza spazi invece del `:` spaziato di 4a (decisione di Alfonso, motivata
+nel documento di prompt).

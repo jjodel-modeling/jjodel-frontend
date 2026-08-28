@@ -24,8 +24,8 @@
  *     object-diagram underline applies; the inline row is a value sitting in a
  *     slot, and does not take it.
  *
- * The underline follows the INSTANCE NAME, never the whole run: `Color : Red`
- * has to read "a Red, which is a Color", not "an instance named Color : Red".
+ * The underline follows the INSTANCE NAME, never the whole run: `Color::Red`
+ * has to read "a Red, which is a Color", not "an instance named Color::Red".
  * On the pill the name is the right-hand half, which is the only thing that
  * changes from the rectangle header — the rule itself is the same one.
  */
@@ -68,7 +68,16 @@ function SingletonPill({ parts, variant, selected = false, title, onClick }: Sin
             {superclassName && (
                 <>
                     <span className="mm-object__pill-super">{superclassName}</span>
-                    <span className="mm-object__pill-sep"> : </span>
+                    {/* `::`, not ` : `. The design prototype draws a single
+                        spaced colon; the double colon was chosen over it
+                        (Alfonso, 2026-08-28) because it is the qualified-name
+                        operator, and a qualified name is exactly what this
+                        label is — `Color::Red` names the literal inside the
+                        closed set, where a spaced colon would read as the
+                        instance-of relation the rectangle header already
+                        carries. No surrounding spaces: they are part of the
+                        other reading, not this one. */}
+                    <span className="mm-object__pill-sep">::</span>
                 </>
             )}
             <span className="mm-object__pill-name">{instanceName}</span>

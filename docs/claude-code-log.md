@@ -93,6 +93,19 @@ Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right u
 **Notes**: `countValuedSlots` contava anche lo slot IDENTITA' (§3.12), che senza attributo `name` sta in `DObject.features` senza `instanceof`: record D di `Blue` con `values: ["Blue"]` contro `LObject.features` a zero. Compariva in ritardo e avrebbe reso rettangolo ogni singleton con un nome. Ora conta solo gli slot il cui `instanceof` risolve. Dettaglio in §7 del report. Il «Turno 4» del bundle non esiste nel repo neanche dopo il ri-pull: eseguito sul testo. Precede `82bf16815`.
 **Prompt document name**: 2026-08-28 15:00
 
+## 2026-08-28 — feat(editor-v2): il separatore della pill singleton e' `::`
+**Prompt**: consegnato `SIngleton.zip` col bundle di design vero (il «Turno 4» che la copia in repo non aveva) e una sola istruzione: «tra `Color::Red` e `Color: Red` scegli la prima forma».
+**Files touched**: `editor-v2/nodes/SingletonPill.tsx` (separatore da `' : '` a `'::'`, col motivo), `editor-v2/nodes/instanceNode.scss` (via `white-space: pre` sul separatore, non c'e' piu' spazio da proteggere), `editor-v2/nodes/singletonShape.ts` e `editor-v2/nodes/ObjectNode.tsx` (soli commenti), `editor-v2/nodes/__tests__/singletonShape.test.ts` (l'asserzione ora prova che il modulo non incolla nessun separatore), `docs/design/design_handoff_instance_node/` (bundle installato e committato, 10 file), `docs/prompts/claude_2026-08-28_1500_prompt_singleton_pill.md` e `docs/discovery/discovery_2026-08-28_singleton_pill.md` (rettifica su H2), `docs/claude-code-log.md`
+**Outcome**: ✅ completed
+**Corregge**: 2026-08-28 15:00
+**Causa**: (f)
+**Regressions**: no — typecheck 33 = baseline con insieme di errori identico; vitest 1632 passed / 0 failed coi soliti 9 file rotti all'import; build exit 0; `npm run smoke` 12 passed / 0 failed / 3 skipped.
+**Out-of-scope changes**: no — i file della pill piu' il bundle di design, che Alfonso ha consegnato in questo turno ed e' il riferimento citato dai commenti gia' committati.
+**Layer Impact Report**: not-required — nessun file di §3.1.
+**Smoke visivo**: passato — `scripts/smoke/_tmp_singleton_pill.ts` (non committata) **31/31 verdi**, zero errori di pagina, due temi. Check nuovo P-2b sulla RUN completa e non sul solo separatore: `textContent` della pill === `Color::Red`, cosi' uno spazio che arrivasse dal markup attorno verrebbe visto.
+**Notes**: il bundle vero smentisce la nota del turno precedente: «Turno 4» esiste (Proposal a 47384 byte contro i 35239 della copia in repo, che era stale). Il riscontro visivo conferma geometria, selezione, parita' riga/canvas e badge come gia' implementati; il `PROMPT_singleton_pill.md` interno e' identico al testo di chat. Il prototipo 4a usa pero' un `:` singolo in un flex a `gap: 5px`: `::` senza spazi e' una divergenza deliberata, `::` essendo l'operatore di nome qualificato.
+**Prompt document name**: 2026-08-28 15:50
+
 ## 2026-08-27 — fix(settings): il modale Settings torna a 1120 di larghezza
 **Prompt**: «riallarga un po' il modale, mi sembra troppo piccolo», dopo la revisione 5a che lo aveva portato da 1360x820 a 960x780.
 **Files touched**: `frontend/src/components/Settings/UnifiedSettingsModal/UnifiedSettingsModal.scss`, `docs/claude-code-log.md`. Sonde `_tmp_settings_providers_5a*.ts` gitignored, gate aggiornati al nuovo numero.
@@ -300,16 +313,3 @@ Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right u
 **Smoke visivo**: passato. Tre sonde: `_tmp_instance_node.ts` 18/18 e zero errori di pagina sul default neutro, `_tmp_instance_node_presets.ts chip` 9/9 e `badge` 8/8 sulle configurazioni che il default non raggiunge, esercitate ribaltando temporaneamente `INSTANCE_NODE_STYLE_DEFAULT` e ripristinandolo byte-identico (verificato con `diff`).
 **Notes**: tre misure hanno cambiato il codice. (1) `Status { Green, Amber, Red }`, l'unico esempio che il handoff porta per la regola 3, non la passa come scritta: `amber` non e' una keyword CSS. (2) Aliasare `--color-bg-secondary` per il dark metteva il nodo SOTTO la tela, mentre ogni altro nodo della tela ci sta sopra. (3) `.mm-node__header` centra a (0,1,0) e senza dichiarazione esplicita il centraggio sopravviveva a chip e badge. Due fatti sul modello in `sessione_2026-08-27_instance_node.md` §3.
 **Prompt document name**: 2026-08-27 22:20 instance_node_rendering
-
-## 2026-08-28 — feat(editor-v2): il separatore della pill singleton e' `::`
-**Prompt**: consegnato `SIngleton.zip` col bundle di design vero (il «Turno 4» che la copia in repo non aveva) e una sola istruzione: «tra `Color::Red` e `Color: Red` scegli la prima forma».
-**Files touched**: `editor-v2/nodes/SingletonPill.tsx` (separatore da `' : '` a `'::'`, col motivo), `editor-v2/nodes/instanceNode.scss` (via `white-space: pre` sul separatore, non c'e' piu' spazio da proteggere), `editor-v2/nodes/singletonShape.ts` e `editor-v2/nodes/ObjectNode.tsx` (soli commenti), `editor-v2/nodes/__tests__/singletonShape.test.ts` (l'asserzione ora prova che il modulo non incolla nessun separatore), `docs/design/design_handoff_instance_node/` (bundle installato e committato, 10 file), `docs/prompts/claude_2026-08-28_1500_prompt_singleton_pill.md` e `docs/discovery/discovery_2026-08-28_singleton_pill.md` (rettifica su H2), `docs/claude-code-log.md`
-**Outcome**: ✅ completed
-**Corregge**: 2026-08-28 15:00
-**Causa**: (f)
-**Regressions**: no — typecheck 33 = baseline con insieme di errori identico; vitest 1632 passed / 0 failed coi soliti 9 file rotti all'import; build exit 0; `npm run smoke` 12 passed / 0 failed / 3 skipped.
-**Out-of-scope changes**: no — i file della pill piu' il bundle di design, che Alfonso ha consegnato in questo turno ed e' il riferimento citato dai commenti gia' committati.
-**Layer Impact Report**: not-required — nessun file di §3.1.
-**Smoke visivo**: passato — `scripts/smoke/_tmp_singleton_pill.ts` (non committata) **31/31 verdi**, zero errori di pagina, due temi. Check nuovo P-2b sulla RUN completa e non sul solo separatore: `textContent` della pill === `Color::Red`, cosi' uno spazio che arrivasse dal markup attorno verrebbe visto.
-**Notes**: il bundle vero smentisce la nota del turno precedente: «Turno 4» esiste (Proposal a 47384 byte contro i 35239 della copia in repo, che era stale). Il riscontro visivo conferma geometria, selezione, parita' riga/canvas e badge come gia' implementati; il `PROMPT_singleton_pill.md` interno e' identico al testo di chat. Il prototipo 4a usa pero' un `:` singolo in un flex a `gap: 5px`: `::` senza spazi e' una divergenza deliberata, `::` essendo l'operatore di nome qualificato.
-**Prompt document name**: 2026-08-28 15:50

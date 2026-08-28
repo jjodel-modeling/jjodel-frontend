@@ -441,9 +441,11 @@
         color: var(--color-inode-label);
     }
 
+    // `::` — the qualified-name operator, with no spaces around it. `white-space`
+    // is deliberately NOT set: there is no whitespace in the separator to protect,
+    // and the pill already carries `nowrap`.
     .mm-object__pill-sep {
         color: var(--color-inode-quiet);
-        white-space: pre;   // the spaces around the colon are part of the label
     }
 
     .mm-object__pill-name {
@@ -456,8 +458,8 @@
     // Difference 2 of 2 — the underline. The canvas node is an instance
     // specification and takes the UML object-diagram underline; the inline row
     // is a value sitting in a slot and does not. It spans the NAME alone:
-    // `Color : Red` must read "a Red, which is a Color", not "an instance named
-    // Color : Red". Same rule as the rectangle header, different span.
+    // `Color::Red` must read "a Red, which is a Color", not "an instance named
+    // Color::Red". Same rule as the rectangle header, different span.
     .mm-object__pill--node .mm-object__pill-name {
         text-decoration: underline;
         text-underline-offset: 3px;

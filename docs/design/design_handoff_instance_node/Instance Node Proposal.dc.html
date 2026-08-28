@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <meta name="design_doc_mode" content="canvas">
+  <link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/tokens/fonts.css">
+  <link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/tokens/colors.css">
+  <link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/tokens/entities.css">
+  <link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/tokens/typography.css">
+  <link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/tokens/spacing.css">
+  <link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/tokens/radius.css">
+  <link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/tokens/shadows.css">
+  <link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/tokens/transitions.css">
+  <link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/styles.css">
+  <script src="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/_ds_bundle.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+  <style>
+    body { margin: 0; background: #f8fafc; font-family: 'Inter', system-ui, sans-serif; }
+    a { color: #0ea5e9; text-decoration: none; }
+    a:hover { color: #0284c7; text-decoration: underline; }
+  </style>
+</helmet>
+<section id="4" style="padding: 48px 56px; display: flex; flex-direction: column; gap: 32px; border-bottom: 1px solid #e2e8f0;">
+  <div style="max-width: 820px;">
+    <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8; margin-bottom: 8px;">Turno 4 · Istanze singleton</div>
+    <h1 style="font-size: 24px; font-weight: 700; color: #0f172a; margin: 0 0 8px;">Il singleton è una pill, non un rettangolo</h1>
+    <p style="font-size: 14px; color: #475569; margin: 0 0 10px; line-height: 1.6;">Un'istanza con <code style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; background: #f1f5f9; padding: 1px 5px; border-radius: 3px;">view.singleton = true</code> è un valore atomico: identità e tipo coincidono e non c'è compartment da mostrare. Riceve la stessa forma dei value renderer del livello 3 — pill, radius full, superficie bianca, bordo hairline slate — così che <span style="font-weight: 600;">Blue</span> dentro la riga <span style="font-weight: 600;">color</span> e <span style="font-weight: 600;">Blue</span> come nodo su canvas siano la stessa cosa.</p>
+    <p style="font-size: 14px; color: #475569; margin: 0; line-height: 1.6;">Etichetta: se la metaclasse ha una <span style="font-weight: 600;">superclasse astratta</span> la pill legge <code style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; background: #f1f5f9; padding: 1px 5px; border-radius: 3px;">Color : Red</code> — la superclasse è l'unica informazione non ridondante, perché dice a quale insieme chiuso il literal appartiene. Senza superclasse astratta, solo il nome: <code style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; background: #f1f5f9; padding: 1px 5px; border-radius: 3px;">Config : Config</code> è rumore, <code style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; background: #f1f5f9; padding: 1px 5px; border-radius: 3px;">Config</code> basta.</p>
+  </div>
+
+  <div style="display: flex; gap: 32px; flex-wrap: wrap; align-items: flex-start;">
+
+    <!-- 4a -->
+    <div id="4a" style="display: flex; flex-direction: column; gap: 12px; width: 300px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: #0f172a; color: #ffffff; letter-spacing: 0.04em;">4a</span>
+        <span style="font-size: 13px; font-weight: 600; color: #0f172a;">Con superclasse astratta</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 12px; align-items: flex-start; padding: 20px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+        <span style="display: inline-flex; align-items: baseline; gap: 5px; padding: 7px 16px; border-radius: 999px; background: #ffffff; border: 1px solid #cbd5e1; box-shadow: 0 1px 2px rgba(0,0,0,0.04); font-size: 13px; white-space: nowrap;"><span style="color: #64748b; font-weight: 500;">Color</span><span style="color: #cbd5e1;">:</span><span style="color: #0f172a; font-weight: 600; text-decoration: underline; text-underline-offset: 3px;">Red</span></span>
+        <span style="display: inline-flex; align-items: baseline; gap: 5px; padding: 7px 16px; border-radius: 999px; background: #ffffff; border: 1px solid #cbd5e1; box-shadow: 0 1px 2px rgba(0,0,0,0.04); font-size: 13px; white-space: nowrap;"><span style="color: #64748b; font-weight: 500;">Color</span><span style="color: #cbd5e1;">:</span><span style="color: #0f172a; font-weight: 600; text-decoration: underline; text-underline-offset: 3px;">Green</span></span>
+        <span style="display: inline-flex; align-items: baseline; gap: 5px; padding: 7px 16px; border-radius: 999px; background: #ffffff; border: 1px solid #cbd5e1; box-shadow: 0 1px 2px rgba(0,0,0,0.04); font-size: 13px; white-space: nowrap;"><span style="color: #64748b; font-weight: 500;">Color</span><span style="color: #cbd5e1;">:</span><span style="color: #0f172a; font-weight: 600; text-decoration: underline; text-underline-offset: 3px;">Blue</span></span>
+      </div>
+      <div style="font-size: 12px; color: #94a3b8; line-height: 1.5;">Superclasse a peso secondario, nome sottolineato: la convenzione UML resta sul nome dell'istanza.</div>
+    </div>
+
+    <!-- 4b -->
+    <div id="4b" style="display: flex; flex-direction: column; gap: 12px; width: 300px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: #0f172a; color: #ffffff; letter-spacing: 0.04em;">4b</span>
+        <span style="font-size: 13px; font-weight: 600; color: #0f172a;">Senza superclasse astratta</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 12px; align-items: flex-start; padding: 20px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+        <span style="display: inline-flex; align-items: center; padding: 7px 16px; border-radius: 999px; background: #ffffff; border: 1px solid #cbd5e1; box-shadow: 0 1px 2px rgba(0,0,0,0.04); font-size: 13px; white-space: nowrap;"><span style="color: #0f172a; font-weight: 600; text-decoration: underline; text-underline-offset: 3px;">Config</span></span>
+        <span style="display: inline-flex; align-items: center; padding: 7px 16px; border-radius: 999px; background: #ffffff; border: 1px solid #0891b2; box-shadow: 0 0 0 3px rgba(6,182,212,0.18), 0 1px 2px rgba(0,0,0,0.04); font-size: 13px; white-space: nowrap;"><span style="color: #0f172a; font-weight: 600; text-decoration: underline; text-underline-offset: 3px;">Config</span></span>
+      </div>
+      <div style="font-size: 12px; color: #94a3b8; line-height: 1.5;">Sopra a riposo, sotto selezionato. Il ciano resta libero per la selezione, come in <a href="#3b">3b</a>.</div>
+    </div>
+
+    <!-- 4c -->
+    <div id="4c" style="display: flex; flex-direction: column; gap: 12px; width: 340px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: #0f172a; color: #ffffff; letter-spacing: 0.04em;">4c</span>
+        <span style="font-size: 13px; font-weight: 600; color: #0f172a;">Coerenza riga ↔ canvas</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 16px; padding: 20px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+        <div style="background: #ffffff; border-radius: 8px; border: 1px solid #cbd5e1; box-shadow: 0 1px 2px rgba(0,0,0,0.04); overflow: hidden;">
+          <div style="padding: 11px 14px; border-bottom: 1px solid #cbd5e1; text-align: center;">
+            <span style="font-size: 14px; font-weight: 600; color: #0f172a; text-decoration: underline; text-underline-offset: 3px;">Shape_0 : Shape</span>
+          </div>
+          <div style="padding: 10px 14px; display: grid; grid-template-columns: 64px 1fr; row-gap: 8px; column-gap: 12px; font-size: 13px; align-items: center;">
+            <span style="color: #64748b;">color</span>
+            <span><span style="display: inline-flex; align-items: baseline; gap: 4px; padding: 2px 10px; border-radius: 999px; background: #ffffff; border: 1px solid #cbd5e1; font-size: 12px;"><span style="color: #94a3b8;">Color</span><span style="color: #cbd5e1;">:</span><span style="color: #0f172a; font-weight: 600;">Blue</span></span></span>
+            <span style="color: #64748b;">cfg</span>
+            <span><span style="display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 999px; background: #ffffff; border: 1px solid #cbd5e1; font-size: 12px;"><span style="color: #0f172a; font-weight: 600;">Config</span></span></span>
+          </div>
+        </div>
+        <div style="display: flex; gap: 12px; align-items: center; justify-content: center;">
+          <span style="display: inline-flex; align-items: baseline; gap: 5px; padding: 7px 16px; border-radius: 999px; background: #ffffff; border: 1px solid #cbd5e1; box-shadow: 0 1px 2px rgba(0,0,0,0.04); font-size: 13px; white-space: nowrap;"><span style="color: #64748b; font-weight: 500;">Color</span><span style="color: #cbd5e1;">:</span><span style="color: #0f172a; font-weight: 600; text-decoration: underline; text-underline-offset: 3px;">Blue</span></span>
+          <span style="display: inline-flex; align-items: center; padding: 7px 16px; border-radius: 999px; background: #ffffff; border: 1px solid #cbd5e1; box-shadow: 0 1px 2px rgba(0,0,0,0.04); font-size: 13px; white-space: nowrap;"><span style="color: #0f172a; font-weight: 600; text-decoration: underline; text-underline-offset: 3px;">Config</span></span>
+        </div>
+      </div>
+      <div style="font-size: 12px; color: #94a3b8; line-height: 1.5;">Stessa forma nelle due posizioni: solo scala e sottolineatura cambiano — la riga è inline, il nodo è un'istanza.</div>
+    </div>
+
+    <!-- 4d -->
+    <div id="4d" style="display: flex; flex-direction: column; gap: 12px; width: 300px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: #0f172a; color: #ffffff; letter-spacing: 0.04em;">4d</span>
+        <span style="font-size: 13px; font-weight: 600; color: #0f172a;">Singleton con struttura</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 12px; align-items: flex-start; padding: 20px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+        <div style="background: #ffffff; border-radius: 8px; border: 1px solid #cbd5e1; box-shadow: 0 1px 2px rgba(0,0,0,0.04); overflow: hidden; min-width: 200px;">
+          <div style="padding: 9px 14px; border-bottom: 1px solid #cbd5e1; display: flex; align-items: center; gap: 7px;">
+            <span style="width: 18px; height: 18px; border-radius: 999px; border: 1px solid #cbd5e1; color: #64748b; font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; flex: none;">1</span>
+            <span style="font-size: 14px; font-weight: 600; color: #0f172a; text-decoration: underline; text-underline-offset: 3px;">Config</span>
+          </div>
+          <div style="padding: 10px 14px; display: grid; grid-template-columns: 64px 1fr; row-gap: 8px; column-gap: 12px; font-size: 13px; align-items: center;">
+            <span style="color: #64748b;">debug</span>
+            <span style="color: #0f172a; font-weight: 500;">true</span>
+            <span style="color: #64748b;">level</span>
+            <span style="color: #0f172a; font-weight: 500;">2</span>
+          </div>
+        </div>
+      </div>
+      <div style="font-size: 12px; color: #94a3b8; line-height: 1.5;">Se il singleton ha slot valorizzati la pill non basta: torna rettangolo, e il badge <span style="font-family: 'IBM Plex Mono', monospace;">1</span> porta l'informazione di cardinalità.</div>
+    </div>
+
+  </div>
+
+  <div style="max-width: 820px; padding: 16px 18px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+    <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8; margin-bottom: 8px;">Regola per l'IR</div>
+    <p style="font-size: 13px; color: #475569; margin: 0; line-height: 1.65;">Il label del singleton si risolve così: se esiste una superclasse diretta <span style="font-weight: 600;">astratta</span> → <span style="font-family: 'IBM Plex Mono', monospace;">«Super : Nome»</span>; altrimenti → <span style="font-family: 'IBM Plex Mono', monospace;">«Nome»</span>. Con più superclassi astratte si prende la prima dichiarata e le altre restano nell'inspector. La forma si risolve sul contenuto, non sul flag: <span style="font-family: 'IBM Plex Mono', monospace;">singleton && slot valorizzati === 0</span> → pill; altrimenti rettangolo con badge <span style="font-family: 'IBM Plex Mono', monospace;">1</span>. Nessun fill colorato in nessuno dei due casi.</p>
+  </div>
+</section>
+
+<section id="3" style="padding: 48px 56px; display: flex; flex-direction: column; gap: 32px; border-bottom: 1px solid #e2e8f0;">
+  <div style="max-width: 780px;">
+    <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8; margin-bottom: 8px;">Turno 3 · Default e derivati</div>
+    <h1 style="font-size: 24px; font-weight: 700; color: #0f172a; margin: 0 0 8px;">2c come default, 2b e 2d riportati sul neutro</h1>
+    <p style="font-size: 14px; color: #475569; margin: 0; line-height: 1.6;">Dato <a href="#2c">2c</a> come base, il colore categoriale non è più il modo primario per dichiarare il tipo — quindi 2b e 2d vanno rifatti in chiave slate, con la tinta come override esplicito e non come default. Tutti mostrano lo stesso compartment.</p>
+  </div>
+
+  <div style="display: flex; gap: 32px; flex-wrap: wrap; align-items: flex-start;">
+
+    <!-- 3a -->
+    <div id="3a" style="display: flex; flex-direction: column; gap: 12px; width: 300px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: #0f172a; color: #ffffff; letter-spacing: 0.04em;">3a</span>
+        <span style="font-size: 13px; font-weight: 600; color: #0f172a;">Default (2c) — non selezionato</span>
+      </div>
+      <div style="background: #ffffff; border-radius: 8px; border: 1px solid #cbd5e1; box-shadow: 0 1px 2px rgba(0,0,0,0.04); overflow: hidden;">
+        <div style="padding: 11px 14px; border-bottom: 1px solid #cbd5e1; text-align: center;">
+          <span style="font-size: 14px; font-weight: 600; color: #0f172a; text-decoration: underline; text-underline-offset: 3px;">Shape_0 : Shape</span>
+        </div>
+        <div style="padding: 10px 14px; display: grid; grid-template-columns: 64px 1fr; row-gap: 8px; column-gap: 12px; font-size: 13px; align-items: center;">
+          <span style="color: #64748b;">color</span>
+          <span style="display: inline-flex; align-items: center; gap: 6px; color: #0f172a; font-weight: 500;"><span style="width: 10px; height: 10px; border-radius: 3px; background: #22c55e; flex: none;"></span>Green</span>
+          <span style="color: #64748b;">tags <span style="color: #cbd5e1;">[1]</span></span>
+          <span style="display: flex; gap: 4px; flex-wrap: wrap;"><span style="font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 4px; background: #f1f5f9; color: #475569;">Green</span></span>
+          <span style="color: #64748b;">cfg</span>
+          <span><span style="display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; padding: 2px 8px; border-radius: 999px; background: #ecfeff; color: #0891b2; border: 1px solid #a5f3fc;"><i class="bi bi-link-45deg"></i>Config</span></span>
+          <span style="color: #64748b;">owner</span>
+          <span style="color: #cbd5e1;">—</span>
+        </div>
+      </div>
+      <div style="font-size: 12px; color: #94a3b8; line-height: 1.5;">Il riferimento. Nessun colore nel chrome.</div>
+    </div>
+
+    <!-- 3b selected state -->
+    <div id="3b" style="display: flex; flex-direction: column; gap: 12px; width: 300px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: #0f172a; color: #ffffff; letter-spacing: 0.04em;">3b</span>
+        <span style="font-size: 13px; font-weight: 600; color: #0f172a;">Default (2c) — selezionato</span>
+      </div>
+      <div style="background: #ffffff; border-radius: 8px; border: 1px solid #0891b2; box-shadow: 0 0 0 3px rgba(6,182,212,0.18), 0 1px 2px rgba(0,0,0,0.04); overflow: hidden;">
+        <div style="padding: 11px 14px; background: #e0f7fa; border-bottom: 1px solid #a5f3fc; text-align: center;">
+          <span style="font-size: 14px; font-weight: 600; color: #0f172a; text-decoration: underline; text-underline-offset: 3px;">Shape_0 : Shape</span>
+        </div>
+        <div style="padding: 10px 14px; display: grid; grid-template-columns: 64px 1fr; row-gap: 8px; column-gap: 12px; font-size: 13px; align-items: center;">
+          <span style="color: #64748b;">color</span>
+          <span style="display: inline-flex; align-items: center; gap: 6px; color: #0f172a; font-weight: 500;"><span style="width: 10px; height: 10px; border-radius: 3px; background: #22c55e; flex: none;"></span>Green</span>
+          <span style="color: #64748b;">tags <span style="color: #cbd5e1;">[1]</span></span>
+          <span style="display: flex; gap: 4px; flex-wrap: wrap;"><span style="font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 4px; background: #f1f5f9; color: #475569;">Green</span></span>
+          <span style="color: #64748b;">cfg</span>
+          <span><span style="display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; padding: 2px 8px; border-radius: 999px; background: #ecfeff; color: #0891b2; border: 1px solid #a5f3fc;"><i class="bi bi-link-45deg"></i>Config</span></span>
+          <span style="color: #64748b;">owner</span>
+          <span style="color: #cbd5e1;">—</span>
+        </div>
+      </div>
+      <div style="font-size: 12px; color: #94a3b8; line-height: 1.5;">Con un default neutro, il cyan di selezione resta libero e inequivocabile: è il vero argomento a favore di 2c.</div>
+    </div>
+
+    <!-- 3c neutral 2b -->
+    <div id="3c" style="display: flex; flex-direction: column; gap: 12px; width: 300px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: #0f172a; color: #ffffff; letter-spacing: 0.04em;">3c</span>
+        <span style="font-size: 13px; font-weight: 600; color: #0f172a;">Header riempito in slate</span>
+      </div>
+      <div style="background: #ffffff; border-radius: 8px; border: 1px solid #cbd5e1; box-shadow: 0 1px 2px rgba(0,0,0,0.04); overflow: hidden;">
+        <div style="padding: 11px 14px; background: #f1f5f9; border-bottom: 1px solid #cbd5e1; text-align: center;">
+          <span style="font-size: 14px; font-weight: 600; color: #0f172a; text-decoration: underline; text-underline-offset: 3px;">Shape_0 : Shape</span>
+        </div>
+        <div style="padding: 10px 14px; display: grid; grid-template-columns: 64px 1fr; row-gap: 8px; column-gap: 12px; font-size: 13px; align-items: center;">
+          <span style="color: #64748b;">color</span>
+          <span style="display: inline-flex; align-items: center; gap: 6px; color: #0f172a; font-weight: 500;"><span style="width: 10px; height: 10px; border-radius: 3px; background: #22c55e; flex: none;"></span>Green</span>
+          <span style="color: #64748b;">tags <span style="color: #cbd5e1;">[1]</span></span>
+          <span style="display: flex; gap: 4px; flex-wrap: wrap;"><span style="font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 4px; background: #f1f5f9; color: #475569;">Green</span></span>
+          <span style="color: #64748b;">cfg</span>
+          <span><span style="display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; padding: 2px 8px; border-radius: 999px; background: #ecfeff; color: #0891b2; border: 1px solid #a5f3fc;"><i class="bi bi-link-45deg"></i>Config</span></span>
+          <span style="color: #64748b;">owner</span>
+          <span style="color: #cbd5e1;">—</span>
+        </div>
+      </div>
+      <div style="font-size: 12px; color: #94a3b8; line-height: 1.5;">L'header riempito separa titolo e compartment senza spendere colore né aggiungere glifi. La tinta categoriale resta un override.</div>
+    </div>
+
+    <!-- 3d neutral 2d -->
+    <div id="3d" style="display: flex; flex-direction: column; gap: 12px; width: 300px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: #0f172a; color: #ffffff; letter-spacing: 0.04em;">3d</span>
+        <span style="font-size: 13px; font-weight: 600; color: #0f172a;">2d in slate — tipo come chip</span>
+      </div>
+      <div style="background: #ffffff; border-radius: 8px; border: 1px solid #cbd5e1; box-shadow: 0 1px 2px rgba(0,0,0,0.04); display: flex; overflow: hidden;">
+        <div style="width: 3px; background: #cbd5e1; flex: none;"></div>
+        <div style="flex: 1; min-width: 0;">
+          <div style="padding: 10px 14px; border-bottom: 1px solid #cbd5e1; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+            <span style="font-size: 14px; font-weight: 600; color: #0f172a; text-decoration: underline; text-underline-offset: 3px;">Shape_0</span>
+            <span style="font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; white-space: nowrap;">Shape</span>
+          </div>
+          <div style="padding: 10px 14px; display: grid; grid-template-columns: 64px 1fr; row-gap: 8px; column-gap: 12px; font-size: 13px; align-items: center;">
+            <span style="color: #64748b;">color</span>
+            <span style="display: inline-flex; align-items: center; gap: 6px; color: #0f172a; font-weight: 500;"><span style="width: 10px; height: 10px; border-radius: 3px; background: #22c55e; flex: none;"></span>Green</span>
+            <span style="color: #64748b;">tags <span style="color: #cbd5e1;">[1]</span></span>
+            <span style="display: flex; gap: 4px; flex-wrap: wrap;"><span style="font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 4px; background: #f1f5f9; color: #475569;">Green</span></span>
+            <span style="color: #64748b;">cfg</span>
+            <span><span style="display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; padding: 2px 8px; border-radius: 999px; background: #ecfeff; color: #0891b2; border: 1px solid #a5f3fc;"><i class="bi bi-link-45deg"></i>Config</span></span>
+            <span style="color: #64748b;">owner</span>
+            <span style="color: #cbd5e1;">—</span>
+          </div>
+        </div>
+      </div>
+      <div style="font-size: 12px; color: #94a3b8; line-height: 1.5;">La barra laterale grigia è pronta a ricevere il colore categoriale solo quando l'utente lo attiva. Nome primario, tipo secondario.</div>
+    </div>
+
+    <!-- 3e override -->
+    <div id="3e" style="display: flex; flex-direction: column; gap: 12px; width: 300px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: #0f172a; color: #ffffff; letter-spacing: 0.04em;">3e</span>
+        <span style="font-size: 13px; font-weight: 600; color: #0f172a;">Override utente su 3d</span>
+      </div>
+      <div style="background: #ffffff; border-radius: 8px; border: 1px solid #cbd5e1; box-shadow: 0 1px 2px rgba(0,0,0,0.04); display: flex; overflow: hidden;">
+        <div style="width: 3px; background: #f59e0b; flex: none;"></div>
+        <div style="flex: 1; min-width: 0;">
+          <div style="padding: 10px 14px; border-bottom: 1px solid #cbd5e1; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+            <span style="font-size: 14px; font-weight: 600; color: #0f172a; text-decoration: underline; text-underline-offset: 3px;">Shape_0</span>
+            <span style="font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #fef3c7; color: #b45309; white-space: nowrap;">Shape</span>
+          </div>
+          <div style="padding: 10px 14px; display: grid; grid-template-columns: 64px 1fr; row-gap: 8px; column-gap: 12px; font-size: 13px; align-items: center;">
+            <span style="color: #64748b;">color</span>
+            <span style="display: inline-flex; align-items: center; gap: 6px; color: #0f172a; font-weight: 500;"><span style="width: 10px; height: 10px; border-radius: 3px; background: #22c55e; flex: none;"></span>Green</span>
+            <span style="color: #64748b;">tags <span style="color: #cbd5e1;">[1]</span></span>
+            <span style="display: flex; gap: 4px; flex-wrap: wrap;"><span style="font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 4px; background: #f1f5f9; color: #475569;">Green</span></span>
+            <span style="color: #64748b;">cfg</span>
+            <span><span style="display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; padding: 2px 8px; border-radius: 999px; background: #ecfeff; color: #0891b2; border: 1px solid #a5f3fc;"><i class="bi bi-link-45deg"></i>Config</span></span>
+            <span style="color: #64748b;">owner</span>
+            <span style="color: #cbd5e1;">—</span>
+          </div>
+        </div>
+      </div>
+      <div style="font-size: 12px; color: #94a3b8; line-height: 1.5;">Un solo campo cambiato (<span style="font-family: 'IBM Plex Mono', monospace;">accent</span>) e il nodo diventa categoriale: la tinta è un'eccezione dichiarata, non il default.</div>
+    </div>
+  </div>
+
+  <div style="border-top: 1px solid #e2e8f0; padding-top: 24px; max-width: 780px; font-size: 13px; color: #475569; line-height: 1.7;">
+    <b style="color: #0f172a;">Raccomandazione.</b> <a href="#3a">3a</a> come default di fabbrica, con <a href="#3b">3b</a> come stato di selezione. <a href="#3c">3c</a> e <a href="#3d">3d</a> come preset alternativi shippati (rispettivamente «header riempito» e «nome primario»), e la tinta categoriale — <a href="#3e">3e</a>, <a href="#2b">2b</a>, <a href="#2d">2d</a> — raggiungibile con un solo campo di override. Così il colore nel diagramma resta una scelta dell'utente e non un rumore imposto.
+  </div>
+</section>
+
+<section id="2" style="padding: 48px 56px; display: flex; flex-direction: column; gap: 32px; border-bottom: 1px solid #e2e8f0;">
+  <div style="max-width: 760px;">
+    <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8; margin-bottom: 8px;">Turno 2 · Preset di stile</div>
+    <h1 style="font-size: 24px; font-weight: 700; color: #0f172a; margin: 0 0 8px;">Preset per l'header del nodo</h1>
+    <p style="font-size: 14px; color: #475569; margin: 0; line-height: 1.6;">Il compartment resta quello approvato (<a href="#1">1</a>, colonna centrale). Cambia solo il modo in cui il nodo dichiara il proprio tipo. Ogni preset è un valore di default del View Designer, sovrascrivibile dall'utente sui singoli campi (accento, posizione della barra, badge, sfondo header).</p>
+  </div>
+
+  <div style="display: flex; gap: 32px; flex-wrap: wrap; align-items: flex-start;">
+
+    <!-- 2a top bar -->
+    <div id="2a" style="display: flex; flex-direction: column; gap: 12px; width: 300px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: #0f172a; color: #ffffff; letter-spacing: 0.04em;">2a</span>
+        <span style="font-size: 13px; font-weight: 600; color: #0f172a;">Accent bar in alto</span>
+      </div>
+      <div style="background: #ffffff; border-radius: 12px; border: 0.5px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.06); overflow: hidden;">
+        <div style="height: 3px; background: #f59e0b;"></div>
+        <div style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; gap: 10px;">
+          <span style="width: 20px; height: 20px; border-radius: 4px; background: #fef3c7; color: #b45309; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; flex: none;">m</span>
+          <span style="font-size: 14px; font-weight: 600; color: #0f172a; text-decoration: underline; text-underline-offset: 3px;">Shape_0</span>
+          <span style="font-size: 13px; color: #94a3b8;">: Shape</span>
+        </div>
+        <div style="padding: 10px 14px; display: grid; grid-template-columns: 64px 1fr; row-gap: 8px; column-gap: 12px; font-size: 13px; align-items: center;">
+          <span style="color: #64748b;">color</span>
+          <span style="display: inline-flex; align-items: center; gap: 6px; color: #0f172a; font-weight: 500;"><span style="width: 10px; height: 10px; border-radius: 3px; background: #22c55e; flex: none;"></span>Green</span>
+          <span style="color: #64748b;">tags <span style="color: #cbd5e1;">[1]</span></span>
+          <span style="display: flex; gap: 4px; flex-wrap: wrap;"><span style="font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 4px; background: #f1f5f9; color: #475569;">Green</span></span>
+          <span style="color: #64748b;">cfg</span>
+          <span><span style="display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; padding: 2px 8px; border-radius: 999px; background: #ecfeff; color: #0891b2; border: 1px solid #a5f3fc;"><i class="bi bi-link-45deg"></i>Config</span></span>
+          <span style="color: #64748b;">owner</span>
+          <span style="color: #cbd5e1;">—</span>
+        </div>
+      </div>
+      <div style="font-size: 12px; color: #94a3b8; line-height: 1.5;">Coerente con la project card della dashboard. Il colore è l'unico campo da sovrascrivere.</div>
+    </div>
+
+    <!-- 2b tinted header -->
+    <div id="2b" style="display: flex; flex-direction: column; gap: 12px; width: 300px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: #0f172a; color: #ffffff; letter-spacing: 0.04em;">2b</span>
+        <span style="font-size: 13px; font-weight: 600; color: #0f172a;">Header tinto, no barra</span>
+      </div>
+      <div style="background: #ffffff; border-radius: 12px; border: 0.5px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.06); overflow: hidden;">
+        <div style="padding: 11px 14px; background: #fffbeb; border-bottom: 1px solid #fde68a; display: flex; align-items: center; gap: 10px;">
+          <i class="bi bi-box" style="font-size: 14px; color: #b45309;"></i>
+          <span style="font-size: 14px; font-weight: 600; color: #0f172a; text-decoration: underline; text-underline-offset: 3px;">Shape_0</span>
+          <span style="font-size: 13px; color: #a16207;">: Shape</span>
+        </div>
+        <div style="padding: 10px 14px; display: grid; grid-template-columns: 64px 1fr; row-gap: 8px; column-gap: 12px; font-size: 13px; align-items: center;">
+          <span style="color: #64748b;">color</span>
+          <span style="display: inline-flex; align-items: center; gap: 6px; color: #0f172a; font-weight: 500;"><span style="width: 10px; height: 10px; border-radius: 3px; background: #22c55e; flex: none;"></span>Green</span>
+          <span style="color: #64748b;">tags <span style="color: #cbd5e1;">[1]</span></span>
+          <span style="display: flex; gap: 4px; flex-wrap: wrap;"><span style="font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 4px; background: #f1f5f9; color: #475569;">Green</span></span>
+          <span style="color: #64748b;">cfg</span>
+          <span><span style="display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; padding: 2px 8px; border-radius: 999px; background: #ecfeff; color: #0891b2; border: 1px solid #a5f3fc;"><i class="bi bi-link-45deg"></i>Config</span></span>
+          <span style="color: #64748b;">owner</span>
+          <span style="color: #cbd5e1;">—</span>
+        </div>
+      </div>
+      <div style="font-size: 12px; color: #94a3b8; line-height: 1.5;">Il tipo si legge a distanza anche su canvas zoomato. Più colore, meno neutro.</div>
+    </div>
+
+    <!-- 2c neutral / UML strict -->
+    <div id="2c" style="display: flex; flex-direction: column; gap: 12px; width: 300px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: #0f172a; color: #ffffff; letter-spacing: 0.04em;">2c</span>
+        <span style="font-size: 13px; font-weight: 600; color: #0f172a;">Neutro, UML stretto</span>
+      </div>
+      <div style="background: #ffffff; border-radius: 8px; border: 1px solid #cbd5e1; box-shadow: 0 1px 2px rgba(0,0,0,0.04); overflow: hidden;">
+        <div style="padding: 11px 14px; border-bottom: 1px solid #cbd5e1; text-align: center;">
+          <span style="font-size: 14px; font-weight: 600; color: #0f172a; text-decoration: underline; text-underline-offset: 3px;">Shape_0 : Shape</span>
+        </div>
+        <div style="padding: 10px 14px; display: grid; grid-template-columns: 64px 1fr; row-gap: 8px; column-gap: 12px; font-size: 13px; align-items: center;">
+          <span style="color: #64748b;">color</span>
+          <span style="display: inline-flex; align-items: center; gap: 6px; color: #0f172a; font-weight: 500;"><span style="width: 10px; height: 10px; border-radius: 3px; background: #22c55e; flex: none;"></span>Green</span>
+          <span style="color: #64748b;">tags <span style="color: #cbd5e1;">[1]</span></span>
+          <span style="display: flex; gap: 4px; flex-wrap: wrap;"><span style="font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 4px; background: #f1f5f9; color: #475569;">Green</span></span>
+          <span style="color: #64748b;">cfg</span>
+          <span><span style="display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; padding: 2px 8px; border-radius: 999px; background: #ecfeff; color: #0891b2; border: 1px solid #a5f3fc;"><i class="bi bi-link-45deg"></i>Config</span></span>
+          <span style="color: #64748b;">owner</span>
+          <span style="color: #cbd5e1;">—</span>
+        </div>
+      </div>
+      <div style="font-size: 12px; color: #94a3b8; line-height: 1.5;">Zero colore nel chrome: il colore resta solo dentro i valori. Il default più conservativo.</div>
+    </div>
+
+    <!-- 2d left bar -->
+    <div id="2d" style="display: flex; flex-direction: column; gap: 12px; width: 300px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: #0f172a; color: #ffffff; letter-spacing: 0.04em;">2d</span>
+        <span style="font-size: 13px; font-weight: 600; color: #0f172a;">Barra laterale + badge tipo</span>
+      </div>
+      <div style="background: #ffffff; border-radius: 12px; border: 0.5px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.06); display: flex; overflow: hidden;">
+        <div style="width: 3px; background: #f59e0b; flex: none;"></div>
+        <div style="flex: 1; min-width: 0;">
+          <div style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+            <span style="font-size: 14px; font-weight: 600; color: #0f172a; text-decoration: underline; text-underline-offset: 3px;">Shape_0</span>
+            <span style="font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #fef3c7; color: #b45309; white-space: nowrap;">Shape</span>
+          </div>
+          <div style="padding: 10px 14px; display: grid; grid-template-columns: 64px 1fr; row-gap: 8px; column-gap: 12px; font-size: 13px; align-items: center;">
+            <span style="color: #64748b;">color</span>
+            <span style="display: inline-flex; align-items: center; gap: 6px; color: #0f172a; font-weight: 500;"><span style="width: 10px; height: 10px; border-radius: 3px; background: #22c55e; flex: none;"></span>Green</span>
+            <span style="color: #64748b;">tags <span style="color: #cbd5e1;">[1]</span></span>
+            <span style="display: flex; gap: 4px; flex-wrap: wrap;"><span style="font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 4px; background: #f1f5f9; color: #475569;">Green</span></span>
+            <span style="color: #64748b;">cfg</span>
+            <span><span style="display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; padding: 2px 8px; border-radius: 999px; background: #ecfeff; color: #0891b2; border: 1px solid #a5f3fc;"><i class="bi bi-link-45deg"></i>Config</span></span>
+            <span style="color: #64748b;">owner</span>
+            <span style="color: #cbd5e1;">—</span>
+          </div>
+        </div>
+      </div>
+      <div style="font-size: 12px; color: #94a3b8; line-height: 1.5;">Il nome dell'istanza è l'unico elemento primario; il tipo diventa un chip. Nome lungo = più spazio.</div>
+    </div>
+  </div>
+
+  <div style="border-top: 1px solid #e2e8f0; padding-top: 24px; display: flex; flex-direction: column; gap: 12px;">
+    <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8;">Cosa esporre come stile sovrascrivibile</div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; max-width: 1000px;">
+      <div style="background: #ffffff; border: 0.5px solid #e2e8f0; border-radius: 8px; padding: 12px 14px;">
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #0f172a; margin-bottom: 4px;">header.accent</div>
+        <div style="font-size: 12px; color: #64748b; line-height: 1.5;">Colore ereditato dalla classe del metamodello; override per istanza o per viewpoint.</div>
+      </div>
+      <div style="background: #ffffff; border: 0.5px solid #e2e8f0; border-radius: 8px; padding: 12px 14px;">
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #0f172a; margin-bottom: 4px;">header.accentPlacement</div>
+        <div style="font-size: 12px; color: #64748b; line-height: 1.5;">top · left · fill · none — i quattro preset qui sopra.</div>
+      </div>
+      <div style="background: #ffffff; border: 0.5px solid #e2e8f0; border-radius: 8px; padding: 12px 14px;">
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #0f172a; margin-bottom: 4px;">header.typeDisplay</div>
+        <div style="font-size: 12px; color: #64748b; line-height: 1.5;">badge · icon · chip · inline · hidden.</div>
+      </div>
+      <div style="background: #ffffff; border: 0.5px solid #e2e8f0; border-radius: 8px; padding: 12px 14px;">
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #0f172a; margin-bottom: 4px;">slots.emptyBehavior</div>
+        <div style="font-size: 12px; color: #64748b; line-height: 1.5;">dash · collapse · hide — indipendente dal preset di header.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="1" style="padding: 48px 56px; display: flex; flex-direction: column; gap: 40px;">
+  <div style="max-width: 720px;">
+    <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8; margin-bottom: 8px;">View Designer · Instance node</div>
+    <h1 style="font-size: 24px; font-weight: 700; color: #0f172a; margin: 0 0 8px;">Rendering delle istanze — default vs proposta</h1>
+    <p style="font-size: 14px; color: #475569; margin: 0; line-height: 1.6;">Stessi dati delle due istanze <span style="font-family: 'IBM Plex Mono', monospace;">Shape_0</span> e <span style="font-family: 'IBM Plex Mono', monospace;">Shape_1</span>. La proposta distingue slot vuoti, riferimenti, collezioni e valori enum.</p>
+  </div>
+
+  <div style="display: flex; gap: 56px; flex-wrap: wrap; align-items: flex-start;">
+
+    <!-- DEFAULT -->
+    <div style="display: flex; flex-direction: column; gap: 16px;">
+      <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8;">Default attuale</div>
+      <div style="width: 280px; background: #ffffff; border: 1px solid #334155; border-radius: 6px;">
+        <div style="padding: 10px 16px; border-bottom: 1px solid #e2e8f0; text-align: center; font-size: 18px; font-weight: 700; color: #1e293b;">Shape_1 : Shape</div>
+        <div style="padding: 12px 16px; display: flex; flex-direction: column; gap: 6px; font-size: 16px; color: #334155;">
+          <div>color =</div>
+          <div>tags =</div>
+          <div>cfg = Config</div>
+          <div>owner =</div>
+        </div>
+      </div>
+      <div style="font-size: 12px; color: #94a3b8; max-width: 280px; line-height: 1.5;">Slot vuoti indistinguibili da quelli pieni; nessuna semantica sui valori; header non-UML.</div>
+    </div>
+
+    <!-- PROPOSED filled -->
+    <div style="display: flex; flex-direction: column; gap: 16px;">
+      <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #475569;">Proposta — istanza valorizzata</div>
+      <div style="width: 300px; background: #ffffff; border-radius: 12px; border: 0.5px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.06); overflow: hidden;">
+        <div style="height: 3px; background: #f59e0b;"></div>
+        <div style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; gap: 10px;">
+          <span style="width: 20px; height: 20px; border-radius: 4px; background: #fef3c7; color: #b45309; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; flex: none;">m</span>
+          <span style="font-size: 14px; font-weight: 600; color: #0f172a; text-decoration: underline; text-underline-offset: 3px;">Shape_0</span>
+          <span style="font-size: 13px; color: #94a3b8;">: Shape</span>
+        </div>
+        <div style="padding: 10px 14px; display: grid; grid-template-columns: 64px 1fr; row-gap: 8px; column-gap: 12px; font-size: 13px; align-items: center;">
+          <span style="color: #64748b;">color</span>
+          <span style="display: inline-flex; align-items: center; gap: 6px; color: #0f172a; font-weight: 500;"><span style="width: 10px; height: 10px; border-radius: 3px; background: #22c55e; flex: none;"></span>Green</span>
+          <span style="color: #64748b;">tags <span style="color: #cbd5e1;">[1]</span></span>
+          <span style="display: flex; gap: 4px; flex-wrap: wrap;"><span style="font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 4px; background: #f1f5f9; color: #475569;">Green</span></span>
+          <span style="color: #64748b;">cfg</span>
+          <span><span style="display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; padding: 2px 8px; border-radius: 999px; background: #ecfeff; color: #0891b2; border: 1px solid #a5f3fc;"><i class="bi bi-link-45deg"></i>Config</span></span>
+          <span style="color: #64748b;">owner</span>
+          <span style="color: #cbd5e1;">—</span>
+        </div>
+      </div>
+      <div style="font-size: 12px; color: #94a3b8; max-width: 300px; line-height: 1.5;">Nome istanza sottolineato (UML), tipo attenuato, badge categoriale <b>m</b>, swatch per enum-colore, chips per collezioni con cardinalità, pill navigabile per i riferimenti, «—» per gli slot vuoti.</div>
+    </div>
+
+    <!-- PROPOSED mostly empty -->
+    <div style="display: flex; flex-direction: column; gap: 16px;">
+      <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #475569;">Proposta — istanza quasi vuota</div>
+      <div style="width: 300px; background: #ffffff; border-radius: 12px; border: 0.5px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.06); overflow: hidden;">
+        <div style="height: 3px; background: #f59e0b;"></div>
+        <div style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; gap: 10px;">
+          <span style="width: 20px; height: 20px; border-radius: 4px; background: #fef3c7; color: #b45309; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; flex: none;">m</span>
+          <span style="font-size: 14px; font-weight: 600; color: #0f172a; text-decoration: underline; text-underline-offset: 3px;">Shape_1</span>
+          <span style="font-size: 13px; color: #94a3b8;">: Shape</span>
+        </div>
+        <div style="padding: 10px 14px; display: grid; grid-template-columns: 64px 1fr; row-gap: 8px; column-gap: 12px; font-size: 13px; align-items: center;">
+          <span style="color: #64748b;">cfg</span>
+          <span><span style="display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; padding: 2px 8px; border-radius: 999px; background: #ecfeff; color: #0891b2; border: 1px solid #a5f3fc;"><i class="bi bi-link-45deg"></i>Config</span></span>
+        </div>
+        <div style="padding: 8px 14px; border-top: 1px solid #f1f5f9; font-size: 11px; color: #94a3b8; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+          <i class="bi bi-chevron-down"></i>3 slot vuoti
+        </div>
+      </div>
+      <div style="font-size: 12px; color: #94a3b8; max-width: 300px; line-height: 1.5;">Gli slot non valorizzati collassano in un footer espandibile: il nodo occupa solo lo spazio dell'informazione reale.</div>
+    </div>
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:760}}"></script>
+</body>
+</html>

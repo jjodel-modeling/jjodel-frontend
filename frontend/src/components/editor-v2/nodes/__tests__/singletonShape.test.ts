@@ -160,10 +160,15 @@ describe('singletonLabelParts', () => {
 
     it('le due meta\' restano separate: il chiamante non deve mai concatenarle', () => {
         // La sottolineatura UML copre il solo nome, quindi una stringa unica
-        // `Color : Red` sarebbe gia' il difetto — l'istanza si leggerebbe come
-        // se si chiamasse cosi'.
+        // sarebbe gia' il difetto — l'istanza si leggerebbe come se si chiamasse
+        // cosi'. Il separatore (`::`) vive nel componente, non qui: questo
+        // modulo restituisce due meta' e nessuna colla.
         const parts = singletonLabelParts('Red', [{ id: 'Color', name: 'Color', abstract: true }]);
-        expect(Object.values(parts)).not.toContain('Color : Red');
+        expect(parts.superclassName).toBe('Color');
+        expect(parts.instanceName).toBe('Red');
+        for (const v of Object.values(parts)) {
+            expect(String(v)).not.toContain(':');
+        }
     });
 });
 

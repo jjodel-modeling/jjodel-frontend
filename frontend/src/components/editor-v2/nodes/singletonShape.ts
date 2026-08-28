@@ -78,7 +78,7 @@ export interface SingletonLabelParts {
 }
 
 /**
- * `Color : Red`, or just `Red`.
+ * `Color::Red`, or just `Red`.
  *
  * The order is the inverse of the rectangle header's `Red : Color`, and that is
  * the point: the pill reads "a Red, which is a Color". Which half gets the UML
