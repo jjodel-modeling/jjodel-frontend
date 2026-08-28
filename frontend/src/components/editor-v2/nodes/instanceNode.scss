@@ -487,6 +487,20 @@
         font-family: inherit;
     }
 
+    // Rename nell'header: .mm-node__input eredita --node-header-text
+    // (bianco in alcuni scheme); il nome dell'istanza usa --color-inode-name.
+    // Allineo l'input al nome renderizzato e do alla selezione un cyan che
+    // resti visibile sull'header selezionato (#e0f7fa).
+    .mm-object__header .mm-node__input {
+        color: var(--color-inode-name);          // slate-900
+        caret-color: var(--color-inode-selected-border); // cyan-600
+
+        &::selection {
+            background: rgba(8, 145, 178, 0.25); // cyan-600 @ 25%
+            color: var(--color-inode-name);
+        }
+    }
+
     // ── Inline editing ───────────────────────────────────────────────────────
     // The compartment stays editable. `.mm-field__input` cannot be reused: its
     // rules are nested under `.mm-field`, a class these rows do not carry, and
