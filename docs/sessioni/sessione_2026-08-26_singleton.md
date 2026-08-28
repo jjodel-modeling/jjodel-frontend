@@ -126,3 +126,38 @@ filtro), corregge una guardia mancante nel prompt, consegna A; 9/9 visivo, log, 
 discovery B; il report trova che il ramo nativo non ha righe reference, che `.value` è un no-op
 sugli slot vuoti, e che la soppressione dei singleton è incoerente in `useJjomSync` da prima di B.
 Checkpoint qui, con le proposte sulle nove domande in attesa di Alfonso.
+
+---
+
+## Aggiornamento di fine serata (23:50): commit B chiuso
+
+| Commit | Contenuto |
+|---|---|
+| `1635e8450` | **feat(ir)**, commit B: `syncSetReferenceValue` (`canvasToJjom.ts`), mirror `showSingletons` + `singletonConformTypeIds` + `singletonClassIdsByType` + `modelId` in `EditorContext`, token `feat.type` in `compartmentSig` e `typeId` su `CompartmentRowData`, ramo `selectable` nel `case 'value'` di `IRNodeContent`, `InlineObjectSelect` nuovo (portal su body, `nodrag nowheel`), `cursor: pointer` in `irStyle.ts`. Sei file, non sette: `CompartmentRowData` vive in `IRNodeContent.tsx:98`. Candidati da `DModel.objects` (solo radici), non da `o.model` (getter L, assente sul raw). |
+| `5d9ea54fa` | **fix(ir)**: span vuoto a larghezza zero, `display: inline-block; min-width: 1.5em` su `--editable`, placeholder `…` via `:empty::after` in `var(--text-dim)` su `--select`. |
+| `a207f1bbe` | commit di un'altra sessione che ha raccolto anche le due entry di log di B (`git add docs/claude-code-log.md` su file condiviso, rule 17); Claude Code non ha riscritto la storia. |
+
+**Verifica visiva** (11/11): 1-5 e 9 dalla chat via Chrome prima del fix; 2 bis, 6, 7, 8 dalla chat
+dopo il fix; 10 da Alfonso (rombi). Undo: **due passi**, prima l'arco poi il valore. Console muta
+in tutti i passaggi. La prima prova di Alfonso era fallita per fixture: la view aveva il
+compartimento `source: children` (dispatch, read-only, senza segmento `value`); corretto in
+`references` con `name`, `" = "`, `value`. **La view corretta va salvata (File > Save)** o al reload
+torna `children`.
+
+**Fronte (β), quattro voci, numero di partenza misurato**:
+1. *hide*: archi RF 9 → 7 senza `setEdges`, React Flow scarta in silenzio gli archi con target sparito.
+2. assegnazione con singleton nascosti: valore e `DVoidEdge` scritti, archi RF fermi.
+3. *show*: l'arco creato mentre il target era soppresso **non compare** (D-layer 1, RF 0), serve reload (§6.4 del report B, riprodotto).
+4. **nuova**: al mount con chiave `false` i nodi singleton erano visibili e il menu senza spunta; la soppressione al mount (`EditorV2.tsx:792-816`) non è scattata, il primo click è finito nel ramo `show` a vuoto. Probabile ordine fra quell'effetto e l'init di `useJjomSync`.
+Più R-SGL-9(g) (`isSingletonSuppressed(objId)` sempre falso). Critical zone, LIR, discovery propria.
+
+**Nota di processo**: due sessioni di Claude Code hanno lavorato in parallelo sullo stesso working
+tree (HMR su `UnifiedEdge.tsx` e altri durante la verifica di B, commit `a207f1bbe`); `git add` per
+path su file condivisi raccoglie il lavoro altrui. Da tenere in conto quando si apre β.
+
+**Convenzione nuova (26/8)**: ogni prompt, GO o ACK per Claude Code chiude la risposta con l'etichetta
+in grassetto «Prompt per Claude Code:»; brevi in blocco mono, lunghi come path in `docs/prompts/`.
+Alfonso la aggiunge alle istruzioni del progetto.
+
+**Prossimi passi**: push; prompt di discovery β (quattro voci sopra, `useJjomSync.ts` +
+`EditorV2.tsx` toggle e mount, con LIR); decidere il destino di `StatusBar.*` e `featureSignature.ts`.
