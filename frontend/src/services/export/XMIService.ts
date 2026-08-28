@@ -873,6 +873,55 @@ export class XMIService {
             values = [rawValue];
         }
 
+        // R-FRM-3 (spec 2026-08-28 §10): the POINTER to the DEnumLiteral is the canonical enum
+        // value; the literal NAME is the legacy form, accepted on read but no longer written.
+        // XMI carries names — EMF writes them, and so does our own export, whose serializeFeatures
+        // resolves a pointer back to `target.name` — so the importer is where the file's name
+        // becomes the canon. The mapping happens HERE, on `values`, because both write paths
+        // below (conformity slot and the DValue.new fallback) receive this same array untouched:
+        // one map covers both, and neither branch needs to change.
+        //
+        // `metaFeature` is an L proxy — the code above already reads `.className` and
+        // `.upperBound` off it — so `.type` is an LClassifier and `.type.isEnum` is the very
+        // predicate CHECK 10 uses (ConformanceValidator, `attrType.isEnum`). Same accessor on
+        // both sides of the ratification, deliberately: the writer and the checker agree on what
+        // "enum" means.
+        const featType: any = (metaFeature as any).type;
+        if (featType && featType.isEnum) {
+            const literals: any[] = Array.isArray(featType.literals) ? featType.literals : [];
+            const nameToId = new Map<string, string>();
+            const literalIds = new Set<string>();
+            for (const l of literals) {
+                const lname = l?.name;
+                const lid = l?.id;
+                if (lid === null || lid === undefined) continue;
+                literalIds.add(lid);
+                // A literal without a name contributes nothing to resolve BY name, and a map
+                // holding `undefined` as a key would turn an absent attribute into a pointer.
+                if (lname === null || lname === undefined) continue;
+                // First occurrence wins on a duplicate name — the same tie-break as
+                // normalizeEnumValues on the form side, so reader and writer agree on which
+                // literal a given name denotes.
+                if (!nameToId.has(lname)) nameToId.set(lname, lid);
+            }
+            values = values.map((v) => {
+                const resolved = nameToId.get(v);
+                if (resolved !== undefined) return resolved;
+                // Already a pointer: passes through untouched, and silently, since it is already
+                // the canon. It cannot be reached through `nameToId`, which is keyed by name.
+                if (literalIds.has(v)) return v;
+                // Neither name nor id: kept verbatim, on purpose. The import loads the file and
+                // lets the validator speak — CHECK 10 raises `invalid_enum_literal` on exactly
+                // this value. Same policy as the .jmm loader's ordinal-to-pointer mapper
+                // (api/data.ts:355-370), which likewise leaves alone what it cannot resolve.
+                const msg = `Enum attribute "${featName}" on "${metaClass.name}": value "${v}" does not match any literal of enum "${featType.name}", kept as-is`;
+                console.warn('[XMI import]', msg);
+                ctx.warnings.push(msg);
+                ctx.summary.warnings++;
+                return v;
+            });
+        }
+
         // Reuse the conformity slot when present (see getConformitySlot). Plain replace on
         // `values` + clearing isMirage mirrors the identity-slot population pattern in
         // LModelElement.tsx set_name (Direction A). Fallback (no slot) keeps the B.1 behavior.
