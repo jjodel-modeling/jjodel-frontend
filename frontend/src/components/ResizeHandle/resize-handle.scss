@@ -59,15 +59,13 @@
 
   &:focus { outline: none; }
 
-  // System focus rule, not a tinted halo. `--color-border-focus` is NOT used here even
-  // though it names exactly this role: measured on the running app, it resolves to
-  // #64748b only while `data-theme="light"` is explicitly set and to #06b6d4 — cyan —
-  // in every other state, because `tokens.css:122` and `_colors-light.scss:93` both
-  // declare it on `:root` and only the light one carries the attribute that wins. Cyan
-  // is the canvas' accent and must not mark focus. `--color-slate-600` is the grade
-  // asked for, and it holds in both themes.
+  // System focus rule, not a tinted halo. `--color-border-focus` names exactly this
+  // role and carries the theme: slate-600 on light, slate-400 on dark, never the
+  // canvas cyan. It was hardcoded here for a day, because the token resolved to
+  // #06b6d4 outside an explicit light theme; that was fixed at the root on the same
+  // day and the workaround is gone with it.
   &:focus-visible {
-    outline: 2px solid var(--color-slate-600);
+    outline: 2px solid var(--color-border-focus);
     outline-offset: 2px;
 
     &::after { background: var(--color-slate-400); }
@@ -213,12 +211,9 @@ html[data-theme="dark"] {
       &::after { background: var(--color-slate-400); }
     }
 
-    // Slate-600 is the ring on a light panel; on #1e293b it disappears into it.
-    &:focus-visible {
-      outline-color: var(--color-slate-400);
-
-      &::after { background: var(--color-slate-400); }
-    }
+    // No `outline-color` here any more: `--color-border-focus` lifts to slate-400 on
+    // its own in this theme. Only the pill needs restating.
+    &:focus-visible::after { background: var(--color-slate-400); }
 
     &.dragging {
       background: var(--color-bg-hover);

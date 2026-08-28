@@ -90,7 +90,7 @@ $gradient-hover: linear-gradient(180deg, $slate-100 0%, $slate-200 100%);
   --color-border-primary: #{$slate-300};   /* Main borders, dividers */
   --color-border-secondary: #{$slate-250}; /* Subtle borders */
   --color-border-hover: #{$slate-400};     /* Hover state borders */
-  --color-border-focus: #{$slate-500};     /* Focus state borders */
+  --color-border-focus: #{$slate-600};     /* Focus rings. Slate, never the canvas cyan */
 
   /* ============================================
      TEXT COLORS

@@ -11,7 +11,10 @@
  * D-UI-13: the semantic layer belongs to styles/tokens/, the primitive layer
  * belongs here. Names declared by both files are being withdrawn from this one
  * in arcs. Arc 1 (2026-08-20) removed the 16 names whose value was identical in
- * both, so no computed value changed. Arc 4 (2026-08-21) sorted the tertiary text
+ * both, so no computed value changed. --color-border-focus went on 2026-08-28,
+ * out of turn and for cause: the two declarations DISAGREED, this one holding
+ * cyan-500, and with no `data-theme` set (the app's own default) it was this one
+ * that won, painting every focus ring on the canvas' accent colour. Arc 4 (2026-08-21) sorted the tertiary text
  * sites onto three roles and then withdrew the text family from here, which is why
  * the "SEMANTIC COLORS - Text" section is gone. Backgrounds, borders, shadows,
  * transitions and the z scale still collide: arcs 5 to 8, see docs/decisions.md.
@@ -119,7 +122,6 @@
      ======================================== */
   --color-border-primary: #e2e8f0;   /* slate-200 */
   --color-border-secondary: #cbd5e1; /* slate-300 */
-  --color-border-focus: #06b6d4;     /* cyan-500 */
   --color-border-error: #dc2626;     /* red-600 */
 
   /* ========================================
