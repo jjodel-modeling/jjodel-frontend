@@ -281,6 +281,9 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
 
     // Enum popover: tracks which feature ID has its popover open (null = none)
     const [openEnumId, setOpenEnumId] = useState<string | null>(null);
+    // The trigger's viewport rect, read once at open: the popover is portalled
+    // onto `body` (the node clips its own overflow) and positions from this.
+    const [openEnumRect, setOpenEnumRect] = useState<DOMRect | null>(null);
 
     // Per-node runtime state of the handoff: local, not persisted.
     // `emptyRowsExpanded` only means anything under emptyBehavior = "collapse".
@@ -899,19 +902,25 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                 <>
                     <span
                         className={`mm-object__enum-slot${isStaleEnum ? ' mm-field__enum-stale' : ''}`}
-                        onClick={(e) => { e.stopPropagation(); setOpenEnumId(openEnumId === feature.id ? null : feature.id); }}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            const opening = openEnumId !== feature.id;
+                            setOpenEnumRect(opening ? e.currentTarget.getBoundingClientRect() : null);
+                            setOpenEnumId(opening ? feature.id : null);
+                        }}
                         title={isStaleEnum ? `"${feature.value}" is no longer a valid enum literal` : row.decision.reason}
                     >
                         {isStaleEnum && <i className="bi bi-exclamation-triangle-fill mm-field__enum-stale-icon" />}
                         {painted}
                     </span>
                     <i className="bi bi-chevron-down mm-object__enum-chevron" />
-                    {openEnumId === feature.id && (
+                    {openEnumId === feature.id && openEnumRect && (
                         <InlineEnumSelect
                             value={feature.value}
                             enumName={feature.typeName ?? 'Enum'}
                             literals={feature.enumLiterals!}
                             isStale={!!isStaleEnum}
+                            anchorRect={openEnumRect}
                             onChange={(val) => {
                                 if (val !== feature.value) {
                                     editorContext?.takeSnapshot();
@@ -923,8 +932,9 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                                     syncUpdateFeatureValue(id, row.name, val);
                                 }
                                 setOpenEnumId(null);
+                                setOpenEnumRect(null);
                             }}
-                            onClose={() => setOpenEnumId(null)}
+                            onClose={() => { setOpenEnumId(null); setOpenEnumRect(null); }}
                         />
                     )}
                 </>

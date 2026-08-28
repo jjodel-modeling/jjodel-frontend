@@ -185,10 +185,10 @@
         gap: 6px;
         min-width: 0;
         flex-wrap: wrap;
-        // Containing block for the inspect icon. Safe next to the enum popover:
-        // `.inline-type-select` is `position: relative` itself, so its list is
-        // positioned against that and not against whatever ancestor happens to
-        // be relative.
+        // Containing block for the inspect icon. No longer shared with the enum
+        // popover: `overflow: hidden` on `.mm-node.mm-object` above cut that
+        // list at the node's border, so it is portalled onto `body` and
+        // positioned from the trigger's rect (InlineEnumSelect, 2026-08-28).
         position: relative;
         // The icon's slot, RESERVED and always present rather than made on
         // hover. Reserving costs 18px of value width on every row; making room
