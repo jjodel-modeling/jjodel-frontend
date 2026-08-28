@@ -1,0 +1,110 @@
+// DisplayAnnotations — the `jjodel/*` group in the M2 inspector.
+//
+// Field rows reuse the inspector's own `.jj-field` / `.jj-toggle-row`, so the
+// group reads as part of the panel and not as a guest in it. What is added here
+// is only what the panel has no shape for: the two bounds side by side, the note
+// that says what the pair produces, and the verdict block.
+
+.jj-display {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+
+    &__input {
+        width: 100%;
+        height: var(--input-height-sm, 28px);
+        padding: 0 var(--space-2);
+        border: 1px solid var(--color-panel-border);
+        border-radius: var(--radius-sm);
+        background: var(--color-panel-bg);
+        color: var(--color-text-primary);
+        font: inherit;
+        font-size: var(--font-size-sm);
+        box-sizing: border-box;
+
+        &::placeholder { color: var(--color-text-placeholder); }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-border-focus);
+            outline-offset: 1px;
+        }
+    }
+
+    // Min and Max are one decision, so they sit on one line: the pair is what
+    // chooses `progress`, and splitting them into two rows hides that.
+    &__bounds {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--space-2);
+    }
+
+    &__note {
+        color: var(--color-text-tertiary);
+        font-size: var(--font-size-xs);
+        line-height: 1.4;
+    }
+
+    &__toggle-row { margin-top: var(--space-1); }
+
+    // The verdict: what the metamodel alone settles, plus the caveat that it is
+    // not the whole ladder.
+    &__verdict {
+        margin-top: var(--space-1);
+        padding-top: var(--space-2);
+        border-top: 1px solid var(--color-panel-border);
+    }
+
+    &__verdict-head {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: var(--space-2);
+    }
+
+    &__verdict-label {
+        color: var(--color-text-tertiary);
+        font-size: var(--font-size-xs);
+    }
+
+    &__verdict-value {
+        color: var(--color-text-primary);
+        font-size: var(--font-size-sm);
+        font-weight: var(--font-weight-medium);
+    }
+
+    // Same word and same meaning as the canvas inspector's badge: a rule-1
+    // declaration exists, so the ladder is not running for this property.
+    &__badge {
+        padding: 1px var(--space-2);
+        border-radius: var(--radius-full);
+        background: var(--color-bg-hover);
+        color: var(--color-text-secondary);
+        font-size: 10px;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+    }
+
+    &__clear {
+        padding: 0;
+        border: 0;
+        background: none;
+        color: var(--color-link, var(--color-text-secondary));
+        font: inherit;
+        font-size: var(--font-size-xs);
+        cursor: pointer;
+
+        &:hover { text-decoration: underline; }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-border-focus);
+            outline-offset: 2px;
+        }
+    }
+
+    &__verdict-sub {
+        margin-top: var(--space-1);
+        color: var(--color-text-placeholder);
+        font-size: var(--font-size-xs);
+        line-height: 1.4;
+    }
+}

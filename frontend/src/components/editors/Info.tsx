@@ -32,6 +32,7 @@ import { M2AnalyticsModal, M2AnalyticsData } from '../M2AnalyticsModal';
 import { useInterfaceMode } from '../../hooks/useInterfaceMode';
 import { getTypeName, getMultiplicity, formatFeatureSignature } from '../../common/featureSignature';
 import { resolveEntityType, entityLetter } from '../../common/entityMeta';
+import DisplayAnnotations from '../editor-v2/nodes/DisplayAnnotations';
 
 // Collapsible section for properties panel grouping
 function CollapsibleSection(props: { title: string; defaultOpen?: boolean; headerRight?: React.ReactNode; children: React.ReactNode }) {
@@ -571,8 +572,28 @@ class builder {
     }
 
     static attribute(data: LModelElement, advanced: boolean, skipTitle: boolean = false): JSX.Element {
+        const type = (data as any)?.type;
         return (<>
             {this.feature(data, advanced, true, ATTRIBUTE_ID_FLAG, ATTRIBUTE_IOT_FLAG)}
+
+            {/* DISPLAY (2026-08-29). The `jjodel/*` declarations the Row view
+                library reads. Attribute only, and NOT in `feature()`: a unit, a
+                pair of bounds and a monospace treatment are statements about a
+                value, and a reference has none. They are metamodel facts — they
+                govern every instance of the class — so the surface is here and
+                not in the FormSpec authoring of the Form tab. */}
+            <CollapsibleSection title="DISPLAY" defaultOpen={false}>
+                <DisplayAnnotations
+                    featureId={(data as any)?.id ?? null}
+                    typeName={getTypeName(data)}
+                    enumLiteralNames={
+                        type?.className === 'DEnumerator'
+                            ? (type.literals ?? []).map((l: any) => l?.name).filter(Boolean)
+                            : undefined
+                    }
+                    isMany={(data as LAttribute).__raw?.upperBound !== 1}
+                />
+            </CollapsibleSection>
         </>);
     }
     static reference(data: LModelElement, advanced: boolean, skipTitle: boolean = false): JSX.Element {

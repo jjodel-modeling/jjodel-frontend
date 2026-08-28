@@ -15,6 +15,7 @@ import {
     isEmptySlot,
     isNamedColor,
     isSyntacticColor,
+    metamodelRenderer,
     parseBoolean,
     relativeAge,
     toCssColor,
@@ -400,5 +401,38 @@ describe('boolean, date and age helpers', () => {
         expect(relativeAge('2026-06-28T20:00:00Z', now)).toBe('2 mesi');
         expect(relativeAge('2025-06-28T20:00:00Z', now)).toBe('1 anno');
         expect(relativeAge('not a date', now)).toBeNull();
+    });
+});
+
+describe('metamodelRenderer — the verdict with no instance in hand', () => {
+    it('does NOT answer dash for a value-less feature, which is what detectValueRenderer would', () => {
+        expect(detectValueRenderer({ value: '', typeName: 'EInt' }).kind).toBe('dash');
+        expect(metamodelRenderer({ value: '', typeName: 'EInt' }).kind).toBe('numberUnit');
+    });
+
+    it('both bounds are what promotes a number to a progress bar', () => {
+        expect(metamodelRenderer({ value: '', typeName: 'EInt', min: 0 }).kind).toBe('numberUnit');
+        expect(metamodelRenderer({ value: '', typeName: 'EInt', min: 0, max: 100 }).kind).toBe('progress');
+    });
+
+    it('a rule-1 declaration wins and says so', () => {
+        const v = metamodelRenderer({ value: '', typeName: 'EString', rendererOverride: 'code' });
+        expect(v.kind).toBe('code');
+        expect(v.fromDeclaration).toBe(true);
+        expect(v.reason).toContain('jjodel/renderer=code');
+    });
+
+    it('a declared colour TYPE is a metamodel fact, even with nothing to paint', () => {
+        expect(metamodelRenderer({ value: '', typeName: 'Color' }).kind).toBe('swatch');
+    });
+
+    it('an enumeration falls to the chip, and plain text is the floor', () => {
+        expect(metamodelRenderer({ value: '', typeName: 'Palette', enumLiteralNames: ['Red'] }).kind).toBe('enumChip');
+        expect(metamodelRenderer({ value: '', typeName: 'EString' }).kind).toBe('truncatedText');
+    });
+
+    it('cardinality and reference-ness outrank the type, as they do on a slot', () => {
+        expect(metamodelRenderer({ value: '', typeName: 'EInt', isMany: true }).kind).toBe('collection');
+        expect(metamodelRenderer({ value: '', isReference: true }).kind).toBe('refPill');
     });
 });

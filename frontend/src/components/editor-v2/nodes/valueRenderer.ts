@@ -172,6 +172,7 @@ const NUMERIC_TYPE_NAMES: ReadonlySet<string> = new Set([
 
 const normType = (t: string | undefined | null): string => (t ?? '').trim().toLowerCase();
 
+export function isColorType(typeName?: string): boolean { return COLOR_TYPE_NAMES.has(normType(typeName)); }
 export function isBooleanType(typeName?: string): boolean { return BOOLEAN_TYPE_NAMES.has(normType(typeName)); }
 export function isDateType(typeName?: string): boolean { return DATE_TYPE_NAMES.has(normType(typeName)); }
 export function isNumericType(typeName?: string): boolean { return NUMERIC_TYPE_NAMES.has(normType(typeName)); }
@@ -444,6 +445,63 @@ export function traceLadder(slot: SlotShape): LadderTrace {
         : `"${featureName || 'the property'}" is not a name that suggests a colour`);
 
     return { rungs, swatch: null, winner: null };
+}
+
+/**
+ * The renderer the METAMODEL alone settles, with no instance in hand.
+ *
+ * `detectValueRenderer` answers for a slot, and most of what it consults is the
+ * slot's VALUE: it short-circuits on `isEmptySlot`, and ladder rungs 2 to 4 read
+ * the value, then the enum literals against the value, then the attribute name
+ * but only as a tie-break on a value that already names a colour. Called with no
+ * value it answers `dash` for every attribute in the model, which is true of the
+ * slot and useless about the feature.
+ *
+ * What CAN be answered without a value is exactly what the four Display
+ * annotations govern: the rule-1 declaration, the declared type, and the pair of
+ * bounds that chooses between `progress` and `numberUnit`. This returns that and
+ * says nothing else — the M2 panel states the fact it can reach instead of
+ * claiming a verdict it cannot, which is the failure the inspector exists to
+ * prevent, committed one level up.
+ *
+ * The order below is `detectValueRenderer`'s own order with the value-dependent
+ * rungs removed, and it is duplicated here rather than shared because the two
+ * answer different questions: one is "what does this slot render as", the other
+ * is "what has the modeller settled". `swatch` is reported for a declared colour
+ * TYPE because that is a metamodel fact; whether a given instance paints is not.
+ */
+export interface MetamodelRendererVerdict {
+    kind: RendererKind;
+    reason: string;
+    /** The verdict comes from `jjodel/renderer`, so the ladder never runs. */
+    fromDeclaration: boolean;
+}
+
+export function metamodelRenderer(slot: SlotShape): MetamodelRendererVerdict {
+    if (slot.rendererOverride && isDeclarableRenderer(slot.rendererOverride)) {
+        return {
+            kind: slot.rendererOverride,
+            reason: `declared jjodel/renderer=${slot.rendererOverride}`,
+            fromDeclaration: true,
+        };
+    }
+    const no = (kind: RendererKind, reason: string): MetamodelRendererVerdict =>
+        ({ kind, reason, fromDeclaration: false });
+
+    if (slot.isReference) return no('refPill', 'the feature is a reference');
+    if (slot.isMany) return no('collection', 'the feature is multi-valued');
+    if (isColorType(slot.typeName)) return no('swatch', `declared ${slot.typeName} type`);
+    if (isBooleanType(slot.typeName)) return no('boolean', 'declared EBoolean type');
+    if (isDateType(slot.typeName)) return no('date', 'declared date type');
+    if (isNumericType(slot.typeName)) {
+        return slot.min != null && slot.max != null
+            ? no('progress', 'declared numeric type, with both bounds')
+            : no('numberUnit', 'declared numeric type');
+    }
+    if ((slot.enumLiteralNames?.length ?? 0) > 0) {
+        return no('enumChip', 'the feature is typed on an enumeration');
+    }
+    return no('truncatedText', 'no metamodel rule settles this; instances decide by value');
 }
 
 /**

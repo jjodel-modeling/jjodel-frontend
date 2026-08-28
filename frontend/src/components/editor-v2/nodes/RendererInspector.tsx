@@ -68,7 +68,7 @@ function computePopoverStyle(rect: DOMRect): React.CSSProperties {
 }
 
 /** Human names for the library members, as the change menu lists them. */
-const RENDERER_LABELS: Record<string, string> = {
+export const RENDERER_LABELS: Record<string, string> = {
     swatch: 'Colour swatch',
     enumChip: 'Enum chip',
     boolean: 'Boolean',
