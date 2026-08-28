@@ -146,3 +146,67 @@ ogni token nuovo.
 
 **Smoke visivo: non eseguito.** Gli otto criteri di accettazione richiedono un canvas con un modello;
 la checklist e' consegnata ad Alfonso.
+
+
+---
+
+# Coda: la fixture di smoke, e due ipotesi smentite dalla misura
+
+`?smoke=rowviews` (`examples/RowViewSmoke/`, `components/devtools/SmokeBoot.tsx`) costruisce progetto,
+metamodello e modello e apre il canvas su un `AllNine` che mostra tutti e nove i renderer in un nodo.
+Dev-only: `SmokeBoot` e' inerte fuori da `import.meta.env.DEV` e l'import dinamico viene eliminato
+dal build, verificato cercando `AllNine` in ogni `dist/**/*.js`.
+
+## Cosa la costruzione ha misurato
+
+Cinque tentativi di creare le istanze, ciascuno che correggeva il precedente, ciascuno una misura:
+
+1. `addObject({name}, classId)` — respinto: il primo argomento e' uno **schema di matching** passato a
+   `getInstantiableClasses`, non un sacco di valori iniziali.
+2. `DObject.new(classId, …)` — l'oggetto esiste, `features` vuoto.
+3. `addObject({}, classId, true)` — l'oggetto esiste, `features` vuoto **sulla lettura sincrona**.
+4. `addObject({}, undefined)` — respinto, uno schema vuoto non conforma a nessun tipo.
+5. Rimbalzo `instanceof = undefined` poi `= klass` per forzare la conformity: il clear ha preso, il
+   re-set no, e tutte le istanze sono uscite `: Orphan` sul canvas.
+
+Il punto (3) e' quello che mi ha portato fuori strada: la conformity **gira**, semplicemente non e'
+visibile sulla lettura immediata. La fixture aveva quindi i suoi slot, e chiamare anche `addValue`
+gliene dava un secondo giro.
+
+## Le due ipotesi, e cosa ha detto la misura
+
+**Righe duplicate.** Ipotesi (di Alfonso, ragionevole): mismatch di forma degli id, `coveredAttrIds`
+confrontato contro `DAttribute.id` con una forma diversa, `Set.has` che manca sempre. Misurato dal
+vivo, fianco a fianco: `firstClassAttrId` e `firstCoveredId` **identici carattere per carattere**,
+`missing: 0`, `slotsNotInIdlookup: 0`. Il matching di `ObjectNode` era corretto. Il numero vero era
+`slotCount: 25` per `classAttrCount: 12` (+1 reference): **la fixture creava gli slot due volte**.
+Corretto scrivendo negli slot esistenti; 51 righe → 27, che e' 2×13 + 1.
+
+Il fix apparteneva quindi alla fixture e **non** a `ObjectNode`, al contrario di quanto ipotizzato:
+toccare il matching del nodo avrebbe rotto un comportamento corretto per compensare un difetto altrove.
+
+**Reference rotta.** Misurato prima di scrivere codice, come richiesto. Dopo la delete di `Config_old`
+il `DValue` di `cfg` legge:
+
+```
+values: ["Pointer1787938948576_USER_49"], valueCount: 1, firstResolves: false
+```
+
+Il puntatore **sopravvive**. La delete non ripulisce gli slot referenti, l'assunzione di
+`brokenRefMemory` e' giusta, e la domanda di design sullo scrubbing **non si pone**. Il bug era mio,
+nel path di risoluzione: `jjomTransformers` iterava `fv.values`, e il proxy L **scarta** le voci non
+risolvibili invece di restituire la stringa, quindi il puntatore morto non arrivava mai al loop.
+Corretto leggendo `__raw.values` come fonte di verita' e usando il proxy solo per dare un nome a
+quelle che risolvono.
+
+Terza misura, conseguenza della seconda: la delete e' legata al **rendering del canvas**, non a un
+timer. `brokenRefMemory` impara il nome dal transformer, e `DockManager.open2` non monta l'editor da
+solo; con un ritardo fisso la riga usciva sempre `Pointer178…` invece di `Config_old`. Ora la fixture
+attende la prima `.mm-object` nel DOM, e la riga barra il nome.
+
+## Stato
+
+27 righe su 6 nodi, `unit` 2 e non 4 (il controllo del punto 3 passa), `broken` 1 etichettato
+`Config_old`, tre pill singleton con lo swatch. Resta noto e non affrontato: dopo la delete il nodo
+dell'oggetto cancellato resta sul canvas (`docs/decisions.md` R-SGL-9 (e)/(f), pre-esistente), e i
+nodi nascono sovrapposti perche' la fixture non assegna coordinate.

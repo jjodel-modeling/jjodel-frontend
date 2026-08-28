@@ -2,6 +2,32 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-08-28 — feat(dev): fixture di smoke della libreria Row view, e due difetti veri
+**Prompt**: costruire la fixture visiva della libreria Row view e lasciarla a schermo — un entry point dev-only che crea progetto, metamodello e modello e apre il canvas, con `AllNine` che mostra tutti e nove i renderer in un nodo solo. Poi: risolvere le righe duplicate (bloccante per la verifica visiva) misurando prima di teorizzare, e misurare il DValue della reference rotta prima di scrivere codice.
+**Files touched**: frontend/src/examples/RowViewSmoke/index.ts (nuovo), frontend/src/components/devtools/SmokeBoot.tsx (nuovo), frontend/src/App.tsx, frontend/src/components/editor-v2/utils/jjomTransformers.ts, docs/claude-code-log.md
+**Outcome**: ✅ completed
+**Corregge**: 2026-08-28 17:05
+**Causa**: (c)
+**Regressions**: no. `npm run typecheck` 33 = baseline, `npm run test` 1742 passati, `npm run build` exit 0. Fixture assente dal bundle di produzione, verificato cercando `AllNine` in ogni `dist/**/*.js`. Verifica a schermo eseguita da qui col driver Playwright: 27 righe su 6 nodi, `unit` 2 e non 4, `broken` 1 con etichetta `Config_old`.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (nessun file della critical zone §3.1; `jjomTransformers` e' lettura D→canvas)
+**Smoke visivo**: passato da qui su tutti i renderer; resta ad Alfonso il giudizio su proporzione e gerarchia.
+**Notes**: Due ipotesi mie, entrambe smentite dalla misura. Le righe doppie non erano un mismatch di id in `ObjectNode` (`identical: true`, `missing: 0`): erano 25 slot per 13 feature, perche' la conformity **gira** e la fixture ne creava un secondo giro con `addValue`. Il puntatore morto **sopravvive** alla delete, quindi la domanda sullo scrubbing non si pone: il bug era in `jjomTransformers`, che leggeva `fv.values` invece di `__raw.values`. Dettaglio in `sessione_2026-08-28_row_view_library.md`.
+**Prompt document name**: 2026-08-28 19:20
+
+## 2026-08-28 — docs: debito, la lag §3.6 uccide le istanze singleton alla nascita
+**Prompt**: registrare come debito a se' stante, coi numeri misurati, la lag di propagazione trovata costruendo la fixture di smoke. Non va risolta in questa slice.
+**Files touched**: docs/claude-code-log.md
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (solo documentazione)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Misurato col fixture `?smoke=rowviews`. `LClass.attributes` legge **0 subito dopo `addAttribute`** e **12 dopo un gap di propagazione**. Non e' cosmetico: il persist callback di `DModel.new` (`joiner/classes.ts:937-944`) itera `lmodel.classes` per creare un'istanza per ogni classe singleton, e un M1 creato subito dopo l'M2 ne trova **zero** — `Red`/`Green`/`Blue` non nascono, senza errore. Col gap nascono tutte e tre. Colpisce import e script, non solo le fixture.
+**Prompt document name**: 2026-08-28 19:20
+
 ## 2026-08-28 — feat(editor-v2): l'ispettore dei renderer ha un'affordance visibile
 **Prompt**: l'ispettore serviva un modo visibile di entrarci. Icona `bi-sliders` 14px slate-400 al bordo destro della cella valore, rivelata sull'hover della riga con la transizione di casa; Alt+click resta come acceleratore. Tre vincoli: non cambiare l'altezza della riga ne' far scorrere il valore, fermare la propagazione come fa il chip `+k`, e mostrare l'icona anche sulle righe gia' `dichiarato`.
 **Files touched**: frontend/src/components/editor-v2/nodes/ObjectNode.tsx, frontend/src/components/editor-v2/nodes/instanceNode.scss, docs/sessioni/sessione_2026-08-28_row_view_library.md, docs/claude-code-log.md
