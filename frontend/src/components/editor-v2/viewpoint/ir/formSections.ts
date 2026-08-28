@@ -19,11 +19,26 @@
 import type { CompiledFieldCompartment } from './irTypes';
 import type { FormFieldDescriptor } from './useFormWidgets';
 
-export interface Section {
+/**
+ * A section of the form, with the fields that belong to it.
+ *
+ * Generic over the field type since Slice 2a, with the form's own descriptor as the default,
+ * so `Section` alone still means what it meant. The authoring surface partitions rows derived
+ * from the METACLASS, which have no slot behind them and therefore cannot be
+ * `FormFieldDescriptor`s: the two callers must nonetheless get the same order and the same
+ * titles, or the panel would describe a layout the form does not produce.
+ */
+export interface Section<F = FormFieldDescriptor> {
     key: string;
     title: string;
-    fields: FormFieldDescriptor[];
+    fields: F[];
 }
+
+/** What `buildFormSections` reads off a compartment, and the whole of it. */
+export type SectionCompartment = Pick<CompiledFieldCompartment, 'id' | 'source' | 'title'>;
+
+/** What `buildFormSections` reads off a field, and the whole of it. */
+export type SectionField = Pick<FormFieldDescriptor, 'isReference' | 'isComposition'>;
 
 /** The three natural groups a `source` can claim, in the order the tail renders them. */
 const GROUPS = ['attributes', 'references', 'children'] as const;
@@ -56,11 +71,11 @@ function sectionTitle(c: Pick<CompiledFieldCompartment, 'id' | 'title'>): string
  * gives each its own row view; the two converge on the same children from opposite ends, and the
  * form reads the owning slots because that is where multiplicity and requiredness live.
  */
-export function buildFormSections(
-    fields: FormFieldDescriptor[],
-    compartments: CompiledFieldCompartment[],
-): Section[] {
-    const byGroup: Record<Group, FormFieldDescriptor[]> = {
+export function buildFormSections<F extends SectionField>(
+    fields: F[],
+    compartments: SectionCompartment[],
+): Section<F>[] {
+    const byGroup: Record<Group, F[]> = {
         attributes: fields.filter(f => !f.isReference && !f.isComposition),
         references: fields.filter(f => f.isReference),
         children: fields.filter(f => f.isComposition),
@@ -73,7 +88,7 @@ export function buildFormSections(
         return GROUPS.map(g => ({ key: g, title: GROUP_TITLE[g], fields: byGroup[g] }));
     }
 
-    const authored: Section[] = compartments.map((c, i) => ({
+    const authored: Section<F>[] = compartments.map((c, i) => ({
         key: `${c.id}-${i}`,
         title: sectionTitle(c),
         fields: byGroup[(c.source as Group)] ?? [],
@@ -86,7 +101,7 @@ export function buildFormSections(
     // renders twice, today and after this change, because that is the view author's doing. The
     // set below only decides what is missing.
     const claimed = new Set<string>(compartments.map(c => c.source));
-    const tail: Section[] = GROUPS
+    const tail: Section<F>[] = GROUPS
         .filter(g => !claimed.has(g))
         // `residual-` cannot collide with an authored key, which always ends in `-<index>`.
         .map(g => ({ key: `residual-${g}`, title: GROUP_TITLE[g], fields: byGroup[g] }));

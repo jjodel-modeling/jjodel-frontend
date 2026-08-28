@@ -65,6 +65,11 @@ export interface MetaclassAttribute {
     type: string;          // type name (e.g. 'EString')
     lowerBound: number;
     upperBound: number;
+    /** True when the declared type is a `DEnumerator`, read through the `LClassifier.isEnum`
+     *  accessor. The form derivation needs it to map an enum attribute to a `select` widget
+     *  without a live slot to inspect (spec addendum 2026-08-28 sez. 5). Optional so external
+     *  MetaclassAttribute literals need not supply it (rule 11); resolveM1Info always populates it. */
+    isEnum?: boolean;
 }
 
 export interface MetaclassReference {
@@ -382,6 +387,7 @@ function resolveM1Info(modelId: string, knownMetamodelId?: string): EditorModeIn
                         type: attr.type?.name ?? 'EString',
                         lowerBound: attr.lowerBound ?? 0,
                         upperBound: attr.upperBound ?? 1,
+                        isEnum: !!attr.type?.isEnum,
                     });
                 }
             } catch { /* proxy can throw */ }
@@ -398,6 +404,7 @@ function resolveM1Info(modelId: string, knownMetamodelId?: string): EditorModeIn
                         type: attr.type?.name ?? 'EString',
                         lowerBound: attr.lowerBound ?? 0,
                         upperBound: attr.upperBound ?? 1,
+                        isEnum: !!attr.type?.isEnum,
                     });
                 }
             } catch { /* proxy can throw */ }

@@ -2,6 +2,19 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-08-28 — feat(form): fondamenta additive per il tab Form dell'authoring (Slice 2a, commit 1)
+**Prompt**: primo dei due commit della Slice 2a. Quattro modifiche additive che non cambiano nessun comportamento: `isEnum` sugli attributi della metaclasse, `overrideIsCompatible` esportata, `buildFormSections` generica sul tipo del campo, opzioni disabilitate con tooltip nel `SegmentedControl`. Base: discovery `discovery_2026-08-28_form_tab_authoring_slice2.md` (D4, D5, D6, D7/Q1).
+**Files touched**: frontend/src/components/editor-v2/hooks/useEditorMode.ts, frontend/src/components/editor-v2/viewpoint/ir/useFormWidgets.ts, frontend/src/components/editor-v2/viewpoint/ir/formSections.ts, frontend/src/components/ui/SegmentedControl/SegmentedControl.tsx, frontend/src/components/ui/SegmentedControl/SegmentedControl.module.css, frontend/src/components/editor-v2/viewpoint/ir/__tests__/useFormWidgets.test.ts, docs/claude-code-log.md
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. `npm run typecheck` 33 = baseline, diff degli errori identico riga per riga. `npx vitest run`: 1632 → 1639 test passati (+7 nuovi), stessi 9 file falliti all'import (`window is not defined`, noti).
+**Out-of-scope changes**: yes. `SegmentedControl.module.css` non era nell'elenco del prompt: senza la regola di muting un segmento disabilitato e' indistinguibile da uno attivo, quindi la meta' CSS della decisione Q1 e' necessaria. Una regola sola, fuori da `.trackDisabled` per non comporsi con l'opacita' di gruppo.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile (nessun cambiamento visibile: i due consumatori del SegmentedControl non passano le nuove proprieta').
+**Notes**: `Section<F = FormFieldDescriptor>` e `buildFormSections<F extends SectionField>`: i test esistenti non cambiano, verificato. `--color-text-disabled` esiste solo nella palette light, quindi il fallback e' `--color-text-tertiary`, dichiarato in entrambe; aggiungere il token mancante al dark tocca i file dei token, fuori scope. `isEnum` letto con `attr.type?.isEnum`, l'accessor di `LClassifier` (LModelElement.tsx:1690), dentro i try/catch gia' presenti.
+**Prompt document name**: 2026-08-28 16:35
+
 ## 2026-08-28 — docs: discovery per il tab Form dell'authoring (Slice 2, Fase 1, read-only)
 **Prompt**: raccogliere i fatti di codice per la Fase 2 del tab `Form` (id `ir-form`, solo kind vertex) nell'authoring IR: consumatori della barra, navigazione cross-tab, ciclo di commit del draft, feature della metaclasse target, riuso di `useFormWidgets`, adattatore per `buildFormSections`, primitive UI, gating Advanced, test, rischi. Dieci domande D1..D10, nessuna modifica al codice.
 **Files touched**: docs/discovery/discovery_2026-08-28_form_tab_authoring_slice2.md, docs/claude-code-log.md

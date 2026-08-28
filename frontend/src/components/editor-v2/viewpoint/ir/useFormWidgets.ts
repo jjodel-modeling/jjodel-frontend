@@ -116,8 +116,12 @@ export function widgetForPrimitive(typeName: string): { widget: WidgetKind; step
  * Note the asymmetry with irValidate: the AUTHORING surface may well want to refuse such
  * an override at commit time (the R-B9-bis criterion). That belongs to Slice 2, where the
  * widgets table exists; it is not this module's job.
+ *
+ * Exported since Slice 2a: the widgets table of `FormAuthoringBody` offers exactly the
+ * overrides this predicate accepts, so the two sides cannot drift into offering an override
+ * the interpreter would then ignore. One rule, one place.
  */
-function overrideIsCompatible(derived: WidgetKind, override: WidgetKind): boolean {
+export function overrideIsCompatible(derived: WidgetKind, override: WidgetKind): boolean {
     if (override === derived) return true;
     switch (derived) {
         // Text and multiline text are interchangeable; a JjEL expression is an EString

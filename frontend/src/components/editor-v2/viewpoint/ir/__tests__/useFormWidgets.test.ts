@@ -17,10 +17,11 @@ import {
     isAtUpperBound,
     isBasicField,
     multiplicityLabel,
+    overrideIsCompatible,
     widgetForPrimitive,
 } from '../useFormWidgets';
 import { assignableOptions, meaningfulValues, rawValues } from '../slotValues';
-import type { FormSpec } from '../irTypes';
+import type { FormSpec, WidgetKind } from '../irTypes';
 
 // --- fixtures ---------------------------------------------------------------
 
@@ -405,5 +406,47 @@ describe('assignableOptions', () => {
     it('returns an empty list when every candidate is taken, which is what disables Add', () => {
         const out = assignableOptions(OPTS, ['t_start', 't_stop', 't_fault']);
         expect(out).toEqual([]);
+    });
+});
+
+/**
+ * `overrideIsCompatible` became exported with Slice 2a, because the authoring widgets table
+ * offers exactly the overrides it accepts. The table below is the whole predicate, pinned so
+ * the two sides cannot drift: what the panel offers and what the interpreter honours are the
+ * same set by construction, not by agreement.
+ */
+describe('overrideIsCompatible', () => {
+    const ALL: WidgetKind[] = ['text', 'textarea', 'select', 'checkbox', 'color', 'number', 'reference', 'link'];
+    const accepted = (derived: WidgetKind) => ALL.filter(k => overrideIsCompatible(derived, k));
+
+    it('always accepts the derived widget itself', () => {
+        for (const k of ALL) expect(overrideIsCompatible(k, k)).toBe(true);
+    });
+
+    it('text and textarea are interchangeable, and both accept link', () => {
+        expect(accepted('text')).toEqual(['text', 'textarea', 'link']);
+        expect(accepted('textarea')).toEqual(['text', 'textarea', 'link']);
+    });
+
+    it('a number may be typed as text, nothing else', () => {
+        expect(accepted('number')).toEqual(['text', 'number']);
+    });
+
+    it('an enum select and a checkbox take no override at all', () => {
+        expect(accepted('select')).toEqual(['select']);
+        expect(accepted('checkbox')).toEqual(['checkbox']);
+    });
+
+    it('a reference may degrade to a plain select', () => {
+        expect(accepted('reference')).toEqual(['select', 'reference']);
+    });
+
+    it('color and link fall in the default branch: no override', () => {
+        expect(accepted('color')).toEqual(['color']);
+        expect(accepted('link')).toEqual(['link']);
+    });
+
+    it('rejects the persisted slip the module doc names: checkbox over an EString', () => {
+        expect(overrideIsCompatible(widgetForPrimitive('EString').widget, 'checkbox')).toBe(false);
     });
 });
