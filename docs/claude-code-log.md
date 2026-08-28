@@ -2,6 +2,32 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-08-29 — revert(editor-v2): lo schema high-contrast torna a contrasto pieno sulle edge
+**Prompt**: ripristinare in `_color-schemes.scss` i valori originali di `--edge-color` e `--edge-marker-stroke` dentro `.scheme-high-contrast` (dark `rgba(255,255,255,0.7)`, light `rgba(0,0,0,0.7)`): e' uno schema di accessibilita' e deve restare a contrasto pieno. `_themes.scss` invariato.
+**Files touched**: frontend/src/components/editor-v2/_color-schemes.scss (righe 316/317 e 337/338 riportate ai valori di HEAD), docs/claude-code-log.md
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (`git diff --quiet` su `_color-schemes.scss` esce 0: il file e' byte-identico a HEAD, nessun residuo; build exit 0; `npm run check:docs` 3/3)
+**Out-of-scope changes**: no (il file del prompt piu' il log)
+**Layer Impact Report**: not-required (nessun file di §3.1)
+**Smoke visivo**: non applicabile (ritorno esatto allo stato committato, verificato per assenza di diff invece che per misura)
+**Notes**: Corregge di fatto l'entry immediatamente precedente di oggi (le edge alla scala slate), che pero' nasce da un prompt inline e non ha una chiave `YYYY-MM-DD HH:mm` da citare: `Corregge` resta al sentinella per non inventare un riferimento, e la catena e' qui. Causa sarebbe (f). Lo scostamento segnalato li' e' stato deciso in senso opposto: slate nei temi base, nero e bianco pieni in high-contrast, che e' uno schema di accessibilita'.
+**Prompt document name**: prompt inline, nessun documento
+
+## 2026-08-29 — fix(editor-v2): le edge del canvas passano dai grigi neutri alla scala slate
+**Prompt**: in `_themes.scss` e `_color-schemes.scss` le edge usano grigi neutri in alpha (`rgba(0,0,0,...)` / `rgba(255,255,255,...)`) per `edge-color` e `edge-marker-stroke`. Allinearli alla scala slate: chiaro -> `#94a3b8` in `_themes.scss` e `#64748b` in `_color-schemes.scss .theme-light`; scuro -> `rgba(148,163,184,0.65-0.75)`. Non toccare `edge-selected` ne `edge-marker-fill`.
+**Files touched**: frontend/src/components/editor-v2/_themes.scss (mappa dark righe 94/98: `rgba(255,255,255,0.5)` -> `rgba(148,163,184,0.65)`; mappa light righe 252/256: `rgba(0,0,0,0.45)` e `rgba(0,0,0,0.5)` -> `#94a3b8`), frontend/src/components/editor-v2/_color-schemes.scss (`.scheme-high-contrast &.theme-dark` righe 316/317 -> `rgba(148,163,184,0.75)`; `&.theme-light` righe 337/338 -> `#64748b`), docs/claude-code-log.md
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (typecheck 33 = baseline su output completo, EXIT=2; build exit 0, zero righe di errore oltre alle deprecation Sass preesistenti e al chunk-warning, e nessun warning cita i due file toccati; `npm run smoke` 12 passed / 0 failed / 3 skipped exit 0; `inheritanceStyle.test.ts` 8/8 — asserisce il riferimento `var(--edge-color)`, non il valore, quindi resta verde per costruzione)
+**Out-of-scope changes**: no (i due file del prompt piu' il log)
+**Layer Impact Report**: not-required (nessun file di §3.1)
+**Smoke visivo**: non eseguito. Nessuna sonda sul canvas: i valori sono verificati alla sorgente e sui consumatori, non sul pixel. Consumatori confermati vivi prima della modifica (§5, sotto-regola sugli output morti): `--edge-color` in 4 dichiarazioni di `EditorV2.scss` (2497, 2514, 2528 `fill`, 2598), `--edge-marker-stroke` in 5 (2540-2561, le punte di freccia); controllo positivo a 5 occorrenze su `--edge-selected`. `edge-selected` e `edge-marker-fill` invariati come chiesto.
+**Notes**: Scostamento: entrambi i blocchi di `_color-schemes.scss` stanno in `.scheme-high-contrast`, lo schema del contrasto massimo — li' le edge scendono da nero/bianco pieni a slate, quindi il contrasto cala per progetto. Sull'intervallo lasciato aperto dal prompt ho tenuto l'ordine preesistente: `_themes.scss` 0.65 (era 0.5), `_color-schemes.scss` 0.75 (era 0.7), come l'asimmetria gia' chiesta sul chiaro (`#94a3b8` vs `#64748b`).
+**Prompt document name**: prompt inline, nessun documento
+
 ## 2026-08-28 — fix(tokens): `--color-border-focus` e' slate in tutti i temi, mai ciano
 **Prompt**: il token deve risolvere a slate-600 (#475569) su chiaro e slate-400 (#94a3b8) su scuro, mai a ciano, che resta riservato a selezione canvas e drag. Correggere alla radice e verificare i sei fogli che lo usano per l'anello di focus, senza toccarli se il token e' giusto.
 **Files touched**: styles/tokens.css (dichiarazione ciano ritirata, arco D-UI-13 fuori turno, annotato nella testata), styles/tokens/_colors-light.scss (slate-500 -> slate-600), styles/tokens/_colors-dark.scss (il nome mancava del tutto: aggiunto a slate-400 nella sezione BORDERS), components/ResizeHandle/resize-handle.scss (torna sul token, via il valore a mano e l'override scuro), docs/prompts/claude_2026-08-28_2155_prompt_border_focus_token_slate.md, docs/claude-code-log.md.
