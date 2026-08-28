@@ -301,22 +301,62 @@ export function validateConformance(
                     // CHECK 10: invalid_enum_literal — enum-typed value must be a current literal of the enum
                     const attrType: any = attr.type;
                     if (attrType && attrType.isEnum) {
+                        // Two accepted forms, one source. R-FRM-3 makes the POINTER to the
+                        // DEnumLiteral the canonical value and keeps the literal NAME as a legacy
+                        // form accepted on read, with no expiry: nothing migrates saved models
+                        // (VersionFixer.tsx:277, the line that would is commented out), so both
+                        // shapes stay in the wild forever. Before this, the check compared names
+                        // only, so every enum touched by an editor — which writes the pointer —
+                        // was flagged.
+                        //
+                        // Both sets come from `attrType.literals`, which the L layer already hands
+                        // over as LEnumLiteral proxies carrying `id` AND `name`: no lookup, no new
+                        // import. This module is a pure function with type-only imports and must
+                        // stay one.
+                        //
+                        // Ids are filtered like names, and not because a real literal lacks one:
+                        // the legacy test fixtures declare `{ name: 'RED' }` with no id, so an
+                        // unfiltered set would hold `undefined` and quietly accept it as valid.
+                        const enumLiterals: any[] = Array.isArray(attrType.literals) ? attrType.literals : [];
                         const literalNames = new Set<string>(
-                            (Array.isArray(attrType.literals) ? attrType.literals : [])
+                            enumLiterals
                                 .map((l: any) => l?.name)
                                 .filter((n: any) => n !== null && n !== undefined)
                         );
+                        const literalIds = new Set<string>(
+                            enumLiterals
+                                .map((l: any) => l?.id)
+                                .filter((i: any) => i !== null && i !== undefined)
+                        );
                         for (const v of scalarValues) {
-                            // A value may arrive as a raw literal-name string or as a resolved
-                            // LEnumLiteral object; compare on the literal name in both cases.
-                            const vName = (v && typeof v === 'object' && 'name' in (v as object)) ? (v as any).name : v;
-                            if (!literalNames.has(vName as string)) {
+                            // A value may arrive as a literal-name string (XMI import), as a
+                            // pointer id string (the editors), or as a resolved LEnumLiteral
+                            // object (only through the `feat.values` fallback, since production
+                            // reads `__raw.values`). An object is valid on either of its two
+                            // identities; a string is valid as either form.
+                            const isObj = !!v && typeof v === 'object';
+                            const vName = isObj
+                                ? ((v as any).name ?? (v as any).id)
+                                : v;
+                            const valid = isObj
+                                ? (literalNames.has((v as any).name) || literalIds.has((v as any).id))
+                                : (literalNames.has(v as string) || literalIds.has(v as string));
+                            // Everything else stays a violation, and deliberately so: a pointer to
+                            // a literal of ANOTHER enum is a type error and not an alternative
+                            // spelling, a name whose literal was removed is still stale, and a
+                            // numeric ordinal is neither form.
+                            if (!valid) {
                                 violations.push({
                                     objectId: objId,
                                     objectName: objName,
                                     violationType: 'invalid_enum_literal',
                                     severity: 'warning',
-                                    message: `Object "${objName || objId}": attribute "${attr.name}" has value "${vName}" which is not a literal of enum "${attrType.name}"`,
+                                    // The offending value is reported as it stands. Naming a
+                                    // pointer would mean resolving it, which needs the global
+                                    // idlookup this module must not import; "(by name or id)"
+                                    // says what was checked, so a raw pointer in the text reads
+                                    // as a value that matched neither rather than as a bug.
+                                    message: `Object "${objName || objId}": attribute "${attr.name}" has value "${vName}" which is not a literal (by name or id) of enum "${attrType.name}"`,
                                     metamodelElementName: attr.name,
                                 });
                             }

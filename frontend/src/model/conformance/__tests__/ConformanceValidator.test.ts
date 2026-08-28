@@ -201,6 +201,116 @@ describe('CHECK 10 — invalid_enum_literal', () => {
 });
 
 // ==================================================================
+// CHECK 10 — pointer form (R-FRM-3)
+//
+// The canonical value of an enum attribute is the POINTER to the DEnumLiteral;
+// the literal NAME is a legacy form accepted on read, with no expiry. Before
+// this, the check compared names only, so every enum written by an editor was
+// flagged. The four cases above keep the legacy form honest; these keep the
+// canonical one honest, and the two must never diverge.
+//
+// Note the fixtures here declare literals with BOTH `id` and `name`, unlike the
+// legacy ones above, which have `name` only. That difference is the subject of
+// the last case.
+// ==================================================================
+describe('CHECK 10 — enum literal pointers (R-FRM-3)', () => {
+    const enumType = {
+        name: 'Color', isEnum: true,
+        literals: [{ id: 'lit_red', name: 'RED' }, { id: 'lit_green', name: 'GREEN' }],
+    };
+    const widget = (feature: AnyObj) => {
+        const a = attr({ id: 'a', name: 'color', type: enumType });
+        const C = klass({ id: 'C', name: 'Widget', allAttributes: [a] });
+        return { C, o: obj({ id: 'o', name: 'w', instanceof: C, features: [feature] }) };
+    };
+
+    it('accepts a pointer to a literal of the enum, read from __raw.values', () => {
+        // The production path: validateConformance prefers `feat.__raw.values`, and every case
+        // in this file before R-FRM-3 exercised only the `feat.values` fallback. This one goes
+        // through the array the app actually writes.
+        const { C, o } = widget(val('a', { __raw: { values: ['lit_red'] } }));
+        expect(types(run([o], [C]))).not.toContain('invalid_enum_literal');
+    });
+
+    it('accepts a pointer through the values fallback too', () => {
+        const { C, o } = widget(val('a', { value: 'lit_green' }));
+        expect(types(run([o], [C]))).not.toContain('invalid_enum_literal');
+    });
+
+    it('still accepts the legacy literal name, on both read paths', () => {
+        // The half that must not regress: tolerance was added, nothing was replaced.
+        const raw = widget(val('a', { __raw: { values: ['RED'] } }));
+        expect(types(run([raw.o], [raw.C]))).not.toContain('invalid_enum_literal');
+        const fallback = widget(val('a', { value: 'GREEN' }));
+        expect(types(run([fallback.o], [fallback.C]))).not.toContain('invalid_enum_literal');
+    });
+
+    it('flags a pointer that belongs to no literal of THIS enum', () => {
+        // A pointer to a literal of another enum is a type error, not an alternative spelling:
+        // the id set is built from this enum's literals only, so it is caught with no special
+        // handling.
+        const { C, o } = widget(val('a', { __raw: { values: ['lit_of_another_enum'] } }));
+        expect(types(run([o], [C]))).toContain('invalid_enum_literal');
+    });
+
+    it('accepts a resolved LEnumLiteral object on either of its identities', () => {
+        // Pre-existing behaviour, preserved: the L getter maps enum values to proxies, and a
+        // fixture may hand one over. Valid by name, and now also valid by id alone - a proxy
+        // whose name failed to resolve is not thereby an invalid value.
+        const byName = widget(val('a', { value: { name: 'RED' } }));
+        expect(types(run([byName.o], [byName.C]))).not.toContain('invalid_enum_literal');
+        const byId = widget(val('a', { value: { id: 'lit_green' } }));
+        expect(types(run([byId.o], [byId.C]))).not.toContain('invalid_enum_literal');
+        const neither = widget(val('a', { value: { name: 'BLUE', id: 'lit_blue' } }));
+        expect(types(run([neither.o], [neither.C]))).toContain('invalid_enum_literal');
+    });
+
+    it('flags a numeric ordinal, which is neither accepted form', () => {
+        // Ordinals are the residue of a separate defect in the .jmm loader; tolerating them here
+        // would turn a third, unratified form into a valid one by accident.
+        const { C, o } = widget(val('a', { __raw: { values: [1] } }));
+        expect(types(run([o], [C]))).toContain('invalid_enum_literal');
+    });
+
+    it('with literals that carry no id, still flags and never prints undefined', () => {
+        // The legacy fixture shape (`{ name: 'RED' }`, no id). An id set built without filtering
+        // would hold `undefined`; this pins that it does not, and that the message stays legible.
+        const idlessEnum = { name: 'Color', isEnum: true, literals: [{ name: 'RED' }] };
+        const a = attr({ id: 'a', name: 'color', type: idlessEnum });
+        const C = klass({ id: 'C', name: 'Widget', allAttributes: [a] });
+        const o = obj({ id: 'o', name: 'w', instanceof: C, features: [val('a', { value: 'BLUE' })] });
+        const res = run([o], [C]);
+        expect(types(res)).toContain('invalid_enum_literal');
+        const msg = res.violations.find((v: AnyObj) => v.violationType === 'invalid_enum_literal')?.message ?? '';
+        expect(msg).toContain('"BLUE"');
+        expect(msg).not.toContain('undefined');
+    });
+
+    it('reports the offending value and says both forms were checked', () => {
+        const { C, o } = widget(val('a', { __raw: { values: ['lit_of_another_enum'] } }));
+        const msg = run([o], [C]).violations
+            .find((v: AnyObj) => v.violationType === 'invalid_enum_literal')?.message ?? '';
+        expect(msg).toContain('lit_of_another_enum');
+        expect(msg).toContain('by name or id');
+        expect(msg).toContain('"Color"');
+    });
+
+    it('flags every bad value of a multivalued attribute and none of the good ones', () => {
+        const a = attr({ id: 'a', name: 'colors', type: enumType, upperBound: -1 });
+        const C = klass({ id: 'C', name: 'Widget', allAttributes: [a] });
+        // Mixed on purpose: a pointer, a legacy name, and one of each that is wrong.
+        const o = obj({ id: 'o', name: 'w', instanceof: C, features: [
+            val('a', { __raw: { values: ['lit_red', 'GREEN', 'lit_bogus', 'PURPLE'] } }),
+        ] });
+        const res = run([o], [C]);
+        const enumViolations = res.violations.filter((v: AnyObj) => v.violationType === 'invalid_enum_literal');
+        expect(enumViolations).toHaveLength(2);
+        expect(enumViolations.map((v: AnyObj) => v.message).join(' ')).toContain('lit_bogus');
+        expect(enumViolations.map((v: AnyObj) => v.message).join(' ')).toContain('PURPLE');
+    });
+});
+
+// ==================================================================
 // CHECK 11 — duplicate_id_value
 // ==================================================================
 describe('CHECK 11 — duplicate_id_value', () => {
