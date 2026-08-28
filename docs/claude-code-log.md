@@ -11,8 +11,8 @@ Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right u
 **Regressions**: unknown. Gate verdi: `npm run typecheck` 33 = baseline (diff identico), `npx vitest run` 1639 → 1677 passati (+38 nuovi) con gli stessi 9 file falliti all'import, `npm run build` exit 0 col solo chunk-warning. Nessuna verifica a schermo da qui: la checklist visiva e' nella nota finale ed e' di Alfonso.
 **Out-of-scope changes**: no
 **Layer Impact Report**: not-required (nessun file della critical zone §3.1)
-**Smoke visivo**: non eseguito da qui (checklist consegnata ad Alfonso, otto punti)
-**Notes**: Q5 misurata e confermata: una feature chiamata `op` fa respingere la view da `findUnknownPredicateOp`. Test di caratterizzazione, `irValidate.ts` non toccato, spec §2 aggiornata col limite noto e §14 con lo stato della slice. Il tab e' in Basic per non violare R-3: il gating Advanced e' dentro il corpo. Debiti in Slice 2b: `basic`, link ai compartimenti, `FieldCompartmentSpec.title` non autorabile.
+**Smoke visivo**: passato (otto punti su otto, verifica di Alfonso su localhost:3000 con hard refresh)
+**Notes**: Q5 misurata e confermata: una feature chiamata `op` fa respingere la view da `findUnknownPredicateOp`. Test di caratterizzazione, `irValidate.ts` non toccato, spec §2 aggiornata col limite noto e §14 con lo stato della slice. Il tab e' in Basic per non violare R-3: il gating Advanced e' dentro il corpo. Debiti in Slice 2b: `basic`, link ai compartimenti, `FieldCompartmentSpec.title` non autorabile. Punto 8 dello smoke: chiuse le pendenze E3 e Add-al-limite della Slice 1b.
 **Prompt document name**: 2026-08-28 16:35
 
 ## 2026-08-28 — feat(form): fondamenta additive per il tab Form dell'authoring (Slice 2a, commit 1)
@@ -24,7 +24,7 @@ Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right u
 **Regressions**: no. `npm run typecheck` 33 = baseline, diff degli errori identico riga per riga. `npx vitest run`: 1632 → 1639 test passati (+7 nuovi), stessi 9 file falliti all'import (`window is not defined`, noti).
 **Out-of-scope changes**: yes. `SegmentedControl.module.css` non era nell'elenco del prompt: senza la regola di muting un segmento disabilitato e' indistinguibile da uno attivo, quindi la meta' CSS della decisione Q1 e' necessaria. Una regola sola, fuori da `.trackDisabled` per non comporsi con l'opacita' di gruppo.
 **Layer Impact Report**: not-required
-**Smoke visivo**: non applicabile (nessun cambiamento visibile: i due consumatori del SegmentedControl non passano le nuove proprieta').
+**Smoke visivo**: passato (verificato con gli otto punti della Slice 2a; il punto 5 esercita il segmento disabilitato introdotto qui).
 **Notes**: `Section<F = FormFieldDescriptor>` e `buildFormSections<F extends SectionField>`: i test esistenti non cambiano, verificato. `--color-text-disabled` esiste solo nella palette light, quindi il fallback e' `--color-text-tertiary`, dichiarato in entrambe; aggiungere il token mancante al dark tocca i file dei token, fuori scope. `isEnum` letto con `attr.type?.isEnum`, l'accessor di `LClassifier` (LModelElement.tsx:1690), dentro i try/catch gia' presenti.
 **Prompt document name**: 2026-08-28 16:35
 
