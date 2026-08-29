@@ -151,6 +151,16 @@
         > .jj-field-label + * ~ * { grid-column: 1 / -1; justify-self: stretch; }
     }
 
+    /* Stesso rientro, stessa ragione, su un altro bersaglio: `.jj-field > button`
+       (`properties-with-tree-view.scss:701`) porta `margin-left` sulla colonna della
+       label mentre `.jj-textstyle-field__trigger` si dichiara `width: 100%`
+       (`_form-system.scss:982`). I due insieme fanno un bottone piu' largo del suo
+       contenitore, e il trigger dello stile di riga sborda. Difetto PREESISTENTE,
+       misurato su `HEAD~1` a 6px; l'inset a 14px allarga la colonna e lo portava a 12.
+       Il rientro e' inutile dentro il rail, dove la label non ha piu' una colonna sua:
+       azzerato, e lo sbordo si chiude a zero invece di raddoppiare. */
+    .jj-field > button { margin-left: 0; }
+
     /* ── Segmented ────────────────────────────────────────────────────────────
        Il primitivo disegna un track `#f1f5f9` con la pillola bianca in rilievo
        (decisione D1). 7a inverte: il track è un filo su superficie, e il segmento

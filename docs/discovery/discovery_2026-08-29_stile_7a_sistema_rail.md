@@ -372,3 +372,46 @@ famiglia di `_form-system.scss:664`, che non è stata toccata.
    sette tab IR e non questi.
 5. **Il `Reset` di 7c tiene l'underline**, che il mock non ha: toglierla lascerebbe un
    comando distinguibile dal solo colore.
+
+---
+
+## Chiusura delle verifiche pendenti (giro pulizie, 2026-08-29)
+
+Le due verifiche che la Fase 2 aveva lasciato aperte sono chiuse, e nessuna delle due
+era davvero un ostacolo di fixture.
+
+**Appearance e Text: verificati.** Non serviva costruire una view edge o row a mano —
+basta il controllo `Kind` di Applies to (`irTabs.tsx:129`, `convertIRKind`), che è il
+percorso di prodotto. Convertita la view del demo a `edge` la barra diventa
+`Applies to · Structure · Appearance · Text · Source`; convertita una **seconda** view a
+`row` diventa `Applies to · Text · Source`. Entrambi i tab misurati sotto il sistema:
+pannello `#ffffff` / 14px, eyebrow `11px|#94a3b8|600`, label `13px|#475569`, select
+`12px / 28px / #cbd5e1`, help `11px|#94a3b8`. Ritagli
+`_tmp_rail_tab_after_edge_appearance.png`, `_tmp_rail_tab_after_edge_text.png`,
+`_tmp_rail_tab_after_row_text.png`.
+
+Reperto lungo la strada: **`edge → row` non è un percorso disponibile**. Il pannello
+dell'edge non offre il select del Kind nel suo Applies to (misurato: zero `select` in
+quel body), quindi la conversione a row va fatta partendo da una view ancora vertex.
+
+**Uno sbordo preesistente, misurato su HEAD~1 e chiuso.**
+`.jj-textstyle-field__trigger` si dichiara `width: 100%` (`_form-system.scss:982`) dentro
+un `.jj-field > button` che la skin B4 rientra di 28px sulla colonna della label
+(`properties-with-tree-view.scss:701`): il bottone è più largo del suo contenitore e
+sborda. Non è un difetto di Fase 2 — su `HEAD~1` sborda di **6px** — ma l'inset a 14px
+allarga la colonna e lo portava a **12px**. Il rientro non ha senso dentro il rail, dove
+la label non occupa più una colonna propria: azzerato lì, e lo sbordo va a **zero** su
+tutti e tre i tab (`escapees: []`), invece di raddoppiare. Stessa ragione e stesso
+perimetro del rientro degli hint, già dichiarato allo scostamento 3.
+
+**La sonda 7c non era rotta dal sistema, era invecchiata.** Riscritta sulla coppia di
+attributi che il fixture offre davvero — due EString della stessa classe, `description`
+dichiarato `code` come caso di accordo e `notes` dichiarato `swatch` come caso di
+override, entrambi con widget `textarea`. `tint` non è più utilizzabile: dopo
+`4c6bd845d` è un `Palette`, e un `Palette` non offre alcun override compatibile. La
+sonda torna **19/19 ALL GREEN** e ora misura anche la resa 7c della riga, non solo il
+testo.
+
+Scostamento residuo nuovo, minore: la label propria di un `Toggle` (la prop `label`, es.
+«Center label», «All metaclasses (*)») resta a 15px, perché è `Toggle.module.css .label`
+e non una `jj-field-label`. Si vede accanto a una label di campo da 13px.

@@ -1198,7 +1198,7 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                             {ownIsSingleton && (
                                 <span
                                     className="mm-object__singleton-badge"
-                                    title={`${metaclassName} e' singleton: questa e' la sua unica istanza`}
+                                    title={`${metaclassName} is a singleton: this is its only instance`}
                                 >
                                     1
                                 </span>
