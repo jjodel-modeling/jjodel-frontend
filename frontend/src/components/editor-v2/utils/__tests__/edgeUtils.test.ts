@@ -22,8 +22,12 @@ import {
     computeLabelAnchor,
     computeCardinalityAnchor,
     pointsToPath,
+    parsePathPoints,
+    computeTreeConnectorPath,
     MARKER_APPROACH_RUN,
+    MIN_APPROACH_RUN,
     type Side,
+    type TreeBranch,
 } from '../edgeUtils';
 
 const REFERENCE_ROUNDING = { approachRun: MARKER_APPROACH_RUN, interiorStraight: 0.5 };
@@ -111,9 +115,11 @@ describe('collasso del jog ravvicinato', () => {
     });
 
     it('fra snap e soglia lo scalino si sposta a ridosso del source', () => {
-        // Prima: bend al punto medio, x = 620. Ora: 16px dopo l'ancora, x = 556.
+        // Prima: bend al punto medio, x = 620. Ora: MIN_APPROACH_RUN dopo l'ancora,
+        // x = 564. Il varco (160) regge due sporgenze piene, quindi il capo target
+        // ne conserva 136: il contratto vale su entrambi i lati.
         const d = jogPath(10);
-        expect(d).toBe('M 540 426.5 L 556 426.5 L 556 436.5 L 700 436.5');
+        expect(d).toBe('M 540 426.5 L 564 426.5 L 564 436.5 L 700 436.5');
     });
 
     it('sopra la soglia il bend torna al punto medio', () => {
@@ -121,7 +127,8 @@ describe('collasso del jog ravvicinato', () => {
     });
 
     it('con varco stretto lo scalino non supera il punto medio', () => {
-        // Varco di 20px: `min(16, 10)` → il bend resta a metà, come prima.
+        // Varco di 20px, sotto `2 × MIN_APPROACH_RUN`: il bend resta a metà, come
+        // prima — `min(MIN_APPROACH_RUN, varco/2)` vale 10 per capo.
         const d = computeManhattanPath(540, 426.5, 'right' as Side, 560, 436.5, 'left' as Side);
         expect(d).toBe('M 540 426.5 L 550 426.5 L 550 436.5 L 560 436.5');
     });
@@ -251,7 +258,7 @@ describe('waypoint sui segmenti terminali', () => {
 
     it('il primo segmento si sposta con una gomitata, l\'ancora non si muove', () => {
         const r = applyWaypointsWithMap(L, [{ segmentIndex: 0, offset: 20 }]);
-        expect(pointsToPath(r.points)).toBe('M 0 0 L 16 0 L 16 20 L 100 20 L 100 300');
+        expect(pointsToPath(r.points)).toBe('M 0 0 L 24 0 L 24 20 L 100 20 L 100 300');
         // L'ancora sorgente e' esattamente quella ricevuta...
         expect(r.points[0]).toEqual(L[0]);
         // ...e il tratto che ne esce e' ancora perpendicolare al suo lato.
@@ -262,7 +269,7 @@ describe('waypoint sui segmenti terminali', () => {
 
     it('l\'ultimo segmento fa lo stesso dalla parte dell\'arrowhead', () => {
         const r = applyWaypointsWithMap(L, [{ segmentIndex: 1, offset: 30 }]);
-        expect(pointsToPath(r.points)).toBe('M 0 0 L 130 0 L 130 284 L 100 284 L 100 300');
+        expect(pointsToPath(r.points)).toBe('M 0 0 L 130 0 L 130 276 L 100 276 L 100 300');
         expect(r.points[r.points.length - 1]).toEqual(L[2]);
         // L'ingresso resta verticale, come il lato del target chiede.
         expect(r.points[r.points.length - 2].x).toBe(L[2].x);
@@ -280,6 +287,136 @@ describe('waypoint sui segmenti terminali', () => {
     it('con varco stretto la gomitata non supera meta\' del tratto', () => {
         const shortL = [{ x: 0, y: 0 }, { x: 20, y: 0 }, { x: 20, y: 300 }];
         const r = applyWaypointsWithMap(shortL, [{ segmentIndex: 0, offset: 12 }]);
-        expect(r.points[1].x).toBe(10); // min(16, 20/2)
+        expect(r.points[1].x).toBe(10); // min(MIN_APPROACH_RUN, 20/2)
+    });
+});
+
+/**
+ * Sporgenza minima ai due capi — il contratto di `MIN_APPROACH_RUN`.
+ *
+ * La misura non si legge dal router ma dal `d` emesso, come tutto il resto del file:
+ * la L può diventare una Z, e la Z può guadagnare uno stub da
+ * `ensureOrthogonalEndpoints`, quindi il primo e l'ultimo segmento del tracciato
+ * finale non sono quelli che il ramo di routing ha scritto.
+ */
+describe('sporgenza minima ai due capi', () => {
+    /** Lunghezze del primo e dell'ultimo segmento del `d`, in pixel Manhattan. */
+    const ends = (d: string) => {
+        const p = parsePathPoints(d);
+        const len = (a: { x: number; y: number }, b: { x: number; y: number }) =>
+            Math.abs(b.x - a.x) + Math.abs(b.y - a.y);
+        return { first: len(p[0], p[1]), last: len(p[p.length - 2], p[p.length - 1]) };
+    };
+
+    it('la L con la curva a ridosso del source ripiega sulla Z', () => {
+        // right → top con le due ancore a 10px sull'asse X: la L secca metteva la
+        // svolta a 10px dall'ancora sorgente, dentro il raccordo.
+        const d = computeManhattanPath(540, 426.5, 'right' as Side, 550, 600, 'top' as Side);
+        expect(d).toBe('M 540 426.5 L 570 426.5 L 570 576 L 550 576 L 550 600');
+        const { first, last } = ends(d);
+        expect(first).toBeGreaterThanOrEqual(MIN_APPROACH_RUN);
+        expect(last).toBeGreaterThanOrEqual(MIN_APPROACH_RUN);
+    });
+
+    it('la L con la curva a ridosso del target ripiega sulla Z', () => {
+        // Stessa coppia di lati, ancore a 10px sull'asse Y: qui era l'ultimo tratto,
+        // quello sotto la punta della freccia, a valere 10px.
+        const d = computeManhattanPath(540, 426.5, 'right' as Side, 740, 436.5, 'top' as Side);
+        expect(d).toBe('M 540 426.5 L 640 426.5 L 640 412.5 L 740 412.5 L 740 436.5');
+        const { first, last } = ends(d);
+        expect(first).toBeGreaterThanOrEqual(MIN_APPROACH_RUN);
+        expect(last).toBeGreaterThanOrEqual(MIN_APPROACH_RUN);
+    });
+
+    it('la simmetrica col source verticale si comporta allo stesso modo', () => {
+        const d = computeManhattanPath(470, 453, 'bottom' as Side, 700, 463, 'left' as Side);
+        expect(d).toBe('M 470 453 L 470 483 L 676 483 L 676 463 L 700 463');
+        const { first, last } = ends(d);
+        expect(first).toBeGreaterThanOrEqual(MIN_APPROACH_RUN);
+        expect(last).toBeGreaterThanOrEqual(MIN_APPROACH_RUN);
+    });
+
+    it('la L con entrambi i tratti larghi resta una L a due segmenti', () => {
+        // Nessuna regressione sul caso sano: tre punti, come da sempre.
+        const d = computeManhattanPath(540, 426.5, 'right' as Side, 740, 600, 'top' as Side);
+        expect(d).toBe('M 540 426.5 L 740 426.5 L 740 600');
+        expect(parsePathPoints(d)).toHaveLength(3);
+    });
+
+    it('la Z con varco ampio tiene la sporgenza su entrambi i capi', () => {
+        for (const d of [
+            computeManhattanPath(540, 426.5, 'right' as Side, 700, 436.5, 'left' as Side),
+            computeManhattanPath(470, 453, 'bottom' as Side, 480, 613, 'top' as Side),
+            computeManhattanPath(540, 426.5, 'right' as Side, 700, 466.5, 'left' as Side),
+        ]) {
+            const { first, last } = ends(d);
+            expect(first).toBeGreaterThanOrEqual(MIN_APPROACH_RUN);
+            expect(last).toBeGreaterThanOrEqual(MIN_APPROACH_RUN);
+        }
+    });
+
+    it('sotto i due run pieni la Z degrada a metà varco, su entrambi gli assi', () => {
+        // Varco di 40px < `2 × MIN_APPROACH_RUN`: 20px per capo. È la degradazione
+        // dichiarata, e il tracciato è quello di sempre.
+        const h = computeManhattanPath(540, 426.5, 'right' as Side, 580, 446.5, 'left' as Side);
+        expect(h).toBe('M 540 426.5 L 560 426.5 L 560 446.5 L 580 446.5');
+        expect(ends(h)).toEqual({ first: 20, last: 20 });
+
+        const v = computeManhattanPath(470, 453, 'bottom' as Side, 490, 493, 'top' as Side);
+        expect(v).toBe('M 470 453 L 470 473 L 490 473 L 490 493');
+        expect(ends(v)).toEqual({ first: 20, last: 20 });
+
+        // …e in entrambi i casi metà varco è esattamente il tetto disponibile.
+        expect(20).toBe(Math.min(MIN_APPROACH_RUN, 40 / 2));
+    });
+
+    it("resta una banda degenere dove lo stub cade sull'ancora del target", () => {
+        // Difetto preesistente, non introdotto qui: quando la distanza fra le due
+        // ancore vale **esattamente** lo stub, `buildOrthogonalPath` mette i due stub
+        // sulla stessa verticale, salta la svolta di raccordo e `cleanPoints` collassa
+        // la U a larghezza zero. Prima della modifica la banda stava a 20px (lo stub
+        // di allora), ora sta a 24: si è spostata di 4px, non si è allargata.
+        const degenere = computeManhattanPath(540, 426.5, 'right' as Side, 564, 426.5, 'top' as Side);
+        expect(ends(degenere).last).toBe(0);
+        // A 20px, che era la banda vecchia, ora il gancio si disegna.
+        const sana = computeManhattanPath(540, 426.5, 'right' as Side, 560, 426.5, 'top' as Side);
+        expect(sana).toBe('M 540 426.5 L 564 426.5 L 564 402.5 L 560 402.5 L 560 426.5');
+        expect(ends(sana)).toEqual({ first: 24, last: 24 });
+    });
+});
+
+/**
+ * Il connettore d'ereditarietà è fuori da questo lavoro, e questa prova lo tiene
+ * fuori: `computeTreeConnectorPath` non passa da `computeManhattanPath` né dagli stub
+ * ortogonali, quindi né `MIN_APPROACH_RUN` né `STUB_LENGTH` possono raggiungerlo.
+ * I sei `d` sotto sono quelli emessi prima della modifica, copiati byte per byte.
+ */
+describe("connettore d'ereditarietà: output invariato", () => {
+    const branches: TreeBranch[] = [
+        { childX: 120, childY: 300, edgeId: 'e1' },
+        { childX: 400, childY: 300, edgeId: 'e2' },
+        { childX: 660, childY: 340, edgeId: 'e3' },
+    ];
+
+    it('tronco, barra e rami sono byte-identici', () => {
+        const g = computeTreeConnectorPath(380, 100, branches);
+        expect(g.trunkPath).toBe('M 380 200 L 380 100');
+        expect(g.barAndBranchesPath).toBe(
+            'M 120 300 L 120 200 L 380 200 M 400 300 L 400 200 M 660 340 L 660 200 L 380 200',
+        );
+        expect(g.junction).toEqual({ x: 380, y: 200 });
+        expect(g.branchPaths.get('e1')).toBe('M 380 100 L 380 200 L 120 200 L 120 300');
+        expect(g.branchPaths.get('e2')).toBe('M 380 100 L 380 200 L 400 200 L 400 300');
+        expect(g.branchPaths.get('e3')).toBe('M 380 100 L 380 200 L 660 200 L 660 340');
+    });
+
+    it('anche gli arrotondamenti senza policy restano quelli di prima', () => {
+        const g = computeTreeConnectorPath(380, 100, branches);
+        expect(roundManhattanPath(g.barAndBranchesPath, 6)).toBe(
+            'M 120 300 L 120 206 A 6 6 0 0 1 126 200 L 374 200 A 6 6 0 0 1 386 206 '
+            + 'L 394 294 A 6 6 0 0 0 400 294 L 400 206 A 6 6 0 0 1 406 206 L 654 334 '
+            + 'A 6 6 0 0 0 660 334 L 660 206 A 6 6 0 0 0 654 200 L 380 200',
+        );
+        expect(buildFinalPath(parsePathPoints(g.trunkPath), [], 6, 6)).toBe('M 380 200 L 380 100');
     });
 });

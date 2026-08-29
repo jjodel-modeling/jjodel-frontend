@@ -23,7 +23,7 @@
  * Puro: niente React, niente ReactFlow, niente DOM.
  */
 
-import { applyWaypoints, avoidNodeRects, computeManhattanPath, getNodeRect, getSideFromHandle, parsePathPoints } from './edgeUtils';
+import { applyWaypoints, avoidNodeRects, computeManhattanPath, getNodeRect, getSideFromHandle, MIN_APPROACH_RUN, parsePathPoints } from './edgeUtils';
 import { computeHandlePositionForNode } from './handlePosition';
 import { applyBundleSpread } from '../edges/bundleSpread';
 import type { NodePosition } from './portDistribution';
@@ -47,11 +47,14 @@ export const LANE_MIN_GAP = 8;
 const LANE_STEP = LANE_MIN_GAP + 1;
 
 /**
- * Lunghezza del tratto d'approccio protetto a ciascun capo. Coincide con la
- * sporgenza minima del router (`MIN_APPROACH_RUN`): è il tratto che deve restare
- * perpendicolare all'ancora e che nessun altro segmento può occupare.
+ * Lunghezza del tratto d'approccio protetto a ciascun capo. È la sporgenza minima del
+ * router, **importata** e non ricopiata: era un 16 letterale accanto a un commento che
+ * diceva «coincide con `MIN_APPROACH_RUN`», e ha smesso di coincidere il 2026-08-29,
+ * quando quella costante è salita a 24. È il tratto che deve restare perpendicolare
+ * all'ancora e che nessun altro segmento può occupare — e, dal 2026-08-29, nemmeno un
+ * segmento dello stesso arco (vedi `minOffset`/`maxOffset` in `LaneSegment`).
  */
-export const LANE_APPROACH_RUN = 16;
+export const LANE_APPROACH_RUN = MIN_APPROACH_RUN;
 
 /**
  * Sovrapposizione minima, lungo l'asse del segmento, perché due segmenti paralleli
@@ -95,6 +98,17 @@ export interface LaneSegment {
     to: number;
     /** Un ostacolo non si sposta: è un tratto d'approccio, incollato alla sua ancora. */
     fixed: boolean;
+    /**
+     * Scostamenti estremi ammessi, quando il segmento confina con un tratto terminale.
+     *
+     * Spostare un segmento interno lo fa scorrere **lungo** l'asse del terminale che
+     * gli sta accanto, quindi ne accorcia o allunga la sporgenza. `conflicts` esclude
+     * per costruzione le coppie dello stesso arco, cosí l'approccio di un arco non
+     * protegge mai i propri segmenti: questi due limiti sono quella protezione.
+     * Assenti sui segmenti che non toccano un terminale.
+     */
+    minOffset?: number;
+    maxOffset?: number;
 }
 
 /** Polilinea di un arco, come la catena automatica la produce. */
@@ -156,14 +170,37 @@ export function collectLaneSegments(edges: LaneEdge[]): LaneSegment[] {
             const a = pts[i], b = pts[i + 1];
             const { horizontal, length } = axis(a, b);
             if (length < 1) continue;
+            const at = horizontal ? a.y : a.x;
+
+            // Limiti dai terminali adiacenti. Il segmento 1 condivide `pts[1]` col
+            // terminale d'ingresso, l'ultimo mobile condivide `pts[nSeg-1]` con quello
+            // d'uscita: scorrendo, ne cambiano la lunghezza. La soglia è
+            // `min(MIN_APPROACH_RUN, corsa attuale)` — un terminale già corto non si
+            // accorcia oltre, ma non gli si chiede di crescere.
+            let minOffset = -Infinity;
+            let maxOffset = Infinity;
+            const limit = (anchor: Point, joint: Point) => {
+                const coord = horizontal ? 'y' as const : 'x' as const;
+                const run = Math.abs(joint[coord] - anchor[coord]);
+                if (run < 0.5) return;
+                const floor = Math.min(LANE_APPROACH_RUN, run);
+                // `at` deve restare dalla parte in cui sta ora, ad almeno `floor`.
+                if (joint[coord] > anchor[coord]) minOffset = Math.max(minOffset, anchor[coord] + floor - at);
+                else maxOffset = Math.min(maxOffset, anchor[coord] - floor - at);
+            };
+            if (i === 1) limit(pts[0], pts[1]);
+            if (i === nSeg - 2) limit(pts[nSeg], pts[nSeg - 1]);
+
             out.push({
                 edgeId: e.id,
                 segmentIndex: i,
                 horizontal,
-                at: horizontal ? a.y : a.x,
+                at,
                 from: horizontal ? Math.min(a.x, b.x) : Math.min(a.y, b.y),
                 to: horizontal ? Math.max(a.x, b.x) : Math.max(a.y, b.y),
                 fixed: false,
+                minOffset,
+                maxOffset,
             });
         }
     }
@@ -249,7 +286,11 @@ export function assignLanes(segments: LaneSegment[]): Map<string, LaneOffset[]> 
         }
 
         movable.forEach((s, k) => {
-            const offset = ladder[k] + delta - s.at;
+            const raw = ladder[k] + delta - s.at;
+            // Il piolo cede al terminale: la scala è un'euristica di leggibilità, la
+            // sporgenza d'approccio è un contratto. Un piolo bloccato può ritrovarsi
+            // accanto al vicino, e quella coppia torna a contendersi il corridoio.
+            const offset = Math.min(Math.max(raw, s.minOffset ?? -Infinity), s.maxOffset ?? Infinity);
             if (Math.abs(offset) > 0.01) push(s.edgeId, { segmentIndex: s.segmentIndex, offset });
         });
     }

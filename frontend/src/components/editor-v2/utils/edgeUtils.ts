@@ -15,19 +15,30 @@ export interface NodeRect {
 
 const DETOUR_PADDING = 30; // used only for same-side and backward U-shape routing
 
-/** Minimum perpendicular stub length (px) for orthogonal endpoint enforcement. */
-const STUB_LENGTH = 20;
-
 /**
- * Sporgenza perpendicolare desiderata prima della prima svolta (e dopo l'ultima).
+ * Sporgenza perpendicolare minima prima della prima svolta e dopo l'ultima.
  *
  * Vive qui, non in `edgeRouting.ts`, perché è il router a doverla rispettare e
- * `edgeRouting` importa da questo modulo (mai il contrario). La Z la soddisfa già per
- * costruzione — lo scalino sta a metà del varco, cioè a `gap/2` da ciascun capo, che è
- * `min(MIN_APPROACH_RUN, gap/2)` per ogni varco — e la degradazione sotto i 32px di
- * varco è dichiarata: si prende metà del varco disponibile.
+ * `edgeRouting` importa da questo modulo (mai il contrario). È il contratto per
+ * **entrambi** i capi, source e target, non solo per il lato source della Z: 24px
+ * sono la punta della freccia (~9), il raggio del raccordo (4) e un margine. Sotto
+ * quella misura la punta si sovrappone all'arco e il raccordo si stringe fino allo
+ * spigolo vivo, che è il difetto misurato in produzione.
+ *
+ * Il contratto si ferma dove la geometria non lo consente: con un varco più stretto
+ * di `2 × MIN_APPROACH_RUN` si prende metà del varco per capo, e la degradazione è
+ * dichiarata — `min(MIN_APPROACH_RUN, gap/2)`.
  */
-export const MIN_APPROACH_RUN = 16;
+export const MIN_APPROACH_RUN = 24;
+
+/**
+ * Minimum perpendicular stub length (px) for orthogonal endpoint enforcement.
+ *
+ * È la stessa misura della sporgenza del router: uno stub più corto rimetterebbe la
+ * curva addosso all'ancora proprio nei tracciati che `ensureOrthogonalEndpoints`
+ * deve raddrizzare. Un solo valore, una sola sede.
+ */
+const STUB_LENGTH = MIN_APPROACH_RUN;
 
 /**
  * Sotto questo offset fra le due ancore lo scalino di una Z si sposta **a ridosso del
@@ -170,11 +181,13 @@ export function computeManhattanPath(
 /**
  * Ascissa (o ordinata) dello scalino di una Z.
  *
- * Con offset fra le ancore pari o superiore a `TIGHT_JOG` resta il punto medio del
- * varco, come da sempre. Sotto quella soglia lo scalino si avvicina al source fino a
- * `MIN_APPROACH_RUN`, **senza mai superare il punto medio**: quando il varco è più
- * stretto di `2 × MIN_APPROACH_RUN` il clamp restituisce esattamente il punto medio,
- * cioè il valore di prima. Nessun caso sano cambia.
+ * Lo scalino sta sempre dentro `[from + RUN, to − RUN]`, così **entrambi** i tratti
+ * terminali — non solo quello del source — valgono almeno `MIN_APPROACH_RUN`. Dentro
+ * l'intervallo il punto medio resta il default; sotto la soglia `TIGHT_JOG` lo
+ * scalino scende all'estremo vicino al source, che è il minimo dell'intervallo.
+ *
+ * Con un varco più stretto di `2 × MIN_APPROACH_RUN` l'intervallo è vuoto: si torna
+ * al punto medio, cioè metà varco per capo. È la degradazione dichiarata.
  *
  * @param from   coordinata dell'ancora sorgente sull'asse dello scalino
  * @param to     coordinata dell'ancora destinazione sullo stesso asse
@@ -183,10 +196,10 @@ export function computeManhattanPath(
  */
 function tightJogBend(from: number, to: number, offset: number, ascending: boolean): number {
     const mid = (from + to) / 2;
+    // Varco troppo stretto per due sporgenze piene: metà varco per capo.
+    if (Math.abs(to - from) < 2 * MIN_APPROACH_RUN) return mid;
     if (offset >= TIGHT_JOG) return mid;
-    return ascending
-        ? Math.min(from + MIN_APPROACH_RUN, mid)
-        : Math.max(from - MIN_APPROACH_RUN, mid);
+    return ascending ? from + MIN_APPROACH_RUN : from - MIN_APPROACH_RUN;
 }
 
 function categorizeSidePair(s: Side, t: Side): 'opposite-horizontal' | 'opposite-vertical' | 'same' | 'adjacent' {
@@ -325,6 +338,21 @@ function routeAdjacent(
         const tGoingDown = tSide === 'bottom';
         const sourceInTargetDirection = tGoingDown ? (sy >= ty) : (sy <= ty);
 
+        // Z-fallback: 3 segments with direction-aware midpoint.
+        // Ensure first segment always goes in the correct outward direction
+        // of the source side (right → increasing X, left → decreasing X).
+        const zFallback = (): { x: number; y: number }[] => {
+            const midX = goingRight
+                ? Math.max((sx + tx) / 2, sx + DETOUR_PADDING)
+                : Math.min((sx + tx) / 2, sx - DETOUR_PADDING);
+            return [
+                { x: sx, y: sy },
+                { x: midX, y: sy },
+                { x: midX, y: ty },
+                { x: tx, y: ty },
+            ];
+        };
+
         if (targetInDirection && sourceInTargetDirection) {
             // Clean L-shape: bend at (tx, sy)
             // Snap if nearly aligned
@@ -336,21 +364,16 @@ function routeAdjacent(
                 const avgX = (sx + tx) / 2;
                 return [{ x: avgX, y: sy }, { x: avgX, y: ty }];
             }
+            // La curva cade a `|tx - sx|` dall'ancora sorgente e a `|sy - ty|` da
+            // quella di destinazione. Sotto la sporgenza minima la punta della
+            // freccia finisce sul raccordo: si ripiega sulla Z, che stacca la prima
+            // svolta di DETOUR_PADDING, invece di stringere la L fino allo spigolo.
+            if (Math.abs(tx - sx) < MIN_APPROACH_RUN || Math.abs(sy - ty) < MIN_APPROACH_RUN) {
+                return zFallback();
+            }
             return [{ x: sx, y: sy }, { x: tx, y: sy }, { x: tx, y: ty }];
-        } else {
-            // Z-fallback: 3 segments with direction-aware midpoint.
-            // Ensure first segment always goes in the correct outward direction
-            // of the source side (right → increasing X, left → decreasing X).
-            const midX = goingRight
-                ? Math.max((sx + tx) / 2, sx + DETOUR_PADDING)
-                : Math.min((sx + tx) / 2, sx - DETOUR_PADDING);
-            return [
-                { x: sx, y: sy },
-                { x: midX, y: sy },
-                { x: midX, y: ty },
-                { x: tx, y: ty },
-            ];
         }
+        return zFallback();
     } else {
         // Source exits vertically → first segment vertical, second horizontal
         const goingDown = sSide === 'bottom';
@@ -359,6 +382,21 @@ function routeAdjacent(
         // Check target entry direction
         const tGoingRight = tSide === 'right';
         const sourceInTargetDirection = tGoingRight ? (sx >= tx) : (sx <= tx);
+
+        // Z-fallback: 3 segments with direction-aware midpoint.
+        // Ensure first segment always goes in the correct outward direction
+        // of the source side (bottom → increasing Y, top → decreasing Y).
+        const zFallback = (): { x: number; y: number }[] => {
+            const midY = goingDown
+                ? Math.max((sy + ty) / 2, sy + DETOUR_PADDING)
+                : Math.min((sy + ty) / 2, sy - DETOUR_PADDING);
+            return [
+                { x: sx, y: sy },
+                { x: sx, y: midY },
+                { x: tx, y: midY },
+                { x: tx, y: ty },
+            ];
+        };
 
         if (targetInDirection && sourceInTargetDirection) {
             // Clean L-shape: bend at (sx, ty)
@@ -370,21 +408,14 @@ function routeAdjacent(
                 const avgY = (sy + ty) / 2;
                 return [{ x: sx, y: avgY }, { x: tx, y: avgY }];
             }
+            // Simmetrica del ramo orizzontale: la curva sta a `|ty - sy|` dal source
+            // e a `|sx - tx|` dal target.
+            if (Math.abs(ty - sy) < MIN_APPROACH_RUN || Math.abs(sx - tx) < MIN_APPROACH_RUN) {
+                return zFallback();
+            }
             return [{ x: sx, y: sy }, { x: sx, y: ty }, { x: tx, y: ty }];
-        } else {
-            // Z-fallback: 3 segments with direction-aware midpoint.
-            // Ensure first segment always goes in the correct outward direction
-            // of the source side (bottom → increasing Y, top → decreasing Y).
-            const midY = goingDown
-                ? Math.max((sy + ty) / 2, sy + DETOUR_PADDING)
-                : Math.min((sy + ty) / 2, sy - DETOUR_PADDING);
-            return [
-                { x: sx, y: sy },
-                { x: sx, y: midY },
-                { x: tx, y: midY },
-                { x: tx, y: ty },
-            ];
         }
+        return zFallback();
     }
 }
 
@@ -2046,8 +2077,20 @@ function emitLineWithBridges(
 export const AVOID_CLEARANCE = 8;
 /** Finestra esente alle due estremita': lo stub perpendicolare esce dal proprio nodo. */
 const AVOID_STUB = 8;
-/** Lunghezza dello stub costruito dal ri-instradamento (> AVOID_STUB). */
-const AVOID_STUB_OUT = 12;
+/**
+ * Lunghezze provate per lo stub costruito dal ri-instradamento, dalla migliore in giu'.
+ *
+ * Il ri-instradamento **ricostruisce** i due tratti terminali, quindi e' qui che il
+ * contratto di `MIN_APPROACH_RUN` va onorato una seconda volta: il router puo' aver
+ * dato 300px di approccio e l'evitamento li riduce alla lunghezza dello stub. Misurato
+ * il 2026-08-29 sulla scena densa: dodici archi su diciotto passano di qui, e tutti e
+ * dodici uscivano con il terminale a **esattamente 12px**, il vecchio valore fisso.
+ *
+ * La degradazione a gradini invece della rinuncia: quando 24px cadono dentro un corpo
+ * si prova la meta', che e' il valore storico. Se non passa nemmeno quello si torna
+ * `null` come prima — l'alternativa sarebbe deviare verso un ostacolo.
+ */
+const AVOID_STUB_OUT_STEPS: readonly number[] = [MIN_APPROACH_RUN, MIN_APPROACH_RUN / 2];
 /** Le corsie si posano a clearance + 1: il criterio chiede >= 8, non > 8. */
 const AVOID_LANE = AVOID_CLEARANCE + 1;
 /** Margine di rilevazione: mezzo pixel sotto la clearance, cosi' una corsia posata
@@ -2160,9 +2203,21 @@ function routeAroundRects(points: Pt[], rects: Rect[]): Pt[] | null {
     const dT = axisDirection(points, 'end');
     if (!dS || !dT) return null;
 
-    const S1 = { x: S.x + dS.x * AVOID_STUB_OUT, y: S.y + dS.y * AVOID_STUB_OUT };
-    const T1 = { x: T.x + dT.x * AVOID_STUB_OUT, y: T.y + dT.y * AVOID_STUB_OUT };
-    if (insideRects(S1, rects, AVOID_DETECT) || insideRects(T1, rects, AVOID_DETECT)) return null;
+    // Lo stub piu' lungo che non nasca dentro un corpo, un capo alla volta: i due lati
+    // possono degradare in modo diverso, ed e' giusto che il capo libero tenga i 24px
+    // anche quando l'altro non ci sta.
+    const stubOut = (P: Pt, d: Pt): number | null => {
+        for (const k of AVOID_STUB_OUT_STEPS) {
+            if (!insideRects({ x: P.x + d.x * k, y: P.y + d.y * k }, rects, AVOID_DETECT)) return k;
+        }
+        return null;
+    };
+    const kS = stubOut(S, dS);
+    const kT = stubOut(T, dT);
+    if (kS === null || kT === null) return null;
+
+    const S1 = { x: S.x + dS.x * kS, y: S.y + dS.y * kS };
+    const T1 = { x: T.x + dT.x * kT, y: T.y + dT.y * kT };
 
     // Le corsie degli **ostacoli** si arrotondano al mezzo pixel; le coordinate degli
     // **stub** no, entrano esatte.
