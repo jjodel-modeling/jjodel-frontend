@@ -2,6 +2,19 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-08-29 — docs: l'instance manager ha gia' meta' del motore in casa, e il canvas scopabile non c'e'
+**Prompt**: Fase 1 di discovery per l'instance manager (form CRUD), corsia completa, zero scritture di sorgente. Sei voci da censire: routing e contratto dei tab di progetto piu' costo di un terzo tipo; derivazione della shape dal metamodello in forma serializzabile; write path fuori-canvas per create/update/delete di istanze e valori, con semantica del delete di containment e enumerazione delle reference entranti; portabilita' di `valueRenderer` + `FormSpec` come modulo; esistenza di un canvas scopabile su sottografo (verificando in particolare `NestedView`); collocazione del motore coerente con un'estrazione futura.
+**Files touched**: docs/discovery/discovery_2026-08-29_instance_manager_fase1.md (nuovo), docs/claude-code-log.md. **Zero file di sorgente.** Nessuna sonda `_tmp_*`: tutte le asserzioni sono statiche e dichiarate tali.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (nessun sorgente toccato). L'albero portava gia' in ingresso cinque file di `editor-v2/utils/` modificati e non committati piu' due prompt document non tracciati, tutti fuori dal perimetro censito e lasciati intatti.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (lettura pura; nessuna scrittura, nessun file di §3.1 modificato)
+**Smoke visivo**: non applicabile (discovery read-only, nessuna resa cambiata)
+**Notes**: Due referenze del prompt non sono nel repo (`CRUD Manager Simulation.dc.html`; i «Turni 10-13», il proposal ha 2,3,4,5,7): RC-10 applicata, §0 del report. Tre reperti cambiano il piano, tutti in `discovery_2026-08-29_instance_manager_fase1.md`: la precedenza e' gia' un modulo puro (§4), l'update non va riscritto ma ospitato (§3.1, §4), e il canvas scopabile non esiste — `NestedView` e' un'altra cosa (§6). Sette domande di ratifica in §7.
+**Prompt document name**: prompt inline, nessun documento
+
 ## 2026-08-29 — chore: giro pulizie — la sonda 7c ringiovanisce, l'ultimo italiano se ne va, i due tab mancanti si fotografano
 **Prompt**: tre voci in corsia veloce. (1) Riscrivere `_tmp_7c_provenance.ts` su una coppia compatibile, la premessa `tint` essendo caduta con `4c6bd845d`. (2) Residuo R-4: il `title` del badge singleton in `ObjectNode.tsx` passa all'inglese, cercandolo per stringa e non per riga, piu' due passate di censimento su `editor-v2/` con controllo positivo. (3) Fotografare Appearance e Text, la verifica lasciata pendente in Fase 2, costruendo la view edge/row se serve.
 **Files touched**: editor-v2/nodes/ObjectNode.tsx (una stringa), editors/railSystem.scss (una regola, motivata sotto), docs/discovery/discovery_2026-08-29_stile_7a_sistema_rail.md (sezione di chiusura delle verifiche pendenti), docs/claude-code-log.md. Sonde `_tmp_7c_provenance.ts` riscritta, `_tmp_rail_edgerow.ts` nuova, `_tmp_kinds.ts`, `_tmp_7c_opts.ts` (non committate).
