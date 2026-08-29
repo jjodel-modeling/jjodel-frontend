@@ -113,8 +113,30 @@ Coordinate per la prossima sonda:
   una sonda sullo stato `auto`/`declared` non lo vede. Il ritaglio `_tmp_rstr7_rung0_afterreset.png`
   e' proprio quel caso e non mostra il difetto.
 
-Preesistente a questa sessione — lo span e' di `25a707036`, non toccato qui. **Punto aperto,
-non risolto**: puo' essere un difetto di layout (il footer stringe la colonna e il RowValue
-accanto non lascia larghezza) oppure di copy, se «on the canvas» e' semplicemente troppo
-lunga per quello slot. Nel secondo caso la correzione giusta sta nel design, non nel CSS:
-da guardare sul proposal prima di aprire un fix.
+Preesistente a questa sessione — lo span e' di `25a707036`, non toccato qui.
+
+**Misurato il 2026-08-29 (`_tmp_footer_measure.ts`), e la misura decide: e' larghezza, non
+proprieta' flex.** Geometria del footer con `viewOverride` vero, pannello largo 1217px:
+
+| elemento | left | right | width |
+|---|---|---|---|
+| `__result` (il padre) | 835 | 900 | **65** |
+| `__result-scope` (il figlio) | 884 | 971 | **86** |
+| `__action` «Back to the metamodel renderer» | 910 | 1094 | 184 |
+| `__action` «Change renderer» | 1104 | 1201 | 97 |
+
+Il figlio (86) e' piu' largo del padre (65) e sborda di 71px, fin dentro la prima azione che
+comincia a 910. Il footer e' `display: flex`, `gap: 10px`, `flex-wrap: nowrap`. Sommando il
+contenuto — RowValue + 86 + 184 + 97 piu' due gap — servono ~430px in una fascia che ne offre
+~366: **mancano una sessantina di pixel, il contenuto non ci sta.**
+
+**Tentativo fatto e revocato.** `flex: none; white-space: nowrap` su `__result-scope` toglie
+l'andata a capo ma la converte in una **sovrapposizione**: lo scope smette di cedere e si
+stampa sopra «Back to the metamodel renderer» (ritaglio catturato in sessione). Peggio del
+difetto di partenza, quindi revocato: `rendererInspector.scss` e' tornato byte-identico a HEAD.
+
+**Resta aperto, ed e' una decisione di design, non di CSS.** Le uscite plausibili sono tre e
+si escludono: accorciare la copy (**«· on canvas»** costa ~25px, che da soli non bastano),
+far andare a capo il footer (`flex-wrap: wrap`, che cambia l'altezza del pannello), o togliere
+un'azione dal footer. Tutte e tre toccano `__footer`/`__action`, fuori dal perimetro
+dichiarato. Da guardare sul proposal.

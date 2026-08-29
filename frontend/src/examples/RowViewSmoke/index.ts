@@ -117,9 +117,25 @@ function buildMetamodel(project: LProject): {
     // ── AllNine: one attribute per renderer, in the order the rows will read ──
     const allNine: LClass = LClass.fromD(pkg.addClass('AllNine'));
 
-    const tint = allNine.addAttribute('tint', palette.id);              // swatch
-    const strokeAttr = allNine.addAttribute('stroke', stroke.id);       // enumChip
-    const cfg = allNine.addReference('cfg', config.id);                 // refPill
+    // THE PROXY, not its id and not its name. `Constructors.DTypedElement`
+    // (joiner/classes.ts:855) honours exactly two shapes: a canonical primitive
+    // pointer, matched by /^Pointer_E[A-Z]+$/, and an OBJECT — `getByName2`
+    // returns it untouched on `typeof name === 'object'`. Everything else is
+    // silently downgraded, because that call passes only one argument, so
+    // `classname` is undefined and the loop's `classname !== d.className` skips
+    // every entry: a by-name lookup that can only ever return null.
+    //
+    // The downgrade is silent and asymmetric, which is why it went unseen:
+    // a DAttribute falls to `Pointers.ESTRING`, a DReference to THE FATHER.
+    // Measured 2026-08-29 — `palette.id` left tint on `Pointer_ESTRING` (so the
+    // colour ladder never reached rung 3, and `Stroke`, this fixture's control,
+    // was not a control at all), and `config.id` gave cfg the id of AllNine.
+    // The cast is required: the signature asks for a Pointer, while the only
+    // input the constructor honours for a user-defined type is the proxy.
+    // Fixing the API instead of the caller is core work, registered as debt.
+    const tint = allNine.addAttribute('tint', palette as any);          // swatch
+    const strokeAttr = allNine.addAttribute('stroke', stroke as any);   // enumChip
+    const cfg = allNine.addReference('cfg', config as any);             // refPill
     const visible = allNine.addAttribute('visible', 'Pointer_EBOOLEAN');// boolean, true
     const locked = allNine.addAttribute('locked', 'Pointer_EBOOLEAN');  // boolean, false
     const widthPx = allNine.addAttribute('widthPx', 'Pointer_EINT');

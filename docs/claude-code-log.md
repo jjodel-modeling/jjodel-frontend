@@ -2,6 +2,32 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-08-29 — fix(fixture): i tipi di tint, stroke e cfg smettono di essere scartati in silenzio
+**Prompt**: corsia veloce, due voci. (1) Fixture `tint`: ripuntare il tipo all'enum, «verosimilmente una riga»; dichiarare se serve di piu'. (2) Micro-voce (b) del report §6, footer dell'inspector: verdetto dichiarato «CSS, non copy», fix `flex: none; white-space: nowrap`. Perimetro di voce 1 allargato a tutti e tre gli effetti su ratifica esplicita in sessione.
+**Files touched**: frontend/src/examples/RowViewSmoke/index.ts (tre call site: `palette`/`stroke`/`config` passati come proxy invece che per id, piu' il commento che spiega perche'), docs/discovery/discovery_2026-08-29_rstr7_inspector_ramo_ir.md (§6(b) riscritta con la geometria del footer), docs/claude-code-log.md. Sonde `_tmp_tint_type.ts`, `_tmp_diag_ids.ts`, `_tmp_tint_rung3.ts`, `_tmp_footer_measure.ts`, `_tmp_row_recon.ts` (non committate).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: (c)
+**Regressions**: no (typecheck 33 = baseline su output completo, zero errori nel file toccato; build exit 0, solo il chunk-warning; nessun test importa il fixture — grep vuoto sui `*.test.ts`)
+**Out-of-scope changes**: no (il perimetro a tre call site e' stato ratificato in sessione prima di scrivere)
+**Layer Impact Report**: not-required (nessun file di §3.1; nessuna modifica al costruttore, solo al chiamante)
+**Smoke visivo**: passato. `_tmp_tint_rung3.ts` **7/7 ALL GREEN** sul canvas vero: `tint`→`Palette`, `stroke`→`Stroke`, `cfg`→`Config` riletti dallo store, e sulla riga nativa senza override ne' annotazione la ladder da' chip `auto` col vincitore al **gradino 3** — «CSS colour enum — winning rule / All 3 literals of Palette are CSS colour names: Red, Green, Blue» — mentre il gradino 4 resta `not evaluated`. Prima il tie-break sul nome era l'unico vincitore possibile. `_tmp_rstr7_rung0.ts` 10/10 invariata. Ritaglio in `scripts/smoke/_tmp_tint_rung3.png`.
+**Notes**: Premessa smentita: il fixture gia' passava l'enum, il difetto non e' suo. `Constructors.DTypedElement` (`joiner/classes.ts:855`) onora due sole forme, il pointer primitivo canonico e un **oggetto**; ogni altro input cade in `getByName2(type)`, chiamata con un argomento solo — `classname` resta `undefined`, il confronto scarta ogni voce, ritorna null. Degrado silenzioso e asimmetrico: EString per un DAttribute, **il padre** per un DReference. Sistemare l'API e' core (§5): debito.
+**Prompt document name**: prompt inline, nessun documento
+
+## 2026-08-29 — docs: il verdetto sul footer dell'inspector e' smentito dalla misura
+**Prompt**: voce 2 della stessa sessione — footer dell'inspector, micro-voce (b) del report §6: applicare `flex: none; white-space: nowrap` su `.inode-inspector__result-scope`, verdetto dichiarato «CSS, non copy».
+**Files touched**: docs/discovery/discovery_2026-08-29_rstr7_inspector_ramo_ir.md (§6(b)). `rendererInspector.scss` toccato e **revocato**: byte-identico a HEAD.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (c)
+**Regressions**: no (nessun file di sorgente modificato a fine sessione)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (nessun file di §3.1)
+**Smoke visivo**: passato come misura, fallito come fix. Col fix in piedi il capoverso sparisce ma diventa **sovrapposizione**: `__result-scope` (86px, left 884, right 971) sborda dal padre `__result` (65px, right 900) e si stampa sopra l'azione «Back to the metamodel renderer» (left 910). Footer `flex-wrap: nowrap`, `gap: 10px`: servono ~430px di contenuto in ~366 disponibili.
+**Notes**: Mancano ~60px di larghezza reale, quindi nessuna proprieta' flex sullo scope puo' risolverlo: il verdetto «CSS, non copy» e' smentito. Le tre uscite — accorciare la copy (`· on canvas` vale ~25px, non bastano), `flex-wrap: wrap`, togliere un'azione — toccano tutte `__footer`/`__action`, fuori dal perimetro dichiarato. Fix revocato, decisione rimandata al proposal. Tabella della geometria in §6(b) del report.
+**Prompt document name**: prompt inline, nessun documento
+
 ## 2026-08-29 — feat(editor-v2): R-STR-7 sciolta, il gradino 0 arriva sul canvas
 **Prompt**: Fase 2 di R-STR-7 — abilitare il gradino 0 montando il `RendererInspector` anche sul ramo IR di `ObjectNode`. Verso ratificato: montare, non rimuovere. Tre ratifiche in ingresso: doppia gesture sulla riga IR (Alt+click piu' bottone hover-reveal), `IRNodeContent` alza il solo nome della feature, Reset e sorgenti non si toccano. Prerequisito bloccante: provare che `slotRows` e' popolato sul ramo IR.
 **Files touched**: editor-v2/nodes/ObjectNode.tsx (`resetViewWidget` e `openInspector` risaliti sopra il return di :728, `openInspectorAt` e `openInspectorByFeatureName` nuove, `inspectorEl` estratto e montato dai due rami, prop passata a `IRNodeContent`), editor-v2/nodes/valueRenderer.ts (`findRowByFeatureName`), editor-v2/viewpoint/ir/IRNodeContent.tsx (`onInspectFeature?` su `IRNodeContentProps`, Alt+click sulla riga, bottone `bi-sliders`), editor-v2/viewpoint/ir/irStyle.ts (`.ir-row__inspect`, hover-reveal), editor-v2/nodes/__tests__/valueRenderer.test.ts (+4 prove), docs/discovery/discovery_2026-08-29_rstr7_inspector_ramo_ir.md (nuovo), docs/decisions.md (R-STR-7 sciolta), docs/design/design_handoff_instance_node/PROMPT_structure_tab.md (blocco «Stato misurato» e riga dei test), docs/prompts/claude_2026-08-29_0200_prompt_rstr7_gradino0.md, docs/claude-code-log.md. Sonde `_tmp_slotrows_ir.ts`, `_tmp_slotrows_recon.ts`, `_tmp_rstr7_rung0.ts` (non committate).
