@@ -1948,6 +1948,19 @@ allineato a questa lettura, non il contrario. Quindi: gradino 0 con tag «vince 
 gradino 1 visibile con la sua evidenza e badge `overridden by current view`, chip a `view`, e
 footer che mostra il renderer **del canvas** con la sua etichetta.
 
+**R-STR-7** (2026-08-29) — **Il gradino 0 e il chip `view` sono irraggiungibili sul canvas.**
+`ObjectNode` monta il `RendererInspector` solo nel ramo nativo (`ObjectNode.tsx:728`,
+`if (irResolution && !irDelegated)`), e un ir che porta `form` — o `structure` — non supera
+l'hash strutturale di `isMigratedDefaultView`, quindi non e' mai delegato: `viewWidget`
+all'unico punto di mount e' sempre `undefined`. La superficie viva della precedenza 7c e' il
+**Form tab**. Il gradino 0 va o rimosso, o abilitato montando l'inspector anche sul ramo IR.
+Misurato il 2026-08-29 con controllo positivo (ir migrato nudo -> delegato; lo stesso con
+`form` -> no; con `structure` -> no) e sul canvas vero con `_tmp_rung1_probe.ts`, che prova
+anche il contrario di cio' che si sospettava: il gradino 1 **e'** alimentabile in sessione
+(`DAnnotation.new('jjodel/renderer=…', [], attrId, true)` -> chip da `auto` a `declared`,
+gradino 1 vincente), e lo stub di `parseDAnnotation` costa solo il round-trip `.ecore`.
+Stesso regime di R-STR-6: registrato, non aperto.
+
 **R-STR-6** (2026-08-29, Alfonso) — **Debito registrato, non aperto.** Estendere la vittoria
 della view alla riga del canvas richiede `decide` esportato da `nodes/valueRenderer.ts` e la
 decisione di riga cambiata in `nodes/ObjectNode.tsx`. E' un fronte separato: non si apre
