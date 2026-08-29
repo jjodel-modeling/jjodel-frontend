@@ -2,6 +2,19 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-08-30 — docs: il bundle atterra a meta' slice, e le cinque domande del contratto trovano risposta
+**Prompt**: nessuno — riconciliazione dovuta. Il bundle handoff citato dai due prompt e assente a entrambe le misure (29/08 e 30/08, controllo positivo entrambe le volte) e' arrivato **durante** la slice 2a, nel commit `e70265529` di un'altra sessione, con in piu' `form-engine-contract.md`. Letti i tre documenti e confrontati con il report di Fase 1 e con la slice appena consegnata.
+**Files touched**: docs/discovery/discovery_2026-08-29_instance_manager_fase1.md (addendum in coda; §0 non riscritto), docs/decisions.md (nota di riconciliazione in testa alla serie R-FORM, la sezione con le cinque risposte, e Q8), docs/claude-code-log.md.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: (e)
+**Regressions**: no (soli documenti; `npm run check:docs` 3/3)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (nessun sorgente)
+**Smoke visivo**: non applicabile
+**Notes**: **Nulla contraddice la slice 2a**, e le cinque domande del contratto sono le voci del censimento. La risposta alla 2 va **contro** l'ipotesi del contratto: la precedenza la fa il motore, non l'adapter, perche' `valueRenderer.ts` e `widgetRenderer.ts` sono gia' puri. Una divergenza vera, **Q8**, che non risolvo io: il Turno 10b vuole a sinistra l'outline di containment, la slice ha il catalogo per metaclasse. La 2a e' da prompt inline, quindi `Corregge` resta al sentinella.
+**Prompt document name**: prompt inline, nessun documento
+
 ## 2026-08-30 — feat(manager): l'instance manager e' il terzo tipo di tab, e ospita IRForm
 **Prompt**: Slice 2a dell'instance manager, corsia completa, sulla discovery ratificata piu' Q1(b)/Q2/Q3/Q5/Q7. Tab (`TabDataMaker.instanceManager` con id `mgr_${model.id}` e `data-type="manager"`, `DockManager.openManager`, prefisso in `closeTabsForEntity`, ramo Q1(b) in `Dock.tsx`), punto d'ingresso minimo scelto e dichiarato, componente a tre lastre (metaclassi da `getMetaclassInfo` con le astratte non selezionabili e la causa, istanze filtrate per `instanceof`, click che monta `IRForm` com'e'), stile 7a, zero modifiche a `EditorV2`/`joiner`/`IRForm`, stringhe inglesi. Test unitari sul filtro e sull'id prefissato, smoke a schermo.
 **Files touched**: **nuovi** abstract/tabs/instanceManagerModel.ts (la meta' pura), InstanceManagerTab.tsx, instanceManagerTab.scss, __tests__/instanceManagerModel.test.ts (17 prove); abstract/tabs/TabDataMaker.tsx (+1 statico), abstract/DockManager.tsx (`openManager` + il prefisso in `closeTabsForEntity`), abstract/Dock.tsx (ramo Q1(b)), editors/properties-with-tree-view.scss (+1 selettore al kill-switch del rail), pages/components/LeftBar.tsx (`itemAction` opzionale su `renderSection`, usato dai soli Models), pages/dashboard.scss (`.psb-item-action`), pages/components/Navbar.tsx (ramo `mgr_` nello smistamento della striscia). Sonde `_tmp_instance_manager.ts`, `_tmp_mgr_tabstrip.ts` e i tre `.png` (non committate). Commit sorgente `9ab7560d0`, chore `b9be0674e`, docs a parte.

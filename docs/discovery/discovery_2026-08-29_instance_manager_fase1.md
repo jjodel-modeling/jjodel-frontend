@@ -448,3 +448,39 @@ vedere quanti oggetti contenuti sparisce prima di confermare, perche' il cascade
 
 **Fuori dalla Fase 2**: l'estrazione del motore in `jjform/` (aspetta il contratto META,
 §0) e il diagramma embedded scopato (§6).
+
+---
+
+## Addendum (2026-08-30) — il bundle e' atterrato, e §0 va letto con questa data accanto
+
+Il §0 di questo report dichiarava assenti `CRUD Manager Simulation.dc.html` e i «Turni
+10-13» del proposal. **Era vero quando e' stato misurato** (29/08, e riconfermato il 30/08
+all'inizio della slice 2a, entrambe le volte con controllo positivo). Il bundle e' arrivato
+**a meta' della slice 2a**, nel commit `e70265529` da un'altra sessione, insieme a un terzo
+documento che il §0 non poteva nominare perche' non era stato ancora citato:
+`docs/design/design_handoff_instance_node/form-engine-contract.md`.
+
+Il §0 non si riscrive (e' la misura di quel momento, ed e' il precedente di R-E/E-1
+applicato a se stessi). Questo addendum dice che cosa cambia e che cosa no.
+
+**Non cambia niente di §1-§6.** Letti i tre documenti: nessuna misura di questo report e'
+smentita. Il contratto v0 chiede esattamente il taglio che §5.2 descrive — un modulo puro
+`(metamodelShape, instanceData, formSpec) -> formModel` piu' eventi astratti — e le sue
+**cinque domande aperte** sono, una per una, le voci del censimento. Le risposte sono a
+registro in `docs/decisions.md`, serie R-FORM, sezione «Le cinque domande aperte di
+form-engine-contract.md». La piu' rilevante: alla domanda 2 la misura risponde **contro**
+l'ipotesi del contratto — la precedenza la fa il **motore**, non l'adapter, perche'
+`valueRenderer.ts` e `widgetRenderer.ts` sono gia' puri (§4), e lasciarla all'adapter
+terrebbe fuori dal motore l'unica parte gia' portabile.
+
+**Cambia la §8, in un punto.** La proposta di slice diceva «colonna sinistra = metaclassi»,
+ed e' quella che il prompt della 2a ha ratificato e che e' stata consegnata. Il **Turno
+10b** descrive invece la colonna sinistra come **outline di containment del modello dai
+root**, con la creazione appesa all'albero. Sono due navigazioni diverse — estensione per
+tipo contro struttura del modello — e solo la seconda ha un posto naturale per la create
+della slice 2c. Registrata come **Q8**, aperta.
+
+**Resta vero il §6**: il Turno 13 (ibrido form + diagramma) e il 10c (`Form` come symbol
+accanto a Rectangle/Circle, per-metaclasse) sono la superficie che `EditorV2` oggi non sa
+scopare. Il 10c e' R-FORM-3 alla lettera e conferma Q5: la `surface` e' una scelta della
+view, per metaclasse.

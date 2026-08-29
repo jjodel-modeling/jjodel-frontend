@@ -1984,12 +1984,15 @@ finche' non e' deciso esplicitamente.
 ## Serie R-FORM — instance manager e motore form (ratifiche 2026-08-29/30)
 
 Report di Fase 1: `docs/discovery/discovery_2026-08-29_instance_manager_fase1.md`.
-Le referenze di design citate dai prompt (`CRUD Manager Simulation.dc.html`, i «Turni
-10-13» del proposal, `form-engine-contract.md`) **non sono nel repo**: cercate due volte
-con controllo positivo, 2026-08-29 e 2026-08-30. RC-10 applicata in entrambe le sessioni.
-Finche' non atterrano (RC-9) non vincolano, e **R-FORM-2 sotto e' derivata dal codice, non
-dal contratto META**: quando il bundle arriva, il §5 del report va confrontato e, se
-divergono, rifatto — non riconciliato a posteriori.
+
+**Nota di riconciliazione (2026-08-30).** Le referenze di design (`CRUD Manager
+Simulation.dc.html`, i Turni 10-13 del proposal, `form-engine-contract.md`) non erano nel
+repo quando la discovery e la slice 2a sono state misurate — cercate due volte con
+controllo positivo, il 29 e il 30, RC-10 applicata entrambe le volte. **Sono atterrate a
+meta' della slice**, in `e70265529`, da un'altra sessione. Lette subito dopo: **nulla
+contraddice la slice 2a**, e le cinque domande aperte del contratto trovano risposta nel
+report. Le risposte sono qui sotto, e una di esse va **contro** la direzione che il
+contratto proponeva a titolo di ipotesi.
 
 **R-FORM-1** (2026-08-29, Alfonso) — **Il manager e' superficie sorella del canvas**: terzo
 tipo di tab del progetto, non tab del rail, e vede il modello nudo — struttura dal
@@ -2057,6 +2060,42 @@ entra in una superficie pubblica.
 **Q7** (2026-08-30, Alfonso) — **`syncDeleteObject` si cancella**, in un chore a parte.
 Fatto: commit `b9be0674e`. Era la vecchia via raw, senza cascade, e restava una trappola per
 assonanza per chi avrebbe scritto il delete del manager.
+
+### Le cinque domande aperte di `form-engine-contract.md`, con la misura
+
+1. **«La shape si deriva tutta dal joiner senza passare dal renderer?»** — **Quasi.**
+   `MetaclassInfo` (`useEditorMode.ts:43-79`, accessore non-hook `getMetaclassInfo`) e' gia'
+   serializzabile e copre `attrs`/`refs`/`children` con cardinalita' e `containment`;
+   `containedIn` si inverte da `references[].containment`. **Mancano tre cose**: i letterali
+   di enum (c'e' il flag `isEnum`, non l'id del tipo, quindi la chiave `enums` del
+   `metamodelShape` non e' derivabile — e' Q4), `derived`/`changeable`, e l'indice delle
+   reference entranti. Il `metamodelShape` v0 non chiede le ultime due.
+2. **«Il widget risolto arriva dall'adapter o il motore rifa' la precedenza?»** — **Il
+   motore.** Il contratto propone l'adapter («dentro jjodel conviene…»); la misura dice il
+   contrario, ed e' il reperto migliore della Fase 1: la precedenza **e' gia' un modulo
+   puro**. `nodes/valueRenderer.ts` (683 righe) e `ir/irReadCtx.ts` hanno **zero**
+   `^import`; `ir/widgetRenderer.ts`, che implementa R-STR-3/R-STR-4, ne ha due e sono
+   tipi. Passare il widget gia' risolto dall'adapter significherebbe lasciare fuori dal
+   motore l'unica parte che e' gia' portabile.
+3. **Operazioni e attributi derivati fuori dal v0** — coerente col repo: `MetaclassInfo`
+   non porta ne' le operazioni ne' `derived`, e la lettura di `derived`/`changeable` oggi
+   passa dal proxy della metafeature (`useFormWidgets.ts:236`), cioe' da un'istanza viva.
+4. **Attributi multivalore fuori dal v0** — **attenzione, non e' gratis**: il repo li
+   gestisce gia' (`upperBound !== 1` -> `treatment: 'list'`, `addSlotValue`,
+   `appendSlotValue`), e `clearSlotValue` lascia un **buco** invece di accorciare l'array
+   (`formWrite.ts:73-100`, motivazione misurata). Un motore v0 che li esclude deve
+   dichiarare che il suo `instanceData` non e' round-trip con quello che jjodel produce.
+5. **Naming e collocazione** — Q6: `frontend/src/jjform/`, pari grado di `jjel/`, che e'
+   il precedente misurato (zero import da joiner/react/redux).
+
+**Q8** (2026-08-30) — **aperta, e nasce dalla riconciliazione.** Il Turno 10b («Intero
+modello — master-detail») descrive la colonna sinistra come **outline di containment del
+modello a partire dai root**, con la creazione nell'albero («Add Port», «Add root
+element»). La slice 2a implementa invece un **catalogo per metaclasse** (metaclassi ->
+istanze -> form), che e' cio' che il prompt della slice specificava alla lettera. Le due
+navigazioni non sono la stessa cosa: l'outline mostra la struttura del modello, il catalogo
+la sua estensione per tipo, e solo il primo ha un posto naturale dove appendere la create
+di 2c. Non risolta qui: la slice consegnata segue il prompt, e la scelta e' di prodotto.
 
 ### Perimetro delle slice
 
