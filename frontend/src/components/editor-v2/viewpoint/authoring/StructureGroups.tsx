@@ -233,6 +233,11 @@ export const StructureGroups: React.FC<StructureGroupsProps> = ({
 
     return (
         <>
+            {/* One wrapper per group (7a). It is what scopes the stylesheet: the
+                restyling of the shared primitives down to 7a's density must not reach
+                the Field compartments editor nested in this same tab body, nor any
+                other tab. */}
+            <div className="ir-structure-group ir-structure-group--name">
             <FormSection title="Name" divider={false}>
                 <Row label="Position">
                     {/* The shared Select always renders a placeholder option with an empty
@@ -254,7 +259,7 @@ export const StructureGroups: React.FC<StructureGroupsProps> = ({
                 {/* The reason line belongs to the fields whose AVAILABILITY depends on the
                     Symbol, and only to those: Position has one, Empty slots does not,
                     because Empty slots applies to every shape (7a). */}
-                {positionReason && <HelpText>{positionReason}</HelpText>}
+                {positionReason && <HelpText className="ir-structure-group__help">{positionReason}</HelpText>}
                 {r.preserved['name.position'] && (
                     <div className="ir-structure-group__preserved">
                         <span style={PRESERVED_CHIP}>
@@ -273,13 +278,15 @@ export const StructureGroups: React.FC<StructureGroupsProps> = ({
                     />
                 </Row>
                 {singleMetaclass && (
-                    <HelpText>
+                    <HelpText className="ir-structure-group__help">
                         {'Every node in this viewpoint is a '}
                         <code>{singleMetaclass}</code>
                     </HelpText>
                 )}
             </FormSection>
+            </div>
 
+            <div className="ir-structure-group ir-structure-group--accent">
             <FormSection title="Accent" divider={false}>
                 <Row label="Placement">
                     <SegmentedControl<AccentPlacement>
@@ -289,7 +296,7 @@ export const StructureGroups: React.FC<StructureGroupsProps> = ({
                         onChange={(v) => set('accentPlacement', v, v === caps.defaultAccentPlacement)}
                     />
                 </Row>
-                {accentReason && <HelpText>{accentReason}</HelpText>}
+                {accentReason && <HelpText className="ir-structure-group__help">{accentReason}</HelpText>}
                 {r.preserved.accentPlacement && (
                     <div className="ir-structure-group__preserved">
                         <span style={PRESERVED_CHIP}>
@@ -304,9 +311,11 @@ export const StructureGroups: React.FC<StructureGroupsProps> = ({
                         onChange={(hex) => set('accent', hex, hex === DEFAULT_ACCENT)}
                     />
                 </Row>
-                <HelpText>Inherited from the metaclass · override per instance</HelpText>
+                <HelpText className="ir-structure-group__help">Inherited from the metaclass · override per instance</HelpText>
             </FormSection>
+            </div>
 
+            <div className="ir-structure-group ir-structure-group--compartment">
             <FormSection title="Compartment" divider={false}>
                 <Row label="Mode">
                     <SegmentedControl<CompartmentMode>
@@ -316,7 +325,7 @@ export const StructureGroups: React.FC<StructureGroupsProps> = ({
                         onChange={(v) => set('compartment.mode', v, v === caps.defaultCompartmentMode)}
                     />
                 </Row>
-                {modeReason && <HelpText>{modeReason}</HelpText>}
+                {modeReason && <HelpText className="ir-structure-group__help">{modeReason}</HelpText>}
                 {r.preserved['compartment.mode'] && (
                     <div className="ir-structure-group__preserved">
                         <span style={PRESERVED_CHIP}>
@@ -359,6 +368,7 @@ export const StructureGroups: React.FC<StructureGroupsProps> = ({
                     </>
                 )}
             </FormSection>
+            </div>
         </>
     );
 };

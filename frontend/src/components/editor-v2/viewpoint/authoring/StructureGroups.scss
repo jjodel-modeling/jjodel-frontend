@@ -1,70 +1,283 @@
 /* StructureGroups — the three level-2 groups of the Structure tab.
 
-   Metrics from artboards 7a/7b of the instance-node handoff: a rail 320px wide, rows
-   laid out label-left / control-right, groups separated by the FormSection divider the
-   panel already draws. Every value comes from styles/tokens/, and no variable is
-   declared here (rule 28).
+   Metrics lifted from artboard 7a of the instance-node handoff (`Instance Node
+   Proposal.dc.html`): a rail 320px wide, rows laid out label-left / control-right,
+   groups separated by a hairline. 7a is markedly denser than the primitives'
+   default rhythm, which is sized for the wide Properties column — so this sheet
+   restyles them down, and it does so ONLY under `.ir-tab-body--structure` and,
+   inside it, only under the two classes this component owns
+   (`.ir-structure-group`, `.ir-structure-group__control`). No other tab body of
+   the rail, and not the Field compartments editor nested in this one, is reached.
+
+   Every value comes from styles/tokens/ where a token resolves to the design's
+   own number — the form family does for the whole slate ramp of 7a:
+     --color-form-label        #475569  row label
+     --color-form-muted        #94a3b8  eyebrow, help text, chevron, count
+     --color-form-section      #64748b  inactive segment, hex readout
+     --color-form-border       #e2e8f0  segmented track
+     --color-form-border-strong #cbd5e1 select
+     --color-text-primary      #0f172a  active segment, select value
+   The two remaining numbers (10px inner gap, 14px separator inset) have no token
+   on the 8px grid and stay literal. No variable is declared here (rule 28).
 
    A stylesheet of its own rather than the stacked `jj-field` the rest of the panel
    uses: 7a's rows put the control on the same line as its label, which `jj-field`
    (label above, control below) cannot express — the same reason FormAuthoringBody.scss
    exists for its tables. */
 
+.ir-tab-body--structure {
+    /* Group rhythm of 7a: 16px between groups, and every group after the first
+       opens on a hairline set 14px above its eyebrow. The panel's own 12px padding
+       (`info.scss:414`, `.properties-panel`) stands in for the design's 14px body
+       inset — it is shared by every tab, so it is not touched here. */
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+
+    > :not(:first-child) {
+        border-top: 1px solid var(--color-slate-100);
+        padding-top: 14px;
+    }
+
+    /* FormSection is sized for the wide column: 24px above the section, 12px under
+       its title, 12px between fields. 7a runs 10px throughout, and the space above
+       comes from the gap declared here instead. `> h3 + div` is the section content:
+       every FormSection of this tab passes `divider={false}`, so no divider div sits
+       between the two. */
+    .ir-structure-group > section,
+    > section {
+        margin-top: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .ir-structure-group > section > h3,
+    > section > h3 {
+        margin: 0;
+        font-size: var(--text-xs);
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--color-form-muted);
+    }
+
+    .ir-structure-group > section > h3 + div,
+    > section > h3 + div {
+        gap: 10px;
+    }
+
+    /* The help text of 7a: 11px, muted, 6px from its icon, and no margin of its own
+       — the 10px group gap already spaces it off the row above. */
+    .ir-structure-group__help {
+        gap: 6px;
+        margin-top: 0;
+        font-size: var(--text-xs);
+        line-height: 1.5;
+        color: var(--color-form-muted);
+
+        /* `.properties-panel-container p > i.bi-info-circle` (0,2,2) hides the glyph
+           inside the Properties card — the B4 mockup wanted a hint to be a quiet line
+           of text, not an annotated callout (`properties-with-tree-view.scss:689`).
+           7a draws it, so this tab takes it back at (0,3,2), and only this tab: the
+           card rule keeps standing everywhere else it applies. */
+        > i.bi-info-circle {
+            display: inline-block;
+            margin-top: 1px;
+            /* The primitive writes `font-size: var(--icon-size-sm)` (14px) INLINE on
+               the glyph, which nothing but `!important` can reach; at 11px body text
+               a 14px glyph reads as a control rather than a mark. */
+            font-size: var(--text-xs) !important;
+            color: var(--color-form-muted);
+        }
+
+        code {
+            font-family: var(--font-family-mono, 'IBM Plex Mono', Monaco, Consolas, monospace);
+            font-size: var(--text-xs);
+            color: var(--color-form-section);
+            background: none;
+            padding: 0;
+        }
+    }
+}
+
 .ir-structure-group {
     &__row {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: var(--space-3, 12px);
+        gap: var(--space-3);
         min-height: 28px;
-
-        + .ir-structure-group__row { margin-top: var(--space-2, 8px); }
     }
 
     &__label {
         flex: 0 1 auto;
-        font-size: var(--text-md);
-        color: var(--color-text-secondary);
+        font-size: var(--text-sm);
+        color: var(--color-form-label);
         white-space: nowrap;
-    }
-
-    /* The control column does not stretch: a segmented control of two segments and one
-       of four are both right-aligned against the rail's edge, which is what makes the
-       column read as a column when the options differ per Symbol. */
-    &__control {
-        flex: 0 0 auto;
-        display: inline-flex;
-        align-items: center;
-        justify-content: flex-end;
-        min-width: 0;
-        max-width: 62%;
     }
 
     /* The value the IR still holds and this Symbol does not offer. Sits under the
        reason line, which has already said WHY the option is gone; this one says the
        authored value is still there and will come back with the Symbol. */
     &__preserved {
-        margin-top: var(--space-1, 4px);
+        margin-top: 0;
     }
 
     /* The single summary at the foot of the tab. `bi-eye-slash`, one line, both
-       families of cause on it (7b). */
+       families of cause on it (7b). Its hairline comes from the tab body's
+       `> :not(:first-child)` rule; the inset is overridden below, because 7b sets
+       this one at 12px rather than the 14px the groups use. */
     &__hidden {
         display: flex;
         align-items: flex-start;
         gap: 6px;
-        margin-top: var(--space-3, 12px);
-        padding-top: var(--space-3, 12px);
-        border-top: 1px solid var(--color-border-secondary);
-        font-size: var(--text-2xs);
+        font-size: var(--text-xs);
         line-height: 1.6;
-        color: var(--color-text-tertiary);
+        color: var(--color-form-muted);
 
         > i { margin-top: 1px; }
     }
 
     &__hidden-fields {
-        color: var(--color-text-secondary);
+        color: var(--color-form-section);
         font-weight: 500;
+    }
+}
+
+/* 7b's inset for the summary row, at the specificity the `> :not(:first-child)`
+   rule above carries (0,2,0) — the bare BEM class would lose to it. */
+.ir-tab-body--structure > .ir-structure-group__hidden { padding-top: 12px; }
+
+/* The control column does not stretch: a segmented control of two segments and one
+   of four are both right-aligned against the rail's edge, which is what makes the
+   column read as a column when the options differ per Symbol. */
+.ir-tab-body--structure .ir-structure-group__control {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    min-width: 0;
+    max-width: 72%;
+
+    /* ── Segmented: one bordered track, no chip ────────────────────────────
+       The primitive draws a slate-100 track with a white raised chip on the
+       selected segment (project decision D1). 7a inverts that: the track is a
+       1px outline on the panel's own surface and the SELECTED segment is the
+       filled one. Restyled here rather than in the primitive — D1 governs every
+       other segmented control in the app. */
+    [role='radiogroup'] {
+        gap: 0;
+        padding: 0;
+        background: none;
+        border: 1px solid var(--color-form-border);
+        border-radius: var(--radius-md, 8px);
+        overflow: hidden;
+    }
+
+    [role='radio'] {
+        border-radius: 0;
+        padding: 5px 10px;
+        font-size: var(--text-md);
+        font-weight: 400;
+        line-height: 1.4;
+        color: var(--color-form-section);
+        box-shadow: none;
+
+        + [role='radio'] { border-left: 1px solid var(--color-form-border); }
+    }
+
+    [role='radio'][aria-checked='true'] {
+        background: var(--color-slate-100);
+        color: var(--color-text-primary);
+        font-weight: 500;
+        box-shadow: none;
+    }
+
+    /* 7a widens the two numeric segments so the track does not read as narrower
+       than its neighbours on a single glyph. */
+    [aria-label='Columns of the compartment rows'] [role='radio'] { padding: 5px 12px; }
+
+    /* ── Select: the compact value box of 7a, not the input-height control ─────
+       Size does not come off the primitive here. `.view-editor-root select`
+       (`components/forEndUser/color.scss:667`) pins height 36px / min-width 170px at
+       the same (0,1,1) specificity the primitive's own class carries, and wins on
+       source order — measured, not assumed, which is why this block is anchored on
+       `.ir-tab-body--structure` and the three size properties are all restated. The
+       same rule reaches `input[type='text']` through
+       `styles/components/_form-system.scss:42`. */
+    select {
+        width: auto;
+        min-width: 0;
+        max-width: 100%;
+        height: 28px;
+        min-height: 0;
+        padding: 5px 24px 5px 10px;
+        font-size: var(--text-md);
+        line-height: 1.4;
+        border: 1px solid var(--color-form-border-strong);
+        border-radius: var(--radius-sm);
+        color: var(--color-text-primary);
+    }
+
+    select:hover:not(:disabled) { border-color: var(--color-border-hover); }
+    select:focus { border-width: 1px; }
+
+    /* The chevron of 7a: 10px, muted, tucked against the 10px right padding. */
+    select + span {
+        right: 8px;
+        font-size: 10px;
+        color: var(--color-form-muted);
+    }
+
+    /* ── Color: a 14px swatch and the hex as TEXT at rest ──────────────────
+       7a shows no input chrome until the value is being edited. The hex field
+       keeps its input semantics (paste still works) and drops its border and
+       fill; focus — which is what a click on the value produces — brings the
+       box back. */
+    input[type='color'] {
+        width: 14px;
+        height: 14px;
+        border: 1px solid var(--color-form-muted);
+        border-radius: 3px;
+    }
+
+    input[type='color']::-webkit-color-swatch { border-radius: 2px; }
+    input[type='color']::-moz-color-swatch { border-radius: 2px; }
+
+    input[type='text'] {
+        flex: 0 0 auto;
+        width: 8ch;
+        height: auto;
+        min-height: 0;
+        padding: 0;
+        font-family: var(--font-family-mono, 'IBM Plex Mono', Monaco, Consolas, monospace);
+        font-size: var(--text-xs);
+        line-height: 1.4;
+        color: var(--color-form-section);
+        background: none;
+        border-color: transparent;
+    }
+
+    input[type='text']:hover:not(:disabled) { border-color: transparent; }
+
+    input[type='text']:focus {
+        padding: 1px 4px;
+        color: var(--color-text-primary);
+        background: var(--color-form-surface);
+        border-color: var(--input-border-color-focus);
+    }
+}
+
+/* The two slate primitives above are theme-invariant by design (styles/tokens.css),
+   so the divider and the selected segment need a dark counterpart of their own —
+   the same shape ListEditor.module.css uses for its hardcoded light surfaces. */
+html[data-theme='dark'] {
+    .ir-tab-body--structure > :not(:first-child) {
+        border-top-color: var(--color-border-primary);
+    }
+
+    .ir-structure-group__control [role='radio'][aria-checked='true'] {
+        background: var(--color-bg-tertiary);
     }
 }
