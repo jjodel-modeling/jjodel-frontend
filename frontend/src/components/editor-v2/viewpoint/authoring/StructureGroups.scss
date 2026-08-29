@@ -26,10 +26,28 @@
    exists for its tables. */
 
 .ir-tab-body--structure {
+    /* 7a paints the tab body white, against the slate-50 the app puts everywhere
+       else. That ground is `.properties-panel`'s (`components/editors/info.scss:414`,
+       `background` inherited from the card) and it is shared by every tab of the rail,
+       so it is repainted HERE and not there: the body pulls out over the panel's
+       padding and lays down its own — 14px, the mock's number, which also closes the
+       one deviation the first pass declared on the body inset.
+
+       The pull is 20/16 and not `--space-3`, measured: the inset that actually
+       applies is `padding: 16px 20px !important` from
+       `properties-with-tree-view.scss:578`, which beats `info.scss:414`'s
+       `var(--space-3)`. The two literals are a coupling to that rule — if the card's
+       inset moves, a band of slate reappears here, and the fix is to follow it.
+
+       The top pull is conditional: an `ErrorText` (`VertexAuthoringPanel.tsx:388`,
+       `role="alert"`) can precede the bodies, and a negative margin would ride over
+       it. With one on screen the white simply starts below it. */
+    margin: 0 -20px -16px;
+    padding: 14px;
+    background: var(--color-form-surface);
+
     /* Group rhythm of 7a: 16px between groups, and every group after the first
-       opens on a hairline set 14px above its eyebrow. The panel's own 12px padding
-       (`info.scss:414`, `.properties-panel`) stands in for the design's 14px body
-       inset — it is shared by every tab, so it is not touched here. */
+       opens on a hairline set 14px above its eyebrow. */
     display: flex;
     flex-direction: column;
     gap: var(--space-4);
@@ -99,6 +117,10 @@
             padding: 0;
         }
     }
+}
+
+.properties-panel:not(:has(> [role='alert'])) > .ir-tab-body--structure {
+    margin-top: -16px;
 }
 
 .ir-structure-group {

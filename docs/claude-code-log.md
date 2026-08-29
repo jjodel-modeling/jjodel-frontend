@@ -2,6 +2,19 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-08-29 — style(editor-v2): il fondo del tab Structure diventa bianco, da bordo a bordo
+**Prompt**: follow-up a `dc0a8e5a2`, una voce: il fondo del pannello Structure deve essere `#ffffff` come nel mock 7a, non il fondo colorato attuale. Scope sotto `.ir-tab-body--structure`, o al livello del body se il fondo viene da `.properties-panel` — in quel caso override locale, senza toccare la regola condivisa. Verifica del computed style, screenshot, commit singolo.
+**Files touched**: editor-v2/viewpoint/authoring/StructureGroups.scss (blocco `.ir-tab-body--structure`: `background`, `padding: 14px`, tiraggio negativo 20/16, piu' la regola condizionale del tiraggio in alto), docs/claude-code-log.md. Sonda `scripts/smoke/_tmp_structure_7a.ts` estesa (catena dei fondi, geometria, secondo ritaglio del pannello) e i `.png` (non committati).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: (a)
+**Regressions**: no (typecheck 33 = baseline su output completo; build exit 0, solo il chunk-warning; `npx vitest run` 1832 passed / 0 failed coi 9 file rotti all'import = baseline nota; `npm run smoke` 12 passed / 0 failed / 3 skipped; `_tmp_structure_tab.ts` **22/22 invariata**)
+**Out-of-scope changes**: no (un solo file di sorgente, quello del prompt; la regola condivisa non e' toccata)
+**Layer Impact Report**: not-required (nessun file di §3.1)
+**Smoke visivo**: passato, ed e' il criterio d'accettazione. `background-color` sul body del tab: `rgba(0, 0, 0, 0)` -> **`rgb(255, 255, 255)`**. Il bianco arriva ai bordi, misurato sulla geometria: pannello `x=1213 w=383`, body `x=1221 w=367` col primo tentativo (8px di slate ancora scoperti per lato) e **`x=1213 w=383`, identico al pannello**, dopo il tiraggio corretto; `scrollWidth - clientWidth = 0`, nessun overflow orizzontale introdotto. `padding` del body `0` -> **14px**. Ritagli in `scripts/smoke/_tmp_structure_7a_after.png` e `_tmp_structure_7a_after_panel.png`.
+**Notes**: Il fondo era di `.properties-panel` (#f8fafc), non del body: ridipinto localmente, regola condivisa intatta. L'inset vero e' `16px 20px !important` (`properties-with-tree-view.scss:578`), non `--space-3`: il tiraggio e' 20/16, coupling dichiarato in commento. Quello in alto e' condizionato a `:not(:has(> [role=alert]))`, perche' un `ErrorText` precede i body. Chiude lo scostamento (1) della entry precedente, che il prompt voleva emendata: il log e' add-only (R-RAIL-45).
+**Prompt document name**: prompt inline, nessun documento
+
 ## 2026-08-29 — style(editor-v2): il tab Structure scende alla densita' del mock 7a
 **Prompt**: allineamento visivo del solo tab Structure al design 7a — `StructureGroups.scss` piu' eventuali classi nel `.tsx`, zero logica, zero IR. Valori lifted dal mock: body/gruppi 16px con separatore `border-top` + 14px, righe 10px, eyebrow 11/600/0.08em, segmented a track bordato senza pillola bianca, select compatto, color come swatch 14px + hex mono a riposo, help text 11px con `bi-info-circle`, toggle cyan piccolo. Vincolo: token del design system dove esistono, scope sotto il body `ir-structure`, screenshot prima/dopo.
 **Files touched**: editor-v2/viewpoint/authoring/StructureGroups.scss (riscritta), editor-v2/viewpoint/authoring/StructureGroups.tsx (un `<div className="ir-structure-group ir-structure-group--*">` attorno a ciascuno dei tre `FormSection`, `className="ir-structure-group__help"` sui cinque `HelpText`; nessun'altra riga), docs/claude-code-log.md. Sonde `scripts/smoke/_tmp_structure_7a.ts`, `_tmp_sel_rules.ts`, `_tmp_help_icon.ts` e i due `.png` (non committate).
