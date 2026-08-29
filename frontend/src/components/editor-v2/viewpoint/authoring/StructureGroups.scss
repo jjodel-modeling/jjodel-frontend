@@ -1,129 +1,26 @@
-/* StructureGroups — the three level-2 groups of the Structure tab.
+/* StructureGroups — quel che resta di specifico dei tre gruppi di livello 2.
 
-   Metrics lifted from artboard 7a of the instance-node handoff (`Instance Node
-   Proposal.dc.html`): a rail 320px wide, rows laid out label-left / control-right,
-   groups separated by a hairline. 7a is markedly denser than the primitives'
-   default rhythm, which is sized for the wide Properties column — so this sheet
-   restyles them down, and it does so ONLY under `.ir-tab-body--structure` and,
-   inside it, only under the two classes this component owns
-   (`.ir-structure-group`, `.ir-structure-group__control`). No other tab body of
-   the rail, and not the Field compartments editor nested in this one, is reached.
+   Il sistema 7a — ritmo dei gruppi, eyebrow, riga campo, segmented, select, input,
+   color, help — è salito a `components/editors/railSystem.scss` in Fase 2
+   (`docs/discovery/discovery_2026-08-29_stile_7a_sistema_rail.md`) e vale ora per
+   tutti i tab del rail. Qui restano le tre cose che appartengono a questi gruppi e
+   a nessun altro: la riga label-sinistra/controllo-destra costruita a mano (queste
+   righe non sono `jj-field`), il chip del valore preservato, e la riga riassuntiva
+   di 7b.
 
-   Every value comes from styles/tokens/ where a token resolves to the design's
-   own number — the form family does for the whole slate ramp of 7a:
-     --color-form-label        #475569  row label
-     --color-form-muted        #94a3b8  eyebrow, help text, chevron, count
-     --color-form-section      #64748b  inactive segment, hex readout
-     --color-form-border       #e2e8f0  segmented track
-     --color-form-border-strong #cbd5e1 select
-     --color-text-primary      #0f172a  active segment, select value
-   The two remaining numbers (10px inner gap, 14px separator inset) have no token
-   on the 8px grid and stay literal. No variable is declared here (rule 28).
-
-   A stylesheet of its own rather than the stacked `jj-field` the rest of the panel
-   uses: 7a's rows put the control on the same line as its label, which `jj-field`
-   (label above, control below) cannot express — the same reason FormAuthoringBody.scss
-   exists for its tables. */
-
-.ir-tab-body--structure {
-    /* 7a paints the tab body white, against the slate-50 the app puts everywhere
-       else. That ground is `.properties-panel`'s (`components/editors/info.scss:414`,
-       `background` inherited from the card) and it is shared by every tab of the rail,
-       so it is repainted HERE and not there: the body pulls out over the panel's
-       padding and lays down its own — 14px, the mock's number, which also closes the
-       one deviation the first pass declared on the body inset.
-
-       The pull is 20/16 and not `--space-3`, measured: the inset that actually
-       applies is `padding: 16px 20px !important` from
-       `properties-with-tree-view.scss:578`, which beats `info.scss:414`'s
-       `var(--space-3)`. The two literals are a coupling to that rule — if the card's
-       inset moves, a band of slate reappears here, and the fix is to follow it.
-
-       The top pull is conditional: an `ErrorText` (`VertexAuthoringPanel.tsx:388`,
-       `role="alert"`) can precede the bodies, and a negative margin would ride over
-       it. With one on screen the white simply starts below it. */
-    margin: 0 -20px -16px;
-    padding: 14px;
-    background: var(--color-form-surface);
-
-    /* Group rhythm of 7a: 16px between groups, and every group after the first
-       opens on a hairline set 14px above its eyebrow. */
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-4);
-
-    > :not(:first-child) {
-        border-top: 1px solid var(--color-slate-100);
-        padding-top: 14px;
-    }
-
-    /* FormSection is sized for the wide column: 24px above the section, 12px under
-       its title, 12px between fields. 7a runs 10px throughout, and the space above
-       comes from the gap declared here instead. `> h3 + div` is the section content:
-       every FormSection of this tab passes `divider={false}`, so no divider div sits
-       between the two. */
-    .ir-structure-group > section,
-    > section {
-        margin-top: 0;
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-    }
-
-    .ir-structure-group > section > h3,
-    > section > h3 {
-        margin: 0;
-        font-size: var(--text-xs);
-        font-weight: 600;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        color: var(--color-form-muted);
-    }
-
-    .ir-structure-group > section > h3 + div,
-    > section > h3 + div {
-        gap: 10px;
-    }
-
-    /* The help text of 7a: 11px, muted, 6px from its icon, and no margin of its own
-       — the 10px group gap already spaces it off the row above. */
-    .ir-structure-group__help {
-        gap: 6px;
-        margin-top: 0;
-        font-size: var(--text-xs);
-        line-height: 1.5;
-        color: var(--color-form-muted);
-
-        /* `.properties-panel-container p > i.bi-info-circle` (0,2,2) hides the glyph
-           inside the Properties card — the B4 mockup wanted a hint to be a quiet line
-           of text, not an annotated callout (`properties-with-tree-view.scss:689`).
-           7a draws it, so this tab takes it back at (0,3,2), and only this tab: the
-           card rule keeps standing everywhere else it applies. */
-        > i.bi-info-circle {
-            display: inline-block;
-            margin-top: 1px;
-            /* The primitive writes `font-size: var(--icon-size-sm)` (14px) INLINE on
-               the glyph, which nothing but `!important` can reach; at 11px body text
-               a 14px glyph reads as a control rather than a mark. */
-            font-size: var(--text-xs) !important;
-            color: var(--color-form-muted);
-        }
-
-        code {
-            font-family: var(--font-family-mono, 'IBM Plex Mono', Monaco, Consolas, monospace);
-            font-size: var(--text-xs);
-            color: var(--color-form-section);
-            background: none;
-            padding: 0;
-        }
-    }
-}
-
-.properties-panel:not(:has(> [role='alert'])) > .ir-tab-body--structure {
-    margin-top: -16px;
-}
+   Sono spariti da qui, perché il sistema li fa: il fondo bianco e il suo tiraggio
+   negativo 20/16 con il coupling all'inset della card, il gate
+   `:not(:has(> [role='alert']))` che quel tiraggio richiedeva, il padding di 14px,
+   il ritmo 16/10 dei gruppi, la eyebrow, e tutto il blocco dei controlli sotto
+   `__control`. Con essi sono spariti anche i tre `div` di gruppo e la classe
+   `__help` nel `.tsx`: esistevano solo per scopare, e lo scope ora è il rail. */
 
 .ir-structure-group {
+    /* La riga di 7a. Costruita qui e non su `jj-field` perché queste righe non ne
+       usano il markup: `Row` in `StructureGroups.tsx` rende label e controllo come
+       due `span`, senza label semantica. I valori sono gli stessi che il sistema dà
+       a un `jj-field` — 13px `--color-form-label` a sinistra, controllo a destra,
+       gap 12. */
     &__row {
         display: flex;
         align-items: center;
@@ -139,21 +36,36 @@
         white-space: nowrap;
     }
 
-    /* The value the IR still holds and this Symbol does not offer. Sits under the
-       reason line, which has already said WHY the option is gone; this one says the
-       authored value is still there and will come back with the Symbol. */
+    /* La colonna dei controlli non si allarga: un segmented da due segmenti e uno da
+       quattro sono entrambi allineati al bordo del rail, ed è quello che fa leggere
+       la colonna come colonna quando le opzioni cambiano per Symbol. */
+    &__control {
+        flex: 0 0 auto;
+        display: inline-flex;
+        align-items: center;
+        justify-content: flex-end;
+        min-width: 0;
+        max-width: 72%;
+    }
+
+    /* Il valore che l'IR conserva e questo Symbol non offre. Sta sotto la riga di
+       motivo, che ha già detto PERCHÉ l'opzione non c'è; questa dice che il valore
+       autorato è ancora lì e torna col Symbol. */
     &__preserved {
         margin-top: 0;
     }
 
-    /* The single summary at the foot of the tab. `bi-eye-slash`, one line, both
-       families of cause on it (7b). Its hairline comes from the tab body's
-       `> :not(:first-child)` rule; the inset is overridden below, because 7b sets
-       this one at 12px rather than the 14px the groups use. */
+    /* L'unica riga riassuntiva in coda al tab (7b). `bi-eye-slash`, una riga, con
+       entrambe le famiglie di causa. Non è una `section`, quindi la hairline che il
+       sistema dà a `section + section` non la raggiunge: se la posa da sé, con
+       l'inset a 12px che 7b le assegna invece dei 14 dei gruppi. */
     &__hidden {
         display: flex;
         align-items: flex-start;
         gap: 6px;
+        margin-top: var(--space-4);
+        padding-top: 12px;
+        border-top: 1px solid var(--color-slate-100);
         font-size: var(--text-xs);
         line-height: 1.6;
         color: var(--color-form-muted);
@@ -167,139 +79,6 @@
     }
 }
 
-/* 7b's inset for the summary row, at the specificity the `> :not(:first-child)`
-   rule above carries (0,2,0) — the bare BEM class would lose to it. */
-.ir-tab-body--structure > .ir-structure-group__hidden { padding-top: 12px; }
-
-/* The control column does not stretch: a segmented control of two segments and one
-   of four are both right-aligned against the rail's edge, which is what makes the
-   column read as a column when the options differ per Symbol. */
-.ir-tab-body--structure .ir-structure-group__control {
-    flex: 0 0 auto;
-    display: inline-flex;
-    align-items: center;
-    justify-content: flex-end;
-    min-width: 0;
-    max-width: 72%;
-
-    /* ── Segmented: one bordered track, no chip ────────────────────────────
-       The primitive draws a slate-100 track with a white raised chip on the
-       selected segment (project decision D1). 7a inverts that: the track is a
-       1px outline on the panel's own surface and the SELECTED segment is the
-       filled one. Restyled here rather than in the primitive — D1 governs every
-       other segmented control in the app. */
-    [role='radiogroup'] {
-        gap: 0;
-        padding: 0;
-        background: none;
-        border: 1px solid var(--color-form-border);
-        border-radius: var(--radius-md, 8px);
-        overflow: hidden;
-    }
-
-    [role='radio'] {
-        border-radius: 0;
-        padding: 5px 10px;
-        font-size: var(--text-md);
-        font-weight: 400;
-        line-height: 1.4;
-        color: var(--color-form-section);
-        box-shadow: none;
-
-        + [role='radio'] { border-left: 1px solid var(--color-form-border); }
-    }
-
-    [role='radio'][aria-checked='true'] {
-        background: var(--color-slate-100);
-        color: var(--color-text-primary);
-        font-weight: 500;
-        box-shadow: none;
-    }
-
-    /* 7a widens the two numeric segments so the track does not read as narrower
-       than its neighbours on a single glyph. */
-    [aria-label='Columns of the compartment rows'] [role='radio'] { padding: 5px 12px; }
-
-    /* ── Select: the compact value box of 7a, not the input-height control ─────
-       Size does not come off the primitive here. `.view-editor-root select`
-       (`components/forEndUser/color.scss:667`) pins height 36px / min-width 170px at
-       the same (0,1,1) specificity the primitive's own class carries, and wins on
-       source order — measured, not assumed, which is why this block is anchored on
-       `.ir-tab-body--structure` and the three size properties are all restated. The
-       same rule reaches `input[type='text']` through
-       `styles/components/_form-system.scss:42`. */
-    select {
-        width: auto;
-        min-width: 0;
-        max-width: 100%;
-        height: 28px;
-        min-height: 0;
-        padding: 5px 24px 5px 10px;
-        font-size: var(--text-md);
-        line-height: 1.4;
-        border: 1px solid var(--color-form-border-strong);
-        border-radius: var(--radius-sm);
-        color: var(--color-text-primary);
-    }
-
-    select:hover:not(:disabled) { border-color: var(--color-border-hover); }
-    select:focus { border-width: 1px; }
-
-    /* The chevron of 7a: 10px, muted, tucked against the 10px right padding. */
-    select + span {
-        right: 8px;
-        font-size: 10px;
-        color: var(--color-form-muted);
-    }
-
-    /* ── Color: a 14px swatch and the hex as TEXT at rest ──────────────────
-       7a shows no input chrome until the value is being edited. The hex field
-       keeps its input semantics (paste still works) and drops its border and
-       fill; focus — which is what a click on the value produces — brings the
-       box back. */
-    input[type='color'] {
-        width: 14px;
-        height: 14px;
-        border: 1px solid var(--color-form-muted);
-        border-radius: 3px;
-    }
-
-    input[type='color']::-webkit-color-swatch { border-radius: 2px; }
-    input[type='color']::-moz-color-swatch { border-radius: 2px; }
-
-    input[type='text'] {
-        flex: 0 0 auto;
-        width: 8ch;
-        height: auto;
-        min-height: 0;
-        padding: 0;
-        font-family: var(--font-family-mono, 'IBM Plex Mono', Monaco, Consolas, monospace);
-        font-size: var(--text-xs);
-        line-height: 1.4;
-        color: var(--color-form-section);
-        background: none;
-        border-color: transparent;
-    }
-
-    input[type='text']:hover:not(:disabled) { border-color: transparent; }
-
-    input[type='text']:focus {
-        padding: 1px 4px;
-        color: var(--color-text-primary);
-        background: var(--color-form-surface);
-        border-color: var(--input-border-color-focus);
-    }
-}
-
-/* The two slate primitives above are theme-invariant by design (styles/tokens.css),
-   so the divider and the selected segment need a dark counterpart of their own —
-   the same shape ListEditor.module.css uses for its hardcoded light surfaces. */
-html[data-theme='dark'] {
-    .ir-tab-body--structure > :not(:first-child) {
-        border-top-color: var(--color-border-primary);
-    }
-
-    .ir-structure-group__control [role='radio'][aria-checked='true'] {
-        background: var(--color-bg-tertiary);
-    }
+html[data-theme='dark'] .ir-structure-group__hidden {
+    border-top-color: var(--color-border-primary);
 }

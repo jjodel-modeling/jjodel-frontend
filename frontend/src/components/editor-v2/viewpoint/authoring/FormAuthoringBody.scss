@@ -144,25 +144,54 @@
         gap: 6px;
         padding: 0 var(--space-2, 8px) var(--space-2, 8px);
         border-bottom: 1px solid var(--color-border-secondary);
-        font-size: var(--text-2xs);
+        /* 7c: 11px sulla riga, non i 10 del resto della tabella, e il grigio della
+           famiglia form invece del terziario. Il glifo resta `bi-arrow-return-right`
+           e resta muto. */
+        font-size: var(--text-xs);
         line-height: 1.5;
-        color: var(--color-text-tertiary);
+        color: var(--color-form-muted);
 
         &:last-child { border-bottom: none; }
 
-        > i { margin-top: 1px; }
+        > i { margin-top: 1px; color: var(--color-form-muted); }
 
         code {
             font-family: var(--font-mono);
-            font-size: var(--text-2xs);
+            font-size: var(--text-xs);
+            color: var(--color-form-section);
         }
+    }
+
+    /* Il verbo dell'override. 7c disegna l'ambra sul contenitore della riga e poi la
+       sovrascrive su ogni span interno, quindi a video non se ne vede: la ratifica di
+       Fase 2 la vuole sul solo verbo, ed e' li' che sta. `--color-warning-text` vale
+       esattamente `#b45309` in light (amber-700, `_colors-light.scss:414`) e ha una
+       controparte dark, cosa che il literal non avrebbe. */
+    &__provenance-verb {
+        color: var(--color-warning-text);
+        font-weight: 500;
     }
 
     /* The renderer the view is covering: the one word the author has to read to judge
        the override, so it steps up out of the tertiary grey. */
     &__provenance-kind {
-        color: var(--color-text-secondary);
+        color: var(--color-form-section);
         font-weight: 500;
+    }
+
+    /* Il Reset della riga di provenienza: 7c lo vuole `#0284c7` (sky-600), non
+       l'accent slate del link generico di questo body. Literal per scelta dichiarata,
+       sul precedente di D-5-2: l'unico token a quel valore e' `--color-form-dirty-text`
+       («edited, not saved»), semanticamente estraneo a un comando di ripristino, e la
+       famiglia sky del design system si ferma alla grade 500. L'underline resta — il
+       mock non ce l'ha, ma toglierla lascerebbe un comando distinguibile dal solo
+       colore. */
+    &__provenance &__link {
+        font-size: var(--text-xs);
+        color: #0284c7;
+        font-weight: 500;
+
+        &:hover { color: #0369a1; }
     }
 
     &__legend {

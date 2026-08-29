@@ -14,23 +14,12 @@
 // ============================================
 // OUTER PADDING — match Properties' airy .props-section__body inset
 // ============================================
-// The Properties panel's airy look comes from `.props-section__body { padding: 4px 14px 12px }`
-// in info-improvements.scss:971. Each CollapsibleSection in Info.tsx adds a 14px horizontal
-// inset around its content. InfoData renders flat <section class="properties-tab properties-panel">
-// (no CollapsibleSections), so without this rule the content would touch the edges.
-//
-// Scoped to `.view-editor-tab-content > section.properties-tab.properties-panel` so it ONLY
-// affects InfoData (the other sub-tabs Template/Style/Events/Options render different root
-// elements — .template-tab, .style-tab, .events-tab, .options-tab — and have their own padding).
-//
-// Uses !important + higher specificity than `.properties-panel { padding: 0px !important }`
-// (info-improvements.scss:1207) so it wins the cascade.
-.view-editor-tab-content > section.properties-tab.properties-panel {
-  // 16px horizontal (8px grid ×2) so the Name field's left border + focus ring
-  // and the right-aligned toggles have clearance from the panel edges; vertical
-  // padding unchanged.
-  padding: 12px 16px !important;
-}
+// L'inset di questo pannello viene da `properties-with-tree-view.scss:578`, che dichiara
+// lo stesso selettore dentro `.properties-panel-container` e vince per specificità. La
+// regola che stava qui — `padding: 12px 16px !important` — era morta da allora, e la sua
+// presenza rendeva illeggibile quale valore fosse davvero in vigore: rimossa in Fase 2 di
+// `docs/discovery/discovery_2026-08-29_stile_7a_sistema_rail.md` (punto 2 delle ratifiche),
+// quando quell'inset è passato ai 14px di 7a.
 
 // ============================================
 // MAIN CONTAINER — compact like Properties

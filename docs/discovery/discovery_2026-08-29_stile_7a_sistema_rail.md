@@ -262,3 +262,113 @@ leggibili da `document.styleSheets`, e il controllo positivo `panel.matches('.pr
 passa mentre l'elenco resta vuoto, quindi il silenzio non è un risultato; l'attribuzione di
 §3 è stata fatta sulla sorgente, per catena di selettori),
 `_tmp_structure_7a.ts` (esteso con catena dei fondi e geometria).
+
+---
+
+# Addendum — Fase 2 eseguita (2026-08-29)
+
+Le cinque ratifiche sono arrivate e la promozione è stata scritta. Questo addendum
+registra come sono state sciolte le cinque domande di §7 e cosa la Fase 2 ha misurato
+in più.
+
+## Le ratifiche, e cosa hanno prodotto
+
+**Q3 → opzione (b), la raccomandazione del report.** Il bianco sta su
+`.properties-with-tree-view--rail .properties-panel-container .view-editor-tab-content`.
+La famiglia globale di `_form-system.scss:664` non è stata toccata: il pannello interno
+riprende il bianco con un `!important` che pareggia quello della famiglia. Il tiraggio
+negativo 20/16 di `f2226b575`, il suo coupling dichiarato e il gate
+`:not(:has(> [role='alert']))` sono spariti: esistevano solo per la scopatura.
+
+**Tre classi di antenato, non due — misurato.** La sede scritta nel prompt
+(`--rail .view-editor-tab-content`, due classi) è stata provata e **non basta**: la skin
+B4 dichiara `.properties-panel-container .jj-field select` e `info.scss:914` dichiara
+`.properties-panel .input-container select`, entrambe (0,2,1) come la sede a due classi.
+A pari specificità decide l'ordine sorgente, che questo foglio controlla verso
+`properties-with-tree-view` (dov'è importato in coda) ma non verso `info.scss`. Col terzo
+antenato le regole di controllo salgono a (0,3,1) e la questione si chiude senza
+`!important`. Prima della correzione i select di Applies to e Form restavano a
+13px/r6/200px; dopo, tutti i controlli visibili di tutti i tab misurano
+`12px / 28px / rgb(203,213,225)`.
+
+**Q2 → la riga campo, e il capovolgimento che la misura ha imposto.** La prima stesura
+faceva della griglia il default di ogni `.jj-field`, con due eccezioni. È stata bocciata
+sullo schermo: dentro Structure il campo «Row segments» porta un `ListEditor` annidato —
+un `div` con classe hashata, che l'eccezione `div:not([class])` non intercettava — e la
+lista finiva schiacciata nella colonna destra. La riga è ora **opt-in**, con l'elenco dei
+controlli atomici che la reggono. Un elenco di ciò che regge la riga è verificabile; un
+elenco di ciò che non la regge non si chiude mai.
+
+**Trappola CSS che ha spento tutto in una volta.** La prima versione dell'opt-in usava
+`:has()` dentro `:has()`, che non è CSS valido — e un selettore invalido non cade da
+solo: porta giù l'intera lista separata da virgole. A schermo la riga era sparita da
+**tutti** i tab insieme, il che somiglia a «la regola non si applica» e invece era «la
+regola non esiste». Riscritta con combinatori discendenti dentro l'argomento.
+
+**Q1 → i sette tab.** `SymbolCard` è in perimetro e il sistema la raggiunge senza cambi
+strutturali: vive nello stesso contenitore, e le servono due sole regole (la riga d'asse
+e lo swatch a 14px), perché la sua riga non è un `jj-field`.
+
+**Q4 → l'ambra sul verbo.** Il report aveva misurato che nel mock l'ambra sta sul
+contenitore ed è sovrascritta da ogni span interno, quindi invisibile. La ratifica la
+vuole sul verbo, e lì è: `--color-warning-text` vale esattamente `#b45309` in light
+(`_colors-light.scss:414`) e ha una controparte dark, cosa che il literal non avrebbe.
+
+**Q5 → il Source resta fuori.** Il `<pre>` di `IRSourceBody` porta stili inline e
+toccarlo è una modifica al `.tsx`. Il tab prende il fondo e l'inset del sistema; il
+blocco di codice resta com'è. Voce futura.
+
+## Ostacolo di fixture confermato, e superato per la sola 7c
+
+`_tmp_7c_provenance.ts` **falliva già su HEAD**, verificato riportando il tree a HEAD e
+rigiocandola: `option textarea not offered ()`. La causa è `4c6bd845d`, che ha riparato
+il fixture passando l'enum: `tint` è ora `Palette` e non offre più alcun override
+compatibile (dump per riga: `opts: [""]`). La sonda è invecchiata rispetto a quella
+riparazione — non è una regressione di Fase 2.
+
+Per vedere davvero la riga 7c si dichiara `jjodel/renderer=swatch` su `description`
+(EString, il cui unico override compatibile è `textarea`): il widget allora **copre** la
+dichiarazione invece di concordarci. Misurato così, con la riga a schermo: riga e glifo
+11px `#94a3b8`, verbo `#b45309` a 500, renderer coperto `#64748b` a 500, evidenza in mono
+`#64748b`, Reset `#0284c7` a 500.
+
+## Non verificato a schermo, e perché
+
+`Appearance` e `Text` sono i due tab dei pannelli edge e row. Il fixture
+`__jjodelInstallIRDemo()` installa **solo view di kind vertex** (righe del tree:
+`IR Demo State`, `IR State baseVertex`, `IR State isInitialVertex`), quindi i due tab non
+sono raggiungibili senza costruire una view edge o row — authoring, non stile. Sono
+`ir-tab-body` sotto lo stesso scope e il sistema li raggiunge per costruzione, ma la
+prova a schermo manca. Ostacolo di fixture, causa (g).
+
+## Il controllo negativo, provato meglio di uno screenshot
+
+La card della sintassi astratta non è solo byte-identica (`cmp` sui due PNG): è
+**strutturalmente fuori portata**. Misurato sul DOM vivo, il suo pannello dà
+`insideTabContent=false` — non è dentro `.view-editor-tab-content`, quindi nessuna delle
+regole nuove può raggiungerla, indipendentemente dalla specificità.
+
+L'editor dei viewpoint non è esercitabile: `NestedView` non ha importatori vivi. Il solo
+riferimento fuori dal proprio file è l'`export` del barrel (`components/editors/index.ts:8`)
+e una riga **commentata** in `Dock.tsx:21`. Controllo positivo sulla stessa grep: la
+forma `from '…ViewData'` ne trova 2. Il suo `.viewpoint-tab` è dipinto solo dalla
+famiglia di `_form-system.scss:664`, che non è stata toccata.
+
+## Scostamenti residui, dichiarati
+
+1. **Due input restano a 13px** in Applies to (lo stepper di Priority e il suo gemello):
+   li tiene la neutralizzazione di U-5 (`properties-with-tree-view.scss:378-386`, (0,4,1)),
+   scritta apposta per il difetto della casella vuota. Non toccata: sovrascriverla per
+   1px di font riaprirebbe quel difetto.
+2. **`Id` e `Title` del compartment editor restano impilati** mentre `Source` accanto a
+   loro è una riga: i primi due sono campi di testo a piena larghezza, il terzo un select
+   allineato a destra. Coerente campo per campo, non uniforme a colpo d'occhio.
+3. **Il rientro degli hint della skin B4** (`margin-left` sulla colonna della label,
+   `max-width: 290px`) è annullato dentro il rail: con la riga di 7a la label non occupa
+   più una colonna propria e il rientro lasciava la riga di aiuto disallineata.
+4. **I sotto-tab legacy di una view senza IR** (Template, Style, Events, Options) vivono
+   nello stesso contenitore e prendono fondo, inset e sistema dei controlli. È il raggio
+   che «tutti i tab del rail» comporta, ed è dichiarato qui perché il prompt elencava i
+   sette tab IR e non questi.
+5. **Il `Reset` di 7c tiene l'underline**, che il mock non ha: toglierla lascerebbe un
+   comando distinguibile dal solo colore.

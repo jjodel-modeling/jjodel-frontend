@@ -1,0 +1,349 @@
+/* railSystem.scss — lo stile 7a come sistema del rail.
+   =========================================================================
+
+   Fase 2 di `docs/discovery/discovery_2026-08-29_stile_7a_sistema_rail.md`.
+   Quello che `dc0a8e5a2`/`f2226b575` avevano scopato sotto
+   `.ir-tab-body--structure` vive qui, una volta sola, per tutti i tab.
+
+   SEDE DELLO SCOPE — `.properties-with-tree-view--rail .properties-panel-container
+   .view-editor-tab-content`. Tre classi e non due, misurato: la skin B4 dichiara i
+   suoi input e select come `.properties-panel-container .jj-field select` — (0,2,1),
+   pari a due classi più un elemento — e `components/editors/info.scss:914` fa lo
+   stesso con `.properties-panel .input-container select`. A pari specificità decide
+   l'ordine sorgente, che questo foglio controlla solo verso `properties-with-tree-view`
+   (dove è importato in coda) e non verso `info.scss`. Il terzo antenato porta le
+   regole di controllo a (0,3,1) e chiude la questione senza `!important`.
+   Il report aveva misurato che il fondo `#f8fafc` NON sta sul selettore condiviso
+   `section.properties-tab.properties-panel` — quello non dichiara alcun background —
+   ma su una famiglia a dieci selettori con `!important`
+   (`styles/components/_form-system.scss:664`) che raggiunge l'editor dei viewpoint,
+   i quattro sotto-tab legacy della view e la pagina Collaborative. Quella famiglia
+   resta intatta: si dipinge un antenato che appartiene al solo rail, e il pannello
+   interno riprende il bianco con l'unico `!important` di questo foglio, che serve a
+   pareggiare quello della famiglia.
+
+   COSA RAGGIUNGE — tutto ciò che il rail monta dentro il tab content: i sei
+   `ir-tab-body` dei tre pannelli di authoring, la `SymbolCard` (che tab body non è,
+   §1 del report) e — conseguenza dichiarata — i sotto-tab legacy di una view senza
+   IR, che vivono nello stesso contenitore. NON raggiunge la card della sintassi
+   astratta né l'editor dei viewpoint, che sono i due controlli negativi.
+
+   VALORI — l'artboard 7a di `Instance Node Proposal.dc.html`, e il tab Structure in
+   produzione come referenza viva. I token della famiglia form risolvono esattamente
+   la rampa slate del mock:
+     --color-form-label         #475569  label di riga
+     --color-form-muted         #94a3b8  eyebrow, help, chevron
+     --color-form-section       #64748b  segmento inattivo, hex
+     --color-form-border        #e2e8f0  track del segmented
+     --color-form-border-strong #cbd5e1  select e input
+     --color-text-primary       #0f172a  segmento attivo, valore
+   Restano literal i 10px del passo interno e i 14px dell'inset del separatore:
+   non stanno sulla griglia da 8 e non hanno token. Nessuna variabile è dichiarata
+   qui (regola 28). */
+
+.properties-with-tree-view--rail .properties-panel-container .view-editor-tab-content {
+    background: var(--color-form-surface);
+
+    /* La famiglia di `_form-system.scss:664` dipinge `.properties-tab` a `#f8fafc`
+       con `!important`, e resta viva per le sei superfici fuori dal rail: qui la si
+       pareggia sul solo pannello di questo contenitore. È l'unico `!important` del
+       foglio. */
+    > section.properties-tab.properties-panel,
+    > section.properties-tab.properties-panel.symbol-card {
+        background-color: var(--color-form-surface) !important;
+    }
+
+    /* ── Ritmo dei gruppi (7a) ────────────────────────────────────────────────
+       16px fra un gruppo e il successivo, che si apre su una hairline posata 14px
+       sopra la sua eyebrow. `FormSection` è tarato sulla colonna larga (24px sopra
+       la sezione, 12px sotto il titolo, 12px fra i campi): qui scende a 16/10/10. */
+    section {
+        margin-top: var(--space-4);
+
+        &:first-child { margin-top: 0; }
+
+        + section {
+            border-top: 1px solid var(--color-slate-100);
+            padding-top: 14px;
+        }
+
+        /* Eyebrow. `> h3` e non `h3`: la sezione può contenerne altri annidati. */
+        > h3 {
+            margin: 0 0 10px;
+            font-size: var(--text-xs);
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--color-form-muted);
+        }
+
+        /* Il contenuto della sezione. Tutti i `FormSection` del rail passano
+           `divider={false}`, quindi nessun div di divider si interpone. */
+        > h3 + div { gap: 10px; }
+    }
+
+    /* ── Riga campo ───────────────────────────────────────────────────────────
+       7a mette la label a sinistra e il controllo a destra. `jj-field` impila, ed è
+       un idioma condiviso — 172 occorrenze in 22 file, 67 regole in 11 fogli — che
+       il rail non possiede: la riga si ottiene qui, sotto l'antenato del rail, senza
+       toccare né la base né la card della sintassi astratta.
+
+       CONTROINDICAZIONE MISURATA, e il motivo della griglia invece del flex: un
+       `jj-field` del rail non ha due figli. `MatchingSection.tsx:147-231` ne mette
+       quattro o cinque — label, Toggle, lista, Select, uno o due HelpText — e un
+       `space-between` li allineerebbe tutti su una riga sola. La griglia mette il
+       PRIMO controllo accanto alla label e manda tutto il resto a capo su entrambe
+       le colonne, che è esattamente come 7a dispone la riga e la sua riga di aiuto. */
+    .jj-field {
+        margin-bottom: 10px;
+
+        &:last-child { margin-bottom: 0; }
+
+        > .jj-field-label {
+            margin-bottom: 0;
+            font-size: var(--text-sm);
+            font-weight: 400;
+            color: var(--color-form-label);
+        }
+    }
+
+    /* La riga vera e propria è OPT-IN, non opt-out, e la lista è quella dei controlli
+       atomici. La prima stesura faceva il contrario — griglia su ogni `jj-field`, con
+       due eccezioni — e la misura l'ha bocciata: dentro il tab Structure il campo
+       «Row segments» del `FieldCompartmentListEditor` porta un `ListEditor` annidato,
+       che è un `div` con classe hashata e quindi sfuggiva a `div:not([class])`; la
+       lista finiva schiacciata nella colonna destra. Un elenco di ciò che la riga
+       regge è verificabile; un elenco di ciò che non la regge non lo è, perché non si
+       chiude mai. Un campo fuori lista resta impilato, che è la resa di oggi.
+
+       Niente `:has()` dentro `:has()`: non è CSS valido, e un selettore invalido non
+       cade da solo — porta giù l'INTERA lista separata da virgole. La prima stesura
+       dell'opt-in lo faceva e ha spento la riga su tutti i tab in una volta, il che a
+       schermo somigliava a «la regola non si applica» invece che a «la regola non
+       esiste». I combinatori discendenti qui sotto dicono la stessa cosa e sono
+       validi. */
+    .jj-field:has(> .jj-field-label + :is(input, select, span, [role='switch'], [role='radiogroup'])),
+    .jj-field:has(> .jj-field-label + div > [role='switch']),
+    .jj-field:has(> .jj-field-label + div > [role='radiogroup']),
+    .jj-field:has(> .jj-field-label + div > input),
+    .jj-field:has(> .jj-field-label + div > select),
+    .jj-field:has(> .jj-field-label + div > div > input[type='color']) {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        align-items: center;
+        column-gap: var(--space-3);
+        row-gap: var(--space-2);
+
+        > .jj-field-label { grid-column: 1; }
+
+        /* Il controllo: seconda colonna, allineato al bordo destro del rail come in
+           7a. `min-width: 0` perché una griglia non lascia rimpicciolire un figlio
+           sotto il suo contenuto senza. */
+        > .jj-field-label + * {
+            grid-column: 2;
+            justify-self: end;
+            min-width: 0;
+            max-width: 100%;
+        }
+
+        /* Tutto ciò che segue il controllo — help, liste, builder — torna a piena
+           larghezza sotto la riga. */
+        > .jj-field-label + * ~ * { grid-column: 1 / -1; justify-self: stretch; }
+    }
+
+    /* ── Segmented ────────────────────────────────────────────────────────────
+       Il primitivo disegna un track `#f1f5f9` con la pillola bianca in rilievo
+       (decisione D1). 7a inverte: il track è un filo su superficie, e il segmento
+       SCELTO è quello pieno. Ristilato qui e non nel primitivo — D1 governa ogni
+       altro segmented dell'app. */
+    [role='radiogroup'] {
+        gap: 0;
+        padding: 0;
+        background: none;
+        border: 1px solid var(--color-form-border);
+        border-radius: var(--radius-md, 8px);
+        overflow: hidden;
+    }
+
+    [role='radio'] {
+        border-radius: 0;
+        padding: 5px 10px;
+        font-size: var(--text-md);
+        font-weight: 400;
+        line-height: 1.4;
+        color: var(--color-form-section);
+        box-shadow: none;
+
+        + [role='radio'] { border-left: 1px solid var(--color-form-border); }
+    }
+
+    [role='radio'][aria-checked='true'] {
+        background: var(--color-slate-100);
+        color: var(--color-text-primary);
+        font-weight: 500;
+        box-shadow: none;
+    }
+
+    /* I due segmenti numerici di 7a, allargati perché il track non legga più stretto
+       dei vicini su un glifo solo. */
+    [aria-label='Columns of the compartment rows'] [role='radio'] { padding: 5px 12px; }
+
+    /* ── Select e input ───────────────────────────────────────────────────────
+       La taglia non viene dal primitivo: `.view-editor-root select`
+       (`components/forEndUser/color.scss:667`, height 36 / min-width 170) e la
+       famiglia di `styles/components/_form-system.scss:42` per gli input vincono a
+       pari specificità per ordine sorgente. Misurato, non dedotto: per questo le tre
+       proprietà di taglia sono tutte ridichiarate. */
+    select {
+        width: auto;
+        min-width: 0;
+        max-width: 100%;
+        height: 28px;
+        min-height: 0;
+        padding: 5px 24px 5px 10px;
+        font-size: var(--text-md);
+        line-height: 1.4;
+        border: 1px solid var(--color-form-border-strong);
+        border-radius: var(--radius-sm);
+        color: var(--color-text-primary);
+    }
+
+    select:hover:not(:disabled) { border-color: var(--color-border-hover); }
+    select:focus { border-width: 1px; }
+
+    select + span {
+        right: 8px;
+        font-size: 10px;
+        color: var(--color-form-muted);
+    }
+
+    /* La skin B4 dichiara `border: 1px solid $pc-slate-200 !important` su
+       `.jj-field input` e `.jj-field select` (`properties-with-tree-view.scss:596`):
+       il colore del bordo è l'unica proprietà che la specificità da sola non porta
+       via, e 7a lo vuole a `#cbd5e1`. Secondo e ultimo `!important` del foglio,
+       speso per pareggiarne uno. */
+    .jj-field select,
+    .jj-field input:not([type='color']):not([type='checkbox']) {
+        border-color: var(--color-form-border-strong) !important;
+    }
+
+    input[type='text'],
+    input[type='number'] {
+        height: 28px;
+        min-height: 0;
+        padding: 5px 10px;
+        font-size: var(--text-md);
+        line-height: 1.4;
+        border: 1px solid var(--color-form-border-strong);
+        border-radius: var(--radius-sm);
+        color: var(--color-text-primary);
+    }
+
+    /* ── Color ────────────────────────────────────────────────────────────────
+       7a non mostra chrome d'input finché il valore non è in modifica. Il campo hex
+       conserva la sua semantica (incollare un hex continua a funzionare) e perde
+       bordo e fondo; il focus — che è quello che un click sul valore produce —
+       riporta la scatola. Agganciato al fratello `input[type='color']`, così vale
+       per ogni `ColorPicker` del rail e per nessun altro campo di testo. */
+    input[type='color'] {
+        width: 14px;
+        height: 14px;
+        border: 1px solid var(--color-form-muted);
+        border-radius: 3px;
+    }
+
+    input[type='color']::-webkit-color-swatch { border-radius: 2px; }
+    input[type='color']::-moz-color-swatch { border-radius: 2px; }
+
+    div:has(> input[type='color']) input[type='text'] {
+        flex: 0 0 auto;
+        width: 8ch;
+        height: auto;
+        padding: 0;
+        font-family: var(--font-family-mono, 'IBM Plex Mono', Monaco, Consolas, monospace);
+        font-size: var(--text-xs);
+        color: var(--color-form-section);
+        background: none;
+        border-color: transparent;
+
+        &:hover:not(:disabled) { border-color: transparent; }
+
+        &:focus {
+            padding: 1px 4px;
+            color: var(--color-text-primary);
+            background: var(--color-form-surface);
+            border-color: var(--input-border-color-focus);
+        }
+    }
+
+    /* ── Help e righe di causa ────────────────────────────────────────────────
+       `HelpText` rende un `<p>` con il suo glifo. La card Properties lo spegne
+       (`properties-with-tree-view.scss:689`, scelta B4: «un hint è una riga quieta,
+       non un callout»); 7a lo disegna, e la promozione se lo porta dietro — dentro
+       il rail. Fuori, la regola della card resta in piedi. */
+    p {
+        column-gap: 6px;
+        margin-top: 0;
+        /* La skin B4 rientra gli hint sulla colonna della label e li stringe a 290px
+           (`properties-with-tree-view.scss:676-682`), che è il ritmo della card a
+           label impilata. Con la riga di 7a la label non occupa più una colonna
+           propria, e il rientro lascerebbe la riga di aiuto disallineata da tutto il
+           resto. */
+        margin-left: 0;
+        max-width: none;
+        font-size: var(--text-xs);
+        line-height: 1.5;
+        color: var(--color-form-muted);
+
+        > i.bi-info-circle {
+            display: inline-block;
+            margin-top: 1px;
+            /* Il primitivo scrive `font-size: var(--icon-size-sm)` (14px) INLINE sul
+               glifo: solo `!important` lo raggiunge. A 11px di corpo un glifo da 14
+               legge come un controllo, non come un segno. */
+            font-size: var(--text-xs) !important;
+            color: var(--color-form-muted);
+        }
+
+        code {
+            font-family: var(--font-family-mono, 'IBM Plex Mono', Monaco, Consolas, monospace);
+            font-size: var(--text-xs);
+            color: var(--color-form-section);
+            background: none;
+            padding: 0;
+        }
+    }
+    /* ── SymbolCard ───────────────────────────────────────────────────────────
+       Il tab Symbol non è un tab body: `ViewData.tsx:111` lo dirotta su un componente
+       con radice propria (§1 del report). Il sistema lo raggiunge lo stesso — vive in
+       questo contenitore — ma la sua riga d'asse non è un `jj-field`, quindi label e
+       swatch vogliono le due regole che seguono. Nessun cambio strutturale al
+       componente. */
+    .symbol-card__axis {
+        justify-content: space-between;
+
+        > .jj-field-label {
+            font-size: var(--text-sm);
+            font-weight: 400;
+            color: var(--color-form-label);
+            margin-bottom: 0;
+        }
+    }
+
+    .symbol-card__swatch {
+        width: 14px;
+        height: 14px;
+        border-radius: 3px;
+        border-color: var(--color-form-muted);
+    }
+}
+
+/* Le due primitive slate consumate sopra sono invarianti al tema per costruzione
+   (`styles/tokens.css`), quindi la hairline e il segmento scelto vogliono una
+   controparte dark propria — la stessa forma che `ListEditor.module.css` usa per le
+   sue superfici chiare literal. Il dark resta comunque sospeso (R-RAIL-44): questa
+   è cintura, non copertura. */
+html[data-theme='dark'] .properties-with-tree-view--rail .properties-panel-container .view-editor-tab-content {
+    section + section { border-top-color: var(--color-border-primary); }
+    [role='radio'][aria-checked='true'] { background: var(--color-bg-tertiary); }
+}

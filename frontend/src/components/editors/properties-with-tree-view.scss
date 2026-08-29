@@ -574,9 +574,16 @@ $pc-hint-indent: 26px;        // 18px checkbox + 8px gap (the design-system Chec
         }
     }
 
-    // ─── Body: horizontal padding (base rule uses !important) ───
+    // ─── Body: inset (base rule uses !important) ───
+    // 14px, il numero di 7a, promosso a inset di sistema del rail (Fase 2 di
+    // `docs/discovery/discovery_2026-08-29_stile_7a_sistema_rail.md`, punto 2 delle
+    // ratifiche). Era `16px 20px`. Sullo STESSO selettore esisteva una seconda
+    // dichiarazione, `12px 16px !important` in `views/data/viewapplyto.scss:28`, che
+    // perdeva per specificità da quando questa regola esiste: rimossa nello stesso
+    // commit, perché due `!important` sullo stesso bersaglio sono ciò che ha reso
+    // difficile leggere questo inset in Fase 1.
     .view-editor-tab-content > section.properties-tab.properties-panel {
-        padding: 16px 20px !important;
+        padding: 14px !important;
     }
 
     // ─── Field labels ───
@@ -2522,3 +2529,8 @@ body[data-active-tab="documentation"] .properties-tree-overlay {
     outline: none;
     box-shadow: var(--focus-ring), inset 0 -2px 0 var(--color-accent);
 }
+
+// Il sistema 7a del rail (Fase 2). In coda, e non in testa, perché fra regole di
+// pari specificità l'ordine sorgente decide: il sistema deve poter pareggiare le
+// dichiarazioni della skin B4 che sta sopra senza alzare la specificità.
+@import './railSystem';

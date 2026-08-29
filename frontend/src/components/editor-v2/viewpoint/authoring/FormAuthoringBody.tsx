@@ -567,7 +567,10 @@ export const FormAuthoringBody: React.FC<FormAuthoringBodyProps> = ({ draft, tar
                     <div className="form-authoring__provenance">
                         <i className="bi bi-arrow-return-right" aria-hidden="true" />
                         <span>
-                            {'metamodel declares '}
+                            {/* Il verbo porta l'evidenza ambra di 7c: e' la parola che
+                                dice che questa riga sta coprendo qualcosa. Solo una
+                                classe, la stringa non cambia. */}
+                            <span className="form-authoring__provenance-verb">{'metamodel declares '}</span>
                             <span className="form-authoring__provenance-kind">
                                 {RENDERER_LABELS[provenance.metamodel.kind] ?? provenance.metamodel.kind}
                             </span>
