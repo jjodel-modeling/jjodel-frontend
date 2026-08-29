@@ -9,6 +9,7 @@
 
 import { describe, it, expect } from 'vitest';
 import {
+    findRowByFeatureName,
     absoluteDate,
     detectColor,
     detectValueRenderer,
@@ -434,5 +435,36 @@ describe('metamodelRenderer — the verdict with no instance in hand', () => {
     it('cardinality and reference-ness outrank the type, as they do on a slot', () => {
         expect(metamodelRenderer({ value: '', typeName: 'EInt', isMany: true }).kind).toBe('collection');
         expect(metamodelRenderer({ value: '', isReference: true }).kind).toBe('refPill');
+    });
+});
+
+/**
+ * The IR branch cannot hand back a row, only a feature name (R-STR-7). These fix the
+ * three answers the bridge has to give, including the two that must NOT open a panel.
+ */
+describe('findRowByFeatureName — the IR branch bridge', () => {
+    const rows = [
+        { id: 'r1', slot: { value: 'x', featureName: 'tint' } },
+        { id: 'r2', slot: { value: 'y', featureName: 'stroke' } },
+        { id: 'r3', slot: { value: 'z' } },
+    ];
+
+    it('finds the row that carries the name', () => {
+        expect(findRowByFeatureName(rows, 'stroke')?.id).toBe('r2');
+    });
+
+    it('a name with no row is null, not the first row', () => {
+        expect(findRowByFeatureName(rows, 'missing')).toBeNull();
+    });
+
+    it('a node with no rows is null — the IR branch renders before slotRows has to exist', () => {
+        expect(findRowByFeatureName([], 'tint')).toBeNull();
+        expect(findRowByFeatureName(undefined, 'tint')).toBeNull();
+        expect(findRowByFeatureName(null, 'tint')).toBeNull();
+    });
+
+    it('an empty name never matches the row that declares no featureName', () => {
+        expect(findRowByFeatureName(rows, '')).toBeNull();
+        expect(findRowByFeatureName(rows, undefined)).toBeNull();
     });
 });

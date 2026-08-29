@@ -44,7 +44,7 @@ import {
     instanceNodeChrome,
     emptySlotsLabel,
 } from './instanceNodeStyle';
-import { detectValueRenderer, detectColor, type RendererDecision, type SlotShape } from './valueRenderer';
+import { detectValueRenderer, detectColor, findRowByFeatureName, type RendererDecision, type SlotShape } from './valueRenderer';
 import { withoutViewWidget } from '../viewpoint/ir/widgetRenderer';
 import RowValue, { MAX_CHIPS } from './RowValue';
 import RendererInspector from './RendererInspector';
@@ -725,6 +725,110 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
     // not read like one it does.
     const isPill = instanceShape === 'pill' && !isOrphan && !notRendered;
 
+    /**
+     * Open the inspector for one row.
+     *
+     * Anchored to the row's own box, because the panel explains THAT row: a
+     * ladder floating in a side panel with no value in view would be arguing
+     * about something the reader cannot see.
+     *
+     * Reached with Alt+click. The obvious gesture, right-click, is already the
+     * canvas node menu, and shadowing it on the value cells would take a
+     * committed behaviour away from part of every instance node.
+     */
+    /**
+     * The Form tab's Reset, performed from the canvas (Turno 7c): drop this feature's
+     * entry from the active view's `FormSpec.widgets`.
+     *
+     * Both surfaces write the SAME key, which is what stops the provenance from
+     * diverging - there is no second store of "who declared this". The write is the
+     * panel's own whole-object replace (`view.ir = next`), and `VertexAuthoringPanel`
+     * already re-seeds its draft when the ir changes outside its mount (D15), so an
+     * authoring panel open on this view follows instead of clobbering.
+     */
+    const resetViewWidget = (featureName: string) => {
+        const viewId = irResolution?.compiled.viewId;
+        if (!viewId) return;
+        // `fromPointer` and not `fromD`: what the compiled view carries is the id.
+        const lview = LPointerTargetable.fromPointer(viewId) as any;
+        const ir = lview?.ir;
+        if (!ir) return;
+        const next = withoutViewWidget(ir, featureName);
+        // Same reference = nothing to remove. Skipping the write costs the user no undo
+        // step for a no-op.
+        if (next === ir) return;
+        lview.ir = next;
+    };
+
+    const openInspector = (row: SlotRow, e: React.MouseEvent, anchorEl?: HTMLElement | null) => {
+        e.stopPropagation();
+        e.preventDefault();
+        // Both entry points anchor to the same box: the VALUE CELL, never the
+        // icon. Anchoring the panel to a 14px glyph would put it in a different
+        // place depending on how the user opened it, for the same row.
+        openInspectorAt(row, (anchorEl ?? (e.currentTarget as HTMLElement)).getBoundingClientRect());
+    };
+
+    /**
+     * The same open, given a box instead of an event. The IR branch (R-STR-7) has a
+     * DOMRect and no `SlotRow` to hand, so both branches build the panel's payload
+     * here: one place decides what `featureId` means, not two.
+     */
+    function openInspectorAt(row: SlotRow, rect: DOMRect) {
+        setInspecting({
+            slot: row.slot,
+            // The METAMODEL feature, which is where an override is written. A
+            // placeholder row already stands for one; a real slot's `feature.id`
+            // is its DValue, so the declared feature is `featureTypeId`'s owner
+            // — carried on the row as the placeholder id or resolved from the
+            // live feature-name map, both of which name the DAttribute.
+            featureId: row.placeholder?.id ?? liveFeatureIdMap.get(row.feature?.id ?? '') ?? null,
+            anchor: rect,
+        });
+    }
+
+    /**
+     * The IR branch's entry point (R-STR-7). `IRNodeContent` knows the feature NAME
+     * and nothing the inspector can use: its rows are keyed by DValue id. The bridge
+     * is a lookup into `slotRows`, which is built from `data.features` and is therefore
+     * populated on the IR branch too — measured on the real canvas, 13 features on an
+     * IR-rendered node (discovery 2026-08-29 §4). A name with no row is a no-op: the
+     * panel is never opened on a row that is not there.
+     */
+    const openInspectorByFeatureName = (featureName: string, anchor: DOMRect) => {
+        const row = findRowByFeatureName(slotRows, featureName);
+        if (!row) return;
+        openInspectorAt(row, anchor);
+    };
+
+    /**
+     * The ladder for the property under the pointer. A portal on `body`, because the
+     * compartment sits inside a node the canvas clips — the same reason `TextStyleField`
+     * and the problem overlay portal theirs. Built here, above the IR branch's early
+     * return, so the two branches mount ONE element instead of a copy each (R-STR-7).
+     */
+    const inspectorEl = inspecting ? (
+        <RendererInspector
+            anchor={inspecting.anchor}
+            slot={inspecting.slot}
+            featureId={inspecting.featureId}
+            className={metaclassName}
+            /* What the ACTIVE VIEW declares for this feature (Turno 7c). Read off
+               the resolved view rather than the store: `formSpec` is already on
+               the compiled view, and reading it anywhere else would be a second
+               source for one key. Undefined when no IR view resolves for this
+               object, which is also when there is no view to override anything. */
+            viewWidget={inspecting.slot.featureName
+                ? irResolution?.compiled.formSpec?.widgets?.[inspecting.slot.featureName]
+                : undefined}
+            viewId={irResolution?.compiled.viewId}
+            onResetViewOverride={inspecting.slot.featureName
+                ? () => resetViewWidget(inspecting.slot.featureName as string)
+                : undefined}
+            onClose={() => setInspecting(null)}
+        />
+    ) : null;
+
     if (irResolution && !irDelegated) {
         // IR render path: wrapper, resizer, handles and highlight class stay
         // identical (handle contract is node-type-agnostic); only the content
@@ -762,6 +866,7 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                     objectId={irResolution.objectId}
                     vertexId={id}
                     readCtx={irResolution.readCtx}
+                    onInspectFeature={openInspectorByFeatureName}
                 />
                 {/* graphVertex containment (Fase 2b): collapse/expand chip */}
                 {irResolution.compiled.kind === 'graphVertex'
@@ -785,6 +890,10 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                         {isCollapsed(irResolution.objectId) ? String(irChildCount) : null}
                     </button>
                 )}
+                {/* Same panel as the native branch. It portals to `body`, so sitting
+                    inside the node's box costs it neither the canvas clip nor the
+                    transform. */}
+                {inspectorEl}
             </div>
         );
     }
@@ -945,59 +1054,6 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
         return painted;
     };
 
-    /**
-     * Open the inspector for one row.
-     *
-     * Anchored to the row's own box, because the panel explains THAT row: a
-     * ladder floating in a side panel with no value in view would be arguing
-     * about something the reader cannot see.
-     *
-     * Reached with Alt+click. The obvious gesture, right-click, is already the
-     * canvas node menu, and shadowing it on the value cells would take a
-     * committed behaviour away from part of every instance node.
-     */
-    /**
-     * The Form tab's Reset, performed from the canvas (Turno 7c): drop this feature's
-     * entry from the active view's `FormSpec.widgets`.
-     *
-     * Both surfaces write the SAME key, which is what stops the provenance from
-     * diverging - there is no second store of "who declared this". The write is the
-     * panel's own whole-object replace (`view.ir = next`), and `VertexAuthoringPanel`
-     * already re-seeds its draft when the ir changes outside its mount (D15), so an
-     * authoring panel open on this view follows instead of clobbering.
-     */
-    const resetViewWidget = (featureName: string) => {
-        const viewId = irResolution?.compiled.viewId;
-        if (!viewId) return;
-        // `fromPointer` and not `fromD`: what the compiled view carries is the id.
-        const lview = LPointerTargetable.fromPointer(viewId) as any;
-        const ir = lview?.ir;
-        if (!ir) return;
-        const next = withoutViewWidget(ir, featureName);
-        // Same reference = nothing to remove. Skipping the write costs the user no undo
-        // step for a no-op.
-        if (next === ir) return;
-        lview.ir = next;
-    };
-
-    const openInspector = (row: SlotRow, e: React.MouseEvent, anchorEl?: HTMLElement | null) => {
-        e.stopPropagation();
-        e.preventDefault();
-        // Both entry points anchor to the same box: the VALUE CELL, never the
-        // icon. Anchoring the panel to a 14px glyph would put it in a different
-        // place depending on how the user opened it, for the same row.
-        const rect = (anchorEl ?? (e.currentTarget as HTMLElement)).getBoundingClientRect();
-        setInspecting({
-            slot: row.slot,
-            // The METAMODEL feature, which is where an override is written. A
-            // placeholder row already stands for one; a real slot's `feature.id`
-            // is its DValue, so the declared feature is `featureTypeId`'s owner
-            // — carried on the row as the placeholder id or resolved from the
-            // live feature-name map, both of which name the DAttribute.
-            featureId: row.placeholder?.id ?? liveFeatureIdMap.get(row.feature?.id ?? '') ?? null,
-            anchor: rect,
-        });
-    };
 
     /** A row accepts an inline edit: attributes and placeholders, never references. */
     const isRowEditable = (row: SlotRow) =>
@@ -1263,31 +1319,7 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                 )}
             </div>
 
-            {/* The ladder for the property under the pointer. A portal on
-                `body`, because the compartment sits inside a node the canvas
-                clips — the same reason `TextStyleField` and the problem overlay
-                portal theirs. */}
-            {inspecting && (
-                <RendererInspector
-                    anchor={inspecting.anchor}
-                    slot={inspecting.slot}
-                    featureId={inspecting.featureId}
-                    className={metaclassName}
-                    /* What the ACTIVE VIEW declares for this feature (Turno 7c). Read off
-                       the resolved view rather than the store: `formSpec` is already on
-                       the compiled view, and reading it anywhere else would be a second
-                       source for one key. Undefined when no IR view resolves for this
-                       object, which is also when there is no view to override anything. */
-                    viewWidget={inspecting.slot.featureName
-                        ? irResolution?.compiled.formSpec?.widgets?.[inspecting.slot.featureName]
-                        : undefined}
-                    viewId={irResolution?.compiled.viewId}
-                    onResetViewOverride={inspecting.slot.featureName
-                        ? () => resetViewWidget(inspecting.slot.featureName as string)
-                        : undefined}
-                    onClose={() => setInspecting(null)}
-                />
-            )}
+            {inspectorEl}
         </div>
     );
 }

@@ -95,6 +95,15 @@ export interface IRNodeContentProps {
     /** RF vertex id — the canonical write path is keyed by vertex. */
     vertexId: string;
     readCtx: ReadCtx;
+    /**
+     * Opens the renderer ladder on one compartment row (R-STR-7, 2026-08-29).
+     * Carries the FEATURE NAME and nothing else: `CompartmentRowData` is keyed by
+     * DValue id, which the inspector cannot use, and lifting a `SlotRow` in here
+     * would put the native branch's row model inside this interface. The host
+     * resolves the name against its own `slotRows` and owns the panel.
+     * Absent in the authoring preview, which has no inspector to open.
+     */
+    onInspectFeature?: (featureName: string, anchor: DOMRect) => void;
 }
 
 interface CompartmentRowData {
@@ -123,7 +132,7 @@ interface SelectingRowState {
     anchorRect: DOMRect;
 }
 
-function IRNodeContent({ compiled, objectId, vertexId, readCtx }: IRNodeContentProps) {
+function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature }: IRNodeContentProps) {
     const form = compiled.form(readCtx, objectId);
     const fill = compiled.fill ? compiled.fill(readCtx, objectId) : '';
 
@@ -490,7 +499,22 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx }: IRNodeContentP
                         style={resolveTextStyle(fc.rowStyle, readCtx, objectId)}
                     >
                         {source.map(row => (
-                            <div key={row.key} className="ir-row">
+                            <div
+                                key={row.key}
+                                className="ir-row"
+                                /* Alt+click is the accelerator, exactly as on the native
+                                   branch (ObjectNode.tsx). A modifier leaves every gesture
+                                   already bound on this row where it was: plain click still
+                                   selects the node, double click still edits the value or
+                                   opens the singleton select, right click still opens the
+                                   canvas node menu. */
+                                onClick={onInspectFeature ? (e) => {
+                                    if (!e.altKey) return;
+                                    e.stopPropagation();
+                                    e.preventDefault();
+                                    onInspectFeature(row.name, (e.currentTarget as HTMLElement).getBoundingClientRect());
+                                } : undefined}
+                            >
                                 {fc.segments.map((seg, si) => {
                                     switch (seg.kind) {
                                         case 'name': return <span key={si}>{row.name}</span>;
@@ -558,6 +582,32 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx }: IRNodeContentP
                                         default: return null;
                                     }
                                 })}
+                                {/* The discoverable way in, for everyone who does not know
+                                    about the modifier. Hidden until the row is hovered: an
+                                    IR node is authored to a size, and a permanent glyph on
+                                    every row would spend that width on chrome. Shown on
+                                    EVERY row, including one whose renderer is already
+                                    declared — the ladder is where a declaration is undone,
+                                    so hiding the icon there would close the only exit. */}
+                                {onInspectFeature && (
+                                    <button
+                                        type="button"
+                                        className="ir-row__inspect nodrag"
+                                        title="Why this renderer"
+                                        aria-label={`Why this renderer for ${row.name}`}
+                                        /* onMouseDown too, or React Flow starts dragging the
+                                           node under the press before the click ever lands. */
+                                        onMouseDown={(e) => e.stopPropagation()}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            e.preventDefault();
+                                            const rowEl = (e.currentTarget as HTMLElement).parentElement;
+                                            onInspectFeature(row.name, (rowEl ?? e.currentTarget).getBoundingClientRect());
+                                        }}
+                                    >
+                                        <i className="bi bi-sliders" />
+                                    </button>
+                                )}
                             </div>
                         ))}
                     </div>

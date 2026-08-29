@@ -184,6 +184,18 @@ const BASE_CSS = `
    editor surface and follows the theme; the hex is its light value, kept as the fallback the
    rest of EditorV2.scss uses. */
 .ir-node-content .ir-row__value--select:empty::after { content: '…'; color: var(--text-dim, #94a3b8); }
+/* Renderer ladder affordance (R-STR-7). Hover-reveal, the action-icon idiom of the cards:
+   an IR node is authored to a size, so a glyph permanently parked on every row would spend
+   that width on chrome. margin-left:auto and not absolute positioning - the row is a
+   flex line, so this pushes the icon to the right edge without taking it out of flow and
+   without needing reserved padding the authored box does not have. flex-shrink: 0 keeps it
+   from being squeezed away by a long value. */
+.ir-node-content .ir-row__inspect { margin-left: auto; flex-shrink: 0; display: inline-flex; align-items: center; border: none; background: none; padding: 0 0 0 4px; font-size: inherit; line-height: 1; color: var(--text-dim, #94a3b8); cursor: pointer; opacity: 0; transition: opacity var(--duration-fast, 150ms) var(--ease-out, ease-out); }
+.ir-node-content .ir-row:hover .ir-row__inspect { opacity: 1; }
+.ir-node-content .ir-row__inspect:hover { color: #0ea5e9; }
+/* Keyboard reachability is not a hover state: an icon focused by Tab has to be visible,
+   or the affordance exists only for a pointer. Same rule as the native branch. */
+.ir-node-content .ir-row__inspect:focus-visible { opacity: 1; outline: 1px solid #0ea5e9; outline-offset: 1px; }
 `;
 
 function ensureStyleTag(): HTMLStyleElement | null {

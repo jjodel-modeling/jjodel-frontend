@@ -661,3 +661,23 @@ export function detectValueRenderer(slot: SlotShape): RendererDecision {
     // whole value in the tooltip. Every slot has a rendering.
     return { kind: 'truncatedText', reason: 'no colour rule fired' };
 }
+
+/**
+ * The IR branch's bridge from a feature NAME to the row that carries it (R-STR-7).
+ *
+ * `IRNodeContent` keys its rows by DValue id, which the inspector cannot use, so the
+ * only thing it can hand back is the metamodel feature name. This resolves it against
+ * the host's own row list. It lives here, beside `SlotShape`, because `SlotRow` is
+ * local to `ObjectNode.tsx` and importing that file into a test pulls Monaco in with
+ * it — the same reason `RENDERER_LABELS` moved here.
+ *
+ * An empty or absent name never matches: a row whose slot declares no `featureName`
+ * would otherwise answer for every anonymous query.
+ */
+export function findRowByFeatureName<T extends { slot: SlotShape }>(
+    rows: readonly T[] | null | undefined,
+    featureName: string | null | undefined,
+): T | null {
+    if (!rows || !featureName) return null;
+    return rows.find(r => r.slot.featureName === featureName) ?? null;
+}
