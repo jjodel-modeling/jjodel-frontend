@@ -95,10 +95,21 @@ Ogni sonda futura sul ramo IR deve attivare il viewpoint, non solo installarlo.
 
 Due, entrambe registrate e non toccate. Chiuse in giri successivi.
 
-**(a) Residuo R-4 sull'affordance nativa.** `ObjectNode.tsx:1227-1228` ha
-`title="Perche' questo renderer"` e `aria-label={`Perche' questo renderer per ${row.name}`}`
-in italiano: sopravvissuto al giro sulle stringhe inglesi del 2026-08-29. Il bottone IR
-nuovo nasce in inglese (`Why this renderer`). Si chiude nel prossimo giro di stringhe.
+**(a) Residuo R-4 sull'affordance nativa. Sciolta il 2026-08-29.** Il `title` e l'`aria-label`
+del bottone `bi-sliders` del ramo nativo erano in italiano, sopravvissuti al giro sulle
+stringhe inglesi dello stesso giorno. Ora sono `Why this renderer` e
+`Why this renderer for ${row.name}`, **identici** al gemello IR
+(`IRNodeContent.tsx:596-597`), che era la referenza. Nessun test asseriva su quelle stringhe.
+
+Nota sulle coordinate: la voce citava `ObjectNode.tsx:1227-1228`, ma alla chiusura le righe
+erano `1284-1285` — le estrazioni di `a18fe1468` (`inspectorEl`, `openInspectorAt`) hanno
+spostato il blocco. Un numero di riga in un documento invecchia; la stringa no.
+
+**Residuo censito e NON corretto**, da giro dedicato: `ObjectNode.tsx:1201` porta
+``title={`${metaclassName} e' singleton: questa e' la sua unica istanza`}``. Cercato su tutta
+`editor-v2/nodes/` con due passate — accenti in `title=`/`aria-label=` (zero, controllo
+positivo a 21 `title=` su 5 file) e parole italiane senza accento in attributi e in testo JSX
+visibile (questa sola occorrenza).
 
 **(b) Il footer della ladder va a capo male.** Misurato sul ritaglio
 `scripts/smoke/_tmp_rstr7_rung0_button.png` (2026-08-29): con un override di view attivo il

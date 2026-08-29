@@ -2,6 +2,19 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-08-29 — fix(editor-v2): l'affordance nativa dell'inspector parla inglese come il suo gemello IR
+**Prompt**: residuo R-4 registrato in §6(a) del report di R-STR-7 — `title` e `aria-label` del bottone `bi-sliders` del ramo nativo da «Perche' questo renderer» a "Why this renderer", identici al gemello IR del 29/08. Piu' un censimento delle stringhe UI italiane residue in `editor-v2/nodes/`, da elencare e NON correggere.
+**Files touched**: editor-v2/nodes/ObjectNode.tsx (due stringhe), docs/discovery/discovery_2026-08-29_rstr7_inspector_ramo_ir.md (§6(a) sciolta), docs/claude-code-log.md.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (typecheck 33 = baseline su output completo, zero errori nel file toccato; `npx vitest run` 1832 passed / 0 failed coi 9 file rotti all'import = baseline nota; nessun test asseriva sulle due stringhe, grep vuoto sui `*.test.ts*`)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (nessun file di §3.1)
+**Smoke visivo**: non eseguito, e non serve: due attributi di accessibilita' su un bottone gia' coperto dalla sonda `_tmp_rstr7_rung0.ts`, che lo aggancia per classe e non per testo. Verificato alla sorgente che le due stringhe sono ora byte-identiche al gemello IR (`IRNodeContent.tsx:596-597`), che era la referenza dichiarata dal prompt.
+**Notes**: Censimento come chiesto, due passate su tutta `editor-v2/nodes/`: accenti in `title=`/`aria-label=` zero (controllo positivo a 21 `title=` su 5 file), parole italiane senza accento una sola. **Residuo elencato e non corretto**: `ObjectNode.tsx:1201`, ``title={`${metaclassName} e' singleton: questa e' la sua unica istanza`}``. Le coordinate del report (1227-1228) erano invecchiate: le righe vere erano 1284-1285, spostate dalle estrazioni di `a18fe1468`.
+**Prompt document name**: prompt inline, nessun documento
+
 ## 2026-08-29 — fix(editor-v2): il Reset dell'inspector si accorcia, e il footer torna su una riga
 **Prompt**: riapertura della micro-voce (b) del report §6 col verso ratificato sul proposal: la copy del reset passa da «Back to the metamodel renderer» a «Reset» con la stringa lunga nel `title`, piu' `flex: none; white-space: nowrap` sullo scope come cintura. Nessun altro cambio a `__footer`/`__action`.
 **Files touched**: editor-v2/nodes/RendererInspector.tsx (copy del bottone, `title`, commento), editor-v2/nodes/rendererInspector.scss (`__result-scope`), docs/discovery/discovery_2026-08-29_rstr7_inspector_ramo_ir.md (§6(b) sciolta), docs/claude-code-log.md. Sonde `_tmp_footer_measure.ts`, `_tmp_rstr7_rung0.ts` (non committate).

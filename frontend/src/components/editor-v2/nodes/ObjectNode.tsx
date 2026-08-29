@@ -1281,8 +1281,8 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                                         <button
                                             type="button"
                                             className="mm-object__inspect nodrag"
-                                            title="Perché questo renderer"
-                                            aria-label={`Perché questo renderer per ${row.name}`}
+                                            title="Why this renderer"
+                                            aria-label={`Why this renderer for ${row.name}`}
                                             // Same contract as the `+k` chip: inspecting is
                                             // not selecting, and the row's own click target
                                             // stays whatever it was. `onMouseDown` too, or
