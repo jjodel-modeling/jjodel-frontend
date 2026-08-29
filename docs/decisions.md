@@ -1981,6 +1981,94 @@ della view alla riga del canvas richiede `decide` esportato da `nodes/valueRende
 decisione di riga cambiata in `nodes/ObjectNode.tsx`. E' un fronte separato: non si apre
 finche' non e' deciso esplicitamente.
 
+## Serie R-FORM — instance manager e motore form (ratifiche 2026-08-29/30)
+
+Report di Fase 1: `docs/discovery/discovery_2026-08-29_instance_manager_fase1.md`.
+Le referenze di design citate dai prompt (`CRUD Manager Simulation.dc.html`, i «Turni
+10-13» del proposal, `form-engine-contract.md`) **non sono nel repo**: cercate due volte
+con controllo positivo, 2026-08-29 e 2026-08-30. RC-10 applicata in entrambe le sessioni.
+Finche' non atterrano (RC-9) non vincolano, e **R-FORM-2 sotto e' derivata dal codice, non
+dal contratto META**: quando il bundle arriva, il §5 del report va confrontato e, se
+divergono, rifatto — non riconciliato a posteriori.
+
+**R-FORM-1** (2026-08-29, Alfonso) — **Il manager e' superficie sorella del canvas**: terzo
+tipo di tab del progetto, non tab del rail, e vede il modello nudo — struttura dal
+metamodello (attributi, reference, containment, cardinalita', enum). Il viewpoint attivo
+contribuisce i soli widget, via `FormSpec` e la precedenza esistente (`valueRenderer`).
+
+**R-FORM-2** (2026-08-29, Alfonso) — **Portabilita' come vincolo di prima classe**: il motore
+form e' un layer puro senza dipendenze da store, D-graph o React-jjodel — contratto
+(`metamodelShape`, `instanceData`, `formSpec`) verso form model ed eventi astratti. Dentro
+jjodel un adapter D-graph, fuori un adapter JSON; il debito `DTypedElement` vive
+nell'adapter, mai nel motore. *Misura del 2026-08-29*: il taglio esiste gia' per la
+**lettura** — `irReadCtx.ts` (interfaccia `ReadCtx` + backend draw, **zero** `^import`) e
+`irReadCtxLproxy.ts` (64 righe, importa il joiner e **inietta** l'impuro). E' la forma da
+imitare. `ReadCtx` **non basta**: copre valori e identita', non la shape del metamodello,
+non l'enumerazione delle istanze, non la scrittura. Il contratto e' quindi `ReadCtx` + una
+`ShapeCtx` + una `WriteCtx`; `FormSpec` e' gia' puro e serializzabile
+(`irTypes.ts:246-266`) e non richiede nulla.
+
+**R-FORM-3** (2026-08-29, Alfonso) — **Editing surface per metaclasse dichiarata nella view**
+(`form | diagram`), due consumatori: il canvas (nodo-form contro symbol) e il manager
+(tabelle contro diagramma embedded scopato al sottoalbero). Fuori da jjodel `diagram`
+degrada sempre a `form`: la surface e' presentazione, mai dato. *Misura del 2026-08-29*:
+il diagramma scopato **non esiste** — `EditorV2Props` ha il solo `modelid`, nessuno
+scoping, nessuna palette ristretta, e `NestedView` non e' quello (e' l'editor delle view,
+gia' irraggiungibile: `discovery_2026-08-23_nestedview_ui_morta.md`). L'ibrido 13a e' quindi
+**Fase 3 o oltre**, e fino ad allora `diagram` degrada a `form` anche **dentro** jjodel,
+come stato transitorio dichiarato.
+
+### Le sette domande della Fase 1
+
+**Q1(b)** (2026-08-30, Alfonso) — **Il rail destro e' nascosto sotto il manager**, con un
+attributo proprio sull'idioma del tab Documentation (`body[data-active-tab="manager"]`,
+kill-switch in `properties-with-tree-view.scss`). Valore proprio e non `'documentation'`:
+nascondono la stessa cosa per ragioni diverse, e un valore condiviso farebbe muovere in
+silenzio l'uno al cambiare dell'altro. Il manager **non** emette `EDITOR_TYPE_CHANGE`: non
+e' un tipo di editor, e' un tab che porta la propria superficie di dettaglio.
+
+**Q2** (2026-08-30, Alfonso) — **Il soggetto del tab e' il modello M1**, non la metaclasse:
+un tab per M1, tutte le metaclassi dentro. E' il soggetto che il canvas ha gia', e la parita'
+di soggetto fra le due superfici e' cio' che rende R-FORM-1 vero e non solo dichiarato.
+Conseguenza: id `mgr_${model.id}`, e `closeTabsForEntity` chiude un tab, non N.
+
+**Q3** (2026-08-30, Alfonso) — **Sonda prima, poi `get_addObject`**, e non nella slice 2a.
+Quel getter apre una `TRANSACTION` con un creatore annidato (`DObject.new3`,
+`LModelElement.tsx:7134`) piu' un `setTimeout` per i valori (`:7153`): e' provato dal
+ContextMenu **con** un grafo aperto, e il manager crea senza grafo. Non decidibile
+staticamente.
+
+**Q4** — **aperta.** Il dominio di enum e reference senza istanza (`MetaclassAttribute` porta
+il nome del tipo e `isEnum`, non l'id, e i letterali oggi arrivano da
+`LValue.get_validTargets`, che vuole uno slot vivo). Estrarre un
+`validTargetsFor(feature, modelId)` e' l'unica via che non duplica, ma tocca
+`LModelElement.tsx`, che e' core (Regola 5). Blocca la slice 2b, non la 2a.
+
+**Q5** (2026-08-30, Alfonso) — **La `surface` di R-FORM-3 e' una chiave nuova su
+`VertexViewIR`**, accanto a `form` e `structure`, additiva-opzionale, senza bump di
+`irVersion` e senza migrazione — R-STR-1 alla lettera. Non su `FormSpec`. Fuori dalla
+slice 2a.
+
+**Q6** — **aperta.** Nome e sede del motore: proposta `frontend/src/jjform/`, pari grado di
+`jjel/`/`jjtl/`/`jjscript/`, con `index.ts` e `SPEC.md`, e l'invariante «zero import da
+`joiner/`, `redux/`, `react`, `components/`» dichiarata nel SPEC. Costoso cambiarlo dopo:
+entra in una superficie pubblica.
+
+**Q7** (2026-08-30, Alfonso) — **`syncDeleteObject` si cancella**, in un chore a parte.
+Fatto: commit `b9be0674e`. Era la vecchia via raw, senza cascade, e restava una trappola per
+assonanza per chi avrebbe scritto il delete del manager.
+
+### Perimetro delle slice
+
+**Slice 2a** (2026-08-30, commit `9ab7560d0`) — tab, colonna metaclassi, lista istanze,
+`IRForm` ospitato. **Non e' read-only**: ospitare `IRForm` porta con se' tutto
+`formWrite.ts`, quindi il tab edita dalla prima slice; read-only sono le sue due liste.
+**Slice 2b** — le colonne per-attributo, che e' dove nasce `ShapeCtx` e dove serve la
+risposta a Q4. **Slice 2c** — create e delete, con la cascata di containment resa esplicita
+in UI: il cascade canonico gia' cancella i contenuti (`Dummy.get_delete`) e non chiede.
+**Fuori dalla Fase 2**: l'estrazione in `jjform/` (aspetta il contratto META) e il diagramma
+scopato.
+
 ## Superate
 
 - **D3** (2026-07-26, routing congelato in v1) — superata da E-route il 2026-08-06.

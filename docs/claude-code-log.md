@@ -2,6 +2,32 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-08-30 — feat(manager): l'instance manager e' il terzo tipo di tab, e ospita IRForm
+**Prompt**: Slice 2a dell'instance manager, corsia completa, sulla discovery ratificata piu' Q1(b)/Q2/Q3/Q5/Q7. Tab (`TabDataMaker.instanceManager` con id `mgr_${model.id}` e `data-type="manager"`, `DockManager.openManager`, prefisso in `closeTabsForEntity`, ramo Q1(b) in `Dock.tsx`), punto d'ingresso minimo scelto e dichiarato, componente a tre lastre (metaclassi da `getMetaclassInfo` con le astratte non selezionabili e la causa, istanze filtrate per `instanceof`, click che monta `IRForm` com'e'), stile 7a, zero modifiche a `EditorV2`/`joiner`/`IRForm`, stringhe inglesi. Test unitari sul filtro e sull'id prefissato, smoke a schermo.
+**Files touched**: **nuovi** abstract/tabs/instanceManagerModel.ts (la meta' pura), InstanceManagerTab.tsx, instanceManagerTab.scss, __tests__/instanceManagerModel.test.ts (17 prove); abstract/tabs/TabDataMaker.tsx (+1 statico), abstract/DockManager.tsx (`openManager` + il prefisso in `closeTabsForEntity`), abstract/Dock.tsx (ramo Q1(b)), editors/properties-with-tree-view.scss (+1 selettore al kill-switch del rail), pages/components/LeftBar.tsx (`itemAction` opzionale su `renderSection`, usato dai soli Models), pages/dashboard.scss (`.psb-item-action`), pages/components/Navbar.tsx (ramo `mgr_` nello smistamento della striscia). Sonde `_tmp_instance_manager.ts`, `_tmp_mgr_tabstrip.ts` e i tre `.png` (non committate). Commit sorgente `9ab7560d0`, chore `b9be0674e`, docs a parte.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: (c)
+**Regressions**: no (typecheck 33 = baseline su output completo, zero errori negli 11 file toccati; `npx vitest run` 1849 passed / 0 failed coi 9 file rotti all'import = baseline nota, erano 1832, +17 le prove nuove; build exit 0 col solo chunk-warning; `npm run smoke` 12/0/3)
+**Out-of-scope changes**: yes (11 file, sopra la soglia di Regola 19. Otto sono quelli che il prompt e la §1.3 del report nominano; `LeftBar.tsx`+`dashboard.scss` sono il punto d'ingresso minimo che il prompt delega esplicitamente; `Navbar.tsx` e' una misura — senza il suo ramo il tab era invisibile e non richiudibile.)
+**Layer Impact Report**: not-required per la slice (nessun file di §3.1); **prodotto** per il chore `b9be0674e`, che tocca `canvasToJjom.ts`.
+**Smoke visivo**: **passato, ed e' il criterio d'accettazione**. `_tmp_instance_manager.ts` **26/26 ALL GREEN** sul fixture RowViewSmoke: bottone invisibile a riposo e rivelato dall'hover (opacity 0 -> 1) con controllo negativo sulle sezioni senza seconda porta; tab attivo `mgr_…` e **non** il canvas omonimo; `data-active-tab=manager` e rail nascosto; sei metaclassi in ordine, `Color` inerte con la causa, `Red/Green/Blue` con la parola `singleton` e conteggio 1, `AllNine` a 2; lista di 2 istanze che combacia col conteggio; `IRForm` montato con 12 campi (empty-state come controllo positivo prima). **Entrambi i write path**: uno slot EString arriva a `DValue.values` (1 hit) e il rename arriva a `DObject.name`, con la lista che si riallinea da sola. **Il canvas, aperto dopo, mostra il nome scritto dal manager** (7 nodi, hit) e riprende `data-editor-type=model` col rail. Zero errori di pagina. Ritagli `_tmp_instance_manager{,_after,_canvas}.png`.
+**Notes**: Tre misure hanno cambiato il diff, tutte a schermo. (1) La striscia dei tab vera e' quella della **Navbar** — i `.dock-tab` stanno a 0x0 — e smista sui prefissi: il manager cadeva nel ramo finale ed era scartato come fantasma. (2) Il badge `1` del singleton, giusto sul canvas, accanto al conteggio si leggeva «1 1»: diventa la parola. (3) Due errori della **sonda**, non del prodotto: cercava lo stamp del nome fra le `DValue`, e scriveva una stringa in un EInt. Serie R-FORM in `decisions.md`.
+**Prompt document name**: prompt inline, nessun documento
+
+## 2026-08-30 — chore(editor-v2): via syncDeleteObject, morta da aprile
+**Prompt**: chore preliminare della slice 2a, commit a parte — rimuovere `syncDeleteObject` (`canvasToJjom.ts:1829-1863`) con grep di conferma ed entry di log propria. Scioglie Q7 della discovery di Fase 1.
+**Files touched**: editor-v2/sync/canvasToJjom.ts (-35 righe, la funzione e nient'altro). Commit `b9be0674e`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (typecheck 33 = baseline su output completo; nessun import diventa orfano — `TRANSACTION`, `DeleteElementAction` e `LPointerTargetable` restano usati nel file)
+**Out-of-scope changes**: no
+**Layer Impact Report**: **prodotto** in chat prima del diff (`canvasToJjom.ts` e' in §3.1)
+**Smoke visivo**: non applicabile — codice mai eseguito, zero call site.
+**Notes**: `command grep -rn` su tutto il repo, una sola riga: la sua dichiarazione; controllo positivo `syncDeleteVertex` su 27 file. Gia' misurata morta il 2026-04-30 (`docs/reports/2026-04-30-jjscript-m1-pre-impl-investigation.md` §B) e lasciata li'. Va via ora perche' e' una trappola per assonanza: prendeva un `vertexId` e cancellava raw, senza cascade, mentre il delete corretto di un'istanza e' `lObject.delete()`.
+**Prompt document name**: prompt inline, nessun documento
+
 ## 2026-08-29 — chore(editor-v2): il sorgente di approach_run raggiunge la entry che lo dava per fatto
 **Prompt**: regolarizzazione in corsia veloce, zero codice nuovo. Il lavoro `approach_run` aveva le entry di log committate ma il sorgente ancora unstaged: verificare che il diff nel working tree sia coerente con le entry e coi due prompt document, girare la suite **due volte** — su HEAD pulito via stash, poi col diff riapplicato — e committare per pathspec solo a verde pieno, fermandosi altrimenti senza committare.
 **Files touched**: editor-v2/utils/edgeUtils.ts, editor-v2/utils/edgeLanes.ts, editor-v2/utils/__tests__/edgeUtils.test.ts, editor-v2/utils/__tests__/edgeLanes.test.ts, editor-v2/utils/__tests__/nodeAvoidance.test.ts, docs/prompts/claude_2026-08-29_1710_prompt_edge_approach_run.md, docs/prompts/claude_2026-08-29_1810_prompt_approach_run_a_valle.md, docs/claude-code-log.md. **Zero righe scritte in questa sessione**: il diff e' quello trovato nel working tree e committato invariato — md5 `f5d31260235f17597a2be991a1e89a1a` prima dello stash e identico dopo il pop.
