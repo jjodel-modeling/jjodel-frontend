@@ -2,6 +2,19 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-08-29 — docs: lo stile 7a si puo' promuovere a sistema, ma non dalla sede che il prompt indica
+**Prompt**: estendere lo stile 7a a tutti i tab del rail (Applies to · Structure · Symbol · Form · Source), promuovendo a livello di pannello quanto `dc0a8e5a2`/`f2226b575` scopavano sotto `.ir-tab-body--structure`; fondo bianco sulla regola condivisa, inset di sistema 14px, rimozione del pull 20/16 e del gate `[role=alert]`. Corsia completa dichiarata dal prompt stesso, con **hard stop al report** se il perimetro supera 3 file o tocca interfacce esportate.
+**Files touched**: docs/discovery/discovery_2026-08-29_stile_7a_sistema_rail.md (nuovo), docs/claude-code-log.md. **Zero file di sorgente.** Sonde `scripts/smoke/_tmp_rail_tabs_audit.ts`, `_tmp_rail_rules.ts`, `_tmp_structure_7a.ts` esteso, e i cinque ritagli `_tmp_rail_tab_before_*.png` (non committate).
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (a)
+**Regressions**: no (nessun sorgente toccato; `git status` pulito salvo i due documenti e le sonde `_tmp_*`)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (nessun file di §3.1)
+**Smoke visivo**: baseline, non verifica. `_tmp_rail_tabs_audit.ts` apre i cinque tab della barra del vertex sul rail vero e legge lo stile calcolato del **solo sottoalbero visibile**, con ritaglio per ciascuno: lo scarto da 7a e' omogeneo su tutti i tab tranne Structure — eyebrow 12/700/#64748b contro 11/600/#94a3b8, label 14px, select 13px r6 200x30 contro 12px r4 110x28, help 13px/#64748b/gap 8 contro 11px/#94a3b8/gap 6; il Form ha ancora la pillola bianca su track `#f1f5f9`. Reperto di metodo: la prima stesura della sonda usava `display !== 'none'` come test di visibilita' e misurava i body nascosti degli altri tab (R-RAIL-36) — il tell erano le larghezze a `0.0` e i conteggi identici ovunque; corretta a `getClientRects().length > 0`.
+**Notes**: Quattro premesse del prompt smentite dalla misura, §3 del report. La decisiva: il fondo `#f8fafc` **non** e' su `section.properties-tab.properties-panel` — quel selettore non dichiara alcun background — ma su una famiglia a dieci selettori con `!important` (`_form-system.scss:664`) che raggiunge l'editor dei viewpoint, i quattro sotto-tab legacy e la pagina Collaborative. Perimetro reale 11 file, uno globale, due sulla doppia card (Q7). Cinque domande da ratificare in §7.
+**Prompt document name**: prompt inline, nessun documento
+
 ## 2026-08-29 — style(editor-v2): il fondo del tab Structure diventa bianco, da bordo a bordo
 **Prompt**: follow-up a `dc0a8e5a2`, una voce: il fondo del pannello Structure deve essere `#ffffff` come nel mock 7a, non il fondo colorato attuale. Scope sotto `.ir-tab-body--structure`, o al livello del body se il fondo viene da `.properties-panel` — in quel caso override locale, senza toccare la regola condivisa. Verifica del computed style, screenshot, commit singolo.
 **Files touched**: editor-v2/viewpoint/authoring/StructureGroups.scss (blocco `.ir-tab-body--structure`: `background`, `padding: 14px`, tiraggio negativo 20/16, piu' la regola condizionale del tiraggio in alto), docs/claude-code-log.md. Sonda `scripts/smoke/_tmp_structure_7a.ts` estesa (catena dei fondi, geometria, secondo ritaglio del pannello) e i `.png` (non committati).
