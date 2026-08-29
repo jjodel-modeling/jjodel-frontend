@@ -276,6 +276,12 @@ function LeftBar(props: LeftBarProps): JSX.Element {
     // LProject.transformations is synced by ProjectEditor via SetFieldAction (see ProjectEditor.tsx:169)
     const pTransformations = (((project as any)?.transformations) || []) as Array<{ id: string; name: string }>;
 
+    /**
+     * `itemAction` is the row's SECOND door: a hover-revealed button that opens a
+     * different surface on the same subject, next to the arrow that opens the
+     * default one. Optional, so the three sections that have only one door are
+     * untouched. Today the only user is Models → instance manager.
+     */
     const renderSection = (
         key: string,
         label: string,
@@ -284,6 +290,7 @@ function LeftBar(props: LeftBarProps): JSX.Element {
         onItemClick: (item: any) => void,
         onNewClick: () => void,
         newLabel: string,
+        itemAction?: { icon: string; title: string; onClick: (item: any) => void },
     ) => {
         const isCollapsed = !!collapsedSections[key];
         return (
@@ -302,6 +309,19 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                         >
                             <span className={`psb-badge psb-badge--${badge}`}>{badge}</span>
                             <span className="psb-item-name">{item.name}</span>
+                            {itemAction && (
+                                <button
+                                    type="button"
+                                    className="psb-item-action"
+                                    title={itemAction.title}
+                                    aria-label={itemAction.title}
+                                    // The row itself opens the canvas; without this the
+                                    // click would do both.
+                                    onClick={(e) => { e.stopPropagation(); itemAction.onClick(item); }}
+                                >
+                                    <i className={`bi ${itemAction.icon}`} />
+                                </button>
+                            )}
                             <i className="bi bi-arrow-right psb-item-arrow" />
                         </div>
                     ))}
@@ -349,6 +369,16 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                     (m) => { const lm = pModels.find(x => x.id === m.id); if (lm) DockManager.open2(lm); },
                     () => requestFromProjectEditor(JjodelEvents.CREATE_MODEL),
                     'New model',
+                    // Second door onto the model the row already opens: same subject,
+                    // catalogue instead of diagram. Here rather than in a context menu
+                    // because this row IS where a model is opened today, and putting
+                    // the sister surface anywhere else would make the two look
+                    // unrelated. Models only — an M2 has no instances.
+                    {
+                        icon: 'bi-table',
+                        title: 'Open instance manager',
+                        onClick: (m) => { const lm = pModels.find(x => x.id === m.id); if (lm) DockManager.openManager(lm); },
+                    },
                 )}
 
                 {renderSection(

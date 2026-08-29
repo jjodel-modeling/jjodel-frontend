@@ -1448,7 +1448,12 @@ $pc-hint-indent: 26px;        // 18px checkbox + 8px gap (the design-system Chec
 // activeEditorType model/metamodel non copre questi due stati, che non sono
 // editor-type). Vedi abstract/style.scss per data-layout-mode / data-active-tab.
 body[data-layout-mode="canvas-only"] .properties-tree-overlay,
-body[data-active-tab="documentation"] .properties-tree-overlay {
+body[data-active-tab="documentation"] .properties-tree-overlay,
+// Instance manager (Q1(b), 2026-08-30): il tab porta la propria superficie di
+// dettaglio (IRForm nel terzo riquadro), quindi il rail sarebbe una seconda
+// porta sulla stessa stanza. Valore proprio, non 'documentation': nascondono la
+// stessa cosa per ragioni diverse.
+body[data-active-tab="manager"] .properties-tree-overlay {
     display: none !important;
 }
 

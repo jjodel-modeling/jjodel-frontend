@@ -36,6 +36,7 @@ import {FakeStateProps} from '../../joiner/types';
 import {connect} from 'react-redux';
 import {AuthApi, ProjectsApi} from '../../api/persistance';
 import DockManager from "../../components/abstract/DockManager";
+import { MANAGER_TAB_PREFIX, modelIdOfManagerTab } from '../../components/abstract/tabs/instanceManagerModel';
 
 import {Item, Menu, UserHeader} from '../components/menu/Menu';
 
@@ -1675,6 +1676,20 @@ function NavbarComponent(props: AllProps) {
                     } else if (id.startsWith('doc_')) {
                         type = 'documentation';
                         title = 'Documentation';
+                    } else if (id.startsWith(MANAGER_TAB_PREFIX)) {
+                        // Instance manager. Without this branch the id falls through to
+                        // the model lookup below, misses (the id is prefixed), and the
+                        // tab is dropped from the strip as a ghost — measured: the tab
+                        // opened, was active, and had no way back to it or to close it.
+                        // Same shape as the four prefixes above; the title repeats the
+                        // one TabDataMaker builds, because this strip reads ids, not JSX.
+                        type = 'manager';
+                        const mid = modelIdOfManagerTab(id);
+                        const rawModel = mid ? ((state as any)[mid] || (state as any).idlookup?.[mid]) : null;
+                        // A manager whose model is gone is a ghost like any other: drop
+                        // it rather than print a placeholder (the model branch's rule).
+                        if (!rawModel) return null;
+                        title = `${rawModel.name || 'Unnamed'} Instances`;
                     } else if (id.startsWith('vp_')) {
                         type = 'viewpoint';
                         // Extract title from React element or look up viewpoint
@@ -1778,6 +1793,10 @@ function NavbarComponent(props: AllProps) {
             case 'model': return { letter: 'm', className: 'appbar-tab__badge--model' };
             case 'transformation': return { letter: 'T', className: 'appbar-tab__badge--transformation' };
             case 'documentation': return { letter: 'D', className: 'appbar-tab__badge--documentation' };
+            // The manager's subject IS a model, so it takes the model badge colour and
+            // says which of the two surfaces it is with the icon — the same `bi-table`
+            // that opens it from the project rail.
+            case 'manager': return { letter: '', icon: 'bi-table', className: 'appbar-tab__badge--model' };
             case 'viewpoint': return { letter: 'V', className: 'appbar-tab__badge--viewpoint' };
             default: return { letter: '', className: '' };
         }
@@ -1790,6 +1809,7 @@ function NavbarComponent(props: AllProps) {
             case 'model': return 'Model';
             case 'transformation': return 'JjTL Transformation';
             case 'viewpoint': return 'Viewpoint';
+            case 'manager': return 'Instance manager';
             default: return '';
         }
     };
