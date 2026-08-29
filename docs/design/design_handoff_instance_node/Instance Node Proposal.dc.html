@@ -26,6 +26,711 @@
     a:hover { color: #0284c7; text-decoration: underline; }
   </style>
 </helmet>
+<section id="13" style="padding: 48px 56px; display: flex; flex-direction: column; gap: 32px; border-bottom: 1px solid #e2e8f0;">
+  <div style="max-width: 860px;">
+    <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8; margin-bottom: 8px;">Turno 13 · Esplorazione · Ibrido form + diagramma</div>
+    <h1 style="font-size: 24px; font-weight: 700; color: #0f172a; margin: 0 0 8px;">Editing surface: la view decide cosa si edita a form e cosa a diagramma</h1>
+    <p style="font-size: 14px; color: #475569; margin: 0; line-height: 1.6;">Una sola dichiarazione per metaclasse — <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; background: #f1f5f9; padding: 1px 5px; border-radius: 3px;">surface: form | diagram</span> — consumata da entrambe le superfici: sul canvas una metaclasse <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">form</span> diventa nodo-form (<a href="#10c">10c</a>); nel manager una metaclasse <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">diagram</span> apre al drill-in un diagramma embedded scopato al suo sottoalbero di containment. Fuori da jjodel (R-FORM-2) <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">diagram</span> degrada sempre a form: la surface è presentazione, mai dato.</p>
+  </div>
+  <div style="display: flex; gap: 32px; flex-wrap: wrap; align-items: flex-start;">
+
+    <div id="13a" style="display: flex; flex-direction: column; gap: 12px; width: 680px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: #0f172a; color: #ffffff; letter-spacing: 0.04em;">13a</span>
+        <span style="font-size: 13px; font-weight: 600; color: #0f172a;">Manager — drill-in su una metaclasse «diagram»</span>
+      </div>
+      <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+        <div style="padding: 10px 16px; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; gap: 6px; font-size: 12px;">
+          <span style="color: #0284c7; cursor: pointer;">StateMachine</span>
+          <i class="bi bi-chevron-right" style="font-size: 9px; color: #cbd5e1;"></i>
+          <span style="color: #0f172a; font-weight: 600;">traffic light</span>
+          <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #e0f7fa; color: #0891b2; margin-left: 4px;"><i class="bi bi-diagram-3" style="font-size: 10px;"></i>diagram</span>
+          <span style="margin-left: auto; display: inline-flex; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; font-size: 11px;">
+            <span style="padding: 4px 12px; background: #f1f5f9; color: #0f172a; font-weight: 500; display: inline-flex; align-items: center; gap: 5px;"><i class="bi bi-diagram-3" style="font-size: 10px;"></i>Diagram</span>
+            <span style="padding: 4px 12px; color: #64748b; border-left: 1px solid #e2e8f0; display: inline-flex; align-items: center; gap: 5px;"><i class="bi bi-ui-checks" style="font-size: 10px;"></i>Form</span>
+          </span>
+        </div>
+        <div style="padding: 12px 16px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 12px;">
+          <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #64748b;">Name</span>
+          <span style="font-size: 12px; color: #0f172a; border: 1px solid #cbd5e1; border-radius: 4px; padding: 5px 10px; width: 160px;">traffic light</span>
+          <span style="font-size: 11px; color: #94a3b8;">Gli attributi della radice restano form; il sottoalbero è il diagramma sotto.</span>
+        </div>
+        <div style="display: flex; height: 260px;">
+          <div style="width: 116px; border-right: 1px solid #e2e8f0; background: #f8fafc; padding: 10px 0; display: flex; flex-direction: column; gap: 2px; flex: none;">
+            <div style="padding: 0 12px 6px; font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8;">Palette</div>
+            <div style="display: flex; align-items: center; gap: 7px; padding: 6px 12px; font-size: 11px; color: #475569; cursor: grab;"><span style="width: 18px; height: 12px; border: 1px solid #94a3b8; border-radius: 3px; background: #ffffff;"></span>State</div>
+            <div style="display: flex; align-items: center; gap: 7px; padding: 6px 12px; font-size: 11px; color: #475569; cursor: grab;"><svg width="18" height="10" viewBox="0 0 18 10"><path d="M0,5 H14" stroke="#94a3b8" stroke-width="1.5"></path><polygon points="18,5 12,2 12,8" fill="#94a3b8"></polygon></svg>Transition</div>
+            <div style="margin-top: auto; padding: 8px 12px; font-size: 10px; color: #cbd5e1; line-height: 1.4;">Only the subtree's metaclasses</div>
+          </div>
+          <div style="flex: 1; position: relative; background-image: radial-gradient(#e2e8f0 1px, transparent 1px); background-size: 16px 16px; overflow: hidden;">
+            <svg style="position: absolute; inset: 0; width: 100%; height: 100%;" viewBox="0 0 540 260" preserveAspectRatio="none">
+              <path d="M118,92 C170,60 260,60 322,84" fill="none" stroke="#94a3b8" stroke-width="1.5"></path><polygon points="326,86 316,80 318,90" fill="#94a3b8"></polygon>
+              <path d="M392,110 C420,150 380,196 320,204" fill="none" stroke="#94a3b8" stroke-width="1.5"></path><polygon points="316,205 325,199 326,209" fill="#94a3b8"></polygon>
+              <path d="M212,208 C150,200 90,160 76,120 " fill="none" stroke="#94a3b8" stroke-width="1.5"></path><polygon points="75,116 71,126 81,124" fill="#94a3b8"></polygon>
+              <text x="216" y="58" font-size="10" fill="#64748b" font-family="Inter, sans-serif">go</text>
+              <text x="404" y="164" font-size="10" fill="#64748b" font-family="Inter, sans-serif">caution</text>
+              <text x="120" y="178" font-size="10" fill="#64748b" font-family="Inter, sans-serif">stop</text>
+            </svg>
+            <div style="position: absolute; left: 32px; top: 74px; width: 88px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
+              <div style="height: 3px; background: #06b6d4;"></div>
+              <div style="padding: 6px 10px; font-size: 12px; font-weight: 600; color: #0f172a;">red</div>
+              <div style="padding: 0 10px 6px; font-size: 10px;"><span style="padding: 1px 7px; border-radius: 999px; background: #f1f5f9; color: #475569; font-weight: 500;">initial</span></div>
+            </div>
+            <div style="position: absolute; left: 326px; top: 62px; width: 88px; background: #ffffff; border: 1.5px solid #06b6d4; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 12px rgba(6,182,212,0.15);">
+              <div style="height: 3px; background: #06b6d4;"></div>
+              <div style="padding: 6px 10px; font-size: 12px; font-weight: 600; color: #0f172a;">green</div>
+              <div style="padding: 0 10px 6px; font-size: 10px;"><span style="padding: 1px 7px; border-radius: 999px; background: #f1f5f9; color: #475569; font-weight: 500;">normal</span></div>
+            </div>
+            <div style="position: absolute; left: 212px; top: 184px; width: 88px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
+              <div style="height: 3px; background: #06b6d4;"></div>
+              <div style="padding: 6px 10px; font-size: 12px; font-weight: 600; color: #0f172a;">yellow</div>
+              <div style="padding: 0 10px 6px; font-size: 10px;"><span style="padding: 1px 7px; border-radius: 999px; background: #f1f5f9; color: #475569; font-weight: 500;">normal</span></div>
+            </div>
+            <div style="position: absolute; right: 10px; top: 10px; width: 148px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); font-size: 11px; overflow: hidden;">
+              <div style="padding: 6px 10px; border-bottom: 1px solid #f1f5f9; font-weight: 600; color: #0f172a; display: flex; align-items: center; gap: 6px;"><span style="font-size: 8px; font-weight: 700; width: 12px; height: 12px; display: inline-flex; align-items: center; justify-content: center; border-radius: 2px; background: #fee2e2; color: #dc2626;">C</span>green : State</div>
+              <div style="padding: 6px 10px; display: flex; flex-direction: column; gap: 5px; color: #475569;">
+                <span style="display: flex; justify-content: space-between;">name <span style="color: #0f172a;">green</span></span>
+                <span style="display: flex; justify-content: space-between;">kind <span style="padding: 0 6px; border-radius: 999px; background: #f1f5f9; font-size: 10px;">normal</span></span>
+              </div>
+              <div style="padding: 5px 10px; border-top: 1px solid #f1f5f9; color: #0284c7; font-size: 10px;">Open form <i class="bi bi-arrow-right" style="font-size: 9px;"></i></div>
+            </div>
+            <div style="position: absolute; right: 10px; bottom: 8px; font-size: 10px; color: #94a3b8; background: rgba(255,255,255,0.9); padding: 2px 8px; border-radius: 999px;">scoped to traffic light · 3 states · 3 transitions</div>
+          </div>
+        </div>
+      </div>
+      <div style="font-size: 12px; color: #64748b; line-height: 1.6;">Il drill-in su una metaclasse dichiarata <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px;">diagram</span> apre un canvas embedded <span style="font-weight: 600; color: #475569;">scopato</span>: root = l'istanza, perimetro = sottoalbero di containment + reference interne, palette ridotta alle metaclassi del sottoalbero. Selezionare un nodo apre la mini-form; «Open form» porta al drill-in classico. Il toggle in alto a destra permette comunque la vista form (le tabelle della simulazione) — che è anche il fallback obbligato fuori da jjodel.</div>
+    </div>
+
+    <div id="13b" style="display: flex; flex-direction: column; gap: 12px; width: 320px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: #0f172a; color: #ffffff; letter-spacing: 0.04em;">13b</span>
+        <span style="font-size: 13px; font-weight: 600; color: #0f172a;">La dichiarazione — nel rail della view</span>
+      </div>
+      <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+        <div style="display: flex; gap: 14px; padding: 0 14px; border-bottom: 1px solid #e2e8f0; font-size: 12px; white-space: nowrap; overflow: hidden;">
+          <span style="padding: 10px 0; color: #64748b;">Applies to</span>
+          <span style="padding: 10px 0; color: #0f172a; font-weight: 600; box-shadow: inset 0 -2px 0 #0ea5e9;">Structure</span>
+          <span style="padding: 10px 0; color: #64748b;">Symbol</span>
+          <span style="padding: 10px 0; color: #64748b;">Form</span>
+          <span style="padding: 10px 0; color: #cbd5e1;">⋯</span>
+        </div>
+        <div style="padding: 14px; display: flex; flex-direction: column; gap: 14px;">
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8;">Editing surface</div>
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+              <span style="font-size: 13px; color: #475569;">StateMachine</span>
+              <span style="display: inline-flex; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; font-size: 12px;">
+                <span style="padding: 5px 10px; color: #64748b;">Form</span>
+                <span style="padding: 5px 10px; background: #f1f5f9; color: #0f172a; font-weight: 500; border-left: 1px solid #e2e8f0;">Diagram</span>
+              </span>
+            </div>
+            <div style="display: flex; align-items: flex-start; gap: 6px; font-size: 11px; color: #94a3b8; line-height: 1.5;"><i class="bi bi-info-circle" style="margin-top: 1px;"></i><span>Applies to its containment subtree: States and Transitions edit on an embedded diagram</span></div>
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+              <span style="font-size: 13px; color: #475569;">Config</span>
+              <span style="display: inline-flex; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; font-size: 12px;">
+                <span style="padding: 5px 10px; background: #f1f5f9; color: #0f172a; font-weight: 500;">Form</span>
+                <span style="padding: 5px 10px; color: #64748b; border-left: 1px solid #e2e8f0;">Diagram</span>
+              </span>
+            </div>
+          </div>
+          <div style="display: flex; align-items: flex-start; gap: 6px; font-size: 11px; color: #b45309; line-height: 1.5; border-top: 1px solid #f1f5f9; padding-top: 12px;"><i class="bi bi-box-arrow-up-right" style="margin-top: 1px;"></i><span>Outside jjodel (standalone / reduced): <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px;">diagram</span> always degrades to the form fallback — surface is presentation, never data</span></div>
+        </div>
+      </div>
+      <div style="font-size: 12px; color: #64748b; line-height: 1.6;">Stessa view, stessa dichiarazione, due consumatori: il canvas la legge per decidere nodo-form vs symbol (<a href="#10c">10c</a>), il manager per decidere tabelle vs diagramma embedded (<a href="#13a">13a</a>). Nessuna configurazione nuova nel manager: eredita tutto dalla view attiva.</div>
+    </div>
+
+  </div>
+</section>
+<section id="12" style="padding: 48px 56px; display: flex; flex-direction: column; gap: 32px; border-bottom: 1px solid #e2e8f0;">
+  <div style="max-width: 860px;">
+    <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8; margin-bottom: 8px;">Turno 12 · Esplorazione · Copertura dei casi</div>
+    <h1 style="font-size: 24px; font-weight: 700; color: #0f172a; margin: 0 0 8px;">I casi che una form generata deve saper gestire</h1>
+    <p style="font-size: 14px; color: #475569; margin: 0; line-height: 1.6;">Cinque situazioni che completano <a href="#10a">10a</a>–<a href="#11b">11b</a>: creazione con validazione, multi-selezione, ricorsione profonda, delete di un'istanza referenziata, e la galleria completa dei widget. Tutte derivano da metamodello + FormSpec: nessuna configurazione aggiuntiva.</p>
+  </div>
+  <div style="display: flex; gap: 28px; flex-wrap: wrap; align-items: flex-start;">
+
+    <div id="12a" style="display: flex; flex-direction: column; gap: 12px; width: 340px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: #0f172a; color: #ffffff; letter-spacing: 0.04em;">12a</span>
+        <span style="font-size: 13px; font-weight: 600; color: #0f172a;">Creazione + validazione</span>
+      </div>
+      <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; box-shadow: 0 8px 24px rgba(15,23,42,0.12);">
+        <div style="background: linear-gradient(135deg, #334155, #0f172a); padding: 14px 18px; display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 10px; font-weight: 700; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; border-radius: 5px; background: rgba(255,255,255,0.15); color: #ffffff;">C</span>
+          <span style="font-size: 15px; font-weight: 600; color: #ffffff; flex: 1;">New Sensor</span>
+          <i class="bi bi-x-lg" style="font-size: 13px; color: rgba(255,255,255,0.6);"></i>
+        </div>
+        <div style="padding: 18px; display: flex; flex-direction: column; gap: 14px; font-size: 12px;">
+          <div style="display: flex; flex-direction: column; gap: 5px;">
+            <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #64748b;">Name <span style="color: #dc2626;">*</span></span>
+            <span style="border: 1.5px solid #ef4444; border-radius: 4px; padding: 7px 10px; color: #0f172a; box-shadow: 0 0 0 3px rgba(239,68,68,0.08);">s1</span>
+            <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: #dc2626;"><i class="bi bi-exclamation-circle"></i>A Sensor named «s1» already exists in plant</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 5px;">
+            <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #64748b;">Config <span style="color: #dc2626;">*</span> <span style="font-weight: 400; text-transform: none; letter-spacing: 0; color: #94a3b8;">1..1</span></span>
+            <span style="display: inline-flex; align-items: center; justify-content: space-between; border: 1px solid #cbd5e1; border-radius: 4px; padding: 7px 10px; color: #94a3b8;">Select a Config… <i class="bi bi-chevron-down" style="font-size: 10px;"></i></span>
+            <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: #b45309;"><i class="bi bi-exclamation-triangle"></i>Required by cardinality 1..1</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 5px;">
+            <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #64748b;">Threshold</span>
+            <span style="display: inline-flex; align-items: center; justify-content: space-between; border: 1px solid #cbd5e1; border-radius: 4px; padding: 7px 10px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #94a3b8;">default: 40 <span style="color: #cbd5e1;">°C</span></span>
+          </div>
+        </div>
+        <div style="padding: 12px 18px; border-top: 1px solid #e2e8f0; background: #f8fafc; display: flex; align-items: center; justify-content: flex-end; gap: 10px;">
+          <span style="font-size: 12px; font-weight: 500; color: #475569; padding: 7px 14px;">Cancel</span>
+          <span style="font-size: 12px; font-weight: 500; color: #ffffff; background: linear-gradient(#64748b, #475569); border-radius: 8px; padding: 7px 16px; opacity: 0.5;">Create</span>
+        </div>
+      </div>
+      <div style="font-size: 12px; color: #64748b; line-height: 1.6;">L'unico caso davvero transazionale: l'istanza non esiste finché «Create». Obbligatorietà dalla cardinalità (1..1 → required), unicità del nome dal contesto di containment, default visibili ma non persistiti finché non tocchi il campo. Create disabilitato finché la form non è valida.</div>
+    </div>
+
+    <div id="12b" style="display: flex; flex-direction: column; gap: 12px; width: 300px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: #0f172a; color: #ffffff; letter-spacing: 0.04em;">12b</span>
+        <span style="font-size: 13px; font-weight: 600; color: #0f172a;">Multi-selezione</span>
+      </div>
+      <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+        <div style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; gap: 10px;">
+          <span style="display: inline-flex;"><span style="font-size: 10px; font-weight: 700; width: 16px; height: 16px; display: inline-flex; align-items: center; justify-content: center; border-radius: 3px; background: #fee2e2; color: #dc2626;">C</span><span style="font-size: 10px; font-weight: 700; width: 16px; height: 16px; display: inline-flex; align-items: center; justify-content: center; border-radius: 3px; background: #fee2e2; color: #dc2626; margin-left: -6px; box-shadow: 0 0 0 1.5px #ffffff;">C</span></span>
+          <span style="font-size: 13px; font-weight: 600; color: #0f172a; flex: 1;">3 Sensors selected</span>
+          <i class="bi bi-x-lg" style="font-size: 12px; color: #94a3b8;"></i>
+        </div>
+        <div style="padding: 16px; display: flex; flex-direction: column; gap: 13px; font-size: 12px;">
+          <div style="display: flex; flex-direction: column; gap: 5px;">
+            <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #64748b;">Tint</span>
+            <span style="display: inline-flex; align-items: center; justify-content: space-between; border: 1px solid #cbd5e1; border-radius: 4px; padding: 6px 10px; color: #94a3b8; font-style: italic;">Mixed (Green, Red, Blue) <i class="bi bi-chevron-down" style="font-size: 10px;"></i></span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 5px;">
+            <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #64748b;">Threshold</span>
+            <span style="display: inline-flex; align-items: center; justify-content: space-between; border: 1px solid #06b6d4; background: #e0f7fa; border-radius: 4px; padding: 6px 10px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #0f172a;">50 <span style="color: #0891b2; font-size: 10px; font-family: Inter, sans-serif;">will apply to 3</span></span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 5px;">
+            <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #64748b;">Active</span>
+            <span style="display: inline-flex; align-items: center; gap: 8px;"><span style="width: 36px; height: 20px; border-radius: 999px; background: linear-gradient(90deg, #06b6d4 50%, #e2e8f0 50%); position: relative; display: inline-block;"><span style="position: absolute; left: 10px; top: 2px; width: 16px; height: 16px; border-radius: 50%; background: #ffffff; box-shadow: 0 0 0 1px #cbd5e1;"></span></span><span style="font-size: 11px; color: #94a3b8; font-style: italic;">2 on · 1 off</span></span>
+          </div>
+          <div style="display: flex; align-items: flex-start; gap: 6px; font-size: 11px; color: #94a3b8; line-height: 1.5; border-top: 1px solid #f1f5f9; padding-top: 10px;"><i class="bi bi-info-circle" style="margin-top: 1px;"></i><span>Name and children are hidden: identity is never bulk-edited</span></div>
+        </div>
+      </div>
+      <div style="font-size: 12px; color: #64748b; line-height: 1.6;">Valori misti dichiarati, mai mediati: il campo mostra «Mixed» finché non lo tocchi, e la scrittura vale per tutta la selezione (dichiarato inline). Il toggle ha uno stato terzo. Nome e containment spariscono: l'identità non si edita in blocco.</div>
+    </div>
+
+    <div id="12c" style="display: flex; flex-direction: column; gap: 12px; width: 320px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: #0f172a; color: #ffffff; letter-spacing: 0.04em;">12c</span>
+        <span style="font-size: 13px; font-weight: 600; color: #0f172a;">Ricorsione profonda — drill-in</span>
+      </div>
+      <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+        <div style="padding: 10px 16px; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; gap: 6px; font-size: 12px;">
+          <span style="color: #0284c7; cursor: pointer;">s1</span>
+          <i class="bi bi-chevron-right" style="font-size: 9px; color: #cbd5e1;"></i>
+          <span style="color: #0284c7; cursor: pointer;">p2: Port</span>
+          <i class="bi bi-chevron-right" style="font-size: 9px; color: #cbd5e1;"></i>
+          <span style="color: #0f172a; font-weight: 600;">f1: Filter</span>
+          <i class="bi bi-x-lg" style="font-size: 12px; color: #94a3b8; margin-left: auto;"></i>
+        </div>
+        <div style="padding: 16px; display: flex; flex-direction: column; gap: 13px; font-size: 12px;">
+          <div style="display: flex; flex-direction: column; gap: 5px;">
+            <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #64748b;">Expression</span>
+            <span style="border: 1px solid #cbd5e1; border-radius: 4px; padding: 7px 10px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #0f172a; background: #f8fafc;">value &gt; threshold * 0.9</span>
+          </div>
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+            <span style="color: #475569;">enabled</span>
+            <span style="width: 36px; height: 20px; border-radius: 999px; background: #06b6d4; position: relative; display: inline-block;"><span style="position: absolute; right: 2px; top: 2px; width: 16px; height: 16px; border-radius: 50%; background: #ffffff;"></span></span>
+          </div>
+          <div style="display: flex; align-items: flex-start; gap: 6px; font-size: 11px; color: #94a3b8; line-height: 1.5; border-top: 1px solid #f1f5f9; padding-top: 10px;"><i class="bi bi-info-circle" style="margin-top: 1px;"></i><span>Level 3 of containment: Sensor → Port → Filter. Inline stops at 1 level; beyond, drill-in replaces the form body</span></div>
+        </div>
+      </div>
+      <div style="font-size: 12px; color: #64748b; line-height: 1.6;">La regola di profondità: un livello di children inline (10a), dal secondo in poi <span style="font-weight: 600; color: #475569;">drill-in</span> — il corpo della form è sostituito dal figlio e il breadcrumb tiene la strada del containment. Ogni segmento è cliccabile; la stessa regola vale in drawer, modale e pannello.</div>
+    </div>
+
+    <div id="12d" style="display: flex; flex-direction: column; gap: 12px; width: 340px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: #0f172a; color: #ffffff; letter-spacing: 0.04em;">12d</span>
+        <span style="font-size: 13px; font-weight: 600; color: #0f172a;">Delete di un'istanza referenziata</span>
+      </div>
+      <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; box-shadow: 0 8px 24px rgba(15,23,42,0.12);">
+        <div style="padding: 16px 18px 0; display: flex; gap: 12px;">
+          <span style="width: 34px; height: 34px; border-radius: 8px; background: #fef2f2; display: inline-flex; align-items: center; justify-content: center; flex: none;"><i class="bi bi-exclamation-triangle" style="color: #dc2626; font-size: 15px;"></i></span>
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <span style="font-size: 14px; font-weight: 600; color: #0f172a;">Delete cfg1?</span>
+            <span style="font-size: 12px; color: #64748b; line-height: 1.5;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px;">cfg1: Config</span> is referenced by <span style="font-weight: 600; color: #475569;">2 Sensors</span> — cardinality 1..1 would break.</span>
+          </div>
+        </div>
+        <div style="margin: 12px 18px; border: 1px solid #f1f5f9; border-radius: 6px; font-size: 12px;">
+          <div style="display: flex; align-items: center; gap: 8px; padding: 7px 12px; border-bottom: 1px solid #f1f5f9; color: #475569;"><span style="font-size: 9px; font-weight: 700; width: 13px; height: 13px; display: inline-flex; align-items: center; justify-content: center; border-radius: 3px; background: #fee2e2; color: #dc2626;">C</span>s1 <span style="color: #94a3b8; font-family: 'IBM Plex Mono', monospace; font-size: 10px;">.cfg</span></div>
+          <div style="display: flex; align-items: center; gap: 8px; padding: 7px 12px; color: #475569;"><span style="font-size: 9px; font-weight: 700; width: 13px; height: 13px; display: inline-flex; align-items: center; justify-content: center; border-radius: 3px; background: #fee2e2; color: #dc2626;">C</span>s2 <span style="color: #94a3b8; font-family: 'IBM Plex Mono', monospace; font-size: 10px;">.cfg</span></div>
+        </div>
+        <div style="margin: 0 18px 14px; display: flex; flex-direction: column; gap: 6px; font-size: 12px;">
+          <span style="display: inline-flex; align-items: center; gap: 8px; border: 1.5px solid #0891b2; background: #e0f7fa; border-radius: 6px; padding: 8px 12px; color: #0f172a; font-weight: 500;"><i class="bi bi-arrow-repeat" style="color: #0891b2;"></i>Reassign both to… <span style="margin-left: auto; display: inline-flex; align-items: center; gap: 5px; font-weight: 400; border: 1px solid #cbd5e1; background: #ffffff; border-radius: 4px; padding: 2px 8px; font-size: 11px;">cfg2 <i class="bi bi-chevron-down" style="font-size: 9px; color: #94a3b8;"></i></span></span>
+          <span style="display: inline-flex; align-items: center; gap: 8px; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 12px; color: #64748b;"><i class="bi bi-slash-circle"></i>Delete anyway — 2 Sensors become invalid</span>
+        </div>
+        <div style="padding: 12px 18px; border-top: 1px solid #e2e8f0; background: #f8fafc; display: flex; justify-content: flex-end; gap: 10px; font-size: 12px;">
+          <span style="font-weight: 500; color: #475569; padding: 7px 14px;">Cancel</span>
+          <span style="font-weight: 500; color: #ffffff; background: #dc2626; border-radius: 8px; padding: 7px 16px;">Delete</span>
+        </div>
+      </div>
+      <div style="font-size: 12px; color: #64748b; line-height: 1.6;">Mai bloccare, mai cascare in silenzio: il dialogo elenca <span style="font-weight: 600; color: #475569;">chi</span> referenzia, offre la riassegnazione (default quando esiste un sostituto compatibile) e permette il delete sporco dichiarandone il costo — coerente con jjodel, dove un modello può essere temporaneamente invalido e la validazione lo dice.</div>
+    </div>
+
+    <div id="12e" style="display: flex; flex-direction: column; gap: 12px; width: 380px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: #0f172a; color: #ffffff; letter-spacing: 0.04em;">12e</span>
+        <span style="font-size: 13px; font-weight: 600; color: #0f172a;">Galleria — tutti i widget della mappa</span>
+      </div>
+      <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+        <div style="padding: 14px 16px; display: flex; flex-direction: column; gap: 11px; font-size: 12px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;"><span style="color: #475569;">name <span style="font-size: 10px; color: #cbd5e1; font-family: 'IBM Plex Mono', monospace;">text</span></span><span style="border: 1px solid #cbd5e1; border-radius: 4px; padding: 4px 9px; color: #0f172a; width: 130px;">s1</span></div>
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;"><span style="color: #475569;">script <span style="font-size: 10px; color: #cbd5e1; font-family: 'IBM Plex Mono', monospace;">textarea→code</span></span><span style="border: 1px solid #cbd5e1; border-radius: 4px; padding: 4px 9px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #0f172a; background: #f8fafc; width: 130px;">emit(value)</span></div>
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;"><span style="color: #475569;">tint <span style="font-size: 10px; color: #cbd5e1; font-family: 'IBM Plex Mono', monospace;">color→swatch</span></span><span style="display: inline-flex; align-items: center; gap: 6px; width: 130px;"><span style="width: 14px; height: 14px; border-radius: 3px; background: #22c55e; border: 1px solid #94a3b8;"></span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #64748b;">Green</span></span></div>
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;"><span style="color: #475569;">mode <span style="font-size: 10px; color: #cbd5e1; font-family: 'IBM Plex Mono', monospace;">select→enumChip</span></span><span style="width: 130px;"><span style="font-size: 11px; padding: 2px 9px; border-radius: 999px; background: #f1f5f9; color: #475569; font-weight: 500;">periodic</span></span></div>
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;"><span style="color: #475569;">active <span style="font-size: 10px; color: #cbd5e1; font-family: 'IBM Plex Mono', monospace;">checkbox→boolean</span></span><span style="width: 130px;"><span style="width: 32px; height: 18px; border-radius: 999px; background: #06b6d4; position: relative; display: inline-block;"><span style="position: absolute; right: 2px; top: 2px; width: 14px; height: 14px; border-radius: 50%; background: #ffffff;"></span></span></span></div>
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;"><span style="color: #475569;">threshold <span style="font-size: 10px; color: #cbd5e1; font-family: 'IBM Plex Mono', monospace;">number→numberUnit</span></span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #0f172a; width: 130px;">42 <span style="color: #94a3b8;">°C</span></span></div>
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;"><span style="color: #475569;">cfg <span style="font-size: 10px; color: #cbd5e1; font-family: 'IBM Plex Mono', monospace;">reference→pill</span></span><span style="width: 130px;"><span style="display: inline-flex; align-items: center; gap: 5px; font-size: 11px; padding: 2px 8px; border: 1px solid #e2e8f0; border-radius: 999px; color: #0f172a;"><span style="font-size: 8px; font-weight: 700; width: 12px; height: 12px; display: inline-flex; align-items: center; justify-content: center; border-radius: 2px; background: #cffafe; color: #0891b2;">R</span>cfg1</span></span></div>
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;"><span style="color: #475569;">installed <span style="font-size: 10px; color: #cbd5e1; font-family: 'IBM Plex Mono', monospace;">date</span></span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #0f172a; width: 130px;">2026-08-12</span></div>
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;"><span style="color: #475569;">battery <span style="font-size: 10px; color: #cbd5e1; font-family: 'IBM Plex Mono', monospace;">progress</span></span><span style="width: 130px; display: inline-flex; align-items: center; gap: 7px;"><span style="flex: 1; height: 5px; border-radius: 999px; background: #f1f5f9; overflow: hidden; display: inline-block;"><span style="display: block; width: 72%; height: 100%; background: #22c55e;"></span></span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #64748b;">72%</span></span></div>
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;"><span style="color: #475569;">notes <span style="font-size: 10px; color: #cbd5e1; font-family: 'IBM Plex Mono', monospace;">truncatedText</span></span><span style="font-size: 11px; color: #64748b; width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">calibrated on install, re-check…</span></div>
+        </div>
+      </div>
+      <div style="font-size: 12px; color: #64748b; line-height: 1.6;">La mappa widget↔renderer completa (R-STR-3), vista dal lato form: le prime sette righe hanno un widget FormSpec; <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px;">date</span>, <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px;">progress</span> e <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px;">truncatedText</span> arrivano solo dal metamodello (nessun override di view). In edit ogni riga diventa il controllo pieno; a riposo è il renderer compatto del canvas.</div>
+    </div>
+
+  </div>
+</section>
+<section id="11" style="padding: 48px 56px; display: flex; flex-direction: column; gap: 32px; border-bottom: 1px solid #e2e8f0;">
+  <div style="max-width: 860px;">
+    <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8; margin-bottom: 8px;">Turno 11 · Esplorazione · Il quarto tipo</div>
+    <h1 style="font-size: 24px; font-weight: 700; color: #0f172a; margin: 0 0 8px;">CRUD manager: il modello come sistema informativo</h1>
+    <p style="font-size: 14px; color: #475569; margin: 0; line-height: 1.6;">Il quarto tipo, oltre i tre di <a href="#10a">10a</a>–<a href="#10c">10c</a>: una vista <span style="font-weight: 600;">per metaclasse</span> invece che per containment. Ogni metaclasse root diventa una collezione gestita — tabella delle istanze, New/Edit/Delete, ricerca — come l'admin di un sistema informativo, generata da metamodello + FormSpec: le colonne sono gli attributi (resi coi widget della precedenza), la form di edit è il tipo 1 (<a href="#9a">9a</a>). Chi compila dati non vede mai il canvas.</p>
+  </div>
+  <div style="display: flex; gap: 32px; flex-wrap: wrap; align-items: flex-start;">
+    <div id="11a" style="display: flex; flex-direction: column; gap: 12px; width: 900px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: #0f172a; color: #ffffff; letter-spacing: 0.04em;">11a</span>
+        <span style="font-size: 13px; font-weight: 600; color: #0f172a;">Instance manager — collezione Sensor con drawer di edit</span>
+      </div>
+      <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); display: flex; height: 360px;">
+        <div style="width: 168px; border-right: 1px solid #e2e8f0; background: #f8fafc; display: flex; flex-direction: column;">
+          <div style="padding: 12px 14px 8px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8;">Collections</div>
+          <div style="font-size: 12px; display: flex; flex-direction: column;">
+            <div style="display: flex; align-items: center; gap: 8px; padding: 7px 14px; background: #e0f7fa; box-shadow: inset 2px 0 0 #0891b2; color: #0f172a; font-weight: 500;"><span style="font-size: 9px; font-weight: 700; width: 14px; height: 14px; display: inline-flex; align-items: center; justify-content: center; border-radius: 3px; background: #fee2e2; color: #dc2626;">C</span>Sensor <span style="margin-left: auto; font-size: 11px; color: #64748b;">4</span></div>
+            <div style="display: flex; align-items: center; gap: 8px; padding: 7px 14px; color: #475569;"><span style="font-size: 9px; font-weight: 700; width: 14px; height: 14px; display: inline-flex; align-items: center; justify-content: center; border-radius: 3px; background: #dbeafe; color: #2563eb;">C</span>Config <span style="margin-left: auto; font-size: 11px; color: #94a3b8;">2</span></div>
+            <div style="display: flex; align-items: center; gap: 8px; padding: 7px 14px; color: #475569;"><span style="font-size: 9px; font-weight: 700; width: 14px; height: 14px; display: inline-flex; align-items: center; justify-content: center; border-radius: 3px; background: #dcfce7; color: #16a34a;">C</span>Zone <span style="margin-left: auto; font-size: 11px; color: #94a3b8;">3</span></div>
+          </div>
+          <div style="margin-top: auto; padding: 10px 14px; font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0; line-height: 1.5;">Collections = root-instantiable metaclasses. Port lives inside Sensor, not here.</div>
+        </div>
+        <div style="flex: 1; display: flex; flex-direction: column; min-width: 0;">
+          <div style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 14px; font-weight: 600; color: #0f172a;">Sensor</span>
+            <span style="font-size: 11px; color: #94a3b8;">4 instances</span>
+            <span style="margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #94a3b8; border: 1px solid #e2e8f0; border-radius: 4px; padding: 4px 10px;"><i class="bi bi-search" style="font-size: 11px;"></i>Search…</span>
+            <span style="font-size: 12px; font-weight: 500; color: #ffffff; background: linear-gradient(#64748b, #475569); border-radius: 8px; padding: 5px 12px; display: inline-flex; align-items: center; gap: 6px;"><i class="bi bi-plus-lg" style="font-size: 11px;"></i>New Sensor</span>
+          </div>
+          <div style="flex: 1; font-size: 12px; overflow: hidden;">
+            <div style="display: grid; grid-template-columns: 56px 1fr 84px 76px 46px 50px; gap: 0; padding: 7px 14px; border-bottom: 1px solid #e2e8f0; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #94a3b8;">
+              <span>name</span><span>description</span><span>tint</span><span>threshold</span><span>active</span><span></span>
+            </div>
+            <div style="display: grid; grid-template-columns: 56px 1fr 84px 76px 46px 50px; align-items: center; padding: 8px 14px; border-bottom: 1px solid #f1f5f9; color: #475569;">
+              <span style="font-weight: 500; color: #0f172a;">s1</span><span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: 'IBM Plex Mono', monospace; font-size: 11px;">reads ambient °C…</span><span style="display: inline-flex; align-items: center; gap: 5px;"><span style="width: 11px; height: 11px; border-radius: 3px; background: #22c55e;"></span>Green</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px;">42 °C</span><span><span style="width: 24px; height: 14px; border-radius: 999px; background: #06b6d4; position: relative; display: inline-block;"><span style="position: absolute; right: 2px; top: 2px; width: 10px; height: 10px; border-radius: 50%; background: #ffffff;"></span></span></span><span style="display: inline-flex; gap: 8px; justify-content: flex-end;"><i class="bi bi-pencil" style="color: #0284c7; font-size: 12px;"></i><i class="bi bi-trash" style="color: #cbd5e1; font-size: 12px;"></i></span>
+            </div>
+            <div style="display: grid; grid-template-columns: 56px 1fr 84px 76px 46px 50px; align-items: center; padding: 8px 14px; border-bottom: 1px solid #f1f5f9; color: #475569; background: #f8fafc; box-shadow: inset 2px 0 0 #0891b2;">
+              <span style="font-weight: 500; color: #0f172a;">s2</span><span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: 'IBM Plex Mono', monospace; font-size: 11px;">gateway probe</span><span style="display: inline-flex; align-items: center; gap: 5px;"><span style="width: 11px; height: 11px; border-radius: 3px; background: #ef4444;"></span>Red</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px;">55 °C</span><span><span style="width: 24px; height: 14px; border-radius: 999px; background: #e2e8f0; position: relative; display: inline-block;"><span style="position: absolute; left: 2px; top: 2px; width: 10px; height: 10px; border-radius: 50%; background: #ffffff; box-shadow: 0 0 0 1px #cbd5e1;"></span></span></span><span style="display: inline-flex; gap: 8px; justify-content: flex-end;"><i class="bi bi-pencil" style="color: #0284c7; font-size: 12px;"></i><i class="bi bi-trash" style="color: #cbd5e1; font-size: 12px;"></i></span>
+            </div>
+            <div style="display: grid; grid-template-columns: 56px 1fr 84px 76px 46px 50px; align-items: center; padding: 8px 14px; border-bottom: 1px solid #f1f5f9; color: #475569;">
+              <span style="font-weight: 500; color: #0f172a;">s3</span><span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: 'IBM Plex Mono', monospace; font-size: 11px;">south wing</span><span style="display: inline-flex; align-items: center; gap: 5px;"><span style="width: 11px; height: 11px; border-radius: 3px; background: #3b82f6;"></span>Blue</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px;">38 °C</span><span><span style="width: 24px; height: 14px; border-radius: 999px; background: #06b6d4; position: relative; display: inline-block;"><span style="position: absolute; right: 2px; top: 2px; width: 10px; height: 10px; border-radius: 50%; background: #ffffff;"></span></span></span><span style="display: inline-flex; gap: 8px; justify-content: flex-end;"><i class="bi bi-pencil" style="color: #0284c7; font-size: 12px;"></i><i class="bi bi-trash" style="color: #cbd5e1; font-size: 12px;"></i></span>
+            </div>
+          </div>
+        </div>
+        <div style="width: 224px; border-left: 1px solid #e2e8f0; display: flex; flex-direction: column; background: #ffffff;">
+          <div style="padding: 10px 14px; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 13px; font-weight: 600; color: #0f172a; flex: 1;">s2 <span style="font-weight: 400; color: #94a3b8;">: Sensor</span></span>
+            <i class="bi bi-x-lg" style="font-size: 12px; color: #94a3b8;"></i>
+          </div>
+          <div style="padding: 14px; display: flex; flex-direction: column; gap: 12px; font-size: 12px;">
+            <div style="display: flex; flex-direction: column; gap: 5px;"><span style="font-weight: 500; color: #475569;">name</span><span style="border: 1px solid #cbd5e1; border-radius: 4px; padding: 4px 8px; color: #0f172a;">s2</span></div>
+            <div style="display: flex; flex-direction: column; gap: 5px;"><span style="font-weight: 500; color: #475569;">threshold</span><span style="border: 1px solid #cbd5e1; border-radius: 4px; padding: 4px 8px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #0f172a;">55 <span style="color: #94a3b8;">°C</span></span></div>
+            <div style="display: flex; flex-direction: column; gap: 5px;"><span style="font-weight: 500; color: #475569;">cfg <span style="font-size: 10px; color: #94a3b8; font-weight: 400;">1..1</span></span><span style="display: inline-flex; align-items: center; justify-content: space-between; border: 1px solid #cbd5e1; border-radius: 4px; padding: 4px 8px; color: #0f172a;">cfg1: Config <i class="bi bi-chevron-down" style="font-size: 9px; color: #94a3b8;"></i></span></div>
+            <div style="display: flex; flex-direction: column; gap: 5px;">
+              <div style="display: flex; align-items: center; justify-content: space-between;"><span style="font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8;">Ports · 1 of 4</span><span style="font-size: 11px; color: #0284c7;"><i class="bi bi-plus"></i> Add</span></div>
+              <div style="display: flex; align-items: center; gap: 6px; font-size: 11px; color: #64748b;"><i class="bi bi-chevron-right" style="font-size: 9px;"></i>p1 · gw/0 · out</div>
+            </div>
+          </div>
+          <div style="margin-top: auto; padding: 10px 14px; border-top: 1px solid #f1f5f9; display: flex; align-items: center; gap: 6px; font-size: 11px; color: #94a3b8;"><i class="bi bi-info-circle"></i>Live writes — no Save</div>
+        </div>
+      </div>
+      <div style="font-size: 12px; color: #64748b; line-height: 1.6;">Tre pezzi già disegnati, ricomposti: collezioni = metaclassi root (10b), tabella = le righe del nodo in orizzontale (colonne dai widget della precedenza — swatch, mono, toggle), drawer = form di tipo 1 con children inline (10a). Delete con conferma quando l'istanza è referenziata (le reference entranti si contano dal modello). La domanda aperta è dove vive: quinto tab del rail no — è una <span style="font-weight: 600; color: #475569;">superficie di prodotto</span>, sorella del canvas, plausibilmente un'altra «view» del progetto accanto a diagramma e tree.</div>
+    </div>
+
+    <div id="11b" style="display: flex; flex-direction: column; gap: 12px; width: 900px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: #0f172a; color: #ffffff; letter-spacing: 0.04em;">11b</span>
+        <span style="font-size: 13px; font-weight: 600; color: #0f172a;">Come pagina web — lista piena, edit in modale</span>
+      </div>
+      <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); position: relative; height: 420px;">
+        <div style="background: #ffffff; border-bottom: 1px solid #e2e8f0; padding: 0 24px; height: 48px; display: flex; align-items: center; gap: 24px;">
+          <span style="font-size: 14px; font-weight: 700; color: #0f172a;">plant</span>
+          <div style="display: flex; gap: 18px; font-size: 12px; height: 100%; align-items: stretch;">
+            <span style="display: flex; align-items: center; color: #0f172a; font-weight: 500; box-shadow: inset 0 -2px 0 #0ea5e9;">Sensors <span style="margin-left: 5px; font-size: 10px; background: #f1f5f9; border-radius: 999px; padding: 1px 6px; color: #64748b;">4</span></span>
+            <span style="display: flex; align-items: center; color: #64748b;">Configs <span style="margin-left: 5px; font-size: 10px; background: #f1f5f9; border-radius: 999px; padding: 1px 6px; color: #94a3b8;">2</span></span>
+            <span style="display: flex; align-items: center; color: #64748b;">Zones <span style="margin-left: 5px; font-size: 10px; background: #f1f5f9; border-radius: 999px; padding: 1px 6px; color: #94a3b8;">3</span></span>
+          </div>
+          <span style="margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #94a3b8; border: 1px solid #e2e8f0; border-radius: 4px; padding: 4px 10px; background: #ffffff;"><i class="bi bi-search" style="font-size: 11px;"></i>Search sensors…</span>
+          <span style="font-size: 12px; font-weight: 500; color: #ffffff; background: linear-gradient(#64748b, #475569); border-radius: 8px; padding: 6px 14px; display: inline-flex; align-items: center; gap: 6px;"><i class="bi bi-plus-lg" style="font-size: 11px;"></i>New Sensor</span>
+        </div>
+        <div style="padding: 20px 24px;">
+          <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+            <div style="display: grid; grid-template-columns: 70px 1fr 96px 80px 56px 40px; padding: 8px 16px; border-bottom: 1px solid #e2e8f0; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #94a3b8;"><span>name</span><span>description</span><span>tint</span><span>threshold</span><span>active</span><span></span></div>
+            <div style="display: grid; grid-template-columns: 70px 1fr 96px 80px 56px 40px; align-items: center; padding: 9px 16px; border-bottom: 1px solid #f1f5f9; font-size: 12px; color: #475569;"><span style="font-weight: 500; color: #0f172a;">s1</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">reads ambient °C…</span><span style="display: inline-flex; align-items: center; gap: 5px;"><span style="width: 11px; height: 11px; border-radius: 3px; background: #22c55e;"></span>Green</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px;">42 °C</span><span style="color: #16a34a; font-size: 11px;">on</span><span style="text-align: right;"><i class="bi bi-pencil" style="color: #0284c7; font-size: 12px;"></i></span></div>
+            <div style="display: grid; grid-template-columns: 70px 1fr 96px 80px 56px 40px; align-items: center; padding: 9px 16px; border-bottom: 1px solid #f1f5f9; font-size: 12px; color: #475569; background: #f8fafc;"><span style="font-weight: 500; color: #0f172a;">s2</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">gateway probe</span><span style="display: inline-flex; align-items: center; gap: 5px;"><span style="width: 11px; height: 11px; border-radius: 3px; background: #ef4444;"></span>Red</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px;">55 °C</span><span style="color: #94a3b8; font-size: 11px;">off</span><span style="text-align: right;"><i class="bi bi-pencil" style="color: #0284c7; font-size: 12px;"></i></span></div>
+            <div style="display: grid; grid-template-columns: 70px 1fr 96px 80px 56px 40px; align-items: center; padding: 9px 16px; font-size: 12px; color: #475569;"><span style="font-weight: 500; color: #0f172a;">s3</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">south wing</span><span style="display: inline-flex; align-items: center; gap: 5px;"><span style="width: 11px; height: 11px; border-radius: 3px; background: #3b82f6;"></span>Blue</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px;">38 °C</span><span style="color: #16a34a; font-size: 11px;">on</span><span style="text-align: right;"><i class="bi bi-pencil" style="color: #0284c7; font-size: 12px;"></i></span></div>
+          </div>
+        </div>
+        <div style="position: absolute; inset: 0; background: rgba(15,23,42,0.55); display: flex; align-items: center; justify-content: center;">
+          <div style="width: 520px; background: #ffffff; border-radius: 16px; box-shadow: 0 32px 80px rgba(15,23,42,0.45); overflow: hidden;">
+            <div style="background: linear-gradient(135deg, #334155, #0f172a); padding: 18px 24px; display: flex; align-items: center; gap: 12px;">
+              <span style="font-size: 11px; font-weight: 700; width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; background: rgba(255,255,255,0.15); color: #ffffff;">C</span>
+              <div style="flex: 1;">
+                <div style="font-size: 16px; font-weight: 600; color: #ffffff;">s2</div>
+                <div style="font-size: 11px; color: rgba(255,255,255,0.65);">Sensor · plant · <span style="font-family: 'IBM Plex Mono', monospace;">4 instances</span></div>
+              </div>
+              <i class="bi bi-x-lg" style="font-size: 14px; color: rgba(255,255,255,0.6); cursor: pointer;"></i>
+            </div>
+            <div style="padding: 22px 24px; display: flex; flex-direction: column; gap: 16px; font-size: 12px;">
+              <div style="display: flex; gap: 14px;">
+                <div style="display: flex; flex-direction: column; gap: 6px; flex: 1;"><span style="font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #64748b;">Name</span><span style="border: 1px solid #cbd5e1; border-radius: 4px; padding: 8px 11px; font-size: 13px; color: #0f172a;">s2</span></div>
+                <div style="display: flex; flex-direction: column; gap: 6px; width: 140px;"><span style="font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #64748b;">Threshold</span><span style="display: inline-flex; align-items: center; justify-content: space-between; border: 1px solid #cbd5e1; border-radius: 4px; padding: 8px 11px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #0f172a;">55 <span style="color: #94a3b8;">°C</span></span></div>
+              </div>
+              <div style="display: flex; gap: 14px;">
+                <div style="display: flex; flex-direction: column; gap: 6px; flex: 1;"><span style="font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #64748b;">Tint</span><div style="display: flex; gap: 8px;"><span style="display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border: 1.5px solid #0891b2; border-radius: 4px; background: #e0f7fa; color: #0f172a; font-weight: 500;"><span style="width: 12px; height: 12px; border-radius: 3px; background: #ef4444;"></span>Red</span><span style="display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border: 1px solid #cbd5e1; border-radius: 4px; color: #64748b;"><span style="width: 12px; height: 12px; border-radius: 3px; background: #22c55e;"></span>Green</span><span style="display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border: 1px solid #cbd5e1; border-radius: 4px; color: #64748b;"><span style="width: 12px; height: 12px; border-radius: 3px; background: #3b82f6;"></span>Blue</span></div></div>
+                <div style="display: flex; flex-direction: column; gap: 6px; width: 140px;"><span style="font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #64748b;">Config <span style="font-weight: 400; text-transform: none; letter-spacing: 0; color: #94a3b8;">1..1</span></span><span style="display: inline-flex; align-items: center; justify-content: space-between; border: 1px solid #cbd5e1; border-radius: 4px; padding: 8px 11px; color: #0f172a;">cfg1 <i class="bi bi-chevron-down" style="font-size: 10px; color: #94a3b8;"></i></span></div>
+              </div>
+              <div style="border-top: 1px solid #f1f5f9; padding-top: 14px; display: flex; flex-direction: column; gap: 8px;">
+                <div style="display: flex; align-items: center; justify-content: space-between;"><span style="font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #64748b;">Ports <span style="font-weight: 400; letter-spacing: 0; text-transform: none; color: #94a3b8;">· 1 of 4</span></span><span style="font-size: 12px; font-weight: 500; color: #0284c7; cursor: pointer;"><i class="bi bi-plus"></i> Add Port</span></div>
+                <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #475569; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 12px;"><i class="bi bi-chevron-right" style="font-size: 10px; color: #94a3b8;"></i><span style="flex: 1;">p1 <span style="color: #94a3b8;">· gw/0 · out</span></span><i class="bi bi-trash" style="color: #cbd5e1; font-size: 12px;"></i></div>
+              </div>
+            </div>
+            <div style="padding: 14px 24px; border-top: 1px solid #e2e8f0; background: #f8fafc; display: flex; align-items: center; gap: 12px;">
+              <span style="font-size: 12px; color: #dc2626; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; cursor: pointer;"><i class="bi bi-trash" style="font-size: 12px;"></i>Delete</span>
+              <span style="flex: 1;"></span>
+              <span style="font-size: 13px; font-weight: 500; color: #475569; padding: 8px 16px; cursor: pointer;">Cancel</span>
+              <span style="font-size: 13px; font-weight: 500; color: #ffffff; background: linear-gradient(#64748b, #475569); border-radius: 8px; padding: 8px 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.15);">Done</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="font-size: 12px; color: #64748b; line-height: 1.6;">Stesso sistema di 11a, registro da applicazione web: collezioni come tab orizzontali in una navbar (idioma dashboard jjodel), tabella a tutta pagina, edit in <span style="font-weight: 600; color: #475569;">modale</span> — header navy con identità piena dell'istanza (idioma del pannello auth), campi a due colonne con label uppercase, footer di comando con Delete/Cancel/Done: qui il registro è transazionale, non live — Done applica, Cancel scarta. Adatto quando il compilatore dati è un utente finale che non deve vedere né canvas né rail. Il modale regge finché la ricorsione è a un livello; oltre (Port con figli suoi), meglio il drawer di 11a o drill-in nel modale con breadcrumb.</div>
+    </div>
+
+  </div>
+</section>
+<section id="10" style="padding: 48px 56px; display: flex; flex-direction: column; gap: 32px; border-bottom: 1px solid #e2e8f0;">
+  <div style="max-width: 860px;">
+    <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8; margin-bottom: 8px;">Turno 10 · Esplorazione · Le tre forme delle form</div>
+    <h1 style="font-size: 24px; font-weight: 700; color: #0f172a; margin: 0 0 8px;">Singola istanza, intero modello, ramo nel diagramma</h1>
+    <p style="font-size: 14px; color: #475569; margin: 0 0 10px; line-height: 1.6;">Stessa FormSpec per-metaclasse, tre composizioni. La regola che le attraversa tutte: <span style="font-weight: 600;">containment crea</span> (i figli nascono e muoiono dentro la form), <span style="font-weight: 600;">reference seleziona</span> (mai creare da un select — niente orfani). Struttura, tipi e cardinalità arrivano dal metamodello: zero configurazione nuova.</p>
+    <p style="font-size: 14px; color: #475569; margin: 0; line-height: 1.6;">Fixture comune: <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; background: #f1f5f9; padding: 1px 5px; border-radius: 3px;">s1: Sensor</span> con containment <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; background: #f1f5f9; padding: 1px 5px; border-radius: 3px;">ports: Port[0..4]</span> e reference <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; background: #f1f5f9; padding: 1px 5px; border-radius: 3px;">cfg: Config[1]</span>.</p>
+  </div>
+  <div style="display: flex; gap: 32px; flex-wrap: wrap; align-items: flex-start;">
+
+    <div id="10a" style="display: flex; flex-direction: column; gap: 12px; width: 360px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: #0f172a; color: #ffffff; letter-spacing: 0.04em;">10a</span>
+        <span style="font-size: 13px; font-weight: 600; color: #0f172a;">Singola istanza + children inline</span>
+      </div>
+      <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+        <div style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 10px; font-weight: 700; width: 16px; height: 16px; display: inline-flex; align-items: center; justify-content: center; border-radius: 3px; background: #fee2e2; color: #dc2626;">C</span>
+          <span style="font-size: 14px; font-weight: 600; color: #0f172a; flex: 1;">s1 <span style="font-weight: 400; color: #94a3b8;">: Sensor</span></span>
+          <i class="bi bi-x-lg" style="font-size: 13px; color: #94a3b8;"></i>
+        </div>
+        <div style="padding: 16px; display: flex; flex-direction: column; gap: 14px;">
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <span style="font-size: 12px; font-weight: 500; color: #475569;">name</span>
+            <span style="border: 1px solid #cbd5e1; border-radius: 4px; padding: 5px 10px; font-size: 12px; color: #0f172a;">s1</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <span style="font-size: 12px; font-weight: 500; color: #475569;">cfg <span style="font-size: 10px; color: #94a3b8; font-weight: 400;">reference · 1..1</span></span>
+            <span style="display: inline-flex; align-items: center; justify-content: space-between; font-size: 12px; padding: 5px 10px; border: 1px solid #cbd5e1; border-radius: 4px; color: #0f172a;"><span style="display: inline-flex; align-items: center; gap: 6px;"><span style="font-size: 9px; font-weight: 700; width: 14px; height: 14px; display: inline-flex; align-items: center; justify-content: center; border-radius: 3px; background: #cffafe; color: #0891b2;">R</span>cfg1: Config</span><i class="bi bi-chevron-down" style="font-size: 10px; color: #94a3b8;"></i></span>
+            <div style="display: flex; align-items: flex-start; gap: 6px; font-size: 11px; color: #94a3b8; line-height: 1.5;"><i class="bi bi-info-circle" style="margin-top: 1px;"></i><span>Selects among existing Config instances — references never create</span></div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8;">Ports <span style="letter-spacing: 0; text-transform: none; font-weight: 400;">· 2 of 4</span></span>
+              <span style="font-size: 11px; font-weight: 500; color: #0284c7; cursor: pointer;"><i class="bi bi-plus"></i> Add Port</span>
+            </div>
+            <div style="border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+              <div style="display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-bottom: 1px solid #f1f5f9; font-size: 12px;">
+                <i class="bi bi-chevron-right" style="font-size: 10px; color: #94a3b8;"></i>
+                <span style="color: #0f172a; flex: 1;">p1 <span style="color: #94a3b8;">· north · in</span></span>
+                <i class="bi bi-trash" style="font-size: 11px; color: #cbd5e1;"></i>
+              </div>
+              <div style="background: #f8fafc;">
+                <div style="display: flex; align-items: center; gap: 8px; padding: 7px 10px; font-size: 12px;">
+                  <i class="bi bi-chevron-down" style="font-size: 10px; color: #64748b;"></i>
+                  <span style="color: #0f172a; font-weight: 500; flex: 1;">p2</span>
+                  <i class="bi bi-trash" style="font-size: 11px; color: #94a3b8;"></i>
+                </div>
+                <div style="padding: 4px 10px 12px 28px; display: flex; flex-direction: column; gap: 10px;">
+                  <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+                    <span style="font-size: 12px; color: #475569;">direction</span>
+                    <span style="display: inline-flex; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; font-size: 12px;"><span style="padding: 4px 10px; color: #64748b;">in</span><span style="padding: 4px 10px; background: #f1f5f9; color: #0f172a; font-weight: 500; border-left: 1px solid #e2e8f0;">out</span></span>
+                  </div>
+                  <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+                    <span style="font-size: 12px; color: #475569;">topic</span>
+                    <span style="border: 1px solid #cbd5e1; border-radius: 4px; padding: 4px 8px; font-size: 11px; font-family: 'IBM Plex Mono', monospace; color: #0f172a;">south/2</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="font-size: 12px; color: #64748b; line-height: 1.6;">Il mattone base. I figli di containment vivono come lista inline: riga collassata, espansa = sotto-form ricorsiva (tipo 1 dentro tipo 1). «Add» rispetta la cardinalità (2 of 4). Un livello di ricorsione inline; oltre, drill-in.</div>
+    </div>
+
+    <div id="10b" style="display: flex; flex-direction: column; gap: 12px; width: 520px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: #0f172a; color: #ffffff; letter-spacing: 0.04em;">10b</span>
+        <span style="font-size: 13px; font-weight: 600; color: #0f172a;">Intero modello — master-detail</span>
+      </div>
+      <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); display: flex;">
+        <div style="width: 190px; border-right: 1px solid #e2e8f0; background: #f8fafc; display: flex; flex-direction: column;">
+          <div style="padding: 10px 12px; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between;">
+            <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8;">Model</span>
+            <i class="bi bi-plus-lg" style="font-size: 11px; color: #0284c7;"></i>
+          </div>
+          <div style="padding: 6px 0; font-size: 12px;">
+            <div style="display: flex; align-items: center; gap: 6px; padding: 5px 12px; color: #475569;"><i class="bi bi-chevron-down" style="font-size: 9px; color: #94a3b8;"></i><span style="font-size: 9px; font-weight: 700; width: 13px; height: 13px; display: inline-flex; align-items: center; justify-content: center; border-radius: 3px; background: #fef3c7; color: #b45309;">m</span>plant</div>
+            <div style="display: flex; align-items: center; gap: 6px; padding: 5px 12px 5px 26px; background: #e0f7fa; box-shadow: inset 2px 0 0 #0891b2; color: #0f172a; font-weight: 500;"><i class="bi bi-chevron-down" style="font-size: 9px; color: #64748b;"></i><span style="font-size: 9px; font-weight: 700; width: 13px; height: 13px; display: inline-flex; align-items: center; justify-content: center; border-radius: 3px; background: #fee2e2; color: #dc2626;">C</span>s1: Sensor</div>
+            <div style="display: flex; align-items: center; gap: 6px; padding: 4px 12px 4px 44px; color: #64748b;">p1: Port</div>
+            <div style="display: flex; align-items: center; gap: 6px; padding: 4px 12px 4px 44px; color: #64748b;">p2: Port</div>
+            <div style="display: flex; align-items: center; gap: 6px; padding: 4px 12px 4px 44px; color: #94a3b8; font-style: italic;"><i class="bi bi-plus" style="font-size: 11px;"></i>Add Port</div>
+            <div style="display: flex; align-items: center; gap: 6px; padding: 5px 12px 5px 26px; color: #475569;"><i class="bi bi-chevron-right" style="font-size: 9px; color: #94a3b8;"></i><span style="font-size: 9px; font-weight: 700; width: 13px; height: 13px; display: inline-flex; align-items: center; justify-content: center; border-radius: 3px; background: #fee2e2; color: #dc2626;">C</span>s2: Sensor</div>
+            <div style="display: flex; align-items: center; gap: 6px; padding: 5px 12px 5px 26px; color: #475569;"><i class="bi bi-chevron-right" style="font-size: 9px; color: #94a3b8;"></i><span style="font-size: 9px; font-weight: 700; width: 13px; height: 13px; display: inline-flex; align-items: center; justify-content: center; border-radius: 3px; background: #fee2e2; color: #dc2626;">C</span>cfg1: Config</div>
+            <div style="display: flex; align-items: center; gap: 6px; padding: 5px 12px 5px 26px; color: #94a3b8; font-style: italic;"><i class="bi bi-plus" style="font-size: 11px;"></i>Add root element <i class="bi bi-chevron-down" style="font-size: 9px;"></i></div>
+          </div>
+        </div>
+        <div style="flex: 1; display: flex; flex-direction: column;">
+          <div style="padding: 10px 14px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 13px; font-weight: 600; color: #0f172a;">s1 <span style="font-weight: 400; color: #94a3b8;">: Sensor</span></span>
+          </div>
+          <div style="padding: 14px; display: flex; flex-direction: column; gap: 12px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+              <span style="font-size: 12px; color: #475569;">name</span>
+              <span style="border: 1px solid #cbd5e1; border-radius: 4px; padding: 4px 8px; font-size: 12px; color: #0f172a; width: 110px;">s1</span>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+              <span style="font-size: 12px; color: #475569;">tint</span>
+              <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; color: #0f172a;"><span style="width: 12px; height: 12px; border-radius: 3px; background: #22c55e;"></span>Green <i class="bi bi-chevron-down" style="font-size: 10px; color: #94a3b8;"></i></span>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+              <span style="font-size: 12px; color: #475569;">cfg</span>
+              <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; color: #0f172a;"><span style="font-size: 9px; font-weight: 700; width: 13px; height: 13px; display: inline-flex; align-items: center; justify-content: center; border-radius: 3px; background: #cffafe; color: #0891b2;">R</span>cfg1 <i class="bi bi-chevron-down" style="font-size: 10px; color: #94a3b8;"></i></span>
+            </div>
+            <div style="display: flex; align-items: flex-start; gap: 6px; font-size: 11px; color: #94a3b8; line-height: 1.5; border-top: 1px solid #f1f5f9; padding-top: 10px;"><i class="bi bi-info-circle" style="margin-top: 1px;"></i><span>Children edit in place: select <span style="color: #64748b; font-weight: 500;">p1</span> in the outline. Creation lives in the tree («Add Port»), not in a dropdown.</span></div>
+          </div>
+        </div>
+      </div>
+      <div style="font-size: 12px; color: #64748b; line-height: 1.6;">Un editor alternativo al canvas, per chi lavora a dati: outline = containment del modello a partire dai <span style="font-weight: 600; color: #475569;">root</span> — «Add root element» offre le metaclassi istanziabili a livello di modello (le stesse del palette del canvas), i nodi «Add» interni i figli di containment. Detail = form di tipo 1 dell'elemento selezionato; le reference restano select anche qui.</div>
+    </div>
+
+    <div id="10c" style="display: flex; flex-direction: column; gap: 12px; width: 560px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: #0f172a; color: #ffffff; letter-spacing: 0.04em;">10c</span>
+        <span style="font-size: 13px; font-weight: 600; color: #0f172a;">Ramo nel diagramma — form embedded come Symbol</span>
+      </div>
+      <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); position: relative; height: 340px; overflow: hidden; background-image: radial-gradient(#e2e8f0 1px, transparent 1px); background-size: 16px 16px;">
+        <div style="position: absolute; left: 24px; top: 32px; width: 150px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+          <div style="height: 3px; background: #94a3b8;"></div>
+          <div style="padding: 7px 10px; font-size: 12px; font-weight: 600; color: #0f172a; border-bottom: 1px solid #e2e8f0;">cfg1: Config</div>
+          <div style="padding: 6px 10px; font-size: 11px; color: #64748b;">rate = 5s</div>
+        </div>
+        <svg style="position: absolute; left: 174px; top: 68px; width: 76px; height: 40px;" viewBox="0 0 76 40"><path d="M0,8 C30,8 40,32 76,32" fill="none" stroke="#94a3b8" stroke-width="1.5"></path><polygon points="76,32 68,28 68,36" fill="#94a3b8"></polygon></svg>
+        <div style="position: absolute; left: 250px; top: 24px; width: 280px; background: #ffffff; border: 1px solid #06b6d4; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(6,182,212,0.15);">
+          <div style="height: 3px; background: #06b6d4;"></div>
+          <div style="padding: 8px 12px; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 10px; font-weight: 700; width: 16px; height: 16px; display: inline-flex; align-items: center; justify-content: center; border-radius: 3px; background: #fee2e2; color: #dc2626;">C</span>
+            <span style="font-size: 13px; font-weight: 600; color: #0f172a; flex: 1;">s1: Sensor</span>
+            <i class="bi bi-ui-checks" style="font-size: 12px; color: #0891b2;" title="Rendered as form by this view"></i>
+          </div>
+          <div style="padding: 10px 12px; display: flex; flex-direction: column; gap: 9px; font-size: 12px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+              <span style="color: #475569;">threshold</span>
+              <span style="border: 1px solid #cbd5e1; border-radius: 4px; padding: 3px 8px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #0f172a;">42 <span style="color: #94a3b8;">°C</span></span>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+              <span style="color: #475569;">cfg</span>
+              <span style="display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border: 1px solid #cbd5e1; border-radius: 4px; color: #0f172a; font-size: 11px;">cfg1 <i class="bi bi-chevron-down" style="font-size: 9px; color: #94a3b8;"></i></span>
+            </div>
+            <div style="border-top: 1px solid #f1f5f9; padding-top: 8px; display: flex; flex-direction: column; gap: 6px;">
+              <div style="display: flex; align-items: center; justify-content: space-between;">
+                <span style="font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8;">Ports · 2 of 4</span>
+                <span style="font-size: 11px; color: #0284c7; cursor: pointer;"><i class="bi bi-plus"></i> Add</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px; font-size: 11px; color: #64748b; padding: 3px 0;"><i class="bi bi-chevron-right" style="font-size: 9px;"></i>p1 · north · in</div>
+              <div style="display: flex; align-items: center; gap: 6px; font-size: 11px; color: #64748b; padding: 3px 0;"><i class="bi bi-chevron-right" style="font-size: 9px;"></i>p2 · south/2 · out</div>
+            </div>
+          </div>
+        </div>
+        <div style="position: absolute; left: 250px; top: 268px; width: 150px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+          <div style="height: 3px; background: #94a3b8;"></div>
+          <div style="padding: 7px 10px; font-size: 12px; font-weight: 600; color: #0f172a;">s2: Sensor</div>
+        </div>
+        <div style="position: absolute; right: 12px; bottom: 10px; font-size: 10px; color: #94a3b8; background: rgba(255,255,255,0.9); padding: 2px 8px; border-radius: 999px;">canvas · viewpoint Syntax</div>
+      </div>
+      <div style="font-size: 12px; color: #64748b; line-height: 1.6;">Una scelta della view, non un sistema nuovo: nel tab Symbol, <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px;">Form</span> diventa un symbol accanto a Rectangle/Circle. Il nodo copre sé e il sottoalbero di containment (i Port non appaiono come nodi: vivono nella lista); le reference restano edge o select, deciso dalla view. <span style="font-weight: 600; color: #475569;">s2</span> resta un rettangolo: la scelta è per-metaclasse.</div>
+    </div>
+
+  </div>
+</section>
+<section id="9" style="padding: 48px 56px; display: flex; flex-direction: column; gap: 32px; border-bottom: 1px solid #e2e8f0;">
+  <div style="max-width: 860px;">
+    <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8; margin-bottom: 8px;">Turno 9 · Esplorazione · Non a registro</div>
+    <h1 style="font-size: 24px; font-weight: 700; color: #0f172a; margin: 0 0 8px;">Il pannello form vero e proprio: una property sheet generata dalla FormSpec</h1>
+    <p style="font-size: 14px; color: #475569; margin: 0; line-height: 1.6;">La terza superficie, oggi inesistente: un pannello che edita un'istanza campo-per-campo, generato dalla stessa <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; background: #f1f5f9; padding: 1px 5px; border-radius: 3px;">FormSpec.widgets</span> che governa le righe del nodo (<a href="#8a">8a</a>). Stessa precedenza, stessi widget, zero configurazione nuova — la view che hai già definito <span style="font-weight: 600;">è</span> la form. Apribile dal nodo (doppio click sull'header o voce di contesto), vive come pannello laterale, non modale: il canvas resta visibile e la selezione guida il pannello.</p>
+  </div>
+  <div style="display: flex; gap: 32px; flex-wrap: wrap; align-items: flex-start;">
+    <div id="9a" style="display: flex; flex-direction: column; gap: 12px; width: 400px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: #0f172a; color: #ffffff; letter-spacing: 0.04em;">9a</span>
+        <span style="font-size: 13px; font-weight: 600; color: #0f172a;">Property sheet — «Edit s1» generata dalla view</span>
+      </div>
+      <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+        <div style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 10px; font-weight: 700; width: 16px; height: 16px; display: inline-flex; align-items: center; justify-content: center; border-radius: 3px; background: #fee2e2; color: #dc2626;">C</span>
+          <div style="flex: 1;">
+            <div style="font-size: 14px; font-weight: 600; color: #0f172a;">s1</div>
+            <div style="font-size: 11px; color: #94a3b8;">Sensor · viewpoint <span style="color: #64748b; font-weight: 500;">Syntax</span></div>
+          </div>
+          <i class="bi bi-x-lg" style="font-size: 13px; color: #94a3b8; cursor: pointer;"></i>
+        </div>
+        <div style="padding: 16px; display: flex; flex-direction: column; gap: 16px;">
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span style="font-size: 12px; font-weight: 500; color: #475569;">description</span>
+              <span style="font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 999px; background: #f1f5f9; color: #64748b;" title="Widget declared by this view (rung 0)">view</span>
+            </div>
+            <div style="border: 1px solid #cbd5e1; border-radius: 4px; padding: 8px 10px; font-size: 12px; color: #0f172a; line-height: 1.5; min-height: 44px;">Reads ambient temperature every 5s and publishes on the north-bound topic.</div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span style="font-size: 12px; font-weight: 500; color: #475569;">tint</span>
+              <span style="font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 999px; background: #f1f5f9; color: #94a3b8;" title="Resolved by type: CSS colour enum (rung 3)">auto</span>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 5px 10px; border: 1px solid #cbd5e1; border-radius: 4px; color: #64748b;"><span style="width: 12px; height: 12px; border-radius: 3px; background: #ef4444;"></span>Red</span>
+              <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 5px 10px; border: 1px solid #06b6d4; border-radius: 4px; color: #0f172a; background: #e0f7fa;"><span style="width: 12px; height: 12px; border-radius: 3px; background: #22c55e;"></span>Green</span>
+              <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 5px 10px; border: 1px solid #cbd5e1; border-radius: 4px; color: #64748b;"><span style="width: 12px; height: 12px; border-radius: 3px; background: #3b82f6;"></span>Blue</span>
+            </div>
+          </div>
+          <div style="display: flex; gap: 16px;">
+            <div style="display: flex; flex-direction: column; gap: 6px; flex: 1;">
+              <span style="font-size: 12px; font-weight: 500; color: #475569;">threshold</span>
+              <span style="display: inline-flex; align-items: center; justify-content: space-between; font-size: 12px; padding: 5px 10px; border: 1px solid #cbd5e1; border-radius: 4px;"><span style="font-family: 'IBM Plex Mono', monospace; color: #0f172a;">42</span><span style="font-size: 11px; color: #94a3b8;">°C</span></span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              <span style="font-size: 12px; font-weight: 500; color: #475569;">active</span>
+              <span style="width: 36px; height: 20px; border-radius: 999px; background: #06b6d4; position: relative; display: inline-block; margin-top: 4px;"><span style="position: absolute; right: 2px; top: 2px; width: 16px; height: 16px; border-radius: 50%; background: #ffffff;"></span></span>
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span style="font-size: 12px; font-weight: 500; color: #475569;">cfg</span>
+              <span style="font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 999px; background: #f1f5f9; color: #94a3b8;" title="Resolved by type: reference (rung 3)">auto</span>
+            </div>
+            <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 4px 10px; border: 1px solid #e2e8f0; border-radius: 999px; color: #0f172a; align-self: flex-start;"><span style="font-size: 9px; font-weight: 700; width: 14px; height: 14px; display: inline-flex; align-items: center; justify-content: center; border-radius: 3px; background: #cffafe; color: #0891b2;">R</span>cfg1: Config <i class="bi bi-x" style="font-size: 12px; color: #94a3b8;"></i></span>
+          </div>
+        </div>
+        <div style="padding: 10px 16px; border-top: 1px solid #f1f5f9; display: flex; align-items: center; gap: 8px; font-size: 11px; color: #94a3b8;">
+          <i class="bi bi-info-circle"></i><span>Widgets come from the <span style="color: #64748b; font-weight: 500;">Syntax</span> view's Form tab — same precedence as the canvas</span>
+        </div>
+      </div>
+      <div style="font-size: 12px; color: #64748b; line-height: 1.6;">Ogni campo porta il chip di provenienza (<span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px;">view</span> / <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px;">auto</span> / <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px;">declared</span>) — lo stesso lessico dell'inspector. Niente Save: scrittura live sul D-object, come le righe del nodo. Se ti convince, il passo successivo è il proposal completo (stati di errore, multi-selezione, feature non renderizzabili) prima di qualsiasi prompt.</div>
+    </div>
+  </div>
+</section>
+<section id="8" style="padding: 48px 56px; display: flex; flex-direction: column; gap: 32px; border-bottom: 1px solid #e2e8f0;">
+  <div style="max-width: 860px;">
+    <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8; margin-bottom: 8px;">Turno 8 · Esempio illustrativo · Le form allo stato attuale</div>
+    <h1 style="font-size: 24px; font-weight: 700; color: #0f172a; margin: 0 0 8px;">Dalla FormSpec al canvas: chi definisce e chi consuma</h1>
+    <p style="font-size: 14px; color: #475569; margin: 0; line-height: 1.6;">Il progettista della view sceglie i widget nel <span style="font-weight: 600;">Form tab</span> (sinistra) e la scelta finisce in <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; background: #f1f5f9; padding: 1px 5px; border-radius: 3px;">FormSpec.widgets</span>. Chi usa il modello non passa mai di lì: ogni istanza a canvas sotto quel viewpoint (destra) rende ed edita i valori con i widget decisi dalla view — è il gradino 0 della precedenza (<a href="#7c">7c</a>). L'icona sliders sulla riga apre l'inspector che dichiara la provenienza.</p>
+  </div>
+  <div style="display: flex; gap: 32px; flex-wrap: wrap; align-items: flex-start;">
+    <div id="8a" style="display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap;">
+      <div style="display: flex; flex-direction: column; gap: 12px; width: 320px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: #0f172a; color: #ffffff; letter-spacing: 0.04em;">8a</span>
+          <span style="font-size: 13px; font-weight: 600; color: #0f172a;">Authoring — Form tab della view</span>
+        </div>
+        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+          <div style="display: flex; gap: 14px; padding: 0 14px; border-bottom: 1px solid #e2e8f0; font-size: 12px; white-space: nowrap; overflow: hidden;">
+            <span style="padding: 10px 0; color: #64748b;">Applies to</span>
+            <span style="padding: 10px 0; color: #64748b;">Structure</span>
+            <span style="padding: 10px 0; color: #64748b;">Symbol</span>
+            <span style="padding: 10px 0; color: #0f172a; font-weight: 600; box-shadow: inset 0 -2px 0 #0ea5e9;">Form</span>
+            <span style="padding: 10px 0; color: #cbd5e1;">⋯</span>
+          </div>
+          <div style="padding: 14px; display: flex; flex-direction: column; gap: 16px;">
+            <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8;">Widgets · Sensor</div>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+                <span style="font-size: 13px; color: #475569;">description</span>
+                <span style="font-size: 12px; padding: 5px 10px; border: 1px solid #cbd5e1; border-radius: 4px; color: #0f172a; display: inline-flex; align-items: center; gap: 7px;">textarea <i class="bi bi-chevron-down" style="font-size: 10px; color: #94a3b8;"></i></span>
+              </div>
+              <div style="display: flex; align-items: flex-start; gap: 6px; font-size: 11px; color: #94a3b8; line-height: 1.5; padding-left: 2px;"><i class="bi bi-arrow-return-right" style="margin-top: 1px;"></i><span>metamodel declares <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px;">code</span> — <span style="color: #b45309; font-weight: 500;">overridden</span> by this view · <span style="color: #0284c7; font-weight: 500; cursor: pointer;">Reset</span></span></div>
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+                <span style="font-size: 13px; color: #475569;">tint</span>
+                <span style="font-size: 12px; padding: 5px 10px; border: 1px solid #cbd5e1; border-radius: 4px; color: #94a3b8; display: inline-flex; align-items: center; gap: 7px;">auto <i class="bi bi-chevron-down" style="font-size: 10px; color: #94a3b8;"></i></span>
+              </div>
+              <div style="display: flex; align-items: flex-start; gap: 6px; font-size: 11px; color: #94a3b8; line-height: 1.5; padding-left: 2px;"><i class="bi bi-info-circle" style="margin-top: 1px;"></i><span>CSS colour enum — resolves to <span style="color: #64748b; font-weight: 500;">Swatch</span></span></div>
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+                <span style="font-size: 13px; color: #475569;">threshold</span>
+                <span style="font-size: 12px; padding: 5px 10px; border: 1px solid #cbd5e1; border-radius: 4px; color: #94a3b8; display: inline-flex; align-items: center; gap: 7px;">auto <i class="bi bi-chevron-down" style="font-size: 10px; color: #94a3b8;"></i></span>
+              </div>
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+                <span style="font-size: 13px; color: #475569;">active</span>
+                <span style="font-size: 12px; padding: 5px 10px; border: 1px solid #cbd5e1; border-radius: 4px; color: #94a3b8; display: inline-flex; align-items: center; gap: 7px;">auto <i class="bi bi-chevron-down" style="font-size: 10px; color: #94a3b8;"></i></span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="font-size: 12px; color: #64748b; line-height: 1.6;">La view dichiara solo ciò che decide: <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px;">description → textarea</span>. Il resto resta <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px;">auto</span> e lo risolve la precedenza (annotazione → tipo → nome).</div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 12px; width: 340px; padding-top: 34px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <i class="bi bi-arrow-right" style="font-size: 16px; color: #94a3b8;"></i>
+          <span style="font-size: 13px; font-weight: 600; color: #0f172a;">Consumo — istanza sul canvas</span>
+        </div>
+        <div style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+          <div style="height: 3px; background: #06b6d4;"></div>
+          <div style="padding: 8px 12px; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 10px; font-weight: 700; width: 16px; height: 16px; display: inline-flex; align-items: center; justify-content: center; border-radius: 3px; background: #fee2e2; color: #dc2626;">C</span>
+            <span style="font-size: 13px; font-weight: 600; color: #0f172a;">s1: Sensor</span>
+          </div>
+          <div style="display: flex; flex-direction: column; font-size: 12px;">
+            <div style="display: flex; align-items: center; gap: 8px; padding: 7px 12px; border-bottom: 1px solid #f1f5f9; background: #f8fafc;">
+              <span style="color: #64748b; width: 76px; flex: none;">description</span>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #0f172a; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 4px; padding: 3px 6px; flex: 1;">reads ambient °C…</span>
+              <i class="bi bi-sliders" style="color: #94a3b8; font-size: 12px;"></i>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px; padding: 7px 12px; border-bottom: 1px solid #f1f5f9;">
+              <span style="color: #64748b; width: 76px; flex: none;">tint</span>
+              <span style="display: inline-flex; align-items: center; gap: 6px;"><span style="width: 14px; height: 14px; border-radius: 3px; background: #22c55e; border: 1px solid #94a3b8;"></span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #64748b;">Green</span></span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px; padding: 7px 12px; border-bottom: 1px solid #f1f5f9;">
+              <span style="color: #64748b; width: 76px; flex: none;">threshold</span>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #0f172a;">42 <span style="color: #94a3b8;">°C</span></span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px; padding: 7px 12px;">
+              <span style="color: #64748b; width: 76px; flex: none;">active</span>
+              <span style="width: 28px; height: 16px; border-radius: 999px; background: #06b6d4; position: relative; display: inline-block;"><span style="position: absolute; right: 2px; top: 2px; width: 12px; height: 12px; border-radius: 50%; background: #ffffff;"></span></span>
+            </div>
+          </div>
+        </div>
+        <div style="font-size: 12px; color: #64748b; line-height: 1.6;"><span style="font-weight: 600; color: #475569;">description</span> si edita come textarea perché la view l'ha deciso (gradino 0); <span style="font-weight: 600; color: #475569;">tint</span> è uno Swatch dal tipo enum (gradino 3); <span style="font-weight: 600; color: #475569;">threshold</span> e <span style="font-weight: 600; color: #475569;">active</span> dal tipo (number, boolean). L'utente del modello non vede mai la FormSpec.</div>
+      </div>
+    </div>
+  </div>
+</section>
 <section id="7" style="padding: 48px 56px; display: flex; flex-direction: column; gap: 32px; border-bottom: 1px solid #e2e8f0;">
   <div style="max-width: 860px;">
     <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8; margin-bottom: 8px;">Turno 7 · Livello 2 · Structure tab del rettangolo</div>
@@ -233,10 +938,10 @@
         </div>
         <div style="padding: 12px 16px; border-top: 1px solid #f1f5f9; display: flex; align-items: center; gap: 10px; background: #f8fafc;">
           <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #0f172a; font-weight: 500;"><span style="width: 10px; height: 10px; border-radius: 3px; background: #22c55e; flex: none; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.08);"></span>Swatch colore <span style="font-size: 11px; font-weight: 400; color: #94a3b8;">· sul canvas</span></span>
-          <span style="margin-left: auto; font-size: 12px; font-weight: 500; color: #0284c7; cursor: pointer;">Torna al renderer del metamodello</span>
+          <span style="margin-left: auto; font-size: 12px; font-weight: 500; color: #0284c7; cursor: pointer;" title="Torna al renderer del metamodello">Reset</span>
         </div>
       </div>
-      <div style="font-size: 12px; color: #94a3b8; line-height: 1.5;">La view vince, ma non in silenzio. Il Form tab dice cosa sta coprendo (<span style="font-style: italic;">metamodel declares Swatch</span>) con il Reset accanto; la ladder guadagna il gradino 0 e il chip dell'inspector passa da <span style="font-family: 'IBM Plex Mono', monospace;">auto</span> a <span style="font-family: 'IBM Plex Mono', monospace;">view</span>. Il gradino 1 resta visibile con la sua evidenza: l'override si giudica sapendo cosa nasconde. Le due superfici scrivono la stessa chiave — <span style="font-family: 'IBM Plex Mono', monospace;">FormSpec.widgets</span> — quindi la provenienza non può divergere. L'override governa il <span style="font-weight: 600;">form</span>: sul canvas il nodo continua a dipingere il renderer del metamodello, e il footer lo dice. Estendere la vittoria della view al canvas è un fronte separato, registrato come debito.</div>
+      <div style="font-size: 12px; color: #94a3b8; line-height: 1.5;">La view vince, ma non in silenzio. Il Form tab dice cosa sta coprendo (<span style="font-style: italic;">metamodel declares Swatch</span>) con il Reset accanto; la ladder guadagna il gradino 0 e il chip dell'inspector passa da <span style="font-family: 'IBM Plex Mono', monospace;">auto</span> a <span style="font-family: 'IBM Plex Mono', monospace;">view</span>. Il gradino 1 resta visibile con la sua evidenza: l'override si giudica sapendo cosa nasconde. Le due superfici scrivono la stessa chiave — <span style="font-family: 'IBM Plex Mono', monospace;">FormSpec.widgets</span> — quindi la provenienza non può divergere — e per lo stesso motivo il footer usa la stessa copy del Form tab: <span style="font-family: 'IBM Plex Mono', monospace;">Reset</span> secco, col significato lungo nel tooltip (misurato 2026-08-29: la copy estesa non entra nel footer, ~60px mancanti). L'override governa il <span style="font-weight: 600;">form</span>: sul canvas il nodo continua a dipingere il renderer del metamodello, e il footer lo dice. Estendere la vittoria della view al canvas è un fronte separato, registrato come debito.</div>
     </div>
 
   </div>
