@@ -135,8 +135,18 @@ l'andata a capo ma la converte in una **sovrapposizione**: lo scope smette di ce
 stampa sopra «Back to the metamodel renderer» (ritaglio catturato in sessione). Peggio del
 difetto di partenza, quindi revocato: `rendererInspector.scss` e' tornato byte-identico a HEAD.
 
-**Resta aperto, ed e' una decisione di design, non di CSS.** Le uscite plausibili sono tre e
-si escludono: accorciare la copy (**«· on canvas»** costa ~25px, che da soli non bastano),
-far andare a capo il footer (`flex-wrap: wrap`, che cambia l'altezza del pannello), o togliere
-un'azione dal footer. Tutte e tre toccano `__footer`/`__action`, fuori dal perimetro
-dichiarato. Da guardare sul proposal.
+**Sciolta (2026-08-29), verso: accorciare la copy del Reset.** La decisione e' stata presa sul
+proposal (Turno 7, mock 7c aggiornato il 2026-08-29) e non nel CSS, come la misura chiedeva.
+La copy che sborda non e' lo scope ma **l'azione**: «Back to the metamodel renderer» (184px)
+diventa **«Reset»** (32px), con la stringa lunga conservata nel `title`. Sono i ~150px che
+mancavano, e in piu' allinea il lessico — il Reset del Form tab
+(`FormAuthoringBody.tsx:585`) usa gia' quella parola per la stessa scrittura, e due superfici
+che condividono una chiave non devono divergere nemmeno nel lessico.
+
+`flex: none; white-space: nowrap` resta su `__result-scope` come **cintura**, non come fix:
+con la copy corta i pixel rientrano da soli, ma lo scope non deve mai poter tornare a
+spezzarsi parola per parola. Nulla d'altro in `__footer`/`__action` e' cambiato.
+
+Geometria dopo, stessa sonda: `__result` 835→971 contiene il suo scope invece di essere
+sbordato (prima il padre finiva a 900 e il figlio a 971), `Reset` occupa 1062→1094 — 91px di
+franco invece di una sovrapposizione — e tutto sta su una riga (altezze 15/16px).

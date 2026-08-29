@@ -254,6 +254,12 @@
     &__result-scope {
         color: var(--color-inode-label);
         font-size: 12px;
+        // Belt, not the fix: the shortened Reset copy is what buys the width back.
+        // This only guarantees the scope is never the item that yields — it used to
+        // wrap word by word, and it must stay one phrase. What gives instead is the
+        // RowValue beside it, which `&__result` already allows with `min-width: 0`.
+        flex: none;
+        white-space: nowrap;
     }
 
     &__action {

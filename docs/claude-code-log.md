@@ -2,6 +2,19 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-08-29 — fix(editor-v2): il Reset dell'inspector si accorcia, e il footer torna su una riga
+**Prompt**: riapertura della micro-voce (b) del report §6 col verso ratificato sul proposal: la copy del reset passa da «Back to the metamodel renderer» a «Reset» con la stringa lunga nel `title`, piu' `flex: none; white-space: nowrap` sullo scope come cintura. Nessun altro cambio a `__footer`/`__action`.
+**Files touched**: editor-v2/nodes/RendererInspector.tsx (copy del bottone, `title`, commento), editor-v2/nodes/rendererInspector.scss (`__result-scope`), docs/discovery/discovery_2026-08-29_rstr7_inspector_ramo_ir.md (§6(b) sciolta), docs/claude-code-log.md. Sonde `_tmp_footer_measure.ts`, `_tmp_rstr7_rung0.ts` (non committate).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: (a)
+**Regressions**: no (typecheck 33 = baseline su output completo, zero errori nei file toccati; `npx vitest run` 1822 passed / 0 failed; `_tmp_rstr7_rung0.ts` 10/10 invariata, il Reset resta agganciabile e continua a togliere la chiave)
+**Out-of-scope changes**: no (il prompt diceva «un file», i file sono due: la copy sta nel `.tsx` e la cintura nello `.scss`. Nessun altro selettore toccato.)
+**Layer Impact Report**: not-required (nessun file di §3.1)
+**Smoke visivo**: passato. `_tmp_footer_measure.ts` con `viewOverride` attivo: `__result` 835→971 ora **contiene** il suo scope (prima il padre finiva a 900 e il figlio sbordava a 971), `Reset` occupa 1062→1094 con 91px di franco dove prima c'era sovrapposizione, altezze 15/16px = una riga sola. Ritaglio `_tmp_rstr7_rung0_button.png`: il footer legge «Green · on the canvas    Reset  Change renderer» intero, senza capoversi.
+**Notes**: Chiude la voce lasciata aperta dalla entry di oggi «il verdetto sul footer e' smentito dalla misura», che nasce da un prompt inline e non ha una chiave `HH:mm` da citare: `Corregge` resta al sentinella e la catena e' qui. I ~60px mancanti li restituisce l'**azione**, non il testo che andava a capo: «Back to the metamodel renderer» valeva 184px, «Reset» 32. Il `flex: none` e' cintura, non fix. Lessico allineato al Form tab (`FormAuthoringBody.tsx:585`). Geometria in §6(b) del report.
+**Prompt document name**: prompt inline, nessun documento
+
 ## 2026-08-29 — fix(fixture): i tipi di tint, stroke e cfg smettono di essere scartati in silenzio
 **Prompt**: corsia veloce, due voci. (1) Fixture `tint`: ripuntare il tipo all'enum, «verosimilmente una riga»; dichiarare se serve di piu'. (2) Micro-voce (b) del report §6, footer dell'inspector: verdetto dichiarato «CSS, non copy», fix `flex: none; white-space: nowrap`. Perimetro di voce 1 allargato a tutti e tre gli effetti su ratifica esplicita in sessione.
 **Files touched**: frontend/src/examples/RowViewSmoke/index.ts (tre call site: `palette`/`stroke`/`config` passati come proxy invece che per id, piu' il commento che spiega perche'), docs/discovery/discovery_2026-08-29_rstr7_inspector_ramo_ir.md (§6(b) riscritta con la geometria del footer), docs/claude-code-log.md. Sonde `_tmp_tint_type.ts`, `_tmp_diag_ids.ts`, `_tmp_tint_rung3.ts`, `_tmp_footer_measure.ts`, `_tmp_row_recon.ts` (non committate).

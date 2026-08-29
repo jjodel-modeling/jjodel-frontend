@@ -259,9 +259,16 @@ function RendererInspector({
                     <button
                         type="button"
                         className="inode-inspector__action inode-inspector__action--reset-view"
+                        /* `Reset` and not «Back to the metamodel renderer»: it is the same
+                           word the Form tab's provenance row uses for the same write
+                           (FormAuthoringBody.tsx), and two surfaces that share a key must
+                           not diverge in the lexicon either. The long form survives as the
+                           tooltip, where it costs no width — the footer had ~60px less than
+                           its content needed, measured 2026-08-29. */
+                        title="Back to the metamodel renderer"
                         onClick={() => { onResetViewOverride(); onClose(); }}
                     >
-                        Back to the metamodel renderer
+                        Reset
                     </button>
                 )}
                 <button
