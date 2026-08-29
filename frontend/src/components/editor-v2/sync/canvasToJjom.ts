@@ -1826,38 +1826,3 @@ export function reconcileJjomAfterUndoRedo(
     return idMap;
 }
 
-export function syncDeleteObject(objectVertexId: string): void {
-    try {
-        const vertexProxy: any = LPointerTargetable.fromPointer(objectVertexId);
-        if (!vertexProxy) return;
-
-        // Delete connected edges first
-
-        const graphProxy: any = vertexProxy.graph;
-        if (graphProxy) {
-            const allEdges: any[] = graphProxy.edges ?? [];
-            const connected = allEdges.filter((e: any) => {
-                const startId = e?.start?.id ?? e?.__raw?.start;
-                const endId = e?.end?.id ?? e?.__raw?.end;
-                return startId === objectVertexId || endId === objectVertexId;
-            });
-            if (connected.length > 0) {
-                TRANSACTION('EditorV2 delete object edges', () => {
-                    for (const edge of connected) {
-                        DeleteElementAction.new(edge.__raw ?? edge);
-                    }
-                });
-            }
-        }
-
-        // Delete the DObject model element
-        const modelElement = vertexProxy?.model;
-        if (modelElement) {
-            TRANSACTION('EditorV2 delete object', () => {
-                DeleteElementAction.new(modelElement.__raw ?? modelElement);
-            });
-        }
-    } catch (err) {
-        console.warn('[canvasToJjom] Failed to delete object:', err);
-    }
-}
