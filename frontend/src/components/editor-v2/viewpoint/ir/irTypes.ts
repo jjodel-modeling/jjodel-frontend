@@ -265,6 +265,65 @@ export interface FormSpec {
     basic?: string[];
 }
 
+/**
+ * Level-2 structure vocabulary (design handoff `Instance Node Proposal.dc.html`,
+ * Turno 7, and README.md "Level 2 - Structure (shape-dependent)").
+ *
+ * These five names are deliberately the ones `nodes/instanceNodeStyle.ts` already
+ * declares for the render side, which states of itself that «the shape is here so
+ * the next slice adds a source, not a mechanism». This is that source: the
+ * authoring panel writes them, and wiring them into
+ * `resolveInstanceNodeStyle` as the viewpoint layer is the render slice that
+ * follows. Two members are new here and NOT yet in that union - `ring` on the
+ * accent, `hidden` on the type - because widening the render union without a
+ * renderer for either would be a silent promise. The unions are declared
+ * separately rather than imported from the node module: `irTypes` is a pure
+ * schema, and importing a canvas module into it would invert the layering.
+ *
+ * The saved IR has no VersionFixer (R-B9), so every literal below is DEFINITIVE.
+ */
+export type NamePosition = 'header-band' | 'center' | 'below' | 'external';
+export type NameTypeDisplay = 'inline' | 'chip' | 'badge' | 'hidden';
+export type AccentPlacement = 'none' | 'top' | 'left' | 'ring';
+export type CompartmentMode = 'inline' | 'popover' | 'none';
+export type CompartmentColumns = 2 | 3;
+export type EmptyBehavior = 'dash' | 'collapse' | 'hide';
+
+/**
+ * StructureSpec (2026-08-29) - where the name goes, where the accent goes, and what
+ * the compartment does with unset slots. Nested groups (`name.*`, `compartment.*`)
+ * rather than eight flat keys on `ShapeSpec`: these are structure, not geometry of
+ * the symbol, and `ShapeSpec` is the geometry.
+ *
+ * EVERY field is optional and a default is NEVER persisted - the `padding`/`marker`
+ * idiom: the key is absent, never an empty value, so a view whose field was set and
+ * put back round-trips byte-identical to one that never carried it. The defaults
+ * themselves are per Symbol and live in `structureCapabilities.ts`, not here: a
+ * default that depends on the shape cannot be a constant of the schema.
+ *
+ * Additive optional field: no irVersion bump, no VersionFixer migration - same
+ * precedent as `marker`, `ShapeSpec.padding` and `FormSpec`.
+ *
+ * CONSTRAINT (inherited from FormSpec): no key named `op` carrying a string value,
+ * at any depth. `irValidate.findUnknownPredicateOp` walks the whole ir and reads
+ * every string `op` as a predicate operator.
+ */
+export interface StructureSpec {
+    name?: {
+        position?: NamePosition;
+        typeDisplay?: NameTypeDisplay;
+    };
+    accentPlacement?: AccentPlacement;
+    /** Any CSS colour, `var(--token)` included - same vocabulary as `ShapeSpec.fill`. */
+    accent?: string;
+    compartment?: {
+        mode?: CompartmentMode;
+        columns?: CompartmentColumns;
+    };
+    emptyBehavior?: EmptyBehavior;
+    edgeMarker?: boolean;
+}
+
 export interface VertexViewIR {
     irVersion: string;               // "ir-1.0" | "ir-1.2"
     kind: 'vertex';
@@ -278,6 +337,11 @@ export interface VertexViewIR {
     label?: string;
     resizable?: boolean;             // v1: override esplicito del gate resize (undefined = default per forma)
     shape: ShapeSpec;
+    /**
+     * Level-2 structure supplement (2026-08-29, Turno 7). Absent = every field at its
+     * per-Symbol default. Additive optional field: no irVersion bump, no migration.
+     */
+    structure?: StructureSpec;
     fieldCompartments?: FieldCompartmentSpec[];
     /**
      * Form rendering supplement (2026-08-26). Absent = this view renders as a symbol

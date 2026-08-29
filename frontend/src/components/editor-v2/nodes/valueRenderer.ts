@@ -270,6 +270,28 @@ export type RendererKind =
     | 'collection'
     | 'brokenRef';
 
+/**
+ * Human names for the library members, as the inspector's change menu lists them and as
+ * the Form tab's provenance line names what a view is covering.
+ *
+ * Lives HERE and not on the inspector component, where it was born: `FormAuthoringBody`
+ * needs it too, and importing a component that reaches the joiner barrel would pull
+ * Monaco into every module that imports the panel - Monaco dereferences `window` at
+ * import time, which makes the importing module unloadable under the `node` test
+ * environment (the hazard `rowViewAnnotations.ts` documents for its own write side).
+ * `RendererInspector` re-exports it, so its existing importers are unaffected.
+ */
+export const RENDERER_LABELS: Record<string, string> = {
+    swatch: 'Colour swatch',
+    enumChip: 'Enum chip',
+    boolean: 'Boolean',
+    numberUnit: 'Number with unit',
+    date: 'Date',
+    truncatedText: 'Truncated text',
+    progress: 'Progress bar',
+    code: 'Code / monospace',
+};
+
 /** Every kind that can be declared by a rule-1 annotation. */
 export const DECLARABLE_RENDERERS: readonly RendererKind[] = [
     'swatch', 'enumChip', 'boolean', 'numberUnit', 'date', 'truncatedText', 'progress', 'code',

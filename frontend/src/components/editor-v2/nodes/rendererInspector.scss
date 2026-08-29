@@ -66,6 +66,15 @@
         color: var(--color-inode-selected-badge-fg);
     }
 
+    // `view`: the third state of the chip (Turno 7c). Takes the same selected pair as
+    // `declared` plus an outline, because both say "a rule was written down" and the
+    // difference is WHO wrote it, which the word itself carries.
+    &__badge--view {
+        background: var(--color-inode-selected-badge-bg);
+        color: var(--color-inode-selected-badge-fg);
+        border: 1px solid var(--color-inode-selected-border);
+    }
+
     &__body {
         padding: 12px 16px;
         display: flex;
@@ -159,9 +168,61 @@
         color: var(--color-inode-quiet);
     }
 
+    // Rung 0 — the view's declaration. Same emphasis as the ladder's own winner: it is
+    // a winning rule, on the surface it governs.
+    &__rung--view {
+        padding: 10px 12px;
+        margin: 0 -12px 4px;
+        background: var(--color-bg-primary);
+        border-radius: 6px;
+        border-bottom: none;
+        border-left: 2px solid var(--color-inode-emphasis);
+
+        .inode-inspector__rung-title {
+            color: var(--color-inode-name);
+            font-weight: 600;
+        }
+
+        .inode-inspector__evidence {
+            color: var(--color-inode-chip-fg);
+            margin-top: 3px;
+        }
+    }
+
     &__won-tag {
         font-weight: 500;
         color: var(--color-inode-label);
+    }
+
+    // The rung the view covers. A quiet chip, not a warning colour: the rule is valid
+    // and stays visible — it is covered on one surface, not wrong.
+    &__overridden-tag {
+        margin-left: 6px;
+        padding: 1px 6px;
+        border-radius: 4px;
+        background: var(--color-inode-badge-bg);
+        color: var(--color-inode-badge-fg);
+        font-size: 11px;
+        font-weight: 600;
+    }
+
+    // Inline link inside a rung's evidence (the cross-tab jump to the Form tab).
+    &__inline-link {
+        appearance: none;
+        border: none;
+        background: none;
+        padding: 0;
+        font: inherit;
+        color: var(--color-accent);
+        text-decoration: underline;
+        cursor: pointer;
+
+        &:hover { color: var(--color-accent-hover); }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-border-focus);
+            outline-offset: 2px;
+        }
     }
 
     &__unreached-tag {
@@ -188,6 +249,13 @@
         min-width: 0;
     }
 
+    // Which surface the footer's rendering belongs to. Present only when a view covers
+    // the metamodel's rule, which is the only case where the question can be asked.
+    &__result-scope {
+        color: var(--color-inode-label);
+        font-size: 12px;
+    }
+
     &__action {
         margin-left: auto;
         flex: none;
@@ -203,6 +271,13 @@
         &:hover {
             text-decoration: underline;
         }
+    }
+
+    // Two actions in the footer: the first takes the `margin-left: auto` above and
+    // pushes the pair to the right, the second sits beside it on the flex gap. Without
+    // this the second auto margin would split the row and separate them.
+    &__action + &__action {
+        margin-left: 0;
     }
 
     &__menu {

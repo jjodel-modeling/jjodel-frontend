@@ -1,9 +1,13 @@
 import React, { useMemo } from 'react';
+import { useSelector } from 'react-redux';
 import { Checkbox, HelpText, Select, SegmentedControl, FormSection, PRESERVED_CHIP } from '../../../ui';
 import type { MetaclassInfo } from '../../hooks/useEditorMode';
 import { JjodelEvents } from '../../../../events/registry';
 import { buildFormSections, type Section } from '../ir/formSections';
 import { overrideIsCompatible, widgetForPrimitive } from '../ir/useFormWidgets';
+import { viewRendererOverride, type ViewRendererOverride } from '../ir/widgetRenderer';
+import { readRowViewAnnotations, type RowViewAnnotations } from '../../nodes/rowViewAnnotations';
+import { RENDERER_LABELS, type SlotShape } from '../../nodes/valueRenderer';
 import type {
     FeatureTreatment,
     FieldCompartmentSpec,
@@ -273,6 +277,58 @@ export function ignoredOverrides(form: FormSpec | undefined, rows: AuthoringFeat
     return out;
 }
 
+/**
+ * The row as a `SlotShape`, so the metamodel's own verdict can be asked with the same
+ * function the canvas asks (`metamodelRenderer`) instead of a second derivation of the
+ * same cascade.
+ *
+ * `value` is empty and stays empty: this is the METAMODEL side of the comparison, and
+ * every branch of `metamodelRenderer` reads the declared type, the bounds and the
+ * annotations — never the value. Authoring has no instance to read one from anyway.
+ *
+ * `enumLiteralNames` carries one placeholder name rather than the real literals: the
+ * verdict tests only whether the list is non-empty, and the authoring row does not hold
+ * the literals. Anything that starts reading them here needs the real ones first.
+ */
+export function slotShapeForRow(row: AuthoringFeatureRow, annotations?: RowViewAnnotations): SlotShape {
+    return {
+        value: '',
+        typeName: row.typeName,
+        isReference: row.isReference || row.isComposition,
+        isMany: row.upperBound !== 1,
+        enumLiteralNames: row.isEnum ? [row.typeName] : undefined,
+        featureName: row.name,
+        rendererOverride: annotations?.renderer,
+        min: annotations?.min,
+        max: annotations?.max,
+    };
+}
+
+/**
+ * The provenance of one row: what the view is covering, or null when it covers nothing
+ * (Turno 7c). Exported so the test asks exactly what the row shows.
+ */
+export function provenanceForRow(
+    row: AuthoringFeatureRow,
+    form: FormSpec | undefined,
+    annotations?: RowViewAnnotations,
+): ViewRendererOverride | null {
+    return viewRendererOverride(slotShapeForRow(row, annotations), form?.widgets?.[row.name]);
+}
+
+/**
+ * How the provenance line names the metamodel's evidence.
+ *
+ * The design writes it `@renderer=color`; the wire format in this codebase is
+ * `jjodel/renderer=swatch` (`rowViewAnnotations.ts`), and the line quotes the real one —
+ * an author who reads `@renderer` here and greps for it finds nothing.
+ */
+export function provenanceEvidence(p: ViewRendererOverride): string {
+    return p.metamodel.fromDeclaration
+        ? `jjodel/renderer=${p.metamodel.kind}`
+        : p.metamodel.reason;
+}
+
 /** The authorable features of a metaclass, attributes first, in declaration order. */
 export function rowsForMetaclass(target: MetaclassInfo | null): AuthoringFeatureRow[] {
     if (!target) return [];
@@ -339,6 +395,43 @@ export interface FormAuthoringBodyProps {
 export const FormAuthoringBody: React.FC<FormAuthoringBodyProps> = ({ draft, target, advanced, viewId, onChange }) => {
     const form = draft.form;
     const compartments = draft.fieldCompartments;
+
+    /**
+     * The metamodel's `jjodel/*` declarations for the target's features, keyed by feature
+     * name (Turno 7c). A SELECTOR and not an effect: the note above rules out effects
+     * because both mounts keep every tab body alive, and an effect would then run inside
+     * the symbol editor modal where this tab is unreachable. A read is inert there — it
+     * renders nothing extra and writes nothing — so the invariant that matters is kept.
+     *
+     * Serialized to a string so the subscription re-renders on a change to THESE
+     * annotations and not on every store action (the `liveFeatureNameSig` idiom of
+     * `ObjectNode`); the map is parsed back in the memo below.
+     */
+    const annotationSig = useSelector((state: any) => {
+        const lookup = state?.idlookup;
+        if (!lookup || !target) return '';
+        const parts: string[] = [];
+        for (const a of (target.allAttributes ?? target.attributes ?? [])) {
+            const ann = readRowViewAnnotations(lookup, a.id);
+            if (ann.renderer === undefined && ann.min === undefined && ann.max === undefined) continue;
+            parts.push(`${a.name}\u0001${ann.renderer ?? ''}\u0001${ann.min ?? ''}\u0001${ann.max ?? ''}`);
+        }
+        return parts.join('\u0002');
+    });
+
+    const annotationsByName = useMemo(() => {
+        const out = new Map<string, RowViewAnnotations>();
+        if (!annotationSig) return out;
+        for (const entry of annotationSig.split('\u0002')) {
+            const [name, renderer, min, max] = entry.split('\u0001');
+            out.set(name, {
+                renderer: renderer || undefined,
+                min: min === '' ? undefined : Number(min),
+                max: max === '' ? undefined : Number(max),
+            });
+        }
+        return out;
+    }, [annotationSig]);
 
     const { rows, sections, ignored, unknownBasic } = useMemo(() => {
         const r = rowsForMetaclass(target);
@@ -447,23 +540,54 @@ export const FormAuthoringBody: React.FC<FormAuthoringBodyProps> = ({ draft, tar
         const active = declared !== undefined && overrideIsCompatible(derived, declared) && declared !== derived
             ? declared
             : '';
+        // What this row's widget is covering, when it covers anything (Turno 7c). Null
+        // when the view declared nothing, when the metamodel declares nothing to cover,
+        // or when the two agree — three different facts, one silence, on purpose.
+        const provenance = provenanceForRow(row, form, annotationsByName.get(row.name));
+
         return (
-            <div className="form-authoring__row" key={row.name}>
-                <span className="form-authoring__name">
-                    {row.name}
-                    {(active !== '' || basicDiffers(row)) && <span className="form-authoring__dot" aria-hidden="true" />}
-                </span>
-                {basicCell(row)}
-                <Select
-                    size="sm"
-                    options={offered.map(k => ({ value: k, label: widgetLabel(k) }))}
-                    placeholder={`Default (${widgetLabel(derived)})`}
-                    value={active}
-                    disabled={offered.length === 0}
-                    title={offered.length === 0 ? `No alternative widget applies to ${row.typeName || 'this type'}` : undefined}
-                    onChange={(e) => onChange(withFormEntry(form, 'widgets', row.name, (e.target.value || undefined) as WidgetKind | undefined))}
-                />
-            </div>
+            <React.Fragment key={row.name}>
+                <div className="form-authoring__row">
+                    <span className="form-authoring__name">
+                        {row.name}
+                        {(active !== '' || basicDiffers(row)) && <span className="form-authoring__dot" aria-hidden="true" />}
+                    </span>
+                    {basicCell(row)}
+                    <Select
+                        size="sm"
+                        options={offered.map(k => ({ value: k, label: widgetLabel(k) }))}
+                        placeholder={`Default (${widgetLabel(derived)})`}
+                        value={active}
+                        disabled={offered.length === 0}
+                        title={offered.length === 0 ? `No alternative widget applies to ${row.typeName || 'this type'}` : undefined}
+                        onChange={(e) => onChange(withFormEntry(form, 'widgets', row.name, (e.target.value || undefined) as WidgetKind | undefined))}
+                    />
+                </div>
+                {provenance && (
+                    <div className="form-authoring__provenance">
+                        <i className="bi bi-arrow-return-right" aria-hidden="true" />
+                        <span>
+                            {'metamodel declares '}
+                            <span className="form-authoring__provenance-kind">
+                                {RENDERER_LABELS[provenance.metamodel.kind] ?? provenance.metamodel.kind}
+                            </span>
+                            {' ('}
+                            <code>{provenanceEvidence(provenance)}</code>
+                            {') — overridden by this view · '}
+                            {/* The same key both surfaces write: Reset removes the entry from
+                                `widgets`, which is what makes the ladder's rung 0 disappear
+                                too. No second store of provenance to keep in step. */}
+                            <button
+                                type="button"
+                                className="form-authoring__link"
+                                onClick={() => onChange(withFormEntry(form, 'widgets', row.name, undefined))}
+                            >
+                                Reset
+                            </button>
+                        </span>
+                    </div>
+                )}
+            </React.Fragment>
         );
     };
 

@@ -38,13 +38,14 @@ import { containmentChildren } from '../viewpoint/ir/irContainment';
 import { isCollapsed, toggleCollapsed, useCollapseVersion } from '../viewpoint/ir/irCollapseState';
 import { isSimActive, useSimVersion } from '../sim/simRunState';
 import { entityLetter } from '../../../common/entityMeta';
-import { store } from '../../../joiner';
+import { store, LPointerTargetable } from '../../../joiner';
 import {
     resolveInstanceNodeStyle,
     instanceNodeChrome,
     emptySlotsLabel,
 } from './instanceNodeStyle';
 import { detectValueRenderer, detectColor, type RendererDecision, type SlotShape } from './valueRenderer';
+import { withoutViewWidget } from '../viewpoint/ir/widgetRenderer';
 import RowValue, { MAX_CHIPS } from './RowValue';
 import RendererInspector from './RendererInspector';
 import {
@@ -955,6 +956,30 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
      * canvas node menu, and shadowing it on the value cells would take a
      * committed behaviour away from part of every instance node.
      */
+    /**
+     * The Form tab's Reset, performed from the canvas (Turno 7c): drop this feature's
+     * entry from the active view's `FormSpec.widgets`.
+     *
+     * Both surfaces write the SAME key, which is what stops the provenance from
+     * diverging - there is no second store of "who declared this". The write is the
+     * panel's own whole-object replace (`view.ir = next`), and `VertexAuthoringPanel`
+     * already re-seeds its draft when the ir changes outside its mount (D15), so an
+     * authoring panel open on this view follows instead of clobbering.
+     */
+    const resetViewWidget = (featureName: string) => {
+        const viewId = irResolution?.compiled.viewId;
+        if (!viewId) return;
+        // `fromPointer` and not `fromD`: what the compiled view carries is the id.
+        const lview = LPointerTargetable.fromPointer(viewId) as any;
+        const ir = lview?.ir;
+        if (!ir) return;
+        const next = withoutViewWidget(ir, featureName);
+        // Same reference = nothing to remove. Skipping the write costs the user no undo
+        // step for a no-op.
+        if (next === ir) return;
+        lview.ir = next;
+    };
+
     const openInspector = (row: SlotRow, e: React.MouseEvent, anchorEl?: HTMLElement | null) => {
         e.stopPropagation();
         e.preventDefault();
@@ -1248,6 +1273,18 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                     slot={inspecting.slot}
                     featureId={inspecting.featureId}
                     className={metaclassName}
+                    /* What the ACTIVE VIEW declares for this feature (Turno 7c). Read off
+                       the resolved view rather than the store: `formSpec` is already on
+                       the compiled view, and reading it anywhere else would be a second
+                       source for one key. Undefined when no IR view resolves for this
+                       object, which is also when there is no view to override anything. */
+                    viewWidget={inspecting.slot.featureName
+                        ? irResolution?.compiled.formSpec?.widgets?.[inspecting.slot.featureName]
+                        : undefined}
+                    viewId={irResolution?.compiled.viewId}
+                    onResetViewOverride={inspecting.slot.featureName
+                        ? () => resetViewWidget(inspecting.slot.featureName as string)
+                        : undefined}
                     onClose={() => setInspecting(null)}
                 />
             )}

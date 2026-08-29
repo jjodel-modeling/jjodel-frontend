@@ -1,0 +1,70 @@
+/* StructureGroups — the three level-2 groups of the Structure tab.
+
+   Metrics from artboards 7a/7b of the instance-node handoff: a rail 320px wide, rows
+   laid out label-left / control-right, groups separated by the FormSection divider the
+   panel already draws. Every value comes from styles/tokens/, and no variable is
+   declared here (rule 28).
+
+   A stylesheet of its own rather than the stacked `jj-field` the rest of the panel
+   uses: 7a's rows put the control on the same line as its label, which `jj-field`
+   (label above, control below) cannot express — the same reason FormAuthoringBody.scss
+   exists for its tables. */
+
+.ir-structure-group {
+    &__row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-3, 12px);
+        min-height: 28px;
+
+        + .ir-structure-group__row { margin-top: var(--space-2, 8px); }
+    }
+
+    &__label {
+        flex: 0 1 auto;
+        font-size: var(--text-md);
+        color: var(--color-text-secondary);
+        white-space: nowrap;
+    }
+
+    /* The control column does not stretch: a segmented control of two segments and one
+       of four are both right-aligned against the rail's edge, which is what makes the
+       column read as a column when the options differ per Symbol. */
+    &__control {
+        flex: 0 0 auto;
+        display: inline-flex;
+        align-items: center;
+        justify-content: flex-end;
+        min-width: 0;
+        max-width: 62%;
+    }
+
+    /* The value the IR still holds and this Symbol does not offer. Sits under the
+       reason line, which has already said WHY the option is gone; this one says the
+       authored value is still there and will come back with the Symbol. */
+    &__preserved {
+        margin-top: var(--space-1, 4px);
+    }
+
+    /* The single summary at the foot of the tab. `bi-eye-slash`, one line, both
+       families of cause on it (7b). */
+    &__hidden {
+        display: flex;
+        align-items: flex-start;
+        gap: 6px;
+        margin-top: var(--space-3, 12px);
+        padding-top: var(--space-3, 12px);
+        border-top: 1px solid var(--color-border-secondary);
+        font-size: var(--text-2xs);
+        line-height: 1.6;
+        color: var(--color-text-tertiary);
+
+        > i { margin-top: 1px; }
+    }
+
+    &__hidden-fields {
+        color: var(--color-text-secondary);
+        font-weight: 500;
+    }
+}

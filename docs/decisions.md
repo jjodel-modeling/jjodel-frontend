@@ -1913,6 +1913,46 @@ Componente nuovo `InlineObjectSelect`, clone di `InlineEnumSelect` sulle classi
 riga in `irStyle.ts`, `.ir-row__value--select { cursor: pointer }`, in aggiunta all'hover di
 `--editable`.
 
+## Serie R-STR — livello 2 Structure e precedenza della view (ratifiche 2026-08-29)
+
+**R-STR-1** (2026-08-29, Alfonso) — **`structure` e' una chiave annidata su `VertexViewIR`**,
+non otto chiavi piatte su `ShapeSpec`: questi campi sono struttura, non geometria del simbolo.
+I gruppi seguono la tabella dei campi (`name.*`, `compartment.*`). Additivo-opzionale, nessun
+bump di `irVersion`, nessuna migrazione. Il saved IR non ha VersionFixer (R-B9): le grafie
+sono definitive.
+
+**R-STR-2** (2026-08-29, Alfonso) — **La tabella capability e' un modulo a se**
+(`viewpoint/ir/structureCapabilities.ts`), non campi su `ShapeDescriptor`: rendering e
+authoring restano descrittori distinti. Un'opzione che il Symbol non supporta e' **assente,
+non disabilitata**, e ogni assenza e' dichiarata — riga di motivo sui soli campi
+symbol-dipendenti, piu' una riga riassuntiva `bi-eye-slash` a fondo tab nelle due famiglie
+(dal Symbol / dalla scelta corrente). Un valore persistito non piu' ammesso resta nell'IR e
+non viene renderizzato: mai riscritture silenziose.
+
+**R-STR-3** (2026-08-29, Alfonso) — **Mappa widget->renderer**: `color`->`swatch`,
+`textarea`->`code`, `select`->`enumChip`, `checkbox`->`boolean`, `number`->`numberUnit`,
+`text`->`truncatedText`, `reference`/`link`->`refPill`. `date`, `progress` e gli stati
+(`dash`, `collection`, `brokenRef`) non hanno widget: solo il metamodello puo' chiederli.
+
+**R-STR-4** (2026-08-29, Alfonso) — **Definizione di «copre»**: la riga di provenienza nel
+Form tab e il gradino 0 della ladder compaiono SOLO quando il widget dichiarato dalla view
+mappa su un renderer **diverso** da quello dichiarato dal metamodello, o su nessuno. Se
+coincidono e' accordo, non override: nessun badge, chip fermo su `auto`, vince il gradino 1.
+Le due superfici leggono e scrivono la stessa chiave (`FormSpec.widgets`): nessuno stato
+duplicato di provenienza.
+
+**R-STR-5** (2026-08-29, Alfonso) — **La view vince nel FORM, non sul canvas.** E' la lettura
+corretta di `FormSpec`, che per sua definizione descrive «how the same view renders as a FORM
+of editable widgets instead of a symbol on the canvas»; il Turno 7c del handoff e' stato
+allineato a questa lettura, non il contrario. Quindi: gradino 0 con tag «vince nel form»,
+gradino 1 visibile con la sua evidenza e badge `overridden by current view`, chip a `view`, e
+footer che mostra il renderer **del canvas** con la sua etichetta.
+
+**R-STR-6** (2026-08-29, Alfonso) — **Debito registrato, non aperto.** Estendere la vittoria
+della view alla riga del canvas richiede `decide` esportato da `nodes/valueRenderer.ts` e la
+decisione di riga cambiata in `nodes/ObjectNode.tsx`. E' un fronte separato: non si apre
+finche' non e' deciso esplicitamente.
+
 ## Superate
 
 - **D3** (2026-07-26, routing congelato in v1) — superata da E-route il 2026-08-06.

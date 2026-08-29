@@ -26,6 +26,222 @@
     a:hover { color: #0284c7; text-decoration: underline; }
   </style>
 </helmet>
+<section id="7" style="padding: 48px 56px; display: flex; flex-direction: column; gap: 32px; border-bottom: 1px solid #e2e8f0;">
+  <div style="max-width: 860px;">
+    <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8; margin-bottom: 8px;">Turno 7 · Livello 2 · Structure tab del rettangolo</div>
+    <h1 style="font-size: 24px; font-weight: 700; color: #0f172a; margin: 0 0 8px;">I campi di livello 2 entrano nel tab Structure, e il tab mostra solo ciò che il Symbol supporta</h1>
+    <p style="font-size: 14px; color: #475569; margin: 0 0 10px; line-height: 1.6;">Il rail ha già la partizione a tab (Applies to · Structure · Symbol · Form · Appearance · Text · Source) e il tab Structure ospita già i Field compartments — il Form tab ci arriva via <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; background: #f1f5f9; padding: 1px 5px; border-radius: 3px;">Edit compartments</span>. I campi introdotti dall'handoff (<a href="#3">3</a>) si inseriscono sopra, in tre gruppi: Name, Accent, Compartment. Nessun tab nuovo.</p>
+    <p style="font-size: 14px; color: #475569; margin: 0; line-height: 1.6;">Due regole. <span style="font-weight: 600;">Contestualità</span>: un campo che il Symbol corrente non supporta non è disabilitato — è assente, e l'assenza è dichiarata in una riga sola (<a href="#7b">7b</a>). <span style="font-weight: 600;">Precedenza</span>: quando FormSpec.widgets e il renderer dichiarato nel metamodello parlano dello stesso attributo, la view vince ma deve dichiararlo — su entrambe le superfici (<a href="#7c">7c</a>).</p>
+  </div>
+
+  <div style="display: flex; gap: 32px; flex-wrap: wrap; align-items: flex-start;">
+
+    <div id="7a" style="display: flex; flex-direction: column; gap: 12px; width: 320px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: #0f172a; color: #ffffff; letter-spacing: 0.04em;">7a</span>
+        <span style="font-size: 13px; font-weight: 600; color: #0f172a;">Rectangle — tutti i gruppi, default neutri</span>
+      </div>
+      <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+        <div style="display: flex; gap: 14px; padding: 0 14px; border-bottom: 1px solid #e2e8f0; font-size: 12px; white-space: nowrap; overflow: hidden;">
+          <span style="padding: 10px 0; color: #64748b;">Applies to</span>
+          <span style="padding: 10px 0; color: #0f172a; font-weight: 600; box-shadow: inset 0 -2px 0 #0ea5e9;">Structure</span>
+          <span style="padding: 10px 0; color: #64748b;">Symbol</span>
+          <span style="padding: 10px 0; color: #64748b;">Form</span>
+          <span style="padding: 10px 0; color: #cbd5e1;">⋯</span>
+        </div>
+        <div style="padding: 14px; display: flex; flex-direction: column; gap: 16px;">
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8;">Name</div>
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+              <span style="font-size: 13px; color: #475569;">Position</span>
+              <span style="font-size: 12px; padding: 5px 10px; border: 1px solid #cbd5e1; border-radius: 4px; color: #0f172a; display: inline-flex; align-items: center; gap: 7px;">Header band <i class="bi bi-chevron-down" style="font-size: 10px; color: #94a3b8;"></i></span>
+            </div>
+            <div style="display: flex; align-items: flex-start; gap: 6px; font-size: 11px; color: #94a3b8; line-height: 1.5;"><i class="bi bi-info-circle" style="margin-top: 1px;"></i><span>Header band available because the Symbol is <span style="color: #64748b; font-weight: 500;">Rectangle</span></span></div>
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+              <span style="font-size: 13px; color: #475569;">Type</span>
+              <div style="display: flex; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                <span style="font-size: 12px; padding: 5px 10px; background: #f1f5f9; color: #0f172a; font-weight: 500;">Inline</span>
+                <span style="font-size: 12px; padding: 5px 10px; color: #64748b; border-left: 1px solid #e2e8f0;">Chip</span>
+                <span style="font-size: 12px; padding: 5px 10px; color: #64748b; border-left: 1px solid #e2e8f0;">Badge</span>
+              </div>
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 10px; border-top: 1px solid #f1f5f9; padding-top: 14px;">
+            <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8;">Accent</div>
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+              <span style="font-size: 13px; color: #475569;">Placement</span>
+              <div style="display: flex; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                <span style="font-size: 12px; padding: 5px 10px; background: #f1f5f9; color: #0f172a; font-weight: 500;">None</span>
+                <span style="font-size: 12px; padding: 5px 10px; color: #64748b; border-left: 1px solid #e2e8f0;">Top</span>
+                <span style="font-size: 12px; padding: 5px 10px; color: #64748b; border-left: 1px solid #e2e8f0;">Left</span>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+              <span style="font-size: 13px; color: #475569;">Color</span>
+              <span style="display: inline-flex; align-items: center; gap: 7px; font-size: 12px; color: #0f172a;"><span style="width: 14px; height: 14px; border-radius: 3px; background: #cbd5e1; border: 1px solid #94a3b8; flex: none;"></span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #64748b;">#cbd5e1</span></span>
+            </div>
+            <div style="display: flex; align-items: flex-start; gap: 6px; font-size: 11px; color: #94a3b8; line-height: 1.5;"><i class="bi bi-info-circle" style="margin-top: 1px;"></i><span>Inherited from the metaclass · override per instance</span></div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 10px; border-top: 1px solid #f1f5f9; padding-top: 14px;">
+            <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8;">Compartment</div>
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+              <span style="font-size: 13px; color: #475569;">Mode</span>
+              <div style="display: flex; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                <span style="font-size: 12px; padding: 5px 10px; background: #f1f5f9; color: #0f172a; font-weight: 500;">Inline</span>
+                <span style="font-size: 12px; padding: 5px 10px; color: #64748b; border-left: 1px solid #e2e8f0;">Popover</span>
+                <span style="font-size: 12px; padding: 5px 10px; color: #64748b; border-left: 1px solid #e2e8f0;">None</span>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+              <span style="font-size: 13px; color: #475569;">Columns</span>
+              <div style="display: flex; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                <span style="font-size: 12px; padding: 5px 12px; background: #f1f5f9; color: #0f172a; font-weight: 500;">2</span>
+                <span style="font-size: 12px; padding: 5px 12px; color: #64748b; border-left: 1px solid #e2e8f0;">3</span>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+              <span style="font-size: 13px; color: #475569;">Empty slots</span>
+              <div style="display: flex; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                <span style="font-size: 12px; padding: 5px 10px; background: #f1f5f9; color: #0f172a; font-weight: 500;">Dash</span>
+                <span style="font-size: 12px; padding: 5px 10px; color: #64748b; border-left: 1px solid #e2e8f0;">Collapse</span>
+                <span style="font-size: 12px; padding: 5px 10px; color: #64748b; border-left: 1px solid #e2e8f0;">Hide</span>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+              <span style="font-size: 13px; color: #475569;">Edge marker</span>
+              <x-import component-from-global-scope="JjodelDesignSystem_cc51d0.Switch" checked="{{ true }}" hint-size="44px,24px"></x-import>
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 10px; border-top: 1px solid #f1f5f9; padding-top: 14px;">
+            <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8;">Field compartments</div>
+            <div style="display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid #e2e8f0; border-radius: 4px; font-size: 12px; color: #475569;"><i class="bi bi-list-columns" style="color: #94a3b8;"></i>attributes <span style="margin-left: auto; font-size: 11px; color: #94a3b8;">4 features</span></div>
+          </div>
+        </div>
+      </div>
+      <div style="font-size: 12px; color: #94a3b8; line-height: 1.5;">Ogni controllo è al suo default — la configurazione neutra di <a href="#3">3</a> non richiede alcun tocco. La riga di motivo compare solo sui campi la cui disponibilità dipende dal Symbol: Position ce l'ha, Empty slots no, perché vale per ogni forma. I Field compartments esistenti restano in coda, invariati.</div>
+    </div>
+
+    <div id="7b" style="display: flex; flex-direction: column; gap: 12px; width: 320px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: #0f172a; color: #ffffff; letter-spacing: 0.04em;">7b</span>
+        <span style="font-size: 13px; font-weight: 600; color: #0f172a;">Stadium — il filtro contestuale</span>
+      </div>
+      <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+        <div style="display: flex; gap: 14px; padding: 0 14px; border-bottom: 1px solid #e2e8f0; font-size: 12px; white-space: nowrap; overflow: hidden;">
+          <span style="padding: 10px 0; color: #64748b;">Applies to</span>
+          <span style="padding: 10px 0; color: #0f172a; font-weight: 600; box-shadow: inset 0 -2px 0 #0ea5e9;">Structure</span>
+          <span style="padding: 10px 0; color: #64748b;">Symbol</span>
+          <span style="padding: 10px 0; color: #64748b;">Form</span>
+          <span style="padding: 10px 0; color: #cbd5e1;">⋯</span>
+        </div>
+        <div style="padding: 14px; display: flex; flex-direction: column; gap: 16px;">
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8;">Name</div>
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+              <span style="font-size: 13px; color: #475569;">Position</span>
+              <span style="font-size: 12px; padding: 5px 10px; border: 1px solid #cbd5e1; border-radius: 4px; color: #0f172a; display: inline-flex; align-items: center; gap: 7px;">Center <i class="bi bi-chevron-down" style="font-size: 10px; color: #94a3b8;"></i></span>
+            </div>
+            <div style="display: flex; align-items: flex-start; gap: 6px; font-size: 11px; color: #94a3b8; line-height: 1.5;"><i class="bi bi-info-circle" style="margin-top: 1px;"></i><span>Header band not offered: <span style="color: #64748b; font-weight: 500;">Stadium</span> has no flat top edge</span></div>
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+              <span style="font-size: 13px; color: #475569;">Type</span>
+              <div style="display: flex; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                <span style="font-size: 12px; padding: 5px 10px; color: #64748b;">Inline</span>
+                <span style="font-size: 12px; padding: 5px 10px; color: #64748b; border-left: 1px solid #e2e8f0;">Chip</span>
+                <span style="font-size: 12px; padding: 5px 10px; background: #f1f5f9; color: #0f172a; font-weight: 500; border-left: 1px solid #e2e8f0;">Hidden</span>
+              </div>
+            </div>
+            <div style="display: flex; align-items: flex-start; gap: 6px; font-size: 11px; color: #94a3b8; line-height: 1.5;"><i class="bi bi-info-circle" style="margin-top: 1px;"></i><span>Every node in this viewpoint is a <span style="font-family: 'IBM Plex Mono', monospace;">State</span></span></div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 10px; border-top: 1px solid #f1f5f9; padding-top: 14px;">
+            <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8;">Accent</div>
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+              <span style="font-size: 13px; color: #475569;">Placement</span>
+              <div style="display: flex; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                <span style="font-size: 12px; padding: 5px 10px; background: #f1f5f9; color: #0f172a; font-weight: 500;">None</span>
+                <span style="font-size: 12px; padding: 5px 10px; color: #64748b; border-left: 1px solid #e2e8f0;">Ring</span>
+              </div>
+            </div>
+            <div style="display: flex; align-items: flex-start; gap: 6px; font-size: 11px; color: #94a3b8; line-height: 1.5;"><i class="bi bi-info-circle" style="margin-top: 1px;"></i><span>Ring replaces Top / Left on shapes without straight edges</span></div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 10px; border-top: 1px solid #f1f5f9; padding-top: 14px;">
+            <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8;">Compartment</div>
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+              <span style="font-size: 13px; color: #475569;">Mode</span>
+              <div style="display: flex; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                <span style="font-size: 12px; padding: 5px 10px; color: #64748b;">Popover</span>
+                <span style="font-size: 12px; padding: 5px 10px; background: #f1f5f9; color: #0f172a; font-weight: 500; border-left: 1px solid #e2e8f0;">None</span>
+              </div>
+            </div>
+            <div style="display: flex; align-items: flex-start; gap: 6px; font-size: 11px; color: #94a3b8; line-height: 1.5;"><i class="bi bi-info-circle" style="margin-top: 1px;"></i><span>Inline not offered: a Stadium has no room for rows. The diagram is topology</span></div>
+          </div>
+          <div style="border-top: 1px solid #f1f5f9; padding-top: 12px; display: flex; align-items: flex-start; gap: 6px; font-size: 11px; color: #94a3b8; line-height: 1.6;">
+            <i class="bi bi-eye-slash" style="margin-top: 1px;"></i>
+            <span>Not shown — <span style="color: #64748b; font-weight: 500;">Columns, Empty slots, Edge marker</span> (Mode is None) · <span style="color: #64748b; font-weight: 500;">Field compartments</span> (no compartment on this Symbol)</span>
+          </div>
+        </div>
+      </div>
+      <div style="font-size: 12px; color: #94a3b8; line-height: 1.5;">Il filtro agisce due volte: il Symbol toglie le opzioni che la geometria non ha (Header band, Top/Left), la scelta corrente toglie i campi resi inerti (Mode None spegne il resto del gruppo). Assente, non disabilitato: a 320px un controllo disabilitato costa spazio e invita al click — ma l'assenza è sempre dichiarata nella riga <i class="bi bi-eye-slash" style="font-size: 10px;"></i>, mai silenziosa.</div>
+    </div>
+
+    <div id="7c" style="display: flex; flex-direction: column; gap: 12px; width: 400px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: #0f172a; color: #ffffff; letter-spacing: 0.04em;">7c</span>
+        <span style="font-size: 13px; font-weight: 600; color: #0f172a;">Precedenza — FormSpec.widgets vs renderer del metamodello</span>
+      </div>
+      <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+        <div style="padding: 10px 16px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #94a3b8;">Form tab · widget overrides</div>
+        <div style="padding: 12px 16px; display: flex; flex-direction: column;">
+          <div style="display: grid; grid-template-columns: 1fr 48px 110px; gap: 10px; padding: 4px 0 8px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #94a3b8;">
+            <span>Feature</span><span>Basic</span><span>Widget</span>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 48px 110px; gap: 10px; padding: 7px 0; border-top: 1px solid #f8fafc; font-size: 13px; align-items: center;">
+            <span style="color: #0f172a;">width</span>
+            <span style="width: 14px; height: 14px; border: 1px solid #cbd5e1; border-radius: 3px;"></span>
+            <span style="font-size: 12px; color: #94a3b8;">Number <span style="font-size: 11px;">· derived</span></span>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 48px 110px; gap: 10px; padding: 7px 0 4px; border-top: 1px solid #f8fafc; font-size: 13px; align-items: center;">
+            <span style="color: #0f172a;">color</span>
+            <span style="width: 14px; height: 14px; border: 1px solid #cbd5e1; border-radius: 3px; background: #334155; display: inline-flex; align-items: center; justify-content: center;"><i class="bi bi-check" style="color: #ffffff; font-size: 11px;"></i></span>
+            <span style="font-size: 12px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; color: #0f172a; display: inline-flex; align-items: center; gap: 6px; justify-content: space-between;">Text <i class="bi bi-chevron-down" style="font-size: 10px; color: #94a3b8;"></i></span>
+          </div>
+          <div style="display: flex; align-items: flex-start; gap: 6px; font-size: 11px; color: #b45309; line-height: 1.5; padding: 4px 0 2px;">
+            <i class="bi bi-arrow-return-right" style="margin-top: 1px; color: #94a3b8;"></i>
+            <span style="color: #94a3b8;">metamodel declares <span style="color: #64748b; font-weight: 500;">Swatch</span> (<span style="font-family: 'IBM Plex Mono', monospace;">@renderer=color</span>) — overridden by this view · <span style="color: #0284c7; font-weight: 500; cursor: pointer;">Reset</span></span>
+          </div>
+        </div>
+      </div>
+      <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+        <div style="padding: 12px 16px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: baseline; gap: 6px;">
+          <span style="font-size: 13px; font-weight: 600; color: #0f172a;">color</span>
+          <span style="font-size: 12px; color: #94a3b8;">· Shape</span>
+          <span style="margin-left: auto; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 4px; background: #ecfeff; color: #0891b2; border: 1px solid #a5f3fc;">view</span>
+        </div>
+        <div style="padding: 12px 16px; display: flex; flex-direction: column; gap: 0;">
+          <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #94a3b8; margin-bottom: 10px;">Ladder di detection</div>
+          <div style="display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; margin: 0 -12px 4px; background: #f8fafc; border-radius: 6px; border-left: 2px solid #334155;">
+            <span style="width: 16px; height: 16px; border-radius: 999px; background: #334155; color: #ffffff; font-family: 'IBM Plex Mono', monospace; font-size: 9px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; flex: none; margin-top: 1px;">0</span>
+            <div style="min-width: 0;"><div style="font-size: 12px; color: #0f172a; font-weight: 600;">Dichiarata dalla view <span style="font-weight: 500; color: #64748b;">— vince nel form</span></div><div style="font-size: 11px; color: #64748b; margin-top: 3px; line-height: 1.5;"><span style="font-family: 'IBM Plex Mono', monospace;">FormSpec.widgets.color = "text"</span> · <span style="color: #0284c7; font-weight: 500; cursor: pointer;">Apri il Form tab</span></div></div>
+          </div>
+          <div style="display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid #f8fafc;">
+            <span style="width: 16px; height: 16px; border-radius: 999px; border: 1px solid #e2e8f0; color: #cbd5e1; font-family: 'IBM Plex Mono', monospace; font-size: 9px; display: inline-flex; align-items: center; justify-content: center; flex: none; margin-top: 1px;">1</span>
+            <div style="min-width: 0;"><div style="font-size: 12px; color: #94a3b8;">Dichiarazione nel metamodello <span style="font-size: 11px; font-weight: 600; padding: 1px 6px; border-radius: 4px; background: #f1f5f9; color: #64748b; margin-left: 4px;">overridden by current view</span></div><div style="font-size: 11px; color: #cbd5e1; margin-top: 2px;"><span style="font-family: 'IBM Plex Mono', monospace;">@renderer=color</span> → Swatch — valida, ma la view la copre</div></div>
+          </div>
+          <div style="display: flex; gap: 10px; align-items: flex-start; padding: 8px 0;">
+            <span style="width: 16px; height: 16px; border-radius: 999px; border: 1px solid #e2e8f0; color: #cbd5e1; font-family: 'IBM Plex Mono', monospace; font-size: 9px; display: inline-flex; align-items: center; justify-content: center; flex: none; margin-top: 1px;">2–4</span>
+            <div style="min-width: 0;"><div style="font-size: 12px; color: #cbd5e1;">Valore parsato · enum di colori · nome <span style="font-size: 11px;">— non valutate</span></div></div>
+          </div>
+        </div>
+        <div style="padding: 12px 16px; border-top: 1px solid #f1f5f9; display: flex; align-items: center; gap: 10px; background: #f8fafc;">
+          <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #0f172a; font-weight: 500;"><span style="width: 10px; height: 10px; border-radius: 3px; background: #22c55e; flex: none; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.08);"></span>Swatch colore <span style="font-size: 11px; font-weight: 400; color: #94a3b8;">· sul canvas</span></span>
+          <span style="margin-left: auto; font-size: 12px; font-weight: 500; color: #0284c7; cursor: pointer;">Torna al renderer del metamodello</span>
+        </div>
+      </div>
+      <div style="font-size: 12px; color: #94a3b8; line-height: 1.5;">La view vince, ma non in silenzio. Il Form tab dice cosa sta coprendo (<span style="font-style: italic;">metamodel declares Swatch</span>) con il Reset accanto; la ladder guadagna il gradino 0 e il chip dell'inspector passa da <span style="font-family: 'IBM Plex Mono', monospace;">auto</span> a <span style="font-family: 'IBM Plex Mono', monospace;">view</span>. Il gradino 1 resta visibile con la sua evidenza: l'override si giudica sapendo cosa nasconde. Le due superfici scrivono la stessa chiave — <span style="font-family: 'IBM Plex Mono', monospace;">FormSpec.widgets</span> — quindi la provenienza non può divergere. L'override governa il <span style="font-weight: 600;">form</span>: sul canvas il nodo continua a dipingere il renderer del metamodello, e il footer lo dice. Estendere la vittoria della view al canvas è un fronte separato, registrato come debito.</div>
+    </div>
+
+  </div>
+</section>
+
 <section id="5" style="padding: 48px 56px; display: flex; flex-direction: column; gap: 32px; border-bottom: 1px solid #e2e8f0;">
   <div style="max-width: 860px;">
     <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8; margin-bottom: 8px;">Turno 5 · Livello 3 · Libreria Row view</div>
