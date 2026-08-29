@@ -41,14 +41,16 @@ La view vince ma deve dichiararlo, su entrambe le superfici:
 - **Inspector ladder** (renderer inspector del Turno 5): l'override della view diventa il gradino **0** ("Dichiarata dalla view — regola vincente", con link che dispatcha `IR_AUTHORING_TAB` verso `ir-form`); il gradino 1 resta visibile con la sua evidenza e badge `overridden by current view`; il chip di stato passa da `auto` a `view`. Footer: "Torna al renderer del metamodello" = stesso Reset.
 - Le due superfici leggono/scrivono la stessa chiave (`FormSpec.widgets`): niente stato duplicato di provenienza.
 
-**Stato misurato (2026-08-29, R-STR-7).** Delle due superfici solo il **Form tab** e' viva.
-`ObjectNode` monta il renderer inspector unicamente nel ramo nativo, e un ir che porta `form`
-— o `structure` — non supera l'hash di `isMigratedDefaultView`, quindi non e' mai delegato:
-il gradino 0, il badge `overridden by current view`, il chip `view` e il reset del footer sono
-implementati e oggi irraggiungibili. Il gradino 1 invece **e'** alimentabile in sessione
-(`DAnnotation.new('jjodel/renderer=…')`); lo stub di `parseDAnnotation` costa solo il
-round-trip `.ecore`. Il gradino 0 va o rimosso, o abilitato montando l'inspector anche sul
-ramo IR: debito registrato, non aperto.
+**Stato misurato (2026-08-29, R-STR-7 — sciolta lo stesso giorno).** Entrambe le superfici
+sono ora vive. Fino a `3e7eb02db` il gradino 0 era implementato e irraggiungibile: `ObjectNode`
+montava il renderer inspector solo nel ramo nativo, e un ir che porta `form` — o `structure` —
+non supera l'hash di `isMigratedDefaultView`, quindi non e' mai delegato. La causa non era
+`viewWidget`, che leggeva gia' la sorgente giusta, ma l'assenza di un punto d'ingresso: i due
+call site di `openInspector` stavano sotto il return anticipato del ramo IR. Il verso scelto e'
+**montare**, non rimuovere: la riga IR ha ora la doppia gesture del ramo nativo (Alt+click piu'
+bottone hover-reveal), `IRNodeContent` alza il nome della feature e `ObjectNode` risolve il
+`SlotRow`. Il gradino 1 resta alimentabile in sessione (`DAnnotation.new('jjodel/renderer=…')`);
+lo stub di `parseDAnnotation` costa solo il round-trip `.ecore`.
 
 ## Test attesi
 
@@ -57,8 +59,10 @@ ramo IR: debito registrato, non aperto.
 - Precedenza, **sul Form tab**: con una dichiarazione `jjodel/renderer` in sessione piu' un
   override di view che mappa su un renderer diverso, la riga di provenienza compare, nomina il
   renderer coperto, cita il formato reale e offre il Reset; con un override che **coincide**
-  (accordo) la riga non compare; il Reset rimuove la chiave e pota il `form` vuoto. La meta'
-  inspector (gradino 0, chip `view`) non e' verificabile a schermo finche' vale R-STR-7.
+  (accordo) la riga non compare; il Reset rimuove la chiave e pota il `form` vuoto.
+- Precedenza, **sull'inspector del canvas**: dal 2026-08-29 verificabile a schermo su un nodo
+  del ramo IR — gradino 0 vincente, chip `view`, gradino 1 col badge, Reset del footer che
+  toglie la chiave. Il ponte nome-feature -> `SlotRow` ha i suoi test unitari.
 
 ## Fuori scope
 

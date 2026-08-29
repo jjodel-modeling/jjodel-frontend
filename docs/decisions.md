@@ -1961,6 +1961,21 @@ anche il contrario di cio' che si sospettava: il gradino 1 **e'** alimentabile i
 gradino 1 vincente), e lo stub di `parseDAnnotation` costa solo il round-trip `.ecore`.
 Stesso regime di R-STR-6: registrato, non aperto.
 
+**Sciolta (2026-08-29), verso: montato sul ramo IR.** Il `RendererInspector` e' ora montato
+anche nel ramo `irResolution && !irDelegated`, e il gradino 0 e' raggiungibile sul canvas.
+Due correzioni alla diagnosi originaria, misurate: (1) `viewWidget` **non** era il problema —
+a `ObjectNode.tsx:1281-1284` leggeva gia' `irResolution?.compiled.formSpec?.widgets?.[…]`,
+la sorgente giusta; (2) la causa vera era l'assenza di un **punto d'ingresso**, perche' i due
+call site di `openInspector` stavano entrambi sotto il return anticipato di `:728`, insieme a
+`openInspector` e `resetViewWidget` stessi. La riga IR guadagna la doppia gesture del ramo
+nativo (Alt+click piu' bottone `bi-sliders` hover-reveal); `IRNodeContent` alza il solo nome
+della feature (prop opzionale su `IRNodeContentProps`) e il ponte nome->`SlotRow` e'
+`findRowByFeatureName` in `nodes/valueRenderer.ts`. Verificato a schermo con
+`_tmp_rstr7_rung0.ts`, 10/10: chip `view`, gradino 0 vincente, gradino 1 col badge
+`overridden by current view`, Reset del footer che toglie la chiave e chip che torna a
+`declared`. R-STR-6 (la vittoria della view sulla **riga del canvas**) resta chiusa: questa
+ratifica apre la superficie della ladder, non cambia chi vince il rendering della riga.
+
 **R-STR-6** (2026-08-29, Alfonso) — **Debito registrato, non aperto.** Estendere la vittoria
 della view alla riga del canvas richiede `decide` esportato da `nodes/valueRenderer.ts` e la
 decisione di riga cambiata in `nodes/ObjectNode.tsx`. E' un fronte separato: non si apre
