@@ -108,3 +108,19 @@ export {
     rootOf,
     truncateTo,
 } from './nav';
+
+export type {
+    OutlineKind,
+    OutlineMenu,
+    OutlineMenuBlock,
+    OutlineMenuEntry,
+    OutlineNode,
+} from './outline';
+
+export {
+    OUTLINE_DEFAULT_OPEN_DEPTH,
+    childMenu,
+    outlineLabel,
+    outlineOpenByDefault,
+    rootMenu,
+} from './outline';

@@ -46,9 +46,15 @@
     /* One fixed reading column, an elastic table, and a detail that only opens
        when a row is picked. The table is the pane whose width actually varies
        with the metamodel, so it takes the slack. */
+    &__pane--outline { flex: 0 0 300px; padding: 14px 0; }
     &__pane--classes { flex: 0 0 200px; }
     &__pane--table   { flex: 1 1 auto; overflow: hidden; }
     &__pane--detail  { flex: 0 0 400px; padding: 0; }
+
+    /* The outline pane pads its rows, not itself: the selection band has to run
+       the full width of the column, and a padded pane would inset it. The eyebrow
+       gets the inset back. */
+    &__pane--outline > .instance-manager__eyebrow { padding: 0 14px; }
 
     /* Eyebrow — 11 / 600 / 0.08em / muted, the 7a heading. */
     &__eyebrow {
@@ -961,4 +967,133 @@
     }
 
     &__inline-open { margin-bottom: 4px; }
+
+    /* ── The containment outline (10b) ─────────────────────────────────────────
+       Mock 1b of `Q8 Catalogo vs Outline.dc.html`: 12px rows, a 12px genre icon,
+       the metaclass in mono at the right, «+» in accent. The 14px inset and the
+       16px per level are literals for the same reason the pane's 14px is — they
+       are off the 8px grid and have no token (railSystem declares them literal
+       too). The indent itself is inline, since it is a function of the depth. */
+
+    &__outline { display: flex; flex-direction: column; }
+
+    &__outline-item { position: relative; }
+
+    &__outline-node {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px 4px 14px;
+        font-size: 12px;
+        color: var(--color-text-primary);
+        cursor: pointer;
+
+        &:hover { background: var(--color-bg-tertiary); }
+
+        &--selected,
+        &--selected:hover { background: var(--color-selection-bg); }
+
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: -2px; }
+    }
+
+    /* Always occupied, caret or not: a leaf whose row started 12px to the left of
+       its siblings would read as a level of its own. */
+    &__outline-caret {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: none;
+        width: 12px;
+        height: 12px;
+        padding: 0;
+        border: 0;
+        background: none;
+        color: var(--color-form-muted);
+        font-size: 9px;
+        cursor: pointer;
+
+        &:hover { color: var(--color-accent); }
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 1px; }
+    }
+
+    &__outline-icon {
+        flex: none;
+        font-size: 12px;
+        color: var(--color-form-section);
+    }
+
+    &__outline-name {
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    /* A dangling pointer is the one state in this panel that has to be seen across
+       the room (12d), and it is the same token the table's `__broken` uses. */
+    &__outline-node--broken {
+        cursor: default;
+        color: var(--color-error);
+
+        .instance-manager__outline-icon { color: var(--color-error); }
+        &:hover { background: none; }
+    }
+
+    &__outline-add {
+        display: inline-flex;
+        align-items: center;
+        flex: none;
+        padding: 0;
+        border: 0;
+        background: none;
+        color: var(--color-accent);
+        font-size: 12px;
+        cursor: pointer;
+        opacity: 0;
+
+        &:focus-visible { opacity: 1; outline: 2px solid var(--color-border-focus); outline-offset: 1px; }
+    }
+
+    /* Hover-reveal, and revealed for good on the selected row: a «+» on every row
+       of a deep model is a column of plus signs, and the one row the user is
+       working on is the one that needs it standing. */
+    &__outline-node:hover .instance-manager__outline-add,
+    &__outline-node--selected .instance-manager__outline-add,
+    &__outline-add[aria-expanded='true'] { opacity: 1; }
+
+    &__outline-menu {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        margin: 2px 10px 4px 28px;
+        padding: 6px;
+        border: 1px solid var(--color-form-border);
+        border-radius: 6px;
+        background: var(--color-bg-primary);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+
+        .instance-manager__note { margin: 0; }
+        .instance-manager__child-reason { margin: 0; }
+    }
+
+    &__outline-menu-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        width: 100%;
+        padding: 4px 6px;
+        border: 0;
+        border-radius: 4px;
+        background: none;
+        font-size: 12px;
+        color: var(--color-text-primary);
+        text-align: left;
+        cursor: pointer;
+
+        .instance-manager__code { margin-left: auto; }
+
+        &:hover { background: var(--color-bg-tertiary); color: var(--color-accent); }
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: -1px; }
+    }
 }

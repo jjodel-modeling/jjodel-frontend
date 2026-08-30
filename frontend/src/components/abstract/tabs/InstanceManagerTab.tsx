@@ -63,6 +63,9 @@ import type {
     MultiField,
     MultiModel,
     NavState,
+    OutlineMenu,
+    OutlineMenuEntry,
+    OutlineNode,
     RefShape,
     UnionPreflight,
 } from '../../../jjform';
@@ -77,19 +80,25 @@ import {
     drillInto,
     multiModel,
     navFor,
+    childMenu,
     newDraft,
     newInstanceReason,
+    outlineLabel,
+    outlineOpenByDefault,
     rendersInline,
+    rootMenu,
     setDraftRef,
     setDraftValue,
     truncateTo,
     unionPreflight,
 } from '../../../jjform';
 import { childrenIn, multiInstancesOf, navStepOf, pathTo } from '../../editor-v2/hooks/multiDraw';
+import { outlineRows, outlineTree } from '../../editor-v2/hooks/outlineDraw';
 import { applyBulk } from '../../editor-v2/hooks/multiAdapter';
 import {
     instanceCountsByClass,
     instancesOfClass,
+    modelIdOfObject,
     uninstantiableReason,
 } from './instanceManagerModel';
 import {
@@ -727,6 +736,171 @@ function MultiForm({ model, touched, onTouch, onApply, onClear, onDelete }: {
     );
 }
 
+/**
+ * OutlinePanel — l'albero di containment del modello (slice 10b, mock 1b di
+ * `Q8 Catalogo vs Outline.dc.html`).
+ *
+ * Q8, ri-sciolta col peso di 2c: «non e' un aut-aut, e' una divisione di ruoli». Questo
+ * pannello AFFIANCA il catalogo, non lo sostituisce — «outline per il dove,
+ * tabella per il quanto», la nota del design, che e' il layout contract di questa
+ * slice. La tabella per metaclasse resta con il suo `New`, e i due gesti emettono
+ * lo STESSO evento.
+ *
+ * ── Un motore in meno, non uno in piu' ────────────────────────────────────────
+ *
+ * Il pannello non ha regole proprie. L'albero e' `outlineDraw.outlineTree`, il
+ * menu del «+» e' `jjform.childMenu` / `jjform.rootMenu` — cioe' `addChildReason`
+ * e `newInstanceReason`, le stesse due funzioni che la barra «Add contained» e la
+ * toolbar della tabella gia' chiamano — e la create e' `openCreate(cls, ownerId,
+ * childKey)`, invariata. La form del nodo selezionato e' la STESSA `IRForm` del
+ * manager: l'outline e' una superficie di navigazione in piu', non un motore in
+ * piu'.
+ *
+ * ── Due gesti, distinti apposta ───────────────────────────────────────────────
+ *
+ * Il chevron APRE, la riga SELEZIONA. Il mock e' una figura statica e non mostra
+ * il chevron; e' l'unica aggiunta al disegno, ed e' quella che evita l'alternativa
+ * — un click che seleziona E apre — in cui non si puo' guardare la form di un nodo
+ * senza sfogliargli sotto i figli.
+ *
+ * ── Il genere dell'icona viene dal metamodello ────────────────────────────────
+ *
+ * Non da una tabella per metaclasse (il mock ne dipinge una, ma e' un fixture, non
+ * una regola che jjodel possa leggere): il modello e' una scatola, un'istanza la
+ * cui metaclasse ha feature di contenimento e' una cartella, ogni altra un cerchio,
+ * e un puntatore morto e' il triangolo con il token della tabella
+ * (`instance-manager__broken`) — la cosa che 12d dice non debba sparire in silenzio.
+ */
+function OutlinePanel({
+    rows, subjectId, isOpen, hasSlots, menuFor, menuOf,
+    onToggle, onSelect, onMenu, onCreate,
+}: {
+    rows: OutlineNode[];
+    subjectId: string | null;
+    isOpen: (node: OutlineNode) => boolean;
+    hasSlots: (node: OutlineNode) => boolean;
+    menuFor: string | null;
+    menuOf: (node: OutlineNode) => OutlineMenu;
+    onToggle: (node: OutlineNode) => void;
+    onSelect: (node: OutlineNode) => void;
+    onMenu: (node: OutlineNode) => void;
+    onCreate: (node: OutlineNode, entry: OutlineMenuEntry) => void;
+}) {
+    const icon = (node: OutlineNode): string => {
+        if (node.kind === 'model') return 'bi-box';
+        if (node.kind === 'broken') return 'bi-exclamation-triangle';
+        return hasSlots(node) ? 'bi-folder2' : 'bi-circle';
+    };
+
+    return (
+        <aside className="instance-manager__pane instance-manager__pane--outline">
+            <h3 className="instance-manager__eyebrow">Model outline</h3>
+            {rows.length === 0 ? (
+                <p className="instance-manager__note">No model resolved.</p>
+            ) : (
+                <ul className="instance-manager__list instance-manager__outline">
+                    {rows.map(node => {
+                        const menu = menuFor === node.id ? menuOf(node) : null;
+                        const selectable = node.kind === 'object';
+                        return (
+                            <li
+                                className="instance-manager__outline-item"
+                                key={node.id + '@' + node.depth + ':' + (node.childKey ?? '')}
+                            >
+                                <div
+                                    className={
+                                        'instance-manager__outline-node'
+                                        + (node.id === subjectId ? ' instance-manager__outline-node--selected' : '')
+                                        + (node.kind === 'broken' ? ' instance-manager__outline-node--broken' : '')
+                                    }
+                                    /* 14px d'inserto e 16px per livello: le misure del
+                                       mock 1b, che sono le stesse del resto del pannello
+                                       (l'inserto e' quello di railSystem) e non hanno un
+                                       token — come il 14px del pane. */
+                                    style={{ paddingLeft: 14 + node.depth * 16 }}
+                                    title={node.kind === 'broken' ? `Dangling pointer: ${node.id}` : outlineLabel(node)}
+                                    onClick={selectable ? () => onSelect(node) : undefined}
+                                    role={selectable ? 'button' : undefined}
+                                    tabIndex={selectable ? 0 : undefined}
+                                    onKeyDown={selectable ? e => {
+                                        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(node); }
+                                    } : undefined}
+                                >
+                                    {node.children.length > 0 ? (
+                                        <button
+                                            type="button"
+                                            className="instance-manager__outline-caret"
+                                            aria-label={isOpen(node) ? `Collapse ${outlineLabel(node)}` : `Expand ${outlineLabel(node)}`}
+                                            aria-expanded={isOpen(node)}
+                                            onClick={e => { e.stopPropagation(); onToggle(node); }}
+                                        >
+                                            <i className={'bi ' + (isOpen(node) ? 'bi-chevron-down' : 'bi-chevron-right')} aria-hidden="true" />
+                                        </button>
+                                    ) : (
+                                        <span className="instance-manager__outline-caret" aria-hidden="true" />
+                                    )}
+
+                                    <i className={'bi ' + icon(node) + ' instance-manager__outline-icon'} aria-hidden="true" />
+
+                                    <span className="instance-manager__outline-name">{outlineLabel(node)}</span>
+
+                                    {node.cls && <span className="instance-manager__code">{node.cls}</span>}
+
+                                    {hasSlots(node) && (
+                                        <button
+                                            type="button"
+                                            className="instance-manager__outline-add"
+                                            title={`Add inside ${outlineLabel(node)}`}
+                                            aria-label={`Add inside ${outlineLabel(node)}`}
+                                            aria-expanded={menuFor === node.id}
+                                            onClick={e => { e.stopPropagation(); onMenu(node); }}
+                                        >
+                                            <i className="bi bi-plus-square" aria-hidden="true" />
+                                        </button>
+                                    )}
+                                </div>
+
+                                {/* Il menu dei child-slot leciti di QUEL nodo. Una voce
+                                    bloccata e' ASSENTE dalle offerte e presente come
+                                    frase — mai una riga grigia che non dice perche'
+                                    (Regola 1 del Livello 2, terza superficie che la
+                                    osserva). Sul nodo modello le sole rootable. */}
+                                {menu && (
+                                    <div className="instance-manager__outline-menu" role="menu">
+                                        {menu.entries.map(entry => (
+                                            <button
+                                                type="button"
+                                                role="menuitem"
+                                                className="instance-manager__outline-menu-item"
+                                                key={(entry.childKey ?? '') + ':' + entry.cls}
+                                                onClick={e => { e.stopPropagation(); onCreate(node, entry); }}
+                                            >
+                                                <i className="bi bi-plus" aria-hidden="true" />
+                                                {entry.label}
+                                                {entry.childKey && (
+                                                    <span className="instance-manager__code">{entry.childKey}</span>
+                                                )}
+                                            </button>
+                                        ))}
+                                        {menu.entries.length === 0 && menu.blocked.length === 0 && (
+                                            <p className="instance-manager__note">Nothing can be created here.</p>
+                                        )}
+                                        {menu.blocked.map(block => (
+                                            <p className="instance-manager__child-reason" key={block.key} title={block.reason}>
+                                                {block.reason}
+                                            </p>
+                                        ))}
+                                    </div>
+                                )}
+                            </li>
+                        );
+                    })}
+                </ul>
+            )}
+        </aside>
+    );
+}
+
 export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
     // One subscription for the whole tab. `idlookup`'s reference changes on every
     // model write, which is precisely the granularity the derived lists need.
@@ -763,6 +937,18 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
      *  one piece of state — never N pending deletes queued behind each other. */
     const [pendingMulti, setPendingMulti] = useState<UnionPreflight<any, any> | null>(null);
     const [multiReassignTo, setMultiReassignTo] = useState('');
+    /** L'outline (10b). SOLO due stati locali, ed e' deliberato: l'albero NON e'
+     *  tenuto qui. Tutto il tab pende da una sola `useSelector(state.idlookup)` e
+     *  l'outline e' un `useMemo` sulla stessa sorgente — tenerne una copia in stato
+     *  locale sarebbe l'unico modo di far divergere il pannello dalla tabella.
+     *
+     *  `expanded` e' un OVERRIDE, non l'apertura: assente significa «come
+     *  `outlineOpenByDefault` dice», presente significa «l'utente ha detto». Un
+     *  default calcolato e memorizzato al primo render avrebbe fissato l'albero di
+     *  quel momento, e un figlio nato dopo sarebbe nato chiuso sotto un padre che
+     *  nessuno ha mai chiuso. */
+    const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+    const [menuFor, setMenuFor] = useState<string | null>(null);
 
     // Name-sorted so the column does not reorder itself when a class is renamed
     // elsewhere. `getMetaclassInfo` is impure (it reads the store and L-proxies),
@@ -813,10 +999,29 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
 
     // The selected instance may have been deleted, or filtered out of view, or may
     // belong to a class that was just deselected. Resolving it against the CURRENT
-    // rows rather than trusting the state means the drawer can never show a dead
-    // object — but it is resolved against `rows`, not `visible`, so typing in the
-    // search box does not close the drawer on the row being edited.
-    const subjectId = selectedObjectId && rows.some(r => r.id === selectedObjectId)
+    // state rather than trusting it means the drawer can never show a dead object —
+    // and it is resolved against `rows`, not `visible`, so typing in the search box
+    // does not close the drawer on the row being edited.
+    //
+    // WIDENED BY 10b, and this one expression is the whole delta the outline needs
+    // on the form side. A node of the outline may be an instance of ANOTHER
+    // metaclass than the table is listing, and the design is explicit that picking
+    // it must NOT change the collection («evidenzia la riga *se* la tabella mostra
+    // quella metaclasse»). So the rule becomes «a live row OR a live DObject of this
+    // model», and everything downstream stands by itself: the row highlight is
+    // already `row.id === subjectId`, so the outline -> table synchrony costs
+    // nothing; `subjectShape` goes through `shapeCtx.classOf(subjectId)` and not
+    // through the selected class; `childSlots`, `inlineChildren` and `drillTo` go
+    // through `formSubjectId` and `pathTo`.
+    //
+    // Declared: `toggleSelected` and `confirmMultiDelete` still reason over `rows`.
+    // They stay correct because the outline never feeds `alsoSelected` — it clears
+    // it — so `selectedIds` holds one element and `isMulti` stays false. A future
+    // slice that let the outline multi-select would have to redo that boundary.
+    const subjectId = selectedObjectId
+        && (rows.some(r => r.id === selectedObjectId)
+            || (idlookup?.[selectedObjectId]?.className === 'DObject'
+                && modelIdOfObject(idlookup, selectedObjectId) === modelid))
         ? selectedObjectId
         : null;
 
@@ -992,6 +1197,79 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
         setDraft(newDraft(shapeCtx.shape(), clsName, ownerId, childKey));
     };
 
+    // ── L'outline di containment (10b) ─────────────────────────────────────────
+    // Terza superficie della create, e ZERO rami nuovi: `openCreate` e' chiamata
+    // qui con (cls, node.id, childKey) da un nodo istanza e con (cls, null, null)
+    // dal nodo modello — le stesse due forme che il catalogo e la barra dei figli
+    // gia' emettono. La provenienza non e' cablata da nessuna parte, che e' cio'
+    // che il docstring di `jjform/create.ts` prometteva a Q8.
+
+    /** L'albero, sulla stessa `idlookup` di tutto il resto del tab. */
+    const outline = useMemo(
+        () => outlineTree(idlookup, modelid, shapeCtx.shape()),
+        [idlookup, modelid, shapeCtx],
+    );
+
+    /** Aperto se l'utente l'ha detto, altrimenti come dice la regola di default. */
+    const outlineIsOpen = (node: OutlineNode) => expanded[node.id] ?? outlineOpenByDefault(node.depth);
+
+    const outlineVisible = useMemo(
+        () => outlineRows(outline, outlineIsOpen),
+        [outline, expanded],
+    );
+
+    /** Quante istanze per NOME di metaclasse — cio' che `rootMenu` legge per il
+     *  singleton. `counts` accanto e' per id, che e' la chiave della colonna. */
+    const countsByName = useMemo(() => {
+        const out: Record<string, number> = {};
+        for (const cls of classes) out[cls.name] = counts[cls.id] ?? 0;
+        return out;
+    }, [classes, counts]);
+
+    /** Se il «+» va offerto affatto: la metaclasse ha almeno una feature di
+     *  contenimento (il modello, almeno una rootable). Una lettura di shape, non
+     *  degli slot: contare i valori di ogni slot di ogni nodo a ogni render sarebbe
+     *  una scansione per disegnare un'icona. Il conteggio lo fa il menu, che si
+     *  costruisce solo per il nodo aperto. */
+    const outlineHasSlots = (node: OutlineNode): boolean => {
+        if (node.kind === 'broken') return false;
+        if (node.kind === 'model') return rootMenu(shapeCtx.shape(), countsByName).entries.length > 0;
+        const cls = node.cls ? shapeCtx.shape().classes[node.cls] ?? null : null;
+        return (cls?.children.length ?? 0) > 0;
+    };
+
+    /** Il menu di UN nodo, costruito solo quando e' aperto. */
+    const outlineMenuOf = (node: OutlineNode): OutlineMenu => {
+        if (node.kind === 'model') return rootMenu(shapeCtx.shape(), countsByName);
+        const cls = node.cls ? shapeCtx.shape().classes[node.cls] ?? null : null;
+        const slotCounts: Record<string, number> = {};
+        for (const child of cls?.children ?? []) slotCounts[child.key] = childSlotCount(node.id, child.key);
+        return childMenu(cls, slotCounts);
+    };
+
+    const toggleOutline = (node: OutlineNode) => {
+        setMenuFor(null);
+        setExpanded(prev => ({ ...prev, [node.id]: !(prev[node.id] ?? outlineOpenByDefault(node.depth)) }));
+    };
+
+    /** Selezionare un nodo NON cambia la collezione mostrata dalla tabella: e' il
+     *  vincolo del design. `subjectId` risolve l'oggetto per conto suo, e la riga
+     *  si evidenzia da sola se per caso la tabella sta mostrando quella metaclasse.
+     *  Azzera `alsoSelected`: l'outline non alimenta la multi-selezione (12b). */
+    const selectFromOutline = (node: OutlineNode) => {
+        if (node.kind !== 'object') return;
+        setMenuFor(null);
+        setSelectedObjectId(node.id);
+        setAlsoSelected([]);
+        setBulkTouched({});
+        setNav(null);
+    };
+
+    const outlineCreate = (node: OutlineNode, entry: OutlineMenuEntry) => {
+        setMenuFor(null);
+        openCreate(entry.cls, node.kind === 'model' ? null : node.id, entry.childKey);
+    };
+
     // ── Delete (12d) ───────────────────────────────────────────────────────────
     // ONE event, `delete(id, { reassignTo? | clearRefs })`, whose options are the
     // verdict of the preflight. The preflight is ALWAYS computed (ratified rule 1):
@@ -1068,6 +1346,23 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
 
     return (
         <div className="instance-manager">
+            {/* ── L'outline di containment (10b) ──────────────────────────────
+                Quarta colonna, la prima da sinistra: AFFIANCA il catalogo, non lo
+                sostituisce. «Outline per il dove, tabella per il quanto» — la nota
+                del mock 1b, che e' il layout contract di questa slice. */}
+            <OutlinePanel
+                rows={outlineVisible}
+                subjectId={subjectId}
+                isOpen={outlineIsOpen}
+                hasSlots={outlineHasSlots}
+                menuFor={menuFor}
+                menuOf={outlineMenuOf}
+                onToggle={toggleOutline}
+                onSelect={selectFromOutline}
+                onMenu={node => setMenuFor(prev => (prev === node.id ? null : node.id))}
+                onCreate={outlineCreate}
+            />
+
             {/* ── Metaclasses ─────────────────────────────────────────────── */}
             <aside className="instance-manager__pane instance-manager__pane--classes">
                 <h3 className="instance-manager__eyebrow">Metaclasses</h3>
