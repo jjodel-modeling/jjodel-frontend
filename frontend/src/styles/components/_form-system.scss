@@ -654,7 +654,6 @@ input[type="number"] {
 
 // Parent containers should have white background
 .view-editor-root,
-.viewpoint-tab-container,
 .dock-tabpane {
   background-color: #ffffff !important;
   height: 100% !important;
@@ -662,7 +661,6 @@ input[type="number"] {
 
 // Tab content containers - extend to full height with gray background
 .properties-tab,
-.viewpoint-tab,
 .node-tab,
 .apply-to-tab,
 .template-tab,
@@ -712,14 +710,12 @@ input[type="number"] {
 
   // Parent container backgrounds
   .view-editor-root,
-  .viewpoint-tab-container,
   .dock-tabpane {
     background-color: #0f172a !important;
   }
 
   // Tab backgrounds
   .properties-tab,
-  .viewpoint-tab,
   .node-tab,
   .apply-to-tab,
   .template-tab,

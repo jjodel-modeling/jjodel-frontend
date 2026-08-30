@@ -1,67 +1,28 @@
 /* ============================================
-   NESTED VIEW - VIEWPOINTS PANEL
+   VIEW DATA - PANNELLO DELLA VIEW SELEZIONATA
+   Caricato da ViewData.tsx: stila `.view-editor-root`,
+   la sua intestazione e il sistema di tab che ha
+   sostituito il DockLayout di rc-dock.
    Redesigned following CLAUDE.md design tokens
    ============================================ */
 
 // === DESIGN TOKENS ===
 // Typography
 $font-family: 'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-$font-size-xs: 11px;
-$font-size-sm: 12px;
 $font-size-base: 13px;
-$font-size-md: 14px;
-$font-weight-normal: 400;
-$font-weight-medium: 500;
-$font-weight-semibold: 600;
 
 // Colors - SLATE PALETTE
 $color-text-primary: #111418;
 $color-text-secondary: #6B7280;
 $color-text-tertiary: #9CA3AF;
 $color-bg-primary: #ffffff;
-$color-bg-secondary: #f8fafc;
-$color-bg-tertiary: #f1f5f9;
 $color-border: #e2e4e8;
 $color-border-hover: #d0d3d8;
-$color-accent: #475569;
-$color-accent-hover: #334155;
 
 // Spacing
 $spacing-xs: 4px;
 $spacing-sm: 8px;
 $spacing-md: 12px;
-$spacing-lg: 16px;
-
-// Border Radius
-$radius-sm: 4px;
-$radius-md: 6px;
-$radius-lg: 8px;
-
-// Transitions
-$transition-fast: 150ms ease;
-$transition-normal: 200ms ease;
-
-// Layout - COMPACT
-$row-height: 28px; // Reduced from 32px
-$row-padding-v: 4px; // Reduced from 6px
-$row-gap: 6px; // Reduced from 8px
-$icon-size: 22px; // Reduced from 24px
-$vp-group-spacing: 12px; // Reduced from 16px
-
-// Type colors - DISTINCT for each type (from CLAUDE.md)
-$color-viewpoint: #475569;    // slate-600
-$color-model: #64748b;        // slate-500 (Metamodels)
-$color-package: #f59e0b;      // amber-500 (Packages)
-$color-class: #0ea5e9;        // cyan-500 (Classes)
-$color-attribute: #10b981;    // green-500 (Attributes)
-$color-reference: #8b5cf6;    // purple-500 (References)
-$color-operation: #06b6d4;    // cyan-400 (Operations)
-$color-enum: #ec4899;         // pink-500 (Enumerations)
-$color-literal: #f472b6;      // pink-400 (Enum Literals)
-$color-object: #6b7280;       // gray-500
-$color-edge: #64748b;         // slate-500
-$color-vertex: #6b7280;       // gray-500
-$color-parameter: #9ca3af;    // gray-400 (Parameters)
 
 // ============================================
 // VIEW EDITOR ROOT CONTAINER
