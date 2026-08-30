@@ -2,6 +2,19 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-08-30 — test(smoke): ritaratura della baseline, il debito delle 44 risulta pagato
+**Prompt**: «Micro: ritaratura della baseline smoke», dato in chat e non depositato in `docs/prompts/`. Ritarare su corsa quieta, aggiornare la sezione «Known debt» del README con la data, e provare con 3 corse GREEN consecutive piu' un diff che mostri SOLO le rimozioni attese — fermandosi e riportando se sparisce altro.
+**Files touched**: frontend/scripts/smoke/console-baseline.json, frontend/scripts/smoke/README.md (commit unico `b2ffb9163`), docs/claude-code-log.md. **Zero sorgenti.** Nessun file condiviso con le sessioni parallele, che tengono sei file di `src/` modificati e che questa sessione non ha toccato.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Nessun file eseguibile toccato: il diff e' un JSON generato piu' una voce di README. La baseline **scende**, quindi A4 diventa piu' stretta, mai piu' larga.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (nessun file di §3.1)
+**Smoke visivo**: **3 corse GREEN consecutive** sulla baseline nuova, 12/0/3, exit 0. Prima di quelle, due VOID **della sessione parallela**: `src/model/logicWrapper/nameUniqueness.ts` salvato dentro la finestra, 2 boot per stato e 4 asserzioni rosse per aritmetica su una conta raddoppiata. La guardia ha nominato il file e ha rifiutato di chiamarlo rosso — e' il caso per cui e' stata scritta il 30-08.
+**Notes**: Diff verificato **meccanicamente**, non a occhio: 1 pattern rimosso (6/18/20 = 44), 0 aggiunti, 0 conteggi cambiati sui 12 comuni, e fuori da `patterns` cambiano solo `generatedAt` e `commit`. La condizione di stop del prompt non e' scattata. In «Known debt» la voce resta **barrata e datata** invece che cancellata: un debito pagato e' un fatto diverso da un debito mai esistito, e A4 quelle 44 le portava come margine fantasma.
+**Prompt document name**: 2026-08-30 17:15
+
 ## 2026-08-30 — discovery: S1 si ferma sulla prima misura, cinque consumatori la reggono
 **Prompt**: «S1: una regola di uniqueness, in un posto», dato in chat e non depositato in `docs/prompts/`. Prima slice della sequenza WriteCtx (referto `b9ca883fc` §5.1 e §6). Il prompt impone una misura PRIMA del fix — il censimento di chi consuma l'unicita' del nome M1 — con condizione di arresto esplicita: se almeno un consumatore richiede la regola larga (class-agnostic), fermarsi e riportare con l'evidenza, perche' la scelta risale al design.
 **Files touched**: docs/discovery/discovery_2026-08-30_s1_uniqueness_consumatori.md (nuovo, 320 righe), docs/claude-code-log.md. **Zero sorgenti, zero sonde.** Commit del referto `3354fb0da`, log a parte. Nessun file condiviso con la sessione parallela, che ha committato la coda smoke (`39e5b3f2c`, `959d50c4f`, `68e2d7748`) mentre questa sessione leggeva: verificato su `git status --porcelain` prima del commit.
