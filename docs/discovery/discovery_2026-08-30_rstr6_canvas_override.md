@@ -156,6 +156,36 @@ metamodello `jjodel/renderer=swatch`, da sola, lascia la riga IR a testo nudo
 
 Chi vorrà aprirlo lo apra come fronte proprio, con la stessa disciplina.
 
+## 6bis. Il referto gemello, e la via scelta fra le tre
+
+Una sessione parallela ha misurato **la stessa cosa nello stesso pomeriggio** e ne ha scritto
+il proprio referto: `docs/discovery/discovery_2026-08-30_3_rstr6_canvas_override.md`, commit
+`ec42652af`. Le due misure **concordano** — ramo nativo con la libreria e senza `formSpec`,
+ramo IR con il `formSpec` e senza libreria — e i due documenti vanno letti insieme, non come
+alternative. Quel referto si ferma prima del diff (**hard stop**) e mette a ratifica tre vie:
+
+- **(A)** il gradino 0 nel solo segmento `value`, attivo solo dove la view dichiara un widget;
+- **(B)** l'intera libreria sul segmento `value`, che cambierebbe la resa di **ogni** nodo IR
+  esistente e richiederebbe un opt-in per view, cioè una chiave nuova sull'IR senza
+  VersionFixer (R-B9);
+- **(C)** chiudere R-STR-6 dichiarandola non desiderabile.
+
+**Questa slice ha implementato (A)**, e la scelta va dichiarata perché non è stata ratificata
+da nessuno prima: è l'unica delle tre che il prompt autorizza da sé. (B) è una decisione di
+prodotto sulla natura del compartimento IR — superficie di testo dell'autore contro superficie
+renderizzata — che il prompt non poteva prendere perché non sapeva di doverla prendere; (C)
+contraddice la premessa stessa del prompt, che apre R-STR-6 invece di chiuderla. (A) cambia
+zero view esistenti, che è il vincolo più forte in gioco.
+
+Il costo di (A) è quello che quel referto nomina, ed è il §6 qui sopra: **il gradino 1 resta
+disonorato sul ramo IR**. Il canvas è quindi coerente con la view e non ancora con il
+metamodello. Non è un residuo dimenticato: è il confine che separa (A) da (B), e chi vorrà (B)
+troverà qui misurato che cosa costa.
+
+La sua domanda di ratifica 3 — il footer che diceva «· on the canvas» era già impreciso su un
+ramo IR che rende testo — è **chiusa in questa slice**: l'inciso è stato rimosso, perché dopo
+(A) il footer e la riga dipingono la stessa decisione. Verificato, `F2`/`F3`.
+
 ## 7. Cosa NON è verificato
 
 - `property.render = edge-label` e la dark mode: fuori scope per prompt.

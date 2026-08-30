@@ -2013,6 +2013,18 @@ valore di partenza. **Confine dichiarato**: sul ramo IR il gradino 1 continua a 
 dipingere — una `jjodel/renderer=…` da sola lascia il testo nudo. Estenderlo cambierebbe la
 resa di ogni view autorata senza che nessuno l'abbia chiesto, ed e' un fronte a parte.
 
+**Via (A) di tre, scelta e non ratificata da altri.** Una sessione parallela ha misurato lo
+stesso stato (referto gemello `discovery_2026-08-30_3_rstr6_canvas_override.md`, commit
+`ec42652af`, misure concordi) e si e' fermata prima del diff, mettendo a ratifica tre vie:
+(A) il gradino 0 nel solo segmento `value`, attivo dove la view dichiara un widget; (B) tutta
+la libreria sul segmento `value`, che cambierebbe la resa di **ogni** nodo IR esistente e
+vorrebbe un opt-in per view, cioe' una chiave nuova sull'IR senza VersionFixer (R-B9);
+(C) chiudere R-STR-6 come non desiderabile. **E' stata implementata (A)**: e' l'unica che il
+prompt autorizza da se'. (B) e' una decisione di prodotto sulla natura del compartimento IR —
+superficie di testo dell'autore contro superficie renderizzata — e (C) contraddice la premessa
+del prompt. Il costo di (A) e' il confine dichiarato qui sopra, ed e' esattamente cio' che
+separa (A) da (B). Chi voglia (B) trovi nei due referti che cosa costa.
+
 **R-STR-5 e' superata nella sua delimitazione**, non nella sua lettura di `FormSpec`: la
 copy dell'inspector che la incarnava — tag «winning rule **in the form**» e inciso «· on the
 canvas» — e' rimossa, perche' esisteva per tenere distinte due risposte che ora coincidono.
