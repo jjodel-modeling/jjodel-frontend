@@ -5,8 +5,8 @@ import ModelTab from './ModelTab';
 import DocumentationTab from './DocumentationTab';
 import InstanceManagerTab from './InstanceManagerTab';
 import { managerTabId } from './instanceManagerModel';
-// Viewpoint editing is handled inline in the right-panel "Viewpoints" tab
-// (NestedView + ViewData) — no dedicated dock tab is created.
+// Viewpoint editing is handled inline in the right-panel "Viewpoints" tab —
+// no dedicated dock tab is created.
 // ViewpointEditorPanel files in src/components/panels/viewpoint-editor/ are
 // intentionally kept in the codebase (post-release cleanup).
 import { ConformanceIndicator } from '../../../model/conformance/ConformanceIndicator';
@@ -61,9 +61,8 @@ class TabDataMaker {
     }
 
     // NOTE: TabDataMaker.viewpoint() was removed — viewpoint editing lives in the
-    // right-panel "Viewpoints" tab (NestedView + ViewData sub-tabs). See
-    // DockManager.openViewpoint() which now activates that tab instead of creating
-    // a dedicated dock tab.
+    // right-panel "Viewpoints" tab. See DockManager.openViewpoint() which now
+    // activates that tab instead of creating a dedicated dock tab.
 
     static documentation(model?: DModel|LModel): TabData {
         const tabId = model ? `doc_${model.id}` : 'documentation';

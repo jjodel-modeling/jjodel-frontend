@@ -194,10 +194,10 @@ function ViewDataComponent(props: AllProps) {
     const [activeTab, setActiveTab] = useState<TabId>(tabs[0].id);
 
     // Cross-tab navigation asked for from inside a body (the Form tab's «Edit
-    // compartments»). Two instances of this panel can be mounted at once (the
-    // Properties card and the standalone NestedView host), so the event is filtered on
-    // the view it names; a tab absent from the CURRENT list is ignored rather than
-    // activated, which would leave every body hidden and the panel blank.
+    // compartments»). More than one instance of this panel can be mounted at once, so
+    // the event is filtered on the view it names; a tab absent from the CURRENT list is
+    // ignored rather than activated, which would leave every body hidden and the panel
+    // blank.
     const tabIds = tabs.map(t => t.id).join(',');
     useEffect(() => {
         const onTab = (e: Event) => {
@@ -216,9 +216,9 @@ function ViewDataComponent(props: AllProps) {
 
     // Who owns the way out is the host's business, not this panel's. Inside the
     // Properties card the way out is the Tree right above it — selecting anything
-    // else replaces the panel — so the card asks for no back. The standalone
-    // NestedView host has no such tree: there the back IS the only way from the
-    // view editor to the viewpoint list, so it stays (default).
+    // else replaces the panel — so the card asks for no back. A host without such a
+    // tree has the back as its only way from the view editor to the viewpoint list, so
+    // it stays unless the host opts out (default).
     const showBack = props.showBack !== false;
 
     return (

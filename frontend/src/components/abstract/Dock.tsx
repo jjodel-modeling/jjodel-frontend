@@ -19,7 +19,6 @@ import { isProjectModified } from '../../common/libraries/projectModified';
 import { Logo } from '../../components/logo';
 import { SimpleResizeHandle } from '../SimpleResizeHandle';
 //import MqttEditor from "../rightbar/mqtt/MqttEditor";
-//import NestedView from "../rightbar/nestedViewEditor/ViewEditorNestedVersion";
 //import CollaboratorsEditor from "../rightbar/collaboratorsEditor/CollaboratorsEditor";
 
 // ============================================
