@@ -195,7 +195,12 @@ export function applyDelete(plan: DeletePlan): number {
             console.warn('[deleteAdapter] applyDelete: reassign slot not found', step);
             continue;
         }
-        setSlotValue(slot, step.index, step.to, true);
+        const r = setSlotValue(slot, step.index, step.to, true);
+        // The plan is applied in order and each step must be observable by the next
+        // (R-FORM-11): a reassign the host refuses leaves a referrer pointing at what is
+        // about to be deleted, and until S2 that refusal was invisible. Reported with the
+        // host's own reason; the plan is NOT re-decided here, for the reason above.
+        if (!r.ok) console.warn('[deleteAdapter] applyDelete: reassign refused', { step, reason: r.reason });
     }
 
     for (const step of plan.clear) {
@@ -205,7 +210,8 @@ export function applyDelete(plan: DeletePlan): number {
             console.warn('[deleteAdapter] applyDelete: clear slot not found', step);
             continue;
         }
-        clearSlotValue(slot, step.index, true);
+        const r = clearSlotValue(slot, step.index, true);
+        if (!r.ok) console.warn('[deleteAdapter] applyDelete: clear refused', { step, reason: r.reason });
     }
 
     if (plan.reassign.length === 0 && plan.clear.length === 0) return runDeletes(plan.deletes);

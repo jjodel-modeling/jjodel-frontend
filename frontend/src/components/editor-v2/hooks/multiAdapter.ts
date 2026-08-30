@@ -43,6 +43,12 @@ export interface BulkResult {
     unchanged: number;
     /** Events whose slot could not be resolved on the instance. */
     missing: number;
+    /** Events the host REFUSED (S2). Optional because the shape predates the verdict,
+     *  and reported rather than folded into `unchanged`: a refusal is not a no-op, and
+     *  counting it as one is exactly the confusion S2 exists to remove. The caller
+     *  (`InstanceManagerTab.applyBulkEdit`) discards this result today; the live
+     *  consumption of the refusal is the warning logged with the host's own reason. */
+    refused?: number;
 }
 
 /**
@@ -63,7 +69,7 @@ export interface BulkResult {
  * `createAdapter.applyCreate` and `deleteAdapter.applyDelete`.
  */
 export function applyBulk(plan: readonly BulkSetValue[]): BulkResult {
-    const out: BulkResult = { written: 0, unchanged: 0, missing: 0 };
+    const out: BulkResult = { written: 0, unchanged: 0, missing: 0, refused: 0 };
     if (!plan || plan.length === 0) return out;
 
     for (const ev of plan) {
@@ -74,7 +80,11 @@ export function applyBulk(plan: readonly BulkSetValue[]): BulkResult {
             out.missing++;
             continue;
         }
-        if (setSlotValue(slot, 0, ev.value as any, ev.isPtr)) out.written++;
+        const r = setSlotValue(slot, 0, ev.value as any, ev.isPtr);
+        if (!r.ok) {
+            console.warn('[multiAdapter] applyBulk: write refused', { id: ev.id, key: ev.key, reason: r.reason });
+            out.refused = (out.refused ?? 0) + 1;
+        } else if (r.changed) out.written++;
         else out.unchanged++;
     }
     // `U.isProjectModified` is NOT set here: `setSlotValue` already sets it on

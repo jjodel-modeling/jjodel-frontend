@@ -176,6 +176,13 @@ export function IRForm({ objectId, defaultTheme = 'plain' }: IRFormProps) {
     // A new subject starts clean: the marks belong to the object being edited, not to the panel.
     useEffect(() => { setDirtyFields(new Set()); }, [objectId]);
 
+    // The host's refusal of the last RENAME (S2). The identity field is rendered here and
+    // not by IRFormField, so it needs its own copy of the same rule: `ok` decides the
+    // message, `changed` decides the dirty mark. Cleared on the next accepted rename and
+    // whenever the subject changes.
+    const [nameRefusal, setNameRefusal] = useState<string | null>(null);
+    useEffect(() => { setNameRefusal(null); }, [objectId]);
+
     // Scroll-to-field from a summary chip. Keyed by field name, filled during the render below.
     const fieldRefs = useRef<Map<string, HTMLDivElement>>(new Map());
     const focusFirstOf = useCallback((severity: 'error' | 'warning') => {
@@ -280,7 +287,7 @@ export function IRForm({ objectId, defaultTheme = 'plain' }: IRFormProps) {
                             <span className="ir-form__group-label">Identity</span>
                             <span className="ir-form__group-count">1</span>
                         </div>
-                        <div className={`ir-field${dirtyFields.has('name') ? ' ir-field--dirty' : ''}`}>
+                        <div className={`ir-field${nameRefusal ? ' ir-field--error' : ''}${dirtyFields.has('name') ? ' ir-field--dirty' : ''}`}>
                             <div className="ir-field__labelrow">
                                 {dirtyFields.has('name') && (
                                     <span className="ir-field__dirty-dot" title="Modified, not saved" aria-hidden="true" />
@@ -292,10 +299,20 @@ export function IRForm({ objectId, defaultTheme = 'plain' }: IRFormProps) {
                                 id="ir-field-name"
                                 ariaLabel="name"
                                 value={name}
-                                onCommit={(next) => { if (setObjectName(objectId, next)) markDirty('name'); }}
+                                invalid={!!nameRefusal}
+                                onCommit={(next) => {
+                                    const r = setObjectName(objectId, next);
+                                    setNameRefusal(r.ok ? null : (r.reason ?? 'The model refused this change'));
+                                    if (r.changed) markDirty('name');
+                                }}
                             />
-                            <div className="ir-field__message">
-                                {dirtyFields.has('name') ? 'Modified, not saved' : null}
+                            <div className="ir-field__message" role={nameRefusal ? 'alert' : undefined}>
+                                {nameRefusal ? (
+                                    <>
+                                        <i className="bi bi-x-circle-fill ir-field__message-icon" aria-hidden="true" />
+                                        <span className="ir-field__message-text" title={nameRefusal}>{nameRefusal}</span>
+                                    </>
+                                ) : dirtyFields.has('name') ? 'Modified, not saved' : null}
                             </div>
                         </div>
                     </div>

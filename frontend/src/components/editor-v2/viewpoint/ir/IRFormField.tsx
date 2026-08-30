@@ -12,7 +12,10 @@
  *
  * Slice 1a renders the slot reserved and always empty: the per-field diagnostics arrive
  * in 1b, once the problems registry carries the feature name. The height is already
- * final, so nothing moves when they do.
+ * final, so nothing moves when they do. S2 puts a second kind of message in the same
+ * slot: the host's REFUSAL of a write this field just attempted, with the host's own
+ * reason. It sits above the registry's diagnostics because it is about the edit and not
+ * about the model, and it costs no layout for the same reason the rest does not.
  *
  * Multivalued features, references and compositions are READ-ONLY here, rendered as value
  * rows with the full label row above them, so the multiplicity and the required marker are
@@ -20,11 +23,11 @@
  * decision: 1b turns them into pickers and lists.
  */
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { LPointerTargetable } from '../../../../joiner';
 import type { FormFieldDescriptor } from './useFormWidgets';
 import { isAtUpperBound, multiplicityLabel } from './useFormWidgets';
-import { appendSlotValue, clearSlotValue, setSlotValue } from './formWrite';
+import { appendSlotValue, clearSlotValue, setSlotValue, type WriteResult } from './formWrite';
 import { worstSeverity, type FieldDiagnostic } from './formDiagnostics';
 import TextWidget from './widgets/TextWidget';
 import NumberWidget from './widgets/NumberWidget';
@@ -79,10 +82,41 @@ function displayValue(raw: unknown): string {
     return String(raw);
 }
 
+/** Shown when the host refuses without saying why. The host's own `reason` is used
+ *  verbatim whenever there is one; this is the field's own sentence for the case where
+ *  there is none, never a guess at what the host meant. */
+const UNSTATED_REFUSAL = 'The model refused this change';
+
 export function IRFormField({ field, diagnostics, dirty, onCommitted }: IRFormFieldProps) {
     const fieldId = `ir-field-${field.slotId}`;
     const first = field.values[0];
-    const worst = worstSeverity(diagnostics);
+
+    /**
+     * The host's last refusal on THIS field (S2).
+     *
+     * Local, not lifted to the host: a refusal belongs to the write that was just
+     * attempted here, while `diagnostics` come from the problems registry and describe
+     * the model. The next accepted commit clears it — including a no-op, because a field
+     * the user left alone is not a field still being refused.
+     *
+     * The state resets by itself when the form changes subject: IRForm keys each field by
+     * `slotId`, so a different instance mounts a different component.
+     */
+    const [refusal, setRefusal] = useState<string | null>(null);
+
+    // A refusal reads as an error, and it goes FIRST: it is about the edit the user just
+    // made, while the registry's diagnostics are about the state of the model.
+    const shown: FieldDiagnostic[] = refusal
+        ? [{ severity: 'error', message: refusal }, ...(diagnostics ?? [])]
+        : (diagnostics ?? []);
+    const worst = worstSeverity(shown);
+
+    /** One place where the verdict is read: `ok` decides the message, `changed` decides
+     *  the dirty mark. Before S2 a refused write marked the field dirty and said nothing. */
+    const consume = (r: WriteResult) => {
+        setRefusal(r.ok ? null : (r.reason ?? UNSTATED_REFUSAL));
+        if (r.changed) onCommitted?.(field.slotId);
+    };
 
     const rowTexts = useMemo(
         () => field.values.map(displayValue).filter(t => t !== ''),
@@ -96,13 +130,13 @@ export function IRFormField({ field, diagnostics, dirty, onCommitted }: IRFormFi
     const writable = !field.isReadOnly;
 
     const commitAt = (index: number, value: string | number | boolean | null, isPtr: boolean) => {
-        if (setSlotValue(field.slot, index, value, isPtr)) onCommitted?.(field.slotId);
+        consume(setSlotValue(field.slot, index, value, isPtr));
     };
     const clearAt = (index: number, isPtr: boolean) => {
-        if (clearSlotValue(field.slot, index, isPtr)) onCommitted?.(field.slotId);
+        consume(clearSlotValue(field.slot, index, isPtr));
     };
     const appendAt = (value: string | number | boolean, isPtr: boolean) => {
-        if (appendSlotValue(field.slot, value, isPtr)) onCommitted?.(field.slotId);
+        consume(appendSlotValue(field.slot, value, isPtr));
     };
 
     /**
@@ -213,7 +247,7 @@ export function IRFormField({ field, diagnostics, dirty, onCommitted }: IRFormFi
                 value={typeof first === 'string' ? first : ''}
                 options={field.options}
                 invalid={worst === 'error'}
-                onCommit={(v) => { if (setSlotValue(field.slot, 0, v, true)) onCommitted?.(field.slotId); }}
+                onCommit={(v) => commitAt(0, v, true)}
             />
         );
     } else if (editable) {
@@ -281,13 +315,13 @@ export function IRFormField({ field, diagnostics, dirty, onCommitted }: IRFormFi
                 more of the one line available than "you have not saved yet", which the dot
                 and the border already say. */}
             <div className="ir-field__message" role={worst ? 'alert' : undefined}>
-                {worst && diagnostics?.length ? (
+                {worst && shown.length ? (
                     <>
                         <i
                             className={`bi ${worst === 'error' ? 'bi-x-circle-fill' : 'bi-exclamation-triangle-fill'} ir-field__message-icon`}
                             aria-hidden="true"
                         />
-                        <span className="ir-field__message-text" title={diagnostics[0].message}>{diagnostics[0].message}</span>
+                        <span className="ir-field__message-text" title={shown[0].message}>{shown[0].message}</span>
                     </>
                 ) : dirty ? (
                     <span className="ir-field__message-text">Modified, not saved</span>
