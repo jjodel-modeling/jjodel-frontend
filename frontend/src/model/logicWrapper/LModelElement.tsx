@@ -90,7 +90,7 @@ import {
 } from "../../api/data";
 import {ValuePointers} from "./PointerDefinitions";
 import {transientProperties} from "../../joiner/classes";
-import {checkNameUniqueness} from "./nameUniqueness";
+import {checkNameUniqueness, checkM2NameUniqueness, m2KindOf, type M2NamespaceKind} from "./nameUniqueness";
 import { toast } from "../../components/Toast";
 import React, {JSX} from "react";
 import { checkObjectCreation, checkLinkCreation, checkValueAssignment, emitGuardViolation } from '../conformance/ConformanceGuard';
@@ -104,6 +104,48 @@ export type SchemaMatchingScore = {
     excessFeaturesCount: number, matchingFeaturesCount: number, missingFeaturesCount: number,
     isPartial: boolean,
     class:LClass, instantiable: boolean, namesMap: Dictionary<DocString<"feature name">>};
+
+
+/**
+ * The M2 create gate (S1-M2) — the create consults the SAME verdict as the rename.
+ *
+ * There is no single `get_addObject` at M2: the create primitives are eleven, spread
+ * over five receivers (LPackage, LClass, LEnumerator, LOperation, LModel, plus the two
+ * that build a classifier from a feature — `LReference.get_addClass` and
+ * `LAttribute.get_addEnumerator`). This function is what keeps them from becoming
+ * eleven rules: each one calls it, none of them decides anything.
+ *
+ * The gate is on the EXPLICIT name only, exactly as in `LValue.get_addObject` after
+ * S1a. With none given, `DPointerTargetable.defaultname` computes the auto-name, and
+ * gating that would refuse creates the rule has no verdict about — measured, an
+ * auto-name cannot even see a sibling made in the same tick (`idlookup` resolves a
+ * pending create by id but does not enumerate it). See
+ * docs/discovery/discovery_2026-08-30_s1m2_una_regola.md §3.
+ *
+ * Call it BEFORE any TRANSACTION, never inside one: it adds no creator, and CLAUDE.md
+ * §3.3 forbids wrapping one.
+ *
+ * @param father the PROSPECTIVE parent — the element the new one will hang from,
+ *               which for `LReference.addClass` is the package, not the receiver.
+ * @returns true when the caller must refuse and create nothing.
+ */
+function m2CreateRefused(
+    father: LModelElement | undefined | null,
+    kind: M2NamespaceKind,
+    name: string | undefined,
+    where: string
+): boolean {
+    if (!name) return false;
+    const verdict = checkM2NameUniqueness({father, kind, name});
+    if (!verdict.ok) {
+        toast.error(verdict.reason as string, {title: 'Validation failed'});
+        Log.ww(where + ' refused: ' + verdict.reason, {father, kind, name});
+        return true;
+    }
+    // Case-sensitive by decision: the near-homonym is legal, and declared.
+    if (verdict.warning) toast.warning(verdict.warning, {title: 'Near-duplicate name'});
+    return false;
+}
 
 
 @Node
@@ -1379,6 +1421,16 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
         let rawType = c.data.type;
         if (typeof rawType === 'string') {
             // if classref was set by name, and wasn't existing at set time, resolve it at runtime and update state.
+            //
+            // STEP 2 IS DEAD, AND STAYS DEAD BY DECISION (R-M2U-5, 2026-08-30).
+            // `model` is declared here and never assigned: the four `this.get_model(c)`
+            // below discard their return value, so every `if (model)` is false and only
+            // the `Selectors.getByName` branch ever runs. Measured by discrimination on
+            // 'EInt' — see docs/discovery/discovery_2026-08-30_micro_core_tre_fix.md §4.1.
+            // NOT repaired: assigning `model` would narrow the resolution pool from
+            // global to per-model, which is a design change and not a typo fix, and the
+            // per-model pool is exactly the one S1-M2 has just made metamodel-wide.
+            // Whoever revisits this decides the pool first and the assignment second.
             let model: LModel = null as any;
             // resolve for enumerators (primitives and void are resolved at set time)
             if (c.data.className !== 'DReference') {
@@ -1884,6 +1936,7 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
     protected get_addPackage(context: Context): this["addPackage"] {
         // console.log("Package.get_addPackage()", {context, thiss:this});
         return (name?: D["name"], uri?: D["uri"], prefix?: D["prefix"]) => {
+            if (m2CreateRefused(context.proxyObject as LModelElement, 'package', name, 'LPackage.addPackage()')) return undefined as any;
             return LPointerTargetable.fromD(DPackage.new(name, uri, prefix, context.data.id, true, DPackage));
         }
     }
@@ -1894,7 +1947,10 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
     protected get_addClass(context: Context): this["addClass"] {
         return (name?: DClass["name"], isInterface?: DClass["interface"], isAbstract?: DClass["abstract"], isPrimitive?: DClass["isPrimitive"],
                 isPartial?: DClass["partial"], partialDefaultName?: DClass["partialdefaultname"]
-        ) => LPointerTargetable.fromD(DClass.new(name, isInterface, isAbstract, isPrimitive, isPartial, partialDefaultName, context.data.id, true));
+        ) => {
+            if (m2CreateRefused(context.proxyObject as LModelElement, 'classifier', name, 'LPackage.addClass()')) return undefined as any;
+            return LPointerTargetable.fromD(DClass.new(name, isInterface, isAbstract, isPrimitive, isPartial, partialDefaultName, context.data.id, true));
+        };
     }
 
     public addEnum(...p:Parameters<this["addEnumerator"]>): LEnumerator { return this.addEnumerator(...p); }
@@ -1902,7 +1958,10 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
         return this.get_addEnumerator(context); }
     public addEnumerator(name?: DEnumerator["name"]): LEnumerator { return this.cannotCall("addEnumerator"); }
     protected get_addEnumerator(context: Context): this["addEnumerator"] {
-        return (name?: DEnumerator["name"]) => LPointerTargetable.fromD(DEnumerator.new(name, context.data.id, true));
+        return (name?: DEnumerator["name"]) => {
+            if (m2CreateRefused(context.proxyObject as LModelElement, 'classifier', name, 'LPackage.addEnumerator()')) return undefined as any;
+            return LPointerTargetable.fromD(DEnumerator.new(name, context.data.id, true));
+        };
     }
 
     protected get_classes(context: Context, state?: DState, setNameKeys: boolean = true): LClass[] & Dictionary<DocString<"$name">, LClass> {
@@ -2404,7 +2463,10 @@ export class LOperation<Context extends LogicContext<DOperation, LOperation> = a
 
     public addParameter(name?: DParameter["name"], type?: DParameter["type"]): LParameter { return this.cannotCall("addParameter"); }
     protected get_addParameter(context: Context): this["addParameter"] {
-        return (name?: DParameter["name"], type?: DParameter["type"]) => LPointerTargetable.fromD(DParameter.new(name, type, context.data.id, true)); }
+        return (name?: DParameter["name"], type?: DParameter["type"]) => {
+            if (m2CreateRefused(context.proxyObject as LModelElement, 'parameter', name, 'LOperation.addParameter()')) return undefined as any;
+            return LPointerTargetable.fromD(DParameter.new(name, type, context.data.id, true));
+        }; }
 
     public execute(thiss: LObject, ...params: any): any { return this.cannotCall("execute"); }
     protected get_execute(context: Context): ((thiss: LObject, ...params: any[])=>any) {
@@ -3196,6 +3258,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     public addAttribute(name?: DAttribute["name"], type?: DAttribute["type"]): LAttribute { return this.cannotCall("addAttribute"); }
     protected get_addAttribute(context: Context): this["addAttribute"] {
         return (name?: DAttribute["name"], type?: DAttribute["type"]) => {
+            if (m2CreateRefused(context.proxyObject as LModelElement, 'feature', name, 'LClass.addAttribute()')) return undefined as any;
             // Creation-time type inference: only when the caller passes a non-empty name
             // and NO explicit type. An explicit type (Ecore/XMI import, undo-reconcile,
             // examples, Jjodie) is forwarded untouched, and a missing name falls through
@@ -3213,12 +3276,18 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
 
     public addReference(name?: DReference["name"], type?: DReference["type"]): LReference { return this.cannotCall("addReference"); }
     protected get_addReference(context: Context): this["addReference"] {
-        return (name?: DReference["name"], type?: DReference["type"]) => LPointerTargetable.fromD(DReference.new(name, type, context.data.id, true));
+        return (name?: DReference["name"], type?: DReference["type"]) => {
+            if (m2CreateRefused(context.proxyObject as LModelElement, 'feature', name, 'LClass.addReference()')) return undefined as any;
+            return LPointerTargetable.fromD(DReference.new(name, type, context.data.id, true));
+        };
     }
 
     public addOperation(name?: DOperation["name"], type?: DOperation["type"]): LOperation { return this.cannotCall("addOperation"); }
     protected get_addOperation(context: Context): this["addOperation"] {
-        return (name?: DOperation["name"], type?: DOperation["type"]) => LPointerTargetable.fromD(DOperation.new(name, type, [], context.data.id, true));
+        return (name?: DOperation["name"], type?: DOperation["type"]) => {
+            if (m2CreateRefused(context.proxyObject as LModelElement, 'feature', name, 'LClass.addOperation()')) return undefined as any;
+            return LPointerTargetable.fromD(DOperation.new(name, type, [], context.data.id, true));
+        };
     }
 
 
@@ -4079,6 +4148,9 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
     protected get_addClass(c: Context): this["addClass"] {
         return (name?: DClass["name"], isInterface?: DClass["interface"], isAbstract?: DClass["abstract"], isPrimitive?: DClass["isPrimitive"],
                 isPartial?: DClass["partial"], partialDefaultName?: DClass["partialdefaultname"]) => {
+            // BEFORE the TRANSACTION, never inside it: the gate adds no creator (§3.3).
+            // The prospective father is the PACKAGE this reference lives in.
+            if (m2CreateRefused(c.proxyObject.package as unknown as LModelElement, 'classifier', name, 'LReference.addClass()')) return undefined as any;
             let dclass: DClass = null as any
             TRANSACTION(this.get_name(c)+'.addClass()', ()=>{
                 dclass = DClass.new(name, isInterface, isAbstract, isPrimitive, isPartial, partialDefaultName, c.proxyObject.package!.id, true);
@@ -4475,7 +4547,11 @@ export class LAttribute <Context extends LogicContext<DAttribute> = any, C exten
     protected get_addEnum(context: Context): this["addEnumerator"] { return this.get_addEnumerator(context); }
     public addEnumerator(name?: DEnumerator["name"], father?: DEnumerator["father"]): LEnumerator { return this.cannotCall("Attribute.addEnumerator"); }
     protected get_addEnumerator(context: Context): this["addEnumerator"] {
-        return (name?: DEnumerator["name"], father?: DEnumerator["father"]) => LPointerTargetable.fromD(DEnumerator.new(name, context.proxyObject.package?.id, true)); }
+        return (name?: DEnumerator["name"], father?: DEnumerator["father"]) => {
+            // The prospective father is the PACKAGE, not this attribute.
+            if (m2CreateRefused(context.proxyObject.package as unknown as LModelElement, 'classifier', name, 'LAttribute.addEnumerator()')) return undefined as any;
+            return LPointerTargetable.fromD(DEnumerator.new(name, context.proxyObject.package?.id, true));
+        }; }
 
     protected get_isID(context: Context): this["isID"] { return context.data.isID; }
     protected set_isID(val: this["isID"], c: Context): boolean {
@@ -4770,7 +4846,10 @@ export class LEnumerator<Context extends LogicContext<DEnumerator> = any, C exte
 
     public addLiteral(name?: DEnumLiteral["name"], value?: DEnumLiteral["value"]): LEnumLiteral { return this.cannotCall("addLiteral"); }
     protected get_addLiteral(c: Context): this["addLiteral"] {
-        return (name?: DEnumLiteral["name"], value?: DEnumLiteral["value"]) => LPointerTargetable.fromD(DEnumLiteral.new(name, value, c.data.id, true)); }
+        return (name?: DEnumLiteral["name"], value?: DEnumLiteral["value"]) => {
+            if (m2CreateRefused(c.proxyObject as LModelElement, 'literal', name, 'LEnumerator.addLiteral()')) return undefined as any;
+            return LPointerTargetable.fromD(DEnumLiteral.new(name, value, c.data.id, true));
+        }; }
 
     protected get_literals(context: Context): this["literals"] {
         return context.data.literals.map((pointer) => {
@@ -5073,6 +5152,7 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
     public get_addPackage(context: Context): ((name?: DPackage["name"], uri?: DPackage["uri"], prefix?: DPackage["prefix"]) => LPackage) {
         // console.log("Model.addPackage()", {context, thiss: this});
         return (name?: DPackage["name"], uri?: DPackage["uri"], prefix?: DPackage["prefix"]) => {
+            if (m2CreateRefused(context.proxyObject as unknown as LModelElement, 'package', name, 'LModel.addPackage()')) return undefined as any;
             return LPointerTargetable.fromD(DPackage.new(name, uri, prefix, context.data.id, true, DModel));
         }
     }

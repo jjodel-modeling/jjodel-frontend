@@ -11,12 +11,37 @@
  * Duplicates never arise via LObject.set_name / set_father (hard-blocked with
  * U.alert), so this producer exists specifically to surface pre-existing
  * duplicates loaded from the model or introduced by paths that bypass setters.
+ *
+ * ── M2 (S1-M2, R-M2U-6) ──────────────────────────────────────────────────────
+ *
+ * The same producer covers M2 when the open model IS a metamodel: classifiers,
+ * datatypes, features, literals and parameters go through `detectM2DuplicateNames`,
+ * whose namespaces are the ratified ones (metamodel-wide for classifiers, own +
+ * inherited for features). The reactivity signature widens to match — it used to
+ * discard every `className !== 'DObject'`, which is why four `Concept_0` in a
+ * metamodel left the registry empty.
+ *
+ * MEASURED, and NOT fixed here (1): the producer is signature-driven, and the
+ * signature is read from `state.idlookup` at NOTIFY time. `idlookup` is a Proxy whose
+ * `get` resolves a pending creation but whose ENUMERATION does not list it, so a batch
+ * of creates made in one tick leaves the signature stale until the NEXT store
+ * notification, and the badge lights up one write later. Measured with four
+ * `Concept_0`: registry empty after 9s, then exactly 4 entries the moment any other
+ * write lands. Pre-existing and level-independent — the M1 half reads the same
+ * signature — so it is declared, not repaired here.
+ *
+ * MEASURED, and NOT fixed here (2): the registry entry is keyed by the ELEMENT id,
+ * while `NodeProblemIndicator` is mounted with the ReactFlow node id, which is the
+ * DVertex id — so the dot does not appear on the canvas, at M1 either. That is a
+ * pre-existing mismatch (`ConformanceProblemSync` works around it by registering
+ * under both ids) and is out of this slice's perimeter. See
+ * docs/discovery/discovery_2026-08-30_s1m2_una_regola.md §4.
  */
 
 import { useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { DObject, DState, LModel, LObject, LPointerTargetable } from '../../../joiner';
-import { detectDuplicateNames } from '../../../model/logicWrapper/nameUniqueness';
+import { detectDuplicateNames, detectM2DuplicateNames, m2KindOf } from '../../../model/logicWrapper/nameUniqueness';
 import {
     registerProblem,
     markResolved,
@@ -47,7 +72,10 @@ export function UniquenessProblemSync({ modelid }: Props) {
         const parts: string[] = [];
         for (const id in lookup) {
             const raw = lookup[id] as DObject;
-            if (!raw || raw.className !== DObject.cname) continue;
+            if (!raw) continue;
+            // M1 instances, plus every M2 named element (m2KindOf returns null for
+            // DModel / DValue / DVertex / …, so nothing else widens the signature).
+            if (raw.className !== DObject.cname && !m2KindOf(raw.className)) continue;
             parts.push(`${id}:${raw.name ?? ''}:${raw.father ?? ''}`);
         }
         parts.sort();
@@ -59,9 +87,13 @@ export function UniquenessProblemSync({ modelid }: Props) {
         const model = LPointerTargetable.fromPointer(modelid) as LModel | null;
         if (!model) return;
 
-        const dupMap = detectDuplicateNames(model);
+        // One map, two producers: M1 instances for an ordinary model, M2 elements for
+        // a metamodel. A metamodel has no DObjects and a model has no M2 elements of
+        // its own, so the two never overlap and the merge cannot mask either.
+        const dupMap = (model as unknown as { isMetamodel?: boolean }).isMetamodel
+            ? (detectM2DuplicateNames(model) as unknown as Map<string, LObject[]>)
+            : detectDuplicateNames(model);
         const desiredIds = new Set<string>();
-
         for (const [nodeId, colliding] of dupMap) {
             const id = duplicateProblemId(nodeId);
             desiredIds.add(id);

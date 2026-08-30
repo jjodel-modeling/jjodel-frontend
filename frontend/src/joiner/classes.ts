@@ -151,6 +151,7 @@ import type {ProjectsApi as TypeProjectsAPI, UsersApi} from "../api/persistance"
 import type {Collaborative as CollaborativeT} from "../components/collaborative/Collaborative";
 import {names} from "tinycolor2";
 import { toast } from "../components/Toast";
+import { checkM2NameUniqueness, m2KindOf } from "../model/logicWrapper/nameUniqueness";
 import { DEFAULT_VIEW_CSS } from "../view/viewElement/defaultViewCss";
 var windoww = window as any;
 
@@ -2168,15 +2169,47 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
         if (c.data.name === name) return true;
         const father: LPointerTargetable = (c.proxyObject as LModelElement).father;
         if (father) {
-            const check = (father as LModelElement).children?.filter((child) => {
-                return child.id !== c.data.id && (D.fromPointer(child.id) as DNamedElement).name === name;
-            });
-            if (check.length > 0) {
-                toast.error(`Element name "${name}" is already taken in this scope`, {
-                    title: 'Validation failed',
-                    action: { label: 'View errors →', onClick: () => { /* TODO: wire to errors panel when available */ } },
+            // ── Uniqueness (S1-M2): the M2 rename is a CONSUMER of the one verdict ──
+            //
+            // This method is the single site every M2 rename crosses (`LClass` and
+            // `LAttribute` call `super` first; `LModel` and `LObject` have rules of
+            // their own and never reach here). Until S1-M2 it carried its own rule —
+            // `father.children`, which is the sibling list and therefore neither the
+            // metamodel-wide pool a classifier needs (R-M2U-2) nor the inherited
+            // features a feature needs (R-M2U-4).
+            //
+            // `m2KindOf` returns null for everything that is not an M2 named element
+            // (DVertex, DGraph, DValue, …). Those keep EXACTLY the check they had:
+            // this method is the base of every LPointerTargetable, and silently
+            // moving the scope of a committed check for them was not decided.
+            const m2kind = m2KindOf(c.data.className);
+            if (m2kind) {
+                const verdict = checkM2NameUniqueness({
+                    father: father as LModelElement,
+                    kind: m2kind,
+                    name,
+                    excludeId: c.data.id,
                 });
-                return true;
+                if (!verdict.ok) {
+                    toast.error(verdict.reason as string, {
+                        title: 'Validation failed',
+                        action: { label: 'View errors →', onClick: () => { /* TODO: wire to errors panel when available */ } },
+                    });
+                    return true;
+                }
+                // Case-sensitive by decision: the near-homonym is legal, and declared.
+                if (verdict.warning) toast.warning(verdict.warning, { title: 'Near-duplicate name' });
+            } else {
+                const check = (father as LModelElement).children?.filter((child) => {
+                    return child.id !== c.data.id && (D.fromPointer(child.id) as DNamedElement).name === name;
+                });
+                if (check.length > 0) {
+                    toast.error(`Element name "${name}" is already taken in this scope`, {
+                        title: 'Validation failed',
+                        action: { label: 'View errors →', onClick: () => { /* TODO: wire to errors panel when available */ } },
+                    });
+                    return true;
+                }
             }
         }
 
