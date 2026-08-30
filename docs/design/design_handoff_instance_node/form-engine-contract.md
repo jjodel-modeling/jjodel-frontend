@@ -164,6 +164,46 @@ Regole già ratificate che il motore implementa:
 - ricorsione inline 1 livello, poi drill-in (12c)
 - delete referenziato: preflight, reassign default, delete sporco dichiarato (12d)
 
+## 5.1 `create` — quello che la slice 2c ha implementato
+
+Il motore puro sta in `frontend/src/jjform/create.ts` (zero import, come `shape.ts`):
+`newDraft`, `validateDraft`, `draftModel`, piu' i due verdetti di offerta
+`newInstanceReason` e `addChildReason`. L'applicazione al D-graph sta nell'adapter,
+`editor-v2/hooks/createAdapter.applyCreate`, con la meta' pura in `createDraw.ts`.
+
+- **Le due vie sono UN evento.** Catalogo `(cls, null, null)` e child-slot
+  `(cls, ownerId, childKey)`: nel motore niente si dirama sulla provenienza del gesto,
+  che e' l'avvertimento Q8 messo in codice — la scelta fra catalogo e outline si rifa'
+  in 10b.
+- **La primitiva e' `addObject`, non `DObject.new`.** `LValue.get_addObject`
+  (`LModelElement.tsx:7035`) serve sia `LModel.addObject` (root) sia `LValue.addObject`
+  (contenuta), e chiamata su uno slot di containment mette il padre **sullo slot**
+  (`:7043`): `owner` e `children[childKey]` — l'invariante ridondante della sezione 2 —
+  sono cosi' scritti dalla stessa chiamata e non possono divergere. `forceCreation: true`
+  e' obbligatorio: senza, `:7095` sceglie la sottoclasse per match di schema invece della
+  metaclasse che l'utente ha scelto.
+- **I valori viaggiano CON la create**, come `json`, perche' `addObject` semina gli slot
+  su un `setTimeout` proprio (`:7153`, il ritardo di CLAUDE.md §9.2): una sola dilazione
+  invece di due. Chiavi `$`-prefissate, tranne `name`, che passa nuda per raggiungere
+  anche `DObject.name` (il doppio legame di §3.12) e solo se la metaclasse dichiara
+  l'attributo.
+- **Required** e' `lower >= 1` letto come «almeno un valore»: un draft offre un controllo
+  per feature, quindi un `2..*` non sarebbe mai soddisfacibile e il commit resterebbe
+  bloccato per sempre. Il messaggio stampa la molteplicita', cosi' la mancanza si vede
+  invece di restare muta.
+- **Uniqueness del nome** fra siblings stesso `cls` + `owner`, sul solo `name`: e' la
+  feature con cui il resto di jjodel risolve un'istanza. Un nome vuoto non collide con dei
+  siblings senza nome — l'assenza di un nome non e' un nome che sbatte.
+- **Derived e read-only non sono offerti** nel draft: un controllo su un valore che il
+  write path rifiuta e' un controllo che mente. Restano nella shape, quindi la tabella
+  continua a mostrarne la colonna.
+- **L'enum si apre sul primo letterale**, required o no: e' quello che fa
+  `CRUD Manager Simulation.dc.html` (`openModal`), e il design e' l'autorita' sugli stati.
+- **Fuori dalla 2c**: il delete (12d), la multi-selezione (12b), e l'Add dentro il gruppo
+  «children» della form — `ListWidget.onAppend` e' un PICKER su elementi esistenti, cioe'
+  «reference seleziona», il gesto sbagliato per uno slot di containment. La create
+  contenuta e' quindi una barra accanto alla form, non un bottone dentro.
+
 ## Punti aperti — stato al 2026-08-30
 
 1. **La shape si deriva tutta dal joiner senza passare dal renderer?** — **Si', ora.**
@@ -185,11 +225,31 @@ Regole già ratificate che il motore implementa:
    precedente misurato (zero import da joiner/react/redux). Aperta nella slice 2b per il solo
    TIPO; il motore ci arriva quando `WriteCtx` e' deciso.
 
-### Aperto, nuovo
+### Chiuso dalla 2c
 
-6. **Il filtro containment-loop non esiste a livello di shape.** `LValue.get_validTargets`
-   scarta i candidati che chiuderebbero un ciclo di contenimento, leggendo la catena dei padri
-   dell'ISTANZA. Non ha significato per una metaclasse ed e' quindi **assente**, non
-   approssimato: la shape dice cosa il metamodello permette, quale di quei candidati una
-   particolare istanza possa prendere e' una domanda del momento della scrittura. La eredita
-   la slice 2c.
+6. **Il filtro containment-loop non esiste a livello di shape.** — **Chiuso dalla slice 2c.**
+   `LValue.get_validTargets` scarta i candidati che chiuderebbero un ciclo di contenimento,
+   leggendo la catena dei padri dell'ISTANZA. Non ha significato per una metaclasse ed e'
+   quindi **assente** dalla shape, non approssimato. Dove e' finito, e perche':
+
+   - **Nell'adapter, nella sua meta' pura**: `createDraw.containmentChain` (la catena) e
+     `createDraw.candidatesFor` (la sottrazione), in
+     `frontend/src/components/editor-v2/hooks/createDraw.ts`. Non nel motore, che non ha
+     un'istanza da leggere; non nella shape, che non ha un'istanza di cui parlare. Nella
+     meta' pura e non in quella impura perche' un filtro non provato e' un filtro creduto:
+     le prove stanno in `__tests__/createDraw.test.ts` e provano **per contrasto** — stessa
+     chiamata, un candidato che chiuderebbe il ciclo assente e uno lecito offerto.
+   - **La catena di un draft e' quella del suo OWNER**, l'owner incluso: il draft non e'
+     ancora nello store e non ha padri propri. E' l'equivalente esatto del `fatherList` che
+     il core legge (`LModelElement.tsx:7871`).
+   - **Solo sulle feature di containment**, dietro lo stesso `if (isContainment)` del core:
+     una reference non-containment non puo' chiudere un ciclo di contenimento, e filtrarla
+     vieterebbe un modello lecito.
+   - **Misurato: per la CREATE il filtro e' inerte, e non e' un difetto.** Il Turno 10 dice
+     «containment crea», quindi un draft non offre nessun selettore su una feature di
+     containment: `draftableRefs` restituisce le sole reference non-containment. Il ramo e'
+     scritto come la regola si legge, non come i dati di oggi lo rendono, e i due percorsi
+     che lo raggiungeranno hanno gia' un nome — l'EDIT di uno slot di containment (12b/12c) e
+     il gesto «sposta qui un figlio esistente». Fino ad allora la garanzia resta del core:
+     `setValueAtPosition` rifiuta la scrittura (`:7654`) e `get_validTargets` filtra il
+     picker che `IRForm` gia' monta.

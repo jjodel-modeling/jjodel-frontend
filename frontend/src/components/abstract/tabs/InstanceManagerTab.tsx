@@ -39,9 +39,24 @@ import React, { useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { getMetaclassInfo, type MetaclassInfo } from '../../editor-v2/hooks/useEditorMode';
 import { makeShapeCtx } from '../../editor-v2/hooks/shapeAdapter';
+import {
+    applyCreate,
+    childSlotCount,
+    classIdOf,
+    draftContext,
+} from '../../editor-v2/hooks/createAdapter';
 import IRForm from '../../editor-v2/viewpoint/ir/IRForm';
 import { EmptyState } from '../../ui';
 import type { RendererDecision } from '../../editor-v2/nodes/valueRenderer';
+import type { ClassShape, Draft, DraftField, RefShape } from '../../../jjform';
+import {
+    addChildReason,
+    draftModel,
+    newDraft,
+    newInstanceReason,
+    setDraftRef,
+    setDraftValue,
+} from '../../../jjform';
 import {
     instanceCountsByClass,
     instancesOfClass,
@@ -139,6 +154,158 @@ function Cell({ cell }: { cell: TableCell }) {
     }
 }
 
+/**
+ * The create draft, as a modal (12a).
+ *
+ * Transactional in the strict sense: this component holds NO model state and
+ * writes nothing. It renders the `DraftModel` the engine produced, hands every
+ * keystroke back as a new `Draft`, and Commit is the only thing that reaches the
+ * D graph — through the caller. Cancel therefore leaves no trace by construction,
+ * not by cleanup.
+ *
+ * The copy is the simulation's: «New <Cls>» as the title, the owner and «not
+ * created until «Create»» as the subtitle, the required star, the cardinality
+ * beside the label, the per-field error under the control, and a Create button
+ * that is disabled while any field carries one.
+ */
+function DraftDialog({ draft, model, ownerLabel, onChange, onCancel, onCommit }: {
+    draft: Draft;
+    model: ReturnType<typeof draftModel>;
+    ownerLabel: string;
+    onChange: (d: Draft) => void;
+    onCancel: () => void;
+    onCommit: () => void;
+}) {
+    const field = (f: DraftField) => {
+        const invalid = !!f.error;
+        const common = {
+            id: `instance-manager-draft-${f.key}`,
+            className: 'instance-manager__draft-control'
+                + (invalid ? ' instance-manager__draft-control--invalid' : ''),
+        };
+
+        if (f.kind === 'ref') {
+            return (
+                <select
+                    {...common}
+                    value={f.value}
+                    onChange={e => onChange(setDraftRef(draft, f.key, e.target.value))}
+                >
+                    <option value="">Select a {f.typeName}…</option>
+                    {f.options.map(o => (
+                        <option key={o.id} value={o.id}>{o.label}</option>
+                    ))}
+                </select>
+            );
+        }
+        if (f.kind === 'enum') {
+            return (
+                <select
+                    {...common}
+                    value={f.value}
+                    onChange={e => onChange(setDraftValue(draft, f.key, e.target.value))}
+                >
+                    {!f.required && <option value="">—</option>}
+                    {f.options.map(o => (
+                        <option key={o.id} value={o.id}>{o.label}</option>
+                    ))}
+                </select>
+            );
+        }
+        if (f.kind === 'boolean') {
+            return (
+                <select
+                    {...common}
+                    value={f.value}
+                    onChange={e => onChange(setDraftValue(draft, f.key, e.target.value))}
+                >
+                    <option value="">—</option>
+                    <option value="true">true</option>
+                    <option value="false">false</option>
+                </select>
+            );
+        }
+        return (
+            <input
+                {...common}
+                type={f.kind === 'number' ? 'number' : 'text'}
+                value={f.value}
+                placeholder={`${f.key}…`}
+                onChange={e => onChange(setDraftValue(draft, f.key, e.target.value))}
+            />
+        );
+    };
+
+    return (
+        <div className="instance-manager__scrim" role="dialog" aria-modal="true" aria-label={model.title}>
+            <div className="instance-manager__draft">
+                <header className="instance-manager__draft-head">
+                    <div>
+                        <div className="instance-manager__draft-title">{model.title}</div>
+                        <div className="instance-manager__draft-subtitle">
+                            {model.cls} · {ownerLabel} · not created until «Create»
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        className="instance-manager__draft-close"
+                        aria-label="Cancel"
+                        onClick={onCancel}
+                    >
+                        <i className="bi bi-x-lg" aria-hidden="true" />
+                    </button>
+                </header>
+
+                <div className="instance-manager__draft-body">
+                    {model.fields.length === 0 ? (
+                        <p className="instance-manager__note">
+                            {model.cls} declares no editable feature — «Create» makes an empty instance.
+                        </p>
+                    ) : model.fields.map(f => (
+                        <div className="instance-manager__draft-field" key={f.key}>
+                            <label
+                                className="instance-manager__draft-label"
+                                htmlFor={`instance-manager-draft-${f.key}`}
+                            >
+                                {f.key}
+                                {f.required && <span className="instance-manager__req" aria-hidden="true">*</span>}
+                                <span className="instance-manager__draft-card">
+                                    {f.typeName} [{f.multiplicity}]
+                                </span>
+                            </label>
+                            {field(f)}
+                            {f.error && (
+                                <span className="instance-manager__draft-error" role="alert">
+                                    <i className="bi bi-exclamation-circle" aria-hidden="true" />
+                                    {f.error}
+                                </span>
+                            )}
+                        </div>
+                    ))}
+                </div>
+
+                <footer className="instance-manager__draft-foot">
+                    <span className="instance-manager__draft-hint">
+                        <i className="bi bi-info-circle" aria-hidden="true" />
+                        Transactional: nothing exists until Create
+                    </span>
+                    <button type="button" className="instance-manager__draft-cancel" onClick={onCancel}>
+                        Cancel
+                    </button>
+                    <button
+                        type="button"
+                        className="instance-manager__draft-commit"
+                        disabled={!model.valid}
+                        onClick={onCommit}
+                    >
+                        Create
+                    </button>
+                </footer>
+            </div>
+        </div>
+    );
+}
+
 export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
     // One subscription for the whole tab. `idlookup`'s reference changes on every
     // model write, which is precisely the granularity the derived lists need.
@@ -147,6 +314,10 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
     const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
     const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null);
     const [query, setQuery] = useState('');
+    /** The transactional draft (12a). Null when no create is in flight, and the
+     *  ONLY place a not-yet-created instance exists: nothing reaches the store
+     *  until Create, so Cancel is `setDraft(null)` and nothing else. */
+    const [draft, setDraft] = useState<Draft | null>(null);
 
     // Name-sorted so the column does not reorder itself when a class is renamed
     // elsewhere. `getMetaclassInfo` is impure (it reads the store and L-proxies),
@@ -209,6 +380,77 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
         setSelectedClassId(cls.id);
         setSelectedObjectId(null);
         setQuery('');
+    };
+
+    // ── Create (2c) ────────────────────────────────────────────────────────────
+    // Two routes, ONE event. `openCreate` is called from the catalogue with
+    // (cls, null, null) and from a child slot with (cls, ownerId, childKey), and
+    // nothing downstream knows which gesture produced it — the Q8 warning honoured
+    // in code, since where the rootable create is offered from is re-decided in 10b.
+
+    /** Why the selected metaclass does NOT offer `New`, or null when it does.
+     *  When it is a string the button is ABSENT, not disabled, and the sentence
+     *  goes at the foot of the collection — the same idiom the abstract row in the
+     *  metaclass list already uses. */
+    const newReason = useMemo(
+        () => (classShape ? newInstanceReason(classShape, rows.length) : null),
+        [classShape, rows.length],
+    );
+
+    /** The `ClassShape` of the selected instance — where its child slots come from. */
+    const subjectShape: ClassShape | null = useMemo(() => {
+        if (!subjectId) return null;
+        const name = shapeCtx.classOf(subjectId);
+        return name ? shapeCtx.shape().classes[name] ?? null : null;
+    }, [shapeCtx, subjectId]);
+
+    /** One entry per child slot of the selected instance: how full it is, and why
+     *  Add is not offered when it is not. */
+    const childSlots = useMemo(() => {
+        if (!subjectId || !subjectShape) return [] as Array<{ child: RefShape; count: number; reason: string | null }>;
+        return subjectShape.children.map(child => {
+            const count = childSlotCount(subjectId, child.key);
+            return { child, count, reason: addChildReason(child, count) };
+        });
+    }, [subjectId, subjectShape, idlookup]);
+
+    /** What the live model answers about the draft: reference candidates (with the
+     *  containment-loop filter already applied — see `createAdapter.draftContext`)
+     *  and the sibling names the uniqueness rule reads. */
+    const draftCtx = useMemo(
+        () => (draft ? draftContext(modelid, shapeCtx.shape(), draft) : null),
+        [draft, modelid, shapeCtx],
+    );
+
+    const draftView = useMemo(
+        () => (draft && draftCtx ? draftModel(shapeCtx.shape(), draft, draftCtx) : null),
+        [draft, draftCtx, shapeCtx],
+    );
+
+    const draftOwnerLabel = useMemo(() => {
+        if (!draft?.ownerId) return 'model root';
+        const owner = rows.find(r => r.id === draft.ownerId);
+        return owner?.name || idlookup?.[draft.ownerId]?.name || draft.ownerId;
+    }, [draft, rows, idlookup]);
+
+    const openCreate = (clsName: string, ownerId: string | null, childKey: string | null) => {
+        setDraft(newDraft(shapeCtx.shape(), clsName, ownerId, childKey));
+    };
+
+    const commitDraft = () => {
+        if (!draft || !draftView?.valid) return;
+        const createdId = applyCreate(modelid, shapeCtx.shape(), draft);
+        setDraft(null);
+        if (!createdId) return;
+        // Show what was just made, whichever route made it: the created instance's
+        // own collection becomes the visible one and the instance is selected, so
+        // the round trip through the table of 2b is what the user sees next.
+        const createdClassId = classIdOf(modelid, draft.cls);
+        if (typeof createdClassId === 'string' && createdClassId !== selectedClassId) {
+            setSelectedClassId(createdClassId);
+            setQuery('');
+        }
+        setSelectedObjectId(createdId);
     };
 
     return (
@@ -277,7 +519,26 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                             onChange={e => setQuery(e.target.value)}
                         />
                     )}
+                    {/* Route 1 of Turno 10: the catalogue creates the rootable ones.
+                        Absent, never disabled, when the metamodel says no — the
+                        sentence below the toolbar carries the reason instead. */}
+                    {classShape && !newReason && (
+                        <button
+                            type="button"
+                            className="instance-manager__new"
+                            onClick={() => openCreate(classShape.key, null, null)}
+                        >
+                            <i className="bi bi-plus-lg" aria-hidden="true" />
+                            New {classShape.key}
+                        </button>
+                    )}
                 </div>
+
+                {classShape && newReason && (
+                    <p className="instance-manager__note instance-manager__note--reason">
+                        {newReason}
+                    </p>
+                )}
 
                 {!selectedClass ? (
                     <p className="instance-manager__note">Pick a metaclass to list its instances.</p>
@@ -360,7 +621,55 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
             {/* ── The selected instance, as a form ────────────────────────── */}
             <section className="instance-manager__pane instance-manager__pane--detail">
                 {subjectId ? (
-                    <IRForm objectId={subjectId} />
+                    <>
+                        <IRForm objectId={subjectId} />
+                        {/* Route 2 of Turno 10: containment creates. One Add per child
+                            slot of the shape, gated by `upper`; when the slot is full
+                            the control is absent and the cardinality says why. The
+                            event is the same `create` the catalogue emits.
+
+                            A BAR BESIDE THE FORM, not an Add inside the form's own
+                            children group, for two measured reasons. `ListWidget`'s Add
+                            is a PICKER over existing elements (`onAppend`, then
+                            `ReferencePicker`), which is «reference selects» — the wrong
+                            gesture for a containment slot, whose whole rule is that it
+                            creates. And giving it a second, creating Add means threading
+                            a callback through `IRForm` → `IRFormField` → `ListWidget`,
+                            three components this tab HOSTS unchanged (2a) and that the
+                            canvas rail mounts too. The form lists the children; this
+                            bar is the create the module comment of `ListWidget` defers. */}
+                        {childSlots.length > 0 && (
+                            <div className="instance-manager__children">
+                                <h3 className="instance-manager__eyebrow">Add contained</h3>
+                                <ul className="instance-manager__list">
+                                    {childSlots.map(({ child, count, reason }) => (
+                                        <li className="instance-manager__child" key={child.key}>
+                                            <span className="instance-manager__row-name">
+                                                {child.key}
+                                                <span className="instance-manager__draft-card">
+                                                    {child.of} [{count}/{child.upper === -1 ? '*' : child.upper}]
+                                                </span>
+                                            </span>
+                                            {reason ? (
+                                                <span className="instance-manager__child-reason" title={reason}>
+                                                    {reason}
+                                                </span>
+                                            ) : (
+                                                <button
+                                                    type="button"
+                                                    className="instance-manager__add"
+                                                    onClick={() => openCreate(child.of, subjectId, child.key)}
+                                                >
+                                                    <i className="bi bi-plus" aria-hidden="true" />
+                                                    Add {child.of}
+                                                </button>
+                                            )}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+                    </>
                 ) : (
                     <EmptyState
                         icon="bi-ui-checks-grid"
@@ -369,6 +678,17 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                     />
                 )}
             </section>
+
+            {draft && draftView && (
+                <DraftDialog
+                    draft={draft}
+                    model={draftView}
+                    ownerLabel={draftOwnerLabel}
+                    onChange={setDraft}
+                    onCancel={() => setDraft(null)}
+                    onCommit={commitDraft}
+                />
+            )}
         </div>
     );
 }
