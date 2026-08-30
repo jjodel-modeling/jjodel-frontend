@@ -2,6 +2,53 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-08-31 — feat(manager): il riquadro di vicinato nel manager (13a)
+**Prompt**: «13a: il riquadro di vicinato nel manager», dato in chat e non depositato in
+`docs/prompts/`, a valle della ratifica di design R-13A-1 e del disegno
+`13a Diagramma Embedded.dc.html` **opzione 1a** (untracked a inizio sessione, committato con
+il referto). Perimetro dal prompt: vista derivata dallo store — owner a 1 livello, refs
+uscenti a 1 salto, referenced-by entranti dalla risalita di 2b — read-only piu' navigazione,
+nodi resi col motore che esiste (`detectValueRenderer`), click = terzo emettitore di
+`subjectId`, «Open in canvas» come innesto del canvas vero. Fuori scopo dichiarato: drag,
+edge-draw, create dal riquadro, layout persistito, piu' di 1 salto, 1b intero.
+**Files touched**: `jjform/{neighborhood.ts,index.ts,__tests__/neighborhood.test.ts}`,
+`editor-v2/hooks/{neighborhoodDraw.ts,neighborhoodAdapter.ts,__tests__/neighborhoodDraw.test.ts}`,
+`abstract/tabs/{InstanceManagerTab.tsx,instanceManagerTab.scss}` (commit `f17241936`);
+`docs/discovery/discovery_2026-08-31_vicinato_manager_13a.md` + il disegno in `5cf0a7b49`;
+log a parte. Otto sorgenti: Regola 19 **rispettata** — elenco presentato in chat con cosa
+cambia in ciascuno, e conferma ricevuta (con le tre scelte di design: quinto pannello a
+destra del dettaglio, primo attributo non-`name` come valore saliente, attesa ~2 s senza
+toast). Sonde `frontend/scripts/smoke/_tmp_13a_verify.ts`, `_tmp_13a_race.ts` e i tre png
+(non committate, gitignored). Ogni commit con pathspec; `git status --porcelain` e indice
+verificati prima: indice vuoto, l'albero portava solo i `docs/prompts/*` untracked d'inizio
+sessione. **`docs/decisions.md` non toccato**: e' della parallela dichiarata dal prompt.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — le tre superfici esistenti invariate: la collezione della tabella non
+cambia al click sul riquadro («Config · 3 instances» prima e dopo), l'outline segue la stessa
+selezione, `npm run smoke` GREEN 12/0/3, zero errori di pagina.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessun file di §3.1 nel perimetro (`viewpoint/ir/` e
+`useJjomSync.ts` letti, mai scritti), zero creatori D, zero `TRANSACTION`, zero
+`SetFieldAction`: il riquadro legge. L'unica scrittura del gesto e' un CustomEvent.
+**Smoke visivo**: passato — `_tmp_13a_verify.ts`, **27 controlli ALL GREEN**, zero errori di
+pagina: pannello montato come quinto (`outline|classes|table|detail|graph`), uscenti a destra
+con la chiave `cfg` sull'arco, entranti a sinistra, owner sopra e incolonnato con la chiave
+`kids`, nodo broken col token della tabella, istanza sola con la frase, click su un vicino che
+muove form+tabella+outline, riparentamento riflesso, «Open in canvas» che seleziona il
+VERTICE (controllo negativo: non l'id dell'oggetto). Piu' `npm run smoke` GREEN.
+Gate a 3 valori: `npx tsc --noEmit` **33** (baseline invariata, conteggio su output completo),
+`npm run build` verde (solo il warning chunk-size preesistente), vitest **2248/0** (+34 unita',
+9 file rossi = i noti `window is not defined`).
+**Notes**: Ipotesi di Fase 1 falsificata in Fase 2 e misurata: l'evento `SELECT_NODE` esiste
+ma il suo spazio di id e' quello dei VERTICI, e il vertice nello store non basta — compare a
+532 ms mentre il nodo React Flow entra nel DOM a 949 ms, e un dispaccio nel mezzo va perduto.
+L'adapter aspetta il nodo montato. Reperto collaterale non toccato (Regola 1): la Tree View
+emette l'id del DObject, quindi la sua selezione su canvas per le istanze M1 non puo'
+funzionare. Referto §6 e §11.
+**Prompt document name**: prompt inline (non depositato) 2026-08-31 01:00
+
 ## 2026-08-31 — fix(editor-v2): la firma del badge salta le pendenti
 **Prompt**: «Micro: la firma del badge salta le pendenti», dato in chat e non depositato in
 `docs/prompts/`. Applicare il fix (b) ratificato da `discovery_2026-08-31_badge_riconciliazione.md`

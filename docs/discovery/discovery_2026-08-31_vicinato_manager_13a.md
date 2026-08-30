@@ -245,3 +245,37 @@ tetto di attesa (~2 s) e la rinuncia silenziosa? Oppure si preferisce un toast?
 - `frontend/src/events/registry.ts`
 - `docs/design/design_handoff_instance_node/13a Diagramma Embedded.dc.html`
 - `docs/PROTOCOL.md`, `CLAUDE.md`, `docs/decisions.md`, `docs/claude-code-log.md`
+
+---
+
+## 11. Addendum di Fase 2 — il vertice non basta (misurato 2026-08-31)
+
+La Fase 1 (§6) aveva scritto: «si tenta finche' il vertice non compare». Falso in
+un punto, e la Fase 2 l'ha misurato invece di supporlo (`_tmp_13a_race.ts`, dal
+click su «Open in canvas»):
+
+```
+246ms  vertice=no  nodoDOM=0  nodiRF=0  selezionati=[]
+532ms  vertice=si  nodoDOM=0  nodiRF=0  selezionati=[]
+949ms  vertice=si  nodoDOM=1  nodiRF=8  selezionati=[]
+```
+
+Il `DVertex` compare a **532 ms**, il nodo React Flow entra nel DOM a **949 ms**.
+Un `SELECT_NODE` emesso nel mezzo — cioe' esattamente quello che la prima stesura
+dell'adapter emetteva — **va perduto**: `EditorV2` marca `selected` su una lista di
+nodi che ancora non contiene quello, e la lista che `useJjomSync` consegna dopo
+nasce deselezionata. Controllo positivo sulla stessa corsa: un dispaccio a mano a
+**3.2 s** attacca (`selezionati: ["Pointer…119"]`).
+
+Quindi la condizione d'attesa non e' il vertice nello store ma il NODO montato —
+`.react-flow__node[data-id=…]`, l'attributo con cui React Flow marca ogni nodo. E'
+una lettura del DOM da codice d'applicazione, dichiarata nel docstring
+dell'adapter: l'alternativa senza di essa e' una raffica di dispacci alla cieca,
+che rifarebbe partire l'animazione del viewport a ogni colpo. Il tetto resta i 2 s
+ratificati (il caso misurato ne usa 0.95), e alla scadenza si tenta una volta alla
+cieca prima di rinunciare in silenzio.
+
+La verifica a schermo (`_tmp_13a_verify.ts`, 27 controlli, **ALL GREEN**) chiude il
+punto col suo controllo negativo: l'id selezionato sul canvas e' quello del
+vertice, e **non** quello del DObject — che e' il difetto registrato in §6 per la
+Tree View, sempre aperto e non toccato qui.
