@@ -17,6 +17,21 @@
  * reason. It sits above the registry's diagnostics because it is about the edit and not
  * about the model, and it costs no layout for the same reason the rest does not.
  *
+ * ── S3: how this component addresses a write ──────────────────────────────────
+ *
+ * By `(objectId, field.name)`, resolved at the instant of the write — never through the
+ * proxy the descriptor carries in `field.slot`. The two are the same slot at the moment
+ * the form renders and they can stop being the same afterwards, and a form stays open for
+ * minutes: measured on the running app (`scripts/smoke/_tmp_s3_probe.ts`, 2026-08-30),
+ * with the metaclass losing and regaining the feature the instance's `DValue` is
+ * REPLACED, and a write through the captured proxy reports `{ok: true, changed: true}`
+ * while landing the value in no slot at all. The id and the feature name are the two
+ * halves of an address that survives that; the proxy is not.
+ *
+ * `field.name` is the feature key, the same string the adapters use in `lOwner['$' + key]`
+ * and the same one `describeSlot` reads the slot's name from. `objectId` comes from the
+ * host: `IRForm` already had it, and passes it to `setObjectName` one component up.
+ *
  * Multivalued features, references and compositions are READ-ONLY here, rendered as value
  * rows with the full label row above them, so the multiplicity and the required marker are
  * legible before the editing controls exist. That is a slice boundary, not a design
@@ -27,7 +42,7 @@ import { useMemo, useState } from 'react';
 import { LPointerTargetable } from '../../../../joiner';
 import type { FormFieldDescriptor } from './useFormWidgets';
 import { isAtUpperBound, multiplicityLabel } from './useFormWidgets';
-import { appendSlotValue, clearSlotValue, setSlotValue, type WriteResult } from './formWrite';
+import { appendValue, clearValue, setValue, type WriteResult } from './formWrite';
 import { worstSeverity, type FieldDiagnostic } from './formDiagnostics';
 import TextWidget from './widgets/TextWidget';
 import NumberWidget from './widgets/NumberWidget';
@@ -42,6 +57,10 @@ import ChipsWidget from './widgets/ChipsWidget';
 export type { FieldDiagnostic };
 
 export interface IRFormFieldProps {
+    /** DObject id of the instance this field belongs to. Half of the address of every
+     *  write this component performs; the other half is `field.name`. See the note on
+     *  addressing in the module comment. */
+    objectId: string;
     field: FormFieldDescriptor;
     /** Projected from the problems registry by the host; the slot is reserved either way. */
     diagnostics?: FieldDiagnostic[];
@@ -87,7 +106,7 @@ function displayValue(raw: unknown): string {
  *  there is none, never a guess at what the host meant. */
 const UNSTATED_REFUSAL = 'The model refused this change';
 
-export function IRFormField({ field, diagnostics, dirty, onCommitted }: IRFormFieldProps) {
+export function IRFormField({ objectId, field, diagnostics, dirty, onCommitted }: IRFormFieldProps) {
     const fieldId = `ir-field-${field.slotId}`;
     const first = field.values[0];
 
@@ -129,14 +148,16 @@ export function IRFormField({ field, diagnostics, dirty, onCommitted }: IRFormFi
         && !field.isReference && !field.isComposition;
     const writable = !field.isReadOnly;
 
+    // Every write goes out as (objectId, field.name), never as `field.slot`. See the
+    // addressing note in the module comment for what the proxy cost.
     const commitAt = (index: number, value: string | number | boolean | null, isPtr: boolean) => {
-        consume(setSlotValue(field.slot, index, value, isPtr));
+        consume(setValue(objectId, field.name, index, value, isPtr));
     };
     const clearAt = (index: number, isPtr: boolean) => {
-        consume(clearSlotValue(field.slot, index, isPtr));
+        consume(clearValue(objectId, field.name, index, isPtr));
     };
     const appendAt = (value: string | number | boolean, isPtr: boolean) => {
-        consume(appendSlotValue(field.slot, value, isPtr));
+        consume(appendValue(objectId, field.name, value, isPtr));
     };
 
     /**

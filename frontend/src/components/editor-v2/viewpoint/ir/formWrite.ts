@@ -40,6 +40,27 @@
  * field declares a refusal. A field that commits on blur with an unchanged value gets
  * `{ok: true, changed: false}` and must show nothing, which is the pre-S2 behaviour of
  * the boolean and the reason `changed` exists as a separate field.
+ *
+ * ── S3: two ways in, and which one a caller should take ───────────────────────
+ *
+ * `setValue` / `clearValue` / `appendValue` address by `(objectId, featureKey)` and
+ * resolve the slot AT THE MOMENT OF THE WRITE. `setSlotValue` / `clearSlotValue` /
+ * `appendSlotValue` take a slot proxy the caller already holds. They are the same
+ * write: the first three resolve and delegate to the second three.
+ *
+ * A caller that holds a proxy ACROSS TIME must take the by-id form. Measured on the
+ * running app (`scripts/smoke/_tmp_s3_probe.ts`, 2026-08-30): with a form open, remove
+ * and re-add the feature on the metaclass and the instance's `DValue` is REPLACED — the
+ * old id is gone from the store. Writing through the captured proxy then returns
+ * `{ok: true, changed: true}` and lands the value nowhere: not in the dead slot, not in
+ * the live one. Reported as done, lost in silence. `slot.r` does not save it, because it
+ * re-wraps for that same dead id (`proxy.ts:320`). The same write resolved by
+ * `(objectId, 'label')` lands in the live slot, in the same run.
+ *
+ * The by-proxy form is not deprecated: the three adapters resolve the slot themselves,
+ * one line before the call, from an id they already have, so their proxy is never older
+ * than the write. Both forms converge in S4, when `WriteCtx` gives the write side one
+ * surface.
  */
 
 import { LPointerTargetable, SetFieldAction, TRANSACTION, U } from '../../../../joiner';
@@ -253,6 +274,76 @@ export function appendSlotValue(
     // Same note as `addSlotValue`: `SetFieldAction` carries no verdict back.
     U.isProjectModified = true;
     return writeDone();
+}
+
+// ── S3: the same writes, addressed by (objectId, featureKey) ─────────────────────
+//
+// The form is the only writer in this perimeter that used to travel with a live proxy;
+// the three adapters (`deleteAdapter:193`, `multiAdapter:77`, `createAdapter:225`) and the
+// read side (`irReadCtxLproxy:26`) already address this way. These three functions are
+// what makes the form the fourth, and they are deliberately thin: the write semantics
+// stay in one place, above.
+
+/**
+ * The slot of `featureKey` on `objectId`, resolved NOW.
+ *
+ * `lObject['$' + key]` is the codebase's own idiom for it, not a new one: same expression
+ * as the adapters and as the ReadCtx L-proxy backend. `null` when the object is gone or
+ * the metaclass has no such feature — both are refusals with a reason, never a silent
+ * write into nothing.
+ */
+function resolveSlot(objectId: string, featureKey: string): SlotProxy | null {
+    try {
+        const lObject: any = LPointerTargetable.fromPointer(objectId);
+        return lObject?.['$' + featureKey] ?? null;
+    } catch (err) {
+        console.warn('[formWrite] resolveSlot failed', { objectId, featureKey, err });
+        return null;
+    }
+}
+
+/** The refusal both a missing object and a missing feature get. One sentence, naming
+ *  what could not be found: the caller shows it verbatim, so it has to be readable. */
+function unresolved(featureKey: string): WriteResult {
+    return writeRefused(`feature "${featureKey}" is not on this object any more`);
+}
+
+/** `setSlotValue`, addressed by `(objectId, featureKey)`. See the module comment for why
+ *  a caller that holds its addressing across time must use this one. */
+export function setValue(
+    objectId: string,
+    featureKey: string,
+    index: number,
+    value: string | number | boolean | null | undefined,
+    isPtr?: boolean,
+): WriteResult {
+    const slot = resolveSlot(objectId, featureKey);
+    if (!slot) return unresolved(featureKey);
+    return setSlotValue(slot, index, value, isPtr);
+}
+
+/** `clearSlotValue`, addressed by `(objectId, featureKey)`. Leaves a hole, as it does. */
+export function clearValue(
+    objectId: string,
+    featureKey: string,
+    index: number,
+    isPtr?: boolean,
+): WriteResult {
+    const slot = resolveSlot(objectId, featureKey);
+    if (!slot) return unresolved(featureKey);
+    return clearSlotValue(slot, index, isPtr);
+}
+
+/** `appendSlotValue`, addressed by `(objectId, featureKey)`. */
+export function appendValue(
+    objectId: string,
+    featureKey: string,
+    value: string | number | boolean,
+    isPtr: boolean,
+): WriteResult {
+    const slot = resolveSlot(objectId, featureKey);
+    if (!slot) return unresolved(featureKey);
+    return appendSlotValue(slot, value, isPtr);
 }
 
 /**

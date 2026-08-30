@@ -343,6 +343,10 @@ export function IRForm({ objectId, defaultTheme = 'plain' }: IRFormProps) {
                                 ref={el => { if (el) fieldRefs.current.set(f.name, el); else fieldRefs.current.delete(f.name); }}
                             >
                                 <IRFormField
+                                    // Half of the address of every write the field makes
+                                    // (S3). The other half is the field's own name; the
+                                    // proxy in `f.slot` no longer travels to a write.
+                                    objectId={objectId}
                                     field={f}
                                     diagnostics={diagnostics.byField.get(f.name)}
                                     dirty={dirtyFields.has(f.slotId)}
