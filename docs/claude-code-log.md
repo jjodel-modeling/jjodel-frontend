@@ -2,6 +2,19 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-08-30 — refactor(editors): il foglio di NestedView misurato per selettore, e potato
+**Prompt**: `docs/prompts/PROMPT_scss_orphans.md`. Slice a valle della rimozione di `NestedView` (`0494a9cad`): potare i selettori **provatamente** orfani di `nestedView.scss`, sciogliendo prima le due riserve di metodo dichiarate in §4 di `discovery_2026-08-30_2_nestedview_rimozione.md` — (a) vita per **classe usata** e non per sottostringa, (b) `&` annidati **espansi** prima del confronto. Un selettore in dubbio resta. Prova visiva obbligatoria con ritagli md5-identici, e questo e' il criterio della slice.
+**Files touched**: editors/views/nestedView.scss (3737 → 366 righe), docs/discovery/discovery_2026-08-30_3_nestedview_scss_orfani.md (nuovo), docs/claude-code-log.md. Sonda `scripts/smoke/_tmp_scss_orphans.ts` e i 30 `.png` (non committati). Commit sorgente `061859313`, docs `549198ae3`, log a parte. **Zero file condivisi** con le sessioni parallele (12b/12c in `jjform/`, R-STR-6 in `editor-v2/nodes/`): verificato su `git diff --name-only` dei loro 8 commit atterrati durante il task.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (nessun file della critical zone)
+**Smoke visivo**: passato — `npm run smoke` 12/0/3 = baseline; sonda dedicata su `ViewData`, 5 tab × 2 temi, **10 ritagli su 10 md5-identici**, computed style `diff` vuoto, stessi 4 errori di boot noti
+**Notes**: Sciolta la riserva (a), `.viewpoint-tab` risulta **senza emettitori**: lo emetteva solo `NestedView.tsx:476/496`, e il censimento del 30-08 lo dava vivo perche' altri due fogli lo stilano. Da li' pendeva il 78% del foglio, quindi la potatura e' 886 istanze di selettore su 921, non le ~69 stimate. Ampiezza confermata da Alfonso prima del commit. Verifica meccanica sul CSS ricompilato: 0 regressioni, 0 rimozioni senza prova. Dettagli e i tre reperti di metodo nel referto.
+**Prompt document name**: PROMPT_scss_orphans.md 2026-08-30 12:45
+
 ## 2026-08-30 — docs: la via (A) di R-STR-6, dichiarata contro le altre due
 **Prompt**: nessuno — riconciliazione dovuta, e va a registro perche' riguarda una scelta non ratificata. Una sessione parallela ha eseguito lo **stesso** prompt `PROMPT_rstr6_canvas_override.md`, ha misurato lo stesso stato e si e' fermata prima del diff (**hard stop**, referto `discovery_2026-08-30_3_rstr6_canvas_override.md`, commit `ec42652af`), mettendo a ratifica tre vie. La slice che ha appena chiuso R-STR-6 ne ha implementata una senza che nessuno l'avesse scelta.
 **Files touched**: docs/discovery/discovery_2026-08-30_rstr6_canvas_override.md (§6bis nuova: il referto gemello, le tre vie, la via scelta e il suo costo), docs/decisions.md (lo stesso, dentro la ratifica di R-STR-6), docs/claude-code-log.md. Commit `adbab1aaf`.
