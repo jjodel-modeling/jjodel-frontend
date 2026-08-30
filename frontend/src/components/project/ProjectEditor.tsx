@@ -1883,9 +1883,39 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                             const objects = lModel.objects || [];
                             // console.log(`[ProjectEditor] LModel has ${objects.length} objects:`, objects.map((o: LObject) => o.name));
 
+                            // Resolve an object of the fresh model BY NAME, declaring ambiguity
+                            // instead of resolving it (R-S1-3). `.find` answered "the first" to a
+                            // question with no single answer: two homonyms meant the attributes
+                            // landed on one of them and the pointer pointed at one of them, with
+                            // nothing said about the choice. Returns null on 0 AND on 2+; the
+                            // caller skips the write and the slot stays empty and declared.
+                            //
+                            // This runs inside handleExecuteTransformation, i.e. AFTER a JjTL run,
+                            // never at project load — so refusing a write here can never stop a
+                            // saved model with pre-existing duplicates from opening.
+                            // `ambiguous` is separate from a null `found` so each caller keeps its
+                            // own "not found" copy untouched and only the new case speaks with a
+                            // new voice — a not-found warning on an ambiguous name would be a
+                            // false statement about a name that IS there, twice.
+                            const resolveSeeded = (
+                                name: string, what: string
+                            ): { found: LObject | null; ambiguous: boolean } => {
+                                const matches = objects.filter((o: LObject) => o.name === name);
+                                if (matches.length === 1) return { found: matches[0], ambiguous: false };
+                                if (matches.length === 0) return { found: null, ambiguous: false };
+                                console.warn(
+                                    `[ProjectEditor] Ambiguous name "${name}" (${matches.length} instances) `
+                                    + `— ${what} skipped, nothing written. Candidates: `
+                                    + matches.map((o: any) => `${o?.instanceof?.name ?? '?'} (${o.id})`).join(', ')
+                                );
+                                return { found: null, ambiguous: true };
+                            };
+
                             for (const pending of pendingAttributeSets) {
                                 // Find object by name
-                                const lObject = objects.find((o: LObject) => o.name === pending.objectName);
+                                const r = resolveSeeded(pending.objectName, 'attribute seeding');
+                                if (r.ambiguous) continue;
+                                const lObject = r.found;
                                 if (!lObject) {
                                     console.warn(`[ProjectEditor] Object "${pending.objectName}" not found in model`);
                                     continue;
@@ -1926,7 +1956,9 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                             if (pendingReferenceSets.length > 0) {
                                 console.log(`[ProjectEditor] STEP 8b: Setting references for ${pendingReferenceSets.length} objects`);
                                 for (const pending of pendingReferenceSets) {
-                                    const lObject = objects.find((o: LObject) => o.name === pending.objectName);
+                                    const ro = resolveSeeded(pending.objectName, 'reference seeding');
+                                    if (ro.ambiguous) continue;
+                                    const lObject = ro.found;
                                     if (!lObject) {
                                         console.warn(`[ProjectEditor] Ref: Object "${pending.objectName}" not found`);
                                         continue;
@@ -1953,7 +1985,17 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                                     }
                                                     continue;
                                                 }
-                                                const targetLObj = objects.find((o: LObject) => o.name === targetName);
+                                                // The pointer WRITE below is the one the census
+                                                // singles out: an ambiguous target here does not
+                                                // fail, it points somewhere. Skipping leaves the
+                                                // slot empty and declared, which is the honest
+                                                // outcome — a written pointer cannot be told
+                                                // apart from a chosen one afterwards.
+                                                const rt = resolveSeeded(
+                                                    targetName, `reference target for ${pending.objectName}.${refName}[${ri}]`
+                                                );
+                                                if (rt.ambiguous) continue;
+                                                const targetLObj = rt.found;
                                                 if (!targetLObj) {
                                                     console.warn(`[ProjectEditor] Ref: Target "${targetName}" not found in model for ${pending.objectName}.${refName}[${ri}]`);
                                                     continue;
