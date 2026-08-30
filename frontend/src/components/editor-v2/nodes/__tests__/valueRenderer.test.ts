@@ -316,6 +316,61 @@ describe('detectValueRenderer — the rule-1 override', () => {
     });
 });
 
+describe('detectValueRenderer — rung 0, the view override on the canvas (R-STR-6)', () => {
+    it('the view wins over the metamodel declaration it covers', () => {
+        // Exactly the pair the inspector draws with an `overridden by current view`
+        // badge: rule 1 says swatch, the view says code. Since R-STR-6 the canvas
+        // row paints the view's answer, not rule 1's.
+        const d = detectValueRenderer({
+            value: 'self.width > 0', typeName: 'EString',
+            rendererOverride: 'swatch', viewRenderer: 'code',
+        });
+        expect(d.kind).toBe('code');
+        expect(d.reason).toContain('FormSpec.widgets');
+    });
+
+    it('the view wins over the declared TYPE as well', () => {
+        expect(detectValueRenderer({ value: 'true', typeName: 'EBoolean', viewRenderer: 'code' }).kind)
+            .toBe('code');
+    });
+
+    it('CONTRAST — with no view declaration the same slot keeps the metamodel answer', () => {
+        // The half that makes the test above a measurement rather than a tautology:
+        // remove the one field, and every other input is identical.
+        expect(detectValueRenderer({ value: 'true', typeName: 'EBoolean' }).kind).toBe('boolean');
+        expect(detectValueRenderer({
+            value: 'self.width > 0', typeName: 'EString', rendererOverride: 'swatch',
+        }).kind).toBe('truncatedText');   // swatch on an unpaintable value degrades
+    });
+
+    it('degrades on a value that cannot support it, exactly as rule 1 does', () => {
+        // Same fallback, and it has to be the same: the two rungs share `decide`,
+        // so a declared swatch and a view swatch cannot disagree about `Bananas`.
+        expect(detectValueRenderer({ value: 'Bananas', viewRenderer: 'swatch' }).kind).toBe('truncatedText');
+    });
+
+    it('an unmappable renderer name falls through instead of blanking the row', () => {
+        // `reference`/`link` map to `refPill`, which is NOT declarable: a view that
+        // asks for it on an attribute gets the metamodel answer, not an empty cell.
+        expect(detectValueRenderer({ value: 'Shape_0', viewRenderer: 'refPill' }).kind).toBe('truncatedText');
+        expect(detectValueRenderer({ value: 'true', typeName: 'EBoolean', viewRenderer: 'hologram' }).kind)
+            .toBe('boolean');
+    });
+
+    it('states outrank it: a view cannot declare a slot non-empty (R-STR-3)', () => {
+        expect(detectValueRenderer({ value: '', viewRenderer: 'code' }).kind).toBe('dash');
+        expect(detectValueRenderer({ value: 'x', isBroken: true, viewRenderer: 'code' }).kind).toBe('brokenRef');
+        expect(detectValueRenderer({ value: 'a', values: ['a', 'b'], viewRenderer: 'code' }).kind).toBe('collection');
+        expect(detectValueRenderer({ value: 'Config', isReference: true, viewRenderer: 'code' }).kind).toBe('refPill');
+    });
+
+    it('rung 0 outranks rung 1 and rung 1 still works underneath it', () => {
+        const slot = { value: '240', typeName: 'EInt', rendererOverride: 'truncatedText' } as const;
+        expect(detectValueRenderer(slot).kind).toBe('truncatedText');
+        expect(detectValueRenderer({ ...slot, viewRenderer: 'numberUnit' }).kind).toBe('numberUnit');
+    });
+});
+
 describe('traceLadder — the whole ladder, not the outcome', () => {
     const colourEnum = {
         value: 'Green',

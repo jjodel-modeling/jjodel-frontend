@@ -32,6 +32,7 @@ import { NodeProblemIndicator } from '../problems/NodeProblemIndicator';
 import { useIsHighlighted } from '../problems/useNodeProblems';
 import { useIRView, useIRViewpointActive } from '../viewpoint/ir/irResolve';
 import { isMigratedDefaultView } from '../viewpoint/ir/irDefaults';
+import { rendererForWidget } from '../viewpoint/ir/widgetRenderer';
 import type { VertexViewIR } from '../viewpoint/ir/irTypes';
 import IRNodeContent from '../viewpoint/ir/IRNodeContent';
 import { containmentChildren } from '../viewpoint/ir/irContainment';
@@ -644,6 +645,15 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                 min: f.min,
                 max: f.max,
                 isBroken: allBroken,
+                // Rung 0 (R-STR-6): what the ACTIVE VIEW asks for, mapped here
+                // because the mapping module imports `valueRenderer` and the
+                // decision cannot reach back for it. Read off the compiled view,
+                // the same source the inspector reads — one key, one provenance.
+                // `undefined` when no view resolves, or when the widget is
+                // outside the vocabulary: both are «the view says nothing».
+                viewRenderer: rendererForWidget(
+                    irResolution?.compiled.formSpec?.widgets?.[liveName],
+                ) ?? undefined,
             };
             const decision = detectValueRenderer(slot);
 
@@ -679,7 +689,11 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
         }
 
         return rows;
-    }, [data.features, liveFeatureNameMap, missingAttributes, edgeRefNames]);
+        // `formSpec.widgets` and not `irResolution`: the widgets object is the exact
+        // input rung 0 reads, and depending on the whole resolution would rebuild
+        // every row on any change to the compiled view.
+    }, [data.features, liveFeatureNameMap, missingAttributes, edgeRefNames,
+        irResolution?.compiled.formSpec?.widgets]);
 
     const emptyRowCount = useMemo(() => slotRows.filter(r => r.isEmpty).length, [slotRows]);
 
@@ -802,6 +816,42 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
     };
 
     /**
+     * The IR branch's rung-0 rendering (R-STR-6).
+     *
+     * `IRNodeContent` paints a field segment as plain text: the interpreter has no
+     * renderer library of its own, and measured on the real canvas it never had one
+     * (`scripts/smoke/_tmp_rstr6_measure.ts`, 2026-08-30 — zero `mm-object__*`
+     * markers on any IR row, against ten distinct renderers on the native branch).
+     * So the row that CAN see a `FormSpec` was the row that could not paint it, and
+     * the row that paints was the row that never sees one.
+     *
+     * This closes the gap from the side that already has both: `slotRows` is built
+     * on the IR branch too, and it now carries rung 0. The bridge is by FEATURE
+     * NAME, the same one `openInspectorByFeatureName` uses, so the interpreter
+     * still knows nothing about `SlotRow`.
+     *
+     * Returns null unless the view actually declared a widget for this feature,
+     * which is what keeps every existing IR view rendering exactly as before: no
+     * declaration, no change, and the interpreter's own text stands.
+     */
+    const renderViewWidget = (featureName: string): React.ReactNode | null => {
+        const row = findRowByFeatureName(slotRows, featureName);
+        if (!row?.slot.viewRenderer) return null;
+        return (
+            <RowValue
+                decision={row.decision}
+                values={row.values}
+                variant="row"
+                targets={row.feature?.refTargets}
+                pillTargets={pillTargetSupers}
+                hasEdge={style.edgeMarker && row.hasEdge}
+                onTargetClick={revealReferenceTarget}
+                now={now}
+            />
+        );
+    };
+
+    /**
      * The ladder for the property under the pointer. A portal on `body`, because the
      * compartment sits inside a node the canvas clips — the same reason `TextStyleField`
      * and the problem overlay portal theirs. Built here, above the IR branch's early
@@ -867,6 +917,7 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                     vertexId={id}
                     readCtx={irResolution.readCtx}
                     onInspectFeature={openInspectorByFeatureName}
+                    renderViewWidget={renderViewWidget}
                 />
                 {/* graphVertex containment (Fase 2b): collapse/expand chip */}
                 {irResolution.compiled.kind === 'graphVertex'

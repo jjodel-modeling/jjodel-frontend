@@ -45,14 +45,15 @@
  * rung 1 keeps its evidence with an `overridden by current view` badge — because
  * «l'override si giudica sapendo cosa nasconde».
  *
- * SCOPE, stated because the panel must not overclaim: `FormSpec` is, by its own
- * definition in irTypes.ts, «how the same view renders as a FORM of editable
- * widgets instead of a symbol on the canvas». So the view's declaration wins in
- * the FORM, and the row under the pointer here — a canvas compartment — still
- * paints the metamodel's rule. That is why rung 0's tag says «winning rule in the
- * form» rather than «winning rule», and why the footer keeps showing what is
- * actually painted. Extending the precedence to the canvas row is a rendering
- * change, deliberately out of this slice.
+ * SCOPE — WIDENED 2026-08-30 (R-STR-6, ratified from debt). Rung 0 used to carry
+ * the tag «winning rule in the form», and the footer a «· on the canvas» aside,
+ * because `FormSpec` is by its own definition in irTypes.ts «how the same view
+ * renders as a FORM of editable widgets instead of a symbol on the canvas» — so
+ * the view won in the form and the canvas row still painted the metamodel's rule
+ * (R-STR-5). The canvas row now honours it too: rung 0 is a rung of
+ * `detectValueRenderer` itself, so ONE decision feeds this panel and the row it
+ * is anchored to. The tag is therefore «winning rule», plain, and the footer's
+ * scope aside is gone — it existed to reconcile two answers that no longer differ.
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -189,7 +190,10 @@ function RendererInspector({
                         <div className="inode-inspector__rung-body">
                             <div className="inode-inspector__rung-title">
                                 Declared by the view
-                                <span className="inode-inspector__won-tag"> — winning rule in the form</span>
+                                {/* «winning rule», plain: since R-STR-6 the canvas row
+                                    honours it too, so there is no second surface to
+                                    qualify the claim against. */}
+                                <span className="inode-inspector__won-tag"> — winning rule</span>
                             </div>
                             <div className="inode-inspector__evidence">
                                 <code>{`FormSpec.widgets.${slot.featureName ?? 'property'} = "${viewOverride.widget}"`}</code>
@@ -246,11 +250,10 @@ function RendererInspector({
                     to show renderings. Same component the compartment uses. */}
                 <span className="inode-inspector__result">
                     <RowValue decision={decision} values={slot.values ?? [slot.value]} variant="row" />
-                    {/* Named as the canvas's, when a view covers it: the footer shows what is
-                        painted here, and rung 0 says the view wins in the form (R-STR-5). The
-                        two statements only read as one answer if the footer says which
-                        surface it is talking about. */}
-                    {viewOverride && <span className="inode-inspector__result-scope">· on the canvas</span>}
+                    {/* No scope aside any more (R-STR-6): the footer paints the decision
+                        `detectValueRenderer` returned, and that is the same decision the
+                        canvas row paints. The aside existed to separate two answers; with
+                        one answer it would only invite the question of what else there is. */}
                 </span>
                 {/* Same key the Form tab writes, so the provenance cannot diverge: the
                     Reset removes `FormSpec.widgets[feature]` and rung 0 disappears with

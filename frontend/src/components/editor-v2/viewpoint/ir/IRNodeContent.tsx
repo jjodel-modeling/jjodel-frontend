@@ -104,6 +104,22 @@ export interface IRNodeContentProps {
      * Absent in the authoring preview, which has no inspector to open.
      */
     onInspectFeature?: (featureName: string, anchor: DOMRect) => void;
+    /**
+     * Rung 0 on the canvas row (R-STR-6): the rendering the ACTIVE VIEW asks for
+     * for one feature, or null when it asks for nothing.
+     *
+     * A CALLBACK and not a decision, for the same reason `onInspectFeature` carries
+     * a name and not a `SlotRow`: the renderer library and the row model both live
+     * on the native branch, and lifting either in here would put `ObjectNode`'s
+     * internals inside this interface. The interpreter asks by feature name and
+     * paints whatever comes back.
+     *
+     * Null is the DEFAULT answer, not a failure: with no declared widget the
+     * segment renders exactly the text it rendered before, which is what keeps
+     * every authored view unchanged. Absent in the authoring preview, which has no
+     * active view to override anything.
+     */
+    renderViewWidget?: (featureName: string) => React.ReactNode | null;
 }
 
 interface CompartmentRowData {
@@ -132,7 +148,7 @@ interface SelectingRowState {
     anchorRect: DOMRect;
 }
 
-function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature }: IRNodeContentProps) {
+function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature, renderViewWidget }: IRNodeContentProps) {
     const form = compiled.form(readCtx, objectId);
     const fill = compiled.fill ? compiled.fill(readCtx, objectId) : '';
 
@@ -565,6 +581,13 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
                                                     />
                                                 );
                                             }
+                                            // Rung 0 (R-STR-6). Only the RENDERING is
+                                            // replaced: the span keeps its class and its
+                                            // double-click, so a row the view draws as a
+                                            // swatch is still the row the user edits by
+                                            // double-clicking it. Editing itself is handled
+                                            // above, where the input replaces everything.
+                                            const viewPainted = renderViewWidget?.(row.name) ?? null;
                                             return (
                                                 <span
                                                     key={si}
@@ -574,7 +597,7 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
                                                         setEditValue(row.value);
                                                     } : undefined}
                                                 >
-                                                    {row.value}
+                                                    {viewPainted ?? row.value}
                                                 </span>
                                             );
                                         }

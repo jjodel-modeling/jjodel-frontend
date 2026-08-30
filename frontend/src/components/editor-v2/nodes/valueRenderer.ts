@@ -342,6 +342,17 @@ export interface SlotShape {
      */
     rendererOverride?: string;
     /**
+     * RUNG 0: the renderer the ACTIVE VIEW asks for, already mapped from its
+     * `FormSpec.widgets` entry by `widgetRenderer.rendererForWidget` (R-STR-6).
+     *
+     * Mapped by the CALLER and not here, because the mapping lives in
+     * `viewpoint/ir/widgetRenderer.ts`, which imports this module: reading it back
+     * would close a cycle. What arrives is therefore already a `RendererKind`
+     * name, and it is validated the way `rendererOverride` is — a value outside
+     * the vocabulary falls through instead of blanking the row.
+     */
+    viewRenderer?: string;
+    /**
      * Unit suffix, from `jjodel/unit=…` and from nowhere else. The handoff is
      * explicit: never inferred from the attribute name.
      */
@@ -623,6 +634,26 @@ export function detectValueRenderer(slot: SlotShape): RendererDecision {
     const count = slot.values?.length ?? 0;
     if (count > 1 || (slot.isMany && count >= 1)) {
         return { kind: 'collection', reason: 'the slot is multi-valued' };
+    }
+
+    // ── Rung 0: the active view, which outranks the metamodel (R-STR-6) ──
+    //
+    // «L'override della view vince anche sul canvas.» It sits BELOW the four
+    // guards above and ABOVE rule 1, and both positions are the ratified reading:
+    //
+    //  - below the guards, because `dash`, `collection` and `brokenRef` are
+    //    STATES of the value rather than choices — R-STR-3 maps no widget to any
+    //    of them — and a reference already has its own rendering. A view cannot
+    //    declare a slot non-empty.
+    //  - above rule 1, because that is what «the view wins» means: the
+    //    metamodel's `jjodel/renderer=…` is exactly what rung 0 is defined to
+    //    cover (R-STR-4), and the inspector already draws it with an
+    //    `overridden by current view` badge.
+    //
+    // An unmappable widget falls THROUGH rather than blanking the row: the IR is
+    // never reinterpreted in silence (Regola 1 del Livello 2).
+    if (slot.viewRenderer && isDeclarableRenderer(slot.viewRenderer)) {
+        return decide(slot.viewRenderer, slot, `declared by the view: FormSpec.widgets = ${slot.viewRenderer}`);
     }
 
     // ── Rule 1, the whole of it ──
