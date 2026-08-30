@@ -32,9 +32,15 @@ green and never as a red.
 
 A run is void when either guard fires:
 
-- **quiescence** (`quiescence.ts`) — a file under `frontend/src` was added,
+- **quiescence** (`quiescence.ts`) — a file the dev server serves was added,
   removed or modified while the run was in flight. The report names the files
-  and the state whose window they fell in.
+  and the state whose window they fell in. The watched perimeter is
+  `src/`, `public/`, `vite.config.ts` and `index.html`: everything vite reads
+  and pushes into the page. `vite.config.ts` is the worst case — saving it does
+  not hot-update the page, it RESTARTS the dev server, so the states opened
+  after it are measuring a different server than the ones before. `scripts/` is
+  deliberately outside: a `_tmp_*` probe saved during a run must not void it.
+  Cost measured 2026-08-30: 4756 files in 22-25 ms per scan, four scans per run.
 - **boot ceiling** (`countBoots` in `assertions.ts`) — a state's page loaded the
   document more than once, counted from `[vite] connecting...`. Every console
   pattern is then that pattern taken N times, not a regression.
@@ -80,10 +86,10 @@ properties in these files.
 | File | Role |
 |---|---|
 | `states.ts` | Environment, thresholds, allowlist, the three states, localStorage seeding |
-| `assertions.ts` | DOM measurement, the four assertions, console normalization, boot count |
-| `quiescence.ts` | Snapshot and diff of `frontend/src`: did the tree move under the run |
+| `assertions.ts` | DOM measurement, the five assertions, console normalization, boot count |
+| `quiescence.ts` | Snapshot and diff of what the dev server serves: did the tree move under the run |
 | `run.ts` | Runs the assertions, prints the report, decides the three-valued verdict |
-| `calibrate.ts` | Prints raw measurements; `--write-baseline` regenerates the baseline |
+| `calibrate.ts` | Prints raw measurements; `--write-baseline` regenerates the baseline, unless the run is void |
 | `console-baseline.json` | Generated. Never hand-edited |
 
 ## Reaching the app
@@ -102,7 +108,10 @@ Everything is behind authentication, and the persistence backend
 The project is then created through the real UI and opened by URL,
 `#/project?id=<id>`. No application code is modified or bypassed.
 
-## The four assertions
+## The five assertions
+
+They were four when this file was written, and A5 arrived without the heading
+following it. Corrected 2026-08-30; the count here is the count `run.ts` runs.
 
 | | What |
 |---|---|
@@ -110,6 +119,7 @@ The project is then created through the real UI and opened by URL,
 | **A2** | `canvas.width / main.width >= CANVAS_MAIN_RATIO_MIN` (0.95). Measured 1.0000; a collapse to 30% gives 0.30 |
 | **A3** | No visible `position: fixed` element outside the allowlist intersects `.app-statusbar`, tolerance 0 |
 | **A4** | No console regression against `console-baseline.json` |
+| **A5** | Chrome stack contiguous: no gap between app bar, toolbar, rail and status bar |
 
 `.app-statusbar` is **not** `position: fixed` — it is a flex child
 (`src/components/StatusBar.scss:9-24`). Its rect is measured, never assumed to
@@ -183,9 +193,14 @@ The prefix is `debug|`, not `[vite]` at any level: an
 `error|[vite] Internal Server Error …` is the dev server failing to compile the
 app, and that still fails A4.
 
-**Note.** `calibrate.ts` does **not** carry the quiescence guard. Regenerate the
-baseline only after a run that `npm run smoke` declared GREEN, or a stray
-`[vite] hot updated` can be frozen into the file.
+**Note.** `calibrate.ts` carries the same two guards, and the rule «recalibrate
+only after a quiet run» is now code rather than a note: on a perturbed run it
+prints VOID, names the file that moved, exits 3 and **does not write** the
+baseline. A stray `[vite] hot updated` frozen into this file would become the
+reference every later run is compared against, silently and permanently — which
+is why calibrate refuses where `run.ts` merely declares. The measurements are
+still printed on a void run: unusable as a baseline, readable as numbers, as
+long as it says so.
 
 ### Key normalization
 
