@@ -514,6 +514,22 @@ al 2026-08-28, sono state spostate dall'attivo senza modifiche.
 **Notes**: `basic: []` non viene potato: una mappa vuota e una assente dicono la stessa cosa, una lista vuota e una assente no. Il primo toggle materializza l'euristica e lo stato passa a «declared», detto dalla riga di stato. Griglia unificata a `1fr 40px 130px`: l'header era `1fr 110px` contro righe treatment `1fr 130px`, mai allineato in una sezione mista. Il `Checkbox` condiviso non espone `ariaLabel`/`title`, quindi il tooltip sta sul wrapper e il nome accessibile resta aperto (task suo).
 **Prompt document name**: 2026-08-28 19:35
 
+Rotazione del 2026-08-30 (P9, oltre le 40 entry): la entry qui sotto, la piu' vecchia
+rimasta nell'attivo dopo la rotazione precedente, e' stata spostata senza modifiche.
+
+## 2026-08-29 — fix(editor-v2): l'affordance nativa dell'inspector parla inglese come il suo gemello IR
+**Prompt**: residuo R-4 registrato in §6(a) del report di R-STR-7 — `title` e `aria-label` del bottone `bi-sliders` del ramo nativo da «Perche' questo renderer» a "Why this renderer", identici al gemello IR del 29/08. Piu' un censimento delle stringhe UI italiane residue in `editor-v2/nodes/`, da elencare e NON correggere.
+**Files touched**: editor-v2/nodes/ObjectNode.tsx (due stringhe), docs/discovery/discovery_2026-08-29_rstr7_inspector_ramo_ir.md (§6(a) sciolta), docs/claude-code-log.md.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (typecheck 33 = baseline su output completo, zero errori nel file toccato; `npx vitest run` 1832 passed / 0 failed coi 9 file rotti all'import = baseline nota; nessun test asseriva sulle due stringhe, grep vuoto sui `*.test.ts*`)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (nessun file di §3.1)
+**Smoke visivo**: non eseguito, e non serve: due attributi di accessibilita' su un bottone gia' coperto dalla sonda `_tmp_rstr7_rung0.ts`, che lo aggancia per classe e non per testo. Verificato alla sorgente che le due stringhe sono ora byte-identiche al gemello IR (`IRNodeContent.tsx:596-597`), che era la referenza dichiarata dal prompt.
+**Notes**: Censimento come chiesto, due passate su tutta `editor-v2/nodes/`: accenti in `title=`/`aria-label=` zero (controllo positivo a 21 `title=` su 5 file), parole italiane senza accento una sola. **Residuo elencato e non corretto**: `ObjectNode.tsx:1201`, ``title={`${metaclassName} e' singleton: questa e' la sua unica istanza`}``. Le coordinate del report (1227-1228) erano invecchiate: le righe vere erano 1284-1285, spostate dalle estrazioni di `a18fe1468`.
+**Prompt document name**: prompt inline, nessun documento
+
 ## 2026-07-29 — refactor: narrow PropertiesWithTreeView mode union to floating
 **Prompt**: Post-fase floating, Task 2 — restringere l'union `PropertiesWithTreeViewProps.mode` da `'popup' | 'tab' | 'inline' | 'floating'` a `'floating'` (unico valore istanziato). Fallout guidato dal compilatore: rimuovere solo i rami morti flaggati da typecheck.
 **Files touched**: `editors/PropertiesWithTreeView.tsx` (union ristretta a `'floating'` :65; rimosso il ramo dispatch popup/inline morto `if (mode !== 'tab' && mode !== 'floating') return <Info mode={mode}/>` alle righe 393-395 + la sua docstring a :391 — TS2367 su `mode !== 'tab'` era l'unico errore flaggato dal compilatore), `docs/claude-code-log.md`.
@@ -13123,3 +13139,16 @@ come le due meta' precedenti. Nessuna voce e' stata modificata, solo spostata.
 **Smoke visivo**: passato. `_tmp_footer_measure.ts` con `viewOverride` attivo: `__result` 835→971 ora **contiene** il suo scope (prima il padre finiva a 900 e il figlio sbordava a 971), `Reset` occupa 1062→1094 con 91px di franco dove prima c'era sovrapposizione, altezze 15/16px = una riga sola. Ritaglio `_tmp_rstr7_rung0_button.png`: il footer legge «Green · on the canvas    Reset  Change renderer» intero, senza capoversi.
 **Notes**: Chiude la voce lasciata aperta dalla entry di oggi «il verdetto sul footer e' smentito dalla misura», che nasce da un prompt inline e non ha una chiave `HH:mm` da citare: `Corregge` resta al sentinella e la catena e' qui. I ~60px mancanti li restituisce l'**azione**, non il testo che andava a capo: «Back to the metamodel renderer» valeva 184px, «Reset» 32. Il `flex: none` e' cintura, non fix. Lessico allineato al Form tab (`FormAuthoringBody.tsx:585`). Geometria in §6(b) del report.
 **Prompt document name**: prompt inline, nessun documento
+
+## 2026-08-29 — fix(editor-v2): il contratto della sporgenza arriva a valle, e il criterio visivo passa
+**Prompt**: portare `MIN_APPROACH_RUN` oltre il router. (1) `avoidNodeRects` deve rispettare il contratto sui terminali, con degradazione `min(RUN, spazio/2)`, lasciando la clearance interna; attenzione all'interazione con `edgeLanes.ts`, il vincolo va rispettato **dopo** l'ultima trasformazione che tocca i terminali. (2) `LANE_APPROACH_RUN = 16` col commento che mente: allineare o riscrivere, **decidendolo misurando**. Fuori perimetro: `MARKER_APPROACH_RUN`, `RoundingPolicy`, connettore d'ereditarieta', self-loop, waypoint, la banda singolare.
+**Files touched**: editor-v2/utils/edgeUtils.ts (`AVOID_STUB_OUT` fisso -> `AVOID_STUB_OUT_STEPS`, e `routeAroundRects` sceglie il gradino piu' alto che non nasca dentro un corpo, un capo alla volta), editor-v2/utils/edgeLanes.ts (`LANE_APPROACH_RUN` importata da `MIN_APPROACH_RUN`, `minOffset`/`maxOffset` opzionali su `LaneSegment`, popolati per i segmenti che confinano con un terminale, e la strozzatura in `assignLanes`), utils/__tests__/nodeAvoidance.test.ts (+6 prove, 2 asserzioni riallineate), utils/__tests__/edgeLanes.test.ts (+5 prove, 1 asserzione che fissava 16), docs/prompts/claude_2026-08-29_1810_prompt_approach_run_a_valle.md, docs/claude-code-log.md. Sonde `scripts/smoke/_tmp_approach_run.ts`, `_tmp_two_nodes.ts` (non committate).
+**Outcome**: ✅ completed
+**Corregge**: 2026-08-29 17:10 edge_approach_run (ne rende visibile il criterio, che li' restava fallito)
+**Causa**: (c)
+**Regressions**: no (typecheck 33 = baseline su output completo, zero errori nei file toccati; build exit 0, solo il chunk-warning; `npx vitest run` 1832 passed / 0 failed coi 9 file rotti all'import = baseline nota, erano 1812, +20 fra i due giri; `npm run smoke` 12 passed / 0 failed / 3 skipped; `npm run check:docs` 3/3). Un caso degenere cambia forma: la U-detour fra due nodi sovrapposti passava sopra-sinistra e ora passa sotto-destra, ~6% piu' lunga, criterio rispettato in entrambi.
+**Out-of-scope changes**: no (i due sorgenti sono quelli del prompt, i due file di test sono quelli che il prompt chiede)
+**Layer Impact Report**: not-required (nessun file di §3.1; geometria pura, nessuna scrittura D-layer)
+**Smoke visivo**: **passato, e stavolta e' il criterio d'accettazione**. Scena densa Heater, `d` finale dal DOM, HEAD contro dopo: archi con un terminale sotto 24px da **12/18 a 0/18**, minimo da 11.5px a **24.0px**. Criteri D di `_tmp_dense.ts`: D1/D2a/D2b/D5 verdi in entrambe; **D3** coppie parallele sotto 8px **15 -> 13**, **D4** 3 -> 3 (entrambi gia' rossi su HEAD, preesistenti). Scena a due nodi, 69 pose: **una sola** cambia, ed e' un miglioramento (12/12 -> 24/24), le altre 68 byte-identiche. Sweep del router rigenerato, non ereditato: 150 712 -> 6 528, invariato. Connettore d'ereditarieta': i sei `d` pinnati passano.
+**Notes**: Reperto preliminare: la sonda del giro precedente misurava la retta **prima** dell'arco, non la distanza ancora->svolta, e sotto-riportava di 4px (il raggio). Corretta: i numeri di quel prompt vanno letti +4. Due cause, non una: `avoidNodeRects` ricostruiva i terminali a 12px fissi, e la corsia li accorciava ancora perche' `conflicts` esclude le coppie dello stesso arco. Prezzo provato: un piolo strozzato puo' finire sotto `LANE_MIN_GAP`.
+**Prompt document name**: 2026-08-29 18:10 approach_run_a_valle
