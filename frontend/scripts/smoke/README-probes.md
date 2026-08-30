@@ -99,11 +99,26 @@ Probes and their screenshots are named `_tmp_*` and stay out of git:
 frontend/scripts/smoke/_tmp_*
 ```
 
-The rule is **path-anchored**. A `_tmp_*` artifact written anywhere else is not
-ignored: measured 2026-08-30, 142 untracked `_tmp_*.png` sitting in `frontend/`
-because a probe wrote its screenshots relative to the wrong cwd. Write the
-probe *and* everything it emits under `frontend/scripts/smoke/`, or `git status`
-carries them until somebody notices.
+The rule is **path-anchored**, so it protects one directory and nothing else.
+The cause is always the same: `page.screenshot({path: ...})` takes a **relative**
+path, resolved against a cwd the probe does not control. Where the file lands
+therefore depends on where it was launched from, and the ignore rule reaches
+exactly one of those places.
+
+Counted 2026-08-30, three landing sites in the tree at once, none of them
+ignored:
+
+| written as | launched from | lands in | orphans |
+|------------|---------------|----------|---------|
+| `_tmp_x.png` | `frontend/` | `frontend/` | 142 (4.4 MB) |
+| `scripts/smoke/_tmp_x.png` | repo root | `scripts/smoke/` | 10 |
+| `scripts/smoke/_tmp_x.png` | `frontend/scripts/smoke/` | `frontend/scripts/smoke/scripts/smoke/` | 2 |
+
+Only the 142 were in scope of the clean-up that measured this; the other two
+sites are still there. Write an **absolute** path, or one built from the probe's
+own module URL — the only form invariant to where it was launched. A relative
+one that happens to be right today is right only for the cwd that was used, and
+`git status` carries the rest until somebody notices.
 
 They are never committed. The referto and the log entry carry the numbers; the
 probe carries nothing anyone needs later.
@@ -142,6 +157,34 @@ Without the second half, "does not write" had been checked against a slot that
 was already empty.
 
 Use the word in the probe labels; it makes the pairing greppable across referti.
+
+### Assert the setup, do not wait for it
+
+A setup step whose effect propagates asynchronously must be **asserted**, not
+timed. Measured 2026-08-30: writing `composition = true` and calling
+`slot.addObject(...)` **inside the same `evaluate`** produces a **root**, not a
+child. `get_addObject` reads `composition` to decide whether the father is the
+slot or the model (`LModelElement.tsx:7056`), and at zero ms from the write it
+still reads `false` — the propagation latency of CLAUDE.md §9.2.
+
+| where | father of the created object |
+|-------|------------------------------|
+| two separate `evaluate`s, with a wait between | **DValue**, owner `allNine_valued` |
+| one single `evaluate` | **DModel** |
+| the probe, first version (one `evaluate`) | path `smoke_model/Dup_x`, two segments — the FAIL |
+
+That first run came out **1 FAILURE of 19**, and the failure was the probe's, not
+the code's. The fix was not «wait longer»: it was to **assert the father**, so
+that an apparent nesting fails instead of passing in silence. A probe that only
+waits reports a green whenever the wait happened to be long enough on that
+machine, that day.
+
+Generalised: after any setup that depends on propagation, assert the shape you
+believe you built — the father, the slot, the count — before asserting anything
+about it.
+
+Referto: `docs/discovery/discovery_2026-08-30_s1b_micro_produttore_candidati.md`
+§3.
 
 ### Select by name, never by index
 
@@ -232,3 +275,25 @@ falsified the counts two other probes assert ("12 rows, 0 empty", "24 rows =
 12 features × 2 instances").
 
 Referto: `docs/discovery/discovery_2026-08-30_5_brokenref_fixture.md` §2.2.
+
+### No nested objects in it: 7 of 7 are roots
+
+Measured 2026-08-30 on `rowviews`: **7 `DObject`, all seven with `father` =
+`DModel`** (`smoke_model`). Not one is nested. The five of `order` minus
+`Config_old`, which the fixture deletes to make the broken reference, plus the
+three singletons `Red`/`Green`/`Blue` the persist callback creates on its own.
+
+So a probe that needs a child **fabricates it and asserts it**. Do not read a
+nesting into the fixture that is not there: with roots only, every path comes out
+`smoke_model/<name>`, and any code branch that walks up to an owner is **never
+exercised** — the probe would prove half a walker while believing it proved all
+of it. `_tmp_s1bmicro_recon.ts` is the measurement; the probe that needed a child
+turned `cfg` into a composition, created an object inside `allNine_valued`, and
+checked it had actually landed there («Assert the setup, do not wait for it»)
+before using it.
+
+Changing the fixture to add one is the wrong move for the same reason as above:
+it changes what every other session's probe is counting.
+
+Referto: `docs/discovery/discovery_2026-08-30_s1b_micro_produttore_candidati.md`
+§2.
