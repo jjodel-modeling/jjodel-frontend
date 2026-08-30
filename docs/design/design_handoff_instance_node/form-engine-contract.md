@@ -148,14 +148,100 @@ Per un'istanza: lista di field descriptor già validati:
 Per una collezione: colonne (dagli attrs+refs) + righe. Per un delete: preflight
 `{ referencedBy: [{ id, refKey }], reassignCandidates: [...] }` (12d).
 
-## 5. Eventi astratti (il motore li emette, l'adapter li applica)
+## 5. `WriteCtx` — la firma delle scritture (l'adapter la implementa, il motore la usa)
 
+Gli eventi astratti di questa sezione hanno smesso di essere prosa: da S4 sono
+`frontend/src/jjform/writeCtx.ts`, sei primitive che l'host implementa e che il motore
+chiama. L'implementazione di jjodel e' `editor-v2/hooks/writeCtxLproxy.makeWriteCtx`,
+sorella di `irReadCtxLproxy` per il lato lettura.
+
+```ts
+setValue(id, key, index, value, isPtr?)   -> WriteResult
+clearValue(id, key, index, isPtr?)        -> WriteResult   // lascia un BUCO (R-FORM-7)
+appendValue(id, key, value, isPtr)        -> WriteResult
+setName(id, name)                         -> WriteResult   // primitiva a se' (R-WCX-2)
+create(cls, ownerId|null, childKey|null, seed) -> CreateResult
+delete(id)                                -> WriteResult
+validTargets(id, key)                     -> TargetOption[]   // l'OFFERTA (S5)
+
+WriteResult  = { ok, changed, reason? }        // S2
+CreateResult = { ok, id: string|null, reason? }
+TargetOption = { id, label, group? }           // piatta: il group e' una RESA
 ```
-setValue(id, key, value)          — attributo
-setRef(id, key, targetId|null)    — reference
-create(cls, ownerId|null, childKey|null, draft)   — transazionale (12a)
-delete(id, { reassignTo?|clearRefs })             — con preflight (12d)
-```
+
+L'indirizzamento e' `(id, chiave, indice)` **sempre**: mai uno slot, mai un proxy. Non
+e' stile — un proxy tenuto nel tempo scrive in uno slot morto e **si dichiara riuscito**
+(misurato, S3). `WriteResult.reason` e' l'unico canale per cui un rifiuto dell'host
+raggiunge il motore, e viaggia **verbatim**.
+
+**`validTargets` e' una LETTURA, e sta qui** (S5, R-WCX-5). Non enumera «il modello»: enumera
+gli ARGOMENTI LECITI di `setValue`/`appendValue` su quel `(id, chiave)`, e il suo criterio di
+correttezza e' il rifiuto dello stesso host. Un adapter che implementasse le scritture senza
+di lei offrirebbe esattamente i bersagli che poi rifiuta; separarla su un contesto di lettura
+renderebbe quella divergenza esprimibile. **Totale**: nessun verdetto, `[]` e' una risposta —
+il picker la rende «no candidates», non un errore. Il `group` e' un'etichetta opzionale
+(`Free Objects`, `Bound Objects`, `Literals of <enum>`): la lista e' PIATTA, e chi rende
+raggruppa (`useFormWidgets.groupTargets`), cosi' un host senza raggruppamento non perde nulla.
+Il filtro dentro resta del core (R-FORM-13): legge la catena dei padri di QUELL'istanza, e
+nessuna shape puo' rifarlo perche' una metaclasse non ha padri.
+
+### 5.0 Gli OBBLIGHI dell'implementazione (R-WCX-3)
+
+Non sono codice del motore: sono cio' che un adapter deve garantire perche' il motore
+resti corretto. Un adapter che ne salta uno perde dati in silenzio.
+
+- **Il filtro containment-loop e' dell'HOST** (R-FORM-13). Nessuna shape puo' rifarlo:
+  legge la catena dei padri di QUESTA istanza. Da S5 l'obbligo e' NOMINATO — `validTargets`
+  e' nella firma — e resta un obbligo: il contratto non lo reimplementa, pretende che
+  l'implementazione lo fornisca. Un adapter che ritorna tutto ha una firma verde e un
+  modello che si contiene da solo.
+- **La rete in scrittura e' dell'HOST, e non e' completa.** `setValueAtPosition` rifiuta
+  il ciclo di contenimento; la conformita' di tipo del bersaglio e' **commentata**
+  (`LModelElement.tsx:7652`), quindi il motore non puo' contarci: limite dichiarato, non
+  garanzia.
+- **`clearValue` buca, la cascata dell'host accorcia per valore** (R-FORM-7 / R-FORM-10).
+  Un `instanceData` che non sa rappresentare un buco non fa round-trip.
+- **Il doppio legame dell'identita'** (CLAUDE.md §3.12, R-WCX-2): `setName` scrive
+  ENTRAMBI i lati. Riunirla a `setValue(id,'name',…)` scriverebbe il solo slot.
+- **L'obbligo di sequenza**: i piani sono ORDINATI e ogni passo dev'essere osservabile
+  dal successivo. In jjodel costa `U.UpdatingTimer * 2` fra una scrittura di slot e una
+  delete (R-FORM-11) e **zero** fra N scritture su N slot distinti (R-FORM-12). I
+  millisecondi sono dell'host; l'obbligo e' del contratto.
+- **`create` fa LA metaclasse chiesta**, mai una sua sottoclasse (`forceCreation`), e i
+  valori del `seed` viaggiano CON la create, non dopo.
+- **La cascata di containment NON e' di `delete`**: e' del piano (R-FORM-9).
+
+### 5.0bis L'offerta, e quando viene chiesta
+
+Una sola sorgente, `WriteCtx.validTargets`, letta attraverso il wrapper del motore
+`jjform.targetOptions` (che normalizza e non lascia passare un'eccezione: un'offerta che non
+si puo' calcolare e' un'offerta VUOTA, mai una form che salta). Due MOMENTI, e sono entrambi
+necessari:
+
+- al **render**, per lo stato dei controlli — la select di un enum, il bottone Add che deve
+  gia' sapere di non avere piu' candidati;
+- all'**apertura** del popover, per la lista — perche' una form resta aperta per minuti e la
+  gerarchia sotto non sta ferma. Misurato: creare un candidato mentre la form e' aperta non
+  tocca nessuno slot del soggetto, quindi la firma di `useIRFormView` non lo vede e il rail
+  **non ri-renderizza**; prima di S5 il picker riaperto mostrava ancora la lista vecchia
+  (`_tmp_s5_probe.ts`, corsa sull'albero pre-S5: rail `["Config_main"]`, il nuovo assente;
+  manager invece gia' fresco, perche' quella superficie ri-renderizza per conto suo).
+
+### 5.1bis Chi scrive attraverso il ctx, oggi
+
+`jjform/delete.applyPlanWrites(ctx, plan)` — le reassign e le clear di un piano, in
+ordine. E' il motore che scrive, ed e' provato **contro un host che non e' jjodel**:
+`jjform/__tests__/writeCtx.test.ts` implementa `WriteCtx` su un `Record` JSON e ci fa
+atterrare gli stessi piani (la portabilita' di R-FORM-2 smette di essere strutturale).
+
+Le altre due inversioni sono **dichiarate e rimandate**, non dimenticate:
+
+- `multiAdapter.applyBulk` — il suo `BulkResult` distingue `missing` (slot irrisolvibile)
+  da `refused` (host che rifiuta), e attraverso il ctx le due arriverebbero come lo
+  stesso `{ok:false}`: fonderle sarebbe la confusione che S2 esiste per togliere.
+- `createAdapter.applyCreate` — resta il TRADUTTORE del draft (campi non toccati scartati,
+  stringhe tipate per attributo); la scrittura sotto e' gia' `createInstance`, cioe' la
+  primitiva `create` del ctx.
 
 Regole già ratificate che il motore implementa:
 - containment crea / reference seleziona (Turno 10)
@@ -297,7 +383,8 @@ porta zero occorrenze di `mixed`, `multi`, `12b`, `12c`, con controllo positivo 
    testo.
 5. **Naming e collocazione** — `frontend/src/jjform/`, pari grado di `jjel/`, che e' il
    precedente misurato (zero import da joiner/react/redux). Aperta nella slice 2b per il solo
-   TIPO; il motore ci arriva quando `WriteCtx` e' deciso.
+   TIPO; **il motore ci e' arrivato con S4**, che ha deciso `WriteCtx` (sezione 5), e la
+   firma si e' chiusa con **S5**, che vi ha aggiunto `validTargets`.
 
 ### Chiuso dalla 2c
 

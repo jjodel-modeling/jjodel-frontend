@@ -2369,6 +2369,27 @@ appartiene a una verdetto di RISOLUZIONE (`jjscript/.../instance.ts:146`,
 `{ok, reason}` — la parte che attraversa il contratto. Zero consumatori cambiati, zero
 copy cambiata: l'alternativa avrebbe aggiunto due campi che nessuno scrittore popola.
 
+**R-WCX-5** (2026-08-30) — **L'offerta sta sul contratto della SCRITTURA, e si chiede quando
+si apre il picker.** `validTargets(id, key) -> TargetOption[]` entra in `jjform/writeCtx.ts`,
+non su un ReadCtx affiancato: cio' che enumera non e' «il modello» ma gli ARGOMENTI LECITI di
+`setValue`/`appendValue` su quel `(id, chiave)`, e il suo criterio di correttezza e' il
+rifiuto dello stesso host — un adapter che implementasse le scritture senza di lei offrirebbe
+proprio i bersagli che poi rifiuta, e separarla renderebbe quella divergenza esprimibile.
+Totale (`[]`, mai un verdetto), piatta con `group?` opzionale (il raggruppamento e' una resa,
+`useFormWidgets.groupTargets`), e implementata **delegando**: `writeCtxLproxy.validTargetsFor`
+legge `slot.validTargetOptions -> get_validTargets`, dove il filtro containment-loop di
+R-FORM-13 resta. Misurato per contrasto sul vivo (`_tmp_s5_verify.ts`, 13/13): `kids`
+(containment) offre 2 candidati e non il contenitore, `mate` (stesso tipo, non containment)
+ne offre 4 e lo offre; l'ordine e gli id attraverso il contratto sono **identici** al vecchio
+percorso dal proxy. Due MOMENTI, una sorgente: al render per lo stato dei controlli,
+all'apertura del popover per la lista — perche' una form resta aperta per minuti. Misurato
+sull'albero pre-S5 con la stessa sonda (`_tmp_s5_probe.ts`): un candidato creato mentre la
+form e' aperta non tocca nessuno slot del soggetto, la firma di `useIRFormView` non lo vede, e
+il picker del **rail** riaperto mostrava ancora `["Config_main"]`; il **manager**, che
+ri-renderizza per conto suo, era gia' fresco. Il difetto era quindi di UNA superficie su due,
+e la correzione toglie la dipendenza dalla superficie. Chiude il punto 6 del contratto e
+l'indirizzamento aperto da S3: `FormFieldDescriptor.slot` — zero lettori misurati — e' rimosso.
+
 **R-DEL-4** (2026-08-30) — **La rete di `get_delete` copre anche `values`, e la verita' di
 fondo e' `idlookup`, non `pointedBy`.** `Dummy.get_delete` portava gia' una rete per il
 `pointedBy` stale (`common/Dummy.ts:104-116`, il commento la dichiara) ma per i soli
