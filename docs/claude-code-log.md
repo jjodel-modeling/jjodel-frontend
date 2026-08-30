@@ -2,6 +2,19 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-08-30 — docs: lo smoke flaky non e' flaky, e' il salvataggio di un collega
+**Prompt**: «Discovery: lo smoke flaky (11/1/3 ambientale)». Misurare la distribuzione su >=10 corse consecutive, stabilire se il 3x dei conteggi e' causa o sintomo, spiegare perche' 12/0/3 ha smesso di essere affidabile. Solo discovery: zero fix, un report, proposta di gate sostitutivo se lo smoke non e' certificabile.
+**Files touched**: docs/discovery/discovery_2026-08-30_6_smoke_flaky.md (nuovo), docs/claude-code-log.md. **Zero sorgenti, zero file dello smoke.** Sonde `frontend/scripts/smoke/_tmp_hmrwatch.ts` e `_tmp_flake_probe.ts` (non committate). Commit del referto `ff9ee37e4`, log a parte.
+**Outcome**: ✅ completed
+**Corregge**: 2026-08-30 14:30 brokenref_fixture_micro (ne spiega il `Notes`, dove lo smoke rosso e' stato dichiarato «ambientale» senza risalire alla causa)
+**Causa**: (g)
+**Regressions**: no — nessun file eseguibile toccato. Unica scrittura fuori dal referto: un `touch` su `frontend/src/joiner/classes.ts` per l'esperimento controllato, md5 `6d19220b3db864780513c68a5bca1fdf` **identico prima e dopo**, stato git invariato.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (nessun file di sync/D-L)
+**Smoke visivo**: e' l'oggetto della misura. 12 corse: **10 verdi 12/0/3, 2 rosse 11/1/3**. Le dieci verdi sono identiche al messaggio (13/14/15 messaggi, 11/12/12 pattern): lo smoke non ha jitter proprio. Le due rosse cadono esattamente sulle due corse dentro cui il watcher ha visto un evento HMR della sessione parallela, e lo stato che fallisce e' quello aperto in quell'istante — `NEW (2x)` nello smoke contro due eventi nel watcher, `NEW (1x)` contro uno. Correlazione **8 su 8** sulle corse coperte. Il «3x la baseline» del referto originale e' il conteggio di **tre boot**: riprodotto a comando con due `touch` a md5 invariato, che danno 33 messaggi contro 13 e `[vite] connecting...` a 3 contro 1.
+**Notes**: A4 non ha margine: 11 pattern su 12 a margine **esattamente 0**, e l'unico con slack (`two children with the same key`, 6/18/20) e' un bug chiuso dopo il 01-08, quindi 0 ovunque — slack morto, che A4 non puo' spendere perche' confronta per chiave. Non e' nuovo: il log del 29-08 (riga 323) porta gia' un `advanced-mode A4:FAIL` in concorrenza con la build. Cinque proposte misurate in §9, **nessuna applicata**; la guardia di quiescenza sulle mtime di `src` copre tutti e tre i rossi osservati.
+**Prompt document name**: PROMPT_smoke_flaky_discovery.md (prompt inline; il documento non esiste in `docs/prompts/`) 2026-08-30 15:00
+
 ## 2026-08-30 — discovery: il contro-esempio a R-FORM-10, e la coda orfane di tree.scss
 **Prompt**: «Discovery: il contro-esempio a R-FORM-10 (+ coda tree.scss)», dato in chat e non depositato in `docs/prompts/`. Riempire la matrice 2x2 lasciata aperta in §0 di `discovery_2026-08-30_5_brokenref_fixture.md` — cardinalita' (1..1 vs 0..*) x percorso di delete (12d/`deleteAdapter` vs quello del fixture) — dire se R-FORM-10 va riscritta o delimitata, e verificare che `missing` e `brokenRef` siano davvero due stati distinti su tabella e nodo ora che entrambi esistono in natura. Solo discovery: zero fix. Coda micro in commit separato: le 7 orfane preesistenti di `tree.scss` col metodo R-NV-7 e gate sul CSS compilato.
 **Files touched**: frontend/src/components/forEndUser/tree.scss (7 dichiarazioni morte), docs/discovery/discovery_2026-08-30_6_rform10_controesempio.md (nuovo), docs/claude-code-log.md. Sonde `_tmp_rform10_{matrix,wrapclock,render}.ts` (non committate). Commit sorgente `9c91c65ef`, docs `f1694e9ca`, log a parte. Zero file condivisi con la sessione parallela di 12b/12c, che tiene `jjform/index.ts` e `InstanceManagerTab.tsx` modificati nell'albero e che questa sessione non ha toccato.
