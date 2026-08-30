@@ -14,7 +14,8 @@
      --color-form-label          #475569  row text
      --color-form-muted          #94a3b8  eyebrow, counts, secondary
      --color-form-section        #64748b  the row's type
-     --color-form-border         #e2e8f0  pane separators
+     --color-form-border         #e2e8f0  pane separators, table rules
+     --color-form-border-strong  #cbd5e1  input borders
      --color-selection-bg / -bar          the selected row
 
    `--color-selection-*` carries a TODO in `_colors-light.scss:373` asking to be
@@ -42,11 +43,12 @@
         + .instance-manager__pane { border-left: 1px solid var(--color-form-border); }
     }
 
-    /* Two fixed reading columns and one elastic detail: the form is the pane whose
-       content actually varies in width, and the two lists read better narrow. */
-    &__pane--classes   { flex: 0 0 200px; }
-    &__pane--instances { flex: 0 0 240px; }
-    &__pane--detail    { flex: 1 1 auto; padding: 0; }
+    /* One fixed reading column, an elastic table, and a detail that only opens
+       when a row is picked. The table is the pane whose width actually varies
+       with the metamodel, so it takes the slack. */
+    &__pane--classes { flex: 0 0 200px; }
+    &__pane--table   { flex: 1 1 auto; overflow: hidden; }
+    &__pane--detail  { flex: 0 0 400px; padding: 0; }
 
     /* Eyebrow — 11 / 600 / 0.08em / muted, the 7a heading. */
     &__eyebrow {
@@ -58,8 +60,33 @@
         color: var(--color-form-muted);
     }
 
+    &__toolbar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-shrink: 0;
+
+        .instance-manager__eyebrow { margin-bottom: 0; }
+    }
+
+    /* 12px / 28px / border-strong — the 7a control, same as every select in the rail. */
+    &__search {
+        margin-left: auto;
+        width: 180px;
+        height: 28px;
+        padding: 0 8px;
+        border: 1px solid var(--color-form-border-strong);
+        border-radius: 4px;
+        background: var(--color-form-surface);
+        font-size: 12px;
+        color: var(--color-form-label);
+
+        &::placeholder { color: var(--color-form-muted); }
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: -1px; }
+    }
+
     &__note {
-        margin: 0;
+        margin: 10px 0 0;
         font-size: var(--text-xs);
         line-height: 1.5;
         color: var(--color-form-muted);
@@ -121,16 +148,11 @@
         white-space: nowrap;
     }
 
-    &__row-type,
     &__count {
         flex-shrink: 0;
-        font-size: var(--text-xs);
-        color: var(--color-form-section);
-    }
-
-    &__count {
         min-width: 16px;
         text-align: right;
+        font-size: var(--text-xs);
         font-variant-numeric: tabular-nums;
         color: var(--color-form-muted);
     }
@@ -145,8 +167,161 @@
         color: var(--color-form-muted);
     }
 
-    &__unnamed {
-        font-style: italic;
+    /* ── The collection table ──────────────────────────────────────────────
+       Wide content scrolls INSIDE its own container: a metamodel with fifteen
+       attributes must not make the tab scroll sideways. */
+    &__table-scroll {
+        margin-top: 10px;
+        overflow: auto;
+        flex: 1 1 auto;
+    }
+
+    &__table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: var(--text-sm);
+        color: var(--color-form-label);
+
+        th, td {
+            padding: 5px 10px;
+            text-align: left;
+            font-weight: 400;
+            white-space: nowrap;
+            max-width: 260px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        thead th {
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            background: var(--color-form-surface);
+            border-bottom: 1px solid var(--color-form-border);
+            font-size: var(--text-xs);
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            color: var(--color-form-muted);
+        }
+
+        tbody tr {
+            border-bottom: 1px solid var(--color-slate-100);
+            cursor: pointer;
+
+            &:hover { background: var(--color-bg-tertiary); }
+        }
+    }
+
+    &__tr--selected,
+    &__tr--selected:hover {
+        background: var(--color-selection-bg);
+
+        .instance-manager__td-name { box-shadow: inset 2px 0 0 var(--color-selection-bar); }
+    }
+
+    &__td-name {
+        font-weight: 500;
+        color: var(--color-text-primary);
+    }
+
+    &__th--readonly { color: var(--color-form-border-strong); }
+
+    &__req {
+        margin-left: 2px;
+        color: var(--color-marker-required);
+    }
+
+    &__lock {
+        margin-left: 4px;
+        font-size: 9px;
+        color: var(--color-form-muted);
+    }
+
+    &__th-refs, &__td-refs { text-align: right; }
+
+    &__refcount {
+        display: inline-block;
+        min-width: 18px;
+        padding: 0 5px;
+        border-radius: 9px;
+        background: var(--color-bg-tertiary);
+        font-size: var(--text-xs);
+        font-variant-numeric: tabular-nums;
+        color: var(--color-form-section);
+        cursor: help;
+    }
+
+    /* ── Cells, one line each ─────────────────────────────────────────────── */
+    &__dash, &__unnamed {
+        color: var(--color-form-muted);
+    }
+
+    &__unnamed { font-style: italic; }
+
+    &__swatch-cell, &__pill, &__collection, &__broken {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-width: 0;
+    }
+
+    &__swatch {
+        flex-shrink: 0;
+        width: 14px;
+        height: 14px;
+        border: 1px solid var(--color-form-muted);
+        border-radius: 3px;
+    }
+
+    &__chip {
+        display: inline-block;
+        padding: 0 6px;
+        border: 1px solid var(--color-form-border);
+        border-radius: 9px;
+        font-size: var(--text-xs);
+        line-height: 16px;
+        color: var(--color-form-section);
+    }
+
+    &__pill {
+        padding: 0 6px 0 4px;
+        border: 1px solid var(--color-form-border);
+        border-radius: 9px;
+        font-size: var(--text-xs);
+        line-height: 16px;
+        color: var(--color-form-section);
+
+        i { font-size: 9px; }
+    }
+
+    /* A dangling pointer is the one thing in this table that has to be seen
+       across the room (12d): it is the state that makes a delete unsafe. */
+    &__broken {
+        color: var(--color-error);
+        font-size: var(--text-xs);
+
+        i { font-size: 10px; }
+    }
+
+    &__num { font-variant-numeric: tabular-nums; }
+
+    &__unit {
+        margin-left: 3px;
+        font-size: var(--text-xs);
+        color: var(--color-form-muted);
+    }
+
+    &__code {
+        font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+        font-size: 11px;
+        color: var(--color-form-section);
+    }
+
+    &__bool { color: var(--color-form-section); }
+
+    &__more {
+        flex-shrink: 0;
+        font-size: 10px;
         color: var(--color-form-muted);
     }
 }
