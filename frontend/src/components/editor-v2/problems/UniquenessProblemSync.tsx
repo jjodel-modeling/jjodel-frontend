@@ -21,23 +21,38 @@
  * discard every `className !== 'DObject'`, which is why four `Concept_0` in a
  * metamodel left the registry empty.
  *
- * MEASURED (tick-fix, 2026-08-31), and DELIBERATE: the badge reports COMMITTED state,
- * so it still lights one write after a batch of same-tick duplicates. The earlier
- * diagnosis in this comment was wrong on the mechanism — `idlookup` is not a Proxy, it
- * is a plain object whose `__proto__` is `DPointerTargetable.pendingCreation`, and the
- * `for...in` on line 73 DOES enumerate a pending create (measured 114 vs 112 own keys).
- * What is stale at notify time is every COLLECTION `detect*DuplicateNames` walks
- * (`pkg.classes`, `cls.allAttributes`, `father.children`), written by the persist
- * callback's SetFieldAction one tick later. Baseline re-measured with four `Concept_0`:
- * registry 0 at 1s, 0 at 10s, exactly 4 the moment any other write lands.
+ * MEASURED (badge reconciliation, 2026-08-31): the defect the two notes above described
+ * as "the badge lights one write late" was a MISSED NOTIFICATION, with no upper bound —
+ * a batch of same-tick duplicates left the registry empty until the user happened to
+ * touch a name, a father, or create another named element. Mechanism, measured anew:
+ * `idlookup` is a plain object whose `__proto__` is `DPointerTargetable.pendingCreation`,
+ * so `for...in` DOES enumerate a pending create (122 keys in `for...in` vs 120 own).
+ * The signature therefore reached its FINAL value in the create's own tick, while every
+ * COLLECTION `detect*DuplicateNames` walks (`pkg.classes`, `cls.allAttributes`,
+ * `father.children`) was still stale — the scan ran and found nothing. One tick later the
+ * persist callback filled those collections, but the commit only moves a key from the
+ * proto to the own keys: it touches none of `id`, `name`, `father`, so the signature did
+ * not change and the effect was never re-run. Sampled every 200 ms on two same-named
+ * creates: `detect*` returned 2 while the registry stayed at 0, signature identical
+ * before and after the commit (-622776247 -> -622776247).
  *
- * The tick-fix gives `nameUniqueness.ts` an `includePending` option and the two scans
- * below leave it at its default, `false`. That is a choice, not an omission: a
- * collision the store has not accepted yet is not a problem the user can act on, and
- * an Ecore parse runs with `Constructors.paused`, so its whole output sits in the
- * pending dictionary until `persist` (R-GT-2) — counting it would make the badge flash
- * on every import. Passing `{includePending: true}` to either scan closes the one-write
- * delay; measured, and not taken. See
+ * THE FIX is the `hasOwnProperty` guard in the signature loop below: pending keys are
+ * skipped, so the commit itself is what makes the signature change. It also removes the
+ * scan that used to run, guaranteed empty-handed, inside the create's tick. Cost per call,
+ * measured on the diff itself (`_tmp_badge_fix_verify.ts`, state grown to 150/154 keys):
+ * M2 0.042 ms shipped vs 0.053 before, M1 0.0405 vs 0.0395 — a wash, as the report's own
+ * measure on a 120-element state predicted (0.032 vs 0.033). The scan it now schedules costs
+ * `detectM2DuplicateNames` 0.87 ms / `detectDuplicateNames` 2.59 ms, once per settling
+ * BATCH, not per element. See
+ * docs/discovery/discovery_2026-08-31_badge_riconciliazione.md §3 and §5 (variant b).
+ *
+ * WHAT IS COUNTED DID NOT CHANGE — only WHEN it is recounted. The badge still reports
+ * COMMITTED state: the two scans below leave `nameUniqueness.ts`'s `includePending` at its
+ * default, `false`. That is a choice, not an omission: a collision the store has not
+ * accepted yet is not a problem the user can act on, and an Ecore parse runs with
+ * `Constructors.paused`, so its whole output sits in the pending dictionary until `persist`
+ * (R-GT-2) — counting it would make the badge flash on every import. Passing
+ * `{includePending: true}` to either scan is measured, and not taken. See
  * docs/discovery/discovery_2026-08-31_tick_fix_defaultname.md.
  *
  * MEASURED, and NOT fixed here (2): the registry entry is keyed by the ELEMENT id,
@@ -81,6 +96,13 @@ export function UniquenessProblemSync({ modelid }: Props) {
         const lookup = state?.idlookup ?? {};
         const parts: string[] = [];
         for (const id in lookup) {
+            // Skip pending creates: `idlookup`'s `__proto__` is
+            // `DPointerTargetable.pendingCreation`, so `for...in` enumerates elements the
+            // store has not committed yet. Counting them made the signature reach its final
+            // value in the create's own tick — the commit one tick later changed no field of
+            // the signature, so the effect was never re-run and the registry stayed empty
+            // until an unrelated write. See the note above.
+            if (!Object.prototype.hasOwnProperty.call(lookup, id)) continue;
             const raw = lookup[id] as DObject;
             if (!raw) continue;
             // M1 instances, plus every M2 named element (m2KindOf returns null for
