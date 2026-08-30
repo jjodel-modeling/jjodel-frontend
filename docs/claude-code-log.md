@@ -12,7 +12,7 @@ Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right u
 **Out-of-scope changes**: no
 **Layer Impact Report**: not-required (nessun sorgente)
 **Smoke visivo**: non applicabile
-**Notes**: **Le due misure concordano**, e i referti ora si citano a vicenda invece di stare come alternative. La via implementata e' la **(A)**: gradino 0 nel solo segmento `value`, attivo dove la view dichiara un widget. Motivo dichiarato: e' l'unica che il prompt autorizza da se'. La (B) — tutta la libreria sul segmento — e' una decisione di prodotto sulla natura del compartimento IR e vorrebbe una chiave nuova sull'IR senza VersionFixer; la (C) contraddice la premessa del prompt. Il costo di (A) e' il confine gia' dichiarato: il gradino 1 resta disonorato sul ramo IR.
+**Notes**: **Le due misure concordano**, e i referti ora si citano a vicenda invece di stare come alternative. La via implementata e' la **(A)**, gradino 0 nel solo segmento `value`: e' l'unica che il prompt autorizza da se'. Le altre due, e il costo di (A), stanno in §6bis del referto e nella ratifica di R-STR-6.
 **Prompt document name**: nessun documento
 
 ## 2026-08-30 — feat(editor-v2): l'override della view vince anche sul canvas (R-STR-6)
