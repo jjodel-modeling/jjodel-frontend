@@ -2,6 +2,19 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-08-30 — docs: cosa serve a `WriteCtx`, e la doppia verita' che gia' diverge
+**Prompt**: «Discovery: cosa serve a WriteCtx (la migrazione del motore in `jjform/`)». Quattro domande: inventario delle scritture degli adapter sul D-graph (firma, dilazioni, transazionalita', per sito); minimo comune che le copra senza importare il D-graph, con bozza di `WriteCtx` e mappa sito->metodo; cosa NON puo' migrare e per ciascuna se resta fuori per design o va dichiarata nel contratto; il costo della doppia verita'. Sola lettura, bozza nel referto e non nel sorgente, sequenza di slice proposta.
+**Files touched**: docs/discovery/discovery_2026-08-30_writectx_migrazione_motore.md (nuovo, 410 righe), docs/claude-code-log.md. **Zero sorgenti, zero sonde.** Commit del referto `b9ca883fc`, log a parte.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — nessun file eseguibile toccato, nessun comando di scrittura eseguito. Gate non pertinenti e non girati (sola lettura); `npm run check:docs` 3/3 sul log.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (sola lettura; nessuna modifica a sync/D-L)
+**Smoke visivo**: non applicabile — nessuna modifica di resa. Il perimetro letto (`IRForm`, montato da `InstanceManagerTab` **e** da `PropertiesWithTreeView`) e' registrato nel referto §2.2 perche' la slice S3 proposta tocchera' entrambe le superfici e lo smoke andra' girato su tutte e due.
+**Notes**: Il reperto che decide: tre siti su quattro indirizzano gia' per `(id, chiave)`, solo `IRFormField` passa un proxy L vivo. Tre garanzie da dichiarare nel contratto: filtro containment-loop del picker, rifiuto in scrittura (`formWrite` torna `boolean` dove il core torna `{success, reason}`), doppio legame dell'identita'. Una **divergenza** misurata, non duplicazione: la uniqueness del nome — core al rename su tutto il namespace, motore alla create sui soli fratelli di stessa metaclasse.
+**Prompt document name**: PROMPT_writectx_discovery.md (prompt inline; il documento non esiste in `docs/prompts/`) 2026-08-30 16:10
+
 ## 2026-08-30 — feat(nodes): missing sul nodo, e la delimitazione di R-FORM-10
 **Prompt**: dato in chat, non depositato in `docs/prompts/`. Due lavori, commit separati: (1) applicare a `decisions.md` la delimitazione di R-FORM-10 gia' ratificata dal design (§4 del referto del 30-08), senza riscrivere la parte che resta vera; (2) far arrivare `missing` al nodo — `SlotShape` guadagna `required` dall'adapter, la guardia entra in `detectValueRenderer` fra `dash` e `brokenRef` come UNA decisione, il nodo la riceve dalla ladder (precedente R-STR-6 (B)).
 **Files touched**: editor-v2/nodes/{valueRenderer.ts, RowValue.tsx, instanceNode.scss, ObjectNode.tsx} + 1 test, editor-v2/{types.ts, utils/jjomTransformers.ts}, abstract/tabs/{instanceTable.ts, InstanceManagerTab.tsx} + 1 test, docs/decisions.md (R-FORM-10 delimitata, R-FORM-15 nuova), docs/discovery/discovery_2026-08-30_missing_sul_nodo.md (nuovo), docs/claude-code-log.md. Sonda `scripts/smoke/_tmp_missing_verify.ts` e i tre `.png` (non committati). Commit `eae3af0fa` (delimitazione), `a42e9f2b8` (sorgenti), `f9b3390aa` (docs), log a parte. **Zero file condivisi** con le sessioni parallele (R-SMK-3 su `scripts/smoke/`, atterrata come `627ac1a0f`; censimento `.delete()` in sola lettura, `98860ca1f`/`d8d3439a5`), verificato su `git status` prima di ogni commit.
