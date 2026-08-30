@@ -2158,16 +2158,54 @@ anche `.father`, `.instances`, `.objects`, `.model` e una voce nuda `objects` se
 e le sole sorgenti che sono riferimenti sono `idlookup.<id>.values[.<n>]`. Una voce per
 PUNTATORE, non per istanza: il dialogo di 12d deve riassegnarne uno per uno.
 
+**R-FORM-9** (2026-08-30) — **La cascata di containment la fa l'ADAPTER: il core non la
+fa.** Corregge una riga di questa stessa pagina, scritta come assunzione e mai misurata.
+`Dummy.get_delete` scende su `lDeleted.children`; per un `DObject` sono i suoi slot
+(`LModelElement.tsx:6439`), e `LValue` **non** dichiara `get_children_idlist`, quindi
+eredita quello di base (`:727`) che restituisce le sole `annotations`. Un `DObject`
+contenuto sta nei `values` dello slot, non fra i `children` di nessuno. Misurato sul
+fixture RowViewSmoke con `cfg` acceso a containment: cancellare il contenitore porta i
+`DObject` da 7 a 6 — muore **solo** il contenitore — e il figlio resta con un `father` che
+non risolve. E' un **orfano invisibile**: ogni lista del manager risale `father` fino a un
+`DModel`, quindi una catena rotta lo fa sparire dalle liste senza sparire dallo store.
+`deleteDraw.descendantsOf` e' la chiusura che l'adapter cancella esplicitamente, dal piu'
+profondo. Sonda `scripts/smoke/_tmp_delete_primitive.ts`, referto in
+`docs/discovery/discovery_2026-08-30_slice12d_delete.md`.
+
+**R-FORM-10** (2026-08-30) — **Un delete lascia uno slot VUOTO, non un puntatore appeso.**
+Misurato: la cascata del core raggiunge `case 'values'` e fa
+`SetFieldAction(slot, 'values', deletedID, '-=')`, quindi **accorcia** l'array
+(`0..*` a due bersagli, cancellato quello in posizione 0: `len` 2 -> 1). Contraddice il
+commento del fixture `RowViewSmoke` del 28/08 («the reducer scrubs no inbound pointer»),
+e spiega l'altra sua nota, «the broken reference renders as a dash»: non c'e' nessun
+puntatore appeso da rendere. Due conseguenze ratificate. (1) Il «ref rotto» della regola 2
+di 12d e' l'altra meta' di cio' che la sezione 2 del contratto chiama tale — «id assente
+**o ""**» — cioe' un ref `required` rimasto senza valori, che `instanceTable` rende ora
+come `missing` invece che come trattino. (2) `clear` e `dirty` sono due scritture
+**diverse**: `clearSlotValue` lascia un buco (R-FORM-7), la cascata accorcia. Su un
+monovalore coincidono, su un multivalore no, ed e' per questo che le opzioni sono tre e
+non due.
+
+**R-FORM-11** (2026-08-30) — **Se il piano ha scritto prima, le delete sono differite.**
+Nello stesso tick le due operazioni atterrano nell'ordine sbagliato e un valore si perde:
+misurato: un `clear` di `allNine_broken.cfg[0]` seguito subito dalla delete del bersaglio
+lasciava lo slot a `[null]` invece che a `[null, Config_two]`. Le stesse due primitive con
+un'attesa in mezzo danno lo stato giusto, e restano corrette anche dopo la delete. La
+dilazione e' `U.UpdatingTimer * 2`, la stessa che `LValue.addObject` usa per il proprio
+seeding e che CLAUDE.md §9.2 prescrive. Un piano `dirty` non scrive nulla prima e **non**
+e' differito.
+
 ### Perimetro delle slice
 
 **Slice 2a** (2026-08-30, commit `9ab7560d0`) — tab, colonna metaclassi, lista istanze,
 `IRForm` ospitato. **Non e' read-only**: ospitare `IRForm` porta con se' tutto
 `formWrite.ts`, quindi il tab edita dalla prima slice; read-only sono le sue due liste.
 **Slice 2b** — le colonne per-attributo, che e' dove nasce `ShapeCtx` e dove serve la
-risposta a Q4. **Slice 2c** — create e delete, con la cascata di containment resa esplicita
-in UI: il cascade canonico gia' cancella i contenuti (`Dummy.get_delete`) e non chiede.
-**Fuori dalla Fase 2**: l'estrazione in `jjform/` (aspetta il contratto META) e il diagramma
-scopato.
+risposta a Q4. **Slice 2c** — la sola create (motore `jjform/create.ts` + `createAdapter`).
+**Slice 12d** — la delete col preflight, che la 2c aveva lasciato indietro.
+~~il cascade canonico gia' cancella i contenuti (`Dummy.get_delete`) e non chiede~~ —
+**falso, misurato il 2026-08-30**: vedi R-FORM-9. **Fuori dalla Fase 2**: l'estrazione in
+`jjform/` (aspetta il contratto META) e il diagramma scopato.
 
 ## Superate
 

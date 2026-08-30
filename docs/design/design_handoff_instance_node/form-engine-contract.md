@@ -204,6 +204,47 @@ Il motore puro sta in `frontend/src/jjform/create.ts` (zero import, come `shape.
   «reference seleziona», il gesto sbagliato per uno slot di containment. La create
   contenuta e' quindi una barra accanto alla form, non un bottone dentro.
 
+## 5.2 `delete` — quello che la slice 12d ha implementato
+
+Il motore puro sta in `frontend/src/jjform/delete.ts` (zero import, come
+`shape.ts` e `create.ts`): `deletePreflight`, `deleteVerdict`, `deletePlan`.
+L'applicazione al D-graph sta nell'adapter, `editor-v2/hooks/deleteAdapter`, con la
+metà pura in `deleteDraw.ts`. Misure in
+`docs/discovery/discovery_2026-08-30_slice12d_delete.md`.
+
+- **Il preflight è SEMPRE calcolato**, referenziato o no. Non referenziato e senza
+  discendenti: conferma semplice, «This cannot be undone.». Referenziato: i
+  referrer elencati **per nome** e per feature — uno per PUNTATORE, non per istanza
+  (R-FORM-8), perché ognuno va riassegnato per conto suo.
+- **Tre verdetti, un evento.** `{ reassignTo }`, `{ clearRefs: true }`, `{}`. Non
+  sono due travestiti da tre: `clearSlotValue` lascia un **buco** (R-FORM-7) mentre
+  la cascata del core **accorcia** l'array per valore — misurato su uno slot `0..*`
+  a due bersagli. Su un monovalore coincidono, su un multivalore no. La simulazione
+  li fonde in una riga perché nel suo modello in memoria l'effetto è lo stesso; qui
+  le righe sono due, e la riga della reassign resta quella del design.
+- **La cascata di containment è dell'ADAPTER, non del core.** Misurato: `Dummy.get_delete`
+  scende su `children`, e un `DObject` contenuto sta nei `values` dello slot, non fra
+  i `children` di nessuno. Cancellare il contenitore lasciava il figlio **orfano** e
+  invisibile (le liste risalgono `father` fino a un `DModel`). Il piano elenca i
+  discendenti e li cancella **dal più profondo**; il preflight li conta prima.
+- **I referrer VERSO i discendenti sono referrer**, e il dialogo lo dice
+  (`viaDescendant`). I puntatori tenuti da chi sta morendo sono invece scartati:
+  riassegnarli sarebbe modificare un fantasma.
+- **Il delete sporco è dichiarato, non impedito** (sezione 2). `DeletePlan.invalidates`
+  nomina i referrer il cui slot scende sotto il proprio `lower`, e la tabella rende
+  come `missing` un ref `required` rimasto senza valori. Non c'è puntatore appeso da
+  rendere: il core toglie il puntatore entrante, quindi lo stato invalido è lo slot
+  VUOTO — l'altra metà di «id assente o ""».
+- **`blocked`** è la delete che l'host rifiuterà comunque. L'unico caso misurato è
+  l'istanza singleton: `LObject.get_delete` logga e ritorna. Dichiarato nel
+  preflight, mai scoperto premendo il bottone.
+- **Le delete sono differite di `U.UpdatingTimer * 2` quando il piano ha scritto
+  prima** (reassign o clear). Non è una precauzione: nello stesso tick le due
+  operazioni atterrano nell'ordine sbagliato e un valore si perde — misurato. Un
+  piano `dirty` non scrive nulla e non è differito.
+- **Fuori dalla 12d**: la multi-selezione (12b), l'undo/redo oltre a quello che il
+  core già offre, l'outline di 10b.
+
 ## Punti aperti — stato al 2026-08-30
 
 1. **La shape si deriva tutta dal joiner senza passare dal renderer?** — **Si', ora.**
