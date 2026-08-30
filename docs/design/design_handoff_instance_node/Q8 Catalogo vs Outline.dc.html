@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <meta name="design_doc_mode" content="canvas">
+  <link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/tokens/fonts.css">
+  <link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/tokens/colors.css">
+  <link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/tokens/typography.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+  <style>
+    body { margin: 0; background: #f8fafc; font-family: 'Inter', sans-serif; }
+    a { color: #0ea5e9; } a:hover { color: #0284c7; }
+  </style>
+</helmet>
+<section style="padding: 32px 40px 48px; display: flex; flex-direction: column; gap: 20px;">
+  <div style="display: flex; flex-direction: column; gap: 6px; max-width: 980px;">
+    <span style="font-size: 22px; font-weight: 700; color: #0f172a;">Q8 — dove vive la create (e la navigazione): catalogo o outline</span>
+    <span style="font-size: 13px; color: #64748b; line-height: 1.6;">La scelta rimandata da 2c «col peso giusto». Stesso fixture nei due mock: un modello State Machine con containment a 4 livelli, 8 metaclassi, 23 istanze. L'evento di create è UNO in entrambi (<code style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">create(cls, ownerId, childKey)</code>, R-2C-1) — cambia solo la superficie del gesto.</span>
+  </div>
+  <div style="display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap;">
+
+    <div id="1a" style="display: flex; flex-direction: column; gap: 12px; width: 660px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="background: #334155; color: #ffffff; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 4px;">1a</span>
+        <span style="font-size: 14px; font-weight: 600; color: #0f172a;">Catalogo — per metaclasse (lo status quo di 2a–2c)</span>
+      </div>
+      <div style="background: #ffffff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); overflow: hidden; display: flex; height: 400px;">
+        <div style="width: 190px; border-right: 1px solid #e2e8f0; padding: 12px 0; display: flex; flex-direction: column;">
+          <span style="font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8; padding: 0 14px 8px;">Metaclasses</span>
+          <sc-for list="{{ metaclasses }}" as="mc" hint-placeholder-count="6">
+            <div style="display: flex; align-items: center; gap: 8px; padding: 6px 14px; font-size: 12px; color: #0f172a; background: {{ mc.bg }}; cursor: pointer;">
+              <span style="width: 16px; height: 16px; border-radius: 4px; background: #fee2e2; color: #dc2626; font-size: 9px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; flex: none;">C</span>
+              <span style="flex: 1;">{{ mc.name }}</span>
+              <span style="font-size: 11px; color: #94a3b8;">{{ mc.count }}</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="flex: 1; display: flex; flex-direction: column;">
+          <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">
+            <span style="font-size: 13px; font-weight: 600; color: #0f172a;">State · 9 instances</span>
+            <span style="display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(#64748b, #475569); color: #ffffff; font-size: 12px; font-weight: 500; padding: 6px 12px; border-radius: 8px; cursor: pointer;"><i class="bi bi-plus-lg"></i>New State</span>
+          </div>
+          <div style="flex: 1; padding: 8px 16px; display: flex; flex-direction: column; font-size: 12px; color: #334155;">
+            <sc-for list="{{ states }}" as="s" hint-placeholder-count="5">
+              <div style="display: grid; grid-template-columns: 1fr 110px 90px; gap: 10px; padding: 6px 4px; border-bottom: 1px solid #f1f5f9; align-items: baseline;">
+                <span style="font-weight: 500;">{{ s.name }}</span>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #64748b;">{{ s.owner }}</span>
+                <span style="font-size: 11px; color: #94a3b8;">{{ s.kind }}</span>
+              </div>
+            </sc-for>
+            <span style="font-size: 11px; color: #94a3b8; padding: 10px 4px;">Transition: created from its container's form (Add on the child slot) — the button is absent here, not disabled.</span>
+          </div>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="display: flex; gap: 8px; align-items: baseline; font-size: 12px; color: #475569;"><i class="bi bi-check-circle" style="color: #22c55e;"></i><span><strong style="color: #0f172a;">Metaclassi molte:</strong> scala — la lista è piatta, i conteggi orientano; trovare «tutti gli State» è un click.</span></div>
+        <div style="display: flex; gap: 8px; align-items: baseline; font-size: 12px; color: #475569;"><i class="bi bi-x-circle" style="color: #ef4444;"></i><span><strong style="color: #0f172a;">Modello profondo:</strong> il DOVE è invisibile — l'owner è una colonna mono, non un posto; per capire la gerarchia serve aprire N form.</span></div>
+        <div style="display: flex; gap: 8px; align-items: baseline; font-size: 12px; color: #475569;"><i class="bi bi-x-circle" style="color: #ef4444;"></i><span><strong style="color: #0f172a;">Create annidata:</strong> due gesti lontani — la rootable sta qui, la contenuta dentro la form del padre: l'utente impara due posti.</span></div>
+      </div>
+    </div>
+
+    <div id="1b" style="display: flex; flex-direction: column; gap: 12px; width: 660px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="background: #0891b2; color: #ffffff; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 4px;">1b</span>
+        <span style="font-size: 14px; font-weight: 600; color: #0f172a;">Outline — l'albero di containment (10b)</span>
+      </div>
+      <div style="background: #ffffff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); overflow: hidden; display: flex; height: 400px;">
+        <div style="width: 300px; border-right: 1px solid #e2e8f0; padding: 12px 0; display: flex; flex-direction: column; overflow: hidden;">
+          <span style="font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8; padding: 0 14px 8px;">Model outline</span>
+          <sc-for list="{{ outline }}" as="n" hint-placeholder-count="10">
+            <div style="display: flex; align-items: center; gap: 6px; padding: 4px 14px; padding-left: {{ n.pad }}; font-size: 12px; color: #0f172a; background: {{ n.bg }}; cursor: pointer;">
+              <i class="bi {{ n.icon }}" style="font-size: 12px; color: {{ n.iconColor }};"></i>
+              <span style="flex: 1; font-weight: {{ n.weight }};">{{ n.name }}</span>
+              <span style="font-size: 10px; color: #94a3b8; font-family: 'IBM Plex Mono', monospace;">{{ n.cls }}</span>
+              <sc-if value="{{ n.canAdd }}" hint-placeholder-val="{{ false }}">
+                <i class="bi bi-plus-square" style="font-size: 12px; color: #0891b2;"></i>
+              </sc-if>
+            </div>
+          </sc-for>
+          <div style="margin: 8px 14px 0; padding: 8px 10px; background: #e0f7fa; border-radius: 6px; font-size: 11px; color: #155e75; line-height: 1.5;">Il «+» su un nodo apre il menu dei child-slot leciti di QUEL nodo (upper pieno = voce assente + motivo). Sul nodo modello: le sole metaclassi rootable.</div>
+        </div>
+        <div style="flex: 1; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px;">
+          <span style="font-size: 13px; font-weight: 600; color: #0f172a;">Idle <span style="font-size: 11px; font-weight: 400; color: #94a3b8;">— State · in Region_main</span></span>
+          <div style="display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: #334155;">
+            <div style="display: grid; grid-template-columns: 90px 1fr; gap: 8px; align-items: center;"><span style="color: #64748b;">name</span><span style="border: 1px solid #e2e8f0; border-radius: 4px; padding: 5px 8px;">Idle</span></div>
+            <div style="display: grid; grid-template-columns: 90px 1fr; gap: 8px; align-items: center;"><span style="color: #64748b;">kind</span><span style="border: 1px solid #e2e8f0; border-radius: 4px; padding: 5px 8px; display: inline-flex; align-items: center; gap: 6px;"><span style="width: 8px; height: 8px; border-radius: 999px; background: #22c55e;"></span>initial</span></div>
+            <div style="display: grid; grid-template-columns: 90px 1fr; gap: 8px; align-items: baseline;"><span style="color: #64748b;">outgoing</span><span style="font-size: 11px; color: #64748b;">t1 → Running · <span style="color: #0891b2; cursor: pointer;">Add Transition</span></span></div>
+          </div>
+          <span style="font-size: 11px; color: #94a3b8; line-height: 1.6; margin-top: auto;">La form del nodo selezionato è la STESSA IRForm del manager — l'outline è una superficie di navigazione in più, non un motore in più. La tabella per metaclasse resta: outline per il dove, tabella per il quanto.</span>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="display: flex; gap: 8px; align-items: baseline; font-size: 12px; color: #475569;"><i class="bi bi-check-circle" style="color: #22c55e;"></i><span><strong style="color: #0f172a;">Modello profondo:</strong> il DOVE è la struttura stessa; la catena dei padri si vede, non si ricostruisce.</span></div>
+        <div style="display: flex; gap: 8px; align-items: baseline; font-size: 12px; color: #475569;"><i class="bi bi-check-circle" style="color: #22c55e;"></i><span><strong style="color: #0f172a;">Create annidata:</strong> UN gesto, sempre lo stesso — «+» sul padre, ovunque sia; rootable = «+» sulla radice: il caso speciale sparisce.</span></div>
+        <div style="display: flex; gap: 8px; align-items: baseline; font-size: 12px; color: #475569;"><i class="bi bi-x-circle" style="color: #ef4444;"></i><span><strong style="color: #0f172a;">Metaclassi molte:</strong> «tutti gli State» non esiste come vista — serve la tabella accanto (o un filtro), l'outline da solo non basta.</span></div>
+      </div>
+    </div>
+
+  </div>
+  <div style="max-width: 1344px; background: #ffffff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); padding: 16px 20px; display: flex; flex-direction: column; gap: 8px;">
+    <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8;">La mia raccomandazione</span>
+    <span style="font-size: 13px; color: #334155; line-height: 1.7;"><strong>Non è un aut-aut: è una divisione di ruoli.</strong> L'outline (<a href="#1b">1b</a>) diventa la sede PRIMARIA della create e della navigazione — un gesto solo, il dove visibile, il caso rootable/contenuta unificato. Il catalogo (<a href="#1a">1a</a>) resta come vista per-metaclasse (la tabella di 2b coi suoi 9 renderer e «referenced by»), e il suo <em>New</em> sopravvive come scorciatoia per le sole rootable — stesso evento, stessa form. 10b quindi non sostituisce il manager: gli aggiunge il pannello che gli manca. Il costo: un pannello in più da mantenere; il filtro «tutti gli X» resta alla tabella, che è già costruita.</span>
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const P = (d) => (14 + d * 16) + 'px';
+    return {
+      metaclasses: [
+        { name: 'Machine', count: 1, bg: 'transparent' },
+        { name: 'Region', count: 3, bg: 'transparent' },
+        { name: 'State', count: 9, bg: '#f1f5f9' },
+        { name: 'Transition', count: 7, bg: 'transparent' },
+        { name: 'Config', count: 2, bg: 'transparent' },
+        { name: 'Guard', count: 1, bg: 'transparent' }
+      ],
+      states: [
+        { name: 'Idle', owner: 'Region_main', kind: 'initial' },
+        { name: 'Running', owner: 'Region_main', kind: 'normal' },
+        { name: 'Paused', owner: 'Region_main', kind: 'normal' },
+        { name: 'Draining', owner: 'Region_aux', kind: 'normal' },
+        { name: 'Fault', owner: 'Region_err/Nested_1', kind: 'final' }
+      ],
+      outline: [
+        { name: 'plant_model', cls: 'Model', icon: 'bi-box', iconColor: '#d97706', pad: P(0), weight: 600, bg: 'transparent', canAdd: true },
+        { name: 'MainUnit', cls: 'Machine', icon: 'bi-diagram-3', iconColor: '#dc2626', pad: P(1), weight: 500, bg: 'transparent', canAdd: true },
+        { name: 'Region_main', cls: 'Region', icon: 'bi-folder', iconColor: '#2563eb', pad: P(2), weight: 400, bg: 'transparent', canAdd: true },
+        { name: 'Idle', cls: 'State', icon: 'bi-circle', iconColor: '#64748b', pad: P(3), weight: 500, bg: '#e0f7fa', canAdd: true },
+        { name: 't1 \u2192 Running', cls: 'Transition', icon: 'bi-arrow-right', iconColor: '#0891b2', pad: P(4), weight: 400, bg: 'transparent', canAdd: false },
+        { name: 'Running', cls: 'State', icon: 'bi-circle', iconColor: '#64748b', pad: P(3), weight: 400, bg: 'transparent', canAdd: true },
+        { name: 'Paused', cls: 'State', icon: 'bi-circle', iconColor: '#64748b', pad: P(3), weight: 400, bg: 'transparent', canAdd: true },
+        { name: 'Region_err', cls: 'Region', icon: 'bi-folder', iconColor: '#2563eb', pad: P(2), weight: 400, bg: 'transparent', canAdd: true },
+        { name: 'Nested_1', cls: 'Region', icon: 'bi-folder', iconColor: '#2563eb', pad: P(3), weight: 400, bg: 'transparent', canAdd: true },
+        { name: 'Fault', cls: 'State', icon: 'bi-circle', iconColor: '#64748b', pad: P(4), weight: 400, bg: 'transparent', canAdd: true },
+        { name: 'cfg_default', cls: 'Config', icon: 'bi-gear', iconColor: '#7c3aed', pad: P(1), weight: 400, bg: 'transparent', canAdd: false }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>
