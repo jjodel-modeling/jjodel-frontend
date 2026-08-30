@@ -1884,7 +1884,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                             // console.log(`[ProjectEditor] LModel has ${objects.length} objects:`, objects.map((o: LObject) => o.name));
 
                             // Resolve an object of the fresh model BY NAME, declaring ambiguity
-                            // instead of resolving it (R-S1-3). `.find` answered "the first" to a
+                            // instead of resolving it (R-S1-5). `.find` answered "the first" to a
                             // question with no single answer: two homonyms meant the attributes
                             // landed on one of them and the pointer pointed at one of them, with
                             // nothing said about the choice. Returns null on 0 AND on 2+; the

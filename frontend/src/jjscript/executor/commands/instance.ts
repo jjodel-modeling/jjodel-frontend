@@ -105,7 +105,7 @@ function findMetaclassByName(metamodel: LModel, className: string): LClass | nul
 /**
  * Every instance of the target M1 model carrying this name — the RAW lookup.
  *
- * Returns the LIST, never one of them (R-S1-3). A name is not a key: `model.objects`
+ * Returns the LIST, never one of them (R-S1-5). A name is not a key: `model.objects`
  * can legitimately hold several instances that share one, and the `.find` this used to
  * be answered "the first" to a question that has no single answer. Whoever needs ONE
  * goes through `resolveInstanceHandle`, which turns the list into a verdict.

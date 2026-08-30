@@ -113,7 +113,7 @@ function findUnresolved(
         if (m1Model) {
             const instanceName = dep.name.segments.join('::') || dep.name.raw;
             // `.length > 0`, never the bare value: `findInstanceByName` returns the LIST of
-            // matches (R-S1-3), and an EMPTY ARRAY IS TRUTHY. Written as a truthiness test
+            // matches (R-S1-5), and an EMPTY ARRAY IS TRUTHY. Written as a truthiness test
             // this would report every M1 dependency as resolved on the first poll — the
             // waiter would exit at once and the commands would run before the instance
             // exists, with no compile error to show for it.

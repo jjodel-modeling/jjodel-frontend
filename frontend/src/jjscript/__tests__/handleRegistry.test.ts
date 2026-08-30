@@ -200,7 +200,7 @@ describe('handleRegistry primitives', () => {
     });
 });
 
-// --- 8. Ambiguity is declared, never resolved (R-S1-3) ----------------------
+// --- 8. Ambiguity is declared, never resolved (R-S1-5) ----------------------
 
 describe('ambiguous names are declared, not resolved', () => {
     it('refuses to pick one of two pre-existing homonyms, and names both', () => {
