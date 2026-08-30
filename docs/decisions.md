@@ -2613,6 +2613,95 @@ alla slice S1-M2 e **non** e' toccato qui. Questo fix lo rende piu' visibile, no
 una delle scelte silenziose gia' censite invece di restare fuori dal censimento.
 
 
+## Serie R-M2U — una regola di uniqueness per i nomi M2 (ratifiche 2026-08-30)
+
+A valle di `discovery_2026-08-30_uniqueness_m2.md`, che aveva misurato **tre** regole M2
+discordanti e una create che non ne applicava nessuna. Il precedente formale e' S1a
+(`f32c5a4d3`): una regola all'incrocio delle due vie, mai due copie. Misura della slice:
+`discovery_2026-08-30_s1m2_una_regola.md` (Fase 1 + addendum di Fase 2).
+
+**R-M2U-1** (2026-08-30) — **Case-sensitive, e il quasi-omonimo si dichiara.** `Foo` e
+`foo` sono nomi diversi e leciti; la scrittura che crea la quasi-collisione la **annuncia**
+(`UniquenessVerdict.warning`, un toast di priorita' `warning`), non la rifiuta. Il rename
+di JjScript (`commands/rename.ts`) si allinea al sensitive e **smette di bypassare**
+`set_name`: `checkNameConflict` non e' stato ristretto, e' stato **rimosso**, e il comando
+scrive con `element.name = newName`, cosi' gli effetti che appartengono al setter
+(`LClass` che riemette `ClassNameChanged.<id>`, `LAttribute` che re-inferisce il tipo) non
+vanno piu' ricostruiti a mano. **Cambia comportamento committato**: `classe -> 'dupprobe'`
+con `DupProbe` in campo, che quel comando rifiutava, ora passa con un warning.
+
+**R-M2U-2** (2026-08-30) — **Il pool dei classificatori e' il METAMODELLO INTERO.** Due
+classi omonime in package diversi dello stesso metamodello **collidono**; lo stesso nome in
+un altro metamodello e' lecito. Classi ed enumeratori restano in **un solo** namespace,
+com'erano gia' dentro `pkg.children`: separarli avrebbe spento un controllo committato.
+Cambia comportamento: il cross-package omonimo, oggi accettato, e' rifiutato.
+
+**R-M2U-3** (2026-08-30) — **`DDataType` e' un namespace separato.** Una classe e un
+datatype possono condividere il nome. Il «buco» del referto — un rename di classe verso il
+nome di un datatype passa — **non e' un buco**: si chiude come comportamento **inteso**.
+Cio' che i datatype guadagnano e' un namespace proprio, che prima non avevano affatto
+(`pkg.children` non li elenca), quindi due datatype omonimi ora collidono fra loro.
+
+**R-M2U-4** (2026-08-30) — **Le feature ereditate ENTRANO nel namespace della classe: niente
+shadowing.** Un attributo che ombreggia una feature del padre e' rifiutato, e la `reason`
+**nomina il padre** (`… inherited from Class "Sup"`). Attributi, reference e operazioni
+restano un namespace solo, come nell'unione che `LClass.get_children_idlist` gia' faceva.
+
+Conseguenza misurata e **non teorica**: `useClassRemoval.collapseHierarchy` ricopia nelle
+sottoclassi le feature che stanno per perdere, e gira **prima** che la superclasse sparisca
+— quindi ogni copia risultava ombreggiata e veniva **rifiutata**, con perdita silenziosa
+delle feature alla rimozione (misurato: lista `["shLabel"]`, `addAttribute` -> `null`,
+`ownAttributes` invariati). La ricopia usa ora `D*.new` diretta, cioe' **la porta del
+caricamento**, che il disegno lascia deliberatamente non gatata perche' riproduce uno stato
+invece di proporne uno. Il gate resta sul primitivo L, dove arrivano i gesti d'utente.
+E' l'unico file oltre ai cinque del perimetro dichiarato, e sta nel log come
+`Out-of-scope changes: yes`.
+
+**R-M2U-5** (2026-08-30) — **Il gradino 2 di `get_type` resta morto, dichiarato.** Zero
+comportamento: un commento sul sito e questa riga. La ragione e' che ripararlo
+(`model` e' dichiarata e mai assegnata, R-M2-2) **restringerebbe il pool** da globale a
+per-modello, ed e' proprio il pool che R-M2U-2 ha appena reso metamodello-wide: chi
+riaprira' il punto decide il pool per primo e l'assegnazione per seconda.
+
+**R-M2U-6** (2026-08-30) — **Il badge copre M2.** `detectM2DuplicateNames` alimenta lo
+stesso registro `duplicate-name`, con la stessa forma degli M1 (chiave = id dell'elemento),
+e la firma di reattivita' di `UniquenessProblemSync` smette di scartare tutto cio' che non
+e' `DObject`. Misurato: i quattro `Concept_0` della propagazione accendono **4** voci sulle
+quattro classi giuste; un metamodello pulito lascia il registro spento.
+
+Due limiti **dichiarati e non chiusi**, entrambi misurati:
+- **Il ritardo di una scrittura.** La firma legge l'**enumerazione** di `state.idlookup`, e
+  `idlookup` e' un Proxy la cui `get` risolve una create pendente ma la cui enumerazione
+  **non la elenca** (`Object.keys` invariato, colpo diretto per id positivo). Un lotto di
+  create nello stesso tick lascia quindi la firma stantia finche' non arriva **un'altra**
+  notifica: il registro si accende una scrittura dopo, non mai (misurato: 0 dopo 9 s, 4
+  all'istante della scrittura successiva). Preesistente e indipendente dal livello — la
+  meta' M1 legge la stessa firma.
+- **La voce non si vede sul canvas.** Il registro e' indicizzato per id dell'**elemento**,
+  mentre `NodeProblemIndicator` e' montato con l'id del nodo ReactFlow, che e' quello del
+  **`DVertex`** — e a M1 vale lo stesso. `ConformanceProblemSync` aggira registrando sotto
+  entrambi gli id; `ClassNode` non monta affatto l'indicatore. Fuori perimetro.
+
+**Il tick-fix e' rimandato, con la sua misura.** Il duplicato di propagazione di
+`defaultname` (quattro `addClass()` in un tick -> quattro `Concept_0`) **non e' chiudibile
+nel namespace-check**: nessuna sorgente — collezione, `children`, o scansione di
+`idlookup` — puo' vedere una create dello stesso tick, per la proprieta' del Proxy qui
+sopra. Misurato con la scansione eseguita **prima di ciascuna** delle quattro create:
+cinque scansioni identiche, `[[],[],[],[],[]]`. Il duplicato **strutturale** (`datatype_0`
+x2) si chiude invece come **non raggiungibile**: non esiste un `addDataType` a livello L, e
+l'unico `DDataType.new` di produzione (`api/data.ts:868`) passa un nome esplicito. Riserva:
+se un `addDataType` nascera', il gate esiste gia' per costruzione (R-M2U-3).
+
+Misurato a schermo, `_tmp_s1m2_verify.ts`, **26/26 ALL GREEN, zero errori di pagina**: i tre
+contro-esempi del referto danno verdetto **identico** su create e rename, il cross-package
+e' rifiutato, il quasi-omonimo passa **col toast**, lo shadowing e' rifiutato **col padre
+nella reason**, classe e datatype omonimi convivono, e il badge conta 4 su 4. Unita':
+`model/__tests__/m2NameUniqueness.test.ts`, **22/22**, girate anche contro **tre** versioni
+difettose del modulo (3, 2 e 2 rossi). Il cross-metamodello resta coperto dall'unita' e
+**non** dalla sonda: il fixture ha un solo metamodello, e la sonda si dichiara `SKIP`
+invece di passare a vuoto.
+
+
 ## Superate
 
 - **D3** (2026-07-26, routing congelato in v1) — superata da E-route il 2026-08-06.
