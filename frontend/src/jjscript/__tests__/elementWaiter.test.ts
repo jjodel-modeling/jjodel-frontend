@@ -111,11 +111,31 @@ describe('waitForDependencies — M2 path unchanged', () => {
 });
 
 describe('shared M1 lookups (exported from instance.ts)', () => {
-    it('findInstanceByName matches by name in model.objects', () => {
+    it('findInstanceByName returns the LIST of matches in model.objects', () => {
         const model: any = { objects: [{ id: 'o1', name: 'Alice' }] };
-        expect(findInstanceByName(model, 'Alice')).toEqual({ id: 'o1', name: 'Alice' });
-        expect(findInstanceByName(model, 'Bob')).toBeNull();
-        expect(findInstanceByName({} as any, 'Alice')).toBeNull();
+        expect(findInstanceByName(model, 'Alice')).toEqual([{ id: 'o1', name: 'Alice' }]);
+        expect(findInstanceByName(model, 'Bob')).toEqual([]);
+        expect(findInstanceByName({} as any, 'Alice')).toEqual([]);
+    });
+
+    it('returns every homonym, so no caller can silently get "the first"', () => {
+        const model: any = { objects: [
+            { id: 'o1', name: 'Alice' },
+            { id: 'o2', name: 'Bob' },
+            { id: 'o3', name: 'Alice' },
+        ] };
+        expect(findInstanceByName(model, 'Alice').map((o: any) => o.id)).toEqual(['o1', 'o3']);
+    });
+
+    it('the empty result is falsy ONLY via .length — the waiter\'s trap', () => {
+        // Pinned deliberately. `findUnresolved` used to read this value for truthiness,
+        // and [] is truthy: written that way every M1 dependency reads as resolved on the
+        // first poll and the commands run before the instance exists, with no compile
+        // error. The assertion below is the reason elementWaiter.ts:115 says `.length > 0`.
+        const empty = findInstanceByName({ objects: [] } as any, 'Nobody');
+        expect(empty).toEqual([]);
+        expect(Boolean(empty)).toBe(true);        // the trap, stated
+        expect(empty.length > 0).toBe(false);     // the correct test
     });
 
     it('resolveTargetModel finds the non-metamodel model by id', () => {

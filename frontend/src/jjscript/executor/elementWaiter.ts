@@ -112,7 +112,16 @@ function findUnresolved(
         // args.target.raw` derivation of the instance name.
         if (m1Model) {
             const instanceName = dep.name.segments.join('::') || dep.name.raw;
-            if (findInstanceByName(m1Model, instanceName)) return false; // resolved
+            // `.length > 0`, never the bare value: `findInstanceByName` returns the LIST of
+            // matches (R-S1-3), and an EMPTY ARRAY IS TRUTHY. Written as a truthiness test
+            // this would report every M1 dependency as resolved on the first poll — the
+            // waiter would exit at once and the commands would run before the instance
+            // exists, with no compile error to show for it.
+            //
+            // Ambiguity is deliberately NOT a refusal here: this is a wait, not a write.
+            // Two instances carrying the name means the thing being waited for has arrived;
+            // WHICH of them was meant is the question the command handler refuses on.
+            if (findInstanceByName(m1Model, instanceName).length > 0) return false; // resolved
         }
         // Try scoped resolution first (matching what the command handlers do)
         if (targetMetamodel) {

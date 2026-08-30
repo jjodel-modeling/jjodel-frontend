@@ -30,7 +30,7 @@ vi.mock('../../joiner', () => ({
     LClass: class {},
 }));
 
-import { resolveInstanceHandle, findInstanceByName } from '../executor/commands/instance';
+import { resolveInstanceHandle, findInstanceByName, describeAmbiguity } from '../executor/commands/instance';
 import {
     registerHandle,
     getHandleId,
@@ -70,9 +70,9 @@ describe('set x.name is innocuous (re-key bug)', () => {
         a.name = 'clk';
 
         // subsequent command `set p1.direction = ...` still resolves via the handle
-        expect(resolveInstanceHandle(m, 'p1')).toBe(a);
+        expect(resolveInstanceHandle(m, 'p1').value).toBe(a);
         // whereas the old name-based lookup can no longer find "p1" (the source of the bug)
-        expect(findInstanceByName(m, 'p1')).toBeNull();
+        expect(findInstanceByName(m, 'p1')).toEqual([]);
     });
 });
 
@@ -88,8 +88,8 @@ describe('duplicate name attributes are expressible and addressable', () => {
         b.name = 'clk';
         const m = model([a, b]);
 
-        expect(resolveInstanceHandle(m, 'clk_a')).toBe(a);
-        expect(resolveInstanceHandle(m, 'clk_b')).toBe(b);
+        expect(resolveInstanceHandle(m, 'clk_a').value).toBe(a);
+        expect(resolveInstanceHandle(m, 'clk_b').value).toBe(b);
         expect(m.objects.filter((o: any) => o.name === 'clk')).toHaveLength(2);
     });
 });
@@ -107,20 +107,21 @@ describe('delete frees the handle', () => {
         store.delete('idA');
         m = model([]);
 
-        expect(resolveInstanceHandle(m, 'p1')).toBeNull(); // `set p1.x` would now error
+        expect(resolveInstanceHandle(m, 'p1').ok).toBe(false); // `set p1.x` would now error
+        expect(resolveInstanceHandle(m, 'p1').value).toBeUndefined();
         expect(hasHandle('p1')).toBe(false);
 
         // recreate "p1" → fresh id, resolves the new object
         const a2 = makeInstance('idA2', 'p1');
         registerHandle('p1', 'idA2');
         m = model([a2]);
-        expect(resolveInstanceHandle(m, 'p1')).toBe(a2);
+        expect(resolveInstanceHandle(m, 'p1').value).toBe(a2);
     });
 
     it('self-heals a stale registry entry whose object no longer exists', () => {
         registerHandle('ghost', 'idGone'); // idGone never added to the store
         const m = model([]);
-        expect(resolveInstanceHandle(m, 'ghost')).toBeNull();
+        expect(resolveInstanceHandle(m, 'ghost').ok).toBe(false);
         expect(hasHandle('ghost')).toBe(false); // entry cleaned up
     });
 });
@@ -137,8 +138,8 @@ describe('rename moves the handle', () => {
         const m = model([a]);
 
         expect(hasHandle('p1')).toBe(false);
-        expect(resolveInstanceHandle(m, 'p1')).toBeNull();
-        expect(resolveInstanceHandle(m, 'p2')).toBe(a);
+        expect(resolveInstanceHandle(m, 'p1').ok).toBe(false);
+        expect(resolveInstanceHandle(m, 'p2').value).toBe(a);
         expect(getHandleId('p2')).toBe('idA'); // same id preserved
     });
 });
@@ -149,7 +150,7 @@ describe('pre-existing instances (not created this run)', () => {
     it('resolves by name via the fallback when no handle is registered', () => {
         const z = makeInstance('idZ', 'preexisting');
         const m = model([z]); // not registered
-        expect(resolveInstanceHandle(m, 'preexisting')).toBe(z);
+        expect(resolveInstanceHandle(m, 'preexisting').value).toBe(z);
     });
 });
 
@@ -161,7 +162,14 @@ describe('registry precedence', () => {
         const script = makeInstance('idW', 'x'); // created this run, handle "x"
         registerHandle('x', 'idW');
         const m = model([pre, script]);
-        expect(resolveInstanceHandle(m, 'x')).toBe(script);
+        const r = resolveInstanceHandle(m, 'x');
+        expect(r.ok).toBe(true);
+        expect(r.value).toBe(script);
+        // AND the list was never consulted: a registered handle is id-based, so the two
+        // homonyms in `objects` cannot make it ambiguous. This is the contrast that shows
+        // the ambiguity branch lives on the FALLBACK only.
+        expect(r.candidates).toBeUndefined();
+        expect(findInstanceByName(m, 'x')).toHaveLength(2);
     });
 });
 
@@ -189,5 +197,70 @@ describe('handleRegistry primitives', () => {
 
         clearHandles();
         expect(getReservedHandles().size).toBe(0);
+    });
+});
+
+// --- 8. Ambiguity is declared, never resolved (R-S1-3) ----------------------
+
+describe('ambiguous names are declared, not resolved', () => {
+    it('refuses to pick one of two pre-existing homonyms, and names both', () => {
+        // Neither is registered: this is the pre-existing-instance fallback, the only
+        // path on which ambiguity is reachable (§3.1 of the S1b discovery).
+        const a = makeInstance('idA', 'clk');
+        const b = makeInstance('idB', 'clk');
+        a.instanceof = { name: 'Port' };
+        b.instanceof = { name: 'Signal' };
+        const m = model([a, b]);
+
+        const r = resolveInstanceHandle(m, 'clk');
+        expect(r.ok).toBe(false);
+        expect(r.value).toBeUndefined();          // nothing is picked
+        expect(r.candidates).toHaveLength(2);
+        expect(r.candidates!.map(c => c.className).sort()).toEqual(['Port', 'Signal']);
+        expect(r.candidates!.map(c => c.id).sort()).toEqual(['idA', 'idB']);
+        // The metaclass, not a containment path: both candidates are roots of the same
+        // model, so the path would print the same line twice (§5).
+        expect(r.reason).toContain('Port (idA)');
+        expect(r.reason).toContain('Signal (idB)');
+    });
+
+    it('a name carried by exactly one instance stays resolved (contrast)', () => {
+        const a = makeInstance('idA', 'clk');
+        const b = makeInstance('idB', 'other');
+        const m = model([a, b]);
+
+        const r = resolveInstanceHandle(m, 'clk');
+        expect(r.ok).toBe(true);
+        expect(r.value).toBe(a);
+        expect(r.candidates).toBeUndefined();
+    });
+
+    it('distinguishes "no such name" from "several" by candidates, not by the message', () => {
+        const m = model([makeInstance('idA', 'clk')]);
+        const absent = resolveInstanceHandle(m, 'nope');
+        expect(absent.ok).toBe(false);
+        expect(absent.candidates).toBeUndefined();   // 0 matches: not the ambiguous case
+        expect(absent.reason).toContain("No instance named 'nope'");
+    });
+
+    it('degrades to the bare id when the metaclass cannot be read', () => {
+        const a = makeInstance('idA', 'clk');   // no `instanceof` at all
+        const b = makeInstance('idB', 'clk');
+        const m = model([a, b]);
+
+        const r = resolveInstanceHandle(m, 'clk');
+        expect(r.candidates!.every(c => c.className === '')).toBe(true);
+        expect(r.reason).toContain('idA, idB');     // no empty parentheses
+    });
+
+    it('describeAmbiguity is one builder, so five commands cannot drift', () => {
+        const copy = describeAmbiguity('clk', [
+            { id: 'Pointer_1', className: 'Config' },
+            { id: 'Pointer_2', className: 'AllNine' },
+        ]);
+        expect(copy).toBe(
+            "Ambiguous instance name 'clk': 2 candidates — Config (Pointer_1), AllNine (Pointer_2). "
+            + 'Rename one, or address it from the canvas.'
+        );
     });
 });
