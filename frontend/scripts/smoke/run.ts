@@ -2,8 +2,25 @@
  * run.ts — visual smoke (docs/PROTOCOL.md P8).
  *
  * Opens each state in states.ts, runs the applicable assertions, prints one
- * line per assertion plus a summary. Exit code is non-zero if at least one
- * assertion failed.
+ * line per assertion plus a summary.
+ *
+ * The verdict has three values, not two:
+ *
+ *   GREEN  every assertion passed on a run that measured what it declares.
+ *   RED    an assertion failed. This is a statement about the application.
+ *   VOID   the run did not measure what it declares — somebody saved a file
+ *          under `frontend/src` while it was in flight, or the page booted more
+ *          than once. This is a statement about the machine, and the only
+ *          correct response is to run again. A void run is NOT a pass.
+ *
+ * Exit codes: 0 green, 1 red, 2 harness error (no baseline), 3 void.
+ *
+ * The two guards behind VOID are quiescence.ts (what moved on disk) and
+ * countBoots (how many times the document loaded). They exist because the smoke
+ * shares one dev server with every other session on this machine: measured
+ * 2026-08-30, ten still runs gave byte-identical tallies and the two runs a
+ * concurrent save fell into went red on whichever state was open at that
+ * instant. See docs/discovery/discovery_2026-08-30_6_smoke_flaky.md.
  *
  * Run: npm run smoke   (dev server must already be up)
  *
@@ -28,15 +45,19 @@ import {
 } from './states.ts';
 import type { AssertionId, SmokeState } from './states.ts';
 import {
+    MAX_BOOTS_PER_STATE,
     assertCanvasGeometry,
     assertChromeStackContiguous,
     assertConsoleAgainstBaseline,
     assertNoStatusbarOverlay,
     assertStructureMounted,
+    countBoots,
     measure,
     tallyConsole,
 } from './assertions.ts';
 import type { AssertionResult, ConsoleBaseline } from './assertions.ts';
+import { SRC_ROOT, describeChanges, diffSnapshots, snapshotSrc } from './quiescence.ts';
+import type { SrcChange, SrcSnapshot } from './quiescence.ts';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const BASELINE_PATH = resolve(HERE, 'console-baseline.json');
@@ -47,6 +68,14 @@ interface StateReport {
     results: AssertionResult[];
     improvements: string[];
     pageErrors: string[];
+    /** Document loads observed for this state. Above MAX_BOOTS_PER_STATE the tally is void. */
+    boots: number;
+}
+
+/** What moved under src while one state was open. */
+interface QuiescenceWindow {
+    stateId: string;
+    changes: SrcChange[];
 }
 
 function icon(status: string): string {
@@ -77,6 +106,7 @@ async function runState(
             results: [],
             improvements: [],
             pageErrors: opened.pageErrors,
+            boots: countBoots(opened.logs),
         };
     }
 
@@ -130,7 +160,14 @@ async function runState(
     );
 
     await opened.ctx.close();
-    return { state, reached: true, results, improvements, pageErrors: opened.pageErrors };
+    return {
+        state,
+        reached: true,
+        results,
+        improvements,
+        pageErrors: opened.pageErrors,
+        boots: countBoots(opened.logs),
+    };
 }
 
 function report(r: StateReport): void {
@@ -155,6 +192,11 @@ function report(r: StateReport): void {
     }
 
     for (const imp of r.improvements) console.log(imp);
+
+    console.log(
+        `  BOOT  ${r.boots} document load(s) (ceiling ${MAX_BOOTS_PER_STATE})` +
+        (r.boots > MAX_BOOTS_PER_STATE ? '  <-- the tally above is that tally repeated' : ''),
+    );
 
     if (r.pageErrors.length > 0) {
         console.log(`        note: ${r.pageErrors.length} uncaught page error(s) (not an assertion):`);
@@ -186,11 +228,20 @@ async function main(): Promise<void> {
         console.log(`    ${n.why}`);
     }
 
+    // Taken before the launch, so the first window covers the browser start-up
+    // too: a save that lands there reaches state one exactly like any other.
+    const beforeAll = snapshotSrc();
+
     const browser = await chromium.launch();
     const reports: StateReport[] = [];
+    const windows: QuiescenceWindow[] = [];
     try {
+        let prev: SrcSnapshot = beforeAll;
         for (const state of STATES) {
             reports.push(await runState(browser, state, baseline));
+            const after = snapshotSrc();
+            windows.push({ stateId: state.id, changes: diffSnapshots(prev, after) });
+            prev = after;
         }
     } finally {
         await browser.close();
@@ -213,6 +264,34 @@ async function main(): Promise<void> {
         }
     }
 
+    const movedWindows = windows.filter((w) => w.changes.length > 0);
+    const noisyStates = reports.filter((r) => r.boots > MAX_BOOTS_PER_STATE);
+    const isVoid = movedWindows.length > 0 || noisyStates.length > 0;
+
+    console.log('');
+    console.log('-'.repeat(78));
+    console.log('RUN VALIDITY — did this run measure the tree it declares?');
+    console.log('-'.repeat(78));
+    console.log(`  watched : ${SRC_ROOT}`);
+    console.log(`            ${beforeAll.files.size} file(s) at start`);
+    console.log(
+        `  boots   : ${reports.map((r) => `${r.state.id}=${r.boots}`).join('  ')}` +
+        `  (ceiling ${MAX_BOOTS_PER_STATE} per state)`,
+    );
+    if (movedWindows.length === 0) {
+        console.log('  moved   : nothing under src moved while the run was in flight');
+    }
+    for (const w of movedWindows) {
+        console.log(`  moved   : ${w.changes.length} change(s) under src while '${w.stateId}' was open:`);
+        for (const line of describeChanges(w.changes)) console.log(line);
+    }
+    for (const r of noisyStates) {
+        console.log(
+            `  reboot  : '${r.state.id}' loaded the document ${r.boots} times — every console ` +
+            `pattern above is that pattern counted ${r.boots} times, not a regression`,
+        );
+    }
+
     console.log('');
     console.log('='.repeat(78));
     console.log('SUMMARY');
@@ -228,14 +307,28 @@ async function main(): Promise<void> {
     console.log('');
     console.log(`  ${passed} passed, ${failed} failed, ${skipped} skipped`);
     console.log(`  ${NOT_COVERED.length} coverage gaps declared above.`);
+    console.log('');
 
-    if (failed > 0) {
-        console.log('');
-        console.log('  Smoke red. Do not soften a threshold and do not patch the app by eye:');
-        console.log('  report the failure at the top of the closing report (docs/PROTOCOL.md P8).');
+    // Void outranks red on purpose: on a run that booted three times the
+    // assertions above are arithmetic on a repeated tally, so calling it red
+    // would name the application for something the machine did.
+    if (isVoid) {
+        console.log('  VERDICT: VOID — the tree moved under the run, or the page booted twice.');
+        console.log('  Nothing above is certified: a void run is not a pass and not a failure.');
+        console.log('  Run it again on a still tree, and report the void with its cause');
+        console.log('  (docs/PROTOCOL.md P8). Do not read the assertions as a result.');
+        process.exit(3);
     }
 
-    process.exit(failed > 0 ? 1 : 0);
+    if (failed > 0) {
+        console.log('  VERDICT: RED — quiescent run, and an assertion failed.');
+        console.log('  Do not soften a threshold and do not patch the app by eye:');
+        console.log('  report the failure at the top of the closing report (docs/PROTOCOL.md P8).');
+        process.exit(1);
+    }
+
+    console.log('  VERDICT: GREEN — quiescent run, single boot per state, every assertion passed.');
+    process.exit(0);
 }
 
 await main();

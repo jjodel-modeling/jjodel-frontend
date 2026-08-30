@@ -12,10 +12,55 @@ hierarchy and perceived behaviour.
 The dev server must already be up (`npm start`).
 
 ```bash
-npm run smoke              # assertions, exit != 0 on failure
+npm run smoke              # three-valued verdict, see below
 npm run smoke:calibrate    # measurements only, never fails
 npm run typecheck:scripts  # type coverage for these files
 ```
+
+### The verdict has three values
+
+| Verdict | Exit | Meaning |
+|---|---|---|
+| **GREEN** | 0 | Every assertion passed on a run that measured what it declares |
+| **RED** | 1 | An assertion failed. A statement about the **application** |
+| **VOID** | 3 | The run did not measure what it declares. A statement about the **machine** |
+| (harness) | 2 | `console-baseline.json` unreadable |
+
+**A void run is not a pass and not a failure: nothing is certified, and the run
+is repeated.** Report it in the prompt log as a void with its cause, never as a
+green and never as a red.
+
+A run is void when either guard fires:
+
+- **quiescence** (`quiescence.ts`) — a file under `frontend/src` was added,
+  removed or modified while the run was in flight. The report names the files
+  and the state whose window they fell in.
+- **boot ceiling** (`countBoots` in `assertions.ts`) — a state's page loaded the
+  document more than once, counted from `[vite] connecting...`. Every console
+  pattern is then that pattern taken N times, not a regression.
+
+Void outranks red on purpose. On a run that booted three times the assertions
+are arithmetic on a repeated tally, so calling it red would name the application
+for something the machine did.
+
+### Why the guards exist
+
+The smoke shares one dev server with every other session on this machine, and
+the vite client writes into the console of the very page being measured.
+Measured 2026-08-30 over 12 consecutive runs
+(`docs/discovery/discovery_2026-08-30_6_smoke_flaky.md`): ten runs on a still
+tree gave **byte-identical** tallies — 13/14/15 messages, ten times out of ten —
+and the two runs a concurrent save fell into went red on whichever state was
+open at that instant. Correlation 8 out of 8 on the runs an independent watcher
+covered. The "counts at 3x the baseline" of that report is not a count that
+grew: it is the same count taken three times, after two `full-reload`s.
+
+The guards are two because neither covers the other. A `hot updated` leaves the
+boot count at 1, and a dev-server restart could reboot the page with nothing
+moving under `src`.
+
+**With another session editing `frontend/src`, development runs will often be
+void. That is the correct behaviour, not a blockage.**
 
 ### Node version
 
@@ -35,8 +80,9 @@ properties in these files.
 | File | Role |
 |---|---|
 | `states.ts` | Environment, thresholds, allowlist, the three states, localStorage seeding |
-| `assertions.ts` | DOM measurement, the four assertions, console normalization |
-| `run.ts` | Runs the assertions, prints the report, sets the exit code |
+| `assertions.ts` | DOM measurement, the four assertions, console normalization, boot count |
+| `quiescence.ts` | Snapshot and diff of `frontend/src`: did the tree move under the run |
+| `run.ts` | Runs the assertions, prints the report, decides the three-valued verdict |
 | `calibrate.ts` | Prints raw measurements; `--write-baseline` regenerates the baseline |
 | `console-baseline.json` | Generated. Never hand-edited |
 
@@ -118,6 +164,28 @@ IMPROVED: <pattern> — 44 -> 12, lower the baseline
 
 A4 fails only when a pattern absent from the baseline appears, or when an
 existing pattern exceeds its baseline count.
+
+### What A4 does not count
+
+Keys under `debug|[vite] ` — the dev client's own `connecting...`, `connected.`
+and `hot updated: …` — are excluded from the comparison, on **both** sides:
+observed and baseline. The committed baseline contains three of them, and
+filtering one side only would report every run as having lost a pattern.
+
+This is not a softening. Those lines carry exactly two signals, and both moved
+to the instrument that reads them properly: `hot updated` means somebody saved a
+file mid-run, which the quiescence guard reports naming the file; repeated
+`connecting...` means the page rebooted, which the boot ceiling reports naming
+the count. Inside A4 both arrived as "a console regression", which is the one
+thing they are not.
+
+The prefix is `debug|`, not `[vite]` at any level: an
+`error|[vite] Internal Server Error …` is the dev server failing to compile the
+app, and that still fails A4.
+
+**Note.** `calibrate.ts` does **not** carry the quiescence guard. Regenerate the
+baseline only after a run that `npm run smoke` declared GREEN, or a stray
+`[vite] hot updated` can be frozen into the file.
 
 ### Key normalization
 
