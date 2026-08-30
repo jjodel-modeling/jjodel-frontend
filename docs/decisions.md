@@ -2537,6 +2537,61 @@ la scrittura sarebbe avvenuta. Referto:
 `docs/discovery/discovery_2026-08-30_s1b_ambiguita_dichiarata.md`.
 
 
+## Serie R-GT / R-M2 — tre micro fix di core (ratifiche 2026-08-30)
+
+A valle di `discovery_2026-08-30_gettype_finestra_parser.md` e
+`discovery_2026-08-30_uniqueness_m2.md`. La misura di entrambe sta in
+`discovery_2026-08-30_micro_core_tre_fix.md`: prima e dopo, nella stessa giornata e sullo
+stesso fixture, con le sonde rigirate non modificate.
+
+**R-GT-1** (2026-08-30) — **Il gradino 3 di `get_type` non restituisce piu' il contenitore a
+una `DReference` senza tipo: restituisce `Defaults.Pointer_EOBJECT`.** E' la stessa decisione
+gia' presa a valle nel costruttore (`Constructors.DTypedElement`, ramo del rifiuto dichiarato):
+il seed era scritto in due posti e i due posti dicevano cose diverse. Il rischio sul parser
+Ecore, che il referto del 30-08 dichiarava «non misurabile da sonda», e' **misurato come
+inesistente**: `DReference.new` mette il padre al posto del tipo assente prima del costruttore,
+quindi `data.type` non e' mai falsy sul percorso del parser e il gradino 3 non scatta;
+fuori da quella finestra il censimento dei chiamanti in albero e' vuoto. `Pointer_EOBJECT` e'
+una `DClass` vera nello store (`redux/store.tsx:340`), quindi i tre getter derivati che leggono
+`.isClass` **senza guardia** ricevono la stessa forma di prima. Il ramo non-`DReference` resta
+`'Pointer_ESTRING'`. **Non** e' stata presa la forma (A2) del referto (`undefined` per
+l'assenza vera): riaprirebbe `MISSING_TYPE` ma richiede che ogni consumatore di `.type` regga
+`undefined`, e quel costo non e' misurato.
+
+**R-GT-2** (2026-08-30) — **`EcoreParser.parse` abbassa `Constructors.paused` in un `finally`.**
+L'id e' nuovo: il reperto e' §5 dello stesso referto, che il prompt di ratifica non aveva
+siglato. `finally`, mai `catch`: l'eccezione esce dal metodo come prima e il fallimento resta
+altrettanto rumoroso — misurato, e' la stessa stringa d'errore. Cio' che cambia e' il
+contagio: prima, un `.ecore` con un `eType` irrisolvibile lasciava il flag alzato per il resto
+della sessione, e da quel momento **ogni** create restava in `pendingCreation` e spariva al
+primo reload, in silenzio. La finestra copre esattamente i quattro passi che stavano fra i due
+flag; `fixObjectPointers` e `persist` restano fuori, nell'ordine, perche' girano con il flag
+gia' abbassato.
+
+**R-M2-2** (2026-08-30) — **`_impl_getByName` cerca la chiave `"$" + nome`**, che e' quella che
+i tre produttori scrivono (`U.toNamedArray`, `LPackage.get_classes`, `LPackage.get_enumerators`)
+e che la sonda legge sull'oggetto vivo, non solo nel sorgente. Vale per **entrambe** le vie: il
+colpo diretto e il giro case-insensitive, che chiedeva `'freeprobe'` a chiavi scritte
+`'$freeprobe'`. Il controllo positivo del referto — `getClassByName('$FreeProbe')` risolveva —
+si **inverte** di proposito: il `'$'` appartiene alla chiave, non al nome che il chiamante passa.
+Due precisazioni che la misura impone e che questa ratifica registra:
+- **Il gradino 2 di `get_type` non e' fra i beneficiari.** `model` e' dichiarata e mai
+  assegnata (`if (!model) this.get_model(c);` scarta il valore di ritorno), in `get_type` come
+  in `set_type`: le quattro `if (model) …` sono morte per una ragione indipendente dalla chiave,
+  misurata per discriminazione su `'EInt'`. **Dichiarato, non corretto**: assegnare `model`
+  restringerebbe il pool da globale a per-modello, ed e' una decisione di design.
+- **L'unico consumatore vivo e' `edgeCandidate.ts:59`**, e li' il comportamento e' **nuovo**: il
+  banner «Looks like an edge candidate» puo' comparire per una view con `appliableToClasses`
+  vuoto e una condizione che nomina una classe con due reference. Non distruttivo — l'`Apply`
+  resta un gesto utente — ma e' l'unica differenza a schermo della slice, e non e' stata
+  osservata a schermo (il fixture non ha view senza IR): §5.1 del referto.
+
+Il reperto gemello — `getByName2` e la chiave `$nome` scelgono duplicati **diversi** — resta
+alla slice S1-M2 e **non** e' toccato qui. Questo fix lo rende piu' visibile, non piu' grave:
+`getClassByName` passa da «non risponde mai» a «risponde con l'ultimo omonimo», cioe' diventa
+una delle scelte silenziose gia' censite invece di restare fuori dal censimento.
+
+
 ## Superate
 
 - **D3** (2026-07-26, routing congelato in v1) — superata da E-route il 2026-08-06.
