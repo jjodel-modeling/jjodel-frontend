@@ -2,6 +2,19 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-08-30 — docs: la via (A) di R-STR-6, dichiarata contro le altre due
+**Prompt**: nessuno — riconciliazione dovuta, e va a registro perche' riguarda una scelta non ratificata. Una sessione parallela ha eseguito lo **stesso** prompt `PROMPT_rstr6_canvas_override.md`, ha misurato lo stesso stato e si e' fermata prima del diff (**hard stop**, referto `discovery_2026-08-30_3_rstr6_canvas_override.md`, commit `ec42652af`), mettendo a ratifica tre vie. La slice che ha appena chiuso R-STR-6 ne ha implementata una senza che nessuno l'avesse scelta.
+**Files touched**: docs/discovery/discovery_2026-08-30_rstr6_canvas_override.md (§6bis nuova: il referto gemello, le tre vie, la via scelta e il suo costo), docs/decisions.md (lo stesso, dentro la ratifica di R-STR-6), docs/claude-code-log.md. Commit `adbab1aaf`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: (f)
+**Regressions**: no (soli documenti; `npm run check:docs` 3/3)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (nessun sorgente)
+**Smoke visivo**: non applicabile
+**Notes**: **Le due misure concordano**, e i referti ora si citano a vicenda invece di stare come alternative. La via implementata e' la **(A)**: gradino 0 nel solo segmento `value`, attivo dove la view dichiara un widget. Motivo dichiarato: e' l'unica che il prompt autorizza da se'. La (B) — tutta la libreria sul segmento — e' una decisione di prodotto sulla natura del compartimento IR e vorrebbe una chiave nuova sull'IR senza VersionFixer; la (C) contraddice la premessa del prompt. Il costo di (A) e' il confine gia' dichiarato: il gradino 1 resta disonorato sul ramo IR.
+**Prompt document name**: nessun documento
+
 ## 2026-08-30 — feat(editor-v2): l'override della view vince anche sul canvas (R-STR-6)
 **Prompt**: `docs/prompts/PROMPT_rstr6_canvas_override.md`. Residuo a registro dal Livello 2, ora su chiamata: la precedenza `FormSpec.widgets` > `@renderer` e' viva su due superfici (Form tab e ladder dell'inspector), la terza — il rendering effettivo sul nodo canvas — va **verificata** e, dove non onora l'override, allineata. Metodo imposto: **prima misura lo stato**, sonda a schermo su un nodo del ramo IR per ogni renderer della mappa R-STR-3; se `viewWidget` gia' copre tutto, la slice e' un report di conferma. Il fix passa da dove la ladder gia' decide (`valueRenderer`/`widgetRenderer`), mai una seconda decisione nel componente. L'IR non si riscrive mai in silenzio.
 **Files touched**: editor-v2/nodes/valueRenderer.ts (`SlotShape.viewRenderer` + il gradino 0), nodes/ObjectNode.tsx (riempie il gradino 0 dal `formSpec` compilato; `renderViewWidget`, il ponte per nome verso il ramo IR), viewpoint/ir/IRNodeContent.tsx (prop opzionale, usata nel segmento `value` solo se restituisce qualcosa), nodes/RendererInspector.tsx (copy allineata: il tag torna «winning rule», l'inciso «· on the canvas» cade), nodes/__tests__/valueRenderer.test.ts (7 prove nuove), docs/discovery/discovery_2026-08-30_rstr6_canvas_override.md (nuovo), docs/decisions.md (R-STR-6 sciolta, R-STR-5 superata nella delimitazione), docs/claude-code-log.md. Sonde `_tmp_rstr6_measure.ts`, `_tmp_rstr6_verify.ts` e i `.png` (non committate). Commit sorgente `2a3e408c0`, docs `8ecfa4e13`, log a parte. **Zero file condivisi** con le sessioni parallele (12b/12c in `jjform/`, scss orfani in `editors/`).
