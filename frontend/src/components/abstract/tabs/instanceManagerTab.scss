@@ -776,4 +776,189 @@
         border-top: 1px solid var(--color-form-border);
         background: var(--color-bg-tertiary);
     }
+
+    // ── Multi-selection (12b) and drill-in (12c) ─────────────────────────────
+    // No new tokens: every colour here is one the manager already uses, per the
+    // design-system rule that variables live in `styles/tokens/` and never in a
+    // component file.
+
+    &__th-pick, &__td-pick {
+        width: 28px;
+        text-align: center;
+        padding: 0 4px;
+
+        input { cursor: pointer; }
+    }
+
+    /** A row in the selection that is not the subject: present, but quieter than
+     *  the one the form is mounted on. */
+    &__tr--multi,
+    &__tr--multi:hover {
+        background: var(--color-bg-tertiary);
+    }
+
+    &__multi {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding: 16px 20px;
+        overflow: auto;
+    }
+
+    &__multi-field {
+        display: grid;
+        grid-template-columns: 110px 1fr;
+        align-items: center;
+        gap: 4px 10px;
+    }
+
+    &__multi-label {
+        font-size: 12px;
+        color: var(--color-form-muted);
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    &__multi-input {
+        min-width: 0;
+        padding: 5px 8px;
+        border: 1px solid var(--color-form-border);
+        border-radius: 6px;
+        background: var(--color-bg-primary);
+        font-size: 12px;
+        color: var(--color-text-primary);
+
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 1px; }
+    }
+
+    /** A field the selection disagrees on. The placeholder carries the distinct
+     *  values, so the control reads as «not one value» rather than as empty. */
+    &__multi-input--mixed {
+        &::placeholder { font-style: italic; color: var(--color-form-muted); }
+    }
+
+    &__multi-mixed, &__multi-apply {
+        grid-column: 2;
+        font-size: 11px;
+        color: var(--color-form-muted);
+    }
+
+    &__multi-apply { color: var(--color-accent); }
+
+    /** The third state of the toggle: the counts ARE the information, so they sit
+     *  beside the two writes rather than being folded into a checkbox. */
+    &__tri {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    &__tri-counts {
+        font-size: 11px;
+        color: var(--color-form-muted);
+        margin-right: 4px;
+    }
+
+    &__tri-btn {
+        padding: 3px 10px;
+        border: 1px solid var(--color-form-border);
+        border-radius: 6px;
+        background: var(--color-bg-primary);
+        font-size: 11px;
+        color: var(--color-form-muted);
+        cursor: pointer;
+
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 1px; }
+    }
+
+    &__tri-btn--on {
+        border-color: var(--color-accent);
+        color: var(--color-accent);
+    }
+
+    &__multi-actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 8px;
+        margin-top: 6px;
+    }
+
+    // ── The breadcrumb of 12c ────────────────────────────────────────────────
+
+    &__crumbs {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 2px;
+        padding: 8px 20px;
+        border-bottom: 1px solid var(--color-form-border);
+        background: var(--color-bg-tertiary);
+    }
+
+    &__crumb-wrap { display: inline-flex; align-items: center; gap: 2px; }
+
+    &__crumb {
+        padding: 2px 4px;
+        border: none;
+        border-radius: 4px;
+        background: none;
+        font-size: 11px;
+        color: var(--color-accent);
+        cursor: pointer;
+
+        &:hover { text-decoration: underline; }
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 1px; }
+    }
+
+    /** Where the form already is: not a link, because the navigation would do
+     *  nothing. */
+    &__crumb--current {
+        color: var(--color-text-primary);
+        cursor: default;
+
+        &:hover { text-decoration: none; }
+    }
+
+    &__crumb-sep { font-size: 9px; color: var(--color-form-muted); }
+
+    // ── The inline level of 12c ──────────────────────────────────────────────
+
+    &__inline {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding: 12px 20px 20px;
+        border-top: 1px solid var(--color-form-border);
+    }
+
+    &__inline-slot { display: flex; flex-direction: column; gap: 6px; }
+
+    /** A child edited in place: nested, and set apart by a rule on the left so
+     *  the eye can tell whose fields it is looking at. */
+    &__inline-child {
+        border-left: 2px solid var(--color-form-border);
+        padding-left: 10px;
+    }
+
+    &__inline-open, &__inline-link {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        width: 100%;
+        padding: 4px 8px;
+        border: 1px solid var(--color-form-border);
+        border-radius: 6px;
+        background: var(--color-bg-primary);
+        font-size: 12px;
+        color: var(--color-text-primary);
+        cursor: pointer;
+
+        &:hover { border-color: var(--color-accent); color: var(--color-accent); }
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 1px; }
+    }
+
+    &__inline-open { margin-bottom: 4px; }
 }

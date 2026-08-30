@@ -53,15 +53,40 @@ import {
 import IRForm from '../../editor-v2/viewpoint/ir/IRForm';
 import { EmptyState } from '../../ui';
 import type { RendererDecision } from '../../editor-v2/nodes/valueRenderer';
-import type { ClassShape, DeleteOptions, DeletePreflight, Draft, DraftField, RefShape } from '../../../jjform';
+import type {
+    ClassShape,
+    Crumb,
+    DeleteOptions,
+    DeletePreflight,
+    Draft,
+    DraftField,
+    MultiField,
+    MultiModel,
+    NavState,
+    RefShape,
+    UnionPreflight,
+} from '../../../jjform';
 import {
     addChildReason,
+    breadcrumbOf,
+    bulkPlan,
+    crumbLabel,
+    currentOf,
+    depthOf,
     draftModel,
+    drillInto,
+    multiModel,
+    navFor,
     newDraft,
     newInstanceReason,
+    rendersInline,
     setDraftRef,
     setDraftValue,
+    truncateTo,
+    unionPreflight,
 } from '../../../jjform';
+import { childrenIn, multiInstancesOf, navStepOf, pathTo } from '../../editor-v2/hooks/multiDraw';
+import { applyBulk } from '../../editor-v2/hooks/multiAdapter';
 import {
     instanceCountsByClass,
     instancesOfClass,
@@ -464,6 +489,240 @@ function DeleteDialog({ pre, reassignTo, onReassignTo, onCancel, onConfirm }: {
     );
 }
 
+/**
+ * The multi-delete dialogue (12b): ONE preflight for the whole selection.
+ *
+ * Not N dialogues in a row. The user made one decision and is shown its whole
+ * cost once — the union of the referrers, with the pointers held by anything
+ * that is dying already removed (`unionPreflight`), and the reassign candidates
+ * that fit EVERY member.
+ *
+ * The three verdicts are 12d's, unchanged: reassign, clear, dirty. What the set
+ * shares is the decision; the arithmetic is still per instance, because
+ * `deletePlan`'s verdict is defined over one target.
+ */
+function MultiDeleteDialog({ pre, reassignTo, onReassignTo, onCancel, onConfirm }: {
+    pre: UnionPreflight<any, any>;
+    reassignTo: string;
+    onReassignTo: (v: string) => void;
+    onCancel: () => void;
+    onConfirm: (options: DeleteOptions) => void;
+}) {
+    return (
+        <div className="instance-manager__scrim" role="dialog" aria-modal="true" aria-label={pre.title}>
+            <div className="instance-manager__draft">
+                <h3 className="instance-manager__draft-title">{pre.title}</h3>
+                <p className="instance-manager__note">{pre.message}</p>
+
+                {pre.blocked ? (
+                    /* Refused as a whole rather than half-performed: deleting the
+                       members that can go and silently skipping the rest would leave
+                       a selection the user cannot reason about. */
+                    <>
+                        <p className="instance-manager__note instance-manager__note--reason">{pre.blocked}</p>
+                        <div className="instance-manager__multi-actions">
+                            <button type="button" className="instance-manager__draft-cancel" onClick={onCancel}>Close</button>
+                        </div>
+                    </>
+                ) : (
+                    <>
+                        {pre.descendants.length > 0 && (
+                            <p className="instance-manager__note">
+                                {pre.descendants.length} contained instance{pre.descendants.length === 1 ? '' : 's'} will go with them.
+                            </p>
+                        )}
+
+                        {pre.referencedBy.length > 0 && (
+                            <ul className="instance-manager__list">
+                                {pre.referencedBy.map((r: any, i: number) => (
+                                    <li className="instance-manager__child" key={`${r.instanceId}:${r.featureKey}:${r.index}:${i}`}>
+                                        <span className="instance-manager__row-name">
+                                            {r.instanceName || r.instanceId}
+                                            <span className="instance-manager__draft-card">.{r.featureKey}</span>
+                                        </span>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+
+                        <div className="instance-manager__multi-actions">
+                            {pre.canReassign && (
+                                <>
+                                    <select
+                                        className="instance-manager__multi-input"
+                                        value={reassignTo}
+                                        aria-label="Reassign all references to"
+                                        onChange={e => onReassignTo(e.target.value)}
+                                    >
+                                        {pre.reassignCandidates.map(c => (
+                                            <option key={c.id} value={c.id}>{c.label}</option>
+                                        ))}
+                                    </select>
+                                    <button
+                                        type="button"
+                                        className="instance-manager__new"
+                                        disabled={!reassignTo}
+                                        onClick={() => onConfirm({ reassignTo })}
+                                    >Reassign all, then delete</button>
+                                </>
+                            )}
+                            {pre.referencedBy.length > 0 && (
+                                <button
+                                    type="button"
+                                    className="instance-manager__new"
+                                    onClick={() => onConfirm({ clearRefs: true })}
+                                >Clear the references, then delete</button>
+                            )}
+                            <button
+                                type="button"
+                                className="instance-manager__new"
+                                onClick={() => onConfirm({})}
+                            >
+                                {pre.referencedBy.length > 0
+                                    ? `Delete anyway — ${pre.referencedBy.length} reference${pre.referencedBy.length === 1 ? '' : 's'} become invalid`
+                                    : `Delete ${pre.count}`}
+                            </button>
+                            <button type="button" className="instance-manager__draft-cancel" onClick={onCancel}>Cancel</button>
+                        </div>
+                    </>
+                )}
+            </div>
+        </div>
+    );
+}
+
+/**
+ * The multi-selection form (12b).
+ *
+ * `Instance Node Proposal.dc.html`, Turno 12, panel `12b`. Three things it does
+ * that a single-instance form does not, each of them the design's own words:
+ *
+ *  - a field the selection disagrees on prints «Mixed (Green, Red, Blue)» — the
+ *    DISTINCT values, not a representative. Touching it is what replaces it; until
+ *    then the control shows the disagreement instead of hiding it;
+ *  - a touched field says «will apply to N», because a bulk write is the one edit
+ *    whose blast radius is not obvious from where the cursor is;
+ *  - a boolean has a THIRD state: «2 on · 1 off», not a checkbox guessing.
+ *
+ * What it does NOT render is as specified as what it does: `name` and every
+ * containment slot are ABSENT, with the reason printed once at the foot. Absent
+ * and not disabled — a greyed control invites the gesture it then refuses, and the
+ * design says «hidden».
+ *
+ * The component decides nothing. Which fields exist, which are mixed, which are
+ * excluded and why all come from `jjform/multi`; this paints them.
+ */
+function MultiForm({ model, touched, onTouch, onApply, onClear, onDelete }: {
+    model: MultiModel;
+    touched: Record<string, unknown>;
+    onTouch: (key: string, value: unknown) => void;
+    onApply: () => void;
+    onClear: () => void;
+    onDelete: () => void;
+}) {
+    const dirty = Object.keys(touched).length;
+
+    /** What a field shows: the value the user typed if they typed one, else the
+     *  agreed value, else nothing — because there is no agreed value to show. */
+    const shownValue = (f: MultiField): string => {
+        if (f.key in touched) return String(touched[f.key] ?? '');
+        if (f.state === 'mixed') return '';
+        return f.value == null ? '' : String(f.value);
+    };
+
+    const mixedLabel = (f: MultiField): string => {
+        const shown = f.distinct.map(v => (v == null ? '(empty)' : String(v)));
+        return `Mixed (${shown.join(', ')})`;
+    };
+
+    return (
+        <div className="instance-manager__multi">
+            <h3 className="instance-manager__eyebrow">{model.title}</h3>
+
+            {model.fields.map(f => {
+                const isTouched = f.key in touched;
+                return (
+                    <div className="instance-manager__multi-field" key={f.key}>
+                        <label className="instance-manager__multi-label" htmlFor={`multi-${f.key}`}>
+                            {f.key}
+                            {f.required && <span className="instance-manager__req" aria-hidden="true">*</span>}
+                        </label>
+
+                        {f.kind === 'boolean' ? (
+                            /* The third state. A tri-state is not a checkbox with a
+                               dash: the counts are the information, and the two
+                               buttons are the only two writes that exist. */
+                            <div className="instance-manager__tri">
+                                {!isTouched && f.counts && (
+                                    <span className="instance-manager__tri-counts">
+                                        {f.counts.on} on · {f.counts.off} off
+                                        {f.counts.unset > 0 && ` · ${f.counts.unset} unset`}
+                                    </span>
+                                )}
+                                <button
+                                    type="button"
+                                    className={'instance-manager__tri-btn' + (touched[f.key] === true ? ' instance-manager__tri-btn--on' : '')}
+                                    onClick={() => onTouch(f.key, true)}
+                                >on</button>
+                                <button
+                                    type="button"
+                                    className={'instance-manager__tri-btn' + (touched[f.key] === false ? ' instance-manager__tri-btn--on' : '')}
+                                    onClick={() => onTouch(f.key, false)}
+                                >off</button>
+                            </div>
+                        ) : (
+                            <input
+                                id={`multi-${f.key}`}
+                                className={'instance-manager__multi-input' + (f.state === 'mixed' && !isTouched ? ' instance-manager__multi-input--mixed' : '')}
+                                type={f.kind === 'number' ? 'number' : 'text'}
+                                value={shownValue(f)}
+                                placeholder={f.state === 'mixed' ? mixedLabel(f) : ''}
+                                title={f.state === 'mixed' ? mixedLabel(f) : undefined}
+                                onChange={e => onTouch(f.key, f.kind === 'number' ? Number(e.target.value) : e.target.value)}
+                            />
+                        )}
+
+                        {isTouched ? (
+                            <span className="instance-manager__multi-apply">will apply to {model.count}</span>
+                        ) : f.state === 'mixed' ? (
+                            <span className="instance-manager__multi-mixed">{mixedLabel(f)}</span>
+                        ) : null}
+                    </div>
+                );
+            })}
+
+            {model.excluded.length > 0 && (
+                /* The reason, once, for the fields that are not here. Printed rather
+                   than implied: a form that silently drops `name` is a form the user
+                   has to guess about. */
+                <p className="instance-manager__note instance-manager__note--reason">
+                    {Array.from(new Set(model.excluded.map(e => e.reason))).join(' · ')}
+                </p>
+            )}
+
+            <div className="instance-manager__multi-actions">
+                <button type="button" className="instance-manager__draft-cancel" onClick={onDelete}>
+                    <i className="bi bi-trash" aria-hidden="true" /> Delete {model.count}
+                </button>
+                <button
+                    type="button"
+                    className="instance-manager__draft-cancel"
+                    disabled={dirty === 0}
+                    onClick={onClear}
+                >Discard</button>
+                <button
+                    type="button"
+                    className="instance-manager__new"
+                    disabled={dirty === 0}
+                    onClick={onApply}
+                >
+                    Apply to {model.count}
+                </button>
+            </div>
+        </div>
+    );
+}
+
 export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
     // One subscription for the whole tab. `idlookup`'s reference changes on every
     // model write, which is precisely the granularity the derived lists need.
@@ -471,6 +730,21 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
 
     const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
     const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null);
+    /** The EXTRA rows a multi-selection holds, beside `selectedObjectId`.
+     *
+     *  Two pieces of state rather than one set, and deliberately: the single
+     *  selection is what the form is mounted on and what drill-in navigates from,
+     *  and collapsing the two would make «which one is the subject» a question
+     *  with no answer whenever the set has more than one member. `selectedIds`
+     *  below is the union, and it is what 12b reads. */
+    const [alsoSelected, setAlsoSelected] = useState<string[]>([]);
+    /** The keys the user actually wrote in the multi-form, and their values.
+     *  Untouched means unwritten (12b rule 2), so this map — not the rendered
+     *  field values — is what `bulkPlan` is given. */
+    const [bulkTouched, setBulkTouched] = useState<Record<string, unknown>>({});
+    /** Where the form has drilled to (12c). Null while the form sits on its own
+     *  subject, which is the common case and costs no breadcrumb. */
+    const [nav, setNav] = useState<NavState | null>(null);
     const [query, setQuery] = useState('');
     /** The transactional draft (12a). Null when no create is in flight, and the
      *  ONLY place a not-yet-created instance exists: nothing reaches the store
@@ -481,6 +755,10 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
      *  until a row of the dialogue is pressed, so Cancel is `setPending(null)`. */
     const [pending, setPending] = useState<DeletePreflight | null>(null);
     const [reassignTo, setReassignTo] = useState('');
+    /** The union preflight of a multi-delete (12b). One dialogue for the set, so
+     *  one piece of state — never N pending deletes queued behind each other. */
+    const [pendingMulti, setPendingMulti] = useState<UnionPreflight<any, any> | null>(null);
+    const [multiReassignTo, setMultiReassignTo] = useState('');
 
     // Name-sorted so the column does not reorder itself when a class is renamed
     // elsewhere. `getMetaclassInfo` is impure (it reads the store and L-proxies),
@@ -538,10 +816,120 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
         ? selectedObjectId
         : null;
 
+    // ── Multi-selection (12b) ──────────────────────────────────────────────────
+
+    /** The whole selection, subject first, resolved against the LIVE rows for the
+     *  same reason `subjectId` is: a row deleted under the form must leave the
+     *  selection, not linger in it as a phantom that makes every field mixed. */
+    const selectedIds: string[] = useMemo(() => {
+        const live = new Set(rows.map(r => r.id));
+        const out: string[] = [];
+        if (subjectId) out.push(subjectId);
+        for (const id of alsoSelected) if (id !== subjectId && live.has(id)) out.push(id);
+        return out;
+    }, [rows, subjectId, alsoSelected]);
+
+    const isMulti = selectedIds.length > 1;
+
+    /** The multi-form, or null when fewer than two rows are selected.
+     *  The engine decides what is mixed and what is excluded; `multiDraw` only
+     *  says what each instance holds. */
+    const multi: MultiModel | null = useMemo(() => {
+        if (!classShape || selectedIds.length < 2) return null;
+        return multiModel(classShape, multiInstancesOf(idlookup, classShape, selectedIds));
+    }, [classShape, selectedIds, idlookup]);
+
+    /** Toggle a row in or out of the selection.
+     *
+     *  Picking the subject out of the set promotes the next member rather than
+     *  leaving the form with nothing: a selection of three minus its subject is
+     *  still a selection of two, and blanking the detail pane would read as the
+     *  click having deselected everything. */
+    const toggleSelected = (id: string) => {
+        setBulkTouched({});
+        setNav(null);
+        if (id === subjectId) {
+            const next = alsoSelected.find(x => x !== id) ?? null;
+            setSelectedObjectId(next);
+            setAlsoSelected(prev => prev.filter(x => x !== id && x !== next));
+            return;
+        }
+        if (alsoSelected.includes(id)) { setAlsoSelected(prev => prev.filter(x => x !== id)); return; }
+        if (!subjectId) { setSelectedObjectId(id); return; }
+        setAlsoSelected(prev => [...prev, id]);
+    };
+
+    /** A plain click on a row: one subject, selection reset. The checkbox is the
+     *  gesture that ADDS; a click that quietly extended the selection would make
+     *  every ordinary row change a bulk edit waiting to happen. */
+    const selectOnly = (id: string) => {
+        setSelectedObjectId(id);
+        setAlsoSelected([]);
+        setBulkTouched({});
+        setNav(null);
+    };
+
+    const applyBulkEdit = () => {
+        if (!multi) return;
+        const plan = bulkPlan(multi, bulkTouched);
+        setBulkTouched({});
+        if (plan.length === 0) return;
+        applyBulk(plan);
+    };
+
+    // ── Drill-in (12c) ─────────────────────────────────────────────────────────
+
+    /** The instance the form body is showing: the drilled-into child when a
+     *  navigation is open, the selected row otherwise. ONE form, whose body is
+     *  replaced — the design's own words — so this is an id swap and not a second
+     *  mounted form. Resolved against the store so a drilled-into child that was
+     *  deleted falls back to the subject instead of showing a dead object. */
+    const formSubjectId: string | null = useMemo(() => {
+        if (!nav) return subjectId;
+        const cur = currentOf(nav);
+        if (cur && idlookup?.[cur.id]?.className === 'DObject') return cur.id;
+        return subjectId;
+    }, [nav, subjectId, idlookup]);
+
+    /** How deep the form has drilled. It is what decides inline vs link. */
+    const formDepth = nav ? depthOf(nav) : 0;
+
+    const crumbs: Crumb[] = useMemo(() => (nav ? breadcrumbOf(nav) : []), [nav]);
+
+    /** Drill into a contained child. The road is seeded from the SUBJECT's own
+     *  position, not from the model root, so the breadcrumb starts where the form
+     *  started and does not print ancestors the user never navigated through. */
+    const drillTo = (childId: string, childKey: string) => {
+        const step = navStepOf(idlookup, childId, childKey);
+        if (!step) return;
+        if (nav) { setNav(drillInto(nav, step)); return; }
+        const root = subjectId ? navStepOf(idlookup, subjectId) : null;
+        if (!root) return;
+        setNav(drillInto(navFor(root), step));
+    };
+
+    /** The contained children of the form's current subject, per child slot.
+     *  Empty at depth >= INLINE_DEPTH_LIMIT: beyond the inline level the children
+     *  render as drill-in links, which is the same list read by a different rule. */
+    const inlineChildren = useMemo(() => {
+        if (!formSubjectId || !shapeCtx) return [] as Array<{ key: string; of: string; ids: string[] }>;
+        const clsName = pathTo(idlookup, formSubjectId).slice(-1)[0]?.cls;
+        const shape = clsName ? shapeCtx.shape().classes[clsName] : null;
+        if (!shape) return [];
+        return shape.children.map(c => ({
+            key: c.key,
+            of: c.of,
+            ids: childrenIn(idlookup, formSubjectId, c.key),
+        })).filter(c => c.ids.length > 0);
+    }, [idlookup, formSubjectId, shapeCtx]);
+
     const selectClass = (cls: MetaclassInfo) => {
         if (uninstantiableReason(cls)) return;
         setSelectedClassId(cls.id);
         setSelectedObjectId(null);
+        setAlsoSelected([]);
+        setBulkTouched({});
+        setNav(null);
         setQuery('');
     };
 
@@ -626,6 +1014,36 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
         // already resolves against the live rows, and this only saves the drawer a
         // render on a dead object.
         if (selectedObjectId && plan.deletes.includes(selectedObjectId)) setSelectedObjectId(null);
+    };
+
+    // ── Multi-delete (12b) ─────────────────────────────────────────────────────
+    // ONE preflight for the set: the referrers are the union, minus the pointers
+    // held by anything that is dying. The plans are still per-instance, because
+    // `deletePlan` is 12d's and its verdict is defined over one target — what the
+    // set shares is the DECISION, not the arithmetic.
+
+    const openMultiDelete = () => {
+        if (selectedIds.length < 2) return;
+        const shape = shapeCtx.shape();
+        const pres = selectedIds.map(id => preflightFor(modelid, shape, id));
+        const union = unionPreflight(pres as any);
+        setMultiReassignTo(union.reassignCandidates[0]?.id ?? '');
+        setPendingMulti(union);
+    };
+
+    const confirmMultiDelete = (options: DeleteOptions) => {
+        if (!pendingMulti || pendingMulti.blocked) { setPendingMulti(null); return; }
+        const shape = shapeCtx.shape();
+        for (const id of pendingMulti.ids) {
+            const plan = deletePlan(preflightFor(modelid, shape, id), options);
+            if (plan.blocked) { console.warn('[InstanceManagerTab] multi delete refused', plan.blocked); continue; }
+            applyDelete(plan);
+        }
+        setPendingMulti(null);
+        setSelectedObjectId(null);
+        setAlsoSelected([]);
+        setBulkTouched({});
+        setNav(null);
     };
 
     const commitDraft = () => {
@@ -746,6 +1164,26 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                         <table className="instance-manager__table">
                             <thead>
                                 <tr>
+                                    {/* Select-all over the VISIBLE rows: what the
+                                        search box left on screen is what a click here
+                                        means, so a filtered table cannot silently
+                                        select rows the user cannot see. */}
+                                    <th scope="col" className="instance-manager__th-pick">
+                                        <input
+                                            type="checkbox"
+                                            aria-label="Select all visible instances"
+                                            checked={visible.length > 0 && visible.every(r => selectedIds.includes(r.id))}
+                                            onChange={() => {
+                                                const allOn = visible.length > 0 && visible.every(r => selectedIds.includes(r.id));
+                                                setBulkTouched({});
+                                                setNav(null);
+                                                if (allOn) { setSelectedObjectId(null); setAlsoSelected([]); return; }
+                                                const [first, ...rest] = visible.map(r => r.id);
+                                                setSelectedObjectId(first ?? null);
+                                                setAlsoSelected(rest);
+                                            }}
+                                        />
+                                    </th>
                                     <th scope="col" className="instance-manager__th-name">name</th>
                                     {columns.map(col => (
                                         <th
@@ -778,10 +1216,29 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                                 {visible.map(row => (
                                     <tr
                                         key={row.id}
-                                        className={row.id === subjectId ? 'instance-manager__tr--selected' : undefined}
+                                        className={
+                                            row.id === subjectId ? 'instance-manager__tr--selected'
+                                                : selectedIds.includes(row.id) ? 'instance-manager__tr--multi'
+                                                    : undefined
+                                        }
                                         title={row.name || row.id}
-                                        onClick={() => setSelectedObjectId(row.id)}
+                                        onClick={() => selectOnly(row.id)}
                                     >
+                                        {/* The checkbox is the gesture that ADDS to the
+                                            selection; a plain click still means «this one».
+                                            Keeping them apart is what stops every ordinary
+                                            row change from being a bulk edit in waiting. */}
+                                        <td
+                                            className="instance-manager__td-pick"
+                                            onClick={e => { e.stopPropagation(); toggleSelected(row.id); }}
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedIds.includes(row.id)}
+                                                aria-label={`Select ${row.name || row.id}`}
+                                                onChange={() => { /* the cell owns the gesture */ }}
+                                            />
+                                        </td>
                                         <th scope="row" className="instance-manager__td-name">
                                             {row.name || <em className="instance-manager__unnamed">unnamed</em>}
                                         </th>
@@ -828,9 +1285,96 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
 
             {/* ── The selected instance, as a form ────────────────────────── */}
             <section className="instance-manager__pane instance-manager__pane--detail">
-                {subjectId ? (
+                {isMulti && multi ? (
+                    <MultiForm
+                        model={multi}
+                        touched={bulkTouched}
+                        onTouch={(key, value) => setBulkTouched(prev => ({ ...prev, [key]: value }))}
+                        onApply={applyBulkEdit}
+                        onClear={() => setBulkTouched({})}
+                        onDelete={openMultiDelete}
+                    />
+                ) : subjectId ? (
                     <>
-                        <IRForm objectId={subjectId} />
+                        {/* The breadcrumb of 12c: «il breadcrumb tiene la strada del
+                            containment. Ogni segmento e' cliccabile». Present only once
+                            a drill-in has happened — a form sitting on its own subject
+                            has a road of one step, and printing it would be noise. */}
+                        {crumbs.length > 1 && (
+                            <nav className="instance-manager__crumbs" aria-label="Containment path">
+                                {crumbs.map(c => (
+                                    <span key={c.id + ':' + c.depth} className="instance-manager__crumb-wrap">
+                                        {c.isCurrent ? (
+                                            <span className="instance-manager__crumb instance-manager__crumb--current">
+                                                {crumbLabel(c)}
+                                            </span>
+                                        ) : (
+                                            <button
+                                                type="button"
+                                                className="instance-manager__crumb"
+                                                onClick={() => setNav(prev => (prev ? truncateTo(prev, c.depth) : prev))}
+                                            >
+                                                {crumbLabel(c)}
+                                            </button>
+                                        )}
+                                        {!c.isCurrent && <i className="bi bi-chevron-right instance-manager__crumb-sep" aria-hidden="true" />}
+                                    </span>
+                                ))}
+                            </nav>
+                        )}
+
+                        <IRForm objectId={formSubjectId ?? subjectId} />
+
+                        {/* The depth rule of 12c, and it is ONE comparison:
+                            `rendersInline(formDepth)`. At depth 0 a contained child is
+                            edited INLINE, in its own form nested under the parent's; at
+                            depth 1 and beyond the same children render as links that
+                            drill in, replacing the body of this one form.
+
+                            The nesting is done HERE and not inside `IRFormField`, for
+                            the reason the children bar below already states: giving the
+                            form's own children group a second behaviour means threading
+                            a callback through `IRForm` -> `IRFormField` -> `ListWidget`,
+                            three components this tab HOSTS unchanged (2a) and that the
+                            canvas rail mounts too. Same seam, same reason. */}
+                        {inlineChildren.length > 0 && (
+                            <div className="instance-manager__inline">
+                                {inlineChildren.map(slot => (
+                                    <div className="instance-manager__inline-slot" key={slot.key}>
+                                        <h3 className="instance-manager__eyebrow">
+                                            {slot.key}
+                                            <span className="instance-manager__draft-card">{slot.of}</span>
+                                        </h3>
+                                        {slot.ids.map(childId => (
+                                            rendersInline(formDepth) ? (
+                                                <div className="instance-manager__inline-child" key={childId}>
+                                                    <button
+                                                        type="button"
+                                                        className="instance-manager__inline-open"
+                                                        title="Open this child as the form body"
+                                                        onClick={() => drillTo(childId, slot.key)}
+                                                    >
+                                                        {crumbLabel(navStepOf(idlookup, childId) ?? { id: childId, name: '', cls: slot.of, childKey: null })}
+                                                        <i className="bi bi-box-arrow-in-right" aria-hidden="true" />
+                                                    </button>
+                                                    <IRForm objectId={childId} />
+                                                </div>
+                                            ) : (
+                                                <button
+                                                    type="button"
+                                                    className="instance-manager__inline-link"
+                                                    key={childId}
+                                                    onClick={() => drillTo(childId, slot.key)}
+                                                >
+                                                    {crumbLabel(navStepOf(idlookup, childId) ?? { id: childId, name: '', cls: slot.of, childKey: null })}
+                                                    <i className="bi bi-chevron-right" aria-hidden="true" />
+                                                </button>
+                                            )
+                                        ))}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                         {/* Route 2 of Turno 10: containment creates. One Add per child
                             slot of the shape, gated by `upper`; when the slot is full
                             the control is absent and the cardinality says why. The
@@ -886,6 +1430,16 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                     />
                 )}
             </section>
+
+            {pendingMulti && (
+                <MultiDeleteDialog
+                    pre={pendingMulti}
+                    reassignTo={multiReassignTo}
+                    onReassignTo={setMultiReassignTo}
+                    onCancel={() => setPendingMulti(null)}
+                    onConfirm={confirmMultiDelete}
+                />
+            )}
 
             {pending && (
                 <DeleteDialog
