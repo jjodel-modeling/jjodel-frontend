@@ -2,6 +2,44 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-08-31 — fix(core): il namespace vede le create del proprio tick
+**Prompt**: «Tick-fix: defaultname vede le create del proprio tick», depositato in chat, a valle
+di `discovery_2026-08-30_uniqueness_m2.md` §5(b) e `discovery_2026-08-30_s1m2_una_regola.md` §3.
+L'ipotesi che portava — «`idlookup` e' un Proxy la cui enumerazione non elenca le pendenti,
+rendile enumerabili» — **e' stata falsificata dalla Fase 1 e il prompt lo prevedeva**: `idlookup`
+non e' un Proxy, e' un oggetto il cui `__proto__` e' `DPointerTargetable.pendingCreation`
+(`reducer.ts:639`), e il `for...in` le pendenti **le elenca gia'** (115 contro 112 own key,
+misurato). Cio' che non le vede sono le **collezioni** da cui ogni namespace e' costruito
+(`pkg.classes` 6->6, `pkg.children` 8->8, `childNames` senza il nome nuovo, nello stesso tick).
+Il fix resta alla fonte — un indice delle pendenti letto dove il namespace e' **deciso** — ma
+**non tocca `idlookup`**, quindi nessun censimento dei suoi lettori era dovuto.
+**Files touched**: `frontend/src/model/logicWrapper/nameUniqueness.ts` (`pendingChildrenOf`,
+`NamespaceOptions.includePending`, innesto in `getNamespaceOf` e `getM2NamespaceOf`, opt-out nei
+due `detect*`), `frontend/src/joiner/classes.ts` (`defaultname`, **una** implementazione per 35
+chiamate), `frontend/src/components/editor-v2/problems/UniquenessProblemSync.tsx` (solo commento:
+la diagnosi «Proxy» era sbagliata, e la scelta del badge e' ora dichiarata),
+`frontend/src/model/__tests__/m2NameUniqueness.test.ts` (+17 unita', +`DPointerTargetable` nel
+mock). Piu' `docs/discovery/discovery_2026-08-31_tick_fix_defaultname.md`. Quattro sorgenti,
+sotto la Regola 19. Sonde non committate: `_tmp_tick_recon.ts`, `_tmp_tick_recon2.ts`,
+`_tmp_tick_verify.ts` (19/0), `_tmp_tick_import.ts` (7/0), `_tmp_tick_residue.ts`.
+**Outcome**: ✅ completed
+**Corregge**: 2026-08-30 22:55 (S1-M2, la diagnosi del Proxy)
+**Causa**: (c)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessuno dei quattro file e' in §3.1, e non c'e' nessun
+percorso di scrittura D: `pendingCreation` e' letto e mai scritto, zero creatori, zero
+`TRANSACTION`, zero `SetFieldAction`. Il quadro dei layer sta comunque nel referto §3 e nella
+chiusura in chat, ma non e' stato scritto prima del diff e non lo dichiaro come tale.
+**Smoke visivo**: passato — `npm run smoke` 12/0/3 VERDICT GREEN, corsa quiescente, un boot per
+stato, `moved: nothing`.
+**Notes**: 4 `addClass()` in un tick danno `Concept_0..3`; a tick separati identico a oggi. Il
+badge resta **INVARIATO** per scelta (`detect*` lascia `includePending` a `false`): un parse
+tiene tutto in `pendingCreation` fino a `persist`, R-GT-2, e contarlo lampeggerebbe a ogni
+import. Variante misurata e non spedita. Gate: tsc 33 = baseline, build 0, vitest 2214/0 (+17),
+smoke GREEN, 4 mutazioni -> 8/2/3/1 rossi. Misure, import e limiti nel referto citato.
+**Prompt document name**: Tick-fix defaultname (in chat) 2026-08-31 00:00
+
 ## 2026-08-31 — docs(discovery): l'import Ecore da UI e' vivo, misurato dal gesto
 **Prompt**: «Discovery: l'import Ecore da UI e' morto end-to-end?», dato in chat e non depositato in `docs/prompts/`. Quattro domande: la catena anello per anello, da quando, l'inventario per rianimare il legacy, e se il test end-to-end di `parseDAnnotation` diventa scrivibile. Zero fix dichiarati nel prompt.
 **Files touched**: `docs/discovery/discovery_2026-08-31_import_ecore_catena.md` (nuovo), `docs/claude-code-log.md`. Sonde `frontend/scripts/smoke/_tmp_ecore_chain.ts`, `_tmp_ecore_converters.ts`, `_tmp_ecore_converters2.ts` e `_tmp_ecore_chain.png` (non committate, gitignored). Zero file sorgente toccati. Commit con pathspec; `git status --porcelain` e indice verificati prima: indice vuoto, nessuna sessione parallela sui miei file.
