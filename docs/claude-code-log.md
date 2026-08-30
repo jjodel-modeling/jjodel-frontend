@@ -2,6 +2,20 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-08-30 — feat(manager): nasce ShapeCtx, e la collezione diventa una tabella
+**Prompt**: Slice 2b, corsia completa, con Q4 (via adapter, senza toccare il core) e Q8 (catalogo per metaclasse) ratificate in ingresso. Far nascere `ShapeCtx` chiudendo i tre buchi di §2.2 (letterali di enum, `derived`/`changeable`, risalita di `pointedBy`), collocandolo dove vivra' il motore; tabella per-attributo nella lista istanze con le celle rese dai renderer della precedenza — mai una terza copia della classificazione; colonna «referenced by» come preflight di 12d; ricerca; zero write nuovi, zero modifiche a joiner/core.
+**Files touched**: **nuovi** `src/jjform/{shape.ts,index.ts}` (il tipo, zero import), editor-v2/hooks/shapeDraw.ts (la meta' pura dell'adapter) e shapeAdapter.ts (la meta' impura), abstract/tabs/instanceTable.ts (colonne e celle, puro), __tests__/instanceTable.test.ts (29 prove); **modificati** abstract/tabs/InstanceManagerTab.tsx (tabella + ricerca + colonna refs + renderer di cella) e instanceManagerTab.scss. Docs: decisions.md (Q4/Q6/Q8 sciolte, R-FORM-4..8), form-engine-contract.md (copia repo allineata), claude-code-log.md. Sonde `_tmp_pointedby.ts`, `_tmp_sfa.ts`, `_tmp_instance_manager.ts` esteso e i `.png` (non committate).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: (e)
+**Regressions**: no (typecheck 33 = baseline su output completo, zero errori nei file toccati; `npx vitest run` 1890 passed / 0 failed coi 9 file rotti all'import = baseline nota, erano 1849; build exit 0 col solo chunk-warning; `npm run smoke` 12/0/3)
+**Out-of-scope changes**: no (i sette file di sorgente sono quelli che le quattro voci del prompt implicano; `joiner/` e il core non sono toccati, come chiesto)
+**Layer Impact Report**: not-required (nessun file di §3.1; l'adapter LEGGE `idlookup` e `pointedBy`, non scrive nulla — la slice non ha write path nuovi)
+**Smoke visivo**: **passato, 41/41 ALL GREEN**, ed e' il criterio della slice. `_tmp_instance_manager.ts`: 14 colonne dagli attrs+refs con tipo e cardinalita' nel `title`; nove renderer distinti a schermo (`swatch-cell`, `chip`, `bool`, `num`, `text`, `code`, `dash`, `collection`, `pill`), cioe' la precedenza e non testo piatto; ricerca per nome, per VALORE reso, e lo stato «nessun risultato»; **«referenced by»** con controllo negativo (AllNine tutte a `—`) e attribuzione distinta (`Config_main <- allNine_valued·cfg`, `Config_old <- allNine_broken·cfg`); **`derived` provato accendendolo a runtime** — 0 lucchetti prima, uno solo dopo su `guard`, col `title` che dice «derived». Restano verdi i 2a: write dei due path e canvas che riflette. Ritagli `_tmp_instance_manager{,_after,_canvas}.png`.
+**Notes**: La forma di `pointedBy` e' **misurata** (`_tmp_pointedby.ts`), non dedotta: porta anche `.father`, `.instances`, `.objects` e una voce nuda `objects`; solo `idlookup.<id>.values[.<n>]` e' un riferimento. Tre correzioni della sonda prima del verde, tutte errori miei e non del prodotto: lucchetti cercati sulla tabella sbagliata, D-layer letto prima del flush, una sola istanza referenziata assunta su due. Un typecheck a 34 non era cache: un'altra sessione editava `joiner/classes.ts` sotto di me.
+**Prompt document name**: prompt inline, nessun documento
+
+
 ## 2026-08-30 — docs: il bundle atterra a meta' slice, e le cinque domande del contratto trovano risposta
 **Prompt**: nessuno — riconciliazione dovuta. Il bundle handoff citato dai due prompt e assente a entrambe le misure (29/08 e 30/08, controllo positivo entrambe le volte) e' arrivato **durante** la slice 2a, nel commit `e70265529` di un'altra sessione, con in piu' `form-engine-contract.md`. Letti i tre documenti e confrontati con il report di Fase 1 e con la slice appena consegnata.
 **Files touched**: docs/discovery/discovery_2026-08-29_instance_manager_fase1.md (addendum in coda; §0 non riscritto), docs/decisions.md (nota di riconciliazione in testa alla serie R-FORM, la sezione con le cinque risposte, e Q8), docs/claude-code-log.md.
