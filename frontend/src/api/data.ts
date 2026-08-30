@@ -175,12 +175,26 @@ export class EcoreParser{
         // console.log("root parse", {ecorejson, parsedjson});
         // isMetamodel = !!parsedjson[ECoreRoot.ecoreEPackage];
 
+        // `paused` gates `Constructors.persist` (joiner/classes.ts:651): while it is up,
+        // nothing constructed here leaves `DPointerTargetable.pendingCreation` for the store.
+        // It has to come back down even when the parse throws, and the parse does throw --
+        // `LinkAllNamesToIDs` ends on `Log.ex(!target, "LinkAllNames() can't find type target")`
+        // (:348) and `Log.ex` raises. Measured (docs/discovery/discovery_2026-08-30_gettype_finestra_parser.md
+        // §5): one .ecore with an unresolvable eType left `paused === true` for the rest of the
+        // session, and every element created afterwards got an id, stayed readable through the
+        // prototype chain, and was never committed -- the app kept answering and every new
+        // creation vanished on the next reload. `finally`, not `catch`: the failure stays as
+        // loud as it is today, the exception still leaves this method.
         Constructors.paused = true;
-        let parsedElements: DModelElement[] = isMetamodel ? EcoreParser.parseM2Model(parsedjson, filename) : EcoreParser.parseM1Model(parsedjson, undefined, filename);
-        console.warn("parse.result D", parsedElements);
-        this.LinkAllNamesToIDs(parsedElements);
-        this.fixNamingConflicts(parsedElements);
-        Constructors.paused = false;
+        let parsedElements: DModelElement[];
+        try {
+            parsedElements = isMetamodel ? EcoreParser.parseM2Model(parsedjson, filename) : EcoreParser.parseM1Model(parsedjson, undefined, filename);
+            console.warn("parse.result D", parsedElements);
+            this.LinkAllNamesToIDs(parsedElements);
+            this.fixNamingConflicts(parsedElements);
+        } finally {
+            Constructors.paused = false;
+        }
         // if (persist) CreateElementAction.newBatch(parsedElements);
         // update m1 object pointers (need them to be persistent to navigate .fathers and get ecore pointer strings using LObject)
         this.fixObjectPointers(parsedElements); // updates dvalue.values from ecore reference to pointers.
