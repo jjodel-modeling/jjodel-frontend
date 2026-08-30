@@ -2,6 +2,20 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-08-30 — discovery: il contro-esempio a R-FORM-10, e la coda orfane di tree.scss
+**Prompt**: «Discovery: il contro-esempio a R-FORM-10 (+ coda tree.scss)», dato in chat e non depositato in `docs/prompts/`. Riempire la matrice 2x2 lasciata aperta in §0 di `discovery_2026-08-30_5_brokenref_fixture.md` — cardinalita' (1..1 vs 0..*) x percorso di delete (12d/`deleteAdapter` vs quello del fixture) — dire se R-FORM-10 va riscritta o delimitata, e verificare che `missing` e `brokenRef` siano davvero due stati distinti su tabella e nodo ora che entrambi esistono in natura. Solo discovery: zero fix. Coda micro in commit separato: le 7 orfane preesistenti di `tree.scss` col metodo R-NV-7 e gate sul CSS compilato.
+**Files touched**: frontend/src/components/forEndUser/tree.scss (7 dichiarazioni morte), docs/discovery/discovery_2026-08-30_6_rform10_controesempio.md (nuovo), docs/claude-code-log.md. Sonde `_tmp_rform10_{matrix,wrapclock,render}.ts` (non committate). Commit sorgente `9c91c65ef`, docs `f1694e9ca`, log a parte. Zero file condivisi con la sessione parallela di 12b/12c, che tiene `jjform/index.ts` e `InstanceManagerTab.tsx` modificati nell'albero e che questa sessione non ha toccato.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Il diff di sorgente e' di sole dichiarazioni SCSS morte con CSS compilato identico byte a byte (md5 `03bbe9cb…`, 3356 byte da entrambe le parti). Build exit 0 col solo chunk-warning; typecheck **33 = baseline su output completo**, verificato per differenza contro l'albero senza il diff (i 3 in piu' della prima corsa erano `multiDraw.ts`, file della sessione parallela in volo).
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (discovery read-only sul core; l'unico diff e' SCSS, e non tocca alcun file di §3.1)
+**Smoke visivo**: passato. Le tre sonde ALL GREEN dove asseriscono, zero errori di pagina in tutte le corse; ritagli `_tmp_rform10_{node,table}.png`. `npm run smoke` non rigirato — vedi Notes.
+**Notes**: Nessuno dei due assi del prompt spiega il contro-esempio: la cardinalita' non entra nella regola e i due percorsi chiamano la stessa `Dummy.get_delete`. La variabile e' l'**istante del wrap** del proxy L. R-FORM-10 va **delimitata**, non riscritta; testo proposto nel referto, `decisions.md` non toccato. Domanda 3: la tabella distingue `missing` da `broken`, il nodo no. Tutto in `discovery_2026-08-30_6_rform10_controesempio.md`.
+**Prompt document name**: 2026-08-30 15:30
+
+
 ## 2026-08-30 — fix(joiner): il seed della DReference rifiutata, misurato prima di essere scelto
 **Prompt**: `docs/prompts/PROMPT_seed_dreference.md`. Chiudere il residuo di §4 del referto DTypedElement: quando lo switch rifiuta un tipo per una DReference il seed resta *il padre*, e la reference punta al proprio contenitore. Metodo imposto: **prima misura** cosa il D-graph tollera come tipo assente e cosa ne fanno i consumatori; se nessun valore assente e' tollerato senza fix a valle, fermarsi e riportare. Invarianti: i 12 test del 30-08 verdi, il contratto `undefined` del parser Ecore intatto, `Log.ww` al suo posto.
 **Files touched**: joiner/classes.ts (un ramo dello switch del seed), joiner/__tests__/dTypedElement.test.ts (5 prove nuove, 12 -> 17), docs/discovery/discovery_2026-08-30_dref_seed_rifiutata.md (nuovo), docs/claude-code-log.md. Sonde `_tmp_dref_seed_{measure,p2,p3,verify}.ts` (non committate). Commit sorgente `269823207`, docs `cc83f9889`, log a parte. **Zero file condivisi** con la sessione parallela di brokenRef (`28a26fe34`, `09ef17a06`, `d0861186b`), verificato su `git diff --name-only`.
