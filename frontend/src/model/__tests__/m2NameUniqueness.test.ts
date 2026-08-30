@@ -15,10 +15,16 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+// `DPointerTargetable.pendingCreation` is the fourth thing the barrel supplies at
+// runtime: the dictionary of the elements created in the current tick (tick-fix,
+// 2026-08-31). The mock gives a REAL, writable dictionary, so a test can put a
+// pending element in it and see the namespace resolvers pick it up — the same
+// object `Constructors`' constructor writes to on the field.
 vi.mock('../../joiner', () => ({
     DModel: { cname: 'DModel' },
     DObject: { cname: 'DObject' },
     DValue: { cname: 'DValue' },
+    DPointerTargetable: { pendingCreation: {} as { [k: string]: any } },
 }));
 
 const NU = await import('../logicWrapper/nameUniqueness');
@@ -278,5 +284,175 @@ describe('il badge: detectM2DuplicateNames (R-M2U-6)', () => {
         const near = attach(klass('kNear', 'dupprobe'), pkgA, 'classes'); ownIsAll(near);
         refreshChildren(pkgA);
         expect(detectM2DuplicateNames(model as any).has('kNear')).toBe(false);
+    });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Il tick-fix — le create dello stesso tick, che nessuna collezione elenca
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Misurato 2026-08-31 (`_tmp_tick_recon.ts`): `idlookup` non e' un Proxy, e' un
+// oggetto il cui `__proto__` e' `DPointerTargetable.pendingCreation`. Il `for...in`
+// le elenca (114 contro 112 di `Object.keys`), il colpo per id le risolve. Cio' che
+// NON le vede sono le COLLEZIONI da cui ogni namespace e' costruito: nello stesso
+// tick `pkg.classes` resta 6, `pkg.children` resta 8, `childNames` non contiene il
+// nome nuovo. Da qui il fix, e da qui questi test: il pending e' un elemento con
+// `{className, name, father}` gia' scritti e nessuna collezione che lo contenga.
+
+const { getNamespaceOf, checkNameUniqueness, detectDuplicateNames, pendingChildrenOf } = NU;
+const PENDING = ((await import('../../joiner')) as Any).DPointerTargetable.pendingCreation as Any;
+
+/** Un elemento nel dizionario delle pendenti: fuori da ogni collezione, per costruzione. */
+function pending(className: string, id: string, name: string, father: Any): Any {
+    const e = { className, id, name, father: father?.id ?? father };
+    PENDING[id] = e;
+    return e;
+}
+
+beforeEach(() => { for (const k of Object.keys(PENDING)) delete PENDING[k]; });
+
+describe('pendingChildrenOf — il dizionario delle create del tick', () => {
+    it('filtra sul padre, e accetta sia una stringa sia un Set', () => {
+        pending('DClass', 'p1', 'Uno', pkgA);
+        pending('DClass', 'p2', 'Due', pkgB);
+        expect(pendingChildrenOf('pA').map((e: Any) => e.id)).toEqual(['p1']);
+        expect(pendingChildrenOf(new Set(['pA', 'pB'])).map((e: Any) => e.id)).toEqual(['p1', 'p2']);
+    });
+
+    it('ignora le pendenti SENZA padre — i due residui misurati al boot', () => {
+        // Misurati: un `DState` e un `DProject`, entrambi senza `father`. Restano nel
+        // dizionario per tutta la sessione, e nessun namespace li deve mai vedere.
+        PENDING['r1'] = { className: 'DState', id: 'r1' };
+        PENDING['r2'] = { className: 'DProject', id: 'r2', name: 'Row view smoke' };
+        expect(pendingChildrenOf('pA')).toHaveLength(0);
+        // controllo positivo: lo stesso dizionario, con un padre, risponde
+        pending('DClass', 'p1', 'Uno', pkgA);
+        expect(pendingChildrenOf('pA')).toHaveLength(1);
+    });
+
+    it('un insieme di padri vuoto, o assente, non scandisce nulla', () => {
+        pending('DClass', 'p1', 'Uno', pkgA);
+        expect(pendingChildrenOf(new Set())).toHaveLength(0);
+        expect(pendingChildrenOf(undefined)).toHaveLength(0);
+        expect(pendingChildrenOf(null)).toHaveLength(0);
+    });
+});
+
+describe('M2 — il namespace vede le create del proprio tick', () => {
+    it('una classe pendente entra nel pool dei classificatori, e fa rifiutare l\'omonima', () => {
+        pending('DClass', 'pNew', 'TickProbe', pkgA);
+        expect(getM2NamespaceOf(pkgA, 'classifier').map((e: Any) => e.id)).toContain('pNew');
+        const v = checkM2NameUniqueness({ father: pkgA, kind: 'classifier', name: 'TickProbe' });
+        expect(v.ok).toBe(false);
+        expect(v.reason).toBe('Name "TickProbe" already used by Class "TickProbe"');
+    });
+
+    it('PER CONTRASTO: `includePending: false` sullo stesso stato accetta', () => {
+        pending('DClass', 'pNew', 'TickProbe', pkgA);
+        expect(checkM2NameUniqueness({
+            father: pkgA, kind: 'classifier', name: 'TickProbe', includePending: false }).ok).toBe(true);
+        // e il pool committato, da solo, davvero non la contiene
+        expect(getM2NamespaceOf(pkgA, 'classifier', undefined, { includePending: false })
+            .map((e: Any) => e.id)).not.toContain('pNew');
+    });
+
+    it('il genere della pendente decide il suo namespace, come per una committata', () => {
+        pending('DDataType', 'pDt', 'TickProbe', pkgA);
+        // datatype: proprio namespace (R-M2U-3) — la classe omonima passa
+        expect(checkM2NameUniqueness({ father: pkgA, kind: 'classifier', name: 'TickProbe' }).ok).toBe(true);
+        expect(checkM2NameUniqueness({ father: pkgA, kind: 'datatype', name: 'TickProbe' }).ok).toBe(false);
+    });
+
+    it('la classe pendente di un ALTRO metamodello non collide — R-M2U-2 vale anche qui', () => {
+        pending('DClass', 'pOther', 'TickProbe', otherPkg);
+        expect(checkM2NameUniqueness({ father: pkgA, kind: 'classifier', name: 'TickProbe' }).ok).toBe(true);
+        // controllo positivo: nel SUO metamodello la stessa pendente rifiuta
+        expect(checkM2NameUniqueness({ father: otherPkg, kind: 'classifier', name: 'TickProbe' }).ok).toBe(false);
+    });
+
+    it('una classe pendente in un package FRATELLO dello stesso metamodello collide', () => {
+        pending('DClass', 'pB1', 'TickProbe', pkgB);
+        expect(checkM2NameUniqueness({ father: pkgA, kind: 'classifier', name: 'TickProbe' }).ok).toBe(false);
+    });
+
+    it('una feature pendente sulla classe rifiuta l\'omonima', () => {
+        pending('DAttribute', 'pF', 'tickAttr', dupA);
+        expect(checkM2NameUniqueness({ father: dupA, kind: 'feature', name: 'tickAttr' }).ok).toBe(false);
+    });
+
+    it('una feature pendente sulla SUPERCLASSE ombreggia, e nomina il padre', () => {
+        // `allExtends` e' la catena che `allAttributes` percorre: la pendente vi entra
+        // per lo stesso motivo per cui vi entra una committata.
+        sub.allExtends = [sup];
+        pending('DAttribute', 'pSup', 'tickSup', sup);
+        const v = checkM2NameUniqueness({ father: sub, kind: 'feature', name: 'tickSup' });
+        expect(v.ok).toBe(false);
+        // controllo negativo: senza la catena, la stessa pendente non raggiunge `sub`
+        sub.allExtends = [];
+        expect(checkM2NameUniqueness({ father: sub, kind: 'feature', name: 'tickSup' }).ok).toBe(true);
+    });
+
+    it('package / literal / parameter restano sui `children`, pendenti comprese', () => {
+        pending('DPackage', 'pP', 'TickPkg', pkgA);
+        expect(checkM2NameUniqueness({ father: pkgA, kind: 'package', name: 'TickPkg' }).ok).toBe(false);
+        // e una classe pendente NON occupa il namespace dei package
+        pending('DClass', 'pC', 'TickCls', pkgA);
+        expect(checkM2NameUniqueness({ father: pkgA, kind: 'package', name: 'TickCls' }).ok).toBe(true);
+    });
+
+    it('il quasi-omonimo si dichiara anche contro una pendente', () => {
+        pending('DClass', 'pNear', 'TickProbe', pkgA);
+        const v = checkM2NameUniqueness({ father: pkgA, kind: 'classifier', name: 'tickprobe' });
+        expect(v.ok).toBe(true);
+        expect(v.warning).toBe('Name "tickprobe" differs only by case from "TickProbe" in the same scope');
+    });
+});
+
+describe('il badge NON conta gli stati transitori — R-M2U-6, e il vincolo sull\'import', () => {
+    it('per difetto lo scanner M2 ignora le pendenti', () => {
+        pending('DClass', 'pDup', 'DupProbe', pkgA);
+        const map = detectM2DuplicateNames(model as any);
+        // le due `DupProbe` committate ci sono gia' (il fixture), la pendente non
+        // aggiunge ne' una voce propria ne' un collidente in piu'
+        expect(map.has('pDup')).toBe(false);
+        expect(map.get('cA')).toHaveLength(1);
+    });
+
+    it('PER CONTRASTO: `includePending: true` la conta — la misura, non il default', () => {
+        pending('DClass', 'pDup', 'DupProbe', pkgA);
+        const map = detectM2DuplicateNames(model as any, { includePending: true });
+        expect(map.get('cA')).toHaveLength(2);
+    });
+});
+
+describe('M1 — la stessa regola, sull\'altra meta\'', () => {
+    it('un\'istanza pendente sotto lo stesso modello collide', () => {
+        const m1: Any = { className: 'DModel', id: 'm1', name: 'M1', allSubObjects: [] };
+        const committed: Any = { className: 'DObject', id: 'o1', name: 'Alpha', father: m1 };
+        m1.allSubObjects.push(committed);
+        pending('DObject', 'oPend', 'Beta', m1);
+        expect(getNamespaceOf(m1).map((o: Any) => o.id)).toEqual(['o1', 'oPend']);
+        expect(checkNameUniqueness({ father: m1, name: 'Beta' }).ok).toBe(false);
+        // controllo negativo: un nome libero passa
+        expect(checkNameUniqueness({ father: m1, name: 'Gamma' }).ok).toBe(true);
+    });
+
+    it('cio\' che non e\' un DObject non entra nel namespace M1', () => {
+        const m1: Any = { className: 'DModel', id: 'm1', name: 'M1', allSubObjects: [] };
+        pending('DValue', 'vPend', 'Beta', m1);
+        pending('DVertex', 'xPend', 'Beta', m1);
+        expect(checkNameUniqueness({ father: m1, name: 'Beta' }).ok).toBe(true);
+        // controllo positivo: lo stesso nome, su un DObject pendente, rifiuta
+        pending('DObject', 'oPend', 'Beta', m1);
+        expect(checkNameUniqueness({ father: m1, name: 'Beta' }).ok).toBe(false);
+    });
+
+    it('il badge M1 ignora le pendenti per difetto, e le conta su richiesta', () => {
+        const m1: Any = { className: 'DModel', id: 'm1', name: 'M1', allSubObjects: [] };
+        const a: Any = { className: 'DObject', id: 'o1', name: 'Alpha', father: m1 };
+        m1.allSubObjects.push(a);
+        pending('DObject', 'oPend', 'Alpha', m1);
+        expect(detectDuplicateNames(m1).size).toBe(0);
+        expect(detectDuplicateNames(m1, { includePending: true }).get('o1')).toHaveLength(1);
     });
 });

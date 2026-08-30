@@ -151,7 +151,7 @@ import type {ProjectsApi as TypeProjectsAPI, UsersApi} from "../api/persistance"
 import type {Collaborative as CollaborativeT} from "../components/collaborative/Collaborative";
 import {names} from "tinycolor2";
 import { toast } from "../components/Toast";
-import { checkM2NameUniqueness, m2KindOf } from "../model/logicWrapper/nameUniqueness";
+import { checkM2NameUniqueness, m2KindOf, pendingChildrenOf } from "../model/logicWrapper/nameUniqueness";
 import { DEFAULT_VIEW_CSS } from "../view/viewElement/defaultViewCss";
 var windoww = window as any;
 
@@ -1463,7 +1463,18 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
                     let meta = LPointerTargetable.from(metaptr as Pointer);
                     startingPrefix = startingPrefix(meta as L);
                 }
-                const childrenNames: (string)[] = lfather.childNames; // lfather.children.map(c => (c as LNamedElement)?.name);
+                // `childNames` is built from `father.children`, a COLLECTION written by the
+                // persist callback's SetFieldAction — so it cannot report a sibling created
+                // earlier in THIS tick, and four unnamed creates in one tick used to take the
+                // same name four times. `pendingChildrenOf` is the same-tick half, read from
+                // `DPointerTargetable.pendingCreation` where `{className, name, father}` are
+                // already set. Named elements only: a pending DVertex/DValue is not a name
+                // this namespace holds. See nameUniqueness.ts, section «The current tick».
+                const pendingNames: string[] = pendingChildrenOf(lfather.id)
+                    .filter(e => !!(e as GObject).name &&
+                        (m2KindOf((e as GObject).className) !== null || (e as GObject).className === 'DObject'))
+                    .map(e => (e as GObject).name as string);
+                const childrenNames: (string)[] = lfather.childNames.concat(pendingNames); // lfather.children.map(c => (c as LNamedElement)?.name);
                 return U.increaseEndingNumber(startingPrefix + '0', false, false, (newname) => childrenNames.indexOf(newname) >= 0);
             }
             else if (typeof father === 'function') {

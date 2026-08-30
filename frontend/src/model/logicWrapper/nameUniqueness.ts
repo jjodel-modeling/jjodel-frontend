@@ -48,7 +48,7 @@
  * would otherwise depend on components/editor-v2/ — inverted dependency).
  */
 
-import { DModel, DObject, DValue, GObject, LModel, LModelElement, LObject, LValue } from '../../joiner';
+import { DModel, DObject, DPointerTargetable, DValue, GObject, LModel, LModelElement, LObject, LValue } from '../../joiner';
 
 export interface NameUniquenessOptions {
     /**
@@ -78,6 +78,86 @@ function resolveLObjectsFromLValue(v: LValue): LObject[] {
     );
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  The current tick — elements created but not yet committed
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// MEASURED 2026-08-31 (`_tmp_tick_recon.ts`), and it corrects what this file said
+// before: `idlookup` is NOT a Proxy. It is a plain object whose `__proto__` is
+// `DPointerTargetable.pendingCreation` (`redux/reducer/reducer.ts:639`), so
+//
+//   `Object.keys` / `Object.values` / `Object.entries`  do NOT list a pending create
+//   `for (const id in idlookup)`                        DOES  list it  (114 vs 112)
+//   `idlookup[id]`                                      resolves it
+//
+// So enumerability was never the whole defect, and making the pending creates own
+// keys of `idlookup` would not have fixed the auto-name: EVERY namespace source used
+// here is a COLLECTION (`pkg.classes`, `cls.allAttributes`, `father.children`), and a
+// collection is written by the `SetFieldAction` of the persist callback, which has not
+// landed yet in the creating tick (CLAUDE.md §3.6). Measured inside one tick:
+// `pkg.classes` 6 -> 6, `pkg.children` 8 -> 8, `childNames` does not contain the new
+// name — while `pendingCreation[id]` already carries `{className, name, father}`.
+//
+// Hence the fix is here, at the one place each namespace is DECIDED, and it reads the
+// pending dictionary directly. `idlookup`'s contract is untouched: no census of its
+// readers is owed, because nothing about it changes.
+//
+// The dictionary is small and does not grow: measured 2 entries at rest and 2 after
+// five creates, both of them a `DState` and a `DProject` with NO `father` — so the
+// `father` filter below can never match them.
+
+/** Options shared by the two namespace resolvers. */
+export interface NamespaceOptions {
+    /**
+     * Include the elements created in the CURRENT tick (see the note above).
+     *
+     * `true` (the default) for every PROSPECTIVE verdict — a create or a rename asks
+     * «is this name free right now», and a sibling made three statements ago is part
+     * of «right now». This is what makes four `addClass()` in one tick take
+     * `Concept_0..3` instead of `Concept_0` four times.
+     *
+     * `false` for the full-model scans behind the badge: those report COMMITTED state,
+     * and a collision the store has not accepted yet is not a problem the user can act
+     * on. It is also what keeps an import's pendings unobservable — a parse runs with
+     * `Constructors.paused`, so its whole output sits in this dictionary until
+     * `persist` (R-GT-2).
+     */
+    includePending?: boolean;
+}
+
+/**
+ * The elements created in the current tick whose `father` is one of `fatherIds`.
+ *
+ * Returns RAW D-objects, not L proxies: the proxy of a pending element does resolve,
+ * but building one per candidate costs more than the two fields a namespace reads.
+ * `.name`, `.id` and `.father` are all set by `Constructors`' constructor (measured),
+ * and `.className` is the D name — which is what `refusalReason` and `m2KindOf`
+ * expect anyway (CLAUDE.md §3.13).
+ */
+export function pendingChildrenOf(fatherIds: Set<string> | string | undefined | null): GObject[] {
+    const ids = typeof fatherIds === 'string' ? new Set([fatherIds]) : fatherIds;
+    if (!ids || ids.size === 0) return [];
+    // Guarded, not asserted: unit tests mock `../../joiner`, and a namespace resolver
+    // must answer on the committed half alone when the D-layer is not there.
+    const pending = (DPointerTargetable as unknown as { pendingCreation?: { [k: string]: GObject } } | undefined)?.pendingCreation;
+    if (!pending) return [];
+    const out: GObject[] = [];
+    for (const id of Object.keys(pending)) {
+        const e = pending[id] as GObject & { father?: string };
+        if (!e || !e.father) continue;
+        if (!ids.has(e.father)) continue;
+        out.push(e);
+    }
+    return out;
+}
+
+/** The id of an element or of a father passed as a pointer. */
+function idOf(e: unknown): string | undefined {
+    if (typeof e === 'string') return e;
+    return (e as { id?: string } | undefined | null)?.id;
+}
+
+
 /**
  * The namespace a name must be unique in, resolved from the FATHER.
  *
@@ -87,7 +167,8 @@ function resolveLObjectsFromLValue(v: LValue): LObject[] {
  */
 export function getNamespaceOf(
     father: LModelElement | undefined | null,
-    excludeId?: string
+    excludeId?: string,
+    opts: NamespaceOptions = {}
 ): LObject[] {
     if (!father) return [];
 
@@ -102,6 +183,19 @@ export function getNamespaceOf(
         // defensively in case of future topology changes).
         siblings = ((father as LObject).subObjects ?? []) as LObject[];
     }
+
+    // The siblings created in THIS tick, which no collection above can report yet.
+    // Only direct children of `father`: with a model father those are the roots, and a
+    // nested object pending under some LValue of the model is NOT added — declared,
+    // because `allSubObjects` is recursive while this is one level. Same-tick nesting
+    // has no create path in the tree today.
+    if (opts.includePending !== false) {
+        siblings = siblings.concat(
+            pendingChildrenOf(idOf(father)).filter(
+                e => (e as { className?: string }).className === DObject.cname
+            ) as unknown as LObject[]
+        );
+    }
     return siblings.filter(o => !!o && o.id !== excludeId);
 }
 
@@ -111,10 +205,10 @@ export function getNamespaceOf(
  */
 export function getSiblingNamespace(
     lobj: LObject,
-    opts: NameUniquenessOptions = {}
+    opts: NameUniquenessOptions & NamespaceOptions = {}
 ): LObject[] {
     const father = opts.overrideFather ?? (lobj.father as LModelElement | undefined);
-    return getNamespaceOf(father, lobj?.id);
+    return getNamespaceOf(father, lobj?.id, {includePending: opts.includePending});
 }
 
 /** The verdict. `ok: false` always carries a `reason` — the sentence a consumer
@@ -165,10 +259,12 @@ export function checkNameUniqueness(args: {
     name: string;
     /** The element being renamed or reparented; omitted by a create. */
     excludeId?: string;
-}): UniquenessVerdict {
+} & NamespaceOptions): UniquenessVerdict {
     const name = args?.name;
     if (name === undefined || name === null) return { ok: true };
-    const collidingWith = getNamespaceOf(args.father, args.excludeId).filter(o => o.name === name);
+    const collidingWith = getNamespaceOf(
+        args.father, args.excludeId, {includePending: args.includePending}
+    ).filter(o => o.name === name);
     if (collidingWith.length === 0) return { ok: true };
     return { ok: false, reason: refusalReason(name, collidingWith[0]), collidingWith };
 }
@@ -184,10 +280,11 @@ export function checkNameUniqueness(args: {
 export function validateNameUniqueness(
     lobj: LObject,
     newName: string,
-    opts: NameUniquenessOptions = {}
+    opts: NameUniquenessOptions & NamespaceOptions = {}
 ): { valid: boolean; collidingWith?: LObject[] } {
     const father = opts.overrideFather ?? (lobj?.father as LModelElement | undefined);
-    const verdict = checkNameUniqueness({ father, name: newName, excludeId: lobj?.id });
+    const verdict = checkNameUniqueness({
+        father, name: newName, excludeId: lobj?.id, includePending: opts.includePending });
     if (verdict.ok) return { valid: true };
     return { valid: false, collidingWith: verdict.collidingWith };
 }
@@ -200,12 +297,14 @@ export function validateNameUniqueness(
  * acceptable for models up to ~1000 objects. Indexing by namespace key is
  * future work.
  */
-export function detectDuplicateNames(model: LModel): Map<string, LObject[]> {
+export function detectDuplicateNames(model: LModel, opts: NamespaceOptions = {}): Map<string, LObject[]> {
     const result = new Map<string, LObject[]>();
     const all = (model.allSubObjects ?? []) as LObject[];
+    // COMMITTED state by default: see `NamespaceOptions.includePending`.
+    const includePending = opts.includePending === true;
     for (const obj of all) {
         if (!obj) continue;
-        const siblings = getSiblingNamespace(obj);
+        const siblings = getSiblingNamespace(obj, {includePending});
         const colliding = siblings.filter(s => s.name === obj.name);
         if (colliding.length > 0) {
             result.set(obj.id, colliding);
@@ -237,13 +336,13 @@ export function detectDuplicateNames(model: LModel): Map<string, LObject[]> {
 // and features; narrowing or widening the other three was not decided, and either
 // would silently move a committed, on-screen check (CLAUDE.md rule 3).
 //
-// Measured, and the reason the auto-name is NOT gated here: `idlookup` is a Proxy
-// whose `get` trap resolves a pending creation but whose enumeration does not list
-// it (`Object.keys` unchanged, a scan finds nothing, the direct hit by id finds the
-// object). So NO namespace source — collection, `children`, or an idlookup scan —
-// can see a create made in the same tick, and four `addClass()` in one tick still
-// take the same `defaultname`. That duplicate needs the tick fix and is declared,
-// not closed: docs/discovery/discovery_2026-08-30_s1m2_una_regola.md §3.
+// The same-tick create: CLOSED, and not the way S1-M2 expected. That referto read the
+// defect as an enumerability one; the measurement of 2026-08-31 says `idlookup` is not
+// a Proxy at all and `for...in` does list the pendings — what lags is every COLLECTION
+// these namespaces are built from. So the fix is the `includePending` half of
+// `getM2NamespaceOf` above, and four `addClass()` in one tick now take `Concept_0..3`.
+// See the block at the top of this file and
+// docs/discovery/discovery_2026-08-31_tick_fix_defaultname.md.
 
 /** The six M2 namespaces. Not a metaclass list: `DClass` and `DEnumerator` share one. */
 export type M2NamespaceKind = 'classifier' | 'datatype' | 'feature' | 'package' | 'literal' | 'parameter';
@@ -312,10 +411,15 @@ function collectionOf(holder: GObject | undefined | null, field: string): GObjec
 export function getM2NamespaceOf(
     father: LModelElement | undefined | null,
     kind: M2NamespaceKind,
-    excludeId?: string
+    excludeId?: string,
+    opts: NamespaceOptions = {}
 ): GObject[] {
     if (!father) return [];
     let pool: GObject[] = [];
+    // The fathers whose children belong to THIS namespace. Collected alongside the
+    // pool so the same-tick half below cannot drift from the committed half: one
+    // switch decides both.
+    const holders = new Set<string>();
 
     switch (kind) {
         case 'classifier': {
@@ -324,11 +428,15 @@ export function getM2NamespaceOf(
             // committed class-agnostic behaviour while widening the pool.
             for (const pkg of packagesOfMetamodel(father)) {
                 pool = pool.concat(collectionOf(pkg, 'classes'), collectionOf(pkg, 'enumerators'));
+                const pid = idOf(pkg); if (pid) holders.add(pid);
             }
             break;
         }
         case 'datatype': {
-            for (const pkg of packagesOfMetamodel(father)) pool = pool.concat(collectionOf(pkg, 'datatypes'));
+            for (const pkg of packagesOfMetamodel(father)) {
+                pool = pool.concat(collectionOf(pkg, 'datatypes'));
+                const pid = idOf(pkg); if (pid) holders.add(pid);
+            }
             break;
         }
         case 'feature': {
@@ -340,14 +448,31 @@ export function getM2NamespaceOf(
                 collectionOf(father as unknown as GObject, 'allReferences'),
                 collectionOf(father as unknown as GObject, 'allOperations')
             );
+            const fid = idOf(father); if (fid) holders.add(fid);
+            // `allExtends` is the public shape of the same `extendsChain` those three
+            // getters walk, so a feature pending on a superclass shadows too.
+            for (const sup of collectionOf(father as unknown as GObject, 'allExtends')) {
+                const sid = idOf(sup); if (sid) holders.add(sid);
+            }
             break;
         }
         default: {
             // package / literal / parameter — unchanged: exactly the list the core
             // rule has always compared against.
             pool = collectionOf(father as unknown as GObject, 'children');
+            const fid = idOf(father); if (fid) holders.add(fid);
             break;
         }
+    }
+
+    // The same-tick half. `m2KindOf` is the filter, so a pending element joins exactly
+    // the namespace a committed one of the same className would.
+    if (opts.includePending !== false) {
+        pool = pool.concat(
+            pendingChildrenOf(holders).filter(
+                e => m2KindOf((e as { className?: string }).className) === kind
+            )
+        );
     }
 
     return pool.filter(e => !!e && (e as { id?: string }).id !== excludeId);
@@ -379,11 +504,12 @@ export function checkM2NameUniqueness(args: {
     name: string;
     /** The element being renamed; omitted by a create. */
     excludeId?: string;
-}): UniquenessVerdict {
+} & NamespaceOptions): UniquenessVerdict {
     const name = args?.name;
     if (name === undefined || name === null) return { ok: true };
 
-    const namespace = getM2NamespaceOf(args.father, args.kind, args.excludeId);
+    const namespace = getM2NamespaceOf(
+        args.father, args.kind, args.excludeId, {includePending: args.includePending});
     const collidingWith = namespace.filter(e => (e as { name?: string }).name === name);
     if (collidingWith.length > 0) {
         const collider = collidingWith[0];
@@ -428,9 +554,11 @@ export function checkM2NameUniqueness(args: {
  *
  * Complexity O(N × M) like the M1 scan; acceptable at metamodel sizes.
  */
-export function detectM2DuplicateNames(model: LModel): Map<string, GObject[]> {
+export function detectM2DuplicateNames(model: LModel, opts: NamespaceOptions = {}): Map<string, GObject[]> {
     const result = new Map<string, GObject[]>();
     if (!model) return result;
+    // COMMITTED state by default: see `NamespaceOptions.includePending`.
+    const includePending = opts.includePending === true;
 
     const consider = (el: GObject | undefined, father: GObject | undefined, kind: M2NamespaceKind): void => {
         if (!el || !father) return;
@@ -439,6 +567,7 @@ export function detectM2DuplicateNames(model: LModel): Map<string, GObject[]> {
             kind,
             name: (el as { name?: string }).name as string,
             excludeId: (el as { id?: string }).id,
+            includePending,
         });
         if (!verdict.ok) result.set((el as { id: string }).id, (verdict.collidingWith ?? []) as unknown as GObject[]);
     };

@@ -21,14 +21,24 @@
  * discard every `className !== 'DObject'`, which is why four `Concept_0` in a
  * metamodel left the registry empty.
  *
- * MEASURED, and NOT fixed here (1): the producer is signature-driven, and the
- * signature is read from `state.idlookup` at NOTIFY time. `idlookup` is a Proxy whose
- * `get` resolves a pending creation but whose ENUMERATION does not list it, so a batch
- * of creates made in one tick leaves the signature stale until the NEXT store
- * notification, and the badge lights up one write later. Measured with four
- * `Concept_0`: registry empty after 9s, then exactly 4 entries the moment any other
- * write lands. Pre-existing and level-independent — the M1 half reads the same
- * signature — so it is declared, not repaired here.
+ * MEASURED (tick-fix, 2026-08-31), and DELIBERATE: the badge reports COMMITTED state,
+ * so it still lights one write after a batch of same-tick duplicates. The earlier
+ * diagnosis in this comment was wrong on the mechanism — `idlookup` is not a Proxy, it
+ * is a plain object whose `__proto__` is `DPointerTargetable.pendingCreation`, and the
+ * `for...in` on line 73 DOES enumerate a pending create (measured 114 vs 112 own keys).
+ * What is stale at notify time is every COLLECTION `detect*DuplicateNames` walks
+ * (`pkg.classes`, `cls.allAttributes`, `father.children`), written by the persist
+ * callback's SetFieldAction one tick later. Baseline re-measured with four `Concept_0`:
+ * registry 0 at 1s, 0 at 10s, exactly 4 the moment any other write lands.
+ *
+ * The tick-fix gives `nameUniqueness.ts` an `includePending` option and the two scans
+ * below leave it at its default, `false`. That is a choice, not an omission: a
+ * collision the store has not accepted yet is not a problem the user can act on, and
+ * an Ecore parse runs with `Constructors.paused`, so its whole output sits in the
+ * pending dictionary until `persist` (R-GT-2) — counting it would make the badge flash
+ * on every import. Passing `{includePending: true}` to either scan closes the one-write
+ * delay; measured, and not taken. See
+ * docs/discovery/discovery_2026-08-31_tick_fix_defaultname.md.
  *
  * MEASURED, and NOT fixed here (2): the registry entry is keyed by the ELEMENT id,
  * while `NodeProblemIndicator` is mounted with the ReactFlow node id, which is the
