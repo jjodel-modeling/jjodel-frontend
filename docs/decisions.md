@@ -1981,6 +1981,44 @@ della view alla riga del canvas richiede `decide` esportato da `nodes/valueRende
 decisione di riga cambiata in `nodes/ObjectNode.tsx`. E' un fronte separato: non si apre
 finche' non e' deciso esplicitamente.
 
+**Sciolta (2026-08-30), verso: la view vince anche sul canvas.** Aperta su chiamata dal
+prompt `docs/prompts/PROMPT_rstr6_canvas_override.md`. **La diagnosi registrata sopra era
+sbagliata nella seconda meta', e la misura l'ha spostata di file** (referto:
+`docs/discovery/discovery_2026-08-30_rstr6_canvas_override.md`). `ObjectNode` non aveva
+bisogno di una decisione diversa: aveva bisogno di un input che non riceveva, e il difetto
+stava altrove. Misurato sul fixture RowViewSmoke:
+
+- il ramo NATIVO ha la libreria — **dieci** renderer distinti a schermo — ma non vede mai un
+  `formSpec`: un ir che porta `form` non supera l'hash di `isMigratedDefaultView` (R-STR-7) e
+  finisce al ramo IR, e l'unica altra porta, `viewId === IR_DEFAULT_OBJECT_VIEW_ID`, non e'
+  scrivibile — `fromPointer('Pointer_IRDefaultObjectView')` non restituisce nulla;
+- il ramo IR vede il `formSpec` (l'inspector lo legge li') ma **non ha alcuna libreria**: per
+  ognuno degli otto widget della mappa R-STR-3 la riga restava `renderer: none`, testo nudo,
+  mentre nello stesso istante il chip diceva `view` e il pannello dipingeva la libreria.
+
+Quindi il debito non era una precedenza da cambiare, era un ponte mancante fra i due rami.
+Il fix: `SlotShape.viewRenderer` come **gradino 0 di `detectValueRenderer`** — sotto i
+guardiani di stato (`dash`/`collection`/`brokenRef`/`refPill`, che R-STR-3 non mappa su
+nessun widget) e sopra la regola 1 — piu' `renderViewWidget?(featureName)`, callback
+opzionale che `IRNodeContent` usa nel segmento `value` solo se restituisce qualcosa, e che
+`ObjectNode` implementa col ponte per nome di R-STR-7. Una sola decisione, nessuna seconda
+nel componente. La mappatura widget->renderer resta in `widgetRenderer.ts` e arriva **gia'
+mappata**: leggerla dal decisore chiuderebbe un ciclo di import. Un nome fuori vocabolario
+(`refPill`, da `reference`/`link`) **cade** invece di svuotare la riga.
+
+**Il gate e' la presenza di un widget dichiarato**, quindi nessun progetto esistente cambia
+resa. Verificato a schermo, `_tmp_rstr6_verify.ts` 13/13: senza override la riga IR e'
+identica a prima e il ramo nativo rende `swatch` a inizio e fine giro; col Reset si torna al
+valore di partenza. **Confine dichiarato**: sul ramo IR il gradino 1 continua a non
+dipingere — una `jjodel/renderer=…` da sola lascia il testo nudo. Estenderlo cambierebbe la
+resa di ogni view autorata senza che nessuno l'abbia chiesto, ed e' un fronte a parte.
+
+**R-STR-5 e' superata nella sua delimitazione**, non nella sua lettura di `FormSpec`: la
+copy dell'inspector che la incarnava — tag «winning rule **in the form**» e inciso «· on the
+canvas» — e' rimossa, perche' esisteva per tenere distinte due risposte che ora coincidono.
+Il selettore `.inode-inspector__result-scope` resta orfano in `rendererInspector.scss`, non
+rimosso (Regola 9).
+
 ## Serie R-FORM — instance manager e motore form (ratifiche 2026-08-29/30)
 
 Report di Fase 1: `docs/discovery/discovery_2026-08-29_instance_manager_fase1.md`.
