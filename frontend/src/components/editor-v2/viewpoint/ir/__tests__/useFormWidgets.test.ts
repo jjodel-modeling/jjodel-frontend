@@ -4,7 +4,13 @@
  * Pure: describeSlot takes plain objects shaped like the L-proxies it reads, so no
  * store, no React, no framework barrel. The fixtures mirror the proxy surface the real
  * code touches and nothing more, `slot.instanceof`, `slot.instanceof.__raw` for the
- * bounds, `slot.__raw.values`, `slot.validTargetOptions`.
+ * bounds, `slot.__raw.values`.
+ *
+ * Since S5 the CANDIDATES are not among them: they no longer come off the slot at all.
+ * `describeSlot` asks the host's offer, addressed by feature key, and the fixture plays
+ * that host through `offerFor` — which is why the option cases below pass an offer and
+ * the others pass none. A slot with no offer has no candidates, which is exactly what a
+ * plain attribute is.
  *
  * The example domain is the Statechart of the design handoff (State: name, kind,
  * entryAction, timeout, isHistory, outgoing, substates, tags) so the cases are the ones
@@ -20,8 +26,10 @@ import {
     overrideIsCompatible,
     widgetForPrimitive,
 } from '../useFormWidgets';
+import type { FieldOffer } from '../useFormWidgets';
 import { assignableOptions, meaningfulValues, rawValues } from '../slotValues';
 import type { FormSpec, WidgetKind } from '../irTypes';
+import type { TargetOption } from '../../../../../jjform';
 
 // --- fixtures ---------------------------------------------------------------
 
@@ -63,6 +71,25 @@ function slot(o: SlotOpts): any {
 const attr = (name: string, typeName: string, over: Partial<SlotOpts> = {}) =>
     slot({ name, typeName, ...over });
 
+/**
+ * The host's offer for these fixture slots, keyed by feature name.
+ *
+ * Flat `TargetOption`s with a group label, which is what `WriteCtx.validTargets` returns;
+ * the fixture keeps declaring them grouped because that is how the picker reads, and
+ * `groupTargets` puts them back that way. A key nobody declared offers `[]`.
+ */
+function offerFor(...slots: any[]): FieldOffer {
+    const by = new Map<string, TargetOption[]>();
+    for (const s of slots) {
+        const groups = s?.validTargetOptions;
+        if (!Array.isArray(groups)) continue;
+        const flat: TargetOption[] = [];
+        for (const g of groups) for (const o of g.options) flat.push({ id: o.value, label: o.label, group: g.label });
+        by.set(s.name, flat);
+    }
+    return (key: string) => by.get(key) ?? [];
+}
+
 // --- primitive type -> widget ------------------------------------------------
 
 describe('widgetForPrimitive', () => {
@@ -98,7 +125,7 @@ describe('describeSlot classification', () => {
     });
 
     it('derives select with options for an enum attribute', () => {
-        const d = describeSlot(slot({
+        const kind = slot({
             name: 'kind', typeName: 'StateKind', typeClass: 'DEnumerator',
             lowerBound: 1, upperBound: 1,
             options: [{ label: 'StateKind', options: [
@@ -106,7 +133,8 @@ describe('describeSlot classification', () => {
                 { value: 'p-normal', label: 'normal' },
                 { value: 'p-final', label: 'final' },
             ] }],
-        }))!;
+        });
+        const d = describeSlot(kind, undefined, offerFor(kind))!;
         expect(d.widget).toBe('select');
         expect(d.isEnum).toBe(true);
         expect(d.options[0].options).toHaveLength(3);
@@ -116,40 +144,70 @@ describe('describeSlot classification', () => {
     it('normalizes an enum value written as the literal NAME into the option id', () => {
         // What the XMI importer writes: the name, not the pointer. The select is keyed by id,
         // so before this the control rendered empty over a value that was there.
-        const d = describeSlot(slot({
+        const kind = slot({
             name: 'kind', typeClass: 'DEnumerator', values: ['normal'],
             options: [{ label: 'StateKind', options: [
                 { value: 'p-initial', label: 'initial' },
                 { value: 'p-normal', label: 'normal' },
             ] }],
-        }))!;
+        });
+        const d = describeSlot(kind, undefined, offerFor(kind))!;
         expect(d.values).toEqual(['p-normal']);
     });
 
     it('leaves an enum value that already is an option id untouched', () => {
-        const d = describeSlot(slot({
+        const kind = slot({
             name: 'kind', typeClass: 'DEnumerator', values: ['p-initial'],
             options: [{ label: 'StateKind', options: [
                 { value: 'p-initial', label: 'initial' },
                 { value: 'p-normal', label: 'normal' },
             ] }],
-        }))!;
+        });
+        const d = describeSlot(kind, undefined, offerFor(kind))!;
         expect(d.values).toEqual(['p-initial']);
     });
 
     it('leaves an unknown enum name alone, for the validator to report', () => {
         // A literal removed from the enum since the model was written. Rewriting it here
         // would hide a real conformance problem behind a blank control.
-        const d = describeSlot(slot({
+        const kind = slot({
             name: 'kind', typeClass: 'DEnumerator', values: ['obsolete'],
             options: [{ label: 'StateKind', options: [{ value: 'p-normal', label: 'normal' }] }],
-        }))!;
+        });
+        const d = describeSlot(kind, undefined, offerFor(kind))!;
         expect(d.values).toEqual(['obsolete']);
     });
 
     it('does not normalize a non-enum slot, even when a label happens to match', () => {
         const d = describeSlot(slot({ name: 'trigger', values: ['normal'] }))!;
         expect(d.values).toEqual(['normal']);
+    });
+
+    it('asks the offer by FEATURE KEY, and a key it does not know offers nothing', () => {
+        // The addressing of S5, on the read side: the descriptor holds no slot and no id,
+        // so the only thing that can reach the host is the name of the feature.
+        const kind = slot({
+            name: 'kind', typeClass: 'DEnumerator',
+            options: [{ label: 'StateKind', options: [{ value: 'p-normal', label: 'normal' }] }],
+        });
+        const other = slot({ name: 'other', typeClass: 'DEnumerator' });
+
+        expect(describeSlot(kind, undefined, offerFor(kind))!.options[0].options).toHaveLength(1);
+        // Per contrasto, same offer, different key: nothing, and no crash.
+        expect(describeSlot(other, undefined, offerFor(kind))!.options).toEqual([]);
+    });
+
+    it('regroups a flat offer under its group labels, in first-appearance order', () => {
+        const ref = slot({ name: 'outgoing', featureClass: 'DReference', typeName: 'State' });
+        const offer: FieldOffer = () => ([
+            { id: 't_a', label: 'A', group: 'Free Objects' },
+            { id: 't_b', label: 'B', group: 'Bound Objects' },
+            { id: 't_c', label: 'C', group: 'Free Objects' },
+            { id: 't_d', label: 'D' },
+        ]);
+        const d = describeSlot(ref, undefined, offer)!;
+        expect(d.options.map(g => g.label)).toEqual(['Free Objects', 'Bound Objects', '']);
+        expect(d.options[0].options.map(o => o.value)).toEqual(['t_a', 't_c']);
     });
 
     it('derives reference for a DReference, and is NOT a composition', () => {
@@ -191,12 +249,12 @@ describe('describeSlot classification', () => {
         expect(describeSlot({ id: 'x', __raw: { values: [] } })).toBeNull();
     });
 
-    it('survives a slot whose validTargetOptions getter throws', () => {
-        const hostile: any = slot({ name: 'ref', featureClass: 'DReference' });
-        Object.defineProperty(hostile, 'validTargetOptions', {
-            get() { throw new Error('half-built metamodel'); },
-        });
-        const d = describeSlot(hostile)!;
+    it('survives an offer that throws', () => {
+        // The guarantee `readOptions` carried since 1a, kept where the call moved to: the
+        // host's offer walks the metamodel and a half-built one can throw. An empty option
+        // list degrades the picker to "no candidates", never to a crashed form.
+        const hostile: FieldOffer = () => { throw new Error('half-built metamodel'); };
+        const d = describeSlot(slot({ name: 'ref', featureClass: 'DReference' }), undefined, hostile)!;
         expect(d.options).toEqual([]);       // degraded, not crashed
         expect(d.widget).toBe('reference');
     });

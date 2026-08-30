@@ -20,7 +20,8 @@
  * ── S3: how this component addresses a write ──────────────────────────────────
  *
  * By `(objectId, field.name)`, resolved at the instant of the write — never through the
- * proxy the descriptor carries in `field.slot`. The two are the same slot at the moment
+ * proxy the descriptor used to carry in `field.slot` (removed in S5, once the offer was
+ * the last reader of it). The two were the same slot at the moment
  * the form renders and they can stop being the same afterwards, and a form stays open for
  * minutes: measured on the running app (`scripts/smoke/_tmp_s3_probe.ts`, 2026-08-30),
  * with the metaclass losing and regaining the feature the instance's `DValue` is
@@ -32,16 +33,20 @@
  * and the same one `describeSlot` reads the slot's name from. `objectId` comes from the
  * host: `IRForm` already had it, and passes it to `setObjectName` one component up.
  *
+ * S5 completes that address on the READ side too: the candidates of a picker are asked of
+ * the same `WriteCtx` the writes go through, by `(objectId, field.name)`, and the
+ * descriptor no longer carries a slot proxy at all.
+ *
  * Multivalued features, references and compositions are READ-ONLY here, rendered as value
  * rows with the full label row above them, so the multiplicity and the required marker are
  * legible before the editing controls exist. That is a slice boundary, not a design
  * decision: 1b turns them into pickers and lists.
  */
 
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { LPointerTargetable } from '../../../../joiner';
-import type { FormFieldDescriptor } from './useFormWidgets';
-import { isAtUpperBound, multiplicityLabel } from './useFormWidgets';
+import type { FieldOffer, FormFieldDescriptor } from './useFormWidgets';
+import { isAtUpperBound, multiplicityLabel, offerGroups } from './useFormWidgets';
 import { appendValue, clearValue, setValue, type WriteResult } from './formWrite';
 import { worstSeverity, type FieldDiagnostic } from './formDiagnostics';
 import TextWidget from './widgets/TextWidget';
@@ -62,6 +67,19 @@ export interface IRFormFieldProps {
      *  addressing in the module comment. */
     objectId: string;
     field: FormFieldDescriptor;
+    /**
+     * The host's offer for this object, bound to `objectId` by `IRForm` and asked per
+     * feature key (S5).
+     *
+     * `field.options` already carries what the offer answered when the form last
+     * rendered, and that is what the enum select and the Add button's state read. The two
+     * picker controls take this instead, and ask AGAIN when they open: a form stays open
+     * for minutes, and the containment-loop filter behind the offer (R-FORM-13) depends on
+     * where this object sits in the hierarchy, which something else may have moved
+     * meanwhile — without touching this object's own slots, so nothing re-rendered the
+     * form. Same source, later moment.
+     */
+    offer?: FieldOffer;
     /** Projected from the problems registry by the host; the slot is reserved either way. */
     diagnostics?: FieldDiagnostic[];
     /** True when this field was edited and the project has not been saved since. */
@@ -106,7 +124,7 @@ function displayValue(raw: unknown): string {
  *  there is none, never a guess at what the host meant. */
 const UNSTATED_REFUSAL = 'The model refused this change';
 
-export function IRFormField({ objectId, field, diagnostics, dirty, onCommitted }: IRFormFieldProps) {
+export function IRFormField({ objectId, field, offer, diagnostics, dirty, onCommitted }: IRFormFieldProps) {
     const fieldId = `ir-field-${field.slotId}`;
     const first = field.values[0];
 
@@ -137,6 +155,14 @@ export function IRFormField({ objectId, field, diagnostics, dirty, onCommitted }
         if (r.changed) onCommitted?.(field.slotId);
     };
 
+    /** The offer, asked at the moment a picker opens. Falls back to what the last render
+     *  got when the host supplies no offer, so a caller that has not been updated renders
+     *  exactly as before instead of showing an empty list. */
+    const getOptions = useCallback(
+        () => (offer ? offerGroups(offer, field.name) : field.options),
+        [offer, field.name, field.options],
+    );
+
     const rowTexts = useMemo(
         () => field.values.map(displayValue).filter(t => t !== ''),
         [field.values],
@@ -148,8 +174,8 @@ export function IRFormField({ objectId, field, diagnostics, dirty, onCommitted }
         && !field.isReference && !field.isComposition;
     const writable = !field.isReadOnly;
 
-    // Every write goes out as (objectId, field.name), never as `field.slot`. See the
-    // addressing note in the module comment for what the proxy cost.
+    // Every write goes out as (objectId, field.name); since S5 there is no proxy on the
+    // descriptor to take instead. See the addressing note in the module comment.
     const commitAt = (index: number, value: string | number | boolean | null, isPtr: boolean) => {
         consume(setValue(objectId, field.name, index, value, isPtr));
     };
@@ -201,6 +227,7 @@ export function IRFormField({ objectId, field, diagnostics, dirty, onCommitted }
                 id={fieldId}
                 values={field.values}
                 options={field.options}
+                getOptions={getOptions}
                 typeName={field.typeName}
                 secondary={field.isReference ? rowSecondary : undefined}
                 atUpperBound={isAtUpperBound(field)}
@@ -230,6 +257,7 @@ export function IRFormField({ objectId, field, diagnostics, dirty, onCommitted }
                 ariaLabel={field.name}
                 value={typeof first === 'string' ? first : ''}
                 options={field.options}
+                getOptions={getOptions}
                 typeName={field.typeName}
                 // A required single reference cannot be unset: offering "(none)" would put the
                 // model in a state the metamodel forbids, in one click.

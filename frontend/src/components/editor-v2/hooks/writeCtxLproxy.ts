@@ -19,6 +19,7 @@
  *   setName                              ->  formWrite.setObjectName
  *   create                               ->  createAdapter.createInstance
  *   delete                               ->  deleteInstance, below
+ *   validTargets                         ->  LValue.get_validTargets, below (S5)
  *
  * `delete` is the one primitive that had no function of its own: it was the body of
  * `deleteAdapter.runDeletes`'s loop, which counted rather than reporting. It lands
@@ -37,8 +38,8 @@
  */
 
 import { LPointerTargetable, store } from '../../../joiner';
-import { writeDone, writeRefused, writeUnchanged, type CreateResult, type WriteCtx, type WriteResult } from '../../../jjform';
-import { appendValue, clearValue, setObjectName, setValue } from '../viewpoint/ir/formWrite';
+import { writeDone, writeRefused, writeUnchanged, type CreateResult, type TargetOption, type WriteCtx, type WriteResult } from '../../../jjform';
+import { appendValue, clearValue, resolveSlot, setObjectName, setValue } from '../viewpoint/ir/formWrite';
 import { createInstance } from './createAdapter';
 
 /**
@@ -74,6 +75,57 @@ export function deleteInstance(id: string): WriteResult {
 }
 
 /**
+ * The legal arguments of a write on `(objectId, featureKey)` — the `validTargets`
+ * primitive (S5).
+ *
+ * DELEGATION, not a reimplementation. The whole answer is `LValue.get_validTargets`
+ * (`LModelElement.tsx:7883`), read through `validTargetOptions` (`:7871`) because that
+ * overload is the one that carries the GROUP headings ('Free Objects', 'Bound Objects',
+ * 'Literals of Tint') the picker renders as secondary text; the bare `validTargets`
+ * returns the proxies without them. The containment-loop filter of R-FORM-13 lives
+ * inside that method, behind `if (isContainment)`, and it is the reason this primitive
+ * cannot be derived from a `MetamodelShape`: it subtracts the instance's own
+ * `fatherList`, and a metaclass has no fathers. Moving the filter here would be trading
+ * a verified guarantee for one of ours.
+ *
+ * Resolved at the moment it is ASKED, by `(objectId, featureKey)`, through the same
+ * `resolveSlot` the writes use — never from a slot held across time (S3).
+ *
+ * TOTAL, as the contract declares: a missing object, a feature the metaclass no longer
+ * has, an offer that throws on a half-built model (the case
+ * `useFormWidgets.readOptions` carried a `try` for, since 1a) all answer `[]`. There is
+ * no verdict to return here: an empty offer is an answer, and the picker renders it as
+ * "no candidates".
+ */
+export function validTargetsFor(objectId: string, featureKey: string): TargetOption[] {
+    let groups: any;
+    try {
+        const slot: any = resolveSlot(objectId, featureKey);
+        if (!slot) return [];
+        groups = slot.validTargetOptions;
+    } catch (err) {
+        console.warn('[writeCtxLproxy] validTargets failed', { objectId, featureKey, err });
+        return [];
+    }
+    if (!Array.isArray(groups)) return [];
+    const out: TargetOption[] = [];
+    for (const g of groups) {
+        if (!g || !Array.isArray(g.options)) continue;
+        const group = typeof g.label === 'string' ? g.label.trim() : '';
+        for (const o of g.options) {
+            // The core's option is `{value, label, title}` (`LModelElement.tsx:7897`).
+            // `value` is the id the write takes back, so an option without one is not a
+            // candidate; the label falls back to it rather than leaving a blank row.
+            if (!o || typeof o.value !== 'string' || !o.value) continue;
+            const opt: TargetOption = { id: o.value, label: typeof o.label === 'string' && o.label ? o.label : o.value };
+            if (group) opt.group = group;
+            out.push(opt);
+        }
+    }
+    return out;
+}
+
+/**
  * The `WriteCtx` of this host.
  *
  * `modelId` is needed by `create` alone (see the header). Everything else addresses
@@ -91,6 +143,11 @@ export function makeWriteCtx(modelId: string = ''): WriteCtx {
         // halves of the identity binding (CLAUDE.md §3.12), which `setValue(id,'name',…)`
         // would not.
         setName: (id, name) => setObjectName(id, name),
+
+        // The offer, and it is on this interface for the reason the header of
+        // `jjform/writeCtx.ts` gives: what it enumerates are the legal arguments of the
+        // two writes above, so a host cannot implement one half and not the other.
+        validTargets: (id, key) => validTargetsFor(id, key),
 
         create(cls, ownerId, childKey, seed): CreateResult {
             if (!modelId) return { ok: false, id: null, reason: 'this write context has no model to create in' };

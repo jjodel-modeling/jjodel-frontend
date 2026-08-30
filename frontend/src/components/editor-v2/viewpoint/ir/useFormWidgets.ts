@@ -19,13 +19,34 @@
  * agree, because the two render differently, a reference picks an existing element, a
  * composition owns its children.
  *
- * Everything here is a pure function of (slot proxies, FormSpec). The hook wrapper only
- * memoizes; there is no subscription, because the caller (IRForm) already re-renders on
- * the object's slot signature through useIRFormView.
+ * Everything here is a pure function of (slot proxies, FormSpec, the host's offer). The
+ * hook wrapper only memoizes; there is no subscription, because the caller (IRForm)
+ * already re-renders on the object's slot signature through useIRFormView.
+ *
+ * ── S5: the candidates no longer come off the slot ────────────────────────────
+ *
+ * `readOptions(slot)` is gone. The candidates of a reference or an enum are asked of the
+ * HOST by `(objectId, featureKey)`, through `WriteCtx.validTargets` and its engine
+ * wrapper `jjform.targetOptions`, and they reach this module as the `offer` callback —
+ * already addressed, so nothing here has to hold an id or a proxy. Two reasons, and
+ * neither is tidiness:
+ *
+ *  - the filter behind the offer is per-INSTANCE (R-FORM-13, the containment loop reads
+ *    this object's ancestor chain), so reading it off a slot proxy captured earlier is
+ *    the S3 defect applied to the offer instead of to the write: the proxy can be dead
+ *    and the answer still looks like an answer;
+ *  - the offer and the write must be the same host's, or a form offers a target that the
+ *    write then refuses. One interface answers both.
+ *
+ * The offer is resolved at the moment it is asked. This module asks at RENDER; the two
+ * picker controls ask again at OPEN (`ReferenceWidget`, `ListWidget`), because a form
+ * stays open for minutes and the hierarchy under it does not stay still. One source, two
+ * moments — not two sources.
  */
 
 import { useMemo } from 'react';
 import type { FeatureTreatment, FormSpec, WidgetKind } from './irTypes';
+import type { TargetOption } from '../../../../jjform';
 import { meaningfulValues, rawValues } from './slotValues';
 
 /** Option group for a select-like widget; the shape `ui/Select` consumes directly. */
@@ -40,8 +61,6 @@ export interface FormFieldDescriptor {
     slotId: string;
     /** Feature name. The key of `FormSpec.widgets` / `.features` / `.basic`. */
     name: string;
-    /** The L-proxy over the slot, for the write helpers. */
-    slot: any;
     /** Resolved widget: derived from the type, then overridden by FormSpec.widgets. */
     widget: WidgetKind;
     /** Widget the TYPE alone would have produced, the mockup's authoring panel flags
@@ -142,22 +161,51 @@ export function overrideIsCompatible(derived: WidgetKind, override: WidgetKind):
     }
 }
 
-/** Read the option groups a slot offers, or [] when it offers none. */
-function readOptions(slot: any): FormFieldOptionGroup[] {
+/**
+ * The host's offer for one feature of the object being described, already addressed.
+ *
+ * A callback and not an array: the caller binds `objectId` once and this module asks per
+ * feature, so no id and no proxy travels through the descriptors. `IRForm` builds it out
+ * of `jjform.targetOptions(ctx, objectId, key)`.
+ */
+export type FieldOffer = (featureKey: string) => TargetOption[];
+
+/**
+ * Group a flat offer the way the picker renders it.
+ *
+ * The contract's `TargetOption` is FLAT with an optional `group` (`jjform/writeCtx.ts`):
+ * a host with no grouping returns a plain list and loses nothing, while this one files
+ * candidates under 'Free Objects' / 'Bound Objects' / 'Literals of <enum>'. The picker
+ * shows the heading as secondary text when there is more than one, so the grouping is a
+ * RENDERING decision and it is made here, not in the contract.
+ *
+ * Order is first-appearance, which is the core's own order (free before bound): sorting
+ * the headings would reshuffle a list the user has learned the shape of.
+ */
+export function groupTargets(offered: TargetOption[]): FormFieldOptionGroup[] {
+    const out: FormFieldOptionGroup[] = [];
+    const byLabel = new Map<string, FormFieldOptionGroup>();
+    for (const o of offered ?? []) {
+        if (!o || typeof o.id !== 'string' || !o.id) continue;
+        const label = typeof o.group === 'string' ? o.group : '';
+        let g = byLabel.get(label);
+        if (!g) { g = { label, options: [] }; byLabel.set(label, g); out.push(g); }
+        g.options.push({ value: o.id, label: String(o.label ?? o.id) });
+    }
+    return out;
+}
+
+/** Ask the offer for one feature, grouped as the picker renders it. An offer that throws
+ *  degrades to "no candidates", never to a crashed form: the guarantee `readOptions`
+ *  carried since 1a, kept where the call now happens.
+ *
+ *  Exported because the two picker controls ask AGAIN when they open (S5), through
+ *  `IRFormField`, and asking a second way is how two answers start disagreeing. */
+export function offerGroups(offer: FieldOffer | undefined, featureKey: string): FormFieldOptionGroup[] {
+    if (!offer) return [];
     try {
-        const groups = slot?.validTargetOptions;
-        if (!Array.isArray(groups)) return [];
-        return groups
-            .filter((g: any) => g && Array.isArray(g.options))
-            .map((g: any) => ({
-                label: String(g.label ?? ''),
-                options: g.options
-                    .filter((o: any) => o && o.value != null)
-                    .map((o: any) => ({ value: String(o.value), label: String(o.label ?? o.value) })),
-            }));
+        return groupTargets(offer(featureKey));
     } catch {
-        // validTargetOptions walks the metamodel; a half-built model can throw. An empty
-        // option list degrades the select to "no candidates", never to a crash.
         return [];
     }
 }
@@ -203,7 +251,7 @@ function normalizeEnumValues(values: unknown[], options: FormFieldOptionGroup[])
  * Descriptor of one slot. Exported for the unit tests, which drive it on plain object
  * fixtures rather than on live proxies.
  */
-export function describeSlot(slot: any, spec?: FormSpec): FormFieldDescriptor | null {
+export function describeSlot(slot: any, spec?: FormSpec, offer?: FieldOffer): FormFieldDescriptor | null {
     if (!slot) return null;
     const feature = slot.instanceof;
     const name: string = String(slot.name ?? feature?.name ?? '');
@@ -258,14 +306,13 @@ export function describeSlot(slot: any, spec?: FormSpec): FormFieldDescriptor | 
     if (treatment === 'inline' && upperBound !== 1) treatment = 'list';
     if (treatment === 'hidden') treatment = defaultTreatment;
 
-    const options = isEnum || isPlainRef || isCompositionRef ? readOptions(slot) : [];
+    const options = isEnum || isPlainRef || isCompositionRef ? offerGroups(offer, name) : [];
     const raw = rawValues(slot);
     const values = isEnum ? normalizeEnumValues(raw, options) : raw;
 
     return {
         slotId: String(slot.id ?? ''),
         name,
-        slot,
         widget,
         derivedWidget,
         typeName,
@@ -319,10 +366,10 @@ export function isAtUpperBound(field: FormFieldDescriptor): boolean {
  * Descriptors for every slot of an object, in the object's own feature order.
  * `slots` is `LObject.features`; nulls (a slot whose metafeature vanished) are dropped.
  */
-export function describeSlots(slots: any[], spec?: FormSpec): FormFieldDescriptor[] {
+export function describeSlots(slots: any[], spec?: FormSpec, offer?: FieldOffer): FormFieldDescriptor[] {
     const out: FormFieldDescriptor[] = [];
     for (const slot of slots ?? []) {
-        const d = describeSlot(slot, spec);
+        const d = describeSlot(slot, spec, offer);
         if (!d) continue;
         // `hidden` is applied HERE and in both modes: it is the author saying the feature has
         // no place in this form, which Advanced does not override, Advanced shows everything
@@ -336,6 +383,6 @@ export function describeSlots(slots: any[], spec?: FormSpec): FormFieldDescripto
 
 /** Memoized wrapper. `signature` is the caller's slot snapshot: passing it explicitly
  *  keeps the memo honest, since the proxies themselves are new objects every render. */
-export function useFormWidgets(slots: any[], spec: FormSpec | undefined, signature: string): FormFieldDescriptor[] {
-    return useMemo(() => describeSlots(slots, spec), [signature, spec]);   // eslint-disable-line react-hooks/exhaustive-deps
+export function useFormWidgets(slots: any[], spec: FormSpec | undefined, signature: string, offer?: FieldOffer): FormFieldDescriptor[] {
+    return useMemo(() => describeSlots(slots, spec, offer), [signature, spec, offer]);   // eslint-disable-line react-hooks/exhaustive-deps
 }

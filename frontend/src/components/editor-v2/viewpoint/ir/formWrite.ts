@@ -291,8 +291,12 @@ export function appendSlotValue(
  * as the adapters and as the ReadCtx L-proxy backend. `null` when the object is gone or
  * the metaclass has no such feature — both are refusals with a reason, never a silent
  * write into nothing.
+ *
+ * Exported since S5: `writeCtxLproxy.validTargets` needs the same slot, resolved the same
+ * way and at the same moment, and a second copy of one line is how two resolutions start
+ * disagreeing about what «now» means.
  */
-function resolveSlot(objectId: string, featureKey: string): SlotProxy | null {
+export function resolveSlot(objectId: string, featureKey: string): SlotProxy | null {
     try {
         const lObject: any = LPointerTargetable.fromPointer(objectId);
         return lObject?.['$' + featureKey] ?? null;

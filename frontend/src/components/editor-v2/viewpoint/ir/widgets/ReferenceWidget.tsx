@@ -5,6 +5,16 @@
  * (`setSlotValue(slot, 0, id, true)`), which is what the classic panel writes, so the two
  * surfaces leave a slot in the same shape.
  *
+ * ── S5: the candidates are asked when the popover OPENS ──────────────────────
+ *
+ * `options` is what the last render of the form got; `getOptions` asks the host again, at
+ * the instant the picker opens. The two differ, and visibly: the offer is filtered per
+ * INSTANCE (R-FORM-13 subtracts this object's ancestor chain), so moving the object
+ * elsewhere in the hierarchy changes the answer WITHOUT touching this object's own slots
+ * — which is exactly the change `useIRFormView`'s signature does not see, so the form
+ * does not re-render and `options` stays as it was. Asking at open costs one core call
+ * per gesture and removes the whole class.
+ *
  * The displayed name comes from the L PROXY, not from `idlookup[id].name`. On a model
  * imported from XMI the two disagree, the D field keeps the generated default (`State_0`)
  * while the proxy carries the identity the user sees (`Running`), and a row saying
@@ -23,6 +33,9 @@ export interface ReferenceWidgetProps {
     onPick: (id: string) => void;
     onClear: () => void;
     options: FormFieldOptionGroup[];
+    /** The same offer, asked again when the popover opens (S5). Absent: `options` is used
+     *  as it is, which is what every caller got before S5. */
+    getOptions?: () => FormFieldOptionGroup[];
     /** Declared type of the reference, for the placeholder and the search message. */
     typeName: string;
     /** [1..1] cannot be unset, so the picker offers no "(none)". */
@@ -73,15 +86,21 @@ export function metaclassLetter(id: string, fallbackTypeName?: string): string {
 }
 
 export function ReferenceWidget(props: ReferenceWidgetProps) {
-    const { value, onPick, onClear, options, typeName, allowNone, readOnly, invalid, id, ariaLabel } = props;
+    const { value, onPick, onClear, options, getOptions, typeName, allowNone, readOnly, invalid, id, ariaLabel } = props;
     const [anchor, setAnchor] = useState<DOMRect | null>(null);
+    // The candidates this popover is showing, frozen at the moment it opened. Not derived
+    // from `options` on every render: re-asking while the list is open would reshuffle it
+    // under the cursor.
+    const [openOptions, setOpenOptions] = useState<FormFieldOptionGroup[]>(options);
     const btnRef = useRef<HTMLButtonElement>(null);
 
     const open = useCallback(() => {
         if (readOnly) return;
         const r = btnRef.current?.getBoundingClientRect();
-        if (r) setAnchor(r);
-    }, [readOnly]);
+        if (!r) return;
+        setOpenOptions(getOptions ? getOptions() : options);
+        setAnchor(r);
+    }, [readOnly, getOptions, options]);
 
     const name = referenceName(value);
     const empty = !name;
@@ -117,7 +136,7 @@ export function ReferenceWidget(props: ReferenceWidgetProps) {
             {anchor && (
                 <ReferencePicker
                     anchor={anchor}
-                    options={options}
+                    options={openOptions}
                     value={value}
                     allowNone={allowNone}
                     typeName={typeName}

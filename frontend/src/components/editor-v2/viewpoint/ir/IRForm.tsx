@@ -24,7 +24,9 @@ import { entityLetter, resolveEntityType } from '../../../../common/entityMeta';
 import { getInterfaceMode } from '../../../../hooks/useInterfaceMode';
 import { SegmentedControl } from '../../../ui';
 import { useIRFormView } from './useIRFormView';
-import { describeSlots, isBasicField } from './useFormWidgets';
+import { describeSlots, isBasicField, type FieldOffer } from './useFormWidgets';
+import { targetOptions } from '../../../../jjform';
+import { makeWriteCtx } from '../../hooks/writeCtxLproxy';
 import { setObjectName } from './formWrite';
 import { useNodeProblems } from '../../problems/useNodeProblems';
 import { collectFormDiagnostics } from './formDiagnostics';
@@ -136,11 +138,29 @@ export function IRForm({ objectId, defaultTheme = 'plain' }: IRFormProps) {
     // stay folded over the new one's, which do not even have the same keys.
     useEffect(() => { setCollapsed(readCollapsed(viewKey)); }, [viewKey]);
 
+    /**
+     * The host's write contract (S4), and since S5 also its OFFER.
+     *
+     * Built once per subject, with no model id: `create` is the only primitive that needs
+     * one and this form does not create — the catalogue and the child bar do, through
+     * their own adapters. Everything the form uses addresses by instance id.
+     *
+     * The offer is bound to `objectId` here and asked per feature key, so no proxy and no
+     * id travels inside a descriptor. It is the same `ctx` the field writes through: the
+     * candidates a picker shows and the values a write accepts come from one interface,
+     * which is why `validTargets` sits on `WriteCtx` and not beside it.
+     */
+    const ctx = useMemo(() => makeWriteCtx(), []);
+    const offer: FieldOffer = useCallback(
+        (featureKey: string) => targetOptions(ctx, objectId, featureKey),
+        [ctx, objectId],
+    );
+
     const slots: any[] = lObject?.features ?? [];
     const fields = useMemo(
-        () => describeSlots(slots, spec),
+        () => describeSlots(slots, spec, offer),
         // eslint-disable-next-line react-hooks/exhaustive-deps
-        [slots, spec, resolution],
+        [slots, spec, resolution, offer],
     );
 
     const visible = mode === 'advanced' ? fields : fields.filter(f => isBasicField(f, spec));
@@ -344,10 +364,12 @@ export function IRForm({ objectId, defaultTheme = 'plain' }: IRFormProps) {
                             >
                                 <IRFormField
                                     // Half of the address of every write the field makes
-                                    // (S3). The other half is the field's own name; the
-                                    // proxy in `f.slot` no longer travels to a write.
+                                    // (S3) and of every offer it asks for (S5). The other
+                                    // half is the field's own name; since S5 the descriptor
+                                    // carries no proxy at all.
                                     objectId={objectId}
                                     field={f}
+                                    offer={offer}
                                     diagnostics={diagnostics.byField.get(f.name)}
                                     dirty={dirtyFields.has(f.slotId)}
                                     onCommitted={markDirty}

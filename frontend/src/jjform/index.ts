@@ -6,10 +6,12 @@
  * DELETE half (`delete.ts`), and slice 12b/12c the MULTI-SELECTION (`multi.ts`)
  * and the depth/breadcrumb rule (`nav.ts`) — all pure for the reason the shape
  * is. Slice S2 added `write.ts`, the RESULT type of a write, and slice S4
- * `writeCtx.ts` — the six write primitives themselves, the contract an adapter
- * implements so the engine can write without knowing what it is writing into. What
- * still waits is `validTargets` (S5, the per-instance picker filter of R-FORM-13)
- * and the open questions of `form-engine-contract.md`.
+ * `writeCtx.ts` — the write primitives themselves, the contract an adapter
+ * implements so the engine can write without knowing what it is writing into. Slice S5
+ * closed that surface with `validTargets`, the per-instance offer of R-FORM-13: the
+ * legal ARGUMENTS of a write belong to the same contract as the write, or a host can
+ * offer what it will then refuse. What still waits are the open questions of
+ * `form-engine-contract.md`.
  *
  * Invariant, checked by reading and by the module having nothing to import:
  * nothing under `jjform/` imports from `joiner/`, `redux/`, `react` or
@@ -87,7 +89,9 @@ export type { WriteResult } from './write';
 
 export { writeDone, writeRefused, writeUnchanged } from './write';
 
-export type { CreateResult, WriteCtx, WriteValue } from './writeCtx';
+export type { CreateResult, TargetOption, WriteCtx, WriteValue } from './writeCtx';
+
+export { targetOptions } from './writeCtx';
 
 export type { Crumb, NavState, NavStep } from './nav';
 

@@ -10,6 +10,12 @@
  *    the rows are readable and removable, and the rest is deferred. Rendering a disabled Add
  *    would promise a gesture that is not coming.
  *
+ * S5: `options` is what the last render of the form got — it drives the Add button's own
+ * state, which has to be right BEFORE the gesture ("No candidates left" on a disabled
+ * button). `getOptions` asks the host again when the popover opens, for the reason spelt
+ * out in `ReferenceWidget`: the offer is filtered per instance, and the hierarchy can move
+ * under an open form without re-rendering it.
+ *
  * Holes are rendered as nothing. `clearSlotValue` writes `undefined` into a position rather
  * than splicing it out (measured; see formWrite.clearSlotValue), so a slot edited twice holds
  * gaps, and this walks the raw array to keep the INDEX of each row, the index is what a
@@ -30,6 +36,8 @@ export interface ListWidgetProps {
     /** Absent for containment children, which have no Add in this slice. */
     onAppend?: (id: string) => void;
     options: FormFieldOptionGroup[];
+    /** The same offer, asked again when the Add popover opens (S5). Absent: `options`. */
+    getOptions?: () => FormFieldOptionGroup[];
     typeName: string;
     /** Secondary text of a row, e.g. "to Off" for a Transition. Absent = no secondary text. */
     secondary?: (id: string) => string | undefined;
@@ -41,8 +49,11 @@ export interface ListWidgetProps {
 }
 
 export function ListWidget(props: ListWidgetProps) {
-    const { values, onRemove, onAppend, options, typeName, secondary, atUpperBound, upperBound, readOnly, id } = props;
+    const { values, onRemove, onAppend, options, getOptions, typeName, secondary, atUpperBound, upperBound, readOnly, id } = props;
     const [anchor, setAnchor] = useState<DOMRect | null>(null);
+    // What the open popover offers, taken when it opened. `addable` below stays the
+    // render-time answer, because it is what disables the button.
+    const [openAddable, setOpenAddable] = useState<FormFieldOptionGroup[]>([]);
     const addRef = useRef<HTMLButtonElement>(null);
 
     // Values already in the list, by raw position: `values` carries holes, and a hole is not
@@ -54,8 +65,12 @@ export function ListWidget(props: ListWidgetProps) {
     const openAdd = useCallback(() => {
         if (readOnly || addBlocked) return;
         const r = addRef.current?.getBoundingClientRect();
-        if (r) setAnchor(r);
-    }, [readOnly, addBlocked]);
+        if (!r) return;
+        // Re-asked, then subtracted again: a value added a moment ago must not be offered
+        // twice, and the fresh offer knows nothing about this slot's contents.
+        setOpenAddable(assignableOptions(getOptions ? getOptions() : options, values));
+        setAnchor(r);
+    }, [readOnly, addBlocked, getOptions, options, values]);
 
     // Index preserved: `i` is the position in the raw array, which is what onRemove addresses.
     const rows = values
@@ -114,7 +129,7 @@ export function ListWidget(props: ListWidgetProps) {
             {anchor && onAppend && (
                 <ReferencePicker
                     anchor={anchor}
-                    options={addable}
+                    options={openAddable}
                     value=""
                     // Appending has nothing to unset: "(none)" would mean "append nothing".
                     allowNone={false}

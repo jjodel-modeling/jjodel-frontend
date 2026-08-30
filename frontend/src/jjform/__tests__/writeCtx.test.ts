@@ -20,7 +20,7 @@ import { describe, expect, it } from 'vitest';
 import type { MetamodelShape, RefShape } from '../shape';
 import { applyPlanWrites, deletePlan, deletePreflight, type PreflightInput, type ReferrerInput } from '../delete';
 import { writeDone, writeRefused, writeUnchanged } from '../write';
-import type { CreateResult, WriteCtx, WriteValue } from '../writeCtx';
+import { targetOptions, type CreateResult, type TargetOption, type WriteCtx, type WriteValue } from '../writeCtx';
 
 // -- The fake host ------------------------------------------------------------
 
@@ -31,6 +31,11 @@ interface FakeInstance {
     cls: string;
     name: string;
     slots: Record<string, WriteValue[]>;
+    /** Who contains this instance, if anyone. The fake host's whole hierarchy: it is all
+     *  `validTargets` needs to refuse a containment loop, and the point of having it here
+     *  is that the OBLIGATION of R-FORM-13 is satisfiable by forty lines of plain object
+     *  code — the engine never sees how. */
+    owner?: string;
 }
 
 type FakeStore = Record<string, FakeInstance>;
@@ -44,7 +49,33 @@ function makeFakeCtx(db: FakeStore): WriteCtx {
         if (!inst) return null;
         return inst.slots[key] ?? null;
     };
+    /** Ancestors of `id`, itself included. Cycle-safe, like the core's `fatherList`. */
+    const chain = (id: string): Set<string> => {
+        const out = new Set<string>();
+        let cur: string | undefined = id;
+        while (cur && !out.has(cur)) { out.add(cur); cur = db[cur]?.owner; }
+        return out;
+    };
     return {
+        /**
+         * The fake host's offer: every instance of the right class, minus this instance's
+         * own ancestor chain when the feature contains.
+         *
+         * That subtraction is R-FORM-13 restated by a host that is not jjodel — which is
+         * the claim of the slice: the FILTER is the host's, the OBLIGATION is the
+         * contract's, and the engine consumes the answer without knowing either.
+         */
+        validTargets(id, key): TargetOption[] {
+            const inst = db[id];
+            if (!inst) return [];
+            const feature = SHAPE.classes[inst.cls]?.refs.find(r => r.key === key);
+            if (!feature) return [];
+            const wanted = feature.ofId.replace(/^c_/, '');
+            const forbidden = feature.composition ? chain(id) : new Set<string>();
+            return Object.entries(db)
+                .filter(([cid, c]) => c.cls === wanted && !forbidden.has(cid))
+                .map(([cid, c]) => ({ id: cid, label: c.name, group: c.owner ? 'Bound' : 'Free' }));
+        },
         setValue(id, key, index, value) {
             const slot = slotOf(id, key);
             if (!slot) return writeRefused(`feature "${key}" is not on this object`);
@@ -117,7 +148,15 @@ const SHAPE: MetamodelShape = {
         State: {
             key: 'State', id: 'c_State',
             root: true, abstract: false, singleton: false, containedIn: [],
-            attrs: [], refs: [], children: [],
+            attrs: [],
+            // Two features of the SAME type, one containing and one not: the pair the
+            // containment-loop filter has to tell apart, and the only way to prove by
+            // contrast that it filters what it must and nothing else.
+            refs: [
+                ref({ key: 'substates', of: 'State', composition: true }),
+                ref({ key: 'peer', of: 'State' }),
+            ],
+            children: [],
         },
         Transition: {
             key: 'Transition', id: 'c_Transition',
@@ -137,6 +176,9 @@ function seedDb(): FakeStore {
         s_spare: { cls: 'State', name: 'Spare', slots: {} },
         t_one: { cls: 'Transition', name: 'T1', slots: { target: ['s_doomed'] } },
         t_two: { cls: 'Transition', name: 'T2', slots: { target: ['s_other', 's_doomed'] } },
+        // Neither an ancestor nor a descendant of anyone: the candidate that must SURVIVE
+        // every filter, so an empty offer cannot pass for a correct one.
+        s_free: { cls: 'State', name: 'Free', slots: {} },
     };
 }
 
@@ -247,7 +289,7 @@ describe('WriteCtx - a non-jjodel adapter the engine writes through', () => {
         expect(outcome).toEqual({ written: 0, unchanged: 2, refused: [] });
     });
 
-    it('the other five primitives are satisfiable by the same JSON host', () => {
+    it('the other primitives are satisfiable by the same JSON host', () => {
         // Not the engine writing - the engine has no create/delete/rename loop yet (S4
         // declared those inversions and deferred them). This is the CONTRACT being
         // implementable end to end by something that is not jjodel, which is the claim
@@ -271,5 +313,66 @@ describe('WriteCtx - a non-jjodel adapter the engine writes through', () => {
         // Already gone is not a failure - the case a containment cascade hits whenever
         // the host removed a child on its own.
         expect(ctx.delete(created.id as string)).toEqual({ ok: true, changed: false });
+    });
+});
+
+describe('validTargets - the offer, through the same contract as the write', () => {
+    it('the engine reads a fake host\'s offer and never touches the host itself', () => {
+        const db = seedDb();
+        const ctx = makeFakeCtx(db);
+
+        const offered = targetOptions(ctx, 't_one', 'target');
+
+        // Both States, labelled and grouped by the host, ids opaque to the engine.
+        expect(offered.map(o => o.id).sort()).toEqual(['s_doomed', 's_free', 's_spare']);
+        expect(offered.find(o => o.id === 's_spare')).toEqual({ id: 's_spare', label: 'Spare', group: 'Free' });
+    });
+
+    it('the containment-loop filter is the HOST\'s, and the engine sees only its effect', () => {
+        const db = seedDb();
+        db.s_doomed.owner = 's_spare';                       // Spare contains Doomed
+        db.s_spare.slots.substates = ['s_doomed'];
+        const ctx = makeFakeCtx(db);
+
+        // A containment feature: the chain is subtracted, the unrelated State is not.
+        const contained = targetOptions(ctx, 's_doomed', 'substates').map(o => o.id);
+        expect(contained).not.toContain('s_spare');          // would close the loop
+        expect(contained).not.toContain('s_doomed');         // nor would self-containment
+        expect(contained).toContain('s_free');               // positive half: the filter is not just empty
+
+        // Per contrasto, in the same run: a NON-containment feature of the same type
+        // offers the container. Filtering it would forbid a legal model - the contrast
+        // R-FORM-13 was measured with on the real host.
+        expect(targetOptions(ctx, 's_doomed', 'peer').map(o => o.id)).toContain('s_spare');
+    });
+
+    it('an offer that throws is an EMPTY offer, never a thrown form', () => {
+        const ctx = makeFakeCtx(seedDb());
+        const hostile: WriteCtx = { ...ctx, validTargets: () => { throw new Error('half-built model'); } };
+        expect(targetOptions(hostile, 't_one', 'target')).toEqual([]);
+    });
+
+    it('normalizes what a host may legitimately return badly', () => {
+        const ctx = makeFakeCtx(seedDb());
+        const sloppy: WriteCtx = {
+            ...ctx,
+            validTargets: () => ([
+                { id: 's_ok', label: 'Ok' },
+                { id: 's_nolabel' },                          // label falls back to the id
+                { id: '', label: 'empty id' },                // not a candidate: unusable as a value
+                { label: 'no id at all' },
+                null,
+            ] as unknown as TargetOption[]),
+        };
+        expect(targetOptions(sloppy, 't_one', 'target')).toEqual([
+            { id: 's_ok', label: 'Ok' },
+            { id: 's_nolabel', label: 's_nolabel' },
+        ]);
+    });
+
+    it('a feature the host does not have offers nothing, and says nothing', () => {
+        const ctx = makeFakeCtx(seedDb());
+        expect(targetOptions(ctx, 't_one', 'nonesiste')).toEqual([]);
+        expect(targetOptions(ctx, 'no_such_instance', 'target')).toEqual([]);
     });
 });

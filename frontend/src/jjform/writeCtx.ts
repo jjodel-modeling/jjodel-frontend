@@ -48,19 +48,32 @@
  * the alternative (optional fields for both) would have added two fields that this
  * directory could not type and that no write path would ever populate.
  *
+ * ── What the picker reads, and why it is on THIS interface ───────────────────
+ *
+ * `validTargets(id, key)` — S5. It is a READ, and it sits on the write contract on
+ * purpose: what it enumerates is not "the model", it is THE LEGAL ARGUMENTS of
+ * `setValue`/`appendValue` on this `(id, key)`. Its correctness criterion is the
+ * host's own refusal — an option this method offers and the same ctx then refuses is
+ * the contract contradicting itself, and a host that implemented the writes without it
+ * would offer exactly those. Splitting it onto a read context would make that
+ * divergence expressible; here it is not, because one object answers both halves.
+ *
+ * The filter it carries is the containment-loop filter of R-FORM-13, and it stays the
+ * HOST's: it reads the ancestor chain of THIS instance (`LValue.get_validTargets`,
+ * `LModelElement.tsx:7883`), which no `MetamodelShape` can reproduce — a metaclass has
+ * no ancestors. The contract does not reimplement it. It NAMES it, so that a non-jjodel
+ * adapter has to supply one instead of discovering the obligation by writing a cycle.
+ *
  * ── What is NOT here, and why ─────────────────────────────────────────────────
  *
- * `validTargets(id, key)` — the per-instance containment-loop filter of R-FORM-13,
- * which no shape can reproduce because it reads the ancestor chain of THIS object
- * (`LValue.get_validTargets`, `LModelElement.tsx:7853`). The referto marks it
- * obligatory in the finished contract and gives it its own slice (S5), because it is
- * the one method with a visible rendering: it feeds the picker. Until S5 the picker
- * keeps reading it off the proxy through `useFormWidgets.readOptions`, which is the
- * committed behaviour, and this interface does not pretend to have replaced it.
+ * Nothing else of the write surface. The `MetamodelShape` answers what a feature IS;
+ * `ReadCtx` (`editor-v2/viewpoint/ir/irReadCtx.ts`) answers what an instance HOLDS;
+ * this answers what may be written and what happens when it is.
  *
  * The OBLIGATIONS of an implementation — the ones the engine cannot check and a
  * non-jjodel adapter would otherwise discover by losing data — are listed in
- * `docs/prompts/form-engine-contract.md` §5, not restated here.
+ * `docs/design/design_handoff_instance_node/form-engine-contract.md` §5.0, not restated
+ * here.
  */
 
 import type { WriteResult } from './write';
@@ -83,6 +96,19 @@ export interface CreateResult {
  *  `null` is the empty position a clear leaves — the HOLE of R-FORM-7 — not a
  *  missing value. */
 export type WriteValue = string | number | boolean | null;
+
+/**
+ * One candidate a reference or an enum slot may be given.
+ *
+ * `id` is opaque — the engine never parses it, it hands it back to `setValue` /
+ * `appendValue` as the value. `label` is what a human reads.
+ */
+export interface TargetOption {
+    id: string;
+    label: string;
+    /** Optional heading the host filed this candidate under. Absent = no grouping. */
+    group?: string;
+}
 
 /**
  * The six primitives, and the whole write surface of the form engine.
@@ -126,6 +152,28 @@ export interface WriteCtx {
     /** Append an already-known value to the end of `key` on `id`. Distinct from
      *  `setValue` at the next index, which would have to be computed from a read. */
     appendValue(id: string, key: string, value: string | number | boolean, isPtr: boolean): WriteResult;
+
+    // ── the legal arguments ──────────────────────────────────────────────────
+
+    /**
+     * The values `setValue`/`appendValue` may legally be given for `key` on `id`.
+     *
+     * Per INSTANCE, never per metaclass: the answer depends on where `id` sits in the
+     * containment hierarchy, and it changes when something else moves — which is why the
+     * address is `(id, key)` and not a slot, and why an implementation must answer at the
+     * moment it is asked rather than from anything it cached. A form stays open for
+     * minutes; the hierarchy under it does not stay still.
+     *
+     * TOTAL: a feature that offers nothing, a feature that is not there, a host that
+     * cannot answer — all return `[]`. There is no verdict here because there is nothing
+     * to refuse: an empty offer IS the answer, and the picker renders it as "no
+     * candidates" rather than as an error.
+     *
+     * `group` is a heading the host may file a candidate under ('Free Objects', 'Bound
+     * Objects', 'Literals of Tint' in this one). Optional, and flat rather than nested,
+     * so a host with no grouping returns a plain list and loses nothing.
+     */
+    validTargets(id: string, key: string): TargetOption[];
 
     // ── identity ─────────────────────────────────────────────────────────────
 
@@ -176,4 +224,39 @@ export interface WriteCtx {
      * what the plan already ordered.
      */
     delete(id: string): WriteResult;
+}
+
+/**
+ * The engine's own read of `validTargets`: total, defensive, and the single place the
+ * candidates of a field are obtained.
+ *
+ * Why the engine wraps the primitive instead of the caller calling it: the host's
+ * implementation is the widest thing in this contract — in jjodel it walks
+ * `allSubObjects`, filters by type and by ancestor chain, and it can throw on a
+ * half-built model (measured; `useFormWidgets.readOptions` carried the `try` for exactly
+ * that). An offer that cannot be computed is an EMPTY offer, never a crashed form, and
+ * that rule belongs to the engine, not to each of the three controls that render a
+ * picker.
+ *
+ * Normalization is the other half: an `id` that is not a string is dropped rather than
+ * coerced (a candidate the engine cannot hand back to `setValue` is not a candidate),
+ * and a missing label falls back to the id, so a row is never blank.
+ */
+export function targetOptions(ctx: WriteCtx, id: string, key: string): TargetOption[] {
+    let raw: unknown;
+    try {
+        raw = ctx.validTargets(id, key);
+    } catch {
+        return [];
+    }
+    if (!Array.isArray(raw)) return [];
+    const out: TargetOption[] = [];
+    for (const o of raw) {
+        const cand = o as Partial<TargetOption> | null | undefined;
+        if (!cand || typeof cand.id !== 'string' || !cand.id) continue;
+        const opt: TargetOption = { id: cand.id, label: typeof cand.label === 'string' && cand.label ? cand.label : cand.id };
+        if (typeof cand.group === 'string' && cand.group) opt.group = cand.group;
+        out.push(opt);
+    }
+    return out;
 }
