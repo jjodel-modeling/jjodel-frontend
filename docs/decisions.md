@@ -2253,19 +2253,26 @@ non risolve. E' un **orfano invisibile**: ogni lista del manager risale `father`
 profondo. Sonda `scripts/smoke/_tmp_delete_primitive.ts`, referto in
 `docs/discovery/discovery_2026-08-30_slice12d_delete.md`.
 
-**R-FORM-10** (2026-08-30) — **Un delete lascia uno slot VUOTO, non un puntatore appeso.**
-Misurato: la cascata del core raggiunge `case 'values'` e fa
-`SetFieldAction(slot, 'values', deletedID, '-=')`, quindi **accorcia** l'array
-(`0..*` a due bersagli, cancellato quello in posizione 0: `len` 2 -> 1). Contraddice il
-commento del fixture `RowViewSmoke` del 28/08 («the reducer scrubs no inbound pointer»),
-e spiega l'altra sua nota, «the broken reference renders as a dash»: non c'e' nessun
-puntatore appeso da rendere. Due conseguenze ratificate. (1) Il «ref rotto» della regola 2
-di 12d e' l'altra meta' di cio' che la sezione 2 del contratto chiama tale — «id assente
-**o ""**» — cioe' un ref `required` rimasto senza valori, che `instanceTable` rende ora
-come `missing` invece che come trattino. (2) `clear` e `dirty` sono due scritture
-**diverse**: `clearSlotValue` lascia un buco (R-FORM-7), la cascata accorcia. Su un
-monovalore coincidono, su un multivalore no, ed e' per questo che le opzioni sono tre e
-non due.
+**R-FORM-10** (2026-08-30, delimitata il 2026-08-30) — **La cascata toglie i puntatori
+entranti che il proxy vedeva quando e' stato avvolto.** Misurato: la cascata del core
+raggiunge `case 'values'` e fa `SetFieldAction(slot, 'values', deletedID, '-=')`, quindi
+**accorcia** l'array (`0..*` a due bersagli, cancellato quello in posizione 0:
+`len` 2 -> 1). Vale per i soli puntatori presenti in `pointedBy` **dello snapshot** su cui
+il proxy L e' stato costruito (`joiner/classes.ts:277`, `proxy.ts:397`,
+`classes.ts:2108`): un riferimento scritto **dopo** il wrap sopravvive alla delete e resta
+appeso. `deleteAdapter.runDeletes` avvolge subito prima di cancellare e sta quindi nel caso
+pulito; il fixture `RowViewSmoke`, che avvolge in una fase precedente, e' il contro-esempio
+e produce `brokenRef`. La cardinalita' **non** entra nella regola: misurata 2x2, le due
+righe non cambiano fra `0..1` e `0..*`. Cade quindi la generalita' implicita della prima
+stesura («un delete lascia uno slot vuoto») e la conclusione che ne discendeva («non c'e'
+nessun puntatore appeso da rendere»), che il fixture falsifica a comando. Restano
+ratificate le due conseguenze gia' scritte. (1) Il «ref rotto» della regola 2 di 12d e'
+l'altra meta' di cio' che la sezione 2 del contratto chiama tale — «id assente **o ""**»
+— cioe' un ref `required` rimasto senza valori, che `instanceTable` rende ora come
+`missing` invece che come trattino. (2) `clear` e `dirty` sono due scritture **diverse**:
+`clearSlotValue` lascia un buco (R-FORM-7), la cascata accorcia. Su un monovalore
+coincidono, su un multivalore no, ed e' per questo che le opzioni sono tre e non due.
+Referto: `docs/discovery/discovery_2026-08-30_6_rform10_controesempio.md`.
 
 **R-FORM-11** (2026-08-30) — **Se il piano ha scritto prima, le delete sono differite.**
 Nello stesso tick le due operazioni atterrano nell'ordine sbagliato e un valore si perde:
