@@ -7,6 +7,9 @@ overlay parked on the status bar, new console errors.
 It does **not** replace Alfonso's check, which is about proportion, visual
 hierarchy and perceived behaviour.
 
+It is also not the same instrument as the single-use `_tmp_*` probes that share
+this directory. Those are documented in `README-probes.md`.
+
 ## Running it
 
 The dev server must already be up (`npm start`).
@@ -91,6 +94,7 @@ properties in these files.
 | `run.ts` | Runs the assertions, prints the report, decides the three-valued verdict |
 | `calibrate.ts` | Prints raw measurements; `--write-baseline` regenerates the baseline, unless the run is void |
 | `console-baseline.json` | Generated. Never hand-edited |
+| `README-probes.md` | The `_tmp_*` probes: a different instrument, its own conventions |
 
 ## Reaching the app
 

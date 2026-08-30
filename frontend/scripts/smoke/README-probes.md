@@ -1,0 +1,234 @@
+# Probes (`_tmp_*`)
+
+A **probe** is a single-use Playwright script written to answer one question a
+slice actually asks — "does `delete` refuse the ambiguous name and leave both
+objects alive", "does the commit land the value in the slot and not only on
+`DObject.name`". It drives the real app in a real browser against the live dev
+server, and it dies with the slice.
+
+It is **not** part of `npm run smoke`. `run.ts` is the standing instrument: three
+states, five assertions, a three-valued verdict, a committed console baseline
+(see `README.md`). A probe is the opposite: disposable, uncommitted, and shaped
+by whatever it needs to measure today. The two share this directory and the
+helpers in `states.ts`, nothing else.
+
+This file exists because the method findings kept being rediscovered. The
+`__name` gotcha below was hit by three different sessions inside 2026-08-30
+(`_tmp_s1a_verify.ts` 17:00, `_tmp_s2_probe.ts` 17:28, `_tmp_s1b_verify.ts`
+17:32, each carrying its own copy of the shim) and written down once. Every rule
+below carries the measurement or the referto it came from. Nothing here is a
+preference.
+
+---
+
+## Running one
+
+```bash
+cd frontend
+npx tsx scripts/smoke/_tmp_<name>.ts
+```
+
+The dev server must already be up (`npm start`), same as for the smoke.
+
+Note the runner differs from the committed harness. `npm run smoke` goes through
+node's own type stripping (`--experimental-strip-types`, see `README.md` §Node
+version); probes go through **tsx**, which is not in `frontend/node_modules` —
+it resolves from the npx cache (`~/.npm/_npx/*/node_modules/tsx`, verified
+2026-08-30). That difference is not cosmetic: it is the whole of the next
+section.
+
+---
+
+## The `__name` gotcha
+
+**Symptom.** A probe dies with `ReferenceError: __name is not defined`, thrown
+in the browser *before the first line of the probe body runs*, on any
+`page.evaluate` whose body contains an arrow function assigned to a `const`.
+Which is nearly every probe.
+
+**Cause, measured.** tsx transforms with esbuild's `keepNames: true` (hard-coded
+in tsx's own dist bundle: `{…, minifyWhitespace: true, keepNames: true}`).
+`keepNames` rewrites every named function expression to preserve `fn.name`.
+Measured 2026-08-30 with the repo's own esbuild:
+
+```
+$ esbuild --keep-names kn.ts
+var __defProp = Object.defineProperty;
+var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
+const f = /* @__PURE__ */ __name((x) => x + 1, "f");
+
+$ esbuild kn.ts                      # same input, no flag
+const f = (x) => x + 1;
+```
+
+The `__name` helper is emitted at **node module scope**. Playwright serializes
+the `page.evaluate` callback as source text and evaluates it in the page, where
+that helper does not exist — so the rewritten arrow references a free identifier
+and throws on the first statement that defines it.
+
+**Fix.** Install an identity shim before any page script:
+
+```ts
+await ctx.addInitScript(() => { (globalThis as any).__name = (f: any) => f; });
+```
+
+`addInitScript`, not an inline `evaluate`: it has to be in place before the
+page's own scripts, and before the first `evaluate` the probe makes. Put it
+immediately after `newContext`/`seed` and before `goto`.
+
+It is the smallest honest fix — identity, so the rewritten code runs exactly as
+written. It does not patch the app, does not touch the transform, and leaves
+`fn.name` merely wrong inside the evaluated body, where nothing reads it.
+
+Referto: `docs/discovery/discovery_2026-08-30_s1b_ambiguita_dichiarata.md` §"Sonda
+dedicata". Carried by 30 of the probes on disk at 2026-08-30 18:00 — a count that
+drifts, since this directory is written by whatever sessions are running.
+
+---
+
+## Conventions
+
+These are read off the 2026-08-30 referti, not proposed here.
+
+### Naming, and where the ignore rule actually reaches
+
+Probes and their screenshots are named `_tmp_*` and stay out of git:
+
+```
+# .gitignore:66
+frontend/scripts/smoke/_tmp_*
+```
+
+The rule is **path-anchored**. A `_tmp_*` artifact written anywhere else is not
+ignored: measured 2026-08-30, 142 untracked `_tmp_*.png` sitting in `frontend/`
+because a probe wrote its screenshots relative to the wrong cwd. Write the
+probe *and* everything it emits under `frontend/scripts/smoke/`, or `git status`
+carries them until somebody notices.
+
+They are never committed. The referto and the log entry carry the numbers; the
+probe carries nothing anyone needs later.
+
+### Outside `src`, so they do not void the run
+
+`scripts/` is deliberately outside the quiescence perimeter (`README.md`
+§verdict): the watched roots are `src/`, `public/`, `vite.config.ts` and
+`index.html`. Saving a probe mid-run must not void the smoke. This is the reason
+probes live here and not under `src/`.
+
+### Positive *and* negative controls, in the same run
+
+Every assertion of absence carries its own positive control, in the same run.
+The standing formulation: *"a rule that refused everything would come out green
+on the main criterion"*.
+
+- S1a: three negative controls (a free name accepted in three different
+  positions) alongside the rejection cases.
+- S1b micro: a positive control (an unknown identifier still prints its own
+  line, so the render block is reachable) and a negative control (no "and N
+  more" where there is no producer).
+- 12bc: row A of the table is the pre-chain state, labelled as the positive
+  control.
+
+A silence is only evidence when something in the same run proves the instrument
+had signal. Same discipline as CLAUDE.md §5's rule on searches, applied to the
+screen.
+
+### «Per contrasto» is the standard form
+
+An assertion that something did **not** happen is verified against the case
+where it does. S1b: `set CLK.widthPx` on the ambiguous name does not write —
+*and then*, after disambiguation, the same `set` passes and writes (`[] -> [42]`).
+Without the second half, "does not write" had been checked against a slot that
+was already empty.
+
+Use the word in the probe labels; it makes the pairing greppable across referti.
+
+### Select by name, never by index
+
+Two FAILs on the first 12bc run were the probe's, not the code's, and they were
+the same error: rows selected **by index** while the table is sorted **by name**
+(`broken`, `noref`, `valued`), so the probe measured a different pair from the
+one it had written to. Fixed by selecting on the name; green.
+
+Any list the app sorts — instance tables, pickers, trees — is addressed by name
+or by a stable attribute. An index is a claim about an ordering the probe does
+not control.
+
+Referto: `docs/discovery/discovery_2026-08-30_slice12bc_multiselect_recursion.md`
+§4.
+
+### A run that booted more than once measured a doubled tally
+
+The rule is the smoke's boot ceiling (`countBoots`, `MAX_BOOTS_PER_STATE = 1` in
+`assertions.ts`): a page that loaded the document twice gives every count twice,
+so arithmetic on it names the application for something the machine did — the
+run is **VOID**, repeated on a still tree, and reported as a void, never as a
+green and never as a red.
+
+Probes inherit the rule and, measured 2026-08-30, **none of them wires it**:
+0 of the `_tmp_*` files import `countBoots`, against 150 that import from
+`states.ts`. The zero is the load-bearing half; the 150 is the positive control
+that the search reached the files at all.
+So today it is on the author. If a probe's numbers look like a clean multiple of
+what you expected, suspect the boot before the code, and repeat on a still tree
+— which, with another session editing `frontend/src`, is often the second run.
+Every probe does capture page errors and reports them (`page.on('pageerror', …)`,
+"zero errori di pagina" in the referti); that part is universal.
+
+### Output shape
+
+The convention across every probe: one line per check, counted, plus raw
+measurements that assert nothing.
+
+```ts
+let failures = 0;
+const check = (label: string, ok: boolean, detail: string) => {
+    if (!ok) failures++;
+    console.log(`${ok ? 'PASS' : 'FAIL'}  ${label}  ${detail}`);
+};
+const note = (label: string, d: unknown) =>
+    console.log(`MEAS  ${label}  ${typeof d === 'string' ? d : JSON.stringify(d)}`);
+```
+
+Referti quote the result as `n/n ALL GREEN, zero errori di pagina`. `MEAS` lines
+are how a probe reports a number it has no expectation for yet — they are what
+turns a probe into a measurement instead of a guess confirmed.
+
+### Reaching the real module
+
+The dev server is Vite, so the page can `import()` a source path directly:
+
+```ts
+const m = await import('/src/jjscript/executor/commands/instance.ts');
+```
+
+No mock, no rewritten path: live store, real L proxies, the file in this tree.
+Pair it with a positive control that the import resolved and exports what you
+expect, or a typo gives you a silent skip.
+
+### Reuse from the harness
+
+`states.ts` is the shared part. `BASE_URL`, `seed(ctx, advanced)` (the offline
+localStorage seeding, `README.md` §Reaching the app), `createProject`,
+`VIEWPORT_*`, the `*_MS` timings. Import them; do not re-derive the offline user
+shape in a probe.
+
+---
+
+## The fixture precedent: append, never reorder
+
+`examples/RowViewSmoke/index.ts` is shared by the probes of several sessions at
+once, and **they address instances by position through `createdIds`**.
+
+So: a new instance goes **at the end of `order`**. Existing entries keep their
+position and therefore their ids. Adding one in the middle, or sorting the list,
+silently repoints every other session's probe at a different object — with no
+error, and with assertions that still pass on the wrong subject.
+
+The same reasoning rules out changing the metamodel where an instance would do.
+2026-08-30: a third `AllNine` was appended rather than a second reference added,
+because a new feature adds a row to *every* `AllNine` node and would have
+falsified the counts two other probes assert ("12 rows, 0 empty", "24 rows =
+12 features × 2 instances").
+
+Referto: `docs/discovery/discovery_2026-08-30_5_brokenref_fixture.md` §2.2.
