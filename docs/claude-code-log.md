@@ -2,6 +2,32 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-08-30 — discovery: l'unicita' dei nomi a M2, la matrice dei consumatori
+**Prompt**: «Discovery: l'unicita' dei nomi a M2», depositato in `docs/prompts/PROMPT_discovery_uniqueness_m2.md`. Quattro domande: la regola M2 e dove vive; i consumatori che risolvono per nome e su quale pool; se la divergenza create/rename di S1 e' costruibile a M2; se `defaultname` puo' duplicare e se il badge copre M2. Zero fix.
+**Files touched**: `docs/discovery/discovery_2026-08-30_uniqueness_m2.md` (nuovo), `docs/prompts/PROMPT_discovery_uniqueness_m2.md` (nuovo), `docs/claude-code-log.md`. **Zero sorgenti.** Una sonda non committata, `frontend/scripts/smoke/_tmp_m2_uniqueness.ts` (20 check, ALL GREEN, zero errori di pagina).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — sola lettura, zero diff di sorgente. La sonda scrive solo sullo stato in memoria di un contesto browser usa-e-getta.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Tre regole M2, non una (core `classes.ts:2166`; `LModel.set_name`; JjScript `rename.ts:138`, per-kind, case-insensitive, che bypassa `set_name`). La create non ne applica nessuna. Divergenza misurata in tre forme in una corsa. Due buchi: i `DDataType` non sono in `pkg.children`, le feature ereditate non entrano nel namespace. Reperto autonomo: `getClassByName`/`getEnumByName` ritornano sempre `null` (chiave `$nome` vs chiave nuda). Dettagli nel referto.
+**Prompt document name**: PROMPT_discovery_uniqueness_m2.md 2026-08-30 19:06
+
+## 2026-08-30 — discovery: la finestra transitoria del parser Ecore, misurata
+**Prompt**: «Discovery: la via (A) di get_type — il padre nella finestra transitoria», depositato in `docs/prompts/PROMPT_discovery_gettype_via_a.md`. Tre domande: chi legge `.type` fra `DReference.new(undefined)` e la scrittura del campo; cosa ne fa; se il gradino 3 di `get_type` ha ancora chiamanti fuori dalla finestra. Zero fix.
+**Files touched**: `docs/discovery/discovery_2026-08-30_gettype_finestra_parser.md` (nuovo), `docs/prompts/PROMPT_discovery_gettype_via_a.md` (nuovo), `docs/claude-code-log.md`. **Zero sorgenti.** Una sonda non committata, `frontend/scripts/smoke/_tmp_gettype_window.ts` (15 check, ALL GREEN, zero errori di pagina).
+**Outcome**: ✅ completed
+**Corregge**: 2026-08-30 14:15 (PROMPT_seed_dreference.md)
+**Causa**: (c)
+**Regressions**: no — sola lettura, zero diff di sorgente.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: L'assunzione del referto del 30-08 («nella finestra `type === undefined` e' il contratto») e' falsificata: `DReference.new` mette il padre al posto del tipo assente prima del costruttore, quindi `data.type` non e' mai falsy e il gradino 3 non scatta sul percorso del parser. La finestra e' leggibile (`reducer.ts:639`) ma sincrona: 0 dispatch. Import end-to-end finalmente esercitato. Due reperti collaterali nel referto §1 e §5.
+**Prompt document name**: PROMPT_discovery_gettype_via_a.md 2026-08-30 19:06
+
 ## 2026-08-30 — chore(smoke): 142 png orfane rimosse, e il cwd che le scriveva
 **Prompt**: «Micro igiene: png orfane + due reperti nel README-probes», dato in chat e non depositato in `docs/prompts/`. Due parti: (1) verificare che le ~142 `_tmp_*.png` in `frontend/` fossero tutte untracked e da sonda, poi rimuoverle, fermandosi se qualcosa non matcha il pattern o risulta tracked; (2) due aggiunte a `README-probes.md` dai reperti del 30-08 sera — l'annidamento apparente (`composition = true` + `slot.addObject()` nello stesso `evaluate`) e il fixture rowviews senza oggetti annidati. Solo pulizia + docs, zero sorgenti, entry nello stesso minuto, pathspec.
 **Files touched**: `frontend/scripts/smoke/README-probes.md` (+56/-4), e la rimozione di 142 `frontend/_tmp_*.png` (mai tracciate: non compaiono in nessun commit). **Zero sorgenti, zero `src/`, zero sonde.** Indice verificato vuoto (`git diff --cached --name-only`) prima del commit; commit con pathspec.
