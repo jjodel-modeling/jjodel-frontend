@@ -2435,6 +2435,68 @@ accendersi sul duplicato preesistente. Referto:
 `docs/discovery/discovery_2026-08-30_s1a_una_funzione_uniqueness.md`.
 
 
+**R-S1-5** (2026-08-30) — **I consumatori che risolvono per nome dichiarano l'ambiguita' invece
+di risolverla.** Il ramo di S1b, sui cinque consumatori del censimento. `findInstanceByName`
+(`jjscript/executor/commands/instance.ts`) torna la **lista**: un nome non e' una chiave, e il
+`.find` rispondeva «il primo» a una domanda senza risposta unica. `resolveInstanceHandle` ne fa un
+verdetto a tre esiti `{ok, value?, reason?, candidates?}` — risolto, assente, ambiguo — dove
+`candidates.length >= 2` distingue l'ambiguo dall'assente senza far leggere `reason` al chiamante.
+`delete`, `rename` e `set` (attributo, riferimento e **bersaglio** del riferimento) **rifiutano**
+sull'ambiguo: il colpo silenzioso al primo omonimo era il difetto, non un comportamento da
+proteggere. Cambia comportamento committato, ed e' voluto.
+
+Tre delimitazioni misurate, non assunte:
+
+- **L'ambiguita' e' raggiungibile solo sul ramo di fallback.** Il registro di handle e' per-id e
+  per-run ed e' consultato per primo, quindi un'istanza creata nello script non e' mai ambigua: lo
+  scenario «registry precedence» di `handleRegistry.test.ts` resta risolto **senza** che la lista
+  venga costruita. Solo le istanze pre-esistenti allo script possono esserlo.
+- **I candidati si nominano per METACLASSE, non per path di containment.** `LModel.objects` e'
+  `data.objects` (`LModelElement.tsx:5561`), cioe' le radici di **un solo** modello: ogni candidato
+  che quel lookup puo' tornare condivide lo stesso path, e stamparlo metterebbe due righe identiche
+  sotto «which one?». Il path resta il disambiguatore giusto per il pool di JjEL, che e'
+  `allSubObjects` di ogni modello M1. Una sola funzione costruisce la frase (`describeAmbiguity`),
+  perche' cinque copie della stessa frase diventano cinque frasi diverse.
+- **`elementWaiter` legge `.length > 0`, mai il valore.** Un array vuoto e' **truthy**: scritto
+  come test di verita', ogni dipendenza M1 sarebbe risultata risolta al primo poll e i comandi
+  sarebbero partiti prima che l'istanza esistesse, **senza un solo errore di compilazione**.
+  L'ambiguita' li' non e' un rifiuto: e' un'attesa, non una scrittura — due istanze col nome
+  significano che la cosa attesa e' arrivata, e *quale* fosse e' la domanda su cui rifiuta il
+  comando.
+
+Il seeding di `ProjectEditor` (`:1888, :1929, :1956`) non scrive su ambiguita' e la dichiara; lo
+slot resta vuoto e dichiarato. Misurato: quelle righe stanno dentro `handleExecuteTransformation`
+(`:1391`), il callback di esecuzione JjTL, e **non girano mai al caricamento di un progetto** —
+quindi il vincolo «i duplicati preesistenti si aprono sempre» (R-S1-4) e' soddisfatto per
+costruzione, non per concessione.
+
+**Cosa NON e' entrato, e perche'.** Il punto «binding nudo di JjEL» del prompt e' risultato **gia'
+implementato**: `buildEvalContext` non lega un nome ambiguo, registra `{count, sampleClass}`, passa
+la mappa all'evaluator (`AMBIGUOUS_INSTANCES_KEY`), che emette `kind: 'ambiguous-instance'`, e ha
+il suo test con controllo negativo (`jjel/__tests__/ambiguous-instance.test.ts`). E registrare
+`Class.Name` nella stessa mappa sarebbe stata una **scrittura morta**, misurata: l'unico lettore e'
+`evaluator.ts:231`, sul ramo **Identifier**; il ramo di accesso a proprieta' (`:513-538`) emette
+`property-not-found` e non consulta mai `ctx.ambiguousInstances`. Inoltre ogni nome che rende
+`Class.Name` ambiguo e' **gia'** nella mappa sotto il nome nudo, perche' `instances` e' un
+sottoinsieme del pool su cui `instancesByName` e' costruita. Rendere non-muto l'accesso qualificato
+richiede `jjel/` — fuori perimetro per Regola 20, e assegnato a una micro-slice separata. Quindi
+**zero diff in `eval.ts`**: §2 di `discovery_2026-08-30_s1b_ambiguita_dichiarata.md`.
+
+**Nota sulla sigla.** Il prompt di S1b chiamava questa ratifica «R-S1-3». Quando e' stato scritto,
+il registro non la conteneva ancora; S1a ha poi committato R-S1-3 con un altro significato (il
+motore form che cede la regola per-classe). Questa e' percio' **R-S1-5**, e i riferimenti nel
+sorgente puntano a questa.
+
+Misurato a schermo, `_tmp_s1b_verify.ts`, **11/11 ALL GREEN, zero errori di pagina**, sul modulo
+vero importato dal sorgente vivo (nessun mock): due omonimi costruiti come si presentano al
+caricamento (`SetFieldAction` su `data.name`, che non passa da `set_name` e quindi non incontra la
+guardia di R-S1-2); `delete CLK` ambiguo **rifiuta e non cancella nulla** (`DObject` 10 -> 10,
+entrambi vivi); `set CLK.widthPx` ambiguo **rifiuta e non scrive** (nessuno dei due slot si muove);
+e per contrasto, disambiguato, lo stesso `set` passa e scrive (`[] -> [42]`) — che e' la prova che
+la scrittura sarebbe avvenuta. Referto:
+`docs/discovery/discovery_2026-08-30_s1b_ambiguita_dichiarata.md`.
+
+
 ## Superate
 
 - **D3** (2026-07-26, routing congelato in v1) — superata da E-route il 2026-08-06.
