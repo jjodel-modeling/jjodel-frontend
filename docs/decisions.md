@@ -2041,7 +2041,7 @@ Quel getter apre una `TRANSACTION` con un creatore annidato (`DObject.new3`,
 ContextMenu **con** un grafo aperto, e il manager crea senza grafo. Non decidibile
 staticamente.
 
-**Q4** — **aperta.** Il dominio di enum e reference senza istanza (`MetaclassAttribute` porta
+**Q4** — **sciolta il 2026-08-30**, verso in «Slice 2b» piu' sotto. Il dominio di enum e reference senza istanza (`MetaclassAttribute` porta
 il nome del tipo e `isEnum`, non l'id, e i letterali oggi arrivano da
 `LValue.get_validTargets`, che vuole uno slot vivo). Estrarre un
 `validTargetsFor(feature, modelId)` e' l'unica via che non duplica, ma tocca
@@ -2052,7 +2052,7 @@ il nome del tipo e `isEnum`, non l'id, e i letterali oggi arrivano da
 `irVersion` e senza migrazione — R-STR-1 alla lettera. Non su `FormSpec`. Fuori dalla
 slice 2a.
 
-**Q6** — **aperta.** Nome e sede del motore: proposta `frontend/src/jjform/`, pari grado di
+**Q6** — **sciolta il 2026-08-30** da R-FORM-4. Nome e sede del motore: proposta `frontend/src/jjform/`, pari grado di
 `jjel/`/`jjtl/`/`jjscript/`, con `index.ts` e `SPEC.md`, e l'invariante «zero import da
 `joiner/`, `redux/`, `react`, `components/`» dichiarata nel SPEC. Costoso cambiarlo dopo:
 entra in una superficie pubblica.
@@ -2088,7 +2088,7 @@ assonanza per chi avrebbe scritto il delete del manager.
 5. **Naming e collocazione** — Q6: `frontend/src/jjform/`, pari grado di `jjel/`, che e'
    il precedente misurato (zero import da joiner/react/redux).
 
-**Q8** (2026-08-30) — **aperta, e nasce dalla riconciliazione.** Il Turno 10b («Intero
+**Q8** (2026-08-30) — **sciolta lo stesso giorno**, verso in «Slice 2b». Nasce dalla riconciliazione. Il Turno 10b («Intero
 modello — master-detail») descrive la colonna sinistra come **outline di containment del
 modello a partire dai root**, con la creazione nell'albero («Add Port», «Add root
 element»). La slice 2a implementa invece un **catalogo per metaclasse** (metaclassi ->
@@ -2096,6 +2096,67 @@ istanze -> form), che e' cio' che il prompt della slice specificava alla lettera
 navigazioni non sono la stessa cosa: l'outline mostra la struttura del modello, il catalogo
 la sua estensione per tipo, e solo il primo ha un posto naturale dove appendere la create
 di 2c. Non risolta qui: la slice consegnata segue il prompt, e la scelta e' di prodotto.
+
+### Slice 2b — ShapeCtx e la tabella (ratifiche 2026-08-30)
+
+**Q4, sciolta** (Alfonso) — **Via adapter, senza toccare il core.** I letterali di enum si
+risolvono da `idlookup` per l'id della DAttribute (`shapeDraw.enumeratorOf` ->
+`enumShapeOf`), non estraendo un `validTargetsFor` da `LValue.get_validTargets`
+(`LModelElement.tsx:7853`), che e' core (Regola 5). **Costo dichiarato e non simulato**:
+`get_validTargets` scarta anche i candidati che chiuderebbero un ciclo di contenimento, e
+quel filtro e' PER-ISTANZA — legge la catena dei padri dell'oggetto. Non ha significato per
+una metaclasse, quindi e' **assente** dalla shape, non approssimato: la shape dice cosa il
+metamodello permette, quali di quei candidati una particolare istanza possa prendere e' una
+domanda del momento della scrittura. La eredita la slice 2c. A registro anche nel contratto,
+punto aperto 6.
+
+**Q8, sciolta** (Alfonso) — **Il catalogo per metaclasse resta.** La colonna sinistra elenca
+ogni metaclasse, non le sole root del Turno 11a («Collections = root-instantiable
+metaclasses»): una metaclasse contenuta senza collezione propria sarebbe irraggiungibile.
+L'outline di containment del Turno 10b resta **navigazione alternativa futura**, a registro
+qui e non aperta: e' la sede naturale della create di 2c, e quando quella slice si apre la
+scelta fra le due va rifatta con quel peso. `jjform.collectionClasses(shape, rootOnly)`
+porta gia' il parametro, spento di default, perche' la lettura 11a resti esprimibile senza
+riscrivere la colonna.
+
+**R-FORM-4** (2026-08-30) — **Sede del motore: `frontend/src/jjform/`, aperta per il solo
+tipo.** Pari grado di `jjel/`, che e' il precedente misurato (zero import da
+joiner/react/redux). L'invariante e' **zero import**, non «niente React»: `shape.ts` e
+`index.ts` non importano nulla, come `irReadCtx.ts` e `valueRenderer.ts`. Il motore ci arriva
+quando `WriteCtx` e' deciso; la slice 2b vi mette `MetamodelShape`, `ShapeCtx`, `IncomingRef`
+e tre funzioni derivate. Scioglie Q6.
+
+**R-FORM-5** (2026-08-30) — **L'adapter e' in due file, e la ragione e' un test.** La prima
+stesura teneva tutto in `shapeAdapter.ts`, che importa `store` dal barrel del joiner: il
+barrel raggiunge monaco, monaco dereferenzia `window` a import time, e la suite unitaria
+moriva all'import con `window is not defined` — lo stesso modo in cui muoiono le nove suite
+gia' rosse. Da qui `shapeDraw.ts`, la meta' **senza import** (classificazione dei tipi, flag
+`derived`/`changeable`, letterali di enum, walk di `pointedBy`), e `shapeAdapter.ts` come
+meta' impura (`buildMetamodelShape`, `makeShapeCtx`). E' la stessa divisione di
+`irReadCtx` / `irReadCtxLproxy`, e va mantenuta: chi aggiunge una funzione pura all'adapter
+la mette nel primo file, o la rende non testabile.
+
+**R-FORM-6** (2026-08-30) — **La precedenza la fa il motore, non l'adapter.** Chiude il punto
+aperto 2 del contratto **contro** l'ipotesi che il contratto avanzava. Ragione misurata:
+`valueRenderer.ts` e `irReadCtx.ts` hanno zero `^import`, `widgetRenderer.ts` due e sono
+tipi, `rowViewAnnotations.ts` zero. La precedenza e' gia' l'unica parte portabile del
+pacchetto; passare all'adapter il widget gia' risolto la lascerebbe fuori dal motore.
+L'adapter passa le annotazioni, non il verdetto. La copia repo del contratto e' allineata.
+
+**R-FORM-7** (2026-08-30) — **I multivalore sono nel v0**, contro il punto aperto 4. Non
+sarebbe stato gratis escluderli: il repo li gestisce gia', e `formWrite.clearSlotValue`
+lascia un **buco** invece di accorciare l'array (motivazione misurata nel suo docstring). Un
+`instanceData` che ignorasse i buchi non farebbe round-trip con quello che jjodel produce.
+`instanceTable.slotShapeFor` li salta esplicitamente, nel conteggio e nel testo.
+
+**R-FORM-8** (2026-08-30) — **«Referenced by» conta le sole reference non-containment.** Il
+walk (`shapeDraw.referencedBy`) restituisce **ogni** puntatore entrante col flag
+`composition`, e chi conta filtra. Un proprietario non e' un referente: contarlo metterebbe
+un 1 su ogni istanza contenuta del modello e renderebbe la colonna muta. La forma del walk e'
+misurata, non dedotta (`scripts/smoke/_tmp_pointedby.ts`, 2026-08-30): `pointedBy` porta
+anche `.father`, `.instances`, `.objects`, `.model` e una voce nuda `objects` senza prefisso,
+e le sole sorgenti che sono riferimenti sono `idlookup.<id>.values[.<n>]`. Una voce per
+PUNTATORE, non per istanza: il dialogo di 12d deve riassegnarne uno per uno.
 
 ### Perimetro delle slice
 
