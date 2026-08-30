@@ -21,7 +21,12 @@
  *
  * The scan is a full path -> mtime map rather than a max-mtime: it names the
  * file that moved, and it also catches an added or removed file, which a
- * high-water mark misses. Cost measured on this tree: 1379 files, 7-12 ms.
+ * high-water mark misses.
+ *
+ * Cost measured on this tree, 2026-08-30, five scans each: `src` alone is 1379
+ * files in 9-13 ms; `src` plus `public/`, `vite.config.ts` and `index.html` is
+ * 4756 files in 22-25 ms. Four scans per run, so widening the root costs about
+ * 50 ms on a run that takes minutes — measured before widening, not assumed.
  */
 
 import { readdirSync, statSync } from 'node:fs';
@@ -29,6 +34,9 @@ import { fileURLToPath } from 'node:url';
 import { dirname, relative, resolve } from 'node:path';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
+
+/** `frontend/`. Every reported path is relative to it, so it reads like a repo path. */
+export const REPORT_ROOT = resolve(HERE, '../..');
 
 /**
  * The tree whose stillness the run depends on: what the dev server watches and
@@ -38,9 +46,38 @@ const HERE = dirname(fileURLToPath(import.meta.url));
  * this file are not part of what the browser loads, and a probe saved during a
  * run must not void it.
  */
-export const SRC_ROOT = resolve(HERE, '../../src');
+export const SRC_ROOT = resolve(REPORT_ROOT, 'src');
+
+/**
+ * Directories walked in full.
+ *
+ * `public/` was added on 2026-08-30: it is served verbatim to the page, so a
+ * save in there changes what the run measures exactly as a save under `src`
+ * does. It holds 3377 static assets and nothing generated — measured, nothing
+ * under it had moved in the previous 24 hours — so it adds no spurious voids.
+ */
+export const WATCHED_DIRS: string[] = [SRC_ROOT, resolve(REPORT_ROOT, 'public')];
+
+/**
+ * Single files watched alongside the directories.
+ *
+ * `vite.config.ts` is the worst case the guard can catch: saving it does not
+ * hot-update the page, it RESTARTS the dev server, and every state opened after
+ * that point is measuring a different server than the states before it.
+ * `index.html` is the document the page is.
+ */
+export const WATCHED_FILES: string[] = [
+    resolve(REPORT_ROOT, 'vite.config.ts'),
+    resolve(REPORT_ROOT, 'index.html'),
+];
+
+/** What the run declares it watched, for the report. */
+export function describeWatched(): string[] {
+    return [...WATCHED_DIRS.map((d) => `${relative(REPORT_ROOT, d)}/`), ...WATCHED_FILES.map((f) => relative(REPORT_ROOT, f))];
+}
 
 export interface SrcSnapshot {
+    /** The base every reported path is relative to: `frontend/`. */
     root: string;
     /** Wall clock of the scan, for the report. */
     takenAt: number;
@@ -51,7 +88,7 @@ export interface SrcSnapshot {
 export type SrcChangeKind = 'added' | 'removed' | 'modified';
 
 export interface SrcChange {
-    /** Relative to SRC_ROOT, so it reads like a repo path. */
+    /** Relative to REPORT_ROOT, so it reads like a repo path (`src/…`, `vite.config.ts`). */
     path: string;
     kind: SrcChangeKind;
 }
@@ -82,10 +119,21 @@ function walk(dir: string, into: Map<string, number>): void {
     }
 }
 
-export function snapshotSrc(root: string = SRC_ROOT): SrcSnapshot {
-    const files = new Map<string, number>();
-    walk(root, files);
-    return { root, takenAt: Date.now(), files };
+export function snapshotSrc(
+    dirs: string[] = WATCHED_DIRS,
+    files: string[] = WATCHED_FILES,
+): SrcSnapshot {
+    const map = new Map<string, number>();
+    for (const d of dirs) walk(d, map);
+    for (const f of files) {
+        try {
+            map.set(f, statSync(f).mtimeMs);
+        } catch {
+            // Absent is a legitimate state (a config that does not exist here):
+            // it is absent in both scans, so it contributes nothing to the diff.
+        }
+    }
+    return { root: REPORT_ROOT, takenAt: Date.now(), files: map };
 }
 
 /** Everything that moved between the two scans, sorted for a stable report. */
@@ -110,7 +158,7 @@ export function diffSnapshots(before: SrcSnapshot, after: SrcSnapshot): SrcChang
  * dozens of files at once and the point is the fact, not the inventory.
  */
 export function describeChanges(changes: SrcChange[], max: number = 6): string[] {
-    const lines = changes.slice(0, max).map((c) => `      ${c.kind.padEnd(8)} src/${c.path}`);
+    const lines = changes.slice(0, max).map((c) => `      ${c.kind.padEnd(8)} ${c.path}`);
     if (changes.length > max) lines.push(`      … and ${changes.length - max} more`);
     return lines;
 }

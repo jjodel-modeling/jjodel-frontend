@@ -9,7 +9,8 @@
  *   GREEN  every assertion passed on a run that measured what it declares.
  *   RED    an assertion failed. This is a statement about the application.
  *   VOID   the run did not measure what it declares — somebody saved a file
- *          under `frontend/src` while it was in flight, or the page booted more
+ *          the dev server serves (`src/`, `public/`, `vite.config.ts`,
+ *          `index.html`) while it was in flight, or the page booted more
  *          than once. This is a statement about the machine, and the only
  *          correct response is to run again. A void run is NOT a pass.
  *
@@ -56,7 +57,7 @@ import {
     tallyConsole,
 } from './assertions.ts';
 import type { AssertionResult, ConsoleBaseline } from './assertions.ts';
-import { SRC_ROOT, describeChanges, diffSnapshots, snapshotSrc } from './quiescence.ts';
+import { describeChanges, describeWatched, diffSnapshots, snapshotSrc } from './quiescence.ts';
 import type { SrcChange, SrcSnapshot } from './quiescence.ts';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -72,7 +73,7 @@ interface StateReport {
     boots: number;
 }
 
-/** What moved under src while one state was open. */
+/** What moved in the watched tree while one state was open. */
 interface QuiescenceWindow {
     stateId: string;
     changes: SrcChange[];
@@ -272,17 +273,17 @@ async function main(): Promise<void> {
     console.log('-'.repeat(78));
     console.log('RUN VALIDITY — did this run measure the tree it declares?');
     console.log('-'.repeat(78));
-    console.log(`  watched : ${SRC_ROOT}`);
+    console.log(`  watched : ${describeWatched().join('  ')}`);
     console.log(`            ${beforeAll.files.size} file(s) at start`);
     console.log(
         `  boots   : ${reports.map((r) => `${r.state.id}=${r.boots}`).join('  ')}` +
         `  (ceiling ${MAX_BOOTS_PER_STATE} per state)`,
     );
     if (movedWindows.length === 0) {
-        console.log('  moved   : nothing under src moved while the run was in flight');
+        console.log('  moved   : nothing the dev server serves moved while the run was in flight');
     }
     for (const w of movedWindows) {
-        console.log(`  moved   : ${w.changes.length} change(s) under src while '${w.stateId}' was open:`);
+        console.log(`  moved   : ${w.changes.length} change(s) while '${w.stateId}' was open:`);
         for (const line of describeChanges(w.changes)) console.log(line);
     }
     for (const r of noisyStates) {
