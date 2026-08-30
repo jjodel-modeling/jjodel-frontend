@@ -2,6 +2,19 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-08-30 — docs: la via (A) di R-STR-6 passa da fatto a ratifica
+**Prompt**: «committare (A) con la ratifica di oggi nella entry di log: *gradino 0 soltanto; il gradino 1 sul ramo IR resta disonorato per scelta dichiarata, slice (B) ratificata a seguire*». La via (A) era stata implementata e poi **dichiarata** dalla riconciliazione di `adbab1aaf`, che però annotava onestamente «senza che nessuno l'avesse scelta». Questa entry è la scelta: da qui (A) è ratificata, e il confine che lascia aperto è un impegno, non un residuo.
+**Files touched**: docs/claude-code-log.md (questa entry). **Zero sorgenti**: la corsia era già a registro in `2a3e408c0`, committata dalla sessione parallela mentre giravano i gate di questa.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: (f)
+**Regressions**: no. Gate rigirati **in modo indipendente** sul contenuto poi committato — `git diff 2a3e408c0 HEAD` sui cinque file è **vuoto**, quindi le misure valgono per quel commit: typecheck **33 = baseline su output completo** e `diff` della lista errori **identico** alla baseline delle 11:00, zero errori nei cinque file (controllo positivo: 7 righe sui file della baseline nota); `npx vitest run` **2008 passed / 0 failed**, +7 esatti sulle 2001 della 12d; build exit 0 coi warning **byte-identici** alla build di stamattina; `npm run smoke` 12/0/3.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required per questa entry (soli documenti); prodotto dalla sessione che ha scritto il diff.
+**Smoke visivo**: **passato, 13/13 ALL GREEN**, sonda indipendente `_tmp_rstr6_accept.ts`, zero errori di pagina. **Il residuo di (A) è misurato, non assunto**: senza widget dichiarato **12/12** righe IR restano testo — `guard`, che porta `@renderer=code`, incluso — quindi nessuna view autorata cambia resa e il gradino 1 sul ramo IR resta davvero disonorato. Coi widget: `color`→swatch, `textarea`→code, `select`→enumChip, `checkbox`→**boolean** (su `visible`=true, il ramo NON degradato, complementare alla misura gemella che lo prova degradare su «Green»), `number`→numberUnit, `text`→truncatedText. Degradi provati per contrasto sullo stesso widget con un valore che non lo regge; `refPill` non dichiarabile cade sul metamodello senza svuotare la riga; il Reset riporta swatch→testo.
+**Notes**: Due sessioni hanno eseguito lo stesso prompt: una si è fermata all'hard stop mettendo a ratifica tre vie (`ec42652af`), l'altra ha implementato (A). Le misure concordano e i referti si citano. **Da chiudere**: `decisions.md` porta R-STR-6 come sciolta ma non registra la scelta fra le tre vie come ratificata da Alfonso, né apre (B).
+**Prompt document name**: PROMPT_rstr6_canvas_override.md
+
 ## 2026-08-30 — refactor(editors): il foglio di NestedView misurato per selettore, e potato
 **Prompt**: `docs/prompts/PROMPT_scss_orphans.md`. Slice a valle della rimozione di `NestedView` (`0494a9cad`): potare i selettori **provatamente** orfani di `nestedView.scss`, sciogliendo prima le due riserve di metodo dichiarate in §4 di `discovery_2026-08-30_2_nestedview_rimozione.md` — (a) vita per **classe usata** e non per sottostringa, (b) `&` annidati **espansi** prima del confronto. Un selettore in dubbio resta. Prova visiva obbligatoria con ritagli md5-identici, e questo e' il criterio della slice.
 **Files touched**: editors/views/nestedView.scss (3737 → 366 righe), docs/discovery/discovery_2026-08-30_3_nestedview_scss_orfani.md (nuovo), docs/claude-code-log.md. Sonda `scripts/smoke/_tmp_scss_orphans.ts` e i 30 `.png` (non committati). Commit sorgente `061859313`, docs `549198ae3`, log a parte. **Zero file condivisi** con le sessioni parallele (12b/12c in `jjform/`, R-STR-6 in `editor-v2/nodes/`): verificato su `git diff --name-only` dei loro 8 commit atterrati durante il task.
