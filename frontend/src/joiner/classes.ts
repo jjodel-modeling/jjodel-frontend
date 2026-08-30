@@ -853,6 +853,36 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         thiss.name = (name !== undefined) ? name || '' : thiss.constructor.name.substring(1) + " 1";
         return this; }
 
+    /**
+     * The `type` a caller hands to `DTypedElement`, resolved to the classifier it names.
+     *
+     * Four shapes are accepted, in order of cost: an L-proxy, a D object, an id, a name.
+     * Before this existed the resolution was a bare `Selectors.getByName2(type)` — one
+     * argument, so `classname` stayed `undefined`, so the loop's `classname !== d.className`
+     * skipped every entry: a by-name lookup that could only ever return null. Only the two
+     * object shapes survived it, because `getByName2` returns an object untouched, and every
+     * id and every name fell through to the seed below — as EString for a DAttribute, as
+     * THE FATHER for a DReference. Silent, and asymmetric.
+     */
+    private static resolveClassifier(type: any): DClassifier | null {
+        if (!type) return null;
+        // A proxy reports the D-layer className (CLAUDE.md §3.13), so unwrapping to `__raw`
+        // is about identity, not about the switch: both shapes answer 'DClass' either way.
+        if (typeof type === 'object') return ((type as GObject).__raw || type) as DClassifier;
+        if (typeof type !== 'string') return null;
+        const s: DState = store.getState();
+        // An id — the shape a caller most often has at hand, and the one that used to be lost.
+        const byId = s.idlookup[type];
+        if (byId && typeof byId === 'object') return byId as DClassifier;
+        // A name, last resort: `getByName2` filters on className and matches nothing without
+        // it, so it has to be asked once per kind of classifier a type can be.
+        for (const cname of ['DClass', 'DEnumerator', 'DDataType']) {
+            const found = Selectors.getByName2(type, cname, false, s);
+            if (found) return found as DClassifier;
+        }
+        return null;
+    }
+
     DTypedElement(type?: DTypedElement["type"]): this {
         const thiss: DTypedElement = this.thiss as any;
         thiss.allowCrossReference = false;
@@ -866,7 +896,8 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
             return this;
         }
 
-        let dtype = Selectors.getByName2(type) as DClassifier | null;
+        const requested = type; // what the caller asked for, so the fallback below can say so
+        let dtype = Constructors.resolveClassifier(type);
         switch (dtype?.className){
             default: type = undefined; break;
             case 'DClass':
@@ -880,6 +911,10 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
                     default: type = dtype.id; break;
                 }
                 break;
+            // A DDataType is as legal an attribute type as an enum (EMF's EDataType) and
+            // shares its rule: fine for the three that carry a value, refused for a
+            // reference, which must point at a class.
+            case 'DDataType':
             case 'DEnumerator':
                 switch (thiss.className) {
                     case 'DAttribute':
@@ -894,6 +929,12 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         }
 
         if (!type) {
+            // The fallback is a seed, not a resolution: say so whenever the caller asked
+            // for something and got something else. `type === undefined` is the seed being
+            // used as intended — the Ecore parser constructs with no type on purpose and
+            // field-writes `.type` right after — and stays quiet.
+            if (requested !== undefined) Log.ww('DTypedElement: cannot resolve the requested type, falling back',
+                {requested, resolved: dtype, on: thiss.className, name: (thiss as GObject).name});
             switch (thiss.className) {
                 default:
                 case 'DReference':

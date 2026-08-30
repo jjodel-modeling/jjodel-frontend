@@ -117,25 +117,17 @@ function buildMetamodel(project: LProject): {
     // ── AllNine: one attribute per renderer, in the order the rows will read ──
     const allNine: LClass = LClass.fromD(pkg.addClass('AllNine'));
 
-    // THE PROXY, not its id and not its name. `Constructors.DTypedElement`
-    // (joiner/classes.ts:855) honours exactly two shapes: a canonical primitive
-    // pointer, matched by /^Pointer_E[A-Z]+$/, and an OBJECT — `getByName2`
-    // returns it untouched on `typeof name === 'object'`. Everything else is
-    // silently downgraded, because that call passes only one argument, so
-    // `classname` is undefined and the loop's `classname !== d.className` skips
-    // every entry: a by-name lookup that can only ever return null.
-    //
-    // The downgrade is silent and asymmetric, which is why it went unseen:
-    // a DAttribute falls to `Pointers.ESTRING`, a DReference to THE FATHER.
-    // Measured 2026-08-29 — `palette.id` left tint on `Pointer_ESTRING` (so the
-    // colour ladder never reached rung 3, and `Stroke`, this fixture's control,
-    // was not a control at all), and `config.id` gave cfg the id of AllNine.
-    // The cast is required: the signature asks for a Pointer, while the only
-    // input the constructor honours for a user-defined type is the proxy.
-    // Fixing the API instead of the caller is core work, registered as debt.
-    const tint = allNine.addAttribute('tint', palette as any);          // swatch
-    const strokeAttr = allNine.addAttribute('stroke', stroke as any);   // enumChip
-    const cfg = allNine.addReference('cfg', config as any);             // refPill
+    // By id, which is what the signature asks for. Until 2026-08-30 these three had
+    // to pass the PROXY instead, with a cast: `Constructors.DTypedElement` honoured
+    // only a canonical primitive pointer and an object, and silently downgraded an
+    // id — `palette.id` left tint on `Pointer_ESTRING`, so the colour ladder never
+    // reached rung 3 and `Stroke`, this fixture's control, was not a control at all;
+    // `config.id` gave cfg the id of AllNine, its own father. The constructor now
+    // resolves ids and names too, so the fixture states the type the plain way and
+    // is a caller of the fixed path rather than a way around it.
+    const tint = allNine.addAttribute('tint', palette.id);              // swatch
+    const strokeAttr = allNine.addAttribute('stroke', stroke.id);       // enumChip
+    const cfg = allNine.addReference('cfg', config.id);                 // refPill
     const visible = allNine.addAttribute('visible', 'Pointer_EBOOLEAN');// boolean, true
     const locked = allNine.addAttribute('locked', 'Pointer_EBOOLEAN');  // boolean, false
     const widthPx = allNine.addAttribute('widthPx', 'Pointer_EINT');
