@@ -10,10 +10,18 @@
  */
 import { describe, it, expect } from 'vitest';
 import { jjelEvalWithDiagnostics } from '../index';
-import { AMBIGUOUS_INSTANCES_KEY } from '../evaluator/context';
+import {
+    AMBIGUOUS_INSTANCES_KEY,
+    AMBIGUOUS_CANDIDATES_SHOWN,
+    formatAmbiguousCandidates,
+} from '../evaluator/context';
+import type { AmbiguousInstanceInfo } from '../evaluator/context';
 
-const ambigMap = (entries: [string, { count: number; sampleClass: string | null }][]) =>
+const ambigMap = (entries: [string, AmbiguousInstanceInfo][]) =>
     ({ [AMBIGUOUS_INSTANCES_KEY]: new Map(entries) } as any);
+
+const candidate = (id: string, className: string | null, path: string | null) =>
+    ({ id, className, path });
 
 describe('JjEL instance-by-name ambiguity (Stage 2)', () => {
     it('emits an ambiguous-instance warning for a recorded ambiguous name', () => {
@@ -82,5 +90,82 @@ describe('JjEL instance-by-name ambiguity (Stage 2)', () => {
             ambigMap([['S0', { count: 2, sampleClass: 'State' }]]),
         );
         expect(warnings.some(w => w.kind === 'ambiguous-instance' && w.identifier === 'S0')).toBe(true);
+    });
+});
+
+describe('JjEL ambiguity — the candidates are named (S1b micro)', () => {
+    it('two cross-model homonyms: the warning carries both paths, and still binds nothing', () => {
+        const { value, warnings } = jjelEvalWithDiagnostics(
+            'S0',
+            ambigMap([['S0', {
+                count: 2,
+                sampleClass: 'State',
+                candidates: [
+                    candidate('Pointer_a1', 'State', 'Traffic/machine/S0'),
+                    candidate('Pointer_b2', 'State', 'Lift/machine/S0'),
+                ],
+            }]]),
+        );
+        // Unchanged from before the candidates existed: no binding, one warning.
+        expect(value).toBeNull();
+        expect(warnings).toHaveLength(1);
+        const w = warnings[0] as any;
+        expect(w.kind).toBe('ambiguous-instance');
+        expect(w.count).toBe(2);
+        expect(w.candidates).toHaveLength(2);
+        expect(w.candidates.map((c: any) => c.path)).toEqual([
+            'Traffic/machine/S0',
+            'Lift/machine/S0',
+        ]);
+        expect(w.candidates.map((c: any) => c.id)).toEqual(['Pointer_a1', 'Pointer_b2']);
+        // The path is what separates them here (the pool is cross-model), so the
+        // copy must show both — a metaclass-only line would print 'State' twice.
+        expect(formatAmbiguousCandidates(w.candidates)).toBe(
+            'Traffic/machine/S0 (State), Lift/machine/S0 (State)',
+        );
+    });
+
+    it('a producer that names nobody leaves the warning exactly as it was', () => {
+        const { value, warnings } = jjelEvalWithDiagnostics(
+            'S0',
+            ambigMap([['S0', { count: 3, sampleClass: 'State' }]]),
+        );
+        expect(value).toBeNull();
+        expect(warnings[0]).toMatchObject({
+            kind: 'ambiguous-instance',
+            identifier: 'S0',
+            count: 3,
+            sampleClass: 'State',
+        });
+        expect('candidates' in (warnings[0] as any)).toBe(false);
+        expect(formatAmbiguousCandidates((warnings[0] as any).candidates)).toBeNull();
+    });
+
+    it('an empty candidate list is absent, not empty, on the warning', () => {
+        // Negative control on the distinction the copy depends on: '[]' from the
+        // producer must not become a list the reader is shown.
+        const { warnings } = jjelEvalWithDiagnostics(
+            'S0',
+            ambigMap([['S0', { count: 2, sampleClass: null, candidates: [] }]]),
+        );
+        expect('candidates' in (warnings[0] as any)).toBe(false);
+    });
+
+    it('the copy names the first five and counts the rest', () => {
+        const many = Array.from({ length: 8 }, (_, i) =>
+            candidate(`Pointer_${i}`, 'State', `M${i}/S0`));
+        expect(AMBIGUOUS_CANDIDATES_SHOWN).toBe(5);
+        expect(formatAmbiguousCandidates(many)).toBe(
+            'M0/S0 (State), M1/S0 (State), M2/S0 (State), M3/S0 (State), M4/S0 (State), and 3 more',
+        );
+        // Exactly at the cap there is nothing left to count.
+        expect(formatAmbiguousCandidates(many.slice(0, 5))).toBe(
+            'M0/S0 (State), M1/S0 (State), M2/S0 (State), M3/S0 (State), M4/S0 (State)',
+        );
+    });
+
+    it('a candidate with no path falls back to metaclass, then to id', () => {
+        expect(formatAmbiguousCandidates([candidate('Pointer_x', 'State', null)])).toBe('State');
+        expect(formatAmbiguousCandidates([candidate('Pointer_x', null, null)])).toBe('Pointer_x');
     });
 });

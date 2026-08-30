@@ -4,7 +4,8 @@
  */
 
 import React, { useEffect, useRef, useCallback, useState } from 'react';
-import {AI, ChatMessage, ConsoleEntry, CodeEntry, isCodeEntry} from '../../types/jodie';
+import {AI, ChatMessage, ConsoleEntry, CodeEntry, CodeWarning, isCodeEntry} from '../../types/jodie';
+import { formatAmbiguousCandidates } from '../../jjel/evaluator/context';
 import { MarkdownMessage } from './MarkdownMessage';
 import { JjelValueInspector, detectKind } from './JjelValueInspector';
 import { JjScriptService, ScriptLineResult } from '../../jjscript';
@@ -213,6 +214,21 @@ function MessageBubble({ message, onJjScriptExecute, onTestInCode, onOfferExecut
     );
 }
 
+/**
+ * The ambiguous-instance warning line.
+ *
+ * A component rather than an inline branch because it needs one value computed
+ * before the JSX. When the producer named no candidate the copy is byte for
+ * byte the one that shipped before they existed — the list is an addition, not
+ * a replacement.
+ */
+function AmbiguousInstanceWarning({ warning }: { warning: CodeWarning }): JSX.Element {
+    const named = formatAmbiguousCandidates(warning.candidates);
+    return (
+        <>Ambiguous instance name <code>{warning.identifier}</code> ({warning.count} matches){named ? `: ${named}` : ''}. Use the qualified form <code>{(warning.sampleClass ?? 'ClassName')}.{warning.identifier}</code>.</>
+    );
+}
+
 function CodeReplEntry({ entry, onAskJjodie }: { entry: CodeEntry; onAskJjodie?: (entry: CodeEntry) => void }): JSX.Element {
     const isError = !entry.output.ok;
     const outputText = entry.output.ok
@@ -258,7 +274,7 @@ function CodeReplEntry({ entry, onAskJjodie }: { entry: CodeEntry; onAskJjodie?:
                                 {w.kind === 'property-not-found'
                                     ? <>Property <code>{w.identifier}</code> not found on object.</>
                                     : w.kind === 'ambiguous-instance'
-                                        ? <>Ambiguous instance name <code>{w.identifier}</code> ({w.count} matches). Use the qualified form <code>{(w.sampleClass ?? 'ClassName')}.{w.identifier}</code>.</>
+                                        ? <AmbiguousInstanceWarning warning={w} />
                                         : <>Unknown identifier <code>{w.identifier}</code>.</>}
                                 {w.suggestion && <> Did you mean <code>{w.suggestion}</code>?</>}
                             </span>
