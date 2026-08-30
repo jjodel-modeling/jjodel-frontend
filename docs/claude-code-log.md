@@ -2,6 +2,19 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-08-31 — docs(discovery): l'import Ecore da UI e' vivo, misurato dal gesto
+**Prompt**: «Discovery: l'import Ecore da UI e' morto end-to-end?», dato in chat e non depositato in `docs/prompts/`. Quattro domande: la catena anello per anello, da quando, l'inventario per rianimare il legacy, e se il test end-to-end di `parseDAnnotation` diventa scrivibile. Zero fix dichiarati nel prompt.
+**Files touched**: `docs/discovery/discovery_2026-08-31_import_ecore_catena.md` (nuovo), `docs/claude-code-log.md`. Sonde `frontend/scripts/smoke/_tmp_ecore_chain.ts`, `_tmp_ecore_converters.ts`, `_tmp_ecore_converters2.ts` e `_tmp_ecore_chain.png` (non committate, gitignored). Zero file sorgente toccati. Commit con pathspec; `git status --porcelain` e indice verificati prima: indice vuoto, nessuna sessione parallela sui miei file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (nessun file di §3.1 toccato; sola lettura)
+**Smoke visivo**: passato. `_tmp_ecore_chain.ts` guida il gesto reale — «Import» -> «Import Ecore (.ecore)» -> `FileChooser` -> fixture: **9/9 ALL GREEN**, zero errori di pagina. Store 0->1 `DModel`, 11->12 `DClass`, **0->4 `DAnnotation`** con le `source` esatte; modale «Import successful, Attributes 4».
+**Notes**: Ipotesi falsificata su entrambi i capi. Le due misure del 30-08 erano vere ma su un percorso legacy e mai cablato: `importEcore_click` non ha chiamanti in nessun commit della storia. `xml2jsonobj` funzionava fino a `47a4b5b10` (2025-11-09), rotto da un refuso di un token; la via viva nasce dopo (`de518e89d`) e non ci e' mai passata. Il picker **e' pilotabile**: corregge il §8 del referto `dtypedelement` del 30-08, che non ha chiave timestamp. Inventario nel referto §6.
+**Prompt document name**: 2026-08-31 00:00
+
 ## 2026-08-30 — feat(manager): l'outline di containment nel manager (10b)
 **Prompt**: «10b — Fase 2 approvata (8 file confermati, Regola 19)», dato in chat e non depositato in `docs/prompts/`. A valle di `docs/discovery/discovery_2026-08-30_outline_containment_10b.md` (Fase 1) e del disegno `Q8 Catalogo vs Outline.dc.html`, **opzione 1b**, dichiarato referenza dal prompt. Perimetro dal prompt: `outlineDraw.ts` che compone `childrenIn`/`ownerOf`/`childCount`; il modello del menu estratto dal JSX di `childSlots`, **una fonte** per catalogo e outline; `subjectId` allargato a «riga viva OPPURE DObject vivo del modello»; il fixture coi 4 livelli piu' il ghost, col puntatore morto reso come **nodo broken** e non sparito in silenzio.
 **Files touched**: `jjform/{outline.ts,index.ts,__tests__/outline.test.ts}`, `editor-v2/hooks/{outlineDraw.ts,__tests__/outlineDraw.test.ts}`, `abstract/tabs/{InstanceManagerTab.tsx,instanceManagerTab.scss}` (commit `8c0caef49`); `docs/discovery/discovery_2026-08-30_outline_containment_10b.md` + `docs/design/design_handoff_instance_node/Q8 Catalogo vs Outline.dc.html` in `7a6ed3c17`; log a parte. Sonda `frontend/scripts/smoke/_tmp_10b_verify.ts` e il png (non committati, gitignored). Ogni commit con pathspec, `git status --porcelain` e indice verificati prima: **nessuna sessione parallela**, l'albero portava solo i miei file piu' i `docs/prompts/*` untracked d'inizio sessione.
