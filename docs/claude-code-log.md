@@ -2,6 +2,19 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-08-30 — refactor: i residui orfani fuori perimetro del 30-08, chiusi
+**Prompt**: micro-slice a valle di `061859313`: chiudere i tre reperti che la potatura di `nestedView.scss` aveva dichiarato e non toccato — (1) `.viewpoint-tab` senza emettitori in `info.scss` e `_form-system.scss`, (2) le regole `tree-*` di `tree.scss` che nessuno emette, (3) la coda di `nestedView.scss`: intestazione ormai imprecisa e variabili SCSS inutilizzate. Stesso metodo e stessi gate del 30-08, precedente autoritativo. I sei «dubbio» restano dubbi.
+**Files touched**: editors/info.scss, styles/components/_form-system.scss, forEndUser/tree.scss (285 righe), editors/views/nestedView.scss (326 righe), docs/discovery/discovery_2026-08-30_4_scss_orfani_residui.md (nuovo), docs/claude-code-log.md. Sonde `_tmp_orphans2*.ts` e i 98 `.png` (non committati). Commit sorgente `00b6a9fbc`, docs `c3bf55de3`, log a parte. **Zero file condivisi** con la sessione parallela di R-STR-6 (B) (`989b225e7`, `8bcc289ae`: `ObjectNode.tsx`, `IRNodeContent.tsx`, `decisions.md`), verificato su `git diff --name-only`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (nessun file della critical zone)
+**Smoke visivo**: passato — `npm run smoke` 12/0/3 = baseline; sonda su tre superfici (pannello ViewData ×5 tab, info panel, tree), 2 temi, **13/14 ritagli md5-identici** contro un albero pulito da `git stash`. Il 14esimo (`light_props`) differisce di **7 pixel su 430.800**, ±1 su un solo canale, agli angoli arrotondati: il dump esaustivo di **ogni** proprieta' calcolata di **ogni** elemento della banda (custom property e rect inclusi) da' **0 differenze di valore**; cambia solo l'ordine di enumerazione dei custom property. Dichiarato, non arrotondato a 14/14.
+**Notes**: Tre correzioni misurate al referto del 30-08, in §0 del nuovo referto: `_form-system.scss:657,715` portano `.viewpoint-tab-container`, altro token (anch'esso senza emettitori, rimosso); le variabili sono 45 e le orfane 34, non 48/33; il grep repo-wide sugli `.scss` che il prompt prescrive e' un falso positivo di massa — le variabili SCSS sono file-scoped, i veri consumatori esterni sono **0**. Reperto di metodo: il gate a pixel sul tree **non ha segnale** (le regole entity non dipingono, vince l'`<i>` interno — CLAUDE.md §5 riprodotto su `tree-DPackage`), ed e' dichiarato tale invece che contato.
+**Prompt document name**: PROMPT_scss_orphans_residui.md 2026-08-30 13:00
+
 ## 2026-08-30 — feat(editor-v2): la ladder completa sul segmento value del ramo IR (R-STR-6 B)
 **Prompt**: `PROMPT_rstr6b_full_ladder.md`. Chiudere il costo dichiarato di (A): il segmento `value` di `IRNodeContent` passa per la **ladder completa** di `detectValueRenderer`, la stessa chiamata del ramo nativo, cosi' i due rami non possono divergere. Ratifica di design in ingresso: **il compartimento IR e' una superficie resa, non testo d'autore** — la resa piatta e' il buco, non la baseline. Vincoli: ordine dei gradini quello di (A); **nessuna chiave IR nuova**, la scelta resa/testo non e' per-view; flag ammesso solo per prudenza, un giro, mai un fork della decisione; **prima misura il blast radius**, conteggio per gradino, e il numero va nel report.
 **Files touched**: editor-v2/nodes/ObjectNode.tsx (`renderViewWidget` -> `renderRowValue`, la guardia `viewRenderer` tolta), viewpoint/ir/IRNodeContent.tsx (prop rinominata, contratto esteso a ogni feature), docs/discovery/discovery_2026-08-30_rstr6b_full_ladder.md (nuovo), docs/decisions.md (R-STR-6 (B)), docs/claude-code-log.md. Sonde `_tmp_rstr6b_blast.ts`, `_tmp_rstr6b_verify.ts` e il `.png` (non committate). Commit sorgente `989b225e7`, docs `8bcc289ae`, log a parte; rotazione del log in `12763f6c7`, prima della partenza come chiesto.
