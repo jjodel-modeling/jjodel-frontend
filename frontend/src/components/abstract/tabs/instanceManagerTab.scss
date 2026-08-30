@@ -50,6 +50,10 @@
     &__pane--classes { flex: 0 0 200px; }
     &__pane--table   { flex: 1 1 auto; overflow: hidden; }
     &__pane--detail  { flex: 0 0 400px; padding: 0; }
+    /* Il vicinato sta ACCANTO alla form (13a, mock 1a): la form scrive, il
+       riquadro legge. Larghezza fissa come le altre colonne di lettura; il
+       disegno, che e' piu' largo, scorre dentro la propria scatola. */
+    &__pane--graph   { flex: 0 0 360px; }
 
     /* The outline pane pads its rows, not itself: the selection band has to run
        the full width of the column, and a padded pane would inset it. The eyebrow
@@ -1096,4 +1100,139 @@
         &:hover { background: var(--color-bg-tertiary); color: var(--color-accent); }
         &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: -1px; }
     }
+
+    /* ── Il vicinato (13a) ─────────────────────────────────────────────────────
+       Mock 1a di `13a Diagramma Embedded.dc.html`. Nessun colore nuovo: il nodo e'
+       la card del 7a (superficie, bordo, raggio 8), il soggetto porta la coppia
+       della selezione (`--color-selection-bar`, la stessa barra della riga scelta
+       nella tabella e nell'outline), e gli stati rotto/mancante riusano i token
+       della tabella invece di somigliargli. */
+
+    &__open-canvas {
+        margin-left: auto;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 2px 6px;
+        border: 0;
+        border-radius: 4px;
+        background: none;
+        font-size: var(--text-xs);
+        color: var(--color-selection-bar);
+        cursor: pointer;
+
+        i { font-size: 10px; }
+
+        &:hover { background: var(--color-bg-tertiary); }
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 1px; }
+    }
+
+    /* Il disegno scorre QUI dentro, non nel tab: tre colonne sono piu' larghe di
+       360px, e un tab che scorre di lato e' il difetto che la tabella evita. */
+    &__graph {
+        flex: 1 1 auto;
+        margin-top: 10px;
+        overflow: auto;
+    }
+
+    &__graph-frame { position: relative; }
+
+    &__graph-edges {
+        position: absolute;
+        top: 0;
+        left: 0;
+        pointer-events: none;
+    }
+
+    &__graph-edge {
+        fill: none;
+        stroke: var(--color-form-muted);
+        stroke-width: 1;
+
+        /* L'arco di owner e' contenimento, non riferimento: piu' chiaro e senza
+           punta, perche' il verso lo dice gia' la posizione (l'owner sta sopra). */
+        &--owner { stroke: var(--color-form-border-strong); }
+    }
+
+    &__graph-arrow {
+        fill: none;
+        stroke: var(--color-form-muted);
+    }
+
+    &__graph-label {
+        fill: var(--color-form-muted);
+        font-size: 9px;
+        /* L'alone: l'etichetta passa sopra il proprio arco, e senza il contorno
+           del fondo le due linee si leggono come una sola. */
+        paint-order: stroke;
+        stroke: var(--color-form-surface);
+        stroke-width: 3px;
+        stroke-linejoin: round;
+    }
+
+    &__graph-node {
+        position: absolute;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 2px;
+        padding: 4px 8px;
+        border: 1px solid var(--color-form-border);
+        border-radius: 8px;
+        background: var(--color-form-surface);
+        overflow: hidden;
+        cursor: pointer;
+
+        &:hover { background: var(--color-bg-tertiary); }
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 1px; }
+
+        /* Il soggetto non e' cliccabile — e' gia' selezionato — e lo dice anche il
+           cursore, non solo il bordo. */
+        &--subject {
+            border: 2px solid var(--color-selection-bar);
+            box-shadow: 0 0 0 3px var(--color-selection-bg);
+            cursor: default;
+
+            &:hover { background: var(--color-form-surface); }
+        }
+
+        &--broken {
+            border-style: dashed;
+            border-color: var(--color-error);
+            cursor: default;
+
+            &:hover { background: var(--color-form-surface); }
+        }
+    }
+
+    &__graph-name {
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--color-text-primary);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    &__graph-meta {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        min-width: 0;
+        font-size: 10px;
+        color: var(--color-form-muted);
+
+        > * {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+    }
+
+    &__graph-cls {
+        flex-shrink: 0;
+        color: var(--color-form-section);
+    }
+
+    &__graph-value { min-width: 0; }
 }

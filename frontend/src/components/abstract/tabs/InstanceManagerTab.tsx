@@ -63,9 +63,12 @@ import type {
     MultiField,
     MultiModel,
     NavState,
+    NeighborhoodLayout,
     OutlineMenu,
     OutlineMenuEntry,
     OutlineNode,
+    PlacedEdge,
+    PlacedNode,
     RefShape,
     UnionPreflight,
 } from '../../../jjform';
@@ -81,6 +84,9 @@ import {
     multiModel,
     navFor,
     childMenu,
+    neighborLabel,
+    neighborhoodLayout,
+    neighborhoodNote,
     newDraft,
     newInstanceReason,
     outlineLabel,
@@ -94,6 +100,8 @@ import {
 } from '../../../jjform';
 import { childrenIn, multiInstancesOf, navStepOf, pathTo } from '../../editor-v2/hooks/multiDraw';
 import { outlineRows, outlineTree } from '../../editor-v2/hooks/outlineDraw';
+import { neighborhoodOf } from '../../editor-v2/hooks/neighborhoodDraw';
+import { openInCanvas } from '../../editor-v2/hooks/neighborhoodAdapter';
 import { applyBulk } from '../../editor-v2/hooks/multiAdapter';
 import {
     instanceCountsByClass,
@@ -901,6 +909,197 @@ function OutlinePanel({
     );
 }
 
+/** Il tracciato di un arco. Una retta fra due fianchi, e un cappio quando i due
+ *  capi sono lo stesso nodo — un auto-riferimento e' un fatto del modello, e un
+ *  segmento di lunghezza zero lo nasconderebbe. */
+function neighborEdgePath(e: PlacedEdge): string {
+    if (e.selfLoop) return `M ${e.x1} ${e.y1} c 26 -18, 26 18, 0 0`;
+    return `M ${e.x1} ${e.y1} L ${e.x2} ${e.y2}`;
+}
+
+/**
+ * NeighborhoodPanel — il vicinato dell'istanza selezionata (slice 13a, mock 1a di
+ * `13a Diagramma Embedded.dc.html`).
+ *
+ * ── Non e' un canvas ──────────────────────────────────────────────────────────
+ *
+ * Il canvas vero esiste (v2-flow) ed e' a un click: «Open in canvas» apre il tab
+ * del modello e vi seleziona lo stesso nodo. Qui non c'e' nessun gesto spaziale —
+ * niente drag, niente edge-draw, niente create, nessun layout persistito — perche'
+ * duplicare una superficie che esiste e' l'anti-pattern che Q8 ha appena smontato.
+ * Questo pannello e' lettura piu' navigazione; la form accanto resta la superficie
+ * di scrittura.
+ *
+ * ── Un motore in meno, non uno in piu' ────────────────────────────────────────
+ *
+ * Come `OutlinePanel`, non ha regole proprie. Il grafo e' `neighborhoodDraw`
+ * (composizione di `ownerOf`, `filledSlotValues`, la risalita `pointedBy` di 2b e
+ * la ladder di `detectValueRenderer`), le posizioni sono `jjform.neighborhoodLayout`,
+ * e il click e' lo STESSO `setSelectedObjectId` della riga di tabella e del nodo
+ * d'outline: il terzo emettitore della selezione condivisa, non una terza
+ * sincronia.
+ *
+ * ── Gli stati del contratto sono quelli della tabella ─────────────────────────
+ *
+ * Un puntatore che non risolve e' un nodo `broken` col token della tabella
+ * (`instance-manager__broken`), un required rimasto senza valore porta
+ * `instance-manager__missing`, uno slot vuoto semplicemente non compare. Sono le
+ * stesse classi, non classi che somigliano a quelle: due token per lo stesso stato
+ * divergono al primo ritocco.
+ */
+function NeighborhoodPanel({
+    layout, note, subjectId, onSelect, onOpenInCanvas,
+}: {
+    layout: NeighborhoodLayout;
+    note: string | null;
+    subjectId: string | null;
+    onSelect: (node: PlacedNode) => void;
+    onOpenInCanvas: () => void;
+}) {
+    return (
+        <aside className="instance-manager__pane instance-manager__pane--graph">
+            <div className="instance-manager__toolbar">
+                <h3 className="instance-manager__eyebrow">Neighborhood</h3>
+                {subjectId && (
+                    <button
+                        type="button"
+                        className="instance-manager__open-canvas"
+                        title="Open this model on the canvas, with this instance selected"
+                        onClick={onOpenInCanvas}
+                    >
+                        Open in canvas
+                        <i className="bi bi-box-arrow-up-right" aria-hidden="true" />
+                    </button>
+                )}
+            </div>
+
+            {!subjectId ? (
+                <p className="instance-manager__note">Pick an instance to see what touches it.</p>
+            ) : (
+                <>
+                    {/* Il disegno scorre DENTRO la sua scatola: tre colonne piu' i
+                        distacchi sono piu' larghe del pannello, e far scorrere il tab
+                        di lato sarebbe il difetto che la tabella accanto gia' evita. */}
+                    <div className="instance-manager__graph">
+                        <div
+                            className="instance-manager__graph-frame"
+                            style={{ width: layout.width, height: layout.height }}
+                        >
+                            <svg
+                                className="instance-manager__graph-edges"
+                                width={layout.width}
+                                height={layout.height}
+                                aria-hidden="true"
+                            >
+                                <defs>
+                                    <marker
+                                        id="instance-manager-neighbor-arrow"
+                                        markerWidth="8"
+                                        markerHeight="8"
+                                        refX="7"
+                                        refY="3"
+                                        orient="auto"
+                                    >
+                                        <path className="instance-manager__graph-arrow" d="M0,0 L7,3 L0,6" />
+                                    </marker>
+                                </defs>
+                                {layout.edges.map((e, i) => (
+                                    <g key={`${e.source}>${e.featureKey ?? ''}>${e.target}#${i}`}>
+                                        <path
+                                            className={
+                                                'instance-manager__graph-edge'
+                                                + (e.kind === 'owner' ? ' instance-manager__graph-edge--owner' : '')
+                                            }
+                                            d={neighborEdgePath(e)}
+                                            markerEnd={e.kind === 'owner' ? undefined : 'url(#instance-manager-neighbor-arrow)'}
+                                        />
+                                        {/* La chiave della feature STA SULL'ARCO: fra la
+                                            stessa coppia di nodi possono correre due
+                                            riferimenti diversi, e senza la chiave sono
+                                            indistinguibili. */}
+                                        {e.featureKey && (
+                                            <text
+                                                className="instance-manager__graph-label"
+                                                x={(e.x1 + e.x2) / 2}
+                                                y={(e.y1 + e.y2) / 2 - 4}
+                                                textAnchor="middle"
+                                            >
+                                                {e.featureKey}
+                                            </text>
+                                        )}
+                                    </g>
+                                ))}
+                            </svg>
+
+                            {layout.nodes.map(node => {
+                                // Il soggetto non e' cliccabile: e' gia' selezionato, e
+                                // offrire una navigazione che non muove niente e' rumore.
+                                const selectable = node.kind === 'object' && node.role !== 'subject';
+                                return (
+                                    <div
+                                        key={node.id + ':' + node.role}
+                                        className={
+                                            'instance-manager__graph-node'
+                                            + (node.role === 'subject' ? ' instance-manager__graph-node--subject' : '')
+                                            + (node.kind === 'broken' ? ' instance-manager__graph-node--broken' : '')
+                                        }
+                                        style={{ left: node.x, top: node.y, width: node.w, height: node.h }}
+                                        title={
+                                            node.kind === 'broken'
+                                                ? `Dangling pointer: ${node.id}`
+                                                : `${neighborLabel(node)} — ${node.cls || 'unknown metaclass'} (${node.role})`
+                                        }
+                                        role={selectable ? 'button' : undefined}
+                                        tabIndex={selectable ? 0 : undefined}
+                                        onClick={selectable ? () => onSelect(node) : undefined}
+                                        onKeyDown={selectable ? e => {
+                                            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(node); }
+                                        } : undefined}
+                                    >
+                                        <span className="instance-manager__graph-name">{neighborLabel(node)}</span>
+                                        <span className="instance-manager__graph-meta">
+                                            {node.kind === 'broken' ? (
+                                                <span className="instance-manager__broken">
+                                                    <i className="bi bi-exclamation-triangle-fill" aria-hidden="true" />
+                                                    broken
+                                                </span>
+                                            ) : (
+                                                <>
+                                                    {node.cls && <span className="instance-manager__graph-cls">{node.cls}</span>}
+                                                    {node.value && (node.value.missing ? (
+                                                        <span
+                                                            className="instance-manager__missing"
+                                                            title={`${node.value.key} — required by cardinality, no value`}
+                                                        >
+                                                            <i className="bi bi-exclamation-triangle-fill" aria-hidden="true" />
+                                                            missing
+                                                        </span>
+                                                    ) : (
+                                                        <span
+                                                            className="instance-manager__graph-value"
+                                                            title={`${node.value.key} = ${node.value.text}`}
+                                                        >
+                                                            {node.value.key} = {node.value.text}
+                                                        </span>
+                                                    ))}
+                                                </>
+                                            )}
+                                        </span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Mai un vuoto muto: un'istanza che non e' contenuta e non tocca
+                        nessuno lo DICE, invece di mostrare una scatola sola e basta. */}
+                    {note && <p className="instance-manager__note">{note}</p>}
+                </>
+            )}
+        </aside>
+    );
+}
+
 export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
     // One subscription for the whole tab. `idlookup`'s reference changes on every
     // model write, which is precisely the granularity the derived lists need.
@@ -1268,6 +1467,40 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
     const outlineCreate = (node: OutlineNode, entry: OutlineMenuEntry) => {
         setMenuFor(null);
         openCreate(entry.cls, node.kind === 'model' ? null : node.id, entry.childKey);
+    };
+
+    // ── Il vicinato (13a) ──────────────────────────────────────────────────────
+    // Vista DERIVATA, non un secondo canvas: owner a un livello, refs uscenti a un
+    // salto, referenced-by entranti a un salto. Sulla stessa `idlookup` di tutto il
+    // resto del tab, quindi una gerarchia cambiata sotto si riflette da se': niente
+    // copia in stato locale, per la ragione gia' scritta per l'outline.
+
+    const neighborhood = useMemo(
+        () => (subjectId ? neighborhoodOf(idlookup, subjectId, shapeCtx.shape()) : null),
+        [idlookup, subjectId, shapeCtx],
+    );
+
+    /** Le posizioni, che sono aritmetica pura sul vicinato. */
+    const neighborhoodView = useMemo(() => neighborhoodLayout(neighborhood), [neighborhood]);
+
+    /** Terzo emettitore della selezione, stesso corpo degli altri due
+     *  (`selectOnly`, `selectFromOutline`): il riquadro non alimenta la
+     *  multi-selezione, la azzera. Il memo qui sopra pende da `subjectId`, quindi
+     *  il riquadro si ricentra da solo sul nodo appena scelto. */
+    const selectFromNeighborhood = (node: PlacedNode) => {
+        if (node.kind !== 'object') return;
+        setMenuFor(null);
+        setSelectedObjectId(node.id);
+        setAlsoSelected([]);
+        setBulkTouched({});
+        setNav(null);
+    };
+
+    /** L'innesto del canvas vero: apre il tab del modello e vi seleziona questa
+     *  istanza. La risoluzione oggetto -> vertice e l'attesa stanno nell'adapter,
+     *  che e' la sola meta' impura di questa slice. */
+    const openSubjectInCanvas = () => {
+        if (subjectId) void openInCanvas(modelid, subjectId);
     };
 
     // ── Delete (12d) ───────────────────────────────────────────────────────────
@@ -1729,6 +1962,18 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                     />
                 )}
             </section>
+
+            {/* ── Il vicinato (13a) ───────────────────────────────────────────
+                Accanto alla form, che resta la superficie di scrittura: il
+                riquadro e' lettura e navigazione. «Open in canvas» e' il punto
+                d'innesto del canvas vero, che non si duplica qui. */}
+            <NeighborhoodPanel
+                layout={neighborhoodView}
+                note={neighborhoodNote(neighborhood)}
+                subjectId={subjectId}
+                onSelect={selectFromNeighborhood}
+                onOpenInCanvas={openSubjectInCanvas}
+            />
 
             {pendingMulti && (
                 <MultiDeleteDialog

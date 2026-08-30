@@ -10,7 +10,9 @@
  * implements so the engine can write without knowing what it is writing into. Slice S5
  * closed that surface with `validTargets`, the per-instance offer of R-FORM-13: the
  * legal ARGUMENTS of a write belong to the same contract as the write, or a host can
- * offer what it will then refuse. What still waits are the open questions of
+ * offer what it will then refuse. Slice 10b added `outline.ts`, the containment tree's
+ * menu rule, and slice 13a `neighborhood.ts` — the local graph of one instance, read
+ * plus navigation, never a second canvas. What still waits are the open questions of
  * `form-engine-contract.md`.
  *
  * Invariant, checked by reading and by the module having nothing to import:
@@ -108,6 +110,29 @@ export {
     rootOf,
     truncateTo,
 } from './nav';
+
+export type {
+    NeighborEdge,
+    NeighborKind,
+    NeighborNode,
+    NeighborRole,
+    NeighborValue,
+    Neighborhood,
+    NeighborhoodLayout,
+    PlacedEdge,
+    PlacedNode,
+} from './neighborhood';
+
+export {
+    NEIGHBOR_COL_GAP,
+    NEIGHBOR_NODE_H,
+    NEIGHBOR_NODE_W,
+    NEIGHBOR_OWNER_GAP,
+    NEIGHBOR_ROW_GAP,
+    neighborLabel,
+    neighborhoodLayout,
+    neighborhoodNote,
+} from './neighborhood';
 
 export type {
     OutlineKind,
