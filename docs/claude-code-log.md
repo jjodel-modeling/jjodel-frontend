@@ -2,6 +2,34 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-08-31 — docs(discovery): il ritardo del badge, riconciliato in una corsa
+**Prompt**: «Riconciliazione: il ritardo del badge, due misure opposte», dato in chat e non
+depositato in `docs/prompts/`. Le due misure del 31-08 sullo stesso scenario con esiti opposti —
+sessione A (`_tmp_m2u6_verify.ts`, non committata): registro pieno senza scrittura successiva;
+sessione B (referto `0d2354da9` §4): registro 0 a 9 s. Tre richieste: una sonda che copra
+entrambe le forme variando UNA variabile alla volta, la spiegazione del reperto di A
+(`addObject({}, classId, true)` che non ritorna), e il verdetto con la causa vera e il fix col
+costo. **Solo discovery: zero fix.**
+**Files touched**: `docs/discovery/discovery_2026-08-31_badge_riconciliazione.md` (nuovo),
+`docs/claude-code-log.md`. Sonde `frontend/scripts/smoke/_tmp_badge_recon.ts` e
+`_tmp_badge_recon2.ts` (non committate, gitignored). **Zero file sorgente toccati.** Commit con
+pathspec; `git status --porcelain` e indice verificati prima: indice vuoto, l'albero portava solo
+i `docs/prompts/*` untracked d'inizio sessione — nessuna sessione parallela.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (sola lettura)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (nessun file di §3.1 toccato; sola lettura)
+**Smoke visivo**: non applicabile — nessun cambiamento da guardare. Le due sonde girano
+sull'app viva, 2 livelli x 5 celle piu' 15 campioni a 200 ms: **0 FAIL, zero errori di pagina**.
+**Notes**: Non sono in conflitto: sono due celle. L'unica variabile che ribalta l'esito e' una
+scrittura di nome DOPO la create — A ne aveva una (la rinomina, che su una pendente si posa un
+tick dopo). Numero, livello, porta e slot: misurati inerti. Causa: non l'enumerazione — la firma
+e' gia' finale nel tick della create e non cambia piu' al commit. Notifica mancata, non ritardo.
+`detect` a mano rende 2 col registro a 0. Fix e costo in §5 del referto.
+**Prompt document name**: prompt inline (non depositato) 2026-08-31 00:00
+
 ## 2026-08-31 — fix(core): il namespace vede le create del proprio tick
 **Prompt**: «Tick-fix: defaultname vede le create del proprio tick», depositato in chat, a valle
 di `discovery_2026-08-30_uniqueness_m2.md` §5(b) e `discovery_2026-08-30_s1m2_una_regola.md` §3.
