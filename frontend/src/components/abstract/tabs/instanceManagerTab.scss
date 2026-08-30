@@ -549,4 +549,231 @@
            carry the reason. */
         &:disabled { opacity: 0.5; cursor: not-allowed; }
     }
+
+    /* ── The missing-required cell (12d) ──────────────────────────────────────
+       The other half of a broken ref (contract §2: "missing id or empty"). It is
+       what a dirty delete leaves on the referrer: the core removes the incoming
+       pointer by value, so the slot is EMPTY, and a dash there would be the silent
+       emptiness ratified rule 2 forbids. Same red as `__broken`, different word,
+       because they are different states of the same problem. */
+    &__missing {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-width: 0;
+        color: var(--color-error);
+        font-size: var(--text-xs);
+
+        i { font-size: 10px; }
+    }
+
+    /* ── The delete affordance in the row (12d) ─────────────────────────────── */
+    &__th-del, &__td-del {
+        width: 28px;
+        text-align: center;
+    }
+
+    /* Quiet until the row is hovered: the design draws it at #cbd5e1, i.e. present
+       but not competing with the values. It opens the preflight, it does not delete. */
+    &__trash {
+        font-size: 13px;
+        color: var(--color-form-muted);
+        cursor: pointer;
+        opacity: 0;
+
+        &:hover { color: var(--color-error); }
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 2px; }
+    }
+
+    tbody tr:hover &__trash,
+    tbody tr:focus-within &__trash { opacity: 1; }
+
+    /* Screen-reader-only: the actions column has no visible header, but a table
+       header cell with no accessible name is a column a screen reader cannot name. */
+    &__sr {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+    }
+
+    /* ── The delete dialogue (12d) ────────────────────────────────────────────
+       420px, 16px radius, the same scrim as the draft. Copy, spacing and states
+       from `CRUD Manager Simulation.dc.html`, which is the authority on them. */
+    &__del {
+        display: flex;
+        flex-direction: column;
+        width: min(460px, calc(100vw - 80px));
+        max-height: calc(100vh - 80px);
+        overflow: hidden;
+        border-radius: 16px;
+        background: var(--color-form-surface);
+        box-shadow: 0 32px 80px rgba(15, 23, 42, 0.45);
+    }
+
+    &__del-head {
+        display: flex;
+        gap: 12px;
+        flex: none;
+        padding: 18px 20px 0;
+    }
+
+    &__del-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: none;
+        width: 34px;
+        height: 34px;
+        border-radius: 8px;
+        background: var(--color-error-subtle);
+        color: var(--color-error);
+        font-size: 15px;
+    }
+
+    &__del-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--color-form-label);
+    }
+
+    &__del-message {
+        margin-top: 4px;
+        font-size: 12px;
+        line-height: 1.5;
+        color: var(--color-form-muted);
+    }
+
+    &__del-refs, &__del-children {
+        margin: 12px 20px 0;
+        padding: 0;
+        max-height: 120px;
+        overflow: auto;
+        border: 1px solid var(--color-form-border);
+        border-radius: 6px;
+        list-style: none;
+        font-size: 12px;
+
+        li {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 12px;
+            border-bottom: 1px solid var(--color-form-border);
+            color: var(--color-form-section);
+
+            &:last-child { border-bottom: none; }
+        }
+    }
+
+    &__del-badge-c {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: none;
+        width: 13px;
+        height: 13px;
+        border-radius: 3px;
+        background: var(--color-error-subtle);
+        color: var(--color-error);
+        font-size: 9px;
+        font-weight: 700;
+        cursor: help;
+    }
+
+    &__del-refname {
+        font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+        font-size: 10px;
+        color: var(--color-form-muted);
+    }
+
+    &__del-via {
+        margin-left: auto;
+        font-size: 10px;
+        color: var(--color-form-muted);
+    }
+
+    &__del-options {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin: 12px 20px 14px;
+        font-size: 12px;
+    }
+
+    /* The default, and the only row the design tints: cyan is an active indicator
+       here, never a button background (§7.1). */
+    &__del-reassign {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border: 1.5px solid var(--color-inode-ref-fg);
+        border-radius: 6px;
+        background: var(--color-inode-ref-bg);
+        font-weight: 500;
+        color: var(--color-form-label);
+
+        /* Cyan as an ACTIVE INDICATOR, never as a button background (§7.1): it
+           marks the row the design makes the default, and the Apply button beside
+           it stays the slate gradient every primary button in this file uses. The
+           token is the instance-node cyan, which is the design's #0891b2 in light
+           and its dark-surface correction in dark — not a literal. */
+        i { color: var(--color-inode-ref-fg); }
+    }
+
+    &__del-select {
+        margin-left: auto;
+        height: 24px;
+        padding: 0 8px;
+        border: 1px solid var(--color-form-border-strong);
+        border-radius: 4px;
+        background: var(--color-form-surface);
+        font-size: 11px;
+        color: var(--color-form-label);
+        max-width: 180px;
+    }
+
+    &__del-apply {
+        height: 24px;
+        padding: 0 10px;
+        border: none;
+        border-radius: 4px;
+        background: linear-gradient(135deg, #334155, #1e293b);
+        font-size: 11px;
+        font-weight: 500;
+        color: #ffffff;
+        cursor: pointer;
+
+        &:hover { filter: brightness(1.1); }
+    }
+
+    &__del-quiet {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid var(--color-form-border);
+        border-radius: 6px;
+        background: none;
+        font-size: 12px;
+        text-align: left;
+        color: var(--color-form-muted);
+        cursor: pointer;
+
+        &:hover { border-color: var(--color-error); color: var(--color-error); }
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 1px; }
+    }
+
+    &__del-foot {
+        display: flex;
+        justify-content: flex-end;
+        flex: none;
+        padding: 12px 20px;
+        border-top: 1px solid var(--color-form-border);
+        background: var(--color-bg-tertiary);
+    }
 }

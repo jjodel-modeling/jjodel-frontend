@@ -45,10 +45,15 @@ import {
     classIdOf,
     draftContext,
 } from '../../editor-v2/hooks/createAdapter';
+import {
+    applyDelete,
+    deletePlan,
+    preflightFor,
+} from '../../editor-v2/hooks/deleteAdapter';
 import IRForm from '../../editor-v2/viewpoint/ir/IRForm';
 import { EmptyState } from '../../ui';
 import type { RendererDecision } from '../../editor-v2/nodes/valueRenderer';
-import type { ClassShape, Draft, DraftField, RefShape } from '../../../jjform';
+import type { ClassShape, DeleteOptions, DeletePreflight, Draft, DraftField, RefShape } from '../../../jjform';
 import {
     addChildReason,
     draftModel,
@@ -87,6 +92,19 @@ export interface InstanceManagerTabProps {
 function Cell({ cell }: { cell: TableCell }) {
     const d: RendererDecision = cell.decision;
     const extra = cell.count > 1 ? <span className="instance-manager__more">+{cell.count - 1}</span> : null;
+
+    // A required feature with nothing in it is reported BEFORE the renderer gets a
+    // say: the precedence would print a dash, and a dash is exactly the silent
+    // emptiness ratified rule 2 of 12d forbids after a dirty delete. The cell says
+    // the model needs attention; it does not say why the value went.
+    if (cell.missingRequired) {
+        return (
+            <span className="instance-manager__missing" title="Required by cardinality — no value">
+                <i className="bi bi-exclamation-triangle-fill" aria-hidden="true" />
+                missing
+            </span>
+        );
+    }
 
     switch (d.kind) {
         case 'dash':
@@ -306,6 +324,146 @@ function DraftDialog({ draft, model, ownerLabel, onChange, onCancel, onCommit }:
     );
 }
 
+/**
+ * The delete preflight, as a modal (12d).
+ *
+ * Same discipline as `DraftDialog`: it holds no model state and writes nothing. It
+ * renders the `DeletePreflight` the engine produced and hands back the OPTION the
+ * user chose; the caller turns that into a plan and applies it. Cancel therefore
+ * leaves no trace by construction.
+ *
+ * The copy and the states are `CRUD Manager Simulation.dc.html`'s: the red warning
+ * badge, «Delete <label>?» as the title, the message that names the referrers and
+ * the cardinality that would break, the scrollable list of referrers BY NAME with
+ * the feature in mono beside it, the cyan «Reassign all to» row with its select and
+ * its Apply, and the quiet row underneath. One row more than the simulation, and it
+ * is the ratified difference of 12d: the simulation fuses «clear» and «delete
+ * anyway» into one gesture because in its own model they have the same effect,
+ * while here they do not — measured, `clearSlotValue` leaves a hole and the core's
+ * own cascade shortens the array. Two effects, two rows.
+ */
+function DeleteDialog({ pre, reassignTo, onReassignTo, onCancel, onConfirm }: {
+    pre: DeletePreflight;
+    reassignTo: string;
+    onReassignTo: (id: string) => void;
+    onCancel: () => void;
+    onConfirm: (options: DeleteOptions) => void;
+}) {
+    return (
+        <div className="instance-manager__scrim" role="dialog" aria-modal="true" aria-label={pre.title}>
+            <div className="instance-manager__del">
+                <header className="instance-manager__del-head">
+                    <span className="instance-manager__del-badge" aria-hidden="true">
+                        <i className="bi bi-exclamation-triangle" />
+                    </span>
+                    <div>
+                        <div className="instance-manager__del-title">{pre.title}</div>
+                        <div className="instance-manager__del-message">
+                            {pre.blocked ?? pre.message}
+                        </div>
+                    </div>
+                </header>
+
+                {/* The referrers, by NAME. An id in this list would be a list nobody
+                    can act on: the whole point of the preflight is that the user
+                    recognises what is about to break. */}
+                {pre.referencedBy.length > 0 && (
+                    <ul className="instance-manager__del-refs">
+                        {pre.referencedBy.map((r, i) => (
+                            <li key={`${r.instanceId}-${r.featureKey}-${r.index}-${i}`}>
+                                <span
+                                    className="instance-manager__del-badge-c"
+                                    title={r.wouldBreak
+                                        ? `Cardinality ${r.multiplicity} would break`
+                                        : `Cardinality ${r.multiplicity}`}
+                                    aria-hidden="true"
+                                >C</span>
+                                {r.instanceName || r.instanceId}
+                                <span className="instance-manager__del-refname">.{r.featureKey}</span>
+                                {r.viaDescendant && (
+                                    <span className="instance-manager__del-via" title="Points at a contained element that the cascade deletes">
+                                        via contained
+                                    </span>
+                                )}
+                            </li>
+                        ))}
+                    </ul>
+                )}
+
+                {/* The cascade, counted and named. Ratified rule 3: containment
+                    falls with the container, so the dialogue says what falls. */}
+                {pre.descendants.length > 0 && (
+                    <ul className="instance-manager__del-children">
+                        {pre.descendants.map(d => (
+                            <li key={d.id}>
+                                <i className="bi bi-diagram-2" aria-hidden="true" />
+                                {d.name || d.id}
+                                <span className="instance-manager__del-refname">
+                                    : {d.cls} · .{d.childKey}
+                                </span>
+                            </li>
+                        ))}
+                    </ul>
+                )}
+
+                {!pre.blocked && (
+                    <div className="instance-manager__del-options">
+                        {pre.canReassign && (
+                            <div className="instance-manager__del-reassign">
+                                <i className="bi bi-arrow-repeat" aria-hidden="true" />
+                                Reassign all to
+                                <select
+                                    className="instance-manager__del-select"
+                                    aria-label="Reassign all references to"
+                                    value={reassignTo}
+                                    onChange={e => onReassignTo(e.target.value)}
+                                >
+                                    {pre.reassignCandidates.map(o => (
+                                        <option key={o.id} value={o.id}>{o.label}</option>
+                                    ))}
+                                </select>
+                                <button
+                                    type="button"
+                                    className="instance-manager__del-apply"
+                                    onClick={() => onConfirm({ reassignTo })}
+                                >
+                                    Apply
+                                </button>
+                            </div>
+                        )}
+
+                        {pre.referencedBy.length > 0 && (
+                            <button
+                                type="button"
+                                className="instance-manager__del-quiet"
+                                onClick={() => onConfirm({ clearRefs: true })}
+                            >
+                                <i className="bi bi-slash-circle" aria-hidden="true" />
+                                {pre.clearLabel}
+                            </button>
+                        )}
+
+                        <button
+                            type="button"
+                            className="instance-manager__del-quiet"
+                            onClick={() => onConfirm({})}
+                        >
+                            <i className={pre.referencedBy.length ? 'bi bi-exclamation-octagon' : 'bi bi-trash'} aria-hidden="true" />
+                            {pre.dirtyLabel}
+                        </button>
+                    </div>
+                )}
+
+                <footer className="instance-manager__del-foot">
+                    <button type="button" className="instance-manager__draft-cancel" onClick={onCancel}>
+                        Cancel
+                    </button>
+                </footer>
+            </div>
+        </div>
+    );
+}
+
 export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
     // One subscription for the whole tab. `idlookup`'s reference changes on every
     // model write, which is precisely the granularity the derived lists need.
@@ -318,6 +476,11 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
      *  ONLY place a not-yet-created instance exists: nothing reaches the store
      *  until Create, so Cancel is `setDraft(null)` and nothing else. */
     const [draft, setDraft] = useState<Draft | null>(null);
+    /** The delete preflight in flight (12d). Null when no delete is pending, and
+     *  like the draft it is the only place the decision lives: nothing is written
+     *  until a row of the dialogue is pressed, so Cancel is `setPending(null)`. */
+    const [pending, setPending] = useState<DeletePreflight | null>(null);
+    const [reassignTo, setReassignTo] = useState('');
 
     // Name-sorted so the column does not reorder itself when a class is renamed
     // elsewhere. `getMetaclassInfo` is impure (it reads the store and L-proxies),
@@ -435,6 +598,34 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
 
     const openCreate = (clsName: string, ownerId: string | null, childKey: string | null) => {
         setDraft(newDraft(shapeCtx.shape(), clsName, ownerId, childKey));
+    };
+
+    // ── Delete (12d) ───────────────────────────────────────────────────────────
+    // ONE event, `delete(id, { reassignTo? | clearRefs })`, whose options are the
+    // verdict of the preflight. The preflight is ALWAYS computed (ratified rule 1):
+    // an unreferenced instance gets the simple confirmation, a referenced one the
+    // dialogue that lists who points at it.
+
+    const openDelete = (instanceId: string) => {
+        const pre = preflightFor(modelid, shapeCtx.shape(), instanceId);
+        setReassignTo(pre.reassignCandidates[0]?.id ?? '');
+        setPending(pre);
+    };
+
+    const confirmDelete = (options: DeleteOptions) => {
+        if (!pending) return;
+        const plan = deletePlan(pending, options);
+        setPending(null);
+        if (plan.blocked) {
+            console.warn('[InstanceManagerTab] delete refused', plan.blocked);
+            return;
+        }
+        applyDelete(plan);
+        // The subject may be one of the instances that just died — the target or a
+        // descendant of it. Clearing the selection is not a cleanup: `subjectId`
+        // already resolves against the live rows, and this only saves the drawer a
+        // render on a dead object.
+        if (selectedObjectId && plan.deletes.includes(selectedObjectId)) setSelectedObjectId(null);
     };
 
     const commitDraft = () => {
@@ -578,6 +769,9 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                                     <th scope="col" className="instance-manager__th-refs" title="Incoming references — how many other instances point at this one">
                                         referenced by
                                     </th>
+                                    <th scope="col" className="instance-manager__th-del">
+                                        <span className="instance-manager__sr">actions</span>
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -609,6 +803,20 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                                                     {row.referencedBy.length}
                                                 </span>
                                             )}
+                                        </td>
+                                        {/* The delete affordance of the design: a
+                                            trash glyph at the end of the row, quiet
+                                            until hovered. It does not delete — it
+                                            opens the preflight, which is the whole
+                                            of ratified rule 1. */}
+                                        <td className="instance-manager__td-del">
+                                            <i
+                                                className="bi bi-trash instance-manager__trash"
+                                                title={`Delete ${row.name || row.id}`}
+                                                role="button"
+                                                aria-label={`Delete ${row.name || row.id}`}
+                                                onClick={e => { e.stopPropagation(); openDelete(row.id); }}
+                                            />
                                         </td>
                                     </tr>
                                 ))}
@@ -678,6 +886,16 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                     />
                 )}
             </section>
+
+            {pending && (
+                <DeleteDialog
+                    pre={pending}
+                    reassignTo={reassignTo}
+                    onReassignTo={setReassignTo}
+                    onCancel={() => setPending(null)}
+                    onConfirm={confirmDelete}
+                />
+            )}
 
             {draft && draftView && (
                 <DraftDialog

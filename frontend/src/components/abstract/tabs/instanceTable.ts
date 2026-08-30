@@ -58,6 +58,14 @@ export interface TableCell {
      *  beside the first value rather than only a bare count. */
     count: number;
     broken: boolean;
+    /** A REQUIRED feature holding no value at all. Not the same fact as `broken`,
+     *  which is a pointer that does not resolve: this is the other half of what
+     *  contract section 2 calls a broken ref ("missing id or empty"), and it is
+     *  the state a dirty delete leaves behind. Measured 2026-08-30: the core's
+     *  delete removes each incoming pointer BY VALUE, so the referrer is left with
+     *  an empty slot, and without this flag the cell would print a dash - the
+     *  silent emptiness ratified rule 2 of 12d forbids. */
+    missingRequired: boolean;
 }
 
 export interface TableRow {
@@ -192,7 +200,13 @@ export function tableRow(
         const { slot, count, broken } = slotShapeFor(idlookup, instanceId, feature, shape);
         const decision = detectValueRenderer(slot);
         const text = slot.values?.join(', ') ?? '';
-        cells[feature.key] = { text, decision, count, broken };
+        cells[feature.key] = {
+            text, decision, count, broken,
+            // A derived feature is computed, not held: an empty one is not a model
+            // the user has to repair, and flagging it would put a warning on every
+            // row of a metamodel that declares one.
+            missingRequired: feature.required && count === 0 && !broken && !feature.derived,
+        };
         if (text) bits.push(text);
     }
 
