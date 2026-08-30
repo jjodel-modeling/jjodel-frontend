@@ -2310,6 +2310,25 @@ che poi rifiuta. Le esclusioni portano il **motivo**, scritto. La regola e' appl
 e' una convenzione, un piano che non emette l'evento e' una garanzia. Il prompt della
 slice chiedeva la sola identita'; il containment viene dal design, che e' l'autorita'.
 
+**R-FORM-15** (2026-08-30) — **Uno stato del contratto e' UNA decisione, e la prendono
+tutte le superfici insieme.** La tabella del manager distingueva `missing` (required
+rimasto senza valori) da `broken` (pointer che non risolve); il nodo del canvas no —
+required-vuoto e mai-scritto dipingevano lo stesso trattino, perche' `SlotShape` portava
+`isBroken` ma non `required` e `missingRequired` viveva nei soli due file della tabella
+(misurato, `discovery_2026-08-30_6_rform10_controesempio.md` §5). La divergenza non era
+un difetto del renderer: era una **seconda copia della regola**, una guardia piazzata
+davanti allo switch della cella. Ora `SlotShape` porta `required` (derivata dalla
+cardinalita' — `lower >= 1`, mai persistita, e mai vera per una feature `derived`), la
+guardia sta in `detectValueRenderer` fra `isBroken` e `isEmptySlot`, e le due superfici
+la **ricevono** come ogni altro stato (precedente R-STR-6 (B)): zero decisioni nei
+componenti. `TableCell.missingRequired` resta un campo, ma e' letto dalla decisione.
+L'ordine e' quello e non un altro: un pointer appeso dice piu' del vuoto che pure e',
+quindi `brokenRef` vince su uno slot required rotto. La resa del nodo e' la stessa
+famiglia di `broken` — stesso rosso, glifo e parola diversi — perche' sono le due meta'
+di cio' che la sezione 2 del contratto chiama «id assente o ""». Misurato a schermo,
+`_tmp_missing_verify.ts`: nativo, IR e tabella danno la stessa classificazione sui tre
+stati, e il contrasto (`lowerBound` 1 -> 0 -> 1) riporta il trattino.
+
 ### Perimetro delle slice
 
 **Slice 2a** (2026-08-30, commit `9ab7560d0`) — tab, colonna metaclassi, lista istanze,
