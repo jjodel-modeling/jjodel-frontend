@@ -2,6 +2,19 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-08-30 — test(smoke): la guardia su calibrate, e il numero vero delle assertion
+**Prompt**: «Coda smoke: calibrate con guardia + README», dato in chat e non depositato in `docs/prompts/`. Chiudere i due residui di `627ac1a0f`: (1) `calibrate.ts` guadagna la guardia di quiescenza — ritaratura valida solo su corsa quieta, altrimenti VOID senza scrivere; (2) README, «four assertions» -> il numero vero e una riga sulla regola che ora e' codice; (3) valutare e dichiarare l'estensione della radice sorvegliata a `vite.config.ts` + `index.html` + `public/`.
+**Files touched**: frontend/scripts/smoke/{calibrate.ts,quiescence.ts,run.ts} (commit `39e5b3f2c`), frontend/scripts/smoke/README.md (commit `959d50c4f`), docs/claude-code-log.md. **Zero file di `src/`.** Nessun file condiviso con le sessioni parallele (R-DEL-4 su `Dummy.ts`, discovery WriteCtx).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. `npm run typecheck` **33 = baseline su output completo**, e zero righe di errore nominano `scripts/` (fuori dal program di tsconfig, verificato non assunto); `npm run build` exit 0 col solo chunk-warning.
+**Out-of-scope changes**: no. `quiescence.ts` e una riga di report in `run.ts` sono richiesti dal punto 3 del prompt: senza, la riga «watched:» dichiarerebbe meno di cio' che sorveglia.
+**Layer Impact Report**: not-required (nessun file di §3.1; il diff e' interamente sotto `scripts/`)
+**Smoke visivo**: i tre test attesi tutti verdi. Perturbata (`touch public/favicon.ico` a 30 s dall'avvio) -> **VOID, exit 3, baseline byte-identica** (md5 `85a71c22…` prima e dopo), file nominato `modified public/favicon.ico`; il touch non ha cambiato contenuto (md5 del favicon identico, `git status` vuoto). Quieta -> baseline scritta, exit 0. **`npm run smoke` 5 corse consecutive: 5/5 GREEN, 12/0/3, exit 0** con la radice allargata.
+**Notes**: Radice allargata dopo aver **misurato il costo**, non assumendolo: 4756 file in 22-25 ms contro 1379 in 9-13, ~50 ms su una corsa di minuti. Reperto da non perdere: la ritaratura quieta **abbassa** la baseline di 44 «two children with the same key» (6/18/20) — il debito che il README dava «to be verified» risulta pagato. Baseline **ripristinata e non committata**: abbassarla tocca anche la sezione «Known debt», fuori dallo scope dichiarato. Decisione ad Alfonso.
+**Prompt document name**: 2026-08-30 16:45
+
 ## 2026-08-30 — docs: cosa serve a `WriteCtx`, e la doppia verita' che gia' diverge
 **Prompt**: «Discovery: cosa serve a WriteCtx (la migrazione del motore in `jjform/`)». Quattro domande: inventario delle scritture degli adapter sul D-graph (firma, dilazioni, transazionalita', per sito); minimo comune che le copra senza importare il D-graph, con bozza di `WriteCtx` e mappa sito->metodo; cosa NON puo' migrare e per ciascuna se resta fuori per design o va dichiarata nel contratto; il costo della doppia verita'. Sola lettura, bozza nel referto e non nel sorgente, sequenza di slice proposta.
 **Files touched**: docs/discovery/discovery_2026-08-30_writectx_migrazione_motore.md (nuovo, 410 righe), docs/claude-code-log.md. **Zero sorgenti, zero sonde.** Commit del referto `b9ca883fc`, log a parte.
