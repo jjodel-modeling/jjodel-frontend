@@ -2329,6 +2329,46 @@ di cio' che la sezione 2 del contratto chiama «id assente o ""». Misurato a sc
 `_tmp_missing_verify.ts`: nativo, IR e tabella danno la stessa classificazione sui tre
 stati, e il contrasto (`lowerBound` 1 -> 0 -> 1) riporta il trattino.
 
+**R-WCX-1** (2026-08-30) — **La scrittura del motore e' un contratto di sei primitive,
+indirizzate per `(id, chiave, indice)`.** `jjform/writeCtx.ts` — set/clear/append,
+`setName`, `create`, `delete` — con l'implementazione dell'host fuori
+(`editor-v2/hooks/writeCtxLproxy.ts`), la stessa divisione di
+`irReadCtx`/`irReadCtxLproxy` e per la stessa ragione: l'interfaccia non porta nessun
+tipo dell'host. Il ctx **non consegna mai uno slot**: un proxy tenuto nel tempo scrive in
+uno slot morto e si dichiara riuscito (misurato, S3). La slice ha RACCOLTO, non riscritto:
+ogni metodo e' una funzione che esisteva — `formWrite` per i valori e il nome,
+`createAdapter.createInstance` per la create, il corpo del ciclo di `runDeletes` per la
+delete — e la sonda `_tmp_s4_verify.ts` misura le vie vecchie invariate (21/21 ALL GREEN).
+
+**R-WCX-2** (2026-08-30) — **`setName` e' una primitiva a se', e il contratto dice
+perche'.** Il nome ha un doppio legame (CLAUDE.md §3.12): il setter L scrive `DObject.name`
+E lo slot identita', mentre la direzione inversa dev'essere una `SetFieldAction` diretta o
+il ciclo si richiude. `setValue(id, 'name', 0, …)` scriverebbe il solo slot e le due meta'
+divergerebbero. Sta nel TIPO, non in un commento, perche' il primo adapter che
+«semplifica» la riunirebbe a `setValue`.
+
+**R-WCX-3** (2026-08-30) — **Cio' che resta dell'host e' un OBBLIGO dichiarato, non
+codice del motore.** Contratto §5.0: il filtro containment-loop del picker (R-FORM-13), la
+rete in scrittura di `setValueAtPosition` — **incompleta**, la conformita' di tipo e'
+commentata a `LModelElement.tsx:7652` e va dichiarata come limite, non come garanzia —, il
+buco contro l'accorciamento per valore (R-FORM-7 / R-FORM-10), il doppio legame
+(R-WCX-2), l'obbligo di sequenza (R-FORM-11/12: i millisecondi sono dell'host, l'ordine e'
+del contratto), `forceCreation`, e la cascata che e' del piano e non di `delete`
+(R-FORM-9). Un adapter che ne salta uno perde dati **in silenzio**, ed e' la ragione per
+cui l'elenco sta nel contratto e non nei docstring.
+
+**R-WCX-4** (2026-08-30) — **La convergenza dei verdetti si decide misurando i
+consumatori, e la misura dice di NON unificare.** Tre forme portavano `{ok, reason}`:
+`UniquenessVerdict {ok, reason?, collidingWith?}` (S1a), la risoluzione per nome
+`{ok, value?, reason?, candidates?}` (S1b) e `WriteResult {ok, changed, reason?}` (S2).
+Misurato: `collidingWith` ha due lettori e trasporta `LObject[]`, cioe' proxy vivi —
+metterlo su `WriteResult` darebbe a `jjform/` il suo primo tipo dell'host; `candidates`
+appartiene a una verdetto di RISOLUZIONE (`jjscript/.../instance.ts:146`,
+`jjel/evaluator/context.ts:209`) e non sta su nessun percorso di scrittura. Quindi
+`WriteResult` resta a tre campi, le estensioni restano dove sono, e cio' che converge e'
+`{ok, reason}` — la parte che attraversa il contratto. Zero consumatori cambiati, zero
+copy cambiata: l'alternativa avrebbe aggiunto due campi che nessuno scrittore popola.
+
 **R-DEL-4** (2026-08-30) — **La rete di `get_delete` copre anche `values`, e la verita' di
 fondo e' `idlookup`, non `pointedBy`.** `Dummy.get_delete` portava gia' una rete per il
 `pointedBy` stale (`common/Dummy.ts:104-116`, il commento la dichiara) ma per i soli
