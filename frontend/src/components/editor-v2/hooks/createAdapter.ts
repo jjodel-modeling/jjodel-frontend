@@ -56,9 +56,11 @@
  */
 
 import { LPointerTargetable, store, U } from '../../../joiner';
+import type { LModelElement } from '../../../joiner';
+import { getNamespaceOf } from '../../../model/logicWrapper/nameUniqueness';
 import type { AttrShape, ClassShape, Draft, DraftContext, DraftOption, MetamodelShape } from '../../../jjform';
 import { draftableAttrs, draftableRefs } from '../../../jjform';
-import { candidatesFor, childCount, containmentChain, siblingNames } from './createDraw';
+import { candidatesFor, childCount, containmentChain } from './createDraw';
 import { getMetaclassInfo, type MetaclassInfo } from './useEditorMode';
 
 type Idlookup = Record<string, any>;
@@ -158,11 +160,40 @@ export function draftContext(
         );
     }
 
-    const classId = classIdOf(modelId, cls.key);
-    return {
-        candidates,
-        siblingNames: classId ? siblingNames(idlookup, modelId, classId, draft.ownerId) : [],
-    };
+    return { candidates, siblingNames: namespaceNames(modelId, draft) };
+}
+
+/**
+ * The names already taken in the namespace the draft would join — READ FROM THE
+ * CORE, not recomputed here (R-S1-3).
+ *
+ * Until S1a this came from `createDraw.siblingNames`, which scoped the check to
+ * «same metaclass, same owner». The core scopes it to «same father, whatever the
+ * metaclass», and the two are ORTHOGONAL, not nested: each accepts something the
+ * other refuses (`discovery_2026-08-30_s1_uniqueness_consumatori.md` §3). Two rules
+ * that disagree is the divergence this slice exists to close, so the adapter now
+ * resolves the FATHER the draft will hang from and hands the core's namespace to
+ * `jjform.validateDraft` — which stays a consumer, and gains no rule of its own.
+ *
+ * The father is the same one `applyCreate` writes under: the owner's containment
+ * slot for a contained draft, the model for a root. `LObject.name` is the identity
+ * slot first, then `DObject.name` (`LModelElement.tsx:5969`), i.e. the name the user
+ * reads — so a duplicate that shows on screen is a duplicate the check sees.
+ */
+function namespaceNames(modelId: string, draft: Draft): string[] {
+    let father: unknown = null;
+    if (draft.ownerId && draft.childKey) {
+        const lOwner: any = LPointerTargetable.fromPointer(draft.ownerId);
+        father = lOwner?.['$' + draft.childKey]
+            ?? (lOwner?.features ?? []).find((f: any) => f?.name === draft.childKey)
+            ?? null;
+    } else {
+        father = LPointerTargetable.fromPointer(modelId) ?? null;
+    }
+    if (!father) return [];
+    return getNamespaceOf(father as LModelElement)
+        .map(o => (o?.name ?? '') as string)
+        .filter(Boolean);
 }
 
 /** The slot value a draft string becomes, by the attribute's type.

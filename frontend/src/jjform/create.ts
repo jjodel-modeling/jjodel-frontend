@@ -107,8 +107,10 @@ export interface DraftContext {
      *  «unknown»: an empty select is the honest rendering of a model with nothing
      *  to point at. */
     candidates?: Record<string, DraftOption[]>;
-    /** Names of the instances of the same `cls` under the same `owner`. The
-     *  uniqueness rule of 12a is scoped exactly there. */
+    /** Names already taken in the namespace the draft will join, as the HOST resolves
+     *  it. Since R-S1-3 (2026-08-30) that is the core's namespace — every sibling under
+     *  the same father, whatever its metaclass — and no longer «same cls, same owner».
+     *  The engine does not compute this and holds no rule of its own: it compares. */
     siblingNames?: string[];
 }
 
@@ -220,10 +222,16 @@ export function setDraftRef(draft: Draft, key: string, targetId: string): Draft 
  *  - REQUIRED BY CARDINALITY. `lower >= 1` needs a value. The message names the
  *    multiplicity, so a `2..*` that this draft can only half-satisfy says so
  *    instead of failing mutely (reading 2 of the header).
- *  - UNIQUE NAME AMONG SIBLINGS. Same `cls`, same `owner` — the scope the contract
- *    fixes. Only the `name` feature: it is the one the rest of jjodel resolves an
- *    instance by (`findInstanceByName`, the identity slot of §3.12), and making
- *    every attribute unique would be a constraint the metamodel never asked for.
+ *  - UNIQUE NAME AMONG SIBLINGS. The scope is the HOST's `ctx.siblingNames`, and
+ *    since R-S1-3 the host resolves it from the core's one rule: every sibling under
+ *    the same father, whatever its metaclass. 12a's own «same cls, same owner» scope
+ *    is AMENDED — it was measured orthogonal to the core's, and two orthogonal rules
+ *    over one property is the divergence S1 exists to close. This check stays here
+ *    because a draft must say NO before the user presses Create, not after; it is an
+ *    ANTICIPATION of the verdict, never a second verdict. Only the `name` feature: it
+ *    is the one the rest of jjodel resolves an instance by (`findInstanceByName`, the
+ *    identity slot of §3.12), and making every attribute unique would be a constraint
+ *    the metamodel never asked for.
  *
  * An empty name is NOT a duplicate however many unnamed siblings there are: the
  * absence of a name is not a name that collides.
@@ -246,7 +254,9 @@ export function validateDraft(
             continue;
         }
         if (a.key === 'name' && v && siblings.includes(v)) {
-            errors[a.key] = `A ${cls.key} named «${v}» already exists here`;
+            // Not «A State named …»: the namespace is class-agnostic, so naming the
+            // metaclass would describe a scope the rule no longer has (R-S1-3).
+            errors[a.key] = `An element named «${v}» already exists here`;
         }
     }
 

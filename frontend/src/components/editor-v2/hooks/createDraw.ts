@@ -112,10 +112,10 @@ export function childCount(idlookup: Idlookup, ownerId: string, childKey: string
  * Every instance of `classIds` in `modelId` whose owner is `ownerId`.
  *
  * `ownerId === null` means the roots of the model — the instances the model owns
- * directly. This is the sibling scope the uniqueness rule of 12a is defined over
- * (same `cls`, same `owner`), and it is why the walk is one hop and not the whole
- * chain: two instances with different owners are not siblings however close their
- * ancestors are.
+ * directly. The walk is one hop and not the whole chain: two instances with different
+ * owners are not siblings however close their ancestors are. This WAS the scope of the
+ * uniqueness rule of 12a; since R-S1-3 (2026-08-30) that rule reads the core's
+ * namespace instead — see `siblingNames` below.
  *
  * `classIds` is a SET of D-layer class ids, not one: the sibling scope is «same
  * cls», so the caller passes the one id for uniqueness and the conformance closure
@@ -151,10 +151,20 @@ export function ownerOf(idlookup: Idlookup, objectId: string): string | null {
     return owner?.className === 'DObject' && typeof owner.id === 'string' ? owner.id : null;
 }
 
-/** Display names of the siblings a draft would join — the input of the uniqueness
- *  rule. Named by the same rule the rest of the manager reads names by
- *  (`makeDrawReadCtx`: identity slot first, then `DObject.name`, then `initialName`),
- *  because a duplicate the user can see must be a duplicate the check can see. */
+/** Display names of the instances of ONE metaclass under one owner.
+ *
+ *  NO LONGER THE UNIQUENESS RULE (R-S1-3, 2026-08-30). It used to feed
+ *  `draftContext.siblingNames`, on the «same cls, same owner» scope of 12a; that scope
+ *  was measured ORTHOGONAL to the core's — each accepts what the other refuses
+ *  (`discovery_2026-08-30_s1_uniqueness_consumatori.md` §3) — and 12a was amended to
+ *  the core's. `createAdapter.namespaceNames` now reads the namespace from
+ *  `nameUniqueness.getNamespaceOf`, and this function must NOT be wired back into a
+ *  uniqueness check: two rules that agree today diverge tomorrow.
+ *
+ *  Kept because it is a meaningful per-class query in its own right, and tested as one.
+ *  Named by the same rule the rest of the manager reads names by (`makeDrawReadCtx`:
+ *  identity slot first, then `DObject.name`, then `initialName`).
+ *  TODO: cleanup — remove if no per-class consumer appears. */
 export function siblingNames(
     idlookup: Idlookup,
     modelId: string,

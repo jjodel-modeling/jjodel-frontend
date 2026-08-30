@@ -90,7 +90,7 @@ import {
 } from "../../api/data";
 import {ValuePointers} from "./PointerDefinitions";
 import {transientProperties} from "../../joiner/classes";
-import {validateNameUniqueness} from "./nameUniqueness";
+import {checkNameUniqueness} from "./nameUniqueness";
 import { toast } from "../../components/Toast";
 import React, {JSX} from "react";
 import { checkObjectCreation, checkLinkCreation, checkValueAssignment, emitGuardViolation } from '../conformance/ConformanceGuard';
@@ -6232,12 +6232,15 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
         if (c.data.name === name) return true;
 
         const self = c.proxyObject as unknown as LObject;
-        const result = validateNameUniqueness(self, name);
-        if (!result.valid) {
-            const collider = (result.collidingWith ?? [])[0];
-            const ownerType = (collider?.className ?? 'Element').replace(/^[DLW]/, '');
-            const ownerName = collider?.name ?? '?';
-            toast.error(`Name "${name}" already used by ${ownerType} "${ownerName}"`, {
+        // The rename is a CONSUMER of the one verdict (R-S1-2), not a rule of its own:
+        // the same `checkNameUniqueness` the create consults, and the same sentence.
+        const verdict = checkNameUniqueness({
+            father: self.father as unknown as LModelElement,
+            name,
+            excludeId: self.id,
+        });
+        if (!verdict.ok) {
+            toast.error(verdict.reason as string, {
                 title: 'Validation failed',
                 action: { label: 'View errors →', onClick: () => { /* TODO: wire to errors panel when available */ } },
             });
@@ -6293,8 +6296,9 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
         const self = c.proxyObject as unknown as LObject;
         const newFather = LPointerTargetable.from(val) as LModelElement;
         if (newFather) {
-            const result = validateNameUniqueness(self, self.name, { overrideFather: newFather });
-            if (!result.valid) {
+            // Same verdict, different sentence: a reparent names the destination scope.
+            const result = checkNameUniqueness({ father: newFather, name: self.name, excludeId: self.id });
+            if (!result.ok) {
                 const collider = (result.collidingWith ?? [])[0];
                 const ownerType = (collider?.className ?? 'Element').replace(/^[DLW]/, '');
                 const ownerName = collider?.name ?? '?';
@@ -7130,6 +7134,32 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
             if (!constructorPointers.name && constructorPointers.instanceof){
                 let meta = L.from(constructorPointers.instanceof) as LClass;
                 if (meta.isSingleton){ constructorPointers.name = meta.name; }
+            }
+            // ── Uniqueness (R-S1-2): the create consults the SAME verdict as the rename ──
+            //
+            // This is the point both ways cross: `LValue.get_addObject` is defined once and
+            // serves `LModel.addObject` (a root) and `LValue.addObject` (a contained instance),
+            // and it sits in the same file as `LObject.set_name`. Until S1a the create reached
+            // `DObject.new3` without ever passing a uniqueness check, so it could produce a
+            // name the rename would have refused.
+            //
+            // The gate is on the EXPLICIT name only. With none given, `DObject.new3` computes
+            // the auto-name from `defaultname`, whose namespace for a NESTED object is empty
+            // (`LValue` does not override `get_children_idlist`), so gating that would refuse
+            // the second `Add` of a containment slot. Declared and not closed — see
+            // docs/discovery/discovery_2026-08-30_s1a_una_funzione_uniqueness.md §2 and §5.
+            //
+            // BEFORE the TRANSACTION, never inside it: nothing here wraps a creator (§3.3).
+            if (constructorPointers.name) {
+                const uniq = checkNameUniqueness({
+                    father: LPointerTargetable.from(father) as unknown as LModelElement,
+                    name: constructorPointers.name as string,
+                });
+                if (!uniq.ok) {
+                    toast.error(uniq.reason as string, { title: 'Validation failed' });
+                    Log.ww('addObject() refused: ' + uniq.reason, {json, father, thiss: c.data});
+                    return lobj;
+                }
             }
             TRANSACTION(this.get_name(c as any)+'.addObject()', () => {
                 let dobj = DObject.new3(constructorPointers, () => { }, isDModel?DModel:DValue, true);

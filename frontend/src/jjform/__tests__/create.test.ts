@@ -213,12 +213,12 @@ describe('validateDraft — required by cardinality', () => {
     });
 });
 
-describe('validateDraft — the name is unique among siblings (12a)', () => {
+describe('validateDraft — the name is unique among siblings (12a, amended by R-S1-3)', () => {
     const base = () => setDraftValue(newDraft(SHAPE, 'State', 'm1', 'states'), 'name', 'red');
 
     it('names the conflict', () => {
         const errors = validateDraft(SHAPE, base(), { siblingNames: ['green', 'red'] });
-        expect(errors.name).toBe('A State named «red» already exists here');
+        expect(errors.name).toBe('An element named «red» already exists here');
     });
 
     it('accepts a name no sibling holds', () => {
@@ -228,7 +228,7 @@ describe('validateDraft — the name is unique among siblings (12a)', () => {
     it('compares trimmed, both sides', () => {
         const d = setDraftValue(newDraft(SHAPE, 'State'), 'name', '  red  ');
         expect(validateDraft(SHAPE, d, { siblingNames: [' red '] }).name)
-            .toBe('A State named «red» already exists here');
+            .toBe('An element named «red» already exists here');
     });
 
     it('does not make an empty name collide with unnamed siblings', () => {
@@ -236,6 +236,14 @@ describe('validateDraft — the name is unique among siblings (12a)', () => {
         // is not a name that collides.
         const errors = validateDraft(SHAPE, newDraft(SHAPE, 'State'), { siblingNames: ['', '  '] });
         expect(errors.name).toBe('Required by cardinality 1..1');
+    });
+
+    it('is class-agnostic: the host resolves the namespace, the engine only compares', () => {
+        // R-S1-3: `siblingNames` is the CORE namespace — every sibling under the same
+        // father, whatever its metaclass. A `Transition` called «red» therefore blocks a
+        // `State` called «red», which the amended 12a would have allowed.
+        const errors = validateDraft(SHAPE, base(), { siblingNames: ['red'] });
+        expect(errors.name).toBe('An element named «red» already exists here');
     });
 
     it('leaves other attributes free to repeat', () => {
