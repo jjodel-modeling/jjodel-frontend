@@ -2329,6 +2329,36 @@ di cio' che la sezione 2 del contratto chiama «id assente o ""». Misurato a sc
 `_tmp_missing_verify.ts`: nativo, IR e tabella danno la stessa classificazione sui tre
 stati, e il contrasto (`lowerBound` 1 -> 0 -> 1) riporta il trattino.
 
+**R-DEL-4** (2026-08-30) — **La rete di `get_delete` copre anche `values`, e la verita' di
+fondo e' `idlookup`, non `pointedBy`.** `Dummy.get_delete` portava gia' una rete per il
+`pointedBy` stale (`common/Dummy.ts:104-116`, il commento la dichiara) ma per i soli
+`father.objects` / `father.features`, cioe' il containment: gli slot di riferimento M1
+restavano scoperti, ed e' esattamente il modo di guasto delimitato da R-FORM-10 — proxy
+avvolto prima della scrittura, `case 'values'` mai raggiunto per quello slot, puntatore
+appeso. Ora, **e solo se il morente e' un `DObject`** (nessun altro tipo puo' stare in uno
+slot di riferimento, quindi i `DValue` della cascata saltano interamente la scansione), la
+delete scandisce `idlookup` e fa `SetFieldAction(slot, 'values', deletedID, '-=')` su ogni
+`DValue` che tiene davvero quell'id. Stesso posto, stesso idioma, stessa scrittura del
+`case 'values'`, quindi ridondante e no-op quando il ciclo delle dipendenze l'ha gia'
+sparata. **Il contratto di `undefined` e l'ordine delle scritture di R-FORM-11 non sono
+toccati**: la rete sta dentro la stessa `TRANSACTION` e nella stessa posizione relativa di
+quella `father`. Scartate le altre due vie di `discovery_2026-08-30_censimento_delete_proxy_stale.md`
+§5: la rilettura di `pointedBy` in `get__jjdependencies` tocca ogni classe L in una zona
+dove l'ordine e' delicato (resta a registro se la rete estesa non bastasse), e l'invariante
+nel costruttore del proxy e' una riscrittura del D-L. **Costo misurato prima del diff**:
+0.005 ms sull'`idlookup` da 112 voci del fixture, 0.57 ms a 10k, 4.72 ms a 50k, 23.75 ms a
+200k; end-to-end 0.33 ms per delete **intera** su 30 delete in fila. La cascata resta
+O(N x |idlookup|): sotto il migliaio di istanze e' meno di mezzo secondo, sopra va
+sorvegliata. La variante «`pointedBy` letto dallo store vivo» costa 0.0005 ms e non e'
+quadratica, ma **non e' stata scelta**: `pointedBy` e' un indice che puo' contenere voci non
+valide, e una rete che si appoggia all'indice che sta compensando non e' una rete. Resta a
+registro come uscita di sicurezza. Misurato a schermo, `_tmp_rdel4_verify.ts`, 12/12 ALL
+GREEN: il (c) del fixture passa da `dangling 1` a `dangling 0`, il percorso fresco e la
+cascata `father` sono invariati, e la matrice 2x2 di R-FORM-10 vede la colonna «stale»
+convergere a quella «fresco» in entrambe le cardinalita' — mentre lo scarto snapshot/store
+resta misurabile (`6` contro `7`), cioe' il difetto e' coperto a valle, non mascherato.
+Referto: `docs/discovery/discovery_2026-08-30_rdel4_values_safety_net.md`.
+
 ### Perimetro delle slice
 
 **Slice 2a** (2026-08-30, commit `9ab7560d0`) — tab, colonna metaclassi, lista istanze,
