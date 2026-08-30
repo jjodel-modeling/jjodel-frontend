@@ -816,27 +816,30 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
     };
 
     /**
-     * The IR branch's rung-0 rendering (R-STR-6).
+     * The IR branch's row rendering, by the FULL ladder (R-STR-6 (B)).
      *
-     * `IRNodeContent` paints a field segment as plain text: the interpreter has no
+     * `IRNodeContent` painted a field segment as plain text: the interpreter has no
      * renderer library of its own, and measured on the real canvas it never had one
      * (`scripts/smoke/_tmp_rstr6_measure.ts`, 2026-08-30 — zero `mm-object__*`
      * markers on any IR row, against ten distinct renderers on the native branch).
      * So the row that CAN see a `FormSpec` was the row that could not paint it, and
      * the row that paints was the row that never sees one.
      *
-     * This closes the gap from the side that already has both: `slotRows` is built
-     * on the IR branch too, and it now carries rung 0. The bridge is by FEATURE
-     * NAME, the same one `openInspectorByFeatureName` uses, so the interpreter
-     * still knows nothing about `SlotRow`.
+     * Slice (A) bridged the gap for RUNG 0 only, and left its cost written down: on
+     * the IR branch `guard` (`@renderer=code`) still rendered plain text while the
+     * native branch rendered `code`. This closes it. The condition is gone: every
+     * feature the native side has a row for is painted by the same
+     * `detectValueRenderer` decision, so the two branches cannot disagree about what
+     * a value looks like — which was the whole argument for (B).
      *
-     * Returns null unless the view actually declared a widget for this feature,
-     * which is what keeps every existing IR view rendering exactly as before: no
-     * declaration, no change, and the interpreter's own text stands.
+     * Still by FEATURE NAME, the bridge `openInspectorByFeatureName` uses, so the
+     * interpreter keeps knowing nothing about `SlotRow`. Null when there is no row
+     * of that name: the interpreter then renders its own text, which is the fallback
+     * that keeps a compartment the native side does not model from going blank.
      */
-    const renderViewWidget = (featureName: string): React.ReactNode | null => {
+    const renderRowValue = (featureName: string): React.ReactNode | null => {
         const row = findRowByFeatureName(slotRows, featureName);
-        if (!row?.slot.viewRenderer) return null;
+        if (!row) return null;
         return (
             <RowValue
                 decision={row.decision}
@@ -917,7 +920,7 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                     vertexId={id}
                     readCtx={irResolution.readCtx}
                     onInspectFeature={openInspectorByFeatureName}
-                    renderViewWidget={renderViewWidget}
+                    renderRowValue={renderRowValue}
                 />
                 {/* graphVertex containment (Fase 2b): collapse/expand chip */}
                 {irResolution.compiled.kind === 'graphVertex'

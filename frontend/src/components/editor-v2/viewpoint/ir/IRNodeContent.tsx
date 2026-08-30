@@ -105,8 +105,14 @@ export interface IRNodeContentProps {
      */
     onInspectFeature?: (featureName: string, anchor: DOMRect) => void;
     /**
-     * Rung 0 on the canvas row (R-STR-6): the rendering the ACTIVE VIEW asks for
-     * for one feature, or null when it asks for nothing.
+     * The rendering of one feature's value, by the FULL ladder (R-STR-6 (B)).
+     *
+     * Slice (A) passed only rung 0 through here — the widget the active view
+     * declared — and left rung 1 and the type/name rungs unpainted, so `guard`
+     * (`@renderer=code`) rendered `code` on the native branch and plain text here.
+     * That gap was (A)'s declared cost; this is it closed. The callback now answers
+     * for EVERY feature, with the same `detectValueRenderer` call the native branch
+     * makes, so the two branches cannot diverge on what a value looks like.
      *
      * A CALLBACK and not a decision, for the same reason `onInspectFeature` carries
      * a name and not a `SlotRow`: the renderer library and the row model both live
@@ -114,12 +120,11 @@ export interface IRNodeContentProps {
      * internals inside this interface. The interpreter asks by feature name and
      * paints whatever comes back.
      *
-     * Null is the DEFAULT answer, not a failure: with no declared widget the
-     * segment renders exactly the text it rendered before, which is what keeps
-     * every authored view unchanged. Absent in the authoring preview, which has no
-     * active view to override anything.
+     * Null means «I have no row for that name» — a compartment row the native side
+     * does not know — and the segment then renders its own text, unchanged. Absent
+     * in the authoring preview, which has no live object to read.
      */
-    renderViewWidget?: (featureName: string) => React.ReactNode | null;
+    renderRowValue?: (featureName: string) => React.ReactNode | null;
 }
 
 interface CompartmentRowData {
@@ -148,7 +153,7 @@ interface SelectingRowState {
     anchorRect: DOMRect;
 }
 
-function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature, renderViewWidget }: IRNodeContentProps) {
+function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature, renderRowValue }: IRNodeContentProps) {
     const form = compiled.form(readCtx, objectId);
     const fill = compiled.fill ? compiled.fill(readCtx, objectId) : '';
 
@@ -581,13 +586,15 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
                                                     />
                                                 );
                                             }
-                                            // Rung 0 (R-STR-6). Only the RENDERING is
-                                            // replaced: the span keeps its class and its
-                                            // double-click, so a row the view draws as a
-                                            // swatch is still the row the user edits by
-                                            // double-clicking it. Editing itself is handled
-                                            // above, where the input replaces everything.
-                                            const viewPainted = renderViewWidget?.(row.name) ?? null;
+                                            // The full ladder (R-STR-6 (B)). Only the
+                                            // RENDERING is replaced: the span keeps its class
+                                            // and its double-click, so a row drawn as a swatch
+                                            // is still the row the user edits by double-clicking
+                                            // it. Editing itself is handled above, where the
+                                            // input replaces everything, and the reference
+                                            // select is handled before that — the two gestures
+                                            // that own the row keep owning it.
+                                            const painted = renderRowValue?.(row.name) ?? null;
                                             return (
                                                 <span
                                                     key={si}
@@ -597,7 +604,7 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
                                                         setEditValue(row.value);
                                                     } : undefined}
                                                 >
-                                                    {viewPainted ?? row.value}
+                                                    {painted ?? row.value}
                                                 </span>
                                             );
                                         }
