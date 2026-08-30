@@ -233,9 +233,16 @@ Printed on every run, so a gap is never mistaken for a pass:
 
 Visible in the baseline, deliberately not addressed here:
 
-- **44 React "Encountered two children with the same key"** across the three
-  states (6 / 18 / 20). Possible relation to the pre-existing `Dock.tsx:388` key
-  bug noted on 2026-07-31 — to be verified.
+- ~~**44 React "Encountered two children with the same key"** across the three
+  states (6 / 18 / 20)~~ — **paid, verified 2026-08-30.** The count is 0 in
+  every state, so the pattern is gone from the baseline entirely. It had been
+  recorded on 2026-08-01 as "possible relation to the pre-existing
+  `Dock.tsx:388` key bug, to be verified": that verification is what the quiet
+  recalibration performed, and it is why the entry is struck through rather
+  than deleted — a debt that was paid is a different fact from a debt that was
+  never there. A4 carried those 44 as slack until then: a margin against a bug
+  that no longer existed, which would have absorbed a real regression of up to
+  the same size without failing.
 - **`.editor-v2__canvas` and `.editor-v2__main` have `bottom=950`** against a
   900px viewport: 50px of vertical overflow.
 - **`wrong project setup in navbar`** (2/2/3) and **`stateinitializer`** (2 per
