@@ -2,6 +2,19 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-08-30 — discovery: S1 si ferma sulla prima misura, cinque consumatori la reggono
+**Prompt**: «S1: una regola di uniqueness, in un posto», dato in chat e non depositato in `docs/prompts/`. Prima slice della sequenza WriteCtx (referto `b9ca883fc` §5.1 e §6). Il prompt impone una misura PRIMA del fix — il censimento di chi consuma l'unicita' del nome M1 — con condizione di arresto esplicita: se almeno un consumatore richiede la regola larga (class-agnostic), fermarsi e riportare con l'evidenza, perche' la scelta risale al design.
+**Files touched**: docs/discovery/discovery_2026-08-30_s1_uniqueness_consumatori.md (nuovo, 320 righe), docs/claude-code-log.md. **Zero sorgenti, zero sonde.** Commit del referto `3354fb0da`, log a parte. Nessun file condiviso con la sessione parallela, che ha committato la coda smoke (`39e5b3f2c`, `959d50c4f`, `68e2d7748`) mentre questa sessione leggeva: verificato su `git status --porcelain` prima del commit.
+**Outcome**: ⚠️ partial — la Fase 1 e' completa e la condizione di arresto del prompt e' **verificata**, quindi il fix non e' stato scritto. Non e' una slice mancata: e' l'esito che il prompt prevedeva per questo ramo.
+**Corregge**: —
+**Causa**: (a)
+**Regressions**: no — nessun file eseguibile toccato, nessun comando di scrittura eseguito. Gate non pertinenti e non girati (sola lettura); `npm run check:docs` sul log.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (sola lettura; nessuna modifica a sync/D-L)
+**Smoke visivo**: non applicabile — nessuna modifica di resa.
+**Notes**: Cinque consumatori vivi risolvono un'istanza M1 per nome in modo class-agnostic: due **scrivono** su quella risoluzione, uno **cancella** (`delete X`), tutti con un `.find` muto senza ramo per l'ambiguita'. Due reperti oltre il prompt: il binding di JjEL chiede uno scope che **nemmeno il core copre**, e le due regole non sono annidate ma **ortogonali**. Allinearsi a 12a spegnerebbe un badge committato (Regola 3). §2-§4 del referto. Tipo di commit per precedente di `b9ca883fc`.
+**Prompt document name**: prompt inline (non depositato) 2026-08-30 17:30
+
 ## 2026-08-30 — test(smoke): la guardia su calibrate, e il numero vero delle assertion
 **Prompt**: «Coda smoke: calibrate con guardia + README», dato in chat e non depositato in `docs/prompts/`. Chiudere i due residui di `627ac1a0f`: (1) `calibrate.ts` guadagna la guardia di quiescenza — ritaratura valida solo su corsa quieta, altrimenti VOID senza scrivere; (2) README, «four assertions» -> il numero vero e una riga sulla regola che ora e' codice; (3) valutare e dichiarare l'estensione della radice sorvegliata a `vite.config.ts` + `index.html` + `public/`.
 **Files touched**: frontend/scripts/smoke/{calibrate.ts,quiescence.ts,run.ts} (commit `39e5b3f2c`), frontend/scripts/smoke/README.md (commit `959d50c4f`), docs/claude-code-log.md. **Zero file di `src/`.** Nessun file condiviso con le sessioni parallele (R-DEL-4 su `Dummy.ts`, discovery WriteCtx).
