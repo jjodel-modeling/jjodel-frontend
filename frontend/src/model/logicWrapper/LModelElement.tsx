@@ -5779,14 +5779,25 @@ instanceof === undefined or missing  --> auto-detect and assign the type
     }
     _impl_getByName(collection: Dictionary<string, LModelElement> & any[], name: string, caseSensitive: boolean = false): LModelElement | null {
         name = name.trim();
-        if (collection[name]) return collection[name];
+        // The named-array convention is "$" + name, in all three places that build one:
+        // `U.toNamedArray` (common/U.tsx:2083), `LPackage.get_classes` (:1902) and
+        // `LPackage.get_enumerators` (:1909). Looking up the bare key could never hit, and
+        // neither could the lowercase pass, which produced '$freeprobe' and asked for
+        // 'freeprobe' -- so `getClassByName` and `getEnumByName` returned null for every
+        // name, unique ones included. Measured (R-M2-2,
+        // docs/discovery/discovery_2026-08-30_uniqueness_m2.md §4.1), with the positive
+        // control that made it a measurement: `getClassByName('$FreeProbe')` did resolve.
+        // That control stops working here on purpose -- the '$' belongs to the key, not to
+        // the name the caller passes.
+        const key: string = '$' + name;
+        if (collection[key]) return collection[key];
         if (caseSensitive) return null;
 
         let initialKeys: string[] = Object.keys(collection);
         for (let k of initialKeys ) {
             collection[(k + '').toLowerCase()] = collection[k];
         }
-        return collection[name.toLowerCase()] || null;
+        return collection[key.toLowerCase()] || null;
     }
 
 }
