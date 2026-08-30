@@ -24,6 +24,32 @@ const VP_ID_PREFIX = 'Pointer_IRDemoViewpoint';
 const VIEW_BASE_PREFIX = 'Pointer_IRDemoBaseView';
 const VIEW_FLAG_PREFIX = 'Pointer_IRDemoFlagView';
 
+/**
+ * The reference compartment, shared by both demo views.
+ *
+ * Why it exists: without it the demo view declares `attributes` only, and
+ * `IRNodeContent` partitions its rows R/A — so a reference has no row on the IR
+ * branch at all. Measured 2026-08-30 on `AllNine`: 12 rows per IR node, `cfg`
+ * among them ZERO times, while the native branch drew it. That is what left the
+ * three reference STATES — `refPill`, `brokenRef`, `dash` — unexercised on this
+ * branch after R-STR-6 (B) routed the whole ladder through it.
+ *
+ * Same `rowFormat` as `attrs` on purpose: the two compartments must differ in
+ * their SOURCE and in nothing else, or a difference in what they paint could be
+ * read as a difference in how they were asked to paint it.
+ *
+ * Additive: it declares no new IR key (`{from:'references'}` is irVersion 1.0,
+ * irTypes.ts:130), and `IRNodeContent` skips a compartment whose source array is
+ * empty — so a metaclass with no references, `State` and `Task` included, renders
+ * exactly as before.
+ */
+const REFERENCES_COMPARTMENT = {
+    id: 'refs',
+    source: { from: 'references' },
+    rowFormat: { segments: [{ kind: 'name' }, { kind: 'literal', text: '=' }, { kind: 'value' }] },
+    separator: true,
+} as const satisfies NonNullable<VertexViewIR['fieldCompartments']>[number];
+
 function baseViewIR(metaclassName: string): VertexViewIR {
     return {
         irVersion: 'ir-1.0',
@@ -47,6 +73,7 @@ function baseViewIR(metaclassName: string): VertexViewIR {
                 rowFormat: { segments: [{ kind: 'name' }, { kind: 'literal', text: '=' }, { kind: 'value' }] },
                 separator: true,
             },
+            REFERENCES_COMPARTMENT,
         ],
     };
 }
@@ -83,6 +110,7 @@ function flagViewIR(metaclassName: string, boolAttrName: string): VertexViewIR {
                 rowFormat: { segments: [{ kind: 'name' }, { kind: 'literal', text: '=' }, { kind: 'value' }] },
                 separator: true,
             },
+            REFERENCES_COMPARTMENT,
         ],
     };
 }

@@ -261,7 +261,14 @@ function applyPending(
     }
 }
 
-const valuedInstance = (name: string, cfgTarget: string): PendingObject => ({
+/**
+ * `cfgTarget` null = the `cfg` slot is never written, and stays as conformity
+ * created it: the EMPTY reference, third of the three states a reference row can
+ * be in. It is deliberately the only difference from the other two instances —
+ * three nodes that agree on every attribute make the reference row the one thing
+ * a reader can be comparing.
+ */
+const valuedInstance = (name: string, cfgTarget: string | null): PendingObject => ({
     name,
     single: [
         ['tint', 'Green'],
@@ -277,7 +284,7 @@ const valuedInstance = (name: string, cfgTarget: string): PendingObject => ({
         // `notes` is deliberately never written: it is the dash.
     ],
     many: [['tags', TAGS]],
-    refs: [['cfg', [cfgTarget]]],
+    refs: cfgTarget ? [['cfg', [cfgTarget]]] : [],
 });
 
 export function loadRowViewSmoke(): Promise<SmokeReport> {
@@ -338,11 +345,15 @@ export function loadRowViewSmoke(): Promise<SmokeReport> {
     // `LObject.set_instanceof` does (`LModelElement.tsx:6448`), and that is what
     // the palette goes through when a class is dropped on the canvas. So the
     // fixture goes through it too.
+    // Appended, never reordered: the ids other sessions' probes read are
+    // positional through `createdIds`, so a third instance goes at the TAIL and
+    // the first four keep the ids they had.
     const order: Array<{ klass: LClass; name: string }> = [
         { klass: config, name: 'Config_main' },
         { klass: config, name: 'Config_old' },
         { klass: allNine, name: 'allNine_valued' },
         { klass: allNine, name: 'allNine_broken' },
+        { klass: allNine, name: 'allNine_noref' },
     ];
     const createdIds: string[] = [];
     for (const { klass } of order) {
@@ -350,9 +361,13 @@ export function loadRowViewSmoke(): Promise<SmokeReport> {
         createdIds.push(typeof d === 'string' ? d : d?.id);
     }
 
+    // The three states of a reference row, one instance each. `Config_old` is
+    // deleted at the end of the fixture, which is what turns the second into the
+    // broken one — see the delete below.
     const pending: PendingObject[] = [
-        valuedInstance('allNine_valued', 'Config_main'),
-        valuedInstance('allNine_broken', 'Config_old'),
+        valuedInstance('allNine_valued', 'Config_main'),   // refPill
+        valuedInstance('allNine_broken', 'Config_old'),    // brokenRef
+        valuedInstance('allNine_noref', null),             // dash
     ];
 
     {
@@ -420,12 +435,14 @@ export function loadRowViewSmoke(): Promise<SmokeReport> {
             //     expected, and `DValue.instanceof` verified to be a plain
             //     string, so the string/array guard is NOT the cause.
             //
-            // (2) The broken reference renders as a dash, not as `brokenRef`.
-            //     Deleting `Config_old` leaves the `cfg` row empty rather than
-            //     dangling, so either the cascade scrubs the referring slot
-            //     after all, or the value never carried a resolvable pointer.
-            //     `brokenRefMemory` and the `brokenRef` renderer are therefore
-            //     NOT exercised by this fixture yet.
+            // (2) was «the broken reference renders as a dash, not as
+            //     `brokenRef`». RE-MEASURED 2026-08-30 on HEAD and no longer
+            //     true: `allNine_broken.cfg.__raw.values` still holds
+            //     `Pointer…_49` after the delete, that id resolves to nothing,
+            //     and the native row paints `brokenRef` reading `Config_old`.
+            //     The defect is closed; what remained was that the IR branch had
+            //     no reference row to paint it in, which the `refs` compartment
+            //     of `irDemoFixture` now supplies.
             // ── Open the canvas BEFORE breaking anything ──
             //
             // Order matters for what the broken row can say. `brokenRefMemory`
@@ -472,10 +489,19 @@ export function loadRowViewSmoke(): Promise<SmokeReport> {
                     return;
                 }
                 // Deleting the target leaves the pointer dangling in the
-                // referring slot: measured 2026-08-28, `DValue.values` still
-                // held the id afterwards and it resolved to nothing. The reducer
-                // scrubs no inbound pointer, so the evidence survives and
-                // `brokenRef` has both a state to render and a name to show.
+                // referring slot: measured 2026-08-28 and RE-measured 2026-08-30
+                // on HEAD, `DValue.values` still held the id afterwards and it
+                // resolved to nothing. The reducer scrubs no inbound pointer, so
+                // the evidence survives and `brokenRef` has both a state to
+                // render and a name to show.
+                //
+                // R-FORM-11's delay is not needed here and would not help: the
+                // referring slots were written a phase earlier, so nothing is in
+                // flight when this runs.
+                //
+                // Only THIS instance goes broken. `allNine_valued` keeps
+                // `Config_main` alive and `allNine_noref` was never written, so
+                // the three nodes show the three states side by side.
                 const doomed = byName.get('Config_old');
                 if (doomed) doomed.delete();
                 else findings.push('Config_old not found at deletion time; no broken reference');
