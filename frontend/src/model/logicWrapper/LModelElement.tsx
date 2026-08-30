@@ -1403,7 +1403,19 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
             }
         }
         // 3) fallback values.
-        return LPointerTargetable.fromPointer(c.data.className === 'DReference' ? c.data.father : 'Pointer_ESTRING');
+        // A DReference with no type used to get its own container back. That was the same
+        // seed the constructor wrote, and the constructor stopped writing it for a declared
+        // rejection (`Constructors.DTypedElement`, joiner/classes.ts): the two lines said
+        // different things, and this one said the false one. It gets the same weakest target
+        // instead -- the m3 `EObject`, a real DClass in the store (redux/store.tsx:340), so
+        // `get_classType`/`get_primitiveType` keep reading `.isClass` on a live proxy.
+        // Measured, not assumed (R-GT-1, docs/discovery/discovery_2026-08-30_gettype_finestra_parser.md):
+        // the Ecore parser never reaches this step -- `DReference.new` substitutes the father
+        // for the absent type before the constructor sees anything, so `data.type` is never
+        // falsy on that path -- and outside that window the census of in-tree callers is
+        // empty. The two ways here are the console and the public API.
+        const Defaults: typeof TDefaults = windoww.Defaults;
+        return LPointerTargetable.fromPointer(c.data.className === 'DReference' ? Defaults.Pointer_EOBJECT : 'Pointer_ESTRING');
     }
 
     protected set_type(val: Pack1<this["type"]>, c: Context): boolean {
