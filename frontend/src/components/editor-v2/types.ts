@@ -222,6 +222,13 @@ export interface FeatureValueRow {
     /** Declared multi-valued in the metamodel (upperBound ≠ 1). */
     isMany?: boolean;
     /**
+     * Declared as one that cannot be empty (lowerBound ≥ 1), and not derived.
+     * The other half of the cardinality `isMany` already carries: the node needs
+     * it to tell a required slot left empty from an optional one never written,
+     * which the dash alone cannot say. Derived here and never persisted.
+     */
+    required?: boolean;
+    /**
      * For reference slots: the resolved targets, with their DObject ids. `value`
      * carries the same names joined; only the ids let the reference pill select
      * and reveal the target.

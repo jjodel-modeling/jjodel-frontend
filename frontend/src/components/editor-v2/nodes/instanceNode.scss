@@ -433,6 +433,38 @@
         white-space: nowrap;
     }
 
+    // ── Required, and empty ──────────────────────────────────────────────────
+    //
+    // The other half of a broken reference (contract section 2: «missing id or
+    // empty»), and the same red, because they are two states of one problem. The
+    // word differs and the glyph differs — triangle, not circle — so the two stay
+    // distinguishable at a glance, and neither can be mistaken for the quiet dash
+    // of an optional slot left unset.
+    //
+    // The reference design is the manager's table column: `instance-manager__missing`
+    // draws the same icon beside the same word. Same 20px line box as every other
+    // value, so a slot going empty never changes the node's height.
+    .mm-object__missing {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-width: 0;
+        line-height: 20px;
+    }
+
+    .mm-object__missing-icon {
+        flex: none;
+        font-size: 11px;
+        color: var(--color-inode-broken);
+    }
+
+    .mm-object__missing-word {
+        color: var(--color-inode-broken);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
     // Cyan is correct here: within the canvas, cyan is the interaction and
     // navigation accent. The pill selects and reveals its target.
     .mm-object__ref-pill {

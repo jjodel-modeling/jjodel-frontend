@@ -204,6 +204,29 @@ function BrokenRef({ name }: { name: string }) {
     );
 }
 
+/**
+ * A required slot holding nothing.
+ *
+ * The other half of `BrokenRef`, and drawn as its sibling on purpose: the two are
+ * the two halves of one problem — the contract's «missing id or empty» — so they
+ * share the red and the warning glyph and differ in the word, exactly as the
+ * manager's table draws them (R-FORM-15). What it must NOT look like is the dash
+ * beside it: an optional slot left unset is a fact about the model, a required one
+ * left unset is a repair the model is waiting for.
+ *
+ * There is no value to strike through, so the word IS the content. It stays in the
+ * same 20px line box as the pill it replaces, so a slot going empty never changes
+ * the node's height.
+ */
+function MissingRequired() {
+    return (
+        <span className="mm-object__missing" title="Required by cardinality — no value">
+            <i className="bi bi-exclamation-triangle-fill mm-object__missing-icon" />
+            <span className="mm-object__missing-word">missing</span>
+        </span>
+    );
+}
+
 // ─── The dispatcher ──────────────────────────────────────────────────────────
 
 function RowValue(props: RowValueProps) {
@@ -222,6 +245,12 @@ function RowValue(props: RowValueProps) {
         // reader unable to tell "unset" from "not declared". ──
         case 'dash':
             return <span className="mm-object__dash">—</span>;
+
+        // ── Empty, but the metamodel says it cannot be. The decision was made in
+        // `detectValueRenderer`, like every other state: the node paints what the
+        // ladder handed it and decides nothing of its own (R-STR-6 (B)). ──
+        case 'missingRequired':
+            return <MissingRequired />;
 
         case 'brokenRef':
             return (

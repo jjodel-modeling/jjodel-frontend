@@ -635,6 +635,10 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                 values: f.values,
                 isReference: isRef,
                 isMany: f.isMany,
+                // The metamodel says this slot cannot be empty. Read from the
+                // adapter, which holds the cardinality; the ladder turns it into
+                // `missingRequired` and this component decides nothing.
+                required: f.required,
                 typeName: f.typeName,
                 enumLiteralNames: f.enumLiterals?.map(l => l.name),
                 featureName: liveName,

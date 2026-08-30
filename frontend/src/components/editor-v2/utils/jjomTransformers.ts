@@ -329,10 +329,22 @@ function objectVertexToRFNode(vertex: any): Node<ObjectNodeData> {
             // Multi-valued in the metamodel. The instance node prints the ACTUAL
             // count held, but it needs the declared bound to tell a single-valued
             // slot from a collection that happens to hold one element.
+            //
+            // Required is the other end of the same cardinality: `lower >= 1` is the
+            // marker `jjform/shape.ts` already derives for the manager's table, and
+            // deriving it the same way here is what keeps the node and the table
+            // from classifying one empty slot two different ways (R-FORM-15).
+            //
+            // A derived feature is computed rather than held, so an empty one is
+            // not a model to repair: it is excluded here, exactly as
+            // `instanceTable.ts` excludes it.
             let isMany = false;
+            let required = false;
             try {
                 const ub = feature?.upperBound;
                 isMany = typeof ub === 'number' && ub !== 1;
+                const lb = feature?.lowerBound;
+                required = typeof lb === 'number' && lb >= 1 && feature?.derived !== true;
             } catch { /* proxy access can throw */ }
 
             if (isRef) {
@@ -439,6 +451,7 @@ function objectVertexToRFNode(vertex: any): Node<ObjectNodeData> {
                 enumLiterals,
                 values,
                 isMany,
+                required,
                 refTargets,
                 rendererOverride: declared.renderer,
                 unit: declared.unit,

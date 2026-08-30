@@ -254,7 +254,9 @@ export function relativeAge(raw: string, now: number): string | null {
  * `dash` is the confirmed default for an empty slot and `collection` is the
  * layout the chips sit in, so the nine renderers of the handoff are the rest.
  * `brokenRef` is a state of `refPill`, not a tenth notation: it renders where a
- * pill would have and says why there is no pill.
+ * pill would have and says why there is no pill. `missingRequired` is the same
+ * kind of member on the other side: a state of `dash`, for the empty slot the
+ * metamodel says cannot be empty.
  */
 export type RendererKind =
     | 'dash'
@@ -268,7 +270,8 @@ export type RendererKind =
     | 'progress'
     | 'code'
     | 'collection'
-    | 'brokenRef';
+    | 'brokenRef'
+    | 'missingRequired';
 
 /**
  * Human names for the library members, as the inspector's change menu lists them and as
@@ -362,6 +365,17 @@ export interface SlotShape {
     max?: number;
     /** The reference points at an object that no longer resolves. */
     isBroken?: boolean;
+    /**
+     * `lower >= 1` in the metamodel: the slot is declared as one that cannot be
+     * empty. Derived from the cardinality by the ADAPTER and never persisted —
+     * the same derivation `jjform/shape.ts` already makes for the table, so the
+     * two surfaces read one fact and not two.
+     *
+     * A derived feature is computed rather than held, so an empty one is not a
+     * model to repair: the adapters keep it out of this flag rather than the
+     * ladder having to know what `derived` means.
+     */
+    required?: boolean;
 }
 
 /** A slot holds nothing: no values, or a single blank one. */
@@ -623,7 +637,19 @@ export function detectValueRenderer(slot: SlotShape): RendererDecision {
         return { kind: 'brokenRef', reason: 'the reference target no longer exists' };
     }
 
+    // A required slot with nothing in it is not the same fact as an optional one
+    // left unset, and the two must not paint the same dash. The decision is made
+    // HERE and only here: both surfaces receive it from the ladder like any other
+    // state, so the node and the manager's table cannot classify it differently
+    // (the divergence measured on 2026-08-30 —
+    // `discovery_2026-08-30_6_rform10_controesempio.md` §5).
+    //
+    // Below `isBroken`, because a dangling pointer says more than the emptiness
+    // it also is: a required slot holding a broken pointer is reported as broken.
     if (isEmptySlot(slot)) {
+        if (slot.required) {
+            return { kind: 'missingRequired', reason: 'the metamodel requires a value and the slot holds none' };
+        }
         return { kind: 'dash', reason: 'the slot holds no value' };
     }
 
@@ -641,10 +667,10 @@ export function detectValueRenderer(slot: SlotShape): RendererDecision {
     // «L'override della view vince anche sul canvas.» It sits BELOW the four
     // guards above and ABOVE rule 1, and both positions are the ratified reading:
     //
-    //  - below the guards, because `dash`, `collection` and `brokenRef` are
-    //    STATES of the value rather than choices — R-STR-3 maps no widget to any
-    //    of them — and a reference already has its own rendering. A view cannot
-    //    declare a slot non-empty.
+    //  - below the guards, because `dash`, `missingRequired`, `collection` and
+    //    `brokenRef` are STATES of the value rather than choices — R-STR-3 maps
+    //    no widget to any of them — and a reference already has its own
+    //    rendering. A view cannot declare a slot non-empty, nor optional.
     //  - above rule 1, because that is what «the view wins» means: the
     //    metamodel's `jjodel/renderer=…` is exactly what rung 0 is defined to
     //    cover (R-STR-4), and the inspector already draws it with an

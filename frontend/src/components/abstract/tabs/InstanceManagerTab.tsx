@@ -118,22 +118,26 @@ function Cell({ cell }: { cell: TableCell }) {
     const d: RendererDecision = cell.decision;
     const extra = cell.count > 1 ? <span className="instance-manager__more">+{cell.count - 1}</span> : null;
 
-    // A required feature with nothing in it is reported BEFORE the renderer gets a
-    // say: the precedence would print a dash, and a dash is exactly the silent
-    // emptiness ratified rule 2 of 12d forbids after a dirty delete. The cell says
-    // the model needs attention; it does not say why the value went.
-    if (cell.missingRequired) {
-        return (
-            <span className="instance-manager__missing" title="Required by cardinality — no value">
-                <i className="bi bi-exclamation-triangle-fill" aria-hidden="true" />
-                missing
-            </span>
-        );
-    }
-
     switch (d.kind) {
         case 'dash':
             return <span className="instance-manager__dash" title="No value">—</span>;
+
+        // A required feature with nothing in it. The precedence would print a dash,
+        // and a dash is exactly the silent emptiness ratified rule 2 of 12d forbids
+        // after a dirty delete. The cell says the model needs attention; it does not
+        // say why the value went.
+        //
+        // The verdict arrives from `detectValueRenderer` like every other state
+        // (R-FORM-15): it used to be a guard placed ahead of this switch, which made
+        // it a SECOND decision beside the engine's — and the canvas node, which has
+        // only the engine, painted the same slot as a dash.
+        case 'missingRequired':
+            return (
+                <span className="instance-manager__missing" title="Required by cardinality — no value">
+                    <i className="bi bi-exclamation-triangle-fill" aria-hidden="true" />
+                    missing
+                </span>
+            );
 
         case 'brokenRef':
             return (

@@ -173,6 +173,14 @@ export function slotShapeFor(
         // still makes the cell say so, because the row's job is to flag that the
         // model needs attention, not to hide it behind two good values.
         isBroken: broken,
+        // `lower >= 1`, and not derived: a derived feature is computed rather than
+        // held, so an empty one is not a model the user has to repair and flagging
+        // it would put a warning on every row of a metamodel that declares one.
+        //
+        // Handed to the ladder rather than decided here: since R-FORM-15 the
+        // `missingRequired` verdict is the ENGINE's, so this table and the canvas
+        // node cannot classify the same empty slot differently.
+        required: feature.required && !feature.derived,
     };
     return { slot, count: filled.length, broken };
 }
@@ -202,10 +210,11 @@ export function tableRow(
         const text = slot.values?.join(', ') ?? '';
         cells[feature.key] = {
             text, decision, count, broken,
-            // A derived feature is computed, not held: an empty one is not a model
-            // the user has to repair, and flagging it would put a warning on every
-            // row of a metamodel that declares one.
-            missingRequired: feature.required && count === 0 && !broken && !feature.derived,
+            // Read off the decision, not recomputed: the ladder already answered,
+            // and a second copy of the rule here is exactly the divergence
+            // R-FORM-15 exists to close. Kept as a field because the cell reads it
+            // as a state, the way `broken` is read.
+            missingRequired: decision.kind === 'missingRequired',
         };
         if (text) bits.push(text);
     }

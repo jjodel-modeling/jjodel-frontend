@@ -316,6 +316,60 @@ describe('detectValueRenderer — the rule-1 override', () => {
     });
 });
 
+describe('detectValueRenderer — required and empty (R-FORM-15)', () => {
+    // The three states the manager's table already separated and the canvas node
+    // did not: measured on 2026-08-30 in
+    // `discovery_2026-08-30_6_rform10_controesempio.md` §5, where a required slot
+    // emptied by a delete and one never written painted the same dash on the node.
+    // Since the guard moved into the ladder, both surfaces read ONE verdict.
+
+    it('a required slot holding nothing is missing, not a dash', () => {
+        expect(detectValueRenderer({ value: '', isReference: true, required: true }).kind)
+            .toBe('missingRequired');
+        expect(detectValueRenderer({ value: '', values: [], required: true }).kind)
+            .toBe('missingRequired');
+        expect(detectValueRenderer({ value: '—', required: true }).kind).toBe('missingRequired');
+    });
+
+    it('CONTRAST — the same slot, not required, is a dash', () => {
+        // The half that makes the test above a measurement: one field removed,
+        // every other input identical.
+        expect(detectValueRenderer({ value: '', isReference: true }).kind).toBe('dash');
+        expect(detectValueRenderer({ value: '', values: [] }).kind).toBe('dash');
+    });
+
+    it('a required slot that HOLDS something is not missing', () => {
+        expect(detectValueRenderer({ value: 'Config', isReference: true, required: true }).kind)
+            .toBe('refPill');
+        expect(detectValueRenderer({ value: '42', typeName: 'EInt', required: true }).kind)
+            .toBe('numberUnit');
+    });
+
+    it('a dangling pointer outranks it: broken says more than the emptiness it also is', () => {
+        expect(detectValueRenderer({
+            value: '', isReference: true, required: true, isBroken: true,
+        }).kind).toBe('brokenRef');
+    });
+
+    it('the state wins over rule 1 and over the view, exactly as dash does', () => {
+        // Extends the R-STR-6 (B) contrasts: `missingRequired` is a STATE of the
+        // value, and R-STR-3 maps no widget to it. Neither an annotation nor a view
+        // may declare a required slot non-empty.
+        expect(detectValueRenderer({ value: '', required: true, rendererOverride: 'code' }).kind)
+            .toBe('missingRequired');
+        expect(detectValueRenderer({ value: '', required: true, viewRenderer: 'code' }).kind)
+            .toBe('missingRequired');
+        expect(detectValueRenderer({
+            value: '', required: true, rendererOverride: 'swatch', viewRenderer: 'code',
+        }).kind).toBe('missingRequired');
+    });
+
+    it('says which rule decided, so the row tooltip can', () => {
+        expect(detectValueRenderer({ value: '', required: true }).reason)
+            .toContain('requires a value');
+    });
+});
+
 describe('detectValueRenderer — rung 0, the view override on the canvas (R-STR-6)', () => {
     it('the view wins over the metamodel declaration it covers', () => {
         // Exactly the pair the inspector draws with an `overridden by current view`

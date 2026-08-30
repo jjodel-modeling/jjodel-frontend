@@ -304,6 +304,59 @@ describe('slotShapeFor / tableRow', () => {
         expect(row.cells.cfg.decision.kind).toBe('brokenRef');
     });
 
+    it('derives `required` from the cardinality and hands it to the ladder (R-FORM-15)', () => {
+        // `lower >= 1`, read off the shape and never persisted: the slot carries the
+        // flag, the ENGINE turns it into the verdict. Same derivation the canvas
+        // adapter makes from `lowerBound`, which is what stops the two surfaces
+        // classifying one empty slot two different ways.
+        expect(Sensor.refs[0].lower).toBe(1);               // positive control
+        expect(slotShapeFor(idlookup, 's1', Sensor.refs[0], shape).slot.required).toBe(true);
+        expect(Sensor.attrs[1].lower).toBe(0);              // positive control
+        expect(slotShapeFor(idlookup, 's1', Sensor.attrs[1], shape).slot.required).toBe(false);
+    });
+
+    it('a derived feature is never required, however its bounds read', () => {
+        // Computed rather than held: an empty one is not a model to repair, and
+        // flagging it would put a warning on every row of a metamodel that
+        // declares one.
+        const derivedRequired = { ...Sensor.attrs[4], lower: 1, required: true };
+        expect(derivedRequired.derived).toBe(true);         // positive control
+        expect(slotShapeFor(idlookup, 's1', derivedRequired, shape).slot.required).toBe(false);
+    });
+
+    it('the three states of one reference, side by side (R-FORM-15)', () => {
+        // s3 holds the required `cfg` as an EMPTY slot — what a delete leaves on the
+        // referrer — beside s2's dangling pointer and s2's absent, optional `tint`.
+        // The same three the canvas node now classifies the same way.
+        const l = {
+            ...idlookup,
+            s3: { id: 's3', className: 'DObject', name: 's3', instanceof: 'cSensor', father: 'm1',
+                  features: ['vName3', 'vCfg3'] },
+            vName3: { id: 'vName3', className: 'DValue', instanceof: 'aName', father: 's3', values: ['s3'] },
+            vCfg3: { id: 'vCfg3', className: 'DValue', instanceof: 'rCfg', father: 's3', values: [] },
+        };
+        expect(tableRow(l, 's3', Sensor, shape).cells.cfg.decision.kind).toBe('missingRequired');
+        expect(tableRow(l, 's2', Sensor, shape).cells.cfg.decision.kind).toBe('brokenRef');
+        expect(tableRow(l, 's2', Sensor, shape).cells.tint.decision.kind).toBe('dash');
+    });
+
+    it('the cell flag is READ OFF the decision, not computed a second time', () => {
+        // The divergence R-FORM-15 closes was exactly a second copy of the rule:
+        // the table decided ahead of the switch, the node had only the ladder.
+        const l = {
+            ...idlookup,
+            s3: { id: 's3', className: 'DObject', name: 's3', instanceof: 'cSensor', father: 'm1',
+                  features: ['vCfg3'] },
+            vCfg3: { id: 'vCfg3', className: 'DValue', instanceof: 'rCfg', father: 's3', values: [] },
+        };
+        const row = tableRow(l, 's3', Sensor, shape);
+        expect(row.cells.cfg.missingRequired).toBe(true);
+        expect(row.cells.cfg.decision.kind).toBe('missingRequired');
+        // and the two other states leave it false, brokenness included
+        expect(tableRow(l, 's2', Sensor, shape).cells.cfg.missingRequired).toBe(false);
+        expect(tableRow(l, 's2', Sensor, shape).cells.tint.missingRequired).toBe(false);
+    });
+
     it('lets the precedence pick the renderer, per kind', () => {
         const row = tableRow(idlookup, 's1', Sensor, shape);
         expect(row.cells.cfg.decision.kind).toBe('refPill');
