@@ -2,6 +2,19 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-08-30 — discovery: censimento dei `.delete()` per proxy stale
+**Prompt**: «Censimento dei 67 `.delete()` per proxy stale», dato in chat e non depositato in `docs/prompts/`. Aprire la domanda di §3 di `discovery_2026-08-30_6_rform10_controesempio.md`: quanti siti tengono un proxy avvolto in una fase precedente? Classificazione statica in (a)/(b)/(c) per distanza wrap->delete, sonda a schermo SOLO sui (c), verdetto per sito in tabella, forma del fix proposta e non applicata. Solo discovery: zero modifiche a sorgente.
+**Files touched**: docs/discovery/discovery_2026-08-30_censimento_delete_proxy_stale.md (nuovo), docs/claude-code-log.md. **Zero sorgenti.** Sonda `_tmp_delete_census_canvas.ts` (non committata). Commit del referto `98860ca1f`, log a parte. Nessun file condiviso con le sessioni parallele, che tengono `scripts/smoke/{assertions,run}.ts` modificati e che questa sessione non ha toccato.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — nessun file eseguibile toccato.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (lettura del core, zero diff)
+**Smoke visivo**: `_tmp_delete_census_canvas.ts` **ALL GREEN**, zero errori di pagina, corsa singola senza boot multipli. `npm run smoke` non rigirato: zero modifiche a sorgente da gateare.
+**Notes**: Corregge due numeri del referto R-FORM-10 del 30-08 (non un prompt, quindi `Corregge` resta `—`). I siti sono **43, non 67**: 24 righe contate erano commenti. E (c) non e' «scritture interposte» ma «una scrittura che AGGIUNGE un puntatore entrante»: `get__jjdependencies` elenca dallo snapshot ma risolve ogni path sullo store vivo. Verdetto **(a) 17 · (b) 25 · (c) 1**, l'unico (c) e' il fixture. `syncDeleteVertex` pulito, col controllo negativo che prova il segnale.
+**Prompt document name**: 2026-08-30 16:10
+
 ## 2026-08-30 — feat(jjform): multi-selezione e ricorsione inline, con due misure che hanno cambiato il diff
 **Prompt**: `docs/prompts/PROMPT_12bc_multiselect_recursion.md`. Le due regole restanti del motore form: 12b (Mixed dichiarati, identita' mai bulk, delete multipla su preflight unico) e 12c (un livello di children inline, poi drill-in col breadcrumb), piu' il filtro containment-loop «su percorso raggiungibile». Vincoli: ordine delle scritture bulk misurato prima (R-FORM-11), motore in `jjform/` a zero import, divisione `*Draw`/`*Adapter`.
 **Files touched**: jjform/{multi.ts, nav.ts, index.ts} + 2 test (nuovi), editor-v2/hooks/{multiDraw.ts, multiAdapter.ts} + 1 test (nuovi), abstract/tabs/InstanceManagerTab.tsx, abstract/tabs/instanceManagerTab.scss, docs/discovery/discovery_2026-08-30_slice12bc_multiselect_recursion.md (nuovo), docs/decisions.md (R-FORM-12..14), form-engine-contract.md §5.3 (due copie, md5 identici), docs/claude-code-log.md. Sonde `_tmp_12bc_{measure,q1,verify}.ts` e 4 `.png` (non committate). Commit sorgenti `8fb085d9e`, docs `372512796`, log a parte. **Zero file condivisi** con la sessione parallela (`ff9ee37e4`, `2e176e0e5`, `53f4fc01f`: soli documenti), verificato su `git diff --name-only`.
