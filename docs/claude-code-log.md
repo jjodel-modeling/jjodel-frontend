@@ -2,6 +2,19 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-08-30 — docs(smoke): il README delle sonde, e ogni convenzione con la sua misura
+**Prompt**: «Micro: README delle sonde a schermo», dato in chat e non depositato in `docs/prompts/`. Raccogliere i reperti di metodo delle sonde che si stavano perdendo nei referti: il gotcha `__name`, le convenzioni gia' in uso ricavate dai referti del 30-08 (non inventate), e il precedente del fixture. Scelta dichiarata fra file nuovo e sezione del README esistente. Solo documentazione, zero sorgenti, zero smoke, entry di log nello stesso minuto, pathspec.
+**Files touched**: `frontend/scripts/smoke/README-probes.md` (nuovo, 234 righe) e `frontend/scripts/smoke/README.md` (+4 righe: un rimando in testa e una riga nella tabella dei file). **Zero sorgenti, zero sonde, zero `src/`.** Scelta: **file separato**, perche' `README.md` documenta lo strumento committato (tre stati, cinque asserzioni, baseline) mentre le sonde sono l'opposto — usa e getta, non committate, per-slice; il rimando evita che il file nuovo resti introvabile.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — nessun file eseguibile toccato, il diff e' due `.md`. Cancelli non pertinenti e non girati; `npm run check:docs` sul log.
+**Out-of-scope changes**: **yes** — `README.md`. Il prompt offriva l'alternativa (file nuovo **o** sezione del README), non entrambi: ho preso il file nuovo e aggiunto 4 righe di rimando al vecchio. Dichiarato qui invece che fatto scivolare nel diff.
+**Layer Impact Report**: not-required (nessun file di §3.1; nulla sotto `src/`)
+**Smoke visivo**: non applicabile — nessuna modifica di resa.
+**Notes**: Due scarti prompt/repo. (1) Il FAIL «selezione per indice su tabella ordinata per nome» e' della sonda **12bc** (referto `slice12bc` §4), non di 2c: il referto 2c non contiene la stringa `FAIL`. Citato corretto. (2) Il gotcha `__name` e' documentato **una volta sola** nei referti (`s1b` §Sonda); l'ho **ri-misurato** con l'esbuild del repo invece di citare una conta non verificabile. Conte che derivano dichiarate con l'ora.
+**Prompt document name**: prompt inline (non depositato) 2026-08-30 18:00
+
 ## 2026-08-30 — feat(jjel): i candidati nominati, e il produttore che ancora non li nomina
 **Prompt**: «Micro: i candidati nominati nell'ambiguita' JjEL», dato in chat e non depositato in `docs/prompts/`. Micro-slice ratificata a valle della Fase 1 di S1b: JjEL gia' DICHIARA l'ambiguita' (rifiuta il binding, registra `{count, sampleClass}`, avvisa); manca il nome dei candidati. Perimetro dichiarato: `jjel/evaluator/context.ts:152-175`, `jjel/evaluator/evaluator.ts:236-245`, `types/jodie.ts:932-937`. La mappa porta i candidati (id + metaclasse + path — il pool JjEL e' `allSubObjects` cross-modello, il path DISTINGUE, misura S1b §5); `kind: 'ambiguous-instance'` li espone; la copy li elenca (primi 5 + «and N more»); warning pedagogico e controllo negativo restano.
 **Files touched**: `jjel/evaluator/context.ts`, `jjel/evaluator/evaluator.ts`, `types/jodie.ts`, `components/Jodie/ChatMessages.tsx`, `jjel/__tests__/ambiguous-instance.test.ts`, `docs/discovery/discovery_2026-08-30_s1b_micro_candidati_jjel.md` (nuovo). Sonde `scripts/smoke/_tmp_s1b_{recon,recon2,jjel_candidates}.ts` e il `.png` (non committate). Commit sorgenti `2b77263e5`, docs a parte, log a parte, tutti con pathspec. **Zero file condivisi** con le due sessioni parallele: S1b Fase 2 e' atterrata a meta' slice (`8b4abecbf`..`dd25b59ce`, quattro file jjscript piu' `ProjectEditor.tsx`) e S2 tiene `jjform/`+`ir/` modificati — verificato su `git status --porcelain` prima di ogni commit.
