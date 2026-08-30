@@ -13,6 +13,7 @@ import { jjelEval } from '../../../jjel';
 import type { JjelValue } from '../../../jjel';
 import { extractAttributeValues } from '../../../jjel/evaluator/modelContext';
 import { AMBIGUOUS_INSTANCES_KEY } from '../../../jjel/evaluator/context';
+import type { AmbiguousInstanceCandidate, AmbiguousInstanceInfo } from '../../../jjel/evaluator/context';
 import { store, LPointerTargetable } from '../../../joiner';
 
 // ============================================
@@ -318,25 +319,49 @@ export function buildEvalContext(context: ExecutionContext): Record<string, Jjel
     // time since the evaluator checks them before context vars). Names shared by
     // 2+ instances are NOT bound and are recorded so the evaluator can emit a
     // 'use the qualified form' warning.
-    const instancesByName = new Map<string, JjelValue[]>();
+    // Grouped by POOL INDEX, not by handle: naming a candidate needs the raw
+    // L-proxy (`rawM1Objects[j]`) for the metaclass and the containment walk,
+    // and the two arrays are index-aligned by construction.
+    const instancesByName = new Map<string, number[]>();
     for (let j = 0; j < allInstancesJjel.length; j++) {
         const h = allInstancesJjel[j] as any;
         const nm = (h && typeof h.name === 'string') ? h.name : '';
         if (!nm) continue;
         const a = instancesByName.get(nm);
-        if (a) a.push(allInstancesJjel[j]); else instancesByName.set(nm, [allInstancesJjel[j]]);
+        if (a) a.push(j); else instancesByName.set(nm, [j]);
     }
-    const ambiguousInstances = new Map<string, { count: number; sampleClass: string | null }>();
+    const ambiguousInstances = new Map<string, AmbiguousInstanceInfo>();
     for (const [nm, a] of instancesByName) {
         if (a.length === 1) {
-            if (!(nm in variables)) variables[nm] = a[0];
+            if (!(nm in variables)) variables[nm] = allInstancesJjel[a[0]];
         } else {
             let sampleClass: string | null = null;
             try {
-                const io = (a[0] as any)?.instanceOf;
+                const io = (allInstancesJjel[a[0]] as any)?.instanceOf;
                 if (io && typeof io.name === 'string') sampleClass = io.name;
             } catch { /* skip */ }
-            ambiguousInstances.set(nm, { count: a.length, sampleClass });
+            // Name them, in pool order. Not truncated here: the cap lives in
+            // `formatAmbiguousCandidates`, and `count` stays the authority on how
+            // many there are. Absent rather than empty when nothing is nameable,
+            // so a reader can tell 'no names available' from 'named nobody'.
+            const candidates: AmbiguousInstanceCandidate[] = [];
+            for (const j of a) {
+                const raw = rawM1Objects[j];
+                let id = '';
+                try { id = (typeof raw?.id === 'string') ? raw.id : ''; } catch { /* skip */ }
+                if (!id) continue;
+                let className: string | null = null;
+                try {
+                    const cn = raw?.instanceof?.name;
+                    if (typeof cn === 'string' && cn) className = cn;
+                } catch { /* skip */ }
+                candidates.push({ id, className, path: buildContainmentPath(raw, nm) });
+            }
+            ambiguousInstances.set(nm, {
+                count: a.length,
+                sampleClass,
+                ...(candidates.length > 0 ? { candidates } : {}),
+            });
         }
     }
     // Thread the ambiguity map to the evaluator (lifted into
@@ -781,6 +806,64 @@ function resolveParentHandle(
     const ownerId = fatherData.father;
     if (typeof ownerId !== 'string' || !ownerId) return null;
     return resolveOrMaterialize(ownerId, instanceById, classByName, fillWorklist);
+}
+
+/** Depth cap on the containment walk. A chain longer than this yields no path at all. */
+const MAX_CONTAINMENT_PATH_DEPTH = 32;
+
+/**
+ * The containment path of an M1 instance, from its model down to itself
+ * (e.g. `Traffic/machine/S0`).
+ *
+ * Written for the ambiguity warning: the pool is `allSubObjects` across EVERY
+ * M1 model, so two instances sharing a name differ by owner or by model far
+ * more often than by metaclass — the path is what actually tells them apart.
+ *
+ * Climbs the same raw 2-hop chain as `resolveParentHandle` (DObject -> DValue
+ * containment slot -> owner DObject) until the father stops being a DValue:
+ * that step is the DModel, and its name opens the path. Owner names are read
+ * through the L-proxy, so an instance whose display name lives in its identity
+ * slot (CLAUDE.md §3.12) reads here the way it reads on screen; an owner with
+ * no readable name contributes its id, which at least still addresses something.
+ *
+ * `leafName` is the name the caller grouped by rather than `rawObj.name`: a
+ * user feature may shadow `name` on the handle (see fillInstanceSlots), and the
+ * path has to end with the name the reader typed.
+ *
+ * Returns null when the chain cannot be walked — no father, a missing lookup
+ * entry, a cycle, or a chain past the cap. The copy then falls back to the
+ * metaclass, then to the id (`formatAmbiguousCandidates`).
+ */
+function buildContainmentPath(rawObj: any, leafName: string): string | null {
+    if (!rawObj || !leafName) return null;
+    const segments: string[] = [leafName];
+    const seen = new Set<string>();
+    let cur: any = rawObj;
+    for (let hop = 0; hop < MAX_CONTAINMENT_PATH_DEPTH; hop++) {
+        let fatherPtr: any;
+        try { fatherPtr = cur?.__raw?.father; } catch { return null; }
+        if (typeof fatherPtr !== 'string' || !fatherPtr) return null;
+        if (seen.has(fatherPtr)) return null;   // a cycle gives no path, never a wrong one
+        seen.add(fatherPtr);
+        let fatherData: any;
+        try { fatherData = (store.getState() as any)?.idlookup?.[fatherPtr]; } catch { return null; }
+        if (!fatherData) return null;
+        // Not a containment slot -> the model. Its name opens the path and the walk is over.
+        if (fatherData.className !== 'DValue') {
+            const rootName = (typeof fatherData.name === 'string') ? fatherData.name : '';
+            return (rootName ? [rootName, ...segments] : segments).join('/');
+        }
+        const ownerId = fatherData.father;
+        if (typeof ownerId !== 'string' || !ownerId) return null;
+        let owner: any;
+        try { owner = LPointerTargetable.fromPointer(ownerId) as any; } catch { return null; }
+        if (!owner) return null;
+        let ownerName: string | null = null;
+        try { if (typeof owner.name === 'string' && owner.name) ownerName = owner.name; } catch { /* skip */ }
+        segments.unshift(ownerName || ownerId);
+        cur = owner;
+    }
+    return null;
 }
 
 /**
