@@ -245,6 +245,39 @@ metà pura in `deleteDraw.ts`. Misure in
 - **Fuori dalla 12d**: la multi-selezione (12b), l'undo/redo oltre a quello che il
   core già offre, l'outline di 10b.
 
+## 5.3 `multi` e `nav` — quello che la slice 12b/12c ha implementato
+
+I due motori puri stanno in `frontend/src/jjform/multi.ts` e `frontend/src/jjform/nav.ts`
+(zero import, come `shape.ts`, `create.ts` e `delete.ts`). L'applicazione al D-graph sta
+in `editor-v2/hooks/multiAdapter`, con la meta' pura in `multiDraw.ts`. Misure in
+`docs/discovery/discovery_2026-08-30_slice12bc_multiselect_recursion.md`.
+
+**La specifica sta in `Instance Node Proposal.dc.html`, Turno 12** — non in
+`CRUD Manager Simulation.dc.html`, che il prompt della slice citava: misurato, quel file
+porta zero occorrenze di `mixed`, `multi`, `12b`, `12c`, con controllo positivo a segnale
+(`openModal` 6, `META` 9) sullo stesso file.
+
+- **Mixed e' dichiarato, mai mediato.** Un campo su cui la selezione non concorda porta
+  `state: 'mixed'`, `value: null` e i valori **distinti**, cosi' la UI stampa
+  «Mixed (Green, Red, Blue)» invece di mostrarne uno e mentire sugli altri.
+- **Non toccato = non scritto.** `bulkPlan` emette eventi per le sole chiavi che l'utente
+  ha davvero scritto. E' cio' che lascia misto un campo misto dopo una scrittura altrove.
+- **Identita' e containment spariscono, con motivo.** Assenti, non disabilitati (R-FORM-14),
+  e la guardia gira due volte: in `multiModel` e di nuovo in `bulkPlan`.
+- **Il toggle ha un terzo stato**: `counts` porta `on`/`off`/`unset`, che e' cio' che
+  stampa «2 on · 1 off». Un booleano mai scritto e' `unset`, non `off`.
+- **Un bulk e' N `setValue`, non un evento nuovo**: 12b non allarga la sezione 5.
+- **Le scritture bulk non sono differite** (R-FORM-12), e la differenza con R-FORM-11 e'
+  misurata, non assunta.
+- **La profondita' e' un numero solo**, `INLINE_DEPTH_LIMIT = 1`: al livello del soggetto
+  i figli contenuti si editano inline, dal secondo in poi il corpo della form e'
+  **sostituito** dal figlio e il breadcrumb tiene la strada. Una form sola, non uno stack.
+- **La delete multipla e' un preflight solo** (`unionPreflight`): i referrer sono l'unione
+  **meno** i puntatori tenuti da chiunque stia morendo, e i candidati di riassegnazione
+  sono l'**intersezione** — il dialogo offre un bersaglio per tutto l'insieme.
+- **Fuori dalla 12b/12c**: il bulk di un multivalore (12b edita un campo, e un campo e' un
+  controllo: letto e scritto in posizione 0), l'outline 10b, il diagramma 13a.
+
 ## Punti aperti — stato al 2026-08-30
 
 1. **La shape si deriva tutta dal joiner senza passare dal renderer?** — **Si', ora.**

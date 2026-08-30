@@ -2276,6 +2276,33 @@ dilazione e' `U.UpdatingTimer * 2`, la stessa che `LValue.addObject` usa per il 
 seeding e che CLAUDE.md §9.2 prescrive. Un piano `dirty` non scrive nulla prima e **non**
 e' differito.
 
+**R-FORM-12** (2026-08-30) — **Le scritture bulk NON sono differite, e la differenza con
+R-FORM-11 e' di natura.** Misurato (`_tmp_12bc_measure.ts`): tre `setValueAtPosition`
+sulla stessa feature di tre istanze diverse, in un solo tick, **0 perse su 3**; le stesse
+dilazionate, identiche. Il pericolo di R-FORM-11 sono **due operazioni su UNO slot** (una
+scrittura posizionale, poi una cascata che rimuove per valore dallo stesso array); un bulk
+sono N operazioni su N slot **distinti**. Un ritardo che nessuno ha misurato e' un ritardo
+che nessuno potra' piu' togliere.
+
+**R-FORM-13** (2026-08-30) — **Il filtro containment-loop sul percorso di EDIT e' del
+core, e non va spostato.** Il picker che `IRForm` monta legge `slot.validTargetOptions` →
+`get_validTargets`, che per un `LValue` e' l'override di `LModelElement.tsx:7871` col
+filtro dentro. Misurato per contrasto su una reference auto-referenziale (`kids : AllNine`
+composition, l'unico modo per cui il contenitore sia candidato **per tipo**): 2 opzioni
+prima della catena, **1 dopo**, il contenitore sparito, il lecito rimasto; su una
+reference dello stesso tipo ma NON containment, 3 opzioni col contenitore offerto.
+`createDraw.candidatesFor` resta quindi **inerte** anche dopo 12b/12c, e sostituirla al
+core sarebbe barattare una garanzia verificata con una nostra. Chiude, misurandola, la
+riga del contratto §6 che dava questo percorso come «quello che l'accendera'».
+
+**R-FORM-14** (2026-08-30) — **Nella multi-form spariscono identita' E containment, e
+sparire vuol dire assenti.** Il design (`Instance Node Proposal.dc.html`, Turno 12, 12b)
+dice «Name and children are hidden», non «disabled»: un controllo grigio invita il gesto
+che poi rifiuta. Le esclusioni portano il **motivo**, scritto. La regola e' applicata
+**due volte**, in `multiModel` e di nuovo in `bulkPlan`: una UI che nasconde un controllo
+e' una convenzione, un piano che non emette l'evento e' una garanzia. Il prompt della
+slice chiedeva la sola identita'; il containment viene dal design, che e' l'autorita'.
+
 ### Perimetro delle slice
 
 **Slice 2a** (2026-08-30, commit `9ab7560d0`) — tab, colonna metaclassi, lista istanze,
@@ -2284,6 +2311,10 @@ e' differito.
 **Slice 2b** — le colonne per-attributo, che e' dove nasce `ShapeCtx` e dove serve la
 risposta a Q4. **Slice 2c** — la sola create (motore `jjform/create.ts` + `createAdapter`).
 **Slice 12d** — la delete col preflight, che la 2c aveva lasciato indietro.
+**Slice 12b/12c** — la multi-selezione (motore `jjform/multi.ts` + `multiDraw`/
+`multiAdapter`) e la ricorsione inline con drill-in (`jjform/nav.ts`). L'inline resta
+**fuori** da `IRFormField`: le form annidate le monta il manager, per la stessa ragione
+per cui la barra «Add contained» non e' un bottone dentro il gruppo children.
 ~~il cascade canonico gia' cancella i contenuti (`Dummy.get_delete`) e non chiede~~ —
 **falso, misurato il 2026-08-30**: vedi R-FORM-9. **Fuori dalla Fase 2**: l'estrazione in
 `jjform/` (aspetta il contratto META) e il diagramma scopato.
