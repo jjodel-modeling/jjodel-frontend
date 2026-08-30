@@ -2375,6 +2375,66 @@ per cui la barra «Add contained» non e' un bottone dentro il gruppo children.
 **falso, misurato il 2026-08-30**: vedi R-FORM-9. **Fuori dalla Fase 2**: l'estrazione in
 `jjform/` (aspetta il contratto META) e il diagramma scopato.
 
+## Serie R-S1 — una regola di uniqueness del nome M1 (ratifiche 2026-08-30)
+
+A valle del censimento `discovery_2026-08-30_s1_uniqueness_consumatori.md`, che aveva fermato
+la slice: cinque consumatori vivi risolvono un'istanza M1 per nome in modo class-agnostic, e le
+due regole in campo non erano annidate ma **ortogonali**. La scelta e' risalita al design.
+
+**R-S1-1** (2026-08-30) — **Il namespace e' quello del CORE: i fratelli dello stesso padre,
+qualunque sia la loro metaclasse.** Radice (padre = `DModel`) -> `allSubObjects`; nidificato
+(padre = la `DValue` del containment) -> gli `LObject` dello stesso slot. E' la regola che
+`nameUniqueness.getSiblingNamespace` gia' applicava al rename, al reparent e al badge, ed e'
+quella che resta: restringerla a 12a avrebbe **spento** un controllo committato e reso a schermo
+(Regola 3 di CLAUDE.md).
+
+**R-S1-2** (2026-08-30) — **Un solo verdetto, `{ok, reason}`, collocato dove entrambe le vie lo
+attraversano.** `nameUniqueness.checkNameUniqueness({father, name, excludeId?})` e' la funzione;
+la risoluzione del namespace e' espressa sul **padre** (`getNamespaceOf`) e non su un'istanza
+esistente, perche' una create l'istanza non ce l'ha ancora. `LObject.set_name` e
+`LObject.set_father` ne diventano **consumatori** a comportamento invariato (stessa frase a
+schermo), e la create smette di saltarla. Il punto d'ingresso e' `LValue.get_addObject`
+(`LModelElement.tsx:7035`), misurato e non assunto: e' definita una volta e serve **entrambi** i
+ricevitori — `LModel.addObject` per una radice, `LValue.addObject` per un contenuto — e sta nello
+stesso file di `set_name`. **Non** e' `DObject.new`/`new3`: da li' passa anche il caricamento
+(import, seeding di `ProjectEditor`, fixture), e rifiutare li' vorrebbe dire che un modello con
+duplicati preesistenti non si apre. Il gate vale sul nome **esplicito**: senza, `new3` calcola
+l'auto-nome con `defaultname`, il cui namespace per un nidificato e' **vuoto** (`LValue` non
+sovrascrive `get_children_idlist`), e gatarlo rifiuterebbe la seconda `Add` di un containment.
+La forma `{ok, reason}` anticipa `WriteResult` di S2 senza implementarlo.
+
+**R-S1-3** (2026-08-30) — **12a e' emendata: il motore form cede la sua regola per-classe.**
+Lo scope «stessa metaclasse, stesso owner» di `createDraw.siblingNames` era **ortogonale** a
+quello del core, non piu' stretto: ciascuno accetta cio' che l'altro rifiuta (§3 del censimento).
+`createAdapter.draftContext` risolve ora il **padre prospettico** e passa il namespace del core a
+`jjform.validateDraft`, che resta una **consumatrice** — la validazione anticipata nel draft e' li'
+perche' un draft deve dire NO prima che l'utente prema Create, non dopo, e non e' un secondo
+verdetto. Il messaggio non nomina piu' la metaclasse (`An element named «X» already exists here`),
+perche' descriverebbe uno scope che la regola non ha piu'. `createDraw.siblingNames` resta in file
+come query per-classe e **non va ricablata** in un controllo di uniqueness.
+
+**R-S1-4** (2026-08-30) — **La (B) globale e' respinta, e i duplicati preesistenti non si
+riscrivono mai.** Lo scope del pool `allSubObjects` di ogni modello M1 — quello che il binding di
+JjEL assume — chiuderebbe tutti e cinque i consumatori ma e' il vincolo **piu' stretto
+sull'utente**: vieterebbe due `Member` chiamati `John` in due `Family` diverse, che e' un modello
+legittimo in Families.ecore. Nessuna migrazione: i duplicati gia' nel modello si aprono, si
+leggono e si **dichiarano al primo tocco** (`detectDuplicateNames` li segnala gia' oggi), mai una
+riscrittura silenziosa del nome.
+
+**Perimetro di S1a, e cosa resta a S1b.** S1a cabla: il core, il rename, il reparent, la create
+via `addObject` (manager/2c, ContextMenu, drop classico, singleton, `examples/`), il draft del
+manager, il badge. **Restano dichiarate e non chiuse**, e sono il ramo di S1b: le tre create che
+chiamano `DObject.new` direttamente — `jjscript/executor/commands/instance.ts`, il seeding di
+`components/project/ProjectEditor.tsx`, `canvasToJjom.syncCreateObject` — piu' il ramo di
+ambiguita' dei consumatori (`findInstanceByName`, `eval.ts`). E resta fuori l'auto-nome
+(`defaultname`), che serve anche M2. Misurato a schermo, `_tmp_s1a_verify.ts`, **ALL GREEN, zero
+errori di pagina**: i due contro-esempi dell'ortogonalita' danno verdetto **identico** su create e
+rename (stesso slot classi diverse -> entrambi rifiutano; stessa classe due slot dello stesso owner
+-> entrambi accettano), il caso divergente originale non e' piu' costruibile, e il badge continua ad
+accendersi sul duplicato preesistente. Referto:
+`docs/discovery/discovery_2026-08-30_s1a_una_funzione_uniqueness.md`.
+
+
 ## Superate
 
 - **D3** (2026-07-26, routing congelato in v1) — superata da E-route il 2026-08-06.
