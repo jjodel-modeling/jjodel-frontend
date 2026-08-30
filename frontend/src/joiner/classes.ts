@@ -938,7 +938,30 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
             switch (thiss.className) {
                 default:
                 case 'DReference':
-                    type = this.fatherPtr as Pointer<DClass> || undefined;
+                    // Two different situations share this branch, and they must not share
+                    // the value. `requested === undefined` is the seed used as intended —
+                    // the Ecore parser constructs with no type and field-writes `.type`
+                    // right after — and keeps the father it has always kept.
+                    // A DECLARED REJECTION (the caller asked for an enum or a datatype, and
+                    // the switch above refused it because a reference must point at a class)
+                    // used to keep the father too, which made the reference point at its own
+                    // container: a target nobody asked for, wrong in the export as much as
+                    // on the canvas. It gets the weakest target instead — the m3 `EObject`,
+                    // which is what EMF itself writes for an unspecified reference target.
+                    // Measured, not assumed (docs/discovery/discovery_2026-08-30_dref_seed_rifiutata.md):
+                    // the absent values the D-graph does tolerate (undefined/null/'') are
+                    // undone one layer up by `LTypedElement.get_type`, which re-substitutes
+                    // the father for every falsy `data.type` — so every consumer that reads
+                    // through a proxy (Ecore export, JSON, canvas, validation) would go on
+                    // seeing the container. `Pointer_EOBJECT` is a real classifier, so it
+                    // survives `get_type` untouched, and its Ecore round-trip is stable.
+                    // Scoped to DReference on purpose: this branch is also the `default`
+                    // for any other className, and widening it there is not what was
+                    // measured. Same set the `Log.ww` above declares — a refused type and
+                    // an unresolvable one are both "the caller asked, and did not get it".
+                    type = (requested !== undefined && thiss.className === 'DReference')
+                        ? Defaults.Pointer_EOBJECT
+                        : (this.fatherPtr as Pointer<DClass> || undefined);
                     break;
                 case 'DOperation':
                     type = this.fatherPtr as Pointer<DClass>;

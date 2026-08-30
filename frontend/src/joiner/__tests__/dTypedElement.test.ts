@@ -23,6 +23,7 @@ import path from 'path';
 const CLASSES_TS = path.resolve(__dirname, '../classes.ts');
 const DATA_TS = path.resolve(__dirname, '../../api/data.ts');
 const CREATE_TS = path.resolve(__dirname, '../../jjscript/executor/commands/create.ts');
+const DEFAULTS_TS = path.resolve(__dirname, '../../common/Defaults.ts');
 
 const source = fs.readFileSync(CLASSES_TS, 'utf8');
 
@@ -89,6 +90,45 @@ describe('DTypedElement — il fallback e\' dichiarato', () => {
         const overwrite = body.indexOf('type = undefined');
         expect(capture).toBeGreaterThan(-1);
         expect(capture, 'requested va catturata prima che lo switch azzeri type').toBeLessThan(overwrite);
+    });
+});
+
+describe('DTypedElement — il seed di una DReference rifiutata', () => {
+    // Il rifiuto (enum o datatype su una reference) e il tipo irrisolvibile condividono
+    // il ramo del seed con `type === undefined`, che e' il contratto del parser Ecore.
+    // I due casi non devono condividere il valore: vedi
+    // docs/discovery/discovery_2026-08-30_dref_seed_rifiutata.md.
+
+    it('non da\' piu\' il padre a chi un tipo lo aveva chiesto', () => {
+        const body = typedElementBody();
+        // Il padre resta raggiungibile, ma non piu' da solo: la riga che lo assegna
+        // e' ora condizionata.
+        expect(body).not.toMatch(/case 'DReference':\s*\n(\s*\/\/[^\n]*\n)*\s*type = this\.fatherPtr as Pointer<DClass> \|\| undefined;/);
+    });
+
+    it('il rifiuto prende il bersaglio piu\' debole, mai il contenitore', () => {
+        expect(typedElementBody()).toMatch(/requested !== undefined && thiss\.className === 'DReference'\)?\s*\n?\s*\?\s*Defaults\.Pointer_EOBJECT/);
+    });
+
+    it('EOBJECT e\' il puntatore canonico, non una stringa scritta a mano', () => {
+        // `Defaults.Pointer_EOBJECT` e' la stessa costante con cui `redux/store.tsx`
+        // crea la metaclasse m3: se cambia li', deve cambiare qui.
+        expect(fs.readFileSync(DEFAULTS_TS, 'utf8')).toMatch(/static Pointer_EOBJECT: Pointer<DClass> = 'Pointer_EOBJECT';/);
+        expect(typedElementBody()).not.toMatch(/'Pointer_EOBJECT'/);
+    });
+
+    it('il seed di `undefined` resta il padre, e resta muto', () => {
+        // Il contratto del parser Ecore: nessun tipo chiesto, nessun avviso, il seed di
+        // sempre. E' uno dei due invarianti che questa slice non poteva toccare.
+        const body = typedElementBody();
+        expect(body).toMatch(/:\s*\(this\.fatherPtr as Pointer<DClass> \|\| undefined\)/);
+        expect(body).toMatch(/if \(requested !== undefined\) Log\.ww\(/);
+    });
+
+    it('non allarga il ramo `default` agli altri typed element', () => {
+        // `default:` cade in `case 'DReference':`. La condizione nomina la className
+        // proprio per non cambiare il seed di chi non e' una reference.
+        expect(typedElementBody()).toMatch(/thiss\.className === 'DReference'/);
     });
 });
 
