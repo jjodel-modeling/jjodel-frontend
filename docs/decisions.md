@@ -2025,6 +2025,37 @@ superficie di testo dell'autore contro superficie renderizzata — e (C) contrad
 del prompt. Il costo di (A) e' il confine dichiarato qui sopra, ed e' esattamente cio' che
 separa (A) da (B). Chi voglia (B) trovi nei due referti che cosa costa.
 
+**R-STR-6 (B)** (2026-08-30, Alfonso) — **Il compartimento IR e' una superficie RESA, non
+testo d'autore.** Ratifica di design che scioglie la product decision che i due referti di (A)
+avevano messo a registro, e chiude il costo dichiarato di (A): il segmento `value` di
+`IRNodeContent` passa per la **ladder completa** di `detectValueRenderer`, la stessa chiamata
+del ramo nativo, cosi' i due rami non possono divergere su come si vede un valore. La resa
+piatta di prima era **il buco**, non la baseline da proteggere — e' il design del Livello 3
+(`Instance Node Proposal`).
+
+**Blast radius contato prima del diff**, che e' il dato che questa ratifica aspettava:
+**24 righe su 24**, cioe' il 100% del campione (12 feature x 2 istanze su `AllNine` con il
+viewpoint IR Demo). Per gradino: tipo 12, ladder colore/enum 4, nome/pavimento 4, gradino 1
+(annotazione) 2, guardia di stato 2. Il 100% e' vero e va letto per quello che e': oggi quel
+segmento non rende NULLA della libreria, quindi cambia ogni riga che la libreria sappia
+disegnare. Non e' il 100% dei progetti reali — e' il 100% dell'unico campione di view IR che
+il repo contiene (i tre stati di `npm run smoke` sono progetti vuoti). Il limite e' dichiarato
+in §1 del referto, non aggirato. Riverificato dopo il diff con la stessa sonda: righe che
+cambiano **0**, e i renderer distinti sul ramo IR passano da `["none"]` a nove.
+
+**Nessun feature flag e nessuna chiave IR nuova.** Il flag era ammesso «se serve prudenza»,
+per un giro: non usato, perche' acceso cambia tutto lo stesso e spento spedirebbe al buio
+proprio cio' che si chiedeva di chiudere; la prudenza che comprerebbe l'ha gia' comprata la
+misura, e il rollback e' il revert di un commit solo. La scelta resa/testo **non e' per-view**,
+quindi non c'e' chiave da persistere e la questione del VersionFixer (R-B9) non si pone.
+
+**Il motore non e' stato toccato**: l'ordine dei gradini resta quello scritto da (A) in
+`detectValueRenderer` (guardie di stato -> gradino 0 -> gradino 1 -> tipo -> nome), e il diff
+si limita a farlo arrivare a schermo togliendo una condizione al ponte. Referto:
+`docs/discovery/discovery_2026-08-30_rstr6b_full_ladder.md`. Verifica 16/16, con il test che
+(A) non poteva passare: `guard` (`@renderer=code`) rende `code` su **entrambi** i rami, e il
+Reset di un override torna al **gradino 1**, non al testo.
+
 **R-STR-5 e' superata nella sua delimitazione**, non nella sua lettura di `FormSpec`: la
 copy dell'inspector che la incarnava — tag «winning rule **in the form**» e inciso «· on the
 canvas» — e' rimossa, perche' esisteva per tenere distinte due risposte che ora coincidono.
