@@ -5,10 +5,11 @@
  * slice 2c added the CREATE half of the engine (`create.ts`), slice 12d the
  * DELETE half (`delete.ts`), and slice 12b/12c the MULTI-SELECTION (`multi.ts`)
  * and the depth/breadcrumb rule (`nav.ts`) — all pure for the reason the shape
- * is. Slice S2 added `write.ts`, the RESULT type of a write: the one piece of
- * `WriteCtx` a caller can consume before the interface itself exists. What still
- * waits on `WriteCtx` is the rest of the write side — the per-field `set` — and
- * the open questions of `form-engine-contract.md`.
+ * is. Slice S2 added `write.ts`, the RESULT type of a write, and slice S4
+ * `writeCtx.ts` — the six write primitives themselves, the contract an adapter
+ * implements so the engine can write without knowing what it is writing into. What
+ * still waits is `validTargets` (S5, the per-instance picker filter of R-FORM-13)
+ * and the open questions of `form-engine-contract.md`.
  *
  * Invariant, checked by reading and by the module having nothing to import:
  * nothing under `jjform/` imports from `joiner/`, `redux/`, `react` or
@@ -64,7 +65,9 @@ export type {
     ReferrerInput,
 } from './delete';
 
-export { deletePlan, deletePreflight, deleteVerdict } from './delete';
+export type { PlanWriteOutcome, PlanWriteRefusal } from './delete';
+
+export { applyPlanWrites, deletePlan, deletePreflight, deleteVerdict } from './delete';
 
 export type {
     BulkSetValue,
@@ -83,6 +86,8 @@ export { IDENTITY_KEY, bulkExclusionReason, bulkPlan, multiModel, unionPreflight
 export type { WriteResult } from './write';
 
 export { writeDone, writeRefused, writeUnchanged } from './write';
+
+export type { CreateResult, WriteCtx, WriteValue } from './writeCtx';
 
 export type { Crumb, NavState, NavStep } from './nav';
 

@@ -8,10 +8,13 @@
  *
  * -- The invariant of this directory, restated --------------------------------
  *
- * ZERO imports beyond the sibling TYPES of `shape.ts`. Same rule as `shape.ts`
- * and `create.ts`, same reason: one import from `joiner/` would drag monaco and
- * `window` behind it and end the portability. Everything here is a function of
- * plain records; the D graph lives on the other side of the adapter.
+ * ZERO imports beyond the sibling TYPES of `shape.ts`, and since S4 of `writeCtx.ts`
+ * / `write.ts` - the write CONTRACT, which is an interface and a record type, not a
+ * host. Same rule as `shape.ts` and `create.ts`, same reason: one import from
+ * `joiner/` would drag monaco and `window` behind it and end the portability.
+ * Everything here is a function of plain records; the D graph lives on the other
+ * side of the adapter, and `applyPlanWrites` reaches it only through the `WriteCtx`
+ * its caller hands in.
  *
  * -- ONE event, three verdicts ------------------------------------------------
  *
@@ -60,6 +63,8 @@
  */
 
 import type { ClassShape, MetamodelShape } from './shape';
+import type { WriteCtx } from './writeCtx';
+import type { WriteResult } from './write';
 import { multiplicity } from './shape';
 
 /** One option of the reassign select - an instance, by name. */
@@ -343,4 +348,79 @@ export function deletePlan(pre: DeletePreflight, options: DeleteOptions = {}): D
         deletes,
         invalidates: pre.referencedBy.filter(r => r.wouldBreak),
     };
+}
+
+// -- Applying the plan's WRITES, through a WriteCtx ----------------------------
+
+/** One step the host refused, with the host's own words. Kept as data rather than
+ *  logged here: this module has nothing to log to, and the adapter that does is the
+ *  one that knows which console the user is looking at. */
+export interface PlanWriteRefusal {
+    /** Which half of the plan the step came from. */
+    kind: 'reassign' | 'clear';
+    instanceId: string;
+    featureKey: string;
+    index: number;
+    /** The host's `reason`, absent when the host gave none. */
+    reason?: string;
+}
+
+/** What `applyPlanWrites` did. Counted per STEP, because a plan step is a pointer
+ *  (R-FORM-8) and two pointers of the same referrer are two independent outcomes. */
+export interface PlanWriteOutcome {
+    /** Steps whose write reported a change. */
+    written: number;
+    /** Steps whose value was already the one asked for: no write, no failure. */
+    unchanged: number;
+    /** Steps the host refused. Empty is the normal case. */
+    refused: PlanWriteRefusal[];
+}
+
+/**
+ * Apply the WRITES of a plan — the reassigns, then the clears — through `ctx`.
+ *
+ * The deletes are NOT here, and that is the whole reason this function stops where
+ * it does. In this host they are deferred by `U.UpdatingTimer * 2` whenever the plan
+ * wrote first (R-FORM-11), because issued in the same tick a positional write and a
+ * cascade that removes by value from the same array land in the wrong order and a
+ * value is lost — measured, `scripts/smoke/_tmp_instance_manager_12d.ts`. That
+ * deferral is a number of this host, so it stays in the adapter; what belongs to the
+ * contract is the OBLIGATION it satisfies — each step observable by the next — and
+ * the ORDER, which is here.
+ *
+ * The order is load-bearing: the writes on the referrers come first, while the
+ * pointers still resolve, and reassigns come before clears so a slot that is both
+ * repointed and cleared ends up cleared, as the plan intends. A reassign performed
+ * after the delete would repoint a slot the core's own cascade had already emptied.
+ *
+ * Nothing is re-decided. The plan is applied as given: a second verdict computed
+ * here could disagree with the one the user is looking at, and the confirm button is
+ * exactly where the two must be the same.
+ *
+ * `blocked` plans write nothing — the same guard the adapter already applies, kept
+ * here too so an adapter that forgets it cannot half-apply a plan the preflight
+ * refused.
+ */
+export function applyPlanWrites(ctx: WriteCtx, plan: DeletePlan): PlanWriteOutcome {
+    const out: PlanWriteOutcome = { written: 0, unchanged: 0, refused: [] };
+    if (!plan || plan.blocked) return out;
+
+    const tally = (kind: 'reassign' | 'clear', step: { instanceId: string; featureKey: string; index: number }, r: WriteResult): void => {
+        // The three addressing fields, named rather than spread: a `ReassignStep` also
+        // carries `to`, and a refusal that echoed the target back would be describing the
+        // write that did NOT happen.
+        if (!r.ok) out.refused.push({ kind, instanceId: step.instanceId, featureKey: step.featureKey, index: step.index, reason: r.reason });
+        else if (r.changed) out.written++;
+        else out.unchanged++;
+    };
+
+    // `isPtr: true` on both: every step of a plan is an incoming POINTER at the
+    // instance being deleted, which is what a referrer is.
+    for (const step of plan.reassign) {
+        tally('reassign', step, ctx.setValue(step.instanceId, step.featureKey, step.index, step.to, true));
+    }
+    for (const step of plan.clear) {
+        tally('clear', step, ctx.clearValue(step.instanceId, step.featureKey, step.index, true));
+    }
+    return out;
 }

@@ -41,14 +41,15 @@
  * -- No outer TRANSACTION ------------------------------------------------------
  *
  * `LPointerTargetable.get_delete` opens its own (`joiner/classes.ts:2529`), and so
- * does every `formWrite` helper used here. Nothing in this file opens one:
+ * does every `formWrite` helper this file reaches - since S4, through the `WriteCtx`
+ * of `writeCtxLproxy` rather than by importing them. Nothing in this file opens one:
  * wrapping the calls would nest the writes of a cascade inside a single
  * transaction, which is the hazard of CLAUDE.md rule 12 / section 3.3. The cost is
  * that an undo undoes one step at a time, which is the granularity the core
  * already offers everywhere else (12d leaves undo alone by scope).
  */
 
-import { LPointerTargetable, store, U } from '../../../joiner';
+import { store, U } from '../../../joiner';
 import type {
     ClassShape,
     DeleteOption,
@@ -56,12 +57,12 @@ import type {
     DeletePreflight,
     MetamodelShape,
 } from '../../../jjform';
-import { deletePreflight } from '../../../jjform';
-import { clearSlotValue, setSlotValue } from '../viewpoint/ir/formWrite';
+import { applyPlanWrites, deletePreflight } from '../../../jjform';
 import { candidatesFor } from './createDraw';
 import { conformanceClassIds } from './createAdapter';
 import { descendantsOf, referrerInputs } from './deleteDraw';
 import { makeDrawReadCtx } from '../viewpoint/ir/irReadCtx';
+import { deleteInstance, makeWriteCtx } from './writeCtxLproxy';
 
 type Idlookup = Record<string, any>;
 
@@ -136,20 +137,19 @@ export function preflightFor(
 export { deletePlan } from '../../../jjform';
 
 /** The cascade itself: one `.delete()` per id, in the order the plan fixed.
- *  Split out because it is what the deferral below schedules. */
+ *  Split out because it is what the deferral below schedules.
+ *
+ *  Since S4 the single delete is `writeCtxLproxy.deleteInstance`, the `delete`
+ *  primitive of `WriteCtx` — the same body that used to sit in this loop, with its
+ *  two silent `continue`s turned into verdicts. The count is unchanged: only a delete
+ *  that reported `changed` is counted, which is exactly the branch that used to reach
+ *  `deleted++`. */
 function runDeletes(ids: string[]): number {
     let deleted = 0;
     for (const id of ids) {
-        if (!(store.getState() as any)?.idlookup?.[id]) continue;
-        try {
-            const proxy: any = LPointerTargetable.fromPointer(id);
-            if (!proxy) continue;
-            // No outer TRANSACTION: `get_delete` opens its own.
-            proxy.delete();
-            deleted++;
-        } catch (err) {
-            console.warn('[deleteAdapter] applyDelete failed', { id, err });
-        }
+        const r = deleteInstance(id);
+        if (r.ok && r.changed) deleted++;
+        else if (!r.ok) console.warn('[deleteAdapter] applyDelete refused', { id, reason: r.reason });
     }
     return deleted;
 }
@@ -188,30 +188,20 @@ function runDeletes(ids: string[]): number {
 export function applyDelete(plan: DeletePlan): number {
     if (!plan || plan.blocked) return 0;
 
-    for (const step of plan.reassign) {
-        const lOwner: any = LPointerTargetable.fromPointer(step.instanceId);
-        const slot: any = lOwner?.['$' + step.featureKey];
-        if (!slot) {
-            console.warn('[deleteAdapter] applyDelete: reassign slot not found', step);
-            continue;
-        }
-        const r = setSlotValue(slot, step.index, step.to, true);
+    // S4: the WRITES of the plan — reassigns then clears, in that order — are applied
+    // by the pure engine through this host's `WriteCtx`. The loops that used to stand
+    // here resolved `lOwner['$' + key]` themselves and then called `formWrite`; the ctx
+    // resolves the same expression, at the same moment, in `formWrite.setValue`. What
+    // moved is who holds the loop, not what the loop does. The DELETES stay here: they
+    // carry a deferral that is a number of this host (R-FORM-11), and the contract
+    // takes the obligation, not the milliseconds.
+    const outcome = applyPlanWrites(makeWriteCtx(), plan);
+    for (const r of outcome.refused) {
         // The plan is applied in order and each step must be observable by the next
         // (R-FORM-11): a reassign the host refuses leaves a referrer pointing at what is
         // about to be deleted, and until S2 that refusal was invisible. Reported with the
         // host's own reason; the plan is NOT re-decided here, for the reason above.
-        if (!r.ok) console.warn('[deleteAdapter] applyDelete: reassign refused', { step, reason: r.reason });
-    }
-
-    for (const step of plan.clear) {
-        const lOwner: any = LPointerTargetable.fromPointer(step.instanceId);
-        const slot: any = lOwner?.['$' + step.featureKey];
-        if (!slot) {
-            console.warn('[deleteAdapter] applyDelete: clear slot not found', step);
-            continue;
-        }
-        const r = clearSlotValue(slot, step.index, true);
-        if (!r.ok) console.warn('[deleteAdapter] applyDelete: clear refused', { step, reason: r.reason });
+        console.warn(`[deleteAdapter] applyDelete: ${r.kind} refused`, r);
     }
 
     if (plan.reassign.length === 0 && plan.clear.length === 0) return runDeletes(plan.deletes);

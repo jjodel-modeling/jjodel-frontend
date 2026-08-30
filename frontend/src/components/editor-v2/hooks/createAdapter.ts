@@ -58,7 +58,7 @@
 import { LPointerTargetable, store, U } from '../../../joiner';
 import type { LModelElement } from '../../../joiner';
 import { getNamespaceOf } from '../../../model/logicWrapper/nameUniqueness';
-import type { AttrShape, ClassShape, Draft, DraftContext, DraftOption, MetamodelShape } from '../../../jjform';
+import type { AttrShape, ClassShape, CreateResult, Draft, DraftContext, DraftOption, MetamodelShape } from '../../../jjform';
 import { draftableAttrs, draftableRefs } from '../../../jjform';
 import { candidatesFor, childCount, containmentChain } from './createDraw';
 import { getMetaclassInfo, type MetaclassInfo } from './useEditorMode';
@@ -213,6 +213,73 @@ function typedValue(attr: AttrShape, raw: string): string | number | boolean {
 }
 
 /**
+ * Create ONE instance — the `create` primitive of `WriteCtx` (S4), on this host.
+ *
+ * Split out of `applyCreate` unchanged: same `addObject`, same arguments, same
+ * `forceCreation: true`, same absence of an outer TRANSACTION. What the split buys is
+ * that the primitive now has the contract's SHAPE — `(cls, ownerId|null,
+ * childKey|null, seed)` returning a `CreateResult` — so `writeCtxLproxy` can hand it
+ * to the engine without a translation layer in between, and `applyCreate` above stays
+ * what it was: the draft's translator.
+ *
+ * `seed` carries BARE feature keys. The `$`-prefixing is this host's, and it happens
+ * here: `:7157` reads a `$` key as «slot, and only slot». `name` is the one exception
+ * and passes bare, so the same string reaches `DObject.name` through the
+ * `{...json, father}` spread AND the identity slot — the double binding of §3.12, from
+ * the one place that can write both at once. A caller that does not want the name
+ * bound simply does not put `name` in the seed.
+ */
+export function createInstance(
+    modelId: string,
+    className: string,
+    ownerId: string | null,
+    childKey: string | null,
+    seed: Readonly<Record<string, string | number | boolean>>,
+): CreateResult {
+    const classId = classIdOf(modelId, className);
+    if (!classId) return { ok: false, id: null, reason: `metaclass "${className}" is not in this model` };
+
+    const json: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(seed ?? {})) {
+        if (key === 'name') json.name = value;
+        else json['$' + key] = value;
+    }
+
+    try {
+        let created: any = null;
+        if (ownerId && childKey) {
+            const lOwner: any = LPointerTargetable.fromPointer(ownerId);
+            // `$key` is the documented slot accessor (CLAUDE.md §9.1) and the one
+            // `addObject` itself uses when it seeds values. `features` is the
+            // fallback for a slot the accessor does not resolve.
+            const slot: any = lOwner?.['$' + childKey]
+                ?? (lOwner?.features ?? []).find((f: any) => f?.name === childKey);
+            if (!slot) {
+                console.warn('[createAdapter] applyCreate: child slot not found', { ownerId, childKey });
+                return { ok: false, id: null, reason: `feature "${childKey}" is not on this object` };
+            }
+            // No outer TRANSACTION: addObject opens its own around DObject.new3.
+            created = slot.addObject(json, classId, true);
+        } else {
+            const lModel: any = LPointerTargetable.fromPointer(modelId);
+            if (!lModel) return { ok: false, id: null, reason: 'model not found' };
+            created = lModel.addObject(json, classId, true);
+        }
+
+        if (!created?.id) {
+            console.warn('[createAdapter] applyCreate: addObject returned no instance', { className, ownerId, childKey });
+            return { ok: false, id: null, reason: 'the host created no instance' };
+        }
+        U.isProjectModified = true;
+        return { ok: true, id: created.id as string };
+    } catch (err) {
+        console.warn('[createAdapter] applyCreate failed', { className, ownerId, childKey, err });
+        const message = (err as { message?: unknown })?.message;
+        return { ok: false, id: null, reason: typeof message === 'string' ? message : undefined };
+    }
+}
+
+/**
  * Apply a validated draft to the D graph. Returns the new instance's id, or null.
  *
  * The caller validates first: this function does NOT re-run `validateDraft`, on
@@ -220,6 +287,12 @@ function typedValue(attr: AttrShape, raw: string): string | number | boolean {
  * disagree with the one the user is looking at, and the commit button is the place
  * where the two must be the same. What it does check is the shape of its own
  * arguments, because a missing owner slot is a bug here, not a user error.
+ *
+ * Since S4 the write itself is `createInstance` above, and this function is what it
+ * always was underneath: the translation of a DRAFT — untouched fields dropped,
+ * strings typed by the attribute's type — into the seed the primitive takes. The
+ * translation is shape-driven and stays here, next to the draft; the write is the
+ * contract's and is one call away.
  */
 export function applyCreate(
     modelId: string,
@@ -228,55 +301,21 @@ export function applyCreate(
 ): string | null {
     const cls: ClassShape | undefined = shape?.classes?.[draft?.cls];
     if (!cls) return null;
-    const classId = classIdOf(modelId, cls.key);
-    if (!classId) return null;
 
-    // The json the seeding loop of `addObject` reads. `$`-prefixed everywhere but
-    // `name`, which has to reach `DObject.name` as well — see the header.
-    const json: Record<string, unknown> = {};
-    const hasNameAttr = cls.attrs.some(a => a.key === 'name');
+    // The seed the create carries. `name` is included only when the metaclass
+    // actually declares the attribute — `draftableAttrs` reads `cls.attrs`, so a
+    // class without it never offers the field and never reaches this line.
+    const seed: Record<string, string | number | boolean> = {};
     for (const a of draftableAttrs(cls)) {
         const raw = (draft.values[a.key] ?? '').trim();
         if (!raw) continue;                       // an untouched field writes nothing
-        if (a.key === 'name' && hasNameAttr) json.name = raw;
-        else json['$' + a.key] = typedValue(a, raw);
+        seed[a.key] = typedValue(a, raw);
     }
     for (const r of draftableRefs(cls)) {
         const target = (draft.refs[r.key] ?? '').trim();
-        if (target) json['$' + r.key] = target;
+        if (target) seed[r.key] = target;
     }
 
-    try {
-        let created: any = null;
-        if (draft.ownerId && draft.childKey) {
-            const lOwner: any = LPointerTargetable.fromPointer(draft.ownerId);
-            // `$key` is the documented slot accessor (CLAUDE.md §9.1) and the one
-            // `addObject` itself uses when it seeds values. `features` is the
-            // fallback for a slot the accessor does not resolve.
-            const slot: any = lOwner?.['$' + draft.childKey]
-                ?? (lOwner?.features ?? []).find((f: any) => f?.name === draft.childKey);
-            if (!slot) {
-                console.warn('[createAdapter] applyCreate: child slot not found', {
-                    ownerId: draft.ownerId, childKey: draft.childKey,
-                });
-                return null;
-            }
-            // No outer TRANSACTION: addObject opens its own around DObject.new3.
-            created = slot.addObject(json, classId, true);
-        } else {
-            const lModel: any = LPointerTargetable.fromPointer(modelId);
-            if (!lModel) return null;
-            created = lModel.addObject(json, classId, true);
-        }
-
-        if (!created?.id) {
-            console.warn('[createAdapter] applyCreate: addObject returned no instance', { draft });
-            return null;
-        }
-        U.isProjectModified = true;
-        return created.id as string;
-    } catch (err) {
-        console.warn('[createAdapter] applyCreate failed', { draft, err });
-        return null;
-    }
+    const result = createInstance(modelId, cls.key, draft.ownerId ?? null, draft.childKey ?? null, seed);
+    return result.ok ? result.id : null;
 }
