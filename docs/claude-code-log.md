@@ -2,6 +2,37 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-08-31 — fix(editor-v2): la firma del badge salta le pendenti
+**Prompt**: «Micro: la firma del badge salta le pendenti», dato in chat e non depositato in
+`docs/prompts/`. Applicare il fix (b) ratificato da `discovery_2026-08-31_badge_riconciliazione.md`
+§5: una riga nel `useSelector` di `UniquenessProblemSync`, le chiavi pendenti (non proprie)
+saltate dalla firma. `includePending` resta `false` (R-BDG-2/R-TCK-2, R-GT-2 intatto). Piu' la
+correzione di R-M2U-6 in `decisions.md`, commit docs separato.
+**Files touched**: `frontend/src/components/editor-v2/problems/UniquenessProblemSync.tsx` (la
+riga `hasOwnProperty` piu' la nota in testa, che descriveva il difetto come «ritardo di una
+scrittura»), `docs/decisions.md`, `docs/claude-code-log.md`. Sonda
+`frontend/scripts/smoke/_tmp_badge_fix_verify.ts` (non committata, gitignored). Due commit,
+pathspec; indice verificato vuoto prima, albero coi soli `docs/prompts/*` untracked d'inizio
+sessione — nessuna sessione parallela.
+**Outcome**: ✅ completed
+**Corregge**: 2026-08-30 22:55 (S1-M2, il limite R-M2U-6 «ritardo di una scrittura»)
+**Causa**: c
+**Regressions**: no — le celle D4R/L4R/L4Rn restano a 4 come prima, M1 e M2; controllo negativo
+(2 create con nomi distinti) registro fermo a 0; zero errori di pagina.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessun file di §3.1 toccato, nessun creatore, nessuna
+TRANSACTION, nessuna SetFieldAction: sola lettura sul D-layer dentro un `useSelector`.
+**Smoke visivo**: passato — `_tmp_badge_fix_verify.ts`, M2 e M1, 5 celle per livello, **0 FAIL**.
+Gate a 3 valori: `npm run typecheck` **33** (baseline invariata, conteggio su output completo),
+`npm run build` verde (solo il warning chunk-size preesistente),
+`m2NameUniqueness.test.ts` **39/39**.
+**Notes**: Causa (c): la diagnosi «`idlookup` e' un Proxy che non elenca le pendenti» era
+un'assunzione, falsificata due volte a misura. Test = cella D2 senza poke: registro **2 gia' a
+200 ms**, M2 e M1 (prima: 0 a oltranza); sulla stessa corsa la firma vecchia e' inerte al commit
+(`-1068118749 -> -1068118749`), la nuova cambia. Costo sul diff (150/154 chiavi): M2 0.042
+ms/chiamata contro 0.053, M1 0.0405 contro 0.0395 — pari, come il referto prevedeva.
+**Prompt document name**: prompt inline (non depositato) 2026-08-31 00:57
+
 ## 2026-08-31 — docs(discovery): il ritardo del badge, riconciliato in una corsa
 **Prompt**: «Riconciliazione: il ritardo del badge, due misure opposte», dato in chat e non
 depositato in `docs/prompts/`. Le due misure del 31-08 sullo stesso scenario con esiti opposti —

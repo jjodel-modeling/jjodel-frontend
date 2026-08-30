@@ -2669,14 +2669,28 @@ e la firma di reattivita' di `UniquenessProblemSync` smette di scartare tutto ci
 e' `DObject`. Misurato: i quattro `Concept_0` della propagazione accendono **4** voci sulle
 quattro classi giuste; un metamodello pulito lascia il registro spento.
 
-Due limiti **dichiarati e non chiusi**, entrambi misurati:
-- **Il ritardo di una scrittura.** La firma legge l'**enumerazione** di `state.idlookup`, e
-  `idlookup` e' un Proxy la cui `get` risolve una create pendente ma la cui enumerazione
-  **non la elenca** (`Object.keys` invariato, colpo diretto per id positivo). Un lotto di
-  create nello stesso tick lascia quindi la firma stantia finche' non arriva **un'altra**
-  notifica: il registro si accende una scrittura dopo, non mai (misurato: 0 dopo 9 s, 4
-  all'istante della scrittura successiva). Preesistente e indipendente dal livello — la
-  meta' M1 legge la stessa firma.
+Due limiti dichiarati. Il primo e' **chiuso il 2026-08-31**; il secondo resta aperto.
+
+- **La notifica mancata** (era: «il ritardo di una scrittura»). ~~`idlookup` e' un Proxy la
+  cui enumerazione non elenca una create pendente~~ — **diagnosi falsificata**: `idlookup` e'
+  un oggetto ordinario il cui `__proto__` e' `DPointerTargetable.pendingCreation`, e il
+  `for...in` della firma **le elenca** (misurato: 122 chiavi in `for...in` contro 120
+  proprie). La causa vera e' il contrario: proprio perche' le elenca, la firma raggiungeva il
+  suo valore **finale nel tick della create**, quando le **collezioni** che lo scanner cammina
+  (`pkg.classes`, `cls.allAttributes`, `father.children`) erano ancora stantie — la scansione
+  girava a vuoto. Al commit, un tick dopo, la chiave passa dal proto alle proprie e le
+  collezioni si riempiono, ma **nessuno** dei tre campi della firma (`id`, `name`, `father`)
+  cambia: nessun rerender, effetto mai richiamato. Non un ritardo in coda, ma una **notifica
+  mancata senza limite superiore**, che la prima scrittura nominata successiva risolveva per
+  caso (misurato: registro 0 a 9 s, `detect*` a 2 nello stesso istante, firma identica prima
+  e dopo il commit). **Chiuso** saltando le chiavi non proprie nel `useSelector` di
+  `UniquenessProblemSync` (variante (b) del referto): al commit la firma cambia, e la
+  scansione a vuoto nel tick della create sparisce. Misurato sul diff, M1 e M2: due omonime
+  committate **senza alcuna scrittura successiva** accendono il registro a **2** entro 400 ms
+  (prima: 0 fino al poke); le celle con rinomina restano a 4. `includePending` resta `false`
+  — R-GT-2 intatto: cambia **quando** si riconta, non **cosa**. Referti:
+  `docs/discovery/discovery_2026-08-31_tick_fix_defaultname.md` (§badge, `0d2354da9`) e
+  `docs/discovery/discovery_2026-08-31_badge_riconciliazione.md` (§3 la causa, §5 il fix).
 - **La voce non si vede sul canvas.** Il registro e' indicizzato per id dell'**elemento**,
   mentre `NodeProblemIndicator` e' montato con l'id del nodo ReactFlow, che e' quello del
   **`DVertex`** — e a M1 vale lo stesso. `ConformanceProblemSync` aggira registrando sotto
@@ -2685,8 +2699,9 @@ Due limiti **dichiarati e non chiusi**, entrambi misurati:
 **Il tick-fix e' rimandato, con la sua misura.** Il duplicato di propagazione di
 `defaultname` (quattro `addClass()` in un tick -> quattro `Concept_0`) **non e' chiudibile
 nel namespace-check**: nessuna sorgente — collezione, `children`, o scansione di
-`idlookup` — puo' vedere una create dello stesso tick, per la proprieta' del Proxy qui
-sopra. Misurato con la scansione eseguita **prima di ciascuna** delle quattro create:
+`idlookup` — puo' vedere una create dello stesso tick, perche' le collezioni si posano un
+tick dopo (vedi il limite qui sopra; il tick-fix e' poi arrivato per altra via, `e1c885d4c`).
+Misurato con la scansione eseguita **prima di ciascuna** delle quattro create:
 cinque scansioni identiche, `[[],[],[],[],[]]`. Il duplicato **strutturale** (`datatype_0`
 x2) si chiude invece come **non raggiungibile**: non esiste un `addDataType` a livello L, e
 l'unico `DDataType.new` di produzione (`api/data.ts:868`) passa un nome esplicito. Riserva:
