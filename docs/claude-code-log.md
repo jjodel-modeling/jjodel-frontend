@@ -2,6 +2,48 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-08-31 — feat(manager): l'outline nel DS, e una misura per la colonna centrale (10e)
+**Prompt**: «Slice 10e — conformita' dell'outline + misura della colonna centrale, micro,
+SERIALE»: icone da `entityMeta` col foreground della coppia di entita', nodo modello con
+la sua coppia e nome 12/600, classe in mono 11 slate-500 (arbitrato A4), coppia di
+selezione verificata, «+» raggiungibile da tastiera, riga 28px, indent 16, hover
+`--color-bg-hover`; e le due card a `max-width: 1300px` centrate, con la tabella che
+abbraccia il contenuto invece di riempire la pagina. Prima azione: rotazione del log.
+**Files touched**: rotazione del log in `817da5e75` (`docs/claude-code-log{,-archive}.md`);
+`abstract/tabs/{InstanceManagerTab.tsx,instanceManagerTab.scss}` e
+`abstract/tabs/__tests__/instanceManager10e.test.ts` (**nuovo**, 35 casi) in `3ccd749b9`;
+referto in `00585d2eb`; log a parte. Tre commit, tutti con pathspec, indice verificato
+vuoto prima e dopo ciascuno.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `npm run typecheck` **33** (baseline invariata, conteggio su output
+completo, `EXIT=2`); `npm run build` exit **0**; vitest **2642 passati / 0 falliti** (2607
+prima piu' i 35 nuovi), 9 file rossi = i noti `window is not defined`, nessuno di questa
+slice. Suite propria provata con 5 mutazioni (icona, min-height, hover, cinturino, flex):
+2/1/1/1/1 rossi, verde al ripristino.
+**Out-of-scope changes**: no — i due file del perimetro piu' la loro suite.
+**Layer Impact Report**: not-required — nessun file di §3.1 nel perimetro. Zero creatori D,
+zero `TRANSACTION`, zero `SetFieldAction`: il delta e' regole SCSS, la funzione `icon` di
+`OutlinePanel` e due modificatori di classe.
+**Smoke visivo**: passato — `npm run smoke` **GREEN 12/0/3**, corsa quiescente, un boot per
+stato, `moved: nothing`; e NON probante per questa slice (nessuno stato di `states.ts`
+monta il manager). La misura che la riguarda e' `_tmp_10e_verify.ts` sull'app vera, fixture
+StateMachine/State/Transition, girata DUE volte con lo stesso file e la slice in `git
+stash`: **before 36 PASS / 17 FAIL**, **after 53 PASS / 0 FAIL**, zero errori di pagina in
+entrambi. Glifi `bi-diagram-3` `rgb(122,64,86)` sulle istanze e `bi-box` `rgb(69,86,111)`
+sul modello (prima: tutti `rgb(15,23,42)`); righe 28px, insetti 14/30/46; hover
+`rgb(233,239,246)`; «+» raggiunto al 68° Tab con `:focus-visible` vero; card a 1300 esatti
+e centrate a 2200px di viewport; footer a 8px dall'ultima riga (prima: 388). Ritagli
+`_tmp_10e_{before,after}_*.png`.
+**Notes**: il reperto non era nella lista dei sette. La regola di 10b
+`&__outline-icon { color: … }` e' (0,1,0) e **non dipinge**: `styles/style.scss:788`
+dichiara `i.bi` a (0,1,1) e il glifo dell'albero E' un `<i class="bi">`. Morta da quando
+e' stata scritta. Da qui il selettore a (0,3,0), che deve battere anche `i.bi:hover`. Per
+esteso, con i tre difetti di sonda e il duplicato dell'outline (fuori scope), in
+`docs/discovery/discovery_2026-08-31_outline_conformita_10e.md`.
+**Prompt document name**: prompt inline, nessun documento — 2026-08-31 22:20
+
 ## 2026-08-31 — feat(manager): il fondo desk e le due card della colonna centrale (10d)
 **Prompt**: «Slice 10d — sfondo e card del manager, micro, SERIALE»: la colonna a destra
 del rail passa dal bianco pieno al fondo app; tabella e pannello form diventano due card
