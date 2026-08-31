@@ -2,6 +2,43 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-08-31 — fix(manager): l'outline di containment, ri-letto dopo FL6 (10b)
+**Prompt**: «Slice 10b — outline di containment nel manager, PARALLELO a FL7»: pannello
+«Model outline», riga con icona/nome/classe/«+», menu dei child-slot leciti, create dal
+motore esistente, selezione condivisa, innesto da decidere misurando la struttura
+post-FL6. **Reperto principale**: la slice e' gia' a terra dal 2026-08-30 (commit
+`8c0caef49`, entry a `docs/claude-code-log.md:400`) e sopravvive intatta a FL5/FL6.
+Undici clausole su tredici gia' soddisfatte, verificate una per una in tabella
+nell'addendum al referto. Non rifatte: rifarle sarebbe riscrivere codice verificato
+(Regola 3). Chiuse le due che mancavano davvero.
+**Files touched**: `abstract/tabs/instanceManagerTab.scss` (una regola: la barra
+`--color-selection-bar` sul nodo selezionato) e `abstract/tabs/__tests__/instanceManagerOutline.test.ts`
+(**nuovo**, 15 casi) in `757d1057d`; l'addendum a
+`docs/discovery/discovery_2026-08-30_outline_containment_10b.md` in `a60039bc3`; log a
+parte. `InstanceManagerTab.tsx` **non toccato**.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `npm run typecheck` **33** (baseline invariata, conteggio su output
+completo, exit 2 come da baseline); `npm run build` exit **0**; vitest **2503 passati / 0
+falliti** (2488 prima piu' i 15 nuovi), 9 file rossi = i noti `window is not defined`,
+nessuno di questa slice. La sola asserzione sul foglio provata per mutazione: tolta la
+`box-shadow`, 1 rosso; ripristinata, 15 verdi.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessun file di §3.1 nel perimetro; zero creatori D,
+zero `TRANSACTION`, zero `SetFieldAction`. Il delta e' una regola SCSS e un file di test.
+**Smoke visivo**: passato — `npm run smoke` **GREEN 12/0/3**, corsa quiescente, un boot per
+stato, `moved: nothing`; e NON probante per questa slice (nessuno stato di `states.ts` monta
+il manager: dice che nulla e' regredito). La misura che la riguarda e' il CSS emesso da
+`npm run build`, dove la regola compare come
+`.instance-manager__outline-node--selected{background:var(--color-selection-bg);box-shadow:inset 2px 0 0 var(--color-selection-bar)}`.
+**Notes**: Due incidenti. (1) Tipo del commit non nel prompt: scelto invece di chiederlo
+(deroga a P6). (2) `git add` piu' `git commit` nudo ha inglobato cinque file messi in indice
+da FL7 fra il mio controllo e il mio add — la patologia di §6.1. Rilevato subito,
+`reset --soft`, indice di FL7 restituito intatto, ricommit con pathspec. Divergenza aperta
+sul mono della metaclasse: addendum A4 del referto.
+**Prompt document name**: 10b (prompt in chat, non depositato) 2026-08-31 20:45
+
 ## 2026-08-31 — feat(manager): la form sotto la tabella e la riga espandibile (FL6)
 **Prompt**: `docs/prompts/PROMPT_FL6_manager_layout.md` — la form lascia la quarta
 colonna e prende il pannello sotto la tabella (contenuto a 1300px centrato); la riga
