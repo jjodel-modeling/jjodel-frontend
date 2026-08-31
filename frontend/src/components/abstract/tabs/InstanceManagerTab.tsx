@@ -1013,12 +1013,13 @@ function EgoRow({ ego, hostWidth, onSelect, onOpenInCanvas }: {
  *
  * Legge lo STESSO `Ego` — stessa proiezione, stessa precedenza, stesso cap, stessi
  * conteggi — e instrada il click dagli STESSI due puri, `egoDispatch` e
- * `egoShowAll`. Cio' che cambia e' soltanto la geometria: tre gruppi impilati
- * invece di tre colonne affiancate, e niente frecce, perche' l'intestazione del
- * gruppo dice il verso meglio di quanto una freccia lunga 12px lo direbbe.
+ * `egoShowAll`. Cio' che cambia e' soltanto la geometria: gruppi impilati invece
+ * di colonne affiancate, e niente frecce ne' linea di contenimento, perche'
+ * l'intestazione del gruppo dice il legame meglio di quanto un tratto lungo 12px
+ * lo direbbe.
  *
  * Il gruppo «this object» c'e' anche qui, in mezzo: e' cio' che rende leggibile
- * l'ordine dei tre: chi entra, chi sono, chi esco a toccare.
+ * l'ordine: chi mi possiede, chi entra, chi sono, chi esco a toccare.
  */
 function EgoList({ ego, onSelect, onOpenInCanvas }: {
     ego: Ego;
@@ -1085,6 +1086,13 @@ function EgoList({ ego, onSelect, onOpenInCanvas }: {
                     </button>
                 </span>
             </div>
+
+            {/* L'owner in testa (FL7), dove il nastro lo mette sopra: il
+                contenimento si legge prima dei riferimenti. Solo quando ha un
+                nodo suo — un owner che e' anche un vicino e' gia' in uno dei due
+                gruppi, e una seconda voce con lo stesso nome direbbe due
+                istanze. */}
+            {ego.owner?.side === 'owner' && group('owner', [ego.owner])}
 
             {group('incoming', ego.incoming)}
 
