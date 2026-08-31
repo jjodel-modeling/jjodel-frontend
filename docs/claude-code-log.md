@@ -2,6 +2,53 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-08-31 — feat(manager): il badge lettera dell'outline, il vocabolario del rail (10f)
+**Prompt**: «Slice 10f — badge lettera nell'outline, come il rail, micro, SERIALE»: ogni riga
+sostituisce l'icona col badge quadrato lettera del DS (16×16, raggio 4, lettera 10/700),
+lettera = iniziale maiuscola della metaclasse, coppia colore = `class` — un solo colore di
+famiglia, la lettera distingue; nodo modello con badge `m` e coppia model. Riga e densita' di
+10e invariate, classe in mono a destra invariata. Chiesto anche un verdetto sul chip
+flottante `s0` dello screenshot.
+**Files touched**: `abstract/tabs/{InstanceManagerTab.tsx,instanceManagerTab.scss}`,
+`abstract/tabs/__tests__/instanceManager10f.test.ts` (**nuovo**, 22 casi) e
+`__tests__/instanceManager10e.test.ts` in `67f0d54a1`; log a parte. Un commit di codice, con
+pathspec, indice verificato vuoto prima e dopo.
+**Outcome**: ✅ completed
+**Corregge**: 2026-08-31 22:20
+**Causa**: (f)
+**Regressions**: no — `npm run typecheck` **33** (baseline invariata, conteggio su output
+completo); `npm run build` exit **0**; vitest **2658 passati / 0 falliti** (2642 di 10e, meno
+6 asserzioni invertite nella sua suite, piu' i 22 nuovi), 9 file rossi = i noti `window is not
+defined`, nessuno di questa slice. Suite propria provata con 5 mutazioni (badge 16→18, via
+`toUpperCase`, coppia model→class, esadecimale ambra nel foglio, `icon()` reintrodotta): 1
+rosso ciascuna, verde al ripristino.
+**Out-of-scope changes**: yes — `instanceManager10e.test.ts`, committato un'ora prima. Due dei
+suoi describe asseriscono il glifo che questa slice toglie. Invertiti in asserzioni di ASSENZA
+invece che cancellati, come 10c fece con `instanceManagerFl6.test.ts`: un test tolto non dice
+niente il giorno in cui qualcuno riscrive la riga che aveva tolto. Le due cose che 10f non
+tocca — i glifi di 10b spariti, il triangolo di 12d — restano positive.
+**Layer Impact Report**: not-required — nessun file di §3.1 nel perimetro. Zero creatori D,
+zero `TRANSACTION`, zero `SetFieldAction`: il delta e' una regola SCSS, due funzioni pure in
+`OutlinePanel` e un ternario nel JSX.
+**Smoke visivo**: passato — `_tmp_10f_verify.ts` sull'app vera, fixture StateMachine/State/
+Transition, girata DUE volte con lo stesso file e la slice in `git stash`: **before 15 PASS /
+13 FAIL**, **after 28 PASS / 0 FAIL**, zero errori di pagina in entrambi. Badge istanza
+`rgb(252,225,234)`/`rgb(122,64,86)` — gli stessi `rgb` del badge «C» del rail, letti nella
+stessa corsa; badge modello `rgb(226,234,245)`/`rgb(69,86,111)`, cioe' NON ambra; 16×16 contro
+i 18 del rail, raggio 4px dal token, 10px/700; lettere distinte `["S","T"]` (prima: `[null]`);
+la collisione State/StateMachine misurata presente e risolta dalla colonna mono. Non-regressioni
+verdi in ENTRAMBI i giri: righe 28px, insetti 14/30/46, hover `rgb(233,239,246)`, coppia di
+selezione intera, mono 11px slate-500, «+» presente. Ritagli `_tmp_10f_{before,after}_*.png`.
+Quattro asserzioni passano a vuoto nel «before» (confronti contro `null` e `every` su lista
+vuota): valgono solo nell'«after», ed e' detto qui perche' non contino come contrasto.
+**Notes**: il reperto e' di coordinamento, non di codice. Il prompt dichiarava «sessione
+singola, seriale» e dava 10e per fatto; 10e era invece IN CORSO negli stessi due file —
+scritture misurate alle 22:56:52 e 22:58:54, fra una mia lettura e la successiva. Fermato tutto
+prima di scrivere una riga, e atteso `3ccd749b9`. Un commit con pathspec avrebbe portato il
+diff non testato di 10e sotto il mio messaggio. Il chip `s0`: artefatto, il `title` nativo
+della riga.
+**Prompt document name**: prompt inline, nessun documento — 2026-08-31 22:55
+
 ## 2026-08-31 — feat(manager): l'outline nel DS, e una misura per la colonna centrale (10e)
 **Prompt**: «Slice 10e — conformita' dell'outline + misura della colonna centrale, micro,
 SERIALE»: icone da `entityMeta` col foreground della coppia di entita', nodo modello con
