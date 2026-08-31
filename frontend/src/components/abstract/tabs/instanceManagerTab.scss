@@ -427,6 +427,11 @@
         font-size: 12px;
         color: var(--color-form-label);
         cursor: pointer;
+        /* Stessa causa del primario, conseguenza diversa: qui il fondo e' chiaro,
+           quindi l'icona non spariva — leggeva `#0f172a` invece del `#475569`
+           della propria etichetta, cioe' un secondario con due pesi di grigio.
+           `inherit` la riallinea alla label. */
+        i.bi, i.bi:hover { color: inherit; }
 
         &:hover { background: var(--color-bg-tertiary); }
         &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: -1px; }
@@ -687,6 +692,21 @@
         cursor: pointer;
 
         i { font-size: 11px; }
+        /* Il glifo prende il colore del PULSANTE, che qui e' il bianco dichiarato
+           quattro righe sopra. Non e' ridondante: `styles/style.scss:789` dichiara
+           `i.bi { color: var(--font-color-1) }` DIRETTAMENTE sull'elemento che
+           dipinge, e una dichiarazione diretta batte sempre l'ereditarieta' —
+           misurato il 2026-09-01, l'icona di «+ New» calcolava `rgb(15, 23, 42)`
+           su un pulsante che dichiara `rgb(255, 255, 255)`. E' lo stesso reperto
+           del 2026-08-12 sull'albero (CLAUDE.md §5), applicato ai pulsanti.
+
+           `inherit` e non `#fff`: il colore ha UNA sorgente, il pulsante, e una
+           variante futura se lo porta dietro. La coppia con `:hover` non e'
+           decorazione — `i.bi:hover` dichiara un SECONDO colore
+           (`--palette-1-hover`, misurato `#1e293b`) a pari specificita' della
+           prima meta' di questa regola, e senza il selettore piu' lungo il
+           difetto tornerebbe al passaggio del mouse. */
+        i.bi, i.bi:hover { color: inherit; }
 
         &:hover { filter: brightness(1.1); }
         &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 2px; }
