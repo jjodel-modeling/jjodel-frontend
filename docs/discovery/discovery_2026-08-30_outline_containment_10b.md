@@ -215,3 +215,90 @@ referto resta il documento di Fase 1, e questo e' la sua chiusa.
    porta un gesto di delete nell'albero, e la delete resta dove 12d l'ha messa
    (riga della tabella e dialogo). E' una superficie in piu' da aggiungere, non un
    pezzo mancante di questa.
+
+---
+
+## Addendum — 2026-08-31, la ri-lettura post-FL6 (R-E/E-1)
+
+Un secondo prompt 10b e' arrivato il 31-08 («PARALLELO a FL7»), chiedendo di
+decidere l'innesto misurando la struttura del manager **dopo** FL6. Il referto
+esisteva gia' al path: per R-E/E-1 non lo si riscrive. Questo addendum riporta
+le sole cose che la prima Fase 1 non poteva coprire, e nulla sopra e' toccato.
+
+### A1. La slice e' gia' a terra, e sopravvive a FL6
+
+`git log -- frontend/src/jjform/outline.ts` da' **un solo commit**, `8c0caef49`
+«feat(manager): l'outline di containment, accanto al catalogo (10b)», con la sua
+entry di log al 2026-08-30 (`docs/claude-code-log.md:400`). Misurato sul working
+tree di oggi, dopo FL5/FL6:
+
+| Clausola del prompt del 31-08 | Dove sta | Esito |
+|---|---|---|
+| Pannello «Model outline» nel manager | `InstanceManagerTab.tsx:823` (`OutlinePanel`), montato a `:1638` | c'e' |
+| Innesto post-FL6 | prima colonna a sinistra; FL6 ha impilato **la colonna centrale** (`__main`: tabella sopra, form sotto) e ha lasciato le due letture a sinistra affiancate (`instanceManagerTab.scss:49-56`) | invariato, gia' coerente |
+| Albero di containment dallo store | `outlineTree(idlookup, modelid, shape)` a `:1426`, una `useSelector` sola | c'e' |
+| Riga: icona, nome, classe in mono, «+» | `:838` (icona per genere), `:894`, `:896` (`__code`), `:901` (`bi-plus-square`, `--color-accent`) | c'e' |
+| Indentazione per profondita' | `style={{ paddingLeft: 14 + node.depth * 16 }}` a `:869` | c'e' |
+| Selezione = vocabolario cyan | `--color-selection-bg` a `instanceManagerTab.scss:1042` — **ma senza la barra** | **mancava**, vedi A2 |
+| «+» = child-slot leciti di QUEL nodo | `outlineMenuOf` a `:1459` → `childMenu`/`rootMenu` | c'e' |
+| upper pieno = voce assente + motivo | `menu.blocked` a `:938`, mai una riga grigia | c'e' |
+| Radice: sole rootable | `rootMenu(shape, countsByName)` a `:1461` | c'e' |
+| Create dal motore esistente | `openCreate` → `newDraft` → `DraftDialog` → `applyCreate` | c'e' |
+| Selezione condivisa outline ↔ tabella ↔ form | un solo `selectedObjectId` (`:1128`), `subjectId` allargato (`:1239`) | c'e' |
+| Catalogo-New e outline-+ = stesso evento | `openCreate(...)` da tre siti, un solo `newDraft(` nel file | c'e' |
+
+Le sole due cose che il prompt chiede e che il repo **non** aveva sono in A2 e A3.
+Il resto non e' stato rifatto: rifarlo sarebbe stato riscrivere codice verificato
+(Regola 3).
+
+### A2. La barra della selezione mancava davvero
+
+La riga della tabella porta la **coppia**: `background: var(--color-selection-bg)`
+piu' `box-shadow: inset 2px 0 0 var(--color-selection-bar)` sulla cella del nome
+(`instanceManagerTab.scss:263-268`). Il nodo dell'outline portava la sola
+campitura. Due superfici che dicono «questo e' selezionato» in due modi diversi
+sono due vocabolari, non uno: aggiunta la barra al nodo selezionato, sul bordo
+della **colonna** e non sull'inserto del livello (un indicatore che scorre con la
+profondita' si leggerebbe come un secondo dato). Misurato nel CSS emesso da
+`npm run build`.
+
+### A3. Due delle quattro prove attese non erano committate
+
+Le prove 1 e 2 del prompt erano gia' coperte dai moduli puri: i quattro livelli e
+il puntatore morto in `outlineDraw.test.ts` (22 casi), lo slot pieno e le sole
+rootable in `jjform/__tests__/outline.test.ts` (20 casi). Le prove 3 e 4 —
+selezione coerente su id, e «stesso evento, assert sull'evento non sulla UI» —
+erano state misurate **solo** dalla sonda `_tmp_10b_verify.ts`, che non e'
+committata e quindi non regge nel tempo. Sono ora in
+`components/abstract/tabs/__tests__/instanceManagerOutline.test.ts`, 15 casi:
+
+- la clausola 4 e' provata sul **motore**, dove e' misurabile invece che leggibile:
+  `newDraft(SHAPE, 'Region', 'm1', 'regions')` da' lo stesso draft comunque lo si
+  chiami, e per diramarsi sulla provenienza servirebbe prima un argomento che la
+  nomina, che la firma non ha. Sul sorgente: i tre siti passano tutti da
+  `openCreate`, e `newDraft(` compare **una volta sola** nel tab;
+- la clausola 3 su `subjectId`, `selectedObjectId` unico, nessun secondo stato
+  dell'albero, e il contrasto che conta — `selectFromOutline` **non** chiama
+  `setSelectedClassId`, mentre `commitDraft` si', quindi selezionare nell'albero
+  non cambia la collezione sotto.
+
+Meta' del file e' asserito sul sorgente per la ragione gia' dichiarata in
+`instanceManagerFl6.test.ts`: `environment: 'node'`, nessun jsdom (Regola 4), e
+`InstanceManagerTab` muore all'import su `window`. Il controllo positivo e' in
+ogni blocco che afferma un'assenza; la sola asserzione sul foglio ha signal
+misurata per mutazione (tolta la `box-shadow`: 1 rosso; ripristinata: 15 verdi).
+
+### A4. Divergenza dichiarata, non chiusa
+
+Il prompt scrive «classe in mono **10px slate-400**». Il markup usa
+`instance-manager__code`, che il foglio da' a **11px** e `--color-form-section`
+(slate-500), ed e' lo **stesso** token della tabella e del menu. Ritoccarlo per
+il solo albero spezzerebbe la parita' fra le due superfici; ritoccarlo per tutte
+e' una modifica alla tabella, fuori dal perimetro di questa slice. Lasciato
+com'e' e dichiarato qui.
+
+### A5. Coordinamento con FL7
+
+`InstanceManagerTab.tsx` **non e' toccato** da questo passo: il delta e' una
+regola nel foglio piu' un file di test nuovo. `egoNeighborhood.ts`,
+`EgoDiagram.tsx` e `egoDiagram.scss` non sono toccati. Zero contesa con FL7.
