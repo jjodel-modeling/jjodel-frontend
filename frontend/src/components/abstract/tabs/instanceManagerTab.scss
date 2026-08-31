@@ -56,12 +56,44 @@
        `min-width: 0` non e' igiene: senza, un flex item non scende MAI sotto la
        larghezza minima del suo contenuto, e una tabella con dodici colonne
        spingerebbe di lato l'intero tab invece di scorrere nella sua scatola. */
+    /* 10d — la colonna centrale e' un DESK, non una superficie.
+       Il fondo va qui e non sulla radice: la radice tiene i due pannelli di
+       lettura a sinistra, che restano superficie di colonna. Il token e'
+       `--color-form-panel` (#f8fafc), che in scuro il sistema commenta
+       letteralmente «panel under the cards»; NON `--color-bg-primary`, che e'
+       fra i 15 nomi dichiarati due volte con valori diversi e che `tokens.css`
+       vince dipingendo #ffffff — cioe' il bianco pieno che questa slice toglie.
+
+       `padding` e' la gronda delle card, `gap` e' il fondo che le separa: senza
+       il gap le due card si toccherebbero e tornerebbero a leggersi come una
+       superficie sola, che e' il difetto da cui parte la slice. */
     &__main {
         display: flex;
         flex-direction: column;
         flex: 1 1 auto;
         min-width: 0;
         overflow: hidden;
+        gap: 12px;
+        padding: 12px;
+        background: var(--color-form-panel);
+    }
+
+    /* Le due card gemelle. Stessi quattro token per entrambe: se la tabella e la
+       form avessero due chrome diversi direbbero di essere due generi di cosa,
+       e sono due letture dello stesso oggetto.
+
+       L'ombra e' `--shadow-desk-card`, il ruolo dichiarato per questa slice in
+       `styles/tokens/_shadows.scss`. NON `--shadow-sm`: quel nome e' dichiarato
+       sia in `styles/tokens/` sia in `styles/tokens.css` con valori diversi, e
+       misurato a schermo il 2026-08-31 dipingeva l'ombra di tokens.css e non la
+       propria. NON `--shadow-card` (= `--shadow-md`), che ha quattro volte il
+       raggio ed e' un'elevazione da popover. */
+    &__pane--table,
+    &__pane--form {
+        border: 1px solid var(--color-form-border);
+        border-radius: var(--radius-card);
+        background: var(--color-form-surface);
+        box-shadow: var(--shadow-desk-card);
     }
 
     &__pane--table { flex: 1 1 auto; overflow: hidden; min-height: 0; }
@@ -76,7 +108,6 @@
         max-height: 55%;
         min-height: 0;
         padding: 0;
-        border-top: 1px solid var(--color-form-border);
         overflow-y: auto;
     }
 
@@ -369,8 +400,14 @@
         justify-content: space-between;
         flex-shrink: 0;
         gap: 12px;
-        margin-top: 8px;
-        padding-top: 8px;
+        /* 10d — il footer e' il BORDO INFERIORE della card, non una riga che
+           galleggia dentro il padding. I margini negativi lo sbordano fino ai
+           tre lati della card e il padding rimette l'inset al contenuto: senza,
+           la riga si fermerebbe a 14px dai bordi e leggerebbe come un separatore
+           interno. Il raggio della card lo clippa (`overflow: hidden` sul
+           pannello, gia' dichiarato sopra). */
+        margin: 8px -14px -14px;
+        padding: 10px 14px;
         border-top: 1px solid var(--color-form-border);
         font-size: var(--text-xs);
         color: var(--color-form-muted);

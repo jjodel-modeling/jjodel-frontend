@@ -29,6 +29,7 @@
      value, so which one an alias resolves to depends on cascade order. */
   --shadow-popover: 0 4px 12px rgba(0, 0, 0, 0.45);
   --focus-ring: 0 0 0 3px rgba(148, 163, 184, 0.25);
+  --shadow-desk-card: 0 1px 3px rgba(0, 0, 0, 0.4);
 }
 
 /* ============================================
@@ -52,6 +53,22 @@
   /* Form views (2026-08-26) — see the note in the dark block above. */
   --shadow-popover: 0 4px 12px rgba(0, 0, 0, 0.08);
   --focus-ring: 0 0 0 3px rgba(51, 65, 85, 0.15);
+
+  /* La card che posa su un fondo desk (2026-08-31, slice 10d). Un ruolo a se'
+     e SCRITTO PER ESTESO invece di un alias a --shadow-sm, per la ragione che
+     --shadow-popover e' scritto per esteso qui sopra e per una misura che la
+     conferma: --shadow-sm e' dichiarato SIA qui SIA in styles/tokens.css con
+     valori diversi, e tokens.css vince. Misurato a schermo il 2026-08-31 sulla
+     card del manager, `box-shadow: var(--shadow-sm)` dipingeva
+     `0 1px 3px rgba(0,0,0,0.1), 0 1px 2px -1px rgba(0,0,0,0.1)` — l'ombra di
+     tokens.css, non lo `0 1px 2px rgba(0,0,0,0.05)` che si legge in questo
+     file. Un alias avrebbe ereditato la stessa ambiguita': il nome non porta
+     un valore, porta una gara di cascata.
+
+     E' l'ombra piu' bassa del sistema, e lo e' apposta: una card di lettura si
+     stacca dal fondo, non galleggia sopra. --shadow-card (= --shadow-md) ha
+     quattro volte il raggio ed e' un'elevazione da popover. */
+  --shadow-desk-card: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 /* ============================================

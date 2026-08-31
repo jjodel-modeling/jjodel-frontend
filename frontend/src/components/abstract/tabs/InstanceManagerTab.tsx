@@ -1898,14 +1898,20 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                     Il titolo e' il NOME della metaclasse a 24px, non l'eyebrow con
                     il conteggio appiccicato: il conteggio e' sceso nel footer, che
                     e' il posto in cui una tabella dice quante righe ha. Il
-                    sottotitolo dice la PROVENIENZA — da dove nascono queste
-                    istanze — che e' l'informazione che l'eyebrow non poteva
-                    portare senza diventare una frase. */}
+                    sottotitolo dice il MODELLO e la taglia della collezione.
+
+                    10d — cade «Created from the container's form»: diceva quasi
+                    la stessa cosa della frase di `newInstanceReason` sessanta
+                    pixel piu' sotto (punto aperto del referto 10c, arbitrato).
+                    Il conteggio e' `rows.length`, NON filtrato: il footer conta
+                    le visibili, e i due numeri coincidono solo a filtri spenti —
+                    quanto e' grande la collezione e quanto ne resta sono due
+                    domande diverse. */}
                 {selectedClass && (
                     <header className="instance-manager__head">
                         <h2 className="instance-manager__title">{selectedClass.name}</h2>
                         <p className="instance-manager__provenance">
-                            Created from the container's form · {modelName}
+                            {modelName} · {rows.length} instance{rows.length === 1 ? '' : 's'}
                         </p>
                     </header>
                 )}

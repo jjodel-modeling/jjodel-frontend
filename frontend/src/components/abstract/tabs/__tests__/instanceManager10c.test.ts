@@ -412,8 +412,12 @@ describe('10c — la testata della tabella', () => {
             .not.toContain('text-transform');
     });
 
-    it('sottotitolo di provenienza, col nome del modello', () => {
-        expect(TSX).toContain("Created from the container's form · {modelName}");
+    // 10d ha arbitrato il punto aperto del referto 10c: la provenienza cade,
+    // resta il modello. L'AFFERMAZIONE e' la stessa — il sottotitolo porta il
+    // nome del modello — e la copy e' nuova.
+    it('sottotitolo col nome del modello', () => {
+        expect(TSX).toContain('{modelName} · {rows.length} instance');
+        expect(CODE).not.toContain("Created from the container's form");
     });
 
     it('il segnaposto e\' «Filter by name…», e il predicato e\' quello sul nome', () => {
