@@ -48,12 +48,50 @@
        with the metamodel, so it takes the slack. */
     &__pane--outline { flex: 0 0 300px; padding: 14px 0; }
     &__pane--classes { flex: 0 0 200px; }
-    &__pane--table   { flex: 1 1 auto; overflow: hidden; }
-    &__pane--detail  { flex: 0 0 400px; padding: 0; }
-    /* Il vicinato sta ACCANTO alla form (13a, mock 1a): la form scrive, il
-       riquadro legge. Larghezza fissa come le altre colonne di lettura; il
-       disegno, che e' piu' largo, scorre dentro la propria scatola. */
-    &__pane--graph   { flex: 0 0 360px; }
+
+    /* FL6 — la colonna centrale e' IMPILATA: la tabella sopra, la form sotto.
+       Le due letture (outline, catalogo) restano affiancate a sinistra, perche'
+       scegliere cosa guardare e' l'altro asse.
+
+       `min-width: 0` non e' igiene: senza, un flex item non scende MAI sotto la
+       larghezza minima del suo contenuto, e una tabella con dodici colonne
+       spingerebbe di lato l'intero tab invece di scorrere nella sua scatola. */
+    &__main {
+        display: flex;
+        flex-direction: column;
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow: hidden;
+    }
+
+    &__pane--table { flex: 1 1 auto; overflow: hidden; min-height: 0; }
+
+    /* La form: sotto la tabella, e con un tetto di altezza. `flex: 0 1 auto`
+       piu' `max-height` in percentuale, non un'altezza fissa: una form di tre
+       campi prende tre campi di spazio, e una di trenta ne prende meta' schermo
+       e scorre — la tabella sopra non deve mai sparire, o la riga selezionata
+       (e la sua espansione) diventa invisibile mentre la si edita. */
+    &__pane--form {
+        flex: 0 1 auto;
+        max-height: 55%;
+        min-height: 0;
+        padding: 0;
+        border-top: 1px solid var(--color-form-border);
+        overflow-y: auto;
+    }
+
+    /* Il cinturino a 1300px, centrato: su un 27" una riga di campi larga tutto
+       lo schermo non e' piu' leggibile, e' solo piu' lunga da attraversare. */
+    &__form-inner {
+        width: 100%;
+        max-width: 1300px;
+        margin: 0 auto;
+        padding: 14px;
+    }
+
+    /* Il pannello impilato non prende il bordo SINISTRO della regola generale:
+       il suo separatore e' orizzontale, ed e' dichiarato qui sopra. */
+    &__main > .instance-manager__pane + .instance-manager__pane { border-left: 0; }
 
     /* The outline pane pads its rows, not itself: the selection band has to run
        the full width of the column, and a padded pane would inset it. The eyebrow
@@ -1133,112 +1171,228 @@
         &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 1px; }
     }
 
-    /* Il disegno scorre QUI dentro, non nel tab: tre colonne sono piu' larghe di
-       360px, e un tab che scorre di lato e' il difetto che la tabella evita. */
-    &__graph {
-        flex: 1 1 auto;
-        margin-top: 10px;
-        overflow: auto;
+    /* ── La riga espansa: il vicinato a un salto (FL6) ──────────────────────
+       Le regole del NASTRO stanno in `egoDiagram.scss`, che e' del componente.
+       Qui c'e' solo cio' che appartiene alla TABELLA: la cella che lo ospita, e
+       la lista testuale in cui degrada quando la riga e' stretta. */
+    &__tr--expansion {
+        > td {
+            padding: 0;
+            /* La cella dell'espansione non partecipa alle regole della riga: la
+               tabella impone `white-space: nowrap` e un `max-width` per tenere le
+               celle su una riga sola, e qui dentro c'e' un pannello. */
+            white-space: normal;
+            max-width: none;
+            background: var(--color-bg-secondary);
+            border-bottom: 1px solid var(--color-form-border);
+        }
     }
 
-    &__graph-frame { position: relative; }
-
-    &__graph-edges {
-        position: absolute;
-        top: 0;
+    /* `sticky` perche' la larghezza e' fissata a quella del CONTENITORE: se la
+       tabella scorre per le sue colonne, il pannello resta dov'e' invece di
+       uscire di lato. `box-sizing` perche' la larghezza arriva in pixel dal
+       misuratore e il padding non deve sommarcisi. */
+    &__ego {
+        position: sticky;
         left: 0;
-        pointer-events: none;
+        box-sizing: border-box;
+        padding: 10px 14px;
+        overflow: hidden;
     }
 
-    &__graph-edge {
-        fill: none;
-        stroke: var(--color-form-muted);
-        stroke-width: 1;
-
-        /* L'arco di owner e' contenimento, non riferimento: piu' chiaro e senza
-           punta, perche' il verso lo dice gia' la posizione (l'owner sta sopra). */
-        &--owner { stroke: var(--color-form-border-strong); }
-    }
-
-    &__graph-arrow {
-        fill: none;
-        stroke: var(--color-form-muted);
-    }
-
-    &__graph-label {
-        fill: var(--color-form-muted);
-        font-size: 9px;
-        /* L'alone: l'etichetta passa sopra il proprio arco, e senza il contorno
-           del fondo le due linee si leggono come una sola. */
-        paint-order: stroke;
-        stroke: var(--color-form-surface);
-        stroke-width: 3px;
-        stroke-linejoin: round;
-    }
-
-    &__graph-node {
-        position: absolute;
+    /* ── Il fallback testuale ──────────────────────────────────────────────── */
+    &__ego-list {
         display: flex;
         flex-direction: column;
-        justify-content: center;
-        gap: 2px;
-        padding: 4px 8px;
-        border: 1px solid var(--color-form-border);
-        border-radius: 8px;
-        background: var(--color-form-surface);
-        overflow: hidden;
-        cursor: pointer;
-
-        &:hover { background: var(--color-bg-tertiary); }
-        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 1px; }
-
-        /* Il soggetto non e' cliccabile — e' gia' selezionato — e lo dice anche il
-           cursore, non solo il bordo. */
-        &--subject {
-            border: 2px solid var(--color-selection-bar);
-            box-shadow: 0 0 0 3px var(--color-selection-bg);
-            cursor: default;
-
-            &:hover { background: var(--color-form-surface); }
-        }
-
-        &--broken {
-            border-style: dashed;
-            border-color: var(--color-error);
-            cursor: default;
-
-            &:hover { background: var(--color-form-surface); }
-        }
+        gap: 10px;
     }
 
-    &__graph-name {
-        font-size: 12px;
+    /* `flex-wrap` perche' questa e' la resa STRETTA: l'occhiello piu' la frase
+       delle affordance non stanno su una riga di 370px, e senza il ritorno a capo
+       il contenuto sborda la scatola — che, essendo `overflow: hidden`, lo
+       taglierebbe invece di mostrarlo. Misurato: 38px fuori a 900px di viewport. */
+    &__ego-head, &__ego-foot {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 4px 10px;
+
+        .instance-manager__eyebrow { margin-bottom: 0; }
+    }
+
+    &__ego-hint, &__ego-counts {
+        font-size: var(--text-xs);
+        color: var(--color-form-muted);
+    }
+
+    &__ego-hint { margin-left: auto; }
+    &__ego-foot { justify-content: space-between; }
+
+    &__ego-link {
+        padding: 0;
+        border: 0;
+        background: none;
+        font-size: var(--text-xs);
+        color: var(--color-selection-bar);
+        cursor: pointer;
+
+        &:hover { text-decoration: underline; }
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 1px; }
+    }
+
+    &__ego-group { display: flex; flex-direction: column; gap: 4px; }
+
+    &__ego-group-title {
+        margin: 0;
+        font-size: var(--text-xs);
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--color-form-section);
+    }
+
+    &__ego-items {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    &__ego-item {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        min-width: 0;
+        padding: 4px 8px;
+        border: 1px solid var(--color-form-border);
+        border-radius: 4px;
+        background: var(--color-form-surface);
+        font-size: var(--text-sm);
+        color: var(--color-form-label);
+        cursor: pointer;
+
+        &:hover { border-color: var(--color-form-border-strong); }
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 1px; }
+    }
+
+    /* Il soggetto porta il vocabolario della SELEZIONE, come nel nastro: e' la
+       stessa affermazione («sei qui»), e due colori per dirla divergerebbero. */
+    &__ego-item--subject {
+        background: var(--color-inode-ref-bg);
+        border-color: var(--color-inode-ref-border);
+        color: var(--color-inode-selected-badge-fg);
+        cursor: default;
+    }
+
+    /* Il nodo sintetico del cap non e' un'istanza: porta al canvas. */
+    &__ego-item--more { border-style: dashed; color: var(--color-form-muted); }
+
+    /* Un puntatore che non risolve: non cliccabile, e col token della tabella. */
+    &__ego-item--broken { cursor: default; border-color: var(--color-error); }
+
+    /* Il nome puo' essere lungo quanto vuole: in una scatola stretta si accorcia
+       con i puntini, e non allarga la riga. `min-width: 0` sulla voce e' cio' che
+       lo rende possibile — senza, un figlio flex non scende sotto la larghezza
+       minima del proprio contenuto. */
+    &__ego-name {
         font-weight: 500;
-        color: var(--color-text-primary);
+        min-width: 0;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
     }
 
-    &__graph-meta {
-        display: flex;
-        align-items: center;
-        gap: 5px;
-        min-width: 0;
-        font-size: 10px;
-        color: var(--color-form-muted);
-
-        > * {
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-    }
-
-    &__graph-cls {
-        flex-shrink: 0;
+    &__ego-cls, &__ego-via {
+        font-size: var(--text-xs);
         color: var(--color-form-section);
     }
 
-    &__graph-value { min-width: 0; }
+    /* La metaclasse non si accorcia: e' corta e senza di lei la voce non dice di
+       che cosa parla. La chiave della feature, che segue, si'. */
+    &__ego-cls { flex-shrink: 0; }
+
+    /* La chiave della feature cede prima del nome: e' la meno importante delle tre
+       cose che la voce dice, ed e' anche nel `title`. */
+    &__ego-via {
+        margin-left: auto;
+        color: var(--color-form-muted);
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    /* ── Il chevron di coda riga ────────────────────────────────────────────
+       Indicatore, non bottone: il gesto e' il click sulla riga. */
+    &__th-chev, &__td-chev {
+        width: 24px;
+        text-align: center;
+    }
+
+    &__chev {
+        font-size: 10px;
+        color: var(--color-form-muted);
+    }
+
+    /* ── L'header della form (FL6) ──────────────────────────────────────────── */
+    &__form-head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid var(--color-form-border);
+    }
+
+    &__form-title {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        min-width: 0;
+    }
+
+    &__form-name {
+        font-size: var(--text-base);
+        font-weight: 600;
+        color: var(--color-form-label);
+    }
+
+    &__form-cls {
+        font-size: var(--text-xs);
+        color: var(--color-form-section);
+    }
+
+    /* Il badge dice del PROGETTO, non dell'istanza: il titolo lo scrive per
+       esteso, perche' due parole in un badge non bastano a dirlo. */
+    &__badge {
+        padding: 1px 6px;
+        border: 1px solid var(--color-warning);
+        border-radius: 999px;
+        font-size: var(--text-xs);
+        color: var(--color-warning);
+        white-space: nowrap;
+    }
+
+    &__form-actions { margin-left: auto; display: flex; gap: 8px; }
+
+    &__form-delete {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        height: 28px;
+        padding: 0 10px;
+        border: 1px solid var(--color-form-border-strong);
+        border-radius: 4px;
+        background: var(--color-form-surface);
+        font-size: var(--text-xs);
+        color: var(--color-form-label);
+        cursor: pointer;
+
+        i { font-size: 11px; }
+
+        &:hover { border-color: var(--color-error); color: var(--color-error); }
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 1px; }
+    }
 }

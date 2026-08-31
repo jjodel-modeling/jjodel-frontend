@@ -35,7 +35,7 @@
  * show, the fix is a signature selector, not a cache.
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { getMetaclassInfo, type MetaclassInfo } from '../../editor-v2/hooks/useEditorMode';
 import { makeShapeCtx } from '../../editor-v2/hooks/shapeAdapter';
@@ -63,13 +63,12 @@ import type {
     DraftField,
     MultiField,
     MultiModel,
+    Ego,
+    EgoNode,
     NavState,
-    NeighborhoodLayout,
     OutlineMenu,
     OutlineMenuEntry,
     OutlineNode,
-    PlacedEdge,
-    PlacedNode,
     RefShape,
     UnionPreflight,
 } from '../../../jjform';
@@ -82,12 +81,15 @@ import {
     depthOf,
     draftModel,
     drillInto,
+    egoDispatch,
+    egoLabel,
+    egoLayout,
+    egoNeighborhood,
+    egoShowAll,
+    egoSummary,
     multiModel,
     navFor,
     childMenu,
-    neighborLabel,
-    neighborhoodLayout,
-    neighborhoodNote,
     newDraft,
     newInstanceReason,
     outlineLabel,
@@ -101,8 +103,10 @@ import {
 } from '../../../jjform';
 import { childrenIn, multiInstancesOf, navStepOf, pathTo } from '../../editor-v2/hooks/multiDraw';
 import { outlineRows, outlineTree } from '../../editor-v2/hooks/outlineDraw';
-import { neighborhoodOf } from '../../editor-v2/hooks/neighborhoodDraw';
+import { egoInputOf } from '../../editor-v2/hooks/neighborhoodDraw';
 import { openInCanvas } from '../../editor-v2/hooks/neighborhoodAdapter';
+import EgoDiagram from './EgoDiagram';
+import { isProjectModified } from '../../../common/libraries/projectModified';
 import { applyBulk } from '../../editor-v2/hooks/multiAdapter';
 import {
     instanceCountsByClass,
@@ -946,194 +950,172 @@ function OutlinePanel({
     );
 }
 
-/** Il tracciato di un arco. Una retta fra due fianchi, e un cappio quando i due
- *  capi sono lo stesso nodo — un auto-riferimento e' un fatto del modello, e un
- *  segmento di lunghezza zero lo nasconderebbe. */
-function neighborEdgePath(e: PlacedEdge): string {
-    if (e.selfLoop) return `M ${e.x1} ${e.y1} c 26 -18, 26 18, 0 0`;
-    return `M ${e.x1} ${e.y1} L ${e.x2} ${e.y2}`;
+/**
+ * EgoRow — il vicinato a un salto DENTRO la riga espansa (FL6).
+ *
+ * ── Che cosa aggiunge a `EgoDiagram` ──────────────────────────────────────────
+ *
+ * Una decisione sola: se il nastro ci sta. `EgoDiagram` disegna, e il suo disegno
+ * ha una larghezza NOTA — `egoLayout(ego).width`, aritmetica pura sul vicinato —
+ * quindi la soglia non e' un numero inventato ne' una media del viewport: e'
+ * quanto quel disegno misura, confrontato con quanto la tabella gli lascia. Sopra
+ * la soglia il nastro; sotto, la lista testuale, stessi dati e stessi click.
+ *
+ * La misura arriva dal padre (`hostWidth`, un solo `ResizeObserver` sul
+ * contenitore di scorrimento della tabella) e NON dal viewport: una finestra larga
+ * con l'outline aperto e dodici colonne lascia alla riga meno spazio di una
+ * finestra stretta con la tabella sola, e la media direbbe il contrario.
+ *
+ * ── Perche' la scatola ha una larghezza in pixel ──────────────────────────────
+ *
+ * Perche' vive in un `<td colSpan>`, e in `table-layout: auto` la larghezza
+ * MINIMA del contenuto di una cella spinge la tabella. Un nastro da 900px dentro
+ * una riga espansa allargherebbe ogni altra riga: la riga espandibile esiste per
+ * evitare lo scorrimento orizzontale, non per introdurlo. Fissandola a
+ * `hostWidth` la cella non puo' chiedere piu' di quanto il contenitore ha, e
+ * `position: sticky` la tiene in vista se la tabella scorre per le sue colonne.
+ */
+function EgoRow({ ego, hostWidth, onSelect, onOpenInCanvas }: {
+    ego: Ego;
+    /** Quanto misura il contenitore di scorrimento della tabella, adesso. */
+    hostWidth: number;
+    onSelect: (instanceId: string) => void;
+    onOpenInCanvas: () => void;
+}) {
+    const drawnWidth = useMemo(() => egoLayout(ego).width, [ego]);
+    // `hostWidth` a 0 e' «non ancora misurato», non «larghezza zero»: al primo
+    // render l'osservatore non ha ancora parlato, e degradare in quell'istante
+    // farebbe lampeggiare la lista su ogni apertura.
+    const narrow = hostWidth > 0 && hostWidth < drawnWidth;
+
+    return (
+        <div
+            className="instance-manager__ego"
+            style={hostWidth > 0 ? { width: hostWidth } : undefined}
+        >
+            {narrow ? (
+                <EgoList ego={ego} onSelect={onSelect} onOpenInCanvas={onOpenInCanvas} />
+            ) : (
+                <EgoDiagram ego={ego} onSelect={onSelect} onOpenInCanvas={onOpenInCanvas} />
+            )}
+        </div>
+    );
 }
 
 /**
- * NeighborhoodPanel — il vicinato dell'istanza selezionata (slice 13a, mock 1a di
- * `13a Diagramma Embedded.dc.html`).
+ * EgoList — lo stesso vicinato, quando il nastro non ci sta.
  *
- * ── Non e' un canvas ──────────────────────────────────────────────────────────
+ * Clausola della specifica ratificata («textual list where space is narrow»,
+ * `form-autolayout-spec.md`, Related manager decisions) e punto aperto 2 del
+ * referto FL5, che qui si chiude.
  *
- * Il canvas vero esiste (v2-flow) ed e' a un click: «Open in canvas» apre il tab
- * del modello e vi seleziona lo stesso nodo. Qui non c'e' nessun gesto spaziale —
- * niente drag, niente edge-draw, niente create, nessun layout persistito — perche'
- * duplicare una superficie che esiste e' l'anti-pattern che Q8 ha appena smontato.
- * Questo pannello e' lettura piu' navigazione; la form accanto resta la superficie
- * di scrittura.
+ * ── Non e' un secondo disegno ─────────────────────────────────────────────────
  *
- * ── Un motore in meno, non uno in piu' ────────────────────────────────────────
+ * Legge lo STESSO `Ego` — stessa proiezione, stessa precedenza, stesso cap, stessi
+ * conteggi — e instrada il click dagli STESSI due puri, `egoDispatch` e
+ * `egoShowAll`. Cio' che cambia e' soltanto la geometria: tre gruppi impilati
+ * invece di tre colonne affiancate, e niente frecce, perche' l'intestazione del
+ * gruppo dice il verso meglio di quanto una freccia lunga 12px lo direbbe.
  *
- * Come `OutlinePanel`, non ha regole proprie. Il grafo e' `neighborhoodDraw`
- * (composizione di `ownerOf`, `filledSlotValues`, la risalita `pointedBy` di 2b e
- * la ladder di `detectValueRenderer`), le posizioni sono `jjform.neighborhoodLayout`,
- * e il click e' lo STESSO `setSelectedObjectId` della riga di tabella e del nodo
- * d'outline: il terzo emettitore della selezione condivisa, non una terza
- * sincronia.
- *
- * ── Gli stati del contratto sono quelli della tabella ─────────────────────────
- *
- * Un puntatore che non risolve e' un nodo `broken` col token della tabella
- * (`instance-manager__broken`), un required rimasto senza valore porta
- * `instance-manager__missing`, uno slot vuoto semplicemente non compare. Sono le
- * stesse classi, non classi che somigliano a quelle: due token per lo stesso stato
- * divergono al primo ritocco.
+ * Il gruppo «this object» c'e' anche qui, in mezzo: e' cio' che rende leggibile
+ * l'ordine dei tre: chi entra, chi sono, chi esco a toccare.
  */
-function NeighborhoodPanel({
-    layout, note, subjectId, onSelect, onOpenInCanvas,
-}: {
-    layout: NeighborhoodLayout;
-    note: string | null;
-    subjectId: string | null;
-    onSelect: (node: PlacedNode) => void;
+function EgoList({ ego, onSelect, onOpenInCanvas }: {
+    ego: Ego;
+    onSelect: (instanceId: string) => void;
     onOpenInCanvas: () => void;
 }) {
+    const handlers = useMemo(() => ({ onSelect, onOpenInCanvas }), [onSelect, onOpenInCanvas]);
+    const isolated = ego.counts.incoming === 0
+        && ego.counts.outgoing === 0
+        && ego.counts.referencedBy === 0;
+
+    const entry = (node: EgoNode) => {
+        const clickable = node.kind !== 'broken';
+        const activate = () => egoDispatch(node, handlers, ego.subject.id);
+        return (
+            <li
+                key={node.side + ':' + node.id}
+                className={
+                    'instance-manager__ego-item'
+                    + (node.kind === 'more' ? ' instance-manager__ego-item--more' : '')
+                    + (node.kind === 'broken' ? ' instance-manager__ego-item--broken' : '')
+                }
+                role={clickable ? 'button' : undefined}
+                tabIndex={clickable ? 0 : undefined}
+                title={node.featureKeys.length > 0 ? `via ${node.featureKeys.join(', ')}` : undefined}
+                onClick={clickable ? activate : undefined}
+                onKeyDown={clickable ? e => {
+                    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activate(); }
+                } : undefined}
+            >
+                <span className="instance-manager__ego-name">{egoLabel(node)}</span>
+                {node.kind === 'broken' ? (
+                    <span className="instance-manager__broken">
+                        <i className="bi bi-exclamation-triangle-fill" aria-hidden="true" />
+                        broken
+                    </span>
+                ) : node.cls ? (
+                    <span className="instance-manager__ego-cls">{node.cls}</span>
+                ) : null}
+                {node.featureKeys.length > 0 && (
+                    <span className="instance-manager__ego-via">{node.featureKeys.join(', ')}</span>
+                )}
+            </li>
+        );
+    };
+
+    /** Un gruppo vuoto non si rende: e' la stessa regola del nastro, dove una
+     *  colonna senza vicini non occupa spazio invece di occuparne a vuoto. */
+    const group = (title: string, nodes: EgoNode[]) => (nodes.length === 0 ? null : (
+        <div className="instance-manager__ego-group">
+            <h4 className="instance-manager__ego-group-title">{title}</h4>
+            <ul className="instance-manager__ego-items">{nodes.map(entry)}</ul>
+        </div>
+    ));
+
     return (
-        <aside className="instance-manager__pane instance-manager__pane--graph">
-            <div className="instance-manager__toolbar">
-                <h3 className="instance-manager__eyebrow">Neighborhood</h3>
-                {subjectId && (
+        <div className="instance-manager__ego-list">
+            <div className="instance-manager__ego-head">
+                <span className="instance-manager__eyebrow">Neighborhood · 1 hop</span>
+                <span className="instance-manager__ego-hint">
+                    click a node to select it ·{' '}
+                    <button type="button" className="instance-manager__ego-link" onClick={onOpenInCanvas}>
+                        open in canvas
+                    </button>
+                </span>
+            </div>
+
+            {group('incoming', ego.incoming)}
+
+            <div className="instance-manager__ego-group">
+                <h4 className="instance-manager__ego-group-title">this object</h4>
+                <ul className="instance-manager__ego-items">
+                    <li className="instance-manager__ego-item instance-manager__ego-item--subject">
+                        <span className="instance-manager__ego-name">{egoLabel(ego.subject)}</span>
+                        {ego.subject.cls && (
+                            <span className="instance-manager__ego-cls">{ego.subject.cls}</span>
+                        )}
+                    </li>
+                </ul>
+            </div>
+
+            {group('outgoing', ego.outgoing)}
+
+            <div className="instance-manager__ego-foot">
+                <span className="instance-manager__ego-counts">{egoSummary(ego.counts)}</span>
+                {!isolated && (
                     <button
                         type="button"
-                        className="instance-manager__open-canvas"
-                        title="Open this model on the canvas, with this instance selected"
-                        onClick={onOpenInCanvas}
+                        className="instance-manager__ego-link"
+                        title="Open the canvas filtered on this instance"
+                        onClick={() => egoShowAll(handlers)}
                     >
-                        Open in canvas
-                        <i className="bi bi-box-arrow-up-right" aria-hidden="true" />
+                        show all
                     </button>
                 )}
             </div>
-
-            {!subjectId ? (
-                <p className="instance-manager__note">Pick an instance to see what touches it.</p>
-            ) : (
-                <>
-                    {/* Il disegno scorre DENTRO la sua scatola: tre colonne piu' i
-                        distacchi sono piu' larghe del pannello, e far scorrere il tab
-                        di lato sarebbe il difetto che la tabella accanto gia' evita. */}
-                    <div className="instance-manager__graph">
-                        <div
-                            className="instance-manager__graph-frame"
-                            style={{ width: layout.width, height: layout.height }}
-                        >
-                            <svg
-                                className="instance-manager__graph-edges"
-                                width={layout.width}
-                                height={layout.height}
-                                aria-hidden="true"
-                            >
-                                <defs>
-                                    <marker
-                                        id="instance-manager-neighbor-arrow"
-                                        markerWidth="8"
-                                        markerHeight="8"
-                                        refX="7"
-                                        refY="3"
-                                        orient="auto"
-                                    >
-                                        <path className="instance-manager__graph-arrow" d="M0,0 L7,3 L0,6" />
-                                    </marker>
-                                </defs>
-                                {layout.edges.map((e, i) => (
-                                    <g key={`${e.source}>${e.featureKey ?? ''}>${e.target}#${i}`}>
-                                        <path
-                                            className={
-                                                'instance-manager__graph-edge'
-                                                + (e.kind === 'owner' ? ' instance-manager__graph-edge--owner' : '')
-                                            }
-                                            d={neighborEdgePath(e)}
-                                            markerEnd={e.kind === 'owner' ? undefined : 'url(#instance-manager-neighbor-arrow)'}
-                                        />
-                                        {/* La chiave della feature STA SULL'ARCO: fra la
-                                            stessa coppia di nodi possono correre due
-                                            riferimenti diversi, e senza la chiave sono
-                                            indistinguibili. */}
-                                        {e.featureKey && (
-                                            <text
-                                                className="instance-manager__graph-label"
-                                                x={(e.x1 + e.x2) / 2}
-                                                y={(e.y1 + e.y2) / 2 - 4}
-                                                textAnchor="middle"
-                                            >
-                                                {e.featureKey}
-                                            </text>
-                                        )}
-                                    </g>
-                                ))}
-                            </svg>
-
-                            {layout.nodes.map(node => {
-                                // Il soggetto non e' cliccabile: e' gia' selezionato, e
-                                // offrire una navigazione che non muove niente e' rumore.
-                                const selectable = node.kind === 'object' && node.role !== 'subject';
-                                return (
-                                    <div
-                                        key={node.id + ':' + node.role}
-                                        className={
-                                            'instance-manager__graph-node'
-                                            + (node.role === 'subject' ? ' instance-manager__graph-node--subject' : '')
-                                            + (node.kind === 'broken' ? ' instance-manager__graph-node--broken' : '')
-                                        }
-                                        style={{ left: node.x, top: node.y, width: node.w, height: node.h }}
-                                        title={
-                                            node.kind === 'broken'
-                                                ? `Dangling pointer: ${node.id}`
-                                                : `${neighborLabel(node)} — ${node.cls || 'unknown metaclass'} (${node.role})`
-                                        }
-                                        role={selectable ? 'button' : undefined}
-                                        tabIndex={selectable ? 0 : undefined}
-                                        onClick={selectable ? () => onSelect(node) : undefined}
-                                        onKeyDown={selectable ? e => {
-                                            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(node); }
-                                        } : undefined}
-                                    >
-                                        <span className="instance-manager__graph-name">{neighborLabel(node)}</span>
-                                        <span className="instance-manager__graph-meta">
-                                            {node.kind === 'broken' ? (
-                                                <span className="instance-manager__broken">
-                                                    <i className="bi bi-exclamation-triangle-fill" aria-hidden="true" />
-                                                    broken
-                                                </span>
-                                            ) : (
-                                                <>
-                                                    {node.cls && <span className="instance-manager__graph-cls">{node.cls}</span>}
-                                                    {node.value && (node.value.missing ? (
-                                                        <span
-                                                            className="instance-manager__missing"
-                                                            title={`${node.value.key} — required by cardinality, no value`}
-                                                        >
-                                                            <i className="bi bi-exclamation-triangle-fill" aria-hidden="true" />
-                                                            missing
-                                                        </span>
-                                                    ) : (
-                                                        <span
-                                                            className="instance-manager__graph-value"
-                                                            title={`${node.value.key} = ${node.value.text}`}
-                                                        >
-                                                            {node.value.key} = {node.value.text}
-                                                        </span>
-                                                    ))}
-                                                </>
-                                            )}
-                                        </span>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-
-                    {/* Mai un vuoto muto: un'istanza che non e' contenuta e non tocca
-                        nessuno lo DICE, invece di mostrare una scatola sola e basta. */}
-                    {note && <p className="instance-manager__note">{note}</p>}
-                </>
-            )}
-        </aside>
+        </div>
     );
 }
 
@@ -1506,28 +1488,61 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
         openCreate(entry.cls, node.kind === 'model' ? null : node.id, entry.childKey);
     };
 
-    // ── Il vicinato (13a) ──────────────────────────────────────────────────────
-    // Vista DERIVATA, non un secondo canvas: owner a un livello, refs uscenti a un
-    // salto, referenced-by entranti a un salto. Sulla stessa `idlookup` di tutto il
-    // resto del tab, quindi una gerarchia cambiata sotto si riflette da se': niente
-    // copia in stato locale, per la ragione gia' scritta per l'outline.
+    // ── Il vicinato, dentro la riga (13a → FL5/FL6) ─────────────────────────
+    // Vista DERIVATA, non un secondo canvas, e non piu' una colonna: il vicinato
+    // sta nella riga ESPANSA della tabella, che e' l'unico posto in cui sta
+    // accanto all'istanza di cui parla. Sulla stessa `idlookup` di tutto il resto
+    // del tab, quindi una gerarchia cambiata sotto si riflette da se'.
+    //
+    // L'aside `pane--graph` di 13a e' RIMOSSO: rendeva questo stesso dato in una
+    // quarta colonna, e due rese dello stesso vicinato a mezzo schermo di distanza
+    // sono la divergenza che la prima modifica di una delle due produce.
 
-    const neighborhood = useMemo(
-        () => (subjectId ? neighborhoodOf(idlookup, subjectId, shapeCtx.shape()) : null),
+    /** L'ingresso del nastro: i tre dati grezzi, prima di ogni decisione. */
+    const egoInput = useMemo(
+        () => (subjectId ? egoInputOf(idlookup, subjectId, shapeCtx.shape()) : null),
         [idlookup, subjectId, shapeCtx],
     );
 
-    /** Le posizioni, che sono aritmetica pura sul vicinato. */
-    const neighborhoodView = useMemo(() => neighborhoodLayout(neighborhood), [neighborhood]);
+    /** La proiezione: dedup, precedenza, cap, conteggi. Tutta del modulo puro. */
+    const ego: Ego | null = useMemo(
+        () => (egoInput ? egoNeighborhood(egoInput) : null),
+        [egoInput],
+    );
+
+    /** Quanto spazio la tabella lascia alla riga espansa, misurato.
+     *
+     *  UN osservatore per il tab, sul contenitore di scorrimento, e non uno per
+     *  riga: la riga espansa e' una sola per costruzione (l'espansione segue la
+     *  selezione), e la larghezza che le interessa e' quella del contenitore, non
+     *  la propria — la propria e' cio' che questo numero DECIDE, e misurarla
+     *  sarebbe un anello.
+     *
+     *  Il fallback quando `ResizeObserver` non c'e' e' la misura al primo render,
+     *  che e' quella giusta finche' nessuno ridimensiona: meglio del viewport, che
+     *  non saprebbe dell'outline aperto ne' delle dodici colonne. */
+    const tableScrollRef = useRef<HTMLDivElement | null>(null);
+    const [hostWidth, setHostWidth] = useState(0);
+    useEffect(() => {
+        const el = tableScrollRef.current;
+        if (!el) { setHostWidth(0); return; }
+        const measure = () => setHostWidth(el.clientWidth);
+        measure();
+        if (typeof ResizeObserver === 'undefined') return;
+        const ro = new ResizeObserver(measure);
+        ro.observe(el);
+        return () => ro.disconnect();
+    }, [selectedClassId, visible.length]);
 
     /** Terzo emettitore della selezione, stesso corpo degli altri due
-     *  (`selectOnly`, `selectFromOutline`): il riquadro non alimenta la
+     *  (`selectOnly`, `selectFromOutline`): il nastro non alimenta la
      *  multi-selezione, la azzera. Il memo qui sopra pende da `subjectId`, quindi
-     *  il riquadro si ricentra da solo sul nodo appena scelto. */
-    const selectFromNeighborhood = (node: PlacedNode) => {
-        if (node.kind !== 'object') return;
+     *  la riga espansa si sposta da sola sul nodo appena scelto — che e' il test
+     *  «click su un vicino sposta selezione, espansione e form sullo stesso id». */
+    const selectFromEgo = (instanceId: string) => {
+        if (!instanceId || idlookup?.[instanceId]?.className !== 'DObject') return;
         setMenuFor(null);
-        setSelectedObjectId(node.id);
+        setSelectedObjectId(instanceId);
         setAlsoSelected([]);
         setBulkTouched({});
         setNav(null);
@@ -1679,6 +1694,17 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                 )}
             </aside>
 
+            {/* ── La colonna centrale: la tabella SOPRA, la form SOTTO ────────
+                Il riassetto di FL6. La form lascia la quarta colonna e prende il
+                pannello sotto la tabella, che e' la sola collocazione in cui una
+                griglia a 12 colonne ha 12 colonne da riempire: in 400px di
+                larghezza il packer di FL1 impacchettava una colonna sola, e
+                l'auto-layout non aveva niente da decidere.
+
+                Le due letture restano affiancate — catalogo e outline a sinistra,
+                fissi — perche' scegliere COSA guardare e' l'altro asse, e
+                impilarlo sotto la form vorrebbe dire scorrere per cambiare riga. */}
+            <div className="instance-manager__main">
             {/* ── The collection: a table of the selected metaclass ────────── */}
             <section className="instance-manager__pane instance-manager__pane--table">
                 <div className="instance-manager__toolbar">
@@ -1729,7 +1755,7 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                         No instance matches “{query}”.
                     </p>
                 ) : (
-                    <div className="instance-manager__table-scroll">
+                    <div className="instance-manager__table-scroll" ref={tableScrollRef}>
                         <table className="instance-manager__table">
                             <thead>
                                 <tr>
@@ -1779,18 +1805,38 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                                     <th scope="col" className="instance-manager__th-del">
                                         <span className="instance-manager__sr">actions</span>
                                     </th>
+                                    {/* La colonna del chevron: intestazione muta,
+                                        perche' la parola sopra una freccia che dice
+                                        gia' «apri» e' rumore in una riga di dodici
+                                        colonne. Il nome resta per chi legge con uno
+                                        screen reader. */}
+                                    <th scope="col" className="instance-manager__th-chev">
+                                        <span className="instance-manager__sr">expand</span>
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {visible.map(row => (
+                                {visible.map(row => {
+                                    /* L'espansione SEGUE la selezione, e non e' un
+                                       secondo stato: «una sola riga espansa alla
+                                       volta» non e' una regola da far rispettare, e'
+                                       cio' che «espansa == selezionata» significa.
+                                       Un `expandedId` accanto a `subjectId` sarebbe
+                                       stato il secondo posto in cui la stessa cosa
+                                       puo' essere vera, e il primo giorno in cui i
+                                       due divergono la form parlerebbe di una riga
+                                       e il nastro di un'altra. */
+                                    const isExpanded = row.id === subjectId;
+                                    return (
+                                    <React.Fragment key={row.id}>
                                     <tr
-                                        key={row.id}
                                         className={
                                             row.id === subjectId ? 'instance-manager__tr--selected'
                                                 : selectedIds.includes(row.id) ? 'instance-manager__tr--multi'
                                                     : undefined
                                         }
                                         title={row.name || row.id}
+                                        aria-expanded={isExpanded}
                                         onClick={() => selectOnly(row.id)}
                                     >
                                         {/* The checkbox is the gesture that ADDS to the
@@ -1844,16 +1890,55 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                                                 onClick={e => { e.stopPropagation(); openDelete(row.id); }}
                                             />
                                         </td>
+                                        {/* Il chevron e' un INDICATORE, non un
+                                            secondo bottone: il gesto e' il click
+                                            sulla riga, gia' scritto sopra, e un
+                                            bersaglio annidato che fa la stessa cosa
+                                            e' un modo per farla due volte. */}
+                                        <td className="instance-manager__td-chev">
+                                            <i
+                                                className={'bi instance-manager__chev '
+                                                    + (isExpanded ? 'bi-chevron-up' : 'bi-chevron-down')}
+                                                aria-hidden="true"
+                                            />
+                                        </td>
                                     </tr>
-                                ))}
+
+                                    {/* La riga espansa: il vicinato a un salto, e
+                                        nient'altro. La form NON e' qui — e' il
+                                        pannello sotto la tabella, dove ha la
+                                        larghezza che la sua griglia chiede. `ego`
+                                        e' null solo se il soggetto non risolve, e
+                                        allora non c'e' riga da rendere. */}
+                                    {isExpanded && ego && (
+                                        <tr className="instance-manager__tr--expansion">
+                                            <td colSpan={columns.length + 5}>
+                                                <EgoRow
+                                                    ego={ego}
+                                                    hostWidth={hostWidth}
+                                                    onSelect={selectFromEgo}
+                                                    onOpenInCanvas={openSubjectInCanvas}
+                                                />
+                                            </td>
+                                        </tr>
+                                    )}
+                                    </React.Fragment>
+                                    );
+                                })}
                             </tbody>
                         </table>
                     </div>
                 )}
             </section>
 
-            {/* ── The selected instance, as a form ────────────────────────── */}
-            <section className="instance-manager__pane instance-manager__pane--detail">
+            {/* ── The selected instance, as a form ──────────────────────────
+                Sotto la tabella, dentro la stessa colonna: e' il riassetto di FL6.
+                Il contenuto e' cinturato a 1300px e centrato (decisione
+                ratificata) — su un 27" una riga di campi larga tutto lo schermo
+                non e' piu' leggibile, e' solo piu' lunga da attraversare con gli
+                occhi. */}
+            <section className="instance-manager__pane instance-manager__pane--form">
+                <div className="instance-manager__form-inner">
                 {isMulti && multi ? (
                     <MultiForm
                         model={multi}
@@ -1891,6 +1976,57 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                                 ))}
                             </nav>
                         )}
+
+                        {/* L'header della form: chi si sta editando, se il
+                            progetto ha scritture non salvate, e la sola azione che
+                            un motore ce l'ha.
+
+                            SAVE E DISCARD NON CI SONO, ed e' una constatazione, non
+                            una dimenticanza: questa form scrive DIRITTO nello store
+                            (`formWrite.ts`, un commit per battuta, `U.isProjectModified`
+                            a true su ogni cambiamento reale). Non esiste un draft di
+                            edit da salvare ne' da annullare — l'unico draft del tab e'
+                            quello della CREATE (12a), che vive nella sua dialogue e ha
+                            gia' il suo Create/Cancel. Renderli qui vorrebbe dire o due
+                            bottoni inerti o un motore nuovo sul write path: il primo e'
+                            una bugia, il secondo e' un'altra slice. Punto aperto,
+                            dichiarato nel referto.
+
+                            Il badge dice quel che il flag dice davvero — «il progetto
+                            ha modifiche non salvate» — e non «questa istanza». Il flag
+                            e' uno statico letto al render, non un sottoscrivibile: si
+                            aggiorna al primo re-render dopo la scrittura, che qui e' lo
+                            stesso in cui la scrittura arriva, perche' ogni scrittura
+                            cambia `idlookup` e il tab pende da quello. */}
+                        <header className="instance-manager__form-head">
+                            <div className="instance-manager__form-title">
+                                <span className="instance-manager__form-name">
+                                    {ego?.subject.name || <em className="instance-manager__unnamed">unnamed</em>}
+                                </span>
+                                {ego?.subject.cls && (
+                                    <span className="instance-manager__form-cls">{ego.subject.cls}</span>
+                                )}
+                                {isProjectModified() && (
+                                    <span
+                                        className="instance-manager__badge"
+                                        title="The project has changes that have not been saved yet"
+                                    >
+                                        Unsaved changes
+                                    </span>
+                                )}
+                            </div>
+                            <div className="instance-manager__form-actions">
+                                <button
+                                    type="button"
+                                    className="instance-manager__form-delete"
+                                    title={`Delete ${ego?.subject.name || subjectId}`}
+                                    onClick={() => openDelete(subjectId)}
+                                >
+                                    <i className="bi bi-trash" aria-hidden="true" />
+                                    Delete
+                                </button>
+                            </div>
+                        </header>
 
                         <IRForm objectId={formSubjectId ?? subjectId} />
 
@@ -1995,22 +2131,12 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                     <EmptyState
                         icon="bi-ui-checks-grid"
                         title="No instance selected"
-                        description="Pick a metaclass, then a row, to edit it here."
+                        description="Pick a metaclass, then a row, to edit it below."
                     />
                 )}
+                </div>
             </section>
-
-            {/* ── Il vicinato (13a) ───────────────────────────────────────────
-                Accanto alla form, che resta la superficie di scrittura: il
-                riquadro e' lettura e navigazione. «Open in canvas» e' il punto
-                d'innesto del canvas vero, che non si duplica qui. */}
-            <NeighborhoodPanel
-                layout={neighborhoodView}
-                note={neighborhoodNote(neighborhood)}
-                subjectId={subjectId}
-                onSelect={selectFromNeighborhood}
-                onOpenInCanvas={openSubjectInCanvas}
-            />
+            </div>
 
             {pendingMulti && (
                 <MultiDeleteDialog
