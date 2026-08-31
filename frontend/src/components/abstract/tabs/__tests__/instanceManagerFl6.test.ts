@@ -89,7 +89,13 @@ describe('FL6 — la riga espandibile', () => {
 
     it('la cella dell\'espansione copre TUTTE le colonne, chevron compreso', () => {
         // pick + name + N + referenced-by + actions + chevron = N + 5.
-        expect(TSX).toContain('colSpan={columns.length + 5}');
+        //
+        // Aggiornato da 10c, e l'affermazione e' LA STESSA: la tabella rende
+        // `shownColumns` (le colonne meno quelle vuote su tutte le righe), quindi
+        // «N» e' il numero di colonne RESE. Se la cella continuasse a contare
+        // `columns`, l'espansione sborderebbe di una cella per ogni colonna
+        // nascosta — che e' esattamente il difetto che questo test intercetta.
+        expect(TSX).toContain('colSpan={shownColumns.length + 5}');
         expect(TSX).toContain('instance-manager__th-chev');
         expect(TSX).toContain('instance-manager__td-chev');
     });
@@ -185,11 +191,29 @@ describe('FL6 — il fallback a larghezza stretta', () => {
 });
 
 describe('FL6 — l\'header della form', () => {
-    it('nome dell\'istanza, metaclasse, e il badge', () => {
+    it('nome dell\'istanza e metaclasse', () => {
         expect(TSX).toContain('instance-manager__form-head');
         expect(TSX).toContain('{ego?.subject.name ||');
-        expect(TSX).toContain('Unsaved changes');
-        expect(TSX).toContain('isProjectModified()');
+        expect(TSX).toContain('{ego.subject.cls}');
+    });
+
+    it('il badge «Unsaved changes» e\' andato via con 10c (deviazione A3)', () => {
+        // FL6 lo asseriva PRESENTE. 10c lo toglie, e non e' una regressione: A3
+        // dice «dove la board mostra Save/Discard, non costruirli», e quel badge
+        // era la meta' superstite della stessa famiglia — annunciava modifiche
+        // non salvate accanto a una form che scrive diritto e non ne tiene
+        // nessuna. Il flag di progetto resta vero e resta leggibile dove il
+        // progetto si salva; qui diceva del PROGETTO sembrando dire dell'ISTANZA.
+        //
+        // L'asserzione e' invertita invece che cancellata: cosi' il giorno in cui
+        // qualcuno lo rimette, questo test lo dice.
+        const head = TSX.indexOf('instance-manager__form-head');
+        const end = TSX.indexOf('</header>', head);
+        expect(end).toBeGreaterThan(head);
+        const region = TSX.slice(head, end);
+        expect(region).toContain('instance-manager__form-delete');   // positivo di controllo
+        expect(region).not.toContain('instance-manager__badge');
+        expect(region).not.toContain('isProjectModified()');
     });
 
     it('Delete e\' quello di 12d: apre la preflight, non cancella', () => {

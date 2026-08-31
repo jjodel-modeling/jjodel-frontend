@@ -243,3 +243,185 @@ export function filterRows(rows: TableRow[], query: string): TableRow[] {
     if (terms.length === 0) return rows;
     return rows.filter(r => terms.every(t => r.haystack.includes(t)));
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 10c — la testata, il footer e le due riduzioni della tabella.
+//
+// Tutto quel che segue e' PURO, e sta qui e non nel TSX per una ragione misurata:
+// `InstanceManagerTab.tsx` non e' importabile sotto l'ambiente `node` di vitest
+// (arriva a monaco per il barrel di `editor-v2/`, e muore all'import prima del
+// primo `it`, cfr. il docstring di `__tests__/instanceManagerFl6.test.ts`). Una
+// regola scritta dentro il componente e' una regola che nessun test puo' eseguire:
+// resterebbe provata solo per lettura del sorgente, che e' esattamente cio' che
+// CLAUDE.md §5 vieta di chiamare verifica.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Soglia della paginazione. Sotto questo numero di righe la paginazione non
+ *  appare affatto — non «appare disabilitata»: un controllo inerte su una tabella
+ *  di sei righe e' arredamento. */
+export const PAGE_SIZE = 50;
+
+/**
+ * Filtro sul NOME, che non e' `filterRows`.
+ *
+ * `filterRows` cerca nell'intera riga (`haystack`), ed e' la «Search…» di 11a.
+ * La board chiede «Filter by name…», che e' un'altra promessa: chi la legge si
+ * aspetta che digitare `on` non gli restituisca ogni istanza che ha `on` in un
+ * attributo qualunque. Due segnaposti diversi vogliono due predicati diversi.
+ *
+ * I termini sono in AND, come in `filterRows`: la differenza e' il CAMPO su cui
+ * cercano, non il modo di comporre.
+ */
+export function filterRowsByName(rows: TableRow[], query: string): TableRow[] {
+    const terms = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    if (terms.length === 0) return rows;
+    return rows.filter(r => {
+        const name = r.name.toLowerCase();
+        return terms.every(t => name.includes(t));
+    });
+}
+
+/** L'enum discriminante di una metaclasse, se ne ha uno. */
+export interface Discriminant {
+    /** Nome della feature — la chiave della cella su cui il segmented filtra. */
+    key: string;
+    /** Nome dell'enumerazione, per il tooltip. */
+    enumName: string;
+    /** I literal, NELL'ORDINE DELLA SHAPE. Nomi, non pointer: e' cio' che la
+     *  cella stampa (`displayValue` risolve il pointer al nome del literal), e
+     *  quindi cio' contro cui il segmented puo' confrontare senza una seconda
+     *  risoluzione. */
+    literals: string[];
+}
+
+/**
+ * L'enum discriminante: il PRIMO attributo a valore singolo di tipo `enum` con
+ * almeno due literal, nell'ordine in cui la shape li elenca.
+ *
+ * Letto dalla shape, mai cablato: il prompt di 10c nomina `All | normal | initial
+ * | final` per `State` come ESEMPIO, e cablare quei quattro literal avrebbe reso
+ * la barra muta su ogni altro metamodello.
+ *
+ * Perche' «a valore singolo»: un enum `many` puo' avere piu' literal per riga, e
+ * un segmented a scelta unica su un valore multiplo e' una domanda a cui la riga
+ * risponde piu' volte. Perche' «almeno due»: un enum di un literal partiziona
+ * niente, e la barra direbbe `All | x` con le due voci sempre uguali.
+ *
+ * Restituisce `null` quando non ce n'e' — e allora il segmented non si rende.
+ */
+export function discriminantEnum(cls: ClassShape, shape: MetamodelShape): Discriminant | null {
+    for (const a of cls.attrs) {
+        if (a.type !== 'enum' || a.many || !a.enum) continue;
+        const literals = (shape.enums[a.enum]?.literals ?? []).map(l => l.name);
+        if (literals.length < 2) continue;
+        return { key: a.key, enumName: a.enum, literals };
+    }
+    return null;
+}
+
+/**
+ * Il segmented, applicato. `literal === ''` e' «All» e non filtra.
+ *
+ * Confronta sul TESTO della cella, che e' gia' il nome del literal: la
+ * risoluzione pointer -> nome l'ha fatta `displayValue` una volta sola, in
+ * `tableRow`. Rifarla qui sarebbe la seconda lettura della stessa convenzione,
+ * e le due divergerebbero il giorno in cui l'importatore XMI ne scrive una terza.
+ */
+export function filterBySegment(rows: TableRow[], key: string, literal: string): TableRow[] {
+    if (!literal) return rows;
+    return rows.filter(r => r.cells[key]?.text === literal);
+}
+
+/**
+ * Le colonne interamente vuote: quelle in cui NESSUNA riga tiene un valore.
+ *
+ * «Vuota» e' `count === 0` e nient'altro. Una cella `broken` non e' vuota — tiene
+ * un puntatore che non risolve, che e' un problema da vedere, non un'assenza da
+ * nascondere; e una `missingRequired` e' l'assenza che il modello DEVE mostrare
+ * (regola 2 ratificata di 12d). Nascondere la colonna che le contiene sarebbe
+ * ripristinare per via di layout il silenzio che quella regola vieta.
+ *
+ * Misurate su TUTTE le righe della metaclasse, mai sulle filtrate: se dipendessero
+ * dal filtro, le colonne apparirebbero e sparirebbero a ogni battuta, e la tabella
+ * cambierebbe forma mentre la si legge.
+ */
+export function emptyColumnKeys(rows: TableRow[], columns: TableColumn[]): string[] {
+    if (rows.length === 0) return [];
+    return columns
+        .filter(col => rows.every(r => {
+            const c = r.cells[col.key];
+            return !!c && c.count === 0 && !c.broken && !c.missingRequired;
+        }))
+        .map(col => col.key);
+}
+
+/** Le colonne che restano, nell'ordine originale. */
+export function visibleColumns(columns: TableColumn[], hiddenKeys: string[]): TableColumn[] {
+    if (hiddenKeys.length === 0) return columns;
+    const hidden = new Set(hiddenKeys);
+    return columns.filter(col => !hidden.has(col.key));
+}
+
+/** Quante pagine servono. Almeno una, anche a zero righe: «pagina 1 di 0» non e'
+ *  una posizione. */
+export function pageCount(total: number, size: number = PAGE_SIZE): number {
+    return Math.max(1, Math.ceil(total / Math.max(1, size)));
+}
+
+/** La finestra di una pagina. `page` e' 1-based, e viene pinzata: una pagina 7 su
+ *  una tabella che ne ha 3 restituisce la 3, non un vuoto. */
+export function pageOf(rows: TableRow[], page: number, size: number = PAGE_SIZE): TableRow[] {
+    if (rows.length <= size) return rows;
+    const last = pageCount(rows.length, size);
+    const p = Math.min(Math.max(1, Math.floor(page)), last);
+    return rows.slice((p - 1) * size, p * size);
+}
+
+/** Un campo CSV, con le virgolette raddoppiate secondo RFC 4180. */
+function csvField(raw: string): string {
+    const s = raw ?? '';
+    return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+/**
+ * Export CSV delle righe DATE — cioe' delle righe filtrate, perche' e' quello che
+ * il chiamante passa. Un export che riesportasse la collezione intera mentre lo
+ * schermo ne mostra sei sarebbe un bottone che fa un'altra cosa da quella che
+ * l'utente ha appena composto.
+ *
+ * Le colonne sono quelle DATE, cioe' anche qui quelle visibili: una colonna
+ * nascosta perche' vuota esporterebbe una colonna di stringhe vuote.
+ *
+ * Il testo e' quello che la cella stampa, non lo stato grezzo: un CSV di pointer
+ * non lo apre nessuno.
+ */
+export function toCsv(columns: TableColumn[], rows: TableRow[]): string {
+    const head = ['name', ...columns.map(c => c.key)].map(csvField).join(',');
+    const body = rows.map(r =>
+        [r.name, ...columns.map(c => r.cells[c.key]?.text ?? '')].map(csvField).join(','));
+    return [head, ...body].join('\r\n');
+}
+
+/**
+ * La metaclasse piu' popolata, per la preselezione allo stato di riposo.
+ *
+ * A parita' di conteggio vince la PRIMA nell'ordine dato — che nel tab e' l'ordine
+ * alfabetico del rail, quindi la scelta e' stabile fra un render e l'altro invece
+ * di dipendere dall'ordine in cui la `idlookup` e' stata percorsa.
+ *
+ * Le metaclassi a zero istanze non vincono mai: se nessuna ne ha, il ritorno e'
+ * `null` e il chiamante rende l'unico empty state («modello vuoto») invece di
+ * preselezionare una collezione vuota e mostrarne un secondo.
+ */
+export function mostPopulatedClassId(
+    classes: Array<{ id: string }>,
+    counts: Record<string, number>,
+): string | null {
+    let bestId: string | null = null;
+    let best = 0;
+    for (const cls of classes) {
+        const n = counts[cls.id] ?? 0;
+        if (n > best) { best = n; bestId = cls.id; }
+    }
+    return bestId;
+}

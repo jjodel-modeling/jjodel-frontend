@@ -108,9 +108,13 @@
         color: var(--color-form-muted);
     }
 
+    /* Va a capo (10c): cinque controlli su una tabella stretta non stanno in
+       riga, e `overflow: hidden` sul pannello li taglierebbe invece di mandarli
+       sotto. */
     &__toolbar {
         display: flex;
         align-items: center;
+        flex-wrap: wrap;
         gap: 10px;
         flex-shrink: 0;
 
@@ -118,8 +122,11 @@
     }
 
     /* 12px / 28px / border-strong — the 7a control, same as every select in the rail. */
+    /* 10c: il search perde `margin-left: auto`. Non e' piu' l'unico controllo
+       che spinge il New a destra — l'eyebrow che lo precedeva e' diventato la
+       testata sopra la barra, e il primo posto della barra e' il suo. La spinta
+       e' passata a `__export`. */
     &__search {
-        margin-left: auto;
         width: 180px;
         height: 28px;
         padding: 0 8px;
@@ -196,6 +203,51 @@
         white-space: nowrap;
     }
 
+    /* ── 10c: il badge di metaclasse ───────────────────────────────────────
+       SOLO la geometria. Il colore arriva da `jj-type-badge--class`, cioe' dalla
+       coppia di token di entita' (`--color-entity-class-bg` / `-fg`), che e' la
+       stessa che il rail delle proprieta' usa: questa slice non introduce una
+       seconda palette (R-RAIL-30), e non ridichiara `background` ne' `color` —
+       ridichiararli qui vorrebbe dire vincere sulla coppia e perdere il tema
+       scuro senza nessun errore di compilazione.
+
+       Quadrato, non pillola: 18px per 18px con `--radius-sm`. Il badge del rail
+       delle proprieta' e' 22px perche' li' e' l'unico glifo di un blocco di
+       identita' isolato; qui sta in una riga di lista alta 26px, e a 22px
+       spingerebbe la riga. */
+    &__glyph {
+        flex: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 18px;
+        height: 18px;
+        border-radius: var(--radius-sm);
+        font-size: 10px;
+        font-weight: 700;
+        line-height: 1;
+    }
+
+    /* La sezione VIEWS prende aria sopra di se': separa due liste che sono due
+       domande diverse («quale collezione» e «quale vista»), e senza lo stacco
+       leggerebbero come una lista sola di cui le ultime due voci sono metaclassi
+       dal nome strano. */
+    &__eyebrow--views {
+        margin-top: 18px;
+        padding-top: 12px;
+        border-top: 1px solid var(--color-form-border);
+    }
+
+    &__view-icon {
+        flex: none;
+        width: 18px;
+        text-align: center;
+        font-size: 12px;
+        color: var(--color-form-muted);
+    }
+
+    &__row--selected .instance-manager__view-icon { color: var(--color-accent); }
+
     &__count {
         flex-shrink: 0;
         min-width: 16px;
@@ -212,6 +264,165 @@
         border-radius: 3px;
         font-size: 10px;
         line-height: 15px;
+        color: var(--color-form-muted);
+    }
+
+    /* ── 10c: la testata della tabella ─────────────────────────────────────
+       Il titolo a 24px in sentence case: e' il nome della metaclasse com'e'
+       scritto nel metamodello, quindi NESSUN `text-transform`. Una regola che lo
+       mettesse in maiuscolo direbbe una parola che il metamodello non ha. */
+    &__head {
+        flex-shrink: 0;
+        margin-bottom: 12px;
+    }
+
+    &__title {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 600;
+        line-height: 1.2;
+        color: var(--color-text-primary);
+    }
+
+    &__provenance {
+        margin: 2px 0 0;
+        font-size: var(--text-xs);
+        color: var(--color-form-muted);
+    }
+
+    /* Il segmented: UN contenitore con il bordo, i bottoni dentro senza. Un
+       bordo per bottone avrebbe fatto una doppia riga a ogni giunzione. */
+    &__segmented {
+        display: inline-flex;
+        align-items: center;
+        height: 28px;
+        padding: 2px;
+        gap: 2px;
+        border: 1px solid var(--color-form-border-strong);
+        border-radius: 4px;
+        background: var(--color-form-surface);
+    }
+
+    &__segment {
+        height: 22px;
+        padding: 0 9px;
+        border: 0;
+        border-radius: 3px;
+        background: transparent;
+        font-size: var(--text-xs);
+        color: var(--color-form-muted);
+        cursor: pointer;
+
+        &:hover { background: var(--color-bg-tertiary); }
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: -1px; }
+
+        /* Il segmento attivo prende la campitura di selezione, la STESSA del
+           rail: un filtro attivo e una riga attiva sono lo stesso fatto detto in
+           due posti, e due colori direbbero che sono due fatti. */
+        &--on {
+            background: var(--color-selection-bg);
+            color: var(--color-text-primary);
+            font-weight: 500;
+        }
+    }
+
+    &__hidden-cols {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: var(--text-xs);
+        color: var(--color-form-muted);
+        cursor: default;
+    }
+
+    /* Export sta a sinistra del New e non ne prende il peso: il primario della
+       testata e' uno solo, ed e' la create. */
+    &__export {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-left: auto;
+        height: 28px;
+        padding: 0 10px;
+        border: 1px solid var(--color-form-border-strong);
+        border-radius: 4px;
+        background: var(--color-form-surface);
+        font-size: 12px;
+        color: var(--color-form-label);
+        cursor: pointer;
+
+        &:hover { background: var(--color-bg-tertiary); }
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: -1px; }
+    }
+
+    /* Quando Export non c'e' (collezione vuota) il New deve comunque andare a
+       destra: la spinta e' su entrambi, e il primo dei due che si rende vince. */
+    &__export ~ .instance-manager__new { margin-left: 10px; }
+
+    /* ── 10c: il footer della tabella ──────────────────────────────────────
+       `flex-shrink: 0` non e' igiene: il contenitore della tabella e'
+       `flex: 1 1 auto`, e senza questo il footer sarebbe la prima cosa che una
+       tabella lunga comprime via. */
+    &__foot {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-shrink: 0;
+        gap: 12px;
+        margin-top: 8px;
+        padding-top: 8px;
+        border-top: 1px solid var(--color-form-border);
+        font-size: var(--text-xs);
+        color: var(--color-form-muted);
+    }
+
+    &__foot-count { font-variant-numeric: tabular-nums; }
+    &__foot-of { color: var(--color-form-border-strong); }
+
+    &__pager {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    &__page-of { font-variant-numeric: tabular-nums; }
+
+    &__page-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        border: 1px solid var(--color-form-border-strong);
+        border-radius: 4px;
+        background: var(--color-form-surface);
+        color: var(--color-form-label);
+        cursor: pointer;
+
+        &:hover:not(:disabled) { background: var(--color-bg-tertiary); }
+        &:disabled { opacity: 0.4; cursor: default; }
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: -1px; }
+    }
+
+    /* ── 10c: la form collassata ───────────────────────────────────────────
+       Il pannello perde il tetto del 55% e prende l'altezza del suo contenuto,
+       che e' una riga: il `max-height` di FL6 e' un TETTO per una form aperta,
+       non un pavimento, e su una barra sottile non ha niente da limitare. */
+    &__pane--form-collapsed {
+        flex: 0 0 auto;
+        max-height: none;
+        overflow: hidden;
+
+        .instance-manager__form-inner { padding: 0; }
+    }
+
+    &__collapsed {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0;
+        padding: 9px 14px;
+        font-size: var(--text-xs);
         color: var(--color-form-muted);
     }
 

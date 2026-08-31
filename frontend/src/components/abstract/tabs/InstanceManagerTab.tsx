@@ -106,7 +106,6 @@ import { outlineRows, outlineTree } from '../../editor-v2/hooks/outlineDraw';
 import { egoInputOf } from '../../editor-v2/hooks/neighborhoodDraw';
 import { openInCanvas } from '../../editor-v2/hooks/neighborhoodAdapter';
 import EgoDiagram from './EgoDiagram';
-import { isProjectModified } from '../../../common/libraries/projectModified';
 import { applyBulk } from '../../editor-v2/hooks/multiAdapter';
 import {
     instanceCountsByClass,
@@ -115,13 +114,31 @@ import {
     uninstantiableReason,
 } from './instanceManagerModel';
 import {
-    filterRows,
+    PAGE_SIZE,
+    discriminantEnum,
+    emptyColumnKeys,
+    filterBySegment,
+    filterRowsByName,
+    mostPopulatedClassId,
+    pageCount,
+    pageOf,
     tableColumns,
     tableRow,
+    toCsv,
+    visibleColumns,
+    type Discriminant,
     type TableCell,
     type TableRow,
 } from './instanceTable';
+import { entityLetter } from '../../../common/entityMeta';
 import './instanceManagerTab.scss';
+
+/** La lettera del badge di metaclasse, dal registro delle entita' e non da una
+ *  costante locale: `entityMeta` e' la sola fonte del vocabolario di badge del DS,
+ *  e una `'C'` scritta a mano qui e' la seconda copia che il giorno in cui il
+ *  registro cambia resta indietro senza errore di compilazione. Risolta una volta
+ *  al modulo: e' costante. */
+const CLASS_LETTER = entityLetter('class');
 
 export interface InstanceManagerTabProps {
     /** The M1 model this manager is the catalogue of. */
@@ -1175,6 +1192,22 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
      *  nessuno ha mai chiuso. */
     const [expanded, setExpanded] = useState<Record<string, boolean>>({});
     const [menuFor, setMenuFor] = useState<string | null>(null);
+    /** 10c — la sezione VIEWS del rail. L'outline diventa una VISTA che si apre e
+     *  si chiude, e non piu' una colonna che c'e' e basta: il rail e' il posto in
+     *  cui si sceglie cosa guardare, e una vista senza interruttore in quel posto
+     *  e' l'unica che non si puo' scegliere. Aperta di default — e' lo stato in
+     *  cui 10b l'ha consegnata, e chiuderla d'ufficio sarebbe una regressione di
+     *  superficie travestita da default. */
+    const [showOutline, setShowOutline] = useState(true);
+    /** Il literal selezionato nel segmented, `''` per «All». Una stringa e non un
+     *  indice: gli indici di un enum cambiano quando il metamodello cambia, e un
+     *  filtro che dopo una modifica del metamodello punta a un altro literal e'
+     *  peggio di uno che si azzera. */
+    const [segment, setSegment] = useState('');
+    /** La pagina corrente, 1-based. Pinzata da `pageOf`, quindi non serve tenerla
+     *  in bolla con il numero di righe: una pagina 7 su tre pagine RENDE la terza,
+     *  invece di rendere il vuoto e aspettare un effetto che la corregga. */
+    const [page, setPage] = useState(1);
 
     // Name-sorted so the column does not reorder itself when a class is renamed
     // elsewhere. `getMetaclassInfo` is impure (it reads the store and L-proxies),
@@ -1221,7 +1254,39 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
             tableRow(idlookup, r.id, classShape, shape, shapeCtx.referencedBy(r.id)));
     }, [idlookup, modelid, selectedClassId, classShape, shapeCtx]);
 
-    const visible = useMemo(() => filterRows(rows, query), [rows, query]);
+    /** L'enum discriminante, letto dalla shape. `null` quando la metaclasse non ne
+     *  ha uno, e allora il segmented non si rende affatto. */
+    const discriminant: Discriminant | null = useMemo(
+        () => (classShape ? discriminantEnum(classShape, shapeCtx.shape()) : null),
+        [classShape, shapeCtx],
+    );
+
+    /** Le colonne interamente vuote, misurate su TUTTE le righe della metaclasse.
+     *  Non sulle filtrate: una misura che dipendesse dal filtro farebbe cambiare
+     *  forma alla tabella a ogni battuta. */
+    const hiddenColumnKeys = useMemo(() => emptyColumnKeys(rows, columns), [rows, columns]);
+    const shownColumns = useMemo(
+        () => visibleColumns(columns, hiddenColumnKeys),
+        [columns, hiddenColumnKeys],
+    );
+
+    /** Le due riduzioni COMPONGONO, in AND: il nome restringe, il segmented
+     *  restringe ancora. L'ordine non conta (sono due predicati indipendenti sulla
+     *  stessa riga) ma e' fissato qui perche' il footer conti su un solo numero. */
+    const visible = useMemo(
+        () => filterBySegment(
+            filterRowsByName(rows, query),
+            discriminant?.key ?? '',
+            discriminant ? segment : '',
+        ),
+        [rows, query, discriminant, segment],
+    );
+
+    /** La finestra di pagina. Sotto soglia `pageOf` restituisce l'array stesso e
+     *  la paginazione non si rende: `paged === visible` e' la condizione, non un
+     *  secondo flag da tenere allineato. */
+    const pages = pageCount(visible.length, PAGE_SIZE);
+    const paged = useMemo(() => pageOf(visible, page, PAGE_SIZE), [visible, page]);
 
     // The selected instance may have been deleted, or filtered out of view, or may
     // belong to a class that was just deselected. Resolving it against the CURRENT
@@ -1366,6 +1431,58 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
         setBulkTouched({});
         setNav(null);
         setQuery('');
+        // Le due riduzioni sono PER COLLEZIONE: il segmented parla dei literal di
+        // un enum che l'altra metaclasse non ha, e una pagina 4 su una collezione
+        // che ne ha una sola sarebbe una tabella vuota all'arrivo.
+        setSegment('');
+        setPage(1);
+    };
+
+    // ── 10c: lo stato di riposo ────────────────────────────────────────────────
+    // All'apertura la tabella e' PIENA. Un manager che si apre su «Pick a
+    // metaclass» chiede all'utente di fare una scelta che il modello ha gia'
+    // fatto: la collezione piu' popolata e' la risposta piu' probabile alla
+    // domanda «cosa c'e' qui dentro».
+    //
+    // L'effetto e' condizionato a `selectedClassId === null`, quindi NON e' una
+    // preselezione che si ripete: una volta che l'utente ha scelto, anche
+    // scegliendo una collezione vuota, resta la sua. Il `null` di ritorno di
+    // `mostPopulatedClassId` (modello senza istanze) lascia la selezione vuota, ed
+    // e' li' che si rende l'UNICO empty state.
+    useEffect(() => {
+        if (selectedClassId !== null) return;
+        const best = mostPopulatedClassId(classes, counts);
+        if (best) setSelectedClassId(best);
+    }, [classes, counts, selectedClassId]);
+
+    /** Quante istanze ha il modello, tutte le metaclassi insieme. Distingue
+     *  «modello vuoto» — l'unico empty state possibile — da «collezione vuota»,
+     *  che con la preselezione qui sopra puo' capitare solo per scelta esplicita. */
+    const modelIsEmpty = useMemo(
+        () => classes.every(c => (counts[c.id] ?? 0) === 0),
+        [classes, counts],
+    );
+
+    /** Il nome del modello, per il sottotitolo di provenienza. Letto dalla
+     *  `idlookup` come tutto il resto del tab; l'id nudo e' il ripiego, e non
+     *  succede su un modello caricato. */
+    const modelName: string = idlookup?.[modelid]?.name || modelid;
+
+    /** Export delle righe FILTRATE, colonne visibili: quel che c'e' sullo schermo.
+     *
+     *  Nessuna dipendenza nuova (Regola 4): un `Blob`, un `<a download>` e una
+     *  revoca, che e' lo stesso giro che `DocumentationTab.tsx:852` gia' fa per il
+     *  markdown. Il `revokeObjectURL` non e' igiene: senza, l'URL tiene vivo il
+     *  blob per tutta la vita del documento. */
+    const exportCsv = () => {
+        if (!classShape) return;
+        const csv = toCsv(shownColumns, visible);
+        const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${modelName}-${classShape.key}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
     };
 
     // ── Create (2c) ────────────────────────────────────────────────────────────
@@ -1643,7 +1760,7 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                 Quarta colonna, la prima da sinistra: AFFIANCA il catalogo, non lo
                 sostituisce. «Outline per il dove, tabella per il quanto» — la nota
                 del mock 1b, che e' il layout contract di questa slice. */}
-            <OutlinePanel
+            {showOutline && <OutlinePanel
                 rows={outlineVisible}
                 subjectId={subjectId}
                 isOpen={outlineIsOpen}
@@ -1654,7 +1771,7 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                 onSelect={selectFromOutline}
                 onMenu={node => setMenuFor(prev => (prev === node.id ? null : node.id))}
                 onCreate={outlineCreate}
-            />
+            />}
 
             {/* ── Metaclasses ─────────────────────────────────────────────── */}
             <aside className="instance-manager__pane instance-manager__pane--classes">
@@ -1680,6 +1797,21 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                                     aria-disabled={reason ? true : undefined}
                                     onClick={() => selectClass(cls)}
                                 >
+                                    {/* 10c — il badge quadrato «C», nel vocabolario del
+                                        DS. Il colore NON e' dichiarato qui: arriva da
+                                        `jj-type-badge--class`, cioe' dalla coppia
+                                        pastello/saturato dei token di entita'
+                                        (`--color-entity-class-bg` / `-fg`), la stessa
+                                        che il rail delle proprieta' usa a
+                                        `Info.tsx:1085`. Questa slice non introduce una
+                                        seconda palette; dichiara la sola geometria, e
+                                        quella sta nel foglio. La lettera viene da
+                                        `entityMeta`, non da `name.charAt(0)`: e' il
+                                        badge del TIPO, non l'iniziale dell'elemento. */}
+                                    <span
+                                        className="instance-manager__glyph jj-type-badge--class"
+                                        aria-hidden="true"
+                                    >{CLASS_LETTER}</span>
                                     <span className="instance-manager__row-name">{cls.name}</span>
                                     {/* The word, not the canvas's `1` badge: here the
                                         count column sits right beside it, and a singleton
@@ -1700,6 +1832,53 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                         })}
                     </ul>
                 )}
+
+                {/* ── VIEWS (10c) ─────────────────────────────────────────────
+                    Sotto le metaclassi, e nella stessa colonna: il rail e' il
+                    posto in cui si sceglie COSA guardare, e le due viste del
+                    modello sono l'altra meta' di quella scelta. Due voci sole, e
+                    dichiaratamente due: la vista Diagram di 13a/1b e' rimandata,
+                    e un terzo posto inerte avrebbe promesso una superficie che
+                    non c'e'.
+
+                    Outline e' il pannello di 10b, che smette di essere una colonna
+                    sempre presente e diventa una vista che si apre. Canvas non e'
+                    un pannello: e' l'innesto sul canvas VERO
+                    (`neighborhoodAdapter.openInCanvas`), lo stesso che il nastro
+                    della riga espansa chiama — un evento, non una seconda resa. */}
+                <h3 className="instance-manager__eyebrow instance-manager__eyebrow--views">Views</h3>
+                <ul className="instance-manager__list">
+                    <li
+                        className={'instance-manager__row instance-manager__view'
+                            + (showOutline ? ' instance-manager__row--selected' : '')}
+                        title="Model outline — the containment tree of this model"
+                        role="button"
+                        aria-pressed={showOutline}
+                        onClick={() => setShowOutline(v => !v)}
+                    >
+                        <i className="bi bi-list-nested instance-manager__view-icon" aria-hidden="true" />
+                        <span className="instance-manager__row-name">Outline</span>
+                    </li>
+                    {/* Visibile e inerte quando non c'e' un soggetto, con la causa
+                        nel `title`: `openInCanvas` prende un oggetto, e la stessa
+                        regola con cui il rail tiene visibili le metaclassi astratte
+                        vale qui — una voce che sparisce si legge come una funzione
+                        che non esiste, una spenta si legge come il modello che dice
+                        perche'. */}
+                    <li
+                        className={'instance-manager__row instance-manager__view'
+                            + (subjectId ? '' : ' instance-manager__row--disabled')}
+                        title={subjectId
+                            ? 'Open the selected instance in the canvas'
+                            : 'Select an instance to open it in the canvas'}
+                        role="button"
+                        aria-disabled={subjectId ? undefined : true}
+                        onClick={() => { if (subjectId) openSubjectInCanvas(); }}
+                    >
+                        <i className="bi bi-diagram-3 instance-manager__view-icon" aria-hidden="true" />
+                        <span className="instance-manager__row-name">Canvas</span>
+                    </li>
+                </ul>
             </aside>
 
             {/* ── La colonna centrale: la tabella SOPRA, la form SOTTO ────────
@@ -1715,25 +1894,97 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
             <div className="instance-manager__main">
             {/* ── The collection: a table of the selected metaclass ────────── */}
             <section className="instance-manager__pane instance-manager__pane--table">
+                {/* ── La testata (10c) ────────────────────────────────────────
+                    Il titolo e' il NOME della metaclasse a 24px, non l'eyebrow con
+                    il conteggio appiccicato: il conteggio e' sceso nel footer, che
+                    e' il posto in cui una tabella dice quante righe ha. Il
+                    sottotitolo dice la PROVENIENZA — da dove nascono queste
+                    istanze — che e' l'informazione che l'eyebrow non poteva
+                    portare senza diventare una frase. */}
+                {selectedClass && (
+                    <header className="instance-manager__head">
+                        <h2 className="instance-manager__title">{selectedClass.name}</h2>
+                        <p className="instance-manager__provenance">
+                            Created from the container's form · {modelName}
+                        </p>
+                    </header>
+                )}
+
                 <div className="instance-manager__toolbar">
-                    <h3 className="instance-manager__eyebrow">
-                        {selectedClass
-                            ? `${selectedClass.name} · ${rows.length} instance${rows.length === 1 ? '' : 's'}`
-                            : 'Instances'}
-                    </h3>
-                    {selectedClass && rows.length > 0 && (
+                    {selectedClass && (
                         <input
                             className="instance-manager__search"
                             type="search"
                             value={query}
-                            placeholder="Search…"
-                            aria-label={`Search ${selectedClass.name} instances`}
-                            onChange={e => setQuery(e.target.value)}
+                            placeholder="Filter by name…"
+                            aria-label={`Filter ${selectedClass.name} instances by name`}
+                            onChange={e => { setQuery(e.target.value); setPage(1); }}
                         />
                     )}
+
+                    {/* Il segmented dei literal dell'enum discriminante. I literal
+                        arrivano dalla SHAPE (`discriminantEnum`), mai cablati: il
+                        `All | normal | initial | final` del prompt e' l'esempio di
+                        `State`, e scriverlo qui avrebbe reso la barra muta su ogni
+                        altro metamodello. Assente quando la metaclasse non ha un
+                        enum a valore singolo con almeno due literal. */}
+                    {discriminant && (
+                        <div
+                            className="instance-manager__segmented"
+                            role="group"
+                            aria-label={`Filter by ${discriminant.key}`}
+                            title={`${discriminant.key} : ${discriminant.enumName}`}
+                        >
+                            {['', ...discriminant.literals].map(lit => (
+                                <button
+                                    type="button"
+                                    key={lit || '__all__'}
+                                    className={'instance-manager__segment'
+                                        + (segment === lit ? ' instance-manager__segment--on' : '')}
+                                    aria-pressed={segment === lit}
+                                    onClick={() => { setSegment(lit); setPage(1); }}
+                                >
+                                    {lit || 'All'}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* L'indicatore dichiara la riduzione che la tabella ha appena
+                        fatto da se'. Una colonna che sparisce senza che nulla lo
+                        dica e' un metamodello che sembra piu' povero di quel che
+                        e': il conteggio e' li' perche' la riduzione sia leggibile,
+                        e il `title` elenca quali. */}
+                    {hiddenColumnKeys.length > 0 && (
+                        <span
+                            className="instance-manager__hidden-cols"
+                            title={`Empty on every instance: ${hiddenColumnKeys.join(', ')}`}
+                        >
+                            <i className="bi bi-eye-slash" aria-hidden="true" />
+                            {hiddenColumnKeys.length} empty column{hiddenColumnKeys.length === 1 ? '' : 's'} hidden
+                        </span>
+                    )}
+
+                    {classShape && rows.length > 0 && (
+                        <button
+                            type="button"
+                            className="instance-manager__export"
+                            title={`Export the ${visible.length} listed instance${visible.length === 1 ? '' : 's'} as CSV`}
+                            onClick={exportCsv}
+                        >
+                            <i className="bi bi-download" aria-hidden="true" />
+                            Export
+                        </button>
+                    )}
+
                     {/* Route 1 of Turno 10: the catalogue creates the rootable ones.
                         Absent, never disabled, when the metamodel says no — the
-                        sentence below the toolbar carries the reason instead. */}
+                        sentence below the toolbar carries the reason instead.
+
+                        10c non cambia l'evento, e non poteva: `openCreate(cls, null,
+                        null)` e' LA STESSA chiamata che `outlineCreate` fa dal nodo
+                        modello. La scorciatoia rootable della regola Q8 e' la
+                        superficie, non un secondo percorso di create. */}
                     {classShape && !newReason && (
                         <button
                             type="button"
@@ -1752,15 +2003,26 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                     </p>
                 )}
 
-                {!selectedClass ? (
-                    <p className="instance-manager__note">Pick a metaclass to list its instances.</p>
+                {/* ── L'unico empty state (10c) ───────────────────────────────
+                    «Pick a metaclass to list its instances» E' ANDATO VIA. Non era
+                    un cartello sbagliato: era il secondo di due in cascata, e con
+                    la preselezione della collezione piu' popolata non e' piu'
+                    raggiungibile se non su un modello che non ha istanze — che e'
+                    esattamente il caso che il cartello sotto dichiara, una volta
+                    sola e con il nome giusto. */}
+                {modelIsEmpty || !selectedClass ? (
+                    <EmptyState
+                        icon="bi-inbox"
+                        title="This model has no instances yet"
+                        description="Create one from a metaclass on the left, or from the outline."
+                    />
                 ) : rows.length === 0 ? (
                     <p className="instance-manager__note">
                         No instance of {selectedClass.name} in this model.
                     </p>
                 ) : visible.length === 0 ? (
                     <p className="instance-manager__note">
-                        No instance matches “{query}”.
+                        No instance of {selectedClass.name} matches the current filters.
                     </p>
                 ) : (
                     <div className="instance-manager__table-scroll" ref={tableScrollRef}>
@@ -1775,20 +2037,20 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                                         <input
                                             type="checkbox"
                                             aria-label="Select all visible instances"
-                                            checked={visible.length > 0 && visible.every(r => selectedIds.includes(r.id))}
+                                            checked={paged.length > 0 && paged.every(r => selectedIds.includes(r.id))}
                                             onChange={() => {
-                                                const allOn = visible.length > 0 && visible.every(r => selectedIds.includes(r.id));
+                                                const allOn = paged.length > 0 && paged.every(r => selectedIds.includes(r.id));
                                                 setBulkTouched({});
                                                 setNav(null);
                                                 if (allOn) { setSelectedObjectId(null); setAlsoSelected([]); return; }
-                                                const [first, ...rest] = visible.map(r => r.id);
+                                                const [first, ...rest] = paged.map(r => r.id);
                                                 setSelectedObjectId(first ?? null);
                                                 setAlsoSelected(rest);
                                             }}
                                         />
                                     </th>
                                     <th scope="col" className="instance-manager__th-name">name</th>
-                                    {columns.map(col => (
+                                    {shownColumns.map(col => (
                                         <th
                                             key={col.key}
                                             scope="col"
@@ -1824,7 +2086,7 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                                 </tr>
                             </thead>
                             <tbody>
-                                {visible.map(row => {
+                                {paged.map(row => {
                                     /* L'espansione SEGUE la selezione, e non e' un
                                        secondo stato: «una sola riga espansa alla
                                        volta» non e' una regola da far rispettare, e'
@@ -1865,7 +2127,7 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                                         <th scope="row" className="instance-manager__td-name">
                                             {row.name || <em className="instance-manager__unnamed">unnamed</em>}
                                         </th>
-                                        {columns.map(col => (
+                                        {shownColumns.map(col => (
                                             <td key={col.key}>
                                                 <Cell cell={row.cells[col.key]} />
                                             </td>
@@ -1920,7 +2182,7 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                                         allora non c'e' riga da rendere. */}
                                     {isExpanded && ego && (
                                         <tr className="instance-manager__tr--expansion">
-                                            <td colSpan={columns.length + 5}>
+                                            <td colSpan={shownColumns.length + 5}>
                                                 <EgoRow
                                                     ego={ego}
                                                     hostWidth={hostWidth}
@@ -1937,6 +2199,56 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                         </table>
                     </div>
                 )}
+
+                {/* ── Il footer (10c) ─────────────────────────────────────────
+                    A sinistra il conteggio, che dall'eyebrow e' sceso qui: e' il
+                    posto in cui una tabella dice quante righe ha, e sopra
+                    competeva con il nome della metaclasse per la stessa riga.
+
+                    A destra la paginazione, e SOLO sopra soglia. `pages > 1` e'
+                    la condizione — non una prop `disabled`: su una tabella di sei
+                    righe una barra di pagine spenta e' arredamento che dichiara un
+                    limite che non c'e'. Il conteggio a sinistra e' quello
+                    FILTRATO, con il totale accanto quando le due cose differiscono:
+                    dire «12 instances» mentre il filtro ne ha lasciate 12 su 300
+                    sarebbe vero e fuorviante. */}
+                {selectedClass && rows.length > 0 && (
+                    <footer className="instance-manager__foot">
+                        <span className="instance-manager__foot-count">
+                            {visible.length} instance{visible.length === 1 ? '' : 's'}
+                            {visible.length !== rows.length && (
+                                <span className="instance-manager__foot-of"> of {rows.length}</span>
+                            )}
+                            {' · '}
+                            {selectedIds.length} selected
+                        </span>
+                        {pages > 1 && (
+                            <nav className="instance-manager__pager" aria-label="Table pages">
+                                <button
+                                    type="button"
+                                    className="instance-manager__page-btn"
+                                    aria-label="Previous page"
+                                    disabled={page <= 1}
+                                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                                >
+                                    <i className="bi bi-chevron-left" aria-hidden="true" />
+                                </button>
+                                <span className="instance-manager__page-of">
+                                    Page {Math.min(page, pages)} of {pages}
+                                </span>
+                                <button
+                                    type="button"
+                                    className="instance-manager__page-btn"
+                                    aria-label="Next page"
+                                    disabled={page >= pages}
+                                    onClick={() => setPage(p => Math.min(pages, p + 1))}
+                                >
+                                    <i className="bi bi-chevron-right" aria-hidden="true" />
+                                </button>
+                            </nav>
+                        )}
+                    </footer>
+                )}
             </section>
 
             {/* ── The selected instance, as a form ──────────────────────────
@@ -1945,7 +2257,10 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                 ratificata) — su un 27" una riga di campi larga tutto lo schermo
                 non e' piu' leggibile, e' solo piu' lunga da attraversare con gli
                 occhi. */}
-            <section className="instance-manager__pane instance-manager__pane--form">
+            <section
+                className={'instance-manager__pane instance-manager__pane--form'
+                    + (isMulti || subjectId ? '' : ' instance-manager__pane--form-collapsed')}
+            >
                 <div className="instance-manager__form-inner">
                 {isMulti && multi ? (
                     <MultiForm
@@ -2014,14 +2329,16 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                                 {ego?.subject.cls && (
                                     <span className="instance-manager__form-cls">{ego.subject.cls}</span>
                                 )}
-                                {isProjectModified() && (
-                                    <span
-                                        className="instance-manager__badge"
-                                        title="The project has changes that have not been saved yet"
-                                    >
-                                        Unsaved changes
-                                    </span>
-                                )}
+                                {/* «Unsaved changes» E' ANDATO VIA (deviazione A3,
+                                    ratificata e qui portata a termine). Il write e'
+                                    DIRETTO — `formWrite.ts`, un commit per battuta —
+                                    quindi non esiste un draft di edit da salvare, e
+                                    un badge che annuncia modifiche non salvate accanto
+                                    a una form che non ne tiene nessuna e' la meta'
+                                    superstite di un Save/Discard che questa slice non
+                                    costruisce. Il flag di progetto resta vero e resta
+                                    leggibile dove il progetto si salva; qui diceva del
+                                    progetto mentre sembrava dire dell'istanza. */}
                             </div>
                             <div className="instance-manager__form-actions">
                                 <button
@@ -2136,11 +2453,17 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                         )}
                     </>
                 ) : (
-                    <EmptyState
-                        icon="bi-ui-checks-grid"
-                        title="No instance selected"
-                        description="Pick a metaclass, then a row, to edit it below."
-                    />
+                    /* 10c — niente piu' cartello. Il pannello COLLASSA a una barra
+                       sottile: un `EmptyState` alto mezzo schermo per dire che non
+                       c'e' niente da mostrare occupava, per non mostrare nulla,
+                       lo spazio che serve alla tabella per mostrare qualcosa. La
+                       barra dice la stessa frase in una riga, e il pannello si
+                       riapre da se' alla selezione — l'altezza segue lo stato,
+                       che e' la sola cosa che questa superficie deve dire. */
+                    <p className="instance-manager__collapsed">
+                        <i className="bi bi-pencil-square" aria-hidden="true" />
+                        Select an instance to edit it
+                    </p>
                 )}
                 </div>
             </section>
