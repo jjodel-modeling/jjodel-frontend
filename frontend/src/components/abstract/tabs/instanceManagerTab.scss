@@ -40,7 +40,23 @@
         padding: 14px;
         overflow-y: auto;
 
-        + .instance-manager__pane { border-left: 1px solid var(--color-form-border); }
+        /* 10h — lo stesso separatore vale anche verso la colonna centrale.
+           `__main` non e' un `__pane` — e' il desk, non una superficie di lettura —
+           quindi la regola del fratello non lo raggiungeva, e il rail
+           METACLASSES/VIEWS finiva contro il fondo desk senza confine.
+
+           Si ESTENDE il selettore invece di dichiarare un `border-right` sul rail:
+           qui il confine sta sull'elemento che SEGUE (e' la convenzione di questo
+           blocco), e cosi' i due confini interni restano UNA dichiarazione sola —
+           cioe' un token solo, che e' quello che il prompt chiede di garantire.
+
+           Il token e' quello misurato ai confini gia' esistenti, non un valore
+           nuovo: `--color-form-border`, #e2e8f0. Misurato il 2026-09-01, il rail
+           sinistro dell'app (`.leftbar--project`, `pages/dashboard.scss:990`)
+           dipinge lo stesso `rgb(226, 232, 240)`, e `--color-border-subtle` —
+           il nome ipotizzato dal prompt — non esiste nel sistema. */
+        + .instance-manager__pane,
+        + .instance-manager__main { border-left: 1px solid var(--color-form-border); }
     }
 
     /* One fixed reading column, an elastic table, and a detail that only opens
