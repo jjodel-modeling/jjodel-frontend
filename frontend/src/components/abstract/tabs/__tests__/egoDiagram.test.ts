@@ -45,6 +45,7 @@ const inst = (id: string, name: string, cls: string): EgoInstance => ({ id, name
 const RUNNING = inst('o_running', 'Running', 'State');
 const T_STOP = inst('o_t1', 'stop', 'Transition');
 const T_START = inst('o_t0', 'start', 'Transition');
+const HEATER = inst('o_heater', 'Heater', 'StateMachine');
 
 const incoming = (from: EgoInstance, featureKey: string, composition = false): IncomingRef => ({
     instanceId: from.id,
@@ -166,6 +167,71 @@ describe('i vuoti', () => {
         expect(html).toContain('dangling pointer');
         expect(html).toContain('ego-diagram__node--broken');
         expect(countOf(html, 'role="button"')).toBe(0);
+    });
+});
+
+// ── L'owner (FL7) ───────────────────────────────────────────────────────────
+
+describe('l owner', () => {
+    /** `Running`, piu' la macchina che lo contiene. */
+    const owned: EgoInput = {
+        ...both,
+        incoming: [incoming(HEATER, 'states', true), incoming(T_START, 'target')],
+    };
+
+    it('la scatola dell owner porta la sottoetichetta, non la metaclasse', () => {
+        const html = render(owned);
+        expect(html).toContain('>Heater<');
+        expect(html).toContain('ego-diagram__node-owner');
+        expect(html).toContain('>owner<');
+        // La metaclasse dell'owner non e' nella scatola — tre righe in 40px non
+        // ci stanno — ma e' nel tooltip, che e' dove il resto del nastro la porta
+        // per esteso.
+        expect(html).toContain('Owner: Heater : StateMachine — via states');
+    });
+
+    it('il legame di containment e reso, e SENZA punta', () => {
+        const html = render(owned);
+        // Un `<path>` in piu' delle due frecce, e l'unico senza `markerEnd`:
+        // la punta e' cio' che distingue un riferimento da un contenimento.
+        expect(countOf(html, 'ego-diagram__owner-link')).toBe(1);
+        expect(countOf(html, 'ego-diagram__arrow"')).toBe(2);
+        expect(html).toMatch(/ego-diagram__owner-link"[^>]*d="M [\d.]+ [\d.]+ L [\d.]+ [\d.]+"/);
+        expect(html).not.toMatch(/ego-diagram__owner-link"[^>]*marker/);
+    });
+
+    it('l owner e cliccabile come ogni altro nodo', () => {
+        const html = render(owned);
+        // Tre `role="button"`: i due vicini piu' l'owner. Il soggetto non ce l'ha.
+        expect(countOf(html, 'role="button"')).toBe(3);
+        expect(countOf(html, 'ego-diagram__node"')).toBe(3);
+    });
+
+    it('nessun contenimento: nessuna scatola e nessuna linea', () => {
+        // `both` e' lo stesso vicinato senza la voce di contenimento: il positivo
+        // di controllo dell'asserzione qui sopra e' il test precedente, che sulla
+        // stessa resa trova entrambi.
+        const html = render(both);
+        expect(html).not.toContain('ego-diagram__node-owner');
+        expect(html).not.toContain('ego-diagram__owner-link');
+        expect(countOf(html, 'ego-diagram__node"')).toBe(2);
+    });
+
+    it('un owner che e anche vicino si rende UNA volta, e senza linea', () => {
+        const html = render({
+            ...both,
+            incoming: [
+                incoming(HEATER, 'states', true),
+                incoming(HEATER, 'current'),
+                incoming(T_START, 'target'),
+            ],
+        });
+        expect(countOf(html, '>Heater<')).toBe(1);
+        expect(html).not.toContain('ego-diagram__node-owner');
+        expect(html).not.toContain('ego-diagram__owner-link');
+        // Nella colonna entrante porta la metaclasse come ogni vicino, e il
+        // tooltip tiene entrambe le chiavi.
+        expect(html).toContain('Heater : StateMachine — via current, states');
     });
 });
 

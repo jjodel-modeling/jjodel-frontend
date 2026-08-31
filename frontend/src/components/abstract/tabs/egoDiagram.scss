@@ -11,6 +11,7 @@
 
      --color-form-surface              #ffffff  fondo delle scatole vicine
      --color-form-border               #e2e8f0  bordo delle scatole, filetto del footer
+     --color-form-border-strong        #cbd5e1  il legame di contenimento (FL7)
      --color-form-label                #475569  il nome di un vicino
      --color-form-muted                #94a3b8  metaclasse, eyebrow, conteggi (slate-400)
      --color-border-focus                       anello di focus da tastiera
@@ -112,6 +113,18 @@
         stroke: none;
     }
 
+    /* Il legame di contenimento (FL7): una retta senza punta. Non ha un verso da
+       leggere — ha un sopra e un sotto — e senza punta e' anche l'unica cosa che
+       lo distingue a colpo d'occhio dalle frecce accanto.
+       Un passo piu' scuro delle frecce (`-strong` e' $slate-300 contro il
+       $slate-200 di `--color-form-border`): il contenimento e' il legame piu'
+       forte dei due, e qui e' anche il piu' corto. */
+    &__owner-link {
+        fill: none;
+        stroke: var(--color-form-border-strong);
+        stroke-width: 1.5;
+    }
+
     &__node,
     &__subject {
         position: absolute;
@@ -170,6 +183,19 @@
     &__node-cls {
         color: var(--color-form-muted);
         font-size: 10.5px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* La sottoetichetta dell'owner (FL7). Prende il POSTO della metaclasse invece
+       di aggiungersi: tre righe in una scatola alta 40px non ci stanno, e il nome
+       della metaclasse resta nel tooltip. Due punti piu' piccola della metaclasse
+       di un vicino perche' dice un RUOLO e non un dato — 9px e' la misura della
+       board 1a. */
+    &__node-owner {
+        color: var(--color-form-muted);
+        font-size: 9px;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;

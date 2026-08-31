@@ -16,6 +16,12 @@
  * scatole di troppo. Qui la colonna entrante resta con il solo `start`, il footer
  * dichiara `referenced by 3`, e i due numeri portano nomi diversi perche' contano
  * cose diverse.
+ *
+ * FL7 aggiunge l'OWNER, e la fixture non e' cambiata di una riga per accoglierlo:
+ * il contenimento `Heater.states` era gia' li' dentro dal primo giorno, scartato
+ * dal filtro. E' il fatto che ha reso la slice possibile senza toccare l'host —
+ * il prompt lo chiamava `Region_main`, che e' il nome della board 13a e non esiste
+ * nel codice; qui l'owner di `Running` e' `Heater`, via `states`.
  */
 
 import { describe, expect, it, vi } from 'vitest';
@@ -121,6 +127,92 @@ describe('egoNeighborhood — la fixture Heater/Running', () => {
     it('il footer nomina i tre numeri, e li nomina in ordine', () => {
         expect(egoSummary(egoNeighborhood(heater()).counts))
             .toBe('1 incoming · 2 outgoing · referenced by 3');
+    });
+});
+
+// ── L'owner (FL7) ───────────────────────────────────────────────────────────
+
+describe('egoNeighborhood — l owner', () => {
+    it('l owner e la macchina che contiene lo stato, con la sua chiave', () => {
+        const ego = egoNeighborhood(heater());
+        expect(ego.owner).toMatchObject({
+            id: HEATER.id,
+            name: 'Heater',
+            cls: 'StateMachine',
+            kind: 'object',
+            side: 'owner',
+            featureKeys: ['states'],
+        });
+    });
+
+    it('il footer NON cambia: l owner non e un entrante e non e un referrer', () => {
+        // La riga della tabella dice 3 e il nastro deve continuare a dire 3. Se
+        // l'owner entrasse in uno dei tre numeri, due letture a due centimetri di
+        // distanza si contraddirebbero.
+        const ego = egoNeighborhood(heater());
+        expect(ego.counts).toEqual({ incoming: 1, outgoing: 2, referencedBy: 3 });
+        expect(egoSummary(ego.counts)).toBe('1 incoming · 2 outgoing · referenced by 3');
+        expect(ids(ego.incoming)).not.toContain(HEATER.id);
+        expect(ids(ego.outgoing)).not.toContain(HEATER.id);
+    });
+
+    it('istanza rootable: nessun puntatore di contenimento -> owner null', () => {
+        // Il `father` di un'istanza radice e' il MODELLO, che non e' un DObject:
+        // `referencedBy` non produce mai una voce per lui. Il null non e' un caso
+        // gestito, e' il silenzio della sorgente.
+        const rootable = heater();
+        rootable.incoming = rootable.incoming.filter(r => !r.composition);
+        expect(egoNeighborhood(rootable).owner).toBeNull();
+
+        expect(egoNeighborhood({ subject: RUNNING, outgoing: [], incoming: [] }).owner).toBeNull();
+        expect(egoNeighborhood(null).owner).toBeNull();
+    });
+
+    it('l owner che e anche vicino resta UN nodo, nel ruolo di vicino', () => {
+        // `Heater` contiene `Running` E lo punta con `current`. Una scatola sola,
+        // nella colonna entrante, e `ego.owner` e' quella stessa scatola: e' cosi'
+        // che il tipo dice «disegnato una volta sola».
+        const input = heater();
+        input.incoming = [...input.incoming, incoming(HEATER, 'current')];
+        const ego = egoNeighborhood(input);
+
+        expect(names(ego.incoming)).toEqual(['start', 'Heater']);
+        expect(ego.owner).not.toBeNull();
+        expect(ego.owner).toBe(ego.incoming[1]);          // identita', non copia
+        expect(ego.owner!.side).toBe('incoming');
+        // Entrambe le chiavi sullo stesso nodo: il riferimento e il contenimento.
+        expect(ego.owner!.featureKeys).toEqual(['current', 'states']);
+        // E il conteggio segue il riferimento, non il contenimento: 4 puntatori
+        // entranti, quello di `states` ancora non contato.
+        expect(ego.counts).toEqual({ incoming: 2, outgoing: 2, referencedBy: 4 });
+    });
+
+    it('un owner che e anche il quinto uscente riprende la sua banda', () => {
+        // «Una volta sola» vuol dire una volta DISEGNATA. Tagliato fuori dal cap,
+        // quel nodo non e' in nessuna colonna: se tenesse il `side` della colonna
+        // l'owner sparirebbe dietro il «+n more».
+        const ego = egoNeighborhood({
+            subject: RUNNING,
+            outgoing: Array.from({ length: 5 }, (_, i) => ({
+                featureKey: 'outgoing',
+                targetId: i === 4 ? HEATER.id : 't' + i,
+                target: i === 4 ? HEATER : inst('t' + i, 'T' + i, 'Transition'),
+            })),
+            incoming: [incoming(HEATER, 'states', true)],
+        });
+
+        expect(ids(ego.outgoing)).not.toContain(HEATER.id);   // il cap l'ha tagliato
+        expect(ego.owner).toMatchObject({ id: HEATER.id, side: 'owner' });
+        expect(ego.owner!.featureKeys).toEqual(['outgoing', 'states']);
+    });
+
+    it('un auto-contenimento non e un owner', () => {
+        const ego = egoNeighborhood({
+            subject: RUNNING,
+            outgoing: [],
+            incoming: [incoming(RUNNING, 'substates', true)],
+        });
+        expect(ego.owner).toBeNull();
     });
 });
 
@@ -252,6 +344,17 @@ describe('egoDispatch — l unica interazione', () => {
         expect(h.onOpenInCanvas).not.toHaveBeenCalled();
     });
 
+    it('l owner seleziona il suo id, per la stessa strada dei vicini', () => {
+        const h = handlers();
+        const ego = egoNeighborhood(heater());
+
+        expect(egoAction(ego.owner, ego.subject.id)).toEqual({ kind: 'select', id: HEATER.id });
+        expect(egoDispatch(ego.owner, h, ego.subject.id)).toEqual({ kind: 'select', id: HEATER.id });
+        expect(h.onSelect).toHaveBeenCalledTimes(1);
+        expect(h.onSelect).toHaveBeenCalledWith(HEATER.id);
+        expect(h.onOpenInCanvas).not.toHaveBeenCalled();
+    });
+
     it('«+n more» apre il canvas, e NON seleziona', () => {
         const h = handlers();
         const more: EgoNode = {
@@ -344,6 +447,72 @@ describe('egoLayout — tre colonne, fisse', () => {
         const outArrow = l.arrows.find(a => a.side === 'outgoing')!;
         expect(outArrow.d.startsWith(`M ${l.subject.x + l.subject.w} ${l.subject.y + l.subject.h / 2} C `))
             .toBe(true);
+    });
+
+    it('l owner sta in una banda sopra, e le colonne scendono di altrettanto', () => {
+        const l = egoLayout(egoNeighborhood(heater()));
+        const band = EGO_NODE_H + EGO_ROW_GAP;
+
+        expect(l.owner).toMatchObject({ id: HEATER.id, y: 0, w: EGO_NODE_W, h: EGO_NODE_H });
+        // Sopra A SINISTRA: un `EGO_COL_GAP` a sinistra del soggetto, che e' la
+        // sola unita' orizzontale di questo disegno.
+        expect(l.owner!.x).toBe(l.subject.x - EGO_COL_GAP);
+        expect(l.subject.y).toBeGreaterThanOrEqual(band);
+        for (const n of [...l.incoming, ...l.outgoing]) expect(n.y).toBeGreaterThanOrEqual(band);
+        expect(l.height).toBe(band + Math.max(EGO_SUBJECT_H, 2 * EGO_NODE_H + EGO_ROW_GAP));
+    });
+
+    it('il legame dell owner e una retta, e non e fra le frecce', () => {
+        const l = egoLayout(egoNeighborhood(heater()));
+        // `L`, non `C`: le cubiche sono dei riferimenti. E fuori da `arrows`,
+        // perche' e' l'unica linea che il renderer disegna senza punta.
+        expect(l.ownerLink).toBe(
+            `M ${l.owner!.x + EGO_NODE_W / 2} ${EGO_NODE_H}`
+            + ` L ${l.subject.x + EGO_SUBJECT_W / 2} ${l.subject.y}`,
+        );
+        expect(l.arrows).toHaveLength(l.incoming.length + l.outgoing.length);
+        expect(l.arrows.some(a => a.nodeId === HEATER.id)).toBe(false);
+    });
+
+    it('senza colonna entrante l owner resta sopra, contro il bordo', () => {
+        // `subjectX` e' zero e la sottrazione andrebbe sotto zero: si taglia a
+        // zero invece di spingere fuori dal disegno. Sopra e a sinistra finche'
+        // c'e' un a sinistra.
+        const l = egoLayout(egoNeighborhood({
+            subject: RUNNING,
+            outgoing: [],
+            incoming: [incoming(HEATER, 'states', true)],
+        }));
+        expect(l.subject.x).toBe(0);
+        expect(l.owner!.x).toBe(0);
+        expect(l.width).toBe(EGO_SUBJECT_W);
+        expect(l.height).toBe(EGO_NODE_H + EGO_ROW_GAP + EGO_SUBJECT_H);
+    });
+
+    it('nessun owner, nessuna banda: le misure di FL5 alla cifra', () => {
+        const noOwner = heater();
+        noOwner.incoming = noOwner.incoming.filter(r => !r.composition);
+        const l = egoLayout(egoNeighborhood(noOwner));
+
+        expect(l.owner).toBeNull();
+        expect(l.ownerLink).toBeNull();
+        // Nessuno scarto in testa: la colonna piu' alta parte da zero, e l'altezza
+        // e' la sua, non la sua piu' una banda.
+        expect(l.outgoing[0].y).toBe(0);
+        expect(l.height).toBe(2 * EGO_NODE_H + EGO_ROW_GAP);
+    });
+
+    it('un owner gia disegnato come vicino non costa una banda', () => {
+        const input = heater();
+        input.incoming = [...input.incoming, incoming(HEATER, 'current')];
+        const l = egoLayout(egoNeighborhood(input));
+
+        expect(l.owner).toBeNull();
+        expect(l.ownerLink).toBeNull();
+        expect(l.incoming[0].y).toBe(0);
+        expect(l.height).toBe(2 * EGO_NODE_H + EGO_ROW_GAP);
+        // La scatola c'e', ma e' nella colonna entrante: una sola, non due.
+        expect(l.incoming.filter(n => n.id === HEATER.id)).toHaveLength(1);
     });
 
     it('con un vicino solo per lato la curva e piatta: stessa quota ai due capi', () => {

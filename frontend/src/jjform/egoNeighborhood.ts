@@ -4,12 +4,23 @@
  * ── Che cosa NON e', di nuovo ─────────────────────────────────────────────────
  *
  * Non e' un canvas, e non e' nemmeno il riquadro di 13a. Il riquadro
- * (`neighborhood.ts`) e' un pannello che sta accanto alla form e ha una colonna
- * di OWNER sopra il soggetto; questo e' un nastro largo quanto una riga di
- * tabella, con tre colonne e nient'altro: entranti a sinistra, soggetto al
- * centro, uscenti a destra. L'owner non c'e' perche' la riga non ha altezza da
- * spendere per il contenimento, che e' dell'outline (10b) e ha gia' la sua
- * superficie.
+ * (`neighborhood.ts`) e' un pannello che sta accanto alla form; questo e' un
+ * nastro largo quanto una riga di tabella: entranti a sinistra, soggetto al
+ * centro, uscenti a destra, e l'owner sopra a sinistra (FL7).
+ *
+ * ── L'owner, e perche' e' arrivato dopo (FL7) ─────────────────────────────────
+ *
+ * FL5 lo aveva lasciato fuori con questa motivazione: «la riga non ha altezza da
+ * spendere per il contenimento, che e' dell'outline (10b)». La decisione del
+ * 2026-08-31 la ribalta, sulla scorta dell'opzione 1a della board 13a: l'outline
+ * dice DOVE sta un'istanza nell'albero, il nastro dice CHI la tocca, e «chi la
+ * possiede» e' la prima riga di quella seconda risposta. La banda costa una
+ * scatola alta 40px, una volta sola e solo quando l'owner c'e'.
+ *
+ * Non e' un dato nuovo: era gia' nell'ingresso. `EgoInput.incoming` e' la
+ * risposta di `referencedBy` VERBATIM, contenimento incluso e marcato, e questo
+ * modulo lo scartava un rigo piu' sotto. L'owner e' quel puntatore, lo stesso che
+ * il conteggio continua a non contare.
  *
  * I due moduli convivono per la stessa ragione per cui convivono le due
  * `FormTheme`: descrivono due disegni diversi dello stesso dato. Fonderli
@@ -25,12 +36,24 @@
  *
  * ── Un nodo per id, e l'uscente vince ─────────────────────────────────────────
  *
- * La stessa precedenza di `neighborhoodDraw` (owner > uscente > entrante), meno
- * l'owner: un vicino che il soggetto punta E che punta il soggetto compare UNA
- * volta, nella colonna degli uscenti. Non e' un'economia di pixel — e' che due
- * scatole con lo stesso nome ai due lati raccontano due istanze dove ce n'e' una.
- * L'arco di ritorno non si perde: la chiave della feature entrante finisce fra le
+ * Un vicino che il soggetto punta E che punta il soggetto compare UNA volta,
+ * nella colonna degli uscenti. Non e' un'economia di pixel — e' che due scatole
+ * con lo stesso nome ai due lati raccontano due istanze dove ce n'e' una. L'arco
+ * di ritorno non si perde: la chiave della feature entrante finisce fra le
  * `featureKeys` dello stesso nodo.
+ *
+ * L'owner e' l'ULTIMO servito, e la regola vale anche per lui: se possiede il
+ * soggetto E lo punta per riferimento, `owner` e' quel nodo li' — lo STESSO
+ * oggetto, con il suo `side` di vicino — e non una seconda scatola sopra. Chi
+ * rende guarda `owner.side === 'owner'` per sapere se ha una scatola propria da
+ * disegnare. Cio' che non si perde e' la chiave: il nome della feature di
+ * contenimento entra nelle `featureKeys` di quel nodo, e quindi nel suo tooltip.
+ *
+ * La precedenza e' percio' uscente > entrante > owner, e non quella di
+ * `neighborhoodDraw` (owner > uscente > entrante). Sono due disegni diversi: li'
+ * l'owner ha una colonna propria e vince perche' e' il ruolo piu' forte; qui la
+ * colonna e' quella dei riferimenti, l'owner e' una banda sopra, e un'istanza che
+ * e' entrambe le cose si legge meglio dov'e' l'arco.
  *
  * E' anche cio' che fa tornare i numeri della fixture: `Running` di `Heater` e'
  * puntato da `start.target`, `stop.source` e `fault.source` — tre puntatori,
@@ -93,7 +116,12 @@ export interface EgoInput {
  *  come nella tabella e nell'outline. */
 export type EgoKind = 'object' | 'broken' | 'more';
 
-export type EgoSide = 'incoming' | 'outgoing';
+/** Dove un nodo sta: le due colonne, piu' la banda dell'owner (FL7).
+ *
+ *  `'owner'` vuol dire «ha una scatola propria, sopra a sinistra». Un owner che
+ *  e' anche un vicino NON lo porta: porta il `side` della sua colonna, ed e' il
+ *  modo in cui questo tipo dice «disegnato una volta sola». */
+export type EgoSide = 'incoming' | 'outgoing' | 'owner';
 
 /** Un nodo del nastro. Il prompt lo chiama `NodeRef`; qui porta il prefisso della
  *  famiglia perche' `jjform/` e' una directory sola e un `NodeRef` nudo non
@@ -127,6 +155,15 @@ export interface Ego {
      *  quando ce n'erano di piu'. */
     incoming: EgoNode[];
     outgoing: EgoNode[];
+    /** Il padre di CONTENIMENTO, o `null` quando il modello possiede il soggetto
+     *  direttamente — un'istanza rootable non ha owner, e la radice del modello
+     *  non e' un nodo di questo disegno.
+     *
+     *  Quando l'owner e' anche un vicino, questo campo e' quel nodo, per
+     *  IDENTITA': `ego.owner === ego.incoming[k]` e' vero, e il suo `side` non e'
+     *  `'owner'`. Chi rende disegna la scatola dell'owner solo per
+     *  `owner.side === 'owner'`. */
+    owner: EgoNode | null;
     counts: EgoCounts;
 }
 
@@ -183,6 +220,7 @@ export function egoNeighborhood(input: EgoInput | null | undefined): Ego {
         subject,
         incoming: [],
         outgoing: [],
+        owner: null,
         counts: { incoming: 0, outgoing: 0, referencedBy: 0 },
     };
     if (!input || !subjectId) return empty;
@@ -229,10 +267,48 @@ export function egoNeighborhood(input: EgoInput | null | undefined): Ego {
         inByI.push(node);
     }
 
+    // L'owner: il puntatore di CONTENIMENTO diretto al soggetto, cioe' l'unica
+    // voce che il filtro qui sopra ha scartato. Si cerca per ultimo perche' la
+    // sua precedenza e' l'ultima: se quell'istanza ha gia' un nodo, quello e'
+    // l'owner — una scatola sola, e la chiave del contenimento le si aggiunge.
+    //
+    // Nessuna voce di contenimento vuol dire owner assente, ed e' esattamente il
+    // caso rootable: il `father` di un'istanza radice e' il MODELLO, che non e'
+    // un `DObject` e la cui collezione non e' uno slot, quindi `referencedBy` non
+    // lo produce mai. Il null non e' un caso limite gestito qui — e' il silenzio
+    // della sorgente, letto per quello che dice.
+    const drawnIn = capped(inByI, 'incoming');
+    const drawnOut = capped(outByI, 'outgoing');
+
+    const ownerRef = (input.incoming ?? []).find(
+        r => r && r.composition && r.instanceId && r.instanceId !== subjectId,
+    );
+    let owner: EgoNode | null = null;
+    if (ownerRef) {
+        const existing = byId.get(ownerRef.instanceId) ?? null;
+        owner = existing ?? {
+            id: ownerRef.instanceId,
+            name: ownerRef.instanceName ?? '',
+            cls: ownerRef.instanceClass ?? '',
+            kind: 'object',
+            side: 'owner',
+            featureKeys: [],
+        };
+        // «Una volta sola» vuol dire una volta DISEGNATA. Un vicino che il cap ha
+        // tagliato fuori dalla sua colonna non e' da nessuna parte, e lasciargli
+        // il `side` della colonna nasconderebbe l'owner dietro un «+n more».
+        // La banda, che il cap non tocca, se lo riprende.
+        if (!existing || !(drawnIn.includes(existing) || drawnOut.includes(existing))) {
+            owner.side = 'owner';
+        }
+        addKey(owner, ownerRef.featureKey);
+    }
+
     return {
         subject,
-        incoming: capped(inByI, 'incoming'),
-        outgoing: capped(outByI, 'outgoing'),
+        incoming: drawnIn,
+        outgoing: drawnOut,
+        owner,
         counts: {
             incoming: inByI.length,
             outgoing: outByI.length,
@@ -287,6 +363,11 @@ export type EgoAction =
  * perche' non c'e' niente da selezionare. Il sintetico `more` porta al canvas, e
  * ci porta con lo STESSO gesto di «open in canvas»: e' l'unico posto dove il
  * quinto vicino esiste.
+ *
+ * L'owner non ha nessun ramo qui, ed e' voluto: decide su `kind`, non su `side`,
+ * e un owner e' un `object` con un id come ogni altro. Cliccarlo seleziona quella
+ * istanza, che e' cio' che il prompt di FL7 chiede — «click = selezione, come
+ * ogni nodo» — e cio' che si otterrebbe comunque scrivendo di meno.
  */
 export function egoAction(node: EgoNode | null | undefined, subjectId?: string): EgoAction {
     if (!node) return { kind: 'none' };
@@ -366,6 +447,15 @@ export interface EgoLayout {
     subject: EgoPlacedNode;
     incoming: EgoPlacedNode[];
     outgoing: EgoPlacedNode[];
+    /** La scatola dell'owner, quando ne ha una propria (`owner.side === 'owner'`).
+     *  `null` anche quando `ego.owner` non e' null: e' il caso dell'owner che e'
+     *  gia' disegnato come vicino. */
+    owner: EgoPlacedNode | null;
+    /** Il legame di contenimento, gia' pronto per `d`. Fuori da `arrows`, e non
+     *  per ordine: non ha punta (il contenimento non ha un verso da leggere, ha
+     *  un sopra e un sotto) e non ha ventaglio, quindi il renderer lo deve
+     *  distinguere comunque. `null` quando la scatola non c'e'. */
+    ownerLink: string | null;
     arrows: EgoArrow[];
 }
 
@@ -384,6 +474,19 @@ function columnHeight(n: number): number {
  *
  * Nessun `y` negativo per costruzione: l'altezza totale e' il massimo delle tre,
  * e ogni colonna si centra dentro di essa.
+ *
+ * ── La banda dell'owner (FL7) ─────────────────────────────────────────────────
+ *
+ * Quando l'owner ha una scatola propria, il nastro guadagna in TESTA una banda
+ * alta quanto una scatola piu' un distacco, e le tre colonne scendono di
+ * altrettanto. Le `x` non si muovono: l'owner sta a sinistra del soggetto di un
+ * `EGO_COL_GAP` — la sola unita' orizzontale che questo disegno ha — e a `x` zero
+ * quando la sottrazione andrebbe sotto zero, cioe' quando non c'e' colonna
+ * entrante e il soggetto e' gia' contro il bordo. Sopra e a sinistra finche' c'e'
+ * un a sinistra; sopra, quando non c'e'.
+ *
+ * Senza owner la banda vale zero e ogni misura di questa funzione e' quella di
+ * FL5, alla cifra.
  */
 export function egoLayout(ego: Ego | null | undefined): EgoLayout {
     const subjectNode: EgoNode = ego?.subject ?? {
@@ -391,26 +494,34 @@ export function egoLayout(ego: Ego | null | undefined): EgoLayout {
     };
     const incoming = ego?.incoming ?? [];
     const outgoing = ego?.outgoing ?? [];
+    const ownerNode = ego?.owner ?? null;
+    /** Solo l'owner con scatola propria costa una banda: quello gia' disegnato
+     *  come vicino e' nella sua colonna e non chiede altezza. */
+    const ownerBoxed = ownerNode !== null && ownerNode.side === 'owner';
+    const band = ownerBoxed ? EGO_NODE_H + EGO_ROW_GAP : 0;
 
     const inH = columnHeight(incoming.length);
     const outH = columnHeight(outgoing.length);
-    const height = Math.max(inH, outH, EGO_SUBJECT_H);
+    const bodyH = Math.max(inH, outH, EGO_SUBJECT_H);
+    const height = band + bodyH;
 
     const step = EGO_NODE_W + EGO_COL_GAP;
     const subjectX = incoming.length > 0 ? step : 0;
     const outgoingX = subjectX + EGO_SUBJECT_W + EGO_COL_GAP;
-    const width = outgoingX + (outgoing.length > 0 ? EGO_NODE_W : -EGO_COL_GAP);
+    const columnsW = outgoingX + (outgoing.length > 0 ? EGO_NODE_W : -EGO_COL_GAP);
+    const ownerX = Math.max(0, subjectX - EGO_COL_GAP);
+    const width = ownerBoxed ? Math.max(columnsW, ownerX + EGO_NODE_W) : columnsW;
 
     const subject: EgoPlacedNode = {
         ...subjectNode,
         x: subjectX,
-        y: (height - EGO_SUBJECT_H) / 2,
+        y: band + (bodyH - EGO_SUBJECT_H) / 2,
         w: EGO_SUBJECT_W,
         h: EGO_SUBJECT_H,
     };
 
     const place = (nodes: EgoNode[], x: number, total: number): EgoPlacedNode[] => {
-        const top = (height - total) / 2;
+        const top = band + (bodyH - total) / 2;
         return nodes.map((n, i) => ({
             ...n,
             x,
@@ -443,5 +554,17 @@ export function egoLayout(ego: Ego | null | undefined): EgoLayout {
         })),
     ];
 
-    return { width, height, subject, incoming: placedIn, outgoing: placedOut, arrows };
+    // L'owner e il suo legame. Una RETTA, dal bordo basso della scatola al bordo
+    // alto del soggetto, e senza punta: e' l'opzione 1a della board 13a, dove la
+    // linea dell'owner e' l'unica delle tre senza `marker-end`. Una cubica come
+    // quelle dei riferimenti direbbe che e' la stessa specie di legame.
+    const owner: EgoPlacedNode | null = ownerBoxed && ownerNode
+        ? { ...ownerNode, x: ownerX, y: 0, w: EGO_NODE_W, h: EGO_NODE_H }
+        : null;
+    const ownerLink = owner
+        ? `M ${owner.x + owner.w / 2} ${owner.y + owner.h} `
+          + `L ${subject.x + subject.w / 2} ${subject.y}`
+        : null;
+
+    return { width, height, subject, incoming: placedIn, outgoing: placedOut, owner, ownerLink, arrows };
 }

@@ -22,10 +22,21 @@ import './egoDiagram.scss';
  * di tabella — espande e carica la form.
  *
  * Il riquadro di 13a (`NeighborhoodPanel`, in `InstanceManagerTab.tsx`) e' l'altro
- * disegno dello stesso dato: un pannello alto, con una colonna di OWNER sopra il
- * soggetto. Questo e' un nastro largo quanto una riga, con tre colonne e senza
- * owner — il contenimento e' dell'outline, che ha la profondita' per mostrarlo.
- * I due convivono; fonderli darebbe a uno dei due un campo che l'altro non rende.
+ * disegno dello stesso dato: un pannello alto, dove ogni nodo porta anche il suo
+ * valore saliente. Questo e' un nastro largo quanto una riga. I due convivono;
+ * fonderli darebbe a uno dei due un campo che l'altro non rende.
+ *
+ * ── L'owner (FL7) ─────────────────────────────────────────────────────────────
+ *
+ * Una scatola sopra a sinistra, come i vicini, con la sottoetichetta «owner» al
+ * posto della metaclasse — tre righe in 40px non ci stanno, e la metaclasse resta
+ * nel tooltip. Il legame e' una retta SENZA punta: il contenimento non ha un
+ * verso da leggere, ha un sopra e un sotto, ed e' l'unica cosa che lo distingue a
+ * colpo d'occhio dai riferimenti accanto. E' l'opzione 1a della board 13a.
+ *
+ * Le posizioni sono ancora tutte del modulo: `layout.owner` e `layout.ownerLink`
+ * arrivano gia' calcolati, e sono `null` insieme quando l'owner non c'e' o e' gia'
+ * disegnato come vicino. Questo file non decide quale dei due casi sia.
  *
  * ── Un motore in meno ─────────────────────────────────────────────────────────
  *
@@ -65,7 +76,11 @@ function nodeTitle(node: EgoNode): string {
     if (node.kind === 'more') return 'Show the rest on the canvas';
     if (node.kind === 'broken') return `Dangling pointer: ${node.id}`;
     const via = node.featureKeys.length > 0 ? ` — via ${node.featureKeys.join(', ')}` : '';
-    return `${egoLabel(node)} : ${node.cls || 'unknown metaclass'}${via}`;
+    // La metaclasse dell'owner vive QUI e non nella scatola, che al suo posto
+    // porta il ruolo: e' il solo nodo del nastro il cui tooltip dice qualcosa che
+    // la scatola non dice.
+    const role = node.side === 'owner' ? 'Owner: ' : '';
+    return `${role}${egoLabel(node)} : ${node.cls || 'unknown metaclass'}${via}`;
 }
 
 export function EgoDiagram({ ego, onSelect, onOpenInCanvas }: EgoDiagramProps) {
@@ -105,6 +120,8 @@ export function EgoDiagram({ ego, onSelect, onOpenInCanvas }: EgoDiagramProps) {
                         <i className="bi bi-exclamation-triangle-fill" aria-hidden="true" />
                         broken
                     </span>
+                ) : node.side === 'owner' ? (
+                    <span className="ego-diagram__node-owner">owner</span>
                 ) : node.cls ? (
                     <span className="ego-diagram__node-cls">{node.cls}</span>
                 ) : null}
@@ -165,8 +182,16 @@ export function EgoDiagram({ ego, onSelect, onOpenInCanvas }: EgoDiagramProps) {
                                 markerEnd="url(#ego-diagram-arrow)"
                             />
                         ))}
+                        {/* Il contenimento: nessun `markerEnd`. La punta e'
+                            l'unica cosa che le frecce qui sopra dicono, e darla
+                            anche a questa linea vorrebbe dire dire la stessa
+                            cosa di due legami diversi. */}
+                        {layout.ownerLink && (
+                            <path className="ego-diagram__owner-link" d={layout.ownerLink} />
+                        )}
                     </svg>
 
+                    {layout.owner && neighbour(layout.owner)}
                     {layout.incoming.map(neighbour)}
                     {layout.outgoing.map(neighbour)}
 
