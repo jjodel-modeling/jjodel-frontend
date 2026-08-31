@@ -2,6 +2,47 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-09-01 — feat(tokens): la coppia model esce dai contenitori e torna ambra (DS-1)
+**Prompt**: «Slice DS1 — la coppia entity-model vira ad amber, SERIALE lato token, parallela
+a 10h»: `--color-entity-model-{bg,fg}` esce dall'alias sulla famiglia contenitori (R-RAIL-30)
+e prende i quattro valori dell'opzione (A) gia' ratificata — H 85, grado saturo, `#F3E8D3 /
+#6B5110` in chiaro e `#3B2B06 / #E4C992` in scuro. I tre lettori virano nella stessa corsa,
+gate visivo sui pastelli affiancati (se `model` ed `enum` sono indistinguibili la slice si
+ferma su (C)), e §2.2 del DS aggiornata perche' documento e token non divergano di nuovo.
+**Files touched**: `styles/tokens/{_colors-light.scss,_colors-dark.scss}`,
+`styles/__tests__/entityModelAmberDs1.test.ts` (**nuovo**, 21 casi), `docs/DESIGN-SYSTEM.md`
+§2.2 e il referto `docs/discovery/discovery_2026-09-01_ds1_model_ambra.md` in `f4aa22df1`;
+log a parte. Un commit di codice, con pathspec, indice verificato vuoto prima e dopo.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `npm run typecheck` **33** (baseline invariata, conteggio su output
+completo, `EXIT=2`); `npm run build` exit **0**; `npx vitest run` **2710 passati / 0
+falliti**, 9 file rossi = i noti `window is not defined`, nessuno di questa slice. Suite
+propria provata con SEI mutazioni (alias restaurato, tinta a H 70 sotto il pavimento, grado
+di croma tenue, `package` de-aliasato, consumatore a letterale, `model-fg` scuro uguale a
+`enum-fg`): 2/4/5/1/2/4 rossi, verde al ripristino in tutti e sei.
+**Out-of-scope changes**: no — i due fogli token, la suite nuova, la sezione del DS che il
+prompt inline aggiunge al perimetro, il referto.
+**Layer Impact Report**: not-required — nessun file di §3.1 nel perimetro. Zero creatori D,
+zero `TRANSACTION`, zero `SetFieldAction`: il delta e' quattro dichiarazioni CSS.
+**Smoke visivo**: passato — `_tmp_ds1_verify.ts` sull'app vera, girata DUE volte con lo
+stesso file e i due fogli token riportati a `HEAD` per il giro before (non `git stash`: 10h
+stava scrivendo in `instanceManagerTab.scss` nella stessa corsa): **before 27 PASS / 4 FAIL**,
+**after 31 PASS / 0 FAIL**, zero errori di pagina in entrambi, due temi per giro. Le tre
+superfici misurate a computed style: rail Properties `rgb(243,232,211)/rgb(107,81,16)`,
+badge `m` dell'outline identico — vira per EREDITA', `instanceManagerTab.scss` non toccato —
+e menu «New document» identico; in scuro `rgb(59,43,6)/rgb(228,201,146)` su tutte e tre. Il
+gate percettivo passa: nel before `MODEL` e `METAMODEL` erano lo stesso pixel, nell'after
+`model` legge oliva-oro contro il pesca di `enum` e il tortora di `literal`. Ritagli
+`_tmp_ds1_{before,after}_{light,dark}_2_strip.png` e `_1_rail` / `_3_outline`.
+**Notes**: I numeri del prompt sono stati ricalcolati da zero in OKLab, non copiati: tornano
+tutti, pavimento compreso. Due correzioni alla sonda e non al prodotto, nel referto §4. Un
+reperto per la slice a valle: il commento di `EditorV2.scss:797` motiva il proprio letterale
+con l'alias che DS-1 ha appena falsificato. Con questa entry le attive salgono a 44: la
+rotazione oltre le 40 resta dovuta come commit a se'.
+**Prompt document name**: PROMPT_ds1_entity_model_amber.md — 2026-09-01 00:15
+
 ## 2026-09-01 — fix(manager): il confine fra il rail e la colonna centrale (10h)
 **Prompt**: «Slice 10h — ritocchi visuali del manager, giro 1, micro, SERIALE»: (1) il rail
 METACLASSES/VIEWS finisce senza confine contro il fondo desk della colonna centrale —
