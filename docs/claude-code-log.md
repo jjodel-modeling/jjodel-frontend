@@ -2,6 +2,40 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-08-31 — feat(jjform): registro delle width e packer del form auto-layout (FL1)
+**Prompt**: `docs/prompts/PROMPT_FL1_widthmap_packing.md` — registro tipo→`{span, widget}`
+e packing a 12 colonne come modulo PURO in `jjform/`, sulla specifica ratificata
+`docs/design/design_handoff_jjodel_form_views/form-autolayout-spec.md`. Fuori scopo
+dichiarato: temi (FL2), widget (FL3), rendering e misura dell'overflow (FL4).
+**Files touched**: `frontend/src/jjform/layout.ts` (nuovo),
+`frontend/src/jjform/__tests__/layout.test.ts` (nuovo, 37 unita'),
+`frontend/src/jjform/index.ts` (solo il blocco di export FL1) — commit `5fafd3ecf`,
+pathspec esplicito. `index.ts` e' condiviso con la sessione FL2 in volo: committata la sola
+mia parte con il pattern §6.1 (checkout HEAD, riapplico il mio blocco, commit, ripristino
+la copia combinata), quindi il blocco `themes` di FL2 resta nel working tree e non e' entrato
+nel mio commit. Log e prompt in un commit docs a parte.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: a
+**Regressions**: no — `npx tsc --noEmit` **33** (baseline invariata, conteggio su output
+completo), `npm run build` verde (solo il warning chunk-size preesistente), vitest su
+`src/jjform` **216/0** su 9 file (le 37 nuove piu' le 179 preesistenti, temi di FL2 inclusi).
+Modulo non ancora cablato da nessuna superficie: l'integrazione e' FL4.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessun file di §3.1 nel perimetro; `jjform/` non
+importa nulla, zero creatori D, zero `TRANSACTION`, zero `SetFieldAction`.
+**Smoke visivo**: passato — `npm run smoke` GREEN 12/0/3, run quiescente. Non probante per
+questa slice: nessuno stato di `states.ts` monta una form, e FL1 non ha superficie visiva.
+**Notes**: ⚠️ per tre divergenze fra le «righe attese» del prompt e le regole della specifica,
+che il modulo segue: (1) `kind` enum3 da' span 3, non 6 — le righe del prototipo tornano
+esatte solo con un enum >3 literals; (2) la riga corta che il prompt chiude con «buco 3»
+viene invece chiusa dalla regola 2 (l'ultimo scalare si estende); (3) `tags` (attr) e
+`outgoing` (ref) non possono condividere una riga, perche' la regola 3 fa ripartire il
+packing a ogni sezione. `Form Auto Layout.dc.html`, dichiarato autoritativo dalla specifica,
+**non esiste nel repo**: le divergenze non sono arbitrabili sull'artefatto. Test scritti
+sulle regole; le righe del fixture sono asserite come le regole le producono.
+**Prompt document name**: PROMPT_FL1_widthmap_packing.md 2026-08-31 11:05
+
 ## 2026-08-31 — feat(manager): il riquadro di vicinato nel manager (13a)
 **Prompt**: «13a: il riquadro di vicinato nel manager», dato in chat e non depositato in
 `docs/prompts/`, a valle della ratifica di design R-13A-1 e del disegno
