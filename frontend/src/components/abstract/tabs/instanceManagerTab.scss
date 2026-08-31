@@ -1038,8 +1038,18 @@
 
         &:hover { background: var(--color-bg-tertiary); }
 
+        /* La coppia intera del vocabolario di selezione, non la sola campitura:
+           la barra e' quella che la riga della tabella porta su `__td-name`, e
+           due superfici che dicono «questo e' selezionato» in due modi diversi
+           sono due vocabolari, non uno. La barra sta sul bordo della colonna e
+           non sull'inserto del livello: e' la colonna a essere selezionata li'
+           dentro, e un indicatore che si sposta con la profondita' si leggerebbe
+           come un secondo dato. */
         &--selected,
-        &--selected:hover { background: var(--color-selection-bg); }
+        &--selected:hover {
+            background: var(--color-selection-bg);
+            box-shadow: inset 2px 0 0 var(--color-selection-bar);
+        }
 
         &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: -2px; }
     }
