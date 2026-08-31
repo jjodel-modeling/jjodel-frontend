@@ -2,6 +2,44 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-09-01 — fix(manager): le icone dei pulsanti ereditano il colore del pulsante
+**Prompt**: «in tutti i pulsanti color slate scuro le icone bi non sono in bianco, devono
+essere color bianco». Schermo indicato dopo domanda: la testata della tabella dell'instance
+manager — il primario «+ New <Cls>» e gli altri controlli pieni della stessa barra.
+**Files touched**: `abstract/tabs/instanceManagerTab.scss` (in `dd8098827`) e
+`abstract/tabs/__tests__/instanceManagerIconInherit.test.ts` (**nuovo**, 13 casi, in
+`04cc1cb49`); log a parte. DUE commit invece di uno per l'incidente d'indice sotto.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `npm run typecheck` **33** (baseline invariata, conteggio su output
+completo, `EXIT=2`); `npm run build` exit **0**; vitest **2756 passati / 3 falliti**, e i 3
+rossi NON sono di questa correzione: sono `instanceManager10c` (×2) e `instanceManager10d`
+(×1), che asseriscono il TSX e il foglio come li lascia la slice **10i di un'altra sessione,
+non committata in albero** — l'unico `rgba(` in piu' e' il `box-shadow` del suo pannello
+Columns, e il mio delta non aggiunge ne' esadecimali ne' `rgba` fuori dai commenti (che i
+test spogliano). 11 file rossi = i 9 noti `window is not defined` piu' quei due. Suite propria
+provata con SEI mutazioni (via la regola dal primario, senza l'hover, `#fff` al posto di
+`inherit`, via la regola da Export, regola larga a livello di tab, `!important`): 2/1/2/1/1/3
+rossi, verde al ripristino in tutte e sei.
+**Out-of-scope changes**: no — il foglio del perimetro indicato e la sua suite.
+**Layer Impact Report**: not-required — nessun file di §3.1. Il delta e' due dichiarazioni CSS.
+**Smoke visivo**: passato — `_tmp_biwhite_verify.ts`, fixture StateMachine/State/Transition:
+**before 10 PASS / 4 FAIL**, **after 14 PASS / 0 FAIL**, zero errori di pagina. «+ New»:
+icona `rgb(15,23,42)` -> `rgb(255,255,255)`, uguale al `color` del pulsante, e bianca anche
+sotto hover. Export: `rgb(15,23,42)` -> `rgb(71,85,105)`, cioe' il colore della propria
+etichetta. Verificato anche nel PIXEL, decodificando i PNG: al centro del glifo `+`
+(1440,148) il before e' `(18,27,46)` — il punto piu' SCURO del riquadro — e l'after
+`(231,233,235)`, il piu' chiaro. Non-regressioni verdi in entrambi i giri: i tre confini di
+10h, i badge lettera di 10f, il badge «C» del rail, le righe della tabella.
+**Notes**: due reperti di metodo nel referto. Una prima sonda su cinque stati aveva trovato
+UNA sola icona non bianca, e non era questa: `__new` si rende solo con una metaclasse
+ROOTABLE selezionata, e nessuno stato la selezionava — uno stato senza il soggetto da' lo
+stesso silenzio di un soggetto che non c'e'. E `--font-color-1` e' dichiarato su `body`, non
+su `:root`: letto sulla radice torna vuoto e fa dichiarare inerte una regola viva. Ho
+commesso entrambi gli errori prima di correggerli.
+**Prompt document name**: prompt inline, nessun documento — 2026-09-01 00:45
+
 ## 2026-09-01 — feat(tokens): la coppia model esce dai contenitori e torna ambra (DS-1)
 **Prompt**: «Slice DS1 — la coppia entity-model vira ad amber, SERIALE lato token, parallela
 a 10h»: `--color-entity-model-{bg,fg}` esce dall'alias sulla famiglia contenitori (R-RAIL-30)
