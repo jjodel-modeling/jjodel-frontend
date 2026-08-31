@@ -219,13 +219,13 @@ describe('rung 3 — the type name parsed syntactically', () => {
 
 // ─── The packer ──────────────────────────────────────────────────────────────
 
-const field = (key: string, span: 3 | 6 | 12, many = false): LayoutField => ({
+const field = (key: string, span: 3 | 6 | 12, many = false, readOnly = false): LayoutField => ({
     key, id: 'f_' + key,
     kind: many ? 'collection' : 'string',
     widget: many ? 'chips' : 'text',
     span, baseSpan: span, stretched: false,
     growsOnOverflow: many,
-    many, required: false, readOnly: false,
+    many, required: false, readOnly,
     rung: 'type', reason: 'fixture',
 });
 
@@ -298,6 +298,28 @@ describe('packing — the stretch', () => {
     it('gives the whole row back to a lone scalar, so a 3 can become a 12', () => {
         const rows = packRows([field('flag', 3)]);
         expect(rows[0].fields[0]).toMatchObject({ span: 12, baseSpan: 3, stretched: true });
+    });
+
+    // ── Amendment A1 (spec, 31-08-2026): read-only never stretches ────────────
+
+    it('does NOT stretch a read-only field — it keeps the hole (A1)', () => {
+        const rows = packRows([field('depth', 3, false, true)]);
+        expect(rows[0].fields[0]).toMatchObject({ span: 3, baseSpan: 3, stretched: false });
+        expect(rows[0].free).toBe(9);
+    });
+
+    it('leaves the hole when a read-only field ENDS a short row (A1)', () => {
+        const rows = packRows([field('name', 6), field('depth', 3, false, true)]);
+        expect(rows[0].fields.map(f => f.span)).toEqual([6, 3]);
+        expect(rows[0].free).toBe(3);
+    });
+
+    it('still stretches a writable scalar that FOLLOWS a read-only one (A1)', () => {
+        // The rule is about the LAST field of the row, not about the row containing
+        // one: a writable field closing the row takes the free columns as before.
+        const rows = packRows([field('depth', 3, false, true), field('note', 3)]);
+        expect(rows[0].fields.map(f => f.span)).toEqual([3, 9]);
+        expect(rows[0].free).toBe(0);
     });
 });
 

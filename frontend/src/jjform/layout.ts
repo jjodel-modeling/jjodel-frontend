@@ -389,9 +389,22 @@ export interface FormLayout {
  * metamodel declared a multi where a scalar would have closed the row — and a
  * packer that removed it would remove the reason to go fix the metamodel.
  *
- * The stretch is rule 2 in its entirety: the last SCALAR of a short row extends
- * to fill it; a multi never stretches by position, only by its own overflow, so a
- * row ending in a multi keeps its hole and the multi keeps `growsOnOverflow`.
+ * The stretch is rule 2 in its entirety, amendment A1 included: the last WRITABLE
+ * SCALAR of a short row extends to fill it. Two kinds of field refuse the stretch
+ * and keep the row's hole instead —
+ *
+ *  - a MULTI, which grows only by its own chip overflow (`growsOnOverflow`), so a
+ *    row ending in one keeps the hole and the flag;
+ *  - a READ-ONLY or derived field (amendment A1, FL1 arbitration ratified with the
+ *    spec on 31-08-2026). Spending a row's free columns on the one field the user
+ *    cannot touch reads as an invitation to type into it — the misreading the lock
+ *    glyph exists to prevent — and spends them at the expense of a field that could
+ *    have used them. `readOnly` already covers `derived`: `shape.ts` computes it as
+ *    `derived || changeable === false`.
+ *
+ * In both cases the hole is INFORMATION, and that is the whole argument: it says the
+ * metamodel put a multi or a derived attribute at the end of a short row, which is a
+ * thing to go and fix in the metamodel rather than to paper over in the packer.
  */
 export function packRows(fields: readonly LayoutField[]): LayoutRow[] {
     const rows: LayoutRow[] = [];
@@ -402,7 +415,7 @@ export function packRows(fields: readonly LayoutField[]): LayoutRow[] {
         if (current.length === 0) return;
         const free = GRID_COLUMNS - used;
         const last = current[current.length - 1];
-        if (free > 0 && !last.growsOnOverflow) {
+        if (free > 0 && !last.growsOnOverflow && !last.readOnly) {
             current[current.length - 1] = { ...last, span: (last.span + free) as Span, stretched: true };
             rows.push({ fields: current, free: 0 });
         } else {
