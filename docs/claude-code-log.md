@@ -2,6 +2,54 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-08-31 — feat(jjform): il nodo owner nell'ego-diagramma (FL7)
+**Prompt**: `docs/prompts/PROMPT_FL7_ego_owner.md` — l'ego-diagramma della riga
+espandibile guadagna il padre di contenimento: `owner` nel risultato, scatola
+sopra-a-sinistra con sottoetichetta «owner», legame senza freccia, precedenza id
+invariata, gruppo «owner» in testa al fallback testuale. Parallela a 10b.
+**Files touched**: `jjform/{egoNeighborhood.ts,__tests__/egoNeighborhood.test.ts}`,
+`abstract/tabs/{EgoDiagram.tsx,egoDiagram.scss,__tests__/egoDiagram.test.ts}`
+(`3637bfbaa`); `abstract/tabs/InstanceManagerTab.tsx` (`b5112fddf`); referto,
+prompt e log in `docs/`. Tre commit, tutti con pathspec, indice verificato vuoto
+prima e dopo ciascuno. `jjform/index.ts` **non toccato**: nessun tipo nuovo
+esportato, il barrel esporta gia' `Ego`, `EgoNode`, `EgoSide`, `EgoLayout`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `npm run typecheck` **33** (baseline invariata, conteggio su
+output completo); `npm run build` exit 0; vitest **2520 passati / 0 falliti**,
+9 file rossi = i noti errori all'import, nessuno di questa slice; suite proprie
+**56/56** (39 al referto FL5), provate con 5 mutazioni (4/2/1/1/1 rossi, verde al
+ripristino).
+**Out-of-scope changes**: yes — `InstanceManagerTab.tsx` non e' fra i «file tuoi»
+del prompt, che anzi elenca «la tabella» fra i file da non toccare; ma il prompt
+chiede anche il gruppo «owner» nel fallback, che vive li'. Le due clausole non
+possono valere entrambe: portata in chat prima di scrivere, scelta l'opzione
+«farlo, in un commit separato» perche' la collisione con 10b resta una riga.
+**Layer Impact Report**: not-required — nessun file di §3.1 nel perimetro. Zero
+creatori D, zero `TRANSACTION`, zero `SetFieldAction` aggiunti: l'owner era gia'
+nell'ingresso (`egoInputOf` passa `referencedBy` verbatim, contenimento incluso e
+marcato) e il modulo lo scartava un rigo sotto. Nessun walk nuovo, nessuna
+modifica alla firma delle prop, quindi il mount nella riga espandibile e' restato
+fuori dal perimetro come il prompt prescrive.
+**Smoke visivo**: passato — `npm run smoke` **GREEN 12/0/3**, corsa quiescente, e
+NON probante per questa slice (nessuno stato di `states.ts` monta il manager).
+Cio' che la riguarda e' la sonda `_tmp_fl7_verify.ts` sull'app vera, fixture
+`Heater` + `Cooler`: **20 PASS / 0 FAIL / 0 errori di pagina** — scatola owner
+sopra (378<=464) e a sinistra (915<971) del soggetto, tooltip
+`Owner: Heater : StateMachine — via states`, UNA retta senza `marker-end` in
+`$slate-300` contro le sei frecce che la punta ce l'hanno, footer uguale alla
+colonna referenced-by (4 e 4), `Off` con owner `Cooler` e non `Heater`, `Heater`
+rootable senza scatola ne' linea, click che porta la form sull'owner, e a 900px i
+gruppi `[owner, incoming, this object, outgoing]`.
+**Notes**: tre scoperte. (1) `Region_main` non esiste nel codice: e' della board
+13a, l'owner di `Running` e' `Heater`. (2) Caso non nominato: l'owner tagliato dal
+cap riprende la banda, o sparirebbe dietro un «+n more». (3) Fuori perimetro:
+`substates` (auto-riferimento) resta `composition: false` dove `states` diventa
+`true`. Piu' l'incidente di concorrenza con 10b, chiuso senza perdite. Per esteso
+in `docs/discovery/discovery_2026-08-31_fl7_ego_owner.md`.
+**Prompt document name**: PROMPT_FL7_ego_owner.md 2026-08-31 21:15
+
 ## 2026-08-31 — fix(manager): l'outline di containment, ri-letto dopo FL6 (10b)
 **Prompt**: «Slice 10b — outline di containment nel manager, PARALLELO a FL7»: pannello
 «Model outline», riga con icona/nome/classe/«+», menu dei child-slot leciti, create dal
