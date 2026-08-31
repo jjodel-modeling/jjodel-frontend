@@ -2,6 +2,46 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-08-31 — feat(manager): il rail, la testata, il footer e lo stato di riposo (10c)
+**Prompt**: `docs/prompts/PROMPT_10c_manager_parity.md` — parita' di superficie con la
+board: badge «C» e sezione VIEWS nel rail, testata a 24px con provenienza, filtro sul nome,
+segmented sull'enum discriminante, indicatore delle colonne vuote, Export, footer con
+conteggio e paginazione, preselezione della metaclasse piu' popolata, empty state unico,
+pannello form collassabile. Motore invariato, A3 portata a termine. Seriale.
+**Files touched**: `abstract/tabs/{InstanceManagerTab.tsx,instanceManagerTab.scss,instanceTable.ts}`,
+`abstract/tabs/__tests__/instanceManager10c.test.ts` (**nuovo**, 69 casi) e
+`__tests__/instanceManagerFl6.test.ts` in `d448573ff`; referto, prompt e log in `docs/`.
+Un commit di codice, con pathspec, indice verificato vuoto prima e dopo.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `npm run typecheck` **33** (baseline invariata, conteggio su output
+completo); `npm run build` exit **0**; vitest **2590 passati / 0 falliti**, 9 file rossi = i
+noti `window is not defined`, nessuno di questa slice. Suite propria 69/69, provata con 5
+mutazioni (1/2/3/1/1 rossi, verde al ripristino).
+**Out-of-scope changes**: yes — due file oltre i «tuoi». `instanceTable.ts`: la logica nuova
+e' pura e nel TSX non sarebbe provabile (il file muore all'import sotto node, via monaco);
+sono nove funzioni in coda, zero righe esistenti toccate. `instanceManagerFl6.test.ts`: due
+asserzioni che 10c supera per costruzione — `colSpan` ora conta `shownColumns` (stessa
+affermazione, nome nuovo) e «Unsaved changes», che FL6 asseriva presente, e' invertita in
+un'asserzione di assenza invece che cancellata.
+**Layer Impact Report**: not-required — nessun file di §3.1 nel perimetro. Zero creatori D,
+zero `TRANSACTION`, zero `SetFieldAction` aggiunti: la slice legge la shape e la `idlookup`
+che il tab gia' sottoscrive, e scrive solo stato locale di React.
+**Smoke visivo**: passato — `npm run smoke` **GREEN 12/0/3**, corsa quiescente, `moved:
+nothing`, e NON probante per questa slice (nessuno stato di `states.ts` monta il manager).
+La misura che la riguarda e' `_tmp_10c_verify.ts` sull'app vera, fixture `Heater` estesa con
+un enum vero e una colonna mai valorizzata: **50 PASS / 0 FAIL / 0 errori di pagina**. Badge
+18×18 con `rgb(252,225,234)`/`rgb(122,64,86)` — i token, non una palette locale; «warm» ∩
+normal = 1 riga e «warm» ∩ final = 0 (un OR ne avrebbe date due); pannello form 33px
+collassato → 372px espanso; paginazione assente a 6 righe, «Page 1 of 2» a 66.
+**Notes**: quattro reperti e un punto aperto, per esteso in
+`docs/discovery/discovery_2026-08-31_manager_parity_10c.md`. (1) Un'asserzione di ASSENZA non
+puo' leggere i commenti. (2) L'A3 va scoped: «Discard» esiste anche nel multi-form di 12b,
+dove un draft c'e' davvero. (3) La colonna `name` e' due cose, e l'indicatore nasconde la
+feature. (4) `+ New` assente su `State` e' la regola rootable, non un difetto.
+**Prompt document name**: PROMPT_10c_manager_parity.md 2026-08-31 22:40
+
 ## 2026-08-31 — feat(jjform): il nodo owner nell'ego-diagramma (FL7)
 **Prompt**: `docs/prompts/PROMPT_FL7_ego_owner.md` — l'ego-diagramma della riga
 espandibile guadagna il padre di contenimento: `owner` nel risultato, scatola
