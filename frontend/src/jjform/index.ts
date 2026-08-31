@@ -12,7 +12,9 @@
  * legal ARGUMENTS of a write belong to the same contract as the write, or a host can
  * offer what it will then refuse. Slice 10b added `outline.ts`, the containment tree's
  * menu rule, and slice 13a `neighborhood.ts` — the local graph of one instance, read
- * plus navigation, never a second canvas. What still waits are the open questions of
+ * plus navigation, never a second canvas. Slice FL1 added `layout.ts`, the
+ * WIDTH REGISTRY and the packer of the form auto-layout — the module that makes the
+ * metamodel, and never the user, decide where a field sits. What still waits are the open questions of
  * `form-engine-contract.md`.
  *
  * Invariant, checked by reading and by the module having nothing to import:
@@ -94,6 +96,32 @@ export { writeDone, writeRefused, writeUnchanged } from './write';
 export type { CreateResult, TargetOption, WriteCtx, WriteValue } from './writeCtx';
 
 export { targetOptions } from './writeCtx';
+
+export type {
+    FormLayout,
+    FormWidget,
+    LayoutAnnotations,
+    LayoutField,
+    LayoutRow,
+    LayoutSection,
+    SectionKey,
+    Span,
+    WidthClass,
+    WidthKind,
+    WidthRung,
+    WidthVerdict,
+} from './layout';
+
+export {
+    ENUM_SEGMENTED_MAX,
+    GRID_COLUMNS,
+    RENDERER_WIDTH_KIND,
+    WIDTH_MAP,
+    formLayout,
+    layoutField,
+    packRows,
+    widthOf,
+} from './layout';
 
 export type { Crumb, NavState, NavStep } from './nav';
 
