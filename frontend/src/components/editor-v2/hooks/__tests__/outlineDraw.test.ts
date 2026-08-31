@@ -224,3 +224,201 @@ describe('outlineRows — cosa una lista disegna', () => {
         expect(outlineRows(null, () => true)).toEqual([]);
     });
 });
+
+/**
+ * 10g — un nodo per istanza.
+ *
+ * Il fixture qui sotto e' quello MISURATO sull'app vera (referto 10g): tre
+ * oggetti elencati in uno slot di contenimento il cui `father` e' rimasto il
+ * modello, che e' cio' che una scrittura grezza su `values` lascia dietro (la
+ * via `LValue.setValueAtPosition` scriverebbe `father`, la `SetFieldAction`
+ * diretta no). Prima di questa slice rendevano DUE volte: radice e figlio.
+ */
+function fixtureDoppi(): Any {
+    const lk: Any = {};
+    lk['m'] = { id: 'm', className: 'DModel', name: 'sm' };
+    lk['c_Machine'] = { id: 'c_Machine', className: 'DClass', name: 'Machine' };
+    lk['c_State'] = { id: 'c_State', className: 'DClass', name: 'State' };
+    lk['a_name'] = { id: 'a_name', className: 'DAttribute', name: 'name' };
+    lk['r_states'] = { id: 'r_states', className: 'DReference', name: 'states', composition: true };
+    lk['r_next'] = { id: 'r_next', className: 'DReference', name: 'next', composition: false };
+
+    const obj = (id: string, cls: string, father: string, slots: Array<[string, string, unknown[]]>) => {
+        const featureIds: string[] = [];
+        for (const [slotId, featureId, values] of slots) {
+            lk[slotId] = { id: slotId, className: 'DValue', instanceof: featureId, father: id, values };
+            featureIds.push(slotId);
+        }
+        lk[id] = { id, className: 'DObject', instanceof: cls, father, name: id, features: featureIds };
+    };
+
+    // Heater elenca Idle, Running e Warmup fra i suoi `states`, ma solo Warmup
+    // ha il `father` spostato: Idle e Running hanno ancora il modello per padre.
+    obj('Heater', 'c_Machine', 'm', [
+        ['H_name', 'a_name', ['Heater']],
+        ['H_states', 'r_states', ['Idle', 'Running', 'Warmup']],
+    ]);
+    obj('Idle', 'c_State', 'm', [['I_name', 'a_name', ['Idle']], ['I_next', 'r_next', ['Running']]]);
+    obj('Running', 'c_State', 'm', [['R_name', 'a_name', ['Running']], ['R_next', 'r_next', []]]);
+    obj('Warmup', 'c_State', 'H_states', [['W_name', 'a_name', ['Warmup']], ['W_next', 'r_next', []]]);
+    return lk;
+}
+
+const SHAPE_SM: MetamodelShape = {
+    enums: {},
+    classes: {
+        Machine: cls({ key: 'Machine', root: true, children: [ref({ key: 'states', of: 'State' })] }),
+        State: cls({
+            key: 'State', containedIn: ['Machine'],
+            refs: [ref({ key: 'next', of: 'State', composition: false })],
+        }),
+    },
+};
+
+describe('outlineTree — 10g: un nodo per istanza', () => {
+    it('N istanze -> N+1 nodi: il modello piu una riga per istanza, mai due', () => {
+        const t = outlineTree(fixtureDoppi(), 'm', SHAPE_SM);
+        const rows = outlineRows(t, () => true);
+        expect(rows.length).toBe(5);          // m + Heater + Idle + Running + Warmup
+        expect(new Set(rows.map(n => n.id)).size).toBe(rows.length);
+    });
+
+    it('l istanza il cui father e ancora il modello rende UNA volta, alla radice', () => {
+        const t = outlineTree(fixtureDoppi(), 'm', SHAPE_SM);
+        expect(t.children.map(n => n.id)).toEqual(['Heater', 'Idle', 'Running']);
+        const heater = t.children.find(n => n.id === 'Heater')!;
+        expect(heater.children.map(n => n.id)).toEqual(['Warmup']);
+    });
+
+    it('lo slot che la elenca non la disegna: il father dice chi e l owner', () => {
+        const t = outlineTree(fixtureDoppi(), 'm', SHAPE_SM);
+        const heater = t.children.find(n => n.id === 'Heater')!;
+        expect(heater.children.map(n => n.id)).not.toContain('Idle');
+        expect(heater.children.map(n => n.id)).not.toContain('Running');
+    });
+
+    it('PER CONTRASTO: l istanza col father spostato NON e piu una radice', () => {
+        const t = outlineTree(fixtureDoppi(), 'm', SHAPE_SM);
+        expect(t.children.map(n => n.id)).not.toContain('Warmup');
+    });
+
+    it('una ref NON containment non porta un secondo nodo: Running e uno solo', () => {
+        const rows = outlineRows(outlineTree(fixtureDoppi(), 'm', SHAPE_SM), () => true);
+        expect(rows.filter(n => n.id === 'Running').length).toBe(1);
+    });
+
+    it('puntata da due slot di cui uno solo containment: un nodo, sotto quel padre', () => {
+        // Warmup e' contenuta da Heater.states e citata da Idle.next.
+        const lk = fixtureDoppi();
+        lk['I_next'].values = ['Warmup'];
+        const t = outlineTree(lk, 'm', SHAPE_SM);
+        const rows = outlineRows(t, () => true);
+        expect(rows.filter(n => n.id === 'Warmup').length).toBe(1);
+        expect(t.children.find(n => n.id === 'Heater')!.children.map(n => n.id)).toEqual(['Warmup']);
+    });
+
+    it('lo stesso oggetto in DUE slot di contenimento rende sotto il father, una volta', () => {
+        const lk = fixtureDoppi();
+        lk['c_Room'] = { id: 'c_Room', className: 'DClass', name: 'Room' };
+        lk['Cooler'] = {
+            id: 'Cooler', className: 'DObject', instanceof: 'c_Machine', father: 'm', name: 'Cooler',
+            features: ['C_name', 'C_states'],
+        };
+        lk['C_name'] = { id: 'C_name', className: 'DValue', instanceof: 'a_name', father: 'Cooler', values: ['Cooler'] };
+        // Cooler elenca Warmup, che pero' ha per father lo slot di Heater.
+        lk['C_states'] = { id: 'C_states', className: 'DValue', instanceof: 'r_states', father: 'Cooler', values: ['Warmup'] };
+        const t = outlineTree(lk, 'm', SHAPE_SM);
+        const rows = outlineRows(t, () => true);
+        expect(rows.filter(n => n.id === 'Warmup').length).toBe(1);
+        expect(t.children.find(n => n.id === 'Cooler')!.children).toEqual([]);
+        expect(t.children.find(n => n.id === 'Heater')!.children.map(n => n.id)).toEqual(['Warmup']);
+    });
+
+    it('l orfano — father su un owner che non lo disegna — non sparisce: torna radice', () => {
+        const lk = fixtureDoppi();
+        lk['H_states'].values = ['Idle', 'Running'];   // Warmup ha ancora H_states per father
+        const t = outlineTree(lk, 'm', SHAPE_SM);
+        const rows = outlineRows(t, () => true);
+        expect(rows.filter(n => n.id === 'Warmup').length).toBe(1);
+        expect(t.children.map(n => n.id)).toContain('Warmup');
+        expect(rows.length).toBe(5);
+    });
+
+    it('il puntatore morto resta un nodo broken: il filtro e sull owner, non sulla vivezza', () => {
+        const lk = fixtureDoppi();
+        lk['H_states'].values = ['Warmup', 'ghost'];
+        const t = outlineTree(lk, 'm', SHAPE_SM);
+        const heater = t.children.find(n => n.id === 'Heater')!;
+        expect(heater.children.map(n => `${n.id}:${n.kind}`)).toEqual(['Warmup:object', 'ghost:broken']);
+    });
+
+    it('un ciclo di contenimento si ferma, e non raddoppia un nodo', () => {
+        const lk = fixtureDoppi();
+        // Warmup contiene Heater, che contiene Warmup: father incrociati.
+        lk['W_states'] = { id: 'W_states', className: 'DValue', instanceof: 'r_states', father: 'Warmup', values: ['Heater'] };
+        lk['Warmup'].features = [...lk['Warmup'].features, 'W_states'];
+        lk['Warmup'].instanceof = 'c_Machine';
+        lk['Heater'].father = 'W_states';
+        const rows = outlineRows(outlineTree(lk, 'm', SHAPE_SM), () => true);
+        expect(new Set(rows.map(n => n.id)).size).toBe(rows.length);
+    });
+
+    it('senza shape la sweep NON scatta: il rendering di 10b resta quello', () => {
+        const t = outlineTree(fixtureDoppi(), 'm', null);
+        expect(t.children.map(n => n.id)).toEqual(['Heater', 'Idle', 'Running']);
+    });
+});
+
+describe('outlineTree — 10g: i due casi che il solo filtro sull owner non chiude', () => {
+    it('due slot di contenimento dello STESSO owner che elencano lo stesso figlio: un nodo', () => {
+        const lk = fixtureDoppi();
+        lk['r_spare'] = { id: 'r_spare', className: 'DReference', name: 'spare', composition: true };
+        lk['H_spare'] = { id: 'H_spare', className: 'DValue', instanceof: 'r_spare', father: 'Heater', values: ['Warmup'] };
+        lk['Heater'].features = [...lk['Heater'].features, 'H_spare'];
+        // `father` di Warmup resta H_states: l owner e Heater da entrambi i lati,
+        // e il filtro sull owner lascia passare tutti e due gli slot.
+        const shape: MetamodelShape = {
+            enums: {},
+            classes: {
+                ...SHAPE_SM.classes,
+                Machine: cls({
+                    key: 'Machine', root: true,
+                    children: [ref({ key: 'states', of: 'State' }), ref({ key: 'spare', of: 'State' })],
+                }),
+            },
+        };
+        const rows = outlineRows(outlineTree(lk, 'm', shape), () => true);
+        expect(rows.filter(n => n.id === 'Warmup').length).toBe(1);
+        expect(new Set(rows.map(n => n.id)).size).toBe(rows.length);
+    });
+
+    it('un orfano gia disegnato dalla sweep non torna sotto un orfano disegnato dopo', () => {
+        const lk: Any = {};
+        lk['m'] = { id: 'm', className: 'DModel', name: 'sm' };
+        lk['c_Machine'] = { id: 'c_Machine', className: 'DClass', name: 'Machine' };
+        lk['a_name'] = { id: 'a_name', className: 'DAttribute', name: 'name' };
+        lk['r_states'] = { id: 'r_states', className: 'DReference', name: 'states', composition: true };
+        lk['Heater'] = {
+            id: 'Heater', className: 'DObject', instanceof: 'c_Machine', father: 'm', name: 'Heater',
+            features: ['H_states'],
+        };
+        // H_states NON elenca Off: Off e' un orfano — father posato, slot che non lo disegna.
+        lk['H_states'] = { id: 'H_states', className: 'DValue', instanceof: 'r_states', father: 'Heater', values: [] };
+        // Sub compare PRIMA di Off nell ordine d inserimento: la sweep lo incontra per primo.
+        lk['Sub'] = {
+            id: 'Sub', className: 'DObject', instanceof: 'c_Machine', father: 'O_states', name: 'Sub', features: [],
+        };
+        lk['Off'] = {
+            id: 'Off', className: 'DObject', instanceof: 'c_Machine', father: 'H_states', name: 'Off',
+            features: ['O_states'],
+        };
+        lk['O_states'] = { id: 'O_states', className: 'DValue', instanceof: 'r_states', father: 'Off', values: ['Sub'] };
+        const shape: MetamodelShape = {
+            enums: {},
+            classes: { Machine: cls({ key: 'Machine', root: true, children: [ref({ key: 'states', of: 'Machine' })] }) },
+        };
+        const rows = outlineRows(outlineTree(lk, 'm', shape), () => true);
+        expect(rows.filter(n => n.id === 'Sub').length).toBe(1);
+        expect(rows.length).toBe(4);   // m + Heater + Sub + Off
+    });
+});

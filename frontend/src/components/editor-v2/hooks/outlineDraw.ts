@@ -43,6 +43,47 @@
  *    across renders. NOT alphabetical, and NOT `DModel.objects`: the first is a
  *    directory's rule and this is a model, the second is the forward collection
  *    that §3.6 says is stale.
+ *
+ * ── One node per instance, and why it was not one before (10g) ────────────────
+ *
+ * Containment is a FUNCTION: an instance has ONE owner. The tree drew it as a
+ * relation, because its two halves read two different sources — the roots from
+ * `father` (`ownerOf(id) === null`), the children from the owner's slot `values` —
+ * and nothing made the two agree. An instance listed in a containment slot whose
+ * `father` was never moved off the model therefore rendered TWICE: once as a root,
+ * once as that slot's child. Measured on the real app (10g referto): 14 nodes for
+ * 11 instances, the three extra being exactly the three whose slot write did not
+ * carry the `father` side-effect.
+ *
+ * The rule this file now holds: a slot value is drawn as a child of `X` only when
+ * `ownerOf(value) === X`. `ownerOf` is `createDraw`'s — the SAME resolver the ego
+ * neighbourhood (13a, `ownerLinkOf`) and `instancesUnder` already read, not a
+ * second one. Composition is not re-tested inside it: the walk only ever visits
+ * `ClassShape.children`, which `shapeAdapter` builds from `composition === true`,
+ * so the containment side of «father + composition» is already enforced one line
+ * up. Pushing the test down into `ownerOf` would change a resolver shared with two
+ * other surfaces (Rule 20) for no measured gain.
+ *
+ * A value that resolves to nothing is still a `broken` node — the filter is on
+ * OWNERSHIP, and a dangling pointer has no owner to disagree with.
+ *
+ * ── The sweep, and the invariant it buys ──────────────────────────────────────
+ *
+ * The filter alone makes duplicates impossible but not the count exact: an
+ * instance whose `father` names an owner that never draws it — a containment
+ * flipped to `false` after the write, a slot emptied without detaching — would be
+ * neither root nor child, and DISAPPEAR. That is the worse half of the same
+ * defect. After the root walk, such an instance is appended at root level, so the
+ * count is `instances + 1` by construction, in either direction.
+ *
+ * The sweep is DELIBERATELY not unconditional. It fires only when the owner's
+ * metaclass IS in the shape — that is, when the shape had its say and still did
+ * not draw the child. A shape that is null, or missing the owner's class, is a
+ * metamodel mid-load: there the tree is knowably incomplete, and flattening every
+ * contained instance to root level would turn a two-frame load into a visible
+ * shuffle. Those two states keep exactly the rendering 10b committed, and the
+ * `instances + 1` invariant is claimed for a LOADED shape, which is the state the
+ * acceptance criterion is written on.
  */
 
 import { findFeatureRaw, makeDrawReadCtx } from '../viewpoint/ir/irReadCtx';
@@ -92,7 +133,7 @@ export function outlineRoots(idlookup: Idlookup, modelId: string): string[] {
  * metaclass is absent from the shape renders as a childless node rather than
  * disappearing: a half-loaded metamodel must not delete a branch of the model.
  *
- * `depthCap` and the `seen` set are a cycle belt, not a semantic limit: the core
+ * `depthCap` and the `emitted` set are a cycle belt, not a semantic limit: the core
  * refuses to write a containment cycle (`LValue.setValueAtPosition` returns
  * `{success:false}`), so a tree this deep is already corrupt and stopping beats
  * looping.
@@ -116,13 +157,16 @@ export function outlineTree(
     };
     if (!idlookup || !modelId) return root;
 
-    const seen = new Set<string>();
+    /** Every instance already drawn. Doubles as the cycle belt: a node reached a
+     *  second time is not drawn a second time, it is not drawn at all. */
+    const emitted = new Set<string>();
 
     const nodeOf = (id: string, depth: number, childKey: string | null): OutlineNode => {
         const d = idlookup[id];
         if (d?.className !== 'DObject') {
             return { id, name: '', cls: '', kind: 'broken', depth, childKey, children: [] };
         }
+        emitted.add(id);
         const node: OutlineNode = {
             id,
             name: ctx.getName(id) ?? '',
@@ -132,18 +176,39 @@ export function outlineTree(
             childKey,
             children: [],
         };
-        if (depth >= depthCap || seen.has(id)) return node;   // cycle belt
-        seen.add(id);
+        if (depth >= depthCap) return node;   // cycle belt
         const cls = node.cls ? shape?.classes?.[node.cls] : null;
         for (const child of cls?.children ?? []) {
             for (const value of rawSlotValues(idlookup, id, child.key)) {
+                if (idlookup[value]?.className === 'DObject') {
+                    // The owner is the one the D-graph names, not the one that
+                    // happens to list it: a slot value whose `father` points
+                    // elsewhere renders THERE, once.
+                    if (ownerOf(idlookup, value) !== id) continue;
+                    if (emitted.has(value)) continue;
+                }
                 node.children.push(nodeOf(value, depth + 1, child.key));
             }
         }
         return node;
     };
 
+    // No `emitted` guard here: a root has no owner, and the walk only descends
+    // into values whose owner it IS, so a root cannot already be someone's child.
     for (const id of outlineRoots(idlookup, modelId)) root.children.push(nodeOf(id, 1, null));
+    // The sweep — see the header. Same discovery order as the roots, so an
+    // orphan lands where insertion order says and not at some sorted position.
+    for (const id in idlookup) {
+        if (emitted.has(id)) continue;
+        if (idlookup[id]?.className !== 'DObject') continue;
+        if (modelOfObject(idlookup, id) !== modelId) continue;
+        // Its owner's class must be one the shape knows: a missing class is a
+        // metamodel still loading, not an orphan.
+        const ownerId = ownerOf(idlookup, id);
+        const ownerCls = ownerId ? ctx.getMetaclassName(ownerId) : null;
+        if (!ownerCls || !shape?.classes?.[ownerCls]) continue;
+        root.children.push(nodeOf(id, 1, null));
+    }
     return root;
 }
 
