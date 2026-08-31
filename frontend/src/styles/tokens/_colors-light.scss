@@ -411,6 +411,15 @@ $gradient-hover: linear-gradient(180deg, $slate-100 0%, $slate-200 100%);
   --color-form-dirty-border: #7dd3fc;                 /* sky-300: edited, not saved */
   --color-form-dirty-text: #0284c7;                   /* sky-600 */
   --color-form-dirty-halo: rgba(14, 165, 233, 0.2);   /* halo of the 6px dirty dot */
+  /* Focus of the extended widgets (FL3). Cyan, which §7.1 reserves for exactly this
+     — focus states, active indicators, links — and never for a button ground. Two
+     roles rather than one because the ring is a shadow and the border is a colour,
+     and a caller needs them apart. Scoped by USE and not by selector: only the FL3
+     widget classes read them, so the controls of the form that predate this slice
+     keep the slate --color-accent / --focus-ring they were verified with. Aligning
+     the rest is FL4's decision, ratified 2026-08-31. */
+  --color-form-focus-border: #0891b2;                /* cyan-600 */
+  --color-form-focus-ring: 0 0 0 3px rgba(8, 145, 178, 0.12);
   --color-warning-text: #b45309;                     /* amber-700; the scale stops at $amber-600 */
 
   /* ============================================

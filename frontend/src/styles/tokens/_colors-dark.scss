@@ -307,6 +307,12 @@
   --color-form-dirty-border: #0ea5e9;                 /* sky-500: sky-300 greys out on #0f1012 */
   --color-form-dirty-text: #7dd3fc;                   /* sky-300, readable on a dark panel */
   --color-form-dirty-halo: rgba(56, 189, 248, 0.28);  /* sky-400 at the alpha the dark bg needs */
+  /* Focus of the extended widgets (FL3) — see the light file for why two roles.
+     #0891b2 goes muddy on a dark surface, the correction --color-inode-ref-fg
+     already makes for the reference pill, so the border takes cyan-400 and the ring
+     the alpha a dark ground needs to show one at all. */
+  --color-form-focus-border: #22d3ee;                 /* cyan-400 */
+  --color-form-focus-ring: 0 0 0 3px rgba(34, 211, 238, 0.22);
   --color-warning-text: #fcd34d;                      /* amber-300, readable on a dark panel */
 
   /* ============================================
