@@ -2,6 +2,48 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-08-31 — feat(editor-v2): i widget estesi come gemelli write-side (FL3)
+**Prompt**: `docs/prompts/PROMPT_FL3_widgets.md` — i widget estesi della form come
+meta' write delle Row view: date/datetime, duration, color, @email, @url, textarea
+che cresce, chip input per tags e multi-ref. Logica pura in `jjform/`, registro
+`{ nome: componente }` che FL4 cuce, quattro stati per widget. Parallelo a FL1/FL2,
+file disgiunti.
+**Files touched**: `jjform/{widgetValue.ts,__tests__/widgetValue.test.ts}`;
+`editor-v2/viewpoint/ir/widgets/{widgetProps.ts,DateWidget.tsx,DurationWidget.tsx,ColorWidget.tsx,ValidatedTextWidget.tsx,GrowTextWidget.tsx,ChipInputWidget.tsx,index.ts,formWidgets.scss,__tests__/extendedWidgets.test.ts}`;
+`styles/tokens/{_colors-light.scss,_colors-dark.scss}` (+2 ruoli, solo aggiunte).
+Tre commit, pathspec: `d60275228` (modulo puro, anticipato — vedi Causa),
+`1c5bfb01e` (widget + registro + stile + test + token), `7db1ed8bf` (referto).
+Regola 19 **rispettata**: 16 file elencati in chat con cosa cambia in ciascuno,
+go-ahead ricevuto con le tre ratifiche. **Zero widget esistenti toccati**:
+`TextWidget` e `ChipsWidget` restano come sono, e il perche' e' nelle testate dei due
+componenti nuovi che li affiancano. `irFormStyle.scss` **non toccato**: e' di FL2.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: e
+**Regressions**: no — nessun file esistente modificato salvo i due di token, in sola
+aggiunta; `npm run test` 2382 passati / 0 falliti (9 file rossi = i noti
+`window is not defined`, nessuno di questa slice); `npm run smoke` GREEN 12/0/3.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessun file di §3.1 nel perimetro, zero
+creatori D, zero TRANSACTION, zero SetFieldAction: i widget ricevono callback e non
+sanno in cosa scrivono. Nessuno importa `joiner/`, per costruzione.
+**Smoke visivo**: non applicabile — i widget non sono ancora innestati nel renderer
+(l'innesto e' FL4), quindi non c'e' pixel da guardare: misurato, il CSS emesso da
+`npm run build` contiene **0** occorrenze di `ir-datefield`/`ir-chipinput__pill`,
+perche' nulla importa ancora il registro. Il foglio e' verificato a parte con
+`npx sass`, exit 0, 81 regole. `npm run smoke` girato lo stesso, GREEN 12/0/3, a
+dimostrare che nulla e' regredito. Gate a 3 valori: `npm run typecheck` **33**
+(baseline invariata, conteggio su output completo), `npm run build` exit **0**,
+vitest **71/71** sulle due suite nuove.
+**Notes**: Causa (e): `c98f47d3c` (FL2) ha inglobato la modifica non committata di
+questa sessione a `jjform/index.ts`, lasciando HEAD a esportare da un
+`./widgetValue` non tracciato — un checkout pulito non compilava. Chiuso committando
+subito il modulo puro. Reperto §F12. Le 39 verdi al primo colpo sono state messe
+alla prova con due mutazioni: 3 rossi, i tre attesi. `@url` nasce senza gemello read
+(§F5), dichiarato e asserito nel test. Referto:
+`docs/discovery/discovery_2026-08-31_fl3_widget_estesi.md`.
+**Prompt document name**: PROMPT_FL3_widgets.md 2026-08-31 16:58
+
 ## 2026-08-31 — feat(jjform): i temi della form come preset in cascata (FL2)
 **Prompt**: `docs/prompts/PROMPT_FL2_themes.md` — un tema e' un preset nominato su
 ESATTAMENTE tre campi (`labelPlacement`, `density`, `sectionStyle`), quattro preset dalla
