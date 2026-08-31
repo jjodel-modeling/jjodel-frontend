@@ -94,9 +94,34 @@
         border-radius: var(--radius-card);
         background: var(--color-form-surface);
         box-shadow: var(--shadow-desk-card);
+
+        /* 10e — il cinturino sta sulle CARD, non piu' dentro la form.
+           `__form-inner` lo dichiarava un livello piu' in basso: la form aveva la
+           sua misura e la tabella no, cioe' due card della stessa colonna con due
+           larghezze diverse sopra i 1300px. Qui vale per entrambe, ed e' la
+           colonna intera ad avere una misura.
+
+           `margin-inline: auto` su un flex item non e' decorazione: i margini auto
+           assorbono lo spazio libero, ed e' quello che centra la card sul desk una
+           volta che `max-width` ha lasciato spazio. Sotto i 1300px di viewport non
+           c'e' spazio libero, il `width: 100%` prende tutto il desk meno la gronda,
+           e il cinturino semplicemente non morde. */
+        width: 100%;
+        max-width: 1300px;
+        margin-inline: auto;
     }
 
-    &__pane--table { flex: 1 1 auto; overflow: hidden; min-height: 0; }
+    /* 10e — `flex: 0 1 auto` e non piu' `1 1 auto`: con `grow: 1` la card si
+       stirava fino al fondo del desk anche con sei righe, e il footer restava
+       appeso in basso staccato dall'ultima riga — la card vuota che riempie la
+       pagina. Con `grow: 0` la card abbraccia il contenuto e il fondo desk assorbe
+       il resto.
+
+       `shrink: 1` resta, ed e' il vincolo di FL6 che non va perso: con quaranta
+       righe la card non deve superare il desk spingendo fuori la form, deve
+       scorrere al proprio interno. `__table-scroll` e' corretto sotto entrambi i
+       regimi — in una card che abbraccia non ha spazio in piu' da prendere. */
+    &__pane--table { flex: 0 1 auto; overflow: hidden; min-height: 0; }
 
     /* La form: sotto la tabella, e con un tetto di altezza. `flex: 0 1 auto`
        piu' `max-height` in percentuale, non un'altezza fissa: una form di tre
@@ -112,7 +137,12 @@
     }
 
     /* Il cinturino a 1300px, centrato: su un 27" una riga di campi larga tutto
-       lo schermo non e' piu' leggibile, e' solo piu' lunga da attraversare. */
+       lo schermo non e' piu' leggibile, e' solo piu' lunga da attraversare.
+
+       SUPERATO da 10e, che ha portato lo stesso cinturino sulle due CARD: la card
+       che contiene questo blocco e' gia' <= 1300, quindi questo `max-width` non
+       morde piu'. Resta dichiarato e non rimosso (Regola 9): toglierlo non
+       cambierebbe un pixel, e la sua presenza non ne cambia uno. */
     &__form-inner {
         width: 100%;
         max-width: 1300px;
@@ -1279,12 +1309,18 @@
         display: flex;
         align-items: center;
         gap: 6px;
+        /* 10e — 28px dichiarati come ALTEZZA MINIMA, non ottenuti allargando il
+           padding: il padding lo mangerebbe la riga con il menu «+» aperto, e la
+           densita' dell'albero cambierebbe con lo stato di un menu. */
+        min-height: 28px;
         padding: 4px 10px 4px 14px;
         font-size: 12px;
         color: var(--color-text-primary);
         cursor: pointer;
 
-        &:hover { background: var(--color-bg-tertiary); }
+        /* 10e — `--color-bg-hover` e non `--color-bg-tertiary`: sono due ruoli
+           diversi (`#e9eff6` contro `#f1f5f9` in chiaro), e questo e' l'hover. */
+        &:hover { background: var(--color-bg-hover); }
 
         /* La coppia intera del vocabolario di selezione, non la sola campitura:
            la barra e' quella che la riga della tabella porta su `__td-name`, e
@@ -1327,6 +1363,30 @@
         font-size: 12px;
         color: var(--color-form-section);
     }
+
+    /* 10e — la coppia di entita' sul glifo, e TRE livelli di selettore invece di
+       uno. `styles/style.scss:788` dichiara `i.bi { color: var(--font-color-1); }`
+       con specificita' (0,1,1) e `i.bi:hover` con (0,2,1), e il glifo dell'albero
+       E' un `<i class="bi …">`. La regola di 10b qui sopra e' (0,1,0) e quindi
+       NON dipinge: misurato il 2026-08-31 sull'app vera, ogni glifo dell'outline
+       rende `rgb(15, 23, 42)` — cioe' `--font-color-1` — e non lo slate che la
+       riga dichiara. E' lo stesso reperto dell'albero del 2026-08-12 (CLAUDE.md
+       §5): quando uno stile e un pixel non concordano, il pixel e' la misura.
+
+       (0,3,0) e non (0,2,0), perche' deve battere anche l'`:hover` del foglio
+       globale, o il colore dell'entita' salterebbe via al passaggio del mouse.
+
+       `--broken` non e' qui: non e' un genere di entita' ed e' gia' servito dalla
+       regola di 12d poco sotto, che questa slice lascia intatta. */
+    &__pane--outline .instance-manager__outline-node {
+        .instance-manager__outline-icon--model { color: var(--color-entity-model-fg); }
+        .instance-manager__outline-icon--object { color: var(--color-entity-class-fg); }
+    }
+
+    /* Il nodo modello e' la TESTA dell'albero, non una riga come le altre: prende
+       il peso, e lo prende da solo — un albero in cui anche i figli sono in 600
+       non ha piu' una testa. */
+    &__outline-node--model .instance-manager__outline-name { font-weight: 600; }
 
     &__outline-name {
         flex: 1;

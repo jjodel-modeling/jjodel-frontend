@@ -130,7 +130,7 @@ import {
     type TableCell,
     type TableRow,
 } from './instanceTable';
-import { entityLetter } from '../../../common/entityMeta';
+import { entityIcon, entityLetter } from '../../../common/entityMeta';
 import './instanceManagerTab.scss';
 
 /** La lettera del badge di metaclasse, dal registro delle entita' e non da una
@@ -829,13 +829,17 @@ function MultiForm({ model, touched, onTouch, onApply, onClear, onDelete }: {
  * — un click che seleziona E apre — in cui non si puo' guardare la form di un nodo
  * senza sfogliargli sotto i figli.
  *
- * ── Il genere dell'icona viene dal metamodello ────────────────────────────────
+ * ── Il genere dell'icona viene da entityMeta (10e) ────────────────────────────
  *
- * Non da una tabella per metaclasse (il mock ne dipinge una, ma e' un fixture, non
- * una regola che jjodel possa leggere): il modello e' una scatola, un'istanza la
- * cui metaclasse ha feature di contenimento e' una cartella, ogni altra un cerchio,
- * e un puntatore morto e' il triangolo con il token della tabella
- * (`instance-manager__broken`) — la cosa che 12d dice non debba sparire in silenzio.
+ * Non da una tabella locale. 10b ne dipingeva una — scatola per il modello,
+ * cartella per chi ha figli, cerchio per chi non ne ha — e quella regola diceva
+ * *struttura*, non *tipo*, duplicando cio' che il chevron dice gia' due pixel a
+ * sinistra. Ora il glifo esce da `ENTITY_META`, che e' la sola sorgente del
+ * vocabolario di icone del DS, e porta il foreground della coppia di entita'.
+ *
+ * Un puntatore morto resta fuori dalla mappa: non e' un genere di entita', e' uno
+ * stato, e tiene il triangolo col token dell'errore — la cosa che 12d dice non
+ * debba sparire in silenzio.
  */
 function OutlinePanel({
     rows, subjectId, isOpen, hasSlots, menuFor, menuOf,
@@ -852,11 +856,39 @@ function OutlinePanel({
     onMenu: (node: OutlineNode) => void;
     onCreate: (node: OutlineNode, entry: OutlineMenuEntry) => void;
 }) {
+    /* 10e — il glifo viene da `entityMeta`, la sola sorgente del vocabolario di
+       icone del DS, e non piu' da una tabella locale.
+
+       Il modello resta `bi-box` perche' e' quello che `entityIcon('model')`
+       restituisce: cambia da dove arriva, non cosa disegna.
+
+       Ogni riga `object` prende l'icona della sua METACLASSE, ed e' sempre
+       `class`: una riga dell'outline e' un `DObject`, la cui metaclasse e' una
+       `DClass`. `abstractClass` non puo' occorrere — un'istanza di classe
+       astratta non esiste, ed e' la regola che il rail applica gia' con
+       `uninstantiableReason`. Quindi la mappa, su QUESTA superficie, da' un
+       valore solo, e va detto: una lettura che si aspettasse glifi diversi per
+       metaclassi diverse si aspetterebbe qualcosa che il modello non produce.
+
+       Spariscono `bi-folder2` e `bi-circle`, che 10b assegnava per «ha figli /
+       non ha figli»: e' informazione di struttura, non di tipo, ed e' gia' detta
+       dal chevron due pixel a sinistra.
+
+       `broken` non passa dalla mappa: non e' un genere di entita', e' uno stato
+       (12d), e tiene il triangolo con il token dell'errore. */
     const icon = (node: OutlineNode): string => {
-        if (node.kind === 'model') return 'bi-box';
+        if (node.kind === 'model') return entityIcon('model');
         if (node.kind === 'broken') return 'bi-exclamation-triangle';
-        return hasSlots(node) ? 'bi-folder2' : 'bi-circle';
+        return entityIcon('class');
     };
+
+    /* Il modificatore che porta la COPPIA di entita' sul glifo. Sta sul glifo e
+       non sul nodo perche' il colore e' del glifo; e sui soli due generi che la
+       mappa serve, cosi' che `broken` resti sulla regola di 12d, invariata. */
+    const iconKind = (node: OutlineNode): string =>
+        node.kind === 'model' ? ' instance-manager__outline-icon--model'
+            : node.kind === 'object' ? ' instance-manager__outline-icon--object'
+                : '';
 
     return (
         <aside className="instance-manager__pane instance-manager__pane--outline">
@@ -876,6 +908,7 @@ function OutlinePanel({
                                 <div
                                     className={
                                         'instance-manager__outline-node'
+                                        + (node.kind === 'model' ? ' instance-manager__outline-node--model' : '')
                                         + (node.id === subjectId ? ' instance-manager__outline-node--selected' : '')
                                         + (node.kind === 'broken' ? ' instance-manager__outline-node--broken' : '')
                                     }
@@ -906,7 +939,7 @@ function OutlinePanel({
                                         <span className="instance-manager__outline-caret" aria-hidden="true" />
                                     )}
 
-                                    <i className={'bi ' + icon(node) + ' instance-manager__outline-icon'} aria-hidden="true" />
+                                    <i className={'bi ' + icon(node) + ' instance-manager__outline-icon' + iconKind(node)} aria-hidden="true" />
 
                                     <span className="instance-manager__outline-name">{outlineLabel(node)}</span>
 
