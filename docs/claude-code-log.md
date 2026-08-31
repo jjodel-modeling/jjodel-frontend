@@ -2,6 +2,45 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-08-31 — feat(manager): l'ego-diagramma a un salto della riga espandibile (FL5)
+**Prompt**: `docs/prompts/PROMPT_FL5_ego_diagram.md` — il vicinato di un'istanza come
+nastro fisso incoming → oggetto → outgoing dentro la riga espansa della tabella del
+manager. Modulo puro `egoNeighborhood.ts`, componente di resa con frecce SVG a ventaglio,
+cap a 4 per lato con nodo sintetico «+n more», click = selezione. Parallelo a FL4, file
+contesi dichiarati.
+**Files touched**: `jjform/{egoNeighborhood.ts,__tests__/egoNeighborhood.test.ts}`;
+`components/abstract/tabs/{EgoDiagram.tsx,egoDiagram.scss,__tests__/egoDiagram.test.ts}`
+— tutti NUOVI, `7289443ba`; referto e prompt `7fa39ed37`. Tre commit, pathspec, indice
+verificato vuoto prima e dopo ciascuno. Regola 19 **rispettata**: 8 file elencati in chat
+con cosa cambia in ciascuno, go-ahead ricevuto sulle due domande aperte. **Zero file
+esistenti modificati**: i tre contesi (`jjform/index.ts`, `IRForm.tsx`,
+`irFormStyle.scss`) non sono toccati, e nemmeno `InstanceManagerTab.tsx` — vedi Notes.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: a
+**Regressions**: no — nessun file esistente modificato, zero token toccati; `npm run test`
+2456 passati / 0 falliti (9 file rossi = i noti `window is not defined`, nessuno di questa
+slice); `npm run smoke` GREEN 12/0/3, corsa quiescente.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessun file di §3.1 nel perimetro, zero creatori D,
+zero TRANSACTION, zero SetFieldAction. Il modulo ha un import solo, di tipo, da `./shape`;
+il componente riceve due callback e non sa in cosa scrivono, e non importa niente da
+`editor-v2/`, `joiner/` o `redux/` (asserito nel test, con positivo di controllo).
+**Smoke visivo**: non applicabile — `EgoDiagram` non e' montato da nessuna superficie
+(l'innesto e' bloccato, vedi Notes), quindi non c'e' pixel da guardare: **misurato**, il CSS
+emesso da `npm run build` contiene **0** occorrenze di `ego-diagram`, perche' nulla importa
+il componente. Il foglio e' verificato a parte con `npx sass`, exit 0, 32 regole. Smoke
+girato lo stesso, GREEN 12/0/3, a dimostrare che nulla e' regredito. Gate a 3 valori:
+`npm run typecheck` **33** (baseline invariata, conteggio su output completo),
+`npm run build` exit **0**, vitest **39/39** sulle due suite nuove.
+**Notes**: ⚠️ per l'innesto: la riga espandibile NON esiste (`InstanceManagerTab.tsx:1747`
+rende un tbody piatto, form nel pannello destro), e il file che la ospiterebbe confina con
+FL4. Non innestato e dichiarato, come il prompt prescrive e come confermato in chat.
+`Manager Admin Form Bottom.dc.html` non e' nel repo (RC-10): terzo board di questo handoff.
+Quattro punti aperti e le 5 mutazioni (5 rossi) in
+`docs/discovery/discovery_2026-08-31_fl5_ego_diagramma.md`.
+**Prompt document name**: PROMPT_FL5_ego_diagram.md 2026-08-31 18:37
+
 ## 2026-08-31 — feat(editor-v2): l'auto-layout della form, cucito (FL4)
 **Prompt**: `docs/prompts/PROMPT_FL4_integration.md` — cucire i tre moduli nel renderer
 della IRForm: griglia a 12 colonne da FL1, tema da FL2, widget dal registro di FL3.
