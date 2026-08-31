@@ -2,6 +2,45 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-08-31 — fix(manager): un nodo per istanza nell'outline (10g)
+**Prompt**: «Slice 10g — un nodo per istanza nell'outline, micro, SERIALE dopo 10f»: il
+reperto di 10e (18 nodi per 12 istanze, la selezione ne accende due) va prima MISURATO —
+quale delle tre ipotesi (ref non-containment camminate / `ownerOf` con piu' candidati /
+istanza raggiungibile sia come root sia come figlio) — e poi corretto sulla regola «una
+istanza rende UNA volta, sotto il suo owner di containment reale», riusando il resolver
+condiviso se esiste. Chiesto anche un verdetto sulla nota di FL7 su `substates`.
+**Files touched**: `editor-v2/hooks/outlineDraw.ts`,
+`editor-v2/hooks/__tests__/outlineDraw.test.ts` (17 -> 30 casi) e il referto
+`docs/discovery/discovery_2026-08-31_10g_outline_doppi.md` in `0277d7bf8`; log a parte.
+Un commit di codice, con pathspec, indice verificato vuoto prima e dopo.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `npm run typecheck` **33** (baseline invariata, conteggio su output
+completo, `EXIT=2`); `npm run build` exit **0**; vitest **2671 passati / 0 falliti** (2658
+di 10f piu' i 13 nuovi), 9 file rossi = i noti `window is not defined`, nessuno di questa
+slice. Suite propria provata con SEI mutazioni (via il filtro `ownerOf`, via il dedup
+`emitted`, via la sweep, sweep incondizionata, `emitted` solo oltre la radice, `broken`
+filtrato come un vivo): 8/2/2/2/1/3 rossi, verde al ripristino in tutti e sei.
+**Out-of-scope changes**: no — il modulo del perimetro, la sua suite e il referto.
+**Layer Impact Report**: not-required — nessun file di §3.1 nel perimetro. Zero creatori
+D, zero `TRANSACTION`, zero `SetFieldAction`: il delta e' un filtro e una sweep dentro una
+funzione pura di `idlookup`.
+**Smoke visivo**: passato — `_tmp_10g_verify.ts` sull'app vera, girata DUE volte con lo
+stesso file e la slice in `git stash`: **before 16 PASS / 8 FAIL**, **after 24 PASS / 0
+FAIL**, zero errori di pagina in entrambi. Nodi a schermo **14 -> 12** su 11 istanze;
+ripetute `Idle`x2/`Running`x2/`start`x2 -> **nessuna**; `Off`, che nel before **non
+compariva affatto**, torna visibile una volta; il click su `Idle` accende **due** righe
+prima e **una** dopo. Non-regressioni verdi in ENTRAMBI i giri: nodo modello primo, badge
+lettera di 10f (`["S","T","m"]`), «+» presente, mono a destra su ogni istanza, form
+montata. Ritagli `_tmp_10g_{before,after}_{1_rest,2_selected}.png`.
+**Notes**: causa = ipotesi (c), ma per costruzione: radici da `father`, figli dai `values`,
+due sorgenti che nulla faceva concordare. (a) e (b) escluse dalla misura. La nota di FL7 su
+`substates` e' spiegata e fuori causa: `LReference.set_containment` RIFIUTA
+l'auto-composizione (`father === type`) e restituisce `true`, quindi la shape dice il vero
+e la correzione, se serve, sta nel core. Dettaglio nel referto §3.
+**Prompt document name**: prompt inline, nessun documento — 2026-08-31 23:20
+
 ## 2026-08-31 — feat(manager): il badge lettera dell'outline, il vocabolario del rail (10f)
 **Prompt**: «Slice 10f — badge lettera nell'outline, come il rail, micro, SERIALE»: ogni riga
 sostituisce l'icona col badge quadrato lettera del DS (16×16, raggio 4, lettera 10/700),
