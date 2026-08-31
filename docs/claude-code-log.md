@@ -13,7 +13,7 @@ dichiarato: temi (FL2), widget (FL3), rendering e misura dell'overflow (FL4).
 pathspec esplicito. `index.ts` e' condiviso con la sessione FL2 in volo: committata la sola
 mia parte con il pattern §6.1 (checkout HEAD, riapplico il mio blocco, commit, ripristino
 la copia combinata), quindi il blocco `themes` di FL2 resta nel working tree e non e' entrato
-nel mio commit. Log e prompt in un commit docs a parte.
+nel mio commit. Log, prompt e referto in due commit docs a parte.
 **Outcome**: ⚠️ partial
 **Corregge**: —
 **Causa**: a
@@ -26,14 +26,11 @@ Modulo non ancora cablato da nessuna superficie: l'integrazione e' FL4.
 importa nulla, zero creatori D, zero `TRANSACTION`, zero `SetFieldAction`.
 **Smoke visivo**: passato — `npm run smoke` GREEN 12/0/3, run quiescente. Non probante per
 questa slice: nessuno stato di `states.ts` monta una form, e FL1 non ha superficie visiva.
-**Notes**: ⚠️ per tre divergenze fra le «righe attese» del prompt e le regole della specifica,
-che il modulo segue: (1) `kind` enum3 da' span 3, non 6 — le righe del prototipo tornano
-esatte solo con un enum >3 literals; (2) la riga corta che il prompt chiude con «buco 3»
-viene invece chiusa dalla regola 2 (l'ultimo scalare si estende); (3) `tags` (attr) e
-`outgoing` (ref) non possono condividere una riga, perche' la regola 3 fa ripartire il
-packing a ogni sezione. `Form Auto Layout.dc.html`, dichiarato autoritativo dalla specifica,
-**non esiste nel repo**: le divergenze non sono arbitrabili sull'artefatto. Test scritti
-sulle regole; le righe del fixture sono asserite come le regole le producono.
+**Notes**: ⚠️ per tre divergenze fra le «righe attese» del prompt e le regole della
+specifica, che il modulo segue: span di `kind`, il «buco 3» contro la regola 2, e `tags`+
+`outgoing` in due sezioni. `Form Auto Layout.dc.html`, dichiarato autoritativo dalla
+specifica, non esiste nel repo. Misure, positivo di controllo e domande aperte in
+`docs/discovery/discovery_2026-08-31_fl1_divergenze_righe_attese.md`.
 **Prompt document name**: PROMPT_FL1_widthmap_packing.md 2026-08-31 11:05
 
 ## 2026-08-31 — feat(manager): il riquadro di vicinato nel manager (13a)
