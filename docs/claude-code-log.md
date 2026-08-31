@@ -2,6 +2,50 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-08-31 — feat(manager): la form sotto la tabella e la riga espandibile (FL6)
+**Prompt**: `docs/prompts/PROMPT_FL6_manager_layout.md` — la form lascia la quarta
+colonna e prende il pannello sotto la tabella (contenuto a 1300px centrato); la riga
+diventa espandibile e ospita l'ego-diagramma di FL5; l'aside del vicinato di 13a viene
+rimosso; fallback a lista testuale sotto una soglia MISURATA; export di
+`egoNeighborhood` nel barrel.
+**Files touched**: `jjform/index.ts`;
+`editor-v2/hooks/{neighborhoodDraw.ts,__tests__/neighborhoodDraw.test.ts}`;
+`abstract/tabs/{InstanceManagerTab.tsx,instanceManagerTab.scss,__tests__/instanceManagerFl6.test.ts}`
+(l'ultimo NUOVO); piu' referto e prompt in `docs/`. Regola 19 **rispettata**: sei file
+elencati in chat con cosa cambia in ciascuno, go-ahead ricevuto. Due commit, pathspec,
+indice verificato vuoto prima e dopo ciascuno.
+**Outcome**: ✅ completed
+**Corregge**: 2026-08-31 18:37 — FL5, di cui questa slice innesta il componente rimasto
+scollegato (suo punto aperto 1) e chiude anche i punti 2 (fallback) e 4 (barrel).
+**Causa**: a
+**Regressions**: no — `npm run typecheck` **33** (baseline invariata, conteggio su output
+completo); `npm run build` exit 0; vitest **2488 passati / 0 falliti**, 9 file rossi = i
+noti `window is not defined`, nessuno di questa slice; suite proprie **54/54**, provate
+con 7 mutazioni (7 rossi, verde al ripristino).
+**Out-of-scope changes**: no — i sei file sono quelli concordati. `EgoDiagram.tsx` NON
+toccato (fuori scope per il prompt): il suo import per path resta, ed e' l'ultima riga
+aperta del punto 4 di FL5.
+**Layer Impact Report**: not-required — nessun file di §3.1 nel perimetro. Zero creatori
+D, zero `TRANSACTION`, zero `SetFieldAction` aggiunti: `egoInputOf` e' pura e legge
+`makeDrawReadCtx` + `filledSlotValues` + `referencedBy`, le tre sorgenti che 13a componeva
+gia'. Nessun walk nuovo.
+**Smoke visivo**: passato — `npm run smoke` **GREEN 12/0/3**, corsa quiescente, e NON
+probante per questa slice (nessuno stato di `states.ts` monta il manager: dice che nulla
+e' regredito). Cio' che la riguarda e' la sonda `_tmp_fl6_verify.ts` sull'app vera,
+fixture Heater: **24 PASS / 0 FAIL / 0 errori di pagina** — form sotto la tabella e
+centrata a <=1300px, aside assente, una sola riga espansa col nastro, il click su un
+vicino sposta selezione+espansione+form, il fallback stretto rende la lista senza
+scorrimento (residuo 0px), la create passa ancora dalla sua dialogue. Misura di contorno:
+il CSS emesso contiene ora **31** occorrenze di `ego-diagram` (erano **0** al referto FL5,
+perche' nulla importava il componente) e **0** di `pane--graph`.
+**Notes**: due clausole del prompt non erano applicabili come scritte, entrambe risolte e
+dichiarate — Save/Discard senza motore (la form scrive diritto; deciso in chat: resi nome,
+metaclasse, badge e Delete) e la riga 1 attesa, che somma 15 su 12 con `kind` stringa e
+vale con `kind` corta (dimostrato ritipizzandola). Due difetti CSS veri trovati dalla
+sonda, chiusi. Per esteso in
+`docs/discovery/discovery_2026-08-31_fl6_riassetto_manager.md`.
+**Prompt document name**: PROMPT_FL6_manager_layout.md 2026-08-31 19:30
+
 ## 2026-08-31 — feat(manager): l'ego-diagramma a un salto della riga espandibile (FL5)
 **Prompt**: `docs/prompts/PROMPT_FL5_ego_diagram.md` — il vicinato di un'istanza come
 nastro fisso incoming → oggetto → outgoing dentro la riga espansa della tabella del
