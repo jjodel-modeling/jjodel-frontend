@@ -41,10 +41,32 @@
  * rows with the full label row above them, so the multiplicity and the required marker are
  * legible before the editing controls exist. That is a slice boundary, not a design
  * decision: 1b turns them into pickers and lists.
+ *
+ * ── FL4: the extended widgets, in front of the dispatch that was already here ──
+ *
+ * The field now receives its `LayoutField` — FL1's verdict on this feature: a width, and the
+ * NAME of the write-side Row view that should render it. When `formAutoLayout.extendedWidgetFor`
+ * resolves that name in FL3's registry, the registry's component renders and the branches
+ * below are not reached; when it returns null the dispatch is exactly the committed one.
+ *
+ * Null is the answer for more than «the registry does not have it». It is also the answer for
+ * an author override (`FormSpec.widgets`, persisted and definitive under R-B9), for a
+ * read-only cell, and for a containment list — the three cases where the committed dispatch
+ * is right and the width map's opinion is not. The rules and their reasons live in
+ * `extendedWidgetFor`, in one place, rather than as conditions scattered through this file.
+ *
+ * The chip input is the one extended widget the host has to help: its reference variant does
+ * not open a picker, it asks (`onRequestAdd`, with its own rect), because `ReferencePicker`
+ * reaches the joiner barrel and every FL3 widget stays clear of it. Mounting the picker is
+ * this component's job, and it already mounts the same one for `ReferenceWidget` and
+ * `ListWidget` — same popover, same offer, asked again at open.
  */
 
 import { useCallback, useMemo, useState } from 'react';
 import { LPointerTargetable } from '../../../../joiner';
+import type { LayoutField } from './formAutoLayout';
+import { extendedWidgetFor } from './formAutoLayout';
+import { toCssColor } from '../../nodes/valueRenderer';
 import type { FieldOffer, FormFieldDescriptor } from './useFormWidgets';
 import { isAtUpperBound, multiplicityLabel, offerGroups } from './useFormWidgets';
 import { appendValue, clearValue, setValue, type WriteResult } from './formWrite';
@@ -56,6 +78,8 @@ import SelectWidget from './widgets/SelectWidget';
 import ReferenceWidget from './widgets/ReferenceWidget';
 import ListWidget from './widgets/ListWidget';
 import ChipsWidget from './widgets/ChipsWidget';
+import ReferencePicker from './widgets/ReferencePicker';
+import { extendedWidget, type WidgetChip } from './widgets';
 
 /** Re-exported so the widgets and the host keep importing it from here, as in Slice 1a;
  *  the single definition now lives with the projection that produces them. */
@@ -87,6 +111,13 @@ export interface IRFormFieldProps {
     /** Called after a commit that actually changed something, so the host can mark the
      *  field dirty. The host owns the set: a field does not remember its own history. */
     onCommitted?: (slotId: string) => void;
+    /**
+     * FL1's verdict on this feature: the width class, the widget NAME and the rung that
+     * decided them. Optional, so a caller that has not been updated renders through the
+     * committed dispatch exactly as before — the width belongs to the CELL, which the host
+     * draws, and this component only reads which widget the name asks for.
+     */
+    layout?: LayoutField;
 }
 
 /**
@@ -124,7 +155,7 @@ function displayValue(raw: unknown): string {
  *  there is none, never a guess at what the host meant. */
 const UNSTATED_REFUSAL = 'The model refused this change';
 
-export function IRFormField({ objectId, field, offer, diagnostics, dirty, onCommitted }: IRFormFieldProps) {
+export function IRFormField({ objectId, field, offer, diagnostics, dirty, onCommitted, layout }: IRFormFieldProps) {
     const fieldId = `ir-field-${field.slotId}`;
     const first = field.values[0];
 
@@ -211,11 +242,92 @@ export function IRFormField({ objectId, field, offer, diagnostics, dirty, onComm
         commitAt(0, next, false);
     };
 
-    // Dispatch order, and it matters: read-only first (nothing below may offer an edit on a
+    // ── FL4: the chip input's data, and the picker it asks the host to open ──────
+
+    const isPointerValued = field.isReference || field.isComposition;
+
+    /**
+     * The chips, and the RAW index each one came from.
+     *
+     * Two arrays and not one, because `rawValues` has holes — `clearSlotValue` blanks a
+     * position rather than splicing it — and the widget addresses a removal by its own
+     * position in the array it was handed. Dropping the empties without keeping the
+     * original index is how the next removal lands on the wrong value; this is the rule
+     * `ListWidget` and `ChipsWidget` already state, applied to a widget that states it too.
+     */
+    const { chips, chipIndex } = useMemo(() => {
+        const out: WidgetChip[] = [];
+        const idx: number[] = [];
+        field.values.forEach((v, i) => {
+            if (v == null || v === '') return;
+            if (isPointerValued && typeof v === 'string') {
+                const label = displayValue(v);
+                // `displayValue` falls through to the pointer itself when nothing resolves,
+                // which is exactly the state the read side draws as broken.
+                const broken = label === v;
+                out.push({ key: v, label, broken });
+            } else {
+                out.push({ key: `${i}`, label: String(v) });
+            }
+            idx.push(i);
+        });
+        return { chips: out, chipIndex: idx };
+    }, [field.values, isPointerValued]);
+
+    /** Anchor of the picker the chip input asked for, or null when it is closed. The same
+     *  popover `ReferenceWidget` and `ListWidget` open, mounted here for the reason FL3
+     *  states: a widget that opened it would have to import the joiner barrel. */
+    const [chipPicker, setChipPicker] = useState<DOMRect | null>(null);
+
+    /**
+     * FL3's registry, consulted first — and only where `extendedWidgetFor` says so.
+     *
+     * The rules (author override wins, a read-only cell offers nothing, a containment list
+     * stays a sub-form, and the two meanings of the word `textarea`) are all in that one
+     * function. Here there is only the lookup and the props.
+     */
+    const extendedName = layout ? extendedWidgetFor(layout.widget, field) : null;
+    const ExtendedDef = extendedName ? extendedWidget(extendedName) : null;
+    const declaredUnit = field.annotations?.unit;
+    const unit = declaredUnit === 'ms' || declaredUnit === 's' ? declaredUnit : undefined;
+
+    // Dispatch order, and it matters: the extended registry first (it has already refused
+    // every case the branches below own), then read-only (nothing may offer an edit on a
     // derived or frozen slot), then the list treatments, then the single reference, then the
     // scalars. The branches are exclusive, so a feature never gets two controls.
     let control: React.ReactNode;
-    if (field.isReadOnly && !field.isMultivalued) {
+    if (ExtendedDef) {
+        const Widget = ExtendedDef.component;
+        control = (
+            <Widget
+                widget={ExtendedDef.id}
+                id={fieldId}
+                ariaLabel={field.name}
+                invalid={worst === 'error'}
+                value={field.isMultivalued ? undefined : (first == null ? '' : String(first))}
+                chips={field.isMultivalued ? chips : undefined}
+                unit={unit}
+                // The read side's own colour vocabulary, handed in rather than restated:
+                // `jjform/` may not import `components/`, so the form asks the row how to
+                // paint (the note on `ExtendedWidgetProps.toCss`).
+                toCss={toCssColor}
+                atUpperBound={isAtUpperBound(field)}
+                upperBound={field.upperBound}
+                onCommit={field.isMultivalued ? undefined : ((next: string) => commitScalar(next))}
+                onRemove={field.isMultivalued
+                    ? ((_key: string, i: number) => clearAt(chipIndex[i] ?? i, isPointerValued))
+                    : undefined}
+                // Typed values for a multivalued ATTRIBUTE; a reference is chosen, not typed,
+                // and the two callbacks are how `ChipInputWidget` tells its variants apart.
+                onAppend={field.isMultivalued && !isPointerValued
+                    ? ((text: string) => appendAt(text, false))
+                    : undefined}
+                onRequestAdd={field.isMultivalued && isPointerValued
+                    ? ((anchor: DOMRect) => setChipPicker(anchor))
+                    : undefined}
+            />
+        );
+    } else if (field.isReadOnly && !field.isMultivalued) {
         control = (
             <div className="ir-field__readonly" id={fieldId}>
                 {displayValue(first) || <span className="ir-field__empty">empty</span>}
@@ -358,6 +470,23 @@ export function IRFormField({ objectId, field, offer, diagnostics, dirty, onComm
             </div>
 
             {control}
+
+            {/* The chip input's picker. Asked for by the widget with its own rect, mounted
+                here, and closed on every outcome including a pick — a chip list stays open
+                for the next value, but the popover does not. */}
+            {chipPicker && (
+                <ReferencePicker
+                    anchor={chipPicker}
+                    options={getOptions()}
+                    value=""
+                    // A chip list appends: "(none)" would be a value to add, which it is not.
+                    allowNone={false}
+                    typeName={field.typeName}
+                    onPick={(id) => { setChipPicker(null); appendAt(id, true); }}
+                    onClear={() => setChipPicker(null)}
+                    onClose={() => setChipPicker(null)}
+                />
+            )}
 
             {/* Fixed height, always present. See the module comment. A diagnostic wins over
                 the dirty note: a field can be both, and "this value is invalid" is worth

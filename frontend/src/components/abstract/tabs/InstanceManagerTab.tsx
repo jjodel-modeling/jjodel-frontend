@@ -51,6 +51,7 @@ import {
     preflightFor,
 } from '../../editor-v2/hooks/deleteAdapter';
 import IRForm from '../../editor-v2/viewpoint/ir/IRForm';
+import { autoLayoutRows, inputFromDraftField } from '../../editor-v2/viewpoint/ir/formAutoLayout';
 import { EmptyState } from '../../ui';
 import type { RendererDecision } from '../../editor-v2/nodes/valueRenderer';
 import type {
@@ -231,6 +232,19 @@ function Cell({ cell }: { cell: TableCell }) {
  * created until «Create»» as the subtitle, the required star, the cardinality
  * beside the label, the per-field error under the control, and a Create button
  * that is disabled while any field carries one.
+ *
+ * ── FL4: the same layout as the edit form, not a second one ───────────────────
+ *
+ * The body is packed by `formAutoLayout.autoLayoutRows` — the same call `IRForm` makes,
+ * over the same width registry — and it renders into `ir-form__row` / `ir-form__cell`, the
+ * same two grid classes. A `DraftField` and a `FormFieldDescriptor` are different types, so
+ * the adapter projects both onto FL1's input; what they must NOT be is two geometries for
+ * the same metaclass, which is what a create dialogue laid out by hand would be.
+ *
+ * The CONTROLS stay the draft's own. A draft has no slots and no write path — «this
+ * component holds NO model state and writes nothing» — while every extended widget of FL3
+ * commits through one. Sharing the geometry and not the controls is the line that keeps
+ * this dialogue transactional.
  */
 function DraftDialog({ draft, model, ownerLabel, onChange, onCancel, onCommit }: {
     draft: Draft;
@@ -300,6 +314,13 @@ function DraftDialog({ draft, model, ownerLabel, onChange, onCancel, onCommit }:
         );
     };
 
+    // The geometry, from the same packer the edit form uses. No annotations are threaded in:
+    // a draft is built from the metaclass shape and the host that would read `jjodel/renderer`
+    // off the D graph is `IRForm`, not this dialogue — rung 2 simply does not fire here, which
+    // the ladder answers by falling through to rung 3 rather than by blanking the field.
+    const rows = autoLayoutRows(model.fields.map(inputFromDraftField));
+    const byKey = new Map(model.fields.map(f => [f.key, f]));
+
     return (
         <div className="instance-manager__scrim" role="dialog" aria-modal="true" aria-label={model.title}>
             <div className="instance-manager__draft">
@@ -325,25 +346,41 @@ function DraftDialog({ draft, model, ownerLabel, onChange, onCancel, onCommit }:
                         <p className="instance-manager__note">
                             {model.cls} declares no editable feature — «Create» makes an empty instance.
                         </p>
-                    ) : model.fields.map(f => (
-                        <div className="instance-manager__draft-field" key={f.key}>
-                            <label
-                                className="instance-manager__draft-label"
-                                htmlFor={`instance-manager-draft-${f.key}`}
-                            >
-                                {f.key}
-                                {f.required && <span className="instance-manager__req" aria-hidden="true">*</span>}
-                                <span className="instance-manager__draft-card">
-                                    {f.typeName} [{f.multiplicity}]
-                                </span>
-                            </label>
-                            {field(f)}
-                            {f.error && (
-                                <span className="instance-manager__draft-error" role="alert">
-                                    <i className="bi bi-exclamation-circle" aria-hidden="true" />
-                                    {f.error}
-                                </span>
-                            )}
+                    ) : rows.map((row, ri) => (
+                        <div className="ir-form__row" key={`draft-row-${ri}`} data-free={row.free}>
+                            {row.fields.map(lf => {
+                                const f = byKey.get(lf.key);
+                                if (!f) return null;
+                                return (
+                                    <div
+                                        className="ir-form__cell"
+                                        key={f.key}
+                                        style={{ ['--ir-form-span' as any]: String(lf.span) }}
+                                        data-width-kind={lf.kind}
+                                        data-width-rung={lf.rung}
+                                    >
+                                        <div className="instance-manager__draft-field">
+                                            <label
+                                                className="instance-manager__draft-label"
+                                                htmlFor={`instance-manager-draft-${f.key}`}
+                                            >
+                                                {f.key}
+                                                {f.required && <span className="instance-manager__req" aria-hidden="true">*</span>}
+                                                <span className="instance-manager__draft-card">
+                                                    {f.typeName} [{f.multiplicity}]
+                                                </span>
+                                            </label>
+                                            {field(f)}
+                                            {f.error && (
+                                                <span className="instance-manager__draft-error" role="alert">
+                                                    <i className="bi bi-exclamation-circle" aria-hidden="true" />
+                                                    {f.error}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
                     ))}
                 </div>

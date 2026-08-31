@@ -450,10 +450,16 @@
         &:hover { color: #ffffff; }
     }
 
+    /* Since FL4 the children are ROWS of the shared 12-column grid, packed by
+       `formAutoLayout.autoLayoutRows` — the same call the edit form makes — so the two
+       columns this used to impose are gone: a two-up layout that the metamodel did not
+       choose is exactly the per-form arrangement the auto-layout removes. The row and cell
+       rules are `ir-form__row` / `ir-form__cell` in `irFormStyle.scss`, which reaches this
+       tab through its own import of `IRForm`. */
     &__draft-body {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 16px 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
         padding: 20px 24px;
         overflow: auto;
     }

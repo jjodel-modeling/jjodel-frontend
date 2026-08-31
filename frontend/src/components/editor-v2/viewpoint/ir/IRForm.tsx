@@ -13,6 +13,24 @@
  * stylesheet away; the host's default is passed in rather than materialized at compile,
  * because the default differs per host (plain in the rail, card in the document).
  *
+ * ── FL4: the auto-layout, the theme and the extended widgets ───────────────────
+ *
+ * The body is no longer a vertical list of label-and-field. Each section is packed into
+ * the spec's 12-COLUMN GRID by `formAutoLayout.autoLayoutRows`, which is FL1's packer
+ * reached through the adapter: the metamodel decides where a field sits, and there is no
+ * per-field width and no layout control anywhere in this component — the only choice the
+ * user has is the theme preset, and the theme cannot move a field.
+ *
+ * The theme is FL2's, resolved through `resolveFormTheme` from what the saved IR actually
+ * carries (the panel skin, plus `FormSpec.labelPlacement` when the author stated one — see
+ * spec amendment A2). It reaches the DOM as CSS custom properties and three data
+ * attributes; the four legacy skin classes stay exactly as they were, so nothing that
+ * renders today changes because of a preset it never chose.
+ *
+ * One field width is decided at RUNTIME and only one: a chip input promotes from half a row
+ * to the whole row when its chips outgrow the half (`useChipOverflow`, hysteresis in
+ * `overflowVerdict`). That is the spec's rule 2 and the only measurement in the form.
+ *
  * Reactivity comes entirely from `useIRFormView`, whose signature covers the object's
  * name, its metaclass and every slot's values. This component holds no model state, only
  * the Basic/Advanced mode, which is a property of the viewer, not of the model.
@@ -32,6 +50,17 @@ import { useNodeProblems } from '../../problems/useNodeProblems';
 import { collectFormDiagnostics } from './formDiagnostics';
 import { buildFormSections } from './formSections';
 import type { FormSpec, FormTheme } from './irTypes';
+import type { LayoutAnnotations } from '../../../../jjform';
+import {
+    autoLayoutRows,
+    chromeOf,
+    inputFromDescriptor,
+    resolveFormTheme,
+    spanWithOverflow,
+    themeVars,
+    type LayoutField,
+} from './formAutoLayout';
+import { useChipOverflow } from './useChipOverflow';
 import IRFormField from './IRFormField';
 import TextWidget from './widgets/TextWidget';
 import './irFormStyle.scss';
@@ -102,6 +131,37 @@ const MODE_OPTIONS: { value: FormMode; label: string }[] = [
     { value: 'advanced', label: 'Advanced' },
 ];
 
+
+/**
+ * One cell of the 12-column grid.
+ *
+ * A component and not an inline `<div>` because of the hook: `useChipOverflow` measures ONE
+ * cell, and a hook cannot be called from inside a `.map`. That constraint is also the right
+ * shape — a chip input that promotes measures itself and re-renders itself, and a field that
+ * is not one passes `enabled: false` and observes nothing.
+ *
+ * The span reaches CSS as a custom property rather than as a class per width: three classes
+ * would be three places to change when a width class is added, which rule 4 of the packing
+ * says must be one row in a map.
+ */
+function FormCell({ layout, children }: { layout: LayoutField; children: React.ReactNode }) {
+    const { ref, promoted } = useChipOverflow(layout.growsOnOverflow);
+    const span = spanWithOverflow(layout, promoted);
+    return (
+        <div
+            ref={ref}
+            className={`ir-form__cell${layout.stretched ? ' ir-form__cell--stretched' : ''}${promoted ? ' ir-form__cell--promoted' : ''}`}
+            style={{ ['--ir-form-span' as any]: String(span) }}
+            data-width-kind={layout.kind}
+            /* The rung that decided the width, for the same reason FL1 carries it: a layout
+               nobody can interrogate is a layout nobody can go and correct at the metamodel. */
+            data-width-rung={layout.rung}
+        >
+            {children}
+        </div>
+    );
+}
+
 export function IRForm({ objectId, defaultTheme = 'plain' }: IRFormProps) {
     const resolution = useIRFormView(objectId);
 
@@ -164,6 +224,21 @@ export function IRForm({ objectId, defaultTheme = 'plain' }: IRFormProps) {
     );
 
     const visible = mode === 'advanced' ? fields : fields.filter(f => isBasicField(f, spec));
+
+    /**
+     * Rung 2 of the width ladder, keyed by feature name.
+     *
+     * `jjodel/renderer=…` as `describeSlot` already parsed it off the feature proxy, threaded
+     * in rather than re-read: `AttrShape` does not carry annotations and is not being widened
+     * to, which is FL1's own reason for taking this as a parameter. A feature with no
+     * declaration contributes an entry with no `renderer`, which the ladder reads as «rung 2
+     * did not fire» — the same answer as an absent entry, so the map needs no filtering.
+     */
+    const layoutAnnotations = useMemo<LayoutAnnotations>(() => {
+        const out: LayoutAnnotations = {};
+        for (const f of visible) out[f.name] = { renderer: f.annotations?.renderer };
+        return out;
+    }, [visible]);
 
     // The registry is keyed by node id, and the conformance producer registers every violated
     // object TWICE, once under its DObject id for the tree, once under its DVertex id for the
@@ -233,6 +308,18 @@ export function IRForm({ objectId, defaultTheme = 'plain' }: IRFormProps) {
     const letter = entityLetter(resolveEntityType('object') ?? 'object');
     const theme: FormTheme = spec?.theme ?? defaultTheme;
 
+    /**
+     * FL2's theme, from the two legacy fields the saved IR carries (spec amendment A2).
+     *
+     * The skin keeps its class — every committed rule of the four skins is untouched — and
+     * the preset arrives beside it as custom properties and data attributes. The per-class
+     * rung of the cascade has no source in the D graph yet; `resolveFormTheme` takes it as a
+     * third argument so adding one is a change of this call and not of the mechanism.
+     */
+    const preset = resolveFormTheme(theme, spec?.labelPlacement);
+    const chrome = chromeOf(preset);
+    const presetVars = themeVars(preset) as React.CSSProperties;
+
     // The identity field appears only when the metaclass has NO `name` slot. When it has
     // one, that slot's own field already edits the name: writing the slot propagates onto
     // DObject.name through the identity binding (CLAUDE.md 3.12), so rendering both would
@@ -241,7 +328,14 @@ export function IRForm({ objectId, defaultTheme = 'plain' }: IRFormProps) {
     const hasNameSlot = fields.some(f => f.name === 'name');
 
     return (
-        <div className={`ir-form ir-form--${theme}`} data-mode={mode}>
+        <div
+            className={`ir-form ir-form--${theme}`}
+            data-mode={mode}
+            data-label-placement={preset.labelPlacement}
+            data-density={preset.density}
+            data-section-style={preset.sectionStyle}
+            style={presetVars}
+        >
             <div className="ir-form__header">
                 <span className="ir-form__eyebrow">PROPERTIES</span>
                 <span className="ir-form__spacer" />
@@ -307,6 +401,12 @@ export function IRForm({ objectId, defaultTheme = 'plain' }: IRFormProps) {
                             <span className="ir-form__group-label">Identity</span>
                             <span className="ir-form__group-count">1</span>
                         </div>
+                        {/* The same row/cell wrapper the sections use, so the identity field
+                            gets the grid's gaps and the theme's label placement rather than
+                            being the one field in the form that sits outside the layout. A
+                            whole row: there is nothing to pack it against. */}
+                        <div className="ir-form__row" data-free={0}>
+                        <div className="ir-form__cell" style={{ ['--ir-form-span' as any]: '12' }}>
                         <div className={`ir-field${nameRefusal ? ' ir-field--error' : ''}${dirtyFields.has('name') ? ' ir-field--dirty' : ''}`}>
                             <div className="ir-field__labelrow">
                                 {dirtyFields.has('name') && (
@@ -335,45 +435,69 @@ export function IRForm({ objectId, defaultTheme = 'plain' }: IRFormProps) {
                                 ) : dirtyFields.has('name') ? 'Modified, not saved' : null}
                             </div>
                         </div>
+                        </div>
+                        </div>
                     </div>
                 )}
 
                 {sections.map(s => {
-                    const folded = collapsed.has(s.key);
+                    // A section with no heading has nothing to fold BY, so it never folds:
+                    // `sectionStyle: 'none'` removes the eyebrow, and a section folded away
+                    // under it would have no control left to bring it back.
+                    const folded = chrome.eyebrow && collapsed.has(s.key);
+                    // Rule 3: the packing restarts at every section. The fields arrive here
+                    // already filtered by `hidden` and by the Basic/Advanced mode, and the
+                    // packer sees exactly what the user sees — a form in Basic packs its own
+                    // rows rather than showing the holes of the fields Advanced would add.
+                    const rows = autoLayoutRows(s.fields.map(inputFromDescriptor), layoutAnnotations);
+                    const byName = new Map(s.fields.map(f => [f.name, f]));
                     return (
                     <div className={`ir-form__group${folded ? ' ir-form__group--collapsed' : ''}`} key={s.key}>
                         {/* One heading element for every theme, and the theme decides what it
                             looks like and whether it is interactive. A button in plain/card/compact
                             too, rather than two markups to keep in step: the themes differ in
                             appearance, and the collapse affordance is chrome the stylesheet shows
-                            or hides. */}
-                        <button
-                            type="button"
-                            className="ir-form__group-title"
-                            aria-expanded={!folded}
-                            onClick={() => toggleSection(s.key)}
-                        >
-                            <i className={`bi bi-chevron-${folded ? 'right' : 'down'} ir-form__group-chevron`} aria-hidden="true" />
-                            <span className="ir-form__group-label">{s.title}</span>
-                            <span className="ir-form__group-count">{s.fields.length}</span>
-                        </button>
-                        {!folded && s.fields.map(f => (
-                            <div
-                                key={f.slotId}
-                                ref={el => { if (el) fieldRefs.current.set(f.name, el); else fieldRefs.current.delete(f.name); }}
+                            or hides. Whether there is a heading AT ALL is the preset's
+                            `sectionStyle`, through FL2's `SECTION_CHROME`. */}
+                        {chrome.eyebrow && (
+                            <button
+                                type="button"
+                                className="ir-form__group-title"
+                                aria-expanded={!folded}
+                                onClick={() => toggleSection(s.key)}
                             >
-                                <IRFormField
-                                    // Half of the address of every write the field makes
-                                    // (S3) and of every offer it asks for (S5). The other
-                                    // half is the field's own name; since S5 the descriptor
-                                    // carries no proxy at all.
-                                    objectId={objectId}
-                                    field={f}
-                                    offer={offer}
-                                    diagnostics={diagnostics.byField.get(f.name)}
-                                    dirty={dirtyFields.has(f.slotId)}
-                                    onCommitted={markDirty}
-                                />
+                                <i className={`bi bi-chevron-${folded ? 'right' : 'down'} ir-form__group-chevron`} aria-hidden="true" />
+                                <span className="ir-form__group-label">{s.title}</span>
+                                <span className="ir-form__group-count">{s.fields.length}</span>
+                            </button>
+                        )}
+                        {!folded && rows.map((row, ri) => (
+                            <div className="ir-form__row" key={`${s.key}-row-${ri}`} data-free={row.free}>
+                                {row.fields.map(lf => {
+                                    const f = byName.get(lf.key);
+                                    if (!f) return null;
+                                    return (
+                                        <FormCell layout={lf} key={f.slotId}>
+                                            <div
+                                                ref={el => { if (el) fieldRefs.current.set(f.name, el); else fieldRefs.current.delete(f.name); }}
+                                            >
+                                                <IRFormField
+                                                    // Half of the address of every write the field makes
+                                                    // (S3) and of every offer it asks for (S5). The other
+                                                    // half is the field's own name; since S5 the descriptor
+                                                    // carries no proxy at all.
+                                                    objectId={objectId}
+                                                    field={f}
+                                                    offer={offer}
+                                                    diagnostics={diagnostics.byField.get(f.name)}
+                                                    dirty={dirtyFields.has(f.slotId)}
+                                                    onCommitted={markDirty}
+                                                    layout={lf}
+                                                />
+                                            </div>
+                                        </FormCell>
+                                    );
+                                })}
                             </div>
                         ))}
                     </div>

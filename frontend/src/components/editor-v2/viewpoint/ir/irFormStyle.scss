@@ -212,7 +212,11 @@
 .ir-form__group {
     display: flex;
     flex-direction: column;
-    gap: var(--space-3);
+    /* Since FL4 the children of a group are ROWS of the 12-column grid, not fields, and the
+       spacing between them is the theme's density (`DENSITY_SCALE[…].rowGap`). The fallback
+       is the value this rule carried before, so a host that renders a form without the
+       preset variables — there is none today — is spaced as it was. */
+    gap: var(--ir-form-row-gap, var(--space-3));
 }
 
 .ir-form__group + .ir-form__group {
@@ -981,3 +985,94 @@
 .ir-form--inspector .ir-ref { height: var(--control-height-md); }
 
 .ir-form--inspector .ir-chips { min-height: var(--control-height-md); }
+
+
+/* ══ FL4 — the 12-column auto-layout grid ═══════════════════════════════════════
+ *
+ * Specification: `docs/design/design_handoff_jjodel_form_views/form-autolayout-spec.md`.
+ * The geometry is decided in `jjform/layout.ts` and reaches here as ONE number per cell,
+ * `--ir-form-span`. There is deliberately no `.ir-form__cell--6` and no width class: a new
+ * width would then be a new rule here as well as a new row in the map, and rule 4 of the
+ * packing says the algorithm — and everything downstream of it — never changes.
+ *
+ * The four skin classes below this block are untouched. What the preset adds arrives as the
+ * custom properties `themeVars` emits and as three data attributes, so a form renders
+ * exactly as it did before unless the preset says otherwise.
+ */
+
+.ir-form__row {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: var(--ir-form-col-gap, 8px);
+    align-items: start;
+    min-width: 0;
+}
+
+.ir-form__cell {
+    /* `span var(--…)` substitutes at computed-value time, which is why the span can be a
+       property at all. The fallback is the whole row: a cell with no span is a cell whose
+       width nobody decided, and half a row would be a guess. */
+    grid-column: span var(--ir-form-span, 12);
+    min-width: 0;
+}
+
+/* The runtime half of rule 2. Nothing is drawn differently — the promotion IS the span —
+   but the state is on the element, so a screenshot of a wrong promotion can be read back
+   to the field that made it. */
+.ir-form__cell--promoted { --ir-form-span: 12; }
+
+/* --- the theme, as the preset resolves it ---------------------------------- */
+
+/* Label to the left. The two-column field is the same shape the `compact` skin has always
+   had; what the preset adds is the ability to ask for it under any skin. The column width
+   is a variable so the skin can keep its own — see `--ir-form-label-col` on `.ir-form--compact`
+   below, which preserves its committed 88px against the preset's 72. */
+.ir-form[data-label-placement="left"] .ir-field {
+    display: grid;
+    grid-template-columns: var(--ir-form-label-col, 72px) minmax(0, 1fr);
+    align-items: center;
+    gap: 0 var(--space-2);
+}
+
+.ir-form[data-label-placement="left"] .ir-field__labelrow { min-width: 0; }
+.ir-form[data-label-placement="left"] .ir-field__message { grid-column: 2; }
+.ir-form[data-label-placement="left"] .ir-field__label { text-align: var(--ir-form-label-align, left); }
+
+/* The multiplicity leaves the row for the label's tooltip, for the reason the compact skin
+   states: in a fixed label column it and an ellipsized label compete, and the label wins. */
+.ir-form[data-label-placement="left"] .ir-field__mult,
+.ir-form[data-label-placement="left"] .ir-field__spacer { display: none; }
+
+/* Density. Only the two measures the scale actually states for a control — a third would be
+   a styling system, which is what the closed preset exists to prevent. */
+.ir-form[data-density] .ir-field__control,
+.ir-form[data-density] .ir-field__control--mono,
+.ir-form[data-density] .ir-field__readonly {
+    padding-top: var(--ir-form-pad-y);
+    padding-bottom: var(--ir-form-pad-y);
+    padding-left: var(--ir-form-pad-x);
+    padding-right: var(--ir-form-pad-x);
+}
+
+.ir-form[data-density] .ir-field__label {
+    font-size: var(--ir-form-label-size, var(--text-xs));
+    font-weight: var(--ir-form-label-weight, 500);
+}
+
+.ir-form[data-density] .ir-form__group + .ir-form__group { padding-top: var(--ir-form-section-gap); }
+
+/* Section chrome. Only the two the skins do not already draw: the rule between sections
+   (`divided`) and the absence of every boundary (`none`, whose eyebrow IRForm does not
+   render at all, so there is nothing here to hide). `flat` and `card` are the skins' own. */
+.ir-form[data-section-style="divided"] .ir-form__group + .ir-form__group {
+    border-top: 1px solid var(--color-form-border);
+}
+
+.ir-form[data-section-style="none"] .ir-form__group + .ir-form__group {
+    border-top: none;
+}
+
+/* The committed 88px of the compact skin, restated as the variable the preset reads. Without
+   it the rule above would win on specificity and silently retune a skin this slice did not
+   set out to change. */
+.ir-form--compact { --ir-form-label-col: 88px; }

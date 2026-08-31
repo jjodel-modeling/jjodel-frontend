@@ -47,6 +47,7 @@
 import { useMemo } from 'react';
 import type { FeatureTreatment, FormSpec, WidgetKind } from './irTypes';
 import type { TargetOption } from '../../../../jjform';
+import { parseRowViewAnnotations, type RowViewAnnotations } from '../../nodes/rowViewAnnotations';
 import { meaningfulValues, rawValues } from './slotValues';
 
 /** Option group for a select-like widget; the shape `ui/Select` consumes directly. */
@@ -98,6 +99,24 @@ export interface FormFieldDescriptor {
     step: number;
     /** Max length for the text widget; 1 for EChar, unlimited otherwise. */
     maxLength?: number;
+    /**
+     * Opaque handle of the METAFEATURE (DAttribute / DReference), as distinct from
+     * `slotId`, which is the instance's DValue. Added for FL4: the width ladder's rung 2 and
+     * the duration widget's unit are both `jjodel/…` declarations that hang off the feature,
+     * not off the slot.
+     */
+    featureId: string;
+    /**
+     * The `jjodel/…` declarations of this feature, already parsed (FL4).
+     *
+     * Read off the feature proxy's own `annotations` rather than through
+     * `readRowViewAnnotations(idlookup, …)`, which would need the store: the proxies are
+     * already resolved here, and a second source for the same declaration is how two
+     * readers start disagreeing. An entry the proxy gives as a bare id is skipped — this
+     * module has no lookup to resolve it with, and an unread declaration is `{}`, which is
+     * exactly «the metamodel says nothing».
+     */
+    annotations: RowViewAnnotations;
 }
 
 /**
@@ -306,6 +325,16 @@ export function describeSlot(slot: any, spec?: FormSpec, offer?: FieldOffer): Fo
     if (treatment === 'inline' && upperBound !== 1) treatment = 'list';
     if (treatment === 'hidden') treatment = defaultTreatment;
 
+    // Annotation sources off the feature proxy. Objects with a `source` string only: see
+    // the note on `FormFieldDescriptor.annotations`.
+    const annotationSources: (string | undefined)[] = [];
+    const rawAnnotations = feature?.annotations;
+    if (Array.isArray(rawAnnotations)) {
+        for (const a of rawAnnotations) {
+            if (a && typeof a === 'object' && typeof (a as any).source === 'string') annotationSources.push((a as any).source);
+        }
+    }
+
     const options = isEnum || isPlainRef || isCompositionRef ? offerGroups(offer, name) : [];
     const raw = rawValues(slot);
     const values = isEnum ? normalizeEnumValues(raw, options) : raw;
@@ -333,6 +362,8 @@ export function describeSlot(slot: any, spec?: FormSpec, offer?: FieldOffer): Fo
         filled: meaningfulValues(slot),
         step,
         maxLength,
+        featureId: String(feature?.id ?? ''),
+        annotations: parseRowViewAnnotations(annotationSources),
     };
 }
 
