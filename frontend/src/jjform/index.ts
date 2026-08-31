@@ -16,7 +16,10 @@
  * WIDTH REGISTRY and the packer of the form auto-layout — the module that makes the
  * metamodel, and never the user, decide where a field sits. Slice FL2 added `themes.ts`, the form's
  * THEME — a named preset over exactly three fields, resolved through the same
- * least-to-most-specific cascade as every other style field of the platform. What
+ * least-to-most-specific cascade as every other style field of the platform. Slice FL5
+ * added `egoNeighborhood.ts`, the 1-HOP EGO of one instance — the same data 13a walks,
+ * projected onto a ribbon a table row can hold: dedup, precedence, cap, counts,
+ * positions, and the routing of a click. What
  * still waits are the open questions of `form-engine-contract.md`.
  *
  * Invariant, checked by reading and by the module having nothing to import:
@@ -124,6 +127,36 @@ export {
     packRows,
     widthOf,
 } from './layout';
+
+export type {
+    Ego,
+    EgoCounts,
+    EgoInput,
+    EgoInstance,
+    EgoKind,
+    EgoNode,
+    EgoPointer,
+    EgoSide,
+} from './egoNeighborhood';
+
+export type { EgoAction, EgoArrow, EgoHandlers, EgoLayout, EgoPlacedNode } from './egoNeighborhood';
+
+export {
+    EGO_COL_GAP,
+    EGO_MAX_PER_SIDE,
+    EGO_NODE_H,
+    EGO_NODE_W,
+    EGO_ROW_GAP,
+    EGO_SUBJECT_H,
+    EGO_SUBJECT_W,
+    egoAction,
+    egoDispatch,
+    egoLabel,
+    egoLayout,
+    egoNeighborhood,
+    egoShowAll,
+    egoSummary,
+} from './egoNeighborhood';
 
 export type { Crumb, NavState, NavStep } from './nav';
 

@@ -51,6 +51,9 @@ import { slotShapeFor } from '../../abstract/tabs/instanceTable';
 import { detectValueRenderer } from '../nodes/valueRenderer';
 import type {
     ClassShape,
+    EgoInput,
+    EgoInstance,
+    EgoPointer,
     MetamodelShape,
     NeighborEdge,
     NeighborNode,
@@ -195,6 +198,80 @@ export function neighborhoodOf(
     }
 
     return { subjectId, nodes, edges };
+}
+
+/**
+ * L'INGRESSO dell'ego-diagramma della riga espansa (FL5/FL6), da un `idlookup`.
+ *
+ * Sorella di `neighborhoodOf`, non un secondo walk: legge le STESSE tre sorgenti
+ * (`makeDrawReadCtx` per il nome, `filledSlotValues` per gli uscenti,
+ * `shapeDraw.referencedBy` per gli entranti) e si ferma li'. Tutto cio' che
+ * assomiglia a una decisione — dedup, precedenza fra i due lati, cap a
+ * `EGO_MAX_PER_SIDE`, conteggi, posizioni — e' di `jjform/egoNeighborhood`, che
+ * e' puro e provato sotto node. Questa funzione non ne ripete nessuna.
+ *
+ * ── Perche' non riusa `neighborhoodOf` ────────────────────────────────────────
+ *
+ * Perche' `Neighborhood` ha gia' fuso i due lati in una lista di nodi con un
+ * RUOLO, e ha applicato la sua precedenza (owner > uscente > entrante) e il suo
+ * dedup «un arco per coppia+feature». `EgoInput` vuole il dato PRIMA di quelle
+ * scelte: i puntatori uscenti uno per POSIZIONE (uno slot multivalore con tre
+ * valori sono tre voci) e gli entranti verbatim, contenimento incluso e marcato,
+ * perche' il filtro sul contenimento e' una regola del DISEGNO del nastro.
+ * Ricavarli da `Neighborhood` vorrebbe dire disfare due volte lo stesso nodo.
+ *
+ * L'owner NON c'e', ed e' la differenza fra i due disegni: il nastro e' largo
+ * quanto una riga e il contenimento e' dell'outline (10b), che ha la profondita'
+ * per mostrarlo. Il legame owner→soggetto non si perde comunque, quando l'owner
+ * punta anche per riferimento: arriva dagli entranti come chiunque altro.
+ *
+ * `cls.refs` sono le sole reference NON di contenimento (`ClassShape.refs`, il
+ * contenimento e' in `children`), quindi il filtro sugli uscenti e' della shape e
+ * non ricompare qui.
+ *
+ * Restituisce `null` — e non un ingresso vuoto — quando il soggetto non e' un
+ * `DObject` vivo: una riga espansa su un oggetto morto non deve disegnare un
+ * soggetto senza nome, deve non disegnare.
+ */
+export function egoInputOf(
+    idlookup: Idlookup,
+    subjectId: string,
+    shape: MetamodelShape | null,
+): EgoInput | null {
+    if (!idlookup || !subjectId) return null;
+    if (idlookup[subjectId]?.className !== 'DObject') return null;
+
+    const ctx = makeDrawReadCtx(idlookup);
+    const classes = shape?.classes ?? {};
+
+    /** Un'istanza ridotta a cio' che una scatola sa dire, o `null` quando il
+     *  puntatore non risolve — che e' esattamente cio' che il modulo legge come
+     *  nodo `broken`, reso e mai saltato (stessa scelta di tabella e outline). */
+    const instanceOf = (id: string): EgoInstance | null => {
+        if (idlookup[id]?.className !== 'DObject') return null;
+        return { id, name: ctx.getName(id) ?? '', cls: ctx.getMetaclassName(id) ?? '' };
+    };
+
+    const subject: EgoInstance = {
+        id: subjectId,
+        name: ctx.getName(subjectId) ?? '',
+        cls: ctx.getMetaclassName(subjectId) ?? '',
+    };
+
+    const subjectClassName = ctx.getMetaclassName(subjectId);
+    const cls: ClassShape | null = subjectClassName ? classes[subjectClassName] ?? null : null;
+
+    // Ordine di dichiarazione della shape, che e' l'ordine in cui la form e la
+    // tabella leggono le stesse feature: un nastro che riordinasse i vicini
+    // litigherebbe con le due superfici che gli stanno intorno.
+    const outgoing: EgoPointer[] = [];
+    for (const ref of cls?.refs ?? []) {
+        for (const targetId of filledSlotValues(idlookup, subjectId, ref.key)) {
+            outgoing.push({ featureKey: ref.key, targetId, target: instanceOf(targetId) });
+        }
+    }
+
+    return { subject, outgoing, incoming: referencedBy(idlookup, subjectId) };
 }
 
 /**

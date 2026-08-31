@@ -17,7 +17,8 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { neighborhoodOf, ownerLinkOf, salientValue, vertexOfObject } from '../neighborhoodDraw';
+import { egoInputOf, neighborhoodOf, ownerLinkOf, salientValue, vertexOfObject } from '../neighborhoodDraw';
+import { egoNeighborhood } from '../../../../jjform';
 import type { AttrShape, ClassShape, MetamodelShape, Neighborhood, RefShape } from '../../../../jjform';
 
 type Any = Record<string, any>;
@@ -304,5 +305,95 @@ describe('vertexOfObject — lo spazio di id del canvas', () => {
         expect(vertexOfObject(fixture(), 'altro', 'p2')).toBeNull();
         expect(vertexOfObject(fixture(), '', 's1')).toBeNull();
         expect(vertexOfObject(null as any, 'm', 's1')).toBeNull();
+    });
+});
+
+/**
+ * `egoInputOf` — l'INGRESSO del nastro (FL5/FL6), sullo stesso fixture.
+ *
+ * Quello che si prova qui e' la meta' IMPURA della catena: che i tre dati escano
+ * dall'`idlookup` nella forma in cui `egoNeighborhood` li vuole — uno per
+ * POSIZIONE, contenimento incluso e marcato, puntatori morti conservati. Le
+ * scelte (dedup, precedenza, cap, conteggi) sono provate in
+ * `jjform/__tests__/egoNeighborhood.test.ts` e non si ripetono; l'ultimo blocco
+ * mette in fila le due meta' una volta sola, per vedere che si parlino.
+ */
+describe('egoInputOf — i tre dati, prima di ogni decisione', () => {
+    it('gli uscenti sono le sole reference NON di contenimento, in ordine di shape', () => {
+        const input = egoInputOf(fixture(), 's1', SHAPE);
+        expect(input).not.toBeNull();
+        expect(input!.subject).toEqual({ id: 's1', name: 's1', cls: 'Sensor' });
+        expect(input!.outgoing.map(p => [p.featureKey, p.targetId]))
+            .toEqual([['cfg', 'cfg1'], ['peer', 's2']]);
+        // `ports` e `alarms` sono contenimento: stanno in `children`, e il nastro
+        // non li disegna. L'outline (10b) e' dove i figli vivono.
+        expect(input!.outgoing.some(p => p.featureKey === 'ports' || p.featureKey === 'alarms')).toBe(false);
+    });
+
+    it('lo stesso bersaglio due volte nello stesso slot sono DUE puntatori', () => {
+        // Il dedup e' del modulo, non di qui: consegnargli un puntatore solo
+        // vorrebbe dire prendere quella decisione due volte, in due posti.
+        const input = egoInputOf(fixture(), 's2', SHAPE);
+        expect(input!.outgoing.map(p => [p.featureKey, p.targetId]))
+            .toEqual([['cfg', 'cfg2'], ['peer', 's1'], ['peer', 's1']]);
+    });
+
+    it('un puntatore che non risolve conserva il suo id e perde il bersaglio', () => {
+        const input = egoInputOf(fixture(), 's3', SHAPE);
+        expect(input!.outgoing).toEqual([{ featureKey: 'cfg', targetId: 'ghost', target: null }]);
+    });
+
+    it('gli entranti arrivano verbatim: contenimento incluso e MARCATO', () => {
+        // Il filtro sul contenimento e' una regola del disegno, quindi e' del
+        // modulo. Filtrarlo qui lo renderebbe invisibile al suo stesso test.
+        const input = egoInputOf(fixture(), 'p2', SHAPE);
+        expect(input!.incoming.map(r => [r.instanceId, r.featureKey, r.composition]))
+            .toEqual([['s1', 'ports', true]]);
+        expect(input!.outgoing).toEqual([]);   // Port non ha reference, solo figli
+    });
+
+    it('due puntatori dalla stessa istanza attraverso lo stesso slot sono due voci', () => {
+        const input = egoInputOf(fixture(), 's1', SHAPE);
+        expect(input!.incoming.map(r => [r.instanceId, r.featureKey, r.index]))
+            .toEqual([['s2', 'peer', 0], ['s2', 'peer', 1]]);
+    });
+
+    it('soggetto morto, id vuoto o lookup assente: null, e la riga non disegna', () => {
+        expect(egoInputOf(fixture(), 'ghost', SHAPE)).toBeNull();
+        expect(egoInputOf(fixture(), 'c_Sensor', SHAPE)).toBeNull();   // non e' un DObject
+        expect(egoInputOf(fixture(), '', SHAPE)).toBeNull();
+        expect(egoInputOf(null as any, 's1', SHAPE)).toBeNull();
+    });
+
+    it('shape assente: il soggetto resta, gli uscenti no — non sparisce dal suo riquadro', () => {
+        const input = egoInputOf(fixture(), 's1', null);
+        expect(input!.subject.id).toBe('s1');
+        expect(input!.outgoing).toEqual([]);
+        expect(input!.incoming.length).toBe(2);   // l'indice non dipende dalla shape
+    });
+});
+
+describe('egoInputOf + egoNeighborhood — le due meta\' si parlano', () => {
+    it('s1: un entrante e un uscente, e il conteggio dei PUNTATORI resta due', () => {
+        const ego = egoNeighborhood(egoInputOf(fixture(), 's1', SHAPE));
+        // `s2` punta s1 due volte E s1 punta s2: la precedenza «l'uscente vince»
+        // lascia una scatola sola, dal lato uscente.
+        expect(ego.outgoing.map(n => n.id)).toEqual(['cfg1', 's2']);
+        expect(ego.incoming.map(n => n.id)).toEqual([]);
+        // Il numero della colonna della tabella e' dei PUNTATORI, non delle
+        // scatole: due, come `referencedBy` di 2b li conta.
+        expect(ego.counts.referencedBy).toBe(2);
+    });
+
+    it('p2: il solo entrante e\' il suo owner, e il nastro non lo disegna', () => {
+        const ego = egoNeighborhood(egoInputOf(fixture(), 'p2', SHAPE));
+        expect(ego.incoming).toEqual([]);
+        expect(ego.outgoing).toEqual([]);
+        expect(ego.counts.referencedBy).toBe(0);
+    });
+
+    it('s3: il puntatore morto diventa un nodo broken, reso e mai saltato', () => {
+        const ego = egoNeighborhood(egoInputOf(fixture(), 's3', SHAPE));
+        expect(ego.outgoing.map(n => [n.id, n.kind])).toEqual([['ghost', 'broken']]);
     });
 });
