@@ -2,6 +2,50 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-08-31 — feat(manager): il fondo desk e le due card della colonna centrale (10d)
+**Prompt**: «Slice 10d — sfondo e card del manager, micro, SERIALE»: la colonna a destra
+del rail passa dal bianco pieno al fondo app; tabella e pannello form diventano due card
+gemelle (bianco, raggio 12, hairline, ombra) separate dal fondo, testata dentro la card e
+footer come suo bordo inferiore; il rail resta com'e'; il sottotitolo perde «Created from
+the container's form». Solo chrome, zero logica.
+**Files touched**: `abstract/tabs/{instanceManagerTab.scss,InstanceManagerTab.tsx}`,
+`abstract/tabs/__tests__/instanceManager10d.test.ts` (**nuovo**, 17 casi),
+`__tests__/instanceManager10c.test.ts` e `styles/tokens/_shadows.scss` in `10e6382d1`;
+referto in `d7c64de5d`; log a parte. Due commit di contenuto, entrambi con pathspec,
+indice verificato vuoto prima e dopo.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `npm run typecheck` **33** (baseline invariata, conteggio su output
+completo); `npm run build` exit **0**; vitest **2607 passati / 0 falliti** (2590 prima piu'
+i 17 nuovi), 9 file rossi = i noti `window is not defined`, nessuno di questa slice. Suite
+propria provata con 5 mutazioni (fondo desk, ombra, bordo della form, footer non sbordato,
+sottotitolo vecchio): 1 rosso ciascuna, verde al ripristino.
+**Out-of-scope changes**: yes — `styles/tokens/_shadows.scss`, un file che il prompt non
+nomina. Ci si arriva dalla Regola 28, che vuole le variabili CSS in `tokens/` e mai nel
+foglio del componente, e da una misura: `--shadow-sm` e' dichiarato sia in `tokens/` sia in
+`styles/tokens.css` con valori diversi, e a schermo dipingeva quello di tokens.css. Il
+delta e' una riga per tema piu' il commento.
+**Layer Impact Report**: not-required — nessun file di §3.1 nel perimetro. Zero creatori D,
+zero `TRANSACTION`, zero `SetFieldAction`: il delta e' regole SCSS, una riga di JSX che
+legge un `useMemo` gia' esistente, e due file di test.
+**Smoke visivo**: passato — `npm run smoke` **GREEN 12/0/3**, corsa quiescente, un boot per
+stato, `moved: nothing`; e NON probante per questa slice (nessuno stato di `states.ts` monta
+il manager). La misura che la riguarda e' `_tmp_10d_verify.ts` sull'app vera, fixture
+Heater/Cooler, girata DUE volte con lo stesso file e la slice in `git stash`: **before
+15 PASS / 14 FAIL**, **after 29 PASS / 0 FAIL**, zero errori di pagina in entrambe. I 14
+rossi del before sono il contrasto e sono le asserzioni della slice; i 15 verdi i controlli
+positivi e le non-regressioni. `main.bg` `rgb(248,250,252)` con radice bianca e rail
+trasparente; gronda 12 e stacco 12; footer `bottom` a `table.bottom-1` e largo
+`table.w-2`; form collassata 34px con raggio e ombra, aperta 387px; riga espandibile 1,
+ego 1, outline 18, overflow orizzontale 0.
+**Notes**: un reperto vale il resto. `--shadow-sm` non dipinge `--shadow-sm`: e' fra i nomi
+dichiarati due volte, e a schermo davano l'ombra di `tokens.css`. Trovato solo perche' la
+sonda legge lo stile calcolato — leggere `_shadows.scss` e' leggere il comparatore (§5). Da
+qui il ruolo nuovo `--shadow-desk-card`. Per esteso, col giro «before», in
+`docs/discovery/discovery_2026-08-31_manager_chrome_10d.md`.
+**Prompt document name**: PROMPT_10d_manager_chrome.md 2026-08-31 23:40
+
 ## 2026-08-31 — feat(manager): il rail, la testata, il footer e lo stato di riposo (10c)
 **Prompt**: `docs/prompts/PROMPT_10c_manager_parity.md` — parita' di superficie con la
 board: badge «C» e sezione VIEWS nel rail, testata a 24px con provenienza, filtro sul nome,
