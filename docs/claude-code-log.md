@@ -2,6 +2,42 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-08-31 — feat(jjform): i temi della form come preset in cascata (FL2)
+**Prompt**: `docs/prompts/PROMPT_FL2_themes.md` — un tema e' un preset nominato su
+ESATTAMENTE tre campi (`labelPlacement`, `density`, `sectionStyle`), quattro preset dalla
+tabella della spec, `resolveTheme` che fonde PER CAMPO nella stessa cascata degli altri
+style field (metamodello → viewpoint → per-classe), costanti nominate per la resa. Modulo
+puro in `jjform/`. Fuori scopo dichiarato: packing (FL1), widget (FL3), UI di scelta.
+**Files touched**: `frontend/src/jjform/themes.ts` e
+`frontend/src/jjform/__tests__/themes.test.ts` (nuovi, `eb49bed4e`);
+`frontend/src/jjform/index.ts` (soli export in coda, `c98f47d3c`);
+`docs/discovery/discovery_2026-08-31_fl2_temi_form.md` (`01eb50051`). Quattro file, tre
+commit, tutti con pathspec e indice verificato vuoto prima e dopo ciascuno.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — nessun consumatore esiste ancora (FL4 e' il primo); `npm run smoke`
+GREEN 12/0/3 su corsa quiescente, `npm run build` verde.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessun file di §3.1 nel perimetro; il modulo ha
+ZERO import, quindi zero propagazione a D-layer, L-layer, sync, JjOM o persistenza.
+**Smoke visivo**: passato — `npm run smoke` **GREEN 12 passed / 0 failed / 3 skipped**,
+«quiescent run, single boot per state». Una prima corsa era uscita **VOID** («the tree
+moved under the run: modified src/jjform/index.ts»): causa accertata, la sessione FL1
+parallela che scriveva sullo stesso `index.ts`; ripetuta a albero fermo dopo il commit di
+FL1. Il VOID e' riportato, non nascosto (P8). Gate a 3 valori sull'albero corrente:
+`npm run typecheck` **33** (baseline invariata, conteggio su output completo, exit 2 come
+da baseline), `npm run build` verde (solo chunk-size preesistente), vitest **2311/0**
+(9 file rossi = i noti `window is not defined` di monaco, zero test eseguiti in essi).
+Unita' proprie: `themes.test.ts` **26/26**.
+**Notes**: Due reperti, entrambi in `discovery_2026-08-31_fl2_temi_form.md` (§3, §2).
+(1) `FormTheme` esiste gia', `irTypes.ts:211`, altro significato e letterali DEFINITIVI
+(R-B9): non toccato, i due tipi convivono in moduli diversi come gia' `AccentPlacement`;
+riconciliarli e' di FL4. (2) La board dichiarata autoritativa, `Form Auto Layout.dc.html`,
+non esiste in repo; prompt e spec concordano sui preset, quindi non blocca. Le 26 unita'
+girate contro sei versioni difettose: 1, 3, 2, 1, 1, 2 rossi.
+**Prompt document name**: PROMPT_FL2_themes.md 2026-08-31 10:40
+
 ## 2026-08-31 — feat(jjform): registro delle width e packer del form auto-layout (FL1)
 **Prompt**: `docs/prompts/PROMPT_FL1_widthmap_packing.md` — registro tipo→`{span, widget}`
 e packing a 12 colonne come modulo PURO in `jjform/`, sulla specifica ratificata
