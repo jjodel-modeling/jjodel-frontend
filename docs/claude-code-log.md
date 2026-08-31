@@ -2,6 +2,53 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-09-01 — fix(manager): il confine fra il rail e la colonna centrale (10h)
+**Prompt**: «Slice 10h — ritocchi visuali del manager, giro 1, micro, SERIALE»: (1) il rail
+METACLASSES/VIEWS finisce senza confine contro il fondo desk della colonna centrale —
+aggiungere la stessa hairline che divide il rail sinistro dell'app dal pannello Model
+outline, MISURANDO quel bordo invece di inventarne uno, e facendo portare al rail la classe
+separatore se esiste; (2) verificare che i TRE confini verticali del manager usino lo stesso
+token, dichiararli nel referto, allineare chi diverge nella stessa corsa.
+**Files touched**: `abstract/tabs/instanceManagerTab.scss`,
+`abstract/tabs/__tests__/instanceManager10h.test.ts` (**nuovo**, 18 casi) e il referto
+`docs/discovery/discovery_2026-09-01_10h_confini_manager.md` in `011d77476`; log a parte.
+Un commit di codice, con pathspec, indice verificato vuoto prima e dopo.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `npm run typecheck` **33** (baseline invariata, conteggio su output
+completo, `EXIT=2`); `npm run build` exit **0**; vitest **2710 passati / 0 falliti** (2671 di
+10g, piu' i 18 nuovi e i 21 di DS-1 in albero da un'altra sessione), 9 file rossi = i due
+noti errori di collection `window is not defined` (monaco, `PerformanceMetrics.ts:220`),
+nessuno di questa slice. Suite propria provata con SETTE mutazioni (via l'estensione a
+`__main`, letterale al posto del token, 2px, `border-right` locale sul rail,
+`--color-form-border-strong`, via il reset dei pannelli impilati, variabile CSS nel foglio):
+2/3/3/3/3/1/1 rossi, verde al ripristino in tutte e sette.
+**Out-of-scope changes**: no — il foglio del perimetro, la sua suite e il referto.
+**Layer Impact Report**: not-required — nessun file di §3.1 nel perimetro. Zero creatori D,
+zero `TRANSACTION`, zero `SetFieldAction`: il delta e' un selettore esteso e una
+dichiarazione sola in un foglio SCSS.
+**Smoke visivo**: passato — `_tmp_10h_verify.ts` sull'app vera, fixture StateMachine/State/
+Transition, girata DUE volte con lo stesso file e la slice in `git stash`: **before 21 PASS /
+5 FAIL**, **after 26 PASS / 0 FAIL**, zero errori di pagina in entrambi; i 5 rossi del before
+sono esattamente il blocco di contrasto. I tre confini dopo: `1px solid rgb(226,232,240)`
+tutti e tre, letti sull'elemento che dipinge (`.leftbar` a destra, `__pane--classes` e
+`__main` a sinistra); prima il terzo era `0px none`. Verificato ANCHE nel pixel, decodificando
+i PNG: una colonna sola di `(226,232,240)` a x = 239 / 541 / 741, alle altezze y = 300/500/700
+— nel before x=741 passava da bianco a `(248,250,252)` senza confine. Non-regressioni verdi in
+ENTRAMBI i giri: fondo desk, card con bordo/raggio/ombra pari, filtro 6 -> 1 righe, badge
+lettera di 10f, badge «C» 18x18, selezione a UNA riga (l'invariante di 10g); e i confini non
+cambiano ne' sotto selezione ne' sotto filtro. Con l'outline chiuso il confine nuovo resta e
+il rail, primo pannello, non prende bordo a sinistra. Ritagli
+`_tmp_10h_{before,after}_{1_rest,2_selected,3_filtered,4_no_outline,5_dark}.png`.
+**Notes**: due reperti, entrambi nel referto §2 e §5. `--color-border-subtle`, il token che
+il prompt ipotizzava, NON esiste: stringa vuota sulla radice, e un `var()` su quel nome
+avrebbe riprodotto il difetto. E il confine del rail dell'app (`dashboard.scss:990`) scrive
+`#e2e8f0` LETTERALE: in chiaro nessuna divergenza di colore, in scuro resta chiaro mentre i
+due del manager seguono il token. Non allineato: quel blocco e' tutto letterale e senza tema
+scuro. Segnalato, fuori perimetro.
+**Prompt document name**: prompt inline, nessun documento — 2026-09-01 00:20
+
 ## 2026-08-31 — fix(manager): un nodo per istanza nell'outline (10g)
 **Prompt**: «Slice 10g — un nodo per istanza nell'outline, micro, SERIALE dopo 10f»: il
 reperto di 10e (18 nodi per 12 istanze, la selezione ne accende due) va prima MISURATO —
