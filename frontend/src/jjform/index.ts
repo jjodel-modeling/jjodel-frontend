@@ -14,8 +14,10 @@
  * menu rule, and slice 13a `neighborhood.ts` — the local graph of one instance, read
  * plus navigation, never a second canvas. Slice FL1 added `layout.ts`, the
  * WIDTH REGISTRY and the packer of the form auto-layout — the module that makes the
- * metamodel, and never the user, decide where a field sits. What still waits are the open questions of
- * `form-engine-contract.md`.
+ * metamodel, and never the user, decide where a field sits. Slice FL2 added `themes.ts`, the form's
+ * THEME — a named preset over exactly three fields, resolved through the same
+ * least-to-most-specific cascade as every other style field of the platform. What
+ * still waits are the open questions of `form-engine-contract.md`.
  *
  * Invariant, checked by reading and by the module having nothing to import:
  * nothing under `jjform/` imports from `joiner/`, `redux/`, `react` or
@@ -163,6 +165,30 @@ export {
 } from './neighborhood';
 
 export type {
+    CheckStatus,
+    ControlDecision,
+    ControlFlags,
+    Duration,
+    DurationUnit,
+    FieldCheck,
+    UrlCheck,
+} from './widgetValue';
+
+export {
+    checkEmail,
+    checkUrl,
+    controlClass,
+    controlDecision,
+    durationValueIn,
+    formatDuration,
+    isHexColor,
+    normalizeHex,
+    normalizeIsoDate,
+    normalizeIsoDateTime,
+    parseDuration,
+} from './widgetValue';
+
+export type {
     OutlineKind,
     OutlineMenu,
     OutlineMenuBlock,
@@ -177,3 +203,31 @@ export {
     outlineOpenByDefault,
     rootMenu,
 } from './outline';
+
+export type {
+    Density,
+    DensityScale,
+    FormTheme,
+    FormThemeName,
+    LabelLayout,
+    LabelPlacement,
+    SectionChrome,
+    SectionStyle,
+} from './themes';
+
+export {
+    DENSITY_SCALE,
+    FORM_THEME_DEFAULT,
+    FORM_THEME_DEFAULT_NAME,
+    FORM_THEME_NAMES,
+    FORM_THEME_PRESETS,
+    LABEL_COLUMN_WIDTH,
+    LABEL_FONT_SIZE,
+    LABEL_FONT_WEIGHT,
+    LABEL_LAYOUT,
+    SECTION_CHROME,
+    SECTION_HEADER_BAND,
+    resolveTheme,
+    themeLayer,
+    themeName,
+} from './themes';
