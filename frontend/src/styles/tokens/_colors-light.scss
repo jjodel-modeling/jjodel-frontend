@@ -349,12 +349,19 @@ $gradient-hover: linear-gradient(180deg, $slate-100 0%, $slate-200 100%);
   --color-entity-reference-fg: #535B1D;
   --color-entity-operation-bg: #EBE6FC;
   --color-entity-operation-fg: #5A4A7F;
+  /* model — DS-1 (2026-08-31). Fuori dagli alias del contenitore: DESIGN-SYSTEM
+     §2.2 dice ambra, e l'alias di R-RAIL-30 la scavalcava senza registrarlo.
+     Grado SATURO a H 85, l'unica tinta ambra che in ENTRAMBI i temi supera il
+     pavimento della scala — la dE OKLCH minima gia' tollerata fra due fondi di
+     famiglie diverse, 0.0143 qui e 0.0243 in scuro, entrambi class/object.
+     Misurato: bg L 0.934 C 0.030 H 83.6, fg L 0.451 C 0.085 H 85.0,
+     dE(bg, enum.bg) 0.0146, contrasto 6.16:1. */
+  --color-entity-model-bg: #F3E8D3;
+  --color-entity-model-fg: #6B5110;
 
   /* Alias — sei contenitori, la classe astratta, il tipo di dato */
   --color-entity-metamodel-bg: var(--color-entity-container-bg);
   --color-entity-metamodel-fg: var(--color-entity-container-fg);
-  --color-entity-model-bg: var(--color-entity-container-bg);
-  --color-entity-model-fg: var(--color-entity-container-fg);
   --color-entity-package-bg: var(--color-entity-container-bg);
   --color-entity-package-fg: var(--color-entity-container-fg);
   --color-entity-viewpoint-bg: var(--color-entity-container-bg);
