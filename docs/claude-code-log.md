@@ -2,6 +2,52 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-08-31 — feat(editor-v2): l'auto-layout della form, cucito (FL4)
+**Prompt**: `docs/prompts/PROMPT_FL4_integration.md` — cucire i tre moduli nel renderer
+della IRForm: griglia a 12 colonne da FL1, tema da FL2, widget dal registro di FL3.
+Overflow dei multi misurato a runtime con isteresi, nessuna width per-campo e nessuna
+opzione di layout nella UI, riconciliazione dei due `FormTheme`, emendamento regola 2
+(readOnly non si stretcha), stessa geometria per la form di edit e per il draft di create.
+**Files touched**: `jjform/{layout.ts,__tests__/layout.test.ts}` (`b3da09dba`);
+`editor-v2/viewpoint/ir/{formAutoLayout.ts,useChipOverflow.ts,__tests__/formAutoLayout.test.ts,IRForm.tsx,IRFormField.tsx,useFormWidgets.ts,irFormStyle.scss}`
+e `abstract/tabs/{InstanceManagerTab.tsx,instanceManagerTab.scss}` (`beeea12ae`);
+`docs/design/design_handoff_jjodel_form_views/form-autolayout-spec.md` piu' i tre
+`PROMPT_FL{2,3,4}*.md` untracked (`349b32961`). Tre commit, tutti con pathspec e indice
+verificato a mano prima di ciascuno. `jjform/index.ts` **non toccato**: FL4 non aggiunge
+export al barrel, quindi la lezione del fan-out FL1/FL2 non aveva nulla da coordinare.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `npm run typecheck` **33** (baseline invariata, conteggio su output
+completo); `npm run build` exit 0 (solo chunk-size preesistente); vitest **2442 passati /
+0 falliti**, 9 file rossi = i noti `window is not defined`, nessuno di questa slice; le due
+suite proprie 40/40 e 32/32.
+**Out-of-scope changes**: yes — `useFormWidgets.ts` e i due file di
+`abstract/tabs/` non erano nominati nel prompt. Il primo perche' il rung 2 della scala
+(`jjodel/renderer=…`) non era raggiungibile senza portare le annotazioni sul descrittore
+(due proprieta' aggiunte, `featureId` e `annotations`, nessuna esistente toccata); i secondi
+perche' il test atteso «la form del draft di create e la edit usano lo stesso layout» non e'
+verificabile senza toccare la `DraftDialog`, che e' li'. Nessun altro file allargato.
+**Layer Impact Report**: not-required — nessun file di §3.1 nel perimetro. Zero creatori D,
+zero `TRANSACTION`, zero `SetFieldAction` aggiunti: le scritture restano quelle gia'
+committate di `formWrite.ts`, raggiunte dagli stessi due indirizzi `(objectId, field.name)`.
+**Smoke visivo**: passato — `npm run smoke` **GREEN 12 passed / 0 failed / 3 skipped**,
+«quiescent run, single boot per state». La prima corsa era uscita **VOID** («the tree moved
+under the run: added src/components/abstract/tabs/__tests__/egoDiagram.test.ts»): causa
+accertata, la sessione FL5 parallela sull'ego-diagramma, non questa slice; ripetuta ad albero
+fermo dopo i tre commit. Il VOID e' riportato, non nascosto (P8). Non probante per la
+geometria: nessuno stato di `states.ts` monta una form, quindi lo smoke dice che nulla e'
+regredito e non che la griglia sia giusta. Misura che invece la riguarda: il CSS emesso da
+`npm run build` contiene ora **16** occorrenze di `ir-datefield` e **6** di
+`ir-chipinput__pill`, che in FL3 erano **0** perche' nulla importava il registro — l'innesto
+e' verificato dal bundle, non dedotto.
+**Notes**: Due pixel cambiati su superficie committata, voluti e commentati nei file:
+`.ir-form__group` passa da 12px a `--ir-form-row-gap` (14px), perche' e' la density di FL2 a
+governare il ritmo; `.ir-form--compact` ridichiara `--ir-form-label-col: 88px`, senza cui la
+regola nuova per `labelPlacement: left` vincerebbe per specificita'. Regola 19: 12 file
+elencati a fine sessione, non prima — nessun interlocutore in background.
+**Prompt document name**: PROMPT_FL4_integration.md 2026-08-31 18:45
+
 ## 2026-08-31 — feat(editor-v2): i widget estesi come gemelli write-side (FL3)
 **Prompt**: `docs/prompts/PROMPT_FL3_widgets.md` — i widget estesi della form come
 meta' write delle Row view: date/datetime, duration, color, @email, @url, textarea
