@@ -130,7 +130,7 @@ import {
     type TableCell,
     type TableRow,
 } from './instanceTable';
-import { entityIcon, entityLetter } from '../../../common/entityMeta';
+import { entityLetter } from '../../../common/entityMeta';
 import './instanceManagerTab.scss';
 
 /** La lettera del badge di metaclasse, dal registro delle entita' e non da una
@@ -856,39 +856,41 @@ function OutlinePanel({
     onMenu: (node: OutlineNode) => void;
     onCreate: (node: OutlineNode, entry: OutlineMenuEntry) => void;
 }) {
-    /* 10e — il glifo viene da `entityMeta`, la sola sorgente del vocabolario di
-       icone del DS, e non piu' da una tabella locale.
+    /* 10f — il badge quadrato lettera al posto del glifo, che e' lo stesso
+       vocabolario che il rail delle metaclassi porta due colonne a sinistra
+       (10c): quadrato, `--radius-sm`, coppia pastello/saturato dei token di
+       entita'. Due pannelli affiancati che dicono «metaclasse» in due alfabeti
+       diversi — un'icona qui, una lettera li' — sono due vocabolari, non uno.
 
-       Il modello resta `bi-box` perche' e' quello che `entityIcon('model')`
-       restituisce: cambia da dove arriva, non cosa disegna.
+       La LETTERA non e' quella del rail. Il rail scrive `entityLetter('class')`,
+       cioe' `C`, perche' li' la lettera dice il TIPO dell'elemento e il nome gli
+       sta accanto. Qui il tipo e' lo stesso su OGNI riga — F3 di 10e: una riga
+       dell'outline e' sempre un `DObject` la cui metaclasse e' una `DClass` — e
+       una colonna di `C` sarebbe la monotonia di 10e con un glifo diverso. La
+       lettera e' l'iniziale della METACLASSE (`S` State, `T` Transition, `I`
+       Initial) e il colore resta uno solo: la famiglia la dice la coppia,
+       l'individuo la dice la lettera.
 
-       Ogni riga `object` prende l'icona della sua METACLASSE, ed e' sempre
-       `class`: una riga dell'outline e' un `DObject`, la cui metaclasse e' una
-       `DClass`. `abstractClass` non puo' occorrere — un'istanza di classe
-       astratta non esiste, ed e' la regola che il rail applica gia' con
-       `uninstantiableReason`. Quindi la mappa, su QUESTA superficie, da' un
-       valore solo, e va detto: una lettura che si aspettasse glifi diversi per
-       metaclassi diverse si aspetterebbe qualcosa che il modello non produce.
+       Le iniziali collidono — State e StateMachine danno entrambe `S` — e non e'
+       un difetto da risolvere qui: la classe in mono a destra della riga e' la
+       disambiguazione, ed e' li' dal 10b.
 
-       Spariscono `bi-folder2` e `bi-circle`, che 10b assegnava per «ha figli /
-       non ha figli»: e' informazione di struttura, non di tipo, ed e' gia' detta
-       dal chevron due pixel a sinistra.
+       `broken` NON prende un badge. Non ha una metaclasse da cui trarre una
+       lettera (`cls` e' vuoto per costruzione, `jjform/outline.ts`), e un
+       quadrato vuoto direbbe «istanza senza nome» invece di «puntatore morto»:
+       tiene il triangolo col token dell'errore, che e' cio' che 12d impone. */
+    const badgePair = (node: OutlineNode): string =>
+        node.kind === 'model' ? 'jj-type-badge--model' : 'jj-type-badge--class';
 
-       `broken` non passa dalla mappa: non e' un genere di entita', e' uno stato
-       (12d), e tiene il triangolo con il token dell'errore. */
-    const icon = (node: OutlineNode): string => {
-        if (node.kind === 'model') return entityIcon('model');
-        if (node.kind === 'broken') return 'bi-exclamation-triangle';
-        return entityIcon('class');
+    /* `entityLetter('model')` e' gia' `m` minuscola nel registro: il badge del
+       modello non ha un caso speciale, ha la stessa fonte degli altri. Il
+       fallback su `entityLetter('class')` copre l'oggetto senza metaclasse — che
+       il dominio non produce — perche' un quadrato vuoto e' peggio di una `C`. */
+    const badgeLetter = (node: OutlineNode): string => {
+        if (node.kind === 'model') return entityLetter('model');
+        const initial = (node.cls ?? '').trim().charAt(0);
+        return initial ? initial.toUpperCase() : entityLetter('class');
     };
-
-    /* Il modificatore che porta la COPPIA di entita' sul glifo. Sta sul glifo e
-       non sul nodo perche' il colore e' del glifo; e sui soli due generi che la
-       mappa serve, cosi' che `broken` resti sulla regola di 12d, invariata. */
-    const iconKind = (node: OutlineNode): string =>
-        node.kind === 'model' ? ' instance-manager__outline-icon--model'
-            : node.kind === 'object' ? ' instance-manager__outline-icon--object'
-                : '';
 
     return (
         <aside className="instance-manager__pane instance-manager__pane--outline">
@@ -939,7 +941,14 @@ function OutlinePanel({
                                         <span className="instance-manager__outline-caret" aria-hidden="true" />
                                     )}
 
-                                    <i className={'bi ' + icon(node) + ' instance-manager__outline-icon' + iconKind(node)} aria-hidden="true" />
+                                    {node.kind === 'broken' ? (
+                                        <i className="bi bi-exclamation-triangle instance-manager__outline-icon" aria-hidden="true" />
+                                    ) : (
+                                        <span
+                                            className={'instance-manager__outline-badge ' + badgePair(node)}
+                                            aria-hidden="true"
+                                        >{badgeLetter(node)}</span>
+                                    )}
 
                                     <span className="instance-manager__outline-name">{outlineLabel(node)}</span>
 

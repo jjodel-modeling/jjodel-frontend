@@ -51,17 +51,19 @@ function block(source: string, selector: string, after = ''): string {
  *  identica: quel file la cerca per questa stringa esatta. */
 const CARD_RULE = '&__pane--table,\n    &__pane--form {';
 
-describe('10e — le icone dell\'outline vengono da entityMeta', () => {
-    it('positivo di controllo: il pannello e la sua funzione icona esistono', () => {
+/* 10f ha sostituito il glifo dell'outline con un badge lettera, e con esso sono
+ * spariti `icon`, `iconKind`, le due classi `__outline-icon--model`/`--object` e
+ * la regola a tre livelli che le dipingeva. Le asserzioni POSITIVE su quel
+ * materiale vivono ora in `instanceManager10f.test.ts`.
+ *
+ * Qui restano, invertite in asserzioni di ASSENZA invece che cancellate: e' la
+ * regola che 10c ha applicato a `instanceManagerFl6.test.ts`, e il motivo e' che
+ * un test tolto non dice niente il giorno in cui qualcuno riscrive la riga che
+ * aveva tolto. Le due cose che 10f NON tocca — i glifi generici di 10b spariti,
+ * il triangolo di 12d — restano positive. */
+describe('10e — le icone dell\'outline, superate da 10f', () => {
+    it('positivo di controllo: il pannello esiste ancora', () => {
         expect(CODE).toContain('function OutlinePanel({');
-        expect(CODE).toContain('const icon = (node: OutlineNode): string =>');
-    });
-
-    it('il glifo esce dalla mappa del DS, non da un letterale', () => {
-        expect(CODE).toContain("import { entityIcon, entityLetter } from '../../../common/entityMeta'");
-        const fn = CODE.slice(CODE.indexOf('const icon = (node: OutlineNode)'));
-        expect(fn).toContain("entityIcon('model')");
-        expect(fn).toContain("entityIcon('class')");
     });
 
     it('via cartelle e cerchi: i due glifi generici di 10b non sono più nel codice', () => {
@@ -69,56 +71,20 @@ describe('10e — le icone dell\'outline vengono da entityMeta', () => {
         expect(CODE).not.toContain('bi-circle');
     });
 
-    it('il puntatore morto resta fuori dalla mappa, col suo triangolo (12d)', () => {
-        expect(CODE).toContain("if (node.kind === 'broken') return 'bi-exclamation-triangle'");
-        // e la regola di 12d nel foglio non è stata toccata
+    it('il puntatore morto tiene il triangolo, e la regola di 12d è intatta', () => {
+        expect(CODE).toContain('bi bi-exclamation-triangle instance-manager__outline-icon');
         expect(RULES).toContain('&__outline-node--broken {');
         const broken = block(RULES, '&__outline-node--broken {');
         expect(broken).toContain('color: var(--color-error)');
     });
 
-    it('il glifo porta il modificatore del suo genere, e solo per i due generi serviti', () => {
-        expect(CODE).toContain('const iconKind = (node: OutlineNode): string =>');
-        expect(CODE).toContain('instance-manager__outline-icon--model');
-        expect(CODE).toContain('instance-manager__outline-icon--object');
-        // `broken` non prende un modificatore: cade sulla regola di 12d
-        expect(CODE).not.toContain('instance-manager__outline-icon--broken');
-    });
-
-    it('e il modificatore arriva davvero sull\'elemento `<i>` che dipinge', () => {
-        expect(CODE).toContain(
-            "'bi ' + icon(node) + ' instance-manager__outline-icon' + iconKind(node)");
-    });
-});
-
-describe('10e — la coppia di entità sul glifo', () => {
-    it('positivo di controllo: la regola dei glifi per genere esiste', () => {
-        expect(RULES).toContain('&__pane--outline .instance-manager__outline-node {');
-    });
-
-    it('i due generi leggono la coppia di entità, non un colore locale', () => {
-        const rule = RULES.slice(RULES.indexOf('&__pane--outline .instance-manager__outline-node {'));
-        const body = rule.slice(0, rule.indexOf('\n    }') + 6);
-        expect(body).toContain('.instance-manager__outline-icon--model { color: var(--color-entity-model-fg); }');
-        expect(body).toContain('.instance-manager__outline-icon--object { color: var(--color-entity-class-fg); }');
-    });
-
-    it('nessuna palette locale: il foglio non dichiara esadecimali per il glifo', () => {
-        const rule = RULES.slice(RULES.indexOf('&__pane--outline .instance-manager__outline-node {'));
-        const body = rule.slice(0, rule.indexOf('\n    }') + 6);
-        expect(body).not.toMatch(/#[0-9a-fA-F]{3,8}/);
-    });
-
-    it('il selettore è a tre livelli: deve battere `i.bi` e il suo `:hover`', () => {
-        // (0,3,0) — pannello, nodo, glifo. Con (0,1,0) o (0,2,0) la regola non
-        // dipinge: misurato a schermo il 2026-08-31, cfr. il commento nel foglio.
-        const sel = '&__pane--outline .instance-manager__outline-node {';
-        const at = RULES.indexOf(sel);
-        expect(at, 'la regola a tre livelli è sparita').toBeGreaterThan(-1);
-        // e la regola nuda di 10b, che è (0,1,0), non è stata promossa a sorgente
-        // del colore per genere: resta il fallback e nient'altro.
-        const base = block(RULES, '&__outline-icon {');
-        expect(base).not.toContain('--color-entity');
+    it('il glifo per genere di 10e non c\'è più: né funzioni, né classi, né regola', () => {
+        expect(CODE).not.toContain('const iconKind');
+        expect(CODE).not.toContain('instance-manager__outline-icon--model');
+        expect(CODE).not.toContain('instance-manager__outline-icon--object');
+        expect(RULES).not.toContain('instance-manager__outline-icon--');
+        // e `entityIcon` non è più importato: nessun consumatore è rimasto
+        expect(CODE).not.toContain('entityIcon');
     });
 });
 

@@ -1364,23 +1364,35 @@
         color: var(--color-form-section);
     }
 
-    /* 10e — la coppia di entita' sul glifo, e TRE livelli di selettore invece di
-       uno. `styles/style.scss:788` dichiara `i.bi { color: var(--font-color-1); }`
-       con specificita' (0,1,1) e `i.bi:hover` con (0,2,1), e il glifo dell'albero
-       E' un `<i class="bi …">`. La regola di 10b qui sopra e' (0,1,0) e quindi
-       NON dipinge: misurato il 2026-08-31 sull'app vera, ogni glifo dell'outline
-       rende `rgb(15, 23, 42)` — cioe' `--font-color-1` — e non lo slate che la
-       riga dichiara. E' lo stesso reperto dell'albero del 2026-08-12 (CLAUDE.md
-       §5): quando uno stile e un pixel non concordano, il pixel e' la misura.
+    /* 10f — il badge lettera della riga, e SOLO la geometria: il colore arriva
+       dalla coppia (`jj-type-badge--class`, `jj-type-badge--model`), come per il
+       badge del rail a `&__glyph`. Ridichiarare qui `background` o `color`
+       vorrebbe dire vincere sulla coppia e perdere il tema scuro senza nessun
+       errore di compilazione.
 
-       (0,3,0) e non (0,2,0), perche' deve battere anche l'`:hover` del foglio
-       globale, o il colore dell'entita' salterebbe via al passaggio del mouse.
+       16px e non i 18 del rail: la riga dell'albero porta anche il chevron e
+       l'inserto di livello, e a 18 il badge diventerebbe l'elemento piu' pesante
+       di una riga che ne ha gia' quattro.
 
-       `--broken` non e' qui: non e' un genere di entita' ed e' gia' servito dalla
-       regola di 12d poco sotto, che questa slice lascia intatta. */
-    &__pane--outline .instance-manager__outline-node {
-        .instance-manager__outline-icon--model { color: var(--color-entity-model-fg); }
-        .instance-manager__outline-icon--object { color: var(--color-entity-class-fg); }
+       E' un `<span>`, non un `<i class="bi">`, e questo e' il motivo per cui la
+       regola a TRE livelli che 10e aveva dovuto scrivere qui non serve piu' ed e'
+       stata tolta con le due classi che serviva: `styles/style.scss:788` dichiara
+       `i.bi { color: var(--font-color-1); }` a (0,1,1) e non raggiunge uno span,
+       quindi la coppia dipinge a (0,1,0). Il glifo del puntatore morto resta un
+       `<i>` e resta servito dalla regola di 12d, che e' a (0,2,0) e batte `i.bi`
+       — ma non `i.bi:hover`, che e' a (0,2,1). Quel passaggio del mouse era gia'
+       cosi' prima di questa slice e non e' nel suo perimetro. */
+    &__outline-badge {
+        flex: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 16px;
+        height: 16px;
+        border-radius: var(--radius-sm);
+        font-size: 10px;
+        font-weight: 700;
+        line-height: 1;
     }
 
     /* Il nodo modello e' la TESTA dell'albero, non una riga come le altre: prende
