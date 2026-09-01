@@ -93,12 +93,26 @@ describe('10h — quello che la slice NON tocca', () => {
         expect(RULES).toContain('&__pane--classes { flex: 0 0 200px; }');
     });
 
-    it('il reset dei pannelli IMPILATI dentro `__main` resta', () => {
-        // Senza, la form sotto la tabella prenderebbe un bordo verticale che nella
-        // colonna impilata non ha senso: è il motivo per cui la regola esiste.
-        expect(RULES).toMatch(
+    /* ASSERZIONE ROVESCIATA — 10k-ter, e la ragione è una misura.
+       Qui si pinnava `&__main > .instance-manager__pane + .instance-manager__pane
+       { border-left: 0 }` con la motivazione «senza, la form sotto la tabella
+       prenderebbe un bordo verticale che nella colonna impilata non ha senso».
+       Quella motivazione valeva finché i due pannelli impilati erano SUPERFICI.
+       10e li ha resi CARD, con un bordo proprio sui quattro lati, e da allora il
+       reset non toglieva più un separatore di troppo: toglieva il lato sinistro
+       della card della form — l'unico elemento che quel selettore raggiunge.
+
+       Misurato a schermo il 2026-09-01, prima della rimozione: `border-left`
+       computato `0px none rgb(15, 23, 42)` contro `1px solid rgb(226, 232, 240)`
+       sugli altri tre lati, e nessun pixel di bordo sul punto mediano del lato
+       sinistro. Il reset è quindi TOLTO, e questa asserzione lo pinna al
+       contrario. */
+    it('il reset dei pannelli IMPILATI dentro `__main` è TOLTO (10k-ter)', () => {
+        expect(RULES).not.toMatch(
             /&__main > \.instance-manager__pane \+ \.instance-manager__pane \{ border-left: 0; \}/,
         );
+        // Nessun altro modo di azzerare quel lato è rientrato dalla finestra.
+        expect(RULES).not.toMatch(/border-left:\s*(0|none)\s*;/);
     });
 
     it('il fondo desk della colonna centrale resta `--color-form-panel`', () => {

@@ -205,6 +205,68 @@ describe('10k punto 3 — l\'header della form ha una banda propria', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 3-ter. Il bordo sinistro della card della form
+// ─────────────────────────────────────────────────────────────────────────────
+
+/* Emendamento 10k-ter. Lo screenshot mostrava la card della form senza il lato
+   sinistro. Il prompt nominava due sospetti — la banda di `__form-head` che con
+   i margini negativi copre l'hairline, oppure un hairline sub-pixel che il
+   renderer arrotonda a zero — e chiedeva di MISURARE prima di scegliere. La
+   sonda `scripts/smoke/_tmp_10kter_border_verify.ts` li ha esclusi entrambi:
+
+     - i margini negativi valgono ESATTAMENTE il padding della card (-14 contro
+       14, letti dai computed style e non copiati), e la banda si ferma sul
+       bordo interno: nell'after `band.left = 755` contro `card.left = 754`;
+     - il bordo non era sub-pixel: era ASSENTE. `border-left` computato
+       `0px none rgb(15, 23, 42)` contro `1px solid rgb(226, 232, 240)` sugli
+       altri tre lati.
+
+   Il colpevole era il reset della colonna impilata in `__main`, scritto quando
+   i due pannelli erano superfici e non ancora card (10e). Le asserzioni qui
+   sotto pinnano la rimozione DA QUESTO LATO — la coppia col foglio sta in
+   `instanceManager10h.test.ts`, dove l'asserzione ratificata che lo pinnava è
+   rovesciata. */
+describe('10k-ter — la card della form tiene il bordo su tutti e quattro i lati', () => {
+    const CARDS = block(RULES, '&__pane--table,');
+
+    it('positivo di controllo: il blocco delle due card esiste e dichiara il bordo', () => {
+        expect(CARDS).not.toBe('');
+        expect(CARDS).toContain('border: 1px solid var(--color-form-border);');
+    });
+
+    it('nessuna regola azzera più il lato sinistro dei pannelli impilati', () => {
+        expect(RULES).not.toMatch(
+            /&__main > \.instance-manager__pane \+ \.instance-manager__pane \{ border-left: 0; \}/,
+        );
+        expect(RULES).not.toMatch(/border-left:\s*(0|none)\s*;/);
+    });
+
+    it('il lato sinistro non viene rimesso con un token diverso dagli altri tre', () => {
+        // Il bordo che ricompare è quello della card, non un secondo filetto: se
+        // qualcuno lo ridichiarasse con `--color-form-border-strong` i quattro
+        // lati direbbero due cose diverse. Il vincolo è già in 10h su TUTTI i
+        // `border-left` del foglio; qui si pinna che il blocco card non ne
+        // aggiunga uno proprio.
+        expect(CARDS).not.toContain('border-left');
+    });
+
+    it('la banda dell\'header resta insettata dentro il bordo, non sopra', () => {
+        // I margini negativi devono valere il padding di `__form-inner`, non un
+        // numero copiato: se crescessero, la banda tornerebbe sul bordo.
+        const FH = block(RULES, '&__form-head {');
+        const INNER = block(RULES, '&__form-inner {');
+        expect(FH).not.toBe('');
+        expect(INNER).not.toBe('');
+        const pad = INNER.match(/padding:\s*(\d+)px/);
+        const mar = FH.match(/margin:\s*-(\d+)px -(\d+)px/);
+        expect(pad, 'padding di __form-inner non leggibile').not.toBeNull();
+        expect(mar, 'margin di __form-head non leggibile').not.toBeNull();
+        expect(mar![1]).toBe(pad![1]);
+        expect(mar![2]).toBe(pad![1]);
+    });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // 4. La colonna NAME doppia
 // ─────────────────────────────────────────────────────────────────────────────
 
