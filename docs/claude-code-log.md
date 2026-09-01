@@ -14,9 +14,7 @@ committate (`.gitignore:66`).
 **Outcome**: ⚠️ partial — il punto 1 e' mappato per intero; il punto 2 e' FALSIFICATO
 nella forma descritta e resta aperto in attesa dello stato dell'utente.
 **Corregge**: —
-**Causa**: (a) — la premessa del punto 2 («la CTA passa `openCreate(cls, null, null)`»)
-non regge alla misura: `InstanceManagerTab.tsx:2890` passa gia' `(child.of, subjectId,
-child.key)`. Manca dal prompt l'errore esatto e la forma del metamodello.
+**Causa**: (a)
 **Regressions**: no — nessun file di codice toccato, nessun gate da muovere.
 **Out-of-scope changes**: no.
 **Layer Impact Report**: not-required — fase read-only, zero scritture committate.
@@ -25,16 +23,12 @@ giri: `_tmp_crud2_recon.ts` 8/8, `_tmp_crud2_recon2.ts` 9/9 (padre alla radice, 
 contenuto, ritorno alla sintassi astratta, ricarica: zero errori di pagina in tutti),
 `_tmp_crud2_recon3.ts` 5/6 (l'arm H resta non misurato, dichiarato),
 `_tmp_crud2_recon4.ts` 4/5 con il difetto nuovo misurato.
-**Notes**: l'orfano della CTA e' impossibile per costruzione — `useEditorMode.ts:421`
-classifica con `!!composition`, `LModelElement.tsx:7168` scrive il father con
-`composition || aggregation`, e il primo insieme e' contenuto nel secondo. La stessa
-divergenza al contrario produce pero' un difetto MISURATO: una reference di sola
-aggregation, offerta dal modale come dropdown, sfratta il bersaglio dal suo contenitore
-(`states.values` da `["s1"]` a `[null]`). Piu' un secondo reperto: `addChildReason` non
-guarda `abstract`, e la barra crea istanze di classi astratte. Referto §2.5 e §2.6.
-Arresto anche per stato dell'albero: AUTO1 Fase 2 non e' in albero (zero `isID` in
-`createAdapter`/`jjform`, con controllo positivo su `Info.tsx:177`) e un'altra corsia
-tiene non committati `jjform/index.ts` e `ReferencePicker.tsx`, due file del perimetro.
+**Notes**: la premessa del punto 2 non regge: `InstanceManagerTab.tsx:2890` passa gia'
+`(child.of, subjectId, child.key)`, e l'orfano e' impossibile per costruzione —
+`useEditorMode.ts:421` classifica con `!!composition`, `LModelElement.tsx:7168` scrive il
+father con `composition || aggregation`. La stessa divergenza al contrario da' pero' un
+difetto misurato, e un secondo reperto tocca `addChildReason`. Decisioni aperte, reperti
+nuovi e motivo dell'arresto nel referto: §1.6, §2.5, §2.6, §4, §5.
 **Prompt document name**: CRUD2 cardinalita' e aggancio (in chat) — 2026-09-01 17:10
 
 
