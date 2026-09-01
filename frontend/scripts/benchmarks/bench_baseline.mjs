@@ -196,13 +196,22 @@ fs.writeFileSync(OUT, JSON.stringify(R, null, 2));
 // ---- classic switch (only when the 3-state toggle is present) ----
 {
     // activate the Default viewpoint (enables the classic/split toggle)
-    const vpSelect = page.locator('.toolbar-viewpoint-selector select');
-    if (await vpSelect.count() > 0) {
-        const opts = await vpSelect.first().evaluate(el => Array.from(el.options).map(o => ({ v: o.value, t: o.textContent })));
+    //
+    // NAV2 (2026-09-01) turned the picker from a <select> into a custom listbox, so the
+    // options are only in the DOM while the panel is open and there is no `selectOption`
+    // to drive. The block is rewritten around that and NOT left on the old selector: the
+    // `count() > 0` guard above would have gone quietly to zero, skipping the viewpoint
+    // activation and reporting `classic_toggle_found: 0` as if the toggle had moved.
+    const vpTrigger = page.locator('.toolbar-viewpoint-selector .toolbar-viewpoint-trigger');
+    if (await vpTrigger.count() > 0) {
+        await vpTrigger.first().click();
+        const opts = await page.evaluate(() => Array.from(
+            document.querySelectorAll('.toolbar-viewpoint-menu__option'))
+            .map((el, i) => ({ v: String(i), t: el.querySelector('.toolbar-viewpoint-menu__label')?.textContent })));
         log('viewpoint options: ' + JSON.stringify(opts));
-        const def = opts.find(o => /default$/i.test((o.t || '').trim())) ?? opts.find(o => o.v);
+        const def = opts.find(o => /default$/i.test((o.t || '').trim())) ?? opts.find(o => o.v !== '0');
         if (def?.v) {
-            await vpSelect.first().selectOption(def.v);
+            await page.locator('.toolbar-viewpoint-menu__option').nth(Number(def.v)).click();
             // viewpoint activation triggers recompiles; wait until responsive
             for (let i = 0; i < 120; i++) {
                 const r = await probe(page, () => 1, 1500);
@@ -210,6 +219,10 @@ fs.writeFileSync(OUT, JSON.stringify(R, null, 2));
                 await new Promise(rr => setTimeout(rr, 2000));
             }
             await page.waitForTimeout(2000);
+        } else {
+            // Nothing to pick: close the panel, or it would sit over the toggle measured
+            // two lines down. A <select> closed itself on the same non-choice.
+            await page.keyboard.press('Escape');
         }
     }
     const toggle = page.locator('.editor-mode-toggle button[title="Concrete syntax only"]');
