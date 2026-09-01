@@ -36,6 +36,7 @@
  */
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useSelector } from 'react-redux';
 import { getMetaclassInfo, type MetaclassInfo } from '../../editor-v2/hooks/useEditorMode';
 import { makeShapeCtx } from '../../editor-v2/hooks/shapeAdapter';
@@ -1196,6 +1197,40 @@ function EgoList({ ego, onSelect, onOpenInCanvas }: {
     );
 }
 
+/** La larghezza massima che il pannello Columns puo' prendere. Serve DUE volte e
+ *  deve essere lo stesso numero in entrambe: qui, per non spingere il pannello
+ *  oltre il bordo destro della finestra, e in `&__columns-panel` come `max-width`.
+ *  Se i due valori divergessero, il clamp misurerebbe una scatola che non e'
+ *  quella dipinta e il pannello uscirebbe di nuovo — dal viewport, stavolta. */
+const COLUMNS_PANEL_MAX_W = 280;
+
+/** Geometria `fixed` del pannello Columns a partire dal rect del suo bottone
+ *  (10k-chiusura). Il pannello e' portato su `document.body`, quindi le
+ *  coordinate sono quelle del viewport e non serve nessun antenato posizionato.
+ *
+ *  Perche' `fixed` e non piu' `absolute` dentro la card: `__pane--table` porta
+ *  `overflow: hidden` — glielo chiede il raccordo dei raggi su testata e righe,
+ *  ed e' asserito da 10k — e un figlio in `absolute` viene clippato da
+ *  quell'antenato. Il pannello finiva tagliato al bordo basso della card,
+ *  visibile fino a meta' elenco. Togliere l'`overflow` avrebbe rotto i raccordi:
+ *  esce il pannello, non la clip.
+ *
+ *  Ribalta sopra il bottone quando sotto non c'e' spazio, e stringe al viewport
+ *  su entrambi gli assi: e' lo stesso idioma di `TextStyleField`, che risolve
+ *  esattamente questo problema in un altro pannello di questo repo. */
+function computeColumnsPanelStyle(rect: DOMRect): React.CSSProperties {
+    const GAP = 4, MARGIN = 8, PREF = 220, MAX_H = 320;
+    const spaceBelow = window.innerHeight - rect.bottom - MARGIN;
+    const spaceAbove = rect.top - MARGIN;
+    const openUp = spaceBelow < PREF && spaceAbove > spaceBelow;
+    const maxHeight = Math.max(140, Math.min(MAX_H, (openUp ? spaceAbove : spaceBelow) - GAP));
+    const left = Math.max(MARGIN, Math.min(rect.left, window.innerWidth - COLUMNS_PANEL_MAX_W - MARGIN));
+    const base: React.CSSProperties = { left, maxHeight };
+    return openUp
+        ? { ...base, bottom: window.innerHeight - rect.top + GAP }
+        : { ...base, top: rect.bottom + GAP };
+}
+
 export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
     // One subscription for the whole tab. `idlookup`'s reference changes on every
     // model write, which is precisely the granularity the derived lists need.
@@ -1274,6 +1309,14 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
      *  il pannello e' uno, appeso al proprio bottone. */
     const [columnsOpen, setColumnsOpen] = useState(false);
     const columnsRef = useRef<HTMLDivElement | null>(null);
+    /** Il pannello vive su `document.body` (portale), quindi NON e' piu' dentro
+     *  `columnsRef`: il click-fuori deve interrogare due nodi, il gruppo del
+     *  bottone e il pannello. Con il solo `columnsRef` ogni spunta chiuderebbe
+     *  il pannello che si sta usando. */
+    const columnsPanelRef = useRef<HTMLDivElement | null>(null);
+    /** Il rect del bottone al momento dell'apertura: e' l'unica cosa da cui la
+     *  geometria `fixed` puo' nascere, e viene ricalcolato a scroll e resize. */
+    const [columnsRect, setColumnsRect] = useState<DOMRect | null>(null);
 
     /* Chiusura del pannello: click fuori ed Esc.
      *
@@ -1281,18 +1324,36 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
      * fuori (il trascinamento di una selezione di testo) arriva a `window` come
      * un click sul documento, e chiuderebbe il pannello mentre lo si sta usando.
      * Il listener e' montato SOLO da aperto — un handler globale che gira
-     * sempre per uno stato che e' falso quasi sempre e' costo senza lavoro. */
+     * sempre per uno stato che e' falso quasi sempre e' costo senza lavoro.
+     *
+     * Scroll e resize CHIUDONO invece di riposizionare: il pannello e' ancorato
+     * a un bottone che vive in una barra dentro una card che scorre, e un
+     * popover `fixed` che resta fermo mentre il suo ancoraggio scivola via e'
+     * peggio di un popover che non c'e' piu'. Lo scroll e' in cattura — quello
+     * degli antenati non bolla — e ignora lo scroll INTERNO del pannello, che e'
+     * il gesto con cui si scorre un elenco di venti colonne. */
     useEffect(() => {
         if (!columnsOpen) return;
         const onDown = (e: MouseEvent) => {
-            if (!columnsRef.current?.contains(e.target as Node)) setColumnsOpen(false);
+            const t = e.target as Node;
+            if (columnsRef.current?.contains(t) || columnsPanelRef.current?.contains(t)) return;
+            setColumnsOpen(false);
         };
         const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setColumnsOpen(false); };
+        const onScroll = (e: Event) => {
+            if (columnsPanelRef.current?.contains(e.target as Node)) return;
+            setColumnsOpen(false);
+        };
+        const onResize = () => setColumnsOpen(false);
         window.addEventListener('mousedown', onDown);
         window.addEventListener('keydown', onKey);
+        window.addEventListener('scroll', onScroll, true);
+        window.addEventListener('resize', onResize);
         return () => {
             window.removeEventListener('mousedown', onDown);
             window.removeEventListener('keydown', onKey);
+            window.removeEventListener('scroll', onScroll, true);
+            window.removeEventListener('resize', onResize);
         };
     }, [columnsOpen]);
 
@@ -2246,17 +2307,32 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                                     aria-expanded={columnsOpen}
                                     aria-haspopup="true"
                                     title="Choose which columns the table shows"
-                                    onClick={() => setColumnsOpen(o => !o)}
+                                    onClick={e => {
+                                        setColumnsRect(e.currentTarget.getBoundingClientRect());
+                                        setColumnsOpen(o => !o);
+                                    }}
                                 >
                                     <i className="bi bi-layout-three-columns" aria-hidden="true" />
                                     Columns
                                 </button>
 
-                                {columnsOpen && (
+                                {/* 10k-chiusura — il pannello esce dall'albero del tab.
+                                    `createPortal` su `document.body` piu' la geometria
+                                    `fixed` calcolata dal rect del bottone: dentro la card
+                                    l'`overflow: hidden` che raccorda i raggi lo tagliava a
+                                    meta' elenco. Il tema vive su `html[data-theme]`, quindi
+                                    i token seguono il pannello anche fuori dal sottoalbero;
+                                    le regole di 10i e 10k sono su classi BEM piatte
+                                    (`.instance-manager__columns-item input[…]`), non
+                                    discendenti di `.instance-manager`, e lo raggiungono
+                                    per costruzione. */}
+                                {columnsOpen && columnsRect && createPortal(
                                     <div
+                                        ref={columnsPanelRef}
                                         className="instance-manager__columns-panel"
                                         role="group"
                                         aria-label={`Columns of ${classShape.key}`}
+                                        style={computeColumnsPanelStyle(columnsRect)}
                                     >
                                         {toggles.map(t => (
                                             <label
@@ -2284,7 +2360,8 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                                                 )}
                                             </label>
                                         ))}
-                                    </div>
+                                    </div>,
+                                    document.body
                                 )}
                             </div>
                         )}

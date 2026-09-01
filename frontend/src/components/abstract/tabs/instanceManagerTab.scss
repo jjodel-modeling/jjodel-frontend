@@ -166,9 +166,32 @@
         padding: 14px;
     }
 
-    /* Il pannello impilato non prende il bordo SINISTRO della regola generale:
-       il suo separatore e' orizzontale, ed e' dichiarato qui sopra. */
-    &__main > .instance-manager__pane + .instance-manager__pane { border-left: 0; }
+    /* IL NEUTRALIZZATORE DELLA COLONNA IMPILATA E' STATO TOLTO (10k-ter).
+       Qui stava `&__main > .instance-manager__pane + .instance-manager__pane {
+       border-left: 0 }`, scritta quando i due pannelli della colonna centrale
+       erano SUPERFICI: allora il bordo sinistro della regola generale
+       (`&__pane + &__pane`, il separatore delle letture) era un filetto verticale
+       di troppo su un pannello il cui separatore e' orizzontale, e azzerarlo era
+       giusto.
+
+       10e ha reso quei due pannelli delle CARD, con un bordo proprio su tutti e
+       quattro i lati. Da allora quella riga non toglieva piu' un separatore:
+       toglieva il LATO SINISTRO della card della form — l'unico elemento che il
+       selettore raggiunge, perche' `__main` contiene esattamente due `__pane` e
+       la form e' il secondo. Misurato a schermo il 2026-09-01, prima di questa
+       modifica: `border-left` computato `0px none rgb(15, 23, 42)` contro
+       `1px solid rgb(226, 232, 240)` sugli altri tre, e la scansione dei pixel
+       sul punto mediano del lato sinistro non trovava nulla che staccasse dal
+       fondo desk (ΔL* 1.82, cioe' il salto fra il bianco della card e il desk,
+       non un bordo).
+
+       Il selettore vinceva per specificita' (0,4,0 contro 0,1,0 del blocco card),
+       quindi il `border` della card non aveva voce in capitolo. Tolta la riga, il
+       lato sinistro torna `1px solid var(--color-form-border)` — lo STESSO token
+       degli altri tre lati, non un valore nuovo: e' il bordo della card che
+       ricompare, non un separatore che si aggiunge. Vale anche per la barra
+       collassata di 10c, che porta entrambe le classi ed e' una card come le
+       altre. */
 
     /* The outline pane pads its rows, not itself: the selection band has to run
        the full width of the column, and a padded pane would inset it. The eyebrow
@@ -475,7 +498,14 @@
        barra che VA A CAPO (`flex-wrap` sopra), quindi la posizione del
        pannello non e' calcolabile dal contenitore — deve nascere dal proprio
        bottone, e per farlo serve un `position: relative` che sia quello e non
-       la toolbar intera. */
+       la toolbar intera.
+
+       10k-chiusura: la frase resta vera, ma l'ancoraggio ora e' in JS. Il
+       pannello e' `fixed` su `document.body` e nasce dal rect del bottone, non
+       piu' da questo blocco contenitore; il `relative` qui sotto non posiziona
+       piu' nulla. Non e' rimosso (Regola 9) perche' e' anche cio' che tiene il
+       wrapper una scatola di posizionamento per qualunque cosa vi si appenda,
+       e toglierlo e' un delta senza guadagno. */
     &__columns-wrap {
         position: relative;
         display: inline-flex;
@@ -515,15 +545,33 @@
 
     /* La card del DS: fondo primario, bordo `form-border`, raggio 6, l'ombra
        leggera di `__outline-menu`. */
+    /* 10k-chiusura — `fixed`, e il posto lo mette React.
+       `absolute` ancorava il pannello al wrapper, che sta dentro `__pane--table`:
+       quella card e' `overflow: hidden` (glielo chiede il raccordo dei raggi su
+       testata e righe, ed e' asserito da 10k), e un `absolute` viene clippato
+       dall'antenato che nasconde. Il pannello si vedeva fino a meta' elenco.
+       Il nodo e' ora portato su `document.body` e le coordinate sono del
+       viewport: `top`/`left` (o `bottom`, quando ribalta) arrivano inline da
+       `computeColumnsPanelStyle`, e qui NON si dichiarano — una coordinata nel
+       foglio vincerebbe o perderebbe contro l'inline a seconda del ramo, che e'
+       il modo di avere due geometrie per lo stesso pannello.
+
+       `max-width` e' il gemello di `COLUMNS_PANEL_MAX_W` nel TSX: e' la misura
+       con cui il clamp orizzontale tiene il pannello dentro la finestra, e i due
+       numeri devono restare lo stesso numero.
+
+       `z-index: 30` e non 3: fuori dalla card il pannello non compete piu' con i
+       fratelli del tab ma con i livelli di pagina. Sopra la card della form (che
+       non ne dichiara nessuno) e SOTTO lo scrim dei dialoghi (40): quando si apre
+       una modale il pannello deve finirle dietro, non davanti. */
     &__columns-panel {
-        position: absolute;
-        top: calc(100% + 4px);
-        left: 0;
-        z-index: 3;
+        position: fixed;
+        z-index: 30;
         display: flex;
         flex-direction: column;
         gap: 2px;
         min-width: 190px;
+        max-width: 280px;
         max-height: 320px;
         overflow-y: auto;
         padding: 6px;

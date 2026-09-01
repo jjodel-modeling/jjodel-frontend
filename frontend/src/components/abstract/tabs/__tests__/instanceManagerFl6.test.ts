@@ -157,7 +157,19 @@ describe('FL6 — il fallback a larghezza stretta', () => {
         // La soglia e' la larghezza del disegno, non un numero scelto a mano.
         expect(TSX).toContain('const drawnWidth = useMemo(() => egoLayout(ego).width, [ego]);');
         expect(TSX).toContain('const narrow = hostWidth > 0 && hostWidth < drawnWidth;');
-        expect(TSX).not.toContain('window.innerWidth');
+        // La misura del viewport non entra nella SOGLIA. L'asserzione era su
+        // tutto il file finche' il file non ha avuto altri motivi di misurare la
+        // finestra: 10k-chiusura porta il pannello Columns su un portale, e un
+        // popover `fixed` DEVE stringersi al viewport per non uscirne. Il
+        // perimetro e' ristretto al blocco dell'ego, che e' cio' che la regola
+        // FL6 dice; il controllo positivo qui sotto e' che la finestra di 900
+        // caratteri contenga davvero la soglia.
+        const at = TSX.indexOf('const drawnWidth = useMemo(');
+        expect(at).toBeGreaterThan(-1);
+        const ego = TSX.slice(at, at + 900);
+        expect(ego).toContain('const narrow =');
+        expect(ego).not.toContain('window.innerWidth');
+        expect(ego).not.toContain('matchMedia');
         expect(TSX).not.toContain('matchMedia');
     });
 

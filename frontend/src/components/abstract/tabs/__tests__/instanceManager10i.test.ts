@@ -351,12 +351,20 @@ describe('10i — il bottone e il popover', () => {
     it('chiusura su click-fuori ed Esc, e solo da aperto', () => {
         const at = TSX_CODE.indexOf('if (!columnsOpen) return;');
         expect(at).toBeGreaterThan(-1);
-        const body = TSX_CODE.slice(at, at + 900);
+        const body = TSX_CODE.slice(at, at + 1400);
         expect(body).toContain("window.addEventListener('mousedown'");
         expect(body).toContain("e.key === 'Escape'");
         expect(body).toContain("window.removeEventListener('mousedown'");
         expect(body).toContain("window.removeEventListener('keydown'");
         expect(body).toContain('columnsRef.current?.contains');
+        // 10k-chiusura: il pannello e' su `document.body`, quindi il solo
+        // `columnsRef` non basta piu' — senza il secondo nodo ogni spunta
+        // chiuderebbe il pannello che si sta usando.
+        // L'espressione INTERA, e non il solo nome del ref: `onScroll` qui
+        // sotto porta lo stesso nome, e una sotto-stringa passerebbe anche con
+        // il click-fuori tornato a interrogare un nodo solo.
+        expect(body).toContain(
+            'if (columnsRef.current?.contains(t) || columnsPanelRef.current?.contains(t)) return;');
     });
 
     it('la card del popover è quella del DS', () => {
@@ -364,9 +372,62 @@ describe('10i — il bottone e il popover', () => {
         expect(panel).toMatch(/border:\s*1px solid var\(--color-form-border\)/);
         expect(panel).toMatch(/border-radius:\s*6px/);
         expect(panel).toMatch(/background:\s*var\(--color-bg-primary\)/);
-        expect(panel).toMatch(/position:\s*absolute/);
-        // Ancorata al proprio bottone, non alla toolbar che va a capo.
+        // 10k-chiusura: `absolute` era il DIFETTO — `__pane--table` e'
+        // `overflow: hidden` e clippava il pannello a meta' elenco. Ora e'
+        // `fixed` su un portale, con le coordinate inline dal rect del bottone.
+        expect(panel).toMatch(/position:\s*fixed/);
+        expect(panel).not.toMatch(/position:\s*absolute/);
+        // E le coordinate NON stanno nel foglio: le mette React, o si avrebbero
+        // due geometrie per lo stesso pannello.
+        expect(panel).not.toMatch(/^\s*(top|left|bottom|right):/m);
+        // Il wrapper resta una scatola di posizionamento (Regola 9), anche se
+        // non ancora nulla.
         expect(block(RULES, '&__columns-wrap {')).toMatch(/position:\s*relative/);
+    });
+
+    /* 10k-chiusura — il portale e la sua geometria.
+       Il controllo positivo e' il `createPortal` importato: se l'import non ci
+       fosse, ogni asserzione qui sotto misurerebbe un file che non e' quello. */
+    it('il pannello è portato su document.body, non annidato nella card', () => {
+        expect(TSX_CODE).toContain("import { createPortal } from 'react-dom'");
+        const at = TSX_CODE.indexOf('columnsOpen && columnsRect && createPortal(');
+        expect(at).toBeGreaterThan(-1);
+        const body = TSX_CODE.slice(at, at + 2600);
+        expect(body).toContain('instance-manager__columns-panel');
+        expect(body).toContain('ref={columnsPanelRef}');
+        expect(body).toContain('style={computeColumnsPanelStyle(columnsRect)}');
+        expect(body).toContain('document.body');
+    });
+
+    it('la geometria fixed nasce dal rect del bottone, ribalta e si stringe al viewport', () => {
+        const at = TSX_CODE.indexOf('function computeColumnsPanelStyle');
+        expect(at).toBeGreaterThan(-1);
+        const body = TSX_CODE.slice(at, at + 900);
+        // Ribaltamento sopra il bottone quando sotto non c'e' spazio.
+        expect(body).toContain(
+            'const openUp = spaceBelow < PREF && spaceAbove > spaceBelow;');
+        expect(body).toContain('bottom: window.innerHeight - rect.top + GAP');
+        expect(body).toContain('top: rect.bottom + GAP');
+        // Clamp orizzontale sulla STESSA misura che il foglio dipinge.
+        expect(body).toContain('COLUMNS_PANEL_MAX_W');
+        const declared = /const COLUMNS_PANEL_MAX_W = (\d+);/.exec(TSX_CODE);
+        expect(declared).not.toBeNull();
+        expect(block(RULES, '&__columns-panel {')).toMatch(
+            new RegExp(`max-width:\\s*${declared![1]}px`));
+        // Il rect e' preso all'apertura, dal bottone stesso.
+        expect(TSX_CODE).toContain('setColumnsRect(e.currentTarget.getBoundingClientRect())');
+    });
+
+    it('scroll e resize chiudono il pannello, ma non lo scroll interno', () => {
+        const at = TSX_CODE.indexOf('if (!columnsOpen) return;');
+        const body = TSX_CODE.slice(at, at + 1400);
+        // Cattura: lo scroll degli antenati non bolla.
+        expect(body).toContain("window.addEventListener('scroll', onScroll, true)");
+        expect(body).toContain("window.removeEventListener('scroll', onScroll, true)");
+        expect(body).toContain("window.addEventListener('resize', onResize)");
+        expect(body).toContain("window.removeEventListener('resize', onResize)");
+        // Lo scroll DENTRO il pannello è il gesto con cui si scorre l'elenco.
+        expect(body).toMatch(/onScroll = \(e: Event\) => \{[\s\S]{0,120}columnsPanelRef\.current\?\.contains/);
     });
 
     it('il bottone è secondario: le stesse dichiarazioni di Export', () => {
