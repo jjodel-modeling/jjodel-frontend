@@ -306,3 +306,119 @@ blocco 1 porta ora un controllo positivo (`1f`) che fallisce se il pannello non 
    `composition` di un auto-riferimento non si scrive (§8b).
 4. `--shadow-sm`, `--color-bg-secondary` e `--color-border-primary` restano fra i 15 nomi
    dichiarati due volte con valori diversi. Questa slice li ha aggirati, non chiusi.
+
+---
+
+# 11. Giro di chiusura — il punto 2 emendato (01-09, 13:21)
+
+Il prompt e' stato **emendato dopo il commit del primo giro** (`170a6d3fb`, 13:19; emendamento
+13:21). Il punto 2 non chiedeva piu' solo di far uscire titolo e sottotitolo dalla card: chiede una
+riga di testata con le due AZIONI a destra, e una toolbar ridotta a cio' che riduce la tabella.
+
+**Sonda: before 53/5, after 60/0**, zero errori di pagina. I cinque rossi del before sono
+esattamente le cinque asserzioni nuove.
+
+| | before | after |
+|---|---|---|
+| Export | nella card (toolbar) | in testata, `x 1510`, sul rigo del titolo |
+| New | nella card (toolbar) | in testata, ultimo, dopo Export |
+| toolbar | search, segmented, indicatore, Columns, Export, New | `["search","segmented","hidden-cols","columns-wrap"]` |
+| Columns | a sinistra di Export | a filo destro della barra (`right 1572` = bordo barra) |
+| a 0 istanze | toolbar spenta, `New` assente con lei | toolbar spenta, `newCount: 0` in testata |
+
+**Il criterio della divisione**: la barra restringe cio' che si VEDE; Export e New agiscono sulla
+collezione intera, che e' quel che il titolo nomina — ed e' anche perche' sopravvivevano al filtro
+mentre stavano in una riga che il filtro popola.
+
+**`!collectionIsEmpty` sul New e' la regola di 10j portata nella posizione nuova.** Finche' il
+bottone stava nella toolbar la questione non si poneva: a zero istanze la riga si spegneva intera e
+se lo portava via, lasciando sola la CTA del cartello. La testata invece RESTA a zero istanze — 10j
+lo dichiara esplicitamente — quindi senza la guardia lo stesso «New State» comparirebbe due volte a
+quaranta pixel di distanza. Vince la CTA, che sta dentro il cartello che spiega perche' la tabella
+e' vuota.
+
+## 11.1 Due errori miei, misurati
+
+**(a) Le asserzioni 2e/2f chiedevano un bottone che il soggetto non puo' avere.** Scritte su
+`State`, che e' **contenuta**: `newInstanceReason` le nega il New da prima di questa slice, e il
+`newBox: null` che leggevo era corretto. Spostate su `StateMachine` (rootable, con il New a
+schermo), e `State` e' diventata la non-regressione. Un after rosso che accusava il codice di una
+proprieta' del soggetto.
+
+**(b) Ho committato tre test rossi.** `4180819c3` e' andato in HEAD con tre asserzioni di 10i/10j
+rotte. La causa e' di metodo: la suite intera e' girata PRIMA del giro di chiusura (2885/0), e dopo
+il giro ho girato solo la suite 10k e la sonda. Nessuna delle due tocca 10i/10j. Il rilievo e'
+arrivato dalla corsia 10k-bis, non da me.
+
+Le tre erano tutte asserzioni che pinnavano la DISPOSIZIONE, non difetti del codice — la stessa
+forma dell'asserzione di 10d che il primo giro aveva gia' dovuto rovesciare:
+
+| test | perche' e' morto | riparazione |
+|------|------------------|-------------|
+| 10i «prima di Export» | `exp > btn` si e' rovesciato perche' Export e' salito in testata, che nel sorgente viene prima | tenuta la meta' invariante (Columns accanto all'indicatore), la meta' su Export e' diventata `exp < bar` |
+| 10j «i figli NON la ridicono» | `not.toContain` sull'INTERO file; `!collectionIsEmpty` ora compare una volta in testata, dove non e' una ridicitura | ristretto alla fetta di sorgente della barra |
+| 10j «il New scende con la riga» | la condizione ha guadagnato il terzo termine | asserita la condizione nuova, piu' l'esclusivita' fra bottone e CTA |
+
+Entrambe le riallineate provate per mutazione (tolta la guardia; Export rimesso nella barra): una
+rossa ciascuna. Chiuse in `f18c03d9e`.
+
+**La regola generale, dalla corsia 10k-bis**: *un `not.toContain` senza regione e' un divieto senza
+giurisdizione.* 10c aveva gia' corretto lo stesso pattern, ma per un'altra causa — li' il falso
+positivo veniva dai commenti, ed e' per quello che la suite 10k tiene `CODE`. Qui veniva da
+un'occorrenza **legittima** in una regione dove il divieto non vale, e spogliare i commenti non
+avrebbe salvato nulla: serviva restringere la regione.
+
+## 11.2 Il punto 3, corretto da un'altra corsia
+
+`--color-form-panel` per la banda dell'header form (§1) **era sbagliato**, e la corsia 10k-bis l'ha
+chiuso in `5bcc56abe`: il desk E' quel token (`&__main`), quindi banda e desk avevano lo stesso
+colore e ΔL = 0 — una testata che vale il fondo su cui posa non e' una banda. Ora
+`--color-bg-tertiary` (slate-100) con hairline `--color-form-border-strong`.
+
+Non era una svista di token: era la scelta coerente con la frase che l'accompagnava («lo stesso
+token con cui 10d ha dipinto il desk»). E' la frase la trappola — descriveva la banda come «il
+fondo sotto il titolo» per analogia con «il fondo sotto le card», e due superfici che si toccano
+non possono condividere il ruolo di fondo l'una dell'altra. La mia sonda non l'ha visto perche'
+misurava il VALORE della banda (`3a`: diverso dal bianco) e non la sua DIFFERENZA dal desk. La
+suite 10k-bis aggiunge il controllo positivo che alla mia mancava: il desk deve restare
+`--color-form-panel`, o un `not.toContain` verde direbbe soltanto che qualcuno ha rinominato il
+token ovunque.
+
+Conseguenza dichiarata: il mio after 60/0 e' stato misurato su un albero **misto**, con la loro
+banda gia' dentro. Le asserzioni del punto 3 passano con entrambi i token, quindi il risultato
+regge, ma non e' l'after del solo mio delta.
+
+## 11.3 L'indice condiviso, e la finestra che §6.1 non copre
+
+`fcc200d11` — poi disfatto — e' finito in HEAD con il mio `InstanceManagerTab.tsx` e il foglio
+ISOLATO di un'altra corsia: il TSX che rende `instance-manager__head-actions` senza la regola che
+lo dispone. Avevo messo in stage per hunk apposta e verificato l'indice con
+`git diff --cached --name-only`; poi ho committato **senza pathspec**, e nella finestra fra la
+verifica e il commit l'altra corsia aveva lasciato l'indice sporco dopo un commit fallito.
+
+§6.1 protegge dal contenuto sbagliato dentro un file conteso, non dalla **finestra** fra `git add`
+e `git commit`. Con tre sessioni sullo stesso albero la finestra e' il rischio dominante.
+
+La forma che la chiude e' un **indice privato**:
+
+```bash
+export GIT_INDEX_FILE=/tmp/x.index
+git read-tree HEAD
+git apply --cached miei-hunk.patch          # solo i propri hunk
+git update-index --add <file interamente propri>
+git commit-tree $(git write-tree) -p HEAD -F messaggio
+git update-ref HEAD <nuovo-commit> <vecchio-HEAD>
+```
+
+Toglie di mezzo la risorsa condivisa invece di sincronizzarla, che e' la differenza fra una
+convenzione e una garanzia. Seguito obbligatorio: l'indice condiviso resta stale sui path
+committati, e va risincronizzato con `git reset -- <quei path>` — **solo quelli**, mai un
+`git reset` nudo, che sbaraccherebbe cio' che un'altra corsia ha in stage.
+
+## 11.4 Verifiche del giro di chiusura
+
+- `npx vitest run`: **2904 passati / 0 falliti**; 9 file rossi in raccolta, il noto
+  `window is not defined`. Le suite `tabs/` da sole: **380/380**.
+- `npm run typecheck`: **33**, baseline invariata.
+- `npm run build`: exit **0**, solo il warning di chunk.
+- Sonda `_tmp_10k_verify.ts`, portata da 49 a 60 asserzioni: **before 53/5, after 60/0**.
