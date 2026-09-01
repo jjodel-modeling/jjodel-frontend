@@ -2,6 +2,47 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-09-01 — fix(manager): il bordo sinistro torna sulla card della form (10k-ter)
+**Prompt**: emendamento in chat, un punto solo: dallo screenshot la card della form non
+mostra il lato sinistro. Il prompt nominava DUE sospetti alternativi — la banda di
+`__form-head`, che con i margini negativi poteva coprire l'hairline, oppure un hairline a
+0.5px arrotondato a zero dal renderer — e chiedeva esplicitamente di MISURARE prima di
+scegliere (`getBoundingClientRect` di card vs banda), con verifica a sonda sui quattro
+bordi dipinti.
+**Files touched**: `abstract/tabs/instanceManagerTab.scss` (rimossa la riga
+`&__main > .instance-manager__pane + .instance-manager__pane { border-left: 0 }`, piu' il
+commento che ne registra il perche'), `__tests__/instanceManager10h.test.ts` (asserzione
+ratificata rovesciata) e `__tests__/instanceManager10k.test.ts` (blocco nuovo «10k-ter»,
+4 casi); questa entry a parte. La sonda `scripts/smoke/_tmp_10kter_border_verify.ts` non
+e' committata: `.gitignore:66` ignora `frontend/scripts/smoke/_tmp_*` per disegno.
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-01 00:20 (10h, prompt inline: la riga tolta e' di quella slice)
+**Causa**: (c)
+**Regressions**: no — `npm run typecheck` **33** su output COMPLETO (124 righe, exit 2 =
+baseline invariata); `npm run build` exit **0**, solo il warning di chunk noto; suite
+`abstract/tabs/__tests__/` **387/387** sull'albero fuso. Blocco nuovo provato contro
+QUATTRO mutazioni (reset rimesso, lato sinistro con `--color-form-border-strong`, margini
+della banda a -20, padding di `__form-inner` a 18): 2/2/2/1 rossi, verde al ripristino in
+tutte e quattro.
+**Out-of-scope changes**: no — ma un'asserzione RATIFICATA di 10h e' rovesciata: pinnava
+il reset con la motivazione «senza, la form prenderebbe un bordo verticale che nella
+colonna impilata non ha senso», vera finche' i pannelli non erano card (10e).
+**Layer Impact Report**: not-required — nessun file di §3.1, nessun trigger di §3.2. Zero
+creatori D, zero `TRANSACTION`, zero scritture: il delta e' una dichiarazione CSS tolta.
+**Smoke visivo**: passato — `_tmp_10kter_border_verify.ts`, **before 10/4, after 14/0**,
+rieseguita **14/0** sull'albero fuso, zero errori di pagina, stesso strumento su tutti i
+giri. Misura a `deviceScaleFactor: 1` per disegno (caso peggiore per un hairline) e sui
+PIXEL dello screenshot, decodificati a mano con `zlib` (nessuna dipendenza nuova). Bordo
+sinistro: `0px none rgb(15, 23, 42)` -> `1px solid rgb(226, 232, 240)`; ΔL* dal desk
+**1.82 -> 6.41**, cioe' da «solo il salto bianco-card / desk» a «il pixel del bordo c'e'»,
+allineato agli altri tre lati. Banda: `left` da 754 (sul bordo) a 755 (dentro).
+**Notes**: entrambi i sospetti del prompt ESCLUSI dalla misura — i margini negativi
+valevano gia' esattamente il padding, e il bordo non era sub-pixel ma ASSENTE. Concorrenza:
+il mio hunk sullo `.scss` e' stato spazzato dentro `3ab498458` (10k-chiusura, sessione
+parallela sullo stesso file); nulla perso o duplicato, ma il mio commit `182d1bb19` porta
+percio' i soli due file di test.
+**Prompt document name**: emendamento bordo card form (in chat) — 2026-09-01 14:20
+
 ## 2026-09-01 — feat(toolbar): il picker delle sintassi diventa un listbox custom (NAV2)
 **Prompt**: `docs/prompts/PROMPT_NAV2_picker_listbox.md`. Il `<select>` nativo diventa un
 dropdown con icona per voce e selezione cyan; la logica di NAV1 (sentinella, routing,
