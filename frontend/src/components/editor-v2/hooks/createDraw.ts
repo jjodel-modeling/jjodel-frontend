@@ -177,6 +177,69 @@ export function siblingNames(
         .filter(Boolean);
 }
 
+// ── Auto-increment of an ID attribute (AUTO1) ─────────────────────────────────
+
+/**
+ * The largest integer any instance currently holds in ONE attribute's slots, or
+ * null when none does.
+ *
+ * The scan is BY ATTRIBUTE, not by metaclass, and that is the load-bearing choice.
+ * `ConformanceValidator` CHECK 11 (`ConformanceValidator.ts:366-377`) accumulates
+ * duplicate-id candidates keyed on `attr.id` too, so the space this reads is
+ * exactly the space the validator judges. An attribute declared on a superclass
+ * has ONE `DAttribute.id` shared by the whole hierarchy: scanning by attribute
+ * covers the subclasses, the sibling branches, and the case where the declaring
+ * class is abstract — a scan over «the draft's class plus its concrete subclasses»
+ * would miss the siblings and hand out a number the validator then calls a
+ * duplicate.
+ *
+ * NOT scoped to one model, deliberately. Two models over the same metamodel share
+ * the attribute, so they share the maximum: the sequence is then monotone across
+ * both and can never collide INSIDE either, which is the only scope CHECK 11
+ * judges. Scoping the scan per model would need a `modelOfObject` walk per slot
+ * and would buy a lower number, not a safer one.
+ *
+ * Non-numeric and non-finite entries are SKIPPED rather than coerced: a slot that
+ * holds `''` or a label is not a zero, and `Number('') === 0` would silently make
+ * it one. A model with nothing numeric answers null, which is not the same as 0 —
+ * the caller is the one that decides where a fresh sequence starts.
+ */
+export function maxIdValue(idlookup: Idlookup, attrId: string): number | null {
+    if (!idlookup || !attrId) return null;
+    let max: number | null = null;
+    for (const id in idlookup) {
+        const d = idlookup[id];
+        if (!d || d.className !== 'DValue' || d.instanceof !== attrId) continue;
+        const values: unknown[] = Array.isArray(d.values) ? d.values : [];
+        for (const v of values) {
+            if (typeof v !== 'number' && typeof v !== 'string') continue;
+            if (typeof v === 'string' && v.trim() === '') continue;
+            const n = Number(v);
+            if (!Number.isFinite(n)) continue;
+            if (max === null || n > max) max = n;
+        }
+    }
+    return max;
+}
+
+/**
+ * The value the next instance's ID slot takes: the previous maximum plus one, and
+ * 1 when the attribute has no numeric value yet.
+ *
+ * The sequence starts at 1, not 0, because it is read by people — the first row of
+ * a table is 1 in every place this product prints an ordinal. Holes are never
+ * recycled: an id that was handed out and then deleted stays spent, which is what
+ * makes the number stable for anything that wrote it down.
+ *
+ * A negative maximum still advances by one (−3 → −2): the rule is «after the
+ * largest», and clamping to 1 would re-issue a value a hand-written model may
+ * already hold.
+ */
+export function nextIdValue(idlookup: Idlookup, attrId: string): number {
+    const max = maxIdValue(idlookup, attrId);
+    return max === null ? 1 : max + 1;
+}
+
 /** One reference candidate, as `jjform`'s `DraftOption` wants it. */
 export interface CandidateOption {
     id: string;

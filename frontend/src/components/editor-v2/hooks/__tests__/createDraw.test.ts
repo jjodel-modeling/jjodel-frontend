@@ -19,7 +19,9 @@ import {
     containmentChain,
     filledSlotValues,
     instancesUnder,
+    maxIdValue,
     modelOfObject,
+    nextIdValue,
     ownerOf,
     siblingNames,
 } from '../createDraw';
@@ -225,5 +227,112 @@ describe('the sibling scope of the uniqueness rule (12a)', () => {
         idlookup.v_root_items.values = ['mid', 'other', 'note'];
         expect(siblingNames(idlookup, 'm1', 'c_Folder', 'root').sort()).toEqual(['mid', 'other']);
         expect(siblingNames(idlookup, 'm1', 'c_Note', 'root')).toEqual(['note']);
+    });
+});
+
+
+// ── AUTO1: the auto-increment scan ───────────────────────────────────────────
+//
+// The subject is the SCOPE of the scan, and it is tested by contrast the way the
+// containment filter above is: the same call, one slot that must count and one
+// that must not, and the answer moves only when the right one moves.
+//
+// The fixture puts ONE DAttribute (`a_code`) on an abstract superclass and gives
+// it three holders across two different subclasses and two different models —
+// which is exactly the shape a scan «per metaclass» would get wrong.
+
+/**
+ *    a_code : EInt, isID           declared on Item (abstract)
+ *      ├ Book   (subclass)  b1.code = 3
+ *      └ Disc   (subclass)  d1.code = 7        ← sibling branch
+ *    a_rank : EInt, no flag        r1.rank = 99   ← a different attribute
+ *    a_code, second model         b2.code = 12    ← another model, same attribute
+ */
+function idFixture() {
+    return {
+        a_code: { id: 'a_code', className: 'DAttribute', name: 'code', isID: true },
+        a_rank: { id: 'a_rank', className: 'DAttribute', name: 'rank' },
+
+        v_b1_code: { id: 'v_b1_code', className: 'DValue', father: 'b1', instanceof: 'a_code', values: [3] },
+        v_d1_code: { id: 'v_d1_code', className: 'DValue', father: 'd1', instanceof: 'a_code', values: [7] },
+        v_b2_code: { id: 'v_b2_code', className: 'DValue', father: 'b2', instanceof: 'a_code', values: [12] },
+        v_r1_rank: { id: 'v_r1_rank', className: 'DValue', father: 'r1', instanceof: 'a_rank', values: [99] },
+    } as Record<string, any>;
+}
+
+describe('maxIdValue — the scan is by ATTRIBUTE, and that is the point', () => {
+    it('spans the whole hierarchy: two subclasses, one attribute, one maximum', () => {
+        const l = idFixture();
+        // positive control: both branches ARE in the fixture
+        expect(l.v_b1_code.values).toEqual([3]);
+        expect(l.v_d1_code.values).toEqual([7]);
+        expect(maxIdValue(l, 'a_code')).toBe(12);
+    });
+
+    it('ignores every other attribute — 99 is in the fixture and must not win', () => {
+        const l = idFixture();
+        expect(l.v_r1_rank.values).toEqual([99]);   // positive control
+        delete l.v_b2_code;
+        expect(maxIdValue(l, 'a_code')).toBe(7);
+    });
+
+    it('answers null, not 0, when the attribute has no value yet', () => {
+        expect(maxIdValue(idFixture(), 'a_nothing')).toBeNull();
+        expect(maxIdValue({}, 'a_code')).toBeNull();
+        expect(maxIdValue(null as any, 'a_code')).toBeNull();
+    });
+
+    it('reads a numeric string', () => {
+        const l = {
+            a_code: idFixture().a_code,
+            v1: { id: 'v1', className: 'DValue', instanceof: 'a_code', values: ['4'] },
+        };
+        expect(maxIdValue(l, 'a_code')).toBe(4);
+    });
+
+    it('never coerces an empty or unparsable value to zero', () => {
+        // The slots EXIST and hold something; what they hold is not a number. A
+        // `Number()` with no guard turns '', '  ' and null into 0 — and 0 is a
+        // maximum, so the sequence would start at 1 on a model that has no ids AND
+        // on a model whose ids are all blank, silently. Asserted on the null, which
+        // is the only answer that separates the two.
+        const l = {
+            a_code: idFixture().a_code,
+            v1: { id: 'v1', className: 'DValue', instanceof: 'a_code', values: ['', '  '] },
+            v2: { id: 'v2', className: 'DValue', instanceof: 'a_code', values: [null, undefined] },
+            v3: { id: 'v3', className: 'DValue', instanceof: 'a_code', values: ['abc', NaN, Infinity] },
+        };
+        expect(maxIdValue(l, 'a_code')).toBeNull();
+        expect(nextIdValue(l, 'a_code')).toBe(1);
+    });
+
+    it('does not mistake a non-DValue that happens to carry the same instanceof', () => {
+        const l = idFixture();
+        l.impostor = { id: 'impostor', className: 'DObject', instanceof: 'a_code', values: [999] };
+        expect(maxIdValue(l, 'a_code')).toBe(12);
+    });
+
+    it('takes the maximum over a multivalued slot, not its last entry', () => {
+        const l = { a: { id: 'a' }, v: { id: 'v', className: 'DValue', instanceof: 'a', values: [5, 2] } };
+        expect(maxIdValue(l, 'a')).toBe(5);
+    });
+});
+
+describe('nextIdValue — after the largest, and holes stay spent', () => {
+    it('starts a fresh sequence at 1, not at 0', () => {
+        expect(nextIdValue({}, 'a_code')).toBe(1);
+    });
+
+    it('is the maximum plus one, whatever the gaps below it', () => {
+        const l = idFixture();
+        expect(nextIdValue(l, 'a_code')).toBe(13);
+        // the 3 and the 7 are still there: the sequence does not recycle them
+        delete l.v_b2_code;
+        expect(nextIdValue(l, 'a_code')).toBe(8);
+    });
+
+    it('advances past a negative maximum rather than clamping to 1', () => {
+        const l = { a: { id: 'a' }, v: { id: 'v', className: 'DValue', instanceof: 'a', values: [-3] } };
+        expect(nextIdValue(l, 'a')).toBe(-2);
     });
 });

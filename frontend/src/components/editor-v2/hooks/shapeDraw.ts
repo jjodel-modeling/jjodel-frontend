@@ -118,6 +118,12 @@ export function attrShape(
     // enum with no literals, which would render an empty select over a live value.
     const isEnum = !!enumerator;
     const flags = featureFlags(idlookup, a.id);
+    // `isID` is read from the same place as `derived` and `changeable` — the raw
+    // DAttribute in `idlookup` — but NOT through `featureFlags`, which serves
+    // `refShape` too and whose exact return object is pinned by a ratified
+    // `toEqual` (`instanceTable.test.ts:199-204`). A reference has no ID flag, so
+    // widening that answer would buy nothing and cost a green assertion.
+    const isID = idlookup?.[a.id]?.isID === true;
     return {
         key: a.name,
         id: a.id,
@@ -130,6 +136,7 @@ export function attrShape(
         type: classifyAttrType(a.type, isEnum),
         enum: isEnum ? enumerator.name : undefined,
         typeName: a.type,
+        isID,
     };
 }
 

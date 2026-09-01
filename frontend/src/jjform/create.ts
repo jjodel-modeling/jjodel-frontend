@@ -47,7 +47,7 @@
  */
 
 import type { AttrShape, ClassShape, MetamodelShape, RefShape } from './shape';
-import { multiplicity } from './shape';
+import { isAutoIdAttr, multiplicity } from './shape';
 
 /** The transactional draft. Serializable, and not yet anywhere. */
 export interface Draft {
@@ -118,9 +118,20 @@ export interface DraftContext {
 
 /** The attributes a draft offers. Derived and read-only ones are EXCLUDED: a
  *  control over a value the write path will refuse is a control that lies. Their
- *  existence is still in the shape, so the table keeps showing the column. */
+ *  existence is still in the shape, so the table keeps showing the column.
+ *
+ *  An AUTO-ID attribute (`isID` over `EInt`) is excluded by the SAME argument, one
+ *  step further: the write path would not refuse the value, it would OVERWRITE the
+ *  reason for showing it. The number an auto-increment will take is settled by the
+ *  model at the moment of the write, so anything a draft could put in that control
+ *  is a PREDICTION — and a prediction rendered as a filled field reads as a fact.
+ *  This is the `AUTO_INCREMENT` column of an `INSERT`: absent from the statement,
+ *  present in the row. The column stays in the table (`tableFeatures` reads
+ *  `cls.attrs`, not this) and the field stays in the edit form, read-only.
+ *  Recorded because the field's absence is a DECISION and looks like an omission:
+ *  re-adding the control would be re-adding the lie. */
 export function draftableAttrs(cls: ClassShape): AttrShape[] {
-    return cls.attrs.filter(a => !a.derived && !a.readOnly);
+    return cls.attrs.filter(a => !a.derived && !a.readOnly && !isAutoIdAttr(a));
 }
 
 /** The references a draft offers. Same exclusion, same reason. Children are NOT

@@ -9,7 +9,8 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import type { ClassShape, MetamodelShape, RefShape } from '../shape';
+import type { AttrShape, ClassShape, MetamodelShape, RefShape } from '../shape';
+import { isAutoIdAttr, tableFeatures } from '../shape';
 import {
     addChildReason,
     draftableAttrs,
@@ -337,5 +338,95 @@ describe('immutability of the draft', () => {
         expect(d.refs.source).toBe('');
         expect(withName.values.name).toBe('go');
         expect(withRef.refs.source).toBe('s1');
+    });
+});
+
+
+// ── AUTO1: the auto-increment ID attribute ───────────────────────────────────
+//
+// A SEPARATE fixture rather than a fourth metaclass on SHAPE: the cases above
+// assert exact field lists and exact draft keys, and widening the shared shape
+// would move goalposts none of them are about.
+
+const idAttr = (o: Partial<AttrShape> & { key: string }): AttrShape => ({
+    id: 'a_' + o.key, lower: 0, upper: 1, many: false, required: false,
+    derived: false, readOnly: false, type: 'number', typeName: 'EInt',
+    ...o,
+});
+
+const ID_SHAPE: MetamodelShape = {
+    enums: {},
+    classes: {
+        Ticket: {
+            key: 'Ticket', id: 'c_Ticket',
+            root: true, abstract: false, singleton: false, containedIn: [],
+            attrs: [
+                idAttr({ key: 'code', isID: true }),
+                idAttr({ key: 'name', type: 'string', typeName: 'EString' }),
+                // isID over a type nothing can generate — NOT an auto id.
+                idAttr({ key: 'slug', type: 'string', typeName: 'EString', isID: true }),
+                // EInt without the flag — an ordinary number the user types.
+                idAttr({ key: 'weight' }),
+            ],
+            refs: [],
+            children: [],
+        },
+    },
+};
+
+describe('isAutoIdAttr — the one gate the three consumers share', () => {
+    it('needs BOTH the ID flag and the integer type', () => {
+        expect(isAutoIdAttr({ isID: true, typeName: 'EInt' })).toBe(true);
+        expect(isAutoIdAttr({ isID: true, typeName: 'EString' })).toBe(false);
+        expect(isAutoIdAttr({ isID: false, typeName: 'EInt' })).toBe(false);
+        expect(isAutoIdAttr({ typeName: 'EInt' })).toBe(false);
+    });
+
+    it('answers false, not undefined, for a missing attribute', () => {
+        expect(isAutoIdAttr(null)).toBe(false);
+        expect(isAutoIdAttr(undefined)).toBe(false);
+        expect(isAutoIdAttr({})).toBe(false);
+    });
+
+    it('reads the flag literally: a truthy non-true does not count', () => {
+        expect(isAutoIdAttr({ isID: 1 as unknown as boolean, typeName: 'EInt' })).toBe(false);
+    });
+});
+
+describe('draftableAttrs — the auto-id control is ABSENT, not prefilled (AUTO1)', () => {
+    it('drops an isID EInt attribute and keeps every other one', () => {
+        expect(draftableAttrs(ID_SHAPE.classes.Ticket).map(a => a.key))
+            .toEqual(['name', 'slug', 'weight']);
+    });
+
+    it('gives the draft no key at all for it — an empty key would render a control', () => {
+        const d = newDraft(ID_SHAPE, 'Ticket');
+        expect(d.values).not.toHaveProperty('code');
+        expect(Object.keys(d.values).sort()).toEqual(['name', 'slug', 'weight']);
+    });
+
+    it('renders no field for it, and still renders the others', () => {
+        const m = draftModel(ID_SHAPE, newDraft(ID_SHAPE, 'Ticket'));
+        expect(m.fields.map(f => f.key)).toEqual(['name', 'slug', 'weight']);
+    });
+
+    it('never blocks the commit on it, even declared required', () => {
+        const required: MetamodelShape = {
+            enums: {},
+            classes: {
+                Ticket: {
+                    ...ID_SHAPE.classes.Ticket,
+                    attrs: [idAttr({ key: 'code', isID: true, lower: 1, required: true })],
+                },
+            },
+        };
+        const d = newDraft(required, 'Ticket');
+        expect(validateDraft(required, d)).toEqual({});
+        expect(draftModel(required, d).valid).toBe(true);
+    });
+
+    it('keeps the column in the table — the value is hidden from the FORM, not from the model', () => {
+        expect(tableFeatures(ID_SHAPE.classes.Ticket).map(f => f.key))
+            .toContain('code');
     });
 });

@@ -43,6 +43,7 @@ interface SlotOpts {
     composition?: boolean;
     derived?: boolean;
     changeable?: boolean;
+    isID?: boolean;
     values?: unknown[];
     options?: { label: string; options: { value: string; label: string }[] }[];
 }
@@ -62,6 +63,7 @@ function slot(o: SlotOpts): any {
             composition: o.composition,
             derived: o.derived,
             changeable: o.changeable,
+            isID: o.isID,
             type: { name: o.typeName ?? 'EString', className: o.typeClass ?? 'DClass' },
             __raw: { lowerBound: lower, upperBound: upper },
         },
@@ -242,6 +244,28 @@ describe('describeSlot classification', () => {
 
         const plain = describeSlot(attr('name', 'EString'))!;
         expect(plain.isReadOnly).toBe(false);
+    });
+
+    it('locks an auto-increment id, and ONLY when the type can be generated (AUTO1)', () => {
+        const auto = describeSlot(attr('code', 'EInt', { isID: true }))!;
+        expect(auto.isReadOnly).toBe(true);
+        expect(auto.isDerived).toBe(false);   // locked by the ID flag, not by `derived`
+        expect(auto.widget).toBe('number');   // it still RENDERS as what it is
+
+        // Contrast, and it is the whole point of the second clause: an isID over a
+        // type nothing generates stays writable, or it would be unwritable for ever.
+        const stringId = describeSlot(attr('slug', 'EString', { isID: true }))!;
+        expect(stringId.isReadOnly).toBe(false);
+
+        // Contrast the other way: an EInt with no flag is an ordinary number.
+        const plainInt = describeSlot(attr('weight', 'EInt'))!;
+        expect(plainInt.isReadOnly).toBe(false);
+
+        // A reference cannot carry the flag; a stray one must not lock it.
+        const ref = describeSlot(slot({
+            name: 'owner', typeName: 'EInt', featureClass: 'DReference', isID: true,
+        }))!;
+        expect(ref.isReadOnly).toBe(false);
     });
 
     it('returns null for a slot with no name instead of throwing', () => {

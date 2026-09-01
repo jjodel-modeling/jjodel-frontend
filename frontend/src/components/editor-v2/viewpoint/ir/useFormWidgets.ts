@@ -47,6 +47,7 @@
 import { useMemo } from 'react';
 import type { FeatureTreatment, FormSpec, WidgetKind } from './irTypes';
 import type { TargetOption } from '../../../../jjform';
+import { isAutoIdAttr } from '../../../../jjform/shape';
 import { parseRowViewAnnotations, type RowViewAnnotations } from '../../nodes/rowViewAnnotations';
 import { meaningfulValues, rawValues } from './slotValues';
 
@@ -311,7 +312,17 @@ export function describeSlot(slot: any, spec?: FormSpec, offer?: FieldOffer): Fo
     const widget = override && overrideIsCompatible(derivedWidget, override) ? override : derivedWidget;
 
     const isDerived = feature?.derived === true;
-    const isReadOnly = isDerived || feature?.changeable === false;
+    // AUTO1: an `isID` attribute over `EInt` is filled by the create adapter's
+    // auto-increment, so the form SHOWS it and offers no editor — the read-only
+    // branch `IRFormField` already renders for a derived or frozen feature. It is
+    // derived from the metamodel's own flag, not from a `changeable = false`
+    // written onto the user's model: presentation must not edit the metamodel.
+    // The gate is the shared `isAutoIdAttr`, so the field that is hidden in the
+    // create modal and the field that is locked here cannot come apart; `isID`
+    // over any other type stays fully writable, since nothing generates its value
+    // and locking it would make it unwritable for ever.
+    const isAutoId = featureClass === 'DAttribute' && isAutoIdAttr({ isID: feature?.isID === true, typeName });
+    const isReadOnly = isDerived || feature?.changeable === false || isAutoId;
 
     // Treatment. The default follows the multiplicity, which is what an author would have to
     // write out otherwise; an explicit `inline` on a multivalued feature is DEGRADED to

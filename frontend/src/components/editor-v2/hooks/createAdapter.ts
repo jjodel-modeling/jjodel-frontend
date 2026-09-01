@@ -53,6 +53,24 @@
  * included when the metaclass actually declares a `name` attribute; otherwise the
  * auto-name `DObject.new3` computes stands, and no key is sent that the seeding
  * loop would have to warn about.
+ *
+ * ── The auto-increment of an ID attribute rides the SAME json (AUTO1) ─────────
+ *
+ * An `isID` attribute typed `EInt` is not offered in the draft (`draftableAttrs`
+ * excludes it) and is not typed by anyone: its value is computed here, from the
+ * model, and put in the json the create already carries. Not written afterwards —
+ * that would be a SECOND deferral on top of `addObject`'s own, i.e. a window in
+ * which the instance exists with an empty id and anything watching the store sees
+ * it. One json, one deferral, one moment at which the instance is complete.
+ *
+ * A value the CALLER supplied always wins. `createInstance` has two callers —
+ * `applyCreate` below and `writeCtxLproxy` (S4) — and an explicit seed is a fact
+ * the host stated, while the generated number is a default; overwriting the first
+ * with the second would make an import or a scripted create unable to keep its own
+ * ids.
+ *
+ * Keys are `$`-prefixed here too: the generated value is a SLOT value like any
+ * other. The one exception below is `name`, and it is the same exception.
  */
 
 import { LPointerTargetable, store, U } from '../../../joiner';
@@ -60,7 +78,11 @@ import type { LModelElement } from '../../../joiner';
 import { getNamespaceOf } from '../../../model/logicWrapper/nameUniqueness';
 import type { AttrShape, ClassShape, CreateResult, Draft, DraftContext, DraftOption, MetamodelShape } from '../../../jjform';
 import { draftableAttrs, draftableRefs } from '../../../jjform';
-import { candidatesFor, childCount, containmentChain } from './createDraw';
+// Deep import, as `shapeDraw.ts` next door already does: `isAutoIdAttr` is not on
+// the barrel's public surface, and putting it there would be a seventh file this
+// task is not scoped to touch. The module is the same either way.
+import { isAutoIdAttr } from '../../../jjform/shape';
+import { candidatesFor, childCount, containmentChain, nextIdValue } from './createDraw';
 import { getMetaclassInfo, type MetaclassInfo } from './useEditorMode';
 
 type Idlookup = Record<string, any>;
@@ -213,6 +235,47 @@ function typedValue(attr: AttrShape, raw: string): string | number | boolean {
 }
 
 /**
+ * The generated value of every auto-ID attribute of `className` the caller did not
+ * already supply.
+ *
+ * The attributes come from `MetaclassInfo.allAttributes` — own AND inherited, the
+ * same field `shapeAdapter` builds `ClassShape.attrs` from — because an id
+ * declared on a superclass is exactly the case that must keep working: one
+ * `DAttribute.id`, one sequence, shared down the hierarchy. The flag itself is NOT
+ * on `MetaclassAttribute` and is not put there (that structure is out of this
+ * task's perimeter): it is read off the raw `DAttribute` in `idlookup`, which is
+ * where `shapeDraw.attrShape` reads it too.
+ *
+ * The gate is `isAutoIdAttr`, the same predicate that hid the control in the draft
+ * and renders the field read-only in the form. An `isID` attribute over any other
+ * type is left alone: nothing here knows how to generate a string, and seeding it
+ * would put a number where the metamodel asked for something else.
+ *
+ * A metamodel this host cannot resolve yields no keys — `classesByName` already
+ * answers an empty map for a half-loaded model, and a create that cannot see the
+ * metaclass has bigger problems than a missing id.
+ */
+function autoIdSeed(
+    modelId: string,
+    className: string,
+    seed: Readonly<Record<string, string | number | boolean>>,
+): Record<string, number> {
+    const info = classesByName(modelId)[className];
+    const attrs = info?.allAttributes ?? info?.attributes ?? [];
+    if (attrs.length === 0) return {};
+
+    const idlookup = lookup();
+    const out: Record<string, number> = {};
+    for (const a of attrs) {
+        if (!a?.name || !a?.id) continue;
+        if (Object.prototype.hasOwnProperty.call(seed ?? {}, a.name)) continue;
+        if (!isAutoIdAttr({ isID: idlookup[a.id]?.isID === true, typeName: a.type })) continue;
+        out[a.name] = nextIdValue(idlookup, a.id);
+    }
+    return out;
+}
+
+/**
  * Create ONE instance — the `create` primitive of `WriteCtx` (S4), on this host.
  *
  * Split out of `applyCreate` unchanged: same `addObject`, same arguments, same
@@ -241,6 +304,10 @@ export function createInstance(
 
     const json: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(seed ?? {})) {
+        if (key === 'name') json.name = value;
+        else json['$' + key] = value;
+    }
+    for (const [key, value] of Object.entries(autoIdSeed(modelId, className, seed))) {
         if (key === 'name') json.name = value;
         else json['$' + key] = value;
     }
