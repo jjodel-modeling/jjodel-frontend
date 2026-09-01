@@ -2,6 +2,30 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-09-01 — docs(discovery): TXT1, il carrier regge e tre premesse no (Fase 1)
+**Prompt**: `docs/prompts/PROMPT_TXT1_multiline_textarea.md`. Corsia DISCOVERY-FIRST con
+clausola d'arresto: il grafo D porta metadati per-attributo scrivibili e persistiti, oggi,
+senza toccare il core? Nessun codice prima del referto (P4).
+**Files touched**: `docs/discovery/discovery_2026-09-01_txt1_annotation_multiline.md` e
+questa entry. **Zero file di codice**: la Fase 2 attende il go-ahead. Le sonde
+`scripts/smoke/_tmp_txt1_*.ts` non sono committate (`.gitignore:66`).
+**Outcome**: ✅ completed (Fase 1)
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — nessun file di codice toccato, nessun gate da muovere.
+**Out-of-scope changes**: no.
+**Layer Impact Report**: not-required — fase read-only, zero scritture committate.
+**Smoke visivo**: non applicabile — nessun delta visivo. La misura e' a sonda:
+`_tmp_txt1_recon.ts` **18/18 ALL GREEN**, zero errori di pagina, piu' `_tmp_txt1_vfx.ts` per
+diagnosticare un braccio.
+**Notes**: clausola d'arresto **superata**: scrittura, rilettura, JSON, VersionFixer e
+LoadAction misurati verdi (trasporto backend non esercitato, dichiarato). Ma tre premesse
+del prompt cadono: `parseDAnnotation` **e' implementata** e produce gia' il nostro formato
+di filo dai details Ecore; il round-trip perde sull'**export**; `featureFlags` sta in
+`shapeDraw.ts`. Trovato fuori perimetro un difetto latente di `VersionFixer` (referto §7).
+**Prompt document name**: PROMPT_TXT1_multiline_textarea.md — 2026-09-01 15:35
+
+
 ## 2026-09-01 — fix(form): il lato destro della select torna al chevron (FL10)
 **Prompt**: MICRO in chat, dal referto FL9 §8. La regola di densita' scrive
 `padding-right: var(--ir-form-pad-x)` sulla select e sovrascrive i 36px di
