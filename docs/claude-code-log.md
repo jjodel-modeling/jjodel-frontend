@@ -2,6 +2,44 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-09-01 — fix(manager): il quinto eyebrow traccia come gli altri (DS3)
+**Prompt**: «DS3: quinto eyebrow `&__draft-label` a 0.04em (micro, PARALLELO)» — chiudere la
+divergenza che il referto 10i §4 aveva rilevato e LASCIATO, portando `&__draft-label` alle
+dichiarazioni eyebrow (11px/600/uppercase/0.08em, colore muted), aggiornando il test di 10i da
+«fissa la divergenza» ad «afferma la convergenza», con sonda visiva before/after. Fuori scope:
+gli altri 13 eyebrow, un token `--tracking-eyebrow`, tabella ed empty state (10j).
+**Files touched**: `abstract/tabs/instanceManagerTab.scss` (il solo blocco `&__draft-label`),
+`abstract/tabs/__tests__/instanceManager10i.test.ts` (36 -> 39 casi) e il referto
+`docs/discovery/discovery_2026-09-01_ds3_draft_label.md`, in `db7e7610a`; questa entry a parte.
+Pathspec, indice verificato vuoto prima e dopo.
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-01 00:20 — slice 10i, la divergenza che il suo referto §4 lascio' aperta
+**Causa**: (a)
+**Regressions**: no — `npm run typecheck` **33** (baseline invariata, conteggio su output
+COMPLETO); `npm run build` exit **0**; `npm run test` **2799 passati / 0 falliti**, 9 file rossi
+in raccolta tutti il noto `window is not defined`. I 3 test rossi dell'entry sulle icone bi
+(`10c` ×2, `10d` ×1) sono tornati VERDI: erano causati da 10i non committata in albero, e ora
+10i è in `dc6ae5c52`. Suite propria provata con TRE mutazioni (ritorno a 0.04em, colore che
+converge a muted, dichiarazione rimossa): 1/1/1 rossi, verde al ripristino in tutte e tre.
+**Out-of-scope changes**: no — il blocco nominato dal prompt e il test che il prompt cita.
+**Layer Impact Report**: not-required — nessun file di §3.1. Il delta è UNA dichiarazione CSS.
+**Smoke visivo**: passato — `_tmp_ds3_verify.ts`, fixture StateMachine rootable con tre chiavi
+di lunghezza diversa: **before 15 PASS / 3 FAIL**, **after 18 PASS / 0 FAIL**, zero errori di
+pagina in entrambi i giri; blocchi 0 e 2 verdi in entrambi, solo il blocco 1 vira. Verificato
+anche nell'INCHIOSTRO, non nel solo computed style: la larghezza del nodo di testo presa con un
+`Range` (il rect dell'elemento avrebbe dato la CELLA, che col tracciato non cambia — un falso
+negativo che sarebbe passato per misura). `name` 34.92->36.69, `entryAction` 83.78->88.63,
+`documentation` 103.94->109.66: delta +1.77/+4.85/+5.72px contro un predetto N*0.44 di
+1.76/4.84/5.72, tre su tre entro 0.01px. Non-regressioni verdi in entrambi i giri: il suffisso
+tipo/cardinalità che NON eredita il tracciato, le intestazioni di 10i, l'eyebrow del pannello,
+il titolo del dialogo.
+**Notes**: la divergenza era DOPPIA. Oltre al tracciato, il colore: form-section (slate-500,
+4.76:1 su bianco) contro form-muted (slate-400, 2.59:1). Chiesto e deciso di NON convergerlo —
+è la `<label>` di un campo a 11px, muted la manderebbe sotto AA. Il prompt indicava
+`irFormStyle` e un «badge draft sporco»: il grep dice `instanceManagerTab.scss`, e non c'è
+stato sporco. Referto §1, §3 e §6.
+**Prompt document name**: prompt inline «DS3 — quinto eyebrow» — 2026-09-01 09:10
+
 ## 2026-09-01 — fix(manager): le icone dei pulsanti ereditano il colore del pulsante
 **Prompt**: «in tutti i pulsanti color slate scuro le icone bi non sono in bianco, devono
 essere color bianco». Schermo indicato dopo domanda: la testata della tabella dell'instance
