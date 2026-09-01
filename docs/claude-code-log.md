@@ -2,6 +2,42 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-09-01 — fix(manager): Export e New salgono in testata, e i tre rossi che ho committato (10k-CHIUSURA)
+**Prompt**: `docs/prompts/PROMPT_10k_ritocchi_giro2.md`, punto 2 **emendato alle 13:21** — due
+minuti dopo il commit del primo giro. Non piu' solo titolo e sottotitolo fuori dalla card: riga di
+testata col soggetto a sinistra e `Export` + `+ New State` a destra, card che comincia dalla
+toolbar, toolbar ridotta a filtro/segmented/indicatore/Columns con gli ultimi due a destra, e il
+caso «0 istanze» da arbitrare perche' 10j lascia la testata accesa.
+**Files touched**: `abstract/tabs/{InstanceManagerTab.tsx, instanceManagerTab.scss}` in
+**4180819c3**; `__tests__/instanceManager{10i,10j}.test.ts` (3 asserzioni riallineate) in
+**f18c03d9e**; §11 del referto e il prompt emendato in **a3d27017e**; questa entry a parte.
+Commit costruiti con un **indice privato** (`GIT_INDEX_FILE`), vedi Notes.
+**Outcome**: ⚠️ partial — spedito e verde, ma con un commit rotto in mezzo (vedi Regressions).
+**Corregge**: 2026-09-01 12:30 — 10k, il suo punto 2 nella versione emendata due minuti dopo
+**Causa**: (f)
+**Regressions**: **yes, e mie**. `4180819c3` e' andato in HEAD con **tre test rossi** di 10i/10j.
+La suite intera era girata PRIMA del giro (2885/0) e dopo ho girato solo la suite 10k e la sonda,
+che non toccano quelle due. Il rilievo e' arrivato dalla corsia 10k-bis, non da me. Chiusi in
+`f18c03d9e`, entrambe le riallineate provate per mutazione (tolta la guardia; Export rimesso nella
+barra): una rossa ciascuna. Stato finale: `npx vitest run` **2904 passati / 0 falliti** (9 file
+rossi in raccolta, il noto `window is not defined`), suite `tabs/` **380/380**, `npm run
+typecheck` **33** invariata, `npm run build` exit **0**.
+**Out-of-scope changes**: no.
+**Layer Impact Report**: not-required — nessun file di §3.1, zero creatori D, zero `TRANSACTION`.
+**Smoke visivo**: passato — `_tmp_10k_verify.ts` portata da 49 a 60 asserzioni, **before 53/5,
+after 60/0**, zero errori di pagina. I cinque rossi del before sono le cinque asserzioni nuove.
+Misurato: Export `x 1510` e New in testata sul rigo del titolo, barra ridotta a
+`["search","segmented","hidden-cols","columns-wrap"]` con Columns a filo destro (`right 1572`), e a
+zero istanze `newCount: 0` con la sola CTA del cartello.
+**Notes**: due lezioni oltre la slice. (1) `4180819c3` era prima `fcc200d11`, che prese l'indice
+CONDIVISO — §6.1 copre il contenuto sbagliato in un file conteso, non la finestra fra `git add` e
+`git commit`; con tre sessioni sull'albero la finestra e' il rischio dominante, e la chiude un
+indice privato. (2) Il punto 3 del primo giro era sbagliato e l'ha corretto un'altra corsia
+(`5bcc56abe`): la mia sonda misurava il VALORE della banda, non la sua differenza dal desk.
+Referto §11.
+**Prompt document name**: PROMPT_10k_ritocchi_giro2.md — 2026-09-01 13:21
+
+
 ## 2026-09-01 — fix(manager): la banda dell'header form prende un token suo (10k-bis)
 **Prompt**: emendamento 10k-bis, un punto solo: l'header della card form
 (`&__form-head`) non staccava dal desk. Due leve insieme — fondo un gradino piu' scuro,
