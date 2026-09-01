@@ -2,6 +2,47 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-09-01 — feat(toolbar): «Data manager» in coda al picker delle sintassi (NAV1)
+**Prompt**: `docs/prompts/PROMPT_NAV1_data_manager_picker.md` — il manager entra nel
+selettore delle viste come «Data manager», in coda dopo un separatore, e la scelta deve
+portare alla STESSA vista del tab dell'header riusando la via che lo apre oggi. Discovery
+prima del codice (Regola 15 doppia): vocabolario del picker, consumatore della scelta,
+simmetria picker/tab, e fermata se il picker avesse assunzioni «solo sintassi». Fuori
+scope: `InstanceManagerTab.tsx`/`.scss` (10k in volo), il rail del mock, la persistenza.
+**Files touched**: `editor-v2/dataManagerOption.ts` (nuovo, zero import: sentinella,
+etichetta, separatore, `isDataManagerOption`), `editor-v2/Toolbar.tsx` (le due opzioni in
+coda al `<select>` + l'intercettazione in `handleViewpointChange`), la suite nuova
+`editor-v2/__tests__/dataManagerPicker.test.ts` (18 casi), il referto
+`docs/discovery/discovery_2026-09-01_nav1_data_manager_picker.md` e il documento di prompt
+a terra (RC-9), in `ccb2c0774`; questa entry a parte. Pathspec obbligata: l'albero portava
+il lavoro di 10k su `InstanceManagerTab.tsx`/`.scss` e su `PROMPT_10k_*`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `npm run typecheck` **33** (baseline invariata, conteggio su output
+COMPLETO, non su una finestra); `npm run build` exit **0**, solo il noto warning di chunk;
+`npx vitest run` **2903 passati / 0 falliti**, 9 file rossi in raccolta tutti il noto
+`window is not defined`. La suite nuova provata contro DUE mutazioni del sorgente
+(intercettazione spostata DOPO `activateViewpoint`: 2 rossi; voce messa PRIMA dei
+viewpoint: 3 rossi), verde al ripristino.
+**Out-of-scope changes**: no — il prompt non elencava file (discovery-first); il perimetro
+consegnato e' picker + routing, e `InstanceManagerTab` non e' stato aperto.
+**Layer Impact Report**: not-required — nessun file di §3.1, zero creatori D, zero
+`TRANSACTION`. La sentinella non raggiunge mai `state.viewpoint`: e' il punto di §C2.
+**Smoke visivo**: passato — `npm run smoke` **GREEN**, 12 passed / 0 failed / 3 skipped.
+Ma il gate vero e' la sonda `_tmp_nav1_verify.ts`, **17/17 ALL GREEN, zero errori di
+pagina**: nessuno dei tre stati dello smoke contiene un M1 col picker, e uno schermo che
+non puo' contenere il soggetto tace come un soggetto assente (§5). Coperti l'ordine in
+coda, il separatore disabilitato, l'assenza su M2, il gesto, la convergenza su UN tab con
+la porta del rail, e il tab del manager ancora aperto dopo il ritorno alla sintassi.
+**Notes**: due reperti di metodo, un giro rosso ciascuno (referto §5). (1)
+`visible=true` sceglie il pane sbagliato: rc-dock lascia i pane inattivi nel DOM traslati
+fuori schermo con `getClientRects()` non vuoto — misurato x = -857 — e il primo giro dette
+un B2 FAIL falso. Scoping su `.dock-tabpane-active`. (2) La fixture `rowviews` non offre
+viewpoint selezionabili (l'unico e' di sistema, filtrato dal picker): l'asserzione
+sull'ordine era vera a vuoto, ora c'e' il controllo positivo 0b e la semina.
+**Prompt document name**: PROMPT_NAV1_data_manager_picker.md — 2026-09-01 13:16
+
 ## 2026-09-01 — fix(manager): i nove ritocchi del giro 2, e lo stretch di FL1 che si ferma a meta' (10k)
 **Prompt**: `docs/prompts/PROMPT_10k_ritocchi_giro2.md` — nove punti di superficie e copy su uno
 screenshot di `sample-StateMachine`, pattern 10h/10i (sonda before/after, asserzioni su computed
