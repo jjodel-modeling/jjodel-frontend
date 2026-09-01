@@ -436,7 +436,12 @@ describe('10c — la testata della tabella', () => {
     });
 
     it('l\'indicatore delle colonne nascoste dice il conteggio reale', () => {
-        expect(TSX).toContain('{hiddenColumnKeys.length} empty column');
+        // 10i ha spostato il conteggio da `hiddenColumnKeys` alle sole colonne
+        // vuote NON-overridate: con il pannello Columns una vuota puo' essere
+        // sullo schermo per scelta, e contarla direbbe «nascosta» di una
+        // colonna che si vede. La misura di partenza resta la stessa, ed e'
+        // quella che le due righe qui sotto continuano a fissare.
+        expect(TSX).toContain('{autoHiddenKeys.length} empty column');
         expect(TSX).toContain('emptyColumnKeys(rows, columns)');
         // Misurate su TUTTE le righe, non sulle filtrate: altrimenti la tabella
         // cambierebbe forma a ogni battuta nel filtro.
@@ -444,7 +449,10 @@ describe('10c — la testata della tabella', () => {
     });
 
     it('la tabella rende le colonne SUPERSTITI', () => {
-        expect(TSX).toContain('visibleColumns(columns, hiddenColumnKeys)');
+        // 10i: `visibleColumns` e' rimasta esportata e provata in
+        // `instanceTable.test.ts`; il tab ci passa attraverso `shownColumnsWith`,
+        // che e' la stessa riduzione con sopra la scelta esplicita.
+        expect(TSX).toContain('shownColumnsWith(columns, hiddenColumnKeys, overrides)');
         expect(TSX).toContain('{shownColumns.map(col => (');
         expect(TSX).toContain('colSpan={shownColumns.length + 5}');
     });
@@ -500,8 +508,18 @@ describe('10c — lo stato di riposo', () => {
         expect(CODE).not.toContain('Pick a metaclass to list its instances');
         expect(CODE).not.toContain('title="No instance selected"');
         expect(TSX).toContain('title="This model has no instances yet"');
-        // Un solo `EmptyState` montato in tutto il tab.
-        expect(CODE.match(/<EmptyState/g) ?? []).toHaveLength(1);
+        // 10j — due `EmptyState` nel SORGENTE, mai due a SCHERMO: sono i due
+        // rami alternativi della stessa catena ternaria (prima la collezione
+        // vuota, poi il modello vuoto). L'invariante di 10c e' «un cartello
+        // solo, niente cascata», e il conteggio del sorgente ne era il
+        // surrogato finche' il ramo era uno. Il surrogato nuovo e' l'ALTERNANZA,
+        // che dice la stessa cosa e la dice di piu': due `<EmptyState>` in due
+        // rami che si escludono non possono comparire insieme, mentre due
+        // conteggiati a uno non escludevano nulla.
+        expect(CODE.match(/<EmptyState/g) ?? []).toHaveLength(2);
+        expect(CODE).toMatch(
+            /\{collectionIsEmpty && selectedClass \? \([\s\S]*?<EmptyState[\s\S]*?\) : modelIsEmpty \|\| !selectedClass \? \([\s\S]*?<EmptyState[\s\S]*?\) : visible\.length === 0 \? \(/,
+        );
     });
 
     it('senza selezione il pannello form COLLASSA a una barra', () => {

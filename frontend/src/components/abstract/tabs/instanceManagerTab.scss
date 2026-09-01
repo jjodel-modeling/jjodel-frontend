@@ -412,6 +412,100 @@
         cursor: default;
     }
 
+    /* ── 10i: il pannello Columns ──────────────────────────────────────────
+       Il wrapper esiste solo per ancorare il popover: il bottone e' in una
+       barra che VA A CAPO (`flex-wrap` sopra), quindi la posizione del
+       pannello non e' calcolabile dal contenitore — deve nascere dal proprio
+       bottone, e per farlo serve un `position: relative` che sia quello e non
+       la toolbar intera. */
+    &__columns-wrap {
+        position: relative;
+        display: inline-flex;
+    }
+
+    /* Le stesse dichiarazioni di `__export`: e' lo stesso controllo secondario
+       della stessa barra. Scritte per esteso e non ereditate da un selettore
+       comune perche' unificarle vorrebbe dire riscrivere `__export`, che questa
+       slice non ha nel perimetro. */
+    &__columns {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        height: 28px;
+        padding: 0 10px;
+        border: 1px solid var(--color-form-border-strong);
+        border-radius: 4px;
+        background: var(--color-form-surface);
+        font-size: 12px;
+        color: var(--color-form-label);
+        cursor: pointer;
+
+        &:hover { background: var(--color-bg-tertiary); }
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: -1px; }
+
+        /* Aperto = premuto. La campitura e' quella della selezione, la stessa
+           del segmento attivo e della riga selezionata: uno stato attivo e'
+           un fatto solo, e un secondo colore direbbe che sono due. */
+        &[aria-expanded='true'] { background: var(--color-selection-bg); }
+    }
+
+    /* La card del DS: fondo primario, bordo `form-border`, raggio 6, l'ombra
+       leggera di `__outline-menu`. */
+    &__columns-panel {
+        position: absolute;
+        top: calc(100% + 4px);
+        left: 0;
+        z-index: 3;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 190px;
+        max-height: 320px;
+        overflow-y: auto;
+        padding: 6px;
+        border: 1px solid var(--color-form-border);
+        border-radius: 6px;
+        background: var(--color-bg-primary);
+        /* Geometria per esteso, colore da token: e' la forma che R-RAIL-10
+           prescrive per le ombre, e non `var(--shadow-*)`. `__outline-menu`
+           porta la stessa ombra con l'`rgba` letterale — precede la regola e
+           resta com'e' (Regola 8), ma la nuova non la ricopia: in scuro il
+           token vira e il letterale no. */
+        box-shadow: 0 2px 6px var(--color-node-shadow);
+    }
+
+    &__columns-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 6px;
+        border-radius: 4px;
+        font-size: 12px;
+        color: var(--color-text-primary);
+        cursor: pointer;
+
+        &:hover { background: var(--color-bg-tertiary); }
+
+        input { cursor: pointer; }
+
+        /* `name` non si disattiva. La voce resta LEGGIBILE — e' l'unica che
+           dice quale colonna e' la colonna dei nomi — e non prende il grigio
+           di un controllo spento: e' bloccata, non indisponibile. */
+        &--locked {
+            cursor: default;
+            &:hover { background: none; }
+            input { cursor: default; }
+        }
+    }
+
+    /* La nota che dice PERCHE' la casella e' spenta. Senza, una spunta assente
+       su una colonna che il metamodello dichiara legge come un guasto. */
+    &__columns-empty {
+        margin-left: auto;
+        font-size: var(--text-2xs);
+        color: var(--color-form-muted);
+    }
+
     /* Export sta a sinistra del New e non ne prende il peso: il primario della
        testata e' uno solo, ed e' la create. */
     &__export {
@@ -504,6 +598,56 @@
         .instance-manager__form-inner { padding: 0; }
     }
 
+    /* ── 10j: il cartello della collezione vuota ───────────────────────────
+       Il componente condiviso `EmptyState` resta com'e': lo montano altri otto
+       punti dell'app, e la misura che questa slice chiede e' del manager. Qui
+       si scrive la sola differenza, e la si scopa alla card della tabella.
+
+       Il selettore raddoppia la classe — `&__empty.jj-empty-state` invece del
+       solo `&__empty` — e non e' enfasi: il foglio del componente dichiara le
+       proprie regole scure sotto `[data-theme="dark"] .jj-empty-state__…`, che
+       a classe singola pareggerebbero la specificita' di queste e vincerebbero
+       per ordine di cascata. Raddoppiando, ogni riga qui sta un gradino sopra
+       la sua omologa scura, in chiaro e in scuro allo stesso modo.
+
+       Il glifo esce dal cerchio: 48px di pastiglia dipinta per un'icona che
+       dice «vuoto» erano la meta' dell'altezza del cartello. Restano 32px di
+       glifo, e la gronda verticale sale a 48 perche' il respiro lo dia lo
+       spazio e non un disco grigio.
+
+       Nessun `flex-grow: 0` qui: `__pane--table` e' gia' `flex: 0 1 auto` da
+       10e, e la card abbraccia il contenuto per quella regola. Ridirlo qui
+       sarebbe una seconda dichiarazione dello stesso vincolo, cioe' il posto in
+       cui un domani le due divergono.
+
+       I due grigi sono i due che questo file GIA' usa come colore di testo:
+       `--color-form-border-strong` (slate-300) e' quello di `__foot-of` e
+       `__th--readonly`, `--color-form-muted` (slate-400) quello di ogni
+       sottoriga. Nessuna terza tinta, nessun letterale. */
+    &__empty.jj-empty-state {
+        padding-block: 48px;
+
+        .jj-empty-state__icon-circle {
+            width: auto;
+            height: auto;
+            margin: 0 0 12px;
+            background: none;
+            border-radius: 0;
+
+            .bi {
+                font-size: 32px;
+                color: var(--color-form-border-strong);
+            }
+        }
+
+        .jj-empty-state__title { font-weight: 600; }
+
+        .jj-empty-state__description {
+            font-size: var(--text-sm);
+            color: var(--color-form-muted);
+        }
+    }
+
     &__collapsed {
         display: flex;
         align-items: center;
@@ -539,6 +683,21 @@
             text-overflow: ellipsis;
         }
 
+        /* 10i — le intestazioni SONO l'eyebrow del pannello, non un quarto
+           stile a parte: 11 / 600 / 0.08em / muted, le stesse quattro
+           dichiarazioni di `&__eyebrow` e di `&__ego-group-title`. Prima di
+           10i erano gia' tre su quattro, e la quarta divergeva di 0.04em senza
+           una ragione scritta da nessuna parte.
+
+           Il maiuscolo lo fa il CSS. Le stringhe restano quelle del
+           metamodello — `entryAction` e' il nome della feature, e riscriverlo
+           `ENTRYACTION` nel sorgente lo perderebbe per il `title`, per il CSV
+           e per chi legge con uno screen reader, che riceve il testo e non la
+           resa. `text-transform` cambia i pixel e lascia il dato.
+
+           `0.08em` resta letterale per R-RAIL-10, che lo nomina come la sua
+           prima eccezione: non c'e' un token da usare qui, e inventarne uno
+           sarebbe estendere la scala per far combaciare una superficie. */
         thead th {
             position: sticky;
             top: 0;
@@ -547,7 +706,8 @@
             border-bottom: 1px solid var(--color-form-border);
             font-size: var(--text-xs);
             font-weight: 600;
-            letter-spacing: 0.04em;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
             color: var(--color-form-muted);
         }
 

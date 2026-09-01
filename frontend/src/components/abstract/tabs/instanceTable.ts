@@ -362,6 +362,120 @@ export function visibleColumns(columns: TableColumn[], hiddenKeys: string[]): Ta
     return columns.filter(col => !hidden.has(col.key));
 }
 
+/* ── 10i: la scelta esplicita sopra la riduzione automatica ────────────────────
+ *
+ * `emptyColumnKeys` decide da se', e fino a 10i quella decisione era definitiva:
+ * una colonna vuota spariva e non c'era gesto per riaverla. Le tre funzioni qui
+ * sotto aggiungono UNO strato, non un secondo meccanismo — la riduzione resta
+ * quella, e l'override dice soltanto quando NON vale.
+ *
+ * L'assenza di una chiave e' l'assenza di scelta, e non `true`: se «nessuna
+ * scelta» valesse «visibile», il primo render di una metaclasse con colonne
+ * vuote le mostrerebbe tutte e la riduzione automatica sarebbe morta. E' per
+ * questo che il tipo e' un record parziale e non un `Set` di chiavi accese.
+ */
+
+/** La scelta esplicita dell'utente, per chiave di colonna: `true` visibile,
+ *  `false` nascosta, chiave assente = nessuna scelta (vale l'automatico). */
+export type ColumnOverrides = Record<string, boolean>;
+
+/** La chiave della colonna `name`, che non e' una feature del metamodello e non
+ *  compare in `tableColumns`: la tabella la stampa a parte, e il pannello la
+ *  offre come voce bloccata perche' una riga senza il proprio nome non e' una
+ *  vista ridotta, e' una tabella illeggibile. */
+export const NAME_COLUMN_KEY = 'name';
+
+/** Visibile o no, per una chiave sola. L'override, quando c'e', VINCE. */
+export function isColumnVisible(
+    key: string,
+    hiddenKeys: string[],
+    overrides: ColumnOverrides,
+): boolean {
+    const choice = overrides[key];
+    if (choice !== undefined) return choice;
+    return !hiddenKeys.includes(key);
+}
+
+/** Le colonne che la tabella stampa, nell'ordine originale, con gli override
+ *  applicati sopra la riduzione automatica. */
+export function shownColumnsWith(
+    columns: TableColumn[],
+    hiddenKeys: string[],
+    overrides: ColumnOverrides,
+): TableColumn[] {
+    return columns.filter(col => isColumnVisible(col.key, hiddenKeys, overrides));
+}
+
+/**
+ * Le colonne che l'INDICATORE conta: le vuote su cui l'utente non si e' ancora
+ * espresso.
+ *
+ * Una vuota che l'utente ha spuntato e' sullo schermo, e contarla direbbe
+ * «nascosta» di una colonna visibile. Una vuota che ha tolto di suo e' una sua
+ * scelta, non una riduzione fatta dalla tabella: l'indicatore dichiara cio' che
+ * la tabella ha deciso DA SE', ed e' quello il suo unico mestiere.
+ */
+export function autoHiddenColumnKeys(
+    hiddenKeys: string[],
+    overrides: ColumnOverrides,
+): string[] {
+    return hiddenKeys.filter(key => overrides[key] === undefined);
+}
+
+/** Una voce del pannello Columns. */
+export interface ColumnToggle {
+    key: string;
+    label: string;
+    /** Spuntata = la colonna e' sullo schermo. */
+    checked: boolean;
+    /** Vuota su ogni istanza: e' la nota «empty» accanto all'etichetta. Resta
+     *  vera anche quando l'utente l'ha forzata visibile — il fatto sul modello
+     *  non cambia perche' la si guarda. */
+    empty: boolean;
+    /** Non disattivabile (`name`). */
+    locked: boolean;
+}
+
+/**
+ * Le voci del pannello, `name` in testa e poi le colonne nell'ordine della
+ * tabella. Una lista sola: la spunta E' la visibilita', e non c'e' un secondo
+ * posto in cui la stessa cosa puo' essere vera.
+ */
+export function columnToggles(
+    columns: TableColumn[],
+    hiddenKeys: string[],
+    overrides: ColumnOverrides,
+): ColumnToggle[] {
+    const hidden = new Set(hiddenKeys);
+    /* La voce bloccata rappresenta la colonna FISSA dei nomi, quella che la
+     * tabella stampa fuori da `shownColumns` e che nessuno puo' spegnere: e'
+     * li' per dire che c'e', non per offrire un gesto.
+     *
+     * Ma `tableFeatures` restituisce ogni attributo, `name` compreso, e in un
+     * metamodello che dichiara `name : EString` la tabella lo stampa DUE volte
+     * — la fissa e la feature. Quel doppione e' un difetto noto e fuori dal
+     * perimetro di 10i (misurato il 2026-09-01: la fixture di 10h lo mostra
+     * identico prima e dopo la slice). Qui la voce sintetica si tira indietro
+     * quando la feature c'e', per non aggiungere al pannello una seconda riga
+     * che dice «name»: quella che resta governa il doppione, e la colonna
+     * fissa — che e' cio' che «name non disattivabile» protegge — resta a
+     * schermo comunque, perche' non passa da `shownColumns`. */
+    const declared = columns.some(col => col.key === NAME_COLUMN_KEY);
+    const synthetic: ColumnToggle[] = declared ? [] : [
+        { key: NAME_COLUMN_KEY, label: NAME_COLUMN_KEY, checked: true, empty: false, locked: true },
+    ];
+    return [
+        ...synthetic,
+        ...columns.map(col => ({
+            key: col.key,
+            label: col.label,
+            checked: isColumnVisible(col.key, hiddenKeys, overrides),
+            empty: hidden.has(col.key),
+            locked: false,
+        })),
+    ];
+}
+
 /** Quante pagine servono. Almeno una, anche a zero righe: «pagina 1 di 0» non e'
  *  una posizione. */
 export function pageCount(total: number, size: number = PAGE_SIZE): number {

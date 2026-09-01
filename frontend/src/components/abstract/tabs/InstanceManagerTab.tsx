@@ -115,6 +115,8 @@ import {
 } from './instanceManagerModel';
 import {
     PAGE_SIZE,
+    autoHiddenColumnKeys,
+    columnToggles,
     discriminantEnum,
     emptyColumnKeys,
     filterBySegment,
@@ -122,10 +124,11 @@ import {
     mostPopulatedClassId,
     pageCount,
     pageOf,
+    shownColumnsWith,
     tableColumns,
     tableRow,
     toCsv,
-    visibleColumns,
+    type ColumnOverrides,
     type Discriminant,
     type TableCell,
     type TableRow,
@@ -139,6 +142,12 @@ import './instanceManagerTab.scss';
  *  registro cambia resta indietro senza errore di compilazione. Risolta una volta
  *  al modulo: e' costante. */
 const CLASS_LETTER = entityLetter('class');
+
+/** L'assenza di scelte, condivisa. Un `{}` scritto in linea sarebbe un oggetto
+ *  NUOVO a ogni render, e i tre `useMemo` che lo hanno fra le dipendenze si
+ *  ricalcolerebbero sempre — una tabella che ricostruisce le proprie colonne a
+ *  ogni battuta nel filtro. */
+const EMPTY_OVERRIDES: Readonly<Record<string, boolean>> = Object.freeze({});
 
 export interface InstanceManagerTabProps {
     /** The M1 model this manager is the catalogue of. */
@@ -1250,6 +1259,41 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
      *  in bolla con il numero di righe: una pagina 7 su tre pagine RENDE la terza,
      *  invece di rendere il vuoto e aspettare un effetto che la corregga. */
     const [page, setPage] = useState(1);
+    /** Le scelte esplicite su quali colonne vedere, PER METACLASSE.
+     *
+     *  Una mappa sola annidata, e non uno stato che si azzera cambiando
+     *  metaclasse: le colonne di `State` e quelle di `Transition` non sono le
+     *  stesse colonne, e un record piatto le farebbe collidere sulla prima
+     *  chiave omonima — due metamodelli su tre hanno un `kind` da qualche parte.
+     *  Vive nello stato del tab e non in `localStorage`: e' la posizione di uno
+     *  sguardo dentro una sessione, non una preferenza dell'utente, e R-RAIL-11
+     *  chiude la lista delle chiavi che sopravvivono al reload. */
+    const [columnChoice, setColumnChoice] = useState<Record<string, ColumnOverrides>>({});
+    /** Il pannello Columns e' aperto. Un booleano e non l'id della metaclasse:
+     *  il pannello e' uno, appeso al proprio bottone. */
+    const [columnsOpen, setColumnsOpen] = useState(false);
+    const columnsRef = useRef<HTMLDivElement | null>(null);
+
+    /* Chiusura del pannello: click fuori ed Esc.
+     *
+     * `mousedown` e non `click`: un click che parte dentro il pannello e finisce
+     * fuori (il trascinamento di una selezione di testo) arriva a `window` come
+     * un click sul documento, e chiuderebbe il pannello mentre lo si sta usando.
+     * Il listener e' montato SOLO da aperto — un handler globale che gira
+     * sempre per uno stato che e' falso quasi sempre e' costo senza lavoro. */
+    useEffect(() => {
+        if (!columnsOpen) return;
+        const onDown = (e: MouseEvent) => {
+            if (!columnsRef.current?.contains(e.target as Node)) setColumnsOpen(false);
+        };
+        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setColumnsOpen(false); };
+        window.addEventListener('mousedown', onDown);
+        window.addEventListener('keydown', onKey);
+        return () => {
+            window.removeEventListener('mousedown', onDown);
+            window.removeEventListener('keydown', onKey);
+        };
+    }, [columnsOpen]);
 
     // Name-sorted so the column does not reorder itself when a class is renamed
     // elsewhere. `getMetaclassInfo` is impure (it reads the store and L-proxies),
@@ -1307,10 +1351,42 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
      *  Non sulle filtrate: una misura che dipendesse dal filtro farebbe cambiare
      *  forma alla tabella a ogni battuta. */
     const hiddenColumnKeys = useMemo(() => emptyColumnKeys(rows, columns), [rows, columns]);
+
+    /** Gli override della metaclasse corrente. `{}` quando non ci si e' ancora
+     *  espressi, che e' il caso in cui la riduzione automatica vale intera. */
+    const overrides: ColumnOverrides = columnChoice[selectedClassId ?? ''] ?? EMPTY_OVERRIDES;
+
+    /** Le colonne stampate: l'automatico, con sopra la scelta esplicita. E' la
+     *  stessa `shownColumns` di prima e tiene lo stesso nome, cosi' l'export —
+     *  che gia' la usa — segue la scelta senza un secondo punto da allineare. */
     const shownColumns = useMemo(
-        () => visibleColumns(columns, hiddenColumnKeys),
-        [columns, hiddenColumnKeys],
+        () => shownColumnsWith(columns, hiddenColumnKeys, overrides),
+        [columns, hiddenColumnKeys, overrides],
     );
+
+    /** Quelle che l'indicatore dichiara: le vuote su cui l'utente TACE. */
+    const autoHiddenKeys = useMemo(
+        () => autoHiddenColumnKeys(hiddenColumnKeys, overrides),
+        [hiddenColumnKeys, overrides],
+    );
+
+    /** Le voci del pannello. `name` in testa, bloccata. */
+    const toggles = useMemo(
+        () => columnToggles(columns, hiddenColumnKeys, overrides),
+        [columns, hiddenColumnKeys, overrides],
+    );
+
+    /** Una spunta. Scrive l'override della SOLA metaclasse corrente, e scrive
+     *  sempre un booleano esplicito: togliere la chiave riporterebbe la colonna
+     *  all'automatico, che per una vuota appena spuntata vorrebbe dire vederla
+     *  sparire di nuovo al giro dopo. */
+    const toggleColumn = (key: string, next: boolean) => {
+        if (!selectedClassId) return;
+        setColumnChoice(prev => ({
+            ...prev,
+            [selectedClassId]: { ...(prev[selectedClassId] ?? {}), [key]: next },
+        }));
+    };
 
     /** Le due riduzioni COMPONGONO, in AND: il nome restringe, il segmented
      *  restringe ancora. L'ordine non conta (sono due predicati indipendenti sulla
@@ -1473,6 +1549,12 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
         setBulkTouched({});
         setNav(null);
         setQuery('');
+        // Il pannello si chiude, le SCELTE no: `columnChoice` e' indicizzato per
+        // metaclasse apposta, e tornare su `State` deve ritrovare le colonne
+        // come le si era lasciate. Chiudere il pannello e' un'altra cosa —
+        // resterebbe aperto sopra una lista che nel frattempo e' diventata la
+        // lista di un'altra metaclasse.
+        setColumnsOpen(false);
         // Le due riduzioni sono PER COLLEZIONE: il segmented parla dei literal di
         // un enum che l'altra metaclasse non ha, e una pagina 4 su una collezione
         // che ne ha una sola sarebbe una tabella vuota all'arrivo.
@@ -1504,6 +1586,26 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
         () => classes.every(c => (counts[c.id] ?? 0) === 0),
         [classes, counts],
     );
+
+    /** La COLLEZIONE e' vuota: una metaclasse E' scelta e non ha istanze.
+     *
+     *  Distinta da `modelIsEmpty`, e la distinzione E' il difetto che 10j
+     *  corregge. Misurato il 2026-09-01 sui due casi separati:
+     *   - modello vuoto, metaclasse scelta -> il cartello diceva «This model has
+     *     no instances yet» con «Device · 0 instances» in testata, cioe'
+     *     nominava la cosa sbagliata delle due che aveva sotto gli occhi;
+     *   - modello pieno, metaclasse vuota -> nessun cartello affatto, solo la
+     *     riga «No instance of Device in this model.».
+     *  Sono la stessa domanda («questa collezione e' vuota») e ricevevano due
+     *  risposte diverse, nessuna delle quali nominava la metaclasse come
+     *  soggetto. Da qui una condizione sola per entrambi.
+     *
+     *  E' anche la condizione del chrome: a zero righe il filtro, il segmented,
+     *  l'indicatore, Columns, il footer e la barra della form non hanno nulla su
+     *  cui lavorare. `visible.length === 0` NON e' questa condizione — un filtro
+     *  che non trova nulla lascia una collezione PIENA, e togliergli il campo di
+     *  ricerca toglierebbe l'unico modo di disfare il filtro. */
+    const collectionIsEmpty = !!selectedClass && rows.length === 0;
 
     /** Il nome del modello, per il sottotitolo di provenienza. Letto dalla
      *  `idlookup` come tutto il resto del tab; l'id nudo e' il ripiego, e non
@@ -1959,7 +2061,11 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                 )}
 
                 <div className="instance-manager__toolbar">
-                    {selectedClass && (
+                    {/* 10j — le quattro riduzioni si spengono a collezione vuota.
+                        Non `disabled`: un filtro spento su zero righe dichiara un
+                        limite che non c'e', ed e' lo stesso argomento con cui 10c
+                        ha reso il pager condizionale invece che disabilitato. */}
+                    {selectedClass && !collectionIsEmpty && (
                         <input
                             className="instance-manager__search"
                             type="search"
@@ -1976,7 +2082,7 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                         `State`, e scriverlo qui avrebbe reso la barra muta su ogni
                         altro metamodello. Assente quando la metaclasse non ha un
                         enum a valore singolo con almeno due literal. */}
-                    {discriminant && (
+                    {discriminant && !collectionIsEmpty && (
                         <div
                             className="instance-manager__segmented"
                             role="group"
@@ -2003,14 +2109,71 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                         dica e' un metamodello che sembra piu' povero di quel che
                         e': il conteggio e' li' perche' la riduzione sia leggibile,
                         e il `title` elenca quali. */}
-                    {hiddenColumnKeys.length > 0 && (
+                    {/* 10i — il conteggio passa da `hiddenColumnKeys` alle sole
+                        NON-OVERRIDATE. Con il pannello, una vuota puo' essere
+                        sullo schermo per scelta, e continuare a contarla qui
+                        direbbe «nascosta» di una colonna che si vede. */}
+                    {autoHiddenKeys.length > 0 && !collectionIsEmpty && (
                         <span
                             className="instance-manager__hidden-cols"
-                            title={`Empty on every instance: ${hiddenColumnKeys.join(', ')}`}
+                            title={`Empty on every instance: ${autoHiddenKeys.join(', ')}`}
                         >
                             <i className="bi bi-eye-slash" aria-hidden="true" />
-                            {hiddenColumnKeys.length} empty column{hiddenColumnKeys.length === 1 ? '' : 's'} hidden
+                            {autoHiddenKeys.length} empty column{autoHiddenKeys.length === 1 ? '' : 's'} hidden
                         </span>
+                    )}
+
+                    {/* Il pannello Columns (10i).
+                        Sta accanto all'indicatore perche' e' il gesto che
+                        risponde alla frase: la riga dice «due colonne
+                        nascoste», e il bottone subito dopo e' dove si va a
+                        rivederle. Secondario come Export: il primario della
+                        testata resta la create, uno solo. */}
+                    {classShape && columns.length > 0 && !collectionIsEmpty && (
+                        <div className="instance-manager__columns-wrap" ref={columnsRef}>
+                            <button
+                                type="button"
+                                className="instance-manager__columns"
+                                aria-expanded={columnsOpen}
+                                aria-haspopup="true"
+                                title="Choose which columns the table shows"
+                                onClick={() => setColumnsOpen(o => !o)}
+                            >
+                                <i className="bi bi-layout-three-columns" aria-hidden="true" />
+                                Columns
+                            </button>
+
+                            {columnsOpen && (
+                                <div
+                                    className="instance-manager__columns-panel"
+                                    role="group"
+                                    aria-label={`Columns of ${classShape.key}`}
+                                >
+                                    {toggles.map(t => (
+                                        <label
+                                            key={t.key}
+                                            className={'instance-manager__columns-item'
+                                                + (t.locked ? ' instance-manager__columns-item--locked' : '')}
+                                            title={t.locked
+                                                ? 'The name column is always shown'
+                                                : t.empty ? 'Empty on every instance — check to show it anyway'
+                                                    : undefined}
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                checked={t.checked}
+                                                disabled={t.locked}
+                                                onChange={e => toggleColumn(t.key, e.target.checked)}
+                                            />
+                                            {t.label}
+                                            {t.empty && (
+                                                <span className="instance-manager__columns-empty">empty</span>
+                                            )}
+                                        </label>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     )}
 
                     {classShape && rows.length > 0 && (
@@ -2058,16 +2221,47 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                     raggiungibile se non su un modello che non ha istanze — che e'
                     esattamente il caso che il cartello sotto dichiara, una volta
                     sola e con il nome giusto. */}
-                {modelIsEmpty || !selectedClass ? (
+                {/* 10j — la COLLEZIONE vuota viene prima del modello vuoto, e
+                    l'ordine e' la correzione. Quando una metaclasse e' scelta il
+                    soggetto sullo schermo e' lei: la testata dice «Device · 0
+                    instances», e un cartello che risponde parlando del modello
+                    nomina l'altra cosa. Il ramo del modello resta, e resta VERO,
+                    per il solo caso in cui non c'e' una metaclasse scelta a fare
+                    da soggetto — cioe' il riposo di un modello senza istanze,
+                    dove `mostPopulatedClassId` non ha nulla da preselezionare.
+
+                    La CTA e' `openCreate(cls, null, null)`: LA STESSA chiamata
+                    del bottone in testata e di `outlineCreate` dal nodo modello.
+                    Non un secondo percorso di create — la scorciatoia rootable
+                    della regola Q8 e' superficie, e qui e' la superficie che
+                    risponde alla frase invece di mandare altrove chi la legge.
+
+                    Senza scorciatoia (metaclasse non rootable) il cartello dice
+                    DOVE si crea e non mostra un bottone che non puo' esistere:
+                    e' lo stesso idioma con cui la testata toglie «New» invece di
+                    spegnerlo. */}
+                {collectionIsEmpty && selectedClass ? (
                     <EmptyState
+                        className="instance-manager__empty"
+                        icon="bi-inbox"
+                        title={`No ${selectedClass.name} instances yet`}
+                        description={classShape && !newReason
+                            ? 'Create the first one to see it here.'
+                            : 'Add one from its container in the outline.'}
+                        action={classShape && !newReason
+                            ? {
+                                label: `+ New ${classShape.key}`,
+                                onClick: () => openCreate(classShape.key, null, null),
+                            }
+                            : undefined}
+                    />
+                ) : modelIsEmpty || !selectedClass ? (
+                    <EmptyState
+                        className="instance-manager__empty"
                         icon="bi-inbox"
                         title="This model has no instances yet"
                         description="Create one from a metaclass on the left, or from the outline."
                     />
-                ) : rows.length === 0 ? (
-                    <p className="instance-manager__note">
-                        No instance of {selectedClass.name} in this model.
-                    </p>
                 ) : visible.length === 0 ? (
                     <p className="instance-manager__note">
                         No instance of {selectedClass.name} matches the current filters.
@@ -2305,6 +2499,14 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                 ratificata) — su un 27" una riga di campi larga tutto lo schermo
                 non e' piu' leggibile, e' solo piu' lunga da attraversare con gli
                 occhi. */}
+            {/* 10j — a collezione vuota il pannello non si rende affatto.
+                La barra «Select an instance to edit it» e' il collasso di 10c, e
+                quel collasso risponde a «non hai ancora scelto una riga»: con
+                zero righe non c'e' una riga da scegliere, e la frase promette un
+                gesto che la tabella sopra non offre. Sparisce il pannello e non
+                solo la frase, perche' una card vuota con bordo e ombra sarebbe
+                un contenitore che dichiara un contenuto assente. */}
+            {(isMulti || subjectId || !collectionIsEmpty) && (
             <section
                 className={'instance-manager__pane instance-manager__pane--form'
                     + (isMulti || subjectId ? '' : ' instance-manager__pane--form-collapsed')}
@@ -2515,6 +2717,7 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                 )}
                 </div>
             </section>
+            )}
             </div>
 
             {pendingMulti && (
