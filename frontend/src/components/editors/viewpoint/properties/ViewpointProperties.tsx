@@ -1,4 +1,5 @@
 import React, { useCallback } from 'react';
+import { useSelector } from 'react-redux';
 import { LViewPoint } from '../../../../joiner';
 import { ViewpointType, getViewpointType } from '../../../../view/viewPoint/viewpoint';
 import { FORM_THEME_DEFAULT_NAME, FORM_THEME_NAMES, type FormThemeName } from '../../../../jjform';
@@ -69,6 +70,29 @@ const ViewpointProperties: React.FC<ViewpointPropertiesProps> = ({ viewpoint, re
         (viewpoint as any).formTheme = v === FORM_THEME_INHERIT ? undefined : (v as FormThemeName);
     }, [viewpoint, readOnly]);
 
+    /**
+     * The «applies once this viewpoint is active» hint (slice UX1).
+     *
+     * The select above writes the viewpoint SELECTED in the tree; `IRForm` reads the rung
+     * off the viewpoint ACTIVE in the session (`IRForm.tsx:199`). They are the same object
+     * most of the time, and different exactly when somebody inspects a viewpoint without
+     * activating it — where the write lands correctly and nothing on screen moves. STYLE2's
+     * referto §8 left that case open and named the cure: an affordance in the panel, not a
+     * change of source.
+     *
+     * The SAME source `IRForm` reads, and not a second derivation of «active»: a panel that
+     * decided it from `LProject.viewpoints`, or from the tree selection, could disagree with
+     * the form it is describing, and the hint would then be wrong precisely in the case it
+     * exists for.
+     *
+     * Text only. The select stays enabled and keeps writing in BOTH cases: the write is
+     * legitimate — the theme belongs to the viewpoint, not to the session — and a disabled
+     * control would make a correct action unavailable. No viewpoint active at all is the
+     * divergent case too: the choice is stored and waits.
+     */
+    const activeViewpointId = useSelector((state: any) => state?.viewpoint) as string | undefined;
+    const isActiveViewpoint = !!activeViewpointId && activeViewpointId === viewpoint.id;
+
     return (
         <div className="workbench-properties">
             <h4 className="workbench-properties__section-header">Viewpoint</h4>
@@ -112,6 +136,9 @@ const ViewpointProperties: React.FC<ViewpointPropertiesProps> = ({ viewpoint, re
                     <option value={FORM_THEME_INHERIT}>Default ({FORM_THEME_DEFAULT_NAME})</option>
                     {FORM_THEME_NAMES.map(n => <option key={n} value={n}>{n}</option>)}
                 </select>
+                {!isActiveViewpoint && (
+                    <p className="wp-field__hint">Applies when this viewpoint is active.</p>
+                )}
             </div>
         </div>
     );

@@ -95,6 +95,16 @@
     min-height: 48px;
     font-family: inherit;
   }
+
+  // A note UNDER a control, never a second label (UX1). One step down and muted, the
+  // same #64748b the secondary text of this sheet already uses (.wp-event-item,
+  // .wp-type-segmented__option), so the hint reads as a caption of the field above.
+  &__hint {
+    margin: 6px 0 0;
+    font-size: 12px;
+    line-height: 1.4;
+    color: #64748b;
+  }
 }
 
 // ---------- Toggle row ----------
