@@ -4168,7 +4168,16 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
         if (val && mainkey === 'composition' && c.data.father === c.data.type) {
             // todo: discovere non-trivial loops
             Log.ww('setting ' + this.get_fullname(c) + ' as composition is generating a composition loop, the class has become not instantiable.\nConsider switching to aggregation.');
-            return true;
+            // The write is REFUSED here (a self-composition is legitimately blocked), so the
+            // return says so. It used to be `true`, and the caller had no way to tell an
+            // accepted write from a refused one: measured on `substates` (State -> State) in
+            // `docs/discovery/discovery_2026-08-31_10g_outline_doppi.md` §3, where the shape
+            // reported `composition: false` while the assignment had reported success.
+            // Nobody reads this verdict today — the proxy set trap discards it
+            // (`joiner/proxy.ts:475-479` calls the setter and returns a hard-coded `true`),
+            // and the only other callers are the three delegating wrappers below. So this is
+            // the truth of the return, not a change of behaviour for any caller.
+            return false;
         }
 
         if (!!c.data[mainkey] === val) return true;
