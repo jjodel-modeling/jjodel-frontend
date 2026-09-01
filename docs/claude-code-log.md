@@ -2,6 +2,57 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-09-01 — fix(manager): il pannello Columns esce dalla clip della card (10k-chiusura)
+**Prompt**: emendamento 10k-CHIUSURA. Il pannello Columns era tagliato dall'`overflow:
+hidden` della card tabella. Ordine di preferenza dato dal prompt: (1) portale su
+`document.body` posizionato dal rect del bottone, (2) `position: fixed` senza portale.
+Divieto esplicito: NON togliere l'`overflow: hidden` dalla card (romperebbe i raccordi dei
+raggi, asseriti da 10k). Piu' la domanda sulle caselle del pannello e la verifica per
+sonda con `elementFromPoint` (trappola nota dei rect), z-index sopra la form card,
+click-fuori ancora funzionante, non-regressione 10i.
+**Files touched**: `abstract/tabs/InstanceManagerTab.tsx` (import di `createPortal`,
+`COLUMNS_PANEL_MAX_W` + `computeColumnsPanelStyle`, due stati nuovi — `columnsPanelRef` e
+`columnsRect` — l'effetto di chiusura esteso a scroll/resize, il pannello dentro
+`createPortal`), `abstract/tabs/instanceManagerTab.scss` (blocco `&__columns-panel`:
+`fixed`, `z-index: 30`, `max-width`, via le coordinate; commento del wrapper aggiornato),
+`__tests__/instanceManager10i.test.ts` (due asserzioni riallineate + tre `it` nuovi) e
+`__tests__/instanceManagerFl6.test.ts` (un'asserzione ristretta di perimetro), in
+**3ab498458**; questa entry a parte. La sonda `scripts/smoke/_tmp_10kchiusura_verify.ts`
+non e' committata: `.gitignore:66` ignora `frontend/scripts/smoke/_tmp_*` per disegno.
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-01 00:20 — 10i, il prompt inline che introdusse il pannello
+**Causa**: (c)
+**Regressions**: no — `npm run typecheck` **33** (baseline invariata, conteggio su output
+COMPLETO); `npm run build` exit 0, solo il warning di chunk noto; suite
+`abstract/tabs/__tests__/` **387/387**; `npm run smoke` **GREEN**, 12 passed / 0 failed / 3
+skipped. Le asserzioni nuove provate contro SETTE mutazioni (foglio a `absolute`;
+`max-width` divergente dalla costante del TSX; click-fuori tornato a interrogare il solo
+`columnsRef`; `openUp` costante; scroll non in cattura; portale senza `document.body`;
+una coordinata rimessa nel foglio): 1 rosso ciascuna, verde al ripristino in tutte e sette.
+**Out-of-scope changes**: no — `instanceManagerFl6.test.ts` non era nominato dal prompt ma
+il suo `expect(TSX).not.toContain('window.innerWidth')` era su TUTTO il file, e un popover
+`fixed` DEVE misurare il viewport per non uscirne: l'asserzione e' ristretta al blocco
+della soglia dell'ego, che e' cio' che FL6 dichiara. Nessun sorgente fuori perimetro.
+**Layer Impact Report**: not-required — nessun file di §3.1, zero creatori D, zero
+`TRANSACTION`, zero scritture. Il delta e' dove vive un nodo del DOM.
+**Smoke visivo**: passato — `_tmp_10kchiusura_verify.ts`, **before 49/7, after 56/0**, zero
+errori di pagina, stesso strumento su entrambi i lati. Il criterio e'
+`document.elementFromPoint` sul centro dell'ULTIMA voce, dopo averla portata in vista con
+`scrollTop`: nel before il punto (1577, 468) restituisce `instance-manager__collapsed` —
+li' il pannello era stato tagliato — e nell'after restituisce
+`instance-manager__columns-item`. Il before sfora anche il viewport a destra (1672 su
+1600), che l'after chiude col clamp. Le caselle 16x16 / raggio 4 / bordo `#cbd5e1` /
+spuntata `#334155` risultano IDENTICHE nei due giri: la regola di 10k e' su classi BEM
+piatte, non discendenti di `.instance-manager`, e raggiunge il portale per costruzione —
+il sospetto del prompt e' misurato e infondato.
+**Notes**: due rettifiche al disegno della sonda, entrambe §5. (1) La fixture di 10i (sei
+colonne) NON riproduce il difetto: il pannello finiva a 335px contro un fondo card a 433 e
+il before sarebbe passato. Servono dodici attributi in piu' su `State`. (2) L'ultima voce
+non e' colpibile nemmeno dopo il fix se non la si porta in vista con `scrollTop`: il
+pannello ha `max-height` e scorre da se', e quel rosso avrebbe parlato dello scorrimento.
+**Prompt document name**: emendamento 10k-CHIUSURA (in chat) — 2026-09-01 13:50
+
+
 ## 2026-09-01 — fix(manager): Export e New salgono in testata, e i tre rossi che ho committato (10k-CHIUSURA)
 **Prompt**: `docs/prompts/PROMPT_10k_ritocchi_giro2.md`, punto 2 **emendato alle 13:21** — due
 minuti dopo il commit del primo giro. Non piu' solo titolo e sottotitolo fuori dalla card: riga di
