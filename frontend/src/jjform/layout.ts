@@ -37,9 +37,12 @@
  *
  *   1. the metamodel type — `AttrShape.type`, plus cardinality and reference-ness,
  *      which settle `collection` and `reference` outright;
- *   2. a metamodel annotation — `jjodel/renderer=…`, mapped through
- *      `RENDERER_WIDTH_KIND`. A value outside the map falls THROUGH rather than
- *      blanking the field, the way `valueRenderer` treats `rendererOverride`;
+ *   2. a metamodel annotation. TWO of them, read in this order: `jjodel/renderer=…`
+ *      mapped through `RENDERER_WIDTH_KIND`, then `jjodel/multiline=true`. A
+ *      renderer outside the map falls THROUGH rather than blanking the field, the
+ *      way `valueRenderer` treats `rendererOverride` — and falling through means
+ *      `multiline` still gets its turn, which is the whole reason it is second and
+ *      not an `else`;
  *   3. the type NAME, parsed syntactically — a set membership test, not a
  *      heuristic, and only over names rung 1 left at `unknown` or `string`.
  *
@@ -57,7 +60,11 @@ import type { AttrShape, ClassShape, MetamodelShape, RefShape } from './shape';
 export const GRID_COLUMNS = 12;
 
 /**
- * The ceiling the STRETCH may not pass — amendment A2 (10k, 01-09-2026).
+ * The ceiling the STRETCH may not pass — amendment A3 in the spec (01-09-2026).
+ *
+ * The comment below has called it «A2» since 10k wrote it, and the spec's A2 is a
+ * different amendment (the legacy `FormTheme` literals). The id is A3; the name in
+ * the code is not renamed, per rule 2. This line is the correspondence.
  *
  * Half a row. Rule 2 lets the last writable scalar of a short row absorb the free
  * columns, and unbounded that turns a text input into a banner: measured on
@@ -251,14 +258,19 @@ function syntacticKind(typeName: string | undefined): WidthKind | null {
 /**
  * The annotations the layout reads, keyed by feature name.
  *
- * `renderer` is `jjodel/renderer=…` as `rowViewAnnotations` parses it, threaded in
+ * Both are `jjodel/…` declarations as `rowViewAnnotations` parses them, threaded in
  * by the host: `AttrShape` does not carry annotations and is not being widened to,
  * since the shape is the METAMODEL's structure and an annotation is a decoration
  * over it. Absent map, absent entry and unrecognised value are all the same
  * answer — rung 2 did not fire.
+ *
+ * `multiline` is a boolean and not a second renderer name on purpose: a new value of
+ * `renderer` would have to join `DECLARABLE_RENDERERS`, which is typed `RendererKind[]`
+ * and propagates to the switch of the Row view — that is, to the CANVAS. A width is
+ * not a notation, and this key is the form's alone.
  */
 export interface LayoutAnnotations {
-    [featureKey: string]: { renderer?: string } | undefined;
+    [featureKey: string]: { renderer?: string; multiline?: boolean } | undefined;
 }
 
 /** Which rung decided, in the spec's own numbering. */
@@ -327,11 +339,27 @@ export function widthOf(
             break;
     }
 
-    // Rung 2 — the annotation.
+    // Rung 2 — the annotation. The renderer first: it is rule 1 of the ladder, and a
+    // `jjodel/renderer=code` that decides a width today must keep deciding it.
     const declared = annotations?.[feature.key]?.renderer;
     if (declared) {
         const kind = RENDERER_WIDTH_KIND[declared];
         if (kind) return verdict(kind, 'annotation', `declared jjodel/renderer=${declared}`);
+    }
+
+    // Rung 2b — `jjodel/multiline=true`, the gradino that used to be missing: the only
+    // way to ask for a growing prose box WITHOUT renaming the attribute's type. It sits
+    // after the renderer block rather than inside an `else`, so a renderer that settles a
+    // width still wins (`code` → span 6) while one that settles none (`enumChip`, or a
+    // name nobody knows) falls through and leaves the declaration its turn.
+    //
+    // The guard is the family rung 1 has already decided, never the type NAME: `boolean`,
+    // `number` and `enum` returned above, `many` and reference-ness returned before them,
+    // and `date` is excluded here because it survived the switch as a family. What is left
+    // is the string/unknown floor, which is exactly what a textarea can hold.
+    if (annotations?.[feature.key]?.multiline === true
+        && (attr.type === 'string' || attr.type === 'unknown')) {
+        return verdict('text', 'annotation', 'declared jjodel/multiline=true');
     }
 
     // Rung 3 — the type name, parsed.
@@ -422,7 +450,8 @@ export interface FormLayout {
  * metamodel put a multi or a derived attribute at the end of a short row, which is a
  * thing to go and fix in the metamodel rather than to paper over in the packer.
  *
- * AMENDMENT A2 (10k, 01-09-2026): the stretch stops at `STRETCH_MAX`, half a row.
+ * AMENDMENT A3 (spec; called «A2» in this file since 10k, see `STRETCH_MAX`): the
+ * stretch stops at `STRETCH_MAX`, half a row.
  * Since every base span is 3, 6 or 12 and every `free` is a multiple of 3, the whole
  * of the change is: a quarter-row field still grows, and it grows to a half; a
  * half-row field no longer grows at all. `entryAction` beside `timeout` on the State
@@ -440,7 +469,7 @@ export function packRows(fields: readonly LayoutField[]): LayoutRow[] {
         if (current.length === 0) return;
         const free = GRID_COLUMNS - used;
         const last = current[current.length - 1];
-        // Amendment A2: the stretch stops at half a row. `grown` is what the field
+        // Amendment A3: the stretch stops at half a row. `grown` is what the field
         // actually takes; when the cap bites, part of the free space survives as a
         // hole — and a hole is information, which is the same argument A1 already
         // makes for the read-only case two paragraphs up.

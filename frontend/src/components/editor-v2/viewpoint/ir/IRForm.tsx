@@ -253,15 +253,19 @@ export function IRForm({ objectId, defaultTheme = 'plain' }: IRFormProps) {
     /**
      * Rung 2 of the width ladder, keyed by feature name.
      *
-     * `jjodel/renderer=…` as `describeSlot` already parsed it off the feature proxy, threaded
-     * in rather than re-read: `AttrShape` does not carry annotations and is not being widened
-     * to, which is FL1's own reason for taking this as a parameter. A feature with no
-     * declaration contributes an entry with no `renderer`, which the ladder reads as «rung 2
-     * did not fire» — the same answer as an absent entry, so the map needs no filtering.
+     * `jjodel/renderer=…` and `jjodel/multiline=true` as `describeSlot` already parsed them
+     * off the feature proxy, threaded in rather than re-read: `AttrShape` does not carry
+     * annotations and is not being widened to, which is FL1's own reason for taking this as a
+     * parameter. A feature with no declaration contributes an entry with neither key, which
+     * the ladder reads as «rung 2 did not fire» — the same answer as an absent entry, so the
+     * map needs no filtering.
      */
     const layoutAnnotations = useMemo<LayoutAnnotations>(() => {
         const out: LayoutAnnotations = {};
-        for (const f of visible) out[f.name] = { renderer: f.annotations?.renderer };
+        for (const f of visible) out[f.name] = {
+            renderer: f.annotations?.renderer,
+            multiline: f.annotations?.multiline,
+        };
         return out;
     }, [visible]);
 

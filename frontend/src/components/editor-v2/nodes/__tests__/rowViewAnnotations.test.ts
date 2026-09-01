@@ -15,10 +15,11 @@ import {
     parseRowViewAnnotations,
     readRowViewAnnotations,
 } from '../rowViewAnnotations';
+import { metamodelRenderer, type SlotShape } from '../valueRenderer';
 
 describe('the wire format', () => {
     it('round-trips every key', () => {
-        for (const key of ['renderer', 'unit', 'min', 'max'] as const) {
+        for (const key of ['renderer', 'unit', 'min', 'max', 'multiline'] as const) {
             expect(annotationKeyOf(annotationSource(key, 'v'))).toBe(key);
         }
     });
@@ -39,10 +40,11 @@ describe('the wire format', () => {
 });
 
 describe('parseRowViewAnnotations', () => {
-    it('reads the four keys', () => {
+    it('reads the five keys', () => {
         expect(parseRowViewAnnotations([
             'jjodel/renderer=swatch', 'jjodel/unit=px', 'jjodel/min=0', 'jjodel/max=100',
-        ])).toEqual({ renderer: 'swatch', unit: 'px', min: 0, max: 100 });
+            'jjodel/multiline=true',
+        ])).toEqual({ renderer: 'swatch', unit: 'px', min: 0, max: 100, multiline: true });
     });
 
     it('an undeclared key is ABSENT, not defaulted', () => {
@@ -97,5 +99,79 @@ describe('readRowViewAnnotations — off an idlookup', () => {
     it('finds the annotation to overwrite, so a second declaration is never stacked', () => {
         expect(findRowViewAnnotationId(lookup, 'attr1', 'unit')).toBe('a1');
         expect(findRowViewAnnotationId(lookup, 'attr1', 'min')).toBeNull();
+    });
+});
+
+// ─── The third family: `multiline`, a boolean (TXT1) ─────────────────────────
+
+describe('multiline — the boolean family', () => {
+    it('is the fifth key of the union, so a source carrying it is OURS', () => {
+        // Before TXT1 this returned null and the declaration was dropped at the door.
+        expect(annotationKeyOf('jjodel/multiline=true')).toBe('multiline');
+        expect(annotationSource('multiline', 'true')).toBe('jjodel/multiline=true');
+    });
+
+    it('reads the two words the writer emits, as booleans and not as strings', () => {
+        expect(parseRowViewAnnotations(['jjodel/multiline=true'])).toEqual({ multiline: true });
+        expect(parseRowViewAnnotations(['jjodel/multiline=false'])).toEqual({ multiline: false });
+    });
+
+    it('DROPS anything else rather than coercing it — the argument that settles the NaN', () => {
+        // A value that means nothing here must not arrive downstream looking like a
+        // decision. `1` and `True` are the two an importer is most likely to produce,
+        // and they are dropped exactly as `jjodel/min=abc` is.
+        for (const bad of ['si', '1', '0', 'True', 'yes', '']) {
+            expect(parseRowViewAnnotations([`jjodel/multiline=${bad}`]).multiline,
+                `value ${JSON.stringify(bad)}`).toBeUndefined();
+        }
+    });
+
+    it('tolerates surrounding whitespace, which an imported model can carry', () => {
+        expect(parseRowViewAnnotations(['jjodel/multiline= true ']).multiline).toBe(true);
+    });
+
+    it('is absent, not false, when nothing declares it', () => {
+        expect(parseRowViewAnnotations(['jjodel/renderer=code']).multiline).toBeUndefined();
+        expect(readRowViewAnnotations({ a: { annotations: [] } }, 'a').multiline).toBeUndefined();
+    });
+
+    it('reads off an idlookup like every other key', () => {
+        const lookup = {
+            attr: { className: 'DAttribute', annotations: ['m1'] },
+            m1: { className: 'DAnnotation', source: 'jjodel/multiline=true' },
+        };
+        expect(readRowViewAnnotations(lookup, 'attr')).toEqual({ multiline: true });
+        expect(findRowViewAnnotationId(lookup, 'attr', 'multiline')).toBe('m1');
+    });
+});
+
+describe('the canvas and the table do not see the fifth key', () => {
+    // Not asserted, SHOWN: the Row view and the instance table both build their slot by
+    // NAMING four fields (`jjomTransformers.ts:456-459`, `instanceTable.ts:168-171`).
+    // The projection below is that destructuring, and the verdict either side of a
+    // multiline declaration has to be the same object.
+    const project = (a: ReturnType<typeof parseRowViewAnnotations>, value: string): SlotShape => ({
+        value,
+        typeName: 'EString',
+        rendererOverride: a.renderer,
+        unit: a.unit,
+        min: a.min,
+        max: a.max,
+    });
+
+    it('a multiline declaration leaves the metamodel verdict untouched', () => {
+        const bare = parseRowViewAnnotations([]);
+        const declared = parseRowViewAnnotations(['jjodel/multiline=true']);
+        expect(declared.multiline).toBe(true);   // positive control: the parse DID happen
+        expect(metamodelRenderer(project(declared, 'note')))
+            .toEqual(metamodelRenderer(project(bare, 'note')));
+    });
+
+    it('and it does not disturb a declaration the canvas DOES read', () => {
+        const both = parseRowViewAnnotations(['jjodel/renderer=code', 'jjodel/multiline=true']);
+        const codeOnly = parseRowViewAnnotations(['jjodel/renderer=code']);
+        expect(metamodelRenderer(project(both, 'x')))
+            .toEqual(metamodelRenderer(project(codeOnly, 'x')));
+        expect(metamodelRenderer(project(both, 'x')).kind).toBe('code');
     });
 });

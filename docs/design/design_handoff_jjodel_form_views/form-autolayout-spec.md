@@ -1,6 +1,6 @@
 # Form auto-layout + themes — specification
 
-Status: ratified 31-08-2026; amended 31-08-2026 (FL1/FL4 arbitration, see "Amendments").
+Status: ratified 31-08-2026; amended 31-08-2026 (FL1/FL4 arbitration) and 01-09-2026 (10k/TXT1), see "Amendments".
 
 **This text is normative. The boards are illustrative.** `Form Auto Layout.dc.html` lives in the design project and not in this repository, so it cannot be diffed, cited by line, or checked by a test; where it and this text disagree, THIS TEXT decides, and the board is read as an example of the rules rather than as a source of them. That is the reverse of what the first draft of this line said, and the reversal is deliberate: FL1 measured three divergences between the board's hand-tuned rows and the rows the rules below produce (`docs/discovery/discovery_2026-08-31_fl1_divergenze_righe_attese.md`), and a rule that loses to a picture is not a rule. Companion boards, on the same footing: `Manager Admin Form Bottom.dc.html` (form below the table, ego-diagram neighborhood in the expandable row), `Manager Admin Form Modal.dc.html` (modal alternative, kept).
 
@@ -91,3 +91,47 @@ They are reconciled by an ADAPTER, in one place
 the author stated it, is folded on top as a more-specific cascade layer. The saved IR stays
 readable by every reader that already reads it; the new preset vocabulary stays the one the
 renderer spends.
+
+### A3 — the stretch stops at half a row, and the base width it does not touch (01-09-2026, 10k + TXT1)
+
+Two halves of one sentence, written together because each is the other's exception.
+
+**The cap.** Rule 2 lets the last writable scalar of a short row absorb the free columns.
+Unbounded, that turns a text input into a banner: measured on `State` of
+`StateMachine.ecore`, `entryAction` came out at span 9 beside a `timeout` at span 3 — a
+75/25 row where the metamodel had declared two fields of ordinary width. The stretch stops
+at **half a row**. Since every base span is 3, 6 or 12 and every remainder is a multiple of
+3, the whole of the change is: a quarter-row field still grows, and it grows to a half; a
+half-row field no longer grows at all. What the cap leaves behind is the same hole A1
+leaves, and it says the same thing — the row is short because of what comes next, not
+because a field deserved three quarters of it.
+
+**The exception.** The cap is on what the packer ADDS, never on the width the registry
+assigns. `text` and `richtext` are a span of 12 in the table above, and a field that STARTS
+at 12 keeps it: it fills its row, there is nothing free to absorb, and the cap is never
+consulted. This is not a break in the rule; it is the rule read properly, and until now it
+lived only in a code comment.
+
+That distinction is what makes the metamodel declaration reachable. `jjodel/multiline=true`
+on a scalar string attribute resolves at **rung 2** to the `text` width class — span 12,
+textarea — which is the third way to ask for a growing prose box and the first one that is
+a fact about the metamodel. The other two are an author override inside a view, which has
+to be repeated in every viewpoint, and renaming the attribute's type to `Text`, which
+changes the user's model for a question of presentation. A cap read as a cap on base widths
+would have closed that road the day it opened.
+
+Rung 2 reads the two declarations in order: `jjodel/renderer=…` first, because it is rule 1
+of the ladder and a renderer that settles a width today must go on settling it, then
+`jjodel/multiline`. A renderer that settles no width falls through and leaves the multiline
+declaration its turn. The two are not exclusive, and the authoring panel offers both
+without hiding either: it says which one is deciding.
+
+**Checkable form:** `packRows` never returns a field whose `span` exceeds `STRETCH_MAX`
+*as a result of the stretch*; a field with `baseSpan === 12` comes out at 12 with
+`stretched === false`; `widthOf` on a scalar string attribute with `multiline` declared
+returns `{ kind: 'text', span: 12, widget: 'textarea', rung: 'annotation' }`, and the same
+attribute with `renderer=code` also declared returns the `code` class at span 6.
+
+**Id note.** `jjform/layout.ts` has called this cap «amendment A2» since it was written, and
+the spec's A2 is a different amendment (the legacy `FormTheme` literals). The id is **A3**;
+the name inside the code is not renamed, and this line is the correspondence.

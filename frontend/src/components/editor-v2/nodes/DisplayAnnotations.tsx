@@ -9,10 +9,25 @@
  * of the product because these are facts about the attribute and not about a
  * view: they govern every instance of the class, and a FormSpec cannot own them.
  *
+ * ── Two toggles over two different keys, and why neither hides the other ───
+ *
+ * `Code` writes `jjodel/renderer=code`; `Multiline` writes `jjodel/multiline=true`.
+ * They may BOTH be on, and nothing here prevents it: at rung 2 of the width ladder
+ * the renderer is read first, so `code` takes the width (span 6, mono) and the
+ * multiline declaration keeps sitting on the attribute, unread for now and read
+ * again the moment the renderer is cleared. Making them exclusive would mean
+ * deleting one of the user's two declarations on their behalf to enforce a
+ * precedence the ladder already enforces on its own.
+ *
+ * So the toggle carries a HINT instead — «Overridden by renderer: code» — and the
+ * hint's condition is `multilineOverriddenBy`, which asks the same map the ladder
+ * asks. Informing, not forbidding: the same argument the Code toggle already makes
+ * one paragraph down for not rendering itself disabled.
+ *
  * ── Where the fourth field went ────────────────────────────────────────────
  *
  * There is no `jjodel/code` and there never was: `rowViewAnnotations.ts` owns
- * four keys and that is not one of them. What renders a value in monospace is
+ * five keys and that is not one of them. What renders a value in monospace is
  * the `code` RENDERER, already in `DECLARABLE_RENDERERS`, so the Code toggle
  * writes `jjodel/renderer=code` and clears it. That has one consequence worth
  * stating: the toggle and the inspector's menu are two controls over one key.
@@ -40,6 +55,7 @@ import { RENDERER_LABELS } from './RendererInspector';
 import {
     boundToWrite,
     displayFieldsFor,
+    multilineOverriddenBy,
     unitToWrite,
     type FieldCommit,
 } from './displayAnnotationFields';
@@ -74,11 +90,12 @@ function Field(props: { label: string; children: React.ReactNode }) {
 }
 
 function DisplayAnnotations({ featureId, typeName, enumLiteralNames, isMany }: DisplayAnnotationsProps) {
-    // Equality on the four parsed values, so the group re-renders when a
+    // Equality on the five parsed values, so the group re-renders when a
     // declaration changes and not on every unrelated store write.
     const annotations = useSelector(
         (state: any) => readRowViewAnnotations(state?.idlookup ?? {}, featureId),
-        (a, b) => a.renderer === b.renderer && a.unit === b.unit && a.min === b.min && a.max === b.max,
+        (a, b) => a.renderer === b.renderer && a.unit === b.unit && a.min === b.min && a.max === b.max
+            && a.multiline === b.multiline,
     );
 
     const [unitDraft, setUnitDraft] = useState('');
@@ -99,6 +116,10 @@ function DisplayAnnotations({ featureId, typeName, enumLiteralNames, isMany }: D
     const codeDeclared = declaredRenderer === 'code';
     // Not shown disabled: not shown. The badge below states what is declared.
     const showCodeToggle = gating.code && (declaredRenderer === undefined || codeDeclared);
+    const multilineDeclared = annotations.multiline === true;
+    // The renderer that is taking the width decision, when one is — shown only while
+    // `multiline` is actually on, since with the toggle off there is nothing to override.
+    const overriddenBy = multilineDeclared ? multilineOverriddenBy(declaredRenderer) : null;
 
     const commit = (key: RowViewAnnotationKey, outcome: FieldCommit) => {
         if (outcome.action === 'ignore') return;
@@ -109,6 +130,16 @@ function DisplayAnnotations({ featureId, typeName, enumLiteralNames, isMany }: D
     const toggleCode = (on: boolean) => {
         if (on) declareRowViewAnnotation(featureId, 'renderer', 'code');
         else clearRowViewAnnotation(featureId, 'renderer');
+    };
+
+    // The wire value is the string `'true'`, which is what `parseRowViewAnnotations`
+    // reads back as the boolean: the write path's signature is `string | number` and it
+    // is not widened for one caller. Off CLEARS rather than writing `false` — an absent
+    // declaration and a denied one read the same at rung 2, and clearing is what every
+    // other control in this group does with an emptied field.
+    const toggleMultiline = (on: boolean) => {
+        if (on) declareRowViewAnnotation(featureId, 'multiline', 'true');
+        else clearRowViewAnnotation(featureId, 'multiline');
     };
 
     // The verdict the metamodel alone settles. Bounds come from the DRAFTS'
@@ -186,6 +217,27 @@ function DisplayAnnotations({ featureId, typeName, enumLiteralNames, isMany }: D
                         onClick={(e) => { e.stopPropagation(); toggleCode(!codeDeclared); }}
                     />
                 </div>
+            )}
+
+            {gating.multiline && (
+                <>
+                    <div className="jj-toggle-row jj-display__toggle-row" onClick={() => toggleMultiline(!multilineDeclared)}>
+                        <span className="jj-toggle-row__label">Multiline</span>
+                        <button
+                            type="button"
+                            role="switch"
+                            aria-checked={multilineDeclared}
+                            aria-label="Edit this attribute in a multiline box"
+                            className={`jjodel-switch${multilineDeclared ? ' active' : ''}`}
+                            onClick={(e) => { e.stopPropagation(); toggleMultiline(!multilineDeclared); }}
+                        />
+                    </div>
+                    {overriddenBy && (
+                        <div className="jj-display__note">
+                            Overridden by renderer: {overriddenBy}
+                        </div>
+                    )}
+                </>
             )}
 
             <div className="jj-display__verdict">

@@ -181,6 +181,76 @@ describe('rung 2 — the annotation', () => {
     });
 });
 
+// ─── Rung 2b: `jjodel/multiline=true` (TXT1) ─────────────────────────────────
+//
+// The gradino that used to be missing. Before it, an `EString` that wanted a growing
+// prose box had two ways to get one and neither was the metamodel: an author override
+// in the view, or RENAMING the attribute's type to `Text`. This is the third.
+
+describe('rung 2b — the multiline declaration', () => {
+    const ml: LayoutAnnotations = { note: { multiline: true } };
+
+    it('promotes a scalar EString to the whole-row textarea', () => {
+        const f = attr({ key: 'note', typeName: 'EString', type: 'string' });
+        expect(widthOf(f, SHAPE, ml)).toMatchObject({
+            kind: 'text', span: 12, widget: 'textarea', rung: 'annotation',
+        });
+        // The same attribute with nothing declared is a half row of plain text: the
+        // declaration is the whole of the difference.
+        expect(widthOf(f, SHAPE)).toMatchObject({ kind: 'string', span: 6, widget: 'text', rung: 'type' });
+    });
+
+    it('reaches the unknown floor too — a user datatype is a string here', () => {
+        expect(widthOf(attr({ key: 'note', typeName: 'Celsius' }), SHAPE, ml))
+            .toMatchObject({ kind: 'text', span: 12, rung: 'annotation' });
+    });
+
+    it('declares NOTHING where rung 1 has already decided', () => {
+        // One case per rung-1 verdict. Each is the same annotation on a feature whose
+        // width the metamodel's own structure settled before rung 2 could run.
+        const cases: Array<[string, ReturnType<typeof attr> | ReturnType<typeof ref>, string]> = [
+            ['boolean', attr({ key: 'note', typeName: 'EBoolean', type: 'boolean' }), 'boolean'],
+            ['number', attr({ key: 'note', typeName: 'EInt', type: 'number' }), 'number'],
+            ['enum', attr({ key: 'note', typeName: 'StateKind', type: 'enum', enum: 'StateKind' }), 'enumShort'],
+            ['date', attr({ key: 'note', typeName: 'EDate', type: 'date' }), 'date'],
+            ['reference', ref({ key: 'note', of: 'Transition' }), 'reference'],
+            ['multivalued', attr({ key: 'note', typeName: 'EString', type: 'string', many: true, upper: -1 }), 'collection'],
+        ];
+        for (const [label, feature, expected] of cases) {
+            const v = widthOf(feature, SHAPE, ml);
+            expect(v.kind, label).toBe(expected);
+            expect(v.rung, label).toBe('type');
+        }
+    });
+
+    it('LOSES to a renderer that settles a width — `code` keeps its half row', () => {
+        // Rule 1 of the ladder, and rule 3 of CLAUDE.md: a `renderer=code` that decides a
+        // width today must go on deciding it.
+        const both: LayoutAnnotations = { note: { renderer: 'code', multiline: true } };
+        expect(widthOf(attr({ key: 'note', typeName: 'EString', type: 'string' }), SHAPE, both))
+            .toMatchObject({ kind: 'code', span: 6, widget: 'code', rung: 'annotation' });
+    });
+
+    it('but a renderer that settles NO width falls through and leaves it its turn', () => {
+        // This is why rung 2b is placed after the renderer block and not inside an `else`.
+        const junk: LayoutAnnotations = { note: { renderer: 'not-a-renderer', multiline: true } };
+        expect(widthOf(attr({ key: 'note', typeName: 'EString', type: 'string' }), SHAPE, junk))
+            .toMatchObject({ kind: 'text', span: 12, rung: 'annotation' });
+    });
+
+    it('fires on `true` alone: `false` and an absent key are the same answer', () => {
+        const f = attr({ key: 'note', typeName: 'EString', type: 'string' });
+        expect(widthOf(f, SHAPE, { note: { multiline: false } })).toMatchObject({ kind: 'string', rung: 'type' });
+        expect(widthOf(f, SHAPE, { note: {} })).toMatchObject({ kind: 'string', rung: 'type' });
+        expect(widthOf(f, SHAPE, {})).toMatchObject({ kind: 'string', rung: 'type' });
+    });
+
+    it('is keyed by feature, so it does not leak onto the neighbour', () => {
+        const other = attr({ key: 'title', typeName: 'EString', type: 'string' });
+        expect(widthOf(other, SHAPE, ml)).toMatchObject({ kind: 'string', span: 6 });
+    });
+});
+
 // ─── Rung 3: the type name, parsed ───────────────────────────────────────────
 
 describe('rung 3 — the type name parsed syntactically', () => {
@@ -361,6 +431,30 @@ describe('packing — the stretch', () => {
         const rows = packRows([field('note', 12)]);
         expect(rows[0].fields[0]).toMatchObject({ span: 12, baseSpan: 12, stretched: false });
         expect(rows[0].free).toBe(0);
+    });
+
+    // ── L'eccezione, presa dal capo dell'annotation (A3 nella spec, TXT1) ─────
+
+    it('un `multiline` dichiarato arriva a 12 e li TIENE: il tetto e\' sullo stretch', () => {
+        // Fine a fine, dal verdetto al packer, che e\' l\'unico modo di provarlo: il tetto
+        // e\' un `Math.min` sullo stretch, e un campo che parte a 12 non passa mai di li.
+        const ml: LayoutAnnotations = { note: { multiline: true } };
+        const note = layoutField(attr({ key: 'note', typeName: 'EString', type: 'string' }), SHAPE, ml);
+        expect(note).toMatchObject({ span: 12, baseSpan: 12, widget: 'textarea', rung: 'annotation' });
+        const rows = packRows([note]);
+        expect(rows[0].fields[0]).toMatchObject({ span: 12, stretched: false });
+        expect(rows[0].free).toBe(0);
+        expect(STRETCH_MAX).toBe(6);   // controllo positivo: il tetto c'e\' ancora
+    });
+
+    it('e il tetto resta intatto per i NON-multiline della stessa riga', () => {
+        // La stessa annotation su un solo campo: il vicino non annotato non cresce oltre 6.
+        const ml: LayoutAnnotations = { note: { multiline: true } };
+        const title = layoutField(attr({ key: 'title', typeName: 'EString', type: 'string' }), SHAPE, ml);
+        const flag = layoutField(attr({ key: 'flag', typeName: 'EBoolean', type: 'boolean' }), SHAPE, ml);
+        const rows = packRows([flag, title]);
+        expect(rows[0].fields.map(f => [f.key, f.span])).toEqual([['flag', 3], ['title', 6]]);
+        expect(rows[0].free).toBe(3);
     });
 });
 

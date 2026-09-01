@@ -15,7 +15,12 @@
  *     between them (`valueRenderer.ts`, `decide('progress')`);
  *   - the monospace treatment only means something on text. On a number it
  *     would fight the numeric renderer for the same declaration, and on a
- *     boolean or a date there is nothing to set in monospace.
+ *     boolean or a date there is nothing to set in monospace;
+ *   - the multiline box only means something on text, and for the SAME reason,
+ *     which is why it rides the same `textual` reading rather than a second one.
+ *     A toggle offered on an `EInt` would promise a width the ladder refuses to
+ *     give it: `widthOf` gates rung 2b on the string/unknown floor, and a control
+ *     that can be switched on with no effect is worse than one that is absent.
  *
  * Anything that is not a number, a boolean, a date, a declared colour or an
  * enumeration counts as text here. That is deliberately the wide reading: a
@@ -23,6 +28,7 @@
  * library is concerned, and `truncatedText` is the library's floor.
  */
 
+import { RENDERER_WIDTH_KIND } from '../../../jjform/layout';
 import { isBooleanType, isColorType, isDateType, isNumericType } from './valueRenderer';
 
 export interface DisplayFieldGating {
@@ -32,6 +38,8 @@ export interface DisplayFieldGating {
     bounds: boolean;
     /** `jjodel/renderer=code` — text types only. */
     code: boolean;
+    /** `jjodel/multiline=true` — text types only, same reading as `code`. */
+    multiline: boolean;
 }
 
 export function displayFieldsFor(typeName: string | undefined, hasEnumLiterals: boolean): DisplayFieldGating {
@@ -41,12 +49,32 @@ export function displayFieldsFor(typeName: string | undefined, hasEnumLiterals: 
         && !isDateType(typeName)
         && !isColorType(typeName)
         && !hasEnumLiterals;
-    return { unit: numeric, bounds: numeric, code: textual };
+    return { unit: numeric, bounds: numeric, code: textual, multiline: textual };
+}
+
+/**
+ * The renderer that takes the width decision away from a `multiline` declaration,
+ * or null when none does.
+ *
+ * The two toggles are NOT mutually exclusive and the UI does not pretend they are:
+ * both may be on, both are written, and neither erases the other. What the reader
+ * needs is the one fact the panel would otherwise hide — that at rung 2 the
+ * renderer is read first, so with `renderer=code` declared the box stays at span 6
+ * whatever `multiline` says. Informing, not forbidding.
+ *
+ * Read off `RENDERER_WIDTH_KIND` rather than spelled `=== 'code'`: that map IS the
+ * set of renderers that settle a width, so a sixth entry there cannot leave this
+ * hint behind. A renderer the map does not name (`enumChip`, `progress`, or one
+ * nobody knows) settles no width, falls through, and overrides nothing.
+ */
+export function multilineOverriddenBy(renderer: string | undefined): string | null {
+    if (!renderer) return null;
+    return RENDERER_WIDTH_KIND[renderer] ? renderer : null;
 }
 
 /** True when the group would render no editable field at all. */
 export function hasNoDisplayFields(gating: DisplayFieldGating): boolean {
-    return !gating.unit && !gating.bounds && !gating.code;
+    return !gating.unit && !gating.bounds && !gating.code && !gating.multiline;
 }
 
 /**

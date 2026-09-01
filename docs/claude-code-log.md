@@ -2,6 +2,53 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-09-01 — feat(form): `jjodel/multiline` porta un EString alla textarea che cresce (TXT1)
+**Prompt**: TXT1 fase 2, go-ahead sul referto
+`docs/discovery/discovery_2026-09-01_txt1_annotation_multiline.md`. Decisioni gia' prese:
+quinta chiave del carrier, terza famiglia di parsing (booleana), rung 2 **dopo** il blocco
+renderer; i due toggle possono stare accesi insieme, con un hint invece di un divieto;
+`FormWidget.textarea` (GrowTextWidget) e non `WidgetKind.textarea` (JjEL); emendamento A3
+alla spec con la collisione di id A2 dichiarata; commento stale in testa a
+`rowViewAnnotations.ts` corretto; braccio 3.0 della sonda di Fase 1 girato di verso.
+**Files touched**: `editor-v2/nodes/{rowViewAnnotations.ts, displayAnnotationFields.ts,
+DisplayAnnotations.tsx}`, `jjform/layout.ts`, `editor-v2/viewpoint/ir/IRForm.tsx`,
+`docs/design/design_handoff_jjodel_form_views/form-autolayout-spec.md` + i tre di test
+(`jjform/__tests__/layout.test.ts`, `nodes/__tests__/{rowViewAnnotations.test.ts,
+displayAnnotationFields.test.ts}`) e il referto di Fase 2. Le sonde
+`scripts/smoke/_tmp_txt1_{recon,verify}.ts` non sono committate (`.gitignore:66`).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `npx tsc --noEmit` **33** su output COMPLETO, exit 2 (baseline
+invariata, zero errori nei file toccati); `npm run build` exit **0**, solo il warning di
+chunk noto; suite `nodes/__tests__/` + `jjform/__tests__/` + `ir/__tests__/` **943/943**.
+I gate girano sull'albero che porta anche AUTO1 F2, atterrato in parallelo: dichiarato.
+Sette mutazioni sui punti portanti (chiave tolta dall'unione, rung 2b prima del rung 1,
+precedenza del renderer invertita, valore coerciuto invece che scartato, gate del tipo
+tolto, gating sganciato da `textual`, hint incondizionato): 7/2/1/1/1/3/1 rossi, 476/476 al
+ripristino.
+**Out-of-scope changes**: no — sei file di prodotto/spec piu' i tre di test, tutti dentro i
+nove del perimetro dichiarato. `useFormWidgets.ts` NON toccato: era l'incrocio con AUTO1
+(riga 314) e non serviva — `describeSlot` chiama gia' `parseRowViewAnnotations`, quindi la
+quinta chiave arriva al descriptor da sola. AUTO1 ha emendato quella riga nello stesso
+albero; i due diff non si sovrappongono.
+**Layer Impact Report**: produced — in chat prima del diff. Layer toccati: lettore delle
+annotation, scala delle larghezze (rung 2), render della form IR (§3.1). Nessun layer D/L,
+JjOM, sync, canvas o persistenza.
+**Smoke visivo**: passato — `_tmp_txt1_verify.ts` **23/23 ALL GREEN**, zero errori di
+pagina: la cella passa da 184px a 375px (6 -> 12 colonne) con `textarea.ir-growtext` e senza
+l'hint JjEL; il `\n` sopravvive a `VersionFixer.update` + `LoadAction`; quattro preset senza
+clip (`scrollHeight <= clientHeight`, 52/52); `renderer=code` vince e togliendolo la
+growtext torna, con nessuna delle due dichiarazioni cancellata. `_tmp_txt1_recon.ts` 14/16:
+i due rossi sono i bracci 4 e 5b, che asserivano la PRESENZA del buco — inversione attesa e
+dichiarata, non una regressione.
+**Notes**: la sonda ha trovato due cose non riparate qui, argomentate in
+`discovery_2026-09-01_txt1_fase2_multiline.md` §6.1-6.2 e §9. La form non si ridisegna sulla
+scrittura di un'annotation (deps di `IRForm`); misurato per contrasto identico su
+`jjodel/renderer`, quindi pre-esistente e in critical zone. E il ri-impacchettamento delle
+righe non e' il tetto violato: fra i campi che si muovono nessuno cresce.
+**Prompt document name**: PROMPT_TXT1_multiline_textarea.md — 2026-09-01 19:30
+
 ## 2026-09-01 — fix(persistence): `highestVersion` non e' piu' azzerato dall'ordine statico (VF1)
 **Prompt**: VF1 (in chat), dal referto TXT1 §7. In `VersionFixer` i campi statici si
 inizializzano in ordine di dichiarazione: `versionAdapters = setup()` porta `highestVersion`
