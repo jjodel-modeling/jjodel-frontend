@@ -2,6 +2,73 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-09-01 — discovery: il duplicate-name che sopravvive a nomi diversi (UNQ1 F1)
+**Prompt**: UNQ1 Fase 1, dal fatto lasciato aperto da CRUD3 F2 §A.3.3. Quattro domande con
+misura: la sequenza dei nomi dal costruttore al primo render, il lifecycle di
+`UniquenessProblemSync`, quale collezione e' «this scope», e se il caso si riproduce sulle
+root. Zero file di prodotto, sonde `_tmp_unq1_*`, nessun fix.
+**Files touched**: `docs/discovery/discovery_2026-09-01_unq1_duplicate_name.md` (nuovo).
+Zero prodotto. Le sonde `scripts/smoke/_tmp_unq1_{recon,stale,transient,slot,roots}.ts` non
+sono committate (`.gitignore:66`).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — nessun file di codice toccato. Le sonde girano contro il dev server e
+non modificano sorgenti; zero `pageerror` in tutte e cinque.
+**Out-of-scope changes**: no — un solo file, il referto.
+**Layer Impact Report**: not-required — discovery read-only, nessun diff su §3.1.
+**Smoke visivo**: non applicabile. Sonde: `_tmp_unq1_recon` 6/8, `_tmp_unq1_stale` 11/12,
+`_tmp_unq1_transient` 3/4, `_tmp_unq1_roots` 3/3. I rossi sono asserzioni scritte come il
+comportamento CORRETTO: sono la riproduzione del difetto, non un guasto della sonda.
+**Notes**: nasce col nome giusto; il produttore lo legge sbagliato e non revoca.
+`LObject.get_name` (`LModelElement.tsx:6081`) legge lo slot identita' prima di `data.name`;
+lo slot, seminato in differita, per >=425 ms rende l'auto-nome, che per un padre `DValue` e'
+SEMPRE `X_0`. La firma di `UniquenessProblemSync` legge il D grezzo: firma e scan vedono due
+stati diversi, lo scan gira una volta sola e sbagliata. Root immuni. Referto per il resto.
+**Prompt document name**: UNQ1 F1 (in chat) — 2026-09-01 23:55
+
+
+## 2026-09-01 — feat(manager): «Save project» in testata, un salvataggio per tre chiamanti (SAVE1)
+**Prompt**: SAVE1 — un bottone secondario «Save project» a sinistra di Export nell'header
+di `InstanceManagerTab`, che chiami la stessa funzione di File -> Save Project e Ctrl/Cmd+S.
+Non duplicare il blocco di `Navbar.tsx:1381-1400`: estrarlo in un helper e farlo usare dai
+tre call site. Stato: disabilitato a progetto pulito **se** il dirty flag e' leggibile in
+modo affidabile, altrimenti sempre attivo e dichiarato.
+**Files touched**: `frontend/src/common/libraries/saveProject.tsx` (nuovo),
+`frontend/src/common/libraries/__tests__/saveProject.test.ts` (nuovo),
+`frontend/src/pages/components/Navbar.tsx`,
+`frontend/src/components/abstract/tabs/InstanceManagerTab.tsx`,
+`frontend/src/components/abstract/tabs/instanceManagerTab.scss`. La sonda
+`scripts/smoke/_tmp_save1_verify.ts` non e' committata (`.gitignore:66`).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `npx tsc --noEmit` su output COMPLETO **33**, la baseline, **0** nei
+file toccati; `npm run build` exit **0**; `npx vitest run` intera **3081/3081** test passati
+(3067 + i 14 nuovi), i 9 file rossi falliscono in import (`window is not defined`) e sono
+preesistenti. Le due non regressioni che l'estrazione poteva rompere sono misurate a schermo,
+non dedotte: Ctrl/Cmd+S e la voce File salvano ancora, contati sulla chiamata e non sul suo
+effetto. Quattro mutazioni: tolto `clearTimeout` 1/14 rosso, tolto il reset di `isLoading`
+2/14, cambiata la classe del bottone 1/14, la scorciatoia che bypassa l'helper 2/14.
+**Out-of-scope changes**: no — cinque file, tutti nel perimetro dichiarato dal prompt
+(«InstanceManagerTab.tsx, Navbar.tsx, il file dell'helper, test»); il foglio di stile e il
+componente contano come unita' logica (RC-11). `SaveAndCloseProject` (`Navbar.tsx:508`) e' la
+quarta copia storica del blocco e NON e' stata toccata: il prompt dice «due call site».
+**Layer Impact Report**: not-required — nessun file di §3.1; l'helper non scrive nel D-layer
+oltre a `SetRootFieldAction('isLoading')`, che e' l'azione che c'era gia'.
+**Smoke visivo**: passato — `_tmp_save1_verify.ts` **before 7 PASS / 7 FAIL, after 14 PASS /
+0 FAIL**, stesso strumento sui due lati, zero `pageerror` in entrambi. I blocchi 0 e 3
+(controlli positivi e non regressioni) verdi in ENTRAMBI i giri: sono loro che lo rendono
+una misura. Il before gira sui sorgenti di HEAD ripristinati da `git show` e rimessi da una
+copia, **senza `git stash`** (RC-13).
+**Notes**: dirty flag misurato e SCARTATO, come il prompt prevede: `U.isProjectModified` e'
+uno static (`U.tsx:211`) azzerato senza azione ne' evento, e `IRForm.tsx:344` dichiara gia'
+che sottoscriverlo non e' possibile. Sempre attivo, spento solo in volo. Due difetti
+pre-esistenti misurati e non toccati, annotati nella sonda: il flag lo pulisce anche
+l'autosave silenzioso, e `version` non avanza fra due save ravvicinati.
+**Prompt document name**: SAVE1 (in chat) — 2026-09-01 23:20
+
+
 ## 2026-09-01 — fix(conformance): CHECK 6 chiede l'esistenza al grafo (CRUD3 F2)
 **Prompt**: CRUD3 Fase 2 sul referto di F1, decisione ratificata «vederli, non visitarli».
 Il perimetro di VISITA resta `model.objects`; cambia solo il test di ESISTENZA del
