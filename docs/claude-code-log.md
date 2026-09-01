@@ -2,6 +2,43 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-09-01 — fix(form): il lato destro della select torna al chevron (FL10)
+**Prompt**: MICRO in chat, dal referto FL9 §8. La regola di densita' scrive
+`padding-right: var(--ir-form-pad-x)` sulla select e sovrascrive i 36px di
+`Select.module.css:55`; escludere il lato destro dalla densita' oppure `max()` fra i due,
+dichiarando la via col computed style nei quattro preset. Verifica: testo lungo che non
+finisce sotto il chevron, FL8/FL9 intatti.
+**Files touched**: `editor-v2/viewpoint/ir/irFormStyle.scss` (una regola nuova),
+`editor-v2/viewpoint/ir/__tests__/irFormControlPadding.test.ts` (blocco FL10, 6 casi, ora
+15) e il referto `docs/discovery/discovery_2026-09-01_fl10_chevron_reserve.md`. Le sonde
+`scripts/smoke/_tmp_fl10_*.ts` non sono committate: `.gitignore:66` ignora
+`frontend/scripts/smoke/_tmp_*` per disegno.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `npx tsc --noEmit` **33** su output COMPLETO (123 righe, exit 2 =
+baseline invariata); `npm run build` exit **0**, solo il warning di chunk noto; suite
+`viewpoint/ir/__tests__/` + `jjform/__tests__/` **759/759**. Unita' provata contro TRE
+mutazioni (36 -> 32, regola rimossa, riserva estesa anche agli input): 2 / 5 / 5 rossi,
+verde al ripristino in tutte e tre.
+**Out-of-scope changes**: no.
+**Layer Impact Report**: not-required — nessun file di §3.1, zero creatori D, zero
+`TRANSACTION`, nessuna scrittura verso lo store: il delta e' una dichiarazione CSS.
+**Smoke visivo**: passato — `_tmp_fl10_verify.ts` **10/10**, zero errori di pagina, quattro
+preset in UN caricamento (before = la regola pre-FL10 rimessa a runtime). Geometria: il gap
+fra content box e chevron da **-17 / -18 / -17 / -19** a **+9 ovunque**. Pixel: con
+un'etichetta lunga l'inchiostro nella banda del chevron era salito a un centinaio, ora e'
+**identico al caso corto** (40/52). FL8 intatto (zero <40px, zero overflow), FL9 intatto (il
+content box verticale resta >= la riga). Con la regola tolta dal foglio la sonda va rossa su
+ACCETTAZIONE 1 e 2.
+**Notes**: le due vie del prompt misurate entrambe, e sono **equivalenti** (36px, gap +9 in
+tutti e quattro): scelta la piu' corta, `max()` non compra nulla perche' a densita' 8/9/10 il
+primo argomento non puo' vincere. Il 36 e' ripetuto ma non silenzioso: il test legge anche
+`Select.module.css` e cade se i due numeri divergono. Bug della sonda corretto: le etichette
+originali si rileggono a ogni giro, non si tengono in una globale.
+**Prompt document name**: MICRO FL10 riserva del chevron (in chat) — 2026-09-01 15:05
+
+
 ## 2026-09-01 — fix(form): il testo delle select sta nel content box (FL9)
 **Prompt**: MICRO in chat. Dallo screenshot il testo delle `<select>` delle form IR e'
 tosato in basso; discovery minima obbligatoria (computed height, padding-block, line-height,

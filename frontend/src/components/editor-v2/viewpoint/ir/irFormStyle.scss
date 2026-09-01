@@ -1131,6 +1131,27 @@
     padding-bottom: 0;
 }
 
+/* The right side of a `select` is not padding either: it is the room the chevron sits in.
+ * `Select.module.css` reserves it twice — `.select` at :34 and `.selectSm` at :55, both
+ * `36px` — for a `.icon` it absolutes at `right: 12px` with a `font-size: 16px` glyph. The
+ * rule above hands that side to `--ir-form-pad-x` instead, which is 10 / 9 / 8, and the
+ * value ends up painted under its own chevron.
+ *
+ * Measured 2026-09-01 (`_tmp_fl10_recon.ts`, the four presets in one load): the content box
+ * runs PAST the chevron's left edge by 17 / 18 / 17 / 19px, and per contrasto a long option
+ * label takes the ink inside the chevron's own band from 40 to about 100 pixels. Restoring
+ * the module's reserve puts the content box 9px clear of the chevron in all four, and the
+ * band goes back to what the chevron alone paints.
+ *
+ * 36px is restated here, not invented: it is the module's own number, and
+ * `irFormControlPadding.test.ts` reads both files and fails if the two ever disagree. The
+ * `max(var(--ir-form-pad-x), 36px)` form measured identical (same 36, same 9px clearance)
+ * and was left out: at the declared densities its first argument can never win. The left
+ * side keeps the theme's padding — that side is FL8's, and nothing sits on it. */
+.ir-form[data-density] select.ir-field__control {
+    padding-right: 36px;
+}
+
 .ir-form[data-density] .ir-field__label {
     font-size: var(--ir-form-label-size, var(--text-xs));
     font-weight: var(--ir-form-label-weight, 500);
