@@ -2,6 +2,34 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-09-02 — discovery: appendice UNQ1 F1, il «2» del tree conta figli (Q5/Q6)
+**Prompt**: aggiunta a UNQ1 F1, dallo screenshot post CHECK 6: Book_0 con due figli
+rinominati a nomi distinti, badge 2 nel tree, form «No issues», canvas pulito. Q5 il badge
+aggrega i problemi dei discendenti sul padre, e da quale registro; Q6 il badge resta dopo
+save + reload. Zero file di prodotto, sonde `_tmp_unq1_*`, nessun fix.
+**Files touched**: `docs/discovery/discovery_2026-09-01_unq1_duplicate_name.md` (appendice
+§A.0-§A.6 in coda al referto esistente, R-E/E-1: non riscritto). Zero prodotto. Le sonde
+`scripts/smoke/_tmp_unq1_{badge,ctrl,form}.ts` non sono committate (`.gitignore:66`).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — nessun file di codice toccato; le sonde girano contro il dev server
+e non modificano sorgenti, zero `pageerror` in tutte e tre.
+**Out-of-scope changes**: no — un solo file, il referto.
+**Layer Impact Report**: not-required — discovery read-only, nessun diff su §3.1.
+**Smoke visivo**: non applicabile. Sonde: `_tmp_unq1_badge` 14/16, `_tmp_unq1_ctrl` 7/9,
+`_tmp_unq1_form` 3/4. I due rossi di `_tmp_unq1_ctrl` sono il difetto di §A.4 scritto come
+comportamento corretto; i due di `_tmp_unq1_badge` sono un controllo positivo che NON e'
+partito (misura rotta, non un negativo) e sono stati rifatti in `_tmp_unq1_ctrl`, dove
+passa; quello di `_tmp_unq1_form` e' l'asserzione che cercava «duplicate» dove la form
+rende «1 warning».
+**Notes**: il badge conta figli, non problemi: `instance.children.length`
+(`TreeViewContent.tsx:891`), misurato 2/3/5 su padri con 0/0/2 entry attive. `FeatureRow`
+non legge `_jjNodeProblems`; l'unico lettore dell'albero e' `EntityRow` (`:719-720`), per
+il proprio id. I warning non sopravvivono al rename. Dopo il reload il badge resta perche'
+restano i figli. Due fatti nuovi in §A.4 e §A.5. Referto per il resto.
+**Prompt document name**: UNQ1 F1 aggiunta (in chat) — 2026-09-02 00:00
+
 ## 2026-09-01 — discovery: il duplicate-name che sopravvive a nomi diversi (UNQ1 F1)
 **Prompt**: UNQ1 Fase 1, dal fatto lasciato aperto da CRUD3 F2 §A.3.3. Quattro domande con
 misura: la sequenza dei nomi dal costruttore al primo render, il lifecycle di
