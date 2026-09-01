@@ -983,10 +983,23 @@
         min-width: 0;
     }
 
+    /* DS3 — il quinto eyebrow del foglio, e ora traccia come gli altri quattro.
+       10i lo rilevo' a `0.04em` e lo lascio' com'era, fissandone lo stato con
+       un'asserzione perche' non venisse riscoperto; questa slice chiude la
+       divergenza: `0.08em`, letterale per R-RAIL-10 come sopra.
+
+       Il COLORE resta `--color-form-section` (slate-500) e NON diventa
+       `--color-form-muted` (slate-400), che e' l'unico punto in cui questa
+       etichetta si stacca dall'eyebrow. La ragione e' misurata, non estetica:
+       su bianco slate-500 da' 4.76:1 e slate-400 da' 2.59:1, e questa non e'
+       una testata ma la `<label>` di un campo da compilare, a 11px. Portarla
+       a muted la manderebbe sotto AA. In scuro i due token collassano
+       entrambi su `--color-text-tertiary`, quindi la divergenza vive solo in
+       chiaro. Deliberata: non «convergerla» in un passaggio di pulizia. */
     &__draft-label {
         font-size: var(--text-xs);
         font-weight: 600;
-        letter-spacing: 0.04em;
+        letter-spacing: 0.08em;
         text-transform: uppercase;
         color: var(--color-form-section);
     }

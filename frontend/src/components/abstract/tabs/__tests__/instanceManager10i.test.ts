@@ -87,11 +87,47 @@ describe('10i — intestazioni di colonna in maiuscolo', () => {
 
     it('il vecchio 0.04em non è più su `thead th`', () => {
         expect(block(RULES, 'thead th {')).not.toMatch(/letter-spacing:\s*0\.04em/);
-        // Resta UNA divergenza nel foglio, e non è di questa slice: il
-        // `&__draft-label` del dialogo di create è un quinto eyebrow a 0.04em.
-        // È dentro la banda dichiarata, sta su un'altra superficie e il prompt
-        // non lo nomina — rilevato e lasciato, non «pulito» di passaggio.
-        expect(block(RULES, '&__draft-label {')).toMatch(/letter-spacing:\s*0\.04em/);
+    });
+
+    // ── DS3 ───────────────────────────────────────────────────────────
+    // 10i aveva rilevato `&__draft-label` a 0.04em e lo aveva LASCIATO, fissando
+    // lo stato con un'asserzione perché la sessione dopo non lo riscoprisse. DS3
+    // chiude la divergenza: le asserzioni sotto non fissano più uno scarto,
+    // affermano una convergenza. L'asserzione non è sparita, ha cambiato verso.
+
+    it('DS3 — il `&__draft-label` traccia come l\'eyebrow: 0.08em', () => {
+        const draft = block(RULES, '&__draft-label {');
+        expect(draft).toMatch(/letter-spacing:\s*0\.08em/);
+        expect(draft).not.toMatch(/letter-spacing:\s*0\.04em/);
+        // …e con esso sparisce l'ULTIMO 0.04em del foglio: era l'unica occorrenza
+        // fuori dai commenti, che `RULES` spoglia.
+        expect(RULES).not.toMatch(/letter-spacing:\s*0\.04em/);
+        // Controllo positivo: la regex sa trovare un tracciato quando c'è.
+        expect(RULES).toMatch(/letter-spacing:\s*0\.08em/);
+    });
+
+    it('DS3 — le altre tre erano già quelle dell\'eyebrow', () => {
+        const draft = block(RULES, '&__draft-label {');
+        const eyebrow = block(RULES, '&__eyebrow {');
+        for (const decl of [
+            /font-size:\s*var\(--text-xs\)/,
+            /font-weight:\s*600/,
+            /text-transform:\s*uppercase/,
+        ]) {
+            expect(draft).toMatch(decl);
+            expect(eyebrow).toMatch(decl);
+        }
+    });
+
+    it('DS3 — il COLORE resta divergente, e di proposito', () => {
+        // L'unico punto in cui questa etichetta si stacca dall'eyebrow, per una
+        // ragione misurata e non estetica: non è una testata ma la `<label>` di
+        // un campo da compilare, a 11px. Su bianco slate-500 dà 4.76:1 e
+        // slate-400 dà 2.59:1 — muted la manderebbe sotto AA. In scuro i due
+        // token collassano su `--color-text-tertiary` e la divergenza non esiste.
+        // Se un domani qualcuno la «converge» di passaggio, questo test lo ferma.
+        expect(block(RULES, '&__draft-label {')).toMatch(/color:\s*var\(--color-form-section\)/);
+        expect(block(RULES, '&__eyebrow {')).toMatch(/color:\s*var\(--color-form-muted\)/);
     });
 
     it('nessun valore fuori dalla banda dichiarata (0.04–0.1em)', () => {
