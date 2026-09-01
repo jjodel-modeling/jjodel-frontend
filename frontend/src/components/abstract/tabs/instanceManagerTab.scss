@@ -371,6 +371,35 @@
         width: 100%;
         max-width: 1300px;
         margin: 0 auto;
+        /* 10k-CHIUSURA — la testata e' una RIGA: il soggetto a sinistra, le due
+           azioni che agiscono su di lui a destra. `flex-end` e non `center`: i
+           due blocchi hanno altezze diverse (due righe contro un bottone da
+           28px), e allinearli al centro farebbe galleggiare i bottoni sopra la
+           linea di base del sottotitolo invece che sopra la card. */
+        display: flex;
+        align-items: flex-end;
+        gap: 12px;
+    }
+
+    /* `min-width: 0` non e' igiene: senza, il blocco del titolo non scende sotto
+       la larghezza del nome della metaclasse, e un nome lungo spingerebbe i due
+       bottoni fuori dal cinturino invece di accorciarsi. */
+    &__head-titles { min-width: 0; }
+
+    /* Le due azioni. `margin-left: auto` qui e non su `__export`: nella toolbar
+       la spinta era del bottone perche' era lui l'ultimo elemento, in testata e'
+       del gruppo. I due margini che i bottoni portano da 10c sono azzerati
+       DENTRO questo blocco e non alla sorgente — restano validi dove quei
+       bottoni sono nati, e qui la spaziatura la da' il `gap`. */
+    &__head-actions {
+        flex: none;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-left: auto;
+
+        .instance-manager__export { margin-left: 0; }
+        .instance-manager__new { margin-left: 0; }
     }
 
     &__title {
@@ -425,10 +454,17 @@
         }
     }
 
+    /* 10k-CHIUSURA — indicatore e Columns chiudono la barra a destra, ora che
+       Export e New sono saliti in testata. La spinta e' dichiarata su ENTRAMBI e
+       il primo dei due che si rende vince: l'indicatore non c'e' quando non ci
+       sono colonne ridotte, e senza la seconda dichiarazione Columns resterebbe
+       appiccicato al segmented. E' lo stesso idioma con cui `__export ~ __new`
+       gia' risolve la stessa coppia in questo foglio. */
     &__hidden-cols {
         display: inline-flex;
         align-items: center;
         gap: 5px;
+        margin-left: auto;
         font-size: var(--text-xs);
         color: var(--color-form-muted);
         cursor: default;
@@ -443,7 +479,11 @@
     &__columns-wrap {
         position: relative;
         display: inline-flex;
+        margin-left: auto;
     }
+
+    /* Quando l'indicatore c'e', la spinta e' sua e Columns le sta accanto. */
+    &__hidden-cols ~ .instance-manager__columns-wrap { margin-left: 10px; }
 
     /* Le stesse dichiarazioni di `__export`: e' lo stesso controllo secondario
        della stessa barra. Scritte per esteso e non ereditate da un selettore

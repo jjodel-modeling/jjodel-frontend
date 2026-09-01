@@ -2077,10 +2077,68 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                 la spaziano dalla card: nessun margine proprio (vedi il foglio). */}
             {selectedClass && (
                 <header className="instance-manager__head">
-                    <h2 className="instance-manager__title">{selectedClass.name}</h2>
-                    <p className="instance-manager__provenance">
-                        {modelName} · {rows.length} instance{rows.length === 1 ? '' : 's'}
-                    </p>
+                    <div className="instance-manager__head-titles">
+                        <h2 className="instance-manager__title">{selectedClass.name}</h2>
+                        <p className="instance-manager__provenance">
+                            {modelName} · {rows.length} instance{rows.length === 1 ? '' : 's'}
+                        </p>
+                    </div>
+
+                    {/* 10k-CHIUSURA — le due azioni sul SOGGETTO salgono accanto al
+                        suo nome. La barra dentro la card riduce cio' che si vede
+                        (filtro, segmented, colonne); Export e New agiscono sulla
+                        collezione intera, che e' quel che il titolo nomina — ed e'
+                        anche perche' sopravvivevano al filtro mentre stavano in una
+                        riga che il filtro popola.
+
+                        Export resta il secondario e New il primario: un solo
+                        primario in tutta la testata, come da 10c. */}
+                    <div className="instance-manager__head-actions">
+                        {classShape && rows.length > 0 && (
+                            <button
+                                type="button"
+                                className="instance-manager__export"
+                                title={`Export the ${visible.length} listed instance${visible.length === 1 ? '' : 's'} as CSV`}
+                                onClick={exportCsv}
+                            >
+                                <i className="bi bi-download" aria-hidden="true" />
+                                Export
+                            </button>
+                        )}
+
+                        {/* Route 1 of Turno 10: the catalogue creates the rootable ones.
+                            Absent, never disabled, when the metamodel says no — the
+                            sentence below the toolbar carries the reason instead.
+
+                            10c non cambia l'evento, e non poteva: `openCreate(cls, null,
+                            null)` e' LA STESSA chiamata che `outlineCreate` fa dal nodo
+                            modello. La scorciatoia rootable della regola Q8 e' la
+                            superficie, non un secondo percorso di create.
+
+                            10k-CHIUSURA — `!collectionIsEmpty` e' NUOVO, ed e' la
+                            regola di 10j portata nella nuova posizione. Finche' «New»
+                            stava nella toolbar la questione non si poneva: a zero
+                            istanze la riga si spegneva intera e il bottone se ne
+                            andava con lei, lasciando la CTA del cartello sola. La
+                            testata invece RESTA a zero istanze (10j lo dichiara
+                            esplicitamente), quindi senza questa guardia lo stesso
+                            «New State» comparirebbe due volte a quaranta pixel di
+                            distanza. Vince la CTA, che e' dentro il cartello che
+                            spiega perche' la tabella e' vuota; il bottone in testata
+                            torna appena c'e' una collezione da cui esportare o
+                            filtrare. Stessa regola, stesso arbitrato, posizione
+                            nuova. */}
+                        {classShape && !newReason && !collectionIsEmpty && (
+                            <button
+                                type="button"
+                                className="instance-manager__new"
+                                onClick={() => openCreate(classShape.key, null, null)}
+                            >
+                                <i className="bi bi-plus-lg" aria-hidden="true" />
+                                New {classShape.key}
+                            </button>
+                        )}
+                    </div>
                 </header>
             )}
 
@@ -2231,36 +2289,12 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                             </div>
                         )}
 
-                        {classShape && rows.length > 0 && (
-                            <button
-                                type="button"
-                                className="instance-manager__export"
-                                title={`Export the ${visible.length} listed instance${visible.length === 1 ? '' : 's'} as CSV`}
-                                onClick={exportCsv}
-                            >
-                                <i className="bi bi-download" aria-hidden="true" />
-                                Export
-                            </button>
-                        )}
-
-                        {/* Route 1 of Turno 10: the catalogue creates the rootable ones.
-                            Absent, never disabled, when the metamodel says no — the
-                            sentence below the toolbar carries the reason instead.
-
-                            10c non cambia l'evento, e non poteva: `openCreate(cls, null,
-                            null)` e' LA STESSA chiamata che `outlineCreate` fa dal nodo
-                            modello. La scorciatoia rootable della regola Q8 e' la
-                            superficie, non un secondo percorso di create. */}
-                        {classShape && !newReason && (
-                            <button
-                                type="button"
-                                className="instance-manager__new"
-                                onClick={() => openCreate(classShape.key, null, null)}
-                            >
-                                <i className="bi bi-plus-lg" aria-hidden="true" />
-                                New {classShape.key}
-                            </button>
-                        )}
+                        {/* Export e «New» NON sono piu' qui: 10k-CHIUSURA li porta
+                            nella riga di testata, sul desk. Cio' che resta e' cio'
+                            che RIDUCE la tabella — filtro, segmented, indicatore,
+                            Columns — e questa e' ora la sola cosa che la barra fa.
+                            Le due azioni sul soggetto stanno accanto al nome del
+                            soggetto. */}
                     </div>
                 )}
 
