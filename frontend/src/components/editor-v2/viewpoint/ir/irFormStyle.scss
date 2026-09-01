@@ -1110,6 +1110,27 @@
     padding-right: var(--ir-form-pad-x);
 }
 
+/* A control whose height is FIXED clips its text at the content box, so vertical padding
+ * there is not spacing: it is how much of the glyph gets cut. `--ir-form-pad-y` is right
+ * for the controls that grow with their content — the mono textarea, the readonly cell —
+ * and the rule above keeps giving it to them. On a `select` or an `input` the height is
+ * already set by `--input-height-sm`, and with `box-sizing: border-box` the same number
+ * only shrinks the box the text has to fit in: it never contributed a pixel of layout.
+ *
+ * Measured 2026-09-01 (`_tmp_fl9_recon2.ts`, a ladder on the shipped form, Inter Variable
+ * at 13px): the painted band of `Agjpqy` is 14px, the line box 19.5px, and the content
+ * box is the height minus the two 1.5px borders minus twice the padding. The band loses
+ * its first pixel at pad 5 (content 16) and is down to 10px of 14 at pad 7 (content 12) —
+ * pad 7 being exactly what the `comfortable` density ships, so Comfortable and Sectioned
+ * cut 4px off every descender and Compact does the same from a 24px box. Zeroing it
+ * leaves the whole height to the text: 25px of content against a 19.5px line box under
+ * plain and card, 21px under compact, so no density step can bring the clip back. */
+.ir-form[data-density] select.ir-field__control,
+.ir-form[data-density] input.ir-field__control {
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
 .ir-form[data-density] .ir-field__label {
     font-size: var(--ir-form-label-size, var(--text-xs));
     font-weight: var(--ir-form-label-weight, 500);

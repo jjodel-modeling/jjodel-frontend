@@ -2,6 +2,46 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-09-01 — fix(form): il testo delle select sta nel content box (FL9)
+**Prompt**: MICRO in chat. Dallo screenshot il testo delle `<select>` delle form IR e'
+tosato in basso; discovery minima obbligatoria (computed height, padding-block, line-height,
+font-size del widget FL3 e da quale regola arrivano) prima del fix, con verifica su TUTTI e
+quattro i preset e non solo su quello a schermo. Sospetto nominato: altezza ridotta dal
+density theme con padding pensato per l'altezza piena.
+**Files touched**: `editor-v2/viewpoint/ir/irFormStyle.scss` (una regola nuova, 21 righe
+commento compreso), `editor-v2/viewpoint/ir/__tests__/irFormControlPadding.test.ts` (nuovo,
+9 casi) e il referto `docs/discovery/discovery_2026-09-01_fl9_select_text_clip.md`. Le tre
+sonde `scripts/smoke/_tmp_fl9_*.ts` non sono committate: `.gitignore:66` ignora
+`frontend/scripts/smoke/_tmp_*` per disegno.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `npx tsc --noEmit` **33** su output COMPLETO (123 righe, exit 2 =
+baseline invariata, zero errori nuovi in `viewpoint/ir`); `npm run build` exit **0**, solo
+il warning di chunk noto; suite `viewpoint/ir/__tests__/` + `jjform/__tests__/` **753/753**.
+Unita' nuova provata contro TRE mutazioni (padding 3px, blocco spostato prima della regola
+di densita', blocco rimosso): 1 rosso, 1 rosso, suite che non colleziona affatto; verde al
+ripristino.
+**Out-of-scope changes**: no — il perimetro dichiarato era il foglio del widget e il fix sta
+li'. Il fix copre pero' anche gli `input` ad altezza fissa oltre alle `select`: stessa riga
+di CSS, stessa altezza, stesso taglio, e ripararne una sola avrebbe lasciato l'altra tagliata.
+**Layer Impact Report**: not-required — nessun file di §3.1, zero creatori D, zero
+`TRANSACTION`, nessuna scrittura verso lo store: il delta e' una dichiarazione CSS.
+**Smoke visivo**: passato — `_tmp_fl9_verify.ts` **15/15**, zero errori di pagina, quattro
+preset in UN solo caricamento (before = la regola committata, rimessa a runtime). Banda di
+testo dipinta, misurata sui PIXEL dentro il padding box: Comfortable e Sectioned **10 -> 14**
+su 14, Compact **10 -> 13** su 13, Dense 14 -> 14 (non tagliava). Geometria di celle, campi,
+etichette, controlli e riga del messaggio IDENTICA before/after nei quattro preset, `formH`
+compreso. FL8 intatto: zero controlli sotto i 40px, zero overflow. Con il blocco rimosso dal
+foglio la sonda va rossa su ACCETTAZIONE 1.
+**Notes**: il sospetto del prompt e' ESCLUSO dalla misura — Dense, il preset che indicava,
+e' l'unico che non tagliava; a tagliare erano Comfortable e Sectioned, quelli col padding
+piu' generoso. Causa vera: il padding di densita' dato a controlli ad altezza gia' fissa,
+dove con `border-box` non e' spaziatura ma taglio. Il Range chiesto dal prompt non esiste su
+una `<select>` chiusa (le `<option>` non sono renderizzate): misura sui pixel, referto §5.
+**Prompt document name**: MICRO FL9 select tosate (in chat) — 2026-09-01 14:30
+
+
 ## 2026-09-01 — fix(manager): il pannello Columns si legge a colpo d'occhio (10k-dd)
 **Prompt**: richiesta a schermo, senza documento — «puoi fare questo dropdown un po' piu' slick?»
 con screenshot del pannello Columns aperto su `State`.
