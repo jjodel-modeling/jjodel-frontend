@@ -2,6 +2,44 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-09-01 — fix(persistence): `highestVersion` non e' piu' azzerato dall'ordine statico (VF1)
+**Prompt**: VF1 (in chat), dal referto TXT1 §7. In `VersionFixer` i campi statici si
+inizializzano in ordine di dichiarazione: `versionAdapters = setup()` porta `highestVersion`
+a 2.228, la riga dopo lo rimette a 0. `update()` salta `setup()` (adapter truthy, `:112`) e
+cicla `while (currVer !== 0)` — «missing version adapter from "2.228"» su uno stato gia'
+all'ultima versione. Test prima del fix, censimento dei lettori, Layer Impact Report.
+**Files touched**: `frontend/src/redux/VersionFixer.tsx` (le due righe scambiate + il commento
+che spiega perche' l'ordine e' portante). La sonda `scripts/smoke/_tmp_vf1_verify.ts` non e'
+committata (`.gitignore:66`).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `npx tsc --noEmit` **33** su output COMPLETO (baseline invariata);
+`npm run build` exit **0**, solo il warning di chunk noto; `src/redux/__tests__/` **44/44**.
+La sonda VF1 e' scritta PRIMA del fix e misurata rossa: 4 bracci su 8 rossi (B, C, D, F) con
+i tre controlli verdi; dopo lo scambio **8/8 ALL GREEN**, zero errori di pagina. Braccio H
+(non-regressione richiesta): stato dell'app -> JSON -> `update()` -> **byte-identico**,
+114634 = 114634.
+**Out-of-scope changes**: no — un solo file di prodotto.
+**Layer Impact Report**: produced — in chat prima del diff. Layer **Persistence**, unico
+toccato. Lettori censiti (`command grep -rn "highestVersion|highestversion" src/`, 13 esiti):
+`:119` (il while, il difetto), `:140` (`v.version !== highestVersion`), `get_highestversion()`
+per i tre lettori esterni `joiner/classes.ts:1160`, `:4094`, `redux/store.tsx:104`;
+`api/DTO/UpdateProjectRequest.ts:54` e' commentato. `update()` ha un solo chiamante fuori
+classe: `components/topbar/SaveManager.ts:56`.
+**Smoke visivo**: passato — `_tmp_vf1_verify.ts` 8/8; `_tmp_txt1_recon.ts` 17/18, l'unico
+rosso e' il braccio 3.0, che asserisce la PRESENZA del difetto (`cold === 0`): ora legge
+2.228. E' l'inversione attesa, non una regressione; i 17 restanti, giro salva/ricarica
+compreso, restano verdi. La sonda TXT1 non e' committata e non e' stata modificata.
+**Notes**: nell'app il fix e' inerte all'osservazione — `DState.new()` al boot valuta
+`store.tsx:104`, che ripara il campo prima di `SaveManager.load`. Sparisce la latenza: ogni
+via che raggiunga `update()` prima di un `new DState()` moriva. Secondo sintomo chiuso: a 0,
+`:140` rigenerava ogni view non toccata a ogni caricamento (braccio F). Il `= 0` resta:
+`setup()` accumula con `Math.max`. Perche' non e' un test vitest, e la via scelta: intestazione
+di `scripts/smoke/_tmp_vf1_verify.ts`.
+**Prompt document name**: VF1 (in chat) — 2026-09-01 18:30
+
+
 ## 2026-09-01 — feat(manager): i chip di enum della tabella prendono il colore (PILL2)
 **Prompt**: «non vedo nessun pill colorato», con screenshot. Le pill dello screenshot sono
 i chip di enum della tabella del Manager (`instance-manager__chip`), non le ref pill della
