@@ -2,6 +2,79 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-09-01 — fix(core): il rifiuto dell'auto-composizione dice il vero, e l'orfano del doppio append ha un nome
+**Prompt**: «ENG1: due difetti del core sul containment, PARALLELO a 10j-chiusura». (A) fix:
+`LReference.set_containment` sul ramo auto-composizione (`father === type`) logga il warning,
+NON scrive e restituiva `true`; censire prima chi legge il ritorno, il rifiuto in se' resta.
+(B) DISCOVERY-FIRST: l'orfano lasciato da due append consecutivi su `Cooler.states`
+(`Off.father` sullo slot, slot a `["Broken"]`), riprodurre prima di toccare, correggere solo
+se il fix e' locale e a blast radius dichiarato. Fuori scope: la sweep di 10g, OQ-4 del
+2026-07-27, ogni superficie manager.
+**Files touched**: `model/logicWrapper/LModelElement.tsx` (**una** riga di `return`, piu' il
+commento che porta la misura) e `model/__tests__/setContainmentVerdict.test.ts` (**nuovo**,
+11 casi) in `b7d9c4c10`; il referto
+`docs/discovery/discovery_2026-09-01_eng1_containment_core.md` in `f1b8a6f69`; questa entry
+a parte. Tre commit, tutti con pathspec, indice verificato vuoto prima e dopo ciascuno.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `npm run typecheck` **33** (baseline invariata, conteggio su output
+completo, `EXIT=2`); `npm run build` exit **0**; `npx vitest run` **2799 passati / 0
+falliti**, 9 file rossi = i noti `window is not defined`, nessuno di questa slice. Suite
+propria provata con SEI mutazioni (`return true` restaurato, warning rimosso, no-op che
+rende `false`, guardia allargata ad `aggregation`, il trap del proxy che propaga il
+verdetto, un quarto chiamante di `set_containment`): 2/1/2/4/1/1 rossi, verde al ripristino
+in tutte e sei.
+**Out-of-scope changes**: no — il file del prompt, la sua suite nuova, il referto.
+**Layer Impact Report**: not-required — `LModelElement.tsx` non e' in §3.1 ne' fra i trigger
+di §3.2, e il delta e' un `return`: zero creatori D, zero `TRANSACTION`, zero
+`SetFieldAction`. Il permesso di §5 Regola 5 (core) e' il prompt stesso.
+**Smoke visivo**: passato — `_tmp_eng1_measure.ts` sull'app vera, fixture StateMachine/State.
+Arm A: 6/6 PASS, incluso il controllo positivo (`states` riceve composition) e il contrasto
+(`aggregation` sullo stesso auto-riferimento PASSA: il `return false` non ha allargato il
+rifiuto). Arm B: gli unici 4 FAIL sono le riproduzioni volute (A1x2, A3, A5); A2/A4/A6/A7/A8
+verdi. Zero errori di pagina. Nessuna superficie visiva toccata.
+**Notes**: Il censimento chiude A senza consumer: il trap `set` di `proxy.ts:476-483` scarta
+il verdetto, e quel `return true` a mano e' anche cio' che impedisce alla correzione di far
+lanciare l'assegnazione. «Riproduci in unit test» non e' eseguibile: `LModelElement.tsx` non
+importa sotto vitest, riverificato. B chiude come referto perche' la correzione ovvia — la
+lettura dallo store vivo — non funziona: dentro la finestra lo store e' stantio quanto
+`context.data`. Referto §0, §A.1, §B.4-B.6.
+**Prompt document name**: prompt inline (non depositato) — 2026-09-01 09:05
+
+
+## 2026-09-01 — docs(form): i quattro preset guardati, e il select che non ha dove scrivere (STYLE1)
+**Prompt**: «STYLE1 — selettore tema form nel tab Style + formSpec di verifica (PARALLELO)»:
+chiudere il debito di FL4 (i 4 preset rendono ma nessuno li ha mai visti) con (1) un select
+«Form theme» nel tab Style che scriva dove FL2 ha stabilito che il tema risolve, e (2) una
+sonda che applica i 4 preset su una form reale e cattura 4 screenshot. Clausola di arresto
+esplicita nel prompt: «se FL2 non ha lasciato una write surface, fermati e riporta».
+**Files touched**: `docs/discovery/discovery_2026-09-01_style1_tema_form.md` (**nuovo**);
+questa entry in commit a parte. **Zero file sorgente toccati.**
+**Outcome**: ⚠️ partial — (2) fatto e verde, (1) **fermato** dalla clausola del prompt.
+**Corregge**: 2026-08-31 18:45 (PROMPT_FL4_integration.md — ne chiude il debito di verifica)
+**Causa**: a
+**Regressions**: no — nessun sorgente modificato, quindi nulla da far regredire. Verificato in
+positivo comunque, sull'app viva: senza scelta di tema il DOM della form e' identico al before,
+e per contrasto rimosso il tema dopo quattro cambi torna identico.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessun file di §3.1, e nessun file di alcun tipo:
+il diff e' un solo documento.
+**Smoke visivo**: passato — `_tmp_style1_verify.ts` sull'app vera, **23/23 ALL GREEN, exit 0,
+zero errori di pagina**. Soggetto `allNine_valued` (14 campi / 3 gruppi / 7 righe) nel rail a
+400px. Quattro preset, quattro firme distinte, quattro screenshot: Comfortable
+`top|comfortable|flat|14px|811px`, Compact `left|compact|divided|8px|566px`, Sectioned
+`top|comfortable|card|14px|914px`, Dense `left|dense|none|6px|536px`, eyebrow 3/3/3/**0**.
+Geometria identica sotto tutti e quattro: il tema non muove un campo.
+**Notes**: Causa (a): la premessa del prompt — «cascata metamodel -> viewpoint» — e' una
+firma di funzione, non una struttura dati: i due livelli non hanno sorgente nel grafo D.
+Tre reperti in `discovery_2026-09-01_style1_tema_form.md` (§3, §4, §7): Style e form in
+due rami esclusivi dello stesso `if`; `Dense` irraggiungibile da ogni scrittura; Compact e
+Dense non si leggono nel rail (4 controlli sotto i 40px, il piu' stretto a 7.8px, contro
+0). L'ultimo va aperto come slice propria.
+**Prompt document name**: prompt inline STYLE1, nessun documento — 2026-09-01 09:10
+
+
 ## 2026-09-01 — fix(manager): il quinto eyebrow traccia come gli altri (DS3)
 **Prompt**: «DS3: quinto eyebrow `&__draft-label` a 0.04em (micro, PARALLELO)» — chiudere la
 divergenza che il referto 10i §4 aveva rilevato e LASCIATO, portando `&__draft-label` alle
