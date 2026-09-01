@@ -612,8 +612,16 @@
 
        Il glifo esce dal cerchio: 48px di pastiglia dipinta per un'icona che
        dice «vuoto» erano la meta' dell'altezza del cartello. Restano 32px di
-       glifo, e la gronda verticale sale a 48 perche' il respiro lo dia lo
-       spazio e non un disco grigio.
+       glifo, e il respiro lo da' lo spazio invece di un disco grigio.
+
+       La gronda e' 24px, e il numero e' MISURATO, non scelto. La prima stesura
+       ne metteva 48 e la card della tabella saliva da 298px a 347px, cioe' 49px
+       piu' ALTA di prima: la CTA guadagnata pesa ~45px, il cerchio che se ne va
+       ne restituisce 16, e i +32px di gronda rispetto ai 32 del componente
+       condiviso pagavano la differenza. Il chrome tolto non c'entrava — filtro,
+       segmented e Columns stavano sulla stessa riga del «New», che ora si spegne
+       con lei. A 24px il cartello sta sui 185px e la card sui 261px, sotto i
+       298px del prima. §1 del referto 10j.
 
        Nessun `flex-grow: 0` qui: `__pane--table` e' gia' `flex: 0 1 auto` da
        10e, e la card abbraccia il contenuto per quella regola. Ridirlo qui
@@ -625,7 +633,7 @@
        `__th--readonly`, `--color-form-muted` (slate-400) quello di ogni
        sottoriga. Nessuna terza tinta, nessun letterale. */
     &__empty.jj-empty-state {
-        padding-block: 48px;
+        padding-block: 24px;
 
         .jj-empty-state__icon-circle {
             width: auto;

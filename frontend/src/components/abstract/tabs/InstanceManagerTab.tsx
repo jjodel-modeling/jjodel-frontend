@@ -2060,153 +2060,166 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                     </header>
                 )}
 
-                <div className="instance-manager__toolbar">
-                    {/* 10j — le quattro riduzioni si spengono a collezione vuota.
-                        Non `disabled`: un filtro spento su zero righe dichiara un
-                        limite che non c'e', ed e' lo stesso argomento con cui 10c
-                        ha reso il pager condizionale invece che disabilitato. */}
-                    {selectedClass && !collectionIsEmpty && (
-                        <input
-                            className="instance-manager__search"
-                            type="search"
-                            value={query}
-                            placeholder="Filter by name…"
-                            aria-label={`Filter ${selectedClass.name} instances by name`}
-                            onChange={e => { setQuery(e.target.value); setPage(1); }}
-                        />
-                    )}
+                {/* 10j — la riga di riduzioni si spegne INTERA a collezione vuota.
+                    Non `disabled`: un filtro spento su zero righe dichiara un
+                    limite che non c'e', ed e' lo stesso argomento con cui 10c ha
+                    reso il pager condizionale invece che disabilitato.
 
-                    {/* Il segmented dei literal dell'enum discriminante. I literal
-                        arrivano dalla SHAPE (`discriminantEnum`), mai cablati: il
-                        `All | normal | initial | final` del prompt e' l'esempio di
-                        `State`, e scriverlo qui avrebbe reso la barra muta su ogni
-                        altro metamodello. Assente quando la metaclasse non ha un
-                        enum a valore singolo con almeno due literal. */}
-                    {discriminant && !collectionIsEmpty && (
-                        <div
-                            className="instance-manager__segmented"
-                            role="group"
-                            aria-label={`Filter by ${discriminant.key}`}
-                            title={`${discriminant.key} : ${discriminant.enumName}`}
-                        >
-                            {['', ...discriminant.literals].map(lit => (
+                    La condizione sta sulla RIGA e non su ciascun figlio, e la
+                    differenza e' misurata: spegnere i quattro dentro una riga che
+                    resta libera spazio orizzontale e zero spazio verticale — la
+                    barra c'era ancora, con dentro il solo «New», che la CTA del
+                    cartello ripete quaranta pixel piu' in basso. `New` e la CTA
+                    hanno la STESSA condizione (`classShape && !newReason`): dove
+                    la riga sparisce il bottone e' gia' a schermo dentro il
+                    cartello, e dove la CTA non c'e' non c'era nemmeno il bottone.
+                    La TESTATA — titolo e sottotitolo — non e' toccata. §1 del
+                    referto 10j. */}
+                {!collectionIsEmpty && (
+                    <div className="instance-manager__toolbar">
+                        {selectedClass && (
+                            <input
+                                className="instance-manager__search"
+                                type="search"
+                                value={query}
+                                placeholder="Filter by name…"
+                                aria-label={`Filter ${selectedClass.name} instances by name`}
+                                onChange={e => { setQuery(e.target.value); setPage(1); }}
+                            />
+                        )}
+
+                        {/* Il segmented dei literal dell'enum discriminante. I literal
+                            arrivano dalla SHAPE (`discriminantEnum`), mai cablati: il
+                            `All | normal | initial | final` del prompt e' l'esempio di
+                            `State`, e scriverlo qui avrebbe reso la barra muta su ogni
+                            altro metamodello. Assente quando la metaclasse non ha un
+                            enum a valore singolo con almeno due literal. */}
+                        {discriminant && (
+                            <div
+                                className="instance-manager__segmented"
+                                role="group"
+                                aria-label={`Filter by ${discriminant.key}`}
+                                title={`${discriminant.key} : ${discriminant.enumName}`}
+                            >
+                                {['', ...discriminant.literals].map(lit => (
+                                    <button
+                                        type="button"
+                                        key={lit || '__all__'}
+                                        className={'instance-manager__segment'
+                                            + (segment === lit ? ' instance-manager__segment--on' : '')}
+                                        aria-pressed={segment === lit}
+                                        onClick={() => { setSegment(lit); setPage(1); }}
+                                    >
+                                        {lit || 'All'}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* L'indicatore dichiara la riduzione che la tabella ha appena
+                            fatto da se'. Una colonna che sparisce senza che nulla lo
+                            dica e' un metamodello che sembra piu' povero di quel che
+                            e': il conteggio e' li' perche' la riduzione sia leggibile,
+                            e il `title` elenca quali. */}
+                        {/* 10i — il conteggio passa da `hiddenColumnKeys` alle sole
+                            NON-OVERRIDATE. Con il pannello, una vuota puo' essere
+                            sullo schermo per scelta, e continuare a contarla qui
+                            direbbe «nascosta» di una colonna che si vede. */}
+                        {autoHiddenKeys.length > 0 && (
+                            <span
+                                className="instance-manager__hidden-cols"
+                                title={`Empty on every instance: ${autoHiddenKeys.join(', ')}`}
+                            >
+                                <i className="bi bi-eye-slash" aria-hidden="true" />
+                                {autoHiddenKeys.length} empty column{autoHiddenKeys.length === 1 ? '' : 's'} hidden
+                            </span>
+                        )}
+
+                        {/* Il pannello Columns (10i).
+                            Sta accanto all'indicatore perche' e' il gesto che
+                            risponde alla frase: la riga dice «due colonne
+                            nascoste», e il bottone subito dopo e' dove si va a
+                            rivederle. Secondario come Export: il primario della
+                            testata resta la create, uno solo. */}
+                        {classShape && columns.length > 0 && (
+                            <div className="instance-manager__columns-wrap" ref={columnsRef}>
                                 <button
                                     type="button"
-                                    key={lit || '__all__'}
-                                    className={'instance-manager__segment'
-                                        + (segment === lit ? ' instance-manager__segment--on' : '')}
-                                    aria-pressed={segment === lit}
-                                    onClick={() => { setSegment(lit); setPage(1); }}
+                                    className="instance-manager__columns"
+                                    aria-expanded={columnsOpen}
+                                    aria-haspopup="true"
+                                    title="Choose which columns the table shows"
+                                    onClick={() => setColumnsOpen(o => !o)}
                                 >
-                                    {lit || 'All'}
+                                    <i className="bi bi-layout-three-columns" aria-hidden="true" />
+                                    Columns
                                 </button>
-                            ))}
-                        </div>
-                    )}
 
-                    {/* L'indicatore dichiara la riduzione che la tabella ha appena
-                        fatto da se'. Una colonna che sparisce senza che nulla lo
-                        dica e' un metamodello che sembra piu' povero di quel che
-                        e': il conteggio e' li' perche' la riduzione sia leggibile,
-                        e il `title` elenca quali. */}
-                    {/* 10i — il conteggio passa da `hiddenColumnKeys` alle sole
-                        NON-OVERRIDATE. Con il pannello, una vuota puo' essere
-                        sullo schermo per scelta, e continuare a contarla qui
-                        direbbe «nascosta» di una colonna che si vede. */}
-                    {autoHiddenKeys.length > 0 && !collectionIsEmpty && (
-                        <span
-                            className="instance-manager__hidden-cols"
-                            title={`Empty on every instance: ${autoHiddenKeys.join(', ')}`}
-                        >
-                            <i className="bi bi-eye-slash" aria-hidden="true" />
-                            {autoHiddenKeys.length} empty column{autoHiddenKeys.length === 1 ? '' : 's'} hidden
-                        </span>
-                    )}
+                                {columnsOpen && (
+                                    <div
+                                        className="instance-manager__columns-panel"
+                                        role="group"
+                                        aria-label={`Columns of ${classShape.key}`}
+                                    >
+                                        {toggles.map(t => (
+                                            <label
+                                                key={t.key}
+                                                className={'instance-manager__columns-item'
+                                                    + (t.locked ? ' instance-manager__columns-item--locked' : '')}
+                                                title={t.locked
+                                                    ? 'The name column is always shown'
+                                                    : t.empty ? 'Empty on every instance — check to show it anyway'
+                                                        : undefined}
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={t.checked}
+                                                    disabled={t.locked}
+                                                    onChange={e => toggleColumn(t.key, e.target.checked)}
+                                                />
+                                                {t.label}
+                                                {t.empty && (
+                                                    <span className="instance-manager__columns-empty">empty</span>
+                                                )}
+                                            </label>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
 
-                    {/* Il pannello Columns (10i).
-                        Sta accanto all'indicatore perche' e' il gesto che
-                        risponde alla frase: la riga dice «due colonne
-                        nascoste», e il bottone subito dopo e' dove si va a
-                        rivederle. Secondario come Export: il primario della
-                        testata resta la create, uno solo. */}
-                    {classShape && columns.length > 0 && !collectionIsEmpty && (
-                        <div className="instance-manager__columns-wrap" ref={columnsRef}>
+                        {classShape && rows.length > 0 && (
                             <button
                                 type="button"
-                                className="instance-manager__columns"
-                                aria-expanded={columnsOpen}
-                                aria-haspopup="true"
-                                title="Choose which columns the table shows"
-                                onClick={() => setColumnsOpen(o => !o)}
+                                className="instance-manager__export"
+                                title={`Export the ${visible.length} listed instance${visible.length === 1 ? '' : 's'} as CSV`}
+                                onClick={exportCsv}
                             >
-                                <i className="bi bi-layout-three-columns" aria-hidden="true" />
-                                Columns
+                                <i className="bi bi-download" aria-hidden="true" />
+                                Export
                             </button>
+                        )}
 
-                            {columnsOpen && (
-                                <div
-                                    className="instance-manager__columns-panel"
-                                    role="group"
-                                    aria-label={`Columns of ${classShape.key}`}
-                                >
-                                    {toggles.map(t => (
-                                        <label
-                                            key={t.key}
-                                            className={'instance-manager__columns-item'
-                                                + (t.locked ? ' instance-manager__columns-item--locked' : '')}
-                                            title={t.locked
-                                                ? 'The name column is always shown'
-                                                : t.empty ? 'Empty on every instance — check to show it anyway'
-                                                    : undefined}
-                                        >
-                                            <input
-                                                type="checkbox"
-                                                checked={t.checked}
-                                                disabled={t.locked}
-                                                onChange={e => toggleColumn(t.key, e.target.checked)}
-                                            />
-                                            {t.label}
-                                            {t.empty && (
-                                                <span className="instance-manager__columns-empty">empty</span>
-                                            )}
-                                        </label>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    )}
+                        {/* Route 1 of Turno 10: the catalogue creates the rootable ones.
+                            Absent, never disabled, when the metamodel says no — the
+                            sentence below the toolbar carries the reason instead.
 
-                    {classShape && rows.length > 0 && (
-                        <button
-                            type="button"
-                            className="instance-manager__export"
-                            title={`Export the ${visible.length} listed instance${visible.length === 1 ? '' : 's'} as CSV`}
-                            onClick={exportCsv}
-                        >
-                            <i className="bi bi-download" aria-hidden="true" />
-                            Export
-                        </button>
-                    )}
-
-                    {/* Route 1 of Turno 10: the catalogue creates the rootable ones.
-                        Absent, never disabled, when the metamodel says no — the
-                        sentence below the toolbar carries the reason instead.
-
-                        10c non cambia l'evento, e non poteva: `openCreate(cls, null,
-                        null)` e' LA STESSA chiamata che `outlineCreate` fa dal nodo
-                        modello. La scorciatoia rootable della regola Q8 e' la
-                        superficie, non un secondo percorso di create. */}
-                    {classShape && !newReason && (
-                        <button
-                            type="button"
-                            className="instance-manager__new"
-                            onClick={() => openCreate(classShape.key, null, null)}
-                        >
-                            <i className="bi bi-plus-lg" aria-hidden="true" />
-                            New {classShape.key}
-                        </button>
-                    )}
-                </div>
+                            10c non cambia l'evento, e non poteva: `openCreate(cls, null,
+                            null)` e' LA STESSA chiamata che `outlineCreate` fa dal nodo
+                            modello. La scorciatoia rootable della regola Q8 e' la
+                            superficie, non un secondo percorso di create. */}
+                        {classShape && !newReason && (
+                            <button
+                                type="button"
+                                className="instance-manager__new"
+                                onClick={() => openCreate(classShape.key, null, null)}
+                            >
+                                <i className="bi bi-plus-lg" aria-hidden="true" />
+                                New {classShape.key}
+                            </button>
+                        )}
+                    </div>
+                )}
 
                 {classShape && newReason && (
                     <p className="instance-manager__note instance-manager__note--reason">
