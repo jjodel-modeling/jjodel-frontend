@@ -2,6 +2,33 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-09-01 — discovery: Edition_0 esiste per l'albero e non per il validatore (CRUD3 F1)
+**Prompt**: CRUD3 Fase 1, cinque domande con misura (Q1 i cinque lettori, Q2 dove sta
+l'oggetto su fixture a due modelli omonimi, Q3 come `createInstance` sceglie il modello,
+Q4 la race di deferral, Q5 il form nested che dice «No issues»). Read-only sul prodotto,
+sonde `_tmp_`, nessuna ipotesi di fix nel referto.
+**Files touched**: `docs/discovery/discovery_2026-09-01_crud3_edition_dangling.md` (nuovo).
+Zero file di prodotto. Le sonde `scripts/smoke/_tmp_crud3_{recon,red}.ts` non sono
+committate (`.gitignore:66`).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — nessun file di codice toccato, nessun file di prodotto letto in
+scrittura. Le due sonde girano contro il dev server e non modificano sorgenti.
+**Out-of-scope changes**: no — un solo file, il referto.
+**Layer Impact Report**: not-required — discovery read-only, nessun diff su §3.1.
+**Smoke visivo**: non applicabile — nessuna modifica visiva. Le sonde:
+`_tmp_crud3_recon.ts` **12/12**, `_tmp_crud3_red.ts` **10/10**, zero `pageerror` in
+entrambe.
+**Notes**: causa a `joiner/classes.ts:774-784` — un `DObject` col padre `DValue` va in
+`values`, mai in `objects` — mentre il perimetro del validatore E' `model.objects`
+(`ConformanceValidator.ts:27`). Q4 scartata: rosso a t=0, a +3500 e dopo ricarica, col per
+contrasto verde. Q5: indice unico, la violazione e' del referrer. I due `model_1` omonimi
+non c'entrano. Il resto — tabella Q1, misure, una lettura intermedia corretta, la residua,
+i candidati col costo — nel referto.
+**Prompt document name**: CRUD3 F1 (in chat) — 2026-09-01 22:30
+
+
 ## 2026-09-01 — docs(log): rotazione P9, le ventitre' entry oltre la quarantesima (DOCS1)
 **Prompt**: DOCS1 — «ruota il log oltre le 40 voci». La soglia di P9 e' 40 e il file attivo
 era a 62 dopo la chiusura di IRF1 e di CRUD2 Fase 2; le rotazioni precedenti l'avevano
