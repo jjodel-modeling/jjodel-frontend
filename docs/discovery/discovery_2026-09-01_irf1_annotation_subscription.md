@@ -378,3 +378,22 @@ non ha modo di sapere che lo stash che apre non e' quello che credevi di aver cr
 dimostrare che un rosso e' pre-esistente lo stash non serviva affatto: bastava — ed e' quello
 che alla fine ha dato la prova — leggere il diff non committato dei file rossi e cercare
 l'implementazione che i loro nomi invocano.
+
+## 15. Addendum — i gate rifatti sull'albero fuso con CRUD2
+
+I 16 rossi di §13 sono spariti da soli, e per la ragione che §13 dava: erano test davanti
+alla loro implementazione. La corsia CRUD2 e' atterrata mentre IRF1 lavorava — `cd4135625`
+«the create modal reads cardinality, and aggregation stops evicting» e la sua voce di log —
+portando `setDraftRefMany` in `jjform/create.ts`. Il commit di IRF1 (`81ea7b67e`) sta sopra
+i suoi.
+
+Tutto rimisurato su HEAD:
+
+- `vitest` su `viewpoint/ir/__tests__/` + `nodes/__tests__/` + `jjform/__tests__/`:
+  **983/983**, 36 file, zero rossi;
+- `npx tsc --noEmit` su output completo, exit 2: **33**, baseline invariata;
+- `npm run build`: **exit 0**, zero occorrenze di `error`;
+- `_tmp_irf1_verify.ts`: **12/12 ALL GREEN**, B **264 ms**, C **254 ms**, D **252 ms**.
+
+I due diff non si toccano: CRUD2 sta in `jjform/` e `abstract/tabs/`, IRF1 in
+`viewpoint/ir/IRForm.tsx`.

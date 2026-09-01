@@ -2,6 +2,48 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-09-01 — fix(form): la form vede cambiare un'annotation della metafeature (IRF1)
+**Prompt**: IRF1, dal difetto pre-esistente misurato da TXT1 Fase 2 §6.1. Riproduzione
+PRIMA come sonda, col contrasto sulla chiave vecchia; sottoscrizione di `IRForm` estesa
+alla sorgente delle annotation della metafeature per la via meno invasiva, senza
+ristrutturare il recompute; Layer Impact Report col censimento di chi altro legge quelle
+deps; delta di re-render misurato su un gesto non pertinente.
+**Files touched**: `frontend/src/components/editor-v2/viewpoint/ir/IRForm.tsx` (import del
+prefisso, il selettore `annotationSignature`, la dep nella memo, l'intestazione che diceva
+«Reactivity comes entirely from `useIRFormView`»), il test nuovo
+`viewpoint/ir/__tests__/irFormAnnotationSubscription.test.ts`, e il referto
+`docs/discovery/discovery_2026-09-01_irf1_annotation_subscription.md`. La sonda
+`scripts/smoke/_tmp_irf1_verify.ts` non e' committata (`.gitignore:66`).
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-01 19:30 — TXT1 Fase 2, il punto §6.1 che il suo referto dichiaro' non riparato
+**Causa**: (c)
+**Regressions**: no — su HEAD fuso con CRUD2: `npx tsc --noEmit` **33** su output COMPLETO,
+exit 2 (baseline invariata, zero errori nei file toccati); `npm run build` exit **0**, zero
+`error`, solo il warning di chunk noto; `vitest` su `viewpoint/ir/` + `nodes/` + `jjform/`
+**983/983**. Sonde TXT1: `_tmp_txt1_verify.ts` **21/21 ALL GREEN**, `_tmp_txt1_recon.ts`
+14/16 coi soli bracci 4 e 5b, l'inversione gia' dichiarata dalla Fase 2. Sei mutazioni sui
+punti portanti: 1/1/1/1/2 rossi sulle unita' e — la piu' importante — la firma sul solo
+array di puntatori misurata SULL'APP, verde su B e C e **rossa su D**, che e' la cecita'
+prevista mostrata invece che affermata.
+**Out-of-scope changes**: no — un file di prodotto piu' il test piu' il referto.
+**Layer Impact Report**: produced — in chat e in §5 del referto, prima del diff. D-layer in
+sola LETTURA (zero scritture, zero TRANSACTION, zero creatori); il solo layer modificato e'
+il render IR. `useIRFormView` non e' toccato: allargarne la firma avrebbe fatto ri-risolvere
+`resolveIRView` e ripubblicare le cross-deps per una larghezza.
+**Smoke visivo**: passato — `_tmp_irf1_verify.ts` **12/12 ALL GREEN**, zero errori di pagina,
+NESSUN nudge in nessun braccio. Prima del rimedio 3 rossi: `multiline` e `renderer=swatch`
+lasciavano la form ferma oltre il budget di 6000 ms mentre lo store portava gia' la
+dichiarazione. Dopo: growtext a 12 colonne in **264 ms**, swatch a 3 colonne in **254 ms**,
+ritorno all'input dopo il clear in **252 ms**.
+**Notes**: (c) perche' la diagnosi ereditata era la memo, e la memo non c'entra: `slots` e'
+`get_features`, un array nuovo a ogni lettura — referto §1. Costo misurato, non stimato, con
+un contatore tolto prima del commit: +1 render prima e +1 dopo su un gesto non pertinente,
+0 e 0 a riposo. Il `clear` non tocca `annotations` (1 -> 1 puntatori, `source` -> `''`): §4.2.
+Un `git stash push` fallito in silenzio ha fatto aprire al `pop` lo stash di luglio: riparato,
+stash list intatta, §14.
+**Prompt document name**: IRF1 (in chat) — 2026-09-01 20:15
+
+
 ## 2026-09-01 — feat(manager): la cardinalita' nel modale, e l'aggregation non sfratta piu' (CRUD2 F2)
 **Prompt**: CRUD2 fase 2, go-ahead sul referto
 `discovery_2026-09-01_crud2_cardinalita_aggancio.md`. Tre punti gia' decisi (multi-selezione
