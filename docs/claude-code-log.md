@@ -65,7 +65,7 @@ copia, **senza `git stash`** (RC-13).
 uno static (`U.tsx:211`) azzerato senza azione ne' evento, e `IRForm.tsx:344` dichiara gia'
 che sottoscriverlo non e' possibile. Sempre attivo, spento solo in volo. Due difetti
 pre-esistenti misurati e non toccati, annotati nella sonda: il flag lo pulisce anche
-l'autosave silenzioso, e `version` non avanza fra due save ravvicinati.
+l'autosave silenzioso, e `version` non avanza fra due save vicini.
 **Prompt document name**: SAVE1 (in chat) — 2026-09-01 23:20
 
 
