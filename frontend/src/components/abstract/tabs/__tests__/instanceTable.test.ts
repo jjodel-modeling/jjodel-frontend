@@ -396,6 +396,59 @@ describe('slotShapeFor / tableRow', () => {
         expect(cell.decision.kind).toBe('enumChip');
     });
 
+    /* Una tinta per alternativa (PILL). Lo slot e' l'indice del letterale dentro la
+       PROPRIA enumerazione, non una posizione globale: due valori fra cui si sta
+       scegliendo non escono mai dello stesso colore. Il colore dipinto lo misura la
+       sonda; qui si asserisce l'assegnazione. */
+    describe('lo slot di colore del chip di enum', () => {
+        const kinds = {
+            ...shape,
+            enums: { ...shape.enums, Kind: { id: 'eKind', name: 'Kind',
+                literals: [{ id: 'lInit', name: 'initial' }, { id: 'lFinal', name: 'final' }] } },
+        };
+        const cls: ClassShape = { ...Sensor, attrs: [
+            { key: 'kind', id: 'aKind', lower: 0, upper: 1, many: false, required: false,
+              derived: false, readOnly: false, type: 'enum', enum: 'Kind', typeName: 'Kind' },
+        ], refs: [] };
+        const withValues = (values: string[], upper = 1) => ({
+            ...idlookup,
+            aKind: { id: 'aKind', className: 'DAttribute', name: 'kind' },
+            s1: { ...idlookup.s1, features: ['vKind'] },
+            vKind: { id: 'vKind', className: 'DValue', instanceof: 'aKind', father: 's1', values },
+        });
+        const clsUpper = (upper: number): ClassShape => ({ ...cls, attrs: [{ ...cls.attrs[0], upper, many: upper !== 1 }] });
+
+        it('positivo di controllo: il primo letterale prende lo slot 1', () => {
+            expect(tableRow(withValues(['lInit']), 's1', cls, kinds).cells.kind.slot).toBe(1);
+        });
+
+        it('due letterali della stessa enumerazione non condividono lo slot', () => {
+            const a = tableRow(withValues(['lInit']), 's1', cls, kinds).cells.kind.slot;
+            const b = tableRow(withValues(['lFinal']), 's1', cls, kinds).cells.kind.slot;
+            expect(a).toBe(1);
+            expect(b).toBe(2);
+            expect(a).not.toBe(b);
+        });
+
+        it('un valore che non e\' fra i letterali non prende slot', () => {
+            // Un modello importato puo\' portare un letterale poi rimosso: e\' un problema
+            // di conformita\', non un\'alternativa da colorare.
+            expect(tableRow(withValues(['lRimosso']), 's1', cls, kinds).cells.kind.slot).toBeUndefined();
+        });
+
+        it('un enum MULTIVALORE non prende slot: il testo e\' una giunzione', () => {
+            const row = tableRow(withValues(['lInit', 'lFinal']), 's1', clsUpper(-1), kinds);
+            expect(row.cells.kind.text).toContain(',');
+            expect(row.cells.kind.slot).toBeUndefined();
+        });
+
+        it('un attributo che non e\' un\'enumerazione non prende slot', () => {
+            const cell = tableRow(idlookup, 's1', Sensor, shape).cells.name
+                ?? tableRow(idlookup, 's1', Sensor, shape).cells[Object.keys(tableRow(idlookup, 's1', Sensor, shape).cells)[0]];
+            expect(cell.slot).toBeUndefined();
+        });
+    });
+
     it('honours a rule-1 renderer annotation on the feature', () => {
         const annotated = {
             ...idlookup,

@@ -1003,6 +1003,54 @@
         color: var(--color-form-section);
     }
 
+    /* Una tinta per alternativa. Gli slot sono sette, in ordine fisso, assegnati da
+       `jjform/optionColor.ts` sull'indice del letterale dentro la PROPRIA enumerazione:
+       due valori fra cui si sta scegliendo non escono mai dello stesso colore, e `High`
+       e' lo stesso colore in tutte le colonne tipate sulla stessa enumerazione. Due
+       enumerazioni diverse possono riusare uno slot — non sono alternative fra loro.
+
+       Il chip neutro qui sopra resta la base: lo porta un enum multivalore (il testo e'
+       una giunzione, e colorarla col primo letterale direbbe una cosa falsa sugli altri)
+       e un valore che non e' fra i letterali dichiarati.
+
+       Sette blocchi e non una custom property scritta sull'elemento: le variabili di
+       questo sistema stanno in `styles/tokens/` (CLAUDE.md regola 28). */
+    &__chip--slot-1 {
+        background: var(--color-opt-1-bg);
+        border-color: var(--color-opt-1-border);
+        color: var(--color-opt-1-fg);
+    }
+    &__chip--slot-2 {
+        background: var(--color-opt-2-bg);
+        border-color: var(--color-opt-2-border);
+        color: var(--color-opt-2-fg);
+    }
+    &__chip--slot-3 {
+        background: var(--color-opt-3-bg);
+        border-color: var(--color-opt-3-border);
+        color: var(--color-opt-3-fg);
+    }
+    &__chip--slot-4 {
+        background: var(--color-opt-4-bg);
+        border-color: var(--color-opt-4-border);
+        color: var(--color-opt-4-fg);
+    }
+    &__chip--slot-5 {
+        background: var(--color-opt-5-bg);
+        border-color: var(--color-opt-5-border);
+        color: var(--color-opt-5-fg);
+    }
+    &__chip--slot-6 {
+        background: var(--color-opt-6-bg);
+        border-color: var(--color-opt-6-border);
+        color: var(--color-opt-6-fg);
+    }
+    &__chip--slot-7 {
+        background: var(--color-opt-7-bg);
+        border-color: var(--color-opt-7-border);
+        color: var(--color-opt-7-fg);
+    }
+
     &__pill {
         padding: 0 6px 0 4px;
         border: 1px solid var(--color-form-border);

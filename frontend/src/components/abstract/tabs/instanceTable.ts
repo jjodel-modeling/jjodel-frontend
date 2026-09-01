@@ -24,6 +24,7 @@
 
 import { findFeatureRaw, makeDrawReadCtx } from '../../editor-v2/viewpoint/ir/irReadCtx';
 import { readRowViewAnnotations } from '../../editor-v2/nodes/rowViewAnnotations';
+import { optionSlot } from '../../../jjform';
 import {
     detectValueRenderer,
     type RendererDecision,
@@ -66,6 +67,17 @@ export interface TableCell {
      *  an empty slot, and without this flag the cell would print a dash - the
      *  silent emptiness ratified rule 2 of 12d forbids. */
     missingRequired: boolean;
+    /**
+     * Colour slot of this value among the LITERALS of its own enumeration, 1-based, or
+     * absent when the feature is not an enumeration (or the value is not one of its
+     * literals — an imported model can hold one that was later removed).
+     *
+     * Alternatives, and only alternatives: `High` wears the same colour in every column
+     * typed on the same enumeration, and a literal of a different enumeration may reuse
+     * it, because the two are never a choice between each other. `jjform/optionColor.ts`
+     * owns the assignment and the reason it cycles past the seventh.
+     */
+    slot?: number;
 }
 
 export interface TableRow {
@@ -215,6 +227,16 @@ export function tableRow(
             // R-FORM-15 exists to close. Kept as a field because the cell reads it
             // as a state, the way `broken` is read.
             missingRequired: decision.kind === 'missingRequired',
+            // The colour of the alternative, for a chip that shows ONE literal. A
+            // multivalued enum prints a join (`A, B`) and colouring that by its first
+            // literal would say something false about the rest, so it keeps the neutral
+            // chip. `optionSlot` answers `null` for a value that is not among the
+            // literals — an imported model can hold one that was later removed — and a
+            // value with no slot wears the chip the table drew before there were slots.
+            slot: slot.values?.length === 1
+                ? optionSlot([{ options: (slot.enumLiteralNames ?? []).map(value => ({ value })) }],
+                             slot.values[0]) ?? undefined
+                : undefined,
         };
         if (text) bits.push(text);
     }

@@ -93,6 +93,7 @@ import {
     childMenu,
     newDraft,
     newInstanceReason,
+    optionSlotClass,
     outlineLabel,
     outlineOpenByDefault,
     rendersInline,
@@ -216,7 +217,15 @@ function Cell({ cell }: { cell: TableCell }) {
             );
 
         case 'enumChip':
-            return <span className="instance-manager__chip" title={cell.text}>{cell.text}{extra}</span>;
+            // One colour per alternative: the literals of one enumeration never share a
+            // slot, so two values a modeller is choosing between never read the same.
+            // Across enumerations they may, and that is the rule, not a collision.
+            return (
+                <span
+                    className={`instance-manager__chip${optionSlotClass('instance-manager__chip', cell.slot ?? null)}`}
+                    title={cell.text}
+                >{cell.text}{extra}</span>
+            );
 
         case 'refPill':
             return (

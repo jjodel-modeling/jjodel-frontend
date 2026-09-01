@@ -2,6 +2,40 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-09-01 — feat(manager): i chip di enum della tabella prendono il colore (PILL2)
+**Prompt**: «non vedo nessun pill colorato», con screenshot. Le pill dello screenshot sono
+i chip di enum della tabella del Manager (`instance-manager__chip`), non le ref pill della
+form IR colorate un'ora prima: **avevo colorato la superficie sbagliata**. Stessa palette,
+stesso modulo, superficie giusta.
+**Files touched**: `abstract/tabs/{instanceTable.ts, InstanceManagerTab.tsx,
+instanceManagerTab.scss}` e `abstract/tabs/__tests__/instanceTable.test.ts` (blocco nuovo,
+5 casi, ora 38). La sonda `scripts/smoke/_tmp_pill2_verify.ts` non e' committata
+(`.gitignore:66`).
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-01 16:30
+**Causa**: (a)
+**Regressions**: no — `npx tsc --noEmit` **33** su output COMPLETO (baseline invariata);
+`npm run build` exit **0**, solo il warning di chunk noto; suite `abstract/tabs/__tests__/`
++ `jjform/__tests__/` **714/714**. Blocco nuovo provato contro TRE mutazioni (slot anche al
+multivalore, fallback a 1 invece di `undefined`, lista di alternative fasulla): 1/2/3
+rossi, verde al ripristino.
+**Out-of-scope changes**: no — quattro file, sotto la soglia della regola 19.
+**Layer Impact Report**: not-required — nessun file di §3.1, zero creatori D, zero
+`TRANSACTION`: si calcola un indice e si aggiunge una classe.
+**Smoke visivo**: passato — `_tmp_pill2_verify.ts` **9/9**, zero errori di pagina, chiaro e
+scuro. Colonna `stroke`: `SOLID`/`DASHED`/`DOTTED` escono slot 1/2/3, tre fondi distinti in
+entrambi i temi; lo stesso letterale e' sempre dello stesso colore.
+**Notes**: lo slot e' l'indice del letterale nella PROPRIA enumerazione, non una posizione
+globale: `High` e' lo stesso colore in ogni colonna tipata sulla stessa enum, e due enum
+diverse possono riusare uno slot — non sono alternative fra loro. Un enum multivalore resta
+neutro (il testo e' una giunzione). Due errori della sonda corretti: il fixture aveva un
+solo letterale in uso, e la prima messa in scena scriveva su `tint`, che rende SWATCH e non
+chip — la colonna a chip si legge ora dal DOM.
+**Prompt document name**: «non vedo nessun pill colorato» (in chat) — 2026-09-01 17:20
+
+
+
+
 ## 2026-09-01 — docs(discovery): CRUD2 fase 1, la cardinalita' conferma e l'orfano no
 **Prompt**: CRUD2 (in chat), due difetti dal prodotto del 01-09, discovery-first su
 entrambi. 1) i dropdown delle associazioni ignorano la cardinalita'; 2) il child creato
