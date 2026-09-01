@@ -137,7 +137,20 @@ describe('10j — il chrome tace a collezione vuota', () => {
         expect(CODE).toContain('{discriminant && (');
         expect(CODE).toContain('{autoHiddenKeys.length > 0 && (');
         expect(CODE).toContain('{classShape && columns.length > 0 && (');
-        expect(CODE).not.toContain('&& !collectionIsEmpty && (');
+        // 10k-CHIUSURA — l'asserzione era un `not.toContain` sull'INTERO file.
+        // Ora `!collectionIsEmpty` compare una volta, sul «New» salito in
+        // TESTATA: li' non e' una ridicitura, perche' la testata non e'
+        // condizionata alla collezione (l'`it` due righe sotto lo pinna) e
+        // senza la guardia il bottone raddoppierebbe la CTA del cartello. La
+        // regola resta quella di prima, ristretta a dove valeva: dentro la
+        // barra, nessun figlio ripete la condizione del contenitore.
+        const bar = CODE.indexOf('instance-manager__toolbar');
+        // `indexOf` DALLA barra in poi: `note--reason` compare tre volte nel
+        // file e la prima e' nel dialogo di delete, ottocento righe sopra.
+        const barEnd = CODE.indexOf('instance-manager__note--reason', bar);
+        expect(bar).toBeGreaterThan(-1);
+        expect(barEnd).toBeGreaterThan(bar);
+        expect(CODE.slice(bar, barEnd)).not.toContain('collectionIsEmpty');
     });
 
     it('il pannello della form non si rende affatto: la barra sparisce col contenitore', () => {
@@ -155,8 +168,17 @@ describe('10j — il chrome tace a collezione vuota', () => {
         // quella dell'`action` del cartello: dove la riga sparisce il bottone è
         // già a schermo dentro il cartello, e dove la CTA non c'è non c'era
         // nemmeno il bottone. Nessun caso perde la create.
-        expect(CODE).toContain('{classShape && !newReason && (');
+        // 10k-CHIUSURA — la condizione era `{classShape && !newReason && (`,
+        // uguale a quella della CTA, e bastava: il «New» stava nella barra, che
+        // a collezione vuota spariva intera. Salito in testata — che a
+        // collezione vuota RESTA — la parita' non basta piu', e serve il terzo
+        // termine. L'invariante che questo `it` protegge non cambia: i due non
+        // convivono mai, e nessun caso perde la create.
+        expect(CODE).toContain('{classShape && !newReason && !collectionIsEmpty && (');
         expect(CODE).toMatch(/action=\{classShape && !newReason\s*\?/);
+        // I due sono ESCLUSIVI: il bottone chiede una collezione non vuota, la
+        // CTA vive dentro il ramo `collectionIsEmpty`.
+        expect(CODE).toMatch(/\{collectionIsEmpty && selectedClass \?/);
     });
 
     it('Export resta com\'era: già assente a zero righe, per la sua condizione', () => {

@@ -304,13 +304,22 @@ describe('10i — il bottone e il popover', () => {
         expect(TSX_CODE).toMatch(/aria-hidden="true"\s*\/>\s*\n\s*Columns/);
     });
 
-    it('sta ACCANTO all\'indicatore, e prima di Export', () => {
+    it('sta ACCANTO all\'indicatore, e chiude la barra', () => {
+        // 10k-CHIUSURA — la seconda meta' era `exp > btn`, «e prima di Export».
+        // Export ha lasciato la barra: sta nella riga di testata, che nel
+        // sorgente viene PRIMA, quindi il confronto si e' rovesciato senza che
+        // nulla di 10i cambiasse. Cio' che 10i asseriva davvero — Columns
+        // accanto all'indicatore, perche' la riga dice «due nascoste» e il
+        // bottone subito dopo e' dove si va a rivederle — resta, e la meta' su
+        // Export diventa la sua verita' nuova: nella barra non c'e' piu'.
         const ind = TSX_CODE.indexOf('empty column');
         const btn = TSX_CODE.indexOf('instance-manager__columns"');
+        const bar = TSX_CODE.indexOf('instance-manager__toolbar');
         const exp = TSX_CODE.indexOf('instance-manager__export"');
         expect(ind).toBeGreaterThan(-1);
         expect(btn).toBeGreaterThan(ind);
-        expect(exp).toBeGreaterThan(btn);
+        expect(exp).toBeGreaterThan(-1);      // Export esiste ancora
+        expect(exp).toBeLessThan(bar);        // …ma sopra la barra, in testata
     });
 
     it('l\'indicatore legge `autoHiddenKeys`, non più `hiddenColumnKeys`', () => {
