@@ -2,6 +2,90 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-09-01 — test(smoke): la `link` condivisa che asserisce la forma che posa (ENG2)
+**Prompt**: `docs/prompts/PROMPT_ENG2_probe_link_gate.md` — chiudere il secondo punto di
+ENG1 §B.6: una `link` condivisa in `states.ts` che asserisca la forma costruita invece di
+ricalcolare l'indice dallo store, la migrazione delle sonde che usano la forma pericolosa,
+e il contratto del chiamante pinnato come SOLO COMMENTO su `get_setValueAtPosition`.
+Fuori scope: ogni modifica di codice a `LModelElement.tsx` e `action.ts`, OQ-2/OQ-4.
+**Files touched**: `frontend/scripts/smoke/states.ts` (export `link` + `LinkResult`),
+`frontend/scripts/smoke/README-probes.md` (nuova sotto-sezione), `frontend/src/model/
+logicWrapper/LModelElement.tsx` (**otto righe di commento, zero codice**) e il referto
+`docs/discovery/discovery_2026-09-01_eng2_probe_link_gate.md`, in `de7a916f3`; questa entry
+a parte. Le sonde `_tmp_eng2_verify.ts` (nuova) e `_tmp_10g_{measure,verify}.ts` (migrate)
+restano non committate: `.gitignore:66`. Pathspec — l'indice portava lavoro di UX1, che si e'
+committato da se' in `e3fbbcb08`.
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-01 09:05 — ENG1, il punto §B.6 che quel referto lascio' aperto per progetto
+**Causa**: (g)
+**Regressions**: no — `npm run typecheck` **33** (baseline invariata, conteggio su output
+COMPLETO); `states.ts` sta fuori da `include: src`, verificato a parte con `tsc --noEmit`
+mirato, exit **0**; `npm run build` exit **0**; `npx vitest run` **2843 passati / 0 falliti**,
+9 file rossi in raccolta tutti il noto `window is not defined`; `npm run check:docs` 3/3.
+`link` provata con UNA mutazione (cursore rimosso, indice riletto dallo store): 3/16 rossi,
+tutti sull'arm dentro la finestra; verde al ripristino.
+**Out-of-scope changes**: no — i due file del prompt, il commento, il referto.
+**Layer Impact Report**: not-required — `LModelElement.tsx` non e' in §3.1 e il delta e' un
+commento: zero creatori D, zero `TRANSACTION`, zero comportamento.
+**Smoke visivo**: passato — `npm run smoke` **GREEN**, 12 passed / 0 failed / 3 skipped, un
+boot per stato. Sonda `_tmp_eng2_verify.ts` **16/16 PASS, zero errori di pagina**, con la
+forma pericolosa tenuta nella STESSA esecuzione come controllo positivo (perde ancora un
+valore, lascia ancora l'orfano). `_tmp_10g_verify.ts` dopo la migrazione **24/24**, riga
+«orfani misurati» vuota; `_tmp_10g_measure.ts` 12 nodi su 12, zero duplicati.
+**Notes**: due reperti. (1) La `link` leggeva `refDef.containment`, campo legacy (§3.8): il
+D-layer scrive `composition`, e il per contrasto si accendeva su scritture corrette — 3/16
+rossi alla prima esecuzione. (2) Le sonde 10c..10f NON sono migrate: posano `raw` e
+asseriscono l'outline, che `father` costruisce; cambiare il posatore cambia il soggetto e
+ritira numeri gia' ratificati. Referto §4 e §7. P6: tipo di commit non indicato dal prompt,
+scelto `test(smoke)` e dichiarato.
+**Prompt document name**: PROMPT_ENG2_probe_link_gate.md — 2026-09-01 12:35
+
+## 2026-09-01 — feat(properties): l'hint del viewpoint non attivo sotto il Form theme (UX1)
+**Prompt**: `docs/prompts/PROMPT_UX1_theme_hint_inactive.md` — chiudere il punto aperto di
+STYLE2 §8: il select «Form theme» scrive il viewpoint SELEZIONATO nell'albero, `IRForm` legge
+quello ATTIVO, e se divergono la scelta appare inerte. Una riga di hint sotto il select, copy
+asciutto sentence case, solo nel caso divergente, sorgente riusata (`state.viewpoint`) e non
+derivata una seconda volta. Fuori scope: attivazione automatica, skin legacy, ogni altra
+superficie.
+**Files touched**: `editors/viewpoint/properties/ViewpointProperties.tsx` (`useSelector` su
+`state.viewpoint`, il predicato, il `<p>` sotto il select),
+`editors/viewpoint/properties/properties.scss` (`&__hint`, additiva) e la suite nuova
+`editors/viewpoint/properties/__tests__/viewpointThemeHint.test.ts` (16 casi), piu' il
+documento di prompt a terra (RC-9), in `e3fbbcb08`; questa entry a parte. Pathspec obbligata:
+una sessione parallela teneva modificati `scripts/smoke/states.ts` e `README-probes.md`.
+Indice verificato vuoto prima e dopo.
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-01 09:35 (STYLE2) — il punto che il suo referto §8 lascio' aperto
+**Causa**: (a)
+**Regressions**: no — `npm run typecheck` **33** (baseline invariata, conteggio su output
+COMPLETO, `EXIT=2`); `npm run build` exit **0**; `npx vitest run` **2843 passati / 0 falliti**
+(2827 + i 16 nuovi), 9 file rossi in raccolta tutti il noto `window is not defined`. Suite
+propria provata con SEI mutazioni (gate rimosso, condizione invertita, guardia sul valore
+vuoto rimossa, select disabilitato fuori dal viewpoint attivo, seconda sorgente via
+`LProject`, regola SCSS rimossa): 1/1/1/1/2/2 rossi, verde al ripristino in tutte e sei.
+**Out-of-scope changes**: yes — uno, dichiarato: `properties.scss`. Il prompt diceva
+«`ViewpointProperties.tsx` + test, zero file condivisi»; un hint senza regola avrebbe reso a
+13px nero, indistinguibile da una seconda etichetta. Misurato che il foglio NON e' condiviso:
+`wp-field` e `workbench-properties` compaiono solo in quei due file (4 occorrenze, tutte
+nella cartella), e `wp-field__hint` non esisteva da nessuna parte. La regola e' additiva.
+**Layer Impact Report**: not-required — nessun file di §3.1 e nessun trigger di §3.2: zero
+creatori D, zero `TRANSACTION`, zero scritture. Il delta e' una lettura di `state.viewpoint` e
+un ramo JSX.
+**Smoke visivo**: passato — `_tmp_ux1_verify.ts` sull'app vera, **13/13 ALL GREEN, exit 0,
+zero errori di pagina**. Caso ATTIVO 0 hint; DIVERGENTE per costruzione (secondo viewpoint
+creato con `DViewPoint.newVP` e attivato) 1 hint con la copy esatta, `<p>` 12px `#64748b`
+sotto il select contro i 13px dell'etichetta; DIVERGENTE per assenza (`state.viewpoint` `""`)
+1 hint — la guardia `!!activeViewpointId` tiene; ritorno all'attivo 0 hint, il controllo di
+segno opposto. PER CONTRASTO il select scrive in ENTRAMBI (`Compact` nell'attivo, `Dense` nel
+divergente) e scrive sul viewpoint SELEZIONATO, con quello attivo rimasto `null`; mai
+`disabled` in nessuno dei tre stati.
+**Notes**: il primo giro della sonda usci' «ATTIVO: nessun hint» VERDE con il pannello
+ASSENTE — zero hint perche' zero DOM: `Info` non monta senza una tab aperta. L'ha preso il
+controllo positivo, non il criterio. La suite legge il SORGENTE e non monta il componente:
+misurato, importarlo muore in raccolta con `window is not defined` (la barrel `joiner` arriva
+a monaco), precedente `irFormLabelColumn.test.ts`.
+**Prompt document name**: PROMPT_UX1_theme_hint_inactive.md — 2026-09-01 12:05
+
 ## 2026-09-01 — feat(manager): l'empty state della metaclasse vuota, e la card che scende sotto il prima (10j)
 **Prompt**: due giri. (1) «Slice 10j — empty state della metaclasse vuota, SERIALE»: il cartello
 parla del MODELLO mentre e' la metaclasse a essere vuota, la card riempie l'altezza, la barra
