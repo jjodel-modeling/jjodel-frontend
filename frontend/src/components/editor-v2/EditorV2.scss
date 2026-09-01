@@ -405,9 +405,11 @@
         }
     }
 
-    // Step 3. The native select clips its own text, so it needs a floor and nothing
-    // else. Last to give: it is the syntax control (R-IRN-10).
-    .toolbar-viewpoint-selector select {
+    // Step 3. The trigger truncates its own label (`__label` below), so it needs a floor
+    // and nothing else. Last to give: it is the syntax control (R-IRN-10). The selector
+    // followed the element from `select` to `.toolbar-viewpoint-trigger` with NAV2 — the
+    // ladder is unchanged, and a rule left on `select` would simply have stopped matching.
+    .toolbar-viewpoint-trigger {
         min-width: 72px;
     }
 }
@@ -561,12 +563,24 @@
     .bi-eye {
         font-size: 13px;
         color: #64748b;
+        flex: none;
     }
 
-    select {
+    // The trigger. Was a `<select>` until NAV2; the geometry and the two-state grammar
+    // below are that control's, carried over value for value so the bar does not move a
+    // pixel when nothing is active. The eye now lives INSIDE it, so the rule above reaches
+    // it as a descendant either way.
+    .toolbar-viewpoint-trigger {
+        display: flex;
+        align-items: center;
+        gap: 4px;
         padding: 3px 8px;
         border: 1px solid #e2e8f0;
         border-radius: 5px;
+        // A `<button>` does not inherit the page font the way a `<select>` was already
+        // being told to; without this the label falls back to the browser's UI font and
+        // the control stops matching the bar beside it.
+        font: inherit;
         font-size: 11px;
         color: #334155;
         background: #fff;
@@ -574,13 +588,46 @@
         outline: none;
         max-width: 140px;
 
-        &:focus {
+        &__label {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        // 8px and never truncated, like `.toolbar-dropdown-btn__chevron`, or the control
+        // stops reading as a dropdown.
+        &__chevron {
+            flex: none;
+            font-size: 8px;
+            opacity: 0.6;
+        }
+
+        // A `<select>` drew its own focus frame; a button does not, and losing it would be
+        // the accessibility regression this slice exists not to make. The ring is a
+        // box-shadow and not an outline because `computeListStyle` is not the only thing
+        // setting `outline: none` here — the rule above does, for the trigger's own resting
+        // state. 3px, from the design system.
+        &:focus-visible {
             border-color: #0ea5e9;
+            box-shadow: var(--focus-ring);
+        }
+
+        &:hover:not(:disabled) {
+            border-color: #94a3b8;
+        }
+
+        // Same treatment as `.toolbar-btn:disabled` and `.toolbar-dropdown-btn:disabled`,
+        // so the three kinds of inert control in this bar read alike. The `<select>` got
+        // this from the browser; a button has to ask.
+        &:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
         }
     }
 
     &--active {
-        select {
+        .toolbar-viewpoint-trigger {
             border-color: #0ea5e9;
             color: #0369a1;
             background: #f0f9ff;
@@ -590,6 +637,107 @@
             color: #0ea5e9;
         }
     }
+}
+
+// ── Syntax picker panel (NAV2) ──────────────────────────────────────────────
+//
+// Flat BEM and top-level, NOT nested under `.editor-v2` or `.editor-v2-toolbar`: the panel
+// is portalled onto `document.body` and a descendant selector would not reach it. Same
+// reasoning, and the same trap, as the Columns panel of 10k.
+//
+// Geometry (`position`, `left`, `top`/`bottom`, `max-height`, `z-index`) is inline, from
+// `computeListStyle`. What is here is only what the mock names.
+//
+// The shadow is composed by hand rather than taken from `var(--shadow-dropdown)`. That
+// role resolves to `--shadow-lg`, one of the names declared BOTH by `styles/tokens/` and
+// by `styles/tokens.css` with different values — the collision `_shadows.scss` documents
+// and that was MEASURED on the manager card on 2026-08-31, where `var(--shadow-sm)`
+// painted tokens.css's value. tokens.css declares it on a plain `:root` with no dark
+// variant, so the token would also freeze the light shadow into dark. `--color-node-shadow`
+// carries the theme correction and collides with nothing.
+.toolbar-viewpoint-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    // Mirrors MIN_WIDTH in `computeListStyle`, which clamps `left` against it: if the two
+    // diverged, the clamp would measure a box that is not the one painted — the mistake
+    // COLUMNS_PANEL_MAX_W exists to name.
+    min-width: 140px;
+    max-width: 260px;
+    overflow-y: auto;
+    padding: 4px;
+    border: 1px solid var(--color-form-border);
+    border-radius: var(--radius-dropdown);
+    // Opaque in BOTH themes. `--color-bg-elevated` is the declared role for floating
+    // panels and would have been the obvious pick, but in dark it is
+    // `rgba(255,255,255,0.04)` — a translucent ground over the canvas. The `--color-bg-*`
+    // and `--color-border-primary` names are among the fifteen collided with tokens.css.
+    background: var(--color-form-surface);
+    box-shadow: 0 4px 12px var(--color-node-shadow);
+}
+
+.toolbar-viewpoint-menu__sep {
+    height: 1px;
+    margin: 4px 6px;
+    background: var(--color-form-border);
+}
+
+.toolbar-viewpoint-menu__option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    user-select: none;
+}
+
+.toolbar-viewpoint-menu__icon {
+    flex: none;
+    width: 14px;
+    font-size: 12px;
+    text-align: center;
+    opacity: 0.75;
+}
+
+.toolbar-viewpoint-menu__label {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.toolbar-viewpoint-menu__check {
+    flex: none;
+    font-size: 12px;
+}
+
+// The keyboard cursor. Distinct from selection on purpose: the arrows move this, and
+// nothing else, until Enter commits.
+.toolbar-viewpoint-menu__option--highlighted {
+    background: var(--color-bg-hover);
+}
+
+// The ratified cyan selection grammar, in tokens rather than in the mock's literals, so
+// the dark corrections they already carry apply here too. In light the three resolve to
+// exactly the hexes the mock names: #ecfeff ground, #0e7490 text, #0891b2 bar.
+.toolbar-viewpoint-menu__option[aria-selected='true'] {
+    background: var(--color-inode-ref-bg);
+    color: var(--color-inode-selected-badge-fg);
+    box-shadow: inset 3px 0 0 var(--color-selection-bar);
+
+    .toolbar-viewpoint-menu__icon {
+        opacity: 1;
+    }
+}
+
+// Both at once: the ground stays the selection's, and the cursor declares itself with the
+// DS focus ring instead of a second background that would erase the cyan.
+.toolbar-viewpoint-menu__option[aria-selected='true'].toolbar-viewpoint-menu__option--highlighted {
+    box-shadow: inset 3px 0 0 var(--color-selection-bar), var(--color-form-focus-ring);
 }
 
 // ── Viewpoint editor badge + back button ──

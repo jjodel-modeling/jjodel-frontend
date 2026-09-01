@@ -25,8 +25,17 @@ export const DATA_MANAGER_OPTION_VALUE = '@data-manager';
 /** Ratified label (2026-09-01): sentence case, NOT «CRUD», NOT «Tabular syntax». */
 export const DATA_MANAGER_OPTION_LABEL = 'Data manager';
 
-/** The `<option>` that separates the syntaxes from the manager. Disabled, so it is
- *  never selectable and never reaches `onChange`. */
+/** Bootstrap glyph of the entry. NAV1 could not paint it — a native `<option>` renders
+ *  text only — so the mock's `bi-table` lived on the models rail alone. NAV2 replaces the
+ *  `<select>` with a listbox whose entries carry icons, and the glyph comes home. */
+export const DATA_MANAGER_OPTION_ICON = 'bi-table';
+
+/** TODO: cleanup — no reader since NAV2 (2026-09-01). The separator was an `<option disabled>`
+ *  because a native `<select>` has no other way to draw a rule; in the listbox that replaced it
+ *  the separator is a hairline `<div role="presentation">`, which is not an entry at all and so
+ *  cannot be highlighted, counted, or reached by the arrow keys. Kept, not deleted: it is the
+ *  vocabulary NAV1 ratified, and the unit suite still asserts the shape of the sentinel against
+ *  it. */
 export const DATA_MANAGER_SEPARATOR_LABEL = '────────';
 
 /**
