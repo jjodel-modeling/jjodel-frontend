@@ -275,3 +275,197 @@ non ridefinisce `get_children_idlist` — ma `getNamespaceOf` risponde «si'» p
 conto suo (`resolveLObjectsFromLValue`), e `LObject.subObjects` pure. Sono gia'
 due punti che sanno discendere uno slot mentre il terzo, `defaultname`, non lo sa.
 La domanda e' se vada unificato li' o lasciato tre volte.
+
+---
+
+# Appendice — Q5 / Q6 (aggiunta 2026-09-02, dallo screenshot del 2026-09-01 post CHECK 6)
+
+Fatto riportato: `Book_0` con due figli `Edition` rinominati a mano «prima
+edizione» / «seconda edizione», badge **2** sul padre nel tree, form «No issues»,
+canvas pulito. Due domande: il badge aggrega i problemi dei discendenti (Q5), e
+sopravvive a save + reload (Q6).
+
+Tre sonde nuove, non committate (`.gitignore:66`), zero `pageerror` in tutte e tre:
+
+| sonda | esito | cosa misura |
+|---|---|---|
+| `_tmp_unq1_badge.ts` | 14 PASS / 2 FAIL | Q5 e Q6 sul DOM reso, piu' il caso dello screenshot |
+| `_tmp_unq1_ctrl.ts` | 7 PASS / 2 FAIL | il controllo positivo che alla prima mancava, e lo scope della revoca |
+| `_tmp_unq1_form.ts` | 3 PASS / 1 FAIL | chi legge il registro nella form: il padre e il figlio a confronto |
+
+I 2 FAIL di `_tmp_unq1_badge` sono il suo arm D — un controllo positivo che **non
+e' partito** (0 entry registrate): non un negativo, una misura rotta, rifatta in
+`_tmp_unq1_ctrl` dove passa. I 2 FAIL di `_tmp_unq1_ctrl` sono asserzioni scritte
+come il comportamento corretto: sono §A.4. L'unico FAIL di `_tmp_unq1_form` e' un
+difetto della sua asserzione, non della misura: cercava la parola «duplicate» nel
+testo della form, che invece rende il **conteggio** («1 warning»); la misura sotto
+sta in §A.5 e dice cio' che serve.
+
+---
+
+## A.0 La risposta secca
+
+**Il badge non conta problemi: conta figli.** E i due warning **non sono
+sopravvissuti** al rename — il registro si svuota. Cio' che resta sullo schermo e'
+un numero che non ha mai parlato di problemi, e che vale 2 perche' i figli sono
+due.
+
+---
+
+## A.1 Q5 — da dove viene il «2»
+
+La riga di un'istanza M1 e' una `FeatureRow`, e `FeatureRow` **non legge nessun
+registro**. Il numero e' `instance.children.length`
+(`TreeViewContent.tsx:891`), reso solo quando `hasChildren` (`:856`), in
+slate-300 nella colonna destra (`tree-view-sidebar.scss:1924-1932`; sotto i 400px
+di rail e' `display:none`, `:1943`). I figli sono quelli che
+`buildInstanceForest` (`:2322`) raccoglie da `LObject.subObjects` (`:2342-2352`),
+cioe' il containment — la stessa discesa dello slot di §4, non il registro.
+
+L'**unico** consumatore di `_jjNodeProblems` nell'albero e' `EntityRow`
+(`:719-720`), e il suo scope e' l'id della propria riga: `useNodeProblems(expandKey)`,
+nessuna aggregazione sui discendenti. Rende un **triangolo**, mai un numero
+(`:786`); `problems.length > 1` allunga solo il tooltip con `(+N more)`, e sempre
+sullo **stesso** nodo. `FeatureRow` non chiama `useNodeProblems` affatto: le
+righe M1 non hanno indicatore di problema, ne' sul padre ne' sui figli.
+
+Misure, tutte a stato assestato con la rail a 560px:
+
+| padre | figli | entry attive nel registro | badge letto |
+|---|---|---|---|
+| `Book_0` dopo il rename | 2 | 0 | **2** |
+| `Libro_pulito`, nomi distinti dalla nascita | 3 | 0 | **3** |
+| `Libro_pulito` + due auto-nomi (collisione VERA) | 5 | 2 | **5** |
+
+Se contasse i problemi direbbe 0, 0, 2. Dice 2, 3, 5. E nei tre stati
+`document.querySelectorAll('.tree-problem-icon')` ha **totale 0**.
+
+**Controllo positivo** (`_tmp_unq1_ctrl` arm 2), perche' uno zero da un
+`querySelector` e' indistinguibile da un selettore sbagliato: costruito un
+metamodello con due classi omonime — `addClass('Book')` due volte le accetta
+entrambe, arm 0 — e aperta la tab M2, il produttore registra sulle due `DClass` e
+le **righe M2 dipingono l'icona**, `data-severity="warning"`, con
+`aria-label="Name \"Book\" is also used by another element in this scope."`.
+L'albero sa dipingere un problema: il silenzio sulle righe M1 e' un'assenza vera.
+
+Quindi, alla lettera delle due domande di Q5: **no**, non aggrega; e **no**, non
+legge quel registro — non ne legge nessuno.
+
+---
+
+## A.2 Il rename revoca (e il fatto riportato non si conferma)
+
+Ripetuto il caso dello screenshot: `Book_0`, due nested creati con i nomi di
+CRUD3 (`Edition_0`, `Edition_1`), poi rinominati. Le due strade dell'interfaccia
+misurate **entrambe**, una per figlio: `l.name = …` (`set_name`, scrive campo e
+slot, §3.12) e `l['$name'].value = …` (lo slot diretto, che e' cio' che scrive la
+form).
+
+```
+prima del rename   2 entry attive   {Edition_0 ← "Edition_0"} {Edition_1 ← "Edition_0"}
+dopo il rename     registro []      raw e proxy d'accordo su «prima/seconda edizione»
+```
+
+E' il corollario di §3 che si avvera: il rename cambia la firma, lo scan riparte,
+e stavolta proxy e D-layer concordano. **I due warning non sopravvivono a nomi
+diversi.** Il «2» che sopravvive e' il conteggio dei figli.
+
+---
+
+## A.3 Q6 — save + reload
+
+Il registro e' una `Map` di modulo (`registry.ts:79`), esposta su `window` per il
+debug (`:94`), dichiarata «session-local … not persisted» dalla sua intestazione:
+un reload la azzera per costruzione. Cio' che il reload non decide e' se il
+produttore la **ricostruisca uguale**, ed e' quello che la sonda misura —
+`ProjectsApi.save(project)` (offline, `projects.ts:113`), poi `page.reload()`
+vero, non una navigazione di hash, poi riapertura della tab M1:
+
+```
+badge sul padre        2 -> 2          (i figli sono ancora due: il numero e' loro)
+i due rinominati       0 entry -> 0    nessun falso positivo al load
+i due «Edition_0»      2 entry -> 2    la collisione VERA torna, ricostruita da zero
+```
+
+Il controllo che rende leggibile la misura: dopo il reload i due figli si chiamano
+ancora «prima edizione» / «seconda edizione», raw e proxy d'accordo — il progetto
+e' stato davvero salvato e riletto.
+
+Risposta: **il badge resta, e non dice niente sui problemi**. Il registro invece
+non e' persistente e viene ricalcolato; il ricalcolo al load **non riproduce il
+falso positivo**, e quindi la finestra di lettura sbagliata di §1 e' un artefatto
+del **percorso di creazione** (la semina in differita dello slot), non del
+percorso di caricamento. Delle due letture che Q6 proponeva, vale la prima: il
+difetto e' in-session, e la sola cosa che sopravvive al reload e' una collisione
+che nei dati e' vera.
+
+---
+
+## A.4 Un terzo fatto, non chiesto: la revoca e' globale, il produttore e' per modello
+
+Misurato in `_tmp_unq1_ctrl` arm 3, con **due collisioni vere** contemporanee, una
+per livello (due `Edition_0` in M1, due `Book` in M2):
+
+```
+tab M1 aperta          2 entry M1
+apro la tab M2         2 entry M2   e le due M1 SPARISCONO
+                       (nello stato i due Edition_0 ci sono ancora: 3a-ctrl)
+torno sulla tab M1     restano le 2 M2, le 2 M1 NON tornano
+```
+
+Il meccanismo e' nel ciclo di revoca (`UniquenessProblemSync.tsx:160-164`): la
+`Map` e' una sola per la sessione, ma ogni produttore tratta come propria
+**qualunque** entry di kind `duplicate-name` e marca risolto tutto cio' che il
+**suo** scan non desidera. L'editor M2, montato con il suo `modelid`, scandisce
+solo M2 e cancella le entry di M1; e non tornano, perche' l'effetto di M1 riparte
+solo su cambio di firma, non su cambio di tab.
+
+Costo: un warning M1 **vero** puo' sparire per il resto della sessione solo
+perche' l'utente e' passato dal metamodello. E' un difetto distinto da quello di
+§1-§5 e vive in un punto diverso; non e' toccato dai candidati C1..C4.
+
+---
+
+## A.5 Chi lo vede davvero: la form dell'OGGETTO, e nient'altro
+
+Lo screenshot dice «No issues» sulla form di `Book_0`, e la domanda che ne segue
+non e' se la form sbagli ma **chi legge**. `IRForm` chiama
+`useNodeProblems(objectId)` (`IRForm.tsx:334`) — per il **solo** oggetto
+selezionato, come `EntityRow`, senza aggregazione — e `collectFormDiagnostics`
+manda il `duplicate-name` nel residuo, contato ma senza campo a cui attaccarsi
+(`formDiagnostics.ts:95-98`). Misurato sui due lati, con il falso positivo attivo
+(2 entry) e la form aperta dalla tab «Form» dell'inspector
+(`PropertiesWithTreeView.tsx:1109` — senza quel click la form non e' nel DOM
+affatto, ed e' cosi' che il primo giro della sonda ha misurato zero):
+
+```
+form di Book_0        «No issues»    ← lo screenshot, e ha ragione: le entry sono sui figli
+form di Edition_0     «1 warning»    ← il falso positivo, visibile qui e solo qui
+```
+
+Quindi il quadro dello screenshot torna per intero, tessera per tessera: il badge
+conta i figli, la form del padre dice il vero perche' il padre non ha entry, il
+canvas tace per il disallineamento di chiavi che l'intestazione di
+`UniquenessProblemSync` gia' dichiara (entry sull'id dell'elemento, indicatore
+montato sull'id del DVertex), e i due warning stavano — prima del rename — nella
+form dei due figli, che nello screenshot non era aperta.
+
+## A.6 Cosa cambia per i candidati di §7
+
+Niente su C1..C4: il falso positivo esiste ancora, riprodotto qui (2 entry attive
+prima del rename), e resta visibile dove §A.5 lo misura. Cambia solo il **raggio**:
+non e' un'infezione diffusa dell'interfaccia, e' una riga nella form del singolo
+oggetto in collisione, che sparisce al primo rename.
+
+Che vale anche al contrario, ed e' il fatto piu' scomodo di questa appendice: la
+collisione **vera** di §6 — due `Edition_0` prodotti da due Add senza rinomina —
+sta esattamente nello stesso unico posto. Sull'albero non compare (§A.1), sul
+canvas nemmeno, e sopravvive al reload (§A.3). Il primo lettore che si
+aggiungera' (una `useNodeProblems` in `FeatureRow`, o l'allineamento delle chiavi
+sul canvas) accendera' insieme il vero e il falso.
+
+**C5, nuovo** — restringere la revoca al proprio modello: il produttore conosce il
+suo `modelid`, le entry no. Costo: aggiungere un campo alle entry (o un prefisso
+all'id) tocca `registry.ts`, il produttore della conformance che scrive nella
+stessa mappa, e i loro test. Non raccomandato qui: e' il difetto di §A.4, non
+quello per cui UNQ1 e' stata aperta.
