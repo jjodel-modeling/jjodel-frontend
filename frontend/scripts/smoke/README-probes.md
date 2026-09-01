@@ -186,6 +186,64 @@ about it.
 Referto: `docs/discovery/discovery_2026-08-30_s1b_micro_produttore_candidati.md`
 §3.
 
+#### The index is the caller's, and `link` owns it
+
+The same rule has a second half, on the write instead of the read. Measured
+2026-09-01 (`discovery_2026-09-01_eng1_containment_core.md` §B.1-B.4): a probe
+that appends by re-deriving the index from the store
+
+```ts
+const idx = (idlookup[slotId]?.values ?? []).length;   // <- stale
+lslot.setValueAtPosition(idx, target.id);
+```
+
+computes **the same index twice** when two appends fall inside one propagation
+window, because every dispatch is deferred by a `setTimeout(…, 0)`
+(`redux/action/action.ts:349`). The second write overwrites the first, one value
+is lost, and the evicted object keeps `father` on a slot that no longer lists
+it — an orphan, returned as `{success: true}`. Measured window: `values.length`
+still reads 0 at sync, at a microtask and at `setTimeout 0`; it reads 1 at 50ms.
+
+No read fixes it: inside the window `store.getState()` is exactly as stale as
+`context.data`. The contract is therefore the **caller's** — one index per
+gesture, or the whole array in a single `set_values`, where the indices are
+assigned on an array the caller holds. It is pinned in the core as a comment on
+`get_setValueAtPosition` (`LModelElement.tsx:7752`), which is a comment on
+purpose: ENG1 measured that the fix is not local, and the "obvious" one — making
+`_clearValueAtPosition` read the live store — cures nothing while leaving the
+lost value, the half that leaves no trace.
+
+So probes do not pose containment by hand. `states.ts` exports **`link(page,
+owner, ref, target)`**, which
+
+- keeps a **per-slot cursor** on `window`, seeded from the store once and never
+  re-read, and writes the whole array through a single `values = [...]`;
+- writes `father` as a side effect, because that funnel goes through
+  `get_setValueAtPosition` per index — which a raw
+  `SetFieldAction.new(slot,'values',id,'+=')` does not (the shape behind the
+  fatherless models of the 10c..10f probes, `discovery_2026-08-31_10g_outline_doppi.md` §3);
+- **asserts** what it built instead of waiting for it: the posed values are a
+  prefix of the slot's, and the father is the slot when the reference is a
+  composition and is *not* the slot when it isn't. A timeout returns
+  `ok: false` carrying its last measurement, never a silence.
+
+Read `composition`, not `containment`, when you need the flag off the D-layer:
+`containment` is the legacy spelling (CLAUDE.md §3.8) and reads `false` on
+references the L-layer calls compositions. The first version of `link` got this
+wrong and its per contrasto failed on a correct write.
+
+Verified by `_tmp_eng2_verify.ts`, 16/16, with the dangerous form kept in the
+same run as the positive control: it still loses a value and still leaves an
+orphan, so a green on the `link` arms is a green with signal behind it. Mutation
+check: removing the cursor turns the in-window arm red (3/16) and leaves the
+sequential arms green — the cursor is precisely what the window costs.
+
+The two probes that carried the dangerous form (`_tmp_10g_measure.ts`,
+`_tmp_10g_verify.ts`) were migrated and re-run: 24/24, zero orphans measured,
+and their `raw` arm — the declared subject of that measurement — untouched.
+
+Referto: `docs/discovery/discovery_2026-09-01_eng2_probe_link_gate.md`.
+
 ### Select by name, never by index
 
 Two FAILs on the first 12bc run were the probe's, not the code's, and they were

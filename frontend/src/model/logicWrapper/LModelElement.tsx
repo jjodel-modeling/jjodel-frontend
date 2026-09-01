@@ -7749,6 +7749,14 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         }
         if (!skipSettingUndefined) SetFieldAction.new(context.data, 'values.' + index as any, undefined, '', info.isPtr);
     }
+    // Caller contract (measured, docs/discovery/discovery_2026-09-01_eng1_containment_core.md B.4):
+    // `index` is the caller's to own. This function derives the evicted occupant from
+    // `c.data.values[index]`, and inside the propagation window of the previous write that read is
+    // stale — so is `store.getState()`, which is why no read cures it. Two writes deriving the same
+    // index from the store therefore both target it: the second overwrites the first, and the first
+    // occupant is left with `father` on a slot that no longer lists it, with `{success: true}`
+    // returned. Callers keep one index per gesture, or write the whole array in a single
+    // `set_values`, where the indices are assigned on an array the caller holds.
     protected get_setValueAtPosition(c: Context): ((index: number, val: this["values"][0], info?: Partial<SetValueAtPositionInfoType>, outactions?:outactions, lname?: string) => {success: boolean, reason?: string}) {
         return (index: number, val: this["values"][0] | any, info0?: Partial<SetValueAtPositionInfoType>, outactions?: outactions, lname: string = ''): { success: boolean, reason?: string } => {
             if (!outactions) outactions = {clear:[], set:[], immediatefire: true}
