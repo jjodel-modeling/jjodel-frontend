@@ -2,6 +2,47 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-09-01 — feat(toolbar): il picker delle sintassi diventa un listbox custom (NAV2)
+**Prompt**: `docs/prompts/PROMPT_NAV2_picker_listbox.md`. Il `<select>` nativo diventa un
+dropdown con icona per voce e selezione cyan; la logica di NAV1 (sentinella, routing,
+convergenza sul tab) non si tocca; accessibilita' alla pari col nativo; il pannello non
+dev'essere tosato; la `<option disabled>` diventa una hairline.
+**Files touched**: `editor-v2/{Toolbar.tsx, EditorV2.scss, dataManagerOption.ts}` e
+`editor-v2/__tests__/dataManagerPicker.test.ts`; a parte, fuori perimetro,
+`scripts/benchmarks/bench_baseline.mjs` (vedi Out-of-scope). Referto e prompt in un commit
+loro, questa entry per pathspec.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `npx tsc --noEmit` **33** su output COMPLETO (baseline invariata,
+zero errori nuovi in `editor-v2/`); `npm run build` exit **0**, solo il warning di chunk
+noto; `npx vitest run` **2932 passati / 0 falliti**, i 9 file rossi in raccolta sono il
+muro noto `window is not defined` (jjtl/jjscript/utils, nessuno in editor-v2). Suite
+NAV1/NAV2 **39/39**, provata con SEI mutazioni (via `aria-activedescendant`; voce del
+manager davanti ai viewpoint; hex del mock al posto dei token; `scroll` rimosso in bolla;
+focus ring spento; type-ahead disattivato): una rossa ciascuna, controllo verde.
+**Out-of-scope changes**: **yes, una, dichiarata**. `bench_baseline.mjs:199` e' l'UNICO
+call site committato del picker (le altre 26 occorrenze sono sonde `_tmp_*` ignorate da
+git) e pilotava il controllo con `selectOption` dietro una guardia `count() > 0`: senza
+intervento sarebbe andata a zero **in silenzio**, saltando l'attivazione del viewpoint e
+riportando `classic_toggle_found: 0` come se il toggle fosse sparito. Riparato in un
+commit separato, per staccarlo in una riga se la decisione e' un'altra.
+**Layer Impact Report**: not-required — nessun file di §3.1, zero creatori D, zero
+`TRANSACTION`, nessuna scrittura nuova verso lo store.
+**Smoke visivo**: passato — `_tmp_nav2_verify.ts` **43/43**, zero errori di pagina, chiaro
+e scuro. Le 22 asserzioni della sonda NAV1 ci sono tutte, rimappate (il referto §7 dice
+quali cambiano di selettore e perche'); provata con una mutazione a quattro teste
+(separatore a `role=option`, `aria-activedescendant` via, ArrowUp inerte, fondo della
+selezione cambiato): 8 rosse, comprese tutte e quattro le mirate.
+**Notes**: la board citata dal prompt non esiste nel repo (RC-10: dichiarato, proceduto
+sulla prosa normativa). Rifiutati due token con la misura in mano: `--shadow-dropdown`
+(alias di `--shadow-lg`, fra i nomi che `tokens.css` ridichiara, e senza variante scura) e
+`--color-bg-elevated` (traslucido in scuro). Il precedente riusato NON e' il pannello
+Columns ma `computeListStyle`, gia' condiviso da tre controlli. Referto:
+`discovery_2026-09-01_nav2_picker_listbox.md`.
+**Prompt document name**: PROMPT_NAV2_picker_listbox.md — 2026-09-01 13:55
+
+
 ## 2026-09-01 — fix(manager): il pannello Columns esce dalla clip della card (10k-chiusura)
 **Prompt**: emendamento 10k-CHIUSURA. Il pannello Columns era tagliato dall'`overflow:
 hidden` della card tabella. Ordine di preferenza dato dal prompt: (1) portale su
