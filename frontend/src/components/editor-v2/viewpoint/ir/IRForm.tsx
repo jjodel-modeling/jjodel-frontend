@@ -31,9 +31,11 @@
  * to the whole row when its chips outgrow the half (`useChipOverflow`, hysteresis in
  * `overflowVerdict`). That is the spec's rule 2 and the only measurement in the form.
  *
- * Reactivity comes entirely from `useIRFormView`, whose signature covers the object's
- * name, its metaclass and every slot's values. This component holds no model state, only
- * the Basic/Advanced mode, which is a property of the viewer, not of the model.
+ * Reactivity is `useIRFormView`, whose signature covers the object's name, its metaclass
+ * and every slot's values, plus one selector of its own for what that signature cannot
+ * see: the `jjodel/…` declarations, which hang off the METAFEATURE and not off the object
+ * (IRF1 — see the comment on `annotationSignature`). This component holds no model state,
+ * only the Basic/Advanced mode, which is a property of the viewer, not of the model.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -46,6 +48,7 @@ import { useIRFormView } from './useIRFormView';
 import { describeSlots, isBasicField, type FieldOffer } from './useFormWidgets';
 import { targetOptions } from '../../../../jjform';
 import { makeWriteCtx } from '../../hooks/writeCtxLproxy';
+import { ROW_VIEW_ANNOTATION_PREFIX } from '../../nodes/rowViewAnnotations';
 import { setObjectName } from './formWrite';
 import { useNodeProblems } from '../../problems/useNodeProblems';
 import { collectFormDiagnostics } from './formDiagnostics';
@@ -241,11 +244,66 @@ export function IRForm({ objectId, defaultTheme = 'plain' }: IRFormProps) {
         [ctx, objectId],
     );
 
+    /**
+     * The METAFEATURE rung of the subscription (IRF1).
+     *
+     * `useIRFormView`'s signature is the object's own snapshot: name, metaclass, and every
+     * slot's VALUES. A `jjodel/…` declaration lives one level above that, on the METAFEATURE
+     * — `DValue.instanceof` → `DAttribute.annotations` → `DAnnotation.source` — so not one of
+     * those four steps is in the snapshot, and the form did not re-render when a declaration
+     * changed: turning Multiline (or Code, which is older than either toggle) on showed
+     * nothing until some unrelated write redrew the panel. Measured, before and after, in
+     * `docs/discovery/discovery_2026-09-01_irf1_annotation_subscription.md` §4.
+     *
+     * Its own `useSelector` and not a field of that signature, for the reason `viewpointTheme`
+     * gives above and for one more of its own: widening the snapshot would re-run
+     * `resolveIRView` and re-publish the cross-deps on every declaration, which is a whole
+     * resolution pass bought for a width. This returns a STRING, so the default equality is
+     * the right one and a dispatch that touched no declaration returns the same string and
+     * re-renders nothing.
+     *
+     * It reads down to the `source`, and that is the load-bearing half rather than a detail.
+     * The Display panel's two writes are not the same shape: the FIRST declaration creates a
+     * `DAnnotation` and grows the pointer array, while clearing one and turning it back on
+     * are `SetFieldAction`s on `DAnnotation.source` that leave the array untouched — measured
+     * at length 1 → 1 with the source going `jjodel/multiline=true` → ``. A subscription on
+     * `DAttribute.annotations` alone would light up on the first toggle and stay blind to
+     * every one after it.
+     *
+     * The prefix is imported from `rowViewAnnotations`, the wire format's one owner, so an
+     * annotation that arrived some other way does not redraw a form that cannot read it.
+     */
+    const annotationSignature = useSelector((state: any) => {
+        const lookup = state?.idlookup;
+        const featureIds = lookup?.[objectId]?.features;
+        if (!lookup || !Array.isArray(featureIds)) return '';
+        const parts: string[] = [];
+        for (const fid of featureIds) {
+            const metaId = lookup[fid]?.instanceof;
+            if (typeof metaId !== 'string') continue;
+            const annotations = lookup[metaId]?.annotations;
+            if (!Array.isArray(annotations)) continue;
+            for (const entry of annotations) {
+                // Both shapes, exactly as `readRowViewAnnotations` takes them: a pointer id,
+                // or the record itself, which some write paths leave in place.
+                const source = entry && typeof entry === 'object' && typeof entry.source === 'string'
+                    ? entry.source
+                    : lookup[typeof entry === 'string' ? entry : entry?.id]?.source;
+                if (typeof source === 'string' && source.startsWith(ROW_VIEW_ANNOTATION_PREFIX)) {
+                    // Keyed by metafeature: the same declaration moved from one feature to
+                    // another is a different form, and an unkeyed list would not say so.
+                    parts.push(`${metaId}:${source}`);
+                }
+            }
+        }
+        return parts.join(';');
+    });
+
     const slots: any[] = lObject?.features ?? [];
     const fields = useMemo(
         () => describeSlots(slots, spec, offer),
         // eslint-disable-next-line react-hooks/exhaustive-deps
-        [slots, spec, resolution, offer],
+        [slots, spec, resolution, offer, annotationSignature],
     );
 
     const visible = mode === 'advanced' ? fields : fields.filter(f => isBasicField(f, spec));
