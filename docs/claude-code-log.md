@@ -49,6 +49,47 @@ scrittura di un'annotation (deps di `IRForm`); misurato per contrasto identico s
 righe non e' il tetto violato: fra i campi che si muovono nessuno cresce.
 **Prompt document name**: PROMPT_TXT1_multiline_textarea.md — 2026-09-01 19:30
 
+## 2026-09-01 — feat(manager): un attributo ID di tipo EInt si numera da se' (AUTO1)
+**Prompt**: AUTO1 fase 2, go-ahead sul referto
+`docs/discovery/discovery_2026-09-01_auto1_id_autoincrement.md`. Tre decisioni gia' prese:
+il campo ID sparisce dal modale di create, lo scan e' per `attr.id` sui DValue, il seed sta
+dentro il json di `createInstance` con gate `isID && EInt` su seed E read-only, `newDraft`
+intatto.
+**Files touched**: `jjform/{shape.ts, create.ts}`,
+`components/editor-v2/hooks/{shapeDraw.ts, createDraw.ts, createAdapter.ts}`,
+`components/editor-v2/viewpoint/ir/useFormWidgets.ts` + i tre di test
+(`jjform/__tests__/create.test.ts`, `hooks/__tests__/createDraw.test.ts`,
+`ir/__tests__/useFormWidgets.test.ts`). La sonda `scripts/smoke/_tmp_auto1_verify.ts` non e'
+committata (`.gitignore:66`).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `npx tsc --noEmit` **33** su output COMPLETO (baseline invariata);
+`npm run build` exit **0**, solo il warning di chunk noto; suite `jjform/` + `hooks/` +
+`viewpoint/ir/` + `abstract/tabs/` **1337/1337**. I tre blocchi nuovi provati contro SEI
+mutazioni (gate senza la clausola EInt; `draftableAttrs` che non esclude; scan senza il
+guard sui valori; scan senza `Number.isFinite`; scan non indicizzato sull'attributo;
+sequenza che parte da 0; form che ignora il flag): 4/1/1/1/5/1/1 rossi, verde al ripristino.
+**Out-of-scope changes**: no — i 6 file autorizzati dal referto piu' i 3 di test.
+**Layer Impact Report**: produced — in chat prima del diff. Layer **D** (sola lettura: uno
+scan di `idlookup` per `className === 'DValue' && instanceof === attrId`, lo stesso spazio di
+CHECK 11 `ConformanceValidator.ts:366-377`) e **JjOM** (una chiave in piu' nel json che
+`createInstance` gia' passa ad `addObject`). Zero TRANSACTION nuove, zero creatori annidati.
+**Smoke visivo**: passato — `_tmp_auto1_verify.ts` **21/21 ALL GREEN**, zero errori di
+pagina; lo stesso file girato coi 6 sorgenti ripristinati da HEAD da' **13/21**, con gli 8
+rossi esattamente sugli arm della nuova semantica e i 13 controlli verdi. Sequenza 1,2,3 su
+tre create; 42 del chiamante non sovrascritto e la create dopo riparte da 43; una sola
+`DAttribute` su due rami fratelli (Book/Disc) da' 1,2,3; il modale di create non mostra
+`code` e mostra `title/slug/weight`.
+**Notes**: un solo gate (`jjform/shape.isAutoIdAttr`) letto dai tre consumatori, o il campo
+nascosto nel draft e quello bloccato nella form divergono. Le scelte che il diff non spiega
+— campo assente per scelta, `featureFlags` non allargata, import profondo, scan non filtrato
+per modello, sequenza da 1, il giro «prima» annullato e rifatto — stanno in
+`discovery_2026-09-01_auto1_id_autoincrement.md` §8, scritta qui. Log a 59 voci contro la
+soglia P9 di 40: rotazione non fatta, §8.8.
+**Prompt document name**: AUTO1 fase 2 (in chat) — 2026-09-01 19:00
+
+
 ## 2026-09-01 — fix(persistence): `highestVersion` non e' piu' azzerato dall'ordine statico (VF1)
 **Prompt**: VF1 (in chat), dal referto TXT1 §7. In `VersionFixer` i campi statici si
 inizializzano in ordine di dichiarazione: `versionAdapters = setup()` porta `highestVersion`
