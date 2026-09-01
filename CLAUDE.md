@@ -476,6 +476,38 @@ A search scope written into a prompt is a claim about what the command does. If 
 - Never use `--no-verify` or skip pre-commit hooks.
 - After commit: update `docs/claude-code-log.md`.
 
+### 6.4 Concorrenza tra lane
+
+Piu' sessioni lavorano sullo **stesso working tree** nello stesso momento. Non e' un caso
+limite: e' la condizione normale di questo repo, e ogni regola qui sotto nasce da un
+incidente misurato, non da una preferenza. Iscritta come **RC-13** in `docs/decisions.md`.
+
+- **Una corsia per giro.** Un giro chiude il perimetro che il suo prompt dichiara e nient'altro.
+  Il lavoro di un'altra corsia che compare in albero a meta' sessione non e' un invito ad
+  assorbirlo: si constata e si lascia dov'e'.
+- **Docs e codice mai nello stesso commit.** La entry di log, il referto e le ratifiche
+  viaggiano separati dal diff che descrivono. Un commit misto non si puo' revertire per meta'.
+- **Lo staged e il WIP altrui sono intoccabili.** `git commit` committa **l'indice intero**,
+  incluso quello che un'altra sessione ha messo in stage: si passa sempre il pathspec al commit
+  stesso (`git commit -- <paths>`), o si confronta `git diff --cached --name-only` con la lista
+  dichiarata prima di committare. `git add` solo con path espliciti, mai `git add .` / `-A`
+  (regola 17).
+- **NIENTE `git stash` su albero condiviso.** Uno `stash push -- <paths>` che includa un file
+  **non tracciato** fallisce senza creare nulla, e il `pop` successivo apre lo stash sbagliato:
+  misurato il 2026-09-01, 7 file riversati in albero da uno stash del 2026-07-28
+  (`docs/discovery/discovery_2026-09-01_irf1_annotation_subscription.md` §14). E per la cosa che
+  lo stash veniva usato a dimostrare — «questi rossi sono pre-esistenti» — **lo stash non serve**:
+  si legge il diff non committato dei file rossi e si cerca l'implementazione che i loro nomi
+  invocano. Se un confronto prima/dopo e' davvero necessario, si ripristinano i file **nominati**
+  da `git show HEAD:<path>` e si rimettono a posto da una copia, senza toccare l'indice.
+- **La rotazione del log e' una corsia esclusiva.** Nessun altro giro tocca
+  `docs/claude-code-log.md` mentre e' in corso, e la rotazione non porta con se' altre modifiche.
+  Criterio di spostamento: verbatim, nell'ordine del file attivo (RC-12).
+- **Le deroghe a una regola numerata si flaggano nel giro, non si nascondono.** Chi supera una
+  soglia lo dichiara — i file elencati con cosa cambia in ciascuno, e il campo
+  `Out-of-scope changes` della entry che lo ripete — e prosegue; sanare o rifiutare e' del
+  reviewer, a valle (RC-11).
+
 ---
 
 ## 7. Design system

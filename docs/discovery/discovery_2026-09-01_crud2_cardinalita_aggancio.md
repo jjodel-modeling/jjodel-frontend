@@ -509,3 +509,56 @@ scrivevano **un solo valore**, e il commit lasciava `s0.father = members` con
 `sm1.states = [null]`. Nel «dopo»: due chip, `members` con **due** valori, i tre father
 invariati, `sm1.states` senza buchi, e — per contrasto nello stesso giro — un `setValue`
 su una COMPOSITION che sposta ancora il father, come deve.
+
+---
+
+## 8. Domande aperte per Alfonso
+
+Aggiunta il 2026-09-01 con DOCS1-bis. Due domande sole: sono quelle che la Fase 2 **non**
+poteva chiudere da sé, e nessuna delle due è un dettaglio implementativo. Le domande del §4
+sono chiuse — 2 da R-CR2-4, 3 dalla via non-core del §7.2, 4 dall'allargamento del §7.3 —
+tranne la prima, che è la prima qui sotto.
+
+### 8.1 Punto 4 — servono il testo esatto dell'errore e la forma del metamodello
+
+Lo stato che il §2.5 produce **si rende senza rumore**. Misurato in §7.1: con
+`sm1.states = [null]` e `s1.father` spostato, il ritorno alla sintassi astratta monta il
+canvas (2 nodi), non lascia alcun error boundary e non produce un solo errore di pagina;
+lo stesso vale dopo un salva/ricarica. Il controllo positivo è nello stesso giro.
+
+Quindi l'errore riportato — «il passaggio alla sintassi astratta va in errore» — **non è
+questo path**, e non è nemmeno quello del §2.2, dove quattro arm sono verdi. È un terzo
+path, e per raggiungerlo servono due cose che solo chi ha visto l'errore può dare:
+
+1. **il testo esatto dell'errore**, e dove compare: console, toast, o schermata piena;
+2. **la forma del metamodello** su cui è successo: la reference in gioco è `composition`,
+   `aggregation` o pura? la metaclasse figlia è astratta? la cardinalità?
+
+Senza (2) la riproduzione resta una ricerca cieca: le tre forme si comportano in modo
+diverso e ognuna ha già la sua misura in questo referto. Con (2) la sonda esiste già —
+`_tmp_crud2e_absyntax.ts` va riparametrata, non riscritta.
+
+### 8.2 Il lower bound: con la multi-selezione un `2..*` è esprimibile — si alza la regola?
+
+**È una decisione di merito, e non è stata presa.**
+
+L'intestazione di `jjform/create.ts` motiva la regola attuale — `lower >= 1` vale come
+«almeno un valore», non come «almeno `lower` valori» — con una premessa che la Fase 2 ha
+fatto cadere: *«a draft offers one control per feature, so a `2..*` could never be satisfied
+and the commit would be blocked forever»*. Con i chip il draft offre N bersagli per feature,
+e un `2..*` **si può** soddisfare prima del commit.
+
+Le due strade, con il costo di ciascuna:
+
+- **lasciare com'è.** Un `2..*` si crea con un bersaglio e si completa nella form di edit.
+  Costo: il modale accetta un'istanza che la validazione di conformità marcherà come non
+  conforme un istante dopo — due verdetti sullo stesso oggetto, che è la divergenza che
+  R-S1-3 ha chiuso altrove.
+- **alzarla a «almeno `lower` valori»**, sulle sole feature multivalore. Costo: `validateDraft`
+  smette di essere una regola sola e diventa due (la mono resta «almeno uno», che è la stessa
+  cosa solo perché `lower` vale 1); e un metamodello con un `3..*` senza abbastanza candidati
+  in campo rende il create **impossibile** invece che incompleto — oggi quel caso si crea e
+  si completa dopo.
+
+La seconda è coerente con la cardinalità dichiarata; la prima è coerente con il resto del
+modale, che non ha mai bloccato su ciò che si può finire dopo. Il referto non sceglie.

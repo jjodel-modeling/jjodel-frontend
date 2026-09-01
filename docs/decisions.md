@@ -38,6 +38,30 @@ citare l'id con la data. Le decisioni sostituite si spostano in "Superate", con 
   (b) citata dal memo del 2026-08-22; confermata a voce il 2026-08-24.
 - **RC-10** (2026-08-24) — Chi trova citato un documento inesistente lo dichiara e procede sul
   resto; una decisione che poggiava solo su quel documento si rifà, non si ricostruisce.
+- **RC-11** (2026-09-01) — **Le deroghe a una regola numerata si dichiarano nel giro e si sanano
+  ex-post.** Chi supera una soglia (regola 19, i 5 file) non si ferma se il perimetro è la
+  conseguenza diretta di quanto il prompt ha autorizzato: elenca i file con cosa cambia in
+  ciascuno nel referto, lo ripete nel campo `Out-of-scope changes` della entry, e il reviewer
+  sana o rifiuta a valle. Sanata così CRUD2 Fase 2, 7 file (referto §7.5): la coppia
+  componente + foglio di stile accoppiato conta come **unità logica**, perché aggiungere un
+  controllo significa aggiungerne la regola. **Non è un precedente**: la soglia resta 5 e resta
+  contata per file, e la deroga vale per quel giro soltanto.
+- **RC-12** (2026-09-01) — **La rotazione del log sposta verbatim, nell'ordine del file attivo.**
+  Le voci che escono da `docs/claude-code-log.md` si appendono in coda a
+  `docs/claude-code-log-archive.md` **così come sono e nell'ordine che avevano**, sotto una nota
+  di rotazione datata: mai riassunte, mai riordinate, mai riscritte. Riordinare è modificare, che
+  è un'operazione diversa dalla rotazione. Le inversioni interne pre-esistenti restano e si
+  dichiarano nella nota. Precedenti: `cc802fea2` e `c54526650`. La prosa dei batch più vecchi
+  dell'archivio descrive un blocco invertito: è superata da questa clausola, e i batch già
+  scritti non si toccano.
+- **RC-13** (2026-09-01) — **Una corsia per giro, e l'albero è condiviso.** Le regole operative
+  della concorrenza fra corsie stanno in `CLAUDE.md` §6.4, che questa clausola iscrive senza
+  duplicare: una corsia per giro, docs e codice mai nello stesso commit, `git add` per pathspec,
+  lo staged altrui intoccabile, **niente `git stash` su albero condiviso**, rotazione del log in
+  corsia esclusiva. Nasce da un incidente misurato: uno `stash push -- <paths>` con dentro un
+  file non tracciato fallisce **in silenzio**, e il `pop` che segue apre lo stash sbagliato —
+  7 file in conflitto da uno stash del 2026-07-28
+  (`discovery_2026-09-01_irf1_annotation_subscription.md` §14).
   Generalizza la clausola §8 del memo del 2026-08-22 a ogni documento; confermata a voce il
   2026-08-24.
 
@@ -2715,6 +2739,86 @@ nella reason**, classe e datatype omonimi convivono, e il badge conta 4 su 4. Un
 difettose del modulo (3, 2 e 2 rossi). Il cross-metamodello resta coperto dall'unita' e
 **non** dalla sonda: il fixture ha un solo metamodello, e la sonda si dichiara `SKIP`
 invece di passare a vuoto.
+
+
+## Serie R-CR2 — il batch CRUD2 / AUTO1 / TXT1 (ratifiche 2026-09-01)
+
+Cinque decisioni di merito prodotte dalle quattro corsie del 2026-09-01. Le tre di processo
+che nascono dallo stesso giro sono RC-11, RC-12 e RC-13, sopra. Fonti:
+`discovery_2026-09-01_auto1_id_autoincrement.md` (§8),
+`discovery_2026-09-01_crud2_cardinalita_aggancio.md` (§7),
+`discovery_2026-09-01_txt1_fase2_multiline.md`,
+`discovery_2026-09-01_irf1_annotation_subscription.md`,
+`discovery_2026-09-01_eng1_containment_core.md` (§B).
+
+**R-CR2-1** (2026-09-01, AUTO1) — **Un attributo `isID` di tipo `EInt` si numera da sé, e il
+campo sparisce dal modale di create.** Il valore è il massimo corrente più uno, calcolato sullo
+spazio dell'**attributo** (scan dei `DValue` per `attr.id`, lo stesso che `ConformanceValidator`
+CHECK 11 giudica) e non della metaclasse, così l'ereditarietà condivide una sola sequenza. La
+sequenza parte da 1 e **i buchi restano spesi**: un id assegnato e poi cancellato non si ricicla,
+che è ciò che rende il numero stabile per chi se lo è annotato. Il campo **non è offerto** nel
+draft — il numero è deciso dal modello nell'istante della scrittura, quindi mostrarlo
+pre-valorizzato sarebbe una previsione resa come fatto (il pattern `AUTO_INCREMENT`: assente
+dalla `INSERT`, presente nella riga). La colonna resta in tabella e il campo resta nella form,
+in sola lettura. Il gate è **una** funzione (`jjform/shape.isAutoIdAttr`, `isID && EInt`) letta
+dai tre consumatori: la seconda clausola non è decorazione, perché `isID` da solo bloccherebbe
+un identificatore `EString` che nessuno sa generare, rendendolo inscrivibile per sempre. Un
+valore fornito dal chiamante vince sempre sul generato.
+
+**R-CR2-2** (2026-09-01, TXT1) — **`multiline` è la quinta chiave del carrier delle annotation,
+e decide al rung 2 senza escludere il renderer.** La dichiarazione vive sul metamodello
+(`jjodel/multiline=true` su `DAnnotation.source`), non nella view: un `EString` che vuole essere
+una nota multiriga non deve più cambiare il **tipo** dell'attributo né ripetere un override in
+ogni viewpoint. Il valore è booleano dichiarato — qualunque cosa non sia `true`/`false` viene
+**scartata**, non coerciuta. Precedenza: `renderer` resta la regola 1 della scala e `multiline`
+decide solo dove il renderer non ha deciso; **nessuna mutua esclusione** fra i due, né sul
+verdetto né nella UI, dove si mostrano entrambi e la scala decide.
+
+**R-CR2-2-bis** (2026-09-01, IRF1 — **corregge** R-CR2-2) — **La diagnosi §6.1 del referto TXT1
+Fase 2 era sbagliata, e va citata come tale.** Attribuiva il difetto («la form non vede cambiare
+un'annotation della metafeature») alla `useMemo` dei descriptor. Misurato: la memo **non trattiene
+mai** un descriptor vecchio, perché la sua dep `slots` è `lObject.features`, e
+`LPointerTargetable.fromArr` (`LModelElement.tsx:773-776`) costruisce **un array nuovo a ogni
+lettura** — l'identità cambia a ogni render e la memo ricalcola sempre. Il difetto era la
+**sottoscrizione**: mancava la re-render, non il ricalcolo. Il rimedio che seguiva dalla diagnosi
+sbagliata — allargare le dipendenze della memo — non avrebbe riparato nulla da solo. Corollario
+misurato sulla forma del selettore: sottoscrivere il solo `DAttribute.annotations` sarebbe verde
+all'accensione e **cieco** allo spegnimento e alla riaccensione, che scrivono `DAnnotation.source`
+lasciando `annotations` invariato; la sottoscrizione deve arrivare fino alla `source`.
+**Il braccio G di `_tmp_txt1_verify.ts` è VACUO** — la sua terza clausola in `||` è `cols === 6`,
+che è vera su entrambi i lati — e **non va citato come verde**: non misura la latenza né prima né
+dopo. Chi lo trova citato in un referto precedente lo legga come non-misura (RC-10).
+
+**R-CR2-3** (2026-09-01, ENG1-B) — **La coerenza di `setValueAtPosition` è contratto del
+CHIAMANTE.** L'indice è del chiamante: dentro la finestra di propagazione di una scrittura
+precedente, `c.data.values[index]` e `store.getState()` sono **ugualmente stantii**, quindi
+nessuna lettura cura il problema. Due scritture che ri-derivano l'indice dallo store nella stessa
+finestra puntano allo stesso indice: la seconda sovrascrive la prima, il valore sfrattato resta
+con un `father` su uno slot che non lo elenca più, e la chiamata ritorna `{success: true}`. La
+regola operativa è: **un indice per gesto**, oppure l'array intero in un solo `set_values`, dove
+gli indici sono assegnati sull'array che il chiamante ha in mano. Il vincolo è già iscritto come
+commento su `get_setValueAtPosition`; qui diventa citabile.
+
+**R-CR2-4** (2026-09-01, CRUD2 §2.5) — **Una `aggregation` pura non sfratta più, e lo fa senza
+toccare il core.** Due letture della stessa parola divergono e restano entrambe dove sono
+(`useEditorMode.ts:421` legge `composition`, `LReference.get_containment` legge
+`composition || aggregation`): una reference di sola aggregation cadeva quindi nel modale come
+«scegli un bersaglio» mentre la scrittura la trattava da containment e **riassegnava il father**
+del bersaglio, lasciando un buco `[null]` nello slot del padre precedente. Chiuso passando
+`info.isContainment: false` a `setValueAtPosition` — l'interruttore che il core **già espone**,
+derivato da `LReference.containment` solo quando il chiamante lo lascia indefinito. Zero righe nel
+core. Misurato per contrasto: una reference **pura** seminata per la stessa via non sposta nulla,
+quindi si dirotta la sola aggregation, e una `composition` continua a spostare il father come deve.
+**CONTRATTO, e va rispettato da chi chiama**: le chiavi di aggregation escono dal json della create
+e pagano un **secondo deferral** (`U.UpdatingTimer * 3`, dopo il seeding di `addObject` a `* 2`),
+perché il json non può trasportare `info`. `createInstance` **ritorna prima** che quei valori siano
+in store: un chiamante che legga lo slot in modo sincrono lo trova vuoto. Ogni altro valore —
+attributi, l'auto-id di R-CR2-1, composition e reference pure — continua ad arrivare con la create.
+
+**R-CR2-5** (2026-09-01) — **Le slice 13a/1b non si fanno.** L'ego-diagramma e
+`openInCanvas` coprono già il bisogno che le motivava: una seconda superficie di navigazione
+locale sarebbe un secondo canvas, che è esattamente ciò che 13a si era vietata. Chiuse per
+sufficienza del sostituto, non rimandate.
 
 
 ## Superate
