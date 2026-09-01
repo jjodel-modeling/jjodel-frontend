@@ -19,6 +19,7 @@ import type { AttrShape, ClassShape, MetamodelShape, RefShape } from '../shape';
 import {
     ENUM_SEGMENTED_MAX,
     GRID_COLUMNS,
+    STRETCH_MAX,
     WIDTH_MAP,
     formLayout,
     layoutField,
@@ -244,10 +245,12 @@ describe('packing — greedy fill in declaration order', () => {
     it('breaks before a field that does not fit rather than splitting it', () => {
         const rows = packRows([field('a', 6), field('b', 3), field('c', 6)]);
         // `c` needs 6 and only 3 are left, so the row closes at 9 — and `b`, the
-        // last scalar of a short row, stretches into the gap.
+        // last scalar of a short row, stretches into the gap. `c` resta poi solo
+        // sulla seconda riga: prima di A2 assorbiva le 6 libere e chiudeva a 12,
+        // ora si ferma a mezza riga e il buco resta.
         expect(shapeOf(rows)).toEqual([
             { spans: [6, 6], free: 0 },
-            { spans: [12], free: 0 },
+            { spans: [6], free: 6 },
         ]);
     });
 
@@ -265,10 +268,13 @@ describe('packing — greedy fill in declaration order', () => {
 });
 
 describe('packing — the stretch', () => {
-    it('extends the last SCALAR of a short row to fill it', () => {
+    it('extends the last SCALAR of a short row, up to the A2 ceiling', () => {
+        // Prima di A2 questo campo arrivava a 12 e la riga chiudeva a `free: 0`.
+        // Un `text` a mezza riga che diventa un banner e' il difetto che A2 chiude:
+        // il campo resta a 6 e il buco resta, e dice che la riga e' corta.
         const rows = packRows([field('only', 6)]);
-        expect(rows[0].fields[0]).toMatchObject({ span: 12, baseSpan: 6, stretched: true });
-        expect(rows[0].free).toBe(0);
+        expect(rows[0].fields[0]).toMatchObject({ span: 6, baseSpan: 6, stretched: false });
+        expect(rows[0].free).toBe(6);
     });
 
     it('stretches the last field, not the widest one', () => {
@@ -295,9 +301,12 @@ describe('packing — the stretch', () => {
         expect(rows[0].free).toBe(0);
     });
 
-    it('gives the whole row back to a lone scalar, so a 3 can become a 12', () => {
+    it('gives HALF the row to a lone quarter-row scalar, non tutta (A2)', () => {
+        // Prima di A2: `span: 12`. Il campo cresce ancora — e' la regola 2, che A2
+        // non abroga — ma si ferma a mezza riga.
         const rows = packRows([field('flag', 3)]);
-        expect(rows[0].fields[0]).toMatchObject({ span: 12, baseSpan: 3, stretched: true });
+        expect(rows[0].fields[0]).toMatchObject({ span: 6, baseSpan: 3, stretched: true });
+        expect(rows[0].free).toBe(6);
     });
 
     // ── Amendment A1 (spec, 31-08-2026): read-only never stretches ────────────
@@ -317,8 +326,40 @@ describe('packing — the stretch', () => {
     it('still stretches a writable scalar that FOLLOWS a read-only one (A1)', () => {
         // The rule is about the LAST field of the row, not about the row containing
         // one: a writable field closing the row takes the free columns as before.
+        // Prima di A2: `[3, 9]`, `free: 0`. Il campo scrivibile prende ancora le
+        // colonne libere, e ora fino a mezza riga.
         const rows = packRows([field('depth', 3, false, true), field('note', 3)]);
-        expect(rows[0].fields.map(f => f.span)).toEqual([3, 9]);
+        expect(rows[0].fields.map(f => f.span)).toEqual([3, 6]);
+        expect(rows[0].free).toBe(3);
+    });
+
+    // ── Amendment A2 (10k, 01-09-2026): lo stretch si ferma a mezza riga ──────
+
+    it('non porta MAI un campo oltre mezza riga (A2)', () => {
+        expect(STRETCH_MAX).toBe(6);
+        for (const base of [3, 6] as const) {
+            for (const lead of [[], [field('x', 3)], [field('x', 6)], [field('x', 3), field('y', 3)]]) {
+                const rows = packRows([...lead, field('last', base)]);
+                for (const r of rows) for (const f of r.fields) {
+                    expect(f.span, `base ${base}, lead ${lead.length}`).toBeLessThanOrEqual(STRETCH_MAX);
+                }
+            }
+        }
+    });
+
+    it('e\' il caso `entryAction` dello screenshot: 9 -> 6 accanto a `timeout` (A2)', () => {
+        // La riga 2 di `State`, con l'ordine di `StateMachine.ecore`: `tags` (6) non
+        // ci sta, la riga chiude, e prima di A2 `entryAction` assorbiva le 3 colonne
+        // libere finendo a 9 contro le 3 di `timeout`.
+        const rows = packRows([field('timeout', 3), field('entryAction', 6), field('tags', 6, true)]);
+        expect(rows[0].fields.map(f => [f.key, f.span])).toEqual([['timeout', 3], ['entryAction', 6]]);
+        expect(rows[0].fields[1].stretched).toBe(false);
+        expect(rows[0].free).toBe(3);
+    });
+
+    it('un campo che PARTE a riga intera la tiene: A2 e\' un tetto allo stretch, non a `baseSpan`', () => {
+        const rows = packRows([field('note', 12)]);
+        expect(rows[0].fields[0]).toMatchObject({ span: 12, baseSpan: 12, stretched: false });
         expect(rows[0].free).toBe(0);
     });
 });

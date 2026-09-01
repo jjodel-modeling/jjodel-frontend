@@ -56,6 +56,22 @@ import type { AttrShape, ClassShape, MetamodelShape, RefShape } from './shape';
  *  never changes, and a variable column count is the first way it would. */
 export const GRID_COLUMNS = 12;
 
+/**
+ * The ceiling the STRETCH may not pass — amendment A2 (10k, 01-09-2026).
+ *
+ * Half a row. Rule 2 lets the last writable scalar of a short row absorb the free
+ * columns, and unbounded that turns a text input into a banner: measured on
+ * `State` of `StateMachine.ecore`, `entryAction` came out at span 9 beside a
+ * `timeout` at span 3 — a 75/25 row where the metamodel had declared two fields
+ * of ordinary width. The stretch still exists and still closes a hole; it may no
+ * longer take a field past the widest width the registry itself ever assigns to
+ * one that is not a textarea.
+ *
+ * NOT a base width: `WIDTH_MAP` still gives `text` and `richtext` a span of 12,
+ * and a field that STARTS at 12 keeps it. The cap is on what the packer adds.
+ */
+export const STRETCH_MAX = 6;
+
 /** The three width classes. `3` is a quarter row, `6` a half, `12` the whole. */
 export type Span = 3 | 6 | 12;
 
@@ -405,6 +421,15 @@ export interface FormLayout {
  * In both cases the hole is INFORMATION, and that is the whole argument: it says the
  * metamodel put a multi or a derived attribute at the end of a short row, which is a
  * thing to go and fix in the metamodel rather than to paper over in the packer.
+ *
+ * AMENDMENT A2 (10k, 01-09-2026): the stretch stops at `STRETCH_MAX`, half a row.
+ * Since every base span is 3, 6 or 12 and every `free` is a multiple of 3, the whole
+ * of the change is: a quarter-row field still grows, and it grows to a half; a
+ * half-row field no longer grows at all. `entryAction` beside `timeout` on the State
+ * of `StateMachine.ecore` was the measurement — 9 against 3, a row the metamodel had
+ * not asked for. What the cap leaves behind is the same kind of hole A1 leaves, and
+ * it says the same thing: the row is short because of what comes next, not because a
+ * field deserved three quarters of it.
  */
 export function packRows(fields: readonly LayoutField[]): LayoutRow[] {
     const rows: LayoutRow[] = [];
@@ -415,9 +440,14 @@ export function packRows(fields: readonly LayoutField[]): LayoutRow[] {
         if (current.length === 0) return;
         const free = GRID_COLUMNS - used;
         const last = current[current.length - 1];
-        if (free > 0 && !last.growsOnOverflow && !last.readOnly) {
-            current[current.length - 1] = { ...last, span: (last.span + free) as Span, stretched: true };
-            rows.push({ fields: current, free: 0 });
+        // Amendment A2: the stretch stops at half a row. `grown` is what the field
+        // actually takes; when the cap bites, part of the free space survives as a
+        // hole — and a hole is information, which is the same argument A1 already
+        // makes for the read-only case two paragraphs up.
+        const grown = Math.min(last.span + free, STRETCH_MAX);
+        if (free > 0 && !last.growsOnOverflow && !last.readOnly && grown > last.span) {
+            current[current.length - 1] = { ...last, span: grown as Span, stretched: true };
+            rows.push({ fields: current, free: GRID_COLUMNS - (used + (grown - last.span)) });
         } else {
             rows.push({ fields: current, free });
         }
