@@ -6,7 +6,13 @@ import HighlightPalette from './components/HighlightPalette';
 import { LayoutMode, getSavedLayoutMode, saveLayoutMode } from '../abstract/Dock';
 import { isProjectOverviewPage } from '../../utils/navigationUtils';
 import { Defaults, LPointerTargetable, LViewPoint, store } from '../../joiner';
-import type { DViewPoint } from '../../joiner';
+import type { DViewPoint, LModel } from '../../joiner';
+import {
+    DATA_MANAGER_OPTION_LABEL,
+    DATA_MANAGER_OPTION_VALUE,
+    DATA_MANAGER_SEPARATOR_LABEL,
+    isDataManagerOption,
+} from './dataManagerOption';
 import { activateViewpoint } from '../../utils/lastViewpoint';
 import DockManager from '../abstract/DockManager';
 import { JjodelEvents } from '../../events/registry';
@@ -263,9 +269,33 @@ function Toolbar({
     // keeps the controls live on M2 where abstract syntax is all there is.
     const viewControlsDisabled = !!shownViewpointId;
 
+    // The picker carries one synthetic entry, «Data manager», which is NOT a viewpoint
+    // (dataManagerOption.ts says why). It is intercepted HERE, before `activateViewpoint`,
+    // so the sentinel never reaches `state.viewpoint` and no fake DViewPoint is needed.
+    //
+    // The manager is not mounted here: this delegates to `DockManager.openManager`, the
+    // same door the models rail uses (LeftBar.tsx), and `DockManager.open` activates a tab
+    // whose id already exists — so picking the entry twice, or picking it on a model whose
+    // manager was opened from the rail, converges on ONE tab instead of remounting.
+    //
+    // The <select> stays controlled on `shownViewpointId`, so it snaps back to the active
+    // syntax on the next render. That is correct and not a bug to fix: the canvas tab this
+    // toolbar belongs to keeps rendering that syntax underneath, and the manager tab is a
+    // sibling of it, not a mode of it. Going back to a syntax means activating the canvas
+    // tab — the manager tab is left open, never closed from here.
     const handleViewpointChange = useCallback((vpId: string) => {
+        if (isDataManagerOption(vpId)) {
+            if (!modelId) return;
+            try {
+                const lm = LPointerTargetable.fromPointer(modelId) as LModel;
+                if (lm) DockManager.openManager(lm);
+            } catch (e) {
+                console.warn('[Toolbar] Data manager: model not resolvable', modelId, e);
+            }
+            return;
+        }
         activateViewpoint(vpId || null);
-    }, []);
+    }, [modelId]);
 
     // ── Views menu (edit entry next to the selector) ──
     // The list is built at render straight from the store instead of through a selector:
@@ -621,6 +651,21 @@ function Toolbar({
                         {!isMetamodel && viewpoints.map(vp => (
                             <option key={vp.id} value={vp.id}>{vp.name}</option>
                         ))}
+                        {/* «Data manager» closes the list, after a separator: the syntaxes
+                            stay one group and the manager reads as the operational view it
+                            is. Last, never interleaved. Off on metamodels, which have no
+                            instances and whose manager `DockManager.openManager` refuses
+                            anyway, and off without a `modelId`, which is what the entry
+                            would have to resolve to open the tab. No icon: a native
+                            <option> renders text only, and the existing entries carry
+                            none — the `bi-table` of the mock is already the manager's
+                            glyph in the models rail. */}
+                        {!isMetamodel && modelId && (
+                            <>
+                                <option disabled>{DATA_MANAGER_SEPARATOR_LABEL}</option>
+                                <option value={DATA_MANAGER_OPTION_VALUE}>{DATA_MANAGER_OPTION_LABEL}</option>
+                            </>
+                        )}
                     </select>
                 </div>
 
