@@ -370,7 +370,10 @@ describe('10i — il bottone e il popover', () => {
     it('la card del popover è quella del DS', () => {
         const panel = block(RULES, '&__columns-panel {');
         expect(panel).toMatch(/border:\s*1px solid var\(--color-form-border\)/);
-        expect(panel).toMatch(/border-radius:\s*6px/);
+        // 10k-dd: `--radius-dropdown` (8px) invece del 6 letterale. E' il
+        // gradino che il DS dichiara per menu e popover, ed e' questo che
+        // «la card del popover e' quella del DS» vuol dire.
+        expect(panel).toMatch(/border-radius:\s*var\(--radius-dropdown\)/);
         expect(panel).toMatch(/background:\s*var\(--color-bg-primary\)/);
         // 10k-chiusura: `absolute` era il DIFETTO — `__pane--table` e'
         // `overflow: hidden` e clippava il pannello a meta' elenco. Ora e'
@@ -390,9 +393,24 @@ describe('10i — il bottone e il popover', () => {
        fosse, ogni asserzione qui sotto misurerebbe un file che non e' quello. */
     it('il pannello è portato su document.body, non annidato nella card', () => {
         expect(TSX_CODE).toContain("import { createPortal } from 'react-dom'");
-        const at = TSX_CODE.indexOf('columnsOpen && columnsRect && createPortal(');
+        const open = 'columnsOpen && columnsRect && createPortal(';
+        const at = TSX_CODE.indexOf(open);
         expect(at).toBeGreaterThan(-1);
-        const body = TSX_CODE.slice(at, at + 2600);
+        // 10k-dd — la regione e' la CHIAMATA, non una finestra di 2600 caratteri.
+        // Quella finestra era tarata sulla lunghezza che il JSX aveva quel
+        // giorno: la testata del pannello ne ha aggiunti cinquecento e
+        // `document.body`, che e' il SECONDO argomento e sta quindi in fondo,
+        // ne e' uscito — un rosso che accusava il portale di non esserci
+        // mentre era solo piu' in la'. Si chiude sulla parentesi bilanciata,
+        // che e' dove la chiamata finisce davvero.
+        let depth = 0, end = at;
+        for (let i = at + open.length - 1; i < TSX_CODE.length; i++) {
+            const c = TSX_CODE[i];
+            if (c === '(') depth++;
+            else if (c === ')') { depth--; if (depth === 0) { end = i + 1; break; } }
+        }
+        expect(end).toBeGreaterThan(at);
+        const body = TSX_CODE.slice(at, end);
         expect(body).toContain('instance-manager__columns-panel');
         expect(body).toContain('ref={columnsPanelRef}');
         expect(body).toContain('style={computeColumnsPanelStyle(columnsRect)}');

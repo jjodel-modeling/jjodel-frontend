@@ -358,6 +358,67 @@ describe('10k punto 4 — la colonna che ripete i nomi', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 4-bis. 10k-dd: la rifinitura del pannello Columns
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('10k-dd — il pannello Columns si legge a colpo d\'occhio', () => {
+    const PANEL = block(RULES, '&__columns-panel {');
+    const ITEM = block(RULES, '&__columns-item {');
+
+    it('positivo di controllo: le due regole esistono', () => {
+        expect(PANEL).not.toBe('');
+        expect(ITEM).not.toBe('');
+    });
+
+    it('una colonna NASCOSTA porta l\'etichetta in muted: e\' la gerarchia', () => {
+        // La sola dichiarazione che rende leggibile un elenco di nove righe
+        // senza contare nove caselle.
+        expect(ITEM).toContain('&--off { color: var(--color-form-muted); }');
+        expect(CODE).toContain("(t.checked ? '' : ' instance-manager__columns-item--off')");
+    });
+
+    it('…e la casella NON si smorza con lei', () => {
+        // Una casella smorzata si legge come disattivata, e queste sono tutte
+        // cliccabili. Il colore sta sulla riga, non sull'input.
+        expect(ITEM).not.toMatch(/&--off \{[^}]*input/s);
+    });
+
+    it('la testata conta le visibili, e non ripete la parola del bottone', () => {
+        expect(CODE).toContain('instance-manager__columns-head');
+        expect(CODE).toMatch(/\{toggles\.filter\(t => t\.checked\)\.length\} of \{toggles\.length\} shown/);
+        // «Columns» e' sul bottone da cui il pannello e' appena nato.
+        const head = block(RULES, '&__columns-head {');
+        expect(head).toContain('border-bottom: 1px solid var(--color-form-border)');
+    });
+
+    it('le righe si toccano, e l\'hover e\' quello delle altre liste', () => {
+        expect(PANEL).toContain('gap: 0;');
+        expect(ITEM).toContain('&:hover { background: var(--color-bg-hover); }');
+        expect(ITEM).toContain('transition: background-color 150ms ease-out');
+    });
+
+    it('il popover prende il raggio del DS e si stacca dalla card sotto', () => {
+        expect(PANEL).toContain('border-radius: var(--radius-dropdown)');
+        expect(PANEL).toContain('box-shadow: 0 4px 12px var(--color-node-shadow)');
+    });
+
+    it('la nota resta LEGGIBILE: muted, non slate-300', () => {
+        // Misurato: slate-300 su bianco da' ~1.6:1, e la nota e' l'unica cosa
+        // che spiega perche' una casella e' spenta. Stessa conclusione di DS3
+        // su `__draft-label`.
+        const empty = block(RULES, '&__columns-empty {');
+        expect(empty).toContain('color: var(--color-form-muted)');
+        expect(empty).not.toContain('--color-form-border-strong');
+    });
+
+    it('e cede il posto all\'etichetta, invece di uscire dal pannello', () => {
+        expect(block(RULES, '&__columns-empty {')).toContain('flex: none');
+        expect(block(RULES, '&__columns-label {')).toContain('text-overflow: ellipsis');
+        expect(CODE).toContain('<span className="instance-manager__columns-label">{t.label}</span>');
+    });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // 6. CHILDREN e ADD CONTAINED
 // ─────────────────────────────────────────────────────────────────────────────
 

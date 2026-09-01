@@ -569,36 +569,90 @@
         z-index: 30;
         display: flex;
         flex-direction: column;
-        gap: 2px;
-        min-width: 190px;
+        /* 10k-dd — le righe si toccano. Il `gap: 2px` piu' il raggio di ogni
+           riga faceva una rigatura: nove bande separate invece di un elenco, e
+           la campitura dell'hover perdeva il contatto con quella sopra. A zero,
+           l'hover e' una banda continua e l'elenco e' una cosa sola. */
+        gap: 0;
+        min-width: 200px;
         max-width: 280px;
         max-height: 320px;
         overflow-y: auto;
-        padding: 6px;
+        /* La gronda scende a 4px in verticale: il respiro lo danno le righe, e
+           6px sopra la prima la staccavano dalla testata. */
+        padding: 4px;
         border: 1px solid var(--color-form-border);
-        border-radius: 6px;
+        /* `--radius-dropdown` (8px) e non il 6 letterale: e' il gradino che il
+           DS dichiara per menu e popover, e questo e' un popover. */
+        border-radius: var(--radius-dropdown);
         background: var(--color-bg-primary);
         /* Geometria per esteso, colore da token: e' la forma che R-RAIL-10
            prescrive per le ombre, e non `var(--shadow-*)`. `__outline-menu`
            porta la stessa ombra con l'`rgba` letterale — precede la regola e
            resta com'e' (Regola 8), ma la nuova non la ricopia: in scuro il
            token vira e il letterale no. */
-        box-shadow: 0 2px 6px var(--color-node-shadow);
+        /* 10k-dd — 4/12 invece di 2/6. Il pannello galleggia SOPRA una card che
+           ha gia' la sua ombra (`--shadow-desk-card`): a 2px stava sullo stesso
+           piano di cio' che copre, e un popover che non si stacca dal proprio
+           fondo si legge come un pezzo di esso. Il colore resta il token. */
+        box-shadow: 0 4px 12px var(--color-node-shadow);
+    }
+
+    /* ── 10k-dd: la testata del pannello ─────────────────────────────────────
+       Nove righe che cominciano fredde non dicono quante colonne si stanno
+       guardando: bisogna contare le spunte. Il conteggio e' l'unica cosa che il
+       pannello sa e che l'elenco non mostra, e sta dove si guarda per primo.
+
+       NON ripete la parola «Columns»: quella e' sul bottone da cui il pannello
+       e' appena nato, e ridirla qui sarebbe la seconda copia della stessa
+       etichetta a otto pixel di distanza. */
+    &__columns-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 3px 6px 6px;
+        margin-bottom: 4px;
+        border-bottom: 1px solid var(--color-form-border);
+        font-size: var(--text-2xs);
+        font-variant-numeric: tabular-nums;
+        color: var(--color-form-muted);
+        cursor: default;
     }
 
     &__columns-item {
         display: flex;
         align-items: center;
-        gap: 6px;
+        gap: 8px;
         padding: 4px 6px;
-        border-radius: 4px;
+        border-radius: var(--radius-sm);
         font-size: 12px;
         color: var(--color-text-primary);
         cursor: pointer;
+        /* 10k-dd — la stessa transizione della riga di tabella e della riga del
+           rail: le tre sono lo stesso gesto su tre elenchi. */
+        transition: background-color 150ms ease-out;
 
-        &:hover { background: var(--color-bg-tertiary); }
+        /* 10k-dd — `--color-bg-hover`, non `--color-bg-tertiary`. Questo foglio
+           ha gia' ratificato due volte che i due sono ruoli distinti e che
+           l'hover e' il primo (riga di tabella, nodo dell'outline); questa e' la
+           terza riga di elenco della stessa superficie e non aveva ragione di
+           divergere. `--color-bg-tertiary` resta il fondo delle bande a riposo,
+           che qui e' la testata. */
+        &:hover { background: var(--color-bg-hover); }
 
         input { cursor: pointer; }
+
+        /* ── 10k-dd: la gerarchia ────────────────────────────────────────────
+           Una colonna NASCOSTA porta l'etichetta in muted. E' la sola
+           dichiarazione che rende l'elenco leggibile a colpo d'occhio: senza,
+           nove righe sono nove righe uguali e per sapere che cosa si sta
+           guardando bisogna leggere nove caselle. Con, le colonne a schermo
+           sono le scure e le altre arretrano.
+
+           Il colore NON tocca la casella, che resta il controllo del DS con il
+           suo bordo pieno: una casella smorzata insieme all'etichetta si
+           leggerebbe come disattivata, e queste sono tutte cliccabili. */
+        &--off { color: var(--color-form-muted); }
 
         /* `name` non si disattiva. La voce resta LEGGIBILE — e' l'unica che
            dice quale colonna e' la colonna dei nomi — e non prende il grigio
@@ -612,10 +666,32 @@
 
     /* La nota che dice PERCHE' la casella e' spenta. Senza, una spunta assente
        su una colonna che il metamodello dichiara legge come un guasto. */
+    /* La nota che dice PERCHE' la casella e' spenta. 10k-dd: `flex: none` e
+       l'etichetta che si accorcia al posto suo — prima la nota era spinta a
+       destra da `margin-left: auto` e un nome lungo la mandava fuori dal
+       pannello invece di accorciarsi. Misurato nel before: 43px di vuoto fra
+       etichetta e nota su un pannello largo 190, cioe' quasi un quarto della
+       larghezza speso in aria. */
     &__columns-empty {
+        flex: none;
         margin-left: auto;
+        padding-left: 8px;
         font-size: var(--text-2xs);
+        /* Resta `--color-form-muted` (slate-400) e NON scende a slate-300, che
+           il primo giro di 10k-dd aveva provato: su bianco slate-300 da' 1.6:1,
+           cioe' illeggibile, e la nota e' l'unica cosa che spiega perche' una
+           casella e' spenta. Non serviva smorzarla — con le etichette nascoste
+           gia' in muted la nota non compete piu' con niente. Stessa misura, e
+           stessa conclusione, del `__draft-label` di DS3. */
         color: var(--color-form-muted);
+    }
+
+    /* L'etichetta cede prima della nota: e' lei che puo' essere lunga. */
+    &__columns-label {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     /* Export sta a sinistra del New e non ne prende il peso: il primario della

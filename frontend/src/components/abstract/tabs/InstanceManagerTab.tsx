@@ -2334,11 +2334,21 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                                         aria-label={`Columns of ${classShape.key}`}
                                         style={computeColumnsPanelStyle(columnsRect)}
                                     >
+                                        {/* 10k-dd — la testata conta, e conta le VISIBILI
+                                            includendo la colonna fissa dei nomi, che e'
+                                            a schermo e non passa da `toggles` quando la
+                                            feature `name` esiste. Il numero e' cio' che
+                                            l'elenco non mostra: le spunte ci sono tutte,
+                                            ma vanno contate a mano. */}
+                                        <div className="instance-manager__columns-head">
+                                            {toggles.filter(t => t.checked).length} of {toggles.length} shown
+                                        </div>
                                         {toggles.map(t => (
                                             <label
                                                 key={t.key}
                                                 className={'instance-manager__columns-item'
-                                                    + (t.locked ? ' instance-manager__columns-item--locked' : '')}
+                                                    + (t.locked ? ' instance-manager__columns-item--locked' : '')
+                                                    + (t.checked ? '' : ' instance-manager__columns-item--off')}
                                                 title={t.locked
                                                     ? 'The name column is always shown'
                                                     : t.duplicate ? 'Same value as the name column on every instance — check to show it anyway'
@@ -2351,7 +2361,7 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                                                     disabled={t.locked}
                                                     onChange={e => toggleColumn(t.key, e.target.checked)}
                                                 />
-                                                {t.label}
+                                                <span className="instance-manager__columns-label">{t.label}</span>
                                                 {t.empty && (
                                                     <span className="instance-manager__columns-empty">empty</span>
                                                 )}
