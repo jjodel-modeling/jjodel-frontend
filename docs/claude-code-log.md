@@ -2,6 +2,40 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-09-01 — fix(manager): la banda dell'header form prende un token suo (10k-bis)
+**Prompt**: emendamento 10k-bis, un punto solo: l'header della card form
+(`&__form-head`) non staccava dal desk. Due leve insieme — fondo un gradino piu' scuro,
+hairline a `--color-form-border-strong`. Terza leva (titolo a 600, metaclasse a chip
+pastello) subordinata dal prompt a «solo se il pixel dice che non basta». Verifica
+richiesta: sonda con contrasto MISURATO banda-vs-desk e banda-vs-corpo card.
+**Files touched**: `abstract/tabs/instanceManagerTab.scss` (blocco `&__form-head`: due
+dichiarazioni piu' il commento) e `__tests__/instanceManager10k.test.ts` (blocco «10k
+punto 3»), in **5bcc56abe**; questa entry a parte. La sonda
+`scripts/smoke/_tmp_10kbis_verify.ts` non e' committata: `.gitignore:66` ignora
+`frontend/scripts/smoke/_tmp_*` per disegno.
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-01 12:30
+**Causa**: (c)
+**Regressions**: no — `npm run typecheck` **33** (baseline invariata, conteggio su output
+COMPLETO, 124 righe); `npm run build` exit **0**, solo il warning di chunk noto; suite
+`abstract/tabs/__tests__/` su HEAD fuso **380/380**. Le due asserzioni ratificate di 10k
+sul form-head sono riscritte (il fondo che pinnavano e' il difetto che l'emendamento
+chiude), piu' un controllo positivo nuovo sul desk. Suite provata con QUATTRO mutazioni
+(fondo a `form-panel`, fondo a `bg-hover`, hairline a `form-border`, desk portato anche
+lui a `bg-tertiary`): 1/1/1/1 rossi, verde al ripristino in tutte e quattro.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessun file di §3.1, nessun trigger di §3.2. Zero
+creatori D, zero `TRANSACTION`, zero scritture: il delta e' due dichiarazioni CSS.
+**Smoke visivo**: passato — `_tmp_10kbis_verify.ts`, **before 13/4, after 17/0**, zero
+errori di pagina, stesso strumento su entrambi i lati. La misura e' ΔL* (CIE, sRGB→Lab
+D65) sui `backgroundColor` COMPUTATI: banda-vs-desk **0 → 1.83** (nel before esattamente
+zero, i due lati erano lo stesso token), banda-vs-corpo card **1.82 → 3.65**,
+filetto-vs-banda **6.41 → 11.49**. Leva facoltativa NON fatta: il titolo era gia' a 600
+(misurato, X7) e il pixel dice che le due leve bastano; scelta confermata da Alfonso.
+**Notes**: due rettifiche al prompt. (1) «--color-bg-hover (#f1f5f9)» sono due token diversi: `bg-hover` e' $slate-150 (#e9eff6), `bg-tertiary` e' $slate-100 (#f1f5f9). Il foglio aveva gia' ratificato la distinzione due volte a commento, e usa `bg-tertiary` per le superfici a riposo. (2) Soglia A6 alzata da 4 a 8: a 4 passava in entrambi i giri. La (c) per esteso, e l'incidente di concorrenza con `ecore` (mio indice sporco finito in fcc200d11, da loro resettato; nulla perso), nel messaggio di 5bcc56abe.
+**Prompt document name**: emendamento 10k-bis (in chat) — 2026-09-01 13:15
+
+
 ## 2026-09-01 — feat(toolbar): «Data manager» in coda al picker delle sintassi (NAV1)
 **Prompt**: `docs/prompts/PROMPT_NAV1_data_manager_picker.md` — il manager entra nel
 selettore delle viste come «Data manager», in coda dopo un separatore, e la scelta deve
