@@ -42,6 +42,7 @@ import {Item, Menu, UserHeader} from '../components/menu/Menu';
 
 import Collaborative from "../../components/collaborative/Collaborative";
 import { isProjectModified } from '../../common/libraries/projectModified';
+import { saveProjectWithFeedback } from '../../common/libraries/saveProject';
 import { AboutDialog, AboutDialogController } from './about/AboutDialog';
 import {Undoredocomponent} from "../../components/topbar/undoredocomponent";
 import {BEGIN, CollabRefreshAction, COMMIT, END} from "../../redux/action/action";
@@ -1097,18 +1098,10 @@ function NavbarComponent(props: AllProps) {
                 event.stopPropagation();
 
                 if (context === 'PROJECT_EDITOR' || context === 'METAMODEL_EDITOR') {
-                    if (project) {
-                        (async () => {
-                            try {
-                                SetRootFieldAction.new('isLoading', true);
-                                await ProjectsApi.save(project);
-                                SetRootFieldAction.new('isLoading', false);
-                            } catch (error: any) {
-                                U.alert('e', 'Error while Saving Project', error.message);
-                                SetRootFieldAction.new('isLoading', false);
-                            }
-                        })();
-                    }
+                    // SAVE1: stessa funzione del menu File e del bottone del Data
+                    // Manager. La scorciatoia ci guadagna la guardia di timeout,
+                    // che qui non c'era.
+                    void saveProjectWithFeedback(project);
                 } else if (context === 'USER_PROFILE') {
                     // Profile changes are auto-saved, show confirmation
                     U.alert('i', 'Profile Saved', 'Your profile changes are saved automatically.');
@@ -1379,24 +1372,11 @@ function NavbarComponent(props: AllProps) {
 
                 /* Save Project */
                 isDashboard ? null : {name: 'Save Project',
-                    function: async () => {
-                        if (project) {
-                            try {
-                                SetRootFieldAction.new('isLoading', true);
-                                const maxWait = 10 * 1000;
-                                let timeout = setTimeout(()=> {
-                                    SetRootFieldAction.new('isLoading', false);
-                                    U.alert('e', 'Request timed out', <>Verify your connection or&nbsp;
-                                        <a href="mailto:info@jjodel.io?subject=Save%20timeout&body=Describe%20your%20actions%20prior%20the%20error%2C%20and%20attach%20your%20latest%20savefile%20if%20possible.">contact our support</a></>);
-                                }, maxWait);
-                                await ProjectsApi.save(project);
-                                clearTimeout(timeout);
-                                SetRootFieldAction.new('isLoading', false);
-                            } catch (error: any) {
-                                U.alert('e', 'Error while Saving Project', error.message);
-                            }
-                        }
-                    }
+                    // SAVE1: il blocco che stava qui e' diventato
+                    // `saveProjectWithFeedback`. Il menu ci guadagna il
+                    // ripristino di `isLoading` sul ramo di errore, che qui
+                    // mancava.
+                    function: () => { void saveProjectWithFeedback(project); }
                     , icon: <i className="bi bi-floppy" />, shortcutPills: formatShortcutPills(SHORTCUTS.SAVE)},
 
                 isDashboard ? null : {name: 'Download Project', function: async()=> {

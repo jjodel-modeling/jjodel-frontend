@@ -421,6 +421,7 @@
         gap: 10px;
         margin-left: auto;
 
+        .instance-manager__save { margin-left: 0; }
         .instance-manager__export { margin-left: 0; }
         .instance-manager__new { margin-left: 0; }
     }
@@ -694,8 +695,17 @@
         white-space: nowrap;
     }
 
-    /* Export sta a sinistra del New e non ne prende il peso: il primario della
-       testata e' uno solo, ed e' la create. */
+    /* SAVE1 — «Save project» divide la regola con Export invece di copiarla:
+       il prompt chiede «stesso componente/classe di Export», e qui i due
+       bottoni secondari della testata non sono un componente ma una regola.
+       Una seconda copia dei dodici valori sarebbe la meta' che il giorno in
+       cui Export cambia resta indietro senza errore di compilazione.
+
+       Export sta a sinistra del New e non ne prende il peso: il primario della
+       testata e' uno solo, ed e' la create. Save sta a sinistra di Export per
+       la stessa ragione, un gradino piu' in la': e' l'azione sul PROGETTO,
+       mentre le altre due sono sulla collezione che il titolo nomina. */
+    &__save,
     &__export {
         display: inline-flex;
         align-items: center;
@@ -718,8 +728,13 @@
         /* 10k punto 9. */
         transition: background-color 150ms ease-out;
 
-        &:hover { background: var(--color-bg-tertiary); }
+        &:hover:not(:disabled) { background: var(--color-bg-tertiary); }
         &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: -1px; }
+
+        /* Solo `__save` si disabilita — durante il salvataggio in volo. La
+           stessa coppia di valori del `__page-btn`, che e' l'altro secondario
+           di questo foglio che si spegne. */
+        &:disabled { opacity: 0.4; cursor: default; }
     }
 
     /* Quando Export non c'e' (collezione vuota) il New deve comunque andare a

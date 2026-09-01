@@ -138,6 +138,8 @@ import {
     type TableRow,
 } from './instanceTable';
 import { entityLetter } from '../../../common/entityMeta';
+import { saveProjectWithFeedback } from '../../../common/libraries/saveProject';
+import { LProject } from '../../../joiner';
 import './instanceManagerTab.scss';
 
 /** La lettera del badge di metaclasse, dal registro delle entita' e non da una
@@ -1391,6 +1393,22 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
      *  geometria `fixed` puo' nascere, e viene ricalcolato a scroll e resize. */
     const [columnsRect, setColumnsRect] = useState<DOMRect | null>(null);
 
+    /** SAVE1 — il salvataggio in volo. L'UNICO stato che il bottone «Save
+     *  project» tiene, e deliberatamente: NON tiene una nozione di «sporco».
+     *
+     *  Misurato: `U.isProjectModified` e' un `public static boolean` su `U`
+     *  (`common/U.tsx:211`), non un campo dello store; `ProjectsApi.save` lo
+     *  rimette a `false` (`api/persistance/projects.ts:133`) senza emettere
+     *  azione ne' evento, e `IRForm.tsx` gia' dichiara nel proprio sorgente che
+     *  «subscribing to the flag is not possible (it is a plain static)». Un
+     *  `disabled={!U.isProjectModified}` sarebbe quindi letto al render e mai
+     *  invalidato: dopo una modifica fatta altrove — la canvas, un altro tab —
+     *  il bottone resterebbe SPENTO con il progetto sporco, cioe' il salvataggio
+     *  diventerebbe irraggiungibile proprio quando serve. Il prompt di SAVE1
+     *  prevede questo esito: «se il flag non e' esposto in modo affidabile,
+     *  sempre attivo». Sempre attivo, e nessuna nozione di dirty nuova. */
+    const [saving, setSaving] = useState(false);
+
     /* Chiusura del pannello: click fuori ed Esc.
      *
      * `mousedown` e non `click`: un click che parte dentro il pannello e finisce
@@ -1777,6 +1795,32 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
         a.download = `${modelName}-${classShape.key}.csv`;
         a.click();
         URL.revokeObjectURL(url);
+    };
+
+    /** SAVE1 — il salvataggio esplicito del progetto dalla testata del manager.
+     *
+     *  E' LA STESSA funzione di File -> Save Project e di Ctrl/Cmd+S: il blocco
+     *  che stava scritto due volte in `Navbar.tsx` e' ora
+     *  `common/libraries/saveProject.tsx`, e questo e' il terzo chiamante. Non un
+     *  secondo percorso di salvataggio — spinner, timeout a 10s e alert sono
+     *  quelli, e non ne esiste una copia qui.
+     *
+     *  Il progetto viene da `LProject.getProject()` e non da una prop: il tab non
+     *  riceve il progetto (`InstanceManagerTabProps` e' il solo `modelid`), ed e'
+     *  la stessa risoluzione che `SaveManager.save()` fa dalla topbar. Con nessun
+     *  progetto risolto l'helper non fa nulla e ritorna `false`.
+     *
+     *  `saving` spegne il bottone per la durata della chiamata e nient'altro: la
+     *  label non cambia e nessuno spinner nuovo nasce, perche' quello globale
+     *  (`isLoading`) lo accende gia' l'helper. */
+    const saveProject = async () => {
+        if (saving) return;
+        setSaving(true);
+        try {
+            await saveProjectWithFeedback(LProject.getProject());
+        } finally {
+            setSaving(false);
+        }
     };
 
     // ── Create (2c) ────────────────────────────────────────────────────────────
@@ -2236,6 +2280,37 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                         Export resta il secondario e New il primario: un solo
                         primario in tutta la testata, come da 10c. */}
                     <div className="instance-manager__head-actions">
+                        {/* SAVE1 — «Save project» a sinistra di Export.
+
+                            Terzo chiamante di `saveProjectWithFeedback`, non un
+                            terzo salvataggio: menu File, Ctrl/Cmd+S e questo
+                            bottone passano dalla stessa funzione.
+
+                            SEMPRE ATTIVO, salvo la durata della chiamata. La
+                            ragione, misurata, sta sul commento di `saving`:
+                            `U.isProjectModified` e' uno static non sottoscrivibile,
+                            e un `disabled` che ne dipendesse resterebbe indietro
+                            rispetto alle modifiche fatte fuori da questo tab.
+
+                            Vive dentro la stessa condizione della testata
+                            (`selectedClass`): dove la testata non c'e' — nessuna
+                            metaclasse scelta — non c'e' neanche lui, e il
+                            salvataggio resta dove gia' stava (menu e scorciatoia).
+
+                            Secondario come Export, e con la sua stessa regola nel
+                            foglio: il primario della testata resta uno solo, la
+                            create. */}
+                        <button
+                            type="button"
+                            className="instance-manager__save"
+                            title="Save the project"
+                            disabled={saving}
+                            onClick={saveProject}
+                        >
+                            <i className="bi bi-floppy" aria-hidden="true" />
+                            Save project
+                        </button>
+
                         {classShape && rows.length > 0 && (
                             <button
                                 type="button"
