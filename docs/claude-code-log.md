@@ -2,6 +2,94 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-09-01 — fix(form): la colonna etichetta e' un cap, e la cella stretta impila il campo (FL8)
+**Prompt**: «FL8: colonna etichetta fissa vs celle del packer (fix, PARALLELO)» — chiudere il
+reperto di STYLE1 §7: nei due preset a etichetta laterale il rail a 400px lasciava 7.8px al
+controllo. Due leve, con l'ordine dichiarato: (a) colonna etichetta flessibile, (b) fallback a
+etichetta sopra sotto una soglia derivata dalla width_map. Fuori scope: il picker del tema
+(STYLE2), `layout.ts`/`themes.ts`/width_map, il manager.
+**Files touched**: `editor-v2/viewpoint/ir/irFormStyle.scss` (il blocco `[data-label-placement=
+"left"]` e una regola nuova), `editor-v2/viewpoint/ir/__tests__/irFormLabelColumn.test.ts`
+(**nuovo**, 18 casi) e il referto `docs/discovery/discovery_2026-09-01_fl8_colonna_etichetta.md`,
+in `57d36a10e`; questa entry a parte. Pathspec, indice verificato vuoto prima e dopo.
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-01 09:10 — STYLE1, il reperto che il suo referto §7 lascio' aperto
+**Causa**: (c)
+**Regressions**: no — `npm run typecheck` **33** (baseline invariata, conteggio su output
+COMPLETO); `npm run build` exit **0**; `npx vitest run` **2825 passati / 0 falliti**, 9 file
+rossi in raccolta tutti il noto `window is not defined`. Suite propria provata con CINQUE
+mutazioni (cap tornato fisso, floor rimosso, soglia a 120px, containment estesa ai preset a
+etichetta sopra, `text-align` dell'etichetta impilata rimosso): 2/2/6/2/2 rossi, verde al
+ripristino in tutte e cinque.
+**Out-of-scope changes**: no — il foglio del prompt, la sua suite nuova, il referto.
+**Layer Impact Report**: not-required — nessun file di §3.1. Il delta e' CSS.
+**Smoke visivo**: passato — `_tmp_fl8_verify.ts`, **18/18 PASS, exit 0, zero errori di pagina**.
+Soggetto `allNine_valued` (14 campi / 3 gruppi / 7 righe) nel rail a 400px. Before riprodotto
+(4 schiacciati e 2 in overflow per preset laterale, tracce `72px 7.75px`), after 0 e 0 nei
+QUATTRO preset, minimo controllo da 7.8px a 63.5px. Comfortable e Sectioned identici al before
+rettangolo per rettangolo (14 celle, 14 campi, `formH` 811.2 / 914.2). Geometria `14/3/7`
+invariata sotto tutti e quattro.
+**Notes**: before e after misurati nello STESSO caricamento, iniettando a runtime la grammatica
+committata: una sessione parallela scriveva su `IRForm.tsx` (09:57) e `formAutoLayout.ts`
+(09:59) mentre la sonda girava, e due giri separati avrebbero confrontato due codici diversi.
+Spedite entrambe le leve: (a) da sola SODDISFA il criterio dichiarato ma lascia i tre sintomi
+del prompt (select sotto la freccia, stepper senza campo, etichetta troncata). Referto §4.
+**Prompt document name**: PROMPT_FL8_rail_label_column.md — 2026-09-01 09:35
+
+
+## 2026-09-01 — feat(form): il rung viewpoint del tema, e il tab Style che non esisteva (STYLE2)
+**Prompt**: `docs/prompts/PROMPT_STYLE2_viewpoint_theme_rung.md` — via **2** del referto
+STYLE1 §5: campo D nuovo a livello viewpoint, `resolveFormTheme` che guadagna quella
+sorgente, precedenza view > viewpoint > default ciascun gradino testato, select «Form
+theme» nel tab Style del viewpoint. Dichiarato SERIALE dopo FL8. Fuori scope: nuovi temi,
+il rung metamodello, la skin legacy, il manager.
+**Files touched**: `view/viewElement/view.tsx` (campo `formTheme?`),
+`editor-v2/viewpoint/ir/formAutoLayout.ts` (quarto strato + `isFormThemeName`),
+`editor-v2/viewpoint/ir/IRForm.tsx` (lettura del rung, e l'eyebrow statico sotto
+`chrome.eyebrow`), `editors/viewpoint/properties/ViewpointProperties.tsx` (il select),
+`editor-v2/viewpoint/ir/__tests__/formAutoLayout.test.ts` (32 -> 40 casi) e il referto
+`docs/discovery/discovery_2026-09-01_style2_viewpoint_rung.md`, in `8b63d1e0d`; questa
+entry a parte. Pathspec obbligata: l'indice conteneva il lavoro di un'altra sessione.
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-01 09:10 (STYLE1) — ne sblocca il select, fermo per mancanza di una
+write surface
+**Causa**: (a)
+**Regressions**: no — `npm run typecheck` **33** (baseline invariata, conteggio su output
+COMPLETO, `EXIT=2`); `npm run build` exit **0**; `npm run test` **2825 passati / 0
+falliti**, 9 file rossi in raccolta tutti il noto `window is not defined`. Suite propria
+provata con CINQUE mutazioni (strato viewpoint scartato, precedenza invertita, guardia
+rimossa, `skin` ridefaultata a `plain`, rung per-classe scartato): 2/2/1/2/3 rossi, verde
+al ripristino in tutte e cinque.
+**Out-of-scope changes**: yes — due, entrambi misurati e nel referto. (1) il select sta in
+`ViewpointProperties.tsx` e non in `PaletteData.tsx`: `<ViewData>`, che possiede il tab
+Style, e' montato in UN posto (`Info.tsx:1394`) e quel posto e' il ramo `else` di `isVP` —
+un viewpoint non ci arriva mai, il reperto 2 di STYLE1 aveva letto il ramo interno di
+`ViewData` e non il montaggio. (2) una riga in `IRForm.tsx`: l'intestazione statica
+«Identity» passa sotto `chrome.eyebrow` come le sezioni.
+**Layer Impact Report**: not-required — nessun file di §3.1 e nessun trigger di §3.2: il
+campo D e' additivo e opzionale, zero creatori, zero `TRANSACTION`, la scrittura e' la
+stessa assegnazione su proxy L con cui `viewpointType` e' scritto da due anni. Il permesso
+di §5 Regola 5 (core, `view.tsx`) e' il prompt stesso.
+**Smoke visivo**: passato — `_tmp_style2_verify.ts` sull'app vera, **30/30 ALL GREEN, exit
+0, zero errori di pagina**. Soggetto `allNine_valued`, rail 400px. I QUATTRO preset per via
+reale, la via contratto di STYLE1 sparita: Comfortable `top|comfortable|flat|14px|811.2px`,
+Compact `left|compact|divided|8px|659.2px`, Sectioned `top|comfortable|card|14px|811.2px`,
+Dense `left|dense|none|6px|11.5px|580.2px`, eyebrow 3/3/3/**0**. Un giro end-to-end vero dal
+`<select>` con Playwright (seleziona viewpoint, sceglie Dense, riseleziona l'oggetto).
+Precedenza a schermo: viewpoint=Dense + view=`plain` rende Comfortable, + view=`compact`
+rende Compact, tolto il tema della view il viewpoint torna a vincere. Non-regressione due
+volte: firma del before identica a quella committata da STYLE1, e tolto il campo il DOM
+torna identico campo per campo. `"Cosy"` nel campo risolve come nessuna opinione. Geometria
+`14/3/7` sotto tutti e quattro.
+**Notes**: Causa (a): il prompt dava per esistente il tab Style del viewpoint. Terzo reperto:
+la firma Dense «0 eyebrow» di STYLE1 era una misura della SONDA — la sua via contratto
+nascondeva a mano ogni `.ir-form__group-title`, inclusa quella statica che React rendeva
+comunque. Sul percorso vero uscivano 1. Corretto: `eyebrow:false` viene solo da `none`, che
+viene solo da `Dense`, irraggiungibile fino a questa slice — nessun comportamento committato
+degradato. Referto §2, §5, §7.
+**Prompt document name**: PROMPT_STYLE2_viewpoint_theme_rung.md — 2026-09-01 09:55
+
+
 ## 2026-09-01 — fix(core): il rifiuto dell'auto-composizione dice il vero, e l'orfano del doppio append ha un nome
 **Prompt**: «ENG1: due difetti del core sul containment, PARALLELO a 10j-chiusura». (A) fix:
 `LReference.set_containment` sul ramo auto-composizione (`father === type`) logga il warning,
