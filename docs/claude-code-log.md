@@ -40,6 +40,53 @@ su `:root`: letto sulla radice torna vuoto e fa dichiarare inerte una regola viv
 commesso entrambi gli errori prima di correggerli.
 **Prompt document name**: prompt inline, nessun documento — 2026-09-01 00:45
 
+## 2026-09-01 — feat(manager): le intestazioni in maiuscolo e il pannello Columns (10i)
+**Prompt**: «Slice 10i — intestazioni UPPERCASE + bottone Columns, micro, SERIALE»: i punti
+3-4 di 10h rimasti fuori dal suo commit. (1) le intestazioni di colonna prendono l'eyebrow
+del DS — 11px/600, letter-spacing 0.04-0.1em, slate-400 — col case fatto dal CSS e non da
+stringhe riscritte, token typography e zero valori nuovi; (2) un bottone «Columns» accanto
+all'indicatore delle vuote, popover di checkbox per colonna, le auto-nascoste unchecked con
+nota «empty» e spuntabili per forzarle visibili, l'indicatore che conta solo le
+non-overridate, `name` non disattivabile, persistenza per metaclasse nello stato UI del tab,
+card DS con chiusura click-fuori/Esc, export sulle colonne visibili. Fuori scope dichiarato:
+icone bi sui bottoni scuri (sessione parallela), convergenza literal amber, doppio «name».
+**Files touched**: `abstract/tabs/{InstanceManagerTab.tsx, instanceManagerTab.scss,
+instanceTable.ts}`, `abstract/tabs/__tests__/instanceManager10i.test.ts` (**nuovo**, 36 casi),
+`abstract/tabs/__tests__/instanceManager10c.test.ts` (2 asserzioni riallineate) e il referto
+`docs/discovery/discovery_2026-09-01_10i_uppercase_columns.md` in `dc6ae5c52`; la rotazione
+del log in `2ad458ed2`, questa entry a parte. Due commit, entrambi con pathspec, indice
+verificato vuoto prima e dopo.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `npm run typecheck` **33** (baseline invariata, conteggio su output
+completo); `npm run build` exit **0**; `npx vitest run` **2759 passati / 0 falliti**, 9 file
+rossi = i noti `window is not defined`. Suite propria provata con CINQUE mutazioni
+(`text-transform` rimosso, `autoHiddenColumnKeys` senza override, `isColumnVisible` scritta
+con `||`, voce `name` sbloccata, nota `empty` che segue la spunta): 3/3/3/1/1 rossi, verde al
+ripristino in tutte e cinque.
+**Out-of-scope changes**: no — i tre sorgenti della superficie, la suite nuova, le due
+asserzioni di 10c che la slice stessa supera, il referto. Sei file: sopra la soglia di
+Regola 19, e non ho fatto la pausa — dichiarato qui.
+**Layer Impact Report**: not-required — nessun file di §3.1 nel perimetro. Zero creatori D,
+zero `TRANSACTION`, zero `SetFieldAction`: il delta e' due dichiarazioni CSS, quattro
+funzioni pure e uno stato React.
+**Smoke visivo**: passato — `_tmp_10i_verify.ts` sull'app vera, DUE giri con i tre sorgenti
+riportati a `HEAD` per il before: **before 15 PASS / 6 FAIL**, **after 43 PASS / 0 FAIL**,
+zero errori di pagina in entrambi. Controlli positivi e non-regressioni 3a-3f verdi in
+ENTRAMBI i giri; l'unica che vira e' 3g, che misura il maiuscolo sotto filtro. A schermo:
+`text-transform: uppercase` su ogni `th` visibile con `textContent` ancora `entryAction`,
+11px/600/0.88px/`rgb(148,163,184)` identici all'eyebrow del pannello, spunta che riporta una
+vuota fra le intestazioni, indicatore 4 -> 3, persistenza che sopravvive al giro su
+`Transition` e ritorno. Ritagli `_tmp_10i_{before,after}_1_headers` e
+`_tmp_10i_after_{2_panel,3_forced,4_persisted,5_selected,6_filtered,7_dark_panel}`.
+**Notes**: Tre scarti prompt/repo misurati prima di scrivere (§0 del referto): non esiste un
+token nella banda chiesta, e `0.08em` e' letterale per ratifica di R-RAIL-10; tre delle
+quattro dichiarazioni c'erano gia'. Una misura ha cambiato il diff: la guardia ovvia su
+`name` resuscitava il doppione noto — «non disattivabile» e' sulla COLONNA, non sulla
+casella. Divergenza rilevata e LASCIATA: `&__draft-label` a 0.04em, fuori perimetro.
+**Prompt document name**: prompt inline (non depositato) 2026-09-01 00:20
+
 ## 2026-09-01 — feat(tokens): la coppia model esce dai contenitori e torna ambra (DS-1)
 **Prompt**: «Slice DS1 — la coppia entity-model vira ad amber, SERIALE lato token, parallela
 a 10h»: `--color-entity-model-{bg,fg}` esce dall'alias sulla famiglia contenitori (R-RAIL-30)
