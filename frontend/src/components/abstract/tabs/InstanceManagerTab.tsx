@@ -99,6 +99,7 @@ import {
     rendersInline,
     rootMenu,
     setDraftRef,
+    setDraftRefMany,
     setDraftValue,
     truncateTo,
     unionPreflight,
@@ -304,6 +305,69 @@ function DraftDialog({ draft, model, ownerLabel, onChange, onCancel, onCommit }:
         };
 
         if (f.kind === 'ref') {
+            // A MULTIVALUED reference (CRUD2). `values` is present only on those, so
+            // the branch is the engine's answer and not a second parse of the
+            // multiplicity string this component happens to print two lines above.
+            //
+            // Chips for what is chosen, a select that ADDS — the pattern the edit
+            // form already uses for a multivalued slot (`ChipInputWidget` + a
+            // picker). What is NOT shared is the picker itself: `ReferencePicker`
+            // is mono-selection and lives in `viewpoint/ir/`, whose widgets all
+            // commit through a slot. A draft has no slot and no write path, and
+            // «sharing the geometry and not the controls is the line that keeps this
+            // dialogue transactional» — the docstring above, honoured rather than
+            // quoted. So the control is the draft's own, and the critical zone is
+            // not entered for a dialogue that writes nothing.
+            if (f.values) {
+                const chosen = f.values;
+                const label = (id: string) => f.options.find(o => o.id === id)?.label ?? id;
+                // Only what is not already taken: an option that re-adds a chip
+                // already on screen is an option that does nothing, and `setDraftRefMany`
+                // would drop it anyway.
+                const rest = f.options.filter(o => !chosen.includes(o.id));
+                return (
+                    <div className="instance-manager__draft-multi">
+                        {chosen.length > 0 && (
+                            <div className="instance-manager__draft-chips">
+                                {chosen.map(id => (
+                                    <span className="instance-manager__chip instance-manager__draft-chip" key={id}>
+                                        {label(id)}
+                                        <button
+                                            type="button"
+                                            className="instance-manager__draft-chip-x"
+                                            aria-label={`Remove ${label(id)}`}
+                                            onClick={() => onChange(setDraftRefMany(
+                                                draft, f.key, chosen.filter(x => x !== id)))}
+                                        >
+                                            <i className="bi bi-x" aria-hidden="true" />
+                                        </button>
+                                    </span>
+                                ))}
+                            </div>
+                        )}
+                        <select
+                            {...common}
+                            value=""
+                            disabled={rest.length === 0}
+                            onChange={e => {
+                                const id = e.target.value;
+                                if (id) onChange(setDraftRefMany(draft, f.key, [...chosen, id]));
+                            }}
+                        >
+                            <option value="">
+                                {rest.length === 0
+                                    ? (f.options.length === 0
+                                        ? `No ${f.typeName} to point at`
+                                        : `All ${f.typeName}s are already chosen`)
+                                    : `Add a ${f.typeName}…`}
+                            </option>
+                            {rest.map(o => (
+                                <option key={o.id} value={o.id}>{o.label}</option>
+                            ))}
+                        </select>
+                    </div>
+                );
+            }
             return (
                 <select
                     {...common}
@@ -1741,11 +1805,17 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
      *  Add is not offered when it is not. */
     const childSlots = useMemo(() => {
         if (!subjectId || !subjectShape) return [] as Array<{ child: RefShape; count: number; reason: string | null }>;
+        const shape = shapeCtx.shape();
         return subjectShape.children.map(child => {
             const count = childSlotCount(subjectId, child.key);
-            return { child, count, reason: addChildReason(child, count) };
+            // The third argument is the metaclass the slot is TYPED ON, and it is
+            // what closes §2.6: without it the bar offered «Add Node» on an abstract
+            // `Node` and the create produced a live instance of it. Resolved by name
+            // through the shape, the same map `RefShape.of` keys into.
+            const target = shape.classes[child.of];
+            return { child, count, reason: addChildReason(child, count, target) };
         });
-    }, [subjectId, subjectShape, idlookup]);
+    }, [subjectId, subjectShape, shapeCtx, idlookup]);
 
     /** What the live model answers about the draft: reference candidates (with the
      *  containment-loop filter already applied — see `createAdapter.draftContext`)
@@ -1817,7 +1887,9 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
         const cls = node.cls ? shapeCtx.shape().classes[node.cls] ?? null : null;
         const slotCounts: Record<string, number> = {};
         for (const child of cls?.children ?? []) slotCounts[child.key] = childSlotCount(node.id, child.key);
-        return childMenu(cls, slotCounts);
+        // The shape goes through so the abstract gate of §2.6 fires here exactly as
+        // it does on the children bar: one rule, two surfaces, one verdict.
+        return childMenu(cls, slotCounts, shapeCtx.shape());
     };
 
     const toggleOutline = (node: OutlineNode) => {

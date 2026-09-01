@@ -77,7 +77,7 @@ import { LPointerTargetable, store, U } from '../../../joiner';
 import type { LModelElement } from '../../../joiner';
 import { getNamespaceOf } from '../../../model/logicWrapper/nameUniqueness';
 import type { AttrShape, ClassShape, CreateResult, Draft, DraftContext, DraftOption, MetamodelShape } from '../../../jjform';
-import { draftableAttrs, draftableRefs } from '../../../jjform';
+import { draftableAttrs, draftableRefs, draftTargets } from '../../../jjform';
 // Deep import, as `shapeDraw.ts` next door already does: `isAutoIdAttr` is not on
 // the barrel's public surface, and putting it there would be a seventh file this
 // task is not scoped to touch. The module is the same either way.
@@ -86,6 +86,12 @@ import { candidatesFor, childCount, containmentChain, nextIdValue } from './crea
 import { getMetaclassInfo, type MetaclassInfo } from './useEditorMode';
 
 type Idlookup = Record<string, any>;
+
+/** What one seed key may carry. The array is CRUD2's widening — a multivalued
+ *  reference handed over as ONE list, mirroring `WriteCtx.create`'s own parameter.
+ *  Declared once here so the primitive, its auto-id helper and the draft translator
+ *  cannot drift apart on it. */
+type SeedValue = string | number | boolean | readonly string[];
 
 const lookup = (): Idlookup => (store.getState() as any)?.idlookup ?? {};
 
@@ -258,7 +264,7 @@ function typedValue(attr: AttrShape, raw: string): string | number | boolean {
 function autoIdSeed(
     modelId: string,
     className: string,
-    seed: Readonly<Record<string, string | number | boolean>>,
+    seed: Readonly<Record<string, SeedValue>>,
 ): Record<string, number> {
     const info = classesByName(modelId)[className];
     const attrs = info?.allAttributes ?? info?.attributes ?? [];
@@ -273,6 +279,84 @@ function autoIdSeed(
         out[a.name] = nextIdValue(idlookup, a.id);
     }
     return out;
+}
+
+/**
+ * The feature names of `className` whose reference the CORE treats as containment
+ * while the SHAPE does not — i.e. the pure aggregations (CRUD2 §2.5).
+ *
+ * Two readings of one word disagree, and both are load-bearing where they are:
+ *
+ *   useEditorMode.ts:421     containment: !!(ref.composition)
+ *   LModelElement.tsx:4164   get_containment: composition || aggregation
+ *
+ * `{composition} ⊂ {composition ∨ aggregation}`, so a reference with `aggregation`
+ * and no `composition` lands in `ClassShape.refs` — the modal offers it as «pick a
+ * target» — while the write path takes it for a containment and REPARENTS the
+ * target. Measured: picking an existing `s1` for a `Group.members` aggregation moved
+ * `s1.father` from its `states` slot to `members` and left `sm1.states = [null]`,
+ * with no error and no way for the caller to notice
+ * (`discovery_2026-09-01_crud2_cardinalita_aggancio.md` §2.5).
+ *
+ * Measured per contrasto on the same fixture, and it is why this set is the
+ * aggregations and NOT every non-composition reference: a PURE reference seeded
+ * through the same json leaves the father exactly where it was. Only the
+ * aggregation branch evicts, so only the aggregation branch is diverted.
+ *
+ * An empty set is the honest answer for a metamodel this host cannot resolve, and
+ * it restores the previous behaviour rather than diverting everything.
+ */
+function aggregationKeys(modelId: string, className: string): Set<string> {
+    const out = new Set<string>();
+    const info = classesByName(modelId)[className];
+    for (const r of info?.references ?? []) {
+        if (r?.name && r.aggregation === true && r.containment !== true) out.add(r.name);
+    }
+    return out;
+}
+
+/**
+ * Write the diverted aggregation values, with the eviction switched OFF.
+ *
+ * `setValueAtPosition`'s third argument is the escape hatch the core already
+ * exposes: `info.isContainment` is only DERIVED from `LReference.containment` when
+ * the caller leaves it undefined, so passing `false` writes the value and skips
+ * both the father reassignment and the detach-from-old-parent action. Measured:
+ * the value lands in the slot, `{success: true}` comes back, and the target's
+ * father does not move. Nothing in `set_values` or `get_containment` is touched —
+ * changing either would be a core change (rule 5) and this does not need one.
+ *
+ * The indices are the CALLER's, taken from the array in hand and never re-derived
+ * from the store — the contract ENG1 §B.4 pinned as a comment on
+ * `get_setValueAtPosition`. That is the same discipline `set_values` follows
+ * internally, and it is what makes N values one gesture rather than N racing ones.
+ *
+ * ── Why this one pays a second deferral, and only this one ───────────────────
+ *
+ * The json route cannot carry `info`, so an aggregation cannot ride `addObject`'s
+ * own deferral. The slots themselves exist from the constructor, not from the
+ * seeding, so the wait is for the same window `addObject` waits for — scheduled at
+ * `UpdatingTimer * 3` so it lands after the seeding at `* 2` rather than racing it
+ * for the same slot. Declared rather than hidden: `createInstance` returns before
+ * these values are in the store, so a caller that reads the slot synchronously sees
+ * it empty. Every other value still arrives with the create.
+ */
+function writeApart(objectId: string, entries: Array<[string, readonly string[]]>): void {
+    if (entries.length === 0) return;
+    setTimeout(() => {
+        const lobj: any = LPointerTargetable.fromPointer(objectId);
+        if (!lobj) { console.warn('[createAdapter] aggregation write: instance vanished', { objectId }); return; }
+        for (const [key, ids] of entries) {
+            const slot: any = lobj['$' + key] ?? (lobj.features ?? []).find((f: any) => f?.name === key);
+            if (!slot) { console.warn('[createAdapter] aggregation write: slot not found', { objectId, key }); continue; }
+            for (let i = 0; i < ids.length; i++) {
+                const r = slot.setValueAtPosition(i, ids[i], { isContainment: false });
+                if (r && r.success === false) {
+                    console.warn('[createAdapter] aggregation write refused', { objectId, key, i, reason: r.reason });
+                }
+            }
+        }
+    }, U.UpdatingTimer * 3);
 }
 
 /**
@@ -297,20 +381,27 @@ export function createInstance(
     className: string,
     ownerId: string | null,
     childKey: string | null,
-    seed: Readonly<Record<string, string | number | boolean>>,
+    seed: Readonly<Record<string, SeedValue>>,
 ): CreateResult {
     const classId = classIdOf(modelId, className);
     if (!classId) return { ok: false, id: null, reason: `metaclass "${className}" is not in this model` };
 
+    // CRUD2 §2.5: the aggregation keys leave the json and are written apart. Every
+    // other key — attributes, the auto-id of AUTO1, composition and plain
+    // references — keeps riding the single deferral `addObject` already pays.
+    const evicting = aggregationKeys(modelId, className);
     const json: Record<string, unknown> = {};
-    for (const [key, value] of Object.entries(seed ?? {})) {
+    const apart: Array<[string, readonly string[]]> = [];
+    const route = (key: string, value: unknown) => {
+        if (evicting.has(key)) {
+            apart.push([key, Array.isArray(value) ? value.map(String) : [String(value)]]);
+            return;
+        }
         if (key === 'name') json.name = value;
         else json['$' + key] = value;
-    }
-    for (const [key, value] of Object.entries(autoIdSeed(modelId, className, seed))) {
-        if (key === 'name') json.name = value;
-        else json['$' + key] = value;
-    }
+    };
+    for (const [key, value] of Object.entries(seed ?? {})) route(key, value);
+    for (const [key, value] of Object.entries(autoIdSeed(modelId, className, seed))) route(key, value);
 
     try {
         let created: any = null;
@@ -337,6 +428,7 @@ export function createInstance(
             console.warn('[createAdapter] applyCreate: addObject returned no instance', { className, ownerId, childKey });
             return { ok: false, id: null, reason: 'the host created no instance' };
         }
+        writeApart(created.id as string, apart);
         U.isProjectModified = true;
         return { ok: true, id: created.id as string };
     } catch (err) {
@@ -372,15 +464,21 @@ export function applyCreate(
     // The seed the create carries. `name` is included only when the metaclass
     // actually declares the attribute — `draftableAttrs` reads `cls.attrs`, so a
     // class without it never offers the field and never reaches this line.
-    const seed: Record<string, string | number | boolean> = {};
+    const seed: Record<string, SeedValue> = {};
     for (const a of draftableAttrs(cls)) {
         const raw = (draft.values[a.key] ?? '').trim();
         if (!raw) continue;                       // an untouched field writes nothing
         seed[a.key] = typedValue(a, raw);
     }
     for (const r of draftableRefs(cls)) {
-        const target = (draft.refs[r.key] ?? '').trim();
-        if (target) seed[r.key] = target;
+        // `draftTargets` answers for both cardinalities, so this loop does not
+        // branch on `many`: what changes is only the SHAPE of the value handed over
+        // — one id, or the whole list in one key. A multivalued feature with no pick
+        // writes nothing, exactly as an untouched single one does; sending `[]`
+        // would be a write that clears a slot the user never opened.
+        const targets = draftTargets(draft, r);
+        if (targets.length === 0) continue;
+        seed[r.key] = r.many ? targets : targets[0];
     }
 
     const result = createInstance(modelId, cls.key, draft.ownerId ?? null, draft.childKey ?? null, seed);

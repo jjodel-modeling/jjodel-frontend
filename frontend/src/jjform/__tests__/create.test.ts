@@ -13,6 +13,8 @@ import type { AttrShape, ClassShape, MetamodelShape, RefShape } from '../shape';
 import { isAutoIdAttr, tableFeatures } from '../shape';
 import {
     addChildReason,
+    draftTargets,
+    setDraftRefMany,
     draftableAttrs,
     draftableRefs,
     draftModel,
@@ -428,5 +430,210 @@ describe('draftableAttrs — the auto-id control is ABSENT, not prefilled (AUTO1
     it('keeps the column in the table — the value is hidden from the FORM, not from the model', () => {
         expect(tableFeatures(ID_SHAPE.classes.Ticket).map(f => f.key))
             .toContain('code');
+    });
+});
+
+
+// ── CRUD2: la cardinalita' nel modale, e i due gate ──────────────────────────
+//
+// Fixture propria, per la ragione del blocco AUTO1 sopra: le asserzioni dei
+// blocchi precedenti fissano liste esatte di campi e di chiavi, e allargare
+// `SHAPE` sposterebbe traguardi che non riguardano questa slice.
+
+const mref = (o: Partial<RefShape> & { key: string; of: string }): RefShape => ({
+    id: 'r_' + o.key, lower: 0, upper: -1, many: true, required: false,
+    derived: false, readOnly: false, ofId: 'c_' + o.of, composition: false, ...o,
+});
+
+const CARD: MetamodelShape = {
+    enums: {},
+    classes: {
+        Group: {
+            key: 'Group', id: 'c_Group',
+            root: true, abstract: false, singleton: false, containedIn: [],
+            attrs: [{
+                key: 'name', id: 'a_g_name', lower: 0, upper: 1, many: false, required: false,
+                derived: false, readOnly: false, type: 'string', typeName: 'EString',
+            }],
+            refs: [
+                mref({ key: 'members', of: 'State' }),                                   // 0..*
+                mref({ key: 'lead', of: 'State', lower: 0, upper: 1, many: false }),      // 0..1
+                mref({ key: 'owner', of: 'State', lower: 1, upper: 1, many: false, required: true }),
+                mref({ key: 'tags', of: 'State', lower: 1, upper: -1, required: true }),  // 1..*
+            ],
+            children: [
+                mref({ key: 'nodes', of: 'Node', composition: true }),
+                mref({ key: 'states', of: 'State', composition: true }),
+                mref({ key: 'one', of: 'State', composition: true, upper: 1, many: false }),
+            ],
+        },
+        State: {
+            key: 'State', id: 'c_State',
+            root: false, abstract: false, singleton: false, containedIn: ['Group'],
+            attrs: [], refs: [], children: [],
+        },
+        Node: {
+            key: 'Node', id: 'c_Node',
+            root: false, abstract: true, singleton: false, containedIn: ['Group'],
+            attrs: [], refs: [], children: [],
+        },
+    },
+};
+
+const CANDIDATES = {
+    candidates: {
+        members: [{ id: 's1', label: 'one' }, { id: 's2', label: 'two' }],
+        lead: [{ id: 's1', label: 'one' }],
+        owner: [{ id: 's1', label: 'one' }],
+        tags: [{ id: 's1', label: 'one' }],
+    },
+};
+
+describe('setDraftRefMany — the whole list, one gesture (CRUD2)', () => {
+    it('does not exist on a fresh draft: newDraft is byte-identical to before', () => {
+        const d = newDraft(CARD, 'Group');
+        expect(d.refsMany).toBeUndefined();
+        // and the ratified shape of a fresh draft is untouched
+        expect(Object.keys(d).sort()).toEqual(['childKey', 'cls', 'ownerId', 'refs', 'values']);
+    });
+
+    it('holds the picks in order and mutates nothing', () => {
+        const d0 = newDraft(CARD, 'Group');
+        const d1 = setDraftRefMany(d0, 'members', ['s2', 's1']);
+        expect(d1.refsMany?.members).toEqual(['s2', 's1']);
+        expect(d0.refsMany).toBeUndefined();          // the input is untouched
+        expect(d1.refs).toBe(d0.refs);                // the other map is not rewritten
+    });
+
+    it('drops duplicates and empty picks — a slot cannot hold the same target twice', () => {
+        const d = setDraftRefMany(newDraft(CARD, 'Group'), 'members', ['s1', 's1', '', '  ', 's2']);
+        expect(d.refsMany?.members).toEqual(['s1', 's2']);
+    });
+
+    it('replaces the list rather than appending to it', () => {
+        let d = setDraftRefMany(newDraft(CARD, 'Group'), 'members', ['s1', 's2']);
+        d = setDraftRefMany(d, 'members', ['s2']);
+        expect(d.refsMany?.members).toEqual(['s2']);
+    });
+
+    it('keeps the other features when one is set', () => {
+        let d = setDraftRefMany(newDraft(CARD, 'Group'), 'members', ['s1']);
+        d = setDraftRefMany(d, 'tags', ['s2']);
+        expect(d.refsMany).toEqual({ members: ['s1'], tags: ['s2'] });
+    });
+});
+
+describe('draftTargets — one reading for both cardinalities', () => {
+    const many = CARD.classes.Group.refs[0];
+    const one = CARD.classes.Group.refs[1];
+
+    it('reads a multivalued feature from refsMany and a monovalued one from refs', () => {
+        const d = setDraftRef(setDraftRefMany(newDraft(CARD, 'Group'), 'members', ['s1', 's2']), 'lead', 's1');
+        expect(draftTargets(d, many)).toEqual(['s1', 's2']);
+        expect(draftTargets(d, one)).toEqual(['s1']);
+    });
+
+    it('answers [] for an untouched feature of either shape', () => {
+        const d = newDraft(CARD, 'Group');
+        expect(draftTargets(d, many)).toEqual([]);
+        expect(draftTargets(d, one)).toEqual([]);
+    });
+
+    it('ignores refs on a multivalued feature — the two maps never describe one feature', () => {
+        const d = setDraftRef(newDraft(CARD, 'Group'), 'members', 's9');
+        expect(draftTargets(d, many)).toEqual([]);
+    });
+});
+
+describe('draftModel — the multivalued reference reports values, the single one does not', () => {
+    it('carries the picks on `values` and leaves `value` empty', () => {
+        const d = setDraftRefMany(newDraft(CARD, 'Group'), 'members', ['s1', 's2']);
+        const f = draftModel(CARD, d, CANDIDATES).fields.find(x => x.key === 'members')!;
+        expect(f.values).toEqual(['s1', 's2']);
+        expect(f.value).toBe('');
+        expect(f.multiplicity).toBe('0..*');
+        expect(f.options.map(o => o.id)).toEqual(['s1', 's2']);   // the offer is unchanged
+    });
+
+    it('leaves a MONOVALUED reference exactly as it was — `values` absent', () => {
+        const d = setDraftRef(newDraft(CARD, 'Group'), 'lead', 's1');
+        const f = draftModel(CARD, d, CANDIDATES).fields.find(x => x.key === 'lead')!;
+        expect(f.values).toBeUndefined();
+        expect(f.value).toBe('s1');
+    });
+
+    it('reports an empty list, not undefined, on an untouched multivalued feature', () => {
+        const f = draftModel(CARD, newDraft(CARD, 'Group'), CANDIDATES).fields.find(x => x.key === 'members')!;
+        expect(f.values).toEqual([]);
+    });
+});
+
+describe('validateDraft — required reads both shapes (CRUD2)', () => {
+    it('blocks a required MULTIVALUED reference with no pick, and names the cardinality', () => {
+        const errs = validateDraft(CARD, newDraft(CARD, 'Group'), CANDIDATES);
+        expect(errs.tags).toBe('Required by cardinality 1..*');
+    });
+
+    it('one pick satisfies it — the «at least one value» reading is unchanged', () => {
+        const d = setDraftRefMany(newDraft(CARD, 'Group'), 'tags', ['s1']);
+        expect(validateDraft(CARD, d, CANDIDATES).tags).toBeUndefined();
+    });
+
+    it('a pick then removed blocks it again', () => {
+        let d = setDraftRefMany(newDraft(CARD, 'Group'), 'tags', ['s1']);
+        d = setDraftRefMany(d, 'tags', []);
+        expect(validateDraft(CARD, d, CANDIDATES).tags).toBe('Required by cardinality 1..*');
+    });
+
+    it('per contrasto: the required MONOVALUED reference behaves as it always did', () => {
+        expect(validateDraft(CARD, newDraft(CARD, 'Group'), CANDIDATES).owner)
+            .toBe('Required by cardinality 1..1');
+        const d = setDraftRef(newDraft(CARD, 'Group'), 'owner', 's1');
+        expect(validateDraft(CARD, d, CANDIDATES).owner).toBeUndefined();
+    });
+
+    it('the whole draft turns valid once both required references are answered', () => {
+        let d = setDraftRef(newDraft(CARD, 'Group'), 'owner', 's1');
+        d = setDraftRefMany(d, 'tags', ['s1']);
+        expect(draftModel(CARD, d, CANDIDATES).valid).toBe(true);
+    });
+});
+
+describe('addChildReason — the abstract gate, symmetric to newInstanceReason (§2.6)', () => {
+    const G = CARD.classes.Group;
+    const nodes = G.children[0];    // typed on the ABSTRACT Node
+    const states = G.children[1];   // typed on the concrete State
+    const one = G.children[2];      // 0..1 on State
+
+    it('refuses Add on a slot typed on an abstract metaclass, and says which is which', () => {
+        const reason = addChildReason(nodes, 0, CARD.classes.Node);
+        expect(reason).toContain('Node is abstract');
+        expect(reason).toContain('«nodes»');
+    });
+
+    it('per contrasto: the same call on a concrete target offers the Add', () => {
+        expect(addChildReason(states, 0, CARD.classes.State)).toBeNull();
+    });
+
+    it('without the target argument the verdict is exactly what it was before', () => {
+        expect(addChildReason(nodes, 0)).toBeNull();
+        expect(addChildReason(states, 0)).toBeNull();
+    });
+
+    it('the abstract gate comes BEFORE the upper bound: the reason a person can act on', () => {
+        // A full slot on an abstract target: both rules would fire, and the one that
+        // must be printed is the one that will not change by deleting a value.
+        expect(addChildReason({ ...nodes, upper: 1 }, 1, CARD.classes.Node))
+            .toContain('abstract');
+    });
+
+    it('read-only still wins over both — it is the outermost refusal', () => {
+        expect(addChildReason({ ...nodes, readOnly: true }, 0, CARD.classes.Node))
+            .toContain('read-only');
+    });
+
+    it('the upper bound is untouched on a concrete target', () => {
+        expect(addChildReason(one, 1, CARD.classes.State))
+            .toBe('«one» is full — cardinality 0..1');
     });
 });

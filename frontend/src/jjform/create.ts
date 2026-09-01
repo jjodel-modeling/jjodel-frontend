@@ -63,6 +63,24 @@ export interface Draft {
     values: Record<string, string>;
     /** Reference targets, keyed by feature name. `''` means «not chosen». */
     refs: Record<string, string>;
+    /**
+     * Targets of the MULTIVALUED references, keyed by feature name (CRUD2).
+     *
+     * A second map rather than a widening of `refs`, for two reasons that are both
+     * measured. `Draft` is an exported interface and rule 11 admits only new
+     * OPTIONAL properties — `refs: Record<string, string | string[]>` would change
+     * the existing one. And `newDraft` is pinned by two ratified assertions
+     * (`instanceManagerOutline.test.ts:115-116`, `create.test.ts`'s
+     * `expect(d.refs).toEqual({source: '', target: ''})` and the empty-draft
+     * `toEqual`), so this map is NOT seeded at construction: it is created by
+     * `setDraftRefMany` on the first pick and read as `refsMany?.[key] ?? []`. A
+     * fresh draft of a class with a `0..*` reference is therefore byte-identical to
+     * what it was before this slice.
+     *
+     * For a feature with `upper !== 1` this map is the ONLY source: `refs[key]`
+     * stays `''` and nothing reads it. The two never describe the same feature.
+     */
+    refsMany?: Record<string, string[]>;
 }
 
 /** One option of a select — an enum literal or a reference candidate. */
@@ -87,6 +105,18 @@ export interface DraftField {
     value: string;
     /** Enum literals or reference candidates; empty for a plain input. */
     options: DraftOption[];
+    /**
+     * The chosen targets of a MULTIVALUED reference, in pick order (CRUD2).
+     *
+     * Present only on a `ref` field whose `upper !== 1`; `undefined` everywhere
+     * else, which is what tells a renderer «this is the single-value control you
+     * already had». `value` stays `''` on such a field: a multi control has no one
+     * current value, and putting the first pick there would make a two-target draft
+     * look like a one-target one to anything that reads `value`.
+     *
+     * Optional, so an external `DraftField` literal need not supply it (rule 11).
+     */
+    values?: string[];
     /** The message the field shows, or null. Non-null is what makes `valid` false. */
     error: string | null;
 }
@@ -187,10 +217,33 @@ export function newInstanceReason(cls: ClassShape, instanceCount = 0): string | 
  * values the slot ACTUALLY holds, holes excluded — the caller counts them, because
  * `formWrite.clearSlotValue` leaves holes and a raw `values.length` would report a
  * slot as full that is not.
+ *
+ * ── The abstract gate, symmetric to `newInstanceReason` (CRUD2 §2.6) ──────────
+ *
+ * `target` is the metaclass the slot is TYPED ON, and when it is abstract the Add
+ * is not offered — the same sentence, from the same vocabulary, that the catalogue
+ * already prints on a rootable abstract class. It was missing here, and the gap was
+ * measured: with `StateMachine.nodes : Node[0..*]` and `Node` abstract, the bar
+ * offered «Add Node», the modal opened, and Create produced a live instance of an
+ * abstract metaclass, correctly parented
+ * (`discovery_2026-09-01_crud2_cardinalita_aggancio.md` §2.6). `createInstance`
+ * passes `forceCreation: true` by design — it instantiates THE class asked for and
+ * never a subtype — so nothing downstream was going to refuse it.
+ *
+ * `target` is OPTIONAL and the gate only fires when it is supplied: a caller that
+ * cannot resolve the target class gets exactly the verdict it got before, rather
+ * than a slot silently closed by an argument nobody passed. Its absence is not
+ * evidence that the class is concrete.
+ *
+ * The reason names the SLOT and the class, because a person reading it is looking
+ * at a row of the children bar and needs to know which of the two is the problem.
  */
-export function addChildReason(child: RefShape, count: number): string | null {
+export function addChildReason(child: RefShape, count: number, target?: ClassShape): string | null {
     if (!child) return 'Unknown feature';
     if (child.readOnly) return `«${child.key}» is read-only`;
+    if (target?.abstract) {
+        return `${target.key} is abstract — «${child.key}» takes one of its concrete subclasses`;
+    }
     if (child.upper !== -1 && count >= child.upper) {
         return `«${child.key}» is full — cardinality ${multiplicity(child)}`;
     }
@@ -233,6 +286,47 @@ export function setDraftValue(draft: Draft, key: string, value: string): Draft {
 /** A draft with one reference changed. Returns a new value; nothing is mutated. */
 export function setDraftRef(draft: Draft, key: string, targetId: string): Draft {
     return { ...draft, refs: { ...draft.refs, [key]: targetId } };
+}
+
+/**
+ * A draft with the whole target LIST of one multivalued reference replaced (CRUD2).
+ *
+ * Whole list, not add-one/remove-one, and that is the point rather than a
+ * convenience: the write this draft becomes is `seed[key] = [id, …]`, ONE
+ * `set_values` over an array whose indices the caller owns. ENG1 measured what the
+ * other shape costs — two appends that each re-derive the index from the store fall
+ * inside one propagation window, compute the same index, and the second silently
+ * evicts the first, returning `{success: true}`
+ * (`discovery_2026-09-01_eng1_containment_core.md` §B.1-B.4). A draft that holds the
+ * list and hands it over once cannot express that bug.
+ *
+ * Duplicates are dropped and order is the pick order: a reference slot holding the
+ * same target twice is a slot the user cannot tell apart, and the core's own
+ * containment path dedups too (`LValue.set_values`). Empty strings are dropped —
+ * `''` is this vocabulary's «not chosen», never a target.
+ *
+ * `refs[key]` is deliberately left alone. For a multivalued feature nothing reads
+ * it, and clearing it would be a write to the other map's meaning.
+ */
+export function setDraftRefMany(draft: Draft, key: string, targetIds: readonly string[]): Draft {
+    const seen = new Set<string>();
+    const next: string[] = [];
+    for (const id of targetIds ?? []) {
+        const t = (id ?? '').trim();
+        if (!t || seen.has(t)) continue;
+        seen.add(t);
+        next.push(t);
+    }
+    return { ...draft, refsMany: { ...(draft.refsMany ?? {}), [key]: next } };
+}
+
+/** The targets a draft currently holds for `ref`, whatever its cardinality.
+ *  One list for both shapes, so a consumer never has to branch on `many` to read.
+ *  A monovalued feature answers `[]` or `[id]`; a multivalued one answers its list. */
+export function draftTargets(draft: Draft, ref: RefShape): string[] {
+    if (ref?.many) return draft?.refsMany?.[ref.key] ?? [];
+    const one = (draft?.refs?.[ref?.key] ?? '').trim();
+    return one ? [one] : [];
 }
 
 // ── Validation (12a) ───────────────────────────────────────────────────────────
@@ -284,7 +378,15 @@ export function validateDraft(
     }
 
     for (const r of draftableRefs(cls)) {
-        if (r.required && !(draft.refs[r.key] ?? '').trim()) {
+        // `draftTargets` answers for both cardinalities, so the rule below is the
+        // one it always was — «at least one value», reading 2 of the header — and
+        // not a second rule for the multivalued case. What CRUD2 changed is where
+        // the answer is stored, not what makes a draft invalid: a `2..*` is still
+        // satisfied by one target, and the multiplicity is still printed so the
+        // shortfall is visible. Raising it to «at least `lower`» is now EXPRESSIBLE
+        // — the premise that a draft offers one control per feature has fallen —
+        // but it is a decision of merit and is deliberately not taken here.
+        if (r.required && draftTargets(draft, r).length === 0) {
             errors[r.key] = `Required by cardinality ${multiplicity(r)}`;
         }
     }
@@ -340,15 +442,20 @@ export function draftModel(
     }
 
     for (const r of draftableRefs(cls)) {
+        // A multivalued reference reports its picks in `values` and leaves `value`
+        // empty; a monovalued one is untouched by this slice and still reports
+        // `value` alone, with `values` absent. The renderer branches on the
+        // PRESENCE of `values`, never on re-parsing the multiplicity string.
         fields.push({
             key: r.key,
             kind: 'ref',
             typeName: r.of,
             multiplicity: multiplicity(r),
             required: r.required,
-            value: draft.refs[r.key] ?? '',
+            value: r.many ? '' : (draft.refs[r.key] ?? ''),
             options: ctx.candidates?.[r.key] ?? [],
             error: errors[r.key] ?? null,
+            ...(r.many ? { values: draftTargets(draft, r) } : {}),
         });
     }
 

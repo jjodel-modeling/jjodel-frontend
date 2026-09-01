@@ -1302,6 +1302,53 @@
         &--invalid { border-color: var(--color-error); }
     }
 
+    /* CRUD2 — il controllo di una reference MULTIVALORE nel modale: i chip di
+       quel che e' scelto, e sotto la select che aggiunge. Impilati e non
+       affiancati perche' la cella del packer e' larga 6 colonne su 12 e una
+       riga di chip accanto a una select ci sta solo finche' i chip sono due.
+
+       Il chip riusa `&__chip` — la stessa pillola della tabella, stessi token —
+       e questa classe aggiunge SOLO quel che il chip della tabella non ha: la
+       croce di rimozione. Nessun token nuovo (regola 28). */
+    &__draft-multi {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        min-width: 0;
+    }
+
+    &__draft-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+
+    &__draft-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 2px;
+        padding-right: 2px;
+    }
+
+    &__draft-chip-x {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 14px;
+        height: 14px;
+        padding: 0;
+        border: none;
+        border-radius: 50%;
+        background: transparent;
+        color: var(--color-form-muted);
+        cursor: pointer;
+
+        i { font-size: 11px; line-height: 1; }
+
+        &:hover { color: var(--color-error); }
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 1px; }
+    }
+
     &__draft-error {
         display: inline-flex;
         align-items: center;

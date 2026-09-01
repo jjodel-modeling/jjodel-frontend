@@ -206,12 +206,22 @@ export interface WriteCtx {
      * The create makes THE metaclass asked for, never one of its subclasses: this
      * host would otherwise pick a subclass by schema match (`:7096`), and the user
      * chose a class.
+     *
+     * A seed value may be an ARRAY of ids (CRUD2): that is a multivalued reference
+     * handed over as ONE list, and it is a WIDENING of this parameter, not a change
+     * to it — every existing caller passes what it always passed. The list travels
+     * whole on purpose. In this host it lands on `LValue.set_values`, which assigns
+     * the indices from the array it is given inside a single TRANSACTION; the shape
+     * it replaces — N appends that each re-derive the index from the store — was
+     * measured to lose a value when two fall inside one propagation window
+     * (`discovery_2026-09-01_eng1_containment_core.md` §B.1-B.4). An engine that
+     * hands over the list cannot express that bug; one that appends can.
      */
     create(
         cls: string,
         ownerId: string | null,
         childKey: string | null,
-        seed: Readonly<Record<string, string | number | boolean>>,
+        seed: Readonly<Record<string, string | number | boolean | readonly string[]>>,
     ): CreateResult;
 
     /**

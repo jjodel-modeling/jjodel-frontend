@@ -365,3 +365,147 @@ Due condizioni, entrambe verificate, impediscono di passare alla Fase 2 senza go
 | `InstanceManagerTab.tsx` | 254-278 (docstring `DraftDialog`), 296-309 (il ramo `ref`), 1760-1762 (`openCreate`), 1834 (`outlineCreate`), 1962-1976 (`commitDraft`), 2196 / 2431 (le CTA rootable), 2890 (la CTA CHILDREN) |
 | `LModelElement.tsx` | 4164 (`LReference.get_containment`), 7168-7171 (`isContainment`/`father`), 7295-7328 (il seeding differito), 7342-7345 (`LValue.get_containment`), 7896-7913 (`set_values`) |
 | `widgets/ReferencePicker.tsx` | 30-44 (le props), 118-122 (`commit`) |
+
+---
+
+## 7. Fase 2 — quel che e' stato scritto, e le due risposte che mancavano
+
+Aggiunto il 2026-09-01 al termine dell'implementazione (go-ahead sul prompt «CRUD2 FASE 2»).
+I §1-6 sopra sono la mappa di Fase 1 e restano com'erano.
+
+### 7.1 Punto 4 — il renderer DIGERISCE il buco: il caso utente e' un terzo path
+
+Prima di ogni riga di codice, come il prompt chiedeva. Sonda
+`scripts/smoke/_tmp_crud2e_absyntax.ts` (non committata, `.gitignore:66`): si costruisce
+lo stato del §2.5 dal modale — `s1.father` spostato su `members`, `sm1.states = [null]` —
+e si torna alla sintassi astratta.
+
+```
+DOPO lo sfratto      s1.father = DValue(members)   sm1.states.values = [null]
+ritorno al canvas    nodes: 2, edges: 0, error boundary: nessuno, 0 pageerror
+dopo la ricarica     nodes: 2,            error boundary: nessuno, 0 pageerror
+```
+
+**11 PASS / 0 FAIL, zero errori di pagina.** Il controllo positivo e' nello stesso giro: il
+ritorno alla sintassi astratta e' fatto DUE volte, una col grafo sano (monta 1 nodo, zero
+errori) e una col buco, cosi' che il verde sul secondo non sia il verde di uno strumento
+spento. Gli unici errori di console sono il rumore di boot (`init_dash`, «wrong project
+setup in navbar {projectid: null}»), presenti anche nel giro di controllo.
+
+**Conseguenza dichiarata**: lo sfratto del §2.5 non produce l'errore che l'utente riporta.
+Il buco `[null]` e' renderizzato senza rumore, prima e dopo un salva/ricarica. Il caso
+dell'utente e' quindi un **terzo path**, ancora non identificato, e la domanda 1 del §4
+resta aperta e risale: servono il testo esatto dell'errore e la forma del metamodello.
+La misura sopra e' stata conservata come **asserzione di non-regressione**: il buco deve
+continuare a rendersi.
+
+### 7.2 §2.5 — esiste una via NON-core, ed e' quella presa
+
+La domanda che decideva il rango: si puo' distinguere containment da aggregation senza
+toccare `set_values` o `LReference.get_containment`? Misurato,
+`scripts/smoke/_tmp_crud2f_agg.ts`, **5/5**, tre bracci sulla stessa fixture:
+
+| arm | scrittura | father del bersaglio |
+|---|---|---|
+| A | `$members` nel json (la via di oggi), aggregation | **si muove** su `members` — il difetto |
+| C | `$sees` nel json, reference PURA | resta su `states` |
+| B | `setValueAtPosition(0, id, {isContainment: false})` | **resta** su `states`, `{success:true}` |
+
+Due letture, entrambe portanti. **C** dice che il difetto e' della sola aggregation e non
+di ogni non-composition: una reference pura seminata per la stessa via non sposta niente.
+**B** dice che il core espone gia' l'interruttore: `info.isContainment` e' DERIVATO da
+`LReference.containment` solo quando il chiamante lo lascia indefinito.
+
+Percio' il fix vive tutto in `createAdapter.ts`: le chiavi di aggregation escono dal json
+(`aggregationKeys`) e sono scritte a parte con `isContainment: false` (`writeApart`),
+indici del chiamante, mai ri-derivati dallo store (ENG1 §B.4). **Zero righe nel core**, e
+la decisione di rango non e' stata spesa.
+
+**Il costo, dichiarato e non nascosto**: quella e' l'unica scrittura che paga una SECONDA
+deferral. Il json non puo' trasportare `info`, quindi un'aggregation non puo' salire sulla
+deferral che `addObject` gia' paga; gli slot pero' esistono dal costruttore, non dal
+seeding, quindi l'attesa e' la stessa finestra, schedulata a `UpdatingTimer * 3` perche'
+atterri dopo il seeding a `* 2` invece di corrergli contro. `createInstance` ritorna prima
+che quei valori siano in store: un chiamante che legga lo slot in modo sincrono lo trova
+vuoto. Ogni altro valore — attributi, l'auto-id di AUTO1, composition e reference pure —
+continua ad arrivare con la create.
+
+### 7.3 Punto 1 — via (b), e perche' non la (a)
+
+Chip + select DENTRO il modale, `viewpoint/ir/` non toccato. La ragione non e' il costo:
+e' la riga che il `DraftDialog` dichiara di se stesso — «sharing the geometry and not the
+controls is the line that keeps this dialogue transactional». `ReferencePicker` e' mono-
+selezione e ogni widget di FL3 committa attraverso uno slot; un draft non ha slot e non ha
+via di scrittura. La (a) avrebbe portato un componente della critical zone dentro un
+dialogo che non scrive.
+
+La forma dei dati, e il motivo per cui e' una MAPPA IN PIU' e non un allargamento:
+`Draft.refsMany?: Record<string, string[]>` e `DraftField.values?: string[]` sono
+proprieta' **opzionali** nuove (regola 11); allargare `refs` a `string | string[]` avrebbe
+cambiato un'interfaccia esportata. E `newDraft` **non** semina `refsMany`: la mappa nasce
+al primo pick, cosi' che un draft fresco resti byte-identico a prima — le due asserzioni
+ratificate che lo pinnano (`instanceManagerOutline.test.ts:115-116`, il `toEqual` del
+draft vuoto in `create.test.ts`) restano verdi senza essere toccate.
+
+Per una feature con `upper !== 1` `refsMany` e' l'UNICA sorgente e `refs[key]` resta `''`:
+le due mappe non descrivono mai la stessa feature. `draftTargets(draft, ref)` e' la
+lettura unica per entrambe le cardinalita', ed e' cio' che tiene `validateDraft` **una
+regola sola** invece di due — «almeno un valore», la lettura 2 dell'intestazione, non e'
+cambiata.
+
+La scrittura e' `seed[key] = [id, …]`, un solo `set_values` sull'array intero, cioe' la
+forma verde di ENG1 §B.2. Il tipo di `seed` e' allargato a `| readonly string[]` nei due
+posti che il §1.5 aveva dichiarato — `WriteCtx.create` e `createAdapter.createInstance` —
+piu' `SeedValue`, dichiarato una volta in `createAdapter` perche' la primitiva, il suo
+helper di auto-id (AUTO1) e il traduttore del draft non possano divergere.
+
+**Il lower bound resta «almeno un valore».** Con la multi-selezione un `2..*` diventa
+esprimibile e la premessa dell'intestazione di `create.ts` («a draft offers one control
+per feature») e' caduta — ma alzare la regola e' una decisione di merito che il prompt non
+ha chiesto. Registrato come commento sul punto, non applicato.
+
+### 7.4 §2.6 — il gate su due superfici, o le due divergono
+
+`addChildReason(child, count, target?)`: il terzo argomento e' la metaclasse su cui lo
+slot e' TIPATO, ed e' opzionale — un chiamante che non sappia risolverla ottiene il
+verdetto che otteneva prima, perche' la sua assenza non e' la prova che la classe sia
+concreta. Il gate sta **prima** dell'upper bound: fra due rifiuti si stampa quello che non
+cambia cancellando un valore.
+
+Il gate e' cablato in **due** posti, ed e' il motivo per cui `outline.ts` entra nel
+perimetro: la barra CHILDREN (`InstanceManagerTab.childSlots`) e il menu «+» dell'outline
+(`jjform/childMenu`, che guadagna un `shape?` opzionale). Cablarne uno solo avrebbe fatto
+una superficie offrire «Add Node» mentre l'altra lo rifiuta, che e' esattamente la
+divergenza che l'intestazione di `outline.ts` dichiara di voler evitare («the SAME two
+functions»).
+
+### 7.5 Perimetro: SETTE file di prodotto, sopra la soglia della regola 19
+
+Dichiarato, non nascosto. La regola 19 chiede di elencarli quando superano i cinque:
+
+| file | cosa cambia |
+|---|---|
+| `jjform/create.ts` | `Draft.refsMany?`, `DraftField.values?`, `setDraftRefMany`, `draftTargets`, il gate astratto in `addChildReason`, `validateDraft` e `draftModel` che leggono entrambe le cardinalita' |
+| `jjform/outline.ts` | `childMenu` prende `shape?` e passa il target al gate (§7.4) |
+| `jjform/index.ts` | due export nuovi (`setDraftRefMany`, `draftTargets`) |
+| `jjform/writeCtx.ts` | `create`'s `seed` allargato a `\| readonly string[]` (§1.5) |
+| `editor-v2/hooks/createAdapter.ts` | `SeedValue`, la lista intera in `applyCreate`, `aggregationKeys` + `writeApart` (§7.2) |
+| `abstract/tabs/InstanceManagerTab.tsx` | il controllo a chip nel modale, il gate astratto sulle due superfici |
+| `abstract/tabs/instanceManagerTab.scss` | le tre regole del controllo a chip; nessun token nuovo (regola 28) |
+
+I primi sei sono conseguenza diretta dei tre punti autorizzati; il settimo e' il foglio
+accoppiato al componente che il sesto modifica. Nessun file fuori da questa lista.
+
+### 7.6 La misura, prima e dopo
+
+`scripts/smoke/_tmp_crud2g_verify.ts` (non committata), stessa app, stessa fixture, due
+giri: **7/13 coi sette sorgenti ripristinati da HEAD**, **13/13 con la modifica in albero**,
+zero errori di pagina in entrambi. I sei rossi del «prima» sono esattamente gli arm della
+nuova semantica; i sette verdi sono i controlli, che nel «prima» dimostrano che lo
+strumento aveva segnale.
+
+Nel «prima», misurato: `members` offriva una `select-one` «Select a State…», due pick
+scrivevano **un solo valore**, e il commit lasciava `s0.father = members` con
+`sm1.states = [null]`. Nel «dopo»: due chip, `members` con **due** valori, i tre father
+invariati, `sm1.states` senza buchi, e — per contrasto nello stesso giro — un `setValue`
+su una COMPOSITION che sposta ancora il father, come deve.

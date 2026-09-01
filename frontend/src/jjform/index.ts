@@ -55,9 +55,11 @@ export {
     draftableAttrs,
     draftableRefs,
     draftModel,
+    draftTargets,
     newDraft,
     newInstanceReason,
     setDraftRef,
+    setDraftRefMany,
     setDraftValue,
     validateDraft,
 } from './create';

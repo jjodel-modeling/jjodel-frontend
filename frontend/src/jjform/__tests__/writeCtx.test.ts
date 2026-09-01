@@ -107,7 +107,14 @@ function makeFakeCtx(db: FakeStore): WriteCtx {
         create(cls, ownerId, childKey, seed): CreateResult {
             const id = `fake_${++seq}`;
             const slots: Record<string, WriteValue[]> = {};
-            for (const [k, v] of Object.entries(seed)) if (k !== 'name') slots[k] = [v];
+            // CRUD2 widened the seed: a value may be a LIST of ids, and a host that
+            // wrapped it in another array would model a slot holding one array
+            // instead of N targets. The fake host spreads it, which is what the real
+            // one does when `set_values` assigns the indices from the array it gets.
+            for (const [k, v] of Object.entries(seed)) {
+                if (k === 'name') continue;
+                slots[k] = Array.isArray(v) ? [...(v as readonly string[])] : [v as WriteValue];
+            }
             db[id] = { cls, name: String(seed.name ?? id), slots };
             if (ownerId && childKey) {
                 const owner = db[ownerId];

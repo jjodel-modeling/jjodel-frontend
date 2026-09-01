@@ -22,6 +22,7 @@ import {
     rootMenu,
 } from '../outline';
 import type { OutlineNode } from '../outline';
+import { addChildReason } from '../create';
 
 const ref = (o: Partial<RefShape> & { key: string; of: string }): RefShape => ({
     id: 'r_' + o.key,
@@ -179,5 +180,44 @@ describe('outlineLabel — cosa legge una riga', () => {
     });
     it('nessun nodo — stringa vuota, non un errore', () => {
         expect(outlineLabel(null)).toBe('');
+    });
+});
+
+
+// ── CRUD2 §2.6: la stessa regola, la seconda superficie ──────────────────────
+
+describe('childMenu — the abstract gate reaches the outline too (CRUD2 §2.6)', () => {
+    // `Element` is already declared abstract in SHAPE above and is the positive
+    // control of this block: a slot typed on it is the case the gate exists for.
+    const ABSTRACT_HOST = cls({
+        key: 'Host', root: true,
+        children: [
+            ref({ key: 'parts', of: 'Element' }),   // abstract target
+            ref({ key: 'regions', of: 'Region' }),  // concrete target
+        ],
+    });
+
+    it('positive control: the fixture really declares Element abstract', () => {
+        expect(SHAPE.classes.Element.abstract).toBe(true);
+        expect(SHAPE.classes.Region.abstract).toBe(false);
+    });
+
+    it('blocks the abstract slot and keeps the concrete one, when the shape is given', () => {
+        const menu = childMenu(ABSTRACT_HOST, {}, SHAPE);
+        expect(menu.entries.map(e => e.childKey)).toEqual(['regions']);
+        expect(menu.blocked.map(b => b.key)).toEqual(['parts']);
+        expect(menu.blocked[0].reason).toContain('abstract');
+    });
+
+    it('without the shape the menu is exactly what it was before this slice', () => {
+        const menu = childMenu(ABSTRACT_HOST, {});
+        expect(menu.entries.map(e => e.childKey)).toEqual(['parts', 'regions']);
+        expect(menu.blocked).toEqual([]);
+    });
+
+    it('agrees with addChildReason on the same pair — one rule, two surfaces', () => {
+        const parts = ABSTRACT_HOST.children[0];
+        expect(childMenu(ABSTRACT_HOST, {}, SHAPE).blocked[0].reason)
+            .toBe(addChildReason(parts, 0, SHAPE.classes.Element));
     });
 });

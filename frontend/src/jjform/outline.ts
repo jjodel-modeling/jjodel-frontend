@@ -98,11 +98,21 @@ export interface OutlineMenu {
  * Order is the shape's, not alphabetical: a metamodel declares its features in an
  * order, and re-sorting them here would make the menu disagree with the form.
  */
-export function childMenu(cls: ClassShape | null | undefined, counts: Record<string, number> = {}): OutlineMenu {
+export function childMenu(
+    cls: ClassShape | null | undefined,
+    counts: Record<string, number> = {},
+    shape?: MetamodelShape,
+): OutlineMenu {
     const menu: OutlineMenu = { entries: [], blocked: [] };
     if (!cls) return menu;
     for (const child of cls.children) {
-        const reason = addChildReason(child, counts[child.key] ?? 0);
+        // `shape` is OPTIONAL and is what lets the abstract gate of §2.6 fire here
+        // too. Without it this menu and the children bar would disagree — one
+        // offering «Add Node» on an abstract target while the other refused it —
+        // and two surfaces over one rule is the divergence the outline was written
+        // to avoid («the SAME two functions», the header above). A caller that
+        // cannot resolve the shape gets exactly the verdict it got before.
+        const reason = addChildReason(child, counts[child.key] ?? 0, shape?.classes?.[child.of]);
         if (reason) menu.blocked.push({ key: child.key, reason });
         else menu.entries.push({ cls: child.of, childKey: child.key, label: `Add ${child.of}` });
     }
