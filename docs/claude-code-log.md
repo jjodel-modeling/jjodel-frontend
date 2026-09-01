@@ -2,6 +2,51 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-09-01 — fix(manager): i nove ritocchi del giro 2, e lo stretch di FL1 che si ferma a meta' (10k)
+**Prompt**: `docs/prompts/PROMPT_10k_ritocchi_giro2.md` — nove punti di superficie e copy su uno
+screenshot di `sample-StateMachine`, pattern 10h/10i (sonda before/after, asserzioni su computed
+style). Checkbox fuori stile, titolo dentro la card, header form senza banda, colonna NAME doppia,
+`entryAction` a tutta larghezza, CHILDREN+ADD CONTAINED, nodo owner attaccato all'arco, copy del
+sottotitolo, passata slick a soli token DS. Fuori scope: motore, outline, ENG2/UX1, dark mode.
+**Files touched**: `jjform/layout.ts` + `__tests__/layout.test.ts` in **a219f91e5**;
+`jjform/{egoNeighborhood,create}.ts` + i due test in **8f046987f**;
+`abstract/tabs/{InstanceManagerTab.tsx, instanceManagerTab.scss, instanceTable.ts}`,
+`__tests__/instanceManager10d.test.ts` (1 asserzione rovesciata), la suite nuova
+`__tests__/instanceManager10k.test.ts` (37 casi), il referto
+`docs/discovery/discovery_2026-09-01_10k_ritocchi_giro2.md` e il prompt in **170a6d3fb**; questa
+entry a parte. Pathspec obbligata: NAV1 stava scrivendo su `Toolbar.tsx` nello stesso albero.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `npm run typecheck` **33** (baseline invariata, conteggio su output
+COMPLETO); `npm run build` exit **0**, solo il warning di chunk noto; `npx vitest run` **2885
+passati / 0 falliti**, 9 file rossi in raccolta tutti il noto `window is not defined`. Suite nuova
+provata con OTTO mutazioni (hover che vince su `:checked`, hover di riga tornato a `bg-tertiary`,
+pannello che non marca il doppione, eyebrow rimesso, doppione fuori dal canale, `STRETCH_MAX` a 12,
+banda dell'owner tornata a `EGO_ROW_GAP`, copy vecchio): 1/1/2/1/1/6/2/2 rossi, verde al ripristino
+in tutte e otto.
+**Out-of-scope changes**: yes — sei file fuori dai tre dichiarati miei nel «Coordinamento»
+(`instanceTable.ts`, `layout.ts`, `create.ts`, `egoNeighborhood.ts` e i loro test), autorizzati da
+Alfonso prima di scrivere insieme alla via del punto 5. Piu' una asserzione ratificata di 10d
+rovesciata: pinnava la testata DENTRO la card, che e' esattamente cio' che il punto 2 disfa.
+**Layer Impact Report**: not-required — nessun file di §3.1 e nessun trigger di §3.2. Zero creatori
+D, zero `TRANSACTION`, zero scritture: il delta e' CSS, JSX e tre funzioni pure.
+**Smoke visivo**: passato — `_tmp_10k_verify.ts`, **before 20/29, after 49/0**, zero errori di
+pagina, stesso strumento su entrambi i lati (i sei sorgenti in stash per il giro before). Misure
+per punto: checkbox 20x20 nativo -> 16x16 DS con riempimento `rgb(51,65,85)`; testata da dentro la
+card a `[63,108]` sopra una card che parte a 120; banda della form da `rgba(0,0,0,0)` a
+`rgb(248,250,252)` e da `[768,1572]` a `[754,1586]`; `ths` da due `name` a uno, indicatore «5
+columns hidden»; `entryAction` span **9 -> 6**, 583px -> 386px contro i 189px di `timeout`; tre
+intestazioni sui figli -> una; gronda dell'owner **12 -> 24px**; copy «Contained in StateMachine».
+Non regressioni 10i/10j/DS3 verdi in ENTRAMBI i giri.
+**Notes**: il punto 5 non era del manager: e' la regola 2 di FL1, ratificata, che stirava l'ultimo
+scalare di una riga corta. Emendamento **A2** (`STRETCH_MAX = 6`) scelto da Alfonso fra tre vie,
+quattro asserzioni ratificate riscritte, raggio d'azione ogni form dell'app. Tre token del prompt
+rettificati: `--color-border` non esiste, `--color-bg-secondary` e `--shadow-sm` sono fra i 15
+dichiarati due volte. Referto §1, §3, §8.
+**Prompt document name**: PROMPT_10k_ritocchi_giro2.md — 2026-09-01 12:30
+
+
 ## 2026-09-01 — test(smoke): la `link` condivisa che asserisce la forma che posa (ENG2)
 **Prompt**: `docs/prompts/PROMPT_ENG2_probe_link_gate.md` — chiudere il secondo punto di
 ENG1 §B.6: una `link` condivisa in `states.ts` che asserisca la forma costruita invece di
