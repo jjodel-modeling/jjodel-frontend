@@ -150,8 +150,20 @@ export function newInstanceReason(cls: ClassShape, instanceCount = 0): string | 
         return `Singleton — the one ${cls.key} of this model already exists`;
     }
     if (!cls.root) {
-        const where = cls.containedIn.length ? cls.containedIn.join(', ') : 'its container';
-        return `Created from its container's form (${where})`;
+        // 10k punto 8 — la frase dice DOVE la metaclasse vive, non da quale
+        // superficie la si raggiunge. «Created from its container's form (Final,
+        // Initial, State, StateMachine)» faceva due giri per arrivarci: nominava
+        // un gesto («la form del contenitore»), e la lista fra parentesi si
+        // leggeva come una nota a piede invece che come la risposta. Il criterio
+        // e' che questa riga sta sotto una testata che ha appena tolto il «New»:
+        // chi la legge ha gia' capito che non si crea di qui, e quel che gli
+        // manca e' il nome del contenitore.
+        //
+        // Le rootable non passano di qua: per loro la funzione risponde `null` e
+        // il bottone c'e'. Non c'era quindi una «riga attuale» da semplificare —
+        // il ramo non esiste.
+        const where = cls.containedIn.length ? cls.containedIn.join(', ') : null;
+        return where ? `Contained in ${where}` : 'Created from its container';
     }
     return null;
 }

@@ -111,8 +111,23 @@ describe('newInstanceReason — whether the catalogue offers New', () => {
     });
 
     it('refuses a non-rootable one, naming its containers', () => {
+        // 10k punto 8: la frase era «Created from its container's form (StateMachine)»
+        // e nominava un gesto prima del posto. Ora dice il posto.
         const reason = newInstanceReason(SHAPE.classes.State, 0);
-        expect(reason).toBe("Created from its container's form (StateMachine)");
+        expect(reason).toBe('Contained in StateMachine');
+    });
+
+    it('elenca TUTTI i contenitori, nell\'ordine che la shape ha gia\' ordinato', () => {
+        const many = { ...SHAPE.classes.State, containedIn: ['Final', 'Initial', 'State', 'StateMachine'] };
+        expect(newInstanceReason(many, 0)).toBe('Contained in Final, Initial, State, StateMachine');
+    });
+
+    it('e senza contenitori dichiarati non inventa un nome', () => {
+        // Il caso degenere: ne' rootable ne' contenuta da nessuno. La riga tiene
+        // la voce di prima meno il giro di parole, perche' qui un nome da dire
+        // non c'e'.
+        const orphan = { ...SHAPE.classes.State, containedIn: [] };
+        expect(newInstanceReason(orphan, 0)).toBe('Created from its container');
     });
 
     it('refuses an abstract one before anything else', () => {

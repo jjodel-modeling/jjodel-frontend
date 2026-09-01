@@ -425,6 +425,26 @@ export const EGO_SUBJECT_H = 48;
 export const EGO_COL_GAP = 56;
 /** Spazio verticale fra due scatole della stessa colonna. */
 export const EGO_ROW_GAP = 12;
+/**
+ * Spazio verticale fra la scatola dell'owner e il soggetto — 10k punto 7.
+ *
+ * NON `EGO_ROW_GAP`, che e' la distanza fra due scatole AFFIANCATE nella stessa
+ * colonna e non ha un arco che passa in mezzo. Qui in mezzo ci passa
+ * `ownerLink`, e la geometria e' obliqua: la retta esce dal centro basso
+ * dell'owner e arriva al centro alto del soggetto, cioe' 74px piu' a destra
+ * (`EGO_SUBJECT_W / 2 + EGO_COL_GAP - EGO_NODE_W / 2`), mentre la scatola
+ * dell'owner continua per 66px oltre il punto di uscita. Su quel tratto la
+ * retta e' ancora sotto la scatola, a `gap * 66 / 74` da essa.
+ *
+ * Misurato il 2026-09-01 su `Off` (contenuto in `Heater`, nessun altro vicino,
+ * cioe' il caso in cui `bodyH` resta `EGO_SUBJECT_H` e il soggetto non scende
+ * da se'): a 12px la retta correva a **10.7px** dal bordo basso della scatola
+ * per 66px, cioe' rasente all'etichetta «owner» che sta proprio li'. A 24px —
+ * il doppio, e sulla griglia da 8 del DS — sono **21.4px**. Il soggetto con
+ * vicini non era interessato: con due uscenti `bodyH` sale a 92 e la gronda
+ * misurava gia' 34px, che e' perche' il difetto si vedeva solo su alcune righe.
+ */
+export const EGO_OWNER_GAP = 24;
 
 export interface EgoPlacedNode extends EgoNode {
     x: number;
@@ -498,7 +518,7 @@ export function egoLayout(ego: Ego | null | undefined): EgoLayout {
     /** Solo l'owner con scatola propria costa una banda: quello gia' disegnato
      *  come vicino e' nella sua colonna e non chiede altezza. */
     const ownerBoxed = ownerNode !== null && ownerNode.side === 'owner';
-    const band = ownerBoxed ? EGO_NODE_H + EGO_ROW_GAP : 0;
+    const band = ownerBoxed ? EGO_NODE_H + EGO_OWNER_GAP : 0;
 
     const inH = columnHeight(incoming.length);
     const outH = columnHeight(outgoing.length);

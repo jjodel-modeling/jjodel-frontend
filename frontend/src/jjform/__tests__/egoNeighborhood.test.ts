@@ -30,6 +30,7 @@ import {
     EGO_MAX_PER_SIDE,
     EGO_NODE_H,
     EGO_NODE_W,
+    EGO_OWNER_GAP,
     EGO_ROW_GAP,
     EGO_SUBJECT_H,
     EGO_SUBJECT_W,
@@ -451,7 +452,9 @@ describe('egoLayout — tre colonne, fisse', () => {
 
     it('l owner sta in una banda sopra, e le colonne scendono di altrettanto', () => {
         const l = egoLayout(egoNeighborhood(heater()));
-        const band = EGO_NODE_H + EGO_ROW_GAP;
+        // 10k punto 7: la banda e' `EGO_OWNER_GAP`, non `EGO_ROW_GAP`. Fra owner
+        // e soggetto passa `ownerLink`; fra due scatole della stessa colonna no.
+        const band = EGO_NODE_H + EGO_OWNER_GAP;
 
         expect(l.owner).toMatchObject({ id: HEATER.id, y: 0, w: EGO_NODE_W, h: EGO_NODE_H });
         // Sopra A SINISTRA: un `EGO_COL_GAP` a sinistra del soggetto, che e' la
@@ -460,6 +463,8 @@ describe('egoLayout — tre colonne, fisse', () => {
         expect(l.subject.y).toBeGreaterThanOrEqual(band);
         for (const n of [...l.incoming, ...l.outgoing]) expect(n.y).toBeGreaterThanOrEqual(band);
         expect(l.height).toBe(band + Math.max(EGO_SUBJECT_H, 2 * EGO_NODE_H + EGO_ROW_GAP));
+        // La gronda vera, quella che l'arco attraversa.
+        expect(l.subject.y - (l.owner!.y + l.owner!.h)).toBeGreaterThanOrEqual(EGO_OWNER_GAP);
     });
 
     it('il legame dell owner e una retta, e non e fra le frecce', () => {
@@ -486,7 +491,11 @@ describe('egoLayout — tre colonne, fisse', () => {
         expect(l.subject.x).toBe(0);
         expect(l.owner!.x).toBe(0);
         expect(l.width).toBe(EGO_SUBJECT_W);
-        expect(l.height).toBe(EGO_NODE_H + EGO_ROW_GAP + EGO_SUBJECT_H);
+        expect(l.height).toBe(EGO_NODE_H + EGO_OWNER_GAP + EGO_SUBJECT_H);
+        // Il caso minimo e' anche il caso peggiore: senza vicini `bodyH` resta
+        // `EGO_SUBJECT_H`, il soggetto non scende da se', e la gronda e' tutta
+        // e sola la banda. E' lo schermo del referto utente.
+        expect(l.subject.y - EGO_NODE_H).toBe(EGO_OWNER_GAP);
     });
 
     it('nessun owner, nessuna banda: le misure di FL5 alla cifra', () => {
