@@ -37,6 +37,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useSelector } from 'react-redux';
 import { LPointerTargetable, U } from '../../../../joiner';
 import { entityLetter, resolveEntityType } from '../../../../common/entityMeta';
 import { getInterfaceMode } from '../../../../hooks/useInterfaceMode';
@@ -55,6 +56,7 @@ import {
     autoLayoutRows,
     chromeOf,
     inputFromDescriptor,
+    isFormThemeName,
     resolveFormTheme,
     spanWithOverflow,
     themeVars,
@@ -176,6 +178,29 @@ export function IRForm({ objectId, defaultTheme = 'plain' }: IRFormProps) {
 
     const spec: FormSpec | undefined = resolution?.compiled?.formSpec ?? undefined;
     const viewKey = resolution?.compiled?.viewId ?? 'default';
+
+    /**
+     * The viewpoint rung of the theme cascade (slice STYLE2).
+     *
+     * Read from the ACTIVE viewpoint — `state.viewpoint` — and not from the resolved
+     * view's own `viewpoint` pointer, for a reason that is the common case and not an
+     * edge one: when no IR view matches, the form renders the metamodel-derived default
+     * (`useIRFormView` returns `{compiled: null}` precisely so that case stays legible),
+     * there is no view to ask, and a rung read off the view would be unreachable exactly
+     * where most models live. `state.viewpoint` is also the source `irResolveCore`
+     * indexes by (`if (d.viewpoint !== vp) continue`), so the theme and the views it
+     * themes come from the same viewpoint by construction.
+     *
+     * Its own `useSelector` and not a field of `useIRFormView`'s signature: that
+     * signature is the object's slot snapshot, rebuilt on every slot write, and adding a
+     * viewpoint field to it would recompute the snapshot for a value that changes when
+     * somebody picks a theme. A selector returning a string re-renders on that string.
+     */
+    const viewpointTheme = useSelector((state: any) => {
+        const vp = state?.viewpoint;
+        const t = vp ? state?.idlookup?.[vp]?.formTheme : undefined;
+        return isFormThemeName(t) ? t : undefined;
+    });
 
     const [mode, setMode] = useState<FormMode>(() => readMode(viewKey));
     const onMode = useCallback((m: FormMode) => {
@@ -309,14 +334,26 @@ export function IRForm({ objectId, defaultTheme = 'plain' }: IRFormProps) {
     const theme: FormTheme = spec?.theme ?? defaultTheme;
 
     /**
-     * FL2's theme, from the two legacy fields the saved IR carries (spec amendment A2).
+     * FL2's theme: the viewpoint's rung (STYLE2) under the two legacy fields the saved IR
+     * carries (spec amendment A2).
      *
      * The skin keeps its class — every committed rule of the four skins is untouched — and
-     * the preset arrives beside it as custom properties and data attributes. The per-class
-     * rung of the cascade has no source in the D graph yet; `resolveFormTheme` takes it as a
-     * third argument so adding one is a change of this call and not of the mechanism.
+     * the preset arrives beside it as custom properties and data attributes. Note what is
+     * passed and what is not: `spec?.theme`, NOT the `theme` const above. The two differ by
+     * exactly the `?? defaultTheme` fallback, and that difference is the precedence. The
+     * class name still needs a skin when the view names none, so `theme` keeps its `'plain'`
+     * default and keeps rendering `ir-form--plain`; the PRESET must be able to see that the
+     * view said nothing, or the viewpoint's rung could never win. A viewpoint theme with no
+     * view theme therefore renders as the `plain` skin wearing another preset's custom
+     * properties, which is the arrangement STYLE1 measured end to end (its «via contratto»
+     * did the same thing by hand, and matched the real path on all three presets where both
+     * exist).
+     *
+     * The per-class rung of the cascade still has no source in the D graph; `resolveFormTheme`
+     * keeps it as the third argument so adding one is a change of this call and not of the
+     * mechanism.
      */
-    const preset = resolveFormTheme(theme, spec?.labelPlacement);
+    const preset = resolveFormTheme(spec?.theme, spec?.labelPlacement, undefined, viewpointTheme);
     const chrome = chromeOf(preset);
     const presetVars = themeVars(preset) as React.CSSProperties;
 
@@ -395,12 +432,25 @@ export function IRForm({ objectId, defaultTheme = 'plain' }: IRFormProps) {
                             gives it the same 28px bar with its chevron and count instead of a
                             bare line that looks like a different kind of thing. Not collapsible:
                             folding away the only control that renames the object would hide the
-                            field this group exists for. */}
-                        <div className="ir-form__group-title ir-form__group-title--static">
-                            <i className="bi bi-chevron-down ir-form__group-chevron" aria-hidden="true" />
-                            <span className="ir-form__group-label">Identity</span>
-                            <span className="ir-form__group-count">1</span>
-                        </div>
+                            field this group exists for.
+
+                            Under `chrome.eyebrow` for the same reason the sections are: with
+                            `sectionStyle: 'none'` there is no heading in this form, and one
+                            heading surviving would be the only boundary left in a preset whose
+                            whole statement is that declaration order IS the boundary. Measured
+                            2026-09-01 (STYLE2): unconditional, it left `Dense` rendering ONE
+                            eyebrow where the preset states zero. It had never shown, because
+                            `none` is reached only by `Dense` and no write surface of the app
+                            could select `Dense` until the viewpoint rung existed — STYLE1's
+                            0 was measured by a probe that hid every title by hand, which hid
+                            this one too. */}
+                        {chrome.eyebrow && (
+                            <div className="ir-form__group-title ir-form__group-title--static">
+                                <i className="bi bi-chevron-down ir-form__group-chevron" aria-hidden="true" />
+                                <span className="ir-form__group-label">Identity</span>
+                                <span className="ir-form__group-count">1</span>
+                            </div>
+                        )}
                         {/* The same row/cell wrapper the sections use, so the identity field
                             gets the grid's gaps and the theme's label placement rather than
                             being the one field in the form that sits outside the layout. A

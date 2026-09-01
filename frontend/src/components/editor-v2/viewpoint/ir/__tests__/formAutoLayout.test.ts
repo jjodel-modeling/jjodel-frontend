@@ -15,7 +15,7 @@
 
 import { describe, expect, it } from 'vitest';
 import type { DraftField } from '../../../../../jjform';
-import { FORM_THEME_PRESETS, GRID_COLUMNS } from '../../../../../jjform';
+import { FORM_THEME_DEFAULT, FORM_THEME_NAMES, FORM_THEME_PRESETS, GRID_COLUMNS } from '../../../../../jjform';
 import type { FormFieldDescriptor } from '../useFormWidgets';
 import {
     LEGACY_SKIN_PRESET,
@@ -27,6 +27,7 @@ import {
     featureOf,
     inputFromDescriptor,
     inputFromDraftField,
+    isFormThemeName,
     overflowVerdict,
     resolveFormTheme,
     spanWithOverflow,
@@ -267,6 +268,100 @@ describe('the legacy skin, reconciled with the preset (A2)', () => {
     it('lets a per-class layer change one field without inheriting the rest', () => {
         const t = resolveFormTheme('card', undefined, { density: 'dense' });
         expect(t).toEqual({ labelPlacement: 'top', density: 'dense', sectionStyle: 'card' });
+    });
+});
+
+// ─── STYLE2: the viewpoint rung, and the three-step precedence ───────────────
+//
+// The ladder the slice exists to build: `ir.form.theme` (view) beats the viewpoint, the
+// viewpoint beats the factory default. Each step gets its own case, because a ladder
+// asserted only at its top would pass with the middle rung missing — which is exactly the
+// state of the code before this slice, where the middle rung was a function parameter
+// nobody could reach.
+
+describe('the viewpoint rung of the form theme (STYLE2)', () => {
+    it('the bottom step: nothing stated anywhere is the committed default', () => {
+        // The non-regression, field by field and not by `toEqual` on a name: this is the
+        // rendering every saved project has today, and a saved project has no `formTheme`.
+        const t = resolveFormTheme(undefined, undefined, undefined, undefined);
+        expect(t).toEqual(FORM_THEME_DEFAULT);
+        expect(t).toEqual(FORM_THEME_PRESETS.Comfortable);
+        // And it is the SAME answer the only call site produced before STYLE2, when it
+        // passed `spec?.theme ?? 'plain'` and could never pass undefined.
+        expect(t).toEqual(resolveFormTheme('plain'));
+    });
+
+    it('the middle step: the viewpoint wins over the default', () => {
+        for (const name of FORM_THEME_NAMES) {
+            expect(resolveFormTheme(undefined, undefined, undefined, name))
+                .toEqual(FORM_THEME_PRESETS[name]);
+        }
+        // Dense in particular — the preset no write surface of the app could reach before
+        // this slice (STYLE1 report §4), which is the whole reason the rung was built.
+        expect(resolveFormTheme(undefined, undefined, undefined, 'Dense'))
+            .toEqual({ labelPlacement: 'left', density: 'dense', sectionStyle: 'none' });
+    });
+
+    it('the top step: the view wins over the viewpoint', () => {
+        // The viewpoint asks for Dense, the view declares the `plain` skin: the view wins,
+        // whole preset against whole preset, and the answer is Comfortable.
+        expect(resolveFormTheme('plain', undefined, undefined, 'Dense'))
+            .toEqual(FORM_THEME_PRESETS.Comfortable);
+        expect(resolveFormTheme('compact', undefined, undefined, 'Sectioned'))
+            .toEqual(FORM_THEME_PRESETS.Compact);
+    });
+
+    it('a view that states only a placement keeps the rest of the viewpoint', () => {
+        // The one-field layer is still a layer: it overrides `labelPlacement` and leaves
+        // the viewpoint's density and chrome standing. Without a skin there is nothing
+        // between the viewpoint and the placement.
+        expect(resolveFormTheme(undefined, 'above', undefined, 'Dense'))
+            .toEqual({ labelPlacement: 'top', density: 'dense', sectionStyle: 'none' });
+    });
+
+    it('the per-class rung still sits above all three', () => {
+        expect(resolveFormTheme('plain', undefined, { density: 'compact' }, 'Dense'))
+            .toEqual({ labelPlacement: 'top', density: 'compact', sectionStyle: 'flat' });
+    });
+
+    it('the four existing call shapes answer exactly as they did', () => {
+        // Every assertion of the A2 block above, restated with the new fourth argument
+        // ABSENT. A signature change that altered any of these would be a regression of
+        // the committed rendering, not a new rung.
+        expect(resolveFormTheme('plain')).toEqual(FORM_THEME_PRESETS.Comfortable);
+        expect(resolveFormTheme('plain', 'left'))
+            .toEqual({ ...FORM_THEME_PRESETS.Comfortable, labelPlacement: 'left' });
+        expect(resolveFormTheme('compact', 'above').labelPlacement).toBe('top');
+        expect(resolveFormTheme('compact').labelPlacement).toBe('left');
+        expect(resolveFormTheme('card', undefined, { density: 'dense' }))
+            .toEqual({ labelPlacement: 'top', density: 'dense', sectionStyle: 'card' });
+    });
+
+    it('a stored value that is not a preset name resolves as no opinion', () => {
+        // The D field comes back from a project file, so it is untrusted at the boundary.
+        // A retired or hand-edited name must land on the step BELOW, not on an undefined
+        // lookup that reaches the default by accident.
+        for (const junk of ['dense', 'COMFORTABLE', 'Cosy', '', 'plain'] as any[]) {
+            expect(isFormThemeName(junk)).toBe(false);
+            expect(resolveFormTheme(undefined, undefined, undefined, junk))
+                .toEqual(FORM_THEME_DEFAULT);
+        }
+        // Positive control: the guard has signal — the four real names pass.
+        for (const name of FORM_THEME_NAMES) expect(isFormThemeName(name)).toBe(true);
+        // And a junk viewpoint does not swallow a view that DID state something.
+        expect(resolveFormTheme('compact', undefined, undefined, 'Cosy' as any))
+            .toEqual(FORM_THEME_PRESETS.Compact);
+    });
+
+    it('the select can name every preset the rung accepts', () => {
+        // The vocabulary of the viewpoint panel's select is `FORM_THEME_NAMES` itself,
+        // read at render time and not a second list of four names.
+        // If a fifth preset is ever added, this fails unless the rung accepts it too.
+        for (const name of FORM_THEME_NAMES) {
+            expect(isFormThemeName(name)).toBe(true);
+            expect(FORM_THEME_PRESETS[name]).toBeDefined();
+        }
+        expect(FORM_THEME_NAMES).toHaveLength(4);
     });
 });
 

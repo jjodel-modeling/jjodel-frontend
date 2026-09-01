@@ -1,6 +1,7 @@
 import React, { useCallback } from 'react';
 import { LViewPoint } from '../../../../joiner';
 import { ViewpointType, getViewpointType } from '../../../../view/viewPoint/viewpoint';
+import { FORM_THEME_DEFAULT_NAME, FORM_THEME_NAMES, type FormThemeName } from '../../../../jjform';
 // Self-import the stylesheet so .wp-type-segmented + .wp-field + .workbench-properties
 // render correctly even when this component is mounted outside WorkbenchProperties
 // (e.g., directly from Info.tsx's view-branch).
@@ -10,6 +11,14 @@ interface ViewpointPropertiesProps {
     viewpoint: LViewPoint;
     readOnly: boolean;
 }
+
+/** The «no opinion» entry of the Form Theme select.
+ *
+ *  A named sentinel and not `''`, so that what the select shows and what the D field
+ *  holds stay two different things: the field's contract is «one of the four preset
+ *  names, or absent», and the sentinel is mapped back to `undefined` on write so no
+ *  fifth literal ever reaches it. */
+const FORM_THEME_INHERIT = '__inherit__';
 
 const typeOptions: { value: ViewpointType; label: string }[] = [
     { value: 'syntax', label: 'Syntax' },
@@ -36,6 +45,28 @@ const ViewpointProperties: React.FC<ViewpointPropertiesProps> = ({ viewpoint, re
         // Sync legacy booleans for backward compat
         viewpoint.isExclusiveView = (newType === 'syntax');
         (viewpoint as any).isValidation = (newType === 'validation');
+    }, [viewpoint, readOnly]);
+
+    /**
+     * The viewpoint rung of the form theme (slice STYLE2).
+     *
+     * Written exactly as `viewpointType` above is written — a bare assignment on the
+     * L-proxy, which routes to a `SetFieldAction` on the D element. `undefined` restores
+     * «no opinion», which is the rendering committed before the field existed.
+     *
+     * This panel and not the Style tab, which is where the STYLE2 prompt (citing STYLE1's
+     * reperto 2) expected it: measured here, `<ViewData>` — the component that owns the
+     * Style tab — is mounted in ONE place, `Info.tsx:1394`, and that place is the `else`
+     * branch of `isVP`. A viewpoint selected in the tree renders THIS component instead,
+     * so a select added to `PaletteData` would have been unreachable code. `ViewData`
+     * does carry a viewpoint branch internally (`ViewData.tsx:53`), which is what the
+     * reperto read; nothing routes a viewpoint into it.
+     */
+    const currentFormTheme = ((viewpoint as any).formTheme as FormThemeName | undefined) ?? null;
+    const handleFormThemeChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+        if (readOnly) return;
+        const v = e.target.value;
+        (viewpoint as any).formTheme = v === FORM_THEME_INHERIT ? undefined : (v as FormThemeName);
     }, [viewpoint, readOnly]);
 
     return (
@@ -67,6 +98,20 @@ const ViewpointProperties: React.FC<ViewpointPropertiesProps> = ({ viewpoint, re
                         </button>
                     ))}
                 </div>
+            </div>
+
+            <div className="wp-field">
+                <label className="wp-field__label">Form theme</label>
+                <select
+                    className="wp-field__select"
+                    value={currentFormTheme ?? FORM_THEME_INHERIT}
+                    onChange={handleFormThemeChange}
+                    disabled={readOnly}
+                    title="Preset applied to the property forms of this viewpoint: label placement, density and section chrome. A view that declares its own theme overrides it."
+                >
+                    <option value={FORM_THEME_INHERIT}>Default ({FORM_THEME_DEFAULT_NAME})</option>
+                    {FORM_THEME_NAMES.map(n => <option key={n} value={n}>{n}</option>)}
+                </select>
             </div>
         </div>
     );

@@ -50,6 +50,7 @@
 
 import {
     DENSITY_SCALE,
+    FORM_THEME_NAMES,
     FORM_THEME_PRESETS,
     LABEL_FONT_SIZE,
     LABEL_FONT_WEIGHT,
@@ -262,29 +263,73 @@ export const LEGACY_SKIN_PRESET: Readonly<Record<LegacySkin, FormThemeName>> = {
 };
 
 /**
- * The resolved theme of a form, from what the saved IR actually holds.
+ * Is this what a viewpoint's `formTheme` is allowed to hold?
  *
- * Two legacy fields become two LAYERS of FL2's cascade, least- to most-specific:
+ * The D field is persisted and read back from a project file, so it is UNTRUSTED at the
+ * boundary: a hand-edited save, or a name retired by a future spec, must resolve as
+ * «no opinion» and not as a lookup into `FORM_THEME_PRESETS` that yields `undefined` and
+ * silently sends the whole cascade to the factory default by a different route. The guard
+ * reads the closed list rather than restating the four names — FL2 exports it for exactly
+ * this and says so.
+ */
+export function isFormThemeName(v: unknown): v is FormThemeName {
+    return typeof v === 'string' && (FORM_THEME_NAMES as readonly string[]).includes(v);
+}
+
+/**
+ * The resolved theme of a form: the viewpoint's rung, then what the saved IR holds.
  *
+ * FOUR layers now, least- to most-specific. The order IS the precedence, and it is the
+ * one STYLE2 states: the view wins over the viewpoint, the viewpoint wins over the
+ * factory default.
+ *
+ *  0. `viewpointTheme` — the preset the ACTIVE viewpoint names (`DViewElement.formTheme`,
+ *     slice STYLE2), as a whole preset. This is the rung FL2 designed the signature for
+ *     and the first one to have a source in the D graph: until STYLE2 the cascade was a
+ *     function signature, not a structure.
  *  1. the skin, as a whole preset — choosing a preset is replacing the level below;
  *  2. `FormSpec.labelPlacement`, when the author stated one, as a one-field layer over it.
  *     `'above'` is FL2's `'top'`; the two vocabularies name the same placement and the
  *     rename happens here rather than in either type.
  *
+ * `skin` is now OPTIONAL, and that is the load-bearing half of the precedence. Before
+ * STYLE2 the only caller passed `spec?.theme ?? 'plain'`, so a skin was ALWAYS stated and
+ * a layer below it could never have won: `undefined` is what lets «the view says nothing»
+ * be distinguishable from «the view says plain», which are the same rendering today and
+ * two different answers as soon as a viewpoint has an opinion. A view that really does
+ * declare `plain` still overrides a viewpoint asking for `Dense` — that is what a
+ * per-view choice means.
+ *
+ * With every argument absent the result is `FORM_THEME_PRESETS.Comfortable`, which is
+ * `FORM_THEME_DEFAULT` and is what `resolveFormTheme('plain')` returned before: the
+ * no-choice rendering is unchanged, and the tests assert it field by field.
+ *
  * `classTheme` is the per-class rung of the spec's cascade, threaded through for the caller
- * that will have one. Nothing in the D graph stores it yet, and this signature is what
- * makes adding the source a change of one call site rather than of the mechanism.
+ * that will have one. Nothing in the D graph stores it yet — STYLE2 deliberately did not
+ * build it, having no measure asking for it — and this signature is what makes adding the
+ * source a change of one call site rather than of the mechanism. It stays the third
+ * parameter so that no existing call site has to move; the viewpoint arrives fourth even
+ * though it is the LEAST specific layer, which is a fact about argument order and not
+ * about precedence — the body below is where the order is decided.
  */
 export function resolveFormTheme(
-    skin: LegacySkin,
+    skin?: LegacySkin,
     labelPlacement?: 'above' | 'left',
     classTheme?: Partial<PresetTheme> | null,
+    viewpointTheme?: FormThemeName | null,
 ): PresetTheme {
-    const preset = FORM_THEME_PRESETS[LEGACY_SKIN_PRESET[skin]];
+    const viewpoint = viewpointTheme && isFormThemeName(viewpointTheme)
+        ? FORM_THEME_PRESETS[viewpointTheme]
+        : null;
+    const preset = skin ? FORM_THEME_PRESETS[LEGACY_SKIN_PRESET[skin]] : null;
     const stated = labelPlacement
         ? { labelPlacement: labelPlacement === 'above' ? ('top' as const) : ('left' as const) }
         : null;
-    return resolveTheme(preset, stated, classTheme);
+    // Two folds and not one: `resolveTheme` takes three layers and there are four. The
+    // first fold produces a COMPLETE theme (it starts from the factory default), so using
+    // it as the base of the second is exactly a fourth layer and not a re-defaulting.
+    const base = resolveTheme(viewpoint, preset, stated);
+    return classTheme ? resolveTheme(base, classTheme) : base;
 }
 
 /** The chrome a section wears under this theme. A re-export in function form, so a renderer
