@@ -2,6 +2,42 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-09-01 — docs(discovery): CRUD2 fase 1, la cardinalita' conferma e l'orfano no
+**Prompt**: CRUD2 (in chat), due difetti dal prodotto del 01-09, discovery-first su
+entrambi. 1) i dropdown delle associazioni ignorano la cardinalita'; 2) il child creato
+da «+ Add <Cls>» non sarebbe legato al parent, con errore al passaggio alla sintassi
+astratta.
+**Files touched**: `docs/discovery/discovery_2026-09-01_crud2_cardinalita_aggancio.md`
+(nuovo) e questa entry. **Zero file di codice**: la Fase 2 attende il go-ahead e due
+decisioni di merito (referto §4). Le sonde `scripts/smoke/_tmp_crud2_*.ts` non sono
+committate (`.gitignore:66`).
+**Outcome**: ⚠️ partial — il punto 1 e' mappato per intero; il punto 2 e' FALSIFICATO
+nella forma descritta e resta aperto in attesa dello stato dell'utente.
+**Corregge**: —
+**Causa**: (a) — la premessa del punto 2 («la CTA passa `openCreate(cls, null, null)`»)
+non regge alla misura: `InstanceManagerTab.tsx:2890` passa gia' `(child.of, subjectId,
+child.key)`. Manca dal prompt l'errore esatto e la forma del metamodello.
+**Regressions**: no — nessun file di codice toccato, nessun gate da muovere.
+**Out-of-scope changes**: no.
+**Layer Impact Report**: not-required — fase read-only, zero scritture committate.
+**Smoke visivo**: non applicabile — nessun delta visivo. La misura e' a sonda, quattro
+giri: `_tmp_crud2_recon.ts` 8/8, `_tmp_crud2_recon2.ts` 9/9 (padre alla radice, padre
+contenuto, ritorno alla sintassi astratta, ricarica: zero errori di pagina in tutti),
+`_tmp_crud2_recon3.ts` 5/6 (l'arm H resta non misurato, dichiarato),
+`_tmp_crud2_recon4.ts` 4/5 con il difetto nuovo misurato.
+**Notes**: l'orfano della CTA e' impossibile per costruzione — `useEditorMode.ts:421`
+classifica con `!!composition`, `LModelElement.tsx:7168` scrive il father con
+`composition || aggregation`, e il primo insieme e' contenuto nel secondo. La stessa
+divergenza al contrario produce pero' un difetto MISURATO: una reference di sola
+aggregation, offerta dal modale come dropdown, sfratta il bersaglio dal suo contenitore
+(`states.values` da `["s1"]` a `[null]`). Piu' un secondo reperto: `addChildReason` non
+guarda `abstract`, e la barra crea istanze di classi astratte. Referto §2.5 e §2.6.
+Arresto anche per stato dell'albero: AUTO1 Fase 2 non e' in albero (zero `isID` in
+`createAdapter`/`jjform`, con controllo positivo su `Info.tsx:177`) e un'altra corsia
+tiene non committati `jjform/index.ts` e `ReferencePicker.tsx`, due file del perimetro.
+**Prompt document name**: CRUD2 cardinalita' e aggancio (in chat) — 2026-09-01 17:10
+
+
 ## 2026-09-01 — feat(form): una tinta per alternativa sulle pill dei riferimenti (PILL)
 **Prompt**: «colora le pill», chiarito in chat: schema con molti colori, distinti fra
 opzioni **alternative fra loro**; ciclatura oltre la palette; perimetro alle sole pill
