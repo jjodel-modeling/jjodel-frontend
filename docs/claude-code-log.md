@@ -2,6 +2,41 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-09-01 — feat(form): una tinta per alternativa sulle pill dei riferimenti (PILL)
+**Prompt**: «colora le pill», chiarito in chat: schema con molti colori, distinti fra
+opzioni **alternative fra loro**; ciclatura oltre la palette; perimetro alle sole pill
+della form IR; slot per posizione nella lista di opzioni. Perimetro di 12 file elencato e
+confermato prima di scrivere (regola 19).
+**Files touched**: `styles/tokens/{_colors-light,_colors-dark}.scss`,
+`jjform/{optionColor.ts (nuovo), index.ts}`,
+`editor-v2/viewpoint/ir/{IRFormField.tsx, irFormStyle.scss}`,
+`editor-v2/viewpoint/ir/widgets/{widgetProps.ts, ChipInputWidget.tsx, ReferenceWidget.tsx,
+ReferencePicker.tsx, formWidgets.scss}`, `jjform/__tests__/optionColor.test.ts` (nuovo).
+La sonda `scripts/smoke/_tmp_pill_verify.ts` non e' committata (`.gitignore:66`).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `npx tsc --noEmit` **33** su output COMPLETO (123 righe, exit 2 =
+baseline invariata); `npm run build` exit **0**, solo il warning di chunk noto; suite
+`jjform/__tests__/` + `viewpoint/ir/__tests__/` **775/775**. Unita' nuova (16 casi) provata
+contro QUATTRO mutazioni (slot fisso a 1, fallback a 1 invece di `null`, indice ripartito
+per gruppo, spazio iniziale della classe tolto): 8/2/1/2 rossi, verde al ripristino.
+**Out-of-scope changes**: no.
+**Layer Impact Report**: not-required — nessun file di §3.1, zero creatori D, zero
+`TRANSACTION`, nessuna scrittura verso lo store: si aggiunge una classe e si leggono token.
+**Smoke visivo**: passato — `_tmp_pill_verify.ts` **16/16**, zero errori di pagina, chiaro e
+scuro, su nove candidati messi in scena. Sette colori distinti sulle prime sette
+alternative, l'ottava riprende la prima, il filtro non ridipinge le superstiti, un valore
+fuori lista non prende slot.
+**Notes**: **sette** slot e non otto: escluse le tre famiglie di stato del DS, otto tinte
+ordinate non superano i pavimenti (validatore dataviz: CVD ΔE 12.5 / 10.4, normale 21.7 /
+17.8). Testo al passo 700 e non 600 — a 600 quattro slot stavano sotto AA sulla propria
+velatura, il cyan committato compreso (3.54:1). Due errori della sonda corretti:
+`LModel.addObject` non crea, e il fixture produce OMONIMI (confronto per sottosequenza).
+**Prompt document name**: «colora le pill» (in chat) — 2026-09-01 16:30
+
+
+
 ## 2026-09-01 — fix(manager): l'ego-diagramma si centra e respira (EGO1)
 **Prompt**: MICRO in chat, con screenshot del 01-09. Nella riga espansa il grafo
 dell'ego-diagram e' appoggiato a sinistra anche con spazio libero a destra, e il respiro

@@ -237,6 +237,9 @@ export {
     rootMenu,
 } from './outline';
 
+export type { OptionGroupLike, OptionLike } from './optionColor';
+export { OPTION_COLOR_SLOTS, optionSlot, optionSlotClass } from './optionColor';
+
 export type {
     Density,
     DensityScale,

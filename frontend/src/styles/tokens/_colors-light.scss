@@ -490,4 +490,48 @@ $gradient-hover: linear-gradient(180deg, $slate-100 0%, $slate-200 100%);
   --color-inode-selected-badge-fg: #0e7490;          /* cyan-700 */
   --color-inode-selected-ring: rgba(6, 182, 212, 0.18);
 
+  /* ── Option colours — one slot per alternative (TXT/pill, 2026-09-01) ────────
+     Seven slots, in fixed order, for the reference pills of the IR form: two
+     options a user is choosing BETWEEN never wear the same colour. Seven and not
+     eight because three hue families are reserved for state — red-500
+     (--color-error), amber-500 (--color-warning), green-500 (--color-success) —
+     and with those out, eight ordered hues no longer clear the separation floors.
+     Past the seventh the assignment cycles: `jjform/optionColor.ts` owns that, and
+     says why.
+
+     Measured with the dataviz validator, adjacent pairs, both modes: worst CVD
+     ΔE 12.5 light / 10.4 dark (target >= 8), worst normal-vision ΔE 21.7 light /
+     17.8 dark (floor 15). Text contrast on its own tint is >= 4.88:1 light and
+     >= 5.6:1 dark, so the label passes AA at small size in every slot.
+
+     The foreground is the 700 step, not the 600 the separation was first searched
+     on: at 600 four slots sat between 3.35 and 3.84:1 on their tint, below AA —
+     the committed --color-inode-ref-fg among them, at 3.54. Slot 1 is therefore
+     the cyan FAMILY of the canvas pill, one step darker, and not its exact hex.
+     Declared: the validator marks cyan-700 and teal-700 just under its chroma
+     floor (0.094 / 0.086 vs 0.1). That gate is written for a chart FILL that would
+     read gray on its own; here the hue carries text, border and tint together. */
+  --color-opt-1-bg: #ecfeff;      /* cyan-50 */
+  --color-opt-1-border: #a5f3fc;  /* cyan-200 */
+  --color-opt-1-fg: #0e7490;      /* cyan-700 */
+  --color-opt-2-bg: #fff7ed;      /* orange-50 */
+  --color-opt-2-border: #fed7aa;  /* orange-200 */
+  --color-opt-2-fg: #c2410c;      /* orange-700 */
+  --color-opt-3-bg: #f0f9ff;      /* sky-50 */
+  --color-opt-3-border: #bae6fd;  /* sky-200 */
+  --color-opt-3-fg: #0369a1;      /* sky-700 */
+  --color-opt-4-bg: #fdf2f8;      /* pink-50 */
+  --color-opt-4-border: #fbcfe8;  /* pink-200 */
+  --color-opt-4-fg: #be185d;      /* pink-700 */
+  --color-opt-5-bg: #eff6ff;      /* blue-50 */
+  --color-opt-5-border: #bfdbfe;  /* blue-200 */
+  --color-opt-5-fg: #1d4ed8;      /* blue-700 */
+  --color-opt-6-bg: #f0fdfa;      /* teal-50 */
+  --color-opt-6-border: #99f6e4;  /* teal-200 */
+  --color-opt-6-fg: #0f766e;      /* teal-700 */
+  --color-opt-7-bg: #faf5ff;      /* purple-50 */
+  --color-opt-7-border: #e9d5ff;  /* purple-200 */
+  --color-opt-7-fg: #7e22ce;      /* purple-700 */
+
+
 }

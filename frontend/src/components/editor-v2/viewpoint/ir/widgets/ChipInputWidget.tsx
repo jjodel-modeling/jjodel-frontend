@@ -50,7 +50,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { controlClass, controlDecision } from '../../../../../jjform';
+import { controlClass, controlDecision, optionSlotClass } from '../../../../../jjform';
 import type { ExtendedWidgetProps } from './widgetProps';
 
 export function ChipInputWidget(props: ExtendedWidgetProps) {
@@ -102,7 +102,12 @@ export function ChipInputWidget(props: ExtendedWidgetProps) {
         >
             {chips.map((c, i) => (
                 <span
-                    className={`${chipClass}${c.broken ? ` ${chipClass}--broken` : ''}`}
+                    /* The slot rides on the REF pill only: a tag is a value the user typed,
+                       not one of a set of alternatives, so there is nothing to tell apart.
+                       Broken wins over the slot in the stylesheet — a target that does not
+                       resolve is not an alternative either, and `optionSlot` already
+                       refuses it, so the two never contradict each other. */
+                    className={`${chipClass}${c.broken ? ` ${chipClass}--broken` : ''}${isRef ? optionSlotClass(chipClass, c.slot ?? null) : ''}`}
                     key={`${c.key}-${i}`}
                 >
                     {/* The same glyph the read side puts on a reference pill, so the

@@ -588,6 +588,40 @@
     line-height: 1;
 }
 
+/* The colour of the alternative, on the badge of the chosen target. The letter stays
+   what it was — the metaclass initial — and the colour answers a different question:
+   WHICH of the offered targets this is. Base (no slot) keeps the entity tokens above,
+   which is what a pointer outside the option list wears. Seven blocks, and the same
+   reason as `formWidgets.scss`: the variables belong to `styles/tokens/`. */
+.ir-ref__badge--slot-1 {
+    background: var(--color-opt-1-bg);
+    color: var(--color-opt-1-fg);
+}
+.ir-ref__badge--slot-2 {
+    background: var(--color-opt-2-bg);
+    color: var(--color-opt-2-fg);
+}
+.ir-ref__badge--slot-3 {
+    background: var(--color-opt-3-bg);
+    color: var(--color-opt-3-fg);
+}
+.ir-ref__badge--slot-4 {
+    background: var(--color-opt-4-bg);
+    color: var(--color-opt-4-fg);
+}
+.ir-ref__badge--slot-5 {
+    background: var(--color-opt-5-bg);
+    color: var(--color-opt-5-fg);
+}
+.ir-ref__badge--slot-6 {
+    background: var(--color-opt-6-bg);
+    color: var(--color-opt-6-fg);
+}
+.ir-ref__badge--slot-7 {
+    background: var(--color-opt-7-bg);
+    color: var(--color-opt-7-fg);
+}
+
 .ir-ref__name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ir-ref__link { flex: 0 0 auto; font-size: 12px; color: var(--color-form-muted); }
 .ir-ref__placeholder { flex: 1 1 auto; min-width: 0; color: var(--color-form-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -678,6 +712,39 @@
     font-size: var(--text-2xs);
     font-weight: var(--font-semibold);
     line-height: 1;
+}
+
+/* The same seven slots in the open list, so the colour the row wears is the colour the
+   pill will wear once it is picked — the recognition is the whole point of colouring
+   the alternatives. The slot is read off the UNFILTERED option list (see the memo in
+   `ReferencePicker`), so typing in the search box never repaints the survivors. */
+.ir-picker__badge--slot-1 {
+    background: var(--color-opt-1-bg);
+    color: var(--color-opt-1-fg);
+}
+.ir-picker__badge--slot-2 {
+    background: var(--color-opt-2-bg);
+    color: var(--color-opt-2-fg);
+}
+.ir-picker__badge--slot-3 {
+    background: var(--color-opt-3-bg);
+    color: var(--color-opt-3-fg);
+}
+.ir-picker__badge--slot-4 {
+    background: var(--color-opt-4-bg);
+    color: var(--color-opt-4-fg);
+}
+.ir-picker__badge--slot-5 {
+    background: var(--color-opt-5-bg);
+    color: var(--color-opt-5-fg);
+}
+.ir-picker__badge--slot-6 {
+    background: var(--color-opt-6-bg);
+    color: var(--color-opt-6-fg);
+}
+.ir-picker__badge--slot-7 {
+    background: var(--color-opt-7-bg);
+    color: var(--color-opt-7-fg);
 }
 
 .ir-picker__name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

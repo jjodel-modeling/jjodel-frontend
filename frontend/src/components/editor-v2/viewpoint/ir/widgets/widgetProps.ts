@@ -28,6 +28,15 @@ export interface WidgetChip {
     readonly label: string;
     /** The pointer no longer resolves. Drawn as the read side draws it: not navigable. */
     readonly broken?: boolean;
+    /**
+     * Colour slot of this value among the field's OPTIONS, 1-based, or absent when the
+     * value is not one of them (a dangling pointer, an emptied offer).
+     *
+     * Resolved by the host, like the label and for the same rule: a widget here never
+     * reads the L layer, and the option list is the host's. `jjform/optionColor.ts`
+     * owns the assignment and the reason it cycles.
+     */
+    readonly slot?: number;
 }
 
 export interface ExtendedWidgetProps {

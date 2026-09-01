@@ -18,6 +18,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { computeListStyle } from '../../../components/InlineObjectSelect';
 import { metaclassLetter } from './ReferenceWidget';
+import { optionSlot, optionSlotClass } from '../../../../../jjform';
 import type { FormFieldOptionGroup } from '../useFormWidgets';
 
 export interface ReferenceCandidate {
@@ -60,6 +61,23 @@ export function ReferencePicker(props: ReferencePickerProps) {
         }
         return out;
     }, [options, multiGroup]);
+
+    /**
+     * The colour slot of every candidate, taken on the UNFILTERED list.
+     *
+     * Typing in the search box must not repaint the rows that survive it: the colour
+     * belongs to the option, not to its position among the matches. Computing it off
+     * `filtered` would give the first match slot 1 on every keystroke, which is the
+     * one thing a categorical colour may never do.
+     */
+    const slots = useMemo(() => {
+        const out = new Map<string, number>();
+        for (const c of all) {
+            const slot = optionSlot(options, c.value);
+            if (slot) out.set(c.value, slot);
+        }
+        return out;
+    }, [all, options]);
 
     const filtered = useMemo(() => {
         const q = query.trim().toLowerCase();
@@ -141,7 +159,10 @@ export function ReferencePicker(props: ReferencePickerProps) {
                         {c.value === NONE
                             ? <span className="ir-picker__none">(none)</span>
                             : <>
-                                <span className="ir-picker__badge" aria-hidden="true">{metaclassLetter(c.value, typeName)}</span>
+                                <span
+                                    className={`ir-picker__badge${optionSlotClass('ir-picker__badge', slots.get(c.value) ?? null)}`}
+                                    aria-hidden="true"
+                                >{metaclassLetter(c.value, typeName)}</span>
                                 <span className="ir-picker__name">{c.label}</span>
                                 {c.group && <span className="ir-picker__group">{c.group}</span>}
                             </>}

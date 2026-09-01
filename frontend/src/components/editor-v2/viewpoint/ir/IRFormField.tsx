@@ -80,6 +80,7 @@ import ListWidget from './widgets/ListWidget';
 import ChipsWidget from './widgets/ChipsWidget';
 import ReferencePicker from './widgets/ReferencePicker';
 import { extendedWidget, type WidgetChip } from './widgets';
+import { optionSlot } from '../../../../jjform';
 
 /** Re-exported so the widgets and the host keep importing it from here, as in Slice 1a;
  *  the single definition now lives with the projection that produces them. */
@@ -265,14 +266,18 @@ export function IRFormField({ objectId, field, offer, diagnostics, dirty, onComm
                 // `displayValue` falls through to the pointer itself when nothing resolves,
                 // which is exactly the state the read side draws as broken.
                 const broken = label === v;
-                out.push({ key: v, label, broken });
+                // The colour slot is the host's to resolve, for the rule the widget bag
+                // states: a widget never reads the L layer, and the option list is here.
+                // A target that is not among the options gets no slot and no colour —
+                // `optionSlot` answers `null`, and a broken pointer is exactly that case.
+                out.push({ key: v, label, broken, slot: optionSlot(field.options, v) ?? undefined });
             } else {
                 out.push({ key: `${i}`, label: String(v) });
             }
             idx.push(i);
         });
         return { chips: out, chipIndex: idx };
-    }, [field.values, isPointerValued]);
+    }, [field.values, field.options, isPointerValued]);
 
     /** Anchor of the picker the chip input asked for, or null when it is closed. The same
      *  popover `ReferenceWidget` and `ListWidget` open, mounted here for the reason FL3

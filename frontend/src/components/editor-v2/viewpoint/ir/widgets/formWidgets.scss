@@ -374,6 +374,56 @@
     > i { flex: none; font-size: 11px; }
 }
 
+/* --- one colour per alternative ---------------------------------------------
+   Seven slots, assigned by `jjform/optionColor.ts` on the field's option list: two
+   targets the user is choosing BETWEEN never come out the same colour. The pill above
+   keeps the reference tokens as its base, which is what a value with no slot wears —
+   an option list that could not be built, or a pointer that is not among the offers.
+
+   Written as seven blocks rather than one rule over a custom property set on the
+   element: the variables of this system live in `styles/tokens/` (CLAUDE.md rule 28),
+   and the slot is a class the host already knows how to compose.
+
+   These come BEFORE `--broken` on purpose. A dangling pointer is not an alternative
+   either, and must keep the broken treatment whatever slot it was handed; at equal
+   specificity the later rule wins, so the order is the guard.
+   --------------------------------------------------------------------------- */
+.ir-chipinput__pill--slot-1 {
+    background: var(--color-opt-1-bg);
+    border-color: var(--color-opt-1-border);
+    color: var(--color-opt-1-fg);
+}
+.ir-chipinput__pill--slot-2 {
+    background: var(--color-opt-2-bg);
+    border-color: var(--color-opt-2-border);
+    color: var(--color-opt-2-fg);
+}
+.ir-chipinput__pill--slot-3 {
+    background: var(--color-opt-3-bg);
+    border-color: var(--color-opt-3-border);
+    color: var(--color-opt-3-fg);
+}
+.ir-chipinput__pill--slot-4 {
+    background: var(--color-opt-4-bg);
+    border-color: var(--color-opt-4-border);
+    color: var(--color-opt-4-fg);
+}
+.ir-chipinput__pill--slot-5 {
+    background: var(--color-opt-5-bg);
+    border-color: var(--color-opt-5-border);
+    color: var(--color-opt-5-fg);
+}
+.ir-chipinput__pill--slot-6 {
+    background: var(--color-opt-6-bg);
+    border-color: var(--color-opt-6-border);
+    color: var(--color-opt-6-fg);
+}
+.ir-chipinput__pill--slot-7 {
+    background: var(--color-opt-7-bg);
+    border-color: var(--color-opt-7-border);
+    color: var(--color-opt-7-fg);
+}
+
 /* A dangling pointer is not navigable, so it does not wear the navigation colour —
    the rule RowValue.BrokenRef states, applied to the write side. */
 .ir-chipinput__pill--broken {

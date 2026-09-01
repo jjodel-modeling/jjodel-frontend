@@ -24,6 +24,7 @@
 
 import { useCallback, useRef, useState } from 'react';
 import { LPointerTargetable } from '../../../../../joiner';
+import { optionSlot, optionSlotClass } from '../../../../../jjform';
 import type { FormFieldOptionGroup } from '../useFormWidgets';
 import ReferencePicker from './ReferencePicker';
 
@@ -104,6 +105,13 @@ export function ReferenceWidget(props: ReferenceWidgetProps) {
 
     const name = referenceName(value);
     const empty = !name;
+    /* The badge, and only the badge, carries the colour. The button is a control the
+       size of the field: tinting all of it would put a coloured bar across the form and
+       compete with the diagnostic borders the field already uses. The letter says WHAT
+       kind of thing this is, the colour says WHICH of the alternatives it is, and the
+       two ride the same 18px square. Options and not `openOptions`: the badge is
+       coloured whether or not the picker has ever been opened. */
+    const badgeSlot = optionSlot(options, value);
 
     return (
         <>
@@ -126,7 +134,10 @@ export function ReferenceWidget(props: ReferenceWidgetProps) {
                     </>
                 ) : (
                     <>
-                        <span className="ir-ref__badge" aria-hidden="true">{metaclassLetter(value, typeName)}</span>
+                        <span
+                            className={`ir-ref__badge${optionSlotClass('ir-ref__badge', badgeSlot)}`}
+                            aria-hidden="true"
+                        >{metaclassLetter(value, typeName)}</span>
                         <span className="ir-ref__name">{name}</span>
                     </>
                 )}
