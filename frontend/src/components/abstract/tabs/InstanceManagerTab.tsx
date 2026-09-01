@@ -118,6 +118,7 @@ import {
     autoHiddenColumnKeys,
     columnToggles,
     discriminantEnum,
+    duplicateNameColumnKeys,
     emptyColumnKeys,
     filterBySegment,
     filterRowsByName,
@@ -1347,10 +1348,25 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
         [classShape, shapeCtx],
     );
 
-    /** Le colonne interamente vuote, misurate su TUTTE le righe della metaclasse.
-     *  Non sulle filtrate: una misura che dipendesse dal filtro farebbe cambiare
-     *  forma alla tabella a ogni battuta. */
-    const hiddenColumnKeys = useMemo(() => emptyColumnKeys(rows, columns), [rows, columns]);
+    /** La colonna `name` che RIPETE la colonna fissa dei nomi su ogni riga
+     *  (10k punto 4). Tenuta a parte da `hiddenColumnKeys` solo per poterne dire
+     *  la ragione: nel canale della riduzione ci entra subito qui sotto. */
+    const duplicateKeys = useMemo(() => duplicateNameColumnKeys(rows, columns), [rows, columns]);
+
+    /** Le colonne che la tabella riduce DA SE': quelle interamente vuote, piu' il
+     *  doppione dei nomi. Misurate su TUTTE le righe della metaclasse, non sulle
+     *  filtrate: una misura che dipendesse dal filtro farebbe cambiare forma alla
+     *  tabella a ogni battuta.
+     *
+     *  UN canale solo, e non due: `shownColumnsWith`, `autoHiddenColumnKeys` e
+     *  `columnToggles` leggono tutti questo array, quindi l'override del pannello
+     *  vince sul doppione esattamente come vince sulle vuote, e l'indicatore lo
+     *  conta come auto-nascosto finche' l'utente non si esprime. Un secondo array
+     *  avrebbe voluto dire un secondo posto in cui una colonna puo' sparire. */
+    const hiddenColumnKeys = useMemo(
+        () => [...emptyColumnKeys(rows, columns), ...duplicateKeys],
+        [rows, columns, duplicateKeys],
+    );
 
     /** Gli override della metaclasse corrente. `{}` quando non ci si e' ancora
      *  espressi, che e' il caso in cui la riduzione automatica vale intera. */
@@ -1364,7 +1380,7 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
         [columns, hiddenColumnKeys, overrides],
     );
 
-    /** Quelle che l'indicatore dichiara: le vuote su cui l'utente TACE. */
+    /** Quelle che l'indicatore dichiara: le auto-nascoste su cui l'utente TACE. */
     const autoHiddenKeys = useMemo(
         () => autoHiddenColumnKeys(hiddenColumnKeys, overrides),
         [hiddenColumnKeys, overrides],
@@ -1372,8 +1388,8 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
 
     /** Le voci del pannello. `name` in testa, bloccata. */
     const toggles = useMemo(
-        () => columnToggles(columns, hiddenColumnKeys, overrides),
-        [columns, hiddenColumnKeys, overrides],
+        () => columnToggles(columns, hiddenColumnKeys, overrides, duplicateKeys),
+        [columns, hiddenColumnKeys, overrides, duplicateKeys],
     );
 
     /** Una spunta. Scrive l'override della SOLA metaclasse corrente, e scrive
@@ -2036,30 +2052,40 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                 fissi — perche' scegliere COSA guardare e' l'altro asse, e
                 impilarlo sotto la form vorrebbe dire scorrere per cambiare riga. */}
             <div className="instance-manager__main">
+            {/* ── La testata (10c, uscita dalla card in 10k) ──────────────────
+                Il titolo e' il NOME della metaclasse a 24px, non l'eyebrow con
+                il conteggio appiccicato: il conteggio e' sceso nel footer, che
+                e' il posto in cui una tabella dice quante righe ha. Il
+                sottotitolo dice il MODELLO e la taglia della collezione.
+
+                10d — cade «Created from the container's form»: diceva quasi
+                la stessa cosa della frase di `newInstanceReason` sessanta
+                pixel piu' sotto (punto aperto del referto 10c, arbitrato).
+                Il conteggio e' `rows.length`, NON filtrato: il footer conta
+                le visibili, e i due numeri coincidono solo a filtri spenti —
+                quanto e' grande la collezione e quanto ne resta sono due
+                domande diverse.
+
+                10k punto 2 — la testata ESCE dalla card e sale sul fondo desk,
+                sopra di essa. Il titolo nomina la METACLASSE, cioe' il soggetto
+                dell'intera colonna: dentro la card diceva «questa tabella si
+                chiama State», mentre sul desk dice «stiamo guardando State», ed
+                e' la seconda cosa che e' vera anche della form sotto. La card
+                comincia dalla toolbar, che e' dove comincia la tabella.
+
+                Resta figlia di `__main`, quindi la gronda e il `gap` del desk
+                la spaziano dalla card: nessun margine proprio (vedi il foglio). */}
+            {selectedClass && (
+                <header className="instance-manager__head">
+                    <h2 className="instance-manager__title">{selectedClass.name}</h2>
+                    <p className="instance-manager__provenance">
+                        {modelName} · {rows.length} instance{rows.length === 1 ? '' : 's'}
+                    </p>
+                </header>
+            )}
+
             {/* ── The collection: a table of the selected metaclass ────────── */}
             <section className="instance-manager__pane instance-manager__pane--table">
-                {/* ── La testata (10c) ────────────────────────────────────────
-                    Il titolo e' il NOME della metaclasse a 24px, non l'eyebrow con
-                    il conteggio appiccicato: il conteggio e' sceso nel footer, che
-                    e' il posto in cui una tabella dice quante righe ha. Il
-                    sottotitolo dice il MODELLO e la taglia della collezione.
-
-                    10d — cade «Created from the container's form»: diceva quasi
-                    la stessa cosa della frase di `newInstanceReason` sessanta
-                    pixel piu' sotto (punto aperto del referto 10c, arbitrato).
-                    Il conteggio e' `rows.length`, NON filtrato: il footer conta
-                    le visibili, e i due numeri coincidono solo a filtri spenti —
-                    quanto e' grande la collezione e quanto ne resta sono due
-                    domande diverse. */}
-                {selectedClass && (
-                    <header className="instance-manager__head">
-                        <h2 className="instance-manager__title">{selectedClass.name}</h2>
-                        <p className="instance-manager__provenance">
-                            {modelName} · {rows.length} instance{rows.length === 1 ? '' : 's'}
-                        </p>
-                    </header>
-                )}
-
                 {/* 10j — la riga di riduzioni si spegne INTERA a collezione vuota.
                     Non `disabled`: un filtro spento su zero righe dichiara un
                     limite che non c'e', ed e' lo stesso argomento con cui 10c ha
@@ -2125,15 +2151,28 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                             NON-OVERRIDATE. Con il pannello, una vuota puo' essere
                             sullo schermo per scelta, e continuare a contarla qui
                             direbbe «nascosta» di una colonna che si vede. */}
-                        {autoHiddenKeys.length > 0 && (
-                            <span
-                                className="instance-manager__hidden-cols"
-                                title={`Empty on every instance: ${autoHiddenKeys.join(', ')}`}
-                            >
-                                <i className="bi bi-eye-slash" aria-hidden="true" />
-                                {autoHiddenKeys.length} empty column{autoHiddenKeys.length === 1 ? '' : 's'} hidden
-                            </span>
-                        )}
+                        {/* 10k — la parola «empty» resta solo quando e' VERA di
+                            tutte. Con il doppione dei nomi fra le auto-nascoste
+                            la frase generalizza, e il `title` porta le due
+                            ragioni separate: dire «empty» di una colonna piena
+                            di nomi sarebbe la nota che mente al posto della
+                            colonna che spariva in silenzio. */}
+                        {autoHiddenKeys.length > 0 && (() => {
+                            const dup = autoHiddenKeys.filter(k => duplicateKeys.includes(k));
+                            const vuote = autoHiddenKeys.filter(k => !duplicateKeys.includes(k));
+                            const why = [
+                                vuote.length ? `Empty on every instance: ${vuote.join(', ')}` : null,
+                                dup.length ? `Same as the name column: ${dup.join(', ')}` : null,
+                            ].filter(Boolean).join('\n');
+                            return (
+                                <span className="instance-manager__hidden-cols" title={why}>
+                                    <i className="bi bi-eye-slash" aria-hidden="true" />
+                                    {dup.length === 0
+                                        ? <>{autoHiddenKeys.length} empty column{autoHiddenKeys.length === 1 ? '' : 's'} hidden</>
+                                        : <>{autoHiddenKeys.length} column{autoHiddenKeys.length === 1 ? '' : 's'} hidden</>}
+                                </span>
+                            );
+                        })()}
 
                         {/* Il pannello Columns (10i).
                             Sta accanto all'indicatore perche' e' il gesto che
@@ -2168,8 +2207,9 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                                                     + (t.locked ? ' instance-manager__columns-item--locked' : '')}
                                                 title={t.locked
                                                     ? 'The name column is always shown'
-                                                    : t.empty ? 'Empty on every instance — check to show it anyway'
-                                                        : undefined}
+                                                    : t.duplicate ? 'Same value as the name column on every instance — check to show it anyway'
+                                                        : t.empty ? 'Empty on every instance — check to show it anyway'
+                                                            : undefined}
                                             >
                                                 <input
                                                     type="checkbox"
@@ -2180,6 +2220,9 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                                                 {t.label}
                                                 {t.empty && (
                                                     <span className="instance-manager__columns-empty">empty</span>
+                                                )}
+                                                {t.duplicate && (
+                                                    <span className="instance-manager__columns-empty">same as name</span>
                                                 )}
                                             </label>
                                         ))}
@@ -2683,9 +2726,29 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                             three components this tab HOSTS unchanged (2a) and that the
                             canvas rail mounts too. The form lists the children; this
                             bar is the create the module comment of `ListWidget` defers. */}
+                        {/* 10k punto 6 — l'eyebrow «Add contained» E' ANDATO VIA.
+                            Erano due sezioni per lo stesso slot: la CHILDREN che
+                            `IRForm` rende (i valori) e questa (la create), una
+                            sotto l'altra, ciascuna con la propria intestazione a
+                            nominare `substates`. Due titoli per un argomento sono
+                            due argomenti, e chi legge cerca la differenza.
+
+                            Sparisce l'INTESTAZIONE, non il blocco: la barra resta
+                            dov'e', perde il proprio titolo e il proprio filetto
+                            (vedi il foglio) e si legge come la coda della sezione
+                            sopra — «i figli, e come aggiungerne uno». La CTA
+                            continua a nominare la metaclasse figlia, che e' la
+                            sola parola che l'intestazione portava e che qui
+                            serviva davvero.
+
+                            Non si tocca `IRForm`: la sezione CHILDREN e' sua, la
+                            monta anche il rail del canvas, e darle una CTA
+                            vorrebbe dire infilare una callback per tre componenti
+                            che questo tab OSPITA invariati (2a) — la stessa
+                            cucitura, e la stessa ragione, che il commento della
+                            barra qui sotto gia' dichiara. */}
                         {childSlots.length > 0 && (
                             <div className="instance-manager__children">
-                                <h3 className="instance-manager__eyebrow">Add contained</h3>
                                 <ul className="instance-manager__list">
                                     {childSlots.map(({ child, count, reason }) => (
                                         <li className="instance-manager__child" key={child.key}>

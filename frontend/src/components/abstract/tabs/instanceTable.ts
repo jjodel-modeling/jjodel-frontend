@@ -355,6 +355,41 @@ export function emptyColumnKeys(rows: TableRow[], columns: TableColumn[]): strin
         .map(col => col.key);
 }
 
+/**
+ * La colonna che RIPETE la colonna fissa dei nomi — 10k punto 4.
+ *
+ * `tableFeatures` restituisce ogni attributo, `name` compreso, e in un metamodello
+ * che dichiara `name : EString` la tabella lo stampa DUE volte: la colonna fissa,
+ * che nessuno puo' spegnere, e la feature accanto. Fino a 10i il doppione era un
+ * difetto noto e dichiarato fuori perimetro (vedi il commento di `columnToggles`);
+ * qui si chiude, e si chiude PER COINCIDENZA e non per nome — la colonna sparisce
+ * quando dice davvero la stessa cosa, e resta quando non la dice.
+ *
+ * La coincidenza e' verificata su OGNI riga, come `emptyColumnKeys` verifica la
+ * vuotezza, e per la stessa ragione: una riduzione che dipendesse da qualche riga
+ * cambierebbe forma al variare del filtro. Basta una riga in cui i due valori
+ * divergono — uno slot `name` mai scritto, un rename applicato a meta' — e la
+ * colonna resta, perche' li' porta un'informazione che la fissa non ha.
+ *
+ * `count === 1` e' parte del confronto: uno slot multivalore che PER CASO ha come
+ * primo valore il nome non e' un doppione, e' una collezione.
+ *
+ * Il canale e' quello di `emptyColumnKeys` — le chiavi finiscono in `hiddenKeys`
+ * insieme alle vuote — perche' il gesto che le governa dev'essere lo stesso:
+ * l'override del pannello Columns vince su entrambe le riduzioni, e
+ * `autoHiddenColumnKeys` conta entrambe finche' l'utente non si esprime. Due
+ * canali avrebbero voluto dire due posti in cui una colonna puo' essere nascosta.
+ */
+export function duplicateNameColumnKeys(rows: TableRow[], columns: TableColumn[]): string[] {
+    if (rows.length === 0) return [];
+    if (!columns.some(col => col.key === NAME_COLUMN_KEY)) return [];
+    const same = rows.every(r => {
+        const c = r.cells[NAME_COLUMN_KEY];
+        return !!c && c.count === 1 && !c.broken && !c.missingRequired && c.text === r.name;
+    });
+    return same ? [NAME_COLUMN_KEY] : [];
+}
+
 /** Le colonne che restano, nell'ordine originale. */
 export function visibleColumns(columns: TableColumn[], hiddenKeys: string[]): TableColumn[] {
     if (hiddenKeys.length === 0) return columns;
@@ -432,6 +467,12 @@ export interface ColumnToggle {
      *  vera anche quando l'utente l'ha forzata visibile — il fatto sul modello
      *  non cambia perche' la si guarda. */
     empty: boolean;
+    /** Ripete la colonna fissa dei nomi su ogni istanza (10k punto 4). Opzionale
+     *  perche' l'interfaccia e' esportata e le proprieta' si aggiungono, non si
+     *  cambiano (Regola 11); assente vale `false`. Distinta da `empty` perche'
+     *  sono due ragioni diverse per la stessa riduzione, e la nota accanto
+     *  all'etichetta deve dire QUALE delle due. */
+    duplicate?: boolean;
     /** Non disattivabile (`name`). */
     locked: boolean;
 }
@@ -445,21 +486,27 @@ export function columnToggles(
     columns: TableColumn[],
     hiddenKeys: string[],
     overrides: ColumnOverrides,
+    duplicateKeys: string[] = [],
 ): ColumnToggle[] {
     const hidden = new Set(hiddenKeys);
+    // Le doppione sono un SOTTOINSIEME delle nascoste, non un secondo elenco: il
+    // chiamante le ha gia' unite in `hiddenKeys`. Qui servono solo a dire quale
+    // delle due ragioni vale, per la nota accanto all'etichetta.
+    const dup = new Set(duplicateKeys);
     /* La voce bloccata rappresenta la colonna FISSA dei nomi, quella che la
      * tabella stampa fuori da `shownColumns` e che nessuno puo' spegnere: e'
      * li' per dire che c'e', non per offrire un gesto.
      *
      * Ma `tableFeatures` restituisce ogni attributo, `name` compreso, e in un
      * metamodello che dichiara `name : EString` la tabella lo stampa DUE volte
-     * — la fissa e la feature. Quel doppione e' un difetto noto e fuori dal
-     * perimetro di 10i (misurato il 2026-09-01: la fixture di 10h lo mostra
-     * identico prima e dopo la slice). Qui la voce sintetica si tira indietro
-     * quando la feature c'e', per non aggiungere al pannello una seconda riga
-     * che dice «name»: quella che resta governa il doppione, e la colonna
-     * fissa — che e' cio' che «name non disattivabile» protegge — resta a
-     * schermo comunque, perche' non passa da `shownColumns`. */
+     * — la fissa e la feature. Quel doppione era un difetto noto e fuori dal
+     * perimetro di 10i; lo chiude 10k con `duplicateNameColumnKeys`, che porta
+     * la chiave nello stesso `hiddenKeys` delle vuote. Qui la voce sintetica si
+     * tira indietro quando la feature c'e', per non aggiungere al pannello una
+     * seconda riga che dice «name»: quella che resta governa il doppione — ed e'
+     * il gesto con cui lo si rimette a schermo — e la colonna fissa, che e' cio'
+     * che «name non disattivabile» protegge, resta comunque, perche' non passa
+     * da `shownColumns`. */
     const declared = columns.some(col => col.key === NAME_COLUMN_KEY);
     const synthetic: ColumnToggle[] = declared ? [] : [
         { key: NAME_COLUMN_KEY, label: NAME_COLUMN_KEY, checked: true, empty: false, locked: true },
@@ -470,7 +517,11 @@ export function columnToggles(
             key: col.key,
             label: col.label,
             checked: isColumnVisible(col.key, hiddenKeys, overrides),
-            empty: hidden.has(col.key),
+            // `empty` resta cio' che era: vuota su ogni istanza. Una doppione non
+            // e' vuota — dire «empty» di una colonna piena di valori sarebbe la
+            // nota che mente al posto della colonna che spariva in silenzio.
+            empty: hidden.has(col.key) && !dup.has(col.key),
+            duplicate: dup.has(col.key),
             locked: false,
         })),
     ];

@@ -240,8 +240,11 @@
         color: var(--color-form-label);
         cursor: pointer;
         position: relative;
+        /* 10k punto 9 — stesso token e stessa durata della riga di tabella: le
+           righe del rail e quelle della tabella sono la stessa specie di gesto. */
+        transition: background-color 150ms ease-out;
 
-        &:hover { background: var(--color-bg-tertiary); }
+        &:hover { background: var(--color-bg-hover); }
 
         &--selected,
         &--selected:hover {
@@ -348,9 +351,26 @@
        Il titolo a 24px in sentence case: e' il nome della metaclasse com'e'
        scritto nel metamodello, quindi NESSUN `text-transform`. Una regola che lo
        mettesse in maiuscolo direbbe una parola che il metamodello non ha. */
+    /* 10k punto 2 — la testata e' uscita dalla card e vive sul fondo desk,
+       sopra di essa. Tre conseguenze, tutte qui:
+
+       `margin-bottom` va a ZERO. Prima separava la testata dalla toolbar dentro
+       la stessa card; ora fra testata e card c'e' il `gap: 12px` di `__main`, e
+       tenere il margine avrebbe sommato i due in 24px senza che nessuno dei due
+       lo dicesse.
+
+       Il cinturino a 1300px e' lo STESSO delle due card (10e). Senza, la testata
+       si allineerebbe al bordo del desk mentre le card sono centrate: sopra i
+       1300px di viewport il titolo scivolerebbe a sinistra rispetto alla tabella
+       che nomina.
+
+       `flex-shrink: 0` resta: `__main` e' una colonna flex, e una testata di due
+       righe e' la prima cosa che si comprimerebbe. */
     &__head {
         flex-shrink: 0;
-        margin-bottom: 12px;
+        width: 100%;
+        max-width: 1300px;
+        margin: 0 auto;
     }
 
     &__title {
@@ -389,6 +409,8 @@
         font-size: var(--text-xs);
         color: var(--color-form-muted);
         cursor: pointer;
+        /* 10k punto 9 — anche il colore, perche' il segmento attivo lo cambia. */
+        transition: background-color 150ms ease-out, color 150ms ease-out;
 
         &:hover { background: var(--color-bg-tertiary); }
         &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: -1px; }
@@ -439,6 +461,8 @@
         font-size: 12px;
         color: var(--color-form-label);
         cursor: pointer;
+        /* 10k punto 9 — 150ms ease-out sulle sole proprieta' che l'hover cambia. */
+        transition: background-color 150ms ease-out;
 
         &:hover { background: var(--color-bg-tertiary); }
         &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: -1px; }
@@ -527,6 +551,9 @@
            `inherit` la riallinea alla label. */
         i.bi, i.bi:hover { color: inherit; }
 
+        /* 10k punto 9. */
+        transition: background-color 150ms ease-out;
+
         &:hover { background: var(--color-bg-tertiary); }
         &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: -1px; }
     }
@@ -580,6 +607,8 @@
         background: var(--color-form-surface);
         color: var(--color-form-label);
         cursor: pointer;
+        /* 10k punto 9. */
+        transition: background-color 150ms ease-out, opacity 150ms ease-out;
 
         &:hover:not(:disabled) { background: var(--color-bg-tertiary); }
         &:disabled { opacity: 0.4; cursor: default; }
@@ -719,11 +748,23 @@
             color: var(--color-form-muted);
         }
 
+        /* 10k punto 9 — l'hover di riga passa a `--color-bg-hover` e smette di
+           scattare. Il token e' quello che il nodo dell'outline gia' porta da
+           10e, con la ragione scritta li': `--color-bg-hover` (#e9eff6) e
+           `--color-bg-tertiary` (#f1f5f9) sono due RUOLI, e questo e' l'hover.
+           Due superfici della stessa colonna che rispondono al puntatore con due
+           grigi diversi dicono di essere due generi di lista.
+
+           150ms ease-out: la stessa durata delle altre transizioni introdotte da
+           questa passata. Solo su `background-color`, non su `all` — un `all` su
+           una riga di tabella anima anche il bordo e la selezione, e la barra di
+           `__td-name` comparirebbe in dissolvenza invece che al click. */
         tbody tr {
             border-bottom: 1px solid var(--color-slate-100);
             cursor: pointer;
+            transition: background-color 150ms ease-out;
 
-            &:hover { background: var(--color-bg-tertiary); }
+            &:hover { background: var(--color-bg-hover); }
         }
     }
 
@@ -876,6 +917,9 @@
            difetto tornerebbe al passaggio del mouse. */
         i.bi, i.bi:hover { color: inherit; }
 
+        /* 10k punto 9 — sul `filter`, che e' cio' che questo hover cambia. */
+        transition: filter 150ms ease-out;
+
         &:hover { filter: brightness(1.1); }
         &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 2px; }
     }
@@ -886,11 +930,18 @@
        the toolbar so it reads as belonging to the collection above it. */
     &__note--reason { margin-top: 8px; }
 
-    /* ── Child slots of the selected instance ─────────────────────────────────── */
+    /* ── Child slots of the selected instance ───────────────────────────────
+       10k punto 6 — via il filetto e via la gronda superiore, con l'eyebrow
+       «Add contained» che il TSX ha tolto. I tre erano cio' che faceva di questa
+       barra una SEZIONE: un titolo, una linea che la staccava da sopra, e lo
+       spazio per respirare da sola. Senza, e' la coda della sezione CHILDREN che
+       la precede — gli stessi slot, e come aggiungerne uno.
+
+       La gronda laterale e inferiore resta: e' l'inset del contenuto della card,
+       lo stesso che `__form-inner` da' a tutto il resto. */
     &__children {
         flex-shrink: 0;
-        padding: 14px;
-        border-top: 1px solid var(--color-form-border);
+        padding: 0 14px 14px;
     }
 
     &__child {
@@ -1129,6 +1180,8 @@
         color: var(--color-form-muted);
         cursor: pointer;
         opacity: 0;
+        /* 10k punto 9 — il cestino compariva di scatto al passaggio del mouse. */
+        transition: opacity 150ms ease-out, color 150ms ease-out;
 
         &:hover { color: var(--color-error); }
         &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 2px; }
@@ -1337,6 +1390,90 @@
         padding: 0 4px;
 
         input { cursor: pointer; }
+    }
+
+    /* ── 10k punto 1: il checkbox, nel vocabolario del DS ────────────────────
+       Misurato nel giro before: 20x20, `appearance: auto`, zero raggio, zero
+       bordo e la spunta nera del controllo nativo di Chrome — cioe' l'unico
+       controllo di questa superficie che non passa dal sistema. `appearance:
+       none` e' la sola via per ridisegnarlo: il nativo non accetta ne' bordo ne'
+       raggio, e `accent-color` cambia il riempimento ma lascia la misura.
+
+       I tre posti in cui esiste, ed e' un elenco esplicito perche' sono tre e
+       nominarli e' il modo di non prenderne un quarto per sbaglio: la testata
+       (select-all), la riga, e le voci del pannello Columns di 10i.
+
+       `ISHISTORY` in riga NON e' qui, ed e' una constatazione misurata: e'
+       `<i class="bi bi-check-square">`, un glifo reso da `Cell`, non un input.
+       Il prompt chiedeva di dichiararlo se non fosse lo stesso componente.
+
+       Il bordo e' `--color-form-border-strong` (slate-300), che e' il nome con
+       cui QUESTO foglio chiama slate-300 e che ogni suo controllo gia' porta —
+       il `--color-border` del prompt non esiste nel sistema, e i due nomi vicini
+       (`--color-border-primary`, `--color-border-secondary`) sono fra i 15
+       dichiarati due volte con valori diversi.
+
+       Il focus porta DUE anelli, e non e' ridondanza: `outline` e' l'idioma che
+       ogni altro controllo di questa barra usa (`--color-border-focus`, slate-600,
+       visibile), e il ring 3px `--color-accent-subtle` e' quello che il prompt
+       chiede — misurato `rgba(51, 65, 85, 0.06)`, cioe' un alone al 6% che da
+       solo non sarebbe un indicatore di focus accessibile.
+
+       La spunta e' un `::before` in `clip-path`, non un glifo di font: dentro un
+       input non si puo' mettere un figlio, e Bootstrap Icons non ha una via per
+       arrivarci. `transform: scale()` invece di `display` cosi' la transizione
+       del punto 9 ha qualcosa su cui correre. */
+    &__th-pick input[type='checkbox'],
+    &__td-pick input[type='checkbox'],
+    &__columns-item input[type='checkbox'] {
+        appearance: none;
+        -webkit-appearance: none;
+        flex: none;
+        display: inline-grid;
+        place-content: center;
+        width: 16px;
+        height: 16px;
+        margin: 0;
+        border: 1px solid var(--color-form-border-strong);
+        border-radius: 4px;
+        background: var(--color-form-surface);
+        cursor: pointer;
+        transition: background-color 150ms ease-out, border-color 150ms ease-out;
+
+        &::before {
+            content: '';
+            width: 9px;
+            height: 9px;
+            background: var(--color-form-surface);
+            transform: scale(0);
+            transition: transform 150ms ease-out;
+            clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+        }
+
+        &:checked {
+            border-color: var(--color-accent);
+            background: var(--color-accent);
+        }
+
+        &:checked::before { transform: scale(1); }
+
+        /* `:not(:checked)` non e' prudenza: `&:hover:not(:disabled)` pesa (0,3,0)
+           e `&:checked` (0,2,0), quindi senza l'esclusione l'hover VINCE anche
+           su una casella spuntata — misurato nel primo giro after, il bordo di
+           una riga selezionata sotto il puntatore leggeva slate-400 invece dello
+           slate-700 del riempimento. Una casella piena non ha comunque bisogno
+           di un hover: il riempimento e' gia' lo stato piu' forte che ha. */
+        &:hover:not(:disabled):not(:checked) { border-color: var(--color-border-hover); }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-border-focus);
+            outline-offset: 1px;
+            box-shadow: 0 0 0 3px var(--color-accent-subtle);
+        }
+
+        /* La voce `name` del pannello, che 10i tiene bloccata e NON spenta:
+           resta leggibile, e il cursore dice che non e' un gesto. */
+        &:disabled { opacity: 0.5; cursor: default; }
     }
 
     /** A row in the selection that is not the subject: present, but quieter than
@@ -1883,14 +2020,44 @@
         color: var(--color-form-muted);
     }
 
-    /* ── L'header della form (FL6) ──────────────────────────────────────────── */
+    /* ── L'header della form (FL6, banda propria in 10k) ─────────────────────
+       10k punto 3 — «Running · State» e Delete galleggiavano sul bianco della
+       card: nessun fondo, nessuna gronda propria, solo un filetto sotto. Con la
+       banda l'header smette di essere la prima riga del contenuto e diventa la
+       testata della card.
+
+       I margini negativi sono la tecnica che `__foot` gia' usa in questo foglio:
+       `__form-inner` insetta di 14px, e -14px riporta la banda sui tre bordi
+       della card mentre il padding rimette l'inset al suo contenuto. Senza, la
+       banda si fermerebbe a 14px dai bordi e leggerebbe come un riquadro dentro
+       la card invece che come la sua testata. Misurato nel giro before: [768,
+       1572] contro [754, 1587] della card.
+
+       Il fondo e' `--color-form-panel` (#f8fafc, slate-50), lo stesso token con
+       cui 10d ha dipinto il desk — il fondo «sotto le card» del sistema, e qui
+       il fondo sotto il titolo. NON `--color-bg-secondary`, che il prompt
+       nominava: e' fra i 15 nomi dichiarati due volte con valori diversi
+       (`_colors-light.scss:81` #ffffff, `tokens.css:117` #f8fafc), cioe' un
+       token il cui valore dipende dall'ordine di cascata. Misurato a runtime
+       risolve #f8fafc, lo stesso colore — ma per via del duplicato, non per
+       dichiarazione, e questo foglio non ci appoggia una superficie.
+
+       Il raggio solo `:first-child`: dopo un drill-in il breadcrumb di 12c sta
+       SOPRA l'header, che allora non e' al bordo della card e va squadrato. Una
+       banda arrotondata a meta' card sarebbe un angolo che non appoggia su
+       niente. */
     &__form-head {
         display: flex;
         align-items: center;
         gap: 10px;
-        margin-bottom: 10px;
-        padding-bottom: 10px;
+        margin: -14px -14px 14px;
+        padding: 10px 14px;
         border-bottom: 1px solid var(--color-form-border);
+        background: var(--color-form-panel);
+
+        &:first-child {
+            border-radius: var(--radius-card) var(--radius-card) 0 0;
+        }
     }
 
     &__form-title {
@@ -1938,6 +2105,9 @@
         cursor: pointer;
 
         i { font-size: 11px; }
+
+        /* 10k punto 9. */
+        transition: border-color 150ms ease-out, color 150ms ease-out;
 
         &:hover { border-color: var(--color-error); color: var(--color-error); }
         &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 1px; }

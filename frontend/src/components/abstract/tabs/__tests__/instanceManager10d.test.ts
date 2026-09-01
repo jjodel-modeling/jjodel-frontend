@@ -122,14 +122,20 @@ describe('10d — le due card gemelle', () => {
     });
 });
 
-describe('10d — testata e footer dentro la card', () => {
-    it('positivo di controllo: la sezione tabella apre prima della testata e chiude dopo il footer', () => {
-        const open = TSX.indexOf('instance-manager__pane--table');
+describe('10d — il footer dentro la card, la testata sopra di essa (10k punto 2)', () => {
+    it('la testata sta FUORI dalla card, e prima; il footer dentro, e ultimo', () => {
+        // Rovesciata da 10k punto 2. 10d asseriva `head > open`, cioe' la testata
+        // DENTRO la card della tabella; ora la testata e' figlia del desk e apre
+        // la colonna, con la card che comincia dalla toolbar. Il footer non si
+        // muove: quello e' il bordo inferiore della card, e resta tale.
+        const desk = TSX.indexOf('<div className="instance-manager__main">');
         const head = TSX.indexOf('<header className="instance-manager__head">');
+        const open = TSX.indexOf('instance-manager__pane--table');
         const foot = TSX.indexOf('<footer className="instance-manager__foot">');
-        expect(open).toBeGreaterThan(-1);
-        expect(head).toBeGreaterThan(open);
-        expect(foot).toBeGreaterThan(head);
+        expect(desk).toBeGreaterThan(-1);
+        expect(head).toBeGreaterThan(desk);
+        expect(open).toBeGreaterThan(head);
+        expect(foot).toBeGreaterThan(open);
     });
 
     it('il footer sborda fino ai bordi della card', () => {
