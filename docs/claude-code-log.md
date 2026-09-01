@@ -2,6 +2,43 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-09-01 — feat(manager): la cardinalita' nel modale, e l'aggregation non sfratta piu' (CRUD2 F2)
+**Prompt**: CRUD2 fase 2, go-ahead sul referto
+`discovery_2026-09-01_crud2_cardinalita_aggancio.md`. Tre punti gia' decisi (multi-selezione
+via (b), §2.5 corretto nella scrittura, §2.6 gate astratto in `addChildReason`) piu' un
+punto 4 da misurare PRIMA di tutto: il passaggio alla sintassi astratta dopo lo sfratto.
+**Files touched**: `jjform/{create.ts, outline.ts, index.ts, writeCtx.ts}`,
+`editor-v2/hooks/createAdapter.ts`, `abstract/tabs/{InstanceManagerTab.tsx,
+instanceManagerTab.scss}` + i tre di test (`jjform/__tests__/{create,outline,writeCtx}.test.ts`)
+e §7 del referto. Le sonde `_tmp_crud2{e,f,g}_*.ts` non sono committate (`.gitignore:66`).
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (a)
+**Regressions**: no — `npx tsc --noEmit` **33** su output COMPLETO (baseline invariata);
+`npm run build` exit **0**, solo il warning di chunk noto; `npx vitest run` **3061/3061**
+test verdi, con i **9** file rossi all'import che sono i pre-esistenti (misurato per
+contrasto: con la modifica in stash, gli stessi 9 file e 3035 test). Sette mutazioni sui
+blocchi nuovi (dedup tolto, append invece di replace, `draftTargets` che ignora `refsMany`,
+`value` che porta il primo pick, gate astratto rimosso, gate dopo l'upper bound, outline che
+ignora la shape): 1/2/5/1/4/1/2 rossi, verde al ripristino.
+**Out-of-scope changes**: no — ma **SETTE** file di prodotto, sopra la soglia della regola 19:
+elencati con cosa cambia in ciascuno nel referto §7.5, tutti conseguenza diretta dei tre
+punti autorizzati.
+**Layer Impact Report**: not-required — nessun file di §3.1; zero righe nel core, zero
+`TRANSACTION` nuove, zero creatori annidati.
+**Smoke visivo**: passato — `_tmp_crud2g_verify.ts` **13/13**, zero errori di pagina; lo
+stesso file coi sette sorgenti da HEAD da' **7/13**, i sei rossi esattamente sugli arm della
+nuova semantica e i sette controlli verdi. `_tmp_crud2e_absyntax.ts` **11/11**,
+`_tmp_crud2f_agg.ts` **5/5**.
+**Notes**: ⚠️ per il punto 4, non per il codice. Il renderer **digerisce** il buco `[null]`:
+0 errori, canvas montato, sopravvive alla ricarica — quindi l'errore dell'utente e' un TERZO
+path e risale (referto §7.1). §2.5 chiuso **senza toccare il core**: `setValueAtPosition`
+espone gia' `info.isContainment`, misurato §7.2; costo dichiarato, la sola aggregation paga
+una seconda deferral. Il lower bound resta «almeno un valore» — ora alzabile, ma e' decisione
+di merito non richiesta (§7.3).
+**Prompt document name**: CRUD2 FASE 2 (in chat) — 2026-09-01 20:30
+
+
 ## 2026-09-01 — feat(form): `jjodel/multiline` porta un EString alla textarea che cresce (TXT1)
 **Prompt**: TXT1 fase 2, go-ahead sul referto
 `docs/discovery/discovery_2026-09-01_txt1_annotation_multiline.md`. Decisioni gia' prese:
