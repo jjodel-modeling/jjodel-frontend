@@ -351,3 +351,170 @@ contenuta e' un'istanza del modello, e oggi nessuno controlla la sua
 conformita' — ma fa comparire in un colpo solo tutte le violazioni degli oggetti
 nested esistenti, su progetti gia' salvati. Il secondo e' un cambio di
 copertura da pianificare, non un fix da infilare in questo giro.
+
+---
+
+# Appendice — CRUD3 F2, il rimedio e le tre voci per Alfonso
+
+Aggiunta in coda (R-E/E-1: il referto non si riscrive). Base `ff0e3f5d8`.
+Decisione ratificata: **«vederli», non «visitarli»**.
+
+## A.1 Cosa e' cambiato
+
+Un solo file di prodotto: `ConformanceValidator.ts`. Il perimetro di **VISITA**
+resta `model.objects` (`:27`, invariata). Cambia **solo il test di esistenza** di
+CHECK 6:
+
+```ts
+for (const refId of referencedIds) {
+    if (!objectIds.has(refId) && !resolvedOnGraph.has(refId)) { ... dangling ... }
+}
+```
+
+`resolvedOnGraph` si riempie nello stesso ciclo che gia' legge lo slot, dal
+**proxy L** — la stessa lettura che fanno i tre lettori che risolvono
+(`LValue.get_values` mappa ogni puntatore con `LPointerTargetable.fromPointer`,
+`LModelElement.tsx:7543`; e' cio' che il chip del canvas usa a
+`jjomTransformers.ts:363-393`). Nessun indice nuovo, nessuna scansione
+`allSubObjects`: e' il lookup che sarebbe comunque girato perche' la riga si
+disegnasse.
+
+Il barrel **non** e' importato: `ConformanceValidator.test.ts` gira in
+`environment: 'node'` e la sua intestazione dichiara la convenzione («no
+framework/barrel import ... to keep the node-env suite green»). Importare
+`LPointerTargetable` qui l'avrebbe rotta. Il proxy che serve il validatore ce
+l'ha gia' in mano.
+
+Si conta come esistente solo un `className === 'DObject'` — il nome del D-layer
+anche su un proxy L (CLAUDE.md §3.13). Un puntatore che risolve su una DClass
+resta dangling.
+
+**Proprieta' di sicurezza, per costruzione**: `resolvedOnGraph` e' usato solo per
+**togliere** una violazione. `dopo ⊆ prima`. Nessuna violazione nuova puo'
+comparire, in nessuno stato — compresi gli slot oltre `upperBound`, dove il proxy
+tronca (`LModelElement.tsx:7482-7488`) e quindi l'insieme e' piu' piccolo e la
+violazione resta esattamente com'era. C'e' un test apposta.
+
+Corretto anche un commento che il cambio rendeva falso (CHECK 8, `:488`): «missing
+target → dangling (CHECK 6)» non e' piu' vero per un bersaglio nested. CHECK 8
+**non** cambia comportamento: un nested non era tipato prima e non lo e' adesso.
+
+## A.2 Verifica
+
+| gate | esito |
+|---|---|
+| `ConformanceValidator.test.ts` | **67/67** (61 preesistenti + 6 nuovi) |
+| `npx vitest run` (intera) | **3067/3067** test passati; 9 file falliscono **in import** (`window is not defined`, jjtl/jjscript/utils) — preesistenti, nessuno tocca conformance |
+| `npx tsc --noEmit` su output COMPLETO | **33**, la baseline; **0** nei file toccati |
+| `npm run build` | exit **0**, zero `error`, solo il warning di chunk noto |
+
+Sonda sull'app, **girata due volte** — `before` coi sorgenti di HEAD ripristinati
+con `git show HEAD:<path>` (nessun `git stash`, RC-13), `after` col rimedio:
+
+| arm | before | after |
+|---|---|---|
+| R2 per contrasto `sequel` → una ROOT | 0 badge | 0 badge |
+| R1 nested contenuto, badge sul canvas | **1** | **0** |
+| R3 stabilita' t=0 … +3500 | 1,1,1,1,1 | 0,0,0,0,0 |
+| R4 form di Book_1 | «1 error» + «points to non-existent object» | «No issues», **chip `Edition_0` ancora risolto** |
+| R6b due nested, form di Book_1 | «2 errors» | «No issues» |
+| R3c dopo ricarica | badge > 0 | badge = 0 |
+
+`_tmp_crud3_f2_verify.ts` **12/12** in entrambe le direzioni, zero `pageerror`.
+Lo stato strutturale e' identico nelle due corse (`fatherKind: DValue`,
+`inObjectsA: false`): a cambiare e' solo il verdetto, non il modello.
+
+**Mutazioni** (tolto il rimedio, il test giusto torna rosso):
+
+| mutazione | rosso |
+|---|---|
+| `!objectIds.has(refId)` — via il ramo di esistenza sul grafo | **3/67** |
+| `className === 'DObject'` → `typeof … === 'string'` | **1/67** (proprio il test sul non-DObject) |
+| via la lettura del proxy, torna solo fallback | **3/67** |
+
+## A.3 Le tre voci
+
+### 1. R-CR3 «visitare i nested» — solo numeri
+
+**Quanti oggetti sono nested.** Conteggio sulle 8 fixture M1 del repo
+(`src/__tests__/fixtures/xmi-m1/*.xmi`), per profondita' dell'elemento, con la
+radice `xmi:XMI` scontata dove c'e':
+
+| fixture | root | nested | tot | % nested |
+|---|---:|---:|---:|---:|
+| combo_test.xmi | 1 | 5 | 6 | 83.3% |
+| modelBook.xmi | 2 | 5 | 7 | 71.4% |
+| polymorphism_test.xmi | 1 | 3 | 4 | 75.0% |
+| references_test.xmi | 1 | 8 | 9 | 88.9% |
+| sample-Families.xmi | 2 | 9 | 11 | 81.8% |
+| sample-Persons.xmi | 9 | 0 | 9 | 0.0% |
+| sample-StateMachine.xmi | 1 | 9 | 10 | 90.0% |
+| table-example.xmi | 1 | 30 | 31 | 96.8% |
+| **TOTALE** | **18** | **69** | **87** | **79.3%** |
+
+**Quattro oggetti su cinque non sono mai visitati dal validatore.** Una sola
+fixture e' piatta. Il conteggio e' per nodo elemento della discesa: e' un limite
+superiore se una fixture usasse elementi per valori di attributo — controllato a
+mano su `sample-Families.xmi` (`father`/`mother`/`sons`/`daughters` sono istanze
+di Member) e su `table-example.xmi` (`rows`, `cells`), dove sono tutti oggetti.
+
+**Quante violazioni nuove.** Misura del delta sull'app, stesso fixture, perimetro
+di visita allargato ad `allSubObjects` in una modifica **temporanea** e
+ripristinata (`_tmp_crud3_visit.ts`). Fixture ordinario: `Edition` con un
+attributo obbligatorio `year : EInt` (lowerBound 1) che il create lascia vuoto —
+la forma piu' comune in un modello reale.
+
+| | oggetti | root | nested | oggetti con violazioni | violazioni | per tipo |
+|---|---:|---:|---:|---:|---:|---|
+| `shipped` | 4 | 1 | 3 | **0** | **0** | — |
+| `widened` | 4 | 1 | 3 | **3** | **3** | `missing_required_attr` ×3 |
+
+**Il 100% dei nested si accende, uno per oggetto**, su un modello che oggi e'
+tutto verde. Estrapolando col rapporto di sopra: su un progetto con la
+composizione delle fixture, «visitare» significa portare in campo l'80% degli
+oggetti che oggi nessuno guarda. Non e' un fix: e' una campagna.
+
+### 2. Il canvas: i nested non ci arrivano mai
+
+`useJjomSync` monta i vertici iterando `rawModel.objects` (`:636`, `:666`,
+`:759`, `:1032`; stessa sorgente in `useM1ReferenceEdges.ts:69,131`,
+`m1EdgeSweep.ts:81`, `IRNodeContent.tsx:293`). Un oggetto contenuto non e' in
+quella collezione, quindi **non ha `DVertex` e non compare mai sul canvas** —
+misurato: `hasVertex: false` per `Edition_0`, `true` per `Book_1`.
+
+Non e' un incidente e potrebbe essere la scelta giusta: `irContainment.ts`
+esiste apposta per disegnare i contenuti **dentro** il contenitore
+(`walkContainment`, `:200-240`), e la sua intestazione dice a chiare lettere che
+i nested «have no DVertex — the form the endpoint token exists for».
+
+**Domanda, nessun fix**: e' voluto (i contenuti si vedono come compartimenti del
+contenitore, mai come nodi propri) o e' un difetto (un'istanza contenuta
+dovrebbe potersi aprire come nodo)? La risposta cambia se `DModel.objects` sia
+la sorgente giusta per il mount o solo quella storica.
+
+### 3. Il testo del warning di §6
+
+Misurato **prima** del rimedio, leggendo il registro (`window._jjNodeProblems`,
+esposto da `registry.ts:94`) — l'albero non era lo strumento giusto, non porta
+`.tree-problem-icon` su quelle righe.
+
+```
+kind:        duplicate-name        (NON conformance)
+severity:    warning
+title:       Duplicate name
+description: Name "Edition_0" is also used by another element in this scope.
+```
+
+Una entry a nome di `Edition_0` e una a nome di `Edition_1`, **con lo stesso
+testo**. Produttore: `UniquenessProblemSync` → `detectDuplicateNames`, non il
+validatore di conformance.
+
+**Non sparisce col rimedio**: misurato dopo, `Edition_0` e `Edition_1` portano
+ancora «1 warning» ciascuna mentre `Book_1` e' passata a «No issues». Sono
+produttori diversi e il rimedio non li tocca.
+
+Due fatti che rendono la voce sospetta, e nessuno dei due e' stato indagato: i
+due nomi **sono diversi** (`Edition_0` ≠ `Edition_1`), e la entry di `Edition_1`
+nomina `"Edition_0"`. Il candidato naturale e' il calcolo dei fratelli per un
+padre `DValue` (`nameUniqueness.ts:177`, `siblings = father.allSubObjects`), ma
+**non l'ho misurato**. Resta domanda aperta, fuori perimetro.
