@@ -2,6 +2,43 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-09-01 — fix(conformance): CHECK 6 chiede l'esistenza al grafo (CRUD3 F2)
+**Prompt**: CRUD3 Fase 2 sul referto di F1, decisione ratificata «vederli, non visitarli».
+Il perimetro di VISITA resta `model.objects`; cambia solo il test di ESISTENZA del
+bersaglio in CHECK 6, col lookup gia' usato dai lettori che risolvono. Perimetro:
+`ConformanceValidator.ts` + il suo test; il costruttore D non si tocca. Piu' tre voci di
+appendice e il testo del warning di §6 misurato PRIMA del rimedio.
+**Files touched**: `frontend/src/model/conformance/ConformanceValidator.ts`,
+`frontend/src/model/conformance/__tests__/ConformanceValidator.test.ts`, e l'appendice a
+`docs/discovery/discovery_2026-09-01_crud3_edition_dangling.md`. Le sonde
+`scripts/smoke/_tmp_crud3_{warn,f2_verify,visit}.ts` non sono committate (`.gitignore:66`).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `npx tsc --noEmit` su output COMPLETO **33**, la baseline, **0** nei
+file toccati; `npm run build` exit **0**, zero `error`; `npx vitest run` intera **3067/3067**
+test passati, i 9 file rossi falliscono in import (`window is not defined`, jjtl/jjscript/utils)
+e sono preesistenti. Il rimedio e' MONOTONO per costruzione: `resolvedOnGraph` toglie
+violazioni e non ne aggiunge, quindi `dopo ⊆ prima` in ogni stato, slot oltre `upperBound`
+compresi (il proxy tronca, l'insieme e' piu' piccolo, la violazione resta). Tre mutazioni:
+3/67, 1/67, 3/67 rossi sui test giusti.
+**Out-of-scope changes**: no — un file di prodotto, il suo test, l'appendice al referto.
+**Layer Impact Report**: not-required — nessun file di §3.1; il validatore legge il D-layer
+e il proxy L in sola lettura, zero scritture, zero TRANSACTION, zero creatori.
+**Smoke visivo**: passato — `_tmp_crud3_f2_verify.ts` **12/12 in entrambe le direzioni**,
+girata due volte (before coi sorgenti di HEAD ripristinati da `git show`, nessun `git stash`).
+Badge sul canvas 1 -> 0 sul nested, `sequel`->root resta 0 in tutte e due; form di Book_1
+da «1 error» a «No issues» col chip `Edition_0` ancora risolto; tiene dopo la ricarica.
+Zero `pageerror`.
+**Notes**: il barrel NON e' importato: il test gira in `environment: node` e la sua
+intestazione dichiara la convenzione; il proxy che serve, il validatore ce l'ha gia'.
+Non e' un `Corregge`: F2 continua F1 (referto ✅), non lo rimedia. R-CR3 misurata: 69
+oggetti su 87 (79.3%) delle fixture M1 sono nested, e allargando la visita si accende il
+100% di quelli del fixture (3/3). Il warning di §6 e' `duplicate-name`, non conformance, e
+resta dopo il rimedio. Tutto in appendice al referto, §A.1-A.3.
+**Prompt document name**: CRUD3 F2 (in chat) — 2026-09-01 23:15
+
+
 ## 2026-09-01 — discovery: Edition_0 esiste per l'albero e non per il validatore (CRUD3 F1)
 **Prompt**: CRUD3 Fase 1, cinque domande con misura (Q1 i cinque lettori, Q2 dove sta
 l'oggetto su fixture a due modelli omonimi, Q3 come `createInstance` sceglie il modello,
