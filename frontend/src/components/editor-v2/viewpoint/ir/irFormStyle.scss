@@ -1026,10 +1026,32 @@
 /* Label to the left. The two-column field is the same shape the `compact` skin has always
    had; what the preset adds is the ability to ask for it under any skin. The column width
    is a variable so the skin can keep its own — see `--ir-form-label-col` on `.ir-form--compact`
-   below, which preserves its committed 88px against the preset's 72. */
+   below, which preserves its committed 88px against the preset's 72.
+ *
+ * The label column is a CAP, not a width, and the control has priority on the space.
+ * FL1 packs at 3/12 as well as at 12/12, and the two had never been seen together because
+ * nobody had ever changed the theme: measured 2026-09-01 in the 400px rail, a span-3 cell
+ * is 87.8px, the fixed 72px column took its 72, and what was left for the control was
+ * 7.75px — the `tint` select rendered empty, `visible` read «isible», the steppers lost
+ * their numeric field (STYLE1 report §7, four controls under 40px per left-label preset).
+ *
+ * `minmax(0, cap)` on the label and a floor on the control invert the priority: the grid
+ * gives the control its floor first and the label takes what remains, up to the cap. Where
+ * the cell is wide enough — every span-6 and span-12 cell, the only ones that existed
+ * before the theme could ask for a left label under the auto-layout — the cap is reached
+ * and NOTHING changes: 72 (88 under the compact skin) exactly as committed. The floor bites
+ * only in the narrow cell that produced the defect.
+ *
+ * The floor is read off this sheet, not chosen: `.ir-field__stepper-btn` is `flex: 0 0 24px`
+ * twice, so 48px is the width of the stepper's own chrome. Below it a stepper is buttons
+ * with no field between them, which is the reported symptom. It is also above the 40px at
+ * which a `select` stops showing its value (STYLE1's acceptance threshold), so one number
+ * settles both. */
 .ir-form[data-label-placement="left"] .ir-field {
     display: grid;
-    grid-template-columns: var(--ir-form-label-col, 72px) minmax(0, 1fr);
+    grid-template-columns:
+        minmax(0, var(--ir-form-label-col, 72px))
+        minmax(min(var(--ir-form-control-min, 48px), 100%), 1fr);
     align-items: center;
     gap: 0 var(--space-2);
 }
@@ -1042,6 +1064,40 @@
    states: in a fixed label column it and an ellipsized label compete, and the label wins. */
 .ir-form[data-label-placement="left"] .ir-field__mult,
 .ir-form[data-label-placement="left"] .ir-field__spacer { display: none; }
+
+/* The floor above keeps every control readable by the acceptance measure — 48px is over the
+ * 40px at which a select stops showing its value — but at a span-3 cell it buys that with a
+ * 31.75px label column, and the screen says what the measure cannot: the select's value ends
+ * up under its own chevron and the stepper shows two buttons with no field between them.
+ * Both symptoms are the ones the slice was opened to remove, so the placement itself gives
+ * way: under a cell too narrow to hold a left label, the field stacks, exactly as the two
+ * `top` presets already do — the same fields, in the same order, in the same cell.
+ *
+ * The threshold is the sum of what the left placement needs and nothing else: the label cap
+ * (72px; 88 under the compact skin, which therefore just fails to reach its cap between 128
+ * and 144 rather than switching later) plus the `--space-2` gap plus the 48px floor = 128px.
+ * A container query and not a media query because the quantity that decides is the CELL, not
+ * the viewport: the same 400px rail holds span-12 cells that are fine and span-3 cells that
+ * are not. Measured in the 400px rail: span-3 = 87.8px stacks, span-6 = 183.5px does not.
+ *
+ * Containment is declared only under `[data-label-placement="left"]`, so the two `top`
+ * presets are untouched by construction and not merely by measurement. `contain: layout`
+ * comes with `container-type`, which makes the cell a containing block for absolutely
+ * positioned descendants: none exist inside a cell (the reference picker is portalled onto
+ * <body>, see `.ir-picker` above), so there is nothing to reparent. */
+.ir-form[data-label-placement="left"] .ir-form__cell { container-type: inline-size; }
+
+@container (max-width: 128px) {
+    .ir-form[data-label-placement="left"] .ir-field {
+        grid-template-columns: minmax(0, 1fr);
+        row-gap: 4px;
+    }
+    .ir-form[data-label-placement="left"] .ir-field__message { grid-column: 1; }
+    /* The stacked label takes the alignment of the placement it has fallen back to: `top`
+       declares `align: 'left'` in `themes.ts`, and a right-flushed label over a left-flushed
+       control would read as a third placement rather than as the degradation of one. */
+    .ir-form[data-label-placement="left"] .ir-field__label { text-align: left; }
+}
 
 /* Density. Only the two measures the scale actually states for a control — a third would be
    a styling system, which is what the closed preset exists to prevent. */
