@@ -2,6 +2,44 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-09-01 — feat(manager): l'empty state della metaclasse vuota, e la card che scende sotto il prima (10j)
+**Prompt**: due giri. (1) «Slice 10j — empty state della metaclasse vuota, SERIALE»: il cartello
+parla del MODELLO mentre e' la metaclasse a essere vuota, la card riempie l'altezza, la barra
+«Select an instance to edit it» resta a tabella vuota, filtro/segmented/indicatore/Columns
+galleggiano su zero righe; dichiarare la scelta su Export. (2) «10j-CHIUSURA»: applicare le due
+leve che il referto §1 aveva misurato e lasciato aperte — gronda 48 -> 24px e riga di toolbar
+spenta a zero istanze — arbitrando «resta la testata» = titolo + sottotitolo.
+**Files touched**: `abstract/tabs/{InstanceManagerTab.tsx, instanceManagerTab.scss}` e
+`abstract/tabs/__tests__/instanceManager10c.test.ts` (1 asserzione riallineata) — **il delta del
+primo giro e' dentro `dc6ae5c52`**, vedi Notes; le due leve, la suite nuova
+`__tests__/instanceManager10j.test.ts` (28 casi) e il referto
+`docs/discovery/discovery_2026-09-01_10j_empty_metaclass.md` in `3c805d777`; questa entry a
+parte. Pathspec, indice verificato vuoto prima e dopo.
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-01 06:20 — prompt inline «Slice 10j», il punto 2 che il suo referto §1
+lascio' aperto (quel giro non ebbe entry: questa la sostituisce e la estende)
+**Causa**: (a)
+**Regressions**: no — `npm run typecheck` **33** (baseline invariata, conteggio su output
+COMPLETO, `EXIT=2`); `npm run build` exit **0**; `npx vitest run` **2827 passati / 0 falliti**,
+9 file rossi in raccolta tutti il noto `window is not defined`. Suite 10j provata con DUE
+mutazioni (gronda tornata a 48px, condizione riportata dai figli alla riga sempre resa): 1/2
+rossi, verde al ripristino in entrambe.
+**Out-of-scope changes**: no — i due sorgenti della superficie, la suite nuova, il referto. La
+suite 10c del primo giro e' l'espansione dichiarata nel referto §6.
+**Layer Impact Report**: not-required — nessun file di §3.1. Zero creatori D, zero
+`TRANSACTION`: il delta e' una dichiarazione CSS e una condizione JSX che sale sul contenitore.
+**Smoke visivo**: passato — `_tmp_10j_verify.ts`. Primo giro **before 29/19, after 55/0**; giro
+di chiusura, sonda portata a 59 asserzioni, **after 59/0**, zero errori di pagina. **Cartello
+185px, card 271px**, contro i 298px del prima della slice e i 347px del primo after. Le tre
+asserzioni nuove: la card contro i 298 del prima, la riga di toolbar ASSENTE, il «New» assente
+con la CTA che lo ripete. Non-regressioni sulla collezione piena verdi in tutti i giri.
+**Notes**: `dc6ae5c52`, intitolato «(10i)», **committo' l'albero e non l'indice**: porta anche
+il delta 10j dei due sorgenti e il riallineo di 10c, quindi dichiara meno di cio' che contiene.
+Il log e' add-only (R-RAIL-45): l'entry 10i resta com'e' e la rettifica si legge qui. La
+misura richiesta dal punto 2 alzava la card di 49px invece di abbassarla — il chrome tolto
+stava tutto sulla riga del «New», che restava. Referto §1 e §7.
+**Prompt document name**: PROMPT_10j_chiusura.md — 2026-09-01 10:20
+
 ## 2026-09-01 — fix(form): la colonna etichetta e' un cap, e la cella stretta impila il campo (FL8)
 **Prompt**: «FL8: colonna etichetta fissa vs celle del packer (fix, PARALLELO)» — chiudere il
 reperto di STYLE1 §7: nei due preset a etichetta laterale il rail a 400px lasciava 7.8px al
