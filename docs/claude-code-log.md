@@ -2,6 +2,45 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-09-01 — fix(manager): l'ego-diagramma si centra e respira (EGO1)
+**Prompt**: MICRO in chat, con screenshot del 01-09. Nella riga espansa il grafo
+dell'ego-diagram e' appoggiato a sinistra anche con spazio libero a destra, e il respiro
+sopra/sotto e' scarso (eyebrow NEIGHBORHOOD e riga dei conteggi addosso ai nodi). Il grafo
+si centra alla sua larghezza naturale, NON si allarga; passo verticale da token del DS;
+`EGO_OWNER_GAP` (10k p7) non si tocca.
+**Files touched**: `abstract/tabs/egoDiagram.scss` (due dichiarazioni: `gap` e
+`margin-inline`), `__tests__/egoDiagram.test.ts` (blocco 4, +5 casi, ora 24) e il referto
+`docs/discovery/discovery_2026-09-01_ego1_centraggio_respiro.md`. `instanceManagerTab.scss`
+NON toccato: il nastro ha un foglio proprio da FL5. Le sonde
+`scripts/smoke/_tmp_ego1_*` non sono committate (`.gitignore:66`).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `npx tsc --noEmit` **33** su output COMPLETO (123 righe, exit 2 =
+baseline invariata, zero errori in `abstract/tabs`); `npm run build` exit **0**, solo il
+warning di chunk noto piu' le deprecation sass e il `bordr` gia' a HEAD in
+`properties-with-tree-view.scss:1210`; suite `abstract/tabs/__tests__/` + `jjform/__tests__/`
+**693/693**. I 5 casi nuovi provati contro CINQUE mutazioni (gap tornato a 6px,
+`margin-inline` rimosso, centraggio con `justify-content` sul contenitore che scorre, 24px
+ricopiato nel foglio, `width: 100%` sul frame): 1 rosso ciascuna, verde al ripristino.
+**Out-of-scope changes**: no.
+**Layer Impact Report**: not-required — nessun file di §3.1, zero creatori D, zero
+`TRANSACTION`, nessuna scrittura verso lo store: il delta e' due dichiarazioni CSS.
+**Smoke visivo**: passato — `_tmp_ego1_verify.ts`, before **14/20** (i 6 rossi sono i punti
+1 e 2, mirati), after **20/20**, zero errori di pagina in entrambi. Scarto dei centri
+**-289.5px -> 0** a 1600, **-129.5 -> 0** a 1280, **-195.5 -> 0** su `Running`; aria sopra e
+sotto **6px -> 12px**; larghezza del disegno **168px identica** (si centra, non si allarga).
+Overflow (scatola stretta sotto la larghezza del grafo) IDENTICO before/after: frame a
+sinistra, `scrollWidth` 356 > `clientWidth` 260, nessun clip nuovo. 10k p7 **24px -> 24px**,
+FL6 degrada ancora in lista a 620.
+**Notes**: il punto discrezionale e' uno solo, dichiarato nel referto §2: `--space-2` (8px)
+e' il primo token sopra il 6px letterale ma vale +2px per lato, che non risponde al difetto;
+si e' preso `--space-3` (12px), un gradino sopra il token su cui il 6px si appoggiava.
+Scelto `margin-inline` e non `justify-content` perche' in un contenitore che scorre il
+secondo taglia l'inizio del contenuto. Corsie: nessun file in comune con AUTO1 Fase 2.
+**Prompt document name**: MICRO EGO1 centraggio e respiro (in chat) — 2026-09-01 16:15
+
+
 ## 2026-09-01 — docs(discovery): TXT1, il carrier regge e tre premesse no (Fase 1)
 **Prompt**: `docs/prompts/PROMPT_TXT1_multiline_textarea.md`. Corsia DISCOVERY-FIRST con
 clausola d'arresto: il grafo D porta metadati per-attributo scrivibili e persistiti, oggi,

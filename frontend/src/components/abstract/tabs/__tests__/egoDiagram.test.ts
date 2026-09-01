@@ -39,6 +39,7 @@ import type { EgoInput, EgoInstance } from '../../../../jjform/egoNeighborhood';
 import type { IncomingRef } from '../../../../jjform/shape';
 
 const SOURCE = readFileSync(resolve(__dirname, '../EgoDiagram.tsx'), 'utf8');
+const SHEET = readFileSync(resolve(__dirname, '../egoDiagram.scss'), 'utf8');
 
 const inst = (id: string, name: string, cls: string): EgoInstance => ({ id, name, cls });
 
@@ -276,5 +277,76 @@ describe('il click passa dal modulo, non dal componente', () => {
 
     it('«open in canvas» dell intestazione e il gesto diretto', () => {
         expect(SOURCE).toMatch(/onClick=\{onOpenInCanvas\}/);
+    });
+});
+
+
+// ── 4. Il foglio: centraggio e respiro (EGO1) ───────────────────────────────
+
+/**
+ * Che cosa questo blocco puo' dire, e che cosa no.
+ *
+ * La suite gira con `environment: 'node'`: non c'e' layout, quindi non c'e' un
+ * modo di misurare qui che il grafo sia centrato o che l'aria sopra valga 12px.
+ * Quella meta' e' della sonda (`scripts/smoke/_tmp_ego1_verify.ts`, 20/20 in
+ * after, 6 rossi mirati in before), e le sue misure stanno nel referto.
+ *
+ * Quel che resta, ed e' il motivo per cui questo blocco esiste, e' che le due
+ * dichiarazioni siano ancora NEL FOGLIO e nella forma che le rende quel che
+ * sono: un `margin-inline: auto` sul blocco misurato — non un
+ * `justify-content`, che in un contenitore che scorre taglia l'inizio del
+ * contenuto — e un passo verticale preso dalla scala `--space-*` invece che da
+ * un letterale. Una riscrittura che le perde passa la sonda solo se qualcuno la
+ * rilancia; passa di qui sempre.
+ */
+describe('il foglio: il grafo si centra e respira (EGO1)', () => {
+    it('il positivo di controllo: il foglio e letto davvero', () => {
+        // Senza questo, un path sbagliato darebbe una stringa vuota e OGNI
+        // asserzione di forma qui sotto fallirebbe per la ragione sbagliata —
+        // o, se scritta al negativo, passerebbe senza aver guardato niente.
+        expect(SHEET).toContain('.ego-diagram {');
+        expect(SHEET).toContain('&__frame');
+        expect(SHEET.length).toBeGreaterThan(1000);
+    });
+
+    it('il disegno si centra con margini automatici, non con `justify-content`', () => {
+        const frame = SHEET.match(/&__frame\s*\{[^}]*\}/);
+        expect(frame, 'blocco `&__frame` non trovato nel foglio').not.toBeNull();
+        expect(frame![0]).toMatch(/margin-inline:\s*auto/);
+        // `justify-content: center` sul contenitore che scorre e' l'altra via, ed
+        // e' quella scartata: con spazio libero negativo taglia il primo nodo
+        // invece di lasciarlo raggiungibile scorrendo.
+        const scroll = SHEET.match(/&__scroll\s*\{[^}]*\}/);
+        expect(scroll![0]).not.toMatch(/justify-content/);
+    });
+
+    it('il disegno si centra e basta: la larghezza resta la sua', () => {
+        const frame = SHEET.match(/&__frame\s*\{[^}]*\}/)![0];
+        // Nessuna larghezza dal foglio: quella arriva come stile inline da
+        // `egoLayout(ego).width`, ed e' la stessa aritmetica che disegna le
+        // frecce. Una `width` qui le farebbe divergere.
+        expect(frame).not.toMatch(/(^|[^-])width:/);
+    });
+
+    it('il passo verticale viene dalla scala del DS, non da un letterale', () => {
+        // I tre figli della colonna sono `__head`, `__scroll`, `__foot`: questo
+        // `gap` E' l'aria sopra e sotto il disegno, e nient'altro.
+        const root = SHEET.slice(SHEET.indexOf('.ego-diagram {'));
+        const gap = root.match(/flex-direction:\s*column;[\s\S]*?gap:\s*([^;]+);/);
+        expect(gap, 'il `gap` della colonna non e piu leggibile').not.toBeNull();
+        expect(gap![1].trim()).toBe('var(--space-3)');
+    });
+
+    it('`EGO_OWNER_GAP` resta del modulo: il foglio non ne copia il valore', () => {
+        // La banda owner -> soggetto (10k p7) e' aritmetica di
+        // `jjform/egoNeighborhood` e arriva nel `d` dell'arco. Un `24px` in una
+        // DICHIARAZIONE qui sarebbe una seconda copia, libera di divergere alla
+        // prima modifica. Nominarlo in un commento, per dire che sta altrove, e'
+        // il contrario del difetto: i commenti si tolgono prima di guardare.
+        const declarations = SHEET.replace(/\/\*[\s\S]*?\*\//g, '');
+        expect(declarations).toContain('&__owner-link');   // il taglio non ha mangiato il foglio
+        expect(declarations).not.toMatch(/24px/);
+        const ownerLink = declarations.match(/&__owner-link\s*\{[^}]*\}/)![0];
+        expect(ownerLink).not.toMatch(/margin|top:|padding/);
     });
 });

@@ -32,9 +32,12 @@
    sei centesimi di alfa vorrebbe dire toccare i due file di token, fuori dal
    perimetro di questa slice.
 
-   Letterali: le misure. 8px di raggio, 12/10.5/13px di corpo, 500/600 di peso e
-   i due passi di 6/10px vengono dalla specifica di FL5 e non hanno un token —
-   il sistema tokenizza i colori, non la tipografia. Le dimensioni delle scatole
+   Letterali: quasi tutte le misure. 8px di raggio, 12/10.5/13px di corpo,
+   500/600 di peso e il passo di 10px vengono dalla specifica di FL5 e non hanno
+   un token — il sistema tokenizza i colori, non la tipografia. UNA eccezione, da
+   EGO1: il passo verticale fra il disegno e le due cornici di testo e' un token
+   della scala `--space-*` (`tokens/_spacing.scss`), perche' li' la misura non
+   viene dalla specifica di FL5 ma dal ritmo del DS. Le dimensioni delle scatole
    NON sono qui: stanno in `jjform/egoNeighborhood.ts` (EGO_NODE_W e sorelle) e
    arrivano come stile inline, perche' le stesse costanti disegnano le frecce e
    due copie divergerebbero al primo ritocco. */
@@ -42,7 +45,18 @@
 .ego-diagram {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    /* Il passo fra il disegno e le due cornici di testo — l'eyebrow sopra, i
+       conteggi sotto — e' il SOLO uso del gap qui: la colonna ha tre figli
+       (`__head`, `__scroll`, `__foot`), quindi questa riga governa esattamente
+       quei due stacchi e nient'altro.
+       Era un letterale di 6px, fuori dalla scala a 4px del DS: misurato a
+       schermo, l'eyebrow NEIGHBORHOOD e la riga dei conteggi stavano addosso
+       alle scatole (6px sopra, 6px sotto). `--space-3` e' un gradino sopra
+       `--space-2`, il token su cui quel 6px si appoggiava.
+       Non c'entra `EGO_OWNER_GAP` (24px, 10k p7): quella e' la banda owner ->
+       soggetto DENTRO il disegno, aritmetica di `jjform/egoNeighborhood`, e
+       resta dov'e'. */
+    gap: var(--space-3);
     padding: 10px 14px 12px;
     background: var(--color-form-surface);
 
@@ -91,7 +105,19 @@
 
     &__scroll { overflow-x: auto; }
 
-    &__frame { position: relative; }
+    /* `margin-inline: auto` e non `justify-content: center` sul genitore: il
+       disegno ha una larghezza NOTA (`egoLayout(ego).width`, stile inline) e
+       vive dentro un contenitore che scorre. Con margini automatici, quando lo
+       spazio libero e' negativo — molti vicini, disegno piu' largo della riga —
+       i due margini valgono 0 e il blocco resta a sinistra, cioe' esattamente
+       il comportamento di oggi: nessun clip nuovo, e il primo nodo resta
+       raggiungibile scorrendo. Il centraggio con `justify-content` in un
+       contenitore che scorre taglia invece l'inizio del contenuto.
+       Il disegno si CENTRA, non si allarga: la larghezza resta la sua. */
+    &__frame {
+        position: relative;
+        margin-inline: auto;
+    }
 
     &__arrows {
         position: absolute;
