@@ -107,6 +107,103 @@ describe('CHECK 8 — reference_target_type_mismatch', () => {
 });
 
 // ==================================================================
+// CHECK 6 — dangling_reference asks the GRAPH, not `model.objects`
+//
+// `model.objects` holds the ROOTS only: `DObject`'s constructor appends to
+// `objects` when the father is the DModel and to the slot's `values` otherwise
+// (joiner/classes.ts:774-784), and a contained instance's father IS the slot
+// (LModelElement.tsx:7171). So a nested instance is outside the visit perimeter
+// and used to be reported as non-existent while the tree, the canvas chip and
+// the nested form all resolved it.
+//
+// The fixture mirrors the real proxy split (LModelElement.tsx:7543,
+// jjomTransformers.ts:363-393): `__raw.values` carries the pointer ids, `values`
+// carries what `LPointerTargetable.fromPointer` gave back — an object with
+// `className: 'DObject'` (the D-layer name even on an L proxy, CLAUDE.md 3.13)
+// for a live target, and nothing for a pointer that resolves to nobody.
+// ==================================================================
+describe('CHECK 6 — existence is asked of the graph', () => {
+    const Ed = klass({ id: 'Ed', name: 'Edition' });
+    const rEditions = ref({ id: 'rEd', name: 'editions', type: Ed, upperBound: -1 });
+    const Book = klass({ id: 'Bk', name: 'Book', allReferences: [rEditions] });
+
+    /** A slot whose raw pointers are `ids` and whose proxy resolved `resolved`. */
+    const slot = (ids: string[], resolved: AnyObj[]): AnyObj =>
+        val('rEd', { values: resolved, __raw: { values: ids } });
+
+    /** What the L proxy hands back for a live nested instance. */
+    const proxied = (id: string, name: string): AnyObj =>
+        ({ id, name, className: 'DObject', instanceof: Ed });
+
+    it('a nested target the proxy resolves is NOT dangling', () => {
+        const book = obj({
+            id: 'b1', name: 'Book_1', instanceof: Book,
+            features: [slot(['e0'], [proxied('e0', 'Edition_0')])],
+        });
+        // `e0` is deliberately absent from `model.objects`: that is what nested means.
+        const res = run([book], [Book, Ed]);
+        expect(types(res)).not.toContain('dangling_reference');
+    });
+
+    it('a target that resolves to nobody IS still dangling', () => {
+        const book = obj({
+            id: 'b1', name: 'Book_1', instanceof: Book,
+            features: [slot(['gone'], [])],
+        });
+        const res = run([book], [Book, Ed]);
+        expect(types(res)).toContain('dangling_reference');
+        expect(res.status).toBe('errors');
+    });
+
+    it('separates the two in one slot: the nested one passes, the dead one is flagged', () => {
+        const book = obj({
+            id: 'b1', name: 'Book_1', instanceof: Book,
+            features: [slot(['e0', 'gone'], [proxied('e0', 'Edition_0')])],
+        });
+        const res = run([book], [Book, Ed]);
+        const dangling = res.violations.filter((v: AnyObj) => v.violationType === 'dangling_reference');
+        expect(dangling).toHaveLength(1);
+        expect(dangling[0].message).toContain('gone');
+        expect(dangling[0].message).not.toContain('e0');
+    });
+
+    it('a root target keeps passing without the proxy saying anything', () => {
+        const other = obj({ id: 'e0', name: 'Edition_0', instanceof: Ed });
+        const book = obj({
+            id: 'b1', name: 'Book_1', instanceof: Book,
+            features: [slot(['e0'], [])],   // proxy silent; `model.objects` answers
+        });
+        const res = run([book, other], [Book, Ed]);
+        expect(types(res)).not.toContain('dangling_reference');
+    });
+
+    it('a resolved entry that is NOT a DObject does not count as existence', () => {
+        const book = obj({
+            id: 'b1', name: 'Book_1', instanceof: Book,
+            // e.g. a pointer that lands on a DClass: it resolves, but it is not an instance
+            features: [slot(['c0'], [{ id: 'c0', name: 'Edition', className: 'DClass' }])],
+        });
+        const res = run([book], [Book, Ed]);
+        expect(types(res)).toContain('dangling_reference');
+    });
+
+    it('an over-full slot loses nothing it used to catch (the proxy truncates, the raw read does not)', () => {
+        const rOne = ref({ id: 'rOne', name: 'editions', type: Ed, upperBound: 1 });
+        const B1 = klass({ id: 'Bk1', name: 'Book', allReferences: [rOne] });
+        const book = obj({
+            id: 'b1', name: 'Book_1', instanceof: B1,
+            // two raw pointers on a 0..1 slot; the proxy would stop at the first.
+            features: [val('rOne', { values: [proxied('e0', 'Edition_0')], __raw: { values: ['e0', 'gone'] } })],
+        });
+        const res = run([book], [B1, Ed]);
+        expect(types(res)).toContain('multiplicity_upper_exceeded');
+        const dangling = res.violations.filter((v: AnyObj) => v.violationType === 'dangling_reference');
+        expect(dangling).toHaveLength(1);
+        expect(dangling[0].message).toContain('gone');
+    });
+});
+
+// ==================================================================
 // CHECK 9 — attr_multiplicity_upper_exceeded
 // ==================================================================
 describe('CHECK 9 — attr_multiplicity_upper_exceeded', () => {
