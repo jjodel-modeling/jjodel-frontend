@@ -158,11 +158,36 @@ describe('10k punto 3 — l\'header della form ha una banda propria', () => {
         expect(FH).toContain('display: flex');
     });
 
-    it('fondo slate-50 dal token che il desk gia\' usa, non dal nome doppio', () => {
-        expect(FH).toContain('background: var(--color-form-panel)');
+    /* 10k-bis, emendamento — la banda cambia token.
+       10k la dipingeva con `--color-form-panel`, «lo stesso token con cui 10d ha
+       dipinto il desk». Proprio per quello non staccava: stesso token da
+       entrambi i lati = stesso colore = nessun salto. Passa a
+       `--color-bg-tertiary`, che e' il nome con cui QUESTO foglio chiama una
+       superficie a riposo un gradino piu' scura (`__foot`, `__del-foot`, la
+       striscia del breadcrumb), e non `--color-bg-hover`, che il foglio riserva
+       — dichiarandolo due volte a commento — agli stati `:hover`. */
+    it('fondo slate-100 dal token delle bande a riposo, non da quello del desk', () => {
+        expect(FH).toContain('background: var(--color-bg-tertiary)');
+        // Il difetto che l'emendamento chiude: la banda NON puo' piu' valere il
+        // token del desk, altrimenti non c'e' salto da misurare.
+        expect(FH).not.toContain('--color-form-panel');
         // `--color-bg-secondary` e' fra i 15 dichiarati due volte con valori
         // diversi: qui non ci si appoggia una superficie.
         expect(FH).not.toContain('--color-bg-secondary');
+        // ...e non l'hover, che in scuro e' traslucido.
+        expect(FH).not.toContain('--color-bg-hover');
+    });
+
+    /* Controllo POSITIVO del test qui sopra, e la meta' che rende la coppia una
+       misura: il desk continua a portare `--color-form-panel`. Senza, un
+       `not.toContain` verde direbbe soltanto che qualcuno ha rinominato il
+       token ovunque — cioe' di nuovo due superfici uguali, e di nuovo nessuna
+       banda. Le due asserzioni insieme dicono «diversi», che e' la richiesta. */
+    it('positivo di controllo: il desk resta --color-form-panel, quindi i due differiscono', () => {
+        const MAIN = block(RULES, '&__main {');
+        expect(MAIN).not.toBe('');
+        expect(MAIN).toContain('background: var(--color-form-panel)');
+        expect(MAIN).not.toContain('--color-bg-tertiary');
     });
 
     it('sborda fino ai bordi della card, come il footer di 10d', () => {
@@ -171,7 +196,9 @@ describe('10k punto 3 — l\'header della form ha una banda propria', () => {
     });
 
     it('hairline sotto, e raggi superiori solo quando e\' davvero in cima', () => {
-        expect(FH).toContain('border-bottom: 1px solid var(--color-form-border)');
+        // 10k-bis: slate-300 e non slate-200. Ora e' il bordo basso di una banda
+        // che ha un fondo suo, non un filetto interno alla card.
+        expect(FH).toContain('border-bottom: 1px solid var(--color-form-border-strong)');
         expect(FH).toContain('&:first-child');
         expect(FH).toMatch(/&:first-child \{[^}]*border-radius: var\(--radius-card\) var\(--radius-card\) 0 0/s);
     });

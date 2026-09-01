@@ -2073,14 +2073,39 @@
        la card invece che come la sua testata. Misurato nel giro before: [768,
        1572] contro [754, 1587] della card.
 
-       Il fondo e' `--color-form-panel` (#f8fafc, slate-50), lo stesso token con
-       cui 10d ha dipinto il desk — il fondo «sotto le card» del sistema, e qui
-       il fondo sotto il titolo. NON `--color-bg-secondary`, che il prompt
-       nominava: e' fra i 15 nomi dichiarati due volte con valori diversi
-       (`_colors-light.scss:81` #ffffff, `tokens.css:117` #f8fafc), cioe' un
-       token il cui valore dipende dall'ordine di cascata. Misurato a runtime
-       risolve #f8fafc, lo stesso colore — ma per via del duplicato, non per
-       dichiarazione, e questo foglio non ci appoggia una superficie.
+       Il fondo e' `--color-bg-tertiary` (#f1f5f9, slate-100). 10k aveva scelto
+       `--color-form-panel` (#f8fafc) perche' e' «il token con cui 10d ha dipinto
+       il desk», ed e' esattamente per quello che la banda non staccava: il desk
+       E' quel token (`&__main`), quindi banda e desk avevano lo stesso colore e
+       ΔL = 0. Una testata che vale il fondo su cui posa non e' una banda.
+
+       IL NOME. L'emendamento 10k-bis chiedeva «--color-bg-hover (#f1f5f9)», che
+       sono due token diversi: `--color-bg-hover` e' `$slate-150` (#e9eff6),
+       `--color-bg-tertiary` e' `$slate-100` (#f1f5f9). Questo foglio ha gia'
+       ratificato la distinzione DUE volte — sull'hover di riga della tabella e
+       sul nodo dell'outline di 10e: «sono due RUOLI, e questo e' l'hover». Qui
+       il ruolo non e' l'hover ma una superficie A RIPOSO, e per quella il foglio
+       usa `--color-bg-tertiary` in tre bande gemelle (`__foot`, `__del-foot`, la
+       striscia del breadcrumb), tutte fondo + hairline come questa; mentre
+       `--color-bg-hover`, in questo foglio, non compare mai fuori da un `:hover`.
+       E' anche il valore che il prompt nominava: la regola «usa il nome che
+       QUESTO foglio gia' usa per quel ruolo» porta qui da entrambi i capi.
+
+       NON `--color-bg-secondary`, che il prompt di 10k nominava: e' fra i 15
+       nomi dichiarati due volte con valori diversi (`_colors-light.scss:81`
+       #ffffff, `tokens.css:117` #f8fafc), cioe' un token il cui valore dipende
+       dall'ordine di cascata. `--color-bg-tertiary` non lo e': zero occorrenze
+       in `tokens.css`, misurate con un controllo positivo sullo STESSO comando
+       (`--color-bg-secondary` ne da' 1, quindi il silenzio e' un risultato e non
+       una ricerca rotta). Ed e' opaco anche in scuro (#16181a), che
+       `--color-bg-hover` non e': li' vale `rgba(255, 255, 255, 0.06)` e come
+       `background` sostituirebbe la superficie invece di sovrapporvisi — e' la
+       ragione, scritta nei token, per cui esiste `--color-inode-pill-hover`.
+
+       L'HAIRLINE passa a `--color-form-border-strong` (slate-300) da
+       `--color-form-border` (slate-200): ora che la banda ha un colore proprio,
+       il filetto e' il bordo BASSO della banda e non un separatore interno alla
+       card, e a slate-200 su un fondo appena piu' chiaro non si leggeva.
 
        Il raggio solo `:first-child`: dopo un drill-in il breadcrumb di 12c sta
        SOPRA l'header, che allora non e' al bordo della card e va squadrato. Una
@@ -2092,8 +2117,8 @@
         gap: 10px;
         margin: -14px -14px 14px;
         padding: 10px 14px;
-        border-bottom: 1px solid var(--color-form-border);
-        background: var(--color-form-panel);
+        border-bottom: 1px solid var(--color-form-border-strong);
+        background: var(--color-bg-tertiary);
 
         &:first-child {
             border-radius: var(--radius-card) var(--radius-card) 0 0;
