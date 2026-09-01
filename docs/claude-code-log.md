@@ -2,6 +2,36 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-09-01 — fix(manager): il pannello Columns si legge a colpo d'occhio (10k-dd)
+**Prompt**: richiesta a schermo, senza documento — «puoi fare questo dropdown un po' piu' slick?»
+con screenshot del pannello Columns aperto su `State`.
+**Files touched**: `abstract/tabs/{InstanceManagerTab.tsx, instanceManagerTab.scss}`,
+`__tests__/instanceManager10k.test.ts` (+8 casi) e `__tests__/instanceManager10i.test.ts` (2
+asserzioni emendate), tutti in **51f9741b1**; questa entry a parte. Commit costruito con indice
+privato (`GIT_INDEX_FILE`), albero verificato pulito prima e dopo.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `npx vitest run` **2940 passati / 0 falliti**, suite `tabs/` **387/387**,
+`npm run typecheck` **33** invariata, `npm run build` exit **0**. Gli otto casi nuovi provati con
+SEI mutazioni (nascoste non smorzate, classe `--off` tolta dal TSX, testata sparita, nota tornata a
+slate-300, raggio tornato letterale, hover tornato a `bg-tertiary`): 1/1/1/1/2/1 rossi, verde al
+ripristino in tutte e sei.
+**Out-of-scope changes**: no — le due asserzioni di 10i sono il seguito obbligato del delta (una
+pinna il raggio che ho cambiato, l'altra si e' rotta per la lunghezza del JSX).
+**Layer Impact Report**: not-required — nessun file di §3.1, zero creatori D, zero `TRANSACTION`.
+**Smoke visivo**: passato — `_tmp_10kdd_measure.ts`, zero errori di pagina. Before: pannello
+**190x252**, righe 24px, font 12px, checkbox 16px, `gap: 2px`, raggio 6px, ombra 2/6, nota a
+**43px** dall'etichetta. After: 200x252, `gap: 0`, raggio 8px, ombra 4/12, etichette nascoste in
+muted, testata «3 of 9 shown».
+**Notes**: lo screenshot era un ritaglio INGRANDITO — le misure erano gia' quelle del DS, e il
+difetto era la gerarchia: nove righe uguali, e per sapere quali colonne sono a schermo bisognava
+leggere nove caselle. Un difetto mio trovato nell'after: avevo smorzato la nota a slate-300,
+~1.6:1 su bianco. La finestra `slice(at, at + 2600)` di 10i e' la versione in positivo del
+«divieto senza giurisdizione».
+**Prompt document name**: (richiesta inline, senza documento) — 2026-09-01 14:31
+
+
 ## 2026-09-01 — fix(manager): il bordo sinistro torna sulla card della form (10k-ter)
 **Prompt**: emendamento in chat, un punto solo: dallo screenshot la card della form non
 mostra il lato sinistro. Il prompt nominava DUE sospetti alternativi — la banda di
