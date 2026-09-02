@@ -70,6 +70,35 @@ export interface NodeProblem {
     // Present only for kind === 'conformance': the aggregated violation list for
     // this object. Drives the popover rows and the per-node count badge.
     conformance?: ConformanceProblemDetail[];
+    /**
+     * The id of the `DModel` whose producer run registered this entry — the ownership the
+     * registry did not carry until UNQ1 C6, and what a producer's revoke pass keys on so that
+     * one open model never revokes the entries of another (discovery_2026-09-01_unq1_duplicate_name.md
+     * §A.4 and §C5.4). Read only by the producers, through `getProblemIdsOwnedBy` below.
+     *
+     * Written by BOTH producers, at REGISTRATION time, from the `modelid` they are mounted with
+     * (EditorV2.tsx:4223-4224 hands both the same one). At registration and not derived at
+     * revoke time on purpose: an element DELETED meanwhile walks up to no model at all, and an
+     * entry whose owner had to be looked up would stop being revocable and sit in the registry
+     * for the rest of the session. The owner is in the data, not in the graph.
+     *
+     * NOT called `modelId`, though a `DModel` id is exactly what it holds. It names the SCAN
+     * that wrote the entry, not the container of `nodeId`, and in the worst case the two come
+     * apart: the conformance producer registers a second entry under the resolved DVertex id
+     * (ConformanceProblemSync.tsx:97), and a DVertex lives in a DGraph, not in the model. The
+     * `DModel` it holds is also a METAMODEL whenever the uniqueness producer is scanning one
+     * (UniquenessProblemSync.tsx:128) — so `metamodelId` would be a lie half the time, and
+     * `modelId` a lie about which relation this is.
+     *
+     * Additive optional property: no consumer enumerates a NodeProblem's keys or compares two
+     * structurally. NodeProblemIndicator reads `severity` / `resolvedAt` / `conformance` /
+     * `title` (:12, :49-50, :53), NodeProblemOverlay `kind` / `action` / `resolvedAt` /
+     * `relatedNodeIds` (:124, :192-198), TreeViewContent `severity` / `description` / `title`
+     * (:727, :735), formDiagnostics `resolvedAt` / `conformance` / `severity` / `title`
+     * (:85-98), useNodeProblems hands the array through untouched, and the two spreads in this
+     * file (:163, :200) carry it along by construction.
+     */
+    ownerModelId?: string;
     createdAt: number;
     resolvedAt?: number;
 }
@@ -215,6 +244,30 @@ export function subscribe(listener: Listener): () => void {
 
 export function getNodeProblemsSnapshot(nodeId: string): readonly NodeProblem[] {
     return nodeSnapshots.get(nodeId) ?? EMPTY_PROBLEMS;
+}
+
+/**
+ * The ids of the entries of one kind owned by one model — the read a producer's revoke pass
+ * needs (see `ownerModelId` above), and the only enumeration of the registry exported.
+ *
+ * It walks the module-level `problems` Map directly. NOT `window._jjNodeProblems`: reading the
+ * global is what `getRegistryState()` did until UNQ1 C5, and under `node` — the vitest
+ * environment — `typeof window === 'undefined'` left it returning an empty Map, so a test of
+ * the revoke written on top of it would have iterated nothing and been green by construction.
+ *
+ * Entries already marked resolved are included: `markResolved` is a no-op on them, so the
+ * caller's diff stays idempotent without a second filter here. An entry with no `ownerModelId`
+ * is owned by nobody and is never returned — no producer writes one today, and one that did
+ * would be asking for its entries to leak rather than to be revoked by the wrong model.
+ */
+export function getProblemIdsOwnedBy(kind: NodeProblemKind, ownerModelId: string): string[] {
+    const out: string[] = [];
+    for (const [id, p] of problems) {
+        if (p.kind !== kind) continue;
+        if (p.ownerModelId !== ownerModelId) continue;
+        out.push(id);
+    }
+    return out;
 }
 
 export function getActiveOverlayProblemId(): string | null {

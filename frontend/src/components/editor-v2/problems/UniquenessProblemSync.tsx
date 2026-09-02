@@ -71,14 +71,27 @@
  * M2): M1 registers 2, open M2 -> 0 M1 left, return to M1 -> still 0, for the rest of the
  * session. See docs/discovery/discovery_2026-09-01_unq1_duplicate_name.md §A.4.
  *
- * THE FIX is `ownedIdsByModel`: the producer revokes only the ids IT registered for the
- * model it is scanning. The entries carry no model of their own — giving them one means
- * `registry.ts` and the conformance producer that writes into the same Map — and the
- * bookkeeping needs none: a `duplicate-name` entry on an element of model M can only have
- * been written by the producer mounted on M. Same shape as `ConformanceProblemSync`'s
- * `ownedIds`, module-level rather than a ref so that it survives the remount of an editor
- * tab. Nothing else moves: the signature is unchanged, the two scans are unchanged, and no
- * scan was added — WHAT is counted and WHEN it is recounted both stay as they were.
+ * THE FIX was `ownedIdsByModel`, a module-level `Map<modelid, Set<problemId>>`: the producer
+ * revoked only the ids IT had registered for the model it was scanning. It held on a premise
+ * true of ONE producer per kind, and said so — a `duplicate-name` entry on an element of model
+ * M can only have been written by the producer mounted on M.
+ *
+ * SUPERSEDED (UNQ1 C6, 2026-09-02) by `ownerModelId` on the entry itself (registry.ts): the
+ * ownership is now in the DATA, written at registration by both producers, and the bookkeeping
+ * is gone. The revoke pass asks the registry which `duplicate-name` entries this model owns
+ * (`getProblemIdsOwnedBy`) and marks resolved the ones its scan no longer wants. The case that
+ * decided it is the DELETED element — the one a walk up to the father would lose, since a
+ * deleted element resolves to no model and its entry would never be claimed again. A field
+ * WRITTEN AT REGISTRATION keeps it for the same reason the bookkeeping did: the owner does not
+ * depend on the graph still holding the element the entry names, and that is a case of the test.
+ *
+ * Two defects leave with the bookkeeping. An entry re-registered by ANOTHER model's producer
+ * (same element id, element moved between models) stayed in this producer's owned set and would
+ * have been revoked out from under its new owner; and the owner of an entry was knowable only
+ * inside the module that wrote it, so a second producer of this kind would have had the entries
+ * in one Map with no way to tell them apart. Nothing else moves: the signature is unchanged, the
+ * two scans are unchanged, and no scan was added — WHAT is counted and WHEN it is recounted both
+ * stay as they were.
  */
 
 import { useEffect } from 'react';
@@ -88,6 +101,7 @@ import { detectDuplicateNames, detectM2DuplicateNames, m2KindOf } from '../../..
 import {
     registerProblem,
     markResolved,
+    getProblemIdsOwnedBy,
     type NodeProblem,
 } from './registry';
 
@@ -97,21 +111,13 @@ interface Props {
 
 // The kind this producer writes, and the prefix of every id it assembles. It no
 // longer decides ownership: until UNQ1 C5 the revoke pass claimed every registry
-// entry of this kind, whatever model it belonged to — see the header note and
-// `ownedIdsByModel` below.
+// entry of this kind, whatever model it belonged to — see the header note and the
+// `ownerModelId` the entries carry since UNQ1 C6.
 const DUPLICATE_KIND: NodeProblem['kind'] = 'duplicate-name';
 
 function duplicateProblemId(nodeId: string): string {
     return `${DUPLICATE_KIND}:${nodeId}`;
 }
-
-/**
- * The ids this producer registered, per model it scanned — the ownership the registry
- * entries do not carry. Module-level, not a `useRef`: an editor tab that unmounts and
- * comes back must still recognise the entries its own model left in the registry, or a
- * collision resolved while the tab was closed would never be revoked.
- */
-const ownedIdsByModel = new Map<string, Set<string>>();
 
 /**
  * The body of the effect. Exported for the test: React is not the subject here, the
@@ -153,25 +159,26 @@ export function reconcileDuplicateProblems(modelid: string): void {
                 type: 'focus-node',
                 targetNodeId: colliding[0]?.id,
             },
+            // The model this scan is running on — a metamodel's DModel id when it is a
+            // metamodel that is open. Written here, at registration, so the entry stays
+            // revocable after the element it names is deleted (see the header note).
+            ownerModelId: modelid,
             createdAt: Date.now(),
         });
     }
 
-    // Mark-resolved the entries THIS model's scan registered last run and no longer
-    // wants. Scoped to `ownedIdsByModel`, never a scan of the whole registry: the
-    // entries of another open model are not ours to revoke, and neither are the
-    // conformance ones (their ids never enter this set). markResolved is a no-op on
-    // an id already resolving or already dropped, so the diff stays idempotent, and
-    // an element deleted meanwhile is still revoked — the id was ours, whatever
-    // became of the element it named.
-    const owned = ownedIdsByModel.get(modelid);
-    if (owned) {
-        for (const id of owned) {
-            if (desiredIds.has(id)) continue;
-            markResolved(id);
-        }
+    // Mark-resolved the entries THIS model owns and this scan no longer wants. The set
+    // comes from the registry, filtered on kind AND on the `ownerModelId` the entries
+    // were registered with — never a scan of the whole registry: the entries of another
+    // open model are not ours to revoke, and neither are the conformance ones (a
+    // different kind, and a different owner is not even consulted). markResolved is a
+    // no-op on an id already resolving, so the diff stays idempotent; and an element
+    // deleted meanwhile is still revoked, because its entry still names us as its owner
+    // whatever became of the element itself.
+    for (const id of getProblemIdsOwnedBy(DUPLICATE_KIND, modelid)) {
+        if (desiredIds.has(id)) continue;
+        markResolved(id);
     }
-    ownedIdsByModel.set(modelid, desiredIds);
 }
 
 export function UniquenessProblemSync({ modelid }: Props) {
