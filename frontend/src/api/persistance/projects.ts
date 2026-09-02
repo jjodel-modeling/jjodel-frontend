@@ -138,7 +138,28 @@ class ProjectsApi {
 
         // Update the version in Redux state. NOT on a silent save: this write is a
         // state delta and would become a step of the D-layer undo history.
-        if (!silent) SetFieldAction.new(dProject.id, 'version', nextVersion, '', false);
+        //
+        // VER1. The `SetFieldAction` reaches Redux, but NOT the object the caller is
+        // holding. The reducer copies along the path (`deepCopyButOnlyFollowingPath`,
+        // reducer.ts:540), so `idlookup[id]` becomes a NEW object while the proxy stays
+        // bound to the previous one — measured: `project.__raw === idlookup[id]` is true
+        // before the first save and false after it. Every field read on the proxy goes to
+        // that detached target (`proxy.ts:323` for `__raw`, `defaultGetter` for the rest),
+        // so `project.version` and `project.__raw.version` both keep the OLD number, and
+        // the next `save` on the same `LProject` recomputes `nextVersion` from it: two
+        // explicit saves produced 1.1 twice instead of 1.1 then 1.2.
+        //
+        // The realignment writes the advanced value back onto that detached target, so a
+        // second call reads the value the first one produced. It is deliberately NOT a
+        // write through the proxy (`project.version = ...` would fire a second
+        // `SetFieldAction`, i.e. a second undo step), and it is deliberately NOT on the
+        // silent branch: a silent save does not advance the version, so there is nothing
+        // to realign.
+        if (!silent) {
+            SetFieldAction.new(dProject.id, 'version', nextVersion, '', false);
+            const raw = project.__raw as DProject | undefined;
+            if (raw) raw.version = nextVersion;
+        }
 
         return dProject;
     }

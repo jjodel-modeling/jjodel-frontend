@@ -188,20 +188,25 @@ describe('ProjectsApi.save — cio\' che DIRTY1 non tocca (non regressione)', ()
     });
 
     /**
-     * Difetto pre-esistente REGISTRATO e NON toccato (referto SAVE1: «`version`
-     * non avanza fra due save vicini»). `save` legge la versione da
-     * `project.__raw`, che il `SetFieldAction` di fine metodo aggiorna in Redux
+     * Difetto pre-esistente REGISTRATO e NON toccato da DIRTY1 (referto SAVE1:
+     * «`version` non avanza fra due save vicini»). `save` legge la versione da
+     * `project.__raw`, che il `SetFieldAction` di fine metodo aggiornava in Redux
      * ma non nell'oggetto in mano al chiamante: due salvataggi espliciti sullo
-     * stesso `LProject` in memoria producono due volte la stessa versione. Qui
-     * e' asserito COM'E', non come dovrebbe essere: se qualcuno lo aggiusta,
-     * questo test diventa rosso ed e' il segnale giusto.
+     * stesso `LProject` in memoria producevano due volte la stessa versione.
+     *
+     * CORRETTO da VER1 (2026-09-02): `save` riallinea `project.__raw.version`
+     * dopo il bump, quindi la seconda chiamata legge il valore avanzato. Questa
+     * asserzione era scritta COM'ERA, con la nota «1.2 il giorno in cui verra'
+     * corretto»; quel giorno e' arrivato e la nota e' stata aggiornata invece che
+     * cancellata, perche' la ragione per cui il test esiste non e' cambiata.
+     * La copertura piena della progressione sta in `projectsSaveVersion.test.ts`.
      */
-    it('difetto noto fuori perimetro: due save sullo stesso __raw danno la stessa versione', async () => {
+    it('VER1: due save sullo stesso __raw danno versioni successive', async () => {
         const p = project(1.0);
         const first = await ProjectsApi.save(p);
         const second = await ProjectsApi.save(p);
 
         expect(first.version).toBe(1.1);
-        expect(second.version).toBe(1.1);   // 1.2 il giorno in cui verra' corretto
+        expect(second.version).toBe(1.2);   // era 1.1 prima di VER1
     });
 });
