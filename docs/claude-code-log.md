@@ -13,6 +13,31 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-02 — docs(log): §6.1 chiusura batch VER1 / UNQ1-C6
+**Prompt**: §6.1 di chiusura del batch VER1 / UNQ1-C6 a repo fermo, seriale: spostare le tre
+entry dalla inbox al log attivo, committare i prompt untracked, iscrivere RC-13-bis in
+PROTOCOL, ruotare il log se oltre soglia, e accertare (non chiudere) lo stato di EGO1 in
+indice. Nessun file applicativo.
+**Files touched**: `docs/claude-code-log.md` + `docs/log-inbox/` (`8875ddc7f`),
+`docs/prompts/` cinque prompt (`be35fde2e`), `docs/PROTOCOL.md` (`7b930bd07`).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: (e)
+**Regressions**: no — nessun file di codice toccato. `npm run check:docs` **3/3, 2 warning**
+prima e dopo ciascun commit; Check A resta PASS dopo l'aggiunta di RC-13-bis, che sta fuori
+dal blocco verificato byte a byte.
+**Out-of-scope changes**: yes — questa entry stessa e' un sesto commit oltre i cinque punti
+del prompt, che non ne prevedeva una: P9 la richiede e la sua omissione e' gia' stata la
+CODA del batch precedente.
+**Layer Impact Report**: not-required — solo documentazione.
+**Smoke visivo**: non applicabile — nessun pixel cambia.
+**Notes**: Deroga dichiarata: la `Notes` di VER1 era 878 caratteri, Check C in ERROR;
+accorciata sotto il cap citando `1ac3b1863`. Entry del batch corrente, stessa sessione, non
+back-filling. Attivo 6 -> 9 entry, rotazione saltata (soglia 40). Accertamento EGO1: l'indice
+non tiene lavoro in volo, tiene un **revert staged** (-295 righe, la discovery cancellata);
+albero e HEAD identici byte a byte, test 24/24. Indice lasciato come trovato.
+**Prompt document name**: PROMPT_6.1_chiusura_VER1_C6.md — 2026-09-02
+
 ## 2026-09-02 — fix(problems): l'appartenenza al modello e' un campo su NodeProblem
 **Prompt**: UNQ1 C6, corsia L2 parallela — chiudere il terzo punto di §C5.4: un campo
 opzionale additivo su `NodeProblem` che nomini il modello di appartenenza, scritto da
