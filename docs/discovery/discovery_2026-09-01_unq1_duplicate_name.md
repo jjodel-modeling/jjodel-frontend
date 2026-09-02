@@ -713,3 +713,196 @@ raccolgono sono i `window is not defined` pre-esistenti, indipendenti da questo 
   `duplicate-name` sulla stessa `Map`, la contabilita' per produttore resterebbe corretta ma
   la domanda «di chi e' questa entry» tornerebbe a non avere risposta nel dato. Il campo su
   `NodeProblem` resta il rimedio vero, e resta non fatto.
+
+---
+
+# Referto UNQ1 C6 — il modello e' un campo sulla entry
+
+Aggiunto 2026-09-02. Commit del codice `bc939442b`, perimetro `problems/registry.ts`,
+`problems/UniquenessProblemSync.tsx`, `problems/ConformanceProblemSync.tsx` e il test
+`problems/__tests__/UniquenessProblemSync.test.ts` — quattro file, sotto la soglia dei
+cinque. Chiude il terzo punto di §C5.4, e nient'altro.
+
+## C6.1 Censimento dei lettori, con riga
+
+Chi importa `NodeProblem` (`command grep -rn "NodeProblem" frontend/src --include="*.ts"
+--include="*.tsx" -l`, exit 0, 13 file — due in piu' di quelli che il prompt elenca:
+`ObjectNode.tsx` e `TreeViewContent.tsx`):
+
+| file | cosa legge, con riga | enumera le chiavi? |
+|---|---|---|
+| `NodeProblemIndicator.tsx` | `severity` `:12,:14`, `resolvedAt` `:12,:49,:53`, `conformance?.length` `:50`, `title` `:53`, `id` `:26` | no |
+| `NodeProblemOverlay.tsx` | `relatedNodeIds[0]` `:124`, `action` `:159-162,:194-197`, `resolvedAt` `:192`, `kind` + `conformance?.length` `:193`, `id` `:200` | no |
+| `useNodeProblems.ts` | niente: passa `readonly NodeProblem[]` `:10-14` attraverso `useSyncExternalStore` | no |
+| `formDiagnostics.ts` | `resolvedAt` `:85`, `conformance` `:87-88`, `d.metamodelElementName` `:90`, `severity` + `title` + `description` `:98` | no |
+| `IRForm.tsx` | non legge il tipo: chiama `useNodeProblems(objectId)` `:334` e passa l'array a `collectFormDiagnostics` | no |
+| `conformanceToProblems.ts` | importa i soli `NodeProblemSeverity` `:21` e `ConformanceProblemDetail` `:13` — non il record | no |
+| `TreeViewContent.tsx` | `severity` `:727`, `description` + `title` `:735`, `length` `:722,:734` | no |
+| `ObjectNode.tsx` | non legge il tipo: monta `<NodeProblemIndicator nodeId={id}/>` `:920,:1151,:1217` | no |
+| `formDiagnostics.test.ts` | costruisce literal `:13-17,:61-70,:85` | no |
+| `UniquenessProblemSync.test.ts` | costruisce literal, legge `kind` `:97`, `resolvedAt` `:104-109` | no |
+| `registry.ts` (se stesso), righe del file **dopo** la modifica | `nodeId` `:164,:175,:216`, `resolvedAt` `:228`, `relatedNodeIds` `:281`; due spread `{...p}` `:192` e `{...existing}` `:229` | no — lo spread propaga il campo per costruzione |
+
+Nessun consumatore enumera le chiavi di un `NodeProblem` ne' confronta due record
+strutturalmente: l'unico confronto e' per **identita' di riferimento**
+(`prev.every((p, i) => p === arr[i])`, `registry.ts:137`), che una proprieta' in piu' non
+tocca. Nessun `Object.keys` / `Object.entries` / `JSON.stringify` su un `NodeProblem` in
+tutto il repo. Il campo e' additivo come `metamodelElementName` (`registry.ts:42-58`, la cui
+nota di additivita' e' il precedente riuscito) lo era, e sta a `registry.ts:101`.
+
+## C6.2 Il nome, e il caso peggiore che regge
+
+`ownerModelId?: string` (`registry.ts`). Contiene **sempre** l'id di un `DModel`, ma non
+si chiama `modelId`, e la ragione e' misurata, non argomentata.
+
+Il caso peggiore e' la doppia registrazione della conformance
+(`ConformanceProblemSync.tsx:97`): oltre alla entry sull'id del `DObject`, ne scrive una
+sull'id del **`DVertex`** risolto. Un `DVertex` sta in un `DGraph`, non nel modello. La
+sonda l'ha ripresa cosi', alla riga `1bis-c`:
+
+```
+{"nodeId":"Pointer1788341103094_USER_40","soggetto":"(fuori lookup)","cls":"DVertex",
+ "owner":"Pointer1788341071362_USER_24","hasOwner":true}
+```
+
+`soggetto: "(fuori lookup)"` perche' il nodo che quella entry nomina non e' un elemento del
+modello. Un campo chiamato `modelId`, accanto a `nodeId`, prometterebbe «il modello del
+nodo»: su quella riga sarebbe falso. Il campo nomina la **scansione che ha scritto la
+entry**, che e' esattamente cio' che serve alla revoca — e `owner` lo dice.
+
+L'altra meta' del caso peggiore: per il produttore dell'unicita' il valore e' il `DModel`
+di un **metamodello** quando e' un metamodello a essere aperto (`isMetamodel`,
+`UniquenessProblemSync.tsx:128`). La sonda lo misura alla riga `C6 2-own`: le due entry su
+`DClass` portano `Pointer…_USER_10`, che e' il `DModel` del metamodello. Quindi
+`metamodelId` sarebbe una bugia meta' delle volte, e `modelId` una bugia su **quale
+relazione** il campo esprime. `ownerModelId` regge entrambe: `…ModelId` sul contenuto — un
+metamodello e' un `DModel` — e `owner…` sulla relazione. E' la lezione di
+`metamodelElementName` applicata: il nome deve reggere il caso in cui un lettore si
+fiderebbe di piu'.
+
+## C6.3 Il punto 4 — `ownedIdsByModel` cade, e il caso cancellato resta
+
+**Esito: rimossa.** Il criterio che il prompt pone e' il caso dell'elemento **cancellato**,
+quello che §C5.2 tiene e che un risalimento del padre a revoca-time perderebbe. Il campo lo
+tiene **perche' e' scritto alla registrazione**: il valore e' nel dato, non nel grafo, e non
+dipende dal fatto che l'elemento nominato esista ancora. La verifica non e' un ragionamento,
+e' il caso di test `revokes its own entry even when the element it named is gone` — il
+fixture cancella `ed1` da `slot.values`, da `m1.allSubObjects` e dal dizionario dei proxy,
+e la entry resta revocata da `m1`.
+
+La revoca legge ora `getProblemIdsOwnedBy(kind, modelid)` (`registry.ts:263`), che scorre la
+`Map` di modulo filtrando su **kind e owner insieme**. Il filtro sul kind e' quello che
+lascia intatto il vicino di conformance anche quando **l'owner coincide** — caso nuovo,
+perche' prima gli id della conformance semplicemente non entravano mai nell'insieme del
+produttore dell'unicita'; ora sarebbero owned dallo stesso modello. E' un caso di test
+aggiunto (`does not claim a conformance entry of its own model`).
+
+Con la contabilita' se ne vanno due difetti latenti, entrambi coperti da un test nuovo:
+
+- una entry **riregistrata da un altro modello** (stesso id di elemento, elemento spostato)
+  restava nell'owned set del primo, che alla scansione successiva l'avrebbe revocata sotto
+  il suo nuovo proprietario (`hands an entry over when another model re-registers it`);
+- l'appartenenza era conoscibile **solo dentro il modulo che l'aveva scritta**, che era
+  precisamente l'obiezione di §C5.4.
+
+`getProblemIdsOwnedBy` legge la `Map` di modulo **direttamente**, non
+`window._jjNodeProblems`: e' il pattern per cui `getRegistryState()` e' caduta in C5, e in
+ambiente `node` avrebbe reso verde per costruzione qualunque test della revoca.
+
+**`ConformanceProblemSync` scrive il campo ma tiene il suo `ownedIds`**, e non e'
+un'incoerenza: li' il ref non e' solo contabilita' di appartenenza, e' anche cio' che il
+**cleanup di unmount** percorre per `clearProblem` (`ConformanceProblemSync.tsx:130-134`).
+Un clear all'unmount non ha nessun `desiredIds` con cui diffare e nessun `modelid` ancora
+garantito significativo. Sostituirlo non e' nel perimetro di questa fetta: dichiarato, non
+fatto. Le deps dell'effetto restano `[result, graphId]` — aggiungere `modelid`, che il
+closure ora legge, farebbe partire l'effetto al cambio di modello con il `result` del
+modello **precedente** ancora in mano, registrando i vecchi oggetti sotto il nuovo owner.
+
+## C6.4 Le misure
+
+**Sonda** `frontend/scripts/smoke/_tmp_unq1c6.ts`, non committata (`.gitignore:66`,
+verificato con `git check-ignore -v`), contro il dev server su `localhost:3000`. Lo stato e'
+quello di C5.3 **invariato** — tre nested omonimi in M1, due classi omonime in M2, vivi
+insieme, nomi scritti con `SetFieldAction` sul campo `name` del D-layer — piu' **una**
+aggiunta: `Book.isbn` ha `lowerBound 1` e resta vuoto, cosi' il **secondo** produttore ha
+qualcosa da registrare e il campo si misura su entrambi i kind. Senza quella riga la sonda
+misurerebbe meta' del lavoro. Il prima e' stato ottenuto con
+`git checkout bc939442b^ -- <i quattro file>` e rimesso a posto con `git checkout HEAD --`:
+**nessuno `stash`, nessuna copia su disco** (RC-13, §6.4).
+
+| | prima (HEAD~1) | dopo |
+|---|---|---|
+| **C5.3, le sette righe** | | |
+| M1, con la sola tab M1 aperta | 3 PASS | 3 PASS |
+| M1, subito dopo aver aperto la tab M2 | 3 PASS | 3 PASS |
+| M2, nello stesso istante | 2 PASS | 2 PASS |
+| M1, tornando sulla tab M1 | 3 PASS | 3 PASS |
+| M1, dopo il rename di uno dei tre | 2 PASS | 2 PASS |
+| M2, nello stesso istante | 2 PASS | 2 PASS |
+| M1, dopo il rename del secondo | 0 PASS | 0 PASS |
+| **C6, il campo** | | |
+| ogni entry `duplicate-name` M1 porta l'owner giusto | **FAIL** | PASS |
+| ogni entry `duplicate-name` M2 porta l'owner giusto (il metamodello) | **FAIL** | PASS |
+| il produttore conformance ha registrato | PASS | PASS |
+| ogni entry `conformance` porta l'owner giusto | **FAIL** | PASS |
+| la entry sull'id del `DVertex` porta lo stesso owner | **FAIL** | PASS |
+| i due owner convivono nel registro, ciascuno sul proprio | **FAIL** | PASS |
+| nessuna entry attiva, di nessun kind, senza il campo (arm 1) | **FAIL** | PASS |
+| nessuna entry attiva, di nessun kind, senza il campo (fine corsa) | **FAIL** | PASS |
+| il vicino di conformance intatto dopo la revoca | PASS | PASS |
+| **totale** | **15 PASS / 7 FAIL** | **22 PASS / 0 FAIL** |
+
+`pageerror`: **0** in entrambe le corse. I 7 FAIL del prima sono asserzioni scritte come il
+comportamento corretto, e le sette righe di C5.3 restano verdi da entrambi i lati: e' la
+non-regressione che il prompt chiedeva. Le tre righe che passano **anche prima** vanno
+lette per quello che sono — «il produttore conformance ha registrato» misura il fixture, non
+il campo, e «il vicino intatto» passava gia' perche' prima gli id della conformance non
+entravano nell'insieme del produttore dell'unicita'.
+
+**Unit test** `problems/__tests__/UniquenessProblemSync.test.ts`, da 7 a **12** casi, verdi.
+I sette di C5 sono invariati; i cinque nuovi stanno in un `describe` a parte e sono: il campo
+stampato su ogni entry a M1 **e** a M2; una entry `duplicate-name` di **un altro modello** su
+un nodo che questo scan non desidera, lasciata stare (il test diretto del campo — il fixture
+a due modelli disgiunti lo provava solo di riflesso); una entry **senza owner**, che nessuno
+rivendica; il vicino di conformance **con lo stesso owner**; e la entry **ceduta** a un altro
+modello, che il primo non revoca piu'. Ogni caso riparte da un grafo di moduli fresco:
+registro e `getProblemIdsOwnedBy` leggono la stessa `Map` di modulo, e un test che la
+ereditasse misurerebbe l'ordine del file.
+
+**Mutazioni**, quattro, tutte rosse:
+
+| mutazione | strumento | esito |
+|---|---|---|
+| il campo non scritto dal produttore **unicita'** | unit | **8 rossi / 12** |
+| il campo scritto con l'id **dell'elemento** invece che del modello (`ownerModelId: nodeId`) | unit | **8 rossi / 12** |
+| la revoca **ignora il campo** e torna globale sul solo kind | unit | **6 rossi / 12** |
+| il campo non scritto dal produttore **conformance** (l'altro dei due) | sonda | **4 rossi**, e sono i quattro del suo kind: le righe `duplicate-name` restano verdi |
+
+L'ultima e' il controllo che la sonda sia sensibile **per produttore** e non solo alla
+presenza del campo in generale.
+
+**Gate**: `npx tsc --noEmit` **33 errori**, la baseline esatta, e **0** nei quattro file
+toccati (`command grep` sul path del perimetro, output completo, non una coda);
+`npm run build` **exit 0** con il solo avviso di chunk-size gia' noto; `npm run test`
+**3131 test verdi, 0 falliti**. I **9** file che non si raccolgono sono i `window is not
+defined` pre-esistenti — riverificati: gli 8 sotto `jjtl/` e `jjscript/` condividono un
+unico errore deduplicato da vitest, `utils/__tests__/UDComparator.test.ts` ha il proprio
+(`PerformanceMetrics.ts:220`), e nessuno dei nove sta nel perimetro.
+
+## C6.5 Cosa resta aperto
+
+- **§A.1 e §A.5, chi legge.** Invariati, e questa fetta non aggiunge un lettore: il campo e'
+  scritto dai produttori e letto dalla sola revoca. Il badge dell'albero conta figli, le
+  righe M1 non hanno indicatore, una collisione si vede nella sola form dell'oggetto.
+- **Il disallineamento di chiavi sul canvas** (entry sull'id dell'elemento, indicatore
+  sull'id del `DVertex`) resta dov'era. La sonda lo **misura** ora, di sponda: la entry di
+  conformance sul `DVertex` e' quella con `soggetto: "(fuori lookup)"`.
+- **`ConformanceProblemSync.ownedIds` resta un `useRef`.** Non e' piu' l'unica sede
+  dell'appartenenza — il campo lo e' — ma serve al cleanup di unmount. Se un domani lo si
+  volesse togliere, la strada e' un `clearProblemsOwnedBy(ownerModelId)` in `registry.ts`,
+  non un secondo censimento nel produttore.
+- **Un terzo produttore.** L'obiezione di §C5.4 e' chiusa nel dato: chiunque scriva nel
+  registro dichiara il proprio modello, e la revoca filtra su kind **e** owner. Resta che
+  nulla **obbliga** a scrivere il campo — e' opzionale, come l'additivita' richiedeva. Un
+  produttore che lo omettesse avrebbe entry che nessuno revoca: `getProblemIdsOwnedBy` non
+  restituisce mai una entry senza owner, ed e' un caso di test.
