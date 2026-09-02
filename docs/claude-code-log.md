@@ -2,6 +2,46 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-09-02 — fix: UNQ1 F2, l'auto-nome non ombreggia piu' il nome vero di un nested
+**Prompt**: UNQ1 F2 — (A) `get_name` (:6081): slot identita' con `values []` -> `data.name`,
+auto-nome solo se anche `data.name` e' vuoto, previo censimento dei lettori che contano
+sull'auto-nome in finestra; (B) `defaultname`: per un padre `DValue` di containment il
+namespace e' quello di `getNamespaceOf`, non `lfather.childNames`; `get_children_idlist` non
+si tocca. C1 scartato. Perimetro: `LModelElement.tsx` + il suo test, NON
+`UniquenessProblemSync.tsx` (corsia L2).
+**Files touched**: `frontend/src/model/logicWrapper/LModelElement.tsx`,
+`frontend/src/model/__tests__/unq1AutoNameShadow.test.ts` (nuovo),
+`docs/discovery/discovery_2026-09-01_unq1_duplicate_name.md` (referto F2, commit a parte).
+La sonda `scripts/smoke/_tmp_unq1f2_verify.ts` non e' committata (`.gitignore:66`).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `npx tsc --noEmit` su output COMPLETO **33**, la baseline esatta, **0**
+nel file toccato; `npm run build` exit **0** col solo avviso di chunk-size noto; `npx vitest
+run` intera **3118/3118** passati, 0 falliti. I 9 file che non si raccolgono sono i `window is
+not defined` pre-esistenti, riverificati sul `LModelElement.tsx` di HEAD: falliscono identici
+senza la correzione. Tre mutazioni: guardia di A resa inerte 3 rossi, namespace di B svuotato
+3 rossi, `get_name` riportato a HEAD rosso sull'ancoraggio.
+**Out-of-scope changes**: no — due file di codice, entrambi nel perimetro. Commit per
+pathspec: l'indice conteneva staged di altre corsie (`api/persistance/projects.ts`,
+`UniquenessProblemSync.tsx`), non toccati.
+**Layer Impact Report**: not-required — nessun file di §3.1. `LModelElement.tsx` e' L-layer
+puro; nessuna scrittura D nuova, nessuna TRANSACTION, nessun creatore aggiunto.
+**Smoke visivo**: passato — `_tmp_unq1f2_verify.ts` **before 4 PASS / 4 FAIL, after 8 PASS /
+0 FAIL**, stesso strumento sui due lati, zero `pageerror` in entrambi. Nella finestra i
+campioni con `raw != proxy` passano da **9 a 0**; il secondo `Add` senza rinomina da
+`Edition_0` a **`Edition_1`**; i duplicate-name attivi col modello aperto da **2 a 0**; le due
+root restano `Book_0`/`Book_1` in entrambe le corse (controllo). Il before ottenuto
+ripristinando il solo file da `git show HEAD:` e rimettendolo a posto da una copia, senza
+`stash` (RC-13).
+**Notes**: censimento di A: i tre lettori di `initialName` (`instanceTable.ts:127`,
+`shapeDraw.ts:205`, `irReadCtx.ts:173`) lo chiedono tutti **dopo** il nome, nel caso che la
+correzione lascia intatto; nessun bloccante. C1 non presa: `get_children_idlist` resta non
+ridefinito su `LValue`, e la domanda di §8 del referto resta aperta. Dettaglio, mutazioni e
+i tre punti ancora aperti nel referto F2 del discovery citato sopra.
+**Prompt document name**: 2026-09-02 00:20
+
+
 ## 2026-09-02 — refactor: «Save & Exit» passa dall'helper, il timer non sopravvive (SAVE1-bis)
 **Prompt**: SAVE1-bis — `SaveAndCloseProject` (`Navbar.tsx:508`) usa `saveProjectWithFeedback`
 e poi chiude. Il conteggio di «Request timed out» in `Navbar.tsx` va a 0 e il test SAVE1 che
