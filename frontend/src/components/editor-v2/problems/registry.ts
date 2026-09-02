@@ -85,9 +85,9 @@ export interface NodeProblem {
      * NOT called `modelId`, though a `DModel` id is exactly what it holds. It names the SCAN
      * that wrote the entry, not the container of `nodeId`, and in the worst case the two come
      * apart: the conformance producer registers a second entry under the resolved DVertex id
-     * (ConformanceProblemSync.tsx:97), and a DVertex lives in a DGraph, not in the model. The
+     * (ConformanceProblemSync.tsx:114), and a DVertex lives in a DGraph, not in the model. The
      * `DModel` it holds is also a METAMODEL whenever the uniqueness producer is scanning one
-     * (UniquenessProblemSync.tsx:128) — so `metamodelId` would be a lie half the time, and
+     * (UniquenessProblemSync.tsx:134) — so `metamodelId` would be a lie half the time, and
      * `modelId` a lie about which relation this is.
      *
      * Additive optional property: no consumer enumerates a NodeProblem's keys or compares two
@@ -96,7 +96,7 @@ export interface NodeProblem {
      * `relatedNodeIds` (:124, :192-198), TreeViewContent `severity` / `description` / `title`
      * (:727, :735), formDiagnostics `resolvedAt` / `conformance` / `severity` / `title`
      * (:85-98), useNodeProblems hands the array through untouched, and the two spreads in this
-     * file (:163, :200) carry it along by construction.
+     * file (:192, :229) carry it along by construction.
      */
     ownerModelId?: string;
     createdAt: number;

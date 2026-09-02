@@ -756,7 +756,7 @@ nota di additivita' e' il precedente riuscito) lo era, e sta a `registry.ts:101`
 si chiama `modelId`, e la ragione e' misurata, non argomentata.
 
 Il caso peggiore e' la doppia registrazione della conformance
-(`ConformanceProblemSync.tsx:97`): oltre alla entry sull'id del `DObject`, ne scrive una
+(`ConformanceProblemSync.tsx:114`): oltre alla entry sull'id del `DObject`, ne scrive una
 sull'id del **`DVertex`** risolto. Un `DVertex` sta in un `DGraph`, non nel modello. La
 sonda l'ha ripresa cosi', alla riga `1bis-c`:
 
@@ -772,7 +772,7 @@ entry**, che e' esattamente cio' che serve alla revoca — e `owner` lo dice.
 
 L'altra meta' del caso peggiore: per il produttore dell'unicita' il valore e' il `DModel`
 di un **metamodello** quando e' un metamodello a essere aperto (`isMetamodel`,
-`UniquenessProblemSync.tsx:128`). La sonda lo misura alla riga `C6 2-own`: le due entry su
+`UniquenessProblemSync.tsx:134`). La sonda lo misura alla riga `C6 2-own`: le due entry su
 `DClass` portano `Pointer…_USER_10`, che e' il `DModel` del metamodello. Quindi
 `metamodelId` sarebbe una bugia meta' delle volte, e `modelId` una bugia su **quale
 relazione** il campo esprime. `ownerModelId` regge entrambe: `…ModelId` sul contenuto — un
@@ -811,7 +811,7 @@ ambiente `node` avrebbe reso verde per costruzione qualunque test della revoca.
 
 **`ConformanceProblemSync` scrive il campo ma tiene il suo `ownedIds`**, e non e'
 un'incoerenza: li' il ref non e' solo contabilita' di appartenenza, e' anche cio' che il
-**cleanup di unmount** percorre per `clearProblem` (`ConformanceProblemSync.tsx:130-134`).
+**cleanup di unmount** percorre per `clearProblem` (`ConformanceProblemSync.tsx:133-138`).
 Un clear all'unmount non ha nessun `desiredIds` con cui diffare e nessun `modelid` ancora
 garantito significativo. Sostituirlo non e' nel perimetro di questa fetta: dichiarato, non
 fatto. Le deps dell'effetto restano `[result, graphId]` — aggiungere `modelid`, che il
