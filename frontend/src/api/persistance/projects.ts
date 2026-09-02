@@ -34,6 +34,7 @@ import {
     registerSerializedMegamodel,
 } from '../../model/megamodelPersistence';
 import {VersionFixer} from "../../redux/VersionFixer";
+import { markProjectSaved } from "../../common/libraries/lastSaved";
 
 @RuntimeAccessible('ProjectsApi')
 class ProjectsApi {
@@ -133,8 +134,33 @@ class ProjectsApi {
 
         const state = await U.compressedState(dProject);
         dProject.state = state;
-        if(U.isOffline()) await Offline.save(dProject);
-        else await Online.save(dProject);
+        const persisted = U.isOffline() ? await Offline.save(dProject) : await Online.save(dProject);
+
+        // SAVE2. Il feedback di salvataggio riuscito sta QUI, non piu' in
+        // `Offline.save` / `Online.save`.
+        //
+        // WHY. I due `U.alert('i', 'Project Saved!', '')` stavano nel layer di
+        // persistenza, che non sa se il salvataggio l'ha chiesto un umano: l'autosave
+        // del layout passa dalla stessa `save`, quindi il toast compariva a ogni gesto.
+        // La correzione non e' un flag in piu' dentro `U.alert` — e' che la decisione
+        // torna a chi ha l'informazione. `Offline` e `Online` non sono esportate
+        // (`class Offline` :268, `class Online` :360, nessun `export`) e questa e' la
+        // loro UNICA chiamata in tutto il sorgente: il chiamante esplicito non le
+        // raggiunge, quindi la silenziosita' scende fin qui e la notifica sale fin qui.
+        // I due metodi ora dicono soltanto se hanno persistito.
+        //
+        // Il perimetro del cambiamento e' esattamente il ramo silenzioso: ogni altro
+        // chiamante (menu File, Ctrl/Cmd+S, il bottone del Data Manager, Download
+        // Project, Export Project) chiama `save` senza `opts` e vede lo stesso toast di
+        // prima, alla stessa condizione di prima — solo il salvataggio riuscito.
+        if (persisted) {
+            // Anche sul ramo silenzioso: l'autosave non notifica piu', e l'indicatore
+            // di «ultimo salvataggio» e' l'unico posto in cui il fatto resta leggibile.
+            // Non e' una scrittura in Redux (vedi `lastSaved.ts`), quindi non e' un
+            // delta di stato e non diventa un passo di undo.
+            markProjectSaved(dProject.lastModified);
+            if (!silent) U.alert('i', 'Project Saved!', '');
+        }
 
         // Clear the dirty flag. NOT on a silent save: the layout autosave persists the
         // current state but the user has not saved, so the project stays dirty and the
@@ -310,11 +336,13 @@ class Offline {
         return filtered[0];
     }
 
-    static async save(project: DProject): Promise<void> {
+    /** SAVE2: ritorna se ha persistito; la notifica la decide `ProjectsApi.save`,
+     *  che e' l'unico chiamante e il solo a sapere se il save e' esplicito. */
+    static async save(project: DProject): Promise<boolean> {
         const projects = Storage.read<DProject[]>('projects') || [];
         const filtered = projects.filter(p => p.id !== project.id);
         Storage.write('projects', [...filtered, project]);
-        U.alert('i', 'Project Saved!', '');
+        return true;
     }
 
     static async favorite(project: DProject): Promise<void> {
@@ -433,7 +461,10 @@ class Online {
         return ret;
     }
 
-    static async save(project: DProject): Promise<void> {
+    /** SAVE2: ritorna se ha persistito. L'alert di ERRORE resta qui — descrive un
+     *  fallimento della rete, che e' informazione di questo layer e va mostrata
+     *  comunque; quello di successo e' salito a `ProjectsApi.save`. */
+    static async save(project: DProject): Promise<boolean> {
         project = {...project} as any;
         if (!project.version) project.version = store.getState().version.n;
         if (!('_Id' in project)) (project as any)._Id = undefined;
@@ -444,13 +475,14 @@ class Online {
         if (response.code !== 200) {
             U.alert('e', 'Cannot Save','Something went wrong ...');
             Log.ee('Failed to save', {response, updateProjectRequest, project});
+            return false;
         }
         else {
-            U.alert('i', 'Project Saved!', '');
             if ((windoww as any).Collaborative?.online) {
                 CollabClearHistoryAction.new();
                 // CollabRefreshAction.new();
             }
+            return true;
         }
     }
 
