@@ -95,9 +95,9 @@ class ProjectsApi {
      * Serialize and persist the project.
      *
      * `opts.silent` makes it a SILENT save: same serialization, same target, but the
-     * project version does not advance and nothing is written back into the store.
-     * Everything else — `lastModified`, the counters, `compressedState`, the
-     * Offline/Online branch, `U.isProjectModified` — is identical either way.
+     * project version does not advance, nothing is written back into the store, and
+     * the project is NOT reported as clean. Everything else — `lastModified`, the
+     * counters, `compressedState`, the Offline/Online branch — is identical either way.
      *
      * WHY. The version bump is not only a number: it is a `SetFieldAction` into Redux,
      * i.e. a state delta, i.e. a step of the D-layer undo history. The layout autosave
@@ -130,7 +130,11 @@ class ProjectsApi {
         dProject.state = state;
         if(U.isOffline()) await Offline.save(dProject);
         else await Online.save(dProject);
-        U.isProjectModified = false;
+
+        // Clear the dirty flag. NOT on a silent save: the layout autosave persists the
+        // current state but the user has not saved, so the project stays dirty and the
+        // "Unsaved changes" prompt on close keeps firing after a node drag.
+        if (!silent) U.isProjectModified = false;
 
         // Update the version in Redux state. NOT on a silent save: this write is a
         // state delta and would become a step of the D-layer undo history.
