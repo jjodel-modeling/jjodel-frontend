@@ -103,11 +103,72 @@ function findMetaclassByName(metamodel: LModel, className: string): LClass | nul
 }
 
 /**
- * Find an instance by name in the target M1 model.
+ * Every instance of the target M1 model carrying this name — the RAW lookup.
+ *
+ * Returns the LIST, never one of them (R-S1-5). A name is not a key: `model.objects`
+ * can legitimately hold several instances that share one, and the `.find` this used to
+ * be answered "the first" to a question that has no single answer. Whoever needs ONE
+ * goes through `resolveInstanceHandle`, which turns the list into a verdict.
+ *
+ * `model.objects` is `data.objects` (`LModelElement.tsx:5561`), i.e. the ROOTS of one
+ * model — not the nested instances, and not other models. That scope is unchanged by
+ * this slice; only the arity of the answer is.
  */
-export function findInstanceByName(model: LModel, instanceName: string): any | null {
+export function findInstanceByName(model: LModel, instanceName: string): any[] {
     const objects = (model as any).objects ?? [];
-    return objects.find((o: any) => o?.name === instanceName) ?? null;
+    return objects.filter((o: any) => o?.name === instanceName);
+}
+
+/** One of several instances a name could have meant. */
+export interface InstanceCandidate {
+    id: string;
+    /** Metaclass name, or '' when it cannot be resolved. */
+    className: string;
+}
+
+/**
+ * The three outcomes of resolving a name to an instance.
+ *
+ *  - `{ok: true, value}`            — exactly one, or the session handle registry answered.
+ *  - `{ok: false, reason}`          — nothing carries that name. No `candidates`.
+ *  - `{ok: false, reason, candidates}` — 2+ carry it. `candidates.length >= 2` is what
+ *                                    distinguishes this case from the one above, so the
+ *                                    caller never has to parse `reason` to tell them apart.
+ *
+ * Same family as the `WriteResult` of the write path, deliberately NOT the same type:
+ * ambiguity of RESOLUTION is a different question from uniqueness of WRITING, and the two
+ * shapes converge in S4 if they turn out to want the same fields. Local to jjscript.
+ */
+export interface InstanceResolution {
+    ok: boolean;
+    value?: any;
+    reason?: string;
+    candidates?: InstanceCandidate[];
+}
+
+function toCandidate(o: any): InstanceCandidate {
+    let className = '';
+    try { className = (o?.instanceof?.name as string) ?? ''; } catch { /* proxy not resolvable */ }
+    return { id: String(o?.id ?? ''), className };
+}
+
+/**
+ * The message an ambiguous name earns, shared by all five commands.
+ *
+ * ONE builder, because five copies of the same sentence drift into five different
+ * sentences. The candidates are named by METACLASS, not by containment path: measured
+ * (`docs/discovery/discovery_2026-08-30_s1b_ambiguita_dichiarata.md` §5), every candidate
+ * this lookup can return is a root of the SAME model, so all of them share one path and
+ * printing it would put two identical lines under "which one?". The metaclass is what
+ * actually separates them; the id is the tiebreaker when even that repeats, and it is
+ * printed in full because a truncated pointer cannot be used to address anything.
+ */
+export function describeAmbiguity(instanceName: string, candidates: InstanceCandidate[]): string {
+    const listed = candidates
+        .map(c => (c.className ? `${c.className} (${c.id})` : c.id))
+        .join(', ');
+    return `Ambiguous instance name '${instanceName}': ${candidates.length} candidates — ${listed}. `
+        + `Rename one, or address it from the canvas.`;
 }
 
 /**
@@ -117,16 +178,29 @@ export function findInstanceByName(model: LModel, instanceName: string): any | n
  * handle is not a script-local one do we fall back to name-based lookup, for instances
  * that pre-existed the script. Stale entries (object deleted underneath us) self-heal.
  *
+ * AMBIGUITY IS ONLY REACHABLE ON THE FALLBACK. The registry is keyed by id and per-run, so
+ * a handle never resolves to two things: the homonym scenario of
+ * `handleRegistry.test.ts` ("registry precedence") stays resolved WITHOUT the list being
+ * built. Only an instance that pre-existed the script can be ambiguous — which is exactly
+ * the case the census describes.
+ *
  * Exported so the dependency waiter can adopt the same resolution in a follow-up.
  */
-export function resolveInstanceHandle(model: LModel, handle: string): any | null {
+export function resolveInstanceHandle(model: LModel, handle: string): InstanceResolution {
     const id = getHandleId(handle);
     if (id) {
         const obj = LPointerTargetable.fromPointer(id) as any;
-        if (obj && obj.id) return obj; // registry wins: id-based, race-free
+        if (obj && obj.id) return { ok: true, value: obj }; // registry wins: id-based, race-free
         unregisterHandle(handle);      // stale (deleted) → clean up, fall through
     }
-    return findInstanceByName(model, handle);
+
+    const matches = findInstanceByName(model, handle);
+    if (matches.length === 1) return { ok: true, value: matches[0] };
+    if (matches.length === 0) {
+        return { ok: false, reason: `No instance named '${handle}' in '${(model as any)?.name ?? 'the model'}'` };
+    }
+    const candidates = matches.map(toCandidate);
+    return { ok: false, reason: describeAmbiguity(handle, candidates), candidates };
 }
 
 /**
@@ -369,7 +443,18 @@ export async function executeDeleteInstance(
     }
 
     const instanceName = args.target.segments.join('::') || args.target.raw; // instance name from segments; raw may carry a dotted '.property' member (P0b)
-    const lObject = resolveInstanceHandle(targetModel, instanceName);
+    const resolved = resolveInstanceHandle(targetModel, instanceName);
+    // Ambiguous → REFUSE. Deleting is destructive and irreversible in one gesture: hitting
+    // the first of several homonyms is the defect the census names, not a behaviour to keep.
+    if (!resolved.ok && resolved.candidates) {
+        return {
+            success: false,
+            command: 'delete',
+            message: `Cannot delete '${instanceName}': the name is ambiguous`,
+            errors: [{ code: 'AMBIGUOUS_INSTANCE', message: resolved.reason! }]
+        };
+    }
+    const lObject = resolved.value;
     if (!lObject) {
         return {
             success: false,
@@ -458,7 +543,17 @@ export async function executeRenameInstance(
     }
 
     const instanceName = args.target.segments.join('::') || args.target.raw; // instance name from segments; raw may carry a dotted '.property' member (P0b)
-    const lObject = resolveInstanceHandle(targetModel, instanceName);
+    const resolved = resolveInstanceHandle(targetModel, instanceName);
+    // Ambiguous → REFUSE: renaming the wrong homonym is as silent as deleting it.
+    if (!resolved.ok && resolved.candidates) {
+        return {
+            success: false,
+            command: 'rename',
+            message: `Cannot rename '${instanceName}': the name is ambiguous`,
+            errors: [{ code: 'AMBIGUOUS_INSTANCE', message: resolved.reason! }]
+        };
+    }
+    const lObject = resolved.value;
     if (!lObject) {
         return {
             success: false,
@@ -471,9 +566,12 @@ export async function executeRenameInstance(
         };
     }
 
-    // Name conflict check
-    const conflict = findInstanceByName(targetModel, args.newName);
-    if (conflict && conflict.id !== lObject.id) {
+    // Name conflict check. The lookup returns the list now, so «already taken» is «at
+    // least one OTHER instance holds it» — same verdict as before for one holder, and no
+    // longer blind to the second.
+    const conflicts = findInstanceByName(targetModel, args.newName)
+        .filter((o: any) => o?.id !== lObject.id);
+    if (conflicts.length > 0) {
         return {
             success: false,
             command: 'rename',
@@ -544,7 +642,18 @@ export async function executeSetInstance(
     }
 
     const instanceName = args.target.segments.join('::') || args.target.raw; // instance name from segments; raw may carry a dotted '.property' member (P0b)
-    const lObject = resolveInstanceHandle(targetModel, instanceName);
+    const resolved = resolveInstanceHandle(targetModel, instanceName);
+    // Ambiguous → REFUSE before any write: `set` mutates, and writing into the first of
+    // several homonyms is a write to an instance the script never named.
+    if (!resolved.ok && resolved.candidates) {
+        return {
+            success: false,
+            command: 'set',
+            message: `Cannot set on '${instanceName}': the name is ambiguous`,
+            errors: [{ code: 'AMBIGUOUS_INSTANCE', message: resolved.reason! }]
+        };
+    }
+    const lObject = resolved.value;
     if (!lObject) {
         return {
             success: false,
@@ -689,7 +798,19 @@ export async function executeSetInstance(
         targetInstanceName = (args.value as QualifiedName).raw;
     }
 
-    const targetInstance = resolveInstanceHandle(targetModel, targetInstanceName);
+    const resolvedTarget = resolveInstanceHandle(targetModel, targetInstanceName);
+    // Ambiguous → REFUSE. This is the case the census calls out as the worst of the five:
+    // the link would be WRITTEN, pointing at whichever homonym came first in `objects`, and
+    // nothing downstream would ever report that the target was chosen rather than named.
+    if (!resolvedTarget.ok && resolvedTarget.candidates) {
+        return {
+            success: false,
+            command: 'set',
+            message: `Cannot link to '${targetInstanceName}': the name is ambiguous`,
+            errors: [{ code: 'AMBIGUOUS_INSTANCE', message: resolvedTarget.reason! }]
+        };
+    }
+    const targetInstance = resolvedTarget.value;
     if (!targetInstance) {
         return {
             success: false,

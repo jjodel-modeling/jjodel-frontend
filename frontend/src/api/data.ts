@@ -175,12 +175,26 @@ export class EcoreParser{
         // console.log("root parse", {ecorejson, parsedjson});
         // isMetamodel = !!parsedjson[ECoreRoot.ecoreEPackage];
 
+        // `paused` gates `Constructors.persist` (joiner/classes.ts:651): while it is up,
+        // nothing constructed here leaves `DPointerTargetable.pendingCreation` for the store.
+        // It has to come back down even when the parse throws, and the parse does throw --
+        // `LinkAllNamesToIDs` ends on `Log.ex(!target, "LinkAllNames() can't find type target")`
+        // (:348) and `Log.ex` raises. Measured (docs/discovery/discovery_2026-08-30_gettype_finestra_parser.md
+        // §5): one .ecore with an unresolvable eType left `paused === true` for the rest of the
+        // session, and every element created afterwards got an id, stayed readable through the
+        // prototype chain, and was never committed -- the app kept answering and every new
+        // creation vanished on the next reload. `finally`, not `catch`: the failure stays as
+        // loud as it is today, the exception still leaves this method.
         Constructors.paused = true;
-        let parsedElements: DModelElement[] = isMetamodel ? EcoreParser.parseM2Model(parsedjson, filename) : EcoreParser.parseM1Model(parsedjson, undefined, filename);
-        console.warn("parse.result D", parsedElements);
-        this.LinkAllNamesToIDs(parsedElements);
-        this.fixNamingConflicts(parsedElements);
-        Constructors.paused = false;
+        let parsedElements: DModelElement[];
+        try {
+            parsedElements = isMetamodel ? EcoreParser.parseM2Model(parsedjson, filename) : EcoreParser.parseM1Model(parsedjson, undefined, filename);
+            console.warn("parse.result D", parsedElements);
+            this.LinkAllNamesToIDs(parsedElements);
+            this.fixNamingConflicts(parsedElements);
+        } finally {
+            Constructors.paused = false;
+        }
         // if (persist) CreateElementAction.newBatch(parsedElements);
         // update m1 object pointers (need them to be persistent to navigate .fathers and get ecore pointer strings using LObject)
         this.fixObjectPointers(parsedElements); // updates dvalue.values from ecore reference to pointers.
@@ -647,34 +661,51 @@ export class EcoreParser{
         return generated;
     }
 
+    /**
+     * `<eAnnotations source=… ><details key=… value=…/></eAnnotations>` -> `DAnnotation`.
+     *
+     * Was `return []` until 2026-08-30, so no import had ever produced an annotation and
+     * an `.ecore` round trip dropped every metamodel declaration — rung 1 of the renderer
+     * ladder included.
+     *
+     * ── Perche' un DAnnotation per detail ──────────────────────────────────────
+     *
+     * Ecore tiene la coppia chiave/valore nei `details`; qui il posto per tenerla non
+     * c'e': `DAnnotationDetail` (`LModelElement.tsx:150`) e' una classe vuota, tutto il
+     * suo corpo e' `// todo`. Quello che esiste ed e' letto e' `DAnnotation.source`, una
+     * stringa, con l'encoding `namespace/chiave=valore` che `rowViewAnnotations.ts`
+     * dichiara e che il resto del codice gia' interroga. Un detail diventa quindi una
+     * annotazione, e la coppia entra nella stringa:
+     *
+     *     source="jjodel" + details[renderer=color]  ->  source = 'jjodel/renderer=color'
+     *
+     * Un'annotazione senza details tiene il suo `source` verbatim, che e' quello che
+     * chiude il giro con l'export: `LModelElement.tsx:1031` scrive `data.source` tale e
+     * quale, quindi un `jjodel/renderer=swatch` esportato e reimportato torna identico.
+     *
+     * Scostamenti dichiarati: le annotazioni annidate non sono ricostruite (appiattire i
+     * details rende l'annidamento senza sede), e `references` non e' letto — nessuno lo
+     * consuma. Nessun typed element viene toccato: il contratto per cui il parser
+     * costruisce con `type === undefined` resta quello, ed e' pinnato altrove.
+     */
     static parseDAnnotation(parent: DModelElement, json: Json, generated: DModelElement[], fullnamePrefix: string): DModelElement[] {
-        return []; // todo
         if (!generated) generated = [];
-        if (!json) { json = {}; }
-        let dObject: DAnnotation = DAnnotation.new();
-        generated.push(dObject); dObject.father = parent.id;
-        (dObject as any).name = this.read(json, ECoreNamed.namee, undefined);
-        dObject.father = parent.id;
-        if (parent) parent.annotations.push(dObject.id);
-        const annotations: Json[] = this.getAnnotations(json);
-        for (let child of annotations) EcoreParser.parseDAnnotation(dObject, child, generated, (dObject as GObject).__fullname + "/");
-        (dObject as GObject).__fullname = undefined; // fullnamePrefix + "/" + (dObject as any).name; // if annotation is not named (and it shouldn't) i don't wanna override container name
-        /// *** specific  *** ///
-        let key: string;
-        for (key in json){
-            const value = json[key];
-            switch (key) { //todo
-                default: Log.exx('unexpected field in EAnnotation:  ' + key + ' => |' + value + '|', {key, value, json}); break;
-                // case ECoreAnnotation.annotations: break; // todo: enable, yes annotations can have annotations
-                case ECoreAnnotation.details: break;
-                case ECoreAnnotation.references: break;
-                case ECoreAnnotation.source: break;
+        if (!json || !parent) { return generated; }
+        const source: string = this.read(json, ECoreAnnotation.source, '');
+        const details: Json[] = this.getDetails(json);
+
+        if (details.length) {
+            for (const det of details) {
+                const key: string = this.read(det, ECoreDetail.key, '');
+                if (!key) continue;
+                const value: string = this.read(det, ECoreDetail.value, '');
+                generated.push(DAnnotation.new(source ? source + '/' + key + '=' + value : key + '=' + value, [], parent.id));
             }
+            return generated;
         }
-        // annotation.referencesStr = this.read(json, ECoreAnnotation.source, '#/');
-        // annotation.name = this.read(json, ECoreAnnotation.name, 'EAnnotation_1');
-        // const details: Json[] = this.getDetails(json);
-        // for (let i = 0; i < details.length; i++) { new EAnnotationDetail(this, details[i]); }
+
+        if (!source) return generated;
+        generated.push(DAnnotation.new(source, [], parent.id));
         return generated; }
 
     static parseRootPackage(parent: DModel, json: Json, generated: DModelElement[]): DModelElement[] {

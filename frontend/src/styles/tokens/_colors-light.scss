@@ -90,7 +90,7 @@ $gradient-hover: linear-gradient(180deg, $slate-100 0%, $slate-200 100%);
   --color-border-primary: #{$slate-300};   /* Main borders, dividers */
   --color-border-secondary: #{$slate-250}; /* Subtle borders */
   --color-border-hover: #{$slate-400};     /* Hover state borders */
-  --color-border-focus: #{$slate-500};     /* Focus state borders */
+  --color-border-focus: #{$slate-600};     /* Focus rings. Slate, never the canvas cyan */
 
   /* ============================================
      TEXT COLORS
@@ -349,12 +349,19 @@ $gradient-hover: linear-gradient(180deg, $slate-100 0%, $slate-200 100%);
   --color-entity-reference-fg: #535B1D;
   --color-entity-operation-bg: #EBE6FC;
   --color-entity-operation-fg: #5A4A7F;
+  /* model — DS-1 (2026-08-31). Fuori dagli alias del contenitore: DESIGN-SYSTEM
+     §2.2 dice ambra, e l'alias di R-RAIL-30 la scavalcava senza registrarlo.
+     Grado SATURO a H 85, l'unica tinta ambra che in ENTRAMBI i temi supera il
+     pavimento della scala — la dE OKLCH minima gia' tollerata fra due fondi di
+     famiglie diverse, 0.0143 qui e 0.0243 in scuro, entrambi class/object.
+     Misurato: bg L 0.934 C 0.030 H 83.6, fg L 0.451 C 0.085 H 85.0,
+     dE(bg, enum.bg) 0.0146, contrasto 6.16:1. */
+  --color-entity-model-bg: #F3E8D3;
+  --color-entity-model-fg: #6B5110;
 
   /* Alias — sei contenitori, la classe astratta, il tipo di dato */
   --color-entity-metamodel-bg: var(--color-entity-container-bg);
   --color-entity-metamodel-fg: var(--color-entity-container-fg);
-  --color-entity-model-bg: var(--color-entity-container-bg);
-  --color-entity-model-fg: var(--color-entity-container-fg);
   --color-entity-package-bg: var(--color-entity-container-bg);
   --color-entity-package-fg: var(--color-entity-container-fg);
   --color-entity-viewpoint-bg: var(--color-entity-container-bg);
@@ -375,5 +382,156 @@ $gradient-hover: linear-gradient(180deg, $slate-100 0%, $slate-200 100%);
      estendere alle altre selezioni del progetto in un task futuro. */
   --color-selection-bg: #e0f7fa;
   --color-selection-bar: #0891b2;
+
+  /* ============================================
+     FORM VIEWS (2026-08-26)
+     Roles of the form rendering of a view (rail Properties, form document,
+     widget node). Prefixed `form` on purpose: the handoff asks for roles whose
+     obvious names (--color-bg-primary, --color-border-primary) are among the 15
+     declared BOTH here and in styles/tokens.css with different values, so which
+     one wins depends on cascade order and none of them has a dependable meaning.
+     See docs/discovery/discovery_2026-08-26_form_views_slice1.md finding 7.
+     Where an existing semantic role matches exactly, these reference it instead
+     of restating the value, so the two stay in step by construction.
+     ============================================ */
+  /* Spelled out, NOT aliased to --color-bg-secondary / --color-bg-primary /
+     --color-border-primary, which is how these three were first written and how they came out
+     INVERTED. Those names are on the list of 15 declared by BOTH styles/tokens/ and
+     styles/tokens.css with different values (discovery finding 7), and tokens.css wins the
+     cascade: --color-form-surface painted #f8fafc and --color-form-panel painted #ffffff, each
+     other's value, while border-strong collapsed onto border. Measured 2026-08-27.
+     The rule that block states, never use one of the 15, covers reaching them through an alias
+     too. That is the half that was easy to miss. */
+  --color-form-surface: #ffffff;                     /* input and card fill */
+  --color-form-panel: #{$slate-50};                  /* card-theme panel, sub-form header */
+  --color-form-border: #{$slate-200};                /* input border — $slate-200, NOT $slate-250 */
+  --color-form-border-strong: #{$slate-300};         /* checkbox, dashed Add */
+  --color-form-summary: #fcfdfe;                     /* problem summary strip; no existing role */
+  --color-form-label: var(--color-text-tertiary);    /* field label 11px (#475569) */
+  --color-form-muted: #{$slate-400};                 /* multiplicity, eyebrow, placeholder.
+                                                        NOT --color-text-disabled, which has the
+                                                        same value but the wrong meaning here. */
+  --color-form-section: #{$slate-500};               /* plain section title (#64748b) */
+  --color-marker-required: #0ea5e9;                  /* required dot and dirty marker.
+                                                        Red stays reserved for diagnostics. */
+  --color-error-text: #b91c1c;                       /* red-700; the scale stops at $red-600 */
+  --color-form-dirty-border: #7dd3fc;                 /* sky-300: edited, not saved */
+  --color-form-dirty-text: #0284c7;                   /* sky-600 */
+  --color-form-dirty-halo: rgba(14, 165, 233, 0.2);   /* halo of the 6px dirty dot */
+  /* Focus of the extended widgets (FL3). Cyan, which §7.1 reserves for exactly this
+     — focus states, active indicators, links — and never for a button ground. Two
+     roles rather than one because the ring is a shadow and the border is a colour,
+     and a caller needs them apart. Scoped by USE and not by selector: only the FL3
+     widget classes read them, so the controls of the form that predate this slice
+     keep the slate --color-accent / --focus-ring they were verified with. Aligning
+     the rest is FL4's decision, ratified 2026-08-31. */
+  --color-form-focus-border: #0891b2;                /* cyan-600 */
+  --color-form-focus-ring: 0 0 0 3px rgba(8, 145, 178, 0.12);
+  --color-warning-text: #b45309;                     /* amber-700; the scale stops at $amber-600 */
+
+  /* ============================================
+     INSTANCE NODE (2026-08-27)
+     Roles of the M1 instance node on the canvas (design handoff
+     docs/design/design_handoff_instance_node/). Prefixed `inode` for the same
+     reason `form` is: the obvious names (--color-node-bg, --color-node-border)
+     are among the 15 declared BOTH here and in styles/tokens.css, so they carry
+     no dependable value — see the FORM VIEWS block above.
+
+     The cyan family is the canvas interaction accent, and it was not in the
+     token system: the node is the first consumer that needs the full ramp
+     (pill, selected header, selected badge, ring) rather than the single
+     --color-canvas-accent. Values are cyan-50..cyan-700, the same ramp
+     --color-selection-bg / --color-selection-bar already draw two steps from.
+     ============================================ */
+  --color-inode-surface: #ffffff;                    /* node fill */
+  --color-inode-border: #{$slate-300};               /* node border, header rule */
+  --color-inode-header-fill: #{$slate-100};          /* headerFill = true */
+  --color-inode-name: #{$slate-900};                 /* instance name, scalar values */
+  --color-inode-label: #{$slate-500};                /* property labels */
+  --color-inode-quiet: #{$slate-300};                /* empty dash, cardinality suffix */
+  --color-inode-footer: #{$slate-400};               /* collapsed-slots footer, edge marker */
+  --color-inode-footer-rule: #{$slate-100};          /* footer top hairline */
+  --color-inode-chip-bg: #{$slate-100};              /* collection chip */
+  --color-inode-chip-fg: #{$slate-600};
+  --color-inode-badge-bg: #{$slate-100};             /* neutral type badge / chip */
+  --color-inode-badge-fg: #{$slate-600};
+  --color-inode-accent-neutral: #{$slate-300};       /* accent bar, factory default */
+  --color-inode-shadow: rgba(0, 0, 0, 0.04);         /* resting */
+  --color-inode-shadow-hover: rgba(0, 0, 0, 0.08);   /* hover lift */
+  /* Hover della pill singleton. Ruolo a se' e OPACO invece di --color-bg-hover,
+     che in chiaro varrebbe lo stesso valore ma in scuro e' traslucido: usato
+     come `background` sostituirebbe la superficie invece di sovrapporsi, e la
+     pill si scurirebbe lasciando trasparire la tela. */
+  --color-inode-pill-hover: #{$slate-150};           /* = --color-bg-hover chiaro */
+
+  /* Row view library (2026-08-28, livello 3). One role per renderer that needs
+     a colour of its own; every other member of the library reuses the roles
+     above, because the handoff's rule is that no renderer introduces colour
+     which is not information. */
+  --color-inode-swatch-hairline: rgba(0, 0, 0, 0.08); /* inset, so #ffffff stays visible */
+  --color-inode-bool-on: #{$slate-700};              /* filled dot = true */
+  --color-inode-bool-off: #{$slate-300};             /* hollow dot border = false */
+  --color-inode-progress-track: #{$slate-200};
+  --color-inode-progress-fill: #{$slate-600};
+  --color-inode-emphasis: #{$slate-700};             /* winning rung: bar + index badge */
+  /* The one red in the node. A broken reference is an error, not an alarm: the
+     icon carries the severity and the strikethrough carries the meaning, so the
+     canvas stays readable with ten of them on it. */
+  --color-inode-broken: #ef4444;                     /* red-500 */
+
+  /* Cyan — selection owns it, and the reference pill borrows it for navigation */
+  --color-inode-ref-bg: #ecfeff;                     /* cyan-50 */
+  --color-inode-ref-border: #a5f3fc;                 /* cyan-200 */
+  --color-inode-ref-fg: #0891b2;                     /* cyan-600 */
+  --color-inode-selected-border: #0891b2;            /* also the accent bar while selected */
+  --color-inode-selected-header-bg: #e0f7fa;
+  --color-inode-selected-header-border: #a5f3fc;
+  --color-inode-selected-badge-bg: #cffafe;          /* cyan-100 */
+  --color-inode-selected-badge-fg: #0e7490;          /* cyan-700 */
+  --color-inode-selected-ring: rgba(6, 182, 212, 0.18);
+
+  /* ── Option colours — one slot per alternative (TXT/pill, 2026-09-01) ────────
+     Seven slots, in fixed order, for the reference pills of the IR form: two
+     options a user is choosing BETWEEN never wear the same colour. Seven and not
+     eight because three hue families are reserved for state — red-500
+     (--color-error), amber-500 (--color-warning), green-500 (--color-success) —
+     and with those out, eight ordered hues no longer clear the separation floors.
+     Past the seventh the assignment cycles: `jjform/optionColor.ts` owns that, and
+     says why.
+
+     Measured with the dataviz validator, adjacent pairs, both modes: worst CVD
+     ΔE 12.5 light / 10.4 dark (target >= 8), worst normal-vision ΔE 21.7 light /
+     17.8 dark (floor 15). Text contrast on its own tint is >= 4.88:1 light and
+     >= 5.6:1 dark, so the label passes AA at small size in every slot.
+
+     The foreground is the 700 step, not the 600 the separation was first searched
+     on: at 600 four slots sat between 3.35 and 3.84:1 on their tint, below AA —
+     the committed --color-inode-ref-fg among them, at 3.54. Slot 1 is therefore
+     the cyan FAMILY of the canvas pill, one step darker, and not its exact hex.
+     Declared: the validator marks cyan-700 and teal-700 just under its chroma
+     floor (0.094 / 0.086 vs 0.1). That gate is written for a chart FILL that would
+     read gray on its own; here the hue carries text, border and tint together. */
+  --color-opt-1-bg: #ecfeff;      /* cyan-50 */
+  --color-opt-1-border: #a5f3fc;  /* cyan-200 */
+  --color-opt-1-fg: #0e7490;      /* cyan-700 */
+  --color-opt-2-bg: #fff7ed;      /* orange-50 */
+  --color-opt-2-border: #fed7aa;  /* orange-200 */
+  --color-opt-2-fg: #c2410c;      /* orange-700 */
+  --color-opt-3-bg: #f0f9ff;      /* sky-50 */
+  --color-opt-3-border: #bae6fd;  /* sky-200 */
+  --color-opt-3-fg: #0369a1;      /* sky-700 */
+  --color-opt-4-bg: #fdf2f8;      /* pink-50 */
+  --color-opt-4-border: #fbcfe8;  /* pink-200 */
+  --color-opt-4-fg: #be185d;      /* pink-700 */
+  --color-opt-5-bg: #eff6ff;      /* blue-50 */
+  --color-opt-5-border: #bfdbfe;  /* blue-200 */
+  --color-opt-5-fg: #1d4ed8;      /* blue-700 */
+  --color-opt-6-bg: #f0fdfa;      /* teal-50 */
+  --color-opt-6-border: #99f6e4;  /* teal-200 */
+  --color-opt-6-fg: #0f766e;      /* teal-700 */
+  --color-opt-7-bg: #faf5ff;      /* purple-50 */
+  --color-opt-7-border: #e9d5ff;  /* purple-200 */
+  --color-opt-7-fg: #7e22ce;      /* purple-700 */
+
 
 }

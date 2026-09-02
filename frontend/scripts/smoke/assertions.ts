@@ -378,6 +378,53 @@ export function tallyConsole(logs: Array<{ type: string; text: string }>): Recor
     return out;
 }
 
+/**
+ * Keys the vite dev client writes into the page console. They are the harness
+ * talking, not the application: `[vite] connecting...`, `[vite] connected.`,
+ * `[vite] hot updated: …`.
+ *
+ * A4 ignores them, and this is not a softening of the gate — it is moving one
+ * signal to the instrument that reads it properly. `hot updated` means somebody
+ * saved a file while the run was in flight, which the quiescence guard declares
+ * as a void run naming the file; repeated `connecting...` means the page booted
+ * more than once, which countBoots declares as a void run naming the count.
+ * Left inside A4 both arrived as "a console regression", which is the one thing
+ * they are not.
+ *
+ * The prefix is deliberately `debug|`, not `[vite]` at any level: an
+ * `error|[vite] Internal Server Error …` is the dev server failing to compile
+ * the app, and that must still fail A4.
+ */
+export const VITE_CLIENT_KEY_PREFIX = 'debug|[vite] ';
+
+export function isViteClientKey(key: string): boolean {
+    return key.startsWith(VITE_CLIENT_KEY_PREFIX);
+}
+
+/**
+ * How many times the document booted during one state.
+ *
+ * The vite client prints `[vite] connecting...` once per websocket setup, which
+ * is once per document load. Measured 2026-08-30: 1 in every still run, 3 in a
+ * run where two `touch`es on a module without an HMR boundary made vite issue
+ * `full-reload` twice — the "counts at 3x the baseline" of the 30-08 report,
+ * which is not a count that grew but the same count taken three times.
+ *
+ * Returns 0 when no vite client is present at all (a production build). That is
+ * reported, never treated as a boot ceiling violation: this function measures
+ * repetition, and it has nothing to say when the instrument is absent.
+ */
+export function countBoots(logs: Array<{ type: string; text: string }>): number {
+    let n = 0;
+    for (const l of logs) {
+        if (l.type === 'debug' && l.text.startsWith('[vite] connecting...')) n++;
+    }
+    return n;
+}
+
+/** One document load per state. Anything above it makes the tally incomparable. */
+export const MAX_BOOTS_PER_STATE = 1;
+
 export interface ConsoleComparison {
     result: AssertionResult;
     /** Patterns whose count dropped below the baseline. Not a failure. */
@@ -390,6 +437,12 @@ export interface ConsoleComparison {
  * Fails when a pattern absent from the baseline appears, or when an existing
  * pattern's count exceeds the baseline. A lower count never fails: it is
  * reported as an improvement so the baseline can be lowered.
+ *
+ * Vite client keys are excluded on BOTH sides — observed and baseline. On the
+ * observed side because they are not the application's output; on the baseline
+ * side because the committed baseline contains three of them, and filtering
+ * only one side would report every run as having lost a pattern. See
+ * VITE_CLIENT_KEY_PREFIX for why this loses no signal.
  */
 export function assertConsoleAgainstBaseline(
     stateId: string,
@@ -399,8 +452,13 @@ export function assertConsoleAgainstBaseline(
     const newPatterns: string[] = [];
     const exceeded: string[] = [];
     const improvements: string[] = [];
+    let excluded = 0;
 
     for (const [key, count] of Object.entries(observed)) {
+        if (isViteClientKey(key)) {
+            excluded += count;
+            continue;
+        }
         const base = baseline.patterns[key]?.[stateId];
         if (base === undefined) {
             newPatterns.push(`      NEW (${count}x): ${key}`);
@@ -413,6 +471,7 @@ export function assertConsoleAgainstBaseline(
 
     // A baselined pattern that vanished entirely is also an improvement.
     for (const [key, perState] of Object.entries(baseline.patterns)) {
+        if (isViteClientKey(key)) continue;
         const base = perState[stateId];
         if (base !== undefined && base > 0 && observed[key] === undefined) {
             improvements.push(`      IMPROVED: ${key} — ${base} -> 0, remove from the baseline`);
@@ -420,7 +479,9 @@ export function assertConsoleAgainstBaseline(
     }
 
     const failed = newPatterns.length > 0 || exceeded.length > 0;
-    const total = Object.values(observed).reduce((a, b) => a + b, 0);
+    const compared = Object.entries(observed).filter(([k]) => !isViteClientKey(k));
+    const total = compared.reduce((a, [, count]) => a + count, 0);
+    const viteNote = excluded > 0 ? `, ${excluded} vite-client message(s) excluded` : '';
 
     return {
         result: {
@@ -428,10 +489,10 @@ export function assertConsoleAgainstBaseline(
             title: 'no console regression vs baseline',
             status: failed ? 'failed' : 'passed',
             detail: failed
-                ? `${total} message(s), ${Object.keys(observed).length} distinct pattern(s); ` +
+                ? `${total} message(s), ${compared.length} distinct pattern(s)${viteNote}; ` +
                   `${newPatterns.length} new, ${exceeded.length} above baseline:\n` +
                   [...newPatterns, ...exceeded].join('\n')
-                : `${total} message(s), ${Object.keys(observed).length} distinct pattern(s), ` +
+                : `${total} message(s), ${compared.length} distinct pattern(s)${viteNote}, ` +
                   `all within baseline`,
         },
         improvements,

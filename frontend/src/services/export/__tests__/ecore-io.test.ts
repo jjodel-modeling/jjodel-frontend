@@ -249,3 +249,189 @@ describe('XMI M1 import — riuso conformity slot (fix duplicati DValue)', () =>
         expect(m![0]).toMatch(/SetFieldAction\.new\(conformitySlot\.id,\s*'values',\s*target,\s*'\+=',\s*true\)/);
     });
 });
+
+
+/**
+ * StateMachine fixture (form views, slice 1b).
+ *
+ * Structural only, on the files themselves: no end-to-end import runs here, because the
+ * importer needs the store and the L layer, which this suite is deliberately free of. The
+ * import is verified on the browser (criterion V1 of the slice).
+ *
+ * What is worth pinning is that the fixture keeps DECLARING the shapes the form needs. Each
+ * assertion below stands for a widget or a diagnostic, and if someone simplifies the fixture
+ * the form silently loses coverage instead of failing — which is exactly how V3 of slice 1a
+ * ended up unexercised for want of a model with a number in it.
+ */
+describe('Ecore I/O — StateMachine fixture (form views 1b)', () => {
+    const ECORE = path.join(FIXTURE_DIR, 'StateMachine.ecore');
+    const XMI = path.join(FIXTURE_DIR, 'sample-StateMachine.xmi');
+
+    it('both files exist and are well-formed enough to parse as XML', () => {
+        for (const f of [ECORE, XMI]) {
+            expect(fs.existsSync(f)).toBe(true);
+            const xml = fs.readFileSync(f, 'utf8');
+            expect(xml.startsWith('<?xml version="1.0" encoding="UTF-8"?>')).toBe(true);
+            // Tags balance: every '<' that opens an element has a matching close or is
+            // self-closing. A cheap check, but it catches the hand-edit that breaks the file.
+            const opens = (xml.match(/<[A-Za-z][^!?>]*[^/?]>/g) ?? []).length;
+            const closes = (xml.match(/<\/[A-Za-z][^>]*>/g) ?? []).length;
+            expect(opens).toBe(closes);
+        }
+    });
+
+    it('declares one widget-bearing type per form control', () => {
+        const xml = fs.readFileSync(ECORE, 'utf8');
+        expect(xml).toContain('nsURI="http://jjodel.io/fixtures/statemachine"');
+        // select
+        expect(xml).toMatch(/xsi:type="ecore:EEnum"\s+name="StateKind"/);
+        expect((xml.match(/<eLiterals /g) ?? []).length).toBe(3);
+        // number stepper, checkbox
+        expect(xml).toContain('Ecore#//EInt');
+        expect(xml).toContain('Ecore#//EBoolean');
+        // read-only field with the lock glyph
+        expect(xml).toMatch(/name="depth"[\s\S]*?derived="true"/);
+        expect(xml).toMatch(/name="depth"[\s\S]*?changeable="false"/);
+        // a REACHABLE upper bound, so the disabled Add and its tooltip can be reached
+        expect(xml).toMatch(/name="outgoing"[\s\S]*?upperBound="5"/);
+        // chips
+        expect(xml).toMatch(/name="tags"[\s\S]*?upperBound="-1"/);
+        // the required marker
+        expect(xml).toMatch(/name="kind"[\s\S]*?lowerBound="1"/);
+    });
+
+    it('the model instance omits Broken.kind, which is what produces the diagnostic', () => {
+        const xml = fs.readFileSync(XMI, 'utf8');
+        const broken = xml.match(/<states[^>]*name="Broken"[^>]*\/>/);
+        expect(broken).not.toBeNull();
+        // The whole point of that instance: `kind` is [1..1] and absent, so the validator
+        // raises on it and the form has a real message to project onto a real field.
+        expect(broken![0]).not.toContain('kind=');
+        // Every other state does declare it, so exactly one violation is expected.
+        expect((xml.match(/kind="/g) ?? []).length).toBe(5);
+    });
+
+    it('the rich instance carries a value for every widget kind', () => {
+        const xml = fs.readFileSync(XMI, 'utf8');
+        const running = xml.match(/<states[^>]*name="Running"[\s\S]*?<\/states>/);
+        expect(running).not.toBeNull();
+        expect(running![0]).toContain('isHistory="true"');
+        expect(running![0]).toContain('timeout="30"');
+        expect(running![0]).toContain('tags="hot monitored"');
+        expect(running![0]).toContain('entryAction="heater.on()"');
+        expect(running![0]).toMatch(/outgoing="t_stop t_fault"/);
+        expect((running![0].match(/<substates /g) ?? []).length).toBe(2);
+    });
+});
+
+
+/**
+ * R-FRM-3 — the XMI importer resolves enum literal NAMES into POINTERS.
+ *
+ * The spec (2026-08-28 addendum, §10) makes the pointer to the DEnumLiteral the canonical enum
+ * value and keeps the name as a legacy form accepted on read. Commit 1 made CHECK 10 tolerant of
+ * both; this is the writer side.
+ *
+ * Structural, like every other importer test in this file, and for the same reason stated at the
+ * top of the `conformity slot` block: XMIService imports the `joiner` barrel, which pulls Monaco,
+ * which needs `window`, and this suite runs on `environment: 'node'` (vitest.config.ts:14). No
+ * end-to-end import can run here, so what the assertions pin is the SHAPE of the transformation —
+ * where it sits, what it keys on, what it leaves alone. The observable claims (the D layer holds
+ * the id; a renamed literal makes the value follow the rename on screen) belong to the browser
+ * verification of this commit.
+ */
+describe('XMI M1 import — enum literal names resolved to pointers (R-FRM-3)', () => {
+    const XMI_SERVICE = path.resolve(__dirname, '../XMIService.ts');
+    const source = fs.readFileSync(XMI_SERVICE, 'utf8');
+    const processAttribute = source.match(/private static processAttribute[\s\S]+?\n    \}/)?.[0] ?? '';
+
+    it('processAttribute is still one method, and the resolution lives inside it', () => {
+        // Guards every assertion below: an empty match would make `toContain` on '' fail loudly
+        // rather than silently, but a match that grabbed the WRONG method would not.
+        expect(processAttribute).not.toBe('');
+        expect(processAttribute).toContain('const featName = attrKey.substring(1)');
+        expect(processAttribute).toContain('nameToId');
+    });
+
+    it('detects the enum through type.isEnum, the same predicate CHECK 10 uses', () => {
+        expect(processAttribute).toMatch(/const featType: any = \(metaFeature as any\)\.type/);
+        expect(processAttribute).toMatch(/if \(featType && featType\.isEnum\)/);
+        // The check on the other side of the ratification reads the same field, so the writer and
+        // the validator cannot disagree on what counts as an enum.
+        const validator = fs.readFileSync(
+            path.resolve(__dirname, '../../../model/conformance/ConformanceValidator.ts'), 'utf8');
+        expect(validator).toContain('attrType.isEnum');
+    });
+
+    it('builds the name→id map from type.literals, skipping literals without an id', () => {
+        expect(processAttribute).toMatch(/Array\.isArray\(featType\.literals\) \? featType\.literals : \[\]/);
+        expect(processAttribute).toMatch(/const nameToId = new Map<string, string>\(\)/);
+        // A literal with no id must not enter the map: it would map a name onto `undefined` and
+        // write an undefined pointer, which is strictly worse than keeping the name.
+        expect(processAttribute).toMatch(/if \(lid === null \|\| lid === undefined\) continue;/);
+        expect(processAttribute).toMatch(/if \(lname === null \|\| lname === undefined\) continue;/);
+        // Duplicate name: first occurrence wins, matching normalizeEnumValues on the form side.
+        expect(processAttribute).toMatch(/if \(!nameToId\.has\(lname\)\) nameToId\.set\(lname, lid\)/);
+    });
+
+    it('resolves per element, so a multi-valued attribute mixes resolved and kept values', () => {
+        // `.map` and not a whole-array replacement: with `tags="hot ZZZ monitored"` the two names
+        // that resolve become pointers and the third stays a name, independently.
+        expect(processAttribute).toMatch(/values = values\.map\(\(v\) => \{/);
+        expect(processAttribute).toMatch(/const resolved = nameToId\.get\(v\);/);
+        expect(processAttribute).toMatch(/if \(resolved !== undefined\) return resolved;/);
+    });
+
+    it('keeps an unresolved value verbatim and warns, instead of rejecting the file', () => {
+        expect(processAttribute).toContain('does not match any literal of enum');
+        expect(processAttribute).toContain('kept as-is');
+        expect(processAttribute).toMatch(/ctx\.warnings\.push\(msg\);[\s\S]{0,40}ctx\.summary\.warnings\+\+/);
+        // The value is returned unchanged: the import loads, and CHECK 10 raises
+        // invalid_enum_literal on exactly that value. No throw, no drop.
+        expect(processAttribute).not.toMatch(/throw new Error\([^)]*literal/);
+    });
+
+    it('lets a value that is already a pointer through, and silently', () => {
+        // Unreachable through nameToId (keyed by name), so without this it would be reported as
+        // unresolved — a warning on the canonical form itself.
+        expect(processAttribute).toMatch(/const literalIds = new Set<string>\(\)/);
+        expect(processAttribute).toMatch(/if \(literalIds\.has\(v\)\) return v;/);
+    });
+
+    it('maps before the branch, so both write paths get the resolved array', () => {
+        const mapAt = processAttribute.indexOf('values = values.map((v) => {');
+        const slotAt = processAttribute.indexOf('const conformitySlot = XMIService.getConformitySlot');
+        const fallbackAt = processAttribute.indexOf('const dValue: DValue = DValue.new(');
+        expect(mapAt).toBeGreaterThan(-1);
+        expect(slotAt).toBeGreaterThan(mapAt);
+        expect(fallbackAt).toBeGreaterThan(mapAt);
+        // Neither branch was touched: they still hand `values` over as they did before.
+        expect(processAttribute).toMatch(/SetFieldAction\.new\(conformitySlot\.id,\s*'values',\s*values as any,\s*'',\s*false\)/);
+        expect(processAttribute).toMatch(/DValue\.new\(undefined,\s*metaFeature\.id as any,\s*values,\s*dObject\.id,\s*true,\s*false\)/);
+    });
+
+    it('leaves non-enum attributes alone', () => {
+        // The whole transformation is inside the `featType.isEnum` guard, and the guard opens
+        // after `values` is built and closes before the write. A string, an int or a boolean
+        // attribute reaches the write with the array the split produced.
+        const guardAt = processAttribute.indexOf('if (featType && featType.isEnum) {');
+        const splitAt = processAttribute.indexOf("values = rawValue.split(/\\s+/)");
+        expect(splitAt).toBeGreaterThan(-1);
+        expect(guardAt).toBeGreaterThan(splitAt);
+        const guarded = processAttribute.slice(guardAt);
+        expect(guarded.indexOf('nameToId')).toBeLessThan(guarded.indexOf('const conformitySlot'));
+    });
+
+    it('the export is unchanged and round-trips both forms to the same XML', () => {
+        // C11 of the discovery: serializeFeatures reads __raw.values and resolves a string that
+        // is a DEnumLiteral id to `target.name`; anything else falls through to String(v), which
+        // for a legacy name is the name itself. So the file this commit produces on export is
+        // byte-identical to the one it produced before, whichever form the D layer holds. This
+        // test exists to make a change to that resolution fail here rather than in a round-trip.
+        const serialize = source.match(/private static serializeFeatures[\s\S]+?\n    \}/)?.[0] ?? '';
+        expect(serialize).not.toBe('');
+        expect(serialize).toMatch(/const rawValues: any\[\] = \(feature\.__raw\?\.values \|\| \[\]\) as any\[\]/);
+        expect(serialize).toMatch(/target\.className === 'DEnumLiteral'\) return this\.escapeXml\(target\.name \|\| ''\)/);
+        expect(serialize).toMatch(/return this\.escapeXml\(String\(v\)\)/);
+    });
+});

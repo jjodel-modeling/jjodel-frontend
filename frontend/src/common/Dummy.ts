@@ -115,6 +115,29 @@ export class Dummy {
                 }
             }
 
+            // Safety net, second half (R-DEL-4): the same staleness, one collection over.
+            // The net above covers containment (father.objects / father.features); the M1
+            // reference slots were left exposed, and that is exactly the failure mode of
+            // R-FORM-10: `case 'values'` below fires only for the slots that pointedBy
+            // listed at the instant the L proxy was wrapped, so a slot written after the
+            // wrap is invisible to it and keeps a Pointer that resolves to nothing.
+            // Ground truth instead of the snapshot: scan idlookup for the DValues that
+            // actually hold this id. The redundant -= is a no-op when the pointedBy loop
+            // already fired the same action, exactly as for the father net.
+            // Only a DObject can sit in a reference slot, so every other className skips
+            // the scan. Cost measured 2026-08-30: 0.005ms on the 112-entry smoke fixture,
+            // 0.57ms at 10k entries, 4.72ms at 50k.
+            if (dDeleted.className === 'DObject') {
+                const idlookup: GObject = store.getState().idlookup;
+                for (const slotId in idlookup) {
+                    const slot: any = idlookup[slotId];
+                    if (!slot || slot.className !== 'DValue') continue;
+                    const vals = slot.values;
+                    if (!Array.isArray(vals) || vals.indexOf(deletedID) === -1) continue;
+                    SetFieldAction.new(slotId as any, 'values', deletedID, '-=', true);
+                }
+            }
+
             for (let dependency of dependencies) {
                 const root: keyof DState = dependency.firstKey;
                 if (root !== 'idlookup') {

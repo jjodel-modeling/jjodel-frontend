@@ -1,12 +1,24 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { Fragment, useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useSelector } from 'react-redux';
 import type { NotationMode, ActiveColorScheme, CustomColorScheme } from './types';
 import ColorSchemeSelector from './components/ColorSchemeSelector';
 import HighlightPalette from './components/HighlightPalette';
+// Geometry of the portalled syntax menu. Imported, not re-derived: this helper is the
+// one implementation `InlineObjectSelect`, `InlineEnumSelect` and `ReferencePicker`
+// already share, so the flip-up, the viewport clamp and the `fixed` frame stay one
+// thing. A fourth copy is exactly what the prompt asked not to write.
+import { computeListStyle } from './components/InlineObjectSelect';
 import { LayoutMode, getSavedLayoutMode, saveLayoutMode } from '../abstract/Dock';
 import { isProjectOverviewPage } from '../../utils/navigationUtils';
 import { Defaults, LPointerTargetable, LViewPoint, store } from '../../joiner';
-import type { DViewPoint } from '../../joiner';
+import type { DViewPoint, LModel } from '../../joiner';
+import {
+    DATA_MANAGER_OPTION_ICON,
+    DATA_MANAGER_OPTION_LABEL,
+    DATA_MANAGER_OPTION_VALUE,
+    isDataManagerOption,
+} from './dataManagerOption';
 import { activateViewpoint } from '../../utils/lastViewpoint';
 import DockManager from '../abstract/DockManager';
 import { JjodelEvents } from '../../events/registry';
@@ -66,6 +78,37 @@ interface ToolbarProps {
     onSelectHighlightColor?: (n: number) => void;
     onClearHighlights?: () => void;
 }
+
+/* ── Syntax picker (NAV2) ────────────────────────────────────────────────────
+   The entries of the viewpoint picker, and the ids the listbox needs.
+
+   The VOCABULARY is NAV1's, unchanged: the empty string is «Abstract syntax», one
+   entry per non-system `DViewPoint`, and the `@data-manager` sentinel last. What
+   NAV2 adds is what a native `<option>` could not carry — a glyph per entry, and a
+   selected state drawn in the ratified cyan.
+
+   `bi-eye` for the concrete syntaxes because that is already the viewpoint glyph in
+   this bar: it sits on the picker itself and on every entry of the views menu beside
+   it. `bi-diagram-3` for the abstract syntax is the class-diagram glyph the notation
+   selector uses for «Structured», the notation abstract syntax draws through. */
+interface SyntaxEntry {
+    /** The value handed to `handleViewpointChange`: '' , a viewpoint id, or the sentinel. */
+    value: string;
+    label: string;
+    /** Bootstrap class, without the `bi ` prefix. */
+    icon: string;
+    /** A hairline is drawn ABOVE this entry. Not an entry of its own — see below. */
+    sep?: boolean;
+}
+
+const ABSTRACT_SYNTAX_ENTRY: SyntaxEntry = { value: '', label: 'Abstract syntax', icon: 'bi-diagram-3' };
+const VIEWPOINT_ENTRY_ICON = 'bi-eye';
+
+/** `aria-controls` / `aria-activedescendant` need ids, and the listbox is portalled onto
+ *  `document.body` — outside the toolbar's subtree, where a scoped id would not help. One
+ *  picker is on screen per active pane, so a constant is enough. */
+const SYNTAX_LISTBOX_ID = 'toolbar-syntax-listbox';
+const syntaxOptionId = (i: number) => `toolbar-syntax-option-${i}`;
 
 const NOTATION_OPTIONS: Array<{ id: NotationMode; name: string; desc: string; icon: string }> = [
     { id: 'uml',        name: 'Structured',        desc: 'Class diagram like',  icon: 'bi-diagram-3' },
@@ -263,9 +306,209 @@ function Toolbar({
     // keeps the controls live on M2 where abstract syntax is all there is.
     const viewControlsDisabled = !!shownViewpointId;
 
+    // The picker carries one synthetic entry, «Data manager», which is NOT a viewpoint
+    // (dataManagerOption.ts says why). It is intercepted HERE, before `activateViewpoint`,
+    // so the sentinel never reaches `state.viewpoint` and no fake DViewPoint is needed.
+    //
+    // The manager is not mounted here: this delegates to `DockManager.openManager`, the
+    // same door the models rail uses (LeftBar.tsx), and `DockManager.open` activates a tab
+    // whose id already exists — so picking the entry twice, or picking it on a model whose
+    // manager was opened from the rail, converges on ONE tab instead of remounting.
+    //
+    // The picker stays controlled on `shownViewpointId`, so it snaps back to the active
+    // syntax on the next render. That is correct and not a bug to fix: the canvas tab this
+    // toolbar belongs to keeps rendering that syntax underneath, and the manager tab is a
+    // sibling of it, not a mode of it. Going back to a syntax means activating the canvas
+    // tab — the manager tab is left open, never closed from here.
     const handleViewpointChange = useCallback((vpId: string) => {
+        if (isDataManagerOption(vpId)) {
+            if (!modelId) return;
+            try {
+                const lm = LPointerTargetable.fromPointer(modelId) as LModel;
+                if (lm) DockManager.openManager(lm);
+            } catch (e) {
+                console.warn('[Toolbar] Data manager: model not resolvable', modelId, e);
+            }
+            return;
+        }
         activateViewpoint(vpId || null);
-    }, []);
+    }, [modelId]);
+
+    // ── The picker itself: a custom listbox, no longer a <select> (NAV2) ──
+    //
+    // Only the SURFACE changed. The vocabulary above, `handleViewpointChange`, the
+    // sentinel interception and the convergence on one manager tab are NAV1's, and this
+    // block calls into them unmodified — a viewpoint id still reaches `activateViewpoint`,
+    // the sentinel still returns before it.
+    //
+    // Why a custom control at all: a native `<option>` renders text only, so the mock's
+    // per-entry glyphs and the cyan selected row cannot live inside one. NAV1 said so and
+    // left the glyph on the rail; NAV2 is the control that can hold it.
+    //
+    // What a `<select>` gave for free, and is therefore re-earned by hand below, item by
+    // item — anything missing here is a REGRESSION against the control it replaces, not a
+    // nicety skipped: `role=listbox` / `role=option` with `aria-selected` and
+    // `aria-activedescendant`, arrows, Home, End, Enter, Space, Escape (which restores
+    // focus to the trigger), Tab, and type-ahead.
+    //
+    // The separator is NOT an entry. In a `<select>` it had to be an `<option disabled>`,
+    // the only rule a native list can draw; here it is a hairline `role="presentation"`
+    // div, so it cannot be highlighted, cannot be counted into the indices the arrow keys
+    // walk, and cannot be read out.
+    const [syntaxOpen, setSyntaxOpen] = useState(false);
+    /** Viewport rect of the trigger, read once at open: the panel is portalled onto
+     *  `document.body` and framed `fixed`, so this is the only thing its geometry can be
+     *  born from. */
+    const [syntaxRect, setSyntaxRect] = useState<DOMRect | null>(null);
+    const [syntaxHighlighted, setSyntaxHighlighted] = useState(0);
+    const syntaxTriggerRef = useRef<HTMLButtonElement>(null);
+    const syntaxListRef = useRef<HTMLDivElement>(null);
+    /** Type-ahead buffer and the moment it was last fed. A `<select>` jumps to the entry
+     *  whose label starts with what you type, and repeating one letter cycles the entries
+     *  that start with it; without this the custom control is strictly worse than the one
+     *  it replaces on a list of ten viewpoints. */
+    const syntaxTypeahead = useRef<{ buf: string; at: number }>({ buf: '', at: 0 });
+
+    const syntaxEntries: SyntaxEntry[] = [ABSTRACT_SYNTAX_ENTRY];
+    if (!isMetamodel) {
+        for (const vp of viewpoints) {
+            syntaxEntries.push({ value: vp.id, label: vp.name, icon: VIEWPOINT_ENTRY_ICON });
+        }
+        // Same guard as NAV1: off on metamodels, which have no instances and whose manager
+        // `DockManager.openManager` refuses anyway, and off without a `modelId`, which is
+        // what the entry has to resolve to open the tab.
+        if (modelId) {
+            syntaxEntries.push({
+                value: DATA_MANAGER_OPTION_VALUE,
+                label: DATA_MANAGER_OPTION_LABEL,
+                icon: DATA_MANAGER_OPTION_ICON,
+                sep: true,
+            });
+        }
+    }
+    /** What the trigger reads. Falls back to «Abstract syntax» for the same reason the
+     *  `<select>` was normalized to '' upstream: an active id with no entry would otherwise
+     *  leave the control blank. */
+    const currentSyntax = syntaxEntries.find(e => e.value === shownViewpointId) ?? ABSTRACT_SYNTAX_ENTRY;
+
+    const openSyntaxMenu = () => {
+        const el = syntaxTriggerRef.current;
+        if (!el) return;
+        setSyntaxRect(el.getBoundingClientRect());
+        const i = syntaxEntries.findIndex(e => e.value === shownViewpointId);
+        setSyntaxHighlighted(i >= 0 ? i : 0);
+        syntaxTypeahead.current = { buf: '', at: 0 };
+        setSyntaxOpen(true);
+    };
+
+    const pickSyntax = (value: string) => {
+        setSyntaxOpen(false);
+        // Focus goes back to the trigger, as it does when a `<select>` closes — except for
+        // the manager entry, which moves to another tab: pulling focus back onto a control
+        // of the tab just left is worse than leaving it where the dock puts it.
+        if (!isDataManagerOption(value)) syntaxTriggerRef.current?.focus();
+        handleViewpointChange(value);
+    };
+
+    /* Closing. `mousedown` and not `click`: a press that starts inside the panel and ends
+     * outside (dragging across a label) reaches `window` as a click on the document and
+     * would close the panel mid-gesture. The trigger is excluded from "outside" or the
+     * toggle would fight itself — mousedown closes, click reopens.
+     *
+     * Scroll, wheel and resize CLOSE instead of repositioning: the geometry is computed
+     * once from the trigger's rect, and a `fixed` panel that stays put while its anchor
+     * slides away is worse than a panel that is gone. Gestures INSIDE the panel are
+     * ignored, or a long list could not be scrolled. Capture on BOTH add and remove — an
+     * ancestor's scroll does not bubble, and a listener added in capture is not removed by
+     * a bubble-phase removal.
+     *
+     * Escape is global and in capture for the reason §15.1 gives: Monaco stops keydown in
+     * bubble phase, and this bar sits above editors that embed it. Mounted only while
+     * open. */
+    useEffect(() => {
+        if (!syntaxOpen) return;
+        const onDown = (e: MouseEvent) => {
+            const t = e.target as Node;
+            if (syntaxTriggerRef.current?.contains(t) || syntaxListRef.current?.contains(t)) return;
+            setSyntaxOpen(false);
+        };
+        const onAnchorMove = (e: Event) => {
+            if (syntaxListRef.current?.contains(e.target as Node)) return;
+            setSyntaxOpen(false);
+        };
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key !== 'Escape') return;
+            e.preventDefault();
+            setSyntaxOpen(false);
+            syntaxTriggerRef.current?.focus();
+        };
+        window.addEventListener('mousedown', onDown, true);
+        window.addEventListener('keydown', onKey, true);
+        window.addEventListener('scroll', onAnchorMove, true);
+        window.addEventListener('wheel', onAnchorMove, true);
+        window.addEventListener('resize', onAnchorMove);
+        return () => {
+            window.removeEventListener('mousedown', onDown, true);
+            window.removeEventListener('keydown', onKey, true);
+            window.removeEventListener('scroll', onAnchorMove, true);
+            window.removeEventListener('wheel', onAnchorMove, true);
+            window.removeEventListener('resize', onAnchorMove);
+        };
+    }, [syntaxOpen]);
+
+    // Focus the list on open, so the keyboard works without a second gesture — the same
+    // rAF the inline selects use, because the portal is not in the DOM on the tick the
+    // state flips.
+    useEffect(() => {
+        if (!syntaxOpen) return;
+        const raf = requestAnimationFrame(() => syntaxListRef.current?.focus());
+        return () => cancelAnimationFrame(raf);
+    }, [syntaxOpen]);
+
+    // Keep the highlighted entry inside the scroll box: with ten viewpoints the arrow keys
+    // walk past the panel's max-height, and a highlight that cannot be seen is not one.
+    useEffect(() => {
+        if (!syntaxOpen) return;
+        const items = syntaxListRef.current?.querySelectorAll('.toolbar-viewpoint-menu__option');
+        (items?.[syntaxHighlighted] as HTMLElement | undefined)?.scrollIntoView({ block: 'nearest' });
+    }, [syntaxOpen, syntaxHighlighted]);
+
+    /** Enter and Space open the menu because the trigger is a `<button>`; the arrows are
+     *  what a `<select>` adds on top, and they open it too. */
+    const onSyntaxTriggerKeyDown = (e: React.KeyboardEvent) => {
+        if (syntaxOpen || isMetamodel) return;
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); openSyntaxMenu(); }
+    };
+
+    const onSyntaxListKeyDown = (e: React.KeyboardEvent) => {
+        e.stopPropagation();
+        const last = syntaxEntries.length - 1;
+        switch (e.key) {
+            case 'ArrowDown': e.preventDefault(); setSyntaxHighlighted(h => Math.min(h + 1, last)); return;
+            case 'ArrowUp': e.preventDefault(); setSyntaxHighlighted(h => Math.max(h - 1, 0)); return;
+            case 'Home': e.preventDefault(); setSyntaxHighlighted(0); return;
+            case 'End': e.preventDefault(); setSyntaxHighlighted(last); return;
+            case 'Enter':
+            case ' ': e.preventDefault(); pickSyntax(syntaxEntries[syntaxHighlighted]?.value ?? ''); return;
+            case 'Escape': e.preventDefault(); setSyntaxOpen(false); syntaxTriggerRef.current?.focus(); return;
+            case 'Tab': setSyntaxOpen(false); return;
+            default: break;
+        }
+        // Type-ahead. One character restarts the search AFTER the current entry, so pressing
+        // the same letter cycles; two or more within the window extend the buffer and search
+        // from the current entry, so a longer prefix narrows instead of jumping.
+        if (e.key.length !== 1 || e.altKey || e.ctrlKey || e.metaKey) return;
+        const now = Date.now();
+        const t = syntaxTypeahead.current;
+        t.buf = now - t.at > 700 ? e.key : t.buf + e.key;
+        t.at = now;
+        const q = t.buf.toLowerCase();
+        const from = q.length === 1 ? syntaxHighlighted + 1 : syntaxHighlighted;
+        for (let k = 0; k < syntaxEntries.length; k++) {
+            const i = (from + k) % syntaxEntries.length;
+            if (syntaxEntries[i].label.toLowerCase().startsWith(q)) { setSyntaxHighlighted(i); break; }
+        }
+    };
 
     // ── Views menu (edit entry next to the selector) ──
     // The list is built at render straight from the store instead of through a selector:
@@ -598,7 +841,7 @@ function Toolbar({
             <div className="toolbar-separator" />
 
             {/* ── Viewpoint selector: this IS the syntax control (R-IRN-10) ──
-                Choosing a viewpoint is choosing the concrete syntax, so the empty option
+                Choosing a viewpoint is choosing the concrete syntax, so the first entry
                 reads "Abstract syntax" and the retired pill said nothing this does not.
                 The lit state stays legible through toolbar-viewpoint-selector--active.
 
@@ -610,24 +853,86 @@ function Toolbar({
                 metamodel's own rendering stays governed by the notation selector. */}
             <div className="toolbar-viewpoint-group">
                 <div className={`toolbar-viewpoint-selector${shownViewpointId ? ' toolbar-viewpoint-selector--active' : ''}`}>
-                    <i className="bi bi-eye" />
-                    <select
-                        value={shownViewpointId}
-                        onChange={(e) => handleViewpointChange(e.target.value)}
+                    {/* The eye moves INSIDE the trigger (it was a sibling of the <select>):
+                        the mock draws one control carrying glyph, label and chevron. It stays
+                        a `.bi-eye` descendant of `.toolbar-viewpoint-selector`, so the lit
+                        rule of `--active` reaches it exactly as before. */}
+                    <button
+                        ref={syntaxTriggerRef}
+                        type="button"
+                        className="toolbar-viewpoint-trigger"
+                        aria-haspopup="listbox"
+                        aria-expanded={syntaxOpen}
+                        aria-controls={SYNTAX_LISTBOX_ID}
+                        aria-label="Viewpoint"
                         disabled={isMetamodel}
                         title={isMetamodel ? 'Metamodels use abstract syntax only' : 'Select viewpoint'}
+                        onClick={() => (syntaxOpen ? setSyntaxOpen(false) : openSyntaxMenu())}
+                        onKeyDown={onSyntaxTriggerKeyDown}
                     >
-                        <option value="">Abstract syntax</option>
-                        {!isMetamodel && viewpoints.map(vp => (
-                            <option key={vp.id} value={vp.id}>{vp.name}</option>
-                        ))}
-                    </select>
+                        <i className="bi bi-eye" aria-hidden="true" />
+                        <span className="toolbar-viewpoint-trigger__label">{currentSyntax.label}</span>
+                        <i className="bi bi-chevron-down toolbar-viewpoint-trigger__chevron" aria-hidden="true" />
+                    </button>
+
+                    {/* Portalled onto `document.body`, and `fixed` from the trigger's rect.
+                        Inside the bar it would be clipped: the toolbar is a flex row in an
+                        rc-dock pane, the trap the Columns panel of 10k hit from the other
+                        side of the app. The portal also settles the rail: the views menu
+                        beside this one is anchored right because the rail overlay is
+                        `position: fixed` on <body> and forms a stacking context ABOVE the
+                        toolbar's, so its 900 paints over a 1000 that lives inside the bar.
+                        A panel that is itself on <body> is that overlay's sibling, and
+                        `computeListStyle`'s z-index 10000 then means what it says.
+
+                        The theme lives on `html[data-theme]`, so the tokens follow the panel
+                        out of the subtree; its rules are flat BEM classes, not descendants of
+                        `.editor-v2-toolbar`, and reach it by construction. */}
+                    {syntaxOpen && syntaxRect && createPortal(
+                        <div
+                            id={SYNTAX_LISTBOX_ID}
+                            ref={syntaxListRef}
+                            className="toolbar-viewpoint-menu"
+                            role="listbox"
+                            aria-label="Viewpoint"
+                            aria-activedescendant={syntaxOptionId(syntaxHighlighted)}
+                            tabIndex={0}
+                            style={computeListStyle(syntaxRect)}
+                            onKeyDown={onSyntaxListKeyDown}
+                        >
+                            {syntaxEntries.map((entry, i) => (
+                                <Fragment key={entry.value || '__abstract__'}>
+                                    {entry.sep && (
+                                        <div className="toolbar-viewpoint-menu__sep" role="presentation" />
+                                    )}
+                                    <div
+                                        id={syntaxOptionId(i)}
+                                        className={'toolbar-viewpoint-menu__option'
+                                            + (i === syntaxHighlighted ? ' toolbar-viewpoint-menu__option--highlighted' : '')}
+                                        role="option"
+                                        aria-selected={entry.value === shownViewpointId}
+                                        onClick={() => pickSyntax(entry.value)}
+                                        onMouseEnter={() => setSyntaxHighlighted(i)}
+                                    >
+                                        <i className={`bi ${entry.icon} toolbar-viewpoint-menu__icon`} aria-hidden="true" />
+                                        <span className="toolbar-viewpoint-menu__label">{entry.label}</span>
+                                        {entry.value === shownViewpointId && (
+                                            <i className="bi bi-check-lg toolbar-viewpoint-menu__check" aria-hidden="true" />
+                                        )}
+                                    </div>
+                                </Fragment>
+                            ))}
+                        </div>,
+                        document.body,
+                    )}
                 </div>
 
                 {/* Views menu — the way into the views editor from the canvas toolbar.
                     Borrows the .notation-selector shape (relative wrapper + absolute
-                    dropdown) so it behaves like the other toolbar menus; the <select>
-                    beside it is untouched. aria-haspopup/aria-expanded are on this button
+                    dropdown) so it behaves like the other toolbar menus; the syntax picker
+                    beside it is untouched — NAV2 rebuilt that one on its own listbox, not
+                    on this shape, because it needs a selected state and per-entry glyphs
+                    that `.notation-selector__option` does not carry. aria-haspopup/aria-expanded are on this button
                     only: the older .notation-selector is not retrofitted here. */}
                 {showViewsMenu && (
                     <div className="notation-selector" ref={viewsMenuRef}>

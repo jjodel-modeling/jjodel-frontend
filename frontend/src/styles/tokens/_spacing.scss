@@ -30,6 +30,14 @@
      ============================================ */
 
   /* Input/Control Heights */
+  /* Form-view control heights (2026-08-26). The existing --input-height scale
+     starts at 32px and the form needs 24/26/28 (compact / inspector / plain and
+     card), so this is a separate, denser scale rather than a widening of that one:
+     --input-height governs the app's ordinary inputs and must not move. */
+  --control-height-sm: 24px;   /* compact theme, chips, Add button */
+  --control-height-md: 26px;   /* inspector theme, picker candidate rows */
+  --control-height-lg: 28px;   /* plain and card themes, search rows */
+
   --input-height: 40px;
   --input-height-sm: 32px;
   --input-height-lg: 48px;

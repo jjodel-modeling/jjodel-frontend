@@ -30,8 +30,16 @@ const deleteDState = false; // there is also one in Constructors, update them to
 @RuntimeAccessible('VersionFixer')
 export class VersionFixer {
     public static cname = 'VersionFixer';
-    private static versionAdapters: Dictionary<number/*version*/, {n: number, f:(s: DState)=>DState}> = VersionFixer.setup();
+    // ORDER IS LOAD-BEARING: `highestVersion` must be declared BEFORE `versionAdapters`.
+    // Static fields initialize in declaration order, and `setup()` raises `highestVersion`
+    // to the highest adapter target while it runs. With the two lines swapped, the `= 0`
+    // initializer executed after `setup()` and reset the maximum to 0: `update()` then
+    // skipped `setup()` (adapters truthy, :112) and looped `while (currVer !== 0)`, dying
+    // with «missing version adapter from "2.228"» on a state already at the latest version.
+    // Do not reorder, and do not drop the `= 0`: `setup()` accumulates with `Math.max`, so
+    // an undefined seed would make it NaN. Measured in TXT1 §7 / scripts/smoke/_tmp_vf1_verify.ts.
     private static highestVersion: number = 0; // automatically updated from updater function names
+    private static versionAdapters: Dictionary<number/*version*/, {n: number, f:(s: DState)=>DState}> = VersionFixer.setup();
     private static prefix: string = '__jodel_versioning_';
     // public static UpdateOnSave: Dictionary<string, string> = {}; // stuff to be fixed with string replacement instead of save object manipulation
     public static help(){

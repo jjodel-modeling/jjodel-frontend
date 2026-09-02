@@ -22,13 +22,16 @@
   --color-border-primary: rgba(255, 255, 255, 0.08);   /* Main borders, dividers */
   --color-border-secondary: rgba(255, 255, 255, 0.04); /* Subtle borders */
   --color-border-hover: rgba(255, 255, 255, 0.12);     /* Hover state borders */
+  --color-border-focus: #94a3b8;                       /* slate-400 - focus rings, never cyan */
 
   /* ============================================
      TEXT COLORS
      ============================================ */
   --color-text-primary: #f0f0f0;      /* Headings, primary text */
   --color-text-secondary: #a0a0a0;    /* Body text, secondary info */
-  --color-text-tertiary: #606060;     /* Placeholders, disabled text */
+  --color-text-tertiary: #606060;     /* Labels, captions */
+  --color-text-placeholder: #545454;  /* Placeholder text */
+  --color-text-disabled: #464646;     /* Disabled text */
   --color-text-inverse: #08090a;      /* Text on light backgrounds */
 
   /* ============================================
@@ -254,12 +257,15 @@
   --color-entity-reference-fg: #C9D399;
   --color-entity-operation-bg: #312746;
   --color-entity-operation-fg: #D1C2F9;
+  /* model — DS-1 (2026-08-31). Controparte scura della coppia ambra a H 85.
+     Misurato: bg L 0.300 C 0.056 H 83.9, fg L 0.846 C 0.078 H 84.7,
+     dE(bg, enum.bg) 0.0263 contro un pavimento di 0.0243, contrasto 8.52:1. */
+  --color-entity-model-bg: #3B2B06;
+  --color-entity-model-fg: #E4C992;
 
   /* Alias — sei contenitori, la classe astratta, il tipo di dato */
   --color-entity-metamodel-bg: var(--color-entity-container-bg);
   --color-entity-metamodel-fg: var(--color-entity-container-fg);
-  --color-entity-model-bg: var(--color-entity-container-bg);
-  --color-entity-model-fg: var(--color-entity-container-fg);
   --color-entity-package-bg: var(--color-entity-container-bg);
   --color-entity-package-fg: var(--color-entity-container-fg);
   --color-entity-viewpoint-bg: var(--color-entity-container-bg);
@@ -278,5 +284,129 @@
   /* Selection (cyan dark variant) */
   --color-selection-bg: rgba(8, 145, 178, 0.18);
   --color-selection-bar: #22D3EE;
+
+  /* ============================================
+     FORM VIEWS (2026-08-26)
+     Dark counterparts of the light block. Same derivation rule: reference the
+     neighbouring semantic role where one exists, literal only where none does.
+     The three literals are the ones the light palette also had to spell out.
+     Surface sits ONE step lighter than panel, mirroring the light side where the
+     input (#ffffff) sits on the panel (#f8fafc).
+     ============================================ */
+  /* Spelled out for the same reason as the light block, even though the dark side was not
+     affected: this file's selector is `:root[data-theme="dark"]`, which outranks the plain
+     `:root` of tokens.css, so the aliases resolved correctly here. Literal anyway, so the two
+     palettes read the same way and neither depends on a specificity accident. */
+  --color-form-surface: #16181a;                      /* input and card fill */
+  --color-form-panel: #0f1012;                        /* panel under the cards */
+  --color-form-border: rgba(255, 255, 255, 0.08);
+  --color-form-border-strong: rgba(255, 255, 255, 0.16); /* one step past --color-border-hover */
+  --color-form-summary: #121416;                      /* a hair lighter than the panel */
+  --color-form-label: var(--color-text-secondary);    /* #a0a0a0 */
+  --color-form-muted: var(--color-text-tertiary);     /* #606060 */
+  --color-form-section: var(--color-text-tertiary);   /* #606060 */
+  --color-marker-required: #38bdf8;                   /* sky-400: #0ea5e9 loses contrast on #0f1012 */
+  --color-error-text: #fca5a5;                        /* red-300, readable on a dark panel */
+  --color-form-dirty-border: #0ea5e9;                 /* sky-500: sky-300 greys out on #0f1012 */
+  --color-form-dirty-text: #7dd3fc;                   /* sky-300, readable on a dark panel */
+  --color-form-dirty-halo: rgba(56, 189, 248, 0.28);  /* sky-400 at the alpha the dark bg needs */
+  /* Focus of the extended widgets (FL3) — see the light file for why two roles.
+     #0891b2 goes muddy on a dark surface, the correction --color-inode-ref-fg
+     already makes for the reference pill, so the border takes cyan-400 and the ring
+     the alpha a dark ground needs to show one at all. */
+  --color-form-focus-border: #22d3ee;                 /* cyan-400 */
+  --color-form-focus-ring: 0 0 0 3px rgba(34, 211, 238, 0.22);
+  --color-warning-text: #fcd34d;                      /* amber-300, readable on a dark panel */
+
+  /* ============================================
+     INSTANCE NODE (2026-08-27)
+     Dark counterparts of the light block. The handoff states dark mode was not
+     designed, so nothing here is transcribed from it: the values are derived.
+
+     The derivation rule of the FORM VIEWS block above — reference the
+     neighbouring semantic role — does NOT apply here, and that is the one thing
+     worth knowing about this block. Those roles describe the app chrome, whose
+     dark ground is near-black (#0f1012); the canvas has its own dark ground
+     (#1e293b) and every node drawn on it sits one step LIGHTER, at #334155.
+     Aliasing --color-bg-secondary here was the first attempt and it inverted
+     figure and ground: the instance node came out darker than the canvas while
+     class, enum and package nodes stayed lighter. Measured 2026-08-27 with
+     scripts/smoke/_tmp_instance_node.ts. So the ground below is the canvas node
+     ground, spelled out, and the text roles are alphas over it.
+
+     The cyan ramp inverts around its middle: on a dark surface the light tints
+     (cyan-200/300) become the FOREGROUND and translucent cyan the ground.
+     Selection keeps owning the cyan.
+     ============================================ */
+  --color-inode-surface: #334155;                      /* the canvas node ground, = --node-bg dark */
+  --color-inode-border: rgba(255, 255, 255, 0.16);
+  --color-inode-header-fill: rgba(255, 255, 255, 0.06);
+  --color-inode-name: rgba(255, 255, 255, 0.92);
+  --color-inode-label: rgba(255, 255, 255, 0.55);
+  --color-inode-quiet: rgba(255, 255, 255, 0.3);       /* dash and cardinality: the quietest role */
+  --color-inode-footer: rgba(255, 255, 255, 0.45);
+  --color-inode-footer-rule: rgba(255, 255, 255, 0.08);
+  --color-inode-chip-bg: rgba(255, 255, 255, 0.09);
+  --color-inode-chip-fg: rgba(255, 255, 255, 0.75);
+  --color-inode-badge-bg: rgba(255, 255, 255, 0.09);
+  --color-inode-badge-fg: rgba(255, 255, 255, 0.75);
+  --color-inode-accent-neutral: rgba(255, 255, 255, 0.25);
+  --color-inode-shadow: rgba(0, 0, 0, 0.4);            /* the light 4% vanishes on a dark ground */
+  --color-inode-shadow-hover: rgba(0, 0, 0, 0.55);
+  /* Un gradino OPACO sopra --color-inode-surface (#334155, slate-700): slate-600.
+     Il traslucido qui aprirebbe un buco sulla tela invece di schiarire la pill. */
+  --color-inode-pill-hover: #475569;                   /* slate-600 */
+
+  /* Cyan, inverted: tint on top, depth underneath */
+  /* Row view library (2026-08-28, livello 3). Il pieno/vuoto del dot booleano e
+     la traccia della barra devono restare distinguibili su #334155, quindi sono
+     alpha di bianco e non i grigi chiari, che su questo fondo collassano. */
+  --color-inode-swatch-hairline: rgba(255, 255, 255, 0.28);
+  --color-inode-bool-on: rgba(255, 255, 255, 0.8);
+  --color-inode-bool-off: rgba(255, 255, 255, 0.32);
+  --color-inode-progress-track: rgba(255, 255, 255, 0.14);
+  --color-inode-progress-fill: rgba(255, 255, 255, 0.62);
+  --color-inode-emphasis: rgba(255, 255, 255, 0.75);
+  --color-inode-broken: #f87171;                       /* red-400; il red-500 va cupo qui */
+
+  --color-inode-ref-bg: rgba(6, 182, 212, 0.16);
+  --color-inode-ref-border: rgba(103, 232, 249, 0.4);  /* cyan-300 at the alpha the dark bg needs */
+  --color-inode-ref-fg: #67e8f9;                       /* cyan-300; #0891b2 goes muddy here */
+  --color-inode-selected-border: #22d3ee;              /* cyan-400 = --color-selection-bar */
+  --color-inode-selected-header-bg: rgba(6, 182, 212, 0.2);
+  --color-inode-selected-header-border: rgba(34, 211, 238, 0.45);
+  --color-inode-selected-badge-bg: rgba(6, 182, 212, 0.26);
+  --color-inode-selected-badge-fg: #a5f3fc;            /* cyan-200 */
+  --color-inode-selected-ring: rgba(34, 211, 238, 0.28);
+
+  /* Option colours, dark. Same seven families, stepped for this surface and
+     validated as their own set — not a flip of the light column. The foreground is
+     the 400 step (the 300s the canvas pill uses are too pale to tell apart: at 300
+     the worst adjacent pair measured ΔE 9.4 for normal vision, under the floor of
+     15), the tint is the 500 at 16% and the border the 400 at 40%, which is the
+     shape --color-inode-ref-* already has here. See the light file for the
+     measurements and for why there are seven. */
+  --color-opt-1-bg: rgba(6, 182, 212, 0.16);      /* cyan-500 */
+  --color-opt-1-border: rgba(34, 211, 238, 0.4);  /* cyan-400 */
+  --color-opt-1-fg: #22d3ee;                      /* cyan-400 */
+  --color-opt-2-bg: rgba(249, 115, 22, 0.16);     /* orange-500 */
+  --color-opt-2-border: rgba(251, 146, 60, 0.4);  /* orange-400 */
+  --color-opt-2-fg: #fb923c;                      /* orange-400 */
+  --color-opt-3-bg: rgba(14, 165, 233, 0.16);     /* sky-500 */
+  --color-opt-3-border: rgba(56, 189, 248, 0.4);  /* sky-400 */
+  --color-opt-3-fg: #38bdf8;                      /* sky-400 */
+  --color-opt-4-bg: rgba(236, 72, 153, 0.16);     /* pink-500 */
+  --color-opt-4-border: rgba(244, 114, 182, 0.4); /* pink-400 */
+  --color-opt-4-fg: #f472b6;                      /* pink-400 */
+  --color-opt-5-bg: rgba(59, 130, 246, 0.16);     /* blue-500 */
+  --color-opt-5-border: rgba(96, 165, 250, 0.4);  /* blue-400 */
+  --color-opt-5-fg: #60a5fa;                      /* blue-400 */
+  --color-opt-6-bg: rgba(20, 184, 166, 0.16);     /* teal-500 */
+  --color-opt-6-border: rgba(45, 212, 191, 0.4);  /* teal-400 */
+  --color-opt-6-fg: #2dd4bf;                      /* teal-400 */
+  --color-opt-7-bg: rgba(168, 85, 247, 0.16);     /* purple-500 */
+  --color-opt-7-border: rgba(192, 132, 252, 0.4); /* purple-400 */
+  --color-opt-7-fg: #c084fc;                      /* purple-400 */
+
 
 }

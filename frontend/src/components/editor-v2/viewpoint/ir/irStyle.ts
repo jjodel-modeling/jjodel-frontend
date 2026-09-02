@@ -171,8 +171,31 @@ const BASE_CSS = `
 /* The compartment row is a flex line at line-height 1.4, and a padded editor would
    become its tallest item: this one stays flat so the row does not grow on edit. */
 .ir-node-content .ir-row__input { padding: 0 4px; }
-.ir-node-content .ir-row__value--editable { cursor: text; }
+/* min-width is the hit area: an unassigned value renders no text, the span collapses to
+   width 0, and the double click has nothing to land on — which is exactly the FIRST
+   assignment, the common case. Measured 2026-08-26: w=0 h=18 on five empty rows. */
+.ir-node-content .ir-row__value--editable { cursor: text; display: inline-block; min-width: 1.5em; }
 .ir-node-content .ir-row__value--editable:hover { background: rgba(14,165,233,0.08); border-radius: 3px; }
+/* A reference row that opens a select carries --editable too, for the hover, but its cursor
+   must not promise a caret: the double click opens a list, it does not start typing. */
+.ir-node-content .ir-row__value--select { cursor: pointer; }
+/* Placeholder for an unassigned select: says "assignable" without inventing a value. Only
+   on the select — an empty attribute keeps its blank. --text-dim is the muted token of the
+   editor surface and follows the theme; the hex is its light value, kept as the fallback the
+   rest of EditorV2.scss uses. */
+.ir-node-content .ir-row__value--select:empty::after { content: '…'; color: var(--text-dim, #94a3b8); }
+/* Renderer ladder affordance (R-STR-7). Hover-reveal, the action-icon idiom of the cards:
+   an IR node is authored to a size, so a glyph permanently parked on every row would spend
+   that width on chrome. margin-left:auto and not absolute positioning - the row is a
+   flex line, so this pushes the icon to the right edge without taking it out of flow and
+   without needing reserved padding the authored box does not have. flex-shrink: 0 keeps it
+   from being squeezed away by a long value. */
+.ir-node-content .ir-row__inspect { margin-left: auto; flex-shrink: 0; display: inline-flex; align-items: center; border: none; background: none; padding: 0 0 0 4px; font-size: inherit; line-height: 1; color: var(--text-dim, #94a3b8); cursor: pointer; opacity: 0; transition: opacity var(--duration-fast, 150ms) var(--ease-out, ease-out); }
+.ir-node-content .ir-row:hover .ir-row__inspect { opacity: 1; }
+.ir-node-content .ir-row__inspect:hover { color: #0ea5e9; }
+/* Keyboard reachability is not a hover state: an icon focused by Tab has to be visible,
+   or the affordance exists only for a pointer. Same rule as the native branch. */
+.ir-node-content .ir-row__inspect:focus-visible { opacity: 1; outline: 1px solid #0ea5e9; outline-offset: 1px; }
 `;
 
 function ensureStyleTag(): HTMLStyleElement | null {

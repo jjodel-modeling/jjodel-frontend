@@ -50,6 +50,7 @@ import {DEFAULT_VIEW_JSX_STRING} from "../../utils/defaultViewTemplate";
 import {collectViewSubtree} from "./viewSubtree";
 import {computeCreationSeed} from "../../components/editor-v2/viewpoint/ir/irCreationSeed";
 import type {AnyViewIR} from "../../components/editor-v2/viewpoint/ir/irTypes";
+import type {FormThemeName} from "../../jjform/themes";
 
 let CSS_Units0 = {'Local-font relative':{
         'cap':     'cap - (Cap height) the nominal height of capital letters of the element\'s font.',
@@ -218,6 +219,33 @@ export class DViewElement extends DPointerTargetable {
     name!: string;
     isExclusiveView!: boolean;
     viewpointType?: ViewpointType; // explicit viewpoint type (additive — legacy booleans still work)
+    /**
+     * The FORM THEME chosen at the VIEWPOINT level (slice STYLE2).
+     *
+     * One of `FORM_THEME_NAMES` — the four presets of `jjform/themes.ts` — or absent.
+     * ABSENT IS A VALUE: it means "this viewpoint states no opinion", which resolves to
+     * exactly the rendering committed before this field existed. That is why no
+     * VersionFixer migration accompanies it: a saved project has no `formTheme`, reads
+     * as absent, and renders byte for byte as it did. CLAUDE.md §3.9 requires a
+     * migration for default-VIEW SOURCE changes (`DV.tsx`, `defaultViewTemplate.ts`)
+     * because those rewrite a persisted `jsxString`; this field rewrites nothing.
+     *
+     * Declared HERE and not on `DViewPoint` for the reason `isValidation` and
+     * `viewpointType` are: `DViewPoint` carries no own data field at all (it redeclares
+     * `id` and `name` and nothing else), and every viewpoint-only field in this graph
+     * lives on `DViewElement` with a comment saying so. A first own field on the
+     * subclass would also have to be taught to `Constructors.DViewPoint`, which today
+     * only wires the project pointer.
+     *
+     * READ BY: `IRForm.tsx`, through the ACTIVE viewpoint (`state.viewpoint`), which is
+     * the same source `irResolveCore` indexes views by. WRITTEN BY: the «Form theme»
+     * select of `ViewpointProperties.tsx` — the panel `Info.tsx` renders for a selected
+     * viewpoint. Not the Style tab: `<ViewData>`, which owns that tab, is mounted only
+     * in the `else` branch of the same `isVP` test, so no viewpoint ever reaches it.
+     * Precedence, stated once and tested: `ir.form.theme` of the view wins over this,
+     * this wins over the factory default.
+     */
+    formTheme?: FormThemeName;
 
     // processate 1 sola volta all'applicazione della vista o all'editing del campo
     constants?: string;

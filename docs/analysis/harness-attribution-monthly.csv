@@ -1,0 +1,9 @@
+month,commits,merges,non_merge,with_trailer,claude_author,marked_any,unmarked,unmarked_probabile_harness,unmarked_probabile_manuale,unmarked_incerto,commits_with_doc_anchor,unmarked_with_doc_anchor
+2026-01,99,1,98,19,0,19,79,0,71,8,23,14
+2026-02,71,5,66,14,0,14,52,0,44,8,3,2
+2026-03,121,6,115,55,0,55,60,1,46,13,18,7
+2026-04,71,9,62,16,0,16,46,25,17,4,43,29
+2026-05,155,14,141,62,0,62,79,48,21,10,121,61
+2026-06,89,13,76,63,0,63,13,4,8,1,57,13
+2026-07,193,3,190,144,17,161,29,20,4,5,163,26
+2026-08,558,4,554,277,52,324,230,190,10,30,492,197

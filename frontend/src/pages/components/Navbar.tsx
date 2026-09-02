@@ -36,11 +36,13 @@ import {FakeStateProps} from '../../joiner/types';
 import {connect} from 'react-redux';
 import {AuthApi, ProjectsApi} from '../../api/persistance';
 import DockManager from "../../components/abstract/DockManager";
+import { MANAGER_TAB_PREFIX, modelIdOfManagerTab } from '../../components/abstract/tabs/instanceManagerModel';
 
 import {Item, Menu, UserHeader} from '../components/menu/Menu';
 
 import Collaborative from "../../components/collaborative/Collaborative";
 import { isProjectModified } from '../../common/libraries/projectModified';
+import { saveProjectWithFeedback } from '../../common/libraries/saveProject';
 import { AboutDialog, AboutDialogController } from './about/AboutDialog';
 import {Undoredocomponent} from "../../components/topbar/undoredocomponent";
 import {BEGIN, CollabRefreshAction, COMMIT, END} from "../../redux/action/action";
@@ -505,24 +507,17 @@ const CloseProject = async()=> {
 };
 
 const SaveAndCloseProject = async(project: LProject | undefined) => {
+    // SAVE1-bis: la quarta copia del blocco di salvataggio e' diventata
+    // `saveProjectWithFeedback`. Qui ci si guadagna il `clearTimeout` sul ramo
+    // di errore, che mancava: dopo un save fallito il timer restava armato e
+    // dieci secondi dopo arrivava anche un «Request timed out» che non
+    // descriveva niente.
+    // `U.isProjectModified = false` non si riscrive qui: lo azzera gia'
+    // `ProjectsApi.save` (`api/persistance/projects.ts:133`), e subito dopo di
+    // nuovo `CloseProject`.
     if (project) {
-        try {
-            SetRootFieldAction.new('isLoading', true);
-            const maxWait = 10 * 1000;
-            let timeout = setTimeout(()=> {
-                SetRootFieldAction.new('isLoading', false);
-                U.alert('e', 'Request timed out', <>Verify your connection or&nbsp;
-                    <a href="mailto:info@jjodel.io?subject=Save%20timeout&body=Describe%20your%20actions%20prior%20the%20error%2C%20and%20attach%20your%20latest%20savefile%20if%20possible.">contact our support</a></>);
-            }, maxWait);
-            await ProjectsApi.save(project);
-            clearTimeout(timeout);
-            U.isProjectModified = false;
-            SetRootFieldAction.new('isLoading', false);
-        } catch (error: any) {
-            U.alert('e', 'Error while Saving Project', error.message);
-            SetRootFieldAction.new('isLoading', false);
-            return; // Non chiudere se il salvataggio fallisce
-        }
+        const saved = await saveProjectWithFeedback(project);
+        if (!saved) return; // Non chiudere se il salvataggio fallisce
     }
 
     // Disabilita il prompt del browser e chiudi
@@ -1096,18 +1091,10 @@ function NavbarComponent(props: AllProps) {
                 event.stopPropagation();
 
                 if (context === 'PROJECT_EDITOR' || context === 'METAMODEL_EDITOR') {
-                    if (project) {
-                        (async () => {
-                            try {
-                                SetRootFieldAction.new('isLoading', true);
-                                await ProjectsApi.save(project);
-                                SetRootFieldAction.new('isLoading', false);
-                            } catch (error: any) {
-                                U.alert('e', 'Error while Saving Project', error.message);
-                                SetRootFieldAction.new('isLoading', false);
-                            }
-                        })();
-                    }
+                    // SAVE1: stessa funzione del menu File e del bottone del Data
+                    // Manager. La scorciatoia ci guadagna la guardia di timeout,
+                    // che qui non c'era.
+                    void saveProjectWithFeedback(project);
                 } else if (context === 'USER_PROFILE') {
                     // Profile changes are auto-saved, show confirmation
                     U.alert('i', 'Profile Saved', 'Your profile changes are saved automatically.');
@@ -1378,24 +1365,11 @@ function NavbarComponent(props: AllProps) {
 
                 /* Save Project */
                 isDashboard ? null : {name: 'Save Project',
-                    function: async () => {
-                        if (project) {
-                            try {
-                                SetRootFieldAction.new('isLoading', true);
-                                const maxWait = 10 * 1000;
-                                let timeout = setTimeout(()=> {
-                                    SetRootFieldAction.new('isLoading', false);
-                                    U.alert('e', 'Request timed out', <>Verify your connection or&nbsp;
-                                        <a href="mailto:info@jjodel.io?subject=Save%20timeout&body=Describe%20your%20actions%20prior%20the%20error%2C%20and%20attach%20your%20latest%20savefile%20if%20possible.">contact our support</a></>);
-                                }, maxWait);
-                                await ProjectsApi.save(project);
-                                clearTimeout(timeout);
-                                SetRootFieldAction.new('isLoading', false);
-                            } catch (error: any) {
-                                U.alert('e', 'Error while Saving Project', error.message);
-                            }
-                        }
-                    }
+                    // SAVE1: il blocco che stava qui e' diventato
+                    // `saveProjectWithFeedback`. Il menu ci guadagna il
+                    // ripristino di `isLoading` sul ramo di errore, che qui
+                    // mancava.
+                    function: () => { void saveProjectWithFeedback(project); }
                     , icon: <i className="bi bi-floppy" />, shortcutPills: formatShortcutPills(SHORTCUTS.SAVE)},
 
                 isDashboard ? null : {name: 'Download Project', function: async()=> {
@@ -1675,6 +1649,20 @@ function NavbarComponent(props: AllProps) {
                     } else if (id.startsWith('doc_')) {
                         type = 'documentation';
                         title = 'Documentation';
+                    } else if (id.startsWith(MANAGER_TAB_PREFIX)) {
+                        // Instance manager. Without this branch the id falls through to
+                        // the model lookup below, misses (the id is prefixed), and the
+                        // tab is dropped from the strip as a ghost — measured: the tab
+                        // opened, was active, and had no way back to it or to close it.
+                        // Same shape as the four prefixes above; the title repeats the
+                        // one TabDataMaker builds, because this strip reads ids, not JSX.
+                        type = 'manager';
+                        const mid = modelIdOfManagerTab(id);
+                        const rawModel = mid ? ((state as any)[mid] || (state as any).idlookup?.[mid]) : null;
+                        // A manager whose model is gone is a ghost like any other: drop
+                        // it rather than print a placeholder (the model branch's rule).
+                        if (!rawModel) return null;
+                        title = `${rawModel.name || 'Unnamed'} Instances`;
                     } else if (id.startsWith('vp_')) {
                         type = 'viewpoint';
                         // Extract title from React element or look up viewpoint
@@ -1778,6 +1766,10 @@ function NavbarComponent(props: AllProps) {
             case 'model': return { letter: 'm', className: 'appbar-tab__badge--model' };
             case 'transformation': return { letter: 'T', className: 'appbar-tab__badge--transformation' };
             case 'documentation': return { letter: 'D', className: 'appbar-tab__badge--documentation' };
+            // The manager's subject IS a model, so it takes the model badge colour and
+            // says which of the two surfaces it is with the icon — the same `bi-table`
+            // that opens it from the project rail.
+            case 'manager': return { letter: '', icon: 'bi-table', className: 'appbar-tab__badge--model' };
             case 'viewpoint': return { letter: 'V', className: 'appbar-tab__badge--viewpoint' };
             default: return { letter: '', className: '' };
         }
@@ -1790,6 +1782,7 @@ function NavbarComponent(props: AllProps) {
             case 'model': return 'Model';
             case 'transformation': return 'JjTL Transformation';
             case 'viewpoint': return 'Viewpoint';
+            case 'manager': return 'Instance manager';
             default: return '';
         }
     };

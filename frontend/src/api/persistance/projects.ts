@@ -34,6 +34,7 @@ import {
     registerSerializedMegamodel,
 } from '../../model/megamodelPersistence';
 import {VersionFixer} from "../../redux/VersionFixer";
+import { markProjectSaved } from "../../common/libraries/lastSaved";
 
 @RuntimeAccessible('ProjectsApi')
 class ProjectsApi {
@@ -95,9 +96,9 @@ class ProjectsApi {
      * Serialize and persist the project.
      *
      * `opts.silent` makes it a SILENT save: same serialization, same target, but the
-     * project version does not advance and nothing is written back into the store.
-     * Everything else — `lastModified`, the counters, `compressedState`, the
-     * Offline/Online branch, `U.isProjectModified` — is identical either way.
+     * project version does not advance, nothing is written back into the store, and
+     * the project is NOT reported as clean. Everything else — `lastModified`, the
+     * counters, `compressedState`, the Offline/Online branch — is identical either way.
      *
      * WHY. The version bump is not only a number: it is a `SetFieldAction` into Redux,
      * i.e. a state delta, i.e. a step of the D-layer undo history. The layout autosave
@@ -121,20 +122,88 @@ class ProjectsApi {
         // Skipped on a silent save: the version keeps its current value, in the
         // serialized state too.
         const silent = opts?.silent === true;
-        const currentVersion = dProject.version;
+        // VER2. Read from Redux, not from `project.__raw`: the proxy target is a mirror
+        // that goes stale the moment the reducer copies along the path, and this method
+        // no longer writes the advanced value back onto that mirror (see the block at
+        // the end of the method). `dProject.version` remains the fallback for a project
+        // that is not in `idlookup`.
+        const currentVersion = ((store.getState() as GObject).idlookup?.[dProject.id]?.version) ?? dProject.version;
         const nextVersion = silent ? currentVersion : getNextVersionNumber(currentVersion);
         dProject.version = nextVersion;
         // console.log(`[Version] Project saved: ${formatVersion(currentVersion)} → ${formatVersion(nextVersion)}`);
 
         const state = await U.compressedState(dProject);
         dProject.state = state;
-        if(U.isOffline()) await Offline.save(dProject);
-        else await Online.save(dProject);
-        U.isProjectModified = false;
+        const persisted = U.isOffline() ? await Offline.save(dProject) : await Online.save(dProject);
+
+        // SAVE2. Il feedback di salvataggio riuscito sta QUI, non piu' in
+        // `Offline.save` / `Online.save`.
+        //
+        // WHY. I due `U.alert('i', 'Project Saved!', '')` stavano nel layer di
+        // persistenza, che non sa se il salvataggio l'ha chiesto un umano: l'autosave
+        // del layout passa dalla stessa `save`, quindi il toast compariva a ogni gesto.
+        // La correzione non e' un flag in piu' dentro `U.alert` — e' che la decisione
+        // torna a chi ha l'informazione. `Offline` e `Online` non sono esportate
+        // (`class Offline` :268, `class Online` :360, nessun `export`) e questa e' la
+        // loro UNICA chiamata in tutto il sorgente: il chiamante esplicito non le
+        // raggiunge, quindi la silenziosita' scende fin qui e la notifica sale fin qui.
+        // I due metodi ora dicono soltanto se hanno persistito.
+        //
+        // Il perimetro del cambiamento e' esattamente il ramo silenzioso: ogni altro
+        // chiamante (menu File, Ctrl/Cmd+S, il bottone del Data Manager, Download
+        // Project, Export Project) chiama `save` senza `opts` e vede lo stesso toast di
+        // prima, alla stessa condizione di prima — solo il salvataggio riuscito.
+        if (persisted) {
+            // Anche sul ramo silenzioso: l'autosave non notifica piu', e l'indicatore
+            // di «ultimo salvataggio» e' l'unico posto in cui il fatto resta leggibile.
+            // Non e' una scrittura in Redux (vedi `lastSaved.ts`), quindi non e' un
+            // delta di stato e non diventa un passo di undo.
+            markProjectSaved(dProject.lastModified);
+            if (!silent) U.alert('i', 'Project Saved!', '');
+        }
+
+        // Clear the dirty flag. NOT on a silent save: the layout autosave persists the
+        // current state but the user has not saved, so the project stays dirty and the
+        // "Unsaved changes" prompt on close keeps firing after a node drag.
+        if (!silent) U.isProjectModified = false;
 
         // Update the version in Redux state. NOT on a silent save: this write is a
         // state delta and would become a step of the D-layer undo history.
-        if (!silent) SetFieldAction.new(dProject.id, 'version', nextVersion, '', false);
+        //
+        // VER1. The `SetFieldAction` reaches Redux, but NOT the object the caller is
+        // holding. The reducer copies along the path (`deepCopyButOnlyFollowingPath`,
+        // reducer.ts:540), so `idlookup[id]` becomes a NEW object while the proxy stays
+        // bound to the previous one — measured: `project.__raw === idlookup[id]` is true
+        // before the first save and false after it. Every field read on the proxy goes to
+        // that detached target (`proxy.ts:323` for `__raw`, `defaultGetter` for the rest),
+        // so `project.version` and `project.__raw.version` both keep the OLD number, and
+        // the next `save` on the same `LProject` recomputes `nextVersion` from it: two
+        // explicit saves produced 1.1 twice instead of 1.1 then 1.2.
+        //
+        // The realignment writes the advanced value back onto that detached target, so a
+        // second call reads the value the first one produced. It is deliberately NOT a
+        // write through the proxy (`project.version = ...` would fire a second
+        // `SetFieldAction`, i.e. a second undo step), and it is deliberately NOT on the
+        // silent branch: a silent save does not advance the version, so there is nothing
+        // to realign.
+        if (!silent) {
+            SetFieldAction.new(dProject.id, 'version', nextVersion, '', false);
+            // VER2. The realignment writes ONLY on a target that is no longer the store's.
+            // Measured 2026-09-02: the app sits permanently at
+            // `transactionStatus.transactionDepthLevel === 1` — `reducer.ts:1443` commits on
+            // a `U.UpdatingTimer` (300ms) interval and `COMMIT` re-opens the block with
+            // `BEGIN()` (`action.ts:137`) — so the action above is QUEUED, not dispatched.
+            // At this line the store is still untouched and `project.__raw` IS
+            // `idlookup[id]` for every production call site (they all take a fresh
+            // `LProject.getProject()`). The unguarded write therefore mutated the live
+            // store object outside the reducer, and poisoned the reducer's own `oldState`:
+            // when the queued action flushed it found nothing left to change. Measured over
+            // one explicit save: `clonedCounter` +0 and zero undo steps, against +1 and one
+            // step for the same `SetFieldAction` fired without the in-place write.
+            const raw = project.__raw as DProject | undefined;
+            const live = (store.getState() as GObject).idlookup?.[dProject.id];
+            if (raw && raw !== live) raw.version = nextVersion;
+        }
 
         return dProject;
     }
@@ -267,11 +336,13 @@ class Offline {
         return filtered[0];
     }
 
-    static async save(project: DProject): Promise<void> {
+    /** SAVE2: ritorna se ha persistito; la notifica la decide `ProjectsApi.save`,
+     *  che e' l'unico chiamante e il solo a sapere se il save e' esplicito. */
+    static async save(project: DProject): Promise<boolean> {
         const projects = Storage.read<DProject[]>('projects') || [];
         const filtered = projects.filter(p => p.id !== project.id);
         Storage.write('projects', [...filtered, project]);
-        U.alert('i', 'Project Saved!', '');
+        return true;
     }
 
     static async favorite(project: DProject): Promise<void> {
@@ -390,7 +461,10 @@ class Online {
         return ret;
     }
 
-    static async save(project: DProject): Promise<void> {
+    /** SAVE2: ritorna se ha persistito. L'alert di ERRORE resta qui — descrive un
+     *  fallimento della rete, che e' informazione di questo layer e va mostrata
+     *  comunque; quello di successo e' salito a `ProjectsApi.save`. */
+    static async save(project: DProject): Promise<boolean> {
         project = {...project} as any;
         if (!project.version) project.version = store.getState().version.n;
         if (!('_Id' in project)) (project as any)._Id = undefined;
@@ -401,13 +475,14 @@ class Online {
         if (response.code !== 200) {
             U.alert('e', 'Cannot Save','Something went wrong ...');
             Log.ee('Failed to save', {response, updateProjectRequest, project});
+            return false;
         }
         else {
-            U.alert('i', 'Project Saved!', '');
             if ((windoww as any).Collaborative?.online) {
                 CollabClearHistoryAction.new();
                 // CollabRefreshAction.new();
             }
+            return true;
         }
     }
 

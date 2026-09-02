@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Statechart metamodel of the form-views design handoff
+  (docs/design/design_handoff_jjodel_form_views/README.md, "Example domain").
+
+  It exists so the form rendering can be exercised on every widget kind at once: the
+  local corpus had no M1 model with a number, a boolean or an enum slot, so V3 of
+  Slice 1a could never be checked on a real model. Each feature below is here for a
+  widget or for a diagnostic:
+
+    name       EString [1..1]   text, and the required marker
+    kind       StateKind [1..1] select, and the missing-value violation on Broken
+    isHistory  EBoolean         checkbox
+    timeout    EInt             number stepper
+    entryAction EString         the JjEL textarea, when a view overrides the widget
+    tags       EString [0..*]   chips
+    depth      EInt derived     read-only field with the lock glyph
+    outgoing   Transition [0..5] reference list, with a reachable upper bound
+    substates  State [0..*]     containment children
+-->
+<ecore:EPackage xmi:version="2.0"
+    xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore"
+    name="statemachine" nsURI="http://jjodel.io/fixtures/statemachine" nsPrefix="statemachine">
+
+  <eClassifiers xsi:type="ecore:EEnum" name="StateKind">
+    <eLiterals name="initial"/>
+    <eLiterals name="normal" value="1"/>
+    <eLiterals name="final" value="2"/>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EClass" name="StateMachine">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="name"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="states"
+        upperBound="-1" eType="#//State" containment="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="transitions"
+        upperBound="-1" eType="#//Transition" containment="true"/>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EClass" name="State">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="name"
+        lowerBound="1" upperBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="kind"
+        lowerBound="1" upperBound="1" eType="#//StateKind"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="isHistory"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="timeout"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="entryAction"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="tags"
+        upperBound="-1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="depth"
+        derived="true" changeable="false"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="outgoing"
+        upperBound="5" eType="#//Transition"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="substates"
+        upperBound="-1" eType="#//State" containment="true"/>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EClass" name="Transition">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="name"
+        lowerBound="1" upperBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="trigger"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="guard"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="source"
+        lowerBound="1" upperBound="1" eType="#//State"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="target"
+        lowerBound="1" upperBound="1" eType="#//State"/>
+  </eClassifiers>
+
+</ecore:EPackage>

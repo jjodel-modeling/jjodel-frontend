@@ -10,7 +10,7 @@
 
 import { useCallback } from 'react';
 import type { Node, Edge } from '@xyflow/react';
-import { LPointerTargetable, TRANSACTION, SetFieldAction, store } from '../../../joiner';
+import { DAttribute, DOperation, DReference, LPointerTargetable, TRANSACTION, SetFieldAction, store } from '../../../joiner';
 import { syncDeleteVertex } from '../sync/canvasToJjom';
 import type { ClassNodeData } from '../types';
 import { JjodelEvents } from '../../../events/registry';
@@ -139,10 +139,34 @@ function collapseHierarchy(
                         (subClass.ownReferences ?? []).map((r: any) => r.name)
                     );
 
+                    // ── Why D*.new and not subClass.addAttribute (S1-M2) ──────────
+                    //
+                    // This is a SYSTEM COPY, not a user create: it moves features the
+                    // subclass is about to lose down into the subclass, and it runs
+                    // BEFORE B is removed — so at this instant the subclass still
+                    // INHERITS every one of them. The M2 uniqueness rule (R-M2U-4, no
+                    // shadowing) therefore refuses each copy, correctly by its own
+                    // terms, and the co-evolution would silently produce nothing and
+                    // lose the features when B goes.
+                    //
+                    // Measured: with `Sup{label}` <- `Sub`, the copy list is `[label]`
+                    // and `subClass.addAttribute('label')` returns null, leaving `Sub`
+                    // with none of it. See
+                    // docs/discovery/discovery_2026-08-30_s1m2_una_regola.md §G.
+                    //
+                    // The bypass is DECLARED and takes the same door the loader takes:
+                    // `D*.new` directly, which the ratified design leaves un-gated for
+                    // exactly this reason (import, seeding, fixtures — writes that must
+                    // reproduce a state, not propose one). The gate stays on the L-layer
+                    // primitive, where user gestures arrive. The `existing*Names` guard
+                    // above is unchanged and still keeps the copy idempotent.
+
                     // Add missing attributes
                     for (const attr of allAttrs) {
                         if (existingAttrNames.has(attr.name)) continue;
-                        const newAttr = subClass.addAttribute(attr.name, attr.type?.id ?? attr.__raw?.type);
+                        const newAttr: any = LPointerTargetable.fromD(
+                            DAttribute.new(attr.name, attr.type?.id ?? attr.__raw?.type, subClass.id, true)
+                        );
                         if (newAttr?.__raw) {
                             newAttr.__raw.lowerBound = attr.lowerBound ?? 0;
                             newAttr.__raw.upperBound = attr.upperBound ?? 1;
@@ -155,13 +179,15 @@ function collapseHierarchy(
                     // Add missing operations
                     for (const op of allOps) {
                         if (existingOpNames.has(op.name)) continue;
-                        subClass.addOperation?.(op.name, op.type?.id ?? op.__raw?.type);
+                        DOperation.new(op.name, op.type?.id ?? op.__raw?.type, [], subClass.id, true);
                     }
 
                     // Add missing references
                     for (const ref of allRefs) {
                         if (existingRefNames.has(ref.name)) continue;
-                        const newRef = subClass.addReference?.(ref.name, ref.type?.id ?? ref.__raw?.type);
+                        const newRef: any = LPointerTargetable.fromD(
+                            DReference.new(ref.name, ref.type?.id ?? ref.__raw?.type, subClass.id, true)
+                        );
                         if (newRef?.__raw) {
                             newRef.__raw.lowerBound = ref.lowerBound ?? 0;
                             newRef.__raw.upperBound = ref.upperBound ?? -1;

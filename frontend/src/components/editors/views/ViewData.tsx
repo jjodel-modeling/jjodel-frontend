@@ -1,4 +1,4 @@
-import React, {Dispatch, ReactElement, ReactNode, useState} from 'react';
+import React, {Dispatch, ReactElement, ReactNode, useEffect, useState} from 'react';
 import {
     Defaults,
     DState,
@@ -29,6 +29,7 @@ import {EdgeAuthoringPanel} from "../../editor-v2/viewpoint/authoring/EdgeAuthor
 import {EnableIRPanel} from "../../editor-v2/viewpoint/authoring/EnableIRPanel";
 import {SymbolCard} from "../../editor-v2/viewpoint/authoring/SymbolCard";
 import {HelpText} from "../../ui";
+import {JjodelEvents} from "../../../events/registry";
 import {
     IR_TAB_LABELS,
     irTabsForKind,
@@ -192,15 +193,32 @@ function ViewDataComponent(props: AllProps) {
     // Active tab state. Defaults to the first tab in the list (always 'apply-to').
     const [activeTab, setActiveTab] = useState<TabId>(tabs[0].id);
 
+    // Cross-tab navigation asked for from inside a body (the Form tab's «Edit
+    // compartments»). More than one instance of this panel can be mounted at once, so
+    // the event is filtered on the view it names; a tab absent from the CURRENT list is
+    // ignored rather than activated, which would leave every body hidden and the panel
+    // blank.
+    const tabIds = tabs.map(t => t.id).join(',');
+    useEffect(() => {
+        const onTab = (e: Event) => {
+            const detail = (e as CustomEvent<{ viewId?: string; tab?: string }>).detail;
+            if (!detail || detail.viewId !== view.id) return;
+            if (!tabIds.split(',').includes(detail.tab ?? '')) return;
+            setActiveTab(detail.tab as TabId);
+        };
+        window.addEventListener(JjodelEvents.IR_AUTHORING_TAB, onTab);
+        return () => window.removeEventListener(JjodelEvents.IR_AUTHORING_TAB, onTab);
+    }, [view.id, tabIds]);
+
     // Fallback: if the currently-active tab is not in the list (e.g. switched
     // from a view to a viewpoint), snap to the first available.
     const activeDescriptor = tabs.find(t => t.id === activeTab) ?? tabs[0];
 
     // Who owns the way out is the host's business, not this panel's. Inside the
     // Properties card the way out is the Tree right above it — selecting anything
-    // else replaces the panel — so the card asks for no back. The standalone
-    // NestedView host has no such tree: there the back IS the only way from the
-    // view editor to the viewpoint list, so it stays (default).
+    // else replaces the panel — so the card asks for no back. A host without such a
+    // tree has the back as its only way from the view editor to the viewpoint list, so
+    // it stays unless the host opts out (default).
     const showBack = props.showBack !== false;
 
     return (

@@ -66,3 +66,14 @@
 .segment:disabled {
   cursor: default;
 }
+
+/* A single disabled segment, muted so the state reads without the group looking off.
+   Scoped out of `.trackDisabled` on purpose: that class already carries the whole
+   group's 0.5 opacity, and a second muting on top of it would compound.
+   `--color-text-disabled` is declared in the light palette only (measured
+   2026-08-28: tokens/_colors-light.scss:102, absent from _colors-dark.scss), so the
+   fallback is a token declared in both rather than a literal. Adding the missing
+   dark token is a change to the token files, which are out of this slice's scope. */
+.track:not(.trackDisabled) .segment:disabled {
+  color: var(--color-text-disabled, var(--color-text-tertiary));
+}

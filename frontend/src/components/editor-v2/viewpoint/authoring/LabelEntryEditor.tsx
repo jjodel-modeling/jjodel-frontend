@@ -1,5 +1,5 @@
 import React from 'react';
-import { Select, Toggle, ConditionalEditor, type PathBuilderFeatures } from '../../../ui';
+import { Select, Toggle, ConditionalEditor, PRESERVED_CHIP, type PathBuilderFeatures } from '../../../ui';
 import { TextSourceEditor } from './TextSourceEditor';
 import { TextStyleField } from './TextStyleField';
 import type { LabelSpec, LabelPosition, TextSource, TextStyle } from '../ir/irTypes';
@@ -10,17 +10,6 @@ const POSITION_OPTIONS = [
     { value: 'inside', label: 'Inside' },
     { value: 'bottom', label: 'Bottom' },
 ];
-
-/** Read-only chip for values not editable in Basic (preserved verbatim). */
-const CHIP: React.CSSProperties = {
-    display: 'inline-block',
-    fontSize: 'var(--font-size-sm)',
-    color: 'var(--color-text-tertiary)',
-    fontStyle: 'italic',
-    padding: '2px 6px',
-    border: '1px dashed var(--color-border-primary)',
-    borderRadius: 'var(--radius-sm)',
-};
 
 export interface LabelEntryEditorProps {
     label: LabelSpec;
@@ -77,7 +66,7 @@ export const LabelEntryEditor: React.FC<LabelEntryEditorProps> = ({
             <div className="jj-field">
                 <label className="jj-field-label">Editable</label>
                 {editableIsWidget
-                    ? <span style={CHIP}>editable: advanced widget</span>
+                    ? <span style={PRESERVED_CHIP}>editable: advanced widget</span>
                     : <Toggle
                         checked={editable === true}
                         onChange={(c) => onChange({ ...label, editable: c })}

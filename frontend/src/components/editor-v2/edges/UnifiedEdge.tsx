@@ -19,11 +19,13 @@ import {
     computeSelfLoopCornerPath,
     getNodeRect,
     computeLabelPosition,
+    computeLabelAnchor,
+    applyWaypointsWithMap,
     computeCardinalityPosition,
     computeCardinalityAnchor,
     CARD_BOX_GAP,
+    MARKER_APPROACH_RUN,
     parsePathPoints,
-    applyWaypoints,
     pointsToPath,
     getSideFromHandle,
     registerEdgePath,
@@ -35,6 +37,7 @@ import {
 } from '../utils/edgeUtils';
 import { MAX_HANDLES_PER_SIDE } from '../utils/portDistribution';
 import { applyBundleSpread } from './bundleSpread';
+import { applyLaneShifts, getLaneShifts, laneShiftsRevision } from '../utils/edgeLanes';
 import { useEditorContextSafe } from '../contexts/EditorContext';
 import { useEdgeHighlightClass } from '../contexts/HighlightContext';
 import { useTreeLayout } from '../hooks/useTreeLayout';
@@ -45,8 +48,14 @@ import { EndpointHandles } from './EndpointHandles';
 // corridor of parallel same-pair edges by physical anchor order (see that module).
 const LABEL_SPREAD_PX = 18;
 const ROLE_LINE_GAP = 10; // px, perpendicular nudge so the role text is off the line
-const ROLE_LINE_GAP_PX = 10; // px, perpendicular nudge so the role text is off the line
-const ROLE_LINE_GAP_PY = 10; // px, perpendicular nudge so the role text is off the line
+const ROLE_LINE_GAP_PX = 8; // px, perpendicular nudge so the role text is off the line
+const ROLE_LINE_GAP_PY = 8; // px, perpendicular nudge so the role text is off the line
+
+// Politica di arrotondamento dei reference edge: retta riservata accanto ai marker
+// (niente uncino sotto la freccia) e meta' di ogni segmento interno tenuta dritta
+// (niente S con le due curve a contatto). L'ereditarieta' non la usa: il suo
+// connettore resta byte-identico.
+const REFERENCE_ROUNDING = { approachRun: MARKER_APPROACH_RUN, interiorStraight: 0.5 } as const;
 
 // E-route: React Flow's Position enum carries the same four strings as the
 // codebase's Side type; the map keeps the conversion explicit instead of casting.
@@ -220,13 +229,16 @@ function UnifiedEdge(props: EdgeProps) {
         return { d, labelX, labelY };
     }, [isNonOrthogonalIR, irRouting, sourceX, sourceY, sourceSide, targetX, targetY, targetSide]);
 
-    // ─── Pipeline: parse → apply waypoints → bundle spread → round corners ───
+    // ─── Pipeline: parse → bundle spread → evitamento → waypoint → round corners ───
+    //
+    // I waypoint dell'utente sono passati **in fondo** (prima stavano subito dopo il
+    // router). Cosi' il loro indice di segmento si riferisce alla polilinea che
+    // l'utente vede davvero, ed e' quello che permette alle maniglie di comparire su
+    // ogni segmento reso invece che su quelli del tracciato pre-evitamento — dove un
+    // arco ri-instradato ne aveva meno di tre e non ne mostrava nessuna.
+    // `applyBundleSpread` conserva il numero di punti (agisce solo su polilinee a 4),
+    // quindi gli indici gia' persistiti restano validi.
     const rawPoints = useMemo(() => parsePathPoints(rawPath), [rawPath]);
-    const adjustedPoints = useMemo(
-        () => (waypoints.length > 0 ? applyWaypoints(rawPoints, waypoints) : rawPoints),
-        [rawPoints, waypoints]
-    );
-    const adjustedPath = useMemo(() => pointsToPath(adjustedPoints), [adjustedPoints]);
 
     // Bundle center: midpoint between the two node centers. A single reference
     // shared by every edge of the pair, so applyBundleSpread orders each edge's
@@ -246,10 +258,14 @@ function UnifiedEdge(props: EdgeProps) {
     // Bundle spread: only applied when the user hasn't customized the routing
     // (waypoints empty) and the edge is not inheritance (which uses tree layout).
     // For self-loop / L-shape / U-detour, applyBundleSpread returns input unchanged.
+    // Lo scostamento di corsia arriva da `EditorV2.applyDistribution`, che e' l'unico
+    // punto che vede tutti gli archi insieme: il ventaglio di `applyBundleSpread`
+    // separa i corridoi della stessa coppia di nodi, la corsia quelli di coppie
+    // diverse. Fuori dalla Z a quattro punti sono entrambi no-op per riferimento.
     const spreadPoints = useMemo(() => {
-        if (isInheritance || isSelfLoop || waypoints.length > 0) return adjustedPoints;
-        return applyBundleSpread(adjustedPoints, bundleCenter);
-    }, [adjustedPoints, bundleCenter, isInheritance, isSelfLoop, waypoints]);
+        if (isInheritance || isSelfLoop) return rawPoints;
+        return applyBundleSpread(rawPoints, bundleCenter);
+    }, [rawPoints, bundleCenter, isInheritance, isSelfLoop]);
     // Anti-collisione (Fase B del punto 1, 2026-08-25): il router resta intatto e
     // questo passaggio guarda la polilinea gia' pronta — dopo i waypoint e dopo lo
     // spread, cioe' dove il criterio si misura davvero — e la ri-instrada solo se
@@ -276,7 +292,32 @@ function UnifiedEdge(props: EdgeProps) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [spreadPoints, allEdges, isSelfLoop, isNonOrthogonalIR, waypoints, isInheritance, isGrouped]);
 
-    const spreadPath = useMemo(() => pointsToPath(routedPoints), [routedPoints]);
+    // Le corsie: separano i corridoi contesi da archi DIVERSI, e arrivano da
+    // `EditorV2.applyDistribution`, l'unico punto che vede tutti gli archi insieme.
+    // Si applicano dopo l'evitamento — e' li' che nascono i segmenti interni che si
+    // contendono i corridoi — e prima dei waypoint, che restano l'ultima parola.
+    // Un arco con waypoint non prende corsie: il suo tracciato e' dell'utente.
+    // Il registro si rilegge quando cambia l'array degli archi — la stessa
+    // dipendenza con cui questo componente rilegge il registro dei tracciati per gli
+    // incroci — oppure quando la polilinea cambia. `laneShiftsRevision()` entra fra
+    // le dipendenze perche' una riscrittura del registro a parita' di archi (nodi
+    // spostati, handle invariati) si veda comunque.
+    const lanedPoints = useMemo(() => {
+        if (isSelfLoop || isNonOrthogonalIR || waypoints.length > 0) return routedPoints;
+        return applyLaneShifts(routedPoints, getLaneShifts(id));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [id, routedPoints, allEdges, laneShiftsRevision(), isSelfLoop, isNonOrthogonalIR, waypoints]);
+
+    // I waypoint chiudono la catena: sono l'ultima parola sul tracciato (R-B10).
+    // `segmentMap` dice dove ogni segmento del router e' finito dopo la
+    // trasformazione, ed e' quello che tiene allineate maniglia e segmento governato.
+    const waypointed = useMemo(
+        () => applyWaypointsWithMap(lanedPoints, waypoints),
+        [lanedPoints, waypoints],
+    );
+    const drawnPoints = waypointed.points;
+    const spreadPath = useMemo(() => pointsToPath(drawnPoints), [drawnPoints]);
+    const basePath = useMemo(() => pointsToPath(lanedPoints), [lanedPoints]);
 
     // ─── Register path for crossing detection ───
     // Grouped inheritance edges skip individual registration: their Manhattan
@@ -292,9 +333,9 @@ function UnifiedEdge(props: EdgeProps) {
     useEffect(() => {
         if (isInheritance && isGrouped) return;
         if (isNonOrthogonalIR) return;
-        registerEdgePath(id, routedPoints, source, target, treeGroupId);
+        registerEdgePath(id, drawnPoints, source, target, treeGroupId);
         return () => unregisterEdgePath(id);
-    }, [id, routedPoints, source, target, treeGroupId, isInheritance, isGrouped, isNonOrthogonalIR]);
+    }, [id, drawnPoints, source, target, treeGroupId, isInheritance, isGrouped, isNonOrthogonalIR]);
 
     // ─── Detect crossings with other edges ───
     // Scope detection to the current React Flow canvas by passing the active node IDs.
@@ -303,9 +344,9 @@ function UnifiedEdge(props: EdgeProps) {
     // re-rendering this edge on unrelated node changes. Recompute triggers: own
     // path (spreadPoints) and any edges-array change (allEdges).
     const crossings = useMemo(
-        () => (isNonOrthogonalIR ? [] : getEdgeCrossings(id, routedPoints, new Set(getNodes().map(n => n.id)))),
+        () => (isNonOrthogonalIR ? [] : getEdgeCrossings(id, drawnPoints, new Set(getNodes().map(n => n.id)))),
         // eslint-disable-next-line react-hooks/exhaustive-deps
-        [id, routedPoints, allEdges, isNonOrthogonalIR]
+        [id, drawnPoints, allEdges, isNonOrthogonalIR]
     );
 
     // ─── Self-loop corner geometry (source === target) ───
@@ -346,11 +387,15 @@ function UnifiedEdge(props: EdgeProps) {
         // E-route: the authored curve replaces the whole Manhattan pipeline output.
         // Corner rounding and bridge arcs are Manhattan-only concepts.
         if (irRoutedGeom) return irRoutedGeom.d;
+        // La politica passa solo ai reference: il connettore d'ereditarieta' (bus,
+        // tronco, T) e' fuori perimetro e resta byte-identico, qui come in
+        // useTreeLayout, che non passa nessuna politica.
+        const rounding = isInheritance ? undefined : REFERENCE_ROUNDING;
         if (crossings.length > 0) {
-            return buildFinalPath(routedPoints, crossings, 4, 6);
+            return buildFinalPath(drawnPoints, crossings, 4, 6, rounding);
         }
-        return roundManhattanPath(spreadPath, 4);
-    }, [spreadPath, routedPoints, crossings, isSelfLoop, selfLoopGeom, irRoutedGeom, sourceX, sourceY, targetX, targetY]);
+        return roundManhattanPath(spreadPath, 4, rounding);
+    }, [spreadPath, drawnPoints, crossings, isSelfLoop, selfLoopGeom, irRoutedGeom, isInheritance, sourceX, sourceY, targetX, targetY]);
 
     // De-overlap shifts precomputed in EditorV2.applyDistribution (0 when no bundle/collision).
     const roleArcShift = edgeData?.roleArcShift ?? 0;
@@ -373,7 +418,8 @@ function UnifiedEdge(props: EdgeProps) {
                 isHorizontal: Math.abs(targetX - sourceX) >= Math.abs(targetY - sourceY),
             };
         }
-        return computeLabelPosition(spreadPath, roleArcShift); // arc-length midpoint, slid for bundles
+        // Punto medio del segmento piu' lungo, scostato per gli archi in fascio.
+        return computeLabelAnchor(spreadPath, roleArcShift);
     }, [spreadPath, isSelfLoop, selfLoopGeom, irRoutedGeom, roleArcShift, sourceX, sourceY, targetX, targetY]);
 
     // Small perpendicular nudge off the line. No cross-edge de-overlap here (see 2c).
@@ -386,7 +432,7 @@ function UnifiedEdge(props: EdgeProps) {
         if (isSelfLoop) return { x: 0, y: 0 };
         const sign = irLabelPlacement === 'above' ? -1 : irLabelPlacement === 'below' ? 1 : 0;
         if (labelPos.isHorizontal) {
-            return { x: 10, y: (sign === 0 ? -1 : sign) * ROLE_LINE_GAP_PY };
+            return { x: 0, y: (sign === 0 ? -1 : sign) * ROLE_LINE_GAP_PY };
         }
         return { x: (sign === 0 ? 1 : sign) * ROLE_LINE_GAP_PX, y: 0 };
     }, [isSelfLoop, labelPos, irLabelPlacement]);
@@ -398,8 +444,10 @@ function UnifiedEdge(props: EdgeProps) {
             return `translate(-50%, -50%) translate(${p.x}px, ${p.y}px)`;
         }
         // Just outside the target box at the entry handle, per-side corner clearance.
-        return computeCardinalityAnchor(targetX, targetY, targetSide, CARD_BOX_GAP, cardinalityShift);
-    }, [isSelfLoop, selfLoopGeom, spreadPath, targetX, targetY, targetSide, cardinalityShift]);
+        // `routedPoints` dice da che parte arriva il tracciato: la molteplicita' si
+        // posa sul fianco opposto, quello che la linea non occupa.
+        return computeCardinalityAnchor(targetX, targetY, targetSide, CARD_BOX_GAP, cardinalityShift, drawnPoints);
+    }, [isSelfLoop, selfLoopGeom, spreadPath, drawnPoints, targetX, targetY, targetSide, cardinalityShift]);
 
     // ─── ISA label midpoint (inheritance ER notation) ───
     const midPoint = useMemo(() => {
@@ -504,6 +552,13 @@ function UnifiedEdge(props: EdgeProps) {
                             refY="5"
                             markerWidth="12"
                             markerHeight="10"
+                            // Without this, markerUnits is 'strokeWidth' and the SVG
+                            // viewport scales by the stroke-width of the path that
+                            // references the marker: the 1.5px line would render the
+                            // triangle at 18x15 instead of 12x10. The size of the
+                            // inheritance triangle is fixed, and does not follow the
+                            // line weight or the selection.
+                            markerUnits="userSpaceOnUse"
                             orient="auto"
                         >
                             <path
@@ -549,6 +604,18 @@ function UnifiedEdge(props: EdgeProps) {
                     />
                 )}
 
+                {/* Junction dot: marks where the trunk joins the bus, so the T there
+                    reads as a connection and not as one of the crossings the bridge
+                    arcs hop over — those stay bare. */}
+                {treeGeometry.junction && (
+                    <circle
+                        cx={treeGeometry.junction.x}
+                        cy={treeGeometry.junction.y}
+                        r={2.5}
+                        className={`inheritance-junction ${selectedClass} ${hlClass}`}
+                    />
+                )}
+
                 {/* Endpoint handles */}
                 {!isSelfLoop && (
                     <EndpointHandles
@@ -585,7 +652,12 @@ function UnifiedEdge(props: EdgeProps) {
     // ═══════════════════════════════════════════════════════
     // CASE 2: Secondary inheritance in tree group → invisible
     // ═══════════════════════════════════════════════════════
-    if (isInheritance && !isPrimary && isGrouped && treeGeometry) {
+    // Only for an edge the tree actually draws. Going silent here is safe exactly
+    // as long as the connector carries this edge's branch: if it does not, this
+    // branch has no path at all and the child reads as disconnected while the model
+    // still holds the generalization. Without a branch the edge falls through to
+    // CASE 3 and draws its own line to the parent — not the bus, but visible.
+    if (isInheritance && !isPrimary && isGrouped && treeGeometry && treeGeometry.branchPaths.has(id)) {
         const branchPath = treeGeometry.branchPaths.get(id);
         const childEndpoint = { x: sourceX, y: sourceY };
 
@@ -731,6 +803,8 @@ function UnifiedEdge(props: EdgeProps) {
                         refY="5"
                         markerWidth="12"
                         markerHeight="10"
+                        // Fixed size, as for the tree marker above.
+                        markerUnits="userSpaceOnUse"
                         orient="auto"
                     >
                         <path
@@ -841,7 +915,9 @@ function UnifiedEdge(props: EdgeProps) {
             {!isSelfLoop && !isNonOrthogonalIR && (
                 <SegmentHandles
                     edgeId={id}
-                    adjustedPath={adjustedPath}
+                    basePath={basePath}
+                    drawnPath={spreadPath}
+                    segmentMap={waypointed.segmentMap}
                     waypoints={waypoints}
                     selected={!!selected}
                 />
@@ -870,7 +946,7 @@ function UnifiedEdge(props: EdgeProps) {
                         className={`edge-label ${selected ? 'selected' : ''} ${isM1Edge ? `edge-label--m1-hover${hovered || selected || (isIREdge && irLabelAlwaysVisible) ? ' edge-label--m1-visible' : ''}` : ''} ${hlClass}`}
                         style={{
                             position: 'absolute',
-                            transform: `translate(-50%, -50%) translate(${10+ labelPos.x + labelOffset.x}px, ${labelPos.y + labelOffset.y}px)`,
+                            transform: `translate(-50%, -50%) translate(${labelPos.x + labelOffset.x}px, ${labelPos.y + labelOffset.y}px)`,
                             pointerEvents: 'all',
                         }}
                         onDoubleClick={(e) => { e.stopPropagation(); if (!labelEditable) return; setEditing(true); }}

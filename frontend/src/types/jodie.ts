@@ -937,6 +937,13 @@ export interface CodeWarning {
     count?: number;
     /** ambiguous-instance only: a sample owning class name for the hint, or null. */
     sampleClass?: string | null;
+    /**
+     * ambiguous-instance only: the instances the name could have meant, when the
+     * producer named them. Structural twin of jjel's `AmbiguousInstanceCandidate`,
+     * restated rather than imported so this file keeps not depending on jjel.
+     * Absent, not empty, when nobody was named.
+     */
+    candidates?: { id: string; className: string | null; path: string | null }[];
 }
 
 /** Anything that may appear in the unified Jjodie history. */

@@ -1498,6 +1498,72 @@ export function syncUpdateFeatureValue(
 }
 
 /**
+ * Assign a REFERENCE slot on a DObject instance — the write path of the singleton select
+ * (R-SGL-4): with the singleton nodes hidden there is no arrow to draw, so the value is
+ * picked from a list and written here.
+ *
+ * Separate from syncUpdateFeatureValue on purpose, and not a widening of it:
+ * - `.value =` is a silent no-op on an EMPTY reference slot (in-browser probe 2026-07-20,
+ *   see EditorV2.tsx handleObjectEdgeSelected), which is exactly the first-assignment case;
+ * - the canonical shape for a reference slot is `values = [...meaningful, id]`, the same one
+ *   syncCreateCompositionLink and the object-as-edge write path already use;
+ * - append and replace are different operations, and a scalar setter cannot express both.
+ *
+ * `meaningful` filters the empty entries because the L-layer `.values` getter pads a slot up
+ * to its lowerBound with `undefined`; reading __raw.values and filtering is what keeps a new
+ * target at index 0 on a [1..1] reference (same reason as syncCreateCompositionLink).
+ *
+ * One TRANSACTION, therefore one undo step for the value. The reference EDGE is not created
+ * here: useM1ReferenceEdges reacts to the slot change afterwards and opens its own — two undo
+ * steps overall, which is the behaviour of the Slots panel and is declared (R-SGL-10(5)).
+ *
+ * @param objectVertexId - the DVertex ID of the object owning the reference
+ * @param featureName    - the reference name
+ * @param targetObjectId - the DObject ID to assign, or null to clear (replace only)
+ * @param mode           - 'replace' for a 0..1 reference, 'append' for a to-many one
+ */
+export function syncSetReferenceValue(
+    objectVertexId: string,
+    featureName: string,
+    targetObjectId: string | null,
+    mode: 'replace' | 'append',
+): void {
+    try {
+        const lVertex: any = LPointerTargetable.fromPointer(objectVertexId);
+        const lObject = lVertex?.model;
+
+        if (!lObject) {
+            console.warn('[canvasToJjom] syncSetReferenceValue: no model for vertex', objectVertexId);
+            return;
+        }
+
+        if (mode === 'append' && !targetObjectId) {
+            console.warn('[canvasToJjom] syncSetReferenceValue: append needs a target', featureName);
+            return;
+        }
+
+        TRANSACTION(`EditorV2 set ref ${featureName}`, () => {
+            const slot = (lObject as any)['$' + featureName];
+            if (!slot) {
+                console.warn('[canvasToJjom] syncSetReferenceValue: feature proxy not found:', featureName);
+                return;
+            }
+            const meaningful: any[] = (slot.__raw?.values ?? []).filter((v: any) => v != null && v !== '');
+            if (mode === 'append') {
+                // Declared no-op: re-adding a value already in the slot would duplicate the
+                // entry and, pair-keyed as it is, produce no second edge anyway.
+                if (meaningful.includes(targetObjectId)) return;
+                slot.values = [...meaningful, targetObjectId];
+            } else {
+                slot.values = targetObjectId ? [targetObjectId] : [];
+            }
+        });
+    } catch (err) {
+        console.warn('[canvasToJjom] Failed to set reference value:', err);
+    }
+}
+
+/**
  * Create a composition link between a parent and child object.
  * Appends the child's DObject ID to the parent's reference values
  * and creates a visual DEdge.
@@ -1760,38 +1826,3 @@ export function reconcileJjomAfterUndoRedo(
     return idMap;
 }
 
-export function syncDeleteObject(objectVertexId: string): void {
-    try {
-        const vertexProxy: any = LPointerTargetable.fromPointer(objectVertexId);
-        if (!vertexProxy) return;
-
-        // Delete connected edges first
-
-        const graphProxy: any = vertexProxy.graph;
-        if (graphProxy) {
-            const allEdges: any[] = graphProxy.edges ?? [];
-            const connected = allEdges.filter((e: any) => {
-                const startId = e?.start?.id ?? e?.__raw?.start;
-                const endId = e?.end?.id ?? e?.__raw?.end;
-                return startId === objectVertexId || endId === objectVertexId;
-            });
-            if (connected.length > 0) {
-                TRANSACTION('EditorV2 delete object edges', () => {
-                    for (const edge of connected) {
-                        DeleteElementAction.new(edge.__raw ?? edge);
-                    }
-                });
-            }
-        }
-
-        // Delete the DObject model element
-        const modelElement = vertexProxy?.model;
-        if (modelElement) {
-            TRANSACTION('EditorV2 delete object', () => {
-                DeleteElementAction.new(modelElement.__raw ?? modelElement);
-            });
-        }
-    } catch (err) {
-        console.warn('[canvasToJjom] Failed to delete object:', err);
-    }
-}

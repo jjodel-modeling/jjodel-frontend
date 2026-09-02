@@ -10,9 +10,11 @@ import {
     parsePathPoints,
     parsePathSubPaths,
     pointsToPath,
+    treeBusCornerRadius,
+    treeBranchAnchor,
+    treeChildBox,
     type TreeBranch,
 } from '../utils/edgeUtils';
-import { computeHandlePositionForNode } from '../utils/handlePosition';
 
 // Stable empty array returned by the nodes selector for non-inheritance edges,
 // so their subscription never fires (Object.is-equal on every store notification).
@@ -22,6 +24,11 @@ export interface TreeGeometry {
     trunkPath: string;
     barAndBranchesPath: string;
     branchPaths: Map<string, string>;
+    /** Where the trunk meets the bar — null with no bar, and null when the trunk
+     *  lands on an end of the bar, where nothing else meets it */
+    junction?: { x: number; y: number } | null;
+    /** Radius of the trunk's own elbow, > 0 only when the trunk lands on a bar end */
+    trunkElbowRadius?: number;
 }
 
 export interface TreeLayoutResult {
@@ -111,53 +118,47 @@ export function useTreeLayout(
     const treeGeometry = useMemo((): TreeGeometry | null => {
         if (!isGrouped) return null;
 
-        const nodeMap = new Map(allNodes.map(n => [n.id, n]));
         const branches: TreeBranch[] = [];
 
-        // Centroid map for the geometry-aware inheritance ordering (S7). Built the
-        // SAME way DynamicHandles does (nodeLookup + positionAbsolute) so the branch
-        // landing and the rendered handle resolve to the identical fraction.
-        const nodePositions = new Map<string, { centerX: number; centerY: number }>();
-        for (const [id, n] of storeApi.getState().nodeLookup) {
-            const p = n.internals?.positionAbsolute ?? n.position;
-            const nw = n.measured?.width ?? 180;
-            const nh = n.measured?.height ?? 80;
-            nodePositions.set(id, { centerX: p.x + nw / 2, centerY: p.y + nh / 2 });
-        }
+        // Sizes come from the subscribed `nodes` array, positions from nodeLookup:
+        //   - allNodes is what re-runs this memo, so reading the size there keeps the
+        //     value and the trigger on the same snapshot — a size read only from the
+        //     imperative lookup can be newer than the render that asked for it;
+        //   - positionAbsolute is the coordinate the paths are drawn in, while
+        //     node.position is relative to the parent and is wrong for every node
+        //     inside a package container.
+        const nodeMap = new Map(allNodes.map(n => [n.id, n]));
+        const lookup = storeApi.getState().nodeLookup;
 
         for (const edge of group) {
-            const childNode = nodeMap.get(edge.source);
-            if (!childNode) continue;
+            const node = nodeMap.get(edge.source) ?? (lookup.get(edge.source) as any);
+            // Only a child that is not on this canvas at all has nothing to connect to.
+            if (!node) continue;
 
-            const w = (childNode.measured?.width ?? (childNode as any).width ?? 180) as number;
-            const h = (childNode.measured?.height ?? (childNode as any).height ?? 80) as number;
-            const childY = sourceSide === 'top'
-                ? (childNode.position?.y ?? 0)
-                : (childNode.position?.y ?? 0) + h;
+            const internals = lookup.get(edge.source) as any;
+            const p = internals?.internals?.positionAbsolute ?? node.position ?? { x: 0, y: 0 };
 
-            // Land the branch on the handle assigned to this inheritance edge
-            // (child side = source), not the node center — so it no longer
-            // overlaps references sharing the same side. Single source of truth
-            // with DynamicHandles: computeHandlePositionForNode rebuilds the side's
-            // endpoints from the current edge set (allEdges) and positions them.
-            const childHandleId = edge.sourceHandle ?? `${sourceSide}-0`;
-            const handlePos = computeHandlePositionForNode({
-                edges: allEdges,
-                nodeId: edge.source,
-                nodeX: childNode.position?.x ?? 0,
-                nodeY: childNode.position?.y ?? 0,
-                nodeWidth: w,
-                nodeHeight: h,
-                handleId: childHandleId,
-                role: 'source',
-                nodePositions,
+            // treeChildBox always answers: an unmeasured child still gets its branch,
+            // anchored on the fallback width and corrected as soon as the measure
+            // arrives. Dropping it here would take the branch away AND shrink the bus
+            // to the children that remain.
+            const box = treeChildBox({
+                x: p.x,
+                y: p.y,
+                measuredWidth: node.measured?.width,
+                measuredHeight: node.measured?.height,
+                declaredWidth: (node as any).width,
+                declaredHeight: (node as any).height,
             });
+            const anchor = treeBranchAnchor(box, sourceSide);
 
-            branches.push({ childX: handlePos.x, childY, edgeId: edge.id });
+            branches.push({ childX: anchor.x, childY: anchor.y, edgeId: edge.id });
         }
 
         return computeTreeConnectorPath(targetX, targetY, branches, [], treeExcludeIds);
-    }, [isGrouped, group, allNodes, allEdges, storeApi, targetX, targetY, sourceSide, treeExcludeIds]);
+        // allNodes is the reactivity source (moves and measures), not a value read here.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isGrouped, group, allNodes, storeApi, targetX, targetY, sourceSide, treeExcludeIds]);
 
     // Register tree geometry paths for crossing detection.
     // All segments use treeGroupId = target (parent node ID) so that
@@ -198,11 +199,15 @@ export function useTreeLayout(
         if (!isPrimary || !isGrouped || !treeGeometry) return '';
         const trunkPts = parsePathPoints(treeGeometry.trunkPath);
         if (trunkPts.length < 2) return treeGeometry.trunkPath;
+        // The radius comes from the geometry: it is 0 unless the trunk lands on an
+        // end of the bar, and there it is already clamped to the segments it joins.
+        // A straight trunk is two points, which both helpers leave alone.
+        const elbow = treeGeometry.trunkElbowRadius ?? 0;
         const trunkCrossings = getEdgeCrossings(`${edgeId}__trunk`, trunkPts, activeNodeIds, []);
         if (trunkCrossings.length > 0) {
-            return buildFinalPath(trunkPts, trunkCrossings, 4, 6);
+            return buildFinalPath(trunkPts, trunkCrossings, elbow, 6);
         }
-        return roundManhattanPath(treeGeometry.trunkPath, 4);
+        return roundManhattanPath(treeGeometry.trunkPath, elbow);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [edgeId, isPrimary, isGrouped, treeGeometry, activeNodeIds, allEdges]);
 
@@ -216,11 +221,15 @@ export function useTreeLayout(
                 finalParts.push(pointsToPath(pts));
                 continue;
             }
+            // Per sub-path: the radius applies to the ONE corner an outer child's
+            // L carries, clamped to half its shortest segment. An interior child is
+            // a two-point vertical and gets 0 — its T-junction stays square.
+            const radius = treeBusCornerRadius(pts);
             const segCrossings = getEdgeCrossings(`${edgeId}__tree_${idx}`, pts, activeNodeIds, []);
             if (segCrossings.length > 0) {
-                finalParts.push(buildFinalPath(pts, segCrossings, 4, 6));
+                finalParts.push(buildFinalPath(pts, segCrossings, radius, 6));
             } else {
-                finalParts.push(roundManhattanPath(pointsToPath(pts), 4));
+                finalParts.push(roundManhattanPath(pointsToPath(pts), radius));
             }
         }
         return finalParts.join(' ');

@@ -11,6 +11,19 @@
  * With --write-baseline it also regenerates console-baseline.json from the
  * current run. That file records the console debt that exists today; it does
  * not absolve it. See README.md.
+ *
+ * THE SAME TWO GUARDS AS run.ts, AND FOR A SHARPER REASON. A recalibration is
+ * only valid on a quiescent run: what run.ts would call VOID, this script must
+ * refuse to FREEZE. A stray `[vite] hot updated` landing in the window, or a
+ * page that booted twice, produces a tally that is the machine's noise — and
+ * writing it into console-baseline.json makes that noise the thing every later
+ * run is compared against, silently and permanently. So on a perturbed run the
+ * verdict is VOID, the file that moved is named, and the baseline is NOT
+ * written. The measurements are still printed: a calibration that measured a
+ * disturbed tree is unusable as a baseline but still readable as numbers, as
+ * long as it says so.
+ *
+ * Exit codes: 0 quiet run, 3 void.
  */
 
 import { chromium } from '@playwright/test';
@@ -21,8 +34,10 @@ import { dirname, resolve } from 'node:path';
 
 import { BASE_URL, FIXED_ALLOWLIST, STATES, STATUSBAR_INTERSECT_TOLERANCE_PX, VIEWPORT_HEIGHT, VIEWPORT_WIDTH, openState } from './states.ts';
 import type { SmokeState } from './states.ts';
-import { measure, tallyConsole } from './assertions.ts';
+import { MAX_BOOTS_PER_STATE, countBoots, measure, tallyConsole } from './assertions.ts';
 import type { ConsoleBaseline, Measurements, Rect } from './assertions.ts';
+import { describeChanges, describeWatched, diffSnapshots, snapshotSrc } from './quiescence.ts';
+import type { SrcChange, SrcSnapshot } from './quiescence.ts';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const BASELINE_PATH = resolve(HERE, 'console-baseline.json');
@@ -35,6 +50,14 @@ interface StateResult {
     measurements: Measurements | null;
     logs: Array<{ type: string; text: string }>;
     pageErrors: string[];
+    /** Document loads observed for this state. Above MAX_BOOTS_PER_STATE the tally is void. */
+    boots: number;
+}
+
+/** What moved in the watched tree while one state was open. */
+interface QuiescenceWindow {
+    stateId: string;
+    changes: SrcChange[];
 }
 
 function pad(n: number): string {
@@ -72,6 +95,7 @@ async function runState(
         measurements,
         logs: opened.logs,
         pageErrors: opened.pageErrors,
+        boots: countBoots(opened.logs),
     };
 }
 
@@ -155,11 +179,20 @@ async function main(): Promise<void> {
     console.log(`viewport : ${VIEWPORT_WIDTH}x${VIEWPORT_HEIGHT}`);
     if (WRITE_BASELINE) console.log('mode     : --write-baseline (console-baseline.json will be rewritten)');
 
+    // Taken before the launch, so the first window covers the browser start-up
+    // too — the same placement run.ts uses, and for the same reason.
+    const beforeAll = snapshotSrc();
+
     const browser = await chromium.launch();
     const results: StateResult[] = [];
+    const windows: QuiescenceWindow[] = [];
     try {
+        let prev: SrcSnapshot = beforeAll;
         for (const state of STATES) {
             results.push(await runState(browser, state));
+            const after = snapshotSrc();
+            windows.push({ stateId: state.id, changes: diffSnapshots(prev, after) });
+            prev = after;
         }
     } finally {
         await browser.close();
@@ -178,8 +211,52 @@ async function main(): Promise<void> {
             `  ${r.state.id.padEnd(22)} reached=${String(r.reached).padEnd(5)} ` +
             `canvas=${m?.canvas ? `${Math.round(m.canvas.w)}x${Math.round(m.canvas.h)}` : 'ABSENT'} ` +
             `ratio=${ratio === null || ratio === undefined ? 'N/A' : ratio.toFixed(4)} ` +
-            `nodes=${m?.nodeCount ?? '-'} fixed=${m?.fixedElements.length ?? '-'} logs=${r.logs.length}`,
+            `nodes=${m?.nodeCount ?? '-'} fixed=${m?.fixedElements.length ?? '-'} logs=${r.logs.length} boots=${r.boots}`,
         );
+    }
+
+    // ── RUN VALIDITY, same semantics as run.ts ──────────────────────────────
+    const movedWindows = windows.filter((w) => w.changes.length > 0);
+    const noisyStates = results.filter((r) => r.boots > MAX_BOOTS_PER_STATE);
+    const isVoid = movedWindows.length > 0 || noisyStates.length > 0;
+
+    console.log('');
+    console.log('-'.repeat(78));
+    console.log('RUN VALIDITY — is this run fit to become the baseline?');
+    console.log('-'.repeat(78));
+    console.log(`  watched : ${describeWatched().join('  ')}`);
+    console.log(`            ${beforeAll.files.size} file(s) at start`);
+    console.log(
+        `  boots   : ${results.map((r) => `${r.state.id}=${r.boots}`).join('  ')}` +
+        `  (ceiling ${MAX_BOOTS_PER_STATE} per state)`,
+    );
+    if (movedWindows.length === 0) {
+        console.log('  moved   : nothing the dev server serves moved while the run was in flight');
+    }
+    for (const w of movedWindows) {
+        console.log(`  moved   : ${w.changes.length} change(s) while '${w.stateId}' was open:`);
+        for (const line of describeChanges(w.changes)) console.log(line);
+    }
+    for (const r of noisyStates) {
+        console.log(
+            `  reboot  : '${r.state.id}' loaded the document ${r.boots} times — its console ` +
+            `tally is that tally counted ${r.boots} times`,
+        );
+    }
+
+    if (isVoid) {
+        console.log('');
+        console.log('  VERDICT: VOID — the tree moved under the run, or the page booted twice.');
+        if (WRITE_BASELINE) {
+            console.log('  BASELINE NOT WRITTEN. Freezing this run would make the noise above the');
+            console.log('  reference every later run is compared against. Run it again on a still');
+            console.log(`  tree: ${BASELINE_PATH} is untouched.`);
+        } else {
+            console.log('  The measurements above describe a disturbed tree: do not choose a');
+            console.log('  threshold from them. Run it again on a still tree.');
+        }
+        process.exit(3);
+        return;
     }
 
     if (WRITE_BASELINE) {
@@ -207,6 +284,7 @@ async function main(): Promise<void> {
         console.log('No thresholds are proposed here by design: they are decided from these');
         console.log('numbers and encoded as named constants in states.ts.');
     }
+    process.exit(0);
 }
 
 await main();

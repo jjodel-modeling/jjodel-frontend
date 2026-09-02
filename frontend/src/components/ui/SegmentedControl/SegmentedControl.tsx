@@ -21,6 +21,21 @@ export interface SegmentedControlOption<T extends string = string> {
    * segment never shows the glyph.
    */
   icon?: string;
+
+  /**
+   * Disables this segment alone, leaving the rest of the group live. Click and
+   * keyboard navigation both skip it. For a choice that is legal in the schema but
+   * not on THIS subject (the IR form authoring disables Inline on a multivalued
+   * feature): dropping the segment instead would make the control show two options
+   * here and three there, and the reader would have to guess why.
+   */
+  disabled?: boolean;
+
+  /**
+   * Native tooltip of this segment. The place to say WHY a segment is disabled,
+   * next to the segment rather than in a note under the row.
+   */
+  title?: string;
 }
 
 export interface SegmentedControlProps<T extends string = string> {
@@ -58,8 +73,22 @@ export function SegmentedControl<T extends string = string>(props: SegmentedCont
 
   const select = (index: number) => {
     const opt = options[index];
-    if (!opt || disabled) return;
+    if (!opt || disabled || opt.disabled) return;
     onChange(opt.value);
+  };
+
+  /**
+   * Next selectable segment in `step` direction, wrapping. Returns the starting index
+   * when every other segment is disabled, so an all-disabled group cannot spin here.
+   */
+  const nextEnabled = (from: number, step: number): number => {
+    const n = options.length;
+    let i = from;
+    for (let k = 0; k < n; k++) {
+      i = (i + step + n) % n;
+      if (!options[i]?.disabled) return i;
+    }
+    return from;
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
@@ -68,20 +97,20 @@ export function SegmentedControl<T extends string = string>(props: SegmentedCont
       case 'ArrowRight':
       case 'ArrowDown':
         e.preventDefault();
-        select((index + 1) % options.length);
+        select(nextEnabled(index, 1));
         break;
       case 'ArrowLeft':
       case 'ArrowUp':
         e.preventDefault();
-        select((index - 1 + options.length) % options.length);
+        select(nextEnabled(index, -1));
         break;
       case 'Home':
         e.preventDefault();
-        select(0);
+        select(nextEnabled(options.length - 1, 1));
         break;
       case 'End':
         e.preventDefault();
-        select(options.length - 1);
+        select(nextEnabled(0, -1));
         break;
     }
   };
@@ -101,7 +130,8 @@ export function SegmentedControl<T extends string = string>(props: SegmentedCont
             type="button"
             role="radio"
             aria-checked={selected}
-            disabled={disabled}
+            disabled={disabled || opt.disabled}
+            title={opt.title}
             tabIndex={selected ? 0 : -1}
             className={`${styles.segment} ${selected ? styles.segmentSelected : ''}`}
             onClick={() => select(index)}

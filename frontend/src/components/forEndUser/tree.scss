@@ -5,7 +5,6 @@
 // === DESIGN TOKENS ===
 $font-family: 'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 $font-size-xs: 11px;
-$font-size-sm: 12px;
 $font-size-base: 13px;
 $font-weight-normal: 400;
 $font-weight-medium: 500;
@@ -13,19 +12,12 @@ $font-weight-semibold: 600;
 
 // Colors
 $color-text-primary: #111418;
-$color-text-secondary: #6B7280;
-$color-bg-secondary: #f8fafc;
-$color-bg-tertiary: #f1f5f9;
-$color-border: #e2e4e8;
-$color-accent: #475569;
 
 // Spacing
 $spacing-xs: 4px;
 $spacing-sm: 8px;
-$spacing-md: 12px;
 
 // Border Radius
-$radius-sm: 4px;
 $radius-md: 6px;
 
 // Transitions
@@ -151,82 +143,66 @@ div.d-flex.tree {
 // TYPE-SPECIFIC COLORS (Muted with backgrounds)
 // Each type has DISTINCT colors for easy identification
 // ============================================
-.tree-DModel,
-.tree-Model {
+.tree-DModel {
   // Slate - Metamodels
   background-color: rgba(100, 116, 139, 0.15);
   color: $color-model;
 }
 
-.tree-DPackage,
-.tree-Package {
+.tree-DPackage {
   // Amber - Packages
   background-color: rgba(245, 158, 11, 0.15);
   color: $color-package;
 }
 
-.tree-DClass,
-.tree-Class {
+.tree-DClass {
   // Cyan - Classes
   background-color: rgba(14, 165, 233, 0.15);
   color: $color-class;
 }
 
-.tree-DAttribute,
-.tree-Attribute {
+.tree-DAttribute {
   // Green - Attributes
   background-color: rgba(16, 185, 129, 0.15);
   color: $color-attribute;
 }
 
-.tree-DReference,
-.tree-Reference {
+.tree-DReference {
   // Purple - References
   background-color: rgba(139, 92, 246, 0.15);
   color: $color-reference;
 }
 
-.tree-DOperation,
-.tree-Operation {
+.tree-DOperation {
   // Cyan (darker) - Operations
   background-color: rgba(6, 182, 212, 0.15);
   color: $color-operation;
 }
 
-.tree-DParameter,
-.tree-Parameter {
+.tree-DParameter {
   // Gray - Parameters
   background-color: rgba(156, 163, 175, 0.15);
   color: $color-parameter;
 }
 
-.tree-DEnumerator,
-.tree-Enumerator {
+.tree-DEnumerator {
   // Pink - Enums
   background-color: rgba(236, 72, 153, 0.15);
   color: $color-enum;
 }
 
-.tree-DEnumLiteral,
-.tree-EnumLiteral {
+.tree-DEnumLiteral {
   // Light Pink - Enum Literals
   background-color: rgba(244, 114, 182, 0.15);
   color: $color-literal;
 }
 
-.tree-DObject,
-.tree-Object {
+.tree-DObject {
   background-color: rgba(107, 114, 128, 0.15);
   color: $color-object;
 }
 
-.tree-Singleton {
-  background-color: rgba(71, 85, 105, 0.15);
-  color: $color-accent;
-}
-
-.tree-DValue,
-.tree-Value {
+.tree-DValue {
   background-color: rgba(107, 114, 128, 0.1);
   color: $color-feature;
 }
@@ -239,79 +215,63 @@ html[data-theme="dark"] {
     color: #f1f5f9;
   }
 
-  .tree-DModel,
-  .tree-Model {
+  .tree-DModel {
     // Slate - Metamodels
     background-color: rgba(100, 116, 139, 0.2);
     color: #94a3b8;
   }
 
-  .tree-DPackage,
-  .tree-Package {
+  .tree-DPackage {
     // Amber - Packages
     background-color: rgba(245, 158, 11, 0.2);
     color: #fbbf24;
   }
 
-  .tree-DClass,
-  .tree-Class {
+  .tree-DClass {
     // Cyan - Classes
     background-color: rgba(14, 165, 233, 0.2);
     color: #38bdf8;
   }
 
-  .tree-DAttribute,
-  .tree-Attribute {
+  .tree-DAttribute {
     // Green - Attributes
     background-color: rgba(16, 185, 129, 0.2);
     color: #34d399;
   }
 
-  .tree-DReference,
-  .tree-Reference {
+  .tree-DReference {
     // Purple - References
     background-color: rgba(139, 92, 246, 0.2);
     color: #a78bfa;
   }
 
-  .tree-DOperation,
-  .tree-Operation {
+  .tree-DOperation {
     // Cyan (darker) - Operations
     background-color: rgba(6, 182, 212, 0.2);
     color: #22d3ee;
   }
 
-  .tree-DParameter,
-  .tree-Parameter {
+  .tree-DParameter {
     // Gray - Parameters
     background-color: rgba(156, 163, 175, 0.2);
     color: #d1d5db;
   }
 
-  .tree-DEnumerator,
-  .tree-Enumerator {
+  .tree-DEnumerator {
     // Pink - Enums
     background-color: rgba(236, 72, 153, 0.2);
     color: #f472b6;
   }
 
-  .tree-DEnumLiteral,
-  .tree-EnumLiteral {
+  .tree-DEnumLiteral {
     // Light Pink - Enum Literals
     background-color: rgba(244, 114, 182, 0.2);
     color: #f9a8d4;
   }
 
   .tree-DObject,
-  .tree-Object,
-  .tree-DValue,
-  .tree-Value {
+  .tree-DValue {
     background-color: rgba(107, 114, 128, 0.2);
     color: #9ca3af;
-  }
-
-  .tree-Singleton {
-    background-color: rgba(71, 85, 105, 0.2);
-    color: #94a3b8;
   }
 }

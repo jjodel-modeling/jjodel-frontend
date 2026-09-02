@@ -11,6 +11,7 @@ import DockManager from './DockManager';
 import {PinnableDock, TabContent, TabHeader} from '../dock/MyRcDock';
 import { TabsOverflowMenu } from '../dock/TabsOverflowMenu';
 import ModelsSummaryTab from "./tabs/ModelsSummaryTab";
+import { MANAGER_TAB_PREFIX } from "./tabs/instanceManagerModel";
 import BrokerEditor from "../editors/Broker";
 import {PermissionModelTab} from "../editors/PermissionModelTab";
 import {MTM} from "../editors/MTM";
@@ -18,7 +19,6 @@ import { isProjectModified } from '../../common/libraries/projectModified';
 import { Logo } from '../../components/logo';
 import { SimpleResizeHandle } from '../SimpleResizeHandle';
 //import MqttEditor from "../rightbar/mqtt/MqttEditor";
-//import NestedView from "../rightbar/nestedViewEditor/ViewEditorNestedVersion";
 //import CollaboratorsEditor from "../rightbar/collaboratorsEditor/CollaboratorsEditor";
 
 // ============================================
@@ -373,10 +373,26 @@ function DockComponent(props: AllProps) {
             }));
         }
 
-        // Hide properties panel when Documentation tab is active
+        // Hide the floating rail on the tabs that own their whole width.
+        //
+        // Two of them now. Documentation was the first; the instance manager is the
+        // second (ratified Q1(b)), and it needs its OWN attribute value rather than
+        // riding on 'documentation', because the two hide the same thing for
+        // different reasons and a shared value would make the next change to either
+        // one silently move the other.
+        //
+        // This branch is also what stands in for EDITOR_TYPE_CHANGE on the manager.
+        // The block above resolves the editor type from `idlookup[activeId]`, and a
+        // manager's id is PREFIXED, so the lookup misses and no event fires — which
+        // would leave body[data-editor-type] on the value the previous tab set. That
+        // is deliberate: the manager is not an editor type, it is a tab that hides
+        // the rail, and saying so here is the whole statement.
         const isDocTab = activeId === 'documentation' || activeId.startsWith('doc_');
+        const isManagerTab = activeId.startsWith(MANAGER_TAB_PREFIX);
         if (isDocTab) {
             document.body.setAttribute('data-active-tab', 'documentation');
+        } else if (isManagerTab) {
+            document.body.setAttribute('data-active-tab', 'manager');
         } else {
             document.body.removeAttribute('data-active-tab');
         }

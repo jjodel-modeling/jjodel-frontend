@@ -138,6 +138,13 @@ export interface FieldCompartmentSpec {
      * irVersion bump, no migration.
      */
     rowFormat: { segments: FieldSegment[]; style?: TextStyle };
+    /**
+     * Section heading when this compartment is rendered as a form group (2026-08-26).
+     * Absent = the `id` with its first letter capitalized. Ignored by the symbol
+     * renderer, which draws no compartment heading. Additive optional field: no
+     * irVersion bump, no migration.
+     */
+    title?: string;
     visible?: Conditional<boolean>;
     separator?: boolean;
 }
@@ -198,6 +205,125 @@ export interface ShapeSpec {
  */
 export type AuthoringMetaclassPins = { [metaclassName: string]: string };
 
+/** Panel skin of a form rendering. Absent = the host decides ('plain' in the rail,
+ *  'card' in the form document): the default belongs to the host, not to the view,
+ *  so the compile does NOT materialize one here. */
+export type FormTheme = 'plain' | 'card' | 'compact' | 'inspector';
+
+/**
+ * Widget vocabulary of a form field.
+ *
+ * The first five names are EXACTLY the ones already persisted by
+ * `FieldSegment.value.editable` and `LabelSpec.editable` (see both above): a
+ * compatible superset, never a diverging vocabulary for the same concept. Two
+ * vocabularies would both be irreversible (R-B9: saved IR has no VersionFixer)
+ * and would have to be kept in step by hand forever.
+ *
+ * 'number', 'reference' and 'link' are new with the form.
+ */
+export type WidgetKind =
+    | 'text' | 'textarea' | 'select' | 'checkbox' | 'color'
+    | 'number' | 'reference' | 'link';
+
+/** How a reference or containment feature renders in a form. */
+export type FeatureTreatment = 'inline' | 'list' | 'hidden';
+
+/**
+ * FormSpec (2026-08-26) — OPTIONAL supplement describing how the same view renders
+ * as a form of editable widgets instead of a symbol on the canvas. A view may carry
+ * only `shape`, only `form`, or both; the applicability half (metaclasses, predicate,
+ * priority, compartments) is shared and unchanged.
+ *
+ * Additive: no irVersion bump and no VersionFixer migration, same precedent as
+ * `marker`, `ShapeSpec.padding` and `RowViewIR.style`. Since the saved IR has no
+ * VersionFixer at all (R-B9), every literal below is DEFINITIVE once written.
+ *
+ * CONSTRAINT — no key named `op` carrying a string value may appear anywhere inside
+ * this structure, at any depth. `irValidate.findUnknownPredicateOp` walks the whole
+ * ir and treats every string `op` as a predicate operator, rejecting the entire view
+ * with a message about predicates. See irValidate.ts (the `op` scan).
+ */
+export interface FormSpec {
+    /** Absent = host default (see FormTheme). */
+    theme?: FormTheme;
+    /** Absent = 'above'. 'left' is honoured by the 'compact' theme only. */
+    labelPlacement?: 'above' | 'left';
+    /**
+     * Override of the widget derived from the feature's type. Key: the feature NAME,
+     * not a PathExpr. The form enumerates self's own slots (LObject.features) and
+     * writes them by index; it never navigates, so a multi-hop path would have no
+     * writable value. Keying by name is also what the rest of the codebase already
+     * does for features (syncUpdateFeatureValue, resolveReferenceIdByName, the
+     * conformance `metamodelElementName`). Absent = derived from the type (spec
+     * v1.2 sez. 10, explicit fallback).
+     */
+    widgets?: Record<string, WidgetKind>;
+    /** References and containment children, keyed by feature name like `widgets`.
+     *  Absent = 'inline' for upperBound 1, 'list' for the multivalued ones. */
+    features?: Record<string, FeatureTreatment>;
+    /** Feature names visible in Basic. Absent = heuristic `lowerBound >= 1`. */
+    basic?: string[];
+}
+
+/**
+ * Level-2 structure vocabulary (design handoff `Instance Node Proposal.dc.html`,
+ * Turno 7, and README.md "Level 2 - Structure (shape-dependent)").
+ *
+ * These five names are deliberately the ones `nodes/instanceNodeStyle.ts` already
+ * declares for the render side, which states of itself that «the shape is here so
+ * the next slice adds a source, not a mechanism». This is that source: the
+ * authoring panel writes them, and wiring them into
+ * `resolveInstanceNodeStyle` as the viewpoint layer is the render slice that
+ * follows. Two members are new here and NOT yet in that union - `ring` on the
+ * accent, `hidden` on the type - because widening the render union without a
+ * renderer for either would be a silent promise. The unions are declared
+ * separately rather than imported from the node module: `irTypes` is a pure
+ * schema, and importing a canvas module into it would invert the layering.
+ *
+ * The saved IR has no VersionFixer (R-B9), so every literal below is DEFINITIVE.
+ */
+export type NamePosition = 'header-band' | 'center' | 'below' | 'external';
+export type NameTypeDisplay = 'inline' | 'chip' | 'badge' | 'hidden';
+export type AccentPlacement = 'none' | 'top' | 'left' | 'ring';
+export type CompartmentMode = 'inline' | 'popover' | 'none';
+export type CompartmentColumns = 2 | 3;
+export type EmptyBehavior = 'dash' | 'collapse' | 'hide';
+
+/**
+ * StructureSpec (2026-08-29) - where the name goes, where the accent goes, and what
+ * the compartment does with unset slots. Nested groups (`name.*`, `compartment.*`)
+ * rather than eight flat keys on `ShapeSpec`: these are structure, not geometry of
+ * the symbol, and `ShapeSpec` is the geometry.
+ *
+ * EVERY field is optional and a default is NEVER persisted - the `padding`/`marker`
+ * idiom: the key is absent, never an empty value, so a view whose field was set and
+ * put back round-trips byte-identical to one that never carried it. The defaults
+ * themselves are per Symbol and live in `structureCapabilities.ts`, not here: a
+ * default that depends on the shape cannot be a constant of the schema.
+ *
+ * Additive optional field: no irVersion bump, no VersionFixer migration - same
+ * precedent as `marker`, `ShapeSpec.padding` and `FormSpec`.
+ *
+ * CONSTRAINT (inherited from FormSpec): no key named `op` carrying a string value,
+ * at any depth. `irValidate.findUnknownPredicateOp` walks the whole ir and reads
+ * every string `op` as a predicate operator.
+ */
+export interface StructureSpec {
+    name?: {
+        position?: NamePosition;
+        typeDisplay?: NameTypeDisplay;
+    };
+    accentPlacement?: AccentPlacement;
+    /** Any CSS colour, `var(--token)` included - same vocabulary as `ShapeSpec.fill`. */
+    accent?: string;
+    compartment?: {
+        mode?: CompartmentMode;
+        columns?: CompartmentColumns;
+    };
+    emptyBehavior?: EmptyBehavior;
+    edgeMarker?: boolean;
+}
+
 export interface VertexViewIR {
     irVersion: string;               // "ir-1.0" | "ir-1.2"
     kind: 'vertex';
@@ -211,7 +337,18 @@ export interface VertexViewIR {
     label?: string;
     resizable?: boolean;             // v1: override esplicito del gate resize (undefined = default per forma)
     shape: ShapeSpec;
+    /**
+     * Level-2 structure supplement (2026-08-29, Turno 7). Absent = every field at its
+     * per-Symbol default. Additive optional field: no irVersion bump, no migration.
+     */
+    structure?: StructureSpec;
     fieldCompartments?: FieldCompartmentSpec[];
+    /**
+     * Form rendering supplement (2026-08-26). Absent = this view renders as a symbol
+     * only; the form host falls back to the metamodel-derived default form (spec v1.2
+     * sez. 10). Additive optional field: no irVersion bump, no migration.
+     */
+    form?: FormSpec;
 }
 
 /**
@@ -234,6 +371,12 @@ export interface GraphVertexViewIR {
     label?: string;
     shape: ShapeSpec;
     fieldCompartments?: FieldCompartmentSpec[];
+    /**
+     * Form rendering supplement (2026-08-26). Absent = this view renders as a symbol
+     * only; the form host falls back to the metamodel-derived default form (spec v1.2
+     * sez. 10). Additive optional field: no irVersion bump, no migration.
+     */
+    form?: FormSpec;
     containment: {
         /** Which contained children render inside the hull; absent = all containment-reference children. */
         childFilter?: Predicate;
@@ -318,6 +461,12 @@ export interface EdgeViewIR {
          *  the whole layout override (waypoints AND side pins) stays session-only. */
         persistWaypoints?: boolean;
     };
+    /**
+     * Form rendering supplement (2026-08-26). Absent = this view renders as a symbol
+     * only; the form host falls back to the metamodel-derived default form (spec v1.2
+     * sez. 10). Additive optional field: no irVersion bump, no migration.
+     */
+    form?: FormSpec;
 }
 
 /**
@@ -457,6 +606,21 @@ export interface CompiledView {
     channels?: string[];
     /** Multi-hop paths read by this view (spec v1.2 sez. 9); [] when the view reads only self. */
     crossPaths: CompiledCrossPath[];
+    /**
+     * FormSpec declared by this view; null when it declares none.
+     *
+     * Named `formSpec` and NOT `form` because `form` on this interface is already
+     * taken, since the spike, by the compiled SHAPE form (rect / ellipse / diamond),
+     * read as `compiled.form(readCtx, objectId)` in IRNodeContent. Renaming that one
+     * is forbidden (CLAUDE.md rule 2) and would touch the canvas renderer, so the new
+     * field takes the free name instead. The PERSISTED name is unaffected: on the IR
+     * interfaces above the field is `form`, which is what lands in saved views.
+     *
+     * A passthrough of the authored FormSpec, not a compiled structure: FormSpec
+     * carries no PathExpr and no Predicate, so it produces no accessor, extends no
+     * dependency set, and declares no channel.
+     */
+    formSpec: FormSpec | null;
     form: CompiledConditional<ShapeForm>;
     fill: CompiledConditional<string> | null;
     border: { color: string; width: number; style: string } | null;
@@ -510,6 +674,9 @@ export interface CompiledFieldCompartment {
     id: string;
     source: 'attributes' | 'references' | 'children';
     segments: FieldSegment[];
+    /** Authored section heading (form rendering); undefined when the compartment
+     *  declares none — the form host then derives one from `id`. */
+    title?: string;
     /** children source only: compiled child filter (absent = all containment children). */
     childFilter?: CompiledPredicate;
     visible: CompiledConditional<boolean>;

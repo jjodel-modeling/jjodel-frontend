@@ -254,3 +254,123 @@ Registro dei debiti tecnici noti. Ogni entry deve indicare: data, origine, stato
 **Riferimenti:**
 - `docs/claude-code-log.md` — entry del 2026-08-18 sullo smoke di M1, nota (7)
 - `frontend/src/view/viewElement/view.tsx:584-593` (`get_ir` / `set_ir`)
+
+---
+
+## Enum M1: gli editor scrivono per id, il validatore e l'importer ragionano per nome
+
+**Registrato:** 2026-08-27
+**Origine:** verifica visiva del commit D della Slice 1b (form views), finding F4. Modificare un
+enum da qualunque pannello fa comparire subito dopo un warning `invalid_enum_literal` sul valore
+appena scritto.
+**Stato attuale:** due convenzioni convivono sullo stesso slot. Gli **editor** scrivono il
+**pointer del literal**: `Info.tsx` costruisce le opzioni con `value: object.id` e il pannello
+classico produce lo stesso warning della form, quindi non e' un difetto introdotto dal form
+rendering. L'**importer XMI** scrive il **nome** (`values: ['normal']`). Il **validatore**
+(`ConformanceValidator.ts` CHECK 10) confronta per nome, e non riconosce un id. Effetto: un modello
+importato e' conforme finche' nessuno lo tocca, e ogni modifica di un enum lo rende non conforme
+agli occhi del validatore, senza che nulla sia cambiato nella semantica del modello.
+**Fix strutturale raccomandato:** scegliere il canone — id o nome — e allineare i tre scrittori.
+La scelta e' di Alfonso e non e' meccanica: l'id e' stabile a fronte di una rinomina del literal,
+il nome e' quello che l'XMI porta e che sopravvive a un round-trip fra progetti diversi. Qualunque
+sia la scelta, il validatore va reso tollerante ad entrambe le forme durante la transizione, o i
+modelli gia' salvati diventano non conformi in blocco.
+**Non fatto di lato:** la form NON e' stata allineata al validatore scrivendo per nome, perche'
+scriverebbe diversamente da `Info.tsx` e aggiungerebbe una quarta convenzione invece di togliere
+una delle tre. La form normalizza in LETTURA (nome -> id, `useFormWidgets.normalizeEnumValues`)
+per rendere il valore importato, e scrive per id come il pannello classico.
+**Priorita':** media.
+**Effort stimato:** mezza giornata per l'allineamento, una volta presa la decisione.
+**Riferimenti:** `model/conformance/ConformanceValidator.ts` (CHECK 10),
+`components/editors/Info.tsx` (opzioni degli enum), `services/export/XMIService.ts`,
+`components/editor-v2/viewpoint/ir/useFormWidgets.ts` (`normalizeEnumValues`).
+
+---
+
+## `DObject.name` e lo slot `name` non allineati sui modelli importati da XMI
+
+**Registrato:** 2026-08-27
+**Origine:** verifica visiva del commit D della Slice 1b (form views), finding F2. Le righe di
+riferimento della form mostravano `State_0` mentre l'header, per lo stesso oggetto, mostrava
+`Running`.
+**Stato attuale:** l'importer XMI popola lo slot `name` dell'istanza ma lascia `DObject.name` al
+default generato (`State_0`, `Transition_0`). Il binding di identita' descritto in `CLAUDE.md`
+3.12 propaga slot -> nome solo quando lo slot viene **scritto** attraverso `setValueAtPosition`,
+non al momento dell'import. Chi legge il campo D vede quindi un nome, chi legge il proxy L ne vede
+un altro, per lo stesso elemento e nello stesso istante.
+**Aggirato, non risolto:** la form legge il nome dal proxy L (`IRFormField.displayValue`,
+`ReferenceWidget.referenceName`), che e' la stessa lettura dell'header, quindi quelle superfici
+concordano. Ogni altro consumatore che legge `idlookup[id].name` su un modello importato mostra
+ancora il default generato.
+**Consumatori colpiti, censiti finora:** il **breadcrumb in testa al rail**, che mostra
+`Transition_0` / `State_0` mentre la form sotto, per lo stesso elemento, mostra `stop` / `Running`
+(osservato il 2026-08-27 durante la verifica del commit E; non corretto, perche' e' lo stesso
+difetto e va chiuso all'origine e non superficie per superficie).
+**Fix strutturale raccomandato:** allineare i due lati all'import, applicando la stessa
+propagazione che l'edit applica — cioe' scrivendo lo slot `name` per la via che gia' porta al campo
+D, invece di popolarlo direttamente. Da valutare nell'importer, non nella form.
+**Priorita':** bassa (cosmetico finche' nessuno usa `DObject.name` per identificare).
+**Effort stimato:** mezza giornata, con un test di round-trip sull'import XMI.
+**Riferimenti:** `services/export/XMIService.ts`, `CLAUDE.md` 3.12,
+`components/editor-v2/viewpoint/ir/IRFormField.tsx` (`displayValue`).
+
+---
+
+## `transientProperties.modelElement` non popolato: letture non guardate oltre i due siti corretti
+
+**Registrato:** 2026-08-27
+**Origine:** finding F3 della verifica del commit D della Slice 1b. La riga del reducer che
+popolerebbe la mappa e' commentata (`redux/reducer/reducer.ts:1093`), quindi l'entry manca per
+ogni elemento e chiunque legga `transientProperties.modelElement[id].<campo>` senza guardia
+esplode.
+**Stato attuale:** i due siti che rompevano il pannello classico su una feature `derived` sono
+stati guardati nel commit `9db0b03f8` (`LValue.get_values` e `LValue.set_values` in
+`model/logicWrapper/LModelElement.tsx`, idioma di `ocl/ocl.tsx:80-81`). **Resta almeno un sito
+non guardato**: `joiner/classes.ts:4160`, `transientProperties.modelElement[mid].nodes`, con la
+stessa esposizione. Non toccato perche' fuori dal perimetro autorizzato di quel commit, e perche'
+il percorso che lo raggiunge non e' stato mappato.
+**Fix strutturale raccomandato:** decidere da che parte si chiude. O si ripristina il popolamento
+nel reducer — e allora va capito perche' fu commentato, il commento accanto suggerisce ragioni di
+sostituzione dello stato — oppure si adotta la lazy-create come idioma unico e si guardano tutti i
+siti. La seconda e' quella gia' in uso in tre punti su quattro.
+**Priorita':** media (il difetto e' latente finche' nessuno percorre quella riga; quando la
+percorre, smonta un pannello).
+**Effort stimato:** un'ora per censire i siti e guardarli; la decisione sul reducer e' la parte
+che richiede un archeologo.
+**Riferimenti:** `redux/reducer/reducer.ts:1093`, `joiner/classes.ts:4160`,
+`model/logicWrapper/LModelElement.tsx` (i due siti guardati), `ocl/ocl.tsx:80-81`.
+
+---
+
+## `LValue.removeByIndex` non accorcia l'array quando non ci sono buchi
+
+**Registrato:** 2026-08-27
+**Origine:** micro-discovery del punto 10 della Slice 1b, misurata a schermo prima di scrivere la
+rimozione delle liste della form.
+**Stato attuale:** `removeByIndex` filtra l'array e passa quello piu' corto a `set_values`, che
+scrive i valori nuovi per posizione e poi tronca l'eccesso con
+`SetFieldAction.new(id, 'values', undefined, '-=', true)`. Quel `'-='` rimuove **per valore**:
+se l'array non contiene un `undefined`, non trova nulla da togliere e la coda sopravvive.
+Misurato su uno slot `[0..5]`:
+- da `["hot","cold","warm"]`, `removeByIndex(1)` produce **`["hot","warm","warm"]`** (lunghezza 3,
+  ultimo valore duplicato);
+- da `["hot",null,"warm"]` — cioe' un array che gia' contiene un buco — `removeByIndex(0)` produce
+  `["warm",null]`, lunghezza 2: li' il troncamento riesce, perche' un `undefined` da rimuovere
+  c'e'.
+Il difetto e' quindi intermittente rispetto allo stato dell'array, il che lo rende facile da non
+vedere.
+**Aggirato, non risolto:** la form NON usa `removeByIndex`. Rimuove con
+`setValueAtPosition(i, undefined)`, che lascia un buco alla posizione `i` senza accorciare — lo
+stesso che fa il pannello classico (`Info.tsx`), quindi le due superfici lasciano il modello nella
+stessa forma. I widget di lista e di chip saltano i buchi in rendering e conservano l'indice
+grezzo, che e' la chiave della rimozione successiva.
+**Fix strutturale raccomandato:** troncare per posizione invece che per valore in `set_values`
+(un `'-='` che accorci di uno, o una riscrittura dell'intero array). Va fatto con un test sui
+tre casi misurati sopra, perche' ogni scrittore di `values` passa di li'.
+**Priorita':** media. Nessun chiamante noto oggi si affida al troncamento, ma la funzione e'
+pubblica e il nome promette quello che non fa.
+**Effort stimato:** mezza giornata, quasi tutta di verifica sui chiamanti.
+**Riferimenti:** `model/logicWrapper/LModelElement.tsx` (`get_removeByIndex`, `set_values` e il
+suo blocco `excess`), `components/editor-v2/viewpoint/ir/formWrite.ts` (`clearSlotValue`, che
+documenta la misura), `components/editors/Info.tsx:736-741`.
+

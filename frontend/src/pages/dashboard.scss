@@ -1143,6 +1143,34 @@ project-card .tip {
       transition: opacity 0.1s, color 0.1s;
     }
 
+    /* Seconda porta della riga (oggi: instance manager sui Models). Stesso
+       idioma di .psb-item-arrow — invisibile a riposo, rivelata dall'hover della
+       riga — perche' e' la stessa affordance: un'azione che appartiene alla riga
+       e non alla lista. Bottone e non <i> perche' e' cliccabile da tastiera; il
+       reset e' esplicito, il rail non ha una base per i <button>. */
+    .psb-item-action {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      padding: 0;
+      border: none;
+      border-radius: 3px;
+      background: transparent;
+      font-size: 11px;
+      color: #94a3b8;
+      flex-shrink: 0;
+      opacity: 0;
+      cursor: pointer;
+      transition: opacity 0.1s, color 0.1s, background 0.1s;
+
+      &:hover { color: #334155; background: #e2e8f0; }
+      &:focus-visible { opacity: 1; outline: 2px solid #0ea5e9; outline-offset: 1px; }
+    }
+
+    .psb-item:hover .psb-item-action { opacity: 1; }
+
     .psb-new {
       display: flex;
       align-items: center;

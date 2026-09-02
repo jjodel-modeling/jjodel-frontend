@@ -151,6 +151,7 @@ import type {ProjectsApi as TypeProjectsAPI, UsersApi} from "../api/persistance"
 import type {Collaborative as CollaborativeT} from "../components/collaborative/Collaborative";
 import {names} from "tinycolor2";
 import { toast } from "../components/Toast";
+import { checkM2NameUniqueness, m2KindOf, pendingChildrenOf } from "../model/logicWrapper/nameUniqueness";
 import { DEFAULT_VIEW_CSS } from "../view/viewElement/defaultViewCss";
 var windoww = window as any;
 
@@ -853,6 +854,36 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         thiss.name = (name !== undefined) ? name || '' : thiss.constructor.name.substring(1) + " 1";
         return this; }
 
+    /**
+     * The `type` a caller hands to `DTypedElement`, resolved to the classifier it names.
+     *
+     * Four shapes are accepted, in order of cost: an L-proxy, a D object, an id, a name.
+     * Before this existed the resolution was a bare `Selectors.getByName2(type)` — one
+     * argument, so `classname` stayed `undefined`, so the loop's `classname !== d.className`
+     * skipped every entry: a by-name lookup that could only ever return null. Only the two
+     * object shapes survived it, because `getByName2` returns an object untouched, and every
+     * id and every name fell through to the seed below — as EString for a DAttribute, as
+     * THE FATHER for a DReference. Silent, and asymmetric.
+     */
+    private static resolveClassifier(type: any): DClassifier | null {
+        if (!type) return null;
+        // A proxy reports the D-layer className (CLAUDE.md §3.13), so unwrapping to `__raw`
+        // is about identity, not about the switch: both shapes answer 'DClass' either way.
+        if (typeof type === 'object') return ((type as GObject).__raw || type) as DClassifier;
+        if (typeof type !== 'string') return null;
+        const s: DState = store.getState();
+        // An id — the shape a caller most often has at hand, and the one that used to be lost.
+        const byId = s.idlookup[type];
+        if (byId && typeof byId === 'object') return byId as DClassifier;
+        // A name, last resort: `getByName2` filters on className and matches nothing without
+        // it, so it has to be asked once per kind of classifier a type can be.
+        for (const cname of ['DClass', 'DEnumerator', 'DDataType']) {
+            const found = Selectors.getByName2(type, cname, false, s);
+            if (found) return found as DClassifier;
+        }
+        return null;
+    }
+
     DTypedElement(type?: DTypedElement["type"]): this {
         const thiss: DTypedElement = this.thiss as any;
         thiss.allowCrossReference = false;
@@ -866,7 +897,8 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
             return this;
         }
 
-        let dtype = Selectors.getByName2(type) as DClassifier | null;
+        const requested = type; // what the caller asked for, so the fallback below can say so
+        let dtype = Constructors.resolveClassifier(type);
         switch (dtype?.className){
             default: type = undefined; break;
             case 'DClass':
@@ -880,6 +912,10 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
                     default: type = dtype.id; break;
                 }
                 break;
+            // A DDataType is as legal an attribute type as an enum (EMF's EDataType) and
+            // shares its rule: fine for the three that carry a value, refused for a
+            // reference, which must point at a class.
+            case 'DDataType':
             case 'DEnumerator':
                 switch (thiss.className) {
                     case 'DAttribute':
@@ -894,10 +930,39 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         }
 
         if (!type) {
+            // The fallback is a seed, not a resolution: say so whenever the caller asked
+            // for something and got something else. `type === undefined` is the seed being
+            // used as intended — the Ecore parser constructs with no type on purpose and
+            // field-writes `.type` right after — and stays quiet.
+            if (requested !== undefined) Log.ww('DTypedElement: cannot resolve the requested type, falling back',
+                {requested, resolved: dtype, on: thiss.className, name: (thiss as GObject).name});
             switch (thiss.className) {
                 default:
                 case 'DReference':
-                    type = this.fatherPtr as Pointer<DClass> || undefined;
+                    // Two different situations share this branch, and they must not share
+                    // the value. `requested === undefined` is the seed used as intended —
+                    // the Ecore parser constructs with no type and field-writes `.type`
+                    // right after — and keeps the father it has always kept.
+                    // A DECLARED REJECTION (the caller asked for an enum or a datatype, and
+                    // the switch above refused it because a reference must point at a class)
+                    // used to keep the father too, which made the reference point at its own
+                    // container: a target nobody asked for, wrong in the export as much as
+                    // on the canvas. It gets the weakest target instead — the m3 `EObject`,
+                    // which is what EMF itself writes for an unspecified reference target.
+                    // Measured, not assumed (docs/discovery/discovery_2026-08-30_dref_seed_rifiutata.md):
+                    // the absent values the D-graph does tolerate (undefined/null/'') are
+                    // undone one layer up by `LTypedElement.get_type`, which re-substitutes
+                    // the father for every falsy `data.type` — so every consumer that reads
+                    // through a proxy (Ecore export, JSON, canvas, validation) would go on
+                    // seeing the container. `Pointer_EOBJECT` is a real classifier, so it
+                    // survives `get_type` untouched, and its Ecore round-trip is stable.
+                    // Scoped to DReference on purpose: this branch is also the `default`
+                    // for any other className, and widening it there is not what was
+                    // measured. Same set the `Log.ww` above declares — a refused type and
+                    // an unresolvable one are both "the caller asked, and did not get it".
+                    type = (requested !== undefined && thiss.className === 'DReference')
+                        ? Defaults.Pointer_EOBJECT
+                        : (this.fatherPtr as Pointer<DClass> || undefined);
                     break;
                 case 'DOperation':
                     type = this.fatherPtr as Pointer<DClass>;
@@ -1398,7 +1463,18 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
                     let meta = LPointerTargetable.from(metaptr as Pointer);
                     startingPrefix = startingPrefix(meta as L);
                 }
-                const childrenNames: (string)[] = lfather.childNames; // lfather.children.map(c => (c as LNamedElement)?.name);
+                // `childNames` is built from `father.children`, a COLLECTION written by the
+                // persist callback's SetFieldAction — so it cannot report a sibling created
+                // earlier in THIS tick, and four unnamed creates in one tick used to take the
+                // same name four times. `pendingChildrenOf` is the same-tick half, read from
+                // `DPointerTargetable.pendingCreation` where `{className, name, father}` are
+                // already set. Named elements only: a pending DVertex/DValue is not a name
+                // this namespace holds. See nameUniqueness.ts, section «The current tick».
+                const pendingNames: string[] = pendingChildrenOf(lfather.id)
+                    .filter(e => !!(e as GObject).name &&
+                        (m2KindOf((e as GObject).className) !== null || (e as GObject).className === 'DObject'))
+                    .map(e => (e as GObject).name as string);
+                const childrenNames: (string)[] = lfather.childNames.concat(pendingNames); // lfather.children.map(c => (c as LNamedElement)?.name);
                 return U.increaseEndingNumber(startingPrefix + '0', false, false, (newname) => childrenNames.indexOf(newname) >= 0);
             }
             else if (typeof father === 'function') {
@@ -2104,15 +2180,47 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
         if (c.data.name === name) return true;
         const father: LPointerTargetable = (c.proxyObject as LModelElement).father;
         if (father) {
-            const check = (father as LModelElement).children?.filter((child) => {
-                return child.id !== c.data.id && (D.fromPointer(child.id) as DNamedElement).name === name;
-            });
-            if (check.length > 0) {
-                toast.error(`Element name "${name}" is already taken in this scope`, {
-                    title: 'Validation failed',
-                    action: { label: 'View errors →', onClick: () => { /* TODO: wire to errors panel when available */ } },
+            // ── Uniqueness (S1-M2): the M2 rename is a CONSUMER of the one verdict ──
+            //
+            // This method is the single site every M2 rename crosses (`LClass` and
+            // `LAttribute` call `super` first; `LModel` and `LObject` have rules of
+            // their own and never reach here). Until S1-M2 it carried its own rule —
+            // `father.children`, which is the sibling list and therefore neither the
+            // metamodel-wide pool a classifier needs (R-M2U-2) nor the inherited
+            // features a feature needs (R-M2U-4).
+            //
+            // `m2KindOf` returns null for everything that is not an M2 named element
+            // (DVertex, DGraph, DValue, …). Those keep EXACTLY the check they had:
+            // this method is the base of every LPointerTargetable, and silently
+            // moving the scope of a committed check for them was not decided.
+            const m2kind = m2KindOf(c.data.className);
+            if (m2kind) {
+                const verdict = checkM2NameUniqueness({
+                    father: father as LModelElement,
+                    kind: m2kind,
+                    name,
+                    excludeId: c.data.id,
                 });
-                return true;
+                if (!verdict.ok) {
+                    toast.error(verdict.reason as string, {
+                        title: 'Validation failed',
+                        action: { label: 'View errors →', onClick: () => { /* TODO: wire to errors panel when available */ } },
+                    });
+                    return true;
+                }
+                // Case-sensitive by decision: the near-homonym is legal, and declared.
+                if (verdict.warning) toast.warning(verdict.warning, { title: 'Near-duplicate name' });
+            } else {
+                const check = (father as LModelElement).children?.filter((child) => {
+                    return child.id !== c.data.id && (D.fromPointer(child.id) as DNamedElement).name === name;
+                });
+                if (check.length > 0) {
+                    toast.error(`Element name "${name}" is already taken in this scope`, {
+                        title: 'Validation failed',
+                        action: { label: 'View errors →', onClick: () => { /* TODO: wire to errors panel when available */ } },
+                    });
+                    return true;
+                }
             }
         }
 

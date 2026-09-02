@@ -4,7 +4,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { validateIR, VALID_PADDING_VALUES, VALID_ROUTING_VALUES } from '../irValidate';
-import { clearCompileCache } from '../irCompile';
+import { clearCompileCache, compileView, irHash } from '../irCompile';
 import { defaultObjectViewIR, defaultEdgeViewIR } from '../irDefaults';
 import { CONTAINER_ENDPOINT } from '../irTypes';
 import type { EdgeViewIR, GraphVertexViewIR, RowViewIR, VertexViewIR } from '../irTypes';
@@ -219,5 +219,96 @@ describe('validateIR: shape.padding closed vocabulary (asse padding, 2026-08-25)
         const r = validateIR('gv-padding-huge', gv);
         expect(r.ok).toBe(false);
         if (!r.ok) expect(r.error).toContain('shape.padding');
+    });
+});
+
+
+/**
+ * FormSpec (Slice 1a, 2026-08-26).
+ *
+ * The whole point of these cases is that validateIR needed NO change to accept `form`:
+ * the validator is permissive towards keys it does not know, and the compile-as-validator
+ * ignores what it does not read. What it is NOT permissive about is a string `op`
+ * anywhere in the ir, because findUnknownPredicateOp walks the whole tree generically —
+ * hence the last case, which is the trap FormSpec's doc-comment warns against.
+ */
+describe('validateIR — form (additive optional field)', () => {
+    const withForm = (form: unknown): VertexViewIR => ({
+        irVersion: 'ir-1.2', kind: 'vertex', metaclasses: ['State'],
+        shape: { form: 'rounded', labels: [{ position: 'top', source: { from: 'intrinsic', prop: 'name' } }] },
+        fieldCompartments: [{
+            id: 'attributes', title: 'Identity',
+            source: { from: 'attributes' },
+            rowFormat: { segments: [{ kind: 'name' }, { kind: 'literal', text: ' = ' }, { kind: 'value' }] },
+        }],
+        form: form as VertexViewIR['form'],
+    });
+
+    it('accepts a view with every FormSpec field populated, and a compartment title', () => {
+        clearCompileCache();
+        const r = validateIR('v-form-full', withForm({
+            theme: 'plain',
+            labelPlacement: 'above',
+            widgets: { entryAction: 'textarea', timeout: 'number', kind: 'select' },
+            features: { outgoing: 'list', substates: 'inline', tags: 'hidden' },
+            basic: ['name', 'kind', 'outgoing'],
+        }));
+        expect(r).toEqual({ ok: true });
+    });
+
+    it('accepts a view with no form at all (every saved view today)', () => {
+        clearCompileCache();
+        const noForm: VertexViewIR = {
+            irVersion: 'ir-1.2', kind: 'vertex', metaclasses: ['State'], shape: { form: 'rect' },
+        };
+        expect(validateIR('v-no-form', noForm)).toEqual({ ok: true });
+    });
+
+    it('rejects a form carrying a string `op`, which the predicate scan reads as an operator', () => {
+        clearCompileCache();
+        const r = validateIR('v-form-op', withForm({ theme: 'plain', widgets: { op: 'text' }, filter: { op: 'contains' } }));
+        expect(r.ok).toBe(false);
+        if (!r.ok) expect(r.error).toContain('unknown predicate operator');
+    });
+});
+
+describe('compileView — form passthrough', () => {
+    const view = (theme: string): VertexViewIR => ({
+        irVersion: 'ir-1.2', kind: 'vertex', metaclasses: ['State'],
+        shape: { form: 'rect' },
+        form: { theme } as VertexViewIR['form'],
+    });
+
+    it('returns the authored FormSpec verbatim on formSpec, and null when absent', () => {
+        clearCompileCache();
+        const withIt = compileView('v-form-pass', view('card'));
+        expect(withIt.formSpec).toEqual({ theme: 'card' });
+        // `form` on CompiledView is the compiled SHAPE form and must be untouched by this.
+        expect(typeof withIt.form).toBe('function');
+
+        clearCompileCache();
+        const without = compileView('v-form-none', {
+            irVersion: 'ir-1.2', kind: 'vertex', metaclasses: ['State'], shape: { form: 'rect' },
+        });
+        expect(without.formSpec).toBeNull();
+    });
+
+    it('does not add the form to the dependency set or to the cross paths', () => {
+        clearCompileCache();
+        const c = compileView('v-form-deps', view('plain'));
+        expect(c.dependencySet).toEqual([]);
+        expect(c.crossPaths).toEqual([]);
+        expect(c.channels).toBeUndefined();
+    });
+
+    it('changes irHash, so a form edit cannot return a stale compile from the cache', () => {
+        const a = irHash(view('plain'));
+        const b = irHash(view('card'));
+        expect(a).not.toBe(b);
+
+        // And the cache keyed on it hands back the new value for the same view id.
+        clearCompileCache();
+        expect(compileView('v-form-cache', view('plain')).formSpec).toEqual({ theme: 'plain' });
+        expect(compileView('v-form-cache', view('card')).formSpec).toEqual({ theme: 'card' });
     });
 });

@@ -14,10 +14,17 @@ function rect(x: number, y: number, width = 180, height = 80): NodeRect {
 const side = (h: string | undefined) => (h ?? '').split('-')[0];
 
 describe('computeGeometricAnchorsForAllEdges — geometry-only side recalc (Step B)', () => {
-    it('Case A layout: Family left-of-center, both Members to the right → father/mother = right/left', () => {
+    it('Case A layout: Family left-of-center, both Members to the right → source side is right, entry on the near face', () => {
         // Discovery Q5 Case A/C final layout: Family(100,300), Member_0(600,100), Member_1(600,500).
         // On these post-layout positions the source side must be `right` (targets are to the right),
         // not the frozen grid-time `left` that produced the observed U-turn.
+        //
+        // Il lato d'ingresso non e' piu' `left`: dal 2026-08-27 il criterio e' il minimo
+        // di svolte, e su questa diagonale l'ingresso dal lato vicino costa **una**
+        // svolta (570px) contro le due della Z frontale (520px). Misurato:
+        // right->bottom e right->top, entrambi 1 svolta. L'intento originario del test
+        // — il lato d'uscita segue la geometria post-layout, niente U-turn — regge
+        // invariato ed e' quello che le prime due asserzioni continuano a presidiare.
         const rects = new Map<string, NodeRect>([
             ['Family', rect(100, 300)],
             ['M0', rect(600, 100)],
@@ -31,9 +38,10 @@ describe('computeGeometricAnchorsForAllEdges — geometry-only side recalc (Step
         const result = computeGeometricAnchorsForAllEdges(edges, rects);
 
         expect(side(result.get('father')!.sourceHandle)).toBe('right');
-        expect(side(result.get('father')!.targetHandle)).toBe('left');
         expect(side(result.get('mother')!.sourceHandle)).toBe('right');
-        expect(side(result.get('mother')!.targetHandle)).toBe('left');
+        // M0 sta in alto: si entra dal suo fondo. M1 sta in basso: si entra dalla cima.
+        expect(side(result.get('father')!.targetHandle)).toBe('bottom');
+        expect(side(result.get('mother')!.targetHandle)).toBe('top');
     });
 
     it('vertical arrangement → bottom/top by dominant axis (no lateral U)', () => {
@@ -155,6 +163,9 @@ describe('computeBestAnchorsWithContext — same-side U gate on frontal saturati
         // (floor(80/10) - 1), not 4 — a taller node legitimately holds more before
         // the U becomes a legitimate escape.
         // With top/bottom also full, the least-penalised option is the same-side U.
+        // Dal 2026-08-27 il cancello non e' piu' una penale di punteggio ma un veto
+        // sul candidato frontale (DenyFn): fra i pari merito rimasti vince `top->top`,
+        // che e' comunque una U ed e' piu' corta della U laterale di prima.
         const { rects, edges } = denseHub(7);
         const res = computeAnchorsWithHysteresis(edges, rects, edges);
         expect(isU(res.get('HT')!)).toBe(true);
@@ -188,9 +199,13 @@ describe('computeBestAnchorsWithContext — :498 self-match fix (S4b Step B)', (
         expect(isU(res.get('e')!)).toBe(false);
     });
 
-    it('a genuine inheritance+reference pair still routes the reference same-side (invariant)', () => {
-        // With a real different-type edge (inheritance) on the same pair, the reference
-        // edge must keep the same-side U convention.
+    it('a genuine inheritance+reference pair routes the reference frontally, not on a U', () => {
+        // La regola «tipo diverso sulla stessa coppia» imponeva qui la U
+        // (right->right). Ritirata il 2026-08-27: su nodi affiancati quella U
+        // collassava per collinearita' in una retta che attraversava il corpo del
+        // target — misurato, `hits=1`. Il minimizzatore, che scarta i tracciati dentro
+        // i corpi, sceglie l'accoppiamento frontale; l'ereditarieta' resta sulla sua
+        // convenzione top/bottom e i due archi non si contendono lo stesso lato.
         const rects = new Map<string, NodeRect>([
             ['A', rect(0, 0)],
             ['B', rect(600, 0)],
@@ -200,6 +215,11 @@ describe('computeBestAnchorsWithContext — :498 self-match fix (S4b Step B)', (
             { id: 'ref', source: 'A', target: 'B', type: 'instanceRef', sourceHandle: 'right-0', targetHandle: 'right-0' },
         ];
         const res = computeAnchorsWithHysteresis(edges, rects, edges);
-        expect(isU(res.get('ref')!)).toBe(true);
+        expect(isU(res.get('ref')!)).toBe(false);
+        expect(side(res.get('ref')!.sourceHandle)).toBe('right');
+        expect(side(res.get('ref')!.targetHandle)).toBe('left');
+        // L'ereditarieta' non si muove: convenzione intoccabile.
+        expect(side(res.get('inh')!.sourceHandle)).toBe('top');
+        expect(side(res.get('inh')!.targetHandle)).toBe('bottom');
     });
 });

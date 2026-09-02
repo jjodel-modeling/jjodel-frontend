@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { useNodes } from '@xyflow/react';
 import type { AnchorConfig, AnchorSide } from '../types';
 import { MAX_HANDLES_PER_SIDE, sideCapacity } from '../utils/portDistribution';
+import { chooseEdgeSides, type SidePair } from '../utils/edgeRouting';
 
 const SIDES = ['top', 'right', 'bottom', 'left'] as const;
 type Side = (typeof SIDES)[number];
@@ -116,25 +117,28 @@ function deconflictBidirectionalEdges(
     return result;
 }
 
-// Angular dead-zone thresholds (radians)
-const DEG_30 = Math.PI / 6;
-const DEG_60 = Math.PI / 3;
-
 /**
- * Computes the best anchor pair using angular dead-zone logic.
+ * Computes the best anchor pair.
  *
- * - Overlap on X axis → force vertical routing
- * - Overlap on Y axis → force horizontal routing
- * - angle < 30° → strongly horizontal
- * - angle > 60° → strongly vertical
- * - 30°–60° (dead zone) → keep current sides if available, else nearest-side
+ * Dal 2026-08-27 la scelta e' quella di `edgeRouting.chooseEdgeSides`: si valutano
+ * tutti e sedici gli accoppiamenti sul tracciato che il router produrrebbe davvero e
+ * vince quello con meno svolte, a parita' il piu' corto, scartando i tracciati che
+ * entrano nei corpi dei due nodi.
+ *
+ * Sostituisce la classificazione angolare con dead zone 30°-60°. Quella dead zone
+ * congelava i lati precedenti e, senza lati precedenti, li faceva ripiegare entrambi
+ * su `right` (il default di `getBaseSide(null)`): l'accoppiamento `right → right`
+ * misurato il 2026-08-27, cioe' la U che gira attorno al nodo di destinazione. La
+ * stabilita' che la dead zone dava e' ora il margine di miglioramento di
+ * `chooseEdgeSides`, che pero' non puo' ripiegare su un accoppiamento che nessuno ha
+ * scelto: senza `current` vince sempre la geometria.
  *
  * @param sourceRect - The source node rectangle
  * @param targetRect - The target node rectangle
  * @param isSelfReference - Whether this is a self-referencing edge
  * @param edgeType - Optional edge type for semantic preferences
- * @param currentSourceSide - Current source side (for dead-zone retention)
- * @param currentTargetSide - Current target side (for dead-zone retention)
+ * @param currentSourceSide - Lato sorgente corrente (soglia di miglioramento)
+ * @param currentTargetSide - Lato destinazione corrente (soglia di miglioramento)
  */
 function computeBestAnchors(
     sourceRect: NodeRect,
@@ -154,60 +158,13 @@ function computeBestAnchors(
         return { sourceHandle: 'top', targetHandle: 'bottom' };
     }
 
-    // Reference: angular dead-zone approach
-    const dx = targetRect.centerX - sourceRect.centerX;
-    const dy = targetRect.centerY - sourceRect.centerY;
-
-    // Overlap detection: do the node projections overlap on each axis?
-    const overlapX = !(sourceRect.x + sourceRect.width < targetRect.x ||
-                       targetRect.x + targetRect.width < sourceRect.x);
-    const overlapY = !(sourceRect.y + sourceRect.height < targetRect.y ||
-                       targetRect.y + targetRect.height < sourceRect.y);
-
-    // Nodes overlap on X → force vertical
-    if (overlapX && !overlapY) {
-        if (dy > 0) return { sourceHandle: 'bottom', targetHandle: 'top' };
-        return { sourceHandle: 'top', targetHandle: 'bottom' };
-    }
-
-    // Nodes overlap on Y → force horizontal
-    if (overlapY && !overlapX) {
-        if (dx > 0) return { sourceHandle: 'right', targetHandle: 'left' };
-        return { sourceHandle: 'left', targetHandle: 'right' };
-    }
-
-    // Angular classification
-    const angle = Math.atan2(Math.abs(dy), Math.abs(dx));
-
-    let sourceSide: Side;
-    let targetSide: Side;
-
-    if (angle < DEG_30) {
-        // Strongly horizontal
-        sourceSide = dx > 0 ? 'right' : 'left';
-        targetSide = dx > 0 ? 'left' : 'right';
-    } else if (angle > DEG_60) {
-        // Strongly vertical
-        sourceSide = dy > 0 ? 'bottom' : 'top';
-        targetSide = dy > 0 ? 'top' : 'bottom';
-    } else {
-        // Dead zone (30°–60°): keep current if available
-        if (currentSourceSide && currentTargetSide) {
-            sourceSide = currentSourceSide;
-            targetSide = currentTargetSide;
-        } else {
-            // No prior state — use nearest-side
-            if (Math.abs(dx) >= Math.abs(dy)) {
-                sourceSide = dx > 0 ? 'right' : 'left';
-                targetSide = dx > 0 ? 'left' : 'right';
-            } else {
-                sourceSide = dy > 0 ? 'bottom' : 'top';
-                targetSide = dy > 0 ? 'top' : 'bottom';
-            }
-        }
-    }
-
-    return { sourceHandle: sourceSide, targetHandle: targetSide };
+    // Reference: minimo di svolte, poi lunghezza, sui sedici accoppiamenti.
+    const chosen = chooseEdgeSides(sourceRect, targetRect, {
+        current: currentSourceSide && currentTargetSide
+            ? { sourceSide: currentSourceSide, targetSide: currentTargetSide }
+            : undefined,
+    });
+    return { sourceHandle: chosen.sourceSide, targetHandle: chosen.targetSide };
 }
 
 /** Edge shape consumed by computeAnchorsWithHysteresis */
@@ -339,61 +296,33 @@ function computeAnchorsWithHysteresis(
             continue;
         }
 
-        // Different-type same-pair rule: if an edge of a different type (e.g. inheritance)
-        // exists between the same two nodes, force same-side routing (right→right or left→left)
-        const hasDifferentTypeOnPair = edges.some(
-            e => e.id !== edge.id &&
-                 ((e.source === edge.source && e.target === edge.target) ||
-                  (e.source === edge.target && e.target === edge.source)) &&
-                 (e.type || 'reference') !== edgeType
+        // Reference con entrambi i capi auto: la scelta e' quella di
+        // `computeBestAnchorsWithContext` (minimo di svolte, poi lunghezza,
+        // occupazione solo a spareggio), filtrata dalla soglia di miglioramento.
+        //
+        // Cade qui la regola «tipo diverso sulla stessa coppia», che forzava la U
+        // quando fra i due nodi c'era gia' un'ereditarieta': la motivazione era
+        // «invece di girare attorno a entrambi i nodi», ma la U misurata il
+        // 2026-08-27 su nodi affiancati collassava dentro il corpo del target. Il
+        // minimizzatore, che scarta i tracciati dentro i corpi, la sostituisce.
+        const edgeContext = contextEdges || edges as unknown as EdgeContext[];
+        // L'id serve ancora, ma per un'altra ragione: la scansione della coppia per
+        // «tipo diverso» non esiste piu' (era li' che nasceva l'auto-riconoscimento
+        // di un arco M1 'instanceRef', il self-match di :498), e oggi identifica
+        // l'arco perche' non si conti da solo nell'occupazione dei lati.
+        //
+        // La coppia corrente entra nella stessa chiamata: la soglia di miglioramento
+        // sostituisce la dead zone angolare. Si cambia lato solo se il nuovo
+        // accoppiamento ha meno svolte, o a parita' di svolte e' piu' corto oltre il
+        // margine; sotto la soglia si resta dove si e', che e' cio' che tiene fermi i
+        // lati durante un trascinamento.
+        const best = computeBestAnchorsWithContext(
+            sourceRect, targetRect, edge.source, edge.target,
+            edgeType, edgeContext, edge.id,
+            { sourceSide: currentSource.side as Side, targetSide: currentTarget.side as Side },
         );
-
-        let finalSourceSide: AnchorSide;
-        let finalTargetSide: AnchorSide;
-
-        if (hasDifferentTypeOnPair) {
-            // Count lateral occupancy for both nodes (excluding self-refs and edges between this pair)
-            const sideOcc: Record<'right' | 'left', number> = { right: 0, left: 0 };
-            for (const e of edges) {
-                if (e.source === e.target || e.id === edge.id) continue;
-                if ((e.source === edge.source && e.target === edge.target) ||
-                    (e.source === edge.target && e.target === edge.source)) continue;
-                for (const s of ['right', 'left'] as const) {
-                    if (e.source === edge.source && getBaseSide(e.sourceHandle) === s) sideOcc[s]++;
-                    if (e.target === edge.source && getBaseSide(e.targetHandle) === s) sideOcc[s]++;
-                    if (e.source === edge.target && getBaseSide(e.sourceHandle) === s) sideOcc[s]++;
-                    if (e.target === edge.target && getBaseSide(e.targetHandle) === s) sideOcc[s]++;
-                }
-            }
-            const bestSide: AnchorSide = sideOcc.left < sideOcc.right ? 'left' : 'right';
-            finalSourceSide = bestSide;
-            finalTargetSide = bestSide;
-        } else {
-            // Reference with both auto sides: compute best with occupancy scoring
-            // so edges from the same node prefer different sides.
-            const edgeContext = contextEdges || edges as unknown as EdgeContext[];
-            // Pass the edge's real (normalised) type and its id so the pair scan inside
-            // excludes this very edge — otherwise an M1 'instanceRef' edge self-matches
-            // the different-type rule (the :498 self-match, fixed here).
-            const best = computeBestAnchorsWithContext(
-                sourceRect, targetRect, edge.source, edge.target,
-                edgeType, edgeContext, edge.id,
-            );
-
-            // Dead-zone hysteresis: in the ambiguous 30°–60° angle range,
-            // keep the current sides to avoid constant flipping.
-            const dx = targetRect.centerX - sourceRect.centerX;
-            const dy = targetRect.centerY - sourceRect.centerY;
-            const angle = Math.atan2(Math.abs(dy), Math.abs(dx));
-
-            if (angle >= DEG_30 && angle <= DEG_60) {
-                finalSourceSide = currentSource.side;
-                finalTargetSide = currentTarget.side;
-            } else {
-                finalSourceSide = best.sourceHandle as AnchorSide;
-                finalTargetSide = best.targetHandle as AnchorSide;
-            }
-        }
+        const finalSourceSide = best.sourceHandle as AnchorSide;
+        const finalTargetSide = best.targetHandle as AnchorSide;
 
         const r: AnchorResult = {
             sourceHandle: finalSourceSide,
@@ -438,21 +367,12 @@ function computeAnchorsWithHysteresis(
     return result;
 }
 
-// Side direction vectors for geometric scoring
-const SIDE_VECTORS: Record<Side, [number, number]> = {
-    top: [0, -1],
-    right: [1, 0],
-    bottom: [0, 1],
-    left: [-1, 0],
-};
-
-// Tie-breaking: leave top free for inheritance convention
-const SIDE_PREFERENCE: Record<Side, number> = {
-    bottom: 3,
-    right: 2,
-    left: 1,
-    top: 0,
-};
+// Le due tabelle del punteggio geometrico (SIDE_VECTORS, direzioni dei lati; e
+// SIDE_PREFERENCE, spareggio bottom > right > left > top) sono state rimosse il
+// 2026-08-27 insieme al ciclo che le leggeva: la scelta dei lati non passa piu' da
+// un prodotto scalare ma dalla misura di svolte e lunghezza in `edgeRouting`, il cui
+// spareggio e' l'asse dominante. Non sono codice «apparentemente inutilizzato»:
+// erano lette solo li'.
 
 /** Minimal edge shape for occupancy context */
 interface EdgeContext {
@@ -468,10 +388,22 @@ interface EdgeContext {
  * Computes the best anchor pair considering existing edges on each side.
  * Used during edge creation to avoid crowding occupied sides.
  *
- * Algorithm:
+ * Algoritmo (dal 2026-08-27):
  * 1. Self-reference / Inheritance: same rules as computeBestAnchors
- * 2. Scoring: geometric fitness - occupancy penalty - mixed-type penalty - U-shape penalty + tie-break
- *    Candidates include both opposing pairs (Z-shape) and same-side pairs (U-shape)
+ * 2. `edgeRouting.chooseEdgeSides` sceglie per svolte e lunghezza; l'occupazione dei
+ *    lati entra **solo come spareggio** fra accoppiamenti pari merito, non come
+ *    penale che possa scavalcare la geometria.
+ *
+ * Rispetto a prima cadono tre politiche, tutte per ratifica esplicita:
+ * - la regola «tipo diverso sulla stessa coppia», che imponeva la U all'associazione
+ *   quando fra i due nodi c'era gia' un'ereditarieta'. Misurato il 2026-08-27: su
+ *   nodi affiancati quella U collassava per collinearita' in una retta che
+ *   attraversava il corpo del target;
+ * - il cancello di saturazione frontale, che ammetteva gli accoppiamenti a U solo
+ *   sopra capienza: ora i sedici accoppiamenti sono tutti candidati, e a filtrarli e'
+ *   il criterio sui corpi;
+ * - il punteggio geometrico a prodotto scalare con le sue penali, sostituito dalla
+ *   misura diretta su svolte e lunghezza.
  */
 function computeBestAnchorsWithContext(
     sourceRect: NodeRect,
@@ -481,6 +413,7 @@ function computeBestAnchorsWithContext(
     edgeType: 'inheritance' | 'reference' | undefined,
     existingEdges: EdgeContext[],
     currentEdgeId?: string,
+    current?: SidePair,
 ): { sourceHandle: string; targetHandle: string } {
     // Self-reference: fixed handles
     if (sourceId === targetId) {
@@ -492,43 +425,10 @@ function computeBestAnchorsWithContext(
         return { sourceHandle: 'top', targetHandle: 'bottom' };
     }
 
-    // Different-type same-pair rule: when an inheritance already exists between
-    // these two nodes, the association must use same-side routing (right→right or left→left)
-    // to create a clean U-shape instead of wrapping around both nodes.
-    //
-    // The edge being routed MUST be excluded from the pair scan (by id, mirroring the
-    // outer hasDifferentTypeOnPair guard). Otherwise an M1 edge whose real type
-    // ('instanceRef'/'composition') differs from the caller-passed edgeType ('reference')
-    // self-matches and takes this same-side early-return, bypassing the frontal-saturation
-    // gate — the :498 self-match. Only a genuine OTHER edge of a different type counts.
-    const hasDifferentTypeBetweenPair = existingEdges.some(
-        e => (currentEdgeId === undefined || e.id !== currentEdgeId) &&
-             ((e.source === sourceId && e.target === targetId) ||
-              (e.source === targetId && e.target === sourceId)) &&
-             (e.type || 'reference') !== (edgeType || 'reference')
-    );
-
-    if (hasDifferentTypeBetweenPair) {
-        // Count occupancy on right/left for both nodes (excluding self-refs)
-        const sideOccupancy: Record<'right' | 'left', number> = { right: 0, left: 0 };
-        for (const e of existingEdges) {
-            if (e.source === e.target) continue;
-            for (const side of ['right', 'left'] as const) {
-                if (e.source === sourceId && getBaseSide(e.sourceHandle) === side) sideOccupancy[side]++;
-                if (e.target === sourceId && getBaseSide(e.targetHandle) === side) sideOccupancy[side]++;
-                if (e.source === targetId && getBaseSide(e.sourceHandle) === side) sideOccupancy[side]++;
-                if (e.target === targetId && getBaseSide(e.targetHandle) === side) sideOccupancy[side]++;
-            }
-        }
-        // Pick the side with less occupancy, prefer right on tie
-        const bestSide = sideOccupancy.left < sideOccupancy.right ? 'left' : 'right';
-        return { sourceHandle: bestSide, targetHandle: bestSide };
-    }
-
-    const dx = targetRect.centerX - sourceRect.centerX;
-    const dy = targetRect.centerY - sourceRect.centerY;
-
-    // Build occupancy info for source and target nodes
+    // Occupazione per lato, su entrambi i nodi. Non decide piu' la scelta: la usa
+    // `chooseEdgeSides` per spareggiare fra accoppiamenti identici su svolte,
+    // lunghezza e sporgenza — cosi' due archi che partono dallo stesso nodo con la
+    // stessa geometria si distribuiscono su lati diversi.
     const sourceSideInfo: Record<Side, { count: number; hasInheritance: boolean }> = {
         top: { count: 0, hasInheritance: false },
         right: { count: 0, hasInheritance: false },
@@ -568,94 +468,56 @@ function computeBestAnchorsWithContext(
         }
     }
 
-    // Frontal side pair by dominant axis (vertical-dominant on ties, matching
-    // computeOptimalHandles / deconfliction). The same-side U is only a legitimate
-    // escape once this frontal side is physically full; below saturation the
-    // occupancy penalty alone must not be allowed to flip an edge onto a U — that
-    // produced the observed wrap-around (side-selection case B).
+    // I lati che l'arco in esame occupa gia': nello spareggio non deve contarsi da
+    // solo, altrimenti un arco isolato vedrebbe occupato il proprio lato e lo
+    // eviterebbe. Nel conteggio di capienza invece si conta, perche' li' la domanda
+    // e' se il lato regge anche lui — ed e' la semantica di prima, invariata.
+    const self = currentEdgeId === undefined
+        ? undefined
+        : existingEdges.find(e => e.id === currentEdgeId && e.source !== e.target);
+    const selfSourceSide = self?.source === sourceId ? getBaseSide(self.sourceHandle) : undefined;
+    const selfTargetSide = self?.target === targetId ? getBaseSide(self.targetHandle) : undefined;
+
+    // Un arco in piu' su un lato pesa il doppio della sola presenza di
+    // un'ereditarieta': a parita' di affollamento si preferisce il lato senza.
+    const occupancy = (pair: SidePair): number => {
+        const src = sourceSideInfo[pair.sourceSide];
+        const tgt = targetSideInfo[pair.targetSide];
+        const own = (selfSourceSide === pair.sourceSide ? 1 : 0) + (selfTargetSide === pair.targetSide ? 1 : 0);
+        return (src.count + tgt.count - own) * 2 + (src.hasInheritance ? 1 : 0) + (tgt.hasInheritance ? 1 : 0);
+    };
+
+    // Capienza fisica del lato frontale (per asse dominante, verticale a parità):
+    // resta l'unica cosa che sopravanza la geometria. Sopra capienza l'accoppiamento
+    // frontale viene negato e l'arco cerca altrove — è il cancello introdotto con
+    // `sideCapacity` (2f58de915) e qui preservato, tradotto da penale di punteggio a
+    // veto sul candidato. Esattamente la capienza ci sta ancora: il confronto è
+    // stretto, come prima.
     let frontalSrc: Side;
     let frontalTgt: Side;
-    if (Math.abs(dy) >= Math.abs(dx)) {
-        if (dy >= 0) { frontalSrc = 'bottom'; frontalTgt = 'top'; }
+    if (Math.abs(targetRect.centerY - sourceRect.centerY) >= Math.abs(targetRect.centerX - sourceRect.centerX)) {
+        if (targetRect.centerY - sourceRect.centerY >= 0) { frontalSrc = 'bottom'; frontalTgt = 'top'; }
         else { frontalSrc = 'top'; frontalTgt = 'bottom'; }
     } else {
-        if (dx > 0) { frontalSrc = 'right'; frontalTgt = 'left'; }
+        if (targetRect.centerX - sourceRect.centerX > 0) { frontalSrc = 'right'; frontalTgt = 'left'; }
         else { frontalSrc = 'left'; frontalTgt = 'right'; }
     }
-    // Saturated when the frontal side already holds more than a full side's worth
-    // of edges at either endpoint — i.e. this edge would overflow it. Exactly the
-    // capacity still fits, so it is NOT saturated (strict >).
-    //
-    // The capacity is the PHYSICAL one — how many anchors fit along that side at
-    // the minimum spacing — not the fixed pool size. Before, this was the third
-    // and last disagreeing notion of "full" in the codebase: portDistribution
-    // counted per role against a constant, this counted both roles against the
-    // same constant, and the geometry counted endpoints against the side length.
-    // They now share one policy (sideCapacity); MAX_HANDLES_PER_SIDE keeps its own
-    // meaning, the size of the pre-allocated DOM pool. The count here stays
-    // role-blind on purpose: a physical side is shared by both roles.
+    // Saturato quando il lato frontale tiene gia' piu' di un lato pieno d'archi a uno
+    // dei due capi. Esattamente la capienza ci sta ancora (confronto stretto), e il
+    // conteggio resta cieco al ruolo: un lato fisico e' condiviso dai due ruoli.
     const frontalSaturated =
         sourceSideInfo[frontalSrc].count > sideCapacity(frontalSrc, sourceRect) ||
         targetSideInfo[frontalTgt].count > sideCapacity(frontalTgt, targetRect);
+    const deny = frontalSaturated
+        ? (pair: SidePair) => pair.sourceSide === frontalSrc && pair.targetSide === frontalTgt
+        : undefined;
 
-    // Score each candidate pair — geometric fitness vs occupancy
-    const candidates: Array<{ sourceSide: Side; targetSide: Side }> = [
-        // Opposing pairs (Z-shape routing)
-        { sourceSide: 'right', targetSide: 'left' },
-        { sourceSide: 'left', targetSide: 'right' },
-        { sourceSide: 'bottom', targetSide: 'top' },
-        { sourceSide: 'top', targetSide: 'bottom' },
-    ];
-    if (frontalSaturated) {
-        // Same-side pairs (U-shape routing) — admitted only when the frontal side
-        // is over capacity, so a crowded-but-not-full frontal side keeps the edge
-        // on a Z-shape (or a top/bottom spread) instead of wrapping into a U.
-        candidates.push(
-            { sourceSide: 'right', targetSide: 'right' },
-            { sourceSide: 'left', targetSide: 'left' },
-        );
-    }
-
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    const nx = dist > 0 ? dx / dist : 0;
-    const ny = dist > 0 ? dy / dist : 0;
-
-    let bestScore = -Infinity;
-    let bestCandidate = candidates[0];
-
-    for (const candidate of candidates) {
-        // Geometric score: alignment of side directions with node-to-node vector (0-100)
-        const [sx, sy] = SIDE_VECTORS[candidate.sourceSide];
-        const srcDot = sx * nx + sy * ny;
-        const [tx, ty] = SIDE_VECTORS[candidate.targetSide];
-        const tgtDot = -(tx * nx + ty * ny);
-        const geoScore = ((srcDot + tgtDot) / 2 + 1) * 50;
-
-        // Occupancy penalty: prefer less crowded sides (30 per edge to overcome geometric gap)
-        const srcCount = sourceSideInfo[candidate.sourceSide].count;
-        const tgtCount = targetSideInfo[candidate.targetSide].count;
-        const occPenalty = (srcCount + tgtCount) * 30;
-
-        // Mixed-type penalty: avoid putting reference on side with inheritance
-        const mixedPenalty =
-            (sourceSideInfo[candidate.sourceSide].hasInheritance ? 25 : 0) +
-            (targetSideInfo[candidate.targetSide].hasInheritance ? 25 : 0);
-
-        // Same-side penalty: U-shape paths are longer, prefer Z-shape when possible
-        const sameSidePenalty = candidate.sourceSide === candidate.targetSide ? 5 : 0;
-
-        // Tie-breaking: prefer bottom > right > left > top (source-weighted for Z-shape routing)
-        const tieBreak = SIDE_PREFERENCE[candidate.sourceSide] * 0.15 + SIDE_PREFERENCE[candidate.targetSide] * 0.05;
-
-        const totalScore = geoScore - occPenalty - mixedPenalty - sameSidePenalty + tieBreak;
-
-        if (totalScore > bestScore) {
-            bestScore = totalScore;
-            bestCandidate = candidate;
-        }
-    }
-
-    return { sourceHandle: bestCandidate.sourceSide, targetHandle: bestCandidate.targetSide };
+    // `current` porta qui la soglia di miglioramento: la decisione se muoversi e
+    // quella su dove muoversi stanno nella stessa chiamata, ed e' l'unico modo perche'
+    // il veto di capienza possa scavalcare l'inerzia (un lato frontale saturo va
+    // lasciato anche quando la geometria da sola direbbe di restare).
+    const chosen = chooseEdgeSides(sourceRect, targetRect, { occupancy, deny, current });
+    return { sourceHandle: chosen.sourceSide, targetHandle: chosen.targetSide };
 }
 
 /**

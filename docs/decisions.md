@@ -38,6 +38,30 @@ citare l'id con la data. Le decisioni sostituite si spostano in "Superate", con 
   (b) citata dal memo del 2026-08-22; confermata a voce il 2026-08-24.
 - **RC-10** (2026-08-24) — Chi trova citato un documento inesistente lo dichiara e procede sul
   resto; una decisione che poggiava solo su quel documento si rifà, non si ricostruisce.
+- **RC-11** (2026-09-01) — **Le deroghe a una regola numerata si dichiarano nel giro e si sanano
+  ex-post.** Chi supera una soglia (regola 19, i 5 file) non si ferma se il perimetro è la
+  conseguenza diretta di quanto il prompt ha autorizzato: elenca i file con cosa cambia in
+  ciascuno nel referto, lo ripete nel campo `Out-of-scope changes` della entry, e il reviewer
+  sana o rifiuta a valle. Sanata così CRUD2 Fase 2, 7 file (referto §7.5): la coppia
+  componente + foglio di stile accoppiato conta come **unità logica**, perché aggiungere un
+  controllo significa aggiungerne la regola. **Non è un precedente**: la soglia resta 5 e resta
+  contata per file, e la deroga vale per quel giro soltanto.
+- **RC-12** (2026-09-01) — **La rotazione del log sposta verbatim, nell'ordine del file attivo.**
+  Le voci che escono da `docs/claude-code-log.md` si appendono in coda a
+  `docs/claude-code-log-archive.md` **così come sono e nell'ordine che avevano**, sotto una nota
+  di rotazione datata: mai riassunte, mai riordinate, mai riscritte. Riordinare è modificare, che
+  è un'operazione diversa dalla rotazione. Le inversioni interne pre-esistenti restano e si
+  dichiarano nella nota. Precedenti: `cc802fea2` e `c54526650`. La prosa dei batch più vecchi
+  dell'archivio descrive un blocco invertito: è superata da questa clausola, e i batch già
+  scritti non si toccano.
+- **RC-13** (2026-09-01) — **Una corsia per giro, e l'albero è condiviso.** Le regole operative
+  della concorrenza fra corsie stanno in `CLAUDE.md` §6.4, che questa clausola iscrive senza
+  duplicare: una corsia per giro, docs e codice mai nello stesso commit, `git add` per pathspec,
+  lo staged altrui intoccabile, **niente `git stash` su albero condiviso**, rotazione del log in
+  corsia esclusiva. Nasce da un incidente misurato: uno `stash push -- <paths>` con dentro un
+  file non tracciato fallisce **in silenzio**, e il `pop` che segue apre lo stash sbagliato —
+  7 file in conflitto da uno stash del 2026-07-28
+  (`discovery_2026-09-01_irf1_annotation_subscription.md` §14).
   Generalizza la clausola §8 del memo del 2026-08-22 a ogni documento; confermata a voce il
   2026-08-24.
 
@@ -1884,6 +1908,918 @@ cascata di `Dummy.get_delete` non raggiunge gli archi M1 di un `DObject` cancell
 'end'/'start'` è un no-op (`Dummy.ts:142-144`) e il loro `model` punta alla `DReference`, non
 all'oggetto. In A è chiuso localmente dentro `_removeSingletonInstances` (archi, poi vertice, poi
 oggetto); resta aperto per ogni cancellazione di `DObject` che non passa da `syncDeleteVertex`.
+(g) `useJjomSync.ts:670` e `:764` chiamano `isSingletonSuppressed(objId)` con un id di `DObject`
+contro un Set di id di `DVertex`: sempre falso, mascherato dal `continue` precedente. Entra nel
+fronte (β) di R-SGL-10.
+
+**R-SGL-10** (2026-08-26, Alfonso) — **Perimetro del commit B.** Report:
+`docs/discovery/discovery_2026-08-26_singleton_reference_select.md`. (1) B è solo ramo IR: il ramo
+nativo di `ObjectNode` non ha righe reference (`:387`, solo attributi), quindi con un viewpoint
+classic la reference verso un singleton nascosto resta non assegnabile. (2) Tipo singleton-conforme:
+classe singleton, oppure classe con `concreteSubclasses.length > 0` tutti singleton (mai per
+vacuità). Candidati: istanze conformi al tipo (`conformsToRefTarget`), metaclasse singleton, **stesso
+M1** dell'oggetto (`DClass.instances` è piatto). (3) Il write path è un entry point nuovo
+`syncSetReferenceValue(vertexId, featureName, targetObjectId | null, 'replace' | 'append')` sulla
+forma canonica `slot.values = [...]`: `.value =` è un no-op sugli slot vuoti (misura del
+2026-07-20, `EditorV2.tsx:1897`). (4) Lo stato «nascosti» viaggia come `showEdgeLabels`: mirror in
+EditorV2 (blocco `:635-666`, filtrato per `modelId`, risemina con `useEffect` su `modelid`) ed
+`EditorContext`, insieme al Set dei tipi conformi (derivato una volta da `modeInfo`) e a `modelId`.
+Mai `getMetaclassInfo` per render, mai `localStorage` dentro `viewpoint/ir/`. (5) Due passi di undo
+(valore, poi arco da `useM1ReferenceEdges`) accettati: è il comportamento del pannello Slots, e
+l'alternativa metterebbe un creatore dentro la transazione (§3.3 di `CLAUDE.md`). (6) **Perimetro
+(α)**: B scrive il valore e basta. L'incoerenza della soppressione in `useJjomSync` (archi non
+filtrati in incrementale `:1302`, nessun `setEdges` nel ramo `hide`, archi esclusi in init che non
+tornano al `show`) è pre-esistente e diventa il fronte **(β)**, critical zone con LIR, da aprire
+subito dopo B. (7) Popover in portal su `body` con posizione calcolata (precedenti in-repo:
+`TextStyleField.tsx`, `NodeProblemOverlay.tsx`), non `overflow: visible` condizionale. (8)
+Componente nuovo `InlineObjectSelect`, clone di `InlineEnumSelect` sulle classi
+`.inline-type-select*` condivise; `InlineEnumSelect` non si tocca; unificazione a debito. (9) Una
+riga in `irStyle.ts`, `.ir-row__value--select { cursor: pointer }`, in aggiunta all'hover di
+`--editable`.
+
+## Serie R-STR — livello 2 Structure e precedenza della view (ratifiche 2026-08-29)
+
+**R-STR-1** (2026-08-29, Alfonso) — **`structure` e' una chiave annidata su `VertexViewIR`**,
+non otto chiavi piatte su `ShapeSpec`: questi campi sono struttura, non geometria del simbolo.
+I gruppi seguono la tabella dei campi (`name.*`, `compartment.*`). Additivo-opzionale, nessun
+bump di `irVersion`, nessuna migrazione. Il saved IR non ha VersionFixer (R-B9): le grafie
+sono definitive.
+
+**R-STR-2** (2026-08-29, Alfonso) — **La tabella capability e' un modulo a se**
+(`viewpoint/ir/structureCapabilities.ts`), non campi su `ShapeDescriptor`: rendering e
+authoring restano descrittori distinti. Un'opzione che il Symbol non supporta e' **assente,
+non disabilitata**, e ogni assenza e' dichiarata — riga di motivo sui soli campi
+symbol-dipendenti, piu' una riga riassuntiva `bi-eye-slash` a fondo tab nelle due famiglie
+(dal Symbol / dalla scelta corrente). Un valore persistito non piu' ammesso resta nell'IR e
+non viene renderizzato: mai riscritture silenziose.
+
+**R-STR-3** (2026-08-29, Alfonso) — **Mappa widget->renderer**: `color`->`swatch`,
+`textarea`->`code`, `select`->`enumChip`, `checkbox`->`boolean`, `number`->`numberUnit`,
+`text`->`truncatedText`, `reference`/`link`->`refPill`. `date`, `progress` e gli stati
+(`dash`, `collection`, `brokenRef`) non hanno widget: solo il metamodello puo' chiederli.
+
+**R-STR-4** (2026-08-29, Alfonso) — **Definizione di «copre»**: la riga di provenienza nel
+Form tab e il gradino 0 della ladder compaiono SOLO quando il widget dichiarato dalla view
+mappa su un renderer **diverso** da quello dichiarato dal metamodello, o su nessuno. Se
+coincidono e' accordo, non override: nessun badge, chip fermo su `auto`, vince il gradino 1.
+Le due superfici leggono e scrivono la stessa chiave (`FormSpec.widgets`): nessuno stato
+duplicato di provenienza.
+
+**R-STR-5** (2026-08-29, Alfonso) — **La view vince nel FORM, non sul canvas.** E' la lettura
+corretta di `FormSpec`, che per sua definizione descrive «how the same view renders as a FORM
+of editable widgets instead of a symbol on the canvas»; il Turno 7c del handoff e' stato
+allineato a questa lettura, non il contrario. Quindi: gradino 0 con tag «vince nel form»,
+gradino 1 visibile con la sua evidenza e badge `overridden by current view`, chip a `view`, e
+footer che mostra il renderer **del canvas** con la sua etichetta.
+
+**R-STR-7** (2026-08-29) — **Il gradino 0 e il chip `view` sono irraggiungibili sul canvas.**
+`ObjectNode` monta il `RendererInspector` solo nel ramo nativo (`ObjectNode.tsx:728`,
+`if (irResolution && !irDelegated)`), e un ir che porta `form` — o `structure` — non supera
+l'hash strutturale di `isMigratedDefaultView`, quindi non e' mai delegato: `viewWidget`
+all'unico punto di mount e' sempre `undefined`. La superficie viva della precedenza 7c e' il
+**Form tab**. Il gradino 0 va o rimosso, o abilitato montando l'inspector anche sul ramo IR.
+Misurato il 2026-08-29 con controllo positivo (ir migrato nudo -> delegato; lo stesso con
+`form` -> no; con `structure` -> no) e sul canvas vero con `_tmp_rung1_probe.ts`, che prova
+anche il contrario di cio' che si sospettava: il gradino 1 **e'** alimentabile in sessione
+(`DAnnotation.new('jjodel/renderer=…', [], attrId, true)` -> chip da `auto` a `declared`,
+gradino 1 vincente), e lo stub di `parseDAnnotation` costa solo il round-trip `.ecore`.
+Stesso regime di R-STR-6: registrato, non aperto.
+
+**Sciolta (2026-08-29), verso: montato sul ramo IR.** Il `RendererInspector` e' ora montato
+anche nel ramo `irResolution && !irDelegated`, e il gradino 0 e' raggiungibile sul canvas.
+Due correzioni alla diagnosi originaria, misurate: (1) `viewWidget` **non** era il problema —
+a `ObjectNode.tsx:1281-1284` leggeva gia' `irResolution?.compiled.formSpec?.widgets?.[…]`,
+la sorgente giusta; (2) la causa vera era l'assenza di un **punto d'ingresso**, perche' i due
+call site di `openInspector` stavano entrambi sotto il return anticipato di `:728`, insieme a
+`openInspector` e `resetViewWidget` stessi. La riga IR guadagna la doppia gesture del ramo
+nativo (Alt+click piu' bottone `bi-sliders` hover-reveal); `IRNodeContent` alza il solo nome
+della feature (prop opzionale su `IRNodeContentProps`) e il ponte nome->`SlotRow` e'
+`findRowByFeatureName` in `nodes/valueRenderer.ts`. Verificato a schermo con
+`_tmp_rstr7_rung0.ts`, 10/10: chip `view`, gradino 0 vincente, gradino 1 col badge
+`overridden by current view`, Reset del footer che toglie la chiave e chip che torna a
+`declared`. R-STR-6 (la vittoria della view sulla **riga del canvas**) resta chiusa: questa
+ratifica apre la superficie della ladder, non cambia chi vince il rendering della riga.
+
+**R-STR-6** (2026-08-29, Alfonso) — **Debito registrato, non aperto.** Estendere la vittoria
+della view alla riga del canvas richiede `decide` esportato da `nodes/valueRenderer.ts` e la
+decisione di riga cambiata in `nodes/ObjectNode.tsx`. E' un fronte separato: non si apre
+finche' non e' deciso esplicitamente.
+
+**Sciolta (2026-08-30), verso: la view vince anche sul canvas.** Aperta su chiamata dal
+prompt `docs/prompts/PROMPT_rstr6_canvas_override.md`. **La diagnosi registrata sopra era
+sbagliata nella seconda meta', e la misura l'ha spostata di file** (referto:
+`docs/discovery/discovery_2026-08-30_rstr6_canvas_override.md`). `ObjectNode` non aveva
+bisogno di una decisione diversa: aveva bisogno di un input che non riceveva, e il difetto
+stava altrove. Misurato sul fixture RowViewSmoke:
+
+- il ramo NATIVO ha la libreria — **dieci** renderer distinti a schermo — ma non vede mai un
+  `formSpec`: un ir che porta `form` non supera l'hash di `isMigratedDefaultView` (R-STR-7) e
+  finisce al ramo IR, e l'unica altra porta, `viewId === IR_DEFAULT_OBJECT_VIEW_ID`, non e'
+  scrivibile — `fromPointer('Pointer_IRDefaultObjectView')` non restituisce nulla;
+- il ramo IR vede il `formSpec` (l'inspector lo legge li') ma **non ha alcuna libreria**: per
+  ognuno degli otto widget della mappa R-STR-3 la riga restava `renderer: none`, testo nudo,
+  mentre nello stesso istante il chip diceva `view` e il pannello dipingeva la libreria.
+
+Quindi il debito non era una precedenza da cambiare, era un ponte mancante fra i due rami.
+Il fix: `SlotShape.viewRenderer` come **gradino 0 di `detectValueRenderer`** — sotto i
+guardiani di stato (`dash`/`collection`/`brokenRef`/`refPill`, che R-STR-3 non mappa su
+nessun widget) e sopra la regola 1 — piu' `renderViewWidget?(featureName)`, callback
+opzionale che `IRNodeContent` usa nel segmento `value` solo se restituisce qualcosa, e che
+`ObjectNode` implementa col ponte per nome di R-STR-7. Una sola decisione, nessuna seconda
+nel componente. La mappatura widget->renderer resta in `widgetRenderer.ts` e arriva **gia'
+mappata**: leggerla dal decisore chiuderebbe un ciclo di import. Un nome fuori vocabolario
+(`refPill`, da `reference`/`link`) **cade** invece di svuotare la riga.
+
+**Il gate e' la presenza di un widget dichiarato**, quindi nessun progetto esistente cambia
+resa. Verificato a schermo, `_tmp_rstr6_verify.ts` 13/13: senza override la riga IR e'
+identica a prima e il ramo nativo rende `swatch` a inizio e fine giro; col Reset si torna al
+valore di partenza. **Confine dichiarato**: sul ramo IR il gradino 1 continua a non
+dipingere — una `jjodel/renderer=…` da sola lascia il testo nudo. Estenderlo cambierebbe la
+resa di ogni view autorata senza che nessuno l'abbia chiesto, ed e' un fronte a parte.
+
+**Via (A) di tre, scelta e non ratificata da altri.** Una sessione parallela ha misurato lo
+stesso stato (referto gemello `discovery_2026-08-30_3_rstr6_canvas_override.md`, commit
+`ec42652af`, misure concordi) e si e' fermata prima del diff, mettendo a ratifica tre vie:
+(A) il gradino 0 nel solo segmento `value`, attivo dove la view dichiara un widget; (B) tutta
+la libreria sul segmento `value`, che cambierebbe la resa di **ogni** nodo IR esistente e
+vorrebbe un opt-in per view, cioe' una chiave nuova sull'IR senza VersionFixer (R-B9);
+(C) chiudere R-STR-6 come non desiderabile. **E' stata implementata (A)**: e' l'unica che il
+prompt autorizza da se'. (B) e' una decisione di prodotto sulla natura del compartimento IR —
+superficie di testo dell'autore contro superficie renderizzata — e (C) contraddice la premessa
+del prompt. Il costo di (A) e' il confine dichiarato qui sopra, ed e' esattamente cio' che
+separa (A) da (B). Chi voglia (B) trovi nei due referti che cosa costa.
+
+**R-STR-6 (B)** (2026-08-30, Alfonso) — **Il compartimento IR e' una superficie RESA, non
+testo d'autore.** Ratifica di design che scioglie la product decision che i due referti di (A)
+avevano messo a registro, e chiude il costo dichiarato di (A): il segmento `value` di
+`IRNodeContent` passa per la **ladder completa** di `detectValueRenderer`, la stessa chiamata
+del ramo nativo, cosi' i due rami non possono divergere su come si vede un valore. La resa
+piatta di prima era **il buco**, non la baseline da proteggere — e' il design del Livello 3
+(`Instance Node Proposal`).
+
+**Blast radius contato prima del diff**, che e' il dato che questa ratifica aspettava:
+**24 righe su 24**, cioe' il 100% del campione (12 feature x 2 istanze su `AllNine` con il
+viewpoint IR Demo). Per gradino: tipo 12, ladder colore/enum 4, nome/pavimento 4, gradino 1
+(annotazione) 2, guardia di stato 2. Il 100% e' vero e va letto per quello che e': oggi quel
+segmento non rende NULLA della libreria, quindi cambia ogni riga che la libreria sappia
+disegnare. Non e' il 100% dei progetti reali — e' il 100% dell'unico campione di view IR che
+il repo contiene (i tre stati di `npm run smoke` sono progetti vuoti). Il limite e' dichiarato
+in §1 del referto, non aggirato. Riverificato dopo il diff con la stessa sonda: righe che
+cambiano **0**, e i renderer distinti sul ramo IR passano da `["none"]` a nove.
+
+**Nessun feature flag e nessuna chiave IR nuova.** Il flag era ammesso «se serve prudenza»,
+per un giro: non usato, perche' acceso cambia tutto lo stesso e spento spedirebbe al buio
+proprio cio' che si chiedeva di chiudere; la prudenza che comprerebbe l'ha gia' comprata la
+misura, e il rollback e' il revert di un commit solo. La scelta resa/testo **non e' per-view**,
+quindi non c'e' chiave da persistere e la questione del VersionFixer (R-B9) non si pone.
+
+**Il motore non e' stato toccato**: l'ordine dei gradini resta quello scritto da (A) in
+`detectValueRenderer` (guardie di stato -> gradino 0 -> gradino 1 -> tipo -> nome), e il diff
+si limita a farlo arrivare a schermo togliendo una condizione al ponte. Referto:
+`docs/discovery/discovery_2026-08-30_rstr6b_full_ladder.md`. Verifica 16/16, con il test che
+(A) non poteva passare: `guard` (`@renderer=code`) rende `code` su **entrambi** i rami, e il
+Reset di un override torna al **gradino 1**, non al testo.
+
+**R-STR-5 e' superata nella sua delimitazione**, non nella sua lettura di `FormSpec`: la
+copy dell'inspector che la incarnava — tag «winning rule **in the form**» e inciso «· on the
+canvas» — e' rimossa, perche' esisteva per tenere distinte due risposte che ora coincidono.
+Il selettore `.inode-inspector__result-scope` resta orfano in `rendererInspector.scss`, non
+rimosso (Regola 9).
+
+## Serie R-FORM — instance manager e motore form (ratifiche 2026-08-29/30)
+
+Report di Fase 1: `docs/discovery/discovery_2026-08-29_instance_manager_fase1.md`.
+
+**Nota di riconciliazione (2026-08-30).** Le referenze di design (`CRUD Manager
+Simulation.dc.html`, i Turni 10-13 del proposal, `form-engine-contract.md`) non erano nel
+repo quando la discovery e la slice 2a sono state misurate — cercate due volte con
+controllo positivo, il 29 e il 30, RC-10 applicata entrambe le volte. **Sono atterrate a
+meta' della slice**, in `e70265529`, da un'altra sessione. Lette subito dopo: **nulla
+contraddice la slice 2a**, e le cinque domande aperte del contratto trovano risposta nel
+report. Le risposte sono qui sotto, e una di esse va **contro** la direzione che il
+contratto proponeva a titolo di ipotesi.
+
+**R-FORM-1** (2026-08-29, Alfonso) — **Il manager e' superficie sorella del canvas**: terzo
+tipo di tab del progetto, non tab del rail, e vede il modello nudo — struttura dal
+metamodello (attributi, reference, containment, cardinalita', enum). Il viewpoint attivo
+contribuisce i soli widget, via `FormSpec` e la precedenza esistente (`valueRenderer`).
+
+**R-FORM-2** (2026-08-29, Alfonso) — **Portabilita' come vincolo di prima classe**: il motore
+form e' un layer puro senza dipendenze da store, D-graph o React-jjodel — contratto
+(`metamodelShape`, `instanceData`, `formSpec`) verso form model ed eventi astratti. Dentro
+jjodel un adapter D-graph, fuori un adapter JSON; il debito `DTypedElement` vive
+nell'adapter, mai nel motore. *Misura del 2026-08-29*: il taglio esiste gia' per la
+**lettura** — `irReadCtx.ts` (interfaccia `ReadCtx` + backend draw, **zero** `^import`) e
+`irReadCtxLproxy.ts` (64 righe, importa il joiner e **inietta** l'impuro). E' la forma da
+imitare. `ReadCtx` **non basta**: copre valori e identita', non la shape del metamodello,
+non l'enumerazione delle istanze, non la scrittura. Il contratto e' quindi `ReadCtx` + una
+`ShapeCtx` + una `WriteCtx`; `FormSpec` e' gia' puro e serializzabile
+(`irTypes.ts:246-266`) e non richiede nulla.
+
+**R-FORM-3** (2026-08-29, Alfonso) — **Editing surface per metaclasse dichiarata nella view**
+(`form | diagram`), due consumatori: il canvas (nodo-form contro symbol) e il manager
+(tabelle contro diagramma embedded scopato al sottoalbero). Fuori da jjodel `diagram`
+degrada sempre a `form`: la surface e' presentazione, mai dato. *Misura del 2026-08-29*:
+il diagramma scopato **non esiste** — `EditorV2Props` ha il solo `modelid`, nessuno
+scoping, nessuna palette ristretta, e `NestedView` non e' quello (e' l'editor delle view,
+gia' irraggiungibile: `discovery_2026-08-23_nestedview_ui_morta.md`). L'ibrido 13a e' quindi
+**Fase 3 o oltre**, e fino ad allora `diagram` degrada a `form` anche **dentro** jjodel,
+come stato transitorio dichiarato.
+
+### Le sette domande della Fase 1
+
+**Q1(b)** (2026-08-30, Alfonso) — **Il rail destro e' nascosto sotto il manager**, con un
+attributo proprio sull'idioma del tab Documentation (`body[data-active-tab="manager"]`,
+kill-switch in `properties-with-tree-view.scss`). Valore proprio e non `'documentation'`:
+nascondono la stessa cosa per ragioni diverse, e un valore condiviso farebbe muovere in
+silenzio l'uno al cambiare dell'altro. Il manager **non** emette `EDITOR_TYPE_CHANGE`: non
+e' un tipo di editor, e' un tab che porta la propria superficie di dettaglio.
+
+**Q2** (2026-08-30, Alfonso) — **Il soggetto del tab e' il modello M1**, non la metaclasse:
+un tab per M1, tutte le metaclassi dentro. E' il soggetto che il canvas ha gia', e la parita'
+di soggetto fra le due superfici e' cio' che rende R-FORM-1 vero e non solo dichiarato.
+Conseguenza: id `mgr_${model.id}`, e `closeTabsForEntity` chiude un tab, non N.
+
+**Q3** (2026-08-30, Alfonso) — **Sonda prima, poi `get_addObject`**, e non nella slice 2a.
+Quel getter apre una `TRANSACTION` con un creatore annidato (`DObject.new3`,
+`LModelElement.tsx:7134`) piu' un `setTimeout` per i valori (`:7153`): e' provato dal
+ContextMenu **con** un grafo aperto, e il manager crea senza grafo. Non decidibile
+staticamente.
+
+**Q4** — **sciolta il 2026-08-30**, verso in «Slice 2b» piu' sotto. Il dominio di enum e reference senza istanza (`MetaclassAttribute` porta
+il nome del tipo e `isEnum`, non l'id, e i letterali oggi arrivano da
+`LValue.get_validTargets`, che vuole uno slot vivo). Estrarre un
+`validTargetsFor(feature, modelId)` e' l'unica via che non duplica, ma tocca
+`LModelElement.tsx`, che e' core (Regola 5). Blocca la slice 2b, non la 2a.
+
+**Q5** (2026-08-30, Alfonso) — **La `surface` di R-FORM-3 e' una chiave nuova su
+`VertexViewIR`**, accanto a `form` e `structure`, additiva-opzionale, senza bump di
+`irVersion` e senza migrazione — R-STR-1 alla lettera. Non su `FormSpec`. Fuori dalla
+slice 2a.
+
+**Q6** — **sciolta il 2026-08-30** da R-FORM-4. Nome e sede del motore: proposta `frontend/src/jjform/`, pari grado di
+`jjel/`/`jjtl/`/`jjscript/`, con `index.ts` e `SPEC.md`, e l'invariante «zero import da
+`joiner/`, `redux/`, `react`, `components/`» dichiarata nel SPEC. Costoso cambiarlo dopo:
+entra in una superficie pubblica.
+
+**Q7** (2026-08-30, Alfonso) — **`syncDeleteObject` si cancella**, in un chore a parte.
+Fatto: commit `b9be0674e`. Era la vecchia via raw, senza cascade, e restava una trappola per
+assonanza per chi avrebbe scritto il delete del manager.
+
+### Le cinque domande aperte di `form-engine-contract.md`, con la misura
+
+1. **«La shape si deriva tutta dal joiner senza passare dal renderer?»** — **Quasi.**
+   `MetaclassInfo` (`useEditorMode.ts:43-79`, accessore non-hook `getMetaclassInfo`) e' gia'
+   serializzabile e copre `attrs`/`refs`/`children` con cardinalita' e `containment`;
+   `containedIn` si inverte da `references[].containment`. **Mancano tre cose**: i letterali
+   di enum (c'e' il flag `isEnum`, non l'id del tipo, quindi la chiave `enums` del
+   `metamodelShape` non e' derivabile — e' Q4), `derived`/`changeable`, e l'indice delle
+   reference entranti. Il `metamodelShape` v0 non chiede le ultime due.
+2. **«Il widget risolto arriva dall'adapter o il motore rifa' la precedenza?»** — **Il
+   motore.** Il contratto propone l'adapter («dentro jjodel conviene…»); la misura dice il
+   contrario, ed e' il reperto migliore della Fase 1: la precedenza **e' gia' un modulo
+   puro**. `nodes/valueRenderer.ts` (683 righe) e `ir/irReadCtx.ts` hanno **zero**
+   `^import`; `ir/widgetRenderer.ts`, che implementa R-STR-3/R-STR-4, ne ha due e sono
+   tipi. Passare il widget gia' risolto dall'adapter significherebbe lasciare fuori dal
+   motore l'unica parte che e' gia' portabile.
+3. **Operazioni e attributi derivati fuori dal v0** — coerente col repo: `MetaclassInfo`
+   non porta ne' le operazioni ne' `derived`, e la lettura di `derived`/`changeable` oggi
+   passa dal proxy della metafeature (`useFormWidgets.ts:236`), cioe' da un'istanza viva.
+4. **Attributi multivalore fuori dal v0** — **attenzione, non e' gratis**: il repo li
+   gestisce gia' (`upperBound !== 1` -> `treatment: 'list'`, `addSlotValue`,
+   `appendSlotValue`), e `clearSlotValue` lascia un **buco** invece di accorciare l'array
+   (`formWrite.ts:73-100`, motivazione misurata). Un motore v0 che li esclude deve
+   dichiarare che il suo `instanceData` non e' round-trip con quello che jjodel produce.
+5. **Naming e collocazione** — Q6: `frontend/src/jjform/`, pari grado di `jjel/`, che e'
+   il precedente misurato (zero import da joiner/react/redux).
+
+**Q8** (2026-08-30) — **sciolta lo stesso giorno**, verso in «Slice 2b». Nasce dalla riconciliazione. Il Turno 10b («Intero
+modello — master-detail») descrive la colonna sinistra come **outline di containment del
+modello a partire dai root**, con la creazione nell'albero («Add Port», «Add root
+element»). La slice 2a implementa invece un **catalogo per metaclasse** (metaclassi ->
+istanze -> form), che e' cio' che il prompt della slice specificava alla lettera. Le due
+navigazioni non sono la stessa cosa: l'outline mostra la struttura del modello, il catalogo
+la sua estensione per tipo, e solo il primo ha un posto naturale dove appendere la create
+di 2c. Non risolta qui: la slice consegnata segue il prompt, e la scelta e' di prodotto.
+
+### Slice 2b — ShapeCtx e la tabella (ratifiche 2026-08-30)
+
+**Q4, sciolta** (Alfonso) — **Via adapter, senza toccare il core.** I letterali di enum si
+risolvono da `idlookup` per l'id della DAttribute (`shapeDraw.enumeratorOf` ->
+`enumShapeOf`), non estraendo un `validTargetsFor` da `LValue.get_validTargets`
+(`LModelElement.tsx:7853`), che e' core (Regola 5). **Costo dichiarato e non simulato**:
+`get_validTargets` scarta anche i candidati che chiuderebbero un ciclo di contenimento, e
+quel filtro e' PER-ISTANZA — legge la catena dei padri dell'oggetto. Non ha significato per
+una metaclasse, quindi e' **assente** dalla shape, non approssimato: la shape dice cosa il
+metamodello permette, quali di quei candidati una particolare istanza possa prendere e' una
+domanda del momento della scrittura. La eredita la slice 2c. A registro anche nel contratto,
+punto aperto 6.
+
+**Q8, sciolta** (Alfonso) — **Il catalogo per metaclasse resta.** La colonna sinistra elenca
+ogni metaclasse, non le sole root del Turno 11a («Collections = root-instantiable
+metaclasses»): una metaclasse contenuta senza collezione propria sarebbe irraggiungibile.
+L'outline di containment del Turno 10b resta **navigazione alternativa futura**, a registro
+qui e non aperta: e' la sede naturale della create di 2c, e quando quella slice si apre la
+scelta fra le due va rifatta con quel peso. `jjform.collectionClasses(shape, rootOnly)`
+porta gia' il parametro, spento di default, perche' la lettura 11a resti esprimibile senza
+riscrivere la colonna.
+
+**R-FORM-4** (2026-08-30) — **Sede del motore: `frontend/src/jjform/`, aperta per il solo
+tipo.** Pari grado di `jjel/`, che e' il precedente misurato (zero import da
+joiner/react/redux). L'invariante e' **zero import**, non «niente React»: `shape.ts` e
+`index.ts` non importano nulla, come `irReadCtx.ts` e `valueRenderer.ts`. Il motore ci arriva
+quando `WriteCtx` e' deciso; la slice 2b vi mette `MetamodelShape`, `ShapeCtx`, `IncomingRef`
+e tre funzioni derivate. Scioglie Q6.
+
+**R-FORM-5** (2026-08-30) — **L'adapter e' in due file, e la ragione e' un test.** La prima
+stesura teneva tutto in `shapeAdapter.ts`, che importa `store` dal barrel del joiner: il
+barrel raggiunge monaco, monaco dereferenzia `window` a import time, e la suite unitaria
+moriva all'import con `window is not defined` — lo stesso modo in cui muoiono le nove suite
+gia' rosse. Da qui `shapeDraw.ts`, la meta' **senza import** (classificazione dei tipi, flag
+`derived`/`changeable`, letterali di enum, walk di `pointedBy`), e `shapeAdapter.ts` come
+meta' impura (`buildMetamodelShape`, `makeShapeCtx`). E' la stessa divisione di
+`irReadCtx` / `irReadCtxLproxy`, e va mantenuta: chi aggiunge una funzione pura all'adapter
+la mette nel primo file, o la rende non testabile.
+
+**R-FORM-6** (2026-08-30) — **La precedenza la fa il motore, non l'adapter.** Chiude il punto
+aperto 2 del contratto **contro** l'ipotesi che il contratto avanzava. Ragione misurata:
+`valueRenderer.ts` e `irReadCtx.ts` hanno zero `^import`, `widgetRenderer.ts` due e sono
+tipi, `rowViewAnnotations.ts` zero. La precedenza e' gia' l'unica parte portabile del
+pacchetto; passare all'adapter il widget gia' risolto la lascerebbe fuori dal motore.
+L'adapter passa le annotazioni, non il verdetto. La copia repo del contratto e' allineata.
+
+**R-FORM-7** (2026-08-30) — **I multivalore sono nel v0**, contro il punto aperto 4. Non
+sarebbe stato gratis escluderli: il repo li gestisce gia', e `formWrite.clearSlotValue`
+lascia un **buco** invece di accorciare l'array (motivazione misurata nel suo docstring). Un
+`instanceData` che ignorasse i buchi non farebbe round-trip con quello che jjodel produce.
+`instanceTable.slotShapeFor` li salta esplicitamente, nel conteggio e nel testo.
+
+**R-FORM-8** (2026-08-30) — **«Referenced by» conta le sole reference non-containment.** Il
+walk (`shapeDraw.referencedBy`) restituisce **ogni** puntatore entrante col flag
+`composition`, e chi conta filtra. Un proprietario non e' un referente: contarlo metterebbe
+un 1 su ogni istanza contenuta del modello e renderebbe la colonna muta. La forma del walk e'
+misurata, non dedotta (`scripts/smoke/_tmp_pointedby.ts`, 2026-08-30): `pointedBy` porta
+anche `.father`, `.instances`, `.objects`, `.model` e una voce nuda `objects` senza prefisso,
+e le sole sorgenti che sono riferimenti sono `idlookup.<id>.values[.<n>]`. Una voce per
+PUNTATORE, non per istanza: il dialogo di 12d deve riassegnarne uno per uno.
+
+**R-FORM-9** (2026-08-30) — **La cascata di containment la fa l'ADAPTER: il core non la
+fa.** Corregge una riga di questa stessa pagina, scritta come assunzione e mai misurata.
+`Dummy.get_delete` scende su `lDeleted.children`; per un `DObject` sono i suoi slot
+(`LModelElement.tsx:6439`), e `LValue` **non** dichiara `get_children_idlist`, quindi
+eredita quello di base (`:727`) che restituisce le sole `annotations`. Un `DObject`
+contenuto sta nei `values` dello slot, non fra i `children` di nessuno. Misurato sul
+fixture RowViewSmoke con `cfg` acceso a containment: cancellare il contenitore porta i
+`DObject` da 7 a 6 — muore **solo** il contenitore — e il figlio resta con un `father` che
+non risolve. E' un **orfano invisibile**: ogni lista del manager risale `father` fino a un
+`DModel`, quindi una catena rotta lo fa sparire dalle liste senza sparire dallo store.
+`deleteDraw.descendantsOf` e' la chiusura che l'adapter cancella esplicitamente, dal piu'
+profondo. Sonda `scripts/smoke/_tmp_delete_primitive.ts`, referto in
+`docs/discovery/discovery_2026-08-30_slice12d_delete.md`.
+
+**R-FORM-10** (2026-08-30, delimitata il 2026-08-30) — **La cascata toglie i puntatori
+entranti che il proxy vedeva quando e' stato avvolto.** Misurato: la cascata del core
+raggiunge `case 'values'` e fa `SetFieldAction(slot, 'values', deletedID, '-=')`, quindi
+**accorcia** l'array (`0..*` a due bersagli, cancellato quello in posizione 0:
+`len` 2 -> 1). Vale per i soli puntatori presenti in `pointedBy` **dello snapshot** su cui
+il proxy L e' stato costruito (`joiner/classes.ts:277`, `proxy.ts:397`,
+`classes.ts:2108`): un riferimento scritto **dopo** il wrap sopravvive alla delete e resta
+appeso. `deleteAdapter.runDeletes` avvolge subito prima di cancellare e sta quindi nel caso
+pulito; il fixture `RowViewSmoke`, che avvolge in una fase precedente, e' il contro-esempio
+e produce `brokenRef`. La cardinalita' **non** entra nella regola: misurata 2x2, le due
+righe non cambiano fra `0..1` e `0..*`. Cade quindi la generalita' implicita della prima
+stesura («un delete lascia uno slot vuoto») e la conclusione che ne discendeva («non c'e'
+nessun puntatore appeso da rendere»), che il fixture falsifica a comando. Restano
+ratificate le due conseguenze gia' scritte. (1) Il «ref rotto» della regola 2 di 12d e'
+l'altra meta' di cio' che la sezione 2 del contratto chiama tale — «id assente **o ""**»
+— cioe' un ref `required` rimasto senza valori, che `instanceTable` rende ora come
+`missing` invece che come trattino. (2) `clear` e `dirty` sono due scritture **diverse**:
+`clearSlotValue` lascia un buco (R-FORM-7), la cascata accorcia. Su un monovalore
+coincidono, su un multivalore no, ed e' per questo che le opzioni sono tre e non due.
+Referto: `docs/discovery/discovery_2026-08-30_6_rform10_controesempio.md`.
+
+**R-FORM-11** (2026-08-30) — **Se il piano ha scritto prima, le delete sono differite.**
+Nello stesso tick le due operazioni atterrano nell'ordine sbagliato e un valore si perde:
+misurato: un `clear` di `allNine_broken.cfg[0]` seguito subito dalla delete del bersaglio
+lasciava lo slot a `[null]` invece che a `[null, Config_two]`. Le stesse due primitive con
+un'attesa in mezzo danno lo stato giusto, e restano corrette anche dopo la delete. La
+dilazione e' `U.UpdatingTimer * 2`, la stessa che `LValue.addObject` usa per il proprio
+seeding e che CLAUDE.md §9.2 prescrive. Un piano `dirty` non scrive nulla prima e **non**
+e' differito.
+
+**R-FORM-12** (2026-08-30) — **Le scritture bulk NON sono differite, e la differenza con
+R-FORM-11 e' di natura.** Misurato (`_tmp_12bc_measure.ts`): tre `setValueAtPosition`
+sulla stessa feature di tre istanze diverse, in un solo tick, **0 perse su 3**; le stesse
+dilazionate, identiche. Il pericolo di R-FORM-11 sono **due operazioni su UNO slot** (una
+scrittura posizionale, poi una cascata che rimuove per valore dallo stesso array); un bulk
+sono N operazioni su N slot **distinti**. Un ritardo che nessuno ha misurato e' un ritardo
+che nessuno potra' piu' togliere.
+
+**R-FORM-13** (2026-08-30) — **Il filtro containment-loop sul percorso di EDIT e' del
+core, e non va spostato.** Il picker che `IRForm` monta legge `slot.validTargetOptions` →
+`get_validTargets`, che per un `LValue` e' l'override di `LModelElement.tsx:7871` col
+filtro dentro. Misurato per contrasto su una reference auto-referenziale (`kids : AllNine`
+composition, l'unico modo per cui il contenitore sia candidato **per tipo**): 2 opzioni
+prima della catena, **1 dopo**, il contenitore sparito, il lecito rimasto; su una
+reference dello stesso tipo ma NON containment, 3 opzioni col contenitore offerto.
+`createDraw.candidatesFor` resta quindi **inerte** anche dopo 12b/12c, e sostituirla al
+core sarebbe barattare una garanzia verificata con una nostra. Chiude, misurandola, la
+riga del contratto §6 che dava questo percorso come «quello che l'accendera'».
+
+**R-FORM-14** (2026-08-30) — **Nella multi-form spariscono identita' E containment, e
+sparire vuol dire assenti.** Il design (`Instance Node Proposal.dc.html`, Turno 12, 12b)
+dice «Name and children are hidden», non «disabled»: un controllo grigio invita il gesto
+che poi rifiuta. Le esclusioni portano il **motivo**, scritto. La regola e' applicata
+**due volte**, in `multiModel` e di nuovo in `bulkPlan`: una UI che nasconde un controllo
+e' una convenzione, un piano che non emette l'evento e' una garanzia. Il prompt della
+slice chiedeva la sola identita'; il containment viene dal design, che e' l'autorita'.
+
+**R-FORM-15** (2026-08-30) — **Uno stato del contratto e' UNA decisione, e la prendono
+tutte le superfici insieme.** La tabella del manager distingueva `missing` (required
+rimasto senza valori) da `broken` (pointer che non risolve); il nodo del canvas no —
+required-vuoto e mai-scritto dipingevano lo stesso trattino, perche' `SlotShape` portava
+`isBroken` ma non `required` e `missingRequired` viveva nei soli due file della tabella
+(misurato, `discovery_2026-08-30_6_rform10_controesempio.md` §5). La divergenza non era
+un difetto del renderer: era una **seconda copia della regola**, una guardia piazzata
+davanti allo switch della cella. Ora `SlotShape` porta `required` (derivata dalla
+cardinalita' — `lower >= 1`, mai persistita, e mai vera per una feature `derived`), la
+guardia sta in `detectValueRenderer` fra `isBroken` e `isEmptySlot`, e le due superfici
+la **ricevono** come ogni altro stato (precedente R-STR-6 (B)): zero decisioni nei
+componenti. `TableCell.missingRequired` resta un campo, ma e' letto dalla decisione.
+L'ordine e' quello e non un altro: un pointer appeso dice piu' del vuoto che pure e',
+quindi `brokenRef` vince su uno slot required rotto. La resa del nodo e' la stessa
+famiglia di `broken` — stesso rosso, glifo e parola diversi — perche' sono le due meta'
+di cio' che la sezione 2 del contratto chiama «id assente o ""». Misurato a schermo,
+`_tmp_missing_verify.ts`: nativo, IR e tabella danno la stessa classificazione sui tre
+stati, e il contrasto (`lowerBound` 1 -> 0 -> 1) riporta il trattino.
+
+**R-WCX-1** (2026-08-30) — **La scrittura del motore e' un contratto di sei primitive,
+indirizzate per `(id, chiave, indice)`.** `jjform/writeCtx.ts` — set/clear/append,
+`setName`, `create`, `delete` — con l'implementazione dell'host fuori
+(`editor-v2/hooks/writeCtxLproxy.ts`), la stessa divisione di
+`irReadCtx`/`irReadCtxLproxy` e per la stessa ragione: l'interfaccia non porta nessun
+tipo dell'host. Il ctx **non consegna mai uno slot**: un proxy tenuto nel tempo scrive in
+uno slot morto e si dichiara riuscito (misurato, S3). La slice ha RACCOLTO, non riscritto:
+ogni metodo e' una funzione che esisteva — `formWrite` per i valori e il nome,
+`createAdapter.createInstance` per la create, il corpo del ciclo di `runDeletes` per la
+delete — e la sonda `_tmp_s4_verify.ts` misura le vie vecchie invariate (21/21 ALL GREEN).
+
+**R-WCX-2** (2026-08-30) — **`setName` e' una primitiva a se', e il contratto dice
+perche'.** Il nome ha un doppio legame (CLAUDE.md §3.12): il setter L scrive `DObject.name`
+E lo slot identita', mentre la direzione inversa dev'essere una `SetFieldAction` diretta o
+il ciclo si richiude. `setValue(id, 'name', 0, …)` scriverebbe il solo slot e le due meta'
+divergerebbero. Sta nel TIPO, non in un commento, perche' il primo adapter che
+«semplifica» la riunirebbe a `setValue`.
+
+**R-WCX-3** (2026-08-30) — **Cio' che resta dell'host e' un OBBLIGO dichiarato, non
+codice del motore.** Contratto §5.0: il filtro containment-loop del picker (R-FORM-13), la
+rete in scrittura di `setValueAtPosition` — **incompleta**, la conformita' di tipo e'
+commentata a `LModelElement.tsx:7652` e va dichiarata come limite, non come garanzia —, il
+buco contro l'accorciamento per valore (R-FORM-7 / R-FORM-10), il doppio legame
+(R-WCX-2), l'obbligo di sequenza (R-FORM-11/12: i millisecondi sono dell'host, l'ordine e'
+del contratto), `forceCreation`, e la cascata che e' del piano e non di `delete`
+(R-FORM-9). Un adapter che ne salta uno perde dati **in silenzio**, ed e' la ragione per
+cui l'elenco sta nel contratto e non nei docstring.
+
+**R-WCX-4** (2026-08-30) — **La convergenza dei verdetti si decide misurando i
+consumatori, e la misura dice di NON unificare.** Tre forme portavano `{ok, reason}`:
+`UniquenessVerdict {ok, reason?, collidingWith?}` (S1a), la risoluzione per nome
+`{ok, value?, reason?, candidates?}` (S1b) e `WriteResult {ok, changed, reason?}` (S2).
+Misurato: `collidingWith` ha due lettori e trasporta `LObject[]`, cioe' proxy vivi —
+metterlo su `WriteResult` darebbe a `jjform/` il suo primo tipo dell'host; `candidates`
+appartiene a una verdetto di RISOLUZIONE (`jjscript/.../instance.ts:146`,
+`jjel/evaluator/context.ts:209`) e non sta su nessun percorso di scrittura. Quindi
+`WriteResult` resta a tre campi, le estensioni restano dove sono, e cio' che converge e'
+`{ok, reason}` — la parte che attraversa il contratto. Zero consumatori cambiati, zero
+copy cambiata: l'alternativa avrebbe aggiunto due campi che nessuno scrittore popola.
+
+**R-WCX-5** (2026-08-30) — **L'offerta sta sul contratto della SCRITTURA, e si chiede quando
+si apre il picker.** `validTargets(id, key) -> TargetOption[]` entra in `jjform/writeCtx.ts`,
+non su un ReadCtx affiancato: cio' che enumera non e' «il modello» ma gli ARGOMENTI LECITI di
+`setValue`/`appendValue` su quel `(id, chiave)`, e il suo criterio di correttezza e' il
+rifiuto dello stesso host — un adapter che implementasse le scritture senza di lei offrirebbe
+proprio i bersagli che poi rifiuta, e separarla renderebbe quella divergenza esprimibile.
+Totale (`[]`, mai un verdetto), piatta con `group?` opzionale (il raggruppamento e' una resa,
+`useFormWidgets.groupTargets`), e implementata **delegando**: `writeCtxLproxy.validTargetsFor`
+legge `slot.validTargetOptions -> get_validTargets`, dove il filtro containment-loop di
+R-FORM-13 resta. Misurato per contrasto sul vivo (`_tmp_s5_verify.ts`, 13/13): `kids`
+(containment) offre 2 candidati e non il contenitore, `mate` (stesso tipo, non containment)
+ne offre 4 e lo offre; l'ordine e gli id attraverso il contratto sono **identici** al vecchio
+percorso dal proxy. Due MOMENTI, una sorgente: al render per lo stato dei controlli,
+all'apertura del popover per la lista — perche' una form resta aperta per minuti. Misurato
+sull'albero pre-S5 con la stessa sonda (`_tmp_s5_probe.ts`): un candidato creato mentre la
+form e' aperta non tocca nessuno slot del soggetto, la firma di `useIRFormView` non lo vede, e
+il picker del **rail** riaperto mostrava ancora `["Config_main"]`; il **manager**, che
+ri-renderizza per conto suo, era gia' fresco. Il difetto era quindi di UNA superficie su due,
+e la correzione toglie la dipendenza dalla superficie. Chiude il punto 6 del contratto e
+l'indirizzamento aperto da S3: `FormFieldDescriptor.slot` — zero lettori misurati — e' rimosso.
+
+**R-DEL-4** (2026-08-30) — **La rete di `get_delete` copre anche `values`, e la verita' di
+fondo e' `idlookup`, non `pointedBy`.** `Dummy.get_delete` portava gia' una rete per il
+`pointedBy` stale (`common/Dummy.ts:104-116`, il commento la dichiara) ma per i soli
+`father.objects` / `father.features`, cioe' il containment: gli slot di riferimento M1
+restavano scoperti, ed e' esattamente il modo di guasto delimitato da R-FORM-10 — proxy
+avvolto prima della scrittura, `case 'values'` mai raggiunto per quello slot, puntatore
+appeso. Ora, **e solo se il morente e' un `DObject`** (nessun altro tipo puo' stare in uno
+slot di riferimento, quindi i `DValue` della cascata saltano interamente la scansione), la
+delete scandisce `idlookup` e fa `SetFieldAction(slot, 'values', deletedID, '-=')` su ogni
+`DValue` che tiene davvero quell'id. Stesso posto, stesso idioma, stessa scrittura del
+`case 'values'`, quindi ridondante e no-op quando il ciclo delle dipendenze l'ha gia'
+sparata. **Il contratto di `undefined` e l'ordine delle scritture di R-FORM-11 non sono
+toccati**: la rete sta dentro la stessa `TRANSACTION` e nella stessa posizione relativa di
+quella `father`. Scartate le altre due vie di `discovery_2026-08-30_censimento_delete_proxy_stale.md`
+§5: la rilettura di `pointedBy` in `get__jjdependencies` tocca ogni classe L in una zona
+dove l'ordine e' delicato (resta a registro se la rete estesa non bastasse), e l'invariante
+nel costruttore del proxy e' una riscrittura del D-L. **Costo misurato prima del diff**:
+0.005 ms sull'`idlookup` da 112 voci del fixture, 0.57 ms a 10k, 4.72 ms a 50k, 23.75 ms a
+200k; end-to-end 0.33 ms per delete **intera** su 30 delete in fila. La cascata resta
+O(N x |idlookup|): sotto il migliaio di istanze e' meno di mezzo secondo, sopra va
+sorvegliata. La variante «`pointedBy` letto dallo store vivo» costa 0.0005 ms e non e'
+quadratica, ma **non e' stata scelta**: `pointedBy` e' un indice che puo' contenere voci non
+valide, e una rete che si appoggia all'indice che sta compensando non e' una rete. Resta a
+registro come uscita di sicurezza. Misurato a schermo, `_tmp_rdel4_verify.ts`, 12/12 ALL
+GREEN: il (c) del fixture passa da `dangling 1` a `dangling 0`, il percorso fresco e la
+cascata `father` sono invariati, e la matrice 2x2 di R-FORM-10 vede la colonna «stale»
+convergere a quella «fresco» in entrambe le cardinalita' — mentre lo scarto snapshot/store
+resta misurabile (`6` contro `7`), cioe' il difetto e' coperto a valle, non mascherato.
+Referto: `docs/discovery/discovery_2026-08-30_rdel4_values_safety_net.md`.
+
+### Perimetro delle slice
+
+**Slice 2a** (2026-08-30, commit `9ab7560d0`) — tab, colonna metaclassi, lista istanze,
+`IRForm` ospitato. **Non e' read-only**: ospitare `IRForm` porta con se' tutto
+`formWrite.ts`, quindi il tab edita dalla prima slice; read-only sono le sue due liste.
+**Slice 2b** — le colonne per-attributo, che e' dove nasce `ShapeCtx` e dove serve la
+risposta a Q4. **Slice 2c** — la sola create (motore `jjform/create.ts` + `createAdapter`).
+**Slice 12d** — la delete col preflight, che la 2c aveva lasciato indietro.
+**Slice 12b/12c** — la multi-selezione (motore `jjform/multi.ts` + `multiDraw`/
+`multiAdapter`) e la ricorsione inline con drill-in (`jjform/nav.ts`). L'inline resta
+**fuori** da `IRFormField`: le form annidate le monta il manager, per la stessa ragione
+per cui la barra «Add contained» non e' un bottone dentro il gruppo children.
+~~il cascade canonico gia' cancella i contenuti (`Dummy.get_delete`) e non chiede~~ —
+**falso, misurato il 2026-08-30**: vedi R-FORM-9. **Fuori dalla Fase 2**: l'estrazione in
+`jjform/` (aspetta il contratto META) e il diagramma scopato.
+
+## Serie R-S1 — una regola di uniqueness del nome M1 (ratifiche 2026-08-30)
+
+A valle del censimento `discovery_2026-08-30_s1_uniqueness_consumatori.md`, che aveva fermato
+la slice: cinque consumatori vivi risolvono un'istanza M1 per nome in modo class-agnostic, e le
+due regole in campo non erano annidate ma **ortogonali**. La scelta e' risalita al design.
+
+**R-S1-1** (2026-08-30) — **Il namespace e' quello del CORE: i fratelli dello stesso padre,
+qualunque sia la loro metaclasse.** Radice (padre = `DModel`) -> `allSubObjects`; nidificato
+(padre = la `DValue` del containment) -> gli `LObject` dello stesso slot. E' la regola che
+`nameUniqueness.getSiblingNamespace` gia' applicava al rename, al reparent e al badge, ed e'
+quella che resta: restringerla a 12a avrebbe **spento** un controllo committato e reso a schermo
+(Regola 3 di CLAUDE.md).
+
+**R-S1-2** (2026-08-30) — **Un solo verdetto, `{ok, reason}`, collocato dove entrambe le vie lo
+attraversano.** `nameUniqueness.checkNameUniqueness({father, name, excludeId?})` e' la funzione;
+la risoluzione del namespace e' espressa sul **padre** (`getNamespaceOf`) e non su un'istanza
+esistente, perche' una create l'istanza non ce l'ha ancora. `LObject.set_name` e
+`LObject.set_father` ne diventano **consumatori** a comportamento invariato (stessa frase a
+schermo), e la create smette di saltarla. Il punto d'ingresso e' `LValue.get_addObject`
+(`LModelElement.tsx:7035`), misurato e non assunto: e' definita una volta e serve **entrambi** i
+ricevitori — `LModel.addObject` per una radice, `LValue.addObject` per un contenuto — e sta nello
+stesso file di `set_name`. **Non** e' `DObject.new`/`new3`: da li' passa anche il caricamento
+(import, seeding di `ProjectEditor`, fixture), e rifiutare li' vorrebbe dire che un modello con
+duplicati preesistenti non si apre. Il gate vale sul nome **esplicito**: senza, `new3` calcola
+l'auto-nome con `defaultname`, il cui namespace per un nidificato e' **vuoto** (`LValue` non
+sovrascrive `get_children_idlist`), e gatarlo rifiuterebbe la seconda `Add` di un containment.
+La forma `{ok, reason}` anticipa `WriteResult` di S2 senza implementarlo.
+
+**R-S1-3** (2026-08-30) — **12a e' emendata: il motore form cede la sua regola per-classe.**
+Lo scope «stessa metaclasse, stesso owner» di `createDraw.siblingNames` era **ortogonale** a
+quello del core, non piu' stretto: ciascuno accetta cio' che l'altro rifiuta (§3 del censimento).
+`createAdapter.draftContext` risolve ora il **padre prospettico** e passa il namespace del core a
+`jjform.validateDraft`, che resta una **consumatrice** — la validazione anticipata nel draft e' li'
+perche' un draft deve dire NO prima che l'utente prema Create, non dopo, e non e' un secondo
+verdetto. Il messaggio non nomina piu' la metaclasse (`An element named «X» already exists here`),
+perche' descriverebbe uno scope che la regola non ha piu'. `createDraw.siblingNames` resta in file
+come query per-classe e **non va ricablata** in un controllo di uniqueness.
+
+**R-S1-4** (2026-08-30) — **La (B) globale e' respinta, e i duplicati preesistenti non si
+riscrivono mai.** Lo scope del pool `allSubObjects` di ogni modello M1 — quello che il binding di
+JjEL assume — chiuderebbe tutti e cinque i consumatori ma e' il vincolo **piu' stretto
+sull'utente**: vieterebbe due `Member` chiamati `John` in due `Family` diverse, che e' un modello
+legittimo in Families.ecore. Nessuna migrazione: i duplicati gia' nel modello si aprono, si
+leggono e si **dichiarano al primo tocco** (`detectDuplicateNames` li segnala gia' oggi), mai una
+riscrittura silenziosa del nome.
+
+**Perimetro di S1a, e cosa resta a S1b.** S1a cabla: il core, il rename, il reparent, la create
+via `addObject` (manager/2c, ContextMenu, drop classico, singleton, `examples/`), il draft del
+manager, il badge. **Restano dichiarate e non chiuse**, e sono il ramo di S1b: le tre create che
+chiamano `DObject.new` direttamente — `jjscript/executor/commands/instance.ts`, il seeding di
+`components/project/ProjectEditor.tsx`, `canvasToJjom.syncCreateObject` — piu' il ramo di
+ambiguita' dei consumatori (`findInstanceByName`, `eval.ts`). E resta fuori l'auto-nome
+(`defaultname`), che serve anche M2. Misurato a schermo, `_tmp_s1a_verify.ts`, **ALL GREEN, zero
+errori di pagina**: i due contro-esempi dell'ortogonalita' danno verdetto **identico** su create e
+rename (stesso slot classi diverse -> entrambi rifiutano; stessa classe due slot dello stesso owner
+-> entrambi accettano), il caso divergente originale non e' piu' costruibile, e il badge continua ad
+accendersi sul duplicato preesistente. Referto:
+`docs/discovery/discovery_2026-08-30_s1a_una_funzione_uniqueness.md`.
+
+
+**R-S1-5** (2026-08-30) — **I consumatori che risolvono per nome dichiarano l'ambiguita' invece
+di risolverla.** Il ramo di S1b, sui cinque consumatori del censimento. `findInstanceByName`
+(`jjscript/executor/commands/instance.ts`) torna la **lista**: un nome non e' una chiave, e il
+`.find` rispondeva «il primo» a una domanda senza risposta unica. `resolveInstanceHandle` ne fa un
+verdetto a tre esiti `{ok, value?, reason?, candidates?}` — risolto, assente, ambiguo — dove
+`candidates.length >= 2` distingue l'ambiguo dall'assente senza far leggere `reason` al chiamante.
+`delete`, `rename` e `set` (attributo, riferimento e **bersaglio** del riferimento) **rifiutano**
+sull'ambiguo: il colpo silenzioso al primo omonimo era il difetto, non un comportamento da
+proteggere. Cambia comportamento committato, ed e' voluto.
+
+Tre delimitazioni misurate, non assunte:
+
+- **L'ambiguita' e' raggiungibile solo sul ramo di fallback.** Il registro di handle e' per-id e
+  per-run ed e' consultato per primo, quindi un'istanza creata nello script non e' mai ambigua: lo
+  scenario «registry precedence» di `handleRegistry.test.ts` resta risolto **senza** che la lista
+  venga costruita. Solo le istanze pre-esistenti allo script possono esserlo.
+- **I candidati si nominano per METACLASSE, non per path di containment.** `LModel.objects` e'
+  `data.objects` (`LModelElement.tsx:5561`), cioe' le radici di **un solo** modello: ogni candidato
+  che quel lookup puo' tornare condivide lo stesso path, e stamparlo metterebbe due righe identiche
+  sotto «which one?». Il path resta il disambiguatore giusto per il pool di JjEL, che e'
+  `allSubObjects` di ogni modello M1. Una sola funzione costruisce la frase (`describeAmbiguity`),
+  perche' cinque copie della stessa frase diventano cinque frasi diverse.
+- **`elementWaiter` legge `.length > 0`, mai il valore.** Un array vuoto e' **truthy**: scritto
+  come test di verita', ogni dipendenza M1 sarebbe risultata risolta al primo poll e i comandi
+  sarebbero partiti prima che l'istanza esistesse, **senza un solo errore di compilazione**.
+  L'ambiguita' li' non e' un rifiuto: e' un'attesa, non una scrittura — due istanze col nome
+  significano che la cosa attesa e' arrivata, e *quale* fosse e' la domanda su cui rifiuta il
+  comando.
+
+Il seeding di `ProjectEditor` (`:1888, :1929, :1956`) non scrive su ambiguita' e la dichiara; lo
+slot resta vuoto e dichiarato. Misurato: quelle righe stanno dentro `handleExecuteTransformation`
+(`:1391`), il callback di esecuzione JjTL, e **non girano mai al caricamento di un progetto** —
+quindi il vincolo «i duplicati preesistenti si aprono sempre» (R-S1-4) e' soddisfatto per
+costruzione, non per concessione.
+
+**Cosa NON e' entrato, e perche'.** Il punto «binding nudo di JjEL» del prompt e' risultato **gia'
+implementato**: `buildEvalContext` non lega un nome ambiguo, registra `{count, sampleClass}`, passa
+la mappa all'evaluator (`AMBIGUOUS_INSTANCES_KEY`), che emette `kind: 'ambiguous-instance'`, e ha
+il suo test con controllo negativo (`jjel/__tests__/ambiguous-instance.test.ts`). E registrare
+`Class.Name` nella stessa mappa sarebbe stata una **scrittura morta**, misurata: l'unico lettore e'
+`evaluator.ts:231`, sul ramo **Identifier**; il ramo di accesso a proprieta' (`:513-538`) emette
+`property-not-found` e non consulta mai `ctx.ambiguousInstances`. Inoltre ogni nome che rende
+`Class.Name` ambiguo e' **gia'** nella mappa sotto il nome nudo, perche' `instances` e' un
+sottoinsieme del pool su cui `instancesByName` e' costruita. Rendere non-muto l'accesso qualificato
+richiede `jjel/` — fuori perimetro per Regola 20, e assegnato a una micro-slice separata. Quindi
+**zero diff in `eval.ts`**: §2 di `discovery_2026-08-30_s1b_ambiguita_dichiarata.md`.
+
+**Nota sulla sigla.** Il prompt di S1b chiamava questa ratifica «R-S1-3». Quando e' stato scritto,
+il registro non la conteneva ancora; S1a ha poi committato R-S1-3 con un altro significato (il
+motore form che cede la regola per-classe). Questa e' percio' **R-S1-5**, e i riferimenti nel
+sorgente puntano a questa.
+
+Misurato a schermo, `_tmp_s1b_verify.ts`, **11/11 ALL GREEN, zero errori di pagina**, sul modulo
+vero importato dal sorgente vivo (nessun mock): due omonimi costruiti come si presentano al
+caricamento (`SetFieldAction` su `data.name`, che non passa da `set_name` e quindi non incontra la
+guardia di R-S1-2); `delete CLK` ambiguo **rifiuta e non cancella nulla** (`DObject` 10 -> 10,
+entrambi vivi); `set CLK.widthPx` ambiguo **rifiuta e non scrive** (nessuno dei due slot si muove);
+e per contrasto, disambiguato, lo stesso `set` passa e scrive (`[] -> [42]`) — che e' la prova che
+la scrittura sarebbe avvenuta. Referto:
+`docs/discovery/discovery_2026-08-30_s1b_ambiguita_dichiarata.md`.
+
+
+## Serie R-GT / R-M2 — tre micro fix di core (ratifiche 2026-08-30)
+
+A valle di `discovery_2026-08-30_gettype_finestra_parser.md` e
+`discovery_2026-08-30_uniqueness_m2.md`. La misura di entrambe sta in
+`discovery_2026-08-30_micro_core_tre_fix.md`: prima e dopo, nella stessa giornata e sullo
+stesso fixture, con le sonde rigirate non modificate.
+
+**R-GT-1** (2026-08-30) — **Il gradino 3 di `get_type` non restituisce piu' il contenitore a
+una `DReference` senza tipo: restituisce `Defaults.Pointer_EOBJECT`.** E' la stessa decisione
+gia' presa a valle nel costruttore (`Constructors.DTypedElement`, ramo del rifiuto dichiarato):
+il seed era scritto in due posti e i due posti dicevano cose diverse. Il rischio sul parser
+Ecore, che il referto del 30-08 dichiarava «non misurabile da sonda», e' **misurato come
+inesistente**: `DReference.new` mette il padre al posto del tipo assente prima del costruttore,
+quindi `data.type` non e' mai falsy sul percorso del parser e il gradino 3 non scatta;
+fuori da quella finestra il censimento dei chiamanti in albero e' vuoto. `Pointer_EOBJECT` e'
+una `DClass` vera nello store (`redux/store.tsx:340`), quindi i tre getter derivati che leggono
+`.isClass` **senza guardia** ricevono la stessa forma di prima. Il ramo non-`DReference` resta
+`'Pointer_ESTRING'`. **Non** e' stata presa la forma (A2) del referto (`undefined` per
+l'assenza vera): riaprirebbe `MISSING_TYPE` ma richiede che ogni consumatore di `.type` regga
+`undefined`, e quel costo non e' misurato.
+
+**R-GT-2** (2026-08-30) — **`EcoreParser.parse` abbassa `Constructors.paused` in un `finally`.**
+L'id e' nuovo: il reperto e' §5 dello stesso referto, che il prompt di ratifica non aveva
+siglato. `finally`, mai `catch`: l'eccezione esce dal metodo come prima e il fallimento resta
+altrettanto rumoroso — misurato, e' la stessa stringa d'errore. Cio' che cambia e' il
+contagio: prima, un `.ecore` con un `eType` irrisolvibile lasciava il flag alzato per il resto
+della sessione, e da quel momento **ogni** create restava in `pendingCreation` e spariva al
+primo reload, in silenzio. La finestra copre esattamente i quattro passi che stavano fra i due
+flag; `fixObjectPointers` e `persist` restano fuori, nell'ordine, perche' girano con il flag
+gia' abbassato.
+
+**R-M2-2** (2026-08-30) — **`_impl_getByName` cerca la chiave `"$" + nome`**, che e' quella che
+i tre produttori scrivono (`U.toNamedArray`, `LPackage.get_classes`, `LPackage.get_enumerators`)
+e che la sonda legge sull'oggetto vivo, non solo nel sorgente. Vale per **entrambe** le vie: il
+colpo diretto e il giro case-insensitive, che chiedeva `'freeprobe'` a chiavi scritte
+`'$freeprobe'`. Il controllo positivo del referto — `getClassByName('$FreeProbe')` risolveva —
+si **inverte** di proposito: il `'$'` appartiene alla chiave, non al nome che il chiamante passa.
+Due precisazioni che la misura impone e che questa ratifica registra:
+- **Il gradino 2 di `get_type` non e' fra i beneficiari.** `model` e' dichiarata e mai
+  assegnata (`if (!model) this.get_model(c);` scarta il valore di ritorno), in `get_type` come
+  in `set_type`: le quattro `if (model) …` sono morte per una ragione indipendente dalla chiave,
+  misurata per discriminazione su `'EInt'`. **Dichiarato, non corretto**: assegnare `model`
+  restringerebbe il pool da globale a per-modello, ed e' una decisione di design.
+- **L'unico consumatore vivo e' `edgeCandidate.ts:59`**, e li' il comportamento e' **nuovo**: il
+  banner «Looks like an edge candidate» puo' comparire per una view con `appliableToClasses`
+  vuoto e una condizione che nomina una classe con due reference. Non distruttivo — l'`Apply`
+  resta un gesto utente — ma e' l'unica differenza a schermo della slice, e non e' stata
+  osservata a schermo (il fixture non ha view senza IR): §5.1 del referto.
+
+Il reperto gemello — `getByName2` e la chiave `$nome` scelgono duplicati **diversi** — resta
+alla slice S1-M2 e **non** e' toccato qui. Questo fix lo rende piu' visibile, non piu' grave:
+`getClassByName` passa da «non risponde mai» a «risponde con l'ultimo omonimo», cioe' diventa
+una delle scelte silenziose gia' censite invece di restare fuori dal censimento.
+
+
+## Serie R-M2U — una regola di uniqueness per i nomi M2 (ratifiche 2026-08-30)
+
+A valle di `discovery_2026-08-30_uniqueness_m2.md`, che aveva misurato **tre** regole M2
+discordanti e una create che non ne applicava nessuna. Il precedente formale e' S1a
+(`f32c5a4d3`): una regola all'incrocio delle due vie, mai due copie. Misura della slice:
+`discovery_2026-08-30_s1m2_una_regola.md` (Fase 1 + addendum di Fase 2).
+
+**R-M2U-1** (2026-08-30) — **Case-sensitive, e il quasi-omonimo si dichiara.** `Foo` e
+`foo` sono nomi diversi e leciti; la scrittura che crea la quasi-collisione la **annuncia**
+(`UniquenessVerdict.warning`, un toast di priorita' `warning`), non la rifiuta. Il rename
+di JjScript (`commands/rename.ts`) si allinea al sensitive e **smette di bypassare**
+`set_name`: `checkNameConflict` non e' stato ristretto, e' stato **rimosso**, e il comando
+scrive con `element.name = newName`, cosi' gli effetti che appartengono al setter
+(`LClass` che riemette `ClassNameChanged.<id>`, `LAttribute` che re-inferisce il tipo) non
+vanno piu' ricostruiti a mano. **Cambia comportamento committato**: `classe -> 'dupprobe'`
+con `DupProbe` in campo, che quel comando rifiutava, ora passa con un warning.
+
+**R-M2U-2** (2026-08-30) — **Il pool dei classificatori e' il METAMODELLO INTERO.** Due
+classi omonime in package diversi dello stesso metamodello **collidono**; lo stesso nome in
+un altro metamodello e' lecito. Classi ed enumeratori restano in **un solo** namespace,
+com'erano gia' dentro `pkg.children`: separarli avrebbe spento un controllo committato.
+Cambia comportamento: il cross-package omonimo, oggi accettato, e' rifiutato.
+
+**R-M2U-3** (2026-08-30) — **`DDataType` e' un namespace separato.** Una classe e un
+datatype possono condividere il nome. Il «buco» del referto — un rename di classe verso il
+nome di un datatype passa — **non e' un buco**: si chiude come comportamento **inteso**.
+Cio' che i datatype guadagnano e' un namespace proprio, che prima non avevano affatto
+(`pkg.children` non li elenca), quindi due datatype omonimi ora collidono fra loro.
+
+**R-M2U-4** (2026-08-30) — **Le feature ereditate ENTRANO nel namespace della classe: niente
+shadowing.** Un attributo che ombreggia una feature del padre e' rifiutato, e la `reason`
+**nomina il padre** (`… inherited from Class "Sup"`). Attributi, reference e operazioni
+restano un namespace solo, come nell'unione che `LClass.get_children_idlist` gia' faceva.
+
+Conseguenza misurata e **non teorica**: `useClassRemoval.collapseHierarchy` ricopia nelle
+sottoclassi le feature che stanno per perdere, e gira **prima** che la superclasse sparisca
+— quindi ogni copia risultava ombreggiata e veniva **rifiutata**, con perdita silenziosa
+delle feature alla rimozione (misurato: lista `["shLabel"]`, `addAttribute` -> `null`,
+`ownAttributes` invariati). La ricopia usa ora `D*.new` diretta, cioe' **la porta del
+caricamento**, che il disegno lascia deliberatamente non gatata perche' riproduce uno stato
+invece di proporne uno. Il gate resta sul primitivo L, dove arrivano i gesti d'utente.
+E' l'unico file oltre ai cinque del perimetro dichiarato, e sta nel log come
+`Out-of-scope changes: yes`.
+
+**R-M2U-5** (2026-08-30) — **Il gradino 2 di `get_type` resta morto, dichiarato.** Zero
+comportamento: un commento sul sito e questa riga. La ragione e' che ripararlo
+(`model` e' dichiarata e mai assegnata, R-M2-2) **restringerebbe il pool** da globale a
+per-modello, ed e' proprio il pool che R-M2U-2 ha appena reso metamodello-wide: chi
+riaprira' il punto decide il pool per primo e l'assegnazione per seconda.
+
+**R-M2U-6** (2026-08-30) — **Il badge copre M2.** `detectM2DuplicateNames` alimenta lo
+stesso registro `duplicate-name`, con la stessa forma degli M1 (chiave = id dell'elemento),
+e la firma di reattivita' di `UniquenessProblemSync` smette di scartare tutto cio' che non
+e' `DObject`. Misurato: i quattro `Concept_0` della propagazione accendono **4** voci sulle
+quattro classi giuste; un metamodello pulito lascia il registro spento.
+
+Due limiti dichiarati. Il primo e' **chiuso il 2026-08-31**; il secondo resta aperto.
+
+- **La notifica mancata** (era: «il ritardo di una scrittura»). ~~`idlookup` e' un Proxy la
+  cui enumerazione non elenca una create pendente~~ — **diagnosi falsificata**: `idlookup` e'
+  un oggetto ordinario il cui `__proto__` e' `DPointerTargetable.pendingCreation`, e il
+  `for...in` della firma **le elenca** (misurato: 122 chiavi in `for...in` contro 120
+  proprie). La causa vera e' il contrario: proprio perche' le elenca, la firma raggiungeva il
+  suo valore **finale nel tick della create**, quando le **collezioni** che lo scanner cammina
+  (`pkg.classes`, `cls.allAttributes`, `father.children`) erano ancora stantie — la scansione
+  girava a vuoto. Al commit, un tick dopo, la chiave passa dal proto alle proprie e le
+  collezioni si riempiono, ma **nessuno** dei tre campi della firma (`id`, `name`, `father`)
+  cambia: nessun rerender, effetto mai richiamato. Non un ritardo in coda, ma una **notifica
+  mancata senza limite superiore**, che la prima scrittura nominata successiva risolveva per
+  caso (misurato: registro 0 a 9 s, `detect*` a 2 nello stesso istante, firma identica prima
+  e dopo il commit). **Chiuso** saltando le chiavi non proprie nel `useSelector` di
+  `UniquenessProblemSync` (variante (b) del referto): al commit la firma cambia, e la
+  scansione a vuoto nel tick della create sparisce. Misurato sul diff, M1 e M2: due omonime
+  committate **senza alcuna scrittura successiva** accendono il registro a **2** entro 400 ms
+  (prima: 0 fino al poke); le celle con rinomina restano a 4. `includePending` resta `false`
+  — R-GT-2 intatto: cambia **quando** si riconta, non **cosa**. Referti:
+  `docs/discovery/discovery_2026-08-31_tick_fix_defaultname.md` (§badge, `0d2354da9`) e
+  `docs/discovery/discovery_2026-08-31_badge_riconciliazione.md` (§3 la causa, §5 il fix).
+- **La voce non si vede sul canvas.** Il registro e' indicizzato per id dell'**elemento**,
+  mentre `NodeProblemIndicator` e' montato con l'id del nodo ReactFlow, che e' quello del
+  **`DVertex`** — e a M1 vale lo stesso. `ConformanceProblemSync` aggira registrando sotto
+  entrambi gli id; `ClassNode` non monta affatto l'indicatore. Fuori perimetro.
+
+**Il tick-fix e' rimandato, con la sua misura.** Il duplicato di propagazione di
+`defaultname` (quattro `addClass()` in un tick -> quattro `Concept_0`) **non e' chiudibile
+nel namespace-check**: nessuna sorgente — collezione, `children`, o scansione di
+`idlookup` — puo' vedere una create dello stesso tick, perche' le collezioni si posano un
+tick dopo (vedi il limite qui sopra; il tick-fix e' poi arrivato per altra via, `e1c885d4c`).
+Misurato con la scansione eseguita **prima di ciascuna** delle quattro create:
+cinque scansioni identiche, `[[],[],[],[],[]]`. Il duplicato **strutturale** (`datatype_0`
+x2) si chiude invece come **non raggiungibile**: non esiste un `addDataType` a livello L, e
+l'unico `DDataType.new` di produzione (`api/data.ts:868`) passa un nome esplicito. Riserva:
+se un `addDataType` nascera', il gate esiste gia' per costruzione (R-M2U-3).
+
+Misurato a schermo, `_tmp_s1m2_verify.ts`, **26/26 ALL GREEN, zero errori di pagina**: i tre
+contro-esempi del referto danno verdetto **identico** su create e rename, il cross-package
+e' rifiutato, il quasi-omonimo passa **col toast**, lo shadowing e' rifiutato **col padre
+nella reason**, classe e datatype omonimi convivono, e il badge conta 4 su 4. Unita':
+`model/__tests__/m2NameUniqueness.test.ts`, **22/22**, girate anche contro **tre** versioni
+difettose del modulo (3, 2 e 2 rossi). Il cross-metamodello resta coperto dall'unita' e
+**non** dalla sonda: il fixture ha un solo metamodello, e la sonda si dichiara `SKIP`
+invece di passare a vuoto.
+
+
+## Serie R-CR2 — il batch CRUD2 / AUTO1 / TXT1 (ratifiche 2026-09-01)
+
+Cinque decisioni di merito prodotte dalle quattro corsie del 2026-09-01. Le tre di processo
+che nascono dallo stesso giro sono RC-11, RC-12 e RC-13, sopra. Fonti:
+`discovery_2026-09-01_auto1_id_autoincrement.md` (§8),
+`discovery_2026-09-01_crud2_cardinalita_aggancio.md` (§7),
+`discovery_2026-09-01_txt1_fase2_multiline.md`,
+`discovery_2026-09-01_irf1_annotation_subscription.md`,
+`discovery_2026-09-01_eng1_containment_core.md` (§B).
+
+**R-CR2-1** (2026-09-01, AUTO1) — **Un attributo `isID` di tipo `EInt` si numera da sé, e il
+campo sparisce dal modale di create.** Il valore è il massimo corrente più uno, calcolato sullo
+spazio dell'**attributo** (scan dei `DValue` per `attr.id`, lo stesso che `ConformanceValidator`
+CHECK 11 giudica) e non della metaclasse, così l'ereditarietà condivide una sola sequenza. La
+sequenza parte da 1 e **i buchi restano spesi**: un id assegnato e poi cancellato non si ricicla,
+che è ciò che rende il numero stabile per chi se lo è annotato. Il campo **non è offerto** nel
+draft — il numero è deciso dal modello nell'istante della scrittura, quindi mostrarlo
+pre-valorizzato sarebbe una previsione resa come fatto (il pattern `AUTO_INCREMENT`: assente
+dalla `INSERT`, presente nella riga). La colonna resta in tabella e il campo resta nella form,
+in sola lettura. Il gate è **una** funzione (`jjform/shape.isAutoIdAttr`, `isID && EInt`) letta
+dai tre consumatori: la seconda clausola non è decorazione, perché `isID` da solo bloccherebbe
+un identificatore `EString` che nessuno sa generare, rendendolo inscrivibile per sempre. Un
+valore fornito dal chiamante vince sempre sul generato.
+
+**R-CR2-2** (2026-09-01, TXT1) — **`multiline` è la quinta chiave del carrier delle annotation,
+e decide al rung 2 senza escludere il renderer.** La dichiarazione vive sul metamodello
+(`jjodel/multiline=true` su `DAnnotation.source`), non nella view: un `EString` che vuole essere
+una nota multiriga non deve più cambiare il **tipo** dell'attributo né ripetere un override in
+ogni viewpoint. Il valore è booleano dichiarato — qualunque cosa non sia `true`/`false` viene
+**scartata**, non coerciuta. Precedenza: `renderer` resta la regola 1 della scala e `multiline`
+decide solo dove il renderer non ha deciso; **nessuna mutua esclusione** fra i due, né sul
+verdetto né nella UI, dove si mostrano entrambi e la scala decide.
+
+**R-CR2-2-bis** (2026-09-01, IRF1 — **corregge** R-CR2-2) — **La diagnosi §6.1 del referto TXT1
+Fase 2 era sbagliata, e va citata come tale.** Attribuiva il difetto («la form non vede cambiare
+un'annotation della metafeature») alla `useMemo` dei descriptor. Misurato: la memo **non trattiene
+mai** un descriptor vecchio, perché la sua dep `slots` è `lObject.features`, e
+`LPointerTargetable.fromArr` (`LModelElement.tsx:773-776`) costruisce **un array nuovo a ogni
+lettura** — l'identità cambia a ogni render e la memo ricalcola sempre. Il difetto era la
+**sottoscrizione**: mancava la re-render, non il ricalcolo. Il rimedio che seguiva dalla diagnosi
+sbagliata — allargare le dipendenze della memo — non avrebbe riparato nulla da solo. Corollario
+misurato sulla forma del selettore: sottoscrivere il solo `DAttribute.annotations` sarebbe verde
+all'accensione e **cieco** allo spegnimento e alla riaccensione, che scrivono `DAnnotation.source`
+lasciando `annotations` invariato; la sottoscrizione deve arrivare fino alla `source`.
+**Il braccio G di `_tmp_txt1_verify.ts` è VACUO** — la sua terza clausola in `||` è `cols === 6`,
+che è vera su entrambi i lati — e **non va citato come verde**: non misura la latenza né prima né
+dopo. Chi lo trova citato in un referto precedente lo legga come non-misura (RC-10).
+
+**R-CR2-3** (2026-09-01, ENG1-B) — **La coerenza di `setValueAtPosition` è contratto del
+CHIAMANTE.** L'indice è del chiamante: dentro la finestra di propagazione di una scrittura
+precedente, `c.data.values[index]` e `store.getState()` sono **ugualmente stantii**, quindi
+nessuna lettura cura il problema. Due scritture che ri-derivano l'indice dallo store nella stessa
+finestra puntano allo stesso indice: la seconda sovrascrive la prima, il valore sfrattato resta
+con un `father` su uno slot che non lo elenca più, e la chiamata ritorna `{success: true}`. La
+regola operativa è: **un indice per gesto**, oppure l'array intero in un solo `set_values`, dove
+gli indici sono assegnati sull'array che il chiamante ha in mano. Il vincolo è già iscritto come
+commento su `get_setValueAtPosition`; qui diventa citabile.
+
+**R-CR2-4** (2026-09-01, CRUD2 §2.5) — **Una `aggregation` pura non sfratta più, e lo fa senza
+toccare il core.** Due letture della stessa parola divergono e restano entrambe dove sono
+(`useEditorMode.ts:421` legge `composition`, `LReference.get_containment` legge
+`composition || aggregation`): una reference di sola aggregation cadeva quindi nel modale come
+«scegli un bersaglio» mentre la scrittura la trattava da containment e **riassegnava il father**
+del bersaglio, lasciando un buco `[null]` nello slot del padre precedente. Chiuso passando
+`info.isContainment: false` a `setValueAtPosition` — l'interruttore che il core **già espone**,
+derivato da `LReference.containment` solo quando il chiamante lo lascia indefinito. Zero righe nel
+core. Misurato per contrasto: una reference **pura** seminata per la stessa via non sposta nulla,
+quindi si dirotta la sola aggregation, e una `composition` continua a spostare il father come deve.
+**CONTRATTO, e va rispettato da chi chiama**: le chiavi di aggregation escono dal json della create
+e pagano un **secondo deferral** (`U.UpdatingTimer * 3`, dopo il seeding di `addObject` a `* 2`),
+perché il json non può trasportare `info`. `createInstance` **ritorna prima** che quei valori siano
+in store: un chiamante che legga lo slot in modo sincrono lo trova vuoto. Ogni altro valore —
+attributi, l'auto-id di R-CR2-1, composition e reference pure — continua ad arrivare con la create.
+
+**R-CR2-5** (2026-09-01) — **Le slice 13a/1b non si fanno.** L'ego-diagramma e
+`openInCanvas` coprono già il bisogno che le motivava: una seconda superficie di navigazione
+locale sarebbe un secondo canvas, che è esattamente ciò che 13a si era vietata. Chiuse per
+sufficienza del sostituto, non rimandate.
+
 
 ## Superate
 

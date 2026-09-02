@@ -211,6 +211,44 @@ export interface FeatureValueRow {
     value: string;                    // display value
     /** For enum-typed attributes: allowed literal names */
     enumLiterals?: Array<{ name: string; value: number }>;
+    /**
+     * Every value the slot holds, in order. `value` stays the display string of
+     * the first one, so existing consumers are untouched; this is what the
+     * instance node needs to render a collection and to print the ACTUAL count
+     * in the label — the cardinality suffix `[0]` is what makes an empty
+     * collection legible, and the metamodel bound cannot supply it.
+     */
+    values?: string[];
+    /** Declared multi-valued in the metamodel (upperBound ≠ 1). */
+    isMany?: boolean;
+    /**
+     * Declared as one that cannot be empty (lowerBound ≥ 1), and not derived.
+     * The other half of the cardinality `isMany` already carries: the node needs
+     * it to tell a required slot left empty from an optional one never written,
+     * which the dash alone cannot say. Derived here and never persisted.
+     */
+    required?: boolean;
+    /**
+     * For reference slots: the resolved targets, with their DObject ids. `value`
+     * carries the same names joined; only the ids let the reference pill select
+     * and reveal the target.
+     *
+     * `broken` marks a pointer that no longer resolves to an object. Such an
+     * entry used to be dropped silently, which made a deleted target look like
+     * an unset property; it is kept now so the row can say what happened, with
+     * `name` filled from `brokenRefMemory.ts`.
+     */
+    refTargets?: Array<{ id: string; name: string; broken?: boolean }>;
+    /**
+     * Metamodel declarations for this feature, from the `jjodel/*` annotations
+     * (`rowViewAnnotations.ts`). All four are absent unless declared: that
+     * absence is the whole point of `unit`, which the handoff forbids inferring
+     * from the attribute name.
+     */
+    rendererOverride?: string;
+    unit?: string;
+    min?: number;
+    max?: number;
 }
 
 // === M1 Edge Data ===

@@ -1,0 +1,261 @@
+/* egoDiagram.scss — l'ego-diagramma della riga espansa (FL5).
+   =========================================================================
+
+   Foglio PROPRIO, non un blocco di `instanceManagerTab.scss`: il nastro e' un
+   componente a se', montato da chi possiede la riga espandibile, e importato dal
+   componente stesso — cosi' un ospite che lo renda ne ottiene sempre anche
+   l'aspetto (stesso patto di `widgets/formWidgets.scss`).
+
+   Nessuna variabile e' dichiarata qui (regola 28). I ruoli letti, tutti gia'
+   esistenti in `tokens/_colors-light.scss` E `_colors-dark.scss`:
+
+     --color-form-surface              #ffffff  fondo delle scatole vicine
+     --color-form-border               #e2e8f0  bordo delle scatole, filetto del footer
+     --color-form-border-strong        #cbd5e1  il legame di contenimento (FL7)
+     --color-form-label                #475569  il nome di un vicino
+     --color-form-muted                #94a3b8  metaclasse, eyebrow, conteggi (slate-400)
+     --color-border-focus                       anello di focus da tastiera
+     --color-error                              il `broken`, come nella tabella
+     --color-inode-shadow / -hover              l'ombra a riposo e quella che sale
+     --color-inode-ref-bg              #ecfeff  fondo del soggetto (cyan-50)
+     --color-inode-ref-border          #a5f3fc  bordo del soggetto (cyan-200)
+     --color-inode-selected-ring                l'anello attorno al soggetto
+     --color-inode-selected-badge-fg   #0e7490  «this object» (cyan-700)
+
+   Il cyan e' qui e in nessun altro punto del nastro: e' il vocabolario della
+   SELEZIONE sul canvas, e il soggetto e' cio' che e' selezionato. Prestarlo a un
+   bordo o a un link lo svuoterebbe.
+
+   Una deviazione, dichiarata: la specifica chiede l'anello a
+   rgba(6,182,212,0.12); il ruolo esistente `--color-inode-selected-ring` vale
+   0.18 in chiaro. Si usa il ruolo invece del letterale — introdurre un token per
+   sei centesimi di alfa vorrebbe dire toccare i due file di token, fuori dal
+   perimetro di questa slice.
+
+   Letterali: quasi tutte le misure. 8px di raggio, 12/10.5/13px di corpo,
+   500/600 di peso e il passo di 10px vengono dalla specifica di FL5 e non hanno
+   un token — il sistema tokenizza i colori, non la tipografia. UNA eccezione, da
+   EGO1: il passo verticale fra il disegno e le due cornici di testo e' un token
+   della scala `--space-*` (`tokens/_spacing.scss`), perche' li' la misura non
+   viene dalla specifica di FL5 ma dal ritmo del DS. Le dimensioni delle scatole
+   NON sono qui: stanno in `jjform/egoNeighborhood.ts` (EGO_NODE_W e sorelle) e
+   arrivano come stile inline, perche' le stesse costanti disegnano le frecce e
+   due copie divergerebbero al primo ritocco. */
+
+.ego-diagram {
+    display: flex;
+    flex-direction: column;
+    /* Il passo fra il disegno e le due cornici di testo — l'eyebrow sopra, i
+       conteggi sotto — e' il SOLO uso del gap qui: la colonna ha tre figli
+       (`__head`, `__scroll`, `__foot`), quindi questa riga governa esattamente
+       quei due stacchi e nient'altro.
+       Era un letterale di 6px, fuori dalla scala a 4px del DS: misurato a
+       schermo, l'eyebrow NEIGHBORHOOD e la riga dei conteggi stavano addosso
+       alle scatole (6px sopra, 6px sotto). `--space-3` e' un gradino sopra
+       `--space-2`, il token su cui quel 6px si appoggiava.
+       Non c'entra `EGO_OWNER_GAP` (24px, 10k p7): quella e' la banda owner ->
+       soggetto DENTRO il disegno, aritmetica di `jjform/egoNeighborhood`, e
+       resta dov'e'. */
+    gap: var(--space-3);
+    padding: 10px 14px 12px;
+    background: var(--color-form-surface);
+
+    &__head,
+    &__foot {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 12px;
+    }
+
+    &__foot {
+        padding-top: 8px;
+        border-top: 1px solid var(--color-form-border);
+    }
+
+    &__eyebrow {
+        color: var(--color-form-muted);
+        font-size: 10.5px;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+    }
+
+    &__hint,
+    &__counts {
+        color: var(--color-form-muted);
+        font-size: 11px;
+    }
+
+    /* Un link, non un bottone: apre un'altra superficie, non compie un'azione
+       sul modello. Nessun fondo, nessun bordo — il chrome del manager e' slate,
+       e un bottone in piu' qui competerebbe con Save/Discard sopra. */
+    &__link {
+        padding: 0;
+        border: 0;
+        background: none;
+        color: inherit;
+        font: inherit;
+        text-decoration: underline;
+        cursor: pointer;
+
+        &:hover { color: var(--color-form-label); }
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 2px; }
+    }
+
+    &__scroll { overflow-x: auto; }
+
+    /* `margin-inline: auto` e non `justify-content: center` sul genitore: il
+       disegno ha una larghezza NOTA (`egoLayout(ego).width`, stile inline) e
+       vive dentro un contenitore che scorre. Con margini automatici, quando lo
+       spazio libero e' negativo — molti vicini, disegno piu' largo della riga —
+       i due margini valgono 0 e il blocco resta a sinistra, cioe' esattamente
+       il comportamento di oggi: nessun clip nuovo, e il primo nodo resta
+       raggiungibile scorrendo. Il centraggio con `justify-content` in un
+       contenitore che scorre taglia invece l'inizio del contenuto.
+       Il disegno si CENTRA, non si allarga: la larghezza resta la sua. */
+    &__frame {
+        position: relative;
+        margin-inline: auto;
+    }
+
+    &__arrows {
+        position: absolute;
+        top: 0;
+        left: 0;
+        pointer-events: none;
+    }
+
+    &__arrow {
+        fill: none;
+        stroke: var(--color-form-border);
+        stroke-width: 1.5;
+    }
+
+    /* Piena, non a contorno: a 7px una punta vuota si legge come un increspatura
+       della linea, e il verso e' l'unica cosa che questa freccia dice. */
+    &__arrow-head {
+        fill: var(--color-form-muted);
+        stroke: none;
+    }
+
+    /* Il legame di contenimento (FL7): una retta senza punta. Non ha un verso da
+       leggere — ha un sopra e un sotto — e senza punta e' anche l'unica cosa che
+       lo distingue a colpo d'occhio dalle frecce accanto.
+       Un passo piu' scuro delle frecce (`-strong` e' $slate-300 contro il
+       $slate-200 di `--color-form-border`): il contenimento e' il legame piu'
+       forte dei due, e qui e' anche il piu' corto. */
+    &__owner-link {
+        fill: none;
+        stroke: var(--color-form-border-strong);
+        stroke-width: 1.5;
+    }
+
+    &__node,
+    &__subject {
+        position: absolute;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 2px;
+        padding: 4px 10px;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    &__node {
+        border: 1px solid var(--color-form-border);
+        background: var(--color-form-surface);
+        box-shadow: 0 1px 2px var(--color-inode-shadow);
+        cursor: pointer;
+        transition: box-shadow 120ms ease;
+
+        &:hover { box-shadow: 0 3px 8px var(--color-inode-shadow-hover); }
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 1px; }
+
+        /* Il sintetico del cap non e' un'istanza: tratteggiato, cosi' non si
+           conta fra i vicini disegnati, e porta al canvas come «show all». */
+        &--more {
+            border-style: dashed;
+            justify-content: center;
+
+            .ego-diagram__node-name {
+                color: var(--color-form-muted);
+                text-align: center;
+            }
+        }
+
+        /* Un puntatore che non risolve si rende, mai si salta: sparire in
+           silenzio racconta un modello sano che non c'e'. Non si clicca, e il
+           cursore lo dice prima del tooltip. */
+        &--broken {
+            border-style: dashed;
+            border-color: var(--color-error);
+            cursor: default;
+
+            &:hover { box-shadow: 0 1px 2px var(--color-inode-shadow); }
+        }
+    }
+
+    &__node-name {
+        color: var(--color-form-label);
+        font-size: 12px;
+        font-weight: 500;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    &__node-cls {
+        color: var(--color-form-muted);
+        font-size: 10.5px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* La sottoetichetta dell'owner (FL7). Prende il POSTO della metaclasse invece
+       di aggiungersi: tre righe in una scatola alta 40px non ci stanno, e il nome
+       della metaclasse resta nel tooltip. Due punti piu' piccola della metaclasse
+       di un vicino perche' dice un RUOLO e non un dato — 9px e' la misura della
+       board 1a. */
+    &__node-owner {
+        color: var(--color-form-muted);
+        font-size: 9px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    &__node-broken {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        color: var(--color-error);
+        font-size: 10.5px;
+    }
+
+    /* Il soggetto. Non e' cliccabile — e' gia' selezionato — e il cursore di
+       default lo dice insieme all'assenza di `role`. */
+    &__subject {
+        border: 1px solid var(--color-inode-ref-border);
+        background: var(--color-inode-ref-bg);
+        box-shadow: 0 0 0 3px var(--color-inode-selected-ring);
+        cursor: default;
+    }
+
+    &__subject-name {
+        color: var(--color-form-label);
+        font-size: 13px;
+        font-weight: 600;
+        text-decoration: underline;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    &__subject-here {
+        color: var(--color-inode-selected-badge-fg);
+        font-size: 10.5px;
+    }
+}

@@ -14,10 +14,9 @@ import { getProject } from '../utils';
 import { executeRenameInstance } from './instance';
 
 import {
-    SetFieldAction,
-    TRANSACTION,
     LProject
 } from '../../../joiner';
+import { checkM2NameUniqueness, m2KindOf, type UniquenessVerdict } from '../../../model/logicWrapper/nameUniqueness';
 
 // ============================================
 // RENAME COMMAND EXECUTOR
@@ -76,49 +75,65 @@ export async function executeRename(
 
         const oldName = element.name;
 
-        // Check for name conflicts
-        const conflict = checkNameConflict(element, newName, project);
-        if (conflict) {
+        // ── Uniqueness (S1-M2): ONE verdict, and no bypass of `set_name` ──────────
+        //
+        // Until S1-M2 this command carried a rule of its own — `checkNameConflict`,
+        // per-kind and case-INSENSITIVE — and then wrote the field directly with
+        // `SetFieldAction`, so the core rule in `LPointerTargetable.set_name` never
+        // ran on this path. Two rules, and the one that applied depended on which
+        // surface the user happened to use.
+        //
+        // Now: the same `checkM2NameUniqueness` the create and the rename consult,
+        // and the write goes through the L-layer setter, which consults it again for
+        // the paths that do not come through here. Case-SENSITIVE by decision
+        // (R-M2U-1): `dupprobe` next to `DupProbe` is a near-homonym, which is legal
+        // and reported, not a conflict. That is a deliberate change of committed
+        // behaviour — this command used to refuse it.
+        const kind = m2KindOf(element.className);
+        const verdict = kind
+            ? checkM2NameUniqueness({father: element.father, kind, name: newName, excludeId: element.id})
+            : {ok: true} as UniquenessVerdict;
+        if (!verdict.ok) {
             return {
                 success: false,
                 command: 'rename',
                 message: `Name conflict: '${newName}' already exists`,
                 errors: [{
                     code: 'NAME_CONFLICT',
-                    message: `An element named '${newName}' already exists in the same scope`,
+                    message: verdict.reason as string,
                     suggestion: 'Choose a different name'
                 }]
             };
         }
 
-        // Perform rename
-        return new Promise((resolve) => {
-            try {
-                TRANSACTION('JjScript: Rename element', () => {
-                    SetFieldAction.new(element, 'name', newName);
+        // Perform rename through the L-layer setter, not a direct SetFieldAction:
+        // `set_name` owns the side effects this command has no business rebuilding
+        // (LClass re-emits `ClassNameChanged.<id>`, LAttribute re-infers the type).
+        try {
+            element.name = newName;
+        } catch (error) {
+            return {
+                success: false,
+                command: 'rename',
+                message: `Failed to rename: ${(error as Error).message}`,
+                errors: [{ code: 'RENAME_ERROR', message: (error as Error).message }]
+            };
+        }
 
-                    resolve({
-                        success: true,
-                        command: 'rename',
-                        message: `Renamed '${oldName}' to '${newName}'`,
-                        data: {
-                            id: element.id,
-                            oldName,
-                            newName
-                        },
-                        affectedElements: [element.id],
-                        undoable: true
-                    });
-                });
-            } catch (error) {
-                resolve({
-                    success: false,
-                    command: 'rename',
-                    message: `Failed to rename: ${(error as Error).message}`,
-                    errors: [{ code: 'RENAME_ERROR', message: (error as Error).message }]
-                });
-            }
-        });
+        return {
+            success: true,
+            command: 'rename',
+            message: verdict.warning
+                ? `Renamed '${oldName}' to '${newName}' — ${verdict.warning}`
+                : `Renamed '${oldName}' to '${newName}'`,
+            data: {
+                id: element.id,
+                oldName,
+                newName
+            },
+            affectedElements: [element.id],
+            undoable: true
+        };
 
     } catch (error) {
         const err = error as Error;
@@ -135,38 +150,6 @@ export async function executeRename(
 // HELPER FUNCTIONS
 // ============================================
 
-function checkNameConflict(element: any, newName: string, project: LProject): boolean {
-    try {
-        // Get siblings (elements in the same container)
-        const parent = element.parent;
-        if (!parent) return false;
-
-        // Check based on element type
-        const className = element.className || element.constructor?.name;
-
-        let siblings: any[] = [];
-        if (className?.includes('Class') || className?.includes('Enum')) {
-            siblings = parent.classifiers || [];
-        } else if (className?.includes('Attribute')) {
-            siblings = parent.attributes || [];
-        } else if (className?.includes('Reference')) {
-            siblings = parent.references || [];
-        } else if (className?.includes('Operation')) {
-            siblings = parent.operations || [];
-        } else if (className?.includes('Parameter')) {
-            siblings = parent.parameters || [];
-        } else if (className?.includes('Package')) {
-            siblings = parent.subPackages || [];
-        } else if (className?.includes('Literal')) {
-            siblings = parent.literals || [];
-        }
-
-        // Check for conflict (exclude self)
-        return siblings.some(s =>
-            s.id !== element.id &&
-            s.name?.toLowerCase() === newName.toLowerCase()
-        );
-    } catch {
-        return false;
-    }
-}
+// `checkNameConflict` used to live here: a second, per-kind, case-insensitive rule,
+// applied on this path only. It was not narrowed or widened — it was REMOVED, and its
+// callers now consult `checkM2NameUniqueness` (S1-M2). One rule, one place.

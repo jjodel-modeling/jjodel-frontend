@@ -275,3 +275,209 @@ export const NOT_COVERED: Array<{ what: string; why: string }> = [
         why: 'they need data-testid attributes and a project fixture, neither of which is authorized.',
     },
 ];
+
+// ── The shared containment poser ────────────────────────────────────────────
+
+/**
+ * `link` — pose a value into a slot, and assert the shape it built.
+ *
+ * Probes kept re-deriving the append index from the store:
+ *
+ *     const idx = (idlookup[slotId]?.values ?? []).length;   // <- stale
+ *     lslot.setValueAtPosition(idx, target.id);
+ *
+ * Inside the propagation window that read is stale, so two consecutive appends
+ * both compute the same index: the second overwrites the first, and the first
+ * occupant is left with `father` on a slot that no longer lists it — an orphan,
+ * returned as `{success: true}`. Measured in
+ * `docs/discovery/discovery_2026-09-01_eng1_containment_core.md` §B.1-B.4: no
+ * read cures it, because `store.getState()` is exactly as stale as
+ * `context.data` until the deferred dispatch lands (`redux/action/action.ts:349`).
+ *
+ * Two decisions follow, and they are the whole of this helper:
+ *
+ *  1. **The index is never re-derived.** A per-slot cursor on `window` is seeded
+ *     from the store on first use and then owned by this function. Each call
+ *     writes the whole array through a single `values = [...]` (`set_values`,
+ *     `LModelElement.tsx:7896`), the one form whose indices are assigned by the
+ *     caller on an array it holds — coherent by construction (ENG1 arm A8).
+ *     That funnel goes through `get_setValueAtPosition` per index, so it also
+ *     writes `father` on containment, which a raw
+ *     `SetFieldAction.new(slot,'values',id,'+=')` does not.
+ *  2. **The shape is asserted, not waited for** (README-probes.md §"Assert the
+ *     setup, do not wait for it"). The poll below ends on the assertion, and a
+ *     timeout returns `ok: false` carrying its last measurement — never a
+ *     silence that reads like a pass.
+ *
+ * The containment check carries its own per contrasto: on a non-containment
+ * reference it asserts the father is *not* the slot, so a helper that wrote the
+ * father unconditionally would fail instead of passing on half the evidence.
+ */
+export interface LinkResult {
+    /** Every assertion below held within the poll window. */
+    ok: boolean;
+    /** Populated on failure, and on any lookup that did not resolve. */
+    error?: string;
+    slotId?: string;
+    /**
+     * The array this call claims to have built (cursor, not a re-read). It is
+     * asserted as a **prefix** of `actual`, not as its whole content: what this
+     * call owns is that its values landed at the indices the cursor assigned.
+     * Trailing entries written by another poser are not this call's business —
+     * and a value lost or overwritten still breaks the prefix, which is the
+     * failure this helper exists to catch.
+     */
+    expected?: string[];
+    /** `values` as the store reports them when the poll ended. */
+    actual?: string[];
+    /** The DReference is a composition: `composition || containment` (§3.8). */
+    containment?: boolean;
+    /** className of the target's father: 'DValue' when contained, else 'DModel'. */
+    fatherKind?: string;
+    /** id of the target's father. */
+    fatherId?: string;
+    /** ms the assertion took to hold. */
+    settledMs?: number;
+}
+
+/** Poll budget for the assertion. The window measured in ENG1 §B.4 is ~50ms. */
+const LINK_ASSERT_TIMEOUT_MS = 4000;
+const LINK_POLL_MS = 100;
+
+/**
+ * Appends `target` to `owner`'s `ref` slot and asserts the result.
+ *
+ * Objects and the reference are addressed **by name** (README-probes.md
+ * §"Select by name, never by index"). The reference is looked up on the
+ * instance's own metaclass, without walking supertypes: an inherited reference
+ * comes back as `ok: false` with the reason, not as a silent skip.
+ */
+export async function link(
+    page: Page,
+    owner: string,
+    ref: string,
+    target: string,
+): Promise<LinkResult> {
+    const posed = await page.evaluate(
+        (a: { owner: string; ref: string; target: string }) => {
+            const w = window as any;
+            try {
+                const idl = w.windoww.store.getState().idlookup;
+                const byName = (n: string) => {
+                    for (const id in idl) {
+                        const e = idl[id];
+                        if (e?.className === 'DObject' && e.name === n) return e;
+                    }
+                    return null;
+                };
+                const from = byName(a.owner);
+                if (!from) return { error: `istanza ${a.owner} non trovata` };
+                const to = byName(a.target);
+                if (!to) return { error: `istanza ${a.target} non trovata` };
+                const refDef = (Object.values(idl) as any[]).find(
+                    (e) =>
+                        e?.className === 'DReference' &&
+                        e.name === a.ref &&
+                        idl[from.instanceof]?.references?.includes(e.id),
+                );
+                if (!refDef) return { error: `referenza ${a.ref} non trovata su ${a.owner}` };
+                const slotId = (from.features ?? []).find(
+                    (f: string) => idl[f]?.instanceof === refDef.id,
+                );
+                if (!slotId) return { error: `slot ${a.ref} assente su ${a.owner}` };
+
+                // The cursor: seeded once from the store, owned from then on.
+                if (!w.__smokeLinkCursor) w.__smokeLinkCursor = {};
+                const prev: string[] =
+                    w.__smokeLinkCursor[slotId] ?? ((idl[slotId]?.values ?? []).slice() as string[]);
+                const next = [...prev, to.id];
+                w.__smokeLinkCursor[slotId] = next;
+
+                // One single set_values: the indices are assigned on the array
+                // held here, never re-read from a store that cannot see them yet.
+                w.LPointerTargetable.fromPointer(slotId).values = next;
+
+                return {
+                    slotId,
+                    targetId: to.id,
+                    expected: next,
+                    // CLAUDE.md §3.8: `composition` is the canonical D-layer
+                    // field; `containment` is the legacy spelling, still written
+                    // by some paths. Reading only the second one gives `false`
+                    // on every reference the L-layer calls a composition — the
+                    // first version of this helper did exactly that, and the
+                    // per contrasto below then failed on a correct write.
+                    containment: refDef.composition === true || refDef.containment === true,
+                };
+            } catch (e) {
+                return { error: e instanceof Error ? `${e.message}\n${e.stack}` : String(e) };
+            }
+        },
+        { owner, ref, target },
+    );
+
+    if ((posed as any).error) return { ok: false, error: (posed as any).error };
+    const p = posed as {
+        slotId: string;
+        targetId: string;
+        expected: string[];
+        containment: boolean;
+    };
+
+    const started = Date.now();
+    let last: { actual: string[]; fatherKind: string; fatherId: string } = {
+        actual: [],
+        fatherKind: 'NON-LETTO',
+        fatherId: '',
+    };
+    while (Date.now() - started < LINK_ASSERT_TIMEOUT_MS) {
+        last = await page.evaluate(
+            (a: { slotId: string; targetId: string }) => {
+                const idl = (window as any).windoww.store.getState().idlookup;
+                const t = idl[a.targetId];
+                const f = t ? idl[t.father] : undefined;
+                return {
+                    actual: ((idl[a.slotId]?.values ?? []) as string[]).slice(),
+                    fatherKind: f?.className ?? (t?.father ? 'FUORI-LOOKUP' : 'NESSUNO'),
+                    fatherId: t?.father ?? '',
+                };
+            },
+            { slotId: p.slotId, targetId: p.targetId },
+        );
+        const valuesOk =
+            last.actual.length >= p.expected.length &&
+            p.expected.every((v, i) => last.actual[i] === v);
+        // Per contrasto inside the assertion: on a plain reference the father
+        // must NOT be the slot, so an unconditional father write fails here.
+        const fatherOk = p.containment
+            ? last.fatherId === p.slotId
+            : last.fatherId !== p.slotId;
+        if (valuesOk && fatherOk) {
+            return {
+                ok: true,
+                slotId: p.slotId,
+                expected: p.expected,
+                actual: last.actual,
+                containment: p.containment,
+                fatherKind: last.fatherKind,
+                fatherId: last.fatherId,
+                settledMs: Date.now() - started,
+            };
+        }
+        await page.waitForTimeout(LINK_POLL_MS);
+    }
+
+    return {
+        ok: false,
+        error:
+            `la forma non si e' assestata in ${LINK_ASSERT_TIMEOUT_MS}ms: ` +
+            `values attesi in testa ${JSON.stringify(p.expected)}, letti ${JSON.stringify(last.actual)}; ` +
+            `containment=${p.containment}, father=${last.fatherKind} (${last.fatherId})`,
+        slotId: p.slotId,
+        expected: p.expected,
+        actual: last.actual,
+        containment: p.containment,
+        fatherKind: last.fatherKind,
+        fatherId: last.fatherId,
+    };
+}

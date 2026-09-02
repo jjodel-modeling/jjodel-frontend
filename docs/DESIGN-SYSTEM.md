@@ -89,14 +89,55 @@ Icon: letter **`M`** (uppercase).
 
 #### Model — Amber
 
-| Stop | Hex | Usage |
-|------|-----|-------|
-| Background (light) | `#FAEEDA` | Badge bg, swatch bg |
-| Background (dark) | `rgba(186, 117, 23, 0.2)` | Dark mode badge |
-| Mid / border | `#FAC775` | Swatch border, preview bars |
-| Strong | `#f59e0b` | Tree View icon color |
-| Text on light bg | `#854F0B` | Badge letter |
-| Text on dark bg | `#FAC775` | Dark mode badge letter |
+Aggiornato con DS-1 (2026-08-31). Fino a quel giorno questa sezione dichiarava una
+rampa (`#FAEEDA / #854F0B`, strong `#f59e0b`) che i token **non** applicavano:
+R-RAIL-30 (2026-08-11) aveva messo `model` fra gli alias della famiglia contenitori
+(`#E2EAF5 / #45566F`), scavalcando in silenzio quanto scritto qui. DS-1 riporta la
+coppia ad ambra e allinea il documento ai token: **quello che segue è quello che i
+token dichiarano**, non un'intenzione.
+
+**La coppia a token — autorevole.** Vive in `styles/tokens/_colors-light.scss` e
+`_colors-dark.scss` fra le coppie canoniche della scala entity, grado **saturo**,
+tinta **H 85** in OKLCH:
+
+| Stop | Hex | Token | Usage |
+|------|-----|-------|-------|
+| Background (light) | `#F3E8D3` | `--color-entity-model-bg` | Badge bg, chip, swatch |
+| Text on light bg | `#6B5110` | `--color-entity-model-fg` | Lettera del badge |
+| Background (dark) | `#3B2B06` | `--color-entity-model-bg` | Badge bg in tema scuro |
+| Text on dark bg | `#E4C992` | `--color-entity-model-fg` | Lettera del badge in tema scuro |
+
+Misurato il 2026-08-31: chiaro bg L 0.934 C 0.030 H 83.6, fg L 0.451 C 0.085 H 85.0,
+contrasto **6.16:1**; scuro bg L 0.300 C 0.056 H 83.9, fg L 0.846 C 0.078 H 84.7,
+contrasto **8.52:1**. La tinta non è quella storica (64–81°) perché a quelle tinte
+l'ambra collide con `enum`/`literal`, che occupano 56°: la ΔE OKLCH dei fondi
+scenderebbe sotto il pavimento che la scala già tollera (0.0143 in chiaro, 0.0243 in
+scuro, in entrambi i casi `class`/`object`). H 85 è l'unica tinta ambra che supera
+quel pavimento in **entrambi** i temi — 0.0146 e 0.0263 contro `enum`. La regola di
+costruzione e i due pavimenti sono difesi da
+`styles/__tests__/entityModelAmberDs1.test.ts`.
+
+**I letterali storici — ancora sullo schermo, non più autorevoli.** Quattro superfici
+dipingono il modello d'ambra con valori propri, precedenti alla scala. Convergeranno
+sulla coppia a token in una slice a valle; fino ad allora esistono e vanno riconosciuti,
+ma non si copiano in codice nuovo:
+
+Percorsi e righe verificati il 2026-09-01, non copiati dal prompt: due dei quattro
+riferimenti in circolazione erano fuori di una riga o piu'.
+
+| Sito | chiaro | scuro |
+|---|---|---|
+| `components/common/element-badge.scss:29-30`, `:111` `--model` | `#FAEEDA / #854F0B` | `rgba(186,117,23,.2) / #FAC775` |
+| `components/megamodel/MegamodelView.scss:256-257,266-267` card | `#FAEEDA / #854F0B` | — |
+| `components/megamodel/MegamodelView.scss:462-463` swatch legenda | `#FAEEDA`, bordo `#FAC775` | — |
+| `pages/dashboard.scss:1126` `.psb-badge--m` | `#fef3c7 / #92400e` | — |
+| `components/editor-v2/EditorV2.scss:810+` `&__badge` | ambra-600 `#d97706` | — |
+
+Il commento di `EditorV2.scss:797-808` motiva il proprio letterale dicendo che
+`--color-entity-model-*` aliasa il contenitore: DS-1 lo ha falsificato, e il commento
+resta lì perché quel file è fuori perimetro. Si aggiorna con la slice di convergenza.
+Nota a margine: `components/project/project-editor.scss:794` usa la stessa coppia
+`#FAEEDA / #854F0B` per `data-type="validation"` — non è il modello, e non converge qui.
 
 Icon: letter **`m`** (lowercase).
 

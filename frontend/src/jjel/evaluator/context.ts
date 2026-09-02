@@ -156,22 +156,82 @@ export type JjelWarning =
         count: number;
         /** A sample owning class name for the qualified-form hint, or null. */
         sampleClass: string | null;
+        /**
+         * The instances the name could have meant, when the producer supplies
+         * them. Absent (not empty) when it does not: a consumer must be able to
+         * tell "no names available" from "named nobody". Never shortened here —
+         * truncation is a copy decision, see `formatAmbiguousCandidates`.
+         */
+        candidates?: AmbiguousInstanceCandidate[];
         /** No Levenshtein suggestion for this kind; null for shape parity. */
         suggestion: string | null;
     };
 
 /**
  * Reserved key under which `buildEvalContext` passes the M1 instance-name
- * ambiguity map (name -> { count, sampleClass }) inside the initial bindings.
+ * ambiguity map (name -> { count, sampleClass, candidates? }) inside the
+ * initial bindings.
  * The `EvaluationContext` constructor lifts it into `ambiguousInstances` and
  * does NOT expose it as a user-visible variable.
  */
 export const AMBIGUOUS_INSTANCES_KEY = '__ambiguousInstances';
 
+/**
+ * One instance an ambiguous M1 name could have meant.
+ *
+ * The pool this describes is `allSubObjects` across EVERY M1 model
+ * (`buildEvalContext`), so two homonyms sit at different depths, under
+ * different owners, often in different models: the containment `path` is what
+ * actually separates them, and the metaclass alone would not. That is the
+ * opposite of the jjscript resolution path, whose pool is the roots of one
+ * model — measured in
+ * `docs/discovery/discovery_2026-08-30_s1b_ambiguita_dichiarata.md` §5, which
+ * is why that side names its candidates by metaclass and keeps its own type.
+ */
+export interface AmbiguousInstanceCandidate {
+    /** The instance pointer id. Printed in full: a truncated id addresses nothing. */
+    id: string;
+    /** Owning metaclass name, or null when the proxy cannot resolve it. */
+    className: string | null;
+    /** Containment path from the model root, or null when it cannot be built. */
+    path: string | null;
+}
+
 /** Per-name ambiguity info for the qualified-form pedagogical warning. */
 export interface AmbiguousInstanceInfo {
     count: number;
     sampleClass: string | null;
+    /**
+     * The named candidates, when the producer supplies them. Optional so a
+     * producer that only counts stays valid: `count` remains the authority on
+     * how many there are, and may exceed `candidates.length`.
+     */
+    candidates?: AmbiguousInstanceCandidate[];
+}
+
+/** How many candidates the copy names before it starts counting instead. */
+export const AMBIGUOUS_CANDIDATES_SHOWN = 5;
+
+/** One candidate as a reader sees it: the path first, the metaclass in tow. */
+function describeAmbiguousCandidate(c: AmbiguousInstanceCandidate): string {
+    if (c.path && c.className) return `${c.path} (${c.className})`;
+    return c.path || c.className || c.id;
+}
+
+/**
+ * The candidate list as one line of copy, or null when there is nothing to name.
+ *
+ * Null and '' are not the same answer here: null means the producer named
+ * nobody, so the caller keeps the copy it had before candidates existed.
+ */
+export function formatAmbiguousCandidates(
+    candidates: AmbiguousInstanceCandidate[] | null | undefined,
+    max: number = AMBIGUOUS_CANDIDATES_SHOWN,
+): string | null {
+    if (!candidates || candidates.length === 0) return null;
+    const shown = candidates.slice(0, max).map(describeAmbiguousCandidate);
+    const rest = candidates.length - shown.length;
+    return rest > 0 ? `${shown.join(', ')}, and ${rest} more` : shown.join(', ');
 }
 
 // ============================================

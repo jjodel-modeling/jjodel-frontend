@@ -1,0 +1,2427 @@
+/* instanceManagerTab.scss — the instance manager, in the 7a system.
+   =========================================================================
+
+   The 7a values are the ones `components/editors/railSystem.scss` establishes,
+   NOT that file itself: railSystem is scoped to
+   `.properties-with-tree-view--rail .properties-panel-container
+   .view-editor-tab-content`, and the manager is a DOCK tab, outside that
+   ancestry. Importing it would either do nothing (the scope never matches) or,
+   if widened to match, repaint six surfaces this slice has no business in.
+   So the values travel through the tokens both files read — which is what the
+   token system is for — and nothing shared is touched.
+
+     --color-form-surface        #ffffff  panel fill
+     --color-form-label          #475569  row text
+     --color-form-muted          #94a3b8  eyebrow, counts, secondary
+     --color-form-section        #64748b  the row's type
+     --color-form-border         #e2e8f0  pane separators, table rules
+     --color-form-border-strong  #cbd5e1  input borders
+     --color-selection-bg / -bar          the selected row
+
+   `--color-selection-*` carries a TODO in `_colors-light.scss:373` asking to be
+   extended past `.tree-row--selected` to the project's other selections. This is
+   one of those, so it uses the pair rather than restating `#e0f7fa`.
+
+   Literals: the 14px inset and the 10px step, exactly as railSystem declares them
+   literal — they are off the 8px grid and have no token. No variable is declared
+   here (rule 28). */
+
+.instance-manager {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: var(--color-form-surface);
+
+    &__pane {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        padding: 14px;
+        overflow-y: auto;
+
+        /* 10h — lo stesso separatore vale anche verso la colonna centrale.
+           `__main` non e' un `__pane` — e' il desk, non una superficie di lettura —
+           quindi la regola del fratello non lo raggiungeva, e il rail
+           METACLASSES/VIEWS finiva contro il fondo desk senza confine.
+
+           Si ESTENDE il selettore invece di dichiarare un `border-right` sul rail:
+           qui il confine sta sull'elemento che SEGUE (e' la convenzione di questo
+           blocco), e cosi' i due confini interni restano UNA dichiarazione sola —
+           cioe' un token solo, che e' quello che il prompt chiede di garantire.
+
+           Il token e' quello misurato ai confini gia' esistenti, non un valore
+           nuovo: `--color-form-border`, #e2e8f0. Misurato il 2026-09-01, il rail
+           sinistro dell'app (`.leftbar--project`, `pages/dashboard.scss:990`)
+           dipinge lo stesso `rgb(226, 232, 240)`, e `--color-border-subtle` —
+           il nome ipotizzato dal prompt — non esiste nel sistema. */
+        + .instance-manager__pane,
+        + .instance-manager__main { border-left: 1px solid var(--color-form-border); }
+    }
+
+    /* One fixed reading column, an elastic table, and a detail that only opens
+       when a row is picked. The table is the pane whose width actually varies
+       with the metamodel, so it takes the slack. */
+    &__pane--outline { flex: 0 0 300px; padding: 14px 0; }
+    &__pane--classes { flex: 0 0 200px; }
+
+    /* FL6 — la colonna centrale e' IMPILATA: la tabella sopra, la form sotto.
+       Le due letture (outline, catalogo) restano affiancate a sinistra, perche'
+       scegliere cosa guardare e' l'altro asse.
+
+       `min-width: 0` non e' igiene: senza, un flex item non scende MAI sotto la
+       larghezza minima del suo contenuto, e una tabella con dodici colonne
+       spingerebbe di lato l'intero tab invece di scorrere nella sua scatola. */
+    /* 10d — la colonna centrale e' un DESK, non una superficie.
+       Il fondo va qui e non sulla radice: la radice tiene i due pannelli di
+       lettura a sinistra, che restano superficie di colonna. Il token e'
+       `--color-form-panel` (#f8fafc), che in scuro il sistema commenta
+       letteralmente «panel under the cards»; NON `--color-bg-primary`, che e'
+       fra i 15 nomi dichiarati due volte con valori diversi e che `tokens.css`
+       vince dipingendo #ffffff — cioe' il bianco pieno che questa slice toglie.
+
+       `padding` e' la gronda delle card, `gap` e' il fondo che le separa: senza
+       il gap le due card si toccherebbero e tornerebbero a leggersi come una
+       superficie sola, che e' il difetto da cui parte la slice. */
+    &__main {
+        display: flex;
+        flex-direction: column;
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow: hidden;
+        gap: 12px;
+        padding: 12px;
+        background: var(--color-form-panel);
+    }
+
+    /* Le due card gemelle. Stessi quattro token per entrambe: se la tabella e la
+       form avessero due chrome diversi direbbero di essere due generi di cosa,
+       e sono due letture dello stesso oggetto.
+
+       L'ombra e' `--shadow-desk-card`, il ruolo dichiarato per questa slice in
+       `styles/tokens/_shadows.scss`. NON `--shadow-sm`: quel nome e' dichiarato
+       sia in `styles/tokens/` sia in `styles/tokens.css` con valori diversi, e
+       misurato a schermo il 2026-08-31 dipingeva l'ombra di tokens.css e non la
+       propria. NON `--shadow-card` (= `--shadow-md`), che ha quattro volte il
+       raggio ed e' un'elevazione da popover. */
+    &__pane--table,
+    &__pane--form {
+        border: 1px solid var(--color-form-border);
+        border-radius: var(--radius-card);
+        background: var(--color-form-surface);
+        box-shadow: var(--shadow-desk-card);
+
+        /* 10e — il cinturino sta sulle CARD, non piu' dentro la form.
+           `__form-inner` lo dichiarava un livello piu' in basso: la form aveva la
+           sua misura e la tabella no, cioe' due card della stessa colonna con due
+           larghezze diverse sopra i 1300px. Qui vale per entrambe, ed e' la
+           colonna intera ad avere una misura.
+
+           `margin-inline: auto` su un flex item non e' decorazione: i margini auto
+           assorbono lo spazio libero, ed e' quello che centra la card sul desk una
+           volta che `max-width` ha lasciato spazio. Sotto i 1300px di viewport non
+           c'e' spazio libero, il `width: 100%` prende tutto il desk meno la gronda,
+           e il cinturino semplicemente non morde. */
+        width: 100%;
+        max-width: 1300px;
+        margin-inline: auto;
+    }
+
+    /* 10e — `flex: 0 1 auto` e non piu' `1 1 auto`: con `grow: 1` la card si
+       stirava fino al fondo del desk anche con sei righe, e il footer restava
+       appeso in basso staccato dall'ultima riga — la card vuota che riempie la
+       pagina. Con `grow: 0` la card abbraccia il contenuto e il fondo desk assorbe
+       il resto.
+
+       `shrink: 1` resta, ed e' il vincolo di FL6 che non va perso: con quaranta
+       righe la card non deve superare il desk spingendo fuori la form, deve
+       scorrere al proprio interno. `__table-scroll` e' corretto sotto entrambi i
+       regimi — in una card che abbraccia non ha spazio in piu' da prendere. */
+    &__pane--table { flex: 0 1 auto; overflow: hidden; min-height: 0; }
+
+    /* La form: sotto la tabella, e con un tetto di altezza. `flex: 0 1 auto`
+       piu' `max-height` in percentuale, non un'altezza fissa: una form di tre
+       campi prende tre campi di spazio, e una di trenta ne prende meta' schermo
+       e scorre — la tabella sopra non deve mai sparire, o la riga selezionata
+       (e la sua espansione) diventa invisibile mentre la si edita. */
+    &__pane--form {
+        flex: 0 1 auto;
+        max-height: 55%;
+        min-height: 0;
+        padding: 0;
+        overflow-y: auto;
+    }
+
+    /* Il cinturino a 1300px, centrato: su un 27" una riga di campi larga tutto
+       lo schermo non e' piu' leggibile, e' solo piu' lunga da attraversare.
+
+       SUPERATO da 10e, che ha portato lo stesso cinturino sulle due CARD: la card
+       che contiene questo blocco e' gia' <= 1300, quindi questo `max-width` non
+       morde piu'. Resta dichiarato e non rimosso (Regola 9): toglierlo non
+       cambierebbe un pixel, e la sua presenza non ne cambia uno. */
+    &__form-inner {
+        width: 100%;
+        max-width: 1300px;
+        margin: 0 auto;
+        padding: 14px;
+    }
+
+    /* IL NEUTRALIZZATORE DELLA COLONNA IMPILATA E' STATO TOLTO (10k-ter).
+       Qui stava `&__main > .instance-manager__pane + .instance-manager__pane {
+       border-left: 0 }`, scritta quando i due pannelli della colonna centrale
+       erano SUPERFICI: allora il bordo sinistro della regola generale
+       (`&__pane + &__pane`, il separatore delle letture) era un filetto verticale
+       di troppo su un pannello il cui separatore e' orizzontale, e azzerarlo era
+       giusto.
+
+       10e ha reso quei due pannelli delle CARD, con un bordo proprio su tutti e
+       quattro i lati. Da allora quella riga non toglieva piu' un separatore:
+       toglieva il LATO SINISTRO della card della form — l'unico elemento che il
+       selettore raggiunge, perche' `__main` contiene esattamente due `__pane` e
+       la form e' il secondo. Misurato a schermo il 2026-09-01, prima di questa
+       modifica: `border-left` computato `0px none rgb(15, 23, 42)` contro
+       `1px solid rgb(226, 232, 240)` sugli altri tre, e la scansione dei pixel
+       sul punto mediano del lato sinistro non trovava nulla che staccasse dal
+       fondo desk (ΔL* 1.82, cioe' il salto fra il bianco della card e il desk,
+       non un bordo).
+
+       Il selettore vinceva per specificita' (0,4,0 contro 0,1,0 del blocco card),
+       quindi il `border` della card non aveva voce in capitolo. Tolta la riga, il
+       lato sinistro torna `1px solid var(--color-form-border)` — lo STESSO token
+       degli altri tre lati, non un valore nuovo: e' il bordo della card che
+       ricompare, non un separatore che si aggiunge. Vale anche per la barra
+       collassata di 10c, che porta entrambe le classi ed e' una card come le
+       altre. */
+
+    /* The outline pane pads its rows, not itself: the selection band has to run
+       the full width of the column, and a padded pane would inset it. The eyebrow
+       gets the inset back. */
+    &__pane--outline > .instance-manager__eyebrow { padding: 0 14px; }
+
+    /* Eyebrow — 11 / 600 / 0.08em / muted, the 7a heading. */
+    &__eyebrow {
+        margin: 0 0 10px;
+        font-size: var(--text-xs);
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--color-form-muted);
+    }
+
+    /* Va a capo (10c): cinque controlli su una tabella stretta non stanno in
+       riga, e `overflow: hidden` sul pannello li taglierebbe invece di mandarli
+       sotto. */
+    &__toolbar {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 10px;
+        flex-shrink: 0;
+
+        .instance-manager__eyebrow { margin-bottom: 0; }
+    }
+
+    /* 12px / 28px / border-strong — the 7a control, same as every select in the rail. */
+    /* 10c: il search perde `margin-left: auto`. Non e' piu' l'unico controllo
+       che spinge il New a destra — l'eyebrow che lo precedeva e' diventato la
+       testata sopra la barra, e il primo posto della barra e' il suo. La spinta
+       e' passata a `__export`. */
+    &__search {
+        width: 180px;
+        height: 28px;
+        padding: 0 8px;
+        border: 1px solid var(--color-form-border-strong);
+        border-radius: 4px;
+        background: var(--color-form-surface);
+        font-size: 12px;
+        color: var(--color-form-label);
+
+        &::placeholder { color: var(--color-form-muted); }
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: -1px; }
+    }
+
+    &__note {
+        margin: 10px 0 0;
+        font-size: var(--text-xs);
+        line-height: 1.5;
+        color: var(--color-form-muted);
+    }
+
+    &__list {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    &__row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 5px 8px;
+        border-radius: 4px;
+        font-size: var(--text-sm);
+        color: var(--color-form-label);
+        cursor: pointer;
+        position: relative;
+        /* 10k punto 9 — stesso token e stessa durata della riga di tabella: le
+           righe del rail e quelle della tabella sono la stessa specie di gesto. */
+        transition: background-color 150ms ease-out;
+
+        &:hover { background: var(--color-bg-hover); }
+
+        &--selected,
+        &--selected:hover {
+            background: var(--color-selection-bg);
+            color: var(--color-text-primary);
+
+            /* The bar, not a border: a border would move the text by a pixel on
+               selection and make the whole list twitch. */
+            &::before {
+                content: '';
+                position: absolute;
+                left: 0;
+                top: 4px;
+                bottom: 4px;
+                width: 2px;
+                border-radius: 1px;
+                background: var(--color-selection-bar);
+            }
+        }
+
+        /* Abstract metaclasses stay VISIBLE and inert, with the cause in the
+           title: a row missing from the list reads as a missing model, a greyed
+           one reads as the metamodel saying so (R-STR-2's rule, applied here). */
+        &--disabled {
+            color: var(--color-form-muted);
+            cursor: default;
+
+            &:hover { background: transparent; }
+        }
+    }
+
+    &__row-name {
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    /* ── 10c: il badge di metaclasse ───────────────────────────────────────
+       SOLO la geometria. Il colore arriva da `jj-type-badge--class`, cioe' dalla
+       coppia di token di entita' (`--color-entity-class-bg` / `-fg`), che e' la
+       stessa che il rail delle proprieta' usa: questa slice non introduce una
+       seconda palette (R-RAIL-30), e non ridichiara `background` ne' `color` —
+       ridichiararli qui vorrebbe dire vincere sulla coppia e perdere il tema
+       scuro senza nessun errore di compilazione.
+
+       Quadrato, non pillola: 18px per 18px con `--radius-sm`. Il badge del rail
+       delle proprieta' e' 22px perche' li' e' l'unico glifo di un blocco di
+       identita' isolato; qui sta in una riga di lista alta 26px, e a 22px
+       spingerebbe la riga. */
+    &__glyph {
+        flex: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 18px;
+        height: 18px;
+        border-radius: var(--radius-sm);
+        font-size: 10px;
+        font-weight: 700;
+        line-height: 1;
+    }
+
+    /* La sezione VIEWS prende aria sopra di se': separa due liste che sono due
+       domande diverse («quale collezione» e «quale vista»), e senza lo stacco
+       leggerebbero come una lista sola di cui le ultime due voci sono metaclassi
+       dal nome strano. */
+    &__eyebrow--views {
+        margin-top: 18px;
+        padding-top: 12px;
+        border-top: 1px solid var(--color-form-border);
+    }
+
+    &__view-icon {
+        flex: none;
+        width: 18px;
+        text-align: center;
+        font-size: 12px;
+        color: var(--color-form-muted);
+    }
+
+    &__row--selected .instance-manager__view-icon { color: var(--color-accent); }
+
+    &__count {
+        flex-shrink: 0;
+        min-width: 16px;
+        text-align: right;
+        font-size: var(--text-xs);
+        font-variant-numeric: tabular-nums;
+        color: var(--color-form-muted);
+    }
+
+    &__tag {
+        flex-shrink: 0;
+        padding: 0 5px;
+        border: 1px solid var(--color-form-border);
+        border-radius: 3px;
+        font-size: 10px;
+        line-height: 15px;
+        color: var(--color-form-muted);
+    }
+
+    /* ── 10c: la testata della tabella ─────────────────────────────────────
+       Il titolo a 24px in sentence case: e' il nome della metaclasse com'e'
+       scritto nel metamodello, quindi NESSUN `text-transform`. Una regola che lo
+       mettesse in maiuscolo direbbe una parola che il metamodello non ha. */
+    /* 10k punto 2 — la testata e' uscita dalla card e vive sul fondo desk,
+       sopra di essa. Tre conseguenze, tutte qui:
+
+       `margin-bottom` va a ZERO. Prima separava la testata dalla toolbar dentro
+       la stessa card; ora fra testata e card c'e' il `gap: 12px` di `__main`, e
+       tenere il margine avrebbe sommato i due in 24px senza che nessuno dei due
+       lo dicesse.
+
+       Il cinturino a 1300px e' lo STESSO delle due card (10e). Senza, la testata
+       si allineerebbe al bordo del desk mentre le card sono centrate: sopra i
+       1300px di viewport il titolo scivolerebbe a sinistra rispetto alla tabella
+       che nomina.
+
+       `flex-shrink: 0` resta: `__main` e' una colonna flex, e una testata di due
+       righe e' la prima cosa che si comprimerebbe. */
+    &__head {
+        flex-shrink: 0;
+        width: 100%;
+        max-width: 1300px;
+        margin: 0 auto;
+        /* 10k-CHIUSURA — la testata e' una RIGA: il soggetto a sinistra, le due
+           azioni che agiscono su di lui a destra. `flex-end` e non `center`: i
+           due blocchi hanno altezze diverse (due righe contro un bottone da
+           28px), e allinearli al centro farebbe galleggiare i bottoni sopra la
+           linea di base del sottotitolo invece che sopra la card. */
+        display: flex;
+        align-items: flex-end;
+        gap: 12px;
+    }
+
+    /* `min-width: 0` non e' igiene: senza, il blocco del titolo non scende sotto
+       la larghezza del nome della metaclasse, e un nome lungo spingerebbe i due
+       bottoni fuori dal cinturino invece di accorciarsi. */
+    &__head-titles { min-width: 0; }
+
+    /* Le due azioni. `margin-left: auto` qui e non su `__export`: nella toolbar
+       la spinta era del bottone perche' era lui l'ultimo elemento, in testata e'
+       del gruppo. I due margini che i bottoni portano da 10c sono azzerati
+       DENTRO questo blocco e non alla sorgente — restano validi dove quei
+       bottoni sono nati, e qui la spaziatura la da' il `gap`. */
+    &__head-actions {
+        flex: none;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-left: auto;
+
+        .instance-manager__save { margin-left: 0; }
+        .instance-manager__last-saved { margin-left: 0; }
+        .instance-manager__export { margin-left: 0; }
+        .instance-manager__new { margin-left: 0; }
+    }
+
+    &__title {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 600;
+        line-height: 1.2;
+        color: var(--color-text-primary);
+    }
+
+    &__provenance {
+        margin: 2px 0 0;
+        font-size: var(--text-xs);
+        color: var(--color-form-muted);
+    }
+
+    /* Il segmented: UN contenitore con il bordo, i bottoni dentro senza. Un
+       bordo per bottone avrebbe fatto una doppia riga a ogni giunzione. */
+    &__segmented {
+        display: inline-flex;
+        align-items: center;
+        height: 28px;
+        padding: 2px;
+        gap: 2px;
+        border: 1px solid var(--color-form-border-strong);
+        border-radius: 4px;
+        background: var(--color-form-surface);
+    }
+
+    &__segment {
+        height: 22px;
+        padding: 0 9px;
+        border: 0;
+        border-radius: 3px;
+        background: transparent;
+        font-size: var(--text-xs);
+        color: var(--color-form-muted);
+        cursor: pointer;
+        /* 10k punto 9 — anche il colore, perche' il segmento attivo lo cambia. */
+        transition: background-color 150ms ease-out, color 150ms ease-out;
+
+        &:hover { background: var(--color-bg-tertiary); }
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: -1px; }
+
+        /* Il segmento attivo prende la campitura di selezione, la STESSA del
+           rail: un filtro attivo e una riga attiva sono lo stesso fatto detto in
+           due posti, e due colori direbbero che sono due fatti. */
+        &--on {
+            background: var(--color-selection-bg);
+            color: var(--color-text-primary);
+            font-weight: 500;
+        }
+    }
+
+    /* 10k-CHIUSURA — indicatore e Columns chiudono la barra a destra, ora che
+       Export e New sono saliti in testata. La spinta e' dichiarata su ENTRAMBI e
+       il primo dei due che si rende vince: l'indicatore non c'e' quando non ci
+       sono colonne ridotte, e senza la seconda dichiarazione Columns resterebbe
+       appiccicato al segmented. E' lo stesso idioma con cui `__export ~ __new`
+       gia' risolve la stessa coppia in questo foglio. */
+    &__hidden-cols {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        margin-left: auto;
+        font-size: var(--text-xs);
+        color: var(--color-form-muted);
+        cursor: default;
+    }
+
+    /* ── 10i: il pannello Columns ──────────────────────────────────────────
+       Il wrapper esiste solo per ancorare il popover: il bottone e' in una
+       barra che VA A CAPO (`flex-wrap` sopra), quindi la posizione del
+       pannello non e' calcolabile dal contenitore — deve nascere dal proprio
+       bottone, e per farlo serve un `position: relative` che sia quello e non
+       la toolbar intera.
+
+       10k-chiusura: la frase resta vera, ma l'ancoraggio ora e' in JS. Il
+       pannello e' `fixed` su `document.body` e nasce dal rect del bottone, non
+       piu' da questo blocco contenitore; il `relative` qui sotto non posiziona
+       piu' nulla. Non e' rimosso (Regola 9) perche' e' anche cio' che tiene il
+       wrapper una scatola di posizionamento per qualunque cosa vi si appenda,
+       e toglierlo e' un delta senza guadagno. */
+    &__columns-wrap {
+        position: relative;
+        display: inline-flex;
+        margin-left: auto;
+    }
+
+    /* Quando l'indicatore c'e', la spinta e' sua e Columns le sta accanto. */
+    &__hidden-cols ~ .instance-manager__columns-wrap { margin-left: 10px; }
+
+    /* Le stesse dichiarazioni di `__export`: e' lo stesso controllo secondario
+       della stessa barra. Scritte per esteso e non ereditate da un selettore
+       comune perche' unificarle vorrebbe dire riscrivere `__export`, che questa
+       slice non ha nel perimetro. */
+    &__columns {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        height: 28px;
+        padding: 0 10px;
+        border: 1px solid var(--color-form-border-strong);
+        border-radius: 4px;
+        background: var(--color-form-surface);
+        font-size: 12px;
+        color: var(--color-form-label);
+        cursor: pointer;
+        /* 10k punto 9 — 150ms ease-out sulle sole proprieta' che l'hover cambia. */
+        transition: background-color 150ms ease-out;
+
+        &:hover { background: var(--color-bg-tertiary); }
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: -1px; }
+
+        /* Aperto = premuto. La campitura e' quella della selezione, la stessa
+           del segmento attivo e della riga selezionata: uno stato attivo e'
+           un fatto solo, e un secondo colore direbbe che sono due. */
+        &[aria-expanded='true'] { background: var(--color-selection-bg); }
+    }
+
+    /* La card del DS: fondo primario, bordo `form-border`, raggio 6, l'ombra
+       leggera di `__outline-menu`. */
+    /* 10k-chiusura — `fixed`, e il posto lo mette React.
+       `absolute` ancorava il pannello al wrapper, che sta dentro `__pane--table`:
+       quella card e' `overflow: hidden` (glielo chiede il raccordo dei raggi su
+       testata e righe, ed e' asserito da 10k), e un `absolute` viene clippato
+       dall'antenato che nasconde. Il pannello si vedeva fino a meta' elenco.
+       Il nodo e' ora portato su `document.body` e le coordinate sono del
+       viewport: `top`/`left` (o `bottom`, quando ribalta) arrivano inline da
+       `computeColumnsPanelStyle`, e qui NON si dichiarano — una coordinata nel
+       foglio vincerebbe o perderebbe contro l'inline a seconda del ramo, che e'
+       il modo di avere due geometrie per lo stesso pannello.
+
+       `max-width` e' il gemello di `COLUMNS_PANEL_MAX_W` nel TSX: e' la misura
+       con cui il clamp orizzontale tiene il pannello dentro la finestra, e i due
+       numeri devono restare lo stesso numero.
+
+       `z-index: 30` e non 3: fuori dalla card il pannello non compete piu' con i
+       fratelli del tab ma con i livelli di pagina. Sopra la card della form (che
+       non ne dichiara nessuno) e SOTTO lo scrim dei dialoghi (40): quando si apre
+       una modale il pannello deve finirle dietro, non davanti. */
+    &__columns-panel {
+        position: fixed;
+        z-index: 30;
+        display: flex;
+        flex-direction: column;
+        /* 10k-dd — le righe si toccano. Il `gap: 2px` piu' il raggio di ogni
+           riga faceva una rigatura: nove bande separate invece di un elenco, e
+           la campitura dell'hover perdeva il contatto con quella sopra. A zero,
+           l'hover e' una banda continua e l'elenco e' una cosa sola. */
+        gap: 0;
+        min-width: 200px;
+        max-width: 280px;
+        max-height: 320px;
+        overflow-y: auto;
+        /* La gronda scende a 4px in verticale: il respiro lo danno le righe, e
+           6px sopra la prima la staccavano dalla testata. */
+        padding: 4px;
+        border: 1px solid var(--color-form-border);
+        /* `--radius-dropdown` (8px) e non il 6 letterale: e' il gradino che il
+           DS dichiara per menu e popover, e questo e' un popover. */
+        border-radius: var(--radius-dropdown);
+        background: var(--color-bg-primary);
+        /* Geometria per esteso, colore da token: e' la forma che R-RAIL-10
+           prescrive per le ombre, e non `var(--shadow-*)`. `__outline-menu`
+           porta la stessa ombra con l'`rgba` letterale — precede la regola e
+           resta com'e' (Regola 8), ma la nuova non la ricopia: in scuro il
+           token vira e il letterale no. */
+        /* 10k-dd — 4/12 invece di 2/6. Il pannello galleggia SOPRA una card che
+           ha gia' la sua ombra (`--shadow-desk-card`): a 2px stava sullo stesso
+           piano di cio' che copre, e un popover che non si stacca dal proprio
+           fondo si legge come un pezzo di esso. Il colore resta il token. */
+        box-shadow: 0 4px 12px var(--color-node-shadow);
+    }
+
+    /* ── 10k-dd: la testata del pannello ─────────────────────────────────────
+       Nove righe che cominciano fredde non dicono quante colonne si stanno
+       guardando: bisogna contare le spunte. Il conteggio e' l'unica cosa che il
+       pannello sa e che l'elenco non mostra, e sta dove si guarda per primo.
+
+       NON ripete la parola «Columns»: quella e' sul bottone da cui il pannello
+       e' appena nato, e ridirla qui sarebbe la seconda copia della stessa
+       etichetta a otto pixel di distanza. */
+    &__columns-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 3px 6px 6px;
+        margin-bottom: 4px;
+        border-bottom: 1px solid var(--color-form-border);
+        font-size: var(--text-2xs);
+        font-variant-numeric: tabular-nums;
+        color: var(--color-form-muted);
+        cursor: default;
+    }
+
+    &__columns-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 4px 6px;
+        border-radius: var(--radius-sm);
+        font-size: 12px;
+        color: var(--color-text-primary);
+        cursor: pointer;
+        /* 10k-dd — la stessa transizione della riga di tabella e della riga del
+           rail: le tre sono lo stesso gesto su tre elenchi. */
+        transition: background-color 150ms ease-out;
+
+        /* 10k-dd — `--color-bg-hover`, non `--color-bg-tertiary`. Questo foglio
+           ha gia' ratificato due volte che i due sono ruoli distinti e che
+           l'hover e' il primo (riga di tabella, nodo dell'outline); questa e' la
+           terza riga di elenco della stessa superficie e non aveva ragione di
+           divergere. `--color-bg-tertiary` resta il fondo delle bande a riposo,
+           che qui e' la testata. */
+        &:hover { background: var(--color-bg-hover); }
+
+        input { cursor: pointer; }
+
+        /* ── 10k-dd: la gerarchia ────────────────────────────────────────────
+           Una colonna NASCOSTA porta l'etichetta in muted. E' la sola
+           dichiarazione che rende l'elenco leggibile a colpo d'occhio: senza,
+           nove righe sono nove righe uguali e per sapere che cosa si sta
+           guardando bisogna leggere nove caselle. Con, le colonne a schermo
+           sono le scure e le altre arretrano.
+
+           Il colore NON tocca la casella, che resta il controllo del DS con il
+           suo bordo pieno: una casella smorzata insieme all'etichetta si
+           leggerebbe come disattivata, e queste sono tutte cliccabili. */
+        &--off { color: var(--color-form-muted); }
+
+        /* `name` non si disattiva. La voce resta LEGGIBILE — e' l'unica che
+           dice quale colonna e' la colonna dei nomi — e non prende il grigio
+           di un controllo spento: e' bloccata, non indisponibile. */
+        &--locked {
+            cursor: default;
+            &:hover { background: none; }
+            input { cursor: default; }
+        }
+    }
+
+    /* La nota che dice PERCHE' la casella e' spenta. Senza, una spunta assente
+       su una colonna che il metamodello dichiara legge come un guasto. */
+    /* La nota che dice PERCHE' la casella e' spenta. 10k-dd: `flex: none` e
+       l'etichetta che si accorcia al posto suo — prima la nota era spinta a
+       destra da `margin-left: auto` e un nome lungo la mandava fuori dal
+       pannello invece di accorciarsi. Misurato nel before: 43px di vuoto fra
+       etichetta e nota su un pannello largo 190, cioe' quasi un quarto della
+       larghezza speso in aria. */
+    &__columns-empty {
+        flex: none;
+        margin-left: auto;
+        padding-left: 8px;
+        font-size: var(--text-2xs);
+        /* Resta `--color-form-muted` (slate-400) e NON scende a slate-300, che
+           il primo giro di 10k-dd aveva provato: su bianco slate-300 da' 1.6:1,
+           cioe' illeggibile, e la nota e' l'unica cosa che spiega perche' una
+           casella e' spenta. Non serviva smorzarla — con le etichette nascoste
+           gia' in muted la nota non compete piu' con niente. Stessa misura, e
+           stessa conclusione, del `__draft-label` di DS3. */
+        color: var(--color-form-muted);
+    }
+
+    /* L'etichetta cede prima della nota: e' lei che puo' essere lunga. */
+    &__columns-label {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    /* SAVE1 — «Save project» divide la regola con Export invece di copiarla:
+       il prompt chiede «stesso componente/classe di Export», e qui i due
+       bottoni secondari della testata non sono un componente ma una regola.
+       Una seconda copia dei dodici valori sarebbe la meta' che il giorno in
+       cui Export cambia resta indietro senza errore di compilazione.
+
+       Export sta a sinistra del New e non ne prende il peso: il primario della
+       testata e' uno solo, ed e' la create. Save sta a sinistra di Export per
+       la stessa ragione, un gradino piu' in la': e' l'azione sul PROGETTO,
+       mentre le altre due sono sulla collezione che il titolo nomina. */
+    /* SAVE2 — l'etichetta dell'ultimo salvataggio. Testo di stato, non un
+       controllo: nessun bordo, nessuno sfondo, nessun colore semantico. Il
+       registro e' quello di `&__provenance` qui sopra, che e' l'altra riga di
+       stato della stessa testata. */
+    &__last-saved {
+        flex: none;
+        font-size: 11px;
+        line-height: 1;
+        white-space: nowrap;
+        color: var(--color-form-muted);
+    }
+
+    &__save,
+    &__export {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-left: auto;
+        height: 28px;
+        padding: 0 10px;
+        border: 1px solid var(--color-form-border-strong);
+        border-radius: 4px;
+        background: var(--color-form-surface);
+        font-size: 12px;
+        color: var(--color-form-label);
+        cursor: pointer;
+        /* Stessa causa del primario, conseguenza diversa: qui il fondo e' chiaro,
+           quindi l'icona non spariva — leggeva `#0f172a` invece del `#475569`
+           della propria etichetta, cioe' un secondario con due pesi di grigio.
+           `inherit` la riallinea alla label. */
+        i.bi, i.bi:hover { color: inherit; }
+
+        /* 10k punto 9. */
+        transition: background-color 150ms ease-out;
+
+        &:hover:not(:disabled) { background: var(--color-bg-tertiary); }
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: -1px; }
+
+        /* Solo `__save` si disabilita — durante il salvataggio in volo. La
+           stessa coppia di valori del `__page-btn`, che e' l'altro secondario
+           di questo foglio che si spegne. */
+        &:disabled { opacity: 0.4; cursor: default; }
+    }
+
+    /* Quando Export non c'e' (collezione vuota) il New deve comunque andare a
+       destra: la spinta e' su entrambi, e il primo dei due che si rende vince. */
+    &__export ~ .instance-manager__new { margin-left: 10px; }
+
+    /* ── 10c: il footer della tabella ──────────────────────────────────────
+       `flex-shrink: 0` non e' igiene: il contenitore della tabella e'
+       `flex: 1 1 auto`, e senza questo il footer sarebbe la prima cosa che una
+       tabella lunga comprime via. */
+    &__foot {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-shrink: 0;
+        gap: 12px;
+        /* 10d — il footer e' il BORDO INFERIORE della card, non una riga che
+           galleggia dentro il padding. I margini negativi lo sbordano fino ai
+           tre lati della card e il padding rimette l'inset al contenuto: senza,
+           la riga si fermerebbe a 14px dai bordi e leggerebbe come un separatore
+           interno. Il raggio della card lo clippa (`overflow: hidden` sul
+           pannello, gia' dichiarato sopra). */
+        margin: 8px -14px -14px;
+        padding: 10px 14px;
+        border-top: 1px solid var(--color-form-border);
+        font-size: var(--text-xs);
+        color: var(--color-form-muted);
+    }
+
+    &__foot-count { font-variant-numeric: tabular-nums; }
+    &__foot-of { color: var(--color-form-border-strong); }
+
+    &__pager {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    &__page-of { font-variant-numeric: tabular-nums; }
+
+    &__page-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        border: 1px solid var(--color-form-border-strong);
+        border-radius: 4px;
+        background: var(--color-form-surface);
+        color: var(--color-form-label);
+        cursor: pointer;
+        /* 10k punto 9. */
+        transition: background-color 150ms ease-out, opacity 150ms ease-out;
+
+        &:hover:not(:disabled) { background: var(--color-bg-tertiary); }
+        &:disabled { opacity: 0.4; cursor: default; }
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: -1px; }
+    }
+
+    /* ── 10c: la form collassata ───────────────────────────────────────────
+       Il pannello perde il tetto del 55% e prende l'altezza del suo contenuto,
+       che e' una riga: il `max-height` di FL6 e' un TETTO per una form aperta,
+       non un pavimento, e su una barra sottile non ha niente da limitare. */
+    &__pane--form-collapsed {
+        flex: 0 0 auto;
+        max-height: none;
+        overflow: hidden;
+
+        .instance-manager__form-inner { padding: 0; }
+    }
+
+    /* ── 10j: il cartello della collezione vuota ───────────────────────────
+       Il componente condiviso `EmptyState` resta com'e': lo montano altri otto
+       punti dell'app, e la misura che questa slice chiede e' del manager. Qui
+       si scrive la sola differenza, e la si scopa alla card della tabella.
+
+       Il selettore raddoppia la classe — `&__empty.jj-empty-state` invece del
+       solo `&__empty` — e non e' enfasi: il foglio del componente dichiara le
+       proprie regole scure sotto `[data-theme="dark"] .jj-empty-state__…`, che
+       a classe singola pareggerebbero la specificita' di queste e vincerebbero
+       per ordine di cascata. Raddoppiando, ogni riga qui sta un gradino sopra
+       la sua omologa scura, in chiaro e in scuro allo stesso modo.
+
+       Il glifo esce dal cerchio: 48px di pastiglia dipinta per un'icona che
+       dice «vuoto» erano la meta' dell'altezza del cartello. Restano 32px di
+       glifo, e il respiro lo da' lo spazio invece di un disco grigio.
+
+       La gronda e' 24px, e il numero e' MISURATO, non scelto. La prima stesura
+       ne metteva 48 e la card della tabella saliva da 298px a 347px, cioe' 49px
+       piu' ALTA di prima: la CTA guadagnata pesa ~45px, il cerchio che se ne va
+       ne restituisce 16, e i +32px di gronda rispetto ai 32 del componente
+       condiviso pagavano la differenza. Il chrome tolto non c'entrava — filtro,
+       segmented e Columns stavano sulla stessa riga del «New», che ora si spegne
+       con lei. A 24px il cartello sta sui 185px e la card sui 261px, sotto i
+       298px del prima. §1 del referto 10j.
+
+       Nessun `flex-grow: 0` qui: `__pane--table` e' gia' `flex: 0 1 auto` da
+       10e, e la card abbraccia il contenuto per quella regola. Ridirlo qui
+       sarebbe una seconda dichiarazione dello stesso vincolo, cioe' il posto in
+       cui un domani le due divergono.
+
+       I due grigi sono i due che questo file GIA' usa come colore di testo:
+       `--color-form-border-strong` (slate-300) e' quello di `__foot-of` e
+       `__th--readonly`, `--color-form-muted` (slate-400) quello di ogni
+       sottoriga. Nessuna terza tinta, nessun letterale. */
+    &__empty.jj-empty-state {
+        padding-block: 24px;
+
+        .jj-empty-state__icon-circle {
+            width: auto;
+            height: auto;
+            margin: 0 0 12px;
+            background: none;
+            border-radius: 0;
+
+            .bi {
+                font-size: 32px;
+                color: var(--color-form-border-strong);
+            }
+        }
+
+        .jj-empty-state__title { font-weight: 600; }
+
+        .jj-empty-state__description {
+            font-size: var(--text-sm);
+            color: var(--color-form-muted);
+        }
+    }
+
+    &__collapsed {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0;
+        padding: 9px 14px;
+        font-size: var(--text-xs);
+        color: var(--color-form-muted);
+    }
+
+    /* ── The collection table ──────────────────────────────────────────────
+       Wide content scrolls INSIDE its own container: a metamodel with fifteen
+       attributes must not make the tab scroll sideways. */
+    &__table-scroll {
+        margin-top: 10px;
+        overflow: auto;
+        flex: 1 1 auto;
+    }
+
+    &__table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: var(--text-sm);
+        color: var(--color-form-label);
+
+        th, td {
+            padding: 5px 10px;
+            text-align: left;
+            font-weight: 400;
+            white-space: nowrap;
+            max-width: 260px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* 10i — le intestazioni SONO l'eyebrow del pannello, non un quarto
+           stile a parte: 11 / 600 / 0.08em / muted, le stesse quattro
+           dichiarazioni di `&__eyebrow` e di `&__ego-group-title`. Prima di
+           10i erano gia' tre su quattro, e la quarta divergeva di 0.04em senza
+           una ragione scritta da nessuna parte.
+
+           Il maiuscolo lo fa il CSS. Le stringhe restano quelle del
+           metamodello — `entryAction` e' il nome della feature, e riscriverlo
+           `ENTRYACTION` nel sorgente lo perderebbe per il `title`, per il CSV
+           e per chi legge con uno screen reader, che riceve il testo e non la
+           resa. `text-transform` cambia i pixel e lascia il dato.
+
+           `0.08em` resta letterale per R-RAIL-10, che lo nomina come la sua
+           prima eccezione: non c'e' un token da usare qui, e inventarne uno
+           sarebbe estendere la scala per far combaciare una superficie. */
+        thead th {
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            background: var(--color-form-surface);
+            border-bottom: 1px solid var(--color-form-border);
+            font-size: var(--text-xs);
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--color-form-muted);
+        }
+
+        /* 10k punto 9 — l'hover di riga passa a `--color-bg-hover` e smette di
+           scattare. Il token e' quello che il nodo dell'outline gia' porta da
+           10e, con la ragione scritta li': `--color-bg-hover` (#e9eff6) e
+           `--color-bg-tertiary` (#f1f5f9) sono due RUOLI, e questo e' l'hover.
+           Due superfici della stessa colonna che rispondono al puntatore con due
+           grigi diversi dicono di essere due generi di lista.
+
+           150ms ease-out: la stessa durata delle altre transizioni introdotte da
+           questa passata. Solo su `background-color`, non su `all` — un `all` su
+           una riga di tabella anima anche il bordo e la selezione, e la barra di
+           `__td-name` comparirebbe in dissolvenza invece che al click. */
+        tbody tr {
+            border-bottom: 1px solid var(--color-slate-100);
+            cursor: pointer;
+            transition: background-color 150ms ease-out;
+
+            &:hover { background: var(--color-bg-hover); }
+        }
+    }
+
+    &__tr--selected,
+    &__tr--selected:hover {
+        background: var(--color-selection-bg);
+
+        .instance-manager__td-name { box-shadow: inset 2px 0 0 var(--color-selection-bar); }
+    }
+
+    &__td-name {
+        font-weight: 500;
+        color: var(--color-text-primary);
+    }
+
+    &__th--readonly { color: var(--color-form-border-strong); }
+
+    &__req {
+        margin-left: 2px;
+        color: var(--color-marker-required);
+    }
+
+    &__lock {
+        margin-left: 4px;
+        font-size: 9px;
+        color: var(--color-form-muted);
+    }
+
+    &__th-refs, &__td-refs { text-align: right; }
+
+    &__refcount {
+        display: inline-block;
+        min-width: 18px;
+        padding: 0 5px;
+        border-radius: 9px;
+        background: var(--color-bg-tertiary);
+        font-size: var(--text-xs);
+        font-variant-numeric: tabular-nums;
+        color: var(--color-form-section);
+        cursor: help;
+    }
+
+    /* ── Cells, one line each ─────────────────────────────────────────────── */
+    &__dash, &__unnamed {
+        color: var(--color-form-muted);
+    }
+
+    &__unnamed { font-style: italic; }
+
+    &__swatch-cell, &__pill, &__collection, &__broken {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-width: 0;
+    }
+
+    &__swatch {
+        flex-shrink: 0;
+        width: 14px;
+        height: 14px;
+        border: 1px solid var(--color-form-muted);
+        border-radius: 3px;
+    }
+
+    &__chip {
+        display: inline-block;
+        padding: 0 6px;
+        border: 1px solid var(--color-form-border);
+        border-radius: 9px;
+        font-size: var(--text-xs);
+        line-height: 16px;
+        color: var(--color-form-section);
+    }
+
+    /* Una tinta per alternativa. Gli slot sono sette, in ordine fisso, assegnati da
+       `jjform/optionColor.ts` sull'indice del letterale dentro la PROPRIA enumerazione:
+       due valori fra cui si sta scegliendo non escono mai dello stesso colore, e `High`
+       e' lo stesso colore in tutte le colonne tipate sulla stessa enumerazione. Due
+       enumerazioni diverse possono riusare uno slot — non sono alternative fra loro.
+
+       Il chip neutro qui sopra resta la base: lo porta un enum multivalore (il testo e'
+       una giunzione, e colorarla col primo letterale direbbe una cosa falsa sugli altri)
+       e un valore che non e' fra i letterali dichiarati.
+
+       Sette blocchi e non una custom property scritta sull'elemento: le variabili di
+       questo sistema stanno in `styles/tokens/` (CLAUDE.md regola 28). */
+    &__chip--slot-1 {
+        background: var(--color-opt-1-bg);
+        border-color: var(--color-opt-1-border);
+        color: var(--color-opt-1-fg);
+    }
+    &__chip--slot-2 {
+        background: var(--color-opt-2-bg);
+        border-color: var(--color-opt-2-border);
+        color: var(--color-opt-2-fg);
+    }
+    &__chip--slot-3 {
+        background: var(--color-opt-3-bg);
+        border-color: var(--color-opt-3-border);
+        color: var(--color-opt-3-fg);
+    }
+    &__chip--slot-4 {
+        background: var(--color-opt-4-bg);
+        border-color: var(--color-opt-4-border);
+        color: var(--color-opt-4-fg);
+    }
+    &__chip--slot-5 {
+        background: var(--color-opt-5-bg);
+        border-color: var(--color-opt-5-border);
+        color: var(--color-opt-5-fg);
+    }
+    &__chip--slot-6 {
+        background: var(--color-opt-6-bg);
+        border-color: var(--color-opt-6-border);
+        color: var(--color-opt-6-fg);
+    }
+    &__chip--slot-7 {
+        background: var(--color-opt-7-bg);
+        border-color: var(--color-opt-7-border);
+        color: var(--color-opt-7-fg);
+    }
+
+    &__pill {
+        padding: 0 6px 0 4px;
+        border: 1px solid var(--color-form-border);
+        border-radius: 9px;
+        font-size: var(--text-xs);
+        line-height: 16px;
+        color: var(--color-form-section);
+
+        i { font-size: 9px; }
+    }
+
+    /* A dangling pointer is the one thing in this table that has to be seen
+       across the room (12d): it is the state that makes a delete unsafe. */
+    &__broken {
+        color: var(--color-error);
+        font-size: var(--text-xs);
+
+        i { font-size: 10px; }
+    }
+
+    &__num { font-variant-numeric: tabular-nums; }
+
+    &__unit {
+        margin-left: 3px;
+        font-size: var(--text-xs);
+        color: var(--color-form-muted);
+    }
+
+    &__code {
+        font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+        font-size: 11px;
+        color: var(--color-form-section);
+    }
+
+    &__bool { color: var(--color-form-section); }
+
+    &__more {
+        flex-shrink: 0;
+        font-size: 10px;
+        color: var(--color-form-muted);
+    }
+
+    /* ── Create (2c) ──────────────────────────────────────────────────────────
+       The button is the 7a primary: slate gradient, white glyph, never cyan on a
+       fill (DESIGN-SYSTEM §7.1). It is rendered only when the metaclass offers a
+       New, so there is no disabled variant of it — an absent control and a
+       sentence saying why is the idiom this tab already uses for abstract rows. */
+    &__new, &__add {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        height: 28px;
+        padding: 0 12px;
+        border: none;
+        border-radius: 8px;
+        background: linear-gradient(135deg, #334155, #1e293b);
+        font-size: 12px;
+        font-weight: 500;
+        color: #ffffff;
+        cursor: pointer;
+
+        i { font-size: 11px; }
+        /* Il glifo prende il colore del PULSANTE, che qui e' il bianco dichiarato
+           quattro righe sopra. Non e' ridondante: `styles/style.scss:789` dichiara
+           `i.bi { color: var(--font-color-1) }` DIRETTAMENTE sull'elemento che
+           dipinge, e una dichiarazione diretta batte sempre l'ereditarieta' —
+           misurato il 2026-09-01, l'icona di «+ New» calcolava `rgb(15, 23, 42)`
+           su un pulsante che dichiara `rgb(255, 255, 255)`. E' lo stesso reperto
+           del 2026-08-12 sull'albero (CLAUDE.md §5), applicato ai pulsanti.
+
+           `inherit` e non `#fff`: il colore ha UNA sorgente, il pulsante, e una
+           variante futura se lo porta dietro. La coppia con `:hover` non e'
+           decorazione — `i.bi:hover` dichiara un SECONDO colore
+           (`--palette-1-hover`, misurato `#1e293b`) a pari specificita' della
+           prima meta' di questa regola, e senza il selettore piu' lungo il
+           difetto tornerebbe al passaggio del mouse. */
+        i.bi, i.bi:hover { color: inherit; }
+
+        /* 10k punto 9 — sul `filter`, che e' cio' che questo hover cambia. */
+        transition: filter 150ms ease-out;
+
+        &:hover { filter: brightness(1.1); }
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 2px; }
+    }
+
+    &__new { margin-left: 10px; }
+
+    /* The reason a create is not offered. Same voice as `__note`, one notch in from
+       the toolbar so it reads as belonging to the collection above it. */
+    &__note--reason { margin-top: 8px; }
+
+    /* ── Child slots of the selected instance ───────────────────────────────
+       10k punto 6 — via il filetto e via la gronda superiore, con l'eyebrow
+       «Add contained» che il TSX ha tolto. I tre erano cio' che faceva di questa
+       barra una SEZIONE: un titolo, una linea che la staccava da sopra, e lo
+       spazio per respirare da sola. Senza, e' la coda della sezione CHILDREN che
+       la precede — gli stessi slot, e come aggiungerne uno.
+
+       La gronda laterale e inferiore resta: e' l'inset del contenuto della card,
+       lo stesso che `__form-inner` da' a tutto il resto. */
+    &__children {
+        flex-shrink: 0;
+        padding: 0 14px 14px;
+    }
+
+    &__child {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 4px 0;
+        font-size: var(--text-sm);
+        color: var(--color-form-label);
+    }
+
+    &__child-reason {
+        margin-left: auto;
+        font-size: var(--text-xs);
+        color: var(--color-form-muted);
+        text-align: right;
+    }
+
+    &__add {
+        margin-left: auto;
+        height: 24px;
+        padding: 0 10px;
+        font-size: 11px;
+    }
+
+    /* ── The draft dialogue (12a) ─────────────────────────────────────────────── */
+    &__scrim {
+        position: fixed;
+        inset: 0;
+        z-index: 40;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(15, 23, 42, 0.55);
+    }
+
+    &__draft {
+        display: flex;
+        flex-direction: column;
+        width: min(680px, calc(100vw - 80px));
+        max-height: calc(100vh - 80px);
+        overflow: hidden;
+        border-radius: 16px;
+        background: var(--color-form-surface);
+        box-shadow: 0 32px 80px rgba(15, 23, 42, 0.45);
+    }
+
+    &__draft-head {
+        display: flex;
+        align-items: flex-start;
+        gap: 16px;
+        flex: none;
+        padding: 18px 24px;
+        background: linear-gradient(135deg, #334155, #0f172a);
+    }
+
+    &__draft-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: #ffffff;
+    }
+
+    &__draft-subtitle {
+        margin-top: 2px;
+        font-size: var(--text-xs);
+        color: rgba(255, 255, 255, 0.65);
+    }
+
+    &__draft-close {
+        margin-left: auto;
+        border: none;
+        background: none;
+        font-size: 14px;
+        color: rgba(255, 255, 255, 0.6);
+        cursor: pointer;
+
+        &:hover { color: #ffffff; }
+    }
+
+    /* Since FL4 the children are ROWS of the shared 12-column grid, packed by
+       `formAutoLayout.autoLayoutRows` — the same call the edit form makes — so the two
+       columns this used to impose are gone: a two-up layout that the metamodel did not
+       choose is exactly the per-form arrangement the auto-layout removes. The row and cell
+       rules are `ir-form__row` / `ir-form__cell` in `irFormStyle.scss`, which reaches this
+       tab through its own import of `IRForm`. */
+    &__draft-body {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        padding: 20px 24px;
+        overflow: auto;
+    }
+
+    &__draft-field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        min-width: 0;
+    }
+
+    /* DS3 — il quinto eyebrow del foglio, e ora traccia come gli altri quattro.
+       10i lo rilevo' a `0.04em` e lo lascio' com'era, fissandone lo stato con
+       un'asserzione perche' non venisse riscoperto; questa slice chiude la
+       divergenza: `0.08em`, letterale per R-RAIL-10 come sopra.
+
+       Il COLORE resta `--color-form-section` (slate-500) e NON diventa
+       `--color-form-muted` (slate-400), che e' l'unico punto in cui questa
+       etichetta si stacca dall'eyebrow. La ragione e' misurata, non estetica:
+       su bianco slate-500 da' 4.76:1 e slate-400 da' 2.59:1, e questa non e'
+       una testata ma la `<label>` di un campo da compilare, a 11px. Portarla
+       a muted la manderebbe sotto AA. In scuro i due token collassano
+       entrambi su `--color-text-tertiary`, quindi la divergenza vive solo in
+       chiaro. Deliberata: non «convergerla» in un passaggio di pulizia. */
+    &__draft-label {
+        font-size: var(--text-xs);
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--color-form-section);
+    }
+
+    /* The type and the cardinality, in the label but not shouting: they are the
+       evidence for the required star beside them. */
+    &__draft-card {
+        margin-left: 6px;
+        font-weight: 400;
+        text-transform: none;
+        letter-spacing: 0;
+        font-size: var(--text-xs);
+        color: var(--color-form-muted);
+    }
+
+    /* 12px / 28px / border-strong — the 7a control, the same one the search box uses. */
+    &__draft-control {
+        height: 28px;
+        padding: 0 8px;
+        border: 1px solid var(--color-form-border-strong);
+        border-radius: 4px;
+        background: var(--color-form-surface);
+        font-size: 12px;
+        color: var(--color-form-label);
+
+        &::placeholder { color: var(--color-form-muted); }
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: -1px; }
+
+        &--invalid { border-color: var(--color-error); }
+    }
+
+    /* CRUD2 — il controllo di una reference MULTIVALORE nel modale: i chip di
+       quel che e' scelto, e sotto la select che aggiunge. Impilati e non
+       affiancati perche' la cella del packer e' larga 6 colonne su 12 e una
+       riga di chip accanto a una select ci sta solo finche' i chip sono due.
+
+       Il chip riusa `&__chip` — la stessa pillola della tabella, stessi token —
+       e questa classe aggiunge SOLO quel che il chip della tabella non ha: la
+       croce di rimozione. Nessun token nuovo (regola 28). */
+    &__draft-multi {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        min-width: 0;
+    }
+
+    &__draft-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+
+    &__draft-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 2px;
+        padding-right: 2px;
+    }
+
+    &__draft-chip-x {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 14px;
+        height: 14px;
+        padding: 0;
+        border: none;
+        border-radius: 50%;
+        background: transparent;
+        color: var(--color-form-muted);
+        cursor: pointer;
+
+        i { font-size: 11px; line-height: 1; }
+
+        &:hover { color: var(--color-error); }
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 1px; }
+    }
+
+    &__draft-error {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: var(--text-xs);
+        color: var(--color-error);
+
+        i { font-size: 10px; }
+    }
+
+    &__draft-foot {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex: none;
+        padding: 14px 24px;
+        border-top: 1px solid var(--color-form-border);
+        background: var(--color-bg-tertiary);
+    }
+
+    &__draft-hint {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        flex: 1;
+        font-size: var(--text-xs);
+        color: var(--color-form-muted);
+    }
+
+    &__draft-cancel {
+        border: none;
+        background: none;
+        padding: 6px 12px;
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--color-form-label);
+        cursor: pointer;
+    }
+
+    &__draft-commit {
+        height: 28px;
+        padding: 0 18px;
+        border: none;
+        border-radius: 8px;
+        background: linear-gradient(135deg, #334155, #1e293b);
+        font-size: 12px;
+        font-weight: 500;
+        color: #ffffff;
+        cursor: pointer;
+
+        &:hover:not(:disabled) { filter: brightness(1.1); }
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 2px; }
+
+        /* Disabled, not hidden: unlike the New button, this control is the one the
+           user is aiming at, and removing it mid-draft would read as the dialogue
+           breaking rather than as the draft being incomplete. The per-field errors
+           carry the reason. */
+        &:disabled { opacity: 0.5; cursor: not-allowed; }
+    }
+
+    /* ── The missing-required cell (12d) ──────────────────────────────────────
+       The other half of a broken ref (contract §2: "missing id or empty"). It is
+       what a dirty delete leaves on the referrer: the core removes the incoming
+       pointer by value, so the slot is EMPTY, and a dash there would be the silent
+       emptiness ratified rule 2 forbids. Same red as `__broken`, different word,
+       because they are different states of the same problem. */
+    &__missing {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-width: 0;
+        color: var(--color-error);
+        font-size: var(--text-xs);
+
+        i { font-size: 10px; }
+    }
+
+    /* ── The delete affordance in the row (12d) ─────────────────────────────── */
+    &__th-del, &__td-del {
+        width: 28px;
+        text-align: center;
+    }
+
+    /* Quiet until the row is hovered: the design draws it at #cbd5e1, i.e. present
+       but not competing with the values. It opens the preflight, it does not delete. */
+    &__trash {
+        font-size: 13px;
+        color: var(--color-form-muted);
+        cursor: pointer;
+        opacity: 0;
+        /* 10k punto 9 — il cestino compariva di scatto al passaggio del mouse. */
+        transition: opacity 150ms ease-out, color 150ms ease-out;
+
+        &:hover { color: var(--color-error); }
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 2px; }
+    }
+
+    tbody tr:hover &__trash,
+    tbody tr:focus-within &__trash { opacity: 1; }
+
+    /* Screen-reader-only: the actions column has no visible header, but a table
+       header cell with no accessible name is a column a screen reader cannot name. */
+    &__sr {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+    }
+
+    /* ── The delete dialogue (12d) ────────────────────────────────────────────
+       420px, 16px radius, the same scrim as the draft. Copy, spacing and states
+       from `CRUD Manager Simulation.dc.html`, which is the authority on them. */
+    &__del {
+        display: flex;
+        flex-direction: column;
+        width: min(460px, calc(100vw - 80px));
+        max-height: calc(100vh - 80px);
+        overflow: hidden;
+        border-radius: 16px;
+        background: var(--color-form-surface);
+        box-shadow: 0 32px 80px rgba(15, 23, 42, 0.45);
+    }
+
+    &__del-head {
+        display: flex;
+        gap: 12px;
+        flex: none;
+        padding: 18px 20px 0;
+    }
+
+    &__del-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: none;
+        width: 34px;
+        height: 34px;
+        border-radius: 8px;
+        background: var(--color-error-subtle);
+        color: var(--color-error);
+        font-size: 15px;
+    }
+
+    &__del-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--color-form-label);
+    }
+
+    &__del-message {
+        margin-top: 4px;
+        font-size: 12px;
+        line-height: 1.5;
+        color: var(--color-form-muted);
+    }
+
+    &__del-refs, &__del-children {
+        margin: 12px 20px 0;
+        padding: 0;
+        max-height: 120px;
+        overflow: auto;
+        border: 1px solid var(--color-form-border);
+        border-radius: 6px;
+        list-style: none;
+        font-size: 12px;
+
+        li {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 12px;
+            border-bottom: 1px solid var(--color-form-border);
+            color: var(--color-form-section);
+
+            &:last-child { border-bottom: none; }
+        }
+    }
+
+    &__del-badge-c {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: none;
+        width: 13px;
+        height: 13px;
+        border-radius: 3px;
+        background: var(--color-error-subtle);
+        color: var(--color-error);
+        font-size: 9px;
+        font-weight: 700;
+        cursor: help;
+    }
+
+    &__del-refname {
+        font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+        font-size: 10px;
+        color: var(--color-form-muted);
+    }
+
+    &__del-via {
+        margin-left: auto;
+        font-size: 10px;
+        color: var(--color-form-muted);
+    }
+
+    &__del-options {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin: 12px 20px 14px;
+        font-size: 12px;
+    }
+
+    /* The default, and the only row the design tints: cyan is an active indicator
+       here, never a button background (§7.1). */
+    &__del-reassign {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border: 1.5px solid var(--color-inode-ref-fg);
+        border-radius: 6px;
+        background: var(--color-inode-ref-bg);
+        font-weight: 500;
+        color: var(--color-form-label);
+
+        /* Cyan as an ACTIVE INDICATOR, never as a button background (§7.1): it
+           marks the row the design makes the default, and the Apply button beside
+           it stays the slate gradient every primary button in this file uses. The
+           token is the instance-node cyan, which is the design's #0891b2 in light
+           and its dark-surface correction in dark — not a literal. */
+        i { color: var(--color-inode-ref-fg); }
+    }
+
+    &__del-select {
+        margin-left: auto;
+        height: 24px;
+        padding: 0 8px;
+        border: 1px solid var(--color-form-border-strong);
+        border-radius: 4px;
+        background: var(--color-form-surface);
+        font-size: 11px;
+        color: var(--color-form-label);
+        max-width: 180px;
+    }
+
+    &__del-apply {
+        height: 24px;
+        padding: 0 10px;
+        border: none;
+        border-radius: 4px;
+        background: linear-gradient(135deg, #334155, #1e293b);
+        font-size: 11px;
+        font-weight: 500;
+        color: #ffffff;
+        cursor: pointer;
+
+        &:hover { filter: brightness(1.1); }
+    }
+
+    &__del-quiet {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid var(--color-form-border);
+        border-radius: 6px;
+        background: none;
+        font-size: 12px;
+        text-align: left;
+        color: var(--color-form-muted);
+        cursor: pointer;
+
+        &:hover { border-color: var(--color-error); color: var(--color-error); }
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 1px; }
+    }
+
+    &__del-foot {
+        display: flex;
+        justify-content: flex-end;
+        flex: none;
+        padding: 12px 20px;
+        border-top: 1px solid var(--color-form-border);
+        background: var(--color-bg-tertiary);
+    }
+
+    // ── Multi-selection (12b) and drill-in (12c) ─────────────────────────────
+    // No new tokens: every colour here is one the manager already uses, per the
+    // design-system rule that variables live in `styles/tokens/` and never in a
+    // component file.
+
+    &__th-pick, &__td-pick {
+        width: 28px;
+        text-align: center;
+        padding: 0 4px;
+
+        input { cursor: pointer; }
+    }
+
+    /* ── 10k punto 1: il checkbox, nel vocabolario del DS ────────────────────
+       Misurato nel giro before: 20x20, `appearance: auto`, zero raggio, zero
+       bordo e la spunta nera del controllo nativo di Chrome — cioe' l'unico
+       controllo di questa superficie che non passa dal sistema. `appearance:
+       none` e' la sola via per ridisegnarlo: il nativo non accetta ne' bordo ne'
+       raggio, e `accent-color` cambia il riempimento ma lascia la misura.
+
+       I tre posti in cui esiste, ed e' un elenco esplicito perche' sono tre e
+       nominarli e' il modo di non prenderne un quarto per sbaglio: la testata
+       (select-all), la riga, e le voci del pannello Columns di 10i.
+
+       `ISHISTORY` in riga NON e' qui, ed e' una constatazione misurata: e'
+       `<i class="bi bi-check-square">`, un glifo reso da `Cell`, non un input.
+       Il prompt chiedeva di dichiararlo se non fosse lo stesso componente.
+
+       Il bordo e' `--color-form-border-strong` (slate-300), che e' il nome con
+       cui QUESTO foglio chiama slate-300 e che ogni suo controllo gia' porta —
+       il `--color-border` del prompt non esiste nel sistema, e i due nomi vicini
+       (`--color-border-primary`, `--color-border-secondary`) sono fra i 15
+       dichiarati due volte con valori diversi.
+
+       Il focus porta DUE anelli, e non e' ridondanza: `outline` e' l'idioma che
+       ogni altro controllo di questa barra usa (`--color-border-focus`, slate-600,
+       visibile), e il ring 3px `--color-accent-subtle` e' quello che il prompt
+       chiede — misurato `rgba(51, 65, 85, 0.06)`, cioe' un alone al 6% che da
+       solo non sarebbe un indicatore di focus accessibile.
+
+       La spunta e' un `::before` in `clip-path`, non un glifo di font: dentro un
+       input non si puo' mettere un figlio, e Bootstrap Icons non ha una via per
+       arrivarci. `transform: scale()` invece di `display` cosi' la transizione
+       del punto 9 ha qualcosa su cui correre. */
+    &__th-pick input[type='checkbox'],
+    &__td-pick input[type='checkbox'],
+    &__columns-item input[type='checkbox'] {
+        appearance: none;
+        -webkit-appearance: none;
+        flex: none;
+        display: inline-grid;
+        place-content: center;
+        width: 16px;
+        height: 16px;
+        margin: 0;
+        border: 1px solid var(--color-form-border-strong);
+        border-radius: 4px;
+        background: var(--color-form-surface);
+        cursor: pointer;
+        transition: background-color 150ms ease-out, border-color 150ms ease-out;
+
+        &::before {
+            content: '';
+            width: 9px;
+            height: 9px;
+            background: var(--color-form-surface);
+            transform: scale(0);
+            transition: transform 150ms ease-out;
+            clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+        }
+
+        &:checked {
+            border-color: var(--color-accent);
+            background: var(--color-accent);
+        }
+
+        &:checked::before { transform: scale(1); }
+
+        /* `:not(:checked)` non e' prudenza: `&:hover:not(:disabled)` pesa (0,3,0)
+           e `&:checked` (0,2,0), quindi senza l'esclusione l'hover VINCE anche
+           su una casella spuntata — misurato nel primo giro after, il bordo di
+           una riga selezionata sotto il puntatore leggeva slate-400 invece dello
+           slate-700 del riempimento. Una casella piena non ha comunque bisogno
+           di un hover: il riempimento e' gia' lo stato piu' forte che ha. */
+        &:hover:not(:disabled):not(:checked) { border-color: var(--color-border-hover); }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-border-focus);
+            outline-offset: 1px;
+            box-shadow: 0 0 0 3px var(--color-accent-subtle);
+        }
+
+        /* La voce `name` del pannello, che 10i tiene bloccata e NON spenta:
+           resta leggibile, e il cursore dice che non e' un gesto. */
+        &:disabled { opacity: 0.5; cursor: default; }
+    }
+
+    /** A row in the selection that is not the subject: present, but quieter than
+     *  the one the form is mounted on. */
+    &__tr--multi,
+    &__tr--multi:hover {
+        background: var(--color-bg-tertiary);
+    }
+
+    &__multi {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding: 16px 20px;
+        overflow: auto;
+    }
+
+    &__multi-field {
+        display: grid;
+        grid-template-columns: 110px 1fr;
+        align-items: center;
+        gap: 4px 10px;
+    }
+
+    &__multi-label {
+        font-size: 12px;
+        color: var(--color-form-muted);
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    &__multi-input {
+        min-width: 0;
+        padding: 5px 8px;
+        border: 1px solid var(--color-form-border);
+        border-radius: 6px;
+        background: var(--color-bg-primary);
+        font-size: 12px;
+        color: var(--color-text-primary);
+
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 1px; }
+    }
+
+    /** A field the selection disagrees on. The placeholder carries the distinct
+     *  values, so the control reads as «not one value» rather than as empty. */
+    &__multi-input--mixed {
+        &::placeholder { font-style: italic; color: var(--color-form-muted); }
+    }
+
+    &__multi-mixed, &__multi-apply {
+        grid-column: 2;
+        font-size: 11px;
+        color: var(--color-form-muted);
+    }
+
+    &__multi-apply { color: var(--color-accent); }
+
+    /** The third state of the toggle: the counts ARE the information, so they sit
+     *  beside the two writes rather than being folded into a checkbox. */
+    &__tri {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    &__tri-counts {
+        font-size: 11px;
+        color: var(--color-form-muted);
+        margin-right: 4px;
+    }
+
+    &__tri-btn {
+        padding: 3px 10px;
+        border: 1px solid var(--color-form-border);
+        border-radius: 6px;
+        background: var(--color-bg-primary);
+        font-size: 11px;
+        color: var(--color-form-muted);
+        cursor: pointer;
+
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 1px; }
+    }
+
+    &__tri-btn--on {
+        border-color: var(--color-accent);
+        color: var(--color-accent);
+    }
+
+    &__multi-actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 8px;
+        margin-top: 6px;
+    }
+
+    // ── The breadcrumb of 12c ────────────────────────────────────────────────
+
+    &__crumbs {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 2px;
+        padding: 8px 20px;
+        border-bottom: 1px solid var(--color-form-border);
+        background: var(--color-bg-tertiary);
+    }
+
+    &__crumb-wrap { display: inline-flex; align-items: center; gap: 2px; }
+
+    &__crumb {
+        padding: 2px 4px;
+        border: none;
+        border-radius: 4px;
+        background: none;
+        font-size: 11px;
+        color: var(--color-accent);
+        cursor: pointer;
+
+        &:hover { text-decoration: underline; }
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 1px; }
+    }
+
+    /** Where the form already is: not a link, because the navigation would do
+     *  nothing. */
+    &__crumb--current {
+        color: var(--color-text-primary);
+        cursor: default;
+
+        &:hover { text-decoration: none; }
+    }
+
+    &__crumb-sep { font-size: 9px; color: var(--color-form-muted); }
+
+    // ── The inline level of 12c ──────────────────────────────────────────────
+
+    &__inline {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding: 12px 20px 20px;
+        border-top: 1px solid var(--color-form-border);
+    }
+
+    &__inline-slot { display: flex; flex-direction: column; gap: 6px; }
+
+    /** A child edited in place: nested, and set apart by a rule on the left so
+     *  the eye can tell whose fields it is looking at. */
+    &__inline-child {
+        border-left: 2px solid var(--color-form-border);
+        padding-left: 10px;
+    }
+
+    &__inline-open, &__inline-link {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        width: 100%;
+        padding: 4px 8px;
+        border: 1px solid var(--color-form-border);
+        border-radius: 6px;
+        background: var(--color-bg-primary);
+        font-size: 12px;
+        color: var(--color-text-primary);
+        cursor: pointer;
+
+        &:hover { border-color: var(--color-accent); color: var(--color-accent); }
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 1px; }
+    }
+
+    &__inline-open { margin-bottom: 4px; }
+
+    /* ── The containment outline (10b) ─────────────────────────────────────────
+       Mock 1b of `Q8 Catalogo vs Outline.dc.html`: 12px rows, a 12px genre icon,
+       the metaclass in mono at the right, «+» in accent. The 14px inset and the
+       16px per level are literals for the same reason the pane's 14px is — they
+       are off the 8px grid and have no token (railSystem declares them literal
+       too). The indent itself is inline, since it is a function of the depth. */
+
+    &__outline { display: flex; flex-direction: column; }
+
+    &__outline-item { position: relative; }
+
+    &__outline-node {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        /* 10e — 28px dichiarati come ALTEZZA MINIMA, non ottenuti allargando il
+           padding: il padding lo mangerebbe la riga con il menu «+» aperto, e la
+           densita' dell'albero cambierebbe con lo stato di un menu. */
+        min-height: 28px;
+        padding: 4px 10px 4px 14px;
+        font-size: 12px;
+        color: var(--color-text-primary);
+        cursor: pointer;
+
+        /* 10e — `--color-bg-hover` e non `--color-bg-tertiary`: sono due ruoli
+           diversi (`#e9eff6` contro `#f1f5f9` in chiaro), e questo e' l'hover. */
+        &:hover { background: var(--color-bg-hover); }
+
+        /* La coppia intera del vocabolario di selezione, non la sola campitura:
+           la barra e' quella che la riga della tabella porta su `__td-name`, e
+           due superfici che dicono «questo e' selezionato» in due modi diversi
+           sono due vocabolari, non uno. La barra sta sul bordo della colonna e
+           non sull'inserto del livello: e' la colonna a essere selezionata li'
+           dentro, e un indicatore che si sposta con la profondita' si leggerebbe
+           come un secondo dato. */
+        &--selected,
+        &--selected:hover {
+            background: var(--color-selection-bg);
+            box-shadow: inset 2px 0 0 var(--color-selection-bar);
+        }
+
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: -2px; }
+    }
+
+    /* Always occupied, caret or not: a leaf whose row started 12px to the left of
+       its siblings would read as a level of its own. */
+    &__outline-caret {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: none;
+        width: 12px;
+        height: 12px;
+        padding: 0;
+        border: 0;
+        background: none;
+        color: var(--color-form-muted);
+        font-size: 9px;
+        cursor: pointer;
+
+        &:hover { color: var(--color-accent); }
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 1px; }
+    }
+
+    &__outline-icon {
+        flex: none;
+        font-size: 12px;
+        color: var(--color-form-section);
+    }
+
+    /* 10f — il badge lettera della riga, e SOLO la geometria: il colore arriva
+       dalla coppia (`jj-type-badge--class`, `jj-type-badge--model`), come per il
+       badge del rail a `&__glyph`. Ridichiarare qui `background` o `color`
+       vorrebbe dire vincere sulla coppia e perdere il tema scuro senza nessun
+       errore di compilazione.
+
+       16px e non i 18 del rail: la riga dell'albero porta anche il chevron e
+       l'inserto di livello, e a 18 il badge diventerebbe l'elemento piu' pesante
+       di una riga che ne ha gia' quattro.
+
+       E' un `<span>`, non un `<i class="bi">`, e questo e' il motivo per cui la
+       regola a TRE livelli che 10e aveva dovuto scrivere qui non serve piu' ed e'
+       stata tolta con le due classi che serviva: `styles/style.scss:788` dichiara
+       `i.bi { color: var(--font-color-1); }` a (0,1,1) e non raggiunge uno span,
+       quindi la coppia dipinge a (0,1,0). Il glifo del puntatore morto resta un
+       `<i>` e resta servito dalla regola di 12d, che e' a (0,2,0) e batte `i.bi`
+       — ma non `i.bi:hover`, che e' a (0,2,1). Quel passaggio del mouse era gia'
+       cosi' prima di questa slice e non e' nel suo perimetro. */
+    &__outline-badge {
+        flex: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 16px;
+        height: 16px;
+        border-radius: var(--radius-sm);
+        font-size: 10px;
+        font-weight: 700;
+        line-height: 1;
+    }
+
+    /* Il nodo modello e' la TESTA dell'albero, non una riga come le altre: prende
+       il peso, e lo prende da solo — un albero in cui anche i figli sono in 600
+       non ha piu' una testa. */
+    &__outline-node--model .instance-manager__outline-name { font-weight: 600; }
+
+    &__outline-name {
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    /* A dangling pointer is the one state in this panel that has to be seen across
+       the room (12d), and it is the same token the table's `__broken` uses. */
+    &__outline-node--broken {
+        cursor: default;
+        color: var(--color-error);
+
+        .instance-manager__outline-icon { color: var(--color-error); }
+        &:hover { background: none; }
+    }
+
+    &__outline-add {
+        display: inline-flex;
+        align-items: center;
+        flex: none;
+        padding: 0;
+        border: 0;
+        background: none;
+        color: var(--color-accent);
+        font-size: 12px;
+        cursor: pointer;
+        opacity: 0;
+
+        &:focus-visible { opacity: 1; outline: 2px solid var(--color-border-focus); outline-offset: 1px; }
+    }
+
+    /* Hover-reveal, and revealed for good on the selected row: a «+» on every row
+       of a deep model is a column of plus signs, and the one row the user is
+       working on is the one that needs it standing. */
+    &__outline-node:hover .instance-manager__outline-add,
+    &__outline-node--selected .instance-manager__outline-add,
+    &__outline-add[aria-expanded='true'] { opacity: 1; }
+
+    &__outline-menu {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        margin: 2px 10px 4px 28px;
+        padding: 6px;
+        border: 1px solid var(--color-form-border);
+        border-radius: 6px;
+        background: var(--color-bg-primary);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+
+        .instance-manager__note { margin: 0; }
+        .instance-manager__child-reason { margin: 0; }
+    }
+
+    &__outline-menu-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        width: 100%;
+        padding: 4px 6px;
+        border: 0;
+        border-radius: 4px;
+        background: none;
+        font-size: 12px;
+        color: var(--color-text-primary);
+        text-align: left;
+        cursor: pointer;
+
+        .instance-manager__code { margin-left: auto; }
+
+        &:hover { background: var(--color-bg-tertiary); color: var(--color-accent); }
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: -1px; }
+    }
+
+    /* ── Il vicinato (13a) ─────────────────────────────────────────────────────
+       Mock 1a di `13a Diagramma Embedded.dc.html`. Nessun colore nuovo: il nodo e'
+       la card del 7a (superficie, bordo, raggio 8), il soggetto porta la coppia
+       della selezione (`--color-selection-bar`, la stessa barra della riga scelta
+       nella tabella e nell'outline), e gli stati rotto/mancante riusano i token
+       della tabella invece di somigliargli. */
+
+    &__open-canvas {
+        margin-left: auto;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 2px 6px;
+        border: 0;
+        border-radius: 4px;
+        background: none;
+        font-size: var(--text-xs);
+        color: var(--color-selection-bar);
+        cursor: pointer;
+
+        i { font-size: 10px; }
+
+        &:hover { background: var(--color-bg-tertiary); }
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 1px; }
+    }
+
+    /* ── La riga espansa: il vicinato a un salto (FL6) ──────────────────────
+       Le regole del NASTRO stanno in `egoDiagram.scss`, che e' del componente.
+       Qui c'e' solo cio' che appartiene alla TABELLA: la cella che lo ospita, e
+       la lista testuale in cui degrada quando la riga e' stretta. */
+    &__tr--expansion {
+        > td {
+            padding: 0;
+            /* La cella dell'espansione non partecipa alle regole della riga: la
+               tabella impone `white-space: nowrap` e un `max-width` per tenere le
+               celle su una riga sola, e qui dentro c'e' un pannello. */
+            white-space: normal;
+            max-width: none;
+            background: var(--color-bg-secondary);
+            border-bottom: 1px solid var(--color-form-border);
+        }
+    }
+
+    /* `sticky` perche' la larghezza e' fissata a quella del CONTENITORE: se la
+       tabella scorre per le sue colonne, il pannello resta dov'e' invece di
+       uscire di lato. `box-sizing` perche' la larghezza arriva in pixel dal
+       misuratore e il padding non deve sommarcisi. */
+    &__ego {
+        position: sticky;
+        left: 0;
+        box-sizing: border-box;
+        padding: 10px 14px;
+        overflow: hidden;
+    }
+
+    /* ── Il fallback testuale ──────────────────────────────────────────────── */
+    &__ego-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    /* `flex-wrap` perche' questa e' la resa STRETTA: l'occhiello piu' la frase
+       delle affordance non stanno su una riga di 370px, e senza il ritorno a capo
+       il contenuto sborda la scatola — che, essendo `overflow: hidden`, lo
+       taglierebbe invece di mostrarlo. Misurato: 38px fuori a 900px di viewport. */
+    &__ego-head, &__ego-foot {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 4px 10px;
+
+        .instance-manager__eyebrow { margin-bottom: 0; }
+    }
+
+    &__ego-hint, &__ego-counts {
+        font-size: var(--text-xs);
+        color: var(--color-form-muted);
+    }
+
+    &__ego-hint { margin-left: auto; }
+    &__ego-foot { justify-content: space-between; }
+
+    &__ego-link {
+        padding: 0;
+        border: 0;
+        background: none;
+        font-size: var(--text-xs);
+        color: var(--color-selection-bar);
+        cursor: pointer;
+
+        &:hover { text-decoration: underline; }
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 1px; }
+    }
+
+    &__ego-group { display: flex; flex-direction: column; gap: 4px; }
+
+    &__ego-group-title {
+        margin: 0;
+        font-size: var(--text-xs);
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--color-form-section);
+    }
+
+    &__ego-items {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    &__ego-item {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        min-width: 0;
+        padding: 4px 8px;
+        border: 1px solid var(--color-form-border);
+        border-radius: 4px;
+        background: var(--color-form-surface);
+        font-size: var(--text-sm);
+        color: var(--color-form-label);
+        cursor: pointer;
+
+        &:hover { border-color: var(--color-form-border-strong); }
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 1px; }
+    }
+
+    /* Il soggetto porta il vocabolario della SELEZIONE, come nel nastro: e' la
+       stessa affermazione («sei qui»), e due colori per dirla divergerebbero. */
+    &__ego-item--subject {
+        background: var(--color-inode-ref-bg);
+        border-color: var(--color-inode-ref-border);
+        color: var(--color-inode-selected-badge-fg);
+        cursor: default;
+    }
+
+    /* Il nodo sintetico del cap non e' un'istanza: porta al canvas. */
+    &__ego-item--more { border-style: dashed; color: var(--color-form-muted); }
+
+    /* Un puntatore che non risolve: non cliccabile, e col token della tabella. */
+    &__ego-item--broken { cursor: default; border-color: var(--color-error); }
+
+    /* Il nome puo' essere lungo quanto vuole: in una scatola stretta si accorcia
+       con i puntini, e non allarga la riga. `min-width: 0` sulla voce e' cio' che
+       lo rende possibile — senza, un figlio flex non scende sotto la larghezza
+       minima del proprio contenuto. */
+    &__ego-name {
+        font-weight: 500;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    &__ego-cls, &__ego-via {
+        font-size: var(--text-xs);
+        color: var(--color-form-section);
+    }
+
+    /* La metaclasse non si accorcia: e' corta e senza di lei la voce non dice di
+       che cosa parla. La chiave della feature, che segue, si'. */
+    &__ego-cls { flex-shrink: 0; }
+
+    /* La chiave della feature cede prima del nome: e' la meno importante delle tre
+       cose che la voce dice, ed e' anche nel `title`. */
+    &__ego-via {
+        margin-left: auto;
+        color: var(--color-form-muted);
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    /* ── Il chevron di coda riga ────────────────────────────────────────────
+       Indicatore, non bottone: il gesto e' il click sulla riga. */
+    &__th-chev, &__td-chev {
+        width: 24px;
+        text-align: center;
+    }
+
+    &__chev {
+        font-size: 10px;
+        color: var(--color-form-muted);
+    }
+
+    /* ── L'header della form (FL6, banda propria in 10k) ─────────────────────
+       10k punto 3 — «Running · State» e Delete galleggiavano sul bianco della
+       card: nessun fondo, nessuna gronda propria, solo un filetto sotto. Con la
+       banda l'header smette di essere la prima riga del contenuto e diventa la
+       testata della card.
+
+       I margini negativi sono la tecnica che `__foot` gia' usa in questo foglio:
+       `__form-inner` insetta di 14px, e -14px riporta la banda sui tre bordi
+       della card mentre il padding rimette l'inset al suo contenuto. Senza, la
+       banda si fermerebbe a 14px dai bordi e leggerebbe come un riquadro dentro
+       la card invece che come la sua testata. Misurato nel giro before: [768,
+       1572] contro [754, 1587] della card.
+
+       Il fondo e' `--color-bg-tertiary` (#f1f5f9, slate-100). 10k aveva scelto
+       `--color-form-panel` (#f8fafc) perche' e' «il token con cui 10d ha dipinto
+       il desk», ed e' esattamente per quello che la banda non staccava: il desk
+       E' quel token (`&__main`), quindi banda e desk avevano lo stesso colore e
+       ΔL = 0. Una testata che vale il fondo su cui posa non e' una banda.
+
+       IL NOME. L'emendamento 10k-bis chiedeva «--color-bg-hover (#f1f5f9)», che
+       sono due token diversi: `--color-bg-hover` e' `$slate-150` (#e9eff6),
+       `--color-bg-tertiary` e' `$slate-100` (#f1f5f9). Questo foglio ha gia'
+       ratificato la distinzione DUE volte — sull'hover di riga della tabella e
+       sul nodo dell'outline di 10e: «sono due RUOLI, e questo e' l'hover». Qui
+       il ruolo non e' l'hover ma una superficie A RIPOSO, e per quella il foglio
+       usa `--color-bg-tertiary` in tre bande gemelle (`__foot`, `__del-foot`, la
+       striscia del breadcrumb), tutte fondo + hairline come questa; mentre
+       `--color-bg-hover`, in questo foglio, non compare mai fuori da un `:hover`.
+       E' anche il valore che il prompt nominava: la regola «usa il nome che
+       QUESTO foglio gia' usa per quel ruolo» porta qui da entrambi i capi.
+
+       NON `--color-bg-secondary`, che il prompt di 10k nominava: e' fra i 15
+       nomi dichiarati due volte con valori diversi (`_colors-light.scss:81`
+       #ffffff, `tokens.css:117` #f8fafc), cioe' un token il cui valore dipende
+       dall'ordine di cascata. `--color-bg-tertiary` non lo e': zero occorrenze
+       in `tokens.css`, misurate con un controllo positivo sullo STESSO comando
+       (`--color-bg-secondary` ne da' 1, quindi il silenzio e' un risultato e non
+       una ricerca rotta). Ed e' opaco anche in scuro (#16181a), che
+       `--color-bg-hover` non e': li' vale `rgba(255, 255, 255, 0.06)` e come
+       `background` sostituirebbe la superficie invece di sovrapporvisi — e' la
+       ragione, scritta nei token, per cui esiste `--color-inode-pill-hover`.
+
+       L'HAIRLINE passa a `--color-form-border-strong` (slate-300) da
+       `--color-form-border` (slate-200): ora che la banda ha un colore proprio,
+       il filetto e' il bordo BASSO della banda e non un separatore interno alla
+       card, e a slate-200 su un fondo appena piu' chiaro non si leggeva.
+
+       Il raggio solo `:first-child`: dopo un drill-in il breadcrumb di 12c sta
+       SOPRA l'header, che allora non e' al bordo della card e va squadrato. Una
+       banda arrotondata a meta' card sarebbe un angolo che non appoggia su
+       niente. */
+    &__form-head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: -14px -14px 14px;
+        padding: 10px 14px;
+        border-bottom: 1px solid var(--color-form-border-strong);
+        background: var(--color-bg-tertiary);
+
+        &:first-child {
+            border-radius: var(--radius-card) var(--radius-card) 0 0;
+        }
+    }
+
+    &__form-title {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        min-width: 0;
+    }
+
+    &__form-name {
+        font-size: var(--text-base);
+        font-weight: 600;
+        color: var(--color-form-label);
+    }
+
+    &__form-cls {
+        font-size: var(--text-xs);
+        color: var(--color-form-section);
+    }
+
+    /* Il badge dice del PROGETTO, non dell'istanza: il titolo lo scrive per
+       esteso, perche' due parole in un badge non bastano a dirlo. */
+    &__badge {
+        padding: 1px 6px;
+        border: 1px solid var(--color-warning);
+        border-radius: 999px;
+        font-size: var(--text-xs);
+        color: var(--color-warning);
+        white-space: nowrap;
+    }
+
+    &__form-actions { margin-left: auto; display: flex; gap: 8px; }
+
+    &__form-delete {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        height: 28px;
+        padding: 0 10px;
+        border: 1px solid var(--color-form-border-strong);
+        border-radius: 4px;
+        background: var(--color-form-surface);
+        font-size: var(--text-xs);
+        color: var(--color-form-label);
+        cursor: pointer;
+
+        i { font-size: 11px; }
+
+        /* 10k punto 9. */
+        transition: border-color 150ms ease-out, color 150ms ease-out;
+
+        &:hover { border-color: var(--color-error); color: var(--color-error); }
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 1px; }
+    }
+}

@@ -7,6 +7,10 @@
 export const JjodelEvents = {
   // UI Navigation
   ACTIVE_TAB: 'jjodel:active-tab',
+  // Ask the host of the IR authoring bar (ViewData) to activate one of its tabs.
+  // detail: { viewId: string; tab: IRTabId }. Distinct from ACTIVE_TAB, which is the
+  // dock's own bar (Dock emits, StatusBar and Navbar listen).
+  IR_AUTHORING_TAB: 'jjodel:ir-authoring-tab',
   EDITOR_TYPE_CHANGE: 'jjodel:editor-type-change',
   TOGGLE_TREE_VIEW: 'jjodel:toggle-tree-view',
   TOGGLE_SINGLETONS: 'jjodel:toggle-singletons',
@@ -46,6 +50,11 @@ export const JjodelEvents = {
   CREATE_MODEL: 'jjodel:createModel',
   CREATE_VIEWPOINT: 'jjodel:createViewpoint',
   SHARE_PROJECT: 'jjodel:shareProject',
+  // SAVE2. Il progetto e' stato persistito. detail: { timestamp: number|null }.
+  // Emesso da `common/libraries/lastSaved.ts` per il salvataggio esplicito E per
+  // quello silenzioso: l'autosave non notifica piu' l'utente, quindi l'indicatore
+  // di «ultimo salvataggio» e' l'unico posto in cui resta leggibile.
+  PROJECT_SAVED: 'jjodel:project-saved',
   OPEN_TRANSFORMATION: 'jjodel:openTransformation',
   TRANSFORMATIONS: 'jjodel:transformations',
   OPEN_NEW_TRANSFORMATION_DIALOG: 'jjodel:open-new-transformation-dialog',

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ListEditor, Input, Select, Toggle, HelpText, ConditionalEditor, forPredicateKind, type PathBuilderFeatures } from '../../../ui';
+import { ListEditor, Input, Select, Toggle, HelpText, ConditionalEditor, forPredicateKind, PRESERVED_CHIP, type PathBuilderFeatures } from '../../../ui';
 import { FieldSegmentEditor } from './FieldSegmentEditor';
 import { TextStyleField } from './TextStyleField';
 import type { FieldCompartmentSpec, FieldSegment, Predicate, TextStyle } from '../ir/irTypes';
@@ -71,17 +71,20 @@ export function withRowStyle(comp: FieldCompartmentSpec, style: TextStyle | unde
     return { ...comp, rowFormat };
 }
 
-/** Read-only chip for values not representable in Basic (preserved verbatim). Same
- *  visual convention as LabelEntryEditor's CHIP — inline style, no new CSS class. */
-const CHIP: React.CSSProperties = {
-    display: 'inline-block',
-    fontSize: 'var(--font-size-sm)',
-    color: 'var(--color-text-tertiary)',
-    fontStyle: 'italic',
-    padding: '2px 6px',
-    border: '1px dashed var(--color-border-primary)',
-    borderRadius: 'var(--radius-sm)',
-};
+/**
+ * Set or clear a compartment's section `title`. `''` drops the KEY rather than writing an
+ * empty string, so a title typed and erased round-trips byte-identical to a compartment
+ * authored without one and the form falls back to the id, as `buildFormSections` does.
+ * Removal is on the exactly-empty string, never on whitespace: trimming on every keystroke
+ * would make a space impossible to type.
+ */
+export function withCompartmentTitle(comp: FieldCompartmentSpec, title: string): FieldCompartmentSpec {
+    if (title === '') {
+        const { title: _dropped, ...rest } = comp;
+        return rest;
+    }
+    return { ...comp, title };
+}
 
 /** New compartment default (prompt B2a): attributes source with a single name segment. */
 const newCompartment = (): FieldCompartmentSpec => ({
@@ -191,6 +194,15 @@ export const FieldCompartmentListEditor: React.FC<FieldCompartmentListEditorProp
                         </div>
 
                         <div className="jj-field">
+                            <label className="jj-field-label">Title</label>
+                            <Input
+                                value={comp.title ?? ''}
+                                placeholder="Defaults to the id"
+                                onChange={(e) => replace(index, withCompartmentTitle(comp, e.target.value))}
+                            />
+                        </div>
+
+                        <div className="jj-field">
                             <label className="jj-field-label">Source</label>
                             {isKnownSource ? (
                                 <Select
@@ -199,7 +211,7 @@ export const FieldCompartmentListEditor: React.FC<FieldCompartmentListEditorProp
                                     onChange={(e) => changeSource(e.target.value)}
                                 />
                             ) : (
-                                <span style={CHIP}>{`unsupported source: ${sourceFrom} (preserved)`}</span>
+                                <span style={PRESERVED_CHIP}>{`unsupported source: ${sourceFrom} (preserved)`}</span>
                             )}
                         </div>
 
@@ -207,7 +219,7 @@ export const FieldCompartmentListEditor: React.FC<FieldCompartmentListEditorProp
                             <div className="jj-field">
                                 <label className="jj-field-label">Filter by metaclass (isKind)</label>
                                 {isAdvancedFilter ? (
-                                    <span style={CHIP}>advanced predicate (preserved)</span>
+                                    <span style={PRESERVED_CHIP}>advanced predicate (preserved)</span>
                                 ) : (
                                     <>
                                         <Toggle

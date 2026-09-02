@@ -4,7 +4,7 @@
 //
 // Name and value of every theme token live in the two maps below, which are
 // the single source. The selectors emit them, they never restate them: two
-// hand-written blocks carrying the same 93 names drift apart in silence.
+// hand-written blocks carrying the same 95 names drift apart in silence.
 //
 // The maps are emitted on four selectors, on purpose (D-UI-10):
 //   .editor-v2.theme-dark / .theme-light   the editor subtree, unchanged
@@ -91,11 +91,11 @@ $editor-v2-theme-dark: (
   'package-accent': #10b981,
 
   // Edges
-  'edge-color': rgba(255, 255, 255, 0.5),
+  'edge-color': rgba(148, 163, 184, 0.65),
   'edge-selected': #0ea5e9,
   'edge-label-bg': #334155,
   'edge-marker-fill': #1e293b,
-  'edge-marker-stroke': rgba(255, 255, 255, 0.5),
+  'edge-marker-stroke': rgba(148, 163, 184, 0.65),
 
   // Input
   'input-bg': rgba(0, 0, 0, 0.25),
@@ -249,11 +249,11 @@ $editor-v2-theme-light: (
   'package-accent': #059669,
 
   // Edges
-  'edge-color': rgba(0, 0, 0, 0.45),
+  'edge-color': #94a3b8,
   'edge-selected': #0284c7,
   'edge-label-bg': #ffffff,
   'edge-marker-fill': #f8fafc,
-  'edge-marker-stroke': rgba(0, 0, 0, 0.5),
+  'edge-marker-stroke': #94a3b8,
 
   // Input
   'input-bg': #ffffff,

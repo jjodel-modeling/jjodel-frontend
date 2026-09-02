@@ -14,6 +14,18 @@
  * (lights the tree triangle) and one under the resolved DVertex id (lights the
  * canvas badge). Object-level (model-level) violations are excluded by the
  * aggregator and only feed the toolbar pill.
+ *
+ * UNQ1 C6 (2026-09-02): every entry now carries `ownerModelId` — the `modelid` this
+ * producer is mounted with — so the ownership a producer's revoke pass needs is in the
+ * data and not only in the module that wrote it. This producer is the second writer into
+ * the shared registry Map, and a field only one of the two populated would be worse than
+ * no field at all: it would invite a reader to trust it.
+ *
+ * The `ownedIds` ref below is NOT replaced by that field, unlike the uniqueness producer's
+ * `ownedIdsByModel`. It is not ownership bookkeeping here: it is also what the unmount
+ * cleanup walks to `clearProblem` this producer's entries outright when the editor closes
+ * (second effect), and clearing on unmount has no `desiredIds` to diff against and no
+ * `modelid` guaranteed still meaningful. Replacing it is not in this slice's perimeter.
  */
 
 import { useEffect, useRef } from 'react';
@@ -85,6 +97,11 @@ export function ConformanceProblemSync({ modelid, graphId }: Props) {
                 description,
                 relatedNodeIds: [],
                 conformance: agg.violations,
+                // The model this producer is validating. Written at registration, on BOTH
+                // the DObject-keyed entry and the DVertex-keyed one — the vertex lives in
+                // the graph rather than in the model, which is the worst case the field's
+                // name is chosen for (registry.ts, `ownerModelId`).
+                ownerModelId: modelid,
                 createdAt: Date.now(),
             });
         };
@@ -106,6 +123,11 @@ export function ConformanceProblemSync({ modelid, graphId }: Props) {
         }
 
         ownedIds.current = desiredIds;
+        // Deps unchanged by UNQ1 C6: `modelid` is read by the register closure now, but
+        // adding it would fire the effect on a model switch with the PREVIOUS model's
+        // `result` still in hand — the old model's objects registered under the new
+        // owner, until the debounce lands. `result` changing is the signal that both
+        // halves are fresh.
     }, [result, graphId]);
 
     // Full cleanup on unmount (editor / model closed): drop our entries outright

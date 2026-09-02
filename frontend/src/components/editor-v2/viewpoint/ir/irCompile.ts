@@ -313,6 +313,13 @@ export function compileView(viewId: string, ir: NodeViewIR): CompiledView {
     // materializes its default here instead of compiling to a value function. The
     // renderer turns anything but 'normal' into an ir-pad--* class (irStyle.ts).
     const padding = ir.shape.padding ?? 'normal';
+    // FormSpec (2026-08-26): a passthrough, not a compile. It carries no PathExpr and
+    // no Predicate, so there is nothing to turn into an accessor and nothing to add to
+    // `deps`, `crossPathSink` or `channelSink` — the three mechanisms a new axis would
+    // normally have to feed. `theme` is deliberately NOT defaulted the way `padding` is
+    // above: its default depends on the host (plain in the rail, card in the document),
+    // so materializing one here would freeze every view on the rail's choice.
+    const formSpec = ir.form ?? null;
     // Node-level text style (ir-1.3, cascade root): same per-axis compile as a label
     // style, and compileTextStyle already returns undefined for an absent input and
     // extends `deps` with the predicates of its conditional axes.
@@ -355,6 +362,11 @@ export function compileView(viewId: string, ir: NodeViewIR): CompiledView {
         id: fc.id,
         source: fc.source.from,
         segments: fc.rowFormat.segments,
+        // Section heading for the form rendering (2026-08-26). Copied verbatim, never
+        // defaulted here: the fallback (`id` capitalized) belongs to the form host, and
+        // materializing it now would make an authored title indistinguishable from a
+        // derived one for any later surface.
+        ...(fc.title !== undefined ? { title: fc.title } : {}),
         // children source (Fase R2): compile the optional child filter with the same
         // predicate compiler as the containment childFilter. attributes/references
         // compile exactly as before (no childFilter). Empty rowFormat.segments is fine
@@ -404,6 +416,7 @@ export function compileView(viewId: string, ir: NodeViewIR): CompiledView {
         dependencySet: Array.from(deps),
         ...(channels ? { channels } : {}),
         crossPaths,
+        formSpec,
         form,
         fill,
         border,

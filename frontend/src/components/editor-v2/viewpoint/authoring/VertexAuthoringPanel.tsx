@@ -5,7 +5,8 @@ import { Input, Select, NumberInput, ColorPicker, ErrorText, Button, HelpText, C
 import { getMetaclassInfo, type MetaclassInfo } from '../../hooks/useEditorMode';
 import { validateIR } from '../ir/irValidate';
 import { defaultObjectViewIR } from '../ir/irDefaults';
-import type { VertexViewIR, ShapeForm, PaddingToken } from '../ir/irTypes';
+import type { VertexViewIR, ShapeForm, PaddingToken, FormSpec, StructureSpec } from '../ir/irTypes';
+import { structureCapabilities } from '../ir/structureCapabilities';
 import { MARKER_REGISTRY } from '../ir/markerRegistry';
 import { recognizeSymbol } from '../ir/symbolRecognition';
 import { resolveMetaclassId, withMetaclassPins, type MetaclassRef } from '../ir/metaclassPin';
@@ -13,6 +14,8 @@ import { defaultResizableForForm } from '../../nodes/nodeSizing';
 import { LabelListEditor } from './LabelListEditor';
 import { TextStyleField } from './TextStyleField';
 import { FieldCompartmentListEditor } from './FieldCompartmentListEditor';
+import { StructureGroups, StructureHiddenSummary } from './StructureGroups';
+import { FormAuthoringBody } from './FormAuthoringBody';
 import { BadgeListEditor } from './BadgeListEditor';
 import { MatchingSection, type MetaclassChoice } from './MatchingSection';
 import { metaclassAmbiguityWarning } from './authoringMessages';
@@ -249,10 +252,18 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
         features: PathBuilderFeatures | null;
         metamodelsWithClass: number;
         targetName: string | null;
+        /**
+         * The resolved target metaclass itself (Slice 2a). `features` is the PathBuilder's
+         * projection and is lossy on purpose: it drops lowerBound, containment and the enum
+         * flag, which the Form tab needs. Widening PathBuilderFeatures would push form
+         * concerns into a generic path control shared by five editors, so the whole
+         * MetaclassInfo travels alongside it and each consumer reads what it needs.
+         */
+        target: MetaclassInfo | null;
     }>(() => {
         const mcs = draft.metaclasses;
         if (mcs === '*' || !Array.isArray(mcs) || mcs.length === 0) {
-            return { features: null, metamodelsWithClass: 0, targetName: null };
+            return { features: null, metamodelsWithClass: 0, targetName: null, target: null };
         }
         const targetName = mcs[0];
 
@@ -283,7 +294,7 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
         // Identity match wins; fall back to the first name match only when the chain
         // cannot pin an id at all (no pin, and a name outside the Apply-to set).
         const target = byId ?? byNameFallback;
-        if (!target) return { features: null, metamodelsWithClass, targetName };
+        if (!target) return { features: null, metamodelsWithClass, targetName, target: null };
         return {
             features: {
                 attributes: (target.allAttributes ?? target.attributes ?? []).map((a) => ({
@@ -295,6 +306,7 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
             },
             metamodelsWithClass,
             targetName,
+            target,
         };
         // appliesToClasses is itself memoized on the stringified appliableToClasses,
         // so it carries the dependency this list used to spell out.
@@ -339,7 +351,36 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
         patchShape({ border: { ...base, ...partial } });
     };
 
-    /** Body visibility of the five-tab partition: `display: none` only (R-A). */
+    /**
+     * Drop the `form` key from the draft. Rest/spread and not `form: undefined`: the key
+     * must be ABSENT, so a view whose FormSpec was set and then emptied round-trips
+     * byte-identical to one that never carried it. Same idiom as `withChildFilter`.
+     */
+    const omitForm = (ir: VertexViewIR): VertexViewIR => {
+        const { form: _dropped, ...rest } = ir;
+        return rest as VertexViewIR;
+    };
+
+    /** Same idiom for `structure`: every default in the level-2 groups is the ABSENCE
+     *  of the key, so an author who tried a field and put it back leaves no trace. */
+    const omitStructure = (ir: VertexViewIR): VertexViewIR => {
+        const { structure: _dropped, ...rest } = ir;
+        return rest as VertexViewIR;
+    };
+
+    /* Level-2 capabilities of the current Symbol (Turno 7a/7b). A Conditional `form`
+       has no single geometry, so `undefined` travels instead of one branch and the tab
+       offers the rectangle's superset — narrowing on one branch would hide a field the
+       other branch supports. */
+    const scalarForm = typeof form === 'string' ? (form as ShapeForm) : undefined;
+    const structureCaps = structureCapabilities(scalarForm);
+    /* The contextual note of 7b under Type: with exactly one metaclass in the whole
+       viewpoint the type on the node repeats what the diagram already says. */
+    const singleMetaclass = Array.isArray(draft.metaclasses) && draft.metaclasses.length === 1
+        ? draft.metaclasses[0]
+        : null;
+
+    /** Body visibility of the tab partition: `display: none` only (R-A). */
     const body = (id: IRTabId) => irTabBodyStyle(id, activeTab);
 
     return (
@@ -385,18 +426,56 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
 
             {/* ─────────── Structure ─────────── */}
             <div className="ir-tab-body ir-tab-body--structure" style={body('ir-structure')}>
+                {/* Level 2 (Turno 7a/7b) — Name, Accent, Compartment, above the
+                    compartment list that was already here. */}
+                <StructureGroups
+                    structure={draft.structure}
+                    form={scalarForm}
+                    singleMetaclass={singleMetaclass}
+                    onChange={(next: StructureSpec | undefined) =>
+                        patch(next === undefined ? omitStructure(draft) : { ...draft, structure: next })}
+                />
+
                 {/* Field compartments — the data round-trips verbatim either way: the
                     whole cloned ir (draft.fieldCompartments included) is written back
-                    on every commit. */}
-                <FormSection title="Field compartments" divider={false}>
-                    <FieldCompartmentListEditor
-                        compartments={fieldCompartments}
-                        features={features}
-                        featuresHint={FEATURES_HINT}
-                        classNames={classNames}
-                        onChange={(next) => patch({ ...draft, fieldCompartments: next })}
-                    />
-                </FormSection>
+                    on every commit.
+
+                    Hidden on a Symbol that offers no compartment (7b): the section is
+                    absent, not disabled, and the summary row below names it with its
+                    cause. The compartments themselves are NOT touched — they stay in
+                    the ir and come back with a Symbol that has room for them. */}
+                {structureCaps.showsFieldCompartments && (
+                    <FormSection title="Field compartments" divider={false}>
+                        <FieldCompartmentListEditor
+                            compartments={fieldCompartments}
+                            features={features}
+                            featuresHint={FEATURES_HINT}
+                            classNames={classNames}
+                            onChange={(next) => patch({ ...draft, fieldCompartments: next })}
+                        />
+                    </FormSection>
+                )}
+
+                {/* The one summary of every absence in this tab, in the two families
+                    7b separates: what the Symbol removed and what the current choice
+                    made inert. Renders nothing when nothing is hidden (7a). */}
+                <StructureHiddenSummary form={scalarForm} structure={draft.structure} />
+            </div>
+
+            {/* ─────────── Form ─────────── */}
+            {/* Slice 2a. Vertex only (irTabsForKind): a row and an edge carry no `form`.
+                The body is mounted like every other one (strada B), so it stays purely
+                presentational — it also lives inside the symbol editor modal, where the
+                tab is not reachable. */}
+            <div className="ir-tab-body ir-tab-body--form" style={body('ir-form')}>
+                <FormAuthoringBody
+                    draft={draft}
+                    target={featureInfo.target}
+                    advanced={advanced}
+                    viewId={view.id as string}
+                    onChange={(form: FormSpec | undefined) =>
+                        patch(form === undefined ? omitForm(draft) : { ...draft, form })}
+                />
             </div>
 
             {/* ─────────── Appearance ─────────── */}

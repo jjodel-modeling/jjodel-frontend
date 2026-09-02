@@ -107,6 +107,103 @@ describe('CHECK 8 — reference_target_type_mismatch', () => {
 });
 
 // ==================================================================
+// CHECK 6 — dangling_reference asks the GRAPH, not `model.objects`
+//
+// `model.objects` holds the ROOTS only: `DObject`'s constructor appends to
+// `objects` when the father is the DModel and to the slot's `values` otherwise
+// (joiner/classes.ts:774-784), and a contained instance's father IS the slot
+// (LModelElement.tsx:7171). So a nested instance is outside the visit perimeter
+// and used to be reported as non-existent while the tree, the canvas chip and
+// the nested form all resolved it.
+//
+// The fixture mirrors the real proxy split (LModelElement.tsx:7543,
+// jjomTransformers.ts:363-393): `__raw.values` carries the pointer ids, `values`
+// carries what `LPointerTargetable.fromPointer` gave back — an object with
+// `className: 'DObject'` (the D-layer name even on an L proxy, CLAUDE.md 3.13)
+// for a live target, and nothing for a pointer that resolves to nobody.
+// ==================================================================
+describe('CHECK 6 — existence is asked of the graph', () => {
+    const Ed = klass({ id: 'Ed', name: 'Edition' });
+    const rEditions = ref({ id: 'rEd', name: 'editions', type: Ed, upperBound: -1 });
+    const Book = klass({ id: 'Bk', name: 'Book', allReferences: [rEditions] });
+
+    /** A slot whose raw pointers are `ids` and whose proxy resolved `resolved`. */
+    const slot = (ids: string[], resolved: AnyObj[]): AnyObj =>
+        val('rEd', { values: resolved, __raw: { values: ids } });
+
+    /** What the L proxy hands back for a live nested instance. */
+    const proxied = (id: string, name: string): AnyObj =>
+        ({ id, name, className: 'DObject', instanceof: Ed });
+
+    it('a nested target the proxy resolves is NOT dangling', () => {
+        const book = obj({
+            id: 'b1', name: 'Book_1', instanceof: Book,
+            features: [slot(['e0'], [proxied('e0', 'Edition_0')])],
+        });
+        // `e0` is deliberately absent from `model.objects`: that is what nested means.
+        const res = run([book], [Book, Ed]);
+        expect(types(res)).not.toContain('dangling_reference');
+    });
+
+    it('a target that resolves to nobody IS still dangling', () => {
+        const book = obj({
+            id: 'b1', name: 'Book_1', instanceof: Book,
+            features: [slot(['gone'], [])],
+        });
+        const res = run([book], [Book, Ed]);
+        expect(types(res)).toContain('dangling_reference');
+        expect(res.status).toBe('errors');
+    });
+
+    it('separates the two in one slot: the nested one passes, the dead one is flagged', () => {
+        const book = obj({
+            id: 'b1', name: 'Book_1', instanceof: Book,
+            features: [slot(['e0', 'gone'], [proxied('e0', 'Edition_0')])],
+        });
+        const res = run([book], [Book, Ed]);
+        const dangling = res.violations.filter((v: AnyObj) => v.violationType === 'dangling_reference');
+        expect(dangling).toHaveLength(1);
+        expect(dangling[0].message).toContain('gone');
+        expect(dangling[0].message).not.toContain('e0');
+    });
+
+    it('a root target keeps passing without the proxy saying anything', () => {
+        const other = obj({ id: 'e0', name: 'Edition_0', instanceof: Ed });
+        const book = obj({
+            id: 'b1', name: 'Book_1', instanceof: Book,
+            features: [slot(['e0'], [])],   // proxy silent; `model.objects` answers
+        });
+        const res = run([book, other], [Book, Ed]);
+        expect(types(res)).not.toContain('dangling_reference');
+    });
+
+    it('a resolved entry that is NOT a DObject does not count as existence', () => {
+        const book = obj({
+            id: 'b1', name: 'Book_1', instanceof: Book,
+            // e.g. a pointer that lands on a DClass: it resolves, but it is not an instance
+            features: [slot(['c0'], [{ id: 'c0', name: 'Edition', className: 'DClass' }])],
+        });
+        const res = run([book], [Book, Ed]);
+        expect(types(res)).toContain('dangling_reference');
+    });
+
+    it('an over-full slot loses nothing it used to catch (the proxy truncates, the raw read does not)', () => {
+        const rOne = ref({ id: 'rOne', name: 'editions', type: Ed, upperBound: 1 });
+        const B1 = klass({ id: 'Bk1', name: 'Book', allReferences: [rOne] });
+        const book = obj({
+            id: 'b1', name: 'Book_1', instanceof: B1,
+            // two raw pointers on a 0..1 slot; the proxy would stop at the first.
+            features: [val('rOne', { values: [proxied('e0', 'Edition_0')], __raw: { values: ['e0', 'gone'] } })],
+        });
+        const res = run([book], [B1, Ed]);
+        expect(types(res)).toContain('multiplicity_upper_exceeded');
+        const dangling = res.violations.filter((v: AnyObj) => v.violationType === 'dangling_reference');
+        expect(dangling).toHaveLength(1);
+        expect(dangling[0].message).toContain('gone');
+    });
+});
+
+// ==================================================================
 // CHECK 9 — attr_multiplicity_upper_exceeded
 // ==================================================================
 describe('CHECK 9 — attr_multiplicity_upper_exceeded', () => {
@@ -197,6 +294,116 @@ describe('CHECK 10 — invalid_enum_literal', () => {
         const o = obj({ id: 'o', name: 'w', instanceof: C, features: [val('a', { value: '' })] });
         const res = run([o], [C]);
         expect(types(res)).not.toContain('invalid_enum_literal');
+    });
+});
+
+// ==================================================================
+// CHECK 10 — pointer form (R-FRM-3)
+//
+// The canonical value of an enum attribute is the POINTER to the DEnumLiteral;
+// the literal NAME is a legacy form accepted on read, with no expiry. Before
+// this, the check compared names only, so every enum written by an editor was
+// flagged. The four cases above keep the legacy form honest; these keep the
+// canonical one honest, and the two must never diverge.
+//
+// Note the fixtures here declare literals with BOTH `id` and `name`, unlike the
+// legacy ones above, which have `name` only. That difference is the subject of
+// the last case.
+// ==================================================================
+describe('CHECK 10 — enum literal pointers (R-FRM-3)', () => {
+    const enumType = {
+        name: 'Color', isEnum: true,
+        literals: [{ id: 'lit_red', name: 'RED' }, { id: 'lit_green', name: 'GREEN' }],
+    };
+    const widget = (feature: AnyObj) => {
+        const a = attr({ id: 'a', name: 'color', type: enumType });
+        const C = klass({ id: 'C', name: 'Widget', allAttributes: [a] });
+        return { C, o: obj({ id: 'o', name: 'w', instanceof: C, features: [feature] }) };
+    };
+
+    it('accepts a pointer to a literal of the enum, read from __raw.values', () => {
+        // The production path: validateConformance prefers `feat.__raw.values`, and every case
+        // in this file before R-FRM-3 exercised only the `feat.values` fallback. This one goes
+        // through the array the app actually writes.
+        const { C, o } = widget(val('a', { __raw: { values: ['lit_red'] } }));
+        expect(types(run([o], [C]))).not.toContain('invalid_enum_literal');
+    });
+
+    it('accepts a pointer through the values fallback too', () => {
+        const { C, o } = widget(val('a', { value: 'lit_green' }));
+        expect(types(run([o], [C]))).not.toContain('invalid_enum_literal');
+    });
+
+    it('still accepts the legacy literal name, on both read paths', () => {
+        // The half that must not regress: tolerance was added, nothing was replaced.
+        const raw = widget(val('a', { __raw: { values: ['RED'] } }));
+        expect(types(run([raw.o], [raw.C]))).not.toContain('invalid_enum_literal');
+        const fallback = widget(val('a', { value: 'GREEN' }));
+        expect(types(run([fallback.o], [fallback.C]))).not.toContain('invalid_enum_literal');
+    });
+
+    it('flags a pointer that belongs to no literal of THIS enum', () => {
+        // A pointer to a literal of another enum is a type error, not an alternative spelling:
+        // the id set is built from this enum's literals only, so it is caught with no special
+        // handling.
+        const { C, o } = widget(val('a', { __raw: { values: ['lit_of_another_enum'] } }));
+        expect(types(run([o], [C]))).toContain('invalid_enum_literal');
+    });
+
+    it('accepts a resolved LEnumLiteral object on either of its identities', () => {
+        // Pre-existing behaviour, preserved: the L getter maps enum values to proxies, and a
+        // fixture may hand one over. Valid by name, and now also valid by id alone - a proxy
+        // whose name failed to resolve is not thereby an invalid value.
+        const byName = widget(val('a', { value: { name: 'RED' } }));
+        expect(types(run([byName.o], [byName.C]))).not.toContain('invalid_enum_literal');
+        const byId = widget(val('a', { value: { id: 'lit_green' } }));
+        expect(types(run([byId.o], [byId.C]))).not.toContain('invalid_enum_literal');
+        const neither = widget(val('a', { value: { name: 'BLUE', id: 'lit_blue' } }));
+        expect(types(run([neither.o], [neither.C]))).toContain('invalid_enum_literal');
+    });
+
+    it('flags a numeric ordinal, which is neither accepted form', () => {
+        // Ordinals are the residue of a separate defect in the .jmm loader; tolerating them here
+        // would turn a third, unratified form into a valid one by accident.
+        const { C, o } = widget(val('a', { __raw: { values: [1] } }));
+        expect(types(run([o], [C]))).toContain('invalid_enum_literal');
+    });
+
+    it('with literals that carry no id, still flags and never prints undefined', () => {
+        // The legacy fixture shape (`{ name: 'RED' }`, no id). An id set built without filtering
+        // would hold `undefined`; this pins that it does not, and that the message stays legible.
+        const idlessEnum = { name: 'Color', isEnum: true, literals: [{ name: 'RED' }] };
+        const a = attr({ id: 'a', name: 'color', type: idlessEnum });
+        const C = klass({ id: 'C', name: 'Widget', allAttributes: [a] });
+        const o = obj({ id: 'o', name: 'w', instanceof: C, features: [val('a', { value: 'BLUE' })] });
+        const res = run([o], [C]);
+        expect(types(res)).toContain('invalid_enum_literal');
+        const msg = res.violations.find((v: AnyObj) => v.violationType === 'invalid_enum_literal')?.message ?? '';
+        expect(msg).toContain('"BLUE"');
+        expect(msg).not.toContain('undefined');
+    });
+
+    it('reports the offending value and says both forms were checked', () => {
+        const { C, o } = widget(val('a', { __raw: { values: ['lit_of_another_enum'] } }));
+        const msg = run([o], [C]).violations
+            .find((v: AnyObj) => v.violationType === 'invalid_enum_literal')?.message ?? '';
+        expect(msg).toContain('lit_of_another_enum');
+        expect(msg).toContain('by name or id');
+        expect(msg).toContain('"Color"');
+    });
+
+    it('flags every bad value of a multivalued attribute and none of the good ones', () => {
+        const a = attr({ id: 'a', name: 'colors', type: enumType, upperBound: -1 });
+        const C = klass({ id: 'C', name: 'Widget', allAttributes: [a] });
+        // Mixed on purpose: a pointer, a legacy name, and one of each that is wrong.
+        const o = obj({ id: 'o', name: 'w', instanceof: C, features: [
+            val('a', { __raw: { values: ['lit_red', 'GREEN', 'lit_bogus', 'PURPLE'] } }),
+        ] });
+        const res = run([o], [C]);
+        const enumViolations = res.violations.filter((v: AnyObj) => v.violationType === 'invalid_enum_literal');
+        expect(enumViolations).toHaveLength(2);
+        expect(enumViolations.map((v: AnyObj) => v.message).join(' ')).toContain('lit_bogus');
+        expect(enumViolations.map((v: AnyObj) => v.message).join(' ')).toContain('PURPLE');
     });
 });
 

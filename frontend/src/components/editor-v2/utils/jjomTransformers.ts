@@ -29,9 +29,12 @@ import type {
     ReferenceKind,
 } from '../types';
 import { setEdgeRefId } from '../sync/syncState';
+import { rememberRefTargetName, lastSeenRefTargetName } from '../nodes/brokenRefMemory';
+import { parseRowViewAnnotations } from '../nodes/rowViewAnnotations';
 import { displayTypeLabel } from '../types';
 import { readVertexLayout, type VertexLayout, type VertexLayoutSource } from '../viewpoint/layout/vertexLayout';
 import { getActiveLayoutKey } from '../viewpoint/layout/vertexLayoutAdapter';
+import { chooseEdgeSides } from './edgeRouting';
 
 // L-proxy types — using `any` for property access to avoid coupling to
 // the exact proxy shape which uses runtime magic getters.
@@ -320,22 +323,82 @@ function objectVertexToRFNode(vertex: any): Node<ObjectNodeData> {
             let featureTypeId = '';
             let typeName = '';
             let enumLiterals: Array<{ name: string; value: number }> | undefined;
+            let values: string[] | undefined;
+            let refTargets: Array<{ id: string; name: string }> | undefined;
+
+            // Multi-valued in the metamodel. The instance node prints the ACTUAL
+            // count held, but it needs the declared bound to tell a single-valued
+            // slot from a collection that happens to hold one element.
+            //
+            // Required is the other end of the same cardinality: `lower >= 1` is the
+            // marker `jjform/shape.ts` already derives for the manager's table, and
+            // deriving it the same way here is what keeps the node and the table
+            // from classifying one empty slot two different ways (R-FORM-15).
+            //
+            // A derived feature is computed rather than held, so an empty one is
+            // not a model to repair: it is excluded here, exactly as
+            // `instanceTable.ts` excludes it.
+            let isMany = false;
+            let required = false;
+            try {
+                const ub = feature?.upperBound;
+                isMany = typeof ub === 'number' && ub !== 1;
+                const lb = feature?.lowerBound;
+                required = typeof lb === 'number' && lb >= 1 && feature?.derived !== true;
+            } catch { /* proxy access can throw */ }
 
             if (isRef) {
-                // Reference: show resolved target names (handle both pointer IDs and objects)
+                // Reference: resolved target names, and the pointers that no
+                // longer resolve to anything.
+                //
+                // The RAW values are the source of truth here, not `fv.values`.
+                // Measured 2026-08-28: deleting a DObject leaves the pointer in
+                // place — `DValue.values` still held `Pointer…_49` afterwards,
+                // and that id resolved to nothing — but the L proxy drops such an
+                // entry rather than handing back the string, so a loop over
+                // `fv.values` never sees it at all. Reading `__raw.values` is
+                // what makes a broken reference detectable; the proxy is then
+                // used only to put a NAME on the ones that do resolve.
                 try {
-                    const vals = fv.values ?? [];
+                    const raw: unknown[] = (fv.__raw?.values ?? fv.values ?? []) as unknown[];
+                    const resolved = new Map<string, string>();
+                    try {
+                        for (const rv of (fv.values ?? []) as any[]) {
+                            if (rv && typeof rv !== 'string' && rv.id && rv.name) resolved.set(rv.id, rv.name);
+                        }
+                    } catch { /* proxy access can throw */ }
+
                     const names: string[] = [];
-                    for (const v of vals) {
-                        const target = typeof v === 'string' ? null : v;
-                        if (target?.name) names.push(target.name);
+                    const targets: Array<{ id: string; name: string; broken?: boolean }> = [];
+                    for (const v of raw) {
+                        const id = typeof v === 'string' ? v : ((v as any)?.id ?? '');
+                        if (!id) continue;
+                        const name = resolved.get(id) ?? (typeof v !== 'string' ? (v as any)?.name : undefined);
+                        if (name) {
+                            names.push(name);
+                            targets.push({ id, name });
+                            // Every resolving pass feeds the memory, so the name is
+                            // already known by the time the object is deleted.
+                            rememberRefTargetName(id, name);
+                            continue;
+                        }
+                        // A pointer that resolves to nothing: the target was
+                        // deleted and the reducer scrubbed no inbound pointer.
+                        // This used to be dropped, which is why a deleted target
+                        // looked exactly like a property nobody had ever set.
+                        const lastKnown = lastSeenRefTargetName(id);
+                        names.push(lastKnown);
+                        targets.push({ id, name: lastKnown, broken: true });
                     }
+                    values = names;
+                    refTargets = targets;
                     value = names.join(', ') || '—';
                 } catch { value = '—'; }
             } else {
                 // Attribute: show primitive value
                 try {
                     const vals = fv.values ?? [];
+                    values = vals.map((v: unknown) => String(v ?? ''));
                     value = vals.length > 0 ? String(vals[0] ?? '') : '';
                 } catch { value = ''; }
 
@@ -360,6 +423,24 @@ function objectVertexToRFNode(vertex: any): Node<ObjectNodeData> {
                 } catch { /* proxy access can throw */ }
             }
 
+            // The metamodel declarations for this feature: the renderer override,
+            // and the unit and bounds the handoff forbids inferring from the name.
+            //
+            // Read through the L proxy, like every other metamodel fact in this
+            // function — `LModelElement.annotations` resolves the pointer list to
+            // LAnnotation proxies, so `.source` is there. A metamodel that
+            // declares nothing yields `{}` and every renderer falls back, which
+            // is the state of every model that predates this feature.
+            let declared: ReturnType<typeof parseRowViewAnnotations> = {};
+            try {
+                const anns = feature?.annotations ?? [];
+                if (anns.length > 0) {
+                    declared = parseRowViewAnnotations(
+                        anns.map((a: any) => (typeof a === 'string' ? undefined : a?.source)),
+                    );
+                }
+            } catch { /* proxy access can throw */ }
+
             features.push({
                 id: fv.id ?? `fv_${features.length}`,
                 featureName: feature?.name ?? 'unnamed',
@@ -368,6 +449,14 @@ function objectVertexToRFNode(vertex: any): Node<ObjectNodeData> {
                 typeName: typeName || undefined,
                 value,
                 enumLiterals,
+                values,
+                isMany,
+                required,
+                refTargets,
+                rendererOverride: declared.renderer,
+                unit: declared.unit,
+                min: declared.min,
+                max: declared.max,
             });
         }
     } catch { /* proxy access can throw */ }
@@ -423,7 +512,11 @@ export function jjomVertexToRFNode(vertex: any): Node | null {
  * For inheritance edges, UML convention dictates the triangle marker is always
  * at the bottom of the parent (target). So we force vertical routing:
  * child (source) connects from top, parent (target) from bottom.
- * Horizontal routing is only used if classes are at nearly the same Y level.
+ *
+ * Per i reference, dal 2026-08-27 la scelta e' la stessa di `useAutoAnchor`:
+ * `edgeRouting.chooseEdgeSides`, minimo di svolte e poi lunghezza sui sedici
+ * accoppiamenti. Le due sedi devono concordare, altrimenti un progetto mostra lati
+ * diversi appena caricato e lati diversi dopo il primo trascinamento.
  */
 function computeOptimalHandles(
     sourceVertex: any,
@@ -448,34 +541,18 @@ function computeOptimalHandles(
     const tw = typeof tEff?.w === 'number' ? tEff.w : 180;
     const th = typeof tEff?.h === 'number' ? tEff.h : 80;
 
-    const scx = sx + sw / 2;
-    const scy = sy + sh / 2;
-    const tcx = tx + tw / 2;
-    const tcy = ty + th / 2;
-
-    const dx = tcx - scx;
-    const dy = tcy - scy;
-
     if (isInheritance) {
         // Inheritance always anchors child=top, parent=bottom
         // (consistent with EditorV2 creation and useAutoAnchor hysteresis)
         return { sourceHandle: 'top-0', targetHandle: 'bottom-0' };
     }
 
-    // Non-inheritance: use dominant axis
-    if (Math.abs(dy) >= Math.abs(dx)) {
-        if (dy < 0) {
-            return { sourceHandle: 'top-0', targetHandle: 'bottom-0' };
-        } else {
-            return { sourceHandle: 'bottom-0', targetHandle: 'top-0' };
-        }
-    } else {
-        if (dx > 0) {
-            return { sourceHandle: 'right-0', targetHandle: 'left-0' };
-        } else {
-            return { sourceHandle: 'left-0', targetHandle: 'right-0' };
-        }
-    }
+    // Non-inheritance: minimo di svolte, poi lunghezza.
+    const chosen = chooseEdgeSides(
+        { x: sx, y: sy, width: sw, height: sh },
+        { x: tx, y: ty, width: tw, height: th },
+    );
+    return { sourceHandle: `${chosen.sourceSide}-0`, targetHandle: `${chosen.targetSide}-0` };
 }
 
 /**

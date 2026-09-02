@@ -5,42 +5,63 @@ import { useEditorContextSafe } from '../contexts/EditorContext';
 
 interface SegmentHandlesProps {
     edgeId: string;
-    /** Path after waypoints applied, before rounding (used to compute segment positions) */
-    adjustedPath: string;
+    /** Polilinea a cui gli **indici** dei waypoint si riferiscono: quella che il
+     *  router ha prodotto, prima che i waypoint la trasformino. */
+    basePath: string;
+    /** Polilinea **disegnata**, dopo i waypoint: e' li' che le maniglie si posano. */
+    drawnPath: string;
+    /** Il segmento `i` di `basePath` e' il segmento `segmentMap[i]` di `drawnPath`. */
+    segmentMap: number[];
     waypoints: EdgeWaypoint[];
     selected: boolean;
 }
 
 /**
- * Renders draggable handles on internal segments of Manhattan-routed edges.
+ * Renders draggable handles on the segments of a Manhattan-routed edge.
  *
- * Rules:
- * - 1 segment (straight line): no handles
- * - 2 segments: no handles (both adjacent to anchors)
- * - 3+ segments: handles on internal segments only (not first/last)
+ * Una maniglia per **ogni** segmento, terminali compresi: trascinare un terminale
+ * non sposta l'ancora ma spezza il tracciato con una gomitata (decisione B del
+ * 2026-08-27), cosi' anche un arco a una sola svolta si puo' correggere a mano.
+ *
+ * Le maniglie si contano sulla polilinea del router — quella a cui gli indici dei
+ * waypoint si riferiscono — e si **disegnano** su quella resa. Prima si contavano e
+ * si disegnavano entrambe su `adjustedPath`, che e' la polilinea **prima**
+ * dell'evitamento degli ostacoli: su un arco ri-instradato quella ha meno segmenti di
+ * quella a schermo, e sotto i tre non compariva nessuna maniglia. Misurato il
+ * 2026-08-27 sul canvas: archi con sei e sette segmenti resi, zero maniglie
+ * (`discovery_2026-08-27_2_dense_diagram_routing.md` §5).
  *
  * Drag is constrained:
  * - Horizontal segment -> vertical drag only (Y axis)
  * - Vertical segment -> horizontal drag only (X axis)
  */
-export function SegmentHandles({ edgeId, adjustedPath, waypoints, selected }: SegmentHandlesProps) {
-    const segments = useMemo(() => getPathSegments(adjustedPath), [adjustedPath]);
+export function SegmentHandles({ edgeId, basePath, drawnPath, segmentMap, waypoints, selected }: SegmentHandlesProps) {
+    const baseSegments = useMemo(() => getPathSegments(basePath), [basePath]);
+    const drawnSegments = useMemo(() => getPathSegments(drawnPath), [drawnPath]);
 
-    // Only internal segments of edges with 3+ segments
-    const internalSegments = useMemo(() => {
-        if (segments.length < 3) return [];
-        return segments.slice(1, -1);
-    }, [segments]);
+    // Una maniglia per segmento del router, posata sul segmento corrispondente del
+    // tracciato reso. Un segmento senza corrispondenza (mappa corta o degenere) non
+    // produce maniglia invece di produrne una fuori posto.
+    const handles = useMemo(() => {
+        const out: Array<{ key: number; base: SegmentInfo; drawn: SegmentInfo }> = [];
+        for (const base of baseSegments) {
+            const at = segmentMap[base.index] ?? base.index;
+            const drawn = drawnSegments[at];
+            if (!drawn) continue;
+            out.push({ key: base.index, base, drawn });
+        }
+        return out;
+    }, [baseSegments, drawnSegments, segmentMap]);
 
-    if (!selected || internalSegments.length === 0) return null;
+    if (!selected || handles.length === 0) return null;
 
     return (
         <EdgeLabelRenderer>
-            {internalSegments.map((seg) => (
+            {handles.map(({ key, base, drawn }) => (
                 <DraggableHandle
-                    key={seg.index}
+                    key={key}
                     edgeId={edgeId}
-                    segment={seg}
+                    segment={{ ...drawn, index: base.index }}
                     waypoints={waypoints}
                 />
             ))}

@@ -90,7 +90,7 @@ import {
 } from "../../api/data";
 import {ValuePointers} from "./PointerDefinitions";
 import {transientProperties} from "../../joiner/classes";
-import {validateNameUniqueness} from "./nameUniqueness";
+import {checkNameUniqueness, checkM2NameUniqueness, getNamespaceOf, m2KindOf, type M2NamespaceKind} from "./nameUniqueness";
 import { toast } from "../../components/Toast";
 import React, {JSX} from "react";
 import { checkObjectCreation, checkLinkCreation, checkValueAssignment, emitGuardViolation } from '../conformance/ConformanceGuard';
@@ -104,6 +104,48 @@ export type SchemaMatchingScore = {
     excessFeaturesCount: number, matchingFeaturesCount: number, missingFeaturesCount: number,
     isPartial: boolean,
     class:LClass, instantiable: boolean, namesMap: Dictionary<DocString<"feature name">>};
+
+
+/**
+ * The M2 create gate (S1-M2) — the create consults the SAME verdict as the rename.
+ *
+ * There is no single `get_addObject` at M2: the create primitives are eleven, spread
+ * over five receivers (LPackage, LClass, LEnumerator, LOperation, LModel, plus the two
+ * that build a classifier from a feature — `LReference.get_addClass` and
+ * `LAttribute.get_addEnumerator`). This function is what keeps them from becoming
+ * eleven rules: each one calls it, none of them decides anything.
+ *
+ * The gate is on the EXPLICIT name only, exactly as in `LValue.get_addObject` after
+ * S1a. With none given, `DPointerTargetable.defaultname` computes the auto-name, and
+ * gating that would refuse creates the rule has no verdict about — measured, an
+ * auto-name cannot even see a sibling made in the same tick (`idlookup` resolves a
+ * pending create by id but does not enumerate it). See
+ * docs/discovery/discovery_2026-08-30_s1m2_una_regola.md §3.
+ *
+ * Call it BEFORE any TRANSACTION, never inside one: it adds no creator, and CLAUDE.md
+ * §3.3 forbids wrapping one.
+ *
+ * @param father the PROSPECTIVE parent — the element the new one will hang from,
+ *               which for `LReference.addClass` is the package, not the receiver.
+ * @returns true when the caller must refuse and create nothing.
+ */
+function m2CreateRefused(
+    father: LModelElement | undefined | null,
+    kind: M2NamespaceKind,
+    name: string | undefined,
+    where: string
+): boolean {
+    if (!name) return false;
+    const verdict = checkM2NameUniqueness({father, kind, name});
+    if (!verdict.ok) {
+        toast.error(verdict.reason as string, {title: 'Validation failed'});
+        Log.ww(where + ' refused: ' + verdict.reason, {father, kind, name});
+        return true;
+    }
+    // Case-sensitive by decision: the near-homonym is legal, and declared.
+    if (verdict.warning) toast.warning(verdict.warning, {title: 'Near-duplicate name'});
+    return false;
+}
 
 
 @Node
@@ -1379,6 +1421,16 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
         let rawType = c.data.type;
         if (typeof rawType === 'string') {
             // if classref was set by name, and wasn't existing at set time, resolve it at runtime and update state.
+            //
+            // STEP 2 IS DEAD, AND STAYS DEAD BY DECISION (R-M2U-5, 2026-08-30).
+            // `model` is declared here and never assigned: the four `this.get_model(c)`
+            // below discard their return value, so every `if (model)` is false and only
+            // the `Selectors.getByName` branch ever runs. Measured by discrimination on
+            // 'EInt' — see docs/discovery/discovery_2026-08-30_micro_core_tre_fix.md §4.1.
+            // NOT repaired: assigning `model` would narrow the resolution pool from
+            // global to per-model, which is a design change and not a typo fix, and the
+            // per-model pool is exactly the one S1-M2 has just made metamodel-wide.
+            // Whoever revisits this decides the pool first and the assignment second.
             let model: LModel = null as any;
             // resolve for enumerators (primitives and void are resolved at set time)
             if (c.data.className !== 'DReference') {
@@ -1403,7 +1455,19 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
             }
         }
         // 3) fallback values.
-        return LPointerTargetable.fromPointer(c.data.className === 'DReference' ? c.data.father : 'Pointer_ESTRING');
+        // A DReference with no type used to get its own container back. That was the same
+        // seed the constructor wrote, and the constructor stopped writing it for a declared
+        // rejection (`Constructors.DTypedElement`, joiner/classes.ts): the two lines said
+        // different things, and this one said the false one. It gets the same weakest target
+        // instead -- the m3 `EObject`, a real DClass in the store (redux/store.tsx:340), so
+        // `get_classType`/`get_primitiveType` keep reading `.isClass` on a live proxy.
+        // Measured, not assumed (R-GT-1, docs/discovery/discovery_2026-08-30_gettype_finestra_parser.md):
+        // the Ecore parser never reaches this step -- `DReference.new` substitutes the father
+        // for the absent type before the constructor sees anything, so `data.type` is never
+        // falsy on that path -- and outside that window the census of in-tree callers is
+        // empty. The two ways here are the console and the public API.
+        const Defaults: typeof TDefaults = windoww.Defaults;
+        return LPointerTargetable.fromPointer(c.data.className === 'DReference' ? Defaults.Pointer_EOBJECT : 'Pointer_ESTRING');
     }
 
     protected set_type(val: Pack1<this["type"]>, c: Context): boolean {
@@ -1872,6 +1936,7 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
     protected get_addPackage(context: Context): this["addPackage"] {
         // console.log("Package.get_addPackage()", {context, thiss:this});
         return (name?: D["name"], uri?: D["uri"], prefix?: D["prefix"]) => {
+            if (m2CreateRefused(context.proxyObject as LModelElement, 'package', name, 'LPackage.addPackage()')) return undefined as any;
             return LPointerTargetable.fromD(DPackage.new(name, uri, prefix, context.data.id, true, DPackage));
         }
     }
@@ -1882,7 +1947,10 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
     protected get_addClass(context: Context): this["addClass"] {
         return (name?: DClass["name"], isInterface?: DClass["interface"], isAbstract?: DClass["abstract"], isPrimitive?: DClass["isPrimitive"],
                 isPartial?: DClass["partial"], partialDefaultName?: DClass["partialdefaultname"]
-        ) => LPointerTargetable.fromD(DClass.new(name, isInterface, isAbstract, isPrimitive, isPartial, partialDefaultName, context.data.id, true));
+        ) => {
+            if (m2CreateRefused(context.proxyObject as LModelElement, 'classifier', name, 'LPackage.addClass()')) return undefined as any;
+            return LPointerTargetable.fromD(DClass.new(name, isInterface, isAbstract, isPrimitive, isPartial, partialDefaultName, context.data.id, true));
+        };
     }
 
     public addEnum(...p:Parameters<this["addEnumerator"]>): LEnumerator { return this.addEnumerator(...p); }
@@ -1890,7 +1958,10 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
         return this.get_addEnumerator(context); }
     public addEnumerator(name?: DEnumerator["name"]): LEnumerator { return this.cannotCall("addEnumerator"); }
     protected get_addEnumerator(context: Context): this["addEnumerator"] {
-        return (name?: DEnumerator["name"]) => LPointerTargetable.fromD(DEnumerator.new(name, context.data.id, true));
+        return (name?: DEnumerator["name"]) => {
+            if (m2CreateRefused(context.proxyObject as LModelElement, 'classifier', name, 'LPackage.addEnumerator()')) return undefined as any;
+            return LPointerTargetable.fromD(DEnumerator.new(name, context.data.id, true));
+        };
     }
 
     protected get_classes(context: Context, state?: DState, setNameKeys: boolean = true): LClass[] & Dictionary<DocString<"$name">, LClass> {
@@ -2392,7 +2463,10 @@ export class LOperation<Context extends LogicContext<DOperation, LOperation> = a
 
     public addParameter(name?: DParameter["name"], type?: DParameter["type"]): LParameter { return this.cannotCall("addParameter"); }
     protected get_addParameter(context: Context): this["addParameter"] {
-        return (name?: DParameter["name"], type?: DParameter["type"]) => LPointerTargetable.fromD(DParameter.new(name, type, context.data.id, true)); }
+        return (name?: DParameter["name"], type?: DParameter["type"]) => {
+            if (m2CreateRefused(context.proxyObject as LModelElement, 'parameter', name, 'LOperation.addParameter()')) return undefined as any;
+            return LPointerTargetable.fromD(DParameter.new(name, type, context.data.id, true));
+        }; }
 
     public execute(thiss: LObject, ...params: any): any { return this.cannotCall("execute"); }
     protected get_execute(context: Context): ((thiss: LObject, ...params: any[])=>any) {
@@ -3184,6 +3258,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     public addAttribute(name?: DAttribute["name"], type?: DAttribute["type"]): LAttribute { return this.cannotCall("addAttribute"); }
     protected get_addAttribute(context: Context): this["addAttribute"] {
         return (name?: DAttribute["name"], type?: DAttribute["type"]) => {
+            if (m2CreateRefused(context.proxyObject as LModelElement, 'feature', name, 'LClass.addAttribute()')) return undefined as any;
             // Creation-time type inference: only when the caller passes a non-empty name
             // and NO explicit type. An explicit type (Ecore/XMI import, undo-reconcile,
             // examples, Jjodie) is forwarded untouched, and a missing name falls through
@@ -3201,12 +3276,18 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
 
     public addReference(name?: DReference["name"], type?: DReference["type"]): LReference { return this.cannotCall("addReference"); }
     protected get_addReference(context: Context): this["addReference"] {
-        return (name?: DReference["name"], type?: DReference["type"]) => LPointerTargetable.fromD(DReference.new(name, type, context.data.id, true));
+        return (name?: DReference["name"], type?: DReference["type"]) => {
+            if (m2CreateRefused(context.proxyObject as LModelElement, 'feature', name, 'LClass.addReference()')) return undefined as any;
+            return LPointerTargetable.fromD(DReference.new(name, type, context.data.id, true));
+        };
     }
 
     public addOperation(name?: DOperation["name"], type?: DOperation["type"]): LOperation { return this.cannotCall("addOperation"); }
     protected get_addOperation(context: Context): this["addOperation"] {
-        return (name?: DOperation["name"], type?: DOperation["type"]) => LPointerTargetable.fromD(DOperation.new(name, type, [], context.data.id, true));
+        return (name?: DOperation["name"], type?: DOperation["type"]) => {
+            if (m2CreateRefused(context.proxyObject as LModelElement, 'feature', name, 'LClass.addOperation()')) return undefined as any;
+            return LPointerTargetable.fromD(DOperation.new(name, type, [], context.data.id, true));
+        };
     }
 
 
@@ -4067,6 +4148,9 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
     protected get_addClass(c: Context): this["addClass"] {
         return (name?: DClass["name"], isInterface?: DClass["interface"], isAbstract?: DClass["abstract"], isPrimitive?: DClass["isPrimitive"],
                 isPartial?: DClass["partial"], partialDefaultName?: DClass["partialdefaultname"]) => {
+            // BEFORE the TRANSACTION, never inside it: the gate adds no creator (§3.3).
+            // The prospective father is the PACKAGE this reference lives in.
+            if (m2CreateRefused(c.proxyObject.package as unknown as LModelElement, 'classifier', name, 'LReference.addClass()')) return undefined as any;
             let dclass: DClass = null as any
             TRANSACTION(this.get_name(c)+'.addClass()', ()=>{
                 dclass = DClass.new(name, isInterface, isAbstract, isPrimitive, isPartial, partialDefaultName, c.proxyObject.package!.id, true);
@@ -4084,7 +4168,16 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
         if (val && mainkey === 'composition' && c.data.father === c.data.type) {
             // todo: discovere non-trivial loops
             Log.ww('setting ' + this.get_fullname(c) + ' as composition is generating a composition loop, the class has become not instantiable.\nConsider switching to aggregation.');
-            return true;
+            // The write is REFUSED here (a self-composition is legitimately blocked), so the
+            // return says so. It used to be `true`, and the caller had no way to tell an
+            // accepted write from a refused one: measured on `substates` (State -> State) in
+            // `docs/discovery/discovery_2026-08-31_10g_outline_doppi.md` §3, where the shape
+            // reported `composition: false` while the assignment had reported success.
+            // Nobody reads this verdict today — the proxy set trap discards it
+            // (`joiner/proxy.ts:475-479` calls the setter and returns a hard-coded `true`),
+            // and the only other callers are the three delegating wrappers below. So this is
+            // the truth of the return, not a change of behaviour for any caller.
+            return false;
         }
 
         if (!!c.data[mainkey] === val) return true;
@@ -4463,7 +4556,11 @@ export class LAttribute <Context extends LogicContext<DAttribute> = any, C exten
     protected get_addEnum(context: Context): this["addEnumerator"] { return this.get_addEnumerator(context); }
     public addEnumerator(name?: DEnumerator["name"], father?: DEnumerator["father"]): LEnumerator { return this.cannotCall("Attribute.addEnumerator"); }
     protected get_addEnumerator(context: Context): this["addEnumerator"] {
-        return (name?: DEnumerator["name"], father?: DEnumerator["father"]) => LPointerTargetable.fromD(DEnumerator.new(name, context.proxyObject.package?.id, true)); }
+        return (name?: DEnumerator["name"], father?: DEnumerator["father"]) => {
+            // The prospective father is the PACKAGE, not this attribute.
+            if (m2CreateRefused(context.proxyObject.package as unknown as LModelElement, 'classifier', name, 'LAttribute.addEnumerator()')) return undefined as any;
+            return LPointerTargetable.fromD(DEnumerator.new(name, context.proxyObject.package?.id, true));
+        }; }
 
     protected get_isID(context: Context): this["isID"] { return context.data.isID; }
     protected set_isID(val: this["isID"], c: Context): boolean {
@@ -4758,7 +4855,10 @@ export class LEnumerator<Context extends LogicContext<DEnumerator> = any, C exte
 
     public addLiteral(name?: DEnumLiteral["name"], value?: DEnumLiteral["value"]): LEnumLiteral { return this.cannotCall("addLiteral"); }
     protected get_addLiteral(c: Context): this["addLiteral"] {
-        return (name?: DEnumLiteral["name"], value?: DEnumLiteral["value"]) => LPointerTargetable.fromD(DEnumLiteral.new(name, value, c.data.id, true)); }
+        return (name?: DEnumLiteral["name"], value?: DEnumLiteral["value"]) => {
+            if (m2CreateRefused(c.proxyObject as LModelElement, 'literal', name, 'LEnumerator.addLiteral()')) return undefined as any;
+            return LPointerTargetable.fromD(DEnumLiteral.new(name, value, c.data.id, true));
+        }; }
 
     protected get_literals(context: Context): this["literals"] {
         return context.data.literals.map((pointer) => {
@@ -5061,6 +5161,7 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
     public get_addPackage(context: Context): ((name?: DPackage["name"], uri?: DPackage["uri"], prefix?: DPackage["prefix"]) => LPackage) {
         // console.log("Model.addPackage()", {context, thiss: this});
         return (name?: DPackage["name"], uri?: DPackage["uri"], prefix?: DPackage["prefix"]) => {
+            if (m2CreateRefused(context.proxyObject as unknown as LModelElement, 'package', name, 'LModel.addPackage()')) return undefined as any;
             return LPointerTargetable.fromD(DPackage.new(name, uri, prefix, context.data.id, true, DModel));
         }
     }
@@ -5767,14 +5868,25 @@ instanceof === undefined or missing  --> auto-detect and assign the type
     }
     _impl_getByName(collection: Dictionary<string, LModelElement> & any[], name: string, caseSensitive: boolean = false): LModelElement | null {
         name = name.trim();
-        if (collection[name]) return collection[name];
+        // The named-array convention is "$" + name, in all three places that build one:
+        // `U.toNamedArray` (common/U.tsx:2083), `LPackage.get_classes` (:1902) and
+        // `LPackage.get_enumerators` (:1909). Looking up the bare key could never hit, and
+        // neither could the lowercase pass, which produced '$freeprobe' and asked for
+        // 'freeprobe' -- so `getClassByName` and `getEnumByName` returned null for every
+        // name, unique ones included. Measured (R-M2-2,
+        // docs/discovery/discovery_2026-08-30_uniqueness_m2.md §4.1), with the positive
+        // control that made it a measurement: `getClassByName('$FreeProbe')` did resolve.
+        // That control stops working here on purpose -- the '$' belongs to the key, not to
+        // the name the caller passes.
+        const key: string = '$' + name;
+        if (collection[key]) return collection[key];
         if (caseSensitive) return null;
 
         let initialKeys: string[] = Object.keys(collection);
         for (let k of initialKeys ) {
             collection[(k + '').toLowerCase()] = collection[k];
         }
-        return collection[name.toLowerCase()] || null;
+        return collection[key.toLowerCase()] || null;
     }
 
 }
@@ -5888,9 +6000,48 @@ export class DObject extends DModelElement { // extends DNamedElement, m1 class 
     features: Pointer<DValue>[] = [];
 
     partial!: boolean | undefined;
+
+    /** The auto-name, resolved in the namespace the M1 rule actually uses.
+     *
+     *  `DPointerTargetable.defaultname` (joiner/classes.ts:1455) builds the taken-name set from
+     *  `lfather.childNames`, which for a CONTAINMENT slot is EMPTY: `LValue` does not override
+     *  `get_children_idlist`, so the base `get_childNames` finds nothing and
+     *  `U.increaseEndingNumber` never leaves `_0`. Every nested instance of a slot was therefore
+     *  born `<Metaclass>_0`, and two `Add` without a rename produced two objects genuinely
+     *  carrying the same name. Roots are immune because a `DModel` father does populate that
+     *  namespace. Measured in `docs/discovery/discovery_2026-09-01_unq1_duplicate_name.md`
+     *  §1(c), §5 and §6.
+     *
+     *  `getNamespaceOf` (nameUniqueness.ts:168) is the single place the M1 scope is decided, and
+     *  it already descends a `DValue` father through the slot's `values` — pending creates of the
+     *  current tick included. So the slot case is routed through it and handed to the predicate
+     *  form of `defaultname`. `get_children_idlist` is NOT widened: what "child" means for
+     *  `LValue` is unchanged for every other reader (that was candidate C1 of the report's §7,
+     *  and it is not taken here).
+     *
+     *  A model father keeps the existing path, byte for byte.
+     */
+    private static autoName(father?: DObject["father"], instanceoff?: DObject["instanceof"]): string {
+        const prefixOf = (meta: LNamedElement) => (meta?.name || "obj") + "_";
+        // Mirrors the guard `defaultname` applies before wrapping: Pointer or D-object only.
+        const wrappable = !!father && (typeof father === "string" || !!(father as GObject).className);
+        const lfather: GObject | null = wrappable ? (LPointerTargetable.wrap(father as any) as any) : null;
+        // The L-proxy reports the D-layer className, never the L-name (CLAUDE.md §3.13).
+        if (lfather && lfather.className === DValue.cname) {
+            const meta = instanceoff ? LPointerTargetable.from(instanceoff as Pointer) : null;
+            const taken = new Set<string>();
+            for (const sibling of getNamespaceOf(lfather as any)) {
+                const n = sibling && (sibling as GObject).name;
+                if (n) taken.add(n as string);
+            }
+            return U.increaseEndingNumber(prefixOf(meta as any) + '0', false, false, (candidate: string) => taken.has(candidate));
+        }
+        return this.defaultname(prefixOf, father, instanceoff);
+    }
+
     public static new(instanceoff?: DObject["instanceof"], father?: DObject["father"], fatherType?: typeof DModel | typeof DValue, name?: DNamedElement["name"], persist: boolean = true): DObject {
         // Compute the default name (auto-generated, per-father unique within sibling scope)
-        const computedDefaultName = this.defaultname(((meta: LNamedElement) => (meta?.name || "obj") + "_"), father, instanceoff);
+        const computedDefaultName = this.autoName(father, instanceoff);
         if (!name) name = computedDefaultName;
         let ret = new Constructors(new DObject('dwc'), father, persist, fatherType).DPointerTargetable().DModelElement()
             .DNamedElement(name).DObject(instanceoff).end();
@@ -5901,7 +6052,7 @@ export class DObject extends DModelElement { // extends DNamedElement, m1 class 
     }
 
     public static new3(ptrs:Partial<ObjectPointers>, then:(d:DObject, c: Constructors)=>void, fatherType?: typeof DModel | typeof DValue, persist: boolean = true): DObject{
-        const computedDefaultName = this.defaultname(((meta: LNamedElement) => (meta?.name || "obj") + "_"), ptrs.father, ptrs.instanceof);
+        const computedDefaultName = this.autoName(ptrs.father, ptrs.instanceof);
         if (!ptrs.name) ptrs.name = computedDefaultName;
         let ret = new Constructors(new DObject('dwc'), ptrs.father, persist, fatherType, ptrs.id)
             .DPointerTargetable().DModelElement()
@@ -5967,7 +6118,28 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
 
 
     protected get_name(context: Context): this['name'] {
-        return (context.proxyObject as GObject)['$name']?.value || context.data.name || context.proxyObject.instanceof?.name;
+        // The identity slot is seeded in deferred fashion (`addObject` seeds the json values on a
+        // `setTimeout`, createAdapter.ts:42), so between the create and the seed its `values` are
+        // `[]`. An EMPTY slot does not read back empty: `get_values` (:7647) substitutes the
+        // owner's `initialName` — the auto-name. Preferring that over `context.data.name`, which
+        // already carries the requested name from the first tick the object exists, is what made
+        // two differently named siblings both read `<Metaclass>_0` for at least 425ms and register
+        // a duplicate-name that was never true in the data. Measured in
+        // `docs/discovery/discovery_2026-09-01_unq1_duplicate_name.md` §1-§3.
+        //
+        // So an empty slot yields to `data.name`, and the auto-name stays the fallback only for
+        // the fully-empty case (slot AND `data.name` empty), which is the case the three readers
+        // of `initialName` — instanceTable.ts:127, shapeDraw.ts:205, irReadCtx.ts:173 — already
+        // spell `name ?? initialName` for. A POPULATED slot still wins: slot -> name is the
+        // load-bearing direction of the identity binding (CLAUDE.md §3.12) and is untouched here.
+        //
+        // Raw read via `__raw.values`: the same idiom `set_name` uses at :6385 to bypass this very
+        // read-fallback. Only the literal empty array counts as empty — a slot deliberately
+        // holding '' is a different case, not measured, and left as it was.
+        const slot = (context.proxyObject as GObject)['$name'];
+        const rawValues = (slot as GObject)?.__raw?.values;
+        if (Array.isArray(rawValues) && rawValues.length === 0 && context.data.name) return context.data.name;
+        return slot?.value || context.data.name || context.proxyObject.instanceof?.name;
     }
 
     protected get_initialName(context: Context): this['initialName'] {
@@ -6232,12 +6404,15 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
         if (c.data.name === name) return true;
 
         const self = c.proxyObject as unknown as LObject;
-        const result = validateNameUniqueness(self, name);
-        if (!result.valid) {
-            const collider = (result.collidingWith ?? [])[0];
-            const ownerType = (collider?.className ?? 'Element').replace(/^[DLW]/, '');
-            const ownerName = collider?.name ?? '?';
-            toast.error(`Name "${name}" already used by ${ownerType} "${ownerName}"`, {
+        // The rename is a CONSUMER of the one verdict (R-S1-2), not a rule of its own:
+        // the same `checkNameUniqueness` the create consults, and the same sentence.
+        const verdict = checkNameUniqueness({
+            father: self.father as unknown as LModelElement,
+            name,
+            excludeId: self.id,
+        });
+        if (!verdict.ok) {
+            toast.error(verdict.reason as string, {
                 title: 'Validation failed',
                 action: { label: 'View errors →', onClick: () => { /* TODO: wire to errors panel when available */ } },
             });
@@ -6293,8 +6468,9 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
         const self = c.proxyObject as unknown as LObject;
         const newFather = LPointerTargetable.from(val) as LModelElement;
         if (newFather) {
-            const result = validateNameUniqueness(self, self.name, { overrideFather: newFather });
-            if (!result.valid) {
+            // Same verdict, different sentence: a reparent names the destination scope.
+            const result = checkNameUniqueness({ father: newFather, name: self.name, excludeId: self.id });
+            if (!result.ok) {
                 const collider = (result.collidingWith ?? [])[0];
                 const ownerType = (collider?.className ?? 'Element').replace(/^[DLW]/, '');
                 const ownerName = collider?.name ?? '?';
@@ -7131,6 +7307,32 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                 let meta = L.from(constructorPointers.instanceof) as LClass;
                 if (meta.isSingleton){ constructorPointers.name = meta.name; }
             }
+            // ── Uniqueness (R-S1-2): the create consults the SAME verdict as the rename ──
+            //
+            // This is the point both ways cross: `LValue.get_addObject` is defined once and
+            // serves `LModel.addObject` (a root) and `LValue.addObject` (a contained instance),
+            // and it sits in the same file as `LObject.set_name`. Until S1a the create reached
+            // `DObject.new3` without ever passing a uniqueness check, so it could produce a
+            // name the rename would have refused.
+            //
+            // The gate is on the EXPLICIT name only. With none given, `DObject.new3` computes
+            // the auto-name from `defaultname`, whose namespace for a NESTED object is empty
+            // (`LValue` does not override `get_children_idlist`), so gating that would refuse
+            // the second `Add` of a containment slot. Declared and not closed — see
+            // docs/discovery/discovery_2026-08-30_s1a_una_funzione_uniqueness.md §2 and §5.
+            //
+            // BEFORE the TRANSACTION, never inside it: nothing here wraps a creator (§3.3).
+            if (constructorPointers.name) {
+                const uniq = checkNameUniqueness({
+                    father: LPointerTargetable.from(father) as unknown as LModelElement,
+                    name: constructorPointers.name as string,
+                });
+                if (!uniq.ok) {
+                    toast.error(uniq.reason as string, { title: 'Validation failed' });
+                    Log.ww('addObject() refused: ' + uniq.reason, {json, father, thiss: c.data});
+                    return lobj;
+                }
+            }
             TRANSACTION(this.get_name(c as any)+'.addObject()', () => {
                 let dobj = DObject.new3(constructorPointers, () => { }, isDModel?DModel:DValue, true);
                 if (isReference && !isContainment){
@@ -7310,7 +7512,11 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
 
 
         if (dmeta?.derived) {
+            // reducer.ts:1093 keeps the line that would populate this map commented out, so the
+            // entry is missing for every element and this read used to throw on any derived
+            // feature. Same lazy-create idiom as ocl.tsx:80-81.
             let td = transientProperties.modelElement[dmeta.id];
+            if (!td) transientProperties.modelElement[dmeta.id] = td = new DataTransientProperties();
             if (!td.derived_read) {
                 try {
                     let txt = dmeta.derived_read || '(data, originalValues)=>{return originalValues}';
@@ -7603,6 +7809,14 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         }
         if (!skipSettingUndefined) SetFieldAction.new(context.data, 'values.' + index as any, undefined, '', info.isPtr);
     }
+    // Caller contract (measured, docs/discovery/discovery_2026-09-01_eng1_containment_core.md B.4):
+    // `index` is the caller's to own. This function derives the evicted occupant from
+    // `c.data.values[index]`, and inside the propagation window of the previous write that read is
+    // stale — so is `store.getState()`, which is why no read cures it. Two writes deriving the same
+    // index from the store therefore both target it: the second overwrites the first, and the first
+    // occupant is left with `father` on a slot that no longer lists it, with `{success: true}`
+    // returned. Callers keep one index per gesture, or write the whole array in a single
+    // `set_values`, where the indices are assigned on an array the caller holds.
     protected get_setValueAtPosition(c: Context): ((index: number, val: this["values"][0], info?: Partial<SetValueAtPositionInfoType>, outactions?:outactions, lname?: string) => {success: boolean, reason?: string}) {
         return (index: number, val: this["values"][0] | any, info0?: Partial<SetValueAtPositionInfoType>, outactions?: outactions, lname: string = ''): { success: boolean, reason?: string } => {
             if (!outactions) outactions = {clear:[], set:[], immediatefire: true}
@@ -7711,7 +7925,11 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         let dmeta: DReference | DAttribute | undefined = meta?.__raw;
         let lname =  this.get_name(c);
         if (dmeta?.derived) {
+            // reducer.ts:1093 keeps the line that would populate this map commented out, so the
+            // entry is missing for every element and this read used to throw on any derived
+            // feature. Same lazy-create idiom as ocl.tsx:80-81.
             let td = transientProperties.modelElement[dmeta.id];
+            if (!td) transientProperties.modelElement[dmeta.id] = td = new DataTransientProperties();
             if (!td.derived_write) {
                 try {
                     let txt = dmeta.derived_write || '(values, data, oldValues)=>{ data.values = values; }';

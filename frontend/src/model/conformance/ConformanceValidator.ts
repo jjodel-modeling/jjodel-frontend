@@ -301,22 +301,62 @@ export function validateConformance(
                     // CHECK 10: invalid_enum_literal — enum-typed value must be a current literal of the enum
                     const attrType: any = attr.type;
                     if (attrType && attrType.isEnum) {
+                        // Two accepted forms, one source. R-FRM-3 makes the POINTER to the
+                        // DEnumLiteral the canonical value and keeps the literal NAME as a legacy
+                        // form accepted on read, with no expiry: nothing migrates saved models
+                        // (VersionFixer.tsx:277, the line that would is commented out), so both
+                        // shapes stay in the wild forever. Before this, the check compared names
+                        // only, so every enum touched by an editor — which writes the pointer —
+                        // was flagged.
+                        //
+                        // Both sets come from `attrType.literals`, which the L layer already hands
+                        // over as LEnumLiteral proxies carrying `id` AND `name`: no lookup, no new
+                        // import. This module is a pure function with type-only imports and must
+                        // stay one.
+                        //
+                        // Ids are filtered like names, and not because a real literal lacks one:
+                        // the legacy test fixtures declare `{ name: 'RED' }` with no id, so an
+                        // unfiltered set would hold `undefined` and quietly accept it as valid.
+                        const enumLiterals: any[] = Array.isArray(attrType.literals) ? attrType.literals : [];
                         const literalNames = new Set<string>(
-                            (Array.isArray(attrType.literals) ? attrType.literals : [])
+                            enumLiterals
                                 .map((l: any) => l?.name)
                                 .filter((n: any) => n !== null && n !== undefined)
                         );
+                        const literalIds = new Set<string>(
+                            enumLiterals
+                                .map((l: any) => l?.id)
+                                .filter((i: any) => i !== null && i !== undefined)
+                        );
                         for (const v of scalarValues) {
-                            // A value may arrive as a raw literal-name string or as a resolved
-                            // LEnumLiteral object; compare on the literal name in both cases.
-                            const vName = (v && typeof v === 'object' && 'name' in (v as object)) ? (v as any).name : v;
-                            if (!literalNames.has(vName as string)) {
+                            // A value may arrive as a literal-name string (XMI import), as a
+                            // pointer id string (the editors), or as a resolved LEnumLiteral
+                            // object (only through the `feat.values` fallback, since production
+                            // reads `__raw.values`). An object is valid on either of its two
+                            // identities; a string is valid as either form.
+                            const isObj = !!v && typeof v === 'object';
+                            const vName = isObj
+                                ? ((v as any).name ?? (v as any).id)
+                                : v;
+                            const valid = isObj
+                                ? (literalNames.has((v as any).name) || literalIds.has((v as any).id))
+                                : (literalNames.has(v as string) || literalIds.has(v as string));
+                            // Everything else stays a violation, and deliberately so: a pointer to
+                            // a literal of ANOTHER enum is a type error and not an alternative
+                            // spelling, a name whose literal was removed is still stale, and a
+                            // numeric ordinal is neither form.
+                            if (!valid) {
                                 violations.push({
                                     objectId: objId,
                                     objectName: objName,
                                     violationType: 'invalid_enum_literal',
                                     severity: 'warning',
-                                    message: `Object "${objName || objId}": attribute "${attr.name}" has value "${vName}" which is not a literal of enum "${attrType.name}"`,
+                                    // The offending value is reported as it stands. Naming a
+                                    // pointer would mean resolving it, which needs the global
+                                    // idlookup this module must not import; "(by name or id)"
+                                    // says what was checked, so a raw pointer in the text reads
+                                    // as a value that matched neither rather than as a bug.
+                                    message: `Object "${objName || objId}": attribute "${attr.name}" has value "${vName}" which is not a literal (by name or id) of enum "${attrType.name}"`,
                                     metamodelElementName: attr.name,
                                 });
                             }
@@ -365,6 +405,9 @@ export function validateConformance(
                 // (dangling), so reading raw here also lets those see links beyond upperBound.
                 let valueCount = 0;
                 const referencedIds: string[] = [];
+                // Ids the L proxy actually RESOLVED for this reference — see CHECK 6 below
+                // for why existence is asked of the graph and not of `model.objects`.
+                const resolvedOnGraph = new Set<string>();
 
                 for (const feat of feats) {
                     const rawVals = (feat as any).__raw?.values;
@@ -379,6 +422,34 @@ export function validateConformance(
                         if (typeof v === 'string') referencedIds.push(v);
                         else if (typeof v === 'object' && 'id' in (v as object)) referencedIds.push((v as LObject).id);
                     }
+
+                    // The SAME read the three resolving surfaces make (the canvas chip in
+                    // `jjomTransformers.ts:363-393`, the tree, the nested form): `LValue.values`
+                    // maps every pointer through `LPointerTargetable.fromPointer`
+                    // (`LModelElement.tsx:7543`), so an entry that comes back as a `DObject`
+                    // is one the graph really holds. No new index and no `allSubObjects` scan:
+                    // this is the lookup that was already going to run for the row to render.
+                    //
+                    // Read UNCONDITIONALLY, not as the fallback above: `__raw.values` is the
+                    // untruncated source of WHICH ids are claimed, and this is the source of
+                    // which of them EXIST. The proxy pads to lowerBound and truncates to
+                    // upperBound (`LModelElement.tsx:7482-7488`), so on an over-full slot this
+                    // set is SMALLER than the raw list — which is safe by construction,
+                    // because it is only ever used to REMOVE a violation (see CHECK 6).
+                    try {
+                        const proxied: unknown = (feat as { values?: unknown }).values;
+                        if (Array.isArray(proxied)) {
+                            for (const pv of proxied) {
+                                if (!pv || typeof pv !== 'object') continue;
+                                const target = pv as { id?: unknown; className?: unknown };
+                                // `className` is the D-layer name even on an L proxy
+                                // (CLAUDE.md 3.13): 'DObject', never 'LObject'.
+                                if (typeof target.id === 'string' && target.className === 'DObject') {
+                                    resolvedOnGraph.add(target.id);
+                                }
+                            }
+                        }
+                    } catch { /* proxy access can throw; absence is handled as "unresolved" */ }
                 }
 
                 const lb = ref.lowerBound ?? 0;
@@ -414,7 +485,11 @@ export function validateConformance(
                     if (declaredType) {
                         for (const refId of referencedIds) {
                             const target = objectById.get(refId);
-                            if (!target) continue;              // missing target → dangling (CHECK 6)
+                            // Not in the visit perimeter: either a dangling pointer (CHECK 6
+                            // says so) or a target that exists on the graph outside
+                            // `model.objects` — a nested instance, which this check has never
+                            // typed and does not start typing here (CRUD3 F2 perimeter).
+                            if (!target) continue;
                             const targetMeta: any = target.instanceof;
                             if (!targetMeta) continue;          // target is orphan → its own CHECK 1
                             const isKindOf =
@@ -445,9 +520,26 @@ export function validateConformance(
                     });
                 }
 
-                // CHECK 6: dangling_reference — referenced objects must exist in the model
+                // CHECK 6: dangling_reference — referenced objects must exist ON THE GRAPH
+                //
+                // Existence is NOT membership of `model.objects`. That collection holds the
+                // ROOTS only: `DObject`'s constructor appends a new instance to `objects`
+                // when its father is the DModel and to the slot's `values` otherwise
+                // (`joiner/classes.ts:774-784`), and a contained instance's father IS the
+                // slot (`LModelElement.tsx:7171`). So every nested instance was reported as
+                // a non-existent target while the tree, the canvas chip and the nested form
+                // all resolved it — measured in
+                // docs/discovery/discovery_2026-09-01_crud3_edition_dangling.md.
+                //
+                // The VISIT perimeter is unchanged and stays `model.objects` (ratified,
+                // CRUD3 F2): a nested object is a legitimate TARGET, it is not something
+                // this validator walks. `objectIds` is kept as the first test because it is
+                // free and covers every root.
+                //
+                // Monotone by construction: `resolvedOnGraph` can only REMOVE a violation,
+                // never add one. Every id flagged after this change was flagged before it.
                 for (const refId of referencedIds) {
-                    if (!objectIds.has(refId)) {
+                    if (!objectIds.has(refId) && !resolvedOnGraph.has(refId)) {
                         violations.push({
                             objectId: objId,
                             objectName: objName,

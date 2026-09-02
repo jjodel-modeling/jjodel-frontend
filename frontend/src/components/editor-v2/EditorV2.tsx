@@ -45,6 +45,7 @@ import ContextMenu, { type ContextMenuItem } from './ContextMenu';
 import { useHistory } from './hooks/useHistory';
 import { useAlignment } from './hooks/useAlignment';
 import { useAutoAnchor, computeAnchorsWithHysteresis, getNodeRect, computeGeometricAnchorsForAllEdges } from './hooks/useAutoAnchor';
+import { computeLaneShifts, laneEdgesFromLayout, setLaneShifts } from './utils/edgeLanes';
 import { reduceReLayout, countReferenceEdges, INITIAL_RELAYOUT_STATE, type ReLayoutState, type ReLayoutEvent } from './utils/reLayoutWatcher';
 // Viewport-only helper (F3): reserve room for the floating overlay in fit/centering.
 import { fitPadding, getCanvasRightInset } from './viewportInset';
@@ -648,6 +649,14 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     const [minimapVisible, setMinimapVisible] = useState(() => {
         try { return localStorage.getItem('jjodel.showMinimap') !== 'false'; } catch { return true; }
     });
+    // Unlike the four above, this toggle is PER MODEL: its key and its event detail carry the
+    // model id, so the mirror both filters the event and reseeds when modelid changes (the
+    // useState initializer runs once). Read by the IR reference rows through EditorContext —
+    // the singleton nodes themselves are moved by handleToggleSingletons below, which is a
+    // different job and stays separate.
+    const [showSingletons, setShowSingletons] = useState(() => {
+        try { return localStorage.getItem(`jjodel.showSingletons.${modelid}`) === 'true'; } catch { return false; }
+    });
     useEffect(() => {
         const handleGrid = (e: Event) => setGridVisible(!!(e as CustomEvent).detail?.show);
         const handleEdgeLabels = (e: Event) => setShowEdgeLabels(!!(e as CustomEvent).detail?.show);
@@ -664,6 +673,39 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             window.removeEventListener(JjodelEvents.TOGGLE_MINIMAP, handleMinimap);
         };
     }, []);
+
+    // Singleton mirror — separate effect because it depends on modelid, and the four
+    // model-agnostic toggles above must not re-register on every model change.
+    useEffect(() => {
+        try { setShowSingletons(localStorage.getItem(`jjodel.showSingletons.${modelid}`) === 'true'); } catch { /* keep current */ }
+        const handleSingletons = (e: Event) => {
+            const detail = (e as CustomEvent).detail;
+            if (detail?.modelId !== modelid) return;
+            setShowSingletons(!!detail.show);
+        };
+        window.addEventListener(JjodelEvents.TOGGLE_SINGLETONS, handleSingletons);
+        return () => window.removeEventListener(JjodelEvents.TOGGLE_SINGLETONS, handleSingletons);
+    }, [modelid]);
+
+    // Singleton-conforming reference types (R-SGL-4 / R-SGL-10(2)), derived ONCE from the
+    // memoized modeInfo: a row then costs a Set lookup. `concreteSubclasses.length > 0` is the
+    // guard against conformance by vacuity — an abstract type with no concrete descendant has
+    // no instances at all, and `every` on an empty array would say yes.
+    const { singletonConformTypeIds, singletonClassIdsByType } = useMemo(() => {
+        const byType = new Map<string, ReadonlySet<string>>();
+        for (const c of modeInfo.allClasses) {
+            const conforms = c.isSingleton
+                || (c.concreteSubclasses.length > 0 && c.concreteSubclasses.every(s => s.isSingleton));
+            if (!conforms) continue;
+            // The classes that satisfy the type, restricted to singletons: the same conformance
+            // conformsToRefTarget uses (the declared target, or a concrete descendant).
+            const ids = new Set<string>();
+            if (c.isSingleton) ids.add(c.id);
+            for (const s of c.concreteSubclasses) if (s.isSingleton) ids.add(s.id);
+            if (ids.size > 0) byType.set(c.id, ids);
+        }
+        return { singletonConformTypeIds: new Set(byType.keys()) as ReadonlySet<string>, singletonClassIdsByType: byType as ReadonlyMap<string, ReadonlySet<string>> };
+    }, [modeInfo.allClasses]);
 
     // Bottom drawer removed — properties editing handled by right-side dock Info panel
     // ── Singleton instance toggle ──────────────────────────────────────
@@ -1194,6 +1236,25 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             const center = (ids.length - 1) / 2;
             ids.forEach((id, i) => roleShift.set(id, (i - center) * ROLE_ARC_STEP));
         }
+
+        // (C) Corsie — separazione dei corridoi condivisi da archi DIVERSI.
+        // `applyBundleSpread` copre solo gli archi della stessa coppia di nodi; fra
+        // coppie diverse i corridoi si sovrapponevano (misurato: 44 coppie sotto gli
+        // 8px su 95 segmenti). Qui la geometria si ricostruisce con la stessa catena
+        // che `UnifiedEdge` percorre — gli handle appena distribuiti, non quelli
+        // dell'arco in ingresso — e i tratti d'approccio entrano come ostacoli fissi.
+        setLaneShifts(computeLaneShifts(laneEdgesFromLayout(
+            edgeList.map(e => ({
+                id: e.id,
+                source: e.source,
+                target: e.target,
+                sourceHandle: edgeHandles.get(e.id)?.sourceHandle ?? e.sourceHandle,
+                targetHandle: edgeHandles.get(e.id)?.targetHandle ?? e.targetHandle,
+                type: e.type,
+            })),
+            positions,
+            currentNodes.filter(n => !n.hidden).map(n => getNodeRect(n)).filter(r => r.width > 0 && r.height > 0),
+        )));
 
         return edgeList.map(edge => {
             const distributed = edgeHandles.get(edge.id);
@@ -3976,7 +4037,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         });
     }, []);
 
-    const editorContextValue = useMemo(() => ({ takeSnapshot, notation, onEdgeDataChange: handleEdgeChange, recalculateAnchors, selectChildElement, selectEdge, showEdgeLabels }), [takeSnapshot, notation, handleEdgeChange, recalculateAnchors, selectChildElement, selectEdge, showEdgeLabels]);
+    const editorContextValue = useMemo(() => ({ takeSnapshot, notation, onEdgeDataChange: handleEdgeChange, recalculateAnchors, selectChildElement, selectEdge, showEdgeLabels, showSingletons, singletonConformTypeIds, singletonClassIdsByType, modelId: modelid }), [takeSnapshot, notation, handleEdgeChange, recalculateAnchors, selectChildElement, selectEdge, showEdgeLabels, showSingletons, singletonConformTypeIds, singletonClassIdsByType, modelid]);
 
     // Model info for PropertiesPanel (when nothing is selected)
     const modelInfoData = useMemo(() => {

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ecore:EPackage xmi:version="2.0"
+    xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore"
+    name="annotation_test"
+    nsURI="http://example.org/annotation_test"
+    nsPrefix="ann">
+  <eClassifiers xsi:type="ecore:EClass" name="Swatch">
+    <!-- La forma EMF: un source con details a chiave. Il parser la appiattisce in
+         un DAnnotation per detail, con source 'jjodel/renderer=color'. -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="tint" eType="#//EString">
+      <eAnnotations source="jjodel">
+        <details key="renderer" value="color"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <!-- Due details sotto un source solo: due DAnnotation. -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="width" eType="#//EInt">
+      <eAnnotations source="jjodel">
+        <details key="unit" value="px"/>
+        <details key="min" value="0"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <!-- La forma che l'export di jjodel produce: source gia' impacchettato, nessun
+         detail. Deve tornare verbatim, ed e' quello che chiude il round trip. -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="code" eType="#//EString">
+      <eAnnotations source="jjodel/renderer=code"/>
+    </eStructuralFeatures>
+    <!-- Controllo negativo: nessuna annotazione. -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="plain" eType="#//EString"/>
+  </eClassifiers>
+</ecore:EPackage>

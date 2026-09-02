@@ -88,7 +88,7 @@ Lo smoke non sostituisce la verifica di Alfonso, che riguarda proporzioni, gerar
 
 ## P9 — Prompt log
 
-Al termine di ogni task, aggiungi un'entry a `docs/claude-code-log.md`. Leggi il log a inizio sessione per il contesto sulle modifiche recenti. Oltre le 40 entry, sposta le più vecchie in `docs/claude-code-log-archive.md`.
+Al termine di ogni task, aggiungi un'entry in testa a `docs/claude-code-log.md` (newest-first per giorno, R-RAIL-45). Leggi il log a inizio sessione per il contesto sulle modifiche recenti. Oltre le 40 entry, sposta le più vecchie in `docs/claude-code-log-archive.md`.
 
 Formato:
 
@@ -110,6 +110,10 @@ Formato:
 La semantica dei campi di autovalutazione, incluse le regole di compilazione di `Corregge` e `Causa` e la tassonomia dei valori ammessi, è definita in `CLAUDE.md` §21.3. Questo file non la duplica. Il blocco di formato qui sopra è verificato byte a byte contro `CLAUDE.md` §21.2 da `npm run check:docs`.
 
 Il log non sostituisce i commit message, e il discovery report non sostituisce il log: sono tre artefatti distinti.
+
+A corsie parallele, `docs/claude-code-log.md` si tocca solo nella §6.1 di chiusura batch, da una sessione sola a repo fermo. Ogni corsia scrive la propria entry in `docs/log-inbox/<lane>.md`; chi chiude il batch le sposta nel log verbatim e cancella l'inbox.
+
+RC-13-bis. Il ripristino di un file tracciato si fa **solo** con `git checkout HEAD -- <path>`. Nessun backup del working tree su disco, nessun file di appoggio in `/tmp` riusato fra sessioni, nessun `git stash`: sono i tre modi in cui il lavoro di un'altra corsia e' stato perso o sovrascritto, tre incidenti della stessa classe in due batch (uno `stash` incrociato, un `log-backup.md` stale, un `cp` da `/tmp` di job che ha sovrascritto il log con una copia pre-rotazione).
 
 ## P10 — Dove vivono i documenti
 

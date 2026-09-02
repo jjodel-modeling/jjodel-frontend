@@ -234,11 +234,16 @@ export class JjelEvaluator {
                     w => w.kind === 'ambiguous-instance' && w.identifier === expr.name,
                 );
                 if (!seen) {
+                    // `candidates` is forwarded only when the producer named
+                    // them: an empty array would tell the copy "named nobody"
+                    // and "there is nobody" with the same value.
+                    const named = ambig.candidates && ambig.candidates.length > 0;
                     sink.push({
                         kind: 'ambiguous-instance',
                         identifier: expr.name,
                         count: ambig.count,
                         sampleClass: ambig.sampleClass,
+                        ...(named ? { candidates: ambig.candidates } : {}),
                         suggestion: null,
                     });
                 }

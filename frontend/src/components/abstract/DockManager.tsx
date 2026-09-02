@@ -3,6 +3,7 @@ import { JjodelEvents } from '../../events/registry';
 import type {GObject, DViewPoint, LViewPoint} from '../../joiner';
 import {LModel, LProject, RuntimeAccessible, SetRootFieldAction, U} from '../../joiner';
 import TabDataMaker from "./tabs/TabDataMaker";
+import { managerTabId } from "./tabs/instanceManagerModel";
 import {DocumentationTab} from "./tabs/DocumentationTab";
 import React from 'react';
 import { JjtlDevelopmentEnv, ModelOption } from '../../jjtl/components';
@@ -66,6 +67,10 @@ class DockManager {
             tabIds.push(entityId);
             // Also close any documentation tab for this model
             tabIds.push(`doc_${entityId}`);
+            // ...and its instance manager, which is a second tab on the same
+            // subject. Without this line deleting an M1 leaves its manager open
+            // on a model that no longer exists.
+            tabIds.push(managerTabId(entityId));
         }
 
         if (!entityType || entityType === 'transformation') {
@@ -144,6 +149,27 @@ class DockManager {
         window.dispatchEvent(new CustomEvent(JjodelEvents.EDITOR_TYPE_CHANGE, {
             detail: { editorType, modelId: me.id }
         }));
+    }
+
+    /**
+     * Open the instance manager of a model — the third kind of project tab.
+     *
+     * Sister of `open2`, and deliberately not folded into it: `open2` picks the
+     * surface from `isMetamodel`, which is a property of the model, while the
+     * manager is a property of what the user asked for. A model has both tabs
+     * available at once and they coexist in the same dock group.
+     *
+     * Metamodels are refused rather than silently ignored: the manager catalogues
+     * INSTANCES, and an M2 has none. Returns false so the caller can tell.
+     */
+    static async openManager(me: LModel): Promise<boolean> {
+        if (!me?.id) return false;
+        if (me.isMetamodel) {
+            console.warn('[DockManager] openManager: metamodels have no instances', me.id);
+            return false;
+        }
+        await DockManager.open('models', TabDataMaker.instanceManager(me));
+        return true;
     }
 
     /**

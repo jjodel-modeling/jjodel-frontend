@@ -45,6 +45,7 @@ import {
     clearCanvasEdgePairs,
     isSingletonSuppressed,
 } from '../sync/syncState';
+import { collectPendingVertexObjects, collectMissingM1Edges } from '../sync/m1EdgeGate';
 import {
     classifyRefEdgeReconcile,
     isM2ReferenceEdge,
@@ -628,48 +629,27 @@ export function useJjomSync(
             }
         }
 
-        // Count missing M1 instance reference edges.
-        // For each DObject, check if its reference features have values
-        // that point to other DObjects with vertices — if the edge doesn't
-        // exist yet, it needs to be created.
-        let missingM1EdgeCount = 0;
-        for (const objId of (rawModel.objects ?? [])) {
-            if (typeof objId !== 'string') continue;
-            const dObj = idlookup[objId] as any;
-            if (!dObj) continue;
-            const srcV = vertexIdByModelId.get(objId);
-            if (!srcV) continue;
-            for (const featId of (dObj.features ?? [])) {
-                if (typeof featId !== 'string') continue;
-                const dFeat = idlookup[featId] as any;
-                if (!dFeat) continue;
-                const metaId = dFeat.instanceof;
-                if (!metaId) continue;
-                const meta = idlookup[metaId] as any;
-                if (!meta || meta.className !== 'DReference') continue;
-                for (const tgtObjId of (dFeat.values ?? [])) {
-                    if (typeof tgtObjId !== 'string') continue;
-                    const tgtV = vertexIdByModelId.get(tgtObjId);
-                    if (!tgtV) continue;
-                    // Composite key (metaId:src→tgt): same metaref can be
-                    // instantiated across many object pairs (Family1.father
-                    // → Member1, Family2.father → Member3, ...).
-                    const ek = `${metaId}:${srcV}→${tgtV}`;
-                    if (!existingEdgeKeys.has(ek)) missingM1EdgeCount++;
-                }
-            }
-        }
-
-        // Count missing M1 object vertices.
-        // (Mirror of the missingClassifiers calc, but for DObject in rawModel.objects)
-        let missingObjectsCount = 0;
-        for (const objId of (rawModel.objects ?? [])) {
-            if (typeof objId !== 'string') continue;
-            if (!idlookup[objId]) continue;
-            if (vertexIdByModelId.has(objId)) continue;
-            if (isSingletonSuppressed(objId)) continue;
-            missingObjectsCount++;
-        }
+        // Objects Step 2bis is ABOUT to give a vertex to, and the M1 tuples that
+        // still need an edge. Both are pure functions over plain data, in
+        // `sync/m1EdgeGate.ts`, so the gate in front of Step 4 can be executed by a
+        // test instead of read: the defect it exists for was a COUNT that came out
+        // 0 on a graph whose vertices were all still to be made, which is exactly
+        // the kind of thing reading does not catch. See that file's header for the
+        // measurement (2026-09-02: two M1 edges lost, zero warnings).
+        const pendingVertexObjects = collectPendingVertexObjects({
+            objects: rawModel.objects ?? [],
+            idlookup: idlookup as any,
+            vertexByObject: vertexIdByModelId,
+            isSuppressed: isSingletonSuppressed,
+        });
+        const missingObjectsCount = pendingVertexObjects.size;
+        const missingM1EdgeCount = collectMissingM1Edges({
+            objects: rawModel.objects ?? [],
+            idlookup: idlookup as any,
+            vertexByObject: vertexIdByModelId,
+            pendingVertexObjects,
+            existingEdgeKeys,
+        }).length;
 
         // Count stale inheritance edges (D-first extends removal / retarget):
         // persisted isExtend edges whose end vertex's class is no longer in the

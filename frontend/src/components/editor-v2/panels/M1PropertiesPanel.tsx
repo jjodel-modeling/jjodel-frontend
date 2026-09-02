@@ -23,6 +23,9 @@ function M1PropertiesPanel({ selectedNode, onNodeChange }: M1PropertiesPanelProp
     const nodeData = selectedNode.data as ObjectNodeData;
     const [name, setName] = useState(nodeData.label);
     const [openEnumId, setOpenEnumId] = useState<string | null>(null);
+    // The trigger's viewport rect, read once at open: the popover is portalled
+    // onto `body`, so it positions from this rather than from an ancestor.
+    const [openEnumRect, setOpenEnumRect] = useState<DOMRect | null>(null);
 
     useEffect(() => {
         setName(nodeData.label);
@@ -92,22 +95,28 @@ function M1PropertiesPanel({ selectedNode, onNodeChange }: M1PropertiesPanelProp
                                     <button
                                         type="button"
                                         className={`properties-field__input properties-field__enum-trigger${isStaleEnum ? ' properties-field__enum-trigger--stale' : ''}`}
-                                        onClick={() => setOpenEnumId(openEnumId === attr.id ? null : attr.id)}
+                                        onClick={(e) => {
+                                            const opening = openEnumId !== attr.id;
+                                            setOpenEnumRect(opening ? e.currentTarget.getBoundingClientRect() : null);
+                                            setOpenEnumId(opening ? attr.id : null);
+                                        }}
                                     >
                                         <span>{attr.value || '(none)'}</span>
                                         <i className="bi bi-chevron-down properties-field__enum-chevron" />
                                     </button>
-                                    {openEnumId === attr.id && (
+                                    {openEnumId === attr.id && openEnumRect && (
                                         <InlineEnumSelect
                                             value={attr.value}
                                             enumName={attr.typeName ?? 'Enum'}
                                             literals={attr.enumLiterals}
                                             isStale={isStaleEnum || false}
+                                            anchorRect={openEnumRect}
                                             onChange={(val) => {
                                                 handleFeatureChange(attr, val);
                                                 setOpenEnumId(null);
+                                                setOpenEnumRect(null);
                                             }}
-                                            onClose={() => setOpenEnumId(null)}
+                                            onClose={() => { setOpenEnumId(null); setOpenEnumRect(null); }}
                                         />
                                     )}
                                 </div>
