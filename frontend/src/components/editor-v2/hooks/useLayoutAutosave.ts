@@ -19,11 +19,18 @@ import { createLayoutAutosaveScheduler, installAutosaveEdgeGuards } from './layo
  * is written back into the store.
  *
  * The silence is load-bearing, not cosmetic. The version bump of an ordinary save
- * is a `SetFieldAction` into Redux, and this save fires 1000ms after the gesture,
- * past the 450ms coalescing window of the D-layer history: it would land as an undo
- * step of its own, so the first Cmd+Z after a drag would undo an invisible version
- * bump instead of the drag. The project version advances only on an explicit save
- * (Cmd+S, toolbar) — ratified 2026-08-24.
+ * is a `SetFieldAction` into Redux, and this save fires only once the idle delay
+ * declared by `AUTOSAVE_DEBOUNCE_MS` below has elapsed (or, at the latest, the
+ * `AUTOSAVE_MAX_WAIT_MS` cap), well past the 450ms coalescing window of the D-layer
+ * history: it would land as an undo step of its own, so the first Cmd+Z after a drag
+ * would undo an invisible version bump instead of the drag. The project version
+ * advances only on an explicit save (Cmd+S, toolbar) — ratified 2026-08-24.
+ *
+ * Il ritardo non e' ripetuto qui apposta. Fino a SAVE2 (`4bc765e85`, 2026-09-02) era
+ * 1000 ms ed era scritto in questo blocco, che e' rimasto indietro quando il valore e'
+ * cambiato: la sede del numero sono le costanti qui sotto, e questo paragrafo le cita
+ * invece di copiarle. Il ragionamento vale a fortiori con un'attesa piu' lunga, perche'
+ * si allontana ulteriormente dalla finestra di coalescing.
  *
  * A pending save in the debounce window is flushed on unmount, so a node moved
  * just before closing the metamodel tab is not lost.

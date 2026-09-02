@@ -8,7 +8,7 @@ Questo file contiene le clausole che prima venivano ricopiate per esteso in ogni
 Riga da mettere in testa a ogni prompt Claude Code:
 
 ```
-Protocollo: docs/PROTOCOL.md — clausole P1..P10 applicabili (tutte salvo deroga esplicita nel prompt).
+Protocollo: docs/PROTOCOL.md — clausole P1..P11 applicabili (tutte salvo deroga esplicita nel prompt).
 ```
 
 Le deroghe si scrivono così: `Deroga: P4 non si applica (motivo: ...)`.
@@ -130,6 +130,30 @@ Archiviare non e' ripulire: la copia nel repo e la cancellazione dal KB sono due
 un documento lasciato in entrambi i posti continua a competere in retrieval con la propria versione
 piu' recente. La mappa completa dei tipi documentali, con formati, gate e ciclo di vita, e' in
 `docs/HARNESS-DOCS.md`; la storia della bonifica in `docs/archivio/triage_kb_2026-08-15.md`.
+
+## P11 — La sonda esegue il soggetto
+
+Una sonda o un test **esegue il soggetto**, non il layer sotto e non il suo sorgente. Chiamare la
+funzione interna che il soggetto a sua volta chiama, o asserire su una stringa letta dal file,
+produce **lo stesso output di un fix che non funziona**: un verde indistinguibile dal rosso che
+avrebbe dovuto esserci. La verifica passa dalla via che passa l'utente — la funzione pubblica,
+l'evento, il gesto — anche quando la via interna e' piu' comoda da chiamare.
+
+Lo **stato di modulo** si azzera nel `beforeEach`. Un timestamp, una cache o un flag a livello di
+modulo sopravvive fra i test dello stesso file: la seconda asserzione legge cio' che ha scritto la
+prima, e un'asserzione vuota passa senza avere mai visto il soggetto.
+
+Il presidio di entrambi e' il **banco delle mutazioni**: si rompe il soggetto in un punto per volta
+e si verifica che il test diventi rosso. Una mutazione che resta verde non e' un test debole, e' un
+test che **non esiste**, e va dichiarata nel referto — non aggiustata in silenzio, perche' la
+mutazione sopravvissuta e' il risultato, non un intoppo di percorso.
+
+Causa: tre occorrenze misurate in due batch, tutte dichiarate dalle sessioni stesse. **VIEW1**
+(`docs/discovery/discovery_2026-09-02_view1_create_manager_vertice.md`) — la prima sonda chiamava
+`slot.addObject` diretto, scavalcando `createInstance`: con il fix gia' in albero la misura non si
+muoveva, ed era la sonda a essere cieca. **SAVE2** (entry di log del 2026-09-02) — il test del
+flush leggeva il sorgente invece di eseguirlo, e restava verde con il flush rimosso; e lo stato di
+modulo di `lastSaved` sopravviveva fra i test, rendendo verde un'asserzione vuota.
 
 ---
 

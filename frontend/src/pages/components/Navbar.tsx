@@ -45,6 +45,7 @@ import { isProjectModified } from '../../common/libraries/projectModified';
 import { saveProjectWithFeedback } from '../../common/libraries/saveProject';
 import { AboutDialog, AboutDialogController } from './about/AboutDialog';
 import {Undoredocomponent} from "../../components/topbar/undoredocomponent";
+import {LastSavedIndicator} from "../../components/topbar/LastSavedIndicator";
 import {BEGIN, CollabRefreshAction, COMMIT, END} from "../../redux/action/action";
 import {Tooltip} from "../../components/forEndUser/Tooltip";
 import {VersionFixer} from "../../redux/VersionFixer";
@@ -1945,6 +1946,14 @@ function NavbarComponent(props: AllProps) {
             )}
 
             <div className="main-header-right">
+                {/* DOC2 — l'ultimo salvataggio del progetto. Qui e non in testata al
+                    Data Manager: l'autosave lo innesca il canvas, e lo stato di
+                    salvataggio e' del progetto, non di una vista, quindi vale per
+                    tutte le tab. Consumatore di `JjodelEvents.PROJECT_SAVED`, non
+                    una seconda fonte di verita'; si rende da solo `null` finche' non
+                    c'e' niente da raccontare. */}
+                {project && <LastSavedIndicator />}
+                {project && <div className="appbar__sep" />}
                 {/* Basic/Advanced mode switch — the single visible writer for the global
                     interface mode (2026-07-30). Replaces the former read-only level badge:
                     same state, now actionable in place instead of bouncing to Settings. */}
