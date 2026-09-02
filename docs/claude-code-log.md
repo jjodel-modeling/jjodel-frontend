@@ -13,6 +13,90 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-02 — fix(problems): l'appartenenza al modello e' un campo su NodeProblem
+**Prompt**: UNQ1 C6, corsia L2 parallela — chiudere il terzo punto di §C5.4: un campo
+opzionale additivo su `NodeProblem` che nomini il modello di appartenenza, scritto da
+**entrambi** i produttori, e la revoca che lo usa al posto di `ownedIdsByModel`, se e solo
+se tiene il caso dell'elemento cancellato che §C5.2 tiene.
+**Files touched**: `frontend/src/components/editor-v2/problems/registry.ts`,
+`.../problems/UniquenessProblemSync.tsx`, `.../problems/ConformanceProblemSync.tsx`,
+`.../problems/__tests__/UniquenessProblemSync.test.ts` (commit `bc939442b`).
+Referto in coda a `docs/discovery/discovery_2026-09-01_unq1_duplicate_name.md` (`e153c8fe2`).
+Coda `7f8fa2242`: tre puntatori di riga della nota, scritti contro i file prima della
+modifica. **Deroga RC-13 dichiarata (RC-11)**: quel commit tiene `registry.ts` e il referto
+insieme — stessa correzione, sole righe di commento, ma e' un commit misto.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — sonda `_tmp_unq1c6.ts`: le sette righe della tabella di C5.3 verdi
+prima **e** dopo, `pageerror` 0 in entrambe le corse; `tsc` 33 (baseline esatta, 0 nei
+quattro file), `build` exit 0, `vitest` 3131 verdi / 0 falliti (i 9 file `window is not
+defined` sono pre-esistenti, riverificati, nessuno nel perimetro).
+**Out-of-scope changes**: no — quattro file, sotto la soglia dei cinque, pathspec esplicito
+al commit; staged EGO1 e WIP VER1 in `api/persistance/` non toccati.
+**Layer Impact Report**: not-required — il registro dei problemi e' una `Map` di modulo
+lato UI: nessuna scrittura D-layer, nessun proxy L, nessun TRANSACTION, nessuna persistenza.
+**Smoke visivo**: passato — sonda 22 PASS / 0 FAIL contro il dev server (prima: 15/7).
+**Notes**: `ownerModelId`, non `modelId`: la conformance registra anche sull'id del
+`DVertex`, che vive nel grafo non nel modello, e per l'unicita' il valore e' il `DModel` di
+un metamodello quando e' un metamodello a essere aperto. Punto 4: `ownedIdsByModel`
+**rimossa** — scritto alla registrazione, il campo tiene l'elemento cancellato perche'
+l'owner e' nel dato. Test 7 -> 12, quattro mutazioni rosse. Censimento lettori, nome e
+misure in §C6.1-C6.4 del referto. Deroga RC-13 in `7f8fa2242`, sopra.
+**Prompt document name**: PROMPT_UNQ1-C6.md — 2026-09-02
+
+## 2026-09-02 — fix(persistance): save riallinea project.__raw dopo il bump di versione
+**Prompt**: VER1 (corsia L1, parallela) — `ProjectsApi.save` legge la versione da un `__raw`
+stantio: due save espliciti sullo stesso `LProject` producono `1.1` due volte. Riprodurre con
+una sonda contro il dev server, censire i lettori di `version`, correggere nel punto minimo,
+test unitario accanto a quello DIRTY1 e invertire l'asserzione che il difetto lo registrava
+com'era. Non toccare la regola ratificata 2026-08-24 (il silent save resta senza bump).
+**Files touched**: `frontend/src/api/persistance/projects.ts`,
+`frontend/src/api/__tests__/projectsSaveDirty.test.ts`,
+`frontend/src/api/__tests__/projectsSaveVersion.test.ts` (nuovo) — commit `1ac3b1863`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `tsc --noEmit` **33** sull'output completo (baseline invariata), **0** nei
+file toccati; `build` exit 0 col solo warning di chunk; `vitest` intera **3131 passati, 0
+falliti**, i 9 file che non si raccolgono riverificati su un worktree staccato su HEAD e
+risultati **identici** (stessa lista, `window is not defined` in `monaco-editor/.../window.js:14`
+e `src/utils/PerformanceMetrics.ts:220`, nessuno dei due toccato).
+**Out-of-scope changes**: no — l'inversione del test DIRTY1 è la stessa correzione, chiesta dal
+prompt.
+**Layer Impact Report**: not-required — nessun file della critical zone §3.1: `projects.ts` non
+è in elenco, non passa da `useJjomSync`/`syncState`/`canvasToJjom`/`portDistribution`/
+`VersionFixer`, e la scrittura D-layer che tocca è il `SetFieldAction` già presente, invariato.
+**Smoke visivo**: non applicabile — nessun pixel cambia; la verifica è la sonda
+`_tmp_ver1_verify.ts`, **5 FAIL su 7 prima, 0 su 7 dopo**, stabile su due corse.
+**Notes**: Causa misurata: il reducer copia lungo il path (`reducer.ts:540`), `idlookup[id]`
+diventa un oggetto nuovo e il proxy resta sul precedente. Nessun lettore dipende dal valore
+stantio. Tre mutazioni rosse (6, 2, 8 FAIL). Censimento, alternativa scartata e motivazione
+in `1ac3b1863` e nel commento di `projects.ts:140-162`. Notes accorciata in §6.1 sotto il cap
+§21.2: entry del batch corrente, stessa sessione, non back-filling.
+**Prompt document name**: PROMPT_VER1.md — 2026-09-02
+
+## 2026-09-02 — chore(gates): Check B accetta solo la forma (x) per Causa
+**Prompt**: CODA di chiusura L1–L4, punto 3 — Check B passava sia `**Causa**: (a)` sia
+`**Causa**: a`. Restringere alla sola forma parentesizzata, misurando prima le conseguenze
+su attivo e archivio. Hard stop se Check B scandisse anche l'archivio (il «no back-filling»
+vieterebbe di emendare le entry pregresse).
+**Files touched**: `frontend/scripts/gates/check-docs.ts` (commit `c9bd6112a`).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `npm run check:docs` **3/3, exit 0, 2 warning** prima e dopo, invariati.
+Nessun file applicativo, nessun impatto su build o typecheck.
+**Out-of-scope changes**: no — un solo file, pathspec esplicito.
+**Layer Impact Report**: not-required — script di gate, nessun layer applicativo.
+**Smoke visivo**: non applicabile — nessun pixel cambia.
+**Notes**: Check B scandisce il solo log attivo; l'archivio serve a risolvere `Corregge`,
+non viene lintato: nessuna entry pregressa toccata, niente hard stop. `Corregge` non prende
+una lettera ma `YYYY-MM-DD HH:mm`, già vincolato da `TIMESTAMP_PREFIX`: la restrizione vale
+per la sola `Causa`. Forme in archivio: **118 `(x)`, 8 nude, 3 di prosa**. Controllo positivo
+`Causa: e` → ERROR. Il gate non ha test: dichiarato, non creato.
+**Prompt document name**: PROMPT_CODA_batch_L1-L4.md — 2026-09-02
+
 ## 2026-09-02 — docs(log): chiusura batch L1–L4 (sanatoria, log-inbox, rotazione)
 **Prompt**: §6.1 di chiusura del batch L1–L4 a repo fermo, seriale: bonificare l'indice
 condiviso, verificare le tre sonde temporanee, scrivere la nota di sanatoria dei commit
