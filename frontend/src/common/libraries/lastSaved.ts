@@ -23,6 +23,7 @@
 
 import { useEffect, useState } from 'react';
 import { JjodelEvents } from '../../events/registry';
+import { formatRelativeTime } from '../../types/activity';
 
 /** Epoch ms dell'ultimo salvataggio andato a buon fine in questa sessione, o
  *  `null` se in questa sessione non ne e' ancora andato a buon fine nessuno. */
@@ -63,19 +64,58 @@ export const LAST_SAVED_TICK_MS = 10_000;
  *
  * Entrambi si spengono allo smontaggio: nessun timer sopravvive al componente.
  */
+/**
+ * DOC2 — la sottoscrizione, estratta dall'hook perche' sia eseguibile.
+ *
+ * Il corpo e' quello che l'effetto di `useLastSaved` aveva gia': l'evento di
+ * salvataggio piu' un tick di `LAST_SAVED_TICK_MS`, entrambi rimossi dalla
+ * funzione di disiscrizione. Sta qui, e non dentro l'hook, perche' un test possa
+ * ESEGUIRLO invece di leggerne il sorgente (P11): senza jsdom un hook non e'
+ * montabile, una funzione lo e', e la mutazione «tolgo il listener» o «tolgo il
+ * tick» diventa rossa invece di restare verde.
+ *
+ * `onChange` e' chiamata a ogni salvataggio e a ogni tick: e' il tick a far
+ * passare l'etichetta da «just now» a «2m ago», il timestamp cambia solo
+ * sull'evento.
+ */
+export function subscribeLastSaved(onChange: () => void): () => void {
+    window.addEventListener(JjodelEvents.PROJECT_SAVED, onChange);
+    const id = setInterval(onChange, LAST_SAVED_TICK_MS);
+    return () => {
+        window.removeEventListener(JjodelEvents.PROJECT_SAVED, onChange);
+        clearInterval(id);
+    };
+}
+
+/**
+ * DOC2 — l'etichetta, estratta dal componente perche' sia eseguibile.
+ *
+ * Non e' un formatter nuovo: il tempo relativo lo fa `formatRelativeTime` di
+ * `types/activity`, la sola fonte, e questa funzione compone soltanto la frase
+ * intorno. E' la stessa che SAVE2 aveva in un `useMemo` dentro
+ * `InstanceManagerTab`; qui la puo' eseguire un test.
+ *
+ * Lo stato sporco AFFIANCA l'ultimo salvataggio invece di cancellarlo: sono due
+ * informazioni diverse e servono insieme. La parola e' «Unsaved» e non la coppia
+ * «Unsaved changes», che la deviazione A3 di 10c tiene fuori da questi testi.
+ *
+ * `null` significa «in questa sessione non e' ancora successo niente da
+ * raccontare, e il progetto non e' sporco»: l'indicatore non si mostra.
+ */
+export function formatLastSavedLabel(savedAt: number | null, dirty: boolean): string | null {
+    const rel = savedAt === null ? null : formatRelativeTime(savedAt);
+    if (dirty) return rel ? `Unsaved, last saved ${rel}` : 'Unsaved';
+    return rel ? `Saved ${rel}` : null;
+}
+
 export function useLastSaved(): { savedAt: number | null; tick: number } {
     const [savedAt, setSavedAt] = useState<number | null>(lastSavedAt);
     const [tick, setTick] = useState(0);
 
-    useEffect(() => {
-        const onSaved = () => setSavedAt(lastSavedAt);
-        window.addEventListener(JjodelEvents.PROJECT_SAVED, onSaved);
-        const id = setInterval(() => { setSavedAt(lastSavedAt); setTick((t) => t + 1); }, LAST_SAVED_TICK_MS);
-        return () => {
-            window.removeEventListener(JjodelEvents.PROJECT_SAVED, onSaved);
-            clearInterval(id);
-        };
-    }, []);
+    useEffect(() => subscribeLastSaved(() => {
+        setSavedAt(lastSavedAt);
+        setTick((t) => t + 1);
+    }), []);
 
     return { savedAt, tick };
 }

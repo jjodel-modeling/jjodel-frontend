@@ -709,7 +709,13 @@
     /* SAVE2 — l'etichetta dell'ultimo salvataggio. Testo di stato, non un
        controllo: nessun bordo, nessuno sfondo, nessun colore semantico. Il
        registro e' quello di `&__provenance` qui sopra, che e' l'altra riga di
-       stato della stessa testata. */
+       stato della stessa testata.
+       // TODO: cleanup — DOC2 ha spostato l'indicatore in topbar
+       // (`.appbar-last-saved` in `navbar.scss`), quindi questa regola e la riga
+       // gemella nel blocco responsive qui sopra non hanno piu' un elemento che
+       // le porti. Restano perche' rimuoverle non e' il perimetro di DOC2, e la
+       // regola 9 vieta di cancellare codice «apparentemente inutilizzato» di
+       // passaggio: la rimozione e' una corsia sua. */
     &__last-saved {
         flex: none;
         font-size: 11px;

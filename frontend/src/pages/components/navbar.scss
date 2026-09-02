@@ -1643,6 +1643,31 @@ $transition-menu: 150ms ease;
 }
 
 // ============================================
+// APP BAR — LAST SAVED INDICATOR (DOC2)
+// Testo di stato, non un controllo: nessun bordo, nessuno sfondo, nessun colore
+// semantico. Stesso registro dell'etichetta che SAVE2 aveva in testata al Data
+// Manager, portata qui perche' l'autosave lo innesca il canvas e lo stato di
+// salvataggio e' del progetto, non di una vista.
+// `flex: none` piu' `white-space: nowrap`: la barra e' alta 60px e l'indicatore
+// ci sta dentro senza toccarne l'altezza. Sotto i 1200px la barra e' gia' stretta
+// (il gap scende a 4px), e li' l'indicatore si toglie di mezzo invece di
+// comprimere le tab: e' informazione, non un comando, e la sua assenza non
+// impedisce niente.
+// ============================================
+
+.appbar-last-saved {
+  flex: none;
+  font-size: 11px;
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--color-text-tertiary);
+}
+
+@media (max-width: 1200px) {
+  .appbar-last-saved { display: none; }
+}
+
+// ============================================
 // APP BAR SEPARATOR
 // ============================================
 
