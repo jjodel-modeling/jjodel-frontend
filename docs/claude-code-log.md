@@ -2,6 +2,17 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+**Incidenti — sanatoria batch L1–L4 (2026-09-02).** Tre commit del batch portano un
+contenuto che il loro messaggio non descrive. Nessun rewrite di history: e' stato un
+rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> contenuto reale».
+
+- `50de03252` — messaggio: «la entry SAVE1-bis, il timer che non sopravvive all'errore».
+  Contenuto reale: la sola entry **DIRTY1**.
+- `f278cf4fb` — messaggio: «la entry DIRTY1, scritta dalla corsia L4». Contenuto reale:
+  le entry **SAVE1-bis + DIRTY1**, entrambe.
+- `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
+  ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
+
 ## 2026-09-02 — fix: UNQ1 C5, la revoca duplicate-name resta nel modello scandito
 **Prompt**: UNQ1 C5 — la revoca tocca solo le entry il cui owner appartiene al modello che
 l'effetto sta scansionando (referto §A.4: revoca globale, produttore per modello, `:160-164`
