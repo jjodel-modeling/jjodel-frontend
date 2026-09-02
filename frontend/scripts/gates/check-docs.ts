@@ -54,12 +54,15 @@ const NOTES_MAX_CHARS = 500;
 /** The sentinel is an em dash U+2014, not '-' and not an en dash. */
 const SENTINEL = '—';
 
-/** CLAUDE.md §21.3 taxonomy. Canonical form is parenthesized. */
+/**
+ * CLAUDE.md §21.3 taxonomy. The canonical form is parenthesized, and it is the
+ * only one accepted: measured on the archive, 118 entries carry `(x)` against 8
+ * with the bare letter, so the bare form is a slip the gate used to wave through
+ * rather than a second convention. The archive is never linted (see checkLog),
+ * so narrowing this touches no past entry.
+ */
 const CAUSA_LETTERS = ['a', 'b', 'c', 'd', 'e', 'f', 'g'];
-const CAUSA_ALLOWED = [
-    ...CAUSA_LETTERS.map((l) => `(${l})`),
-    ...CAUSA_LETTERS,
-];
+const CAUSA_FORM = /^\(([a-g])\)$/;
 
 /**
  * Corregge holds the name of a prompt document, whose format is fixed by the
@@ -354,14 +357,14 @@ function checkLog(): CheckOutcome {
             });
         } else {
             const v = e.fields.get('Causa')!;
-            if (v !== SENTINEL && !CAUSA_ALLOWED.includes(v)) {
+            if (v !== SENTINEL && !CAUSA_FORM.test(v)) {
                 out.ok = false;
                 out.problems.push({
                     file: rel(LOG_MD),
                     entry: label,
                     field: '**Causa**',
                     found: v === '' ? '(empty)' : v,
-                    allowed: `${SENTINEL}  |  one of ${CAUSA_LETTERS.map((l) => `(${l})`).join(' ')}  (bare letters also accepted)`,
+                    allowed: `${SENTINEL}  |  one of ${CAUSA_LETTERS.map((l) => `(${l})`).join(' ')}  (parentheses required)`,
                     message: 'value outside the CLAUDE.md §21.3 taxonomy',
                 });
             }
