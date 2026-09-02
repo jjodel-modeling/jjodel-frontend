@@ -121,7 +121,12 @@ class ProjectsApi {
         // Skipped on a silent save: the version keeps its current value, in the
         // serialized state too.
         const silent = opts?.silent === true;
-        const currentVersion = dProject.version;
+        // VER2. Read from Redux, not from `project.__raw`: the proxy target is a mirror
+        // that goes stale the moment the reducer copies along the path, and this method
+        // no longer writes the advanced value back onto that mirror (see the block at
+        // the end of the method). `dProject.version` remains the fallback for a project
+        // that is not in `idlookup`.
+        const currentVersion = ((store.getState() as GObject).idlookup?.[dProject.id]?.version) ?? dProject.version;
         const nextVersion = silent ? currentVersion : getNextVersionNumber(currentVersion);
         dProject.version = nextVersion;
         // console.log(`[Version] Project saved: ${formatVersion(currentVersion)} → ${formatVersion(nextVersion)}`);
@@ -157,8 +162,21 @@ class ProjectsApi {
         // to realign.
         if (!silent) {
             SetFieldAction.new(dProject.id, 'version', nextVersion, '', false);
+            // VER2. The realignment writes ONLY on a target that is no longer the store's.
+            // Measured 2026-09-02: the app sits permanently at
+            // `transactionStatus.transactionDepthLevel === 1` — `reducer.ts:1443` commits on
+            // a `U.UpdatingTimer` (300ms) interval and `COMMIT` re-opens the block with
+            // `BEGIN()` (`action.ts:137`) — so the action above is QUEUED, not dispatched.
+            // At this line the store is still untouched and `project.__raw` IS
+            // `idlookup[id]` for every production call site (they all take a fresh
+            // `LProject.getProject()`). The unguarded write therefore mutated the live
+            // store object outside the reducer, and poisoned the reducer's own `oldState`:
+            // when the queued action flushed it found nothing left to change. Measured over
+            // one explicit save: `clonedCounter` +0 and zero undo steps, against +1 and one
+            // step for the same `SetFieldAction` fired without the in-place write.
             const raw = project.__raw as DProject | undefined;
-            if (raw) raw.version = nextVersion;
+            const live = (store.getState() as GObject).idlookup?.[dProject.id];
+            if (raw && raw !== live) raw.version = nextVersion;
         }
 
         return dProject;
