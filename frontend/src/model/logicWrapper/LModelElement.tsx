@@ -90,7 +90,7 @@ import {
 } from "../../api/data";
 import {ValuePointers} from "./PointerDefinitions";
 import {transientProperties} from "../../joiner/classes";
-import {checkNameUniqueness, checkM2NameUniqueness, m2KindOf, type M2NamespaceKind} from "./nameUniqueness";
+import {checkNameUniqueness, checkM2NameUniqueness, getNamespaceOf, m2KindOf, type M2NamespaceKind} from "./nameUniqueness";
 import { toast } from "../../components/Toast";
 import React, {JSX} from "react";
 import { checkObjectCreation, checkLinkCreation, checkValueAssignment, emitGuardViolation } from '../conformance/ConformanceGuard';
@@ -6000,9 +6000,48 @@ export class DObject extends DModelElement { // extends DNamedElement, m1 class 
     features: Pointer<DValue>[] = [];
 
     partial!: boolean | undefined;
+
+    /** The auto-name, resolved in the namespace the M1 rule actually uses.
+     *
+     *  `DPointerTargetable.defaultname` (joiner/classes.ts:1455) builds the taken-name set from
+     *  `lfather.childNames`, which for a CONTAINMENT slot is EMPTY: `LValue` does not override
+     *  `get_children_idlist`, so the base `get_childNames` finds nothing and
+     *  `U.increaseEndingNumber` never leaves `_0`. Every nested instance of a slot was therefore
+     *  born `<Metaclass>_0`, and two `Add` without a rename produced two objects genuinely
+     *  carrying the same name. Roots are immune because a `DModel` father does populate that
+     *  namespace. Measured in `docs/discovery/discovery_2026-09-01_unq1_duplicate_name.md`
+     *  §1(c), §5 and §6.
+     *
+     *  `getNamespaceOf` (nameUniqueness.ts:168) is the single place the M1 scope is decided, and
+     *  it already descends a `DValue` father through the slot's `values` — pending creates of the
+     *  current tick included. So the slot case is routed through it and handed to the predicate
+     *  form of `defaultname`. `get_children_idlist` is NOT widened: what "child" means for
+     *  `LValue` is unchanged for every other reader (that was candidate C1 of the report's §7,
+     *  and it is not taken here).
+     *
+     *  A model father keeps the existing path, byte for byte.
+     */
+    private static autoName(father?: DObject["father"], instanceoff?: DObject["instanceof"]): string {
+        const prefixOf = (meta: LNamedElement) => (meta?.name || "obj") + "_";
+        // Mirrors the guard `defaultname` applies before wrapping: Pointer or D-object only.
+        const wrappable = !!father && (typeof father === "string" || !!(father as GObject).className);
+        const lfather: GObject | null = wrappable ? (LPointerTargetable.wrap(father as any) as any) : null;
+        // The L-proxy reports the D-layer className, never the L-name (CLAUDE.md §3.13).
+        if (lfather && lfather.className === DValue.cname) {
+            const meta = instanceoff ? LPointerTargetable.from(instanceoff as Pointer) : null;
+            const taken = new Set<string>();
+            for (const sibling of getNamespaceOf(lfather as any)) {
+                const n = sibling && (sibling as GObject).name;
+                if (n) taken.add(n as string);
+            }
+            return U.increaseEndingNumber(prefixOf(meta as any) + '0', false, false, (candidate: string) => taken.has(candidate));
+        }
+        return this.defaultname(prefixOf, father, instanceoff);
+    }
+
     public static new(instanceoff?: DObject["instanceof"], father?: DObject["father"], fatherType?: typeof DModel | typeof DValue, name?: DNamedElement["name"], persist: boolean = true): DObject {
         // Compute the default name (auto-generated, per-father unique within sibling scope)
-        const computedDefaultName = this.defaultname(((meta: LNamedElement) => (meta?.name || "obj") + "_"), father, instanceoff);
+        const computedDefaultName = this.autoName(father, instanceoff);
         if (!name) name = computedDefaultName;
         let ret = new Constructors(new DObject('dwc'), father, persist, fatherType).DPointerTargetable().DModelElement()
             .DNamedElement(name).DObject(instanceoff).end();
@@ -6013,7 +6052,7 @@ export class DObject extends DModelElement { // extends DNamedElement, m1 class 
     }
 
     public static new3(ptrs:Partial<ObjectPointers>, then:(d:DObject, c: Constructors)=>void, fatherType?: typeof DModel | typeof DValue, persist: boolean = true): DObject{
-        const computedDefaultName = this.defaultname(((meta: LNamedElement) => (meta?.name || "obj") + "_"), ptrs.father, ptrs.instanceof);
+        const computedDefaultName = this.autoName(ptrs.father, ptrs.instanceof);
         if (!ptrs.name) ptrs.name = computedDefaultName;
         let ret = new Constructors(new DObject('dwc'), ptrs.father, persist, fatherType, ptrs.id)
             .DPointerTargetable().DModelElement()
@@ -6079,7 +6118,28 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
 
 
     protected get_name(context: Context): this['name'] {
-        return (context.proxyObject as GObject)['$name']?.value || context.data.name || context.proxyObject.instanceof?.name;
+        // The identity slot is seeded in deferred fashion (`addObject` seeds the json values on a
+        // `setTimeout`, createAdapter.ts:42), so between the create and the seed its `values` are
+        // `[]`. An EMPTY slot does not read back empty: `get_values` (:7647) substitutes the
+        // owner's `initialName` — the auto-name. Preferring that over `context.data.name`, which
+        // already carries the requested name from the first tick the object exists, is what made
+        // two differently named siblings both read `<Metaclass>_0` for at least 425ms and register
+        // a duplicate-name that was never true in the data. Measured in
+        // `docs/discovery/discovery_2026-09-01_unq1_duplicate_name.md` §1-§3.
+        //
+        // So an empty slot yields to `data.name`, and the auto-name stays the fallback only for
+        // the fully-empty case (slot AND `data.name` empty), which is the case the three readers
+        // of `initialName` — instanceTable.ts:127, shapeDraw.ts:205, irReadCtx.ts:173 — already
+        // spell `name ?? initialName` for. A POPULATED slot still wins: slot -> name is the
+        // load-bearing direction of the identity binding (CLAUDE.md §3.12) and is untouched here.
+        //
+        // Raw read via `__raw.values`: the same idiom `set_name` uses at :6385 to bypass this very
+        // read-fallback. Only the literal empty array counts as empty — a slot deliberately
+        // holding '' is a different case, not measured, and left as it was.
+        const slot = (context.proxyObject as GObject)['$name'];
+        const rawValues = (slot as GObject)?.__raw?.values;
+        if (Array.isArray(rawValues) && rawValues.length === 0 && context.data.name) return context.data.name;
+        return slot?.value || context.data.name || context.proxyObject.instanceof?.name;
     }
 
     protected get_initialName(context: Context): this['initialName'] {
