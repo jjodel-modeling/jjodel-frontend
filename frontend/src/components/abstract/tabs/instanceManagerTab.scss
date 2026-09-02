@@ -422,6 +422,7 @@
         margin-left: auto;
 
         .instance-manager__save { margin-left: 0; }
+        .instance-manager__last-saved { margin-left: 0; }
         .instance-manager__export { margin-left: 0; }
         .instance-manager__new { margin-left: 0; }
     }
@@ -705,6 +706,18 @@
        testata e' uno solo, ed e' la create. Save sta a sinistra di Export per
        la stessa ragione, un gradino piu' in la': e' l'azione sul PROGETTO,
        mentre le altre due sono sulla collezione che il titolo nomina. */
+    /* SAVE2 — l'etichetta dell'ultimo salvataggio. Testo di stato, non un
+       controllo: nessun bordo, nessuno sfondo, nessun colore semantico. Il
+       registro e' quello di `&__provenance` qui sopra, che e' l'altra riga di
+       stato della stessa testata. */
+    &__last-saved {
+        flex: none;
+        font-size: 11px;
+        line-height: 1;
+        white-space: nowrap;
+        color: var(--color-form-muted);
+    }
+
     &__save,
     &__export {
         display: inline-flex;

@@ -139,7 +139,9 @@ import {
 } from './instanceTable';
 import { entityLetter } from '../../../common/entityMeta';
 import { saveProjectWithFeedback } from '../../../common/libraries/saveProject';
-import { LProject } from '../../../joiner';
+import { useLastSaved } from '../../../common/libraries/lastSaved';
+import { formatRelativeTime } from '../../../types/activity';
+import { LProject, U } from '../../../joiner';
 import './instanceManagerTab.scss';
 
 /** La lettera del badge di metaclasse, dal registro delle entita' e non da una
@@ -1409,6 +1411,45 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
      *  sempre attivo». Sempre attivo, e nessuna nozione di dirty nuova. */
     const [saving, setSaving] = useState(false);
 
+    /** SAVE2 — l'ultimo salvataggio, accanto al bottone che lo esegue.
+     *
+     *  Perche' qui: il diradamento dell'autosave e la rimozione del suo toast
+     *  tolgono all'utente ogni segnale che il salvataggio stia avvenendo. Il posto
+     *  dove il segnale va rimesso e' dove l'utente lo cerca, cioe' accanto
+     *  all'azione di salvataggio — e «Save project» in testata e' l'unico bottone
+     *  di salvataggio del prodotto (le altre due strade sono la voce di menu e la
+     *  scorciatoia, che non hanno un posto dove mostrare uno stato).
+     *
+     *  `savedAt` viene da `lastSaved.ts` e non dallo store: `ProjectsApi.save`
+     *  scrive `lastModified` sulla copia che serializza e NON la riporta in Redux,
+     *  quindi `project.lastModified` letto da `idlookup` resta al momento
+     *  dell'apertura (misurato). Il modulo emette un evento a ogni salvataggio
+     *  riuscito, silenzioso incluso, e rifa' il conto ogni 10 s: e' cosi' che
+     *  l'etichetta passa da «just now» a «2m ago» senza che l'utente tocchi nulla,
+     *  e il timer si spegne allo smontaggio.
+     *
+     *  Il dirty NON e' un flag nuovo: e' `U.isProjectModified`, lo stesso static che
+     *  governa il prompt «Unsaved changes». Essendo uno static non sottoscrivibile
+     *  (vedi il commento di `saving` qui sopra) lo si rilegge al render e al tick,
+     *  quindi il passaggio allo stato sporco ha un ritardo di al piu' 10 s quando
+     *  la modifica arriva da un altro pannello.
+     *
+     *  La parola e' «Unsaved» e non la coppia che il prompt del browser usa: la
+     *  deviazione A3 di 10c ha tolto da questo file il badge omonimo della form, e
+     *  `instanceManager10c.test.ts` lo presidia su TUTTO il file. Il presidio e' piu'
+     *  largo del suo soggetto — A3 parla della testata della form, questa e' la
+     *  testata della collezione e parla del progetto — ma allargare la deroga
+     *  sarebbe indebolire una guardia committata per far passare una riga nuova:
+     *  costa meno cambiare la riga. Lo stato sporco NON cancella l'ultimo
+     *  salvataggio, lo affianca: sono due informazioni diverse e servono insieme. */
+    const { savedAt, tick } = useLastSaved();
+    const lastSavedLabel = useMemo(() => {
+        void tick;                                    // il tick e' la dipendenza vera
+        const rel = savedAt === null ? null : formatRelativeTime(savedAt);
+        if ((U as any).isProjectModified) return rel ? `Unsaved, last saved ${rel}` : 'Unsaved';
+        return rel ? `Saved ${rel}` : null;
+    }, [savedAt, tick, saving]);
+
     /* Chiusura del pannello: click fuori ed Esc.
      *
      * `mousedown` e non `click`: un click che parte dentro il pannello e finisce
@@ -2310,6 +2351,17 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                             <i className="bi bi-floppy" aria-hidden="true" />
                             Save project
                         </button>
+
+                        {/* SAVE2 — quando e' stato salvato l'ultima volta.
+                            Testo e basta, nel registro di stato che il prodotto usa
+                            gia' altrove («Modified just now / 19h ago»): sentence
+                            case, slate tenue, nessun colore semantico — un
+                            salvataggio riuscito non e' un successo, e' lo stato
+                            normale. Assente finche' in questa sessione non e'
+                            successo niente da raccontare. */}
+                        {lastSavedLabel && (
+                            <span className="instance-manager__last-saved">{lastSavedLabel}</span>
+                        )}
 
                         {classShape && rows.length > 0 && (
                             <button
