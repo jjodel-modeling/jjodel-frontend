@@ -601,7 +601,7 @@ isolato, e vanno lasciati scritti perche' non sembrino risolti:
 
 # Referto UNQ1 C5 — la revoca scopata al modello scansionato
 
-Aggiunto 2026-09-02. Commit del codice `46a38022`, perimetro
+Aggiunto 2026-09-02. Commit del codice `4bde4359`, perimetro
 `components/editor-v2/problems/UniquenessProblemSync.tsx` piu' il suo test, nuovo.
 `registry.ts` **non** e' toccato, e nemmeno `LModelElement.tsx`: quella e' la corsia
 del referto F2 qui sopra. Chiude §A.4, e nient'altro.
