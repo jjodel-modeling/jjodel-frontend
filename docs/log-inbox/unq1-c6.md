@@ -6,7 +6,10 @@ se tiene il caso dell'elemento cancellato che §C5.2 tiene.
 **Files touched**: `frontend/src/components/editor-v2/problems/registry.ts`,
 `.../problems/UniquenessProblemSync.tsx`, `.../problems/ConformanceProblemSync.tsx`,
 `.../problems/__tests__/UniquenessProblemSync.test.ts` (commit `bc939442b`).
-Referto in coda a `docs/discovery/discovery_2026-09-01_unq1_duplicate_name.md`.
+Referto in coda a `docs/discovery/discovery_2026-09-01_unq1_duplicate_name.md` (`e153c8fe2`).
+Coda `7f8fa2242`: tre puntatori di riga della nota, scritti contro i file prima della
+modifica. **Deroga RC-13 dichiarata (RC-11)**: quel commit tiene `registry.ts` e il referto
+insieme — stessa correzione, sole righe di commento, ma e' un commit misto.
 **Outcome**: ✅ completed
 **Corregge**: —
 **Causa**: —
@@ -24,5 +27,5 @@ lato UI: nessuna scrittura D-layer, nessun proxy L, nessun TRANSACTION, nessuna 
 un metamodello quando e' un metamodello a essere aperto. Punto 4: `ownedIdsByModel`
 **rimossa** — scritto alla registrazione, il campo tiene l'elemento cancellato perche'
 l'owner e' nel dato. Test 7 -> 12, quattro mutazioni rosse. Censimento lettori, nome e
-misure in §C6.1-C6.4 del referto.
+misure in §C6.1-C6.4 del referto. Deroga RC-13 in `7f8fa2242`, sopra.
 **Prompt document name**: PROMPT_UNQ1-C6.md — 2026-09-02
