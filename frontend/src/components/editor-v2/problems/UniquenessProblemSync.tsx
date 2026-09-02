@@ -61,6 +61,24 @@
  * pre-existing mismatch (`ConformanceProblemSync` works around it by registering
  * under both ids) and is out of this slice's perimeter. See
  * docs/discovery/discovery_2026-08-30_s1m2_una_regola.md §4.
+ *
+ * MEASURED, and FIXED here (UNQ1 C5, 2026-09-02): the revoke pass below used to walk the
+ * WHOLE registry and mark-resolve every `duplicate-name` entry its own scan did not want.
+ * The registry is ONE session-wide Map and this producer is mounted once per open model,
+ * so opening a metamodel tab erased the M1 warnings of the model tab next door — and they
+ * did not come back, because the M1 effect re-runs on a signature change, not on a tab
+ * switch. Measured with two REAL collisions at once (two `Edition_0` in M1, two `Book` in
+ * M2): M1 registers 2, open M2 -> 0 M1 left, return to M1 -> still 0, for the rest of the
+ * session. See docs/discovery/discovery_2026-09-01_unq1_duplicate_name.md §A.4.
+ *
+ * THE FIX is `ownedIdsByModel`: the producer revokes only the ids IT registered for the
+ * model it is scanning. The entries carry no model of their own — giving them one means
+ * `registry.ts` and the conformance producer that writes into the same Map — and the
+ * bookkeeping needs none: a `duplicate-name` entry on an element of model M can only have
+ * been written by the producer mounted on M. Same shape as `ConformanceProblemSync`'s
+ * `ownedIds`, module-level rather than a ref so that it survives the remount of an editor
+ * tab. Nothing else moves: the signature is unchanged, the two scans are unchanged, and no
+ * scan was added — WHAT is counted and WHEN it is recounted both stay as they were.
  */
 
 import { useEffect } from 'react';
@@ -77,18 +95,83 @@ interface Props {
     modelid: string | undefined;
 }
 
-// Snapshot of registry IDs managed by this producer. We treat any registry
-// entry whose id matches our kind prefix as ours — avoids coupling to the
-// registry internals.
+// The kind this producer writes, and the prefix of every id it assembles. It no
+// longer decides ownership: until UNQ1 C5 the revoke pass claimed every registry
+// entry of this kind, whatever model it belonged to — see the header note and
+// `ownedIdsByModel` below.
 const DUPLICATE_KIND: NodeProblem['kind'] = 'duplicate-name';
 
 function duplicateProblemId(nodeId: string): string {
     return `${DUPLICATE_KIND}:${nodeId}`;
 }
 
-function getRegistryState(): Map<string, NodeProblem> {
-    if (typeof window === 'undefined') return new Map();
-    return (window as unknown as { _jjNodeProblems?: Map<string, NodeProblem> })._jjNodeProblems ?? new Map();
+/**
+ * The ids this producer registered, per model it scanned — the ownership the registry
+ * entries do not carry. Module-level, not a `useRef`: an editor tab that unmounts and
+ * comes back must still recognise the entries its own model left in the registry, or a
+ * collision resolved while the tab was closed would never be revoked.
+ */
+const ownedIdsByModel = new Map<string, Set<string>>();
+
+/**
+ * The body of the effect. Exported for the test: React is not the subject here, the
+ * register/revoke diff is, and rendering it would need a DOM the node-env suite does
+ * not have. Never called from outside the effect in application code.
+ */
+export function reconcileDuplicateProblems(modelid: string): void {
+    const model = LPointerTargetable.fromPointer(modelid) as LModel | null;
+    if (!model) return;
+
+    // One map, two producers: M1 instances for an ordinary model, M2 elements for
+    // a metamodel. A metamodel has no DObjects and a model has no M2 elements of
+    // its own, so the two never overlap and the merge cannot mask either.
+    const dupMap = (model as unknown as { isMetamodel?: boolean }).isMetamodel
+        ? (detectM2DuplicateNames(model) as unknown as Map<string, LObject[]>)
+        : detectDuplicateNames(model);
+    const desiredIds = new Set<string>();
+    for (const [nodeId, colliding] of dupMap) {
+        const id = duplicateProblemId(nodeId);
+        desiredIds.add(id);
+
+        const self = LPointerTargetable.fromPointer(nodeId) as LObject | null;
+        const selfName = self?.name ?? '';
+        const n = colliding.length;
+        const description = n === 1
+            ? `Name "${selfName}" is also used by another element in this scope.`
+            : `Name "${selfName}" is also used by ${n} other elements in this scope.`;
+
+        registerProblem({
+            id,
+            nodeId,
+            kind: DUPLICATE_KIND,
+            severity: 'warning',
+            title: 'Duplicate name',
+            description,
+            relatedNodeIds: colliding.map(o => o.id),
+            action: {
+                label: 'Go to duplicate',
+                type: 'focus-node',
+                targetNodeId: colliding[0]?.id,
+            },
+            createdAt: Date.now(),
+        });
+    }
+
+    // Mark-resolved the entries THIS model's scan registered last run and no longer
+    // wants. Scoped to `ownedIdsByModel`, never a scan of the whole registry: the
+    // entries of another open model are not ours to revoke, and neither are the
+    // conformance ones (their ids never enter this set). markResolved is a no-op on
+    // an id already resolving or already dropped, so the diff stays idempotent, and
+    // an element deleted meanwhile is still revoked — the id was ours, whatever
+    // became of the element it named.
+    const owned = ownedIdsByModel.get(modelid);
+    if (owned) {
+        for (const id of owned) {
+            if (desiredIds.has(id)) continue;
+            markResolved(id);
+        }
+    }
+    ownedIdsByModel.set(modelid, desiredIds);
 }
 
 export function UniquenessProblemSync({ modelid }: Props) {
@@ -116,53 +199,7 @@ export function UniquenessProblemSync({ modelid }: Props) {
 
     useEffect(() => {
         if (!modelid) return;
-        const model = LPointerTargetable.fromPointer(modelid) as LModel | null;
-        if (!model) return;
-
-        // One map, two producers: M1 instances for an ordinary model, M2 elements for
-        // a metamodel. A metamodel has no DObjects and a model has no M2 elements of
-        // its own, so the two never overlap and the merge cannot mask either.
-        const dupMap = (model as unknown as { isMetamodel?: boolean }).isMetamodel
-            ? (detectM2DuplicateNames(model) as unknown as Map<string, LObject[]>)
-            : detectDuplicateNames(model);
-        const desiredIds = new Set<string>();
-        for (const [nodeId, colliding] of dupMap) {
-            const id = duplicateProblemId(nodeId);
-            desiredIds.add(id);
-
-            const self = LPointerTargetable.fromPointer(nodeId) as LObject | null;
-            const selfName = self?.name ?? '';
-            const n = colliding.length;
-            const description = n === 1
-                ? `Name "${selfName}" is also used by another element in this scope.`
-                : `Name "${selfName}" is also used by ${n} other elements in this scope.`;
-
-            registerProblem({
-                id,
-                nodeId,
-                kind: DUPLICATE_KIND,
-                severity: 'warning',
-                title: 'Duplicate name',
-                description,
-                relatedNodeIds: colliding.map(o => o.id),
-                action: {
-                    label: 'Go to duplicate',
-                    type: 'focus-node',
-                    targetNodeId: colliding[0]?.id,
-                },
-                createdAt: Date.now(),
-            });
-        }
-
-        // Mark-resolved any previously-registered duplicate problem that no
-        // longer appears in the scan. markResolved is a no-op for entries
-        // already resolving, so the diff is idempotent.
-        const registry = getRegistryState();
-        for (const [id, p] of registry) {
-            if (p.kind !== DUPLICATE_KIND) continue;
-            if (desiredIds.has(id)) continue;
-            markResolved(id);
-        }
+        reconcileDuplicateProblems(modelid);
     }, [modelid, sig]);
 
     return null;
