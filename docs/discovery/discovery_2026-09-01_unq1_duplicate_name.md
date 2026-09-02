@@ -596,3 +596,120 @@ isolato, e vanno lasciati scritti perche' non sembrino risolti:
   correzione il falso, nel percorso di creazione, non si accende piu'.
 - **§8, la domanda di merito.** Un `LValue` di containment ha figli? Qui si e' risposto
   «non serve deciderlo per chiudere UNQ1», che non e' una risposta.
+
+---
+
+# Referto UNQ1 C5 — la revoca scopata al modello scansionato
+
+Aggiunto 2026-09-02. Commit del codice `46a38022`, perimetro
+`components/editor-v2/problems/UniquenessProblemSync.tsx` piu' il suo test, nuovo.
+`registry.ts` **non** e' toccato, e nemmeno `LModelElement.tsx`: quella e' la corsia
+del referto F2 qui sopra. Chiude §A.4, e nient'altro.
+
+## C5.1 Cosa e' cambiato, in un punto
+
+Il ciclo di revoca (`:160-164` di HEAD) leggeva il registro intero e marcava risolta
+ogni entry di kind `duplicate-name` che il **proprio** scan non desiderava. Ora legge
+`ownedIdsByModel`, una `Map<modelid, Set<problemId>>` di modulo: il produttore revoca
+solo gli id che ha registrato **per il modello che sta scandendo**, e in fondo alla
+corsa vi riscrive il proprio `desiredIds`.
+
+Tutto il resto e' fermo. La firma di reattivita' non cambia di un carattere, i due
+`detect*DuplicateNames` sono chiamati come prima e nessuno scan e' aggiunto: il corpo
+dell'effetto e' **spostato** in `reconcileDuplicateProblems(modelid)`, esportata perche'
+il test possa chiamarla — sotto `vitest` l'ambiente e' `node`, e montare il componente
+vorrebbe un DOM che la suite non ha. L'effetto e' diventato una riga che la chiama.
+
+Cade con il ciclo anche `getRegistryState()`, che esisteva per servirlo e per nient'altro.
+Vale la pena dire cosa nascondeva: leggeva `window._jjNodeProblems`, e in ambiente `node`
+`typeof window === 'undefined'` le faceva restituire una `Map` vuota. Un test della
+revoca, prima, avrebbe iterato il nulla e sarebbe stato verde per costruzione.
+
+## C5.2 Perche' non un campo sulle entry, e perche' non un lookup
+
+C5 nel referto costava «un campo alle entry (o un prefisso all'id)», cioe' `registry.ts`
+piu' il produttore della conformance che scrive nella stessa `Map`, piu' i loro test. Non
+serve: una entry `duplicate-name` su un elemento del modello M puo' averla scritta **solo**
+il produttore montato su M, che e' l'unico a scandire M. L'appartenenza esiste gia', non
+scritta da nessuna parte — e la contabilita' del produttore la rende esplicita senza
+toccare il tipo condiviso.
+
+La `Map` e' di modulo e non un `useRef` di proposito: una tab che si smonta e torna deve
+ancora riconoscere le entry che il **suo** modello ha lasciato, o una collisione risolta a
+tab chiusa non verrebbe revocata mai piu'.
+
+L'alternativa scartata e' risalire il padre di `entry.nodeId` fino al `DModel` e
+confrontarlo con `modelid`. Legge piu' letteralmente «l'owner appartiene al modello», e
+perde un caso che la contabilita' tiene: un elemento **cancellato** non risale piu' a
+nessun modello, quindi nessun produttore lo rivendicherebbe e la sua entry resterebbe nel
+registro per sempre. Con `ownedIdsByModel` l'id era nostro, qualunque cosa sia successa
+all'elemento che nominava — ed e' un caso del test.
+
+## C5.3 Le misure
+
+**Sonda** `scripts/smoke/_tmp_unq1_c5.ts`, non committata (`.gitignore:66`), contro il dev
+server, zero `pageerror` in entrambe le corse. Il prima e' stato ottenuto ripristinando il
+solo `UniquenessProblemSync.tsx` da `git show HEAD:` e rimettendolo a posto da una copia —
+**nessuno `stash`** (RC-13, §6.4).
+
+Lo stato: **tre** nested omonimi in M1 e **due** classi omonime in M2, vivi insieme. I nomi
+sono espliciti, scritti con `SetFieldAction` sul campo `name` del D-layer — il percorso «che
+scavalca i setter» per cui il produttore esiste. Non dipendono dal default-name, che la
+corsia F2 stava correggendo nello stesso albero: dopo quella correzione due `Add` non
+producono piu' due `Edition_0`, e una sonda che ci contasse sopra non misurerebbe piu' nulla.
+
+| entry attive | prima (HEAD) | dopo |
+|---|---|---|
+| M1, con la sola tab M1 aperta | 3 | 3 |
+| M1, subito dopo aver aperto la tab M2 | **0** | **3** |
+| M2, nello stesso istante | 2 | 2 |
+| M1, tornando sulla tab M1 | **0** | **3** |
+| M1, dopo il rename di uno dei tre | **0** | **2** |
+| M2, nello stesso istante | 2 | 2 |
+| M1, dopo il rename del secondo | 0 | 0 |
+| totale | **9 PASS / 3 FAIL** | **12 PASS / 0 FAIL** |
+
+I 3 FAIL del prima sono asserzioni scritte come il comportamento corretto. Le altre nove
+passano in entrambe le corse, e due meritano di essere lette per quello che sono: «le entry
+M2 non sono state toccate dal produttore M1» passava **anche prima**, perche' con la sola
+tab M2 aperta per ultima il produttore M1 non ripartiva affatto; e «nessuna entry M1 attiva
+dopo il secondo rename» passava prima **a vuoto**, perche' non ce n'erano piu' da revocare.
+Il controllo che regge la misura e' l'ultimo: la collisione M1 e' ancora vera nello stato
+mentre le entry erano sparite (`3a-ctrl` di §A.4, ripetuto qui).
+
+Sull'aritmetica che il prompt si aspettava — «risolvere una in M1 -> 1». Per una **coppia**
+non e' cosi': la collisione e' una proprieta' dei due, e rinominarne uno revoca **entrambe**
+le entry, 2 -> 0. Il decremento si vede solo con tre omonimi, ed e' il motivo per cui la
+sonda ne semina tre: 3 -> 2 al primo rename, 2 -> 0 al secondo, quando i rimasti tornano a
+essere due e smettono insieme.
+
+**Unit test** `components/editor-v2/problems/__tests__/UniquenessProblemSync.test.ts`, 7
+casi, verdi. La barrel `joiner` e' finta — tre `cname`, il dizionario dei pending e
+`fromPointer` — e tutto il resto gira vero: i due `detect*`, il registro, il diff. Le
+collisioni del fixture sono per nome esplicito, sulle stesse forme duck-typed che i
+risolutori leggono sul campo (l'idioma di `model/__tests__/m2NameUniqueness.test.ts`). Ogni
+caso riparte da un grafo di moduli fresco: sia la `Map` del registro sia la contabilita'
+sono di modulo, e un test che le ereditasse misurerebbe l'ordine del file.
+
+**Mutazioni**, perche' sette verdi non dicono da soli di essere sensibili:
+
+| mutazione | esito |
+|---|---|
+| revoca su **tutti** gli owned set (il globale di prima, riscritto senza `window`) | **3 rossi**: l'apertura della seconda tab, il ritorno, e la revoca del proprio |
+| ciclo di revoca rimosso del tutto | **4 rossi**: le due risoluzioni, il vicino di kind, l'elemento cancellato |
+
+**Gate**: `tsc` 33, la baseline esatta, 0 nei file toccati; `build` exit 0 con il solo
+avviso di chunk-size gia' noto; `vitest` 3118 test verdi, 0 falliti. I 9 file che non si
+raccolgono sono i `window is not defined` pre-esistenti, indipendenti da questo perimetro.
+
+## C5.4 Cosa resta aperto
+
+- **§A.1 e §A.5, chi legge.** Invariati: il badge dell'albero conta figli, le righe M1 non
+  hanno indicatore, e una collisione si vede nella sola form dell'oggetto. Questa correzione
+  non aggiunge un lettore — rende solo vero cio' che quell'unico lettore mostra.
+- **Il disallineamento di chiavi sul canvas** (entry sull'id dell'elemento, indicatore sull'id
+  del `DVertex`) resta dov'era, dichiarato nell'intestazione del produttore.
+- **Le entry continuano a non portare un modello.** Se un domani un terzo produttore scrivesse
+  `duplicate-name` sulla stessa `Map`, la contabilita' per produttore resterebbe corretta ma
+  la domanda «di chi e' questa entry» tornerebbe a non avere risposta nel dato. Il campo su
+  `NodeProblem` resta il rimedio vero, e resta non fatto.
