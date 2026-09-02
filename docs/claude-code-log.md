@@ -13,6 +13,31 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-02 — docs(log): chiusura batch L1–L4 (sanatoria, log-inbox, rotazione)
+**Prompt**: §6.1 di chiusura del batch L1–L4 a repo fermo, seriale: bonificare l'indice
+condiviso, verificare le tre sonde temporanee, scrivere la nota di sanatoria dei commit
+mal-messaggiati, correggere la `Causa` di SAVE1-bis, iscrivere in P9 la regola log-inbox
+per le corsie parallele, ruotare il log se oltre soglia. Nessun file applicativo.
+**Files touched**: `docs/claude-code-log.md` (nota di sanatoria, `ff74cee8e`),
+`docs/PROTOCOL.md` + `docs/log-inbox/.gitkeep` (regola log-inbox, `061453e65`),
+`docs/claude-code-log.md` + `docs/claude-code-log-archive.md` (rotazione P9, `0838a303f`).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: (e)
+**Regressions**: no — nessun file di codice toccato, nessun gate di build coinvolto.
+`npm run check:docs` (da `frontend/`) **3/3, exit 0** prima e dopo ciascuno dei tre commit,
+con i 2 warning non bloccanti preesistenti su `Corregge` di SAVE1-bis e DIRTY1.
+**Out-of-scope changes**: no — tre commit tematici, ciascuno per pathspec esplicito.
+L'indice conteneva staged della corsia EGO1: lasciato intatto, mai `git add .`.
+**Layer Impact Report**: not-required — solo documentazione.
+**Smoke visivo**: non applicabile — nessun pixel cambia.
+**Notes**: `Corregge` resta `—`: la sessione non rifà il lavoro di una corsia, ne sana il
+registro; `Causa` `(e)` è la concorrenza su albero condiviso. La `Causa` di SAVE1-bis non
+andava corretta: portava già `(a)` dal commit che ha scritto l'entry (`f278cf4fb`). Le tre
+sonde `frontend/scripts/smoke/_tmp_*` cadono in `.gitignore:66`, nessuna promossa.
+Rotazione: attivo 49 -> 5, archivio 1025 -> 1069, verbatim per data. Nessun rewrite.
+**Prompt document name**: PROMPT_CHIUSURA_batch_L1-L4.md — 2026-09-02
+
 ## 2026-09-02 — fix: UNQ1 C5, la revoca duplicate-name resta nel modello scandito
 **Prompt**: UNQ1 C5 — la revoca tocca solo le entry il cui owner appartiene al modello che
 l'effetto sta scansionando (referto §A.4: revoca globale, produttore per modello, `:160-164`
