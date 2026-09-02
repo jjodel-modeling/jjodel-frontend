@@ -111,6 +111,8 @@ La semantica dei campi di autovalutazione, incluse le regole di compilazione di 
 
 Il log non sostituisce i commit message, e il discovery report non sostituisce il log: sono tre artefatti distinti.
 
+A corsie parallele, `docs/claude-code-log.md` si tocca solo nella §6.1 di chiusura batch, da una sessione sola a repo fermo. Ogni corsia scrive la propria entry in `docs/log-inbox/<lane>.md`; chi chiude il batch le sposta nel log verbatim e cancella l'inbox.
+
 ## P10 — Dove vivono i documenti
 
 Il Project Knowledge tiene lo stato corrente, il repo tiene la storia. Sei documenti nel KB, per
