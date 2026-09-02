@@ -2,6 +2,79 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-09-02 — refactor: «Save & Exit» passa dall'helper, il timer non sopravvive (SAVE1-bis)
+**Prompt**: SAVE1-bis — `SaveAndCloseProject` (`Navbar.tsx:508`) usa `saveProjectWithFeedback`
+e poi chiude. Il conteggio di «Request timed out» in `Navbar.tsx` va a 0 e il test SAVE1 che
+lo pinnava va aggiornato. Opzione all'helper solo se serve. Perimetro: Navbar.tsx,
+`common/libraries/saveProject.tsx`, test. NON `api/persistance.ts` (corsia L4).
+**Files touched**: `frontend/src/pages/components/Navbar.tsx`,
+`frontend/src/common/libraries/saveProject.tsx` (solo commenti),
+`frontend/src/common/libraries/__tests__/saveProject.test.ts`. Le sonde
+`scripts/smoke/_tmp_save1bis_{verify,diag}.ts` non sono committate (`.gitignore:66`).
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-01 23:20 (SAVE1)
+**Causa**: (a)
+**Regressions**: no — `npx tsc --noEmit` su output COMPLETO **33**, la baseline, **0** nei
+file toccati; `npm run build` exit **0**; `npx vitest run` intera **3118/3118** passati, i 9
+file rossi falliscono in import (`window is not defined`) e sono preesistenti. Le due non
+regressioni che il passaggio poteva rompere sono misurate a schermo su ENTRAMBI i lati (1a,
+1b verdi in before e after). Quattro mutazioni sul codice nuovo: tolto il `return` sul
+fallimento 1/15 rosso, cambiato l'argomento della chiamata 2/15, reintrodotto un timeout in
+Navbar 1/15, chiusura spostata dentro l'`if` 1/15.
+**Out-of-scope changes**: no — tre file, tutti nel perimetro. Nessuna opzione aggiunta
+all'helper: non serviva, il chiamante sequenzia sul `Promise<boolean>` gia' esistente.
+**Layer Impact Report**: not-required — nessun file di §3.1; l'unica scrittura D e'
+`SetRootFieldAction('isLoading')` dentro l'helper, che c'era gia'.
+**Smoke visivo**: passato — `_tmp_save1bis_verify.ts` **before 21 PASS / 1 FAIL, after 22
+PASS / 0 FAIL**, stesso strumento sui due lati, zero `pageerror` in entrambi. L'unico rosso
+del before e' 2e, che e' il difetto: dopo un errore di salvataggio arrivava, dieci secondi
+piu' tardi, un «Request timed out» spurio (il vecchio `clearTimeout` stava solo sul ramo di
+successo). Il before gira sui sorgenti di HEAD ripristinati da `git show` e rimessi da una
+copia, **senza `git stash`** (RC-13).
+**Notes**: la (a) e' del perimetro di SAVE1, non della sua esecuzione: diceva «due call
+site». `U.isProjectModified = false` rimosso e non riscritto: lo azzera gia' `ProjectsApi.save`
+(`projects.ts:133`) e poi `CloseProject` (`Navbar.tsx:498`). Al primo giro la sonda dava 5 rossi
+FALSI: `window` sostituito a meta' misura, strumenti morti che leggevano zero ovunque. Riarmati
+via `addInitScript`, contatori in `sessionStorage` per attraversare il reload della chiusura.
+**Prompt document name**: SAVE1-bis (in chat) — 2026-09-02 09:00
+
+## 2026-09-02 — fix(persistance): il dirty flag non lo azzera l'autosave silenzioso (DIRTY1)
+**Prompt**: DIRTY1, dal referto SAVE1. In `ProjectsApi.save` la riga che azzera
+`U.isProjectModified` sta fuori da `if (!silent)`: dopo un drag di nodo il progetto risulta
+pulito e l'avviso «Unsaved changes» alla chiusura non scatta. L'azzeramento entra nel ramo
+`!silent`, nessun altro cambio a `save`, before/after. Non `Navbar.tsx` (corsia L3).
+**Files touched**: `frontend/src/api/persistance/projects.ts`,
+`frontend/src/api/__tests__/projectsSaveDirty.test.ts` (nuovo).
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-01 23:20 (SAVE1)
+**Causa**: (c)
+**Regressions**: no — `npx tsc --noEmit` su output COMPLETO **33**, la baseline, **0** nei
+file toccati; `npm run build` exit **0**; `npx vitest run` intera **3091/3091** test passati
+(3082 + i 9 nuovi), i 9 file rossi falliscono in import (`window is not defined`) e sono
+preesistenti. Nessun chiamante dipendeva dall'azzeramento silenzioso: `saveProject.tsx` e le
+tre voci di SAVE1 chiamano `save(project)` senza `opts`, quindi esplicito; l'unico
+`{silent:true}` e' `useLayoutAutosave.ts:59`. I gate girano su albero condiviso con altre
+corsie (vedi Notes).
+**Out-of-scope changes**: no — due file, entrambi nel perimetro. Il commento del metodo,
+che elencava `U.isProjectModified` fra le cose identiche nei due casi, e' aggiornato nello
+stesso file: lasciarlo sarebbe stato falso.
+**Layer Impact Report**: not-required — nessun file di §3.1; la modifica toglie una
+scrittura su uno static di `U`, non ne aggiunge nel D-layer.
+**Smoke visivo**: non applicabile. La misura e' il test, ESEGUITO e non letto: `projects.ts`
+si importa in `environment: node` doppiati i suoi import e stubbato il `window` che
+dereferenzia a modulo (`:453`), quindi il flag e' letto DOPO una chiamata vera a `save`.
+**Before 6 PASS / 3 FAIL, after 9 PASS / 0 FAIL**, stesso file sui due lati; i 3 rossi del
+before sono le sole asserzioni sul silent save. Quattro mutazioni tutte rosse: riga rimossa
+4/9, condizione invertita 5/9, ramo Offline/Online saltato 6/9, version bump anche sul
+silent 1/9.
+**Notes**: riga misurata `api/persistance/projects.ts:133:9` — il prompt citava
+`api/persistance.ts`, che non esiste (regola 15). Il difetto `version` che non avanza fra
+due `save` sullo stesso `__raw` e' fuori perimetro: registrato in un test che lo asserisce
+COM'E' (`1.1` due volte), cosi' il giorno che verra' corretto quel test diventa rosso.
+Altre corsie comparse in albero a meta' sessione: constatate e lasciate, commit per
+pathspec sull'indice altrui gia' staged (RC-13).
+**Prompt document name**: DIRTY1 (in chat) — 2026-09-02 00:20
+
 ## 2026-09-02 — discovery: appendice UNQ1 F1, il «2» del tree conta figli (Q5/Q6)
 **Prompt**: aggiunta a UNQ1 F1, dallo screenshot post CHECK 6: Book_0 con due figli
 rinominati a nomi distinti, badge 2 nel tree, form «No issues», canvas pulito. Q5 il badge
