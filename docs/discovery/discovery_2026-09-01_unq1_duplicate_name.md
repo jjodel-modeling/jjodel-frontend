@@ -469,3 +469,130 @@ suo `modelid`, le entry no. Costo: aggiungere un campo alle entry (o un prefisso
 all'id) tocca `registry.ts`, il produttore della conformance che scrive nella
 stessa mappa, e i loro test. Non raccomandato qui: e' il difetto di §A.4, non
 quello per cui UNQ1 e' stata aperta.
+
+---
+
+# Referto UNQ1 F2 — la correzione, e la strada che non e' stata presa
+
+Aggiunto 2026-09-02. Commit del codice `a8260a83`, perimetro
+`model/logicWrapper/LModelElement.tsx` piu' il suo test. `UniquenessProblemSync.tsx`
+non e' toccato: e' la corsia L2. **C1 scartato** — la domanda di §8 resta aperta e
+questa correzione non la risponde: un `LValue` di containment continua a NON avere
+figli per chiunque legga `children`.
+
+## F2.1 Cosa e' cambiato, in due punti
+
+**A — `LObject.get_name` (:6081).** Uno slot identita' i cui `values` grezzi sono
+l'array vuoto cede a `context.data.name`. L'auto-nome resta il ripiego del solo caso
+in cui anche `data.name` e' vuoto. Uno slot **popolato** vince come prima: la
+direzione slot -> nome di §3.12 di CLAUDE.md non e' toccata, ed e' il caso che il
+test tiene fermo per primo.
+
+La lettura grezza passa da `slot.__raw.values`, lo stesso idioma che `set_name` usa
+gia' a :6385 per scavalcare proprio questo ripiego di lettura. Solo l'array
+letteralmente vuoto conta come vuoto: uno slot che tiene davvero `''` — un nome
+cancellato di proposito — non e' il caso misurato in §1(b) e resta come era.
+
+**B — `DObject.autoName`, nuovo (:6024).** I due creatori (`new`, `new3`) calcolavano
+il default con `DPointerTargetable.defaultname`, che per un padre `DValue` legge un
+namespace vuoto (§1c). Ora il solo caso `DValue` passa da `getNamespaceOf`
+(`nameUniqueness.ts:168`) — il punto unico dove lo scope M1 e' deciso, e che quello
+slot lo sa gia' scendere — e ne consegna i nomi a `U.increaseEndingNumber` nella sua
+forma a predicato. Un padre `DModel` resta sulla strada di prima, byte per byte.
+
+**Cosa NON e' cambiato**, ed e' il punto: `get_children_idlist` non e' stato allargato
+a `LValue`. C1 chiudeva gli stessi due lati ma cambiava il significato di «figlio» per
+una classe che finora non ne aveva, e il suo costo era il censimento dei lettori di
+`children`. Qui i punti che sanno scendere uno slot restano tre — `getNamespaceOf`,
+`LObject.subObjects`, e ora l'auto-nome che si appoggia al primo — invece di due su
+tre. Meno di quanto §8 chiedeva, e senza il censimento che non e' stato fatto.
+
+## F2.2 Il censimento che la correzione A doveva fare prima
+
+Richiesto dal prompt: i lettori di `get_name` che contano sull'auto-nome **in
+finestra**. La differenza esiste solo quando lo slot e' `[]` **e** `data.name` e'
+pieno: prima si otteneva l'`initialName`, ora `data.name`.
+
+Chi vuole l'auto-nome lo chiede per nome, e sempre **dopo** il nome:
+
+| riga:col | espressione |
+|---|---|
+| `components/abstract/tabs/instanceTable.ts:127:16` | `String(target.name ?? target.initialName ?? '')` |
+| `components/editor-v2/hooks/shapeDraw.ts:205:28` | `owner.name ?? owner.initialName ?? ''` |
+| `components/editor-v2/viewpoint/ir/irReadCtx.ts:173:20` | `d?.name ?? d?.initialName ?? null` |
+
+Tutti e tre scendono all'`initialName` solo quando il nome e' vuoto, ed e' esattamente
+il caso che la correzione lascia intatto. Nessun altro lettore confronta `.name` con
+`initialName`, e nessuno cerca la forma `<Metaclasse>_<N>`: la ricerca sull'albero
+(`TreeViewContent`), sul canvas e sui chip non ha prodotto occorrenze.
+`ConformanceValidator.ts:165` legge apposta il grezzo per non farsi mascherare dal
+ripiego, e non passa da qui. Nessun bloccante: si e' proceduto.
+
+Fuori perimetro e non toccato, ma da registrare: `jjscript/executor/commands/instance.ts`
+(:379, :592) scrive `initialName` con il nome esplicito proprio per aggirare l'ordine
+che A cambia. Dopo A quelle due scritture sono ridondanti, non dannose — tengono
+`initialName` allineato a `name`. Rimuoverle e' un giro suo.
+
+## F2.3 Le misure
+
+**Sonda** `scripts/smoke/_tmp_unq1f2_verify.ts`, non committata (`.gitignore:66`), contro
+il dev server, zero `pageerror` in entrambe le corse. Il prima e' stato ottenuto
+ripristinando il solo `LModelElement.tsx` da `git show HEAD:` e rimettendolo a posto da
+una copia — **nessuno `stash`** (RC-13, §6.4).
+
+| | prima (HEAD) | dopo |
+|---|---|---|
+| A campioni con `raw != proxy` nella finestra | **9** su 9 con lo slot pieno | **0** |
+| A esempio del campione sbagliato | `raw [Edition_0, Edition_1]` / `proxy [Edition_0, Edition_0]` | — |
+| B secondo `Add` senza rinomina | `Edition_0` | **`Edition_1`** |
+| B nomi finali nello slot | `[Edition_0, Edition_0]` | `[Edition_0, Edition_1]` |
+| C duplicate-name attivi, M1 aperto | **2** | **0** |
+| D controllo, due root senza nome | `Book_0`, `Book_1` | `Book_0`, `Book_1` |
+| totale | 4 PASS / 4 FAIL | **8 PASS / 0 FAIL** |
+
+I 4 FAIL del prima non sono un guasto della sonda: sono le asserzioni scritte come il
+comportamento corretto, ed e' quello che le rende una misura invece di un rituale. D e
+A-ctrl passano in **entrambe** le corse — il controllo positivo che dice che lo
+strumento sa distinguere il grezzo dal proxy e che le root non sono state toccate.
+
+Va detto dove la misura di A e' piu' stretta di quanto sembri: dei 20 campioni a 25 ms,
+gli 11 iniziali vedono lo slot con **un solo** valore, e su quelli l'asserzione non si
+pronuncia. La finestra utile qui e' stata di 9 campioni, non di 17 come in §2; il
+confronto prima/dopo su quei 9 e' netto e basta a questa correzione, ma il limite
+superiore della finestra continua a non essere misurato.
+
+**Unit test** `model/__tests__/unq1AutoNameShadow.test.ts`, 20 casi, verdi.
+`LModelElement.tsx` non e' importabile sotto vitest (`window is not defined` da monaco,
+via la barrel `joiner`), e i tre test che lo precedono per questo si fermano al
+confronto testuale. Qui il corpo dei due metodi viene **letto dal file**, i tipi
+cancellati da esbuild — la stessa cancellazione della build — e il risultato eseguito
+con le sole dipendenze libere iniettate: gira il sorgente committato, non una sua
+parafrasi. Anche `U.increaseEndingNumber` e' quello vero, estratto allo stesso modo,
+perche' iniettarne un'imitazione avrebbe misurato l'imitazione.
+
+**Mutazioni**, perche' venti verdi non dicono da soli di essere sensibili:
+
+| mutazione | esito |
+|---|---|
+| `rawValues.length === 0` -> `=== -1` (la guardia di A non scatta mai) | **3 rossi**, fra cui i due casi della finestra |
+| il namespace di B svuotato, con `getNamespaceOf` ancora chiamato | **3 rossi**, tutti i casi del contatore |
+| `get_name` riportato alla riga di HEAD | rosso sull'ancoraggio: il test chiede di essere aggiornato invece di misurare un altro soggetto |
+
+**Gate**: `tsc` 33, la baseline esatta, 0 nel file toccato; `build` exit 0 con il solo
+avviso di chunk-size gia' noto; `vitest` 3118 test verdi, 0 falliti. I 9 file che non
+si raccolgono sono i `window is not defined` pre-esistenti, riverificati sul
+`LModelElement.tsx` di HEAD: falliscono identici anche senza questa correzione.
+
+## F2.4 Cosa resta aperto
+
+Niente di quanto qui e' stato chiuso tocca gli altri due difetti che il referto ha
+isolato, e vanno lasciati scritti perche' non sembrino risolti:
+
+- **§A.4, la revoca globale.** Un warning M1 vero sparisce per il resto della sessione
+  se l'utente passa dalla tab M2. C5 vive in `registry.ts` e nel produttore, non qui.
+- **§A.1 e §A.5, chi legge.** Il badge del tree conta figli, non problemi, e una
+  collisione vera resta visibile nella sola form dell'oggetto. Il primo lettore che si
+  aggiungera' accendera' insieme il vero e il falso — con la differenza che dopo questa
+  correzione il falso, nel percorso di creazione, non si accende piu'.
+- **§8, la domanda di merito.** Un `LValue` di containment ha figli? Qui si e' risposto
+  «non serve deciderlo per chiudere UNQ1», che non e' una risposta.
