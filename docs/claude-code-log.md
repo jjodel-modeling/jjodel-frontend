@@ -2,6 +2,44 @@
 
 Newest-first per day (R-RAIL-45, docs/HARNESS-DOCS.md): a new entry goes right under this line. Never append at the bottom.
 
+## 2026-09-02 — fix: UNQ1 C5, la revoca duplicate-name resta nel modello scandito
+**Prompt**: UNQ1 C5 — la revoca tocca solo le entry il cui owner appartiene al modello che
+l'effetto sta scansionando (referto §A.4: revoca globale, produttore per modello, `:160-164`
+— aprire M2 cancella le entry M1, e non tornano). Nessuna modifica alla firma, nessun rescan
+aggiunto. Perimetro: `UniquenessProblemSync.tsx` + test, NON `LModelElement.tsx` (corsia L1).
+Verifica con due collisioni vere insieme, per nome ESPLICITO, before/after.
+**Files touched**: `frontend/src/components/editor-v2/problems/UniquenessProblemSync.tsx`,
+`frontend/src/components/editor-v2/problems/__tests__/UniquenessProblemSync.test.ts` (nuovo),
+`docs/discovery/discovery_2026-09-01_unq1_duplicate_name.md` (referto C5, commit a parte).
+La sonda `scripts/smoke/_tmp_unq1_c5.ts` non e' committata (`.gitignore:66`).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `npm run typecheck` su output COMPLETO **33**, la baseline esatta, **0**
+nei file toccati; `npm run build` exit **0** col solo avviso di chunk-size noto; `npm run
+test` intera **3118/3118** passati, 0 falliti. I 9 file che non si raccolgono sono i `window
+is not defined` pre-esistenti, fuori da questo perimetro. Due mutazioni: revoca su tutti gli
+owned set (il globale di prima) **3 rossi**, ciclo di revoca rimosso **4 rossi**.
+**Out-of-scope changes**: no — due file di codice, entrambi nel perimetro. Commit per
+pathspec: l'indice conteneva staged di altre corsie (`api/persistance/projects.ts`,
+`egoDiagram.*`), non toccati.
+**Layer Impact Report**: not-required — nessun file della lista di §3.2 e nessuna scrittura D:
+il registro e' una `Map` di modulo, UI-only, immune a undo/redo e non persistita. La
+directory `problems/` compare in §3.1, ma il diff non tocca canvas, JjOM ne' D-layer.
+**Smoke visivo**: non applicabile — nessun pixel cambia. Misura sul registro con
+`_tmp_unq1_c5.ts`, stesso strumento sui due lati, zero `pageerror` in entrambi: **before 9
+PASS / 3 FAIL, after 12 PASS / 0 FAIL**. Entry M1 attive dopo l'apertura della tab M2 da **0
+a 3**, al ritorno su M1 da **0 a 3**, dopo il rename di uno dei tre da **0 a 2**; le 2 entry
+M2 restano 2 in ogni passo di entrambe le corse (controllo). Il before ottenuto ripristinando
+il solo file da `git show HEAD:` e rimettendolo a posto da una copia, senza `stash` (RC-13).
+**Notes**: `ownedIdsByModel`, `Map` di modulo per-modello: nessun campo su `NodeProblem`,
+quindi `registry.ts` e il produttore della conformance restano fermi. Cade
+`getRegistryState()`, che leggeva `window._jjNodeProblems` e in env `node` tornava vuota —
+per cui la revoca era intestabile. Il corpo dell'effetto e' spostato in
+`reconcileDuplicateProblems`, esportata per il test. Aritmetica: per una coppia il rename ne
+revoca **due** (2 -> 0); il decremento chiede tre omonimi. Dettaglio nel referto C5.
+**Prompt document name**: 2026-09-02 09:20
+
 ## 2026-09-02 — fix: UNQ1 F2, l'auto-nome non ombreggia piu' il nome vero di un nested
 **Prompt**: UNQ1 F2 — (A) `get_name` (:6081): slot identita' con `values []` -> `data.name`,
 auto-nome solo se anche `data.name` e' vuoto, previo censimento dei lettori che contano
