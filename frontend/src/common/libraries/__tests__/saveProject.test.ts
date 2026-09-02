@@ -1,5 +1,10 @@
 /**
- * SAVE1 — un salvataggio, tre chiamanti.
+ * SAVE1 — un salvataggio, quattro chiamanti.
+ *
+ * SAVE1-bis ha aggiunto il quarto, la `SaveAndCloseProject` di «Save & Exit»,
+ * che era la copia storica rimasta fuori dal perimetro di SAVE1. Con lei il
+ * conteggio di «Request timed out» in `Navbar.tsx` va a ZERO, ed e' l'ultimo
+ * blocco di §B a cambiare numero.
  *
  * Due meta' distinte, e la divisione non e' stilistica:
  *
@@ -8,7 +13,7 @@
  *     `api/persistance`), quindi il timeout, gli alert e l'ordine delle
  *     scritture su `isLoading` sono asseriti ESEGUENDOLI, non leggendoli.
  *
- *  §B SORGENTE. I tre chiamanti no: `Navbar.tsx` e `InstanceManagerTab.tsx`
+ *  §B SORGENTE. I chiamanti no: `Navbar.tsx` e `InstanceManagerTab.tsx`
  *     tirano dentro il barrel di `editor-v2/`, che arriva a monaco, che
  *     dereferenzia `window` all'import — la necessita' misurata in 10c, di cui
  *     l'intestazione di `instanceManager10k.test.ts` porta il verbale. Li' le
@@ -127,7 +132,7 @@ describe('§A saveProjectWithFeedback — il salvataggio', () => {
     });
 });
 
-// ── §B I tre chiamanti ────────────────────────────────────────────────────────
+// ── §B I quattro chiamanti ───────────────────────────────────────────────────
 
 const NAVBAR_SRC = readFileSync(resolve(__dirname, '../../../pages/components/Navbar.tsx'), 'utf8');
 const TAB_SRC = readFileSync(
@@ -149,11 +154,17 @@ const strip = (src: string) => src
     .replace(/^[ \t]*\/\/.*$/gm, '');
 const NAVBAR = strip(NAVBAR_SRC);
 const TAB = strip(TAB_SRC);
+/** L'helper, senza commenti: la sua intestazione CITA «Request timed out» per
+ *  raccontare il difetto che chiudeva, e un conteggio che leggesse anche il
+ *  commento direbbe due dove il prodotto ne ha una. */
+const HELPER = strip(readFileSync(resolve(__dirname, '../saveProject.tsx'), 'utf8'));
 
-describe('§B Navbar — menu File e Ctrl/Cmd+S passano dall\'helper', () => {
-    it('lo importa e lo chiama due volte', () => {
+describe('§B Navbar — menu File, Ctrl/Cmd+S e «Save & Exit» passano dall\'helper', () => {
+    it('lo importa e lo chiama tre volte: menu, scorciatoia, «Save & Exit»', () => {
         expect(NAVBAR).toContain("from '../../common/libraries/saveProject'");
-        expect(NAVBAR.match(/saveProjectWithFeedback\(project\)/g)?.length).toBe(2);
+        // Due con SAVE1 (la voce di menu e Ctrl/Cmd+S), la terza con SAVE1-bis
+        // (`SaveAndCloseProject`). Tutte e tre passano il proprio `project`.
+        expect(NAVBAR.match(/saveProjectWithFeedback\(project\)/g)?.length).toBe(3);
     });
 
     it('la voce «Save Project» non ha piu\' un salvataggio suo', () => {
@@ -173,14 +184,45 @@ describe('§B Navbar — menu File e Ctrl/Cmd+S passano dall\'helper', () => {
         expect(block).not.toContain('ProjectsApi.save');
     });
 
-    it('resta UNA sola copia del blocco di timeout, ed e\' nell\'helper', () => {
-        // `SaveAndCloseProject` e' la quarta copia storica: fuori dal perimetro
-        // di SAVE1 (il prompt dice «due call site»), quindi la sua e' l'unica
-        // occorrenza che deve restare in Navbar. Il giorno in cui passera'
-        // dall'helper anche lei, questo numero va a zero e il test lo dice.
-        expect(NAVBAR.match(/Request timed out/g)?.length).toBe(1);
-        expect(NAVBAR.indexOf('Request timed out'))
-            .toBeGreaterThan(NAVBAR.indexOf('const SaveAndCloseProject'));
+    it('in Navbar non resta NESSUNA copia del blocco di timeout: l\'unica e\' nell\'helper', () => {
+        // SAVE1 lasciava fuori `SaveAndCloseProject`, l'ultima copia storica, e
+        // il conteggio qui era 1. SAVE1-bis la fa passare dall'helper: va a 0.
+        //
+        // Controllo positivo, obbligatorio prima di un'asserzione di assenza
+        // (CLAUDE.md §5): il file e' stato letto davvero, e le tre funzioni che
+        // salvavano in proprio sono ancora tutte al loro posto — e' solo il loro
+        // salvataggio a essere passato altrove.
+        expect(NAVBAR).toContain('const SaveAndCloseProject');
+        expect(NAVBAR).toContain('matchesShortcut(event, SHORTCUTS.SAVE)');
+        expect(NAVBAR).toContain("{name: 'Save Project'");
+
+        expect(NAVBAR.match(/Request timed out/g)?.length ?? 0).toBe(0);
+        // ...e non e' sparita dal prodotto: vive nell'helper, una volta sola.
+        expect(HELPER.match(/Request timed out/g)?.length).toBe(1);
+    });
+
+    it('«Save & Exit» salva dall\'helper, e sul fallimento non chiude', () => {
+        const i = NAVBAR.indexOf('const SaveAndCloseProject');
+        expect(i).toBeGreaterThan(-1);                        // controllo positivo
+        const block = NAVBAR.slice(i, NAVBAR.indexOf('function placeholder', i));
+        expect(block.length).toBeGreaterThan(0);              // la fetta non e' vuota
+
+        expect(block).toContain('saveProjectWithFeedback(project)');
+        expect(block).not.toContain('ProjectsApi.save');
+        expect(block).not.toContain('SetRootFieldAction');
+        // La riscrittura di `U.isProjectModified` sparisce: la fa gia'
+        // `ProjectsApi.save`, e subito dopo `CloseProject`.
+        expect(block).not.toContain('U.isProjectModified =');
+
+        // Il contratto che il prompt chiede di preservare: errore -> niente
+        // chiusura. Il `return` del ramo negativo precede l'unica `CloseProject()`.
+        expect(block).toContain('if (!saved) return;');
+        expect(block.indexOf('if (!saved) return;'))
+            .toBeLessThan(block.indexOf('await CloseProject()'));
+        expect(block).toContain('await CloseProject()');
+        // ...e la chiusura e' dentro la funzione, non nel ramo dell'`if`.
+        expect(block.indexOf('await CloseProject()'))
+            .toBeGreaterThan(block.indexOf('U.disableUnsavedChangesWarning()'));
     });
 });
 

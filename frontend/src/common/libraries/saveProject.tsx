@@ -3,9 +3,10 @@
  *
  * SAVE1. Prima di questa slice lo stesso salvataggio era scritto tre volte:
  * la voce File -> Save Project del menu (`Navbar.tsx`), la scorciatoia Ctrl/Cmd+S
- * (`Navbar.tsx`) e — quarta copia, fuori dal perimetro di questa slice — la
- * `SaveAndCloseProject`. Le copie NON erano identiche, ed e' la ragione per cui
- * l'estrazione non e' cosmetica:
+ * (`Navbar.tsx`) e la `SaveAndCloseProject` di «Save & Exit» (`Navbar.tsx`).
+ * Le prime due sono passate di qui con SAVE1, insieme al bottone nuovo in testata
+ * del Data Manager; la terza con SAVE1-bis. Le copie NON erano identiche, ed e'
+ * la ragione per cui l'estrazione non e' cosmetica:
  *
  *  - il menu aveva la guardia di timeout a 10s con l'alert e il mailto, ma nel
  *    `catch` NON rimetteva `isLoading` a `false`: un save fallito lasciava lo
@@ -14,10 +15,13 @@
  *    niente;
  *  - la scorciatoia rimetteva `isLoading` a `false` in entrambi i rami ma non
  *    aveva nessun timeout: un backend che non risponde lasciava lo spinner
- *    acceso e l'utente senza spiegazione.
+ *    acceso e l'utente senza spiegazione;
+ *  - la `SaveAndCloseProject` aveva il timeout e il ripristino di `isLoading`
+ *    su entrambi i rami, ma non annullava il timer sull'errore: stesso
+ *    «Request timed out» spurio del menu.
  *
- * Questa funzione e' l'UNIONE dei due, non la copia di uno dei due: la guardia
- * di timeout del menu, il ripristino di `isLoading` della scorciatoia, e in piu'
+ * Questa funzione e' l'UNIONE delle tre, non la copia di una: la guardia di
+ * timeout del menu, il ripristino di `isLoading` della scorciatoia, e in piu'
  * il `clearTimeout` anche sul ramo di errore. Ogni chiamante ci guadagna, nessuno
  * ci perde — che e' la condizione perche' un'estrazione non sia una regressione.
  *
@@ -43,12 +47,15 @@ export const SAVE_TIMEOUT_MS = 10 * 1000;
  *
  * Non rilancia mai: l'errore e' gia' stato mostrato all'utente. Il booleano dice
  * al chiamante se il salvataggio e' andato a buon fine, per chi debba decidere
- * qualcosa dopo (nessuno dei tre call site di SAVE1 lo usa, ma la
- * `SaveAndCloseProject` che un giorno passera' di qui deve poterlo fare).
+ * qualcosa dopo: i tre call site di SAVE1 lo ignorano, la `SaveAndCloseProject`
+ * ci decide se chiudere il progetto o restare aperta sull'errore.
  *
  * @param project il progetto corrente; con `null`/`undefined` non fa nulla e
- *        ritorna `false`, che e' il comportamento dei tre call site precedenti
- *        (tutti dentro un `if (project)`).
+ *        ritorna `false`, che e' il comportamento dei call site precedenti
+ *        (tutti dentro un `if (project)`). Attenzione al ritorno `false` in
+ *        questo caso: `SaveAndCloseProject` chiama solo dentro il proprio
+ *        `if (project)`, quindi non confonde «niente da salvare» con «salvataggio
+ *        fallito» e continua a chiudere un progetto assente come faceva prima.
  */
 export async function saveProjectWithFeedback(project: LProject | null | undefined): Promise<boolean> {
     if (!project) return false;

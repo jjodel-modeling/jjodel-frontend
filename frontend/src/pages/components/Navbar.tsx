@@ -507,24 +507,17 @@ const CloseProject = async()=> {
 };
 
 const SaveAndCloseProject = async(project: LProject | undefined) => {
+    // SAVE1-bis: la quarta copia del blocco di salvataggio e' diventata
+    // `saveProjectWithFeedback`. Qui ci si guadagna il `clearTimeout` sul ramo
+    // di errore, che mancava: dopo un save fallito il timer restava armato e
+    // dieci secondi dopo arrivava anche un «Request timed out» che non
+    // descriveva niente.
+    // `U.isProjectModified = false` non si riscrive qui: lo azzera gia'
+    // `ProjectsApi.save` (`api/persistance/projects.ts:133`), e subito dopo di
+    // nuovo `CloseProject`.
     if (project) {
-        try {
-            SetRootFieldAction.new('isLoading', true);
-            const maxWait = 10 * 1000;
-            let timeout = setTimeout(()=> {
-                SetRootFieldAction.new('isLoading', false);
-                U.alert('e', 'Request timed out', <>Verify your connection or&nbsp;
-                    <a href="mailto:info@jjodel.io?subject=Save%20timeout&body=Describe%20your%20actions%20prior%20the%20error%2C%20and%20attach%20your%20latest%20savefile%20if%20possible.">contact our support</a></>);
-            }, maxWait);
-            await ProjectsApi.save(project);
-            clearTimeout(timeout);
-            U.isProjectModified = false;
-            SetRootFieldAction.new('isLoading', false);
-        } catch (error: any) {
-            U.alert('e', 'Error while Saving Project', error.message);
-            SetRootFieldAction.new('isLoading', false);
-            return; // Non chiudere se il salvataggio fallisce
-        }
+        const saved = await saveProjectWithFeedback(project);
+        if (!saved) return; // Non chiudere se il salvataggio fallisce
     }
 
     // Disabilita il prompt del browser e chiudi
