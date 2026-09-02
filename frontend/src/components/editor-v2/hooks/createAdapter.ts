@@ -84,6 +84,10 @@ import { draftableAttrs, draftableRefs, draftTargets } from '../../../jjform';
 import { isAutoIdAttr } from '../../../jjform/shape';
 import { candidatesFor, childCount, containmentChain, nextIdValue } from './createDraw';
 import { getMetaclassInfo, type MetaclassInfo } from './useEditorMode';
+// Two functions, both already exported and both already called this way from
+// `ContextMenu.tsx:371-372`. Importing them adds a caller; it does NOT modify the
+// sync layer, and no file of CLAUDE.md §3.1 is touched by this slice.
+import { createVertexForObject, createCompositionEdgeForObjects } from '../sync/canvasToJjom';
 
 type Idlookup = Record<string, any>;
 
@@ -360,6 +364,114 @@ function writeApart(objectId: string, entries: Array<[string, readonly string[]]
 }
 
 /**
+ * Give a freshly created containment child the two v2-flow artifacts it needs to be
+ * on the canvas: its `DVertex`, and the composition `DEdge` from the parent.
+ *
+ * ── Why this is here at all ───────────────────────────────────────────────────
+ *
+ * MEASURED (VIEW1, 2026-09-02): a child created from the Data Manager existed in the
+ * model — the chip showed, `editions [2]` counted right — and had NO node and NO edge
+ * on the canvas, while the same child made on the canvas had both. The model is not
+ * where the two paths differ; the graph is. `useJjomSync` Step 2 iterates
+ * `rawModel.objects` (`useJjomSync.ts:759`) and a contained instance is deliberately
+ * NOT in that collection: `DObject`'s constructor appends to `model.objects` only when
+ * the father is the `DModel`, and to the slot's `values` otherwise
+ * (`joiner/classes.ts:774-784`, quoted at `ConformanceValidator.ts:525-528`). So the
+ * canvas never had a `DVertex` to draw — it was not failing to draw one.
+ *
+ * That collection membership is RATIFIED as the visit perimeter (CRUD3 F2,
+ * `ConformanceValidator.ts:534`): a nested instance is a legitimate target, not
+ * something the walkers walk. Widening it — teaching the renderer to auto-place a
+ * containment child it finds without a vertex — would mean a critical-zone change to
+ * `useJjomSync` plus a Step 4 that re-fires on slot-value writes, which CLAUDE.md §3.5
+ * forbids in those words. So the producer creates the artifacts instead, which is what
+ * every other create path in this codebase already does.
+ *
+ * ── Same shape as the precedent, deliberately ─────────────────────────────────
+ *
+ * `ContextMenu.tsx:347-373` (`syncChildToFlow`) does exactly this after
+ * `LValue.addObject`, and this is that function's logic on this host: resolve the
+ * model's v2-flow graph, cascade from the parent's vertex, create vertex then edge.
+ * The graph is resolved by FIRST MATCH on `state.graphs` filtered by
+ * `model === modelId && graphStyle === 'v2-flow'` — the same idiom as
+ * `ContextMenu.tsx:356` and `useJjomSync.ts:282`, and there is no other notion to use:
+ * no `activeGraph` / `focusedGraph` / `currentGraph` exists anywhere in the tree
+ * (verified with a positive control on the same search).
+ *
+ * The two limit cases, both measured:
+ *  - ZERO graphs (a model whose tab was never opened) — returns without writing. The
+ *    child keeps the correct model shape and simply has no canvas yet.
+ *  - N graphs — first match wins, as in both existing call sites. `state.graphs` may
+ *    even list the SAME id more than once (measured: 2 entries, 1 distinct graph), so
+ *    "how many entries" is not "how many graphs".
+ *
+ * ── No outer TRANSACTION ──────────────────────────────────────────────────────
+ *
+ * Called AFTER `addObject` has returned, never around it. `createVertexForObject` runs
+ * `DVertex.new` bare and `createCompositionEdgeForObjects` opens its own TRANSACTION
+ * around `DVoidEdge.new2`; both are used exactly this way from the ContextMenu. Nothing
+ * here wraps them, so the nesting hazard of rule 12 / §3.3 is not reintroduced.
+ *
+ * Best-effort throughout: the model write has already succeeded when this runs, and a
+ * canvas that cannot be updated must not turn a good create into a failed one.
+ */
+function syncChildToFlow(
+    modelId: string,
+    parentId: string,
+    childId: string,
+    childKey: string,
+): void {
+    try {
+        const state: any = store.getState();
+        const idl: Idlookup = state?.idlookup ?? {};
+
+        const graphIds: string[] = state?.graphs ?? [];
+        let graphId: string | null = null;
+        for (const id of graphIds) {
+            const g = idl[id];
+            if (g?.model === modelId && g.graphStyle === 'v2-flow') { graphId = id; break; }
+        }
+        if (!graphId) return;   // no v2-flow graph yet — nothing to draw on
+
+        const subEls: string[] = idl[graphId]?.subElements ?? [];
+        // The same scan `canvasToJjom.findVertexIdForObject` makes (`:1347-1357`, keyed on
+        // the DObject id in `DVertex.model`). Inlined rather than exported from the
+        // critical-zone file, and it is what makes this idempotent: a child that already
+        // has a vertex gets no second one.
+        const vertexOf = (objectId: string): string | null => {
+            for (const id of subEls) {
+                const ge = idl[id];
+                if (ge?.className === 'DVertex' && ge.model === objectId) return id;
+            }
+            return null;
+        };
+        if (vertexOf(childId)) return;
+
+        const parentVertexId = vertexOf(parentId);
+        // Cascade to the right of the parent, one row per sibling that is already drawn,
+        // so a second child does not land on top of the first. `EditorV2`'s own
+        // `createCompositionChild` staggers the same way (`:2876`).
+        let x = 0, y = 0;
+        if (parentVertexId) {
+            const pv = idl[parentVertexId];
+            const siblings: string[] = (LPointerTargetable.fromPointer(parentId) as any)
+                ?.['$' + childKey]?.__raw?.values ?? [];
+            const drawn = siblings.filter((sid: any) =>
+                typeof sid === 'string' && sid !== childId && !!vertexOf(sid)).length;
+            x = (pv?.x ?? 0) + (pv?.w ?? 200) + 80;
+            y = (pv?.y ?? 0) + drawn * 80;
+        }
+
+        createVertexForObject(graphId, childId, x, y);
+        // Needs both vertices in `graph.subElements`; the child's was just created, and the
+        // parent's absence is the function's own no-op case (it warns and returns null).
+        createCompositionEdgeForObjects(graphId, parentId, childId, childKey);
+    } catch (err) {
+        console.warn('[createAdapter] syncChildToFlow failed', { modelId, parentId, childId, childKey, err });
+    }
+}
+
+/**
  * Create ONE instance — the `create` primitive of `WriteCtx` (S4), on this host.
  *
  * Split out of `applyCreate` unchanged: same `addObject`, same arguments, same
@@ -429,6 +541,9 @@ export function createInstance(
             return { ok: false, id: null, reason: 'the host created no instance' };
         }
         writeApart(created.id as string, apart);
+        // A CONTAINED child only: a root already gets its vertex from `useJjomSync` Step 2,
+        // which iterates `model.objects` and therefore sees roots and only roots.
+        if (ownerId && childKey) syncChildToFlow(modelId, ownerId, created.id as string, childKey);
         U.isProjectModified = true;
         return { ok: true, id: created.id as string };
     } catch (err) {
