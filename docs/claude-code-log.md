@@ -13,6 +13,29 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-03 — docs(log): §6.1 chiusura batch 2026-09-02 (BOOT1, VIEW1, VER2, SAVE2, DOC2)
+**Prompt**: §6.1 di chiusura del batch del 2 settembre a repo fermo: spostare verbatim le otto
+entry dalle cinque inbox al log attivo, cancellare le inbox, committare il checkpoint del 3/9 e
+questo prompt, accertare (non chiudere) lo stato di EGO1 in indice. Nessun file applicativo.
+**Files touched**: `docs/claude-code-log.md` + `docs/log-inbox/` cinque file rimossi
+(`c1118d86c`), `docs/sessioni/sessione_2026-09-03_ricostruzione.md` +
+`docs/prompts/claude_2026-09-03_1143_chiusura_61_inbox_e_checkpoint.md` (`d9e2480cb`).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: (a)
+**Regressions**: no — nessun file di codice toccato. `check:docs` 3/3 con le stesse 2 warning
+pre-esistenti (i due `Corregge: 2026-09-01 23:20` di SAVE1-bis e DIRTY1) prima e dopo ogni
+commit; nessuna warning nuova dalle otto entry spostate.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — solo documentazione.
+**Smoke visivo**: non applicabile — nessun pixel cambia.
+**Notes**: Due premesse del prompt smentite dalla misura, entrambe innocue. (1) Il log attivo
+teneva 10 entry, non 9: attivo 10 -> 18 con le otto, non 17; rotazione comunque saltata
+(soglia 40). (2) **EGO1: l'indice e' vuoto** — `git diff --cached` a zero al gate, nessun
+revert staged da accertare; l'hard stop del punto 4 non ha oggetto. Entry spostate verbatim,
+nessun emendamento; nessun file di appoggio, nessuna copia del log (RC-13-bis).
+**Prompt document name**: 2026-09-03 11:43
+
 ## 2026-09-02 — fix(topbar): l'ultimo salvataggio si legge da ogni tab (DOC2)
 **Prompt**: DOC2 punto 4 — l'indicatore di SAVE2 sta nella tab sbagliata: l'autosave lo innesca il canvas, ma lo stato si legge solo dal Data Manager.
 **Files touched**: `frontend/src/components/topbar/LastSavedIndicator.tsx` (nuovo), `frontend/src/common/libraries/lastSaved.ts`, `frontend/src/common/libraries/__tests__/lastSaved.test.ts`, `frontend/src/components/abstract/tabs/InstanceManagerTab.tsx`, `frontend/src/components/abstract/tabs/instanceManagerTab.scss`, `frontend/src/pages/components/Navbar.tsx`, `frontend/src/pages/components/navbar.scss` — commit `defb3a112`.
