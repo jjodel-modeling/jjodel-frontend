@@ -63,6 +63,11 @@ export interface FormFieldDescriptor {
     slotId: string;
     /** Feature name. The key of `FormSpec.widgets` / `.features` / `.basic`. */
     name: string;
+    /**
+     * Printed label when `FormSpec.labels` names this feature (R-VP-8); absent = the
+     * feature name. Display only: every write, offer and diagnostic keeps `name`.
+     */
+    label?: string;
     /** Resolved widget: derived from the type, then overridden by FormSpec.widgets. */
     widget: WidgetKind;
     /** Widget the TYPE alone would have produced, the mockup's authoring panel flags
@@ -375,6 +380,9 @@ export function describeSlot(slot: any, spec?: FormSpec, offer?: FieldOffer): Fo
         maxLength,
         featureId: String(feature?.id ?? ''),
         annotations: parseRowViewAnnotations(annotationSources),
+        // Only when the author said so: an absent key keeps the descriptor's shape
+        // identical to today's, which is what the structural test fixtures compare.
+        ...(spec?.labels?.[name] !== undefined ? { label: spec.labels[name] } : {}),
     };
 }
 
@@ -418,6 +426,11 @@ export function describeSlots(slots: any[], spec?: FormSpec, offer?: FieldOffer)
         // the form has, not everything the metaclass has. A diagnostic on a hidden feature is
         // still counted, in the residue (formDiagnostics).
         if (spec?.features?.[d.name] === 'hidden') continue;
+        // `FormSpec.hidden` (R-VP-8): the same exclusion for ANY feature, attributes
+        // included, and explicit by construction. Two conditions on purpose: `features`
+        // stays the channel for references and containment, `hidden` is not its
+        // replacement. Omission from `order` or `basic` never lands here (R-FRM-1).
+        if (spec?.hidden?.includes(d.name)) continue;
         out.push(d);
     }
     return out;

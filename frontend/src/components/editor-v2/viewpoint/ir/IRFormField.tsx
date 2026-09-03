@@ -452,7 +452,7 @@ export function IRFormField({ objectId, field, offer, diagnostics, dirty, onComm
                     theme-aware: the label does not know the theme, and a tooltip repeating a
                     value that is visible two centimetres away costs nothing. */}
                 <label className="ir-field__label" htmlFor={fieldId}
-                       title={field.isDerived ? 'derived' : multiplicityLabel(field)}>{field.name}</label>
+                       title={field.isDerived ? 'derived' : multiplicityLabel(field)}>{field.label ?? field.name}</label>
                 {/* Required is a 4px cyan dot, never a red asterisk: red is reserved for
                     diagnostics, so a field that is merely mandatory must not look wrong. */}
                 {field.isRequired && (

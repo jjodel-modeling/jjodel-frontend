@@ -53,6 +53,7 @@ import { setObjectName } from './formWrite';
 import { useNodeProblems } from '../../problems/useNodeProblems';
 import { collectFormDiagnostics } from './formDiagnostics';
 import { buildFormSections } from './formSections';
+import { orderFields, resolveFormSpec, type FormHost } from './formHosts';
 import type { FormSpec, FormTheme } from './irTypes';
 import type { LayoutAnnotations } from '../../../../jjform';
 import {
@@ -77,6 +78,12 @@ export interface IRFormProps {
     objectId: string;
     /** Host default when the view declares no theme. */
     defaultTheme?: FormTheme;
+    /**
+     * Where this form is mounted (R-VP-12). Picks the `FormSpec.hosts` override the
+     * spec carries for it, if any; absent = 'rail', which never has one, so a mount
+     * that does not say is the base spec, as today.
+     */
+    host?: FormHost;
 }
 
 /**
@@ -167,7 +174,7 @@ function FormCell({ layout, children }: { layout: LayoutField; children: React.R
     );
 }
 
-export function IRForm({ objectId, defaultTheme = 'plain' }: IRFormProps) {
+export function IRForm({ objectId, defaultTheme = 'plain', host = 'rail' }: IRFormProps) {
     const resolution = useIRFormView(objectId);
 
     // The L-proxy is read inside the render on purpose: `useIRFormView`'s signature
@@ -179,7 +186,12 @@ export function IRForm({ objectId, defaultTheme = 'plain' }: IRFormProps) {
         [objectId, resolution],
     );
 
-    const spec: FormSpec | undefined = resolution?.compiled?.formSpec ?? undefined;
+    // The ONE point where the spec enters the form (referto R-VP slice 1, §3.1): the
+    // host's override is folded in here, and nothing downstream sees `hosts`.
+    const spec: FormSpec | undefined = useMemo(
+        () => resolveFormSpec(resolution?.compiled?.formSpec ?? undefined, host),
+        [resolution, host],
+    );
     const viewKey = resolution?.compiled?.viewId ?? 'default';
 
     /**
@@ -306,7 +318,14 @@ export function IRForm({ objectId, defaultTheme = 'plain' }: IRFormProps) {
         [slots, spec, resolution, offer, annotationSignature],
     );
 
-    const visible = mode === 'advanced' ? fields : fields.filter(f => isBasicField(f, spec));
+    // `order` is applied HERE, on the visible fields and before `buildFormSections`,
+    // never inside `describeSlots`: the section partition keeps incoming order, so the
+    // ordering lands inside each section (R-VP-13), and `layoutAnnotations` /
+    // `focusFirstOf` below inherit it deliberately rather than by accident.
+    const visible = orderFields(
+        mode === 'advanced' ? fields : fields.filter(f => isBasicField(f, spec)),
+        spec,
+    );
 
     /**
      * Rung 2 of the width ladder, keyed by feature name.

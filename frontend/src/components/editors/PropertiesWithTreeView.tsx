@@ -1107,7 +1107,7 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
                         )}
 
                         {inspectorTab === 'form' && formSubjectIsObject
-                            ? <IRForm objectId={formSubjectId} />
+                            ? <IRForm objectId={formSubjectId} host="rail" />
                             : <Info
                                 mode={isFloating ? 'tab' : mode}
                                 overrideSelected={effectivePin}

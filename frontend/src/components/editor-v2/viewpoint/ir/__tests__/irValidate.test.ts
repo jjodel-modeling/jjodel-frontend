@@ -264,6 +264,25 @@ describe('validateIR — form (additive optional field)', () => {
         expect(validateIR('v-no-form', noForm)).toEqual({ ok: true });
     });
 
+    it('accepts `order`, `labels`, `hidden` and a `hosts.manager` override (R-VP-8, R-VP-12)', () => {
+        clearCompileCache();
+        const r = validateIR('v-form-hosts', withForm({
+            widgets: { entryAction: 'textarea' },
+            order: ['kind', 'name'],
+            labels: { entryAction: 'On entry' },
+            hidden: ['timeout'],
+            hosts: { manager: { widgets: { kind: 'text' }, hidden: ['tags'], order: ['name'] } },
+        }));
+        expect(r).toEqual({ ok: true });
+    });
+
+    it('rejects a string `op` nested inside `hosts.manager.widgets`, same scan, same depth rule', () => {
+        clearCompileCache();
+        const r = validateIR('v-form-hosts-op', withForm({ hosts: { manager: { widgets: { op: 'text' } } } }));
+        expect(r.ok).toBe(false);
+        if (!r.ok) expect(r.error).toContain('unknown predicate operator');
+    });
+
     it('rejects a form carrying a string `op`, which the predicate scan reads as an operator', () => {
         clearCompileCache();
         const r = validateIR('v-form-op', withForm({ theme: 'plain', widgets: { op: 'text' }, filter: { op: 'contains' } }));

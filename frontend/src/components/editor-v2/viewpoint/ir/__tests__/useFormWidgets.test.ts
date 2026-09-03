@@ -424,6 +424,42 @@ describe('FormSpec.features', () => {
     });
 });
 
+// --- FormSpec.hidden / FormSpec.labels (R-VP-8) ------------------------------
+
+describe('FormSpec.hidden and FormSpec.labels', () => {
+    const three = () => [
+        attr('name', 'EString', { lowerBound: 1 }),
+        attr('timeout', 'EInt'),
+        slot({ name: 'outgoing', featureClass: 'DReference', typeName: 'Transition', upperBound: -1 }),
+    ];
+
+    it('`hidden` drops an ATTRIBUTE too, which `features` never could, in both modes', () => {
+        const spec: FormSpec = { hidden: ['timeout'] };
+        const ds = describeSlots(three(), spec);
+        expect(ds.map(d => d.name)).toEqual(['name', 'outgoing']);
+        expect(ds.filter(d => isBasicField(d, spec)).map(d => d.name)).toEqual(['name']);
+    });
+
+    it('omission never hides: a field absent from `order` and `basic` is still described', () => {
+        const spec: FormSpec = { order: ['outgoing'], basic: ['name'] };
+        expect(describeSlots(three(), spec).map(d => d.name)).toEqual(['name', 'timeout', 'outgoing']);
+    });
+
+    it('the two exclusions add up, and a `hidden` name that is no feature is ignored', () => {
+        const spec: FormSpec = { hidden: ['timeout', 'ghost'], features: { outgoing: 'hidden' } };
+        expect(describeSlots(three(), spec).map(d => d.name)).toEqual(['name']);
+    });
+
+    it('`labels` sets the printed label only; the descriptor keeps `name` and its shape otherwise', () => {
+        const spec: FormSpec = { labels: { timeout: 'Time-out (s)' } };
+        const [plain, labelled] = [describeSlot(attr('timeout', 'EInt'))!, describeSlot(attr('timeout', 'EInt'), spec)!];
+        expect(labelled.label).toBe('Time-out (s)');
+        expect(labelled.name).toBe('timeout');
+        expect(plain).not.toHaveProperty('label');
+        expect({ ...labelled, label: undefined }).toEqual({ ...plain, label: undefined });
+    });
+});
+
 // --- Basic / Advanced --------------------------------------------------------
 
 describe('isBasicField', () => {

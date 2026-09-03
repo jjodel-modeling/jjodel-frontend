@@ -263,7 +263,48 @@ export interface FormSpec {
     features?: Record<string, FeatureTreatment>;
     /** Feature names visible in Basic. Absent = heuristic `lowerBound >= 1`. */
     basic?: string[];
+    /**
+     * Feature names in display order (2026-09-03, R-VP-8, R-VP-13). `order` sorts the
+     * fields INSIDE the section their type assigns them; it moves none across sections
+     * and removes none: the names not listed follow the listed ones in today's order.
+     * The section partition of `formSections.buildFormSections` (attributes, references,
+     * children) is untouched, and R-FRM-1 holds: ordering never filters.
+     */
+    order?: string[];
+    /**
+     * Label override per feature name (R-VP-8). Absent = the feature name, as today.
+     * Only the printed label changes: writes, offers and diagnostics keep the name.
+     */
+    labels?: Record<string, string>;
+    /**
+     * Feature names NOT rendered in this form (R-VP-8). EXPLICIT: a feature is hidden
+     * only when listed here (or as `features: 'hidden'`, which stays the channel for
+     * references and containment); omission from `order` or `basic` never hides
+     * (R-FRM-1). Applied in both modes, in the same place as `features: 'hidden'`.
+     */
+    hidden?: string[];
+    /**
+     * Per-host override (2026-09-03, R-VP-12), resolved field by field over this base
+     * spec by `formHosts.resolveFormSpec`: the manager's drawer form → base `FormSpec`
+     * → type-derived default. Only `manager` is admitted in this slice; the type
+     * excludes the rail and the node form on purpose, not by convention. The word is
+     * `hosts`, never `surfaces`: `VertexViewIR.surface` (R-FORM-3, Q5) is a different,
+     * ratified thing, and the two must not sit one letter apart.
+     */
+    hosts?: { manager?: FormHostOverride };
 }
+
+/**
+ * What a host may override in the base `FormSpec` (R-VP-12): every key but `hosts`
+ * itself, each optional. Merge rule (see `formHosts.resolveFormSpec`): the records
+ * `widgets`, `features`, `labels` merge per feature with the override winning; the
+ * lists `order`, `hidden`, `basic` and the scalars `theme`, `labelPlacement` replace
+ * the base value whole when present.
+ *
+ * `widgets` here reaches the drawer form only; the manager table does not map rung 0
+ * yet (R-VP-9, slice 1b).
+ */
+export type FormHostOverride = Partial<Omit<FormSpec, 'hosts'>>;
 
 /**
  * ManagerSpec (2026-09-03, R-VP-3) — OPTIONAL supplement declaring how the DATA MANAGER

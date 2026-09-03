@@ -2999,7 +2999,7 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                             </div>
                         </header>
 
-                        <IRForm objectId={formSubjectId ?? subjectId} />
+                        <IRForm objectId={formSubjectId ?? subjectId} host="manager" />
 
                         {/* The depth rule of 12c, and it is ONE comparison:
                             `rendersInline(formDepth)`. At depth 0 a contained child is
@@ -3033,7 +3033,7 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                                                         {crumbLabel(navStepOf(idlookup, childId) ?? { id: childId, name: '', cls: slot.of, childKey: null })}
                                                         <i className="bi bi-box-arrow-in-right" aria-hidden="true" />
                                                     </button>
-                                                    <IRForm objectId={childId} />
+                                                    <IRForm objectId={childId} host="manager" />
                                                 </div>
                                             ) : (
                                                 <button
