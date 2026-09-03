@@ -2838,6 +2838,65 @@ locale sarebbe un secondo canvas, che è esattamente ciò che 13a si era vietata
 sufficienza del sostituto, non rimandate.
 
 
+## Serie R-VP — viewpoint vs annotazioni per il Data Manager (ratifiche 2026-09-03)
+
+Memo: `docs/ratifiche/claude_2026-09-03_1441_memo_ratifica_viewpoint_vs_annotazioni.md`.
+Report per R-VP-9..13: `docs/discovery/discovery_2026-09-03_rvp_slice1_manager_section.md`.
+
+**R-VP-1** (2026-09-03) — **Criterio di collocazione**: nel metamodello ciò che cambia significato o
+validità dei dati; nel viewpoint ciò che cambia solo come i dati vengono mostrati o editati. Il
+criterio è semantico, non visuale.
+
+**R-VP-2** (2026-09-03) — **Destinazione delle chiavi `jjodel/*`**: `unit`, `min`, `max` → tipo
+scalare raffinato; `renderer`, `multiline` → viewpoint, nella libreria di row view condivisa.
+
+**R-VP-3** (2026-09-03) — **Il manager non ha un viewpoint proprio.** I suoi aspetti visuali sono una
+sezione della stessa view per classe, additiva su ir-1.3 nello stile del `FormSpec`. Viewpoint
+separato escluso.
+
+**R-VP-4** (2026-09-03) — **Il viewpoint è override, mai prerequisito**: il manager funziona col
+default derivato dal tipo quando la sezione non c'è.
+
+**R-VP-5** (2026-09-03) — **Ladder a tre gradini** (viewpoint, tipo, default): il gradino annotazione
+sparisce per cancellazione, senza convertitore né migrazione (nessun progetto usa le `jjodel/*`).
+
+**R-VP-6** (2026-09-03) — **Encoding annotazione congelato**: nessuna nuova chiave `jjodel/*`, per
+nessun motivo. Un prompt che ne avesse bisogno si ferma e colloca secondo R-VP-1.
+
+**R-VP-7** (2026-09-03) — **Nessun vincolo di major**: sezione manager additiva senza bump; tipi
+raffinati con bump `DState.version.n` come per TextStyle; rimozione senza migrazione.
+
+**R-VP-8** (2026-09-03) — **Perimetro della customizzazione della form del manager**: scegliere quali
+campi, in che ordine, in quali sezioni, con quale renderer e quale label; mai disegnare la griglia
+(regola FL intatta: nessuna larghezza per campo). Forma: override per host dentro lo stesso
+`FormSpec`; il base `FormSpec` si estende con `order`, `labels`, `hidden`. «Quali campi» passa per
+`hidden` esplicito, mai per omissione: R-FRM-1 (i compartimenti ordinano e intitolano, non filtrano,
+addendum FormSpec `:102`) resta intatta. Customizzazione di sessione dell'utente fuori dall'IR.
+
+**R-VP-9** (2026-09-03) — **Il rung 0 del manager è la slice 1b.** `instanceTable.ts` passa alla
+ladder il solo `rendererOverride`, mai `viewRenderer`: `hosts.manager.widgets` vale per la form del
+drawer soltanto, dichiarato nel tipo. Portare il rung 0 alla tabella è una slice a sé, con il
+renderer risolto per classe passato come parametro e `instanceTable.ts` puro.
+
+**R-VP-10** (2026-09-03) — **`ManagerSpec` è solo `columns`.** Niente `sort` (nel manager non esiste
+ordinamento: sarebbe funzionalità nuova). `columns` ordina e porta in testa; le non citate seguono
+nell'ordine di oggi e restano visibili. Nascondere resta il canale unico di sessione.
+
+**R-VP-11** (2026-09-03) — **Quale view porta `manager`**: solo le view senza `predicate`, per
+specificità decrescente come `resolveIRView`; una con predicato viene ignorata con un
+`console.warn` una volta. Lettura dall'indice (`index.byMetaclass`), senza `irCompile` né
+`CompiledView`.
+
+**R-VP-12** (2026-09-03) — **Il nome è `hosts`, non `surfaces`.** `VertexViewIR.surface` (Q5,
+R-FORM-3) è ratificata e definitiva; gli host della form (rail, nodo-form, manager) usano la parola
+già in uso nel codice: `FormSpec.hosts?: { manager?: FormHostOverride }`,
+`FormHostOverride = Partial<Omit<FormSpec, 'hosts'>>`. Solo `manager` ammesso in questa slice.
+
+**R-VP-13** (2026-09-03) — **`order` ordina dentro il gruppo strutturale**, riordinando `visible`
+prima di `buildFormSections`; non sposta di sezione, non toglie nessuno; i non citati seguono i
+citati nell'ordine di oggi.
+
+
 ## Superate
 
 - **D3** (2026-07-26, routing congelato in v1) — superata da E-route il 2026-08-06.
