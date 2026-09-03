@@ -11,8 +11,13 @@ dal log e non dichiarato a voce, è scritto.
 ## Stato a fine sessione
 
 **HEAD `9a1090a82`** (2026-09-02 17:02, «docs(log-inbox): le tre entry di DOC2»), allineato a
-origin, working tree pulito a parte lo staged della corsia EGO1 (revert di un discovery, -295
-righe, constatato e lasciato dalla chiusura VER1/C6). **332 commit dal 28/8**: 25 il 28, 26 il
+origin, working tree pulito e **indice vuoto**. (Rettifica del 3/9 pomeriggio: la prima stesura
+riportava un revert staged della corsia EGO1, -295 righe, citato dalla entry di chiusura VER1/C6
+del 2/9; il gate di questa stessa sessione aveva già misurato `git status --porcelain` vuoto, e
+la §6.1 del 3/9 lo ha confermato. Il file
+`docs/discovery/discovery_2026-09-01_ego1_centraggio_respiro.md` è intatto a HEAD, 192 righe,
+ultimo tocco `76632dc76`: nulla è andato perso; chi ha svuotato l'indice fra il 2/9 sera e il 3/9
+mattina non risulta dal reflog di HEAD, perché un unstage non lo muove.) **332 commit dal 28/8**: 25 il 28, 26 il
 29, 111 il 30, 52 il 31, 76 l'1/9, 42 il 2/9. Diff `758aded1b..HEAD`: 416 file, +81619 / -5662.
 
 Il lavoro è arrivato per due canali distinti, e il Project Knowledge non ne ha visto nessuno:
@@ -170,8 +175,8 @@ commit con contenuto diverso dal messaggio (`50de03252`, `f278cf4fb`, `ed5c80daa
 ## Bug nuovi / Todo
 
 **Alta**
-1. **§6.1 pendente**: otto entry in cinque inbox (`boot1`, `view1`, `ver2`, `save2`, `doc2`) da
-   spostare nel log; revert staged di EGO1 da decidere.
+1. **§6.1**: chiusa il 3/9 (`c1118d86c`, `d9e2480cb`, `c6f1f3c37`); il log attivo aveva 10
+   entry, non 9, e ne ha ora 19. EGO1: nessun revert in indice, vedi la rettifica in testa.
 2. **Finestra 300 ms sui save** (VER2): chiusura via (e), `COMMIT` forzato, è modifica core e
    richiede go-ahead. Il regime della transazione sempre aperta merita una corsia sua.
 3. **Figlio creato senza canvas aperto resta invisibile** (VIEW1/BOOT1): chiuderlo esce dal
@@ -212,7 +217,7 @@ Nessuno in questa sessione. Gli ultimi col naming `claude_<data>_<ora>_` in `doc
 
 ## Prossimi passi
 
-1. Chiusura §6.1: spostare le otto entry dalle inbox, decidere EGO1, verificare `check:docs`.
+1. ~~Chiusura §6.1~~ fatta il 3/9. Push dal Mac dei tre commit docs.
 2. Riscrivere `contesto_progetto.md` a partire da questo file (indice, non duplicato).
 3. Decidere la via (e) per VER2 e la corsia sulla transazione sempre aperta.
 4. DOC1: i numeri stantii e `CLAUDE.md` §6.1 / `P1..P9`.
