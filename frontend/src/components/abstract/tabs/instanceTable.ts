@@ -24,6 +24,7 @@
 
 import { findFeatureRaw, makeDrawReadCtx } from '../../editor-v2/viewpoint/ir/irReadCtx';
 import { readRowViewAnnotations } from '../../editor-v2/nodes/rowViewAnnotations';
+import type { ManagerSpec } from '../../editor-v2/viewpoint/ir/irTypes';
 import { optionSlot } from '../../../jjform';
 import {
     detectValueRenderer,
@@ -107,6 +108,43 @@ export function tableColumns(cls: ClassShape): TableColumn[] {
         readOnly: f.readOnly,
         many: f.many,
     }));
+}
+
+/**
+ * Le colonne riordinate secondo la view della metaclasse (R-VP-3, R-VP-10).
+ *
+ * ORDINA, NON FILTRA. Le citate in `spec.columns` vengono in testa, nell'ordine dato; le
+ * altre seguono nell'ordine di ingresso, e restano tutte nell'array. Chi toglie una
+ * colonna e' la riduzione automatica (`emptyColumnKeys`, `duplicateNameColumnKeys`) con
+ * sopra la scelta di sessione (`shownColumnsWith`), e deve restare l'unico canale: un
+ * secondo posto in cui una colonna puo' sparire e' esattamente cio' che il commento di
+ * `InstanceManagerTab` su `hiddenColumnKeys` esiste per rifiutare.
+ *
+ * Una PERMUTAZIONE, quindi: stesso insieme, ordine diverso. E' la ragione per cui questa
+ * funzione puo' stare PRIMA della riduzione senza cambiarne l'esito — `emptyColumnKeys` e
+ * `duplicateNameColumnKeys` misurano le righe, non le posizioni.
+ *
+ * Un nome che non corrisponde a nessuna colonna e' ignorato: una view resta salvata per
+ * sempre e la metaclasse puo' perdere una feature dopo che la view e' stata scritta. Il
+ * `console.warn` sta nel chiamante, non qui: questo modulo e' puro e girerebbe a ogni
+ * render. Un nome ripetuto in `spec.columns` conta la prima volta, come per un `Set`.
+ *
+ * `spec` assente, `columns` assente o vuoto: l'input, per identita' di riferimento.
+ */
+export function orderColumns(columns: TableColumn[], spec?: ManagerSpec | null): TableColumn[] {
+    const wanted = spec?.columns;
+    if (!wanted || wanted.length === 0) return columns;
+    const byKey = new Map(columns.map(col => [col.key, col]));
+    const lead: TableColumn[] = [];
+    const taken = new Set<string>();
+    for (const key of wanted) {
+        const col = byKey.get(key);
+        if (!col || taken.has(key)) continue;
+        taken.add(key);
+        lead.push(col);
+    }
+    if (lead.length === 0) return columns;
+    return [...lead, ...columns.filter(col => !taken.has(col.key))];
 }
 
 /** Display text of one raw slot value, for a table cell.

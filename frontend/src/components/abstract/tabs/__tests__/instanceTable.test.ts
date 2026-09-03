@@ -23,6 +23,7 @@ import { describe, it, expect } from 'vitest';
 import { attrShape, classifyAttrType, featureFlags, referencedBy } from '../../../editor-v2/hooks/shapeDraw';
 import {
     filterRows,
+    orderColumns,
     slotShapeFor,
     tableColumns,
     tableRow,
@@ -263,6 +264,68 @@ describe('tableColumns', () => {
         expect(by.tags).toMatchObject({ many: true, multiplicity: '0..*' });
         expect(by.computed).toMatchObject({ derived: true, readOnly: true });
         expect(by.cfg).toMatchObject({ kind: 'ref', typeName: 'Config', required: true });
+    });
+});
+
+// --- ManagerSpec.columns (R-VP-3, R-VP-10) ----------------------------------
+
+/**
+ * `orderColumns` ORDINA e non filtra, ed e' l'unica cosa che questi casi devono
+ * dimostrare: dopo ogni chiamata l'insieme delle chiavi e' lo stesso di prima, qualunque
+ * cosa dica lo spec. E' quel fatto a rendere legittimo chiamarla PRIMA della riduzione
+ * automatica nel tab — se togliesse una colonna, `emptyColumnKeys` misurerebbe un insieme
+ * diverso e ci sarebbero due posti in cui una colonna sparisce.
+ */
+describe('orderColumns — ManagerSpec.columns', () => {
+    const keys = (cols: ReturnType<typeof tableColumns>) => cols.map(c => c.key);
+    const ALL = ['name', 'tint', 'threshold', 'tags', 'computed', 'cfg'];
+
+    it('senza spec restituisce l\'input, per identita\' di riferimento', () => {
+        const cols = tableColumns(Sensor);
+        expect(keys(cols)).toEqual(ALL);              // controllo positivo: la fixture c'e'
+        expect(orderColumns(cols)).toBe(cols);
+        expect(orderColumns(cols, null)).toBe(cols);
+        expect(orderColumns(cols, {})).toBe(cols);
+        expect(orderColumns(cols, { columns: [] })).toBe(cols);
+    });
+
+    it('porta in testa le citate, nell\'ordine dato, e lascia le altre dopo', () => {
+        const out = orderColumns(tableColumns(Sensor), { columns: ['cfg', 'threshold'] });
+        expect(keys(out)).toEqual(['cfg', 'threshold', 'name', 'tint', 'tags', 'computed']);
+    });
+
+    it('NON filtra: l\'insieme delle chiavi e\' invariato, spec o non spec', () => {
+        const out = orderColumns(tableColumns(Sensor), { columns: ['cfg'] });
+        expect(out).toHaveLength(ALL.length);
+        expect([...keys(out)].sort()).toEqual([...ALL].sort());
+    });
+
+    it('ignora un nome che non e\' una colonna, e ordina comunque il resto', () => {
+        // Una view resta salvata per sempre: la metaclasse puo' perdere `ports` dopo che
+        // la view e' stata scritta, e `ports` non e' mai stata una colonna (e' un figlio).
+        const out = orderColumns(tableColumns(Sensor), { columns: ['ports', 'tags', 'nonesiste'] });
+        expect(keys(out)).toEqual(['tags', 'name', 'tint', 'threshold', 'computed', 'cfg']);
+    });
+
+    it('un nome ripetuto conta una volta sola', () => {
+        const out = orderColumns(tableColumns(Sensor), { columns: ['tags', 'cfg', 'tags'] });
+        expect(keys(out)).toEqual(['tags', 'cfg', 'name', 'tint', 'threshold', 'computed']);
+        expect(out).toHaveLength(ALL.length);
+    });
+
+    it('con soli nomi sconosciuti restituisce l\'input invariato', () => {
+        const cols = tableColumns(Sensor);
+        expect(orderColumns(cols, { columns: ['ports', 'nonesiste'] })).toBe(cols);
+    });
+
+    it('`name` si ordina come le altre — e\' una colonna vera quando la classe la dichiara', () => {
+        // La `name` BLOCCATA e' `NAME_COLUMN_KEY`, che la tabella stampa a parte e che non
+        // compare in `tableColumns`. Questa `name` e' l'attributo omonimo di Sensor: che
+        // porti lo stesso nome non la rende la stessa colonna.
+        const out = orderColumns(tableColumns(Sensor), { columns: ['name'] });
+        expect(keys(out)).toEqual(ALL);               // era gia' prima: nessun movimento
+        const out2 = orderColumns(tableColumns(Sensor), { columns: ['tint', 'name'] });
+        expect(keys(out2)).toEqual(['tint', 'name', 'threshold', 'tags', 'computed', 'cfg']);
     });
 });
 

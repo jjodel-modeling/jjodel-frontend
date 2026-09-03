@@ -266,6 +266,44 @@ export interface FormSpec {
 }
 
 /**
+ * ManagerSpec (2026-09-03, R-VP-3) — OPTIONAL supplement declaring how the DATA MANAGER
+ * shows the instances of this metaclass. The manager has no viewpoint of its own: its
+ * visual aspects are a section of the same per-class view, additive over ir-1.3 in the
+ * style of `FormSpec`.
+ *
+ * Additive: no irVersion bump and no VersionFixer migration, same precedent as `form`
+ * and `structure`. Since the saved IR has no VersionFixer at all (R-B9), every literal
+ * below is DEFINITIVE once written.
+ *
+ * CONSTRAINT — the same one `FormSpec` carries, for the same reason: no key named `op`
+ * with a string value, at any depth. `irValidate.findUnknownPredicateOp` walks the whole
+ * ir and would reject the entire view with a message about predicates.
+ *
+ * OVERRIDE, NEVER PREREQUISITE (R-VP-4): a manager whose class declares no `manager`
+ * works on the type-derived default, which is what every project has today.
+ */
+export interface ManagerSpec {
+    /**
+     * Feature names, in the order they lead the table. Absent = `tableColumns(cls)` as
+     * today.
+     *
+     * ORDERS, DOES NOT FILTER (R-VP-10). A column not named here follows the named ones
+     * in today's order and stays VISIBLE: what removes a column is the automatic
+     * reduction (empty columns, the duplicated name) with the session choice above it,
+     * and that must stay the only channel — a second place where a column can disappear
+     * is what `InstanceManagerTab.tsx` (the `hiddenColumnKeys` comment) exists to refuse.
+     *
+     * A name matching no feature of the class is IGNORED, never a throw: a view is
+     * persisted for good and a metaclass can lose a feature after the view was authored.
+     *
+     * `name` is not here to be governed: it is not a feature of the metamodel and does
+     * not appear in `tableColumns` — the table prints it apart, and the panel offers it
+     * as a locked entry (`instanceTable.NAME_COLUMN_KEY`).
+     */
+    columns?: string[];
+}
+
+/**
  * Level-2 structure vocabulary (design handoff `Instance Node Proposal.dc.html`,
  * Turno 7, and README.md "Level 2 - Structure (shape-dependent)").
  *
@@ -349,6 +387,12 @@ export interface VertexViewIR {
      * sez. 10). Additive optional field: no irVersion bump, no migration.
      */
     form?: FormSpec;
+    /**
+     * Data Manager supplement (2026-09-03, R-VP-3). Absent = the manager shows this
+     * metaclass with the columns it derives from the type. Additive optional field:
+     * no irVersion bump, no migration.
+     */
+    manager?: ManagerSpec;
 }
 
 /**
@@ -377,6 +421,13 @@ export interface GraphVertexViewIR {
      * sez. 10). Additive optional field: no irVersion bump, no migration.
      */
     form?: FormSpec;
+    /**
+     * Data Manager supplement (2026-09-03, R-VP-3). Both node views share the byMetaclass
+     * bucket in irResolveCore (:210) and the manager lists objects, not edges;
+     * object-as-edge is a canvas rendering choice, in the manager the object is a row.
+     * EdgeViewIR lives in objectAsEdgeByMetaclass and is out.
+     */
+    manager?: ManagerSpec;
     containment: {
         /** Which contained children render inside the hull; absent = all containment-reference children. */
         childFilter?: Predicate;

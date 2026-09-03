@@ -45,7 +45,7 @@ export interface RowIndexEntry {
  * `A.Person` still matches an instance of `A.Employee`, which reaches the bucket
  * through the `A.Person` ancestor.
  */
-function pinAccepts(entry: { pins?: AuthoringMetaclassPins }, name: string, classId: string): boolean {
+export function pinAccepts(entry: { pins?: AuthoringMetaclassPins }, name: string, classId: string): boolean {
     const pinned = entry.pins?.[name];
     return !pinned || pinned === classId;
 }
@@ -56,7 +56,7 @@ function pinAccepts(entry: { pins?: AuthoringMetaclassPins }, name: string, clas
  * vertex, reference-edge, object-as-edge and row all order identically — same
  * semantics and tie-breaks as the previous inline sorts.
  */
-function compareCandidates(
+export function compareCandidates(
     a: { entry: { compiled: { priority: number }; declarationIndex: number }; specificity: number },
     b: { entry: { compiled: { priority: number }; declarationIndex: number }; specificity: number },
 ): number {

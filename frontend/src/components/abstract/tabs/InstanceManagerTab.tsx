@@ -53,6 +53,8 @@ import {
 } from '../../editor-v2/hooks/deleteAdapter';
 import IRForm from '../../editor-v2/viewpoint/ir/IRForm';
 import { autoLayoutRows, inputFromDraftField } from '../../editor-v2/viewpoint/ir/formAutoLayout';
+import { computeIRSignature, getIRIndex } from '../../editor-v2/viewpoint/ir/irResolveCore';
+import { resolveManagerSpec } from '../../editor-v2/viewpoint/ir/managerViews';
 import { EmptyState } from '../../ui';
 import type { RendererDecision } from '../../editor-v2/nodes/valueRenderer';
 import type {
@@ -126,6 +128,7 @@ import {
     filterBySegment,
     filterRowsByName,
     mostPopulatedClassId,
+    orderColumns,
     pageCount,
     pageOf,
     shownColumnsWith,
@@ -1498,7 +1501,52 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
         [shapeCtx, selectedClass],
     );
 
-    const columns = useMemo(() => (classShape ? tableColumns(classShape) : []), [classShape]);
+    /**
+     * La `manager` della metaclasse, dalla view della R-VP-11.
+     *
+     * REGOLA DI RISOLUZIONE (R-VP-11), che e' l'unica cosa non ovvia qui. Le colonne sono
+     * della METACLASSE, ma una view si risolve su un OGGETTO: `resolveIRView` prende un
+     * `objectId` perche' il `predicate` si valuta su un soggetto, e una tabella di
+     * soggetti ne ha tanti quante le righe. Si guardano quindi le sole view SENZA
+     * predicato, per priorita' / specificita' / ordine di dichiarazione — lo stesso
+     * ordine di `resolveIRView`, `compareCandidates` condiviso e non ricopiato. Una view
+     * che porta `manager` E un predicato viene saltata, e detta: ignorarla in silenzio
+     * lascerebbe l'autore davanti a una chiave scritta che non fa niente.
+     *
+     * L'indice arriva da una `useSelector` a se'. Restituisce un oggetto e non una
+     * stringa, ma il riferimento e' STABILE: `getIRIndex` e' memoizzata sulla firma
+     * (`indexCache`), quindi finche' le view non cambiano il selector rende lo stesso
+     * oggetto e non ri-renderizza. E' la stessa ragione per cui la firma si calcola
+     * dentro il selector invece che fuori: e' l'unica cosa che deve essere ricalcolata
+     * a ogni dispatch.
+     */
+    const irIndex = useSelector((state: any) => getIRIndex(state, computeIRSignature(state)));
+    const managerResolution = useMemo(
+        () => (selectedClassId
+            ? resolveManagerSpec(selectedClassId, irIndex, idlookup)
+            : { spec: null, skippedPredicated: [] as string[] }),
+        [selectedClassId, irIndex, idlookup],
+    );
+
+    /** Un avviso per metaclasse, non per render: le view saltate sono una proprieta'
+     *  della coppia (classe, firma dell'indice), e ripeterlo a ogni disegno riempirebbe
+     *  la console senza aggiungere un fatto. */
+    useEffect(() => {
+        for (const viewId of managerResolution.skippedPredicated) {
+            console.warn(
+                `[manager] view ${viewId} declares \`manager\` and a \`predicate\`: ignored. `
+                + 'Columns are per metaclass, a predicate selects per instance (R-VP-11).',
+            );
+        }
+    }, [managerResolution]);
+
+    const columns = useMemo(
+        // `orderColumns` PRIMA di `hiddenColumnKeys`, non dopo: e' una permutazione e non
+        // un filtro, quindi la riduzione automatica misura lo stesso insieme di prima e
+        // il canale unico che il commento qui sotto pretende resta uno.
+        () => orderColumns(classShape ? tableColumns(classShape) : [], managerResolution.spec),
+        [classShape, managerResolution],
+    );
 
     const rows: TableRow[] = useMemo(() => {
         if (!classShape || !selectedClassId) return [];
