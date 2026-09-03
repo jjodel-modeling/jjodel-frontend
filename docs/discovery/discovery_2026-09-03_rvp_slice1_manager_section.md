@@ -482,3 +482,36 @@ dovrebbe arrivare dopo la ratifica, o dichiarare esplicitamente che questa slice
 **Fase 1 chiusa.** Nessun file di prodotto toccato. La Fase 2 attende un GO che sciolga almeno A,
 B e C: senza A il commit 2 non ha forma decidibile, senza C il commit 1 non ha regola di
 risoluzione da scrivere nel commento che §1c richiede.
+
+---
+
+## 8. Addendum Fase 2, commit 1 (2026-09-04, `85db1612c`)
+
+Scritto dopo la verifica visiva, come sede del ragionamento che la entry di log
+(`1af4636b8`) cita e non contiene.
+
+- **Deroga regola 19** (7 file, RC-11): `irResolveCore.ts` e' toccato solo per esportare
+  `pinAccepts` e `compareCandidates`, cosi' `managerViews.ts` riusa il criterio di
+  `resolveIRView` (priorita', specificita', ordine di dichiarazione) senza ricopiarlo.
+- **Deviazione dal GO, dichiarata**: `manager?` sta anche su `GraphVertexViewIR`, non solo
+  su `VertexViewIR`. Il GO chiedeva di fermarsi se uno dei due `form?` restanti fosse la view
+  che il manager legge davvero: lo e', perche' `irResolveCore.ts:210` file `vertex` e
+  `graphVertex` nello stesso bucket `byMetaclass`, e una metaclasse con la sola view
+  `graphVertex` resterebbe senza `manager` per costruzione. `EdgeViewIR` resta fuori:
+  vive in `objectAsEdgeByMetaclass` e il manager lista oggetti, non archi.
+- **Gate**: `tsc` 33 su output completo (baseline), `build` exit 0 col solo avviso di
+  chunk-size, vitest 55/55 sui due file di test. Una prima build con Node 18 (nvm) fallisce
+  in `[vite:worker]` per `crypto.hash is not a function`: ambientale, (g), sparita con il
+  Node 23 di Homebrew.
+- **Smoke visivo** (`localhost:3000`, `Form 1b fixture`, metaclasse `State`): entrambe le view
+  di `State` del viewpoint portano un predicato (`exists` / `empty` su `$substates.value`),
+  quindi nessuna puo' parlare per la classe: caso limite di R-VP-11. Con `manager` sulla
+  view predicata: un solo warn `[manager]`, colonne invariate. Tolto il predicato e
+  `columns: ['tags','timeout','kind']`: NAME (bloccata), TAGS, TIMEOUT, KIND, poi ISHISTORY,
+  ENTRYACTION, DEPTH, OUTGOING nell'ordine di prima, REFERENCED BY dove stava, «1 column
+  hidden» invariato. Un primo tentativo con `['substates','name']` non muove nulla per
+  costruzione: `substates` e' un contenimento (non e' colonna), `name` e' l'attributo che la
+  riduzione automatica nasconde come duplicato della colonna bloccata.
+- **Processo**: i tre commit sono fatti dalla shell nativa del Mac; la VM del bridge aveva
+  lasciato `index.lock`, `HEAD.lock`, `objects/maintenance.lock` e 5 `tmp_obj_*` alle
+  22:56, rimossi a mano da Alfonso.
