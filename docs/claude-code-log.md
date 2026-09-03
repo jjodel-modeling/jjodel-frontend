@@ -13,6 +13,19 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-03 — feat(manager): ManagerSpec.columns sulla view di classe (R-VP slice 1, commit 1)
+**Prompt**: GO emendato R-VP slice 1 Fase 2, commit 1: `ManagerSpec { columns? }` su `VertexViewIR`, `orderColumns` pura in `instanceTable.ts`, lettura di `manager` dall'indice per la sola view senza predicato (R-VP-11), warn una volta per classe. Niente `sort` (R-VP-10), niente `irCompile`/`CompiledView`.
+**Files touched**: `frontend/src/components/editor-v2/viewpoint/ir/irTypes.ts`, `frontend/src/components/editor-v2/viewpoint/ir/irResolveCore.ts` (solo `export` di `pinAccepts` e `compareCandidates`), `frontend/src/components/editor-v2/viewpoint/ir/managerViews.ts` (nuovo), `frontend/src/components/editor-v2/viewpoint/ir/__tests__/managerViews.test.ts` (nuovo), `frontend/src/components/abstract/tabs/instanceTable.ts`, `frontend/src/components/abstract/tabs/__tests__/instanceTable.test.ts`, `frontend/src/components/abstract/tabs/InstanceManagerTab.tsx` — commit `85db1612c`. Docs a parte: `b28c370de` (ratifiche R-VP, memo, referto, GO).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `tsc` 33 su output completo (baseline esatta), `build` exit 0 col solo avviso di chunk-size (Node 23), vitest 55/55 sui due file di test (10 nuovi in `managerViews`, 7 nuovi in `instanceTable`).
+**Out-of-scope changes**: yes
+**Layer Impact Report**: not-required — nessun file di §3.1; zero import di `useJjomSync`/`portDistribution` nel manager (referto §6).
+**Smoke visivo**: passato — su `localhost:3000`, progetto `Form 1b fixture`, metaclasse `State`: senza `manager` tabella identica; `manager` su una view con `predicate` → un solo warn `[manager]` e colonne invariate; tolto il predicato e `columns: ['tags','timeout','kind']` → NAME, TAGS, TIMEOUT, KIND, poi le altre nell'ordine di prima, tutte visibili, «1 column hidden» invariato.
+**Notes**: **Deroga regola 19** (7 file, RC-11): `irResolveCore.ts` entra solo per esportare due funzioni già esistenti, così `managerViews` riusa il criterio di `resolveIRView` senza ricopiarlo. **Deviazione dal GO, dichiarata**: `manager?` anche su `GraphVertexViewIR`, perché `irResolveCore.ts:210` mette `vertex` e `graphVertex` nello stesso bucket `byMetaclass`; `EdgeViewIR` resta fuori. Una prima build con Node 18 (nvm) fallisce per `crypto.hash`: (g), sparita con Node 23. Nel fixture entrambe le view di `State` hanno un predicato: caso limite di R-VP-11, nessuna view parla per la classe. Commit fatti dalla shell nativa del Mac, non dalla VM del bridge (lock residui delle 22:56 rimossi a mano da Alfonso).
+**Prompt document name**: 2026-09-03 23:20
+
 ## 2026-09-03 — docs: discovery on AI surfaces, providers and system prompts
 **Prompt**: inventario read-only delle superfici AI (Jjodie, trasformazioni, documentazione, altro), del pannello Providers e dei system prompt, per la sezione «AI in Jjodel» dei docs.
 **Files touched**: `docs/discovery/discovery_2026-09-03_ai_surfaces_inventory.md` (nuovo), `docs/claude-code-log.md`
