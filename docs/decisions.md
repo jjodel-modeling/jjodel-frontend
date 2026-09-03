@@ -1082,6 +1082,23 @@ Base di evidenza: `docs/discovery/discovery_2026-08-13_view_creation_sites_ir_na
   reale con una premessa nuova, motivata sul pannello futuro, non su R-IRN-22. Conseguenza: la
   condizione di R-LAY-7 («dopo la slice 2 di `2.228`») e' soddisfatta; il fronte layout riparte dal
   prompt del 2026-08-22 17:05, da riallineare a R-LAY-11, R-LAY-12 e R-DEAD prima del lancio.
+- **R-IRN-28** (2026-09-03) — **`DProject.version` e' un'etichetta, non una chiave; la finestra di
+  300 ms di VER2 e' un limite dichiarato, non una regressione.** Misurato il 2026-09-03 su
+  `4b43c5e36`, `command grep` su `frontend/src` esclusi `DState.version.n`, `APP_VERSION`,
+  `irVersion` e i test: i consumatori della revisione sono il display (`Rev X.Y` in
+  `ProjectEditor.tsx:2152`, `Project.tsx:363`, `:522`, `:639`), i metadati di export
+  (`ProjectEditor.tsx:725`, `:753`, `LeftBar.tsx:219`, `UpdateProjectRequest.ts:56`) e il round-trip
+  di persistenza (`projects.ts:130-132`, `:190`, `:205`, `:321`, `:469`). Nessun lookup, nessun
+  confronto, nessuno storico indicizzato per revisione: `localStorage['projects']` tiene un solo
+  `state` per id, e `Collaborative.ts`, `CollaborativeAttacher.tsx`, `editors/Collaborative.tsx`
+  non contengono la parola `version`. Due save espliciti entro `U.UpdatingTimer` (300 ms) che
+  condividono il numero sono percio' una cosmesi del contatore, non una collisione fra stati: la
+  deroga RC-11 di VER2 (`12e06b2ba`) e' accettata e chiusa cosi', senza la via (e) del `COMMIT`
+  forzato, che sarebbe una modifica core comprata per igiene e non per funzione. Da riaprire solo
+  se un consumatore comincia a usare la revisione come identificatore di stato (ripristino, storico,
+  merge collaborativo): quel giorno la corsia sulla transazione sempre aperta (`reducer.ts:1443`)
+  riparte da questa misura. Ratificata da Alfonso il 2026-09-03 su proposta della chat, dopo la
+  domanda posta da Claude Design.
 
 ## Serie R-SIM — Pannello di simulazione e attributi di stato (ratifiche 2026-08-17)
 
