@@ -13,6 +13,19 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-04 — fix(tests): le due asserzioni sul mount di IRForm allineate a host="manager"
+**Prompt**: commit a parte, dichiarato fuori dalla corsia R-DMV: allineare `instanceManagerOutline.test.ts:155` e `instanceManager10c.test.ts:541` al mount che il sorgente porta da `40142a4f3` (R-VP slice 1, commit 2), cioe' `<IRForm objectId={formSubjectId ?? subjectId} host="manager" />`.
+**Files touched**: `frontend/src/components/abstract/tabs/__tests__/instanceManagerOutline.test.ts`, `frontend/src/components/abstract/tabs/__tests__/instanceManager10c.test.ts` — commit `8f8bd41d8`.
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-03 23:20
+**Causa**: (c)
+**Regressions**: no — vitest 84/84 sui due file. Nessun sorgente applicativo toccato: la stringa attesa e' stata allineata al codice, non il contrario.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — due file di test.
+**Smoke visivo**: non applicabile — nessun pixel cambia.
+**Notes**: I due rossi erano in albero da `40142a4f3`, che aggiunse `host="manager"` ai due mount del drawer e non aggiorno' le asserzioni di sorgente che li citano verbatim; la sua entry dichiarava gia' `Out-of-scope changes: yes`. Trovati dalla suite intera girata nella slice C di R-DMV e riportati nell'hard stop prima di essere sanati, non dopo.
+**Prompt document name**: 2026-09-04 15:59
+
 ## 2026-09-04 — feat(manager): la tabella e il drawer leggono dal singleton (R-DMV slice C)
 **Prompt**: GO emendato R-DMV Fase 2, slice C: `ensureDataManagerViewpoint` / `findDataManagerViewpoint` con id fisso `Pointer_ViewPointDataManager` (Q3), e i tre punti di lettura portati sul singleton — la tabella (`InstanceManagerTab`), la view del drawer e il rung del tema della form (`IRForm`, host `manager`). HARD STOP prima della slice D.
 **Files touched**: `frontend/src/view/viewPoint/viewpoint.ts`, `frontend/src/joiner/index.ts`, `frontend/src/components/abstract/tabs/InstanceManagerTab.tsx`, `frontend/src/components/editor-v2/viewpoint/ir/IRForm.tsx` — commit `3b349b03d`. Sonda a parte: `6fc43ed43`.
