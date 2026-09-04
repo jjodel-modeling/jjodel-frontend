@@ -13,6 +13,19 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-04 — docs: discovery del Data Manager Viewpoint singleton (R-DMV, Fase 1)
+**Prompt**: Fase 1 read-only di R-DMV: falsificare H1..H6 (dove marcare il singleton, il picker come porta, l'indice del manager, il rail, i punti di esclusione, `pruneForm`), referto con `file:riga` e citazioni verbatim, proposta di affettatura della Fase 2, hard stop prima di qualunque codice.
+**Files touched**: `docs/discovery/discovery_2026-09-04_data_manager_viewpoint.md` (nuovo, 807 righe) — commit `65b8fb6b8`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — nessun file di codice toccato, Fase 1 read-only. Nessun comando di build o test eseguito, dichiarato nel referto §15.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessun file di §3.1 letto in scrittura; `VersionFixer.tsx` letto in sola lettura per la domanda 6 (risposta: nessuna migrazione).
+**Smoke visivo**: non applicabile — nessun pixel cambia.
+**Notes**: Falsificate H4 (il segmented «Type» del rail declassa il singleton; `FormAuthoringBody` vuole un `draft` e un `target` che nel rail non esistono) e H5 nei numeri (duplicazione e cancellazione hanno due punti ciascuna, non uno). Finding portante §2.3: `isExclusiveView` false renderebbe le view del singleton DECORATIVE su ogni canvas classico (`selectors.ts:552-559`). R-B9 verificata con positivo di controllo: la chiave `manager` si puo' ancora rinominare in `table`.
+**Prompt document name**: 2026-09-04 15:45
+
 ## 2026-09-04 — refactor(rail): via la scheda Form, il Data Manager e' l'unico host (R-VP-14)
 **Prompt**: rimozione integrale della scheda Form del rail (Properties | Form, 2026-08-26): il pannello di destra torna al solo rendering classico (`Info`). Nessuna modifica a `IRForm`, `formHosts.ts`, alla prop `host` ne' al Data Manager (R-VP-14). Corsia veloce RC-3, due file, nessuna critical zone.
 **Files touched**: `frontend/src/components/editors/PropertiesWithTreeView.tsx`, `frontend/src/components/editors/properties-with-tree-view.scss` — commit `c582c2bbb`.
