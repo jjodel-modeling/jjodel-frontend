@@ -13,6 +13,19 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-04 — feat(manager): la tabella e il drawer leggono dal singleton (R-DMV slice C)
+**Prompt**: GO emendato R-DMV Fase 2, slice C: `ensureDataManagerViewpoint` / `findDataManagerViewpoint` con id fisso `Pointer_ViewPointDataManager` (Q3), e i tre punti di lettura portati sul singleton — la tabella (`InstanceManagerTab`), la view del drawer e il rung del tema della form (`IRForm`, host `manager`). HARD STOP prima della slice D.
+**Files touched**: `frontend/src/view/viewPoint/viewpoint.ts`, `frontend/src/joiner/index.ts`, `frontend/src/components/abstract/tabs/InstanceManagerTab.tsx`, `frontend/src/components/editor-v2/viewpoint/ir/IRForm.tsx` — commit `3b349b03d`. Sonda a parte: `6fc43ed43`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `tsc` 33 su output completo (baseline esatta), `build` exit 0 col solo avviso di chunk-size. Suite intera: 3253/3255, 2 rossi PRE-ESISTENTI e non causati qui (`instanceManagerOutline.test.ts:155`, `instanceManager10c.test.ts:541` asseriscono un mount di `IRForm` senza `host="manager"`, che il sorgente porta da `40142a4f3`; verificato con `git show HEAD:` e diff vuoto su quella riga), piu' 9 file che falliscono all'import di monaco in `environment: node`.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessun file di §3.1. `newVP` apre la propria TRANSACTION e non e' avvolta (§3.3).
+**Smoke visivo**: passato — sonda end-to-end `probe_2026-09-04_rdmv_sliceC_singleton_read.mts` sul dev server, 10 PASS 0 FAIL, piu' la verifica di Alfonso. A: singleton assente, colonne `[tint, threshold, tags]`, nessun avviso, e aprire il manager NON lo crea (R-DMV-6). B: `table.columns` nel viewpoint ATTIVO, tabella invariata. C: la stessa chiave nel SINGLETON, `[tags, threshold, tint]` e nessuna colonna persa.
+**Notes**: B rosso prima / C verde e' cio' che rende la misura una misura: da solo, B non distinguerebbe «legge dal singleton» da «non legge piu' niente». Primo giro C1 rosso per la FIXTURE: `DViewElement.new2` prende il PADRE, e una stringa fa cadere il fallback su `Pointer_ViewPointDefault` in silenzio — lo stato che non si e' formato letto come comportamento (CLAUDE.md §5). Documentato nella sonda.
+**Prompt document name**: 2026-09-04 15:59
+
 ## 2026-09-04 — feat(ir): viewpoint esplicito e opzionale su computeIRSignature e getIRIndex (R-DMV slice B)
 **Prompt**: GO emendato R-DMV Fase 2, slice B: parametro `viewpointId` opzionale su `computeIRSignature` e `getIRIndex` (default l'attivo, i 19+16 chiamanti invariati), propagato nei tre punti di `useIRFormView`; test della cache per la domanda Q3 (id fisso, due progetti in sequenza).
 **Files touched**: `frontend/src/components/editor-v2/viewpoint/ir/irResolveCore.ts`, `.../ir/useIRFormView.ts`, `.../ir/__tests__/irIndexViewpoint.test.ts` (nuovo) — commit `a30217722`.
