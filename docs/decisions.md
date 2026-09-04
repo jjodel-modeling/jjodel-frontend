@@ -2924,6 +2924,17 @@ della tabella e `form` del drawer, con le sezioni già esistenti (`widgets`, `or
 `hidden`, `basic`, `theme`). Il nome della chiave delle colonne (`manager` oggi) si decide nella
 discovery prima che un progetto la scriva (R-B9).
 
+**R-DMV-3-bis** (2026-09-04) — **La «view senza `shape`» di R-DMV-3 vale come intento, non come
+assenza letterale.** Le view di classe del singleton portano la **shape minima
+`{ form: 'rect' }`**. Misurato il 2026-09-04: un ir `vertex` privo di `shape` fa lanciare
+`compileView` (`irCompile.ts:305`, `Cannot read properties of undefined (reading 'form')`),
+`getIRIndex` scarta la view con `[ir] compile failed` e l'indice torna `null` — la view
+sparirebbe dall'indice invece di essere una view senza simbolo. Quella shape non disegna mai:
+il singleton non e' mai `state.viewpoint` e resta `isExclusiveView: true`, quindi le sue view
+non raggiungono ne' il canvas IR ne' quello classico. Rendere `shape` opzionale su
+`VertexViewIR` e' un cambio di interfaccia esportata (regola 11) piu' un cambio del compilatore:
+**fuori corsia**, da valutare a un fronte suo.
+
 **R-DMV-4** (2026-09-04) — **Rail del singleton**: Form theme (già in `ViewpointProperties`) e
 un editor per classe dei widget per campo, solo widget compatibili col tipo, che scrive
 `form.widgets` nella view di classe del singleton creandola se manca. Colonne, ordine, label e
