@@ -13,6 +13,19 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-04 — refactor(ir): ManagerSpec diventa TableSpec, prima che un progetto la scriva (R-DMV-3)
+**Prompt**: GO emendato R-DMV Fase 2, slice 0 (ex slice G, promossa in testa): rinomino puro della chiave dell'ir e dei suoi identificatori, da sola nel commit. `manager?: ManagerSpec` -> `table?: TableSpec` sui due node ir, `managerViews.ts` -> `tableViews.ts`, `resolveManagerSpec` -> `resolveTableSpec`, `ManagerViewResolution` -> `TableViewResolution`, test rinominato, warn `[manager]` -> `[table]`.
+**Files touched**: `frontend/src/components/editor-v2/viewpoint/ir/irTypes.ts`, `.../ir/managerViews.ts` -> `.../ir/tableViews.ts` (rinominato), `.../ir/__tests__/managerViews.test.ts` -> `.../ir/__tests__/tableViews.test.ts` (rinominato), `frontend/src/components/abstract/tabs/instanceTable.ts`, `.../tabs/__tests__/instanceTable.test.ts`, `.../tabs/InstanceManagerTab.tsx` — commit `b7f069389`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `tsc` 33 su output completo (baseline esatta), `build` exit 0 col solo avviso di chunk-size, vitest 55/55 sui due file di test (`tableViews` 10, `instanceTable` 45). Banco delle mutazioni (P11): rimesso `(ir as NodeViewIR).manager` al posto di `.table` in `tableViews.ts`, 9 test su 10 rossi; ripristinato.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessun file di §3.1; nessun campo persistito cambia di forma perche' nessun progetto porta ancora la chiave (R-B9, referto §9 con positivo di controllo).
+**Smoke visivo**: non applicabile — rinomino puro, nessun pixel cambia (dichiarato dal GO).
+**Notes**: **Deroga regola 19** (6 file, RC-11): i sei enumerati dalla risposta Q1 del GO. `hosts.manager` / `FormHostOverride` non toccati (R-DMV-7). `managerResolution` resta il nome della variabile locale (regola 2). Grep finale su `frontend/src` = 0; su `docs/discovery/harness` restano 2 righe di prosa nella sonda **non tracciata** `probe_2026-09-03_rvp_slice1_manager_columns.mts`, WIP di un'altra corsia, non toccata (RC-13).
+**Prompt document name**: 2026-09-04 15:59
+
 ## 2026-09-04 — docs: discovery del Data Manager Viewpoint singleton (R-DMV, Fase 1)
 **Prompt**: Fase 1 read-only di R-DMV: falsificare H1..H6 (dove marcare il singleton, il picker come porta, l'indice del manager, il rail, i punti di esclusione, `pruneForm`), referto con `file:riga` e citazioni verbatim, proposta di affettatura della Fase 2, hard stop prima di qualunque codice.
 **Files touched**: `docs/discovery/discovery_2026-09-04_data_manager_viewpoint.md` (nuovo, 807 righe) — commit `65b8fb6b8`.
