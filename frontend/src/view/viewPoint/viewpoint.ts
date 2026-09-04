@@ -10,7 +10,7 @@ import {
     RuntimeAccessibleClass
 } from "../../joiner";
 
-export type ViewpointType = 'syntax' | 'decoration' | 'validation' | 'semantics' | 'editor_behavior';
+export type ViewpointType = 'syntax' | 'decoration' | 'validation' | 'semantics' | 'editor_behavior' | 'dataManager';
 
 /** Derives the viewpoint type from legacy booleans + explicit field */
 export function getViewpointType(vp: DViewElement): ViewpointType {
@@ -18,6 +18,50 @@ export function getViewpointType(vp: DViewElement): ViewpointType {
     if (vp.isValidation) return 'validation';
     if (vp.isExclusiveView) return 'syntax';
     return 'decoration';
+}
+
+/**
+ * The Data Manager Viewpoint singleton (R-DMV-1).
+ *
+ * One per project, and not a viewpoint like the others: it is not created from «New
+ * viewpoint», not duplicated, not deleted, it does not appear among the canvas syntaxes
+ * and the canvas never opens it. The Data Manager reads from it and never from
+ * `state.viewpoint`.
+ *
+ * TWO NAMES, ONE OBJECT, and the asymmetry is deliberate. `viewpointType` says WHAT it
+ * is and is read wherever a `DViewElement` is in hand; the pointer says WHICH one it is
+ * and is read where only an id travels (the megamodel takes `{id, name}` and no D
+ * element). The creator writes both, and no other writer exists — the segmented «Type»
+ * of the rail is not reachable with the singleton selected (R-DMV-4) and the dialog of
+ * «New viewpoint» does not offer this value.
+ *
+ * NOT in `Defaults.viewpoints`: that list is what the store SEEDS at startup
+ * (`redux/store.tsx`), and R-DMV-6 wants the singleton born at the first write, not at
+ * every project open. `Defaults.isSystemViewpoint` therefore stays false for it, and the
+ * exclusions below are a second, independent test rather than an entry in that list.
+ *
+ * INVARIANT — `isExclusiveView` STAYS TRUE. The constructor default is already true
+ * (`joiner/classes.ts`), and it must never be turned off: `selectors.ts` applies as
+ * DECORATIVE the views of every viewpoint that is neither active nor exclusive, so a
+ * non-exclusive singleton would pour its per-class views over the classic canvas of
+ * every project. The instinct that says «it is not a syntax, so it is not exclusive» is
+ * exactly the one that breaks this.
+ */
+export const DATA_MANAGER_VIEWPOINT_TYPE: ViewpointType = 'dataManager';
+
+/** The singleton's fixed pointer (R-DMV, Q3), on the precedent of
+ *  `Pointer_ViewPointDefault`: one lookup in `idlookup` finds it, with no scan by type. */
+export const DATA_MANAGER_VIEWPOINT_ID = 'Pointer_ViewPointDataManager';
+
+/** True for the Data Manager singleton, from a `DViewElement` in hand. */
+export function isDataManagerViewpoint(vp: DViewElement | null | undefined): boolean {
+    return !!vp && getViewpointType(vp) === DATA_MANAGER_VIEWPOINT_TYPE;
+}
+
+/** True for the Data Manager singleton, from its pointer alone — for the lists that
+ *  carry an id and no D element. */
+export function isDataManagerViewpointId(id: string | null | undefined): boolean {
+    return id === DATA_MANAGER_VIEWPOINT_ID;
 }
 
 @RuntimeAccessible('DViewPoint')

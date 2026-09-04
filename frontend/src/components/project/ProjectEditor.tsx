@@ -18,6 +18,7 @@ import {
     SetRootFieldAction,
     TRANSACTION,
     getViewpointType,
+    isDataManagerViewpoint,
     DViewPoint,
     Log,
 } from '../../joiner';
@@ -202,7 +203,11 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
     if (!project) return null;
     const metamodels = project.metamodels || [];
     const models = project.models || [];
-    const viewpoints = project.viewpoints || [];
+    // The Data Manager singleton is out of every list this page builds (R-DMV-1): the
+    // VIEWPOINTS section, the megamodel, and the two export payloads below all read this
+    // array. Filtered ONCE here rather than at each of the five call sites, which is the
+    // reason `Defaults.isSystemViewpoint` exists one level down in `LProject.viewpoints`.
+    const viewpoints = (project.viewpoints || []).filter(vp => !isDataManagerViewpoint(vp?.__raw as any));
     const tags = project.tagNames || [];
 
     // Transformations: hydrated from persisted DProject.transformations,
@@ -1181,11 +1186,17 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         DockManager.openViewpoint(vp);
     };
 
+    // The two guards below are defence in depth over the filter at the top of the
+    // component: the singleton is not in `viewpoints`, so no button in this page can
+    // reach them with it — but `duplicate` and `delete` are the two gestures R-DMV-1
+    // forbids by name, and a future caller of these handlers should not have to know.
     const handleDuplicateViewpoint = (vp: LViewPoint) => {
+        if (isDataManagerViewpoint(vp?.__raw as any)) return;
         vp.duplicate();
     };
 
     const handleDeleteViewpoint = (vp: LViewPoint) => {
+        if (isDataManagerViewpoint(vp?.__raw as any)) return;
         vp.delete();
     };
 

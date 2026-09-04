@@ -29,7 +29,7 @@ import {
     EDGE_STYLES,
     getPort, spreadAnchors, routePoints, buildRoundedPath, labelMidpoint, computeAdaptiveSides,
 } from './MegamodelEdge';
-import { Defaults } from '../../joiner';
+import { Defaults, isDataManagerViewpointId } from '../../joiner';
 import './MegamodelView.scss';
 
 // The viewpoints Jjodel seeds itself are excluded from the megamodel, through
@@ -40,6 +40,10 @@ import './MegamodelView.scss';
 // Defence in depth: since R-IRN-9 the list arrives already filtered by
 // `LProject.viewpoints`. Kept because this component also accepts a caller that
 // has not been through that getter.
+//
+// The Data Manager singleton (R-DMV-1) is excluded on the same line and for the
+// same reason, by pointer: this component takes `{id, name}` and has no D element
+// to ask for the type.
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -150,7 +154,7 @@ function buildGraph(
     // Add user-defined viewpoints (the seeded system viewpoints are excluded)
     if (viewpoints) {
         for (const vp of viewpoints) {
-            if (Defaults.isSystemViewpoint(vp.id)) continue;
+            if (Defaults.isSystemViewpoint(vp.id) || isDataManagerViewpointId(vp.id)) continue;
             if (!nodeMap.has(vp.id)) {
                 const badge = BADGE.viewpoint;
                 nodeMap.set(vp.id, {

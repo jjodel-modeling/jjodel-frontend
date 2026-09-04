@@ -11,7 +11,7 @@ import HighlightPalette from './components/HighlightPalette';
 import { computeListStyle } from './components/InlineObjectSelect';
 import { LayoutMode, getSavedLayoutMode, saveLayoutMode } from '../abstract/Dock';
 import { isProjectOverviewPage } from '../../utils/navigationUtils';
-import { Defaults, LPointerTargetable, LViewPoint, store } from '../../joiner';
+import { Defaults, isDataManagerViewpoint, isDataManagerViewpointId, LPointerTargetable, LViewPoint, store } from '../../joiner';
 import type { DViewPoint, LModel } from '../../joiner';
 import {
     DATA_MANAGER_OPTION_ICON,
@@ -267,11 +267,18 @@ function Toolbar({
     const rawActiveViewpointId = useSelector((state: any) => state.viewpoint) as string;
     const viewpointPointers = useSelector((state: any) => state.viewpoints) as string[];
     const viewpoints = (viewpointPointers || [])
-        .filter(ptr => !Defaults.isSystemViewpoint(ptr))
+        .filter(ptr => !Defaults.isSystemViewpoint(ptr) && !isDataManagerViewpointId(ptr))
         .map(ptr => {
             try {
                 const lVp = LPointerTargetable.fromPointer(ptr) as LViewPoint;
-                return lVp ? { id: ptr, name: lVp.name || 'Unnamed' } : null;
+                if (!lVp) return null;
+                // R-DMV-1: the Data Manager singleton is not a syntax of the canvas and
+                // never becomes `state.viewpoint`. Excluded here and not only by pointer
+                // above, because the pointer test answers «which one» and this one
+                // answers «what kind»: a singleton reached through a path that did not
+                // set the fixed id would still be caught.
+                if (isDataManagerViewpoint(lVp.__raw as any)) return null;
+                return { id: ptr, name: lVp.name || 'Unnamed' };
             } catch { return null; }
         }).filter(Boolean) as Array<{ id: string; name: string }>;
 

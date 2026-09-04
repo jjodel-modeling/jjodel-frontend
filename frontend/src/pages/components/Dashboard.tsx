@@ -5,6 +5,7 @@ import {
     DUser,
     DViewElement,
     Input,
+    isDataManagerViewpoint,
     LPointerTargetable,
     LProject,
     LUser,
@@ -472,7 +473,10 @@ function ProjectCatalog(props: ProjectProps) {
                 </div>)
             })
             }
-            {project.viewpoints.map(vp => {
+            {/* The Data Manager singleton is not listed here (R-DMV-1): it is not a
+                viewpoint the dashboard opens, duplicates or deletes, and its own place
+                is the «Data Manager» section of the tree sidebar. */}
+            {project.viewpoints.filter(vp => !isDataManagerViewpoint(vp?.__raw as any)).map(vp => {
                 let name = vp?.name;
                 return (!vp ? <div key={name||'error_'+vp}>errorvp: {vp + ''}</div> :
                     <div className="row data viewpoint" key={name}>
