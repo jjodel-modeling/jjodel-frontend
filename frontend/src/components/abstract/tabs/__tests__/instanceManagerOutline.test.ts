@@ -152,7 +152,7 @@ describe('10b — una sola selezione, condivisa da tutte le superfici', () => {
         expect(TSX).toContain("node.id === subjectId ? ' instance-manager__outline-node--selected' : ''");
         expect(TSX).toContain("row.id === subjectId ? 'instance-manager__tr--selected'");
         expect(TSX).toContain('const isExpanded = row.id === subjectId');
-        expect(TSX).toContain('<IRForm objectId={formSubjectId ?? subjectId} />');
+        expect(TSX).toContain('<IRForm objectId={formSubjectId ?? subjectId} host="manager" />');
         expect(TSX).toContain('egoInputOf(idlookup, subjectId, shapeCtx.shape())');
     });
 

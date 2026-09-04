@@ -538,7 +538,7 @@ describe('10c — lo stato di riposo', () => {
 describe('10c — deviazione A3: niente Save/Discard/«Unsaved changes»', () => {
     it('positivo di controllo: la form e la sua testata ci sono', () => {
         expect(TSX).toContain('instance-manager__form-head');
-        expect(TSX).toContain('<IRForm objectId={formSubjectId ?? subjectId} />');
+        expect(TSX).toContain('<IRForm objectId={formSubjectId ?? subjectId} host="manager" />');
     });
 
     it('il badge «Unsaved changes» e\' andato via, e con lui l\'import del flag', () => {
