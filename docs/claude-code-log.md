@@ -43,6 +43,19 @@ decidere in chat (F4). Deroga a §6 del prompt ("un solo commit"): `CLAUDE.md` �
 codice nello stesso commit, quindi due commit.
 **Prompt document name**: 2026-09-04 18:50
 
+## 2026-09-05 — feat(ir): la view di classe svuotata si pota (R-DMV slice F, chiude la Fase 2)
+**Prompt**: GO emendato R-DMV Fase 2, slice F: `pruneForm` esteso a `order`/`labels`/`hidden` (non `basic`), potatore separato per `table` sull'ir, e la view del singleton svuotata (ne' `form` ne' `table`) che si rimuove facendo sparire la classe dall'albero. Test su `pruneForm` e sul potatore.
+**Files touched**: `frontend/src/components/editor-v2/viewpoint/authoring/FormAuthoringBody.tsx`, `.../ir/irPrune.ts` (nuovo), `.../ir/__tests__/irPrune.test.ts` (nuovo), `frontend/src/components/editors/viewpoint/properties/DataManagerViewpointPanel.tsx` — commit `317ec973b`. Sonda a parte: `acd5c72d6`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `tsc` 33 su output completo (baseline esatta), `build` exit 0 col solo avviso di chunk-size, vitest **3293/3293** sull'intera suite (0 test rossi; restano i 9 file che muoiono all'import di monaco in `environment: node`, pre-esistenti). Banco delle mutazioni (P11), tre giri: `pruneForm` che non pota `order`/`hidden` -> 2 rossi; `pruneForm` che pota anche `basic` -> 1 rosso; `isPrunableClassView` che ignora lo `shape` -> 1 rosso.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessun file di §3.1. `DeleteElementAction` e `SetRootFieldAction` sono chiamate NUDE, nessun creator annidato (§3.3).
+**Smoke visivo**: passato — sonda `probe_2026-09-05_rdmv_sliceF_prune.mts`, 7 PASS 0 FAIL, confronto dentro il giro (stesso progetto, stessa classe): scritto -> la view c'e' e la classe compare; tolto -> la view sparisce da `idlookup`, la classe esce dall'albero e torna lo stato vuoto, il VIEWPOINT resta; riscritto -> la view rinasce UNA sola.
+**Notes**: Due misure che il referto non aveva. `lView.delete()` su una view del singleton e' un **no-op silenzioso** (logga «unexpected pointedBy case ending with an object» da `get__jjdependencies`: `subViews` e' un Dictionary): si usa `DeleteElementAction`. E `DeleteElementAction` lascia l'id in `state.viewelements`, che alla RIscrittura lo duplicava — due righe per una classe. Il `-=` sul root chiude il giro. Dettaglio nel commento di `writeForm`.
+**Prompt document name**: 2026-09-04 15:59
+
 ## 2026-09-04 — feat(sidebar): la sezione «Data Manager», sempre presente (R-DMV slice E)
 **Prompt**: GO emendato R-DMV Fase 2, slice E: sezione «Data Manager» sempre presente in `TreeViewContent.tsx` con lo stato vuoto ratificato, classi personalizzate con le feature toccate e l'override accanto, «columns» quando fissato, esclusione da `syntaxVps`/`validationVps`/`otherVps`, la voce che seleziona il singleton o il suo stub (Q4/Q6), materializzazione al primo write dal pannello. Un test di sorgente sul modello dei `instanceManager10*`.
 **Files touched**: `frontend/src/components/TreeViewSidebar/TreeViewContent.tsx`, `.../TreeViewSidebar/tree-view-sidebar.scss`, `.../TreeViewSidebar/__tests__/dataManagerSection.test.ts` (nuovo), `frontend/src/components/editors/Info.tsx`, `.../editors/viewpoint/properties/DataManagerViewpointPanel.tsx` — commit `5ae652227`. Sonda a parte: `d0546abcb`.
