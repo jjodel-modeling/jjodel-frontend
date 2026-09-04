@@ -54,7 +54,7 @@ import {
 import IRForm from '../../editor-v2/viewpoint/ir/IRForm';
 import { autoLayoutRows, inputFromDraftField } from '../../editor-v2/viewpoint/ir/formAutoLayout';
 import { computeIRSignature, getIRIndex } from '../../editor-v2/viewpoint/ir/irResolveCore';
-import { resolveManagerSpec } from '../../editor-v2/viewpoint/ir/managerViews';
+import { resolveTableSpec } from '../../editor-v2/viewpoint/ir/tableViews';
 import { EmptyState } from '../../ui';
 import type { RendererDecision } from '../../editor-v2/nodes/valueRenderer';
 import type {
@@ -1502,7 +1502,7 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
     );
 
     /**
-     * La `manager` della metaclasse, dalla view della R-VP-11.
+     * La `table` della metaclasse, dalla view della R-VP-11.
      *
      * REGOLA DI RISOLUZIONE (R-VP-11), che e' l'unica cosa non ovvia qui. Le colonne sono
      * della METACLASSE, ma una view si risolve su un OGGETTO: `resolveIRView` prende un
@@ -1510,7 +1510,7 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
      * soggetti ne ha tanti quante le righe. Si guardano quindi le sole view SENZA
      * predicato, per priorita' / specificita' / ordine di dichiarazione — lo stesso
      * ordine di `resolveIRView`, `compareCandidates` condiviso e non ricopiato. Una view
-     * che porta `manager` E un predicato viene saltata, e detta: ignorarla in silenzio
+     * che porta `table` E un predicato viene saltata, e detta: ignorarla in silenzio
      * lascerebbe l'autore davanti a una chiave scritta che non fa niente.
      *
      * L'indice arriva da una `useSelector` a se'. Restituisce un oggetto e non una
@@ -1523,7 +1523,7 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
     const irIndex = useSelector((state: any) => getIRIndex(state, computeIRSignature(state)));
     const managerResolution = useMemo(
         () => (selectedClassId
-            ? resolveManagerSpec(selectedClassId, irIndex, idlookup)
+            ? resolveTableSpec(selectedClassId, irIndex, idlookup)
             : { spec: null, skippedPredicated: [] as string[] }),
         [selectedClassId, irIndex, idlookup],
     );
@@ -1534,7 +1534,7 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
     useEffect(() => {
         for (const viewId of managerResolution.skippedPredicated) {
             console.warn(
-                `[manager] view ${viewId} declares \`manager\` and a \`predicate\`: ignored. `
+                `[table] view ${viewId} declares \`table\` and a \`predicate\`: ignored. `
                 + 'Columns are per metaclass, a predicate selects per instance (R-VP-11).',
             );
         }

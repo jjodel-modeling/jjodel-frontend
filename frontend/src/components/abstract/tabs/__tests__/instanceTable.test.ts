@@ -267,7 +267,7 @@ describe('tableColumns', () => {
     });
 });
 
-// --- ManagerSpec.columns (R-VP-3, R-VP-10) ----------------------------------
+// --- TableSpec.columns (R-VP-3, R-VP-10) ----------------------------------
 
 /**
  * `orderColumns` ORDINA e non filtra, ed e' l'unica cosa che questi casi devono
@@ -276,7 +276,7 @@ describe('tableColumns', () => {
  * automatica nel tab — se togliesse una colonna, `emptyColumnKeys` misurerebbe un insieme
  * diverso e ci sarebbero due posti in cui una colonna sparisce.
  */
-describe('orderColumns — ManagerSpec.columns', () => {
+describe('orderColumns — TableSpec.columns', () => {
     const keys = (cols: ReturnType<typeof tableColumns>) => cols.map(c => c.key);
     const ALL = ['name', 'tint', 'threshold', 'tags', 'computed', 'cfg'];
 

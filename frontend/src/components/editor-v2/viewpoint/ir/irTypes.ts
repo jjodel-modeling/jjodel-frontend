@@ -307,7 +307,7 @@ export interface FormSpec {
 export type FormHostOverride = Partial<Omit<FormSpec, 'hosts'>>;
 
 /**
- * ManagerSpec (2026-09-03, R-VP-3) — OPTIONAL supplement declaring how the DATA MANAGER
+ * TableSpec (2026-09-03, R-VP-3) — OPTIONAL supplement declaring how the DATA MANAGER
  * shows the instances of this metaclass. The manager has no viewpoint of its own: its
  * visual aspects are a section of the same per-class view, additive over ir-1.3 in the
  * style of `FormSpec`.
@@ -320,10 +320,10 @@ export type FormHostOverride = Partial<Omit<FormSpec, 'hosts'>>;
  * with a string value, at any depth. `irValidate.findUnknownPredicateOp` walks the whole
  * ir and would reject the entire view with a message about predicates.
  *
- * OVERRIDE, NEVER PREREQUISITE (R-VP-4): a manager whose class declares no `manager`
+ * OVERRIDE, NEVER PREREQUISITE (R-VP-4): a manager whose class declares no `table`
  * works on the type-derived default, which is what every project has today.
  */
-export interface ManagerSpec {
+export interface TableSpec {
     /**
      * Feature names, in the order they lead the table. Absent = `tableColumns(cls)` as
      * today.
@@ -433,7 +433,7 @@ export interface VertexViewIR {
      * metaclass with the columns it derives from the type. Additive optional field:
      * no irVersion bump, no migration.
      */
-    manager?: ManagerSpec;
+    table?: TableSpec;
 }
 
 /**
@@ -468,7 +468,7 @@ export interface GraphVertexViewIR {
      * object-as-edge is a canvas rendering choice, in the manager the object is a row.
      * EdgeViewIR lives in objectAsEdgeByMetaclass and is out.
      */
-    manager?: ManagerSpec;
+    table?: TableSpec;
     containment: {
         /** Which contained children render inside the hull; absent = all containment-reference children. */
         childFilter?: Predicate;

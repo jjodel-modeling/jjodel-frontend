@@ -1,5 +1,5 @@
 /**
- * managerViews — which per-class view speaks for the Data Manager, and what it says.
+ * tableViews — which per-class view speaks for the Data Manager, and what it says.
  *
  * The manager asks a question the rest of the IR resolution never asks: «what are the
  * columns of THIS METACLASS», with no instance in hand. Every other resolver takes an
@@ -10,7 +10,7 @@
  * R-VP-11 settles it by exclusion rather than by picking a row: **only views WITHOUT a
  * predicate are considered**, in the same order `resolveIRView` would consider them
  * (priority, then specificity, then declaration order — `compareCandidates`, imported and
- * not restated). A view that declares both a `predicate` and a `manager` is skipped and
+ * not restated). A view that declares both a `predicate` and a `table` is skipped and
  * REPORTED, because silently ignoring an authored key is the failure mode this codebase
  * keeps paying for. The warning belongs to the caller: this module is pure, and a
  * `console.warn` in here would fire once per render instead of once per class.
@@ -21,16 +21,16 @@
  * meanings of "resolve" under one roof.
  */
 
-import type { AuthoringMetaclassPins, ManagerSpec, NodeViewIR } from './irTypes';
+import type { AuthoringMetaclassPins, TableSpec, NodeViewIR } from './irTypes';
 import { classAncestry } from './irReadCtx';
 import { compareCandidates, pinAccepts, type IndexEntry, type IRViewpointIndex } from './irResolveCore';
 
-/** What `resolveManagerSpec` found, and what it had to leave out. */
-export interface ManagerViewResolution {
-    /** The winning view's `manager`, or null when no view declares one. */
-    spec: ManagerSpec | null;
+/** What `resolveTableSpec` found, and what it had to leave out. */
+export interface TableViewResolution {
+    /** The winning view's `table`, or null when no view declares one. */
+    spec: TableSpec | null;
     /**
-     * View ids that declare `manager` AND a `predicate`, therefore skipped (R-VP-11).
+     * View ids that declare `table` AND a `predicate`, therefore skipped (R-VP-11).
      * Empty in the ordinary case. The caller turns a non-empty list into one warning per
      * class — the author has written something that does not apply, and nothing else on
      * screen would say so.
@@ -38,24 +38,24 @@ export interface ManagerViewResolution {
     skippedPredicated: string[];
 }
 
-const NOTHING: ManagerViewResolution = { spec: null, skippedPredicated: [] };
+const NOTHING: TableViewResolution = { spec: null, skippedPredicated: [] };
 
 /**
- * The `manager` of the metaclass, by R-VP-11.
+ * The `table` of the metaclass, by R-VP-11.
  *
  * `metaclassId` is the DClass id, as `resolveIRView` takes it: the ancestry walk is what
  * gives an inherited view its chance, and it needs ids, not names.
  *
- * Only `vertex` and `graphVertex` irs can carry `manager` (the two kinds
+ * Only `vertex` and `graphVertex` irs can carry `table` (the two kinds
  * `irResolveCore`'s index-build files under `byMetaclass`), so the narrowing below is the
  * same test that put the entry in the bucket in the first place — not a second opinion
  * about which views are class views.
  */
-export function resolveManagerSpec(
+export function resolveTableSpec(
     metaclassId: string,
     index: IRViewpointIndex | null,
     idlookup: Record<string, any>,
-): ManagerViewResolution {
+): TableViewResolution {
     if (!index) return NOTHING;
     const ancestry = classAncestry(idlookup, metaclassId);   // [self, ...ancestors]
     if (ancestry.length === 0) return NOTHING;
@@ -85,11 +85,11 @@ export function resolveManagerSpec(
     candidates.sort(compareCandidates);
 
     const skippedPredicated: string[] = [];
-    let spec: ManagerSpec | null = null;
+    let spec: TableSpec | null = null;
     for (const c of candidates) {
         const ir = c.entry.compiled.ir;
         if (ir.kind !== 'vertex' && ir.kind !== 'graphVertex') continue;
-        const declared = (ir as NodeViewIR).manager;
+        const declared = (ir as NodeViewIR).table;
         if (!declared) continue;
         // The predicate is read off the RAW ir and not off `compiled.predicate`, which is
         // a function and always present (the compile gives an absent predicate a

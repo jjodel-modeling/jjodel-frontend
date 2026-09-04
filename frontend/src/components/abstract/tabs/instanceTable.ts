@@ -24,7 +24,7 @@
 
 import { findFeatureRaw, makeDrawReadCtx } from '../../editor-v2/viewpoint/ir/irReadCtx';
 import { readRowViewAnnotations } from '../../editor-v2/nodes/rowViewAnnotations';
-import type { ManagerSpec } from '../../editor-v2/viewpoint/ir/irTypes';
+import type { TableSpec } from '../../editor-v2/viewpoint/ir/irTypes';
 import { optionSlot } from '../../../jjform';
 import {
     detectValueRenderer,
@@ -131,7 +131,7 @@ export function tableColumns(cls: ClassShape): TableColumn[] {
  *
  * `spec` assente, `columns` assente o vuoto: l'input, per identita' di riferimento.
  */
-export function orderColumns(columns: TableColumn[], spec?: ManagerSpec | null): TableColumn[] {
+export function orderColumns(columns: TableColumn[], spec?: TableSpec | null): TableColumn[] {
     const wanted = spec?.columns;
     if (!wanted || wanted.length === 0) return columns;
     const byKey = new Map(columns.map(col => [col.key, col]));
