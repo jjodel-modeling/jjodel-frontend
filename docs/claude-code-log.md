@@ -13,6 +13,32 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-04 — feat(ir): viewpoint esplicito e opzionale su computeIRSignature e getIRIndex (R-DMV slice B)
+**Prompt**: GO emendato R-DMV Fase 2, slice B: parametro `viewpointId` opzionale su `computeIRSignature` e `getIRIndex` (default l'attivo, i 19+16 chiamanti invariati), propagato nei tre punti di `useIRFormView`; test della cache per la domanda Q3 (id fisso, due progetti in sequenza).
+**Files touched**: `frontend/src/components/editor-v2/viewpoint/ir/irResolveCore.ts`, `.../ir/useIRFormView.ts`, `.../ir/__tests__/irIndexViewpoint.test.ts` (nuovo) — commit `a30217722`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `tsc` 33 su output completo (baseline esatta), `build` exit 0 col solo avviso di chunk-size, vitest 552/552 su tutta la cartella `viewpoint/ir/` (23 file, 6 nuovi). Banco delle mutazioni (P11), due giri: `getIRIndex` che ignora `viewpointId` -> 3 rossi su 6; `computeIRSignature` che lo ignora -> 4 rossi su 6.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessun file di §3.1.
+**Smoke visivo**: non applicabile — nessun chiamante cambia comportamento: il default del parametro e' il viewpoint attivo, canvas / manager / drawer identici. La verifica end-to-end arriva con la slice C, che e' il primo passaggio di un viewpoint diverso.
+**Notes**: Q3 misurata e non dedotta: `indexCache` e' chiavata sulla sola signature, che porta un `refToken` per ogni oggetto ir (WeakMap sull'identita'), quindi due progetti in sequenza con lo stesso `Pointer_ViewPointDataManager` danno due chiavi diverse. Asserito anche che indicizzare il singleton non sfratta l'indice dell'attivo (R7 del referto).
+**Prompt document name**: 2026-09-04 15:59
+
+## 2026-09-04 — feat(viewpoint): il tipo dataManager e la sua esclusione dalle liste (R-DMV slice A)
+**Prompt**: GO emendato R-DMV Fase 2, slice A: valore nuovo `'dataManager'` di `ViewpointType`, predicato unico, e i quattro filtri (picker della Toolbar, MegamodelView, Dashboard, dashboard di progetto). L'esclusione arriva prima della cosa da escludere: non esiste mai una finestra in cui il singleton compare dove non deve.
+**Files touched**: `frontend/src/view/viewPoint/viewpoint.ts`, `frontend/src/joiner/index.ts`, `frontend/src/components/editor-v2/Toolbar.tsx`, `frontend/src/components/megamodel/MegamodelView.tsx`, `frontend/src/pages/components/Dashboard.tsx`, `frontend/src/components/project/ProjectEditor.tsx` — commit `15c289f37`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `tsc` 33 su output completo (baseline esatta), `build` exit 0 col solo avviso di chunk-size, `dataManagerPicker.test.ts` 39/39 (il test asserisce sul sorgente di `Toolbar.tsx`, incluso `'}, [modelId]);'`: le deps non cambiano). Nessun `switch` esaustivo su `ViewpointType` in albero, verificato con grep sui 4 consumatori.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessun file di §3.1.
+**Smoke visivo**: non applicabile in questa slice — nulla crea ancora il singleton, quindi nessuna lista puo' cambiare contenuto. Verificato invece nella slice C, blocco A: il singleton non esiste e la tabella e' identica.
+**Notes**: **Deroga regola 19** (6 file, RC-11). Due nomi e un oggetto: `viewpointType` dice COSA e si legge da un `DViewElement`, `DATA_MANAGER_VIEWPOINT_ID` dice QUALE e si legge dove viaggia solo un id (`MegamodelView` prende `{id, name}`). Il singleton NON entra in `Defaults.viewpoints`: quella lista e' cio' che lo store semina all'avvio, e R-DMV-6 lo vuole nato alla prima scrittura. Nessun test: `viewpoint.ts` tira monaco via `joiner` e non si importa in `environment: node`, misurato con una sonda.
+**Prompt document name**: 2026-09-04 15:59
+
 ## 2026-09-04 — refactor(ir): ManagerSpec diventa TableSpec, prima che un progetto la scriva (R-DMV-3)
 **Prompt**: GO emendato R-DMV Fase 2, slice 0 (ex slice G, promossa in testa): rinomino puro della chiave dell'ir e dei suoi identificatori, da sola nel commit. `manager?: ManagerSpec` -> `table?: TableSpec` sui due node ir, `managerViews.ts` -> `tableViews.ts`, `resolveManagerSpec` -> `resolveTableSpec`, `ManagerViewResolution` -> `TableViewResolution`, test rinominato, warn `[manager]` -> `[table]`.
 **Files touched**: `frontend/src/components/editor-v2/viewpoint/ir/irTypes.ts`, `.../ir/managerViews.ts` -> `.../ir/tableViews.ts` (rinominato), `.../ir/__tests__/managerViews.test.ts` -> `.../ir/__tests__/tableViews.test.ts` (rinominato), `frontend/src/components/abstract/tabs/instanceTable.ts`, `.../tabs/__tests__/instanceTable.test.ts`, `.../tabs/InstanceManagerTab.tsx` — commit `b7f069389`.
