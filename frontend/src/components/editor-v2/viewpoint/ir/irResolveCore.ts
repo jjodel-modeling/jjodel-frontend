@@ -109,12 +109,18 @@ function refToken(ir: object): string {
 }
 
 /**
- * Signature of (active viewpoint, its IR views). Cheap: iterates the
+ * Signature of (a viewpoint, its IR views). Cheap: iterates the
  * viewelements pointer list only. Changes when the viewpoint changes, an IR
  * view is added/removed, or any ir object is replaced (edited).
+ *
+ * `viewpointId` names the viewpoint EXPLICITLY; absent, it is the active one, which is
+ * every caller but the Data Manager. The manager reads from its own singleton and never
+ * from `state.viewpoint` (R-DMV-1), and this parameter is the whole mechanism: the
+ * viewpoint id is already `parts[0]` of the signature, so two viewpoints indexed at the
+ * same time land on two different cache keys by construction — see `getIRIndex`.
  */
-export function computeIRSignature(state: any): string {
-    const vp = state.viewpoint;
+export function computeIRSignature(state: any, viewpointId?: string): string {
+    const vp = viewpointId ?? state.viewpoint;
     if (!vp) return '';
     const lookup = state.idlookup;
     const parts: string[] = [vp];
@@ -130,13 +136,25 @@ export function computeIRSignature(state: any): string {
 
 const indexCache = new Map<string, IRViewpointIndex>();
 
-/** Build (or fetch cached) the per-metaclass index for the active viewpoint. */
-export function getIRIndex(state: any, signature: string): IRViewpointIndex | null {
+/**
+ * Build (or fetch cached) the per-metaclass index for a viewpoint — the active one
+ * unless `viewpointId` names another (R-DMV-1, the Data Manager singleton).
+ *
+ * `viewpointId` MUST be the same one the `signature` was computed with. The cache is
+ * keyed on the signature alone, and the signature carries the viewpoint id as its first
+ * part: passing a signature of viewpoint A with `viewpointId` B would file B's index
+ * under A's key. No assertion guards it because the pair always travels together —
+ * `computeIRSignature(state, vp)` then `getIRIndex(state, sig, vp)`.
+ *
+ * The css lifecycle below is already per-viewpoint (`oldIdx.viewpointId === vp`), so a
+ * second indexed viewpoint does not evict the first one's styles.
+ */
+export function getIRIndex(state: any, signature: string, viewpointId?: string): IRViewpointIndex | null {
     if (!signature) return null;
     const cached = indexCache.get(signature);
     if (cached) return cached;
 
-    const vp = state.viewpoint as string;
+    const vp = (viewpointId ?? state.viewpoint) as string;
     const lookup = state.idlookup;
     const byMetaclass = new Map<string, IndexEntry[]>();
     const wildcard: IndexEntry[] = [];

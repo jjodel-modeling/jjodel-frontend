@@ -57,14 +57,23 @@ function formDepKey(objectId: string): string {
     return `form:${objectId}`;
 }
 
-export function useIRFormView(objectId: string | undefined): IRFormResolution | null {
+/**
+ * `viewpointId` names the viewpoint the view is resolved against; absent, the active one.
+ * The Data Manager drawer passes the singleton (R-DMV-1), so the drawer and the table
+ * above it read the same source — the failure this parameter exists to prevent is the
+ * table following the singleton while the form under it still follows the canvas syntax.
+ *
+ * It needs no dep of its own in the memos below: it is `parts[0]` of `signature`, which
+ * every memo already depends on.
+ */
+export function useIRFormView(objectId: string | undefined, viewpointId?: string): IRFormResolution | null {
     // Slot snapshot of the object, exactly as useIRView/useIRRowView build it: the whole
     // feature set, unfiltered by any dependency set. For the form that is not a
     // concession but the requirement — a form reads every feature, not only the ones the
     // view's PathExprs mention.
     const signature = useSelector((state: any) => {
         if (!objectId) return '';
-        const irSig = computeIRSignature(state);
+        const irSig = computeIRSignature(state, viewpointId);
         const lookup = state.idlookup;
         const dObject = lookup?.[objectId];
         if (!dObject) return '';
@@ -90,8 +99,8 @@ export function useIRFormView(objectId: string | undefined): IRFormResolution | 
     const markVersion = useSimVersion();
     const markDeclared = useMemo(() => {
         const state: any = store.getState();
-        const irSig = computeIRSignature(state);
-        const index = irSig ? getIRIndex(state, irSig) : null;
+        const irSig = computeIRSignature(state, viewpointId);
+        const index = irSig ? getIRIndex(state, irSig, viewpointId) : null;
         return !!index?.channelsInUse?.has('mark');
     }, [signature]);   // eslint-disable-line react-hooks/exhaustive-deps
     const markDep = markDeclared ? markVersion : 0;
@@ -110,8 +119,8 @@ export function useIRFormView(objectId: string | undefined): IRFormResolution | 
         const readCtx = makeReadCtx(lookup);
 
         const metaclassId = dObject.instanceof;
-        const irSig = computeIRSignature(state);
-        const index = irSig ? getIRIndex(state, irSig) : null;
+        const irSig = computeIRSignature(state, viewpointId);
+        const index = irSig ? getIRIndex(state, irSig, viewpointId) : null;
         // No viewpoint, no metaclass (a shapeless instance), or no matching view: all
         // three resolve to the default form, which is derived from whatever the object
         // does have. None of them is an error.
