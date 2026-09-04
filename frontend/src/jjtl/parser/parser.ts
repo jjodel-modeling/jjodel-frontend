@@ -253,6 +253,10 @@ export class JjtlParser {
             let conversion: ConversionAST | undefined;
 
             if (this.match(TokenType.LBRACE)) {
+                // The lexer emits NEWLINE tokens: skip them so that the
+                // multi-line form `-> attr {\n -> Class {` is recognised
+                // as object creation, exactly like the single-line form.
+                this.skipNewlines();
                 // Check if it's object creation or inline body
                 if (this.check(TokenType.ARROW)) {
                     objectCreation = this.objectCreation(targetAttribute);
@@ -436,6 +440,9 @@ export class JjtlParser {
         const body = this.mappingBody();
 
         this.consume(TokenType.RBRACE, "Expected '}'");
+        // In the multi-line form a NEWLINE separates the inner '}' (class
+        // body) from the outer '}' (attribute block).
+        this.skipNewlines();
         this.consume(TokenType.RBRACE, "Expected '}'");
 
         return {
