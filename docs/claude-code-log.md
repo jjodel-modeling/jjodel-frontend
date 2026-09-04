@@ -13,6 +13,36 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-04 — fix(jjtl): accept newlines inside nested object creation
+**Prompt**: la forma multiriga di object creation (`-> attr {` a capo `-> Class {`, quella
+documentata in SPEC §3.3) produce `targetClass = attr` senza errori di parsing né di Validate;
+gli oggetti annidati non vengono creati. Discovery sintetica obbligatoria, poi fix minimo in
+`attributeMapping()` e `objectCreation()`, test di parsing, suite `jjtl` e build.
+**Files touched**: `frontend/src/jjtl/parser/parser.ts` (+7, due `skipNewlines()`),
+`frontend/src/jjtl/__tests__/nested-object-creation.test.ts` (nuovo, 5 test) in `1c567930d`;
+`docs/discovery/discovery_2026-09-04_jjtl_nested_object_creation.md`,
+`docs/prompts/claude_2026-09-04_1850_prompt_jjtl_nested_object_creation_newlines.md` e questa
+entry nel commit docs successivo.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `vitest run src/jjtl` 107 verdi / 0 falliti (era 102 su HEAD, +5 nuovi); i
+7 file `window is not defined` (monaco, `environment: 'node'`) sono pre-esistenti, riverificati su
+un worktree pulito a HEAD. `tsc --noEmit` 14 errori, 0 sotto `src/jjtl/` (i 14 "scattered" della
+baseline §17; i 19 di casing non compaiono su filesystem case-sensitive). `build` exit 0 col solo
+avviso di chunk-size.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — solo parser JjTL.
+**Smoke visivo**: non applicabile — da verificare a mano da Alfonso: SM2PN (docs), forma
+multiriga, Validate + Execute, attesi 7 mapping, 0 warning nel Trace, archi presenti.
+**Notes**: Root cause confermata (report F1, F2). `forAllMapping()` non ha il difetto, non
+toccato (F5). Validate è solo `parse()`: il controllo delle classi target vive in
+`executor.validateTargetClasses` come warning a runtime, todo fuori scope (F3). Il ramo
+"nested mapping body" non corrisponde a nessuna sintassi in SPEC né nei test; lasciato, da
+decidere in chat (F4). Deroga a §6 del prompt ("un solo commit"): `CLAUDE.md` §6.4 vieta docs e
+codice nello stesso commit, quindi due commit.
+**Prompt document name**: 2026-09-04 18:50
+
 ## 2026-09-04 — feat(rail): DataManagerViewpointPanel, il rail del singleton (R-DMV slice D)
 **Prompt**: GO emendato R-DMV Fase 2, slice D: pannello nuovo per il singleton (nome, Form theme senza hint, selettore di metaclasse, tabella feature -> widget su `rowsForMetaclass` + `offeredOverrides`, materializzazione alla prima scrittura), `Info.tsx` che dispaccia su `isDataManagerViewpoint`. Niente segmented Type, niente `theme`/`labelPlacement` per view (Q5). HARD STOP dopo il commit.
 **Files touched**: `frontend/src/components/editors/viewpoint/properties/DataManagerViewpointPanel.tsx` (nuovo), `.../properties/DataManagerViewpointPanel.scss` (nuovo), `frontend/src/components/editors/Info.tsx` — commit `367a23c45`. Sonda a parte: `316675476`.
