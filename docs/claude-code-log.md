@@ -13,6 +13,19 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-04 — refactor(rail): via la scheda Form, il Data Manager e' l'unico host (R-VP-14)
+**Prompt**: rimozione integrale della scheda Form del rail (Properties | Form, 2026-08-26): il pannello di destra torna al solo rendering classico (`Info`). Nessuna modifica a `IRForm`, `formHosts.ts`, alla prop `host` ne' al Data Manager (R-VP-14). Corsia veloce RC-3, due file, nessuna critical zone.
+**Files touched**: `frontend/src/components/editors/PropertiesWithTreeView.tsx`, `frontend/src/components/editors/properties-with-tree-view.scss` — commit `c582c2bbb`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `tsc` 33 su output completo (baseline esatta, 0 nei due file), `build` exit 0, warning solo le deprecazioni Sass pre-esistenti (`@import`, `darken()`, global builtin) e l'avviso di chunk-size; zero righe `error`. vitest non eseguito: nessun test cita `inspectorTab` o `inspector-tabs`.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessun file di §3.1.
+**Smoke visivo**: passato — quattro controlli: oggetto M1 selezionato → nessuna barra di tab, Properties classico come prima del 2026-08-26; DClass selezionato → identico a oggi; sezione NODE in Advanced ancora presente; Data Manager, drawer invariato.
+**Notes**: Verifica preventiva §2 sul working tree: `import IRForm` :6, `formSubjectId` :544 (solo il mount :1110), `formSubjectIsObject` :547-550 (barra e mount), `inspectorTab` :551 con l'effetto :554-556, barra :1084-1107, ternario :1109-1115, guardia :1120 — nessun altro consumatore. Via anche il commento :536-539, solo sulla scheda; `selectedElementId` resta (:556, :557, :816). SCSS :2497-2537 intero, `grep inspector-tabs` → 0. Senza la guardia NODE torna sugli oggetti, voluto.
+**Prompt document name**: 2026-09-04 15:09
+
 ## 2026-09-04 — feat(form): order, labels, hidden e hosts.manager su FormSpec (R-VP slice 1, commit 2)
 **Prompt**: GO emendato R-VP slice 1 Fase 2, commit 2: tre chiavi additive su `FormSpec` (`order`, `labels`, `hidden`), override per host `hosts.manager` (`FormHostOverride`), `resolveFormSpec` pura in `formHosts.ts`, prop `host` su `IRForm` dichiarata dai tre mount, `hidden` nello stesso `continue` di `features: 'hidden'`, `order` su `visible` prima di `buildFormSections`.
 **Files touched**: `frontend/src/components/editor-v2/viewpoint/ir/irTypes.ts`, `.../ir/formHosts.ts` (nuovo), `.../ir/__tests__/formHosts.test.ts` (nuovo), `.../ir/IRForm.tsx`, `.../ir/IRFormField.tsx`, `.../ir/useFormWidgets.ts`, `.../ir/__tests__/useFormWidgets.test.ts`, `.../ir/__tests__/irValidate.test.ts`, `frontend/src/components/abstract/tabs/InstanceManagerTab.tsx`, `frontend/src/components/editors/PropertiesWithTreeView.tsx` — commit `40142a4f3`.
