@@ -118,15 +118,30 @@ export const derivedTreatment = (upperBound: number): FeatureTreatment => (upper
  * persisted forever: the saved IR has no VersionFixer (R-B9), so a `form: {}` left behind
  * by an author who tried a theme and went back would stay in the file for good.
  *
- * `basic: []` is NOT pruned, and that asymmetry with `widgets`/`features` is the point:
- * an empty map means "no override", which is the same thing as an absent map, while an
- * empty `basic` is a DECLARED answer ("nothing in Basic"), while absent means the
- * heuristic instead. Only the explicit reset removes the key.
+ * FIVE KEYS ARE PRUNED, and one is not. `widgets`, `features` and `labels` are records
+ * keyed by feature name; `order` and `hidden` are lists (R-VP-8, extended here by R-DMV-5).
+ * For all five, empty means the same thing as absent: no override on any feature, no order
+ * imposed, nothing hidden — «a feature is hidden only when listed here» (R-VP-8) and «the
+ * names not listed follow the listed ones in today's order» (R-VP-13) both read an empty
+ * list exactly as they read a missing one.
+ *
+ * `basic: []` is NOT pruned, and that asymmetry is the point: an empty map or list above
+ * means "no override", which is the same thing as an absent one, while an empty `basic` is
+ * a DECLARED answer ("nothing in Basic") and absent means the multiplicity heuristic
+ * instead. Two different renderings, so the key has to survive. Only the explicit reset
+ * removes it.
+ *
+ * Exported since R-DMV slice F: `irPrune.isPrunableClassView` decides whether a per-class
+ * view of the Data Manager singleton still says anything, and that question is only well
+ * posed against the same emptiness this function defines.
  */
-function pruneForm(next: FormSpec): FormSpec | undefined {
+export function pruneForm(next: FormSpec): FormSpec | undefined {
     const out: FormSpec = { ...next };
     if (out.widgets && Object.keys(out.widgets).length === 0) delete out.widgets;
     if (out.features && Object.keys(out.features).length === 0) delete out.features;
+    if (out.labels && Object.keys(out.labels).length === 0) delete out.labels;
+    if (out.order && out.order.length === 0) delete out.order;
+    if (out.hidden && out.hidden.length === 0) delete out.hidden;
     return Object.keys(out).length === 0 ? undefined : out;
 }
 

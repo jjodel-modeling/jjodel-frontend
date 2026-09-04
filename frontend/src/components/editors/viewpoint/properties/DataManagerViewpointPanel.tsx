@@ -2,7 +2,9 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
 import {
     DATA_MANAGER_VIEWPOINT_ID,
+    DeleteElementAction,
     DViewElement,
+    SetRootFieldAction,
     LPointerTargetable,
     LProject,
     LViewPoint,
@@ -22,6 +24,7 @@ import {
     type AuthoringFeatureRow,
 } from '../../../editor-v2/viewpoint/authoring/FormAuthoringBody';
 import { overrideIsCompatible } from '../../../editor-v2/viewpoint/ir/useFormWidgets';
+import { isPrunableClassView, withViewForm } from '../../../editor-v2/viewpoint/ir/irPrune';
 import type { FormSpec, VertexViewIR, WidgetKind } from '../../../editor-v2/viewpoint/ir/irTypes';
 import { FORM_THEME_DEFAULT_NAME, FORM_THEME_NAMES, type FormThemeName } from '../../../../jjform';
 // Same self-import as ViewpointProperties, and for the same reason: `.wp-field` and
@@ -249,6 +252,35 @@ const DataManagerViewpointPanel: React.FC<DataManagerViewpointPanelProps> = ({ v
      *
      * The state is re-read from the store instead of using the `idlookup` of the render:
      * rung 1 may have just created the viewpoint, and the closure's lookup predates it.
+     *
+     * THE LAST RESET REMOVES THE VIEW (R-DMV-5, slice F). Once nothing is left on it —
+     * `withViewForm` has taken the key off and `isPrunableClassView` finds only the skeleton
+     * — the `DViewElement` is deleted rather than persisted as a view that says nothing:
+     * the ir has no VersionFixer (R-B9), so an empty view left behind is left behind for
+     * good, and the class would keep a row in the tree claiming a customization that is not
+     * there. A view carrying authored content of its own is not prunable and survives.
+     *
+     * `DeleteElementAction` AND NOT `lView.delete()`, which is what every other view row in
+     * this codebase calls. Measured 2026-09-05 on the running app: `delete()` on a view of
+     * the singleton removes NOTHING and throws nothing — it logs «unexpected pointedBy case
+     * ending with an object, still not supported» from `classes.ts` `get__jjdependencies`
+     * and returns, because the parent's `subViews` is a Dictionary and the generic dependency
+     * walk does not handle a map. A silent no-op read as «the pruner does not prune» is
+     * exactly the failure mode CLAUDE.md §5 describes, and it cost this slice a red probe.
+     * The action is a BARE call, with no TRANSACTION around it.
+     *
+     * THE ROOT POINTER IS DROPPED TOO, and that is not tidying. `DeleteElementAction` takes
+     * the element out of `idlookup` and leaves its id in the root `state.viewelements`; on
+     * its own that is harmless, because every reader guards on `idlookup[vid]` and skips a
+     * dangling id. It stops being harmless the moment the class is configured AGAIN: the id
+     * is deterministic, `new2` pushes it a second time, and the list then carries it TWICE —
+     * two rows in the tree for one class and two identical entries in the ir index. Measured
+     * 2026-09-05, and the reason this probe's third block exists at all.
+     *
+     * What is still left behind, declared: the entry in the viewpoint's `subViews` map. It
+     * is keyed by id, so re-creating overwrites rather than duplicating, and nothing walks
+     * that map for the singleton (the tree excludes it from the viewpoint rows). Cleaning it
+     * belongs with the fix of `delete()`.
      */
     const writeForm = useCallback((next: FormSpec | undefined) => {
         if (readOnly || !target) return;
@@ -258,16 +290,23 @@ const DataManagerViewpointPanel: React.FC<DataManagerViewpointPanelProps> = ({ v
             return;
         }
         const state: any = store.getState();
-        const dView = findClassView(state, target) ?? createClassView(dVp, target);
+        const existing = findClassView(state, target);
+        // Nothing to write and nothing written yet: no view is created just to be emptied.
+        if (!existing && next === undefined) return;
+        const dView = existing ?? createClassView(dVp, target);
         if (!dView) return;
         const current = (((dView as any).ir ?? {}) as VertexViewIR);
-        const nextIr: any = { ...current };
         // The key is REMOVED and not written undefined: a view whose form was set and reset
-        // must round-trip identical to one where it was never set (R-B9, the saved ir has no
-        // VersionFixer). Dropping the emptied view itself is slice F, not this.
-        if (next === undefined) delete nextIr.form; else nextIr.form = next;
+        // must round-trip identical to one where it was never set (R-B9).
+        const nextIr = withViewForm(current, next);
         try {
-            (LPointerTargetable.fromD(dView) as any).ir = nextIr;
+            if (isPrunableClassView(nextIr)) {
+                const viewId = (dView as any).id;
+                SetRootFieldAction.new('viewelements' as any, viewId, '-=', true);
+                DeleteElementAction.new(viewId);
+            } else {
+                (LPointerTargetable.fromD(dView) as any).ir = nextIr;
+            }
         } catch (e) {
             console.warn('[dataManager] could not write the form of', target.name, e);
         }
