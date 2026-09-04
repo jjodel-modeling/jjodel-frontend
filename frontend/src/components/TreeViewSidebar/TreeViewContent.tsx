@@ -17,6 +17,9 @@ import {
     LViewPoint,
     U,
     getViewpointType,
+    isDataManagerViewpointId,
+    DATA_MANAGER_VIEWPOINT_ID,
+    DATA_MANAGER_VIEWPOINT_NAME,
 } from '../../joiner';
 import type { Pointer } from '../../joiner';
 import type { ViewpointType } from '../../view/viewPoint/viewpoint';
@@ -29,7 +32,8 @@ import { getTypeName, getMultiplicity } from '../../common/featureSignature';
 import type { NodeProblem } from '../editor-v2/problems/registry';
 import { computeTreeViewScope } from './treeViewScope';
 import { natureOf } from '../editor-v2/viewpoint/ir/edgeEndpoints';
-import type { AnyViewIR, EdgeViewIR } from '../editor-v2/viewpoint/ir/irTypes';
+import { widgetLabel } from '../editor-v2/viewpoint/authoring/FormAuthoringBody';
+import type { AnyViewIR, EdgeViewIR, WidgetKind } from '../editor-v2/viewpoint/ir/irTypes';
 
 /**
  * TreeViewContent — redesign 2026-05-08.
@@ -56,6 +60,7 @@ const SECTION_KEYS = {
     VIEWPOINTS: '__section:viewpoints',
     VIEWPOINTS_SYNTAX: '__section:viewpoints/syntax',
     VIEWPOINTS_VALIDATION: '__section:viewpoints/validation',
+    DATA_MANAGER: '__section:dataManager',
     DOCUMENTATION: '__section:documentation',
 } as const;
 
@@ -65,6 +70,7 @@ const STATIC_SECTION_KEYS: ReadonlySet<string> = new Set<string>([
     SECTION_KEYS.VIEWPOINTS,
     SECTION_KEYS.VIEWPOINTS_SYNTAX,
     SECTION_KEYS.VIEWPOINTS_VALIDATION,
+    SECTION_KEYS.DATA_MANAGER,
     SECTION_KEYS.DOCUMENTATION,
 ]);
 
@@ -230,6 +236,41 @@ interface TreeViewpointData {
     viewCount: number;
     raw: LViewPoint;
     subViews: TreeSubViewData[];
+}
+
+/**
+ * The Data Manager section of the tree (R-DMV-5).
+ *
+ * Only what DEVIATES from the default is listed: a class appears when the singleton holds
+ * a view for it that says something, and under it only the features that view actually
+ * names. A project where nobody configured anything shows the section with its empty state
+ * and nothing else — which is every project that exists today (R-VP-4).
+ */
+interface TreeDataManagerFeatureData {
+    /** Feature name as the view writes it. Not resolved against the metamodel: a view is
+     *  persisted for good and a metaclass can lose a feature after the view was authored,
+     *  so the tree shows what is WRITTEN and lets the panel be the place that validates. */
+    name: string;
+    /** The override, already rendered: «Code», «hidden», «label "…"». */
+    override: string;
+}
+
+interface TreeDataManagerClassData {
+    /** Id of the `DViewElement`. It is the row's `data-element-id`, as for any view row. */
+    viewId: string;
+    /** Metaclass name the view speaks for. */
+    name: string;
+    features: TreeDataManagerFeatureData[];
+    /** `table.columns` when the order is fixed, else null (R-DMV-5, «columns»). */
+    columns: string[] | null;
+}
+
+interface TreeDataManagerData {
+    /** The singleton's name, or the name it will be born with when it does not exist. */
+    name: string;
+    /** True when the `DViewPoint` is really there. False is the ordinary state today. */
+    exists: boolean;
+    classes: TreeDataManagerClassData[];
 }
 
 interface TreeTransformationData {
@@ -612,6 +653,15 @@ interface SectionNodeProps {
     onToggle: () => void;
     children?: ReactNode;
     depth: number;
+    /**
+     * Optional: makes the LABEL a click target of its own, while the chevron and the rest
+     * of the header keep toggling. Only the Data Manager section passes it (R-DMV-5, Q6):
+     * that section stands for one object — the singleton — and clicking its name selects it
+     * in the rail. Every other section stands for a set and has nothing to select, so they
+     * omit the prop and render exactly as before.
+     */
+    onLabelClick?: () => void;
+    labelTitle?: string;
 }
 
 const SectionNode = memo(function SectionNode({
@@ -622,6 +672,8 @@ const SectionNode = memo(function SectionNode({
     onToggle,
     children,
     depth,
+    onLabelClick,
+    labelTitle,
 }: SectionNodeProps): ReactElement {
     return (
         <div className="tree-section" data-section-key={sectionKey}>
@@ -633,7 +685,11 @@ const SectionNode = memo(function SectionNode({
                 <button className="tree-node__toggle" onClick={(e) => { e.stopPropagation(); onToggle(); }}>
                     <i className={`bi bi-chevron-${expanded ? 'down' : 'right'}`} />
                 </button>
-                <span className="tree-section__label">{label}</span>
+                <span
+                    className={`tree-section__label${onLabelClick ? ' tree-section__label--clickable' : ''}`}
+                    title={labelTitle}
+                    onClick={onLabelClick ? (e) => { e.stopPropagation(); onLabelClick(); } : undefined}
+                >{label}</span>
                 {typeof counter === 'number' && (
                     <span className="tree-counter">{counter}</span>
                 )}
@@ -643,6 +699,128 @@ const SectionNode = memo(function SectionNode({
                     {children}
                 </div>
             )}
+        </div>
+    );
+});
+
+// ─── Data Manager rows (R-DMV-5) ────────────────────────────────────────────
+
+/**
+ * Selecting the Data Manager in the rail.
+ *
+ * The SAME write every other row of this tree makes — `_lastSelected.view` — and the same
+ * one `DockManager.openViewpoint` makes. The difference is that the pointer is written
+ * whether or not the object exists: with no singleton yet, `Info` renders the panel on the
+ * STUB and the first write in it materializes the viewpoint (R-DMV-6). Creating the
+ * viewpoint here instead would put it in every project that ever clicked this row.
+ */
+function selectDataManager(): void {
+    try {
+        SetRootFieldAction.new('_lastSelected' as any, {
+            node: '', view: DATA_MANAGER_VIEWPOINT_ID, modelElement: '',
+        });
+    } catch (err) {
+        console.warn('[TreeView] Failed to select the Data Manager viewpoint:', err);
+    }
+}
+
+/** One customized metaclass, and under it the features the view names. */
+const DataManagerClassNode = memo(function DataManagerClassNode({
+    cls, depth, isExpandedFn, onToggleFn, onSelect, selectedViewId, highlightQuery,
+}: {
+    cls: TreeDataManagerClassData;
+    depth: number;
+    isExpandedFn: (key: string) => boolean;
+    onToggleFn: (key: string) => void;
+    onSelect?: () => void;
+    selectedViewId?: string;
+    highlightQuery?: string;
+}): ReactElement {
+    const expanded = isExpandedFn(cls.viewId);
+    const rows = cls.features.length + (cls.columns ? 1 : 0);
+    // Every row of this section opens the same panel, class rows included: the section
+    // stands for one configuration, and there is nothing else a click here could mean.
+    const handleClick = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
+        selectDataManager();
+        onSelect?.();
+    }, [onSelect]);
+    return (
+        <div className="tree-node" data-element-id={cls.viewId}>
+            <EntityRow
+                badge="C"
+                badgeClassName="tree-DClass"
+                name={cls.name}
+                expandKey={cls.viewId}
+                isLeaf={rows === 0}
+                expanded={expanded}
+                selected={selectedViewId === DATA_MANAGER_VIEWPOINT_ID}
+                onToggle={() => onToggleFn(cls.viewId)}
+                onClick={handleClick}
+                depth={depth}
+                dataElementId={cls.viewId}
+                highlightQuery={highlightQuery}
+            />
+            {expanded && (
+                <div className="tree-children">
+                    {cls.columns && (
+                        <div className="tree-node">
+                            <EntityRow
+                                badge="A"
+                                badgeClassName="tree-DAttribute"
+                                name="columns"
+                                isLeaf
+                                onClick={handleClick}
+                                depth={depth + 1}
+                                nameOverride={(
+                                    <>
+                                        <span className="tree-feature__name">columns</span>
+                                        <span className="tree-feature__type">{cls.columns.join(', ')}</span>
+                                    </>
+                                )}
+                            />
+                        </div>
+                    )}
+                    {cls.features.map(f => (
+                        <div className="tree-node" key={f.name}>
+                            <EntityRow
+                                badge="A"
+                                badgeClassName="tree-DAttribute"
+                                name={f.name}
+                                isLeaf
+                                onClick={handleClick}
+                                depth={depth + 1}
+                                nameOverride={(
+                                    <>
+                                        <span className="tree-feature__name">
+                                            {renderHighlightedName(f.name, highlightQuery)}
+                                        </span>
+                                        <span className="tree-feature__type">{f.override}</span>
+                                    </>
+                                )}
+                            />
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+});
+
+/** The empty state of R-DMV-5, a row and not a placeholder: it is also a click target,
+ *  so the panel is reachable in the project where nothing has been configured — which is
+ *  the only state a project can be in before somebody configures something. */
+const DataManagerEmptyState = memo(function DataManagerEmptyState({
+    depth, onSelect,
+}: { depth: number; onSelect?: () => void }): ReactElement {
+    return (
+        <div
+            className="tree-empty-dmv"
+            style={{ paddingLeft: `${depth * TREE_INDENT_STEP}px` }}
+            onClick={() => { selectDataManager(); onSelect?.(); }}
+            title="Open the Data Manager configuration"
+        >
+            <span className="tree-empty-dmv-label">All classes use the type-derived defaults</span>
         </div>
     );
 });
@@ -1748,6 +1926,7 @@ interface StateProps {
     metamodels: TreeMetamodelData[];
     standaloneModels: TreeModelData[];
     viewpoints: TreeViewpointData[];
+    dataManager: TreeDataManagerData;
     selectedElementId?: string;
     selectedViewId?: string;
     projectId?: Pointer<DProject>;
@@ -1760,7 +1939,7 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 function TreeViewContentComponent(props: AllProps) {
     const {
-        metamodels, standaloneModels, viewpoints, selectedElementId,
+        metamodels, standaloneModels, viewpoints, dataManager, selectedElementId,
         selectedViewId, projectId, expandedTreeNodes, onSelect,
         searchOpen, onSearchClose,
     } = props;
@@ -2038,17 +2217,26 @@ function TreeViewContentComponent(props: AllProps) {
         }
     }, [searchQuery, firstMatchId, onSearchClose]);
 
-    // Group viewpoints by type (filtered set during search)
-    const { syntaxVps, validationVps, otherVps } = useMemo(() => {
+    // Group viewpoints by type (filtered set during search).
+    //
+    // The Data Manager singleton is dropped from ALL THREE buckets and from the counter
+    // (R-DMV-5): it has its own section below, and the `other` bucket is a catch-all that
+    // would otherwise have picked the new type up on its own, showing the singleton as a
+    // bare viewpoint under «Viewpoints» — which is exactly what this decision undoes.
+    const { syntaxVps, validationVps, otherVps, viewpointCount } = useMemo(() => {
         const syntax: TreeViewpointData[] = [];
         const validation: TreeViewpointData[] = [];
         const other: TreeViewpointData[] = [];
         for (const vp of displayViewpoints) {
+            if (isDataManagerViewpointId(vp.id)) continue;
             if (vp.vpType === 'syntax') syntax.push(vp);
             else if (vp.vpType === 'validation') validation.push(vp);
             else other.push(vp);
         }
-        return { syntaxVps: syntax, validationVps: validation, otherVps: other };
+        return {
+            syntaxVps: syntax, validationVps: validation, otherVps: other,
+            viewpointCount: syntax.length + validation.length + other.length,
+        };
     }, [displayViewpoints]);
 
     const hasContent =
@@ -2062,6 +2250,7 @@ function TreeViewContentComponent(props: AllProps) {
     const viewpointsExpanded = isExpandedFn(SECTION_KEYS.VIEWPOINTS);
     const syntaxExpanded = isExpandedFn(SECTION_KEYS.VIEWPOINTS_SYNTAX);
     const validationExpanded = isExpandedFn(SECTION_KEYS.VIEWPOINTS_VALIDATION);
+    const dataManagerExpanded = isExpandedFn(SECTION_KEYS.DATA_MANAGER);
     const docsExpanded = isExpandedFn(SECTION_KEYS.DOCUMENTATION);
 
     if (!hasContent) {
@@ -2157,11 +2346,11 @@ function TreeViewContentComponent(props: AllProps) {
                 )}
 
                 {/* VIEWPOINTS — hidden during search when nothing matches */}
-                {(!searchActive || displayViewpoints.length > 0) && (
+                {(!searchActive || viewpointCount > 0) && (
                 <SectionNode
                     sectionKey={SECTION_KEYS.VIEWPOINTS}
                     label="Viewpoints"
-                    counter={displayViewpoints.length}
+                    counter={viewpointCount}
                     expanded={viewpointsExpanded}
                     onToggle={() => onToggleFn(SECTION_KEYS.VIEWPOINTS)}
                     depth={1}
@@ -2245,6 +2434,40 @@ function TreeViewContentComponent(props: AllProps) {
                             renameInputRef={renameInputRef}
                         />
                     ))}
+                </SectionNode>
+                )}
+
+                {/* DATA MANAGER (R-DMV-5) — ALWAYS present, singleton or not: the section
+                    is where the configuration lives, and «there is no configuration» is a
+                    state it has to be able to say. Hidden during search only, like the
+                    other sections with no searchable content of their own. */}
+                {!searchActive && (
+                <SectionNode
+                    sectionKey={SECTION_KEYS.DATA_MANAGER}
+                    label="Data Manager"
+                    counter={dataManager.classes.length}
+                    expanded={dataManagerExpanded}
+                    onToggle={() => onToggleFn(SECTION_KEYS.DATA_MANAGER)}
+                    onLabelClick={() => { selectDataManager(); onSelect?.(); }}
+                    labelTitle="Open the Data Manager configuration"
+                    depth={1}
+                >
+                    {dataManager.classes.length === 0 ? (
+                        <DataManagerEmptyState depth={2} onSelect={onSelect} />
+                    ) : (
+                        dataManager.classes.map(cls => (
+                            <DataManagerClassNode
+                                key={cls.viewId}
+                                cls={cls}
+                                depth={2}
+                                isExpandedFn={isExpandedFn}
+                                onToggleFn={onToggleFn}
+                                onSelect={onSelect}
+                                selectedViewId={selectedViewId}
+                                highlightQuery={highlightQuery}
+                            />
+                        ))
+                    )}
                 </SectionNode>
                 )}
 
@@ -2631,6 +2854,7 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
         }
     } catch { /* ignore */ }
     ret.viewpoints = vpList;
+    ret.dataManager = buildDataManagerData(state);
 
     ret.selectedElementId = state._lastSelected?.modelElement || undefined;
     // Selected view/viewpoint id (DProject._lastSelected.view) — highlights the
@@ -2639,6 +2863,68 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     ret.selectedViewId = state._lastSelected?.view || undefined;
 
     return ret;
+}
+
+/**
+ * What the Data Manager section shows, read off the D layer.
+ *
+ * The admissibility rule is the one `resolveTableSpec` applies at read time — a node view
+ * of the singleton, without a `predicate` — because a view the reader skips must not be
+ * advertised here as a configuration in force. `metaclasses` gives the name; the tree does
+ * not resolve it against the metamodel, on purpose (see `TreeDataManagerFeatureData`).
+ *
+ * A class with a view that says NOTHING is not listed. That is what makes «una view svuotata
+ * si pota e la classe sparisce» (R-DMV-5) visible before the pruner of slice F exists: the
+ * emptied view survives in the store for now, but it stops claiming a customization.
+ */
+function buildDataManagerData(state: DState): TreeDataManagerData {
+    const lookup: any = (state as any).idlookup;
+    const dVp = lookup?.[DATA_MANAGER_VIEWPOINT_ID];
+    const classes: TreeDataManagerClassData[] = [];
+    const list: string[] = (state as any).viewelements ?? [];
+    for (const vid of list) {
+        const d = lookup?.[vid];
+        if (!d || d.viewpoint !== DATA_MANAGER_VIEWPOINT_ID) continue;
+        const ir: any = d.ir;
+        if (!ir || typeof ir !== 'object') continue;
+        if (ir.kind !== 'vertex' && ir.kind !== 'graphVertex') continue;
+        if (ir.predicate !== undefined) continue;
+        if (!Array.isArray(ir.metaclasses) || ir.metaclasses.length === 0) continue;
+
+        // One row per feature the view NAMES, with every key that names it folded into one
+        // line: a feature with both a widget and a label is one row saying both, not two
+        // rows the reader has to correlate.
+        const byFeature = new Map<string, string[]>();
+        const add = (name: string, text: string) => {
+            const cur = byFeature.get(name);
+            if (cur) cur.push(text); else byFeature.set(name, [text]);
+        };
+        const form: any = ir.form;
+        for (const [name, kind] of Object.entries(form?.widgets ?? {})) {
+            add(name, widgetLabel(kind as WidgetKind));
+        }
+        for (const [name, treatment] of Object.entries(form?.features ?? {})) add(name, String(treatment));
+        for (const [name, label] of Object.entries(form?.labels ?? {})) add(name, `label "${String(label)}"`);
+        for (const name of (Array.isArray(form?.hidden) ? form.hidden : [])) add(String(name), 'hidden');
+
+        const columns = Array.isArray(ir.table?.columns) && ir.table.columns.length > 0
+            ? (ir.table.columns as string[])
+            : null;
+        if (byFeature.size === 0 && !columns) continue;   // says nothing: not a customization
+
+        classes.push({
+            viewId: vid,
+            name: String(ir.metaclasses[0]),
+            features: Array.from(byFeature, ([name, parts]) => ({ name, override: parts.join(', ') })),
+            columns,
+        });
+    }
+    classes.sort((a, b) => a.name.localeCompare(b.name));
+    return {
+        name: (dVp?.name as string) || DATA_MANAGER_VIEWPOINT_NAME,
+        exists: !!dVp,
+        classes,
+    };
 }
 
 function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {

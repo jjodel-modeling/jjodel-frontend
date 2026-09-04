@@ -7,6 +7,7 @@ import {
     LProject,
     LViewPoint,
     ensureDataManagerViewpoint,
+    DATA_MANAGER_VIEWPOINT_NAME,
     store,
 } from '../../../../joiner';
 import { EmptyState, HelpText, Select } from '../../../ui';
@@ -52,10 +53,20 @@ import './DataManagerViewpointPanel.scss';
  * The «Applies when this viewpoint is active» hint of `ViewpointProperties` is absent too,
  * and not by omission: the singleton is never `state.viewpoint` (R-DMV-1), so that hint
  * would be permanently visible and permanently false.
+ *
+ * `viewpoint` IS NULLABLE, and that is the stub of R-DMV-6. The sidebar entry exists in
+ * every project, including the ones where nobody has configured anything, and selecting it
+ * points `_lastSelected.view` at `Pointer_ViewPointDataManager` whether or not that object
+ * exists. The panel renders identically either way — what it shows with no singleton is
+ * the state every project is in today — and the FIRST WRITE, whichever control it comes
+ * from, is what brings the viewpoint into being. Materializing on mount instead would put
+ * the object in every project that ever opened this rail, which is the thing R-DMV-6 exists
+ * to prevent.
  */
 
 interface DataManagerViewpointPanelProps {
-    viewpoint: LViewPoint;
+    /** Null when the singleton has not been written to yet: the stub of R-DMV-6. */
+    viewpoint: LViewPoint | null;
     readOnly: boolean;
 }
 
@@ -188,16 +199,42 @@ const DataManagerViewpointPanel: React.FC<DataManagerViewpointPanelProps> = ({ v
     const form = ((classView as any)?.ir?.form) as FormSpec | undefined;
     const rows: AuthoringFeatureRow[] = useMemo(() => rowsForMetaclass(target), [target]);
 
-    const handleNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-        if (!readOnly) viewpoint.name = e.target.value;
-    }, [viewpoint, readOnly]);
-
-    const currentFormTheme = ((viewpoint as any).formTheme as FormThemeName | undefined) ?? null;
-    const handleFormThemeChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+    /**
+     * Rung 1 of the materialization: every write on the VIEWPOINT goes through here, so
+     * that a panel rendered on the stub creates the singleton the moment somebody types a
+     * name or picks a theme, and not before.
+     *
+     * A BARE call, with no TRANSACTION around it (CLAUDE.md §3.3): `newVP` opens its own,
+     * and a creator nested in an outer one loses its writes. The L-proxy is taken from the
+     * D that `ensure` returns rather than from the `viewpoint` prop, which is null on the
+     * stub and stale for one render right after the creation.
+     */
+    const writeViewpoint = useCallback((mutate: (lvp: any) => void) => {
         if (readOnly) return;
+        const dVp = ensureDataManagerViewpoint();
+        if (!dVp) {
+            console.warn('[dataManager] no project in scope: the singleton cannot be created');
+            return;
+        }
+        try { mutate(LPointerTargetable.fromD(dVp)); }
+        catch (e) { console.warn('[dataManager] write on the singleton failed', e); }
+    }, [readOnly]);
+
+    // The name the singleton WILL be born with, shown on the stub: the field is not empty
+    // and not disabled, because typing in it is a legitimate first write.
+    const currentName = viewpoint ? (viewpoint.name || '') : DATA_MANAGER_VIEWPOINT_NAME;
+    const handleNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const v = e.target.value;
-        (viewpoint as any).formTheme = v === FORM_THEME_INHERIT ? undefined : (v as FormThemeName);
-    }, [viewpoint, readOnly]);
+        writeViewpoint(lvp => { lvp.name = v; });
+    }, [writeViewpoint]);
+
+    const currentFormTheme = ((viewpoint as any)?.formTheme as FormThemeName | undefined) ?? null;
+    const handleFormThemeChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+        const v = e.target.value;
+        writeViewpoint(lvp => {
+            lvp.formTheme = v === FORM_THEME_INHERIT ? undefined : (v as FormThemeName);
+        });
+    }, [writeViewpoint]);
 
     /**
      * The write, and with it the materialization of R-DMV-6, in ONE place.
@@ -285,7 +322,7 @@ const DataManagerViewpointPanel: React.FC<DataManagerViewpointPanelProps> = ({ v
                 <label className="wp-field__label">Name</label>
                 <input
                     className="wp-field__input"
-                    value={viewpoint.name || ''}
+                    value={currentName}
                     onChange={handleNameChange}
                     disabled={readOnly}
                 />

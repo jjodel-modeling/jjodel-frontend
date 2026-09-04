@@ -1585,6 +1585,40 @@ html[data-theme="dark"] {
     }
 }
 
+// ─── Data Manager empty state (R-DMV-5) ──────────────────────────────────────
+//
+// Its own rule and not a reuse of `.tree-empty-doc`: that block is laid out for a label
+// PLUS a Generate button (`justify-content: space-between`), and this row carries only the
+// sentence. Clickable, because it is also the way into the panel in the project where
+// nothing has been configured yet — which is every project until somebody configures one.
+
+.tree-empty-dmv {
+    display: flex;
+    align-items: center;
+    padding: 6px 12px 6px 0;
+    cursor: pointer;
+
+    &-label {
+        font-size: 12px;
+        font-style: italic;
+        color: var(--color-text-tertiary);
+    }
+
+    &:hover &-label {
+        color: var(--color-text-secondary);
+    }
+}
+
+// The label of a section that stands for ONE object, and therefore selects it
+// (`SectionNode.onLabelClick`, R-DMV-5). Only the Data Manager section passes that prop.
+.tree-section__label--clickable {
+    cursor: pointer;
+
+    &:hover {
+        color: var(--color-text-primary);
+    }
+}
+
 // ─── Highlight (JjScript execution) — reuse existing animations ──────────────
 
 .tree-row--highlighted {
@@ -1651,6 +1685,7 @@ html[data-theme="dark"] {
 
     .tree-counter,
     .tree-empty-doc-label,
+    .tree-empty-dmv-label,
     .tree-feature__type,
     .tree-feature__mult {
         color: #6b7280;
