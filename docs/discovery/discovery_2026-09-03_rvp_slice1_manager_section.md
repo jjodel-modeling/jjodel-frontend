@@ -515,3 +515,31 @@ Scritto dopo la verifica visiva, come sede del ragionamento che la entry di log
 - **Processo**: i tre commit sono fatti dalla shell nativa del Mac; la VM del bridge aveva
   lasciato `index.lock`, `HEAD.lock`, `objects/maintenance.lock` e 5 `tmp_obj_*` alle
   22:56, rimossi a mano da Alfonso.
+
+---
+
+## 9. Addendum Fase 2, commit 2 (2026-09-04, `40142a4f3`)
+
+- **Deroga regola 19** (10 file, RC-11): i sei del GO piu' `IRFormField.tsx`, i due file
+  di test estesi e `PropertiesWithTreeView.tsx` per il `host` del rail.
+- **`labels`, punto di applicazione**: il GO lo delegava al referto, che non lo indicava. E'
+  unico: `IRFormField.tsx:455` stampa `{field.name}` nella `<label>`. Soluzione: `label?:
+  string` opzionale su `FormFieldDescriptor`, valorizzato in `describeSlot` solo quando
+  `spec.labels[name]` esiste (cosi' le fixture strutturali dei test restano identiche), e
+  `field.label ?? field.name` nel render. Scritture, offer e diagnostiche restano su `name`.
+- **`host` esplicito sui tre mount**: `manager` sui due di `InstanceManagerTab.tsx`
+  (`:3002`, `:3036`), `rail` su `PropertiesWithTreeView.tsx:1110`; default `'rail'` nella
+  prop, cosi' un mount futuro che non dice e' il base spec. `nodeForm` esiste nel tipo ma
+  nessun mount lo passa: il nodo-form non monta `IRForm` (§3.1).
+- **`spec` in `useMemo`** su `[resolution, host]`: `resolveFormSpec` senza override e senza
+  `hosts` restituisce lo stesso oggetto, quindi l'identita' dello spec non cambia rispetto a
+  prima per ogni view di oggi.
+- **Smoke visivo**: primo tentativo prima dell'hard refresh, form in Basic, ordine invariato;
+  causa (g), il bundle era quello del commit 1. Dopo `⌘⇧R` e riscrittura dell'IR (la modifica
+  via console non era salvata): drawer e rail come atteso. `widgets: { kind: 'text' }`
+  nell'override non cambia la select: `kind` e' un enum e `overrideIsCompatible`
+  (`useFormWidgets.ts:163`) lo rifiuta, comportamento pre-esistente della ladder, non un
+  difetto di questa slice.
+- **Debiti registrati, non ora**: `pruneForm` non pota `hosts: {}`, `order: []`, `hidden: []`
+  (§3.10); il rung 0 della tabella (R-VP-9, slice 1b); l'allineamento dell'addendum FormSpec e
+  di `form-engine-contract.md` (§3.3 del prompt).

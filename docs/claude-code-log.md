@@ -13,6 +13,19 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-04 — feat(form): order, labels, hidden e hosts.manager su FormSpec (R-VP slice 1, commit 2)
+**Prompt**: GO emendato R-VP slice 1 Fase 2, commit 2: tre chiavi additive su `FormSpec` (`order`, `labels`, `hidden`), override per host `hosts.manager` (`FormHostOverride`), `resolveFormSpec` pura in `formHosts.ts`, prop `host` su `IRForm` dichiarata dai tre mount, `hidden` nello stesso `continue` di `features: 'hidden'`, `order` su `visible` prima di `buildFormSections`.
+**Files touched**: `frontend/src/components/editor-v2/viewpoint/ir/irTypes.ts`, `.../ir/formHosts.ts` (nuovo), `.../ir/__tests__/formHosts.test.ts` (nuovo), `.../ir/IRForm.tsx`, `.../ir/IRFormField.tsx`, `.../ir/useFormWidgets.ts`, `.../ir/__tests__/useFormWidgets.test.ts`, `.../ir/__tests__/irValidate.test.ts`, `frontend/src/components/abstract/tabs/InstanceManagerTab.tsx`, `frontend/src/components/editors/PropertiesWithTreeView.tsx` — commit `40142a4f3`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `tsc` 33 su output completo (baseline esatta, 0 nei dieci file), `build` exit 0 col solo avviso di chunk-size (Node 23), vitest 95/95 sui quattro file di test (10 nuovi `formHosts`, 4 nuovi `useFormWidgets`, 2 nuovi `irValidate`).
+**Out-of-scope changes**: yes
+**Layer Impact Report**: not-required — nessun file di §3.1.
+**Smoke visivo**: passato — `localhost:3000`, `Form 1b fixture`, `Running : State`, hard refresh dopo il commit. Drawer del manager (Advanced): `Time-out (s)`, `kind`, `name`, `isHistory`, `On entry`, `depth`; `tags` assente. Rail (scheda Form, Advanced): `timeout` con label normale, `kind`, `On entry`, `tags` presente. Pannello Properties classico invariato. Tabella invariata (R-VP-9).
+**Notes**: **Deroga regola 19** (10 file, RC-11). **Scope oltre il GO, dichiarato**: `IRFormField.tsx:455` è l'unico punto che stampa la label (`field.name`), una riga (`field.label ?? field.name`) con `label?` opzionale sul descrittore, valorizzato solo se l'autore lo dichiara. Il rail passa `host="rail"` esplicito. `widgets: { kind: 'text' }` nell'override resta select: `kind` è enum e `overrideIsCompatible` lo rifiuta, ladder pre-esistente. Dettaglio: addendum §9 del referto.
+**Prompt document name**: 2026-09-03 23:20
+
 ## 2026-09-03 — feat(manager): ManagerSpec.columns sulla view di classe (R-VP slice 1, commit 1)
 **Prompt**: GO emendato R-VP slice 1 Fase 2, commit 1: `ManagerSpec { columns? }` su `VertexViewIR`, `orderColumns` pura in `instanceTable.ts`, lettura di `manager` dall'indice per la sola view senza predicato (R-VP-11), warn una volta per classe. Niente `sort` (R-VP-10), niente `irCompile`/`CompiledView`.
 **Files touched**: `frontend/src/components/editor-v2/viewpoint/ir/irTypes.ts`, `frontend/src/components/editor-v2/viewpoint/ir/irResolveCore.ts` (solo `export` di `pinAccepts` e `compareCandidates`), `frontend/src/components/editor-v2/viewpoint/ir/managerViews.ts` (nuovo), `frontend/src/components/editor-v2/viewpoint/ir/__tests__/managerViews.test.ts` (nuovo), `frontend/src/components/abstract/tabs/instanceTable.ts`, `frontend/src/components/abstract/tabs/__tests__/instanceTable.test.ts`, `frontend/src/components/abstract/tabs/InstanceManagerTab.tsx` — commit `85db1612c`. Docs a parte: `b28c370de` (ratifiche R-VP, memo, referto, GO).
