@@ -2850,7 +2850,7 @@ criterio è semantico, non visuale.
 **R-VP-2** (2026-09-03) — **Destinazione delle chiavi `jjodel/*`**: `unit`, `min`, `max` → tipo
 scalare raffinato; `renderer`, `multiline` → viewpoint, nella libreria di row view condivisa.
 
-**R-VP-3** (2026-09-03) — **Il manager non ha un viewpoint proprio.** I suoi aspetti visuali sono una
+**R-VP-3** (2026-09-03, **superata da R-DMV-1 il 2026-09-04**) — **Il manager non ha un viewpoint proprio.** I suoi aspetti visuali sono una
 sezione della stessa view per classe, additiva su ir-1.3 nello stile del `FormSpec`. Viewpoint
 separato escluso.
 
@@ -2887,7 +2887,7 @@ specificità decrescente come `resolveIRView`; una con predicato viene ignorata 
 `console.warn` una volta. Lettura dall'indice (`index.byMetaclass`), senza `irCompile` né
 `CompiledView`.
 
-**R-VP-12** (2026-09-03) — **Il nome è `hosts`, non `surfaces`.** `VertexViewIR.surface` (Q5,
+**R-VP-12** (2026-09-03, **superata da R-DMV-7 il 2026-09-04**) — **Il nome è `hosts`, non `surfaces`.** `VertexViewIR.surface` (Q5,
 R-FORM-3) è ratificata e definitiva; gli host della form (rail, nodo-form, manager) usano la parola
 già in uso nel codice: `FormSpec.hosts?: { manager?: FormHostOverride }`,
 `FormHostOverride = Partial<Omit<FormSpec, 'hosts'>>`. Solo `manager` ammesso in questa slice.
@@ -2904,6 +2904,42 @@ classico resta l'unico rendering del rail. Conseguenze: `hosts.manager` (R-VP-12
 ma non si costruisce più nulla sopra, l'authoring futuro scrive nel `FormSpec` base; `IRForm`,
 `FormHost` e la prop `host` non si toccano in questa rimozione (pulizia a un fronte R-DEAD
 successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rail_form_tab_removal.md`.
+
+
+## Serie R-DMV — il Data Manager Viewpoint singleton (ratifiche 2026-09-04)
+
+Memo: `docs/ratifiche/claude_2026-09-04_1545_memo_ratifica_data_manager_viewpoint.md`.
+Supera R-VP-3 e R-VP-12 (spostate in «Superate»); conferma R-VP-14.
+
+**R-DMV-1** (2026-09-04) — **Un solo Data Manager Viewpoint per progetto**, `DViewPoint` builtin:
+non si crea da «New viewpoint», non si duplica, non si cancella, non compare tra le sintassi del
+canvas e il canvas non lo apre. Il Data Manager legge sempre da lui, mai da `state.viewpoint`.
+
+**R-DMV-2** (2026-09-04) — **I viewpoint diagrammatici sono solo sintassi concreta.** Il loro
+`form.widgets` resta perché governa le righe del nodo (rung 0); nessuna sezione del manager vi
+appartiene più.
+
+**R-DMV-3** (2026-09-04) — **Le view del singleton sono view di classe senza `shape`**: colonne
+della tabella e `form` del drawer, con le sezioni già esistenti (`widgets`, `order`, `labels`,
+`hidden`, `basic`, `theme`). Il nome della chiave delle colonne (`manager` oggi) si decide nella
+discovery prima che un progetto la scriva (R-B9).
+
+**R-DMV-4** (2026-09-04) — **Rail del singleton**: Form theme (già in `ViewpointProperties`) e
+un editor per classe dei widget per campo, solo widget compatibili col tipo, che scrive
+`form.widgets` nella view di classe del singleton creandola se manca. Colonne, ordine, label e
+nascosti nello stesso pannello in una slice successiva.
+
+**R-DMV-5** (2026-09-04) — **Sidebar**: sotto «Data Manager» solo le classi che deviano dal
+default, e sotto ciascuna le feature toccate con l'override accanto, più «columns» quando
+l'ordine è fissato; stato vuoto dichiarato; una view svuotata si pota (`pruneForm` esteso alle
+chiavi nuove) e la classe sparisce.
+
+**R-DMV-6** (2026-09-04) — **Materializzazione alla prima scrittura**, nessuna migrazione: il
+default implicito di R-VP-4 copre tutto finché nulla è personalizzato. Un tema e un set di
+override per progetto.
+
+**R-DMV-7** (2026-09-04) — **`hosts.manager` e `FormHostOverride` sono morti**: restano nel tipo
+finché un fronte R-DEAD non li toglie con misura; nessun progetto li porta.
 
 
 ## Superate
