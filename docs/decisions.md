@@ -2896,6 +2896,15 @@ già in uso nel codice: `FormSpec.hosts?: { manager?: FormHostOverride }`,
 prima di `buildFormSections`; non sposta di sezione, non toglie nessuno; i non citati seguono i
 citati nell'ordine di oggi.
 
+**R-VP-14** (2026-09-04) — **Il Data Manager è l'unico host della form di editing M1.** Fabbisogno
+dichiarato da Alfonso: solo il Data Manager, con la customizzazione della form (come editare ogni
+campo) e la scelta fra temi visuali. La scheda **Form del rail** (`PropertiesWithTreeView.tsx`,
+`inspectorTab`, 2026-08-26) **si toglie per intero**, non si nasconde: il pannello Properties
+classico resta l'unico rendering del rail. Conseguenze: `hosts.manager` (R-VP-12) resta nel tipo
+ma non si costruisce più nulla sopra, l'authoring futuro scrive nel `FormSpec` base; `IRForm`,
+`FormHost` e la prop `host` non si toccano in questa rimozione (pulizia a un fronte R-DEAD
+successivo, con misura). Prompt: `docs/prompts/claude_2026-09-04_1509_prompt_rail_form_tab_removal.md`.
+
 
 ## Superate
 
