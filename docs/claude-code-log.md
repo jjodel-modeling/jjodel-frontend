@@ -13,6 +13,19 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-04 — feat(rail): DataManagerViewpointPanel, il rail del singleton (R-DMV slice D)
+**Prompt**: GO emendato R-DMV Fase 2, slice D: pannello nuovo per il singleton (nome, Form theme senza hint, selettore di metaclasse, tabella feature -> widget su `rowsForMetaclass` + `offeredOverrides`, materializzazione alla prima scrittura), `Info.tsx` che dispaccia su `isDataManagerViewpoint`. Niente segmented Type, niente `theme`/`labelPlacement` per view (Q5). HARD STOP dopo il commit.
+**Files touched**: `frontend/src/components/editors/viewpoint/properties/DataManagerViewpointPanel.tsx` (nuovo), `.../properties/DataManagerViewpointPanel.scss` (nuovo), `frontend/src/components/editors/Info.tsx` — commit `367a23c45`. Sonda a parte: `316675476`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `tsc` 33 su output completo (baseline esatta), `build` exit 0 col solo avviso di chunk-size, vitest 1749/1749 su `components/editors`, `components/editor-v2`, `components/abstract`. `viewpointThemeHint.test.ts` verde: `ViewpointProperties.tsx` non e' stato toccato, ed e' la ragione per cui il pannello e' un componente separato.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessun file di §3.1. `ensureDataManagerViewpoint` e `DViewElement.new2` sono due chiamate NUDE, nessuna TRANSACTION esterna (§3.3).
+**Smoke visivo**: passato — sonda end-to-end `probe_2026-09-04_rdmv_sliceD_rail_panel.mts`, 19 PASS 0 FAIL, piu' lo screenshot del rail. A: il singleton rende il pannello nuovo, il segmented Type e l'hint NON ci sono (positivo di controllo su un viewpoint ordinario, dove il segmented c'e'). B: la prima scrittura crea la view di classe che prima non c'era, e il reset RIMUOVE la chiave `form`. C: il picker mostra esattamente `[Abstract syntax, Ordinary syntax, Data manager]`, il megamodello e la dashboard non lo nominano, ciascuno con il proprio positivo.
+**Notes**: **Scostamento da R-DMV-3, dichiarato**: la view di classe porta uno `shape: {form:'rect'}` minimo. Misurato: un ir `vertex` senza `shape` fa lanciare `compileView` (`irCompile.ts:305`), `getIRIndex` scarta la view con `[ir] compile failed` e l'indice torna `null`. Il primo gradino della materializzazione resta non esercitato: la porta d'ingresso e' la voce di sidebar della slice E, e senza di essa il pannello si raggiunge solo con il singleton gia' creato.
+**Prompt document name**: 2026-09-04 15:59
+
 ## 2026-09-04 — fix(tests): le due asserzioni sul mount di IRForm allineate a host="manager"
 **Prompt**: commit a parte, dichiarato fuori dalla corsia R-DMV: allineare `instanceManagerOutline.test.ts:155` e `instanceManager10c.test.ts:541` al mount che il sorgente porta da `40142a4f3` (R-VP slice 1, commit 2), cioe' `<IRForm objectId={formSubjectId ?? subjectId} host="manager" />`.
 **Files touched**: `frontend/src/components/abstract/tabs/__tests__/instanceManagerOutline.test.ts`, `frontend/src/components/abstract/tabs/__tests__/instanceManager10c.test.ts` — commit `8f8bd41d8`.
