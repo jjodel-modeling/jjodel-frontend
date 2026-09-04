@@ -7,7 +7,8 @@ import {
     LViewElement,
     Pointer,
     RuntimeAccessible,
-    RuntimeAccessibleClass
+    RuntimeAccessibleClass,
+    store
 } from "../../joiner";
 
 export type ViewpointType = 'syntax' | 'decoration' | 'validation' | 'semantics' | 'editor_behavior' | 'dataManager';
@@ -62,6 +63,52 @@ export function isDataManagerViewpoint(vp: DViewElement | null | undefined): boo
  *  carry an id and no D element. */
 export function isDataManagerViewpointId(id: string | null | undefined): boolean {
     return id === DATA_MANAGER_VIEWPOINT_ID;
+}
+
+/** The name the singleton is born with. Editable afterwards like any other viewpoint's:
+ *  nothing identifies it by name (the pointer and the type do that), so a rename is
+ *  cosmetic and safe. */
+export const DATA_MANAGER_VIEWPOINT_NAME = 'Data Manager';
+
+/**
+ * The singleton as it stands in the loaded project, or null when nobody has written to
+ * it yet — which is the state of every project that exists today (R-DMV-6).
+ *
+ * A read of `idlookup` and not `DPointerTargetable.fromPointer`: absence is the ORDINARY
+ * answer here, and it must come back as null rather than as a throw or a hollow proxy.
+ */
+export function findDataManagerViewpoint(state?: any): DViewPoint | null {
+    const st = state ?? store.getState();
+    const d = st?.idlookup?.[DATA_MANAGER_VIEWPOINT_ID];
+    return d && isDataManagerViewpoint(d) ? (d as DViewPoint) : null;
+}
+
+/**
+ * The singleton, created on the spot if it is not there yet — the materialization of
+ * R-DMV-6. Call it from the FIRST WRITE and never on mount: an `ensure` on render would
+ * put the object in every project that ever opened the panel, which is what «born at the
+ * first write» exists to avoid.
+ *
+ * NO OUTER TRANSACTION, here or around a call to this (CLAUDE.md §3.3): `newVP` opens
+ * its own, and a creator nested in another TRANSACTION loses its writes. The two rungs of
+ * the materialization — this viewpoint, then a per-class `DViewElement` inside it — are
+ * therefore two bare calls, exactly as `handleCreateViewpoint` and
+ * `createBlankViewInViewpoint` already do it.
+ *
+ * It does NOT go through the type switch of `handleCreateViewpoint`, and that is the
+ * point: that switch turns `isExclusiveView` off for every type but `syntax`, and a
+ * non-exclusive singleton pours its views over every classic canvas (see the invariant
+ * on `DATA_MANAGER_VIEWPOINT_TYPE`). The constructor default is true and is left alone.
+ */
+export function ensureDataManagerViewpoint(): DViewPoint | null {
+    const existing = findDataManagerViewpoint();
+    if (existing) return existing;
+    return DViewPoint.newVP(DATA_MANAGER_VIEWPOINT_NAME, (vp) => {
+        (vp as any).viewpointType = DATA_MANAGER_VIEWPOINT_TYPE;
+        // `isExclusiveView` is NOT written: the constructor already set it to true and
+        // the invariant is that nothing ever turns it off.
+        vp.isValidation = false;
+    }, true, DATA_MANAGER_VIEWPOINT_ID);
 }
 
 @RuntimeAccessible('DViewPoint')

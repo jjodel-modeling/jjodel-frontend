@@ -195,7 +195,7 @@ export {Size, GraphSize, GraphPoint, IPoint, ISize, Point, Geom} from "../common
 
 export type {WViewElement} from "../view/viewElement/view";
 export {LViewElement, DViewElement} from "../view/viewElement/view";
-export {DViewPoint, LViewPoint, getViewpointType, isDataManagerViewpoint, isDataManagerViewpointId, DATA_MANAGER_VIEWPOINT_TYPE, DATA_MANAGER_VIEWPOINT_ID} from "../view/viewPoint/viewpoint";
+export {DViewPoint, LViewPoint, getViewpointType, isDataManagerViewpoint, isDataManagerViewpointId, ensureDataManagerViewpoint, findDataManagerViewpoint, DATA_MANAGER_VIEWPOINT_TYPE, DATA_MANAGER_VIEWPOINT_ID, DATA_MANAGER_VIEWPOINT_NAME} from "../view/viewPoint/viewpoint";
 export type {ViewpointType} from "../view/viewPoint/viewpoint";
 
 export {Action, CreateElementAction, DeleteElementAction, SetFieldAction, SetRootFieldAction, CompositeAction, ParsedAction, LoadAction, CombineHistoryAction, RedoAction, UndoAction,

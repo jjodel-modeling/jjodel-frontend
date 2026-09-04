@@ -40,7 +40,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSelector } from 'react-redux';
-import { LPointerTargetable, U } from '../../../../joiner';
+import { DATA_MANAGER_VIEWPOINT_ID, LPointerTargetable, U } from '../../../../joiner';
 import { entityLetter, resolveEntityType } from '../../../../common/entityMeta';
 import { getInterfaceMode } from '../../../../hooks/useInterfaceMode';
 import { SegmentedControl } from '../../../ui';
@@ -174,8 +174,25 @@ function FormCell({ layout, children }: { layout: LayoutField; children: React.R
     );
 }
 
+/**
+ * Which viewpoint this host resolves its per-class view against.
+ *
+ * The Data Manager reads from its own singleton and never from `state.viewpoint`
+ * (R-DMV-1); every other host reads from the active viewpoint, which is what `undefined`
+ * means to `useIRFormView` and to `computeIRSignature`. One function and not a ternary
+ * per call site: the drawer's VIEW and the drawer's THEME are two reads that must not be
+ * able to disagree about which viewpoint they came from.
+ *
+ * Here and not in `formHosts.ts`, which is pure and imports nothing but `irTypes`: an
+ * import of `joiner` in that module would drag the whole runtime into a file its tests
+ * load under the node environment.
+ */
+function viewpointOfHost(host: FormHost): string | undefined {
+    return host === 'manager' ? DATA_MANAGER_VIEWPOINT_ID : undefined;
+}
+
 export function IRForm({ objectId, defaultTheme = 'plain', host = 'rail' }: IRFormProps) {
-    const resolution = useIRFormView(objectId);
+    const resolution = useIRFormView(objectId, viewpointOfHost(host));
 
     // The L-proxy is read inside the render on purpose: `useIRFormView`'s signature
     // already covers everything read from it (name, metaclass, every slot's values), so a
@@ -197,14 +214,15 @@ export function IRForm({ objectId, defaultTheme = 'plain', host = 'rail' }: IRFo
     /**
      * The viewpoint rung of the theme cascade (slice STYLE2).
      *
-     * Read from the ACTIVE viewpoint — `state.viewpoint` — and not from the resolved
+     * Read from the host's viewpoint — the active one for the rail and the node form,
+     * the Data Manager singleton for the manager (R-DMV-1) — and not from the resolved
      * view's own `viewpoint` pointer, for a reason that is the common case and not an
      * edge one: when no IR view matches, the form renders the metamodel-derived default
      * (`useIRFormView` returns `{compiled: null}` precisely so that case stays legible),
      * there is no view to ask, and a rung read off the view would be unreachable exactly
-     * where most models live. `state.viewpoint` is also the source `irResolveCore`
-     * indexes by (`if (d.viewpoint !== vp) continue`), so the theme and the views it
-     * themes come from the same viewpoint by construction.
+     * where most models live. It is also the source `irResolveCore` indexes by
+     * (`if (d.viewpoint !== vp) continue`), through the same `viewpointOfHost`, so the
+     * theme and the views it themes come from the same viewpoint by construction.
      *
      * Its own `useSelector` and not a field of `useIRFormView`'s signature: that
      * signature is the object's slot snapshot, rebuilt on every slot write, and adding a
@@ -212,7 +230,7 @@ export function IRForm({ objectId, defaultTheme = 'plain', host = 'rail' }: IRFo
      * somebody picks a theme. A selector returning a string re-renders on that string.
      */
     const viewpointTheme = useSelector((state: any) => {
-        const vp = state?.viewpoint;
+        const vp = viewpointOfHost(host) ?? state?.viewpoint;
         const t = vp ? state?.idlookup?.[vp]?.formTheme : undefined;
         return isFormThemeName(t) ? t : undefined;
     });

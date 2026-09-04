@@ -142,7 +142,7 @@ import {
 } from './instanceTable';
 import { entityLetter } from '../../../common/entityMeta';
 import { saveProjectWithFeedback } from '../../../common/libraries/saveProject';
-import { LProject, U } from '../../../joiner';
+import { DATA_MANAGER_VIEWPOINT_ID, LProject, U } from '../../../joiner';
 import './instanceManagerTab.scss';
 
 /** La lettera del badge di metaclasse, dal registro delle entita' e non da una
@@ -1519,8 +1519,20 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
      * oggetto e non ri-renderizza. E' la stessa ragione per cui la firma si calcola
      * dentro il selector invece che fuori: e' l'unica cosa che deve essere ricalcolata
      * a ogni dispatch.
+     *
+     * DA QUALE VIEWPOINT (R-DMV-1): dal singleton del Data Manager, MAI da
+     * `state.viewpoint`. Le colonne della tabella sono una configurazione della tabella,
+     * non la sintassi concreta di un diagramma, e non devono cambiare quando l'utente
+     * cambia sintassi sul canvas. Finche' il singleton non esiste — cioe' in ogni
+     * progetto salvato fino a oggi — la firma e' vuota, l'indice e' `null` e
+     * `resolveTableSpec` restituisce `NOTHING`: la tabella resta sul default derivato dal
+     * tipo, che e' R-VP-4 e non un caso degenere.
      */
-    const irIndex = useSelector((state: any) => getIRIndex(state, computeIRSignature(state)));
+    const irIndex = useSelector((state: any) => getIRIndex(
+        state,
+        computeIRSignature(state, DATA_MANAGER_VIEWPOINT_ID),
+        DATA_MANAGER_VIEWPOINT_ID,
+    ));
     const managerResolution = useMemo(
         () => (selectedClassId
             ? resolveTableSpec(selectedClassId, irIndex, idlookup)
