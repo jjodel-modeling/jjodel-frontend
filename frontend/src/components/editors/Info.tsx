@@ -2,7 +2,7 @@ import {
     Any,
     DAttribute, DClass, DEnumerator, Dictionary, DModel, DocString, DReference,
     DPackage, DState, DViewElement, DViewPoint,
-    Input, LAttribute, LClass, LClassifier, LEnumerator,
+    Input, isDataManagerViewpoint, LAttribute, LClass, LClassifier, LEnumerator,
     LGraphElement,
     LModel,
     LModelElement,
@@ -12,6 +12,7 @@ import {
 } from '../../joiner';
 import { ViewData } from './views/ViewData';
 import ViewpointProperties from './viewpoint/properties/ViewpointProperties';
+import DataManagerViewpointPanel from './viewpoint/properties/DataManagerViewpointPanel';
 import {FakeStateProps, int, windoww} from '../../joiner/types';
 
 import JsonViewer from '../shared/JsonViewer';
@@ -1367,6 +1368,10 @@ function InfoComponent(props: AllProps) {
 
     // View / Viewpoint selection from Tree View takes precedence over model-element rendering.
     // - DViewPoint → ViewpointProperties (simple Name / Type / Exclusive form)
+    // - the Data Manager singleton → DataManagerViewpointPanel instead (R-DMV-4): no
+    //   segmented Type, which would declass it and pour its views over every classic
+    //   canvas, plus the per-metaclass widget table. A separate component and not a
+    //   branch inside ViewpointProperties — see that panel's own note.
     // - DViewElement → ViewData (Apply to / Template / Style / Events / Options sub-tabs)
     const selectedView = props.view;
     const selectedViewClass = (selectedView as any)?.__raw?.className || (selectedView as any)?.className;
@@ -1385,11 +1390,19 @@ function InfoComponent(props: AllProps) {
         return (
             <section className="properties-tab properties-panel">
                 {isVP ? (
-                    <ViewpointProperties
-                        key={selectedView.id as any}
-                        viewpoint={selectedView as unknown as LViewPoint}
-                        readOnly={false}
-                    />
+                    isDataManagerViewpoint((selectedView as any)?.__raw ?? (selectedView as any)) ? (
+                        <DataManagerViewpointPanel
+                            key={selectedView.id as any}
+                            viewpoint={selectedView as unknown as LViewPoint}
+                            readOnly={false}
+                        />
+                    ) : (
+                        <ViewpointProperties
+                            key={selectedView.id as any}
+                            viewpoint={selectedView as unknown as LViewPoint}
+                            readOnly={false}
+                        />
+                    )
                 ) : (
                     <ViewData
                         key={selectedView.id as any}
