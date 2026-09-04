@@ -43,6 +43,19 @@ decidere in chat (F4). Deroga a §6 del prompt ("un solo commit"): `CLAUDE.md` �
 codice nello stesso commit, quindi due commit.
 **Prompt document name**: 2026-09-04 18:50
 
+## 2026-09-04 — feat(sidebar): la sezione «Data Manager», sempre presente (R-DMV slice E)
+**Prompt**: GO emendato R-DMV Fase 2, slice E: sezione «Data Manager» sempre presente in `TreeViewContent.tsx` con lo stato vuoto ratificato, classi personalizzate con le feature toccate e l'override accanto, «columns» quando fissato, esclusione da `syntaxVps`/`validationVps`/`otherVps`, la voce che seleziona il singleton o il suo stub (Q4/Q6), materializzazione al primo write dal pannello. Un test di sorgente sul modello dei `instanceManager10*`.
+**Files touched**: `frontend/src/components/TreeViewSidebar/TreeViewContent.tsx`, `.../TreeViewSidebar/tree-view-sidebar.scss`, `.../TreeViewSidebar/__tests__/dataManagerSection.test.ts` (nuovo), `frontend/src/components/editors/Info.tsx`, `.../editors/viewpoint/properties/DataManagerViewpointPanel.tsx` — commit `5ae652227`. Sonda a parte: `d0546abcb`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `tsc` 33 su output completo (baseline esatta), `build` exit 0 col solo avviso di chunk-size, vitest 1811/1811 su `src/components` (17 nuovi). Banco delle mutazioni (P11): spostata la guardia del singleton DOPO i tre rami del partizionamento, 2 test su 17 rossi; ripristinata.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessun file di §3.1.
+**Smoke visivo**: passato — sonda `probe_2026-09-04_rdmv_sliceE_sidebar.mts`, 17 PASS 0 FAIL, che chiude anche la verifica della slice D dalla porta dell'utente (RC-8). A: singleton assente, la sezione c'e' con lo stato vuoto. B: la voce apre il pannello sullo STUB e NON materializza. C: la prima scrittura crea i due gradini insieme, `dataManager` + `isExclusiveView: true`. D: l'albero elenca `Sensor > note = Code`, il singleton non e' fra i viewpoint e il contatore resta 1.
+**Notes**: `SectionNode` prende due prop opzionali (`onLabelClick`, `labelTitle`) usate dalla sola sezione Data Manager: le altre stanno per un insieme e non hanno niente da selezionare. Lo stub e' letto in `Info.tsx` dal pointer GREZZO (`viewId`) e non dal proxy: `LViewElement.fromPointer` di un id inesistente rende un proxy senza `__raw`, che non distingue «niente selezionato» da «selezionato ma non ancora nato».
+**Prompt document name**: 2026-09-04 15:59
+
 ## 2026-09-04 — feat(rail): DataManagerViewpointPanel, il rail del singleton (R-DMV slice D)
 **Prompt**: GO emendato R-DMV Fase 2, slice D: pannello nuovo per il singleton (nome, Form theme senza hint, selettore di metaclasse, tabella feature -> widget su `rowsForMetaclass` + `offeredOverrides`, materializzazione alla prima scrittura), `Info.tsx` che dispaccia su `isDataManagerViewpoint`. Niente segmented Type, niente `theme`/`labelPlacement` per view (Q5). HARD STOP dopo il commit.
 **Files touched**: `frontend/src/components/editors/viewpoint/properties/DataManagerViewpointPanel.tsx` (nuovo), `.../properties/DataManagerViewpointPanel.scss` (nuovo), `frontend/src/components/editors/Info.tsx` — commit `367a23c45`. Sonda a parte: `316675476`.
