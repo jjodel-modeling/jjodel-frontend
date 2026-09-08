@@ -22,15 +22,25 @@
  * esattamente la stessa cosa da fuori di JjScript: sintetizza un `ExecutionContext`
  * minimo e chiama `buildEvalContext`. Qui si copia quel gesto.
  *
- * ── IL PERIMETRO E' IL MODELLO APERTO (R-VAL-14) ────────────────────────────
+ * ── IL PERIMETRO E' IL MODELLO APERTO, E ANCHE L'ESTENSIONE (R-VAL-14, R-VAL-16) ──
  *
- * Il contesto che si costruisce e' di **progetto** — dentro ci sono le classi di tutti
- * i metamodelli e il pool di tutte le istanze — ma le istanze che si **validano** sono
- * solo quelle del modello aperto. Le due cose sono diverse e devono restarlo: una regola
- * come `(forall s in State.instances such that s.isInitial).size == 1` **deve** vedere il
- * pool per contare, e cio' che si valida e' comunque solo il modello che l'utente ha
- * davanti. La validazione dell'intero progetto e' un comando a se', fuori dalla prima
- * fetta.
+ * Due cose diverse, e per un giorno solo sono state diverse per sbaglio.
+ *
+ * Le **istanze validate** sono quelle del modello aperto: la validazione dell'intero
+ * progetto e' un comando a se', fuori dalla prima fetta. Questo e' sempre stato giusto.
+ *
+ * L'**estensione** — l'insieme che una quantificazione attraversa dentro il corpo di una
+ * regola, cioe' `State.instances` — deve coincidere con lo stesso perimetro, e non lo
+ * faceva. Misurato il 2026-09-09
+ * (`docs/discovery/harness/probe_2026-09-09_estensione_perimetro_validato.mts`): su un
+ * progetto con due macchine a stati sane, una regola di cardinalita' ne contava quattro
+ * stati e dichiarava violate entrambe le macchine. La restrizione passa ora dal parametro
+ * `extentModelId` di `buildEvalContext` (R-VAL-16) e non da un filtro applicato qui:
+ * l'estensione ricompare in cinque posti dentro quel modulo, e un filtro a valle
+ * duplicherebbe fuori una conoscenza che e' del modulo.
+ *
+ * Il **resto del contesto** resta di progetto — le classi del metamodello, la risoluzione
+ * dei nomi — ed e' voluto: una regola deve poter nominare una classe.
  *
  * ── IL COSTO, DICHIARATO ────────────────────────────────────────────────────
  *
@@ -140,9 +150,13 @@ export function buildValidationInput(modelid: string): ValidationInput | null {
     try { lmodel = LPointerTargetable.fromPointer(modelid) as unknown as LModel; } catch { lmodel = undefined; }
     if (!lmodel) return null;
 
-    // Il pool globale, dal costruttore condiviso. Da qui escono i `globals` (le classi
-    // legate per nome, `instances`, `classes`, …) e gli handle delle istanze.
-    const globals = buildEvalContext(minimalExecutionContext());
+    // Il contesto dal costruttore condiviso, con l'ESTENSIONE ristretta al modello aperto
+    // (R-VAL-16). Il resto resta di progetto — le classi del metamodello, la risoluzione
+    // dei nomi — e a coincidere con il perimetro validato e' solo l'insieme che una
+    // quantificazione attraversa. Senza il parametro, misurato il 2026-09-09, una regola
+    // di cardinalita' contava le istanze di TUTTI i modelli del progetto e dichiarava
+    // violate due macchine a stati sane.
+    const globals = buildEvalContext(minimalExecutionContext(), { extentModelId: modelid });
 
     // Gli handle sono indicizzati per id: il pool e' di progetto, le istanze da validare
     // sono quelle del modello aperto (R-VAL-14).

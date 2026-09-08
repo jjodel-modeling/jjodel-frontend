@@ -50,6 +50,7 @@ export { executeForAll } from './executor/commands/forall';
 
 // Eval command handler + JjEL context builder (reused by Jjodie code-mode console)
 export { executeEval, buildEvalContext } from './executor/commands/eval';
+export type { BuildEvalContextOptions } from './executor/commands/eval';
 
 // Resolvers
 export {
