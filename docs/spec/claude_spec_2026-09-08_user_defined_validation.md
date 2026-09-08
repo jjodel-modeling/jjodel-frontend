@@ -344,6 +344,23 @@ metamodello, la risoluzione dei nomi): a dover coincidere con il perimetro valid
 della stessa lingua nello stesso progetto, uno stato iniziale ciascuno, la regola non deve
 violare.
 
+**Misurato il 2026-09-09: la verifica e' rossa.** `State.instances` contiene gli stati di tutti i
+modelli del progetto, e la prima invariante del libro viola su un modello sano. Il perimetro delle
+**istanze validate** invece e' corretto (controllo positivo: una regola su `isInitial` viola su una
+sola delle due istanze del modello aperto), quindi il difetto e' solo nell'estensione, come §8.2
+prevedeva.
+
+**La restrizione vive dentro `buildEvalContext`, con un parametro opzionale che di default lascia
+il comportamento di oggi**, non come filtro applicato dopo sul valore di ritorno. Il filtro dopo
+sarebbe contenuto nella corsia, ma dovrebbe enumerare i quattro posti in cui l'estensione vive
+(`variables.instances`, `instances`/`allInstances`/`instanceCount` sulle shell, le istanze
+qualificate per nome, la mappa delle ambiguita'), cioe' duplicare fuori dal modulo una conoscenza
+che e' del modulo: il giorno in cui l'estensione compare in un quinto posto la validazione lo manca
+**in silenzio** e torna a produrre verdetti sbagliati. La mappa delle ambiguita' e' poi dato
+derivato, e ricalcolarla fuori sarebbe logica duplicata. Vincolo: l'identita' per riferimento
+(`self.instanceOf == State`) deve reggere, quindi le shell si costruiscono gia' ristrette, non si
+ricostruiscono dopo.
+
 ### 8.3 La superficie dichiara cosa non ha girato (R-VAL-15)
 
 I tre numeri di §8.1 sono un caso particolare di un impegno piu' generale: **la superficie dice
