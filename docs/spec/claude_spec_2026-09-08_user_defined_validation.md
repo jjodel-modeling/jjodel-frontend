@@ -3,7 +3,7 @@
 **File**: `docs/spec/claude_spec_2026-09-08_user_defined_validation.md`
 **Data**: 2026-09-08
 **Stato**: vigente, non implementata. Nessuna Fase 2 aperta.
-**Serie di decisioni**: R-VAL
+**Serie di decisioni**: R-VAL (R-VAL-1..10)
 **Referti a monte**:
 `docs/discovery/discovery_2026-09-08_validazione_definita_utente.md` (Fase 1, 834 righe, `fdf087259`)
 `docs/discovery/discovery_2026-09-08_*keyword*` (micro-discovery lexer, `3e4dec57b`)
@@ -77,10 +77,40 @@ Da R-VAL-2 discendono tre proprieta':
 3. Il *lint del modellatore* (controlli di chi usa una lingua altrui) non e' un meccanismo
    terzo: e' un viewpoint di validazione come gli altri. Previsto, fuori dalla prima fetta.
 
-**Comportamenti da definire e da riportare nella spec quando il macchinario risponde** (§14, D-A
-e D-B): cosa accade alle regole quando la classe che referenziano viene cancellata; cosa accade
-quando un metamodello entra in un progetto diverso da quello in cui le regole sono state
-scritte.
+### 3.1 Cancellazione della classe referenziata (R-VAL-9)
+
+Cancellare una classe non cancella in silenzio le sue regole. Si apre una modale che chiede se
+cancellarle o conservarle come documentazione disabilitata.
+
+Tre precisazioni che discendono dalla scelta e che la spec fissa:
+
+1. **Lo stato di orfana e' distinto dalla disattivazione volontaria di R-VAL-5.** Una regola
+   conservata dopo la cancellazione della classe non e' semplicemente spenta: e' priva di
+   contesto, non e' riattivabile, e non deve comparire nel conteggio delle regole che l'utente ha
+   scelto di silenziare. Il nome della classe si conserva come testo, altrimenti la
+   documentazione e' illeggibile (`self: <cancellata>` non documenta niente).
+2. **Sui percorsi non interattivi la modale non c'e'** (import, round trip, cancellazione in
+   blocco applicata a tutti). Il default e' sempre **conservare**, mai cancellare: una perdita
+   silenziosa di regole e' peggio di un residuo visibile. Una cancellazione in blocco chiede una
+   volta sola e applica la risposta a tutte.
+3. **L'undo deve ripristinare le regole cancellate dalla modale.** Il progetto ha gia' un debito
+   noto sul doppio sistema di undo: se il ripristino non e' garantito, la modale conserva e basta
+   invece di offrire la cancellazione.
+
+### 3.2 Metamodello in un altro progetto (R-VAL-10)
+
+Un metamodello che entra in un progetto diverso da quello in cui le regole sono state scritte si
+comporta come se le regole fossero nate li'. Perche' l'enunciato sia un comportamento e non
+un'intenzione, ne discende che:
+
+1. **I viewpoint di validazione seguono il metamodello** quando questo viene importato o copiato.
+   Non e' automatico: il viewpoint e' di progetto, quindi l'importazione deve portarseli dietro
+   esplicitamente.
+2. **Arrivano attivi.** L'attivazione e' una scelta del progetto (§6) e un metamodello appena
+   arrivato non ne ha ancora una: il default attivo e' l'unico che rende vera la frase «come se
+   fosse stato realizzato li'».
+3. **Le collisioni di nome si risolvono come i modelli duplicati**, con il suffisso `(1)`, `(2)`,
+   senza fondere due viewpoint omonimi e senza sovrascrivere.
 
 ---
 
@@ -276,9 +306,6 @@ Nessuna di queste corsie va aperta prima del rilascio della 3.0.
 
 ## 14. Domande aperte
 
-- **D-A** — Ciclo di vita: cosa accade alle regole quando la classe referenziata viene cancellata.
-- **D-B** — Portabilita': cosa accade quando un metamodello entra in un progetto diverso da quello
-  in cui le regole sono state scritte.
 - **D-C** — Il cartello nel rail (riga in sola lettura che apre l'ambiente) si fa o si tiene il
   solo indicatore sul nodo.
 - **D-D** — Esiste nel codebase un supertipo comune «elemento di viewpoint legato a una classe» su

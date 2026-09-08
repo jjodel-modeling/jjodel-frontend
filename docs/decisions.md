@@ -3034,6 +3034,18 @@ JjTL) è corsia separata e non lo è. `true`, `false` e `null` sono l'unico caso
 vanno intercettati alla creazione del nome con una diagnostica di CHECK 12.
 
 
+**R-VAL-9** (2026-09-08) — **Cancellare una classe non cancella in silenzio le sue regole**: una
+modale chiede se cancellarle o conservarle come documentazione disabilitata. Lo stato di orfana è
+distinto dalla disattivazione volontaria di R-VAL-5, non è riattivabile e non entra nel conteggio
+delle regole silenziate; il nome della classe si conserva come testo. Sui percorsi non interattivi
+il default è conservare, mai cancellare.
+
+**R-VAL-10** (2026-09-08) — **Un metamodello che entra in un altro progetto si comporta come se le
+regole fossero nate lì.** Ne discende che i viewpoint di validazione seguono il metamodello
+nell'importazione, arrivano attivi, e le collisioni di nome si risolvono col suffisso `(1)`, `(2)`
+come per i modelli duplicati.
+
+
 ## Superate
 
 - **D3** (2026-07-26, routing congelato in v1) — superata da E-route il 2026-08-06.

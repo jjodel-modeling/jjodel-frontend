@@ -82,7 +82,7 @@ Invarianti da tenere a mente in chat: il tri-stato si costruisce al confine dell
 
 Due prerequisiti, entrambi dopo il rilascio della 3.0: il triage di `ValidationPill` (non montata dal 2026-08-26) e delle violazioni di modello scartate in `conformanceToProblems.ts:43`; la consolidazione dei nomi riservati in un elenco unico importato da entrambi i lexer, con la diagnostica sui tre letterali `true`/`false`/`null`, unico caso in cui il sistema sbaglia in silenzio. La riparazione del lexer è corsia separata, non prerequisito.
 
-Quattro domande aperte in §14 del file integrale (ciclo di vita alla cancellazione della classe, portabilità fra progetti, cartello nel rail, supertipo comune per R-VAL-6).
+Ciclo di vita e portabilità sono chiusi da R-VAL-9 e R-VAL-10 (modale alla cancellazione della classe con default conservativo; i viewpoint di validazione seguono il metamodello e arrivano attivi). Restano due domande aperte in §14 del file integrale: il cartello nel rail e il supertipo comune per R-VAL-6.
 
 ## Design parcheggiati
 **Dove**: `docs/spec/parcheggiate/` (templates featured projects, templates explore) e `docs/spec/design_2026-05-03_L2_edge_overlay.md`. Nessuno vigente; si riattivano per decisione esplicita.
