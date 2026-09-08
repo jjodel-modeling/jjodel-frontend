@@ -415,3 +415,86 @@ divergenza che produce un risultato sbagliato senza errore.
 - `docs/decisions.md` — R-VAL-13, paragrafo «Todo separato, non della validazione»
 - `docs/discovery/discovery_2026-09-08_verdetto_booleano.md` §6 (la tabella delle due regole)
 - `docs/discovery/harness/probe_2026-09-08_jjel_verdetto_booleano.mts` blocco E (la misura)
+
+---
+
+## Venti classi D su 44 non hanno una cartella di stato dichiarata su DState
+
+**Registrato:** 2026-09-08
+**Origine:** Step 1 della validazione definita dall'utente. La sonda ha misurato che
+`state.validationviewpoints` e' una **stringa** dove `state.viewpoints` e' un array; la verifica
+richiesta prima di sanarla ha scoperto che il fenomeno non e' dei tipi nuovi.
+**Stato attuale:** alla creazione di un elemento il reducer deriva dal className una cartella di
+stato — `elem.className.substring(1).toLowerCase() + 's'` (`redux/reducer/reducer.ts:466`) — e ci
+scrive con il modificatore `'[]'`. Su una chiave **assente** `'[]'` si comporta come `'='`
+(`reducer.ts:186-188`, ramo `oldValue === undefined`, commentato «keep newVal unchanged, act as
+'='»): il campo diventa la stringa dell'ultimo id creato invece di un array che cresce.
+
+Misurato eseguendo, su 44 classi D registrate a runtime: **24 hanno la cartella dichiarata su
+`DState`, 20 no.** Fra queste ultime ci sono tipi che ogni progetto crea a decine —
+`DAnnotation` -> `annotations`, `DVoidEdge` -> `voidedges`, `DExtEdge` -> `extedges`,
+`DRefEdge` -> `refedges`, `DMap` -> `maps` — piu' le due della validazione, che si sono limitate a
+entrare in un insieme che esisteva da prima. Le altre della lista sono astratte o di servizio
+(`DPointerTargetable`, `DModelElement`, `DState`, …) e non vengono istanziate.
+
+Nessuno legge quelle cartelle oggi. Ma le cartelle **dichiarate** sono lette come array in siti
+reali (`state.viewelements ?? []` compare in 8 punti fra `Toolbar.tsx`, `irResolveCore.ts`,
+`TreeViewContent.tsx`, `DataManagerViewpointPanel.tsx`, `viewParentingOptions.ts`), quindi la forma
+attesa e' l'array e chi scrivera' il primo lettore di una cartella non dichiarata trovera' una
+stringa.
+**Perche' non e' stato corretto:** la correzione ovvia — dichiarare le chiavi mancanti su `DState`
+con `= []` — **non raggiunge i progetti gia' salvati**. Misurato con un segnavia piantato nello
+snapshot per provare che il caricamento fosse davvero avvenuto: `edgepoints`, dichiarata su
+`DState`, tolta dallo snapshot e fatta passare dal percorso di caricamento vero
+(`SaveManager.load` -> `VersionFixer.update` -> `LoadAction`), torna **`undefined`**. Il ripristino
+e' in blocco (`reducer.ts`, `case LoadAction.type: newState = action.value`), quindi i default
+della classe valgono solo per uno stato appena costruito. Su un progetto caricato la cartella
+tornerebbe stringa lo stesso.
+
+Farla completa vuol dire normalizzare le chiavi al caricamento, cioe' una migrazione: fuori dal
+perimetro della corsia in cui e' stata trovata, e fermata li' su indicazione esplicita.
+**Fix strutturale raccomandato:** una migrazione `VersionFixer` che normalizzi a array ogni
+cartella derivata, piu' la dichiarazione delle 20 chiavi mancanti su `DState`, piu' — la parte che
+vale davvero — una difesa nel reducer: `'[]'` su una chiave assente dovrebbe creare `[valore]`, non
+il valore nudo. Quest'ultima chiude la famiglia invece di elencarla, ma cambia il comportamento di
+un ramo che ogni creazione attraversa e vuole il suo giro con i suoi test.
+**Priorita':** bassa oggi, media appena qualcuno scrive un lettore. Nessun difetto visibile
+all'utente: e' una struttura dati derivata che nessuno consuma.
+**Effort stimato:** mezza giornata per la dichiarazione piu' la migrazione; una giornata se si
+tocca il ramo del reducer, quasi tutta di verifica.
+**Riferimenti:**
+- `docs/discovery/harness/probe_2026-09-08_cartelle_di_stato_al_reload.mts` (la misura, 9/9)
+- `redux/reducer/reducer.ts:466` (la derivazione), `:186-188` (il ramo `'[]'` su chiave assente),
+  `case LoadAction.type` (il ripristino in blocco)
+- `redux/store.tsx` (le 24 cartelle dichiarate)
+
+---
+
+## Cancellare un viewpoint di validazione lascia le sue regole orfane
+
+**Registrato:** 2026-09-08
+**Origine:** Step 1 della validazione definita dall'utente. Conseguenza **nota e accettata** della
+scelta di non toccare `DPointerTargetable.childKeys`, non un difetto scoperto dopo.
+**Stato attuale:** `DValidationRule` e' contenuta in `DValidationViewpoint` tramite la collezione
+`rules` e il legame all'indietro `father`. `childKeys` — la lista statica che `__json`, `Dummy.ts` e
+la navigazione `$`-prefissata leggono per ogni tipo del sistema — **non elenca `rules`**, e non e'
+stata toccata perche' e' materia del cuore. Ne discende che cancellare un viewpoint non cancella le
+sue regole: restano in `idlookup` con un `father` che punta a un oggetto che non c'e' piu', e
+nessuna superficie le mostra.
+
+Oggi non si manifesta, perche' lo scheletro non ha ancora una cancellazione di viewpoint.
+
+**Da non confondere con R-VAL-9**, che e' un'altra cosa e va nella direzione opposta: li' si parla
+della cancellazione della **classe di contesto**, e la regola orfana e' uno stato **voluto**, con
+una modale che chiede se conservarla come documentazione disabilitata e un default conservativo sui
+percorsi non interattivi. Qui invece l'orfanezza e' un residuo, e non la vuole nessuno.
+**Fix strutturale raccomandato:** chi scrive la cancellazione del viewpoint cancella anche le
+regole (un `DeleteElementAction` per ciascuna, in una TRANSACTION di sole azioni — schema sicuro
+per CLAUDE.md §3.3), oppure iscrive `rules` fra le `childKeys`, che e' una modifica al cuore e va
+autorizzata a parte. La prima e' locale e sufficiente; la seconda e' piu' pulita e piu' cara.
+**Priorita':** bassa finche' la cancellazione non esiste; **bloccante nel giro che la introduce.**
+**Effort stimato:** un'ora dentro il giro che scrive la cancellazione.
+**Riferimenti:**
+- `frontend/src/model/validation/validationTypes.ts` (intestazione, «Che cosa NON c'e'»)
+- `docs/decisions.md` — R-VAL-9 (la cosa diversa con cui non va confusa)
+- `frontend/src/joiner/classes.ts` (`DPointerTargetable.childKeys`)
