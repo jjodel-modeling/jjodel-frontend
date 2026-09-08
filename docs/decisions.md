@@ -3099,6 +3099,19 @@ numero l'autore della prima forma vedrebbe silenzio, indistinguibile da un model
 contatore, non un elenco: i non valutabili non diventano voci del registro.
 
 
+**R-VAL-15** (2026-09-08, dopo lo Step 3) — **L'estensione coincide con il perimetro validato, e la
+superficie dichiara cosa non ha girato.** `X.instances` dentro una regola vede le istanze del
+modello che si sta validando, non del progetto: altrimenti una regola di cardinalità come «esattamente
+uno stato iniziale» conta due su un progetto con due macchine a stati e le dichiara entrambe violate,
+che è la prima invariante della Tabella 7.5 del libro. Il resto del contesto può restare di progetto;
+a coincidere deve essere l'estensione che una quantificazione attraversa. Verifica minima: due modelli
+della stessa lingua nello stesso progetto, uno stato iniziale ciascuno, nessuna violazione. Inoltre i
+tre numeri di R-VAL-14 sono un caso particolare: la superficie dichiara sempre quanto è parziale il
+verdetto, comprese le regole che non compilano e non hanno girato. La riga sul difetto di
+compilazione non è una toppa in attesa del canale di authoring: quel canale serve a chi scrive la
+regola, questa riga a chi legge il verdetto.
+
+
 ## Superate
 
 - **D3** (2026-07-26, routing congelato in v1) — superata da E-route il 2026-08-06.

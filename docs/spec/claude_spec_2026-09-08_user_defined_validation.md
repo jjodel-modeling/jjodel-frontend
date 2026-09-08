@@ -3,7 +3,7 @@
 **File**: `docs/spec/claude_spec_2026-09-08_user_defined_validation.md`
 **Data**: 2026-09-08
 **Stato**: vigente, non implementata. Nessuna Fase 2 aperta.
-**Serie di decisioni**: R-VAL (R-VAL-1..14, con 6-bis)
+**Serie di decisioni**: R-VAL (R-VAL-1..15, con 6-bis)
 **Referti a monte**:
 `docs/discovery/discovery_2026-09-08_validazione_definita_utente.md` (Fase 1, 834 righe, `fdf087259`)
 `docs/discovery/discovery_2026-09-08_*keyword*` (micro-discovery lexer, `3e4dec57b`)
@@ -328,6 +328,35 @@ forma vedrebbe **silenzio**, che e' indistinguibile da un modello valido. L'euri
 (§5.2) copre solo il caso limite in cui la regola e' non valutabile su tutte le istanze; il numero
 copre anche il caso parziale. Restano voci non elencate una per una: e' un contatore, non una
 lista di problemi del modello.
+
+### 8.2 L'estensione coincide con il perimetro validato (R-VAL-15)
+
+`X.instances` dentro il corpo di una regola vede le istanze del **modello che si sta validando**,
+non quelle del progetto. Le due cose vanno tenute uguali, e la ragione e' una regola di cardinalita'
+qualunque: `(forall s in State.instances such that s.isInitial).size == 1` su un progetto che
+contiene due macchine a stati, ciascuna con il suo stato iniziale, conterebbe **due** e
+dichiarerebbe violate entrambe. E' esattamente la prima invariante della Tabella 7.5 del libro, e
+il progetto di prova su beta contiene undici modelli target: il caso non e' teorico.
+
+Il contesto di valutazione puo' restare quello di progetto per tutto il resto (le classi del
+metamodello, la risoluzione dei nomi): a dover coincidere con il perimetro validato e'
+**l'estensione**, cioe' l'insieme che una quantificazione attraversa. Verifica minima: due modelli
+della stessa lingua nello stesso progetto, uno stato iniziale ciascuno, la regola non deve
+violare.
+
+### 8.3 La superficie dichiara cosa non ha girato (R-VAL-15)
+
+I tre numeri di §8.1 sono un caso particolare di un impegno piu' generale: **la superficie dice
+sempre quanto e' parziale il verdetto che stai leggendo**. Non ha girato una regola disattivata,
+non ha prodotto verdetto una valutazione non valutabile, e non ha girato una regola che non
+compila. Le tre cose hanno pesi diversi ma la stessa conseguenza per chi legge: la validazione che
+vede copre meno di quanto sembra.
+
+Nello scheletro la regola che non compila e' dichiarata in una riga in fondo al modale invece che
+come quarto numero, e va bene cosi'. Ma non e' una toppa da togliere quando arriva il canale di
+authoring dello Step 4: quel canale serve a **chi scrive** la regola, mentre questa riga serve a
+**chi legge** il verdetto, che puo' essere un'altra persona in un altro momento. La forma visiva si
+decidera' con il resto della superficie; l'impegno a dichiararlo resta.
 
 ---
 
