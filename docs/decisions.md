@@ -3046,6 +3046,18 @@ nell'importazione, arrivano attivi, e le collisioni di nome si risolvono col suf
 come per i modelli duplicati.
 
 
+**R-VAL-6-bis** (2026-09-08) — **La regola nasce come tipo parallelo, senza supertipo comune**, e
+la forma condivisa con le view è più piccola di quanto R-VAL-6 dichiarava. Una view *seleziona*
+(più metaclassi, filtro per predicati, dispatch che sceglie la vincente); una regola *predica* (un
+solo contesto, la classe e le sue sottoclassi, tutte le regole applicabili si valutano). Legame e
+dispatch non sono comuni; restano comuni solo l'appartenenza a un viewpoint e l'attivabilità. Un
+supertipo che ammette più classi renderebbe rappresentabile la regola con due contesti.
+
+**R-VAL-11** (2026-09-08) — **Nessun cartello nel rail**: il pannello della classe non segnala le
+regole, resta il solo indicatore sul nodo. Una riga in sola lettura è il precedente per cui ogni
+concern che tocca la classe ne chiede una.
+
+
 ## Superate
 
 - **D3** (2026-07-26, routing congelato in v1) — superata da E-route il 2026-08-06.

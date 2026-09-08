@@ -3,7 +3,7 @@
 **File**: `docs/spec/claude_spec_2026-09-08_user_defined_validation.md`
 **Data**: 2026-09-08
 **Stato**: vigente, non implementata. Nessuna Fase 2 aperta.
-**Serie di decisioni**: R-VAL (R-VAL-1..10)
+**Serie di decisioni**: R-VAL (R-VAL-1..11, con 6-bis)
 **Referti a monte**:
 `docs/discovery/discovery_2026-09-08_validazione_definita_utente.md` (Fase 1, 834 righe, `fdf087259`)
 `docs/discovery/discovery_2026-09-08_*keyword*` (micro-discovery lexer, `3e4dec57b`)
@@ -60,6 +60,23 @@ interpretazione sulle istanze, attivabilita', dispatch) ma **non lo stesso tipo*
 regola non significano niente. Nota storica: `joiner/classes.ts:1186` conserva un
 `//thiss.constraints = [];` commentato su `DViewElement` accanto a un flag `isValidation`, cioe'
 il tentativo precedente di questa unificazione.
+
+**R-VAL-6-bis** (2026-09-08, dopo l'osservazione di Alfonso) — **La forma condivisa e' piu'
+piccola di quanto R-VAL-6 dichiarava, e la conclusione si rafforza**: la regola nasce come **tipo
+parallelo**, senza supertipo comune. Una view di viewpoint sintattico *seleziona*: puo' prendere
+istanze di piu' metaclassi, filtrarle con predicati, e il dispatch sceglie quale view vince su una
+data istanza. Una regola *predica*: ha un contesto solo, una classe e le sue sottoclassi, e non
+c'e' nessuna scelta da fare perche' tutte le regole applicabili si valutano. Legame e dispatch,
+cioe' due dei quattro elementi che R-VAL-6 dava per comuni, non lo sono. Resta condiviso solo
+l'essenziale: appartenere a un viewpoint ed essere attivabile. Appoggiare la regola su un
+supertipo che ammette piu' classi e un filtro renderebbe rappresentabile uno stato senza
+significato, la regola con due contesti, e obbligherebbe il valutatore a dargliene uno.
+
+**R-VAL-11** (2026-09-08) — **Nessun cartello nel rail.** Il pannello della classe non dice che la
+classe porta delle regole: resta il solo indicatore sul nodo. Una riga in sola lettura sarebbe il
+precedente per cui ogni concern che tocca la classe ne chiede una, e il rail tornerebbe a essere
+un indice di tutto. Se l'esigenza si vede all'uso, si progetta di proposito una zona dei concern,
+non si aggiunge una riga alla volta.
 
 ---
 
@@ -306,8 +323,5 @@ Nessuna di queste corsie va aperta prima del rilascio della 3.0.
 
 ## 14. Domande aperte
 
-- **D-C** — Il cartello nel rail (riga in sola lettura che apre l'ambiente) si fa o si tiene il
-  solo indicatore sul nodo.
-- **D-D** — Esiste nel codebase un supertipo comune «elemento di viewpoint legato a una classe» su
-  cui appoggiare R-VAL-6, o la regola nasce come tipo parallelo. Da accertare all'inizio della
-  Fase 2, non con una discovery dedicata.
+Nessuna. Le due che restavano sono chiuse: il cartello nel rail da R-VAL-11 (non si fa), il
+supertipo comune da R-VAL-6-bis (non esiste e non serve: tipo parallelo).
