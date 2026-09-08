@@ -37,6 +37,11 @@
  *     La misura sta qui, PRIMA della correzione, perche' un invariante misurato solo dopo
  *     non dice se era vero prima.
  *
+ *  F. LA RESTRIZIONE SEGUE IL MODELLO APERTO, non un modello a caso. Si ripete il giro
+ *     su SM_B: se il parametro fosse ignorato, o legato per sbaglio al primo modello del
+ *     progetto, l'esito su SM_B sarebbe diverso da quello su SM_A. Due misure simmetriche
+ *     dicono che l'estensione e' funzione del perimetro validato e non di una coincidenza.
+ *
  *  D. IL CONTROLLO POSITIVO, e DISCRIMINA (P12). Una terza regola, `isInitial`, che DEVE
  *     violare su uno dei due stati del modello aperto — quello non iniziale — e su
  *     nessun altro. Senza, «zero violazioni» al blocco C sarebbe indistinguibile da un
@@ -195,8 +200,11 @@ await page.evaluate(async (m: string) => {
 }, models.a);
 await page.waitForTimeout(NAV_MS);
 
-const btn = page.locator('button[title="Validate the open model against the active rules"]');
-if (await btn.count() !== 1) { console.log('FIXTURE FAILED: nessun bottone Validate'); await browser.close(); process.exit(1); }
+/** Il bottone VISIBILE. Con due tab aperte i bottoni sono due: rc-dock impagina il
+ *  pannello inattivo fuori schermo, e un `.first()` risolve sul nascosto — misurato in
+ *  questo giro, con un click che va in timeout su un elemento che esiste. */
+const btn = page.locator('button[title="Validate the open model against the active rules"]:visible');
+if (await btn.count() !== 1) { console.log('FIXTURE FAILED: bottoni Validate visibili = ' + await btn.count()); await browser.close(); process.exit(1); }
 await btn.first().click();
 await page.waitForTimeout(SETTLE_MS);
 
@@ -256,6 +264,39 @@ check('`self.instanceOf == State` tiene per identita\' di riferimento',
         ? 'nessuna violazione: la shell legata al nome e\' lo stesso oggetto che l\'istanza punta — '
           + 'una correzione che ricostruisca le shell invece di modificarle sul posto lo romperebbe'
         : `violata su ${byRule('identityHolds').length} istanze: l'uguaglianza per identita' NON tiene gia' oggi`);
+
+// ── F ────────────────────────────────────────────────────────────────────────
+h('F. La restrizione segue il MODELLO APERTO: stesso giro su SM_B');
+
+await page.evaluate(() => { document.querySelector<HTMLElement>('.validation-results__close')?.click(); });
+await page.waitForTimeout(500);
+await page.evaluate(async (m: string) => {
+    const w = window as any;
+    await w.DockManager.open2(w.LPointerTargetable.fromPointer(m));
+}, models.b);
+await page.waitForTimeout(NAV_MS);
+await btn.first().click();
+await page.waitForTimeout(SETTLE_MS);
+
+const onB = await page.evaluate(() => {
+    const root = document.querySelector('.validation-results');
+    if (!root) return null;
+    return {
+        title: root.querySelector('.validation-results__title')?.textContent ?? '',
+        items: Array.from(root.querySelectorAll('.validation-results__item-btn')).map(i => ({
+            element: i.querySelector('.validation-results__item-element')?.textContent ?? '',
+            rule: i.querySelector('.validation-results__item-rule')?.textContent ?? '',
+        })),
+    };
+});
+note('il modale su SM_B', onB);
+await page.screenshot({ path: shot('b_modal_smb') });
+const bRule = (n: string) => (onB?.items ?? []).filter(i => i.rule === n);
+check('su SM_B l\'esito e\' simmetrico: invariante e estensione tengono, il controllo viola una volta',
+    !!onB && onB.title.includes('SM_B') &&
+    bRule('oneInitialState').length === 0 && bRule('extentIsTheModel').length === 0 &&
+    bRule('controlIsInitial').length === 1,
+    `title = ${onB?.title}, violazioni = ${JSON.stringify(onB?.items)}`);
 
 // ── Esito ────────────────────────────────────────────────────────────────────
 h('ESITO');

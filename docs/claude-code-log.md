@@ -13,6 +13,37 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-09 — fix(jjscript): l'estensione si restringe dentro buildEvalContext
+**Prompt**: correzione dell'estensione, opzione (b), R-VAL-16 / spec §8.2, commit separato prima
+dello Step 4. Parametro opzionale su `buildEvalContext`, default identico a oggi, shell costruite
+gia' ristrette e non ricostruite ne' mutate dopo, restrizione su tutti e quattro i posti mappati
+compresa la mappa delle ambiguita'. Nessun altro sito di chiamata toccato. Cinque criteri di
+accettazione tutti misurati, prova di mutazione compresa. Gate pieni perche' il modulo e' condiviso.
+**Files touched**: `jjscript/executor/commands/evalExtent.ts` (nuovo, il selettore puro),
+`jjscript/executor/commands/eval.ts` (parametro opzionale piu' la riga che restringe il pool),
+`jjscript/index.ts` (+1 export di tipo), `jjscript/__tests__/evalExtent.test.ts` (nuovo, 6 test),
+`model/validation/validationContext.ts` (il chiamante e la sua intestazione). Poi la sonda
+aggiornata e questa entry. **I quattro chiamanti storici NON sono toccati**: la console via
+`executeEval`, i comandi `let` e `forall` di JjScript, e Jjodie (`jodieJjelContext.ts`). Nessuno
+passa un secondo argomento — enumerati con un grep sull'intero `frontend/src`.
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-08 16:50
+**Causa**: (c)
+**Regressions**: no — `npx vitest run` 3393 verdi / **0 test falliti** (erano 3387: +6, i nuovi),
+9 file rossi `window is not defined`, gli stessi identici. `tsc --noEmit` 33 = baseline §17, 0 nei
+file toccati. `build` exit 0 col solo avviso di chunk-size.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessun file di §3.1.
+**Smoke visivo**: passato. Sonda di R-VAL-15 rieseguita: **da 4 PASS 2 FAIL a 7 PASS 0 FAIL**, con
+i due rossi diventati verdi e i verdi rimasti verdi. Piu' una prova di mutazione (P12): tolta la
+restrizione dal selettore, la suite passa da 6/6 a 3 rossi.
+**Notes**: I cinque criteri, uno per uno: (1) invariante del libro verde e `State.instances.size ==
+2` verde; (2) controllo positivo invariato, `isInitial` viola su una delle due istanze; (3)
+`self.instanceOf == State` tiene ancora per identita'; (4) default immutato, provato sull'IDENTITA'
+dell'array — una copia sarebbe gia' un cambiamento; (5) mutazione rossa. Aggiunto un blocco di
+simmetria su SM_B che il prompt non chiedeva: la restrizione segue il modello aperto.
+**Prompt document name**: 2026-09-08 16:50
+
 ## 2026-09-09 — docs: la verifica di R-VAL-15 e' ROSSA, l'estensione e' il progetto
 **Prompt**: verifica piccola e bloccante prima dello Step 4, R-VAL-15 / spec §8.2. Due modelli
 della stessa lingua nello stesso progetto, uno stato iniziale ciascuno, e
