@@ -13,6 +13,39 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-08 — feat(validation): Step 1, il modello dello scheletro
+**Prompt**: Step 1 del prompt di Fase 2 dopo il GO su D1=(b). `DValidationViewpoint` e
+`DValidationRule` come tipi paralleli, non `DViewElement` e senza supertipo comune (R-VAL-6-bis);
+campi della regola name/context/body/message/enabled, nessuna severita'; il viewpoint nasce alla
+prima scrittura come il Data Manager Viewpoint, senza migrazione e senza bump di `DState.version.n`
+se si resta additivi, e se un bump serve dichiararlo e fermarsi.
+**Files touched**: `frontend/src/model/validation/validationTypes.ts` (nuovo, 4 classi + find/ensure),
+`frontend/src/model/validation/__tests__/validationTypes.test.ts` (nuovo, 15 test),
+`frontend/src/joiner/index.ts` (+3, un export). Poi, in commit separati:
+`docs/TECH-DEBT.md` (il todo iscritto su richiesta),
+`docs/discovery/harness/probe_2026-09-08_validation_skeleton_step1.mts` (nuova) e questa entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — suite `npx vitest run` 3363 test verdi / 0 falliti, 9 file rossi per
+`window is not defined`; **baseline misurata nello stesso giro** togliendo le tre modifiche e
+rimettendole da copia (mai `git stash`, RC-13): 3348 verdi, gli stessi 9 file rossi. Delta +15,
+che sono i test nuovi. `tsc --noEmit` 33 errori, cioe' la baseline di §17 esatta, 0 sotto i file
+toccati. `build` exit 0 col solo avviso di chunk-size.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessun file di §3.1. `joiner/index.ts` tocca solo la lista
+degli export; nessun campo aggiunto a una classe D esistente.
+**Smoke visivo**: passato, per sonda invece che a occhio: la suite gira in `environment: node` e il
+modulo importa `joiner`, che scrive su `window`, quindi il test unitario e' sul SORGENTE e la sonda
+Playwright fa il resto — **24 PASS 0 FAIL** su registrazione D<->L, nascita alla prima scrittura,
+le due direzioni del legame, la proxy L e il giro salva-ricarica-rileggi. Tre controlli positivi.
+**Notes**: Un rilievo da decidere, riportato in chat e non sanato: `state.validationviewpoints`,
+la cartella derivata dal className in `reducer.ts:466`, resta una **stringa** perche' `DState` non
+la dichiara, mentre `viewpoints` e `viewelements` sono array letti come tali in 8 siti. Nessuno
+legge la nostra oggi (0 occorrenze). Sanarla sono 2 righe additive in `redux/store.tsx`, fuori dal
+perimetro del prompt: regola 20, si riporta e ci si ferma.
+**Prompt document name**: 2026-09-08 16:50
+
 ## 2026-09-08 — docs: Step 0, il verdetto booleano delle regole di validazione
 **Prompt**: Step 0 del prompt di Fase 2 (scheletro della validazione definita dall'utente),
 READ-ONLY con hard stop. Misurare ESEGUENDO l'evaluator: il tipo di ritorno delle tre invarianti
