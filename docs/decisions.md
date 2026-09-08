@@ -3089,6 +3089,16 @@ seconda di chi la valuta. Difetto latente preesistente, da iscrivere e non da co
 giro.
 
 
+**R-VAL-14** (2026-09-08, dopo la misura dello Step 2) — **Perimetro e tre numeri.** Si valuta il
+modello aperto, non tutti i modelli conformi del progetto; la validazione dell'intero progetto è un
+comando a sé, fuori dalla prima fetta. La superficie dichiara sempre tre numeri: le violazioni,
+quante regole sono inattive (guardia di R-VAL-5), quante valutazioni sono non valutabili. Il terzo
+chiude l'ultima strada silenziosa: misurato allo Step 2, sullo stesso modello rotto la forma del
+libro dà zero violazioni e tre non valutabili, la forma con `.all(...)` ne dà una; senza quel
+numero l'autore della prima forma vedrebbe silenzio, indistinguibile da un modello valido. È un
+contatore, non un elenco: i non valutabili non diventano voci del registro.
+
+
 ## Superate
 
 - **D3** (2026-07-26, routing congelato in v1) — superata da E-route il 2026-08-06.
