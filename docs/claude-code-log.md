@@ -13,6 +13,33 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-08 — docs: discovery della validazione definita dall'utente (Fase 1 + addendum)
+**Prompt**: Fase 1 read-only two-phase piu' addendum, otto punti: forma del registry dei problemi e
+innesto per un produttore nuovo; firma/contesto/tri-stato di JjEL; dependency set esposto o esponibile;
+come si aggiunge un elemento contenuto in una classe M2 (VersionFixer, round trip .ecore); aggancio a
+fine transazione; se la radice del modello sia tipata; stato di allInstances e di `.forAll`; se la chiave
+del registro ammetta uno scope non ancorato. Referto obbligatorio, hard stop prima di qualunque codice.
+**Files touched**: `docs/discovery/discovery_2026-09-08_validazione_definita_utente.md` (nuovo, 834
+righe). Nessun file di codice.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — nessun file di codice toccato; `git status --porcelain frontend/src` vuoto a fine
+giro, con controllo positivo sullo stesso comando senza pathspec (che elenca il referto). Nessun gate di
+build o suite eseguito: dichiarato nel referto §6.3.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessun file di §3.1. `LModelElement.tsx`, `joiner/classes.ts`,
+`redux/reducer/reducer.ts` e `VersionFixer.tsx` letti e non modificati.
+**Smoke visivo**: non applicabile — Fase 1 read-only. Al posto suo, due sonde fuori albero che ESEGUONO
+lexer/parser/evaluator JjEL (P11) e non ne leggono il sorgente; output integrale nel referto §4.2 e §5.3,
+con controlli positivi (`forall … in …` e `exists` a 0 errori) accanto ai casi che falliscono.
+**Notes**: Sei ipotesi del prompt falsificate, tabellate in §3bis del referto, che le argomenta tutte:
+`DModel.instanceof` e' `Pointer<DModel>` e non `Pointer<DClass>`; `NodeProblem.nodeId` e' obbligatorio e
+la violazione di modello non ha oggi superficie; JjEL non ha tri-stato e la navigazione su assente lancia;
+`.forAll` riprodotto su JjEL diretto piu' un secondo difetto non iscritto, che rende `CLAUDE.md §12.6`
+falsa. Sette domande aperte in §7, D1 e D3 bloccanti per la forma della Fase 2.
+**Prompt document name**: 2026-09-08 16:30
+
 ## 2026-09-06 — fix(jjtl): accept newlines in helper bodies and before else
 **Prompt**: un `helper` con il corpo su righe separate non parsa mai nell'app (Monaco e Validate:
 "Expected expression" sulla `{`), nemmeno nelle forme documentate in SPEC §3.4 e §13.2. Decisione
