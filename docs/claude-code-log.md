@@ -13,6 +13,38 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-08 — feat(validation): Step 3, il comando e la lista
+**Prompt**: GO Step 3 con R-VAL-14 (spec §8.1): la superficie dichiara TRE numeri —
+violazioni, regole inattive, valutazioni non valutabili — e il terzo e' un contatore, non voci
+del registro. Perimetro il modello aperto. Resto invariato: comando esplicito, nessun debounce,
+nessun `AFTER_TRANSACTION`, `ValidationPill` non si ripara, niente indicatori sul canvas quindi
+l'ancoraggio doppio di R-M2U resta fuori e alla lista basta l'id elemento.
+**Files touched**: nuovi `model/validation/validationContext.ts`,
+`editor-v2/problems/validationToProblems.ts`, `editor-v2/problems/ValidationResultsModal.tsx` e
+`.scss`; modificati `editor-v2/problems/registry.ts` (+1 membro nella union),
+`events/registry.ts` (+1 evento), `editor-v2/Toolbar.tsx` (bottone e handler), `App.tsx` (mount).
+Poi `docs/discovery/harness/probe_2026-09-08_validation_skeleton_step3.mts` e questa entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `npx vitest run` 3387 verdi / 0 falliti, 9 file rossi `window is not
+defined`, gli stessi di prima. `tsc --noEmit` 33 = baseline §17, 0 nei file toccati. `build`
+exit 0 col solo avviso di chunk-size.
+**Out-of-scope changes**: yes — **deroga alla regola 19 dichiarata (RC-11): 8 file**, elencati
+sopra con cosa cambia in ciascuno. Nessuno fuori da quella lista; `EditorV2.tsx` non e' toccato
+perche' il produttore non e' un componente montato ma una funzione chiamata dal comando.
+**Layer Impact Report**: not-required — nessun file di §3.1.
+**Smoke visivo**: passato, sonda Playwright **13 PASS 0 FAIL** piu' tre screenshot: fixture
+costruita dall'app, click sul BOTTONE vero, i tre numeri letti a schermo (1 violazione, 1 regola
+inattiva, 2 non valutabili), una sola voce nel registro, e il controllo positivo che DISCRIMINA
+per P12 — cambiato il modello, le violazioni passano da 1 a 2.
+**Notes**: Misura non scontata: un booleano opzionale **mai scritto** vale `null`, non `false`,
+quindi la regola su quell'istanza esce NON VALUTABILE e non violata. Argomentata nel blocco G
+della sonda. Costo del comando su 5 regole x 2 istanze: 9 ms, contesto compreso. Scostamento
+dichiarato: quando una regola non compila il modale lo dice in una riga, perche' il canale di
+authoring non esiste ancora e l'alternativa e' il silenzio.
+**Prompt document name**: 2026-09-08 16:50
+
 ## 2026-09-08 — feat(validation): Step 2, il valutatore
 **Prompt**: GO opzione (a) — `redux/store.tsx` non si tocca, la cartella di stato resta con le
 altre 18, la riparazione generale resta iscritta e non si apre qui. Poi Step 2 come da prompt di
