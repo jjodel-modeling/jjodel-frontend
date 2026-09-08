@@ -3070,6 +3070,25 @@ famiglia di regole si usa un viewpoint di validazione dedicato e lo si disattiva
 i viewpoint di sintassi va dichiarata in interfaccia, perché per analogia ci si aspetta l'override.
 
 
+**R-VAL-13** (2026-09-08, dopo lo Step 0) — **Il verdetto pretende un booleano; il valutatore non
+converte nulla.** Un risultato non booleano non è un verdetto ma un difetto della regola, sul
+canale di authoring (R-VAL-7). Misurato: `[true,false,true]` è vero per tutte le vie (verdetto
+sbagliato in silenzio), `[]` è falso per `isTruthy` (verità vacua rotta al contrario), e i due
+convertitori esistenti (`isTruthy` e il `Boolean()` di JS in JjTL e JjScript) divergono proprio su
+`[]`. Una regola di conversione nel validatore sarebbe la terza semantica del sistema, nel
+sottosistema che meno può permettersi un verdetto silenziosamente sbagliato. La forma esplicita
+`coll.all(x => pred)` è misurata e funziona. Il tri-stato ha tre ingressi, tutti verso «non
+valutabile»: eccezione, risultato non booleano, warning di identificatore assente da
+`jjelEvalWithDiagnostics`. Una regola non valutabile su tutte le istanze del contesto è segnalata
+come sospetta in authoring. Conseguenza esterna: la Tabella 7.5 del libro va corretta comunque,
+perché il paragrafo sulla truthiness è misurato falso.
+
+**Todo separato, non della validazione**: `isTruthy` e `Boolean()` divergono su `[]`, e la SPEC
+JjEL non nomina mai la truthiness. Una guardia JjTL su collezione vuota vale il contrario a
+seconda di chi la valuta. Difetto latente preesistente, da iscrivere e non da correggere in questo
+giro.
+
+
 ## Superate
 
 - **D3** (2026-07-26, routing congelato in v1) — superata da E-route il 2026-08-06.
