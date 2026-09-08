@@ -1,0 +1,286 @@
+# Spec — Validazione definita dall'utente
+
+**File**: `docs/spec/claude_spec_2026-09-08_user_defined_validation.md`
+**Data**: 2026-09-08
+**Stato**: vigente, non implementata. Nessuna Fase 2 aperta.
+**Serie di decisioni**: R-VAL
+**Referti a monte**:
+`docs/discovery/discovery_2026-09-08_validazione_definita_utente.md` (Fase 1, 834 righe, `fdf087259`)
+`docs/discovery/discovery_2026-09-08_*keyword*` (micro-discovery lexer, `3e4dec57b`)
+
+---
+
+## 1. Scopo e perimetro
+
+Oggi Jjodel valida un modello contro la definizione del suo metamodello: conformance,
+uniqueness dei nomi, forma dei nomi. Questa spec definisce il livello successivo, cioe' i
+vincoli che il *language designer* scrive esplicitamente e che valgono sulle istanze del
+linguaggio che sta definendo.
+
+**In scope**: invarianti dichiarate in funzione di una classe M2, valutate su ogni istanza M1
+di quella classe, scritte in JjEL, non bloccanti.
+
+**Fuori scope, dichiarato**: i vincoli di modello (contesto = il modello intero) e la
+soppressione per singola istanza (waiver). Vedi §11.
+
+**Confine con i tipi scalari**: un vincolo sul valore di un singolo campo (`min`, `max`,
+dominio) appartiene al tipo scalare raffinato e si verifica in scrittura. Le invarianti di
+questa spec sono i vincoli relazionali e strutturali. La stessa cosa non si dice in due posti.
+
+---
+
+## 2. Decisioni ratificate
+
+**R-VAL-1** (2026-09-08) — La validazione e' un *concern* con viewpoint propri, non un
+capitolo del metamodello ne' una sezione dei viewpoint di sintassi. Ragione ratificata da
+Alfonso: il viewpoint e' il meccanismo con cui Jjodel separa gli aspetti specificati in
+funzione di un metamodello, e tenere le regole insieme alle proprieta' della classe aumenta il
+carico cognitivo. Il criterio di R-VP (metamodello = validita', viewpoint = presentazione)
+riguarda i viewpoint di sintassi concreta e non si applica qui.
+
+**R-VAL-2** (2026-09-08) — I viewpoint di validazione sono **multipli** e selezionabili, come
+quelli di sintassi e diversamente dal Data Manager Viewpoint (R-DMV). Conseguenza accettata e
+da dichiarare in interfaccia: «valido» e' relativo all'insieme dei viewpoint di validazione
+attivi.
+
+**R-VAL-3** (2026-09-08) — Nella prima fetta il proprietario di una regola e' sempre una
+**classe** M2. Il livello modello resta fuori: il registro dei problemi richiede `nodeId`
+(`registry.ts:63`, sette siti), le violazioni di modello sono gia' scartate a monte
+(`conformanceToProblems.ts:43`) e non esiste una superficie che le mostri.
+
+**R-VAL-4** (2026-09-08) — Le violazioni **non bloccano** nessuna scrittura, mai. Un modello in
+costruzione e' normalmente invalido.
+
+**R-VAL-5** (2026-09-08) — Attivazione a due livelli indipendenti: il viewpoint e la singola
+regola. Vedi §6.
+
+**R-VAL-6** (2026-09-08) — Una regola ha la stessa **forma** di una view (legame a una classe,
+interpretazione sulle istanze, attivabilita', dispatch) ma **non lo stesso tipo**: non e' un
+`DViewElement`. Ereditare il tipo delle view porterebbe stile, layout e primitive IR che per una
+regola non significano niente. Nota storica: `joiner/classes.ts:1186` conserva un
+`//thiss.constraints = [];` commentato su `DViewElement` accanto a un flag `isValidation`, cioe'
+il tentativo precedente di questa unificazione.
+
+---
+
+## 3. Il concern e i suoi viewpoint
+
+Un **viewpoint di validazione** e' un contenitore di regole definito sopra un metamodello. Un
+progetto ne puo' avere piu' d'uno, e ciascuno raccoglie una famiglia coerente di regole: le
+regole strutturali della lingua, le convenzioni di nomenclatura, i controlli che un utente
+aggiunge sopra un metamodello che non ha scritto lui.
+
+Da R-VAL-2 discendono tre proprieta':
+
+1. L'insieme delle regole in vigore e' l'unione delle regole attive dei viewpoint attivi.
+2. Attivare e disattivare un intero concern e' un'operazione sola, non N.
+3. Il *lint del modellatore* (controlli di chi usa una lingua altrui) non e' un meccanismo
+   terzo: e' un viewpoint di validazione come gli altri. Previsto, fuori dalla prima fetta.
+
+**Comportamenti da definire e da riportare nella spec quando il macchinario risponde** (§14, D-A
+e D-B): cosa accade alle regole quando la classe che referenziano viene cancellata; cosa accade
+quando un metamodello entra in un progetto diverso da quello in cui le regole sono state
+scritte.
+
+---
+
+## 4. La regola
+
+Campi:
+
+| Campo | Contenuto |
+|---|---|
+| `name` | identificatore leggibile, unico nel viewpoint |
+| `context` | puntatore alla classe M2 proprietaria; `self` e' l'istanza |
+| `body` | espressione JjEL booleana |
+| `message` | testo con segnaposto valutati nello stesso contesto, es. `"{self.name} ha saldo {self.saldo}"` |
+| `severity` | `error` o `warning`. Nessun terzo livello nella prima fetta |
+| `enabled` | attivazione della singola regola (§6) |
+
+**Ereditarieta'**: una regola su una superclasse vale su tutte le sue sottoclassi. Nell'ambiente
+di authoring le regole ereditate sono visibili in sola lettura e distinte da quelle proprie:
+senza, il designer riscrive un vincolo che gia' esisteva piu' su.
+
+**Contesto dichiarato**: l'ambiente mostra sempre `self: <Classe>` sopra il corpo. Il contesto e'
+parte del significato della regola, non della selezione corrente.
+
+---
+
+## 5. Semantica di valutazione
+
+**Tri-stato**: vero, falso, non valutabile. Il terzo valore non e' una violazione e non compare
+tra i problemi del modello.
+
+JjEL non ha un tri-stato e la navigazione su un assente **lancia** `JjelEvaluationError`
+(misurato, referto §punto 2). Il tri-stato si costruisce quindi al confine della regola: il
+motore cattura l'eccezione e la mappa su *non valutabile*, mai su violazione. Il linguaggio non
+si tocca.
+
+**Costo della scelta, dichiarato**: un refuso nel nome di una feature diventa a runtime
+indistinguibile da un modello incompleto. La mitigazione non e' a runtime ma in authoring (§10).
+
+**Due canali separati, mai mescolati**:
+
+- una regola che non compila, che nomina una feature inesistente sulla classe di contesto, o che
+  usa un nome riservato, e' un **difetto della regola**. Si mostra nell'ambiente di authoring,
+  accanto al corpo;
+- una regola che vale e risulta falsa su un'istanza e' una **violazione del modello**. Va nel
+  registro dei problemi.
+
+Il registro dei problemi non e' mai il posto dove si scopre che una regola e' scritta male.
+
+---
+
+## 6. Attivazione a due livelli (R-VAL-5)
+
+Due flag indipendenti; una regola e' in vigore se e solo se entrambi sono attivi.
+
+- **Viewpoint attivo**: scelta del progetto, non proprieta' del viewpoint, cosi' che un viewpoint
+  riusabile (una libreria di convenzioni) possa essere attivo in un progetto e non in un altro.
+- **Regola attiva**: proprieta' della regola dentro il suo viewpoint. Una regola disattivata
+  individualmente **resta disattivata** quando il viewpoint viene riattivato.
+
+Disattivare non e' cancellare, e la differenza deve restare visibile.
+
+**Guardia obbligatoria**: la superficie dove si leggono le violazioni dichiara sempre quante
+regole sono inattive e quanti viewpoint sono spenti. Una validazione che si puo' spegnere in
+silenzio e' una validazione di cui non ci si puo' fidare: un progetto che valida contro tre
+regole su undici deve dirlo da solo.
+
+---
+
+## 7. Superficie di authoring
+
+**Ambiente dedicato**, con la stessa forma del View Designer per la sintassi e dell'editor delle
+trasformazioni per JjTL: da un lato le classi del metamodello, dall'altro le regole, corpo in
+Monaco.
+
+**Non nel rail di destra** insieme alle proprieta' della classe (R-VAL-1). Sul nodo resta un
+indicatore discreto con il numero di regole che la classe porta; nel rail al piu' una riga in
+sola lettura che apre l'ambiente, mai un editor.
+
+**Controesempi dal vivo**: mentre si scrive una regola, l'ambiente mostra su quali istanze del
+modello corrente tiene e su quali cade. E' la feature che giustifica una superficie propria: nel
+rail non ci sarebbe stato lo spazio, e un invariante scritto alla cieca si scopre sbagliato
+giorni dopo, su un modello altrui.
+
+**Progressive disclosure**: l'ambiente e' materia da language designer e vive in modalita'
+Advanced. Chi impara non lo incontra.
+
+**Aggancio futuro, non prima fetta**: il completamento dei nomi di feature dentro Monaco e'
+alimentato dallo stesso risolutore statico di §10, che va quindi tenuto separato dal controllo e
+riusabile. Jjodie che redige una regola dal linguaggio naturale e' il quinto uso dell'AI e viene
+dopo che la forma scritta a mano funziona.
+
+---
+
+## 8. Superficie delle violazioni
+
+Le violazioni entrano nel **registro dei problemi esistente** come nuovo produttore, al prezzo di
+un membro in piu' nella union `NodeProblemKind`. L'innesto e' pulito: `ownerModelId` e
+`getProblemIdsOwnedBy` filtrano per kind e per modello. Nessun pannello proprietario.
+
+**Vincolo di scopo, scoperto in discovery**: `ValidationPill` non e' montata dal 2026-08-26
+(`Toolbar.tsx:26`, zero siti di mount). Oggi non esiste un posto dove leggere l'elenco delle
+violazioni. La prima fetta deve quindi comprendere una superficie di lettura, rimontando la pill
+o facendo una lista minima. La decisione appartiene alla corsia di triage (§13).
+
+---
+
+## 9. Rivalutazione e costo
+
+`AFTER_TRANSACTION` riceve solo `newState` e **non dice quali oggetti sono cambiati** (referto,
+punto 5). Il pattern reale e' firma-selettore piu' debounce, con rivalutazione **totale**.
+
+Prima fetta: comando esplicito di validazione, piu' rivalutazione totale con debounce all'inerzia.
+Il costo va **misurato** su un metamodello realistico all'inizio della Fase 2, con un budget
+dichiarato: se lo sfora, si degrada al solo comando esplicito invece di rallentare l'editing.
+Non si assume che la rivalutazione totale sia accettabile.
+
+Seconda fetta: un visitor sull'AST JjEL restituisce i nomi delle feature toccate da una regola
+(non le coppie oggetto-feature che l'IR concretizza) e serve da filtro grossolano per saltare le
+regole che non guardano niente di cambiato. E' lo stesso visitor di §10, pagato una volta.
+
+---
+
+## 10. Nomi riservati e controllo statico
+
+Misurato (micro-discovery): **18 keyword su 18** in JjEL rompono dopo un punto, **25 su 25** in
+JjTL, e le due tabelle divergono; l'unione e' di 29 parole. I nomi che una feature porta quasi
+sempre (`type`, `name`, `value`, `values`, `abstract`, `owner`, `label`, `father`) **non** sono
+keyword. La via d'uscita `self["in"]` funziona e restituisce il valore giusto. Nessun controllo,
+a nessuno dei tre livelli, impedisce oggi di chiamare una feature come una keyword.
+
+Conseguenze per questa spec:
+
+1. Il **controllo statico in authoring** risolve i nomi di feature contro la classe di contesto e
+   ha due mestieri: segnalare il refuso, e segnalare il nome riservato indicando la forma
+   `self["in"]`. Trasforma un errore di parse incomprensibile in un avviso mentre si scrive.
+2. Il controllo **non puo' avere una terza copia** della lista: legge un elenco unico dei nomi
+   riservati, esportato da un modulo che entrambi i lexer importano. La consolidazione di
+   quell'elenco e' **prerequisito** di questa fetta; la riparazione del lexer non lo e'.
+3. `true`, `false` e `null` sono l'unico caso in cui il sistema **sbaglia in silenzio**: parsano
+   come letterali e una feature con quel nome restituisce il valore sbagliato senza errore. Per un
+   validatore e' la categoria peggiore, perche' produce un verdetto autorevole calcolato sul
+   valore sbagliato. Vanno intercettati alla creazione del nome con una diagnostica di CHECK 12,
+   non un rifiuto della scrittura (R-VAL-4 vale anche qui).
+
+---
+
+## 11. Fette
+
+**Fetta 1**. Viewpoint di validazione multipli; regole con proprietario di sola classe; corpo
+JjEL con tri-stato al confine; messaggio con segnaposto; due severita'; attivazione a due
+livelli con la guardia di §6; ambiente di authoring dedicato con contesto dichiarato, ereditate
+in sola lettura, diagnostiche accanto al corpo e controesempi dal vivo; indicatore sul nodo;
+violazioni nel registro esistente; superficie di lettura; comando esplicito piu' rivalutazione
+totale misurata.
+
+**Fetta 2**. Filtro di rivalutazione dal visitor dei nomi di feature; lint del modellatore come
+viewpoint di validazione dedicato; completamento dei nomi in Monaco.
+
+**Fetta 3 e oltre**. Vincoli con proprietario il modello (richiede uno scope non ancorato nel
+registro e una superficie); waiver per singola istanza; Jjodie che redige regole.
+
+**Fuori scope, esplicito**: il waiver per singola istanza non e' definito e non va introdotto per
+approssimazione: tocca la chiave del registro e va progettato quando lo si vuole davvero.
+
+---
+
+## 12. Limiti dichiarati
+
+1. Una regola con un refuso a runtime e' indistinguibile da un modello incompleto (§5). Mitigato
+   in authoring, non risolto.
+2. I nomi riservati sono l'unione di due tabelle divergenti: una feature `from` o `to` naviga in
+   JjEL e si rompe in JjTL (§10).
+3. La rivalutazione e' totale finche' non arriva il filtro della fetta 2 (§9).
+4. Un metamodello esportato in `.ecore` non porta con se' le regole. L'export perde comunque le
+   annotazioni in silenzio oggi (`includeAnnotations` dichiarata e mai letta), quindi non e' una
+   regressione, ma va detto.
+
+---
+
+## 13. Prerequisiti
+
+1. **Triage della validazione esistente**: `ValidationPill` non montata dal 2026-08-26 e
+   violazioni di modello scartate in `conformanceToProblems.ts:43`. Una parte della validazione
+   che diamo per funzionante calcola e butta via. Va davanti a tutto il resto.
+2. **Consolidazione dei nomi riservati** in un elenco unico importato da entrambi i lexer, piu'
+   la diagnostica sui tre letterali e il messaggio di parser che nomina la parola e indica
+   `self["in"]`. Primo prompt di codice, dopo il rilascio del 15 settembre.
+3. **Riparazione del lexer** (keyword dopo il punto): corsia separata, non prerequisito.
+
+Nessuna di queste corsie va aperta prima del rilascio della 3.0.
+
+---
+
+## 14. Domande aperte
+
+- **D-A** — Ciclo di vita: cosa accade alle regole quando la classe referenziata viene cancellata.
+- **D-B** — Portabilita': cosa accade quando un metamodello entra in un progetto diverso da quello
+  in cui le regole sono state scritte.
+- **D-C** — Il cartello nel rail (riga in sola lettura che apre l'ambiente) si fa o si tiene il
+  solo indicatore sul nodo.
+- **D-D** — Esiste nel codebase un supertipo comune «elemento di viewpoint legato a una classe» su
+  cui appoggiare R-VAL-6, o la regola nasce come tipo parallelo. Da accertare all'inizio della
+  Fase 2, non con una discovery dedicata.

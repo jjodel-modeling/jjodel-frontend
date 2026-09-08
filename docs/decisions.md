@@ -2985,6 +2985,55 @@ non si toccano: sono literal definitivi (R-B9) rimappati su preset di layout, un
 nome simile. La riconciliazione resta il debito FL4 già registrato in `themes.ts`.
 
 
+## Serie R-VAL — la validazione definita dall'utente (ratifiche 2026-09-08)
+
+Spec: `docs/spec/claude_spec_2026-09-08_user_defined_validation.md`. Referti:
+`docs/discovery/discovery_2026-09-08_validazione_definita_utente.md` (`fdf087259`) e la
+micro-discovery sul lexer (`3e4dec57b`).
+
+**R-VAL-1** (2026-09-08) — **La validazione è un concern con viewpoint propri**, non un capitolo del
+metamodello né una sezione dei viewpoint di sintassi. Ragione: il viewpoint è il meccanismo con cui
+Jjodel separa gli aspetti specificati in funzione di un metamodello, e tenere le regole accanto alle
+proprietà della classe aumenta il carico cognitivo. Il criterio di R-VP (metamodello = validità,
+viewpoint = presentazione) riguarda i viewpoint di sintassi concreta e non decide qui.
+
+**R-VAL-2** (2026-09-08) — **I viewpoint di validazione sono multipli e selezionabili**, come quelli
+di sintassi e diversamente da R-DMV-1. Conseguenza accettata e da dichiarare in interfaccia: «valido»
+è relativo all'insieme dei viewpoint di validazione attivi. Il lint del modellatore non è un
+meccanismo terzo, è un viewpoint di validazione come gli altri.
+
+**R-VAL-3** (2026-09-08) — **Nella prima fetta il proprietario di una regola è sempre una classe M2.**
+Il livello modello resta fuori: `registry.ts:63` richiede `nodeId` (sette siti), le violazioni di
+modello sono già scartate in `conformanceToProblems.ts:43` e nessuna superficie le mostra.
+
+**R-VAL-4** (2026-09-08) — **Le violazioni non bloccano nessuna scrittura, mai.** Un modello in
+costruzione è normalmente invalido. Vale anche per la diagnostica sui nomi riservati.
+
+**R-VAL-5** (2026-09-08) — **Attivazione a due livelli indipendenti**, viewpoint e singola regola: in
+vigore se e solo se entrambi attivi, e una regola spenta individualmente resta spenta quando il
+viewpoint si riaccende. La superficie delle violazioni dichiara sempre quante regole sono inattive:
+una validazione che si spegne in silenzio non è affidabile.
+
+**R-VAL-6** (2026-09-08) — **Una regola ha la stessa forma di una view ma non lo stesso tipo**: legame
+a una classe, interpretazione sulle istanze, attivabilità, dispatch, ma non è un `DViewElement`.
+Ereditare quel tipo porterebbe stile, layout e primitive IR che per una regola non significano nulla.
+Traccia del tentativo precedente: `joiner/classes.ts:1186`, `//thiss.constraints = [];` commentato
+accanto a un flag `isValidation`.
+
+**R-VAL-7** (2026-09-08) — **Due canali separati per le diagnostiche**: una regola che non compila,
+che nomina una feature inesistente o che usa un nome riservato è un difetto della regola e si mostra
+in authoring; una regola falsa su un'istanza è una violazione e va nel registro dei problemi. Il
+registro non è mai il posto dove si scopre che una regola è scritta male. Corollario: il tri-stato
+(vero, falso, non valutabile) si costruisce al confine della regola, perché JjEL lancia
+`JjelEvaluationError` sulla navigazione su un assente; il linguaggio non si tocca.
+
+**R-VAL-8** (2026-09-08) — **L'elenco dei nomi riservati è unico** e importato da entrambi i lexer:
+il controllo statico in authoring lo legge, e non ne esiste una terza copia. La consolidazione è
+prerequisito della fetta 1; la riparazione del lexer (keyword dopo il punto, 18/18 in JjEL e 25/25 in
+JjTL) è corsia separata e non lo è. `true`, `false` e `null` sono l'unico caso di errore silenzioso e
+vanno intercettati alla creazione del nome con una diagnostica di CHECK 12.
+
+
 ## Superate
 
 - **D3** (2026-07-26, routing congelato in v1) — superata da E-route il 2026-08-06.
