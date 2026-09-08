@@ -13,6 +13,34 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-08 — docs: micro-discovery, l'estensione del difetto keyword-dopo-il-punto
+**Prompt**: micro-discovery READ-ONLY, nessun fix. Misurare l'estensione del difetto nel lexer JjEL
+per decidere se la correzione sia prerequisito della validazione definita dall'utente o corsia
+laterale: elenco completo delle keyword, esito per ciascuna dopo un punto misurato eseguendo il
+parser, esistenza di un controllo che impedisca di chiamare una feature come una keyword, confronto
+con la tabella JjTL. Referto piu' sonda in `docs/discovery/harness/`. Il lexer non si tocca.
+**Files touched**: `docs/discovery/discovery_2026-09-08_keyword_dopo_il_punto.md` (nuovo, 251 righe),
+`docs/discovery/harness/probe_2026-09-08_jjel_keyword_after_dot.mts` (nuova, 7 blocchi). Nessun file
+di codice.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — nessun file di codice toccato, `git status --porcelain frontend/src` vuoto a
+fine giro con controllo positivo sullo stesso comando senza pathspec. Nessun gate di build o suite:
+giro read-only, dichiarato nel referto §11.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessun file di §3.1, nessun sorgente.
+**Smoke visivo**: non applicabile. Al posto suo la sonda consegnata, che ESEGUE lexer, parser ed
+evaluator JjEL e il lexer JjTL (P11): **16 PASS 0 FAIL**, con le due tabelle IMPORTATE dal sorgente
+e non trascritte, e due controlli positivi separati — otto nomi non-keyword che devono parsare e
+`checkNameShape` su input che deve rifiutare.
+**Notes**: Cinque ipotesi falsificate (referto §2). Il difetto non e' di `forAll`: rompono **18
+keyword su 18** in navigazione, 15/18 come identificatore nudo, 25/25 sul lexer JjTL. Ma `type`,
+`name` e `value` non sono keyword e parsano, e `a["<kw>"]` funziona su tutte e 18 fino alla lettura
+del valore. Verdetto: **corsia laterale**. Nessun controllo impedisce di chiamare una feature come
+una keyword, a nessuno dei tre livelli cercati. Tre domande aperte in §10.
+**Prompt document name**: 2026-09-08 17:40
+
 ## 2026-09-08 — docs: §12.6 dice il vero su `forall` in JjEL
 **Prompt**: task docs autonomo, fuori dalla corsia validazione, solo file .md. `CLAUDE.md` §12.6
 dichiara `coll.forAll(x: pred)`; la discovery del 2026-09-08 punto 7 la falsifica. Sostituire la
