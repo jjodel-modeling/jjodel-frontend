@@ -3,7 +3,7 @@
 **File**: `docs/spec/claude_spec_2026-09-08_user_defined_validation.md`
 **Data**: 2026-09-08
 **Stato**: vigente, non implementata. Nessuna Fase 2 aperta.
-**Serie di decisioni**: R-VAL (R-VAL-1..13, con 6-bis)
+**Serie di decisioni**: R-VAL (R-VAL-1..14, con 6-bis)
 **Referti a monte**:
 `docs/discovery/discovery_2026-09-08_validazione_definita_utente.md` (Fase 1, 834 righe, `fdf087259`)
 `docs/discovery/discovery_2026-09-08_*keyword*` (micro-discovery lexer, `3e4dec57b`)
@@ -307,6 +307,27 @@ un membro in piu' nella union `NodeProblemKind`. L'innesto e' pulito: `ownerMode
 (`Toolbar.tsx:26`, zero siti di mount). Oggi non esiste un posto dove leggere l'elenco delle
 violazioni. La prima fetta deve quindi comprendere una superficie di lettura, rimontando la pill
 o facendo una lista minima. La decisione appartiene alla corsia di triage (§13).
+
+### 8.1 Perimetro e i tre numeri (R-VAL-14)
+
+**Perimetro**: si valuta il **modello aperto**, non tutti i modelli conformi del progetto. La
+validazione dell'intero progetto e' un comando esplicito a se', fuori dalla prima fetta: con
+undici modelli target in un progetto reale il costo si moltiplica e la superficie dovrebbe dire a
+quale modello appartiene ogni voce.
+
+**La superficie dichiara sempre tre numeri**, non solo l'elenco:
+
+1. le violazioni, che sono le voci;
+2. quante regole sono **inattive**, per la guardia di R-VAL-5;
+3. quante valutazioni sono risultate **non valutabili**.
+
+Il terzo chiude l'ultima strada silenziosa, e la misura dello Step 2 mostra perche' serve: sullo
+stesso modello rotto, il corpo nella forma del libro produce zero violazioni e tre non valutabili,
+mentre la forma con `.all(...)` produce una violazione. Senza quel numero l'autore della prima
+forma vedrebbe **silenzio**, che e' indistinguibile da un modello valido. L'euristica del sospetto
+(§5.2) copre solo il caso limite in cui la regola e' non valutabile su tutte le istanze; il numero
+copre anche il caso parziale. Restano voci non elencate una per una: e' un contatore, non una
+lista di problemi del modello.
 
 ---
 
