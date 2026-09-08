@@ -13,6 +13,35 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-08 — docs: la verifica sulle cartelle di stato, e perche' la correzione non si fa
+**Prompt**: precedenza sullo Step 2. Sanare `state.validationviewpoints` e `state.validationrules`
+come array in `redux/store.tsx`, additivo, **con verifica obbligatoria prima di scrivere**: un
+progetto salvato senza quelle chiavi, ricaricato, le trova? Se il ripristino e' in blocco la chiave
+arriva `undefined` e rompe in un altro modo. Se serve toccare `VersionFixer`: hard stop, non farla,
+riferire. Inoltre, senza aprire corsie: dichiarare in commento che `VALIDATION_VIEWPOINT_ID` e' una
+scorciatoia dello scheletro e non la forma (R-VAL-2 multiplo, al contrario di R-DMV-1 singleton), e
+iscrivere che cancellare un viewpoint lascia le regole orfane.
+**Files touched**: `frontend/src/model/validation/validationTypes.ts` (solo commenti: +24 sul
+puntatore fisso, +9 sulle regole orfane), `docs/TECH-DEBT.md` (due entry nuove),
+`docs/discovery/harness/probe_2026-09-08_cartelle_di_stato_al_reload.mts` (nuova) e questa entry.
+**Nessuna riga di `redux/store.tsx`**: la correzione non e' stata scritta, ed e' il punto della entry.
+**Outcome**: ⚠️ partial — la verifica e' completa, la correzione e' ferma per la condizione che il
+prompt stesso poneva.
+**Corregge**: —
+**Causa**: (c)
+**Regressions**: no — nessuna riga di codice eseguibile toccata (solo commenti). `tsc --noEmit` 33
+errori = baseline §17; `vitest run src/model/validation` 15/15 verdi.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessun file di §3.1; `redux/store.tsx` letto e NON modificato.
+**Smoke visivo**: passato per sonda, **9 PASS 0 FAIL**: riproduce la cartella-stringa, la vede
+sopravvivere a salva+ricarica, toglie dallo snapshot una chiave **dichiarata** su `DState`
+(`edgepoints`) e la fa passare dal percorso di caricamento vero, e passa in rassegna tutte le classi D.
+**Notes**: Ripristino **in blocco**: `edgepoints`, dichiarata su `DState` e tolta dallo snapshot,
+torna `undefined`. Completare la correzione vuol dire una migrazione: hard stop come da prompt.
+E non e' un difetto della validazione — 20 classi D su 44 sono nella stessa condizione,
+`DAnnotation` e i tre edge comprese. Le due entry nuove di `docs/TECH-DEBT.md` argomentano tutto.
+**Prompt document name**: 2026-09-08 16:50
+
 ## 2026-09-08 — feat(validation): Step 1, il modello dello scheletro
 **Prompt**: Step 1 del prompt di Fase 2 dopo il GO su D1=(b). `DValidationViewpoint` e
 `DValidationRule` come tipi paralleli, non `DViewElement` e senza supertipo comune (R-VAL-6-bis);
