@@ -3058,6 +3058,18 @@ regole, resta il solo indicatore sul nodo. Una riga in sola lettura è il preced
 concern che tocca la classe ne chiede una.
 
 
+**R-VAL-12** (2026-09-08) — **Le regole di superclasse e sottoclasse si accumulano, non si
+sovrascrivono**: su un'istanza valgono le proprie e tutte le ereditate, e non esiste modo di
+sopprimere dalla sottoclasse una regola della superclasse. Discende da R-VAL-6-bis: la view
+seleziona e il dispatch sceglie una vincente perché un'istanza si disegna in un modo solo, la
+regola predica e un'istanza può violarne più d'una. La congiunzione sta nell'aggregato: ogni
+regola conserva verdetto, messaggio e severità propri e ogni violazione è una voce a sé; «valido»
+è la derivata, con severità massima fra le violate. Un nome uguale non crea override. Indebolire
+una regola in una sottoclasse non si può: se serve, la regola sta troppo in alto; per spegnere una
+famiglia di regole si usa un viewpoint di validazione dedicato e lo si disattiva. L'asimmetria con
+i viewpoint di sintassi va dichiarata in interfaccia, perché per analogia ci si aspetta l'override.
+
+
 ## Superate
 
 - **D3** (2026-07-26, routing congelato in v1) — superata da E-route il 2026-08-06.

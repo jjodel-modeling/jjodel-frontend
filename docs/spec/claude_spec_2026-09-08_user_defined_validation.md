@@ -3,7 +3,7 @@
 **File**: `docs/spec/claude_spec_2026-09-08_user_defined_validation.md`
 **Data**: 2026-09-08
 **Stato**: vigente, non implementata. Nessuna Fase 2 aperta.
-**Serie di decisioni**: R-VAL (R-VAL-1..11, con 6-bis)
+**Serie di decisioni**: R-VAL (R-VAL-1..12, con 6-bis)
 **Referti a monte**:
 `docs/discovery/discovery_2026-09-08_validazione_definita_utente.md` (Fase 1, 834 righe, `fdf087259`)
 `docs/discovery/discovery_2026-09-08_*keyword*` (micro-discovery lexer, `3e4dec57b`)
@@ -147,6 +147,38 @@ Campi:
 **Ereditarieta'**: una regola su una superclasse vale su tutte le sue sottoclassi. Nell'ambiente
 di authoring le regole ereditate sono visibili in sola lettura e distinte da quelle proprie:
 senza, il designer riscrive un vincolo che gia' esisteva piu' su.
+
+### 4.1 Superclasse e sottoclasse con una regola ciascuna (R-VAL-12)
+
+**Le regole si accumulano, non si sovrascrivono.** Su un'istanza di una sottoclasse valgono le
+regole della sottoclasse e tutte quelle ereditate. Nessuna regola ne annulla un'altra, e non
+esiste un modo di sopprimere dalla sottoclasse una regola della superclasse.
+
+Non e' una preferenza: discende da R-VAL-6-bis. Una view *seleziona* e il dispatch deve scegliere
+una vincente, perche' un'istanza si disegna in un modo solo; una regola *predica* e non c'e'
+niente da scegliere, perche' un'istanza puo' violare piu' regole insieme. La differenza va
+dichiarata in interfaccia, perche' chi arriva dai viewpoint di sintassi si aspetta per analogia
+che la sottoclasse sovrascriva, e qui non succede.
+
+Tre conseguenze:
+
+1. **La congiunzione sta nell'aggregato, non nelle regole.** Ogni regola produce il proprio
+   verdetto, il proprio messaggio e la propria severita', e ogni violazione e' una voce a se' nel
+   registro. «AND» e' solo la risposta alla domanda derivata «il modello e' valido», dove la
+   severita' complessiva e' la massima fra quelle violate. Le regole non si fondono mai in un
+   verdetto unico.
+2. **Un nome uguale non crea un override.** I nomi sono unici dentro un viewpoint; una regola
+   omonima in un altro viewpoint e' un'altra regola e vale in aggiunta. Far dipendere la validita'
+   da una coincidenza di nomi e' escluso.
+3. **Indebolire una regola in una sottoclasse non si puo', ed e' voluto.** Un invariante puo' solo
+   rafforzarsi scendendo nella gerarchia: se la sottoclasse ha bisogno di violare una regola della
+   superclasse, la regola sta troppo in alto e va spostata giu'. Chi vuole comunque spegnere una
+   famiglia di regole ha gia' la via legittima: metterle in un viewpoint di validazione suo e
+   disattivarlo (R-VAL-2, R-VAL-5), che e' una scelta esplicita e visibile invece di una
+   soppressione implicita.
+
+L'accumulo rende anche l'ereditarieta' multipla un non problema: due superclassi portano le loro
+regole e valgono tutte, senza nessuna gerarchia di precedenza da definire.
 
 **Contesto dichiarato**: l'ambiente mostra sempre `self: <Classe>` sopra il corpo. Il contesto e'
 parte del significato della regola, non della selezione corrente.
