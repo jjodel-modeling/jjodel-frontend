@@ -13,6 +13,34 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-08 — docs: Step 0, il verdetto booleano delle regole di validazione
+**Prompt**: Step 0 del prompt di Fase 2 (scheletro della validazione definita dall'utente),
+READ-ONLY con hard stop. Misurare ESEGUENDO l'evaluator: il tipo di ritorno delle tre invarianti
+della Tabella 7.5 del libro; che cosa restituisce `forall ... : pred` con almeno un elemento falso
+e come si converte a booleano; lo stesso su collezione vuota; se esista gia' una funzione
+`JjelValue -> boolean` e quale regola applichi. Il linguaggio non si tocca.
+**Files touched**: `docs/discovery/discovery_2026-09-08_verdetto_booleano.md` (nuovo, 11 sezioni),
+`docs/discovery/harness/probe_2026-09-08_jjel_verdetto_booleano.mts` (nuova, 8 blocchi). Nessun file
+di codice. Ramo nuovo `validation-skeleton` da `alfonso-frontend-jjtl`, come chiede il prompt.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — nessun file di codice toccato, `git status --porcelain frontend/src` vuoto a
+fine giro con controllo positivo sullo stesso comando senza pathspec, che elenca i due file nuovi.
+Nessun gate di build o suite: giro read-only senza diff di sorgente, dichiarato nel referto §11.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessun file di §3.1, nessun sorgente.
+**Smoke visivo**: non applicabile. Al posto suo la sonda consegnata, che ESEGUE parser ed evaluator
+JjEL su un contesto della forma di `buildEvalContext` (P11): **42 PASS 0 FAIL**, con sette controlli
+positivi a esito noto sulla fixture, senza i quali un elenco di esiti sorprendenti sarebbe
+indistinguibile da un modello vuoto.
+**Notes**: L'ipotesi del prompt e' confermata sulla terza invariante e imprecisa sulla prima: INV1 e
+INV2 sono booleane, solo INV3 restituisce un array. `[false]` e' vero per tutte le vie misurate —
+`if`, `not`, `and`, `implies`, `Boolean()` — e `[]` e' falso per JjEL e vero per il `Boolean()` di
+JjTL/JjScript: due difetti opposti, e due regole gia' in circolo che divergono su un valore.
+Nessun convertitore esportato. Tre domande aperte in §10, D1 bloccante per lo Step 2.
+**Prompt document name**: 2026-09-08 16:50
+
 ## 2026-09-08 — docs: micro-discovery, l'estensione del difetto keyword-dopo-il-punto
 **Prompt**: micro-discovery READ-ONLY, nessun fix. Misurare l'estensione del difetto nel lexer JjEL
 per decidere se la correzione sia prerequisito della validazione definita dall'utente o corsia
