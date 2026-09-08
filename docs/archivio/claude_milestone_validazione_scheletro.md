@@ -1,0 +1,80 @@
+# Milestone — lo scheletro della validazione e la sezione 5.5 del libro
+
+**Data**: 2026-09-08 · **Natura**: materiale di lavoro, non normativo (HARNESS-DOCS §4.8)
+**Normativa di riferimento**: `docs/spec/claude_spec_2026-09-08_user_defined_validation.md`,
+serie R-VAL in `docs/decisions.md`
+**Corsia**: ramo `validation-skeleton`, fuori dalla release del 15 settembre
+
+## Definizione di fatto
+
+La milestone e' chiusa quando **lo scheletro cammina dentro l'applicazione e la sezione 5.5 del
+libro si puo' scrivere**. Non quando i test passano: quando il giro si fa a mano nell'app, sul
+semaforo del libro. Tutto cio' che non serve a quel risultato sta fuori, ed e' elencato in fondo.
+
+## Percorso critico
+
+**1. Step 3** (in esecuzione) — comando Validate sul modello aperto, lista delle violazioni nel
+registro dei problemi, i tre numeri di R-VAL-14 (violazioni, regole inattive, valutazioni non
+valutabili). Chiude con hard stop e verifica visiva di Alfonso.
+
+**2. Step 4** — authoring minimo: il posto da cui una regola si scrive. Monaco per il corpo,
+contesto dichiarato in testa (`self: <Classe>`), regole ereditate visibili in sola lettura e
+distinte dalle proprie, difetti della regola accanto al corpo e mai nel registro (R-VAL-7). Non
+nel rail di destra (R-VAL-1, R-VAL-11).
+
+**3. Prova end to end nell'applicazione** — il gate vero, oggi mancante: il criterio di
+accettazione e' misurato a livello di modulo, con fixture. Va rifatto sul semaforo in
+`localhost:3000`, in offline: creare il viewpoint dall'interfaccia, autorare l'invariante dello
+stato iniziale, togliere `isInitial` e vedere la violazione comparire, rimetterlo e vederla
+sparire. Finche' questo giro non e' fatto, «funziona» significa «funziona nei test».
+
+**4. Screenshot per la 5.5** — le due schermate del prima e dopo, piu' quella dell'authoring della
+regola, sullo stesso progetto e con la stessa impostazione visiva delle figure gia' presenti nel
+capitolo 5.
+
+**6. Scrittura della 5.5** — un invariante solo, **esattamente uno stato iniziale**, che e' quello
+che il metamodello non sa esprimere; la terza invariante della Tabella 7.5 non serve qui perche' la
+molteplicita' di `nextState` la impone gia' e la 5.3 la mostra. Rinvio al capitolo 7 per JjEL, che
+a quel punto del libro non e' ancora stato introdotto. Insieme la 5.6, oggi anch'essa un titolo
+vuoto.
+
+## In parallelo, non bloccanti
+
+**5. Verifica della Figura 5.8** — l'indicatore di validita' che la figura mostra esiste ancora, o
+e' la `ValidationPill` non montata dal 2026-08-26? Se e' quella, o si rimonta o la figura e il
+testo della 5.3 vanno rifatti. Dovuta prima che il capitolo 5 esca, indipendente dallo scheletro.
+
+**7. Correzione del capitolo 7** — terza riga della Tabella 7.5 in
+`ownedTransitions.all(t => t.nextState != null)`, e il paragrafo sulla truthiness, che e' misurato
+falso (`discovery_2026-09-08_verdetto_booleano.md`) e va corretto a prescindere da qualunque scelta
+di design. Nella 7.7, dove oggi si legge che il pannello di validazione e' pianificato e non
+costruito, dire con precisione cosa esiste (valutazione su comando) e cosa no (reattivita').
+
+**8. Checkpoint di sessione** — `sessione_CORRENTE.md` nel Project Knowledge e' fermo al 6
+settembre e non conosce ne' la serie R-VAL ne' questa corsia. Da fare prima di chiudere la chat,
+non dopo.
+
+**9. Decisione sul merge** di `validation-skeleton`, dopo il 15, con il gate da concordare. Nota:
+quattro commit di soli docs sono stati portati su `alfonso-frontend-jjtl` con cherry-pick
+(`02dcbe554`, `d1e4c0802`, `e96d3440b`, `e0a41c42e`); esistono quindi in due copie con hash
+diversi. Se al merge compaiono conflitti su `decisions.md`, `PROTOCOL.md` o la spec, la causa e'
+questa e la risoluzione e' tenere la versione gia' presente, non fondere due volte lo stesso testo.
+
+## Fuori dalla milestone
+
+Scritto perche' la tentazione di infilarlo dentro sara' forte.
+
+**Fetta 1 completa**: segnaposto nei messaggi, due severita', controllo statico dei nomi in
+authoring, indicatori sul canvas, controesempi dal vivo, rivalutazione automatica con debounce,
+modale alla cancellazione della classe (R-VAL-9).
+
+**Prerequisiti e debiti gia' iscritti**: triage di `ValidationPill` e delle violazioni di modello
+scartate in `conformanceToProblems.ts:43`; consolidazione dei nomi riservati in un elenco unico;
+riparazione del lexer (keyword dopo il punto); riparazione generale delle cartelle di stato
+(`reducer.ts:186-188`, con la normalizzazione al caricamento: e' una corsia di migrazione);
+divergenza fra `isTruthy` e `Boolean()` su `[]`.
+
+**Fette 2 e 3**: filtro di rivalutazione dal visitor, lint del modellatore come viewpoint proprio,
+completamento dei nomi in Monaco, vincoli con proprietario il modello, waiver per singola istanza.
+
+**Documentazione su `docs.jjodel.io`**: non ha senso scriverla per uno scheletro.
