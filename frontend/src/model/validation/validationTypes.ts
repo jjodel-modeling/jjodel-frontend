@@ -58,6 +58,16 @@
  * - **la cancellazione a cascata**: `DPointerTargetable.childKeys` non elenca `rules`, e
  *   non e' stato toccato — e' una lista statica che `__json`, `Dummy.ts` e la
  *   navigazione `$`-prefissata leggono per ogni tipo del sistema.
+ *
+ *   CONSEGUENZA NOTA, non un difetto scoperto dopo: **cancellare un viewpoint di
+ *   validazione lascia le sue regole orfane in `idlookup`**. Restano raggiungibili dal
+ *   loro `father`, che ora punta a un oggetto che non c'e' piu', e nessuna superficie le
+ *   mostra. Non e' lo stato di orfana di R-VAL-9, che riguarda la cancellazione della
+ *   CLASSE di contesto ed e' una scelta deliberata con la sua modale: questo e'
+ *   semplicemente il fatto che lo scheletro non ha ancora una cancellazione di
+ *   viewpoint. Chi la scrive deve cancellare anche le regole, o iscrivere `rules` fra le
+ *   `childKeys` — che e' una modifica al cuore e va autorizzata. Iscritto in
+ *   `docs/TECH-DEBT.md`.
  */
 
 import {
@@ -78,13 +88,30 @@ import {
  * `Pointer_ViewPointDataManager`: una lettura di `idlookup` lo trova, senza scansione
  * per tipo.
  *
- * NON significa che il tipo ammetta un solo viewpoint — R-VAL-2 ne vuole piu' d'uno, e
- * `DValidationViewpoint.new` accetta qualunque id. Significa che **l'interfaccia dello
- * scheletro ne mostra uno**, e questo e' quello. Quando arrivera' la gestione dei
- * viewpoint multipli servira' un elenco (una collezione su `DProject`, oppure una
- * scansione di `idlookup` per `className`): e' una decisione di quella corsia, non di
- * questa, e va presa allora perche' la prima porta con se' un campo nuovo su una classe
- * del cuore.
+ * ┌───────────────────────────────────────────────────────────────────────────┐
+ * │ QUESTA E' UNA SCORCIATOIA DELLO SCHELETRO, NON LA FORMA DEL CONCETTO.      │
+ * └───────────────────────────────────────────────────────────────────────────┘
+ *
+ * Il codice qui sotto SOMIGLIA al Data Manager Viewpoint — puntatore fisso, nascita
+ * alla prima scrittura, `find`/`ensure` gemelle — e **la somiglianza inganna**, perche'
+ * i due concetti sono opposti proprio sul punto che il puntatore fisso suggerisce:
+ *
+ * - il Data Manager Viewpoint e' un **singleton per decisione** (R-DMV-1): uno per
+ *   progetto, non creabile da «New viewpoint», non duplicabile, non cancellabile. Li' il
+ *   puntatore fisso E' la forma del concetto.
+ * - il viewpoint di validazione e' **multiplo per decisione** (R-VAL-2): un progetto ne
+ *   ha quanti ne servono, ciascuno raccoglie una famiglia coerente di regole, e
+ *   «valido» e' relativo all'insieme dei viewpoint attivi. Qui il puntatore fisso e'
+ *   solo il modo in cui lo scheletro ne mostra **uno**, perche' l'interfaccia per
+ *   gestirne piu' d'uno e' fuori dal suo perimetro.
+ *
+ * Il tipo li ammette gia' tutti: `DValidationViewpoint.new` accetta qualunque id, e
+ * niente qui dentro impone l'unicita'. Chi aprira' la corsia dei viewpoint multipli
+ * deve **togliere questa costante di mezzo**, non aggirarla: serviranno un elenco (una
+ * collezione su `DProject`, oppure una scansione di `idlookup` per `className`) e una
+ * `find` che non parta da un id. Non e' una decisione di questa corsia, e va presa
+ * allora perche' la prima delle due porta con se' un campo nuovo su una classe del
+ * cuore.
  */
 export const VALIDATION_VIEWPOINT_ID = 'Pointer_ValidationViewpointDefault';
 
