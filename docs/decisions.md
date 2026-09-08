@@ -3112,6 +3112,17 @@ compilazione non è una toppa in attesa del canale di authoring: quel canale ser
 regola, questa riga a chi legge il verdetto.
 
 
+**R-VAL-16** (2026-09-09) — **La restrizione dell'estensione sta dentro `buildEvalContext`**, con un
+parametro opzionale che di default lascia intatto il comportamento per console, JjScript e Jjodie;
+non e' un filtro applicato dopo sul valore di ritorno. Un filtro a valle sarebbe confinato nella
+corsia ma dovrebbe enumerare i quattro posti in cui l'estensione vive, duplicando fuori dal modulo
+una conoscenza che e' del modulo: quando l'estensione comparira' in un quinto posto la validazione
+lo mancherebbe in silenzio. La mappa delle ambiguita' di nome e' dato derivato e ricalcolarla fuori
+sarebbe logica duplicata. L'identita' per riferimento (`self.instanceOf == State`, misurata prima
+della correzione) e' il vincolo di accettazione: le shell si costruiscono gia' ristrette, non si
+ricostruiscono dopo.
+
+
 ## Superate
 
 - **D3** (2026-07-26, routing congelato in v1) — superata da E-route il 2026-08-06.
