@@ -13,6 +13,35 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-09 — docs: la verifica di R-VAL-15 e' ROSSA, l'estensione e' il progetto
+**Prompt**: verifica piccola e bloccante prima dello Step 4, R-VAL-15 / spec §8.2. Due modelli
+della stessa lingua nello stesso progetto, uno stato iniziale ciascuno, e
+`(forall s in State.instances such that s.isInitial).size == 1` eseguita dal comando Validate sul
+modello aperto: deve NON violare. Se rossa, riferire PRIMA di correggere, perche' la correzione
+tocca `buildEvalContext`, condiviso con console, JjScript e Jjodie.
+**Files touched**: `docs/discovery/harness/probe_2026-09-09_estensione_perimetro_validato.mts`
+(nuova) e questa entry. **Nessun file di codice**: giro di sola misura, come chiedeva il prompt.
+**Outcome**: ⚠️ partial — la misura e' completa, la correzione non e' stata scritta perche' il
+prompt la subordina a una decisione.
+**Corregge**: —
+**Causa**: (c)
+**Regressions**: no — `git status --porcelain frontend/src` vuoto a fine giro, con controllo
+positivo sullo stesso comando senza pathspec, che elenca la sonda. Nessun gate di build o suite:
+nessun diff di sorgente da difendere.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessun file di §3.1, nessun sorgente.
+**Smoke visivo**: passato per sonda, **4 PASS 2 FAIL**, e i due rossi sono il risultato cercato:
+`State.instances.size == 2` viola e la prima invariante del libro viola su un modello che ha UN
+solo stato iniziale. Controllo positivo che discrimina (P12): una terza regola viola su UNA sola
+delle due istanze del modello aperto, quindi il comando ha girato, ha visto SM_A e non ha
+iterato SM_B.
+**Notes**: Il perimetro delle ISTANZE validate e' giusto (R-VAL-14 regge); a essere di progetto e'
+l'ESTENSIONE che la quantificazione attraversa. Misurato anche, prima di qualunque correzione,
+l'invariante che una correzione non deve rompere: `self.instanceOf == State` tiene per identita' di
+riferimento, quindi le shell delle classi vanno modificate sul posto e non ricostruite. Tre opzioni
+di correzione riportate in chat, nessuna scritta.
+**Prompt document name**: 2026-09-08 16:50
+
 ## 2026-09-08 — feat(validation): Step 3, il comando e la lista
 **Prompt**: GO Step 3 con R-VAL-14 (spec §8.1): la superficie dichiara TRE numeri —
 violazioni, regole inattive, valutazioni non valutabili — e il terzo e' un contatore, non voci
