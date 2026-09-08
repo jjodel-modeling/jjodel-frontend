@@ -13,6 +13,37 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-08 — feat(validation): Step 2, il valutatore
+**Prompt**: GO opzione (a) — `redux/store.tsx` non si tocca, la cartella di stato resta con le
+altre 18, la riparazione generale resta iscritta e non si apre qui. Poi Step 2 come da prompt di
+Fase 2 con R-VAL-13: modulo puro senza import verso il joiner, raccolta lungo la gerarchia
+(R-VAL-12), `self` l'istanza, tri-stato al confine con i tre ingressi, verdetto che pretende un
+booleano e non converte nulla, test unitari incluse le tre invarianti del libro. Nuovo in
+normativa: P12, il controllo positivo deve discriminare.
+**Files touched**: `frontend/src/model/validation/validationEvaluator.ts` (nuovo),
+`frontend/src/model/validation/__tests__/validationEvaluator.test.ts` (nuovo, 24 test). Questa
+entry a parte. **Nessuna riga di `redux/store.tsx`**, come da opzione (a).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `npx vitest run` 3387 verdi / **0 test falliti** (erano 3363: +24, i nuovi),
+9 file rossi per `window is not defined`, gli stessi identici di prima. `tsc --noEmit` 33 errori =
+baseline §17, **0** sotto `model/validation`. `build` exit 0 col solo avviso di chunk-size.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessun file di §3.1. Il modulo non importa `joiner`, e
+questa e' una proprieta' verificabile: gira nella suite, che `validationTypes.ts` non puo' fare.
+**Smoke visivo**: non applicabile — modulo puro, nessuna superficie. Al posto suo i 24 test che lo
+ESEGUONO, piu' una **prova di mutazione** (P12 applicato alla suite invece che a una sonda):
+introdotta in `verdict()` proprio la truthiness che R-VAL-13 vieta — array non vuoto -> vero — la
+suite passa da 39/39 a **3 rossi**, e ripristinata torna verde. Una suite che non discrimina la
+regola che difende sarebbe decorazione.
+**Notes**: La terza invariante del libro finisce fra le non valutabili, e il test lo mostra accanto
+alla forma corretta: `forall t in coll: pred` su un modello ROTTO produce zero violazioni, mentre
+`coll.all(t => pred)` sullo stesso modello ne produce una. E' il costo di R-VAL-13, gia' dichiarato
+nella spec §5.1. Altra conseguenza scritta nel modulo: `self.owner?.name != ""` su un'istanza senza
+`owner` non compra un verdetto, esce non valutabile per il terzo ingresso.
+**Prompt document name**: 2026-09-08 16:50
+
 ## 2026-09-08 — docs: la verifica sulle cartelle di stato, e perche' la correzione non si fa
 **Prompt**: precedenza sullo Step 2. Sanare `state.validationviewpoints` e `state.validationrules`
 come array in `redux/store.tsx`, additivo, **con verifica obbligatoria prima di scrivere**: un
