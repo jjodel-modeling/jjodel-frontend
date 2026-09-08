@@ -3,7 +3,7 @@
 **File**: `docs/spec/claude_spec_2026-09-08_user_defined_validation.md`
 **Data**: 2026-09-08
 **Stato**: vigente, non implementata. Nessuna Fase 2 aperta.
-**Serie di decisioni**: R-VAL (R-VAL-1..12, con 6-bis)
+**Serie di decisioni**: R-VAL (R-VAL-1..13, con 6-bis)
 **Referti a monte**:
 `docs/discovery/discovery_2026-09-08_validazione_definita_utente.md` (Fase 1, 834 righe, `fdf087259`)
 `docs/discovery/discovery_2026-09-08_*keyword*` (micro-discovery lexer, `3e4dec57b`)
@@ -194,6 +194,50 @@ JjEL non ha un tri-stato e la navigazione su un assente **lancia** `JjelEvaluati
 (misurato, referto §punto 2). Il tri-stato si costruisce quindi al confine della regola: il
 motore cattura l'eccezione e la mappa su *non valutabile*, mai su violazione. Il linguaggio non
 si tocca.
+
+### 5.1 Il verdetto pretende un booleano (R-VAL-13)
+
+**Il valutatore non converte nulla.** Se il corpo della regola non restituisce un booleano, il
+risultato non e' un verdetto: e' un difetto della regola, e va sul canale di authoring insieme
+agli errori di compilazione (R-VAL-7). Nessuna coercizione, nessuna terza semantica di truthiness.
+
+Misurato allo Step 0 (`discovery_2026-09-08_verdetto_booleano.md`, sonda 42/42):
+
+- `forall t in coll: pred` restituisce un array. `[true, false, true]` risulta **vero per tutte le
+  vie** (`if`, `not`, `and`, `implies`, `Boolean()`): una regola violata verrebbe dichiarata
+  soddisfatta in silenzio.
+- L'array vuoto e' **falso** per la truthiness dell'evaluator: la verita' vacua e' rotta nel verso
+  opposto, e uno stato senza transizioni risulterebbe violante.
+- I due convertitori esistenti (`JjelEvaluator.isTruthy` e il `Boolean()` di JS usato da JjTL in 9
+  siti e da JjScript) divergono su **un solo valore**, `[]`, che e' esattamente quello in gioco.
+
+Aggiungere al validatore una regola di conversione propria produrrebbe una **terza** semantica in
+un sistema che ne ha gia' due che divergono, e la produrrebbe nel sottosistema che meno puo'
+permettersi un verdetto silenziosamente sbagliato. La forma esplicita e' misurata e funziona:
+`coll.all(x => pred)` restituisce un booleano e distingue i casi.
+
+**Costo, dichiarato**: la Tabella 7.5 del libro va corretta nella terza riga, che diventa
+`ownedTransitions.all(t => t.nextState != null)`. Va corretto comunque, a prescindere da questa
+decisione: il paragrafo che afferma che «le regole di truthiness dell'evaluator fanno funzionare
+la cosa in pratica» e' misurato falso.
+
+Il costrutto unico di JjEL non e' in discussione: `forall` resta uno solo e continua a calcolare.
+Cambia soltanto che al confine fra chi calcola e chi decide il tipo e' esplicito.
+
+### 5.2 I tre ingressi del non valutabile (R-VAL-13)
+
+Catturare `JjelEvaluationError` non basta. Il tri-stato ha tre ingressi, e tutti e tre danno **non
+valutabile**, mai violazione:
+
+1. l'eccezione di valutazione;
+2. un risultato che non e' un booleano (compreso l'array vuoto che `forall` restituisce su un non
+   array, cioe' il caso dell'istanza malformata);
+3. una diagnostica di identificatore assente, che passa dai warning di `jjelEvalWithDiagnostics` e
+   non dalle eccezioni.
+
+**Euristica per separare il modello incompleto dalla regola rotta**, senza analisi statica: una
+regola non valutabile su **tutte** le istanze del suo contesto e' segnalata come sospetta sul
+canale di authoring; non valutabile su alcune e' soltanto non valutabile.
 
 **Costo della scelta, dichiarato**: un refuso nel nome di una feature diventa a runtime
 indistinguibile da un modello incompleto. La mitigazione non e' a runtime ma in authoring (§10).
