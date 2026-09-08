@@ -45,6 +45,11 @@ export const JjodelEvents = {
   // view (and toggles the pin off when the same view comes back). Navigation entries that
   // just need the panel on screen dispatch this one and leave the pin alone.
   PROPERTIES_SHOW: 'jjodel:properties-show',
+  // R-VAL. L'esito di un giro di validazione definita dall'utente, dal comando alla
+  // superficie che lo mostra. detail: ValidationRunResult & { modelId, modelName } | null.
+  // `null` significa «non ho potuto guardare», che non e' «va tutto bene»: la superficie
+  // deve distinguerli.
+  VALIDATION_RESULTS: 'jjodel:validation-results',
   // Project
   NEW_PROJECT: 'jjodel:new-project',
   CREATE_MODEL: 'jjodel:createModel',

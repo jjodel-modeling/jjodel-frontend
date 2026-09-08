@@ -23,6 +23,8 @@ import { activateViewpoint } from '../../utils/lastViewpoint';
 import DockManager from '../abstract/DockManager';
 import { JjodelEvents } from '../../events/registry';
 import { useTreeViewPanel } from '../../contexts/TreeViewPanelContext';
+import { runValidationOnModel } from '../../model/validation/validationContext';
+import { publishValidationProblems } from './problems/validationToProblems';
 // TODO: cleanup — `ValidationPill` is no longer rendered here (2026-08-26). The import is
 // dropped, the component is not: it is the only conformance summary in the codebase and
 // the aggregated Problems panel it defers to (WP2-D) is still to be built.
@@ -653,6 +655,45 @@ function Toolbar({
         return '';
     });
 
+    /**
+     * L'id del DModel su cui girare la validazione. Stessa risalita di `editorTitle`
+     * — `modelId` e' gia' il DModel nel caso comune, la risalita copre la tab aperta
+     * su qualcosa piu' in basso — ma restituisce l'id invece del nome, perche' il
+     * perimetro e' il MODELLO APERTO (R-VAL-14) e le regole si valutano sulle sue
+     * istanze.
+     */
+    const validationModelId = useSelector((state: any) => {
+        const lookup = state.idlookup || {};
+        let id: string | undefined = modelId;
+        for (let hops = 0; id && hops < 64; hops++) {
+            const e = lookup[id];
+            if (!e) return '';
+            if (e.className === 'DModel') return e.id || '';
+            id = e.father;
+        }
+        return '';
+    });
+
+    /**
+     * Il comando «Validate» (R-VAL, Step 3): esplicito, e nient'altro.
+     *
+     * Nessun debounce, nessuna rivalutazione automatica, nessun `AFTER_TRANSACTION`:
+     * il costo della rivalutazione totale va misurato prima di renderla automatica
+     * (spec §9), e finche' resta a comando quella misura non e' bloccante.
+     *
+     * Due uscite, e sono due cose diverse: le violazioni entrano nel registro dei
+     * problemi come voci, l'esito intero va alla superficie che dichiara i TRE numeri
+     * (R-VAL-14). Le non valutabili NON diventano voci del registro: sono un
+     * contatore.
+     */
+    const handleValidate = useCallback(() => {
+        const result = validationModelId ? runValidationOnModel(validationModelId) : null;
+        if (result) publishValidationProblems(validationModelId, result.violations);
+        window.dispatchEvent(new CustomEvent(JjodelEvents.VALIDATION_RESULTS, {
+            detail: result ? { ...result, modelId: validationModelId, modelName: editorTitle } : null,
+        }));
+    }, [validationModelId, editorTitle]);
+
     // Close dropdown on click outside
     useEffect(() => {
         if (!notationOpen) return;
@@ -758,6 +799,24 @@ function Toolbar({
                         <i className="bi bi-trash" />
                     </button>
                 </div>
+            )}
+
+            {/* ── VALIDATE (R-VAL, Step 3) ──
+                Solo sui modelli: le regole predicano sulle istanze M1, e su un
+                metamodello non c'e' niente da validare in questo senso. */}
+            {!isMetamodel && !!validationModelId && (
+                <>
+                    <div className="toolbar-separator" />
+                    <div className="toolbar-group">
+                        <button
+                            className="toolbar-btn"
+                            onClick={handleValidate}
+                            title="Validate the open model against the active rules"
+                        >
+                            <i className="bi bi-shield-check" />
+                        </button>
+                    </div>
+                </>
             )}
 
             <div className="toolbar-separator" />

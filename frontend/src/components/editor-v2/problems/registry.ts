@@ -25,7 +25,17 @@
  */
 
 export type NodeProblemSeverity = 'warning' | 'error';
-export type NodeProblemKind = 'duplicate-name' | 'conformance';
+/**
+ * `'validation'` (R-VAL, 2026-09-08) e' il terzo produttore: le violazioni delle regole
+ * definite dall'utente. Aggiungere un membro a questa union NON e' «aggiungere una
+ * proprieta' opzionale» ai sensi della Regola 11 di CLAUDE.md, ed e' l'unica via — il
+ * registro filtra per `kind` e i consumatori discriminano su di esso. Autorizzato dalla
+ * spec §8 e dal prompt di Fase 2, che ne dichiarano il prezzo per nome.
+ *
+ * A differenza degli altri due, questo produttore **non e' reattivo**: scrive solo
+ * quando l'utente lancia il comando (nessun debounce, nessun `AFTER_TRANSACTION`).
+ */
+export type NodeProblemKind = 'duplicate-name' | 'conformance' | 'validation';
 
 export interface NodeProblemAction {
     label: string;
