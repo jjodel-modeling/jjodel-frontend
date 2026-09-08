@@ -13,6 +13,36 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-08 — docs: §12.6 dice il vero su `forall` in JjEL
+**Prompt**: task docs autonomo, fuori dalla corsia validazione, solo file .md. `CLAUDE.md` §12.6
+dichiara `coll.forAll(x: pred)`; la discovery del 2026-09-08 punto 7 la falsifica. Sostituire la
+forma, segnalare `x: pred` come non supportata e `forAll` come rotta nel lexer, cercare la stessa
+forma negli altri documenti normativi ed elencare le occorrenze. Nessun fix di codice.
+**Files touched**: `CLAUDE.md` (§12.6: riga di tabella + nota nuova di 16 righe), `AGENTS.md`
+(rigenerato), `frontend/src/jjtl/SPEC.md` (§12.2, riga di Known Bugs), `frontend/src/jjtl/CLAUDE.md`
+(Known limitations, primo bullet), `frontend/src/jjtl/AGENTS.md` (rigenerato). Questa entry a parte.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — nessun file di codice toccato, `git status --porcelain frontend/src` limitato
+ai tre .md dichiarati, con controllo positivo sullo stesso comando senza pathspec. `npm run
+check:agents` PASS su entrambi i generati; `npm run check:docs` 3/3 con i 2 warning pre-esistenti.
+Build e suite non eseguite: nessun sorgente toccato.
+**Out-of-scope changes**: yes — i due `AGENTS.md`, rigenerati e inclusi nello stesso commit come
+impongono RC-7 e §17, non erano nella lista del prompt. Deroga alla regola 19 dichiarata: 6 file,
+di cui 2 generati e 1 la entry di log. Nient'altro fuori dalla lista.
+**Layer Impact Report**: not-required — nessun file di §3.1, nessun sorgente.
+**Smoke visivo**: non applicabile — solo documentazione. Al posto suo una sonda fuori albero (P11)
+che ESEGUE parser ed evaluator JjEL sulle forme prima di scriverle nel documento: `coll.forAll(x =>
+pred)` fallisce come `coll.forAll(x: pred)` (`1:9 Expected property name after '.'`), `getCollectionMethod('forAll')`
+e' assente, `coll.all(x => pred)` parsa e valuta `false` sul fixture. Controllo positivo nello stesso giro.
+**Notes**: Scostamento dichiarato: il prompt chiedeva `coll.forAll(x => pred)`, che la sonda mostra
+fallire allo stesso modo — `forAll` non e' un metodo di collezione e il lexer lo prende per keyword
+comunque. Scritto `coll.all(x => pred)`. Terzo errore nella stessa cella: JjEL `forall` non e' un
+quantificatore booleano ma una comprehension, per decisione esplicita
+(`docs/spec/concern_languages.md:53`). `PROTOCOL.md` e `docs/spec/` non contengono la forma.
+**Prompt document name**: 2026-09-08 17:05
+
 ## 2026-09-08 — docs: discovery della validazione definita dall'utente (Fase 1 + addendum)
 **Prompt**: Fase 1 read-only two-phase piu' addendum, otto punti: forma del registry dei problemi e
 innesto per un produttore nuovo; firma/contesto/tri-stato di JjEL; dependency set esposto o esponibile;

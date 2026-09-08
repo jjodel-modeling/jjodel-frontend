@@ -32,10 +32,16 @@ Railroad diagrams are user-facing visual documentation and do **not** update aut
 
 ## Known limitations
 
-- **`.forAll(x: pred)` never parses on the app path**: the lexer lowercases before the keyword
-  lookup (`lexer.ts:330`), so `forAll` lexes as FORALL and cannot be a member access; and
-  `useJjtlParser.ts:61` calls `parse(tokens)` **without** `source`, i.e. the legacy expression
-  parser, where JjEL is never consulted. Open bug, not scoped to any current work.
+- **`.forAll(...)` never parses, in either lambda form**: BOTH lexers lowercase before the
+  keyword lookup (`jjel/lexer/lexer.ts:397-400`, `jjtl/lexer/lexer.ts:330`), so `forAll` becomes
+  the FORALL token and cannot follow a `.`. Measured 2026-09-08 calling JjEL **directly**, so
+  the defect is not scoped to the app path as this bullet said until then; `useJjtlParser.ts:61`
+  calling `parse(tokens)` **without** `source` — the legacy expression parser, where JjEL is
+  never consulted — is a second, independent reason. There is no `forAll` collection builtin
+  either: the boolean quantifier is `coll.all(x => pred)`, and the lambda form `x: pred` is not
+  accepted as a method argument. See
+  `docs/discovery/discovery_2026-09-08_validazione_definita_utente.md` §5.3. Open bug, not
+  scoped to any current work.
 - **7 test files fail at import** with `window is not defined` under `environment: 'node'`:
   `executor.ts` imports the `joiner` barrel for `U.asNumber` alone, which drags in
   monaco/jquery/sweetalert2/axios. `forall-mapping.test.ts` is among them, so nine `forall`

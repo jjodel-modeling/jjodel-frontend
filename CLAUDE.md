@@ -698,7 +698,24 @@ Expression evaluation engine, used by both JjTL and JjScript. Standalone languag
 | Purpose | Expression evaluation | Model-to-model transformation | Metamodel scripting |
 | Nature | Pure (no side effects) | Declarative + side effects | Imperative |
 | Own evaluator? | Yes (`JjelEvaluator`) | No — delegates to JjEL via AST bridge | Yes (command executor) |
-| `forall` semantics | Boolean quantifier: `coll.forAll(x: pred)` | Mapping constructor: `forall x in coll -> Type {...}` | N/A |
+| `forall` semantics | Set comprehension: `forall x in coll [such that P] [: expr]` | Mapping constructor: `forall x in coll -> Type {...}` | N/A |
+
+**JjEL has no `forAll`.** Its `forall` is a set comprehension, not a boolean quantifier — an
+explicit design decision (`docs/spec/concern_languages.md:53`). The boolean quantifier is
+`coll.all(x => pred)`, with `coll.any` / `coll.none` alongside it; the existential also reads
+`exists x in coll such that P`, and the negated universal `(forall x in coll such that P).isEmpty`.
+
+Two things measured on 2026-09-08 and reported in
+`docs/discovery/discovery_2026-09-08_validazione_definita_utente.md` §5.3:
+
+- `coll.forAll(...)` **never parses**, in either lambda form. Both lexers lowercase before the
+  keyword lookup (`jjel/lexer/lexer.ts:397-400`, `jjtl/lexer/lexer.ts:330`), so `forAll` becomes
+  the `FORALL` token and cannot follow a `.`. There is no `forAll` collection builtin either.
+- The lambda form `x: pred` is **not** accepted as a method argument: `coll.all(x: pred)` fails
+  at the colon, `coll.all(x => pred)` parses and evaluates. The `:` belongs to the `forall`
+  projection only, as the symbol table below already says.
+
+The lexer fix is a lane of its own, not yet opened. This note records what is true today.
 
 **Symbol ownership**:
 - `do` — only in JjEL `with...do`. Nowhere else.
