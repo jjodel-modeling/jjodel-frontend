@@ -374,3 +374,44 @@ pubblica e il nome promette quello che non fa.
 suo blocco `excess`), `components/editor-v2/viewpoint/ir/formWrite.ts` (`clearSlotValue`, che
 documenta la misura), `components/editors/Info.tsx:736-741`.
 
+
+---
+
+## Due truthiness in circolo, e la SPEC JjEL non ne nomina nessuna
+
+**Registrato:** 2026-09-08
+**Origine:** Step 0 della validazione definita dall'utente (R-VAL-13). Trovato mentre si misurava
+tutt'altro — che verdetto dare a una regola il cui corpo non restituisce un booleano — e iscritto
+qui perche' **non e' un difetto della validazione**: e' preesistente, e riguarda JjEL, JjTL e
+JjScript.
+**Stato attuale:** un valore JjEL viene convertito in booleano in due modi diversi, e nessuno dei
+due e' esportato o documentato.
+- `JjelEvaluator.isTruthy` (`frontend/src/jjel/evaluator/evaluator.ts:1003`), dichiarata `private`,
+  usata da `and`, `or`, `not`, `if`, `implies`, dal filtro di `forall` e dal predicato di `exists`.
+  Regola: `null`->false, boolean->se stesso, number->`!= 0`, string->non vuota, **array->non vuoto**,
+  qualunque altro oggetto->true.
+- Il `Boolean()` di JavaScript, applicato direttamente ai risultati JjEL da JjTL
+  (`jjtl/executor/executor.ts:1273, 2898, 2914, 2922, 2930, 3119, 3122, 3138, 3152`) e da JjScript
+  (`jjscript/executor/commands/forall.ts:57-58`).
+
+Sulla tabella dei valori misurata allo Step 0 le due regole divergono su **un solo valore**, `[]`:
+falso per `isTruthy`, **vero** per `Boolean`. Conseguenza concreta: una guardia su collezione vuota
+vale il contrario a seconda di chi la valuta. `frontend/src/jjel/SPEC.md` non contiene ne'
+«truthy» ne' «truthiness» (controllo positivo sullo stesso comando: `isNotEmpty` nello stesso file
+risponde alla riga 259), quindi non c'e' un documento che dica quale delle due sia quella giusta.
+**Perche' non e' stato corretto qui:** R-VAL-13 decide che il validatore **non converte nulla** e
+pretende un booleano, cosi' che la validazione non aggiunga una terza semantica. La scelta chiude
+il problema per la validazione e lo lascia intatto per gli altri due sottosistemi. Correggerlo
+adesso avrebbe voluto dire toccare il linguaggio dentro una corsia che ha per oggetto un'altra cosa.
+**Fix strutturale raccomandato:** esportare un unico convertitore da `jjel`, farlo usare a JjTL e a
+JjScript al posto di `Boolean()`, e scriverne la regola nella SPEC — inclusa la risposta esplicita
+su `[]`, che e' la sola cella in cui la scelta si vede. La parte cara non e' la funzione: e'
+verificare i 10 siti chiamanti, perche' su ognuno il cambio di verdetto sull'array vuoto e' un
+cambio di comportamento.
+**Priorita':** media. Nessun difetto segnalato oggi da un utente, ma e' esattamente la forma di
+divergenza che produce un risultato sbagliato senza errore.
+**Effort stimato:** una giornata, quasi tutta di verifica sui chiamanti.
+**Riferimenti:**
+- `docs/decisions.md` — R-VAL-13, paragrafo «Todo separato, non della validazione»
+- `docs/discovery/discovery_2026-09-08_verdetto_booleano.md` §6 (la tabella delle due regole)
+- `docs/discovery/harness/probe_2026-09-08_jjel_verdetto_booleano.mts` blocco E (la misura)
