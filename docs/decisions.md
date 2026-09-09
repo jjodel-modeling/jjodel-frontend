@@ -3133,6 +3133,18 @@ il caso era una regola su `Initial` in un modello dove i nodi chiamati Initial e
 di `State` con quel nome.
 
 
+**R-VAL-18** (2026-09-09) — **Un pallino di validazione sul canvas non e' mai vecchio**: se non se
+ne puo' garantire la freschezza, non c'e'. Alla prima transazione che tocca il modello **o le
+regole** dopo un'esecuzione le voci si ritirano (`clearValidationProblems`, gia' scritta e mai
+chiamata); non si marcano risolte, che sarebbe falso, ne' vecchie. Il ritiro da solo non basta,
+perche' l'assenza di pallini e' indistinguibile da un modello validato e pulito: viene con UNA
+dichiarazione di freschezza, in un posto solo e mai per nodo, a tre stati (mai validato; validato,
+N violazioni; non validato dall'ultima modifica). Scartata la vecchiaia per voce (paga in
+`formDiagnostics.ts:85`, introduce due vocabolari di pallino, sparira' con la rivalutazione
+automatica) e la rivalutazione automatica adesso (e' la destinazione di §9 ma la spec chiede la
+misura prima, e il costo sta in scrittura: `rebuildSnapshots` piu' `notify` per violazione).
+
+
 ## Superate
 
 - **D3** (2026-07-26, routing congelato in v1) — superata da E-route il 2026-08-06.
