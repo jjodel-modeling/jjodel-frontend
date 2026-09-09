@@ -28,9 +28,12 @@ accettazione e' misurato a livello di modulo, con fixture. Va rifatto sul semafo
 stato iniziale, togliere `isInitial` e vedere la violazione comparire, rimetterlo e vederla
 sparire. Finche' questo giro non e' fatto, «funziona» significa «funziona nei test».
 
-**4. Screenshot per la 5.5** — le due schermate del prima e dopo, piu' quella dell'authoring della
-regola, sullo stesso progetto e con la stessa impostazione visiva delle figure gia' presenti nel
-capitolo 5.
+**4. Screenshot per la 5.5** — catturate il 2026-09-09, tre PNG 1500x950 in
+`docs/discovery/harness/_tmp_book55_*.png`, ignorate da git. Vanno portate nel repo del libro,
+`/Users/alfonso/Documents/Claude/Projects/Jjodel Book/678e1c12660f5f6b2e85fe7b`, cartella
+`author/images/`, con i nomi del capitolo 5. **Avvertenza**: quell'albero ha 18 file modificati non
+committati piu' `author/audit-2026-09/` non tracciata, WIP di un'altra corsia; qualunque scrittura
+li' si committa con pathspec esplicito, mai `git add` largo.
 
 **6. Scrittura della 5.5** — un invariante solo, **esattamente uno stato iniziale**, che e' quello
 che il metamodello non sa esprimere; la terza invariante della Tabella 7.5 non serve qui perche' la
@@ -38,13 +41,28 @@ molteplicita' di `nextState` la impone gia' e la 5.3 la mostra. Rinvio al capito
 a quel punto del libro non e' ancora stato introdotto. Insieme la 5.6, oggi anch'essa un titolo
 vuoto.
 
+*Misurato il 2026-09-09*: la 5.6 **e' gia' scritta** (bozza del 2026-09-08) e porta una nota che
+avverte di ritoccare l'ultima frase del primo paragrafo quando la 5.5 esiste. Quindi resta da
+scrivere la sola 5.5, piu' quella frase.
+
 ## In parallelo, non bloccanti
 
-**5. Verifica della Figura 5.8** — l'indicatore di validita' che la figura mostra esiste ancora, o
-e' la `ValidationPill` non montata dal 2026-08-26? Se e' quella, o si rimonta o la figura e il
-testo della 5.3 vanno rifatti. Dovuta prima che il capitolo 5 esca, indipendente dallo scheletro.
+**5. Figura 5.8** — *misurato il 2026-09-09: non e' una figura stantia, e' un segnaposto.*
+`ch05-conformance-violation.png` e `ch05-conformance-ok.png` sono due PNG 1400x620 del 26 giugno
+con la scritta PLACEHOLDER e la didascalia di cosa andrebbe catturato. Quindi non c'e' niente da
+verificare: c'e' da catturare, con un indicatore **vivo**. La `ValidationPill` non e' renderizzata
+(`Toolbar.tsx:28`); vivi sono i badge per nodo sul canvas e il punto di conformita' nella status
+bar. **Decisione da prendere insieme alla cattura**: il testo della 5.3 dice «the validity
+indicator» al singolare, e la frase e' sul modello intero, quindi o si nomina il punto nella status
+bar (globale, coerente col testo, ma una figura debole) oppure si nominano entrambi i livelli
+(globale piu' l'elemento colpevole), che e' piu' informativo e piu' vero. Raccomandazione:
+entrambi, con la 5.3 riscritta di conseguenza. Riguarda la conformance derivata dal metamodello,
+non la validazione definita dall'utente: e' del capitolo 5, non di questa corsia.
 
-**7. Correzione del capitolo 7** — terza riga della Tabella 7.5 in
+**7. Correzione del capitolo 7** — *file e righe individuati il 2026-09-09*:
+`author/part2/ch08-jjel.tex` (il capitolo 7 del libro), tabella `tab:jjel-invariants` a riga 454,
+paragrafo sulla truthiness alle righe ~492-500, sezione 7.7 `sec:jjel-guards` a riga 429. Terza
+riga della Tabella 7.5 in
 `ownedTransitions.all(t => t.nextState != null)`, e il paragrafo sulla truthiness, che e' misurato
 falso (`discovery_2026-09-08_verdetto_booleano.md`) e va corretto a prescindere da qualunque scelta
 di design. Nella 7.7, dove oggi si legge che il pannello di validazione e' pianificato e non
