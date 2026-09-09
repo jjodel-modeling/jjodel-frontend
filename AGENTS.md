@@ -645,6 +645,43 @@ setTimeout(() => {
 
 Accumulate by **name**, not by ID, inside the TRANSACTION.
 
+### 9.3 Attribute slots and reference slots are written differently — and the wrong way is silent
+
+`['$' + name].value = v` is the form §9.1 and §9.2 use, and it is right **for attributes**. On a
+**reference** slot the same assignment does nothing: it does not throw, does not warn, and leaves
+the slot at `values: []`. Measured 2026-09-09 by running the four candidate forms in sequence
+against a live slot:
+
+| form | reference slot |
+|---|---|
+| `slot.value = <L object>` | no error, `values` stays `[]` |
+| `slot.value = <id>` | no error, `values` stays `[]` |
+| `slot.values = [<id>]` | **writes** |
+| `slot.setValueAtPosition(<id>, 0)` | **writes** |
+
+```typescript
+// RIGHT — reference slot, single or multi valued alike
+(lObject as any)['$ownedTransitions'].values = [targetId];
+(lObject as any)['$nextState'].values = [targetId];
+
+// RIGHT — attribute slot
+(lObject as any)['$isInitial'].value = true;
+```
+
+**The aggravating part is the silence.** A caller that writes a reference the attribute way builds
+a model whose references are all empty and gets no signal at all. A probe written that way then
+measures a state it never created: it will report whatever an empty reference implies —
+a vacuously satisfied constraint, an empty fan-out, a missing edge — as if the model said so.
+Measured in that same round: a probe's own reader disagreed with the JjEL evaluator about whether
+the transitions had targets, and the evaluator was right.
+
+Corollary for reading, same family: `slot.values` **on the L proxy returns the wrapped L objects,
+not the ids** — the default getter resolves every pointer (`__shallowSolver`). Compare with
+`t.id ?? t`, or read `__raw.values` when ids are what you need (the `pkg.uri` / `pkg.__raw.uri`
+asymmetry of §3.7, in another place).
+
+Full measurement: `docs/discovery/discovery_2026-09-09_semaforo_end_to_end.md` §2.1 and §9.
+
 ---
 
 ## 10. Removed components — do not reintroduce

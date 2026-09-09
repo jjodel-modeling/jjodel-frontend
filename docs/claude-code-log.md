@@ -13,6 +13,37 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-09 — docs: §9.3, gli slot di reference si scrivono in un altro modo, e sbagliare e' muto
+**Prompt**: task docs autonomo, fuori dalla corsia, solo file normativi. Iscrivere in `CLAUDE.md`
+nella famiglia §9.1 la misura dello step di chiusura: una reference M1 si scrive con
+`slot.values = [id]`, mentre `slot.value = <id>` e `slot.value = <oggetto L>` non lanciano e non
+scrivono; per gli attributi `slot.value = <primitivo>` funziona. Nominare esplicitamente
+l'aggravante: il fallimento e' muto, quindi una sonda che scrive cosi' misura uno stato che non ha
+mai creato. Verificare con grep se la cosa e' gia' detta altrove e correggere li' invece di
+duplicare.
+**Files touched**: `CLAUDE.md` (§9.3 nuova, 33 righe), `AGENTS.md` (rigenerato). Questa entry nello
+stesso commit, come chiede il prompt. `frontend/src/jjtl/AGENTS.md` rigenerato e **identico**,
+quindi non compare nel diff.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — nessun file di codice toccato, `git status --porcelain frontend/src` vuoto a
+fine giro con controllo positivo sullo stesso comando senza pathspec. `npm run check:agents` PASS su
+entrambi i generati; `npm run check:docs` 3/3 con i 2 warning pre-esistenti. Build e suite non
+eseguite: nessun sorgente toccato.
+**Out-of-scope changes**: no — `AGENTS.md` e' il generato che RC-7 e §17 impongono di includere
+nello stesso commit della sorgente.
+**Layer Impact Report**: not-required — nessun file di §3.1, nessun sorgente.
+**Smoke visivo**: non applicabile — solo documentazione. La misura iscritta non e' nuova: viene
+dalla sonda del giro precedente, che l'ha prodotta eseguendo le quattro forme in sequenza su uno
+slot vero (`probe_2026-09-09_semaforo_end_to_end.mts`).
+**Notes**: Il grep preventivo dice che la cosa NON era detta da nessuna parte: `CLAUDE.md` §9.1 e
+§9.2 mostrano `['$' + attr].value = v`, che e' giusto per gli **attributi** e resta, e §3.12 parla
+dello slot di identita'. Niente da correggere altrove, quindi sezione nuova e non riscrittura.
+Iscritto anche il corollario in lettura: `slot.values` sulla proxy L torna gli oggetti avvolti e
+non gli id, che e' l'altra meta' dello stesso inciampo.
+**Prompt document name**: 2026-09-09 01:10
+
 ## 2026-09-09 — docs: il semaforo del libro, giro end to end dall'authoring
 **Prompt**: chiusura della fetta, voci 3 e 4 di un documento di milestone, in un giro solo.
 Semaforo del libro in offline; viewpoint creato dall'interfaccia; le tre invarianti della Tabella
