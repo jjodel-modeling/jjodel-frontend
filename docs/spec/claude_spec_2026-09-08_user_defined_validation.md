@@ -3,7 +3,7 @@
 **File**: `docs/spec/claude_spec_2026-09-08_user_defined_validation.md`
 **Data**: 2026-09-08
 **Stato**: vigente, non implementata. Nessuna Fase 2 aperta.
-**Serie di decisioni**: R-VAL (R-VAL-1..18, con 6-bis)
+**Serie di decisioni**: R-VAL (R-VAL-1..19, con 6-bis)
 **Referti a monte**:
 `docs/discovery/discovery_2026-09-08_validazione_definita_utente.md` (Fase 1, 834 righe, `fdf087259`)
 `docs/discovery/discovery_2026-09-08_*keyword*` (micro-discovery lexer, `3e4dec57b`)
@@ -455,6 +455,45 @@ misura prima, e il referto del 2026-09-09 dice dove sta il costo, cioe' in scrit
 (`InstanceRow`), quindi il pallino nell'albero e' un altro giro, e il commento di
 `ConformanceProblemSync` che dice il contrario va corretto quando ci si passa. Un'istanza resa come
 edge sintetico (`irobj_*`) non ha `ObjectNode` e nessun id la farebbe accendere.
+
+---
+
+## 8bis. I tre concern nell'albero del megamodello (R-VAL-19)
+
+L'albero del rail elenca oggi `METAMODELS`, `VIEWPOINTS` con sotto `SYNTAX`, poi `DATA MANAGER` e
+`DOCUMENTATION` come fratelli di `VIEWPOINTS`. Ma il Data Manager Viewpoint **e'** un `DViewPoint`,
+per decisione esplicita di R-DMV-1: l'albero afferma quindi una cosa falsa sulla struttura del
+megamodello. Con la validazione che entra sotto `VIEWPOINTS` la falsita' diventa anche arbitraria,
+perche' il lettore dedurrebbe che il viewpoint di validazione e' un viewpoint e quello del Data
+Manager no.
+
+**Forma**: un ramo solo, `VIEWPOINTS`, con tre concern sotto: `SYNTAX`, `DATA MANAGER`,
+`VALIDATION`. Che uno sia singleton per decisione (R-DMV-1) e un altro multiplo per decisione
+opposta (R-VAL-2) e' una proprieta' di quei concern, non una ragione per collocarli in posti diversi
+dell'indice. Sotto `VALIDATION`, ogni viewpoint col suo nome e le sue regole in piano, con la classe
+di contesto nella colonna dove per le view compare `Vertex`: stessa lettura della sintassi, niente
+di nuovo da imparare.
+
+**I tre concern si vedono anche a zero**, con una riga che dice cosa ci andrebbe, come fa oggi il
+Data Manager con «All classes use the type-derived defaults». Un ramo che compare solo quando e'
+pieno non insegna che la funzione esiste, e la scoperta e' proprio il problema che questo cambio
+risolve: oggi un viewpoint di validazione puo' esistere ed essere invisibile a chi guarda l'indice.
+
+**`VIEWPOINTS` resta espanso per default.** L'unico costo reale dello spostamento e' la prominenza
+del Data Manager, che si usa tutti i giorni mentre gli altri due si autorano ogni tanto; col ramo
+aperto quel costo sparisce.
+
+**Conteggi**: significano la stessa cosa a ogni livello. Ogni concern conta i propri viewpoint,
+`VIEWPOINTS` conta il totale.
+
+**Confine, da tenere fermo**: l'albero **nomina e naviga, non modifica**. Cliccare una regola apre
+l'ambiente su quella regola; non si rinomina lì dentro e non si mette lì la spunta Active della
+regola, o ci si ritrova con due editor per la stessa cosa e con la domanda su quale dei due sia
+quello vero. L'unica eccezione e' l'attivazione del **viewpoint**, che e' gia' l'affordance
+dell'occhio sulla sintassi.
+
+Questa decisione **non tocca R-DMV-1**: il Data Manager Viewpoint resta singleton, builtin, non
+creabile e non cancellabile. Cambia solo dove l'indice lo mostra.
 
 ---
 
