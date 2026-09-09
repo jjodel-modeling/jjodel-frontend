@@ -11,7 +11,7 @@
 NON-NEGOTIABLE RULES — re-read before every task
 ═══════════════════════════════════════════════════════════════════
 Canonical list — §20.1 points here; rules are not restated there.
-Shared engagement rules live in docs/PROTOCOL.md (P1..P9); see §1.
+Shared engagement rules live in docs/PROTOCOL.md (P1..P12); see §1.
 
 — Scope & preservation —
  1. Touch only files explicitly listed in the prompt. A broader
@@ -99,7 +99,7 @@ Note: switching to Opus 5 resets effort to its model default (high). If a sessio
 
 Le regole di ingaggio condivise (scope, lettura preventiva, two-phase e discovery
 report, commit, build, smoke visivo, prompt log) stanno in `docs/PROTOCOL.md`
-come clausole P1..P9. I prompt le citano per numero. Questo file non le duplica.
+come clausole P1..P12. I prompt le citano per numero. Questo file non le duplica.
 
 Restano qui, perché specifiche di questo codebase e non del protocollo: le
 regole NON-NEGOTIABLE, la critical zone e il Layer Impact Report (§3), la
