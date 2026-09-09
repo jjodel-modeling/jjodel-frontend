@@ -239,6 +239,15 @@ valutabile**, mai violazione:
 regola non valutabile su **tutte** le istanze del suo contesto e' segnalata come sospetta sul
 canale di authoring; non valutabile su alcune e' soltanto non valutabile.
 
+**Il tri-stato giudica il risultato, non i passaggi intermedi.** Un `null` che attraversa un
+operatore e finisce dentro un booleano non rende la regola non valutabile: e' non valutabile solo
+se il **risultato** e' assente. Misurato il 2026-09-09 sulla regola della sezione 5.5 del libro:
+`isFinal` mai scritto vale `null`, ma `isFinal or ownedTransitions.isNotEmpty` restituisce un
+booleano, quindi produce una violazione e il contatore dei non valutabili resta a zero. E'
+semanticamente giusto (uno stato non marcato non e' finale) e sembra contraddire la misura dello
+Step 3, dove un booleano opzionale mai scritto lasciava la regola non valutabile: li' il `null`
+**era** il risultato, qui e' un passaggio.
+
 **Costo della scelta, dichiarato**: un refuso nel nome di una feature diventa a runtime
 indistinguibile da un modello incompleto. La mitigazione non e' a runtime ma in authoring (§10).
 
