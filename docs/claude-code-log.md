@@ -13,6 +13,35 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-09 — docs: il semaforo del libro, giro end to end dall'authoring
+**Prompt**: chiusura della fetta, voci 3 e 4 di un documento di milestone, in un giro solo.
+Semaforo del libro in offline; viewpoint creato dall'interfaccia; le tre invarianti della Tabella
+7.5 scritte dall'authoring, la terza nella forma corretta; una quarta nella forma originale del
+libro lasciata li'; Validate con il terzo numero che conta le non valutabili; stato iniziale tolto
+e rimesso; estensione verificata con un secondo modello. Tre schermate per la sezione 5.5. Nessuna
+modifica al codice: se il giro scopre un difetto si riferisce e ci si ferma.
+**Files touched**: `docs/discovery/discovery_2026-09-09_semaforo_end_to_end.md` (nuovo, 11 sezioni),
+`docs/discovery/harness/probe_2026-09-09_semaforo_end_to_end.mts` (nuova, 6 blocchi) e questa entry.
+**Nessun file di codice.** Tre figure scritte come artefatti ignorati accanto alla sonda, path nel
+referto §8.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `git status --porcelain frontend/src` vuoto a fine giro, con controllo
+positivo sullo stesso comando senza pathspec, che elenca i due file nuovi. Nessun gate di build o
+suite: giro di sola misura, dichiarato nel referto §11.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessun file di §3.1, nessun sorgente.
+**Smoke visivo**: passato, **13 PASS 0 FAIL**, piu' tre catture. Sul semaforo sano i numeri sono
+`0 / 0 / 3`; tolto lo stato iniziale diventano `3 / 0 / 3` con le tre voci di `oneInitialState`;
+rimesso tornano `0 / 0 / 3`. Con una seconda macchina a stati nel progetto restano `0`.
+**Notes**: Rilievo dichiarato in §0 del referto: `docs/archivio/claude_milestone_validazione_scheletro.md`
+**non esiste** (tre ricerche con controllo positivo). Non mi sono fermato perche' il prompt descrive
+il giro per esteso; se «voci 3 e 4» erano altro, il giro va rifatto. Misura utile alle prossime
+sonde: una reference M1 si scrive con `slot.values = [id]`, mentre `slot.value = <id>` e
+`slot.value = <oggetto>` non lanciano e non scrivono.
+**Prompt document name**: 2026-09-09 00:30
+
 ## 2026-09-09 — feat(validation): Step 4, l'authoring minimo delle regole
 **Prompt**: Step 4 come da prompt di Fase 2. Un punto da cui creare, editare e cancellare regole
 su una classe scelta, Monaco per il corpo, contesto dichiarato in testa (`self: <Classe>`), le
