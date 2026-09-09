@@ -13,6 +13,42 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-09 — feat(validation): la regola che non trova istanze, dichiarata
+**Prompt**: chiusura del quarto modo silenzioso, R-VAL-17 / spec §8.4, ramo
+`validation-skeleton`, commit unico e scope stretto. Una riga in fondo al modale degli esiti che
+dichiara quante regole non hanno trovato nessuna istanza a cui applicarsi, stessa forma e stesso
+posto della riga sulla regola che non compila, con cui convive. Il conteggio si prende nel
+valutatore, non si ricostruisce nella UI; se serve cambiare la forma di `evaluateValidation`,
+farlo in modo additivo. Non un quarto numero, non la copertura per regola, nessun indicatore sul
+canvas. Verifica: test unitari piu' prova di mutazione, e una sonda che riproduce il caso vero.
+**Files touched**: `model/validation/validationEvaluator.ts` (+`unmatchedRuleCount` nel referto,
+una riga di calcolo, due blocchi di commento), `components/editor-v2/problems/ValidationResultsModal.tsx`
+(la riga in fondo piu' l'intestazione), `model/validation/__tests__/validationEvaluator.test.ts`
+(§G, 6 test). Poi la sonda `docs/discovery/harness/probe_2026-09-09_regola_senza_istanze.mts` e
+questa entry, in un commit separato dal codice (RC-13).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `npx vitest run` 3409 verdi / 0 falliti (erano 3403: +6, i nuovi), 9 file
+rossi in raccolta `window is not defined`, gli stessi di sempre. `npm run typecheck` **33** =
+baseline §17, conteggio su output completo e non su una coda, zero nei file toccati.
+`npm run build` exit 0 col solo avviso di chunk-size.
+**Out-of-scope changes**: no — nessun file fuori dai tre dichiarati. `validationContext.ts` non e'
+toccato: `ValidationRunResult` estende `ValidationReport` e il campo nuovo ci passa da solo.
+**Layer Impact Report**: not-required — nessun file di §3.1. Il valutatore e' il modulo puro, il
+modale legge e basta: nessuna scrittura nel D-layer.
+**Smoke visivo**: passato, sonda Playwright **9 PASS 0 FAIL** piu' due catture. Il caso vero
+riprodotto alla lettera: classe `Initial` sottoclasse di `State` senza istanze, e nel modello due
+istanze di `State` chiamate «Initial» e «FInal». Il modale dichiara **entrambe** le cose — una
+violazione nell'elenco e «1 rule found no instance to apply to» in fondo — mentre la riga di
+riepilogo continua a dire «2 rules over 2 instances», che e' il posto dove il difetto si nascondeva.
+**Notes**: Mutazione eseguita in due forme, entrambe rosse: `unmatchedRuleCount = 0` rompe 5 test su
+6, `= compiled.length` ne rompe 3. Il controllo che discrimina (P12) e' nella sonda: spostato il
+contesto della regola muta da `Initial` a `State` — stessa regola, stesso corpo — la riga sparisce e
+le violazioni salgono da 1 a 3. Spente e non compilanti NON rientrano nel conto: hanno gia' la loro
+dichiarazione.
+**Prompt document name**: 2026-09-09 11:00
+
 ## 2026-09-09 — docs: §9.3, gli slot di reference si scrivono in un altro modo, e sbagliare e' muto
 **Prompt**: task docs autonomo, fuori dalla corsia, solo file normativi. Iscrivere in `CLAUDE.md`
 nella famiglia §9.1 la misura dello step di chiusura: una reference M1 si scrive con
