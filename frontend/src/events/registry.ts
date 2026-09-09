@@ -50,6 +50,9 @@ export const JjodelEvents = {
   // `null` significa «non ho potuto guardare», che non e' «va tutto bene»: la superficie
   // deve distinguerli.
   VALIDATION_RESULTS: 'jjodel:validation-results',
+  // R-VAL. Apre l'ambiente di authoring delle regole su un metamodello.
+  // detail: { metamodelId: string; metamodelName?: string }.
+  VALIDATION_RULES_OPEN: 'jjodel:validation-rules-open',
   // Project
   NEW_PROJECT: 'jjodel:new-project',
   CREATE_MODEL: 'jjodel:createModel',

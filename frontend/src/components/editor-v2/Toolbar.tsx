@@ -662,6 +662,10 @@ function Toolbar({
      * perimetro e' il MODELLO APERTO (R-VAL-14) e le regole si valutano sulle sue
      * istanze.
      */
+    /** La modalita' Advanced, letta come booleano: l'ambiente delle regole vive li'
+     *  (spec §7, progressive disclosure). */
+    const advancedMode = useSelector((state: any) => !!state.advanced);
+
     const validationModelId = useSelector((state: any) => {
         const lookup = state.idlookup || {};
         let id: string | undefined = modelId;
@@ -686,6 +690,18 @@ function Toolbar({
      * (R-VAL-14). Le non valutabili NON diventano voci del registro: sono un
      * contatore.
      */
+    /**
+     * L'ambiente di authoring delle regole (R-VAL, Step 4). Vive sul METAMODELLO, perche'
+     * una regola predica su una classe M2, e in modalita' Advanced, perche' e' materia da
+     * language designer (spec §7, progressive disclosure). Non e' nel rail: R-VAL-1 e
+     * R-VAL-11 lo escludono per decisione, non per mancanza di spazio.
+     */
+    const handleOpenRules = useCallback(() => {
+        window.dispatchEvent(new CustomEvent(JjodelEvents.VALIDATION_RULES_OPEN, {
+            detail: { metamodelId: modelId ?? '', metamodelName: editorTitle },
+        }));
+    }, [modelId, editorTitle]);
+
     const handleValidate = useCallback(() => {
         const result = validationModelId ? runValidationOnModel(validationModelId) : null;
         if (result) publishValidationProblems(validationModelId, result.violations);
@@ -799,6 +815,24 @@ function Toolbar({
                         <i className="bi bi-trash" />
                     </button>
                 </div>
+            )}
+
+            {/* ── REGOLE DI VALIDAZIONE (R-VAL, Step 4) ──
+                Solo sui metamodelli e solo in Advanced: le regole si scrivono sulle
+                classi M2, ed e' materia da language designer. */}
+            {isMetamodel && advancedMode && !!modelId && (
+                <>
+                    <div className="toolbar-separator" />
+                    <div className="toolbar-group">
+                        <button
+                            className="toolbar-btn"
+                            onClick={handleOpenRules}
+                            title="Validation rules of this metamodel"
+                        >
+                            <i className="bi bi-list-check" />
+                        </button>
+                    </div>
+                </>
             )}
 
             {/* ── VALIDATE (R-VAL, Step 3) ──
