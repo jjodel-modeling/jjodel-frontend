@@ -13,6 +13,37 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-09 — feat(validation): Step 4, l'authoring minimo delle regole
+**Prompt**: Step 4 come da prompt di Fase 2. Un punto da cui creare, editare e cancellare regole
+su una classe scelta, Monaco per il corpo, contesto dichiarato in testa (`self: <Classe>`), le
+ereditate in sola lettura e distinte dalle proprie. NON nel rail di destra (R-VAL-1, R-VAL-11).
+**Files touched**: nuovi `model/validation/validationRuleSets.ts` (puro),
+`model/validation/validationAuthoring.ts` (le tre scritture),
+`model/validation/__tests__/validationRuleSets.test.ts` (11 test),
+`components/validation/ValidationRulesModal.tsx` e `.scss`; modificati `events/registry.ts`
+(+1 evento), `editor-v2/Toolbar.tsx` (bottone, handler e il selettore di Advanced), `App.tsx`
+(mount). Poi la sonda e questa entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `npx vitest run` 3403 verdi / 0 falliti (erano 3393: +10, i nuovi), 9 file
+rossi `window is not defined`, gli stessi. `tsc --noEmit` 33 = baseline §17, 0 nei file toccati.
+`build` exit 0 col solo avviso di chunk-size.
+**Out-of-scope changes**: yes — **deroga alla regola 19 dichiarata (RC-11): 8 file**, elencati
+sopra con cosa cambia in ciascuno. Nient'altro fuori da quella lista.
+**Layer Impact Report**: not-required — nessun file di §3.1.
+**Smoke visivo**: passato, sonda Playwright **13 PASS 0 FAIL** piu' tre screenshot: apertura dal
+bottone vero, ereditate visibili e non selezionabili, giro completo di scrittura riletto dal
+D-layer, cancellazione con conferma che toglie entrambe le meta' del legame. Controllo positivo
+che discrimina (P12): sulla superclasse la sezione delle ereditate NON esiste.
+**Notes**: Due difetti trovati dalla sonda e corretti nel giro. (1) La firma della `useSelector`
+delle regole non comprendeva la collezione del viewpoint: creazione e aggancio arrivano in commit
+distinti, quindi «New rule» scriveva nel D-layer e il riquadro restava vuoto. (2) Il rail delle
+Properties dipingeva **sopra** il modale nella fascia di destra, con il bottone di cancellazione
+inerte; risolto col portale su `document.body`. Il pixel contro il numero: il fondale calcolava
+gia' 1050 contro 900.
+**Prompt document name**: 2026-09-08 16:50
+
 ## 2026-09-09 — fix(jjscript): l'estensione si restringe dentro buildEvalContext
 **Prompt**: correzione dell'estensione, opzione (b), R-VAL-16 / spec §8.2, commit separato prima
 dello Step 4. Parametro opzionale su `buildEvalContext`, default identico a oggi, shell costruite
