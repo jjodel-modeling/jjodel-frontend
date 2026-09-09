@@ -13,6 +13,33 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-09 — discovery: i tre concern sotto VIEWPOINTS nell'albero del megamodello
+**Prompt**: Fase 1 READ-ONLY corta, ramo `validation-skeleton`, normativa R-VAL-19 (`874199048`) e
+spec §8bis. Sei domande: dove l'albero e' costruito e se e' dichiarativo; cosa sa fare la riga DATA
+MANAGER al clic e se la riga di stato sopravvive a uno spostamento; chi calcola i conteggi; da cosa
+e' decisa l'espansione di default e dove e' persistita; cosa fa l'occhio accanto a «State Machines
+Syntax» e se e' riusabile per R-VAL-2; se il meccanismo del ramo visibile a zero e' generico o
+scritto per il Data Manager. HARD STOP: nessuna modifica, nessuna proposta di implementazione.
+**Files touched**: `docs/discovery/discovery_2026-09-09_albero_tre_concern.md` (nuovo, 387 righe) e
+questa entry. Nessun sorgente.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — nessun file di codice toccato. `git status --porcelain frontend/src` mostra
+solo i due file di `validation/ValidationRulesModal.*` gia' sporchi a inizio sessione, di altra
+corsia, non toccati; controllo positivo sullo stesso comando senza pathspec.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — sola lettura, nessun sorgente.
+**Smoke visivo**: non applicabile. Referto di sorgente con controlli positivi sui comandi
+(`command grep`, non il wrapper): `bi-eye` 2 occorrenze in `TreeViewContent.tsx` con controllo
+positivo `bi-chevron` = 3; `bi-eye-slash` zero nello stesso file mentre il repo ne ha (negativo con
+controllo). Il comportamento a schermo non e' stato rimisurato in questo giro: e' dichiarato in §8.
+**Notes**: Tre reperti nel referto, §5, §3, §6. L'occhio accanto al viewpoint **non e' un toggle**:
+e' il glifo di tipo, e l'attivazione vive solo nel picker della Toolbar, **esclusiva**, opposta a
+R-VAL-2. I conteggi non sono gia' omogenei: `DATA MANAGER` conta classi, non viewpoint. `SYNTAX` e
+`VALIDATION` esistono gia' ma dietro un `length > 0`. Perimetro Fase 2: 6 file, sopra la regola 19.
+**Prompt document name**: 2026-09-09 (Fase 1, tre concern sotto VIEWPOINTS)
+
 ## 2026-09-09 — docs: §9.3, svuotare una reference non svuota, e leggerla conta uno di troppo
 **Prompt**: seconda meta' del giro, dichiarata indipendente dalla misura sul transitorio verde e da
 fare solo dopo. Aggiungere a `CLAUDE.md` §9.3 due misure della stessa famiglia del fallimento muto:
