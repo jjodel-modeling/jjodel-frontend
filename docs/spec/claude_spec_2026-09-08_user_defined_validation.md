@@ -3,7 +3,7 @@
 **File**: `docs/spec/claude_spec_2026-09-08_user_defined_validation.md`
 **Data**: 2026-09-08
 **Stato**: vigente, non implementata. Nessuna Fase 2 aperta.
-**Serie di decisioni**: R-VAL (R-VAL-1..15, con 6-bis)
+**Serie di decisioni**: R-VAL (R-VAL-1..17, con 6-bis)
 **Referti a monte**:
 `docs/discovery/discovery_2026-09-08_validazione_definita_utente.md` (Fase 1, 834 righe, `fdf087259`)
 `docs/discovery/discovery_2026-09-08_*keyword*` (micro-discovery lexer, `3e4dec57b`)
@@ -374,6 +374,26 @@ come quarto numero, e va bene cosi'. Ma non e' una toppa da togliere quando arri
 authoring dello Step 4: quel canale serve a **chi scrive** la regola, mentre questa riga serve a
 **chi legge** il verdetto, che puo' essere un'altra persona in un altro momento. La forma visiva si
 decidera' con il resto della superficie; l'impegno a dichiararlo resta.
+
+### 8.4 La regola che non trova istanze (R-VAL-17)
+
+**Trovato a mano il 2026-09-09, al primo giro visivo, dopo che tre sonde non l'avevano visto.** Una
+regola attiva, che compila e che e' scritta bene, ma il cui contesto e' una classe **senza istanze
+nel modello**, produce zero violazioni e zero non valutabili: indistinguibile da un modello sano.
+Non c'e' niente di rotto, ed e' proprio questo a renderlo il piu' insidioso dei quattro modi di non
+aver girato. L'utente ha scritto una regola giusta sulla classe sbagliata.
+
+Il caso concreto: nel metamodello delle macchine a stati `Initial` e' una sottoclasse di `State`,
+ma nel modello i nodi chiamati «Initial» e «FInal» sono istanze di `State` con quel nome. Una
+regola su `Initial` non trova nulla a cui applicarsi e tace.
+
+La riga di riepilogo e' il posto dove la cosa si nasconde meglio: «2 rules over 8 instances» somma,
+e la somma non dice che una delle due regole non ha toccato niente.
+
+**Nello scheletro**: una riga in fondo al modale, come per la regola che non compila (§8.3), che
+dichiara quante regole non hanno trovato istanze. **Nella fetta 1**: la copertura per regola, cioe'
+su quante istanze ciascuna e' stata valutata, che assorbe anche questo caso senza una riga
+dedicata.
 
 ---
 
