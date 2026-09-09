@@ -26,6 +26,8 @@ import { useTreeViewPanel } from '../../contexts/TreeViewPanelContext';
 import { runValidationOnModel } from '../../model/validation/validationContext';
 import { publishValidationProblems } from './problems/validationToProblems';
 import { buildVertexResolver } from './problems/vertexResolver';
+import { buildValidationSignature, noteValidationRun, resetFreshness } from './problems/validationFreshness';
+import { useValidationFreshness } from './problems/ValidationFreshnessSync';
 // TODO: cleanup — `ValidationPill` is no longer rendered here (2026-08-26). The import is
 // dropped, the component is not: it is the only conformance summary in the codebase and
 // the aggregated Problems panel it defers to (WP2-D) is still to be built.
@@ -709,16 +711,39 @@ function Toolbar({
         }));
     }, [modelId, editorTitle]);
 
+    /**
+     * LA dichiarazione di freschezza (R-VAL-18): una, accanto al comando che la produce,
+     * mai sul nodo. Senza di questa il ritiro dei pallini sarebbe un difetto — l'assenza
+     * di pallini sarebbe indistinguibile da un modello validato e pulito, che e' la
+     * malattia di R-VAL-14 e R-VAL-17 un piano piu' in la'.
+     */
+    const freshness = useValidationFreshness(validationModelId);
+
     const handleValidate = useCallback(() => {
         const result = validationModelId ? runValidationOnModel(validationModelId) : null;
+        if (!result) {
+            // «Non ho potuto guardare» non e' «va tutto bene»: si torna a «mai validato»
+            // e si ritirano le voci di un giro precedente, che non rispondono piu' di
+            // niente (R-VAL-18).
+            if (validationModelId) resetFreshness(validationModelId);
+        }
         if (result) {
             // Il risolutore si costruisce QUI, una volta per comando, sullo stato del
             // momento: e' una fotografia di `idlookup` e non e' reattiva, quindi va
             // ricostruita a ogni giro. Il `graphId` e' cosa dell'editor e arriva come
             // prop; senza, il pallino sul canvas non si accende e le violazioni restano
             // nella lista e sul rail (R-VAL-18).
-            const resolveVertex = buildVertexResolver(store.getState().idlookup, graphId);
+            const state = store.getState();
+            const resolveVertex = buildVertexResolver(state.idlookup, graphId);
             publishValidationProblems(validationModelId, result.violations, resolveVertex);
+            // La firma si prende QUI, sullo stato che il giro ha guardato, e non al primo
+            // render successivo: fra la corsa e quel render c'e' una finestra, e una
+            // modifica caduta li' dentro non verrebbe mai vista (R-VAL-18).
+            noteValidationRun(
+                validationModelId,
+                result.violations.length,
+                buildValidationSignature(state.idlookup),
+            );
         }
         window.dispatchEvent(new CustomEvent(JjodelEvents.VALIDATION_RESULTS, {
             detail: result ? { ...result, modelId: validationModelId, modelName: editorTitle } : null,
@@ -864,6 +889,40 @@ function Toolbar({
                         >
                             <i className="bi bi-shield-check" />
                         </button>
+                        {/* I tre stati sono distinti a vista, e «mai validato» non e'
+                            «pulito»: il verde arriva solo dopo un giro che ha guardato. */}
+                        {freshness.status === 'never' && (
+                            <span
+                                className="validation-freshness validation-freshness--never"
+                                title="This model has not been validated in this session. No dots means nothing has been checked."
+                            >
+                                <i className="bi bi-shield" aria-hidden="true" /> Not validated
+                            </span>
+                        )}
+                        {freshness.status === 'fresh' && (
+                            <span
+                                className={`validation-freshness validation-freshness--${freshness.violationCount > 0 ? 'violated' : 'clean'}`}
+                                title={freshness.violationCount > 0
+                                    ? 'Validated against the active rules. The dots on the canvas are the violations of this run.'
+                                    : 'Validated against the active rules: no violations.'}
+                            >
+                                <i
+                                    className={`bi ${freshness.violationCount > 0 ? 'bi-shield-exclamation' : 'bi-shield-check'}`}
+                                    aria-hidden="true"
+                                />{' '}
+                                {freshness.violationCount === 0
+                                    ? 'No violations'
+                                    : `${freshness.violationCount} ${freshness.violationCount === 1 ? 'violation' : 'violations'}`}
+                            </span>
+                        )}
+                        {freshness.status === 'stale' && (
+                            <span
+                                className="validation-freshness validation-freshness--stale"
+                                title="The model or the rules changed after the last run: the dots were withdrawn rather than left to age. Validate again."
+                            >
+                                <i className="bi bi-shield-slash" aria-hidden="true" /> Changed since validation
+                            </span>
+                        )}
                     </div>
                 </>
             )}

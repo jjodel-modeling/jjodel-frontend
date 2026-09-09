@@ -68,6 +68,7 @@ import { useConformanceGuard } from '../../model/conformance/useConformanceGuard
 import { useOrphanFeatures } from './hooks/useOrphanFeatures';
 import { UniquenessProblemSync } from './problems/UniquenessProblemSync';
 import { ConformanceProblemSync } from './problems/ConformanceProblemSync';
+import { ValidationFreshnessSync } from './problems/ValidationFreshnessSync';
 import { getSyncMode, markDropCreated, suppressSingleton, unsuppressSingleton, clearSuppressedSingletons, getSuppressedSingletonIds, getEdgeRefId } from './sync/syncState';
 import {
     syncPositionToJjom,
@@ -4222,6 +4223,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             <div className={`editor-v2 theme-${theme} notation-${notation}${colorScheme !== 'default' ? ` scheme-${colorScheme}` : ''}${showEdgeLabels ? ' show-edge-labels' : ''}${showBackground ? '' : ' hide-background'}${highlightModeActive ? ' highlight-mode' : ''}`} tabIndex={0} onKeyDown={onKeyDown} onPointerDownCapture={markUserInteracted} onKeyDownCapture={markUserInteracted}>
                 <UniquenessProblemSync modelid={modelid} />
                 <ConformanceProblemSync modelid={modelid} graphId={graphId} />
+                <ValidationFreshnessSync modelid={modelid} />
                 <PalettePanel
                     editorMode={modeInfo.mode}
                     rootableClasses={irPalette.classes}
