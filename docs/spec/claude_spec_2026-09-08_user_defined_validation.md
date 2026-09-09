@@ -3,7 +3,7 @@
 **File**: `docs/spec/claude_spec_2026-09-08_user_defined_validation.md`
 **Data**: 2026-09-08
 **Stato**: vigente, non implementata. Nessuna Fase 2 aperta.
-**Serie di decisioni**: R-VAL (R-VAL-1..17, con 6-bis)
+**Serie di decisioni**: R-VAL (R-VAL-1..18, con 6-bis)
 **Referti a monte**:
 `docs/discovery/discovery_2026-09-08_validazione_definita_utente.md` (Fase 1, 834 righe, `fdf087259`)
 `docs/discovery/discovery_2026-09-08_*keyword*` (micro-discovery lexer, `3e4dec57b`)
@@ -394,6 +394,42 @@ e la somma non dice che una delle due regole non ha toccato niente.
 dichiara quante regole non hanno trovato istanze. **Nella fetta 1**: la copertura per regola, cioe'
 su quante istanze ciascuna e' stata valutata, che assorbe anche questo caso senza una riga
 dedicata.
+
+### 8.5 Il pallino sul canvas non e' mai vecchio (R-VAL-18)
+
+Dopo un'esecuzione, le istanze che violano portano un pallino rosso sul canvas. La validazione pero'
+gira **su comando**, quindi il pallino racconta l'ultima esecuzione e invecchia appena il modello
+cambia: un rosso su un'istanza appena sistemata afferma sul modello di adesso un verdetto calcolato
+su quello di prima, e lo fa a colori in mezzo al diagramma.
+
+**Regola**: un pallino di validazione sul canvas non e' mai vecchio. Se non se ne puo' garantire la
+freschezza, non c'e'. Alla prima transazione che tocca il modello **o le regole** dopo
+un'esecuzione, le voci di validazione si **ritirano** dal registro (`clearValidationProblems`,
+gia' scritta e mai chiamata). Non si marcano risolte, che direbbe una cosa falsa, e non si marcano
+vecchie.
+
+**Il ritiro non basta da solo**, e questa e' la meta' che conta: l'assenza di pallini e'
+indistinguibile da un modello validato e pulito, cioe' la malattia di R-VAL-14 e R-VAL-17 un piano
+piu' in la'. Il ritiro viene quindi con **una** dichiarazione di freschezza, in un posto solo e mai
+per nodo, con tre stati distinti: mai validato; validato, N violazioni; non validato dall'ultima
+modifica.
+
+**La firma copre modello e regole.** Cambiare il corpo di una regola invalida quanto cambiare il
+modello: altrimenti si ricrea R-VAL-17 un piano piu' in la', con pallini che rispondono a una regola
+che non esiste piu'.
+
+**Perche' non la vecchiaia per voce**: paga in `formDiagnostics.ts:85`, che conta ogni voce non
+risolta e non c'entra con la validazione; introduce due vocabolari visivi di pallino per uno stato
+transitorio; e quello stato sparira' quando arrivera' la rivalutazione automatica.
+
+**Perche' non la rivalutazione automatica adesso**: e' la destinazione (§9), ma la spec chiede la
+misura prima, e il referto del 2026-09-09 dice dove sta il costo, cioe' in scrittura, con
+`registerProblem` che fa una `rebuildSnapshots` completa piu' una `notify` per ogni violazione.
+
+**Fuori da questa fetta, dichiarato**: le righe M1 dell'albero non consumano `useNodeProblems`
+(`InstanceRow`), quindi il pallino nell'albero e' un altro giro, e il commento di
+`ConformanceProblemSync` che dice il contrario va corretto quando ci si passa. Un'istanza resa come
+edge sintetico (`irobj_*`) non ha `ObjectNode` e nessun id la farebbe accendere.
 
 ---
 
