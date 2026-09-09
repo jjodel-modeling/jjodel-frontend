@@ -23,21 +23,37 @@
  * stesso vale per i difetti delle regole, che stanno sul canale di authoring (R-VAL-7):
  * il registro non e' mai il posto dove si scopre che una regola e' scritta male.
  *
- * ── L'ANCORAGGIO E' L'ID DELL'ELEMENTO ──────────────────────────────────────
+ * ── L'ANCORAGGIO E' DOPPIO (R-VAL-18, fetta 1) ──────────────────────────────
  *
- * `nodeId` e' l'id del **DObject**, non quello del DVertex. `ConformanceProblemSync`
- * registra due voci per oggetto — una per l'id dell'oggetto, che accende il triangolo
- * dell'albero, e una per l'id del vertice risolto, che accende il pallino sul canvas —
- * perche' quelle due superfici indicizzano il registro su spazi di id diversi. Qui la
- * seconda non serve: lo scheletro **non mette indicatori sul canvas**, e alla lista
- * basta l'id dell'elemento per il salto. Registrare anche l'id del vertice
- * significherebbe accendere un indicatore che nessuno ha progettato.
+ * Due voci per violazione, sotto due id diversi, perche' le superfici del registro
+ * indicizzano su spazi di id diversi:
+ *
+ *   - l'id del **DObject**, che e' quello che la lista del modale usa per il salto e
+ *     che il rail delle proprieta' legge (`IRForm.tsx:371`);
+ *   - l'id del **DVertex**, che e' l'id del nodo React Flow (`EditorV2.tsx:795-796`) e
+ *     quindi quello con cui `NodeProblemIndicator` e' montato: e' il pallino sul canvas.
+ *
+ * E' lo stesso gesto di `ConformanceProblemSync.tsx:109-115`, e il risolutore e' lo
+ * stesso modulo (`vertexResolver.ts`). Nello scheletro c'era la sola voce del DObject,
+ * perche' lo scheletro non metteva indicatori sul canvas: qui e' il contrario, il
+ * pallino sull'istanza che viola E' la fetta.
+ *
+ * Il risolutore arriva dal chiamante e non si costruisce qui: serve il `graphId` del
+ * grafo aperto, che e' cosa dell'editor. Senza risolutore — nessun grafo aperto, o un
+ * oggetto che in quel grafo non ha vertice — resta la sola voce del DObject, e il canvas
+ * non si accende perche' non c'e' niente da accendere. Non e' un errore, e' il caso in
+ * cui l'istanza non e' disegnata.
+ *
+ * LIMITE DICHIARATO: un'istanza resa come edge sintetico (object-as-edge, id `irobj_*`)
+ * non ha nessun `ObjectNode` e quindi nessun `NodeProblemIndicator`. Nessun id la
+ * farebbe accendere: il segnale su un edge e' un'altra superficie, e un altro giro.
  */
 
 import {
     clearProblem, getProblemIdsOwnedBy, markResolved, registerProblem,
     type NodeProblem,
 } from './registry';
+import type { VertexResolver } from './vertexResolver';
 import type { Violation } from '../../../model/validation/validationEvaluator';
 
 const VALIDATION_KIND: NodeProblem['kind'] = 'validation';
@@ -66,19 +82,24 @@ export function validationProblemId(nodeId: string, ruleId: string): string {
  * riscontro che serve — «questa l'hai sistemata». La cancellazione secca resta per il
  * ritiro totale.
  *
- * @returns quante voci sono state registrate.
+ * @param resolveVertex traduce l'id di un DObject in quello del suo DVertex nel grafo
+ *        aperto (`vertexResolver.ts`). Omesso, si registra la sola voce del DObject.
+ * @returns quante VOCI sono state registrate — con l'ancoraggio doppio sono fino al
+ *          doppio delle violazioni, non il loro numero. Il conto delle violazioni sta
+ *          nel referto del valutatore, che e' il posto dove ha significato.
  */
 export function publishValidationProblems(
     ownerModelId: string,
     violations: readonly Violation[],
+    resolveVertex?: VertexResolver,
 ): number {
     const desired = new Set<string>();
-    for (const v of violations) {
-        const id = validationProblemId(v.instanceId, v.ruleId);
+    const register = (nodeId: string, v: Violation): void => {
+        const id = validationProblemId(nodeId, v.ruleId);
         desired.add(id);
         registerProblem({
             id,
-            nodeId: v.instanceId,
+            nodeId,
             kind: VALIDATION_KIND,
             severity: 'error',   // nello scheletro ogni violazione e' un error
             title: v.ruleName || 'Validation',
@@ -87,7 +108,16 @@ export function publishValidationProblems(
             ownerModelId,
             createdAt: Date.now(),
         });
+    };
+
+    for (const v of violations) {
+        // Superficie della lista e del rail: l'id dell'elemento.
+        register(v.instanceId, v);
+        // Superficie del canvas: l'id del vertice risolto, quando l'istanza e' disegnata.
+        const vertexId = resolveVertex?.(v.instanceId) ?? null;
+        if (vertexId && vertexId !== v.instanceId) register(vertexId, v);
     }
+
     for (const id of getProblemIdsOwnedBy(VALIDATION_KIND, ownerModelId)) {
         if (!desired.has(id)) markResolved(id);
     }

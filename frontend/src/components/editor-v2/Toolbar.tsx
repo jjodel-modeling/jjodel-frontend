@@ -25,6 +25,7 @@ import { JjodelEvents } from '../../events/registry';
 import { useTreeViewPanel } from '../../contexts/TreeViewPanelContext';
 import { runValidationOnModel } from '../../model/validation/validationContext';
 import { publishValidationProblems } from './problems/validationToProblems';
+import { buildVertexResolver } from './problems/vertexResolver';
 // TODO: cleanup — `ValidationPill` is no longer rendered here (2026-08-26). The import is
 // dropped, the component is not: it is the only conformance summary in the codebase and
 // the aggregated Problems panel it defers to (WP2-D) is still to be built.
@@ -71,6 +72,11 @@ interface ToolbarProps {
     isMetamodel?: boolean;
     /** Open model id — resolves the model name shown in the identity block, flush right. */
     modelId?: string;
+    /** Il DGraph aperto sul canvas. Serve al solo comando Validate, per tradurre l'id di
+     *  un'istanza in quello del suo DVertex e accendere il pallino sul nodo (R-VAL-18):
+     *  il registro dei problemi e' chiavato per id di nodo React Flow, che e' il vertice.
+     *  Assente — nessun grafo aperto — le violazioni restano nella lista e sul rail. */
+    graphId?: string | null;
     editorMode?: 'flow' | 'classic' | 'split';
     hasViewpoint?: boolean;
     onEditorModeChange?: (mode: 'flow' | 'classic' | 'split') => void;
@@ -236,6 +242,7 @@ function Toolbar({
     onDistributeV,
     isMetamodel = false,
     modelId,
+    graphId,
     editorMode,
     hasViewpoint = false,
     onEditorModeChange,
@@ -704,11 +711,19 @@ function Toolbar({
 
     const handleValidate = useCallback(() => {
         const result = validationModelId ? runValidationOnModel(validationModelId) : null;
-        if (result) publishValidationProblems(validationModelId, result.violations);
+        if (result) {
+            // Il risolutore si costruisce QUI, una volta per comando, sullo stato del
+            // momento: e' una fotografia di `idlookup` e non e' reattiva, quindi va
+            // ricostruita a ogni giro. Il `graphId` e' cosa dell'editor e arriva come
+            // prop; senza, il pallino sul canvas non si accende e le violazioni restano
+            // nella lista e sul rail (R-VAL-18).
+            const resolveVertex = buildVertexResolver(store.getState().idlookup, graphId);
+            publishValidationProblems(validationModelId, result.violations, resolveVertex);
+        }
         window.dispatchEvent(new CustomEvent(JjodelEvents.VALIDATION_RESULTS, {
             detail: result ? { ...result, modelId: validationModelId, modelName: editorTitle } : null,
         }));
-    }, [validationModelId, editorTitle]);
+    }, [validationModelId, editorTitle, graphId]);
 
     // Close dropdown on click outside
     useEffect(() => {

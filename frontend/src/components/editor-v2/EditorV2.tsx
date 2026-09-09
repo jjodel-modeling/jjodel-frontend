@@ -4265,6 +4265,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                         onDistributeV={() => withSnapshot(distributeVertically)}
                         isMetamodel={!isModelMode}
                         modelId={modelid}
+                        graphId={graphId}
                         editorMode={editorMode}
                         hasViewpoint={hasViewpoint}
                         onEditorModeChange={onEditorModeChange}
