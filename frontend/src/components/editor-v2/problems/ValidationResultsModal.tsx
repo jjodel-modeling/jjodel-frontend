@@ -32,6 +32,19 @@
  * il difetto che R-VAL-14 chiude per le non valutabili. Quando l'authoring esistera',
  * questa riga si toglie.
  *
+ * ── LA QUINTA RIGA: LA REGOLA CHE NON TROVA ISTANZE (R-VAL-17) ──────────────
+ *
+ * Stessa forma e stesso posto della riga sul difetto di compilazione, e per la stessa
+ * ragione. Una regola attiva, che compila e scritta bene, ma il cui contesto e' una
+ * classe senza istanze nel modello, produce zero violazioni e zero non valutabili: e'
+ * indistinguibile da un modello sano, ed e' il quarto modo di non aver girato. La riga di
+ * riepilogo qui sotto — «N rules over M instances» — e' proprio il posto dove la cosa si
+ * nasconde meglio, perche' somma.
+ *
+ * Nemmeno questo e' un quarto numero: i tre di R-VAL-14 restano tre. La copertura per
+ * regola, cioe' su quante istanze ciascuna e' stata valutata, e' la forma completa e
+ * appartiene alla fetta 1; quando arrivera' assorbira' anche questa riga.
+ *
  * ── IL SALTO ────────────────────────────────────────────────────────────────
  *
  * Cliccare una voce seleziona l'elemento e chiude. Il gesto e' quello dell'albero
@@ -212,6 +225,17 @@ export function ValidationResultsModal(): React.ReactElement | null {
                         <i className="bi bi-exclamation-triangle" aria-hidden="true" />{' '}
                         {result.defects.length} {result.defects.length === 1 ? 'rule does' : 'rules do'} not compile
                         {' '}and did not run.
+                    </div>
+                )}
+
+                {result.unmatchedRuleCount > 0 && (
+                    <div className="validation-results__note">
+                        <i className="bi bi-info-circle" aria-hidden="true" />{' '}
+                        {result.unmatchedRuleCount} {result.unmatchedRuleCount === 1 ? 'rule' : 'rules'}
+                        {' '}found no instance to apply to:
+                        {' '}{result.unmatchedRuleCount === 1
+                            ? 'its context class has'
+                            : 'their context classes have'} no instances in this model.
                     </div>
                 )}
             </div>

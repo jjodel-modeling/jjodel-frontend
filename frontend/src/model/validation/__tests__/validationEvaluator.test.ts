@@ -309,3 +309,64 @@ describe('§F le regole spente, quelle rotte, quelle sospette', () => {
         ], fx)).not.toThrow();
     });
 });
+// ── §G La regola che non trova istanze (R-VAL-17, spec §8.4) ─────────────────
+
+describe('§G il quarto modo di non aver girato: la regola che non trova istanze', () => {
+    it('una regola il cui contesto non ha istanze e\' contata, e il caso vero e\' che convive con una che viola', () => {
+        // Il caso misurato a mano il 2026-09-09: una regola su una classe che nel modello
+        // non ha istanze, insieme a una che invece viola. Il modale deve dire ENTRAMBE le
+        // cose — se dicesse solo la violazione, la regola muta resterebbe nascosta dentro
+        // la somma della riga di riepilogo.
+        const r = run([
+            rule({ id: 'suInitial', context: 'C_Initial', body: 'false' }),
+            rule({ id: 'chevViola', body: 'false' }),
+        ]);
+        expect(r.unmatchedRuleCount).toBe(1);
+        // Controllo positivo (P12): il valutatore HA girato. Senza queste due righe un
+        // `toBe(1)` passerebbe identico anche se non avesse valutato niente — perche' in
+        // quel caso le regole non applicate sarebbero due, non una.
+        expect(r.violations.map(v => v.ruleId)).toEqual(['chevViola', 'chevViola', 'chevViola']);
+        expect(r.defects).toHaveLength(0);
+    });
+
+    it('zero quando ogni regola trova le sue istanze, e lo zero e\' un vero zero', () => {
+        const r = run([rule({ id: 'inv3', body: INV3 }), rule({ id: 'inv2', body: INV2 })]);
+        expect(r.unmatchedRuleCount).toBe(0);
+        // Discrimina: la stessa chiamata con una sola regola spostata di contesto ne conta una.
+        const spostata = run([rule({ id: 'inv3', context: 'C_Transition', body: INV3 }), rule({ id: 'inv2', body: INV2 })]);
+        expect(spostata.unmatchedRuleCount).toBe(1);
+    });
+
+    it('senza nessuna istanza da validare, ogni regola attiva e compilante e\' senza istanze', () => {
+        const r = evaluateValidation({
+            rules: [rule({ id: 'a', body: 'true' }), rule({ id: 'b', body: 'true' })],
+            instances: [],
+            globals: semaforo().globals,
+        });
+        expect(r.unmatchedRuleCount).toBe(2);
+    });
+
+    it('la regola SPENTA non ci rientra: non e\' arrivata a cercare istanze', () => {
+        const r = run([
+            rule({ id: 'spenta', context: 'C_Transition', body: 'true', enabled: false }),
+            rule({ id: 'muta', context: 'C_Transition', body: 'true' }),   // controllo positivo
+        ]);
+        expect(r.disabledRuleCount).toBe(1);
+        expect(r.unmatchedRuleCount).toBe(1);
+    });
+
+    it('la regola che NON COMPILA non ci rientra: e\' gia\' dichiarata fra i difetti', () => {
+        const r = run([
+            rule({ id: 'rotta', context: 'C_Transition', body: '((((' }),
+            rule({ id: 'muta', context: 'C_Transition', body: 'true' }),   // controllo positivo
+        ]);
+        expect(r.defects.map(d => d.ruleId)).toEqual(['rotta']);
+        expect(r.unmatchedRuleCount).toBe(1);
+    });
+
+    it('e\' il complemento esatto del sospetto: applicata e non valutabile ovunque NON e\' senza istanze', () => {
+        const r = run([rule({ id: 'refuso', body: 'isFinl == false' })]);
+        expect(r.suspectRuleIds).toEqual(['refuso']);
+        expect(r.unmatchedRuleCount).toBe(0);
+    });
+});

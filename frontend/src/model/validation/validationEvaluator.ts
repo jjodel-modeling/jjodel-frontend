@@ -73,6 +73,19 @@
  * perche' un'istanza si disegna in un modo solo; una regola *predica*, e un'istanza puo'
  * violarne piu' d'una.
  *
+ * ── LA REGOLA CHE NON TROVA ISTANZE (R-VAL-17, spec §8.4) ────────────────────
+ *
+ * Il quarto modo di non aver girato, e il piu' insidioso: una regola attiva, che compila
+ * e scritta bene, il cui contesto pero' e' una classe **senza istanze nel modello**.
+ * Produce zero violazioni e zero non valutabili, cioe' e' indistinguibile da un modello
+ * sano. Non c'e' niente di rotto: l'utente ha scritto una regola giusta sulla classe
+ * sbagliata.
+ *
+ * Il conto e' `unmatchedRuleCount`, e si prende qui perche' qui si sa: `applied` conta
+ * gia' le istanze su cui ciascuna regola e' passata, per l'euristica del sospetto.
+ * Ricostruirlo nella UI vorrebbe dire rifare la risoluzione della catena di classi fuori
+ * dal modulo che la riceve.
+ *
  * ── QUELLO CHE NON FA ────────────────────────────────────────────────────────
  *
  * Non ha severita' (nello scheletro ogni violazione e' un `error`), non valuta i
@@ -177,6 +190,17 @@ export interface ValidationReport {
      *  deve poterlo dichiarare: una validazione che si spegne in silenzio non e'
      *  affidabile (spec §6). */
     disabledRuleCount: number;
+    /**
+     * Quante regole attive e compilanti non hanno trovato **nessuna** istanza a cui
+     * applicarsi: il loro contesto e' una classe che nel modello non ha istanze
+     * (R-VAL-17, spec §8.4). Contatore e non elenco, come i tre numeri di R-VAL-14: la
+     * copertura per regola e' la forma completa e appartiene alla fetta 1.
+     *
+     * Non ci rientrano le regole spente (sono in `disabledRuleCount`) ne' quelle che non
+     * compilano (sono in `defects`): quelle due hanno gia' la loro dichiarazione, e non
+     * hanno trovato zero istanze — non sono mai arrivate a cercarle.
+     */
+    unmatchedRuleCount: number;
 }
 
 // ============================================
@@ -263,7 +287,10 @@ export function evaluateValidation(input: ValidationInput): ValidationReport {
         compiled.push({ rule, expr: parsed.expression, applied: 0, notEvaluable: 0 });
     }
     if (compiled.length === 0) {
-        return { violations, notEvaluable, defects, suspectRuleIds: [], disabledRuleCount };
+        return {
+            violations, notEvaluable, defects, suspectRuleIds: [], disabledRuleCount,
+            unmatchedRuleCount: 0,
+        };
     }
 
     const evaluator = new JjelEvaluator();
@@ -343,5 +370,12 @@ export function evaluateValidation(input: ValidationInput): ValidationReport {
         .filter(c => c.applied > 0 && c.notEvaluable === c.applied)
         .map(c => c.rule.id);
 
-    return { violations, notEvaluable, defects, suspectRuleIds, disabledRuleCount };
+    // R-VAL-17. Il complemento esatto della guardia del sospetto qui sopra: `applied > 0`
+    // e' la regola che ha trovato istanze, `applied === 0` quella che non ne ha trovate.
+    const unmatchedRuleCount = compiled.filter(c => c.applied === 0).length;
+
+    return {
+        violations, notEvaluable, defects, suspectRuleIds, disabledRuleCount,
+        unmatchedRuleCount,
+    };
 }
