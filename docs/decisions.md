@@ -3145,6 +3145,19 @@ automatica) e la rivalutazione automatica adesso (e' la destinazione di §9 ma l
 misura prima, e il costo sta in scrittura: `rebuildSnapshots` piu' `notify` per violazione).
 
 
+**R-VAL-19** (2026-09-09) — **L'albero del megamodello elenca tre concern sotto `VIEWPOINTS`**:
+`SYNTAX`, `DATA MANAGER`, `VALIDATION`. Il Data Manager Viewpoint e' un `DViewPoint` (R-DMV-1) e
+oggi l'albero lo mette accanto a `VIEWPOINTS`, affermando il falso; con la validazione dentro, la
+falsita' diventa anche arbitraria. I tre concern si vedono **anche a zero**, con la riga che dice
+cosa ci andrebbe: un ramo che compare solo quando e' pieno non insegna che la funzione esiste, e la
+scoperta e' il problema che il cambio risolve. `VIEWPOINTS` resta espanso per default, cosi' il Data
+Manager non perde prominenza. I conteggi significano la stessa cosa a ogni livello. **Confine**:
+l'albero nomina e naviga, non modifica; cliccare una regola apre l'ambiente su quella regola,
+nessun rename inline e nessuna spunta Active della regola, unica eccezione l'attivazione del
+viewpoint (l'occhio che la sintassi ha gia'). Non tocca R-DMV-1: il singleton resta singleton,
+cambia dove l'indice lo mostra.
+
+
 ## Superate
 
 - **D3** (2026-07-26, routing congelato in v1) — superata da E-route il 2026-08-06.
