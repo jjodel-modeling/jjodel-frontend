@@ -143,6 +143,14 @@ Lo **stato di modulo** si azzera nel `beforeEach`. Un timestamp, una cache o un 
 modulo sopravvive fra i test dello stesso file: la seconda asserzione legge cio' che ha scritto la
 prima, e un'asserzione vuota passa senza avere mai visto il soggetto.
 
+Sull'interfaccia la stessa regola diventa: **quando lo stile e il pixel non vanno d'accordo, la
+misura e' il pixel**. Che un elemento sia raggiungibile non si deduce dai valori di `z-index`
+letti nei fogli di stile, perche' un contesto di impilamento creato da un antenato qualunque li
+riordina senza che nessuno se ne accorga: si misura con `elementsFromPoint` sul pixel che l'utente
+colpirebbe, e l'asserzione e' su chi c'e' in cima allo stack. Causa: lo Step 4 della validazione
+(2026-09-08), dove il rail delle Properties dipingeva sopra il modale e ne rendeva inerte un
+bottone mentre i numeri nel foglio di stile dicevano il contrario.
+
 Il presidio di entrambi e' il **banco delle mutazioni**: si rompe il soggetto in un punto per volta
 e si verifica che il test diventi rosso. Una mutazione che resta verde non e' un test debole, e' un
 test che **non esiste**, e va dichiarata nel referto — non aggiustata in silenzio, perche' la
