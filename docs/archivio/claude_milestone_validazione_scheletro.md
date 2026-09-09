@@ -59,7 +59,17 @@ bar (globale, coerente col testo, ma una figura debole) oppure si nominano entra
 entrambi, con la 5.3 riscritta di conseguenza. Riguarda la conformance derivata dal metamodello,
 non la validazione definita dall'utente: e' del capitolo 5, non di questa corsia.
 
-**7. Correzione del capitolo 7** — *file e righe individuati il 2026-09-09*:
+**7. Correzione del capitolo 7 — FATTA il 2026-09-09**, due commit su `master` del repo del libro:
+`8b66b74` `style(ch07)` porta gli otto ritocchi tipografici che erano gia' in albero, con la
+dipendenza non committata dichiarata nel messaggio (`\meta` e `\origtexttt` in `commands.tex`, il
+colore `codeMeta` in `book.tex`, nessuno dei tre in HEAD, quindi a quel commit il libro non
+compila); `c04e108` `docs(ch07)` porta i due interventi su file pulito, piu' un terzo dichiarato:
+la frase che elencava i tre idiomi chiamava il terzo «a `forall` projection» e con la riga 3
+cambiata sarebbe diventata falsa. Compilazione verificata in directory di scratch, due passate,
+exit 0, nessun `Overfull` nelle righe toccate, il rimando risolve a Table 7.5. L'affermazione sul
+pannello pianificato, nei due punti in cui compare, e' rimasta ferma: si riscrive dopo il merge.
+
+*Storico, prima di essere fatta*: file e righe individuati il 2026-09-09:
 `author/part2/ch08-jjel.tex` (il capitolo 7 del libro), tabella `tab:jjel-invariants` a riga 454,
 paragrafo sulla truthiness alle righe ~492-500, sezione 7.7 `sec:jjel-guards` a riga 429. Terza
 riga della Tabella 7.5 in
