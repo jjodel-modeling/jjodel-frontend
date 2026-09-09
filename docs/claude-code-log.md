@@ -13,6 +13,31 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-09 — discovery: il pallino rosso sulle istanze che violano (fetta 1)
+**Prompt**: Fase 1 READ-ONLY, ramo `validation-skeleton`. Accertare cinque cose prima di aprire la
+Fase 2: (1) come `ConformanceProblemSync` mappa una voce del registro sul badge del nodo e se
+filtra per `NodeProblemKind`; (2) se un kind nuovo va dichiarato; (3) se esiste un meccanismo di
+invalidazione riusabile — la domanda che conta, perche' la conformance si ricalcola sola e la
+validazione gira a comando; (4) quanto testo e quante voci regge il badge su uno stesso nodo
+(R-VAL-12); (5) se il canvas ridisegna sul cambio del registro o serve un evento. Consegna: referto
+in `docs/discovery/`. HARD STOP, nessuna modifica al codice.
+**Files touched**: `docs/discovery/discovery_2026-09-09_pallino_validazione_canvas.md` (nuovo) e
+questa entry. Nessun sorgente.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — nessun file di codice toccato, `git status --porcelain frontend/src` vuoto a
+fine giro, con controllo positivo sullo stesso comando senza pathspec.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessun file di §3.1 toccato; la Fase 1 e' di sola lettura.
+**Smoke visivo**: non applicabile — nessuna modifica renderizzabile.
+**Notes**: Tre risposte cambiano il piano della Fase 2; il dettaglio sta in
+`discovery_2026-09-09_pallino_validazione_canvas.md`. I badge sono agnostici rispetto al kind:
+nessun punto in lettura filtra su `NodeProblemKind`, manca il solo ancoraggio al DVertex. La voce
+chiavata sul DObject di un'istanza M1 non accende nemmeno l'albero: la legge solo il rail.
+L'invalidazione non esiste, e `clearValidationProblems` e' scritta e mai chiamata.
+**Prompt document name**: 2026-09-09 (Fase 1, pallino validazione)
+
 ## 2026-09-09 — feat(validation): la regola che non trova istanze, dichiarata
 **Prompt**: chiusura del quarto modo silenzioso, R-VAL-17 / spec §8.4, ramo
 `validation-skeleton`, commit unico e scope stretto. Una riga in fondo al modale degli esiti che
