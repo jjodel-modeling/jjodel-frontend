@@ -13,6 +13,31 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-09 — docs: il ritiro delle voci di validazione non passa per il verde
+**Prompt**: misura corta e sola, ramo `validation-skeleton`. Il ritiro di R-VAL-18
+(`clearValidationProblems`) attraversa il transitorio verde di 5 secondi del registro? Cioe': dopo
+un Validate con violazioni, toccando il modello, i nodi che violavano mostrano un pallino VERDE
+prima di spegnersi? Verde su un nodo si legge «sistemato», ed e' la cosa falsa che R-VAL-18 ha
+escluso escludendo `markResolved`. Misurare il PIXEL, non dedurlo dal codice (P11). HARD STOP se il
+verde c'e'.
+**Files touched**: `docs/discovery/harness/probe_2026-09-09_ritiro_transitorio_verde.mts` (nuova) e
+questa entry. Nessun sorgente.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — nessun file di codice toccato, `git status --porcelain frontend/src` vuoto
+con controllo positivo sullo stesso comando senza pathspec.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessun sorgente, sola lettura.
+**Smoke visivo**: passato, sonda **6 PASS 0 FAIL**. Campionatore a 30 ms installato PRIMA della
+modifica, finestra di 6.5 s, cioe' oltre i 5 s di `RESOLVED_TTL_MS`.
+**Notes**: RISPOSTA: **il verde non c'e'**, e la decisione non e' violata. 223 campioni sulla
+finestra del ritiro, un colore solo, `rgb(220,38,38)` con classe `--error`; zero campioni verdi,
+zero `--resolved`; i pallini spariscono ~250 ms dopo la modifica. Il controllo positivo e'
+obbligatorio e c'e': lo STESSO campionatore su una riparazione di conformance, che `markResolved`
+lo usa davvero, vede `rgb(34,197,94)` e `--resolved` in 167 campioni su 222, dai 933 ms ai 5911.
+**Prompt document name**: 2026-09-09 (misura, transitorio verde)
+
 ## 2026-09-09 — docs(libro): la figura 5.8, e i due indicatori che esistono davvero
 **Prompt**: `claude_2026-09-09_1306_prompt_book_5_3_conformance_figure.md`. Le due immagini della
 5.3 sono placeholder di giugno. Passo zero obbligatorio: verificare nell'applicazione quali
