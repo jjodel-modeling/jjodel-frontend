@@ -385,3 +385,66 @@ R-VAL-2 non e' questa fetta), `ProjectEditor.tsx` (altra superficie).
   `0/1` (viewpoint) o `N` (classi) sono entrambe difendibili, e la prima rompe D3 della sonda
   mentre la seconda rompe l'omogeneita' che R-VAL-19 chiede. Questo referto registra il conflitto;
   non lo scioglie.
+
+---
+
+## 9. Addendum di Fase 2 (2026-09-09, dopo il diff)
+
+Aggiunto in coda e non al posto di quanto sopra (R-E/E-1). Qui stanno le cose che la Fase 2 ha
+dovuto **decidere** e che nessuna decisione ratificata copriva, piu' l'unico pezzo di perimetro
+consegnato a meta'. Il resto della Fase 2 sta nella entry di log del giro.
+
+### 9.1 Il pezzo consegnato a meta': «apre l'ambiente **su quella regola**»
+
+R-VAL-19 dice che cliccare una regola apre l'ambiente su quella regola. Consegnato: il clic
+dispaccia `JjodelEvents.VALIDATION_RULES_OPEN` con lo stesso `detail` del bottone della Toolbar, e
+il modale si apre sul **metamodello della classe di contesto** della regola. Non consegnato: la
+regola non e' preselezionata dentro l'ambiente.
+
+Il motivo e' di perimetro, non tecnico. `ValidationRulesOpenDetail` non porta un `ruleId`, e il
+consumatore che dovrebbe leggerlo — `ValidationRulesModal.tsx`, che al montare azzera
+`selectedClassId` e `selectedRuleId` — e' uno dei due file sporchi di un'altra corsia, che RC-13 e
+il prompt mettono fuori portata. **Non e' stato dispacciato un `ruleId` che nessuno legge**: un
+campo scritto e mai consumato e' la scrittura morta che §5 insegue, e sarebbe sembrato lavoro fatto.
+Il seguito e' una riga nel `detail` piu' due `setState` nel modale, da fare nella corsia che quel
+file possiede.
+
+### 9.2 Tre scelte prese in assenza di decisione
+
+**(a) Sotto `VALIDATION` convivono due specie.** I `DViewPoint` con `isValidation` (viewpoint di
+*view*, creabili dalla dialog «New viewpoint», gia' resi li' prima di questo giro) e i
+`DValidationViewpoint` dello scheletro R-VAL (che portano *regole*). Entrambi si dichiarano
+viewpoint di validazione, e togliere i primi avrebbe degradato comportamento committato senza una
+decisione che lo dica (regola 3). Il contatore del concern li somma. Da ratificare: se i primi
+debbano restare li', migrare, o sparire.
+
+**(b) `otherVps` resta sciolto a depth 2.** R-VAL-19 nomina tre concern e tace sul quarto gruppo —
+oggi i viewpoint `decoration`. Sono rimasti dove stavano, righe sciolte sotto `VIEWPOINTS` accanto
+alle tre sezioni, e sono contati nel totale. La forma mista era gia' quella di prima; questo giro
+non l'ha creata e non l'ha risolta.
+
+**(c) La riga del `DValidationViewpoint` non ha click.** Un `DValidationViewpoint` **non e'** un
+`DViewElement`: scriverne l'id in `_lastSelected.view` manderebbe `Info.tsx` a risolvere una view
+che non esiste. La riga resta contenitore — si apre e si chiude — e le cose da aprire sono le
+regole. Un click che aprisse l'ambiente «sul viewpoint» dovrebbe scegliere un metamodello, e le
+regole di un viewpoint possono starne su piu' d'uno: sarebbe una scelta arbitraria travestita da
+navigazione.
+
+### 9.3 Due cose viste e non toccate
+
+- **Le righe di classe del Data Manager si accendono tutte insieme.** `DataManagerClassNode` passa
+  `selected={selectedViewId === DATA_MANAGER_VIEWPOINT_ID}`: la pillola di selezione e' sul
+  *viewpoint*, non sulla riga, quindi con il singleton selezionato **ogni** classe risulta
+  selezionata. Si vede nello scatto `_tmp_concern_z_rail.png`. E' comportamento committato dal
+  2026-09-05, fuori dal perimetro di questo giro, e non e' stato toccato.
+- **`enabled` della regola non si vede.** R-VAL-19 vieta la spunta Active nell'albero, e mostrare
+  lo stato senza il controllo e' una domanda di disegno a se': una regola spenta oggi si legge come
+  una accesa. Iscritto, non risolto.
+
+### 9.4 Cosa e' cambiato rispetto a quanto §7 prevedeva
+
+§7 elencava sei file e dava `VersionFixer.tsx` come «verificato e escluso». Confermato: nessuna
+migrazione. Ma il perimetro reale e' **sette**, perche' rendere eseguibile la formula dei conteggi
+(P11, che il prompt chiedeva esplicitamente) ha richiesto un modulo puro nuovo,
+`concernCounts.ts` — senza un solo import, altrimenti monaco rientra nel grafo e il test muore
+all'import come prima.

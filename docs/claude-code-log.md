@@ -13,6 +13,48 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-09 — feat(sidebar): i tre concern sotto VIEWPOINTS (R-VAL-19, 19-bis)
+**Prompt**: Fase 2 su `validation-skeleton`. Un ramo `VIEWPOINTS` con `SYNTAX`, `DATA MANAGER`,
+`VALIDATION`; il Data Manager scende di un livello, `VALIDATION` nasce con le regole in piano e la
+classe di contesto nella colonna dove per le view compare «Vertex». Vincoli da R-VAL-19-bis:
+nessuna attivazione nell'albero e nessuna eccezione; le righe dei concern contano VIEWPOINT e il
+numero di classi passa nel testo della riga di stato; i tre si vedono a zero con guardia unificata;
+la chiave nuova in `STATIC_SECTION_KEYS`; l'albero nomina e naviga. La verifica finale asserisce la
+STRUTTURA RESA, non il sorgente, piu' il banco delle mutazioni.
+**Files touched**: 7, dichiarati prima del diff (RC-11). Nuovi:
+`frontend/src/components/TreeViewSidebar/concernCounts.ts` (modulo puro senza import),
+`docs/discovery/harness/probe_2026-09-09_albero_tre_concern.mts`. Modificati:
+`TreeViewSidebar/TreeViewContent.tsx`, `TreeViewSidebar/tree-view-sidebar.scss`,
+`TreeViewSidebar/__tests__/dataManagerSection.test.ts`,
+`docs/discovery/harness/probe_2026-09-04_rdmv_sliceE_sidebar.mts`, e questa entry. I due
+`ValidationRulesModal.*` sporchi sono di un'altra corsia: non toccati, non committati.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (a)
+**Regressions**: no. `npx tsc --noEmit` = **33**, la baseline dichiarata, zero errori nei file
+toccati (controllo positivo: lo stesso comando filtrato su `TreeViewSidebar|concernCounts` non
+stampa nulla mentre il conteggio totale e' 33). `npm run build` exit 0, solo l'avviso di chunk
+pre-esistente. `npm run test`: **3471 test passati, 0 falliti**; 9 file falliscono all'import per
+`window` sotto `environment: 'node'`, tutti in `jjtl/`, `jjscript/`, `utils/`, fuori perimetro e
+pre-esistenti. Le due sonde verdi: la nuova **26 PASS 0 FAIL**, la vecchia riscritta **17 PASS 0
+FAIL**, unit **30/30**.
+**Out-of-scope changes**: no — 7 file, sopra la soglia di 5 della regola 19, dichiarati in chat
+prima del diff con cosa cambia in ciascuno e ripetuti qui (RC-11).
+**Layer Impact Report**: not-required — nessun file della critical zone (§3.1). Il tocco al
+D-layer e' in sola lettura: `buildValidationViewpointsData` scandisce `idlookup`, non scrive.
+**Smoke visivo**: passato. Due scatti del rail, `_tmp_concern_z_rail_zero.png` (i tre concern a
+zero, ciascuno con la sua riga) e `_tmp_concern_z_rail.png` (popolato). Banco delle mutazioni
+**7 su 7 discriminanti**: M1 riga di VALIDATION tolta, M2 riga di stato a depth 2, M3 Data Manager
+a depth 1, M4 contatore che torna a contare classi, M5 Data Manager fuori da VIEWPOINTS, M6 totale
+senza i viewpoint sciolti, M7 esclusione del singleton dopo lo smistamento. Ogni mutazione arrossa
+l'asserzione sua e solo quella; sorgenti ripristinati byte per byte (`diff -q` verde).
+**Notes**: Il pezzo a meta' e le tre scelte prese senza una decisione che le coprisse stanno
+nell'addendum §9 di `discovery_2026-09-09_albero_tre_concern.md`: il clic sulla regola apre
+l'ambiente sul metamodello ma non vi si posiziona (serve un `ruleId` nel detail, e il consumatore
+e' il file dell'altra corsia); sotto `VALIDATION` convivono due specie di viewpoint; `otherVps`
+resta sciolto. Li' anche due cose viste e non toccate.
+**Prompt document name**: 2026-09-09 (Fase 2, tre concern sotto VIEWPOINTS)
+
 ## 2026-09-09 — discovery: i tre concern sotto VIEWPOINTS nell'albero del megamodello
 **Prompt**: Fase 1 READ-ONLY corta, ramo `validation-skeleton`, normativa R-VAL-19 (`874199048`) e
 spec §8bis. Sei domande: dove l'albero e' costruito e se e' dichiarativo; cosa sa fare la riga DATA
