@@ -675,12 +675,29 @@ a vacuously satisfied constraint, an empty fan-out, a missing edge — as if the
 Measured in that same round: a probe's own reader disagreed with the JjEL evaluator about whether
 the transitions had targets, and the evaluator was right.
 
-Corollary for reading, same family: `slot.values` **on the L proxy returns the wrapped L objects,
-not the ids** — the default getter resolves every pointer (`__shallowSolver`). Compare with
-`t.id ?? t`, or read `__raw.values` when ids are what you need (the `pkg.uri` / `pkg.__raw.uri`
-asymmetry of §3.7, in another place).
+**Clearing is the same trap, one step further.** `slot.values = []` does **not** empty a reference
+slot that already holds a value, and it does not throw: the slot keeps what it had. Measured
+2026-09-09 while building a fixture for the book, where a transition whose `nextState` was
+"cleared" that way still pointed at its target, and the conformance check was right while the
+fixture was wrong. There is no measured form that clears an already-written reference slot from
+the L proxy; when a test or a probe needs an unset reference, **construct it unset** — a freshly
+created object has none — rather than writing one and taking it back.
 
-Full measurement: `docs/discovery/discovery_2026-09-09_semaforo_end_to_end.md` §2.1 and §9.
+Corollary for reading, same family, and it bites in two ways:
+
+- `slot.values` **on the L proxy returns the wrapped L objects, not the ids** — the default getter
+  resolves every pointer (`__shallowSolver`). Compare with `t.id ?? t`, or read `__raw.values` when
+  ids are what you need (the `pkg.uri` / `pkg.__raw.uri` asymmetry of §3.7, in another place).
+- A **single-valued reference that was never set reads back as `[null]`**, not as `[]`. So
+  `slot.values.length` is **1** where there is no value at all, and a guard written as
+  `values.length === 0` never fires. Measured 2026-09-09: on a `Transition` whose `nextState [1]`
+  had never been written, the proxy reported length 1 while `__raw.values` was empty and the
+  conformance engine reported `multiplicity_below_min`. Count on `__raw.values`, filtering out the
+  falsy entries, whenever the question is «is there a value».
+
+Full measurement: `docs/discovery/discovery_2026-09-09_semaforo_end_to_end.md` §2.1 and §9 for the
+write forms; `docs/discovery/harness/probe_2026-09-09_book53_conformance.mts` for the two reading
+measurements and the failed clear.
 
 ---
 

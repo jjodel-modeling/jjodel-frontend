@@ -13,6 +13,31 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-09 — docs: §9.3, svuotare una reference non svuota, e leggerla conta uno di troppo
+**Prompt**: seconda meta' del giro, dichiarata indipendente dalla misura sul transitorio verde e da
+fare solo dopo. Aggiungere a `CLAUDE.md` §9.3 due misure della stessa famiglia del fallimento muto:
+`slot.values = []` NON svuota uno slot di reference gia' scritto e non lancia; in lettura, una
+reference singola mai impostata torna `[null]`, quindi `length` vale 1 dove non c'e' nessun valore.
+Solo docs, `gen:agents` e `check:agents` obbligatori, commit separato.
+**Files touched**: `CLAUDE.md` (§9.3, +18 righe), `AGENTS.md` (rigenerato). Questa entry nello
+stesso commit. `frontend/src/jjtl/AGENTS.md` rigenerato e identico, quindi fuori dal diff.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — nessun sorgente toccato, `git status --porcelain frontend/src` vuoto con
+controllo positivo. `npm run check:agents` PASS su entrambi i generati; `npm run check:docs` 3/3
+con i 2 warning pre-esistenti. Build e suite non eseguite: nessun sorgente.
+**Out-of-scope changes**: no — `AGENTS.md` e' il generato che RC-7 e §17 impongono nello stesso
+commit della sorgente.
+**Layer Impact Report**: not-required — nessun sorgente.
+**Smoke visivo**: non applicabile. Le due misure iscritte non sono nuove: vengono dalla sonda della
+5.3, dove hanno prodotto quattro FAIL che misuravano un modello sano.
+**Notes**: Iscritta anche la conseguenza operativa, che e' la parte utile: non esiste una forma
+misurata che svuoti dalla proxy L una reference gia' scritta, quindi una fixture che vuole una
+reference non impostata **la costruisce cosi'** invece di scriverla e ritirarla. E per la lettura,
+si conta su `__raw.values` filtrando i falsy ogni volta che la domanda e' «c'e' un valore».
+**Prompt document name**: 2026-09-09 (§9.3, svuotamento e lettura)
+
 ## 2026-09-09 — docs: il ritiro delle voci di validazione non passa per il verde
 **Prompt**: misura corta e sola, ramo `validation-skeleton`. Il ritiro di R-VAL-18
 (`clearValidationProblems`) attraversa il transitorio verde di 5 secondi del registro? Cioe': dopo
