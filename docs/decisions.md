@@ -3158,6 +3158,21 @@ viewpoint (l'occhio che la sintassi ha gia'). Non tocca R-DMV-1: il singleton re
 cambia dove l'indice lo mostra.
 
 
+**R-VAL-19-bis** (2026-09-09, dopo la ricognizione) — **Tre presupposti di R-VAL-19 falsificati.**
+(a) L'«occhio» non e' un occhio ma il glifo di tipo del badge `VP`, senza handler, e
+`activateViewpoint` e' esclusiva su radice singola, il contrario di R-VAL-2: nessuna affordance da
+riusare, cade l'eccezione sull'attivazione, **l'albero nomina e naviga senza eccezioni**.
+L'attivazione multipla dei viewpoint di validazione e' un meccanismo da progettare, non di questa
+fetta. (b) I conteggi non sono la stessa specie: `VIEWPOINTS` conta viewpoint, `DATA MANAGER` conta
+classi personalizzate. Le righe dei concern contano viewpoint e il numero di classi personalizzate
+passa nel testo della riga di stato; due reti si riscrivono di proposito, e una asserisce la formula
+leggendo il sorgente, quindi va fatta eseguire (P11). (c) Il collasso e' persistito per progetto:
+chi chiude `VIEWPOINTS` perde anche il Data Manager dall'indice. Accettato e dichiarato, perche' il
+rimedio sarebbe l'eccezione che la decisione toglie. Iscritto e fuori: `hasContent` sostituisce
+l'albero con «No metamodels» in un progetto vuoto, e nessuno dei tre concern si vede proprio quando
+la scoperta servirebbe.
+
+
 ## Superate
 
 - **D3** (2026-07-26, routing congelato in v1) — superata da E-route il 2026-08-06.
