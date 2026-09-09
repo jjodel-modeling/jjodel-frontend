@@ -32,6 +32,7 @@ import { useEffect, useRef } from 'react';
 import { store } from '../../../joiner';
 import { useConformance } from '../../../model/conformance/useConformance';
 import { aggregateConformanceByObject, type ConformanceObjectProblem } from './conformanceToProblems';
+import { buildVertexResolver } from './vertexResolver';
 import {
     registerProblem,
     markResolved,
@@ -50,25 +51,6 @@ function conformanceProblemId(nodeId: string): string {
     return `${CONFORMANCE_KIND}:${nodeId}`;
 }
 
-/**
- * Build a read-only DObject-id -> DVertex-id resolver for the open graph, by
- * scanning graph.subElements for DVertex entries. Mirrors the private
- * findVertexIdForObject in canvasToJjom.ts (not exported), so no critical-zone
- * file is modified. Returns () => null when the graph is unknown.
- */
-function buildVertexResolver(graphId: string | null | undefined): (objectId: string) => string | null {
-    if (!graphId) return () => null;
-    const lookup = store.getState().idlookup ?? {};
-    const graph = lookup[graphId] as { subElements?: string[] } | undefined;
-    const subEls = graph?.subElements ?? [];
-    const map = new Map<string, string>();
-    for (const id of subEls) {
-        const ge = lookup[id] as { className?: string; model?: string } | undefined;
-        if (ge?.className === 'DVertex' && ge.model) map.set(ge.model, id);
-    }
-    return (objectId: string) => map.get(objectId) ?? null;
-}
-
 export function ConformanceProblemSync({ modelid, graphId }: Props) {
     // useConformance returns null for metamodels / models without a metamodel
     // reference, so no problem is ever registered for those (pill stays silent).
@@ -80,7 +62,11 @@ export function ConformanceProblemSync({ modelid, graphId }: Props) {
 
     useEffect(() => {
         const aggregates = aggregateConformanceByObject(result);
-        const resolveVertex = buildVertexResolver(graphId);
+        // Il risolutore non e' piu' privato di questo file: lo condivide col produttore
+        // delle violazioni di validazione (`vertexResolver.ts`). La lettura dello store
+        // resta qui perche' il modulo condiviso e' puro, ed e' puro per poter essere
+        // provato in ambiente `node`.
+        const resolveVertex = buildVertexResolver(store.getState().idlookup, graphId);
         const desiredIds = new Set<string>();
 
         const register = (nodeId: string, agg: ConformanceObjectProblem): void => {
