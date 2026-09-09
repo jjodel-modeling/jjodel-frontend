@@ -3123,6 +3123,16 @@ della correzione) e' il vincolo di accettazione: le shell si costruiscono gia' r
 ricostruiscono dopo.
 
 
+**R-VAL-17** (2026-09-09) — **Una regola che non trova istanze e' il quarto modo di non aver
+girato, e la superficie lo dichiara.** Attiva, compilante, scritta bene, ma con per contesto una
+classe senza istanze nel modello: produce zero violazioni e zero non valutabili, indistinguibile da
+un modello sano, e la riga «N rules over M instances» lo nasconde perche' somma. Nello scheletro si
+chiude con una riga in fondo al modale, come per la regola che non compila; nella fetta 1 con la
+copertura per regola. Trovato a mano al primo giro visivo, dopo che tre sonde non l'avevano visto:
+il caso era una regola su `Initial` in un modello dove i nodi chiamati Initial e FInal sono istanze
+di `State` con quel nome.
+
+
 ## Superate
 
 - **D3** (2026-07-26, routing congelato in v1) — superata da E-route il 2026-08-06.
