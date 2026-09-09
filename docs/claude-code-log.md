@@ -13,6 +13,36 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-09 — docs(libro): la figura 5.8, e i due indicatori che esistono davvero
+**Prompt**: `claude_2026-09-09_1306_prompt_book_5_3_conformance_figure.md`. Le due immagini della
+5.3 sono placeholder di giugno. Passo zero obbligatorio: verificare nell'applicazione quali
+indicatori di conformance esistono oggi, e riferire qualunque scostamento. Poi portare la frase
+della 5.3 dal singolare ai due livelli, ricatturare le due immagini mantenendo i nomi di file, non
+riscrivere il resto della sezione, nessun commento di provvisorieta'.
+**Files touched**: nel repo del libro (commit `6e8e689`), `author/part2/ch05-getting-started.tex`
+piu' le due immagini `author/images/ch05-conformance-{violation,ok}.png` che sostituiscono i
+placeholder. In questo repo, la sonda `probe_2026-09-09_book53_conformance.mts` e questa entry.
+Nessun sorgente del frontend toccato.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — nessun file di codice toccato. `pdflatex` in scratch, due passate, exit 0,
+zero errori e zero riferimenti irrisolti. Figura **5.8** (sottofigure 5.8a e 5.8b) a pagina 86, con
+`\label` invariati. Overfull box: **26 prima, 26 dopo**, le stesse a meno dello scorrimento delle
+righe; nessuna nuova.
+**Out-of-scope changes**: no — `ch05-getting-started.tex` era pulito; le voci sporche dell'albero
+del libro sono di un'altra corsia e non sono state toccate.
+**Layer Impact Report**: not-required — nessun sorgente.
+**Smoke visivo**: passato, sonda **15 PASS 0 FAIL**. Il modello sano e' misurato prima di romperlo,
+il difetto e' costruito e non ottenuto svuotando uno slot.
+**Notes**: I due livelli non sono quelli che il prompt supponeva. Non esiste nessun verdetto di
+modello: la status bar dice «conforms to StateMachine» col punto verde in **entrambi** gli stati, ed
+e' l'etichetta del legame. I due vivi sono il badge sull'elemento e il marcatore `missing` sulla
+riga della feature, che il prompt non nominava. Terzo reperto, non corretto: la fascia del pannello
+dichiara «Conforms to» anche sull'elemento segnalato (`Info.tsx:647` riassegna `conform` invece di
+congiungerlo).
+**Prompt document name**: 2026-09-09 13:06
+
 ## 2026-09-09 — docs(libro): la sezione 5.5, e il passo zero che l'ha decisa
 **Prompt**: GO 5.5 su `claude_2026-09-09_1125_prompt_book_5_5_validation.md`, repo del libro,
 capitolo `ch05-getting-started.tex`. Passo zero obbligatorio: guardare cosa fa l'applicazione oggi,
