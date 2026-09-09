@@ -1609,6 +1609,26 @@ html[data-theme="dark"] {
     }
 }
 
+// ─── Concern empty state (R-VAL-19) ──────────────────────────────────────────
+//
+// La riga che dice cosa andrebbe in un concern vuoto. Stessa metrica e stesso tono di
+// `.tree-empty-dmv` — 12px corsivo terziario, l'altezza di riga dell'albero — e regola
+// propria per la sola cosa che le distingue: quella e' cliccabile perche' dietro ha lo
+// stub del singleton, questa non ha niente da selezionare e non deve sembrare che ce
+// l'abbia. Nessun `cursor: pointer`, nessun hover.
+
+.tree-empty-concern {
+    display: flex;
+    align-items: center;
+    padding: 6px 12px 6px 0;
+
+    &-label {
+        font-size: 12px;
+        font-style: italic;
+        color: var(--color-text-tertiary);
+    }
+}
+
 // The label of a section that stands for ONE object, and therefore selects it
 // (`SectionNode.onLabelClick`, R-DMV-5). Only the Data Manager section passes that prop.
 .tree-section__label--clickable {
@@ -1686,6 +1706,7 @@ html[data-theme="dark"] {
     .tree-counter,
     .tree-empty-doc-label,
     .tree-empty-dmv-label,
+    .tree-empty-concern-label,
     .tree-feature__type,
     .tree-feature__mult {
         color: #6b7280;
