@@ -13,6 +13,37 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-09 — docs(libro): la sezione 5.5, e il passo zero che l'ha decisa
+**Prompt**: GO 5.5 su `claude_2026-09-09_1125_prompt_book_5_5_validation.md`, repo del libro,
+capitolo `ch05-getting-started.tex`. Passo zero obbligatorio: guardare cosa fa l'applicazione oggi,
+compresa la dichiarazione di freschezza, e riferire qualunque scostamento. Un invariante solo, per
+istanza. Ricatturare le tre figure. Ritoccare la 5.6 e togliere la sua nota. Compilazione in
+scratch, due passate. Aggiunta del prompt: smontare l'editor riporta a «mai validato», quindi la
+sonda non deve navigare via fra il Validate e lo scatto.
+**Files touched**: nel repo del libro (commit `1fdecc9`), `author/part2/ch05-getting-started.tex`
+piu' tre immagini nuove `author/images/ch05-validation-{violation,fixed,rule}.png`. In questo repo,
+la sonda `docs/discovery/harness/probe_2026-09-09_book55_validazione.mts` e questa entry. Nessun
+sorgente del frontend toccato.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — nessun file di codice toccato, `git status --porcelain frontend/src` vuoto a
+fine giro con controllo positivo sullo stesso comando senza pathspec. Compilazione `pdflatex` in
+`-output-directory` di scratch, due passate, exit 0, zero errori e **zero riferimenti irrisolti** in
+tutto il libro. Figure 5.13, 5.14, 5.15 alle pagine 90-92; `ch:jjel` risolve al capitolo 7.
+**Out-of-scope changes**: no — `ch05-getting-started.tex` era pulito, le voci sporche dell'albero
+del libro (`book.pdf`, `_build/book.pdf`, `book.idx`, `audit-2026-09/`) sono di un'altra corsia e
+non sono state toccate ne' committate.
+**Layer Impact Report**: not-required — nessun sorgente.
+**Smoke visivo**: passato, sonda Playwright **22 PASS 0 FAIL** sulla fixture esatta del capitolo.
+Le figure escono da quel giro, quindi testo e immagini descrivono lo stesso stato.
+**Notes**: Invariante cambiato rispetto allo stub, come chiedeva il prompt. Tre scostamenti
+riferiti: `isFinal` mai scritto vale `null` e la regola viola lo stesso, senza «non valutabili»; la
+`ValidationPill` della 5.3 non e' montata (0 nel DOM), debito della 5.3; la figura dell'authoring
+ritrae il controllo Active a meta' di un restyle di un'altra corsia, dichiarato accanto
+all'`includegraphics`. La sezione e' in «we» e non in «you», per coerenza col capitolo.
+**Prompt document name**: 2026-09-09 11:25
+
 ## 2026-09-09 — feat(validation): il pallino sulle istanze che violano, e la sua freschezza
 **Prompt**: Fase 2 di R-VAL-18 / spec §8.5, ramo `validation-skeleton`, tre commit separati in
 quest'ordine: (1) il risolutore vertice privato di `ConformanceProblemSync` esce in un modulo
