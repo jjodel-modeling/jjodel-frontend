@@ -431,6 +431,22 @@ che non esiste piu'.
 risolta e non c'entra con la validazione; introduce due vocabolari visivi di pallino per uno stato
 transitorio; e quello stato sparira' quando arrivera' la rivalutazione automatica.
 
+**Il transitorio verde e il ritiro** (misurato il 2026-09-09, con controllo positivo sulla
+conformance che lo mostra per 167 campioni su 222 fino al TTL di 5 s): il ritiro delle voci di
+validazione **non** attraversa il transitorio `--resolved`, i pallini passano dal rosso al niente in
+circa 250 ms, e R-VAL-18 non e' violata in pratica. Ma il risultato oggi e' **emergente, non
+garantito**: e' cosi' perche' l'invalidazione scatta prima, quindi al Validate successivo non c'e'
+piu' niente da segnare come risolto, e il ramo `markResolved` di `publishValidationProblems` risulta
+irraggiungibile. Non si cancella (non si rimuove codice apparentemente inutilizzato): si commenta
+con la ragione.
+
+**Attenzione al giorno in cui la rivalutazione diventa automatica**: quella condizione cade, il ramo
+torna vivo, e con esso un pallino verde che dice «risolta». A quel punto **non e' un difetto ma la
+cosa giusta**, perche' con il verdetto sempre fresco l'affermazione e' vera. Il criterio non e' il
+colore, e' la freschezza: il transitorio risolto e' legittimo se e solo se il verdetto e' garantito
+fresco. Oggi e' inerte; domani sara' corretto. Quello che non deve succedere e' che qualcuno lo
+riaccenda **prima** che la freschezza sia garantita.
+
 **Perche' non la rivalutazione automatica adesso**: e' la destinazione (§9), ma la spec chiede la
 misura prima, e il referto del 2026-09-09 dice dove sta il costo, cioe' in scrittura, con
 `registerProblem` che fa una `rebuildSnapshots` completa piu' una `notify` per ogni violazione.
