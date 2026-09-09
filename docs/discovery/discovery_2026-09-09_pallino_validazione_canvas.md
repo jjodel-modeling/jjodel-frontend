@@ -325,3 +325,35 @@ mai chiamare `useNodeProblems` (§2.1). Non e' un difetto di quel produttore —
 riguarda oggetti M1 e il suo pallino sul canvas funziona — ma un lettore che progetti la fetta 1
 su quella frase conclude che l'albero gia' si accende, e non e' cosi'. Segnalato qui e non
 corretto: la Fase 1 e' READ-ONLY.
+
+---
+
+## 8. Addendum (2026-09-09, dopo la Fase 2) — i debiti che restano aperti
+
+Aggiunto in coda e non fuso nel testo sopra (R-E/E-1): il referto resta il documento della
+Fase 1, questo e' cio' che la Fase 2 ha lasciato dietro di se'. La Fase 2 ha chiuso il §6
+punti 1 e 2 — l'ancoraggio doppio e la regola di invalidazione, che e' R-VAL-18 — e non il
+punto 3.
+
+- **Il popover non ha tetto, e ora il caso e' raggiungibile.** `NodeProblemOverlay.scss`
+  dichiara `min-width: 220px` e `max-width: 320px` e nessun `max-height`, nessun
+  `overflow` (§4.3). Finche' un nodo portava una voce sola era teorico; con R-VAL-12 sul
+  canvas — un'istanza puo' violare piu' regole insieme, e ora ciascuna e' una voce sul
+  vertice — non lo e' piu'. Il foglio e' condiviso con gli altri due produttori, quindi
+  non e' una riga da infilare di straforo in un commit che parla d'altro.
+
+- **Il commento di `ConformanceProblemSync.tsx:11-13` resta sbagliato per meta'** (§7). Il
+  commit 1 della Fase 2 e' passato da quel file — a comportamento invariato, per estrarne
+  il risolutore — e non l'ha corretto di proposito: correggerlo li' avrebbe mescolato una
+  rettifica di merito a un'estrazione dichiarata inerte. Va fatto nel giro che portera' il
+  pallino nelle righe M1 dell'albero, che e' lo stesso giro che rende la frase vera.
+
+- **Il risolutore resta in tre copie, non in una.** La Fase 2 ne ha unificate due
+  (`ConformanceProblemSync` e il produttore di validazione, in
+  `problems/vertexResolver.ts`); restano `sync/canvasToJjom.ts:1347` — critical zone, non
+  si tocca — ed `EditorV2.tsx:181`, fuori dal perimetro dichiarato. Il conto e' quindi
+  tre, non quattro: la quarta copia e' quella che non e' stata scritta.
+
+- **Fuori discussione e gia' dichiarato, non un debito**: un'istanza resa come edge
+  sintetico (`irobj_*`) non ha `ObjectNode` e nessun id la farebbe accendere (§2.3,
+  spec §8.5). Non e' una cosa da sistemare in questa forma: e' un'altra superficie.

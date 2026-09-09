@@ -13,6 +13,46 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-09 — feat(validation): il pallino sulle istanze che violano, e la sua freschezza
+**Prompt**: Fase 2 di R-VAL-18 / spec §8.5, ramo `validation-skeleton`, tre commit separati in
+quest'ordine: (1) il risolutore vertice privato di `ConformanceProblemSync` esce in un modulo
+condiviso, comportamento invariato, critical zone intatta; (2) `publishValidationProblems` registra
+anche sotto l'id del vertice risolto; (3) la freschezza — ritiro alla prima transazione che tocca
+modello **o** regole, UNA dichiarazione a tre stati mai per nodo, firma che copre entrambi. Verifica
+eseguita e non dichiarata, piu' la mutazione. Fuori: tetto del popover, pallino nelle righe M1
+dell'albero, istanze rese come edge sintetico — da iscrivere, non da risolvere.
+**Files touched**: 10 sorgenti in tre commit — `problems/vertexResolver.ts` (nuovo),
+`problems/ConformanceProblemSync.tsx`, `problems/validationToProblems.ts`,
+`problems/validationFreshness.ts` (nuovo), `problems/ValidationFreshnessSync.tsx` (nuovo),
+`editor-v2/Toolbar.tsx`, `editor-v2/EditorV2.tsx`, `editor-v2/EditorV2.scss`, piu' tre file di test
+in `problems/__tests__/`. Poi la sonda `probe_2026-09-09_pallino_freschezza.mts`, l'addendum §8 al
+referto di Fase 1 e questa entry, in un commit separato dal codice (RC-13).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `npx vitest run` 3458 verdi / 0 falliti, 9 file rossi in raccolta
+`window is not defined`, gli stessi di sempre. `npm run typecheck` **33** = baseline §17, conteggio
+su output completo e non su una coda, ed elenco degli errori **identico** a quello di inizio giro a
+meno di riga e colonna. `npm run build` exit 0 col solo avviso di chunk-size.
+**Out-of-scope changes**: no, ma **10 file sopra la soglia di 5** (regola 19): dichiarati in chat
+prima del diff con cosa cambia in ciascuno, e sanabili a valle (RC-11). Sono la conseguenza diretta
+dei tre commit ordinati dal prompt. `ValidationRulesModal.tsx/.scss` erano modificati in albero da
+un'altra corsia e **non** sono stati toccati ne' committati.
+**Layer Impact Report**: produced — in chat prima del diff. Nessuna scrittura nel D-layer: solo
+letture di `idlookup`; il registro dei problemi e' stato di sessione, immune a undo/redo.
+`canvasToJjom.ts` non e' toccato.
+**Smoke visivo**: passato, sonda Playwright **14 PASS 0 FAIL** sull'app vera. Due istanze che
+violano portano il pallino, la terza no; la dichiarazione dice «2 violations»; spostare un nodo NON
+invalida (controllo P12); rinominare un'istanza che non viola ritira **tutti** i pallini e la
+dichiarazione passa a «Changed since validation»; cambiare il solo **messaggio** di una regola —
+che non muove nessun verdetto — fa lo stesso.
+**Notes**: Mutazione eseguita in due sedi. Unitaria: tolto il ritiro, 3 test rossi; tolto il ramo
+`DValidationRule` dalla firma, 4. Sull'app: tolto il ritiro, i 2 controlli «spariscono» diventano
+rossi **mentre la dichiarazione resta verde** — che e' precisamente perche' R-VAL-18 chiede
+entrambe le meta' e perche' si misurano separate. Trovato di passaggio: il risolutore esisteva in
+**tre** copie, non due (`EditorV2.tsx:181` oltre a `canvasToJjom.ts:1347`).
+**Prompt document name**: 2026-09-09 (Fase 2, pallino e freschezza)
+
 ## 2026-09-09 — discovery: il pallino rosso sulle istanze che violano (fetta 1)
 **Prompt**: Fase 1 READ-ONLY, ramo `validation-skeleton`. Accertare cinque cose prima di aprire la
 Fase 2: (1) come `ConformanceProblemSync` mappa una voce del registro sul badge del nodo e se
