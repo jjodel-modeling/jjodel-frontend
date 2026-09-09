@@ -3,7 +3,7 @@
 **File**: `docs/spec/claude_spec_2026-09-08_user_defined_validation.md`
 **Data**: 2026-09-08
 **Stato**: vigente, non implementata. Nessuna Fase 2 aperta.
-**Serie di decisioni**: R-VAL (R-VAL-1..19, con 6-bis)
+**Serie di decisioni**: R-VAL (R-VAL-1..19, con 6-bis e 19-bis)
 **Referti a monte**:
 `docs/discovery/discovery_2026-09-08_validazione_definita_utente.md` (Fase 1, 834 righe, `fdf087259`)
 `docs/discovery/discovery_2026-09-08_*keyword*` (micro-discovery lexer, `3e4dec57b`)
@@ -494,6 +494,44 @@ dell'occhio sulla sintassi.
 
 Questa decisione **non tocca R-DMV-1**: il Data Manager Viewpoint resta singleton, builtin, non
 creabile e non cancellabile. Cambia solo dove l'indice lo mostra.
+
+### 8bis.1 Emendamenti dopo la ricognizione (R-VAL-19-bis)
+
+Il referto del 2026-09-09 ha falsificato tre presupposti su cui R-VAL-19 era scritta.
+
+**L'attivazione esce dal perimetro dell'albero.** L'«occhio» accanto al viewpoint di sintassi non e'
+un occhio: e' il glifo di tipo del badge `VP`, senza handler, e cliccarlo seleziona come cliccare il
+nome. E `activateViewpoint` e' **a valore singolo su una radice sola**, cioe' esclusiva, che e' il
+contrario dei viewpoint di validazione multipli e contemporanei di R-VAL-2. Quindi non c'e' nessuna
+affordance da riusare, e la mia eccezione («l'unica eccezione e' l'attivazione del viewpoint») cade:
+**l'albero nomina e naviga, senza eccezioni**. Resta iscritto, e non e' di questa fetta, che
+l'attivazione multipla dei viewpoint di validazione e' un meccanismo **da progettare**: la
+semantica dei due concern e' genuinamente diversa, perche' con una sintassi si disegna in un modo
+solo mentre le regole attive si applicano tutte insieme.
+
+**I conteggi non sono la stessa specie di numero.** `VIEWPOINTS` conta viewpoint (singleton
+escluso), `DATA MANAGER` conta **classi personalizzate**, e quel numero discrimina anche la riga di
+stato. Renderli omogenei e' un cambio di semantica, non un ricalcolo. Scelta: le righe dei concern
+contano **viewpoint**, e il numero di classi personalizzate vive nel testo della riga di stato, che
+gia' dice quella cosa a parole. Due reti si rompono e vanno riscritte di proposito; una delle due
+asserisce la formula **leggendo il sorgente**, quindi riscriverla perche' esegua e' un miglioramento
+dovuto (P11), non un danno collaterale.
+
+**Il collasso e' persistito per progetto**, quindi chi chiude `VIEWPOINTS` una volta perde il Data
+Manager dall'indice su quel progetto. «Espanso per default» non copre questo caso: aperto per
+default non e' sempre visibile. Conseguenza **accettata e dichiarata**: chi chiude i viewpoint sta
+scegliendo di nascondere i viewpoint, e il Data Manager e' uno di quelli. Il rimedio alternativo,
+tenerlo visibile a ramo chiuso, sarebbe esattamente l'eccezione che questa decisione toglie.
+
+**Fuori da questa fetta, iscritto**: `hasContent` sostituisce l'intero albero con «No metamodels» in
+un progetto senza metamodelli, modelli, viewpoint e trasformazioni. Nessuno dei tre concern si vede
+proprio nel momento in cui la scoperta servirebbe di piu'. E' un problema di scoperta piu' grande di
+quello che questa fetta risolve, e va progettato a parte: cosa deve dire l'indice di un progetto
+vuoto.
+
+**Rischio di implementazione**: la struttura e' JSX annidato a mano con `depth` letterali, quindi
+una `depth` sbagliata non e' un errore di tipo ma un rientro. La verifica finale guarda la struttura
+resa, non il sorgente.
 
 ---
 
