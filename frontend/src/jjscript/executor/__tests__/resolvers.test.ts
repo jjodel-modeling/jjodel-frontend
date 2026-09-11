@@ -19,6 +19,7 @@ import {
     resolveElementInMetamodel,
     resolveTargetInMetamodel,
     resolveTargetInProject,
+    resolveEnumTypeTarget,
     kindLabel,
     TARGET_KINDS_BY_ELEMENT_TYPE,
     CONTAINER_KINDS,
@@ -341,5 +342,146 @@ describe('member backtracking stops at an admissible container', () => {
         expect(resolution.memberMissingOn).toEqual({
             parentName: 'mood', parentKind: 'Enum', member: 'NOPE',
         });
+    });
+});
+
+// ─── `type <Name>` on create attribute ───────────────────────────────────────
+//
+// The silent EString fallback measured in
+// `docs/discovery/discovery_2026-09-11_attribute_enum_type.md`: `create attribute
+// animalMood in Animal type Mood` returned success and produced an EString attribute,
+// because neither `normalizeAttributeType` nor the `Defaults['Pointer_MOOD']` lookup knew
+// the name and both fell through a `??`.
+//
+// `resolveEnumTypeTarget` is the half that lives in the resolver. The decision that turns
+// its result into a pointer or an error is `resolveAttributeType` in `commands/create.ts`,
+// which cannot be imported here (see the header of this file), so the branches it takes
+// are asserted through the resolution it branches on.
+
+describe('resolveEnumTypeTarget — the type of an attribute', () => {
+    function buildTypedMetamodel() {
+        const animal = { name: 'Animal', className: 'DClass', id: 'cls-animal', attributes: [], references: [] };
+        const mood = { name: 'Mood', className: 'DEnumerator', id: 'enum-mood', literals: [] };
+        const metamodel: any = {
+            name: 'MM', id: 'mm-1', packages: [], classes: [animal], attributes: [],
+            references: [], operations: [], parameters: [], literals: [], enumerators: [mood],
+        };
+        return { metamodel, animal, mood };
+    }
+    const project = (...mms: any[]) => ({ name: 'P', metamodels: mms, models: [] } as any);
+
+    it('resolves an enum of the metamodel', () => {
+        const { metamodel, mood } = buildTypedMetamodel();
+        expect(resolveEnumTypeTarget(qn('Mood'), metamodel, project(metamodel)).element?.id).toBe(mood.id);
+    });
+
+    it('refuses a CLASS of the same name — the kind restriction is the whole point', () => {
+        const { metamodel, animal } = buildTypedMetamodel();
+        metamodel.enumerators = [];
+        metamodel.classes = [animal, { name: 'Mood', className: 'DClass', id: 'cls-mood' }];
+        const r = resolveEnumTypeTarget(qn('Mood'), metamodel, project(metamodel));
+        expect(r.element).toBeFalsy();
+        expect(r.ambiguousWith).toBeUndefined();   // -> "Unknown type", not "Ambiguous"
+    });
+
+    it('prefers the exact spelling over a case-only near-homonym', () => {
+        const { metamodel } = buildTypedMetamodel();
+        metamodel.enumerators = [
+            { name: 'mood', className: 'DEnumerator', id: 'enum-lower', literals: [] },
+            { name: 'Mood', className: 'DEnumerator', id: 'enum-upper', literals: [] },
+        ];
+        expect(resolveEnumTypeTarget(qn('Mood'), metamodel, project(metamodel)).element?.id).toBe('enum-upper');
+        expect(resolveEnumTypeTarget(qn('mood'), metamodel, project(metamodel)).element?.id).toBe('enum-lower');
+    });
+
+    it('reports ambiguity when only the case differs and neither spelling is exact', () => {
+        const { metamodel } = buildTypedMetamodel();
+        metamodel.enumerators = [
+            { name: 'mood', className: 'DEnumerator', id: 'enum-lower', literals: [] },
+            { name: 'Mood', className: 'DEnumerator', id: 'enum-upper', literals: [] },
+        ];
+        const r = resolveEnumTypeTarget(qn('MOOD'), metamodel, project(metamodel));
+        expect(r.element).toBeNull();
+        expect(r.ambiguousWith).toEqual(['mood', 'Mood']);
+    });
+
+    it('accepts the qualified form Metamodel::Name', () => {
+        const { metamodel, mood } = buildTypedMetamodel();
+        const other: any = {
+            name: 'Other', id: 'mm-2', packages: [], classes: [], attributes: [], references: [],
+            operations: [], parameters: [], literals: [],
+            enumerators: [{ name: 'Mood', className: 'DEnumerator', id: 'enum-other', literals: [] }],
+        };
+        // No metamodel scope: the qualifier is what decides, and it decides both ways.
+        expect(resolveEnumTypeTarget(qn('MM::Mood'), null, project(metamodel, other)).element?.id).toBe(mood.id);
+        expect(resolveEnumTypeTarget(qn('Other::Mood'), null, project(metamodel, other)).element?.id).toBe('enum-other');
+    });
+
+    it('an unknown name resolves to nothing, with no ambiguity — the error case', () => {
+        const { metamodel } = buildTypedMetamodel();
+        const r = resolveEnumTypeTarget(qn('Nope'), metamodel, project(metamodel));
+        expect(r.element).toBeFalsy();
+        expect(r.ambiguousWith).toBeUndefined();
+    });
+
+    it('the SCOPED metamodel wins over another metamodel that spells the name the same way', () => {
+        // The discriminating fixture: both metamodels declare `Mood`, so an answer of
+        // `enum-mood` can only come from the scoped leg running FIRST. Without it — or with
+        // the project consulted first — `other` is reachable and the answer flips.
+        const { metamodel, mood } = buildTypedMetamodel();
+        const other: any = {
+            name: 'Other', id: 'mm-2', packages: [], classes: [], attributes: [], references: [],
+            operations: [], parameters: [], literals: [],
+            enumerators: [{ name: 'Mood', className: 'DEnumerator', id: 'enum-other', literals: [] }],
+        };
+        // `other` first in the project, so project-wide resolution would answer `enum-other`.
+        expect(resolveEnumTypeTarget(qn('Mood'), metamodel, project(other, metamodel)).element?.id)
+            .toBe(mood.id);
+        // CONTROL: scoped to `other`, the same call gives the other one — the scope is doing it.
+        expect(resolveEnumTypeTarget(qn('Mood'), other, project(other, metamodel)).element?.id)
+            .toBe('enum-other');
+    });
+
+    it('an ambiguous metamodel answer is NOT rescued by the project fallback', () => {
+        // Ambiguity is conclusive: the scoped leg has spoken, and falling through would
+        // silently answer with a different metamodel's enum instead of asking the user
+        // to qualify.
+        const { metamodel } = buildTypedMetamodel();
+        metamodel.enumerators = [
+            { name: 'mood', className: 'DEnumerator', id: 'enum-lower', literals: [] },
+            { name: 'Mood', className: 'DEnumerator', id: 'enum-upper', literals: [] },
+        ];
+        const other: any = {
+            name: 'Other', id: 'mm-2', packages: [], classes: [], attributes: [], references: [],
+            operations: [], parameters: [], literals: [],
+            enumerators: [{ name: 'MOOD', className: 'DEnumerator', id: 'enum-other', literals: [] }],
+        };
+        const r = resolveEnumTypeTarget(qn('MOOD'), metamodel, project(metamodel, other));
+        expect(r.element).toBeNull();
+        expect(r.ambiguousWith).toEqual(['mood', 'Mood']);
+    });
+
+    it('falls back to the project only when the metamodel has no answer', () => {
+        const { metamodel } = buildTypedMetamodel();
+        const other: any = {
+            name: 'Other', id: 'mm-2', packages: [], classes: [], attributes: [], references: [],
+            operations: [], parameters: [], literals: [],
+            enumerators: [{ name: 'Colour', className: 'DEnumerator', id: 'enum-colour', literals: [] }],
+        };
+        expect(resolveEnumTypeTarget(qn('Colour'), metamodel, project(metamodel, other)).element?.id)
+            .toBe('enum-colour');
+        // CONTROL: with a project of its own the metamodel still wins for a name it holds.
+        expect(resolveEnumTypeTarget(qn('Mood'), metamodel, project(metamodel, other)).element?.id)
+            .toBe('enum-mood');
+    });
+
+    it('does not reach for an ATTRIBUTE of that name — the flat pool cannot leak in', () => {
+        // The original defect's shape: `Scene.mood` is visible from the metamodel root.
+        const { metamodel } = buildTypedMetamodel();
+        const sceneMood = { name: 'Mood', className: 'DAttribute', id: 'attr-mood' };
+        metamodel.attributes = [sceneMood];
+        metamodel.enumerators = [];
+        const r = resolveEnumTypeTarget(qn('Mood'), metamodel, project(metamodel));
+        expect(r.element).toBeFalsy();
     });
 });

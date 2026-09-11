@@ -11,7 +11,7 @@ import {
 } from '../../types';
 import {
     resolveElement, resolveElementInMetamodel,
-    resolveTargetInMetamodel, resolveTargetInProject,
+    resolveTargetInMetamodel, resolveTargetInProject, resolveEnumTypeTarget,
     kindLabel, memberMissingMessage, ResolutionKind, TargetResolution
 } from '../resolvers';
 import { qualifiedNameToString } from '../../parser/grammar';
@@ -42,8 +42,7 @@ import {
  * raw Ecore names ('EString', 'EInt', 'EBoolean', ...) that parseTypeReference
  * parks under `kind: 'class'` because they are not in TYPE_ALIASES.
  */
-export function normalizeAttributeType(raw: string): string {
-    const map: Record<string, string> = {
+const PRIMITIVE_ATTRIBUTE_TYPES: Record<string, string> = {
         'estring':  'EString',
         'string':   'EString',
         'str':      'EString',
@@ -69,8 +68,27 @@ export function normalizeAttributeType(raw: string): string {
         'float':    'EFloat',
         'evoid':    'EVoid',
         'void':     'EVoid',
-    };
-    return map[raw.toLowerCase()] ?? 'EString';
+};
+
+/**
+ * The primitive this name denotes, or `null` when it denotes none.
+ *
+ * `normalizeAttributeType` cannot answer that question: its `?? 'EString'` returns the
+ * same value for 'String' and for 'Mood', which is the first of the two silent fallbacks
+ * that typed every enum-valued attribute as EString. Measured in
+ * `docs/discovery/discovery_2026-09-11_attribute_enum_type.md` §3.1.
+ */
+export function primitiveAttributeType(raw: string): string | null {
+    return PRIMITIVE_ATTRIBUTE_TYPES[raw.trim().toLowerCase()] ?? null;
+}
+
+/**
+ * Unchanged behaviour, kept for the callers that want a type name no matter what.
+ * The attribute-creation path no longer uses it: it needs to tell 'not a primitive'
+ * from 'EString', and this cannot.
+ */
+export function normalizeAttributeType(raw: string): string {
+    return primitiveAttributeType(raw) ?? 'EString';
 }
 
 /**
@@ -321,7 +339,7 @@ export async function executeCreate(
                 break;
 
             case 'attribute':
-                result = await createAttribute(name, parentElement, options);
+                result = await createAttribute(name, parentElement, options, project, targetMetamodel);
                 break;
 
             case 'reference':
@@ -469,10 +487,102 @@ async function createClass(
     });
 }
 
+/** What `type <Name>` settled on, or the error that stops the line. */
+type AttributeTypeOutcome =
+    | { ok: true; typePointer: string; typeLabel: string; enumName?: string }
+    | { ok: false; error: ExecutionResult };
+
+/**
+ * Resolve the `type <Name>` clause of `create attribute` to the pointer to write.
+ *
+ * Order, and each step is deliberate:
+ *   1. no clause at all -> EString, the documented default, unchanged.
+ *   2. a primitive -- whether the parser called it `primitive` or parked the raw Ecore
+ *      spelling ('EString', 'EInt') under `class`, which it does for anything outside
+ *      TYPE_ALIASES. `primitiveAttributeType` is the test; `normalizeAttributeType` is
+ *      not, because its fallback answers 'EString' for 'Mood' too.
+ *   3. an enumerator, kind-restricted, metamodel before project.
+ *   4. anything else is an error. It used to be a silent EString with `success: true`.
+ *
+ * The QualifiedName goes to the resolver untouched -- NOT through `rawTypeName`, which
+ * flattens `MM::Mood` to the string 'MM::Mood' and loses the qualification (referto §3.3).
+ *
+ * Ambiguity is answered apart from not-found: both are `element: null` on the
+ * `resolveElement*` shorthands, and only `ambiguousWith` separates them (referto §5, R4).
+ */
+function resolveAttributeType(
+    attrName: string,
+    options: CreateArgs['options'],
+    project?: any,
+    targetMetamodel?: any
+): AttributeTypeOutcome {
+    const pointerFor = (shortType: string): string => (Defaults as any)['Pointer_' + shortType.toUpperCase()];
+
+    const typeRef: any = options?.type;
+    if (!typeRef) {
+        return { ok: true, typePointer: pointerFor('EString'), typeLabel: 'EString' };
+    }
+
+    // 2. primitive, in either of the two shapes the parser produces.
+    const spelled = rawTypeName(typeRef);
+    const primitive = spelled ? primitiveAttributeType(spelled) : null;
+    if (primitive) {
+        // The table and Defaults are both compile-time constants, so a miss here is an
+        // internal inconsistency, not user input -- it must not degrade to EString.
+        const ptr = pointerFor(primitive);
+        if (!ptr) {
+            return { ok: false, error: {
+                success: false,
+                command: 'create',
+                message: `Internal error: no pointer registered for primitive type '${primitive}'.`,
+                errors: [{ code: 'UNKNOWN_PRIMITIVE_POINTER', message: `Missing Defaults.Pointer_${primitive.toUpperCase()}` }]
+            }};
+        }
+        return { ok: true, typePointer: ptr, typeLabel: primitive };
+    }
+
+    // 3. an enumerator of the metamodel (or of the project, qualified or not).
+    const qn: QualifiedName | undefined = typeRef.kind === 'class' ? typeRef.name : undefined;
+    if (qn) {
+        const found = resolveEnumTypeTarget(qn, targetMetamodel, project);
+        if (found.element) {
+            return { ok: true, typePointer: found.element.id, typeLabel: found.element.name, enumName: found.element.name };
+        }
+        if (found.ambiguousWith && found.ambiguousWith.length > 0) {
+            const shown = found.ambiguousWith.join(', ');
+            return { ok: false, error: {
+                success: false,
+                command: 'create',
+                message: `Ambiguous type '${qualifiedNameToString(qn)}' for attribute '${attrName}': ${shown}. Qualify as Metamodel::Name.`,
+                errors: [{
+                    code: 'AMBIGUOUS_TYPE',
+                    message: `'${qualifiedNameToString(qn)}' matches more than one enum: ${shown}`,
+                    suggestion: 'Qualify the type as Metamodel::Name.'
+                }]
+            }};
+        }
+    }
+
+    // 4. neither a primitive nor a resolvable enum.
+    const shownName = qn ? qualifiedNameToString(qn) : (spelled ?? String(typeRef?.type ?? ''));
+    return { ok: false, error: {
+        success: false,
+        command: 'create',
+        message: `Unknown type '${shownName}' for attribute '${attrName}'. Expected a primitive type or an enum.`,
+        errors: [{
+            code: 'UNKNOWN_ATTRIBUTE_TYPE',
+            message: `'${shownName}' is neither a primitive type nor an enum reachable from this metamodel`,
+            suggestion: 'Use a primitive (String, Integer, Boolean, ...) or an existing enum. Qualify as Metamodel::Name if needed.'
+        }]
+    }};
+}
+
 async function createAttribute(
     name: string,
     parent: any,
-    options: CreateArgs['options']
+    options: CreateArgs['options'],
+    project?: any,
+    targetMetamodel?: any
 ): Promise<ExecutionResult> {
     if (!parent) {
         return {
@@ -498,24 +608,24 @@ async function createAttribute(
         };
     }
 
+    // The type is settled BEFORE the element exists: an unresolvable one must not leave a
+    // half-made attribute behind. Three outcomes only -- a primitive, an enumerator, or an
+    // error; the silent EString fallback this replaces is gone from both of its steps
+    // (docs/discovery/discovery_2026-09-11_attribute_enum_type.md §3).
+    const typed = resolveAttributeType(name, options, project, targetMetamodel);
+    if (!typed.ok) return typed.error;
+
     return new Promise((resolve) => {
         try {
             const parentId = parent.id || parent;
 
-            const rawType = rawTypeName(options?.type);
-            const shortType = rawType ? normalizeAttributeType(rawType) : 'EString';
-            // Convert short-name (e.g. 'EInt') to the stable Pointer ID the framework
-            // expects. Requires the companion fix in DTypedElement (joiner/classes.ts)
-            // which short-circuits lookup when it receives an already-valid Pointer_E* ID.
-            const typePointer = (Defaults as any)['Pointer_' + shortType.toUpperCase()] ?? Defaults.Pointer_ESTRING;
-
-            const newAttr = DAttribute.new(name, typePointer, parentId, true);
+            const newAttr = DAttribute.new(name, typed.typePointer, parentId, true);
 
             resolve({
                 success: true,
                 command: 'create',
-                message: `Created attribute '${name}'`,
-                data: { id: newAttr.id, name, type: 'attribute', attributeType: shortType },
+                message: `Created attribute '${name}'${typed.enumName ? ` : ${typed.enumName}` : ''}`,
+                data: { id: newAttr.id, name, type: 'attribute', attributeType: typed.typeLabel },
                 affectedElements: [newAttr.id, parentId],
                 undoable: true
             });
