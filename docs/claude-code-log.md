@@ -27,7 +27,11 @@ restano dell'altra corsia (RC-13).
 **Outcome**: ✅ completed
 **Corregge**: —
 **Causa**: —
-**Regressions**: unknown, fino alla verifica visiva. Gate verdi: `npx tsc --noEmit` **33** su output
+**Regressions**: no — verifica visiva passata su localhost il 2026-09-12 per entrambi gli script
+(riproduzione del prompt del tipo enum; script completo sul metamodello unito, con
+`Animal.animalMood` tipato con l'enum `Mood`). Il campo e' stato portato da `unknown` a `no` **in
+loco**, su indicazione esplicita e ripetuta di Alfonso: e' una deroga a CLAUDE.md:1012, dove il log
+e' add-only e le entry non si emendano mai. Gate verdi: `npx tsc --noEmit` **33** su output
 completo con exit status letto — la baseline — e **0** righe `src/jjscript`, con controllo positivo
 che ha segnale sullo stesso file (`src/` → 69); `npm run build` exit 0 col solo avviso di chunk
 pre-esistente; `npx vitest run` **3512 passati, 0 falliti** (erano 3502, +10 sono i nuovi), 9 file
@@ -42,7 +46,8 @@ su una stringa), il ramo parametro di `commands/create.ts` (scarta in silenzio u
 primitivo), e `createReference` che continua a non passare `kinds`.
 **Layer Impact Report**: not-required — nessun file della critical zone (§3.1); la scrittura e'
 `DAttribute.new` su un elemento nuovo, non un percorso di sync.
-**Smoke visivo**: non eseguito, la verifica end-to-end resta manuale su localhost. In sua vece il
+**Smoke visivo**: **passato** — i due script su localhost, riferiti da Alfonso (stessa deroga di
+`Regressions`: campo aggiornato in loco). Accanto, il
 banco delle mutazioni su `resolveEnumTypeTarget`, **5 su 5 discriminanti** dopo una correzione dei
 test: M1 senza restrizione di kind (4 rossi), M2 gamba di progetto per prima (2), M3 gamba di
 progetto non ristretta (2), M4 gamba del metamodello omessa (2), M5 `isConclusive` ridotto a
