@@ -13,6 +13,54 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-11 — fix(jjscript): la risoluzione del target dopo `in` ristretta ai kind ammissibili
+**Prompt**: due fasi. `create literal HAPPY in Mood` falliva con «Cannot create literal in
+attribute 'mood'»: il resolver del target cercava case-insensitive su ogni kind e restituiva il
+primo in ordine di collezione. Fase 1 read-only con hard stop e referto; Fase 2 dopo il via, con
+tre risposte che hanno ristretto il perimetro (10.1 ramo corrente, 10.2 test a livello di resolver,
+10.3 il tipo enum degli attributi fuori scope).
+**Files touched**: 8, dichiarati in chat prima del diff (RC-11, soglia di regola 19 superata).
+Codice in `7bacbd63c`: `jjscript/executor/resolvers.ts` (selezione kind-aware: esatto prima,
+ripiego case-insensitive unico, ambiguita' dichiarata; `ResolutionKind`, `TargetResolution`,
+`kindLabel`, `TARGET_KINDS_BY_ELEMENT_TYPE`, `CONTAINER_KINDS`, piu' `resolveTargetInMetamodel` /
+`resolveTargetInProject`), `commands/create.ts` (tabella dei kind del parent, messaggi di
+ambiguita' e di non-trovato che nominano il kind), `commands/delete.ts`, `commands/rename.ts`,
+`commands/list.ts` (passano i kind ammissibili), `executor/__tests__/resolvers.test.ts` (nuovo,
+25 test). Docs in questo commit: il referto
+`docs/discovery/discovery_2026-09-11_jjscript_target_resolution.md` e questa entry. I due
+`ValidationRulesModal.*` sporchi sono di un'altra corsia: non toccati, non committati (RC-13).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown. I gate sono verdi — `npx tsc --noEmit` **33** su output completo con
+exit status letto, la baseline dichiarata, zero errori nei file toccati (controllo positivo: lo
+stesso file filtrato su `jjscript` non stampa nulla mentre il totale e' 33); `npm run build` exit 0
+con il solo avviso di chunk pre-esistente; `npx vitest run` **3496 test passati, 0 falliti**
+(erano 3471, +25 sono i nuovi), 9 file falliscono all'import per `window` sotto
+`environment: 'node'`, lo stesso insieme pre-esistente. Resta `unknown` e non `no` perche' il
+comportamento cambia anche per i 9 chiamanti **non** ristretti: la precedenza al caso esatto e il
+backtracking sul membro valgono per tutti, e nessuno dei due e' stato visto nell'app in esecuzione.
+**Out-of-scope changes**: no — ogni file e' il resolver, un suo chiamante dentro JjScript, il test
+nuovo, il referto o il log, cioe' il perimetro che il prompt elenca. Sono 6 file di codice, sopra
+la soglia di 5 della regola 19: elencati in chat con cosa cambia in ciascuno prima del diff e
+ripetuti qui (RC-11). Non toccati e dichiarati aperti i siti del referto §4.5 (`extends.ts`,
+`abstract.ts`, `move`/`copy`/`remove`, `superClass` e il tipo di `reference` in `create.ts`): hanno
+lo stesso difetto ma non la parola `in`.
+**Layer Impact Report**: not-required — nessun file della critical zone (§3.1). Il tocco al
+D-layer e' in sola lettura: i resolver leggono i proxy L, non scrivono.
+**Smoke visivo**: non eseguito in questo giro, per decisione 10.2: la verifica end-to-end dello
+script di riproduzione e' manuale su localhost e resta da fare. In sua vece, banco delle mutazioni
+sul resolver, **5 su 5 discriminanti** — M1 senza precedenza al caso esatto (5 rossi), M2 senza
+filtro di kind (4), M3 ambiguita' che ripiega sul primo (2), M4 membro applicato dopo il test di
+kind (2), M5 ultimo segmento che torna a fermarsi alla prima collezione (4). Ogni mutazione
+arrossa asserzioni sue; sorgente ripristinato byte per byte (`diff -q` verde, 25/25 dopo).
+**Notes**: Il commit di codice va **cherry-picked su `alfonso-frontend-jjtl`**, il ramo che il
+prompt dichiara; i file in perimetro erano byte-identici sui due rami (referto §0). Due premesse
+del prompt smentite dalla misura, entrambe in `discovery_2026-09-11_jjscript_target_resolution.md`
+§8: il test end-to-end sull'executor non gira sotto `environment: 'node'`, e il tipo enum degli
+attributi e' un secondo difetto, fuori scope per 10.3.
+**Prompt document name**: 2026-09-11 10:15
+
 ## 2026-09-09 — feat(sidebar): i tre concern sotto VIEWPOINTS (R-VAL-19, 19-bis)
 **Prompt**: Fase 2 su `validation-skeleton`. Un ramo `VIEWPOINTS` con `SYNTAX`, `DATA MANAGER`,
 `VALIDATION`; il Data Manager scende di un livello, `VALIDATION` nasce con le regole in piano e la
