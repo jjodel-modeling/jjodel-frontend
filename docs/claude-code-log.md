@@ -13,6 +13,48 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-12 — fix(jjscript): il tipo enum degli attributi risolto, niente piu' ripiego su EString
+**Prompt**: `claude_2026-09-11_1800_prompt_jjscript_attribute_enum_type.md`, Fase 2 dopo il via.
+Risposte: §9.1 il resolver nuovo sta in `resolvers.ts` e `create.ts` non contiene logica di lookup;
+§9.4 il tipo sconosciuto e' un errore, cambiamento di comportamento dichiarato; §9.2 e §9.3 avevano
+l'opzione conservativa, presa (vedi `Out-of-scope changes`).
+**Files touched**: 3 di codice in `39c5bf4ab` — `jjscript/executor/resolvers.ts`
+(`resolveEnumTypeTarget`), `jjscript/executor/commands/create.ts` (`PRIMITIVE_ATTRIBUTE_TYPES`,
+`primitiveAttributeType`, `AttributeTypeOutcome`, `resolveAttributeType`, la firma di
+`createAttribute` e il suo sito di chiamata), `jjscript/executor/__tests__/resolvers.test.ts`
+(+10 test, 41 in tutto). Docs in questo commit: questa entry. I due `ValidationRulesModal.*`
+restano dell'altra corsia (RC-13).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown, fino alla verifica visiva. Gate verdi: `npx tsc --noEmit` **33** su output
+completo con exit status letto — la baseline — e **0** righe `src/jjscript`, con controllo positivo
+che ha segnale sullo stesso file (`src/` → 69); `npm run build` exit 0 col solo avviso di chunk
+pre-esistente; `npx vitest run` **3512 passati, 0 falliti** (erano 3502, +10 sono i nuovi), 9 file
+rossi all'import per `window`, l'insieme pre-esistente.
+**Out-of-scope changes**: no. **Cambiamento di comportamento dichiarato** (§9.4): un tipo non
+risolvibile ora e' un errore e la riga viene saltata con
+`Unknown type '<Name>' for attribute '<attr>'. Expected a primitive type or an enum.`, dove prima
+era un falso successo. I progetti salvati non cambiano: il fix tocca solo l'esecuzione.
+**Debito dichiarato**, stessa famiglia ma percorsi diversi, non toccati (opzione conservativa di
+§9.2/§9.3): `commands/set.ts:272` (`set <el> type <X>` risolve di progetto senza `kinds` e ripiega
+su una stringa), il ramo parametro di `commands/create.ts` (scarta in silenzio un tipo non
+primitivo), e `createReference` che continua a non passare `kinds`.
+**Layer Impact Report**: not-required — nessun file della critical zone (§3.1); la scrittura e'
+`DAttribute.new` su un elemento nuovo, non un percorso di sync.
+**Smoke visivo**: non eseguito, la verifica end-to-end resta manuale su localhost. In sua vece il
+banco delle mutazioni su `resolveEnumTypeTarget`, **5 su 5 discriminanti** dopo una correzione dei
+test: M1 senza restrizione di kind (4 rossi), M2 gamba di progetto per prima (2), M3 gamba di
+progetto non ristretta (2), M4 gamba del metamodello omessa (2), M5 `isConclusive` ridotto a
+`scoped.element` (1). **M2, M4 e M5 sopravvivevano** al primo giro: nessuna fixture metteva lo
+stesso nome in due metamodelli, quindi «prima il metamodello» non era osservabile. Aggiunte le due
+fixture, uccidono. Sorgente ripristinato byte per byte (`diff -q` verde, 41/41 dopo).
+**Notes**: Il tipo arriva al resolver come `QualifiedName` intatto, mai via `rawTypeName` (che
+appiattirebbe `MM::Mood` in stringa). L'id dell'enumeratore finisce in `DAttribute.type`, la stessa
+rappresentazione che scrivono `Info.tsx:316` e `canvasToJjom.ts:674`. Referto:
+`discovery_2026-09-11_attribute_enum_type.md`.
+**Prompt document name**: 2026-09-11 18:00
+
 ## 2026-09-12 — discovery: `create attribute ... type <Enum>` ripiega su EString in silenzio
 **Prompt**: `claude_2026-09-11_1800_prompt_jjscript_attribute_enum_type.md`, Fase 1 read-only con
 hard stop. Stabilire cosa decide il tipo di un attributo, come e' rappresentato un attributo tipato
