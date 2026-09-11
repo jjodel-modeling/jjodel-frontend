@@ -8,6 +8,198 @@ import { qualifiedNameToString, matchQualifiedName, parseQualifiedName } from '.
 import { LProject, LModel } from '../../joiner';
 
 // ============================================
+// TARGET KINDS
+// ============================================
+
+/**
+ * The element kinds a resolution target can be restricted to.
+ *
+ * Matched against the candidate's **D-layer** `className` ('DClass', 'DEnumerator', ...):
+ * an L-proxy reports the D name, never the L name (CLAUDE.md §3.13), so a matcher written
+ * against 'LClass' would silently never fire.
+ */
+export type ResolutionKind =
+    | 'class' | 'enum' | 'literal' | 'attribute' | 'reference'
+    | 'operation' | 'parameter' | 'package' | 'model';
+
+/**
+ * Same substring tests the command handlers already use for their own guards
+ * (`isClass`/`isEnum`/`isOperation` in create.ts, `getItemType` in list.ts), kept in one
+ * place so a resolution and the guard that follows it cannot disagree.
+ */
+const KIND_MATCHERS: { [K in ResolutionKind]: (className: string) => boolean } = {
+    class:     (cn) => cn.includes('Class') && !cn.includes('DataType'),
+    enum:      (cn) => cn.includes('Enum') && !cn.includes('Literal'),
+    literal:   (cn) => cn.includes('Literal'),
+    attribute: (cn) => cn.includes('Attribute'),
+    reference: (cn) => cn.includes('Reference'),
+    operation: (cn) => cn.includes('Operation'),
+    parameter: (cn) => cn.includes('Parameter'),
+    package:   (cn) => cn.includes('Package'),
+    model:     (cn) => cn.includes('Model') && !cn.includes('ModelElement'),
+};
+
+const KIND_LABELS: { [K in ResolutionKind]: string } = {
+    class: 'Class', enum: 'Enum', literal: 'Literal', attribute: 'Attribute',
+    reference: 'Reference', operation: 'Operation', parameter: 'Parameter',
+    package: 'Package', model: 'Model',
+};
+
+/**
+ * Human-readable name of the expected kind, for error messages:
+ * `['enum'] -> "Enum"`, `['package','model'] -> "Package or Model"`.
+ * Falls back to a neutral word when the caller restricted nothing.
+ */
+export function kindLabel(kinds?: ResolutionKind[]): string {
+    if (!kinds || kinds.length === 0) return 'Element';
+    const names = kinds.map((k) => KIND_LABELS[k]).filter(Boolean);
+    if (names.length === 0) return 'Element';
+    if (names.length === 1) return names[0];
+    return names.slice(0, -1).join(', ') + ' or ' + names[names.length - 1];
+}
+
+/**
+ * The kinds a `<command> <elementType> ... in <Target>` target may be, when the command
+ * names the element type explicitly. Shared by delete and rename, which both fold their
+ * `in` clause into a `Parent.member` qualified name and resolve it through `resolveElement`.
+ */
+export const TARGET_KINDS_BY_ELEMENT_TYPE: { [elementType: string]: ResolutionKind[] } = {
+    'class':          ['class'],
+    'abstract class': ['class'],
+    'interface':      ['class'],
+    'attribute':      ['attribute'],
+    'reference':      ['reference'],
+    'operation':      ['operation'],
+    'parameter':      ['parameter'],
+    'package':        ['package'],
+    'enum':           ['enum'],
+    'enumeration':    ['enum'],
+    'literal':        ['literal'],
+};
+
+/** Anything that can hold other elements — the admissible kinds for a scope filter. */
+export const CONTAINER_KINDS: ResolutionKind[] = ['package', 'model', 'class', 'enum'];
+
+function matchesKind(element: any, kinds?: ResolutionKind[]): boolean {
+    if (!kinds || kinds.length === 0) return true;
+    const className: string = element?.className || element?.constructor?.name || '';
+    if (!className) return false;
+    return kinds.some((k) => KIND_MATCHERS[k]?.(className) === true);
+}
+
+/**
+ * Outcome of a target resolution.
+ *
+ * `ambiguousWith` is set only when a **kind-restricted** case-insensitive fallback matched
+ * more than one admissible element: picking one of them arbitrarily is what this whole
+ * module is being fixed for, so the caller is told instead. An unrestricted call keeps the
+ * historical first-match-wins behaviour and never reports ambiguity.
+ */
+export interface TargetResolution {
+    /** The resolved element, or null when nothing admissible matched (ambiguity included). */
+    element: any | null;
+    /** The colliding spellings, when the fallback could not choose. */
+    ambiguousWith?: string[];
+}
+
+const NOT_FOUND: TargetResolution = { element: null };
+
+/**
+ * Collections searched at each step of a path walk. The order used to decide which element
+ * won a case-insensitive collision (an attribute named `mood` beat an enum named `Mood`
+ * because 'attributes' comes five entries before 'enumerators'); it no longer does —
+ * `selectTarget` now looks at every collection before choosing.
+ */
+const METAMODEL_COLLECTIONS = [
+    'packages', 'subPackages', 'classifiers', 'classes',
+    'attributes', 'references', 'operations', 'parameters',
+    'literals', 'enumerators'
+];
+
+const PROJECT_COLLECTIONS = [
+    'metamodels', 'models', 'packages', 'subPackages',
+    'classifiers', 'classes', 'attributes', 'references',
+    'operations', 'parameters', 'literals', 'enumerators'
+];
+
+/** Every element of `current`'s collections whose name matches `segmentName` ignoring case. */
+function collectByName(current: any, segmentName: string, collections: string[]): any[] {
+    if (!current) return [];
+    const lower = segmentName.toLowerCase();
+    const out: any[] = [];
+    for (const collName of collections) {
+        const collection = current[collName];
+        if (!Array.isArray(collection)) continue;
+        for (const item of collection) {
+            const name = item?.name;
+            if (typeof name === 'string' && name.toLowerCase() === lower) out.push(item);
+        }
+    }
+    return out;
+}
+
+/**
+ * Choose one element out of the candidates that matched a name ignoring case.
+ *
+ * The rule, in order:
+ *   1. an **exact-case** match among the admissible kinds wins;
+ *   2. otherwise a case-insensitive match wins, but only if it is the only admissible one;
+ *   3. more than one admissible case-insensitive candidate is an ambiguity, reported to
+ *      the caller rather than resolved by insertion order — but only when `kinds` restricts
+ *      the search, so unrestricted callers keep the behaviour they had;
+ *   4. nothing admissible is a miss, and the caller moves on to its next strategy.
+ *
+ * `member` is applied to each candidate **before** the kind test, so a candidate whose
+ * member does not resolve simply drops out and the next one is tried. That is what lets
+ * `delete literal HAPPY in Mood` skip past the attribute named `mood` to the enum `Mood`,
+ * without a separate code path for the `Parent.member` form.
+ */
+function selectTarget(
+    candidates: any[],
+    segmentName: string,
+    member?: string,
+    kinds?: ResolutionKind[]
+): TargetResolution {
+    const exact: any[] = [];
+    const loose: Array<{ element: any; matchedName: string }> = [];
+    const seen = new Set<any>();
+    const lower = segmentName.toLowerCase();
+
+    for (const candidate of candidates) {
+        const matchedName = candidate?.name;
+        if (typeof matchedName !== 'string') continue;
+
+        const element = member ? resolveMember(candidate, member) : candidate;
+        if (!element) continue;
+        if (!matchesKind(element, kinds)) continue;
+
+        // The same element shows up in more than one collection ('classifiers' and
+        // 'classes' overlap); count it once.
+        const key = element.id ?? element;
+        if (seen.has(key)) continue;
+        seen.add(key);
+
+        if (matchedName === segmentName) exact.push(element);
+        else if (matchedName.toLowerCase() === lower) loose.push({ element, matchedName });
+    }
+
+    if (exact.length > 0) return { element: exact[0] };
+    if (loose.length === 1) return { element: loose[0].element };
+    if (loose.length > 1) {
+        if (kinds && kinds.length > 0) {
+            return { element: null, ambiguousWith: loose.map((l) => l.matchedName) };
+        }
+        return { element: loose[0].element };
+    }
+    return NOT_FOUND;
+}
+
+/** True when a resolution is settled: either it found something, or it found too much. */
+function isConclusive(r: TargetResolution): boolean {
+    return !!r.element || !!r.ambiguousWith;
+}
+
+// ============================================
 // METAMODEL-SCOPED RESOLVER (PREFERRED)
 // ============================================
 
@@ -18,37 +210,39 @@ import { LProject, LModel } from '../../joiner';
  *
  * @param target - The qualified name to resolve
  * @param metamodel - The metamodel to search within
+ * @param kinds - Optional restriction to the element kinds the caller can accept.
+ *   Omitting it searches every kind, which is what every pre-existing call site does.
  * @returns The resolved element or null
  */
-export function resolveElementInMetamodel(target: QualifiedName, metamodel: LModel): any {
-    if (!target || !metamodel) return null;
+export function resolveElementInMetamodel(
+    target: QualifiedName, metamodel: LModel, kinds?: ResolutionKind[]
+): any {
+    return resolveTargetInMetamodel(target, metamodel, kinds).element;
+}
+
+/**
+ * The same resolution as `resolveElementInMetamodel`, reporting *why* it found nothing.
+ * Callers that want to tell the user «ambiguous» apart from «not found» use this one.
+ */
+export function resolveTargetInMetamodel(
+    target: QualifiedName, metamodel: LModel, kinds?: ResolutionKind[]
+): TargetResolution {
+    if (!target || !metamodel) return NOT_FOUND;
 
     const segments = target.segments;
-    if (segments.length === 0) return null;
-
-    let result: any = null;
+    if (segments.length === 0) return NOT_FOUND;
 
     // Strategy 1: Direct path resolution within metamodel
-    result = resolveByPathInMetamodel(segments, metamodel);
-    if (result) {
-        if (target.member) {
-            result = resolveMember(result, target.member);
-        }
-        return result;
-    }
+    let result = resolveByPathInMetamodel(segments, metamodel, target.member, kinds);
+    if (isConclusive(result)) return result;
 
     // Strategy 2: Name-only resolution within metamodel
     if (segments.length === 1) {
-        result = resolveByNameInMetamodel(segments[0], metamodel);
-        if (result) {
-            if (target.member) {
-                result = resolveMember(result, target.member);
-            }
-            return result;
-        }
+        result = resolveByNameInMetamodel(segments[0], metamodel, target.member, kinds);
+        if (isConclusive(result)) return result;
     }
 
-    return null;
+    return NOT_FOUND;
 }
 
 /**
@@ -110,55 +304,53 @@ function findClassInPackage(className: string, pkg: any): any {
 }
 
 /**
- * Resolve by path within a specific metamodel
+ * Resolve by path within a specific metamodel.
+ *
+ * Intermediate segments keep the historical walk: first collection that holds a name
+ * match wins, since they are containers and the kind restriction does not describe them.
+ * The **last** segment is the target, so every collection is consulted before choosing
+ * (see `selectTarget`).
  */
-function resolveByPathInMetamodel(segments: string[], metamodel: LModel): any {
-    if (segments.length === 0) return null;
+function resolveByPathInMetamodel(
+    segments: string[], metamodel: LModel, member?: string, kinds?: ResolutionKind[]
+): TargetResolution {
+    if (segments.length === 0) return NOT_FOUND;
 
     let current: any = metamodel;
 
     for (let i = 0; i < segments.length; i++) {
-        const segmentName = segments[i].toLowerCase();
-        let found = false;
+        const segmentName = segments[i];
+        const isLast = i === segments.length - 1;
+        const matches = collectByName(current, segmentName, METAMODEL_COLLECTIONS);
 
-        // Try to find in metamodel collections (no cross-metamodel search)
-        const collections = [
-            'packages', 'subPackages', 'classifiers', 'classes',
-            'attributes', 'references', 'operations', 'parameters',
-            'literals', 'enumerators'
-        ];
+        if (isLast) {
+            const picked = selectTarget(matches, segmentName, member, kinds);
+            if (isConclusive(picked)) return picked;
 
-        for (const collName of collections) {
-            const collection = current[collName];
-            if (Array.isArray(collection)) {
-                const match = collection.find((item: any) =>
-                    item?.name?.toLowerCase() === segmentName
-                );
-                if (match) {
-                    current = match;
-                    found = true;
-                    break;
-                }
+            // Also check direct name match — `current` itself may be the target.
+            if (current?.name?.toLowerCase() === segmentName.toLowerCase()) {
+                return selectTarget([current], segmentName, member, kinds);
             }
+            return NOT_FOUND;
         }
 
-        // Also check direct name match
-        if (!found && current.name?.toLowerCase() === segmentName) {
-            found = true;
-        }
+        if (matches.length > 0) { current = matches[0]; continue; }
 
-        if (!found) {
-            return null;
-        }
+        // Also check direct name match: stay on `current` for this segment.
+        if (current?.name?.toLowerCase() === segmentName.toLowerCase()) continue;
+
+        return NOT_FOUND;
     }
 
-    return current;
+    return NOT_FOUND;
 }
 
 /**
  * Resolve by name within a specific metamodel only
  */
-function resolveByNameInMetamodel(name: string, metamodel: LModel): any {
+function resolveByNameInMetamodel(
+    name: string, metamodel: LModel, member?: string, kinds?: ResolutionKind[]
+): TargetResolution {
     const nameLower = name.toLowerCase();
     const results: any[] = [];
 
@@ -171,13 +363,7 @@ function resolveByNameInMetamodel(name: string, metamodel: LModel): any {
         }
 
         // Search in collections (no metamodels/models - stay within this metamodel)
-        const collections = [
-            'packages', 'subPackages', 'classifiers', 'classes',
-            'attributes', 'references', 'operations', 'parameters',
-            'literals', 'enumerators'
-        ];
-
-        for (const collName of collections) {
+        for (const collName of METAMODEL_COLLECTIONS) {
             const collection = item[collName];
             if (Array.isArray(collection)) {
                 for (const child of collection) {
@@ -189,8 +375,7 @@ function resolveByNameInMetamodel(name: string, metamodel: LModel): any {
 
     search(metamodel);
 
-    // Return first match within this metamodel
-    return results.length > 0 ? results[0] : null;
+    return selectTarget(results, name, member, kinds);
 }
 
 /**
@@ -214,45 +399,41 @@ export function getMetamodelById(project: LProject, metamodelId: string): LModel
  * If there are duplicate names across metamodels, it may return the wrong element.
  * Prefer using resolveElementInMetamodel() when you know the target metamodel.
  */
-export function resolveElement(target: QualifiedName, project: LProject): any {
-    if (!target || !project) return null;
+export function resolveElement(
+    target: QualifiedName, project: LProject, kinds?: ResolutionKind[]
+): any {
+    return resolveTargetInProject(target, project, kinds).element;
+}
+
+/**
+ * The same resolution as `resolveElement`, reporting *why* it found nothing.
+ * Callers that want to tell the user «ambiguous» apart from «not found» use this one.
+ */
+export function resolveTargetInProject(
+    target: QualifiedName, project: LProject, kinds?: ResolutionKind[]
+): TargetResolution {
+    if (!target || !project) return NOT_FOUND;
 
     const segments = target.segments;
-    if (segments.length === 0) return null;
+    if (segments.length === 0) return NOT_FOUND;
 
     // Try multiple resolution strategies
-    let result: any = null;
 
     // Strategy 1: Direct path resolution (Package::Class::Member)
-    result = resolveByPath(segments, project);
-    if (result) {
-        if (target.member) {
-            result = resolveMember(result, target.member);
-        }
-        return result;
-    }
+    let result = resolveByPath(segments, project, target.member, kinds);
+    if (isConclusive(result)) return result;
 
     // Strategy 2: Name-only resolution (search all elements)
     if (segments.length === 1) {
-        result = resolveByName(segments[0], project);
-        if (result) {
-            if (target.member) {
-                result = resolveMember(result, target.member);
-            }
-            return result;
-        }
+        result = resolveByName(segments[0], project, target.member, kinds);
+        if (isConclusive(result)) return result;
     }
 
     // Strategy 3: Partial path match
-    result = resolvePartialPath(segments, project);
-    if (result) {
-        if (target.member) {
-            result = resolveMember(result, target.member);
-        }
-        return result;
-    }
+    result = resolvePartialPath(segments, project, target.member, kinds);
+    if (isConclusive(result)) return result;
 
-    return null;
+    return NOT_FOUND;
 }
 
 /**
@@ -270,56 +451,52 @@ export function resolveParent(parent: QualifiedName | undefined, project: LProje
 // ============================================
 
 /**
- * Resolve by full path (Package::SubPackage::Element)
+ * Resolve by full path (Package::SubPackage::Element).
+ *
+ * Same shape as `resolveByPathInMetamodel`: intermediate segments are containers and keep
+ * the first-match walk, the last segment is the target and goes through `selectTarget`.
  */
-function resolveByPath(segments: string[], project: LProject): any {
-    if (segments.length === 0) return null;
+function resolveByPath(
+    segments: string[], project: LProject, member?: string, kinds?: ResolutionKind[]
+): TargetResolution {
+    if (segments.length === 0) return NOT_FOUND;
 
     // Start from project
     let current: any = project;
 
     for (let i = 0; i < segments.length; i++) {
-        const segmentName = segments[i].toLowerCase();
-        let found = false;
+        const segmentName = segments[i];
+        const isLast = i === segments.length - 1;
+        const matches = collectByName(current, segmentName, PROJECT_COLLECTIONS);
 
-        // Try to find in various collections
-        const collections = [
-            'metamodels', 'models', 'packages', 'subPackages',
-            'classifiers', 'classes', 'attributes', 'references',
-            'operations', 'parameters', 'literals', 'enumerators'
-        ];
+        if (isLast) {
+            const picked = selectTarget(matches, segmentName, member, kinds);
+            if (isConclusive(picked)) return picked;
 
-        for (const collName of collections) {
-            const collection = current[collName];
-            if (Array.isArray(collection)) {
-                const match = collection.find((item: any) =>
-                    item?.name?.toLowerCase() === segmentName
-                );
-                if (match) {
-                    current = match;
-                    found = true;
-                    break;
-                }
+            // Also check direct name match — `current` itself may be the target.
+            if (current?.name?.toLowerCase() === segmentName.toLowerCase()) {
+                return selectTarget([current], segmentName, member, kinds);
             }
+            return NOT_FOUND;
         }
 
-        // Also check direct name match
-        if (!found && current.name?.toLowerCase() === segmentName) {
-            found = true;
-        }
+        if (matches.length > 0) { current = matches[0]; continue; }
 
-        if (!found) {
-            return null;
-        }
+        // Also check direct name match: stay on `current` for this segment.
+        if (current?.name?.toLowerCase() === segmentName.toLowerCase()) continue;
+
+        return NOT_FOUND;
     }
 
-    return current;
+    return NOT_FOUND;
 }
 
 /**
  * Resolve by name only (search all elements in project)
  */
-function resolveByName(name: string, project: LProject): any {
+function resolveByName(
+    name: string, project: LProject, member?: string, kinds?: ResolutionKind[]
+): TargetResolution {
     const nameLower = name.toLowerCase();
     const results: any[] = [];
 
@@ -332,13 +509,7 @@ function resolveByName(name: string, project: LProject): any {
         }
 
         // Search in collections
-        const collections = [
-            'metamodels', 'models', 'packages', 'subPackages',
-            'classifiers', 'classes', 'attributes', 'references',
-            'operations', 'parameters', 'literals', 'enumerators'
-        ];
-
-        for (const collName of collections) {
+        for (const collName of PROJECT_COLLECTIONS) {
             const collection = item[collName];
             if (Array.isArray(collection)) {
                 for (const child of collection) {
@@ -350,22 +521,24 @@ function resolveByName(name: string, project: LProject): any {
 
     search(project);
 
-    // Return first match (could be improved to handle ambiguity)
-    return results.length > 0 ? results[0] : null;
+    return selectTarget(results, name, member, kinds);
 }
 
 /**
  * Resolve partial path (try to match suffix)
  */
-function resolvePartialPath(segments: string[], project: LProject): any {
+function resolvePartialPath(
+    segments: string[], project: LProject, member?: string, kinds?: ResolutionKind[]
+): TargetResolution {
     // Try matching from the last segment backwards
     const results: any[] = [];
+    const lastSegmentRaw = segments[segments.length - 1];
 
     function search(item: any, depth: number = 0): void {
         if (!item) return;
 
         // Check if this item matches the last segment
-        const lastSegment = segments[segments.length - 1].toLowerCase();
+        const lastSegment = lastSegmentRaw.toLowerCase();
         if (item.name?.toLowerCase() === lastSegment) {
             // Verify the path matches
             if (verifyPath(item, segments)) {
@@ -374,13 +547,7 @@ function resolvePartialPath(segments: string[], project: LProject): any {
         }
 
         // Search in collections
-        const collections = [
-            'metamodels', 'models', 'packages', 'subPackages',
-            'classifiers', 'classes', 'attributes', 'references',
-            'operations', 'parameters', 'literals', 'enumerators'
-        ];
-
-        for (const collName of collections) {
+        for (const collName of PROJECT_COLLECTIONS) {
             const collection = item[collName];
             if (Array.isArray(collection)) {
                 for (const child of collection) {
@@ -391,7 +558,7 @@ function resolvePartialPath(segments: string[], project: LProject): any {
     }
 
     search(project);
-    return results.length > 0 ? results[0] : null;
+    return selectTarget(results, lastSegmentRaw, member, kinds);
 }
 
 /**

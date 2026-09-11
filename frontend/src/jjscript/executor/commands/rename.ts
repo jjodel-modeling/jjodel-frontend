@@ -8,7 +8,7 @@ import {
     ExecutionResult,
     ExecutionContext
 } from '../../types';
-import { resolveElement } from '../resolvers';
+import { resolveTargetInProject, kindLabel, TARGET_KINDS_BY_ELEMENT_TYPE } from '../resolvers';
 import { qualifiedNameToString, isValidIdentifier } from '../../parser/grammar';
 import { getProject } from '../utils';
 import { executeRenameInstance } from './instance';
@@ -59,16 +59,32 @@ export async function executeRename(
             return executeRenameInstance(args, context, project);
         }
 
-        // Resolve the target element
-        const element = resolveElement(target, project);
+        // Resolve the target element, restricted to the named element type when the
+        // command gives one (same reasoning as delete: `in <Parent>` is folded into
+        // `Parent.member`, so the container has to be resolved to the right kind).
+        const targetKinds = args.elementType ? TARGET_KINDS_BY_ELEMENT_TYPE[args.elementType] : undefined;
+        const resolution = resolveTargetInProject(target, project, targetKinds);
+        if (resolution.ambiguousWith) {
+            return {
+                success: false,
+                command: 'rename',
+                message: `'${qualifiedNameToString(target)}' is ambiguous: ${resolution.ambiguousWith.join(', ')}`,
+                errors: [{
+                    code: 'AMBIGUOUS_TARGET',
+                    message: `More than one ${kindLabel(targetKinds).toLowerCase()} matches '${qualifiedNameToString(target)}' ignoring case: ${resolution.ambiguousWith.join(', ')}`,
+                    suggestion: 'Use the exact name, matching case, of the one you mean'
+                }]
+            };
+        }
+        const element = resolution.element;
         if (!element) {
             return {
                 success: false,
                 command: 'rename',
-                message: `Element not found: ${qualifiedNameToString(target)}`,
+                message: `${kindLabel(targetKinds)} not found: ${qualifiedNameToString(target)}`,
                 errors: [{
                     code: 'ELEMENT_NOT_FOUND',
-                    message: `Could not find element '${qualifiedNameToString(target)}'`
+                    message: `Could not find ${kindLabel(targetKinds).toLowerCase()} '${qualifiedNameToString(target)}'`
                 }]
             };
         }
