@@ -13,6 +13,43 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-12 — chore(jjscript): la verifica manuale passa, i due fix su alfonso-frontend-jjtl
+**Prompt**: GO dopo la verifica visiva su localhost dei quattro casi (script originale;
+`delete literal HAPPY in Mood`; `create literal X in mood`; il caso di backtracking `Mood`/`mood`).
+Cherry-pick di `7bacbd63c` e `12a318b3a` sul ramo che il prompt del 2026-09-11 10:15 dichiarava,
+solo codice, e nota del cherry-pick in un commit di docs.
+**Files touched**: 1, questa entry. Nessun sorgente toccato in questo giro: i due commit sono stati
+riportati **as-is** con `git cherry-pick -x` (che incide la provenienza nel messaggio), non riscritti.
+Sul ramo di destinazione diventano `9b9730ed4` e `11f42aada`. Entrambi i sorgenti erano gia'
+solo-codice (6 file ciascuno, tutti sotto `frontend/src/jjscript/`), quindi «solo codice» non ha
+richiesto filtri. **Il cherry-pick e' avvenuto in un `git worktree` temporaneo**, non cambiando ramo
+in albero condiviso: i due `ValidationRulesModal.*` dell'altra corsia sono sporchi **e** diversi fra
+i due rami, quindi un `checkout` li avrebbe rifiutati o sovrascritti, e RC-13 vieta lo `stash` che e'
+la scorciatoia abituale. Worktree rimosso a fine giro.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. **Questa entry scioglie l'`unknown` dichiarato in `7bacbd63c` e `12a318b3a`**:
+quelle due entry non sono state emendate (CLAUDE.md:1012, il log e' add-only e le entry non si
+emendano mai), e il loro `unknown` resta il verdetto corretto al momento in cui fu scritto — nulla
+era ancora stato visto nell'app. La verifica manuale sui quattro casi e' passata su localhost.
+Gate sul ramo di destinazione dopo il cherry-pick: `npx vitest run` sul file dei resolver
+**31/31**; `npx tsc --noEmit` exit 2, **14** righe `error TS` su output completo — l'insieme
+«sparso» gia' dichiarato (`Measurable.tsx` ×6, `api/data.ts` ×3, `Dummy.ts`, `EditorV2.tsx`,
+`ChatMessages.tsx`, `ProjectEditor.tsx`, `Dashboard.tsx`), **0** in `src/jjscript` con due controlli
+positivi che hanno segnale sullo stesso file (`src/` → 14, `Measurable` → 6). I 19 errori di casing
+della baseline 33 non esistono su quel ramo: e' una proprieta' del ramo, non un effetto del giro.
+**Out-of-scope changes**: no.
+**Layer Impact Report**: not-required — nessun file della critical zone (§3.1); nessun sorgente
+modificato in questo giro.
+**Smoke visivo**: **passato** — i quattro casi su localhost, riferiti da Alfonso. E' la verifica che
+i due giri precedenti avevano lasciato aperta per decisione 10.2.
+**Notes**: I sei file portati combaciano **byte per byte** fra i due rami (`git diff --quiet` per
+file, con controllo positivo su `eval.ts` che DIFFERISCE per la divergenza pre-esistente di
+R-VAL-16). Resta aperto e dichiarato: i 9 chiamanti senza `kinds` (debito di `7bacbd63c`), che la
+corsia A1 chiudera' portando l'ambiguita' su entrambi i rami di `selectTarget` per tutti.
+**Prompt document name**: 2026-09-12 00:40
+
 ## 2026-09-11 — discovery: la risoluzione per nome e il suo scope in tutto il codebase
 **Prompt**: inventario read-only di ogni lookup per nome (contro puntatore), con lo scope di
 ciascuno, il consumatore che lo possiede e la regola di unicita' vigente — per misurare il costo
