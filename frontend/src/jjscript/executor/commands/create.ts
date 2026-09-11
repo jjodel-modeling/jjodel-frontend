@@ -12,7 +12,7 @@ import {
 import {
     resolveElement, resolveElementInMetamodel,
     resolveTargetInMetamodel, resolveTargetInProject,
-    kindLabel, ResolutionKind, TargetResolution
+    kindLabel, memberMissingMessage, ResolutionKind, TargetResolution
 } from '../resolvers';
 import { qualifiedNameToString } from '../../parser/grammar';
 import { getProject, getDefaultParent, needsParent, getTargetMetamodel } from '../utils';
@@ -234,6 +234,7 @@ export async function executeCreate(
         const parentKinds = PARENT_KINDS_BY_ELEMENT_TYPE[elementType];
         let parentElement;
         let parentAmbiguity: string[] | undefined;
+        let parentMemberMissing: TargetResolution['memberMissingOn'];
         if (parent) {
             // First try scoped resolution within target metamodel
             let resolution: TargetResolution = targetMetamodel
@@ -248,11 +249,12 @@ export async function executeCreate(
             }
             parentElement = resolution.element;
             parentAmbiguity = resolution.ambiguousWith;
+            parentMemberMissing = resolution.memberMissingOn;
 
             // Types with no downstream guard (class, enum, package: they take whatever
             // `father` they are handed) fall back to the unrestricted search rather than
             // failing, so a parent that used to resolve still does.
-            if (!parentElement && !parentAmbiguity && !needsParent(elementType)) {
+            if (!parentElement && !parentAmbiguity && !resolution.memberMissingOn && !needsParent(elementType)) {
                 parentElement = targetMetamodel
                     ? resolveElementInMetamodel(parent, targetMetamodel)
                     : null;
@@ -260,6 +262,21 @@ export async function executeCreate(
             }
         } else {
             parentElement = getDefaultParent(project, elementType);
+        }
+
+        if (parentMemberMissing) {
+            // e.g. `create parameter p in Shape.draw` where `draw` is not on `Shape`.
+            const missing = memberMissingMessage(parentMemberMissing, kindLabel(parentKinds));
+            return {
+                success: false,
+                command: 'create',
+                message: missing,
+                errors: [{
+                    code: 'MEMBER_NOT_FOUND',
+                    message: missing,
+                    suggestion: 'Check the member name, and the case of the container name'
+                }]
+            };
         }
 
         if (parentAmbiguity && parent) {

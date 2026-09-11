@@ -59,6 +59,19 @@ export function kindLabel(kinds?: ResolutionKind[]): string {
 }
 
 /**
+ * The label of the kind an element already is, for messages that name the container a
+ * member was looked for in.
+ */
+export function elementKindLabel(element: any): string {
+    const className: string = element?.className || element?.constructor?.name || '';
+    if (!className) return 'Element';
+    for (const k of Object.keys(KIND_MATCHERS) as ResolutionKind[]) {
+        if (KIND_MATCHERS[k](className)) return KIND_LABELS[k];
+    }
+    return 'Element';
+}
+
+/**
  * The kinds a `<command> <elementType> ... in <Target>` target may be, when the command
  * names the element type explicitly. Shared by delete and rename, which both fold their
  * `in` clause into a `Parent.member` qualified name and resolve it through `resolveElement`.
@@ -100,6 +113,12 @@ export interface TargetResolution {
     element: any | null;
     /** The colliding spellings, when the fallback could not choose. */
     ambiguousWith?: string[];
+    /**
+     * Set when a container that *could* hold the member was selected and the member is not
+     * on it. A settled answer, not a miss: the search stops instead of walking on to a
+     * case-only sibling and acting on an element the caller never named.
+     */
+    memberMissingOn?: { parentName: string; parentKind: string; member: string };
 }
 
 const NOT_FOUND: TargetResolution = { element: null };
@@ -121,6 +140,17 @@ const PROJECT_COLLECTIONS = [
     'classifiers', 'classes', 'attributes', 'references',
     'operations', 'parameters', 'literals', 'enumerators'
 ];
+
+/**
+ * The collections `resolveMember` searches. An element that exposes one of them is the sort
+ * of thing that can hold a member — whether or not it holds the one being asked for.
+ */
+const MEMBER_COLLECTIONS = ['attributes', 'references', 'operations', 'parameters', 'literals'];
+
+function canHoldMembers(element: any): boolean {
+    if (!element) return false;
+    return MEMBER_COLLECTIONS.some((c) => Array.isArray(element[c]));
+}
 
 /** Every element of `current`'s collections whose name matches `segmentName` ignoring case. */
 function collectByName(current: any, segmentName: string, collections: string[]): any[] {
@@ -149,10 +179,15 @@ function collectByName(current: any, segmentName: string, collections: string[])
  *      the search, so unrestricted callers keep the behaviour they had;
  *   4. nothing admissible is a miss, and the caller moves on to its next strategy.
  *
- * `member` is applied to each candidate **before** the kind test, so a candidate whose
- * member does not resolve simply drops out and the next one is tried. That is what lets
- * `delete literal HAPPY in Mood` skip past the attribute named `mood` to the enum `Mood`,
- * without a separate code path for the `Parent.member` form.
+ * `member` is applied to each candidate before the kind test, so a candidate whose member
+ * does not resolve can drop out and the next one be tried. That backtracking is what lets
+ * `delete literal HAPPY in Mood` step past the attribute named `mood` to the enum `Mood`,
+ * without a separate code path for the `Parent.member` form — but it is allowed **only past
+ * a candidate that could never have held the member**. A candidate that could (it exposes
+ * the collections `resolveMember` searches) is the answer, right or wrong: walking from it
+ * onto a case-only sibling would act on an element the caller never named, which is a worse
+ * failure than the one this module is being fixed for. Such a candidate settles the search
+ * as `memberMissingOn`.
  */
 function selectTarget(
     candidates: any[],
@@ -162,6 +197,10 @@ function selectTarget(
 ): TargetResolution {
     const exact: any[] = [];
     const loose: Array<{ element: any; matchedName: string }> = [];
+    // Candidates that can hold members but not the one asked for, kept apart so they can
+    // stop the search instead of being backtracked past.
+    const exactHolders: any[] = [];
+    const looseHolders: Array<{ element: any; matchedName: string }> = [];
     const seen = new Set<any>();
     const lower = segmentName.toLowerCase();
 
@@ -169,9 +208,20 @@ function selectTarget(
         const matchedName = candidate?.name;
         if (typeof matchedName !== 'string') continue;
 
+        const isExact = matchedName === segmentName;
+        if (!isExact && matchedName.toLowerCase() !== lower) continue;
+
         const element = member ? resolveMember(candidate, member) : candidate;
-        if (!element) continue;
-        if (!matchesKind(element, kinds)) continue;
+
+        if (!element || !matchesKind(element, kinds)) {
+            // Nothing usable on this candidate. Record it only if it was a plausible
+            // holder; otherwise let the loop move on, which is the legitimate backtrack.
+            if (member && canHoldMembers(candidate)) {
+                if (isExact) exactHolders.push(candidate);
+                else looseHolders.push({ element: candidate, matchedName });
+            }
+            continue;
+        }
 
         // The same element shows up in more than one collection ('classifiers' and
         // 'classes' overlap); count it once.
@@ -179,11 +229,16 @@ function selectTarget(
         if (seen.has(key)) continue;
         seen.add(key);
 
-        if (matchedName === segmentName) exact.push(element);
-        else if (matchedName.toLowerCase() === lower) loose.push({ element, matchedName });
+        if (isExact) exact.push(element);
+        else loose.push({ element, matchedName });
     }
 
     if (exact.length > 0) return { element: exact[0] };
+
+    // An exact-case container of the right sort outranks every case-insensitive sibling,
+    // even when the member is missing on it.
+    if (member && exactHolders.length > 0) return missingMember(exactHolders[0], member);
+
     if (loose.length === 1) return { element: loose[0].element };
     if (loose.length > 1) {
         if (kinds && kinds.length > 0) {
@@ -191,12 +246,41 @@ function selectTarget(
         }
         return { element: loose[0].element };
     }
+
+    if (member && looseHolders.length === 1) return missingMember(looseHolders[0].element, member);
+    if (member && looseHolders.length > 1 && kinds && kinds.length > 0) {
+        return { element: null, ambiguousWith: looseHolders.map((l) => l.matchedName) };
+    }
+    if (member && looseHolders.length > 1) return missingMember(looseHolders[0].element, member);
+
     return NOT_FOUND;
+}
+
+/**
+ * «Literal 'FOO' not found in Enum 'Mood'» — the message every command builds from a
+ * settled `memberMissingOn`, kept in one place so the four call sites cannot drift.
+ */
+export function memberMissingMessage(
+    missing: NonNullable<TargetResolution['memberMissingOn']>,
+    memberKind: string
+): string {
+    return `${memberKind} '${missing.member}' not found in ${missing.parentKind} '${missing.parentName}'`;
+}
+
+function missingMember(parent: any, member: string): TargetResolution {
+    return {
+        element: null,
+        memberMissingOn: {
+            parentName: parent?.name ?? '',
+            parentKind: elementKindLabel(parent),
+            member,
+        },
+    };
 }
 
 /** True when a resolution is settled: either it found something, or it found too much. */
 function isConclusive(r: TargetResolution): boolean {
-    return !!r.element || !!r.ambiguousWith;
+    return !!r.element || !!r.ambiguousWith || !!r.memberMissingOn;
 }
 
 // ============================================
