@@ -813,3 +813,38 @@ export function isAncestor(ancestor: any, descendant: any): boolean {
     }
     return false;
 }
+
+/**
+ * The enumerator a `type <Name>` clause names, for an attribute.
+ *
+ * The kind restriction is the whole point: without `['enum']` a class called `Mood`
+ * would answer for `type Mood` and the attribute would be typed with a class. Measured
+ * in `docs/discovery/discovery_2026-09-11_attribute_enum_type.md` §5 (R1/R2).
+ *
+ * Metamodel first, project second — the same order `createReference` already uses
+ * (`commands/create.ts`), so a name is read in the artefact being edited before the rest
+ * of the project is consulted. Both legs are kind-restricted, so the project leg cannot
+ * reach for an attribute or a class the way the unrestricted resolvers still do.
+ *
+ * Returns the full `TargetResolution`, never the bare element: the caller has to tell
+ * «no such enum» from «ambiguous», and those two are the SAME `element: null` on the
+ * `resolveElement*` shorthands. `ambiguousWith` is the discriminator.
+ *
+ * `Metamodel::Name` needs nothing special here — `PROJECT_COLLECTIONS` starts at
+ * `'metamodels'`, so the qualified walk already resolves (same referto, R3).
+ */
+export function resolveEnumTypeTarget(
+    name: QualifiedName,
+    metamodel: LModel | null | undefined,
+    project: LProject | null | undefined
+): TargetResolution {
+    const kinds: ResolutionKind[] = ['enum'];
+
+    if (metamodel) {
+        const scoped = resolveTargetInMetamodel(name, metamodel, kinds);
+        if (isConclusive(scoped)) return scoped;
+    }
+    if (project) return resolveTargetInProject(name, project, kinds);
+
+    return NOT_FOUND;
+}
