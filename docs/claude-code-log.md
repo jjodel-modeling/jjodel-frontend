@@ -13,6 +13,30 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-12 — discovery: `create attribute ... type <Enum>` ripiega su EString in silenzio
+**Prompt**: `claude_2026-09-11_1800_prompt_jjscript_attribute_enum_type.md`, Fase 1 read-only con
+hard stop. Stabilire cosa decide il tipo di un attributo, come e' rappresentato un attributo tipato
+con enum, se la risoluzione di `createReference` e' riusabile con restrizione di kind, e quali altri
+comandi accettano `type <Name>`.
+**Files touched**: 2, entrambi docs. Nuovo:
+`docs/discovery/discovery_2026-09-11_attribute_enum_type.md` (299 righe). Modificato: questa entry.
+Nessun sorgente toccato. I due `ValidationRulesModal.*` restano dell'altra corsia (RC-13).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — giro di sola lettura, nessun sorgente modificato.
+**Out-of-scope changes**: no.
+**Layer Impact Report**: not-required — nessun file della critical zone (§3.1) nel perimetro.
+**Smoke visivo**: non applicabile. In sua vece la sonda, **9 test su 9**, con `node_modules` in
+symlink fuori dal repo e nulla installato.
+**Notes**: I ripieghi silenziosi sono **due**, non uno (`create.ts:73` e il lookup
+`Defaults['Pointer_MOOD']`, misurato `undefined`): sanarne uno solo non cambia nulla. La
+rappresentazione **non va toccata** — `DAttribute.type` e' gia' un puntatore al `DEnumerator` — e
+la condizione di stop del prompt non scatta. Riferiti e non corretti: `set ... type` e
+`create parameter`. Dettaglio e 4 domande aperte in
+`discovery_2026-09-11_attribute_enum_type.md` §9.
+**Prompt document name**: 2026-09-11 18:00
+
 ## 2026-09-12 — chore(jjscript): la verifica manuale passa, i due fix su alfonso-frontend-jjtl
 **Prompt**: GO dopo la verifica visiva su localhost dei quattro casi (script originale;
 `delete literal HAPPY in Mood`; `create literal X in mood`; il caso di backtracking `Mood`/`mood`).
