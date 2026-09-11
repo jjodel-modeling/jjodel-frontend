@@ -9,7 +9,7 @@ import {
     ExecutionContext,
     ElementType
 } from '../../types';
-import { resolveTargetInProject, kindLabel, CONTAINER_KINDS } from '../resolvers';
+import { resolveTargetInProject, kindLabel, memberMissingMessage, CONTAINER_KINDS } from '../resolvers';
 import { qualifiedNameToString } from '../../parser/grammar';
 import { getProject } from '../utils';
 
@@ -43,6 +43,19 @@ export async function executeList(
         let scope: any = project;
         if (filter?.in) {
             const resolution = resolveTargetInProject(filter.in, project, CONTAINER_KINDS);
+            if (resolution.memberMissingOn) {
+                const missing = memberMissingMessage(resolution.memberMissingOn, 'Scope');
+                return {
+                    success: false,
+                    command: 'list',
+                    message: missing,
+                    errors: [{
+                        code: 'MEMBER_NOT_FOUND',
+                        message: missing,
+                        suggestion: 'Check the member name, and the case of the container name'
+                    }]
+                };
+            }
             if (resolution.ambiguousWith) {
                 return {
                     success: false,

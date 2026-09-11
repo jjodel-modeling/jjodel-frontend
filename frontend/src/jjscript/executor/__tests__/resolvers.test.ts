@@ -260,3 +260,86 @@ describe('the element-type tables', () => {
         expect(resolveElement(qn('title'), asProject(metamodel), CONTAINER_KINDS)).toBeNull();
     });
 });
+
+// ─── backtracking must not cross an admissible container ─────────────────────
+//
+// Two enums differing only by case, and the member lives on the one the user did NOT
+// name. Backtracking past a candidate is legitimate only when that candidate could not
+// have held the member in the first place (an attribute has no literals); it must never
+// walk from an exact-case container of the right sort onto a case-insensitive sibling.
+
+function buildTwoEnumsMetamodel() {
+    const foo = { name: 'FOO', className: 'DEnumLiteral', id: 'lit-foo-lower' };
+    const bar = { name: 'BAR', className: 'DEnumLiteral', id: 'lit-bar-upper' };
+    const upper = { name: 'Mood', className: 'DEnumerator', id: 'enum-Mood', literals: [bar] };
+    const lower = { name: 'mood', className: 'DEnumerator', id: 'enum-mood', literals: [foo] };
+    return {
+        metamodel: {
+            name: 'MM', className: 'DModel', id: 'mm-3', isMetamodel: true,
+            packages: [], classes: [], attributes: [], references: [],
+            operations: [], parameters: [], literals: [foo, bar], enumerators: [upper, lower],
+        } as any,
+        foo, bar, upper, lower,
+    };
+}
+
+describe('member backtracking stops at an admissible container', () => {
+    it('does not fall through from the exact-case enum onto its case-only sibling', () => {
+        // `delete literal FOO in Mood`: FOO is on `mood`, not on `Mood`. Acting on `mood`
+        // would delete a literal the user never named.
+        const { metamodel } = buildTwoEnumsMetamodel();
+        const resolution = resolveTargetInProject(qn('Mood', 'FOO'), asProject(metamodel), ['literal']);
+        expect(resolution.element).toBeNull();
+        expect(resolution.memberMissingOn).toEqual({
+            parentName: 'Mood', parentKind: 'Enum', member: 'FOO',
+        });
+    });
+
+    it('CONTROL: the member that IS on the exact-case enum resolves', () => {
+        const { metamodel, bar } = buildTwoEnumsMetamodel();
+        expect(resolveElement(qn('Mood', 'BAR'), asProject(metamodel), ['literal'])?.id).toBe(bar.id);
+    });
+
+    it('CONTROL: naming the other spelling reaches its own literal', () => {
+        const { metamodel, foo } = buildTwoEnumsMetamodel();
+        expect(resolveElement(qn('mood', 'FOO'), asProject(metamodel), ['literal'])?.id).toBe(foo.id);
+    });
+
+    it('still backtracks past a container that could never hold the member', () => {
+        // The attribute `mood` has no literals at all — stepping over it is the whole point
+        // of the member-before-kind ordering and must keep working.
+        const { metamodel, happy } = buildMetamodel();
+        expect(resolveElement(qn('Mood', 'HAPPY'), asProject(metamodel), ['literal'])?.id).toBe(happy.id);
+    });
+
+    it('backtracks past a NON-holder even when the non-holder is the exact spelling', () => {
+        // The attribute is spelled `Mood`, exactly as asked, and holds nothing; the enum is
+        // spelled `mood` and holds HAPPY. An attribute could never have held a literal, so
+        // stepping over it is legitimate and the enum is the answer. This is the case that
+        // separates «cannot hold members» from «happens not to hold this one»: without that
+        // distinction the exact-case attribute would stop the search and HAPPY be missed.
+        const attrMood = { name: 'Mood', className: 'DAttribute', id: 'attr-Mood' };
+        const happy = { name: 'HAPPY', className: 'DEnumLiteral', id: 'lit-happy-lower' };
+        const enumMood = { name: 'mood', className: 'DEnumerator', id: 'enum-mood', literals: [happy] };
+        const metamodel: any = {
+            name: 'MM', className: 'DModel', id: 'mm-4', isMetamodel: true,
+            packages: [], classes: [{ name: 'C', className: 'DClass', id: 'c', attributes: [attrMood] }],
+            attributes: [attrMood], references: [], operations: [], parameters: [],
+            literals: [happy], enumerators: [enumMood],
+        };
+        const resolution = resolveTargetInProject(qn('Mood', 'HAPPY'), asProject(metamodel), ['literal']);
+        expect(resolution.memberMissingOn).toBeUndefined();
+        expect(resolution.element?.id).toBe(happy.id);
+    });
+
+    it('a missing member on a uniquely selected case-insensitive container is an error too', () => {
+        // Only one enum now, spelled `mood`; the user asks for `MOOD.FOO` — wrong member.
+        const { metamodel } = buildTwoEnumsMetamodel();
+        metamodel.enumerators = [metamodel.enumerators[1]];   // keep `mood` only
+        const resolution = resolveTargetInProject(qn('MOOD', 'NOPE'), asProject(metamodel), ['literal']);
+        expect(resolution.element).toBeNull();
+        expect(resolution.memberMissingOn).toEqual({
+            parentName: 'mood', parentKind: 'Enum', member: 'NOPE',
+        });
+    });
+});
