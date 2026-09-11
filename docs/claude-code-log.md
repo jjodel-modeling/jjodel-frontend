@@ -13,6 +13,48 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-11 — fix(jjscript): il backtracking sul membro si ferma su un contenitore plausibile
+**Prompt**: controllo di correttezza prima del cherry-pick. Scenario: due enum `Mood` e `mood`
+(collisione di solo caso, ammessa come warning da `nameUniqueness`), comando
+`delete literal FOO in Mood` con FOO su `mood` e non su `Mood`. Prima scrivere il test a livello
+di resolver e riferire il risultato osservato; poi, se conferma il difetto, la correzione minima
+in `selectTarget`, tutti i test esistenti verdi, nessun amend, commit nuovo. In entry: (a) righe di
+codice contro righe di test in `7bacbd63c`, (b) il debito dichiarato sui chiamanti non ristretti.
+**Files touched**: 7. Codice in `12a318b3a`: `jjscript/executor/resolvers.ts`
+(`canHoldMembers`, `MEMBER_COLLECTIONS`, `elementKindLabel`, `memberMissingMessage`, il campo
+opzionale `memberMissingOn` su `TargetResolution`, la nuova precedenza in `selectTarget`,
+`isConclusive`), `commands/create.ts`, `commands/delete.ts`, `commands/rename.ts`,
+`commands/list.ts` (rendono il messaggio), `executor/__tests__/resolvers.test.ts` (+6 test, 31 in
+tutto). Docs in questo commit: questa entry. I due `ValidationRulesModal.*` sporchi restano
+dell'altra corsia, non toccati (RC-13).
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-11 10:15
+**Causa**: (c)
+**Regressions**: unknown. Gate verdi: `npx tsc --noEmit` **33** su output completo con exit status
+letto, la baseline, **0** righe `jjscript` (controllo positivo: il totale e' 33 mentre il filtro e'
+vuoto); `npm run build` exit 0; `npx vitest run` **3502 passati, 0 falliti** (erano 3496, +6 sono i
+nuovi), 9 file rossi all'import per `window`, l'insieme pre-esistente. Resta `unknown` per la
+stessa ragione del giro precedente: nulla di tutto questo e' stato visto nell'app in esecuzione, e
+la verifica end-to-end e' ancora da fare a mano.
+**Out-of-scope changes**: no — resolver, suoi chiamanti dentro JjScript, test, log: il perimetro
+del prompt. Sono 6 file di codice, sopra la soglia di 5 della regola 19, conseguenza diretta di
+quanto il prompt autorizza (RC-11).
+**Layer Impact Report**: not-required — nessun file della critical zone (§3.1); i resolver leggono
+i proxy L, non scrivono.
+**Smoke visivo**: non eseguito, la verifica end-to-end resta manuale su localhost (decisione 10.2
+del giro precedente). In sua vece il banco delle mutazioni, **5 su 5 discriminanti** dopo una
+correzione del banco stesso: N1 contenitore esatto non decisivo (1 rosso), N2 tutto e' un
+contenitore (1), N3 niente e' un contenitore (2), N4 `memberMissingOn` non finale (2), N5
+contenitore case-insensitive unico non decisivo (1). **N2 era inizialmente verde**: nessuna fixture
+metteva un non-contenitore alla grafia esatta, e la mutazione sopravviveva. Aggiunta quella
+fixture, N2 uccide. Sorgente ripristinato byte per byte (`diff -q` verde, 31/31 dopo).
+**Notes**: (a) `7bacbd63c`: codice **+457 −161** (netto +296), test **+262 −0**; 0,57 righe di
+test per riga di codice aggiunta, 0,89 sul netto. (b) **Debito dichiarato**: i chiamanti che non
+passano `kinds` — 9 siti, quelli del referto §4.5 piu' `set`, `show`, `validate`, `move`, `copy`,
+`remove` — nel ripiego case-insensitive prendono ancora **il primo che capita** senza segnalare
+ambiguita'. La precedenza al caso esatto vale per tutti; l'errore di ambiguita' no.
+**Prompt document name**: 2026-09-11 17:30
+
 ## 2026-09-11 — fix(jjscript): la risoluzione del target dopo `in` ristretta ai kind ammissibili
 **Prompt**: due fasi. `create literal HAPPY in Mood` falliva con «Cannot create literal in
 attribute 'mood'»: il resolver del target cercava case-insensitive su ogni kind e restituiva il
