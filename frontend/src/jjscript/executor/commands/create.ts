@@ -9,7 +9,11 @@ import {
     ExecutionContext,
     QualifiedName
 } from '../../types';
-import { resolveElement, resolveElementInMetamodel } from '../resolvers';
+import {
+    resolveElement, resolveElementInMetamodel,
+    resolveTargetInMetamodel, resolveTargetInProject,
+    kindLabel, ResolutionKind, TargetResolution
+} from '../resolvers';
 import { qualifiedNameToString } from '../../parser/grammar';
 import { getProject, getDefaultParent, needsParent, getTargetMetamodel } from '../utils';
 import { executeCreateInstance } from './instance';
@@ -84,6 +88,51 @@ function rawTypeName(typeRef: any): string | undefined {
     }
     return undefined;
 }
+
+// ============================================
+// PARENT KINDS
+// ============================================
+
+/**
+ * The element kinds the target of `create <type> ... in <Target>` may legitimately be.
+ *
+ * Mirrors the guard each creator applies downstream (`isClass`, `isEnum`, `isOperation`),
+ * so a wrong-kind target is caught while resolving instead of after the fact. Without it
+ * the resolver returned whichever element matched the name first, ignoring case and kind:
+ * `create literal HAPPY in Mood` picked the attribute `Scene.mood` over the enum `Mood`.
+ */
+const PARENT_KINDS_BY_ELEMENT_TYPE: { [elementType: string]: ResolutionKind[] } = {
+    'attribute':      ['class'],
+    'reference':      ['class'],
+    'containment':    ['class'],
+    'composition':    ['class'],
+    'operation':      ['class'],
+    'parameter':      ['operation'],
+    'literal':        ['enum'],
+    'class':          ['package', 'model'],
+    'abstract class': ['package', 'model'],
+    'interface':      ['package', 'model'],
+    'enum':           ['package', 'model'],
+    'enumeration':    ['package', 'model'],
+    'package':        ['package', 'model'],
+};
+
+/**
+ * The sentence explaining the restriction, appended to a not-found message so it names the
+ * kind that was expected. Wording is the one the creators already use, verbatim: the
+ * recovery rule `literal-in-attribute` matches on 'Literals can only be added to enums'
+ * (jjscript/recovery/rules.ts:94) and must keep firing for the case it was written for —
+ * the target really is an attribute and no enum by that name exists.
+ */
+const PARENT_RULE_BY_ELEMENT_TYPE: { [elementType: string]: string } = {
+    'attribute':   'Attributes can only be added to classes.',
+    'reference':   'References can only be added to classes.',
+    'containment': 'References can only be added to classes.',
+    'composition': 'References can only be added to classes.',
+    'operation':   'Operations can only be added to classes.',
+    'parameter':   'Parameters can only be added to operations.',
+    'literal':     'Literals can only be added to enums.',
+};
 
 // ============================================
 // VALIDATION HELPERS
@@ -180,33 +229,65 @@ export async function executeCreate(
         // when the same class name exists in multiple metamodels
         const targetMetamodel = getTargetMetamodel(context, project);
 
-        // Resolve parent context - use scoped resolution when we have a target metamodel
+        // Resolve parent context - use scoped resolution when we have a target metamodel,
+        // restricted to the kinds this elementType can legitimately live in.
+        const parentKinds = PARENT_KINDS_BY_ELEMENT_TYPE[elementType];
         let parentElement;
+        let parentAmbiguity: string[] | undefined;
         if (parent) {
             // First try scoped resolution within target metamodel
-            if (targetMetamodel) {
-                parentElement = resolveElementInMetamodel(parent, targetMetamodel);
-                if (!parentElement) {
-                    // Log warning but try project-wide fallback for backward compatibility
+            let resolution: TargetResolution = targetMetamodel
+                ? resolveTargetInMetamodel(parent, targetMetamodel, parentKinds)
+                : { element: null };
+            if (!resolution.element && !resolution.ambiguousWith) {
+                // Log warning but try project-wide fallback for backward compatibility
+                if (targetMetamodel) {
                     console.warn(`[JjScript] Parent '${qualifiedNameToString(parent)}' not found in target metamodel, trying project-wide search`);
-                    parentElement = resolveElement(parent, project);
                 }
-            } else {
-                parentElement = resolveElement(parent, project);
+                resolution = resolveTargetInProject(parent, project, parentKinds);
+            }
+            parentElement = resolution.element;
+            parentAmbiguity = resolution.ambiguousWith;
+
+            // Types with no downstream guard (class, enum, package: they take whatever
+            // `father` they are handed) fall back to the unrestricted search rather than
+            // failing, so a parent that used to resolve still does.
+            if (!parentElement && !parentAmbiguity && !needsParent(elementType)) {
+                parentElement = targetMetamodel
+                    ? resolveElementInMetamodel(parent, targetMetamodel)
+                    : null;
+                if (!parentElement) parentElement = resolveElement(parent, project);
             }
         } else {
             parentElement = getDefaultParent(project, elementType);
         }
 
-        if (!parentElement && needsParent(elementType)) {
+        if (parentAmbiguity && parent) {
+            const expected = kindLabel(parentKinds).toLowerCase();
             return {
                 success: false,
                 command: 'create',
-                message: `Could not find parent for ${elementType}`,
+                message: `'${qualifiedNameToString(parent)}' is ambiguous: ${parentAmbiguity.join(', ')}`,
+                errors: [{
+                    code: 'AMBIGUOUS_PARENT',
+                    message: `More than one ${expected} matches '${qualifiedNameToString(parent)}' ignoring case: ${parentAmbiguity.join(', ')}`,
+                    suggestion: 'Use the exact name, matching case, of the one you mean'
+                }]
+            };
+        }
+
+        if (!parentElement && needsParent(elementType)) {
+            const expected = kindLabel(parentKinds);
+            const rule = PARENT_RULE_BY_ELEMENT_TYPE[elementType];
+            const notFound = `${expected} '${parent ? qualifiedNameToString(parent) : ''}' not found.${rule ? ' ' + rule : ''}`;
+            return {
+                success: false,
+                command: 'create',
+                message: parent ? notFound : `Could not find parent for ${elementType}`,
                 errors: [{
                     code: 'PARENT_NOT_FOUND',
                     message: parent
-                        ? `Parent '${qualifiedNameToString(parent)}' not found`
+                        ? notFound
                         : `No suitable parent found for ${elementType}`
                 }]
             };
