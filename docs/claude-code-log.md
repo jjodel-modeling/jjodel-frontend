@@ -13,6 +13,37 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-11 — discovery: la risoluzione per nome e il suo scope in tutto il codebase
+**Prompt**: inventario read-only di ogni lookup per nome (contro puntatore), con lo scope di
+ciascuno, il consumatore che lo possiede e la regola di unicita' vigente — per misurare il costo
+del disegno «nomi unici per metamodello, nome qualificato `Metamodel.Element`, i lookup di
+progetto falliscono su ambiguita'». Hard stop: nessuna implementazione, nessun piano di
+refactoring oltre la colonna «change needed» per sito.
+**Files touched**: 2, entrambi docs. Nuovo:
+`docs/discovery/discovery_2026-09-11_name_resolution_scope.md` (548 righe: obiettivo, conteggi
+grep grezzi e ritenuti, tabella di 56 siti in 8 gruppi, regola di unicita' con estratto, 27
+misure della sonda, test esistenti, precedenti, rischi, costo per tipo di modifica, 6 domande
+aperte). Modificato: questa entry. I due `ValidationRulesModal.*` sporchi sono di un'altra
+corsia: non toccati, non committati (RC-13).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — nessun sorgente modificato. `git status --short` prima e dopo mostra gli
+stessi due file dell'altra corsia, `git diff --stat` gli stessi 2 file / +11 −9; niente in stage.
+**Out-of-scope changes**: no — il referto e la entry, cioe' il perimetro che il prompt dichiara.
+**Layer Impact Report**: not-required — nessun file della critical zone (§3.1) e' stato
+modificato; la sonda legge, non scrive.
+**Smoke visivo**: non applicabile — giro di sola lettura. In sua vece la sonda, **27 test su 27**,
+sotto il runner del repo con `node_modules` in symlink e nulla installato: `jsdom` non c'e' e non
+e' stato aggiunto (regola 4). Tre assert scritti in prima battuta erano sbagliati e sono stati
+corretti su cio' che il codice fa davvero, non viceversa.
+**Notes**: `checkM2NameUniqueness` **e' gia'** il disegno voluto (R-M2U-2): il buco e' tutto sul
+lato lookup, 17 siti su 56. Tre misure cambiano la forma del lavoro, in
+`discovery_2026-09-11_name_resolution_scope.md` §5: `selectTarget:233` ritorna `exact[0]`, quindi
+due omonimi scritti uguali non toccano mai il ramo `ambiguousWith`; `B::Person` si risolve gia'
+oggi; `B.Person` ritorna null, il `.` e' accesso a membro. `src/ai/` non esiste (RC-10, §0).
+**Prompt document name**: 2026-09-11 11:30
+
 ## 2026-09-11 — fix(jjscript): il backtracking sul membro si ferma su un contenitore plausibile
 **Prompt**: controllo di correttezza prima del cherry-pick. Scenario: due enum `Mood` e `mood`
 (collisione di solo caso, ammessa come warning da `nameUniqueness`), comando
