@@ -4977,6 +4977,13 @@ export class DModel extends DNamedElement { // DNamedElement
         let dmodels: DModel[] = Selectors.getAll(DModel, undefined, undefined, true, false);
         let dmodelnames: string[] = dmodels.map((d: DModel) => d.name);
         if (!name) name = this.defaultname("model_", ((name: string) => dmodelnames.includes(name)));
+        // A name the caller CHOSE was written through unchecked, so importing the same file
+        // twice produced two metamodels called the same thing and nothing said so, while
+        // `LModel.set_name` had been refusing exactly that collision since forever. The pool
+        // is the one `set_name` already compares against -- every DModel, metamodels and M1
+        // models together -- so the two halves cannot disagree.
+        // See docs/discovery/discovery_2026-09-11_name_resolution_scope.md §2.1 (R4).
+        else name = DPointerTargetable.uniqueModelName(name, dmodelnames);
         return new Constructors(new DModel('dwc'), undefined, persist, undefined).DPointerTargetable().DModelElement()
             .DNamedElement(name).DModel(instanceoff, isMetamodel).end();
     }

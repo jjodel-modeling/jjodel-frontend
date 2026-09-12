@@ -1484,6 +1484,39 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
         }
         return startingPrefix + "1"; }
 
+    /**
+     * `requested` if no other model holds it, otherwise the first free `requested (n)`.
+     *
+     * The scheme is NOT new: it is the one `generateUniqueModelName` already applies to the
+     * target model of a transformation (`components/project/ProjectEditor.tsx`, «Generate
+     * unique model name by appending (N) suffix if needed»). `defaultname` above uses the
+     * other house style, a bare trailing counter (`model_0`, `model_1`), and keeps it: that
+     * one names an element nobody asked to name, this one preserves a name the caller chose.
+     *
+     * Exact-case, like `checkM2NameUniqueness` (`model/logicWrapper/nameUniqueness.ts`):
+     * `A` and `a` are different names and both are legal.
+     *
+     * Why suffix instead of refuse, where `LModel.set_name` refuses: a rename has a caller
+     * that can be told no, and it is told (a toast, and the write does not happen). A create
+     * returns a `DModel` and has no channel for a refusal short of throwing, and twelve call
+     * sites do not check one. Suffixing keeps every caller working and makes the name unique,
+     * which is what a qualified `Metamodel::Element` needs to mean one thing.
+     */
+    static uniqueModelName(requested: string, taken: string[]): string {
+        if (!requested) return requested;
+        if (!taken.includes(requested)) return requested;
+        const escaped: string = requested.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const pattern: RegExp = new RegExp('^' + escaped + ' \\((\\d+)\\)$');
+        let max: number = 0;
+        for (const name of taken) {
+            const m = typeof name === 'string' ? name.match(pattern) : null;
+            if (!m) continue;
+            const n: number = parseInt(m[1], 10);
+            if (n > max) max = n;
+        }
+        return requested + ' (' + (max + 1) + ')';
+    }
+
     public static new(...a:any): DPointerTargetable { //father?: Pointer, persist: boolean = false, fatherType?: Constructor, ...a:any): DPointerTargetable {
         Log.exx("cannot instantiate abstract class DPointerTargetable");
         return null as any;
