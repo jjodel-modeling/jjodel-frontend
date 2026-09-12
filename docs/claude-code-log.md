@@ -13,6 +13,40 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-12 — fix(A2): il ripiego case-insensitive di getByName non scrive piu' nella collezione
+**Prompt**: `claude_2026-09-12_0030_prompt_lane_a_resolver_ambiguity.md`, **solo A2**. A3 e A1
+restano fermi in attesa di ACK.
+**Files touched**: 2 di codice in `2a60e3264` — `model/logicWrapper/LModelElement.tsx`
+(`_impl_getByName`: il ripiego legge invece di scrivere) e `model/__tests__/getByNameKey.test.ts`
+(+1 test nuovo, 2 aggiornati, 8 in tutto). Docs in questo commit: questa entry. I due
+`ValidationRulesModal.*` restano dell'altra corsia (RC-13).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown, fino alla verifica visiva. Gate verdi: `npx tsc --noEmit` **33** su output
+completo con exit status letto — la baseline — **0** righe `LModelElement`, controllo positivo con
+segnale sullo stesso file (`src/` → 69); `npm run build` exit 0 col solo avviso di chunk
+pre-esistente; `npx vitest run` **3513 passati, 0 falliti** (erano 3512, +1 e' il nuovo), 9 file
+rossi all'import per `window`, l'insieme pre-esistente.
+**Out-of-scope changes**: no. **Due asserzioni esistenti sono state aggiornate** perche'
+codificavano il corpo vecchio: quella che fissava `return collection[key.toLowerCase()] || null` e
+quella che fissava il `|| null` finale. Ora fissano la forma in lettura e l'accumulatore. Il
+tie-break e' **invariato di proposito**: vinceva l'ultima chiave corrispondente e continua a farlo;
+quale dei due omonimi di solo caso risponda e' una domanda diversa da «il lookup sporca l'ingresso»,
+e A2 scioglie solo la seconda.
+**Layer Impact Report**: not-required — `LModelElement.tsx` non e' in critical zone (§3.1) e il
+tocco e' in sola lettura: la modifica **toglie** l'unica scrittura che c'era.
+**Smoke visivo**: non eseguito, resta manuale. In sua vece il banco delle mutazioni, **3 su 3
+uccise**, ma con una divisione che va detta: N1 (riscrittura degli alias, il difetto originale)
+muore sia col test **committato** (3 rossi) sia con la sonda (2); N2 (tie-break invertito) e N3
+(guardia `caseSensitive` tolta) muoiono **solo con la sonda**, che non e' committata. Il test in
+repo e' statico e protegge la purezza, non il comportamento.
+**Notes**: Il test committato e' statico perche' `LModelElement.tsx` **non e' importabile** sotto il
+banco del repo — rimisurato il 2026-09-12 con una config che ne rispecchia le impostazioni:
+`window is not defined`, controllo positivo `jjscript/executor/resolvers` che importa. La prova di
+comportamento e' la sonda, 6 su 6, che esegue la funzione vera (non una copia) e misura P3-d chiuso.
+**Prompt document name**: 2026-09-12 00:30
+
 ## 2026-09-12 — fix(jjscript): il tipo enum degli attributi risolto, niente piu' ripiego su EString
 **Prompt**: `claude_2026-09-11_1800_prompt_jjscript_attribute_enum_type.md`, Fase 2 dopo il via.
 Risposte: §9.1 il resolver nuovo sta in `resolvers.ts` e `create.ts` non contiene logica di lookup;
