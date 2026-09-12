@@ -4991,6 +4991,10 @@ export class DModel extends DNamedElement { // DNamedElement
         let dmodels: DModel[] = Selectors.getAll(DModel, undefined, undefined, true, false);
         let dmodelnames: string[] = dmodels.map((d: DModel) => d.name);
         if (!name) name = this.defaultname("model_", ((name: string) => dmodelnames.includes(name)));
+        // Same rule as `new`, same pool: the three entry points cannot disagree about what a
+        // model may be called. `new2` has no call site in the tree today (measured 2026-09-12),
+        // and the guard is here so it cannot become the way around the rule.
+        else name = DPointerTargetable.uniqueModelName(name, dmodelnames);
         return new Constructors(new DModel('dwc'), undefined, true, undefined).DPointerTargetable().DModelElement()
             .DNamedElement(name).DModel(instanceoff).end((d) => { Object.assign(d, setter); });
     }
@@ -4999,6 +5003,12 @@ export class DModel extends DNamedElement { // DNamedElement
         let dmodels: DModel[] = Selectors.getAll(DModel, undefined, undefined, true, false);
         let dmodelnames: string[] = dmodels.map((d: DModel) => d.name);
         if (!a.name) a.name = this.defaultname("model_", ((name: string) => dmodelnames.includes(name)));
+        // Same rule as `new`. Writing back into `a.name` rather than a local is deliberate:
+        // the auto-name branch above already does it, and `.DNamedElement(a.name)` below reads
+        // it — a local would have to be threaded through both branches to change nothing.
+        // The one live caller (`jjodie-integration/JjodieAPIImpl.ts:95`) passes an object
+        // literal and returns only the new id, so the write is not observable there.
+        else a.name = DPointerTargetable.uniqueModelName(a.name, dmodelnames);
         return new Constructors(new DModel('dwc'), a.father, persist, undefined, a.id)
             .DPointerTargetable().DModelElement().DNamedElement(a.name)
             .DModel(a.instanceof, !a.instanceof)

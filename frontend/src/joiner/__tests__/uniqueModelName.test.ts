@@ -38,14 +38,22 @@ function uniqueBody(): string {
     return classesSource.slice(start, next);
 }
 
-/** Il corpo del solo `DModel.new`, dalla firma al `return`. */
-function dmodelNewBody(): string {
-    const start = lmeSource.indexOf('    public static new(name?: DNamedElement["name"], instanceoff?: DModel["instanceof"]');
-    expect(start, 'la firma di DModel.new e\' cambiata: aggiorna il test').toBeGreaterThan(-1);
+/** Il corpo di uno dei tre punti d'ingresso di DModel, dalla firma al `return`. */
+function dmodelEntryBody(signature: string): string {
+    const start = lmeSource.indexOf(signature);
+    expect(start, `la firma \`${signature}\` e' cambiata: aggiorna il test`).toBeGreaterThan(-1);
     const next = lmeSource.indexOf('\n    }', start);
     expect(next).toBeGreaterThan(start);
     return lmeSource.slice(start, next);
 }
+
+const ENTRY_POINTS: { label: string; signature: string; nameExpr: string }[] = [
+    { label: 'new',  signature: '    public static new(name?: DNamedElement["name"], instanceoff?: DModel["instanceof"]', nameExpr: 'name' },
+    { label: 'new2', signature: '    static new2(setter: Partial<ObjectWithoutPointers<DModel>>', nameExpr: 'name' },
+    { label: 'new3', signature: '    static new3(a: Partial<ModelPointers>', nameExpr: 'a.name' },
+];
+
+const dmodelNewBody = () => dmodelEntryBody(ENTRY_POINTS[0].signature);
 
 describe('uniqueModelName — lo schema (n), non uno nuovo', () => {
     it('restituisce il nome chiesto quando e\' libero', () => {
@@ -94,5 +102,35 @@ describe('DModel.new — il nome scelto dal chiamante passa dal controllo', () =
         // no, una create no. Se un giorno set_name suffissasse, questo test va rivisto.
         expect(lmeSource).toMatch(/toast\.error\(`Model name "\$\{val\}" is already taken`/);
         expect(lmeSource).not.toMatch(/uniqueModelName\(val/);
+    });
+});
+
+describe('A3b — la regola vale su tutti e tre i punti d\'ingresso', () => {
+    // `new2` non ha chiamanti nell'albero e `new3` ne ha UNO,
+    // `jjodie-integration/JjodieAPIImpl.ts:95` (la riga 94 e' un commento che nomina la
+    // stessa chiamata: contata come sito vivo in prima battuta, e non lo e').
+    // La entry di A3 dice «due chiamanti vivi» ed e' sbagliata; il log e' add-only e non si
+    // emenda, la correzione sta nella entry di A3b.
+    for (const ep of ENTRY_POINTS) {
+        it(`${ep.label}: il ramo senza nome resta defaultname, quello con nome suffissa`, () => {
+            const body = dmodelEntryBody(ep.signature);
+            expect(body).toMatch(/defaultname\("model_"/);
+            // Ancorata a inizio riga e con il contro-controllo sul commento: vedi Q1.
+            const re = new RegExp('\\n +else ' + ep.nameExpr.replace('.', '\\.') +
+                ' = DPointerTargetable\\.uniqueModelName\\(' + ep.nameExpr.replace('.', '\\.') + ', dmodelnames\\);');
+            expect(body).toMatch(re);
+            expect(body).not.toMatch(new RegExp('\\/\\/ *else ' + ep.nameExpr.replace('.', '\\.') + ' = DPointerTargetable'));
+        });
+
+        it(`${ep.label}: interroga lo stesso bacino degli altri due`, () => {
+            const body = dmodelEntryBody(ep.signature);
+            expect(body).toMatch(/Selectors\.getAll\(DModel, undefined, undefined, true, false\)/);
+            expect(body).toMatch(/dmodels\.map\(\(d: DModel\) => d\.name\)/);
+        });
+    }
+
+    it('nessun punto d\'ingresso e\' rimasto indietro: tre firme, tre guardie', () => {
+        const guards = (lmeSource.match(/else (a\.)?name = DPointerTargetable\.uniqueModelName\(/g) || []).length;
+        expect(guards).toBe(ENTRY_POINTS.length);
     });
 });
