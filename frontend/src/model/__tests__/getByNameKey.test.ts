@@ -46,9 +46,29 @@ describe('_impl_getByName — cerca la chiave che i produttori scrivono', () => 
     it('anche il giro case-insensitive passa dalla chiave, non dal nome', () => {
         // Era la meta' che restava rotta anche correggendo solo la prima riga: le chiavi
         // in minuscolo sono '$freeprobe', e chiedere 'freeprobe' non le trova.
+        // A2 (2026-09-12): il confronto non legge piu' `collection[key.toLowerCase()]` —
+        // quella lettura funzionava solo dopo aver SCRITTO gli alias. Ora la chiave in
+        // minuscolo e' il termine di paragone del giro, e la scrittura non c'e' piu'.
         const body = implBody();
-        expect(body).toMatch(/return collection\[key\.toLowerCase\(\)\] \|\| null;/);
+        expect(body).toMatch(/const lowered: string = key\.toLowerCase\(\);/);
+        expect(body).toMatch(/\(k \+ ''\)\.toLowerCase\(\) !== lowered/);
         expect(body).not.toMatch(/collection\[name\.toLowerCase\(\)\]/);
+    });
+
+    it('A2 — il giro case-insensitive NON scrive nella collezione', () => {
+        // Il difetto: il ripiego costruiva un alias in minuscolo per OGNI chiave dentro
+        // `collection`, quindi dopo un `getClassByName('PERSON')` la stessa collezione
+        // rispondeva `Person` anche a 'person', per sempre. Misurato in
+        // docs/discovery/discovery_2026-09-11_name_resolution_scope.md §5 (P3-d).
+        //
+        // Statico e non di comportamento per la ragione dell'intestazione di questo file:
+        // `LModelElement.tsx` non e' importabile sotto il banco del repo (misurato di nuovo
+        // il 2026-09-12: `window is not defined`, con controllo positivo su
+        // `jjscript/executor/resolvers` che importa). La prova di comportamento e' la sonda
+        // citata nella entry di log.
+        const body = implBody();
+        expect(body).not.toMatch(/collection\[[^\]]*\]\s*=/);
+        expect(body).not.toMatch(/initialKeys/);
     });
 
     it('contrasto: `caseSensitive` esce ancora prima del giro in minuscolo', () => {
@@ -58,9 +78,13 @@ describe('_impl_getByName — cerca la chiave che i produttori scrivono', () => 
     });
 
     it('non-regressione: il `trim` e il `null` finale restano', () => {
+        // A2: il `|| null` finale e' diventato un accumulatore inizializzato a null e
+        // restituito tale quale su miss. Il valore di ritorno non cambia; cambia solo che
+        // nessuno scrive mentre lo si calcola.
         const body = implBody();
         expect(body).toMatch(/name = name\.trim\(\);/);
-        expect(body).toMatch(/\|\| null;/);
+        expect(body).toMatch(/let found: LModelElement \| null = null;/);
+        expect(body).toMatch(/return found;/);
     });
 });
 

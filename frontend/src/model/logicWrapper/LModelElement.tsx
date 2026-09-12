@@ -5882,11 +5882,24 @@ instanceof === undefined or missing  --> auto-detect and assign the type
         if (collection[key]) return collection[key];
         if (caseSensitive) return null;
 
-        let initialKeys: string[] = Object.keys(collection);
-        for (let k of initialKeys ) {
-            collection[(k + '').toLowerCase()] = collection[k];
+        // The fallback READS, it does not write. It used to build a lowercase alias for
+        // every key back into `collection` and then read one of them, which rebound the
+        // exact-case entry for every later lookup on the same array: after one
+        // `getClassByName('PERSON')`, asking for 'person' returned `Person`. Measured in
+        // `docs/discovery/discovery_2026-09-11_name_resolution_scope.md` §5 (P3-d).
+        //
+        // The tie-break is unchanged on purpose: the alias pass overwrote earlier keys with
+        // later ones, so the LAST matching key won, and it still does. Which of two
+        // case-variant homonyms answers is a separate question from whether the lookup
+        // mutates its input, and this change only settles the second.
+        const lowered: string = key.toLowerCase();
+        let found: LModelElement | null = null;
+        for (const k of Object.keys(collection)) {
+            if ((k + '').toLowerCase() !== lowered) continue;
+            const hit = collection[k];
+            if (hit) found = hit;
         }
-        return collection[key.toLowerCase()] || null;
+        return found;
     }
 
 }
