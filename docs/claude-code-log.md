@@ -13,6 +13,37 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-13 — fix(A3b): la guardia sul nome vale anche su DModel.new2 e new3
+**Prompt**: `claude_2026-09-12_0030_prompt_lane_a_resolver_ambiguity.md`, item **A3b** aggiunto in
+chat. A1 resta fermo in attesa di ACK.
+**Files touched**: 2 di codice in `6a211f5c3` — `model/logicWrapper/LModelElement.tsx` (il ramo
+`else` di `DModel.new2` e di `DModel.new3`) e `joiner/__tests__/uniqueModelName.test.ts` (+7 test,
+14 in tutto; l'estrattore del corpo ora e' parametrico sui tre punti d'ingresso). Docs in questo
+commit: questa entry. I due `ValidationRulesModal.*` restano dell'altra corsia (RC-13).
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-12 00:30 (A3, `b434a3950`) — chiude i due punti d'ingresso che quel giro
+aveva lasciato aperti e ne corregge il conteggio dei chiamanti.
+**Causa**: (b)
+**Regressions**: unknown, fino alla verifica visiva. Gate verdi: `npx tsc --noEmit` **33** su
+output completo con exit status letto — la baseline — **0** righe `LModelElement`, controllo
+positivo con segnale (`src/` → 69); `npm run build` exit 0 col solo avviso di chunk pre-esistente;
+`npx vitest run` **3527 passati, 0 falliti** (erano 3520, +7 sono i nuovi), 9 file rossi all'import
+per `window`, l'insieme pre-esistente.
+**Out-of-scope changes**: no. **Debito dichiarato con direzione gia' decisa, non toccato qui**:
+`generateUniqueModelName` (`components/project/ProjectEditor.tsx:1359`) duplica questa regola e
+dovra' delegare all'helper del modello, non il contrario.
+**Layer Impact Report**: not-required — nessun file della critical zone (§3.1).
+**Smoke visivo**: non eseguito, resta manuale. In sua vece il banco delle mutazioni, **4 su 4**:
+R1 guardia di `new3` cancellata (2 rossi), R2 guardia di `new3` commentata (1), R3 guardia di
+`new2` cancellata (2), R4 `new3` che interroga un bacino diverso — solo i metamodelli — (1).
+Sorgente ripristinato byte per byte (`diff -q` verde, 14/14 dopo).
+**Notes**: **Correzione alla entry di A3**, che resta com'e' scritta perche' il log e' add-only:
+`new3` ha **UN** chiamante vivo, non due — `JjodieAPIImpl.ts:95`; la riga 94 e' un commento che
+nomina la stessa chiamata ed era stata contata come sito. `new2` non ne ha nessuno: la guardia c'e'
+perche' non diventi la scorciatoia. `new3` scrive in `a.name` e non in un locale, come gia' fa il
+ramo dell'auto-nome sopra di esso.
+**Prompt document name**: 2026-09-12 00:30
+
 ## 2026-09-12 — fix(A3): DModel.new suffissa un nome di metamodello gia' preso
 **Prompt**: `claude_2026-09-12_0030_prompt_lane_a_resolver_ambiguity.md`, **solo A3**. A1 resta
 fermo in attesa di ACK.
