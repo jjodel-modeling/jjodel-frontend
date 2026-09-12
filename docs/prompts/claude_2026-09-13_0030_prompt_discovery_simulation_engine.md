@@ -3,6 +3,12 @@
 **Date**: 2026-09-13 00:30
 **Type**: discovery (Phase 1 of two-phase). No code changes.
 **Lane**: simulation engine, computational model. Independent of `validation-skeleton` work.
+**Runs in parallel with**: `claude_2026-09-13_0100_prompt_discovery_jjel_eval_context.md` (the JjEL
+evaluator side). Perimeters are disjoint: this prompt does not read `frontend/src/jjel/`; the other
+does not read `frontend/src/components/editor-v2/sim/`. Both write to `docs/claude-code-log.md`:
+before committing, re-read the head of the log and place your entry under the header line, above
+any entry the other session may have added; if `git add`/`commit` fails on `.git/index.lock`, wait
+and retry, never remove the lock.
 
 ## Context
 
@@ -38,7 +44,8 @@ The design, in short (read it to judge fit, not to build it):
 ## What to find out (COSA)
 
 Produce a faithful picture of the simulation engine today, then assess the distance to the
-design above, step by step. Answer at least these questions with file paths and line ranges:
+design above, step by step. Answer at least these questions with file paths and line ranges (the JjEL evaluator and its
+context are out of scope here; a parallel discovery covers them):
 
 1. **Where the engine lives.** Known entry points: `frontend/src/components/editor-v2/sim/`
    (`SimulationPanel.tsx`, `simRunState.ts`, `simulation-panel.scss`). Find every other file
@@ -58,15 +65,10 @@ design above, step by step. Answer at least these questions with file paths and 
 4. **The step today.** What `simRunState.ts` and the panel do on start, step, stop: how the
    next element is chosen, whether guards exist and how they are evaluated, whether more than
    one candidate can be enabled and what happens then, whether there is any event notion.
-5. **The JJL interpreter entry points.** Which function evaluates an expression against a
-   context, how the context is built (compare with `buildEvalContext` on the validation lane
-   if present on this branch), what roots are available (`self`, others), and whether the
-   evaluator can be given a read-only model plus a separate writable state root without
-   changing the interpreter.
-6. **Interactions with the critical zone.** Whether any of the above touches `useJjomSync.ts`
+5. **Interactions with the critical zone.** Whether any of the above touches `useJjomSync.ts`
    or `portDistribution.ts`, or the D-graph adapters in `editor-v2/hooks/`. If yes, name the
    exact call sites.
-7. **Branch situation.** The working tree is on `validation-skeleton` with two dirty files of
+6. **Branch situation.** The working tree is on `validation-skeleton` with two dirty files of
    another lane (`ValidationRulesModal.tsx/.scss`): do not touch them and do not switch branch.
    Report with `git diff alfonso-frontend-jjtl validation-skeleton --stat -- frontend/src/components/editor-v2/sim/`
    (and the other files you identify) whether the engine files differ between the two branches.
