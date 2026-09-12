@@ -13,6 +13,43 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-12 — fix(A3): DModel.new suffissa un nome di metamodello gia' preso
+**Prompt**: `claude_2026-09-12_0030_prompt_lane_a_resolver_ambiguity.md`, **solo A3**. A1 resta
+fermo in attesa di ACK.
+**Files touched**: 3 di codice in `b434a3950` — `joiner/classes.ts`
+(`DPointerTargetable.uniqueModelName`, accanto a `defaultname`),
+`model/logicWrapper/LModelElement.tsx` (il ramo `else` di `DModel.new`),
+`joiner/__tests__/uniqueModelName.test.ts` (nuovo, 7 test). Docs in questo commit: questa entry.
+I due `ValidationRulesModal.*` restano dell'altra corsia (RC-13).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown, fino alla verifica visiva. Gate verdi: `npx tsc --noEmit` **33** su
+output completo con exit status letto — la baseline — **0** righe nei due file toccati, controllo
+positivo con segnale (`src/` → 69); `npm run build` exit 0 col solo avviso di chunk pre-esistente;
+`npx vitest run` **3520 passati, 0 falliti** (erano 3513, +7 sono i nuovi), 9 file rossi all'import
+per `window`, l'insieme pre-esistente.
+**Out-of-scope changes**: no. **Debito dichiarato**: `DModel.new2` e `DModel.new3` hanno lo stesso
+buco — `new3` con due chiamanti vivi in `jjodie-integration/JjodieAPIImpl.ts` — e il prompt limita
+il giro a `DModel.new`; applicare l'helper e' una riga per ciascuno. Verificato come richiesto che
+**nessun chiamante dipende dal nome restituito**: i due siti di `DockLayout.tsx` sono commentati,
+`ProjectEditor.tsx:1703` passa un nome gia' deduplicato, gli altri nove usano solo il `DModel`.
+**Layer Impact Report**: not-required — nessun file della critical zone (§3.1); la scrittura e'
+`DModel.new` su un elemento nuovo, non un percorso di sync.
+**Smoke visivo**: non eseguito, resta manuale. In sua vece il banco delle mutazioni, **5 su 5**:
+Q1a ramo `else` commentato (1 rosso), Q1b ramo `else` cancellato (1), Q2 suffisso che riparte dal
+conteggio invece che dal massimo (1 statico + 2 sonda), Q3 confronto case-insensitive (2 + 1),
+Q4 metacaratteri non neutralizzati (1 + 1). **Q1 sopravviveva** alla prima stesura: l'asserzione
+era un `toMatch` nudo e il commento contiene ancora il testo della riga. Riancorata a inizio riga
+piu' un `not.toMatch` sul commento, uccide in entrambe le forme. Sorgenti ripristinati byte per
+byte (`diff -q` verde, 7/7 e 8/8 dopo).
+**Notes**: Lo schema ` (n)` **non e' nuovo**: e' quello di `generateUniqueModelName`
+(`ProjectEditor.tsx:1359`) per i nomi di modello. `defaultname` tiene il suo contatore nudo
+(`model_0`). Bacino identico a quello di `set_name`: ogni `DModel`, metamodelli e modelli M1
+insieme. Test statico per la ragione di A2 — `joiner` e `LModelElement` non importabili sotto il
+banco, rimisurato con controllo positivo; il comportamento e' nella sonda, 8 casi.
+**Prompt document name**: 2026-09-12 00:30
+
 ## 2026-09-12 — fix(A2): il ripiego case-insensitive di getByName non scrive piu' nella collezione
 **Prompt**: `claude_2026-09-12_0030_prompt_lane_a_resolver_ambiguity.md`, **solo A2**. A3 e A1
 restano fermi in attesa di ACK.
