@@ -54,6 +54,46 @@ events/guards/candidates. Touches IR via `marked`/`isMarked`, not sync. `sim/` i
 `alfonso-frontend-jjtl` and `validation-skeleton`. 8 open questions in report §9.
 **Prompt document name**: 2026-09-13 00:30
 
+## 2026-09-13 — fix(A1): gli omonimi scritti uguali sono un'ambiguita', con le grafie qualificate
+**Prompt**: `claude_2026-09-12_0030_prompt_lane_a_resolver_ambiguity.md`, item **A1**, ultimo della
+corsia A. A4 resta da aprire.
+**Files touched**: 6 di codice in `a52dfe5f3`, **sopra la soglia di 5 della regola 19**, elencati
+in chat prima del diff (RC-11): `jjscript/executor/resolvers.ts` (il ramo di pluralita' esatta,
+`qualifiedSpelling`, `ambiguityMessage`, `QUALIFY_ADVICE`, l'ambiguita' tolta dal cancello su
+`kinds`), `commands/delete.ts`, `commands/rename.ts`, `commands/list.ts`, `commands/create.ts`
+(rendono il messaggio condiviso e perdono il consiglio diventato falso),
+`executor/__tests__/resolvers.test.ts` (+13 test, 54 in tutto; 1 asserzione invertita).
+Docs in questo commit: questa entry. I due `ValidationRulesModal.*` restano dell'altra corsia.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown, fino alla verifica visiva. Gate verdi: `npx tsc --noEmit` **33** su
+output completo con exit status letto — la baseline — **0** righe `src/jjscript`, controllo
+positivo con segnale (`src/` → 69); `npm run build` exit 0 col solo avviso di chunk pre-esistente;
+`npx vitest run` **3540 passati, 0 falliti** (erano 3527, +13 sono i nuovi), 9 file rossi
+all'import per `window`, l'insieme pre-esistente.
+**Out-of-scope changes**: no, ma **i quattro comandi sono stati toccati per necessita'**, non per
+stile: il loro suggerimento diceva «Use the exact name, matching case, of the one you mean», che e'
+un consiglio **falso** quando il nome e' gia' esatto ed e' ambiguo lo stesso. Ora condividono
+`ambiguityMessage` e `QUALIFY_ADVICE` e il dettaglio non afferma piu' «ignoring case».
+**Debito dichiarato**, non toccato: i segmenti INTERMEDI di un nome qualificato restano
+first-match (`resolvers.ts`, `resolveByPath`: `current = matches[0]`), quindi `A::B::C` sceglie il
+primo `A`; dopo A3 i nomi di metamodello sono unici, ma la regola non vale ancora per i package
+omonimi. Piu' i siti «pass a scope» e «report ambiguity» dell'inventario che diventano la corsia B.
+**Layer Impact Report**: not-required — nessun file della critical zone (§3.1); i resolver leggono
+i proxy L, non scrivono.
+**Smoke visivo**: non eseguito, resta manuale. In sua vece il banco delle mutazioni, **5 su 5**,
+comprese le due richieste dal prompt: S1 ritorno a `return exact[0]` (4 rossi), S2 qualificazione
+tolta (7), S3 ambiguita' di nuovo dietro il cancello su `kinds` (2), S4 qualificatore inventato per
+un elemento senza modello (6), S5 pluralita' di contenitori esatti che ripiega sul primo (1).
+Sorgente ripristinato byte per byte (`diff -q` verde, 54/54 dopo).
+**Notes**: Una sola asserzione **invertita** invece che cancellata: «unrestricted, the same lookup
+silently picks the first — the old behaviour» fissava esattamente il debito che questo giro paga.
+Un primitivo m3 si scrive **nudo** (`EString`), perche' `get_model` e' null per lui e
+`Ecore::EString` stamperebbe qualcosa che non risolve; con `kinds` sui classificatori non dovrebbe
+comunque mai essere candidato.
+**Prompt document name**: 2026-09-12 00:30
+
 ## 2026-09-13 — fix(A3b): la guardia sul nome vale anche su DModel.new2 e new3
 **Prompt**: `claude_2026-09-12_0030_prompt_lane_a_resolver_ambiguity.md`, item **A3b** aggiunto in
 chat. A1 resta fermo in attesa di ACK.
