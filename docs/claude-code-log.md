@@ -13,6 +13,47 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-13 — discovery: the JjEL evaluator and its context, against the simulation spec
+**Prompt**: `claude_2026-09-13_0100_prompt_discovery_jjel_eval_context.md` — read-only: entry points
+and callers, context shape and read-only exposure, extra roots, errors and tri-state, translatable
+subset census, lexer situation, step 2 mapping.
+**Files touched**: 2, both docs. New: `docs/discovery/discovery_2026-09-13_jjel_eval_context.md`.
+Modified: this entry. No source touched; `sim/` not read (grep only, 0 hits). The two
+`ValidationRulesModal.*` and the six `jjscript/executor` files staged by another session left as
+they were (RC-13).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — read-only run, no source modified.
+**Out-of-scope changes**: no.
+**Layer Impact Report**: not-required — no critical-zone file touched (§3.1).
+**Smoke visivo**: non applicabile — read-only run. In its place a probe executing the evaluator,
+**79 PASS 0 FAIL** (scratchpad, not committed: the prompt admits two files); `npx vitest run
+src/jjel src/model/validation` 269/269.
+**Notes**: Read-only M already holds de facto at the context-builder boundary (plain snapshot, no
+write construct, frozen context measured). Three behaviours to decide: `and`/`or` eager, property of
+a primitive silently `null`, `is` false on M1 handles. Two evaluator paths with different builtins.
+Five open questions in the report §11.
+**Prompt document name**: 2026-09-13 01:00
+
+## 2026-09-13 — discovery: the simulation engine as it stands, against the computational model
+**Prompt**: `claude_2026-09-13_0030_prompt_discovery_simulation_engine.md` — read-only map of the
+engine (files, roles/fitting, state, step, critical zone, branches) and distance to the six-step plan.
+**Files touched**: `docs/discovery/discovery_2026-09-13_simulation_engine_state.md` (new), this entry.
+No code. The dirty `ValidationRulesModal.*` and `jjscript/executor/*` belong to other lanes (RC-13).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — no code changed.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — read-only; the report names the IR critical-zone call sites (§5).
+**Smoke visivo**: non applicabile
+**Notes**: Engine = `sim/` 3 files; roles are six flat `sim*` keys in the M2 `_state` bag (4 read);
+run-state is a boolean Set outside Redux; step fires all transitions of all active instances, no
+events/guards/candidates. Touches IR via `marked`/`isMarked`, not sync. `sim/` identical across
+`alfonso-frontend-jjtl` and `validation-skeleton`. 8 open questions in report §9.
+**Prompt document name**: 2026-09-13 00:30
+
 ## 2026-09-13 — fix(A3b): la guardia sul nome vale anche su DModel.new2 e new3
 **Prompt**: `claude_2026-09-12_0030_prompt_lane_a_resolver_ambiguity.md`, item **A3b** aggiunto in
 chat. A1 resta fermo in attesa di ACK.
