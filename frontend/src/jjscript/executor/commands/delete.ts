@@ -8,7 +8,8 @@ import {
     ExecutionResult,
     ExecutionContext
 } from '../../types';
-import { resolveTargetInProject, kindLabel, memberMissingMessage, TARGET_KINDS_BY_ELEMENT_TYPE } from '../resolvers';
+import { resolveTargetInProject, kindLabel, memberMissingMessage, TARGET_KINDS_BY_ELEMENT_TYPE, ambiguityMessage, QUALIFY_ADVICE
+} from '../resolvers';
 import { qualifiedNameToString } from '../../parser/grammar';
 import { getProject } from '../utils';
 import { executeDeleteInstance } from './instance';
@@ -73,11 +74,11 @@ export async function executeDelete(
             return {
                 success: false,
                 command: 'delete',
-                message: `'${qualifiedNameToString(target)}' is ambiguous: ${resolution.ambiguousWith.join(', ')}`,
+                message: ambiguityMessage(qualifiedNameToString(target), resolution.ambiguousWith),
                 errors: [{
                     code: 'AMBIGUOUS_TARGET',
-                    message: `More than one ${kindLabel(targetKinds).toLowerCase()} matches '${qualifiedNameToString(target)}' ignoring case: ${resolution.ambiguousWith.join(', ')}`,
-                    suggestion: 'Use the exact name, matching case, of the one you mean'
+                    message: `More than one ${kindLabel(targetKinds).toLowerCase()} answers to '${qualifiedNameToString(target)}': ${resolution.ambiguousWith.join(', ')}`,
+                    suggestion: QUALIFY_ADVICE
                 }]
             };
         }

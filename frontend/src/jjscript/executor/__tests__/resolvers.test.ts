@@ -20,6 +20,8 @@ import {
     resolveTargetInMetamodel,
     resolveTargetInProject,
     resolveEnumTypeTarget,
+    ambiguityMessage,
+    QUALIFY_ADVICE,
     kindLabel,
     TARGET_KINDS_BY_ELEMENT_TYPE,
     CONTAINER_KINDS,
@@ -173,11 +175,15 @@ describe('an ambiguous case-insensitive fallback is an error, not a coin toss', 
         expect(resolution.ambiguousWith).toEqual(['colour', 'Colour']);
     });
 
-    it('CONTROL: unrestricted, the same lookup silently picks the first — the old behaviour', () => {
+    it('A1: unrestricted callers are told too — the debt 7bacbd63c declared, paid', () => {
+        // This assertion used to read the other way round: «unrestricted, the same lookup
+        // silently picks the first — the old behaviour», pinning first-match for the nine
+        // callers that pass no `kinds`. A1 makes the rule one rule, with no opt-in, so the
+        // old expectation is now the bug and the test is inverted rather than deleted.
         const mm = buildCaseClashMetamodel();
         const resolution = resolveTargetInMetamodel(qn('COLOUR'), mm);
-        expect(resolution.ambiguousWith).toBeUndefined();
-        expect(resolution.element?.id).toBe('enum-lower');
+        expect(resolution.element).toBeNull();
+        expect(resolution.ambiguousWith).toEqual(['colour', 'Colour']);
     });
 
     it('a single candidate differing only by case is not ambiguous', () => {
@@ -483,5 +489,164 @@ describe('resolveEnumTypeTarget — the type of an attribute', () => {
         metamodel.enumerators = [];
         const r = resolveEnumTypeTarget(qn('Mood'), metamodel, project(metamodel));
         expect(r.element).toBeFalsy();
+    });
+});
+
+// ─── A1: exact-case homonyms across metamodels ───────────────────────────────
+//
+// `nameUniqueness.ts` (R-M2U-2) makes a classifier name unique WITHIN a metamodel and
+// free ACROSS metamodels, so two metamodels may each declare `Person` and both are
+// legal. The name alone cannot choose between them, and until A1 `selectTarget` chose
+// anyway — `if (exact.length > 0) return exact[0]`, the first in collection order.
+// Measured as P7 in docs/discovery/discovery_2026-09-11_name_resolution_scope.md §5.
+
+describe('A1 — two metamodels, one spelling', () => {
+    function twoMetamodels() {
+        const mmA: any = { name: 'A', id: 'mm-a' };
+        const mmB: any = { name: 'B', id: 'mm-b' };
+        const aPerson = { name: 'Person', className: 'DClass', id: 'a-person', model: mmA, attributes: [], references: [] };
+        const bPerson = { name: 'Person', className: 'DClass', id: 'b-person', model: mmB, attributes: [], references: [] };
+        const shell = (mm: any, cls: any, enums: any[] = []) => Object.assign(mm, {
+            packages: [], classes: [cls], attributes: [], references: [],
+            operations: [], parameters: [], literals: [], enumerators: enums,
+        });
+        shell(mmA, aPerson); shell(mmB, bPerson);
+        return { mmA, mmB, aPerson, bPerson, project: { name: 'P', metamodels: [mmA, mmB], models: [] } as any };
+    }
+
+    it('an unqualified name that both declare is an ambiguity, spelled Metamodel::Name', () => {
+        const { project } = twoMetamodels();
+        const r = resolveTargetInProject(qn('Person'), project, ['class']);
+        expect(r.element).toBeNull();
+        expect(r.ambiguousWith).toEqual(['A::Person', 'B::Person']);
+    });
+
+    it('and for an unrestricted caller too — no opt-in', () => {
+        const { project } = twoMetamodels();
+        const r = resolveTargetInProject(qn('Person'), project);
+        expect(r.element).toBeNull();
+        expect(r.ambiguousWith).toEqual(['A::Person', 'B::Person']);
+    });
+
+    it('the qualified form resolves, and never reports ambiguity', () => {
+        const { project, aPerson, bPerson } = twoMetamodels();
+        expect(resolveTargetInProject(qn('A::Person'), project, ['class']).element?.id).toBe(aPerson.id);
+        expect(resolveTargetInProject(qn('B::Person'), project, ['class']).element?.id).toBe(bPerson.id);
+        expect(resolveTargetInProject(qn('A::Person'), project, ['class']).ambiguousWith).toBeUndefined();
+    });
+
+    it('CONTROL: scoped to one metamodel the name is not ambiguous at all', () => {
+        const { mmA, aPerson } = twoMetamodels();
+        const r = resolveTargetInMetamodel(qn('Person'), mmA, ['class']);
+        expect(r.element?.id).toBe(aPerson.id);
+        expect(r.ambiguousWith).toBeUndefined();
+    });
+
+    it('CONTROL: one metamodel only — a lone exact match still resolves', () => {
+        const { mmA, aPerson, project } = twoMetamodels();
+        project.metamodels = [mmA];
+        expect(resolveTargetInProject(qn('Person'), project, ['class']).element?.id).toBe(aPerson.id);
+    });
+
+    it('the case-insensitive branch is qualified too', () => {
+        const { mmA, mmB, project } = twoMetamodels();
+        mmA.classes = [{ name: 'person', className: 'DClass', id: 'a-lower', model: mmA }];
+        mmB.classes = [{ name: 'Person', className: 'DClass', id: 'b-upper', model: mmB }];
+        const r = resolveTargetInProject(qn('PERSON'), project, ['class']);
+        expect(r.element).toBeNull();
+        expect(r.ambiguousWith).toEqual(['A::person', 'B::Person']);
+    });
+
+    it('an element with no owning model is spelled BARE — the m3 primitives', () => {
+        // `get_model` returns null for a primitive (it lives in the store, not in a
+        // metamodel). Inventing `Ecore::EString` would print something that does not
+        // resolve. With kinds restricted to classifiers a primitive should not be a
+        // candidate at all; this pins the spelling for the case where one ever is.
+        const mmA: any = { name: 'A', id: 'mm-a' };
+        const prim = { name: 'EString', className: 'DClass', id: 'Pointer_ESTRING' };   // no .model
+        const owned = { name: 'EString', className: 'DClass', id: 'a-estring', model: mmA };
+        Object.assign(mmA, {
+            packages: [], classes: [prim, owned], attributes: [], references: [],
+            operations: [], parameters: [], literals: [], enumerators: [],
+        });
+        const r = resolveTargetInMetamodel(qn('EString'), mmA, ['class']);
+        expect(r.element).toBeNull();
+        expect(r.ambiguousWith).toEqual(['EString', 'A::EString']);
+    });
+
+    it('the message reads as specified', () => {
+        expect(ambiguityMessage('Person', ['A::Person', 'B::Person']))
+            .toBe("Ambiguous 'Person': A::Person, B::Person. Qualify as Metamodel::Name.");
+        expect(QUALIFY_ADVICE).toBe('Qualify as Metamodel::Name.');
+    });
+
+    it('12a318b3a is preserved: an exact-case holder with a missing member still settles', () => {
+        // The backtracking rule is about where the search STOPS, not about how many
+        // candidates share a spelling. One exact-case enum that cannot hold FOO must still
+        // report memberMissingOn rather than walking on.
+        const { metamodel } = buildMetamodel();
+        const resolution = resolveTargetInMetamodel(qn('Mood', 'FOO'), metamodel, ['literal']);
+        expect(resolution.element).toBeNull();
+        expect(resolution.memberMissingOn).toEqual({ parentName: 'Mood', parentKind: 'Enum', member: 'FOO' });
+        expect(resolution.ambiguousWith).toBeUndefined();
+    });
+
+    it('two exact-case holders that both miss the member are an ambiguity, qualified', () => {
+        const mmA: any = { name: 'A', id: 'mm-a' };
+        const mmB: any = { name: 'B', id: 'mm-b' };
+        const eA = { name: 'Mood', className: 'DEnumerator', id: 'a-mood', literals: [], model: mmA };
+        const eB = { name: 'Mood', className: 'DEnumerator', id: 'b-mood', literals: [], model: mmB };
+        const shell = (mm: any, en: any) => Object.assign(mm, {
+            packages: [], classes: [], attributes: [], references: [],
+            operations: [], parameters: [], literals: [], enumerators: [en],
+        });
+        shell(mmA, eA); shell(mmB, eB);
+        const project: any = { name: 'P', metamodels: [mmA, mmB], models: [] };
+        const r = resolveTargetInProject(qn('Mood', 'FOO'), project, ['literal']);
+        expect(r.element).toBeNull();
+        expect(r.ambiguousWith).toEqual(['A::Mood', 'B::Mood']);
+    });
+});
+
+// ─── A1: an unrestricted caller, end to end through `show` ───────────────────
+//
+// `show` is one of the nine callers that pass no `kinds`. It is exercised here at the
+// resolver level (the executor cannot be imported under this bench — see the header),
+// on both ambiguity branches, because those nine are exactly the ones whose behaviour
+// A1 changes without them opting in.
+
+describe('A1 — the unrestricted caller `show` on both branches', () => {
+    const showLookup = (target: any, project: any) => resolveTargetInProject(target, project);
+
+    function projectWith(classes: { name: string; id: string; mm: string }[]) {
+        const mms = new Map<string, any>();
+        for (const c of classes) {
+            if (!mms.has(c.mm)) mms.set(c.mm, Object.assign({ name: c.mm, id: 'mm-' + c.mm }, {
+                packages: [], classes: [], attributes: [], references: [],
+                operations: [], parameters: [], literals: [], enumerators: [],
+            }));
+            const mm = mms.get(c.mm);
+            mm.classes.push({ name: c.name, className: 'DClass', id: c.id, model: mm });
+        }
+        return { name: 'P', metamodels: [...mms.values()], models: [] } as any;
+    }
+
+    it('exact-case homonyms: show is told, and told in qualified spellings', () => {
+        const p = projectWith([{ name: 'Person', id: 'a1', mm: 'A' }, { name: 'Person', id: 'b1', mm: 'B' }]);
+        const r = showLookup(qn('Person'), p);
+        expect(r.element).toBeNull();
+        expect(r.ambiguousWith).toEqual(['A::Person', 'B::Person']);
+    });
+
+    it('case-insensitive plurality: show is told there too', () => {
+        const p = projectWith([{ name: 'person', id: 'a1', mm: 'A' }, { name: 'Person', id: 'b1', mm: 'B' }]);
+        const r = showLookup(qn('PERSON'), p);
+        expect(r.element).toBeNull();
+        expect(r.ambiguousWith).toEqual(['A::person', 'B::Person']);
+    });
+
+    it('CONTROL: with one candidate show still resolves, unqualified and unrestricted', () => {
+        const p = projectWith([{ name: 'Person', id: 'a1', mm: 'A' }]);
+        expect(showLookup(qn('Person'), p).element?.id).toBe('a1');
     });
 });

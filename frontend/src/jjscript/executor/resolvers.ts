@@ -103,10 +103,10 @@ function matchesKind(element: any, kinds?: ResolutionKind[]): boolean {
 /**
  * Outcome of a target resolution.
  *
- * `ambiguousWith` is set only when a **kind-restricted** case-insensitive fallback matched
- * more than one admissible element: picking one of them arbitrarily is what this whole
- * module is being fixed for, so the caller is told instead. An unrestricted call keeps the
- * historical first-match-wins behaviour and never reports ambiguity.
+ * `ambiguousWith` is set whenever more than one admissible element answered to the name —
+ * exact-case homonyms across metamodels, or a case-insensitive plurality — for EVERY caller,
+ * restricted on kinds or not. Picking one arbitrarily is what this module is being fixed for.
+ * Entries are spelled `Metamodel::Name` so the user can retype one and have it resolve.
  */
 export interface TargetResolution {
     /** The resolved element, or null when nothing admissible matched (ambiguity included). */
@@ -174,10 +174,21 @@ function collectByName(current: any, segmentName: string, collections: string[])
  * The rule, in order:
  *   1. an **exact-case** match among the admissible kinds wins;
  *   2. otherwise a case-insensitive match wins, but only if it is the only admissible one;
+ *   2b. more than one admissible **exact-case** candidate is an ambiguity too: two
+ *      metamodels may each declare `Person`, and `nameUniqueness.ts` (R-M2U-2) says that is
+ *      legal, so the name alone cannot choose and nobody should choose for the user;
  *   3. more than one admissible case-insensitive candidate is an ambiguity, reported to
- *      the caller rather than resolved by insertion order — but only when `kinds` restricts
- *      the search, so unrestricted callers keep the behaviour they had;
+ *      the caller rather than resolved by insertion order;
  *   4. nothing admissible is a miss, and the caller moves on to its next strategy.
+ *
+ * Both ambiguity branches fire for **every** caller, restricted on kinds or not. Until now
+ * only the restricted ones were told, and the nine that pass no `kinds` kept first-match —
+ * the debt `7bacbd63c` declared. One rule, no opt-in.
+ *
+ * A qualified input never reaches either branch across metamodels: `A::Person` walks into
+ * `A` first (`PROJECT_COLLECTIONS` starts at `'metamodels'`) and only A's elements are
+ * candidates. That is why this depends on A3 — a qualifier is a key only if metamodel names
+ * are unique.
  *
  * `member` is applied to each candidate before the kind test, so a candidate whose member
  * does not resolve can drop out and the next one be tried. That backtracking is what lets
@@ -189,6 +200,40 @@ function collectByName(current: any, segmentName: string, collections: string[])
  * failure than the one this module is being fixed for. Such a candidate settles the search
  * as `memberMissingOn`.
  */
+/**
+ * How a candidate is spelled in an ambiguity message: `Metamodel::Name`.
+ *
+ * Every spelling in that message has to be re-typeable and has to resolve, which is the
+ * whole point of printing it. `::` is the qualifier (the `.` is member access — measured in
+ * `docs/discovery/discovery_2026-09-11_name_resolution_scope.md` §5, P10).
+ *
+ * An element with no owning model is spelled **bare**. That is the m3 primitives: `EString`
+ * lives in the store, not in a metamodel, and `get_model` returns null for it
+ * (`model/logicWrapper/LModelElement.tsx`, "normal for primitive types in m3"). Inventing
+ * `Ecore::EString` would print something that does not resolve. With `kinds` restricted to
+ * classifiers a primitive should never be a candidate in the first place; the bare spelling
+ * is what happens if one ever is, not a case being catered for.
+ */
+function qualifiedSpelling(element: any): string {
+    const name: string = element?.name ?? '';
+    let owner: string | undefined;
+    try {
+        const model = element?.model;
+        const n = model?.name;
+        if (typeof n === 'string' && n) owner = n;
+    } catch { /* a proxy that cannot answer is spelled bare */ }
+    return owner ? owner + '::' + name : name;
+}
+
+/** The one piece of advice every ambiguity message gives. Exported so the four commands
+ *  cannot drift into saying different things about the same situation. */
+export const QUALIFY_ADVICE = 'Qualify as Metamodel::Name.';
+
+/** «Ambiguous 'Person': A::Person, B::Person. Qualify as Metamodel::Name.» */
+export function ambiguityMessage(asked: string, ambiguousWith: string[]): string {
+    return `Ambiguous '${asked}': ${ambiguousWith.join(', ')}. ${QUALIFY_ADVICE}`;
+}
+
 function selectTarget(
     candidates: any[],
     segmentName: string,
@@ -233,25 +278,24 @@ function selectTarget(
         else loose.push({ element, matchedName });
     }
 
-    if (exact.length > 0) return { element: exact[0] };
+    if (exact.length === 1) return { element: exact[0] };
+    if (exact.length > 1) return { element: null, ambiguousWith: exact.map(qualifiedSpelling) };
 
     // An exact-case container of the right sort outranks every case-insensitive sibling,
-    // even when the member is missing on it.
-    if (member && exactHolders.length > 0) return missingMember(exactHolders[0], member);
+    // even when the member is missing on it. Unchanged by A1: `12a318b3a`'s rule is about
+    // where the search STOPS, not about how many candidates share a spelling.
+    if (member && exactHolders.length === 1) return missingMember(exactHolders[0], member);
+    if (member && exactHolders.length > 1) {
+        return { element: null, ambiguousWith: exactHolders.map(qualifiedSpelling) };
+    }
 
     if (loose.length === 1) return { element: loose[0].element };
-    if (loose.length > 1) {
-        if (kinds && kinds.length > 0) {
-            return { element: null, ambiguousWith: loose.map((l) => l.matchedName) };
-        }
-        return { element: loose[0].element };
-    }
+    if (loose.length > 1) return { element: null, ambiguousWith: loose.map((l) => qualifiedSpelling(l.element)) };
 
     if (member && looseHolders.length === 1) return missingMember(looseHolders[0].element, member);
-    if (member && looseHolders.length > 1 && kinds && kinds.length > 0) {
-        return { element: null, ambiguousWith: looseHolders.map((l) => l.matchedName) };
+    if (member && looseHolders.length > 1) {
+        return { element: null, ambiguousWith: looseHolders.map((l) => qualifiedSpelling(l.element)) };
     }
-    if (member && looseHolders.length > 1) return missingMember(looseHolders[0].element, member);
 
     return NOT_FOUND;
 }

@@ -12,7 +12,8 @@ import {
 import {
     resolveElement, resolveElementInMetamodel,
     resolveTargetInMetamodel, resolveTargetInProject, resolveEnumTypeTarget,
-    kindLabel, memberMissingMessage, ResolutionKind, TargetResolution
+    kindLabel, memberMissingMessage, ResolutionKind, TargetResolution,
+    ambiguityMessage, QUALIFY_ADVICE
 } from '../resolvers';
 import { qualifiedNameToString } from '../../parser/grammar';
 import { getProject, getDefaultParent, needsParent, getTargetMetamodel } from '../utils';
@@ -302,11 +303,11 @@ export async function executeCreate(
             return {
                 success: false,
                 command: 'create',
-                message: `'${qualifiedNameToString(parent)}' is ambiguous: ${parentAmbiguity.join(', ')}`,
+                message: ambiguityMessage(qualifiedNameToString(parent), parentAmbiguity),
                 errors: [{
                     code: 'AMBIGUOUS_PARENT',
-                    message: `More than one ${expected} matches '${qualifiedNameToString(parent)}' ignoring case: ${parentAmbiguity.join(', ')}`,
-                    suggestion: 'Use the exact name, matching case, of the one you mean'
+                    message: `More than one ${expected} answers to '${qualifiedNameToString(parent)}': ${parentAmbiguity.join(', ')}`,
+                    suggestion: QUALIFY_ADVICE
                 }]
             };
         }
@@ -553,11 +554,11 @@ function resolveAttributeType(
             return { ok: false, error: {
                 success: false,
                 command: 'create',
-                message: `Ambiguous type '${qualifiedNameToString(qn)}' for attribute '${attrName}': ${shown}. Qualify as Metamodel::Name.`,
+                message: `Ambiguous type '${qualifiedNameToString(qn)}' for attribute '${attrName}': ${shown}. ${QUALIFY_ADVICE}`,
                 errors: [{
                     code: 'AMBIGUOUS_TYPE',
                     message: `'${qualifiedNameToString(qn)}' matches more than one enum: ${shown}`,
-                    suggestion: 'Qualify the type as Metamodel::Name.'
+                    suggestion: QUALIFY_ADVICE
                 }]
             }};
         }

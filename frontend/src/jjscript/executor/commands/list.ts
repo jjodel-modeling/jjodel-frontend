@@ -9,7 +9,8 @@ import {
     ExecutionContext,
     ElementType
 } from '../../types';
-import { resolveTargetInProject, kindLabel, memberMissingMessage, CONTAINER_KINDS } from '../resolvers';
+import { resolveTargetInProject, kindLabel, memberMissingMessage, CONTAINER_KINDS, ambiguityMessage, QUALIFY_ADVICE
+} from '../resolvers';
 import { qualifiedNameToString } from '../../parser/grammar';
 import { getProject } from '../utils';
 
@@ -60,11 +61,11 @@ export async function executeList(
                 return {
                     success: false,
                     command: 'list',
-                    message: `'${qualifiedNameToString(filter.in)}' is ambiguous: ${resolution.ambiguousWith.join(', ')}`,
+                    message: ambiguityMessage(qualifiedNameToString(filter.in), resolution.ambiguousWith),
                     errors: [{
                         code: 'AMBIGUOUS_SCOPE',
-                        message: `More than one ${kindLabel(CONTAINER_KINDS).toLowerCase()} matches '${qualifiedNameToString(filter.in)}' ignoring case: ${resolution.ambiguousWith.join(', ')}`,
-                        suggestion: 'Use the exact name, matching case, of the one you mean'
+                        message: `More than one ${kindLabel(CONTAINER_KINDS).toLowerCase()} answers to '${qualifiedNameToString(filter.in)}': ${resolution.ambiguousWith.join(', ')}`,
+                        suggestion: QUALIFY_ADVICE
                     }]
                 };
             }
