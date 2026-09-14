@@ -13,6 +13,28 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-14 — feat(sim slice 0, commit 1): pure simulation core, committed step locked by tests
+**Prompt**: `claude_2026-09-14_0140_prompt_sim_slice0_foundations.md`, commit 1 of 3 — `model/simulation/`
+with types, `stcFromRoles`, the step moved out of the panel unchanged, tests on the quirks.
+**Files touched**: code in `2f53c876a`, all new — `frontend/src/model/simulation/{types.ts,
+stcFromRoles.ts,step.ts,__tests__/step.test.ts}`. Docs: this entry. Worktree `../jjodel-sim`, branch
+`simulation-engine` from `alfonso-frontend-jjtl` `2241dd056`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — no existing file changed. `npx tsc --noEmit` 14 errors, the same set as before
+(diffed line by line), 0 in `model/simulation`; control `--listFilesOnly` lists the 4 new files.
+`npx vitest run src/model/simulation` 21/21. Mutation bench 7/7 red (activation order, terminal
+freeze, stuck skip, dangling deactivation, target existence, Deadlock `some`, `nextState` required).
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — no critical-zone file touched.
+**Smoke visivo**: non applicabile — no UI change in this commit.
+**Notes**: Baseline in a fresh worktree is 14, not 33: the 19 casing errors do not exist on a clean
+checkout. Prompt facts: `../jjodel-release` is not marked prunable in `git worktree list`; left
+alone. Addition: `applyStepLabel`, the one place of the activation-wins rule, for the store to reuse.
+Role names in `StcRoles` are the prompt's (`initial`…); the bag keys stay `sim*`.
+**Prompt document name**: 2026-09-14 01:40
+
 ## 2026-09-08 — docs: micro-discovery, l'estensione del difetto keyword-dopo-il-punto
 **Prompt**: micro-discovery READ-ONLY, nessun fix. Misurare l'estensione del difetto nel lexer JjEL
 per decidere se la correzione sia prerequisito della validazione definita dall'utente o corsia
