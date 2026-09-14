@@ -64,6 +64,44 @@ events/guards/candidates. Touches IR via `marked`/`isMarked`, not sync. `sim/` i
 `alfonso-frontend-jjtl` and `validation-skeleton`. 8 open questions in report §9.
 **Prompt document name**: 2026-09-13 00:30
 
+## 2026-09-14 — refactor(A4): le ricerche per nome estratte dove il banco puo' eseguirle
+**Prompt**: `claude_2026-09-12_0030_prompt_lane_a_resolver_ambiguity.md`, item **A4** aggiunto in
+chat. Chiude la corsia A (A2, A3, A3b, A1, A4).
+**Files touched**: 6 di codice in `dc5f8d3aa`, **sopra la soglia di 5 della regola 19** e
+conseguenza diretta di cio' che il prompt autorizza (RC-11): nuovi `model/nameLookup.ts`
+(`lookupNamedEntry`, `uniqueModelName`, zero import) e `model/__tests__/nameLookup.test.ts`
+(15 test di comportamento); `model/logicWrapper/LModelElement.tsx` e `joiner/classes.ts` delegano;
+`model/__tests__/getByNameKey.test.ts` e `joiner/__tests__/uniqueModelName.test.ts` perdono le
+asserzioni sul testo che ora sono comportamento e tengono solo cio' che resta non importabile.
+Docs in questo commit: questa entry. I due `ValidationRulesModal.*` restano dell'altra corsia.
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-12 00:30 (A2 e A3: le loro prove erano statiche perche' non c'era altro modo)
+**Causa**: (g)
+**Regressions**: unknown, fino alla verifica visiva di corsia. Gate verdi: `npx tsc --noEmit`
+**33** su output completo con exit status letto — la baseline — **0** righe nei file toccati,
+controllo positivo con segnale (`src/` → 69); `npm run build` exit 0; `npx vitest run` **3551
+passati, 0 falliti** (erano 3540, +11), 9 file rossi all'import per `window`, l'insieme
+pre-esistente. **Durante il giro tsc e' salito a 44**: 11 errori tutti nel test nuovo, `T` inferito
+come `{}` perche' l'helper tornava `any`. Tipato l'helper, tornato a 33.
+**Out-of-scope changes**: no.
+**Debito dichiarato** (da A1, iscritto qui perche' il log e' add-only e quella entry non si
+emenda): i segmenti **intermedi** di un nome qualificato restano first-match
+(`resolvers.ts`, `resolveByPath`: `current = matches[0]`). Quindi **la forma a tre segmenti
+`A::B::C` non fa parte della sintassi documentata del qualificatore** finche' quel resolver non e'
+sistemato: la sintassi documentata e' `Metamodel::Element` e basta.
+**Layer Impact Report**: not-required — nessun file della critical zone (§3.1); il modulo nuovo e'
+puro e i due chiamanti delegano senza cambiare firma.
+**Smoke visivo**: non eseguito; la verifica di corsia segue. In sua vece il banco: **i cinque
+mutanti che erano solo-sonda ora muoiono in repo** — N1 riscrittura degli alias (2 rossi), N2
+tie-break invertito (1), N3 guardia `caseSensitive` tolta (1), Q1 ramo `else` commentato in
+`DModel.new` (2), Q-pool `new3` su un bacino piu' stretto (1). Sorgenti ripristinati byte per byte.
+**Notes**: `(g)` per RC-8: l'ostacolo e' del banco, non del prodotto. Restano statiche **solo** le
+asserzioni su cio' che non si puo' importare: la delega di `_impl_getByName`, quella della statica,
+le tre guardie di `DModel`. Verificano anche che non sia rientrata una copia della logica e che
+`nameLookup.ts` **non importi nulla** — un import li' dentro renderebbe di nuovo inservibili le
+prove di comportamento senza far arrossare niente.
+**Prompt document name**: 2026-09-12 00:30
+
 ## 2026-09-13 — fix(A1): gli omonimi scritti uguali sono un'ambiguita', con le grafie qualificate
 **Prompt**: `claude_2026-09-12_0030_prompt_lane_a_resolver_ambiguity.md`, item **A1**, ultimo della
 corsia A. A4 resta da aprire.
