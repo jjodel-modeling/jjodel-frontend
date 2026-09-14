@@ -23,6 +23,39 @@ scritte nello stesso file prima di committare.
   Lezione: due corsie parallele committano il log una alla volta, ciascuna dopo aver riletto la
   testa; lo stesso file non si mette in due commit sovrapposti.
 
+## 2026-09-14 — fix(B2): Jjodie writes into the scope shown to the model
+**Prompt**: `claude_2026-09-14_1730_prompt_lane_b2_jjodie_scope_fix.md` — option S (scope stamped on
+the reply, carried to Run), V1 as an explicit error, V3 refused out of scope, qualified RAG names.
+Two-phase, hard checkpoint answered: one pre-check guard, 13 files, offer/JjScript mode unchanged,
+bare cross-metamodel types refused.
+**Files touched**: `ad32a8ea8`: `docs/discovery/discovery_2026-09-14_jjodie_scope_fix_targets.md`
+(at the checkpoint). `de77f22af`: `types/jodie.ts`, `Jodie/Jodie.tsx`, `Jodie/ChatMessages.tsx`,
+`services/JjodieContext.ts` (private → public), `services/JjodieRagService.ts`,
+`jjscript/services/JjScriptService.ts`, `jjscript/types.ts`, `executor/executor.ts`,
+`executor/utils.ts`, `commands/create.ts` (1 line), new `executor/scopeGuard.ts`; new tests
+`executor/__tests__/scopeGuard.test.ts` (16), `services/__tests__/JjodieRagService.test.ts` (7).
+This entry in its own commit.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown, until the visual check. Gates: `tsc --noEmit` exit 2, **33** on full output
+(baseline measured before the edits, identical but one line), **0** in 12 touched files, **1** in
+`ChatMessages.tsx`, the pre-existing TS2322 moved 262 → 271; control `src/` → 69. `vitest` guard + RAG +
+`resolvers.test.ts` **88/88** (65 before); full run **3592 passed, 0 failed**, 9 files red at import
+(`window is not defined`), the pre-existing set. Mutation bench **7/7** killed, sources restored
+(`diff -q`). `npm run build` exit 0: chunk warning, plus a `bordr` CSS warning not from this lane.
+**Out-of-scope changes**: yes — 13 files over rule 19's threshold, declared and confirmed at the
+checkpoint. `getDefaultParent` now honours `context.targetMetamodelId` JjScript-wide; typed commands
+pass the active metamodel there, same answer.
+**Layer Impact Report**: not-required — no critical-zone file (§3.1).
+**Smoke visivo**: non eseguito — spetta ad Alfonso: V1, V2, V3 of the report and the `A::Person`
+escape hatch.
+**Notes**: Test gap: the `.tsx` stamping/binding and the V1 line, `JjScriptService`, the executor call
+site and `utils.ts` do not import under node; verified by hand only, no source-text tests. The guard
+reads kinds by label: a case-only in-scope match of the same kind shelters a name (report §6). Lane G
+landed during the run: `create … type A::X` now parses.
+**Prompt document name**: 2026-09-14 17:30
+
 ## 2026-09-14 — fix(jjscript): i nomi di tipo qualificati parsano in create e returns
 **Prompt**: `claude_2026-09-14_1731_prompt_lane_g_parser_qualified_type.md` — two-phase con gate
 condizionale: far arrivare a `parseTypeReference` la stringa che si aspetta, senza toccare
