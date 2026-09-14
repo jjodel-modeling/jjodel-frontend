@@ -91,6 +91,43 @@ local `const`, not exported as the prompt said. Doc comments in `nameLookup.ts:6
 `classes.ts:1494` now describe the direction backwards; out of lane (report §6).
 **Prompt document name**: 2026-09-14 16:32
 
+## 2026-09-14 — fix(jjscript): i tipi risolti per kind ammissibili in set, create parameter, createReference
+**Prompt**: `claude_2026-09-14_1631_prompt_lane_c_type_resolution_kinds.md` — two-phase con gate
+condizionale: portare tre siti sullo stesso helper di `create attribute ... type <X>` (`39c5bf4ab`),
+generalizzato ai kind ammissibili di ciascun comando.
+**Files touched**: 6 in tre commit. Codice e test (`3e3ab691a`, 4 file):
+`frontend/src/jjscript/executor/resolvers.ts`, `executor/commands/create.ts`,
+`executor/commands/set.ts`, `executor/__tests__/resolvers.test.ts`. Docs: il referto
+`docs/discovery/discovery_2026-09-14_type_resolution_kinds.md` (`5f00baf71`) e questa entry.
+I quattro file sporchi delle altre corsie (`ValidationRulesModal.*`, `CLAUDE.md`, `AGENTS.md`)
+lasciati dove sono, RC-13; nessuno `stash`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown — i tre comandi non sono eseguibili in bench (vedi **Smoke visivo**).
+Baseline invariata e suite verde, ma il percorso utente non e' stato eseguito in questo giro.
+**Out-of-scope changes**: **yes**, e dichiarato. Il gate ha trovato un **quarto sito** della stessa
+famiglia, `createOperation` (`create.ts:788`, `returns <X>`): identico a `create parameter` riga per
+riga. Portato dentro su ratifica esplicita in chat, come RC-11 prevede: stesso file, stesso helper,
+~15 righe. Restano fuori, anch'essi su ratifica: `parser.ts:352` e `:404`.
+**Layer Impact Report**: not-required — nessun file di §3.1; nessuna `TRANSACTION`, nessuna scrittura
+D-layer vicino al sync.
+**Smoke visivo**: **non eseguito in questo giro** — spetta ad Alfonso su localhost. Al suo posto i
+gate: `npx tsc --noEmit` **33** righe `error TS` su output completo (la baseline di §17) e **0** in
+ciascuno dei tre sorgenti toccati, contate una per una, con controllo positivo che ha segnale sullo
+stesso output (`src/` → 69); `npx vitest run src/jjscript/executor/__tests__/resolvers.test.ts`
+**65 passati, 0 falliti** (erano 54); `npx vitest run src/jjscript` **326 passati**, 9 file su 10 —
+il decimo, `context-binding.test.ts`, fallisce all'import con `window is not defined` e il
+fallimento e' stato **misurato pre-esistente** ripristinando i quattro file da `git show HEAD:<path>`
+e rieseguendo, poi rimessi a posto da copia con `diff` a zero e indice mai toccato (§6.4);
+`npm run build` exit 0, solo il warning di chunk-size noto.
+**Notes**: Tre rilievi fuori previsione, misurati e argomentati in
+`discovery_2026-09-14_type_resolution_kinds.md`: i kind di `set ... type` si derivano
+dall'elemento tipato, non sono `['enum']` piatti (§3.4); `create ... type MM::X` **non parsa** —
+`parser.ts:352` da' un oggetto a `parseTypeReference(raw: string)` (§7); `set Person.age type Mood`
+non e' una forma esistente, il separatore di classe e' `::` (§3.5).
+**Prompt document name**: 2026-09-14 16:31
+
 ## 2026-09-13 — discovery: the JjEL evaluator and its context, against the simulation spec
 **Prompt**: `claude_2026-09-13_0100_prompt_discovery_jjel_eval_context.md` — read-only: entry points
 and callers, context shape and read-only exposure, extra roots, errors and tri-state, translatable
