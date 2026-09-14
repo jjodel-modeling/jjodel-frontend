@@ -26,6 +26,9 @@ import { Dispatch, ReactElement, useCallback, useEffect, useMemo, useState } fro
 import { connect } from 'react-redux';
 import { DState, LPointerTargetable, store } from '../../../joiner';
 import { getSimActiveIds, simApplyStep, simClear, simReset, useSimVersion } from './simRunState';
+import { initialConfiguration, runStatus as computeRunStatus, stepFlowchartBoolean } from '../../../model/simulation/step';
+import { stcFromRoles } from '../../../model/simulation/stcFromRoles';
+import type { SimConfiguration, SimModelView } from '../../../model/simulation/types';
 import './simulation-panel.scss';
 
 // ---------------------------------------------------------------------------
@@ -193,6 +196,28 @@ function transitionTargetId(transition: any, nextStateName: string): string | nu
     }
 }
 
+/**
+ * The impure side of the simulation core (model/simulation/): the read interface
+ * the step runs against, built over `idlookup` and the L proxy with the readers
+ * above. Metaclasses match by exact id, as the inline handlers did.
+ */
+function makeSimModelView(lookup: any, ownedTransitionsName: string, nextStateName: string): SimModelView {
+    return {
+        exists: id => !!lookup[id],
+        isInstanceOf: (id, classId) => lookup[id]?.instanceof === classId,
+        outgoingTransitions: id => outgoingTransitions(id, ownedTransitionsName)
+            .map((t: any) => (typeof t === 'string' ? t : t?.id))
+            .filter((t: unknown): t is string => typeof t === 'string'),
+        transitionTarget: transitionId => {
+            try {
+                return transitionTargetId(LPointerTargetable.fromPointer(transitionId as any), nextStateName);
+            } catch {
+                return null;
+            }
+        },
+    };
+}
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -218,7 +243,9 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
 
     // R-SIM-5: the run-state is per model. Clearing on modelid change and on
     // unmount keeps the flags from surviving into another model of the session.
-    useEffect(() => () => { simClear(); }, [modelid]);
+    // R-SIM-13: the cleanup captures the modelid of its own render, so it clears
+    // that model's run only.
+    useEffect(() => () => { simClear(modelid); }, [modelid]);
 
     const rolesComplete = ENGINE_ROLE_KEYS.every(k => !!roles[k]);
 
@@ -232,60 +259,40 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         lmm.state = { [key]: value === '' ? undefined : value };
     }, [configModelId]);
 
+    // Status, Reset and Step delegate to the core (model/simulation/step.ts), which
+    // holds the semantics and its tests; the rules are unchanged (slice 0).
     const runStatus: RunStatus | null = useMemo(() => {
         if (!isModelMode || !rolesComplete) return null;
+        const stc = stcFromRoles(roles);
+        if (!stc) return null;
         const lookup: any = (store.getState() as any).idlookup ?? {};
-        const activeIds = getSimActiveIds().filter(id => !!lookup[id]);
-        if (activeIds.length === 0) return 'Not started';
-        if (activeIds.some(id => lookup[id]?.instanceof === roles.simTerminal)) return 'Terminated';
-        // Deadlock: at least one active non-terminal instance with no outgoing
-        // transition, and no terminal active. Derived at every render, never stored.
-        const stuck = activeIds.some(id => outgoingTransitions(id, ownedTransitionsName).length === 0);
-        return stuck ? 'Deadlock' : 'Running';
+        const config: SimConfiguration = { marking: new Set(getSimActiveIds(modelid)), event: null };
+        return computeRunStatus(config, stc, makeSimModelView(lookup, ownedTransitionsName, nextStateName));
         // simVersion is the subscription to the active set — the real input of
         // this memo, and the reason the D-layer read above can go through
         // store.getState() (same idiom as irResolve.ts:78).
-    }, [isModelMode, rolesComplete, roles.simTerminal, ownedTransitionsName, simVersion]);
+    }, [isModelMode, rolesComplete, roles, modelid, ownedTransitionsName, nextStateName, simVersion]);
 
     const onReset = useCallback((): void => {
+        const stc = stcFromRoles(roles);
+        if (!stc) return;
         const lookup: any = (store.getState() as any).idlookup ?? {};
-        const initialId = roles.simInitial;
-        if (!initialId) return;
-        const ids = collectModelObjectIds(lookup, modelid)
-            .filter(id => lookup[id]?.instanceof === initialId);
-        simReset(ids);
-    }, [modelid, roles.simInitial]);
+        const view = makeSimModelView(lookup, ownedTransitionsName, nextStateName);
+        const config = initialConfiguration(stc, view, collectModelObjectIds(lookup, modelid));
+        simReset(modelid, [...config.marking]);
+    }, [modelid, roles, ownedTransitionsName, nextStateName]);
 
-    const onStop = useCallback((): void => { simClear(); }, []);
+    const onStop = useCallback((): void => { simClear(modelid); }, [modelid]);
 
-    /**
-     * One step, one `simApplyStep`. For every active instance: its outgoing
-     * transitions fire, their targets activate, the source deactivates. An
-     * active instance with no outgoing transition stays active — the deadlock
-     * stays visible instead of silently emptying the set (prototype behaviour,
-     * Control.tsx:288-295, made explicit). A transition whose `nextState` is
-     * unset still consumes the source token, as in the prototype: a dangling
-     * transition is a modelling error and shows up as a token that vanishes.
-     */
+    /** One step, one `simApplyStep`: the core computes the label, the store applies it. */
     const onStep = useCallback((): void => {
+        const stc = stcFromRoles(roles);
+        if (!stc) return;
         const lookup: any = (store.getState() as any).idlookup ?? {};
-        const activeIds = getSimActiveIds().filter(id => !!lookup[id]);
-        // Terminated: no-op, exactly like the prototype's termination guard.
-        if (activeIds.some(id => lookup[id]?.instanceof === roles.simTerminal)) return;
-
-        const deactivate: string[] = [];
-        const activate: string[] = [];
-        for (const id of activeIds) {
-            const transitions = outgoingTransitions(id, ownedTransitionsName);
-            if (transitions.length === 0) continue;
-            for (const t of transitions) {
-                const targetId = transitionTargetId(t, nextStateName);
-                if (targetId && lookup[targetId]) activate.push(targetId);
-            }
-            deactivate.push(id);
-        }
-        simApplyStep(deactivate, activate);
-    }, [roles.simTerminal, ownedTransitionsName, nextStateName]);
+        const config: SimConfiguration = { marking: new Set(getSimActiveIds(modelid)), event: null };
+        const { label } = stepFlowchartBoolean(config, stc, makeSimModelView(lookup, ownedTransitionsName, nextStateName));
+        simApplyStep(modelid, label.deactivated, label.activated);
+    }, [modelid, roles, ownedTransitionsName, nextStateName]);
 
     const optionsFor = (kind: RoleKind): MetaOption[] => {
         if (kind === 'class') return options.classes;
