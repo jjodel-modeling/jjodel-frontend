@@ -23,6 +23,27 @@ scritte nello stesso file prima di committare.
   Lezione: due corsie parallele committano il log una alla volta, ciascuna dopo aver riletto la
   testa; lo stesso file non si mette in due commit sovrapposti.
 
+## 2026-09-14 — discovery(B): Jjodie metamodel scope, and where a Jjodie write lands
+**Prompt**: `claude_2026-09-14_1630_prompt_lane_b_jjodie_scope_discovery.md` — read-only:
+`resolveMetamodelScope`, `findClassByName` and its call sites, whether Jjodie goes through
+`selectTarget`, what the LLM sees, a localhost repro, the two fix options with their cost.
+**Files touched**: `767220122`: new `docs/discovery/discovery_2026-09-14_jjodie_metamodel_scope.md`.
+This entry in its own commit. No source touched. `resolvers.ts`, `create.ts`, `set.ts` were read
+clean at `26d04febc`; lane C's edits to them appeared later and were left as they are (RC-13).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — read-only run, no source modified.
+**Out-of-scope changes**: no.
+**Layer Impact Report**: not-required — no critical-zone file (§3.1).
+**Smoke visivo**: non applicabile — read-only run. In its place `npx vitest run` on
+`resolvers.test.ts`, 54/54, before lane C's edits. The Q6 repro is pending Alfonso on localhost.
+**Notes**: `JjodieActionExecutor` has 0 importers on both branches and since its creation
+(`75fe8f2f5`): the defect as described is unreachable. 14 call sites, not 13. Live Jjodie writes go
+through JjScript: with `B` focused, `create attribute age in Person` lands in `B`. Writes outside the
+scope remain via `metamodels[0]`, the scope read at Run time, and the project fallback (report §3 Q6).
+**Prompt document name**: 2026-09-14 16:30
+
 ## 2026-09-14 — refactor(D): generateUniqueModelName delegates to uniqueModelName
 **Prompt**: `claude_2026-09-14_1632_prompt_lane_d_unique_model_name_delegation.md` — compare the
 two copies of the `(n)` rule on pool, suffix format and a base ending in `(n)`; delegate if the
