@@ -91,6 +91,7 @@ import {
 import {ValuePointers} from "./PointerDefinitions";
 import {transientProperties} from "../../joiner/classes";
 import {checkNameUniqueness, checkM2NameUniqueness, getNamespaceOf, m2KindOf, type M2NamespaceKind} from "./nameUniqueness";
+import {lookupNamedEntry, uniqueModelName} from "../nameLookup";
 import { toast } from "../../components/Toast";
 import React, {JSX} from "react";
 import { checkObjectCreation, checkLinkCreation, checkValueAssignment, emitGuardViolation } from '../conformance/ConformanceGuard';
@@ -4983,7 +4984,7 @@ export class DModel extends DNamedElement { // DNamedElement
         // is the one `set_name` already compares against -- every DModel, metamodels and M1
         // models together -- so the two halves cannot disagree.
         // See docs/discovery/discovery_2026-09-11_name_resolution_scope.md §2.1 (R4).
-        else name = DPointerTargetable.uniqueModelName(name, dmodelnames);
+        else name = uniqueModelName(name, dmodelnames);
         return new Constructors(new DModel('dwc'), undefined, persist, undefined).DPointerTargetable().DModelElement()
             .DNamedElement(name).DModel(instanceoff, isMetamodel).end();
     }
@@ -4994,7 +4995,7 @@ export class DModel extends DNamedElement { // DNamedElement
         // Same rule as `new`, same pool: the three entry points cannot disagree about what a
         // model may be called. `new2` has no call site in the tree today (measured 2026-09-12),
         // and the guard is here so it cannot become the way around the rule.
-        else name = DPointerTargetable.uniqueModelName(name, dmodelnames);
+        else name = uniqueModelName(name, dmodelnames);
         return new Constructors(new DModel('dwc'), undefined, true, undefined).DPointerTargetable().DModelElement()
             .DNamedElement(name).DModel(instanceoff).end((d) => { Object.assign(d, setter); });
     }
@@ -5008,7 +5009,7 @@ export class DModel extends DNamedElement { // DNamedElement
         // it — a local would have to be threaded through both branches to change nothing.
         // The one live caller (`jjodie-integration/JjodieAPIImpl.ts:95`) passes an object
         // literal and returns only the new id, so the write is not observable there.
-        else a.name = DPointerTargetable.uniqueModelName(a.name, dmodelnames);
+        else a.name = uniqueModelName(a.name, dmodelnames);
         return new Constructors(new DModel('dwc'), a.father, persist, undefined, a.id)
             .DPointerTargetable().DModelElement().DNamedElement(a.name)
             .DModel(a.instanceof, !a.instanceof)
@@ -5884,39 +5885,17 @@ instanceof === undefined or missing  --> auto-detect and assign the type
         return (name: string) => { return this._impl_getByName(this.get_classes(c), name) as LClass; }
     }
     _impl_getByName(collection: Dictionary<string, LModelElement> & any[], name: string, caseSensitive: boolean = false): LModelElement | null {
-        name = name.trim();
         // The named-array convention is "$" + name, in all three places that build one:
-        // `U.toNamedArray` (common/U.tsx:2083), `LPackage.get_classes` (:1902) and
-        // `LPackage.get_enumerators` (:1909). Looking up the bare key could never hit, and
-        // neither could the lowercase pass, which produced '$freeprobe' and asked for
-        // 'freeprobe' -- so `getClassByName` and `getEnumByName` returned null for every
-        // name, unique ones included. Measured (R-M2-2,
-        // docs/discovery/discovery_2026-08-30_uniqueness_m2.md §4.1), with the positive
-        // control that made it a measurement: `getClassByName('$FreeProbe')` did resolve.
-        // That control stops working here on purpose -- the '$' belongs to the key, not to
-        // the name the caller passes.
-        const key: string = '$' + name;
-        if (collection[key]) return collection[key];
-        if (caseSensitive) return null;
-
-        // The fallback READS, it does not write. It used to build a lowercase alias for
-        // every key back into `collection` and then read one of them, which rebound the
-        // exact-case entry for every later lookup on the same array: after one
-        // `getClassByName('PERSON')`, asking for 'person' returned `Person`. Measured in
-        // `docs/discovery/discovery_2026-09-11_name_resolution_scope.md` §5 (P3-d).
+        // `U.toNamedArray` (common/U.tsx), `LPackage.get_classes` and
+        // `LPackage.get_enumerators`. Looking up the bare key could never hit (R-M2-2,
+        // docs/discovery/discovery_2026-08-30_uniqueness_m2.md §4.1).
         //
-        // The tie-break is unchanged on purpose: the alias pass overwrote earlier keys with
-        // later ones, so the LAST matching key won, and it still does. Which of two
-        // case-variant homonyms answers is a separate question from whether the lookup
-        // mutates its input, and this change only settles the second.
-        const lowered: string = key.toLowerCase();
-        let found: LModelElement | null = null;
-        for (const k of Object.keys(collection)) {
-            if ((k + '').toLowerCase() !== lowered) continue;
-            const hit = collection[k];
-            if (hit) found = hit;
-        }
-        return found;
+        // The lookup itself lives in `model/nameLookup.ts` since A4: this file is not
+        // importable under the test bench, so while the body was here it could only be
+        // asserted on as source text — and a regex over a body does not notice a tie-break
+        // being inverted or a write creeping back in. Exact-first, case-insensitive
+        // fallback, last-match-wins and the read-only guarantee are all unchanged.
+        return lookupNamedEntry<LModelElement>(collection, name, caseSensitive);
     }
 
 }
