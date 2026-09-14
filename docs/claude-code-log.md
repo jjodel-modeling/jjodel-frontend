@@ -64,6 +64,57 @@ events/guards/candidates. Touches IR via `marked`/`isMarked`, not sync. `sim/` i
 `alfonso-frontend-jjtl` and `validation-skeleton`. 8 open questions in report §9.
 **Prompt document name**: 2026-09-13 00:30
 
+## 2026-09-14 — chore(jjscript): la corsia A riportata su alfonso-frontend-jjtl, cinque commit
+**Prompt**: GO dopo la verifica visiva di corsia (entry `2026-09-14 16:10`). Cherry-pick `-x` dei
+cinque commit di codice della corsia A sul ramo che il prompt del 2026-09-12 00:30 dichiarava,
+solo codice, e nota del cherry-pick in un commit di docs.
+**Files touched**: 2, entrambi di docs: questa entry e `docs/sessioni/sessione_2026-09-14.md`.
+Nessun sorgente toccato in questo giro: i cinque commit sono riportati **as-is** con
+`git cherry-pick -x` (che incide la provenienza nel messaggio), non riscritti. Tutti e cinque erano
+gia' solo-codice, quindi «solo codice» non ha richiesto filtri. Corrispondenza degli sha, origine su
+`validation-skeleton` → destinazione su `alfonso-frontend-jjtl`:
+
+| item | origine | destinazione |
+|------|---------|--------------|
+| A2 — fallback di `_impl_getByName` senza effetti collaterali | `2a60e3264` | `df11ed769` |
+| A3 — `DModel.new` suffissa i nomi duplicati | `b434a3950` | `1efe5c3ec` |
+| A3b — stessa regola su `new2` e `new3` | `6a211f5c3` | `fa3139a37` |
+| A1 — ambiguita' sugli omonimi di case esatto | `a52dfe5f3` | `ce9e78d64` |
+| A4 — `model/nameLookup.ts` e i due chiamanti che delegano | `dc5f8d3aa` | `e82831264` |
+
+**Il cherry-pick e' avvenuto nel secondo worktree gia' esistente** (`/Users/alfonso/jjodel-release`,
+pulito su `2241dd056`), non cambiando ramo in albero condiviso: i due `ValidationRulesModal.*`
+dell'altra corsia sono sporchi in `/Users/alfonso/jjodel` e RC-13 vieta lo `stash` che sarebbe la
+scorciatoia abituale. Il worktree di prova del giro precedente (tip `59f14a184`) era **una prova e
+non una destinazione**: i suoi cinque sha non sono citati da nessuna parte, e il worktree e' stato
+rimosso a fine giro con `git worktree remove` + `prune`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. **Questa entry chiude il `Regressions: unknown` che le cinque entry di codice
+portano**: quelle entry non sono state emendate (CLAUDE.md:1012, il log e' add-only), e la verifica
+visiva era gia' stata sciolta dalla entry `2026-09-14 16:10`. Gate sul ramo di destinazione dopo il
+cherry-pick, eseguiti in `/Users/alfonso/jjodel-release` con `node_modules` in symlink temporaneo
+(rimosso a fine giro, `git status` vuoto prima e dopo): `npx vitest run` sui quattro file di test
+toccati **87 passati, 0 falliti** su 4 file; `npx tsc --noEmit` exit 2, **14** righe `error TS` su
+output completo — la baseline di quel ramo, l'insieme «sparso» gia' dichiarato (`Measurable.tsx` ×6,
+`api/data.ts` ×3, `Dummy.ts`, `EditorV2.tsx`, `ChatMessages.tsx`, `ProjectEditor.tsx`,
+`Dashboard.tsx`) — e **0** righe in ciascuno degli 8 sorgenti toccati, controllati uno per uno, con
+due controlli positivi che hanno segnale sullo stesso file e con lo stesso strumento (`src/` → 14,
+`Measurable` → 6). I 19 errori di casing della baseline 33 non esistono su quel ramo: e' una
+proprieta' del ramo, non un effetto del giro.
+**Out-of-scope changes**: no.
+**Layer Impact Report**: not-required — nessun file della critical zone (§3.1); nessun sorgente
+modificato in questo giro.
+**Smoke visivo**: **passato**, e non in questo giro: i cinque scenari su localhost riferiti da
+Alfonso e verbalizzati nella entry `2026-09-14 16:10`, che questo giro presuppone e non ripete.
+**Notes**: I 12 file portati combaciano byte per byte con `dc5f8d3aa`, uno per uno; lo stato
+risultante e' identico alla prova (`git diff HEAD 59f14a184` vuoto, controllo positivo con segnale:
+verso `2241dd056` stampa 12 file). **Il controllo positivo del giro del 2026-09-12 non ha piu'
+segnale**: `eval.ts` oggi e' identico fra i due rami, la divergenza R-VAL-16 e' rientrata; usato
+`App.tsx`, che differisce. Restano 35 file diversi sotto `frontend/src`, di altre corsie.
+**Prompt document name**: 2026-09-14 16:25
+
 ## 2026-09-14 — verify: la verifica visiva della corsia A, passata su tutti e cinque i giri
 **Prompt**: verifica di corsia dopo A4. Copre i cinque commit di codice della corsia A:
 `2a60e3264` (A2), `b434a3950` (A3), `6a211f5c3` (A3b), `a52dfe5f3` (A1), `dc5f8d3aa` (A4).
