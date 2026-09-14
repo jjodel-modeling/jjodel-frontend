@@ -28,6 +28,7 @@ import { DState, LPointerTargetable, store } from '../../../joiner';
 import { getSimActiveIds, simApplyStep, simClear, simReset, useSimVersion } from './simRunState';
 import { initialConfiguration, runStatus as computeRunStatus, stepFlowchartBoolean } from '../../../model/simulation/step';
 import { stcFromRoles } from '../../../model/simulation/stcFromRoles';
+import { isKindOf } from '../../../model/simulation/isKindOf';
 import type { SimConfiguration, SimModelView } from '../../../model/simulation/types';
 import './simulation-panel.scss';
 
@@ -199,12 +200,13 @@ function transitionTargetId(transition: any, nextStateName: string): string | nu
 /**
  * The impure side of the simulation core (model/simulation/): the read interface
  * the step runs against, built over `idlookup` and the L proxy with the readers
- * above. Metaclasses match by exact id, as the inline handlers did.
+ * above. Metaclasses match with ancestry (R-SIM-8): an instance of a subclass
+ * of the initial or terminal metaclass plays that role too.
  */
 function makeSimModelView(lookup: any, ownedTransitionsName: string, nextStateName: string): SimModelView {
     return {
         exists: id => !!lookup[id],
-        isInstanceOf: (id, classId) => lookup[id]?.instanceof === classId,
+        isInstanceOf: (id, classId) => isKindOf(lookup, id, classId),
         outgoingTransitions: id => outgoingTransitions(id, ownedTransitionsName)
             .map((t: any) => (typeof t === 'string' ? t : t?.id))
             .filter((t: unknown): t is string => typeof t === 'string'),
