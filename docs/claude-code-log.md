@@ -23,6 +23,42 @@ scritte nello stesso file prima di committare.
   Lezione: due corsie parallele committano il log una alla volta, ciascuna dopo aver riletto la
   testa; lo stesso file non si mette in due commit sovrapposti.
 
+## 2026-09-14 — fix(jjscript): i nomi di tipo qualificati parsano in create e returns
+**Prompt**: `claude_2026-09-14_1731_prompt_lane_g_parser_qualified_type.md` — two-phase con gate
+condizionale: far arrivare a `parseTypeReference` la stringa che si aspetta, senza toccare
+`create.ts` (corsia B2 in corso su quel file).
+**Files touched**: 3 in tre commit. Codice e test (`2a1619653`): `frontend/src/jjscript/parser/parser.ts`,
+`frontend/src/jjscript/__tests__/parser.test.ts`. Docs: il referto
+`docs/discovery/discovery_2026-09-14_parser_qualified_type.md` (`240f5af1f`) e questa entry.
+`create.ts`, `set.ts`, `resolvers.ts` non toccati, come il prompt impone. I due
+`ValidationRulesModal.*` sporchi di un'altra corsia lasciati dove sono, RC-13; nessuno `stash`.
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-14 16:31
+**Causa**: (c)
+**Regressions**: no. Il ramo `IDENTIFIER`/`KEYWORD` di `expectIdentifierOrQualified` ritornava gia'
+una stringa e la riceve invariata: per un nome non qualificato il percorso e' identico, e tre test
+di controllo lo fissano (`type Mood`, `type int`, `returns Result`, `returns int`).
+**Out-of-scope changes**: no. Aggiunto `qualifiedNameToString` all'import da `./grammar` gia'
+esistente in `parser.ts`, che e' completamento normale di un file dichiarato.
+**Layer Impact Report**: not-required — nessun file di §3.1; il parser non tocca D-layer, L-layer,
+sync o persistenza.
+**Smoke visivo**: **non eseguito in questo giro** — spetta ad Alfonso su localhost
+(`create attribute age in Person type Mood2::Level`). Al suo posto i gate: `npm run typecheck`
+exit 2, **33** righe `error TS` su output completo (la baseline di §17), **0** in ciascuno dei due
+file toccati contate una per una, con controllo positivo che ha segnale sullo stesso output
+(`src/` → 69); `npx vitest run src/jjscript/__tests__/parser.test.ts src/jjscript/__tests__/grammar.test.ts`
+**170 passati, 0 falliti**; `npx vitest run src/jjscript` **333 passati** (erano 326), 9 file su 10 —
+il decimo, `context-binding.test.ts`, fallisce all'import con `window is not defined` e il fallimento
+e' stato **misurato pre-esistente su questo HEAD** ripristinando i due file da `git show HEAD:<path>`
+e rieseguendo, poi rimessi a posto da copia con `diff` a zero e indice mai toccato (§6.4);
+`npm run build` exit 0, solo il warning di chunk-size noto.
+**Notes**: Adottata la forma piccola: `expectTypeNameString` serializza il solo ramo oggetto, la
+firma di `parseTypeReference` resta `(raw: string)`. Lecito perche' il round trip e' esatto su ogni
+forma che il lexer produce qui (referto §4). La corsia C aveva rilevato il difetto e lo aveva
+lasciato fuori perimetro su ratifica: `Corregge` punta a quel giro. Fuori perimetro e non toccato:
+`type List<String>` non raggiunge mai il ramo collezione (referto §7).
+**Prompt document name**: 2026-09-14 17:31
+
 ## 2026-09-14 — docs(F): worktree and cherry-pick rule in CLAUDE.md
 **Prompt**: `claude_2026-09-14_1633_prompt_lane_f_claude_md_worktree_rule.md` — record the
 2026-09-14 worktree incident as a rule in the git section of `CLAUDE.md`, one subsection, English.
