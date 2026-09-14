@@ -23,6 +23,26 @@ scritte nello stesso file prima di committare.
   Lezione: due corsie parallele committano il log una alla volta, ciascuna dopo aver riletto la
   testa; lo stesso file non si mette in due commit sovrapposti.
 
+## 2026-09-14 — docs(F): worktree and cherry-pick rule in CLAUDE.md
+**Prompt**: `claude_2026-09-14_1633_prompt_lane_f_claude_md_worktree_rule.md` — record the
+2026-09-14 worktree incident as a rule in the git section of `CLAUDE.md`, one subsection, English.
+**Files touched**: `686a13712`: `CLAUDE.md` (new §6.5 after §6.4, +25; no cherry-pick section
+existed) and `AGENTS.md` (regenerated, +25). This entry in its own commit.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (a)
+**Regressions**: no — docs only. `npm run check:agents` exit 0, `npm run check:docs` exit 0
+(3/3, 2 pre-existing warnings on 2026-09-02 entries).
+**Out-of-scope changes**: yes — `AGENTS.md`, which §17 requires in the same commit as `CLAUDE.md`.
+**Layer Impact Report**: not-required — no critical-zone file (§3.1).
+**Smoke visivo**: non applicabile — docs only.
+**Notes**: Last bullet not written as dictated. The only tracked `eval.ts` is
+`jjscript/executor/commands/eval.ts`, last changed 2026-09-09 on `validation-skeleton` and
+2026-08-30 on `alfonso-frontend-jjtl`; `git diff --quiet` between them exits 1 today and at
+`dc5f8d3aa`/`e82831264` (control `App.tsx` exits 1). It never stopped differing: the rule is kept,
+the example is dropped.
+**Prompt document name**: 2026-09-14 16:33
+
 ## 2026-09-14 — discovery(B): Jjodie metamodel scope, and where a Jjodie write lands
 **Prompt**: `claude_2026-09-14_1630_prompt_lane_b_jjodie_scope_discovery.md` — read-only:
 `resolveMetamodelScope`, `findClassByName` and its call sites, whether Jjodie goes through
