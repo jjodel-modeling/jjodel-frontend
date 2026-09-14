@@ -6,6 +6,7 @@
 import { Lexer, tokenize } from './lexer';
 import {
     parseQualifiedName,
+    qualifiedNameToString,
     parseMultiplicity,
     parseTypeReference,
     parseLiteralValue,
@@ -349,7 +350,7 @@ export class Parser {
 
             // type: TypeName
             if (this.matchKeyword('type') || this.matchOperator(':')) {
-                options.type = parseTypeReference(this.expectIdentifierOrQualified('type name') as string);
+                options.type = parseTypeReference(this.expectTypeNameString('type name'));
                 hasOptions = true;
                 continue;
             }
@@ -401,7 +402,7 @@ export class Parser {
 
             // returnType for operations
             if (this.matchKeyword('returns') || this.matchKeyword('return')) {
-                options.returnType = parseTypeReference(this.expectIdentifierOrQualified('return type') as string);
+                options.returnType = parseTypeReference(this.expectTypeNameString('return type'));
                 hasOptions = true;
                 continue;
             }
@@ -1252,6 +1253,27 @@ export class Parser {
             return token.value;
         }
         throw new Error(`Expected ${what}, found '${token.value}'`);
+    }
+
+    /**
+     * The spelling of a type name, always as the string `parseTypeReference` expects.
+     *
+     * `expectIdentifierOrQualified` returns a `QualifiedName` **object** for a
+     * QUALIFIED_NAME token, and the lexer emits exactly that for `MM::Mood`. The two type
+     * clauses used to pass it on behind an `as string` cast, so `parseTypeReference` hit
+     * `raw.trim()` on an object and every qualified type name failed to parse — measured
+     * in `docs/discovery/discovery_2026-09-14_parser_qualified_type.md` §3.1.
+     *
+     * The round trip is exact, not approximate: `qualifiedNameToString` and
+     * `parseQualifiedName` are inverses over every shape the lexer produces here
+     * (`MM::Mood`, `A::B::C`, `MM::Mood.foo`, `Shape.draw` — measured, §4), and the
+     * `TypeReference` rebuilt from the string is identical to the object serialised. The
+     * IDENTIFIER/KEYWORD branch is already a string and is handed over untouched, so an
+     * unqualified type name takes exactly the path it always took.
+     */
+    private expectTypeNameString(what: string): string {
+        const spelled = this.expectIdentifierOrQualified(what);
+        return typeof spelled === 'string' ? spelled : qualifiedNameToString(spelled);
     }
 
     private expectIdentifierOrQualified(what: string): string | QualifiedName {
