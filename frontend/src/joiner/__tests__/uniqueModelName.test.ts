@@ -55,24 +55,23 @@ const ENTRY_POINTS: { label: string; signature: string; nameExpr: string }[] = [
 
 const dmodelNewBody = () => dmodelEntryBody(ENTRY_POINTS[0].signature);
 
-describe('uniqueModelName — lo schema (n), non uno nuovo', () => {
-    it('restituisce il nome chiesto quando e\' libero', () => {
-        expect(uniqueBody()).toMatch(/if \(!taken\.includes\(requested\)\) return requested;/);
+describe('uniqueModelName — la statica delega al modulo importabile', () => {
+    // A4: lo schema (n) e' in `model/nameLookup.ts` e le sue prove di comportamento — la
+    // sequenza A / A (1) / A (2), il confronto esatto, il massimo invece del conteggio, i
+    // metacaratteri — girano in `model/__tests__/nameLookup.test.ts`. Qui resta la delega,
+    // che da un file non importabile non si puo' eseguire.
+    it('il corpo della statica e\' una sola chiamata al modulo', () => {
+        const start = classesSource.indexOf('    static uniqueModelName(requested: string, taken: string[]): string {');
+        expect(start, 'la firma della statica e\' cambiata: aggiorna il test').toBeGreaterThan(-1);
+        const body = classesSource.slice(start, classesSource.indexOf('\n    }', start));
+        expect(body).toMatch(/return uniqueModelNameImpl\(requested, taken\);/);
+        // nessuna copia della logica rientrata
+        expect(body).not.toMatch(/taken\.includes/);
+        expect(body).not.toMatch(/replace\(/);
     });
 
-    it('il confronto e\' esatto: nessun toLowerCase, come checkM2NameUniqueness', () => {
-        expect(uniqueBody()).not.toMatch(/toLowerCase/);
-    });
-
-    it('suffissa con " (n)", lo schema di generateUniqueModelName', () => {
-        const body = uniqueBody();
-        expect(body).toMatch(/requested \+ ' \(' \+ \(max \+ 1\) \+ '\)'/);
-        // e riparte dal massimo esistente, non dal conteggio
-        expect(body).toMatch(/if \(n > max\) max = n;/);
-    });
-
-    it('i metacaratteri del nome sono neutralizzati prima della regexp', () => {
-        expect(uniqueBody()).toMatch(/requested\.replace\(/);
+    it('l\'import e\' aliasato, perche\' la statica ha lo stesso nome', () => {
+        expect(classesSource).toMatch(/import \{ uniqueModelName as uniqueModelNameImpl \} from "\.\.\/model\/nameLookup";/);
     });
 });
 
@@ -83,8 +82,8 @@ describe('DModel.new — il nome scelto dal chiamante passa dal controllo', () =
         // Ancorata a inizio riga, senza `//` davanti: la prima stesura usava un toMatch
         // nudo, e una mutazione che COMMENTAVA la riga la superava — il commento contiene
         // ancora il testo. Misurato col banco delle mutazioni (Q1, 2026-09-12).
-        expect(body).toMatch(/\n +else name = DPointerTargetable\.uniqueModelName\(name, dmodelnames\);/);
-        expect(body).not.toMatch(/\/\/ *else name = DPointerTargetable\.uniqueModelName/);
+        expect(body).toMatch(/\n +else name = uniqueModelName\(name, dmodelnames\);/);
+        expect(body).not.toMatch(/\/\/ *else name = uniqueModelName/);
     });
 
     it('il bacino e\' quello che set_name gia\' confronta: ogni DModel', () => {
@@ -116,10 +115,12 @@ describe('A3b — la regola vale su tutti e tre i punti d\'ingresso', () => {
             const body = dmodelEntryBody(ep.signature);
             expect(body).toMatch(/defaultname\("model_"/);
             // Ancorata a inizio riga e con il contro-controllo sul commento: vedi Q1.
-            const re = new RegExp('\\n +else ' + ep.nameExpr.replace('.', '\\.') +
-                ' = DPointerTargetable\\.uniqueModelName\\(' + ep.nameExpr.replace('.', '\\.') + ', dmodelnames\\);');
+            // A4: i tre chiamano la funzione importata da `model/nameLookup`, non piu' la
+            // statica di DPointerTargetable. La guardia e' la stessa, il nome no.
+            const expr = ep.nameExpr.replace('.', '\\.');
+            const re = new RegExp('\\n +else ' + expr + ' = uniqueModelName\\(' + expr + ', dmodelnames\\);');
             expect(body).toMatch(re);
-            expect(body).not.toMatch(new RegExp('\\/\\/ *else ' + ep.nameExpr.replace('.', '\\.') + ' = DPointerTargetable'));
+            expect(body).not.toMatch(new RegExp('\\/\\/ *else ' + expr + ' = uniqueModelName'));
         });
 
         it(`${ep.label}: interroga lo stesso bacino degli altri due`, () => {
@@ -130,7 +131,7 @@ describe('A3b — la regola vale su tutti e tre i punti d\'ingresso', () => {
     }
 
     it('nessun punto d\'ingresso e\' rimasto indietro: tre firme, tre guardie', () => {
-        const guards = (lmeSource.match(/else (a\.)?name = DPointerTargetable\.uniqueModelName\(/g) || []).length;
+        const guards = (lmeSource.match(/else (a\.)?name = uniqueModelName\(/g) || []).length;
         expect(guards).toBe(ENTRY_POINTS.length);
     });
 });

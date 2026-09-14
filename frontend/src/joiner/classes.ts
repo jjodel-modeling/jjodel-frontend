@@ -152,6 +152,10 @@ import type {Collaborative as CollaborativeT} from "../components/collaborative/
 import {names} from "tinycolor2";
 import { toast } from "../components/Toast";
 import { checkM2NameUniqueness, m2KindOf, pendingChildrenOf } from "../model/logicWrapper/nameUniqueness";
+// Aliased: the static below has the same name, and a bare call inside it would
+// read as a recursion to anyone skimming. It is not — a bare identifier in a
+// static body resolves to module scope — but the alias says so without asking.
+import { uniqueModelName as uniqueModelNameImpl } from "../model/nameLookup";
 import { DEFAULT_VIEW_CSS } from "../view/viewElement/defaultViewCss";
 var windoww = window as any;
 
@@ -1503,18 +1507,10 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
      * which is what a qualified `Metamodel::Element` needs to mean one thing.
      */
     static uniqueModelName(requested: string, taken: string[]): string {
-        if (!requested) return requested;
-        if (!taken.includes(requested)) return requested;
-        const escaped: string = requested.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const pattern: RegExp = new RegExp('^' + escaped + ' \\((\\d+)\\)$');
-        let max: number = 0;
-        for (const name of taken) {
-            const m = typeof name === 'string' ? name.match(pattern) : null;
-            if (!m) continue;
-            const n: number = parseInt(m[1], 10);
-            if (n > max) max = n;
-        }
-        return requested + ' (' + (max + 1) + ')';
+        // Moved to `model/nameLookup.ts` in A4 so the bench can execute it; this stays as
+        // the call site the codebase already knows, with the same signature and the same
+        // answers. See that module for the scheme and why it is not `defaultname`'s.
+        return uniqueModelNameImpl(requested, taken);
     }
 
     public static new(...a:any): DPointerTargetable { //father?: Pointer, persist: boolean = false, fatherType?: Constructor, ...a:any): DPointerTargetable {
