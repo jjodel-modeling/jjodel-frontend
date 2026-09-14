@@ -149,6 +149,73 @@ describe('Parser: create', () => {
         });
     });
 
+    // Qualified type names used to fail at PARSE time, never reaching the executor:
+    // `expectIdentifierOrQualified` hands back a QualifiedName object for a
+    // QUALIFIED_NAME token, and the two type clauses passed it to
+    // `parseTypeReference(raw: string)` behind an `as string` cast, which died on
+    // `raw.trim()`. Measured in
+    // `docs/discovery/discovery_2026-09-14_parser_qualified_type.md` §3.1.
+    //
+    // The resolver side has accepted `Metamodel::Name` since 3e3ab691a (lane C); this is
+    // the half that lets a user type one.
+    describe('qualified type names — type and returns', () => {
+        const qualified = (t: any) => {
+            expect(t?.kind).toBe('class');
+            return (t as { kind: 'class'; name: { segments: string[]; raw: string } }).name;
+        };
+
+        it('parses a qualified `type MM::Mood`', () => {
+            const a = args<CreateArgs>('create attribute age in Person type MM::Mood');
+            const name = qualified(a.options?.type);
+            expect(name.segments).toEqual(['MM', 'Mood']);
+            expect(name.raw).toBe('MM::Mood');
+        });
+
+        it('parses a qualified `returns MM::Result`', () => {
+            const a = args<CreateArgs>('create operation op in Person returns MM::Result');
+            const name = qualified(a.options?.returnType);
+            expect(name.segments).toEqual(['MM', 'Result']);
+            expect(name.raw).toBe('MM::Result');
+        });
+
+        it('parses a qualified type on a reference and on a parameter', () => {
+            const ref = args<CreateArgs>('create reference r in A type MM::Person');
+            expect(qualified(ref.options?.type).segments).toEqual(['MM', 'Person']);
+
+            const par = args<CreateArgs>('create parameter p in Shape::draw type MM::Person');
+            expect(qualified(par.options?.type).segments).toEqual(['MM', 'Person']);
+        });
+
+        it('keeps more than two segments', () => {
+            const a = args<CreateArgs>('create attribute x in Person type A::B::C');
+            const name = qualified(a.options?.type);
+            expect(name.segments).toEqual(['A', 'B', 'C']);
+            expect(name.raw).toBe('A::B::C');
+        });
+
+        // CONTROL: the unqualified spellings take the string branch, untouched by the fix.
+        it('CONTROL: an unqualified class name is unchanged', () => {
+            const a = args<CreateArgs>('create attribute age in Person type Mood');
+            const name = qualified(a.options?.type);
+            expect(name.segments).toEqual(['Mood']);
+            expect(name.raw).toBe('Mood');
+        });
+
+        it('CONTROL: a primitive alias is still a primitive, on type and on returns', () => {
+            expect(args<CreateArgs>('create attribute age in Person type int').options?.type)
+                .toEqual({ kind: 'primitive', type: 'Integer' });
+            expect(args<CreateArgs>('create operation op in Person returns int').options?.returnType)
+                .toEqual({ kind: 'primitive', type: 'Integer' });
+        });
+
+        it('CONTROL: an unqualified return type is unchanged', () => {
+            const a = args<CreateArgs>('create operation op in Person returns Result');
+            const name = qualified(a.options?.returnType);
+            expect(name.segments).toEqual(['Result']);
+            expect(name.raw).toBe('Result');
+        });
+    });
+
     // M1 instance creation — canonical grammar requires the 'of' keyword.
     describe('create instance — M1 grammar', () => {
         it("rejects 'create instance' without 'of' keyword", () => {
