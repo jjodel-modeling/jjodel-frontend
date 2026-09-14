@@ -13,6 +13,35 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-14 — feat(sim slice 0, commit 3): one notion of «is a» for the simulation roles (R-SIM-8)
+**Prompt**: `claude_2026-09-14_0140_prompt_sim_slice0_foundations.md`, commit 3 of 3 — ancestry-aware
+matching for `simInitial`/`simTerminal` in the adapter's `isInstanceOf`, test on a subclass.
+**Files touched**: code in `c09cf4353` — `frontend/src/model/simulation/isKindOf.ts` (new),
+`frontend/src/model/simulation/__tests__/step.test.ts` (+6 tests), `frontend/src/components/editor-v2/
+sim/SimulationPanel.tsx` (import + one line of the adapter). Docs: this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `npx tsc --noEmit` 14, same set; `npx vitest run` 3416 passed (3410 + 6), the
+same 9 files red at import; `src/model/simulation` 27/27. Mutation bench 3/3 red (exact id only,
+direct parents only, missing class not matched). Probe `after` on the exact-id fixture: 17 PASS, trace
+identical to the pre-slice run.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — no critical-zone file modified. The test imports
+`classAncestry` from `editor-v2/viewpoint/ir/irReadCtx.ts`: exported, and the module has zero imports
+(no React, no store). Test-only, for the parity check with the IR walk.
+**Smoke visivo**: passato. Probe `after3`: J, instance of `SInitSub extends SInit`, no outgoing
+transition. Reset {I,J} Deadlock; Step {A,J}; {B,C,J}; {C,F,J} Terminated; Stop {}. DOM and store
+agree, 0 page errors. Under exact-id matching Reset would give {I} Running, so the expectation itself
+discriminates. A first `after` run timed out on `page.goto` with two probes on a cold server (g); re-run
+alone, green.
+**Notes**: No pure helper outside `viewpoint/ir/` (ConformanceValidator on L types, singletonShape
+direct `extends` only, metamodelConverter on L chains). `classAncestry` qualified but was not imported:
+the core does not import `components/`, and an adapter-only import would leave the match untested
+(the panel does not load under node). Walk duplicated, parity-tested. One difference: an exact id still
+matches a deleted DClass, as before.
+**Prompt document name**: 2026-09-14 01:40
+
 ## 2026-09-14 — feat(sim slice 0, commit 2): the panel delegates to the core, run-state per model
 **Prompt**: `claude_2026-09-14_0140_prompt_sim_slice0_foundations.md`, commit 2 of 3 — Reset, Step and
 status through `model/simulation/`; `Map<modelId, SimConfiguration>` (R-SIM-13).
