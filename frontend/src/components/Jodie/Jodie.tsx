@@ -15,7 +15,7 @@ import {
     ChatState,
     TAIProvider, AIConfig, AI, JodieConfig,
     ConsoleMode, CodeFlavor, CodeEntry, isChatEntry,
-    CONSOLE_MODES, ConsoleModeSwitchVia
+    CONSOLE_MODES, ConsoleModeSwitchVia, JjodieScope
 } from '../../types/jodie';
 import { useSettingsModalSafe } from '../../contexts/SettingsModalContext';
 import { JjodieEvents, AIEvents, JjScriptEvents, JjodelEvents } from '../../events/registry';
@@ -126,13 +126,15 @@ export function Jodie(): JSX.Element {
 
     // Get current project context for AI — reactive to redux state AND active editor changes.
     // Scoped to the metamodel relevant to the active artefact (M1 model or M2 metamodel).
-    const projectContext = useMemo((): string | undefined => {
+    // The scope travels with the text: a reply is stamped with the scope its context showed,
+    // and Run writes there, whatever tab is focused by then.
+    const projectContextBundle = useMemo((): { text?: string; scope?: JjodieScope } => {
         // Read the project live on every recomputation. A frozen []-deps memo
         // here would capture a mount-time `undefined` (Jodie mounts before the
         // project finishes loading), so the context would never reach the LLM.
         // See docs/discovery/2026-06-12_prompt_render_bug.md (Q3, Fix 1).
         const project = user.project;
-        if (!project) return undefined;
+        if (!project) return {};
         try {
             const activeModel = getActiveModel();
             const activeMetamodel = getActiveMetamodel();
@@ -153,10 +155,22 @@ export function Jodie(): JSX.Element {
                     level: 'M2',
                 };
             }
-            return JjodieContextService.getContextJSON(project as LProject, activeArtifact);
+            const text = JjodieContextService.getContextJSON(project as LProject, activeArtifact);
+            // The same resolution getContextJSON used: the metamodel the model is shown. None
+            // (nothing in focus, every metamodel shown) leaves the reply without a scope.
+            const shown = JjodieContextService.resolveMetamodelScope(project as LProject, activeArtifact);
+            const scope: JjodieScope | undefined = text && shown && activeArtifact ? {
+                level: activeArtifact.level,
+                metamodelId: shown.id,
+                metamodelName: shown.name ?? 'Unnamed',
+                modelId: activeArtifact.level === 'M1' ? activeArtifact.id : undefined,
+            } : undefined;
+            return { text, scope };
         }
-        catch (err) { console.warn('Could not get project context:', err); }
+        catch (err) { console.warn('Could not get project context:', err); return {}; }
     }, [state.idlookup.clonedCounter, editorChangeCounter]);
+    const projectContext = projectContextBundle.text;
+    const projectScope = projectContextBundle.scope;
 
     // Listen for open event
     useEffect(() => {
@@ -579,10 +593,12 @@ export function Jodie(): JSX.Element {
                 documents,
             };
             const { entries } = await jjodieProvider.run(content, ctx);
+            // Stamp the reply with the scope its context showed (projectContextBundle).
+            const scoped = entries.map(e => isChatEntry(e) ? { ...e, jjodieScope: projectScope } : e);
 
             setChatState(prev => ({
                 ...prev,
-                messages: [...prev.messages, ...entries],
+                messages: [...prev.messages, ...scoped],
                 isWaiting: false,
                 hasUnread: !prev.isOpen,
             }));
@@ -603,7 +619,7 @@ export function Jodie(): JSX.Element {
                 isWaiting: false,
             }));
         }
-    }, [activeProvider, chatState.messages, consoleMode, state.idlookup.clonedCounter, projectContext, userName]);
+    }, [activeProvider, chatState.messages, consoleMode, state.idlookup.clonedCounter, projectContext, projectScope, userName]);
 
     // Shared one-shot "Ask Jjodie": send `input` to the LLM and append the reply,
     // WITHOUT changing mode. Used by the offer card's [Chiedi a Jjodie] and by the
@@ -620,9 +636,11 @@ export function Jodie(): JSX.Element {
                 ragInitialized,
             };
             const { entries } = await jjodieProvider.run(input, ctx);
+            // Stamp the reply with the scope its context showed (projectContextBundle).
+            const scoped = entries.map(e => isChatEntry(e) ? { ...e, jjodieScope: projectScope } : e);
             setChatState(prev => ({
                 ...prev,
-                messages: [...prev.messages, ...entries],
+                messages: [...prev.messages, ...scoped],
                 isWaiting: false,
                 hasUnread: !prev.isOpen,
             }));
@@ -637,7 +655,7 @@ export function Jodie(): JSX.Element {
             };
             setChatState(prev => ({ ...prev, messages: [...prev.messages, errorMessage], isWaiting: false }));
         }
-    }, [activeProvider, chatState.messages, projectContext, ragInitialized]);
+    }, [activeProvider, chatState.messages, projectContext, projectScope, ragInitialized]);
 
     // Disable an offer entry's buttons after a tap (marks it consumed by id).
     const markOfferConsumed = useCallback((messageId: string) => {

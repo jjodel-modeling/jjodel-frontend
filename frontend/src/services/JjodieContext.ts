@@ -83,8 +83,9 @@ export class JjodieContextService {
      * Resolve the metamodel scope from an active artefact.
      * Returns the LModel of the metamodel to walk, or null if no scoping applies
      * (caller should fall back to the global project collections).
+     * Public so Jodie can stamp a reply with the scope its context showed.
      */
-    private static resolveMetamodelScope(
+    static resolveMetamodelScope(
         project: LProject,
         activeArtifact?: ActiveArtifact
     ): LModel | null {

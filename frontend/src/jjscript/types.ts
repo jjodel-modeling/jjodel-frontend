@@ -502,6 +502,14 @@ export interface ExecutionContext {
      * targets the wrong level.
      */
     level?: 'M1' | 'M2';
+    /**
+     * True when the caller fixed the scope instead of reading it from the UI: a script run
+     * from a Jjodie reply carries the metamodel (and, at M1, the model) Jjodie showed the
+     * model. Resolution then never re-reads the active tab nor falls back to the first
+     * metamodel, and a bare name held only by another metamodel is refused before dispatch
+     * (`executor/scopeGuard.ts`). Absent for typed commands.
+     */
+    scopeBound?: boolean;
     selectedElement?: string;
     history: CommandHistoryEntry[];
     variables: Map<string, any>;

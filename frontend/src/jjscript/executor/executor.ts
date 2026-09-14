@@ -37,6 +37,9 @@ import { executeForAll } from './commands/forall';
 import { executeAbstract } from './commands/abstract';
 import { extractDependencies } from './dependencies';
 import { waitForDependencies } from './elementWaiter';
+import { checkBoundScope } from './scopeGuard';
+import { getMetamodelById } from './resolvers';
+import { getProject } from './utils';
 
 // ============================================
 // EXECUTOR CLASS
@@ -47,12 +50,13 @@ export class JjScriptExecutor {
     private undoStack: (() => void)[] = [];
     private redoStack: (() => void)[] = [];
 
-    constructor(projectId: string, modelId?: string, targetMetamodelId?: string, level?: 'M1' | 'M2') {
+    constructor(projectId: string, modelId?: string, targetMetamodelId?: string, level?: 'M1' | 'M2', scopeBound?: boolean) {
         this.context = {
             projectId,
             modelId,
             targetMetamodelId,
             level,
+            scopeBound,
             history: [],
             variables: new Map()
         };
@@ -110,6 +114,25 @@ export class JjScriptExecutor {
                     // Don't fail here - let the command handler produce the proper error message
                 } else if (waitResult.waitedMs > 0) {
                     // console.log(`[JjScript] Dependencies resolved after ${waitResult.waitedMs}ms`);
+                }
+            }
+
+            // A scope carried from a Jjodie reply says where the script writes: refuse a bare
+            // name only another metamodel holds, before a handler can fall back to it
+            // project-wide. M1 commands already resolve against the bound model's metamodel.
+            if (context.scopeBound && context.level !== 'M1') {
+                const project = getProject(context);
+                if (project) {
+                    const refusal = checkBoundScope(
+                        dependencies, getMetamodelById(project, context.targetMetamodelId ?? ''), project);
+                    if (refusal) {
+                        return {
+                            success: false,
+                            command: ast.command,
+                            message: refusal.message,
+                            errors: [{ code: refusal.code, message: refusal.message, suggestion: refusal.suggestion }]
+                        };
+                    }
                 }
             }
 
@@ -311,22 +334,26 @@ let executorInstance: JjScriptExecutor | null = null;
  * M2 (metamodel editor) within the same project — or between two different
  * M1 models of the same metamodel — must yield distinct executors so that
  * `self` resolution and command-handler routing see the correct host.
+ * `scopeBound`, when passed, invalidates it too: a typed command must never inherit the
+ * bound context a Jjodie reply left behind, nor a reply the unbound one.
  */
 export function getExecutor(
     projectId?: string,
     modelId?: string,
     targetMetamodelId?: string,
-    level?: 'M1' | 'M2'
+    level?: 'M1' | 'M2',
+    scopeBound?: boolean
 ): JjScriptExecutor {
     const ctx = executorInstance?.getContext();
     const needsNew = !executorInstance
         || (projectId && ctx?.projectId !== projectId)
         || (targetMetamodelId !== undefined && ctx?.targetMetamodelId !== targetMetamodelId)
         || (level !== undefined && ctx?.level !== level)
-        || (modelId !== undefined && ctx?.modelId !== modelId);
+        || (modelId !== undefined && ctx?.modelId !== modelId)
+        || (scopeBound !== undefined && !!ctx?.scopeBound !== scopeBound);
 
     if (needsNew) {
-        executorInstance = new JjScriptExecutor(projectId || '', modelId, targetMetamodelId, level);
+        executorInstance = new JjScriptExecutor(projectId || '', modelId, targetMetamodelId, level, scopeBound);
     }
     return executorInstance!;
 }
@@ -339,9 +366,10 @@ export async function executeCommand(
     projectId?: string,
     modelId?: string,
     targetMetamodelId?: string,
-    level?: 'M1' | 'M2'
+    level?: 'M1' | 'M2',
+    scopeBound?: boolean
 ): Promise<ExecutionResult> {
-    const executor = getExecutor(projectId, modelId, targetMetamodelId, level);
+    const executor = getExecutor(projectId, modelId, targetMetamodelId, level, scopeBound);
     return executor.execute(input);
 }
 

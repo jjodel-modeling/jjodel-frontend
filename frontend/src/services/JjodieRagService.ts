@@ -88,7 +88,7 @@ class JjodieRagServiceClass {
             // Include classes
             if (project.classes) {
                 project.classes.forEach((cls: LClass) => {
-                    parts.push(`class:${cls.name || ''}`);
+                    parts.push(`class:${this.qualifiedName(cls, '')}`);
 
                     if (cls.attributes) {
                         cls.attributes.forEach((attr: LAttribute) => {
@@ -107,7 +107,7 @@ class JjodieRagServiceClass {
             // Include enumerations
             if (project.enumerators) {
                 project.enumerators.forEach((en: LEnumerator) => {
-                    parts.push(`enum:${en.name || ''}`);
+                    parts.push(`enum:${this.qualifiedName(en, '')}`);
                 });
             }
 
@@ -148,7 +148,7 @@ class JjodieRagServiceClass {
             overviewParts.push('## Classes');
             project.classes.forEach((cls: LClass) => {
                 const abstractStr = cls.abstract ? ' (abstract)' : '';
-                overviewParts.push(`- **${cls.name || 'Unnamed'}**${abstractStr}`);
+                overviewParts.push(`- **${this.qualifiedName(cls, 'Unnamed')}**${abstractStr}`);
             });
             overviewParts.push('');
         }
@@ -156,7 +156,7 @@ class JjodieRagServiceClass {
         if (project.enumerators && project.enumerators.length > 0) {
             overviewParts.push('## Enumerations');
             project.enumerators.forEach((en: LEnumerator) => {
-                overviewParts.push(`- **${en.name || 'Unnamed'}**`);
+                overviewParts.push(`- **${this.qualifiedName(en, 'Unnamed')}**`);
             });
         }
 
@@ -180,7 +180,7 @@ class JjodieRagServiceClass {
                 const classParts: string[] = [];
                 const className = cls.name || 'Unnamed';
 
-                classParts.push(`# Class: ${className}`);
+                classParts.push(`# Class: ${this.qualifiedName(cls, className)}`);
                 classParts.push('');
 
                 if (cls.abstract) {
@@ -190,7 +190,7 @@ class JjodieRagServiceClass {
 
                 // Extends
                 if (cls.extends && cls.extends.length > 0) {
-                    const superClasses = cls.extends.map((sc: LClass) => sc.name || 'Unknown').join(', ');
+                    const superClasses = cls.extends.map((sc: LClass) => this.qualifiedName(sc, 'Unknown')).join(', ');
                     classParts.push(`**Extends:** ${superClasses}`);
                     classParts.push('');
                 }
@@ -231,7 +231,7 @@ class JjodieRagServiceClass {
                 if (classParts.length > 2) {
                     documents.push({
                         id: `class_${projectId}_${cls.id || className}`,
-                        title: `Class: ${className}`,
+                        title: `Class: ${this.qualifiedName(cls, className)}`,
                         content: classParts.join('\n'),
                         source: 'metamodel' as DocumentSource,
                         metadata: {
@@ -253,7 +253,7 @@ class JjodieRagServiceClass {
                 const enumParts: string[] = [];
                 const enumName = en.name || 'Unnamed';
 
-                enumParts.push(`# Enumeration: ${enumName}`);
+                enumParts.push(`# Enumeration: ${this.qualifiedName(en, enumName)}`);
                 enumParts.push('');
 
                 if (en.literals && en.literals.length > 0) {
@@ -267,7 +267,7 @@ class JjodieRagServiceClass {
                 if (enumParts.length > 2) {
                     documents.push({
                         id: `enum_${projectId}_${en.id || enumName}`,
-                        title: `Enumeration: ${enumName}`,
+                        title: `Enumeration: ${this.qualifiedName(en, enumName)}`,
                         content: enumParts.join('\n'),
                         source: 'metamodel' as DocumentSource,
                         metadata: {
@@ -291,7 +291,7 @@ class JjodieRagServiceClass {
      */
     private getTypeName(attr: any): string {
         try {
-            if (attr.type?.name) return attr.type.name;
+            if (attr.type?.name) return this.qualifiedName(attr.type, attr.type.name);
             if (typeof attr.type === 'string') return attr.type;
             if (attr.primitiveType) return attr.primitiveType;
             return 'String';
@@ -301,12 +301,27 @@ class JjodieRagServiceClass {
     }
 
     /**
+     * Helper: `Metamodel::Name`, the spelling the JjScript resolvers accept and their ambiguity
+     * messages print, so a name the model reads here resolves when it writes it back. An
+     * element with no owning model (m3 primitives such as EString) stays bare, as in
+     * `jjscript/executor/resolvers.ts` `qualifiedSpelling`.
+     */
+    private qualifiedName(element: any, fallback: string): string {
+        const name = element?.name || fallback;
+        try {
+            const owner = element?.model?.name;
+            if (typeof owner === 'string' && owner) return `${owner}::${name}`;
+        } catch { /* a proxy that cannot answer is spelled bare */ }
+        return name;
+    }
+
+    /**
      * Helper: Get target name from reference
      */
     private getTargetName(ref: any): string {
         try {
-            if (ref.type?.name) return ref.type.name;
-            if (ref.target?.name) return ref.target.name;
+            if (ref.type?.name) return this.qualifiedName(ref.type, ref.type.name);
+            if (ref.target?.name) return this.qualifiedName(ref.target, ref.target.name);
             if (typeof ref.type === 'string') return ref.type;
             return 'Unknown';
         } catch {
