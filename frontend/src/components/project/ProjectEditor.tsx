@@ -40,6 +40,7 @@ import type { EnvGenConfigSummary } from '../envgen';
 import { loadMegamodel, getSerializedMegamodel, buildMegamodelExportJson } from '../../model/megamodelPersistence';
 import type { ProjectArtifacts } from '../../model/megamodelInference';
 import { setRuntimeMegamodel, clearRuntimeMegamodel, getRuntimeMegamodel } from '../../model/megamodelRuntime';
+import { uniqueModelName } from '../../model/nameLookup';
 import MegamodelView, { type ArtifactStats } from '../megamodel/MegamodelView';
 import { Badge } from '../common/Badge';
 import { EmptyState } from '../ui/EmptyState';
@@ -1350,36 +1351,15 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
 
         /**
          * Generate unique model name by appending (N) suffix if needed.
-         * Finds the highest existing suffix and increments by 1.
+         * Delegates to `uniqueModelName` (model/nameLookup.ts), the single source of the
+         * rule that `DModel.new` also applies; the pool stays the one passed by the caller.
          *
          * @param baseName - The desired name (e.g., "metamodel_1_to_metamodel_2")
          * @param existingNames - Array of existing names
          * @returns Unique name (e.g., "metamodel_1_to_metamodel_2 (1)")
          */
         const generateUniqueModelName = (baseName: string, existingNames: string[]): string => {
-            // If base name doesn't exist, use it directly
-            if (!existingNames.includes(baseName)) {
-                return baseName;
-            }
-
-            // Find all existing names that match the pattern "baseName (N)"
-            // Escape special regex characters in baseName
-            const escapedBaseName = baseName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            const pattern = new RegExp(`^${escapedBaseName} \\((\\d+)\\)$`);
-
-            let maxSuffix = 0;
-            for (const name of existingNames) {
-                const match = name.match(pattern);
-                if (match) {
-                    const suffix = parseInt(match[1], 10);
-                    if (suffix > maxSuffix) {
-                        maxSuffix = suffix;
-                    }
-                }
-            }
-
-            // Return baseName with the next available suffix (max + 1)
-            return `${baseName} (${maxSuffix + 1})`;
+            return uniqueModelName(baseName, existingNames);
         };
 
         // Execution guard to prevent double-firing
