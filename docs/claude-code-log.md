@@ -13,6 +13,32 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-14 — feat(sim slice 0, commit 2): the panel delegates to the core, run-state per model
+**Prompt**: `claude_2026-09-14_0140_prompt_sim_slice0_foundations.md`, commit 2 of 3 — Reset, Step and
+status through `model/simulation/`; `Map<modelId, SimConfiguration>` (R-SIM-13).
+**Files touched**: code in `c70c9f7b5` — `frontend/src/components/editor-v2/sim/simRunState.ts`,
+`frontend/src/components/editor-v2/sim/SimulationPanel.tsx`. Docs: this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `npx tsc --noEmit` 14, same set as the baseline; `npx vitest run` 3410 passed
+(3389 + 21), 9 files red at import for `window`, the same set as before the slice. `isSimActive` keeps
+its boolean contract (union over models), so `ObjectNode.tsx` and `irReadCtxLproxy.ts` are untouched.
+`simApplyStep` bumps exactly when the in-place version did.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — no critical-zone file touched.
+**Smoke visivo**: passato. Dev server started from the worktree on 3002 (3000 serves the main tree),
+own `cacheDir`; gitignored probe `scripts/smoke/_tmp_sim0_verify.ts`. The prompt's «flowchart example
+of the 2026-08-17 memo» does not exist (0 hits in the memo; that M1 run stayed open), so the probe
+builds one on RowViewSmoke: I→A, A→B|C, B→F, C stuck. Same trace before and after, DOM and store:
+Reset {I} Running; Step {A} Running; {B,C} Deadlock; {C,F} Terminated, Step disabled; Stop {} Not
+started. R-SIM-13 per contrasto: Stop empties its own model (2→0), leaves a marking injected on another
+model, and `isSimActive` still paints it until that one is cleared. 0 page errors.
+**Notes**: Two after-runs failed on the probe, not the app: after HMR the app loads `simRunState.ts?t=…`
+and a bare `import()` got a second, empty instance. Restarted the server; green. Status now reads its
+own model (`getSimActiveIds(modelid)`); with one editor it is the same set.
+**Prompt document name**: 2026-09-14 01:40
+
 ## 2026-09-14 — feat(sim slice 0, commit 1): pure simulation core, committed step locked by tests
 **Prompt**: `claude_2026-09-14_0140_prompt_sim_slice0_foundations.md`, commit 1 of 3 — `model/simulation/`
 with types, `stcFromRoles`, the step moved out of the panel unchanged, tests on the quirks.
