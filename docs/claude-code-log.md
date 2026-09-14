@@ -13,6 +13,16 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+**Incidente — discovery parallele del 2026-09-13.** Due sessioni sullo stesso albero, entry
+scritte nello stesso file prima di committare.
+
+- `46f4f584d` — messaggio: «the simulation engine state discovery and its log entry».
+  Contenuto reale: il report del motore e **due** entry, la sua e quella della discovery JjEL
+  (`claude_2026-09-13_0100_...`), gia' su disco al momento del commit.
+- `2d420c64f` — il solo report JjEL; la sua entry era gia' in `46f4f584d`.
+  Lezione: due corsie parallele committano il log una alla volta, ciascuna dopo aver riletto la
+  testa; lo stesso file non si mette in due commit sovrapposti.
+
 ## 2026-09-13 — discovery: the JjEL evaluator and its context, against the simulation spec
 **Prompt**: `claude_2026-09-13_0100_prompt_discovery_jjel_eval_context.md` — read-only: entry points
 and callers, context shape and read-only exposure, extra roots, errors and tri-state, translatable
