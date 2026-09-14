@@ -508,6 +508,31 @@ incidente misurato, non da una preferenza. Iscritta come **RC-13** in `docs/deci
   `Out-of-scope changes` della entry che lo ripete — e prosegue; sanare o rifiutare e' del
   reviewer, a valle (RC-11).
 
+### 6.5 Worktrees and cherry-picks
+
+Code commits on `validation-skeleton` reach other branches (today `alfonso-frontend-jjtl`) by
+`git cherry-pick -x` of explicit shas, never by range. A branch can be checked out in one worktree
+only, and more than one worktree exists (`git worktree list`). Measured 2026-09-14: `git worktree
+add` refused because `alfonso-frontend-jjtl` was already checked out in `/Users/alfonso/jjodel-release`,
+and the cherry-pick loop then started in the wrong tree. It was aborted, no damage.
+
+- Run `git worktree list` before any cherry-pick.
+- Target branch checked out in a clean tree: run the cherry-pick in that tree. If that tree is not
+  the current lane's, ask Alfonso for authorization first.
+- Target branch checked out in a dirty tree: hard stop. Report and wait.
+- Use a temporary worktree only when the target branch is not checked out anywhere. Remove it when
+  done (`git worktree remove`, then `git worktree prune`).
+- Never move a ref (`git update-ref`, `git branch -f`) while a worktree has it checked out.
+- Never chain a `cd` that can fail in front of a destructive loop. Assert the branch with
+  `git rev-parse --abbrev-ref HEAD` in the target tree before the first pick.
+- A tree without `node_modules` (such as `/Users/alfonso/jjodel-release`) can run the gates through a
+  temporary symlink to `~/jjodel/frontend/node_modules`, removed afterwards. `git status` in that
+  tree must be empty before and after.
+- Choose the positive control of a verify entry at the time of the entry, and measure its signal
+  with the same command (§5). A file that differed between the two branches in an earlier entry
+  may no longer differ, and a file an earlier entry called identical may differ. Do not inherit
+  either claim from the log.
+
 ---
 
 ## 7. Design system
