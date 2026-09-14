@@ -23,6 +23,33 @@ scritte nello stesso file prima di committare.
   Lezione: due corsie parallele committano il log una alla volta, ciascuna dopo aver riletto la
   testa; lo stesso file non si mette in due commit sovrapposti.
 
+## 2026-09-14 — refactor(D): generateUniqueModelName delegates to uniqueModelName
+**Prompt**: `claude_2026-09-14_1632_prompt_lane_d_unique_model_name_delegation.md` — compare the
+two copies of the `(n)` rule on pool, suffix format and a base ending in `(n)`; delegate if the
+pool is a parameter.
+**Files touched**: `284576f94`: `components/project/ProjectEditor.tsx` (1 import, body → one
+`return uniqueModelName(...)`, JSDoc; +4 −24) and the new
+`docs/discovery/discovery_2026-09-14_unique_model_name_delegation.md`, together as the prompt
+names them (a mixed commit, flagged against §6.4). This entry in its own commit.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown, until the visual check below. Gates: `npx tsc --noEmit` exit 2,
+**33** `error TS` on full output before and after, same set line-stripped (`diff` exit 0);
+`ProjectEditor.tsx` holds only the baseline error (225 → 226, shifted by the import); positive
+controls `src/` 33, `Measurable` 6. `npx vitest run` on the three `nameLookup`/`uniqueModelName`/
+`getByNameKey` tests 33/33. `npm run build` exit 0. No new test: `ProjectEditor.tsx` is not
+importable in the bench (`window`); the rule is covered by the existing `nameLookup.test.ts`.
+**Out-of-scope changes**: no.
+**Layer Impact Report**: not-required — no critical-zone file (§3.1).
+**Smoke visivo**: non applicabile in this run — pending Alfonso: two metamodels with the same name
+→ `A`, `A (1)`; rename `A (1)` to `A` → refused.
+**Notes**: Both take the pool as a parameter; suffix format and `(n)`-ending base identical; the
+only differences are guards on inputs where the old copy threw (report §5). The function is a
+local `const`, not exported as the prompt said. Doc comments in `nameLookup.ts:67` and
+`classes.ts:1494` now describe the direction backwards; out of lane (report §6).
+**Prompt document name**: 2026-09-14 16:32
+
 ## 2026-09-13 — discovery: the JjEL evaluator and its context, against the simulation spec
 **Prompt**: `claude_2026-09-13_0100_prompt_discovery_jjel_eval_context.md` — read-only: entry points
 and callers, context shape and read-only exposure, extra roots, errors and tri-state, translatable
