@@ -10,15 +10,17 @@ import {
     LiteralValue,
     QualifiedName
 } from '../../types';
-import { resolveElement } from '../resolvers';
+import { resolveElement, resolveTypeTarget, ResolutionKind, QUALIFY_ADVICE } from '../resolvers';
 import { qualifiedNameToString, literalValueToString } from '../../parser/grammar';
-import { getProject } from '../utils';
+import { getProject, getTargetMetamodel } from '../utils';
 import { executeSetInstance } from './instance';
+import { primitiveAttributeType } from './create';
 
 import {
     SetFieldAction,
     TRANSACTION,
-    LProject
+    LProject,
+    Defaults
 } from '../../../joiner';
 
 // ============================================
@@ -79,8 +81,18 @@ export async function executeSet(
             };
         }
 
-        // Convert value to appropriate type
-        const convertedValue = convertValue(value, propertyInfo.type, project);
+        // `type` is a pointer to a classifier, and which classifiers are admissible depends
+        // on what is being typed -- so it does not go through `convertValue`, whose
+        // unrestricted project-wide lookup ends in a string fallback (see `resolveSetType`).
+        let convertedValue: any;
+        const typeRule = setTypeRuleFor(element, property);
+        if (typeRule) {
+            const settled = resolveSetType(element, typeRule, value, project, getTargetMetamodel(context, project));
+            if (!settled.ok) return settled.error;
+            convertedValue = settled.typePointer;
+        } else {
+            convertedValue = convertValue(value, propertyInfo.type, project);
+        }
         const oldValue = element[property];
 
         // Apply special property transformations (e.g., readonly -> !changeable)
@@ -248,6 +260,130 @@ function transformPropertyValue(property: string, value: any): any {
     }
 
     return value;
+}
+
+/**
+ * The `type` clause of `set`, per element being typed.
+ *
+ * Same table as `create` and for the same reason: it is `LTypedElement.get_validTargets`
+ * (`model/logicWrapper/LModelElement.tsx:1340-1346`). It is keyed on the **D-layer**
+ * className, which is what an L-proxy reports (CLAUDE.md §3.13) -- a matcher written
+ * against 'LAttribute' would never fire and would silently disable the whole branch.
+ *
+ * `set` reaches `type` on all four: `attributeProps`, `referenceProps` and
+ * `operationProps` above all list it, and a DParameter answers `'type' in element`. A
+ * single `['enum']` for every one of them would turn `set r.type = Person`, which works
+ * today, into an error.
+ */
+interface SetTypeRule {
+    /** The word used in the messages. */
+    what: string;
+    /** The admissible kinds handed to the resolver. */
+    kinds: ResolutionKind[];
+    /** Whether a primitive is one of the admissible types. False only for a reference. */
+    primitives: boolean;
+    /** «Expected a primitive type or an enum.» */
+    expected: string;
+}
+
+const SET_TYPE_RULES: Record<string, SetTypeRule> = {
+    DAttribute: { what: 'attribute', kinds: ['enum'],          primitives: true,  expected: 'a primitive type or an enum' },
+    DReference: { what: 'reference', kinds: ['class'],         primitives: false, expected: 'a class' },
+    DParameter: { what: 'parameter', kinds: ['class', 'enum'], primitives: true,  expected: 'a primitive type, a class or an enum' },
+    DOperation: { what: 'operation', kinds: ['class', 'enum'], primitives: true,  expected: 'a primitive type, a class or an enum' },
+};
+
+/**
+ * The rule for this `set`, or undefined when the assignment is not a type at all.
+ *
+ * Deliberately narrow: only the property named `type`, only on the four elements whose
+ * `type` is a classifier pointer. Everything else -- `opposite`, `superTypes`,
+ * `exceptions`, and `type` on anything else -- keeps the path it has always had.
+ */
+function setTypeRuleFor(element: any, property: string): SetTypeRule | undefined {
+    if (property.toLowerCase() !== 'type') return undefined;
+    const className: string = element?.className || element?.constructor?.name || '';
+    return SET_TYPE_RULES[className];
+}
+
+type SetTypeOutcome =
+    | { ok: true; typePointer: string }
+    | { ok: false; error: ExecutionResult };
+
+/**
+ * Resolve the value of a `set <el>.type = <Name>` to the pointer to write.
+ *
+ * The same three steps `create` runs (`commands/create.ts`, `resolveTypeClause`): a
+ * primitive first where one is admissible, then a classifier of the admissible kinds with
+ * the metamodel consulted before the project, then an error.
+ *
+ * What it replaces: `convertValue` resolved the name project-wide with no kind restriction
+ * and, when nothing answered, wrote `qualifiedNameToString(qn)` -- the NAME, as a pointer,
+ * with `success: true`. An unknown type, an ambiguity across metamodels and a primitive all
+ * ended there, and the resulting pointer resolves to nothing.
+ */
+function resolveSetType(
+    element: any,
+    rule: SetTypeRule,
+    value: LiteralValue | QualifiedName,
+    project: LProject,
+    targetMetamodel: any
+): SetTypeOutcome {
+    const ownerName: string = element?.name || 'unnamed';
+
+    // A quoted string is as much a type name as a bare one; a number or a boolean is not.
+    const spelled = isLiteralValue(value)
+        ? ((value as LiteralValue).kind === 'string' ? String((value as any).value) : undefined)
+        : qualifiedNameToString(value as QualifiedName);
+    const qn: QualifiedName | undefined = isLiteralValue(value) ? undefined : (value as QualifiedName);
+
+    // 1. primitive, where the element admits one. `primitiveAttributeType` covers both the
+    //    JjScript aliases ('String', 'int') and the raw Ecore spellings ('EString', 'EInt').
+    const primitive = spelled ? primitiveAttributeType(spelled) : null;
+    if (primitive && rule.primitives) {
+        const ptr = (Defaults as any)['Pointer_' + primitive.toUpperCase()];
+        if (!ptr) {
+            return { ok: false, error: {
+                success: false,
+                command: 'set',
+                message: `Internal error: no pointer registered for primitive type '${primitive}'.`,
+                errors: [{ code: 'UNKNOWN_PRIMITIVE_POINTER', message: `Missing Defaults.Pointer_${primitive.toUpperCase()}` }]
+            }};
+        }
+        return { ok: true, typePointer: ptr };
+    }
+
+    // 2. a classifier of the admissible kinds, metamodel before project.
+    if (qn) {
+        const found = resolveTypeTarget(qn, targetMetamodel, project, rule.kinds);
+        if (found.element) return { ok: true, typePointer: found.element.id };
+        if (found.ambiguousWith && found.ambiguousWith.length > 0) {
+            const shown = found.ambiguousWith.join(', ');
+            return { ok: false, error: {
+                success: false,
+                command: 'set',
+                message: `Ambiguous type '${qualifiedNameToString(qn)}' for ${rule.what} '${ownerName}': ${shown}. ${QUALIFY_ADVICE}`,
+                errors: [{
+                    code: 'AMBIGUOUS_TYPE',
+                    message: `'${qualifiedNameToString(qn)}' matches more than one admissible type: ${shown}`,
+                    suggestion: QUALIFY_ADVICE
+                }]
+            }};
+        }
+    }
+
+    // 3. anything else stops the line. A false success is not a working script.
+    const shownName = spelled ?? String((value as any)?.value ?? '');
+    return { ok: false, error: {
+        success: false,
+        command: 'set',
+        message: `Unknown type '${shownName}' for ${rule.what} '${ownerName}'. Expected ${rule.expected}.`,
+        errors: [{
+            code: 'UNKNOWN_TYPE',
+            message: `'${shownName}' is not ${rule.expected} reachable from this metamodel`,
+            suggestion: `Use ${rule.expected}. Qualify as Metamodel::Name if needed.`
+        }]
+    }};
 }
 
 function convertValue(
