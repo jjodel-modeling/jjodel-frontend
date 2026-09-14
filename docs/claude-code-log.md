@@ -64,6 +64,31 @@ events/guards/candidates. Touches IR via `marked`/`isMarked`, not sync. `sim/` i
 `alfonso-frontend-jjtl` and `validation-skeleton`. 8 open questions in report §9.
 **Prompt document name**: 2026-09-13 00:30
 
+## 2026-09-14 — verify: la verifica visiva della corsia A, passata su tutti e cinque i giri
+**Prompt**: verifica di corsia dopo A4. Copre i cinque commit di codice della corsia A:
+`2a60e3264` (A2), `b434a3950` (A3), `6a211f5c3` (A3b), `a52dfe5f3` (A1), `dc5f8d3aa` (A4).
+**Files touched**: 1, questa entry. Nessun sorgente toccato.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: **no**. Riferito da Alfonso su localhost, cinque scenari: (1) un nome dichiarato
+da due metamodelli riporta l'ambiguita' con le grafie `A::Person, B::Person`; (2) `A::Person`
+risolve dentro `A`; (3) `show person` in minuscolo riporta l'ambiguita' — e' uno dei nove
+chiamanti non ristretti, che prima prendeva il primo in silenzio; (4) due metamodelli creati
+dall'interfaccia con lo stesso nome diventano `A` e `A (1)`; (5) rinominare `A (1)` in `A` viene
+ancora **rifiutato**, cioe' `set_name` non ha imparato a suffissare. Le entry dei cinque giri
+restano con `Regressions: unknown` come sono state scritte: il log e' add-only (CLAUDE.md:1012) e
+questa entry le scioglie senza emendarle.
+**Out-of-scope changes**: no.
+**Layer Impact Report**: not-required — nessun sorgente modificato in questo giro.
+**Smoke visivo**: **passato**, i cinque scenari sopra.
+**Notes**: Il cherry-pick su `alfonso-frontend-jjtl` **non e' stato fatto**: quel ramo e' checked
+out in un secondo worktree (`/Users/alfonso/jjodel-release`), quindi ne' `worktree add` ne' uno
+spostamento del ref sono azioni che questa corsia puo' prendersi da sola. I cinque commit sono
+stati provati in un worktree staccato sul commit del ramo: applicano puliti in ordine, 87 test
+verdi, `tsc` 14 — la baseline di quel ramo — e 0 nei file toccati.
+**Prompt document name**: 2026-09-14 16:10
+
 ## 2026-09-14 — refactor(A4): le ricerche per nome estratte dove il banco puo' eseguirle
 **Prompt**: `claude_2026-09-12_0030_prompt_lane_a_resolver_ambiguity.md`, item **A4** aggiunto in
 chat. Chiude la corsia A (A2, A3, A3b, A1, A4).
