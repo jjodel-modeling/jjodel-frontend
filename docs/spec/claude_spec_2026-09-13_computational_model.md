@@ -1,9 +1,9 @@
 # Spec — The computational model of the simulation engine
 
-**Type**: design spec, normative for the simulation lane. **Status**: draft, ratified in the
-project chat on 2026-09-12/13, pending the two discovery reports
-(`docs/discovery/discovery_2026-09-13_simulation_engine_state.md`,
-`docs/discovery/discovery_2026-09-13_jjel_eval_context.md`) for §9.
+**Type**: design spec, normative for the simulation lane. **Status**: ratified 2026-09-14
+(R-SIM-7..R-SIM-15 in `docs/decisions.md`), on the evidence of
+`docs/discovery/discovery_2026-09-13_simulation_engine_state.md` and
+`docs/discovery/discovery_2026-09-13_jjel_eval_context.md`.
 **Supersedes**: nothing; the current engine in `frontend/src/components/editor-v2/sim/` is the
 implementation this spec reshapes.
 **Vocabulary**: nuXmv's, on purpose (§8). Verification is the last step of the plan; the
@@ -39,16 +39,23 @@ marking), e absent.
 
 ## 3. Semantic type class
 
-An STC declares three things. The fitting morphism maps a metamodel onto the roles; it is
-external to the metamodel, never a stereotype inside it.
+An STC declares three things, and has a **kind**: *boolean marking* (flowcharts, state
+machines) or *bounded-natural marking* (Petri nets). The kind fixes the marking domain, the
+initial rule (§3.4) and the laws. The fitting morphism maps a metamodel onto the roles; it is
+external to the metamodel, never a stereotype inside it. In code the fitting is the set of flat
+`sim*` keys in the M2 model's `_state` bag (R-SIM-2); new roles are new flat keys, never nested
+objects.
 
 ### 3.1 Roles (structure)
 
-Node metaclass; edge metaclass with its source and target references; initial node; final
-node. For event-driven languages: event metaclass, trigger reference on the edge, identifier
-feature of the event. For actions (§5.3): the features or containers holding the condition
-(guard) and the assignments, on edges and, where the language has them, on nodes (entry, exit,
-action node).
+Node metaclass; edge metaclass with its **source** and **target** references, both allowing
+multiplicity (R-SIM-10; containment is an admissible derived source: when `simSource` is unset
+the source is the owner of `simOwnedTransitions`). Initial and final (§3.4). For event-driven
+languages: event metaclass, trigger reference on the edge, identifier feature of the event
+(R-SIM-12: events are the M1 instances of the event metaclass). For actions (§5.3): the
+features or containers holding the condition (guard) and the assignments, on edges and, where
+the language has them, on nodes (entry, exit, action node). Metaclass roles are matched with
+the IR's notion of "is a", `isKindOf` with ancestry (R-SIM-8).
 
 ### 3.2 State components
 
@@ -67,6 +74,13 @@ distinguishes one language from another on the same machinery: token conservatio
 node marked) for flowcharts; exclusivity among sibling states for state machines; no
 additional law for Petri nets. In verification they are checked first, as invariants: a
 violated law means the language is ill-defined, before any model property is asked.
+
+### 3.4 Initial rule and final rule, by kind
+
+Boolean kind: the initial role and the final role are **metaclasses** (every instance of the
+initial metaclass is marked at start; a marked instance of the final metaclass is a terminal
+configuration), as the engine does today. Bounded-natural kind: the initial rule is an
+**integer feature** on the node (the initial marking); there is no final role (R-SIM-9).
 
 ## 4. Step
 
@@ -204,21 +218,39 @@ and is not on the critical path; the binary is not redistributable with the fron
 
 ## 9. Mapping onto the incremental plan
 
-Six steps, ratified 2026-09-13. The file-level mapping is filled from the discovery reports.
+Six steps, ratified 2026-09-13; file-level mapping from the two discovery reports (their §7 and
+§9 hold the line-level detail). Layout (R-SIM-14): the pure core in
+`frontend/src/model/simulation/` (context builder, guard/action evaluator, subset checker, step
+function, exporter; no React), the panel and the run-state store in
+`frontend/src/components/editor-v2/sim/`. The run-state is keyed by `modelId` (R-SIM-13). The
+today's engine is three files (`SimulationPanel.tsx`, `simRunState.ts`, `simulation-panel.scss`),
+byte-identical between `alfonso-frontend-jjtl` and `validation-skeleton`; consumers of the
+boolean marking are `ObjectNode.tsx` (`sim-active`) and the IR (`{ op: 'marked' }`,
+`ReadCtx.isMarked`, channel `'mark'`), the latter critical zone.
 
-1. **Events**: roles of §3.1 for events; e as input; candidate (t, e); discard as a step; the
-   panel's events section.
-2. **Evaluation context**: three roots, read-only model, translatable-subset checker with
-   diagnostics.
-3. **Condition/assignment roles, unified cycle**: marking as declared component; extended
-   components; guards as predicates; actions as parallel assignments; selector as input;
-   progress constraint; cycle *candidates → choice → effect → label*. Fork, join and multiple
-   tokens come from the marking domain moving from boolean to bounded integer. Laws checked
-   at the boundary.
-4. **Snapshots**: step-back as a list of full configurations.
+1. **Events**: roles of §3.1 for events as optional flat keys (`rolesComplete` must not
+   require them); e as input; candidate (t, e), which already forces a candidate notion; discard
+   as a step; the panel's events section listing the M1 event instances. Files: `sim/*`;
+   `collectMetaOptions` must offer attributes for the identifier feature.
+2. **Evaluation context**: new `model/simulation/` builder over the `buildEvalContext`
+   snapshot without `data`/`node`, deep-frozen once per run, roots `self`, `state`, `event`;
+   evaluator path B; tri-state shared with validation (R-SIM-15); subset checker walking
+   `JjelExpression` with receiver types. No change to `jjel/evaluator/*`.
+3. **Condition/assignment roles, unified cycle**: σ as `component → element id → value` plus
+   globals, replacing the `Set`; `isSimActive`/`isMarked` kept as the derived boolean view
+   (R-SIM-11); `simApplyStep` and its "activation wins" rule replaced by the arithmetic effect;
+   guards as predicates; actions as parallel assignments; selector as input; progress
+   constraint; cycle *candidates → choice → effect → label*; the four `runStatus` values
+   redefined on the candidate set (deadlock = no candidate and not terminal). Fork, join and
+   multiple tokens come from the marking domain moving from boolean to bounded integer. Laws
+   checked at the boundary. Candidate highlighting on canvas as a second channel beside
+   `'mark'`: critical zone, Layer Impact Report.
+4. **Snapshots**: step-back as a list of full configurations (σ, e, label), per model, outside
+   Redux (R-SIM-1); `simReset` is the restore primitive to generalise.
    *Between 4 and 5*: Petri nets as third language; the `.smv` exporter.
-5. **Trace and scenarios**: label of §4.5; run policy of §6; scenarios saved and replayed as
-   regression tests, same shape as counterexamples.
+5. **Trace and scenarios**: label of §4.5; run policy of §6 with seeded RNG; scenarios as JSON
+   documents exported and imported as files, same shape as counterexamples; project persistence
+   decided after the format (deferred, see decisions).
 6. **Verification**: the execution service; laws first; properties with `stable`;
    counterexamples replayed as scenarios.
 
@@ -239,7 +271,14 @@ Stated as limits of the first paper, not discovered in review:
 
 - Whether the macro-step of §7 needs any engine-level marker beyond `stable` for the panel
   (presentation decision, after step 1).
-- The exact boundary where the read-only exposure of M is enforced (context builder vs proxy
-  layer): decided on the JjEL discovery.
 - Whether per-element extended components are needed by the three validation languages or
   only the marking is per element (default: marking only, until a language asks).
+- Guard authoring: `and`/`or` are eager in the evaluator, so `x != null and x.p` throws and the
+  guard is reported defective; authors write `x?.p` or `x != null implies x.p` until the
+  evaluator is fixed in its own lane.
+- Names: event identifiers and state component names avoid the 18 JjEL keywords; nuXmv reserved
+  words are not a user constraint because the exporter renames.
+
+Closed on the discoveries: the read-only boundary is the context builder (the evaluator never
+writes; the only write path is a caller-bound function, which the simulation builder never
+binds); model edits during a run interrupt it with a declaration (R-SIM-13).

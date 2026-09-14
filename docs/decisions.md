@@ -1132,6 +1132,58 @@ addendum A1..A4). Memo: `docs/ratifiche/claude_2026-08-17_memo_ratifica_pannello
   come pannello connesso. La spec del pannello fissa prima del codice il comportamento su
   deadlock (stato attivo senza transizioni uscenti) e il criterio di terminazione.
 
+### Ratifiche 2026-09-14 — il modello computazionale
+
+Base di evidenza: `docs/discovery/discovery_2026-09-13_simulation_engine_state.md` e
+`docs/discovery/discovery_2026-09-13_jjel_eval_context.md`. Spec:
+`docs/spec/claude_spec_2026-09-13_computational_model.md`. Ratificate da Alfonso il 2026-09-14 su
+proposta della chat.
+
+- **R-SIM-7** (2026-09-14) — **Il passo è interleaving con selettore, il fire-all è rimosso.** Un
+  passo ha due ingressi, evento e selettore; il selettore è ammissibile solo su un candidato
+  abilitato e vale `none` solo se nessun candidato lo è (vincolo di progresso). Lo scarto di un
+  evento non accettato e la quiescenza sono passi a stato invariato, registrati. Il comportamento
+  committato oggi (`simApplyStep`, tutte le transizioni di tutte le istanze attive in un colpo) è
+  una semantica a step che la spec §10 esclude, e viene sostituito, non affiancato.
+- **R-SIM-8** (2026-09-14) — **Una sola nozione di «is a».** Il motore riconosce le metaclassi dei
+  ruoli con la stessa nozione dell'IR (`isKindOf` con ascendenza), non con `instanceof ===`.
+- **R-SIM-9** (2026-09-14) — **Regola iniziale per genere di STC.** La STC ha un genere: a marking
+  booleano (flowchart, state machine) o a naturali limitati (reti di Petri). Nel genere booleano il
+  ruolo iniziale e il ruolo finale restano metaclassi, come oggi; nel genere a naturali la regola
+  iniziale è una feature intera di marking iniziale sul nodo e il finale non esiste.
+- **R-SIM-10** (2026-09-14) — **Sorgente e destinazione espliciti, contenimento ammesso come legame
+  derivato.** Nuova chiave additiva `simSource` (reference, molteplicità ammessa); `simNextState`
+  ammette molteplicità. Se `simSource` manca, la sorgente è il proprietario di
+  `simOwnedTransitions`. Nessuna migrazione.
+- **R-SIM-11** (2026-09-14) — **`marked` è una vista derivata.** Sul dominio a valori, `marked`
+  significa «valore diverso dal default del dominio» della componente marking. Il contratto
+  booleano di `ReadCtx.isMarked` non cambia; la lettura dei valori dall'IR passa dal profilo JjEL
+  (R-J7); `mark?: string` (R-MK-3) resta riservato ai marking con nome.
+- **R-SIM-12** (2026-09-14) — **Gli eventi sono istanze M1.** L'enumerazione degli eventi è
+  l'insieme delle istanze della metaclasse evento nel modello, con la feature identificatore come
+  nome; il trigger dell'arco è un riferimento a un'istanza evento. Nessun letterale lato M2.
+- **R-SIM-13** (2026-09-14) — **Run-state per modello.** Il singleton diventa una mappa
+  `modelId → configurazione`; `simClear` agisce sul proprio modello. Resta fuori da Redux
+  (R-SIM-1). Una transazione che tocca il modello durante un'esecuzione la interrompe con
+  dichiarazione, come la freschezza della validazione (R-VAL-18); nessun lock sul modello.
+- **R-SIM-14** (2026-09-14) — **Nucleo puro in `model/simulation/`.** Builder di contesto a tre
+  radici (`self`, `state`, `event`), valutatore di guardie e azioni, checker del sottoinsieme
+  traducibile, funzione di passo ed esportatore `.smv` vivono in `frontend/src/model/simulation/`,
+  gemello di `model/validation/`, senza React; in `components/editor-v2/sim/` restano pannello e
+  store. Le guardie usano la via B dell'evaluatore (`new JjelEvaluator()` su un contesto
+  separato, come la validazione): niente `now()`, date né conversioni, radici libere. Lo snapshot
+  di M si costruisce una volta per esecuzione e si congela in profondità; per passo si
+  ricostruiscono solo `state` ed `event`.
+- **R-SIM-15** (2026-09-14) — **Tri-stato condiviso, non copiato.** Le tre entrate e `verdict` di
+  `validationEvaluator.ts` escono in un modulo puro sotto `model/` importato da validazione e
+  simulazione, in un commit proprio con i test della validazione verdi prima e dopo. I tre
+  comportamenti dell'evaluatore (`and`/`or` eager, proprietà silenziosa sui primitivi, `is` sulle
+  istanze) non entrano in questa corsia: l'eager è un bug contro `SPEC.md` da correggere nella
+  sua corsia, gli altri due li segnala il checker.
+- **Rinviato** — la casa degli scenari: nel quinto passo sono documenti JSON esportati e importati
+  come file, stesso formato dei controesempi; la persistenza nel progetto si decide dopo il
+  formato. I candidati sul canvas entrano nel terzo passo come secondo canale, non nel primo.
+
 ## Serie R-J — JjEL come linguaggio delle espressioni dell'IR (ratifiche 2026-08-18)
 
 Base di evidenza: `docs/discovery/discovery_2026-08-14_jjel_come_linguaggio_espressioni_ir.md`
