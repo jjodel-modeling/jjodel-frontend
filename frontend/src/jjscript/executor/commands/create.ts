@@ -280,7 +280,7 @@ export async function executeCreate(
                 if (!parentElement) parentElement = resolveElement(parent, project);
             }
         } else {
-            parentElement = getDefaultParent(project, elementType);
+            parentElement = getDefaultParent(project, elementType, context);
         }
 
         if (parentMemberMissing) {

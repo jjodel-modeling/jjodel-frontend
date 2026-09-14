@@ -19,8 +19,15 @@ export class JjScriptService {
 
     /**
      * Execute a JjScript command
+     *
+     * @param scope - When given, the scope the command runs in, fixed by the caller instead of
+     *   read from the UI: a Jjodie reply passes the metamodel (and, at M1, the model) its
+     *   context showed. The run is then bound to it (`ExecutionContext.scopeBound`).
      */
-    static async execute(input: string): Promise<ExecutionResult> {
+    static async execute(
+        input: string,
+        scope?: { level: 'M1' | 'M2'; metamodelId: string; modelId?: string }
+    ): Promise<ExecutionResult> {
         let command = input.trim();
 
         // Remove / prefix if present
@@ -32,24 +39,25 @@ export class JjScriptService {
         const projectId = this.getCurrentProjectId();
 
         // Resolve M1/M2 level + modelId + targetMetamodelId from current UI state
-        // (read-on-demand: no React coupling, mirrors getCurrentProjectId pattern).
-        const level = getActiveLevel();
-        const activeModel = level === 'M1' ? getActiveModel() : null;
-        const modelId = activeModel?.id;
+        // (read-on-demand: no React coupling, mirrors getCurrentProjectId pattern),
+        // unless the caller fixed the scope.
+        const level = scope ? scope.level : getActiveLevel();
+        const activeModel = !scope && level === 'M1' ? getActiveModel() : null;
+        const modelId = scope ? scope.modelId : activeModel?.id;
 
-        let targetMetamodelId: string | undefined;
-        if (level === 'M1' && activeModel) {
+        let targetMetamodelId: string | undefined = scope?.metamodelId;
+        if (!scope && level === 'M1' && activeModel) {
             const inst = (activeModel as any).instanceof;
             if (inst) {
                 targetMetamodelId = typeof inst === 'string' ? inst : inst?.id;
             }
         }
-        if (!targetMetamodelId) {
+        if (!scope && !targetMetamodelId) {
             targetMetamodelId = getActiveMetamodel()?.id;
         }
 
         // Execute the command
-        const result = await executeCommand(command, projectId, modelId, targetMetamodelId, level);
+        const result = await executeCommand(command, projectId, modelId, targetMetamodelId, level, !!scope);
 
         // Add to history if successful
         if (result.success) {
