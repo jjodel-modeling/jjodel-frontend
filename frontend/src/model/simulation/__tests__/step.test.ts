@@ -18,7 +18,10 @@
 import { describe, it, expect } from 'vitest';
 import { applyStepLabel, initialConfiguration, runStatus, stepFlowchartBoolean } from '../step';
 import { stcFromRoles } from '../stcFromRoles';
+import { isKindOf } from '../isKindOf';
 import type { SimConfiguration, SimModelView, StcDescriptor } from '../types';
+// Test-only import from the IR (import-free module): the parity check of R-SIM-8.
+import { classAncestry } from '../../../components/editor-v2/viewpoint/ir/irReadCtx';
 
 const STC: StcDescriptor = {
     kind: 'boolean',
@@ -212,6 +215,80 @@ describe('applyStepLabel', () => {
     it('deactivates first, then activates', () => {
         expect([...applyStepLabel(new Set(['A', 'X']), ['A'], ['A', 'B'])].sort()).toEqual(['A', 'B', 'X']);
         expect([...applyStepLabel(new Set(['A', 'X']), ['A'], ['B'])].sort()).toEqual(['B', 'X']);
+    });
+});
+
+describe('isKindOf — one notion of "is a" (R-SIM-8)', () => {
+    // Raw D-layer shape: DObject.instanceof -> DClass id, DClass.extends -> DClass ids.
+    const lookup: Record<string, any> = {
+        C_Node: { className: 'DClass', name: 'Node', extends: [] },
+        C_Initial: { className: 'DClass', name: 'Initial', extends: ['C_Node'] },
+        C_SubInitial: { className: 'DClass', name: 'SubInitial', extends: ['C_Initial'] },
+        C_Final: { className: 'DClass', name: 'Final', extends: ['C_Node'] },
+        C_SubFinal: { className: 'DClass', name: 'SubFinal', extends: ['C_Final'] },
+        C_LoopA: { className: 'DClass', name: 'LoopA', extends: ['C_LoopB'] },
+        C_LoopB: { className: 'DClass', name: 'LoopB', extends: ['C_LoopA'] },
+        I: { className: 'DObject', instanceof: 'C_Initial', out: [] },
+        SubI: { className: 'DObject', instanceof: 'C_SubInitial', out: ['t1'] },
+        N: { className: 'DObject', instanceof: 'C_Node', out: [] },
+        SubF: { className: 'DObject', instanceof: 'C_SubFinal', out: [] },
+        A: { className: 'DObject', instanceof: 'C_Node', out: ['t2'] },
+        Loop: { className: 'DObject', instanceof: 'C_LoopA' },
+        Orphan: { className: 'DObject', instanceof: 'C_Deleted' },
+        t1: { className: 'DObject', instanceof: 'C_T', next: 'A' },
+        t2: { className: 'DObject', instanceof: 'C_T', next: 'SubF' },
+    };
+    // Built exactly as the panel's adapter builds `isInstanceOf`.
+    const view: SimModelView = {
+        exists: id => !!lookup[id],
+        isInstanceOf: (id, classId) => isKindOf(lookup, id, classId),
+        outgoingTransitions: id => [...(lookup[id]?.out ?? [])],
+        transitionTarget: t => lookup[t]?.next ?? null,
+    };
+
+    it('a subclass of the initial metaclass is initial', () => {
+        expect(marked(initialConfiguration(STC, view, ['N', 'SubI', 'A']))).toEqual(['SubI']);
+        // control: the superclass is not initial
+        expect(marked(initialConfiguration(STC, view, ['N', 'A']))).toEqual([]);
+    });
+
+    it('a subclass of the terminal metaclass terminates the run', () => {
+        expect(runStatus(config('SubF'), STC, view)).toBe('Terminated');
+        expect(stepFlowchartBoolean(config('SubF', 'A'), STC, view).label.fired).toEqual([]);
+        // control: without it, A fires into SubF
+        expect(stepFlowchartBoolean(config('A'), STC, view).label.fired).toEqual(['t2']);
+    });
+
+    it('matches the class itself, walks transitively, never downwards', () => {
+        expect(isKindOf(lookup, 'I', 'C_Initial')).toBe(true);
+        expect(isKindOf(lookup, 'SubI', 'C_Node')).toBe(true);
+        expect(isKindOf(lookup, 'I', 'C_SubInitial')).toBe(false);
+        expect(isKindOf(lookup, 'N', 'C_Initial')).toBe(false);
+    });
+
+    it('terminates on a cycle in extends, and answers false for unknown objects', () => {
+        expect(isKindOf(lookup, 'Loop', 'C_LoopB')).toBe(true);
+        expect(isKindOf(lookup, 'Loop', 'C_Node')).toBe(false);
+        expect(isKindOf(lookup, 'Nobody', 'C_Node')).toBe(false);
+    });
+
+    it('keeps the exact-id match of a metaclass no longer in the lookup', () => {
+        expect(isKindOf(lookup, 'Orphan', 'C_Deleted')).toBe(true);
+        expect(isKindOf(lookup, 'Orphan', 'C_Node')).toBe(false);
+    });
+
+    it('agrees with the IR ancestry walk (classAncestry) on every existing class', () => {
+        const classes = Object.keys(lookup).filter(id => lookup[id].className === 'DClass');
+        const objects = Object.keys(lookup).filter(id => lookup[id].className === 'DObject' && lookup[lookup[id].instanceof]);
+        let compared = 0;
+        for (const o of objects) {
+            const ancestors = classAncestry(lookup, lookup[o].instanceof).map(a => a.id);
+            for (const c of classes) {
+                expect(isKindOf(lookup, o, c)).toBe(ancestors.includes(c));
+                compared++;
+            }
+        }
+        expect(compared).toBeGreaterThan(20);
     });
 });
 
