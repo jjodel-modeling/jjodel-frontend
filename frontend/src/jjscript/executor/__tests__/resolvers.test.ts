@@ -20,6 +20,7 @@ import {
     resolveTargetInMetamodel,
     resolveTargetInProject,
     resolveEnumTypeTarget,
+    resolveTypeTarget,
     ambiguityMessage,
     QUALIFY_ADVICE,
     kindLabel,
@@ -648,5 +649,173 @@ describe('A1 — the unrestricted caller `show` on both branches', () => {
     it('CONTROL: with one candidate show still resolves, unqualified and unrestricted', () => {
         const p = projectWith([{ name: 'Person', id: 'a1', mm: 'A' }]);
         expect(showLookup(qn('Person'), p).element?.id).toBe('a1');
+    });
+});
+
+// ─── C: `resolveTypeTarget` and the admissible kinds of each command ─────────
+//
+// `resolveEnumTypeTarget` was the `['enum']` case of a rule that three more commands
+// needed and none of them had: `set <el>.type`, `create parameter ... type` and
+// `createReference`. What each of them may name is not a per-call-site taste — it is
+// `LTypedElement.get_validTargets` (`model/logicWrapper/LModelElement.tsx:1340-1346`):
+// a reference points at a class, an attribute takes an enum (or a primitive), a
+// parameter and an operation take either.
+//
+// The pointer-or-error decision lives in `commands/create.ts` and `commands/set.ts`,
+// neither of which can be imported here (see the header of this file): `create.ts` and
+// `set.ts` still die on `ReferenceError: window is not defined`, reached through the
+// `joiner` barrel — re-measured 2026-09-14. So the branches those two take are asserted
+// through the resolution they branch on, exactly as the enum block above does.
+
+describe('resolveTypeTarget — admissible kinds per command', () => {
+    /** One metamodel holding, under the same name `Mood`, every kind that could answer. */
+    function buildMetamodelWith(kinds: { [id: string]: string }) {
+        const mm: any = {
+            name: 'MM', id: 'mm-1', packages: [], classes: [], attributes: [],
+            references: [], operations: [], parameters: [], literals: [], enumerators: [],
+        };
+        for (const [id, className] of Object.entries(kinds)) {
+            const el = { name: 'Mood', className, id, model: mm, literals: [], attributes: [], references: [] };
+            if (className === 'DEnumerator') mm.enumerators.push(el);
+            else if (className === 'DClass') mm.classes.push(el);
+            else if (className === 'DAttribute') mm.attributes.push(el);
+            else if (className === 'DReference') mm.references.push(el);
+        }
+        return mm;
+    }
+    const project = (...mms: any[]) => ({ name: 'P', metamodels: mms, models: [] } as any);
+
+    // ── the kind sets, one assertion per command ─────────────────────────────
+
+    it('reference type = classes only: the class answers, the enum does not', () => {
+        const mm = buildMetamodelWith({ 'cls-mood': 'DClass', 'enum-mood': 'DEnumerator' });
+        expect(resolveTypeTarget(qn('Mood'), mm, project(mm), ['class']).element?.id).toBe('cls-mood');
+
+        const enumOnly = buildMetamodelWith({ 'enum-mood': 'DEnumerator' });
+        const r = resolveTypeTarget(qn('Mood'), enumOnly, project(enumOnly), ['class']);
+        expect(r.element).toBeFalsy();          // -> "Unknown type", the createReference fix
+        expect(r.ambiguousWith).toBeUndefined();
+    });
+
+    it('attribute type = enumerators only: the enum answers, the class does not', () => {
+        const classOnly = buildMetamodelWith({ 'cls-mood': 'DClass' });
+        expect(resolveTypeTarget(qn('Mood'), classOnly, project(classOnly), ['enum']).element).toBeFalsy();
+
+        const enumOnly = buildMetamodelWith({ 'enum-mood': 'DEnumerator' });
+        expect(resolveTypeTarget(qn('Mood'), enumOnly, project(enumOnly), ['enum']).element?.id).toBe('enum-mood');
+    });
+
+    it('parameter type = classes AND enumerators: either answers, alone', () => {
+        const classOnly = buildMetamodelWith({ 'cls-mood': 'DClass' });
+        expect(resolveTypeTarget(qn('Mood'), classOnly, project(classOnly), ['class', 'enum']).element?.id)
+            .toBe('cls-mood');
+
+        const enumOnly = buildMetamodelWith({ 'enum-mood': 'DEnumerator' });
+        expect(resolveTypeTarget(qn('Mood'), enumOnly, project(enumOnly), ['class', 'enum']).element?.id)
+            .toBe('enum-mood');
+    });
+
+    it('a class AND an enum of the same name are an ambiguity for a parameter, not a pick', () => {
+        // The kind restriction cannot choose here: both are admissible and both spell the
+        // name exactly. Choosing by collection order is the defect this module was fixed for.
+        const mm = buildMetamodelWith({ 'cls-mood': 'DClass', 'enum-mood': 'DEnumerator' });
+        const r = resolveTypeTarget(qn('Mood'), mm, project(mm), ['class', 'enum']);
+        expect(r.element).toBeNull();
+        expect(r.ambiguousWith).toEqual(['MM::Mood', 'MM::Mood']);
+    });
+
+    it('no kind set reaches an ATTRIBUTE or a REFERENCE of that name', () => {
+        // `LModel.attributes` is the FLAT list of every attribute of the metamodel, so
+        // `Scene.mood` is visible from the root and used to win on collection order.
+        const mm = buildMetamodelWith({ 'attr-mood': 'DAttribute', 'ref-mood': 'DReference' });
+        for (const kinds of [['class'], ['enum'], ['class', 'enum']] as const) {
+            expect(resolveTypeTarget(qn('Mood'), mm, project(mm), kinds as any).element).toBeFalsy();
+        }
+        // CONTROL: the same fixture with an admissible kind added does answer, so the
+        // silence above is the restriction and not a broken fixture.
+        const withEnum = buildMetamodelWith({ 'attr-mood': 'DAttribute', 'enum-mood': 'DEnumerator' });
+        expect(resolveTypeTarget(qn('Mood'), withEnum, project(withEnum), ['enum']).element?.id)
+            .toBe('enum-mood');
+    });
+
+    // ── exact-first, ambiguity, qualified input, unknown ─────────────────────
+
+    it('exact spelling first, then case-insensitive', () => {
+        const mm: any = {
+            name: 'MM', id: 'mm-1', packages: [], attributes: [], references: [],
+            operations: [], parameters: [], literals: [], enumerators: [],
+            classes: [
+                { name: 'person', className: 'DClass', id: 'cls-lower' },
+                { name: 'Person', className: 'DClass', id: 'cls-upper' },
+            ],
+        };
+        expect(resolveTypeTarget(qn('Person'), mm, project(mm), ['class']).element?.id).toBe('cls-upper');
+        expect(resolveTypeTarget(qn('person'), mm, project(mm), ['class']).element?.id).toBe('cls-lower');
+    });
+
+    it('exact-case homonyms across metamodels: the A1 payload, qualified', () => {
+        const mkMM = (name: string, id: string) => {
+            const mm: any = {
+                name, id: 'mm-' + name, packages: [], attributes: [], references: [],
+                operations: [], parameters: [], literals: [], enumerators: [], classes: [],
+            };
+            mm.classes.push({ name: 'Person', className: 'DClass', id, model: mm });
+            return mm;
+        };
+        const a = mkMM('A', 'a1');
+        const b = mkMM('B', 'b1');
+        // No metamodel scope, so both are candidates and neither spelling can choose.
+        const r = resolveTypeTarget(qn('Person'), null, project(a, b), ['class']);
+        expect(r.element).toBeNull();
+        expect(r.ambiguousWith).toEqual(['A::Person', 'B::Person']);
+        // The message the three commands print is built from that payload, not re-spelled.
+        expect(ambiguityMessage('Person', r.ambiguousWith!))
+            .toBe(`Ambiguous 'Person': A::Person, B::Person. ${QUALIFY_ADVICE}`);
+    });
+
+    it('the qualified form Metamodel::Name decides, and decides both ways', () => {
+        const mkMM = (name: string, id: string) => {
+            const mm: any = {
+                name, id: 'mm-' + name, packages: [], attributes: [], references: [],
+                operations: [], parameters: [], literals: [], enumerators: [], classes: [],
+            };
+            mm.classes.push({ name: 'Person', className: 'DClass', id, model: mm });
+            return mm;
+        };
+        const a = mkMM('A', 'a1');
+        const b = mkMM('B', 'b1');
+        expect(resolveTypeTarget(qn('A::Person'), null, project(a, b), ['class']).element?.id).toBe('a1');
+        expect(resolveTypeTarget(qn('B::Person'), null, project(a, b), ['class']).element?.id).toBe('b1');
+    });
+
+    it('an unknown name resolves to nothing, with no ambiguity — the error case', () => {
+        const mm = buildMetamodelWith({ 'cls-mood': 'DClass' });
+        const r = resolveTypeTarget(qn('Nope'), mm, project(mm), ['class', 'enum']);
+        expect(r.element).toBeFalsy();
+        expect(r.ambiguousWith).toBeUndefined();
+    });
+
+    it('the scoped metamodel is consulted before the project', () => {
+        const mkMM = (name: string, id: string) => {
+            const mm: any = {
+                name, id: 'mm-' + name, packages: [], attributes: [], references: [],
+                operations: [], parameters: [], literals: [], enumerators: [], classes: [],
+            };
+            mm.classes.push({ name: 'Person', className: 'DClass', id, model: mm });
+            return mm;
+        };
+        const a = mkMM('A', 'a1');
+        const b = mkMM('B', 'b1');
+        // `b` first in the project, so a project-wide answer would be ambiguous, not 'a1'.
+        expect(resolveTypeTarget(qn('Person'), a, project(b, a), ['class']).element?.id).toBe('a1');
+        // CONTROL: scoped to `b`, the same call gives the other one.
+        expect(resolveTypeTarget(qn('Person'), b, project(b, a), ['class']).element?.id).toBe('b1');
+    });
+
+    it('resolveEnumTypeTarget is now this function with kinds = [enum], and still answers', () => {
+        const mm = buildMetamodelWith({ 'enum-mood': 'DEnumerator', 'cls-mood': 'DClass' });
+        expect(resolveEnumTypeTarget(qn('Mood'), mm, project(mm)).element?.id)
+            .toBe(resolveTypeTarget(qn('Mood'), mm, project(mm), ['enum']).element?.id);
+        expect(resolveEnumTypeTarget(qn('Mood'), mm, project(mm)).element?.id).toBe('enum-mood');
     });
 });

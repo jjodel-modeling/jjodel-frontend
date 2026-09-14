@@ -882,8 +882,32 @@ export function resolveEnumTypeTarget(
     metamodel: LModel | null | undefined,
     project: LProject | null | undefined
 ): TargetResolution {
-    const kinds: ResolutionKind[] = ['enum'];
+    return resolveTypeTarget(name, metamodel, project, ['enum']);
+}
 
+/**
+ * The classifier a `type <Name>` clause names, restricted to the kinds the command can
+ * accept. The generalisation of `resolveEnumTypeTarget`, which is now the `['enum']` case
+ * of it and keeps its name: the four commands reach this one through the rules table in
+ * `commands/create.ts`, so the enum entry point is left standing rather than renamed.
+ *
+ * Everything the comment above says about the enum case holds here unchanged: metamodel
+ * first and project second, both legs kind-restricted, the full `TargetResolution` back
+ * so the caller can tell «no such type» from «ambiguous», and a qualified `MM::Name`
+ * resolving through `PROJECT_COLLECTIONS` without a special case.
+ *
+ * `kinds` is not a matter of taste per call site: it is `LTypedElement.get_validTargets`
+ * (`model/logicWrapper/LModelElement.tsx:1340-1346`) -- a reference points at a class, the
+ * three that carry a value also take an enum. `Constructors.DTypedElement` applies the
+ * same table to the `.new()` seed (`joiner/classes.ts:906-934`); a field-write of `type`
+ * does not go through it, which is how a reference came to be typeable with an enum.
+ */
+export function resolveTypeTarget(
+    name: QualifiedName,
+    metamodel: LModel | null | undefined,
+    project: LProject | null | undefined,
+    kinds: ResolutionKind[]
+): TargetResolution {
     if (metamodel) {
         const scoped = resolveTargetInMetamodel(name, metamodel, kinds);
         if (isConclusive(scoped)) return scoped;
