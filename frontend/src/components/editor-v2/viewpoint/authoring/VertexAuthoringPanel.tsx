@@ -9,6 +9,10 @@ import type { VertexViewIR, ShapeForm, PaddingToken, FormSpec, StructureSpec } f
 import { structureCapabilities } from '../ir/structureCapabilities';
 import { MARKER_REGISTRY } from '../ir/markerRegistry';
 import { recognizeSymbol } from '../ir/symbolRecognition';
+import {
+    authoredCornerRadius, baseCornerRadius, clampCornerRadius, honorsCornerRadius,
+    roundedPolygonPath, SHAPE_REGISTRY,
+} from '../ir/shapeRegistry';
 import { resolveMetaclassId, withMetaclassPins, type MetaclassRef } from '../ir/metaclassPin';
 import { defaultResizableForForm } from '../../nodes/nodeSizing';
 import { LabelListEditor } from './LabelListEditor';
@@ -77,6 +81,42 @@ const FEATURES_HINT = 'Set a metaclass in the Applies to tab to enable feature p
 
 /** Lossless deep clone for plain IR objects (pure JSON: no functions/dates). */
 const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x));
+
+/**
+ * The three glyphs of the mockup (rect, diamond, hexagon) inside a 44x28 viewBox,
+ * REDRAWN at the current radius instead of being fixed pictures: they run the same
+ * painter the canvas runs, so a regression shows up in the panel before it shows up
+ * on a node.
+ *
+ * The glyph box is 41x25 against a node of a couple of hundred px, so the authored
+ * number is scaled by the ratio `SymbolPreview` already uses for its 72x48 tile
+ * (`rounded` drawn with rx 7 against the 10px of irStyle.ts) and then clamped by the
+ * canvas rule, `min(w, h) / 4`.
+ */
+const GLYPH_W = 41;
+const GLYPH_H = 25;
+const GLYPH_RADIUS_RATIO = 0.7;
+
+const glyphPointsOf = (form: 'diamond' | 'hexagon'): string => {
+    const painter = SHAPE_REGISTRY[form].painter;
+    return painter.kind === 'svg' ? painter.points : '';
+};
+
+const CornerRadiusGlyphs: React.FC<{ radius: number }> = ({ radius }) => {
+    const r = clampCornerRadius(radius * GLYPH_RADIUS_RATIO, GLYPH_W, GLYPH_H);
+    const frame = (key: string, child: React.ReactNode) => (
+        <svg key={key} width={30} height={20} viewBox="0 0 44 28" aria-hidden="true">
+            <g transform="translate(1.5,1.5)" fill="none" stroke="currentColor" strokeWidth={1.5}>{child}</g>
+        </svg>
+    );
+    return (
+        <span className="jj-corner-radius-glyphs" style={{ display: 'inline-flex', gap: 6, alignItems: 'center', color: '#0f172a' }}>
+            {frame('rect', <rect x={0} y={0} width={GLYPH_W} height={GLYPH_H} rx={r > 0 ? r : undefined} />)}
+            {frame('diamond', <path d={roundedPolygonPath(glyphPointsOf('diamond'), r, GLYPH_W, GLYPH_H)} />)}
+            {frame('hexagon', <path d={roundedPolygonPath(glyphPointsOf('hexagon'), r, GLYPH_W, GLYPH_H)} />)}
+        </span>
+    );
+};
 
 /**
  * VertexAuthoringPanel — authors the IR of a selected vertex view.
@@ -339,6 +379,10 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
     const badges = shape.badges ?? [];
     const fieldCompartments = draft.fieldCompartments ?? [];
     const border = shape.border ?? DEFAULT_BORDER;
+    // Corner radius (slice 3, D5), read through the same guard the render uses: an
+    // invalid persisted value reads as absent here too, so the stepper shows the base
+    // radius instead of seeding itself with a number the canvas ignores.
+    const cornerRadius = authoredCornerRadius(shape.cornerRadius);
     // Resolved resizable state (mirrors the checkbox default): explicit flag ?? per-form default.
     // Gates the "Propagate size" button — propagating a size to a non-resizable view has no effect.
     const canResize = draft.resizable ?? defaultResizableForForm(typeof form === 'string' ? form : undefined);
@@ -349,6 +393,18 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
     const patchBorder = (partial: Partial<NonNullable<VertexViewIR['shape']['border']>>) => {
         const base = draft.shape.border ?? DEFAULT_BORDER;
         patchShape({ border: { ...base, ...partial } });
+    };
+
+    /**
+     * Drop `cornerRadius` from the shape. Rest/spread and not `cornerRadius: undefined`,
+     * for the reason `omitForm` gives just below: a view whose radius was written and
+     * then reset must round-trip byte-identical to one that never carried it. Measured
+     * on the running app before this helper existed: the reset drew the base radius
+     * again, and left the KEY in the ir holding `undefined`.
+     */
+    const resetCornerRadius = () => {
+        const { cornerRadius: _dropped, ...rest } = draft.shape;
+        patch({ ...draft, shape: rest });
     };
 
     /**
@@ -373,6 +429,10 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
        offers the rectangle's superset — narrowing on one branch would hide a field the
        other branch supports. */
     const scalarForm = typeof form === 'string' ? (form as ShapeForm) : undefined;
+    /* The forms whose roundness IS the shape (ellipse, circle, stadium) and the cylinder
+       ignore the axis. A Conditional form is NOT ignored: its branches may honor it, and
+       the help text already names the set that does. */
+    const radiusIgnored = scalarForm !== undefined && !honorsCornerRadius(scalarForm);
     const structureCaps = structureCapabilities(scalarForm);
     /* The contextual note of 7b under Type: with exactly one metaclass in the whole
        viewpoint the type on the node repeats what the diagram already says. */
@@ -523,6 +583,44 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                         classNames={classNames}
                         allowConditional={advanced}
                     />
+                </div>
+
+                {/* Corner radius (slice 3, D5). ABSENT IS NOT ZERO: it keeps the form's
+                    base radius (4px rect, 10px rounded, sharp polygons), which is what
+                    every saved view draws today, so the stepper shows that base greyed
+                    until a value is written and Reset removes the key again — the D2
+                    discipline, no default ever persisted. A written 0 is a value, and it
+                    is what squares the corners. */}
+                <div className="jj-field" style={{ marginTop: 'var(--space-2)' }}>
+                    <label className="jj-field-label">
+                        Corner radius <span style={{ color: '#94a3b8' }}>· all vertices</span>
+                    </label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+                        {/* NumberInput carries no placeholder and needs a number, so the
+                            absent state is the base radius shown at reduced opacity with
+                            the word `default` beside it, never an empty field. */}
+                        <span style={{ opacity: cornerRadius === undefined ? 0.6 : 1 }}>
+                            <NumberInput
+                                value={cornerRadius ?? baseCornerRadius(scalarForm)}
+                                min={0}
+                                disabled={radiusIgnored}
+                                onChange={(r) => patchShape({ cornerRadius: r })}
+                            />
+                        </span>
+                        {cornerRadius === undefined ? (
+                            <span style={{ fontSize: 11, color: '#94a3b8' }}>default</span>
+                        ) : (
+                            <Button variant="ghost" size="sm" onClick={resetCornerRadius}>
+                                Reset
+                            </Button>
+                        )}
+                        {!radiusIgnored && <CornerRadiusGlyphs radius={cornerRadius ?? baseCornerRadius(scalarForm)} />}
+                    </div>
+                    <HelpText icon={false}>
+                        {radiusIgnored
+                            ? `${FORM_OPTIONS.find(o => o.value === scalarForm)?.label ?? scalarForm} ignores the corner radius: its roundness is the shape itself.`
+                            : 'Rounds every vertex of the shape — rectangles, diamonds, hexagons, parallelograms alike. 0 keeps sharp corners.'}
+                    </HelpText>
                 </div>
             </FormSection>
 
