@@ -1,5 +1,6 @@
 import React from 'react';
 import { Select, Input, ColorPicker, ConditionalEditor, isConditionalValue, type PathBuilderFeatures } from '../../../ui';
+import { toRules } from '../../../ui/ConditionalEditor/conditional';
 import type { TextStyle, FontFamilyToken, FontWeightToken, Conditional } from '../ir/irTypes';
 
 const FAMILY_OPTIONS = [
@@ -84,8 +85,11 @@ function AxisRow<T>({
 
     const flip = () => {
         if (isCond) {
-            // Collapse to the then-branch value (stays authored, not undefined).
-            onChange((value as { then: T }).then);
+            // Collapse to the first branch value (stays authored, not undefined). Read
+            // through toRules: a `rules` value has no `.then`, and reading it off the
+            // object would unset the axis.
+            const r = toRules(value);
+            onChange(r.rules[0]?.then ?? r.default ?? axisDefault);
         } else {
             const base = (value as T | undefined) ?? axisDefault;
             onChange({ when: { op: 'literal', value: true }, then: base });

@@ -420,7 +420,7 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                     metaclassChoices={metaclassChoices}
                 />
                 <div className="jj-field" style={{ marginTop: 'var(--space-2)' }}>
-                    <HelpText>Multiple rules are not yet editable here. Single conditional fields (when/then/else) are edited now directly in Basic, next to each field.</HelpText>
+                    <HelpText>In Basic mode, Shape, Fill, Marker and label visibility show a fixed value; a value that is already conditional appears as a read-only chip.</HelpText>
                 </div>
             </div>
 
@@ -538,6 +538,7 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                         featuresHint={FEATURES_HINT}
                         classNames={classNames}
                         allowConditional={advanced}
+                        rulesTable={{ noneValue: '', fixedLabel: 'Solid', subjectName: featureInfo.targetName ?? undefined, valueNoun: 'fill' }}
                     />
                 </div>
             </FormSection>
@@ -592,6 +593,7 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                         featuresHint={FEATURES_HINT}
                         classNames={classNames}
                         allowConditional={advanced}
+                        rulesTable={{ noneValue: '', subjectName: featureInfo.targetName ?? undefined, valueNoun: 'marker' }}
                     />
                 </div>
             </FormSection>
