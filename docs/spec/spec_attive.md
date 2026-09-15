@@ -1,6 +1,6 @@
 # Spec attive — indice consolidato
 
-Aggiornato: 2026-08-28. Questo file sostituisce nel Project Knowledge le spec integrali, che vivono in `docs/spec/` nel repo (`alfonso-frontend-jjtl`). Qui: stato, catena di supersessione, invarianti essenziali, puntatore al file integrale. In caso di dubbio fa fede il file integrale nel repo.
+Aggiornato: 2026-09-08. Questo file sostituisce nel Project Knowledge le spec integrali, che vivono in `docs/spec/` nel repo (`alfonso-frontend-jjtl`). Qui: stato, catena di supersessione, invarianti essenziali, puntatore al file integrale. In caso di dubbio fa fede il file integrale nel repo.
 
 ## Catena di supersessione IR
 
@@ -72,6 +72,17 @@ Fronte aperto dal 2026-08-14: JjEL come linguaggio delle espressioni dell'IR (R-
 - La taglia derivata resta in sessione. `isResized` è il solo indicatore di taglia scelta da un umano e ha la precedenza.
 
 Manca ancora il file in `docs/spec/`.
+
+## Validazione definita dall'utente
+**File**: `docs/spec/claude_spec_2026-09-08_user_defined_validation.md` · **Stato**: vigente, non implementata; nessuna Fase 2 aperta
+
+Serie **R-VAL**. La validazione è un concern con viewpoint propri, multipli e selezionabili (R-VAL-1, R-VAL-2): il criterio di R-VP vale per i viewpoint di sintassi e non decide qui. Regole con proprietario di sola classe nella prima fetta (R-VAL-3), violazioni che non bloccano mai (R-VAL-4), attivazione a due livelli indipendenti, viewpoint e singola regola (R-VAL-5), regola con la stessa forma di una view ma non lo stesso tipo (R-VAL-6).
+
+Invarianti da tenere a mente in chat: il tri-stato si costruisce al confine della regola perché JjEL lancia sull'assente, e i difetti della regola non entrano mai nel registro dei problemi, che resta il posto delle violazioni del modello; la rivalutazione è totale finché non arriva il filtro dal visitor, e il suo costo va misurato prima di accettarla; l'authoring sta in un ambiente dedicato con i controesempi dal vivo, mai nel rail accanto alle proprietà della classe.
+
+Due prerequisiti, entrambi dopo il rilascio della 3.0: il triage di `ValidationPill` (non montata dal 2026-08-26) e delle violazioni di modello scartate in `conformanceToProblems.ts:43`; la consolidazione dei nomi riservati in un elenco unico importato da entrambi i lexer, con la diagnostica sui tre letterali `true`/`false`/`null`, unico caso in cui il sistema sbaglia in silenzio. La riparazione del lexer è corsia separata, non prerequisito.
+
+Ciclo di vita e portabilità sono chiusi da R-VAL-9 e R-VAL-10 (modale alla cancellazione della classe con default conservativo; i viewpoint di validazione seguono il metamodello e arrivano attivi). Le regole di superclasse e sottoclasse si accumulano e non si sovrascrivono (R-VAL-12), con la congiunzione nell'aggregato e non nelle regole. Il verdetto pretende un booleano e il valutatore non converte nulla (R-VAL-13, dopo la misura dello Step 0: un array con un falso dentro risulta vero per tutte le vie, l'array vuoto risulta falso); un risultato non booleano è un difetto della regola, non un verdetto. Nessuna domanda aperta: niente cartello nel rail (R-VAL-11) e regola come tipo parallelo senza supertipo comune (R-VAL-6-bis, la view seleziona e la regola predica).
 
 ## Design parcheggiati
 **Dove**: `docs/spec/parcheggiate/` (templates featured projects, templates explore) e `docs/spec/design_2026-05-03_L2_edge_overlay.md`. Nessuno vigente; si riattivano per decisione esplicita.

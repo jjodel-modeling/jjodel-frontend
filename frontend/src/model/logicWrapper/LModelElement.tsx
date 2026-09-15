@@ -91,6 +91,7 @@ import {
 import {ValuePointers} from "./PointerDefinitions";
 import {transientProperties} from "../../joiner/classes";
 import {checkNameUniqueness, checkM2NameUniqueness, getNamespaceOf, m2KindOf, type M2NamespaceKind} from "./nameUniqueness";
+import {lookupNamedEntry, uniqueModelName} from "../nameLookup";
 import { toast } from "../../components/Toast";
 import React, {JSX} from "react";
 import { checkObjectCreation, checkLinkCreation, checkValueAssignment, emitGuardViolation } from '../conformance/ConformanceGuard';
@@ -4977,6 +4978,13 @@ export class DModel extends DNamedElement { // DNamedElement
         let dmodels: DModel[] = Selectors.getAll(DModel, undefined, undefined, true, false);
         let dmodelnames: string[] = dmodels.map((d: DModel) => d.name);
         if (!name) name = this.defaultname("model_", ((name: string) => dmodelnames.includes(name)));
+        // A name the caller CHOSE was written through unchecked, so importing the same file
+        // twice produced two metamodels called the same thing and nothing said so, while
+        // `LModel.set_name` had been refusing exactly that collision since forever. The pool
+        // is the one `set_name` already compares against -- every DModel, metamodels and M1
+        // models together -- so the two halves cannot disagree.
+        // See docs/discovery/discovery_2026-09-11_name_resolution_scope.md §2.1 (R4).
+        else name = uniqueModelName(name, dmodelnames);
         return new Constructors(new DModel('dwc'), undefined, persist, undefined).DPointerTargetable().DModelElement()
             .DNamedElement(name).DModel(instanceoff, isMetamodel).end();
     }
@@ -4984,6 +4992,10 @@ export class DModel extends DNamedElement { // DNamedElement
         let dmodels: DModel[] = Selectors.getAll(DModel, undefined, undefined, true, false);
         let dmodelnames: string[] = dmodels.map((d: DModel) => d.name);
         if (!name) name = this.defaultname("model_", ((name: string) => dmodelnames.includes(name)));
+        // Same rule as `new`, same pool: the three entry points cannot disagree about what a
+        // model may be called. `new2` has no call site in the tree today (measured 2026-09-12),
+        // and the guard is here so it cannot become the way around the rule.
+        else name = uniqueModelName(name, dmodelnames);
         return new Constructors(new DModel('dwc'), undefined, true, undefined).DPointerTargetable().DModelElement()
             .DNamedElement(name).DModel(instanceoff).end((d) => { Object.assign(d, setter); });
     }
@@ -4992,6 +5004,12 @@ export class DModel extends DNamedElement { // DNamedElement
         let dmodels: DModel[] = Selectors.getAll(DModel, undefined, undefined, true, false);
         let dmodelnames: string[] = dmodels.map((d: DModel) => d.name);
         if (!a.name) a.name = this.defaultname("model_", ((name: string) => dmodelnames.includes(name)));
+        // Same rule as `new`. Writing back into `a.name` rather than a local is deliberate:
+        // the auto-name branch above already does it, and `.DNamedElement(a.name)` below reads
+        // it — a local would have to be threaded through both branches to change nothing.
+        // The one live caller (`jjodie-integration/JjodieAPIImpl.ts:95`) passes an object
+        // literal and returns only the new id, so the write is not observable there.
+        else a.name = uniqueModelName(a.name, dmodelnames);
         return new Constructors(new DModel('dwc'), a.father, persist, undefined, a.id)
             .DPointerTargetable().DModelElement().DNamedElement(a.name)
             .DModel(a.instanceof, !a.instanceof)
@@ -5867,26 +5885,17 @@ instanceof === undefined or missing  --> auto-detect and assign the type
         return (name: string) => { return this._impl_getByName(this.get_classes(c), name) as LClass; }
     }
     _impl_getByName(collection: Dictionary<string, LModelElement> & any[], name: string, caseSensitive: boolean = false): LModelElement | null {
-        name = name.trim();
         // The named-array convention is "$" + name, in all three places that build one:
-        // `U.toNamedArray` (common/U.tsx:2083), `LPackage.get_classes` (:1902) and
-        // `LPackage.get_enumerators` (:1909). Looking up the bare key could never hit, and
-        // neither could the lowercase pass, which produced '$freeprobe' and asked for
-        // 'freeprobe' -- so `getClassByName` and `getEnumByName` returned null for every
-        // name, unique ones included. Measured (R-M2-2,
-        // docs/discovery/discovery_2026-08-30_uniqueness_m2.md §4.1), with the positive
-        // control that made it a measurement: `getClassByName('$FreeProbe')` did resolve.
-        // That control stops working here on purpose -- the '$' belongs to the key, not to
-        // the name the caller passes.
-        const key: string = '$' + name;
-        if (collection[key]) return collection[key];
-        if (caseSensitive) return null;
-
-        let initialKeys: string[] = Object.keys(collection);
-        for (let k of initialKeys ) {
-            collection[(k + '').toLowerCase()] = collection[k];
-        }
-        return collection[key.toLowerCase()] || null;
+        // `U.toNamedArray` (common/U.tsx), `LPackage.get_classes` and
+        // `LPackage.get_enumerators`. Looking up the bare key could never hit (R-M2-2,
+        // docs/discovery/discovery_2026-08-30_uniqueness_m2.md §4.1).
+        //
+        // The lookup itself lives in `model/nameLookup.ts` since A4: this file is not
+        // importable under the test bench, so while the body was here it could only be
+        // asserted on as source text — and a regex over a body does not notice a tie-break
+        // being inverted or a write creeping back in. Exact-first, case-insensitive
+        // fallback, last-match-wins and the read-only guarantee are all unchanged.
+        return lookupNamedEntry<LModelElement>(collection, name, caseSensitive);
     }
 
 }

@@ -879,6 +879,21 @@ export interface ChatMessage {
      * after a tap.
      */
     jjscriptOffer?: { input: string; consumed?: boolean };
+    /**
+     * Jjodie reply: the scope its context showed the model when it was asked for. Run
+     * executes the reply's JjScript there, whatever tab is focused by then. Absent when no
+     * metamodel or model was in focus, and Run then refuses instead of guessing.
+     */
+    jjodieScope?: JjodieScope;
+}
+
+/** The metamodel (and, at M1, the model) a Jjodie reply was written against. */
+export interface JjodieScope {
+    level: 'M1' | 'M2';
+    metamodelId: string;
+    metamodelName: string;
+    /** The M1 model, when `level` is 'M1'. */
+    modelId?: string;
 }
 
 // ============================================

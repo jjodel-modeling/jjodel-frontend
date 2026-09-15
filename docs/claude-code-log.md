@@ -13,6 +13,91 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-08 — docs: micro-discovery, l'estensione del difetto keyword-dopo-il-punto
+**Prompt**: micro-discovery READ-ONLY, nessun fix. Misurare l'estensione del difetto nel lexer JjEL
+per decidere se la correzione sia prerequisito della validazione definita dall'utente o corsia
+laterale: elenco completo delle keyword, esito per ciascuna dopo un punto misurato eseguendo il
+parser, esistenza di un controllo che impedisca di chiamare una feature come una keyword, confronto
+con la tabella JjTL. Referto piu' sonda in `docs/discovery/harness/`. Il lexer non si tocca.
+**Files touched**: `docs/discovery/discovery_2026-09-08_keyword_dopo_il_punto.md` (nuovo, 251 righe),
+`docs/discovery/harness/probe_2026-09-08_jjel_keyword_after_dot.mts` (nuova, 7 blocchi). Nessun file
+di codice.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — nessun file di codice toccato, `git status --porcelain frontend/src` vuoto a
+fine giro con controllo positivo sullo stesso comando senza pathspec. Nessun gate di build o suite:
+giro read-only, dichiarato nel referto §11.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessun file di §3.1, nessun sorgente.
+**Smoke visivo**: non applicabile. Al posto suo la sonda consegnata, che ESEGUE lexer, parser ed
+evaluator JjEL e il lexer JjTL (P11): **16 PASS 0 FAIL**, con le due tabelle IMPORTATE dal sorgente
+e non trascritte, e due controlli positivi separati — otto nomi non-keyword che devono parsare e
+`checkNameShape` su input che deve rifiutare.
+**Notes**: Cinque ipotesi falsificate (referto §2). Il difetto non e' di `forAll`: rompono **18
+keyword su 18** in navigazione, 15/18 come identificatore nudo, 25/25 sul lexer JjTL. Ma `type`,
+`name` e `value` non sono keyword e parsano, e `a["<kw>"]` funziona su tutte e 18 fino alla lettura
+del valore. Verdetto: **corsia laterale**. Nessun controllo impedisce di chiamare una feature come
+una keyword, a nessuno dei tre livelli cercati. Tre domande aperte in §10.
+**Prompt document name**: 2026-09-08 17:40
+
+## 2026-09-08 — docs: §12.6 dice il vero su `forall` in JjEL
+**Prompt**: task docs autonomo, fuori dalla corsia validazione, solo file .md. `CLAUDE.md` §12.6
+dichiara `coll.forAll(x: pred)`; la discovery del 2026-09-08 punto 7 la falsifica. Sostituire la
+forma, segnalare `x: pred` come non supportata e `forAll` come rotta nel lexer, cercare la stessa
+forma negli altri documenti normativi ed elencare le occorrenze. Nessun fix di codice.
+**Files touched**: `CLAUDE.md` (§12.6: riga di tabella + nota nuova di 16 righe), `AGENTS.md`
+(rigenerato), `frontend/src/jjtl/SPEC.md` (§12.2, riga di Known Bugs), `frontend/src/jjtl/CLAUDE.md`
+(Known limitations, primo bullet), `frontend/src/jjtl/AGENTS.md` (rigenerato). Questa entry a parte.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — nessun file di codice toccato, `git status --porcelain frontend/src` limitato
+ai tre .md dichiarati, con controllo positivo sullo stesso comando senza pathspec. `npm run
+check:agents` PASS su entrambi i generati; `npm run check:docs` 3/3 con i 2 warning pre-esistenti.
+Build e suite non eseguite: nessun sorgente toccato.
+**Out-of-scope changes**: yes — i due `AGENTS.md`, rigenerati e inclusi nello stesso commit come
+impongono RC-7 e §17, non erano nella lista del prompt. Deroga alla regola 19 dichiarata: 6 file,
+di cui 2 generati e 1 la entry di log. Nient'altro fuori dalla lista.
+**Layer Impact Report**: not-required — nessun file di §3.1, nessun sorgente.
+**Smoke visivo**: non applicabile — solo documentazione. Al posto suo una sonda fuori albero (P11)
+che ESEGUE parser ed evaluator JjEL sulle forme prima di scriverle nel documento: `coll.forAll(x =>
+pred)` fallisce come `coll.forAll(x: pred)` (`1:9 Expected property name after '.'`), `getCollectionMethod('forAll')`
+e' assente, `coll.all(x => pred)` parsa e valuta `false` sul fixture. Controllo positivo nello stesso giro.
+**Notes**: Scostamento dichiarato: il prompt chiedeva `coll.forAll(x => pred)`, che la sonda mostra
+fallire allo stesso modo — `forAll` non e' un metodo di collezione e il lexer lo prende per keyword
+comunque. Scritto `coll.all(x => pred)`. Terzo errore nella stessa cella: JjEL `forall` non e' un
+quantificatore booleano ma una comprehension, per decisione esplicita
+(`docs/spec/concern_languages.md:53`). `PROTOCOL.md` e `docs/spec/` non contengono la forma.
+**Prompt document name**: 2026-09-08 17:05
+
+## 2026-09-08 — docs: discovery della validazione definita dall'utente (Fase 1 + addendum)
+**Prompt**: Fase 1 read-only two-phase piu' addendum, otto punti: forma del registry dei problemi e
+innesto per un produttore nuovo; firma/contesto/tri-stato di JjEL; dependency set esposto o esponibile;
+come si aggiunge un elemento contenuto in una classe M2 (VersionFixer, round trip .ecore); aggancio a
+fine transazione; se la radice del modello sia tipata; stato di allInstances e di `.forAll`; se la chiave
+del registro ammetta uno scope non ancorato. Referto obbligatorio, hard stop prima di qualunque codice.
+**Files touched**: `docs/discovery/discovery_2026-09-08_validazione_definita_utente.md` (nuovo, 834
+righe). Nessun file di codice.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — nessun file di codice toccato; `git status --porcelain frontend/src` vuoto a fine
+giro, con controllo positivo sullo stesso comando senza pathspec (che elenca il referto). Nessun gate di
+build o suite eseguito: dichiarato nel referto §6.3.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessun file di §3.1. `LModelElement.tsx`, `joiner/classes.ts`,
+`redux/reducer/reducer.ts` e `VersionFixer.tsx` letti e non modificati.
+**Smoke visivo**: non applicabile — Fase 1 read-only. Al posto suo, due sonde fuori albero che ESEGUONO
+lexer/parser/evaluator JjEL (P11) e non ne leggono il sorgente; output integrale nel referto §4.2 e §5.3,
+con controlli positivi (`forall … in …` e `exists` a 0 errori) accanto ai casi che falliscono.
+**Notes**: Sei ipotesi del prompt falsificate, tabellate in §3bis del referto, che le argomenta tutte:
+`DModel.instanceof` e' `Pointer<DModel>` e non `Pointer<DClass>`; `NodeProblem.nodeId` e' obbligatorio e
+la violazione di modello non ha oggi superficie; JjEL non ha tri-stato e la navigazione su assente lancia;
+`.forAll` riprodotto su JjEL diretto piu' un secondo difetto non iscritto, che rende `CLAUDE.md §12.6`
+falsa. Sette domande aperte in §7, D1 e D3 bloccanti per la forma della Fase 2.
+**Prompt document name**: 2026-09-08 16:30
+
 ## 2026-09-06 — fix(jjtl): accept newlines in helper bodies and before else
 **Prompt**: un `helper` con il corpo su righe separate non parsa mai nell'app (Monaco e Validate:
 "Expected expression" sulla `{`), nemmeno nelle forme documentate in SPEC §3.4 e §13.2. Decisione

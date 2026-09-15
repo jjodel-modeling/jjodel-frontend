@@ -35,32 +35,32 @@ function implBody(): string {
     return source.slice(start, next);
 }
 
-describe('_impl_getByName — cerca la chiave che i produttori scrivono', () => {
-    it('costruisce la chiave con il prefisso, e non usa piu\' il nome nudo', () => {
+describe('_impl_getByName — delega, e la delega e\' tutto cio\' che resta da fissare qui', () => {
+    // A4: il corpo e' in `model/nameLookup.ts`, che il banco IMPORTA. Le prove di
+    // comportamento — esatto prima, ripiego case-insensitive, tie-break sull'ultima chiave,
+    // `caseSensitive`, e soprattutto che la collezione non venga scritta — stanno in
+    // `model/__tests__/nameLookup.test.ts` e girano davvero.
+    //
+    // Qui resta l'unica cosa che di quel file non si puo' eseguire: che il metodo deleghi,
+    // e che non si sia riportato dentro una copia della logica.
+    it('chiama lookupNamedEntry passando i suoi tre argomenti', () => {
         const body = implBody();
-        expect(body).toMatch(/const key: string = '\$' \+ name;/);
-        expect(body).toMatch(/if \(collection\[key\]\) return collection\[key\];/);
-        expect(body).not.toMatch(/if \(collection\[name\]\) return collection\[name\];/);
+        expect(body).toMatch(/return lookupNamedEntry<LModelElement>\(collection, name, caseSensitive\);/);
     });
 
-    it('anche il giro case-insensitive passa dalla chiave, non dal nome', () => {
-        // Era la meta' che restava rotta anche correggendo solo la prima riga: le chiavi
-        // in minuscolo sono '$freeprobe', e chiedere 'freeprobe' non le trova.
+    it('non e\' rientrata una copia della logica nel corpo', () => {
         const body = implBody();
-        expect(body).toMatch(/return collection\[key\.toLowerCase\(\)\] \|\| null;/);
-        expect(body).not.toMatch(/collection\[name\.toLowerCase\(\)\]/);
+        expect(body).not.toMatch(/collection\[[^\]]*\]\s*=/);   // nessuna scrittura
+        expect(body).not.toMatch(/toLowerCase/);                  // nessun confronto locale
+        expect(body).not.toMatch(/initialKeys/);
     });
 
-    it('contrasto: `caseSensitive` esce ancora prima del giro in minuscolo', () => {
-        const body = implBody();
-        expect(body.indexOf('if (caseSensitive) return null;'))
-            .toBeLessThan(body.indexOf('toLowerCase'));
-    });
-
-    it('non-regressione: il `trim` e il `null` finale restano', () => {
-        const body = implBody();
-        expect(body).toMatch(/name = name\.trim\(\);/);
-        expect(body).toMatch(/\|\| null;/);
+    it('il modulo e\' importato, e da un percorso che non passa dalla barrel joiner', () => {
+        expect(source).toMatch(/import \{lookupNamedEntry, uniqueModelName\} from "\.\.\/nameLookup";/);
+        const mod = fs.readFileSync(path.resolve(__dirname, '../nameLookup.ts'), 'utf8');
+        // Se un import comparisse li' dentro, il banco tornerebbe a non poterlo caricare e
+        // queste prove di comportamento sparirebbero senza che nulla diventi rosso.
+        expect(mod).not.toMatch(/^import /m);
     });
 });
 

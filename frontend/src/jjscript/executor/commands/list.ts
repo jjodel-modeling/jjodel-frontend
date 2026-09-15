@@ -9,7 +9,8 @@ import {
     ExecutionContext,
     ElementType
 } from '../../types';
-import { resolveElement } from '../resolvers';
+import { resolveTargetInProject, kindLabel, memberMissingMessage, CONTAINER_KINDS, ambiguityMessage, QUALIFY_ADVICE
+} from '../resolvers';
 import { qualifiedNameToString } from '../../parser/grammar';
 import { getProject } from '../utils';
 
@@ -37,10 +38,38 @@ export async function executeList(
             };
         }
 
-        // Get the scope to search in
+        // Get the scope to search in. A scope has to be something that holds elements,
+        // so the lookup is restricted to containers: `list attributes in Scene` must not
+        // resolve onto an attribute that happens to share the name.
         let scope: any = project;
         if (filter?.in) {
-            scope = resolveElement(filter.in, project);
+            const resolution = resolveTargetInProject(filter.in, project, CONTAINER_KINDS);
+            if (resolution.memberMissingOn) {
+                const missing = memberMissingMessage(resolution.memberMissingOn, 'Scope');
+                return {
+                    success: false,
+                    command: 'list',
+                    message: missing,
+                    errors: [{
+                        code: 'MEMBER_NOT_FOUND',
+                        message: missing,
+                        suggestion: 'Check the member name, and the case of the container name'
+                    }]
+                };
+            }
+            if (resolution.ambiguousWith) {
+                return {
+                    success: false,
+                    command: 'list',
+                    message: ambiguityMessage(qualifiedNameToString(filter.in), resolution.ambiguousWith),
+                    errors: [{
+                        code: 'AMBIGUOUS_SCOPE',
+                        message: `More than one ${kindLabel(CONTAINER_KINDS).toLowerCase()} answers to '${qualifiedNameToString(filter.in)}': ${resolution.ambiguousWith.join(', ')}`,
+                        suggestion: QUALIFY_ADVICE
+                    }]
+                };
+            }
+            scope = resolution.element;
             if (!scope) {
                 return {
                     success: false,
@@ -48,7 +77,7 @@ export async function executeList(
                     message: `Scope not found: ${qualifiedNameToString(filter.in)}`,
                     errors: [{
                         code: 'ELEMENT_NOT_FOUND',
-                        message: `Could not find scope '${qualifiedNameToString(filter.in)}'`
+                        message: `Could not find scope '${qualifiedNameToString(filter.in)}'. A scope must be a ${kindLabel(CONTAINER_KINDS).toLowerCase()}.`
                     }]
                 };
             }

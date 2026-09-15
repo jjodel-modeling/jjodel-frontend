@@ -1,6 +1,6 @@
 🌐 The application is publicly accessible at [this link.](https://app.jjodel.io/)
 
-# Installation Guide - JJodel
+# Installation Guide - Jjodel
 
 This guide provides complete instructions for installing and running JJodel in different modes.
 

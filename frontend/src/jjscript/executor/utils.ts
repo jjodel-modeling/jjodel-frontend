@@ -244,8 +244,16 @@ export function getDefaultParent(project: LProject, elementType: string, context
             return null;
         }
 
+        // A context that names its metamodel wins over the UI: a Jjodie reply run after a tab
+        // switch still creates where Jjodie was looking. Typed commands name the active
+        // metamodel here already, so for them the answer is the same.
+        const contextMetamodel = context?.targetMetamodelId
+            ? metamodels.find((mm: any) => mm.id === context.targetMetamodelId) ?? null
+            : null;
+        if (context?.scopeBound && !contextMetamodel) return null;
+
         // Try to use the active/selected metamodel first
-        const activeMetamodel = getActiveMetamodel();
+        const activeMetamodel = contextMetamodel ?? getActiveMetamodel();
         let targetMetamodel = activeMetamodel;
 
         // If no active metamodel or it's not in this project, use first metamodel
@@ -292,6 +300,10 @@ export function getTargetMetamodel(context: ExecutionContext, project: LProject)
         const target = metamodels.find((mm: LModel) => mm.id === context.targetMetamodelId);
         if (target) return target;
     }
+
+    // A bound scope (a Jjodie reply) names the only metamodel it may write into: no UI
+    // re-read, no first-metamodel default. The executor refuses such a run before dispatch.
+    if (context.scopeBound) return null;
 
     // Otherwise use the active/selected metamodel
     const active = getActiveMetamodel();

@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect, useRef, useCallback, useState } from 'react';
-import {AI, ChatMessage, ConsoleEntry, CodeEntry, CodeWarning, isCodeEntry} from '../../types/jodie';
+import {AI, ChatMessage, ConsoleEntry, CodeEntry, CodeWarning, isCodeEntry, JjodieScope} from '../../types/jodie';
 import { formatAmbiguousCandidates } from '../../jjel/evaluator/context';
 import { MarkdownMessage } from './MarkdownMessage';
 import { JjelValueInspector, detectKind } from './JjelValueInspector';
@@ -55,7 +55,7 @@ function getInitials(name: string): string {
     return name.split(' ').map(n => n[0] || '').join('').toUpperCase().slice(0, 2) || 'U';
 }
 
-function MessageBubble({ message, onJjScriptExecute, onTestInCode, onOfferExecute, onOfferAsk, onAskFromError }: { message: ChatMessage; onJjScriptExecute?: (commands: string[]) => Promise<ScriptLineResult[]>; onTestInCode?: (code: string, language: string | null) => void; onOfferExecute?: (messageId: string, input: string) => void; onOfferAsk?: (messageId: string, input: string) => void; onAskFromError?: (input: string) => void }): JSX.Element {
+function MessageBubble({ message, onJjScriptExecute, onTestInCode, onOfferExecute, onOfferAsk, onAskFromError }: { message: ChatMessage; onJjScriptExecute?: (commands: string[], scope?: JjodieScope) => Promise<ScriptLineResult[]>; onTestInCode?: (code: string, language: string | null) => void; onOfferExecute?: (messageId: string, input: string) => void; onOfferAsk?: (messageId: string, input: string) => void; onAskFromError?: (input: string) => void }): JSX.Element {
     const isUser = message.role === 'user';
     const providerInfo = message.provider ? AI[message.provider] : null;
     const displayName = message.userName || 'You';
@@ -64,6 +64,15 @@ function MessageBubble({ message, onJjScriptExecute, onTestInCode, onOfferExecut
     const [avatarConfig] = useAvatar();
     const avatarColor = AVATAR_COLORS[avatarConfig.colorIndex];
     const avatarIcon = AVATAR_ICONS[avatarConfig.iconIndex];
+
+    // Run executes this reply's JjScript in the scope its context showed. Memoized:
+    // MarkdownRenderer rebuilds its component map whenever this callback changes identity,
+    // which would remount an open ScriptBlock and drop it mid-run.
+    const scope = message.jjodieScope;
+    const executeInScope = useCallback(
+        (commands: string[]) => onJjScriptExecute!(commands, scope),
+        [onJjScriptExecute, scope]
+    );
 
     // Promotion is shown only on real assistant replies (not user messages, not
     // JjScript success/error feedback) and only when the reply contains a fenced code block.
@@ -166,7 +175,7 @@ function MessageBubble({ message, onJjScriptExecute, onTestInCode, onOfferExecut
                         <MarkdownMessage
                             content={message.content}
                             isUser={isUser}
-                            onJjScriptExecute={onJjScriptExecute}
+                            onJjScriptExecute={onJjScriptExecute ? executeInScope : undefined}
                         />
                     </div>
                 </div>
@@ -385,7 +394,7 @@ export function ChatMessages({ messages, isWaiting, onJjScriptExecuted, onTestIn
     }, [getProjectContext]);
 
     // JjScript execution handler
-    const handleJjScriptExecute = useCallback(async (commands: string[]): Promise<ScriptLineResult[]> => {
+    const handleJjScriptExecute = useCallback(async (commands: string[], scope?: JjodieScope): Promise<ScriptLineResult[]> => {
         // Check if project is available
         if (!projectContext.hasProject) {
             return [{
@@ -404,6 +413,17 @@ export function ChatMessages({ messages, isWaiting, onJjScriptExecuted, onTestIn
             }];
         }
 
+        // A reply runs only in the scope its context showed the model. Without one (nothing
+        // was in focus, so every metamodel was shown) there is no metamodel to write into,
+        // and picking one would be a silent guess.
+        if (!scope) {
+            return [{
+                command: commands[0] || '',
+                success: false,
+                message: 'Jjodie answered with no metamodel or model in focus, so this script has no scope to run in. Open the metamodel or model you want to change, then ask Jjodie again.',
+            }];
+        }
+
         const results: ScriptLineResult[] = [];
 
         for (const command of commands) {
@@ -413,7 +433,8 @@ export function ChatMessages({ messages, isWaiting, onJjScriptExecuted, onTestIn
                 // level/modelId/targetMetamodelId. A bare executeCommand(command) would
                 // reuse the singleton's stale context and reject M1 instance commands
                 // with WRONG_LEVEL. See docs/discovery/2026-06-12_jjscript_m1_coverage.md (Q8).
-                const result = await JjScriptService.execute(command);
+                // The context is the reply's scope, not the tab focused at Run.
+                const result = await JjScriptService.execute(command, scope);
                 results.push({
                     command,
                     success: result.success,

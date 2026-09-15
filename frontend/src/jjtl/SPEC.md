@@ -749,7 +749,7 @@ interface ExecutionResult {
 
 | Bug | Description | Severity |
 |---|---|---|
-| `.forAll(x: pred)` never parses on the app path | The lexer lowercases before the keyword lookup (`lexer.ts:330`), so `forAll` lexes as FORALL and cannot be a member access; `useJjtlParser` calls `parse(tokens)` without `source`, i.e. the legacy expression parser, where JjEL is not consulted | High |
+| `.forAll(...)` never parses, in either lambda form | BOTH lexers lowercase before the keyword lookup (`jjel/lexer/lexer.ts:397-400`, `jjtl/lexer/lexer.ts:330`), so `forAll` becomes the FORALL token and cannot follow a `.`. Measured 2026-09-08 calling JjEL **directly**, so the defect is not scoped to the app path as this row said until then; `useJjtlParser` calling `parse(tokens)` without `source` is a second, independent reason. There is no `forAll` collection builtin either: the boolean quantifier is `coll.all(x => pred)`. See `docs/discovery/discovery_2026-09-08_validazione_definita_utente.md` §5.3 | High |
 | 7 test files fail at import | `window is not defined` under `environment: 'node'`: `executor.ts` imports the `joiner` barrel for `U.asNumber` alone, which drags in monaco/jquery/sweetalert2/axios. `forall-mapping.test.ts` is among them, so nine forall tests do not run | High |
 | Multiplicity `[*]` | Always creates 1 instance | Medium |
 | Number type | All numbers bridged as `EInt`, never `EDouble` | Low |

@@ -2985,6 +2985,194 @@ non si toccano: sono literal definitivi (R-B9) rimappati su preset di layout, un
 nome simile. La riconciliazione resta il debito FL4 già registrato in `themes.ts`.
 
 
+## Serie R-VAL — la validazione definita dall'utente (ratifiche 2026-09-08)
+
+Spec: `docs/spec/claude_spec_2026-09-08_user_defined_validation.md`. Referti:
+`docs/discovery/discovery_2026-09-08_validazione_definita_utente.md` (`fdf087259`) e la
+micro-discovery sul lexer (`3e4dec57b`).
+
+**R-VAL-1** (2026-09-08) — **La validazione è un concern con viewpoint propri**, non un capitolo del
+metamodello né una sezione dei viewpoint di sintassi. Ragione: il viewpoint è il meccanismo con cui
+Jjodel separa gli aspetti specificati in funzione di un metamodello, e tenere le regole accanto alle
+proprietà della classe aumenta il carico cognitivo. Il criterio di R-VP (metamodello = validità,
+viewpoint = presentazione) riguarda i viewpoint di sintassi concreta e non decide qui.
+
+**R-VAL-2** (2026-09-08) — **I viewpoint di validazione sono multipli e selezionabili**, come quelli
+di sintassi e diversamente da R-DMV-1. Conseguenza accettata e da dichiarare in interfaccia: «valido»
+è relativo all'insieme dei viewpoint di validazione attivi. Il lint del modellatore non è un
+meccanismo terzo, è un viewpoint di validazione come gli altri.
+
+**R-VAL-3** (2026-09-08) — **Nella prima fetta il proprietario di una regola è sempre una classe M2.**
+Il livello modello resta fuori: `registry.ts:63` richiede `nodeId` (sette siti), le violazioni di
+modello sono già scartate in `conformanceToProblems.ts:43` e nessuna superficie le mostra.
+
+**R-VAL-4** (2026-09-08) — **Le violazioni non bloccano nessuna scrittura, mai.** Un modello in
+costruzione è normalmente invalido. Vale anche per la diagnostica sui nomi riservati.
+
+**R-VAL-5** (2026-09-08) — **Attivazione a due livelli indipendenti**, viewpoint e singola regola: in
+vigore se e solo se entrambi attivi, e una regola spenta individualmente resta spenta quando il
+viewpoint si riaccende. La superficie delle violazioni dichiara sempre quante regole sono inattive:
+una validazione che si spegne in silenzio non è affidabile.
+
+**R-VAL-6** (2026-09-08) — **Una regola ha la stessa forma di una view ma non lo stesso tipo**: legame
+a una classe, interpretazione sulle istanze, attivabilità, dispatch, ma non è un `DViewElement`.
+Ereditare quel tipo porterebbe stile, layout e primitive IR che per una regola non significano nulla.
+Traccia del tentativo precedente: `joiner/classes.ts:1186`, `//thiss.constraints = [];` commentato
+accanto a un flag `isValidation`.
+
+**R-VAL-7** (2026-09-08) — **Due canali separati per le diagnostiche**: una regola che non compila,
+che nomina una feature inesistente o che usa un nome riservato è un difetto della regola e si mostra
+in authoring; una regola falsa su un'istanza è una violazione e va nel registro dei problemi. Il
+registro non è mai il posto dove si scopre che una regola è scritta male. Corollario: il tri-stato
+(vero, falso, non valutabile) si costruisce al confine della regola, perché JjEL lancia
+`JjelEvaluationError` sulla navigazione su un assente; il linguaggio non si tocca.
+
+**R-VAL-8** (2026-09-08) — **L'elenco dei nomi riservati è unico** e importato da entrambi i lexer:
+il controllo statico in authoring lo legge, e non ne esiste una terza copia. La consolidazione è
+prerequisito della fetta 1; la riparazione del lexer (keyword dopo il punto, 18/18 in JjEL e 25/25 in
+JjTL) è corsia separata e non lo è. `true`, `false` e `null` sono l'unico caso di errore silenzioso e
+vanno intercettati alla creazione del nome con una diagnostica di CHECK 12.
+
+
+**R-VAL-9** (2026-09-08) — **Cancellare una classe non cancella in silenzio le sue regole**: una
+modale chiede se cancellarle o conservarle come documentazione disabilitata. Lo stato di orfana è
+distinto dalla disattivazione volontaria di R-VAL-5, non è riattivabile e non entra nel conteggio
+delle regole silenziate; il nome della classe si conserva come testo. Sui percorsi non interattivi
+il default è conservare, mai cancellare.
+
+**R-VAL-10** (2026-09-08) — **Un metamodello che entra in un altro progetto si comporta come se le
+regole fossero nate lì.** Ne discende che i viewpoint di validazione seguono il metamodello
+nell'importazione, arrivano attivi, e le collisioni di nome si risolvono col suffisso `(1)`, `(2)`
+come per i modelli duplicati.
+
+
+**R-VAL-6-bis** (2026-09-08) — **La regola nasce come tipo parallelo, senza supertipo comune**, e
+la forma condivisa con le view è più piccola di quanto R-VAL-6 dichiarava. Una view *seleziona*
+(più metaclassi, filtro per predicati, dispatch che sceglie la vincente); una regola *predica* (un
+solo contesto, la classe e le sue sottoclassi, tutte le regole applicabili si valutano). Legame e
+dispatch non sono comuni; restano comuni solo l'appartenenza a un viewpoint e l'attivabilità. Un
+supertipo che ammette più classi renderebbe rappresentabile la regola con due contesti.
+
+**R-VAL-11** (2026-09-08) — **Nessun cartello nel rail**: il pannello della classe non segnala le
+regole, resta il solo indicatore sul nodo. Una riga in sola lettura è il precedente per cui ogni
+concern che tocca la classe ne chiede una.
+
+
+**R-VAL-12** (2026-09-08) — **Le regole di superclasse e sottoclasse si accumulano, non si
+sovrascrivono**: su un'istanza valgono le proprie e tutte le ereditate, e non esiste modo di
+sopprimere dalla sottoclasse una regola della superclasse. Discende da R-VAL-6-bis: la view
+seleziona e il dispatch sceglie una vincente perché un'istanza si disegna in un modo solo, la
+regola predica e un'istanza può violarne più d'una. La congiunzione sta nell'aggregato: ogni
+regola conserva verdetto, messaggio e severità propri e ogni violazione è una voce a sé; «valido»
+è la derivata, con severità massima fra le violate. Un nome uguale non crea override. Indebolire
+una regola in una sottoclasse non si può: se serve, la regola sta troppo in alto; per spegnere una
+famiglia di regole si usa un viewpoint di validazione dedicato e lo si disattiva. L'asimmetria con
+i viewpoint di sintassi va dichiarata in interfaccia, perché per analogia ci si aspetta l'override.
+
+
+**R-VAL-13** (2026-09-08, dopo lo Step 0) — **Il verdetto pretende un booleano; il valutatore non
+converte nulla.** Un risultato non booleano non è un verdetto ma un difetto della regola, sul
+canale di authoring (R-VAL-7). Misurato: `[true,false,true]` è vero per tutte le vie (verdetto
+sbagliato in silenzio), `[]` è falso per `isTruthy` (verità vacua rotta al contrario), e i due
+convertitori esistenti (`isTruthy` e il `Boolean()` di JS in JjTL e JjScript) divergono proprio su
+`[]`. Una regola di conversione nel validatore sarebbe la terza semantica del sistema, nel
+sottosistema che meno può permettersi un verdetto silenziosamente sbagliato. La forma esplicita
+`coll.all(x => pred)` è misurata e funziona. Il tri-stato ha tre ingressi, tutti verso «non
+valutabile»: eccezione, risultato non booleano, warning di identificatore assente da
+`jjelEvalWithDiagnostics`. Una regola non valutabile su tutte le istanze del contesto è segnalata
+come sospetta in authoring. Conseguenza esterna: la Tabella 7.5 del libro va corretta comunque,
+perché il paragrafo sulla truthiness è misurato falso.
+
+**Todo separato, non della validazione**: `isTruthy` e `Boolean()` divergono su `[]`, e la SPEC
+JjEL non nomina mai la truthiness. Una guardia JjTL su collezione vuota vale il contrario a
+seconda di chi la valuta. Difetto latente preesistente, da iscrivere e non da correggere in questo
+giro.
+
+
+**R-VAL-14** (2026-09-08, dopo la misura dello Step 2) — **Perimetro e tre numeri.** Si valuta il
+modello aperto, non tutti i modelli conformi del progetto; la validazione dell'intero progetto è un
+comando a sé, fuori dalla prima fetta. La superficie dichiara sempre tre numeri: le violazioni,
+quante regole sono inattive (guardia di R-VAL-5), quante valutazioni sono non valutabili. Il terzo
+chiude l'ultima strada silenziosa: misurato allo Step 2, sullo stesso modello rotto la forma del
+libro dà zero violazioni e tre non valutabili, la forma con `.all(...)` ne dà una; senza quel
+numero l'autore della prima forma vedrebbe silenzio, indistinguibile da un modello valido. È un
+contatore, non un elenco: i non valutabili non diventano voci del registro.
+
+
+**R-VAL-15** (2026-09-08, dopo lo Step 3) — **L'estensione coincide con il perimetro validato, e la
+superficie dichiara cosa non ha girato.** `X.instances` dentro una regola vede le istanze del
+modello che si sta validando, non del progetto: altrimenti una regola di cardinalità come «esattamente
+uno stato iniziale» conta due su un progetto con due macchine a stati e le dichiara entrambe violate,
+che è la prima invariante della Tabella 7.5 del libro. Il resto del contesto può restare di progetto;
+a coincidere deve essere l'estensione che una quantificazione attraversa. Verifica minima: due modelli
+della stessa lingua nello stesso progetto, uno stato iniziale ciascuno, nessuna violazione. Inoltre i
+tre numeri di R-VAL-14 sono un caso particolare: la superficie dichiara sempre quanto è parziale il
+verdetto, comprese le regole che non compilano e non hanno girato. La riga sul difetto di
+compilazione non è una toppa in attesa del canale di authoring: quel canale serve a chi scrive la
+regola, questa riga a chi legge il verdetto.
+
+
+**R-VAL-16** (2026-09-09) — **La restrizione dell'estensione sta dentro `buildEvalContext`**, con un
+parametro opzionale che di default lascia intatto il comportamento per console, JjScript e Jjodie;
+non e' un filtro applicato dopo sul valore di ritorno. Un filtro a valle sarebbe confinato nella
+corsia ma dovrebbe enumerare i quattro posti in cui l'estensione vive, duplicando fuori dal modulo
+una conoscenza che e' del modulo: quando l'estensione comparira' in un quinto posto la validazione
+lo mancherebbe in silenzio. La mappa delle ambiguita' di nome e' dato derivato e ricalcolarla fuori
+sarebbe logica duplicata. L'identita' per riferimento (`self.instanceOf == State`, misurata prima
+della correzione) e' il vincolo di accettazione: le shell si costruiscono gia' ristrette, non si
+ricostruiscono dopo.
+
+
+**R-VAL-17** (2026-09-09) — **Una regola che non trova istanze e' il quarto modo di non aver
+girato, e la superficie lo dichiara.** Attiva, compilante, scritta bene, ma con per contesto una
+classe senza istanze nel modello: produce zero violazioni e zero non valutabili, indistinguibile da
+un modello sano, e la riga «N rules over M instances» lo nasconde perche' somma. Nello scheletro si
+chiude con una riga in fondo al modale, come per la regola che non compila; nella fetta 1 con la
+copertura per regola. Trovato a mano al primo giro visivo, dopo che tre sonde non l'avevano visto:
+il caso era una regola su `Initial` in un modello dove i nodi chiamati Initial e FInal sono istanze
+di `State` con quel nome.
+
+
+**R-VAL-18** (2026-09-09) — **Un pallino di validazione sul canvas non e' mai vecchio**: se non se
+ne puo' garantire la freschezza, non c'e'. Alla prima transazione che tocca il modello **o le
+regole** dopo un'esecuzione le voci si ritirano (`clearValidationProblems`, gia' scritta e mai
+chiamata); non si marcano risolte, che sarebbe falso, ne' vecchie. Il ritiro da solo non basta,
+perche' l'assenza di pallini e' indistinguibile da un modello validato e pulito: viene con UNA
+dichiarazione di freschezza, in un posto solo e mai per nodo, a tre stati (mai validato; validato,
+N violazioni; non validato dall'ultima modifica). Scartata la vecchiaia per voce (paga in
+`formDiagnostics.ts:85`, introduce due vocabolari di pallino, sparira' con la rivalutazione
+automatica) e la rivalutazione automatica adesso (e' la destinazione di §9 ma la spec chiede la
+misura prima, e il costo sta in scrittura: `rebuildSnapshots` piu' `notify` per violazione).
+
+
+**R-VAL-19** (2026-09-09) — **L'albero del megamodello elenca tre concern sotto `VIEWPOINTS`**:
+`SYNTAX`, `DATA MANAGER`, `VALIDATION`. Il Data Manager Viewpoint e' un `DViewPoint` (R-DMV-1) e
+oggi l'albero lo mette accanto a `VIEWPOINTS`, affermando il falso; con la validazione dentro, la
+falsita' diventa anche arbitraria. I tre concern si vedono **anche a zero**, con la riga che dice
+cosa ci andrebbe: un ramo che compare solo quando e' pieno non insegna che la funzione esiste, e la
+scoperta e' il problema che il cambio risolve. `VIEWPOINTS` resta espanso per default, cosi' il Data
+Manager non perde prominenza. I conteggi significano la stessa cosa a ogni livello. **Confine**:
+l'albero nomina e naviga, non modifica; cliccare una regola apre l'ambiente su quella regola,
+nessun rename inline e nessuna spunta Active della regola, unica eccezione l'attivazione del
+viewpoint (l'occhio che la sintassi ha gia'). Non tocca R-DMV-1: il singleton resta singleton,
+cambia dove l'indice lo mostra.
+
+
+**R-VAL-19-bis** (2026-09-09, dopo la ricognizione) — **Tre presupposti di R-VAL-19 falsificati.**
+(a) L'«occhio» non e' un occhio ma il glifo di tipo del badge `VP`, senza handler, e
+`activateViewpoint` e' esclusiva su radice singola, il contrario di R-VAL-2: nessuna affordance da
+riusare, cade l'eccezione sull'attivazione, **l'albero nomina e naviga senza eccezioni**.
+L'attivazione multipla dei viewpoint di validazione e' un meccanismo da progettare, non di questa
+fetta. (b) I conteggi non sono la stessa specie: `VIEWPOINTS` conta viewpoint, `DATA MANAGER` conta
+classi personalizzate. Le righe dei concern contano viewpoint e il numero di classi personalizzate
+passa nel testo della riga di stato; due reti si riscrivono di proposito, e una asserisce la formula
+leggendo il sorgente, quindi va fatta eseguire (P11). (c) Il collasso e' persistito per progetto:
+chi chiude `VIEWPOINTS` perde anche il Data Manager dall'indice. Accettato e dichiarato, perche' il
+rimedio sarebbe l'eccezione che la decisione toglie. Iscritto e fuori: `hasContent` sostituisce
+l'albero con «No metamodels» in un progetto vuoto, e nessuno dei tre concern si vede proprio quando
+la scoperta servirebbe.
+
+
 ## Superate
 
 - **D3** (2026-07-26, routing congelato in v1) — superata da E-route il 2026-08-06.

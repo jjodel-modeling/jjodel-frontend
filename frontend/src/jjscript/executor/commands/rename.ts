@@ -8,7 +8,8 @@ import {
     ExecutionResult,
     ExecutionContext
 } from '../../types';
-import { resolveElement } from '../resolvers';
+import { resolveTargetInProject, kindLabel, memberMissingMessage, TARGET_KINDS_BY_ELEMENT_TYPE, ambiguityMessage, QUALIFY_ADVICE
+} from '../resolvers';
 import { qualifiedNameToString, isValidIdentifier } from '../../parser/grammar';
 import { getProject } from '../utils';
 import { executeRenameInstance } from './instance';
@@ -59,16 +60,48 @@ export async function executeRename(
             return executeRenameInstance(args, context, project);
         }
 
-        // Resolve the target element
-        const element = resolveElement(target, project);
+        // Resolve the target element, restricted to the named element type when the
+        // command gives one (same reasoning as delete: `in <Parent>` is folded into
+        // `Parent.member`, so the container has to be resolved to the right kind).
+        const targetKinds = args.elementType ? TARGET_KINDS_BY_ELEMENT_TYPE[args.elementType] : undefined;
+        const resolution = resolveTargetInProject(target, project, targetKinds);
+        if (resolution.memberMissingOn) {
+            // The container was found and it is the sort that could have held the member.
+            // Not walking on to a case-only sibling is the point: acting on one would
+            // touch an element the command never named.
+            const missing = memberMissingMessage(resolution.memberMissingOn, kindLabel(targetKinds));
+            return {
+                success: false,
+                command: 'rename',
+                message: missing,
+                errors: [{
+                    code: 'MEMBER_NOT_FOUND',
+                    message: missing,
+                    suggestion: 'Check the member name, and the case of the container name'
+                }]
+            };
+        }
+        if (resolution.ambiguousWith) {
+            return {
+                success: false,
+                command: 'rename',
+                message: ambiguityMessage(qualifiedNameToString(target), resolution.ambiguousWith),
+                errors: [{
+                    code: 'AMBIGUOUS_TARGET',
+                    message: `More than one ${kindLabel(targetKinds).toLowerCase()} answers to '${qualifiedNameToString(target)}': ${resolution.ambiguousWith.join(', ')}`,
+                    suggestion: QUALIFY_ADVICE
+                }]
+            };
+        }
+        const element = resolution.element;
         if (!element) {
             return {
                 success: false,
                 command: 'rename',
-                message: `Element not found: ${qualifiedNameToString(target)}`,
+                message: `${kindLabel(targetKinds)} not found: ${qualifiedNameToString(target)}`,
                 errors: [{
                     code: 'ELEMENT_NOT_FOUND',
-                    message: `Could not find element '${qualifiedNameToString(target)}'`
+                    message: `Could not find ${kindLabel(targetKinds).toLowerCase()} '${qualifiedNameToString(target)}'`
                 }]
             };
         }

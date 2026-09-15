@@ -143,6 +143,14 @@ Lo **stato di modulo** si azzera nel `beforeEach`. Un timestamp, una cache o un 
 modulo sopravvive fra i test dello stesso file: la seconda asserzione legge cio' che ha scritto la
 prima, e un'asserzione vuota passa senza avere mai visto il soggetto.
 
+Sull'interfaccia la stessa regola diventa: **quando lo stile e il pixel non vanno d'accordo, la
+misura e' il pixel**. Che un elemento sia raggiungibile non si deduce dai valori di `z-index`
+letti nei fogli di stile, perche' un contesto di impilamento creato da un antenato qualunque li
+riordina senza che nessuno se ne accorga: si misura con `elementsFromPoint` sul pixel che l'utente
+colpirebbe, e l'asserzione e' su chi c'e' in cima allo stack. Causa: lo Step 4 della validazione
+(2026-09-08), dove il rail delle Properties dipingeva sopra il modale e ne rendeva inerte un
+bottone mentre i numeri nel foglio di stile dicevano il contrario.
+
 Il presidio di entrambi e' il **banco delle mutazioni**: si rompe il soggetto in un punto per volta
 e si verifica che il test diventi rosso. Una mutazione che resta verde non e' un test debole, e' un
 test che **non esiste**, e va dichiarata nel referto — non aggiustata in silenzio, perche' la
@@ -154,6 +162,30 @@ Causa: tre occorrenze misurate in due batch, tutte dichiarate dalle sessioni ste
 muoveva, ed era la sonda a essere cieca. **SAVE2** (entry di log del 2026-09-02) — il test del
 flush leggeva il sorgente invece di eseguirlo, e restava verde con il flush rimosso; e lo stato di
 modulo di `lastSaved` sopravviveva fra i test, rendendo verde un'asserzione vuota.
+
+## P12 — Il controllo positivo deve discriminare
+
+Un controllo positivo vale solo se **fallirebbe** quando l'operazione che deve attestare non
+avviene. Un segnavia che resta identico sia che l'operazione sia avvenuta sia che no non e' un
+controllo: e' decorazione che fa passare la misura sbagliata con l'aria della misura verificata.
+
+La forma tipica dell'errore e' scegliere come sentinella qualcosa che **non si muove**: una chiave
+lasciata al suo posto, un valore che il percorso in esame non tocca, un file che esiste comunque.
+La forma corretta e' una sentinella che l'operazione **deve** alterare, piantata dove l'operazione
+passa.
+
+Il criterio si applica anche al momento della lettura. Dove esiste un commit differito
+(`U.UpdatingTimer`, 300 ms, CLAUDE.md §9.2 deferred attribute setting), leggere prima del commit
+restituisce lo stato precedente **con tutte le chiavi al posto giusto**, cioe' esattamente
+l'aspetto di un esito positivo. Una misura presa troppo presto non e' rumorosa, e' plausibile.
+
+Causa: due occorrenze misurate il 2026-09-08 nella corsia della validazione, entrambe dichiarate
+dalla sessione stessa. Nello Step 1 la prima stesura della sonda dichiarava **sei fallimenti** dei
+tipi nuovi, tutti spiegati poi dal commit differito: il controllo positivo su un `DViewPoint`
+creato accanto dava lo stesso identico esito, e senza quel confronto sei comportamenti del
+framework sarebbero finiti a referto come difetti dei tipi nuovi. Nella verifica sulle cartelle di
+stato la prima stesura leggeva prima del commit, otteneva lo stato vecchio con le chiavi al posto
+giusto, e dava la risposta **opposta** a quella vera.
 
 ---
 
