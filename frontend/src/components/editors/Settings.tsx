@@ -7,14 +7,14 @@ import './style.scss';
 function SettingsComponent(props: AllProps) {
     const {background, setBackground, color, setColor} = props;
     return(<section>
-        <div className={'input-container'}>
+        <label className={'input-container'}>
             <b className={'me-2'}>Background:</b>
             <input className={'input'} type={'color'} defaultValue={background} onChange={e => setBackground(e.target.value)} />
-        </div>
-        <div className={'input-container'}>
+        </label>
+        <label className={'input-container'}>
             <b className={'me-2'}>Color:</b>
             <input className={'input'} type={'color'} defaultValue={color} onChange={e => setColor(e.target.value)} />
-        </div>
+        </label>
     </section>);
 
 }

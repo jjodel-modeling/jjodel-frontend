@@ -1,39 +1,42 @@
-import {
-    Constructors,
-    CoordinateMode, D,
-    Debug, DEdgePoint,
-    Defaults,
-    DGraphElement,
-    Dictionary, type DModel,
+import type {
     DModelElement,
     DNamedElement,
     DocString,
+    getWParams,
+    GObject,
+    LogicContext, NestedArray,
+    Pointer,
+} from "../../joiner";
+import {
+    Constructors,
+    CoordinateMode, D, DataTransientProperties,
+    Debug, DEdgePoint,
+    Defaults, DGraph,
+    DGraphElement,
+    Dictionary, type DModel,
     DPointerTargetable, DProject,
     DState,
-    DViewPoint, DVoidEdge,
+    DViewPoint, DVoidEdge, DVoidVertex,
     EdgeBendingMode,
     EdgeGapMode, EdgeSegment,
     EGraphElements,
-    EModelElements,
-    getWParams,
-    GObject,
+    EModelElements, Geom,
     GraphPoint,
     GraphSize,
-    Info, L, LEdge, LEdgePoint, LGraphElement, LModelElement,
+    Info, L, LEdge, LEdgePoint,
+    LGraph, LGraphElement, LModelElement,
     Log,
-    LogicContext,
     LPointerTargetable, LProject, LUser,
     LViewPoint,
     LVoidEdge,
     MyProxyHandler, PointedBy,
-    Pointer,
     Pointers, PrimitiveType,
     RuntimeAccessible,
     RuntimeAccessibleClass,
     Selectors,
     SetFieldAction, SetRootFieldAction,
     ShortAttribETypes,
-    store,
+    store, TLCoord,
     TRANSACTION,
     U, Uobj, ViewEClassMatch, ViewTransientProperties,
     windoww
@@ -41,7 +44,14 @@ import {
 import {DUser, EPSize, Pack1, transientProperties } from "../../joiner/classes";
 import DSL from "../../DSL/DSL";
 import {ReactNode} from "react";
+import type {ViewpointType} from "../viewPoint/viewpoint";
 import {labeltype} from "../../model/dataStructure/GraphDataElements";
+import {DEFAULT_VIEW_JSX_STRING} from "../../utils/defaultViewTemplate";
+import {collectViewSubtree} from "./viewSubtree";
+import {computeCreationSeed} from "../../components/editor-v2/viewpoint/ir/irCreationSeed";
+import type {AnyViewIR} from "../../components/editor-v2/viewpoint/ir/irTypes";
+import type {FormThemeName} from "../../jjform/themes";
+import type {FormPaletteName} from "../../jjform/palettes";
 
 let CSS_Units0 = {'Local-font relative':{
         'cap':     'cap - (Cap height) the nominal height of capital letters of the element\'s font.',
@@ -151,8 +161,31 @@ export type CSSUnit = CSS_AbsoluteUnit | CSS_RelativeFontUnit | CSS_RelativeDomU
 export type StringControl = {type:'text', value: string};
 export type NumberControl = {type:'number', value: number, unit: DocString<"css unit">};
 export type PaletteControl = {type:'color', value: tinycolor.ColorFormats.RGBA[]}; // array of rgba: red, green, blue, alpha
-export type PathControl = {type:'path', value: string, x: string, y: string, options: {k: string, v:string}[]};
+export type PathControl = {type:'path', value: string, x: string, y: string, fillMode?: 'filled' | 'outline', options: {k: string, v:string}[]};
 export type PaletteType = Dictionary<string, PaletteControl | NumberControl | StringControl | PathControl>;
+
+
+/**
+ * `appliableTo` derivato da `ir.kind` (ratifica 2026-08-16).
+ *
+ * Il campo legacy non è ritirabile: VersionFixer.tsx:862,892 lo legge come filtro
+ * di migrazione sulle edge view già salvate, e irValidate.ts:16-19 ricorda che
+ * quelle view non hanno un VersionFixer proprio. Resta quindi scritto, ma da un
+ * writer solo: il kind dell'ir.
+ *
+ * `row` mappa su 'Field' come analogo legacy più vicino: una riga IR è una riga
+ * di compartimento. `graphVertex` non è un kind autorabile (R-6, 2026-08-04) e
+ * cade nel ramo undefined insieme a ogni kind sconosciuto, dove il campo NON
+ * viene toccato: meglio un valore vecchio di un valore inventato.
+ */
+function appliableToForIRKind(kind: unknown): DViewElement['appliableTo'] | undefined {
+    switch (kind) {
+        case 'vertex': return 'Vertex';
+        case 'edge': return 'Edge';
+        case 'row': return 'Field';
+        default: return undefined;
+    }
+}
 
 
 @RuntimeAccessible('DViewElement')
@@ -186,6 +219,60 @@ export class DViewElement extends DPointerTargetable {
     isValidation!: boolean; // only for root views (ex viewpoints) to group views semantically.
     name!: string;
     isExclusiveView!: boolean;
+    viewpointType?: ViewpointType; // explicit viewpoint type (additive — legacy booleans still work)
+    /**
+     * The FORM THEME chosen at the VIEWPOINT level (slice STYLE2).
+     *
+     * One of `FORM_THEME_NAMES` — the four presets of `jjform/themes.ts` — or absent.
+     * ABSENT IS A VALUE: it means "this viewpoint states no opinion", which resolves to
+     * exactly the rendering committed before this field existed. That is why no
+     * VersionFixer migration accompanies it: a saved project has no `formTheme`, reads
+     * as absent, and renders byte for byte as it did. CLAUDE.md §3.9 requires a
+     * migration for default-VIEW SOURCE changes (`DV.tsx`, `defaultViewTemplate.ts`)
+     * because those rewrite a persisted `jsxString`; this field rewrites nothing.
+     *
+     * Declared HERE and not on `DViewPoint` for the reason `isValidation` and
+     * `viewpointType` are: `DViewPoint` carries no own data field at all (it redeclares
+     * `id` and `name` and nothing else), and every viewpoint-only field in this graph
+     * lives on `DViewElement` with a comment saying so. A first own field on the
+     * subclass would also have to be taught to `Constructors.DViewPoint`, which today
+     * only wires the project pointer.
+     *
+     * READ BY: `IRForm.tsx`, through the ACTIVE viewpoint (`state.viewpoint`), which is
+     * the same source `irResolveCore` indexes views by. WRITTEN BY: the «Form theme»
+     * select of `ViewpointProperties.tsx` — the panel `Info.tsx` renders for a selected
+     * viewpoint. Not the Style tab: `<ViewData>`, which owns that tab, is mounted only
+     * in the `else` branch of the same `isVP` test, so no viewpoint ever reaches it.
+     * Precedence, stated once and tested: `ir.form.theme` of the view wins over this,
+     * this wins over the factory default.
+     */
+    formTheme?: FormThemeName;
+    /**
+     * The FORM PALETTE chosen at the VIEWPOINT level (R-SKIN).
+     *
+     * One of `FORM_PALETTE_NAMES` — the four presets of `jjform/palettes.ts` — or absent.
+     * ABSENT IS A VALUE, exactly as for `formTheme` above: it means «this viewpoint states
+     * no opinion», which resolves to `Slate`, which is the appearance committed before the
+     * field existed. That is why no VersionFixer migration accompanies it — a saved project
+     * has no `formPalette`, reads as absent, and renders byte for byte as it did.
+     *
+     * ORTHOGONAL to `formTheme`: that one names a LAYOUT preset (label placement, density,
+     * section chrome), this one names an APPEARANCE preset (nine colour tokens). Two fields
+     * because they are two axes; `Compact` + `Paper` is a legitimate combination.
+     *
+     * NOT `palette`, which is taken on this same class (`:327`) by the legacy per-view
+     * colour map the classic CSS compiler reads. Different thing, and close enough that the
+     * name has to say which one it is.
+     *
+     * Declared HERE and not on `DViewPoint` for the reason stated above for `formTheme`:
+     * `DViewPoint` carries no own data field at all.
+     *
+     * READ BY: `InstanceManagerTab.tsx`, from the Data Manager singleton (R-DMV-1), which
+     * writes it onto the manager root as `data-palette`. WRITTEN BY: the «Palette» select of
+     * `DataManagerViewpointPanel.tsx`, through the same `writeViewpoint` that materializes
+     * the singleton on first write (R-DMV-6).
+     */
+    formPalette?: FormPaletteName;
 
     // processate 1 sola volta all'applicazione della vista o all'editing del campo
     constants?: string;
@@ -195,6 +282,18 @@ export class DViewElement extends DPointerTargetable {
     preRenderFunc!: string;
 
     jsxString!: string; // l'html template
+    // ViewpointIR (EditorV2 interpreter contract, spike 2026-07-17). Optional and additive:
+    // undefined for classic views; serialization is generic, no VersionFixer needed (spec IR sez. 8).
+    ir?: GObject;
+    // Per-kind stash of the reversible IR kind conversion (slice B, 2026-08-16): an
+    // IRKindStash (irKindConvert.ts). Sibling of `ir` BY DESIGN (D6): a key inside
+    // `ir` would change irHash and silently break the compile cache and
+    // irDefaults.isMigratedDefaultView. Undefined when no slot is occupied.
+    irStash?: GObject;
+    // Explicit legacy mark for classic-only custom views (inverse migration
+    // VersionFixer 2.225 -> 2.226, spec v1.2 sez. 11): rendered as abstract
+    // nodes with a visible status, never silently dropped.
+    irLegacyClassic?: boolean;
     usageDeclarations?: string;
 
     longestLabel?: DocString<"function">;
@@ -258,7 +357,26 @@ export class DViewElement extends DPointerTargetable {
     /* private */ compiled_css!: string;
     /* private */ css_MUST_RECOMPILE!: boolean;
     father?: Pointer<DViewElement>;
+    snap!: GraphPoint;
+    grid!: {x?: number, y?: number, type?: "polar" | "cartesian", "center"?: TLCoord, visible?: boolean};
     version!: number; // only meaningful for default views, required to check if view needs to be updated.
+
+    // L2 — edge overlay schema (classic editor only). When isEdge=true, instances of the metaclass represented
+    // by this view are rendered as SVG edges in the classic editor (overlay), reading endpoints via
+    // edgeSource/edgeTarget path expressions evaluated against the M1 instance. Empty string = unconfigured;
+    // overlay falls back to the standard card. No effect in flow editor. Defaults set in Constructors.DViewElement;
+    // existing instances migrated by VersionFixer 2.212 -> 2.213. UI in L2 Fase 5; SVG renderer in L2 Fase 3.
+    isEdge!: boolean;
+    edgeSource!: string;
+    edgeTarget!: string;
+    edgeRouting!: 'straight' | 'manhattan-rounded' | 'bezier'; // L2 overlay path style. Default 'manhattan-rounded' (set in Constructors; existing instances migrated by VersionFixer 2.214 -> 2.215).
+    // L2 — edge customization V1 (label + stroke). Optional fields applied at L2 overlay render-time
+    // (frontend/src/components/edgeOverlay/EdgeOverlay.tsx). Defaults set in Constructors; instances
+    // pre-V1 with `undefined` values are normalized by the selector via narrowing — no VersionFixer bump.
+    edgeLabel!: string;                                         // JjEL expression evaluated to the edge label text. '' = no label.
+    edgeStrokeColor!: string;                                   // semantic palette token: 'default' | 'accent' | 'success' | 'warning' | 'danger' | 'muted'.
+    edgeStrokeWidth!: number;                                   // stroke width in px; clamped to [0.5, 10] by the selector.
+    edgeStrokeStyle!: 'solid' | 'dashed' | 'dotted';            // line pattern.
 /*
     public static new(name: string, jsxString: string, father?: DViewElement, defaultVSize?: GraphSize, usageDeclarations: string = '', constants: string = '',
                       preRenderFunc: string = '', appliableToClasses: string[] = [], oclCondition: string = '',
@@ -279,84 +397,125 @@ export class DViewElement extends DPointerTargetable {
             .DPointerTargetable().DViewElement(name, jsxString, vp).end(callback);
     }
 
-    static newDefault(forData?: DNamedElement): DViewElement{
-        const jsx = `
-
-/* Jjodel Default View 2.1 */ 
-
-<View className={'root'}>
-    <div className={'header'}>
-        <div className={'input-container mx-2'}>
-            <b className={'object-name'}>Name:</b>
-            {data.$name ?
-                <Input data={data.$name} field={'value'} hidden={true} autosize={true} placeholder={'enter name'}/> :
-                <Input data={data} field={'name'} hidden={true} autosize={true}  placeholder={'enter name'}/>
-            }
-        </div>
-    </div>
-    <div className={'body'}>To add information here,<br/> edit the view<br/>"{view.name}"</div>
-    {decorators}
-</View>`;
-        const palettes: PaletteType = {
-            "background-": {type:"color", value: [
-                { "r": 255, "g": 255, "b": 255, "a": 1 },
-                { "r": 250, "g": 250, "b": 250, "a": 1 }]},
-            "border-color-": {type:"color", value: [
-                { "r": 12, "g": 67, "b": 110, "a": 1 }]},
-            "color-": {type:"color", value: [
-                { "r": 12, "g": 67, "b": 110, "a": 1 }]},
-        }
-            const css = `&>.root {
-    border: 2px solid var(--border-color-1)!important;
-    border-radius: 4px;
-    background: linear-gradient(-45deg, var(--background-1) 0%, var(--background-2) 100%);
-    color: var(--color-1);
-    min-width: 180px;
-    
-    &>.header {
-        border-bottom: 1px solid var(--border-color-1);
-    }
-
-    &>.body {
-        text-align: center;
-        height: auto;
-        padding: 5px;
-    }
-} 
-
- `;
+    static newDefault(forData?: DModelElement | DGraphElement, forSelf: boolean = false): DViewElement{
+        /* Jjodel Default View 2.2 - minimal clean + edge-like (sessione 2026-05-03) */
+        const palettes: PaletteType = {};
+        const css = '';
         let query = '';
-        if (forData) switch(forData.className) {
-            case 'DClass':
-                query = `context DObject inv: self.instanceof.id = '${forData.id}'`;
-                break;
-            case 'DAttribute':
-            case 'DReference':
-                query = `context DValue inv: self.instanceof.id = '${forData.id}'`;
-                break;
-            default:
+        if (forData) {
+            if (forSelf) {
                 query = `context ${forData.className} inv: self.id = '${forData.id}'`;
-                break;
+            } else switch (forData.className) {
+                case 'DModel':
+                    query = `context DModel inv: self.instanceof.id = '${forData.id}'`;
+                    break;
+                case 'DClass':
+                    query = `context DObject inv: self.instanceof.id = '${forData.id}'`;
+                    break;
+                case 'DAttribute':
+                case 'DReference':
+                    query = `context DValue inv: self.instanceof.id = '${forData.id}'`;
+                    break;
+                default:
+                    query = `context ${forData.className} inv: self.id = '${forData.id}'`;
+                    break;
+            }
         }
-        const user = LUser.fromPointer(DUser.current) as LUser;
-        // const project = user?.project; if(!project) return this;
+        const user = LUser.getUser();
+        // const project = LProject.getProject(); if(!project) return this;
         let name: string;
         let parentView: LViewElement;
-        let activeVP: LViewPoint | undefined = user?.project?.activeViewpoint;
+        let activeVP: LViewPoint | null | undefined = LProject.getProject()?.activeViewpoint;
         if (activeVP && activeVP?.id !== Defaults.Pointer_ViewPointDefault) parentView = activeVP;
-        else parentView = LPointerTargetable.fromPointer(Defaults.Pointer_ViewModel);
+        // R-IRN-23: the fallback goes through the viewpoint, not through the `Model` view.
+        // After the seed withdrawal (R-IRN-15) `Pointer_ViewModel` does not exist in a new
+        // project: `fromPointer` returns undefined and does not log (canThrow is false), and the
+        // branch went on to dereference `parentView.subViews`. The seeded `Default` viewpoint is
+        // still created (slice 1 kept the container), and it is the same third fallback that
+        // `resolveParentViewpoint` already uses (utils/lastViewpoint.ts:156).
+        else parentView = LPointerTargetable.fromPointer(Defaults.Pointer_ViewPointDefault);
 
-        if (forData?.name) name = 'View for ' + forData.name;
+        let l = forData && L.from(forData);
+        if (l?.name) name = 'View for ' + l.name;
         else {
             let names: string[] = parentView.subViews.map(v => v && v.name);
-            name = U.increaseEndingNumber( 'view_' + 0, false, false, newName => names.indexOf(newName) >= 0);
+            name = U.increaseEndingNumber( 'view_'+(forData?.className ? '_'+forData.className : '') + 0, false, false, newName => names.indexOf(newName) >= 0);
         }
+
+        // IR seed (R-IRN-4): the view is born with the notation it is for, instead of
+        // rendering abstract until someone opens the Enable IR gate. Name and id are read
+        // from the proxy captured above, never from appliableToClasses (which this path
+        // does not even write).
+        //
+        // Only when forSelf is false. A forSelf view targets THAT element by id
+        // ('inv: self.id = ...'), while an IR keyed on the metaclass name targets every
+        // instance of it: seeding there would build a view whose OCL and whose ir say two
+        // different things. No live call site reaches this combination today
+        // (addViewKeybind routes DClass/DAttribute/DReference to addViewInstances, i.e.
+        // forSelf false), but newDefault is a public static and the guard is one term.
+        let seed: AnyViewIR | null = null;
+        if (forData && !forSelf) {
+            switch (forData.className) {
+                case 'DClass':
+                    seed = computeCreationSeed({
+                        kind: 'vertex',
+                        metaclassName: (l as any)?.name,
+                        metaclassId: forData.id,
+                        label: name,
+                    });
+                    break;
+                case 'DAttribute':
+                    // A row carries no metaclass by construction (the author picks it in
+                    // RowAuthoringPanel), so nothing of the attribute is seeded but the kind.
+                    seed = computeCreationSeed({ kind: 'row' });
+                    break;
+                case 'DReference': {
+                    // An edge view's `metaclasses` is the SOURCE metaclass, which for a
+                    // reference is its owning class: LStructuralFeature.father. The
+                    // className check reads the D-layer name ('DClass'), never the L-name,
+                    // which would always be false (CLAUDE.md §3.13). If the owner does not
+                    // resolve, the edge is seeded without metaclass and the author sets it.
+                    let ownerName: string | undefined;
+                    let ownerId: string | undefined;
+                    try {
+                        const owner: any = (l as any)?.father;
+                        if (owner && owner.className === 'DClass') {
+                            ownerName = owner.name;
+                            ownerId = owner.id;
+                        }
+                    } catch { /* dangling or malformed father — fall through unseeded */ }
+                    seed = computeCreationSeed({
+                        kind: 'edge',
+                        metaclassName: ownerName,
+                        metaclassId: ownerId,
+                    });
+                    break;
+                }
+                default:
+                    break;
+            }
+        }
+
+        // A view born with an `ir` renders through the interpreter: a classic template
+        // would be dead text carried forever. Unseeded cases keep the template they had.
+        const jsx = seed ? '' : DEFAULT_VIEW_JSX_STRING;
 
         return DViewElement.new2(name, jsx, parentView.__raw, (d)=>{
             d.css = css;
             d.palette = palettes;
             d.css_MUST_RECOMPILE = true;
             d.oclCondition = query;
+            // Set inside the callback, which Constructors.end() runs BEFORE persist
+            // (joiner/classes.ts:683,688): the view is persisted with its ir already on
+            // it, in one action.
+            if (seed) {
+                (d as any).ir = seed;
+                // Stessa derivazione di set_ir, applicata qui perché il seed scrive sul D e
+                // non passa dal proxy L. La callback è eseguita da Constructors.end() PRIMA
+                // della persist (joiner/classes.ts:683,688): la view è persistita coerente.
+                const derived = appliableToForIRKind(seed.kind);
+                if (derived) d.appliableTo = derived;
+            }
         }, true);
     }
 }
@@ -386,6 +545,15 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
             <br/>A non-exclusive view cannot be applied alone and needs an exclusive view to render the main graphical content.</div>};
     get_isOverlay(c: Context): this["isOverlay"] { return this.get_isExclusiveView(c); }
     set_isOverlay(val: this["isOverlay"], c: Context): boolean { return this.set_isExclusiveView(val, c); }
+
+    tv!: ViewTransientProperties;
+    transient!: DataTransientProperties;
+    __info_of__transient: Info = {type: 'GObject (check it in console)', txt: 'Properties that are not persistent or shared in collaborative environments, such as cached values.'}
+    __info_of__tv: Info = {type: 'GObject (check it in console)', txt: 'Shorter alias for transient view.'}
+    get_transient(c: Context) { return transientProperties.view[c.data.id] || {}; }
+    get_tv(c: Context) { return this.get_transient(c); }
+    set_tv(val: never, c: Context) { return this.cannotSet('transient'); }
+    set_transient(val: never, c: Context) { return this.cannotSet('transient'); }
 
     label!: this["longestLabel"];  // should never be read change their documentation in write only. their values is "read" in this.segments
     longestLabel!: labeltype; // (e:LVoidEdge, segment: EdgeSegment, allNodes: LEdge["allNodes"], allSegments: EdgeSegment[]) => PrimitiveType;
@@ -435,7 +603,9 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         }
         delete allviews[c.data.id];
         let vp = this.get_viewpoint(c);
-        allviews[vp.id] = vp;
+        // get_viewpoint returns undefined on a cyclic or dangling father chain (see its
+        // anti-cycle belt): skip the re-insertion instead of crashing on vp.id.
+        if (vp) allviews[vp.id] = vp;
         return Object.values(allviews);
     }
 
@@ -470,7 +640,33 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         return SetFieldAction.new(c.data, "isExclusiveView", !!val, '', false);
     }
 
-    constants?: string;
+    ir?: GObject;
+    __info_of__ir: Info = {type: 'GObject | undefined', txt: <div>ViewpointIR of the view (EditorV2 interpreter contract). Undefined for classic views.</div>};
+    get_ir(c: Context): this["ir"] { return c.data.ir; }
+    set_ir(val: this["ir"], c: Context): boolean {
+        // `ir.kind` è il writer unico di `appliableTo` (ratifica 2026-08-16): i due campi
+        // viaggiano nella stessa TRANSACTION, così non esiste uno stato intermedio in cui
+        // il discriminatore legacy contraddice l'ir. La scrittura NON passa dal setter L
+        // `set_appliableTo`, che accoppierebbe anche `forceNodeType` (letto solo da
+        // DefaultNode, cioè dal canvas classico non più montato da Fase 5a).
+        const derived = appliableToForIRKind((val as any)?.kind);
+        TRANSACTION('change '+this.get_name(c)+'.ir', ()=>{
+            SetFieldAction.new(c.data, "ir", val as any, '', false);
+            // Kind sconosciuto o `ir` disabilitato: il campo resta com'era.
+            if (derived !== undefined && derived !== c.data.appliableTo) SetFieldAction.new(c.data, "appliableTo", derived, '', false);
+        })
+        return true;
+    }
+
+    irStash?: GObject;
+    __info_of__irStash: Info = {type: 'GObject | undefined', txt: <div>Per-kind stash of the reversible IR kind conversion (IRKindStash, irKindConvert.ts). Undefined when no slot is occupied.</div>};
+    get_irStash(c: Context): this["irStash"] { return c.data.irStash; }
+    set_irStash(val: this["irStash"], c: Context): boolean {
+        // No TRANSACTION and no derivation here: `appliableTo` belongs to `set_ir`.
+        return SetFieldAction.new(c.data, "irStash", val as any, '', false);
+    }
+
+    constants!: GObject;
     __info_of__constants: Info = {todo:true, isGlobal: true, type: "Function():Object", label:"constants declaration",
         txt:<div>Data used in the visual representation, meant to be static values evaluated only once when the view is first applied.<br/>
         Check default value view for an example.<br/>
@@ -497,6 +693,166 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
             patharr.splice(0, 1);
             return root.getByPath(patharr);
         }
+    }
+
+    nodes!: LGraphElement[];
+    __info_of__nodes: Info = {type: 'LGraphElement[]', txt: 'A collection of nodes currently using this view'}
+    public get_nodes(c: Context): LViewElement['nodes'] {
+        let isExclusive = this.get_isExclusiveView(c);
+        let ret: LGraphElement[] = [];
+        for (let nid in transientProperties.node) {
+            let tn = transientProperties.node[nid];
+            if (!tn) continue;
+            if (isExclusive) {
+                if (tn.mainView?.id === c.data.id) ret.push(L.from(nid));
+                else continue;
+            }
+            if (!isExclusive) {
+                for (let v of tn.stackViews) {
+                    if (v?.id === c.data.id) { ret.push(L.from(nid)); break; }
+                }
+            }
+        }
+        return ret;
+    }
+    set_nodes(val: GObject/*<GraphPoint & {type:string}>*/ | number | string | boolean, c: LogicContext<DViewElement>): boolean { return this.cannotSet('nodes'); }
+
+    snap!: GraphPoint;
+    get_snap(c: LogicContext<DVoidVertex>): DVoidVertex["snap"] { return LViewElement.GetSnap(c); }
+    set_snap(val: GraphPoint, c: LogicContext<DViewElement>): boolean { return LViewElement.SetSnap(val, c); }
+
+    public static GetSnap(c: LogicContext<DVoidVertex> | LogicContext<DViewElement>): DVoidVertex["snap"] { return new GraphPoint(c.data.snap!.x, c.data.snap!.y); }
+    public static SetSnap(val: Partial<GraphPoint> | number | string | boolean, c:  LogicContext<DVoidVertex> | LogicContext<DViewElement>): boolean {
+        const isView = c.data.className.includes('View');
+        if (!val && val !== 0) {
+            if (!isView && c.data.snap) {
+                TRANSACTION('Inherit snap on',
+                    ()=> {
+                        SetFieldAction.new(c.data, 'snap', null as any, '=', false);
+                        SetRootFieldAction.new("NODES_RECOMPILE_snap", c.data.id, '+=');
+                    });
+                return true;
+            }
+            else val = 0;
+        }
+        if (typeof val === 'boolean') val = val ? 1 : 0;
+        if (typeof val === 'string') val = +val;
+        if (typeof val === 'number') val = {x: val, y: val};
+        let gval: GObject = typeof val !== 'object' ? {} : val;
+        if ('x' in gval) {
+            gval.x = +gval.x;
+            if (isNaN(gval.x)) gval.x = 0;
+        }
+        if ('y' in gval) {
+            gval.y = +gval.y;
+            if (isNaN(gval.y)) gval.y = 0;
+        }
+
+        let xChanged = 'x' in gval && gval.x !== c.data.snap?.x;
+        let yChanged = 'y' in gval && gval.y !== c.data.snap?.y;
+        if (!xChanged && !yChanged) return true;
+        let diff_old: string = '('+ [(xChanged ? c.data.snap?.x : ''), (yChanged ? c.data.snap?.y : '')].filter(e=>!!e).join(', ') + ')';
+        let diff_new: string = '('+ [(xChanged ? gval.x : ''), (yChanged ? gval.y : '')].filter(e=>!!e).join(', ') + ')';
+        TRANSACTION('Update snap ('+(isView ? 'View' : 'Node')+')',
+            ()=> {
+                SetFieldAction.new(c.data, 'snap', gval as any, '=', false);
+                SetRootFieldAction.new(isView ? "VIEWS_RECOMPILE_snap" : "NODES_RECOMPILE_snap", c.data.id, '+=');
+            },
+            diff_old, diff_new);
+        return true;
+    }
+    grid!: GraphPoint & {type: "polar" | "cartesian", "center": TLCoord, visible: boolean};
+    __info_of__grid: Info = Info.grid;
+    public get_grid(c: Context): LViewElement['grid'] { return LViewElement.GetGrid_impl(c); }
+    set_grid(val: GObject/*<GraphPoint & {type:string}>*/ | number | string | boolean, c: LogicContext<DViewElement>): boolean { return LViewElement.SetGrid_impl(val, c); }
+
+    public static GetGrid_impl(c: LogicContext<DGraph> | LogicContext<DViewElement>): LViewElement['grid'] {
+        let grid: GObject = new GraphPoint(c.data.grid!.x || 0, c.data.grid!.y || 0);
+        if (c.data.grid) {
+            for (let k in c.data.grid) { if (c.data.grid.hasOwnProperty(k)) grid[k] = (c.data.grid as any)[k]; }
+        }
+        grid.type = c.data.grid!.type || 'cartesian';
+        grid.center = c.data.grid!.center || "cc";
+        grid.visible = !!c.data.grid!.visible;
+        return grid as LViewElement['grid'];
+    }
+    public static SetGrid_impl(val: GObject/*<GraphPoint & {type:string}>*/ | number | string | boolean, c: LogicContext<DViewElement> | LogicContext<DGraph>): boolean {
+        let isNode = !c.data.className.includes('View');
+        if (!val && val !== 0) {
+            if (isNode) {
+                TRANSACTION('delete node.grid', ()=>{
+                    SetFieldAction.new(c.data, 'grid', undefined, '', false);
+                    let arr = store.getState().NODES_RECOMPILE_grid;
+                    arr = [...arr];
+                    for (let l of (c.proxyObject as LGraph).allSubVertexes) arr.push(l?.id)
+                    // NB: direct assignment instead of += if faulty but more efficient. but is not so important if some grid updates are skipped/overwritten
+                    SetRootFieldAction.new("NODES_RECOMPILE_grid", arr, '');
+                })
+                return true;
+            }
+            val = 0;
+        }
+        if (typeof val === 'boolean') val = val ? 1 : 0;
+        if (typeof val === 'string') val = +val;
+        if (typeof val === 'number') val = {x: val, y:val};
+        // now it's always transformed to obj, discard original val for gval
+        let gval: GObject = typeof val !== 'object' ? {} : val;
+        if ('x' in gval) {
+            gval.x = +gval.x;
+            if (isNaN(gval.x) || gval.x < 0) gval.x = 0;
+        }
+        if ('y' in gval) {
+            gval.y = +gval.y;
+            if (isNaN(gval.y) || gval.y < 0) gval.y = 0;
+        }
+        if ('type' in gval) {
+            let type = gval.type = gval.type.toLowerCase();
+            if (!['cartesian', 'polar'].includes(type)) gval.type = c.data.grid?.type || 'cartesian';
+        }
+        if ('center' in gval) {
+            gval.center = typeof gval.center === 'string' ? Geom.serialize_TL_Object(Geom.parse_TL_string(gval.center)) : 'cc';
+        }
+        if ('visible' in gval) {
+            gval.visible = U.toBool(gval.visible);
+        }
+        let xChanged = 'x' in gval && gval.x !== c.data.grid?.x;
+        let yChanged = 'y' in gval && gval.y !== c.data.grid?.y;
+        let typeChanged = 'type' in gval && gval.type !== c.data.grid?.type;
+        let centerChanged = 'center' in gval && gval.center !== c.data.grid?.center;
+        let visibleChanged = 'visible' in gval && gval.visible !== c.data.grid?.visible;
+        if (!xChanged && !yChanged && !typeChanged && !centerChanged && !visibleChanged) return true;
+
+        let diff_old: string = '(' + [
+            (xChanged ? c.data.grid?.x : ''), (yChanged ? c.data.grid?.type : ''), (typeChanged ? c.data.grid?.type : ''),
+            (centerChanged ? c.data.grid?.center : ''), (visibleChanged ? c.data.grid?.visible : '')
+        ].filter(e=>!!e).join(', ') + ')';
+        let diff_new: string = '(' + [
+            (xChanged ? gval.x : ''), (yChanged ? gval.y : ''), (typeChanged ? gval.type : ''),
+            (centerChanged ? gval.center : ''), (visibleChanged ? gval.visible : '')
+        ].filter(e=>!!e).join(', ') + ')';
+
+        TRANSACTION('Update grid', ()=> {
+            SetFieldAction.new(c.data, 'grid', gval as any, '+=', false);
+            if (isNode) {
+                let arr = store.getState().NODES_RECOMPILE_grid;
+                arr = [...arr];
+                for (let l of (c.proxyObject as LGraph).allSubVertexes) arr.push(l?.id)
+                // NB: direct assignment instead of += if faulty but more efficient. but is not so important if some grid updates are skipped/overwritten
+                SetRootFieldAction.new("NODES_RECOMPILE_grid", arr, '');
+            } else {
+                // NB: VIEWS_RECOMPILE_grid was deprecated on birth because from view in reducer i cannot query the state to get nodes. so i need to do it here.
+                let arr = store.getState().NODES_RECOMPILE_grid;
+                arr = [...arr];
+                let graphs = LViewElement.prototype.get_nodes.apply(LViewElement.singleton, [c]);
+                for (let l of graphs) {
+                    if (!l || !l.className.includes('Graph')) continue;
+                    for (let v of l.allSubVertexes) arr.push(v?.id);
+                }
+                // NB: direct assignment instead of += if faulty but more efficient. but is not so important if some grid updates are skipped/overwritten
+                SetRootFieldAction.new("NODES_RECOMPILE_grid", arr, '');
+            }
+        }, diff_old, diff_new);
+        return true;
     }
 
     jsxString!: string;
@@ -639,46 +995,45 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
                     s += "\t--" + paletteName + (i+1) + ": " + rgba + ';\n';
                 }
             } else if (palette0.type === 'path'){
-                let palette: PathControl = palette0;
-                let val = U.replaceAll(palette.value, 'view.', '');
-                val = U.replaceAll(val, 'this.', '');
-                val = U.replaceAll(val, 'x', palette.x);
-                val = U.replaceAll(val, 'y', palette.y);
-                val = U.replaceAll(val, '+', ' +');
-                val = U.replaceAll(val, '-', ' -'); // important: cannot add space post-dash or it's harder to distinguish unary and binary -
-                val = U.replaceAll(val, '/', ' / ');
-                val = U.replaceAll(val, '*', ' * ');
-                let valarr: (string | number)[] = val.split(/[,\s]/);
-                // [] not allowed
-                valarr = (valarr as string[]).map(val => {
-                    if (!isNaN(+val)) return val;
-                    let patharr: string[] = val.split('.');
-                    let curr: GObject = c.data;
-                    for (let pathseg of patharr) {
-                        curr = curr[pathseg];
-                        Log.e(!curr && (val.length > 1 || patharr.length > 1), "invalid variable path in css path control", {token:val, view:c.data.name});
-                        if (!curr) break;
-                    }
-                    if (typeof curr === "object" || (typeof curr === "undefined" && (val.length > 1 || patharr.length > 1)))
-                        Log.ee( "invalid variable path in css path control", {token:val, view:c.data.name});
-                    else val = curr || val;
-                    return val;
-                }).filter(p=>!!p);
+                // check and resolve for JOM.navigational.variables.
+                try {
+                    // problem here with parsing palette path with variables
+                    let palette: PathControl = palette0;
+                    let val = palette.value;
+                    // val = U.replaceAll(val, 'view.', '');
+                    // val = U.replaceAll(val, 'this.', '');
+                    // val = U.replaceAll(val, 'x', palette.x);
+                    // val = U.replaceAll(val, 'y', palette.y);
+                    let pathArr = U.parseParenthesis(val, '(', ')', true);
+                    let px = palette.x;
+                    let py = palette.y;
+                    let constants: GObject = this.get_constants(c);
+                    let context: GObject =  {...constants, constants, 'this': c.proxyObject, view: c.proxyObject};
+                    // console.log('evaluating path variables pre:', {val, pre: [...pathArr], post:pathArr, palette, px:palette.x, context});
+                    px = U.evalInContextAndScope("("+px+")", context, context);
+                    context.x = px;
+                    py = U.evalInContextAndScope("("+py+")", context, context);
+                    context.y = py;
+                    let pathArr2 = pathArr.map(e=> {
+                        e = Array.isArray(e) ? e.join('') : e;
+                        if (e[0] !== '(') { // outside of parenthesis, i only replace x, y
+                            e = U.replaceAll(e, 'x', px);
+                            e = U.replaceAll(e, 'y', py);
+                            return e;
+                        }
 
-                for (let i = 0 ; i < valarr.length; i++) {
-                    let val = valarr[i];
-                    switch (val) { // i avoid subtracting L 1 -1 with spaces. it's unary if doesn't have a postfix space.
-                        default: continue;
-                        case '*': valarr[i] = +valarr[i-1] * +valarr[i+1]; valarr[i-1] = valarr[i+1] = ''; break;
-                        case '/': valarr[i] = +valarr[i-1] / +valarr[i+1]; valarr[i-1] = valarr[i+1] = ''; break;
-                        case '+': valarr[i] = +valarr[i-1] + +valarr[i+1]; valarr[i-1] = valarr[i+1] = ''; break;
-                        case '-': valarr[i] = +valarr[i-1] - +valarr[i+1]; valarr[i-1] = valarr[i+1] = ''; break;
-                    }
+                        // inside parenthesis, i eval
+                        return U.evalInContextAndScope(e, context);
+                    })
+                    val = pathArr2.join('');
+                    val = "'"+val+"'";
+                    // console.log('evaluating path variables post:', {val, post:pathArr, pathArr2});
+                    if (allowLESS) s += "\t@" + paletteName + ": " + val + ';\n';
+                    s += "\t--" + paletteName + ': ' + val + ';\n';
+                } catch (e) {
+                    Log.exx('Error evaluating View "'+c.data.name+'" paths', e);
                 }
-                val = valarr.filter(p=>!!p).join(' ');
-                val = "'"+val+"'";
-                if (allowLESS) s += "\t@" + paletteName + ": " + val + ';\n';
-                s += "\t--" + paletteName + ': ' + val + ';\n';
+
             }
             else {
                 // number or text
@@ -737,6 +1092,39 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
             <br/>The same result can be obtained through OCL.</div>}
 
     appliableTo!: 'Any'|'Graph'|'GraphVertex'|'Vertex'|'Edge'|'EdgePoint'|'Field';
+
+    // L2 — edge overlay schema (classic editor only). Mirrors DViewElement:271-278.
+    isEdge!: boolean;
+    __info_of__isEdge: Info = {isEdge: true, type: ShortAttribETypes.EBoolean, label: "Is Edge",
+        txt: <div>Marks this view as an edge in the L2 overlay. When enabled, instances of the matched metaclass are drawn as connecting paths between two endpoint nodes resolved from the JjEL expressions below.</div>}
+
+    edgeSource!: string;
+    __info_of__edgeSource: Info = {isEdge: true, type: ShortAttribETypes.EString, label: "Edge Source",
+        txt: <div>JjEL expression resolving to the LObject visualized as the source endpoint of the edge. For an EReference named e.g. "source", use $source.value to dereference it. The reference name alone returns a DValue wrapper.</div>}
+
+    edgeTarget!: string;
+    __info_of__edgeTarget: Info = {isEdge: true, type: ShortAttribETypes.EString, label: "Edge Target",
+        txt: <div>JjEL expression resolving to the LObject visualized as the target endpoint of the edge. For an EReference named e.g. "target", use $target.value to dereference it. The reference name alone returns a DValue wrapper.</div>}
+
+    edgeRouting!: 'straight' | 'manhattan-rounded' | 'bezier';
+    __info_of__edgeRouting: Info = {isEdge: true, type: '"straight" | "manhattan-rounded" | "bezier"', label: "Edge Routing",
+        txt: <div>Path style used by the L2 overlay to draw this edge. <b>Manhattan (rounded)</b> is the default — orthogonal segments with rounded corners. <b>Straight</b> is a single line between source and target side midpoints. <b>Bezier</b> is a cubic curve with tangents normal to the chosen exit/entry sides.</div>}
+
+    edgeLabel!: string;
+    __info_of__edgeLabel: Info = {isEdge: true, hidden: true, type: ShortAttribETypes.EString, label: "Edge Label",
+        txt: <div>JjEL expression evaluated as the edge label text. Leave empty for no label. Example: <code>$instance.name</code>.</div>}
+
+    edgeStrokeColor!: string;
+    __info_of__edgeStrokeColor: Info = {isEdge: true, hidden: true, type: '"default" | "accent" | "success" | "warning" | "danger" | "muted"', label: "Edge Stroke Color",
+        txt: <div>Color of the edge stroke. Semantic palette tokens that adapt to light and dark themes.</div>}
+
+    edgeStrokeWidth!: number;
+    __info_of__edgeStrokeWidth: Info = {isEdge: true, hidden: true, type: ShortAttribETypes.EFloat, label: "Edge Stroke Width", min: 0.5, max: 10, step: 0.25,
+        txt: <div>Thickness of the edge line in pixels (0.5–10). Default 1.5.</div>}
+
+    edgeStrokeStyle!: 'solid' | 'dashed' | 'dotted';
+    __info_of__edgeStrokeStyle: Info = {isEdge: true, hidden: true, type: '"solid" | "dashed" | "dotted"', label: "Edge Stroke Style",
+        txt: <div>Pattern of the edge line: solid, dashed, or dotted.</div>}
 
     subViews!: LViewElement[];
     __info_of__subViews: Info = {isGlobal: true, hidden: true, type: "DViewElement[]", label:"sub-views",
@@ -1140,10 +1528,10 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     // public get__parsedConstants(c: Context): this['_parsedConstants'] { return c.data._parsedConstants || {}; }
 
     public get_constants(c: Context): this['constants'] {
-        return c.data.constants;
+        return transientProperties.view[c.data.id]?.constants || {}
     }
 
-
+    /*
     public static parseConstants(funcCode?: string): GObject | undefined {
         if (!funcCode) return {};
         let parsedConstants: GObject = {};
@@ -1158,12 +1546,14 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
             return undefined;
         }
         return parsedConstants;
-    }
+    }*/
 
-    public set_constants(value: this['constants'], c: Context): boolean {
-        if (value === c.data.constants) return true;
+    public set_constants(value: string | this['constants'], c: Context): boolean {
+        if (!value) value = '';
+        if (typeof value === 'object') value = JSON.stringify(value);
+        if (value === c.data.constants as any) return true;
         TRANSACTION('change '+this.get_name(c)+'.constants', ()=> {
-            SetFieldAction.new(c.data.id, 'constants', value, '', false);
+            SetFieldAction.new(c.data.id, 'constants', value as string, '', false);
             SetRootFieldAction.new('VIEWS_RECOMPILE_constants', c.data.id, '+=', false);
             SetFieldAction.new(c.data.id, "css_MUST_RECOMPILE", true, '', false);
         })
@@ -1207,7 +1597,15 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         let current = this.get_father(c);
         if (!current) return [] as any;
         let ret: LViewElement[] = [];
+        // A cycle in `father` is not creatable from the "Parent view" select (D-4-6), but it stays
+        // reachable from legacy data and from the console, and without this set the walk never
+        // returns. Local to the call: no state is shared between invocations. On a cycle the chain
+        // is returned as accumulated so far - the same partial-array shape an acyclic walk ends on.
+        const visited: Set<string> = new Set();
         while (current) {
+            const cid = current.id;
+            if (cid && visited.has(cid)) break;
+            visited.add(cid);
             ret.push(current);
             current = current.father;
         }
@@ -1221,7 +1619,14 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         let p = c.data.father;
         if (!p) return LPointerTargetable.fromD(c.data);
         let curr: LViewElement = LPointerTargetable.fromPointer(p);
+        // Same belt as get_fatherChain. A cycle has no rootless ancestor, so it terminates on the
+        // `undefined` this walk already returns when the chain runs out without finding one: no new
+        // fallback value, and no exception surfaced to the caller.
+        const visited: Set<string> = new Set();
         while (curr) {
+            const cid = curr.id;
+            if (cid && visited.has(cid)) return undefined as any;
+            visited.add(cid);
             let prev = curr.father;
             if (!prev) return curr as LViewPoint;
             curr = prev;
@@ -1244,9 +1649,38 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         if (pvid === oldpvid) return true;
         let dfather: DViewElement = (v && typeof v === "object") ? ((v as any).__raw || v) as any : DPointerTargetable.fromPointer(pvid);
 
+        // The denormalized `viewpoint` of the subtree follows the move. Only that field, and
+        // only on the descendants: their `father` links do not change (they stay under this
+        // view, which is the one moving) and neither does any `subViews` entry below this node.
+        // Realigning it is what keeps the three membership indexes agreeing - `viewpoint` is
+        // the one the IR resolver reads (irResolveCore.ts:84,113) and the one the classic
+        // scoring classifies on (selectors.ts:553-559), so a stale value makes a descendant
+        // stop rendering while the tree still shows it under the new viewpoint.
+        //
+        // Decided here, BEFORE the first write: inside a TRANSACTION actions are queued and
+        // fired only at FINAL_END, so a read from the body would see pre-transaction state
+        // anyway - taking the snapshot up here makes the cascade independent of that batching
+        // order instead of quietly relying on it.
+        //
+        // It runs on every reparent, not only on a cross-viewpoint one: the "write only if
+        // different" test below makes it idempotent, and it heals in passing a subtree whose
+        // `viewpoint` had already drifted (legacy data has no other way back).
+        const targetvp = (pvid && dfather && typeof dfather === "object") ? (dfather as any).viewpoint : undefined;
+        const viewsToRealign: string[] = [];
+        if (targetvp) {
+            const preWriteState: DState = store.getState();
+            for (const descendantId of collectViewSubtree(preWriteState as any, id as any)) {
+                if ((preWriteState.idlookup[descendantId] as DViewElement)?.viewpoint !== targetvp) viewsToRealign.push(descendantId);
+            }
+        }
+
         TRANSACTION('change '+this.get_name(c)+'.parent', ()=>{
             ret = SetFieldAction.new(id, "father", pvid, '', true);
             if (data.viewpoint !== dfather.viewpoint) SetFieldAction.new(id, "viewpoint", dfather.viewpoint, '', true);
+            // Direct SetFieldAction, never `lview.viewpoint = x`: that setter is a declared
+            // no-op (set_viewpoint above logs and returns true without writing), so the proxy
+            // route would silently do nothing and still report success.
+            for (const descendantId of viewsToRealign) SetFieldAction.new(descendantId as any, "viewpoint", targetvp, '', true);
             if (oldpvid) {
                 let subViews = (DPointerTargetable.fromPointer(oldpvid) as DViewElement).subViews;
                 if (id in subViews) {
@@ -1261,10 +1695,10 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
                 let oldSubViews = DPointerTargetable.fromPointer(pvid).subViews;
                 let insertBefore: string = '';
                 let subViews: GObject = {};
-                if (copyPos) {
+                if (copyPos > 0) { // indexOf returns -1 when absent, which is truthy: without the > 0 every name entered here.
                     let copiedFromName: string = copyPos ? name.substring(0, copyPos).trim() : '';
                     if (copiedFromName in oldSubViews) insertBefore = copiedFromName;
-                    else {
+                    else if (copiedFromName) { // an empty prefix matches the first key, which is not "the view this one was copied from".
                         for (let key in oldSubViews) if (key.indexOf(copiedFromName) === 0) { insertBefore = key; break; }
                     }
                 }
@@ -1309,7 +1743,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
             }
             let vsize: EPSize = (c.data.size[id] || vp?.__raw.size[id]) as EPSize || {} as any;
             let newSize: EPSize = new GraphSize() as EPSize;
-            console.log({vsize, newSize, size, vp, d:c.data})
+            // console.log({vsize, newSize, size, vp, d:c.data})
             if (size.currentCoordType === vsize?.currentCoordType) { // if samecoord system mix them.
                 newSize.x = size?.x !== undefined ? size.x : vsize.x;
                 newSize.y = size?.y !== undefined ? size.y : vsize.y;
@@ -1359,7 +1793,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         return impl_getSize; }
 
     set_generic_entry(c: Context, key: keyof DViewElement, val: any): boolean {
-        console.log('set_generic_entry', {c, key, val});
+        // console.log('set_generic_entry', {c, key, val});
         SetFieldAction.new(c.data, key, val);
         return true;
     }
@@ -1386,7 +1820,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
             default: forceNodeType = val;
         }
 
-        console.log("set_appliableTo", {forceNodeType, val});
+        // console.log("set_appliableTo", {forceNodeType, val});
         TRANSACTION('change '+this.get_name(c)+'.appliableTo', ()=>{
             if (forceNodeType !== c.data.forceNodeType) SetFieldAction.new(c.data, "forceNodeType", forceNodeType, '', false);
             SetFieldAction.new(c.data, "appliableTo", val, '', false);
@@ -1454,7 +1888,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
                 let pvid: Pointer<DViewPoint> = c.data.father as Pointer<DViewPoint>;
                 const new_vp: DuplicateVPChange = new_vp0 || {pvid};
                 const dfather = DPointerTargetable.fromPointer(new_vp.pvid);
-                console.log("DViewelement.duplicate", {cn: c.data.className, n:c.data.name, deep, new_vp0, dfather});
+                // console.log("DViewelement.duplicate", {cn: c.data.className, n:c.data.name, deep, new_vp0, dfather});
                 const dclone: DViewElement = c.data.className === 'DViewPoint' ?
                     DViewPoint.newVP(`${c.data.name} Copy`) :
                     DViewElement.new2(`${c.data.name} Copy`, '', dfather,
@@ -1504,7 +1938,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
                         case 'clonedCounter': break;
                         case 'css_MUST_RECOMPILE': break;
                         case 'isValidation':
-                            console.log("duplicate " + c.data.name + " set isvalidation", {data:c.data, iv:c.data.isValidation});
+                            // console.log("duplicate " + c.data.name + " set isvalidation", {data:c.data, iv:c.data.isValidation});
                             (lview as any)[key] = (c.data as any)[key];
                             break;
                         default:
@@ -1544,12 +1978,30 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     static updateDefaultView(v: DViewElement | DViewPoint, state?: DState): void {
         let s = state || store.getState();
         let newView: DViewElement | DViewPoint = Defaults.defaultViewPointsMap[v.id]||Defaults.defaultViewsMap[v.id];
-        if (!newView) return; // not a default view
-        newView = {...newView} as any;
+        if (!newView || typeof newView !== 'object') return; // not a default view, or a registry entry never resolved to an object (R-IRN-15)
+        newView = {...newView} as DViewElement & DViewPoint;
         newView.css_MUST_RECOMPILE = true;
         newView.pointedBy = PointedBy.merge(newView, v);
         newView.subViews = {...newView.subViews, ...v.subViews};
+        // Preserve the IR contract across default-view regeneration (VersionFixer
+        // 2.225 -> 2.226 inverse migration; spec v1.2 sez. 11): without this carry-over
+        // the version bump would wipe the migrated `ir`.
+        if ((v as any).ir !== undefined) (newView as any).ir = (v as any).ir;
+        // `irLegacyClassic` is deliberately NOT carried over. The migration marks the view
+        // BEFORE this regeneration runs (VersionFixer.update: the chain first, then this
+        // loop), so the mark was a verdict on a jsxString that no longer exists here —
+        // `newView` is by construction a current default. Carrying it produced views that
+        // held the current template AND the legacy mark: 57 of the 85 marked views in the
+        // example corpus (census 2026-08-04), i.e. more false positives than true ones.
+        // Nothing to recompute: a regenerated default is never legacy.
         s.idlookup[v.id] = newView;
+        // When called with explicit state (e.g. from VersionFixer during project load),
+        // skip dispatching to the live Redux store — the state object will be loaded
+        // via LoadAction later, and VIEWS_RECOMPILE is already set up by SaveManager.
+        if (state) {
+            // Only update the state object directly; recompile flags are already in `state`
+            return;
+        }
         transientProperties.view[v.id] = new ViewTransientProperties();
         SetRootFieldAction.new('VIEWS_RECOMPILE_all', v.id, '+=', false);
     }

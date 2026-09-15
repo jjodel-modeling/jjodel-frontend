@@ -1,278 +1,397 @@
-.tab-btn.commandbar-btn{
-    margin-right: 2px;
-    font-size: 1.26em !important; // it is combined 1.5 old in <i> and * 0.9 in ::before
-    &::before {
-        display: block;
-        padding: 0;
-        text-align: center;
-    }
+/* ============================================
+   CARDS - REDESIGNED WITH DESIGN TOKENS
+   Command bar cards with gradient variants
+   ============================================ */
+
+/* ============================================
+   TAB BUTTON IN COMMANDBAR
+   ============================================ */
+
+.tab-btn.commandbar-btn {
+  margin-right: var(--space-1);
+  font-size: 1.26em !important;
+
+  &::before {
+    display: block;
+    padding: 0;
+    text-align: center;
+  }
 }
+
+/* ============================================
+   COMMANDBAR BASE
+   ============================================ */
+
 .commandbar {
-    margin-left: 0px;
-    padding-left: 0px;
-    display: flex;
-    justify-content: flex-start!important;
-    width: 950px;
+  margin-left: 0;
+  padding-left: 0;
+  display: flex;
+  justify-content: flex-start !important;
+  width: 950px;
 }
 
+/* ============================================
+   COMMANDBAR CARD VARIANTS (GRADIENTS)
+   Note: These gradient colors are brand elements
+   and intentionally preserved.
+   ============================================ */
+
+/* Ottanio (Teal gradient) */
 .commandbar .ottanio {
-    background: var(--gr-1); // linear-gradient(90deg, hsla(208, 33%, 21%, 1) 0%, hsla(186, 89%, 29%, 1) 100%);
+  background: var(--gr-1);
+  color: white;
+
+  & .bi {
     color: white;
-    & .bi {
-        color: white;
-    }
-    & .bi:hover {
-        color: hsla(186, 89%, 29%, 1)!important;
-    }
-    border: none;
+  }
+
+  & .bi:hover {
+    color: hsla(186, 89%, 29%, 1) !important;
+  }
+
+  border: none;
 }
 
+/* Green gradient */
 .commandbar .green {
-    background: var(--gr-2); // linear-gradient(90deg, hsla(186, 89%, 29%, 1) 0%, hsla(154, 69%, 55%, 1) 100%);
+  background: var(--gr-2);
+  color: white;
+
+  & .bi {
     color: white;
-    & .bi {
-        color: white;
-    }
-    & .bi:hover {
-        color: hsla(154, 69%, 55%, 1)!important;
-    }
-    border: none;
+  }
+
+  & .bi:hover {
+    color: hsla(154, 69%, 55%, 1) !important;
+  }
+
+  border: none;
 }
 
+/* Dark red gradient */
 .commandbar .dark-red {
-    background: var(--gr-3); // linear-gradient(90deg, hsla(323, 73%, 22%, 1) 0%, hsla(359, 82%, 60%, 1) 100%);
+  background: var(--gr-3);
+  color: white;
+
+  & .bi {
     color: white;
-    & .bi {
-        color: white;
-    }
-    & .bi:hover {
-        color: hsla(359, 82%, 60%, 1)!important;
-    }
-    border: none;
+  }
+
+  & .bi:hover {
+    color: hsla(359, 82%, 60%, 1) !important;
+  }
+
+  border: none;
 }
 
+/* Orange-yellow gradient */
 .commandbar .orange-yellow {
-    background: var(--gr-4); // linear-gradient(90deg, hsla(359, 82%, 60%, 1) 0%, hsla(45, 100%, 48%, 1) 100%);
+  background: var(--gr-4);
+  color: white;
+
+  & .bi {
     color: white;
-    & .bi {
-        color: white;
-    }
-    & .bi:hover {
-        color: hsla(45, 100%, 48%, 1) !important;
-    }
-    border: none;
+  }
+
+  & .bi:hover {
+    color: hsla(45, 100%, 48%, 1) !important;
+  }
+
+  border: none;
 }
+
+/* Gray gradient */
 .commandbar .gray {
-    background: var(--gr-5); // linear-gradient(90deg, hsla(60, 1%, 32%, 1) 0%, hsla(90, 1%, 56%, 1) 100%);
+  background: var(--gr-5);
+  color: white;
+
+  & .bi {
     color: white;
-    & .bi {
-        color: white;
-    }
-    & .bi:hover {
-        color: hsla(90, 1%, 56%, 1)!important;
-    }
-    border: none;
+  }
+
+  & .bi:hover {
+    color: hsla(90, 1%, 56%, 1) !important;
+  }
+
+  border: none;
 }
-.commandbar .light-green  {
-    background: var(--gr-6); // linear-gradient(90deg, hsla(154, 69%, 55%, 1) 0%, hsla(154, 69%, 72%, 1) 100%);
+
+/* Light green gradient */
+.commandbar .light-green {
+  background: var(--gr-6);
+  color: white;
+
+  & .bi {
     color: white;
-    & .bi {
-        color: white;
-    }
-    & .bi:hover {
-        color: hsla(154, 69%, 72%, 1)!important;
-    }
-    border: none;
+  }
+
+  & .bi:hover {
+    color: hsla(154, 69%, 72%, 1) !important;
+  }
+
+  border: none;
 }
+
+/* Light red gradient */
 .commandbar .light-red {
-    background: var(--gr-7); // linear-gradient(90deg, hsla(359, 82%, 60%, 1) 0%, hsla(359, 82%, 76%, 1) 100%);
+  background: var(--gr-7);
+  color: white;
+
+  & .bi {
     color: white;
-    & .bi {
-        color: white;
-    }
-    & .bi:hover {
-        color: hsla(359, 82%, 76%, 1)!important;
-    }
-    border: none;
+  }
+
+  & .bi:hover {
+    color: hsla(359, 82%, 76%, 1) !important;
+  }
+
+  border: none;
 }
+
+/* Dark blue gradient */
 .commandbar .dark-blue {
-    background: var(--gr-8); // linear-gradient(90deg, hsla(203, 37%, 22%, 1) 0%, hsla(203, 37%, 52%, 1) 100%);
+  background: var(--gr-8);
+  color: white;
+
+  & .bi {
     color: white;
-    & .bi {
-        color: white;
-    }
-    & .bi:hover {
-        color: hsla(203, 37%, 52%, 1)!important;
-    }
-    border: none;
+  }
+
+  & .bi:hover {
+    color: hsla(203, 37%, 52%, 1) !important;
+  }
+
+  border: none;
 }
+
+/* Azure gradient */
 .commandbar .azure {
-    background: var(--gr-9); // linear-gradient(90deg, hsla(186, 89%, 29%, 1) 0%, hsla(186, 89%, 48%, 1) 100%);
+  background: var(--gr-9);
+  color: white;
+
+  & .bi {
     color: white;
-    & .bi {
-        color: white;
-    }
-    & .bi:hover {
-        color: hsla(186, 89%, 48%, 1)!important;
-    }
-    border: none;
+  }
+
+  & .bi:hover {
+    color: hsla(186, 89%, 48%, 1) !important;
+  }
+
+  border: none;
 }
+
+/* Yellow gradient */
 .commandbar .yellow {
-    background: var(--gr-10); // linear-gradient(90deg, hsla(45, 100%, 48%, 1) 0%, hsla(45, 100%, 80%, 1) 100%);
+  background: var(--gr-10);
+  color: white;
+
+  & .bi {
     color: white;
-    & .bi {
-        color: white;
-    }
-    & .bi:hover {
-        color: hsla(45, 100%, 80%, 1)!important;
-    }
-    border: none;
+  }
+
+  & .bi:hover {
+    color: hsla(45, 100%, 80%, 1) !important;
+  }
+
+  border: none;
 }
+
+/* Purple gradient */
 .commandbar .purple {
-    background: var(--gr-11); // linear-gradient(90deg, hsla(323, 73%, 22%, 1) 0%, hsla(323, 73%, 64%, 1) 100%);
+  background: var(--gr-11);
+  color: white;
+
+  & .bi {
     color: white;
-    & .bi {
-        color: white;
-    }
-    & .bi:hover {
-        color: hsla(323, 73%, 64%, 1)!important;
-    }
-    border: none;
+  }
+
+  & .bi:hover {
+    color: hsla(323, 73%, 64%, 1) !important;
+  }
+
+  border: none;
 }
+
+/* Blue gradient */
 .commandbar .blue {
-    background: var(--gr-12); // linear-gradient(90deg, hsla(186, 33%, 94%, 1) 0%, hsla(216, 41%, 79%, 1) 100%);
-    color: var(--color);
-    & .bi {
-        color: white;
-    }
-    & .bi:hover {
-        color: hsla(216, 41%, 79%, 1)!important;
-    }
-    border: none;
+  background: var(--gr-12);
+  color: var(--color-text-primary);
+
+  & .bi {
+    color: white;
+  }
+
+  & .bi:hover {
+    color: hsla(216, 41%, 79%, 1) !important;
+  }
+
+  border: none;
 }
 
+/* Red gradient */
 .commandbar .red {
-    background: linear-gradient(90deg, hsla(14, 90%, 73%, 1) 0%, hsla(331, 54%, 44%, 1) 100%);
+  background: linear-gradient(
+    90deg,
+    hsla(14, 90%, 73%, 1) 0%,
+    hsla(331, 54%, 44%, 1) 100%
+  );
+  color: white;
+
+  & .bi {
     color: white;
-    & .bi {
-        color: white;
-    }
-    & .bi:hover {
-        color: hsla(331, 54%, 44%, 1)!important;
-    }
-    border: none;
+  }
+
+  & .bi:hover {
+    color: hsla(331, 54%, 44%, 1) !important;
+  }
+
+  border: none;
 }
 
+/* Dark gradient */
 .commandbar .dark {
-    background: linear-gradient(90deg, hsla(208, 33%, 21%, 1) 0%, hsla(211, 36%, 46%, 1) 100%);
-    color: white;
-    border: none;
+  background: linear-gradient(
+    90deg,
+    hsla(208, 33%, 21%, 1) 0%,
+    hsla(211, 36%, 46%, 1) 100%
+  );
+  color: white;
+  border: none;
 
-    & .bi {
-        color: white;
-    }
-    & .bi:hover {
-        color: hsla(211, 36%, 46%, 1)!important;
-    }
+  & .bi {
+    color: white;
+  }
+
+  & .bi:hover {
+    color: hsla(211, 36%, 46%, 1) !important;
+  }
 }
 
+/* Rainbow gradient */
 .commandbar .rainbow {
-    background: linear-gradient(90deg, hsla(182, 64%, 53%, 1) 0%, hsla(34, 98%, 50%, 1) 50%, hsla(323, 100%, 47%, 1) 100%);
+  background: linear-gradient(
+    90deg,
+    hsla(182, 64%, 53%, 1) 0%,
+    hsla(34, 98%, 50%, 1) 50%,
+    hsla(323, 100%, 47%, 1) 100%
+  );
+  color: white;
+  border: none;
 
+  & .bi {
     color: white;
-    border: none;
+  }
 
-    & .bi {
-        color: white;
-    }
-    & .bi:hover {
-        color: hsla(323, 100%, 47%, 1)!important;
-    }
+  & .bi:hover {
+    color: hsla(323, 100%, 47%, 1) !important;
+  }
 }
 
+/* Red-orange gradient */
 .commandbar .red-orange {
-    background: linear-gradient(90deg, hsla(333, 100%, 53%, 1) 0%, hsla(33, 94%, 57%, 1) 100%);
+  background: linear-gradient(
+    90deg,
+    hsla(333, 100%, 53%, 1) 0%,
+    hsla(33, 94%, 57%, 1) 100%
+  );
+  color: white;
+  border: none;
+
+  & .bi {
     color: white;
-    border: none;
+  }
 
-    & .bi {
-        color: white;
-    }
-    & .bi:hover {
-        color: hsla(33, 94%, 57%, 1)!important;
-    }
+  & .bi:hover {
+    color: hsla(33, 94%, 57%, 1) !important;
+  }
 }
 
-
-
+/* Clear (white background) */
 .commandbar .clear {
-    background: white;
-    color: var(--color);
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
 
+  & .bi {
+    color: var(--color-accent);
+  }
 
-    & .bi {
-        color: var(--secondary);
-    }
-    & .bi:hover {
-        color: var(--color)!important;
-    }
+  & .bi:hover {
+    color: var(--color-text-primary) !important;
+  }
 }
 
+/* Default gradient */
 .commandbar .default {
-    background: linear-gradient(90deg, hsla(186, 33%, 94%, 1) 0%, hsla(216, 41%, 79%, 1) 100%);
-    color: var(--color);
-    border: none;
-
+  background: linear-gradient(
+    90deg,
+    hsla(186, 33%, 94%, 1) 0%,
+    hsla(216, 41%, 79%, 1) 100%
+  );
+  color: var(--color-text-primary);
+  border: none;
 }
+
+/* ============================================
+   COMMANDBAR CARD LAYOUT
+   ============================================ */
 
 .commandbar .card {
-    width: 23em;
-    margin-right: 26px;
-    margin-left: 0px;
-    padding: 1.2em;
+  width: 23em;
+  margin-right: var(--space-6);
+  margin-left: 0;
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  transition: var(--transition-fast);
+  cursor: pointer;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+  }
 }
 
 .commandbar .card:last-child {
-    width: 23em;
-    margin-right: 0px;
-    margin-left: 0px;
-    padding: 1.2em;
+  width: 23em;
+  margin-right: 0;
+  margin-left: 0;
+  padding: var(--space-4);
 }
 
 .commandbar .card {
-    display: grid;
-    grid-template-columns: auto auto auto auto; //20% 80%;
-    grid-gap: 0px;
+  display: grid;
+  grid-template-columns: auto auto auto auto;
+  grid-gap: 0;
 }
 
+/* Card icon */
 .commandbar .card .icon {
-    flex: 1;
-    font-size: 2.5em;
-    justify-content: center;
+  flex: 1;
+  font-size: 2.5em;
+  justify-content: center;
 }
 
 .commandbar .card .icon .bi:hover {
-    cursor: pointer;
-    color: var(--accent);
-}
-.commandbar .card .icon .disabled:hover {
-    color: inherit!important;
-    cursor: default;
+  cursor: pointer;
+  color: var(--color-accent);
 }
 
+.commandbar .card .icon .disabled:hover {
+  color: inherit !important;
+  cursor: default;
+}
+
+/* Card body */
 .commandbar .card .body h5 {
-    // margin-bottom: 0px; was messing with button alignment
-    font-size: var(--h1-size);
-    font-weight: var(--h1-weight); 
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
 }
 
 .commandbar .card .body {
-    // padding-top: 6px;
-    display: flex;
-    flex-flow: column;
-    &>*{
-        margin: auto;
-        margin-left: 0;
-    }
+  display: flex;
+  flex-flow: column;
 
+  & > * {
+    margin: auto;
+    margin-left: 0;
+  }
 }

@@ -1,0 +1,151 @@
+import { GraphPoint, GraphSize, IPoint } from './Geom';
+
+export type CardinalSide = 'top' | 'bottom' | 'left' | 'right';
+
+export type ManhattanPath = {
+    sourceAnchor: GraphPoint;
+    elbows: GraphPoint[];
+    targetAnchor: GraphPoint;
+    sourceSide: CardinalSide;
+    targetSide: CardinalSide;
+    isSelfEdge: boolean;
+};
+
+// Pick exit side from source toward target using 8-way cardinal.
+// For diagonal directions, prefer horizontal exit when |dx| > |dy|.
+export function getOutgoingSide(sourceCenter: GraphPoint, targetCenter: GraphPoint): CardinalSide {
+    const dir = IPoint.getRelativeDirection(sourceCenter, targetCenter);
+    const dx = Math.abs(targetCenter.x - sourceCenter.x);
+    const dy = Math.abs(targetCenter.y - sourceCenter.y);
+    let chosenSide: CardinalSide;
+    switch (dir) {
+        case 'N':  chosenSide = 'top';                              break;
+        case 'S':  chosenSide = 'bottom';                           break;
+        case 'E':  chosenSide = 'right';                            break;
+        case 'W':  chosenSide = 'left';                             break;
+        case 'NE': chosenSide = dx > dy ? 'right' : 'top';          break;
+        case 'SE': chosenSide = dx > dy ? 'right' : 'bottom';       break;
+        case 'NW': chosenSide = dx > dy ? 'left'  : 'top';          break;
+        case 'SW': chosenSide = dx > dy ? 'left'  : 'bottom';       break;
+        default:   chosenSide = 'right';                            break;
+    }
+    if ((typeof window !== 'undefined') && (window as any).__manhattanDebug) {
+        console.log('[Manhattan-diag] getOutgoingSide', {
+            sourceCenter: { x: sourceCenter.x, y: sourceCenter.y },
+            targetCenter: { x: targetCenter.x, y: targetCenter.y },
+            dx: targetCenter.x - sourceCenter.x,
+            dy: targetCenter.y - sourceCenter.y,
+            absDx: dx,
+            absDy: dy,
+            dir,
+            chosenSide,
+        });
+    }
+    return chosenSide;
+}
+
+// Anchor on a node side, distributed at (i+1)/(N+1) along the side.
+export function computeSideAnchor(size: GraphSize, side: CardinalSide, indexInGroup: number, groupSize: number): GraphPoint {
+    const safeGroup = Math.max(1, groupSize);
+    const safeIndex = Math.max(0, Math.min(indexInGroup, safeGroup - 1));
+    const t = (safeIndex + 1) / (safeGroup + 1);
+    switch (side) {
+        case 'top':    return new GraphPoint(size.x + size.w * t, size.y           );
+        case 'bottom': return new GraphPoint(size.x + size.w * t, size.y + size.h  );
+        case 'left':   return new GraphPoint(size.x,              size.y + size.h * t);
+        case 'right':  return new GraphPoint(size.x + size.w,     size.y + size.h * t);
+    }
+}
+
+// Whether two bboxes overlap when projected onto a single axis.
+export function projectionsOverlap(s1: GraphSize, s2: GraphSize, axis: 'x' | 'y'): boolean {
+    if (axis === 'x') return !(s1.x + s1.w < s2.x || s2.x + s2.w < s1.x);
+    return !(s1.y + s1.h < s2.y || s2.y + s2.h < s1.y);
+}
+
+// Self-edge: lateral UML-style loop on right side, fixed radius.
+function computeSelfEdgePath(size: GraphSize): ManhattanPath {
+    const LOOP_RADIUS = 40;
+    const sourceAnchor = new GraphPoint(size.x + size.w, size.y + size.h * 0.3);
+    const targetAnchor = new GraphPoint(size.x + size.w, size.y + size.h * 0.7);
+    const elbows = [
+        new GraphPoint(sourceAnchor.x + LOOP_RADIUS, sourceAnchor.y),
+        new GraphPoint(targetAnchor.x + LOOP_RADIUS, targetAnchor.y),
+    ];
+    return { sourceAnchor, elbows, targetAnchor, sourceSide: 'right', targetSide: 'right', isSelfEdge: true };
+}
+
+// Compute Manhattan path. Caller must pass isSelfEdge based on start/end identity.
+// indexInGroup/groupSize allow distributing N edges across the same side.
+export function computeManhattanPath(
+    sourceSize: GraphSize,
+    targetSize: GraphSize,
+    sourceIndexInGroup: number,
+    sourceGroupSize: number,
+    targetIndexInGroup: number,
+    targetGroupSize: number,
+    isSelfEdge: boolean
+): ManhattanPath {
+    if (isSelfEdge) {
+        if ((typeof window !== 'undefined') && (window as any).__manhattanDebug) {
+            console.log('[Manhattan-diag] SELF-EDGE detected', {
+                sourceSize: { x: sourceSize.x, y: sourceSize.y, w: sourceSize.w, h: sourceSize.h },
+                targetSize: { x: targetSize.x, y: targetSize.y, w: targetSize.w, h: targetSize.h },
+                sameRef: sourceSize === targetSize,
+            });
+        }
+        return computeSelfEdgePath(sourceSize);
+    }
+
+    const sourceCenter = sourceSize.center();
+    const targetCenter = targetSize.center();
+    const sourceSide = getOutgoingSide(sourceCenter, targetCenter);
+    const targetSide = getOutgoingSide(targetCenter, sourceCenter);
+
+    const sourceAnchor = computeSideAnchor(sourceSize, sourceSide, sourceIndexInGroup, sourceGroupSize);
+    const targetAnchor = computeSideAnchor(targetSize, targetSide, targetIndexInGroup, targetGroupSize);
+
+    const horizontalExit = sourceSide === 'left' || sourceSide === 'right';
+    // L vs Z: project bboxes onto the axis perpendicular to the exit direction.
+    // Overlap on that axis means a single elbow would cause backtracking → use Z.
+    const projectionAxis: 'x' | 'y' = horizontalExit ? 'y' : 'x';
+    const overlap = projectionsOverlap(sourceSize, targetSize, projectionAxis);
+
+    if ((typeof window !== 'undefined') && (window as any).__manhattanDebug) {
+        console.log('[Manhattan-diag] computeManhattanPath shape decision', {
+            sourceSide,
+            targetSide,
+            horizontalExit,
+            projectionAxis,
+            overlap,
+            shapeChosen: overlap ? 'Z (2 elbows)' : 'L (1 elbow)',
+            sourceAnchor: { x: sourceAnchor.x, y: sourceAnchor.y },
+            targetAnchor: { x: targetAnchor.x, y: targetAnchor.y },
+        });
+    }
+
+    let elbows: GraphPoint[];
+    if (!overlap) {
+        if (horizontalExit) {
+            elbows = [new GraphPoint(targetAnchor.x, sourceAnchor.y)];
+        } else {
+            elbows = [new GraphPoint(sourceAnchor.x, targetAnchor.y)];
+        }
+    } else {
+        if (horizontalExit) {
+            const midX = (sourceAnchor.x + targetAnchor.x) / 2;
+            elbows = [
+                new GraphPoint(midX, sourceAnchor.y),
+                new GraphPoint(midX, targetAnchor.y),
+            ];
+        } else {
+            const midY = (sourceAnchor.y + targetAnchor.y) / 2;
+            elbows = [
+                new GraphPoint(sourceAnchor.x, midY),
+                new GraphPoint(targetAnchor.x, midY),
+            ];
+        }
+    }
+
+    return { sourceAnchor, elbows, targetAnchor, sourceSide, targetSide, isSelfEdge: false };
+}

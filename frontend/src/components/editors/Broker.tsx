@@ -24,7 +24,8 @@ function makeInput(label: string, type: 'text'|'number'|'password'): ReactNode {
 
 function BrokerEditorComponent(props: AllProps) {
     const {user} = props;
-    const [connected, setConnected] = useState(IoT.client.connected);
+    let client = IoT.init();
+    const [connected, setConnected] = useState(client.connected);
     const [url, setUrl] = useState('http://localhost');
     const [port, setPort] = useState(1883);
     const [actions, setActions] = useState<Pointer[]>([]);
@@ -32,26 +33,26 @@ function BrokerEditorComponent(props: AllProps) {
 
     const connect = async() => {
         //SetRootFieldAction.new('isLoading', true);
-        IoT.client.io.opts.query = {'project': user.project?.id, 'brokerUrl': `${url}:${port}`};
-        IoT.client.connect();
-        // IoT.client.off('pull-action');
-        IoT.client.on('pull-action', (receivedAction: GObject<Action & CompositeAction>) => {
+        client.io.opts.query = {'project': U.getProjectID_URL(), 'brokerUrl': `${url}:${port}`};
+        client.connect();
+        // client.off('pull-action');
+        client.on('pull-action', (receivedAction: GObject<Action & CompositeAction>) => {
             // if(actions.includes(receivedAction.id)) return;
             const action = Action.fromJson(receivedAction);
-            console.log('Received Action from server.', action);
+            // console.log('Received Action from server.', action);
             action.fire();
         });
         await U.sleep(1);
         //SetRootFieldAction.new('isLoading', false);
-        setConnected(IoT.client.connected);
+        setConnected(client.connected);
     }
     const disconnect = async() => {
         //SetRootFieldAction.new('isLoading', true);
-        IoT.client.off('pull-action');
-        IoT.client.disconnect();
+        client.off('pull-action');
+        client.disconnect();
         await U.sleep(1);
         //SetRootFieldAction.new('isLoading', false);
-        setConnected(IoT.client.connected);
+        setConnected(client.connected);
     }
 
     return <section className={'properties-tab'}>
@@ -85,7 +86,7 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as FakeStateProps;
-    ret.user = LUser.fromPointer(DUser.current);
+    ret.user = LUser.getUser();
     return ret;
 }
 

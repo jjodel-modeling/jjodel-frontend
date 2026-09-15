@@ -4,21 +4,21 @@ module.exports = function (app) {
     app.use(
         '/memorec/*',
         createProxyMiddleware({
-            target: process.env['REACT_APP_MEMOREC'],
+            target: process.env['JODEL_MEMOREC'],
             changeOrigin: true
         })
     );
     app.use(
         '/persistance/*',
         createProxyMiddleware({
-            target: process.env['REACT_APP_PERSISTANCE'],
+            target: process.env['JODEL_PERSISTANCE'],
             changeOrigin: true
         })
     );
     app.use(
         '/collaborative',
         createProxyMiddleware({
-            target: process.env['REACT_APP_COLLABORATIVE'],
+            target: process.env['JODEL_COLLABORATIVE'],
             ws: true,
             changeOrigin: true
         })

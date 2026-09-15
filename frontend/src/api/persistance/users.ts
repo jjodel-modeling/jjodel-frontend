@@ -11,7 +11,7 @@ import {JwtClaims} from "../DTO/JwtClaims";
 class UsersApi {
 
     static async getUserByEmail(email: string): Promise<LUser|null> {
-        const response = await Api.get(`${Api.persistance}/users?email=${email}`);
+        const response = await Api.get(`${U.env('JODEL_PERSISTANCE')}/users?email=${email}`);
         if(response.code !== 200) return null;
         const user = response.data as any as DUser;
         const rawUser = DUser.new(user.name, user.surname, user.nickname, user.affiliation, user.country, user.newsletter, user.email, '', user.id, user._Id);
@@ -19,16 +19,16 @@ class UsersApi {
     }
 
     static async getAllEmails(): Promise<string[]> {
-        const response = await Api.get(`${Api.persistance}/users`);
+        const response = await Api.get(`${U.env('JODEL_PERSISTANCE')}/users`);
         if(response.code !== 200) return [];
         const users = U.wrapper<DUser[]>(response.data);
         return users.filter(u => u.id !== DUser.current).map(u => u.email);
     }
 
 
-    static async getUserByGUID(guid: string, raw: TokenResponse, claims?: JwtClaims|null): Promise<DUser|null> {
-        let response: GObject = await Api.get(`${Api.persistance}/account/by-id/${guid}`);
-        console.log('getUserByGUID', {guid, raw, claims, response, code:response.code, data:response.data});
+    static async getUserByGUID(guid: string): Promise<DUser|null> {
+        let response: GObject = await Api.get(`${U.env('JODEL_PERSISTANCE')}/account/by-id/${guid}`);
+        // console.log('getUserByGUID', {guid, response, code:response.code, data:response.data});
 
         if ((response.code+'')[0] !== '2') {
             let title: string = response.data?.title;
@@ -37,12 +37,12 @@ class UsersApi {
             return null;
         }
 
-        return new UserResponseDTO(response.data).toJodelClass(raw, claims);
+        return new UserResponseDTO(response.data).toJodelClass();
     }
 
     static async updateUserById(updateUserRequest: UpdateUserRequest): Promise<boolean> {
-        const response: GObject = await Api.put(`${Api.persistance}/account/`, {...updateUserRequest});
-        console.log('UpdateUserById', {updateUserRequest, code:response.code, data:response.data, response});
+        const response: GObject = await Api.put(`${U.env('JODEL_PERSISTANCE')}/account/`, {...updateUserRequest});
+        // console.log('UpdateUserById', {updateUserRequest, code:response.code, data:response.data, response});
 
         if ((response.code+'')[0] !== '2') {
             let title: string = response.data?.title;
@@ -57,7 +57,7 @@ class UsersApi {
 
 
     static async updatePassword(changePasswordRequest: ChangePasswordRequest): Promise<number> {
-        const response: GObject = await Api.post(`${Api.persistance}/account/change-password`, changePasswordRequest);
+        const response: GObject = await Api.post(`${U.env('JODEL_PERSISTANCE')}/account/change-password`, changePasswordRequest);
         if ((response.code+'')[0] !== '2') {
             let title: string = response.data?.title;
             let msg: string = response.data?.description;

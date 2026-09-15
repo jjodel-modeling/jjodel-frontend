@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mockup v2: Viewpoint come sintassi concreta, con containment (graphVertex)</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background:#f1f5f9; color:#334155; padding:24px; min-width:1120px;
+  }
+  .wrap { max-width:1180px; margin:0 auto; }
+  h1 { font-size:16px; font-weight:600; letter-spacing:-0.01em; }
+  .subtitle { font-size:11px; color:#64748b; margin-top:4px; margin-bottom:16px; }
+
+  .pipeline { display:flex; align-items:stretch; gap:8px; margin-bottom:16px; }
+  .chip { flex:1; background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:10px 12px; }
+  .chip.hl { border-color:#0ea5e9; background:#f0f9ff; }
+  .chip .t { font-size:12px; font-weight:600; }
+  .chip.hl .t { color:#0369a1; }
+  .chip .d { font-size:11px; color:#64748b; margin-top:2px; }
+  .parr { align-self:center; color:#94a3b8; font-size:14px; flex:0 0 auto; }
+  .killed { align-self:center; flex:0 0 auto; font-size:11px; color:#94a3b8;
+    border:1px dashed #cbd5e1; border-radius:8px; padding:8px 10px; max-width:150px; text-decoration:line-through; }
+
+  .main { display:flex; gap:16px; align-items:stretch; }
+  .canvas-card { flex:1; background:#fff; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; display:flex; flex-direction:column; }
+  .canvas-head { display:flex; align-items:center; gap:8px; padding:8px 12px; border-bottom:1px solid #e2e8f0; }
+  .canvas-head .name { font-size:12px; font-weight:600; }
+  .vp-pill { font-size:11px; background:#f0f9ff; color:#0369a1; border:1px solid #bae6fd; border-radius:999px; padding:2px 10px; }
+  .canvas-head .spacer { flex:1; }
+  .canvas-head .fake-toggle { font-size:11px; color:#94a3b8; }
+  .canvas { position:relative; height:480px;
+    background-color:#fafbfc;
+    background-image: radial-gradient(#dbe2ea 1px, transparent 1px);
+    background-size:16px 16px; }
+  .canvas svg { position:absolute; inset:0; width:100%; height:100%; z-index:5; pointer-events:none; }
+
+  .node { position:absolute; width:130px; height:52px; background:#fff;
+    display:flex; align-items:center; justify-content:center;
+    font-size:12px; font-weight:600; color:#334155; cursor:pointer;
+    box-shadow:0 1px 2px rgba(15,23,42,.06); transition:box-shadow .12s ease; }
+  .node:hover { box-shadow:0 2px 8px rgba(15,23,42,.14); }
+  .node.sub { width:92px; height:34px; font-size:11px; }
+  .node.selected, .gv.selected { outline:2px solid #0ea5e9; outline-offset:2px; }
+  .node .badge { position:absolute; right:6px; bottom:-9px; font-size:9px; font-weight:600;
+    background:#0ea5e9; color:#fff; border-radius:999px; padding:1px 7px; letter-spacing:.02em; }
+
+  .gv { position:absolute; background:#fff; border-radius:10px; cursor:pointer;
+    box-shadow:0 1px 3px rgba(15,23,42,.08); }
+  .gv-head { height:30px; display:flex; align-items:center; gap:8px; padding:0 12px;
+    font-size:12px; font-weight:600; color:#334155;
+    border-bottom:1px solid #e2e8f0; background:#f8fafc; border-radius:9px 9px 0 0; }
+  .gv-head .k { font-size:9px; font-weight:600; text-transform:uppercase; letter-spacing:.05em;
+    color:#0369a1; background:#f0f9ff; border:1px solid #bae6fd; border-radius:4px; padding:1px 5px; }
+  .gv-body { position:absolute; inset:30px 0 0 0; border-radius:0 0 9px 9px;
+    background-image: radial-gradient(#e8edf3 1px, transparent 1px); background-size:12px 12px; }
+
+  .edge-hit { stroke:transparent; stroke-width:14; fill:none; cursor:pointer; pointer-events:stroke; }
+  .edge-path { fill:none; pointer-events:none; }
+  .edge-label { font-size:11px; fill:#64748b; paint-order:stroke; stroke:#fdfdfe; stroke-width:4px; pointer-events:none; }
+
+  .statusbar { border-top:1px solid #e2e8f0; padding:8px 12px; font-size:11px; color:#64748b;
+    background:#f8fafc; min-height:34px; font-family:"SF Mono", ui-monospace, Menlo, monospace; }
+  .statusbar b { color:#0369a1; font-weight:600; }
+
+  .panel { width:344px; flex:0 0 344px; display:flex; flex-direction:column; gap:12px; }
+  .card { background:#fff; border:1px solid #e2e8f0; border-radius:8px; }
+  .card-head { display:flex; align-items:center; gap:8px; padding:8px 12px; border-bottom:1px solid #e2e8f0; }
+  .card-head .t { font-size:12px; font-weight:600; }
+  .kind { font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.04em;
+    background:#f1f5f9; color:#64748b; border-radius:4px; padding:2px 6px; }
+  .kind.gvk { background:#f0f9ff; color:#0369a1; }
+  .card-body { padding:10px 12px; display:flex; flex-direction:column; gap:8px; }
+  .row { display:flex; align-items:center; gap:8px; }
+  .row label { font-size:11px; color:#64748b; width:96px; flex:0 0 96px; }
+  .row select { flex:1; font-size:11px; color:#334155; border:1px solid #cbd5e1; border-radius:6px;
+    padding:4px 6px; background:#fff; outline:none; }
+  .row select:focus { border-color:#334155; box-shadow:0 0 0 3px rgba(51,65,85,.12); }
+  .row.chk { cursor:pointer; }
+  .row.chk input { accent-color:#0ea5e9; }
+  .row.chk span { font-size:11px; color:#334155; }
+  .hint { font-size:10.5px; color:#94a3b8; line-height:1.5; }
+  .presets { display:flex; gap:6px; }
+  .presets button { flex:1; font-size:11px; padding:5px 0; border:1px solid #cbd5e1; background:#fff;
+    border-radius:6px; color:#334155; cursor:pointer; }
+  .presets button:hover { border-color:#0ea5e9; color:#0369a1; }
+  .code { font-family:"SF Mono", ui-monospace, Menlo, monospace; font-size:10.5px; line-height:1.5;
+    background:#0f172a; color:#cbd5e1; border-radius:0 0 8px 8px;
+    padding:12px; overflow:auto; max-height:230px; white-space:pre; }
+  .code .k { color:#7dd3fc; }
+  .code .s { color:#a5b4fc; }
+  .code .n { color:#fda4af; }
+  .foot { font-size:11px; color:#64748b; margin-top:14px; line-height:1.6; }
+  .foot b { color:#334155; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Viewpoint come sintassi concreta, v2: containment ricorsivo (graphVertex)</h1>
+  <div class="subtitle">Running è ora uno stato composito con una sotto-macchina. Due view sulla stessa metaclasse State: la graphVertex vince quando il predicato è vero, altrimenti fallback sulla vertex. Coperti: vertex, graphVertex, edge. Fuori: field, graph.</div>
+
+  <div class="pipeline">
+    <div class="chip"><div class="t">Metamodello + modello</div><div class="d">State (con substates), Transition</div></div>
+    <div class="parr">→</div>
+    <div class="chip hl"><div class="t">ViewpointIR</div><div class="d">3 view: graphVertex + vertex + edge</div></div>
+    <div class="parr">→</div>
+    <div class="chip"><div class="t">Interprete IR</div><div class="d">risoluzione per metaclasse + predicato, ricorsione sui figli</div></div>
+    <div class="parr">→</div>
+    <div class="chip"><div class="t">Canvas</div><div class="d">rendering live</div></div>
+    <div class="killed">generatore → jsxString → classic renderer</div>
+  </div>
+
+  <div class="main">
+    <div class="canvas-card">
+      <div class="canvas-head">
+        <span class="name">TrafficControl.model</span>
+        <span class="vp-pill">viewpoint: state-machine</span>
+        <span class="spacer"></span>
+        <span class="fake-toggle">flow · <s>classic</s> · <s>split</s></span>
+      </div>
+      <div class="canvas" id="canvas"><svg id="svg"></svg></div>
+      <div class="statusbar" id="status">Clicca un elemento. Prova: il container Running, un sotto-stato, e l'edge <b>finish</b> (che attraversa il confine del container).</div>
+    </div>
+
+    <div class="panel">
+      <div class="presets">
+        <button onclick="applyPreset('default')">Preset: Default</button>
+        <button onclick="applyPreset('minimal')">Minimal</button>
+        <button onclick="applyPreset('bold')">Bold</button>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><span class="t">View: State composito</span><span class="kind gvk">graphVertex</span></div>
+        <div class="card-body">
+          <label class="row chk"><input type="checkbox" id="c-comp" checked onchange="toggleComposite(this.checked)">
+            <span>View attiva · predicato: <code style="font-size:10px">not(empty($substates))</code></span></label>
+          <div class="hint">Spegnendola, Running perde il match sulla graphVertex e collassa sulla view vertex: la sotto-macchina sparisce e l'edge <b>finish</b> (che parte da Cruise) risale all'antenato visibile. La policy di risalita è una decisione di semantica, non un dettaglio.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><span class="t">View: State</span><span class="kind">vertex</span></div>
+        <div class="card-body">
+          <div class="row"><label>Forma</label>
+            <select id="c-form" onchange="viewById('v-state').shape.form=this.value; render()">
+              <option value="rounded">rounded</option>
+              <option value="rectangle">rectangle</option>
+              <option value="ellipse">ellipse</option>
+            </select></div>
+          <div class="row"><label>Riempimento</label>
+            <select id="c-fill" onchange="viewById('v-state').shape.fill=this.value; render()">
+              <option value="#ffffff">white</option>
+              <option value="#f8fafc">slate-50</option>
+              <option value="#ecfeff">cyan-50</option>
+            </select></div>
+          <label class="row chk"><input type="checkbox" id="c-rule" checked onchange="toggleRule(this.checked)">
+            <span>Regola: <code style="font-size:10px">$isFinal = true → bordo doppio</code></span></label>
+          <label class="row chk"><input type="checkbox" id="c-badge" checked onchange="toggleBadge(this.checked)">
+            <span>Badge "final"</span></label>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><span class="t">View: Transition</span><span class="kind">edge</span></div>
+        <div class="card-body">
+          <div class="row"><label>Routing</label>
+            <select id="c-routing" onchange="viewById('v-trans').edge.routing=this.value; render()">
+              <option value="manhattan">manhattan</option>
+              <option value="bezier">bezier</option>
+              <option value="straight">straight</option>
+            </select></div>
+          <div class="row"><label>Tratto</label>
+            <select id="c-stroke" onchange="viewById('v-trans').edge.style=this.value; render()">
+              <option value="solid">solid</option>
+              <option value="dashed">dashed</option>
+            </select></div>
+          <label class="row chk"><input type="checkbox" id="c-elabel" checked onchange="viewById('v-trans').edge.showLabel=this.checked; render()">
+            <span>Label da <code style="font-size:10px">$trigger.value</code></span></label>
+        </div>
+      </div>
+
+      <div class="card" style="flex:1; display:flex; flex-direction:column; min-height:0;">
+        <div class="card-head"><span class="t">ViewpointIR (sorgente, live)</span></div>
+        <div class="code" id="irdump" style="flex:1;"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <b>Le domande vere che il containment fa emergere.</b> (1) Chi possiede il layout dei figli: qui è l'editor (coordinate assolute),
+    ma nel flow reale servirà un sotto-canvas con coordinate relative al container. (2) Gli edge che attraversano il confine:
+    l'ancoraggio è sul sotto-stato, il clipping e il routing devono tenere conto del bordo del container.
+    (3) Il collasso: quando la view composita non si applica, gli edge dei figli nascosti risalgono all'antenato visibile
+    (policy lift-to-ancestor, da decidere esplicitamente). La ricorsione qui è a un livello; nello schema è arbitraria.
+  </div>
+</div>
+
+<script>
+/* ============ modello M1 ============ */
+const model = [
+  { id:'s1', meta:'State', name:'Idle',    isFinal:false },
+  { id:'s2', meta:'State', name:'Running', isFinal:false, substates:['s2a','s2b'] },
+  { id:'s2a',meta:'State', name:'Warmup',  isFinal:false, owner:'s2' },
+  { id:'s2b',meta:'State', name:'Cruise',  isFinal:false, owner:'s2' },
+  { id:'s3', meta:'State', name:'Paused',  isFinal:false },
+  { id:'s4', meta:'State', name:'Done',    isFinal:true  },
+  { id:'t1', meta:'Transition', trigger:'start',  source:'s1',  target:'s2'  },
+  { id:'t2', meta:'Transition', trigger:'pause',  source:'s2',  target:'s3'  },
+  { id:'t3', meta:'Transition', trigger:'resume', source:'s3',  target:'s2'  },
+  { id:'t5', meta:'Transition', trigger:'ready',  source:'s2a', target:'s2b' },
+  { id:'t4', meta:'Transition', trigger:'finish', source:'s2b', target:'s4'  },
+];
+/* layout: responsabilita' dell'editor, non dell'IR */
+const POS = {
+  on:  { s1:{x:40,y:200}, s2:{x:250,y:150,w:270,h:180}, s2a:{x:275,y:205}, s2b:{x:405,y:265},
+         s3:{x:250,y:390}, s4:{x:610,y:170} },
+  off: { s1:{x:40,y:200}, s2:{x:250,y:200}, s3:{x:250,y:390}, s4:{x:610,y:170} }
+};
+
+/* ============ ViewpointIR ============ */
+const FINAL_RULE = { when:{ op:'eq', left:'$isFinal.value', right:{kind:'boolean',value:true} },
+                     then:{ color:'#334155', width:4, style:'double' } };
+const FINAL_BADGE = { when:{ op:'eq', left:'$isFinal.value', right:{kind:'boolean',value:true} }, then:'final' };
+const COMPOSITE_VIEW = {
+  id:'v-state-composite', kind:'graphVertex', metaclasses:['State'],
+  predicate: { op:'not', arg:{ op:'empty', path:'$substates' } },
+  shape: { form:'rounded', label:'$name.value',
+           border:{ color:'#64748b', width:1.5, style:'solid' } },
+  containment: { layout:'free', childKinds:['vertex','graphVertex'] }
+};
+let ir = {
+  irVersion:'ir-1.0', name:'state-machine',
+  views: [
+    COMPOSITE_VIEW,
+    { id:'v-state', kind:'vertex', metaclasses:['State'],
+      shape:{ form:'rounded', fill:'#ffffff', label:'$name.value',
+        border:{ rules:[FINAL_RULE], default:{ color:'#94a3b8', width:1.5, style:'solid' } },
+        badge: FINAL_BADGE } },
+    { id:'v-trans', kind:'edge', metaclasses:['Transition'],
+      edge:{ source:'$source', target:'$target', label:'$trigger.value',
+             routing:'manhattan', style:'solid', marker:'arrow', showLabel:true } }
+  ]
+};
+function viewById(id){ return ir.views.find(v=>v.id===id); }
+function compActive(){ return !!viewById('v-state-composite'); }
+
+/* ============ interprete ============ */
+function resolvePath(p, data){ return data[ p.replace(/^\$/,'').split('.')[0] ]; }
+function evalPred(pred, data){
+  if(!pred) return false;
+  switch(pred.op){
+    case 'eq':    return resolvePath(pred.left,data) === pred.right.value;
+    case 'not':   return !evalPred(pred.arg,data);
+    case 'empty': { const v=resolvePath(pred.path,data); return !v || v.length===0; }
+  }
+  return false;
+}
+function condResolve(cond, data){
+  if(cond==null) return null;
+  if(cond.rules){ for(const r of cond.rules){ if(evalPred(r.when,data)) return {v:r.then, why:'regola when'}; }
+                  return {v:cond.default, why:'default'}; }
+  if(cond.when!==undefined){ return evalPred(cond.when,data) ? {v:cond.then, why:'regola when'} : {v:null, why:'when falso'}; }
+  return {v:cond, why:'incondizionato'};
+}
+/* prima view il cui (metaclasse + predicato) matcha: e' l'ordine a dare la specificita' */
+function findView(o){
+  return ir.views.find(v => v.metaclasses && v.metaclasses.includes(o.meta)
+                            && (!v.predicate || evalPred(v.predicate,o)));
+}
+
+/* ---- geometria edge (ancore del mockup, dipendono dal modo) ---- */
+function geomFor(t){
+  if(compActive()) switch(t.trigger){
+    case 'start':  return {x1:170,y1:226,x2:250,y2:226,o:'h',lx:210,ly:216,anch:'middle'};
+    case 'pause':  return {x1:305,y1:330,x2:305,y2:390,o:'v',lx:295,ly:364,anch:'end'};
+    case 'resume': return {x1:345,y1:390,x2:345,y2:330,o:'v',lx:355,ly:364,anch:'start'};
+    case 'ready':  return {x1:367,y1:222,x2:405,y2:282,o:'h',lx:394,ly:252,anch:'start'};
+    case 'finish': return {x1:497,y1:282,x2:610,y2:196,o:'h',lx:560,ly:248,anch:'start'};
+  }
+  else switch(t.trigger){
+    case 'start':  return {x1:170,y1:226,x2:250,y2:226,o:'h',lx:210,ly:216,anch:'middle'};
+    case 'pause':  return {x1:305,y1:252,x2:305,y2:390,o:'v',lx:295,ly:326,anch:'end'};
+    case 'resume': return {x1:345,y1:390,x2:345,y2:252,o:'v',lx:355,ly:326,anch:'start'};
+    case 'ready':  return null; /* entrambi gli endpoint non renderizzati */
+    case 'finish': return {x1:380,y1:226,x2:610,y2:196,o:'h',lx:505,ly:200,anch:'start'};
+  }
+}
+function roundedOrtho(pts, r){
+  let p = `M ${pts[0][0]} ${pts[0][1]}`;
+  for(let i=1;i<pts.length-1;i++){
+    const [x0,y0]=pts[i-1], [x1,y1]=pts[i], [x2,y2]=pts[i+1];
+    const v1=[Math.sign(x1-x0),Math.sign(y1-y0)], v2=[Math.sign(x2-x1),Math.sign(y2-y1)];
+    p += ` L ${x1-v1[0]*r} ${y1-v1[1]*r} Q ${x1} ${y1} ${x1+v2[0]*r} ${y1+v2[1]*r}`;
+  }
+  const L=pts[pts.length-1];
+  return p + ` L ${L[0]} ${L[1]}`;
+}
+function edgePath(g, routing){
+  const {x1,y1,x2,y2,o}=g;
+  if(o==='h' && Math.abs(y2-y1)<5) return `M ${x1} ${y1} L ${x2} ${y2}`;   /* |dy|<5 = dritto */
+  if(o==='v' && Math.abs(x2-x1)<5) return `M ${x1} ${y1} L ${x2} ${y2}`;
+  if(routing==='straight') return `M ${x1} ${y1} L ${x2} ${y2}`;
+  if(routing==='bezier'){
+    return o==='h' ? `M ${x1} ${y1} C ${x1+70} ${y1}, ${x2-70} ${y2}, ${x2} ${y2}`
+                   : `M ${x1} ${y1} C ${x1} ${(y1+y2)/2}, ${x2} ${(y1+y2)/2}, ${x2} ${y2}`;
+  }
+  if(o==='h'){ const mx=(x1+x2)/2; return roundedOrtho([[x1,y1],[mx,y1],[mx,y2],[x2,y2]], 10); }
+  const my=(y1+y2)/2; return roundedOrtho([[x1,y1],[x1,my],[x2,my],[x2,y2]], 10);
+}
+
+/* ---- rendering ---- */
+let selected=null;
+function makeVertex(o, view, pos, sub){
+  const sh=view.shape;
+  const b=condResolve(sh.border,o).v;
+  const el=document.createElement('div');
+  el.className='node'+(sub?' sub':'')+(selected===o.id?' selected':'');
+  el.style.left=pos.x+'px'; el.style.top=pos.y+'px';
+  el.style.background=sh.fill;
+  el.style.border=`${b.width}px ${b.style} ${b.color}`;
+  el.style.borderRadius = sh.form==='rounded'?(sub?'8px':'10px'): sh.form==='ellipse'?'999px':'3px';
+  el.textContent=resolvePath(sh.label,o);
+  const badge = sh.badge ? condResolve(sh.badge,o).v : null;
+  if(badge){ const bd=document.createElement('span'); bd.className='badge'; bd.textContent=badge; el.appendChild(bd); }
+  el.onclick=()=>pick(o.id);
+  return el;
+}
+function render(){
+  const canvas=document.getElementById('canvas');
+  canvas.querySelectorAll('.node,.gv').forEach(n=>n.remove());
+  const pos = compActive()? POS.on : POS.off;
+
+  /* nodi top-level, ricorsione sui figli quando la view e' graphVertex */
+  for(const o of model.filter(m=>m.meta==='State' && !m.owner)){
+    const view=findView(o);
+    if(view.kind==='graphVertex'){
+      const p=pos[o.id], b=condResolve(view.shape.border,o).v;
+      const gv=document.createElement('div');
+      gv.className='gv'+(selected===o.id?' selected':'');
+      gv.style.left=p.x+'px'; gv.style.top=p.y+'px'; gv.style.width=p.w+'px'; gv.style.height=p.h+'px';
+      gv.style.border=`${b.width}px ${b.style} ${b.color}`;
+      gv.innerHTML=`<div class="gv-head">${resolvePath(view.shape.label,o)} <span class="k">graphVertex</span></div><div class="gv-body"></div>`;
+      gv.onclick=(e)=>{ e.stopPropagation(); pick(o.id); };
+      canvas.appendChild(gv);
+      for(const cid of (o.substates||[])){                  /* --- ricorsione (1 livello nel mockup) --- */
+        const c=model.find(m=>m.id===cid);
+        const cv=findView(c);                               /* i figli rientrano nella risoluzione: qui matchano v-state */
+        const cel=makeVertex(c, cv, pos[c.id], true);
+        cel.onclick=(e)=>{ e.stopPropagation(); pick(c.id); };
+        canvas.appendChild(cel);
+      }
+    } else {
+      canvas.appendChild(makeVertex(o, view, pos[o.id], false));
+    }
+  }
+
+  /* edge (sopra i nodi: svg con z-index) */
+  const svg=document.getElementById('svg');
+  let s = `<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5"
+      markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#64748b"/></marker></defs>`;
+  for(const t of model.filter(o=>o.meta==='Transition')){
+    const view=findView(t); if(!view) continue;
+    const g=geomFor(t); if(!g) continue;                    /* endpoint non renderizzati -> edge soppresso */
+    const d=edgePath(g, view.edge.routing);
+    const dash = view.edge.style==='dashed' ? 'stroke-dasharray="6 4"' : '';
+    const mk = view.edge.marker==='arrow' ? 'marker-end="url(#arr)"' : '';
+    s += `<path class="edge-path" d="${d}" stroke="#64748b" stroke-width="1.5" ${dash} ${mk}/>`;
+    if(view.edge.showLabel) s += `<text class="edge-label" x="${g.lx}" y="${g.ly}" text-anchor="${g.anch}">${resolvePath(view.edge.label,t)}</text>`;
+    s += `<path class="edge-hit" d="${d}" onclick="pick('${t.id}')"/>`;
+  }
+  svg.innerHTML=s;
+  dumpIR();
+}
+
+/* ---- status bar ---- */
+function pick(id){
+  selected=id;
+  const o=model.find(m=>m.id===id), view=findView(o);
+  let msg;
+  if(view.kind==='graphVertex'){
+    msg=`<b>${o.name}</b> → view <b>${view.id}</b> (kind: graphVertex) · match: metaclasse State + predicato not(empty($substates)) · containment: ${o.substates.length} figli renderizzati ricorsivamente`;
+  } else if(view.kind==='vertex'){
+    const br=condResolve(view.shape.border,o);
+    const fallback = o.substates ? ' (view composita spenta: fallback)' :
+                     (compActive()&&o.owner ? ' · figlio del container Running: rientra nella stessa risoluzione' :
+                      ' · predicato composito falso: $substates vuoto');
+    msg=`<b>${o.name}</b> → view <b>${view.id}</b> (kind: vertex)${fallback} · bordo: ${br.why}`+
+        (br.why==='regola when' ? ' ($isFinal = true → double)' : '');
+  } else {
+    const src=model.find(m=>m.id===o.source);
+    let extra='';
+    if(o.trigger==='finish') extra = compActive()
+      ? ' · <b>attraversa il confine del container Running</b>'
+      : ' · source Cruise non renderizzato → <b>ancoraggio risalito all\'antenato visibile Running</b> (policy lift-to-ancestor)';
+    msg=`<b>${o.trigger}</b> → view <b>${view.id}</b> (kind: edge) · source: $source = ${src.name}, target: ${model.find(m=>m.id===o.target).name} · routing: ${view.edge.routing}${extra}`;
+  }
+  document.getElementById('status').innerHTML=msg;
+  render();
+}
+
+/* ---- controlli = editor dell'IR ---- */
+function toggleComposite(on){
+  if(on && !compActive()) ir.views.unshift(COMPOSITE_VIEW);
+  if(!on) ir.views = ir.views.filter(v=>v.id!=='v-state-composite');
+  render();
+}
+function toggleRule(on){
+  viewById('v-state').shape.border = on
+    ? { rules:[FINAL_RULE], default:{ color:'#94a3b8', width:1.5, style:'solid' } }
+    : { color:'#94a3b8', width:1.5, style:'solid' };
+  render();
+}
+function toggleBadge(on){
+  if(on) viewById('v-state').shape.badge=FINAL_BADGE; else delete viewById('v-state').shape.badge;
+  render();
+}
+function applyPreset(name){
+  const v0=viewById('v-state'), v1=viewById('v-trans');
+  if(name==='default'){ v0.shape.form='rounded'; v0.shape.fill='#ffffff'; toggleRule(true); v0.shape.badge=FINAL_BADGE;
+    v1.edge.routing='manhattan'; v1.edge.style='solid'; v1.edge.showLabel=true; }
+  if(name==='minimal'){ v0.shape.form='rectangle'; v0.shape.fill='#f8fafc'; toggleRule(false); delete v0.shape.badge;
+    v1.edge.routing='straight'; v1.edge.style='solid'; v1.edge.showLabel=false; }
+  if(name==='bold'){ v0.shape.form='ellipse'; v0.shape.fill='#ecfeff'; toggleRule(true); v0.shape.badge=FINAL_BADGE;
+    v1.edge.routing='bezier'; v1.edge.style='dashed'; v1.edge.showLabel=true; }
+  syncControls(); render();
+}
+function syncControls(){
+  document.getElementById('c-comp').checked  = compActive();
+  document.getElementById('c-form').value    = viewById('v-state').shape.form;
+  document.getElementById('c-fill').value    = viewById('v-state').shape.fill;
+  document.getElementById('c-rule').checked  = !!viewById('v-state').shape.border.rules;
+  document.getElementById('c-badge').checked = !!viewById('v-state').shape.badge;
+  document.getElementById('c-routing').value = viewById('v-trans').edge.routing;
+  document.getElementById('c-stroke').value  = viewById('v-trans').edge.style;
+  document.getElementById('c-elabel').checked= viewById('v-trans').edge.showLabel;
+}
+function dumpIR(){
+  const json=JSON.stringify(ir,null,2)
+    .replace(/"([^"]+)":/g,'<span class="k">"$1"</span>:')
+    .replace(/: "((?:[^"\\]|\\.)*)"/g,': <span class="s">"$1"</span>')
+    .replace(/: (true|false|[\d.]+)/g,': <span class="n">$1</span>');
+  document.getElementById('irdump').innerHTML=json;
+}
+syncControls(); render();
+</script>
+</body>
+</html>

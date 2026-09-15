@@ -1,0 +1,412 @@
+/**
+ * JJODEL DESIGN TOKENS - DARK THEME
+ * Color palette for dark mode
+ * Based on jjodel-ui-documentation.md Section 5.1
+ *
+ * Usage: These variables are applied when [data-theme="dark"] is set on root element
+ */
+
+:root[data-theme="dark"] {
+  /* ============================================
+     BASE BACKGROUNDS
+     ============================================ */
+  --color-bg-primary: #08090a;        /* Main app background - darkest */
+  --color-bg-secondary: #0f1012;      /* Cards, panels - slightly lighter */
+  --color-bg-tertiary: #16181a;       /* Subtle backgrounds, hover states */
+  --color-bg-elevated: rgba(255, 255, 255, 0.04);  /* Floating panels, dropdowns */
+  --color-bg-hover: rgba(255, 255, 255, 0.06);     /* Hover state background */
+
+  /* ============================================
+     BORDERS
+     ============================================ */
+  --color-border-primary: rgba(255, 255, 255, 0.08);   /* Main borders, dividers */
+  --color-border-secondary: rgba(255, 255, 255, 0.04); /* Subtle borders */
+  --color-border-hover: rgba(255, 255, 255, 0.12);     /* Hover state borders */
+  --color-border-focus: #94a3b8;                       /* slate-400 - focus rings, never cyan */
+
+  /* ============================================
+     TEXT COLORS
+     ============================================ */
+  --color-text-primary: #f0f0f0;      /* Headings, primary text */
+  --color-text-secondary: #a0a0a0;    /* Body text, secondary info */
+  --color-text-tertiary: #606060;     /* Labels, captions */
+  --color-text-placeholder: #545454;  /* Placeholder text */
+  --color-text-disabled: #464646;     /* Disabled text */
+  --color-text-inverse: #08090a;      /* Text on light backgrounds */
+
+  /* ============================================
+     BRAND - Dark Slate (backgrounds, branding)
+     Adjusted for dark mode visibility
+     ============================================ */
+  --color-brand: #9ca3af;                       /* Brand color - lighter for dark bg */
+  --color-brand-hover: #d1d5db;                 /* Brand hover state */
+  --color-brand-active: #6b7280;                /* Brand active state */
+
+  /* ============================================
+     ACCENT - Slate (interactive elements)
+     Lighter slate for visibility on dark backgrounds
+     Monochromatic, professional enterprise look
+     ============================================ */
+  --color-accent: #94a3b8;                      /* Primary accent - slate-400 */
+  --color-accent-hover: #cbd5e1;                /* Hover state - slate-300 */
+  --color-accent-active: #64748b;               /* Active/pressed state - slate-500 */
+  --color-accent-light: rgba(148, 163, 184, 0.15); /* Subtle backgrounds */
+  --color-accent-lighter: rgba(148, 163, 184, 0.08); /* Very subtle backgrounds */
+  --color-accent-muted: rgba(148, 163, 184, 0.15);   /* Backgrounds, subtle highlights */
+  --color-accent-subtle: rgba(148, 163, 184, 0.08);  /* Very subtle backgrounds */
+
+  /* ============================================
+     SECONDARY
+     ============================================ */
+  --color-secondary: #9ca3af;                   /* Secondary elements */
+  --color-secondary-hover: #d1d5db;             /* Secondary hover */
+
+  /* ============================================
+     SEMANTIC COLORS
+     Adjusted for better contrast on dark backgrounds
+     ============================================ */
+
+  /* Success - Lighter Green */
+  --color-success: #34d399;
+  --color-success-hover: #4ade80;
+  --color-success-muted: rgba(52, 211, 153, 0.15);
+  --color-success-subtle: rgba(52, 211, 153, 0.08);
+
+  /* Warning - Lighter Amber */
+  --color-warning: #fbbf24;
+  --color-warning-hover: #fcd34d;
+  --color-warning-muted: rgba(251, 191, 36, 0.15);
+  --color-warning-subtle: rgba(251, 191, 36, 0.08);
+
+  /* Error/Danger - Lighter Red */
+  --color-error: #f87171;
+  --color-error-hover: #fca5a5;
+  --color-error-muted: rgba(248, 113, 113, 0.15);
+  --color-error-subtle: rgba(248, 113, 113, 0.08);
+
+  /* Info - Lighter Blue */
+  --color-info: #60a5fa;
+  --color-info-hover: #93c5fd;
+  --color-info-muted: rgba(96, 165, 250, 0.15);
+  --color-info-subtle: rgba(96, 165, 250, 0.08);
+
+  /* ============================================
+     AUTO-* PILL FAMILY (Violet / Indigo) — Dark
+     Paired with the light-mode tokens in _colors-light.scss.
+     Lighter text shades (violet-300 / indigo-300) on higher-opacity backgrounds
+     (0.20 vs light's 0.12) for visibility against dark card backgrounds.
+     ============================================ */
+  --color-auto-resolved-bg: rgba(139, 92, 246, 0.20);     /* violet-500 @ 20% */
+  --color-auto-resolved-text: #c4b5fd;                     /* violet-300 */
+  --color-auto-converted-bg: rgba(99, 102, 241, 0.20);    /* indigo-500 @ 20% */
+  --color-auto-converted-text: #a5b4fc;                    /* indigo-300 */
+
+  /* ============================================
+     CANVAS & GRAPH COLORS
+     For metamodel/model nodes in dark mode
+     ============================================ */
+
+  /* Canvas */
+  --color-canvas-bg: #0f172a;                     /* Canvas background (slate-950) */
+  --color-canvas-grid: #334155;                   /* Grid dots/lines (slate-700) */
+  --color-canvas-accent: #06b6d4;                 /* Selection, focus (same cyan) */
+  --color-canvas-accent-hover: #22d3ee;           /* Accent hover (cyan-300) */
+  --color-canvas-accent-subtle: rgba(6, 182, 212, 0.15);
+  --color-canvas-accent-muted: rgba(6, 182, 212, 0.08);
+  --color-canvas-tint: rgba(255, 255, 255, 0.02);
+  --color-canvas-tint-hover: rgba(255, 255, 255, 0.03);
+  --color-canvas-tint-active: rgba(255, 255, 255, 0.06);
+  --color-canvas-tint-strong: rgba(255, 255, 255, 0.08);
+
+  /* Nodes */
+  --color-node-bg: #1e293b;                      /* Node bg (slate-800) */
+  --color-node-border: #334155;                   /* Node border (slate-700) */
+  --color-node-border-selected: var(--color-canvas-accent);
+  --color-node-shadow: rgba(0, 0, 0, 0.3);
+  --color-node-shadow-selected: rgba(6, 182, 212, 0.2);
+  --color-node-text: #f1f5f9;                    /* Node primary text (slate-100) */
+  --color-node-text-secondary: #94a3b8;          /* Node secondary text (slate-400) */
+  --color-node-text-muted: #94a3b8;
+  --color-node-separator: #334155;
+
+  /* Type-specific node accent borders (brighter for dark bg) */
+  --color-type-class: #60a5fa;                   /* Blue-400 */
+  --color-type-enum: #a78bfa;                    /* Violet-400 */
+  --color-type-package: #34d399;                 /* Emerald-400 */
+  --color-type-object: #fbbf24;                  /* Amber-400 */
+  --color-type-datatype: #818cf8;                /* Indigo-400 */
+
+  /* Edges */
+  --color-edge-overlay-default: #cbd5e1;          /* L2 overlay path default stroke (slate-300, dark) */
+  --color-edge-label-halo: #0f172a;               /* L2 overlay <text> halo for readability (dark) */
+  --color-edge-default: #64748b;                 /* Dark edge stroke (slate-500) */
+  --color-edge-selected: var(--color-canvas-accent);
+  --color-edge-marker-fill: #1e293b;             /* Dark marker fill */
+  --color-edge-label-bg: rgba(30, 41, 59, 0.9);
+  --color-edge-label-bg-selected: rgba(30, 41, 59, 0.95);
+  --color-edge-label-text: #94a3b8;
+  --color-edge-label-text-selected: #22d3ee;
+  --color-edge-cardinality-bg: rgba(30, 41, 59, 0.85);
+  --color-edge-cardinality-text: #64748b;
+
+  /* Handles / Anchors */
+  --color-handle-border: var(--color-canvas-accent);
+  --color-handle-bg: var(--color-node-bg);
+  --color-handle-hover: var(--color-canvas-accent);
+
+  /* Panels */
+  --color-panel-bg: #1e293b;
+  --color-palette-bg: #1e293b;                    /* Left sidebar / palette background */
+  --color-panel-border: #334155;
+  --color-panel-header-bg: #0f172a;
+  --color-panel-header-text: #e2e8f0;
+  --color-panel-header-border: #334155;           /* Border for dark headers */
+  --color-panel-section-text: #94a3b8;
+  --color-panel-item-text: #e2e8f0;
+  --color-panel-item-hover: #334155;
+  --color-panel-item-active: #475569;
+  --color-panel-icon: #94a3b8;
+  --color-panel-muted: #64748b;
+  --color-panel-input-bg: #0f172a;
+  --color-panel-input-border: #334155;
+  --color-panel-input-text: #f1f5f9;
+  --color-panel-input-focus: var(--color-canvas-accent);
+  --color-panel-count-bg: #334155;
+  --color-panel-count-text: #94a3b8;
+  --color-panel-detail-border: #334155;
+
+  /* Toolbar */
+  --color-toolbar-bg: rgba(30, 41, 59, 0.95);
+  --color-toolbar-border: #334155;
+  --color-toolbar-shadow: rgba(0, 0, 0, 0.3);
+  --color-toolbar-label: #94a3b8;
+  --color-toolbar-btn-group: rgba(255, 255, 255, 0.06);
+  --color-toolbar-btn-text: #64748b;
+  --color-toolbar-btn-hover-bg: rgba(255, 255, 255, 0.08);
+  --color-toolbar-btn-hover-text: #f1f5f9;
+  --color-toolbar-btn-active-bg: rgba(255, 255, 255, 0.1);
+  --color-toolbar-btn-active-text: #38bdf8;
+  --color-toolbar-btn-active-shadow: none;
+  --color-toolbar-swatch-active-border: #f1f5f9;
+
+  /* Context menu */
+  --color-ctx-menu-bg: #1e293b;
+  --color-ctx-menu-shadow-1: rgba(0, 0, 0, 0.3);
+  --color-ctx-menu-shadow-2: rgba(0, 0, 0, 0.2);
+  --color-ctx-menu-text: #e2e8f0;
+  --color-ctx-menu-hover: #334155;
+  --color-ctx-menu-icon: #94a3b8;
+  --color-ctx-menu-divider: #334155;
+
+  /* Minimap */
+  --color-minimap-bg: #1e293b;
+
+  /* Segment handles */
+  --color-segment-handle-stroke: #1e293b;
+  --color-segment-handle-hover: #22d3ee;
+  --color-segment-handle-glow: rgba(14, 165, 233, 0.4);
+
+  /* Viewpoint components */
+  --color-viewpoint-input-border: #334155;
+  --color-viewpoint-input-bg: #1e293b;
+  --color-viewpoint-focus-border: #3b82f6;
+  --color-viewpoint-focus-glow: rgba(59, 130, 246, 0.2);
+  --color-viewpoint-focus-glow-subtle: rgba(59, 130, 246, 0.15);
+  --color-viewpoint-toggle-inactive: #475569;
+  --color-viewpoint-toggle-active: #3b82f6;
+  --color-viewpoint-toggle-knob: #ffffff;
+  --color-viewpoint-label: #64748b;
+  --color-viewpoint-error-bg: #450a0a;
+  --color-viewpoint-error-border: #7f1d1d;
+  --color-viewpoint-error-text: #dc2626;
+  --color-viewpoint-error-pre: #fca5a5;
+
+  /* Badge colors */
+  --color-badge-attr-bg: rgba(59, 130, 246, 0.15);
+  --color-badge-attr-text: #60a5fa;
+  --color-badge-ref-bg: rgba(6, 182, 212, 0.15);
+  --color-badge-ref-text: #22d3ee;
+  --color-badge-op-bg: rgba(139, 92, 246, 0.15);
+  --color-badge-op-text: #a78bfa;
+  --color-badge-obj-bg: rgba(16, 185, 129, 0.15);
+  --color-badge-obj-text: #34d399;
+
+  /* ============================================
+     ENTITY CATEGORICAL PALETTE — dark variant
+     Sorgente unica della scala entity (R-RAIL-30). Rigenerata in OKLCH il
+     2026-08-11: chiarezza fondo 0.300 e testo 0.845, croma massima comune a
+     tutte le tinte. Le coppie non discendono piu da entityMeta.ts, che dal
+     2026-08-12 non contiene colori.
+     ============================================ */
+  /* Coppie canoniche (R-RAIL-30) */
+  --color-entity-container-bg: #242E3D;
+  --color-entity-container-fg: #BBCEE8;
+  --color-entity-class-bg: #44212E;
+  --color-entity-class-fg: #F6B8CD;
+  --color-entity-object-bg: #3B272E;
+  --color-entity-object-fg: #E4C1CD;
+  --color-entity-enum-bg: #43260F;
+  --color-entity-enum-fg: #F4C09C;
+  --color-entity-literal-bg: #3A2A1F;
+  --color-entity-literal-fg: #E3C6B2;
+  --color-entity-attribute-bg: #01372C;
+  --color-entity-attribute-fg: #95DDCA;
+  --color-entity-parameter-bg: #1C332D;
+  --color-entity-parameter-fg: #B0D6CB;
+  --color-entity-reference-bg: #2D310C;
+  --color-entity-reference-fg: #C9D399;
+  --color-entity-operation-bg: #312746;
+  --color-entity-operation-fg: #D1C2F9;
+  /* model — DS-1 (2026-08-31). Controparte scura della coppia ambra a H 85.
+     Misurato: bg L 0.300 C 0.056 H 83.9, fg L 0.846 C 0.078 H 84.7,
+     dE(bg, enum.bg) 0.0263 contro un pavimento di 0.0243, contrasto 8.52:1. */
+  --color-entity-model-bg: #3B2B06;
+  --color-entity-model-fg: #E4C992;
+
+  /* Alias — sei contenitori, la classe astratta, il tipo di dato */
+  --color-entity-metamodel-bg: var(--color-entity-container-bg);
+  --color-entity-metamodel-fg: var(--color-entity-container-fg);
+  --color-entity-package-bg: var(--color-entity-container-bg);
+  --color-entity-package-fg: var(--color-entity-container-fg);
+  --color-entity-viewpoint-bg: var(--color-entity-container-bg);
+  --color-entity-viewpoint-fg: var(--color-entity-container-fg);
+  --color-entity-transformation-bg: var(--color-entity-container-bg);
+  --color-entity-transformation-fg: var(--color-entity-container-fg);
+  --color-entity-refactoring-bg: var(--color-entity-container-bg);
+  --color-entity-refactoring-fg: var(--color-entity-container-fg);
+  --color-entity-view-bg: var(--color-entity-container-bg);
+  --color-entity-view-fg: var(--color-entity-container-fg);
+  --color-entity-abstract-class-bg: var(--color-entity-class-bg);
+  --color-entity-abstract-class-fg: var(--color-entity-class-fg);
+  --color-entity-data-type-bg: var(--color-entity-parameter-bg);
+  --color-entity-data-type-fg: var(--color-entity-parameter-fg);
+
+  /* Selection (cyan dark variant) */
+  --color-selection-bg: rgba(8, 145, 178, 0.18);
+  --color-selection-bar: #22D3EE;
+
+  /* ============================================
+     FORM VIEWS (2026-08-26)
+     Dark counterparts of the light block. Same derivation rule: reference the
+     neighbouring semantic role where one exists, literal only where none does.
+     The three literals are the ones the light palette also had to spell out.
+     Surface sits ONE step lighter than panel, mirroring the light side where the
+     input (#ffffff) sits on the panel (#f8fafc).
+     ============================================ */
+  /* Spelled out for the same reason as the light block, even though the dark side was not
+     affected: this file's selector is `:root[data-theme="dark"]`, which outranks the plain
+     `:root` of tokens.css, so the aliases resolved correctly here. Literal anyway, so the two
+     palettes read the same way and neither depends on a specificity accident. */
+  --color-form-surface: #16181a;                      /* input and card fill */
+  --color-form-panel: #0f1012;                        /* panel under the cards */
+  --color-form-border: rgba(255, 255, 255, 0.08);
+  --color-form-border-strong: rgba(255, 255, 255, 0.16); /* one step past --color-border-hover */
+  --color-form-summary: #121416;                      /* a hair lighter than the panel */
+  --color-form-label: var(--color-text-secondary);    /* #a0a0a0 */
+  --color-form-muted: var(--color-text-tertiary);     /* #606060 */
+  --color-form-section: var(--color-text-tertiary);   /* #606060 */
+  --color-marker-required: #38bdf8;                   /* sky-400: #0ea5e9 loses contrast on #0f1012 */
+  --color-error-text: #fca5a5;                        /* red-300, readable on a dark panel */
+  --color-form-dirty-border: #0ea5e9;                 /* sky-500: sky-300 greys out on #0f1012 */
+  --color-form-dirty-text: #7dd3fc;                   /* sky-300, readable on a dark panel */
+  --color-form-dirty-halo: rgba(56, 189, 248, 0.28);  /* sky-400 at the alpha the dark bg needs */
+  /* Focus of the extended widgets (FL3) — see the light file for why two roles.
+     #0891b2 goes muddy on a dark surface, the correction --color-inode-ref-fg
+     already makes for the reference pill, so the border takes cyan-400 and the ring
+     the alpha a dark ground needs to show one at all. */
+  --color-form-focus-border: #22d3ee;                 /* cyan-400 */
+  --color-form-focus-ring: 0 0 0 3px rgba(34, 211, 238, 0.22);
+  --color-warning-text: #fcd34d;                      /* amber-300, readable on a dark panel */
+
+  /* ============================================
+     INSTANCE NODE (2026-08-27)
+     Dark counterparts of the light block. The handoff states dark mode was not
+     designed, so nothing here is transcribed from it: the values are derived.
+
+     The derivation rule of the FORM VIEWS block above — reference the
+     neighbouring semantic role — does NOT apply here, and that is the one thing
+     worth knowing about this block. Those roles describe the app chrome, whose
+     dark ground is near-black (#0f1012); the canvas has its own dark ground
+     (#1e293b) and every node drawn on it sits one step LIGHTER, at #334155.
+     Aliasing --color-bg-secondary here was the first attempt and it inverted
+     figure and ground: the instance node came out darker than the canvas while
+     class, enum and package nodes stayed lighter. Measured 2026-08-27 with
+     scripts/smoke/_tmp_instance_node.ts. So the ground below is the canvas node
+     ground, spelled out, and the text roles are alphas over it.
+
+     The cyan ramp inverts around its middle: on a dark surface the light tints
+     (cyan-200/300) become the FOREGROUND and translucent cyan the ground.
+     Selection keeps owning the cyan.
+     ============================================ */
+  --color-inode-surface: #334155;                      /* the canvas node ground, = --node-bg dark */
+  --color-inode-border: rgba(255, 255, 255, 0.16);
+  --color-inode-header-fill: rgba(255, 255, 255, 0.06);
+  --color-inode-name: rgba(255, 255, 255, 0.92);
+  --color-inode-label: rgba(255, 255, 255, 0.55);
+  --color-inode-quiet: rgba(255, 255, 255, 0.3);       /* dash and cardinality: the quietest role */
+  --color-inode-footer: rgba(255, 255, 255, 0.45);
+  --color-inode-footer-rule: rgba(255, 255, 255, 0.08);
+  --color-inode-chip-bg: rgba(255, 255, 255, 0.09);
+  --color-inode-chip-fg: rgba(255, 255, 255, 0.75);
+  --color-inode-badge-bg: rgba(255, 255, 255, 0.09);
+  --color-inode-badge-fg: rgba(255, 255, 255, 0.75);
+  --color-inode-accent-neutral: rgba(255, 255, 255, 0.25);
+  --color-inode-shadow: rgba(0, 0, 0, 0.4);            /* the light 4% vanishes on a dark ground */
+  --color-inode-shadow-hover: rgba(0, 0, 0, 0.55);
+  /* Un gradino OPACO sopra --color-inode-surface (#334155, slate-700): slate-600.
+     Il traslucido qui aprirebbe un buco sulla tela invece di schiarire la pill. */
+  --color-inode-pill-hover: #475569;                   /* slate-600 */
+
+  /* Cyan, inverted: tint on top, depth underneath */
+  /* Row view library (2026-08-28, livello 3). Il pieno/vuoto del dot booleano e
+     la traccia della barra devono restare distinguibili su #334155, quindi sono
+     alpha di bianco e non i grigi chiari, che su questo fondo collassano. */
+  --color-inode-swatch-hairline: rgba(255, 255, 255, 0.28);
+  --color-inode-bool-on: rgba(255, 255, 255, 0.8);
+  --color-inode-bool-off: rgba(255, 255, 255, 0.32);
+  --color-inode-progress-track: rgba(255, 255, 255, 0.14);
+  --color-inode-progress-fill: rgba(255, 255, 255, 0.62);
+  --color-inode-emphasis: rgba(255, 255, 255, 0.75);
+  --color-inode-broken: #f87171;                       /* red-400; il red-500 va cupo qui */
+
+  --color-inode-ref-bg: rgba(6, 182, 212, 0.16);
+  --color-inode-ref-border: rgba(103, 232, 249, 0.4);  /* cyan-300 at the alpha the dark bg needs */
+  --color-inode-ref-fg: #67e8f9;                       /* cyan-300; #0891b2 goes muddy here */
+  --color-inode-selected-border: #22d3ee;              /* cyan-400 = --color-selection-bar */
+  --color-inode-selected-header-bg: rgba(6, 182, 212, 0.2);
+  --color-inode-selected-header-border: rgba(34, 211, 238, 0.45);
+  --color-inode-selected-badge-bg: rgba(6, 182, 212, 0.26);
+  --color-inode-selected-badge-fg: #a5f3fc;            /* cyan-200 */
+  --color-inode-selected-ring: rgba(34, 211, 238, 0.28);
+
+  /* Option colours, dark. Same seven families, stepped for this surface and
+     validated as their own set — not a flip of the light column. The foreground is
+     the 400 step (the 300s the canvas pill uses are too pale to tell apart: at 300
+     the worst adjacent pair measured ΔE 9.4 for normal vision, under the floor of
+     15), the tint is the 500 at 16% and the border the 400 at 40%, which is the
+     shape --color-inode-ref-* already has here. See the light file for the
+     measurements and for why there are seven. */
+  --color-opt-1-bg: rgba(6, 182, 212, 0.16);      /* cyan-500 */
+  --color-opt-1-border: rgba(34, 211, 238, 0.4);  /* cyan-400 */
+  --color-opt-1-fg: #22d3ee;                      /* cyan-400 */
+  --color-opt-2-bg: rgba(249, 115, 22, 0.16);     /* orange-500 */
+  --color-opt-2-border: rgba(251, 146, 60, 0.4);  /* orange-400 */
+  --color-opt-2-fg: #fb923c;                      /* orange-400 */
+  --color-opt-3-bg: rgba(14, 165, 233, 0.16);     /* sky-500 */
+  --color-opt-3-border: rgba(56, 189, 248, 0.4);  /* sky-400 */
+  --color-opt-3-fg: #38bdf8;                      /* sky-400 */
+  --color-opt-4-bg: rgba(236, 72, 153, 0.16);     /* pink-500 */
+  --color-opt-4-border: rgba(244, 114, 182, 0.4); /* pink-400 */
+  --color-opt-4-fg: #f472b6;                      /* pink-400 */
+  --color-opt-5-bg: rgba(59, 130, 246, 0.16);     /* blue-500 */
+  --color-opt-5-border: rgba(96, 165, 250, 0.4);  /* blue-400 */
+  --color-opt-5-fg: #60a5fa;                      /* blue-400 */
+  --color-opt-6-bg: rgba(20, 184, 166, 0.16);     /* teal-500 */
+  --color-opt-6-border: rgba(45, 212, 191, 0.4);  /* teal-400 */
+  --color-opt-6-fg: #2dd4bf;                      /* teal-400 */
+  --color-opt-7-bg: rgba(168, 85, 247, 0.16);     /* purple-500 */
+  --color-opt-7-border: rgba(192, 132, 252, 0.4); /* purple-400 */
+  --color-opt-7-fg: #c084fc;                      /* purple-400 */
+
+
+}

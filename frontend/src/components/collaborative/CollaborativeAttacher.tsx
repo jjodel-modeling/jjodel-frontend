@@ -9,7 +9,7 @@ let debugOldID: string = '';
 function CollaborativeAttacher(props: Props) {
     useEffect(() => {
             Collaborative.connect(props.project);
-            console.log('Collaborative connect', debugOldID, props.project, Object.is(debugOldID, props.project));
+            // console.log('Collaborative connect', debugOldID, props.project, Object.is(debugOldID, props.project));
             debugOldID = props.project;
             return () => { Collaborative.disconnect(); }
         }

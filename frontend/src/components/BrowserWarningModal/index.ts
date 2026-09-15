@@ -1,0 +1,1 @@
+export { BrowserWarningModal } from './BrowserWarningModal';

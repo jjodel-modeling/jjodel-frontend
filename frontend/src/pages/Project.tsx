@@ -1,17 +1,23 @@
 import React, {Dispatch, JSX, ReactElement, ReactNode, useEffect, useState} from 'react';
 import {connect} from 'react-redux';
 import {
-    CreateElementAction,
+    GObject,
+    Pointer,
+    DViewElement,
+    DViewPoint,
+    LProject,
     Dictionary,
+    DProject,
     DState,
     DUser,
-    DViewElement, DViewPoint, GObject,
-    LProject,
     LUser,
     LViewElement,
     LViewPoint,
-    Pointer,
-    R, store,
+} from '../joiner';
+import {
+    CreateElementAction,
+    R,
+    store,
     Try,
     U
 } from '../joiner';
@@ -26,16 +32,15 @@ import Storage from "../data/storage";
 import Loader from '../components/loader/Loader';
 import {Navbar} from "./components";
 import {CSS_Units} from "../view/viewElement/view";
+import { ProjectLoadingScreen } from '../components/LoadingScreen';
 
 function ProjectComponent(props: AllProps): JSX.Element {
-    const {user} = props;
-    const query = useQuery();
-    const id = query.get('id') || '';
-
-    useEffect(() => {
+/*
+    useEffect(() => { moved in stateinitializer
         (async function() {
+            console.error('init_project');
             const project = await ProjectsApi.getOne(id);
-            console.log('project load api response', {project, isOff:U.isOffline()});
+            // console.log('project load api response', {project, isOff:U.isOffline()});
             if (!project) {
                 // U.resetState();
                 // R.navigate('/allProject');
@@ -49,29 +54,31 @@ function ProjectComponent(props: AllProps): JSX.Element {
             }
             user.project = LProject.fromPointer(project.id);
         })();
-    }, [id]);
+    }, [id]);*/
 
-    let vparr = user?.project?.viewpoints || [];
-    let allViews = vparr.flatMap((vp: LViewPoint) => vp && vp.allSubViews);
-    allViews.push(...vparr as LViewElement[]);
-    allViews = allViews.filter(v => v);
-    const viewsDeDuplicator: Dictionary<Pointer<DViewElement>, LViewElement> = {};
-    for (let v of allViews) viewsDeDuplicator[v.id] = v;
-    if (!user?.project) {
-        return (
+
+    if (props.isLoading) {
+        return <ProjectLoadingScreen />;
+        /*return (
             <div className={'w-100 h-100 d-flex'}>
                 <div className={'m-auto d-flex p-5'} style={{flexFlow: 'column', cursor:'pointer'}}onClick={(e) => R.navigate('/allProjects')}>
                     <h4 className={'mx-auto'}>Project loading...</h4>
                     <div className={'mx-auto'}>if it takes too long try refreshing the page, or click to go back</div>
                 </div>
             </div>
-        );
+        );*/
     }
+    let project = LProject.getProject();
+    let vparr = project?.viewpoints || [];
+    let allViews = vparr.flatMap((vp: LViewPoint) => vp && vp.allSubViews);
+    allViews.push(...vparr as LViewElement[]);
+    allViews = allViews.filter(v => v);
+    const viewsDeDuplicator: Dictionary<Pointer<DViewElement>, LViewElement> = {};
+    for (let v of allViews) viewsDeDuplicator[v.id] = v;
 
     return (<>
-        <Dashboard active={'Project'} version={props.version} project={user.project} />
-        {/*<Try><Dock /></Try>*/}
-        {user.project.type === 'collaborative' && <CollaborativeAttacher project={user.project?.id}/>}
+        <Dashboard active={'Project'} version={props.version} project={project} />
+        {project.type === 'collaborative' && <CollaborativeAttacher project={props.projectid as string}/>}
     </>);
 
 }
@@ -80,8 +87,10 @@ interface OwnProps {
 }
 
 interface StateProps {
-    user: LUser,
+    projectid?: Pointer<DProject>,
+    // project?: LProject,
     version: DState["version"],
+    isLoading: boolean,
 }
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
@@ -89,7 +98,8 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as FakeStateProps;
-    ret.user = LUser.fromPointer(DUser.current);
+    ret.projectid = U.getProjectID_URL() || '';
+    ret.isLoading = ProjectsApi.isLoading;
     return ret;
 }
 

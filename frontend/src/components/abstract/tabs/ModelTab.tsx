@@ -1,11 +1,23 @@
 import React, {Dispatch, ReactElement, ReactNode} from "react";
 import {connect} from "react-redux";
-import {DModel, DPointerTargetable, Pointer, Try, U} from "../../../joiner";
-import {CreateElementAction, DGraph, DModelElement, DState, LGraph, LModel, LModelElement} from "../../../joiner";
-import {DefaultNode} from "../../../joiner/components";
-import ToolBar from "../../toolbar/ToolBar";
+import {
+    DModel,
+    DPointerTargetable,
+    Pointer,
+    Try,
+    U,
+    CreateElementAction,
+    DGraph,
+    DModelElement,
+    DState,
+    LGraph,
+    LModel,
+    LModelElement,
+    Constructors,
+    SetRootFieldAction,
+} from "../../../joiner";
 import ContextMenu from "../../contextMenu/ContextMenu";
-import { MetricsPanel } from "../../metrics/Metrics";
+import { EditorSwitch } from "./EditorSwitch";
 
 
 function ModelTabComponent(props: AllProps) {
@@ -14,23 +26,21 @@ function ModelTabComponent(props: AllProps) {
 
     if (!model) return(<>closed tab</>);
     if (!graph) {
-        DGraph.new(0, model.id);
-        console.log('create m1 graph', {model});
+        const graphid = Constructors.DGraph_makeID(model.id);
+        if (!DPointerTargetable.pendingCreation[graphid]) {
+            const dGraph = DGraph.new(0, model.id);
+            // console.log('create m1 graph', {model, graphId: dGraph.id});
+        }
         return(<div style={{width: "100%", height: "100%", display: "flex"}}>
             <span style={{margin: "auto"}}>Building the Graph...</span>
         </div>);
     }
     let graphid = graph.id;
+    // Classic shutdown (Fase 5a): the classic canvas (EdgeOverlay + DefaultNode)
+    // is no longer mounted — EditorSwitch renders the flow editor only.
     return(<div className={'w-100 h-100'} style={{overflow: 'hidden'}}>
         <ContextMenu graph={graphid}/>
-        <div className={'d-flex h-100'} style={{overflow:'hidden'}} onClick={e => { if (!U.isProjectModified) U.isProjectModified = U.userHasInteracted = true; }}>
-            <ToolBar model={model.id} isMetamodel={model.isMetamodel} metamodelId={props.metamodelid} />
-            <Try>
-                <div className={"GraphContainer h-100 w-100"} style={{position:"relative"}}>
-                    {graph && <DefaultNode data={model} nodeid={graphid} graphid={graphid} />}
-                </div>
-            </Try>
-        </div>
+        <EditorSwitch modelid={model.id} />
     </div>);
 }
 interface OwnProps {
@@ -46,7 +56,7 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
     ret.model = LModel.fromPointer(ownProps.modelid);
     const graphs: DGraph[] = DGraph.fromPointer(state.graphs);
-    const pointers = graphs.filter((graph) => { return graph.model === ownProps.modelid });
+    const pointers = graphs.filter((graph) => { return graph.model === ownProps.modelid && (graph as any).graphStyle !== 'v2-flow' });
     if (pointers.length > 0) ret.graph = LGraph.fromPointer(pointers[0].id);
     return ret;
 }

@@ -20,6 +20,7 @@ import {
     Defaults
 } from '../../joiner';
 import DSL from "../../DSL/DSL";
+import { vi } from 'vitest';
 
 var nosize: GraphSize = {x:0, y:0, w:0, h:0, nosize:true} as any;
 var defaultEdgePointSize: GraphSize = {x:0, y:0, w:15, h:5} as any;
@@ -67,7 +68,8 @@ class DefaultViews {
     &>div{
         transform: rotate(90deg) translate(0, 100%);
     }
-}
+}`;
+let gridsObsolete = `
 .grid-classic {
     background-image: radial-gradient(silver 1px, transparent 0);
     background-size: 15px 15px;
@@ -176,18 +178,18 @@ border-radius: var(--radius);
                 'outline-': U.hexToPalette('#263d91', '#8390fa', '#fac748', '#06bcc1', '#49a078', '#1dd3b0', '#53dd6c', '#d81159', '#9798aa')
             };
             view.css = `
-
-/
-
 /* class */
 
-border-radius: 3px;
+border-radius: 6px;
 .class {
-    border-radius: 3px;
+    border-radius: inherit;
     background: var(--model-background);
     color:var(--model-color);
     min-width: 160px;
     border: 1px solid var(--borderColor)!important;
+    >*{
+        border-radius: inherit;
+    }
     
     &>.header{
         padding: 3px 6px;
@@ -282,39 +284,29 @@ div.header:has(.open:hover) {
     // add preparation code here (like for loops to count something), then list the dependencies below.
     // ¡ The element will update only if one of the Observed Properties has changed !
     // ** declarations here ** //
-    ret.attributes = data.attributes
-    ret.references = data.references
-    ret.operations = data.operations
-    ret.abstract = data.abstract
-    ret.interface = data.interface
+    ret.attributes = data?.attributes || []
+    ret.references = data?.references || []
+    ret.operations = data?.operations || []
+    ret.abstract = data?.abstract || false
+    ret.interface = data?.interface || false
     ${udLevel}
     ${udGrid}
     ${udSnap}
-    ret.refs = data.referencedBy.filter(a => typeof a !== 'undefined')
-    ret.refNames = ret.refs.filter(a => typeof a !== 'undefined').filter(a => a.model.id !== data.model.id).map(a => a.model.name + '::'  + a.parent.name + '.' + a.name)
-    ret.colorIndex = node.state.colorIndex ?? 0
+    ret.refs = (data?.referencedBy || []).filter(a => typeof a !== 'undefined')
+    ret.refNames = ret.refs.filter(a => a && a.model).filter(a => a.model?.id !== data?.model?.id).map(a => (a.model?.name || '') + '::'  + (a.parent?.name || '') + '.' + (a.name || ''))
+    ret.colorIndex = node?.state?.colorIndex ?? 0
 
 }`;
             // view.events = {e1:"(num) => {\n\tdata.name = num;\n}"}
         }, false, Defaults.Pointer_ViewClass);
-        
-        view.onDataUpdate = "if (snap) {\n";
-        view.onDataUpdate += "  const x = node.x, y = node.y;\n";
-        view.onDataUpdate += "  if (x !== 0 || y !== 0) {\n";
-        view.onDataUpdate += "    const zx = (node.zoom && node.zoom.x) || 1;\n";
-        view.onDataUpdate += "    const zy = (node.zoom && node.zoom.y) || 1;\n";
-        view.onDataUpdate += "    const w2 = node.w * 0.5;\n";
-        view.onDataUpdate += "    const h2 = node.h * 0.5;\n";
-        view.onDataUpdate += "    const gx = 30 * zx;\n";
-        view.onDataUpdate += "    const gy = 30 * zy;\n";
-        view.onDataUpdate += "    const cx = x + w2;\n";
-        view.onDataUpdate += "    const cy = y + h2;\n";
-        view.onDataUpdate += "    const nx = Math.round(cx / gx) * gx - w2;\n";
-        view.onDataUpdate += "    const ny = Math.round(cy / gy) * gy - h2;\n";
-        view.onDataUpdate += "    if (nx !== x) node.x = nx;\n";
-        view.onDataUpdate += "    if (ny !== y) node.y = ny;\n";
-        view.onDataUpdate += "  }\n";
-        view.onDataUpdate += "}\n";
+        /*
+        view.onDataUpdate = "if (snap) {\n" +
+        + "\n  const size = node.size"
+        + "\n  if ((size.x || size.y) && (snap.x && snap.y)) {"
+        + "\n    const snapped = size.center().modulo(snap)"
+        + "\n    if (snapped.x !== size.x || snapped.y !== size.y) node.size = snapped;"
+        + "\n  }"
+        + "\n}"*/
 
         return view;
     }
@@ -351,12 +343,13 @@ div.header:has(.open:hover) {
 // `
 
             view.css = `
-border-radius: 3px;
+border-radius: 6px;
 .enumerator {
-    border-radius: 3px;
+    border-radius: inherit;
     background: white;
     color:var(--model-color);
     min-width: 140px;
+    &>*{ border-radius: inherit; }
 
     &>.header{
         padding: 3px 6px;
@@ -392,7 +385,7 @@ border-radius: 3px;
     // add preparation code here (like for loops to count something), then list the dependencies below.
     // ¡ The element will update only if one of the Observed Properties has changed !
     // ** declarations here ** //
-    ret.literals = data.literals
+    ret.literals = data?.literals || []
     ${udLevel}
     ${udSnap}
 
@@ -431,9 +424,13 @@ border-radius: 3px;
 .feature{
     display: flex;
     padding: 2px 5px;
+    
+    input,
     select {
         margin-left: auto;
-        width: max(33%, 75px);
+        width: 125px;
+        max-width: 55%;
+        flex-basis: 0;
     }
 }`;
         }, false, Defaults.Pointer_ViewAttribute);
@@ -451,9 +448,12 @@ border-radius: 3px;
 .feature{
     display: flex;
     padding: 2px 5px;
+    input,
     select {
         margin-left: auto;
-        width: max(33%, 75px);
+        width: 125px;
+        max-width: 55%;
+        flex-basis: 0;
     }
 }`;
         }, false, Defaults.Pointer_ViewReference);
@@ -483,9 +483,13 @@ border-radius: 3px;
 .operation{
     display: flex;
     padding: 2px 5px;
+    
+    input,
     select {
         margin-left: auto;
-        width: max(33%, 75px);
+        width: 125px;
+        max-width: 55%;
+        flex-basis: 0;
     }
     .parameters{
         background-color: var(--background-2);
@@ -545,19 +549,39 @@ border-radius: 3px;
             view.css += '   border-radius: 3px; \n';
             view.css += '   min-width: 160px;\n';
             view.css += '   & .header {\n';
+            view.css += '        padding: 3px 4px;\n';
             view.css += '        text-align: center;  \n';
             view.css += '        &> div {\n';
             view.css += '            & input:placeholder-shown {\n';
             view.css += '                display: inline-block!important;\n';
             view.css += '                margin-left: 30px!important;\n';
             view.css += '            }\n';
+            view.css += '            & input {\n';
+            view.css += '                padding: 0;\n';
+            view.css += '                border: none;\n';
+            view.css += '                outline: none;\n';
+            view.css += '            }\n';
+            view.css += '            & input:focus {\n';
+            view.css += '                display: inline-block!important;\n';
+            view.css += '                background-color: #ededed;\n';
+            view.css += '                border: none!important;\n';
+            view.css += '                outline: none!important;\n';
+            view.css += '                padding: 0!important;\n';
+            view.css += '            }\n';
             view.css += '        }\n';
             view.css += '   }\n';
             view.css += '   background: transparent; \n';
-            view.css += '   color: var(--accent);\n';
+            view.css += '   font-family: "Inter Variabile", Inter, sans-serif;\n';
+            view.css += '   font-size: 13px;\n';
+            view.css += '   font-weight: 500;\n';
+            view.css += '   color: #1E293B;\n';
             view.css += '}\n';
-            view.css += '.object-name {padding: 10px; font-weight: 600; color: var(--accent);}';
-            view.css += '\n.object-children {padding: 10px;background-color: white; height: fit-content; width: -webkit-fill-available;}';
+            view.css += '.object-children {\n';
+            view.css += '    padding: 10px 10px 2px 10px;\n';
+            view.css += '    background-color: white;\n';
+            view.css += '    height: fit-content;\n';
+            view.css += '    width: -webkit-fill-available;\n';
+            view.css += '}\n';
             view.defaultVSize = defaultVertexSize;
             view.appliableTo = 'Vertex';
             view.usageDeclarations = '(ret) => {\n' +
@@ -569,7 +593,7 @@ border-radius: 3px;
                 '// add preparation code here (like for loops to count something), then list the dependencies below.\n' +
                 // ¡ The element will update only if one of the Observed Properties has changed !
                 '// ** declarations here ** //\n' +
-                'ret.metaclassName = data.instanceof?.name || \'Object\'\n' +
+                'ret.metaclassName = data?.instanceof?.name || \'Object\'\n' +
                 udLevel + udSnap +
 
                 '}';
@@ -580,7 +604,8 @@ border-radius: 3px;
         view.onDataUpdate += "    node.x = node.x - ((node.x + node.w/2) % 30);\n";
         view.onDataUpdate += "    node.y = node.y - ((node.y + node.h/2) % 30);\n";
         view.onDataUpdate += "\n";
-        view.onDataUpdate += "    setInterval(() => {\n";
+        view.onDataUpdate += "    let __oduTick = 0;\n";
+        view.onDataUpdate += "    const __oduHandle = setInterval(() => {\n";
         view.onDataUpdate += "      node.edgesOut\n";
         view.onDataUpdate += "        .filter(edge => edge.midnodes.length > 0 && (edge.midnodes.first().y + 7 !== edge.start.y + edge.start.h/2))\n";
         view.onDataUpdate += "        .map(edge => edge.midnodes.first().y = edge.start.y + edge.start.h/2 - 7);\n";
@@ -594,6 +619,12 @@ border-radius: 3px;
         view.onDataUpdate += "      node.edgesIn\n";
         view.onDataUpdate += "        .filter(edge => edge.midnodes.length > 0 && (edge.midnodes.first().y + 7 !== edge.start.y + edge.start.h/2))\n";
         view.onDataUpdate += "        .map(edge => edge.midnodes.first().y = edge.start.y + edge.start.h/2 - 7);\n";
+        view.onDataUpdate += "      const __oduPending =\n";
+        view.onDataUpdate += "        node.edgesOut.filter(edge => edge.midnodes.length > 0 && (edge.midnodes.first().y + 7 !== edge.start.y + edge.start.h/2)).length +\n";
+        view.onDataUpdate += "        node.edgesOut.filter(edge => edge.midnodes.length > 0 && (edge.midnodes.first().x + 7 !== edge.end.x + edge.end.w/2)).length +\n";
+        view.onDataUpdate += "        node.edgesIn.filter(edge => edge.midnodes.length > 0 && (edge.midnodes.first().x + 7 !== edge.end.x + edge.end.w/2)).length +\n";
+        view.onDataUpdate += "        node.edgesIn.filter(edge => edge.midnodes.length > 0 && (edge.midnodes.first().y + 7 !== edge.start.y + edge.start.h/2)).length;\n";
+        view.onDataUpdate += "      if (__oduPending === 0 || ++__oduTick >= 40) clearInterval(__oduHandle);\n";
         view.onDataUpdate += "    }, 150);\n";
         view.onDataUpdate += "  } else {\n";
         view.onDataUpdate += "    if (data.parent.className === 'DValue') {\n";
@@ -666,13 +697,12 @@ border-radius: 3px;
             view.palette = {};
             view.css = `.value{
     padding-right: 6px;
+    padding-bottom: 5px;
     max-width: 300px;
     min-width: 100%;
     overflow:hidden;
+    font-family: "Inter Variabile", Inter, sans-serif;
     &:hover, &:focus-within{ overflow: visible; }
-    /*.values_str{
-        maxWidth: 100px;
-    }*/
 }`;
             view.appliableTo = 'Field';
             view.usageDeclarations = '(ret) =>  {\n' +
@@ -694,7 +724,7 @@ border-radius: 3px;
         let css = `.edgePoint{
     border: 2px solid var(--border-1);
     background: var(--background-1);
-    color: var(--color-1);
+    color: #1E293B;
     width: 15px;
     height: 15px;
     border-radius: 100%;

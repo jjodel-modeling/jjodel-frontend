@@ -14,6 +14,7 @@ module.exports = (env) => {
             }
 
         },
+        exclude: /node_modules\/(?!svg-pathdata)/,
         stats: {// disables console.warn with eslint-like messages in browser
             logging: 'none'//'error',
         },
@@ -28,6 +29,9 @@ module.exports = (env) => {
         output: {
             path: path.resolve(__dirname, 'dist'),
             filename: 'main.bundle.js',
+        },
+        parser: {
+            ecmaVersion: 2020        // enables ??, ?.
         },
         plugins: [
             new Dotenv({

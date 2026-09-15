@@ -1,0 +1,11 @@
+log_entries=458
+--- outcomes ---
+ 471 ✅
+--- types (from headings) ---
+  22 — chore
+  59 — docs
+ 104 — feat
+ 191 — fix
+  36 — refactor
+   2 — test
+archive_entries=0 (no docs/claude-code-log-archive.md)

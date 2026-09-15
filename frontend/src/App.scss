@@ -1,3 +1,25 @@
+/**
+ * JJODEL DESIGN TOKENS - Import first!
+ * This must be imported before any other styles to ensure
+ * design tokens are available throughout the application
+ */
+@import './styles/tokens/index';
+
+/**
+ * GLOBAL COMPONENT STYLES
+ * Buttons, forms, and other reusable components
+ */
+@import './styles/components/buttons';
+
+/**
+ * DIAGRAM REFINED STYLES
+ * Canvas node, edge, and label styling
+ */
+@import './styles/diagram';
+
+/**
+ * EXISTING ANIMATIONS & STYLES
+ */
 @keyframes animationoffset {
   0% {
     offset-distance: 0%;
@@ -29,10 +51,7 @@ view{
 .monospace{
   font-family: 'JetBrains Mono', Lekton, "Courier New", monospace;
 }
-.toolbar-item>span{
-  white-space: nowrap;
-  font-family: 'JetBrains Mono', Lekton, "Courier New", monospace;
-}
+
 label{
   cursor: inherit;
 }
@@ -43,7 +62,7 @@ label{
 content: "\f282";
 transform: inherit;
 transition: inherit;
-font-weight: 900 !important;
+font-weight: var(--font-extrabold) !important;
 }
 .capitalize-first-letter:first-letter {
   // works only on "block" elements? not even flex?
@@ -52,21 +71,56 @@ font-weight: 900 !important;
 .hoverable{
   position: relative;
   &>.content, &>svg>.content{
-    display: none;
+    display: none !important;
   }
 }
 .hoverable:hover, .hoverable:focus, .hoverable:focus-within, .hoverable:active, .hoverable.pinned{
   &>.preview, &>svg>.preview{
-    display: none;
+    display: none !important;
   }
 
   &>.content, &>svg>.content{
-    display: block;
+    &.d-flex{
+      display: flex !important;
+    }
+    &.d-inline{
+      display: inline !important;
+    }
+    &.d-block{
+      display: block !important;
+    }
+    display: block !important;
     z-index:1;
     position: absolute;
     box-shadow: var(--smart-elevation-8);
     &.fixed{
       position: fixed;
+    }
+
+    &.bottom {
+      left: 50%;
+      top: 100%; // calc(100% - 5px);
+      transform: translate(-50%, 0);
+    }
+    &.top {
+      left: 50%;
+      transform: translate(-50%, -100%);
+    }
+    &.right {
+      min-height: 100%;
+      left: calc(100% - 20px);
+      padding-left: 30px;
+      background-color: transparent;
+      top: 0px;
+      box-shadow: none;
+      // navbar stuff, needs to be moved
+      ul { position: relative; }
+      box-shadow: none;
+
+      & .keystroke {
+        float: right;
+        margin-right: 10px;
+      }
     }
   }
 
@@ -293,11 +347,21 @@ body{
   --text-outline-offset: 2px;
   --text-outline-blur: 0;
   --text-outline-color: #000;
+  // nb: text-outline would be better, but it cannot override inner variables, it takes always the variables here.
+  // would need to re-copy the definition of text-outline in target element (other than redefining locally the variables)
   --text-outline:
           calc(var(--text-outline-offset) * +1) calc(var(--text-outline-offset) * +1) var(--text-outline-blur) var(--text-outline-color),
           calc(var(--text-outline-offset) * -1) calc(var(--text-outline-offset) * -1) var(--text-outline-blur) var(--text-outline-color),
           calc(var(--text-outline-offset) * +1) calc(var(--text-outline-offset) * -1) var(--text-outline-blur) var(--text-outline-color),
           calc(var(--text-outline-offset) * -1) calc(var(--text-outline-offset) * +1) var(--text-outline-blur) var(--text-outline-color);
+
+  --text-shadow: var(--text-shadow-b);
+  --text-shadow-b: 2px 2px 3px #000000, 2px -2px 3px #000000, -2px 2px 3px #000000, -2px -2px 3px #000000, 2px 0px 3px #000000, 0px 2px 3px #000000, -2px 0px 3px #000000, 0px -2px 3px #000000;
+  --text-shadow-d: 2px 2px 3px #ddd, 2px -2px 3px #ddd, -2px 2px 3px #ddd, -2px -2px 3px #ddd, 2px 0px 3px #ddd, 0px 2px 3px #ddd, -2px 0px 3px #ddd, 0px -2px 3px #ddd;
+  --text-shadow-e: 2px 2px 3px #eee, 2px -2px 3px #eee, -2px 2px 3px #eee, -2px -2px 3px #eee, 2px 0px 3px #eee, 0px 2px 3px #eee, -2px 0px 3px #eee, 0px -2px 3px #eee;
+  --text-shadow-f: 2px 2px 3px #fff, 2px -2px 3px #fff, -2px 2px 3px #fff, -2px -2px 3px #fff, 2px 0px 3px #fff, 0px 2px 3px #fff, -2px 0px 3px #fff, 0px -2px 3px #fff;
+  --text-shadow-w: var(--text-shadow-f);
+  --text-shadow-g1: 1px 1px 0px #777777, 1px -1px 0px #777777, -1px 1px 0px #777777, -1px -1px 0px #777777, 1px 0px 0px #777777, 0px 1px 0px #777777, -1px 0px 0px #777777, 0px -1px 0px #777777;
 }
 
 
@@ -342,7 +406,7 @@ input, textarea, [contenteditable], pre, .console-output-container, .selectable{
     content: attr(data-val);
     text-transform: capitalize;
     font-variant: normal;
-    // font-weight: normal;
+    // font-weight: var(--font-normal);
     font-style: normal; // removes italic
   }
 }
@@ -374,4 +438,89 @@ input, textarea, [contenteditable], pre, .console-output-container, .selectable{
   min-height: 0;
   display: flex;
   flex-flow: column;
+}
+
+// ============================================
+// GLOBAL RANGE SLIDER STYLING
+// Gradient track with styled thumb
+// ============================================
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #0ea5e9 0%, #cbd5e1 100%);
+  outline: none;
+  cursor: pointer;
+
+  // WebKit (Chrome, Safari, Edge)
+  &::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #334155;
+    border: 2px solid #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+
+    &:hover {
+      transform: scale(1.1);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+    }
+  }
+
+  // Firefox
+  &::-moz-range-track {
+    height: 6px;
+    border-radius: 3px;
+    background: linear-gradient(90deg, #0ea5e9 0%, #cbd5e1 100%);
+  }
+
+  &::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #334155;
+    border: 2px solid #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+
+    &:hover {
+      transform: scale(1.1);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+    }
+  }
+
+  // Focus state
+  &:focus {
+    outline: none;
+
+    &::-webkit-slider-thumb {
+      box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.3);
+    }
+
+    &::-moz-range-thumb {
+      box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.3);
+    }
+  }
+
+  // Disabled state
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+
+    &::-webkit-slider-thumb {
+      cursor: not-allowed;
+    }
+
+    &::-moz-range-thumb {
+      cursor: not-allowed;
+    }
+  }
 }

@@ -1,0 +1,480 @@
+/* SymbolEditorModal — modal surface of the symbol authoring (D15/D15b).
+   Same overlay pattern and stacking as ImportSummaryModal: fixed backdrop on
+   var(--z-modal, 9999), no new stacking context, no portal. Two panes per the
+   approved mockup scene: persistent catalog column + preview and anatomy. */
+
+.symbol-editor-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: var(--z-modal, 9999);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-4, 16px);
+}
+
+.symbol-editor-modal {
+    background: var(--color-bg-secondary, #fff);
+    border-radius: 12px;
+    box-shadow: 0 24px 64px rgba(15, 23, 42, 0.4);
+    width: 1040px;
+    max-width: 96%;
+    /* FIXED height: the box never follows the content (design system: no
+       layout shifts). Tab switches, catalog filtering and recognition changes
+       scroll INSIDE the panes; the modal frame does not move. */
+    height: min(760px, 90vh);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    color: var(--color-text-primary);
+
+    &__header {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2, 8px);
+        padding: var(--space-3, 12px) var(--space-4, 16px);
+        border-bottom: 1px solid var(--color-border-secondary);
+    }
+
+    &__icon {
+        width: 28px;
+        height: 28px;
+        border-radius: 7px;
+        background: var(--gradient-primary, linear-gradient(135deg, #334155, #1e293b));
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        flex: none;
+
+        i { color: #fff; }
+    }
+
+    &__heading {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+        min-width: 0;
+        flex: 1;
+    }
+
+    &__title {
+        margin: 0;
+        font-size: 13px;
+        font-weight: 650;
+        color: var(--color-text-primary);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    /* cyan as accent on the recognized name, per the mockup header */
+    &__title-name { color: #0ea5e9; }
+
+    &__state {
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.03em;
+        border-radius: 10px;
+        padding: 1px 8px;
+        border: 1px solid var(--color-border-secondary, #e2e8f0);
+        color: var(--color-text-secondary, #64748b);
+        background: var(--color-bg-primary, #f1f5f9);
+
+        &--preset {
+            background: rgba(14, 165, 233, 0.08);
+            border-color: rgba(14, 165, 233, 0.3);
+            color: var(--color-text-primary);
+        }
+        &--custom {
+            background: transparent;
+            border-style: dashed;
+        }
+    }
+
+    &__subtitle {
+        font-size: 11px;
+        color: var(--color-text-secondary, #64748b);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    &__reset {
+        flex: none;
+        font-size: 11px;
+    }
+
+    &__close-btn {
+        flex: none;
+        border: none;
+        background: transparent;
+        color: var(--color-text-secondary, #64748b);
+        font-size: 15px;
+        cursor: pointer;
+        padding: var(--space-1, 4px);
+        border-radius: 4px;
+
+        &:hover { color: var(--color-text-primary); }
+        &:focus-visible { outline: 2px solid #334155; outline-offset: 1px; }
+    }
+
+    &__body {
+        flex: 1;
+        display: flex;
+        min-height: 0;
+    }
+
+    /* Compact density for the hosted kit controls, modal context only. The kit
+       components (Input, Select, Button) are CSS Modules sized by the design
+       tokens, so the override is a scoped token redefinition rather than a
+       reach into hashed classes; rail and every other host keep the defaults.
+       NumberInput carries a hardcoded 32px frame and is left as is. */
+    &__catalog,
+    &__panel {
+        --font-size-lg: 12px;      /* Input text; kit default 16px */
+        --input-height-base: 30px; /* md control frame; kit default 40px */
+        --input-height-sm: 26px;   /* sm control frame; kit default 32px */
+        --input-height-lg: 34px;   /* lg control frame; kit default 48px */
+    }
+
+    /* ── catalog column (sectioned per D18) ── */
+
+    &__catalog {
+        width: 264px;
+        flex: none;
+        display: flex;
+        flex-direction: column;
+        border-right: 1px solid var(--color-border-secondary);
+        background: var(--color-bg-primary, #f8fafc);
+        padding: var(--space-3, 12px);
+        /* D18: the sections list is the scroller; frame, search, chips and
+           recents stay fixed. No layout shift of the modal frame on collapse
+           or filtering (fixed-height rule above). */
+        overflow: hidden;
+
+        .jj-field {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-height: 0;
+            gap: var(--space-2, 8px);
+        }
+    }
+
+    /* ── D18: sectioned catalog (column variant of the picker; modal context
+       only, the disclosure variant keeps its inline flat rendering) ── */
+
+    .symbol-catalog {
+
+        &__chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        &__chip {
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--color-text-primary, #334155);
+            background: var(--color-bg-primary, #f1f5f9);
+            border: 1px solid var(--color-border-secondary, #e2e8f0);
+            border-radius: 10px;
+            padding: 2px 8px;
+            cursor: pointer;
+
+            /* cyan only as selection tint, per the design system chips */
+            &.is-active {
+                background: rgba(14, 165, 233, 0.08);
+                border-color: rgba(14, 165, 233, 0.3);
+            }
+            &:focus-visible { outline: 2px solid #334155; outline-offset: 1px; }
+        }
+
+        &__recents {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            min-height: 24px;
+        }
+
+        &__recents-label {
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: var(--color-text-secondary, #64748b);
+            margin-right: 2px;
+        }
+
+        &__recent {
+            display: inline-flex;
+            border: 1px solid var(--color-border-secondary, #e2e8f0);
+            background: var(--color-bg-secondary, #fff);
+            border-radius: 5px;
+            padding: 1px 3px;
+            cursor: pointer;
+
+            &:hover { border-color: var(--color-text-secondary, #64748b); }
+            &:focus-visible { outline: 2px solid #334155; outline-offset: 1px; }
+        }
+
+        &__sections {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            /* Air between the tiles and the scrollbar; the stable gutter keeps
+               the tiles from shifting when the bar appears or disappears. */
+            padding-right: 8px;
+            scrollbar-width: thin;
+            scrollbar-gutter: stable;
+        }
+
+        &__section {
+            border-top: 1px solid var(--color-border-secondary, #e2e8f0);
+
+            &:first-child { border-top: none; }
+        }
+
+        &__section-head {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            border: none;
+            background: transparent;
+            padding: var(--space-2, 8px) 2px;
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: var(--color-text-secondary, #64748b);
+            cursor: pointer;
+
+            i { font-size: 10px; }
+
+            /* A search suspends collapse: the head stays legible, not greyed. */
+            &:disabled {
+                cursor: default;
+                opacity: 1;
+                color: var(--color-text-secondary, #64748b);
+            }
+            &:focus-visible { outline: 2px solid #334155; outline-offset: -2px; }
+        }
+
+        &__section-count {
+            margin-left: auto;
+            font-weight: 500;
+            color: var(--color-text-secondary, #64748b);
+        }
+
+        &__tiles {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 6px;
+            padding: 2px 0 var(--space-2, 8px);
+        }
+
+        &__tile {
+            position: relative; /* anchors the provenance tag (D24) */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            background: var(--color-bg-secondary, #fff);
+            border: 1px solid var(--color-border-secondary, #e2e8f0);
+            border-radius: 6px;
+            padding: 6px 2px 4px;
+            cursor: pointer;
+            min-width: 0;
+
+            &:hover { border-color: var(--color-text-secondary, #64748b); }
+            &:focus-visible { outline: 2px solid #334155; outline-offset: 1px; }
+        }
+
+        /* Provenance tag (D24): shown only in mixed families, where the
+           section header cannot name the notation for every tile. */
+        &__tag {
+            position: absolute;
+            top: 2px;
+            right: 4px;
+            font-size: 7px;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: var(--color-text-tertiary, #94a3b8);
+            pointer-events: none;
+        }
+
+        &__tile-name {
+            font-size: 10px;
+            line-height: 1.2;
+            color: var(--color-text-primary, #334155);
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        &__empty {
+            font-size: 10px;
+            color: var(--color-text-secondary, #64748b);
+            padding: var(--space-2, 8px) 0;
+        }
+    }
+
+    &__catalog-foot {
+        margin-top: auto;
+        padding-top: var(--space-2, 8px);
+        border-top: 1px solid var(--color-border-secondary);
+        font-size: 10px;
+        color: var(--color-text-secondary, #64748b);
+    }
+
+    /* ── main pane: preview strip + mini-bar + panel ── */
+
+    &__main {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-3, 12px);
+        padding: var(--space-3, 12px) var(--space-4, 16px);
+        overflow-y: auto;
+    }
+
+    &__preview {
+        position: relative;
+        height: 132px;
+        flex: none;
+        background: var(--color-bg-primary, #f8fafc);
+        border: 1px solid var(--color-border-secondary, #e2e8f0);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    &__preview-tag {
+        position: absolute;
+        left: 10px;
+        top: 8px;
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: var(--color-text-secondary, #64748b);
+    }
+
+    &__preview-stage {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    &__preview-label {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--color-text-primary, #334155);
+        pointer-events: none;
+        text-align: center;
+        padding: 0 var(--space-2, 8px);
+        overflow: hidden;
+    }
+
+    &__preview-empty {
+        font-size: 11px;
+        color: var(--color-text-secondary, #64748b);
+    }
+
+    /* D8 wiring: caption of the realistic preview, bottom-right corner of the
+       fixed-height strip as in the mockup (10px, mono, secondary). */
+    &__preview-caption {
+        position: absolute;
+        right: 10px;
+        bottom: 8px;
+        font-size: 10px;
+        color: var(--color-text-secondary, #64748b);
+        font-family: var(--font-mono, 'IBM Plex Mono', Monaco, Consolas, monospace);
+    }
+
+    &__tabs {
+        display: flex;
+        gap: var(--space-1, 4px);
+        border-bottom: 1px solid var(--color-border-secondary);
+        flex: none;
+    }
+
+    &__tab {
+        border: none;
+        background: transparent;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--color-text-secondary, #64748b);
+        padding: var(--space-1, 4px) var(--space-2, 8px) var(--space-2, 8px);
+        border-bottom: 2px solid transparent;
+        cursor: pointer;
+
+        /* cyan as active indicator only, never as a background */
+        &.is-active {
+            color: var(--color-text-primary);
+            border-bottom-color: #0ea5e9;
+        }
+        &:focus-visible { outline: 2px solid #334155; outline-offset: -2px; }
+    }
+
+    &__panel {
+        flex: 1;
+        min-height: 0;
+    }
+
+    /* White main pane (ratified 2026-08-15). The hosted panel root
+       (`section.properties-tab.properties-panel`, VertexAuthoringPanel) carries
+       `background-color: #f8fafc !important` from its rail context
+       (_form-system.scss). Same-importance conflict resolves by specificity,
+       so this scoped rule wins here and the rail keeps its gray. */
+    &__panel .properties-tab {
+        background-color: var(--color-bg-secondary, #fff) !important;
+    }
+
+    /* Two-column anatomy (mockup scene): grid over the FormSections of the
+       Appearance body, Symbol identity spanning full width. Addressed through
+       the stable ir-tab-body classes (FormSection classes are CSS modules).
+       The inline display:none of an inactive body wins over this rule, so the
+       R-A visibility mechanism is untouched. Modal context only: the panel
+       stays single-column everywhere else. */
+    .ir-tab-body--appearance {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--space-1, 4px) 28px;
+        align-items: start;
+
+        > section:first-child { grid-column: 1 / -1; }
+    }
+
+    &__footer {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2, 8px);
+        padding: var(--space-3, 12px) var(--space-4, 16px);
+        border-top: 1px solid var(--color-border-secondary);
+    }
+
+    &__hint {
+        font-size: 11px;
+        color: var(--color-text-secondary, #64748b);
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    &__footer .btn { margin-left: auto; }
+}

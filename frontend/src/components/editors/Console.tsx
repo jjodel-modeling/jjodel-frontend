@@ -1,10 +1,12 @@
 import {
     DEdge,
     DGraphElement,
+    DModel,
     Dictionary,
     DState,
     GObject, Info,
     LGraphElement,
+    LModel,
     LModelElement,
     Log,
     LPointerTargetable,
@@ -21,17 +23,198 @@ import {connect} from 'react-redux';
 
 import './style.scss'; // <-- tenuto per retro-compatibilità ma dovrebbe sparire
 import './editors.scss'; // <-- stile comune a tutte le tab editor (idealmente da tenere leggero)
-import './console.scss'; // <-- stile di questa tab
+import './console.scss'; // <-- stile di questa tab (old styles, kept for compatibility)
+import './Console/console-tab.scss'; // <-- new Console v2 styles
 import ReactDOM from "react-dom";
 import {Empty} from "./Empty";
 import {Tooltip} from "../forEndUser/Tooltip";
 
 import { createRoot } from "react-dom/client";
 import {hiddenkeys} from "../../joiner/proxy";
-const Convert = require('ansi-to-html');
+import Convert from 'ansi-to-html';
+import { UpgradePrompt } from '../ModeSystem';
+
+// Import new Console components
+import { ConsoleInput } from './Console/ConsoleInput';
+import { ConsoleHistory } from './Console/ConsoleHistory';
+import { ConsoleToolbar } from './Console/ConsoleToolbar';
+import { CollapsibleContextKeys } from './Console/CollapsibleContextKeys';
+import { CollapsibleShortcuts } from './Console/CollapsibleShortcuts';
+import type { ConsoleEntryData } from './Console/ConsoleEntry';
+import { SimpleFooterResizeHandle } from '../SimpleFooterResizeHandle';
+import type { ConsoleLanguage } from './Console/LanguageToggle';
+
+// Import JjEL for expression evaluation
+import { jjelEval } from '../../jjel';
+import { extractAttributeValues } from '../../jjel/evaluator/modelContext';
+import DockManager from '../abstract/DockManager';
+
+/**
+ * Flatten a Jjodel proxy's properties into a plain object for use as JjEL context.
+ *
+ * The Jjodel L* proxy system uses ES6 Proxy with a `get` trap that dispatches to
+ * `get_<propName>()` methods. The proxy's `ownKeys` trap returns merged keys (D* own +
+ * L* getter names), but there is no `getOwnPropertyDescriptor` trap, so `Object.keys()`
+ * and the spread operator miss all L* properties (like `classes`, `attributes`, etc.).
+ *
+ * Fix: use `Reflect.ownKeys()` which calls the `ownKeys` trap directly without filtering
+ * through `getOwnPropertyDescriptor`, then access each key via the proxy's `get` trap.
+ */
+function flattenProxyContext(proxyObj: any): Record<string, any> {
+    const result: Record<string, any> = {};
+
+    // Reflect.ownKeys calls the proxy's ownKeys trap, which returns merged D* + L* keys
+    // (excluding get_*/set_* prefixed methods). Unlike Object.keys(), it does NOT filter
+    // through getOwnPropertyDescriptor, so L* getter properties like `classes` are included.
+    let keys: (string | symbol)[];
+    try {
+        keys = Reflect.ownKeys(proxyObj);
+    } catch {
+        keys = Object.keys(proxyObj);
+    }
+
+    for (const key of keys) {
+        if (typeof key === 'symbol') continue;
+        if (key.startsWith('__') || key === '_proxied') continue;
+        try { result[key] = proxyObj[key]; } catch { /* skip */ }
+    }
+
+    return result;
+}
+
+/**
+ * Get all accessible property names from a Jjodel proxy (D* own + L* getters).
+ * Uses Reflect.ownKeys for the same reason as flattenProxyContext.
+ */
+function getProxyPropertyNames(proxyObj: any): string[] {
+    const keys = new Set<string>();
+
+    let allKeys: (string | symbol)[];
+    try {
+        allKeys = Reflect.ownKeys(proxyObj);
+    } catch {
+        allKeys = Object.keys(proxyObj);
+    }
+
+    for (const key of allKeys) {
+        if (typeof key === 'symbol') continue;
+        if (!key.startsWith('_')) keys.add(key);
+    }
+
+    return Array.from(keys);
+}
 
 let ansiConvert = (window as any).ansiConvert;
 if (!ansiConvert) (window as any).ansiconvert = ansiConvert = new Convert();
+
+/**
+ * Safe JSON.stringify that handles circular references and depth limits.
+ * Prevents infinite loops when serializing Jjodel proxy objects.
+ */
+function safeStringify(obj: any, maxDepth: number = 20): string {
+    const seen = new WeakSet();
+    let iterationCount = 0;
+    const maxIterations = 10000; // Safety limit
+
+    function replacer(key: string, value: any, depth: number): any {
+        iterationCount++;
+        if (iterationCount > maxIterations) {
+            console.error('[safeStringify] Max iterations exceeded at key:', key, 'depth:', depth);
+            return '[Max iterations exceeded]';
+        }
+
+        // Log progress every 1000 iterations
+        if (iterationCount % 1000 === 0) {
+            // console.log('[safeStringify DEBUG] iterations:', iterationCount, 'depth:', depth, 'key:', key);
+        }
+
+        // Handle primitives
+        if (value === null || typeof value !== 'object') {
+            return value;
+        }
+
+        // Depth limit check
+        if (depth > maxDepth) {
+            return '[Max depth exceeded]';
+        }
+
+        // Circular reference check
+        if (seen.has(value)) {
+            return '[Circular]';
+        }
+
+        // Skip proxy internals and hidden keys
+        if (key.startsWith('__') || key === '_proxied') {
+            return '[Internal]';
+        }
+
+        seen.add(value);
+
+        // Handle arrays
+        if (Array.isArray(value)) {
+            if (value.length > 50) {
+                // Truncate large arrays
+                const truncated = value.slice(0, 50).map((item, i) =>
+                    replacer(String(i), item, depth + 1)
+                );
+                truncated.push(`... and ${value.length - 50} more items`);
+                return truncated;
+            }
+            return value.map((item, i) => replacer(String(i), item, depth + 1));
+        }
+
+        // Handle objects
+        const result: Record<string, any> = {};
+        let keys: string[];
+        try {
+            keys = Object.keys(value);
+        } catch (e) {
+            return '[Error getting keys]';
+        }
+
+        // Limit number of keys for very large objects
+        const maxKeys = 50;
+        const keysToProcess = keys.slice(0, maxKeys);
+
+        for (const k of keysToProcess) {
+            // Skip known problematic proxy keys
+            if (k.startsWith('__') || k === '_proxied' || k === 'json' || k === '__raw') {
+                result[k] = '[Skipped]';
+                continue;
+            }
+
+            try {
+                const propValue = value[k];
+                // Skip functions and symbols
+                if (typeof propValue === 'function' || typeof propValue === 'symbol') {
+                    result[k] = `[${typeof propValue}]`;
+                } else {
+                    result[k] = replacer(k, propValue, depth + 1);
+                }
+            } catch (e) {
+                result[k] = '[Error accessing property]';
+            }
+        }
+
+        if (keys.length > maxKeys) {
+            result['...'] = `${keys.length - maxKeys} more properties`;
+        }
+
+        return result;
+    }
+
+    try {
+        // console.log('[safeStringify DEBUG] Starting...');
+        const processed = replacer('', obj, 0);
+        // console.log('[safeStringify DEBUG] Processing done, total iterations:', iterationCount);
+        const jsonStr = JSON.stringify(processed, null, 2);
+        // console.log('[safeStringify DEBUG] JSON.stringify done');
+        return jsonStr;
+    } catch (e) {
+        console.error('[safeStringify DEBUG] Error:', e);
+        return `[Stringify error: ${e}]`;
+    }
+}
 
 class ThisState{
     expression: string = '';
@@ -40,6 +223,12 @@ class ThisState{
     expressionHistory: string[] = [''];
     initialState: boolean = true;
     time: number = 0;
+    // New state for improved console
+    entries: ConsoleEntryData[] = [];
+    // Footer resize state
+    footerHeight: number = 200; // Default footer height
+    // Language toggle state
+    language: ConsoleLanguage = 'jjel';
 }
 
 // trasformato in class component così puoi usare il this nella console. e non usa accidentalmente window come contesto
@@ -47,16 +236,47 @@ class ThisState{
 function fixproxy(output: any/*but not array*/, addDKeys: boolean = true, addLKeys: boolean = true):
     { output: any, shortcuts?: GObject<'L singleton'>, comments?: Dictionary<string, string | {type:string, txt:string}>} {
 
+    // console.log('[fixproxy DEBUG] Starting, type:', typeof output, 'isArray:', Array.isArray(output));
+
     let ret: ReturnType<typeof fixproxy> = {output};
     if (!output) return ret;
 
+    // Handle arrays of proxies
+    if (Array.isArray(output)) {
+        // console.log('[fixproxy DEBUG] Processing array of', output.length, 'items');
+        // Don't try to convert each proxy in the array - just return simplified info
+        const simplified = output.slice(0, 50).map((item, i) => {
+            if (item?.__isProxy) {
+                try {
+                    // Just get basic info, don't call .json which might loop
+                    return {
+                        _index: i,
+                        _type: item.className || 'unknown',
+                        id: item.id,
+                        name: item.name
+                    };
+                } catch (e) {
+                    return { _index: i, _error: 'Could not read proxy' };
+                }
+            }
+            return item;
+        });
+        if (output.length > 50) {
+            simplified.push({ _truncated: true, _totalItems: output.length });
+        }
+        // console.log('[fixproxy DEBUG] Array simplified');
+        return { output: simplified };
+    }
+
     let proxy: LPointerTargetable | undefined;
     if (output?.__isProxy) {
+        // console.log('[fixproxy DEBUG] Found proxy, accessing .json...');
         proxy = output;
         output = output.json; //.__raw; Object.fromEntries(Object.getOwnPropertyNames(p).map(k => [k, p[k]]));
+        // console.log('[fixproxy DEBUG] .json accessed');
     } else proxy = undefined;
 
-    console.log('console short in 1', {output, proxy, ret, addLKeys, iff:addLKeys && proxy});
+    // console.log('[fixproxy DEBUG] Checkpoint 1', {output: typeof output, proxy: !!proxy, addLKeys});
 
     switch (typeof output) {
         case "function": {
@@ -72,7 +292,7 @@ function fixproxy(output: any/*but not array*/, addDKeys: boolean = true, addLKe
                 let Lsingleton: GObject<'L singleton'> = (RuntimeAccessibleClass.get(output?.className)?.logic?.singleton) || {};
                 let comments: Dictionary<string, string | {type:string, txt:string}> = {};
                 ret.shortcuts = {...Lsingleton};
-                console.log('console short in 2', {output, rett:{...ret, shortt:{...(ret.shortcuts||{})}}, Lsingleton, DClass:RuntimeAccessibleClass.get(output?.className), LClass:RuntimeAccessibleClass.get(output?.className)?.logic});
+                // console.log('console short in 2', {output, rett:{...ret, shortt:{...(ret.shortcuts||{})}}, Lsingleton, DClass:RuntimeAccessibleClass.get(output?.className), LClass:RuntimeAccessibleClass.get(output?.className)?.logic});
                 ret.comments = comments;
                 for (let key in output) {
                     if (Lsingleton["__info_of__" + key]) comments[key] = Lsingleton["__info_of__" + key];
@@ -100,7 +320,7 @@ function fixproxy(output: any/*but not array*/, addDKeys: boolean = true, addLKe
                             break;
                     }
                 }
-                console.log('console short in 3', {ret});
+                // console.log('console short in 3', {ret});
 
             }
             break;
@@ -115,340 +335,687 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
     lastNode?: Pointer<DGraphElement>;
     constructor(props: AllProps) {
         super(props);
-        this.state = new ThisState();
-        this.change = this.change.bind(this);
-        this.change(undefined);
+        // Load footer height from localStorage
+        const storedHeight = localStorage.getItem('jjodel_console_footer_height');
+        const footerHeight = storedHeight ? parseInt(storedHeight, 10) : 200;
+
+        // Load language preference from localStorage
+        const storedLanguage = localStorage.getItem('jjodel_console_language') as ConsoleLanguage | null;
+        const language: ConsoleLanguage = storedLanguage === 'js' ? 'js' : 'jjel';
+
+        const state = new ThisState();
+        state.footerHeight = !isNaN(footerHeight) && footerHeight >= 100 && footerHeight <= 400 ? footerHeight : 200;
+        state.language = language;
+
+        this.state = state;
+        this.handleExecute = this.handleExecute.bind(this);
+        this.handleClearConsole = this.handleClearConsole.bind(this);
+        this.handleInsertContextKey = this.handleInsertContextKey.bind(this);
+        this.handleInsertCode = this.handleInsertCode.bind(this);
+        this.handleFooterHeightChange = this.handleFooterHeightChange.bind(this);
+        this.handleLanguageChange = this.handleLanguageChange.bind(this);
     }
     private _context: GObject = {};
-    change(evt?: React.ChangeEvent<HTMLTextAreaElement>) {
-        if (!this) return; // component being destroyed and remade after code hot update
-        let expression0: string = (evt ? evt.target.value : this.state.expression) || '';
-        let expression: string = expression0.trim();
-        let output;
-        // let context = {...this.props, props: this.props}; // makeEvalContext(this.props as any, {} as any);
 
-        let nid = this.props.node?.id;
-        let tn = transientProperties.node[nid as string];
-        if (nid && tn) {
-            // let component = GraphElementComponent.map[this.props.node.id];
-            this._context = {...tn.viewScores[tn.mainView.id].evalContext};
-            this._context.fromcomponent = true;
-        }
-        else {
-            this._context = {...this.props, props: this.props};
-        }
-        try {
-            // if (expression === 'this') expression = 'data'; // it does a mess by taking a L-singleton with all his __info_of__ stuff
-            if (expression === 'this') output = this._context;
-            else output = U.evalInContextAndScope(expression || '<span class="console-msg">undefined</span>', this._context, this._context);
-        }
-        catch (e: any) {
-            console.error("console error", e);
-            // output = '<span class="console-error">Invalid Syntax!</span> <span class="console-error-msg">' + e.toString() + '<span>' ; }
-            output = '<span class="console-error-msg"><i class="bi bi-exclamation-square-fill"></i><span>' + e.toString() + '</span></span>' ; }
-        this.setState({expression:expression0, output });
+    // Footer resize handlers
+    // Footer resize handler - called by SimpleFooterResizeHandle
+    private handleFooterHeightChange(height: number): void {
+        this.setState({ footerHeight: height });
+        localStorage.setItem('jjodel_console_footer_height', height.toString());
     }
 
-    // textarea: HTMLTextAreaElement | null = null;
-    getClickableEntry(jsxComments: Dictionary<string, ReactNode>, strcomments: Dictionary<string, Info>, expression: string, k: string, arr?: any): JSX.Element{
-        let isReactNode = !!jsxComments[k];
-        let infoof_tooltip: ReactNode;
-        if (isReactNode){
-            infoof_tooltip = <span id={'console_output_comment_key_' + k} className='my-tooltip output-comment tooltip-msg'/>;//jsxComments[k];
+    // Language toggle handler
+    private handleLanguageChange(language: ConsoleLanguage): void {
+        this.setState({ language });
+        localStorage.setItem('jjodel_console_language', language);
+    }
+
+    // Generate unique ID for console entries
+    private generateEntryId(): string {
+        return `entry_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    }
+
+    // Handle special commands
+    private handleCommand(command: string): { output: string; isError: boolean; isHelp?: boolean } | null {
+        const cmd = command.toLowerCase().trim();
+        const { language } = this.state;
+
+        // /clear - Clear console
+        if (cmd === '/clear' || cmd === '/cls') {
+            this.handleClearConsole();
+            return null; // Don't add to history
+        }
+
+        // /help - Show available commands (with clickable commands)
+        if (cmd === '/help' || cmd === '/commands') {
+            return { output: '', isError: false, isHelp: true };
+        }
+
+        // /history - Show command history
+        if (cmd === '/history') {
+            const history = this.state.expressionHistory.filter(h => h.trim() !== '');
+            if (history.length === 0) {
+                return { output: 'No command history yet.', isError: false };
+            }
+            const historyText = history.map((h, i) => `${i + 1}. ${h}`).join('\n');
+            return { output: `Command History:\n${historyText}`, isError: false };
+        }
+
+        // /context - Show available context keys
+        if (cmd === '/context') {
+            const contextKeysInfo = `Available Context Keys:
+
+Model Data:
+  data            - Current metamodel/model data
+  packages        - All packages in the model
+  classes         - All classes in the model
+  enumerations    - All enumerations in the model
+
+Selection:
+  node            - Currently selected node
+  selection       - Array of selected elements
+  selectedId      - ID of selected element
+
+View & UI:
+  view            - Current view configuration
+  zoom            - Current zoom level
+  canvas          - Canvas dimensions and state
+
+Component:
+  component       - React component instance
+  state           - Component state
+  props           - Component props
+
+Utilities:
+  _               - Lodash utility library
+  U               - Jjodel utility functions
+
+Tip: Click any key in the "Context Keys" section below to insert it into the console.`;
+            return { output: contextKeysInfo, isError: false };
+        }
+
+        // /examples - Show usage examples (language-aware)
+        if (cmd === '/examples') {
+            const examples = language === 'jjel'
+                ? `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+JjEL Examples (Jjodel Expression Language)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Navigation:
+  data.classes                    - All classes
+  data.classes.first.attributes   - First class's attributes
+  node.parent                     - Parent element
+
+Filtering (lambda with colon):
+  data.classes.filter(c: c.abstract)
+  data.classes.filter(c: c.name.startsWith("My"))
+  data.classes.filter(c: c.attributes.size > 0)
+
+Mapping:
+  data.classes.map(c: c.name)
+  data.classes.map(c: c.name + " (" + c.attributes.size + " attrs)")
+
+Chaining:
+  data.classes.filter(c: c.abstract).map(c: c.name)
+  data.classes.filter(c: not c.abstract and c.attributes.size > 0).map(c: c.name)
+
+Aggregation:
+  data.classes.size
+  data.classes.filter(c: c.abstract).size
+  data.classes.map(c: c.attributes.size).sum()
+
+Conditionals (if-then-else):
+  if data.classes.size > 0 then "has classes" else "empty"
+  if node.abstract then "abstract" else "concrete"
+  data.classes.map(c: if c.abstract then c.name.toUpper else c.name)
+
+Logical (and, or, not):
+  data.classes.filter(c: c.abstract and c.attributes.size > 0)
+  data.classes.filter(c: not c.abstract or c.name == "Base")
+
+Null-safe:
+  node.parent?.name
+  node.parent?.name ?? "no parent"
+  node.parent?.parent?.name ?? "root"
+
+Type Check:
+  data.classes.filter(c: c is DClass)
+  node is DClass
+
+Inheritance:
+  data.classes.filter(c: c.superclass != null).map(c: c.name)
+  data.classes.map(c: c.name + " → " + (c.superclass?.name ?? "root"))
+  data.classes.filter(c: c.allSuperclasses.size > 1)
+
+String Operations:
+  node.name.toUpper
+  node.name.toLower
+  data.classes.map(c: c.name.substring(0, 3))
+
+Collection Operations:
+  data.classes.first
+  data.classes.last
+  data.classes.take(3).map(c: c.name)
+  data.classes.sortBy(c: c.name).map(c: c.name)
+  data.classes.map(c: c.name).distinct`
+                : `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+JavaScript Examples
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Navigation:
+  data.classes                    - All classes
+  data.classes[0].attributes      - First class's attributes
+  node.parent                     - Parent element
+
+Filtering:
+  data.classes.filter(c => c.abstract)
+  data.classes.filter(c => c.name.startsWith("My"))
+  data.classes.filter(c => c.attributes.length > 0)
+
+Mapping:
+  data.classes.map(c => c.name)
+  data.classes.map(c => ({ name: c.name, attrs: c.attributes.length }))
+
+Chaining:
+  data.classes.filter(c => c.abstract).map(c => c.name)
+  data.classes.flatMap(c => c.attributes).map(a => a.name)
+
+Aggregation:
+  data.classes.length
+  data.classes.reduce((sum, c) => sum + c.attributes.length, 0)
+
+Conditional (ternary):
+  data.classes.length > 0 ? "has classes" : "empty"
+  node.abstract ? "abstract" : "concrete"
+
+Logical (&&, ||, !):
+  data.classes.filter(c => c.abstract && c.attributes.length > 0)
+  data.classes.filter(c => !c.abstract || c.name === "Base")
+
+Null-safe:
+  node?.parent?.name
+  node?.parent?.name ?? "no parent"
+
+Finding:
+  data.classes.find(c => c.name === "MyClass")
+  data.classes.some(c => c.abstract)
+  data.classes.every(c => c.attributes.length > 0)
+
+Sorting:
+  data.classes.sort((a, b) => a.name.localeCompare(b.name))
+  [...data.classes].sort((a, b) => b.attributes.length - a.attributes.length)
+
+Debugging:
+  // console.log(data)
+  JSON.stringify(node, null, 2)`;
+            return { output: examples, isError: false };
+        }
+
+        // /shortcuts - Show keyboard shortcuts
+        if (cmd === '/shortcuts') {
+            const shortcuts = `Keyboard Shortcuts:
+
+Command Execution:
+  Enter                  - Execute current command
+  Shift+Enter            - Insert new line (multi-line mode)
+  Ctrl/Cmd+Enter         - Execute (alternative)
+
+History Navigation:
+  ↑ (Arrow Up)           - Previous command in history
+  ↓ (Arrow Down)         - Next command in history
+
+Autocomplete:
+  Tab                    - Accept suggestion
+  Esc                    - Dismiss suggestions
+
+Editing:
+  Ctrl/Cmd+A             - Select all text
+  Ctrl/Cmd+C             - Copy selected text
+  Ctrl/Cmd+V             - Paste text
+  Ctrl/Cmd+Z             - Undo
+
+Console Management:
+  Ctrl/Cmd+L             - Clear console
+  Esc (when empty)       - Clear input field
+
+Tip: Click the keyboard icon in the toolbar for quick reference.`;
+            return { output: shortcuts, isError: false };
+        }
+
+        // Unknown command
+        if (cmd.startsWith('/')) {
+            return { output: `Unknown command: ${cmd}\nType /help to see available commands.`, isError: true };
+        }
+
+        return null; // Not a command, execute as JavaScript
+    }
+
+    // Handle code execution
+    private handleExecute(code: string): void {
+        if (!code.trim()) return;
+
+        // Check if it's a special command
+        if (code.trim().startsWith('/')) {
+            const commandResult = this.handleCommand(code.trim());
+
+            if (commandResult === null) return; // Command handled without output (like /clear)
+
+            // Add command entry
+            const commandEntry: ConsoleEntryData = {
+                id: this.generateEntryId(),
+                type: 'command',
+                timestamp: new Date(),
+                content: code,
+                input: code
+            };
+
+            // Add result entry
+            let resultEntry: ConsoleEntryData;
+
+            if (commandResult.isHelp) {
+                // Help command with clickable commands
+                resultEntry = {
+                    id: this.generateEntryId(),
+                    type: 'help',
+                    timestamp: new Date(),
+                    content: '',
+                    input: code,
+                    collapsed: false,
+                    onCommandClick: (cmd: string) => this.handleExecute(cmd),
+                    language: this.state.language
+                };
+            } else {
+                // Regular command output
+                resultEntry = {
+                    id: this.generateEntryId(),
+                    type: commandResult.isError ? 'error' : 'info',
+                    timestamp: new Date(),
+                    content: commandResult.output,
+                    input: code,
+                    collapsed: false
+                };
+            }
+
+            this.setState(prevState => ({
+                entries: [...prevState.entries, commandEntry, resultEntry], // Append for chronological order (newest at bottom)
+                expression: '',
+                expressionHistory: [...prevState.expressionHistory, code],
+                expressionIndex: prevState.expressionHistory.length
+            }), () => {
+                // Auto-scroll to show new result (wait for DOM update)
+                setTimeout(() => {
+                    const lastEntry = document.querySelector('.console-history .console-entry:last-child');
+                    if (lastEntry) {
+                        lastEntry.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                    }
+                }, 50);
+            });
+
+            return;
+        }
+
+        // Add command entry with language indicator
+        const commandEntry: ConsoleEntryData = {
+            id: this.generateEntryId(),
+            type: 'command',
+            timestamp: new Date(),
+            content: code,
+            input: code,
+            language: this.state.language
+        };
+
+        // Execute code based on selected language
+        let output: any;
+        let hasError = false;
+
+        if (this.state.language === 'jjel') {
+            // Execute as JjEL expression
+            try {
+                // console.log('[JjEL DEBUG] 1. Starting parse for:', code);
+                // Build implicit context: flatten data properties (including prototype getters)
+                // as top-level variables so users can write `name` instead of `data.name`.
+                // Explicit context keys (data, node, view) override any same-named data properties.
+                // For M1 instances: also extract attribute values from $attrName.value pattern.
+                const dataObj = this._context.data;
+                let jjelContext: Record<string, any>;
+                if (dataObj && typeof dataObj === 'object' && !Array.isArray(dataObj)) {
+                    const flattened = flattenProxyContext(dataObj);
+                    // Extract M1 attribute values (overrides flattened props like DObject.name)
+                    extractAttributeValues(dataObj, flattened);
+                    jjelContext = { ...flattened, ...this._context };
+                } else {
+                    jjelContext = this._context;
+                }
+                // jjelEval throws on parse/evaluation errors, returns the value directly on success
+                output = jjelEval(code, jjelContext);
+                // console.log('[JjEL DEBUG] 2. jjelEval completed, output type:', typeof output);
+                // console.log('[JjEL DEBUG] 2b. output isProxy:', output?.__isProxy);
+                // console.log('[JjEL DEBUG] 2c. output isArray:', Array.isArray(output));
+            } catch (e: any) {
+                console.error("[JjEL DEBUG] ERROR in jjelEval:", e);
+                // Extract JjEL-specific error message
+                const errorMessage = e.message || e.toString();
+                output = errorMessage.replace(/^JjEL (parse |evaluation )?error: /, '');
+                hasError = true;
+            }
         } else {
-            let str = (strcomments[k]?.txt as string)||'';
-            if (str) infoof_tooltip = <div className="my-tooltip output-comment" dangerouslySetInnerHTML={{__html:str}}/>;
-            else infoof_tooltip = null;
-        }
-        if (k === 'father') console.log('jsx comment', {k, infoof_tooltip, jsxComments:{...jsxComments}});
-        if (k === 'isM1') console.log('jsx comment', {k, infoof_tooltip, jsxComments:{...jsxComments}});
-        return <li key={k} onClick={()=> {
-            let isnum = !isNaN(+k);
-            let isregular: boolean = isnum ? true : /\w/.test(k);
-            let append: string;
-            if (isnum) append = '['+k+']';
-            else if (isregular) append = '.'+k;
-            else append = '['+JSON.stringify(k)+']';
-            this.setState({expression: (expression ? expression + append : k)}/*, ()=> { this.change(); }*/);
-        }}>{k}{arr && arr[k] || null}{infoof_tooltip}</li>;
-    }
-
-    outputhtml: HTMLElement | null = null;
-    setState(s: GObject<Partial<ThisState>> | null, callback?: (...a:any) => any): void{
-        if (s){
-            if (s.initialState) {
-                delete s.initialState;
-                return super.setState(s as any);
-            }
-            let s0: GObject<ThisState> = {...s} as any;
-            let olds = this.state;
-            if (s0.expressionIndex !== undefined && s0.expressionIndex !== olds.expressionIndex) s.expression = olds.expressionHistory[s0.expressionIndex];
-            if (s0.expression && s0.expression !== olds.expression) {
-                let time = new Date().getTime();
-                let oldtime = olds.time;
-                Log.exDev(s0.expressionIndex !== undefined, 'cannot set both index and expression together');
-                let i = s.expressionIndex ?? olds.expressionIndex;
-                let slice: string[];
-                if (time - oldtime < 1000) {
-                    slice = olds.expressionHistory.slice(0, i);
-                }
-                else {
-                    slice = olds.expressionHistory.slice(0, i+1);
-                    s.expressionIndex = i + 1;
-                }
-                s.time = time;
-                s.expressionHistory = [...slice, s0.expression];
-                console.log('setstate', {olds: {...olds}, s, slice, i, s0});
-            }
-            if (s.expression !== olds.expression && !('output' in s)) {
-                let call0 = callback;
-                callback = () => { call0?.(); this.change(); }
+            // Execute as JavaScript (existing behavior)
+            try {
+                const expression = code.trim() === 'this' ? 'data' : code;
+                if (expression === 'this') output = this._context;
+                else output = U.evalInContextAndScope(expression, this._context, this._context);
+            } catch (e: any) {
+                console.error("console error", e);
+                output = e.toString();
+                hasError = true;
             }
         }
-        super.setState(s as any, callback);
-    }
-    render(){
-        /*const [expression, setExpression] = useStateIfMounted('data');
-        const [output, setOutput] = useStateIfMounted('');*/
 
-        if (!this.props.node) return <Empty msg={"Select a node."} />;
-        let postprocess: boolean = true;
-        let expression = this.state.expression.trim();
-        if (expression === 'this') expression = 'data';
-        const data = this.props.data;
-        if (this.lastNode !== this.props.node.id) this.change(); // force reevaluation if selected node changed
-        this.lastNode = this.props.node.id;
-
-        /*display history*/
-        let history = this.state.expressionHistory||[];
-        let hlen = history.length;
-        let hindex = this.state.expressionIndex;
-        const entries = 10;
-        let max = Math.floor(Math.min(hindex+entries/2, hlen));
-        let min = Math.floor(hindex + entries - Math.max((hlen-max), entries/2));
-        history = history.slice(min, max);
-        console.log('chistory', {min, max, oldh: this.state.expressionHistory, h: history, selected: history[entries/2]});
-
-
-        let outstr;
-        // try { outstr = U.circularStringify(this.state.output, (key, value)=> { return value.__isProxy ? value.name : value; }, "\t", 1) }
-        // (window as any).inspect = util.inspect;
-        // (window as any).tmpp = this.state.output;
-        let ashtml: boolean
-        let output: any = this.state.output;
-        let shortcuts: GObject<'L singleton'> | undefined = undefined;
-        let comments: Dictionary<string, string | {type:string, txt:string}> | undefined = undefined;
-        let jsxComments: Dictionary<string, JSX.Element[]> = {};
-        let shortcutsjsx: ReactNode = undefined;
+        // Process output
+        let contentStr: string;
         try {
-            if (Array.isArray(output)){
-                comments = {"separator": '<span>Similar to <a href={"https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/join"}>Array.join(separator)</a>' +
-                        ', but supports array of JSX nodes and JSX as separator argument.</span>'};
-                shortcuts = {"separator": ""};
-                output = output.map(o => fixproxy(o).output);
+            // console.log('[JjEL DEBUG] 3. Starting fixproxy...');
+            const processed = fixproxy(output);
+            // console.log('[JjEL DEBUG] 4. fixproxy completed');
+            const finalOutput = processed.output;
+            // console.log('[JjEL DEBUG] 5. finalOutput type:', typeof finalOutput);
+
+            if (typeof finalOutput === 'object' && finalOutput !== null) {
+                // console.log('[JjEL DEBUG] 6. Starting safeStringify...');
+                contentStr = safeStringify(finalOutput);
+                // console.log('[JjEL DEBUG] 7. safeStringify completed, length:', contentStr.length);
+            } else if (finalOutput === undefined) {
+                contentStr = 'undefined';
+            } else if (finalOutput === null) {
+                contentStr = 'null';
+            } else {
+                contentStr = String(finalOutput);
             }
-            else {
-                console.log('console short pre', {output});
-                let ret = fixproxy(output);
-                output = ret.output;
-                comments = ret.comments;
-                shortcuts = ret.shortcuts;
-                console.log('console short', {shortcuts, ret, output});
-            }
-            // todo: as i fix the displaying of a LViewElement without replacing it with __raw,
-            //  i will fix window, component and props displaying too i think they crash for props.data, props.view...
-            if (output?._reactInternals) {
-                output = {"React.Component": {props:"...navigate to expand...", state:"", _isMounted:output._isMounted}}
-            }
-            outstr = '<h4>Result</h4><section class="group result-container"><div class="output-row" tabindex="984">' + U.objectInspect(output)+"<span>";
-            let commentsPopup = "";
-            if (shortcuts || comments){
-                // if(!shortcuts) shortcuts = {};
-                if (!comments) comments = {};
-                for (let commentKey in comments){
-                    let commentVal: any = comments[commentKey];
-                    let txt = commentVal?.txt;
-                    if (txt && typeof txt !== "string") {// only for infoof that have txt = reactNode
-                        // try to inject jsx
-                        jsxComments[commentKey] = txt;
-                        txt = "<span id='console_output_comment_" + commentKey + "'  class='tooltip-msg'/>";
-                        // fallback read text, that should go deep iteration, but 1 level deep should be enough.
-                        // let arr: any[] = (Array.isArray(txt?.props?.children) ? txt.props.children : (txt.props.children ? [txt.props.children] : []));
-                        // txt = arr.map(e => typeof e === "string" ? e : e?.props?.children + '' || '').join("");
-                    }
-                    if (commentVal?.type) commentVal = "\t\t<span class='console-msg'>" + (commentVal?.type?.cname || commentVal.type)+"</span>"; // + " ~ " + txt;
-                    // warning: unicode char but should not make a problem. 𐀹
-                    commentVal += '<div class="output-comment my-tooltip">' + txt + '</div></div><div class="output-row" tabindex="984">'
-
-                    if (postprocess){
-                        let commentKeyEscaped = U.multiReplaceAll(commentKey, ["$", "-"], ["\\$", "\\-"]); // _ should be safe, .-,?^ not happening?
-
-                        let regexp = new RegExp("^({?\\s*" +commentKeyEscaped+":.*)$", "gm");
-                        let regexpCloseTags = new RegExp("(\\<span style\\=\"color\\:\\#)", "gm");
-                        outstr = U.replaceAll(outstr, "$", "£");
-                        outstr = outstr.replace(regexp, "$1" + commentVal);
-                        outstr = outstr.replace(regexpCloseTags,  "</span>$1");
-                        outstr = U.replaceAll(outstr, "£", "$");
-                    }
-                }
-
-
-                /*if (shortcuts) outstr += "</div></section><br><br>" +
-                    "<h4>Shortcuts</h4><section class='group shortcuts-container'><div class=\"output-row\" tabindex=\"984\">" + U.objectInspect(shortcuts)+"</section>";
-                */
-
-                // warning: unicode char but should not make a problem.
-                // outstr = U.replaceAll( outstr, '𐀹,\n', '],</span>\n</div><div class="output-row" tabindex="984"><span style="color:#000">');
-                windoww.outstr = outstr.substring(0, 500);
-                windoww.outstrr = outstr;
-                // [length]: <span style="color:#A50">1<span style="color:#000"> ]
-                if (postprocess){
-                    // let closetagsafely = '</span>';
-                    let closetagsafely = '</span></span></span></span></span></span></span></span></span></span>';
-
-                    outstr = U.replaceAll( outstr, '<span style="color:#000">,\n',
-                        closetagsafely+'\n</div>' + '<div class="output-row" tabindex="984"><span class="console-msg" style="color:#000">');
-
-                    outstr = U.replaceAll( outstr, '<span style="color:#000"> ],\n',
-                        ']</span>\n</div>' + '<div class="output-row" tabindex="984"><span class="console-msg" style="color:#000">');
-
-                    outstr = U.replaceAll( outstr, ': {},\n',
-                        ': {}</span>\n</div>' + '<div class="output-row" tabindex="984">');
-                    // let regexpFixArray = /,?\s\[length\]:\s<span style="color:#A50">\d<span style="color:#000">\s/gm;
-                    windoww.outp = outstr;
-                    // let regexpFixArray = /,?\s\[length\]:\s(<\/span>)+<span style="color:#A50">\d(<\/span>)+]/gm;
-                    let regexpFixArray = /,?\s\[length\]:\s(<\/span>)+<span style="color:#A50">\d(<\/span>)+(<span style="color:#000">\s){0,1}]/gm
-                    outstr = outstr.replaceAll(regexpFixArray, "&nbsp;]</span>");
-                    outstr = U.replaceAll( outstr, ': [&nbsp;]', ': []');
-
-                }
-                let postprocessold: boolean = false;
-                if (postprocessold){
-                    outstr = U.replaceAll( outstr, '<span style="color:#000" class="console-msg">,\n',
-                        '</span><span style="color:#000" class="console-msg">,</span>\n</div><div class="output-row" tabindex="984"><span class="console-msg" style="color:#000">');
-                    /*outstr = U.replaceAll( outstr, '<span style="color:#000" class="console-msg">,\n',
-                        '</span><span style="color:#000" class="console-msg">,</span>\n</div><div class="output-row" tabindex="984"><span class="console-msg" style="color:#000">');*/
-
-                    outstr = U.replaceAll( outstr, '],\n', '],</span>\n</div><div class="output-row" tabindex="984"><span class="console-msg" style="color:#000">');
-                    outstr = U.replaceAll( outstr, '},\n', '},</span>\n</div><div class="output-row" tabindex="984"><span class="console-msg" style="color:#000">');
-
-                }
-            }
-            ashtml = true; }
-        catch(e: any) {
-            console.error(e);
-            throw e;
-            outstr = "[circular object]: " + e.toString();
-            ashtml = false;
+        } catch (e: any) {
+            contentStr = '[Error formatting output]: ' + e.toString();
+            hasError = true;
         }
-        let contextkeysarr: (string)[];
-        let contextkeys: ReactNode = '';
-        if (this.state.expression.trim() === "this") contextkeys = "Warning: \"this\" in the console is aliased to data instead of the whole context of a GraphElement component.";
 
-        let objraw = this.state.output?.__raw || (typeof this.state.output === "object" ? this.state.output : "[primitiveValue]") || {};
-        if (this.state.expression.trim() === "") contextkeysarr = ["data", "node", "view", "component"];
-        else if (typeof objraw === "string") { contextkeysarr = Object.keys(String.prototype); }
-        else contextkeysarr = (Array.isArray(objraw) ?
-                [...(Object.keys(objraw) as any as number[]).filter(k => (k) <= 10).map(k=>k===10 ? '...' : ''+k), ...Object.keys(Array.prototype)]
-                : Object.getOwnPropertyNames(objraw)) || [];
+        // Add result entry
+        const resultEntry: ConsoleEntryData = {
+            id: this.generateEntryId(),
+            type: hasError ? 'error' : 'result',
+            timestamp: new Date(),
+            content: contentStr,
+            input: code,
+            collapsed: false,
+            language: this.state.language
+        };
 
+        // Update state - append for chronological order (newest at bottom)
+        this.setState(prevState => ({
+            entries: [...prevState.entries, commandEntry, resultEntry],
+            expression: '',
+            expressionHistory: [...prevState.expressionHistory, code],
+            expressionIndex: prevState.expressionHistory.length
+        }), () => {
+            // Auto-scroll to show new result (wait for DOM update)
+            setTimeout(() => {
+                const lastEntry = document.querySelector('.console-history .console-entry:last-child');
+                if (lastEntry) {
+                    lastEntry.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                }
+            }, 50);
+        });
 
-        let injectCommentJSX = () => {
-            try{ for (let key in jsxComments) {
-                if (hiddenkeys.includes(key)) continue;
-                let commentNode: HTMLElement | null = document.getElementById("console_output_comment_"+key);
-                Log.eDev(!commentNode, "failed to find comment placeholder", {key, v:jsxComments[key], jsxComments});
-                if (commentNode) createRoot(commentNode).render(jsxComments[key]);
-                // for shortcut or context keys, this can fail without warning as some shortcuts are missing
-                commentNode = document.getElementById("console_output_comment_key_"+key);
-                if (commentNode) createRoot(commentNode).render(jsxComments[key]);
-            } }
-            catch (e) { console.error("failed to inject console output comment:", e)}
-        }
-        setTimeout(injectCommentJSX, 1)
+        // Set native console variables for debugging
         this.setNativeConsoleVariables();
         windoww.output = output;
-        const undo = ()=>{
-            let expressionIndex = Math.max(0, this.state.expressionIndex - 1);
-            if (expressionIndex === this.state.expressionIndex) return;
-            this.setState({ expressionIndex })
+    }
+
+    // Clear all console entries
+    private handleClearConsole(): void {
+        this.setState({
+            entries: [],
+            expression: '',
+            expressionHistory: [''],
+            expressionIndex: 0
+        });
+    }
+
+    // Toggle collapse state of an entry
+    private handleToggleCollapse(id: string): void {
+        this.setState(prevState => ({
+            entries: prevState.entries.map(entry =>
+                entry.id === id ? { ...entry, collapsed: !entry.collapsed } : entry
+            )
+        }));
+    }
+
+    // Delete a specific entry
+    private handleDeleteEntry(id: string): void {
+        this.setState(prevState => ({
+            entries: prevState.entries.filter(entry => entry.id !== id)
+        }));
+    }
+
+    // Insert context key into input
+    private handleInsertContextKey(key: string): void {
+        this.setState(prevState => ({
+            expression: prevState.expression ? `${prevState.expression}.${key}` : key
+        }));
+    }
+
+    // Insert code snippet into input
+    private handleInsertCode(code: string): void {
+        this.setState({ expression: code });
+    }
+    // Update eval context when node changes
+    private updateContext(): void {
+        const nid = this.props.node?.id;
+        const tn = transientProperties.node[nid as string];
+        if (nid && tn) {
+            this._context = {...tn.viewScores[tn.mainView.id].evalContext};
+            this._context.fromcomponent = true;
+        } else {
+            this._context = {...this.props, props: this.props};
         }
-        const redo = ()=>{
-            const expressionHistory = this.state.expressionHistory;
-            let expressionIndex = Math.min(expressionHistory.length-1, this.state.expressionIndex + 1);
-            if (expressionIndex === this.state.expressionIndex) return;
-            this.setState({ expressionIndex })
+    }
+
+    // Add keyboard shortcut handler
+    componentDidMount(): void {
+        document.addEventListener('keydown', this.handleKeyboardShortcuts);
+    }
+
+    componentWillUnmount(): void {
+        document.removeEventListener('keydown', this.handleKeyboardShortcuts);
+    }
+
+    private handleKeyboardShortcuts = (e: KeyboardEvent): void => {
+        // Ctrl/Cmd + L to clear console
+        if ((e.ctrlKey || e.metaKey) && e.key === 'l') {
+            e.preventDefault();
+            this.handleClearConsole();
         }
-        let canredo = this.state.expressionIndex < this.state.expressionHistory.length - 1;
-        let canundo = this.state.expressionIndex > 0;
-        let advanced = this.props.advanced;
+    };
 
-        contextkeys = <ul>{
-            contextkeysarr.sort().map(k=>this.getClickableEntry(jsxComments, comments||{} as any, expression, k))
-        }</ul>;
-
-        if (shortcuts) {
-            shortcutsjsx = <ul>{
-                Object.keys(shortcuts).sort().map(k=>this.getClickableEntry(jsxComments, comments||{} as any, expression, k, shortcuts))
-            }</ul>
-        }
-
-        return(<div className={'w-100 h-100 p-2 console'}>
-            <h1>
-                On {((data as GObject)?.name || "model-less node (" + this.props.node?.className + ")") + " - " + this.props.node?.className}
-            </h1>
-            <div className='console-terminal p-0 mb-2 w-100'>
-                <div className='commands'>
-                    <i onClick={(e) => {
-                        this.setState({expression: '', expressionHistory:[''], expressionIndex:0})
-                    }} title={'Empty console'} className="bi bi-slash-circle"/>
-                    <i onClick={(e) => {
-                        if (!this.state.expression.trim()) {
-                            return Tooltip.show('Nothing to copy', undefined, undefined, 2);
-                        }
-                        let s = this.outputhtml?.innerText || '';
-                        s = s.substring('Result'.length).trim();
-                        U.clipboardCopy(s, () => Tooltip.show('Content copied to clipboard', undefined, undefined, 2));
-                    }} title={'Copy in the clipboard'} className="bi bi-clipboard-plus"/>
-                    {/* @ts-ignore */}
-                    <i onClick={redo} title={'redo'}
-                       className={"redo bi bi-arrow-right-square" + (canredo ? '' : " disabled")}/>
-                    {/* @ts-ignore */}
-                    <i onClick={undo} title={'undo'}
-                       className={"undo bi bi-arrow-left-square" + (canundo ? '' : " disabled")}/>
-                </div>
-                <textarea id={'console'} spellCheck={false} className={'p-0 input w-100'} onChange={this.change}
-                          value={this.state.expression}></textarea>
-            </div>
-            {advanced && history.length>1 && <div>Advanced query history (index = {this.state.expressionIndex})
-                {history.map((s, i) => i === 0 ? null : <>
-                    <div style={{
-                        border: '1px solid ' + (i === history.length/2) ? 'red' : 'gray',
-                        marginTop: '5px',
-                        height: '30px'
-                    }}>{(i) + ') ' + s}</div>
-                </>)}</div>}
-            {/*<label>Query {(this.state.expression)}</label>*/}
-            <hr className={'mt-1 mb-1'} style={{width: 'calc(100% - 8px)', color: 'var(--bg-3)'}}/>
-            {this.state.expression && ashtml && <div className={"console-output-container console-msg"}
-                                                     ref={(e) => { this.outputhtml = e; }}
-                                                     dangerouslySetInnerHTML={ashtml ? {__html: outstr as string} : undefined}/>}
-
-            {this.state.expression && !ashtml && <div className={"console-output-container console-msg"}
-                                                      ref={(e) => { this.outputhtml = e; }}
-                                                      style={{whiteSpace: "pre"}}>{outstr}</div>}
-
-
-            {contextkeysarr.length && <section className={'group suggestion-keys context-keys-list'} style={{whiteSpace: "pre"}}>
-                    <label className={"context-keys"}>Context keys</label>
-                    {contextkeys}
-                </section>
+    // Get the fallback LModel when no node is selected.
+    // Prefers the currently active DockManager tab (= the metamodel the user is viewing).
+    private getFallbackModel(): LModel | null {
+        // 1. Try DockManager active tab — most reliable indicator of current metamodel
+        try {
+            if (DockManager.dock) {
+                const layout = DockManager.dock.getLayout();
+                const modelsPanel = layout?.dockbox?.children?.[0];
+                const tabs = (modelsPanel as any)?.tabs || [];
+                const activeId: string = (modelsPanel as any)?.activeId || tabs[0]?.id;
+                if (activeId) {
+                    const model = LPointerTargetable.fromPointer(activeId) as LModel | null;
+                    if (model) return model;
+                }
             }
-            {shortcutsjsx && <section className='group  suggestion-keys shortcuts-container'>
-                <label className={"context-keys pt-0"}>Shortcuts</label>
-                {shortcutsjsx}
-            </section>}
-        </div>)
+        } catch { /* dock not available */ }
+
+        // 2. Fall back to first metamodel/model pointer
+        const { m2models, m1models } = this.props;
+        const pointers = (m2models && m2models.length > 0) ? m2models
+            : (m1models && m1models.length > 0) ? m1models
+            : [];
+        if (pointers.length === 0) return null;
+        try {
+            return LPointerTargetable.fromPointer(pointers[0]) as LModel;
+        } catch { return null; }
+    }
+
+    // Update context using the fallback model (no node selected)
+    private updateContextForModel(model: LModel): void {
+        this._context = { data: model, props: this.props } as any;
+    }
+
+    render(){
+        const hasNode = !!this.props.node;
+        const fallbackModel = hasNode ? null : this.getFallbackModel();
+
+        if (!hasNode && !fallbackModel) return <Empty msg={"No models available."} />;
+
+        const data = hasNode ? this.props.data : fallbackModel;
+        const advanced = this.props.advanced;
+
+        if (hasNode) {
+            // Update context when node changes
+            if (this.lastNode !== this.props.node!.id) {
+                this.updateContext();
+                this.lastNode = this.props.node!.id;
+            }
+            // Update context on every render to ensure it's fresh
+            this.updateContext();
+        } else {
+            // Fallback: use model as context
+            this.updateContextForModel(fallbackModel!);
+            this.lastNode = '';
+        }
+
+        // Get context keys for autocomplete and collapsible section
+        const objraw = this._context.data || {};
+        let contextkeysarr: string[] = [];
+
+        if (this.state.expression.trim() === "") {
+            contextkeysarr = ["data", "node", "view", "component"];
+        } else if (typeof objraw === "string") {
+            contextkeysarr = Object.keys(String.prototype);
+        } else if (Array.isArray(objraw)) {
+            contextkeysarr = [
+                ...(Object.keys(objraw) as any as number[])
+                    .filter(k => k <= 10)
+                    .map(k => k === 10 ? '...' : '' + k),
+                ...Object.keys(Array.prototype)
+            ];
+        } else {
+            // Use getProxyPropertyNames to include prototype getters (classes, attributes, etc.)
+            contextkeysarr = (objraw && typeof objraw === 'object' && objraw.__isProxy)
+                ? getProxyPropertyNames(objraw)
+                : (Object.getOwnPropertyNames(objraw) || []);
+        }
+
+        // Filter out internal/private keys (starting with _ or __)
+        contextkeysarr = contextkeysarr.filter(key => !key.startsWith('_'));
+
+        // Set native console variables for debugging
+        this.setNativeConsoleVariables();
+
+        return (
+            <div className="console-tab-v2">
+                {/* Header */}
+                <div className="console-header">
+                    <h2 className="console-header__title">
+                        <i className="bi bi-terminal" />
+                        <span>Console</span>
+                    </h2>
+                    <span className="console-header__subtitle">
+                        {hasNode
+                            ? `On ${(data as GObject)?.name || "model-less node (" + this.props.node?.className + ")"} — ${this.props.node?.className}`
+                            : `On ${(fallbackModel as any)?.name || "model"} — No selection`
+                        }
+                    </span>
+                </div>
+
+                {/* Toolbar */}
+                <ConsoleToolbar
+                    onClear={this.handleClearConsole}
+                    onCopyAll={(entries) => {
+                        const allOutput = entries
+                            .filter(e => e.type === 'result' || e.type === 'error')
+                            .map(e => e.content)
+                            .join('\n\n---\n\n');
+                        U.clipboardCopy(allOutput, () => {
+                            Tooltip.show('All output copied to clipboard', undefined, undefined, 2);
+                        });
+                    }}
+                    entries={this.state.entries}
+                    historyCount={this.state.expressionHistory.length - 1}
+                    language={this.state.language}
+                    onLanguageChange={this.handleLanguageChange}
+                />
+
+                {/* Console Body - flex to fill remaining space */}
+                <div className="console-body" style={{ flex: 1, overflow: 'auto', minHeight: '100px' }}>
+                    <ConsoleHistory
+                        entries={this.state.entries}
+                        onToggleCollapse={(id) => this.handleToggleCollapse(id)}
+                        onDeleteEntry={(id) => this.handleDeleteEntry(id)}
+                        onExecuteCode={this.handleExecute}
+                    />
+                </div>
+
+                {/* Bottom Section - Input + Footer with controlled height */}
+                <div
+                    className="console-bottom-section"
+                    style={{
+                        height: `${this.state.footerHeight}px`
+                    }}
+                >
+                    {/* Resize Handle - at the TOP of bottom section */}
+                    <SimpleFooterResizeHandle
+                        onHeightChange={this.handleFooterHeightChange}
+                        currentHeight={this.state.footerHeight}
+                        minHeight={150}
+                        maxHeightPercent={0.4}
+                        containerSelector=".console-tab-v2"
+                    />
+
+                    {/* Input Area */}
+                    <div className="console-input-wrapper" style={{ flexShrink: 0 }}>
+                        <ConsoleInput
+                            value={this.state.expression}
+                            onChange={(value) => this.setState({ expression: value })}
+                            onExecute={this.handleExecute}
+                            history={this.state.expressionHistory.filter(h => h.trim() !== '')}
+                            contextKeys={contextkeysarr}
+                            language={this.state.language}
+                        />
+                    </div>
+
+                    {/* Footer - Collapsible Sections */}
+                    <div className="console-footer" style={{ flex: 1, overflow: 'auto' }}>
+                    <CollapsibleContextKeys
+                        contextKeys={contextkeysarr.sort()}
+                        onInsertKey={this.handleInsertContextKey}
+                    />
+
+                    <CollapsibleShortcuts
+                        onInsertCode={this.handleInsertCode}
+                        advanced={advanced}
+                    />
+
+                    {/* Upgrade prompt for Basic mode users */}
+                    {!advanced && (
+                        <UpgradePrompt
+                            features={[
+                                'Access code shortcuts for common operations',
+                                'View advanced debugging tools',
+                                'Export console history'
+                            ]}
+                        />
+                    )}
+                    </div>
+                </div>
+            </div>
+        )
     }
 
     private setNativeConsoleVariables(): void { // just fordebugging
@@ -468,6 +1035,8 @@ interface StateProps {
     node: LGraphElement|null;
     view: LViewElement|null;
     advanced: boolean;
+    m2models: Pointer<DModel, 0, 'N'>;
+    m1models: Pointer<DModel, 0, 'N'>;
 }
 interface DispatchProps {}
 
@@ -476,11 +1045,31 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as FakeStateProps;
     const nodeid = state._lastSelected?.node;
-    const node: LGraphElement|null = (nodeid) ? LGraphElement.fromPointer(nodeid) : null;
+    let node: LGraphElement|null = (nodeid) ? LGraphElement.fromPointer(nodeid) : null;
+
+    // If the selected node belongs to a different metamodel than the active tab,
+    // treat it as "no node selected" so the Console scopes to the active tab's metamodel.
+    if (node) {
+        try {
+            if (DockManager.dock) {
+                const layout = DockManager.dock.getLayout();
+                const modelsPanel = layout?.dockbox?.children?.[0];
+                const tabs = (modelsPanel as any)?.tabs || [];
+                const activeId: string = (modelsPanel as any)?.activeId || tabs[0]?.id;
+                if (activeId && node.model && node.model.id !== activeId) {
+                    // Node is from a different metamodel — clear it
+                    node = null;
+                }
+            }
+        } catch { /* dock not available */ }
+    }
+
     ret.node = node;
     ret.data = (node?.model) ? node.model : null;
     ret.view = (node?.view) ? node.view : null;
     ret.advanced = state.advanced;
+    ret.m2models = state.m2models;
+    ret.m1models = state.m1models;
     return ret;
 }
 

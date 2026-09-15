@@ -1,0 +1,3176 @@
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import {
+    LModel,
+    LProject,
+    LViewPoint,
+    LClass,
+    LObject,
+    LPointerTargetable,
+    U,
+    store,
+    DModel,
+    DGraph,
+    DObject,
+    DVertex,
+    GraphSize,
+    Constructors,
+    SetFieldAction,
+    SetRootFieldAction,
+    TRANSACTION,
+    getViewpointType,
+    isDataManagerViewpoint,
+    DViewPoint,
+    Log,
+} from '../../joiner';
+import DockManager from '../abstract/DockManager';
+import { createM2, createM1 } from '../../pages/components/Navbar';
+import { formatVersionNumber } from '../../utils/versionUtils';
+import { getPublicProjectUrl, copyToClipboard } from '../../utils/shareUtils';
+import ShareProjectModal from './ShareProjectModal';
+import UnsavedChangesDialog from './UnsavedChangesDialog';
+import DocumentationSection from './DocumentationSection';
+import { EcoreService, XMIService, JsonModelService } from '../../services/export';
+import { NewTransformationDialog, TransformationsList } from '../../jjtl/components';
+import { NewViewpointDialog } from './NewViewpointDialog';
+import { JjtlTransformation, createTransformation, TransformationAST } from '../../jjtl/types';
+import { execute as executeTransformation, ExecutionResult } from '../../jjtl/executor';
+import { convertMetamodelToJjtl, findMetamodelById } from '../../jjtl/utils/metamodelConverter';
+import { EnvGenWizardModal, EnvGenPersistence } from '../envgen';
+import type { EnvGenConfigSummary } from '../envgen';
+import { loadMegamodel, getSerializedMegamodel, buildMegamodelExportJson } from '../../model/megamodelPersistence';
+import type { ProjectArtifacts } from '../../model/megamodelInference';
+import { setRuntimeMegamodel, clearRuntimeMegamodel, getRuntimeMegamodel } from '../../model/megamodelRuntime';
+import { uniqueModelName } from '../../model/nameLookup';
+import MegamodelView, { type ArtifactStats } from '../megamodel/MegamodelView';
+import { Badge } from '../common/Badge';
+import { EmptyState } from '../ui/EmptyState';
+import { JjodelEvents, SystemEvents, EnvGenEvents } from '../../events/registry';
+import { dispatchImportSummary } from '../import/dispatchImportSummary';
+import {
+    buildEcoreImportSummary,
+    buildXmiImportSummary,
+    buildErrorImportSummary,
+} from '../import/buildImportSummary';
+import './project-editor.scss';
+
+
+// Types for contextual menu
+type MenuType = 'metamodel' | 'model' | 'transformation' | null;
+interface OpenMenu {
+    type: MenuType;
+    id: string;
+}
+
+/**
+ * Get the engine (platform) version from the Redux store
+ */
+const getEngineVersion = (): string => {
+    const state = store.getState();
+    return `v${state.version?.n || '2.0'}`;
+};
+
+/**
+ * Convert the project's L-proxy artifacts into the POJO inventory consumed by
+ * megamodel inference and the megamodel JSON export. Cross-metamodel "uses"
+ * detection: a class references or extends a class living in another metamodel
+ * (same detection as the editor's ghostTargets / ghostParents overlays).
+ * Shared by the runtime-megamodel useEffect and handleExportMegamodelJSON so
+ * both see an identical inventory.
+ */
+const buildProjectArtifacts = (
+    metamodels: LModel[],
+    models: LModel[],
+    transformations: JjtlTransformation[],
+): ProjectArtifacts => ({
+    metamodels: metamodels.map(mm => {
+        const usesMetamodelIds = new Set<string>();
+        try {
+            for (const cls of ((mm.classes || []) as any[])) {
+                for (const ref of (cls.references || [])) {
+                    const t = ref?.type;
+                    if (t?.model && t.model.id !== mm.id) usesMetamodelIds.add(t.model.id);
+                }
+                for (const sup of (cls.extends || [])) {
+                    if (sup?.model && sup.model.id !== mm.id) usesMetamodelIds.add(sup.model.id);
+                }
+            }
+        } catch { /* L-proxy access can throw on stale data */ }
+        return { id: mm.id, name: mm.name || '', usesMetamodelIds: [...usesMetamodelIds] };
+    }),
+    models: models.map(m => {
+        const rawInstanceof = (m.__raw as any)['instanceof'];
+        const instanceofMetamodelId = typeof rawInstanceof === 'string' ? rawInstanceof : undefined;
+        const rawState = (m.__raw as any)['_state'];
+        const generatedBy = rawState?.generatedBy ?? undefined;
+        return { id: m.id, name: m.name || '', instanceofMetamodelId, generatedBy };
+    }),
+    transformations: transformations.map(t => ({
+        id: t.id,
+        name: t.name || '',
+        sourceMetamodelId: t.sourceMetamodelId,
+        targetMetamodelId: t.targetMetamodelId,
+    })),
+});
+
+// ============================================
+// SectionHeader — Standardized section header
+// ============================================
+interface SectionHeaderProps {
+    title: string;
+    count: number;
+    primaryAction?: {
+        label: string;
+        onClick: () => void;
+        disabled?: boolean;
+        disabledTitle?: string;
+        hasDropdown?: boolean;
+        isDropdownOpen?: boolean;
+    };
+    secondaryAction?: {
+        label: string;
+        onClick: () => void;
+        icon?: string;
+        hasDropdown?: boolean;
+        isDropdownOpen?: boolean;
+    };
+    children?: React.ReactNode;
+}
+
+function SectionHeader({ title, count, primaryAction, secondaryAction, children }: SectionHeaderProps) {
+    return (
+        <div className="project-section-header">
+            <h2 className="project-section-header__title">
+                {title}
+                <span className="project-section-header__count">({count})</span>
+            </h2>
+            <div className="project-section-header__actions">
+                {children}
+                {secondaryAction && (
+                    <button
+                        className="btn btn--ghost btn--xs"
+                        onClick={secondaryAction.onClick}
+                    >
+                        {secondaryAction.icon && <i className={`bi bi-${secondaryAction.icon}`} />}
+                        {secondaryAction.label}
+                        {secondaryAction.hasDropdown && (
+                            <i className={`bi bi-chevron-${secondaryAction.isDropdownOpen ? 'up' : 'down'} btn-chevron`} />
+                        )}
+                    </button>
+                )}
+                {primaryAction && (
+                    <button
+                        className="btn btn--ghost btn--sm"
+                        onClick={primaryAction.onClick}
+                        disabled={primaryAction.disabled}
+                        title={primaryAction.disabled ? primaryAction.disabledTitle : undefined}
+                    >
+                        {primaryAction.label}
+                        {primaryAction.hasDropdown && (
+                            <i className={`bi bi-chevron-${primaryAction.isDropdownOpen ? 'up' : 'down'} btn-chevron`} />
+                        )}
+                    </button>
+                )}
+            </div>
+        </div>
+    );
+}
+
+interface ProjectEditorProps {
+    project: LProject;
+    onNavigateBack?: () => void;  // Optional callback when user wants to navigate back
+}
+
+/**
+ * Format date for display
+ */
+const formatDate = (date: Date | string | number | undefined): string => {
+    if (!date) return 'Unknown';
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return 'Unknown';
+    return d.toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+};
+
+/**
+ * Project Editor - Clean minimal layout
+ * Shows project header with badges, and sections for metamodels, models, viewpoints
+ */
+const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }) => {
+    if (!project) return null;
+    const metamodels = project.metamodels || [];
+    const models = project.models || [];
+    // The Data Manager singleton is out of every list this page builds (R-DMV-1): the
+    // VIEWPOINTS section, the megamodel, and the two export payloads below all read this
+    // array. Filtered ONCE here rather than at each of the five call sites, which is the
+    // reason `Defaults.isSystemViewpoint` exists one level down in `LProject.viewpoints`.
+    const viewpoints = (project.viewpoints || []).filter(vp => !isDataManagerViewpoint(vp?.__raw as any));
+    const tags = project.tagNames || [];
+
+    // Transformations: hydrated from persisted DProject.transformations,
+    // synced back to Redux on every change so SaveManager picks them up.
+    // TODO: include documentation in project save
+    const [transformations, setTransformationsRaw] = useState<JjtlTransformation[]>(
+        () => ((project as any).transformations as JjtlTransformation[]) || []
+    );
+    const setTransformations = useCallback(
+        (updater: React.SetStateAction<JjtlTransformation[]>) => {
+            setTransformationsRaw(prev => {
+                const next = typeof updater === 'function'
+                    ? (updater as (p: JjtlTransformation[]) => JjtlTransformation[])(prev)
+                    : updater;
+                SetFieldAction.new(project.id, 'transformations', next, '', false);
+                return next;
+            });
+        },
+        [project.id]
+    );
+    const [showNewTransformationDialog, setShowNewTransformationDialog] = useState(false);
+    const [showNewViewpointDialog, setShowNewViewpointDialog] = useState(false);
+
+    // Editing states
+    const [isEditingName, setIsEditingName] = useState(false);
+    const [isEditingDescription, setIsEditingDescription] = useState(false);
+    const [editedName, setEditedName] = useState(project.name || '');
+    const [editedDescription, setEditedDescription] = useState(project.description || '');
+    const [newTag, setNewTag] = useState('');
+    const [isAddingTag, setIsAddingTag] = useState(false);
+
+    // Project menu (⋮) state
+    const [showProjectMenu, setShowProjectMenu] = useState(false);
+    const [linkCopied, setLinkCopied] = useState(false);
+    const projectMenuRef = useRef<HTMLDivElement>(null);
+
+    const [showShareModal, setShowShareModal] = useState(false);
+    const [showMegamodelModal, setShowMegamodelModal] = useState(false);
+
+    // Contextual menu state
+    const [openMenu, setOpenMenu] = useState<OpenMenu | null>(null);
+    const [menuPosition, setMenuPosition] = useState<{
+        align: 'left' | 'right';
+        direction: 'up' | 'down';
+    }>({ align: 'right', direction: 'down' });
+    const [renamingItem, setRenamingItem] = useState<{ type: MenuType; id: string } | null>(null);
+    const [renameValue, setRenameValue] = useState('');
+    const menuRef = useRef<HTMLDivElement>(null);
+    const renameInputRef = useRef<HTMLInputElement>(null);
+
+    // New model metamodel selection menu
+    const [showMetamodelMenu, setShowMetamodelMenu] = useState(false);
+    const metamodelMenuRef = useRef<HTMLDivElement>(null);
+
+    // Import menu for metamodels
+    const [showImportMenu, setShowImportMenu] = useState(false);
+    const importMenuRef = useRef<HTMLDivElement>(null);
+
+    // Import menu for models (XMI M1 importer, Phase B.1)
+    const [showImportModelMenu, setShowImportModelMenu] = useState(false);
+    const importModelMenuRef = useRef<HTMLDivElement>(null);
+
+    // Hidden file inputs for import
+    const importJmmRef = useRef<HTMLInputElement>(null);
+    const importEcoreRef = useRef<HTMLInputElement>(null);
+    const importXmiRef = useRef<HTMLInputElement>(null);
+
+    // Environment Generation state
+    const [showEnvGenWizard, setShowEnvGenWizard] = useState(false);
+    const [envGenConfigs, setEnvGenConfigs] = useState<EnvGenConfigSummary[]>([]);
+    const [editingEnvGenId, setEditingEnvGenId] = useState<string | undefined>(undefined);
+
+    // Unsaved changes tracking
+    const [isDirty, setIsDirty] = useState(false);
+    const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+
+    // Bumped after import linking so the megamodel useEffect re-runs even when the local
+    // `metamodels` / `models` arrays (read at render-start) have not changed identity yet.
+    const [importTick, setImportTick] = useState(0);
+    const pendingActionRef = useRef<(() => void) | null>(null);
+
+    const nameInputRef = useRef<HTMLInputElement>(null);
+    const descriptionInputRef = useRef<HTMLTextAreaElement>(null);
+    const tagInputRef = useRef<HTMLInputElement>(null);
+
+    // Focus input when editing starts
+    useEffect(() => {
+        if (isEditingName && nameInputRef.current) {
+            nameInputRef.current.focus();
+            nameInputRef.current.select();
+        }
+    }, [isEditingName]);
+
+    useEffect(() => {
+        if (isEditingDescription && descriptionInputRef.current) {
+            descriptionInputRef.current.focus();
+            descriptionInputRef.current.select();
+        }
+    }, [isEditingDescription]);
+
+    useEffect(() => {
+        if (isAddingTag && tagInputRef.current) {
+            tagInputRef.current.focus();
+        }
+    }, [isAddingTag]);
+
+    // Sync with project changes
+    useEffect(() => {
+        setEditedName(project.name || '');
+        setEditedDescription(project.description || '');
+    }, [project.name, project.description]);
+
+    // Click-outside handler for contextual menu
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+                setOpenMenu(null);
+            }
+        };
+
+        if (openMenu) {
+            document.addEventListener('mousedown', handleClickOutside);
+            return () => document.removeEventListener('mousedown', handleClickOutside);
+        }
+    }, [openMenu]);
+
+    // Click-outside handler for metamodel selection menu
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (metamodelMenuRef.current && !metamodelMenuRef.current.contains(event.target as Node)) {
+                setShowMetamodelMenu(false);
+            }
+        };
+
+        if (showMetamodelMenu) {
+            document.addEventListener('mousedown', handleClickOutside);
+            return () => document.removeEventListener('mousedown', handleClickOutside);
+        }
+    }, [showMetamodelMenu]);
+
+    // Click-outside handler for import menu
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (importMenuRef.current && !importMenuRef.current.contains(event.target as Node)) {
+                setShowImportMenu(false);
+            }
+        };
+
+        if (showImportMenu) {
+            document.addEventListener('mousedown', handleClickOutside);
+            return () => document.removeEventListener('mousedown', handleClickOutside);
+        }
+    }, [showImportMenu]);
+
+    // Click-outside handler for model import menu
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (importModelMenuRef.current && !importModelMenuRef.current.contains(event.target as Node)) {
+                setShowImportModelMenu(false);
+            }
+        };
+
+        if (showImportModelMenu) {
+            document.addEventListener('mousedown', handleClickOutside);
+            return () => document.removeEventListener('mousedown', handleClickOutside);
+        }
+    }, [showImportModelMenu]);
+
+    // Click-outside handler for project menu (⋮)
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (projectMenuRef.current && !projectMenuRef.current.contains(event.target as Node)) {
+                setShowProjectMenu(false);
+            }
+        };
+
+        if (showProjectMenu) {
+            document.addEventListener('mousedown', handleClickOutside);
+            return () => document.removeEventListener('mousedown', handleClickOutside);
+        }
+    }, [showProjectMenu]);
+
+    // IntersectionObserver removed — section is now driven by URL ?section= param via LeftBar sidebar
+
+    // Focus rename input when renaming starts
+    useEffect(() => {
+        if (renamingItem && renameInputRef.current) {
+            renameInputRef.current.focus();
+            renameInputRef.current.select();
+        }
+    }, [renamingItem]);
+
+    // Browser beforeunload handler - use global handler from U
+    // This allows LeftBar and other components to disable it before programmatic navigation
+    useEffect(() => {
+        // Enable the warning when component mounts
+        U.enableUnsavedChangesWarning();
+
+        // Disable when component unmounts
+        return () => U.disableUnsavedChangesWarning();
+    }, []);
+
+    // Environment Generation: load configs from localStorage and listen for changes
+    useEffect(() => {
+        setEnvGenConfigs(EnvGenPersistence.getAll());
+        const handler = () => setEnvGenConfigs(EnvGenPersistence.getAll());
+        window.addEventListener(EnvGenEvents.CONFIG_CHANGED, handler);
+        return () => window.removeEventListener(EnvGenEvents.CONFIG_CHANGED, handler);
+    }, []);
+
+    // Environment Generation: listen for open-wizard event from Navbar
+    useEffect(() => {
+        const handler = () => {
+            setEditingEnvGenId(undefined);
+            setShowEnvGenWizard(true);
+        };
+        window.addEventListener(EnvGenEvents.OPEN_WIZARD, handler);
+        return () => window.removeEventListener(EnvGenEvents.OPEN_WIZARD, handler);
+    }, []);
+
+    // Open megamodel modal when TreeView entry is clicked
+    useEffect(() => {
+        const handler = () => setShowMegamodelModal(true);
+        window.addEventListener(JjodelEvents.OPEN_MEGAMODEL, handler);
+        return () => window.removeEventListener(JjodelEvents.OPEN_MEGAMODEL, handler);
+    }, []);
+
+    // Open New Transformation dialog when Navbar's "+" dropdown requests it
+    useEffect(() => {
+        const handler = () => setShowNewTransformationDialog(true);
+        window.addEventListener(JjodelEvents.OPEN_NEW_TRANSFORMATION_DIALOG, handler);
+        return () => window.removeEventListener(JjodelEvents.OPEN_NEW_TRANSFORMATION_DIALOG, handler);
+    }, []);
+
+    // Open New Viewpoint dialog when the project rail requests it
+    useEffect(() => {
+        const handler = () => setShowNewViewpointDialog(true);
+        window.addEventListener(JjodelEvents.CREATE_VIEWPOINT, handler);
+        return () => window.removeEventListener(JjodelEvents.CREATE_VIEWPOINT, handler);
+    }, []);
+
+    // Open the Share modal when the project rail requests it
+    useEffect(() => {
+        const handler = () => setShowShareModal(true);
+        window.addEventListener(JjodelEvents.SHARE_PROJECT, handler);
+        return () => window.removeEventListener(JjodelEvents.SHARE_PROJECT, handler);
+    }, []);
+
+    // Broadcast transformations to TreeView via CustomEvent
+    useEffect(() => {
+        const detail = transformations.map(t => ({
+            id: t.id,
+            name: t.name,
+            sourceMMName: t.sourceMetamodelName,
+            targetMMName: t.targetMetamodelName,
+            rules: t.ast?.mappings?.map(m => `${m.sources?.map(s => s.className).join(', ') || '?'} → ${m.targetClass}`) || [],
+            helpers: t.ast?.helpers?.map(h => h.name) || [],
+        }));
+        window.dispatchEvent(new CustomEvent(JjodelEvents.TRANSFORMATIONS, { detail }));
+    }, [transformations]);
+
+    // Megamodel: compute and register runtime megamodel whenever artifacts change
+    useEffect(() => {
+        const projectId = project.id;
+        if (!projectId) return;
+
+        const artifacts = buildProjectArtifacts(metamodels, models, transformations);
+
+        const serialized = getSerializedMegamodel(projectId);
+        const megamodel = loadMegamodel(serialized, artifacts);
+        setRuntimeMegamodel(projectId, megamodel);
+
+        return () => { clearRuntimeMegamodel(projectId); };
+    }, [project.id, metamodels, models, transformations, importTick]);
+
+    // Mark project as dirty (unsaved changes)
+    // Sets both local state and global U.isProjectModified for consistency
+    const markDirty = useCallback(() => {
+        setIsDirty(true);
+        U.isProjectModified = true;
+    }, []);
+
+    // Clear dirty state (after save)
+    // Resets both local state and global U.isProjectModified
+    const clearDirty = useCallback(() => {
+        setIsDirty(false);
+        U.isProjectModified = false;
+    }, []);
+
+    // Handle navigation with unsaved changes check
+    const handleNavigateWithCheck = useCallback((action: () => void) => {
+        if (isDirty) {
+            pendingActionRef.current = action;
+            setShowUnsavedDialog(true);
+        } else {
+            action();
+        }
+    }, [isDirty]);
+
+    // Handle back navigation with unsaved changes check
+    const handleBackNavigation = useCallback(() => {
+        if (onNavigateBack) {
+            handleNavigateWithCheck(onNavigateBack);
+        }
+    }, [onNavigateBack, handleNavigateWithCheck]);
+
+    // Unsaved dialog handlers
+    const handleDontSave = useCallback(() => {
+        setShowUnsavedDialog(false);
+        clearDirty();
+        if (pendingActionRef.current) {
+            pendingActionRef.current();
+            pendingActionRef.current = null;
+        }
+    }, [clearDirty]);
+
+    const handleCancelDialog = useCallback(() => {
+        setShowUnsavedDialog(false);
+        pendingActionRef.current = null;
+    }, []);
+
+    const handleSaveAndContinue = useCallback(async () => {
+        setIsSaving(true);
+        try {
+            // Trigger project save - this depends on your save implementation
+            // For example: await project.save() or dispatch a save action
+            // For now, we'll simulate a brief delay for the save operation
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            clearDirty();
+            setShowUnsavedDialog(false);
+
+            if (pendingActionRef.current) {
+                pendingActionRef.current();
+                pendingActionRef.current = null;
+            }
+        } catch (error) {
+            console.error('Failed to save project:', error);
+            U.alert('e', 'Save failed', 'Could not save the project. Please try again.');
+        } finally {
+            setIsSaving(false);
+        }
+    }, [clearDirty]);
+
+    // scrollToSection removed — section navigation is now URL-based via LeftBar sidebar
+
+    // Download entire project as JSON
+    const handleDownloadProject = useCallback(() => {
+        try {
+            const projectData = {
+                format_version: '1.0',
+                metadata: {
+                    name: project.name || 'Unnamed Project',
+                    exported_at: new Date().toISOString(),
+                    jjodel_version: '2.0'
+                },
+                project: (project as any).__raw || project
+            };
+            const jsonString = JSON.stringify(projectData, null, 2);
+            const filename = `${project.name || 'project'}.jjodel`;
+            U.download(filename, jsonString);
+            U.alert('i', 'Downloaded', `Project exported: ${filename}`);
+        } catch (error) {
+            console.error('Download project error:', error);
+            U.alert('e', 'Download Failed', 'Could not download the project.');
+        }
+        setShowProjectMenu(false);
+    }, [project]);
+
+    // Name editing handlers
+    const handleStartEditName = () => {
+        setEditedName(project.name || '');
+        setIsEditingName(true);
+    };
+
+    const handleSaveName = () => {
+        if (editedName.trim()) {
+            const newName = editedName.trim();
+            if (newName !== project.name) {
+                project.name = newName;
+                markDirty();
+            }
+        } else {
+            U.alert('e', 'Name required', 'Project name cannot be empty');
+            setEditedName(project.name || '');
+        }
+        setIsEditingName(false);
+    };
+
+    const handleCancelEditName = () => {
+        setEditedName(project.name || '');
+        setIsEditingName(false);
+    };
+
+    const handleNameKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            handleSaveName();
+        } else if (e.key === 'Escape') {
+            handleCancelEditName();
+        }
+    };
+
+    // Description editing handlers
+    const handleStartEditDescription = () => {
+        setEditedDescription(project.description || '');
+        setIsEditingDescription(true);
+    };
+
+    const handleSaveDescription = () => {
+        const newDescription = editedDescription.trim();
+        if (newDescription !== project.description) {
+            project.description = newDescription;
+            markDirty();
+        }
+        setIsEditingDescription(false);
+    };
+
+    const handleCancelEditDescription = () => {
+        setEditedDescription(project.description || '');
+        setIsEditingDescription(false);
+    };
+
+    const handleDescriptionKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Escape') {
+            handleCancelEditDescription();
+        }
+    };
+
+    // Tag handlers - supports comma-separated multiple tags
+    const handleAddTag = () => {
+        if (newTag.trim()) {
+            // Split by comma, trim each, filter empty and duplicates
+            const newTags = newTag
+                .split(',')
+                .map(t => t.trim())
+                .filter(t => t.length > 0 && !tags.includes(t));
+
+            if (newTags.length > 0) {
+                project.tagNames = [...tags, ...newTags];
+                markDirty();
+            }
+            setNewTag('');
+        }
+        setIsAddingTag(false);
+    };
+
+    const handleRemoveTag = (tagToRemove: string) => {
+        project.tagNames = tags.filter(t => t !== tagToRemove);
+        markDirty();
+    };
+
+    const handleTagKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            handleAddTag();
+        } else if (e.key === 'Escape') {
+            setNewTag('');
+            setIsAddingTag(false);
+        }
+    };
+
+    // Type toggle handler - toggles between public/private
+    const handleToggleType = () => {
+        project.type = project.type === 'public' ? 'private' : 'public';
+        markDirty();
+    };
+
+    const handleSetVisibility = (target: 'private' | 'public' | 'collaborative') => {
+        project.type = target;
+        markDirty();
+        setShowProjectMenu(false);
+    };
+
+    const handleCopyLink = async () => {
+        const url = getPublicProjectUrl(project.id);
+        await copyToClipboard(url);
+        setLinkCopied(true);
+        setTimeout(() => setLinkCopied(false), 2000);
+    };
+
+    // Contextual menu handlers with smart positioning
+    const toggleMenu = (type: MenuType, id: string, e: React.MouseEvent<HTMLButtonElement>) => {
+        e.stopPropagation(); // Prevent card click
+
+        if (openMenu?.type === type && openMenu?.id === id) {
+            setOpenMenu(null);
+        } else {
+            // Calculate smart positioning based on viewport space
+            const button = e.currentTarget;
+            const rect = button.getBoundingClientRect();
+
+            // Determine horizontal alignment
+            const spaceOnRight = window.innerWidth - rect.right;
+            const spaceOnLeft = rect.left;
+            const align = spaceOnRight < 200 && spaceOnLeft > spaceOnRight ? 'left' : 'right';
+
+            // Determine vertical direction
+            const spaceBelow = window.innerHeight - rect.bottom;
+            const spaceAbove = rect.top;
+            const direction = spaceBelow < 200 && spaceAbove > spaceBelow ? 'up' : 'down';
+
+            setMenuPosition({ align, direction });
+            setOpenMenu({ type, id });
+        }
+    };
+
+    const closeMenu = () => {
+        setOpenMenu(null);
+    };
+
+    // TODO: dead code. Handler kept for reference. Slated for removal in pre-3.0.0 cleanup session
+    // (along with handleJmmFileChange stub at line ~742 and duplicate in LeftBar.tsx:249).
+    // Decision: .jmm format dropped — use .ecore for M2 interop, .jodel for full project.
+    const handleExportMetamodel = (mm: LModel) => {
+        try {
+            const jmmData = {
+                format_version: '1.0',
+                metadata: {
+                    name: mm.name || project.name + '-metamodel',
+                    version: project.version?.toString() || '1.0.0',
+                    author: (project as any).author?.name || 'Unknown',
+                    description: project.description || '',
+                    exported_at: new Date().toISOString(),
+                    source_project: project.id,
+                    jjodel_version: '2.0'
+                },
+                metamodel: (mm as any).__raw || mm
+            };
+
+            const jsonString = JSON.stringify(jmmData, null, 2);
+            const filename = `${mm.name || project.name}-metamodel.jmm`;
+            U.download(filename, jsonString);
+            U.alert('i', 'Exported', `Metamodel exported: ${filename}`);
+        } catch (error) {
+            console.error('Export metamodel error:', error);
+            U.alert('e', 'Export Failed', 'Could not export the metamodel.');
+        }
+        closeMenu();
+    };
+
+    // Export model as .jm file
+    const handleExportModel = (model: LModel) => {
+        try {
+            const jmData = {
+                format_version: '1.0',
+                metadata: {
+                    name: model.name || project.name + '-model',
+                    version: project.version?.toString() || '1.0.0',
+                    author: (project as any).author?.name || 'Unknown',
+                    description: project.description || '',
+                    exported_at: new Date().toISOString(),
+                    source_project: project.id,
+                    jjodel_version: '2.0'
+                },
+                model: (model as any).__raw || model
+            };
+
+            const jsonString = JSON.stringify(jmData, null, 2);
+            const filename = `${model.name || project.name}-model.jm`;
+            U.download(filename, jsonString);
+            U.alert('i', 'Exported', `Model exported: ${filename}`);
+        } catch (error) {
+            console.error('Export model error:', error);
+            U.alert('e', 'Export Failed', 'Could not export the model.');
+        }
+        closeMenu();
+    };
+
+    // Export metamodel as Ecore (.ecore)
+    const handleExportEcore = (mm: LModel) => {
+        try {
+            EcoreService.exportToFile(mm);
+            U.alert('i', 'Exported', `Metamodel exported as Ecore: ${mm.name}.ecore`);
+        } catch (error) {
+            console.error('Export Ecore error:', error);
+            U.alert('e', 'Export Failed', 'Could not export as Ecore format.');
+        }
+        closeMenu();
+    };
+
+    // Export metamodel as semantic JSON (.json). Foreign metamodels referenced
+    // by super-types / reference types are embedded self-contained.
+    const handleExportMetamodelJSON = (mm: LModel) => {
+        try {
+            JsonModelService.exportToFile(mm, 'metamodel');
+            U.alert('i', 'Exported', `Metamodel exported as JSON: ${mm.name}.json`);
+        } catch (error) {
+            console.error('Export metamodel JSON error:', error);
+            U.alert('e', 'Export Failed', 'Could not export the metamodel as JSON.');
+        }
+        closeMenu();
+    };
+
+    // Export model as semantic JSON (.json) with its metamodel(s) embedded.
+    const handleExportModelJSON = (model: LModel) => {
+        try {
+            JsonModelService.exportToFile(model, 'model');
+            U.alert('i', 'Exported', `Model exported as JSON: ${model.name}.json`);
+        } catch (error) {
+            console.error('Export model JSON error:', error);
+            U.alert('e', 'Export Failed', 'Could not export the model as JSON.');
+        }
+        closeMenu();
+    };
+
+    // Export the entire project megamodel (artifact inventory + relationships) as JSON.
+    const handleExportMegamodelJSON = () => {
+        try {
+            const artifacts = buildProjectArtifacts(metamodels, models, transformations);
+            const doc = buildMegamodelExportJson({
+                project: { id: project.id, name: project.name || 'project' },
+                artifacts,
+                viewpoints: viewpoints.map(vp => ({ id: vp.id || vp.name, name: vp.name || 'Unnamed' })),
+                megamodel: getRuntimeMegamodel(project.id),
+                jjodelVersion: getEngineVersion(),
+            });
+            const filename = `${project.name || 'project'}-megamodel.json`;
+            U.download(filename, JSON.stringify(doc, null, 2));
+            U.alert('i', 'Exported', `Megamodel exported: ${filename}`);
+        } catch (error) {
+            console.error('Export megamodel JSON error:', error);
+            U.alert('e', 'Export Failed', 'Could not export the megamodel as JSON.');
+        }
+    };
+
+    // Full megamodel export: the megamodel graph PLUS the complete semantic JSON
+    // documents of every metamodel, model and transformation (same structure as
+    // the per-artifact JSON exports).
+    const handleExportMegamodelFullJSON = () => {
+        try {
+            const artifacts = buildProjectArtifacts(metamodels, models, transformations);
+
+            // Per-artifact build is guarded so one broken artifact (e.g. a model
+            // with no metamodel) does not abort the whole export.
+            const buildArtifactDoc = (entity: LModel, kind: 'metamodel' | 'model'): Record<string, unknown> => {
+                try {
+                    return kind === 'metamodel'
+                        ? JsonModelService.buildMetamodelDocument(entity)
+                        : JsonModelService.buildModelDocument(entity);
+                } catch (e) {
+                    return { id: entity.id, name: entity.name || '', error: (e as Error)?.message ?? String(e) };
+                }
+            };
+
+            const definitions = {
+                metamodels: metamodels.map(mm => buildArtifactDoc(mm, 'metamodel')),
+                models: models.map(m => buildArtifactDoc(m, 'model')),
+                transformations: transformations.map(t => ({ ...t })),
+            };
+
+            const doc = buildMegamodelExportJson({
+                project: { id: project.id, name: project.name || 'project' },
+                artifacts,
+                viewpoints: viewpoints.map(vp => ({ id: vp.id || vp.name, name: vp.name || 'Unnamed' })),
+                megamodel: getRuntimeMegamodel(project.id),
+                jjodelVersion: getEngineVersion(),
+                definitions,
+            });
+            const filename = `${project.name || 'project'}-megamodel-full.json`;
+            U.download(filename, JSON.stringify(doc, null, 2));
+            U.alert('i', 'Exported', `Full megamodel exported: ${filename}`);
+        } catch (error) {
+            console.error('Export full megamodel JSON error:', error);
+            U.alert('e', 'Export Failed', 'Could not export the full megamodel as JSON.');
+        }
+    };
+
+    // TODO: dead code. Trigger for hidden .jmm file input; menu entry removed.
+    // Slated for removal in pre-3.0.0 cleanup session.
+    const handleImportJmm = () => {
+        importJmmRef.current?.click();
+        setShowImportMenu(false);
+    };
+
+    // TODO: dead code. Import stub never implemented; menu entry removed.
+    // Slated for removal in pre-3.0.0 cleanup session.
+    const handleJmmFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        try {
+            const content = await file.text();
+            const jmmData = JSON.parse(content);
+
+            // Validate format
+            if (!jmmData.metamodel) {
+                throw new Error('Invalid .jmm file format: missing metamodel data');
+            }
+
+            // Extract name from metadata or filename
+            const name = jmmData.metadata?.name || file.name.replace(/\.jmm$/, '');
+
+            // Create new metamodel in project using existing createM2
+            const newMM = createM2(project);
+
+            // TODO: Populate metamodel with imported data
+            // For now, just show success with the created metamodel
+            U.alert('i', 'Imported', `Metamodel "${name}" imported successfully`);
+            markDirty();
+
+        } catch (error) {
+            console.error('Import JMM error:', error);
+            U.alert('e', 'Import Failed', `Could not import metamodel: ${(error as Error).message}`);
+        }
+
+        // Reset input
+        if (importJmmRef.current) {
+            importJmmRef.current.value = '';
+        }
+    };
+
+    // Import metamodel from .ecore file
+    const handleImportEcore = () => {
+        importEcoreRef.current?.click();
+        setShowImportMenu(false);
+    };
+
+    const handleEcoreFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Warning capture: snapshot Log.messageMapping['w'] length before import, then take the
+        // delta after import. The parser uses Log.ww/Log.w(true,...) for non-fatal warnings;
+        // those messages are pushed to messageMapping['w']. See discovery sez. A.2 opzione C.
+        const warningsBefore = (Log as any).messageMapping?.['w']?.length ?? 0;
+
+        try {
+            const result = await EcoreService.importFromFile(file);
+
+            if (result.success && result.model) {
+                // Link imported metamodel to current project (Bug F fix 2026-05-13):
+                // EcoreParser.parse() pushes the DModel to state.m2models but does NOT update
+                // project.metamodels. Without this, Dashboard shows metamodelsNumber=0 because
+                // metamodelsNumber is computed from project.metamodels.length at save time.
+                // Pattern mirrors createM2() in Navbar.tsx:75. Reference:
+                // docs/discovery/2026-05-13_microdiscovery_bug_ef_render_duplicate.md sec 6.2.
+                try {
+                    project.metamodels = [...project.metamodels, result.model];
+                    if (result.model.node) {
+                        project.graphs = [...project.graphs, result.model.node as any];
+                    }
+                } catch (linkErr) {
+                    console.warn('[Bug F fix] Failed to link imported metamodel to project:', linkErr);
+                }
+                setImportTick(t => t + 1);
+                markDirty();
+
+                const wAfter = (Log as any).messageMapping?.['w']?.length ?? warningsBefore;
+                const wEntries = (Log as any).messageMapping?.['w'] ?? [];
+                const collected: string[] = wEntries
+                    .slice(warningsBefore, wAfter)
+                    .map((entry: any) => (entry?.short_string ?? String(entry ?? '')).trim())
+                    .filter((s: string) => s.length > 0);
+
+                if (collected.length > 0) {
+                    console.warn('Ecore import warnings:', collected);
+                }
+
+                dispatchImportSummary(
+                    buildEcoreImportSummary(result.model, file.name, collected)
+                );
+            } else {
+                throw new Error(result.errors.join(', '));
+            }
+
+        } catch (error) {
+            console.error('Import Ecore error:', error);
+            dispatchImportSummary(
+                buildErrorImportSummary(
+                    'metamodel',
+                    file.name,
+                    (error as Error)?.message ?? String(error)
+                )
+            );
+        }
+
+        // Reset input
+        if (importEcoreRef.current) {
+            importEcoreRef.current.value = '';
+        }
+    };
+
+    // Import M1 model from .xmi file (Phase B.1: flat instances + primitive attributes)
+    const handleImportXmi = () => {
+        importXmiRef.current?.click();
+        setShowImportModelMenu(false);
+    };
+
+    const handleXmiFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        try {
+            const result = await XMIService.importM1FromFile(file);
+
+            if (result.success && result.model) {
+                // Link imported M1 model to current project (mirrors Bug F fix for Ecore metamodels):
+                // XMIService.importM1FromFile creates the DModel but does not register it under
+                // project.models / project.graphs, so the Dashboard count and the persistence
+                // payload would miss it otherwise.
+                try {
+                    project.models = [...project.models, result.model];
+                    if (result.model.node) {
+                        project.graphs = [...project.graphs, result.model.node as any];
+                    }
+                } catch (linkErr) {
+                    console.warn('[XMI import] Failed to link imported model to project:', linkErr);
+                }
+                setImportTick(t => t + 1);
+                markDirty();
+
+                if (result.warnings.length > 0) {
+                    console.warn('XMI import warnings:', result.warnings);
+                }
+
+                dispatchImportSummary(
+                    buildXmiImportSummary(
+                        result.model,
+                        result.metamodel,
+                        result.pattern ?? 'unknown',
+                        file.name,
+                        result.warnings ?? []
+                    )
+                );
+            } else {
+                throw new Error(result.errors.join(', '));
+            }
+
+        } catch (error) {
+            console.error('Import XMI error:', error);
+            dispatchImportSummary(
+                buildErrorImportSummary(
+                    'model',
+                    file.name,
+                    (error as Error)?.message ?? String(error)
+                )
+            );
+        }
+
+        if (importXmiRef.current) {
+            importXmiRef.current.value = '';
+        }
+    };
+
+    // Export model as XMI (.xmi) with embedded metamodel
+    const handleExportXMI = (model: LModel) => {
+        try {
+            XMIService.exportToFile(model);
+            U.alert('i', 'Exported', `Model exported as XMI: ${model.name}.xmi`);
+        } catch (error) {
+            console.error('Export XMI error:', error);
+            U.alert('e', 'Export Failed', 'Could not export as XMI format.');
+        }
+        closeMenu();
+    };
+
+    // Rename handlers
+    const startRename = (type: MenuType, id: string, currentName: string) => {
+        setRenamingItem({ type, id });
+        setRenameValue(currentName || '');
+        closeMenu();
+    };
+
+    const handleRenameSubmit = (item: LModel) => {
+        if (renameValue.trim()) {
+            const newName = renameValue.trim();
+            if (newName !== item.name) {
+                item.name = newName;
+                markDirty();
+            }
+        }
+        setRenamingItem(null);
+        setRenameValue('');
+    };
+
+    const handleRenameCancel = () => {
+        setRenamingItem(null);
+        setRenameValue('');
+    };
+
+    const handleRenameKeyDown = (e: React.KeyboardEvent, item: LModel) => {
+        if (e.key === 'Enter') {
+            handleRenameSubmit(item);
+        } else if (e.key === 'Escape') {
+            handleRenameCancel();
+        }
+    };
+
+    // Handle badge click - if public, open share modal; if private, toggle to public
+    const handleVisibilityBadgeClick = () => {
+        if (project.type === 'public') {
+            setShowShareModal(true);
+        } else {
+            handleToggleType();
+        }
+    };
+
+    const handleOpenMetamodel = async (mm: LModel) => {
+        await DockManager.open2(mm);
+    };
+
+    const handleOpenModel = async (model: LModel) => {
+        await DockManager.open2(model);
+    };
+
+    const handleCreateMetamodel = () => {
+        createM2(project);
+    };
+
+    // Handle "+ New" button click for models
+    const handleNewModelClick = () => {
+        if (metamodels.length === 0) {
+            // No metamodels - button should be disabled, but handle just in case
+            return;
+        }
+
+        if (metamodels.length === 1) {
+            // Only one metamodel - create model directly
+            createM1(project, metamodels[0]);
+            return;
+        }
+
+        // Multiple metamodels - show selection menu
+        setShowMetamodelMenu(!showMetamodelMenu);
+    };
+
+    // Create model with selected metamodel
+    const handleCreateModel = (metamodel: LModel) => {
+        setShowMetamodelMenu(false);
+        createM1(project, metamodel);
+    };
+
+    // Create a model when the project rail requests it — same flow as this section's
+    // "+ New" button (0 metamodels: no-op; 1: create directly; N: open the picker).
+    // Refs mirror the OPEN_TRANSFORMATION listener below: the effect is mounted once,
+    // but the handler and the metamodel list change on every render.
+    const handleNewModelClickRef = useRef(handleNewModelClick);
+    handleNewModelClickRef.current = handleNewModelClick;
+    const metamodelCountRef = useRef(metamodels.length);
+    metamodelCountRef.current = metamodels.length;
+    useEffect(() => {
+        const handler = () => {
+            handleNewModelClickRef.current();
+            // With N metamodels the picker renders inside this section, which may be
+            // scrolled out of view when the request comes from the rail. Wait a frame so
+            // the dropdown is committed before scrolling to it.
+            if (metamodelCountRef.current > 1) {
+                requestAnimationFrame(() => {
+                    document.getElementById('section-models')
+                        ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                });
+            }
+        };
+        window.addEventListener(JjodelEvents.CREATE_MODEL, handler);
+        return () => window.removeEventListener(JjodelEvents.CREATE_MODEL, handler);
+    }, []);
+
+    const handleDeleteMetamodel = (mm: LModel) => {
+        // Close any open tabs for this metamodel before deleting
+        const name = mm.name;
+        DockManager.closeTabsForEntity(mm.id, 'metamodel');
+        mm.delete();
+        U.alert('s', '', name ? `Metamodel "${name}" deleted` : 'Metamodel deleted');
+    };
+
+    const handleDeleteModel = (model: LModel) => {
+        // Close any open tabs for this model before deleting
+        const name = model.name;
+        DockManager.closeTabsForEntity(model.id, 'model');
+        model.delete();
+        U.alert('s', '', name ? `Model "${name}" deleted` : 'Model deleted');
+    };
+
+    const handleOpenViewpoint = async (vp: LViewPoint) => {
+        // TODO: redirect to panels/viewpoint-editor
+        DockManager.openViewpoint(vp);
+    };
+
+    // The two guards below are defence in depth over the filter at the top of the
+    // component: the singleton is not in `viewpoints`, so no button in this page can
+    // reach them with it — but `duplicate` and `delete` are the two gestures R-DMV-1
+    // forbids by name, and a future caller of these handlers should not have to know.
+    const handleDuplicateViewpoint = (vp: LViewPoint) => {
+        if (isDataManagerViewpoint(vp?.__raw as any)) return;
+        vp.duplicate();
+    };
+
+    const handleDeleteViewpoint = (vp: LViewPoint) => {
+        if (isDataManagerViewpoint(vp?.__raw as any)) return;
+        vp.delete();
+    };
+
+    const handleCreateViewpoint = (data: { name: string; type: import('../../joiner').ViewpointType }) => {
+        const dVp = DViewPoint.newVP(data.name, (vp) => {
+            // Set legacy booleans based on type
+            switch (data.type) {
+                case 'syntax':
+                    vp.isExclusiveView = true;
+                    vp.isValidation = false;
+                    break;
+                case 'validation':
+                    vp.isExclusiveView = false;
+                    vp.isValidation = true;
+                    break;
+                default: // decoration, semantics, editor_behavior
+                    vp.isExclusiveView = false;
+                    vp.isValidation = false;
+                    break;
+            }
+            // Set explicit viewpointType field
+            (vp as any).viewpointType = data.type;
+        });
+        setShowNewViewpointDialog(false);
+
+        // TODO: redirect to panels/viewpoint-editor
+        DockManager.openViewpoint(dVp);
+    };
+
+    // Transformation handlers
+    const handleCreateTransformation = (name: string, sourceId?: string, targetId?: string, description?: string) => {
+        const sourceMM = metamodels.find(mm => mm.id === sourceId);
+        const targetMM = metamodels.find(mm => mm.id === targetId);
+
+        const newTransformation = createTransformation(
+            name,
+            sourceId,
+            sourceMM?.name,
+            targetId,
+            targetMM?.name,
+            description
+        );
+
+        setTransformations(prev => [...prev, newTransformation]);
+        setShowNewTransformationDialog(false);
+        markDirty();
+    };
+
+    const handleOpenTransformation = async (transformation: JjtlTransformation) => {
+        // Find source and target metamodels (initial snapshot)
+        const sourceMM = findMetamodelById(metamodels, transformation.sourceMetamodelId);
+        const targetMM = findMetamodelById(metamodels, transformation.targetMetamodelId);
+
+        // Convert metamodels to JjTL format (initial snapshot)
+        const sourceMetamodelElements = sourceMM ? convertMetamodelToJjtl(sourceMM, { includeInherited: true }) : [];
+        const targetMetamodelElements = targetMM ? convertMetamodelToJjtl(targetMM, { includeInherited: true }) : [];
+
+        // Build available models list for transformation execution
+        // Models (not metamodels) with their conforming metamodel info
+        // DEBUG: Log raw data to understand the structure
+        // console.log('[ProjectEditor] DEBUG - Raw data:', {
+        //     modelsCount: models?.length || 0,
+        //     metamodelsCount: metamodels?.length || 0,
+        //     metamodelIds: metamodels?.map(m => ({ id: m.id, name: m.name })),
+        //     sourceMetamodelName: transformation.sourceMetamodelName,
+        //     firstModel: models?.[0] ? {
+        //         id: models[0].id,
+        //         name: models[0].name,
+        //         instanceof: models[0].instanceof,
+        //         instanceofType: typeof models[0].instanceof,
+        //         // Also try to access as proxy
+        //         instanceofId: (models[0].instanceof as any)?.id,
+        //         instanceofName: (models[0].instanceof as any)?.name,
+        //     } : null,
+        // });
+
+        const availableModels = (models || []).map(model => {
+            // model.instanceof can be:
+            // 1. An LModel proxy (has .id and .name) when accessed through LModel proxy
+            // 2. A raw Pointer string when accessed from raw DModel data
+            // 3. undefined/null
+            const instanceOf = model.instanceof;
+            let mmId = '';
+            let mmName = '';
+
+            if (instanceOf) {
+                if (typeof instanceOf === 'string') {
+                    // Raw Pointer string - need to look up metamodel by ID
+                    mmId = instanceOf;
+                    const mm = metamodels?.find(m => m.id === mmId);
+                    mmName = mm?.name || '';
+                } else if (typeof instanceOf === 'object') {
+                    // LModel proxy - can access .id and .name directly
+                    mmId = (instanceOf as any).id || '';
+                    mmName = (instanceOf as any).name || '';
+                }
+            }
+
+            // console.log('[ProjectEditor] DEBUG - Model mapping:', {
+            //     modelName: model.name,
+            //     instanceofRaw: instanceOf,
+            //     instanceofType: typeof instanceOf,
+            //     extractedMmId: mmId,
+            //     extractedMmName: mmName,
+            // });
+
+            return {
+                id: model.id,
+                name: model.name || 'Unnamed Model',
+                metamodelId: mmId,
+                metamodelName: mmName,
+            };
+        });
+
+        // Get existing model names to prevent duplicates when creating output
+        const existingModelNames = [
+            ...(models || []).map(m => m.name || ''),
+            ...(metamodels || []).map(m => m.name || '')
+        ].filter(Boolean);
+
+        // console.log('[ProjectEditor] Opening transformation', {
+        //     name: transformation.name,
+        //     sourceMetamodelId: transformation.sourceMetamodelId,
+        //     sourceMetamodelName: transformation.sourceMetamodelName,
+        //     sourceElements: sourceMetamodelElements.length,
+        //     targetElements: targetMetamodelElements.length,
+        //     modelsInProject: models?.length || 0,
+        //     availableModels: availableModels.map(m => ({
+        //         id: m.id,
+        //         name: m.name,
+        //         metamodelId: m.metamodelId,
+        //         metamodelName: m.metamodelName
+        //     }))
+        // });
+
+        // Create getter functions that fetch FRESH metamodel data on demand
+        // These are called when user clicks "Analyze" in Suggested Mappings panel
+        const getSourceMetamodel = () => {
+            const freshMM = findMetamodelById(project.metamodels || [], transformation.sourceMetamodelId);
+            const result = freshMM ? convertMetamodelToJjtl(freshMM, { includeInherited: true }) : [];
+            // console.log('[ProjectEditor] getSourceMetamodel called, classes:', result.filter(e => e.type === 'class').length);
+            return result;
+        };
+
+        const getTargetMetamodel = () => {
+            const freshMM = findMetamodelById(project.metamodels || [], transformation.targetMetamodelId);
+            const result = freshMM ? convertMetamodelToJjtl(freshMM, { includeInherited: true }) : [];
+            // console.log('[ProjectEditor] getTargetMetamodel called, classes:', result.filter(e => e.type === 'class').length);
+            return result;
+        };
+
+        /**
+         * Generate unique model name by appending (N) suffix if needed.
+         * Delegates to `uniqueModelName` (model/nameLookup.ts), the single source of the
+         * rule that `DModel.new` also applies; the pool stays the one passed by the caller.
+         *
+         * @param baseName - The desired name (e.g., "metamodel_1_to_metamodel_2")
+         * @param existingNames - Array of existing names
+         * @returns Unique name (e.g., "metamodel_1_to_metamodel_2 (1)")
+         */
+        const generateUniqueModelName = (baseName: string, existingNames: string[]): string => {
+            return uniqueModelName(baseName, existingNames);
+        };
+
+        // Execution guard to prevent double-firing
+        let isExecutingTransformation = false;
+
+        // Wrap Pointer IDs as { __ref: id } so the executor can distinguish
+        // reference values from plain strings during cross-type resolution.
+        // Jjodel Pointer IDs follow the pattern "Pointer<digits>_<context>_<digits>".
+        const wrapIfRef = (val: any): any => {
+            if (typeof val === 'string' && val.startsWith('Pointer')) {
+                const target = (store.getState() as any).idlookup?.[val];
+                if (target?.className === 'DEnumLiteral') return target.name;
+                return { __ref: val };
+            }
+            return val;
+        };
+
+        // Callback when transformation is executed
+        // Returns ExecutionResult so JjtlDevelopmentEnv can update trace display
+        const handleExecuteTransformation = async (
+            sourceModelId: string,
+            outputModelName: string,
+            ast: TransformationAST
+        ): Promise<ExecutionResult | void> => {
+            // Guard against double execution (React StrictMode, button+form submit, etc.)
+            if (isExecutingTransformation) {
+                console.warn('[ProjectEditor] Transformation already executing, skipping duplicate call');
+                return;
+            }
+            isExecutingTransformation = true;
+
+            // console.log('[ProjectEditor] handleExecuteTransformation called', {
+            //     sourceModelId,
+            //     outputModelName,
+            //     astMappings: ast?.mappings?.length || 0
+            // });
+
+            // Validate AST
+            if (!ast || !ast.mappings || ast.mappings.length === 0) {
+                console.error('[ProjectEditor] AST has no mappings!');
+                U.alert('e', 'Error', 'Transformation has no mappings defined.');
+                isExecutingTransformation = false;
+                return;
+            }
+
+            try {
+                // Find source model
+                const sourceModel = models.find(m => m.id === sourceModelId);
+                if (!sourceModel) {
+                    U.alert('e', 'Error', `Source model not found`);
+                    isExecutingTransformation = false;
+                    return;
+                }
+
+                // Use the current transformation from the enclosing closure
+                // (previously: transformations.find(t => t.targetMetamodelId) which always returned the FIRST one)
+                const targetMetamodel = metamodels.find(mm => mm.id === transformation.targetMetamodelId);
+                if (!targetMetamodel) {
+                    U.alert('e', 'Error', `Target metamodel not found`);
+                    isExecutingTransformation = false;
+                    return;
+                }
+
+                // Prepare source data (deep copy)
+                // ALL objects of the model, contained ones included: `LModel.objects`
+                // returns `data.objects`, i.e. the roots only, so a rule on a class that
+                // is only ever instantiated inside a containment slot saw zero instances
+                // and produced nothing. `allSubObjects` scans every DObject whose model is
+                // this one — roots and contained alike — and is the accessor `LProject`
+                // already uses (joiner/classes.ts, `get_objects`).
+                // Read ONCE per Execute: the getter rescans the whole store on each access.
+                // Behavioural change: the set of instances a transformation sees no longer
+                // depends on which rules are written (see SPEC.md §9.1).
+                const allSourceObjects: LObject[] =
+                    (sourceModel as any).allSubObjects || sourceModel.objects || [];
+                // Filter out null/undefined entries: the collection can contain broken
+                // pointers (e.g. deleted DObjects) that dereference to undefined and
+                // would crash downstream property accesses like `obj.instanceof`.
+                const sourceObjects = allSourceObjects.filter((obj: LObject | null | undefined) => {
+                    if (!obj) {
+                        //console.warn('[ProjectEditor] Skipping null/undefined object in source model');
+                        return false;
+                    }
+                    return true;
+                });
+                // console.log('[ProjectEditor] Source objects count:', sourceObjects.length);
+
+
+                const sourceModelData = sourceObjects.map((obj: LObject) => {
+                    // Resolve className with multiple fallback paths
+                    let className = '';
+
+                    // Method 1: Direct instanceof.name (standard path)
+                    if (obj.instanceof && obj.instanceof.name) {
+                        className = obj.instanceof.name;
+                        // console.log(`[ProjectEditor] className from instanceof.name: "${className}"`);
+                    }
+
+                    // Method 2: Check __raw.instanceof and resolve via Redux state
+                    if (!className && (obj as any).__raw?.instanceof) {
+                        const classPointer = (obj as any).__raw.instanceof;
+                        const state = store.getState() as any;
+                        const classData = state[classPointer];
+                        if (classData && classData.name) {
+                            className = classData.name;
+                            // console.log(`[ProjectEditor] className from __raw.instanceof lookup: "${className}"`);
+                        }
+                    }
+
+                    // Method 3: Check features for __class or type indicator
+                    if (!className && obj.features) {
+                        for (const feature of obj.features) {
+                            if (feature.name === '__class' || feature.name === '__type') {
+                                const val = feature.values?.length > 0 ? feature.values[0] : feature.value;
+                                if (typeof val === 'string') {
+                                    className = val;
+                                    // console.log(`[ProjectEditor] className from feature "${feature.name}": "${className}"`);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    // Method 4: Extract from object name pattern (e.g., "A_0" → "A")
+                    if (!className && obj.name) {
+                        const match = obj.name.match(/^([A-Za-z]+)_\d+$/);
+                        if (match) {
+                            className = match[1];
+                            // console.log(`[ProjectEditor] className extracted from name pattern "${obj.name}": "${className}"`);
+                        }
+                    }
+
+                    // Debug: Log all attempts if still no className
+                    if (!className) {
+                        console.warn('[ProjectEditor] Could not resolve className for object:', {
+                            id: obj.id,
+                            name: obj.name,
+                            instanceof: obj.instanceof,
+                            __raw: (obj as any).__raw,
+                            features: obj.features?.map(f => ({ name: f.name, value: f.value, values: f.values }))
+                        });
+                        // Last resort: use object name as-is
+                        className = obj.name || 'UnknownClass';
+                    }
+
+                    const result: Record<string, any> = {
+                        id: obj.id,
+                        name: obj.name,
+                        className: className,
+                        __type: className,
+                    };
+                    if (obj.features) {
+                        for (const feature of obj.features) {
+                            if (!feature.name) continue;
+                            // Read from the raw DValue rather than the L-layer getter.
+                            // L-layer `.values` resolves Pointer IDs to LObject proxies
+                            // which have circular back-refs (e.g., LClass.attributes[0].owner)
+                            // that freeze the thread during deep copy.
+                            // Raw values are either primitives (for attributes) or Pointer
+                            // ID strings (for references).
+                            const rawVals: any[] = (() => {
+                                const r = (feature as any).__raw?.values;
+                                return Array.isArray(r) ? r : [];
+                            })();
+                            // Filter empty and deduplicate: DValue.values can contain
+                            // the same Pointer ID twice (e.g., edge created via canvas
+                            // and then via auto-populate, or data corruption).
+                            const seen = new Set<string>();
+                            const meaningful = rawVals.filter((v: any) => {
+                                if (v == null || v === '') return false;
+                                if (typeof v === 'string') {
+                                    if (seen.has(v)) return false;
+                                    seen.add(v);
+                                }
+                                return true;
+                            });
+                            if (meaningful.length === 0) {
+                                result[feature.name] = null;
+                            } else if (meaningful.length === 1) {
+                                result[feature.name] = wrapIfRef(meaningful[0]);
+                            } else {
+                                result[feature.name] = meaningful.map(wrapIfRef);
+                            }
+                        }
+                    }
+
+                    // Compute _containerId: the DObject that owns this object through
+                    // a containment reference. Traverses the father chain:
+                    //   DObject.father → DValue (containment feature) → DValue.father → owning DObject
+                    // If father points to a DModel, the object is root → _containerId = null.
+                    const fatherPtr = (obj as any).__raw?.father;
+                    if (fatherPtr && typeof fatherPtr === 'string') {
+                        const idl = (store.getState() as any).idlookup;
+                        const fatherData = idl?.[fatherPtr];
+                        if (fatherData?.className === 'DValue' && fatherData.father) {
+                            result._containerId = String(fatherData.father);
+                        }
+                    }
+
+                    return result;
+                });
+
+                // Source data is now safe to pass directly: reference values
+                // are wrapped as { __ref: PointerId } (no L-layer proxies),
+                // and attribute values are primitives from __raw.values.
+                console.log('[ProjectEditor] sourceModelData built, handing to executor');
+                console.time('[TIMING] JSON deep copy (now pass-through)');
+                const sourceModelDataCopy = sourceModelData;
+                console.timeEnd('[TIMING] JSON deep copy (now pass-through)');
+
+                // Execute transformation
+                console.time('[TIMING] executeTransformation');
+                const result: ExecutionResult = await executeTransformation(ast, sourceModelDataCopy, targetMetamodel);
+                console.timeEnd('[TIMING] executeTransformation');
+
+                if (!result.success) {
+                    U.alert('e', 'Transformation Failed', result.errors.join('\n'));
+                    isExecutingTransformation = false;
+                    return result;
+                }
+
+                // ============================================
+                // CREAZIONE MODELLO - NON USARE createM1!
+                // ============================================
+
+                // CRITICAL: Get fresh model names from Redux store, NOT from stale component state
+                // This ensures we catch recently created models that haven't triggered a re-render yet.
+                // DModels live under state.idlookup (not at the root) — iterating root keys would
+                // only see "idlookup", "graphs", etc. and miss every model.
+                const freshState = store.getState() as any;
+                const freshExistingNames: string[] = [];
+                const idlookup = freshState?.idlookup || {};
+                for (const key in idlookup) {
+                    const item = idlookup[key];
+                    if (item && typeof item === 'object' && item.className === 'DModel' && item.name) {
+                        freshExistingNames.push(item.name);
+                    }
+                }
+
+                // Also include names from component state as fallback
+                const existingNames = [
+                    ...freshExistingNames,
+                    ...(models || []).map(m => m.name || ''),
+                    ...(metamodels || []).map(m => m.name || '')
+                ].filter((name, index, arr) => name && arr.indexOf(name) === index); // Remove duplicates
+
+                // Genera nome unico
+                const uniqueOutputName = generateUniqueModelName(outputModelName, existingNames);
+
+                // console.log('[ProjectEditor] Output model name:', {
+                //     requested: outputModelName,
+                //     unique: uniqueOutputName,
+                //     existingNames: existingNames,
+                //     freshNamesCount: freshExistingNames.length
+                // });
+
+                let createdDModel: DModel | null = null;
+                let createdDGraph: DGraph | null = null;
+                let createdModelId: string | null = null;
+                let createdGraphId: string | null = null;
+                let instancesCreated = 0;
+
+                // Store object NAME (not ID!) with attributes — ID from DObject.new() is unreliable
+                const pendingAttributeSets: Array<{
+                    objectName: string;
+                    className: string;
+                    attributes: Record<string, any>;
+                }> = [];
+
+                // Pending references: { __ref_result: true, targets: [...] } values
+                // from executor cross-type resolution. Written via LValue.setValueAtPosition
+                // with isPtr: true (same API as the Properties panel dropdown).
+                const pendingReferenceSets: Array<{
+                    objectName: string;
+                    references: Record<string, { targets: any[] }>;
+                }> = [];
+
+                // Pending nested creations: objects the transformation asked to CREATE
+                // inside a feature of a target instance (`-> columns { forall ... }`).
+                // They are marked __nested by the executor, which is what tells them
+                // apart from __ref_result (a pointer to a target another rule created).
+                // Applied in STEP 6c, outside the TRANSACTION: LValue.addObject opens
+                // its own TRANSACTION around DObject.new3 (§3.3).
+                const pendingNestedCreations: Array<{
+                    parentName: string;
+                    parentClassName: string;
+                    featureName: string;
+                    children: any[];
+                }> = [];
+
+                // Attributes of objects created by STEP 6c, keyed by the REAL id the
+                // primitive returned — never by name: two tables may each own a column
+                // called "id", and a name lookup could not tell them apart.
+                const pendingChildAttributeSets: Array<{
+                    objectId: string;
+                    className: string;
+                    attributes: Record<string, any>;
+                }> = [];
+
+                // Map __sourceId → objectName: the reliable bridge between executor
+                // target instances and the DObjects created from them.
+                // Each executor target has __sourceId (the Pointer ID of the source
+                // element that produced it). We key by __sourceId so STEP 8b can
+                // resolve reference targets without depending on JS object identity
+                // (which breaks across deep copies) or on .name (which may not be
+                // set if the transformation has no `name := name` binding).
+                const sourceIdToObjectName = new Map<string, string>();
+
+                // Collect object IDs + positions for DVertex creation AFTER the TRANSACTION
+                // (DVertex.new has its own internal TRANSACTION — nesting causes coordinates to be lost)
+                const pendingVertices: Array<{
+                    objectId: string;
+                    posX: number;
+                    posY: number;
+                }> = [];
+
+                console.time('[TIMING] TRANSACTION total');
+                TRANSACTION('Execute Transformation: Create Target Model', () => {
+                    // STEP 1: Crea DModel con il nome UNICO
+                    console.time('[TIMING] DModel.new');
+                    const dModel: DModel = DModel.new(
+                        uniqueOutputName,       // ← USA IL NOME UNICO!
+                        targetMetamodel.id,     // instanceof = target metamodel
+                        false,                  // isMetamodel = false
+                        true                    // persist = true
+                    );
+                    console.timeEnd('[TIMING] DModel.new');
+                    createdDModel = dModel;
+                    createdModelId = dModel.id;
+                    // console.log('[ProjectEditor] Created DModel with UNIQUE name:', {
+                    //     id: dModel.id,
+                    //     name: uniqueOutputName
+                    // });
+
+                    // STEP 2: Crea DGraph
+                    console.time('[TIMING] DGraph.new');
+                    const graphId = Constructors.DGraph_makeID(dModel.id);
+                    const dGraph: DGraph = DGraph.new(0, dModel.id, undefined, undefined, graphId);
+                    console.timeEnd('[TIMING] DGraph.new');
+                    createdDGraph = dGraph;
+                    createdGraphId = dGraph.id;
+                    // console.log('[ProjectEditor] Created DGraph:', { id: dGraph.id });
+
+                    console.time('[TIMING] SetFieldActions');
+                    // Tag graph as v2-flow so EditorV2/useJjomSync can find it
+                    SetFieldAction.new(dGraph.id, 'graphStyle', 'v2-flow', '', false);
+
+                    // STEP 3: Aggiungi model a project.models
+                    SetFieldAction.new(project.id, 'models', dModel.id, '+=', true);
+                    // console.log('[ProjectEditor] Added model to project.models');
+
+                    // STEP 4: Aggiungi graph a state.graphs (ROOT!) - per ModelTab
+                    SetRootFieldAction.new('graphs', dGraph.id, '+=', true);
+                    // console.log('[ProjectEditor] Added graph to state.graphs (ROOT)');
+
+                    // STEP 5: Aggiungi graph a project.graphs - per persistenza
+                    SetFieldAction.new(project.id, 'graphs', dGraph.id, '+=', true);
+                    // console.log('[ProjectEditor] Added graph to project.graphs');
+
+                    // STEP 5b: Tag model as generated by transformation
+                    SetFieldAction.new(dModel.id, '_state', {
+                        generatedBy: {
+                            transformationId: transformation.id,
+                            sourceModelId: sourceModelId,
+                            timestamp: Date.now(),
+                        }
+                    }, '', false);
+                    console.timeEnd('[TIMING] SetFieldActions');
+
+                    // STEP 6: Crea istanze
+                    console.time('[TIMING] DObject creation loop');
+                    if (result.targetModel?.instances) {
+                        const targetClasses: LClass[] = targetMetamodel.classes || [];
+                        // console.log('[ProjectEditor] Target classes:', targetClasses.map(c => c.name));
+
+                        // Deduplicate D-layer object names so name-based lookup in STEP 8/8b
+                        // stays reliable when two instances share the same bound name (F5).
+                        const usedObjectNames = new Set<string>();
+
+                        result.targetModel.instances.forEach((instances: any[], className: string) => {
+                            // console.log(`[ProjectEditor] Creating ${instances.length} instances of "${className}"`);
+
+                            const targetClass = targetClasses.find(c => c.name === className);
+                            if (!targetClass) {
+                                console.warn(`[ProjectEditor] Class "${className}" not found`);
+                                return;
+                            }
+
+                            // Grid layout constants for DVertex positioning
+                            const GRID_COLS = 3;
+                            const NODE_W = 200;
+                            const NODE_H = 80;
+                            const GAP_X = 50;
+                            const GAP_Y = 50;
+                            const START_X = 50;
+                            const START_Y = 50;
+
+                            for (const instanceData of instances) {
+                                // console.log(`[ProjectEditor] instanceData from executor:`, instanceData);
+
+                                let objectName = instanceData.name || `${className}_${instancesCreated}`;
+                                if (usedObjectNames.has(objectName)) {
+                                    const originalName = objectName;
+                                    let dedupeSuffix = 2;
+                                    while (usedObjectNames.has(`${originalName}_${dedupeSuffix}`)) dedupeSuffix++;
+                                    objectName = `${originalName}_${dedupeSuffix}`;
+                                    console.warn(`[ProjectEditor] Duplicate object name "${originalName}" in transformation output; using "${objectName}" for the D-layer object to keep name-based lookup reliable.`);
+                                }
+                                usedObjectNames.add(objectName);
+                                const objTimingLabel = `[TIMING] DObject.new #${instancesCreated} (${className})`;
+                                console.time(objTimingLabel);
+                                const dObject = DObject.new(targetClass.id, dModel.id, DModel, objectName, true);
+
+                                // Map __sourceId → objectName for reference wiring in STEP 8b
+                                if (instanceData.__sourceId) {
+                                    sourceIdToObjectName.set(String(instanceData.__sourceId), objectName);
+                                }
+
+                                // Collect for DVertex creation AFTER the TRANSACTION.
+                                // DVertex.new has its own internal TRANSACTION — nesting
+                                // causes coordinates to be lost (all positions become 0,0).
+                                const col = instancesCreated % GRID_COLS;
+                                const row = Math.floor(instancesCreated / GRID_COLS);
+                                const posX = START_X + col * (NODE_W + GAP_X);
+                                const posY = START_Y + row * (NODE_H + GAP_Y);
+                                pendingVertices.push({ objectId: dObject.id, posX, posY });
+
+                                // Collect attributes for deferred setting (after TRANSACTION)
+                                // Use WHITELIST approach: only include attributes that exist in the
+                                // target metamodel class. This avoids collisions between system
+                                // properties (id, name, className) and domain attributes with the
+                                // same names.
+                                const domainAttrNames = new Set(
+                                    (targetClass.allAttributes || []).map((a: any) => a.name).filter(Boolean)
+                                );
+                                const attrs: Record<string, any> = {};
+                                for (const [attrName, attrValue] of Object.entries(instanceData)) {
+                                    if (!domainAttrNames.has(attrName)) continue;
+                                    if (attrValue === undefined || attrValue === null) continue;
+                                    attrs[attrName] = attrValue;
+                                }
+
+                                if (Object.keys(attrs).length > 0) {
+                                    pendingAttributeSets.push({
+                                        objectName: objectName,
+                                        className,
+                                        attributes: attrs,
+                                    });
+                                    // console.log(`[ProjectEditor] Queued attributes for "${objectName}":`, attrs);
+                                }
+
+                                // Collect reference values (marked by executor with __ref_result)
+                                const refs: Record<string, { targets: any[] }> = {};
+                                for (const [key, val] of Object.entries(instanceData)) {
+                                    if (val && typeof val === 'object' && (val as any).__ref_result) {
+                                        refs[key] = val as { targets: any[] };
+                                    }
+                                }
+                                if (Object.keys(refs).length > 0) {
+                                    pendingReferenceSets.push({ objectName, references: refs });
+                                    console.log(`[ProjectEditor] Queued references for "${objectName}":`,
+                                        Object.keys(refs).map(k => `${k}(${refs[k].targets.length})`));
+                                }
+
+                                // Collect nested creations (marked __nested by the executor)
+                                const domainRefNames = new Set(
+                                    (targetClass.allReferences || []).map((r: any) => r.name).filter(Boolean)
+                                );
+                                const nestedKeys = new Set<string>();
+                                for (const [key, val] of Object.entries(instanceData)) {
+                                    if (key.startsWith('__')) continue;
+                                    const candidates = Array.isArray(val) ? val : [val];
+                                    const children = candidates.filter(
+                                        (v: any) => v && typeof v === 'object' && v.__nested
+                                    );
+                                    if (children.length === 0) continue;
+                                    nestedKeys.add(key);
+                                    if (!domainRefNames.has(key)) {
+                                        console.warn(
+                                            `[ProjectEditor] "${objectName}" (${className}): '${key}' is not a reference of `
+                                            + `'${className}', so the ${children.length} object(s) created for it cannot be `
+                                            + `stored and were dropped.`
+                                        );
+                                        continue;
+                                    }
+                                    pendingNestedCreations.push({
+                                        parentName: objectName,
+                                        parentClassName: className,
+                                        featureName: key,
+                                        children,
+                                    });
+                                }
+
+                                // Anything left over is a value the model will not receive.
+                                // It used to fall between the attribute whitelist and the
+                                // reference channel without a word (§6.2 of the discovery).
+                                for (const [key, val] of Object.entries(instanceData)) {
+                                    if (key.startsWith('__')) continue;
+                                    if (key === 'id' || key === 'name' || key === 'className') continue;
+                                    if (val === undefined || val === null) continue;
+                                    if (domainAttrNames.has(key)) continue;
+                                    if (nestedKeys.has(key)) continue;
+                                    if (val && typeof val === 'object' && (val as any).__ref_result) continue;
+                                    console.warn(
+                                        `[ProjectEditor] "${objectName}" (${className}): '${key}' is neither an attribute `
+                                        + `nor a resolved reference nor a nested creation of '${className}'. Value dropped.`,
+                                        val
+                                    );
+                                }
+
+                                instancesCreated++;
+                            }
+                        });
+                    }
+                    console.timeEnd('[TIMING] DObject creation loop');
+                    console.log('[ProjectEditor] sourceId→name map:', Object.fromEntries(sourceIdToObjectName));
+
+                    // console.log(`[ProjectEditor] Total instances created: ${instancesCreated}`);
+                });
+                console.timeEnd('[TIMING] TRANSACTION total');
+
+                // STEP 7: Open tab AFTER a delay for Redux (fire-and-forget)
+                // Scheduled FIRST so tab opens even if DVertex/attribute steps fail.
+                // Delay bumped to 2000ms so it fires after DVertex creation + attribute
+                // setting have settled — otherwise open2 runs while the graph/vertex
+                // dispatches are still in flight and ReactFlow loops on stale state.
+                if (createdDModel) {
+                    const modelToOpen = createdDModel;
+                    const modelName = uniqueOutputName;
+                    const count = instancesCreated;
+
+                    setTimeout(() => {
+                        try {
+                            // Use open2() so EDITOR_TYPE_CHANGE dispatches and Dashboard hides the LeftBar.
+                            DockManager.open2(LModel.fromD(modelToOpen));
+                            U.alert('i', 'Transformation Executed',
+                                `Created model "${modelName}" with ${count} instances.`);
+                            markDirty();
+                        } catch (e) {
+                            console.error('[ProjectEditor] Error opening tab:', e);
+                        }
+                    }, 2000);
+                }
+
+                // Yield one frame before creating DVertices. TRANSACTION above is an
+                // async function that suspends at `await func()` — outer depth stays
+                // at 1 until the microtask runs FINAL_END. Waiting for the next paint
+                // lets React flush renders + lets Redux drain before N DVertex.new()
+                // calls each open their own internal TRANSACTION.
+                await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+                // STEP 6b: Create DVertices OUTSIDE the TRANSACTION.
+                // DVertex.new has its own internal TRANSACTION — calling it inside
+                // another TRANSACTION causes nested transactions that lose coordinates.
+                // Same pattern as useJjomSync's auto-population.
+                // Wrapped in try-catch so vertex creation failures don't prevent tab opening.
+                if (pendingVertices.length > 0 && createdGraphId) {
+                    const gid = createdGraphId;
+                    const NODE_W = 200;
+                    const NODE_H = 80;
+                    console.time('[TIMING] DVertex creation');
+                    try {
+                        let dvIdx = 0;
+                        for (const pv of pendingVertices) {
+                            const size = new GraphSize(pv.posX, pv.posY, NODE_W, NODE_H);
+                            const dvLabel = `[TIMING] DVertex.new #${dvIdx}`;
+                            console.time(dvLabel);
+                            DVertex.new(0, pv.objectId, gid, gid, undefined, size);
+
+                        }
+                    } catch (e) {
+                        console.error('[ProjectEditor] Error creating DVertices (non-fatal):', e);
+                    }
+                    console.timeEnd('[TIMING] DVertex creation');
+                }
+
+                // STEP 8: Set attributes after delay — use LModel proxy to find objects by name
+                if ((pendingAttributeSets.length > 0 || pendingReferenceSets.length > 0
+                    || pendingChildAttributeSets.length > 0) && createdModelId) {
+                    const modelId = createdModelId;
+                    // console.log(`[ProjectEditor] STEP 8: Will set attributes for ${pendingAttributeSets.length} objects via LModel proxy`);
+
+                    // Use setTimeout to wait for Redux propagation and rendering
+                    setTimeout(() => {
+                        try {
+                            const lModel = LPointerTargetable.fromD(modelId) as LModel;
+                            if (!lModel) {
+                                console.error(`[ProjectEditor] Could not get LModel for ${modelId}`);
+                                return;
+                            }
+
+                            const objects = lModel.objects || [];
+
+                    // STEP 6c: Create the objects of nested creations INSIDE their feature.
+                    // `LValue.addObject` wraps `DObject.new3` in its own TRANSACTION
+                    // (LModelElement.tsx, get_addObject), so this must run OUTSIDE the STEP 6
+                    // TRANSACTION — nesting a creator is what loses coordinates and drops
+                    // SetFieldActions (CLAUDE.md §3.3). Same reason DVertex.new is deferred.
+                    //
+                    // Runs at the top of the STEP 8 timeout, where lModel.objects is known
+                    // to be populated. The child is created with its NAME only; the remaining
+                    // attributes are queued against the real id the primitive returns and
+                    // written on a further timer, past addObject's own deferred seeding.
+                    if (pendingNestedCreations.length > 0) {
+                        let nestedCreated = 0;
+                        console.time('[TIMING] nested DObject creation');
+                        try {
+                            const lModelN = lModel;
+                            const rootObjects: LObject[] = (lModelN?.objects || []) as LObject[];
+                            const targetClassesN: LClass[] = targetMetamodel.classes || [];
+
+                            for (const pending of pendingNestedCreations) {
+                                const matches = rootObjects.filter((o: LObject) => o.name === pending.parentName);
+                                if (matches.length !== 1) {
+                                    console.warn(
+                                        `[ProjectEditor] Nested: parent "${pending.parentName}" resolves to `
+                                        + `${matches.length} objects — '${pending.featureName}' left empty.`
+                                    );
+                                    continue;
+                                }
+                                const parent = matches[0];
+                                const slot = (parent as any)['$' + pending.featureName];
+                                if (!slot || typeof slot.addObject !== 'function') {
+                                    console.warn(
+                                        `[ProjectEditor] Nested: feature "$${pending.featureName}" not available on `
+                                        + `"${pending.parentName}" — ${pending.children.length} object(s) dropped.`
+                                    );
+                                    continue;
+                                }
+
+                                for (const child of pending.children) {
+                                    const childClassName = child.__type || child.className;
+                                    const childClass = targetClassesN.find(c => c.name === childClassName);
+                                    if (!childClass) {
+                                        console.warn(`[ProjectEditor] Nested: class "${childClassName}" not found in target metamodel.`);
+                                        continue;
+                                    }
+                                    const childAttrNames = new Set(
+                                        (childClass.allAttributes || []).map((a: any) => a.name).filter(Boolean)
+                                    );
+                                    const childName = typeof child.name === 'string' && child.name
+                                        ? child.name
+                                        : `${childClassName}_${nestedCreated}`;
+                                    try {
+                                        const created = slot.addObject({ name: childName }, childClassName);
+                                        if (!created || !created.id) {
+                                            console.warn(
+                                                `[ProjectEditor] Nested: addObject returned nothing for `
+                                                + `"${pending.parentName}".${pending.featureName} -> ${childClassName}.`
+                                            );
+                                            continue;
+                                        }
+                                        const attrs: Record<string, any> = {};
+                                        for (const [k, v] of Object.entries(child)) {
+                                            if (k === 'name') continue;          // already given to addObject
+                                            if (!childAttrNames.has(k)) continue;
+                                            if (v === undefined || v === null) continue;
+                                            attrs[k] = v;
+                                        }
+                                        if (Object.keys(attrs).length > 0) {
+                                            pendingChildAttributeSets.push({
+                                                objectId: created.id, className: childClassName, attributes: attrs,
+                                            });
+                                        }
+                                        nestedCreated++;
+                                    } catch (e) {
+                                        console.error(
+                                            `[ProjectEditor] Nested: addObject failed for `
+                                            + `"${pending.parentName}".${pending.featureName} -> ${childClassName}:`, e
+                                        );
+                                    }
+                                }
+                            }
+                        } catch (e) {
+                            console.error('[ProjectEditor] Error creating nested objects (non-fatal):', e);
+                        }
+                        console.timeEnd('[TIMING] nested DObject creation');
+                        console.log(`[ProjectEditor] Nested objects created: ${nestedCreated}`);
+                    }
+
+                            // console.log(`[ProjectEditor] LModel has ${objects.length} objects:`, objects.map((o: LObject) => o.name));
+
+                            // Resolve an object of the fresh model BY NAME, declaring ambiguity
+                            // instead of resolving it (R-S1-5). `.find` answered "the first" to a
+                            // question with no single answer: two homonyms meant the attributes
+                            // landed on one of them and the pointer pointed at one of them, with
+                            // nothing said about the choice. Returns null on 0 AND on 2+; the
+                            // caller skips the write and the slot stays empty and declared.
+                            //
+                            // This runs inside handleExecuteTransformation, i.e. AFTER a JjTL run,
+                            // never at project load — so refusing a write here can never stop a
+                            // saved model with pre-existing duplicates from opening.
+                            // `ambiguous` is separate from a null `found` so each caller keeps its
+                            // own "not found" copy untouched and only the new case speaks with a
+                            // new voice — a not-found warning on an ambiguous name would be a
+                            // false statement about a name that IS there, twice.
+                            const resolveSeeded = (
+                                name: string, what: string
+                            ): { found: LObject | null; ambiguous: boolean } => {
+                                const matches = objects.filter((o: LObject) => o.name === name);
+                                if (matches.length === 1) return { found: matches[0], ambiguous: false };
+                                if (matches.length === 0) return { found: null, ambiguous: false };
+                                console.warn(
+                                    `[ProjectEditor] Ambiguous name "${name}" (${matches.length} instances) `
+                                    + `— ${what} skipped, nothing written. Candidates: `
+                                    + matches.map((o: any) => `${o?.instanceof?.name ?? '?'} (${o.id})`).join(', ')
+                                );
+                                return { found: null, ambiguous: true };
+                            };
+
+                            // Write one attribute value on one object.
+                            //
+                            // An attribute typed by an enumerator is stored as a POINTER to a
+                            // DEnumLiteral (setValueAtPosition checks `lval.className === DEnumLiteral`),
+                            // while the executor carries an enum value as the literal's NAME — that is
+                            // also how ProjectEditor serializes it on the source side (wrapIfRef returns
+                            // target.name for a DEnumLiteral). So a string that names a literal of the
+                            // attribute's enum is written as that literal's pointer; anything else is
+                            // written as-is.
+                            const writeAttribute = (lObject: LObject, attrName: string, attrValue: any, who: string): void => {
+                                const feature = (lObject as any)['$' + attrName];
+                                if (!feature) {
+                                    console.warn(`[ProjectEditor] Feature "$${attrName}" not found on "${who}"`);
+                                    const features = lObject.features || [];
+                                    console.warn(`[ProjectEditor] Available features:`, features.map((f: any) => f.name));
+                                    return;
+                                }
+                                const meta: any = (lObject as any).instanceof;
+                                const attrMeta = (meta?.allAttributes || []).find((a: any) => a?.name === attrName);
+                                const attrType: any = attrMeta?.type;
+                                if (attrType && attrType.className === 'DEnumerator' && typeof attrValue === 'string') {
+                                    const literal = (attrType.literals || []).find((l: any) => l?.name === attrValue);
+                                    if (literal) {
+                                        feature.setValueAtPosition(0, literal.id, { isPtr: true });
+                                        return;
+                                    }
+                                    console.warn(
+                                        `[ProjectEditor] "${who}".${attrName}: "${attrValue}" is not a literal of `
+                                        + `enum '${attrType.name}'; written as a plain string.`
+                                    );
+                                }
+                                if (Array.isArray(attrValue)) feature.values = attrValue;
+                                else feature.value = attrValue;
+                            };
+
+                            for (const pending of pendingAttributeSets) {
+                                // Find object by name
+                                const r = resolveSeeded(pending.objectName, 'attribute seeding');
+                                if (r.ambiguous) continue;
+                                const lObject = r.found;
+                                if (!lObject) {
+                                    console.warn(`[ProjectEditor] Object "${pending.objectName}" not found in model`);
+                                    continue;
+                                }
+
+                                // console.log(`[ProjectEditor] Found "${pending.objectName}", setting attributes...`);
+
+                                for (const [attrName, attrValue] of Object.entries(pending.attributes)) {
+                                    try {
+                                        writeAttribute(lObject, attrName, attrValue, pending.objectName);
+                                    } catch (e) {
+                                        console.error(`[ProjectEditor] Error setting ${attrName} on "${pending.objectName}":`, e);
+                                    }
+                                }
+                            }
+
+                            // Attributes of the objects STEP 6c created inside a feature.
+                            // Resolved by the real id the primitive returned, never by name:
+                            // two tables may each own a column called "id".
+                            // Deferred once more: addObject seeds its own json values on a
+                            // timer of U.UpdatingTimer * 2 (600ms) and the child's DValues do
+                            // not exist before that, so writing here would find no $feature.
+                            if (pendingChildAttributeSets.length > 0) {
+                                setTimeout(() => {
+                                    for (const pending of pendingChildAttributeSets) {
+                                        try {
+                                            const lChild = LPointerTargetable.fromPointer(pending.objectId) as LObject | undefined;
+                                            if (!lChild) {
+                                                console.warn(
+                                                    `[ProjectEditor] Nested: object ${pending.objectId} (${pending.className}) `
+                                                    + `no longer resolves; its attributes were not written.`
+                                                );
+                                                continue;
+                                            }
+                                            const who = `${lChild.name || pending.objectId} (${pending.className})`;
+                                            for (const [attrName, attrValue] of Object.entries(pending.attributes)) {
+                                                try {
+                                                    writeAttribute(lChild, attrName, attrValue, who);
+                                                } catch (e) {
+                                                    console.error(`[ProjectEditor] Error setting ${attrName} on ${who}:`, e);
+                                                }
+                                            }
+                                        } catch (e) {
+                                            console.error(`[ProjectEditor] Error seeding nested object ${pending.objectId}:`, e);
+                                        }
+                                    }
+                                    console.log(`[ProjectEditor] ✅ Nested attribute setting complete`);
+                                }, 1000);
+                            }
+
+                            console.log(`[ProjectEditor] ✅ Attribute setting complete`);
+
+                            // STEP 8b: Set references — same LModel proxy, same objects list.
+                            // Uses setValueAtPosition with isPtr:true (same API the Properties
+                            // panel dropdown uses in Info.tsx changeDValue).
+                            //
+                            // Lookup strategy: each executor target has __sourceId (the Pointer
+                            // ID of the source element that produced it). sourceIdToObjectName
+                            // maps __sourceId → the DObject name assigned during creation.
+                            // We then find the real DObject via LModel proxy by name to get
+                            // the real Pointer ID.
+                            if (pendingReferenceSets.length > 0) {
+                                console.log(`[ProjectEditor] STEP 8b: Setting references for ${pendingReferenceSets.length} objects`);
+                                for (const pending of pendingReferenceSets) {
+                                    const ro = resolveSeeded(pending.objectName, 'reference seeding');
+                                    if (ro.ambiguous) continue;
+                                    const lObject = ro.found;
+                                    if (!lObject) {
+                                        console.warn(`[ProjectEditor] Ref: Object "${pending.objectName}" not found`);
+                                        continue;
+                                    }
+                                    for (const [refName, refData] of Object.entries(pending.references)) {
+                                        try {
+                                            const feature = (lObject as any)['$' + refName];
+                                            if (!feature) {
+                                                console.warn(`[ProjectEditor] Ref: Feature "$${refName}" not found on "${pending.objectName}"`);
+                                                continue;
+                                            }
+                                            const targets = refData.targets || [];
+                                            for (let ri = 0; ri < targets.length; ri++) {
+                                                const target = targets[ri];
+                                                const sourceId = target?.__sourceId;
+                                                const targetName = sourceId
+                                                    ? sourceIdToObjectName.get(String(sourceId))
+                                                    : target?.name;
+                                                if (!targetName) {
+                                                    if (sourceId) {
+                                                        console.warn(`[ProjectEditor] Ref: sourceId not found in map: ${sourceId} (for ${pending.objectName}.${refName}[${ri}])`);
+                                                    } else {
+                                                        console.warn(`[ProjectEditor] Ref: target has no __sourceId or name for ${pending.objectName}.${refName}[${ri}]`);
+                                                    }
+                                                    continue;
+                                                }
+                                                // The pointer WRITE below is the one the census
+                                                // singles out: an ambiguous target here does not
+                                                // fail, it points somewhere. Skipping leaves the
+                                                // slot empty and declared, which is the honest
+                                                // outcome — a written pointer cannot be told
+                                                // apart from a chosen one afterwards.
+                                                const rt = resolveSeeded(
+                                                    targetName, `reference target for ${pending.objectName}.${refName}[${ri}]`
+                                                );
+                                                if (rt.ambiguous) continue;
+                                                const targetLObj = rt.found;
+                                                if (!targetLObj) {
+                                                    console.warn(`[ProjectEditor] Ref: Target "${targetName}" not found in model for ${pending.objectName}.${refName}[${ri}]`);
+                                                    continue;
+                                                }
+                                                const targetRealId = targetLObj.id;
+                                                feature.setValueAtPosition(ri, targetRealId, { isPtr: true });
+                                                console.log(`[ProjectEditor] ✅ Ref: ${pending.objectName}.${refName}[${ri}] → ${targetName} (${targetRealId})`);
+                                            }
+                                        } catch (e) {
+                                            console.error(`[ProjectEditor] Error setting ref ${refName} on "${pending.objectName}":`, e);
+                                        }
+                                    }
+                                }
+                                console.log(`[ProjectEditor] ✅ Reference setting complete`);
+                            }
+
+                        } catch (e) {
+                            console.error(`[ProjectEditor] Error in STEP 8:`, e);
+                        }
+                    }, 1000); // 1 second delay — generous, ensures everything is propagated
+                }
+
+                // Return the execution result IMMEDIATELY so JjtlDevelopmentEnv can update trace display
+                // Tab opening and attribute setting happen in the background (fire-and-forget)
+                // Broadcast execution result via custom event (for JjtlDevelopmentEnv trace display)
+                window.dispatchEvent(new CustomEvent(SystemEvents.JJTL_EXECUTION_RESULT, { detail: result }));
+
+                // Reset execution guard
+                isExecutingTransformation = false;
+                return result;
+
+            } catch (error) {
+                console.error('[ProjectEditor] Error:', error);
+                U.alert('e', 'Error', `Failed to execute transformation: ${error}`);
+                // Reset execution guard
+                isExecutingTransformation = false;
+                // Return failed result so JjtlDevelopmentEnv can show errors
+                return {
+                    success: false,
+                    errors: [error instanceof Error ? error.message : String(error)],
+                    warnings: [],
+                } as ExecutionResult;
+            }
+        };
+
+        // Open transformation in JjTL Development Environment tab
+        DockManager.openTransformation(
+            transformation,
+            sourceMetamodelElements,
+            targetMetamodelElements,
+            (updatedCode) => {
+                // Update transformation code when saved
+                setTransformations(prev => prev.map(t =>
+                    t.id === transformation.id
+                        ? { ...t, code: updatedCode, modifiedAt: Date.now() }
+                        : t
+                ));
+                markDirty();
+            },
+            getSourceMetamodel,
+            getTargetMetamodel,
+            availableModels,
+            existingModelNames,
+            handleExecuteTransformation
+        );
+    };
+
+    // Open transformation tab when TreeView entry is clicked
+    const handleOpenTransformationRef = useRef(handleOpenTransformation);
+    handleOpenTransformationRef.current = handleOpenTransformation;
+    const transformationsRef = useRef(transformations);
+    transformationsRef.current = transformations;
+    useEffect(() => {
+        const handler = (e: Event) => {
+            const { id } = (e as CustomEvent).detail || {};
+            if (!id) return;
+            const t = transformationsRef.current.find((tr: any) => tr.id === id);
+            if (t) handleOpenTransformationRef.current(t);
+        };
+        window.addEventListener(JjodelEvents.OPEN_TRANSFORMATION, handler);
+        return () => window.removeEventListener(JjodelEvents.OPEN_TRANSFORMATION, handler);
+    }, []);
+
+    const handleRenameTransformation = (id: string, newName: string) => {
+        setTransformations(prev => prev.map(t =>
+            t.id === id
+                ? { ...t, name: newName, modifiedAt: Date.now() }
+                : t
+        ));
+        markDirty();
+    };
+
+    const handleDeleteTransformation = (id: string) => {
+        // Close any open tabs for this transformation before deleting
+        DockManager.closeTabsForEntity(id, 'transformation');
+        setTransformations(prev => prev.filter(t => t.id !== id));
+        markDirty();
+    };
+
+    const handleDuplicateTransformation = (id: string) => {
+        const original = transformations.find(t => t.id === id);
+        if (original) {
+            const duplicate = createTransformation(
+                `${original.name} (copy)`,
+                original.sourceMetamodelId,
+                original.sourceMetamodelName,
+                original.targetMetamodelId,
+                original.targetMetamodelName,
+                original.description
+            );
+            duplicate.code = original.code;
+            setTransformations(prev => [...prev, duplicate]);
+            markDirty();
+        }
+    };
+
+    // Section definitions removed — navigation is now in LeftBar sidebar
+
+    const versionList = store.getState().version.conversionList;
+    return (
+        <div className="project-editor">
+
+            <div className="project-editor__body">
+                {/* Main content — single section driven by URL ?section= param */}
+                <div className="project-editor__main">
+
+            {/* Project Header — inside centered container */}
+            <div className="project-header-compact">
+                <div className="project-header-compact__row1">
+                    {isEditingName ? (
+                        <input
+                            ref={nameInputRef}
+                            type="text"
+                            className="project-header-compact__title-input"
+                            value={editedName}
+                            onChange={(e) => setEditedName(e.target.value)}
+                            onBlur={handleSaveName}
+                            onKeyDown={handleNameKeyDown}
+                        />
+                    ) : (
+                        <h1
+                            className="project-header-compact__title"
+                            onClick={handleStartEditName}
+                            title="Click to edit name"
+                        >
+                            {project.name || 'Unnamed Project'}
+                        </h1>
+                    )}
+                    <span className="project-header-compact__version">
+                        <i className="bi bi-gear" />
+                        {getEngineVersion()}
+                    </span>
+                    <span className="project-header-compact__version">
+                        Rev {formatVersionNumber(project.version)}
+                    </span>
+                    <div className="project-header-compact__actions">
+                        {isAddingTag ? (
+                            <div className="project-tag__input-wrapper" style={{ display: 'inline-flex' }}>
+                                <input
+                                    ref={tagInputRef}
+                                    type="text"
+                                    className="project-tag__input"
+                                    value={newTag}
+                                    onChange={(e) => setNewTag(e.target.value)}
+                                    onBlur={handleAddTag}
+                                    onKeyDown={handleTagKeyDown}
+                                    placeholder="e.g. client, server"
+                                />
+                            </div>
+                        ) : (
+                            <button
+                                className="btn btn--ghost btn--xs"
+                                onClick={() => setIsAddingTag(true)}
+                                title="Add tags to organize your project"
+                            >
+                                <i className="bi bi-tag" />
+                                Tags
+                            </button>
+                        )}
+                        <div className="project-menu-wrapper" ref={projectMenuRef}>
+                            <button
+                                className="icon-btn icon-btn--menu"
+                                onClick={() => setShowProjectMenu(!showProjectMenu)}
+                                title="Project actions"
+                            >
+                                <i className="bi bi-three-dots-vertical" />
+                            </button>
+                            {showProjectMenu && (
+                                <div className="project-menu-dropdown">
+                                    {project.type !== 'private' && (
+                                        <>
+                                            <button onClick={handleCopyLink}>
+                                                <i className="bi bi-link-45deg" />
+                                                {linkCopied ? 'Link copied!' : 'Copy link'}
+                                            </button>
+                                            <div className="project-menu-dropdown__divider" />
+                                        </>
+                                    )}
+                                    <button onClick={handleDownloadProject}>
+                                        <i className="bi bi-download" />
+                                        Download project
+                                    </button>
+                                    <div className="project-menu-dropdown__divider" />
+                                    {project.type !== 'public' && (
+                                        <button onClick={() => handleSetVisibility('public')}>
+                                            <i className="bi bi-globe" />
+                                            Make public
+                                        </button>
+                                    )}
+                                    {project.type !== 'collaborative' && (
+                                        <button onClick={() => handleSetVisibility('collaborative')}>
+                                            <i className="bi bi-people" />
+                                            Make collaborative
+                                        </button>
+                                    )}
+                                    {project.type !== 'private' && (
+                                        <button onClick={() => handleSetVisibility('private')}>
+                                            <i className="bi bi-lock" />
+                                            Make private
+                                        </button>
+                                    )}
+                                    {onNavigateBack && (
+                                        <>
+                                            <div className="project-menu-dropdown__divider" />
+                                            <button onClick={() => { handleBackNavigation(); setShowProjectMenu(false); }}>
+                                                <i className="bi bi-x-lg" />
+                                                Close project
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+                <div className="project-header-compact__row2">
+                    {isEditingDescription ? (
+                        <div className="project-header-compact__desc-editor">
+                            <textarea
+                                ref={descriptionInputRef}
+                                className="project-header__description-input"
+                                value={editedDescription}
+                                onChange={(e) => setEditedDescription(e.target.value)}
+                                onBlur={handleSaveDescription}
+                                onKeyDown={handleDescriptionKeyDown}
+                                rows={3}
+                                placeholder="Add a project description..."
+                            />
+                        </div>
+                    ) : (
+                        <span className="project-header-compact__desc-row">
+                            {project.description ? (
+                                <span>{project.description}</span>
+                            ) : (
+                                <span
+                                    className="project-header-compact__desc-placeholder"
+                                    onClick={handleStartEditDescription}
+                                >
+                                    Add a description...
+                                </span>
+                            )}
+                            <button
+                                className="edit-btn edit-btn--inline"
+                                onClick={handleStartEditDescription}
+                                title="Edit description"
+                            >
+                                <i className="bi bi-pencil" />
+                            </button>
+                        </span>
+                    )}
+                    <span className="project-header-compact__sep">&middot;</span>
+                    <span>{formatDate(project.creation)}</span>
+                    {tags.length > 0 && (
+                        <>
+                            <span className="project-header-compact__sep">&middot;</span>
+                            {tags.map((tag) => (
+                                <span key={tag} className="project-tag project-tag--compact">
+                                    {tag}
+                                    <button
+                                        className="project-tag__remove"
+                                        onClick={() => handleRemoveTag(tag)}
+                                        title="Remove tag"
+                                    >
+                                        ×
+                                    </button>
+                                </span>
+                            ))}
+                        </>
+                    )}
+                </div>
+            </div>
+
+            {/* Metamodels Section */}
+            <div className="project-section" id="section-metamodels">
+                <SectionHeader
+                    title="METAMODELS"
+                    count={metamodels.length}
+                    primaryAction={{ label: '+ New', onClick: handleCreateMetamodel }}
+                    secondaryAction={{
+                        label: 'Import',
+                        onClick: () => setShowImportMenu(!showImportMenu),
+                        icon: 'upload',
+                        hasDropdown: true,
+                        isDropdownOpen: showImportMenu,
+                    }}
+                >
+                    <button
+                        className="btn btn--ghost btn--xs"
+                        onClick={() => setShowMegamodelModal(true)}
+                        title="View relationships between project artifacts"
+                    >
+                        <i className="bi bi-diagram-3" />
+                        View Megamodel
+                    </button>
+                    {/* Import dropdown menu (rendered inside actions area) */}
+                    {showImportMenu && (
+                        <div className="import-select-menu" ref={importMenuRef}>
+                            <button
+                                className="import-select-menu__item"
+                                onClick={handleImportEcore}
+                            >
+                                <i className="bi bi-file-earmark-code" />
+                                Import Ecore (.ecore)
+                            </button>
+                        </div>
+                    )}
+                </SectionHeader>
+
+                {metamodels.length === 0 ? (
+                    <EmptyState
+                        icon="bi-diagram-3"
+                        title="No metamodels yet"
+                        description="Create a metamodel to define the structure and rules for your domain models."
+                        action={{ label: 'Create Your First Metamodel', onClick: handleCreateMetamodel }}
+                    />
+                ) : (
+                    <div className="list-card">
+                        {metamodels.map((mm) => (
+                            <div
+                                className={`list-card__item ${openMenu?.type === 'metamodel' && openMenu?.id === mm.id ? 'list-card__item--menu-open' : ''}`}
+                                key={mm.id}
+                                onClick={() => handleOpenMetamodel(mm)}
+                                role="button"
+                                tabIndex={0}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                        e.preventDefault();
+                                        handleOpenMetamodel(mm);
+                                    }
+                                }}
+                                style={{ cursor: 'pointer' }}
+                            >
+                                <span className="list-card__icon list-card__icon--mm">M</span>
+                                <div className="list-card__content" style={{ pointerEvents: 'none' }}>
+                                    {renamingItem?.type === 'metamodel' && renamingItem?.id === mm.id ? (
+                                        <input
+                                            ref={renameInputRef}
+                                            type="text"
+                                            className="list-card__rename-input"
+                                            value={renameValue}
+                                            onChange={(e) => setRenameValue(e.target.value)}
+                                            onBlur={() => handleRenameSubmit(mm)}
+                                            onKeyDown={(e) => handleRenameKeyDown(e, mm)}
+                                        />
+                                    ) : (
+                                        <>
+                                            <div className="list-card__name">{mm.name || 'Unnamed'}</div>
+                                            <div className="list-card__type">Metamodel</div>
+                                        </>
+                                    )}
+                                </div>
+                                <div className="list-card__actions">
+                                    <button
+                                        className="icon-btn icon-btn--menu"
+                                        title="More actions"
+                                        onClick={(e) => toggleMenu('metamodel', mm.id, e)}
+                                    >
+                                        <i className="bi bi-three-dots-vertical" />
+                                    </button>
+
+                                    {/* Contextual Menu */}
+                                    {openMenu?.type === 'metamodel' && openMenu?.id === mm.id && (
+                                        <div
+                                            className="context-menu"
+                                            ref={menuRef}
+                                            data-align={menuPosition.align}
+                                            data-direction={menuPosition.direction}
+                                            onClick={(e) => e.stopPropagation()}
+                                        >
+                                            <button
+                                                className="context-menu__item"
+                                                onClick={() => {
+                                                    handleOpenMetamodel(mm);
+                                                    closeMenu();
+                                                }}
+                                            >
+                                                <i className="bi bi-box-arrow-up-right" />
+                                                Open
+                                            </button>
+                                            <button
+                                                className="context-menu__item"
+                                                onClick={() => handleExportEcore(mm)}
+                                            >
+                                                <i className="bi bi-file-earmark-code" />
+                                                Export Ecore (.ecore)
+                                            </button>
+                                            <button
+                                                className="context-menu__item"
+                                                onClick={() => handleExportMetamodelJSON(mm)}
+                                            >
+                                                <i className="bi bi-filetype-json" />
+                                                Export JSON (.json)
+                                            </button>
+                                            <div className="context-menu__divider" />
+                                            <button
+                                                className="context-menu__item"
+                                                onClick={() => startRename('metamodel', mm.id, mm.name || '')}
+                                            >
+                                                <i className="bi bi-pencil" />
+                                                Rename
+                                            </button>
+                                            <div className="context-menu__divider" />
+                                            <button
+                                                className="context-menu__item context-menu__item--danger"
+                                                onClick={() => {
+                                                    handleDeleteMetamodel(mm);
+                                                    closeMenu();
+                                                }}
+                                            >
+                                                <i className="bi bi-trash" />
+                                                Delete
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {/* Models Section */}
+            <div className="project-section" id="section-models">
+                <div className="project-section-header" ref={metamodelMenuRef}>
+                    <h2 className="project-section-header__title">
+                        MODELS
+                        <span className="project-section-header__count">({models.length})</span>
+                    </h2>
+                    <div className="project-section-header__actions">
+                        <button
+                            className="btn btn--ghost btn--xs"
+                            onClick={() => setShowImportModelMenu(!showImportModelMenu)}
+                            title="Import model from file"
+                        >
+                            <i className="bi bi-upload" />
+                            Import
+                            <i className={`bi bi-chevron-${showImportModelMenu ? 'up' : 'down'} btn-chevron`} />
+                        </button>
+
+                        {/* Import dropdown menu */}
+                        {showImportModelMenu && (
+                            <div className="import-select-menu" ref={importModelMenuRef}>
+                                <button
+                                    className="import-select-menu__item"
+                                    onClick={handleImportXmi}
+                                >
+                                    <i className="bi bi-file-earmark-code" />
+                                    Import Model (.xmi)
+                                </button>
+                            </div>
+                        )}
+
+                        <button
+                            className="btn btn--ghost btn--sm"
+                            disabled={metamodels.length === 0}
+                            title={metamodels.length === 0 ? 'Create a metamodel first' : 'Create new model'}
+                            onClick={handleNewModelClick}
+                        >
+                            + New
+                            {metamodels.length > 1 && (
+                                <i className={`bi bi-chevron-${showMetamodelMenu ? 'up' : 'down'} btn-chevron`} />
+                            )}
+                        </button>
+
+                        {/* Metamodel selection dropdown */}
+                        {showMetamodelMenu && metamodels.length > 1 && (
+                            <div className="metamodel-select-menu">
+                                <div className="metamodel-select-menu__header">
+                                    Select metamodel
+                                </div>
+                                <div className="metamodel-select-menu__list">
+                                    {metamodels.map((mm) => (
+                                        <button
+                                            key={mm.id}
+                                            className="metamodel-select-menu__item"
+                                            onClick={() => handleCreateModel(mm)}
+                                        >
+                                            {mm.name || 'Unnamed'}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {models.length === 0 ? (
+                    <EmptyState
+                        icon="bi-box"
+                        title={metamodels.length === 0 ? 'Create a metamodel first' : 'No models yet'}
+                        description={metamodels.length === 0
+                            ? 'Models are instances of metamodels. You need to create a metamodel structure before you can create models.'
+                            : 'Create a model to instantiate your metamodel.'}
+                        hints={metamodels.length === 0
+                            ? [{ icon: 'bi-arrow-up', text: 'Create your first metamodel in the section above' }]
+                            : undefined}
+                    />
+                ) : (
+                    <div className="list-card">
+                        {models.map((model) => (
+                            <div
+                                className={`list-card__item ${openMenu?.type === 'model' && openMenu?.id === model.id ? 'list-card__item--menu-open' : ''}`}
+                                key={model.id}
+                                onClick={() => handleOpenModel(model)}
+                                role="button"
+                                tabIndex={0}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                        e.preventDefault();
+                                        handleOpenModel(model);
+                                    }
+                                }}
+                                style={{ cursor: 'pointer' }}
+                            >
+                                <span className="list-card__icon list-card__icon--model">m</span>
+                                <div className="list-card__content" style={{ pointerEvents: 'none' }}>
+                                    {renamingItem?.type === 'model' && renamingItem?.id === model.id ? (
+                                        <input
+                                            ref={renameInputRef}
+                                            type="text"
+                                            className="list-card__rename-input"
+                                            value={renameValue}
+                                            onChange={(e) => setRenameValue(e.target.value)}
+                                            onBlur={() => handleRenameSubmit(model)}
+                                            onKeyDown={(e) => handleRenameKeyDown(e, model)}
+                                        />
+                                    ) : (
+                                        <>
+                                            <div className="list-card__name">{model.name || 'Unnamed'}</div>
+                                            <div className="list-card__type">
+                                                Model {model.instanceof?.name ? `· ${model.instanceof.name}` : ''}
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                                <div className="list-card__actions">
+                                    <button
+                                        className="icon-btn icon-btn--menu"
+                                        title="More actions"
+                                        onClick={(e) => toggleMenu('model', model.id, e)}
+                                    >
+                                        <i className="bi bi-three-dots-vertical" />
+                                    </button>
+
+                                    {/* Contextual Menu */}
+                                    {openMenu?.type === 'model' && openMenu?.id === model.id && (
+                                        <div
+                                            className="context-menu"
+                                            ref={menuRef}
+                                            data-align={menuPosition.align}
+                                            data-direction={menuPosition.direction}
+                                            onClick={(e) => e.stopPropagation()}
+                                        >
+                                            <button
+                                                className="context-menu__item"
+                                                onClick={() => {
+                                                    handleOpenModel(model);
+                                                    closeMenu();
+                                                }}
+                                            >
+                                                <i className="bi bi-box-arrow-up-right" />
+                                                Open
+                                            </button>
+                                            <button
+                                                className="context-menu__item"
+                                                onClick={() => handleExportModel(model)}
+                                            >
+                                                <i className="bi bi-download" />
+                                                Export (.jm)
+                                            </button>
+                                            <button
+                                                className="context-menu__item"
+                                                onClick={() => handleExportXMI(model)}
+                                            >
+                                                <i className="bi bi-file-earmark-code" />
+                                                Export XMI (.xmi)
+                                            </button>
+                                            <button
+                                                className="context-menu__item"
+                                                onClick={() => handleExportModelJSON(model)}
+                                            >
+                                                <i className="bi bi-filetype-json" />
+                                                Export JSON (.json)
+                                            </button>
+                                            <div className="context-menu__divider" />
+                                            <button
+                                                className="context-menu__item"
+                                                onClick={() => startRename('model', model.id, model.name || '')}
+                                            >
+                                                <i className="bi bi-pencil" />
+                                                Rename
+                                            </button>
+                                            <div className="context-menu__divider" />
+                                            <button
+                                                className="context-menu__item context-menu__item--danger"
+                                                onClick={() => {
+                                                    handleDeleteModel(model);
+                                                    closeMenu();
+                                                }}
+                                            >
+                                                <i className="bi bi-trash" />
+                                                Delete
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {/* Transformations Section */}
+            <div className="project-section" id="section-transformations">
+                <SectionHeader
+                    title="TRANSFORMATIONS"
+                    count={transformations.length}
+                    primaryAction={{ label: '+ New', onClick: () => setShowNewTransformationDialog(true) }}
+                />
+
+                {transformations.length === 0 ? (
+                    <EmptyState
+                        icon="bi-arrow-left-right"
+                        title="No transformations yet"
+                        description="Create model-to-model transformations using JjTL to automate conversions between metamodels."
+                        action={{ label: 'Create Your First Transformation', onClick: () => setShowNewTransformationDialog(true) }}
+                    />
+                ) : (
+                    <TransformationsList
+                        transformations={transformations}
+                        onOpen={handleOpenTransformation}
+                        onRename={handleRenameTransformation}
+                        onDelete={handleDeleteTransformation}
+                        onDuplicate={handleDuplicateTransformation}
+                    />
+                )}
+            </div>
+
+            {/* Viewpoints Section */}
+            <div className="project-section" id="section-viewpoints">
+                <SectionHeader
+                    title="VIEWPOINTS"
+                    count={viewpoints.length}
+                    primaryAction={{ label: '+ New', onClick: () => setShowNewViewpointDialog(true) }}
+                />
+
+                {viewpoints.length === 0 ? (
+                    <EmptyState
+                        icon="bi-eye"
+                        title="No viewpoints defined"
+                        description="Viewpoints let you define custom perspectives on your models."
+                    />
+                ) : (
+                    <div className="list-card">
+                        {viewpoints.map((vp) => {
+                            if (!vp) return null;
+                            const isDefault = vp.name === 'Default' || vp.name === 'Validation default';
+                            const vpType = getViewpointType(vp as any);
+                            const isExclusive = vpType === 'syntax';
+                            // Count sub-views recursively
+                            const countViews = (v: any): number => {
+                                let subs: any[] = [];
+                                try { subs = v.subViews || []; } catch { subs = []; }
+                                let count = subs.length;
+                                for (const sv of subs) {
+                                    if (sv) count += countViews(sv);
+                                }
+                                return count;
+                            };
+                            const viewCount = countViews(vp);
+                            return (
+                                <div className="list-card__item" key={vp.id || vp.name}>
+                                    <span className={`list-card__icon list-card__icon--vp-${vpType}`}
+                                          style={{ cursor: 'pointer' }}
+                                          onClick={() => handleOpenViewpoint(vp)}>V</span>
+                                    <div className="list-card__content"
+                                         style={{ cursor: 'pointer' }}
+                                         onClick={() => handleOpenViewpoint(vp)}>
+                                        <div className="list-card__name">
+                                            {vp.name || 'Unnamed'}
+                                            <span className="vp-type-badge" data-type={vpType}>
+                                                {vpType.replace('_', ' ')}
+                                            </span>
+                                            {!isExclusive && <i className="bi bi-layers vp-mode-icon" title="Overlay viewpoint"></i>}
+                                        </div>
+                                        <div className="list-card__type">
+                                            {viewCount} {viewCount === 1 ? 'view' : 'views'}
+                                        </div>
+                                    </div>
+                                    <div className="list-card__actions">
+                                        <button className="icon-btn" title="View"
+                                                onClick={() => handleOpenViewpoint(vp)}>
+                                            <i className="bi bi-eye" />
+                                        </button>
+                                        <button
+                                            className="icon-btn"
+                                            title="Duplicate"
+                                            onClick={() => handleDuplicateViewpoint(vp)}
+                                        >
+                                            <i className="bi bi-copy" />
+                                        </button>
+                                        {!isDefault && (
+                                            <button
+                                                className="icon-btn icon-btn--danger"
+                                                title="Delete"
+                                                onClick={() => handleDeleteViewpoint(vp)}
+                                            >
+                                                <i className="bi bi-trash" />
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
+
+            {/* Documentation Section */}
+            <div id="section-documentation">
+                <DocumentationSection project={project} />
+            </div>
+
+                </div>{/* end project-editor__main */}
+            </div>{/* end project-editor__body */}
+
+            {/* Megamodel Diagram View */}
+            {showMegamodelModal && (() => {
+                const megamodel = getRuntimeMegamodel(project.id);
+                if (!megamodel) return null;
+
+                // Compute artifact stats for rich node cards
+                const artifactStats: ArtifactStats[] = [];
+                for (const mm of metamodels) {
+                    const classes = mm.classes || [];
+                    const attrs = mm.attributes || [];
+                    const refs = mm.references || [];
+                    artifactStats.push({
+                        id: mm.id,
+                        stats: {
+                            classCount: classes.length,
+                            attributeCount: attrs.length,
+                            referenceCount: refs.length,
+                        },
+                        status: {
+                            type: 'valid',
+                            label: `${classes.length} classes`,
+                        },
+                    });
+                }
+                for (const m of models) {
+                    const objects = m.objects || [];
+                    const conformsToName = (m as any).instanceof?.name;
+                    artifactStats.push({
+                        id: m.id,
+                        stats: {
+                            objectCount: objects.length,
+                            linkCount: objects.reduce((sum: number, o: any) =>
+                                sum + (o?.referenceFeatures?.length ?? 0), 0),
+                        },
+                        status: objects.length === 0
+                            ? { type: 'warning', label: 'Empty model' }
+                            : { type: 'valid', label: conformsToName ? `Conforms to ${conformsToName}` : `${objects.length} objects` },
+                    });
+                }
+                for (const t of transformations) {
+                    const ruleCount = t.ast?.mappings?.length ?? 0;
+                    const mappingCount = t.ast?.mappings?.reduce((sum: number, m: any) =>
+                        sum + (m.body?.length ?? 0), 0) ?? 0;
+                    artifactStats.push({
+                        id: t.id,
+                        stats: {
+                            ruleCount,
+                            mappingCount,
+                        },
+                        status: t.isValid === false
+                            ? { type: 'warning', label: `${t.errorCount ?? 0} errors` }
+                            : { type: 'info', label: `${ruleCount} rules` },
+                    });
+                }
+
+                return (
+                    <MegamodelView
+                        megamodel={megamodel}
+                        projectId={project.id}
+                        viewpoints={viewpoints.map(vp => ({
+                            id: vp.id || vp.name,
+                            name: vp.name || 'Unnamed',
+                            isOverlay: vp.isOverlay,
+                        }))}
+                        artifactStats={artifactStats}
+                        onClose={() => setShowMegamodelModal(false)}
+                        onOpenNode={(nodeId, nodeKind) => {
+                            if (nodeKind === 'metamodel' || nodeKind === 'model') {
+                                const lModel = metamodels.find(mm => mm.id === nodeId) || models.find(m => m.id === nodeId);
+                                if (lModel) DockManager.open2(lModel);
+                            } else if (nodeKind === 'transformation') {
+                                const t = transformations.find(tr => tr.id === nodeId);
+                                if (t) handleOpenTransformation(t);
+                            }
+                        }}
+                        onDeleteNode={(nodeId, nodeKind) => {
+                            if (nodeKind === 'metamodel') {
+                                const mm = metamodels.find(m => m.id === nodeId);
+                                if (mm) handleDeleteMetamodel(mm);
+                            } else if (nodeKind === 'model') {
+                                const m = models.find(mod => mod.id === nodeId);
+                                if (m) handleDeleteModel(m);
+                            } else if (nodeKind === 'transformation') {
+                                handleDeleteTransformation(nodeId);
+                            }
+                            setShowMegamodelModal(false);
+                        }}
+                        onRenameNode={(nodeId, nodeKind, newName) => {
+                            if (nodeKind === 'metamodel') {
+                                const mm = metamodels.find(m => m.id === nodeId);
+                                if (mm && newName !== mm.name) {
+                                    mm.name = newName;
+                                    markDirty();
+                                }
+                            } else if (nodeKind === 'model') {
+                                const m = models.find(mod => mod.id === nodeId);
+                                if (m && newName !== m.name) {
+                                    m.name = newName;
+                                    markDirty();
+                                }
+                            } else if (nodeKind === 'transformation') {
+                                handleRenameTransformation(nodeId, newName);
+                            }
+                            // Keep runtime megamodel ArtifactRef names in sync
+                            // so that close/reopen rebuilds nodes with the new name
+                            const currentMm = getRuntimeMegamodel(project.id);
+                            if (currentMm) {
+                                for (const edge of currentMm.edges) {
+                                    if (edge.source.id === nodeId) edge.source.name = newName;
+                                    if (edge.target.id === nodeId) edge.target.name = newName;
+                                }
+                            }
+                        }}
+                        onDuplicateNode={(nodeId, nodeKind) => {
+                            if (nodeKind === 'transformation') {
+                                handleDuplicateTransformation(nodeId);
+                            }
+                            // TODO: duplicate for metamodels/models
+                        }}
+                        onRunTransformation={(nodeId) => {
+                            const t = transformations.find(tr => tr.id === nodeId);
+                            if (t) {
+                                setShowMegamodelModal(false);
+                                handleOpenTransformation(t);
+                            }
+                        }}
+                        onCreateMetamodel={() => {
+                            handleCreateMetamodel();
+                            setShowMegamodelModal(false);
+                        }}
+                        onCreateModel={() => {
+                            handleNewModelClick();
+                            setShowMegamodelModal(false);
+                        }}
+                        onExport={handleExportMegamodelJSON}
+                        onExportFull={handleExportMegamodelFullJSON}
+                    />
+                );
+            })()}
+
+            {/* Share Modal */}
+            <ShareProjectModal
+                project={project}
+                isOpen={showShareModal}
+                onClose={() => setShowShareModal(false)}
+            />
+
+            {/* New Transformation Dialog */}
+            <NewTransformationDialog
+                isOpen={showNewTransformationDialog}
+                onClose={() => setShowNewTransformationDialog(false)}
+                onSubmit={(data) => handleCreateTransformation(
+                    data.name,
+                    data.sourceMetamodelId,
+                    data.targetMetamodelId,
+                    data.description
+                )}
+                existingNames={transformations.map(t => t.name)}
+                metamodels={metamodels.map(mm => ({ id: mm.id, name: mm.name || 'Unnamed' }))}
+            />
+
+            {/* New Viewpoint Dialog */}
+            <NewViewpointDialog
+                isOpen={showNewViewpointDialog}
+                onClose={() => setShowNewViewpointDialog(false)}
+                onSubmit={handleCreateViewpoint}
+                existingNames={viewpoints.map(vp => vp?.name || '')}
+            />
+
+            {/* Environment Generation Wizard */}
+            <EnvGenWizardModal
+                isOpen={showEnvGenWizard}
+                onClose={() => setShowEnvGenWizard(false)}
+                metamodels={metamodels.map(mm => ({ id: mm.id, name: mm.name || 'Unnamed' }))}
+                existingConfigId={editingEnvGenId}
+                onConfigSaved={() => setEnvGenConfigs(EnvGenPersistence.getAll())}
+            />
+
+            {/* Unsaved Changes Dialog */}
+            <UnsavedChangesDialog
+                isOpen={showUnsavedDialog}
+                onDontSave={handleDontSave}
+                onCancel={handleCancelDialog}
+                onSave={handleSaveAndContinue}
+                isSaving={isSaving}
+            />
+
+            {/* Hidden file inputs for import */}
+            <input
+                ref={importJmmRef}
+                type="file"
+                accept=".jmm"
+                style={{ display: 'none' }}
+                onChange={handleJmmFileChange}
+            />
+            <input
+                ref={importEcoreRef}
+                type="file"
+                accept=".ecore"
+                style={{ display: 'none' }}
+                onChange={handleEcoreFileChange}
+            />
+            <input
+                ref={importXmiRef}
+                type="file"
+                accept=".xmi,.xml"
+                style={{ display: 'none' }}
+                onChange={handleXmiFileChange}
+            />
+        </div>
+    );
+};
+
+export default ProjectEditor;

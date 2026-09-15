@@ -1,0 +1,519 @@
+/**
+ * formWidgets — the look of the extended widgets (FL3).
+ *
+ * A sheet of its own rather than a section of `irFormStyle.scss`, for one practical
+ * reason: FL1, FL2 and FL3 were written in parallel and FL2 owns that file's THEMES
+ * block. Disjoint files is what the three prompts asked for, and a stylesheet is a
+ * file like any other. It is imported by `widgets/index.ts`, so a host that renders
+ * anything out of the registry gets the look with it.
+ *
+ * Every dimension and every colour is a token. The two focus roles are new with this
+ * slice (`--color-form-focus-border`, `--color-form-focus-ring`, declared in BOTH
+ * styles/tokens/_colors-light.scss and _colors-dark.scss) and they are cyan, which
+ * CLAUDE.md §7.1 reserves for focus, active indicators and links. They are read ONLY
+ * here: the controls that predate FL3 keep the slate focus they were verified with,
+ * and aligning them is FL4's decision.
+ *
+ * Shared shape of the four framed controls (`ir-datefield`, `ir-unitfield`,
+ * `ir-colorfield`, `ir-checkedfield`): a flex row that IS the border, with a bare
+ * input inside it carrying none. Drawing the border on the wrapper is what lets an
+ * icon, a unit or a swatch sit inside the field instead of beside it.
+ */
+
+/* ---------------------------------------------------------------------------
+   The frame the four single-line widgets share.
+
+   `.ir-form input.` and not the bare class wherever an input is styled, for the
+   reason irFormStyle.scss states three times: `_form-system.scss:44` selects
+   `input[type="text"]` and friends at (0,1,1), which beats a lone class and would
+   give each of these a second border, a radius and a 28px height INSIDE the frame.
+   Element+class is (0,1,1) too, so `.ir-form` in front takes it to (0,2,1) and the
+   question stops depending on import order.
+   --------------------------------------------------------------------------- */
+
+.ir-datefield,
+.ir-unitfield,
+.ir-colorfield,
+.ir-checkedfield {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: var(--control-height-lg);
+    box-sizing: border-box;
+    padding: 0 6px 0 8px;
+    background: var(--color-form-surface);
+    border: 1px solid var(--color-form-border);
+    border-radius: var(--radius-sm);
+    transition: box-shadow var(--transition-fast), border-color var(--transition-fast);
+}
+
+.ir-datefield:hover,
+.ir-unitfield:hover,
+.ir-colorfield:hover,
+.ir-checkedfield:hover {
+    border-color: var(--color-form-border-strong);
+}
+
+/* Focus lives on the WRAPPER, because the wrapper is what carries the border. The
+   input inside has none to light up. */
+.ir-datefield:focus-within,
+.ir-unitfield:focus-within,
+.ir-colorfield:focus-within,
+.ir-checkedfield:focus-within,
+.ir-growtext:focus,
+.ir-chipinput:focus-within {
+    outline: none;
+    border-color: var(--color-form-focus-border);
+    box-shadow: var(--color-form-focus-ring);
+}
+
+/* --- the bare inputs inside the frames -------------------------------------- */
+
+.ir-form input.ir-datefield__input,
+.ir-form input.ir-unitfield__input,
+.ir-form input.ir-colorfield__hex,
+.ir-form input.ir-checkedfield__input {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 100%;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    outline: none;
+    box-shadow: none;
+    background: transparent;
+    font-family: inherit;
+    font-size: var(--text-sm);
+    color: var(--color-text-primary);
+}
+
+.ir-form input.ir-datefield__input::placeholder,
+.ir-form input.ir-unitfield__input::placeholder,
+.ir-form input.ir-colorfield__hex::placeholder,
+.ir-form input.ir-checkedfield__input::placeholder {
+    color: var(--color-form-muted);
+}
+
+/* --- error ------------------------------------------------------------------ */
+
+.ir-datefield--invalid,
+.ir-unitfield--invalid,
+.ir-colorfield--invalid,
+.ir-checkedfield--invalid,
+.ir-growtext--invalid,
+.ir-chipinput--invalid {
+    border-color: var(--color-error);
+}
+
+/* --- disabled / read-only ---------------------------------------------------
+   The design's `#f8fafc` ground and `not-allowed`. The ground is the token whose
+   ROLE is "subtle background", not the literal: in dark the same literal would be a
+   white panel. The lock glyph sits on the LABEL, which `IRFormField` already draws
+   (`.ir-field__lock`) — a widget does not own the label row.
+   --------------------------------------------------------------------------- */
+
+.ir-datefield--readonly,
+.ir-unitfield--readonly,
+.ir-colorfield--readonly,
+.ir-checkedfield--readonly,
+.ir-growtext--readonly,
+.ir-chipinput--readonly {
+    background: var(--color-bg-tertiary);
+    cursor: not-allowed;
+}
+
+.ir-datefield--readonly .ir-datefield__input,
+.ir-unitfield--readonly .ir-unitfield__input,
+.ir-colorfield--readonly .ir-colorfield__hex,
+.ir-checkedfield--readonly .ir-checkedfield__input,
+.ir-growtext--readonly {
+    cursor: not-allowed;
+    color: var(--color-form-label);
+}
+
+/* A read-only frame must not light up: `readonly` still takes focus, and a cyan ring
+   on a field that cannot be edited is an affordance that lies. */
+.ir-datefield--readonly:focus-within,
+.ir-unitfield--readonly:focus-within,
+.ir-colorfield--readonly:focus-within,
+.ir-checkedfield--readonly:focus-within,
+.ir-growtext--readonly:focus,
+.ir-chipinput--readonly:focus-within {
+    border-color: var(--color-form-border);
+    box-shadow: none;
+}
+
+/* ============================================================================
+   date / datetime
+   ============================================================================ */
+
+.ir-form input.ir-datefield__input {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+}
+
+/* The native indicator is hidden because the design names the glyph, and the glyph
+   button opens the picker in its place (DateWidget.openPicker). Hiding it without
+   the button would leave the control keyboard-only. */
+.ir-datefield__input::-webkit-calendar-picker-indicator {
+    display: none;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+/* Chrome renders an inner spin button on datetime-local. It is not part of the
+   design and it steals the right edge from the glyph. */
+.ir-datefield__input::-webkit-inner-spin-button {
+    display: none;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.ir-datefield__icon {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    border: none;
+    border-radius: var(--radius-xs);
+    background: transparent;
+    color: var(--color-form-muted);
+    font-size: 12px;
+    cursor: pointer;
+    transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.ir-datefield__icon:hover:not(:disabled) {
+    background: var(--color-bg-tertiary);
+    color: var(--color-text-primary);
+}
+
+.ir-datefield__icon:disabled {
+    color: var(--color-form-border-strong);
+    cursor: not-allowed;
+}
+
+/* ============================================================================
+   duration
+   ============================================================================ */
+
+.ir-form input.ir-unitfield__input {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    font-variant-numeric: tabular-nums;
+}
+
+/* Not editable, and it must not look editable: no border, no ground, and out of the
+   text flow of the field. It is the declared dimension, not part of the value. */
+.ir-unitfield__unit {
+    flex: 0 0 auto;
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    color: var(--color-form-muted);
+    user-select: none;
+}
+
+/* ============================================================================
+   colour
+   ============================================================================ */
+
+/* 12px in the form, 10px in the row, 14px in the table: one language, three sizes,
+   which is what «one renderer, two sizes» means once a third surface exists. The
+   radius, the hairline and the custom property are the row's
+   (instanceNode.scss `.mm-object__swatch`), so the two squares are the same square. */
+.ir-colorfield__swatch {
+    flex: 0 0 auto;
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    background: var(--ir-swatch);
+    box-shadow: inset 0 0 0 1px var(--color-inode-swatch-hairline);
+}
+
+/* Nothing to paint: a hatched square says "this value is not a colour I can show",
+   which is a different statement from an empty slot and must not read as black. */
+.ir-colorfield__swatch--unpaintable {
+    background: repeating-linear-gradient(
+        45deg,
+        var(--color-bg-tertiary) 0 3px,
+        var(--color-form-surface) 3px 6px
+    );
+}
+
+.ir-form input.ir-colorfield__hex {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+}
+
+/* ============================================================================
+   email / url
+   ============================================================================ */
+
+.ir-checkedfield__check {
+    flex: 0 0 auto;
+    font-size: 12px;
+    line-height: 1;
+}
+
+.ir-checkedfield__check--valid { color: var(--color-success); }
+.ir-checkedfield__check--invalid { color: var(--color-error); }
+
+.ir-checkedfield__open {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: var(--radius-xs);
+    /* Cyan: this one IS a link, which is the third use §7.1 allows. */
+    color: var(--color-form-focus-border);
+    font-size: 11px;
+    text-decoration: none;
+    transition: background var(--transition-fast);
+}
+
+.ir-checkedfield__open:hover { background: var(--color-bg-tertiary); }
+
+.ir-checkedfield__open--disabled {
+    color: var(--color-form-border-strong);
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* ============================================================================
+   multiline / richtext
+   ============================================================================ */
+
+/* The bare `textarea` rule of _form-system.scss:123 hands out `min-height: 80px` and
+   `resize: vertical` at (0,0,1). The min-height below wins on specificity; `resize`
+   is not contested by anything else here, so the handle would survive and let the
+   reader drag a box whose whole point is that it sizes itself. Declared off. */
+.ir-form textarea.ir-growtext {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 54px;
+    max-height: none;
+    padding: 6px 8px;
+    background: var(--color-form-surface);
+    border: 1px solid var(--color-form-border);
+    border-radius: var(--radius-sm);
+    outline: none;
+    /* The body face, not the mono one: this is prose. The JjEL box next door is the
+       monospace textarea, and the two must not be mistaken for each other. */
+    font-family: inherit;
+    font-size: var(--text-sm);
+    line-height: 1.45;
+    color: var(--color-text-primary);
+    resize: none;
+    overflow: hidden;              /* the box grows instead of scrolling */
+    transition: box-shadow var(--transition-fast), border-color var(--transition-fast);
+}
+
+.ir-form textarea.ir-growtext:hover { border-color: var(--color-form-border-strong); }
+
+/* ============================================================================
+   chip input — tags and multi-ref
+   ============================================================================ */
+
+.ir-chipinput {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    min-height: var(--control-height-lg);
+    box-sizing: border-box;
+    padding: 3px 4px;
+    background: var(--color-form-surface);
+    border: 1px solid var(--color-form-border);
+    border-radius: var(--radius-sm);
+    transition: box-shadow var(--transition-fast), border-color var(--transition-fast);
+}
+
+/* --- tag chips: neutral, because a tag is a value and not a destination ------ */
+
+.ir-chipinput__chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    height: 20px;
+    max-width: 100%;
+    padding: 0 2px 0 6px;
+    background: var(--color-bg-tertiary);
+    border: 1px solid var(--color-form-border);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-xs);
+    color: var(--color-text-primary);
+}
+
+/* --- ref pills: the read side's pill, at the form's size --------------------
+   The three tokens are the ones RowValue paints `.mm-object__ref-pill` with, whose
+   light values are exactly the #ecfeff / #0891b2 / #a5f3fc the design names. Taken
+   as tokens and not as literals so the dark correction they already carry applies
+   here too, and so this pill and the table's agree the day the table is aligned.
+   --------------------------------------------------------------------------- */
+
+.ir-chipinput__pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 20px;
+    max-width: 100%;
+    padding: 0 2px 0 7px;
+    background: var(--color-inode-ref-bg);
+    border: 1px solid var(--color-inode-ref-border);
+    border-radius: 999px;
+    font-size: var(--text-xs);
+    font-weight: var(--font-medium);
+    color: var(--color-inode-ref-fg);
+
+    > i { flex: none; font-size: 11px; }
+}
+
+/* --- one colour per alternative ---------------------------------------------
+   Seven slots, assigned by `jjform/optionColor.ts` on the field's option list: two
+   targets the user is choosing BETWEEN never come out the same colour. The pill above
+   keeps the reference tokens as its base, which is what a value with no slot wears —
+   an option list that could not be built, or a pointer that is not among the offers.
+
+   Written as seven blocks rather than one rule over a custom property set on the
+   element: the variables of this system live in `styles/tokens/` (CLAUDE.md rule 28),
+   and the slot is a class the host already knows how to compose.
+
+   These come BEFORE `--broken` on purpose. A dangling pointer is not an alternative
+   either, and must keep the broken treatment whatever slot it was handed; at equal
+   specificity the later rule wins, so the order is the guard.
+   --------------------------------------------------------------------------- */
+.ir-chipinput__pill--slot-1 {
+    background: var(--color-opt-1-bg);
+    border-color: var(--color-opt-1-border);
+    color: var(--color-opt-1-fg);
+}
+.ir-chipinput__pill--slot-2 {
+    background: var(--color-opt-2-bg);
+    border-color: var(--color-opt-2-border);
+    color: var(--color-opt-2-fg);
+}
+.ir-chipinput__pill--slot-3 {
+    background: var(--color-opt-3-bg);
+    border-color: var(--color-opt-3-border);
+    color: var(--color-opt-3-fg);
+}
+.ir-chipinput__pill--slot-4 {
+    background: var(--color-opt-4-bg);
+    border-color: var(--color-opt-4-border);
+    color: var(--color-opt-4-fg);
+}
+.ir-chipinput__pill--slot-5 {
+    background: var(--color-opt-5-bg);
+    border-color: var(--color-opt-5-border);
+    color: var(--color-opt-5-fg);
+}
+.ir-chipinput__pill--slot-6 {
+    background: var(--color-opt-6-bg);
+    border-color: var(--color-opt-6-border);
+    color: var(--color-opt-6-fg);
+}
+.ir-chipinput__pill--slot-7 {
+    background: var(--color-opt-7-bg);
+    border-color: var(--color-opt-7-border);
+    color: var(--color-opt-7-fg);
+}
+
+/* A dangling pointer is not navigable, so it does not wear the navigation colour —
+   the rule RowValue.BrokenRef states, applied to the write side. */
+.ir-chipinput__pill--broken {
+    background: transparent;
+    border-color: var(--color-inode-broken);
+    color: var(--color-inode-broken);
+}
+
+.ir-chipinput__pill--broken .ir-chipinput__pill-text { text-decoration: line-through; }
+
+.ir-chipinput__chip-text,
+.ir-chipinput__pill-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ir-chipinput__remove {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    padding: 0;
+    border: none;
+    border-radius: var(--radius-xs);
+    background: transparent;
+    color: inherit;
+    font-size: 10px;
+    opacity: 0.7;
+    cursor: pointer;
+    transition: opacity var(--transition-fast), background var(--transition-fast);
+}
+
+.ir-chipinput__remove:hover { opacity: 1; background: var(--color-bg-tertiary); }
+
+.ir-chipinput__empty {
+    font-size: var(--text-xs);
+    color: var(--color-form-muted);
+    font-style: italic;
+    padding-left: 4px;
+}
+
+/* Dashed, so it reads as "there could be one more here" rather than as a filled
+   chip — the affordance `ir-chips__add` already established in this form. */
+.ir-chipinput__add {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 20px;
+    padding: 0 6px;
+    border: 1px dashed var(--color-form-border-strong);
+    border-radius: var(--radius-sm);
+    background: transparent;
+    font-family: inherit;
+    font-size: var(--text-xs);
+    color: var(--color-form-section);
+    cursor: pointer;
+    transition: background var(--transition-fast), border-color var(--transition-fast);
+
+    > i { font-size: 10px; }
+}
+
+.ir-chipinput__add:hover:not(:disabled) {
+    background: var(--color-bg-tertiary);
+    border-color: var(--color-form-muted);
+}
+
+.ir-chipinput__add--disabled,
+.ir-chipinput__add:disabled {
+    border-color: var(--color-form-border);
+    color: var(--color-form-border-strong);
+    cursor: not-allowed;
+}
+
+/* Same height as a chip, so turning Add into a field does not change the container's
+   height: the zero-shift rule holds inside a control too, not only between fields. */
+.ir-form input.ir-chipinput__input {
+    height: 20px;
+    min-width: 80px;
+    flex: 0 1 120px;
+    padding: 0 4px;
+    border: 1px solid var(--color-form-focus-border);
+    border-radius: var(--radius-sm);
+    outline: none;
+    box-shadow: none;
+    background: var(--color-form-surface);
+    font-family: inherit;
+    font-size: var(--text-xs);
+    color: var(--color-text-primary);
+}

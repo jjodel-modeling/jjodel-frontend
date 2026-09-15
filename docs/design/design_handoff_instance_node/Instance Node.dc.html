@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/tokens/fonts.css">
+  <link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/tokens/colors.css">
+  <link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/tokens/entities.css">
+  <link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/tokens/typography.css">
+  <link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/tokens/spacing.css">
+  <link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/tokens/radius.css">
+  <link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/tokens/shadows.css">
+  <link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/tokens/transitions.css">
+  <link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/styles.css">
+  <script src="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/_ds_bundle.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+  <style>
+    body { margin: 0; background: #f8fafc; font-family: 'Inter', system-ui, sans-serif; }
+    a { color: #0ea5e9; text-decoration: none; }
+    a:hover { color: #0284c7; text-decoration: underline; }
+  </style>
+</helmet>
+<div style="min-height: 100vh; padding: 56px; display: flex; flex-direction: column; gap: 40px; align-items: flex-start;">
+
+  <div style="max-width: 720px;">
+    <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8; margin-bottom: 8px;">View Designer · Instance node</div>
+    <h1 style="font-size: 24px; font-weight: 700; color: #0f172a; margin: 0 0 8px;">Nodo istanza — stile configurabile</h1>
+    <p style="font-size: 14px; color: #475569; margin: 0; line-height: 1.6;">Default di fabbrica neutro. Ogni campo di stile è un override indipendente, modificabile dal pannello Tweaks.</p>
+  </div>
+
+  <div style="display: flex; gap: 48px; align-items: flex-start; flex-wrap: wrap;">
+
+    <div style="display: flex; flex-direction: column; gap: 16px;">
+      <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8;">Istanza valorizzata</div>
+      <div style="width: 320px; background: #ffffff; border-radius: 8px; overflow: hidden; display: flex; border: 1px solid {{ borderColor }}; box-shadow: {{ nodeShadow }};">
+        <sc-if value="{{ isLeft }}" hint-placeholder-val="{{ false }}">
+          <div style="width: 3px; flex: none; background: {{ accent }};"></div>
+        </sc-if>
+        <div style="flex: 1; min-width: 0;">
+          <sc-if value="{{ isTop }}" hint-placeholder-val="{{ false }}">
+            <div style="height: 3px; background: {{ accent }};"></div>
+          </sc-if>
+          <div style="padding: 11px 14px; border-bottom: 1px solid {{ headerBorder }}; display: flex; align-items: center; gap: 10px; background: {{ headerBg }}; justify-content: {{ headerAlign }};">
+            <sc-if value="{{ typeBadge }}" hint-placeholder-val="{{ false }}">
+              <span style="width: 20px; height: 20px; border-radius: 4px; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; flex: none; background: {{ badgeBg }}; color: {{ badgeFg }};">m</span>
+            </sc-if>
+            <span style="font-size: 14px; font-weight: 600; color: #0f172a; text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ headerLabel }}</span>
+            <sc-if value="{{ typeChip }}" hint-placeholder-val="{{ false }}">
+              <span style="font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; white-space: nowrap; margin-left: auto; background: {{ badgeBg }}; color: {{ badgeFg }};">Shape</span>
+            </sc-if>
+          </div>
+          <div style="padding: 10px 14px; display: grid; grid-template-columns: 66px 1fr; row-gap: 8px; column-gap: 12px; font-size: 13px; align-items: center;">
+            <sc-for list="{{ rowsFilled }}" as="row" hint-placeholder-count="4">
+              <span style="color: #64748b; display: flex; align-items: baseline; gap: 4px; min-width: 0;">
+                <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ row.name }}</span>
+                <sc-if value="{{ row.card }}" hint-placeholder-val="{{ false }}">
+                  <span style="color: #cbd5e1; font-size: 11px;">{{ row.card }}</span>
+                </sc-if>
+              </span>
+              <span style="display: flex; align-items: center; gap: 6px; min-width: 0; flex-wrap: wrap;">
+                <sc-if value="{{ row.swatch }}" hint-placeholder-val="{{ false }}">
+                  <span style="width: 10px; height: 10px; border-radius: 3px; flex: none; background: {{ row.swatch }};"></span>
+                </sc-if>
+                <sc-if value="{{ row.plain }}" hint-placeholder-val="{{ true }}">
+                  <span style="color: #0f172a; font-weight: 500;">{{ row.plain }}</span>
+                </sc-if>
+                <sc-for list="{{ row.chips }}" as="chip" hint-placeholder-count="0">
+                  <span style="font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 4px; background: #f1f5f9; color: #475569;">{{ chip }}</span>
+                </sc-for>
+                <sc-if value="{{ row.ref }}" hint-placeholder-val="{{ false }}">
+                  <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; padding: 2px 8px; border-radius: 999px; background: #ecfeff; color: #0891b2; border: 1px solid #a5f3fc;"><i class="bi bi-link-45deg"></i>{{ row.ref }}</span>
+                </sc-if>
+                <sc-if value="{{ row.onCanvas }}" hint-placeholder-val="{{ false }}">
+                  <i class="bi bi-arrow-up-right" style="font-size: 11px; color: #94a3b8;" title="Reso anche come edge sul canvas"></i>
+                </sc-if>
+                <sc-if value="{{ row.dash }}" hint-placeholder-val="{{ false }}">
+                  <span style="color: #cbd5e1;">—</span>
+                </sc-if>
+              </span>
+            </sc-for>
+          </div>
+          <sc-if value="{{ collapsedLabel }}" hint-placeholder-val="{{ false }}">
+            <div style="padding: 8px 14px; border-top: 1px solid #f1f5f9; font-size: 11px; color: #94a3b8; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+              <i class="bi bi-chevron-down"></i>{{ collapsedLabel }}
+            </div>
+          </sc-if>
+        </div>
+      </div>
+      <div style="font-size: 12px; color: #94a3b8; width: 320px; line-height: 1.5;">Shape_0 — tutti gli slot valorizzati tranne <span style="font-family: 'IBM Plex Mono', monospace;">owner</span>.</div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 16px;">
+      <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8;">Istanza quasi vuota</div>
+      <div style="width: 320px; background: #ffffff; border-radius: 8px; overflow: hidden; display: flex; border: 1px solid {{ borderColor }}; box-shadow: {{ nodeShadow }};">
+        <sc-if value="{{ isLeft }}" hint-placeholder-val="{{ false }}">
+          <div style="width: 3px; flex: none; background: {{ accent }};"></div>
+        </sc-if>
+        <div style="flex: 1; min-width: 0;">
+          <sc-if value="{{ isTop }}" hint-placeholder-val="{{ false }}">
+            <div style="height: 3px; background: {{ accent }};"></div>
+          </sc-if>
+          <div style="padding: 11px 14px; border-bottom: 1px solid {{ headerBorder }}; display: flex; align-items: center; gap: 10px; background: {{ headerBg }}; justify-content: {{ headerAlign }};">
+            <sc-if value="{{ typeBadge }}" hint-placeholder-val="{{ false }}">
+              <span style="width: 20px; height: 20px; border-radius: 4px; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; flex: none; background: {{ badgeBg }}; color: {{ badgeFg }};">m</span>
+            </sc-if>
+            <span style="font-size: 14px; font-weight: 600; color: #0f172a; text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ headerLabelB }}</span>
+            <sc-if value="{{ typeChip }}" hint-placeholder-val="{{ false }}">
+              <span style="font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; white-space: nowrap; margin-left: auto; background: {{ badgeBg }}; color: {{ badgeFg }};">Shape</span>
+            </sc-if>
+          </div>
+          <div style="padding: 10px 14px; display: grid; grid-template-columns: 66px 1fr; row-gap: 8px; column-gap: 12px; font-size: 13px; align-items: center;">
+            <sc-for list="{{ rowsEmpty }}" as="row" hint-placeholder-count="1">
+              <span style="color: #64748b; display: flex; align-items: baseline; gap: 4px; min-width: 0;">
+                <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ row.name }}</span>
+                <sc-if value="{{ row.card }}" hint-placeholder-val="{{ false }}">
+                  <span style="color: #cbd5e1; font-size: 11px;">{{ row.card }}</span>
+                </sc-if>
+              </span>
+              <span style="display: flex; align-items: center; gap: 6px; min-width: 0; flex-wrap: wrap;">
+                <sc-if value="{{ row.ref }}" hint-placeholder-val="{{ false }}">
+                  <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; padding: 2px 8px; border-radius: 999px; background: #ecfeff; color: #0891b2; border: 1px solid #a5f3fc;"><i class="bi bi-link-45deg"></i>{{ row.ref }}</span>
+                </sc-if>
+                <sc-if value="{{ row.onCanvas }}" hint-placeholder-val="{{ false }}">
+                  <i class="bi bi-arrow-up-right" style="font-size: 11px; color: #94a3b8;"></i>
+                </sc-if>
+                <sc-if value="{{ row.dash }}" hint-placeholder-val="{{ false }}">
+                  <span style="color: #cbd5e1;">—</span>
+                </sc-if>
+              </span>
+            </sc-for>
+          </div>
+          <sc-if value="{{ collapsedLabelB }}" hint-placeholder-val="{{ false }}">
+            <div style="padding: 8px 14px; border-top: 1px solid #f1f5f9; font-size: 11px; color: #94a3b8; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+              <i class="bi bi-chevron-down"></i>{{ collapsedLabelB }}
+            </div>
+          </sc-if>
+        </div>
+      </div>
+      <div style="font-size: 12px; color: #94a3b8; width: 320px; line-height: 1.5;">Shape_1 — solo <span style="font-family: 'IBM Plex Mono', monospace;">cfg</span> valorizzato.</div>
+    </div>
+  </div>
+
+  <div style="border-top: 1px solid #e2e8f0; padding-top: 24px; max-width: 900px; display: flex; flex-direction: column; gap: 12px;">
+    <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8;">Campi di stile</div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px;">
+      <div style="background: #ffffff; border: 0.5px solid #e2e8f0; border-radius: 8px; padding: 10px 12px;">
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #0f172a;">accentPlacement</div>
+        <div style="font-size: 12px; color: #64748b; margin-top: 3px;">none · top · left</div>
+      </div>
+      <div style="background: #ffffff; border: 0.5px solid #e2e8f0; border-radius: 8px; padding: 10px 12px;">
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #0f172a;">accent</div>
+        <div style="font-size: 12px; color: #64748b; margin-top: 3px;">ereditato dalla classe, override per istanza</div>
+      </div>
+      <div style="background: #ffffff; border: 0.5px solid #e2e8f0; border-radius: 8px; padding: 10px 12px;">
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #0f172a;">headerFill</div>
+        <div style="font-size: 12px; color: #64748b; margin-top: 3px;">header riempito o trasparente</div>
+      </div>
+      <div style="background: #ffffff; border: 0.5px solid #e2e8f0; border-radius: 8px; padding: 10px 12px;">
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #0f172a;">typeDisplay</div>
+        <div style="font-size: 12px; color: #64748b; margin-top: 3px;">inline · chip · badge</div>
+      </div>
+      <div style="background: #ffffff; border: 0.5px solid #e2e8f0; border-radius: 8px; padding: 10px 12px;">
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #0f172a;">emptyBehavior</div>
+        <div style="font-size: 12px; color: #64748b; margin-top: 3px;">dash · collapse · hide</div>
+      </div>
+      <div style="background: #ffffff; border: 0.5px solid #e2e8f0; border-radius: 8px; padding: 10px 12px;">
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #0f172a;">edgeMarker</div>
+        <div style="font-size: 12px; color: #64748b; margin-top: 3px;">la riga resta sempre; marca i target sul canvas</div>
+      </div>
+      <div style="background: #ffffff; border: 0.5px solid #e2e8f0; border-radius: 8px; padding: 10px 12px;">
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #0f172a;">selected</div>
+        <div style="font-size: 12px; color: #64748b; margin-top: 3px;">il cyan sostituisce l'accento categoriale</div>
+      </div>
+    </div>
+    <div style="font-size: 13px; color: #475569; line-height: 1.7;">I riferimenti e le associazioni mantengono <b style="color: #0f172a;">sempre</b> la propria riga nel compartment: se il target è sul canvas la riga porta una marca discreta e l'edge la duplica graficamente, ma l'informazione non scompare mai dal nodo.</div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1100,&quot;height&quot;:860},&quot;accentPlacement&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;none&quot;,&quot;top&quot;,&quot;left&quot;],&quot;default&quot;:&quot;none&quot;,&quot;tsType&quot;:&quot;'none'|'top'|'left'&quot;,&quot;section&quot;:&quot;Accento&quot;},&quot;accent&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#cbd5e1&quot;,&quot;options&quot;:[&quot;#cbd5e1&quot;,&quot;#f59e0b&quot;,&quot;#8b5cf6&quot;,&quot;#0891b2&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Accento&quot;},&quot;headerFill&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Header&quot;},&quot;typeDisplay&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;inline&quot;,&quot;chip&quot;,&quot;badge&quot;],&quot;default&quot;:&quot;inline&quot;,&quot;tsType&quot;:&quot;'inline'|'chip'|'badge'&quot;,&quot;section&quot;:&quot;Header&quot;},&quot;emptyBehavior&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;dash&quot;,&quot;collapse&quot;,&quot;hide&quot;],&quot;default&quot;:&quot;dash&quot;,&quot;tsType&quot;:&quot;'dash'|'collapse'|'hide'&quot;,&quot;section&quot;:&quot;Slot&quot;},&quot;edgeMarker&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Slot&quot;},&quot;selected&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Stato&quot;}}">
+class Component extends DCLogic {
+  vals() {
+    const p = this.props;
+    const placement = p.accentPlacement ?? "none";
+    const accent = p.accent ?? "#cbd5e1";
+    const headerFill = p.headerFill ?? false;
+    const typeDisplay = p.typeDisplay ?? "inline";
+    const empty = p.emptyBehavior ?? "dash";
+    const edgeMarker = p.edgeMarker ?? true;
+    const selected = p.selected ?? false;
+    const tinted = placement !== "none" && accent !== "#cbd5e1";
+    return { placement, accent, headerFill, typeDisplay, empty, edgeMarker, selected, tinted };
+  }
+
+  build(defs, v) {
+    const rows = [];
+    let hidden = 0;
+    for (const d of defs) {
+      if (!d.filled) {
+        if (v.empty === "hide" || v.empty === "collapse") { hidden++; continue; }
+        rows.push({ name: d.name, card: d.card, dash: true });
+        continue;
+      }
+      rows.push({
+        name: d.name, card: d.card,
+        swatch: d.swatch, plain: d.plain, chips: d.chips || [],
+        ref: d.ref, onCanvas: d.onCanvas && v.edgeMarker
+      });
+    }
+    const label = v.empty === "collapse" && hidden
+      ? hidden + (hidden === 1 ? " slot vuoto" : " slot vuoti") : "";
+    return { rows, label };
+  }
+
+  renderVals() {
+    const v = this.vals();
+    const a = this.build([
+      { name: "color", filled: true, swatch: "#22c55e", plain: "Green" },
+      { name: "tags", card: "[1]", filled: true, chips: ["Green"] },
+      { name: "cfg", filled: true, ref: "Config", onCanvas: true },
+      { name: "owner", filled: false }
+    ], v);
+    const b = this.build([
+      { name: "color", filled: false },
+      { name: "tags", card: "[0]", filled: false },
+      { name: "cfg", filled: true, ref: "Config", onCanvas: true },
+      { name: "owner", filled: false }
+    ], v);
+
+    // La selezione possiede il cyan: mentre il nodo è selezionato il colore
+    // categoriale cede il passo, così nessuna tinta (amber, viola…) va in conflitto.
+    const badgePair = v.selected
+      ? { bg: "#cffafe", fg: "#0e7490" }
+      : (v.tinted ? { bg: "#fef3c7", fg: "#b45309" } : { bg: "#f1f5f9", fg: "#475569" });
+
+    return {
+      isTop: v.placement === "top",
+      isLeft: v.placement === "left",
+      accent: v.selected ? "#0891b2" : v.accent,
+      borderColor: v.selected ? "#0891b2" : "#cbd5e1",
+      nodeShadow: v.selected
+        ? "0 0 0 3px rgba(6,182,212,0.18), 0 1px 2px rgba(0,0,0,0.04)"
+        : "0 1px 2px rgba(0,0,0,0.04)",
+      headerBg: v.selected ? "#e0f7fa" : (v.headerFill ? "#f1f5f9" : "transparent"),
+      headerBorder: v.selected ? "#a5f3fc" : "#cbd5e1",
+      headerAlign: v.typeDisplay === "inline" ? "center" : "flex-start",
+      typeBadge: v.typeDisplay === "badge",
+      typeChip: v.typeDisplay === "chip",
+      badgeBg: badgePair.bg,
+      badgeFg: badgePair.fg,
+      headerLabel: v.typeDisplay === "inline" ? "Shape_0 : Shape" : "Shape_0",
+      headerLabelB: v.typeDisplay === "inline" ? "Shape_1 : Shape" : "Shape_1",
+      rowsFilled: a.rows,
+      rowsEmpty: b.rows,
+      collapsedLabel: a.label,
+      collapsedLabelB: b.label
+    };
+  }
+}
+</script>
+</body>
+</html>

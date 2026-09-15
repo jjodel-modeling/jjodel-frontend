@@ -1,25 +1,821 @@
-section {
-  overflow:visible;
+/**
+ * Apply To Tab — styled to match the Properties panel baseline.
+ *
+ * Baseline reference: info.scss + info-improvements.scss
+ * - Inputs:   28px height, 12px font, 1px #e2e8f0 border, 4px radius, 4px 8px padding
+ * - Labels:   13px, weight 400, color #64748b
+ * - Toggles:  36×20 .apply-to-toggle, solid #334155 active (NO gradient)
+ * - Fields:   flex column, 5px vertical padding, 4px gap
+ * - Toggle rows: flex row, label LEFT + toggle RIGHT, no card, no shadow
+ *
+ * Class names come from InfoData.tsx — we don't touch the TSX, only restyle.
+ */
+
+// ============================================
+// OUTER PADDING — match Properties' airy .props-section__body inset
+// ============================================
+// L'inset di questo pannello viene da `properties-with-tree-view.scss:578`, che dichiara
+// lo stesso selettore dentro `.properties-panel-container` e vince per specificità. La
+// regola che stava qui — `padding: 12px 16px !important` — era morta da allora, e la sua
+// presenza rendeva illeggibile quale valore fosse davvero in vigore: rimossa in Fase 2 di
+// `docs/discovery/discovery_2026-08-29_stile_7a_sistema_rail.md` (punto 2 delle ratifiche),
+// quando quell'inset è passato ai 14px di 7a.
+
+// ============================================
+// MAIN CONTAINER — compact like Properties
+// ============================================
+.apply-to-tab {
+  display: flex !important;
+  flex-direction: column !important;
+  padding: 8px 12px !important;
+  margin: 0 !important;
+  background: var(--color-bg-primary, #ffffff) !important;
+  font-family: var(--font-sans, 'Inter Variable', -apple-system, BlinkMacSystemFont, sans-serif) !important;
+  font-size: 13px !important;
+  color: var(--color-text-primary, #1e293b) !important;
+  overflow-x: visible !important;
+  overflow-y: auto !important;
+  height: 100% !important;
+  box-sizing: border-box !important;
+
+  // ============================================
+  // FORM FIELD — vertical stacked row (Properties baseline)
+  // ============================================
+  .form-field {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    padding: 5px 0 !important;
+    margin: 0 !important;
+    gap: 4px !important;
+    border-bottom: none !important;
+    overflow: visible !important;
+  }
+
+  .form-label {
+    display: block !important;
+    font-family: var(--font-sans) !important;
+    font-size: 13px !important;
+    font-weight: 400 !important;
+    color: #64748b !important;        // slate-500 — matches Properties labels
+    margin: 0 !important;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  // ============================================
+  // INPUTS, SELECTS, TEXTAREAS
+  // Matches info-improvements.scss input-container pattern
+  // ============================================
+  input,
+  input[type="text"],
+  input[type="number"],
+  select,
+  textarea,
+  .form-input,
+  .form-select {
+    width: 100% !important;
+    max-width: none !important;
+    height: 28px !important;
+    padding: 4px 8px !important;
+    font-family: inherit !important;
+    font-size: 12px !important;
+    color: #1e293b !important;
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 4px !important;
+    outline: none !important;
+    box-sizing: border-box !important;
+    transition: border-color 150ms ease, box-shadow 150ms ease !important;
+
+    &:focus {
+      border-color: #334155 !important;
+      box-shadow: 0 0 0 2px rgba(51, 65, 85, 0.15) !important;
+    }
+
+    &::placeholder {
+      color: #94a3b8 !important;      // slate-400
+    }
+
+    &:disabled,
+    &[readonly] {
+      background: #f8fafc !important; // slate-50
+      color: #64748b !important;
+      cursor: not-allowed !important;
+    }
+  }
+
+  // Native <select> dropdown arrow (slate, not cyan)
+  select,
+  .form-select {
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M2 4l4 4 4-4'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 8px center !important;
+    padding-right: 26px !important;
+    cursor: pointer !important;
+  }
+
+  // Input component wrapper — keep it invisible
+  .input-container {
+    display: block !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+    overflow: visible !important;
+    border: none !important;
+
+    input, select {
+      width: 100% !important;
+    }
+  }
+
+  // ============================================
+  // IS EXCLUSIVE — inline row, NO card
+  // Label LEFT + toggle RIGHT (matches Properties FLAGS rows)
+  // ============================================
+  .form-field--toggle {
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 5px 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    min-height: 28px !important;
+    gap: 8px !important;
+
+    &:hover {
+      background: transparent !important;
+      border: none !important;
+    }
+  }
+
+  .toggle-content {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 1 auto !important;
+    gap: 0 !important;
+  }
+
+  .toggle-label {
+    font-family: var(--font-sans) !important;
+    font-size: 13px !important;
+    font-weight: 400 !important;
+    color: #64748b !important;        // same as .form-label — uniform baseline
+  }
+
+  // Description hidden — Properties FLAGS rows don't have subtitles
+  .toggle-description {
+    display: none !important;
+  }
 }
 
-section.page-root{
+// ============================================
+// TOGGLE SWITCH — aligned with .properties-toggle
+// 36×20, solid slate active (no gradient)
+// ============================================
+.apply-to-tab .apply-to-toggle {
+  position: relative !important;
+  display: inline-block !important;
+  width: 36px !important;
+  height: 20px !important;
+  flex-shrink: 0 !important;
+  background: #cbd5e1 !important;
+  border: none !important;
+  border-radius: 10px !important;
+  cursor: pointer !important;
+  transition: all 200ms ease !important;
+  padding: 0 !important;
+
+  &.active {
+    background: #0ea5e9 !important;   // active = cyan accent (design system A)
+  }
+
+  &:hover:not(.active) {
+    background: #94a3b8 !important;
+  }
+
+  &:focus {
+    outline: none !important;
+    box-shadow: 0 0 0 3px rgba(51, 65, 85, 0.15) !important;
+  }
+
+  &:disabled {
+    opacity: 0.5 !important;
+    cursor: not-allowed !important;
+  }
+}
+
+.apply-to-tab .apply-to-toggle-thumb {
+  position: absolute !important;
+  height: 16px !important;
+  width: 16px !important;
+  left: 2px !important;
+  top: 2px !important;
+  background: white !important;
+  border-radius: 50% !important;
+  transition: transform 200ms ease !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15) !important;
+
+  .apply-to-tab .apply-to-toggle.active & {
+    transform: translateX(16px) !important;
+  }
+}
+
+// ============================================
+// OCL EDITOR / JS EDITOR — collapsible sections
+// Keep existing structure, align colors to baseline
+// ============================================
+.apply-to-tab .section-header--collapsible {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+  padding: 8px 0 !important;
+  background: transparent !important;
+  border: none !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  cursor: pointer !important;
+  margin-top: 12px !important;
+  text-align: left !important;
+
+  &:hover {
+    background: transparent !important;
+  }
+
+  &:focus { outline: none !important; }
+}
+
+.apply-to-tab .section-header__left {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+
+  i {
+    font-size: 12px !important;
+    color: #94a3b8 !important;        // slate-400 — tertiary icon
+    transition: transform 150ms ease !important;
+  }
+}
+
+.apply-to-tab .section-header__right {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+
+  i {
+    font-size: 12px !important;
+    color: #94a3b8 !important;
+
+    &:hover {
+      color: #334155 !important;      // text-primary on hover
+    }
+  }
+}
+
+.apply-to-tab .section-title {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  color: #64748b !important;          // slate-500 — secondary
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  margin: 0 !important;
+}
+
+// ============================================
+// MONACO EDITOR WRAPPER (OCL / JS)
+// ============================================
+.apply-to-tab .monaco-editor-wrapper {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 4px !important;
+  overflow: hidden !important;
+  margin-top: 4px !important;
+}
+
+// ============================================
+// APPLICABLE TO — react-select multi-select
+// Simplified, slate-only, no cyan borders
+// ============================================
+.apply-to-tab .form-field:has([class*="-control"]) {
+  [class*="-control"] {
+    min-height: 28px !important;
+    height: auto !important;
+    max-height: 80px !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 4px !important;
+    background: #ffffff !important;
+    cursor: pointer !important;
+    overflow: visible !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    box-shadow: none !important;
+
+    &:hover {
+      border-color: #cbd5e1 !important;
+    }
+  }
+
+  [class*="-control--is-focused"] {
+    border-color: #334155 !important;
+    box-shadow: 0 0 0 2px rgba(51, 65, 85, 0.15) !important;
+  }
+
+  [class*="-valueContainer"] {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    gap: 4px !important;
+    padding: 2px 6px !important;
+    overflow: visible !important;
+    flex: 1 1 0% !important;
+  }
+
+  [class*="-Input"] {
+    flex: 1 1 auto;
+    min-width: 40px;
+    margin: 0;
+    padding: 0;
+
+    input {
+      border: none !important;
+      outline: none !important;
+      box-shadow: none !important;
+      background: transparent !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      font-size: 12px !important;
+      color: #1e293b !important;
+      width: 100% !important;
+    }
+  }
+
+  // Chips — cyan-tint background/text (active = cyan accent, design system A)
+  [class*="-multiValue"] {
+    background: #e0f2fe !important;   // cyan-100
+    border: 1px solid #bae6fd !important;
+    border-radius: 3px !important;
+    flex-shrink: 0 !important;
+    margin: 1px !important;
+
+  }
+
+  [class*="-multiValue__label"] {
+    color: #0369a1 !important;         // cyan-700 — matches chip tint
+    font-size: 11px !important;
+    font-weight: 400 !important;
+    padding: 1px 4px !important;
+  }
+
+  [class*="-multiValue__remove"] {
+    color: #0369a1 !important;         // cyan-700
+    padding: 0 3px !important;
+    cursor: pointer !important;
+    border-radius: 0 3px 3px 0 !important;
+
+    &:hover {
+      background: #e2e8f0 !important;
+      color: #64748b !important;       // subtle, no red
+    }
+
+    svg {
+      width: 10px !important;
+      height: 10px !important;
+    }
+  }
+
+  // Hide clear-all indicator (slate design doesn't need it)
+  [class*="-clearIndicator"] {
+    display: none !important;
+  }
+
+  // Indicator container (caret dropdown)
+  [class*="-indicatorContainer"],
+  [class*="-IndicatorsContainer"] {
+    padding: 0 4px !important;
+    align-self: center !important;
+
+    svg {
+      width: 12px !important;
+      height: 12px !important;
+      color: #94a3b8 !important;
+    }
+
+    &:hover svg {
+      color: #64748b !important;
+    }
+  }
+
+  [class*="-indicatorSeparator"] {
+    display: none !important;
+  }
+
+  [class*="-placeholder"] {
+    color: #94a3b8 !important;
+    font-size: 12px !important;
+  }
+}
+
+// Multi-select dropdown menu — slate palette
+.apply-to-tab .form-field [class*="-menu"] {
+  z-index: 999 !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 4px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+  background: #ffffff !important;
+  margin-top: 2px !important;
+  overflow: hidden !important;
+}
+
+.apply-to-tab .form-field [class*="-option"] {
+  padding: 6px 8px !important;
+  font-size: 12px !important;
+  color: #1e293b !important;
+  cursor: pointer !important;
+  background: transparent !important;
+
+  &:hover {
+    background: #f1f5f9 !important;
+  }
+}
+
+.apply-to-tab .form-field [class*="-option--is-focused"] {
+  background: #f1f5f9 !important;
+}
+
+// Selected option — cyan tint (active = cyan accent, design system A)
+.apply-to-tab .form-field [class*="-option--is-selected"] {
+  background: #e0f2fe !important;
+  color: #0369a1 !important;
+  font-weight: 500 !important;
+
+  &:hover {
+    background: rgba(51, 65, 85, 0.12) !important;
+  }
+}
+
+.apply-to-tab .form-field [class*="-group"] {
+  padding: 0 !important;
+}
+
+.apply-to-tab .form-field [class*="-groupHeading"] {
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  color: #94a3b8 !important;
+  padding: 6px 8px 2px !important;
+  margin: 0 !important;
+}
+
+// ============================================
+// LEGACY SUPPORT — section.page-root (untouched, still used by some paths)
+// ============================================
+section.page-root {
   display: flex;
   flex-flow: column;
-  &>label{
+
+  & > label {
     display: flex;
     padding-top: 0.125em;
     padding-bottom: 0.125em;
     min-height: min-content;
     height: 32px;
-    font-size: 1.1em!important;
-    color: var(--color);
+    font-size: 1.1em !important;
+    color: var(--color-text-primary);
 
-    &>span{
+    & > span {
       margin: auto;
       flex-grow: 1;
     }
-    &>input{
+
+    & > input {
       margin: auto;
     }
   }
+}
+
+// ============================================
+// DARK MODE — minimal overrides, mirrors baseline
+// ============================================
+[data-theme="dark"] .apply-to-tab {
+  background: #0f172a !important;
+  color: #e2e8f0 !important;
+
+  .form-label { color: #94a3b8 !important; }
+  .toggle-label { color: #94a3b8 !important; }
+
+  input, input[type="text"], input[type="number"], select, textarea,
+  .form-input, .form-select {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+    color: #e2e8f0 !important;
+
+    &:focus {
+      border-color: #64748b !important;
+      box-shadow: 0 0 0 2px rgba(100, 116, 139, 0.25) !important;
+    }
+
+    &::placeholder { color: #64748b !important; }
+
+    &:disabled, &[readonly] {
+      background: #0f172a !important;
+      color: #64748b !important;
+    }
+  }
+
+  .section-header--collapsible {
+    border-bottom-color: #334155 !important;
+  }
+
+  .section-title { color: #94a3b8 !important; }
+  .section-header__left i,
+  .section-header__right i { color: #64748b !important; }
+
+  .monaco-editor-wrapper {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+  }
+
+  // Multi-select dark mode
+  .form-field:has([class*="-control"]) {
+    [class*="-control"] {
+      background: #1e293b !important;
+      border-color: #334155 !important;
+
+      &:hover { border-color: #475569 !important; }
+    }
+
+    [class*="-control--is-focused"] {
+      border-color: #64748b !important;
+      box-shadow: 0 0 0 2px rgba(100, 116, 139, 0.25) !important;
+    }
+
+    [class*="-multiValue"] {
+      background: #334155 !important;
+      border-color: #475569 !important;
+    }
+
+    [class*="-multiValue__label"] { color: #e2e8f0 !important; }
+
+    [class*="-multiValue__remove"] {
+      color: #94a3b8 !important;
+
+      &:hover {
+        background: #475569 !important;
+        color: #cbd5e1 !important;
+      }
+    }
+
+    [class*="-placeholder"] { color: #64748b !important; }
+  }
+
+  .form-field [class*="-menu"] {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+  }
+
+  .form-field [class*="-option"] {
+    color: #e2e8f0 !important;
+
+    &:hover { background: rgba(100, 116, 139, 0.2) !important; }
+  }
+
+  .form-field [class*="-option--is-selected"] {
+    background: rgba(148, 163, 184, 0.15) !important;
+    color: #f1f5f9 !important;
+  }
+
+  .form-field [class*="-option--is-focused"] {
+    background: rgba(100, 116, 139, 0.15) !important;
+  }
+
+  .apply-to-toggle {
+    background: #475569 !important;
+
+    &.active {
+      background: #94a3b8 !important;
+
+      .apply-to-toggle-thumb { background: #0f172a !important; }
+    }
+
+    &:hover:not(.active) { background: #64748b !important; }
+  }
+}
+
+// ============================================
+// L2.x.1 — Edge-candidate banner ("Apply suggestions")
+// Renders above the Is Edge toggle in InfoData when the view's classifier
+// is uniquely identified and has exactly two declared references.
+// Uses semantic --color-info-* tokens ("subtle blue, not cyan").
+// ============================================
+.edge-candidate-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  margin-bottom: 14px;
+  border: 0.5px solid var(--color-info-muted);
+  border-radius: var(--radius-md);
+  background: var(--color-info-bg, var(--color-info-muted));
+}
+
+.edge-candidate-banner__header {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.edge-candidate-banner__header > i {
+  flex-shrink: 0;
+  margin-top: 1px;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--color-info);
+}
+
+.edge-candidate-banner__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.edge-candidate-banner__title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--color-info);
+}
+
+.edge-candidate-banner__body {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--color-info);
+}
+
+.edge-candidate-banner__apply {
+  width: 100%;
+  padding: 6px 12px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--color-info);
+  color: var(--color-text-inverse);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease;
+
+  &:hover:not(:disabled) {
+    background: var(--color-info-hover);
+  }
+
+  &:focus-visible:not(:disabled) {
+    outline: 2px solid var(--color-info);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+// ============================================================================
+// LIVE RULES for the rendered DOM: `.properties-panel .jj-field` (InfoData).
+//
+// The `.apply-to-tab` / `.form-field` rules above are DEAD — InfoData renders
+// `section.properties-tab.properties-panel > .jj-field > <bare widget>`, never
+// `.apply-to-tab`. (Cleanup of the dead rules is deferred to a pre-3.0.0 session.)
+// These scoped rules fix View Properties panel issues 1/3/5/7 from
+// docs/discovery/2026-06-11_view_properties_panel_visual_issues.md.
+// ============================================================================
+
+// --- Issue 1: "Applicable to" multiselect chips — force readable slate, light & dark.
+// Scoped to the panel root `.properties-tab.properties-panel` (the section InfoData and
+// Info both render) instead of `.properties-panel .jj-field`: the sibling spinner/width
+// rules below (same `.properties-panel .jj-field` base) DO take effect, which proves that
+// base matches the live DOM — so the prior chip rule should have matched too and the
+// "still black" residual was most likely stale styles. Dropping the `.jj-field` ancestor
+// removes that dependency for determinism (the chip sits under a label wrapper that lost
+// its `.input-container` class, per the known rootprops override). `!important` + (0,3,0)
+// specificity beats the global `_form-system.scss` !important stack (light :543 = (0,1,0),
+// dark :820 = (0,2,0)) and react-select's non-!important emotion styles.
+.properties-tab.properties-panel .jjodel-select__multi-value {
+  background-color: #e2e8f0 !important;
+}
+.properties-tab.properties-panel .jjodel-select__multi-value__label {
+  color: #334155 !important;
+}
+.properties-tab.properties-panel .jjodel-select__multi-value__remove {
+  color: #64748b !important;
+}
+// Preserve the dark-theme chip appearance (mirrors _form-system's dark values).
+[data-theme="dark"] .properties-tab.properties-panel .jjodel-select__multi-value {
+  background-color: #334155 !important;
+}
+[data-theme="dark"] .properties-tab.properties-panel .jjodel-select__multi-value__label {
+  color: #e2e8f0 !important;
+}
+[data-theme="dark"] .properties-tab.properties-panel .jjodel-select__multi-value__remove {
+  color: #94a3b8 !important;
+}
+
+// --- Issue 3: disabled/readonly values render legible (slate), not placeholder-gray.
+// `-webkit-text-fill-color` overrides WebKit's disabled-input text dimming.
+.properties-panel .jj-field input:disabled,
+.properties-panel .jj-field select:disabled {
+  color: #334155;
+  -webkit-text-fill-color: #334155;
+  opacity: 1;
+  background-color: #f8fafc;
+}
+
+// --- Issue 5: hide native number spinners on Priority.
+// _form-system.scss:189-199 forces spinners globally (without !important); this
+// scoped rule wins on specificity, so no !important is needed.
+.properties-panel .jj-field input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.properties-panel .jj-field input[type="number"]::-webkit-inner-spin-button,
+.properties-panel .jj-field input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+// --- Issue 7: uniform field widths. Native selects otherwise auto-size to their
+// widest option. The child combinator (>) targets only the bare widgets and avoids
+// react-select's internal autosize <input>; the multiselect control is capped
+// separately (below) to align with the rest. OCL/JS editors sit OUTSIDE .jj-field,
+// so they are unaffected.
+.properties-panel .jj-field > input,
+.properties-panel .jj-field > select {
+  width: 100%;
+  max-width: 420px;
+  box-sizing: border-box;
+}
+.properties-panel .jj-field > input[type="number"] {
+  max-width: 160px;
+}
+.properties-panel .jj-field .jjodel-select__control {
+  max-width: 420px;
+}
+
+// ============================================================================
+// 2026-06-12 — unified focus ring + neutralize the rogue select rest-border.
+// ============================================================================
+
+// Unified focus ring for every native control in the panel (design system:
+// slate border + soft slate shadow, no naked outline). Scoped to the panel root
+// `.properties-tab.properties-panel .jj-field` with `[type]` variants so it beats
+// the prior outline-suppression rule `info-improvements.scss:1174-1182`
+// (`.properties-panel .jj-field input[type="text"]:focus { border-color: none;
+// outline: none !important; }`, (0,4,1) — which left text/number inputs with NO
+// focus indicator). The typed variants here are (0,5,1), so they win.
+.properties-tab.properties-panel .jj-field input:focus,
+.properties-tab.properties-panel .jj-field input[type="text"]:focus,
+.properties-tab.properties-panel .jj-field input[type="number"]:focus,
+.properties-tab.properties-panel .jj-field select:focus {
+  outline: none !important;
+  border-color: #334155 !important;
+  box-shadow: 0 0 0 3px rgba(51, 65, 85, 0.15) !important;
+}
+
+// Neutralize the reported "heavy dark border at rest" on a panel <select>
+// (observed on "Preferred appearance"). NB: the `select:invalid` hypothesis does
+// NOT hold — Input.tsx adds no `required` attribute, `auth.scss`'s `select:invalid`
+// is scoped to `.auth-split-screen.dirty`, and `App.scss`'s `&:invalid` parent list
+// excludes `select`. The exact source could not be pinned statically; this rule
+// defensively forces the standard 1px light border (no shadow) at rest. Commit B
+// migrates these selects to JjSelect, removing the native <select> entirely.
+.properties-tab.properties-panel .jj-field select {
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: none !important;
+}
+
+// The unified focus ring above also matches react-select's inner search <input>
+// (JjSelect renders it inside its `.jj-select` container; JjSelect.tsx sets
+// `className='jj-select'` and NO classNamePrefix, so the inner input has no semantic
+// `__input` class — it must be targeted via the container). The outer JjSelect control
+// already conveys focus, so its inner search input must show no ring/border/shadow of
+// its own (otherwise small bars appear next to the caret while filtering). Scoped to
+// `.jj-select`, this never touches the native Name/Priority inputs (not inside a JjSelect).
+.properties-tab.properties-panel .jj-field .jj-select input,
+.properties-tab.properties-panel .jj-field .jj-select input:focus {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
 }

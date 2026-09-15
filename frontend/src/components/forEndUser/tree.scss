@@ -1,53 +1,89 @@
-@import "src/styles/variables";
+/* ============================================
+   TREE COMPONENT - Redesigned with CLAUDE.md tokens
+   ============================================ */
 
+// === DESIGN TOKENS ===
+$font-family: 'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+$font-size-xs: 11px;
+$font-size-base: 13px;
+$font-weight-normal: 400;
+$font-weight-medium: 500;
+$font-weight-semibold: 600;
+
+// Colors
+$color-text-primary: #111418;
+
+// Spacing
+$spacing-xs: 4px;
+$spacing-sm: 8px;
+
+// Border Radius
+$radius-md: 6px;
+
+// Transitions
+$transition-fast: 150ms ease;
+
+// Type colors - DISTINCT for each type (from CLAUDE.md)
+$color-model: #64748b;      // Slate - Metamodels
+$color-package: #f59e0b;    // Amber - Packages
+$color-class: #0ea5e9;      // Cyan - Classes
+$color-attribute: #10b981;  // Green - Attributes
+$color-reference: #8b5cf6;  // Purple - References
+$color-operation: #06b6d4;  // Cyan (darker) - Operations
+$color-enum: #ec4899;       // Pink - Enums
+$color-literal: #f472b6;    // Light Pink - Enum Literals
+$color-object: #6b7280;     // Gray - Objects
+$color-parameter: #9ca3af;  // Light Gray - Parameters
+$color-feature: #6b7280;    // Gray - Values
+
+// ============================================
+// TREE CONTAINER
+// ============================================
 .tree {
+  font-family: $font-family;
 
-  & > .DModel > b {color: $model-color}
-  & > .DPackage > b {color: $package-color}
-  & > .DClass > b {color: $class-color}
-  & > .DObject > b {color: $class-color}
-  & > .DAttribute > b {color: $attribute-color}
-  & > .DReference > b {color: $reference-color}
-  & > .DEnumerator > b {color: $enum-color}
-  & > .DEnumLiteral > b {color: $literal-color}
-  & > .DOperation > b {color: $operation-color}
-  & > .DParameter > b {color: $parameter-color}
-  & > .DValue > b {color: $feature-color}
+  & > .DModel > b { color: $color-model; }
+  & > .DPackage > b { color: $color-package; }
+  & > .DClass > b { color: $color-class; }
+  & > .DObject > b { color: $color-object; }
+  & > .DAttribute > b { color: $color-attribute; }
+  & > .DReference > b { color: $color-reference; }
+  & > .DEnumerator > b { color: $color-enum; }
+  & > .DEnumLiteral > b { color: $color-literal; }
+  & > .DOperation > b { color: $color-operation; }
+  & > .DParameter > b { color: $color-parameter; }
+  & > .DValue > b { color: $color-feature; }
+
   & > label.name:hover {
     text-decoration: underline;
   }
 }
 
-
-
-/* TREE */
-
-.tree-item  {
+// ============================================
+// TREE ITEM
+// ============================================
+.tree-item {
   float: left;
-  font-weight: bold;
+  font-weight: $font-weight-medium;
   display: flex;
-  margin: 1px  8px!important;
+  margin: 1px $spacing-sm !important;
   width: fit-content;
-  //overflow: hidden;
-  font-size: 1em;
+  font-size: $font-size-base;
   height: 1.5rem;
   white-space: pre;
-  font-family: 'Inter Variable', sans-serif;
-
+  font-family: $font-family;
 }
 
-
-
 .tree-item .name {
-  
-  padding: 2px 4px 2px 8px!important;
+  padding: 2px $spacing-xs 2px $spacing-sm !important;
   margin-top: 0;
-  font-weight: normal;
+  font-weight: $font-weight-normal;
   cursor: pointer;
+  color: $color-text-primary;
 }
 
 .tree-item .extends {
-  font-family: 'Inter Variable', sans-serif;
+  font-family: $font-family;
   display: none;
   opacity: 0;
   transition: opacity 0.3s ease-in-out;
@@ -57,123 +93,185 @@
   display: inline;
   opacity: 1;
   transition: opacity 0.3s ease-in-out;
-  & i {
-  font-family: "Inter Variable", sans-serif!important;}
 
+  & i {
+    font-family: $font-family !important;
+  }
 }
 
+// ============================================
+// TYPE ICON
+// ============================================
 .type {
   height: 1.5rem;
   margin-bottom: 20px;
   width: 1.5rem;
-  display: block; margin: auto;
+  display: block;
+  margin: auto;
   padding: 0 3px;
   color: white;
   text-align: center;
-  font-weight: 300;
-  
+  font-weight: $font-weight-normal;
 }
 
 .type .icon {
-  border-radius: 1.4rem!important;
+  border-radius: $radius-md !important;
   height: 1.5rem;
   width: 1.5rem;
-  
-
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  transition: all $transition-fast;
 }
 
-.type .icon.abstract-class   {
-  opacity: 0.5!important;
+.type .icon.abstract-class {
+  opacity: 0.6 !important;
 }
 
-section.datatree-entry-root, div.d-flex tree{
-  padding: 0.125rem;
+section.datatree-entry-root,
+div.d-flex.tree {
+  padding: 2px;
 }
+
 .tree-item .parent-class {
+  // Placeholder for parent class styling
 }
 
-.tree-DModel, .tree-Model {
-  background-color: #5F0F40;
-  // background-color: white;
-  border: 2px solid #5F0F40;
-  color: var(--bg-5);
-  color: white;
+// ============================================
+// TYPE-SPECIFIC COLORS (Muted with backgrounds)
+// Each type has DISTINCT colors for easy identification
+// ============================================
+.tree-DModel {
+  // Slate - Metamodels
+  background-color: rgba(100, 116, 139, 0.15);
+  color: $color-model;
 }
-.tree-DPackage, .tree-Package {
-  background-color: #087E8B;
-  // background-color: white;
-  border: 2px solid #087E8B;
-  color: var(--bg-5);
-  color: white;
-  
-}
-.tree-DClass, .tree-Class {
-  background-color: #DF1619;
-  padding-top: 0px;
-  font-weight: 400;
-  //background-color: white;
-  //border: 2px solid #DF1619;
-  //color: var(--bg-5);
-}
-.tree-DAttribute, .tree-Attribute {
-  background-color: #C5D86D;
-  background-color: white;
-  border: 2px solid #DF1619;
-  color: var(--bg-5);
-}
-.tree-DReference, .tree-Reference {
-  background-color: #ABC7D8;
-  background-color: white;
-  border: 2px solid #DF1619;
-  color: var(--bg-5);
-}
-.tree-DOperation, .tree-Operation {
-  background-color: #FA8334;
-  background-color: white;
-  border: 2px solid #DF1619;
-  color: var(--bg-5);
-}
-.tree-DParameter, .tree-Parameter {
-  background-color: #aaaaaa;
-  background-color: white;
-  border: 2px solid #aaaaaa;
-  color: var(--bg-5);
 
+.tree-DPackage {
+  // Amber - Packages
+  background-color: rgba(245, 158, 11, 0.15);
+  color: $color-package;
 }
-.tree-DEnumerator, .tree-Enumerator {
-  background-color: #F3B700;
-  padding-top: 0px;
-  font-weight: 400;
-  //background-color: white;
-  //border: 2px solid #F3B700;
-  //color: var(--bg-5);
+
+.tree-DClass {
+  // Cyan - Classes
+  background-color: rgba(14, 165, 233, 0.15);
+  color: $color-class;
 }
-.tree-DEnumLiteral, .tree-EnumLiteral {
-  //background-color: #857C8D;
-  background-color: white;
-  border: 0px solid #F3B700;
-  color: var(--bg-5);
+
+.tree-DAttribute {
+  // Green - Attributes
+  background-color: rgba(16, 185, 129, 0.15);
+  color: $color-attribute;
 }
-.tree-DObject, .tree-Object {
-  background-color: #C2B2B4;
-  padding-top: 0px;
-  font-weight: 400;
-  //background-color: white;
-  //border: 2px solid #C2B2B4;
-  //color: var(--bg-5);
+
+.tree-DReference {
+  // Purple - References
+  background-color: rgba(139, 92, 246, 0.15);
+  color: $color-reference;
 }
-.tree-Singleton {
-  background-color: var(--accent);
-  color: white;
-  padding-top: 0px;
-  font-weight: 400;
-  //background-color: white;
-  //border: 2px solid #C2B2B4;
-  //color: var(--bg-5);
+
+.tree-DOperation {
+  // Cyan (darker) - Operations
+  background-color: rgba(6, 182, 212, 0.15);
+  color: $color-operation;
 }
-.tree-DValue, .tree-Value {
-  background-color: #C19AB7;
-  background-color: white;
-  border: 2px solid #C2B2B4;
-  color: var(--bg-5);
+
+.tree-DParameter {
+  // Gray - Parameters
+  background-color: rgba(156, 163, 175, 0.15);
+  color: $color-parameter;
+}
+
+.tree-DEnumerator {
+  // Pink - Enums
+  background-color: rgba(236, 72, 153, 0.15);
+  color: $color-enum;
+}
+
+.tree-DEnumLiteral {
+  // Light Pink - Enum Literals
+  background-color: rgba(244, 114, 182, 0.15);
+  color: $color-literal;
+}
+
+.tree-DObject {
+  background-color: rgba(107, 114, 128, 0.15);
+  color: $color-object;
+}
+
+.tree-DValue {
+  background-color: rgba(107, 114, 128, 0.1);
+  color: $color-feature;
+}
+
+// ============================================
+// DARK MODE SUPPORT
+// ============================================
+html[data-theme="dark"] {
+  .tree-item .name {
+    color: #f1f5f9;
+  }
+
+  .tree-DModel {
+    // Slate - Metamodels
+    background-color: rgba(100, 116, 139, 0.2);
+    color: #94a3b8;
+  }
+
+  .tree-DPackage {
+    // Amber - Packages
+    background-color: rgba(245, 158, 11, 0.2);
+    color: #fbbf24;
+  }
+
+  .tree-DClass {
+    // Cyan - Classes
+    background-color: rgba(14, 165, 233, 0.2);
+    color: #38bdf8;
+  }
+
+  .tree-DAttribute {
+    // Green - Attributes
+    background-color: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+  }
+
+  .tree-DReference {
+    // Purple - References
+    background-color: rgba(139, 92, 246, 0.2);
+    color: #a78bfa;
+  }
+
+  .tree-DOperation {
+    // Cyan (darker) - Operations
+    background-color: rgba(6, 182, 212, 0.2);
+    color: #22d3ee;
+  }
+
+  .tree-DParameter {
+    // Gray - Parameters
+    background-color: rgba(156, 163, 175, 0.2);
+    color: #d1d5db;
+  }
+
+  .tree-DEnumerator {
+    // Pink - Enums
+    background-color: rgba(236, 72, 153, 0.2);
+    color: #f472b6;
+  }
+
+  .tree-DEnumLiteral {
+    // Light Pink - Enum Literals
+    background-color: rgba(244, 114, 182, 0.2);
+    color: #f9a8d4;
+  }
+
+  .tree-DObject,
+  .tree-DValue {
+    background-color: rgba(107, 114, 128, 0.2);
+    color: #9ca3af;
+  }
 }

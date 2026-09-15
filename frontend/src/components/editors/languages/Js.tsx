@@ -13,29 +13,39 @@ import {
 import {useStateIfMounted} from 'use-state-if-mounted';
 import {FakeStateProps} from '../../../joiner/types';
 import { CommandBar, Btn } from '../../commandbar/CommandBar';
+import {AFTER_TRANSACTION} from "../../../redux/action/action";
+import { mediumMonacoOptions, withReadOnly } from '../monacoConfig';
+import EditorToolbar from '../EditorToolbar';
+import EditorFullscreenModal from '../EditorFullscreenModal';
 
 function JsEditorComponent(props: AllProps) {
     const {placeHolder, height, title, getter, setter, jsxLabel, field} = props;
     let data: LPointerTargetable = LPointerTargetable.wrap(props.data) as any;
-    let value = getter ? getter(data, field) : ((data|| {}) as any)[field as any];
-    const [js, setJs] = useStateIfMounted(value);
+    let value_original: string = getter ? getter(data, field) : ((data|| {}) as any)[field as any];
+    let [js, setJs] = useStateIfMounted<string>(value_original);
     const [oldJs, setOldJs] = useStateIfMounted(js);
+    const [pristine, setPristine] = useStateIfMounted(true);
     const [show, setShow] = useStateIfMounted(props.initialExpand ? props.initialExpand(data, field) : false);
     const [expand, setExpand] = useStateIfMounted(false);
+    const [wrap, setWrap] = useStateIfMounted(false);
+    const [fullscreen, setFullscreen] = useStateIfMounted(false);
     const monaco = useMonaco();
     (window as any).monaco = monaco;
-
+    if (js === undefined) js = value_original as string; // + '_updated_debug(works!)';
     const readOnly = props.readOnly !== undefined ? props.readOnly : !props.debugmode && Defaults.check(data.id);
     const change = (value: string|undefined) => {
         /* save in local state for frequent changes */
-        if (value !== undefined) setJs(value);
+        setJs(value || '');
     }
+
     const blur = () => {
         /* confirm in redux state for final state */
         if (oldJs === js) return;
-        if (js && setter) setter(js, data, field);
+        if (setter) setter(js, data, field);
         else if(field) (data as any)[field] = js;
-        setOldJs(value);
+        setOldJs(js);
+        AFTER_TRANSACTION(()=>setJs(undefined as any)); // force it to regenerate from getter
+        if (pristine) setPristine(false);
     }
 
     useEffect(() => {
@@ -56,39 +66,57 @@ function JsEditorComponent(props: AllProps) {
         monaco.languages.typescript.typescriptDefaults.addExtraLib(`declare var data: 'datatype';`);
     }, [monaco]);
     if (!((data && field) || (getter && setter))) return(<>Either props.data & field or both getter & setter are required.</>);
-
-    if (placeHolder && !js) value = placeHolder;
-    if (!value) value = '';
-    const lines = (Math.round(value.split(/\r|\r\n|\n/).length*1.8) < 5 ? 10 : Math.round(value.split(/\r|\r\n|\n/).length*1.8));
+    if (placeHolder && !js && pristine) js = placeHolder;
+    if (!js) js = '';
+    const lines = (Math.round(js.split(/\r|\r\n|\n/).length*1.8) < 5 ? 10 : Math.round(js.split(/\r|\r\n|\n/).length*1.8));
 
     return <>
-        <div style={{...(props.style || {})}} className={'cursor-pointer d-flex'} onClick={e => setShow(!show)}>
-            <span className={'my-auto'} tabIndex={-1}>
-                <i className={'bi bi-chevron-' + (show ? 'down' : 'right')} />
-                {/*show ? <i className={'bi bi-eye-fill'} /> : <i className={'bi bi-eye-slash-fill'} /> */}
-            </span>
-            <label className={'editor-label'}>
-                {title || 'JS Editor'}
-            </label>
-            {jsxLabel && jsxLabel}
-            {/* show && <CommandBar style={{paddingTop: '10px'}}>
-                {expand ?
-                    <Btn icon={'shrink'} action={(e) => {setExpand(false); setShow(true)}} tip={'Minimize editor'}/>
-                    :
-                    <Btn icon={'expand'} action={(e) => {setExpand(true); setShow(true)}} tip={'Enlarge editor'}/>
-                }
-            </CommandBar>*/}
-        </div>
+        <EditorToolbar
+            title={title || 'JS Editor'}
+            icon="bi-filetype-js"
+            content={js || ''}
+            collapsed={!show}
+            onCollapseToggle={() => setShow(!show)}
+            onWrapChange={(newWrap) => setWrap(newWrap)}
+            onExpandChange={(newExpanded) => setExpand(newExpanded)}
+            onFullscreenOpen={() => setFullscreen(true)}
+            disableFullscreen={true}
+            initialExpanded={expand}
+            readOnly={readOnly}
+        />
         {show && <div className={'monaco-editor-wrapper'}
-                /* style={{padding: '5px', minHeight: '20px', height: height ? `${height}px` : '100px', resize: 'vertical', overflow:'hidden'}}*/
                 style={{padding: '5px', height:`${lines+'lvh'}`, transition: 'height 0.3s', resize: 'vertical', overflow:'hidden'}}
                 tabIndex={-1}
                 onFocus={() => setExpand(true)}
                 onBlur={() => {setExpand(false);blur()}}>
             <Editor className={'mx-1'} onChange={change}
-                    options={{fontSize: 12, scrollbar: {vertical: 'hidden', horizontalScrollbarSize: 5}, minimap: {enabled: false}, readOnly: readOnly}}
-                    defaultLanguage={'typescript'} value={value} />
+                    options={{
+                        //...withReadOnly(mediumMonacoOptions, readOnly), todo: check it from claude
+                        // wordWrap: wrap ? 'on' : 'off'
+                        fontSize: 12,
+                        scrollbar: {vertical: 'hidden', horizontalScrollbarSize: 5},
+                        minimap: {enabled: false},
+                        readOnly: readOnly}}
+                    defaultLanguage={'typescript'} value={js}
+                    loading={<div style={{padding: '20px'}}>Loading JS Editor...</div>}
+            />
         </div>}
+
+        <EditorFullscreenModal
+            isOpen={fullscreen}
+            onClose={() => { blur(); setFullscreen(false); }}
+            title={typeof title === 'string' ? title : 'JS Editor'}
+            icon="bi-filetype-js"
+            value={js || ''}
+            onChange={change}
+            onSave={(newValue) => {
+                if (setter) setter(newValue, data, field);
+                else if(field) (data as any)[field] = newValue;
+                setFullscreen(false);
+            }}
+            language="typescript"
+            readOnly={readOnly}
+        />
     </>;
 }
 interface OwnProps {

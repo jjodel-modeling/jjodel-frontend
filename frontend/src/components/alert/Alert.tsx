@@ -1,44 +1,146 @@
 import {DState, SetRootFieldAction, U, windoww} from '../../joiner';
 import {FakeStateProps} from '../../joiner/types';
-import React, {Component, Dispatch, ReactElement, ReactNode} from 'react';
+import React, {Dispatch, ReactElement, ReactNode, useEffect, useState} from 'react';
 import {connect} from 'react-redux';
 import './style.scss';
 
+/**
+ * Alert Component - Toast Notification Style
+ *
+ * Non-blocking toast notifications that auto-dismiss.
+ * Replaces the old modal-style alerts.
+ *
+ * Features:
+ * - Auto-dismiss after 4 seconds
+ * - Progress bar showing remaining time
+ * - Click to dismiss early
+ * - Slide-in/out animations
+ * - Success, Error, Warning, Info variants
+ */
 
 function AlertComponent(props: AllProps) {
     let {type, title, message} = props;
-    let typeLabel = <></>;
-    
+    const [isExiting, setIsExiting] = useState(false);
+    const [isVisible, setIsVisible] = useState(false);
+
+    // Duration in milliseconds
+    const DURATION = 4000;
+
+    // Normalize type
+    let normalizedType: 'success' | 'error' | 'warning' | 'info' = 'success';
     switch (type) {
-        case 'warning': type = 'w'; break;
-        case 'error': type= 'e'; break;
-    }
-    switch (type) {
-        case 'w': typeLabel = <h1 className={'text-warning'}>{title ? title : 'Warning'}</h1>; break;
-        case 'e': typeLabel = <h1 className={'text-danger'}>{title ? title : 'Error'}</h1>; break;
-        default: typeLabel = <h1 className={'text-primary'}>{title ? title : 'Success'}</h1>;
+        case 'warning':
+        case 'w':
+            normalizedType = 'warning';
+            break;
+        case 'error':
+        case 'e':
+            normalizedType = 'error';
+            break;
+        case 'info':
+            normalizedType = 'info';
+            break;
+        default:
+            normalizedType = 'success';
     }
 
-    if (!type || !message) return(<></>);
+    // Get icon for type
+    const getIcon = () => {
+        switch (normalizedType) {
+            case 'success':
+                return <i className="bi bi-check-circle-fill" />;
+            case 'error':
+                return <i className="bi bi-x-circle-fill" />;
+            case 'warning':
+                return <i className="bi bi-exclamation-triangle-fill" />;
+            case 'info':
+                return <i className="bi bi-info-circle-fill" />;
+        }
+    };
 
-    return(<div className={'alert-container'}>
-        <div className={`alert-card ${type === 'w' ? 'warning' : (type === 'e' ? 'error' : 'success')}`}>
-            <div className={'alert-header'}>
-                <div className={'alert-sign-outer'}>
-                    <div className={'alert-sign-inner'}>
-                    </div>
+    // Get default title for type
+    const getDefaultTitle = () => {
+        switch (normalizedType) {
+            case 'success': return 'Success';
+            case 'error': return 'Error';
+            case 'warning': return 'Warning';
+            case 'info': return 'Info';
+        }
+    };
+
+    // Close the toast
+    const handleClose = () => {
+        setIsExiting(true);
+        setTimeout(() => {
+            SetRootFieldAction.new('alert', '', '');
+            setIsExiting(false);
+            setIsVisible(false);
+        }, 300);
+    };
+
+    // Auto-dismiss effect
+    useEffect(() => {
+        if (type && message) {
+            setIsVisible(true);
+            setIsExiting(false);
+
+            // Start exit animation before closing
+            const exitTimer = setTimeout(() => {
+                setIsExiting(true);
+            }, DURATION - 300);
+
+            // Actually close after animation
+            const closeTimer = setTimeout(() => {
+                SetRootFieldAction.new('alert', '', '');
+                setIsExiting(false);
+                setIsVisible(false);
+            }, DURATION);
+
+            return () => {
+                clearTimeout(exitTimer);
+                clearTimeout(closeTimer);
+            };
+        }
+    }, [type, message, title]);
+
+    if (!type || !message || !isVisible) return null;
+
+    return (
+        <div className="toast-alert-container">
+            <div
+                className={`toast-alert toast-alert--${normalizedType} ${isExiting ? 'toast-alert--exiting' : ''}`}
+                role="alert"
+                aria-live="polite"
+                onClick={handleClose}
+            >
+                <div className="toast-alert__icon">
+                    {getIcon()}
                 </div>
-            </div>
-            {typeLabel}
-            <div className={'alert-message'}>{message}</div>
-            <div className={'alert-button-bar'}>
-                <button className={'btn alert-btn my-2  px-4'} onClick={e => SetRootFieldAction.new('alert', '', '')}>
-                    close
+                <div className="toast-alert__content">
+                    <div className="toast-alert__title">
+                        {title || getDefaultTitle()}
+                    </div>
+                    {message && message !== title && (
+                        <div className="toast-alert__message">{message}</div>
+                    )}
+                </div>
+                <button
+                    className="toast-alert__close"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        handleClose();
+                    }}
+                    aria-label="Close notification"
+                >
+                    <i className="bi bi-x" />
                 </button>
+                <div
+                    className="toast-alert__progress"
+                    style={{ animationDuration: `${DURATION}ms` }}
+                />
             </div>
-
         </div>
-    </div>);
+    );
 }
 
 interface OwnProps {}

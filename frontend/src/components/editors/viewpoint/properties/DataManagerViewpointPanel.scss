@@ -1,0 +1,70 @@
+/* DataManagerViewpointPanel — the feature/widget table of the Data Manager singleton's rail.
+
+   Same metrics as the authoring table of `FormAuthoringBody.scss` (header 24px, rows 30px,
+   feature name in mono, control column 130px), on two columns instead of three: the Basic
+   checkbox belongs to the diagram's form, not to this panel (R-DMV-4 offers the widget
+   override alone in this slice).
+
+   Not a reuse of `.form-authoring__*`: those rows are laid out on `1fr 40px 130px`, and
+   borrowing them here would leave the 40px column empty on every row. Every value comes
+   from styles/tokens/, and no variable is declared here (rule 28). */
+
+.dmv-panel {
+    &__table {
+        border: 1px solid var(--color-border-secondary);
+        border-radius: var(--radius-sm);
+        overflow: hidden;
+    }
+
+    &__head {
+        display: grid;
+        grid-template-columns: 1fr 130px;
+        gap: var(--space-2, 8px);
+        align-items: center;
+        height: 24px;
+        padding: 0 var(--space-2, 8px);
+        background: var(--color-bg-primary);
+        border-bottom: 1px solid var(--color-border-secondary);
+        font-size: var(--text-2xs);
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--color-text-tertiary);
+    }
+
+    /* min-height and not height, as in the authoring table: a long feature name wraps
+       rather than being clipped. */
+    &__row {
+        display: grid;
+        grid-template-columns: 1fr 130px;
+        gap: var(--space-2, 8px);
+        align-items: center;
+        min-height: 30px;
+        padding: 0 var(--space-2, 8px);
+        border-bottom: 1px solid var(--color-border-secondary);
+
+        &:last-child { border-bottom: none; }
+    }
+
+    &__name {
+        display: inline-flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 5px;
+        min-width: 0;
+        font-family: var(--font-mono);
+        font-size: var(--text-md);
+        color: var(--color-text-primary);
+        word-break: break-word;
+    }
+
+    /* The override marker, 5px, the same token as the authoring table's dot: cyan marks
+       state, red stays reserved for diagnostics. */
+    &__dot {
+        flex: 0 0 auto;
+        width: 5px;
+        height: 5px;
+        border-radius: var(--radius-full);
+        background: var(--color-marker-required);
+    }
+}

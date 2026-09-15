@@ -1,0 +1,519 @@
+/**
+ * ScriptExecutionWindow Styles
+ * Modal window for step-by-step script execution
+ * Design: Light theme, professional, VS Code-inspired
+ */
+
+// ============================================
+// VARIABLES
+// ============================================
+
+$exec-bg: #ffffff;
+$exec-bg-secondary: #f8fafc;
+$exec-bg-tertiary: #f1f5f9;
+$exec-border: #e2e8f0;
+$exec-text: #1e293b;
+$exec-text-muted: #64748b;
+$exec-accent: #475569;
+$exec-success: #10b981;
+$exec-error: #ef4444;
+$exec-warning: #f59e0b;
+$exec-running: #3b82f6;
+
+// ============================================
+// OVERLAY & WINDOW
+// ============================================
+
+.script-execution-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 32px;
+}
+
+.script-execution-window {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 900px;
+    max-height: 80vh;
+    background: $exec-bg;
+    border-radius: 12px;
+    box-shadow:
+        0 25px 50px -12px rgba(0, 0, 0, 0.25),
+        0 0 0 1px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+}
+
+// ============================================
+// HEADER
+// ============================================
+
+.exec-window__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: $exec-bg-secondary;
+    border-bottom: 1px solid $exec-border;
+}
+
+.exec-window__header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    > i {
+        font-size: 16px;
+        color: $exec-accent;
+    }
+}
+
+.exec-window__title {
+    font-size: 14px;
+    font-weight: 600;
+    color: $exec-text;
+}
+
+.exec-window__target {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: $exec-text-muted;
+    padding: 4px 8px;
+    background: rgba(71, 85, 105, 0.08);
+    border-radius: 4px;
+
+    i {
+        font-size: 10px;
+        opacity: 0.7;
+    }
+}
+
+.exec-window__header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.exec-window__state {
+    font-size: 12px;
+    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: 4px;
+
+    &--idle {
+        background: rgba(100, 116, 139, 0.1);
+        color: #64748b;
+    }
+
+    &--running,
+    &--stepping {
+        background: rgba(59, 130, 246, 0.15);
+        color: #2563eb;
+    }
+
+    &--paused {
+        background: rgba(245, 158, 11, 0.15);
+        color: #d97706;
+    }
+
+    &--completed {
+        background: rgba(16, 185, 129, 0.15);
+        color: #059669;
+    }
+
+    &--error {
+        background: rgba(239, 68, 68, 0.15);
+        color: #dc2626;
+    }
+}
+
+.exec-window__close-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    color: $exec-text-muted;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    &:hover {
+        background: rgba(0, 0, 0, 0.08);
+        color: $exec-text;
+    }
+
+    i {
+        font-size: 14px;
+    }
+}
+
+// ============================================
+// TOOLBAR
+// ============================================
+
+.exec-window__toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: $exec-bg;
+    border-bottom: 1px solid $exec-border;
+}
+
+.exec-toolbar-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    i {
+        font-size: 14px;
+    }
+
+    &--step {
+        background: transparent;
+        color: $exec-text;
+        border: 1px solid $exec-border;
+
+        &:hover {
+            background: $exec-bg-secondary;
+            border-color: #cbd5e1;
+        }
+    }
+
+    &--run {
+        background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+        color: #ffffff;
+        border: none;
+
+        i, span {
+            color: #ffffff;
+        }
+
+        &:hover {
+            background: linear-gradient(135deg, #475569 0%, #334155 100%);
+        }
+    }
+
+    &--stop {
+        background: rgba(239, 68, 68, 0.1);
+        color: #dc2626;
+        border: 1px solid rgba(239, 68, 68, 0.2);
+
+        &:hover {
+            background: rgba(239, 68, 68, 0.15);
+        }
+    }
+}
+
+.exec-toolbar-divider {
+    width: 1px;
+    height: 24px;
+    background: $exec-border;
+    margin: 0 4px;
+}
+
+.exec-toolbar-info {
+    font-size: 12px;
+    color: $exec-text-muted;
+}
+
+// ============================================
+// CONTENT AREA
+// ============================================
+
+.exec-window__content {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+// ============================================
+// CODE AREA
+// ============================================
+
+.exec-window__code-area {
+    flex: 1;
+    overflow-y: auto;
+    background: $exec-bg;
+}
+
+.exec-code__lines {
+    display: flex;
+    flex-direction: column;
+}
+
+.exec-code__line {
+    display: flex;
+    min-height: 26px;
+    transition: background 0.15s ease;
+
+    &--skip {
+        opacity: 0.5;
+    }
+
+    &--pending {
+        // default
+    }
+
+    &--current,
+    &--running {
+        background: rgba(59, 130, 246, 0.08);
+    }
+
+    &--success {
+        background: rgba(16, 185, 129, 0.06);
+    }
+
+    &--error {
+        background: rgba(239, 68, 68, 0.08);
+    }
+}
+
+.exec-code__gutter {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 12px;
+    min-width: 70px;
+    background: rgba(0, 0, 0, 0.02);
+    border-right: 1px solid $exec-border;
+    user-select: none;
+}
+
+.exec-code__line-num {
+    font-family: 'JetBrains Mono', 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: $exec-text-muted;
+    min-width: 24px;
+    text-align: right;
+}
+
+.exec-line-status {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    font-size: 11px;
+
+    &--skip {
+        color: #cbd5e1;
+        font-size: 10px;
+    }
+
+    &--pending {
+        width: 6px;
+        height: 6px;
+        background: #cbd5e1;
+        border-radius: 50%;
+    }
+
+    &--running {
+        width: 8px;
+        height: 8px;
+        background: $exec-running;
+        border-radius: 50%;
+        animation: exec-pulse 1s ease-in-out infinite;
+    }
+
+    &--success {
+        color: $exec-success;
+    }
+
+    &--error {
+        color: $exec-error;
+    }
+}
+
+@keyframes exec-pulse {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.5;
+        transform: scale(0.85);
+    }
+}
+
+.exec-code__content {
+    flex: 1;
+    padding: 0 16px;
+    display: flex;
+    align-items: center;
+    overflow-x: auto;
+
+    span {
+        font-family: 'JetBrains Mono', 'IBM Plex Mono', 'Fira Code', 'Consolas', monospace !important;
+        font-size: 13px !important;
+        line-height: 1.7 !important;
+    }
+}
+
+// ============================================
+// OUTPUT PANEL
+// ============================================
+
+.exec-window__output {
+    width: 280px;
+    display: flex;
+    flex-direction: column;
+    background: $exec-bg-tertiary;
+    border-left: 1px solid $exec-border;
+}
+
+.exec-output__header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    color: $exec-text-muted;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid $exec-border;
+    background: $exec-bg-secondary;
+
+    i {
+        font-size: 12px;
+    }
+}
+
+.exec-output__content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    font-family: 'JetBrains Mono', 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.exec-output__empty {
+    color: $exec-text-muted;
+    font-style: italic;
+}
+
+.exec-output__line {
+    padding: 4px 0;
+    word-break: break-word;
+
+    &--success {
+        color: #059669;
+    }
+
+    &--error {
+        color: #dc2626;
+    }
+
+    &--warning {
+        color: #d97706;
+    }
+}
+
+// ============================================
+// STATUS BAR
+// ============================================
+
+.exec-window__statusbar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 8px 16px;
+    background: $exec-bg-secondary;
+    border-top: 1px solid $exec-border;
+    font-size: 11px;
+    color: $exec-text-muted;
+}
+
+.exec-statusbar__item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    i {
+        font-size: 12px;
+        opacity: 0.7;
+    }
+}
+
+.exec-statusbar__spacer {
+    flex: 1;
+}
+
+.exec-statusbar__hint {
+    opacity: 0.6;
+}
+
+// ============================================
+// SCROLLBAR
+// ============================================
+
+.exec-window__code-area::-webkit-scrollbar,
+.exec-output__content::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.exec-window__code-area::-webkit-scrollbar-track,
+.exec-output__content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.exec-window__code-area::-webkit-scrollbar-thumb,
+.exec-output__content::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.12);
+    border-radius: 4px;
+
+    &:hover {
+        background: rgba(0, 0, 0, 0.2);
+    }
+}
+
+// ============================================
+// RESPONSIVE
+// ============================================
+
+@media (max-width: 768px) {
+    .script-execution-overlay {
+        padding: 16px;
+    }
+
+    .script-execution-window {
+        max-height: 90vh;
+    }
+
+    .exec-window__content {
+        flex-direction: column;
+    }
+
+    .exec-window__output {
+        width: 100%;
+        height: 200px;
+        border-left: none;
+        border-top: 1px solid $exec-border;
+    }
+}

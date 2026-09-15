@@ -69,17 +69,17 @@
     background: whitesmoke; //var(--palette-w);
     border: 1px solid var(--palette-g);
     padding: 0.4em;
-    border-radius: var(--radius); //.5em;
+    border-radius: var(--radius-sm); //.5em;
   }
 
   &> .dark * {
     pointer-events: all;
     margin: auto;
-    background: var(--bg-4);
-    border: 1px solid var(--bg-4);
+    background: var(--color-text-tertiary);
+    border: 1px solid var(--color-text-tertiary);
     color: white;
     padding: 0.4em;
-    border-radius: var(--radius); //.5em;
+    border-radius: var(--radius-sm); //.5em;
   }
   
   &.inline>*{

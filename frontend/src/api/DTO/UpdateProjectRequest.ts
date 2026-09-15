@@ -18,6 +18,7 @@ export class UpdateProjectRequest extends Request_DTO<DProject>{
     collaborators!: string[];
     imported!: boolean;
     version!: number;
+    tagNames!: string[];
 
     constructor(src: Json<RawObject> | DProject) {
         super();
@@ -44,7 +45,7 @@ export class UpdateProjectRequest extends Request_DTO<DProject>{
         updateProjectRequest.isFavorite = !project.isFavorite;
         updateProjectRequest.collaborators = project.collaborators || [""];
 
-        console.log("*************** - updateProjectRequest", updateProjectRequest);
+        // console.log("*************** - updateProjectRequest", updateProjectRequest);
 
         return updateProjectRequest;
     }*/
@@ -57,7 +58,7 @@ export class UpdateProjectRequest extends Request_DTO<DProject>{
         this.creation = (src.creation ? new Date(src.creation) : new Date()).toISOString();
         setFields['creation'] = true;
         this._dto_set('imported', !!src.state, setFields);
-        console.log('dto convert: ', {src, thiss:this, setFields});
+        // console.log('dto convert: ', {src, thiss:this, setFields});
         /*excess.favorite
         excess.className;
         excess.author;

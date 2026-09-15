@@ -1,0 +1,169 @@
+/**
+ * Jjodie Welcome Screen Styles
+ * Clean, centered welcome design
+ */
+
+/* Welcome Container */
+.jjodie-welcome {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 40px;
+    max-width: 500px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+/* Icon */
+.welcome-icon {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, #E0F2FE 0%, #BAE6FD 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 24px;
+    animation: welcomeFadeIn 0.5s ease-out;
+}
+
+.welcome-icon i {
+    font-size: 36px;
+    color: #0EA5E9;
+}
+
+/* Title */
+.welcome-title {
+    font-family: 'Inter', -apple-system, sans-serif;
+    font-size: 28px;
+    font-weight: 700;
+    color: #0C4A6E;
+    margin: 0 0 12px;
+    letter-spacing: -0.02em;
+    animation: welcomeFadeIn 0.6s ease-out 0.1s backwards;
+}
+
+/* Subtitle */
+.welcome-subtitle {
+    font-family: 'Inter', -apple-system, sans-serif;
+    font-size: 15px;
+    color: #64748B;
+    margin: 0 0 28px;
+    line-height: 1.6;
+    animation: welcomeFadeIn 0.7s ease-out 0.2s backwards;
+}
+
+/* Capabilities Grid */
+.welcome-capabilities {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    width: 100%;
+    margin-bottom: 28px;
+    animation: welcomeFadeIn 0.8s ease-out 0.3s backwards;
+}
+
+.capability-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 16px 12px;
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
+    transition: all 0.2s ease;
+}
+
+.capability-item:hover {
+    background: #F0F9FF;
+    border-color: #BAE6FD;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(14, 165, 233, 0.1);
+}
+
+.capability-item i {
+    font-size: 22px;
+    color: #0EA5E9;
+}
+
+.capability-item span {
+    font-family: 'Inter', -apple-system, sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: #475569;
+    text-align: center;
+}
+
+/* CTA */
+.welcome-cta {
+    font-family: 'Inter', -apple-system, sans-serif;
+    font-size: 14px;
+    color: #64748B;
+    margin: 0;
+    line-height: 1.6;
+    animation: welcomeFadeIn 0.9s ease-out 0.4s backwards;
+}
+
+.welcome-cta code {
+    font-family: 'JetBrains Mono', 'SF Mono', monospace;
+    background: #F1F5F9;
+    padding: 2px 8px;
+    border-radius: 4px;
+    color: #0EA5E9;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+/* Animation */
+@keyframes welcomeFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive */
+@media (max-width: 500px) {
+    .jjodie-welcome {
+        padding: 40px 20px;
+    }
+
+    .welcome-icon {
+        width: 64px;
+        height: 64px;
+    }
+
+    .welcome-icon i {
+        font-size: 28px;
+    }
+
+    .welcome-title {
+        font-size: 24px;
+    }
+
+    .welcome-subtitle {
+        font-size: 14px;
+    }
+
+    .welcome-capabilities {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .capability-item {
+        flex-direction: row;
+        justify-content: flex-start;
+        gap: 12px;
+        padding: 14px 16px;
+    }
+
+    .capability-item span {
+        text-align: left;
+    }
+}

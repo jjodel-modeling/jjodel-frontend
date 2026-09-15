@@ -19,7 +19,7 @@ import {
     Debug,
     DViewElement,
     transientProperties,
-    LUser, DProject, XML
+    LUser, DProject, XML, LProject
 } from '../../joiner';
 import {ProjectsApi} from "../../api/persistance";
 import {VersionFixer} from "../../redux/VersionFixer";
@@ -29,18 +29,18 @@ export class SaveManager {
     private static tmpsave: DState;
 
     static save(): void {
-        let project = (LUser.fromPointer(DUser.current) as LUser).project;
+        let project = LProject.getProject();
         if (project) ProjectsApi.save(project);
         U.isProjectModified = false;
         /*SaveManager.tmpsave = store.getState();
         localStorage.setItem("tmpsave", JSON.stringify(SaveManager.tmpsave));
         console.clear();
-        console.log(JSON.stringify(SaveManager.tmpsave))*/
+        // console.log(JSON.stringify(SaveManager.tmpsave))*/
     }
 
     static load(state0: string | GObject<DState>, project: DProject): void {
         if (!state0 && SaveManager.tmpsave) { LoadAction.new(SaveManager.tmpsave); return; }
-        state0 = state0 || localStorage.getItem('tmpsave') || 'null'; // priorities: 1) argument from file 2) state variable cached 3) localstorage 4) null prevent crash
+        state0 = state0 || 'null'; // priorities: 1) argument from file 2) state variable cached 3) localstorage 4) null prevent crash
         let save: GObject<DState> = SaveManager.tmpsave = typeof state0 === 'string' ? JSON.parse(state0) : state0;
         for (let vid of [...save.viewelements, ...save.viewpoints]) {
             for (let key of DViewElement.RecompileKeys) {
@@ -49,6 +49,7 @@ export class SaveManager {
                 if (!save[key]) save[key] = [];
                 save[key].push(vid);
                 let lookupproject = save.idlookup[project.id] as DProject;
+                if (!lookupproject) lookupproject = save.idlookup[project.id] = {...project, state:''} as DProject; // only for newly created projects, never saved
                 lookupproject._Id = project._Id;
             }
         }
@@ -73,7 +74,7 @@ export class SaveManager {
         }
         let ism2 = (lmodel as LModel).isMetamodel;
         let name = (lmodel.name || (ism2 ? 'M2' : 'M1') + '_unnamed')  + (toXML ? ".xml" : '.json') + "."+ (ism2 ? "ecore" : lmodel.instanceof?.name || "shapeless");
-        console.log("download file:", {name, ism2, toXML, lmodel, instanceof:lmodel.instanceof});
+        // console.log("download file:", {name, ism2, toXML, lmodel, instanceof:lmodel.instanceof});
         U.download(name, str);
     }
 
@@ -107,7 +108,7 @@ export class SaveManager {
             if (fileContents.length == 0) return;
             // @ts-ignore
             filename = e.target.files?.[0].name;
-            console.log("file read", {e, fileContents, files, filename});
+            // console.log("file read", {e, fileContents, files, filename});
             filestring = fileContents[0];
 
             // if file is over 500kb, lightmode on
@@ -116,7 +117,7 @@ export class SaveManager {
                 // $(document).one("click", (e) => { Debug.setLightMode(false); });
             }
 
-            console.log('importEcore filestring input: ', filestring);
+            // console.log('importEcore filestring input: ', filestring);
             if (fromXML) {
                 let windoww = window as any;
                 windoww.file = filestring;
@@ -126,7 +127,7 @@ export class SaveManager {
                 // filestring = U.multiReplaceAll(filestring, ["\t", "\r", "\n", '&amp;', '&#38;', '&quot;', '&', '\'', '"'], ["\\t", "\\r", "\\n", '\\&', "\\'", '\\"', '\\&', "\\'", '\\"']);//,  "\\t"), "\r", "\\r"), "\n", "\\n");
 
                 const xmlDoc = new DOMParser().parseFromString(filestring,"text/xml");
-                console.log('importEcore xml:', xmlDoc);
+                // console.log('importEcore xml:', xmlDoc);
                 let jsonstring0 = '';
                 jsonobj = prxml2json.xml2jsonobj(xmlDoc, ' ');//doto: non devo wrappare con \" i nomi di chiavi o valori ma solo i contenuti
                 /*jsonstring = jsonstring0;
@@ -136,11 +137,11 @@ export class SaveManager {
                 */
                 // jsonstring = JSON.stringify(jsonobj);
                 if (jsonobj.parsererror) { Log.ee("failed to parse XML->JSON", {parseError:jsonobj.parseerror, jsonobj});  return; }
-                console.log('importEcore jsonstr input: ', jsonobj);
+                // console.log('importEcore jsonstr input: ', jsonobj);
             }
             else jsonstring = filestring;
             let isMetamodel = filename.indexOf(".ecore") === filename.length - ".ecore".length;
-            console.log("ismetamodel", {filename, isMetamodel});
+            // console.log("ismetamodel", {filename, isMetamodel});
             let end = SaveManager.importEcore(jsonobj || jsonstring || 'null', isMetamodel, filename, true);
         }, extensions, true);
     }
@@ -153,7 +154,32 @@ export class SaveManager {
         }
     }
     public static importEcore(jsonstr: GObject | string | null, isMetamodel: boolean, filename: string | undefined, persist: boolean = true): DModelElement[] {
-        return EcoreParser.parse(jsonstr, isMetamodel, filename, persist);
+        const parsedElements = EcoreParser.parse(jsonstr, isMetamodel, filename, persist);
+        // Link imported metamodel to current project (Bug F fix 2026-05-13):
+        // EcoreParser.parse() pushes the DModel to state.m2models but does NOT update
+        // project.metamodels. Without this, Dashboard shows metamodelsNumber=0 because
+        // metamodelsNumber is computed from project.metamodels.length at save time.
+        // Pattern mirrors createM2() in Navbar.tsx:75. Reference:
+        // docs/discovery/2026-05-13_microdiscovery_bug_ef_render_duplicate.md sec 6.2.
+        try {
+            const project = LProject.getProject();
+            if (project && isMetamodel) {
+                let dmodel: DModelElement | undefined;
+                for (const elem of parsedElements) { if (elem.className === 'DModel') { dmodel = elem; break; } }
+                if (dmodel) {
+                    const lmodel = LPointerTargetable.fromD(dmodel) as LModel;
+                    if (lmodel) {
+                        project.metamodels = [...project.metamodels, lmodel];
+                        if (lmodel.node) {
+                            project.graphs = [...project.graphs, lmodel.node as any];
+                        }
+                    }
+                }
+            }
+        } catch (linkErr) {
+            console.warn('[Bug F fix] Failed to link imported metamodel to project:', linkErr);
+        }
+        return parsedElements;
     }
 
     static exportLayout_click(toFile: boolean) {

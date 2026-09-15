@@ -11,7 +11,7 @@ export class Overlap extends PureComponent<AllProps, ThisState>{
     static cname: string = "Overlap";
 
     render(): ReactNode {
-        console.log('overlap childs:', this.props.children);
+        // console.log('overlap childs:', this.props.children);
         if (!this.props.children || !Array.isArray(this.props.children)) return this.props.children;
         const children = this.props.children; // ? (Array.isArray(this.props.children) ? this.props.children : [this.props.children]) : [];
         return (<>

@@ -1,0 +1,244 @@
+/* FormAuthoringBody — the Form tab of the vertex authoring panel (Slice 2a).
+
+   Metrics from artboards 6a/6b of the form-views handoff: header row 24px, feature
+   rows 30px, feature name in mono 12px, control column 130px, unified 2026-08-28.
+   Every value comes from styles/tokens/, and no variable is declared here (rule 28).
+
+   A stylesheet of its own rather than inline styles: the tables are the first tabular
+   rows in the authoring panel, which is built on the stacked `jj-field` and has no
+   pattern to reuse for them (discovery 2026-08-28, D7). */
+
+.form-authoring {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3, 12px);
+
+    &__table {
+        border: 1px solid var(--color-border-secondary);
+        border-radius: var(--radius-sm);
+        overflow: hidden;
+    }
+
+    /* One control width for every row kind (2026-08-28, Slice 2b): the header used to be
+       1fr 110px while a treatment row was 1fr 130px, so in a mixed section the header was
+       never aligned to the reference rows. A third column would have widened that gap
+       instead of introducing it; unifying at 130px closes it. */
+    &__head {
+        display: grid;
+        grid-template-columns: 1fr 40px 130px;
+        gap: var(--space-2, 8px);
+        align-items: center;
+        height: 24px;
+        padding: 0 var(--space-2, 8px);
+        background: var(--color-bg-primary);
+        border-bottom: 1px solid var(--color-border-secondary);
+        font-size: var(--text-2xs);
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--color-text-tertiary);
+    }
+
+    /* min-height and not height: a row carrying a preserved-value chip is taller than
+       one that is not, and clipping the chip would hide what the row exists to show. */
+    &__row {
+        display: grid;
+        grid-template-columns: 1fr 40px 130px;
+        gap: var(--space-2, 8px);
+        align-items: center;
+        min-height: 30px;
+        padding: 0 var(--space-2, 8px);
+        border-bottom: 1px solid var(--color-border-secondary);
+
+        &:last-child { border-bottom: none; }
+    }
+
+    /* Kept as a class hook now that both row kinds share the one column width above:
+       a treatment row differs by its content, not by its grid. Deliberately carrying no
+       declaration of its own rather than repeating the ones it already inherits. */
+    &__row--treatment { }
+
+    /* Hidden is still authored, so the row stays readable and stays operable: dimmed,
+       never removed, or the author would lose the control that puts it back. */
+    &__row--muted {
+        opacity: 0.6;
+    }
+
+    &__name {
+        display: inline-flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 5px;
+        min-width: 0;
+        font-family: var(--font-mono);
+        font-size: var(--text-md);
+        color: var(--color-text-primary);
+        word-break: break-word;
+    }
+
+    /* 5px, the handoff's size for this marker. Same token as the form's required and
+       dirty dots: cyan marks state, red stays reserved for diagnostics. */
+    &__dot {
+        flex: 0 0 auto;
+        width: 5px;
+        height: 5px;
+        border-radius: var(--radius-full);
+        background: var(--color-marker-required);
+    }
+
+    /* The Basic cell. Centered on its 40px column so the checkboxes read as a column
+       and not as a ragged edge next to names of different lengths. */
+    &__basic {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* State of the `basic` key for the whole tab, plus its one way back to the
+       heuristic. A link, not a button: it undoes a declaration, it does not commit one. */
+    &__state {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-2, 8px);
+        font-size: var(--text-2xs);
+        color: var(--color-text-tertiary);
+    }
+
+    &__link {
+        appearance: none;
+        border: none;
+        background: none;
+        padding: 0;
+        font-family: var(--font-sans);
+        font-size: var(--text-2xs);
+        color: var(--color-accent);
+        text-decoration: underline;
+        cursor: pointer;
+
+        &:hover { color: var(--color-accent-hover); }
+
+        &:focus-visible {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(51, 65, 85, 0.18);
+            border-radius: var(--radius-xs);
+        }
+    }
+
+    &__badge {
+        flex: 0 0 auto;
+        padding: 0 4px;
+        border-radius: var(--radius-xs);
+        background: var(--color-bg-tertiary);
+        color: var(--color-text-tertiary);
+        font-family: var(--font-sans);
+        font-size: var(--text-2xs);
+        line-height: 1.6;
+    }
+
+    /* Provenance of a widget override that covers a metamodel declaration (Turno 7c).
+       A full-width line under its row, inside the same table: the row is a three-column
+       grid and the sentence is one sentence, so it cannot live in a cell. */
+    &__provenance {
+        display: flex;
+        align-items: flex-start;
+        gap: 6px;
+        padding: 0 var(--space-2, 8px) var(--space-2, 8px);
+        border-bottom: 1px solid var(--color-border-secondary);
+        /* 7c: 11px sulla riga, non i 10 del resto della tabella, e il grigio della
+           famiglia form invece del terziario. Il glifo resta `bi-arrow-return-right`
+           e resta muto. */
+        font-size: var(--text-xs);
+        line-height: 1.5;
+        color: var(--color-form-muted);
+
+        &:last-child { border-bottom: none; }
+
+        > i { margin-top: 1px; color: var(--color-form-muted); }
+
+        code {
+            font-family: var(--font-mono);
+            font-size: var(--text-xs);
+            color: var(--color-form-section);
+        }
+    }
+
+    /* Il verbo dell'override. 7c disegna l'ambra sul contenitore della riga e poi la
+       sovrascrive su ogni span interno, quindi a video non se ne vede: la ratifica di
+       Fase 2 la vuole sul solo verbo, ed e' li' che sta. `--color-warning-text` vale
+       esattamente `#b45309` in light (amber-700, `_colors-light.scss:414`) e ha una
+       controparte dark, cosa che il literal non avrebbe. */
+    &__provenance-verb {
+        color: var(--color-warning-text);
+        font-weight: 500;
+    }
+
+    /* The renderer the view is covering: the one word the author has to read to judge
+       the override, so it steps up out of the tertiary grey. */
+    &__provenance-kind {
+        color: var(--color-form-section);
+        font-weight: 500;
+    }
+
+    /* Il Reset della riga di provenienza: 7c lo vuole `#0284c7` (sky-600), non
+       l'accent slate del link generico di questo body. Literal per scelta dichiarata,
+       sul precedente di D-5-2: l'unico token a quel valore e' `--color-form-dirty-text`
+       («edited, not saved»), semanticamente estraneo a un comando di ripristino, e la
+       famiglia sky del design system si ferma alla grade 500. L'underline resta — il
+       mock non ce l'ha, ma toglierla lascerebbe un comando distinguibile dal solo
+       colore. */
+    &__provenance &__link {
+        font-size: var(--text-xs);
+        color: #0284c7;
+        font-weight: 500;
+
+        &:hover { color: #0369a1; }
+    }
+
+    &__legend {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: var(--text-2xs);
+        color: var(--color-text-tertiary);
+    }
+
+    &__residual {
+        margin-bottom: var(--space-2, 8px);
+        font-size: var(--text-2xs);
+        line-height: 1.5;
+        color: var(--color-text-tertiary);
+    }
+
+    &__ignored {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-1, 4px);
+        margin-top: var(--space-2, 8px);
+    }
+
+    &__ignored-row {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2, 8px);
+        flex-wrap: wrap;
+    }
+
+    &__clear {
+        appearance: none;
+        border: 1px solid var(--color-border-primary);
+        border-radius: var(--radius-sm);
+        background: var(--color-bg-secondary);
+        padding: 1px 8px;
+        font-family: var(--font-sans);
+        font-size: var(--text-2xs);
+        color: var(--color-text-secondary);
+        cursor: pointer;
+
+        &:hover { background: var(--color-bg-hover); }
+
+        &:focus-visible {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(51, 65, 85, 0.18);
+        }
+    }
+}

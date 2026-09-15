@@ -1,0 +1,453 @@
+/**
+ * ChatInput Component Styles
+ * Image paste preview and attachment button styles
+ */
+
+// Image preview container above input
+.jodie-image-previews {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px 16px 0;
+    margin-bottom: -4px;
+}
+
+// Individual image preview
+.jodie-image-preview {
+    position: relative;
+    width: 64px;
+    height: 64px;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 2px solid #e2e8f0;
+    background: #f8fafc;
+    transition: all 0.2s ease;
+
+    img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    &:hover {
+        border-color: #64748b;
+
+        .jodie-image-remove {
+            opacity: 1;
+        }
+    }
+}
+
+// Remove button on image preview
+.jodie-image-remove {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #ef4444;
+    border: 2px solid #ffffff;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: all 0.15s ease;
+    padding: 0;
+
+    i {
+        font-size: 12px;
+        line-height: 1;
+    }
+
+    &:hover {
+        background: #dc2626;
+        transform: scale(1.1);
+    }
+}
+
+// Input row with optional attach button
+.jodie-input-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    width: 100%;
+}
+
+// Monospace font for command input
+.jodie-input {
+    font-family: 'JetBrains Mono', 'Fira Code', 'Monaco', 'Consolas', monospace;
+    font-size: 13px;
+    letter-spacing: -0.01em;
+
+    // Hide scrollbar visually; scroll still works via wheel/keyboard
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    &::-webkit-scrollbar {
+        display: none;
+    }
+}
+
+// Composer wrapper: textarea + send button as a unified bordered control.
+// Paperclip stays outside (as a sibling in `.jodie-input-row`).
+// `position: relative` anchors the JjEL autocomplete dropdown above the composer.
+.jodie-composer {
+    flex: 1;
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    padding: 6px 6px 6px 14px;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    transition: border-color 120ms ease, box-shadow 120ms ease;
+    position: relative;
+
+    &:hover {
+        border-color: #94a3b8;
+    }
+
+    &:focus-within {
+        border-color: #334155;
+        box-shadow: 0 0 0 3px rgba(51, 65, 85, 0.12);
+    }
+
+    // Reset textarea chrome inside the composer — wrapper owns border/background.
+    // Keeps min/max height + monospace font from the base `.jodie-input` rule.
+    .jodie-input {
+        border: none;
+        background: transparent;
+        border-radius: 0;
+        padding: 8px 0;
+        box-shadow: none;
+        min-height: 32px;
+
+        &:focus,
+        &:hover:not(:focus):not(:disabled),
+        &:disabled {
+            border: none;
+            background: transparent;
+            box-shadow: none;
+        }
+    }
+}
+
+// Send button: 4 mutually-exclusive states (empty / ready / sending / no-provider).
+// Icon color is targeted on the descendant `<i>` (with `.bi` fallback) to beat
+// the global `i.bi { color: var(--font-color-1) }` rule in styles/style.scss
+// (specificity 0,1,1). `.jodie-send-btn--ready i` is (0,2,1) — wins.
+// Hover-state color is repeated explicitly to outrank `i.bi:hover` (0,2,1).
+.jodie-send-btn {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 120ms ease, transform 100ms ease;
+    padding: 0;
+
+    i, .bi {
+        font-size: 14px;
+        line-height: 1;
+        transition: color 120ms ease;
+    }
+
+    &:active:not(:disabled) {
+        transform: scale(0.94);
+    }
+
+    &--empty {
+        background: #e2e8f0; // slate-200
+        cursor: not-allowed;
+
+        i, .bi { color: #94a3b8; } // slate-400
+    }
+
+    &--ready {
+        background: var(--color-accent, #0ea5e9);
+
+        i, .bi { color: #ffffff; }
+
+        &:hover {
+            background: #0284c7;
+            i, .bi { color: #ffffff; }
+        }
+    }
+
+    &--sending {
+        background: var(--color-accent, #0ea5e9);
+        animation: jodie-send-pulse 1.4s ease-in-out infinite;
+
+        i, .bi { color: #ffffff; }
+
+        &:hover {
+            background: #0284c7;
+            i, .bi { color: #ffffff; }
+        }
+    }
+
+    &--no-provider {
+        background: #fef3c7; // amber-100
+
+        i, .bi { color: #b45309; } // amber-700
+
+        &:hover {
+            background: #fde68a;
+            i, .bi { color: #b45309; }
+        }
+    }
+}
+
+@keyframes jodie-send-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(14, 165, 233, 0.5); }
+    50%      { box-shadow: 0 0 0 4px rgba(14, 165, 233, 0); }
+}
+
+// Attachment button
+.jodie-attach-btn {
+    width: 40px;
+    height: 48px;
+    min-width: 40px;
+    border: none;
+    background: transparent;
+    color: #64748b;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    i {
+        font-size: 18px;
+    }
+
+    &:hover:not(:disabled) {
+        background: #f1f5f9;
+        color: #475569;
+    }
+
+    &:disabled {
+        color: #cbd5e1;
+        cursor: not-allowed;
+    }
+}
+
+// Adjust input container for image support
+.jodie-input-container {
+    display: flex;
+    flex-direction: column;
+    padding: 12px 16px 16px;
+
+    // When there are images, add some visual separation
+    &:has(.jodie-image-previews) {
+        padding-top: 0;
+    }
+}
+
+// Vision hint indicator
+.jodie-vision-hint {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: #94a3b8;
+    padding: 0 4px;
+    margin-bottom: 8px;
+
+    i {
+        font-size: 12px;
+    }
+}
+
+// Dark mode support
+[data-theme="dark"] {
+    .jodie-image-preview {
+        border-color: #334155;
+        background: #1e293b;
+
+        &:hover {
+            border-color: #64748b;
+        }
+    }
+
+    .jodie-image-remove {
+        border-color: #1e293b;
+    }
+
+    .jodie-attach-btn {
+        color: #94a3b8;
+
+        &:hover:not(:disabled) {
+            background: #334155;
+            color: #e2e8f0;
+        }
+
+        &:disabled {
+            color: #475569;
+        }
+    }
+
+    .jodie-vision-hint {
+        color: #64748b;
+    }
+
+    .jodie-composer {
+        background: #0f172a;  // slate-900
+        border-color: #334155;
+
+        &:hover {
+            border-color: #475569;
+        }
+
+        &:focus-within {
+            border-color: #94a3b8;
+            box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.18);
+        }
+    }
+
+    .jodie-send-btn--empty {
+        background: #334155;
+
+        i, .bi { color: #64748b; }
+    }
+
+    .jodie-send-btn--no-provider {
+        background: rgba(245, 158, 11, 0.18);
+
+        i, .bi { color: #fbbf24; }
+
+        &:hover {
+            background: rgba(245, 158, 11, 0.28);
+            i, .bi { color: #fbbf24; }
+        }
+    }
+}
+
+// =====================================================================
+// JjEL autocomplete dropdown (Code mode + JjEL flavor)
+// Anchored to .jodie-composer (position:relative).
+// Always opens upward — there's no room below: the composer sits at the
+// bottom of the Jodie window.
+// =====================================================================
+
+.jodie-completion-dropdown {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: calc(100% + 6px);
+    max-height: 240px; // ~8 rows
+    overflow-y: auto;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.12);
+    z-index: 1000;
+    font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+    font-size: 12px;
+    padding: 4px 0;
+}
+
+.jodie-completion-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px;
+    cursor: pointer;
+    color: #334155;
+
+    &:hover {
+        background: #f1f5f9;
+    }
+
+    &--active {
+        background: #0ea5e9; // cyan-500
+        color: #ffffff;
+
+        &:hover {
+            background: #0ea5e9; // keep selection color on hover
+        }
+
+        .jodie-completion-desc {
+            color: rgba(255, 255, 255, 0.78);
+        }
+
+        .jodie-completion-badge {
+            // Selected row: invert badge to a translucent white pill
+            background: rgba(255, 255, 255, 0.22) !important;
+            color: #ffffff !important;
+        }
+    }
+}
+
+.jodie-completion-badge {
+    flex-shrink: 0;
+    min-width: 38px;
+    text-align: center;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    line-height: 1.4;
+
+    &--keyword        { background: rgba(139, 92, 246, 0.14); color: #6d28d9; }   // violet
+    &--collection     { background: rgba(14, 165, 233, 0.14); color: #0369a1; }   // cyan
+    &--class          { background: rgba(34, 197, 94, 0.14);  color: #15803d; }   // green
+    &--class-property { background: rgba(244, 63, 94, 0.12);  color: #9f1239; }   // rose (class structural property)
+    &--meta-property  { background: rgba(79, 70, 229, 0.12);  color: #3730a3; }   // indigo (meta-level bridge)
+    &--method         { background: rgba(100, 116, 139, 0.16); color: #334155; }  // slate
+    &--context        { background: rgba(245, 158, 11, 0.16); color: #b45309; }   // amber (Level 2 vars)
+}
+
+.jodie-completion-text {
+    flex-shrink: 0;
+    font-weight: 500;
+}
+
+.jodie-completion-desc {
+    flex: 1;
+    margin-left: 6px;
+    color: #94a3b8;
+    font-size: 11px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+[data-theme="dark"] {
+    .jodie-completion-dropdown {
+        background: #0f172a; // slate-900
+        border-color: #334155;
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+    }
+
+    .jodie-completion-row {
+        color: #e2e8f0;
+
+        &:hover {
+            background: #1e293b;
+        }
+    }
+
+    .jodie-completion-desc {
+        color: #64748b;
+    }
+
+    .jodie-completion-badge {
+        &--keyword        { background: rgba(139, 92, 246, 0.22); color: #c4b5fd; }
+        &--collection     { background: rgba(14, 165, 233, 0.20); color: #7dd3fc; }
+        &--class          { background: rgba(34, 197, 94, 0.20);  color: #86efac; }
+        &--class-property { background: rgba(244, 63, 94, 0.22);  color: #fda4af; }
+        &--meta-property  { background: rgba(99, 102, 241, 0.22); color: #c7d2fe; }
+        &--method         { background: rgba(148, 163, 184, 0.22); color: #cbd5e1; }
+        &--context        { background: rgba(245, 158, 11, 0.22); color: #fcd34d; }
+    }
+}

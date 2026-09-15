@@ -1,0 +1,133 @@
+% References for the MDE Intelligence 2026 paper.
+% NOTE (verify before submission): every entry below must be checked against the
+% real source. The project epistemics rule and the meeting discussion both warn
+% against LLM-fabricated citations. Entries here are believed real but unverified
+% bibliographic details (pages, editors, DOIs) must be confirmed.
+
+% ---- AI in software development ----
+@article{chen2021codex,
+  author  = {Chen, Mark and Tworek, Jerry and Jun, Heewoo and others},
+  title   = {Evaluating Large Language Models Trained on Code},
+  journal = {arXiv preprint arXiv:2107.03374},
+  year    = {2021},
+  note    = {Codex / HumanEval; verify author list}
+}
+
+@article{peng2023copilot,
+  author  = {Peng, Sida and Kalliamvakou, Eirini and Cihon, Peter and Demirer, Mert},
+  title   = {The Impact of {AI} on Developer Productivity: Evidence from {GitHub Copilot}},
+  journal = {arXiv preprint arXiv:2302.06590},
+  year    = {2023}
+}
+
+@inproceedings{vaithilingam2022expectation,
+  author    = {Vaithilingam, Priyan and Zhang, Tianyi and Glassman, Elena L.},
+  title     = {Expectation vs. Experience: Evaluating the Usability of Code Generation Tools Powered by Large Language Models},
+  booktitle = {Extended Abstracts of the CHI Conference on Human Factors in Computing Systems (CHI EA)},
+  year      = {2022}
+}
+
+@article{hou2024llm4se,
+  author  = {Hou, Xinyi and Zhao, Yanjie and Liu, Yue and Yang, Zhou and Wang, Kailong and Li, Li and Luo, Xiapu and Lo, David and Grundy, John and Wang, Haoyu},
+  title   = {Large Language Models for Software Engineering: A Systematic Literature Review},
+  journal = {ACM Transactions on Software Engineering and Methodology},
+  year    = {2024},
+  note    = {Verify volume/pages}
+}
+
+@misc{fowler2025specdriven,
+  author = {Fowler, Martin},
+  title  = {Specification-driven development (working note)},
+  year   = {2025},
+  note   = {Placeholder for the spec-driven framing; verify exact source}
+}
+
+% ---- Problems of LLM-based development ----
+@inproceedings{pearce2022asleep,
+  author    = {Pearce, Hammond and Ahmad, Baleegh and Tan, Benjamin and Dolan-Gavitt, Brendan and Karri, Ramesh},
+  title     = {Asleep at the Keyboard? Assessing the Security of {GitHub Copilot}'s Code Contributions},
+  booktitle = {IEEE Symposium on Security and Privacy (S\&P)},
+  year      = {2022},
+  note      = {About 40\% of generated programs vulnerable; arXiv:2108.09293}
+}
+
+@inproceedings{spracklen2025packages,
+  author    = {Spracklen, Joseph and Wijewickrama, Raveen and Sakib, Nazmus and Maiti, Anindya and Viswanath, Bimal and Jadliwala, Murtuza},
+  title     = {We Have a Package for You! A Comprehensive Analysis of Package Hallucinations by Code Generating {LLMs}},
+  booktitle = {USENIX Security Symposium},
+  year      = {2025},
+  note      = {Package hallucination 5.2\% (commercial) to 21.7\% (open); slopsquatting; verify author list}
+}
+
+@techreport{gitclear2024churn,
+  author      = {{GitClear}},
+  title       = {Coding on {Copilot}: Data Shows Downward Pressure on Code Quality},
+  institution = {GitClear},
+  year        = {2024},
+  note        = {Copy-paste exceeds refactored lines; churn rises; industry report, verify}
+}
+
+@techreport{metr2025productivity,
+  author      = {Becker, Joel and Rush, Nate and Barnes, Beth and Rein, David and others},
+  title       = {Measuring the Impact of Early-2025 {AI} on Experienced Open-Source Developer Productivity},
+  institution = {METR},
+  year        = {2025},
+  note        = {arXiv:2507.09089; 19\% slowdown despite perceived speedup; verify authors}
+}
+
+% ---- Debt, process, interpretability ----
+@article{cunningham1992wycash,
+  author  = {Cunningham, Ward},
+  title   = {The {WyCash} Portfolio Management System},
+  journal = {ACM SIGPLAN OOPS Messenger},
+  volume  = {4},
+  number  = {2},
+  pages   = {29--30},
+  year    = {1992}
+}
+
+@article{kruchten2012techdebt,
+  author  = {Kruchten, Philippe and Nord, Robert L. and Ozkaya, Ipek},
+  title   = {Technical Debt: From Metaphor to Theory and Practice},
+  journal = {IEEE Software},
+  volume  = {29},
+  number  = {6},
+  pages   = {18--21},
+  year    = {2012}
+}
+
+@book{vanderaalst2016processmining,
+  author    = {van der Aalst, Wil M. P.},
+  title     = {Process Mining: Data Science in Action},
+  edition   = {2},
+  publisher = {Springer},
+  year      = {2016}
+}
+
+@inproceedings{pesic2006declare,
+  author    = {Pesic, Maja and van der Aalst, Wil M. P.},
+  title     = {A Declarative Approach for Flexible Business Processes Management},
+  booktitle = {Business Process Management Workshops},
+  series    = {Lecture Notes in Computer Science},
+  volume    = {4103},
+  pages     = {169--180},
+  year      = {2006},
+  publisher = {Springer}
+}
+
+@techreport{templeton2024monosemanticity,
+  author      = {Templeton, Adly and Conerly, Tom and Marcus, Jonathan and others},
+  title       = {Scaling Monosemanticity: Extracting Interpretable Features from {Claude 3 Sonnet}},
+  institution = {Anthropic},
+  year        = {2024},
+  type        = {Transformer Circuits Thread},
+  note        = {Verify author list and URL}
+}
+
+@book{brooks1987silverbullet,
+  author    = {Brooks, Frederick P.},
+  title     = {No Silver Bullet: Essence and Accidents of Software Engineering},
+  publisher = {IEEE Computer},
+  year      = {1987},
+  note      = {Essence versus accidental complexity; verify venue}
+}

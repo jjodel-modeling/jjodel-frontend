@@ -1,0 +1,1348 @@
+/* ============================================
+   PROJECT CARD - ACCENT LEFT STYLE (BEM)
+   White card with colored accent bar on left
+   ============================================ */
+
+// ============================================
+// VARIABLES
+// ============================================
+$card-radius: 12px;
+$card-border: #e5e7eb;
+$card-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+$card-shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.08);
+
+$content-padding: 16px;
+
+$color-text-primary: #1f2937;
+$color-text-secondary: #6B7280;
+$color-text-muted: #9CA3AF;
+$color-border-light: #f1f5f9;
+$color-favorite: #F59E0B;
+
+$transition: 150ms ease;
+
+// ============================================
+// PROJECTS GRID
+// ============================================
+.projects-grid, .catalog-grid, .project-cards-grid {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)) !important;
+  gap: 20px;
+  padding: 24px;
+  overflow: visible !important;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr !important;
+    gap: 16px;
+    padding: 16px;
+  }
+}
+
+// ============================================
+// PROJECT CARD - BEM STRUCTURE
+// ============================================
+.project-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff; // Pure white, NO gradient!
+  border: none; // NO border
+  border-radius: $card-radius;
+  overflow: visible; // Allow dropdown to overflow
+  cursor: pointer;
+  transition: all 200ms ease;
+  box-shadow: $card-shadow;
+
+  &:hover {
+    box-shadow: $card-shadow-hover;
+
+    // Issue 3 fix: Update icon backgrounds on card hover
+    .project-card__action:not(.is-favorite) {
+      background: #f1f5f9;
+    }
+
+    // Show actions on hover
+    .project-card__actions {
+      opacity: 1;
+    }
+  }
+
+  // Elevate card when dropdown is open
+  &:focus-within {
+    z-index: 100;
+  }
+
+  // Modern browsers - elevate when has open dropdown
+  &:has(.dropdown),
+  &:has(.dropdown-menu),
+  &:has([class*="menu-dropdown"]),
+  &.menu-open {
+    z-index: 100;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #475569;
+    outline-offset: 2px;
+  }
+
+  // All dropdown variations
+  .dropdown,
+  .dropdown-menu,
+  [class*="menu-dropdown"] {
+    z-index: 9999 !important;
+    position: absolute;
+  }
+
+  // Accent Bar (3px top) - Colored by project type
+  &__accent {
+    height: 3px;
+    width: 100%;
+    flex-shrink: 0;
+    background-color: #cbd5e1; // neutral default (private)
+    transition: background-color 150ms ease;
+    border-radius: $card-radius $card-radius 0 0;
+  }
+
+  &--public &__accent { background-color: #0ea5e9; }   // cyan
+  &--collaborative &__accent { background-color: #f59e0b; } // amber
+  &--favorite &__accent { background-color: #f59e0b; }  // amber
+
+  // Content Area
+  &__content {
+    flex: 1;
+    padding: $content-padding;
+    display: flex;
+    flex-direction: column;
+    min-width: 0; // Allow text truncation
+  }
+
+  // Header (Title + Actions)
+  &__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+
+  &__title {
+    margin: 0;
+    font-family: 'Inter Variable', -apple-system, sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    color: $color-text-primary;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+
+  &__action {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    color: $color-text-secondary;
+    transition: all $transition;
+
+    &:hover {
+      background: #f1f5f9;
+      color: $color-text-primary;
+    }
+
+    i {
+      font-size: 16px;
+    }
+
+    &.is-favorite {
+      color: #facc15 !important; // Yellow star when active
+      background: transparent;
+
+      i {
+        color: #facc15 !important;
+      }
+
+      &:hover {
+        background: #fffbeb;
+      }
+    }
+  }
+
+  // Meta Row - Fixed layout: badge, author (truncate), version (right)
+  &__meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    font-family: 'Inter Variable', -apple-system, sans-serif;
+    font-size: 12px;
+    color: $color-text-secondary;
+  }
+
+  &__badge {
+    flex-shrink: 0;
+    background: #f3f4f6;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    color: $color-text-secondary;
+  }
+
+  &__author {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__version {
+    flex-shrink: 0;
+    margin-left: auto;
+    background: #f1f5f9;          // neutral slate-100
+    color: #94a3b8;               // slate-400 — de-emphasized
+    border: 0.5px solid #e2e8f0;  // subtle border
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    cursor: help;
+  }
+
+  // Tags Row
+  &__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 8px;
+  }
+
+  &__tag {
+    background: #e2e8f0;
+    color: #475569;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: 500;
+    font-family: 'Inter Variable', -apple-system, sans-serif;
+  }
+
+  &__tag-more {
+    position: relative;
+    background: #f1f5f9;
+    color: #94a3b8;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: 500;
+    font-family: 'Inter Variable', -apple-system, sans-serif;
+    cursor: default;
+  }
+
+  &__tag-tooltip {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1e293b;
+    color: #ffffff;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 400;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.15s, visibility 0.15s;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    // Arrow
+    &::after {
+      content: '';
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 5px solid transparent;
+      border-top-color: #1e293b;
+    }
+  }
+
+  &__tag-tooltip-icon {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+  }
+
+  &__tag-more:hover &__tag-tooltip {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  // Stats Row
+  &__stats {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-family: 'Inter Variable', -apple-system, sans-serif;
+    font-size: 12px;
+    color: $color-text-muted;
+  }
+
+  &__stat {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+
+    i {
+      font-size: 14px;
+    }
+  }
+
+  &__time {
+    margin-left: auto;
+    color: $color-text-muted;
+  }
+
+  // Loading State
+  &.is-loading {
+    pointer-events: none;
+
+    .project-card__accent {
+      background: #e2e8f0;
+    }
+
+    .project-card__title{
+      flex-grow: 1;
+      flex-basis: 0;
+      width: 0;
+    }
+    .project-card__title,
+    .project-card__meta,
+    .project-card__stats {
+      background: #f1f5f9;
+      color: transparent;
+      border-radius: 4px;
+    }
+  }
+}
+
+// Menu button styling inside card - Clean, borderless
+.project-card__actions .menu-button {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  margin: 0;
+  position: relative;
+
+  &:hover {
+    background: #f1f5f9 !important;
+  }
+
+  i {
+    color: $color-text-secondary;
+    font-size: 16px;
+  }
+
+  &:hover i {
+    color: $color-text-primary;
+  }
+
+  // Fix: Dropdown positioning - align to right edge, override menu.scss left:0
+  .dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    left: auto !important; // Override menu.scss .dropdown.right { left: 0 }
+    z-index: 9999 !important;
+    margin-top: 0;
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+// ============================================
+// TAG POPOVER
+// Position to the LEFT of the menu, higher z-index
+// ============================================
+.tag-popover {
+  position: absolute;
+  top: 40px;
+  right: 60px; // Position to the LEFT of the menu button
+  background: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
+  padding: 12px;
+  z-index: 10001; // Higher than menu dropdown (9999)
+  min-width: 220px;
+  animation: tagPopoverIn 0.15s ease-out;
+
+  &__input-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  input {
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-family: 'Inter Variable', -apple-system, sans-serif;
+    font-size: 14px;
+    width: 100%;
+    outline: none;
+    flex: 1;
+    transition: border-color 150ms ease, box-shadow 150ms ease;
+
+    &:focus {
+      border-color: #475569;
+      box-shadow: 0 0 0 3px rgba(71, 85, 105, 0.1);
+    }
+
+    &::placeholder {
+      color: #9ca3af;
+    }
+  }
+
+  > button, &__input-row > button {
+    background: #f1f5f9;
+    border: none;
+    color: #64748b;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 8px;
+    line-height: 1;
+    flex-shrink: 0;
+    border-radius: 6px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 150ms ease;
+
+    &:hover {
+      background: #e2e8f0;
+      color: #334155;
+    }
+  }
+
+  &__suggestions {
+    display: flex;
+    flex-direction: column;
+    margin-top: 8px;
+    border-top: 1px solid #e5e7eb;
+    padding-top: 8px;
+  }
+
+  &__suggestion {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 6px 10px;
+    font-family: 'Inter Variable', -apple-system, sans-serif;
+    font-size: 13px;
+    color: #475569;
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 150ms ease;
+
+    &:hover {
+      background: #f1f5f9;
+      color: #1e293b;
+    }
+  }
+}
+
+@keyframes tagPopoverIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// ============================================
+// MENU DROPDOWN POSITIONING
+// ============================================
+.menu-button {
+  position: relative;
+
+  .dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    z-index: 100;
+    margin-top: 4px;
+  }
+}
+
+// ============================================
+// COMPACT LIST VIEW - Mini Cards with Grid
+// ============================================
+
+.compact-cards-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 24px;
+  width: 100%;
+}
+
+.compact-card {
+  display: grid;
+  grid-template-columns: 280px 1fr auto auto; // Issue 2 fix: adjusted for grouped actions
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all $transition;
+  position: relative;
+  overflow: visible !important;
+
+  &:hover {
+    border-color: #d1d5db;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  }
+
+  &:focus-visible {
+    outline: 2px solid #475569;
+    outline-offset: 2px;
+  }
+
+  // Responsive - stack on mobile
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr auto auto; // Issue 2 fix: adjusted for grouped actions
+    gap: 12px;
+
+    .compact-card-stats {
+      display: none;
+    }
+  }
+
+  @media (max-width: 480px) {
+    grid-template-columns: 1fr auto;
+
+    .compact-card-badge {
+      display: none;
+    }
+  }
+}
+
+// Hidden container divs - children participate directly in grid
+.compact-card-left,
+.compact-card-right {
+  display: contents;
+}
+
+.compact-card-name {
+  font-family: 'Inter Variable', -apple-system, sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+  color: #1f2937;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.compact-card-stats {
+  font-family: 'Inter Variable', -apple-system, sans-serif;
+  font-size: 13px;
+  color: #6b7280;
+  white-space: nowrap;
+}
+
+.compact-card-badge {
+  font-family: 'Inter Variable', -apple-system, sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: #f3f4f6;
+  color: #6b7280;
+  min-width: 80px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.compact-card-actions {
+  display: flex; // Issue 2 fix: proper alignment with flexbox
+  align-items: center;
+  gap: 4px;
+  justify-content: flex-end;
+}
+
+// Issue 3 fix: Update compact card icon backgrounds on hover
+.compact-card:hover {
+  .compact-favorite-btn:not(.is-favorite) {
+    background: #f1f5f9;
+  }
+}
+
+.compact-favorite-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  color: $color-text-secondary;
+  cursor: pointer;
+  transition: all $transition;
+
+  &:hover {
+    background: #f1f5f9;
+    color: $color-text-primary;
+  }
+
+  &.is-favorite {
+    color: #facc15 !important; // Yellow star when active
+    background: transparent;
+
+    i {
+      color: #facc15 !important;
+    }
+
+    &:hover {
+      background: #fffbeb;
+    }
+  }
+}
+
+.compact-menu-btn {
+  position: relative;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  margin: 0;
+
+  &:hover {
+    background: #f1f5f9 !important;
+  }
+
+  i {
+    color: $color-text-secondary;
+    font-size: 14px;
+  }
+
+  &:hover i {
+    color: $color-text-primary;
+  }
+
+  .dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    left: auto !important; // Override menu.scss .dropdown.right { left: 0 }
+    z-index: 9999 !important;
+    margin-top: 0;
+    background: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border: 1px solid #e5e7eb;
+    min-width: 180px;
+  }
+}
+
+// ============================================
+// PROJECT ROW - List View with Colored Dot
+// ============================================
+
+// ============================================
+// LIST VIEW — Table-style rows in a single card
+// Updated: 2026-04-04
+// ============================================
+
+.project-rows-grid {
+  background: #ffffff;
+  border: 0.5px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  margin: 12px 24px 24px; // top margin separates from toolbar
+}
+
+.project-row {
+  display: grid;
+  grid-template-columns:
+    36px               // checkbox
+    32px               // dot
+    minmax(140px, 1fr)  // name
+    110px               // type badge
+    70px                // rev
+    110px               // metamodels
+    90px                // models
+    100px               // modified
+    64px;               // actions
+  align-items: center;
+  gap: 8px;
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: background 0.12s;
+  border-bottom: 1px solid #f1f5f9;
+  position: relative;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:hover:not(.project-row--header) {
+    background: #fafbfc;
+
+    .project-row__actions { opacity: 1; }
+  }
+
+  // Header row
+  &--header {
+    cursor: default;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e2e8f0;
+
+    span {
+      font-size: 11px;
+      font-weight: 600;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+  }
+
+  // Selected row
+  &--selected {
+    background: #f1f5f9;
+
+    &:hover { background: #e2e8f0; }
+  }
+
+  // Checkbox
+  &__checkbox {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  // Colored dot
+  &__dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    justify-self: center;
+  }
+
+  // Project name
+  &__name {
+    font-weight: 600;
+    font-size: 14px;
+    color: #1e293b;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+  }
+
+  // Type badge
+  &__badge {
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    text-align: center;
+    width: fit-content;
+
+    &--private {
+      background: #f1f5f9;
+      color: #64748b;
+      border: 0.5px solid #e2e8f0;
+    }
+
+    &--public {
+      background: #dbeafe;
+      color: #3b82f6;
+    }
+
+    &--collaborative {
+      background: #fef3c7;
+      color: #d97706;
+    }
+  }
+
+  // Rev number
+  &__rev {
+    font-size: 13px;
+    color: #475569;
+    font-weight: 500;
+  }
+
+  // Metamodels / Models count
+  &__count {
+    font-size: 13px;
+    color: #475569;
+    font-weight: 600;
+  }
+
+  // Time ago
+  &__time {
+    color: #94a3b8;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  // Actions — visible on row hover
+  &__actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+
+  &__action-btn {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    color: #94a3b8;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.12s;
+
+    &:hover {
+      background: #f1f5f9;
+      color: #64748b;
+    }
+  }
+
+  // Menu button inside list row
+  &__menu {
+    position: relative;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+
+    &:hover {
+      background: #f1f5f9 !important;
+    }
+
+    i {
+      color: #94a3b8;
+      font-size: 14px;
+    }
+
+    &:hover i { color: #64748b; }
+
+    .dropdown {
+      position: absolute;
+      top: calc(100% + 4px);
+      right: 0;
+      left: auto !important;
+      z-index: 9999 !important;
+      margin-top: 0;
+      background: #ffffff;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      border: 1px solid #e5e7eb;
+      min-width: 180px;
+    }
+  }
+
+  // Elevate when dropdown open
+  &:focus-within,
+  &:has(.dropdown) {
+    z-index: 100;
+  }
+
+  // Responsive
+  @media (max-width: 900px) {
+    grid-template-columns:
+      36px 32px 1fr 90px 60px 64px;
+
+    &__count,
+    &__time { display: none; }
+  }
+
+  @media (max-width: 600px) {
+    grid-template-columns:
+      36px 32px 1fr 80px 64px;
+
+    &__rev,
+    &__count,
+    &__time { display: none; }
+  }
+}
+
+.project-row--entering {
+  animation: slideInUp 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+// ============================================
+// LOAD MORE PAGINATION - List View
+// ============================================
+
+.project-list__load-more {
+  display: flex;
+  justify-content: center;
+  padding: 32px 24px;
+  border-top: 1px solid #e2e8f0;
+  margin-top: 8px;
+}
+
+.load-more-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: #ffffff;
+  border: 2px solid #cbd5e1;
+  border-radius: 8px;
+  font-family: 'Inter Variable', -apple-system, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: #475569;
+  cursor: pointer;
+  transition: all 150ms ease;
+
+  &:hover {
+    background: #f8fafc;
+    border-color: #94a3b8;
+    color: #1e293b;
+  }
+
+  &:active {
+    transform: translateY(1px);
+  }
+
+  .load-more-icon {
+    flex-shrink: 0;
+    transition: transform 150ms ease;
+  }
+
+  &:hover .load-more-icon {
+    transform: translateY(2px);
+  }
+
+  .remaining-count {
+    color: #94a3b8;
+    font-weight: 400;
+  }
+}
+
+.project-list__all-loaded {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px;
+  color: #64748b;
+  font-family: 'Inter Variable', -apple-system, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  border-top: 1px solid #e2e8f0;
+  margin-top: 8px;
+
+  .check-icon {
+    color: #22c55e;
+    flex-shrink: 0;
+  }
+}
+
+// ============================================
+// SKELETON LOADING ANIMATION
+// ============================================
+
+.skeleton {
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 4px;
+
+  &--dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+
+  &--text {
+    width: 150px;
+    height: 16px;
+  }
+
+  &--text-sm {
+    width: 80px;
+    height: 14px;
+  }
+
+  &--badge {
+    width: 60px;
+    height: 20px;
+    border-radius: 4px;
+  }
+}
+
+// ============================================
+// STAGGER ANIMATION - Load More
+// ============================================
+
+@keyframes slideInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  60% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// ============================================
+// GALLERY CARD O — Status-forward design
+// Updated: 2026-04-05
+// ============================================
+
+.gallery-card {
+  background: var(--color-bg-primary, #ffffff);
+  border: 0.5px solid var(--color-border, #e2e8f0);
+  border-radius: 8px;
+  padding: 13px 14px;
+  cursor: pointer;
+  position: relative;
+  overflow: visible;
+  transition: border-color 0.15s;
+
+  &:hover {
+    border-color: var(--color-border-medium, #94a3b8);
+    .gallery-card__header-actions { opacity: 1; }
+  }
+
+  &:focus-within { z-index: 100; }
+  &:has(.dropdown),
+  &:has(.dropdown-menu) { z-index: 100; }
+
+  &:focus-visible {
+    outline: 2px solid #475569;
+    outline-offset: 2px;
+  }
+}
+
+// Header: dot + name + actions
+.gallery-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.gallery-card__name-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  flex: 1;
+}
+
+.gallery-card__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.gallery-card__name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gallery-card__header-actions {
+  display: flex;
+  gap: 3px;
+  opacity: 0;
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+}
+
+.gallery-card__action-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.9);
+  border: 0.5px solid var(--color-border, #e2e8f0);
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--color-text-secondary, #64748b);
+  font-size: 14px;
+  transition: all 0.15s;
+  backdrop-filter: blur(4px);
+
+  &:hover {
+    background: #f1f5f9;
+    color: #1e293b;
+  }
+}
+
+// Menu button inside gallery card
+.gallery-card__header-actions .menu-button {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border: 0.5px solid var(--color-border, #e2e8f0) !important;
+  box-shadow: none !important;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  margin: 0;
+  position: relative;
+  backdrop-filter: blur(4px);
+
+  &:hover {
+    background: #f1f5f9 !important;
+  }
+
+  i {
+    color: var(--color-text-secondary, #64748b);
+    font-size: 14px;
+  }
+
+  &:hover i { color: #1e293b; }
+
+  .dropdown {
+    position: absolute;
+    bottom: calc(100% + 4px);
+    right: 0;
+    left: auto !important;
+    z-index: 9999 !important;
+    margin-bottom: 0;
+  }
+}
+
+// Status + Rev row
+.gallery-card__status-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.gallery-card__status {
+  font-size: 10px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 9px;
+}
+
+.gallery-card__rev {
+  font-size: 10px;
+  color: var(--color-text-tertiary, #94a3b8);
+  background: var(--color-bg-secondary, #f8fafc);
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 0.5px solid var(--color-border, #e2e8f0);
+}
+
+// Progress bar
+.gallery-card__progress-wrap {
+  margin-bottom: 10px;
+}
+
+.gallery-card__progress-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10.5px;
+  color: var(--color-text-tertiary, #94a3b8);
+  margin-bottom: 4px;
+}
+
+.gallery-card__progress-track {
+  height: 4px;
+  background: var(--color-bg-secondary, #f1f5f9);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.gallery-card__progress-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+// Footer
+.gallery-card__footer {
+  padding-top: 9px;
+  border-top: 0.5px solid var(--color-border, #e2e8f0);
+}
+
+.gallery-card__footer-time {
+  font-size: 10.5px;
+  color: var(--color-text-tertiary, #94a3b8);
+}
+
+// Dark mode
+[data-theme="dark"] {
+  .gallery-card {
+    background: #1e293b;
+    border-color: #334155;
+
+    &:hover { border-color: #475569; }
+  }
+
+  .gallery-card__action-btn {
+    background: rgba(30, 41, 59, 0.9);
+    border-color: #475569;
+    color: #94a3b8;
+
+    &:hover {
+      background: #334155;
+      color: #e2e8f0;
+    }
+  }
+
+  .gallery-card__header-actions .menu-button {
+    background: rgba(30, 41, 59, 0.9) !important;
+    border-color: #475569 !important;
+  }
+
+  .gallery-card__rev {
+    background: rgba(15, 23, 42, 0.72);
+    border-color: #475569;
+  }
+
+  .gallery-card__status[style*="dcfce7"] {
+    background: rgba(22, 101, 52, 0.25) !important;
+  }
+  .gallery-card__status[style*="fef3c7"] {
+    background: rgba(146, 64, 14, 0.25) !important;
+  }
+}
+
+// ============================================
+// PROJECT CHECKBOX - Bulk Selection
+// ============================================
+
+// Override global checkbox hiding for project checkboxes
+.project-checkbox {
+  // CRITICAL: Override global hiding from tokens/index.scss
+  position: relative !important;
+  opacity: 1 !important;
+  width: 18px !important;
+  height: 18px !important;
+  pointer-events: auto !important;
+  display: block !important;
+  visibility: visible !important;
+
+  // Reset appearance
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+
+  // Visual styling
+  border: 2px solid #cbd5e1 !important;
+  border-radius: 4px;
+  background: #ffffff !important;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 150ms ease;
+  z-index: 10;
+
+  &:hover {
+    border-color: #94a3b8 !important;
+    background: #f8fafc !important;
+  }
+
+  &:checked {
+    background: linear-gradient(180deg, #64748b 0%, #475569 100%) !important;
+    border-color: #475569 !important;
+
+    // Checkmark
+    &::after {
+      content: "";
+      position: absolute;
+      left: 5px;
+      top: 2px;
+      width: 4px;
+      height: 8px;
+      border: solid #ffffff;
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg);
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid #475569;
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.5 !important;
+    cursor: not-allowed;
+  }
+}

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<Table xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns="Table">
+  <rows>
+    <cells content=""/>
+    <cells content="FirstClass.fc_m1"/>
+    <cells content="FirstClass.fc_m2"/>
+    <cells content="SecondClass.sc_m1"/>
+    <cells content="SecondClass.sc_m2"/>
+  </rows>
+  <rows>
+    <cells content="FirstClass.fc_m1"/>
+    <cells content="0"/>
+    <cells content="0"/>
+    <cells content="0"/>
+    <cells content="0"/>
+  </rows>
+  <rows>
+    <cells content="FirstClass.fc_m2"/>
+    <cells content="2"/>
+    <cells content="0"/>
+    <cells content="0"/>
+    <cells content="0"/>
+  </rows>
+  <rows>
+    <cells content="SecondClass.sc_m1"/>
+    <cells content="1"/>
+    <cells content="0"/>
+    <cells content="0"/>
+    <cells content="0"/>
+  </rows>
+  <rows>
+    <cells content="SecondClass.sc_m2"/>
+    <cells content="0"/>
+    <cells content="0"/>
+    <cells content="1"/>
+    <cells content="0"/>
+  </rows>
+</Table>

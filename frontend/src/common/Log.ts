@@ -1,6 +1,6 @@
-import {Dictionary, MyError, RuntimeAccessible, windoww} from "../joiner";
-import {U} from "./U";
-import {NotBool} from "../joiner/types";
+import type {NotBool, Dictionary} from "../joiner";
+import { MyError, RuntimeAccessible, windoww, U} from "../joiner";
+
 
 export type LoggerType = "l" | "i" | "w" | "e" | "ex" | "eDev" | "exDev";
 export class LoggerCategoryState{
@@ -88,17 +88,19 @@ export class Log{
     static disableConsole(){
         // @ts-ignore
         console['logg'] = console.log;
-        console.log = () => {}; }
+        // console.log = () => {};
+    }
 
     static enableConsole() {
         // @ts-ignore
-        if (console['logg']) console.log = console['logg']; }
+        if (console['logg']) console.log = console['logg'];
+    }
 
     private static log(prefix: string, category: LoggerType, originalFunc: typeof console.log, b: boolean, canthrow: boolean, ...restArgs: any[]): string {
         if (!b) { return ''; }
-        const key: string = windoww.U.getCaller(1); // todo: remove replace heavy fumc
+        const key: string = windoww.U.getCaller(2); // todo: remove replace heavy func
         if (restArgs === null || restArgs === undefined) { restArgs = []; }
-        let str = key + ': ';
+        let str = '';
         for (let i = 0; i < restArgs.length; i++) {
             // console.log(prefix, {i, restArgs, curr:restArgs[i]});
             str += '' +
@@ -112,6 +114,7 @@ export class Log{
 
         Log.updateLoggerComponent(category, restArgs, str, category, exception);
         // merged loggers if (Log.loggerMapping[category]) for (const logger of Log.loggerMapping[category]) { logger.log(category, key, restArgs, str); }
+        // console.log('log original func', {originalFunc, key, restArgs}, ...restArgs);
         originalFunc(key, ...restArgs);
         if (exception) throw exception;
         return prefixedstr;
@@ -156,6 +159,10 @@ export class Log{
     private static get_loggercomponent(): any { return Log._loggerComponent; }
     private static updateLoggerComponent(type: LoggerType, args: any[], short_str: string, cat: LoggerType, exception?: Error): void {
         let c = Log.get_loggercomponent();
+
+        // Check if logging is paused (static flag on LoggerComponent)
+        if (c?.constructor?.isPaused) return;
+
         let update: LoggerCategoryState = new LoggerCategoryState(args, short_str, cat, exception);
         Log.messageMapping[type].push(update);
         Log.allMessages.push(update);
@@ -198,6 +205,10 @@ export class Log{
         let warn = console.warn;
         console.warn = (...e): void => {
             let e0 = e[0];
+            if (typeof e0 === 'string' &&
+                e0.startsWith('[React Flow]: Couldn\'t create edge for source handle id:')) {
+                return;
+            }
             if (e0 && (e0[0] === 's' && e0[14] === 's' && e0.substring(0,15) === 'src\\api\\data.ts')) {
                 console.info(...e);
                 return;
@@ -206,6 +217,7 @@ export class Log{
             }*/
             return warn(...e);
         }
+        (console as any).err = console.error;
         console.error = (...e): void => {
             switch (e[0]) { // [0] {} bn
                 case "Warning: The tag <%s> is unrecognized in this browser. If you meant to render a React component, start its name with an uppercase letter.%s":
@@ -223,8 +235,12 @@ export class Log{
                 default:
                     break;
             }
-            // err(e);
-            err(...e);
+
+            if (Array.isArray(e)) {
+                err(...e);
+            } else {
+                err(e);
+            }
         }
     }
 }

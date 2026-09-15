@@ -11,6 +11,7 @@ import EdgePointData from "./EdgePointData";
 import FieldData from "./FieldData";
 import GraphData from "./GraphData";
 import NodeData from "./NodeData";
+import "./viewoptions.scss";
 
 function GenericNodeDataComponent(props: AllProps) {
     const view = props.view;
@@ -38,7 +39,6 @@ function GenericNodeDataComponent(props: AllProps) {
     isEdge = false;
     isEdgePoint = false;*/
     return(<section className={'p-3 options-tab'}>
-        <h1 className={'view'}>View: {view.name}</h1>
         {isField && <FieldData viewID={vid} readonly={readOnly} />}
         {isEdge && <EdgeData viewID={vid} readonly={readOnly} />}
         {isEdgePoint && <EdgePointData viewID={vid} readonly={readOnly} />}

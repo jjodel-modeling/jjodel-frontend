@@ -1,0 +1,20 @@
+{
+  "date": "2026-07-20T21:28:17.796Z",
+  "app": "http://localhost:3012/",
+  "model": "bench.xmi",
+  "project": "Bench_mrtqlc3w",
+  "t_import_ecore_ms": 154,
+  "t_import_xmi_ms": 1773,
+  "commits_import_xmi": 7,
+  "t_mount_flow_nodes_ms": 126633,
+  "t_edges_settle_ms": 126633,
+  "t_responsive_after_open_ms": 167177,
+  "rf_nodes": 501,
+  "rf_edges": 1500,
+  "commits_open_flow": 1506,
+  "edit_flow": {
+    "ms": 31704
+  },
+  "commits_edit_flow": 22,
+  "classic_toggle_found": 0
+}

@@ -1,0 +1,247 @@
+/**
+ * irStyle — per-view CSS generation and injection for IR views.
+ *
+ * One class `.ir-view-<viewid>` per view, injected once when the view enters
+ * the active index and removed when it leaves. Dedicated <style id="ir-views-css">
+ * tag; the existing injector in Dashboard.tsx (#views-css-injector-d) is not
+ * touched. Conditional style parts (form, fill, border) are resolved per
+ * instance and applied inline by IRNodeContent; per-view static parts would
+ * live here (none emitted today).
+ */
+
+import type { NodeViewIR } from './irTypes';
+
+const STYLE_TAG_ID = 'ir-views-css';
+
+/** Base styles for the IR node content, shape-agnostic. Injected once. */
+const BASE_CSS = `
+/* Symbol typography and spacing, in tokens (2026-08-25). font-size sits on the node
+   and every text surface inherits it: the root of the cascade is .ir-node-content,
+   where IRNodeContent emits the inline style of shape.text, and the default grows
+   from 11 to 13px. --ir-pad-x / --ir-pad-y feed the header, the inside label and the
+   compartments with the same values, which the header did not have at all before. */
+.ir-node-content { position: relative; display: flex; flex-direction: column; min-width: 0; width: 100%; height: 100%; font-size: 13px; --ir-pad-x: 8px; --ir-pad-y: 4px; }
+.ir-node-content.ir-pad--small { --ir-pad-x: 4px; --ir-pad-y: 2px; }
+.ir-node-content.ir-pad--large { --ir-pad-x: 16px; --ir-pad-y: 8px; }
+/* max-width: sotto align-items:center (forme geometriche) il flex item prende la
+   larghezza naturale del testo, quindi overflow/ellipsis non scattano MAI e il testo
+   viene dipinto fuori dal contorno (misurato: oltre i 22 caratteri su un rombo 170x80,
+   con overflow:visible, la label esce dai fianchi senza limite). Vincolarla al box
+   restituisce l'ellissi. Il taglio resta al bordo del box, non al contorno: quello e'
+   un lavoro separato. Sulle forme a stretch (rect, rounded, ellisse) e' un no-op. */
+.ir-node-content .ir-label { font-size: inherit; line-height: 1.3; box-sizing: border-box; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.ir-node-content .ir-label--top { order: 0; text-align: center; font-weight: 600; padding: var(--ir-pad-y) var(--ir-pad-x); }
+.ir-node-content .ir-label--center { order: 1; text-align: center; margin: auto 0; font-weight: 600; padding: 0 var(--ir-pad-x); }
+.ir-node-content .ir-label--inside { order: 2; text-align: left; padding: 0 var(--ir-pad-x); }
+.ir-node-content .ir-label--bottom { order: 4; text-align: center; margin-top: auto; padding: var(--ir-pad-y) var(--ir-pad-x); }
+/* Marker layer (asse marker, 2026-08-15): notation symbol inside the shape.
+   "meet" scales the glyph with min(w,h) and centres it, so the marker grows
+   with the shape (BPMN-like). Stacking: shape paint (element background, or
+   the shape SVG at z 0 painted DOM-first) < marker (z 0, DOM-later) < text
+   (z 1, rule below) < badges (z 2) < collapse chip (z 3). */
+.ir-node-content > .ir-marker-svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+/* Text above the marker on every shape: without this, a positioned layer at
+   z 0 paints over in-flow inline content. Same plane the diamond rule already
+   assigns to its children (z 1), generalized to the CSS-painted shapes. */
+.ir-node-content .ir-label, .ir-node-content .ir-compartment { position: relative; z-index: 1; }
+.ir-node-content .ir-badge { position: absolute; font-size: 12px; line-height: 1; z-index: 2; }
+.ir-node-content .ir-badge--tl { top: 2px; left: 4px; }
+.ir-node-content .ir-badge--tr { top: 2px; right: 4px; }
+.ir-node-content .ir-badge--bl { bottom: 2px; left: 4px; }
+.ir-node-content .ir-badge--br { bottom: 2px; right: 4px; }
+.ir-node-content .ir-compartment { order: 3; border-top: 1px solid rgba(51,65,85,0.15); padding: var(--ir-pad-y) var(--ir-pad-x); }
+.ir-node-content .ir-compartment--no-separator { border-top: none; }
+.ir-node-content .ir-compartment .ir-row { font-size: inherit; line-height: 1.4; display: flex; gap: 4px; min-width: 0; }
+.ir-node-content .ir-compartment .ir-row > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Box painting for IR nodes lives on .ir-node-content (Fase B): authored
+   border/fill are applied inline by IRNodeContent, shape radius via
+   ir-shape--<form> here. The base .mm-node box is neutralized for IR nodes only
+   (bridge below, scoped by :has(> .ir-node-content) — native nodes lack that
+   child) so a single element paints and clips. border-color: transparent (not
+   border: none) keeps the 1px geometry and avoids layout shift. The explicit
+   .selected/.drop-target neutralizers outrank EditorV2.scss (0,2,0) by
+   specificity. Box values replicate the .mm-node base with the same tokens. */
+.mm-node:has(> .ir-node-content) { background: transparent; border-color: transparent; box-shadow: none; }
+/* Il wrapper non porta nulla della selezione: anello e banda stanno sulla forma
+   (.ir-node-content, sotto), che e' l'elemento col raggio giusto. Senza
+   outline:none la regola condivisa disegnerebbe un secondo anello rettangolare
+   attorno al primo, e senza box-shadow:none una seconda banda rettangolare.
+   Niente backtick in questo blocco: BASE_CSS e' un template literal. */
+.mm-node.selected:has(> .ir-node-content) { border-color: transparent; outline: none; box-shadow: none; }
+.mm-node.drop-target:has(> .ir-node-content) { border-color: transparent; box-shadow: none; }
+.ir-node-content { box-sizing: border-box; background: var(--node-bg); border: 1px solid var(--border-default); border-radius: 4px; box-shadow: 0 1px 3px var(--node-shadow), 0 4px 12px var(--node-shadow-deep, rgba(0, 0, 0, 0.08)); overflow: hidden; }
+/* Fase 2 (2026-07-28): reconcile the visible box with the .mm-node layout box. In
+   content-hug the block .mm-node floors to 140x40 (EditorV2.scss) but .ir-node-content's
+   width/height:100% do not resolve against the .mm-node's auto size, so the visible box
+   stays at content size (< floor) while React Flow places the edge handles on the floored
+   .mm-node box → edges miss the visible border. Replicate the .mm-node floor on the visible
+   box so the two coincide. Geometric shapes keep min:0 via their ir-shape--* rules (higher
+   specificity), so they still free-resize. The floor is lifted under .mm-node.ir-sized
+   (explicit size) so a resize can shrink below it. */
+.ir-node-content { min-width: 140px; min-height: 40px; }
+.ir-node-content.ir-shape--rounded { border-radius: 10px; }
+/* Fase 2 (2026-07-24): geometric shape nodes (ellipse) free-resize below the
+   label down to SHAPE_MIN_SIZE (the resizer floor). Neutralize every intrinsic
+   min so nothing above the resizer floor blocks the shrink — both on the shape
+   element and on the .mm-node/.mm-object wrapper (140/40 floor in EditorV2.scss),
+   scoped to the ellipse via :has (same pattern as the wrapper neutralizers above).
+   The wrapper must also fill the RF box on BOTH axes: EditorV2.scss's ghost-frame
+   fix gives .mm-object only height:100% (cards content-hug horizontally), so
+   without width:100% here the ellipse wrapper shrink-to-fits the nowrap label and
+   width never drops below it. Before any resize, 100% resolves to auto (content-
+   hug); it engages once the resizer sets an explicit size. The label already
+   clips (.ir-label: overflow/ellipsis/nowrap). */
+.ir-node-content.ir-shape--ellipse { border-radius: 50%; justify-content: center; min-width: 0; min-height: 0; }
+.mm-node:has(> .ir-node-content.ir-shape--ellipse) { min-width: 0; min-height: 0; width: 100%; height: 100%; }
+/* circle: ellipse locked to a 1:1 aspect ratio (round even before any resize;
+   the resizer keepAspectRatio (ObjectNode) keeps it round on drag). */
+.ir-node-content.ir-shape--circle { border-radius: 50%; justify-content: center; aspect-ratio: 1 / 1; min-width: 0; min-height: 0; }
+.mm-node:has(> .ir-node-content.ir-shape--circle) { min-width: 0; min-height: 0; width: 100%; height: 100%; }
+/* diamond: the rhombus is drawn by an SVG layer (IRNodeContent) that carries
+   the resolved fill/border; the rectangular box of .ir-node-content is
+   suppressed here so no square shows behind it (inline box also skipped for
+   diamond in IRNodeContent). overflow:visible keeps the apices' stroke uncut.
+   Content (label/compartments) sits above the SVG via z-index; badges (z 2) and
+   the collapse-chip (z 3) stay above both. */
+.ir-node-content.ir-shape--diamond { background: transparent; border-color: transparent; box-shadow: none; overflow: visible; justify-content: center; align-items: center; min-width: 0; min-height: 0; }
+.ir-node-content.ir-shape--diamond > .ir-diamond-svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; z-index: 0; }
+/* :not(.ir-marker-svg): il layer marker resta absolute anche nel rombo — questa
+   regola sta a (0,3,0) e senza l'esclusione riposizionerebbe (relative) il
+   marker, battendo la sua regola base a (0,2,0). Misurato in sessione: un
+   wrapper a specificita' inferiore viene ignorato in silenzio. */
+.ir-node-content.ir-shape--diamond > :not(.ir-diamond-svg):not(.ir-marker-svg) { position: relative; z-index: 1; }
+.mm-node:has(> .ir-node-content.ir-shape--diamond) { min-width: 0; min-height: 0; width: 100%; height: 100%; }
+/* stadium: rounded col raggio portato alla pillola. Resta dipinto dalla box CSS,
+   quindi tiene il pavimento content-hug come rect e rounded. */
+.ir-node-content.ir-shape--stadium { border-radius: 999px; justify-content: center; }
+/* hexagon, parallelogram, cylinder: dipinte da un layer SVG come il rombo, con le
+   stesse quattro regole. Il selettore figlio ha bisogno della classe del layer,
+   percio' i selettori sono raggruppati e non condivisi con quelli del rombo. */
+.ir-node-content.ir-shape--hexagon,
+.ir-node-content.ir-shape--parallelogram,
+.ir-node-content.ir-shape--cylinder { background: transparent; border-color: transparent; box-shadow: none; overflow: visible; justify-content: center; align-items: center; min-width: 0; min-height: 0; }
+.ir-node-content.ir-shape--hexagon > .ir-hexagon-svg,
+.ir-node-content.ir-shape--parallelogram > .ir-parallelogram-svg,
+.ir-node-content.ir-shape--cylinder > .ir-cylinder-svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; z-index: 0; }
+.ir-node-content.ir-shape--hexagon > :not(.ir-hexagon-svg):not(.ir-marker-svg),
+.ir-node-content.ir-shape--parallelogram > :not(.ir-parallelogram-svg):not(.ir-marker-svg),
+.ir-node-content.ir-shape--cylinder > :not(.ir-cylinder-svg):not(.ir-marker-svg) { position: relative; z-index: 1; }
+.mm-node:has(> .ir-node-content.ir-shape--hexagon),
+.mm-node:has(> .ir-node-content.ir-shape--parallelogram),
+.mm-node:has(> .ir-node-content.ir-shape--cylinder) { min-width: 0; min-height: 0; width: 100%; height: 100%; }
+/* Fase 2 (2026-07-28): gate the fill-neutralizer on an EXPLICIT size, not merely on the
+   resizable flag. ObjectNode emits the ir-sized class on the .mm-node when the node carries
+   a top-level width/height (set by NodeResizer / size propagation), so enabling Resizable
+   alone keeps content-hug + floor (no collapse); the first resize makes the box fill the
+   RF box and shrink to the resizer floor. Neutralizes the .mm-node/.mm-object 140/40 floor
+   (EditorV2.scss) AND the Commit-1 floor replicated on .ir-node-content, filling both axes.
+   Scoped to the marker (specificity beats the base 0,1,0). ObjectNode still emits the
+   ir-resizable class (now inert) - left in place, separate cleanup. */
+.mm-node.ir-sized { min-width: 0; min-height: 0; width: 100%; height: 100%; }
+.mm-node.ir-sized .ir-node-content { min-width: 0; min-height: 0; }
+/* Banda e anello sulla forma. Le ombre di riposo vanno ripetute qui: box-shadow
+   e' una proprieta' sola, e dichiarare la banda da sola le cancellerebbe. */
+.mm-node.selected > .ir-node-content { outline: 2px solid var(--node-selection-stroke); outline-offset: 3px; box-shadow: 0 0 0 3px var(--node-selection-halo), 0 1px 3px var(--node-shadow), 0 4px 12px var(--node-shadow-deep, rgba(0, 0, 0, 0.08)); }
+/* Forme dipinte in SVG: la coppia CSS qui sopra tornerebbe il rettangolo del
+   bounding box, perche' su queste .ir-node-content non ha raggio da seguire (la
+   sagoma sta nel layer SVG). Si spegne, e al suo posto valgono le due copie del
+   contorno che IRNodeContent disegna sotto la sagoma piena: incolori di loro,
+   prendono il colore solo qui, a nodo selezionato. Le larghezze (10 e 6, in px
+   di schermo grazie a non-scaling-stroke) mettono meta' tratto fuori dal
+   contorno: 5px e 3px, gli stessi rientri della coppia CSS. */
+.mm-node.selected > .ir-node-content.ir-shape--diamond,
+.mm-node.selected > .ir-node-content.ir-shape--hexagon,
+.mm-node.selected > .ir-node-content.ir-shape--parallelogram,
+.mm-node.selected > .ir-node-content.ir-shape--cylinder { outline: none; box-shadow: none; }
+.ir-sel-ring, .ir-sel-band { stroke: none; }
+.mm-node.selected > .ir-node-content .ir-sel-ring { stroke: var(--node-selection-stroke); }
+.mm-node.selected > .ir-node-content .ir-sel-band { stroke: var(--node-selection-halo); }
+.mm-node.drop-target > .ir-node-content { outline: 2px solid var(--color-accent); }
+.ir-hull { border: 1.5px dashed rgba(51,65,85,0.45); border-radius: 12px; background: rgba(51,65,85,0.03); }
+.ir-hull__header { display: flex; align-items: center; justify-content: space-between; padding: 0 8px; font-size: 11px; font-weight: 600; color: #334155; }
+.ir-hull__toggle { border: none; background: transparent; cursor: pointer; font-size: 11px; color: #334155; padding: 2px 4px; line-height: 1; }
+.ir-hull__toggle:hover { color: #0ea5e9; }
+.ir-collapse-chip { display: inline-flex; align-items: center; gap: 4px; border: none; background: rgba(51,65,85,0.08); border-radius: 8px; cursor: pointer; font-size: 10px; color: #334155; padding: 2px 6px; margin-left: 6px; line-height: 1.4; }
+.ir-collapse-chip:hover { background: rgba(14,165,233,0.12); }
+/* Shared chrome of the two inline editors; only the padding differs, below. */
+.ir-node-content .ir-label__input, .ir-node-content .ir-row__input { font-size: inherit; border: 1px solid #334155; border-radius: 3px; min-width: 40px; width: 90%; outline: none; }
+/* The label editor keeps the box of the text it replaces: the same padding tokens
+   as the label, minus the 1px the input's own border adds on each side. */
+.ir-node-content .ir-label__input { padding: calc(var(--ir-pad-y) - 1px) calc(var(--ir-pad-x) - 1px); }
+/* The compartment row is a flex line at line-height 1.4, and a padded editor would
+   become its tallest item: this one stays flat so the row does not grow on edit. */
+.ir-node-content .ir-row__input { padding: 0 4px; }
+/* min-width is the hit area: an unassigned value renders no text, the span collapses to
+   width 0, and the double click has nothing to land on — which is exactly the FIRST
+   assignment, the common case. Measured 2026-08-26: w=0 h=18 on five empty rows. */
+.ir-node-content .ir-row__value--editable { cursor: text; display: inline-block; min-width: 1.5em; }
+.ir-node-content .ir-row__value--editable:hover { background: rgba(14,165,233,0.08); border-radius: 3px; }
+/* A reference row that opens a select carries --editable too, for the hover, but its cursor
+   must not promise a caret: the double click opens a list, it does not start typing. */
+.ir-node-content .ir-row__value--select { cursor: pointer; }
+/* Placeholder for an unassigned select: says "assignable" without inventing a value. Only
+   on the select — an empty attribute keeps its blank. --text-dim is the muted token of the
+   editor surface and follows the theme; the hex is its light value, kept as the fallback the
+   rest of EditorV2.scss uses. */
+.ir-node-content .ir-row__value--select:empty::after { content: '…'; color: var(--text-dim, #94a3b8); }
+/* Renderer ladder affordance (R-STR-7). Hover-reveal, the action-icon idiom of the cards:
+   an IR node is authored to a size, so a glyph permanently parked on every row would spend
+   that width on chrome. margin-left:auto and not absolute positioning - the row is a
+   flex line, so this pushes the icon to the right edge without taking it out of flow and
+   without needing reserved padding the authored box does not have. flex-shrink: 0 keeps it
+   from being squeezed away by a long value. */
+.ir-node-content .ir-row__inspect { margin-left: auto; flex-shrink: 0; display: inline-flex; align-items: center; border: none; background: none; padding: 0 0 0 4px; font-size: inherit; line-height: 1; color: var(--text-dim, #94a3b8); cursor: pointer; opacity: 0; transition: opacity var(--duration-fast, 150ms) var(--ease-out, ease-out); }
+.ir-node-content .ir-row:hover .ir-row__inspect { opacity: 1; }
+.ir-node-content .ir-row__inspect:hover { color: #0ea5e9; }
+/* Keyboard reachability is not a hover state: an icon focused by Tab has to be visible,
+   or the affordance exists only for a pointer. Same rule as the native branch. */
+.ir-node-content .ir-row__inspect:focus-visible { opacity: 1; outline: 1px solid #0ea5e9; outline-offset: 1px; }
+`;
+
+function ensureStyleTag(): HTMLStyleElement | null {
+    if (typeof document === 'undefined') return null;
+    let tag = document.getElementById(STYLE_TAG_ID) as HTMLStyleElement | null;
+    if (!tag) {
+        tag = document.createElement('style');
+        tag.id = STYLE_TAG_ID;
+        tag.appendChild(document.createTextNode(BASE_CSS));
+        document.head.appendChild(tag);
+    }
+    return tag;
+}
+
+/** view id → its <style> text node, for targeted removal */
+const viewCssNodes = new Map<string, Text>();
+
+/** Static (non-conditional) CSS derived from the view's shape spec.
+ *  Fase B: border and fill are painted inline on .ir-node-content by
+ *  IRNodeContent, so no static parts are emitted today. Kept (with
+ *  ensureViewCss / viewCssNodes) as the hook for future per-view static parts. */
+function staticCssFor(viewId: string, ir: NodeViewIR): string {
+    const rules: string[] = [];
+    // No static parts today: authored border/fill are applied inline (see IRNodeContent).
+    if (rules.length === 0) return '';
+    return `\n.ir-view-${cssEscape(viewId)} { ${rules.join(' ')} }`;
+}
+
+/** Minimal escape for view ids used inside class selectors. */
+function cssEscape(id: string): string {
+    return id.replace(/[^a-zA-Z0-9_-]/g, '\\$&');
+}
+
+export function ensureViewCss(viewId: string, ir: NodeViewIR): void {
+    const tag = ensureStyleTag();
+    if (!tag || viewCssNodes.has(viewId)) return;
+    const css = staticCssFor(viewId, ir);
+    const node = document.createTextNode(css);
+    tag.appendChild(node);
+    viewCssNodes.set(viewId, node);
+}
+
+export function removeViewCss(viewId: string): void {
+    const node = viewCssNodes.get(viewId);
+    if (node) {
+        node.remove();
+        viewCssNodes.delete(viewId);
+    }
+}

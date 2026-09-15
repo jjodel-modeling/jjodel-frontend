@@ -1,0 +1,519 @@
+/**
+ * Enhanced Markdown Styles
+ * Proper list rendering and syntax highlighting
+ */
+
+/* Container */
+.enhanced-markdown {
+    font-family: var(--font-sans, 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
+    font-size: 15px;
+    line-height: 1.6;
+    color: #1E293B;
+}
+
+/* Remove top margin from first element */
+.enhanced-markdown > :first-child {
+    margin-top: 0 !important;
+}
+
+/* ========================================
+   HEADINGS
+   ======================================== */
+
+.md-h1 {
+    font-size: 22px;
+    font-weight: 700;
+    color: #0F172A;
+    margin: 20px 0 14px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #E2E8F0;
+}
+
+.md-h2 {
+    font-size: 19px;
+    font-weight: 700;
+    color: #1E293B;
+    margin: 18px 0 12px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #F1F5F9;
+}
+
+.md-h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #334155;
+    margin: 16px 0 10px;
+}
+
+/* ========================================
+   PARAGRAPHS
+   ======================================== */
+
+.md-paragraph {
+    margin: 0 0 12px;
+    line-height: 1.7;
+}
+
+.md-paragraph:last-child {
+    margin-bottom: 0;
+}
+
+/* ========================================
+   LISTS - COMPACT STYLING
+   ======================================== */
+
+/* Ordered Lists - Proper Numbering */
+.md-ordered-list {
+    margin: 8px 0;
+    padding-left: 24px;
+    list-style-type: decimal;
+    list-style-position: outside;
+    counter-reset: none;
+}
+
+.md-ordered-list .md-list-item {
+    margin: 4px 0;
+    padding-left: 6px;
+    line-height: 1.5;
+    display: list-item;
+    list-style-type: decimal;
+}
+
+/* Unordered Lists - Custom Bullet Style */
+.md-unordered-list {
+    margin: 8px 0;
+    padding-left: 0;
+    list-style: none;
+}
+
+.md-unordered-list .md-list-item {
+    margin: 4px 0;
+    padding-left: 24px;
+    line-height: 1.5;
+    display: block;
+    position: relative;
+}
+
+/* Custom cyan bullet */
+.md-unordered-list .md-list-item::before {
+    content: '▸';
+    position: absolute;
+    left: 0;
+    color: #0EA5E9;
+    font-weight: 700;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+/* Capability-style list items (bold title + description) */
+.md-unordered-list .md-list-item .md-strong {
+    font-family: 'Inter', -apple-system, sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: #0C4A6E;
+}
+
+/* Nested lists */
+.md-ordered-list .md-ordered-list,
+.md-unordered-list .md-unordered-list,
+.md-ordered-list .md-unordered-list,
+.md-unordered-list .md-ordered-list {
+    margin: 4px 0;
+    padding-left: 20px;
+}
+
+.md-unordered-list .md-unordered-list .md-list-item::before {
+    content: '›';
+    color: #64748B;
+    font-size: 12px;
+}
+
+/* Paragraphs within list items - COMPACT */
+.md-list-item > .md-paragraph {
+    margin: 2px 0;
+}
+
+/* ========================================
+   INLINE CODE
+   ======================================== */
+
+.md-code-inline {
+    background: #FEF3C7;
+    color: #92400E;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: var(--font-mono, 'JetBrains Mono', 'SF Mono', 'Monaco', monospace);
+    font-size: 13px;
+    border: 1px solid #FDE68A;
+    font-weight: 500;
+}
+
+/* ========================================
+   CODE BLOCKS
+   ======================================== */
+
+.md-code-block-wrapper {
+    margin: 14px 0;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #282C34;
+    border: 1px solid #21252B;
+}
+
+.md-code-language {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #21252B;
+    color: #ABB2BF;
+    padding: 6px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.md-code-language i {
+    font-size: 12px;
+}
+
+.md-code-block {
+    margin: 0;
+    padding: 14px;
+    background: #282C34;
+    overflow-x: auto;
+    font-family: var(--font-mono, 'JetBrains Mono', 'SF Mono', 'Monaco', monospace);
+    font-size: 13px;
+    line-height: 1.5;
+    color: #ABB2BF;
+}
+
+.md-code-block code {
+    background: transparent;
+    color: inherit;
+    padding: 0;
+    border: none;
+}
+
+/* ========================================
+   LINKS
+   ======================================== */
+
+.md-link {
+    color: #0EA5E9;
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: all 0.2s;
+}
+
+.md-link:hover {
+    color: #0284C7;
+    border-bottom-color: #0284C7;
+}
+
+/* ========================================
+   TEXT FORMATTING
+   ======================================== */
+
+/* Bold */
+.md-strong {
+    font-weight: 700;
+    color: #0F172A;
+}
+
+/* Italic */
+.md-em {
+    font-style: italic;
+    color: #475569;
+}
+
+/* ========================================
+   SPECIAL STYLES
+   ======================================== */
+
+/* Highlight step titles in ordered lists */
+.md-list-item > .md-paragraph:first-child > .md-strong:first-child,
+.md-list-item > .md-strong:first-child {
+    color: #0EA5E9;
+    font-weight: 700;
+}
+
+/* Blockquotes (if needed) */
+.enhanced-markdown blockquote {
+    margin: 12px 0;
+    padding: 8px 16px;
+    border-left: 4px solid #06B6D4;
+    background: #F0FDFA;
+    color: #134E4A;
+    border-radius: 0 4px 4px 0;
+}
+
+/* Tables (if needed) */
+.enhanced-markdown table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0;
+}
+
+.enhanced-markdown th,
+.enhanced-markdown td {
+    padding: 8px 12px;
+    border: 1px solid #E2E8F0;
+    text-align: left;
+}
+
+.enhanced-markdown th {
+    background: #F8FAFC;
+    font-weight: 600;
+}
+
+.enhanced-markdown tr:nth-child(even) {
+    background: #F8FAFC;
+}
+
+/* Horizontal rules */
+.enhanced-markdown hr {
+    margin: 20px 0;
+    border: none;
+    border-top: 1px solid #E2E8F0;
+}
+
+/* ========================================
+   Syntax Highlighting (Atom One Dark)
+   ======================================== */
+
+/* Base code styling */
+.md-code-block code {
+    background: #282C34;
+    color: #ABB2BF;
+}
+
+/* Comments */
+.md-code-block .hljs-comment,
+.md-code-block .hljs-quote {
+    color: #5C6370;
+    font-style: italic;
+}
+
+/* Keywords */
+.md-code-block .hljs-keyword,
+.md-code-block .hljs-selector-tag,
+.md-code-block .hljs-type {
+    color: #C678DD;
+}
+
+/* Strings */
+.md-code-block .hljs-string,
+.md-code-block .hljs-attr {
+    color: #98C379;
+}
+
+/* Numbers */
+.md-code-block .hljs-number,
+.md-code-block .hljs-literal {
+    color: #D19A66;
+}
+
+/* Functions */
+.md-code-block .hljs-title,
+.md-code-block .hljs-function,
+.md-code-block .hljs-built_in {
+    color: #61AFEF;
+}
+
+/* Variables */
+.md-code-block .hljs-variable,
+.md-code-block .hljs-name {
+    color: #E06C75;
+}
+
+/* Operators */
+.md-code-block .hljs-operator,
+.md-code-block .hljs-punctuation {
+    color: #ABB2BF;
+}
+
+/* Meta/Attributes */
+.md-code-block .hljs-meta,
+.md-code-block .hljs-meta-keyword {
+    color: #61AFEF;
+}
+
+/* Tags (HTML/XML) */
+.md-code-block .hljs-tag {
+    color: #E06C75;
+}
+
+/* Class names */
+.md-code-block .hljs-class .hljs-title {
+    color: #E5C07B;
+}
+
+/* Regular expressions */
+.md-code-block .hljs-regexp {
+    color: #56B6C2;
+}
+
+/* Emphasis */
+.md-code-block .hljs-emphasis {
+    font-style: italic;
+}
+
+.md-code-block .hljs-strong {
+    font-weight: bold;
+}
+
+/* Deletions/Additions (diffs) */
+.md-code-block .hljs-deletion {
+    color: #E06C75;
+    background: rgba(224, 108, 117, 0.15);
+}
+
+.md-code-block .hljs-addition {
+    color: #98C379;
+    background: rgba(152, 195, 121, 0.15);
+}
+
+/* Symbols and constants */
+.md-code-block .hljs-symbol,
+.md-code-block .hljs-bullet {
+    color: #C678DD;
+}
+
+/* Template strings */
+.md-code-block .hljs-template-variable,
+.md-code-block .hljs-template-tag {
+    color: #E06C75;
+}
+
+/* Attributes in HTML */
+.md-code-block .hljs-attribute {
+    color: #D19A66;
+}
+
+/* Section headings */
+.md-code-block .hljs-section {
+    color: #61AFEF;
+    font-weight: bold;
+}
+
+/* ========================================
+   METAMODEL CODE BLOCKS
+   Special styling for metamodel language
+   ======================================== */
+
+.md-metamodel-block {
+    margin: 14px 0;
+    border-radius: 10px;
+    overflow: hidden;
+    background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
+    border: 1px solid #334155;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.md-metamodel-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, #06B6D4 0%, #0891B2 100%);
+    color: white;
+    padding: 8px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+
+.md-metamodel-header i {
+    font-size: 14px;
+}
+
+.md-metamodel-code {
+    margin: 0;
+    padding: 16px 18px;
+    overflow-x: auto;
+    font-family: var(--font-mono, 'JetBrains Mono', 'SF Mono', 'Monaco', monospace);
+    font-size: 13px;
+    line-height: 1.7;
+    color: #E2E8F0;
+}
+
+.md-metamodel-code code {
+    background: transparent;
+}
+
+/* Metamodel syntax line */
+.mm-line {
+    min-height: 1.7em;
+}
+
+/* Metamodel name [Name] */
+.mm-bracket {
+    color: #64748B;
+    font-weight: 700;
+}
+
+.mm-metamodel-name {
+    color: #22D3EE;
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: 0.5px;
+}
+
+/* Keywords: metaclass, abstract, extends */
+.mm-keyword {
+    color: #C084FC;
+    font-weight: 600;
+}
+
+/* Class names after keywords */
+.mm-class-name {
+    color: #FCD34D;
+    font-weight: 600;
+}
+
+/* Attribute symbol + */
+.mm-attr-symbol {
+    color: #4ADE80;
+    font-weight: 700;
+}
+
+/* Containment symbol > */
+.mm-containment-symbol {
+    color: #F472B6;
+    font-weight: 700;
+}
+
+/* Reference symbol - */
+.mm-reference-symbol {
+    color: #60A5FA;
+    font-weight: 700;
+}
+
+/* Attribute/reference name */
+.mm-attr-name {
+    color: #E2E8F0;
+    font-weight: 500;
+}
+
+/* Punctuation : */
+.mm-punctuation {
+    color: #64748B;
+}
+
+/* Type names (EString, EInt, etc.) */
+.mm-type {
+    color: #2DD4BF;
+    font-style: italic;
+}
+
+/* Multiplicity [0..1], [1..*] */
+.mm-multiplicity {
+    color: #FB923C;
+    font-weight: 500;
+}
+
+/* Comments // ... */
+.mm-comment {
+    color: #64748B;
+    font-style: italic;
+}

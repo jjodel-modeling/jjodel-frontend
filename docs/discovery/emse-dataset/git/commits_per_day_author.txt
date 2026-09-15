@@ -1,0 +1,835 @@
+   1 2021-03-31|Damiano Di Vincenzo
+   1 2021-06-16|Damiano Di Vincenzo
+   1 2021-08-27|Damiano Di Vincenzo
+   1 2021-08-31|Damiano Di Vincenzo
+   1 2021-09-01|Damiano Di Vincenzo
+   1 2021-09-03|Damiano Di Vincenzo
+   1 2021-10-08|Damiano Di Vincenzo
+   1 2021-10-27|Damiano Di Vincenzo
+   1 2021-10-29|Damiano Di Vincenzo
+   2 2021-11-02|Damiano Di Vincenzo
+   2 2021-11-03|Damiano Di Vincenzo
+   2 2021-11-03|GiordanoT
+   1 2021-11-19|Damiano Di Vincenzo
+   1 2021-11-23|Damiano Di Vincenzo
+   2 2022-03-23|Damiano Di Vincenzo
+   2 2022-03-23|GiordanoT
+   1 2022-03-25|Damiano Di Vincenzo
+   2 2022-05-03|Damiano Di Vincenzo
+   4 2022-05-03|GiordanoT
+   2 2022-05-07|Damiano Di Vincenzo
+   1 2022-09-20|GiordanoT
+   1 2022-09-21|GiordanoT
+   1 2022-10-15|GiordanoT
+   1 2022-10-25|Damiano Di Vincenzo
+   2 2022-10-29|Damiano Di Vincenzo
+   1 2022-11-10|Damiano Di Vincenzo
+   1 2022-11-14|Damiano Di Vincenzo
+   1 2022-11-14|GiordanoT
+   1 2022-11-15|Damiano Di Vincenzo
+   1 2022-11-19|Damiano Di Vincenzo
+   1 2022-11-19|GiordanoT
+   1 2022-11-21|Damiano Di Vincenzo
+   2 2022-11-22|Damiano Di Vincenzo
+   4 2022-11-23|Damiano Di Vincenzo
+   2 2022-11-23|GiordanoT
+   1 2022-11-24|Damiano Di Vincenzo
+   2 2022-11-28|Damiano Di Vincenzo
+   2 2022-11-28|GiordanoT
+   1 2022-11-29|Damiano Di Vincenzo
+   1 2022-12-05|Damiano Di Vincenzo
+   2 2022-12-05|GiordanoT
+   2 2022-12-06|Damiano Di Vincenzo
+   1 2022-12-13|GiordanoT
+   1 2022-12-16|GiordanoT
+   1 2022-12-20|GiordanoT
+   2 2023-01-19|GiordanoT
+   1 2023-01-20|GiordanoT
+   1 2023-01-21|GiordanoT
+   1 2023-01-22|GiordanoT
+   1 2023-01-27|GiordanoT
+   1 2023-01-28|GiordanoT
+   1 2023-02-15|GiordanoT
+   1 2023-02-19|GiordanoT
+   1 2023-02-25|GiordanoT
+   1 2023-02-26|GiordanoT
+   1 2023-03-01|GiordanoT
+   1 2023-03-02|GiordanoT
+   1 2023-03-03|GiordanoT
+   2 2023-03-11|GiordanoT
+   1 2023-03-14|Damiano Di Vincenzo
+   1 2023-03-15|Damiano Di Vincenzo
+   1 2023-03-15|GiordanoT
+   1 2023-03-16|GiordanoT
+   1 2023-03-17|GiordanoT
+   1 2023-03-20|GiordanoT
+   1 2023-03-21|Damiano Di Vincenzo
+   1 2023-03-22|Damiano Di Vincenzo
+   1 2023-03-23|Damiano Di Vincenzo
+   2 2023-03-28|Damiano Di Vincenzo
+   1 2023-03-28|GiordanoT
+   3 2023-03-29|GiordanoT
+   2 2023-03-30|GiordanoT
+   2 2023-03-31|GiordanoT
+   1 2023-04-01|GiordanoT
+   1 2023-04-02|Damiano Di Vincenzo
+   1 2023-04-03|Damiano Di Vincenzo
+   1 2023-04-04|Damiano Di Vincenzo
+   1 2023-04-07|Damiano Di Vincenzo
+   1 2023-04-12|GiordanoT
+   1 2023-04-18|Damiano Di Vincenzo
+   1 2023-04-20|Damiano Di Vincenzo
+   1 2023-04-21|Damiano Di Vincenzo
+   4 2023-04-24|Damiano Di Vincenzo
+   1 2023-04-28|Damiano Di Vincenzo
+   4 2023-04-29|Damiano Di Vincenzo
+   3 2023-04-29|GiordanoT
+   3 2023-04-30|Damiano Di Vincenzo
+   4 2023-04-30|GiordanoT
+   1 2023-05-01|Damiano Di Vincenzo
+   1 2023-05-02|Damiano Di Vincenzo
+   1 2023-05-02|GiordanoT
+   3 2023-05-03|Damiano Di Vincenzo
+   2 2023-05-03|GiordanoT
+   1 2023-05-04|GiordanoT
+   1 2023-05-06|Damiano Di Vincenzo
+   3 2023-05-06|GiordanoT
+   3 2023-05-07|Damiano Di Vincenzo
+   2 2023-05-09|Damiano Di Vincenzo
+   1 2023-05-10|GiordanoT
+   1 2023-05-11|GiordanoT
+   6 2023-05-14|Damiano Di Vincenzo
+   4 2023-05-15|Damiano Di Vincenzo
+   2 2023-05-15|GiordanoT
+   1 2023-05-22|GiordanoT
+   3 2023-05-24|GiordanoT
+   1 2023-05-26|Damiano Di Vincenzo
+   3 2023-05-26|GiordanoT
+   2 2023-05-29|Damiano Di Vincenzo
+   1 2023-05-29|GiordanoT
+   2 2023-05-30|Damiano Di Vincenzo
+   2 2023-05-30|GiordanoT
+   2 2023-06-02|Damiano Di Vincenzo
+   2 2023-06-04|Damiano Di Vincenzo
+   2 2023-06-04|GiordanoT
+   2 2023-06-06|GiordanoT
+   3 2023-06-07|Damiano Di Vincenzo
+   3 2023-06-07|GiordanoT
+   1 2023-06-07|samfeidon
+   2 2023-06-08|Damiano Di Vincenzo
+   1 2023-06-09|GiordanoT
+   2 2023-06-10|GiordanoT
+   1 2023-06-11|Damiano Di Vincenzo
+   1 2023-06-19|GiordanoT
+   1 2023-06-20|GiordanoT
+   1 2023-06-21|GiordanoT
+   2 2023-07-08|GiordanoT
+   1 2023-07-09|GiordanoT
+   1 2023-07-14|GiordanoT
+   3 2023-07-18|GiordanoT
+   1 2023-07-19|GiordanoT
+   4 2023-07-20|GiordanoT
+   1 2023-07-20|Juri Di Rocco
+   1 2023-07-25|GiordanoT
+   1 2023-08-03|Damiano Di Vincenzo
+   1 2023-08-07|Damiano Di Vincenzo
+   1 2023-08-09|Damiano Di Vincenzo
+   1 2023-08-13|Damiano Di Vincenzo
+   1 2023-08-18|Damiano Di Vincenzo
+   1 2023-08-21|Damiano Di Vincenzo
+   1 2023-08-25|Juri Di Rocco
+   1 2023-08-28|Damiano Di Vincenzo
+   1 2023-09-01|Damiano Di Vincenzo
+   4 2023-09-05|Damiano Di Vincenzo
+   4 2023-09-06|Damiano Di Vincenzo
+   3 2023-09-06|GiordanoT
+   1 2023-09-07|GiordanoT
+   1 2023-09-09|GiordanoT
+   1 2023-09-11|GiordanoT
+   1 2023-09-13|GiordanoT
+  18 2023-09-14|Damiano Di Vincenzo
+   1 2023-09-14|GiordanoT
+   4 2023-09-15|Damiano Di Vincenzo
+   1 2023-09-16|Damiano Di Vincenzo
+   2 2023-09-18|GiordanoT
+   5 2023-09-19|Damiano Di Vincenzo
+   1 2023-09-19|GiordanoT
+   1 2023-09-20|GiordanoT
+   2 2023-09-21|GiordanoT
+   2 2023-09-22|Damiano Di Vincenzo
+   2 2023-09-22|GiordanoT
+   2 2023-09-23|Damiano Di Vincenzo
+   1 2023-09-23|GiordanoT
+   6 2023-09-24|Damiano Di Vincenzo
+   1 2023-09-24|GiordanoT
+   1 2023-09-25|Damiano Di Vincenzo
+   1 2023-09-25|GiordanoT
+   1 2023-09-27|Damiano Di Vincenzo
+   1 2023-09-27|GiordanoT
+   5 2023-09-28|Damiano Di Vincenzo
+   5 2023-09-28|GiordanoT
+   4 2023-09-29|Damiano Di Vincenzo
+   1 2023-09-29|GiordanoT
+   3 2023-10-01|Damiano Di Vincenzo
+   1 2023-10-02|Damiano Di Vincenzo
+   2 2023-10-03|GiordanoT
+   6 2023-10-04|Damiano Di Vincenzo
+   1 2023-10-04|jdirocco
+   3 2023-10-05|Damiano Di Vincenzo
+   1 2023-10-09|GiordanoT
+   1 2023-10-10|Damiano Di Vincenzo
+   3 2023-10-16|Damiano Di Vincenzo
+   1 2023-10-17|Damiano Di Vincenzo
+   2 2023-10-18|Damiano Di Vincenzo
+   1 2023-10-19|Damiano Di Vincenzo
+   2 2023-10-19|GiordanoT
+   3 2023-10-20|Damiano Di Vincenzo
+   2 2023-10-20|GiordanoT
+   1 2023-10-21|Damiano Di Vincenzo
+   3 2023-10-22|Damiano Di Vincenzo
+   2 2023-10-24|Damiano Di Vincenzo
+   1 2023-10-25|GiordanoT
+   1 2023-10-26|Damiano Di Vincenzo
+   1 2023-10-26|GiordanoT
+   1 2023-10-27|Damiano Di Vincenzo
+   1 2023-10-28|Damiano Di Vincenzo
+   1 2023-10-28|GiordanoT
+   1 2023-10-29|Damiano Di Vincenzo
+   2 2023-11-05|GiordanoT
+   1 2023-11-08|GiordanoT
+   1 2023-11-09|GiordanoT
+   2 2023-11-14|Damiano Di Vincenzo
+   4 2023-11-16|Damiano Di Vincenzo
+   2 2023-11-16|GiordanoT
+   3 2023-11-21|Damiano Di Vincenzo
+   1 2023-11-21|GiordanoT
+   2 2023-11-22|Damiano Di Vincenzo
+   1 2023-11-22|GiordanoT
+   2 2023-11-24|Damiano Di Vincenzo
+   1 2023-11-26|Damiano Di Vincenzo
+   2 2023-11-27|Damiano Di Vincenzo
+   4 2023-11-27|GiordanoT
+   1 2023-11-28|Damiano Di Vincenzo
+   1 2023-11-28|GiordanoT
+   1 2023-11-29|GiordanoT
+   1 2023-12-01|GiordanoT
+   1 2023-12-02|GiordanoT
+   1 2023-12-03|Damiano Di Vincenzo
+   1 2023-12-03|GiordanoT
+   1 2023-12-04|GiordanoT
+   1 2023-12-05|GiordanoT
+   1 2023-12-08|GiordanoT
+   5 2023-12-09|Damiano Di Vincenzo
+   1 2023-12-09|GiordanoT
+   1 2023-12-10|Damiano Di Vincenzo
+   1 2023-12-10|GiordanoT
+   1 2023-12-11|Damiano Di Vincenzo
+   2 2023-12-12|Damiano Di Vincenzo
+   1 2023-12-12|GiordanoT
+   1 2023-12-14|Damiano Di Vincenzo
+   1 2023-12-16|Damiano Di Vincenzo
+   1 2023-12-17|GiordanoT
+   3 2023-12-19|Damiano Di Vincenzo
+   2 2023-12-21|Damiano Di Vincenzo
+   1 2023-12-22|GiordanoT
+   1 2023-12-28|Damiano Di Vincenzo
+   2 2023-12-29|Damiano Di Vincenzo
+   1 2024-01-02|Damiano Di Vincenzo
+   1 2024-01-05|Damiano Di Vincenzo
+   1 2024-01-15|Damiano Di Vincenzo
+   6 2024-01-16|Damiano Di Vincenzo
+   1 2024-01-24|Damiano Di Vincenzo
+   3 2024-01-24|GiordanoT
+   1 2024-01-25|GiordanoT
+   2 2024-01-26|GiordanoT
+   2 2024-01-28|GiordanoT
+   1 2024-02-01|GiordanoT
+   2 2024-02-02|Damiano Di Vincenzo
+   1 2024-02-03|GiordanoT
+   1 2024-02-08|GiordanoT
+   1 2024-02-10|Damiano Di Vincenzo
+   1 2024-02-19|GiordanoT
+   1 2024-02-20|GiordanoT
+   2 2024-02-23|Damiano Di Vincenzo
+   1 2024-02-26|Damiano Di Vincenzo
+   1 2024-02-27|Damiano Di Vincenzo
+   1 2024-02-28|Damiano Di Vincenzo
+   1 2024-02-28|GiordanoT
+   3 2024-03-06|Damiano Di Vincenzo
+   1 2024-03-08|Damiano Di Vincenzo
+   1 2024-03-09|Damiano Di Vincenzo
+   1 2024-03-10|Damiano Di Vincenzo
+   1 2024-03-11|Damiano Di Vincenzo
+   1 2024-03-15|Damiano Di Vincenzo
+   4 2024-03-18|Damiano Di Vincenzo
+   2 2024-03-18|GiordanoT
+   2 2024-03-20|Damiano Di Vincenzo
+   1 2024-03-21|Damiano Di Vincenzo
+   1 2024-03-22|Damiano Di Vincenzo
+   1 2024-03-26|Damiano Di Vincenzo
+   3 2024-03-27|Damiano Di Vincenzo
+   2 2024-03-28|Damiano Di Vincenzo
+   1 2024-03-29|Damiano Di Vincenzo
+   2 2024-03-29|GiordanoT
+   1 2024-03-30|Damiano Di Vincenzo
+   2 2024-04-03|Damiano Di Vincenzo
+   3 2024-04-03|GiordanoT
+   1 2024-04-04|GiordanoT
+   1 2024-04-05|GiordanoT
+   2 2024-04-08|Damiano Di Vincenzo
+   7 2024-04-09|Damiano Di Vincenzo
+  10 2024-04-09|GiordanoT
+   4 2024-04-10|Damiano Di Vincenzo
+   1 2024-04-10|GiordanoT
+   8 2024-04-11|Damiano Di Vincenzo
+   8 2024-04-11|GiordanoT
+   3 2024-04-15|Damiano Di Vincenzo
+   2 2024-04-17|Damiano Di Vincenzo
+   3 2024-04-20|GiordanoT
+   3 2024-04-21|Damiano Di Vincenzo
+   1 2024-04-22|Damiano Di Vincenzo
+   3 2024-04-23|Damiano Di Vincenzo
+   1 2024-04-23|GiordanoT
+   1 2024-04-24|Damiano Di Vincenzo
+   1 2024-04-28|GiordanoT
+   4 2024-04-29|Damiano Di Vincenzo
+   1 2024-04-30|Damiano Di Vincenzo
+   1 2024-04-30|GiordanoT
+   1 2024-05-01|GiordanoT
+   4 2024-05-05|Damiano Di Vincenzo
+   6 2024-05-06|Damiano Di Vincenzo
+   1 2024-05-07|Damiano Di Vincenzo
+   1 2024-05-08|Damiano Di Vincenzo
+   2 2024-05-08|GiordanoT
+   1 2024-05-09|Damiano Di Vincenzo
+   1 2024-05-09|GiordanoT
+   2 2024-05-11|Damiano Di Vincenzo
+   1 2024-05-11|GiordanoT
+   1 2024-05-12|Damiano Di Vincenzo
+   1 2024-05-13|Damiano Di Vincenzo
+   1 2024-05-13|GiordanoT
+   1 2024-05-15|Damiano Di Vincenzo
+   1 2024-05-29|GiordanoT
+   1 2024-05-30|GiordanoT
+   3 2024-06-05|Damiano Di Vincenzo
+   3 2024-06-08|Damiano Di Vincenzo
+   3 2024-06-17|Damiano Di Vincenzo
+   6 2024-06-18|Damiano Di Vincenzo
+   1 2024-06-20|GiordanoT
+   2 2024-06-21|Damiano Di Vincenzo
+   5 2024-06-22|Damiano Di Vincenzo
+   4 2024-06-23|Damiano Di Vincenzo
+   3 2024-06-23|GiordanoT
+   1 2024-06-28|Damiano Di Vincenzo
+   1 2024-07-03|Damiano Di Vincenzo
+   1 2024-07-07|Damiano Di Vincenzo
+   3 2024-07-09|Damiano Di Vincenzo
+   2 2024-07-14|Damiano Di Vincenzo
+   3 2024-07-15|GiordanoT
+   1 2024-07-16|GiordanoT
+   1 2024-07-17|GiordanoT
+   1 2024-07-21|Damiano Di Vincenzo
+   1 2024-07-22|Alfonso Pierantonio
+   1 2024-07-22|GiordanoT
+   2 2024-07-23|Alfonso Pierantonio
+   4 2024-07-24|Damiano Di Vincenzo
+   1 2024-07-25|Alfonso Pierantonio
+   2 2024-07-25|Damiano Di Vincenzo
+   5 2024-07-26|Alfonso Pierantonio
+   8 2024-07-26|Damiano Di Vincenzo
+   1 2024-07-27|Alfonso Pierantonio
+   2 2024-07-27|Damiano Di Vincenzo
+   1 2024-07-28|Alfonso Pierantonio
+   4 2024-07-29|Alfonso Pierantonio
+   1 2024-07-29|GiordanoT
+  10 2024-07-30|Damiano Di Vincenzo
+   1 2024-07-30|GiordanoT
+   6 2024-07-31|Alfonso Pierantonio
+   2 2024-07-31|Damiano Di Vincenzo
+   2 2024-08-01|Alfonso Pierantonio
+   1 2024-08-01|Damiano Di Vincenzo
+   1 2024-08-02|Alfonso Pierantonio
+   3 2024-08-03|Alfonso Pierantonio
+   1 2024-08-03|Damiano Di Vincenzo
+   5 2024-08-04|Alfonso Pierantonio
+  10 2024-08-04|Damiano Di Vincenzo
+   1 2024-08-05|Alfonso Pierantonio
+   6 2024-08-05|Damiano Di Vincenzo
+   1 2024-08-06|Alfonso Pierantonio
+   3 2024-08-07|Alfonso Pierantonio
+   1 2024-08-07|GiordanoT
+   5 2024-08-08|Alfonso Pierantonio
+   3 2024-08-08|Damiano Di Vincenzo
+   6 2024-08-09|Alfonso Pierantonio
+   4 2024-08-09|Damiano Di Vincenzo
+   2 2024-08-10|Alfonso Pierantonio
+   1 2024-08-12|Alfonso Pierantonio
+   5 2024-08-13|Damiano Di Vincenzo
+   5 2024-08-14|Alfonso Pierantonio
+   4 2024-08-14|Damiano Di Vincenzo
+   2 2024-08-15|Alfonso Pierantonio
+   2 2024-08-16|Alfonso Pierantonio
+   1 2024-08-17|Alfonso Pierantonio
+   1 2024-08-18|Alfonso Pierantonio
+   1 2024-08-18|Damiano Di Vincenzo
+   1 2024-08-19|Alfonso Pierantonio
+   6 2024-08-20|Alfonso Pierantonio
+   1 2024-08-21|Alfonso Pierantonio
+   4 2024-08-22|Alfonso Pierantonio
+   1 2024-08-24|Alfonso Pierantonio
+   1 2024-08-26|Alfonso Pierantonio
+   3 2024-08-27|Alfonso Pierantonio
+   1 2024-08-27|Damiano Di Vincenzo
+   2 2024-08-28|Alfonso Pierantonio
+   2 2024-08-29|Alfonso Pierantonio
+   2 2024-08-30|Alfonso Pierantonio
+   2 2024-08-31|Alfonso Pierantonio
+   1 2024-08-31|Damiano Di Vincenzo
+   1 2024-08-31|GiordanoT
+   1 2024-09-02|Damiano Di Vincenzo
+   2 2024-09-02|GiordanoT
+   2 2024-09-03|Alfonso Pierantonio
+   1 2024-09-03|GiordanoT
+   1 2024-09-04|Alfonso Pierantonio
+   1 2024-09-04|Damiano Di Vincenzo
+   2 2024-09-06|Alfonso Pierantonio
+   3 2024-09-08|Alfonso Pierantonio
+   2 2024-09-08|GiordanoT
+   2 2024-09-09|Alfonso Pierantonio
+   1 2024-09-10|Alfonso Pierantonio
+   6 2024-09-11|Alfonso Pierantonio
+   2 2024-09-12|GiordanoT
+   4 2024-09-13|Alfonso Pierantonio
+   6 2024-09-13|GiordanoT
+   7 2024-09-14|Damiano Di Vincenzo
+   2 2024-09-15|Damiano Di Vincenzo
+   2 2024-09-15|GiordanoT
+   2 2024-09-16|Alfonso Pierantonio
+  12 2024-09-16|Damiano Di Vincenzo
+   2 2024-09-16|GiordanoT
+   2 2024-09-17|Alfonso Pierantonio
+   7 2024-09-17|Damiano Di Vincenzo
+   3 2024-09-17|GiordanoT
+   4 2024-09-18|Alfonso Pierantonio
+   3 2024-09-19|Alfonso Pierantonio
+   5 2024-09-19|Damiano Di Vincenzo
+   3 2024-09-19|GiordanoT
+   4 2024-09-20|Damiano Di Vincenzo
+   3 2024-09-21|Damiano Di Vincenzo
+   1 2024-09-27|Alfonso Pierantonio
+   1 2024-09-29|Alfonso Pierantonio
+   3 2024-09-30|Alfonso Pierantonio
+   1 2024-09-30|GiordanoT
+   1 2024-10-01|Damiano Di Vincenzo
+   1 2024-10-01|GiordanoT
+   6 2024-10-02|Alfonso Pierantonio
+   2 2024-10-03|Giordano Tinella
+   4 2024-10-03|GiordanoT
+   1 2024-10-04|GiordanoT
+   1 2024-10-09|GiordanoT
+   1 2024-10-10|GiordanoT
+   2 2024-10-11|GiordanoT
+   2 2024-10-22|Damiano Di Vincenzo
+   4 2024-10-23|Damiano Di Vincenzo
+   1 2024-10-23|GiordanoT
+   2 2024-10-30|GiordanoT
+   1 2024-11-06|Damiano Di Vincenzo
+   1 2024-11-06|Juri Di Rocco
+   1 2024-11-07|Damiano Di Vincenzo
+   3 2024-11-09|Damiano Di Vincenzo
+   1 2024-11-10|Damiano Di Vincenzo
+   4 2024-11-11|Damiano Di Vincenzo
+   1 2024-11-14|Damiano Di Vincenzo
+   1 2024-11-16|Damiano Di Vincenzo
+   3 2024-11-17|Damiano Di Vincenzo
+   2 2024-11-18|Alfonso Pierantonio
+   2 2024-11-18|Damiano Di Vincenzo
+   5 2024-11-19|Alfonso Pierantonio
+   7 2024-11-20|Alfonso Pierantonio
+  13 2024-11-20|Damiano Di Vincenzo
+   3 2024-11-21|Damiano Di Vincenzo
+   7 2024-11-23|Damiano Di Vincenzo
+   5 2024-11-24|Damiano Di Vincenzo
+   8 2024-11-27|Damiano Di Vincenzo
+   1 2024-11-28|Damiano Di Vincenzo
+   1 2024-12-07|Damiano Di Vincenzo
+   1 2024-12-08|Alfonso Pierantonio
+   1 2024-12-09|Alfonso Pierantonio
+   1 2024-12-10|Damiano Di Vincenzo
+   1 2024-12-13|Damiano Di Vincenzo
+   3 2024-12-18|Alfonso Pierantonio
+   4 2024-12-20|Alfonso Pierantonio
+   1 2024-12-21|Alfonso Pierantonio
+   1 2024-12-23|Alfonso Pierantonio
+   1 2024-12-23|Damiano Di Vincenzo
+   1 2024-12-24|Alfonso Pierantonio
+   1 2024-12-26|Damiano Di Vincenzo
+   4 2024-12-27|Alfonso Pierantonio
+   1 2024-12-31|Damiano Di Vincenzo
+   2 2025-01-11|Alfonso Pierantonio
+   2 2025-01-13|Alfonso Pierantonio
+   2 2025-01-14|Alfonso Pierantonio
+   3 2025-01-15|Alfonso Pierantonio
+   3 2025-01-16|Alfonso Pierantonio
+   1 2025-01-18|Alfonso Pierantonio
+   1 2025-01-19|Alfonso Pierantonio
+   3 2025-01-20|Alfonso Pierantonio
+   2 2025-01-21|Alfonso Pierantonio
+   2 2025-01-22|Damiano Di Vincenzo
+   1 2025-01-25|Damiano Di Vincenzo
+   2 2025-01-29|Alfonso Pierantonio
+   1 2025-01-29|Damiano Di Vincenzo
+   2 2025-01-31|Damiano Di Vincenzo
+   2 2025-02-10|Damiano Di Vincenzo
+   1 2025-02-11|Damiano Di Vincenzo
+   3 2025-02-13|Damiano Di Vincenzo
+   3 2025-02-14|Damiano Di Vincenzo
+   2 2025-02-19|Damiano Di Vincenzo
+   2 2025-02-20|Damiano Di Vincenzo
+   1 2025-02-21|Damiano Di Vincenzo
+   1 2025-02-28|Damiano Di Vincenzo
+   2 2025-03-02|Damiano Di Vincenzo
+   1 2025-03-09|Damiano Di Vincenzo
+   2 2025-03-15|Damiano Di Vincenzo
+   1 2025-03-26|AndreaPerelli
+   5 2025-03-28|Damiano Di Vincenzo
+   2 2025-03-29|Damiano Di Vincenzo
+   1 2025-04-06|AndreaPerelli
+   1 2025-04-07|AndreaPerelli
+   1 2025-04-07|Damiano Di Vincenzo
+   1 2025-04-09|AndreaPerelli
+   1 2025-04-10|Andrea_Perelli
+  27 2025-04-10|AndreaPerelli
+   1 2025-04-10|Juri Di Rocco
+   1 2025-04-14|Damiano Di Vincenzo
+   1 2025-04-16|AndreaPerelli
+  14 2025-04-16|Damiano Di Vincenzo
+   2 2025-04-16|Juri Di Rocco
+  23 2025-04-18|AndreaPerelli
+   1 2025-04-18|Damiano Di Vincenzo
+   2 2025-04-19|Damiano Di Vincenzo
+   1 2025-04-21|Damiano Di Vincenzo
+   2 2025-04-23|Damiano Di Vincenzo
+   1 2025-04-24|Damiano Di Vincenzo
+   3 2025-04-26|Damiano Di Vincenzo
+   3 2025-04-27|Damiano Di Vincenzo
+   2 2025-04-29|Damiano Di Vincenzo
+   3 2025-04-30|Damiano Di Vincenzo
+   1 2025-05-01|Damiano Di Vincenzo
+   2 2025-05-02|Damiano Di Vincenzo
+   1 2025-05-06|Damiano Di Vincenzo
+   1 2025-05-08|Andrea_Perelli
+   5 2025-05-08|AndreaPerelli
+   3 2025-05-08|Damiano Di Vincenzo
+   2 2025-05-12|Damiano Di Vincenzo
+   3 2025-05-14|Damiano Di Vincenzo
+   5 2025-05-26|Damiano Di Vincenzo
+   4 2025-05-27|Damiano Di Vincenzo
+   1 2025-06-03|AndreaPerelli
+   2 2025-06-04|AndreaPerelli
+   6 2025-06-10|Damiano Di Vincenzo
+   6 2025-06-11|Damiano Di Vincenzo
+   1 2025-06-13|Damiano Di Vincenzo
+   1 2025-06-18|Damiano Di Vincenzo
+   1 2025-06-23|Damiano Di Vincenzo
+   9 2025-06-24|Damiano Di Vincenzo
+   2 2025-06-25|Damiano Di Vincenzo
+   3 2025-06-26|Damiano Di Vincenzo
+   5 2025-06-27|Damiano Di Vincenzo
+   1 2025-06-29|Damiano Di Vincenzo
+   6 2025-06-30|Damiano Di Vincenzo
+   1 2025-07-03|Damiano Di Vincenzo
+  10 2025-07-04|Damiano Di Vincenzo
+   1 2025-07-08|Damiano Di Vincenzo
+   6 2025-07-09|Damiano Di Vincenzo
+   1 2025-07-12|Damiano Di Vincenzo
+   1 2025-07-14|Damiano Di Vincenzo
+   3 2025-07-18|Damiano Di Vincenzo
+   2 2025-07-20|Damiano Di Vincenzo
+   1 2025-07-21|Damiano Di Vincenzo
+   1 2025-07-22|Damiano Di Vincenzo
+   2 2025-07-23|Damiano Di Vincenzo
+   2 2025-07-24|Alfonso Pierantonio
+   5 2025-07-24|Damiano Di Vincenzo
+   3 2025-07-25|Alfonso Pierantonio
+   1 2025-07-26|Alfonso Pierantonio
+   1 2025-07-26|Damiano Di Vincenzo
+   4 2025-07-27|Alfonso Pierantonio
+   2 2025-07-29|Damiano Di Vincenzo
+   1 2025-07-29|Juri Di Rocco
+  10 2025-07-30|Damiano Di Vincenzo
+   3 2025-07-30|Juri Di Rocco
+   4 2025-07-31|Alfonso Pierantonio
+   1 2025-08-01|Damiano Di Vincenzo
+   1 2025-08-02|Alfonso Pierantonio
+   1 2025-08-03|Alfonso Pierantonio
+   3 2025-08-03|Damiano Di Vincenzo
+   3 2025-08-04|Alfonso Pierantonio
+   3 2025-08-05|Juri Di Rocco
+   4 2025-08-06|Alfonso Pierantonio
+   2 2025-08-06|Damiano Di Vincenzo
+   8 2025-08-07|Alfonso Pierantonio
+   4 2025-08-07|Damiano Di Vincenzo
+   3 2025-08-09|Alfonso Pierantonio
+   1 2025-08-09|Damiano Di Vincenzo
+   1 2025-08-10|Alfonso Pierantonio
+   3 2025-08-11|Alfonso Pierantonio
+   1 2025-08-12|Damiano Di Vincenzo
+   1 2025-08-13|Alfonso Pierantonio
+   3 2025-08-16|Alfonso Pierantonio
+   1 2025-08-18|Alfonso Pierantonio
+   3 2025-08-26|Alfonso Pierantonio
+  10 2025-08-27|Alfonso Pierantonio
+   2 2025-08-28|Alfonso Pierantonio
+   2 2025-08-28|Juri Di Rocco
+   4 2025-08-29|Alfonso Pierantonio
+   1 2025-08-29|Juri Di Rocco
+   5 2025-08-30|Alfonso Pierantonio
+   1 2025-08-31|Alfonso Pierantonio
+   1 2025-09-01|Juri Di Rocco
+   5 2025-09-02|Alfonso Pierantonio
+   1 2025-09-02|Juri Di Rocco
+   1 2025-09-03|Alfonso Pierantonio
+   2 2025-09-03|Juri Di Rocco
+   3 2025-09-04|Alfonso Pierantonio
+   1 2025-09-04|AndreaPerelli
+   1 2025-09-05|Damiano Di Vincenzo
+   1 2025-09-05|Juri Di Rocco
+   3 2025-09-08|Alfonso Pierantonio
+   2 2025-09-08|Juri Di Rocco
+   1 2025-09-10|Alfonso Pierantonio
+   1 2025-09-10|Damiano Di Vincenzo
+   4 2025-09-12|Alfonso Pierantonio
+   1 2025-09-12|Damiano Di Vincenzo
+   1 2025-09-13|Alfonso Pierantonio
+   1 2025-09-14|Alfonso Pierantonio
+   1 2025-09-14|Damiano Di Vincenzo
+   5 2025-09-15|Alfonso Pierantonio
+   4 2025-09-15|Damiano Di Vincenzo
+   2 2025-09-15|Juri Di Rocco
+   1 2025-09-17|Damiano Di Vincenzo
+   1 2025-09-18|Alfonso Pierantonio
+   1 2025-09-18|Damiano Di Vincenzo
+   6 2025-09-18|Juri Di Rocco
+   5 2025-09-19|Andrea_Perelli
+   3 2025-09-19|Damiano Di Vincenzo
+   4 2025-09-19|Juri Di Rocco
+   1 2025-09-21|Damiano Di Vincenzo
+   2 2025-09-23|Alfonso Pierantonio
+   2 2025-09-23|Andrea_Perelli
+  10 2025-09-23|Damiano Di Vincenzo
+   4 2025-09-24|Damiano Di Vincenzo
+   1 2025-09-25|Alfonso Pierantonio
+   4 2025-09-25|Andrea_Perelli
+   3 2025-09-25|Damiano Di Vincenzo
+   3 2025-09-25|Juri Di Rocco
+   3 2025-09-26|Damiano Di Vincenzo
+   2 2025-09-27|Alfonso Pierantonio
+   1 2025-09-28|Alfonso Pierantonio
+   1 2025-09-29|Juri Di Rocco
+   1 2025-10-06|Damiano Di Vincenzo
+   5 2025-10-13|Damiano Di Vincenzo
+   3 2025-10-13|Juri Di Rocco
+   1 2025-10-14|Damiano Di Vincenzo
+   1 2025-10-15|Damiano Di Vincenzo
+   4 2025-10-16|Damiano Di Vincenzo
+   1 2025-10-16|Juri Di Rocco
+   1 2025-10-19|Andrea_Perelli
+   2 2025-10-21|Damiano Di Vincenzo
+   2 2025-10-23|Andrea_Perelli
+   1 2025-10-23|Damiano Di Vincenzo
+   4 2025-10-24|Damiano Di Vincenzo
+   1 2025-11-01|Damiano Di Vincenzo
+   4 2025-11-09|Damiano Di Vincenzo
+   1 2025-11-10|Juri Di Rocco
+   1 2025-11-11|Alfonso Pierantonio
+   1 2025-11-12|Alfonso Pierantonio
+   1 2025-11-12|Juri Di Rocco
+   5 2025-11-13|Alfonso Pierantonio
+   1 2025-11-13|Damiano Di Vincenzo
+   1 2025-11-18|Damiano Di Vincenzo
+   3 2025-11-19|Alfonso Pierantonio
+   1 2025-11-19|Juri Di Rocco
+   1 2025-11-20|Juri Di Rocco
+   1 2025-11-21|Damiano Di Vincenzo
+   1 2025-11-22|Damiano Di Vincenzo
+   1 2025-11-24|Alfonso Pierantonio
+   1 2025-11-25|Damiano Di Vincenzo
+   1 2025-11-30|Damiano Di Vincenzo
+   4 2025-12-05|Alfonso Pierantonio
+   1 2025-12-05|Juri Di Rocco
+   4 2025-12-06|Alfonso Pierantonio
+   1 2025-12-06|Damiano Di Vincenzo
+   2 2025-12-06|Juri Di Rocco
+   1 2025-12-07|Alfonso Pierantonio
+   2 2025-12-07|Damiano Di Vincenzo
+   2 2025-12-07|Juri Di Rocco
+   3 2025-12-08|Damiano Di Vincenzo
+   1 2025-12-10|Juri Di Rocco
+   1 2025-12-18|Damiano Di Vincenzo
+   1 2025-12-20|Damiano Di Vincenzo
+   1 2025-12-23|Damiano Di Vincenzo
+   2 2025-12-31|Damiano Di Vincenzo
+   1 2026-01-04|Damiano Di Vincenzo
+   1 2026-01-06|Damiano Di Vincenzo
+   5 2026-01-16|Alfonso Pierantonio
+   5 2026-01-17|Alfonso Pierantonio
+   1 2026-01-17|Damiano Di Vincenzo
+   7 2026-01-18|Alfonso Pierantonio
+   5 2026-01-19|Alfonso Pierantonio
+   3 2026-01-20|Alfonso Pierantonio
+   1 2026-01-20|Damiano Di Vincenzo
+   7 2026-01-21|Alfonso Pierantonio
+   1 2026-01-21|Damiano Di Vincenzo
+  10 2026-01-22|Alfonso Pierantonio
+   3 2026-01-23|Alfonso Pierantonio
+   6 2026-01-24|Alfonso Pierantonio
+   1 2026-01-24|Damiano Di Vincenzo
+   2 2026-01-25|Alfonso Pierantonio
+   6 2026-01-26|Alfonso Pierantonio
+   3 2026-01-27|Alfonso Pierantonio
+   2 2026-01-28|Alfonso Pierantonio
+   1 2026-01-28|Damiano Di Vincenzo
+  17 2026-01-29|Alfonso Pierantonio
+   8 2026-01-30|Alfonso Pierantonio
+   1 2026-01-31|Alfonso Pierantonio
+   2 2026-01-31|Damiano Di Vincenzo
+   2 2026-02-01|Alfonso Pierantonio
+   2 2026-02-02|Alfonso Pierantonio
+   1 2026-02-02|Damiano Di Vincenzo
+   1 2026-02-04|Alfonso Pierantonio
+   3 2026-02-04|Damiano Di Vincenzo
+   1 2026-02-06|Alfonso Pierantonio
+   3 2026-02-07|Alfonso Pierantonio
+   1 2026-02-08|Alfonso Pierantonio
+   1 2026-02-09|Alfonso Pierantonio
+   3 2026-02-10|Alfonso Pierantonio
+   5 2026-02-11|Alfonso Pierantonio
+   4 2026-02-12|Alfonso Pierantonio
+   7 2026-02-13|Alfonso Pierantonio
+   1 2026-02-14|Alfonso Pierantonio
+   8 2026-02-15|Alfonso Pierantonio
+   2 2026-02-16|Alfonso Pierantonio
+   1 2026-02-17|Alfonso Pierantonio
+   1 2026-02-18|Alfonso Pierantonio
+   1 2026-02-19|Alfonso Pierantonio
+   2 2026-02-20|Alfonso Pierantonio
+   3 2026-02-21|Damiano Di Vincenzo
+   2 2026-02-22|Damiano Di Vincenzo
+   1 2026-02-24|Damiano Di Vincenzo
+   6 2026-02-25|Alfonso Pierantonio
+   3 2026-02-26|Alfonso Pierantonio
+   2 2026-02-26|Damiano Di Vincenzo
+   4 2026-02-27|Damiano Di Vincenzo
+   3 2026-03-02|Damiano Di Vincenzo
+   1 2026-03-03|Damiano Di Vincenzo
+   1 2026-03-04|Damiano Di Vincenzo
+   1 2026-03-05|Damiano Di Vincenzo
+   1 2026-03-06|Damiano Di Vincenzo
+   4 2026-03-10|Alfonso Pierantonio
+   1 2026-03-10|Damiano Di Vincenzo
+   4 2026-03-11|Alfonso Pierantonio
+   1 2026-03-11|Damiano Di Vincenzo
+   2 2026-03-12|Andrea_Perelli
+   3 2026-03-12|Damiano Di Vincenzo
+   2 2026-03-13|Alfonso Pierantonio
+   2 2026-03-13|Andrea_Perelli
+  12 2026-03-13|Damiano Di Vincenzo
+  12 2026-03-14|Alfonso Pierantonio
+   2 2026-03-14|Damiano Di Vincenzo
+   2 2026-03-15|Alfonso Pierantonio
+  13 2026-03-16|Alfonso Pierantonio
+   1 2026-03-16|Damiano Di Vincenzo
+   4 2026-03-17|Alfonso Pierantonio
+   4 2026-03-17|Damiano Di Vincenzo
+   3 2026-03-18|Alfonso Pierantonio
+   3 2026-03-19|Alfonso Pierantonio
+   2 2026-03-21|Alfonso Pierantonio
+   4 2026-03-22|Alfonso Pierantonio
+   1 2026-03-23|Alfonso Pierantonio
+   3 2026-03-24|Alfonso Pierantonio
+   5 2026-03-25|Alfonso Pierantonio
+   2 2026-03-25|Damiano Di Vincenzo
+   3 2026-03-26|Alfonso Pierantonio
+   4 2026-03-26|Damiano Di Vincenzo
+   2 2026-03-26|Juri Di Rocco
+   3 2026-03-27|Alfonso Pierantonio
+   1 2026-03-27|Damiano Di Vincenzo
+   2 2026-03-28|Alfonso Pierantonio
+   2 2026-03-29|Alfonso Pierantonio
+   4 2026-03-30|Alfonso Pierantonio
+   2 2026-03-30|Damiano Di Vincenzo
+   1 2026-03-31|Damiano Di Vincenzo
+   4 2026-04-01|Alfonso Pierantonio
+   1 2026-04-01|Damiano Di Vincenzo
+   1 2026-04-01|Juri Di Rocco
+   2 2026-04-02|Alfonso Pierantonio
+   1 2026-04-03|Alfonso Pierantonio
+   1 2026-04-05|Alfonso Pierantonio
+   2 2026-04-06|Alfonso Pierantonio
+   2 2026-04-11|Alfonso Pierantonio
+   4 2026-04-12|Alfonso Pierantonio
+   1 2026-04-13|Alfonso Pierantonio
+   2 2026-04-14|Alfonso Pierantonio
+   3 2026-04-15|Alfonso Pierantonio
+   6 2026-04-15|Juri Di Rocco
+   1 2026-04-16|Juri Di Rocco
+   2 2026-04-17|Alfonso Pierantonio
+   2 2026-04-17|Juri Di Rocco
+   1 2026-04-18|Alfonso Pierantonio
+   4 2026-04-21|Alfonso Pierantonio
+   1 2026-04-21|Juri Di Rocco
+   2 2026-04-22|Alfonso Pierantonio
+   1 2026-04-22|Juri Di Rocco
+   4 2026-04-23|Alfonso Pierantonio
+   1 2026-04-23|Juri Di Rocco
+   1 2026-04-24|Alfonso Pierantonio
+  12 2026-04-25|Alfonso Pierantonio
+   2 2026-04-27|Alfonso Pierantonio
+   2 2026-04-27|Juri Di Rocco
+   4 2026-04-28|Alfonso Pierantonio
+   1 2026-04-29|Alfonso Pierantonio
+   1 2026-04-29|Damiano Di Vincenzo
+   1 2026-04-29|Juri Di Rocco
+   2 2026-05-01|Alfonso Pierantonio
+   8 2026-05-02|Alfonso Pierantonio
+   2 2026-05-03|Alfonso Pierantonio
+   3 2026-05-04|Alfonso Pierantonio
+   9 2026-05-05|Alfonso Pierantonio
+   5 2026-05-06|Alfonso Pierantonio
+   2 2026-05-07|Alfonso Pierantonio
+   4 2026-05-09|Alfonso Pierantonio
+   3 2026-05-10|Alfonso Pierantonio
+   1 2026-05-11|Alfonso Pierantonio
+   2 2026-05-13|Alfonso Pierantonio
+   4 2026-05-14|Alfonso Pierantonio
+   8 2026-05-15|Alfonso Pierantonio
+   1 2026-05-15|Juri Di Rocco
+   2 2026-05-16|Alfonso Pierantonio
+   2 2026-05-18|Alfonso Pierantonio
+   2 2026-05-19|Alfonso Pierantonio
+   9 2026-05-20|Alfonso Pierantonio
+   1 2026-05-20|Damiano Di Vincenzo
+  14 2026-05-21|Alfonso Pierantonio
+   8 2026-05-21|Damiano Di Vincenzo
+   3 2026-05-21|Juri Di Rocco
+   4 2026-05-22|Alfonso Pierantonio
+   8 2026-05-22|Juri Di Rocco
+   4 2026-05-24|Alfonso Pierantonio
+  14 2026-05-25|Alfonso Pierantonio
+   2 2026-05-25|Andrea_Perelli
+   4 2026-05-25|Juri Di Rocco
+   6 2026-05-26|Alfonso Pierantonio
+   1 2026-05-26|Juri Di Rocco
+   4 2026-05-27|Alfonso Pierantonio
+   1 2026-05-27|Damiano Di Vincenzo
+   3 2026-05-29|Alfonso Pierantonio
+   1 2026-05-29|Juri Di Rocco
+   7 2026-05-30|Alfonso Pierantonio
+   5 2026-05-31|Alfonso Pierantonio
+   3 2026-06-03|Alfonso Pierantonio
+   3 2026-06-03|Juri Di Rocco
+   4 2026-06-04|Alfonso Pierantonio
+   2 2026-06-05|Alfonso Pierantonio
+   4 2026-06-05|Juri Di Rocco
+   9 2026-06-08|Alfonso Pierantonio

@@ -25,14 +25,13 @@ function EdgeDataComponent(props: AllProps) {
         let key: string = fullKey.substring(prefixLength);
         if (info.hidden || info.obsolete || info.todo) continue;
         if (!info.isEdge) continue;
-        rows.push(<div className={'input-container'}>
-            <b className={'me-2'}>{key[0].toUpperCase() + key.substring(1)}:</b>
-            <GenericInput rootClassName={'mx-3 mt-1 d-flex edgepoint-adjust'} className={'d-flex'} data={view}
+        rows.push(<div className={'input-container'} key={key}>
+            <GenericInput rootClassName={'edge-input-row'} className={'d-flex'} data={view}
                 field={key as any} tooltip={true} info={info} disabled={readOnly} />
         </div>);
     }
 
-    return(<section>
+    return(<section className="edge">
         <h5>Edge</h5>
         <div className={'px-2'}>
             {rows}

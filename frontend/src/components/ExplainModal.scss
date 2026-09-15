@@ -1,0 +1,150 @@
+.explain-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    background: rgba(15, 23, 42, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: explain-fade-in 0.15s ease-out;
+}
+
+@keyframes explain-fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+@keyframes explain-slide-up {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes explain-spin {
+    0%   { opacity: 0.4; }
+    50%  { opacity: 1; }
+    100% { opacity: 0.4; }
+}
+
+.explain-modal {
+    width: 480px;
+    max-width: calc(100vw - 32px);
+    max-height: 70vh;
+    display: flex;
+    flex-direction: column;
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+    animation: explain-slide-up 0.2s ease-out;
+    overflow: hidden;
+}
+
+.explain-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid #334155;
+    flex-shrink: 0;
+}
+
+.explain-modal-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #e2e8f0;
+    min-width: 0;
+
+    > i {
+        color: #0ea5e9;
+        font-size: 14px;
+        flex-shrink: 0;
+    }
+
+    > span {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    strong {
+        color: #ffffff;
+        font-weight: 600;
+    }
+}
+
+.explain-modal-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: rgba(14, 165, 233, 0.12);
+    color: #0ea5e9;
+    flex-shrink: 0;
+}
+
+.explain-modal-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: #94a3b8;
+    cursor: pointer;
+    flex-shrink: 0;
+
+    &:hover {
+        background: #334155;
+        color: #e2e8f0;
+    }
+}
+
+.explain-modal-body {
+    padding: 16px;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 80px;
+}
+
+.explain-modal-loading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #94a3b8;
+    font-size: 13px;
+
+    .explain-spin {
+        color: #0ea5e9;
+        animation: explain-spin 1.4s ease-in-out infinite;
+    }
+}
+
+.explain-modal-text {
+    color: #e2e8f0;
+    font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.explain-modal-error {
+    color: #ef4444;
+    font-size: 13px;
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+
+    i {
+        margin-top: 2px;
+        flex-shrink: 0;
+    }
+}

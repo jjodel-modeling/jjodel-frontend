@@ -1,0 +1,303 @@
+/**
+ * neighborhoodDraw — la meta' importless dell'adapter del VICINATO (slice 13a).
+ *
+ * Stessa divisione, stessa ragione, di `outlineDraw.ts`, `multiDraw.ts`,
+ * `createDraw.ts` e `shapeDraw.ts` accanto (R-FORM-5): i file `*Adapter.ts`
+ * importano il barrel del joiner, il barrel arriva a monaco, monaco dereferenzia
+ * `window` al momento dell'import, e un test unitario che toccasse qualcosa di
+ * loro morirebbe all'import. Qui tutto e' funzione pura di un `idlookup` piatto.
+ *
+ * ── Niente e' camminato due volte ─────────────────────────────────────────────
+ *
+ * Il vicinato non ha un walk proprio: e' la COMPOSIZIONE di quattro puri che
+ * esistevano gia' per altre superfici, piu' la ladder per il valore saliente.
+ *
+ *  - `createDraw.ownerOf` — l'owner a un salto; `null` vuol dire «il modello lo
+ *    possiede direttamente», che e' anche «nessun nodo owner da disegnare»;
+ *  - `createDraw.filledSlotValues` — i valori di uno slot senza i buchi e SENZA
+ *    il filtro di vivezza, che e' cio' che fa comparire il nodo `broken` invece
+ *    di farlo sparire (stessa scelta di `outlineDraw`);
+ *  - `shapeDraw.referencedBy` — la risalita `pointedBy -> DValue -> father` della
+ *    slice 2b, che porta gia' `featureKey` e `composition`: la chiave sull'arco e
+ *    il filtro «un owner non e' un referrer» sono suoi, non riscritti qui;
+ *  - `irReadCtx.makeDrawReadCtx` — la regola del nome (slot identita', poi
+ *    `DObject.name`, poi `initialName`), cosi' il riquadro chiama un'istanza come
+ *    la chiamano tabella, outline e breadcrumb;
+ *  - `instanceTable.slotShapeFor` + `valueRenderer.detectValueRenderer` — UNA
+ *    decisione per il valore saliente, la stessa della cella (R-FORM-15). Una
+ *    seconda lettura degli stati del contratto qui sarebbe esattamente la
+ *    divergenza che quella ratifica ha chiuso.
+ *
+ * ── Perche' il vicinato di due istanze della stessa metaclasse e' diverso ─────
+ *
+ * Perche' e' PER-PUNTATORE, non per tipo: `referencedBy` legge l'indice
+ * `pointedBy` dell'istanza, quindi due `Config` sorelle riferite da due `Sensor`
+ * diversi hanno vicinati diversi. Un walk «piatto» (tutte le istanze che citano
+ * quella metaclasse) darebbe a entrambe lo stesso disegno, ed e' il controllo che
+ * il test tiene.
+ *
+ * ── Un solo nodo per id ───────────────────────────────────────────────────────
+ *
+ * Un'istanza puo' essere insieme owner, bersaglio di una ref uscente e sorgente
+ * di una entrante. Il NODO e' uno solo — con il primo ruolo in ordine
+ * owner > uscente > entrante — e gli ARCHI restano tutti: e' il grafo a dire che
+ * il legame e' doppio, non due scatole con lo stesso nome.
+ */
+
+import { makeDrawReadCtx } from '../viewpoint/ir/irReadCtx';
+import { filledSlotValues, ownerOf } from './createDraw';
+import { referencedBy } from './shapeDraw';
+import { slotShapeFor } from '../../abstract/tabs/instanceTable';
+import { detectValueRenderer } from '../nodes/valueRenderer';
+import type {
+    ClassShape,
+    EgoInput,
+    EgoInstance,
+    EgoPointer,
+    MetamodelShape,
+    NeighborEdge,
+    NeighborNode,
+    NeighborValue,
+    Neighborhood,
+} from '../../../jjform';
+
+type Idlookup = Record<string, any>;
+
+/** La feature di contenimento in cui l'owner tiene questo oggetto, piu' l'owner.
+ *  Non e' un secondo walk: `ownerOf` decide chi e' l'owner, e questa rilegge lo
+ *  STESSO slot `father` per il nome della feature — la chiave che finisce
+ *  sull'arco. `featureKey` e' null solo se lo slot non risolve la sua
+ *  `DReference`, che e' uno stato di modello corrotto e non un caso normale. */
+export function ownerLinkOf(
+    idlookup: Idlookup,
+    objectId: string,
+): { ownerId: string; featureKey: string | null } | null {
+    const ownerId = ownerOf(idlookup, objectId);
+    if (!ownerId) return null;
+    const slot = idlookup?.[objectId]?.father;
+    const feature = typeof slot === 'string' ? idlookup[idlookup[slot]?.instanceof] : null;
+    return { ownerId, featureKey: typeof feature?.name === 'string' ? feature.name : null };
+}
+
+/**
+ * Il valore saliente di un'istanza: il PRIMO attributo che ne ha uno.
+ *
+ * Ordine della shape, non alfabetico, per la ragione di sempre: il metamodello
+ * dichiara le sue feature in un ordine, e riordinarle qui farebbe litigare il
+ * riquadro con la form accanto. Lo slot identita' (`name`) e' saltato — e' gia'
+ * il titolo del nodo, e stamparlo due volte non e' informazione.
+ *
+ * `dash` (slot vuoto) non e' un valore e si salta; `missingRequired` SI', perche'
+ * un required rimasto senza valore e' uno stato del contratto e il riquadro lo
+ * dipinge col token della tabella. La classificazione arriva dalla ladder: qui
+ * non si decide niente.
+ */
+export function salientValue(
+    idlookup: Idlookup,
+    instanceId: string,
+    cls: ClassShape | null | undefined,
+    shape: MetamodelShape,
+): NeighborValue | undefined {
+    for (const attr of cls?.attrs ?? []) {
+        if (attr.key === 'name') continue;
+        const { slot } = slotShapeFor(idlookup, instanceId, attr, shape);
+        const decision = detectValueRenderer(slot);
+        if (decision.kind === 'dash') continue;
+        if (decision.kind === 'missingRequired') return { key: attr.key, text: '', missing: true };
+        const text = (slot.values ?? []).join(', ');
+        if (!text) continue;
+        return { key: attr.key, text, missing: false };
+    }
+    return undefined;
+}
+
+/**
+ * Il vicinato di un'istanza: owner (un livello su), refs uscenti (un salto) e
+ * referenced-by entranti (un salto), come nodi e archi.
+ *
+ * `shape` e' cio' che dice quali feature sono riferimenti e quali contenimento.
+ * Un'istanza la cui metaclasse manca dalla shape rende un nodo senza uscenti
+ * invece di sparire: un metamodello mezzo caricato non deve cancellare il
+ * soggetto dal suo stesso riquadro.
+ *
+ * I CONTENUTI non ci sono, ed e' deliberato: i figli sono l'outline (10b), che li
+ * mostra tutti e in profondita'. Qui c'e' un salto, e la domanda e' «chi tocca
+ * questa istanza».
+ */
+export function neighborhoodOf(
+    idlookup: Idlookup,
+    subjectId: string,
+    shape: MetamodelShape | null,
+): Neighborhood {
+    const empty: Neighborhood = { subjectId, nodes: [], edges: [] };
+    if (!idlookup || !subjectId) return empty;
+    if (idlookup[subjectId]?.className !== 'DObject') return empty;
+
+    const ctx = makeDrawReadCtx(idlookup);
+    const classes = shape?.classes ?? {};
+    const nodes: NeighborNode[] = [];
+    const edges: NeighborEdge[] = [];
+    const seen = new Set<string>();
+
+    const classOf = (id: string): ClassShape | null => {
+        const name = ctx.getMetaclassName(id);
+        return name ? classes[name] ?? null : null;
+    };
+
+    /** Aggiunge un nodo una volta sola: il primo ruolo che lo raggiunge vince. */
+    const addNode = (id: string, role: NeighborNode['role']): void => {
+        if (seen.has(id)) return;
+        seen.add(id);
+        if (idlookup[id]?.className !== 'DObject') {
+            nodes.push({ id, name: '', cls: '', kind: 'broken', role });
+            return;
+        }
+        const cls = classOf(id);
+        nodes.push({
+            id,
+            name: ctx.getName(id) ?? '',
+            cls: ctx.getMetaclassName(id) ?? '',
+            kind: 'object',
+            role,
+            value: shape ? salientValue(idlookup, id, cls, shape) : undefined,
+        });
+    };
+
+    addNode(subjectId, 'subject');
+
+    // Owner: un livello, e null vuol dire radice del modello.
+    const owner = ownerLinkOf(idlookup, subjectId);
+    if (owner) {
+        addNode(owner.ownerId, 'owner');
+        edges.push({ source: owner.ownerId, target: subjectId, featureKey: owner.featureKey, kind: 'owner' });
+    }
+
+    // Uscenti: le sole reference NON di contenimento della metaclasse del
+    // soggetto. Il contenimento e' l'owner dei figli, e i figli sono dell'outline.
+    const subjectCls = classOf(subjectId);
+    for (const ref of subjectCls?.refs ?? []) {
+        for (const value of filledSlotValues(idlookup, subjectId, ref.key)) {
+            addNode(value, 'outgoing');
+            edges.push({ source: subjectId, target: value, featureKey: ref.key, kind: 'reference' });
+        }
+    }
+
+    // Entranti: la risalita di 2b, senza il containment — «an owner is not a
+    // referrer», e l'owner ha gia' il suo arco. Due puntatori dalla stessa
+    // istanza attraverso la stessa feature (slot multivalore) sono UN arco: il
+    // disegno non distingue due archi sovrapposti, e la posizione nello slot e'
+    // una domanda della form, non del riquadro.
+    const incomingSeen = new Set<string>();
+    for (const ref of referencedBy(idlookup, subjectId)) {
+        if (ref.composition) continue;
+        const key = ref.instanceId + '→' + ref.featureKey;
+        if (incomingSeen.has(key)) continue;
+        incomingSeen.add(key);
+        addNode(ref.instanceId, 'incoming');
+        edges.push({ source: ref.instanceId, target: subjectId, featureKey: ref.featureKey, kind: 'reference' });
+    }
+
+    return { subjectId, nodes, edges };
+}
+
+/**
+ * L'INGRESSO dell'ego-diagramma della riga espansa (FL5/FL6), da un `idlookup`.
+ *
+ * Sorella di `neighborhoodOf`, non un secondo walk: legge le STESSE tre sorgenti
+ * (`makeDrawReadCtx` per il nome, `filledSlotValues` per gli uscenti,
+ * `shapeDraw.referencedBy` per gli entranti) e si ferma li'. Tutto cio' che
+ * assomiglia a una decisione — dedup, precedenza fra i due lati, cap a
+ * `EGO_MAX_PER_SIDE`, conteggi, posizioni — e' di `jjform/egoNeighborhood`, che
+ * e' puro e provato sotto node. Questa funzione non ne ripete nessuna.
+ *
+ * ── Perche' non riusa `neighborhoodOf` ────────────────────────────────────────
+ *
+ * Perche' `Neighborhood` ha gia' fuso i due lati in una lista di nodi con un
+ * RUOLO, e ha applicato la sua precedenza (owner > uscente > entrante) e il suo
+ * dedup «un arco per coppia+feature». `EgoInput` vuole il dato PRIMA di quelle
+ * scelte: i puntatori uscenti uno per POSIZIONE (uno slot multivalore con tre
+ * valori sono tre voci) e gli entranti verbatim, contenimento incluso e marcato,
+ * perche' il filtro sul contenimento e' una regola del DISEGNO del nastro.
+ * Ricavarli da `Neighborhood` vorrebbe dire disfare due volte lo stesso nodo.
+ *
+ * L'owner NON c'e', ed e' la differenza fra i due disegni: il nastro e' largo
+ * quanto una riga e il contenimento e' dell'outline (10b), che ha la profondita'
+ * per mostrarlo. Il legame owner→soggetto non si perde comunque, quando l'owner
+ * punta anche per riferimento: arriva dagli entranti come chiunque altro.
+ *
+ * `cls.refs` sono le sole reference NON di contenimento (`ClassShape.refs`, il
+ * contenimento e' in `children`), quindi il filtro sugli uscenti e' della shape e
+ * non ricompare qui.
+ *
+ * Restituisce `null` — e non un ingresso vuoto — quando il soggetto non e' un
+ * `DObject` vivo: una riga espansa su un oggetto morto non deve disegnare un
+ * soggetto senza nome, deve non disegnare.
+ */
+export function egoInputOf(
+    idlookup: Idlookup,
+    subjectId: string,
+    shape: MetamodelShape | null,
+): EgoInput | null {
+    if (!idlookup || !subjectId) return null;
+    if (idlookup[subjectId]?.className !== 'DObject') return null;
+
+    const ctx = makeDrawReadCtx(idlookup);
+    const classes = shape?.classes ?? {};
+
+    /** Un'istanza ridotta a cio' che una scatola sa dire, o `null` quando il
+     *  puntatore non risolve — che e' esattamente cio' che il modulo legge come
+     *  nodo `broken`, reso e mai saltato (stessa scelta di tabella e outline). */
+    const instanceOf = (id: string): EgoInstance | null => {
+        if (idlookup[id]?.className !== 'DObject') return null;
+        return { id, name: ctx.getName(id) ?? '', cls: ctx.getMetaclassName(id) ?? '' };
+    };
+
+    const subject: EgoInstance = {
+        id: subjectId,
+        name: ctx.getName(subjectId) ?? '',
+        cls: ctx.getMetaclassName(subjectId) ?? '',
+    };
+
+    const subjectClassName = ctx.getMetaclassName(subjectId);
+    const cls: ClassShape | null = subjectClassName ? classes[subjectClassName] ?? null : null;
+
+    // Ordine di dichiarazione della shape, che e' l'ordine in cui la form e la
+    // tabella leggono le stesse feature: un nastro che riordinasse i vicini
+    // litigherebbe con le due superfici che gli stanno intorno.
+    const outgoing: EgoPointer[] = [];
+    for (const ref of cls?.refs ?? []) {
+        for (const targetId of filledSlotValues(idlookup, subjectId, ref.key)) {
+            outgoing.push({ featureKey: ref.key, targetId, target: instanceOf(targetId) });
+        }
+    }
+
+    return { subject, outgoing, incoming: referencedBy(idlookup, subjectId) };
+}
+
+/**
+ * Il VERTICE che rende un oggetto sul canvas, o null.
+ *
+ * Serve a «Open in canvas» e solo a quello. L'id di un nodo React Flow e' l'id
+ * del VERTICE (`jjomTransformers.ts`, `id: vertex.id`), non quello del DObject:
+ * `SELECT_NODE` va emesso con questo, o il canvas confronta due spazi di id
+ * diversi e non seleziona niente.
+ *
+ * Il vertice si riconosce da `model === objectId`, che e' esattamente cio' che
+ * `useJjomSync` scrive creandolo (`DVertex.new(0, objId, graphId, …)`), e il
+ * grafo si controlla perche' due grafi possono rendere lo stesso modello.
+ *
+ * UNA scansione dell'`idlookup`, e gira solo al click: il resto del riquadro e'
+ * letture d'indice.
+ */
+export function vertexOfObject(idlookup: Idlookup, modelId: string, objectId: string): string | null {
+    if (!idlookup || !modelId || !objectId) return null;
+    for (const id in idlookup) {
+        const d = idlookup[id];
+        if (!d || d.className !== 'DVertex') continue;
+        if (d.model !== objectId) continue;
+        const graph = typeof d.graph === 'string' ? idlookup[d.graph] : null;
+        if (graph?.model !== modelId) continue;
+        return typeof d.id === 'string' ? d.id : id;
+    }
+    return null;
+}

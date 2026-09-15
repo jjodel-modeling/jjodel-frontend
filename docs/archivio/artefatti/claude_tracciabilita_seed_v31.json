@@ -1,0 +1,1804 @@
+[
+  {
+    "id": "seed-father",
+    "type": "bug",
+    "title": "Voce 4 — doppio writer di father",
+    "desc": "Chiusa con D-4-1..D-4-9: cascata del viewpoint sul sottoalbero dentro set_father (modulo puro viewSubtree.ts, BFS su state.viewelements con visited set e snapshot pre-scrittura, 9 test), riga viewpoint read-only, Select 'Parent view' filtrato, azione 'Move to viewpoint' (10 test). Catena commit corretta in corsa: 0eb281ce7 è il fix di truthiness su indexOf nel calcolo peso di set_father; 1dd464162 riattribuito alla voce 5. Smoke cross-viewpoint 7/7 su localhost:3000 (incluso il discendente di secondo grado V3), chiusura con GO visivo a 8 punti. Residuo R-F4 = U-2.",
+    "status": "chiusa",
+    "priority": "alta",
+    "decision": "D-4-1..D-4-9",
+    "issue": "",
+    "prompt": "claude/2026-08-08_prompt_discovery_father_single_writer.md",
+    "commits": "0eb281ce7 f5c71d5db 65f18ceb1",
+    "concerns": [
+      "concrete-syntax",
+      "properties-card"
+    ],
+    "milestone": "Coda post-arco A (2026-08-06)",
+    "deps": [],
+    "version": "3.0"
+  },
+  {
+    "id": "seed-smoke4",
+    "type": "debt",
+    "title": "Smoke punto 4 — cascata cross-viewpoint",
+    "desc": "PASSATO 7/7 il 2026-08-08 (localhost:3000): fixture V1>V2>V3, Move di V1 in B, le tre rendono in B, nessuna rende in A (V3 incluso: cascata verificata al secondo grado), Source con viewpoint riallineato e father invariato, nessun dirty spurio alla riapertura di Applies to. La voce 4 è chiusa anche a video. Verbale riportato nella entry di log (pattern 7de92c6cd).",
+    "status": "chiusa",
+    "priority": "alta",
+    "decision": "D-4-1..D-4-8",
+    "issue": "",
+    "prompt": "",
+    "commits": "",
+    "concerns": [
+      "concrete-syntax",
+      "sync-layer",
+      "properties-card"
+    ],
+    "milestone": "Coda post-arco A (2026-08-06)",
+    "deps": [
+      "seed-father"
+    ],
+    "version": "process v1.1"
+  },
+  {
+    "id": "seed-voce3",
+    "type": "bug",
+    "title": "Voce 3 — routing persistito come stringa vuota",
+    "desc": "Chiusa. Colpevole unico: components/ui/Select/Select.tsx:91 antepone sempre un'opzione vuota; su un campo a vocabolario chiuso (R-B9: orthogonal|straight|curved) la stringa vuota finiva serializzata al primo commit del draft. Fix: drop della chiave su '' al commit, placeholder Manhattan (default). Smoke visivo passato, nessun secondo writer emerso. Il gemello corretto è forEndUser/Input.tsx:451 (opzione vuota disabled).",
+    "status": "chiusa",
+    "priority": "media",
+    "decision": "R-B9",
+    "issue": "",
+    "prompt": "claude/2026-08-08_prompt_voce3_routing_stringa_vuota.md",
+    "commits": "7450eb256 7de92c6cd",
+    "concerns": [
+      "concrete-syntax",
+      "design-system"
+    ],
+    "milestone": "Coda post-arco A (2026-08-06)",
+    "deps": [],
+    "version": "3.0"
+  },
+  {
+    "id": "seed-irvalidate",
+    "type": "debt",
+    "title": "Regola routing in irValidate",
+    "desc": "Chiusa con 1cee0e252 (3 file: irValidate.ts, il suo test, entry di log). La regola vive in validateIR, chiamato dai soli quattro pannelli di authoring, mai dal path di render: innestarla in compileEdgeView avrebbe scartato in silenzio le view già persistite con routing '' che oggi rendono ortogonali (UnifiedEdge.tsx:142). Nasce VALID_ROUTING_VALUES esportata (vocabolario da tre copie a due; EdgeAuthoringPanel la importerà quando sarà lecito toccarlo). Quattro test verdi (assente/valido/vuoto/arbitrario); gate tutti verdi (build, tsc 33 baseline, vitest 58/58, check:docs 2/2). Principio da verbalizzare: R-B9-bis.",
+    "status": "chiusa",
+    "priority": "media",
+    "decision": "R-B9, R-B9-bis",
+    "issue": "",
+    "prompt": "",
+    "commits": "1cee0e252",
+    "concerns": [
+      "concrete-syntax"
+    ],
+    "milestone": "Seguiti sessione 2026-08-08",
+    "deps": [],
+    "version": "3.0"
+  },
+  {
+    "id": "seed-rb9bis",
+    "type": "debt",
+    "title": "R-B9-bis a verbale in decisions.md",
+    "desc": "CHIUSA E PUSHATA il 9/8 notte (secondo giro): 7ce6cdd90 mette R-B9-bis a verbale subito dopo R-B9, sezione Edge IR (+10 righe, zero cancellazioni: criterio authoring-time vs render-time, precedente compileEdgeView/validateIR); 8704221de ruota il log da 58 a 20 entry attive, 38 in coda all'archivio preesistente (da 673 a 711; totale conservato 731). check:docs 2/2 dopo ciascun commit; scope verificato su origin da clone shallow: solo i tre file docs attesi. Nuovo tip del branch: 8704221de.",
+    "status": "chiusa",
+    "priority": "media",
+    "decision": "R-B9-bis",
+    "issue": "",
+    "prompt": "claude/2026-08-09_prompt_rb9bis_rotazione_log.md",
+    "commits": "7ce6cdd90 8704221de",
+    "concerns": [
+      "process"
+    ],
+    "milestone": "Consolidamento 2026-08-09",
+    "deps": [
+      "seed-irvalidate"
+    ],
+    "version": "process v1.1"
+  },
+  {
+    "id": "seed-igiene",
+    "type": "debt",
+    "title": "Voce 5 — grappolo igiene",
+    "desc": "TUTTI E TRE I PUNTI CHIUSI. Test duplicato: falso positivo (e23fb6439). Stringa B-5: chiusa (e5d238cd9). InfoTooltip: ESEGUITO IN LOCALE — Alfonso ha portato il git log del suo Mac il 9/8 tarda notte, 10 commit locali mai pushati, tra cui db6ca7155 (estrazione primitiva) + 9e8b07162 (restyle + title) + d8096803a (verbale smoke), esattamente D-5-1/D-5-2 come pianificato. Non è mai stato un incidente di deriva: era lavoro reale, solo non pushato — il 404 su origin era corretto per origin, non per l'esistenza del lavoro. Push eseguito il 9/8 notte (e5d238cd9..956392965): i tre commit InfoTooltip sono su origin.",
+    "status": "chiusa",
+    "priority": "media",
+    "decision": "nota 7 (2026-08-05), D-5-1, D-5-2",
+    "issue": "",
+    "prompt": "claude/2026-08-09_prompt_voce5_infotooltip_ui.md; claude/2026-08-09_prompt_voce5_infotooltip_emendamento_1_restyle.md",
+    "commits": "1dd464162 e23fb6439 e5d238cd9 db6ca7155 9e8b07162 d8096803a",
+    "concerns": [
+      "concrete-syntax",
+      "design-system",
+      "properties-card"
+    ],
+    "milestone": "Coda post-arco A (2026-08-06)",
+    "deps": [
+      "seed-infotooltip"
+    ],
+    "version": "3.0"
+  },
+  {
+    "id": "seed-infotooltip",
+    "type": "debt",
+    "title": "InfoTooltip — primitiva condivisa in ui/",
+    "desc": "CHIUSA IN LOCALE il 9/8 tarda notte: db6ca7155 (extract shared InfoTooltip primitive from four duplicated copies) + 9e8b07162 (dark panel styling and optional title for InfoTooltip) + d8096803a (verbale smoke di entrambi i commit). Git log del Mac di Alfonso confermato: origin/alfonso-frontend-jjtl..HEAD mostra i tre commit tra i 10 non ancora pushati. D-5-1 e D-5-2 eseguite come ratificate. Push eseguito il 9/8 notte: i tre commit sono su origin, verificati singolarmente come antenati del branch remoto.",
+    "status": "chiusa",
+    "priority": "media",
+    "decision": "D-5-1, D-5-2",
+    "issue": "",
+    "prompt": "claude/2026-08-09_prompt_voce5_infotooltip_ui.md; claude/2026-08-09_prompt_voce5_infotooltip_emendamento_1_restyle.md; claude/2026-08-09_prompt_voce5_emendamento_2_push.md",
+    "commits": "db6ca7155 9e8b07162 d8096803a",
+    "concerns": [
+      "design-system",
+      "concrete-syntax"
+    ],
+    "milestone": "Consolidamento 2026-08-09",
+    "deps": [],
+    "version": "3.0"
+  },
+  {
+    "id": "seed-select",
+    "type": "debt",
+    "title": "Micro-commit decisions.md — D-4-9 + nota Select",
+    "desc": "Registrata chiusa con e9e6d1ccd: riga D-4-9 (riconciliazione R-F di chat ≡ D-4-1..D-4-8, residuo = U-2) più nota Select in coda ad Arco A, con i path dei DUE Select omonimi: components/ui/Select/Select.tsx:91 (opzione vuota non disabilitata, il colpevole della voce 3) vs forEndUser/Input.tsx:451 (disabled, il pattern giusto). DIVERGENZA RISOLTA (9/8 sera): il ricontrollo esaustivo ha verificato e9e6d1ccd sulla pagina commit reale di GitHub, tra i dieci del push 40820fe21..e5d238cd9, con contenuto conforme (riga D-4-9 più nota Select). La voce resta chiusa; la riga di backlog 'nota Select non ancora scritta' era stale ed è stata rimossa dal contesto al consolidamento del 9/8 notte.",
+    "status": "chiusa",
+    "priority": "bassa",
+    "decision": "RC-4, D-4-9",
+    "issue": "",
+    "prompt": "claude/2026-08-08_prompt_microcommit_decisions_d49_select.md",
+    "commits": "e9e6d1ccd",
+    "concerns": [
+      "design-system",
+      "process"
+    ],
+    "milestone": "Seguiti sessione 2026-08-08",
+    "deps": [],
+    "version": "process v1.1"
+  },
+  {
+    "id": "seed-ctx",
+    "type": "debt",
+    "title": "Consolidare contesto_progetto.md",
+    "desc": "RISOLTO il 9/8 notte: Alfonso ha portato il git log reale del suo Mac (origin/alfonso-frontend-jjtl..HEAD, 10 commit). Il gap segnalato nel giro precedente (report Fase 0 voce 6 assente da origin) era lavoro locale non pushato, non un buco di processo: e78afff00 lo contiene. Voce 5 e voce 6 sono COMPLETE in locale, mai eseguite in modo fasullo. Push eseguito il 9/8 notte. Lezione: la verifica su origin da sola non basta quando l'esecutore lavora in locale prima del push — va sempre chiesto anche un git log locale quando lo stato appare incoerente. QUARTO EPISODIO (10/8 notte): il contesto dava tip 6e4b02fcc e residuo presente; origin era a 12ad6de83 con B2/A3-bis chiuse e residuo dissolto. Regola nuova a contesto: riconsolidare PRIMA di generare prompt di ripresa.",
+    "status": "chiusa",
+    "priority": "alta",
+    "decision": "",
+    "issue": "",
+    "prompt": "",
+    "commits": "",
+    "concerns": [
+      "process"
+    ],
+    "milestone": "Seguiti sessione 2026-08-08",
+    "deps": [],
+    "version": "process v1.1"
+  },
+  {
+    "id": "seed-branch",
+    "type": "debt",
+    "title": "Verifica ahead reale e push del ramo",
+    "desc": "DUE GIRI COMPLETATI. Primo: 40820fe21..e5d238cd9 (10 commit). Secondo (9/8 notte): push in due range, e5d238cd9..956392965 (i 10 commit di voce 5 e voce 6) più 956392965..3fdb4c14f (entry di log, solo docs/claude-code-log.md). Tip locale = tip remoto = 3fdb4c14f; origin..HEAD = 0; tutti e dieci gli hash verificati singolarmente come antenati di origin. Gate sul push: build ok, tsc 33 baseline, vitest 1122 passed (9 collection failures note), check:docs 2/2 rilanciato dopo l'entry di log. CODA AL 10/8 SERA: 6 commit locali da pushare, riportati da Claude Code — 6b8e91d73, 473813c5f, 47603c613, a801403ba, f4e72f88f, 569f78735. I due in coda sono identificati con certezza: f4e72f88f = Slice C Commit 3 (U-7), 569f78735 = rotazione log (attivo a 20, archivio a 730, taglio senza inversioni); a801403ba = Slice C Commit 2 (U-3), verificato in sessione. AVVERTENZA APERTA: gli hash dei primi tre NON coincidono con quelli registrati la notte (ab90ed06c, 5c6c2f3de, 3dc2774e6, 03363ce6a, b0292b863, abc01825c), quindi c'è stato un rebase o un amend e la mappatura commit→voce dei più vecchi resta non verificata; anche il conteggio non torna (la notte erano 6 commit per parentviews + fusione spec, qui ne restano 3 prima di Slice C). PRIMA DEL PUSH: git log origin/alfonso-frontend-jjtl..HEAD --oneline, riallineamento degli hash su seed-parentviews e seed-fusione-spec, e solo dopo il push. AGGIORNAMENTO 10/8 SERA, verificato su clone shallow di origin: il push della coda di sei è avvenuto. Origin è a 7c373df2d (\"Add documentation for rail redesign\") e contiene, dal più vecchio: 6b8e91d73, 473813c5f, 47603c613, a801403ba, f4e72f88f, 569f78735 (rotazione del NONO lotto), 6e42de745 (Fase 0 discovery). AVVERTENZA CHIUSA: nessun rebase è avvenuto. ab90ed06c, 5c6c2f3de, 3dc2774e6, 03363ce6a, b0292b863 e abc01825c sono tutti antenati di origin con gli hash originali; i due che sembravano non mappabili, 6b8e91d73 e 473813c5f, erano i primi due commit di Slice C, non commit vecchi riscritti. La mappatura commit verso voce è quindi integra. CORREZIONE AL CHECKPOINT: il passo \"push di 6e42de745\" non ha oggetto, quel commit è già su origin. CODA ATTUALE: due commit locali non pushati, 4d215ff0e (C9.1) più la rotazione del DECIMO lotto eseguita la sera del 10/8, il cui hash va letto dal git log sul Mac (questa sessione non ha accesso al working tree). AGGIORNAMENTO 11/8 NOTTE: la coda locale non pushata sale a dieci commit. Nove hash noti, nell'ordine: 4d215ff0e (C9.1), 10dc25879 (rotazione del decimo lotto), e4cef2b24 (report di ancoraggio del passo 0), 1eb008937 (registro R-RAIL-1..22 più nota U-2), bcc68da8f (guscio del passo 2), 77e2bb6a6 (ritiro della postura, passo 2-bis), 9808a812d (NODE come disclosure), ef1260ddc (NODE chiusa di default), 2a9226c0f (registro R-RAIL-24..26). Il decimo è un docs di R-RAIL-23 il cui sha non è stato riportato in sessione e va letto dal git log sul Mac. PUNTO CHIUSO: la rotazione del decimo lotto, che al giro precedente era registrata senza hash, è 10dc25879. AGGIORNAMENTO 11/8 POMERIGGIO: il push dell'arco 1 e' avvenuto, fast-forward abe5fdc8b..54154fd4a, dieci commit e nove file, verificato per path. CODA ATTUALE, 11/8 SERA: dieci commit locali non pushati, tutti dell'arco 2, negli hash noti e nell'ordine: fdcbbb357, b80e713d3, a24567576, 7decf84d2 (passo 1), f8a680db9, 30f5e1855, 9911f802f, 7d67f3b94, 1b27b3e23, b52c2bb8f (passo 2). Il push e' pianificato alla chiusura del passo 3, non prima. AGGIORNAMENTO 12/8 NOTTE: IL PUSH DELL'ARCO 2 E' AVVENUTO e la coda e' vuota. origin/alfonso-frontend-jjtl e' a f48cc299a; git rev-list --count origin/alfonso-frontend-jjtl..HEAD da' 0; il reflog del ref remoto porta update by push su f48cc299a, quindi il ref non e' allineato da una fetch ma da una scrittura. Quattordici commit dell'arco 2 pubblicati in un solo push, i dieci dei passi 1 e 2 piu' i quattro del passo 3. Working tree pulito, con il solo .claude/settings.local.json non tracciato. La voce si chiude qui e si riapre quando una coda nuova si forma. AGGIORNAMENTO 13/8 NOTTE: la coda si e' riformata e si e' svuotata di nuovo. Undici commit pushati in un giro, i dieci dell'arco 2 residuo prodotti in sessione Cowork su clone Linux e consegnati come git bundle, piu' e88fca7df scritto in locale sopra di essi. Origin e' a e88fca7df. NOTA DI METODO NUOVA, che nessun giro precedente aveva: i commit non sono stati scritti sul Mac ma su un clone, perche' le scritture git sul mount del bridge lasciano lock stantii; il trasporto e' stato un git bundle, che si applica in fast-forward e non richiede rete. Il primo bundle generato era inutilizzabile, creato come range 7998de976..HEAD, che porta gli oggetti ma nessun ref con un nome: git pull rispondeva couldn't find remote ref. Rigenerato come 7998de976..alfonso-frontend-jjtl e provato su un clone pulito prima di consegnarlo. AGGIORNAMENTO 13/8 (misurato su clone di origin, non riferito): origin/alfonso-frontend-jjtl e' a 93800c7, due commit sopra e88fca7df, entrambi di sola documentazione e gia' pushati: 9031c6ce6 (R-RAIL-43, emendamento a R-RAIL-27, bundle di trasporto cancellato) e 93800c719 (addendum al report di triage). LA CODA SI E' RIFORMATA e la voce si riapre: il fix del booleano obbligatorio, implementato e verificato a video nella notte del 13, NON e' su origin. Misura: grep di requiredBooleanInitialValues su frontend/src del clone da' zero occorrenze, con controllo positivo _forceConformity a cinque, quindi il silenzio e' un risultato e non un comando che non ha girato. Quanti commit ci siano in coda non e' deducibile da qui: il prompt ne prevedeva due con hard stop in mezzo, e quale dei due sia stato eseguito e' la prima domanda della prossima sessione. Da qui si vede solo che nessuno dei due e' pubblico.",
+    "status": "in coda",
+    "priority": "alta",
+    "decision": "",
+    "issue": "",
+    "prompt": "",
+    "commits": "40820fe21 e5d238cd9 956392965 3fdb4c14f 569f78735 7c373df2d 54154fd4a f48cc299a e88fca7df 9031c6ce6 93800c719",
+    "concerns": [
+      "process",
+      "tooling"
+    ],
+    "milestone": "Consolidamento 2026-08-09",
+    "deps": [],
+    "version": "process v1.1"
+  },
+  {
+    "id": "seed-parentviews",
+    "type": "bug",
+    "title": "Bug allPossibleParentViews (null-check)",
+    "desc": "CHIUSA IN LOCALE il 10/8 (sessione Cowork autonoma, mandato di Alfonso). Verifica su HEAD: la voce 4 NON l'aveva toccato. Root cause: get_viewpoint ritorna undefined su catena father ciclica o dangling (per sua scelta dichiarata), la riga 447 faceva vp.id senza guardia; innesco da dati sporchi persistiti, crash del render del pannello. Fix minimo if (vp) con commento, report tracciato in docs/discovery/discovery_2026-08-10_allpossibleparentviews_nullcheck.md. Gate nel clone cloud: typecheck delta 0, vitest 1125 passed (9 collection failures note), build ok. SMOKE DI NON REGRESSIONE PASSATO (Alfonso, 10/8 mattina), verdetto a log con 3dc2774e6. Commit locali: ab90ed06c + 5c6c2f3de + 3dc2774e6; resta il push. HASH DA RIALLINEARE (10/8 sera): la coda del branch mostra ora 6b8e91d73/473813c5f/47603c613 al posto dei tre registrati qui, quindi dopo il rebase questi hash sono probabilmente stali. Da correggere col git log prima del push (vedi seed-branch).",
+    "status": "chiusa",
+    "priority": "alta",
+    "decision": "",
+    "issue": "",
+    "prompt": "claude/2026-08-10_prompt_nullcheck_allpossibleparentviews.md",
+    "commits": "ab90ed06c 5c6c2f3de 3dc2774e6",
+    "concerns": [
+      "concrete-syntax",
+      "properties-card"
+    ],
+    "milestone": "Consolidamento 2026-08-09",
+    "deps": [],
+    "version": "3.0"
+  },
+  {
+    "id": "seed-q4b",
+    "type": "debt",
+    "title": "Amendment q4b (sospensiva)",
+    "desc": "Rimandato al cruscotto per decisione di Alfonso (9/8 pomeriggio): resta a registro qui come voce da verificare in una prossima sessione; la voce 5 non lo aspetta. Dipendente da voce 4/q4, dettaglio della sospensiva ancora da consolidare. Verificato il 10/8 notte: NON ricostruibile da repo o KB, l'unica fonte è la chat 'Cruscotto della situazione'.",
+    "status": "in coda",
+    "priority": "media",
+    "decision": "",
+    "issue": "",
+    "prompt": "",
+    "commits": "",
+    "concerns": [
+      "concrete-syntax"
+    ],
+    "milestone": "Consolidamento 2026-08-09",
+    "deps": [
+      "seed-father"
+    ]
+  },
+  {
+    "id": "seed-fusione-spec",
+    "type": "debt",
+    "title": "Fusione spec ViewpointIR v1.2 e ritiro di docs/specs/",
+    "desc": "CHIUSA IN LOCALE il 10/8 mattina, dopo ratifica esplicita di Alfonso di R-FS1..R-FS7 (memo claude/2026-08-10_memo_fusione_spec_v12.md). Tre commit: 03363ce6a (merge nella canonica: wildcard sez. 2 e 4, hunk 7 sez. 9, hunk 8 emendamento multi-hop sez. 12, header emendamenti; copia divergente ritirata), b0292b863 (docs/specs/ ritirata, design doc slice-1 migrato a nome conservato, 2 riferimenti vivi a path completo, riga redirect in spec_attive.md), abc01825c (rotazione log, ottavo lotto). Verifica: diff residuo fra le copie = i soli hunk KB tenuti; grep docs/specs/ su spec e codice = solo la riga di redirect; check:docs 2/2. Resta il push. HASH DA RIALLINEARE (10/8 sera): i tre hash qui registrati non compaiono più nella coda del branch (6 commit, nessuno dei quali coincide); dopo il rebase vanno riletti dal git log prima del push (vedi seed-branch).",
+    "status": "chiusa",
+    "priority": "media",
+    "decision": "R-FS1..R-FS7",
+    "issue": "",
+    "prompt": "claude/2026-08-10_prompt_fusione_spec_v12_fase2.md",
+    "commits": "03363ce6a b0292b863 abc01825c",
+    "concerns": [
+      "process",
+      "tooling"
+    ],
+    "milestone": "Consolidamento 2026-08-09",
+    "deps": [],
+    "version": "process v1.1"
+  },
+  {
+    "id": "seed-vocab",
+    "type": "feature",
+    "title": "Cruscotto — vocabolari dinamici (tipi, stati, priorità, versioni)",
+    "desc": "Ratificato il 10/8 sera (V-1, V-2, V-3) ed eseguito nella stessa sessione. V-1: i quattro vocabolari diventano liste editabili come già concern e milestone, ma con nucleo riservato — lo stato terminale (flag terminal, oggi «chiusa») è rinominabile e non eliminabile perché 14 punti del codice ne dipendono (percentuali di milestone, contatore aperte/chiuse, anello eseguibile, colore dei nodi del grafo, drift della catena I); l'ordine delle priorità è la loro gerarchia, la prima è quella evidenziata e pesa di più nell'ordinamento. V-2: i vocabolari vivono nella chiave jjodel-trace-vocab, separata e NON versionata, quindi sopravvivono a un reseed; ci sono migrati anche concern e milestone, che prima si perdevano a ogni cambio di chiave. V-3: i valori nuovi pescano il colore da una palette del design system in ordine deterministico. Modello dei dati: ogni valore ha id stabile (quello che le voci memorizzano) e label modificabile, quindi rinominare non migra nulla e non muove gli slug del connettore issue. SEGUITO APERTO: sync_issues_cruscotto.mjs ha LABEL_COLORS con le chiavi stato:/trace:/prio: cablate sui valori vecchi; con vocabolari liberi le label nuove nascono senza colore. Da derivare dal vocabolario prima della prima sync reale.",
+    "status": "chiusa",
+    "priority": "bassa",
+    "decision": "V-1, V-2, V-3",
+    "issue": "",
+    "prompt": "",
+    "commits": "",
+    "concerns": [
+      "tooling",
+      "process",
+      "design-system"
+    ],
+    "milestone": "Consolidamento 2026-08-09",
+    "deps": [
+      "seed-cruscotto-v3"
+    ],
+    "version": "process v1.1"
+  },
+  {
+    "id": "seed-flatten",
+    "type": "debt",
+    "title": "Flattening di editors/viewpoint/",
+    "desc": "Debito cosmetico, deferred a quando quell'area viene toccata di nuovo per altri motivi.",
+    "status": "idea",
+    "priority": "bassa",
+    "decision": "",
+    "issue": "",
+    "prompt": "",
+    "commits": "",
+    "concerns": [
+      "tooling"
+    ],
+    "milestone": "Consolidamento 2026-08-09",
+    "deps": []
+  },
+  {
+    "id": "seed-ghsync",
+    "type": "feature",
+    "title": "Connettore GitHub Issues del cruscotto",
+    "desc": "Sync della tracciabilità con le issue di jjodel-frontend. Ratifiche del 9/8 sera: scritture eseguite in sessione Cowork con fine-grained PAT on-demand (mai persistito); scope = sole voci aperte e future; master = cruscotto (le modifiche manuali su GitHub sono drift: segnalate e sovrascritte). Motore: claude/sync_issues_cruscotto.mjs, idempotente via marker; label cruscotto/trace/prio/stato, milestone GitHub reali, report created/updated/closed/reopened/drift/orfane; dry-run di default. VALIDAZIONE 10/8 notte (Cowork): motore esercitato in dry-run con API mockata sul seed v16, 26 voci parse ok, piano corretto (9 create, 17 skip); la chiamata API reale dal container cloud è bloccata dal proxy GitHub del sandbox, quindi la prima sync col PAT va lanciata dal Mac.",
+    "status": "in lavorazione",
+    "priority": "media",
+    "decision": "",
+    "issue": "",
+    "prompt": "",
+    "commits": "",
+    "concerns": [
+      "tooling",
+      "process"
+    ],
+    "milestone": "Consolidamento 2026-08-09",
+    "deps": [],
+    "version": "process v1.1"
+  },
+  {
+    "id": "seed-commenti",
+    "type": "debt",
+    "title": "Pass sui commenti di codice in italiano",
+    "desc": "Nato da Voce 6/D9 e dichiarato fuori da R-4: 593 righe di commenti italiani in 99 file, volume 3,5 volte le stringhe UI, con file della critical zone dove il diff di commento è rumore puro. Se mai si farà, sarà una voce a sé con costo e rischio valutati separatamente.",
+    "status": "idea",
+    "priority": "bassa",
+    "decision": "D9",
+    "issue": "",
+    "prompt": "",
+    "commits": "",
+    "concerns": [
+      "tooling",
+      "process"
+    ],
+    "milestone": "Consolidamento 2026-08-09",
+    "deps": [],
+    "version": "3.2"
+  },
+  {
+    "id": "seed-cruscotto-v3",
+    "type": "feature",
+    "title": "Cruscotto di tracciabilità in gallery Cowork",
+    "desc": "Attività Cowork del 9/8: cruscotto riallineato ai consolidamenti e migrato ad artefatto persistente jjodel-tracciabilita nella sidebar del desktop, aggiornabile in place dalle sessioni Cowork; sorgente in claude/tracciabilita-jjodel.jsx nel knowledge base. Design v2 confermato: seed incorporato senza patch (chiave storage nuova a ogni reseed), sync GitHub sostituita dal pannello incolla git log. 10/8: campo 'versione target' per voce (3.0..4) con filtro a checkbox come gli stati, filtro milestone convertito a checkbox multi-selezione, sorgente jsx risincronizzato nel KB. 10/8 sera: reseed v19 (p20260810c), 32 voci, quattro nuove (Slice C, allineamento toggle, punto 2 viewpoint, arco rail); prima di ricompilare, il sorgente ricostruito è stato verificato byte per byte contro il bundle pubblicato. 10/8 NOTTE: reseed v20 (p20260810d). Aggiornamento eseguito come patch chirurgica del bundle pubblicato (array SEED, STORE_KEY, SEED_ID, APP_VERSION), senza ricostruire il sorgente jsx, che nel knowledge base resta fermo a v16 per la ragione già registrata. Lo stato di git di questo giro non è stato preso dalla chat ma da un clone shallow di origin, e ha corretto due fatti: nessun rebase sui commit della notte, e il passo \"push di 6e42de745\" privo di oggetto. 11/8 NOTTE: reseed v21 (p20260811a), 50 voci, sette nuove (arco 1, passo 4, passo 5, arco 2, caret slate-400, chiave tree height, tre regole di protocollo). Patch chirurgica del bundle come al giro precedente, con due verifiche a monte: il codice fuori dall'array SEED è risultato identico byte per byte prima e dopo la sostituzione, e i letterali di interfaccia del bundle v20 coincidono uno per uno con quelli del sorgente jsx v19, quindi fra v19 e v20 sono cambiati solo i dati e le tre costanti. Verifica headless prima della pubblicazione: nessun errore in console, 50 voci, 26 aperte, 24 chiuse, grafo disegnato. DRIFT DICHIARATO: il sorgente jsx nel knowledge base resta fermo al codice v19; per non lasciare i dati solo dentro il bundle minificato, il seed è ora versionato a parte in claude/tracciabilita_seed_v21.json. Riallineare il jsx è una voce di lavoro a sé, non un effetto collaterale di un reseed. 11/8 SERA: reseed v27 (p20260811g), 65 voci, dieci nuove dall'arco 2. Il seed di partenza non e' stato preso dal knowledge base, che era fermo a v24, ma estratto per bracket matching dal bundle pubblicato, che era gia' a v26: la fonte di verita' e' il pubblicato, non la copia. 12/8 NOTTE: reseed v28 (p20260812a), 70 voci, cinque nuove dal passo 3 dell'arco 2 e quattordici aggiornate. Stesso metodo, patch chirurgica del bundle pubblicato con confronto dei caratteri fuori dall'array prima e dopo. QUESTO GIRO HA LETTO LO STATO DAL REPO SUL MAC invece che dai report di sessione: git log, docs/decisions.md, docs/TECH-DEBT.md e docs/claude-code-log.md via bridge, con il push verificato sul reflog del ref remoto e non sul racconto della sessione. E' R-RAIL-28 applicata alla fonte del cruscotto. 13/8: reseed v31 (p20260813b), 90 voci, tredici nuove e sei aggiornate. Lo stato e' stato letto da un clone read-only di origin a 93800c7 e non dai report di sessione, come al giro precedente, con una differenza di metodo che questo giro aggiunge: sono stati confrontati DUE registri, docs/TECH-DEBT.md e il seed, e il confronto ha trovato che sei debiti aperti nel repo non erano mai entrati nel cruscotto e che una voce chiusa nel cruscotto e' rimasta aperta nel repo (voce seed-techdebt-drift). Il seed di partenza e' stato estratto per bracket matching dal bundle pubblicato, con round-trip verificato: la riserializzazione dell'array e' identica byte per byte all'originale prima di ogni modifica.",
+    "status": "chiusa",
+    "priority": "bassa",
+    "decision": "",
+    "issue": "",
+    "prompt": "",
+    "commits": "",
+    "concerns": [
+      "process",
+      "tooling",
+      "design-system"
+    ],
+    "milestone": "Consolidamento 2026-08-09",
+    "deps": [],
+    "version": "process v1.1"
+  },
+  {
+    "id": "seed-u-b4",
+    "type": "feature",
+    "title": "Serie U — unificazione Properties (skin B4)",
+    "desc": "Fronte separato aperto l'8 agosto (rientro: sessione 'Mockup property card' del 2026-08-08). Slice A chiusa (ddfa53179, U-6); Slice B chiusa con H-B falsificata (collisione CSS zero-width, non NumberInput). AGGIORNAMENTO 10/8: Slice B2 risultava GIÀ chiusa e pushata l'8/8 (4e9255462, regola viva a properties-with-tree-view.scss:451, test Ordinal superato allo smoke dell'8/8); Slice A3-bis chiusa dal commit diretto di Alfonso (4701b735b, token --color-sky-500 + glifo del segmented); residuo working tree dissolto. Slice D chiusa come U-2 il 9/8. AGGIORNAMENTO 10/8 SERA: anche la Slice C è chiusa in locale (tre commit), quindi tutte le slice pianificate della serie sono eseguite. Restano tre residui prima di dichiarare chiuso il fronte: smoke del Commit 1 (ritiro portale), verdetto sull'allineamento dei toggle senza label, push della coda. Fuori scope dichiarato invariato: sezione NODE, allowConditional in Basic, Q-A2 dark mode, indipendenza Composition/Aggregation, gating Extends. AGGIORNAMENTO 10/8 SERA: Slice C è chiusa e pushata (cinque commit su origin), quindi cadono due dei tre residui, lo smoke del Commit 1 e il push della coda. Resta il solo verdetto sull'allineamento dei toggle senza label. CHIUSO IL FRONTE il 12/8: l'ultimo residuo, il verdetto sull'allineamento dei toggle senza label, e' stato eseguito e verificato (voce seed-toggle-align). La serie U non ha piu' voci aperte. Restano fuori scope, invariati e dichiarati: sezione NODE, allowConditional in Basic, Q-A2 dark mode, indipendenza Composition/Aggregation, gating Extends.",
+    "status": "chiusa",
+    "priority": "media",
+    "decision": "U-1..U-8, C-1..C-3",
+    "issue": "",
+    "prompt": "claude/2026-08-10_prompt_slice_c_esecutivo.md",
+    "commits": "ddfa53179 4e9255462 4701b735b",
+    "concerns": [
+      "properties-card",
+      "design-system"
+    ],
+    "milestone": "Serie U / skin B4",
+    "deps": [],
+    "version": "3.0"
+  },
+  {
+    "id": "seed-slice-c",
+    "type": "feature",
+    "title": "Slice C — U-3 titoli, U-7 doppie label, ritiro portale",
+    "desc": "CHIUSA IN LOCALE il 10/8, tre commit bisecabili come da memo. Commit 1 = ritiro del portale di ViewData (C-3, l'unico con rischio funzionale: help all'host, back nell'header, via createPortal/headerSlot/querySelector globale). Commit 2 = a801403ba, meccanismo unico dei titoli via FormSection (C-1 strada a): 14 siti convertiti (Matching 1, EnableIR 2, Row 4, Edge 7), marginTop dei figli diretti rimossi; accettate le due decisioni autonome di Code (titoli di pannello anch'essi FormSection; Endpoints dentro il fragment isObject). Commit 3 = f4e72f88f, applicazione della policy Q5 alle doppie label dei toggle (C-2 strada b): sulle 18 coppie censite, 5 rimozioni di classe 1 (LabelEntryEditor x2, BadgeListEditor, RowAuthoringPanel, FieldCompartmentListEditor), 2 riscritture di classe 2 (Separator → Row separators; Children filter → Filter by metaclass (isKind), con (isKind) tenuto perché distingue il filtro base dal ramo advanced predicate), 7 di classe 3 intatte (wildcard, predicate, exclusive in Matching/Row/Edge) e 4 label-uniche non toccate (FieldSegmentEditor, label center dell'edge, Include else branch, Resizable). Gate del Commit 3: typecheck 33 (delta 0), build ok, vitest src/components 324/324, check:docs 2/2. RESIDUO: lo smoke del Commit 1 (back, help, Parent view) non è coperto dal verdetto Q7, che nominava il solo Commit 2. AGGIORNAMENTO 10/8 SERA: chiusa e pushata, verificata da clone di origin e non dalla memoria della chat. Su origin la slice pesa CINQUE commit, non tre: il Commit 1 del memo si è materializzato in due, 6b8e91d73 (ritiro del portale di ViewData, Q4) e 473813c5f (rimozione del back dai due header di property card), mentre 47603c613 è il Parent view che rispecchia il tree con le voci proibite disabilitate. Q7 superato con verifica visiva di Alfonso; il residuo dello smoke del Commit 1 è quindi chiuso.",
+    "status": "chiusa",
+    "priority": "media",
+    "decision": "C-1(a), C-2, C-3, U-3, U-7, Q5, Q7",
+    "issue": "",
+    "prompt": "claude/2026-08-10_prompt_slice_c_esecutivo.md",
+    "commits": "6b8e91d73 473813c5f 47603c613 a801403ba f4e72f88f",
+    "concerns": [
+      "properties-card",
+      "design-system",
+      "concrete-syntax"
+    ],
+    "milestone": "Serie U / skin B4",
+    "deps": [],
+    "version": "3.0"
+  },
+  {
+    "id": "seed-toggle-align",
+    "type": "debt",
+    "title": "U-7 — allineamento misto dei toggle senza label",
+    "desc": "Effetto di rimbalzo del Commit 3, sollevato da Claude Code al gate. Il wrapper del Toggle usa space-between: tolta la prop label, l'interruttore resta figlio unico e si appoggia a sinistra sotto la propria label di campo, mentre i toggle che hanno conservato la label restano spinti contro il bordo destro. Il difetto non è sinistra contro destra: è che nello stesso pannello convivono due allineamenti, e la colonna verticale di pallini che serviva da affordance di scansione è rotta a metà. U-7 ratificava la rimozione di testo ridondante, non lo spostamento del controllo; il memo di Slice C escludeva esplicitamente la migrazione a jj-toggle-row perché cambio di layout. PROPOSTA (da ratificare dopo verifica a video): una sola regola additiva, margin-left auto sul toggle quando è figlio unico del wrapper, così la colonna si ricompone; zero DOM, zero rinomine, nome della classe da verificare con grep e non da inventare. L'alternativa tutti-a-sinistra coincide con l'arco jj-toggle-row e resta fuori scope. AGGIORNAMENTO 10/8 SERA: con Slice C chiusa e pushata questa è l'unica voce che tiene aperto il fronte della serie U. CHIUSA IL 12/8 (sessione Cowork autonoma), con la regola che la voce stessa proponeva: margin-left auto sul toggle quando e' figlio unico del wrapper, una riga additiva in Toggle.module.css, zero DOM e zero rinomine. VERIFICATA A/B SUL CSS EMESSO, non leggendo il foglio: con la regola l'interruttore senza label computa margin-left 288px e tocca il bordo destro, spegnendo dal CSSOM la sola regola :only-child torna a 0px e al bordo sinistro, che e' il difetto. Controllo negativo: ricostruendo la build senza la modifica la regola non compare affatto nel CSS emesso.",
+    "status": "chiusa",
+    "priority": "media",
+    "decision": "U-7, C-2, Q5",
+    "issue": "",
+    "prompt": "",
+    "commits": "988be2f6",
+    "concerns": [
+      "properties-card",
+      "design-system"
+    ],
+    "milestone": "Serie U / skin B4",
+    "deps": [
+      "seed-slice-c"
+    ],
+    "version": "3.0"
+  },
+  {
+    "id": "seed-vp-tree",
+    "type": "bug",
+    "title": "Punto 2 — viewpoint non selezionabile nel tree",
+    "desc": "CHIUSA IL 10/8 SERA COME NON RIPRODUCIBILE, nessun codice toccato. Lo snippet discriminante ha falsificato la diagnosi invece di confermarla. Il progetto ha DUE viewpoint reali con nomi distinti (\"Class Diagram\" dell'8/8 e \"ggg\" del 10/8), non uno materializzato due volte; vpDalGetterL coincide esattamente con Defaults.viewpoints più il campo D, come prescrive get_viewpoints (joiner/classes.ts:3323); nello store ci sono quattro DViewPoint tutti distinti; handleClick del tree (TreeViewContent.tsx:1328-1340) scrive vp.id dalla closure della riga, mai un indice, quindi nessuno scarto di posizione. Verifica a video di Alfonso: selezionare un viewpoint si comporta correttamente. La diagnosi poggiava sulla premessa \"il progetto ha un solo viewpoint\", falsa già nel momento in cui fu scritta. RESIDUO NON SPIEGATO: l'id Pointer1786285503592_USER_185 della \"prima lettura\" non esiste nello stato attuale. Se il sintomo ricompare, ripartire da lì e non dalla teoria della doppia materializzazione.",
+    "status": "chiusa",
+    "priority": "alta",
+    "decision": "",
+    "issue": "",
+    "prompt": "",
+    "commits": "",
+    "concerns": [
+      "sync-layer",
+      "concrete-syntax",
+      "properties-card"
+    ],
+    "milestone": "Consolidamento 2026-08-09",
+    "deps": []
+  },
+  {
+    "id": "seed-rail",
+    "type": "feature",
+    "title": "Arco rail destro — fusione Tree view e Properties",
+    "desc": "RATIFICATO PER INTERO IL 10/8. ARCO 1 IMPLEMENTATO E VERIFICATO L'11/8, resta il passo 5 di sola documentazione; arco 2 non iniziato. Due giri di ratifiche con una Fase 0 di discovery in mezzo: R-RAIL-1..R-RAIL-5 dal primo memo, R-RAIL-6..R-RAIL-13 dal secondo, tutte accettate da Alfonso. IMPIANTO: il rail è un guscio, l'inspector uno slot polimorfo; l'arco 1 scrive un solo renderer, quello dell'elemento di metamodello, e i pannelli di authoring non si toccano (R-RAIL-1). Solo preset 2a, niente gear né popover, componente parametrico senza rami morti, segmented Basic/Advanced fermo nella top bar (R-RAIL-3). La sezione NODE resta nel guscio, gated su advanced, restilata come disclosure: spostarla dentro l'inspector cambierebbe quando compare, non solo dove (R-RAIL-12). Il rail legge solo Redux state.advanced (R-RAIL-13). TOKEN E STILE: si consumano --color-selection-bg e --color-selection-bar, mai letterali, e nessuna unificazione col sky (R-RAIL-4); si consumano var(--font-sans) e var(--font-mono), mai nomi di famiglia (R-RAIL-5). Sui due sistemi di token nessuna scelta di sistema ma una lista nera di 13 nomi che i due definiscono con valori diversi (R-RAIL-6). I 7 valori nuovi: tre altezze letterali nel foglio del rail dentro un blocco di commento, quattro coppie entity promosse a token in un commit separato e precedente, C9.1 (R-RAIL-9). Sui 14 valori snap si adotta sempre il gradino vicino e si emenda il design, con due eccezioni: letter-spacing 0.08em resta letterale e le quattro ombre si compongono, mai --shadow-* (R-RAIL-10). RIUSO: il tree pane riusa TreeViewContent e ne adotta il solo restyle, rinviando badge lettera, filtro che appiattisce e cambio di indent (R-RAIL-7). Nessuna barra di selezione: restano la pill e il peso 600, che soddisfano lo stesso requisito di accessibilità senza ribaltare la Fase 2 C1 del 28/7 (R-RAIL-8). Una visibilità e una larghezza in storage; spariscono cardMaximized, i due toggleMaximize, lo splitter e i due CollapsedPanelToggle; --jj-canvas-right-inset resta il contratto verso il canvas (R-RAIL-11). EMENDAMENTO A R-RAIL-5: i font SONO caricati, _typography.scss:81,84 importa Inter e IBM Plex Mono da Google Fonts. C5.2 è nullo, non esiste alcuna dipendenza da introdurre; l'errore veniva da una grep chiusa con head -20 ed era finito nel primo memo, nel prompt di Fase 0 e in contesto_progetto.md, tutti e tre corretti. U-2 è superato solo nella parte posizionale del breadcrumb: il breadcrumb di \"Applies to\" è semantica della view e sopravvive; la nota va scritta in docs/decisions.md all'apertura dell'implementazione (R-RAIL-2). PROSSIMO ATTO: il prompt di implementazione dell'arco 1, il documento più lungo della serie, che deve portare la lista nera dei 13 token, la tabella di mapping di D3, gli emendamenti al design e la nota U-2. AGGIORNAMENTO 11/8: implementazione avviata e arco riperimetrato in corsa. Le ratifiche salgono a 26: R-RAIL-14..R-RAIL-26 sono nate durante l'esecuzione, non prima. R-RAIL-26 emenda R-RAIL-1 e sposta il renderer dell'elemento di metamodello all'arco 2, quindi l'arco 1 consegna guscio, slot e restyle del tree, non il renderer. L'avanzamento vive ora nelle voci di arco 1 e di arco 2; questa resta la voce cappello del fronte. CORREZIONE DI MODELLO (11/8): il contenitore dipende ora anche da seed-rail-arco1 e seed-rail-arco2. Prima dipendeva dalle sole Fase 0 e C9.1, quindi risultava eseguibile subito e l'ordinamento topologico lo metteva in cima alla milestone, mentre logicamente e l'ultimo a chiudersi. AGGIORNAMENTO 11/8 SERA: arco 1 chiuso e pushato; arco 2 aperto e in corso, con i passi 1 e 2 chiusi in locale. Le ratifiche salgono a trenta: R-RAIL-27 sul working tree non invariante per macchina, R-RAIL-28 sulla prova delle ricerche, R-RAIL-29 sul grep che non e' GNU, R-RAIL-30 sulla scala entity a sorgente unica. Due candidate in attesa di iscrizione, R-RAIL-31 e R-RAIL-32. AGGIORNAMENTO 12/8 NOTTE: arco 1 e arco 2 entrambi pubblici, quattordici commit dell'arco 2 pushati in un solo giro. Le ratifiche salgono a TRENTATRE: R-RAIL-31 sui glob nei comandi di prompt, R-RAIL-32 sulla regola di famiglia contro i fratelli simultanei, R-RAIL-33 sulla scala che non entra nel tree, piu' l'emendamento a R-RAIL-28 esteso alle asserzioni di presenza. Nessuna candidata in attesa di iscrizione. Il fronte aperto dell'arco 2 e' ora tutto di postura e identity block, nessuno di palette. AGGIORNAMENTO 12/8 SERA: entrambi gli archi sono chiusi e la voce cappello si chiude con essi. Le ratifiche salgono a QUARANTADUE: R-RAIL-34 e 35 dal passo 4, R-RAIL-36 sullo stile computato che misura solo cio' che dipinge, R-RAIL-37 sull'enumerazione dei fronti che una dichiarazione tiene, R-RAIL-38 sulla ricollocazione della postura, R-RAIL-39 sul breadcrumb, R-RAIL-40 su dove vive l'identity block, R-RAIL-41 sul chip di firma, R-RAIL-42 sui due temi. Il fronte che resta non e' di questo arco: multiplicity, flags e le disclosure Advanced/Appearance cambiano l'architettura dell'informazione del form e sono una voce nuova, seed-rail-arco3. AGGIORNAMENTO 13/8 NOTTE: l'arco e' pubblico per intero. Origin porta i dieci commit del perimetro residuo piu' la correzione dei preamboli e del commento tombale.",
+    "status": "chiusa",
+    "priority": "alta",
+    "decision": "R-RAIL-1..R-RAIL-26, C1.1, C1.2, C3.1..C3.3, C5.1, C5.3, C7.1, C9.1",
+    "issue": "",
+    "prompt": "claude/2026-08-10_memo_ratifica_arco_rail.md; claude/2026-08-10_memo_ratifica_2_rail_fase0.md",
+    "commits": "",
+    "concerns": [
+      "properties-card",
+      "design-system",
+      "process"
+    ],
+    "milestone": "Arco rail destro (redesign)",
+    "version": "3.0",
+    "deps": [
+      "seed-rail-fase0",
+      "seed-c91",
+      "seed-rail-arco1",
+      "seed-rail-arco2"
+    ]
+  },
+  {
+    "id": "seed-u2",
+    "type": "feature",
+    "title": "U-2 — breadcrumb viewpoint › parent › view",
+    "desc": "CHIUSA E PUSHATA il 9/8 notte (terzo giro): 3b1520417, breadcrumb read-only nel blocco condiviso ViewParentingFields (entrambe le superfici, irTabs e InfoData), fatherName opzionale in readViewParenting con test estesi, wrapper scoped jj-parenting-breadcrumb sulla skin globale jj-context-bar, annotazione della sospensiva R-H sciolta in decisions.md; 76 righe aggiunte, zero rimosse, scope = i 6 file del prompt (verificato su origin). Smoke di Alfonso passato, verdetto aggregato a log con 6e4b02fcc; ordine dei gate invertito (push prima dello smoke), annotato senza conseguenze. Residui: dark theme non verificato (Q-A2, fuori scope); report di Fase 0 tracciato il 9/8 notte con 4c82095dc.",
+    "status": "chiusa",
+    "priority": "media",
+    "decision": "R-F4 → U-2, R-H sciolta",
+    "issue": "",
+    "prompt": "claude/2026-08-09_prompt_u2_breadcrumb_applies_to.md",
+    "commits": "3b1520417 6e4b02fcc",
+    "concerns": [
+      "properties-card",
+      "concrete-syntax"
+    ],
+    "milestone": "Serie U / skin B4",
+    "deps": [
+      "seed-smoke4"
+    ],
+    "version": "3.0"
+  },
+  {
+    "id": "seed-r4",
+    "type": "debt",
+    "title": "Voce 6 — pass di lingua R-4",
+    "desc": "CHIUSA IN LOCALE il 9/8 tarda notte, confermata dal git log reale del Mac di Alfonso: e78afff00 (Fase 0, censimento) + a54f3b7c4/22b563638/a0bf4d1d2/970dfa761/2563b3a95 (i cinque commit di Fase 1, nell'ordine esatto del prompt) + 956392965 (verbale smoke dei cinque). Le nove ratifiche D1-D9 eseguite come decise. Push eseguito il 9/8 notte: tutti e sette i commit su origin.",
+    "status": "chiusa",
+    "priority": "media",
+    "decision": "R-4, D1..D9",
+    "issue": "",
+    "prompt": "claude/2026-08-09_prompt_voce6_langpass_r4_fase0_discovery.md; claude/2026-08-09_prompt_voce6_langpass_r4_fase1_traduzione.md",
+    "commits": "e78afff00 a54f3b7c4 22b563638 a0bf4d1d2 970dfa761 2563b3a95 956392965",
+    "concerns": [
+      "concrete-syntax",
+      "design-system",
+      "properties-card"
+    ],
+    "milestone": "Coda post-arco A (2026-08-06)",
+    "deps": [
+      "seed-r4c5"
+    ],
+    "version": "3.0"
+  },
+  {
+    "id": "seed-r4c1",
+    "type": "debt",
+    "title": "R-4 Commit 1 — stringhe sparse",
+    "desc": "8 file, 21 stringhe. Eseguito in locale: a54f3b7c4 (refactor(i18n): translate scattered UI strings to English). Su origin dal 9/8 notte.",
+    "status": "chiusa",
+    "priority": "media",
+    "decision": "R-4",
+    "issue": "",
+    "prompt": "claude/2026-08-09_prompt_voce6_langpass_r4_fase1_traduzione.md",
+    "commits": "a54f3b7c4",
+    "concerns": [
+      "design-system"
+    ],
+    "milestone": "Voce 6 — Fase 1 traduzione",
+    "deps": []
+  },
+  {
+    "id": "seed-r4c2",
+    "type": "debt",
+    "title": "R-4 Commit 2 — TextStyle",
+    "desc": "2 file, 16 stringhe. Eseguito in locale: 22b563638 (refactor(i18n): translate TextStyle panel to English). Su origin dal 9/8 notte.",
+    "status": "chiusa",
+    "priority": "media",
+    "decision": "R-4",
+    "issue": "",
+    "prompt": "claude/2026-08-09_prompt_voce6_langpass_r4_fase1_traduzione.md",
+    "commits": "22b563638",
+    "concerns": [
+      "design-system",
+      "concrete-syntax"
+    ],
+    "milestone": "Voce 6 — Fase 1 traduzione",
+    "deps": [
+      "seed-r4c1"
+    ]
+  },
+  {
+    "id": "seed-r4c3",
+    "type": "debt",
+    "title": "R-4 Commit 3 — PredicateBuilder",
+    "desc": "2 file, 26 stringhe, primitiva condivisa ui/. Eseguito in locale: a0bf4d1d2 (refactor(ui): translate PredicateBuilder to English). Su origin dal 9/8 notte.",
+    "status": "chiusa",
+    "priority": "media",
+    "decision": "R-4, D3",
+    "issue": "",
+    "prompt": "claude/2026-08-09_prompt_voce6_langpass_r4_fase1_traduzione.md",
+    "commits": "a0bf4d1d2",
+    "concerns": [
+      "design-system",
+      "language-editors"
+    ],
+    "milestone": "Voce 6 — Fase 1 traduzione",
+    "deps": [
+      "seed-r4c2"
+    ]
+  },
+  {
+    "id": "seed-r4c4",
+    "type": "debt",
+    "title": "R-4 Commit 4 — Authoring IR",
+    "desc": "6 file, 86 stringhe, il più esposto. Eseguito in locale: 970dfa761 (refactor(i18n): translate IR authoring panels to English). Su origin dal 9/8 notte.",
+    "status": "chiusa",
+    "priority": "media",
+    "decision": "R-4, D1, D2",
+    "issue": "",
+    "prompt": "claude/2026-08-09_prompt_voce6_langpass_r4_fase1_traduzione.md",
+    "commits": "970dfa761",
+    "concerns": [
+      "concrete-syntax",
+      "properties-card"
+    ],
+    "milestone": "Voce 6 — Fase 1 traduzione",
+    "deps": [
+      "seed-r4c3"
+    ]
+  },
+  {
+    "id": "seed-r4c5",
+    "type": "debt",
+    "title": "R-4 Commit 5 — Jodie",
+    "desc": "3 file: consolidamento più traduzione. Eseguito in locale: 2563b3a95 (refactor(content): consolidate and translate Jodie greeting to English), seguito da 956392965 (verbale smoke dei cinque commit). Su origin dal 9/8 notte.",
+    "status": "chiusa",
+    "priority": "media",
+    "decision": "R-4, D4",
+    "issue": "",
+    "prompt": "claude/2026-08-09_prompt_voce6_langpass_r4_fase1_traduzione.md",
+    "commits": "2563b3a95 956392965",
+    "concerns": [
+      "jodie-console",
+      "ai-integration"
+    ],
+    "milestone": "Voce 6 — Fase 1 traduzione",
+    "deps": [
+      "seed-r4c4"
+    ]
+  },
+  {
+    "id": "seed-undo",
+    "type": "bug",
+    "title": "Undo dei valori di modello",
+    "desc": "useHistory fotografa React Flow: ripristina struttura e layout ma non i valori in Redux. Serve una discovery sul canale Redux. Congelato fuori archi, ma resta il bug aperto con la priorità più alta.",
+    "status": "idea",
+    "priority": "alta",
+    "decision": "",
+    "issue": "",
+    "prompt": "",
+    "commits": "",
+    "concerns": [
+      "sync-layer"
+    ],
+    "milestone": "Fuori archi (congelati)",
+    "deps": [],
+    "version": "3.1"
+  },
+  {
+    "id": "seed-ds",
+    "type": "feature",
+    "title": "Design system di piattaforma (DS-1..DS-10)",
+    "desc": "Fronte congelato, documento di rientro claude/2026-08-05_3_kickoff_prossima_sessione.md. DS-1..DS-10 ratificate; slice 0 (checkbox) chiusa con 3e99044d8.",
+    "status": "in coda",
+    "priority": "bassa",
+    "decision": "DS-1..DS-10",
+    "issue": "",
+    "prompt": "",
+    "commits": "3e99044d8",
+    "concerns": [
+      "design-system"
+    ],
+    "milestone": "Fuori archi (congelati)",
+    "deps": [],
+    "version": "3.2"
+  },
+  {
+    "id": "seed-sky-migrazione",
+    "type": "debt",
+    "title": "Migrazione dei literal #0ea5e9 al token --color-sky-500",
+    "desc": "Debito dichiarato dalla entry retroattiva di A3-bis (4701b735b): il token --color-sky-500 esiste dal 10/8 con un solo consumatore (glifo del segmented, oggi irraggiungibile a video perché ConditionalEditor non passa icon); restano ~197 literal #0ea5e9 sparsi nel repo, che è ciò che rende quel valore l'accent di fatto senza un token che lo rappresenti. Da pianificare come slice di igiene del design system, riproiettando il conteggio sulle tre superfici vive (DS-10).",
+    "status": "idea",
+    "priority": "bassa",
+    "decision": "",
+    "issue": "",
+    "prompt": "",
+    "commits": "",
+    "concerns": [
+      "design-system",
+      "tooling"
+    ],
+    "milestone": "Fuori archi (congelati)",
+    "deps": [
+      "seed-ds"
+    ],
+    "version": "3.2"
+  },
+  {
+    "id": "seed-rail-fase0",
+    "type": "debt",
+    "title": "Fase 0 — discovery dell'arco rail",
+    "desc": "Discovery read-only sull'arco rail, eseguita da Claude Code il 10/8 e chiusa con report in repo (docs/discovery/discovery_2026-08-10_rail_fase0.md, commit 6e42de745, su origin). Undici domande aperte consegnate e tre ancore del prompt smentite, fra cui i font, che risultano caricati. I findings che hanno deciso il secondo giro di ratifiche: i due sistemi di token definiscono 304 e 169 custom property con intersezione di 27 nomi, 14 concordi e 13 divergenti, quindi la scelta \"quale sistema\" si riduce a \"evita tredici nomi\"; TreeViewSidebar.tsx è codice morto, il che rende sicuro il riuso di TreeViewContent; il dispatch polimorfo dell'inspector esiste già dentro Info.tsx:1172-1235; la selezione ha sorgente di verità unica in state._lastSelected e --color-selection-bar ha zero consumatori dal 28/7. Mapping del design sui token: 56 valori, 35 token, 14 snap, 7 nuovo.",
+    "status": "chiusa",
+    "priority": "media",
+    "decision": "",
+    "issue": "",
+    "prompt": "claude/2026-08-10_1630_prompt_rail_fase0.md",
+    "commits": "6e42de745",
+    "concerns": [
+      "properties-card",
+      "design-system",
+      "process"
+    ],
+    "milestone": "Arco rail destro (redesign)",
+    "version": "3.0",
+    "deps": []
+  },
+  {
+    "id": "seed-c91",
+    "type": "debt",
+    "title": "C9.1 — token per le quattro coppie entity",
+    "desc": "Prerequisito di R-RAIL-9, chiuso con commit separato e precedente all'arco: 4d215ff0e, tre file esatti, gate verdi (build ok, typecheck 33 uguale alla baseline, check:docs 2/2). Le quattro coppie entity del rail esistevano in TypeScript ma non come CSS custom property; ora sono token. La collisione dark fra enum e model che motivava la divergenza è stata verificata sul file, non assunta. Diff puramente additivo tranne un commento di header. NON ANCORA PUSHATO: è il primo dei due commit in coda. AGGIORNAMENTO 11/8: i quattro token restano a zero consumatori nel pannello anche a fine passo 3, perché R-RAIL-25 ha deciso di non migrare la palette del badge. Il criterio che il prompt aveva scritto, «zero consumatori a fine passo 3 uguale passo incompleto», è stato ritirato con la ragione: non discendeva da R-RAIL-9. AGGIORNAMENTO 11/8: con R-RAIL-27 le quattro coppie smettono di essere token senza consumatori, perche l'identity block dell'arco 2 le consuma. Cade l'annotazione di R-RAIL-9 sulla seconda meta non realizzata. AGGIORNAMENTO 11/8 SERA: i quattro token di C9.1 sono stati assorbiti dalla scala nuova del passo 2 dell'arco 2. I nomi restano, i valori sono cambiati, e i consumatori che mancavano ora esistono: metamodel e model del rail, viewpoint del tree, piu' i nove modificatori del pannello. La voce resta chiusa e il criterio ritirato resta ritirato.",
+    "status": "chiusa",
+    "priority": "media",
+    "decision": "R-RAIL-9, C9.1",
+    "issue": "",
+    "prompt": "claude/2026-08-10_1930_prompt_c9_1_token_entity.md",
+    "commits": "4d215ff0e",
+    "concerns": [
+      "design-system"
+    ],
+    "milestone": "Arco rail destro (redesign)",
+    "version": "3.0",
+    "deps": []
+  },
+  {
+    "id": "seed-token-cascade",
+    "type": "bug",
+    "title": "Cascata dei token dipendente dal tema",
+    "desc": "Tredici nomi di custom property sono definiti con due valori diversi dai due sistemi di token, e il vincitore lo decide localStorage.theme: --color-bg-primary, --color-bg-secondary, --color-border-focus, --color-border-primary, --color-border-secondary, --color-text-secondary, --color-text-tertiary, i quattro --shadow-*, --transition-fast, --transition-slow. Il sistema SCSS dichiara su :root e su :root[data-theme=\"light\"], tokens.css dichiara su :root ed è caricato dopo: senza attributo data-theme vince tokens.css, con data-theme=\"light\" vince l'SCSS, e frontend/index.html:14-19 scrive l'attributo solo se localStorage.theme vale dark o light. Esiste anche un terzo sistema, styles/variables.scss dichiarato su body, che per ereditarietà batte entrambi i :root sui nomi condivisi (--input-height vale 36px e non i 40px di _spacing.scss), più un quarto pattern di copie locali come variabili SCSS $ nei fogli di componente. L'arco rail aggira il problema con una lista nera di nomi; la riconciliazione vera resta da fare ed è fuori arco.",
+    "status": "in coda",
+    "priority": "alta",
+    "decision": "",
+    "issue": "",
+    "prompt": "",
+    "commits": "",
+    "concerns": [
+      "design-system",
+      "tooling"
+    ],
+    "milestone": "Backlog Fase 0 rail (2026-08-10)",
+    "deps": [],
+    "version": "3.1"
+  },
+  {
+    "id": "seed-due-modalita",
+    "type": "bug",
+    "title": "Due sistemi di modalità non sincronizzati",
+    "desc": "Redux state.advanced e useInterfaceMode coesistono e non si parlano, conviventi in Info.tsx a nove righe di distanza. R-RAIL-13 taglia il nodo per il solo rail, che legge unicamente Redux; la convivenza dei due sistemi resta un difetto strutturale aperto sul resto dell'applicazione.",
+    "status": "in coda",
+    "priority": "alta",
+    "decision": "R-RAIL-13",
+    "issue": "",
+    "prompt": "",
+    "commits": "",
+    "concerns": [
+      "properties-card",
+      "design-system"
+    ],
+    "milestone": "Backlog Fase 0 rail (2026-08-10)",
+    "deps": [],
+    "version": "3.1"
+  },
+  {
+    "id": "seed-treeviewsidebar-morto",
+    "type": "debt",
+    "title": "TreeViewSidebar.tsx è codice morto",
+    "desc": "249 righe mai montate, accertate nella Fase 0, e con esse la chiave di storage jjodel_treeview_visible. C7.1 le dichiara fuori dall'arco rail: non si toccano lì, per non mescolare rimozione e redesign nello stesso diff. La rimozione va fatta come voce a sé. CONFERMATO ALL'ARCO 1: l'unica menzione di TreeViewSidebar.tsx fuori dalla sua directory è un commento in Dock.tsx:281. Il consumatore vivo del foglio tree-view-sidebar.scss è solo PropertiesWithTreeView.tsx:11, e TreeViewContent.tsx non importa alcun foglio. La rimozione resta una voce a sé. MISURA DEL 12/8 NOTTE, dal passo 3: il tree vivo e' PropertiesWithTreeView, montato da Dashboard.tsx:627, che importa ENTRAMBI i fogli, properties-with-tree-view.scss a :9 e tree-view-sidebar.scss a :11. Il foglio del componente morto e' quindi vivo e serve il tree vero, mentre il componente non e' renderizzato da nessuna parte. La rimozione del tsx non puo' portarsi via il foglio.",
+    "status": "idea",
+    "priority": "media",
+    "decision": "C7.1",
+    "issue": "",
+    "prompt": "",
+    "commits": "",
+    "concerns": [
+      "tooling",
+      "properties-card"
+    ],
+    "milestone": "Backlog Fase 0 rail (2026-08-10)",
+    "deps": [],
+    "version": "3.1"
+  },
+  {
+    "id": "seed-palette-entity",
+    "type": "debt",
+    "title": "Migrazione dei .jj-type-badge--* legacy ai token entity",
+    "desc": "Lo stesso concetto di colore per tipo di entità vive in tre posti che non concordano: badgeBg e badgeText di entityMeta, il campo color dello stesso entityMeta, e le $color-* locali di tree-view-sidebar.scss:5-41. C9.1 ha promosso a token le quattro coppie che servivano al rail, non ha unificato le tre palette. QUARTA SEDE TROVATA AL PASSO 3 DELL'ARCO 1: i badge del pannello Properties prendono il colore da _form-system.scss:1251-1259, nove modificatori .jj-type-badge--* con esadecimali inline, mentre il tree usa common/entityMeta.ts, tokenizzato da C9.1. In light nessuno dei quattro kind coincide e attribute ed enum sono proprio invertiti: l'ambra che nel pannello significa attributo è il token di enum, e viceversa. _form-system.scss è importato globalmente da styles/style.scss:2 ed è già stato dichiarato intoccabile da un task precedente, quindi non è una migrazione di sorgente ma una decisione di design con raggio d'azione sull'app. Registrata anche in docs/TECH-DEBT.md, scelto per eliminazione come unico registro di debiti vivo in docs/. È il presupposto del renderer dell'arco 2. AGGIORNAMENTO 11/8, R-RAIL-27 (opzione C): la voce cambia natura. La decisione di design e presa e NON e l'unificazione: la sorgente unica e entityMeta, esposta dai token; i nove .jj-type-badge--* di _form-system.scss:1251-1259 sono dichiarati palette legacy, non si toccano e non si estendono. Non blocca piu l'arco 2, che e stato sbloccato togliendo la dipendenza. Quel che resta e una migrazione meccanica dei consumatori della palette legacy ai token, che diventa piu economica dopo l'arco 2 perche l'identity block sostituisce il badge di PropertiesHeader e lascia views/ViewData.tsx:221 come unico consumatore residuo. Spostata da 3.0 a 3.2, insieme alle altre migrazioni meccaniche. CHIARIMENTO DI MERITO dalla lettura dei valori reali a df8850653: le quattro sedi erano in realta due, perche i token di C9.1 sono la copia byte per byte dei badgeBg/badgeText di entityMeta, e i $color-* del tree sono outline a tinta piena, cioe un linguaggio diverso dal badge. CHIUSA l'11/8 sera dal passo 2 dell'arco 2, ma per una strada diversa da quella prevista qui: non una migrazione dei .jj-type-badge--* legacy verso i token esistenti, bensi' una scala nuova che sostituisce entrambe le palette e di cui i token diventano l'unica sorgente (R-RAIL-30, voce seed-scala-entity). I nove modificatori di _form-system.scss, il badge view di nestedView.scss e i badge del menu New document di documentTypes.ts leggono ora var(--color-entity-*). RESIDUO, che passa a seed-tree-token-migration: il tree non e' migrato, consuma ancora variabili SCSS locali.",
+    "status": "chiusa",
+    "priority": "media",
+    "decision": "R-RAIL-25, R-RAIL-27",
+    "issue": "",
+    "prompt": "",
+    "commits": "30f5e1855 9911f802f 1b27b3e23",
+    "concerns": [
+      "design-system"
+    ],
+    "milestone": "Backlog Fase 0 rail (2026-08-10)",
+    "deps": [],
+    "version": "3.0"
+  },
+  {
+    "id": "seed-entity-scoperte",
+    "type": "debt",
+    "title": "Coppie --color-entity-* ancora scoperte",
+    "desc": "Restano senza token transformation e parameter, fuori dal perimetro di C9.1 che nominava le quattro coppie del rail. La coppia di parameter è #F1F5F9 su #475569, cioè --color-slate-100 e --color-slate-600: esprimibile senza introdurre token nuovi. CHIUSA l'11/8 sera: la scala nuova copre diciassette kind su nove coppie, quindi transformation e parameter hanno un token, e con loro literal, object, dataType, abstractClass, view e refactoring, che prima non ce l'avevano. La coppia di parameter non e' piu' slate come ipotizzato qui: parameter prende la tinta di attribute a croma ridotta, perche' e' una sotto-entita', e lo slate e' riservato alla famiglia dei contenitori.",
+    "status": "chiusa",
+    "priority": "bassa",
+    "decision": "",
+    "issue": "",
+    "prompt": "",
+    "commits": "30f5e1855 9911f802f",
+    "concerns": [
+      "design-system"
+    ],
+    "milestone": "Backlog Fase 0 rail (2026-08-10)",
+    "deps": [],
+    "version": "3.0"
+  },
+  {
+    "id": "seed-tab-morti",
+    "type": "debt",
+    "title": "Rami mode=\"tab\" irraggiungibili in PropertiesWithTreeView",
+    "desc": "Circa 90 righe di rami mai raggiunti, più due chiavi di storage inerti. Il redesign del rail riscrive quel componente, quindi la voce va rivalutata a arco 1 chiuso: potrebbe estinguersi da sola. AGGIORNAMENTO 11/8: PropertiesWithTreeView è stato riscritto al passo 2 dell'arco 1, ma i rami mode=tab sono sopravvissuti, quindi la voce non si è estinta da sola. Le chiavi inerti censite sono due, jjodel_property_tree_view_width e jjodel_property_panel_width, a cui l'arco 1 aggiunge jjodel_property_tree_height (voce a sé).",
+    "status": "idea",
+    "priority": "bassa",
+    "decision": "",
+    "issue": "",
+    "prompt": "",
+    "commits": "",
+    "concerns": [
+      "properties-card",
+      "tooling"
+    ],
+    "milestone": "Backlog Fase 0 rail (2026-08-10)",
+    "deps": [
+      "seed-rail"
+    ],
+    "version": "3.1"
+  },
+  {
+    "id": "seed-font-selfhost",
+    "type": "debt",
+    "title": "Self-hosting dei font",
+    "desc": "Inter e IBM Plex Mono arrivano da due @import di Google Fonts in _typography.scss:81,84. Il TODO è già nel file a _typography.scss:74-78. Ragioni per farlo: prestazioni, conformità privacy, uso offline. Nessun impatto sull'arco rail, che consuma le variabili di famiglia e non i nomi.",
+    "status": "idea",
+    "priority": "bassa",
+    "decision": "",
+    "issue": "",
+    "prompt": "",
+    "commits": "",
+    "concerns": [
+      "design-system",
+      "process"
+    ],
+    "milestone": "Backlog Fase 0 rail (2026-08-10)",
+    "deps": [],
+    "version": "3.2"
+  },
+  {
+    "id": "seed-inter-variable",
+    "type": "debt",
+    "title": "\"Inter Variable\" non è il nome servito da Google",
+    "desc": "È il primo nome nello stack di --font-sans ma non corrisponde a nulla di caricato, quindi il primo elemento dello stack fallisce sempre e la resa dipende dal secondo. Difetto cosmetico, una riga.",
+    "status": "idea",
+    "priority": "bassa",
+    "decision": "",
+    "issue": "",
+    "prompt": "",
+    "commits": "",
+    "concerns": [
+      "design-system"
+    ],
+    "milestone": "Backlog Fase 0 rail (2026-08-10)",
+    "deps": [],
+    "version": "3.0"
+  },
+  {
+    "id": "seed-rail-arco1",
+    "type": "feature",
+    "title": "Arco 1 del rail — guscio, slot e restyle del tree",
+    "desc": "Esecuzione dell'arco 1, riperimetrata in corsa: la consegna è guscio più slot polimorfo più restyle del tree; il renderer dell'elemento di metamodello passa all'arco 2 per R-RAIL-26. Dieci commit locali in ordine: 10dc25879 rotazione del log a inizio arco, e4cef2b24 report di ancoraggio del passo 0, 1eb008937 registro R-RAIL-1..22 con la nota U-2, bcc68da8f guscio del passo 2, un docs di R-RAIL-23 con sha non registrato, 77e2bb6a6 ritiro della postura Browse/Focus (passo 2-bis), 9808a812d sezione NODE come disclosure, ef1260ddc NODE chiusa di default, 2a9226c0f registro R-RAIL-24..26 con la voce di backlog sulla palette. Gate a ogni passo: build 0, typecheck 33 con delta zero, check:docs 2/2, working tree pulito; le quattro grep di conformità sul diff staged sempre a zero. Verifica visiva di Alfonso passata dopo il passo 2-bis e dopo il passo 3. DUE INCIDENTI: al passo 2 la postura Browse/Focus è entrata nel diff nonostante R-RAIL-14 la escludesse, ed è stata ritirata con un commit additivo, così resta recuperabile da bcc68da8f; al passo 3 Claude Code si è fermato su due condizioni di stop entrambe corrette (foglio dei badge globale e intoccabile, palette entity non divergenti ma invertite su attribute ed enum), ed è da lì che nasce il riperimetro. CATENA P SCOPERTA: i cinque documenti prompt dell'arco, dal 10/8 21:30 all'11/8 00:20, non sono nel Project Knowledge; della serie è salvata solo la rotazione del log delle 20:00. NON PUSHATO. Restano il passo 4 e il passo 5. AGGIORNAMENTO 11/8: il codice dell'arco è completo. Il passo 4 ha chiuso il restyle del tree con 238037853 (report di discovery) e df8850653 (restyle, +8 -1), verifica visiva passata. Resta il solo passo 5, che è di sola documentazione; la voce si chiude lì. CHIUSO E PUSHATO l'11/8 pomeriggio. Al passo 5 si aggiunge un passo 6 non pianificato, l'audit del registro, cinque commit: cfadb5ea2 report di discovery, 7bc408746 backfill delle otto R-RAIL mancanti, 6c5d018a0 R-RAIL-27, 91a0fa8b8 due voci di TECH-DEBT, 54154fd4a entry di log e rotazione. Push fast-forward abe5fdc8b..54154fd4a, dieci commit, nove file, 556 inserzioni e 27 cancellazioni, nessun path estraneo; l'unico file di codice dell'intero range docs e' tree-view-sidebar.scss. La voce si chiude qui: l'arco 1 e' pubblico.",
+    "status": "chiusa",
+    "priority": "alta",
+    "decision": "R-RAIL-1..R-RAIL-26",
+    "issue": "",
+    "prompt": "",
+    "commits": "10dc25879 e4cef2b24 1eb008937 bcc68da8f 77e2bb6a6 9808a812d ef1260ddc 2a9226c0f 238037853 df8850653 cf750cade e1ae67df7 019dbc318 cfadb5ea2 7bc408746 6c5d018a0 91a0fa8b8 54154fd4a",
+    "concerns": [
+      "properties-card",
+      "design-system",
+      "concrete-syntax",
+      "process"
+    ],
+    "milestone": "Arco rail destro (redesign)",
+    "version": "3.0",
+    "deps": [
+      "seed-rail-fase0",
+      "seed-c91"
+    ]
+  },
+  {
+    "id": "seed-rail-passo4",
+    "type": "feature",
+    "title": "Passo 4 — restyle del tree pane",
+    "desc": "ESEGUITO E VERIFICATO L'11/8. Due commit: 238037853 il report di discovery (docs/discovery/discovery_2026-08-11_rimando_blocco_altezze.md, 83 righe, committato a sé per R-RAIL-20) e df8850653 il restyle, +8 -1 su tree-view-sidebar.scss, unico file di codice nel diff. I quattro valori di R-RAIL-7 applicati: font-family: var(--font-mono) su .tree-feature__type (:1907), height: 26px su .tree-row (:1699) col rimando di una riga al blocco delle tre altezze del foglio del rail, font-size 13px e font-weight 500 su .tree-row__name (:1765), font-weight 600 sul nome selezionato. Verifica visiva di Alfonso passata, bottoni di azione su hover inclusi. TRE PUNTI SCIOLTI IN CORSA, tutti nell'emendamento delle 12:03. (1) La controprova del prompt (92 esadecimali, lista nera a :735) non tornava perché era una misura PRE-ARCO su bcc68da8f^: a HEAD vale 82 e :717, stessa riga byte per byte, il delta di 10 è la tokenizzazione fatta dall'arco. (2) Le quattro grep di R-RAIL-19 non erano recuperabili dalle fonti autorizzate, e Alfonso ha ratificato il quintetto come soprainsieme; esito sul diff staged: lista nera 0, var(--shadow- 0, esadecimali 0, z-index 0, font-family: 1, ed è il valore 1 del passo. (3) height e non min-height, perché .tree-row__name ha nowrap più text-overflow: ellipsis e box-sizing: border-box è globale, quindi i 26px assorbono gli 8px di padding. Divergenza di forma sul valore 4: il blocco .tree-row--selected non esiste, il peso è scritto come discendente &--selected .tree-row__name, convenzione già in uso a :1981 e :1997. Non eseguito l'atto zero dell'emendamento, quindi la rinomina del checkpoint resta aperta e la raccoglie il passo 5. Verifica indipendente oltre alle grep: compilazione del foglio con dart-sass prima e dopo, il CSS emesso differisce per le sole quattro dichiarazioni.",
+    "status": "chiusa",
+    "priority": "alta",
+    "decision": "R-RAIL-5, R-RAIL-7, R-RAIL-8, R-RAIL-9, R-RAIL-15, R-RAIL-19, R-RAIL-20",
+    "issue": "",
+    "prompt": "claude/2026-08-11_0055_prompt_passo4_restyle_tree.md; claude/2026-08-11_1203_prompt_passo4_emendamento_1.md",
+    "commits": "238037853 df8850653",
+    "concerns": [
+      "properties-card",
+      "design-system"
+    ],
+    "milestone": "Arco rail destro (redesign)",
+    "version": "3.0",
+    "deps": [
+      "seed-rail-arco1"
+    ]
+  },
+  {
+    "id": "seed-rail-passo5",
+    "type": "debt",
+    "title": "Passo 5 — conformità, entry di log e rotazione",
+    "desc": "PROMPT PRONTO, DA ESEGUIRE, autocontenuto e da girare in locale e non dal bridge (sesta condizione di hard stop). Tre commit invece di uno. A: chiusura del residuo di docs/sessioni/, cioè la rinomina di sessione_2026-08-10_4.md al prefisso claude_ più il checkpoint di oggi, lasciata aperta dall'atto zero non eseguito al passo 4. B: iscrizione di R-RAIL-19 in docs/decisions.md, dove la voce non c'è ed è la sua assenza ad aver prodotto un hard stop reale; il testo pronto porta il quintetto di grep e la loro forma sul diff staged. C: una sola entry di log per tutto l'arco, deroga dichiarata dal checkpoint di ieri perché i passi 2, 2-bis, 3 e 4 hanno tutti rimandato la scrittura qui, più la rotazione di una entry (attivo 20 -> 21 -> 20, archivio 733 -> 734, progressivo del lotto da ricavare dal preambolo dell'archivio, atteso l'undicesimo). La bozza dell'entry è nel prompt, con quattordici note e il formato reale dei campi che check:docs valida, che non è quello minimo di CLAUDE.md §21.2. Gate: check:docs 2/2 con 0 warning, che è il valore corrente. Corretto rispetto alla versione precedente di questa voce: gli esadecimali del foglio del rail sono 82 e la lista nera sta a :717, non 92 e :735. ESEGUITO E CHIUSO l'11/8 pomeriggio, tre commit: cf750cade (rinomina del checkpoint del 10 e checkpoint dell'11, +229), e1ae67df7 (R-RAIL-19 a registro col quintetto di grep, +11), 019dbc318 (entry di chiusura d'arco e rotazione, +37 -13). Cinque correzioni alla bozza dell'entry, tutte verificate contro il repo. Una affermazione del report non ha retto al controllo: la nota (15) dichiarava IBM Plex Mono non caricato mentre il file dei token lo importa, e la causa e' emersa piu' tardi, la grep che sosteneva l'asserzione non era mai partita. E' uno dei quattro casi che hanno prodotto R-RAIL-28.",
+    "status": "chiusa",
+    "priority": "media",
+    "decision": "R-RAIL-19, R-RAIL-21",
+    "issue": "",
+    "prompt": "claude/2026-08-11_1245_prompt_passo5_chiusura_arco1.md",
+    "commits": "cf750cade e1ae67df7 019dbc318",
+    "concerns": [
+      "process",
+      "tooling"
+    ],
+    "milestone": "Arco rail destro (redesign)",
+    "version": "3.0",
+    "deps": [
+      "seed-rail-passo4"
+    ]
+  },
+  {
+    "id": "seed-rail-arco2",
+    "type": "feature",
+    "title": "Arco 2 del rail — identity block e postura",
+    "desc": "Perimetro già noto a fine arco 1: identity block nel guscio (R-RAIL-26 sposta qui il restyle ed emenda R-RAIL-1, superando R-RAIL-16 per il solo arco 1); decisione sulla palette entity, che è il presupposto del renderer; chip di firma; padding 4px 14px 18px del form body sotto modificatore, oggi non applicabile perché .properties-panel-body ospita anche il ramo view; postura Browse/Focus, Focus bar, stepper fratelli, breadcrumb posizionale. La postura non va riscritta da zero: è stata costruita al passo 2 e ritirata al passo 2-bis con un commit additivo, quindi si recupera da bcc68da8f. VINCOLO PER GLI STEPPER: l'ordine dei fratelli è quello reso da TreeViewContent; ricostruirlo altrove duplica il modello contro R-RAIL-7. Tre fatti strutturali già accertati e da non riscoprire: PropertiesHeader non rende mai per una view (return anticipato in Info.tsx:1186-1205), getElementTypeInfo restituisce solo un nome di classe e non colori, e le classi props-header sono condivise col ramo view. SBLOCCATO L'11/8 DA R-RAIL-27 (opzione C del memo claude/2026-08-11_memo_ratifica_palette_entity.md): la dipendenza dall'unificazione delle palette e caduta. L'identity block consuma i token --color-entity-<kind>-{bg,fg}, che sono la copia esatta dei badgeBg/badgeText di entityMeta, e _form-system.scss non si tocca. Il rail e gia sul sistema a token (properties-with-tree-view.scss:1407-1413 e tree-view-sidebar.scss:1482-1483 consumano gia token entity), quindi non si introduce un sistema nuovo. RESTA DA RATIFICARE PRIMA DEI PROMPT, per la regola di protocollo 3 emersa dall'arco 1: dove vive esattamente l'identity block nel guscio, cosa fa il chip di firma, e come si rende la postura Browse/Focus recuperata da bcc68da8f. AGGIORNAMENTO 11/8 SERA: arco aperto, passi 1 e 2 chiusi in locale. PIANO SULLA PALETTE SUPERATO: questa voce prevedeva di riusare i token di C9.1 come copia dei badgeBg di entityMeta senza toccare _form-system.scss. Alfonso ha scelto la terza via, una scala nuova, ratificata come R-RAIL-30, e _form-system.scss e' stato toccato con autorizzazione esplicita e perimetro dichiarato, nove valori di modificatore e nient'altro. Restano dell'arco: identity block nel guscio, chip di firma, padding 4px 14px 18px del form body sotto modificatore, postura Browse/Focus recuperabile da bcc68da8f, Focus bar, stepper fratelli, breadcrumb posizionale. AGGIORNAMENTO 12/8 NOTTE: passo 3 chiuso e arco pushato, quattordici commit su origin. IL FRONTE DELLA PALETTE E' FINITO: la scala ha una sorgente sola, il tree e il pannello la consumano e R-RAIL-33 ne fissa il perimetro, che e' il solo registro a pastiglia. I tre passi chiusi sono di sola palette e sola norma; il perimetro di postura e identity block non e' stato aperto. Restano dell'arco, invariati: identity block nel guscio, chip di firma, padding 4px 14px 18px del form body sotto modificatore, postura Browse/Focus recuperabile da bcc68da8f, Focus bar, stepper fratelli, breadcrumb posizionale. Le tre ratifiche che il prompt dell'identity block richiede, cioe' dove vive nel guscio, cosa fa il chip di firma e come si rende la postura, non sono ancora state prese. CHIUSO IL 12/8 (sessione Cowork autonoma, mandato esplicito di Alfonso). Il perimetro residuo e' stato eseguito per intero in cinque commit di codice piu' quelli di registro. LE TRE RATIFICHE CHE MANCAVANO SONO STATE PRESE E ISCRITTE PRIMA DI ESEGUIRLE: R-RAIL-38 ricolloca la postura all'arco 2, che R-RAIL-14 aveva mandato fuori dall'arco 1 senza che nessuno la ricollocasse; R-RAIL-40 decide che l'identity block NON sale nel guscio e la postura lo raggiunge per cascata dal modificatore --rail-focus, evitando il blocco unico che rende due rami, ViewData che perde il suo header e un secondo lettore del modello nel guscio; R-RAIL-41 fa il chip di firma condizionato alle feature tipate. Piu' R-RAIL-39 sul breadcrumb posizionale e R-RAIL-42 sui temi. CONSEGNATO: postura Browse/Focus con Escape e doppio click, Focus bar con chip Back, stepper dei fratelli con J/K, identity block di design §7 (glifo 22->34, nome 14->18, kind nel -fg, chip di firma), aria in fondo al form. Lo stepper NON ricostruisce l'ordine: legge le righe rese dal DOM e prende dallo store il solo campo father, e non scrive la selezione ma clicca la riga bersaglio. UN DIFETTO TROVATO DALL'HARNESS E NON DAL CODICE: la Focus bar dell'arco 1 in dark rendeva quasi bianco su quasi bianco, perche' i grade slate sono palette grezza; corretto con un blocco dark che lascia il light intatto. Gate: typecheck 14 delta zero, build 0, vitest 324/324, check:docs 2/2, harness sui due temi. NON PUSHATO: consegnato come bundle git, perche' le scritture git dal bridge lasciano lock stantii.",
+    "status": "chiusa",
+    "priority": "alta",
+    "decision": "R-RAIL-14, R-RAIL-16, R-RAIL-25, R-RAIL-26, R-RAIL-27, R-RAIL-33, R-RAIL-38..R-RAIL-42",
+    "issue": "",
+    "prompt": "",
+    "commits": "fdcbbb357 f8a680db9 70409831e 6383e97e6 3070da8e 8258dfe2 988a80a3",
+    "concerns": [
+      "properties-card",
+      "design-system"
+    ],
+    "milestone": "Arco rail destro (redesign)",
+    "version": "3.0",
+    "deps": [
+      "seed-rail-arco1"
+    ]
+  },
+  {
+    "id": "seed-caret-slate400",
+    "type": "debt",
+    "title": "--color-slate-400 sul caret della disclosure NODE",
+    "desc": "Il caret della disclosure NODE consuma --color-slate-400, che è palette grezza e non segue il tema: in dark mode resta lo stesso grigio. Introdotto al passo 3 dell'arco 1 e dichiarato debito nello stesso commit, invece che corretto in silenzio o taciuto. Da riprendere con Q-A2, la verifica dark mode già rinviata dalla serie U.",
+    "status": "idea",
+    "priority": "bassa",
+    "decision": "R-RAIL-12",
+    "issue": "",
+    "prompt": "",
+    "commits": "",
+    "concerns": [
+      "design-system"
+    ],
+    "milestone": "Backlog arco 1 rail (2026-08-11)",
+    "deps": [
+      "seed-rail-arco1"
+    ],
+    "version": "3.1"
+  },
+  {
+    "id": "seed-tree-height-key",
+    "type": "debt",
+    "title": "jjodel_property_tree_height inerte nei localStorage",
+    "desc": "R-RAIL-21 ha deciso che l'arco 1 rimuove il codice che scriveva l'altezza trascinabile del tree ma lascia il dato: la chiave resta nei localStorage di chi l'ha già scritta, senza cleanup. Scelta consapevole, da annotare nell'entry di log del passo 5. Se un giorno servirà una purga, va fatta come voce a sé e insieme alle altre due chiavi inerti già censite.",
+    "status": "idea",
+    "priority": "bassa",
+    "decision": "R-RAIL-21",
+    "issue": "",
+    "prompt": "",
+    "commits": "",
+    "concerns": [
+      "tooling",
+      "properties-card"
+    ],
+    "milestone": "Backlog arco 1 rail (2026-08-11)",
+    "deps": [
+      "seed-rail-arco1"
+    ]
+  },
+  {
+    "id": "seed-protocol-3regole",
+    "type": "debt",
+    "title": "Quattordici regole di protocollo da portare in PROTOCOL.md",
+    "desc": "Emerse dall'arco 1, non ancora scritte nel repo. 1) Nessuna ratifica su un report letto a metà: se il testo arriva mutilo o troncato la risposta giusta è chiederlo, non ricostruirlo; un report ricostruito a memoria è la stessa famiglia di errore del context drift, e qui ha prodotto due ratifiche sbagliate, corrette solo alla revisione 2. 2) L'esclusione viaggia con la fonte: quando un passo prescrive la lettura di un documento di design, l'elenco delle feature ratificate fuori va inline nel punto della lettura, non solo nella sezione delle ratifiche; al passo 2 il divieto stava lontano dalla lettura che lo contraddiceva e la postura è entrata nel diff, al passo 3 con l'elenco inline non è successo. 3) Un passo la cui specifica dipende da una decisione non presa va dichiarato come domanda in Fase 0, non come lavoro nel build order: il renderer dell'elemento di metamodello era descritto come lavoro, e le tre decisioni che gli mancavano sono emerse al passo 3 invece che al passo 0. QUATTRO REGOLE NUOVE DALL'11/8. 4) Una controprova numerica va ancorata alla revisione su cui è stata misurata: il passo 4 ha rischiato un hard stop su 92 contro 82 esadecimali, che era solo la differenza fra pre-arco e HEAD; un numero senza sha è una trappola che si arma da sola quando il file cambia. 5) Una ratifica citata da un prompt come fonte deve esistere nel registro prima che il prompt parta: il passo 4 mandava a recuperare le grep da docs/decisions.md, dove la voce R-RAIL-19 non c'era. 6) L'ambiente di esecuzione è parte del prompt: il passo 4 assumeva un esecutore capace di git commit e npm run build, e dal bridge di Cowork nessuna delle due è disponibile, con la prima che lascia danni. 7) Le condizioni di stop bundleate costano meno di quelle sequenziali: tre stop distinti sono stati raccolti in una sola domanda invece di fermare il lavoro tre volte. CINQUE REGOLE NUOVE DALL'11/8 SERA, dall'arco 2. 8) Il prompt che iscrive una regola la obbedisce, e se non la obbedisce lo si scopre subito: il prompt di R-RAIL-29 conteneva un glob non quotato, cioe' la trappola di R-RAIL-28. 9) Una regola di metodo va scritta dove l'attore che deve obbedirla la legge: CLAUDE.md per Claude Code, custom instructions per la chat di progetto; il registro rimanda e non duplica. 10) Un conteggio a registro e' una copia di qualcosa che vive altrove e scade: R-RAIL-30 dichiarava sedici kind ed e' diventata falsa in un'ora, i numerali sono stati rimossi. 11) Il campo Out-of-scope changes serve: un perimetro allargato per una ragione buona si dichiara nel campo che esiste per dichiararlo, invece di essere nascosto o rifiutato, ed e' la prima volta che quel campo porta un valore vero. 12) Uno stop condizionale ben scritto vale un go-ahead: i due hard stop dell'arco 2 sono scattati entrambi per condizioni previste dal prompt e nessuno ha prodotto lavoro parziale committato. DUE REGOLE NUOVE DAL 12/8 NOTTE, dal passo 3. 13) Il log e' append-only: un campo sbagliato in un'entry gia' scritta non si emenda, si corregge nell'entry successiva col campo Corregge, e il campo vecchio resta a vista. Applicato allo Smoke visivo parziale dell'entry di 6f245fa0e, lasciato in piedi. 14) Quando due fogli competono sullo stesso elemento, la misura e' il CSS emesso e la specificita', non il diff: dopo il solo 70409831e il diff era corretto e la resa no, perche' le regole del pannello a (0,3,0) vincevano il color e il foglio del tree vinceva il background per ordine di sorgente a parita' di (0,2,0).",
+    "status": "in coda",
+    "priority": "media",
+    "decision": "",
+    "issue": "",
+    "prompt": "",
+    "commits": "",
+    "concerns": [
+      "process"
+    ],
+    "milestone": "Backlog arco 1 rail (2026-08-11)",
+    "deps": [],
+    "version": "process v1.1"
+  },
+  {
+    "id": "seed-bridge-esecuzione",
+    "type": "debt",
+    "title": "Esecuzione dal bridge Cowork — git non sicuro, build non eseguibile",
+    "desc": "Misurato l'11/8 lavorando sul repo montato via device bridge. (1) LE SCRITTURE GIT NON SONO SICURE: sul mount la unlink è vietata, quindi git scrive .git/index.lock e non riesce a rimuoverlo, lasciando un lock stantio che blocca ogni scrittura successiva, VS Code compreso. È bastato un git status a produrlo, e il lock è stato rimosso a mano. Mitigazione per la sola lettura: GIT_OPTIONAL_LOCKS=0 davanti a ogni comando. Per scrivere, Claude Code in locale. (2) npm run build NON GIRA: frontend/node_modules/@esbuild contiene solo darwin-arm64 mentre la VM del bridge è Linux aarch64, e la build è l'unico dei tre gate che compili davvero il Sass. Surrogato usato con successo: compilazione del solo foglio con il pacchetto sass puro e confronto del CSS emesso prima e dopo, che è una prova di non regressione più stretta della build perché mostra esattamente le dichiarazioni cambiate. typecheck e check:docs girano invece senza problemi. Conseguenza operativa: ogni prompt esecutivo dichiari dove va eseguito. AGGIORNAMENTO 13/8, EMENDAMENTO A R-RAIL-27 (commit 9031c6ce6): non sono solo le scritture git dal bridge a non essere sicure, anche le LETTURE mentono, e il meccanismo e' stato misurato invece che inferito. La spiegazione che circolava, «il bridge non vede core.excludesFile», e' falsa: quella chiave e' vuota su entrambe le macchine e quindi non discrimina. Non essendo impostata, git risolve il path di default degli esclusi da XDG_CONFIG_HOME e, mancando anche quella, da ~/.config/git/ignore, cioe' da HOME; il bridge monta la cartella del repo ma non la home dell'utente e punta HOME dentro la sessione, dove quel file non esiste. Riprodotto sul Mac spostando la sola HOME: git check-ignore passa da exit 0 a exit 1 e git status --short fa comparire ?? .claude/settings.local.json, che in condizioni normali non c'e'. CONSEGUENZA OPERATIVA: un git status dal bridge sovrastima sempre i file non tracciati, e un elenco di residuo del working tree prodotto da li' va confrontato con quello locale prima di diventare una richiesta di decisione. Due voci di backlog nate cosi' sono cadute: la cartella _to_delete/ nella root, che nel working tree non c'e' e che nessun comando ha rimosso, e .claude/settings.local.json, che non era non tracciato ma ignorato.",
+    "status": "in coda",
+    "priority": "alta",
+    "decision": "",
+    "issue": "",
+    "prompt": "",
+    "commits": "",
+    "concerns": [
+      "process",
+      "tooling"
+    ],
+    "milestone": "Backlog arco 1 rail (2026-08-11)",
+    "deps": [],
+    "version": "process v1.1"
+  },
+  {
+    "id": "seed-decisions-buchi",
+    "type": "debt",
+    "title": "docs/decisions.md — sei ratifiche dell’arco non a registro",
+    "desc": "Delle ventisei R-RAIL dell'arco, in docs/decisions.md ne mancano sei: R-RAIL-14, 15, 17, 19, 20, 21. Non è un problema formale: l'assenza di R-RAIL-19 ha prodotto un hard stop reale al passo 4, perché il prompt mandava a recuperare da lì le quattro grep di conformità e la voce non c'era; il quartetto originario è andato perso e si è dovuto ratificare un quintetto sostitutivo. La 19 si chiude col passo 5. Restano cinque, e ognuna è citabile da un prompt futuro con lo stesso esito. Da fare come voce a sé prima dell'arco 2, insieme all'audit di decisions.md già a backlog dalle sessioni precedenti. CHIUSA l'11/8 col passo 6. Le lacune erano OTTO e non sei: l'elenco del passo 5 veniva da un conteggio con grep -o che non distingue una voce definita da una citazione in prosa dentro il corpo di un'altra voce. Stato reale misurato su origin: definite 1..13 e 23..26, solo citate in prosa 16, 18, 22, assenti del tutto 14, 15, 17, 19, 20, 21. Tre delle otto erano citate come autorita' dall'entry appena committata, che quindi rimandava a voci inesistenti. Backfill con 7bc408746, piu' R-RAIL-27 con 6c5d018a0. Il registro e' ora completo senza lacune, e all'11/8 sera arriva a R-RAIL-30.",
+    "status": "chiusa",
+    "priority": "media",
+    "decision": "R-RAIL-14, R-RAIL-15, R-RAIL-17, R-RAIL-19, R-RAIL-20, R-RAIL-21",
+    "issue": "",
+    "prompt": "",
+    "commits": "e1ae67df7 7bc408746 6c5d018a0",
+    "concerns": [
+      "process"
+    ],
+    "milestone": "Backlog arco 1 rail (2026-08-11)",
+    "deps": [
+      "seed-rail-passo5"
+    ],
+    "version": "process v1.1"
+  },
+  {
+    "id": "seed-cruscotto-jsx-sync",
+    "type": "debt",
+    "title": "Riallineamento del sorgente jsx del cruscotto",
+    "desc": "Prerequisito delle due feature seguenti, e debito che cresce a ogni giro. Il sorgente claude/tracciabilita-jjodel.jsx e fermo al codice v19; il pubblicato in gallery e a v25. Fra v19 e v25 sono cambiati solo dati e le tre costanti (STORE_KEY, SEED_ID, APP_VERSION), verificato byte per byte a ogni reseed, quindi il codice non e mai divergato davvero: e il sorgente a non essere stato ricostruito. Finche dura, ogni modifica al comportamento del cruscotto va patchata a mano dentro un bundle minificato, che e dove nascono i bug. Il lavoro e trascrizione del codice piu innesto del seed, con ricompilazione e confronto contro il bundle pubblicato. AGGIORNAMENTO 11/8 SERA: il pubblicato in gallery e' a v27, il sorgente jsx resta a v19. Il divario e' ora di otto reseed. AGGIORNAMENTO 13/8: il pubblicato in gallery e' a v31, il sorgente jsx resta al codice v19. Il divario e' ora di dodici reseed. Nessuno di essi ha toccato il codice, solo dati e le tre costanti, ma il debito non si misura in righe divergenti: si misura nel fatto che una modifica al comportamento del cruscotto va oggi scritta dentro un bundle minificato.",
+    "status": "in coda",
+    "priority": "alta",
+    "decision": "",
+    "issue": "",
+    "prompt": "",
+    "commits": "",
+    "concerns": [
+      "tooling",
+      "process"
+    ],
+    "milestone": "Cruscotto — evoluzione (2026-08-11)",
+    "deps": [],
+    "version": "process v1.1"
+  },
+  {
+    "id": "seed-cruscotto-gerarchia",
+    "type": "feature",
+    "title": "Numerazione gerarchica e campo parent",
+    "desc": "Richiesta dell'11/8. Oggi il contenimento (l'arco 1 contiene passo 4 e passo 5) non esiste nel modello: e simulato con deps e con i titoli, ed e per questo che il contenitore dell'arco compariva in cima all'ordine di esecuzione. Si aggiunge un campo parent esplicito e si DERIVA il numero al render (milestone intera, poi discesa in profondita: 3, 3.1, 3.3.2). DECISIONE DI IMPIANTO: il numero e etichetta di presentazione, non identita. Gli id seed-* restano la chiave stabile, perche sono citati nei delta, nei prompt e nei file di sessione, e perche in questo progetto le voci si spostano (R-RAIL-26 ha riperimetrato l'arco 1 in corsa): con il numero come identita ogni riperimetrazione invaliderebbe i riferimenti esterni. Il modello resta un DAG e non diventa un albero: una voce puo avere un parent e insieme dipendenze fuori dal proprio ramo, come palette entity rispetto all'arco 2.",
+    "status": "in coda",
+    "priority": "media",
+    "decision": "",
+    "issue": "",
+    "prompt": "",
+    "commits": "",
+    "concerns": [
+      "tooling",
+      "process"
+    ],
+    "milestone": "Cruscotto — evoluzione (2026-08-11)",
+    "deps": [
+      "seed-cruscotto-jsx-sync"
+    ],
+    "version": "process v1.1"
+  },
+  {
+    "id": "seed-cruscotto-file",
+    "type": "feature",
+    "title": "Vista dei file toccati per voce, derivata dai commit",
+    "desc": "Richiesta dell'11/8, fattibilita gia misurata sul repo: 24 voci su 52 portano commit, tutti e 55 gli sha citati risolvono, e ne escono 131 coppie voce-file distinte. Delle 28 voci senza commit, 23 sono aperte e 5 sono chiuse senza aver prodotto codice, quindi la copertura sul lavoro di codice e piena. I file NON si memorizzano nel seed, si derivano dai commit con uno script al reseed: memorizzarli li farebbe invecchiare. TRAPPOLA MISURATA: docs/claude-code-log.md compare in quasi ogni commit e senza esclusione diventa il finto hot spot numero uno. Il derivato piu utile e l'indice inverso file -> voci, che risponde alla domanda che in questo progetto costa piu ore: chi ha toccato questo file e perche. Primi risultati: EdgeAuthoringPanel.tsx e conteso da 5 voci di 3 fronti; PropertiesWithTreeView.tsx e properties-with-tree-view.scss sono toccati sia dall'arco rail sia dalla serie U, che e la misura dell'accoppiamento fra i due fronti aperti e spiega a posteriori il doppio gate visivo di Q7.",
+    "status": "in coda",
+    "priority": "media",
+    "decision": "",
+    "issue": "",
+    "prompt": "",
+    "commits": "",
+    "concerns": [
+      "tooling",
+      "process"
+    ],
+    "milestone": "Cruscotto — evoluzione (2026-08-11)",
+    "deps": [
+      "seed-cruscotto-jsx-sync"
+    ],
+    "version": "process v1.1"
+  },
+  {
+    "id": "seed-arco2-passo1",
+    "type": "feature",
+    "title": "Arco 2 passo 1 — R-RAIL-28 a norma e discovery della palette",
+    "desc": "CHIUSO l'11/8 sera, quattro commit, nessun file di codice nel diff: fdcbbb357 (sotto-regola di R-RAIL-28 in CLAUDE.md §5 piu' AGENTS.md di root rigenerato da gen:agents), b80e713d3 (R-RAIL-28 a registro come voce puntatore di una riga), a24567576 (report di discovery, 202 righe), 7decf84d2 (entry di log e rotazione, tredicesimo lotto). SEDE DELLA REGOLA: il testo normativo sta in CLAUDE.md, che Claude Code legge a ogni sessione, e il registro rimanda senza duplicare; una regola iscritta solo nel verbale non si applica da sola, e R-RAIL-20 ne era la prova. LA DISCOVERY E' LA PRIMA APPLICAZIONE DELLA REGOLA, con un controllo positivo accanto a ogni asserzione di assenza, ed e' proprio quel controllo ad aver scoperto che il grep di questa macchina non e' GNU grep (voce seed-grep-ugrep). Findings: le due palette non coincidono su nessuno dei dieci kind, attribute ed enum sono invertiti, e ci sono due collisioni incrociate mai rilevate, il fondo di literal del pannello uguale al fondo di operation del tree e il fondo di model del pannello uguale al fondo di package del tree; il badge porta sempre testo, su tre siti su tre; una terza palette vive in constants/documentTypes.ts.",
+    "status": "chiusa",
+    "priority": "alta",
+    "decision": "R-RAIL-28",
+    "issue": "",
+    "prompt": "claude/2026-08-11_1629_prompt_arco2_passo1_fase1.md",
+    "commits": "fdcbbb357 b80e713d3 a24567576 7decf84d2",
+    "concerns": [
+      "design-system",
+      "process"
+    ],
+    "milestone": "Arco rail destro (redesign)",
+    "version": "3.0",
+    "deps": [
+      "seed-rail-arco1"
+    ]
+  },
+  {
+    "id": "seed-arco2-passo2",
+    "type": "feature",
+    "title": "Arco 2 passo 2 — la scala entity a sorgente unica",
+    "desc": "CHIUSO l'11/8 sera, sei commit: f8a680db9 (sotto-regola di R-RAIL-29 corretta in CLAUDE.md §5, R-RAIL-29 e R-RAIL-30 a registro), 30f5e1855 (scala a token in light e dark, due orfani -saturated rimossi), 9911f802f (alias refactoring verso container), 7d67f3b94 (numerali dei kind rimossi da R-RAIL-30), 1b27b3e23 (pannello, badge view e viewpoint, navbar portati a token), b52c2bb8f (entry di log di undici note e rotazione al quattordicesimo lotto). Il commit D previsto e' stato SALTATO: i campi colore di entityMeta.ts non sono consumati da nessuno, misurato, e il prompt non era mandato per rimozioni. DUE HARD STOP, entrambi corretti e previsti dal prompt: refactoring, un tipo di documento di documentTypes.ts senza token, risolto con un alias e non con una coppia canonica nuova, per non spostare la mappatura dentro il consumatore; e l'accertamento su entityMeta. DUE STOP VISIVI: dopo il commit dei token cambiano tre superfici e solo quelle, dopo i consumatori cambiano i nove badge del pannello e le cinque pastiglie del menu New document. PERIMETRO ALLARGATO DI UNA RIGA e dichiarato: nestedView.scss:3710, il modificatore viewpoint, convertito per non lasciare un esadecimale entity nel file appena toccato. Gate: typecheck 33 con delta zero, build 0, check:docs 2/2. Non pushato. AGGIORNAMENTO 12/8 NOTTE: PUSHATO, dentro il push unico dei quattordici commit dell'arco. CORREZIONE ALLA NOTA (10) DELLA SUA ENTRY DI LOG, registrata dal passo 3 nel campo Corregge: quella nota dava il tree per consumatore delle variabili SCSS locali di tree-view-sidebar.scss:36-42. E' falso, quelle variabili non avevano consumatori, e i colori del tree stavano in tre copie della palette per tipo.",
+    "status": "chiusa",
+    "priority": "alta",
+    "decision": "R-RAIL-29, R-RAIL-30",
+    "issue": "",
+    "prompt": "claude/2026-08-11_1721_prompt_arco2_passo2_scala_entity.md; claude/2026-08-11_1734_prompt_arco2_passo2_ripresa_C_D_E.md; claude/2026-08-11_1746_prompt_passo2_emendamento_1_refactoring.md; claude/2026-08-11_1824_prompt_passo2_commit_E_log.md",
+    "commits": "f8a680db9 30f5e1855 9911f802f 7d67f3b94 1b27b3e23 b52c2bb8f",
+    "concerns": [
+      "design-system",
+      "properties-card",
+      "process"
+    ],
+    "milestone": "Arco rail destro (redesign)",
+    "version": "3.0",
+    "deps": [
+      "seed-arco2-passo1",
+      "seed-scala-entity"
+    ]
+  },
+  {
+    "id": "seed-scala-entity",
+    "type": "feature",
+    "title": "Scala entity generata in OKLCH (R-RAIL-30)",
+    "desc": "RATIFICATA L'11/8 SERA col memo claude/2026-08-11_memo_ratifica_arco2_scala_entity.md, dopo che Alfonso ha scelto la terza via: ne' la palette del pannello ne' quella del tree, ma una scala nuova. CINQUE VINCOLI GENERATORI. Il cyan e' escluso, banda 210-250 di tinta OKLCH, perche' e' gia' prenotato tre volte fra --color-selection-bg, la barra di selezione ritirata e --color-cyan-600: se un kind lo indossa, identita' di tipo e stato di selezione diventano lo stesso segnale. I contenitori sono una famiglia, non colori distinti: viewpoint, metamodel, model, package, transformation, view e refactoring condividono una coppia slate a croma bassa, il che trasforma il difetto accidentale del pannello, metamodel e package identici, in una regola dichiarata; regge perche' il badge porta sempre testo, verificato, piu' un glifo in PropertiesHeader. Le cinque tinte cromatiche sono equispaziate a 59.6 gradi sull'arco che resta, quindi nessuna coppia puo' essere accidentalmente vicina. Le sotto-entita' prendono la tinta del genitore a croma ridotta: object da class, literal da enum, parameter e dataType da attribute; abstractClass resta alias di class. I valori sono generati a chiarezza e croma fissi e i contrasti sono misurati riga per riga, minimo 5.96 su tutte le coppie e su entrambi i temi. PARAMETRI, per rigenerarla senza rifare il ragionamento: fondo light 0.935 con croma 0.031, testo light 0.450 con croma 0.085, fondo dark 0.300 con croma 0.056, testo dark 0.845 con croma 0.077; la croma ridotta e' il 55 per cento della piena. I valori di croma sono il MASSIMO COMUNE a tutte le tinte a quella chiarezza: sopra quella soglia il gamut sRGB tosa in silenzio e la scala smette di essere uniforme, che e' il difetto della prima versione, scoperto rimisurando invece che fidandosi. Tinte: contenitori 257, class 356.6, enum 56.2, reference 115.8, attribute 175.4, operation 297. UNICO SPOSTAMENTO DELIBERATO: reference esce dal cyan e va in giallo-verde, scelto contro il magenta perche' massimizza la separazione minima fra i tre fratelli che si leggono in fila, attribute reference operation, 59 gradi invece di 33. Passa da quindici kind su tredici coppie a diciassette kind su nove coppie. COROLLARIO DEL 12/8 NOTTE, da R-RAIL-33: i contrasti misurati qui, da 5.96 a 8.55, descrivono il SOLO registro a pastiglia, dove -fg poggia sulla propria -bg. Non descrivono il tree, che consuma i soli -fg su fondo trasparente e che R-RAIL-33 tiene fuori dalla scala. La scala resta a sorgente unica e la mappatura dei diciassette kind sulle nove coppie non cambia; cambia il perimetro delle superfici che la indossano.",
+    "status": "chiusa",
+    "priority": "alta",
+    "decision": "R-RAIL-30",
+    "issue": "",
+    "prompt": "claude/2026-08-11_memo_ratifica_arco2_scala_entity.md",
+    "commits": "30f5e1855 9911f802f",
+    "concerns": [
+      "design-system"
+    ],
+    "milestone": "Arco rail destro (redesign)",
+    "version": "3.0",
+    "deps": [
+      "seed-arco2-passo1"
+    ]
+  },
+  {
+    "id": "seed-tree-token-migration",
+    "type": "debt",
+    "title": "Migrazione del tree ai token entity",
+    "desc": "Primo punto del passo 3 dell'arco 2, non una voce di backlog. tree-view-sidebar.scss:36-42 tiene ancora le proprie variabili SCSS locali, $color-class: #378ADD e compagnia, quindi dopo il passo 2 la sorgente unica e' vera per il pannello e per la navbar e falsa proprio per la palette da cui il lavoro era partito. L'unificazione e' a meta'. Le righe viewpoint del tree fanno eccezione e consumano gia' i token, da prima dell'arco. Da valutare insieme: se una tinta di riga del tree si legge come blocco opaco che galleggia sopra hover e selezione, il token sta facendo due mestieri, pastiglia nel pannello e tinta di riga nel tree, e serve un token di riga derivato dalla stessa tinta a croma piu' bassa, non un ritorno a rgba. CHIUSA IL 12/8 NOTTE dai commit 70409831e e 0f1197a7e, ma per una via diversa da quella che questa voce descriveva, e con la premessa ribaltata. Le tredici variabili SCSS locali di tree-view-sidebar.scss:36-42 avevano ZERO consumatori nel file e nel repo, misurato con command grep per ciascuna e con controllo positivo su $color-border, 18 occorrenze, e $radius-md, 2: la tabella di mappatura del prompt non aveva quindi alcun input. I colori del tree stavano in TRE COPIE della stessa palette per tipo, :649-709 in light, :1054-1064 in dark e properties-with-tree-view.scss:919-931 nel pannello, che e' la copia viva. Tutte e tre consumano ora i token e le tredici variabili morte sono rimosse. IL TIMORE REGISTRATO QUI, la tinta di riga che si legge come blocco opaco sopra hover e selezione, si e' materializzato per un commit e ha ricevuto una risposta piu' netta del token di riga qui ipotizzato: R-RAIL-33 tiene la scala fuori dal tree, il pannello consuma il solo -fg su background transparent, il tree resta monocromo.",
+    "status": "chiusa",
+    "priority": "alta",
+    "decision": "R-RAIL-30",
+    "issue": "",
+    "prompt": "",
+    "commits": "",
+    "concerns": [
+      "design-system",
+      "properties-card"
+    ],
+    "milestone": "Arco rail destro (redesign)",
+    "version": "3.0",
+    "deps": [
+      "seed-arco2-passo2"
+    ]
+  },
+  {
+    "id": "seed-grep-ugrep",
+    "type": "debt",
+    "title": "Il grep interattivo non e’ il grep di sistema (R-RAIL-29)",
+    "desc": "SCOPERTO E ISCRITTO L'11/8 SERA, dal controllo positivo che R-RAIL-28 prescrive, alla sua prima applicazione. In shell interattiva su questo Mac grep risolve a un wrapper di ugrep --ignore-files. Due conseguenze, entrambe misurate: i path gitignorati sono esclusi per default, quindi --exclude-dir=node_modules e' inerte e una ricerca per qualcosa che vive sotto un path ignorato restituisce un silenzio che non e' una prova; --include=<glob> non filtra ma viene letto come nome di file, con warning, quindi quelle ricerche erano piu' larghe di quanto dichiarato, non piu' strette. command grep aggira il wrapper e risolve a BSD grep 2.6.0-FreeBSD, che entrambi i flag li onora: il consiglio operativo era giusto ma la ragione no, e la correzione del titolo evita che una sessione futura cerchi un GNU grep che qui non e' installato. PORTATA RETROATTIVA: ogni ricerca prescritta nei prompt precedenti aveva uno scope diverso da quello dichiarato. La direzione larga e' innocua, quella stretta no. Rimedio scelto, invece di un riesame sistematico che costerebbe piu' di quanto renda: chi cita una vecchia asserzione di assenza come autorita' la rifa' prima di citarla. CANDIDATA R-RAIL-31, da iscrivere al primo passo che tocchi il registro: ogni comando di shell scritto in un prompt quota i suoi glob e usa -E con barre nude per le alternanze.",
+    "status": "chiusa",
+    "priority": "alta",
+    "decision": "R-RAIL-28, R-RAIL-29",
+    "issue": "",
+    "prompt": "",
+    "commits": "f8a680db9",
+    "concerns": [
+      "process",
+      "tooling"
+    ],
+    "milestone": "Backlog arco 2 rail (2026-08-11)",
+    "version": "process v1.1",
+    "deps": []
+  },
+  {
+    "id": "seed-navbar-famiglia",
+    "type": "debt",
+    "title": "Menu New document — cinque pastiglie identiche",
+    "desc": "Effetto atteso e voluto della famiglia contenitori, ma e' il punto in cui costa di piu': i cinque tipi di documento, metamodel model transformation viewpoint refactoring, sono tutti contenitori, quindi le cinque pastiglie del menu diventano tutte slate e il menu resta distinto per lettera e testo soltanto. Prima erano lavanda, slate, sky, rosa e slate. LA DIAGNOSI NON E' CHE LA REGOLA COSTA, E' CHE LA PREMESSA NON TIENE: la famiglia era stata giustificata sul presupposto che i contenitori si vedano uno alla volta in un breadcrumb e non come lista di fratelli simultanei, e questo menu e' l'unica superficie del prodotto che li affianca tutti. MISURA CONTRO LA VIA DELLA SFUMATURA, fatta prima di scartarla: cinque gradini di chiarezza sulla tinta 257 fra 0.935 e 0.870 distano 0.016 in OKLab l'uno dall'altro, cioe' sul limite del percepibile fra campiture adiacenti e sotto quel limite a distanza, quindi leggerebbero come gradiente e non come cinque identita'. Se il menu deve tornare a distinguere, il canale e' un'icona per tipo di documento, non il colore. CANDIDATA R-RAIL-32: una regola di famiglia vale finche' i membri non compaiono come fratelli simultanei, e la superficie che li affianca va cercata prima di ratificare la regola, non dopo. R-RAIL-32 ISCRITTA il 12/8 notte col commit 6f245fa0e, e la misura le ha aggiunto un corollario: le superfici che affiancano i membri della famiglia erano DUE, non una. Oltre al menu ci sono le icone del tree, dove metamodel, package e model-M1 collassano sulla stessa coppia e restano separati dalla sola lettera, M, P, m corsivo. Cercarne una e fermarsi non soddisfa la regola. PRECISAZIONE SULLA FORMULAZIONE: i cinque tipi restano distinguibili, perche' il badge porta la lettera, M m T V R da documentTypes.ts:20/29/38/54/63, e accanto ci sono etichetta e descrizione, Navbar.tsx:292-298. Cio' che si e' perso e' il colore come canale di tipo, non la leggibilita' del menu. La seconda superficie e' chiusa da R-RAIL-33, che tiene la scala fuori dal tree e dove le icone hanno forme diverse: resta il solo menu. Voce aperta in docs/TECH-DEBT.md, priorita' media, ed e' una decisione di design aperta, non un difetto. CHIUSA IL 12/8 (sessione Cowork autonoma) nella direzione che la voce indicava: il canale e' l'icona, non la tinta. Il badge del menu porta ora il glifo del tipo invece della lettera. Quattro glifi su cinque sono quelli che entityMeta assegna gia' agli stessi kind, boxes box arrow-left-right eye, cosi' menu e tree dicono la stessa cosa con lo stesso segno; refactoring, che li' non ha voce, prende arrow-repeat. Nessun asset nuovo, nessun colore nuovo, nessun ritorno della tinta per tipo: le cinque pastiglie restano slate, com'e' giusto per una famiglia. Misurato a video sul menu aperto: CINQUE GLIFI DISTINTI, UN SOLO FONDO. Il campo icon e' obbligatorio in DocumentTypeEntry, cosi' un tipo nuovo non puo' entrare nel menu senza scegliersi un segno. RESIDUO APERTO, voce a se': il badge del sottomenu dei metamodelli ha ancora due esadecimali inline in Navbar.tsx.",
+    "status": "chiusa",
+    "priority": "media",
+    "decision": "R-RAIL-30, R-RAIL-32",
+    "issue": "",
+    "prompt": "",
+    "commits": "4daeb38b",
+    "concerns": [
+      "design-system"
+    ],
+    "milestone": "Backlog arco 2 rail (2026-08-11)",
+    "version": "3.0",
+    "deps": [
+      "seed-scala-entity"
+    ]
+  },
+  {
+    "id": "seed-view-badge-override",
+    "type": "debt",
+    "title": "Il badge view del rail non consuma la scala entity",
+    "desc": "properties-with-tree-view.scss:373-376 sovrascrive .jj-type-badge--view con $pc-accent-soft e $pc-accent-strong a specificita' maggiore, essendo annidato. Conseguenza: dentro il rail il badge view non consuma la scala entity, e la tokenizzazione di nestedView.scss fatta al passo 2 agisce solo fuori dal rail, quindi e' in buona parte inerte. Il foglio del rail era fuori perimetro e non e' stato toccato. E' una superficie che mostra un badge entity senza consumare la scala entity, dentro il foglio del rail, cioe' dentro il perimetro dell'arco 2. CHIUSA IL 12/8 NOTTE dal commit 70409831e, dentro il passo 3 e con perimetro autorizzato: l'override consuma ora --color-entity-view-bg e --color-entity-view-fg e non e' piu' un'eccezione a specificita' maggiore. Un -bg e un -fg aggiunti, sul solo badge view.",
+    "status": "chiusa",
+    "priority": "media",
+    "decision": "",
+    "issue": "",
+    "prompt": "",
+    "commits": "",
+    "concerns": [
+      "design-system",
+      "properties-card"
+    ],
+    "milestone": "Backlog arco 2 rail (2026-08-11)",
+    "version": "3.0",
+    "deps": [
+      "seed-arco2-passo2"
+    ]
+  },
+  {
+    "id": "seed-entitymeta-colori-morti",
+    "type": "debt",
+    "title": "I campi colore di entityMeta.ts sono morti",
+    "desc": "Accertato l'11/8 sera con controllo positivo su tutta la catena, ed e' la ragione per cui il commit D del passo 2 e' stato saltato. entityColor, che e' l'unico lettore del campo color, non ha chiamanti fuori dal file, e lo stesso vale per entityIcon e entityIsAbstract; nessuno legge badgeBg, badgeText, badgeBgDark, badgeTextDark in tutto frontend/src; gli unici accessor usati sono entityLetter e resolveEntityType, entrambi da ElementBadge.tsx:9, che i colori non li tocca e si colora da element-badge.scss. L'unica riga che assomigliava e' Navbar.tsx:290, che legge entry.badgeBg di documentTypes, struttura diversa. Non e' stato rimosso nulla perche' il prompt non era mandato per rimozioni, e CLAUDE.md vieta di togliere codice apparentemente inutilizzato senza mandato esplicito. La rimozione va fatta come voce a se'. VOCE APERTA in docs/TECH-DEBT.md il 12/8 notte, con la misura completa: ENTITY_META, interfaccia EntityMeta a entityMeta.ts:35-47, cinque campi di colore per kind, color badgeBg badgeText badgeBgDark badgeTextDark, piu' tre helper, entityColor entityIcon entityIsAbstract. Zero consumatori fuori dal file, zero chiamanti dei tre helper, misurato con command grep -rn su frontend/src. L'unico importatore vivo e' ElementBadge.tsx:9, che prende resolveEntityType ed entityLetter, cioe' la parte semantica. Il badgeBg letto in Navbar.tsx:290 e' il campo omonimo di constants/documentTypes.ts, un oggetto diverso e gia' tokenizzato. VINCOLO SULL'ORDINE: prima di cancellare vanno riscritti i tre commenti che dichiarano di ricopiare entityMeta verbatim, _colors-light.scss:329-330, _colors-dark.scss:235 e documentTypes.ts:44; dopo la rigenerazione OKLCH non e' piu' vero, e la cancellazione farebbe sparire l'unico posto dove quei valori restano leggibili. Effort un'ora, piu' la riscrittura dei commenti.",
+    "status": "in coda",
+    "priority": "media",
+    "decision": "",
+    "issue": "",
+    "prompt": "",
+    "commits": "",
+    "concerns": [
+      "tooling",
+      "design-system"
+    ],
+    "milestone": "Backlog arco 2 rail (2026-08-11)",
+    "version": "3.2",
+    "deps": [
+      "seed-arco2-passo2"
+    ]
+  },
+  {
+    "id": "seed-teal-duplicato",
+    "type": "debt",
+    "title": "Il teal entity duplicato in dodici file",
+    "desc": "#CCFBF1 su #0D9488 e #E1F5EE su #0F6E56, cioe' i colori che entityMeta assegnava a object e transformation, compaiono in otto fogli: element-badge.scss, navbar.scss, tab-title.scss, MegamodelView.scss, project-editor.scss, EditorV2.scss e i due del rail. Non sono consumi di entityMeta ma duplicazioni indipendenti dello stesso teal, quindi non si risolvono con la tokenizzazione del passo 2 e vanno guardate una per una: alcune sono colori di entita' e vanno alla scala, altre sono accenti di superficie che con le entita' non c'entrano. Nessuna rimozione fatta, per lo stesso motivo dell'altra voce. MISURA DEL 12/8 NOTTE, che corregge il conteggio e l'elenco: i file sono DODICI, non otto fogli, e i due del rail non ci sono piu', perche' il #0D9488 di properties-with-tree-view.scss:925 e' stato tokenizzato dal passo 3. In coppia bg/fg adiacente: tab-title.scss:83-84, element-badge.scss:85-86 e :98-99, navbar.scss:1819-1820, _color-schemes.scss:176 e :185 come --enum-header-bg e --enum-accent, MegamodelView.scss:261-262, project-editor.scss:695-696 e :795, piu' entityMeta.ts:84-85 e :187-188, che e' morto. Occorrenze singole: EditorSwitch.scss:52, EditorV2.scss:481, nestedView.scss:2942, navbar.scss:1774, ActionSuggestion.css:87, avatarConfig.ts:14. _color-schemes.scss ed EditorSwitch.scss non erano nell'elenco precedente. NON E' UNA MIGRAZIONE MECCANICA: i dodici usi non significano la stessa cosa, element-badge e tab-title sono badge di entita' e vanno ai token, _color-schemes colora l'header degli enum sul canvas ed e' un'altra scala, avatarConfig e' una tavolozza di avatar. Prima si classifica uso per uso, poi si tokenizza solo cio' che e' colore di entita'. Voce aperta in docs/TECH-DEBT.md; effort mezza giornata, di cui la classificazione e' la parte cara.",
+    "status": "in coda",
+    "priority": "media",
+    "decision": "",
+    "issue": "",
+    "prompt": "",
+    "commits": "",
+    "concerns": [
+      "design-system",
+      "tooling"
+    ],
+    "milestone": "Backlog arco 2 rail (2026-08-11)",
+    "version": "3.2",
+    "deps": [
+      "seed-arco2-passo2"
+    ]
+  },
+  {
+    "id": "seed-commento-documenttypes",
+    "type": "debt",
+    "title": "Commento fuorviante a documentTypes.ts:44",
+    "desc": "Dopo la tokenizzazione del passo 2 il commento cita ancora «Pink from ... #FCE7F3, #DB2777», colori che quel file non usa piu'. E' l'unico esadecimale entity rimasto nei tre file toccati, ed e' dentro un commento. Non ripulito in corsa perche' la regola di scope vieta il refactoring opportunistico su codice adiacente al punto di intervento. Una riga. VOCE APERTA in docs/TECH-DEBT.md il 12/8 notte. Il commento cita badgeBg #FCE7F3 e badgeText #DB2777 come presi dalla voce viewpoint di entityMeta.ts:93-94, dove i due valori esistono ancora; ma documentTypes.ts consuma i token da :55-56 e non quei letterali, entityMeta e' morto, e nella scala rigenerata il viewpoint non e' piu' rosa, e' un alias della famiglia contenitori. Il commento indica una sorgente non consultata e un colore non reso. Il fix e' cancellare la sola prima riga: le righe :45-50 sono la nota TODO sul wiring di onCreate, che e' viva. Due minuti, da accodare al primo passo che tocchi il file.",
+    "status": "in coda",
+    "priority": "bassa",
+    "decision": "",
+    "issue": "",
+    "prompt": "",
+    "commits": "",
+    "concerns": [
+      "tooling"
+    ],
+    "milestone": "Backlog arco 2 rail (2026-08-11)",
+    "version": "3.2",
+    "deps": [
+      "seed-arco2-passo2"
+    ]
+  },
+  {
+    "id": "seed-arco2-passo3",
+    "type": "feature",
+    "title": "Arco 2 passo 3 — il tree ai token, i debiti a registro, il push",
+    "desc": "CHIUSO nella notte fra l'11 e il 12/8, quattro commit e il push. 70409831e (tre copie della palette per tipo portate ai token nel foglio del tree, tredici variabili SCSS locali morte rimosse, badge view del rail tokenizzato), 0f1197a7e (la copia viva nel pannello, che e' quella che vince per specificita'), 6f245fa0e (quattro voci di TECH-DEBT.md, R-RAIL-31 e R-RAIL-32 a registro), f48cc299a (R-RAIL-33 e l'emendamento a R-RAIL-28). LA PREMESSA DEL PROMPT ERA FALSA e la misura l'ha ribaltata: i colori del tree non stavano nelle variabili locali di tree-view-sidebar.scss:36-42, che avevano zero consumatori nel file e nel repo, ma in TRE COPIE della stessa palette per tipo, :649-709 in light con esadecimale piu' rgba al 12 per cento, :1054-1064 in dark con glifo nudo su fondo trasparente, e properties-with-tree-view.scss:919-931 nel pannello. Trentacinque riferimenti a token aggiunti, conteggio riconciliato sul diff staged. UNA REGRESSIONE VISSUTA IL TEMPO DI UN ACCERTAMENTO: dopo il solo 70409831e il tree vivo rendeva la pastiglia a token sotto il glifo esadecimale vecchio, perche' le regole del pannello sono (0,3,0) e battono le (0,2,0) del foglio del tree sul color, mentre il background lo vinceva il foglio del tree per ordine di sorgente. Chiusa da 0f1197a7e prima di qualunque push. Il pannello resta text-only per scelta di Alfonso allo stop: ogni kind ripete background transparent accanto al proprio -fg, alla stessa specificita' del colore. DEROGA DICHIARATA dal prompt sul report di discovery, perimetro noto, nessun file in docs/discovery/. Gate: typecheck 33 delta zero, build exit 0. PUSH ESEGUITO: origin/alfonso-frontend-jjtl e' a f48cc299a, quattordici commit dell'arco 2 pubblicati in un solo giro.",
+    "status": "chiusa",
+    "priority": "alta",
+    "decision": "R-RAIL-31, R-RAIL-32, R-RAIL-33",
+    "issue": "",
+    "prompt": "2026-08-11 20:30; 2026-08-11 21:40",
+    "commits": "70409831e 0f1197a7e 6f245fa0e f48cc299a",
+    "concerns": [
+      "design-system",
+      "properties-card",
+      "process"
+    ],
+    "milestone": "Arco rail destro (redesign)",
+    "version": "3.0",
+    "deps": [
+      "seed-arco2-passo2",
+      "seed-tree-token-migration"
+    ]
+  },
+  {
+    "id": "seed-rail33-tree-monocromo",
+    "type": "feature",
+    "title": "R-RAIL-33 — la scala entity non entra nel tree",
+    "desc": "Ratificata il 12/8 notte col commit f48cc299a, dopo la verifica visiva sui due commit di codice del passo 3. Il colore di tipo vive dove l'elemento e' isolato e non ha contesto strutturale che ne dichiari la natura: badge del pannello properties, navbar, badge view, tutti in registro A PASTIGLIA, fondo -bg piu' testo -fg. Nel tree la natura e' gia' portata da due canali, la forma dell'icona e l'indentazione, quindi il colore sarebbe un terzo canale ridondante su una lista che puo' essere lunga centinaia di righe; e una campitura piena dentro una fascia che porta hover e selezione competerebbe con lo stato invece di aggiungersi. IL TREE RESTA MONOCROMO. La voce ratifica come scelta di design uno stato in cui il prodotto si e' trovato, non registra una regressione da riparare: prima del 12/8 il tree era colorato. PRIMO COROLLARIO: la collisione dei contenitori prevista da R-RAIL-32 non si presenta nel tree, dove metamodel, package e model annidato hanno icone diverse; resta aperta nel menu New document, che e' superficie a pastiglia. SECONDO COROLLARIO: i contrasti misurati in R-RAIL-30, da 5.96 a 8.55, descrivono il solo registro a pastiglia, dove -fg poggia sulla propria -bg, e non descrivono nessuna superficie del tree.",
+    "status": "chiusa",
+    "priority": "alta",
+    "decision": "R-RAIL-33",
+    "issue": "",
+    "prompt": "2026-08-11 21:40",
+    "commits": "f48cc299a",
+    "concerns": [
+      "design-system",
+      "properties-card"
+    ],
+    "milestone": "Arco rail destro (redesign)",
+    "version": "3.0",
+    "deps": [
+      "seed-scala-entity",
+      "seed-arco2-passo3"
+    ]
+  },
+  {
+    "id": "seed-rail28-presenza",
+    "type": "debt",
+    "title": "Emendamento a R-RAIL-28 — anche la presenza e' una misura",
+    "desc": "Iscritto il 12/8 notte col commit f48cc299a. La regola sulla prova delle ricerche valeva per le asserzioni di ASSENZA; l'emendamento la estende alla PRESENZA. Un path, un conteggio di file, l'elenco dei siti di una duplicazione e la descrizione di una resa a video sono misure, e valgono solo se misurate. CINQUE OCCORRENZE IN UN SOLO ARCO: un path di cartella inferito da un file vicino, components/editors/ invece di components/TreeViewSidebar/; tredici variabili dichiarate consumate e in realta' morte; otto fogli col teal che erano dodici file; una voce di debito gia' a registro proposta come nuova, quella sugli @import di _typography.scss; e un report di esecuzione che descriveva i glifi del tree come colorati a token, ratificato senza guardare lo schermo, dove sono monocromi. L'ultima porta il corollario che le riassume: UN REPORT DI ESECUZIONE NON E' UNA MISURA DELLA RESA. Il CSS emesso puo' contenere la regola voluta e lo schermo mostrare altro; solo la verifica visiva chiude la domanda, e nessuna descrizione la sostituisce.",
+    "status": "chiusa",
+    "priority": "alta",
+    "decision": "R-RAIL-28",
+    "issue": "",
+    "prompt": "2026-08-11 21:40",
+    "commits": "f48cc299a",
+    "concerns": [
+      "process"
+    ],
+    "milestone": "Backlog arco 2 rail (2026-08-11)",
+    "version": "process v1.1",
+    "deps": []
+  },
+  {
+    "id": "seed-rail31-glob",
+    "type": "debt",
+    "title": "R-RAIL-31 — glob quotati e -E nei comandi di prompt",
+    "desc": "Iscritta il 12/8 notte col commit 6f245fa0e. Ogni comando di shell scritto in un prompt quota i suoi glob e usa -E con barre nude per le alternanze. Terza occorrenza in un arco della stessa specie di errore: un glob non quotato in zsh fa fallire il comando senza eseguirlo, e il prompt che iscriveva R-RAIL-29 ne conteneva uno, cioe' la trappola della regola che stava iscrivendo. La sede normativa e' il template di prompt, che e' dove l'attore che deve obbedirla la legge; il registro porta la traccia e non duplica, per la stessa ragione di R-RAIL-28 e R-RAIL-29.",
+    "status": "chiusa",
+    "priority": "media",
+    "decision": "R-RAIL-31",
+    "issue": "",
+    "prompt": "2026-08-11 20:30",
+    "commits": "6f245fa0e",
+    "concerns": [
+      "process",
+      "tooling"
+    ],
+    "milestone": "Backlog arco 2 rail (2026-08-11)",
+    "version": "process v1.1",
+    "deps": []
+  },
+  {
+    "id": "seed-glifi-selettori-morti",
+    "type": "debt",
+    "title": "I selettori entity dei glifi nel tree non producono colore a video",
+    "desc": "Aperta in docs/TECH-DEBT.md il 12/8 notte. I commit 70409831e e 0f1197a7e hanno portato gli undici kind a -fg con fondo trasparente; la verifica visiva ha mostrato che nel tree i glifi restano monocromi. CAUSA NON ACCERTATA, e questa voce non la diagnostica, la registra: possibile mancata ereditarieta' di color sul glifo, specificita' superiore altrove, oppure selettore che non colpisce la superficie viva. Con R-RAIL-33 l'esito a video e' quello VOLUTO, quindi non c'e' difetto da riparare; il problema e' che il foglio dichiara un'intenzione che non realizza, e chi leggera' quei selettori li correggera', riportando il colore nel tree contro R-RAIL-33. LA VIA E' RIMUOVERE I SELETTORI, NON FARLI FUNZIONARE: tree-view-sidebar.scss:649-709 in light e :1054-1064 in dark, piu' properties-with-tree-view.scss:919-931, che e' la copia viva. La rimozione va misurata a video prima e dopo, non leggendo il CSS: se un glifo prendesse colore da uno di quei blocchi, togliendolo lo perderebbe. Restano fuori dalla rimozione le righe viewpoint e view-leaf, :1481-1498, a pastiglia per progetto, che consumano i token da prima dell'arco. CHIUSA IL 12/8 (sessione Cowork autonoma). Il commit 6383e97e6 ha tolto i tre blocchi; il commit B, che il passo 7 aveva lasciato aperto in attesa dello smoke, e' stato scritto dopo lo smoke e non prima. LA RIMOZIONE HA RICHIESTO UNA RIGA CHE NESSUNO AVEVA PREVISTO: in dark le undici background: transparent della copia del pannello non tenevano solo la -bg del foglio del tree, tenevano anche la meta' scura della quarta palette, che e' scopata html[data-theme=\"dark\"], cioe' (0,2,1), e batte il transparent di base a (0,2,0). Ripristinato con una riga sola, con un :not() che risparmia le due pastiglie ratificate. SMOKE ESEGUITO SUI DUE TEMI con l'harness in container: i quattro kind bersaglio hanno fondo rgba(0,0,0,0) in entrambi, viewpoint e leaf-view conservano il proprio, il glifo resta monocromo ovunque. Copertura dichiarata parziale: i kind che lo scenario non produce non sono stati misurati, e la riga di guardia li copre per costruzione, che non e' una misura. Ne nasce R-RAIL-37.",
+    "status": "chiusa",
+    "priority": "media",
+    "decision": "R-RAIL-33",
+    "issue": "",
+    "prompt": "",
+    "commits": "6383e97e6 aa824483",
+    "concerns": [
+      "design-system",
+      "properties-card"
+    ],
+    "milestone": "Backlog arco 2 rail (2026-08-11)",
+    "version": "3.0",
+    "deps": [
+      "seed-rail33-tree-monocromo"
+    ]
+  },
+  {
+    "id": "seed-arco2-passo7",
+    "type": "feature",
+    "title": "Arco 2 passo 7 — esecuzione di R-RAIL-33 e chiusura della voce dei glifi",
+    "desc": "CHIUSO il 12/8. Il commit A (6383e97e6) toglie i tre blocchi entity dal tree, con la riga di guardia dark che la rev 1 non aveva e che un hard stop aveva correttamente fermato. Il commit B, che il prompt voleva DOPO lo smoke visivo, e' stato scritto in sessione Cowork dopo aver eseguito lo smoke con l'harness: chiude la voce di debito, corregge l'affermazione di specificita' sulla quarta palette (vera in light, falsa in dark) e iscrive R-RAIL-37. La copertura dello smoke e' dichiarata parziale invece che data per buona: sei kind misurati, gli altri coperti per costruzione dalla riga unica di guardia.",
+    "status": "chiusa",
+    "priority": "media",
+    "decision": "R-RAIL-33, R-RAIL-36, R-RAIL-37",
+    "issue": "",
+    "prompt": "claude/2026-08-12_1500_prompt_arco2_passo7_esecuzione_rail33.md",
+    "commits": "6383e97e6 7998de976 aa824483",
+    "concerns": [
+      "design-system",
+      "properties-card",
+      "process"
+    ],
+    "milestone": "Arco rail destro (redesign)",
+    "deps": [
+      "seed-arco2-passo3"
+    ],
+    "version": "3.0"
+  },
+  {
+    "id": "seed-arco2-passi8-10",
+    "type": "feature",
+    "title": "Arco 2 passi 8-10 — postura, Focus bar, stepper, identity block",
+    "desc": "CHIUSI il 12/8 in sessione Cowork autonoma, cinque commit di codice piu' due di registro. Passo 8: la postura Browse/Focus torna dal ritiro di 77e2bb6a6, riconciliata a mano contro i fogli che l'arco ha cambiato dopo; NON e' un revert, perche' toggleInspector di R-RAIL-23 resta e collapseRail non torna, e la geometria del tree pane ha ora tre casi in ordine di precedenza invece di due. Passo 9: gli stepper dei fratelli, che leggono l'ordine RESO dal DOM e prendono dallo store il solo father, e che cliccano la riga invece di scrivere la selezione. Passo 10: l'identity block di design §7, con il glifo che cresce da 22 a 34 e il nome da 14 a 18 fra Browse e Focus, il kind nel -fg del proprio kind, il chip di firma sulle sole feature tipate. TRE COSE MERITANO IL REGISTRO. La postura raggiunge il blocco per cascata e non come prop, che e' la ragione per cui il blocco non e' dovuto salire nel guscio (R-RAIL-40). Il glifo si chiama props-header__glyph e non __badge perche' quel nome era gia' preso da info-improvements.scss con fondo trasparente e colore terziario: con il nome vecchio il blocco avrebbe preso geometria dalle regole nuove e colore da quella vecchia, cioe' la collisione CSS che il progetto ha imparato a temere. Del padding 4px 14px 18px del design entra il solo 18 in basso, perche' i 14 orizzontali sono gia' li', misurati sul primo campo, e il 4 in alto e' coperto dal margine del blocco.",
+    "status": "chiusa",
+    "priority": "alta",
+    "decision": "R-RAIL-38, R-RAIL-39, R-RAIL-40, R-RAIL-41, R-RAIL-42",
+    "issue": "",
+    "prompt": "",
+    "commits": "c1668469 3070da8e 8258dfe2 9f1a10cf 988a80a3",
+    "concerns": [
+      "properties-card",
+      "design-system",
+      "concrete-syntax"
+    ],
+    "milestone": "Arco rail destro (redesign)",
+    "deps": [
+      "seed-arco2-passo7"
+    ],
+    "version": "3.0"
+  },
+  {
+    "id": "seed-harness-visivo",
+    "type": "feature",
+    "title": "Harness di verifica visiva in container",
+    "desc": "Strumento nato il 12/8 e usato da allora a ogni passo. Apre la build di produzione con vite preview, entra in modalita' Offline, costruisce uno scenario deterministico (progetto, metamodello, due classi di cui una astratta, due attributi, un'enum) e restituisce screenshot a densita' doppia piu' un probe di stili computati, su entrambi i temi. TRE FATTI LO RENDONO POSSIBILE, tutti misurati: npm ci su Linux funziona e il vincolo noto valeva per il node_modules del Mac visto dal bridge; il dev server fallisce l'ottimizzazione dipendenze su nearley.tsx mentre la preview della dist no; il bottone Offline e' gated su host.includes('localhost'), quindi 127.0.0.1 non basta. NOTE OPERATIVE: il modale what's new monta un .wm-backdrop che intercetta i click e va rimosso con un osservatore, non con una pulizia a tempo fisso; la palette usa drag-and-drop HTML5, quindi servono DragEvent sintetici con DataTransfer condiviso e clientX/clientY passati al costruttore. NON sostituisce l'occhio di Alfonso sul giudizio estetico: sostituisce la domanda di che colore e'. Ha gia' trovato due difetti che il codice non mostrava, la meta' dark della quarta palette e la Focus bar illeggibile in dark.",
+    "status": "chiusa",
+    "priority": "alta",
+    "decision": "R-RAIL-28, R-RAIL-36, R-RAIL-42",
+    "issue": "",
+    "prompt": "",
+    "commits": "",
+    "concerns": [
+      "tooling",
+      "process"
+    ],
+    "milestone": "Backlog arco 2 rail (2026-08-11)",
+    "deps": [],
+    "version": "process v1.1"
+  },
+  {
+    "id": "seed-rail-arco3",
+    "type": "feature",
+    "title": "Arco 3 — il form dell'inspector",
+    "desc": "Aperto il 12/8 alla chiusura dell'arco 2, come il memo del perimetro residuo proponeva. Contenuto: il controllo segmentato di multiplicity che sostituisce due stepper e un chip read-only, i flag come chip in Browse e switch in Focus, e le quattro sezioni ADVANCED, FLAGS, ADVANCED STATE, NODE che diventano tre disclosure, Advanced Flags Appearance. Specifica: docs/redesign/rail/README.md §7. Definition of done del design: nove controlli visibili a 420x1000 senza scroll. PERCHE' NON ERA DELL'ARCO 2: cambia l'architettura dell'informazione del form, non la sua pelle, e mappare NODE su Appearance dentro l'inspector e' precisamente la modifica che R-RAIL-12 ha gia' rifiutato una volta, quindi la ratifica va ripresa e non aggirata. Prerequisito di metodo: la griglia a due colonne 84px + 1fr che il design chiede tocca ogni campo del form, quindi il primo passo e' una discovery su quanti componenti di campo la attraversano. AGGIORNAMENTO 13/8: il perimetro dell'arco si e' popolato di due voci registrate che gli stanno addosso e che conviene decidere insieme al form, non dopo. La sezione NODE ha una resa difforme dalle altre quattro sezioni (voce seed-node-difforme), ed e' proprio la sezione che il design vuole mappare su Appearance; la firma del guscio copre tre kind su undici (voce seed-firma-guscio), e la riga 2 dell'header e' contigua alla griglia del form. Il primo passo resta invariato: la discovery su quanti componenti di campo attraversano la griglia 84px + 1fr.",
+    "status": "in coda",
+    "priority": "media",
+    "decision": "R-RAIL-12",
+    "issue": "",
+    "prompt": "claude/2026-08-12_memo_ratifica_arco2_perimetro_residuo.md",
+    "commits": "",
+    "concerns": [
+      "properties-card",
+      "design-system"
+    ],
+    "milestone": "Arco rail destro (redesign)",
+    "deps": [
+      "seed-rail-arco2"
+    ],
+    "version": "3.1"
+  },
+  {
+    "id": "seed-submenu-badge-hex",
+    "type": "debt",
+    "title": "Il badge del sottomenu metamodelli ha due esadecimali inline",
+    "desc": "Trovato il 12/8 mentre si chiudeva la voce del menu New document, e non toccato li' per non allargare il perimetro. Navbar.tsx rende il badge delle voci del sottomenu, cioe' i metamodelli esistenti su cui creare un M1, con style background #E9D5FF e color #7C3AED scritti a mano: e' il viola lavanda che la scala entity ha sostituito ovunque altro, e sopravvive qui perche' quel badge porta l'iniziale di un NOME e non un tipo, quindi era fuori dal giro di tokenizzazione del passo 2. Fix: consumare la coppia della famiglia contenitori come fanno le cinque voci sopra, oppure dichiarare che quel badge non e' un badge di entita' e dargli una coppia neutra propria. Due valori, una riga.",
+    "status": "in coda",
+    "priority": "bassa",
+    "decision": "R-RAIL-30",
+    "issue": "",
+    "prompt": "",
+    "commits": "",
+    "concerns": [
+      "design-system"
+    ],
+    "milestone": "Backlog arco 2 rail (2026-08-11)",
+    "deps": [],
+    "version": "3.2"
+  },
+  {
+    "id": "seed-push-arco2-residuo",
+    "type": "debt",
+    "title": "Push dei dieci commit dell'arco 2 residuo",
+    "desc": "I dieci commit del 12/8 sono nel repo locale di Alfonso solo dopo che lui applica il bundle: la sessione Cowork li ha prodotti su un clone Linux e consegnati come git bundle, perche' le scritture git sul mount del bridge lasciano lock stantii (misurato di nuovo in questa sessione: un commit di prova riesce ma emette warning di unlink su HEAD.lock e sui temporanei degli oggetti). Sequenza: git checkout -- docs/claude-code-log.md docs/claude-code-log-archive.md, che sono le due modifiche non committate gia' contenute nel primo commit del bundle; git pull ~/jjodel/arco2-cowork-2026-08-12.bundle alfonso-frontend-jjtl; verifica visiva; git push. La voce si chiude quando origin porta 2146725c. CHIUSA il 13/8 notte. Alfonso ha applicato il bundle e pushato. VERIFICATO SU ORIGIN e non sul racconto: git ls-remote da' e88fca7df come tip di origin/alfonso-frontend-jjtl, e git merge-base --is-ancestor 2146725c FETCH_HEAD conferma che i dieci commit della sessione Cowork sono antenati di quel tip. La coda locale e' vuota. Sopra i dieci ne e' arrivato un undicesimo, e88fca7df, che non e' di quella sessione: voce seed-archivio-preamboli.",
+    "status": "chiusa",
+    "priority": "alta",
+    "decision": "",
+    "issue": "",
+    "prompt": "",
+    "commits": "2146725c e88fca7df",
+    "concerns": [
+      "process",
+      "tooling"
+    ],
+    "milestone": "Arco rail destro (redesign)",
+    "deps": [
+      "seed-arco2-passi8-10"
+    ],
+    "version": "3.0"
+  },
+  {
+    "id": "seed-archivio-preamboli",
+    "type": "debt",
+    "title": "I tre preamboli mancanti dell'archivio, e il commento della guardia dark",
+    "desc": "CHIUSA il 13/8 notte col commit e88fca7df, scritto in locale sopra i dieci della sessione Cowork. Due residui dichiarati a registro da chi li aveva lasciati aperti, chiusi insieme perche' sono entrambi correzioni di documentazione dell'arco 2. PARTE A: il preambolo di docs/claude-code-log-archive.md nominava i lotti fino al sedicesimo e poi saltava al ventesimo; mancavano diciassettesimo, diciottesimo e diciannovesimo. LA PREMESSA CHE LI RIMANDAVA ERA FALSA, ed e' la parte che vale: due entry di rotazione avevano scritto che ricostruirli voleva dire leggere da git tre tagli mai documentati, mentre l'archivio e' append-only in coda, quindi la posizione di una entry non cambia piu', e ogni lotto aveva gia' registrato nelle proprie note il conteggio prima e dopo. Le tre entry sono le posizioni 740, 741 e 742, e nessun comando git e' servito. Controllo positivo incrociato: la stessa aritmetica mette le due entry del ventesimo lotto in 743 e 744, che sono quelle che la sua entry dichiara di aver spostato, e i Prompt document name in 740-743 valgono 02:25, 02:40, 03:05 e 04:05, le quattro coppie citate nei paragrafi nuovi. Due catene indipendenti che combaciano. Il preambolo e' cronaca e si corregge in avanti: la frase sbagliata del ventunesimo lotto non e' stata riscritta. PARTE B: il commento della guardia dark in properties-with-tree-view.scss attribuiva (0,5,0) al ramo senza :not(), che invece sta a (0,3,0), e cosi' nascondeva il punto. Il :not() non abbassa la specificita' sotto le due pastiglie ratificate, la alza; quello che fa e' escluderle dal match. Solo il commento, il selettore non cambia: md5 della CSS emessa invariato. Archivio a 749 intestazioni prima e dopo. SEGUITO DEL 13/8: da questa voce nasce R-RAIL-43 (commit 9031c6ce6). La premessa caduta qui non era sbagliata una volta sola, era stata ereditata: due entry di rotazione l'avevano ripetuta senza riderivarla, e il ventunesimo lotto nel copiarla ne aveva anche corrotto il conteggio, da tre paragrafi dovuti a quattro. La regola generalizza il caso e sta a registro come voce seed-rail43.",
+    "status": "chiusa",
+    "priority": "media",
+    "decision": "R-RAIL-33, R-RAIL-37",
+    "issue": "",
+    "prompt": "",
+    "commits": "e88fca7df",
+    "concerns": [
+      "process",
+      "design-system"
+    ],
+    "milestone": "Arco rail destro (redesign)",
+    "deps": [
+      "seed-push-arco2-residuo"
+    ],
+    "version": "process v1.1"
+  },
+  {
+    "id": "seed-bool-required",
+    "type": "bug",
+    "title": "Booleano obbligatorio senza valore nello slot M1",
+    "desc": "Aperta e implementata il 13/8 notte. LA REGOLA, ratificata nel memo claude/2026-08-13_memo_ratifica_bool_required_default_false.md: un attributo di tipo EBoolean con lowerBound >= 1 porta false nello slot M1, mai lo slot vuoto. Un obbligatorio non ha stato «non impostato»: se la molteplicita' dice che il valore c'e' sempre, il modello deve contenerlo. Su [0..1] il vuoto resta legittimo e va difeso, perche' e' la differenza fra «non impostato» e «false». FUORI PERIMETRO, deliberatamente: defaultValueLiteral in M2 non si tocca, e gli altri primitivi con [1] (EString a stringa vuota, i numerici a zero) non vengono inizializzati, benche' la tabella esista gia' in U.initializeValue. ROOT CAUSE: nessun punto del codice inizializzava gli slot M1 per tipo. U.initializeValue (U.tsx:798) contiene la tabella e restituisce 'false' per EBoolean, ma aveva un solo chiamante vivo, il bottone di aggiunta valore in Info.tsx:627; l'altro, dentro LClass.get_instance_old, e' in un blocco commentato che comincia a LModelElement.tsx:3661 (verificato leggendo il file, non dal nome). FIX in due punti di LModelElement.tsx: LObject._forceConformity per la nascita dello slot, e due override in LAttribute (set_lowerBound, set_type) per gli slot gia' creati e vuoti; il predicato vive in un posto solo, LAttribute.requiredBooleanInitialValues, e riusa U.initializeValue invece di ripetere la stringa. IL CANDIDATO SBAGLIATO, e perche': Constructors.DStructuralFeature (joiner/classes.ts:713) aggiunge lo slot agli oggetti esistenti quando una feature nasce in M2 e sembra il posto giusto, ma li' lowerBound vale sempre 0, perche' e' il default di campo di DAttribute e i setter arrivano dopo nella catena Constructors: la condizione «booleano obbligatorio» e' falsa il cento per cento delle volte. LA LEZIONE GENERALE, che vale ben oltre questa voce: nel modello Jjodel le proprieta' di una feature non si stabilizzano alla nascita, si stabilizzano per transizioni successive, quindi ogni regola formulata come «quando si crea X con la proprieta' P» va tradotta in «quando P diventa vera su X», altrimenti si aggancia a un punto dove la condizione non si verifica mai. Presumibilmente vale per buona parte dei venticinque interruttori del pannello proprieta'. LIMITE DICHIARATO E NON RISOLTO: l'aggancio in set_type riconosce il passaggio a booleano solo quando l'UI passa un pointer; il flusso principale lo fa (canvasToJjom.ts:602 passa pointerId || value), ma set_type accetta anche nomi in chiaro e li risolve al suo interno, e in quel caso lo slot resta vuoto finche' non si tocca la molteplicita'. Documentato in un commento; non va risolto duplicando la tabella di alias di set_type. NOTA SULL'INFERENZA DAL NOME: attributeTypeInference.ts porta a EBoolean un attributo ancora sul default EString quando lo si rinomina isActive, hasFoo, enabled; e' il modo piu' frequente in cui un attributo diventa booleano e passa da set_name, non da set_type. Dopo l'inferenza l'attributo e' booleano ma [0..1], quindi la regola scatta al successivo cambio di molteplicita', ed e' il comportamento corretto. EFFETTO COLLATERALE POSITIVO: ObjectNode.tsx:161 esclude i required dai placeholder lazy con if (lb > 0) continue, assumendo che un obbligatorio abbia gia' un valore; prima del fix l'assunto era falso e un booleano [1] senza slot non compariva affatto nel nodo oggetto, ne' valorizzato ne' come placeholder. Dopo il fix l'assunto e' vero e la riga non va toccata. STATO: verifica visiva di Alfonso passata («funziona tutto»), ma NON SU ORIGIN, misurato sul clone di 93800c7 con grep a zero occorrenze e controllo positivo. LACUNA DI REGISTRO, misurata il 13/8 sul clone: la regola non e' in docs/decisions.md, command grep -c -i su booleano e EBoolean da' 0 con exit 1, controllo positivo su R-RAIL-43 a 2 con exit 0. Vive nel solo memo del Project Knowledge, e l'ultimo id a registro resta R-RAIL-43. E' la stessa specie della lacuna che con R-RAIL-19 produsse un hard stop reale al passo 4 dell'arco 1: un prompt futuro che la citasse come autorita' non la troverebbe. RESTA APERTO: se sia stato eseguito il solo commit A o anche il B. Se e' stato solo A, i modelli gia' aperti mantengono gli slot vuoti sugli attributi diventati booleani prima del fix, e quello e' un debito, non una cosa fatta. E' la prima azione della prossima sessione.",
+    "status": "in lavorazione",
+    "priority": "alta",
+    "decision": "memo 2026-08-13 bool required (non a registro in docs/decisions.md)",
+    "issue": "",
+    "prompt": "claude/2026-08-13_0118_prompt_bool_required_default_false.md",
+    "commits": "",
+    "concerns": [
+      "jjom-architecture",
+      "sync-layer"
+    ],
+    "milestone": "Modello M1 — conformità dei valori (2026-08-13)",
+    "deps": [],
+    "version": "3.0"
+  },
+  {
+    "id": "seed-slot-primitive-forma",
+    "type": "debt",
+    "title": "La forma dei valori primitivi negli slot M1",
+    "desc": "Aperta il 13/8 come backlog dichiarato del fix del booleano obbligatorio. Due strade producono due tipi diversi per lo stesso slot: l'inizializzazione scrive la STRINGA 'false' (perche' U.initializeValue restituisce stringhe), l'editing da checkbox scrive il BOOLEANO false (Info.tsx:642, target.checked). I lettori che passano da U.fromBoolString non se ne accorgono; un lettore che facesse if (values[0]) leggerebbe true, perche' la stringa 'false' e' truthy in JavaScript. La convivenza esisteva gia' prima del fix e il fix non l'ha peggiorata: e' stato il fix a renderla visibile, perche' prima quello slot semplicemente non c'era. Non esiste un normalizzatore di slot M1 per tipo: __defaultSetter (joiner/classes.ts:2295) ha uno switch per tipo che sembra fare quel mestiere ma agisce sulle proprieta' interne del modello via __info_of__<key>.type, non sugli slot degli oggetti. E' la ragione per cui il commit B ha dovuto scrivere la propagazione a mano invece di riusarne uno.",
+    "status": "idea",
+    "priority": "media",
+    "decision": "",
+    "issue": "",
+    "prompt": "",
+    "commits": "",
+    "concerns": [
+      "jjom-architecture"
+    ],
+    "milestone": "Modello M1 — conformità dei valori (2026-08-13)",
+    "deps": [
+      "seed-bool-required"
+    ],
+    "version": "3.1"
+  },
+  {
+    "id": "seed-rail43",
+    "type": "debt",
+    "title": "R-RAIL-43 — un rinvio che ripete una motivazione la rimette alla prova",
+    "desc": "Iscritta il 13/8 col commit 9031c6ce6. Un rinvio che ripete la motivazione di un rinvio precedente la rimette alla prova, oppure la cita come ereditata e non verificata: una stima di costo non provata non e' una misura, e propagandola la fa degradare. Il caso che l'ha prodotta e' registrato nella voce seed-archivio-preamboli: i tre paragrafi mancanti del preambolo dell'archivio, rinviati due volte con la stessa motivazione, «ricostruirli e' archeologia su git». Il ventunesimo lotto non l'ha riderivata, l'ha copiata dal ventesimo, e nel copiarla ne ha corrotto anche il conteggio, da tre paragrafi dovuti a quattro. Messa alla prova, la motivazione e' caduta in pieno: sono bastati due fatti gia' scritti nei due file, l'archivio e' append-only in coda quindi la posizione di una entry non cambia piu', e ogni lotto registra nelle proprie note il conteggio prima e dopo, con ZERO comandi git. RAPPORTO CON LE REGOLE VICINE, scritto per non lasciarlo implicito: R-RAIL-28 copre le asserzioni di assenza e di presenza, R-RAIL-36 il caso in cui si misura l'elemento sbagliato, R-RAIL-43 il terzo caso, la stima mai eseguita, e ha in piu' la parte sulla propagazione, che le altre due non hanno.",
+    "status": "chiusa",
+    "priority": "media",
+    "decision": "R-RAIL-43",
+    "issue": "",
+    "prompt": "claude/2026-08-12_2000_prompt_arco2_coda_residuo_e_rrail43.md",
+    "commits": "9031c6ce6",
+    "concerns": [
+      "process"
+    ],
+    "milestone": "Backlog arco 2 rail (2026-08-11)",
+    "deps": [
+      "seed-archivio-preamboli"
+    ],
+    "version": "process v1.1"
+  },
+  {
+    "id": "seed-rail27-letture",
+    "type": "debt",
+    "title": "Emendamento a R-RAIL-27 — anche le letture git dal bridge mentono",
+    "desc": "Iscritto il 13/8 col commit 9031c6ce6. R-RAIL-27 valeva per le scritture git dal mount del bridge, che lasciano lock stantii; l'emendamento la estende alle letture. IL MECCANISMO E' MISURATO E NON INFERITO, ed e' l'applicazione di R-RAIL-43 alla misura contenuta nel prompt che la introduceva: la spiegazione che circolava, «il bridge non vede core.excludesFile», e' falsa, perche' quella chiave e' VUOTA SU ENTRAMBE LE MACCHINE e quindi non discrimina. Non essendo impostata, git risolve il path di default degli esclusi da XDG_CONFIG_HOME e in mancanza da ~/.config/git/ignore, cioe' da HOME, ed e' HOME a cambiare: il bridge monta la cartella del repo ma non la home dell'utente. Riprodotto sul Mac spostando la sola HOME e lasciando tutto il resto invariato: git check-ignore -v .claude/settings.local.json passa da exit 0 a exit 1, e git status --short fa comparire ?? .claude/settings.local.json, che in condizioni normali non c'e'. CONSEGUENZA OPERATIVA: un git status dal bridge sovrastima sempre i file non tracciati. Un elenco di residuo del working tree prodotto da li' va confrontato con quello locale prima di diventare una richiesta di decisione, ed e' quello che aveva prodotto due voci di backlog inesistenti.",
+    "status": "chiusa",
+    "priority": "alta",
+    "decision": "R-RAIL-27",
+    "issue": "",
+    "prompt": "claude/2026-08-12_2000_prompt_arco2_coda_residuo_e_rrail43.md",
+    "commits": "9031c6ce6",
+    "concerns": [
+      "process",
+      "tooling"
+    ],
+    "milestone": "Backlog arco 2 rail (2026-08-11)",
+    "deps": [
+      "seed-bridge-esecuzione"
+    ],
+    "version": "process v1.1"
+  },
+  {
+    "id": "seed-orfani-todelete",
+    "type": "debt",
+    "title": "I due orfani di .git/_to_delete/ non sono contenuto perso",
+    "desc": "CHIUSA il 13/8 col commit 93800c719, che scrive la risposta in coda al report di triage del 10 agosto invece che in un documento nuovo: la risposta va dove sta la domanda, e un report di discovery e' una fotografia datata, quindi il paragrafo originale non si riscrive e la correzione va in addendum con la propria data. Il report chiudeva il paragrafo su docs/_to_delete/ con «se conteneva qualcosa di significativo, quel qualcosa e' perso». Per i due .md trovati in .git/_to_delete/ non lo e', misurato: git hash-object piu' git cat-file -e confermano che entrambi gli oggetti sono gia' in git, e git log --all --find-object li colloca in b0292b863 e 03363ce6a, cioe' sono gli originali messi da parte prima delle due operazioni che il loro nome annuncia. Le copie vive li contengono per intero: il design doc diverge per una riga sola, il path del companion spec da docs/specs/ a docs/spec/, che e' la migrazione stessa; la spec v1.2 e' un soprainsieme stretto per quattro hunk, le ratifiche R-FS1..R-FS7, quindi l'orfano e' la copia pre-fusione. UNA DIVERGENZA RIPORTATA INVECE CHE ASSORBITA: la bozza diceva «soprainsiemi stretti» al plurale, e verificato hunk per hunk lo e' solo la spec. UNA METRICA DICHIARATA: i «4 righe» e «17 righe» sono l'output completo di diff, intestazioni di hunk comprese; in righe cambiate sono 1+1 e 5+5, e due lettori onesti ne ricaverebbero numeri diversi. REGISTRATO PER INCISO: .git/_to_delete/ raccoglie 32 file, di cui 30 sono detriti di git, 6 HEAD.lock.*, 7 index.lock.*, 4 maintenance.lock.*, 13 tmp_obj_*, cioe' la traccia accumulata di R-RAIL-27 attraverso le sessioni. E' inerte, sta fuori dal working tree, e come evidenza vale piu' di quanto costi. RESTA APERTA E DICHIARATA COME APERTA: da quale _to_delete/ vengano i due file non e' accertato, il report parla di docs/_to_delete/ e loro stanno in .git/_to_delete/; la conclusione non dipende dalla risposta.",
+    "status": "chiusa",
+    "priority": "media",
+    "decision": "R-RAIL-28",
+    "issue": "",
+    "prompt": "claude/2026-08-12_2130_prompt_arco2_chiusura_addendum_e_rotazione.md",
+    "commits": "93800c719",
+    "concerns": [
+      "process",
+      "tooling"
+    ],
+    "milestone": "Backlog arco 2 rail (2026-08-11)",
+    "deps": [],
+    "version": "process v1.1"
+  },
+  {
+    "id": "seed-rotazione-22",
+    "type": "debt",
+    "title": "Rotazione del ventiduesimo lotto del log",
+    "desc": "DOVUTA E NON ESEGUITA SU ORIGIN, misurata il 13/8 sul clone: docs/claude-code-log.md porta 23 intestazioni attive contro le 20 di soglia, e docs/claude-code-log-archive.md ne porta 749, lo stesso numero registrato prima delle due entry del 13. Era il commit 2 del prompt «2026-08-12 21:30», di cui il commit 1 (l'addendum al triage) e' su origin: la sua entry lo dichiara esplicitamente, «con questa entry le attive salgono a 23, la rotazione e' il commit 2 di questo stesso prompt». Da qui non e' distinguibile se il commit sia stato saltato o solo non pushato; la coda locale non e' ispezionabile da questa sessione. Lavoro: spostare le tre entry piu' vecchie in coda all'archivio, aggiornare il preambolo con il ventiduesimo lotto e il conteggio prima e dopo, riportando attive a 20 e archivio a 752.",
+    "status": "in coda",
+    "priority": "media",
+    "decision": "",
+    "issue": "",
+    "prompt": "claude/2026-08-12_2130_prompt_arco2_chiusura_addendum_e_rotazione.md",
+    "commits": "",
+    "concerns": [
+      "process"
+    ],
+    "milestone": "Arco rail destro (redesign)",
+    "deps": [
+      "seed-orfani-todelete"
+    ],
+    "version": "process v1.1"
+  },
+  {
+    "id": "seed-firma-guscio",
+    "type": "debt",
+    "title": "La firma del guscio properties copre tre kind su undici",
+    "desc": "Aperta in docs/TECH-DEBT.md il 12/8 dal passo 4 dell'arco 2 (D5), che dichiarava la copertura parziale e chiedeva di aprire la voce contestualmente all'implementazione. Entra nel cruscotto il 13/8 col backfill dei debiti del repo. elementSignature (Info.tsx:883-896) rende un chip per tre dei kind che getElementTypeInfo (:847-874) riconosce: DAttribute e DReference col suffisso di tipo «: EString [0..1]», DClass col conteggio delle feature possedute. Gli altri OTTO, DModel DPackage DEnumerator DOperation DParameter DEnumLiteral DObject DValue, ritornano stringa vuota e non rendono alcun chip, per scelta dichiarata: vuoto significa riga non renderizzata, mai un segnaposto. La riga 2 del guscio resta montata quando c'e' il breadcrumb, quindi la geometria non oscilla. DObject e DValue sono gli oggetti M1 e passano dal guscio come gli altri: l'esclusione di useNewDesign (:1208) riguarda il form sottostante, non l'header. FIX: decidere kind per kind quale sia la riga che il tree da' e il pannello non ripete, senza inventare una firma per simmetria. Tre casi hanno una risposta gia' scritta altrove: DObject, per cui il tree rende «: {metaclassName}» (TreeViewContent.tsx:721) e basterebbe estendere common/featureSignature.ts con quel secondo formatter; DParameter, che ha tipo e bound come le feature e riuserebbe formatFeatureSignature; DEnumerator, per cui il conteggio dei literal e' l'analogo esatto del conteggio feature. Restano senza risposta ovvia DModel, DPackage, DOperation, DEnumLiteral e DValue, e per questi la voce si puo' chiudere anche dichiarando che non hanno firma. NOTA DI MISURA: il titolo della voce in TECH-DEBT dice «due kind su undici» mentre il corpo ne conta tre piu' otto; il titolo e' rimasto indietro rispetto al proprio testo, ed e' il corpo a essere misurato.",
+    "status": "in coda",
+    "priority": "media",
+    "decision": "R-RAIL-7, R-RAIL-26",
+    "issue": "",
+    "prompt": "",
+    "commits": "",
+    "concerns": [
+      "properties-card",
+      "design-system"
+    ],
+    "milestone": "Backlog arco 2 rail (2026-08-11)",
+    "deps": [
+      "seed-arco2-passi8-10"
+    ],
+    "version": "3.1"
+  },
+  {
+    "id": "seed-context-bar-fondo",
+    "type": "debt",
+    "title": "jj-context-bar dichiara un fondo che nessuno dei consumatori vuole",
+    "desc": "Aperta in docs/TECH-DEBT.md il 12/8 dal passo 4 dell'arco 2 (D4); lo hard stop A5 del prompt era scattato proprio su questo, perche' la classe che porta il fondo e' condivisa. Entra nel cruscotto il 13/8 col backfill. _form-system.scss:1197-1206 porta background #f1f5f9 e border-bottom 1px solid #e2e8f0, ed entrambi i consumatori li spengono: viewParenting.scss:158-162 per il ramo view e properties-with-tree-view.scss per il guscio dopo il passo 4. Quando tutti i consumatori spengono la stessa proprieta', la proprieta' va tolta dalla base e non spenta due volte. Non risolta li' perche' il foglio e' globale, importato da styles/style.scss:2 (R-RAIL-25). Conteggio dopo il passo 4: le occorrenze di jj-context-bar sono 18 su cinque file e i consumatori che montano il contenitore restano due, Info.tsx:1329 e ViewParentingFields.tsx:76; le altre sedici sono definizioni di regola e sotto-elementi __segment e __sep, e NON sono state contate una per una. Vanno contate prima di togliere qualcosa dalla base, e la verifica e' a video su entrambe le superfici, non sulla lettura del CSS.",
+    "status": "in coda",
+    "priority": "media",
+    "decision": "R-RAIL-25",
+    "issue": "",
+    "prompt": "",
+    "commits": "",
+    "concerns": [
+      "design-system",
+      "properties-card"
+    ],
+    "milestone": "Backlog arco 2 rail (2026-08-11)",
+    "deps": [
+      "seed-arco2-passi8-10"
+    ],
+    "version": "3.2"
+  },
+  {
+    "id": "seed-props-header-icon",
+    "type": "debt",
+    "title": "props-header__icon e' senza consumatori",
+    "desc": "Aperta in docs/TECH-DEBT.md il 12/8 dal passo 4 dell'arco 2 (D1): il markup dell'icona e' uscito dal guscio, la regola CSS e' rimasta. Entra nel cruscotto il 13/8 col backfill. info-improvements.scss:880-890 definisce .props-header__icon, glifo a 20px piu' colore, con variante dark a :816; l'unico consumatore era Info.tsx, riga rimossa dal commit d729c9a2f, e l'header del view editor (ViewData.tsx:212) usa .props-header ma non quella classe. Non rimossa nello stesso passo perche' R-RAIL-26 tiene info-improvements.scss fuori dall'arco e la regola di scope vieta di togliere codice apparentemente morto senza mandato. FIX: rimuoverla, non ricollegarla. L'icona e' stata tolta per decisione, non per errore: il badge di tipo porta gia' kind, testo e colore, e nel guscio l'elemento e' isolato. E' la stessa specie della voce sui selettori entity dei glifi nel tree, CSS che dichiara un'intenzione senza consumatori e che il passaggio successivo rischia di «riparare» riportando cio' che una ratifica aveva tolto.",
+    "status": "in coda",
+    "priority": "bassa",
+    "decision": "R-RAIL-16, R-RAIL-26",
+    "issue": "",
+    "prompt": "",
+    "commits": "",
+    "concerns": [
+      "design-system",
+      "properties-card"
+    ],
+    "milestone": "Backlog arco 2 rail (2026-08-11)",
+    "deps": [
+      "seed-arco2-passi8-10"
+    ],
+    "version": "3.2"
+  },
+  {
+    "id": "seed-node-difforme",
+    "type": "debt",
+    "title": "La sezione NODE non appartiene alla famiglia delle altre sezioni",
+    "desc": "Aperta in docs/TECH-DEBT.md il 12/8, a pannello intero e fuori dal perimetro del passo 4; entra nel cruscotto il 13/8 col backfill. GENERAL, INHERITANCE, FLAGS e ADVANCED STATE condividono una forma sola; NODE no: grigio invece che nero, filo orizzontale che attraversa la riga, chevron a sinistra invece che a destra. La sezione vive nel guscio e non nell'inspector per ratifica esplicita (R-RAIL-12: spostarla cambierebbe QUANDO compare, non solo dove), quindi la difformita' e' di resa, non di collocazione. Va deciso se NODE entra nella famiglia o se la differenza e' voluta perche' la sezione appartiene al guscio e non al form, e in quel caso documentarla. Da guardare prima che la difformita' si consolidi, e comunque insieme all'arco 3, che vuole mappare proprio NODE su Appearance dentro l'inspector.",
+    "status": "idea",
+    "priority": "bassa",
+    "decision": "R-RAIL-12, R-RAIL-24",
+    "issue": "",
+    "prompt": "",
+    "commits": "",
+    "concerns": [
+      "properties-card",
+      "design-system"
+    ],
+    "milestone": "Backlog arco 2 rail (2026-08-11)",
+    "deps": [
+      "seed-arco2-passi8-10"
+    ],
+    "version": "3.1"
+  },
+  {
+    "id": "seed-quarta-palette",
+    "type": "debt",
+    "title": "Una quarta palette entity, globale e non scopata",
+    "desc": "Aperta in docs/TECH-DEBT.md il 12/8, emersa cercando quale regola vincesse su .tree-node__icon.tree-DClass: un concorrente che nessun documento nominava. Entra nel cruscotto il 13/8 col backfill, ed e' la voce citata di sfuggita in tre altre senza mai avere la propria. components/forEndUser/tree.scss dichiara VENTITRE selettori entity senza alcuno scoping, con una palette propria: ambra per i package, cyan #0ea5e9 per le classi, verde per gli attributi, viola per le reference, cyan piu' scuro per le operation, grigio per i parameter. Il foglio e' importato da forEndUser/Tree.tsx:16, cioe' dal tree legacy per end user, ma i selettori sono globali e colpiscono anche il tree del rail: in light perdono a (0,1,0) contro (0,2,0), in dark il foglio si scopa html[data-theme=\"dark\"], sale a (0,2,1) e VINCE contro il background transparent di base del pannello. Dal 12/8 e' trattenuto da una riga di guardia in properties-with-tree-view.scss, dentro il blocco .tree-node__icon, che e' uno schermo e non una soluzione: si toglie solo dopo aver scopato quel foglio sotto la radice del componente legacy, mai prima. Misurato: rimuovendo i tre blocchi entity del rail, .tree-DClass passa a rgb(14, 165, 233), cioe' il cyan che R-RAIL-30 ha escluso dalla scala perche' prenotato dalla selezione. FIX: scopare i selettori sotto la radice del componente legacy, non cancellarli, perche' quel tree e' vivo. Va fatto PRIMA di qualunque intervento che porti il colore ai glifi, altrimenti il primo che disinnesca i.bi nel rail si ritrova la palette del 2023 con il cyan sulle classi. Priorita' bassa oggi, alta il giorno in cui si tocca i.bi.",
+    "status": "in coda",
+    "priority": "bassa",
+    "decision": "R-RAIL-30, R-RAIL-33, R-RAIL-34",
+    "issue": "",
+    "prompt": "",
+    "commits": "",
+    "concerns": [
+      "design-system",
+      "tooling"
+    ],
+    "milestone": "Backlog arco 2 rail (2026-08-11)",
+    "deps": [
+      "seed-glifi-selettori-morti"
+    ],
+    "version": "3.2"
+  },
+  {
+    "id": "seed-tree-feature-name",
+    "type": "debt",
+    "title": "Portata parziale del restyle del tree pane",
+    "desc": "Aperta in docs/TECH-DEBT.md l'11/8 dal passo 4 dell'arco 1 (R-RAIL-7); entra nel cruscotto il 13/8 col backfill. I quattro valori di restyle sono stati applicati a tree-view-sidebar.scss col commit df8850653, e il perimetro di selettori fissato dalla ratifica lascia fuori una parte delle righe. «Nome 13px peso 500» e «peso 600 sul selezionato» agiscono su .tree-row__name, cioe' le righe di nodo e le rule e gli helper JjTL; le righe di istanza e di feature usano un'altra classe, .tree-feature__name, e restano a 11px senza peso dichiarato. Il peso 600 non le raggiunge nemmeno per via della selezione, perche' marcano lo stato selezionato con tree-row__content--selected e non con tree-row--selected. Il suffisso di tipo invece le raggiunge, perche' .tree-feature__type e' in perimetro. Ne risulta, sulle righe di feature, un nome a 11px accanto a fratelli a 13px. E' una DECISIONE DI DESIGN e non una svista: R-RAIL-7 elencava quattro valori su quattro selettori e sono stati applicati esattamente quelli. Va deciso se uniformare .tree-feature__name a .tree-row__name, allineando anche la classe di selezione, che e' la parte non banale e tocca il markup di TreeViewContent, oppure se la differenza fra righe di struttura e righe di istanza e' voluta e va documentata.",
+    "status": "idea",
+    "priority": "bassa",
+    "decision": "R-RAIL-7, R-RAIL-15",
+    "issue": "",
+    "prompt": "",
+    "commits": "",
+    "concerns": [
+      "design-system",
+      "properties-card"
+    ],
+    "milestone": "Backlog arco 1 rail (2026-08-11)",
+    "deps": [
+      "seed-rail-passo4"
+    ],
+    "version": "3.2"
+  },
+  {
+    "id": "seed-techdebt-drift",
+    "type": "debt",
+    "title": "Cruscotto e docs/TECH-DEBT.md disallineati nelle due direzioni",
+    "desc": "Misurato il 13/8 confrontando i due registri voce per voce, ed e' la ragione per cui questo reseed porta sei voci di backfill invece delle sole novita' della sessione. PRIMA DIREZIONE, il cruscotto indietro: sei debiti aperti in docs/TECH-DEBT.md non erano mai entrati nel seed, cioe' la portata parziale del restyle del tree pane (11/8) e i cinque nati dal passo 4 dell'arco 2 (12/8), firma del guscio, jj-context-bar, props-header__icon, sezione NODE, quarta palette. Il meccanismo e' visibile: i debiti aperti DENTRO un passo entrano nel cruscotto quando si registra il passo, quelli aperti a CORONAMENTO di un passo restano nel solo repo, perche' il racconto della sessione li nomina come coda e non come voci. SECONDA DIREZIONE, il repo indietro: la voce «Unificazione delle palette entity pannello/tree» e' ancora a priorita' media in TECH-DEBT e descrive uno stato superato, il pannello e il tree che divergono, mentre nel cruscotto e' chiusa dall'11/8 sera perche' R-RAIL-30 ha sostituito entrambe le palette con una scala nuova. Le altre due chiuse nel repo, il menu New document e i selettori entity dei glifi, portano correttamente «Priorita': chiusa». RIMEDIO PROPOSTO, da ratificare: la chiusura di una voce di cruscotto che ha un gemello in TECH-DEBT scrive «Priorita': chiusa» anche li', nello stesso giro; e ogni reseed confronta le intestazioni dei due registri, che costa una grep e trova esattamente questa specie di deriva.",
+    "status": "in coda",
+    "priority": "media",
+    "decision": "",
+    "issue": "",
+    "prompt": "",
+    "commits": "",
+    "concerns": [
+      "process",
+      "tooling"
+    ],
+    "milestone": "Cruscotto — evoluzione (2026-08-11)",
+    "deps": [],
+    "version": "process v1.1"
+  }
+]

@@ -1,7 +1,21 @@
-import {GObject, Temporary, TODO, U} from "../joiner";
-import {DPointerTargetable, RuntimeAccessible, windoww, Log, RuntimeAccessibleClass, Dictionary} from "../joiner";
+import type {
+    radian,
+    GObject,
+    Dictionary,
+} from "../joiner";
+import {
+    Temporary,
+    TLCoord,
+    TLObject,
+    TODO,
+    DPointerTargetable,
+    RuntimeAccessible,
+    windoww,
+    Log,
+    RuntimeAccessibleClass,
+    U,
+} from "../joiner";
 import React from "react";
-import {radian} from "../joiner/types";
 
 @RuntimeAccessible('IPoint')
 export abstract class IPoint extends RuntimeAccessibleClass {
@@ -184,6 +198,16 @@ export abstract class IPoint extends RuntimeAccessibleClass {
             ret.y /= pt.y as number;
         }
         return ret; }
+
+    public modulo(pt2: number | {x?:number, y?:number}, newInstance?: boolean): this {
+        let thiss = newInstance ? this.duplicate() : this;
+        if (typeof pt2 === "number") { thiss.x %= pt2; thiss.y %= pt2; return thiss; }
+        if (pt2.x !== undefined) thiss.x %= pt2.x;
+        if (pt2.y !== undefined) thiss.y %= pt2.y;
+        return thiss; }
+    public remainder(pt2: number | {x?:number, y?:number, w?:number, h?:number}, newInstance?: boolean): this { return this.modulo(pt2, newInstance); }
+    public modulus(pt2: number | {x?:number, y?:number, w?:number, h?:number}, newInstance?: boolean): this { return this.modulo(pt2, newInstance); }
+    public mod(pt2: number | {x?:number, y?:number, w?:number, h?:number}, newInstance?: boolean): this { return this.modulo(pt2, newInstance); }
 
     public multiplyScalar(scalar: number, newInstance: boolean): this {
         Log.e(isNaN(+scalar), 'IPoint.multiply()', 'scalar argument must be a valid number: ', scalar);
@@ -454,6 +478,18 @@ export abstract class ISize<PT extends IPoint = IPoint> extends RuntimeAccessibl
         if (pt2.h !== undefined) thiss.h /= pt2.h;
         return thiss; }
 
+    public modulo(pt2: number | {x?:number, y?:number, w?:number, h?:number}, newInstance?: boolean): this {
+        let thiss = newInstance ? this.duplicate() : this;
+        if (typeof pt2 === "number") { thiss.x %= pt2; thiss.y %= pt2; thiss.w %= pt2; thiss.h %= pt2; return thiss; }
+        if (pt2.x !== undefined) thiss.x %= pt2.x;
+        if (pt2.y !== undefined) thiss.y %= pt2.y;
+        if (pt2.w !== undefined) thiss.w %= pt2.w;
+        if (pt2.h !== undefined) thiss.h %= pt2.h;
+        return thiss; }
+    public remainder(pt2: number | {x?:number, y?:number, w?:number, h?:number}, newInstance?: boolean): this { return this.modulo(pt2, newInstance); }
+    public modulus(pt2: number | {x?:number, y?:number, w?:number, h?:number}, newInstance?: boolean): this { return this.modulo(pt2, newInstance); }
+    public mod(pt2: number | {x?:number, y?:number, w?:number, h?:number}, newInstance?: boolean): this { return this.modulo(pt2, newInstance); }
+
 
     public tl(): PT { return this.makePoint(this.x,              this.y             ); }
     public tr(): PT { return this.makePoint(this.x + this.w,     this.y             ); }
@@ -466,10 +502,15 @@ export abstract class ISize<PT extends IPoint = IPoint> extends RuntimeAccessibl
     public cc(): PT { return this.makePoint(this.x + this.w / 2, this.y + this.h /2 ); }
     public offset(): PT { return this.makePoint(this.w, this.h); }
     public center(): PT { return this.cc(); }
+    public c(): PT { return this.cc(); }
     public l(): PT { return this.cl(); }
     public r(): PT { return this.cr(); }
     public t(): PT { return this.ct(); }
     public b(): PT { return this.cb(); }
+    public ll(): PT { return this.l(); }
+    public rr(): PT { return this.r(); }
+    public tt(): PT { return this.t(); }
+    public bb(): PT { return this.b(); }
 
     public lt(): PT { return this.tl(); }
     public rt(): PT { return this.tr(); }
@@ -721,12 +762,12 @@ export class GraphSize extends ISize<GraphPoint> {
     this.owner.mark(this.owner.toHtmlCoord(B), false, 'violet');
     this.owner.mark(this.owner.toHtmlCoord(L), false, 'red');
     this.owner.mark(this.owner.toHtmlCoord(R), false, 'orange');*/
-        console.log("intersect pt1:", {T, B, L, R});
+        // console.log("intersect pt1:", {T, B, L, R});
         if ( (B.x >= pt.x && B.x <= prevPt.x) || (B.x >= prevPt.x && B.x <= pt.x) ) { } else { B = null; }
         if ( (T.x >= pt.x && T.x <= prevPt.x) || (T.x >= prevPt.x && T.x <= pt.x) ) { } else { T = null; }
         if ( (L.y >= pt.y && L.y <= prevPt.y) || (L.y >= prevPt.y && L.y <= pt.y) ) { } else { L = null; }
         if ( (R.y >= pt.y && R.y <= prevPt.y) || (R.y >= prevPt.y && R.y <= pt.y) ) { } else { R = null; }
-        console.log("intersect pt2:", {T, B, L, R});
+        // console.log("intersect pt2:", {T, B, L, R});
         function closestmix(pt: GraphPoint, closest: GraphPoint, segStart: GraphPoint, segEnd: GraphPoint, mode: "TB" | "LR"): void {
             // changes pt
             pt.x = closest.x; pt.y = closest.y; return;
@@ -750,7 +791,7 @@ export class GraphSize extends ISize<GraphPoint> {
             else if (Math.abs(closest[sub]-segEnd[sub]) < Math.abs(closest[sub]-segStart[sub])) closest[sub] = segEnd[sub];
             else closest[sub] = segStart[sub];
         }
-        console.log("intersect pt2.5:");
+        // console.log("intersect pt2.5:");
         try{
             if(T) closestmix2(pt, T, vertexGSize.tl(), vertexGSize.tr(), "TB");
             if(B) closestmix2(pt, B, vertexGSize.bl(), vertexGSize.br(), "TB");
@@ -758,13 +799,13 @@ export class GraphSize extends ISize<GraphPoint> {
             if(L) closestmix2(pt, L, vertexGSize.tl(), vertexGSize.bl(), "LR");
         } catch(e){ console.error("intersect error",e)}
         // console.log('superstiti step1: (LTBR):', L, T, B, R);
-        console.log("intersect pt2.9:");
+        // console.log("intersect pt2.9:");
         const vicinanzaT = !T ? Number.POSITIVE_INFINITY : ((T.x - pt.x) * (T.x - pt.x)) + ((T.y - pt.y) * (T.y - pt.y));
         const vicinanzaB = !B ? Number.POSITIVE_INFINITY : ((B.x - pt.x) * (B.x - pt.x)) + ((B.y - pt.y) * (B.y - pt.y));
         const vicinanzaL = !L ? Number.POSITIVE_INFINITY : ((L.x - pt.x) * (L.x - pt.x)) + ((L.y - pt.y) * (L.y - pt.y));
         const vicinanzaR = !R ? Number.POSITIVE_INFINITY : ((R.x - pt.x) * (R.x - pt.x)) + ((R.y - pt.y) * (R.y - pt.y));
         const closest = Math.min(vicinanzaT, vicinanzaB, vicinanzaL, vicinanzaR);
-        console.log("intersect pt3:", {vicinanzaT, vicinanzaB, vicinanzaL, vicinanzaR, closest});
+        // console.log("intersect pt3:", {vicinanzaT, vicinanzaB, vicinanzaL, vicinanzaR, closest});
 
         // console.log( 'closest:', closest);
         // succede quando pt e prevPt sono entrambi all'interno del rettangolo del vertice.
@@ -1183,6 +1224,54 @@ export class Geom extends RuntimeAccessibleClass {
     static lineToSizeIntersection_TODO(size: GraphSize, m: number, startLine: GraphPoint, endIfSegment?: GraphPoint): [] | [GraphPoint] | [GraphPoint, GraphPoint] {
          // todo: use GraphSize.closestIntersection which is close. it is size-segment returning only the closest intersection
         return [];
+    }
+
+    // input like: tl | top left | top-l | center center
+    static parse_TL_string(str0: string): TLObject {
+        let str: string = U.replaceAll(str0, 'center', 'c');
+        str = U.replaceAll(str, 'left', 'l');
+        str = U.replaceAll(str, 'right', 'r');
+        str = U.replaceAll(str, 'top', 't');
+        str = U.replaceAll(str, 'bottom', 'b');
+        str = U.replaceAll(str, '-', '');
+        str = U.replaceAll(str, ' ', '');
+        if (str.length > 2) {
+            Log.ee('Invalid string describing a position. Expected something like "top right", found instead: "' + str0 + '"')
+            return {t: true, l: true}
+        }
+        let ret: GObject = {};
+        for (let i = 0; i < str.length; i++) ret[str[i]] = true;
+        if (ret.b && ret.t) delete ret.b;
+        if (ret.r && ret.l) delete ret.r;
+        return ret;
+    }
+    static serialize_TL_Object(obj: TLObject): TLCoord {
+        if (!obj || typeof obj !== 'object') return "" as any;
+        let ret: string = '';
+        for (let key in obj){
+            if ((obj as GObject)[key] && key.length === 1) ret += key;
+        }
+        if (ret.length === 1) ret += ret;
+        return ret as any;
+    }
+
+    static toRadians(pt: {x?: number, y?: number}): {modulo: number, angle: number} {
+        if (!pt) return {modulo: 0, angle: 0};
+        const x = pt.x || 0;
+        const y = pt.y || 0;
+        return {modulo: Math.hypot(x, y), angle: Math.atan2(y, x)}; // atan2(0,0) === 0 (JS spec)
+    }
+    static fromRadians(polar: { modulo: number; angle: number }): IPoint {
+        if (!polar) return new Point(0, 0);
+        const modulo = polar.modulo || 0;
+        const angle  = polar.angle || 0;
+
+        if (modulo < 0) {
+            Log.ee("Geom.fromRadians(): Modulo cannot be negative", polar);
+            return new Point(0, 0);
+        }
+
+        return new Point(modulo * Math.cos(angle), modulo * Math.sin(angle));
     }
 }
 

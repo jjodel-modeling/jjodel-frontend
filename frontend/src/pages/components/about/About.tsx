@@ -32,7 +32,7 @@ const About = (props: Props) => {
                 <div className='modal' style={{'position': 'fixed'}}>
                     <div><img alt="Jjodel logo" src={logo}/></div>
                     <div className={"d-flex"}>v{props.ver} {props.name}
-                        <a className={"ms-auto"} href={"https://www.jjodel.io/whats-new/"} target="_blank">changelog</a>
+                        <a className={"ms-auto"} href={"https://github.com/jjodel-modeling/jjodel-frontend/releases"} target="_blank" rel="noopener noreferrer">changelog</a>
                     </div>
                     <div>
                         {message}

@@ -40,6 +40,9 @@ sandbox.tsx
 /frontend/build
 /frontend/build/
 /frontend/build/*
+/frontend/dist
+/frontend/dist/
+/frontend/dist/*
 
 /frontend/node_modules/.cache
 /database
@@ -53,3 +56,17 @@ docker-compose.yml
 /build
 frontend/build.rar
 frontend/src/todo_others
+/cloudflare-worker/node_modules
+/frontend/dist
+/CLAUDE.md
+_to_delete/
+.claude/settings.local.json
+
+# Sonde temporanee dello smoke: restano su disco, fuori da git
+frontend/scripts/smoke/_tmp_*
+
+# Screenshot temporanei delle sonde harness: rigenerabili, restano su disco
+docs/discovery/harness/_tmp_*
+
+# Cartella locale di Cowork (Claude desktop), non fa parte del repo
+Claude outputs/

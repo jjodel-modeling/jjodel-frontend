@@ -1,0 +1,32 @@
+/* Vertical rhythm from the approved mockup replica (B4): 24px between sections,
+   12px between fields inside a section, 12px under the section title. Sized for
+   the narrow Properties column, where the original 32/8/16/20 scale (tuned for
+   wide forms) read as very airy once a panel stacks 6+ sections. */
+.section {
+  margin-top: 24px;
+}
+
+.section:first-child {
+  margin-top: 0;
+}
+
+.title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #64748b;
+  margin: 0 0 12px 0;
+}
+
+.divider {
+  height: 1px;
+  background-color: var(--color-slate-200);
+  margin-bottom: var(--spacing-2);
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}

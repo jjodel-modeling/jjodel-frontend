@@ -1,0 +1,463 @@
+/**
+ * Markdown Message Styles
+ * Styling for rendered markdown content in Jjodie chat
+ */
+
+/* ========================================
+   Message Wrapper
+   ======================================== */
+
+.md-message-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.md-plain-text {
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+/* ========================================
+   Rendered Markdown Content
+   ======================================== */
+
+.md-content {
+    line-height: 1.5;
+    color: inherit;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+.md-content > *:first-child {
+    margin-top: 0 !important;
+}
+
+.md-content > *:last-child {
+    margin-bottom: 0 !important;
+}
+
+/* Better spacing between sections */
+.md-content > .md-h1 + .md-list,
+.md-content > .md-h1 + .md-p,
+.md-content > .md-h2 + .md-list,
+.md-content > .md-h2 + .md-p {
+    margin-top: 8px;
+}
+
+/* Paragraphs */
+.md-p {
+    margin: 0 0 8px 0;
+    line-height: 1.5;
+}
+
+.md-p:first-child {
+    margin-top: 0;
+}
+
+.md-p:last-child {
+    margin-bottom: 0;
+}
+
+.md-p + .md-p {
+    margin-top: 8px;
+}
+
+/* Headings */
+.md-h1,
+.md-h2,
+.md-h3,
+.md-h4 {
+    margin: 14px 0 6px;
+    font-weight: 600;
+    color: #0f172a;
+    line-height: 1.3;
+}
+
+.md-h1:first-child,
+.md-h2:first-child,
+.md-h3:first-child,
+.md-h4:first-child {
+    margin-top: 0;
+}
+
+.md-h1 {
+    font-size: 17px;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 5px;
+    margin-bottom: 10px;
+}
+
+.md-h2 {
+    font-size: 15px;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 4px;
+    margin-bottom: 8px;
+}
+
+.md-h3 {
+    font-size: 14px;
+}
+
+.md-h4 {
+    font-size: 13px;
+}
+
+/* Strong and Emphasis */
+.md-content strong {
+    font-weight: 600;
+    color: #0f172a;
+}
+
+.md-content em {
+    font-style: italic;
+}
+
+.md-content del {
+    text-decoration: line-through;
+    opacity: 0.7;
+}
+
+/* Links */
+.md-link {
+    color: #2563eb;
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.2s, color 0.2s;
+}
+
+.md-link:hover {
+    color: #1d4ed8;
+    border-bottom-color: #2563eb;
+}
+
+/* ========================================
+   Code Styling
+   ======================================== */
+
+/* Inline Code */
+.md-inline-code {
+    background: #f1f5f9;
+    color: #dc2626;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+    font-size: 12px;
+    border: 1px solid #e2e8f0;
+    white-space: nowrap;
+}
+
+/* Code Blocks - Light Theme */
+.md-code-block {
+    background: #f8fafc;
+    color: #334155;
+    border-radius: 8px;
+    overflow: hidden;
+    margin: 10px 0;
+    border: 1px solid #e2e8f0;
+}
+
+/* Single line code block - more compact, no header */
+.md-code-block.md-code-block--single {
+    margin: 6px 0;
+    border-radius: 6px;
+}
+
+.md-code-block.md-code-block--single .md-code-content {
+    padding: 8px 12px !important;
+}
+
+/* Code block header */
+.md-code-block .md-code-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 12px;
+    background: #f1f5f9;
+    border-bottom: 1px solid #e2e8f0;
+    min-height: 32px;
+}
+
+.md-code-block .md-code-language {
+    font-size: 11px;
+    font-weight: 600;
+    color: #64748b;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.md-code-block .md-code-copy {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    color: #64748b;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.md-code-block .md-code-copy:hover {
+    background: #e2e8f0;
+    color: #334155;
+}
+
+.md-code-block .md-code-copy.copied {
+    color: #10b981;
+}
+
+.md-code-block .md-code-copy i {
+    font-size: 14px;
+    color: inherit;
+}
+
+.md-code-block .md-code-copy span {
+    font-size: 11px;
+}
+
+/* Syntax highlighted content */
+.md-code-block .md-code-content {
+    margin: 0 !important;
+    padding: 12px !important;
+    background: #f8fafc !important;
+    overflow-x: auto;
+}
+
+.md-code-block .md-code-content code {
+    font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace !important;
+    font-size: 13px !important;
+    line-height: 1.5 !important;
+    background: transparent !important;
+    color: #334155 !important;
+}
+
+/* Line numbers styling */
+.md-code-block .linenumber {
+    min-width: 2.5em !important;
+    padding-right: 1em !important;
+    text-align: right;
+    color: #94a3b8 !important;
+    user-select: none;
+    background: #f1f5f9;
+    border-right: 1px solid #e2e8f0;
+}
+
+/* Code block scrollbar */
+.md-code-block .md-code-content::-webkit-scrollbar,
+.md-code-block::-webkit-scrollbar {
+    height: 6px;
+}
+
+.md-code-block .md-code-content::-webkit-scrollbar-track,
+.md-code-block::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 3px;
+}
+
+.md-code-block .md-code-content::-webkit-scrollbar-thumb,
+.md-code-block::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+}
+
+.md-code-block .md-code-content::-webkit-scrollbar-thumb:hover,
+.md-code-block::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* ========================================
+   Lists - Styles now handled by MarkdownRenderer.scss
+   ======================================== */
+
+/* Legacy classes for backward compatibility */
+.md-ul,
+.md-ol {
+    margin: 6px 0;
+    padding-left: 22px;
+}
+
+.md-ul {
+    list-style-type: disc;
+}
+
+.md-ol {
+    list-style-type: decimal;
+}
+
+.md-li,
+.md-li-ordered {
+    margin: 0 0 4px 0;
+    padding: 0;
+    line-height: 1.5;
+}
+
+.md-li:last-child,
+.md-li-ordered:last-child {
+    margin-bottom: 0;
+}
+
+/* Remove paragraph margins inside list items - critical for tight spacing */
+.md-li p,
+.md-li-ordered p,
+.md-li .md-p,
+.md-li-ordered .md-p {
+    margin: 0 !important;
+    padding: 0;
+    display: inline;
+}
+
+/* Nested lists */
+.md-ul .md-ul,
+.md-ol .md-ol,
+.md-ul .md-ol,
+.md-ol .md-ul {
+    margin: 4px 0 0 0;
+}
+
+/* ========================================
+   Blockquotes
+   ======================================== */
+
+.md-blockquote {
+    border-left: 3px solid #64748b;
+    padding: 10px 14px;
+    margin: 10px 0;
+    color: #475569;
+    font-style: italic;
+    background: #f8fafc;
+    border-radius: 0 6px 6px 0;
+}
+
+/* ========================================
+   Horizontal Rule
+   ======================================== */
+
+.md-hr {
+    border: none;
+    border-top: 1px solid #e2e8f0;
+    margin: 14px 0;
+}
+
+/* ========================================
+   Source View
+   ======================================== */
+
+.md-source {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 14px 16px;
+    overflow-x: auto;
+    font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #1e293b;
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.md-source code {
+    background: transparent;
+    color: inherit;
+    padding: 0;
+    border: none;
+    font-size: inherit;
+}
+
+.md-source::-webkit-scrollbar {
+    height: 6px;
+}
+
+.md-source::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 3px;
+}
+
+.md-source::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+}
+
+/* ========================================
+   Toggle Button
+   ======================================== */
+
+.md-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 11px;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 8px;
+    font-weight: 500;
+    font-family: inherit;
+}
+
+.md-toggle-btn:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    color: #475569;
+}
+
+.md-toggle-btn:active {
+    transform: scale(0.98);
+}
+
+.md-toggle-btn i {
+    font-size: 12px;
+}
+
+/* ========================================
+   User Message Adjustments
+   ======================================== */
+
+/* In user messages (white text on dark bg), adjust colors */
+.jodie-message-user .md-content {
+    color: white;
+}
+
+.jodie-message-user .md-h1,
+.jodie-message-user .md-h2,
+.jodie-message-user .md-h3,
+.jodie-message-user .md-content strong {
+    color: white;
+}
+
+.jodie-message-user .md-inline-code {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fef3c7;
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.jodie-message-user .md-link {
+    color: #93c5fd;
+}
+
+.jodie-message-user .md-link:hover {
+    color: #bfdbfe;
+    border-bottom-color: #93c5fd;
+}
+
+.jodie-message-user .md-blockquote {
+    border-left-color: rgba(255, 255, 255, 0.5);
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.jodie-message-user .md-hr {
+    border-top-color: rgba(255, 255, 255, 0.3);
+}
+
+.jodie-message-user .md-code-block {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}

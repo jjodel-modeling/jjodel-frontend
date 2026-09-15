@@ -1,15 +1,911 @@
-.options-tab{
-  .edgepoint-adjust{
-    // labels for genericinput->input and genericinput>select
-    &>label:has(~label),&>span{
-      display:none;
-      margin-top: auto;
-      margin-bottom: auto;
+.editor-switch-v2-wrapper{
+  /**
+ * OPTIONS TAB - Redesigned per CLAUDE.md
+ * Consistent with Properties and Apply-to tabs
+ */
+
+  // ============================================
+  // VARIABLES
+  // ============================================
+  $color-text-primary: #334155;
+  $color-text-secondary: #64748b;
+  $color-text-tertiary: #94a3b8;
+  $color-bg-primary: #ffffff;
+  $color-bg-secondary: #f8fafc;
+  $color-border: #e2e8f0;
+  $color-border-light: #f1f5f9;
+  $color-accent: #475569;
+
+  $font-family: 'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  // ============================================
+  // MAIN CONTAINER
+  // ============================================
+  .options-tab {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 20px;
+    background: $color-bg-primary;
+    font-family: $font-family;
+
+    // Reset h5 styles within options tab
+    h5 {
+      display: none; // Hide old h5 headers, we use section-header instead
     }
   }
-  .edgepoint-adjust>label>span{
-    display:none;
-    margin-top: auto;
-    margin-bottom: auto;
+
+  // ============================================
+  // SECTION STYLING
+  // ============================================
+  .options-section {
+    background: $color-bg-primary;
+    border: 1px solid $color-border;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .options-section-header {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: $color-text-secondary;
+    padding: 12px 16px;
+    background: $color-bg-secondary;
+    border-bottom: 1px solid $color-border;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    i {
+      font-size: 14px;
+      color: $color-text-tertiary;
+    }
+  }
+
+  .options-section-content {
+    padding: 16px;
+  }
+
+  // ============================================
+  // FIELD SECTION (Dropdown) - Compact inline layout
+  // ============================================
+  .options-field {
+    background: $color-bg-primary;
+    border: 1px solid $color-border;
+    border-radius: 8px;
+    overflow: hidden;
+
+    h5 {
+      display: none; // Hide old header
+    }
+
+    // Add section header via CSS
+    &::before {
+      content: 'FIELD';
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: $color-text-secondary;
+      padding: 12px 16px;
+      background: $color-bg-secondary;
+      border-bottom: 1px solid $color-border;
+    }
+
+    > div {
+      padding: 0; // Remove extra padding
+    }
+
+    .input-container {
+      display: flex;
+      flex-direction: row; // Horizontal layout
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      gap: 12px;
+
+      p {
+        font-size: 13px;
+        font-weight: 500;
+        color: $color-text-primary;
+        margin: 0;
+        flex-shrink: 0;
+      }
+
+      select {
+        width: auto;
+        min-width: 140px;
+        max-width: 200px;
+        height: 32px;
+        padding: 0 28px 0 10px;
+        font-size: 13px;
+        font-family: $font-family;
+        color: $color-text-primary;
+        background: $color-bg-primary;
+        border: 1px solid $color-border;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: border-color 150ms ease, box-shadow 150ms ease;
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M2 4l4 4 4-4'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 10px center;
+
+        &:hover {
+          border-color: #cbd5e1;
+        }
+
+        &:focus {
+          outline: none;
+          border-color: $color-accent;
+          box-shadow: 0 0 0 3px rgba(71, 85, 105, 0.15);
+        }
+      }
+    }
+  }
+
+  // ============================================
+  // NODE/VERTEX SECTION
+  // ============================================
+  .node {
+    background: $color-bg-primary;
+    border: 1px solid $color-border;
+    border-radius: 8px;
+    overflow: hidden;
+
+    h5 {
+      display: none; // Hide old header
+    }
+
+    // Add section header via CSS
+    &::before {
+      content: 'VERTEX OPTIONS';
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: $color-text-secondary;
+      padding: 12px 16px;
+      background: $color-bg-secondary;
+      border-bottom: 1px solid $color-border;
+    }
+
+    // Content wrapper
+    .px-2 {
+      padding: 0 !important;
+    }
+  }
+
+  // ============================================
+  // TOGGLE ROW STYLING
+  // ============================================
+  // Target the outer div.input-container (the row)
+  .options-tab > .node > .px-2 > .input-container,
+  .node > .px-2 > .input-container,
+  .edge > .px-2 > .input-container,
+  .graph > .px-2 > .input-container,
+  .edgepoint-adjust > .px-2 > .input-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    border-bottom: 1px solid $color-border-light;
+    margin: 0 !important;
+    background: $color-bg-primary;
+    transition: background 150ms ease;
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    &:hover {
+      background: $color-bg-secondary;
+    }
+
+    // Label styling for the row label (b element)
+    > b {
+      font-size: 13px;
+      font-weight: 500;
+      color: $color-text-primary;
+      margin: 0 !important;
+      margin-right: auto !important;
+    }
+
+    // The inner label.input-container from Input component - reset its styles
+    > label.input-container {
+      display: contents; // Make it transparent in layout
+      padding: 0;
+      margin: 0;
+      border: none;
+      background: none;
+    }
+
+    // Hidden rows (conditional display)
+    &[hidden] {
+      display: none !important;
+    }
+
+    // Number input styling
+    input[type="number"] {
+      width: 80px;
+      height: 32px;
+      padding: 0 10px;
+      font-size: 13px;
+      font-family: $font-family;
+      color: $color-text-primary;
+      background: $color-bg-primary;
+      border: 1px solid $color-border;
+      border-radius: 6px;
+      text-align: right;
+      transition: border-color 150ms ease, box-shadow 150ms ease;
+
+      &:hover {
+        border-color: #cbd5e1;
+      }
+
+      &:focus {
+        outline: none;
+        border-color: $color-accent;
+        box-shadow: 0 0 0 3px rgba(71, 85, 105, 0.15);
+      }
+    }
+  }
+
+  // Fallback for other input-container patterns
+  .node .input-container,
+  .edge .input-container,
+  .graph .input-container,
+  .edgepoint-adjust .input-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    border-bottom: 1px solid $color-border-light;
+    margin: 0 !important;
+    background: $color-bg-primary;
+    transition: background 150ms ease;
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    &:hover {
+      background: $color-bg-secondary;
+    }
+
+    // Nested label.input-container should be transparent
+    label.input-container {
+      display: contents;
+      padding: 0;
+      margin: 0;
+    }
+
+    b {
+      font-size: 13px;
+      font-weight: 500;
+      color: $color-text-primary;
+      margin-right: auto;
+    }
+
+    // Number input styling
+    input[type="number"] {
+      width: 80px;
+      height: 32px;
+      padding: 0 10px;
+      font-size: 13px;
+      font-family: $font-family;
+      color: $color-text-primary;
+      background: $color-bg-primary;
+      border: 1px solid $color-border;
+      border-radius: 6px;
+      text-align: right;
+      transition: border-color 150ms ease, box-shadow 150ms ease;
+
+      &:hover {
+        border-color: #cbd5e1;
+      }
+
+      &:focus {
+        outline: none;
+        border-color: $color-accent;
+        box-shadow: 0 0 0 3px rgba(71, 85, 105, 0.15);
+      }
+    }
+  }
+
+
+  // ============================================
+  // EDGE SECTION
+  // ============================================
+  .edge {
+    background: $color-bg-primary;
+    border: 1px solid $color-border;
+    border-radius: 8px;
+    overflow: hidden;
+
+    h5 {
+      display: none;
+    }
+
+    &::before {
+      content: 'EDGE OPTIONS';
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: $color-text-secondary;
+      padding: 12px 16px;
+      background: $color-bg-secondary;
+      border-bottom: 1px solid $color-border;
+    }
+
+    // Content wrapper
+    .px-2 {
+      padding: 0 !important;
+    }
+  }
+
+  // ============================================
+  // EDGE POINT SECTION
+  // ============================================
+  .edgepoint-adjust {
+    background: $color-bg-primary;
+    border: 1px solid $color-border;
+    border-radius: 8px;
+    overflow: hidden;
+
+    h5 {
+      display: none;
+    }
+
+    &::before {
+      content: 'EDGE POINT OPTIONS';
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: $color-text-secondary;
+      padding: 12px 16px;
+      background: $color-bg-secondary;
+      border-bottom: 1px solid $color-border;
+    }
+
+    // Content wrapper
+    .px-2 {
+      padding: 0 !important;
+    }
+  }
+
+  // ============================================
+  // GRAPH SECTION
+  // ============================================
+  .graph {
+    background: $color-bg-primary;
+    border: 1px solid $color-border;
+    border-radius: 8px;
+    overflow: hidden;
+
+    h5 {
+      display: none;
+    }
+
+    &::before {
+      content: 'GRAPH OPTIONS';
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: $color-text-secondary;
+      padding: 12px 16px;
+      background: $color-bg-secondary;
+      border-bottom: 1px solid $color-border;
+    }
+
+    // Content wrapper
+    .px-2 {
+      padding: 0 !important;
+    }
+  }
+
+  // ============================================
+  // DARK MODE
+  // ============================================
+ html[data-theme="dark"] {
+    .options-tab {
+      background: #0f172a;
+    }
+
+    .options-section,
+    .options-field,
+    .node,
+    .edge,
+    .edgepoint-adjust,
+    .graph {
+      background: #1e293b;
+      border-color: #334155;
+
+      &::before {
+        background: #0f172a;
+        border-color: #334155;
+        color: #94a3b8;
+      }
+    }
+
+    .options-section-header {
+      background: #0f172a;
+      border-color: #334155;
+      color: #94a3b8;
+    }
+
+    .options-field .input-container {
+      p {
+        color: #cbd5e1;
+      }
+
+      select {
+        background: #1e293b;
+        border-color: #334155;
+        color: #e2e8f0;
+
+        &:hover {
+          border-color: #475569;
+        }
+
+        &:focus {
+          border-color: #60a5fa;
+          box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.15);
+        }
+      }
+    }
+
+    .node .input-container,
+    .options-tab .input-container {
+      border-color: #334155;
+
+      &:hover {
+        background: #334155;
+      }
+
+      b, label {
+        color: #e2e8f0;
+      }
+
+      input[type="number"] {
+        background: #1e293b;
+        border-color: #334155;
+        color: #e2e8f0;
+
+        &:hover {
+          border-color: #475569;
+        }
+
+        &:focus {
+          border-color: #60a5fa;
+          box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.15);
+        }
+      }
+    }
+
+    .options-tab input[type="checkbox"],
+    .node input[type="checkbox"],
+    .edge input[type="checkbox"],
+    .graph input[type="checkbox"],
+    .edgepoint-adjust input[type="checkbox"] {
+      background-color: #475569 !important;
+
+      &:checked {
+        background: linear-gradient(135deg, #64748b 0%, #475569 100%) !important;
+      }
+
+      &:hover:not(:disabled) {
+        background-color: #64748b !important;
+
+        &:checked {
+          background: linear-gradient(135deg, #475569 0%, #334155 100%) !important;
+        }
+      }
+    }
+  }
+
+  [data-theme="dark"] {
+    .options-tab {
+      background: #0f172a;
+    }
+
+    .options-section,
+    .options-field,
+    .node,
+    .edge,
+    .edgepoint-adjust,
+    .graph {
+      background: #1e293b;
+      border-color: #334155;
+
+      &::before {
+        background: #0f172a;
+        border-color: #334155;
+        color: #94a3b8;
+      }
+    }
+
+    .options-section-header {
+      background: #0f172a;
+      border-color: #334155;
+      color: #94a3b8;
+    }
+
+    .options-field .input-container {
+      p {
+        color: #cbd5e1;
+      }
+
+      select {
+        background: #1e293b;
+        border-color: #334155;
+        color: #e2e8f0;
+
+        &:hover {
+          border-color: #475569;
+        }
+
+        &:focus {
+          border-color: #60a5fa;
+          box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.15);
+        }
+      }
+    }
+
+    .node .input-container,
+    .options-tab .input-container {
+      border-color: #334155;
+
+      &:hover {
+        background: #334155;
+      }
+
+      b, label {
+        color: #e2e8f0;
+      }
+
+      input[type="number"] {
+        background: #1e293b;
+        border-color: #334155;
+        color: #e2e8f0;
+
+        &:hover {
+          border-color: #475569;
+        }
+
+        &:focus {
+          border-color: #60a5fa;
+          box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.15);
+        }
+      }
+    }
+
+    .options-tab input[type="checkbox"],
+    .node input[type="checkbox"],
+    .edge input[type="checkbox"],
+    .graph input[type="checkbox"],
+    .edgepoint-adjust input[type="checkbox"] {
+      background-color: #475569 !important;
+
+      &:checked {
+        background: linear-gradient(135deg, #64748b 0%, #475569 100%) !important;
+      }
+
+      &:hover:not(:disabled) {
+        background-color: #64748b !important;
+
+        &:checked {
+          background: linear-gradient(135deg, #475569 0%, #334155 100%) !important;
+        }
+      }
+    }
+  }
+
+  // ============================================
+  // OVERRIDE GLOBAL CHECKBOX LABEL STYLES
+  // Hide ::before from global tokens/index.scss
+  // ============================================
+  .options-tab label.input-container::before,
+  .options-tab .input-container::before,
+  .options-tab label:has(input[type="checkbox"])::before,
+  .node label.input-container::before,
+  .node .input-container::before,
+  .node label:has(input[type="checkbox"])::before,
+  .edge label.input-container::before,
+  .edge .input-container::before,
+  .edge label:has(input[type="checkbox"])::before,
+  .graph label.input-container::before,
+  .graph .input-container::before,
+  .graph label:has(input[type="checkbox"])::before,
+  .edgepoint-adjust label.input-container::before,
+  .edgepoint-adjust .input-container::before,
+  .edgepoint-adjust label:has(input[type="checkbox"])::before {
+    display: none !important;
+    content: none !important;
+    width: 0 !important;
+    height: 0 !important;
+  }
+
+  // ============================================
+  // TOGGLE COMPONENT WRAPPER STYLING
+  // Ensures Toggle fits in input-container rows
+  // ============================================
+  .node .input-container > div[class*="wrapper"],
+  .edge .input-container > div[class*="wrapper"],
+  .graph .input-container > div[class*="wrapper"],
+  .edgepoint-adjust .input-container > div[class*="wrapper"],
+  .options-tab .input-container > div[class*="wrapper"] {
+    // Reset wrapper to not take full width
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0;
+    flex-shrink: 0;
+  }
+
+  // Ensure Toggle button itself is styled correctly
+  .node button[role="switch"],
+  .edge button[role="switch"],
+  .graph button[role="switch"],
+  .edgepoint-adjust button[role="switch"],
+  .options-tab button[role="switch"] {
+    flex-shrink: 0;
+  }
+
+  // ============================================
+  // NUMBER INPUT FIELDS (Default Width/Height)
+  // Compact 90px input, monospace, right-aligned
+  // ============================================
+  .node .input-container.number-field,
+  .edge .input-container.number-field,
+  .graph .input-container.number-field,
+  .edgepoint-adjust .input-container.number-field,
+  .options-tab .input-container.number-field {
+    // Hide any slider/range inputs
+    input[type="range"],
+    .slider,
+    .range-input {
+      display: none !important;
+      width: 0 !important;
+      visibility: hidden !important;
+    }
+
+    // Compact number input styling
+    input[type="number"],
+    input.number-input-compact {
+      width: 90px !important;
+      max-width: 90px !important;
+      height: 28px !important;
+      padding: 0 8px !important;
+      font-size: 12px !important;
+      font-family: 'IBM Plex Mono', Monaco, 'Consolas', monospace !important;
+      text-align: right !important;
+      color: #334155 !important;
+      background: #ffffff !important;
+      border: 1px solid #e2e8f0 !important;
+      border-radius: 6px !important;
+      flex-shrink: 0 !important;
+
+      &:focus {
+        border-color: #64748b !important;
+        outline: none !important;
+        box-shadow: 0 0 0 2px rgba(100, 116, 139, 0.1) !important;
+      }
+
+      // Keep spinner arrows visible but compact
+      &::-webkit-inner-spin-button,
+      &::-webkit-outer-spin-button {
+        opacity: 1;
+        height: 20px;
+      }
+    }
+
+    // Label wrapper from Input component - make transparent
+    label.input-container {
+      display: contents !important;
+    }
+  }
+
+  // Also target globally for any number inputs in these sections
+  .node input.number-input-compact,
+  .edge input.number-input-compact,
+  .graph input.number-input-compact,
+  .edgepoint-adjust input.number-input-compact,
+  .options-tab input.number-input-compact {
+    width: 90px !important;
+    max-width: 90px !important;
+    height: 28px !important;
+    padding: 0 8px !important;
+    font-size: 12px !important;
+    font-family: 'IBM Plex Mono', Monaco, 'Consolas', monospace !important;
+    text-align: right !important;
+    color: #334155 !important;
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 6px !important;
+    flex-shrink: 0 !important;
+
+  }
+
+  // ============================================
+  // GENERIC INPUT ROW STYLING
+  // For Edge and EdgePoint sections using GenericInput
+  // ============================================
+  .edge .input-container,
+  .edgepoint-adjust .input-container {
+    // The GenericInput renders a label.input-container inside
+    // Make it work as a horizontal row with label on left, input on right
+
+    > .edge-input-row,
+    > .edgepoint-input-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      gap: 12px;
+    }
+
+    // GenericInput's label wrapper
+    label.input-container {
+      display: flex !important;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      padding: 0;
+      margin: 0;
+      border: none;
+      background: none;
+      gap: 12px;
+
+      // The label text (from jsxLabel)
+      > span:first-child,
+      > .label-text {
+        font-size: 13px;
+        font-weight: 500;
+        color: $color-text-primary;
+        flex-shrink: 0;
+      }
+
+      // Input wrapper
+      > .input-wrapper,
+      > span:last-child,
+      > input,
+      > select {
+        margin-left: auto;
+      }
+    }
+
+    // Direct label text styling (when GenericInput renders jsxLabel)
+    .edge-input-row > label,
+    .edgepoint-input-row > label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      gap: 12px;
+      padding: 0;
+      margin: 0;
+      background: none;
+      border: none;
+    }
+  }
+
+  // Style the label text that GenericInput generates
+  .edge label.input-container,
+  .edgepoint-adjust label.input-container {
+    // Make the label row horizontal
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+
+    // First text element is the label
+    > *:first-child:not(input):not(select):not(button) {
+      font-size: 13px;
+      font-weight: 500;
+      color: $color-text-primary;
+      margin-right: auto;
+      white-space: nowrap;
+    }
+
+    // Input elements align right
+    > input,
+    > select,
+    > button {
+      margin-left: auto;
+      flex-shrink: 0;
+    }
+  }
+
+}
+
+// ============================================================================
+// 2026-06-12 — LIVE rules for the Properties-panel Options tab.
+// The `.editor-switch-v2-wrapper` block above is DEAD here: that wrapper is NOT an
+// ancestor of the Properties-panel Options tab (GenericNodeData renders
+// `<section.p-3.options-tab>` inside `.view-editor-tab-content`). These bring the tab
+// in line with the rest of the panel (Options-tab consistency). Toggles → `.jj-toggle-row`
+// and "Applicable to" → `.jj-field` + JjSelect are handled in NodeData.tsx / FieldData.tsx
+// (reuse the panel components), so they need no rule here.
+// ============================================================================
+// Anchored on `.options-tab` (the section's own class, guaranteed present) — NOT on
+// `.view-editor-tab-content`, which proved unreliable across attempts (Vite dev-server
+// HMR for this component-imported SCSS is flaky). The Snap/Default-Width rows themselves
+// were moved to the global `.jj-toggle-row` pattern in NodeData.tsx (same mechanism the
+// working toggles use) so their alignment no longer depends on this file; these rules
+// still left-align the remaining sections (Graph/Edge/EdgePoint) + the number inputs.
+.options-tab {
+  // Common-source LEFT alignment: an ancestor applies `text-align: center` which the bare
+  // <h5>/<b>/<input> values would otherwise inherit (that's the "centered" rows/labels).
+  // Reset it once here at the tab root so labels and field values are left-aligned.
+  text-align: left !important;
+
+  // Section titles ("Field" / "Vertex") → match the metaclass `.props-section__title`
+  // (uppercase, small, muted) instead of the bare large <h5>.
+  h5 {
+    font-size: 13px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #64748b;
+    margin: 4px 0 10px 0;
+    text-align: left;
+  }
+
+  // Remaining label rows (Snap, Default Width/Height): label LEFT, control RIGHT, like
+  // the Apply-to toggle rows. Direct children only (not the nested SizeInput wrappers).
+  .px-2 > label.input-container {
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between !important;
+    text-align: left;
+    padding: 5px 0;
+    gap: 8px;
+    margin: 0;
+
+    > b {
+      font-size: 13px;
+      font-weight: 500;
+      color: #334155;
+      margin: 0;
+    }
+  }
+
+  // Number inputs (Snap x/y disabled, Default Width/Height): hide native spinners, keep
+  // disabled values legible (slate, not placeholder-gray), and left-align the value.
+  input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+    text-align: left;
+
+    &::-webkit-inner-spin-button,
+    &::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+
+    &:disabled {
+      color: #334155;
+      -webkit-text-fill-color: #334155;
+      opacity: 1;
+    }
+  }
+
+  // Default Width / Height capped at ~8 digits + comma. Forced width (not just max-width)
+  // + `flex: 0 0 auto` so the flex row cannot stretch it to full width.
+  .number-input-compact {
+    flex: 0 0 auto;
+    width: 110px !important;
+    max-width: 110px !important;
+    min-width: 0 !important;
   }
 }

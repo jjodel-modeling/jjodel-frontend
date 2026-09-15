@@ -1,0 +1,98 @@
+# CODEOWNERS
+#
+# This file defines individuals or teams responsible for code in this repository.
+# Code owners are automatically requested for review when someone opens a pull request
+# that modifies code that they own.
+#
+# More info: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# =====================================
+# DOCUMENTATION
+# =====================================
+
+# Critical documentation - requires review
+/docs/CLAUDE_DEVELOPMENT_GUIDE.md   @alfonso
+/docs/CLAUDE.md                      @alfonso
+/docs/CHANGELOG.md                   @alfonso
+/docs/ai-agents/                     @alfonso
+
+# General documentation
+/docs/DEVELOPER_GUIDE.md             @alfonso
+/docs/USER_GUIDE.md                  @alfonso
+/docs/*.md                           @alfonso
+
+# =====================================
+# DESIGN SYSTEM
+# =====================================
+
+# Global design tokens and styles
+/frontend/src/styles/forms.scss              @alfonso
+/frontend/src/styles/tokens/                 @alfonso
+/frontend/src/styles/_variables.scss         @alfonso
+
+# Component design system
+/frontend/src/components/common/ElementBadge.tsx       @alfonso
+/frontend/src/components/common/element-badge.scss     @alfonso
+
+# =====================================
+# GITHUB CONFIGURATION
+# =====================================
+
+# GitHub configuration files
+/.github/CODEOWNERS                  @alfonso
+/.github/PULL_REQUEST_TEMPLATE.md    @alfonso
+/.github/workflows/                  @alfonso
+
+# =====================================
+# BUILD CONFIGURATION
+# =====================================
+
+# Critical build files - require careful review
+/package.json                        @alfonso
+/package-lock.json                   @alfonso
+/vite.config.ts                      @alfonso
+/tsconfig.json                       @alfonso
+
+# =====================================
+# ROOT CONFIGURATION
+# =====================================
+
+# Root level config files
+/.gitignore                          @alfonso
+/.eslintrc.*                         @alfonso
+/.prettierrc.*                       @alfonso
+/README.md                           @alfonso
+
+# =====================================
+# CORE APPLICATION
+# =====================================
+
+# Entry point
+/frontend/src/App.tsx                @alfonso
+
+# Type definitions - critical for type safety
+/frontend/src/types/                 @alfonso
+
+# =====================================
+# NOTES
+# =====================================
+
+# How to use:
+# 1. Replace @alfonso with actual GitHub usernames or team names
+# 2. Add more specific owners as the team grows
+# 3. Use team names like @jjodel-team/frontend for broader ownership
+# 4. More specific rules override general rules
+#
+# Examples:
+# /frontend/src/components/editors/  @username1
+# /frontend/src/hooks/               @username2
+# /backend/                          @backend-team
+#
+# Wildcards:
+# * matches any string within a path segment
+# ** matches zero or more path segments
+#
+# Examples:
+# *.js                  @js-owner
+# /docs/**/*.md         @docs-team
+# /frontend/**/*.scss   @styles-team

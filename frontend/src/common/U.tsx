@@ -1,5 +1,6 @@
 // import * as detectzoooom from 'detect-zoom'; alternative: https://www.npmjs.com/package/zoom-level
 // import {Mixin} from "ts-mixer";
+import type {NestedArray} from "../joiner";
 import {Any, DClass, DGraphElement, LClass, LGraphElement} from "../joiner";
 import {
     AbstractConstructor,
@@ -37,6 +38,7 @@ import {
     windoww
 } from "../joiner";
 import Swal from "sweetalert2";
+import { JjodelEvents } from "../events/registry";
 import Storage from '../data/storage';
 import {compressToUTF16, decompressFromUTF16} from "async-lz-string";
 import {NumberControl, PaletteControl, PaletteType, PathControl, StringControl} from "../view/viewElement/view";
@@ -92,6 +94,7 @@ export class Color {
 @RuntimeAccessible('R')
 export class R {
     public static cname: string = 'R';
+    public static preventNavigation = false;
 
     // from: 1.com/2/3
     // /5       --> 1.com/5/
@@ -103,7 +106,13 @@ export class R {
     }
 
     public static replace(path: string): void {
+        if (windoww.preventNavigation || R.preventNavigation) return;
         window.location.replace(path);
+    }
+
+    public static refresh(): void {
+        if (windoww.preventNavigation || R.preventNavigation) return;
+        window.location.reload();
     }
 
     public static navigate(path: string, refresh: (true | NavigateFunction) = true): void {
@@ -111,7 +120,7 @@ export class R {
         console.warn('R.navigate()', {path, refresh});
 
         //if (path.indexOf('allProject') >= 0) return;
-        if (windoww.preventNavigation) return;
+        if (windoww.preventNavigation || R.preventNavigation) return;
         let absPathIndex = path.indexOf('//');
         if (absPathIndex >= 0 && absPathIndex <= 'https:'.length) { // other protocols are not supported
             window.location.href = path;
@@ -171,6 +180,7 @@ export class U {
     // to register call with both parameters. to remove a listener call with callback=undefined
     public static navigating: boolean = false; // if i'm changing page, i stop rendering to prevent meaningless errors.
     static debug: boolean = false;
+    static uniqueNames: boolean = true;
     static clickedOutside(currentTarget0: Element|Any<Event>, callback: undefined | ((e: Element, evt: JQuery.ClickEvent) => void)) {
         if (!currentTarget0) return;
         let currentTarget: Element = (currentTarget0 as any)?.currentTarget || currentTarget0 as any;
@@ -199,6 +209,47 @@ export class U {
     private static lastClickedTime: number = 0;
     public static userHasInteracted: boolean = false;
     public static isProjectModified: boolean = false;
+
+    // Interface mode: 'basic' or 'advanced' - controls UI complexity level
+    public static interfaceMode: 'basic' | 'advanced' = 'basic';
+
+    // Global beforeunload handler - to prevent browser prompt when programmatically navigating
+    private static beforeUnloadHandler: ((e: BeforeUnloadEvent) => string | void) | null = null;
+    // Bypass flag - when true, the beforeunload handler will not show the browser prompt
+    public static shouldBypassBeforeUnload: boolean = false;
+
+    /**
+     * Enable the browser's "unsaved changes" warning.
+     * Called when entering a project with unsaved changes.
+     */
+    public static enableUnsavedChangesWarning(): void {
+        if (U.beforeUnloadHandler) return; // Already enabled
+        U.shouldBypassBeforeUnload = false; // Reset bypass flag
+        U.beforeUnloadHandler = (e: BeforeUnloadEvent) => {
+            // Check bypass flag FIRST - if true, skip the warning
+            if (U.shouldBypassBeforeUnload) return;
+            if (U.isProjectModified) {
+                e.preventDefault();
+                e.returnValue = '';
+                return '';
+            }
+        };
+        window.addEventListener('beforeunload', U.beforeUnloadHandler);
+    }
+
+    /**
+     * Disable the browser's "unsaved changes" warning.
+     * Call this BEFORE programmatic navigation (after user chooses "Don't save" or "Save & Exit").
+     */
+    public static disableUnsavedChangesWarning(): void {
+        // Set bypass flag first - this is the most reliable way to prevent the prompt
+        U.shouldBypassBeforeUnload = true;
+        if (U.beforeUnloadHandler) {
+            window.removeEventListener('beforeunload', U.beforeUnloadHandler);
+            U.beforeUnloadHandler = null;
+        }
+    }
+
     private static clickedOutsideCallback(e: any & ClickEvent){
         let target = e.target as Element;
         let clickedAncestors = U.ancestorArray(target, undefined, true);
@@ -263,7 +314,8 @@ export class U {
     };
 
     static publish(topic: string, value: unknown) {
-        if(!IoT.client.connected) {
+        if (!IoT.client) IoT.init();
+        if (!IoT.client.connected) {
             SetRootFieldAction.new('alert', '3:Cannot connect to broker!:','');
             return;
         }
@@ -329,17 +381,27 @@ export class U {
         return v;
     }
     static alertSeparator: string = '£';
-    static alert(type: 'i'|'w'|'e', title: React.ReactNode, message: React.ReactNode = ''): void {
-        if (typeof title !== 'string') {
-            windoww.__jjAlertTitle = title;
-            title = '';
-        } else windoww.__jjAlertTitle = null;
-        if (typeof message !== 'string') {
-            windoww.__jjAlertMessage = message;
-            message = '';
-        } else windoww.__jjAlertMessage = null;
+    /**
+     * @deprecated Use `toast.{error|warning|info|success}()` from `components/Toast` instead.
+     * This facade dispatches to the modern ToastProvider for backward compatibility.
+     */
+    static alert(type: 'i'|'w'|'e'|'s', title: React.ReactNode, message: React.ReactNode = ''): void {
+        try {
+            // @ts-ignore — Vite-defined env var, may be undefined in tests
+            if (import.meta?.env?.DEV) {
+                // eslint-disable-next-line no-console
+                console.warn('[Jjodel] U.alert() is deprecated. Use toast.* from components/Toast.', { type, title, message });
+            }
+        } catch { /* ignore */ }
 
-        SetRootFieldAction.new('alert', type + U.alertSeparator + title + U.alertSeparator + message, '');
+        const priority = ({ i: 'info', w: 'warning', e: 'error', s: 'success' } as const)[type] ?? 'info';
+        const hasMessage = message !== '' && message !== null && message !== undefined;
+        const finalTitle = hasMessage ? title : undefined;
+        const finalMessage = hasMessage ? message : title;
+
+        window.dispatchEvent(new CustomEvent(JjodelEvents.TOAST, {
+            detail: { priority, title: finalTitle, message: finalMessage },
+        }));
     }
 
     static dialog(message: string, label: string, action: () => any): void {
@@ -349,7 +411,7 @@ export class U {
 
     static dialogOptions?: DialogOptions = undefined;
 
-    static async dialog2(title: string, question: string, options: {txt:string, acton?: ()=>{}}[]): Promise<string> {
+    static async dialog2(title: string, question: string, options: {txt:string, action?: ()=>{}}[]): Promise<string> {
         let resolve: ((str: string | PromiseLike<string>) => void) = null as any;
         let reject: ((str: string | PromiseLike<string>) => void) = null as any;
         let promise = new Promise<string>(
@@ -398,7 +460,8 @@ export class U {
     public static objectInspect(val: GObject, depth: number = 2, color: boolean = true, showHidden = true): string{
         if (typeof val === 'string') return val;
         let ansiConvert = (window as any).ansiConvert;
-        if (!ansiConvert) (window as any).ansiconvert = ansiConvert = new Convert();
+        if (!ansiConvert) (window as any).ansiConvert = ansiConvert = new Convert();
+        if (!ansiConvert || typeof ansiConvert.toHtml !== 'function') return U.inspect(val, showHidden, depth, false);
         return U.replaceAll(ansiConvert.toHtml(U.inspect(val, showHidden, depth, color)),
             "style=\"color:#FFF\"", "style=\"color:#000\"");
     }
@@ -513,6 +576,22 @@ export class U {
         return fathers;
     }
 
+    static isShallowEqual(v: any, oldV: any): boolean {
+        switch (typeof v) {
+            default:
+                if (v === oldV) return true;
+                break;
+            case 'object':
+                if (v === oldV) return true;
+                if (v === null) return false;
+                // if (Array.isArray(v)) { U.arrayDifference() }
+                let diff = (window as any).Uobj.objdiff(v, oldV, false, false);
+                if (diff.added.length + diff.changed.length/* + diff.removed.length*/ === 0) return true;
+                break;
+            case 'function': if (v.toString() === oldV.toString()) return true;
+        }
+        return false;
+    }
     /// maxDepth = 2 is the minimum to check the content of objects inside usageDeclarations or node state. like node.errors.naming
     static isShallowEqualWithProxies(obj1?: any, obj2?: any, skipKeys: Dictionary<string>={}, out?: {reason?: string},
                                      depth: number = 0, maxDepth: number = 2, returnIfMaxDepth:boolean = false): boolean {
@@ -824,7 +903,7 @@ export class U {
 /*
     public static log(obj: unknown, label: string = '###') {
         console.clear();
-        console.log(label, obj);
+        // console.log(label, obj);
     }*/
 
     static removeEmptyObjectKeys(obj: GObject): void{
@@ -946,7 +1025,7 @@ export class U {
         let innerFuncParams = (codestrParamNames as string[]).join(',');
         let _jevalfunc = undefined as any; // is set by eval
         const evalmode = false;
-        console.log('parseFunctionWithContextAndScope', {codeStr, scope, context, params:{scopeParams, innerFuncParams}});
+        // console.log('parseFunctionWithContextAndScope', {codeStr, scope, context, params:{scopeParams, innerFuncParams}});
         scopeParams = scopeParams && innerFuncParams ? scopeParams + ',' + innerFuncParams : scopeParams + innerFuncParams;
         if (evalmode) {
             codeStr = "_jevalfunc = function ("+scopeParams+") { return ("+codeStr+")("+innerFuncParams+") }";
@@ -955,7 +1034,7 @@ export class U {
             _jevalfunc = new Function(scopeParams, " return ("+codeStr+")("+innerFuncParams+")");
         }
 
-        console.log('parseFunctionWithContextAndScope', {_jevalfunc, params:{scopeParams}});
+        // console.log('parseFunctionWithContextAndScope', {_jevalfunc, params:{scopeParams}});
 
         if (context) return _jevalfunc.bind(context);
         else return _jevalfunc;
@@ -970,6 +1049,59 @@ export class U {
     // important! this is a simplified version. the correct one allows unicode chars and is 11kb long of regex expression
     public static validIdentfierRegexp = /^[a-zA-Z_$][0-9a-zA-Z_$]*$/;
 
+    public static reservedWords = [
+        // ECMAScript Keywords
+        "break",
+        "case",
+        "catch",
+        "class",
+        "const",
+        "continue",
+        "debugger",
+        "default",
+        "delete",
+        "do",
+        "else",
+        "export",
+        "extends",
+        "finally",
+        "for",
+        "function",
+        "if",
+        "import",
+        "in",
+        "instanceof",
+        "new",
+        "return",
+        "super",
+        "switch",
+        "this",
+        "throw",
+        "try",
+        "typeof",
+        "var",
+        "void",
+        "while",
+        "with",
+        "yield",
+
+        // Future reserved (strict mode / modules)
+        "enum",
+        "await",
+        "implements",
+        "interface",
+        "let",
+        "package",
+        "private",
+        "protected",
+        "public",
+        "static",
+
+        // Literals (also disallowed as identifiers)
+        "null",
+        "true",
+        "false"
+    ];
     // warn: if return is not explicitly inserted (if that's the case set imlicitReturn = false) with a scope and the code have multiple statemepts it will fail.
     // can modify scope AND context
     // warn: can access global scope (window)
@@ -1013,6 +1145,7 @@ export class U {
         if (allowScope && !allowContext) { return eval("with(scopeAndContext){ " + codeStr + " }"); }*/
 //      U.pe(!!scope && U.isStrict(), 'cannot change scope while in strict mode ("use strict")');
         let prefixDeclarations: string = "", postfixDeclarations: string = '';
+
         if (scope) {
             if (U.isStrict) {
                 for (let key in scope) {
@@ -1020,6 +1153,7 @@ export class U {
                         key = key.trim();
                         if (!key || !U.validIdentfierRegexp.test(key)) continue;
                     }
+                    if (U.reservedWords.includes(key)) continue;
                     // anche se li assegno non cambiano i loro valori nel contesto fuori dall'eval, quindi lancio eccezioni con const.
                     prefixDeclarations += "const " + key + "=this." + key + ";";
                     postfixDeclarations = "";
@@ -1222,10 +1356,14 @@ export class U {
         } } catch(e) { Log.e(true, "Exception while trying to read file as text. Error: |", e, "|", file); }
         Log.e(true, "Wrong file type found: |", file ? file.type : null, "|", file); }
 
-    static fileRead(onChange: (e: Event, files: FileList | null, contents?: string[]) => void, extensions: string[] | FileReadTypeEnum[], readContent: boolean): void {
+    static fileRead(onChange: (e: Event, files: FileList | null, contents?: string[]) => void, extensions: string | string[] | FileReadTypeEnum[], readContent: boolean): void {
         // $(document).on('change', (e) => console.log(e));
         // console.log("importEcore: pre file reader");
-        myFileReader.show(onChange, extensions, readContent);
+        let ext: string[] | undefined = extensions as any;
+        if (typeof ext === "string") ext = [ext];
+        if (!ext?.length) ext = undefined;
+        if (Array.isArray(ext)) ext = ext.filter(e=> e && typeof e === "string");
+        myFileReader.show(onChange, ext, readContent);
     }
 
     public static clear(htmlNode: Element): void {
@@ -1371,7 +1509,15 @@ export class U {
             prefix = s.substring(0, i);
             num = 1 + (+matches[1]);
         }
-        if (increaseWhile) while (increaseWhile(prefix + num)) { num++; }
+        let limit = 10000;
+        if (increaseWhile) while (increaseWhile(prefix + num)) {
+            num++;
+            limit--;
+            if (limit <= 0) {
+                Log.eDevv('naming deduplicator stuck', {increaseWhile: increaseWhile?.toString(), s, prefix, num, allowLastNonNumberChars, allowDecimal});
+                return 'invalid_name_' + new Date().getTime();
+            }
+        }
         return prefix + num; }
 
 
@@ -1391,6 +1537,67 @@ export class U {
 
         // for (var i = 0; i < keysA.length; i++) if (!bHasOwnProperty(keysA[i]) || objA[keysA[i]] !== objB[keysA[i]]) { return false; }
         return true;
+    }
+
+    static parseParenthesis(str: string, opening: string = '(', closing: string = ')', includeParenthesis: boolean = false): NestedArray<string>{
+        const root: NestedArray<string> = [];
+        const stack: NestedArray<string> = [root];
+        let start = 0; // start index of next text fragment
+        str = opening + str + closing;
+
+        const pushFragment = (endIndex: number) => {
+            //if (endIndex >= str.length - 1)  console.log("push frag", {str, start, endIndex, includeParenthesis})
+            // skip artificial last parenthesis
+            if (endIndex >= str.length - 1) endIndex = str.length - (includeParenthesis ? 2 : 1);
+            // Only push non-empty fragment
+            if (endIndex >= start) {
+                const frag = str.substring(start, includeParenthesis ? endIndex + 1 : endIndex);
+                newArr.push(frag);
+            }
+        };
+        let newArr: NestedArray<string> = [];
+        for (let i = 0; i < str.length; i++) {
+            const ch = str[i];
+
+            if (ch === opening) {
+                pushFragment(i);         // push text before "("
+                start = (i !== 0) && includeParenthesis ? i : i + 1;           // next text starts right after "("
+                stack.push(newArr = []);
+            } else if (ch === closing) {
+                const completed = stack.pop() as NestedArray<string>;
+                newArr = completed;
+                pushFragment(i);         // push text before ")"
+                start = includeParenthesis ? i : i + 1;           // next fragment begins after ")"
+
+                // NB: stack only has NestedArray until the leaves, but we never reach the leaves here, we are at level -2 from leaves.
+                // (typeof stack[i] = at least string[] or more nested)
+                (stack[stack.length - 1] as NestedArray<string>).push(completed);
+            }
+        }
+
+        // Remaining text after the last parenthesis
+        pushFragment(str.length);
+
+        return root[0] as NestedArray<string>;
+        // Example:
+        // console.log(parseNested("aa b ( dd e (f g)) h (i)"));
+    }
+
+    // returnNaN is used if the original inptu is number and NaN, the returnInvalid if it's a NaN originated by parsing an invalid string/value.
+    static asNumber(val: any, returnInvalid: any = 0, returnNAN: any = NaN): number {
+        if (isNaN(val)) return returnNAN;
+        if (typeof val === 'number') return val;
+        let v = +val;
+        if (isNaN(v)) return returnInvalid;
+        return v;
+    }
+
+    static isNumericString(o: any, allowDecimals: boolean = false): o is string {
+        if (!allowDecimals) return !isNaN(o); // !isNaN('0.5') === false
+        if (typeof o !== 'string') return false;
+        o = o.replace(/\s/gm, '');
+        if (!o) return false; // !isNaN('') === true  !isNaN('\n') === true
+        return isNaN(+o);
     }
 
     // returns true only if parameter is already a number by type. UU.isNumber('3') will return false
@@ -1434,19 +1641,24 @@ export class U {
         // nb: mind that typeof [] === 'object'
         return typeof v === 'object'; }
 
-    static objectFromArray<V extends any>(arr: V[], getKey: keyof V|((entry:V) => string)): Dictionary<string, V>{
+    static objectFromArray<V extends any>(arr: V[], getKey?: keyof V|((entry:V) => string)): Dictionary<string, V>{
         if (!arr || !Array.isArray(arr)) return {};
         // @ts-ignore
-        return arr.reduce((acc, val) => {
+        return arr.reduce((acc, val, i) => {
             // @ts-ignore
-            let key = typeof getKey === 'string' ? val[getKey] : getKey(val);
+            let key: string | number = null as any;
+            if (getKey === undefined) key = val as any;
+            else if (typeof getKey === 'string') key = (val || {} as any)[getKey] as any;
+            else if (typeof getKey === 'function') key = getKey(val);
+            // else key = i;
+            if (key === null || key === undefined) return acc; // skip element
             // @ts-ignore
             acc[key] = val;
             return acc;
         }, {});
     }
 
-    static objectFromArrayValues<T extends any>(arr: (string | number)[], val: T = true as T): Dictionary<string | number, T> {
+    static objectFromArrayValues<K extends string | number, T extends any>(arr: K[], val: T = true as T): Dictionary<K, T> {
         // @ts-ignore
         return arr.reduce((acc, v) => { acc[v] = val; return acc; }, {});
         /*let ret: Dictionary = {};
@@ -1455,15 +1667,21 @@ export class U {
     }
 
     static toBoolString(bool: boolean, ifNotBoolean: boolean = false): string { return bool === true ? 'true' : (bool === false ? 'false' : '' + ifNotBoolean); }
+    static toBool<T extends any>(v: any): boolean {
+     if (typeof v === 'string') return U.fromBoolString(v);
+     return !!v;
+    }
+
     static fromBoolString<T extends any>(str: string | boolean): boolean;
     static fromBoolString<T extends any>(str: string | boolean, defaultVal?: T): boolean | T;
-    static fromBoolString<T extends any>(str: string | boolean, defaultVal?: T, allowNull?: boolean): boolean | null | T;
-    static fromBoolString<T extends any>(str: string | boolean, defaultVal: T = false as any, allowNull: boolean = false, allowUndefined: boolean = false): boolean | null | undefined | T {
+    static fromBoolString<T extends any>(str: string | boolean, defaultVal?: T, nullValue?: T): boolean | T;
+    static fromBoolString<T extends any>(str: string | boolean, defaultVal?: T, nullValue?: T, undefValue?: T): boolean | T;
+    static fromBoolString<T extends any>(str: string | boolean, defaultVal: T = false as any, nullValue: T = null as any, undefValue: T = undefined as any): boolean | T {
         if (str === false) return false;
         if (str === true) return true;
-        str = ('' + str).toLowerCase();
-        if (allowNull && (str === 'null')) return null;
-        if (allowUndefined && (str === 'undefined')) return undefined;
+        str = ('' + str).toLowerCase().trim();
+        if ((str === 'null')) return nullValue;
+        if ((str === 'undefined')) return undefValue;
 
         if (str === "true" || str === 't' || str === '1') return true;
         // if (defaultVal === true) return str === "false" || str === 'f' || str === '0'; // false solo se è esplicitamente false, true se ambiguo.
@@ -1471,7 +1689,9 @@ export class U {
         return defaultVal;
     }
 
-    static arrayDifference<T>(starting: T[], final: T[]): {added: T[], removed: T[], starting: T[], final: T[]} { return Uarr.arrayDifference(starting, final); }
+    static arrayDifference<T>(starting: T[], final: T[], filter: boolean = false): {added: T[], removed: T[], starting: T[], final: T[]} {
+        return Uarr.arrayDifference(starting, final, filter);
+    }
 
     /*  {a: { b: { c1: 1, c2:2, c3:3 } }, d: 1 }     ---->  {"a.b.c1":1, "a.b.c2":2, "a.b.c3":3. "d":1}*/
     public static flattenObjectToRoot(obj: GObject, prefix: string = '', pathseparator: string = '.'): GObject{
@@ -1556,11 +1776,12 @@ export class U {
     }
 
 
-    static download(filename: string = 'nameless.txt', text: string = '', debug: boolean = true): void {
+
+    static download(filename: string = 'nameless.txt', text: string = '', mimeType: string = 'text/plain', debug: boolean = true): void {
         if (!text) return;
         filename = U.toFileName(filename);
         const htmlA: HTMLAnchorElement = document.createElement('a');
-        const blob: Blob = new Blob([text], {type: 'text/plain', endings: 'native'});
+        const blob: Blob = new Blob([text], {type: mimeType, endings: 'native'});
         const blobUrl: string = URL.createObjectURL(blob);
         htmlA.style.display = 'none';
         htmlA.href = blobUrl;
@@ -1870,6 +2091,14 @@ export class U {
         }*/
         return larr as any;
     }
+    public static isPromise(value: any): value is Promise<any> {
+        return (
+            value &&
+            typeof value === "object" &&
+            typeof value.then === "function" &&
+            typeof value.catch === "function"
+        );
+    }
     public static isDPointerTargetable(e: any): e is (DPointerTargetable | LPointerTargetable){
         return e && (e.__isProxy || (e.className && e.id && e.pointedBy && e._state));
     }
@@ -2112,7 +2341,7 @@ export class U {
         const msgbody: string = encodeURIComponent(msgbody_notencoded);
         const mailtitle: string =  encodeURIComponent(title);
         // "mailto:no-one@snai1mai1.com?subject=look at this website&body=Hi,I found this website and thought you might like it http://www.geocities.com/wowhtml"
-        const gitissue = "https://github.com/MDEGroup/jjodel/issues/new?title="+mailtitle+"&body="+msgbody;
+        const gitissue = "https://github.com/jjodel-modeling/jjodel-frontend/issues/new?title="+mailtitle+"&body="+msgbody;
         let mailto: string | undefined = "mailto:"+recipients.join(';')+"?subject="+mailtitle+"&body="+msgbody;
         const mailtolimit = 2042 - 23/*for safety*/;
         /*
@@ -2467,19 +2696,14 @@ export class U {
         return true;
     }
 
-    static findInChildProperties<T extends D|L>(initialArr: (T)[], getChildrens: ((e:T) => (T)[]),
+    static findInChildProperties<T extends D|L>(initialArr: (T)[], getChildren: ((e:T) => (T)[]),
                                                 getID:((e:T)=>PrimitiveType)|undefined, returnWhenFound:((e:T)=>boolean), filter?:((e:T)=>boolean)): (T) {
-        return U.iterateChildProperties(initialArr, getChildrens, getID, returnWhenFound, filter)[0];
+        return U.iterateChildProperties(initialArr, getChildren, getID, returnWhenFound, filter)[0];
     }
-    static iterateChildProperties<T extends D|L>(initialArr: (T)[], getChildrens: ((e:T) => (T)[]),
+    static iterateChildProperties<T extends D|L>(initialArr: (T)[], getChildren: ((e:T) => (T)[]),
                                                  getID?:((e:T)=>PrimitiveType), returnWhenFound?:((e:T)=>boolean), filter?:((e:T)=>boolean)): (T)[] {
         let targets = initialArr;
         let alreadyParsed: Dictionary<string|number, (T)> = {};
-        /*if (includeSelf) {
-            for (let t of targets) {
-                includeSelf
-            }
-        }*/
         while (targets.length) {
             let nextTargets: (T)[] = [];
             for (let target of targets) {
@@ -2489,7 +2713,7 @@ export class U {
                 if (filter && !filter(target)) continue;
                 alreadyParsed[tid] = target;
                 if (returnWhenFound && returnWhenFound(target)) return [target];
-                U.arrayMergeInPlace(nextTargets, getChildrens(target));
+                U.arrayMergeInPlace(nextTargets, getChildren(target));
             }
             targets = nextTargets;
         }
@@ -2707,6 +2931,26 @@ export class U {
         setTimeout(trigger, 100+150+300/1.4);  // ...prints again!
         */
     }
+
+
+    public static toInstanceOf<T extends Constructor>(obj: GObject | null | undefined, Constructor: T): InstanceType<T> {
+        if (!obj || typeof obj !== 'object') return obj as any;
+        let ret: InstanceType<T> = new Constructor();
+        // @ts-ignore
+        for (let k in obj) { ret[k] = obj[k]; }
+        return ret;
+    }
+
+    public static camelCase(s: string): string {
+        if (!s) return s;
+        return s[0].toUpperCase() + s.substring(1);
+    }
+
+    public static env(varr: string): string {
+        if (!varr) return window['process'].env as any;
+        return window['process'].env[varr] || '';
+    }
+
 }
 export type ThrottleState = {timerID: null|number, decay: number, initialDelay:number, currentDelay:number, minDelay: number,
     pending:Function[], cumulative: boolean};
@@ -2794,6 +3038,21 @@ export class Uarr{
         return ret;
     }
 
+    public static asArray(obj: any | any[], nullVal: any = [], undefVal: any = []): any[] {
+        if (Array.isArray(obj)) return obj;
+        if (obj === null) return nullVal as any;
+        if (obj === undefined) return undefVal as any;
+        return [obj];
+    }
+
+    static shallowEqual<T extends any>(a1: T[], a2: T): boolean{
+        if (a1 === a2) return true;
+        if (!Array.isArray(a1) || !Array.isArray(a2)) return false;
+        if (a1.length !== a2.length) return false;
+        for (let i = 0; i < a1.length; i++) if (a1[i] !== a2[i]) return false;
+        return true;
+    }
+
     static arrayShallowCopy<T extends any | undefined | null>(arr: T, includeCustomKeys: boolean = true): T{
         if (!arr) return arr;
         if (!Array.isArray(arr)) return arr;
@@ -2813,7 +3072,7 @@ export class Uarr{
         return subarray.every((el) => array.includes(el));
     }
 
-    static arrayDifference<T>(starting: T[], final: T[]): {added: T[], removed: T[], starting: T[], final: T[]} {
+    public static arrayDifference<T>(starting: T[], final: T[], filter: boolean = false, unsorted = false): {added: T[], removed: T[], starting: T[], final: T[]} {
         let ret: {added: T[], removed: T[], starting: T[], final: T[]} = {} as any;
         ret.starting = starting;
         ret.final = final;
@@ -2821,6 +3080,10 @@ export class Uarr{
         if (!final) final = [];
         ret.removed = Uarr.arraySubtract(starting, final, false); // start & !end
         ret.added = Uarr.arraySubtract(final, starting, false); // end & !start
+        if (filter) {
+            ret.removed = ret.removed.filter(e => !!e);
+            ret.added = ret.added.filter(e => !!e);
+        }
         return ret;
     }
 
@@ -2886,8 +3149,8 @@ export class Uarr{
             //       but need to know it's moved or not because it depends on prepend or append 6
             // [6, __oldItem: 6, __isAlsoRemoved: true]
             if (newi >= 0) {
-                console.log('shiftIndexes: debug 44', {srcArr:[...srcArr], oldITarget:movingElement, oldIndex, newi, totalOffset});
-                console.log('shiftIndexes: debug 55', {srcArr:[...srcArr], srcArr0, oldIndex, oldITarget:movingElement, newi, newiTarget: srcArr[newi], isFake: fakeItems.has(srcArr[newi] as any), isDelete: toDeleteItems.has(srcArr[newi] as any), "in": newi in srcArr});
+                // console.log('shiftIndexes: debug 44', {srcArr:[...srcArr], oldITarget:movingElement, oldIndex, newi, totalOffset});
+                // console.log('shiftIndexes: debug 55', {srcArr:[...srcArr], srcArr0, oldIndex, oldITarget:movingElement, newi, newiTarget: srcArr[newi], isFake: fakeItems.has(srcArr[newi] as any), isDelete: toDeleteItems.has(srcArr[newi] as any), "in": newi in srcArr});
             }
             // moved element fell on empty slot
             if (!(newi in srcArr)) { srcArr[newi] = movingElement; return; } // fakeItems.set(srcArr[newi] = [srcArr[i]] as any, true);
@@ -2941,12 +3204,12 @@ export class Uarr{
         let newArr: T[] = [];
         let holeCount = 0;
         let holecount_debug: { holeCount: number, j?: number, k?: number, i: number, e: any}[] = [];
-        console.log('shiftIndexes: pre expansion', {srcArr:[...srcArr], srcArr0, originalIndexes, moveOffset, moveDirection, totalOffset, allowNegativeIndexes, allowArrayOutOfBound});
+        // console.log('shiftIndexes: pre expansion', {srcArr:[...srcArr], srcArr0, originalIndexes, moveOffset, moveDirection, totalOffset, allowNegativeIndexes, allowArrayOutOfBound});
         srcArr.forEach((e, i) => {
-            console.log('shiftIndexes: expansion', {e, srcArr:[...srcArr], isFake: fakeItems.has(e as any), isDelete: toDeleteItems.has(e as any)});
+            // console.log('shiftIndexes: expansion', {e, srcArr:[...srcArr], isFake: fakeItems.has(e as any), isDelete: toDeleteItems.has(e as any)});
             if (toDeleteItems.has(e as OldItem)) { holeCount--; return; }
             if (fakeItems.has(e as FakeItem)) {
-                console.log('shiftIndexes: expansion 2', {e, srcArr:[...srcArr], isRemoveToo: !!(e as any).__isAlsoRemoved});
+                // console.log('shiftIndexes: expansion 2', {e, srcArr:[...srcArr], isRemoveToo: !!(e as any).__isAlsoRemoved});
 
                 let subarr = e as any as T[];
                 if (moveDirection === 1) { // if direction is >, i prepend old element
@@ -2976,7 +3239,7 @@ export class Uarr{
             newArr[i + holeCount + k] = e as T;
             holecount_debug[i + holeCount] = {e, i, k, holeCount};
         })
-        console.log('shiftIndexes: ret', {srcArr:[...srcArr], srcArr0, holeCount, holecount_debug, fakeItems, toDeleteItems});
+        // console.log('shiftIndexes: ret', {srcArr:[...srcArr], srcArr0, holeCount, holecount_debug, fakeItems, toDeleteItems});
 
         return newArr;
     }
@@ -3031,7 +3294,7 @@ export class Uarr{
                 newArr[i+currentHolesNumber] = srcArr[i];
             }
         }
-        console.log('Array shift debug', {srcArr, newArr, additionalOffsets, moveOffset, moveDirection});
+        // console.log('Array shift debug', {srcArr, newArr, additionalOffsets, moveOffset, moveDirection});
         return newArr;
     }
 }
@@ -3128,14 +3391,25 @@ export class Keystrokes {
     public static clickBackMouseButton = 3;
     public static clickForwardMouseButton = 4;
 
+    // keyboard aliases
+    public static left = 'ArrowLeft';
+    public static right = 'ArrowRight';
+    public static up = 'ArrowUp';
+    public static down = 'ArrowDown';
+    public static win = 'Meta';
+    public static ctrl = 'Control';
+    // mac keys aliases
+    public static cmd = 'Meta';
+    public static option = 'Alt';
     // keyboard
+    public static meta = 'Meta'; // windows key or mac control
     public static escape = 'Escape';
     public static capsLock = 'CapsLock';
+    public static control = 'Control';
     public static shift = 'Shift';
+    public static fn = 'Fn';
     public static tab = 'Tab';
     public static alt = 'Alt';
-    public static cmd = 'Control';
-    public static control = 'Control';
     public static end = 'End';
     public static home = 'Home';
     public static pageUp = 'PageUp';
@@ -3145,7 +3419,7 @@ export class Keystrokes {
     public static audioVolumeMute = 'AudioVolumeMute';
     public static audioVolumeUp = 'AudioVolumeUp';
     public static audioVolumeDown = 'AudioVolumeDown';
-    public static mediaTrackPrevious = 'MediaTrackPrevious';
+    public static mediaTrackPrevious = 'MediaTrackPrevious'; // etc, playpause too
     public static delete = 'Delete'; // canc
     public static backspace = 'Backspace';
     public static space = ' ';
@@ -3157,17 +3431,23 @@ export class Keystrokes {
     public static insert = 'Insert';
     public static f1 = 'F1';
     // weird ones:
-    public static meta = 'Meta'; // f1, or other f's with custom binding and windows key
-    public static unidentified = 'Unidentified'; // brightness
+    public static unidentified = 'Unidentified'; // brightness, F keys without fn (f2, f3...)
     public static __NotReacting__ = 'fn, print, maybe others'; // not even triggering event?
+
     private static RegisteredKeyStrokes: Dictionary<DocString<'selector'>, {keyup: (e:any)=>any, keydown: (e:any)=>any}> = {};
-    public static register(selector: string, arr: {function?: ()=>any, keystroke?: Key[]}[]): void{
-        if (Keystrokes.RegisteredKeyStrokes[selector]) return;
+    private static avoidDuplicateRegisters: Dictionary<DocString<'selector'>, boolean> = {};
+    public static register(selector: string, src: DocString<"unique key to avoid adding twice from same code line">,
+                           arr: {function?: (evt?: any)=>any, keystroke?: Key[]}[]): void{
+        // if (Keystrokes.RegisteredKeyStrokes[selector]) return; disabled, i want 2 different "sources" target body, so i skip by same source instead.
+        if (Keystrokes.avoidDuplicateRegisters[src]) return;
+        Keystrokes.avoidDuplicateRegisters[src] = true;
         let $elems = $(selector);// sort from most "uncommon" to most common key
         let metakeysmap = {
-            [Keystrokes.alt]: 'altKey',
-            [Keystrokes.shift]: 'shiftKey',
-            [Keystrokes.control]: 'ctrlKey',/*
+            [Keystrokes.meta]: true, // 'Meta',
+            [Keystrokes.alt]: true, // 'altKey',
+            [Keystrokes.shift]: true, // 'shiftKey',
+            [Keystrokes.control]: true, // 'ctrlKey',
+            /*
             'altKey': Keystrokes.alt,
             'shiftKey': Keystrokes.shift,
             'ctrlKey': Keystrokes.control,*/
@@ -3177,6 +3457,7 @@ export class Keystrokes {
 
         Log.exDev(!($elems.on as any), 'jQuery is required for Keystrokes.register');
         let optimizedKeyPaths: GObject = {
+            [Keystrokes.meta]: {},
             [Keystrokes.alt]: {},
             [Keystrokes.shift]: {},
             [Keystrokes.control]: {},
@@ -3197,6 +3478,10 @@ export class Keystrokes {
                 if (!root[Keystrokes.control]) root = root[Keystrokes.control] = {};
                 else root = root[Keystrokes.control];
             }
+            if (keymap[Keystrokes.meta]) {
+                if (!root[Keystrokes.meta]) root = root[Keystrokes.meta] = {};
+                else root = root[Keystrokes.meta];
+            }
             let terminalKeys = entry.keystroke.filter(k => !(k in metakeysmap));
             Log.eDev(terminalKeys.length !== 1, "found a keystroke combination with multiple terminal keys", {entry, selector});
             let terminal = terminalKeys[0].toLowerCase();
@@ -3210,6 +3495,7 @@ export class Keystrokes {
                 curr = curr.parentElement;
             }
             // handle event
+            if (e.metaKey) { $elems.removeClass('key-meta'); }
             if (e.altKey) { $elems.removeClass('key-alt'); }
             if (e.shiftKey) { $elems.removeClass('key-shift'); }
             if (e.ctrlKey) { $elems.removeClass('key-ctrl'); }
@@ -3217,7 +3503,7 @@ export class Keystrokes {
         let keydown = (e: KeyDownEvent) => {
             // skip events happened in graph
             let curr = e.target;
-            console.log('keydown', {key: e.key, selector, e, curr, ct:e.currentTarget});
+            // console.log('keydown', {key: e.key, selector, e, curr, ct:e.currentTarget});
             switch (e.key) {
                 case Keystrokes.escape:
                     if (store.getState()?.isEdgePending?.source) SetRootFieldAction.new('isEdgePending', { user: '',  source: '' });
@@ -3231,11 +3517,12 @@ export class Keystrokes {
             }
             // handle event
             let root = optimizedKeyPaths;
+            if (e.metaKey) { root = root[Keystrokes.meta] || {}; $elems.addClass('key-meta'); }
             if (e.altKey) { root = root[Keystrokes.alt] || {}; $elems.addClass('key-alt'); }
             if (e.shiftKey) { root = root[Keystrokes.shift] || {}; $elems.addClass('key-shift'); }
             if (e.ctrlKey) { root = root[Keystrokes.control] || {}; $elems.addClass('key-ctrl'); }
             let f = root[e.key];
-            console.log("execute keystrokes", {e, root, optimizedKeyPaths, up:{$elems, keydown, optimizedKeyPaths, arr}});
+            // console.log("execute keystrokes", {e, src, root, optimizedKeyPaths, up:{$elems, keydown, optimizedKeyPaths, arr}});
             Log.exDev(f && typeof f !== 'function','found keystroke with invalid func',
                 {key: e.key, shift:e.shiftKey, alt: e.altKey, ctrl: e.ctrlKey, f, root, e})
             f?.();
@@ -3245,58 +3532,69 @@ export class Keystrokes {
         // $elems.off('keydown').on('keydown', null, keydown);
         // $elems.off('keydown').on('keyup', null, keyup);
         let $doc = $(document.body);
-        $doc.off('keydown', selector, keydown).on('keydown', selector, keydown);
-        $doc.off('keyup', selector, keyup).on('keyup', selector, keyup);
-
+        $doc.off('keydown.'+src, selector, keydown as any).on('keydown.'+src as any, selector, keydown);
+        $doc.off('keyup.'+src, selector, keyup as any).on('keyup.'+src as any, selector, keyup);
     }
-    public static unregister(selector: string): void{
+
+
+     public static unregister(selector: string, src: string): void {
         if (!Keystrokes.RegisteredKeyStrokes[selector]) return;
         //$(selector).off('keydown', null as any, Keystrokes.RegisteredKeyStrokes[selector].keydown);
         //$(selector).off('keyup', null as any, Keystrokes.RegisteredKeyStrokes[selector].keyup);
 
         let $doc = $(document.body);
-        $doc.off('keydown', selector, Keystrokes.RegisteredKeyStrokes[selector].keydown);
-        $doc.off('keyup', selector, Keystrokes.RegisteredKeyStrokes[selector].keyup);
+        $doc.off('keydown.src', selector, Keystrokes.RegisteredKeyStrokes[selector].keydown);
+        $doc.off('keyup.src', selector, Keystrokes.RegisteredKeyStrokes[selector].keyup);
 
         delete Keystrokes.RegisteredKeyStrokes[selector];
+        delete Keystrokes.avoidDuplicateRegisters[src];
     }
 
 
     public static getKeystrokeJsx(key: string, allowBootIcons: boolean = true, allowBoxIcons: boolean=true, allowTextIcons: boolean = true){
+        if (typeof (key as unknown) !== 'string') return key as any;
         let os = U.getOSBrowserData().os.substring(0, 3).toLowerCase();
-        let obj = iconKeys['bi_' + os];
-        if (!obj) return Log.eDevv('Found unexpected OS: ' + os, {data:U.getOSBrowserData()}) && '';
-        if (allowBootIcons && key in obj) { let val = obj[key]; return <i key={key} className={"bi " + val} title={key}/>; }
+        let obj = iconKeys['bi_' + os] || {};
+        let icon_name = obj[key] || iconKeys.bi_global[key];
+        let text = (iconKeys['text_' + os] || {})[key] || iconKeys.text_global[key];
+        if (allowBootIcons && icon_name) { return <i key={key} className={"bi " + icon_name} title={text || key}/>; }
         //obj = iconKeys['box_' + os];
         // if (!obj) return Log.eDevv('Found unexpected OS: ' + os, {data:U.getOSBrowserData()}) && '';
         //if (allowBoxIcons && key in obj) { let val = obj[key]; return <span><i className={"box-icons?? " + val todo} title={key}/></span>; }
-        obj = iconKeys['text_' + os];
-        if (!obj) return Log.eDevv('Found unexpected OS: ' + os, {data:U.getOSBrowserData()}) && '';
-        if (allowTextIcons && key in obj) { let val = obj[key]; return <i key={key} className={"text-icon " + val} title={key} data-val={val} data-content={key}/>; }
+        if (allowTextIcons && text) { return <i key={key} className={"text-icon " + text} title={text || key} data-val={text} data-content={key}/>; }
         return <span key={key}>{key.toUpperCase()}</span>;
     }
-    public static NamedKeys: Dictionary<string, boolean>;
 }
 
 const iconKeys: Dictionary<string, Dictionary<string, string>> = {
-        bi_win: {
-            [Keystrokes.shift] : "bi-shift"
-        },
-        bi_mac: {
-            [Keystrokes.cmd]   : "bi-command",
-            [Keystrokes.control]   : "bi-command",
-            [Keystrokes.alt]   : "bi-alt",
-            [Keystrokes.shift] : "bi-shift"
-        },
+    bi_global: {
+        [Keystrokes.up]     : "bi-arrow-up",
+        [Keystrokes.down]   : "bi-arrow-down",
+        [Keystrokes.control]: "bi-chevron-up",
+        [Keystrokes.alt]    : "bi-alt", // || bi-option
+        [Keystrokes.shift]  : "bi-shift",
+        [Keystrokes.fn]     : 'bi-globe', // mac always have fn, but i should not register keystrokes to it.
+        [Keystrokes.backspace]: 'bi bi-backspace', //<i className='bi bi-backspace' style={{fontSize: '1em', float: 'right', paddingTop: '2px', fontWeight: '800'}}/>
+    },
+    text_global: {
+        [Keystrokes.control]: "Ctrl",
+    },
+    bi_win: {
+        [Keystrokes.meta]    : "bi-windows", // || bi-microsoft
+    },
+    bi_mac: {
+        [Keystrokes.meta]    : "bi-command",
+    },
     box_win: {},
     box_mac: {},
     text_win: {
-        [Keystrokes.cmd]   : "ctrl",
-        [Keystrokes.control]   : "ctrl",
-        [Keystrokes.alt]   : "alt",
-        [Keystrokes.shift] : "shift"
+        [Keystrokes.meta]    : "Win",
+        [Keystrokes.alt]    : "Alt",
     },
-    text_mac: {},
+    text_mac: {
+        [Keystrokes.meta]    : "Cmd",
+        [Keystrokes.alt]    : "Option",
+    },
 };
 
 // Keystrokes.NamedKeys: Dictionary<string, boolean> = Object.values(Keystrokes).reduce((acc, v) => { acc[v] = true; return acc; }, Keystrokes.NamedKeys as GObject);

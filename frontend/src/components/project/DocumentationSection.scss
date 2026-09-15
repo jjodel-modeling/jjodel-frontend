@@ -1,0 +1,136 @@
+// ============================================
+// DOCUMENTATION SECTION - Overrides for list-card
+// ============================================
+
+@keyframes doc-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.doc-spinning {
+    animation: doc-spin 1s linear infinite;
+    display: inline-block;
+}
+
+// Empty state card (dashed border)
+.documentation-card.documentation-card--empty {
+    border-bottom: none;
+
+    &:hover {
+        background: #f8fafc;
+    }
+}
+
+// Disabled state (no critical mass)
+.documentation-card--disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+
+    &:hover {
+        background: #ffffff;
+        transform: none;
+    }
+}
+
+// ============================================
+// INLINE BADGES & META
+// ============================================
+
+.meta-separator {
+    margin: 0 4px;
+    color: #cbd5e1;
+}
+
+.confidence {
+    font-weight: 500;
+
+    &--high { color: #047857; }
+    &--medium { color: #b45309; }
+    &--low { color: #dc2626; }
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    margin-left: 8px;
+    vertical-align: middle;
+
+    i {
+        font-size: 10px;
+    }
+}
+
+.status-outdated {
+    background: #fef3c7;
+    color: #b45309;
+}
+
+.status-synced {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+// ============================================
+// ERROR INDICATOR
+// ============================================
+
+.doc-error {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    color: #dc2626;
+
+    i {
+        font-size: 18px;
+    }
+}
+
+// ============================================
+// DARK MODE
+// ============================================
+
+[data-theme="dark"] {
+
+    .documentation-card--empty {
+        &:hover {
+            background: #334155;
+        }
+    }
+
+    .documentation-card--disabled {
+        &:hover {
+            background: #1e293b;
+        }
+    }
+
+    .meta-separator {
+        color: #475569;
+    }
+
+    .confidence {
+        &--high { color: #34d399; }
+        &--medium { color: #fbbf24; }
+        &--low { color: #f87171; }
+    }
+
+    .status-outdated {
+        background: #451a03;
+        color: #fbbf24;
+    }
+
+    .status-synced {
+        background: #052e16;
+        color: #4ade80;
+    }
+
+    .doc-error {
+        color: #f87171;
+    }
+}

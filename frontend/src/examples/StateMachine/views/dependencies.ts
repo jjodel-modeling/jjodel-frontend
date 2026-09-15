@@ -4,11 +4,11 @@ export class Dependencies {
     static state = `(ret) => { 
         // scope contains: data, node, view, constants, state
         // ** preparations and default behaviour here ** //
-        console.log('inside ud default func pre', {ret:{...ret}, data, node, view})
+        // console.log('inside ud default func pre', {ret:{...ret}, data, node, view})
         ret.data = data
         ret.node = node
         ret.view = view
-        console.log('inside ud default func post', {ret:{...ret}, data, node, view})
+        // console.log('inside ud default func post', {ret:{...ret}, data, node, view})
         // data, node, view are dependencies by default. delete the line(s) above if you want to remove them.
         // add preparation code here (like for loops to count something), then list the dependencies below.
       
@@ -18,11 +18,11 @@ export class Dependencies {
     static command = `(ret) => { 
         // scope contains: data, node, view, constants, state
         // ** preparations and default behaviour here ** //
-        console.log('inside ud default func pre', {ret:{...ret}, data, node, view})
+        // console.log('inside ud default func pre', {ret:{...ret}, data, node, view})
         ret.data = data
         ret.node = node
         ret.view = view
-        console.log('inside ud default func post', {ret:{...ret}, data, node, view})
+        // console.log('inside ud default func post', {ret:{...ret}, data, node, view})
         // data, node, view are dependencies by default. delete the line(s) above if you want to remove them.
         // add preparation code here (like for loops to count something), then list the dependencies below.
       
@@ -32,11 +32,11 @@ export class Dependencies {
     static events = (event: LClass) => `(ret) => { 
         // scope contains: data, node, view, constants, state
         // ** preparations and default behaviour here ** //
-        console.log('inside ud default func pre', {ret:{...ret}, data, node, view})
+        // console.log('inside ud default func pre', {ret:{...ret}, data, node, view})
         ret.data = data
         ret.node = node
         ret.view = view
-        console.log('inside ud default func post', {ret:{...ret}, data, node, view})
+        // console.log('inside ud default func post', {ret:{...ret}, data, node, view})
         // data, node, view are dependencies by default. delete the line(s) above if you want to remove them.
         // add preparation code here (like for loops to count something), then list the dependencies below.
         
@@ -46,11 +46,11 @@ export class Dependencies {
     static event = `(ret) => { 
         // scope contains: data, node, view, constants, state
         // ** preparations and default behaviour here ** //
-        console.log('inside ud default func pre', {ret:{...ret}, data, node, view})
+        // console.log('inside ud default func pre', {ret:{...ret}, data, node, view})
         ret.data = data
         ret.node = node
         ret.view = view
-        console.log('inside ud default func post', {ret:{...ret}, data, node, view})
+        // console.log('inside ud default func post', {ret:{...ret}, data, node, view})
         // data, node, view are dependencies by default. delete the line(s) above if you want to remove them.
         // add preparation code here (like for loops to count something), then list the dependencies below.
       
@@ -60,11 +60,11 @@ export class Dependencies {
     static transition = `(ret) => { 
         // scope contains: data, node, view, constants, state
         // ** preparations and default behaviour here ** //
-        console.log('inside ud default func pre', {ret:{...ret}, data, node, view})
+        // console.log('inside ud default func pre', {ret:{...ret}, data, node, view})
         ret.data = data
         ret.node = node
         ret.view = view
-        console.log('inside ud default func post', {ret:{...ret}, data, node, view})
+        // console.log('inside ud default func post', {ret:{...ret}, data, node, view})
         // data, node, view are dependencies by default. delete the line(s) above if you want to remove them.
         // add preparation code here (like for loops to count something), then list the dependencies below.
       

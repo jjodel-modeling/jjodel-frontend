@@ -1,0 +1,158 @@
+/**
+ * Jjodie Greeting Styles
+ * Compact, visually appealing greeting component
+ */
+
+.jjodie-greeting {
+    padding: 20px;
+    background: linear-gradient(135deg, #F0F9FF 0%, #E0F2FE 100%);
+    border-left: 4px solid #0EA5E9;
+    border-radius: 12px;
+    margin: 0;
+}
+
+/* Intro paragraph */
+.greeting-intro {
+    font-family: 'Inter', -apple-system, sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+    color: #334155;
+    margin: 0 0 16px;
+    line-height: 1.6;
+}
+
+.greeting-intro strong {
+    font-weight: 700;
+    color: #0C4A6E;
+}
+
+/* Capabilities list */
+.capabilities-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+/* Individual capability item */
+.capability-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 0;
+}
+
+/* Icon container */
+.capability-icon {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #0EA5E9 0%, #0284C7 100%);
+    border-radius: 6px;
+    flex-shrink: 0;
+}
+
+.capability-icon i {
+    font-size: 14px;
+    color: white;
+}
+
+/* Capability content */
+.capability-content {
+    flex: 1;
+    font-family: 'Inter', -apple-system, sans-serif;
+    font-size: 13px;
+    line-height: 1.5;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px;
+}
+
+.capability-title {
+    font-weight: 700;
+    color: #0C4A6E;
+}
+
+.capability-separator {
+    color: #94A3B8;
+    font-weight: 400;
+}
+
+.capability-desc {
+    color: #475569;
+    font-weight: 400;
+}
+
+/* Call to action */
+.greeting-cta {
+    font-family: 'Inter', -apple-system, sans-serif;
+    font-size: 13px;
+    color: #64748B;
+    margin: 16px 0 0;
+    padding-top: 12px;
+    border-top: 1px solid #BAE6FD;
+    line-height: 1.5;
+}
+
+.greeting-cta code {
+    font-family: 'JetBrains Mono', 'SF Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    background: white;
+    color: #0EA5E9;
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid #BAE6FD;
+}
+
+/* Responsive - stack on small screens */
+@media (max-width: 400px) {
+    .capability-content {
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .capability-separator {
+        display: none;
+    }
+
+    .capability-desc {
+        font-size: 12px;
+        color: #64748B;
+    }
+}
+
+/* Animation on mount */
+@keyframes greetingFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.jjodie-greeting {
+    animation: greetingFadeIn 0.3s ease-out;
+}
+
+/* Hover effect on capability items */
+.capability-item {
+    transition: background-color 0.15s ease;
+    border-radius: 6px;
+    margin: 0 -8px;
+    padding: 6px 8px;
+}
+
+.capability-item:hover {
+    background-color: rgba(14, 165, 233, 0.08);
+}
+
+.capability-item:hover .capability-icon {
+    transform: scale(1.05);
+    transition: transform 0.15s ease;
+}

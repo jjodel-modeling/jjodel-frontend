@@ -1,0 +1,183 @@
+// Default class view — variante "Minimal clean".
+// Applicata via classe `.jjodel-default-view` sul root del jsxString
+// generato da `createViewInWorkbench` e `LViewElement.newDefault`.
+//
+// Tre stati: default, hover, selected.
+// Modifier `--edge-like` per metaclasse con esattamente 2 reference
+// (heuristic implementata nel template; falsi positivi su entity con 2 ref
+// accettati come limite noto).
+//
+// Selettori di selezione gestiti:
+//   - `.selected` (flow editor: applicato da React Flow al wrapper esterno;
+//     queste regole agiscono se la classe arriva direttamente sulla View)
+//   - `.selected-by-me` (classic editor: applicato da
+//     GraphElementComponent al root del template)
+//   - `.selected-by-others` (classic editor, multi-user collab)
+//
+// `--color-accent` NON è usato: nel codebase è slate-700, non cyan.
+// I letterali cyan (`#0ea5e9`, `#ecfeff`, `#0e7490`) sono coerenti con
+// i ~12 punti già esistenti in `EditorV2.scss`.
+
+.jjodel-default-view {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    min-width: 200px;
+    padding: 12px 14px;
+    font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    transition: border-color 120ms ease, box-shadow 120ms ease;
+
+    &__header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        justify-content: space-between;
+        margin-bottom: 10px;
+    }
+
+    &__name {
+        font-size: 14px;
+        font-weight: 500;
+        color: #0f172a;
+        line-height: 1.2;
+        flex: 1;
+        min-width: 0;
+        margin: 0;
+    }
+
+    &__type {
+        background: #ecfeff;
+        color: #0e7490;
+        font-size: 11px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-weight: 500;
+        flex-shrink: 0;
+        white-space: nowrap;
+        transition: background 120ms ease, color 120ms ease;
+    }
+
+    &__hint {
+        font-size: 11px;
+        color: #94a3b8;
+        font-style: italic;
+        border-top: 1px solid #f1f5f9;
+        padding-top: 10px;
+    }
+
+    // Smart preview "S1 → S2" per associative class binary.
+    // Visibile solo in modalità --edge-like (lo SCSS la attiva via
+    // `&--edge-like .jjodel-default-view__edge-preview { display: ... }`).
+    // Default: nascosta. Mostrata solo nel modifier.
+    &__edge-preview {
+        display: none;
+        font-size: 12px;
+        font-weight: 500;
+        color: #334155;
+        text-align: center;
+        font-variant-numeric: tabular-nums;
+    }
+
+    // Hover state — leggera elevation, border scurito di un gradino.
+    &:hover {
+        border-color: #cbd5e1;
+        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+    }
+
+    // Selected — classic editor naming (.selected-by-me).
+    // Override esplicito di `outline` per neutralizzare la regola generica
+    // di `view.scss:25` (`.selected-by-me { outline: 2px dashed var(--color-accent); }`).
+    &.selected-by-me {
+        outline: none;
+        border-color: #0ea5e9;
+        border-width: 1.5px;
+        box-shadow:
+            0 0 0 3px rgba(14, 165, 233, 0.18),
+            0 1px 2px rgba(15, 23, 42, 0.04);
+
+        .jjodel-default-view__type {
+            background: #0ea5e9;
+            color: #ffffff;
+        }
+    }
+
+    // Selected by other users (multi-user collab, classic editor).
+    // Mantiene il dashed (semantica "altrove") ma con border invece di outline.
+    &.selected-by-others {
+        outline: none;
+        border: 1.5px dashed #3b82f6;
+    }
+
+    // Selected — flow editor naming (`.selected`).
+    // In flow editor la classe è applicata da React Flow al wrapper `.mm-node`,
+    // non direttamente al `<View>` interno; queste regole agiscono solo se in
+    // futuro la classe arrivasse direttamente. Costo: nullo.
+    &.selected {
+        border-color: #0ea5e9;
+        border-width: 1.5px;
+        box-shadow:
+            0 0 0 3px rgba(14, 165, 233, 0.18),
+            0 1px 2px rgba(15, 23, 42, 0.04);
+
+        .jjodel-default-view__type {
+            background: #0ea5e9;
+            color: #ffffff;
+        }
+    }
+
+    // Modifier "edge-like" — quick win per metaclasse con 2 reference
+    // (associative class binary heuristic). La card si fa compatta e
+    // mostra lo smart preview "S1 → S2" al posto dell'hint.
+    // Resta un nodo, l'estetica suggerisce "connettore". Una vera edge
+    // representation (DVoidEdge) è un task strutturato separato.
+    &--edge-like {
+        min-width: 140px;
+        padding: 8px 10px;
+
+        .jjodel-default-view__header {
+            margin-bottom: 6px;
+        }
+
+        .jjodel-default-view__name {
+            font-size: 12px;
+        }
+
+        .jjodel-default-view__type {
+            font-size: 10px;
+            padding: 1px 6px;
+        }
+
+        // Smart preview visibile, hint nascosto.
+        .jjodel-default-view__edge-preview {
+            display: block;
+        }
+
+        .jjodel-default-view__hint {
+            display: none;
+        }
+    }
+
+    // Modifier "edge-fallback" — DV con isEdge=true ma espressioni non
+    // risolvibili (almeno una di edgeSource/edgeTarget). Card visibile
+    // (no overlay), stile edge-like compact + bordo dashed cyan + sfondo
+    // ecfeff per segnalare lo stato "edge non collegato". L'utente può
+    // cliccare la card e fixare le espressioni dal properties panel.
+    //
+    // Aggiunto in Fase 4 di L2 (sessione 2026-05-04).
+    &--edge-fallback {
+        border-style: dashed;
+        border-color: #06b6d4;
+        background: #ecfeff;
+
+        .jjodel-default-view__edge-preview {
+            display: block;
+            color: #0e7490;
+            font-style: italic;
+        }
+
+        .jjodel-default-view__hint {
+            display: none;
+        }
+    }
+}

@@ -1,0 +1,93 @@
+/* ============================================
+   EMPTY PROJECTS - Minimal empty state
+   ============================================ */
+
+.empty-projects {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 72px 24px 56px;
+    min-height: 420px;
+}
+
+.empty-projects__icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 16px;
+    background: var(--color-bg-secondary, #f8fafc);
+    border: 0.5px solid var(--color-border, #e2e8f0);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 24px;
+    color: var(--color-text-secondary, #64748b);
+}
+
+.empty-projects__title {
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--color-text-primary);
+    margin: 0 0 8px;
+}
+
+.empty-projects__sub {
+    font-size: 14px;
+    color: var(--color-text-secondary, #64748b);
+    line-height: 1.6;
+    max-width: 340px;
+    margin: 0 auto 28px;
+}
+
+.empty-projects__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 9px 20px;
+    background: #0ea5e9;
+    color: white;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 500;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s;
+
+    &:hover { background: #0284c7; }
+
+    i { 
+        font-size: 14px;
+        color: white; 
+    }
+}
+
+.empty-projects__links {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 20px;
+    font-size: 12px;
+}
+
+.empty-projects__link {
+    color: var(--color-text-secondary, #64748b);
+    text-decoration: none;
+    cursor: pointer;
+    transition: color 0.1s;
+
+    &:hover { color: #0ea5e9; }
+}
+
+.empty-projects__sep {
+    color: var(--color-border-secondary, #cbd5e1);
+}
+
+/* Dark mode */
+[data-theme="dark"] {
+    .empty-projects__icon {
+        background: rgba(255, 255, 255, 0.05);
+        border-color: rgba(255, 255, 255, 0.1);
+    }
+}

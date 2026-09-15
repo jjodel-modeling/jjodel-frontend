@@ -27,7 +27,7 @@ export const Btn = (props: BtnProps) => {
     let needConfirm = props.needConfirm || (props.icon === 'delete' && !props.disabled);
     let i_classes = (props.className||'') + ` bi tab-btn commandbar-btn ${askingConfirm ? 'bi-question-square-fill question': props.icon} ${props.theme ? props.theme : 'light'} ${props.size||''} ${mode} ${props.disabled ? 'disabled ' : ''}`
     let action = (e: React.MouseEvent<any,any>) => {
-        console.log('commandbar action', {disabled: props.disabled, action:props.action, askingConfirm, needConfirm});
+        // console.log('commandbar action', {disabled: props.disabled, action:props.action, askingConfirm, needConfirm});
         if (props.disabled || !props.action) return;
         if (!askingConfirm && needConfirm) {
             setConfirm(true);
@@ -41,24 +41,26 @@ export const Btn = (props: BtnProps) => {
         e.stopPropagation();
     }
     let icon: ReactNode = null;
+    let style = props.style || {};
 
     switch (props.icon){
         case 'delete2':
-            icon = <div className={`delete2 ${props.theme ? props.theme : 'light'}`}>Delete</div>; break;
+            icon = <div style={style} className={`delete2 ${props.theme ? props.theme : 'light'} ${props.className || ''}`}>Delete</div>; break;
 
         case 'delete':
             icon = <Tooltip tooltip={askingConfirm ? 'Are you sure?' : props.tip} inline={true} position={'top'} offsetY={10} >
-                <i onClick={action} style={props.style} className={i_classes} />
+                <i style={style} onClick={action} className={i_classes + ' ' + (props.className || '')} />
             </Tooltip>; break;
 
         default:
             icon = <Tooltip tooltip={props.tip} inline={true} position={'top'} offsetY={10}>
-                <i className={i_classes} onClick={action} style={props.style}/>
+                <i style={style} className={i_classes + ' ' +(props.className || '')} onClick={action}/>
             </Tooltip>; break;
     }
 
-    if (props.icon === "space" || props.icon === "minispace") return <span style={{display: 'block', width: `${props.icon === 'space' ? '24px' : '4px'}`}} />;
-    return <div className={'btn-component '+(props.active ? 'active' : '')}>{icon}</div>;
+    if (props.icon === "space" || props.icon === "minispace") return (
+        <span style={{...style, display: 'block', width: `${props.icon === 'space' ? '24px' : '4px'}`}} />);
+    return <div style={style} className={'btn-component '+(props.active ? 'active ' : '') +  (props.className || '')}>{icon}</div>;
 }
 
 

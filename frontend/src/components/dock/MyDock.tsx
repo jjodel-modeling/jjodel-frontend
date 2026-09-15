@@ -27,7 +27,7 @@ export class MyPortal extends React.Component<PortalOwnProps> {
         }
         if (!this.container) {
             if (this.retries++ < this.maxRetries) this.forceUpdate();
-            console.log('MyPortal retry getting container', {thiss: this, props: this.props});
+            // console.log('MyPortal retry getting container', {thiss: this, props: this.props});
             return this.props.children;
         }
         this.retries = 0;

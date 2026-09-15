@@ -20,6 +20,8 @@ import {
     unArr,
     windoww
 } from "../../joiner";
+import { batchedUpdates } from "../../utils/BatchedUpdates";
+import { PerformanceMetrics } from "../../utils/PerformanceMetrics";
 
 // transactional-like start of storage modification
 // todo: nested transaction che conti quanti begin hai effettuato e crei una matrice di pendingActions una per ogni livello nested?
@@ -144,7 +146,7 @@ export function END(actionstoPrepend: Action[] = [], path?: string, oldval?: any
     // console.warn('TRANSACTION END', {depth: t.transactionDepthLevel});
     if (actionstoPrepend.length) t.pendingActions = [...actionstoPrepend, ...t.pendingActions];
 
-    if (t.transactionDepthLevel < 0) { console.error("mismatching END()"); t.transactionDepthLevel = 0; }
+    if (t.transactionDepthLevel < 0) { console.debug("mismatching END() - transaction already closed"); t.transactionDepthLevel = 0; }
     if (t.transactionDepthLevel === 0) return FINAL_END(path, oldval, newval, desc);
     return false;
 }
@@ -223,24 +225,40 @@ export async function TRANSACTION(name:string, func: ()=> void, oldval?: any, ne
     return END([]);
 }
 let at_transaction: ((...a:any)=>void)[] = [];
-let after_transaction: ((...a:any)=>void)[] = [];
-export async function AT_TRANSACTION(a:(...argss:any)=>void) { at_transaction.push(a); }
-export async function AFTER_TRANSACTION(a:(...argss:any)=>void) { after_transaction.push(a); }
+let after_transaction: ((newState: DState)=>void)[] = [];
 
-export async function DO_AFTER_TRANSACTION() { // called after reducer
+// called before reducer, before map and react updates, always, also if the transaction is unsuccessful. Not if it's aborted before launch.
+export async function AT_TRANSACTION(a:(...argss:any)=>void) { at_transaction.push(a); }
+
+// called after reducer, before map and react updates, only if the transaction is successful.
+// NB: cannot call store.getState while inside.
+export async function AFTER_TRANSACTION(a:(newState: DState)=>void) { after_transaction.push(a); }
+
+// after react's update of components
+// NB: can call store.getState while inside.
+export async function AFTER_UPDATE(a:(newState: DState)=>void) { after_transaction.push((s)=>setTimeout(()=>a(s), 1)); }
+
+// to be executed in reducer, for internal jjodel usage, users should never call it.
+export async function DO_AFTER_TRANSACTION_NOT_FOR_USERS(newState: DState) {
+    // console.log('DO_AFTER_TRANSACTION_NOT_FOR_USERS len:', after_transaction.length);
     if (after_transaction.length) {
-        setTimeout(()=> {
-            let callback: (...argss:any)=>void = null as any;
-            for (callback of after_transaction) callback?.();
-            after_transaction = [];
-        }, 0);
+        let callback: (...argss:any)=>void = null as any;
+        let arr = [...after_transaction]; // to prevent pushing while executing
+        after_transaction = [];
+        for (callback of arr) {
+            try { callback?.(newState); } catch (e) { Log.ee('Reducer, error in AFTER_TRANSACTION action', e); }
+        }
+        // console.log('DO_AFTER_TRANSACTION_NOT_FOR_USERS end', [...after_transaction]);
     }
 }
 
+(window as any)._jj_at_transaction = at_transaction;
+(window as any)._jj_after_transaction = after_transaction;
 (window as any).TRANSACTION = TRANSACTION;
 (window as any).AT_TRANSACTION = AT_TRANSACTION;
+(window as any).AFTER_UPDATE = AFTER_UPDATE;
 (window as any).AFTER_TRANSACTION = AFTER_TRANSACTION;
-(window as any).DO_AFTER_TRANSACTION = DO_AFTER_TRANSACTION;
+(window as any).DO_AFTER_TRANSACTION_NOT_FOR_USERS = DO_AFTER_TRANSACTION_NOT_FOR_USERS;
 (window as any).BEGIN = BEGIN;
 (window as any).ABORT = ABORT;
 (window as any).COMMIT = COMMIT;
@@ -291,7 +309,7 @@ export class Action extends RuntimeAccessibleClass {
         this.stack = new Error().stack?.split('\n').splice( 4);
         this.subType = subType;
         this.skipCollaborative = skipCollaborative;
-        this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
+        this.className = Action.cname;
     }
 
     // forces the action to fire alone ignoring a TRANSACTION or BEGIN/END blocks
@@ -327,8 +345,14 @@ export class Action extends RuntimeAccessibleClass {
             printobj['this'] = this;
             printobj['stack'] = this.stack;
             printobj['list'] = (this as any).actions;
-            console.log('firing action:', printobj);
-            storee.dispatch({...this});
+            // console.log('firing action:', printobj);
+            setTimeout(()=>storee.dispatch({...this}), 0); // force action execution to be async, so i can add callbacks like AFTER_TRANSACTION
+            /*
+            // OPTIMIZATION: Wrap dispatch in batchedUpdates to ensure React batches the render
+            PerformanceMetrics.countRender('Action_dispatch');
+            batchedUpdates(() => {
+                storee.dispatch({...this});
+            });*/
         }
         return true;
     }
@@ -368,9 +392,9 @@ export class LoadAction extends Action {
 
     constructor(state: DState | GObject, fire: boolean = true) {
         super('', state, '');
-        this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
+        this.className = LoadAction.cname;
         if (fire) {
-            console.log('load action firing', {thiss:this, list: t.pendingActions, t});
+            // console.log('load action firing', {thiss:this, list: t.pendingActions, t});
             this.fire();
         }
     }
@@ -419,7 +443,7 @@ export class SetRootFieldAction extends Action {
         super(fullpath, value, undefined, skipCollaborative);
         this.accessModifier = accessModifier;
         this.isPointer = isPointer;
-        this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
+        this.className = SetRootFieldAction.cname;
         if (fire) this.fire();
     }
 
@@ -455,6 +479,7 @@ export class SetRootFieldAction extends Action {
 
 @RuntimeAccessible('SetFieldAction')
 export class SetFieldAction extends SetRootFieldAction {
+    static cname: string = 'SetFieldAction';
     static type = 'SET_ME_FIELD';
 
     static create<
@@ -506,7 +531,7 @@ export class SetFieldAction extends SetRootFieldAction {
         T extends (keyof D),
         VAL extends
             D[T] extends string | string[] ? 'must specify "isPointer" parameter' :
-                (AM extends undefined | '' ? D[T] : (AM extends '-=' ? number[] : (AM extends '+=' | '[]' | `[${number}]` | `.${number}` ? unArr<D[T]> | D[T] | D[T][] : any /*failed to narrow type by AM, unrecognized AM*/))),
+                (AM extends undefined | '' ? D[T] : (AM extends '-=' ? any[] : (AM extends '+=' | '[]' | `[${number}]` | `.${number}` ? unArr<D[T]> | D[T] | D[T][] : any /*failed to narrow type by AM, unrecognized AM*/))),
         // VAL extends (AM extends undefined | '' ? D[T] : (AM extends '-=' ? number[] : (AM extends '+=' | '[]' | `[${number}]` | `.${number}` ? unArr<D[T]> | D[T] | D[T][] : '_error_'))),
         /*VAL extends (AM extends undefined | '' ? (D[T] extends any[] ? StrictExclude<D[T], string[]> : StrictExclude<D[T], string>) :
             (AM extends '-=' ?
@@ -525,7 +550,7 @@ export class SetFieldAction extends SetRootFieldAction {
         D extends DPointerTargetable,
         T extends (keyof D),
         VAL extends AM extends '' | undefined ? orArr<string | null | undefined> :
-            (AM extends '-=' ? orArr<number> :
+            (AM extends '-=' ? orArr<any> :
                 (AM extends '+=' ? orArr<string | null | undefined> : '_am_typeerror_')),
         AM extends AccessModifier | undefined = undefined,
         >(me: D | Pointer<D>, field: T,
@@ -561,7 +586,7 @@ export class SetFieldAction extends SetRootFieldAction {
         super(fullpath, val, accessModifier, false, isPointer, skipCollaborative);
         this.me = me;
         this.me_field = field;
-        this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
+        this.className = SetFieldAction.cname;
         if (fire) this.fire();
     }
 
@@ -585,7 +610,7 @@ export class SetFieldAction extends SetRootFieldAction {
         // console.warn("me fire", {thiss:this, d, typeofd:typeof d, field:this.me_field, dfield:d[this.me_field], val:this.value});
         if (d && typeof d === "object") {
             let oldv = U.followPath(d, this.me_field);
-            console.log('set value index firing 0', {ov:d[this.me_field], me_field:this.me_field, oldv, d, newv:this.value});
+            // console.log('set value index firing 0', {ov:d[this.me_field], me_field:this.me_field, oldv, d, newv:this.value});
             if (oldv === this.value) return false;
         }
         return super.fire(forceRelaunch, false);*/
@@ -594,13 +619,14 @@ export class SetFieldAction extends SetRootFieldAction {
 
 @RuntimeAccessible('CollabRefreshAction')
 export class CollabRefreshAction extends Action {
+    static cname = 'CollabRefreshAction';
     static type = 'COLLAB_REFRESH';
     static create(): CollabRefreshAction { return new CollabRefreshAction(); }
     static new(): boolean { return CollabRefreshAction.create().fire(); }
 
     protected constructor() {
         super('', '', '', false);
-        this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
+        this.className = CollabRefreshAction.cname;
     }
 
     fire(forceRelaunch: boolean = false): boolean {
@@ -609,13 +635,14 @@ export class CollabRefreshAction extends Action {
 }
 @RuntimeAccessible('CollabClearHistoryAction')
 export class CollabClearHistoryAction extends Action {
+    static cname: string = 'CollabClearHistoryAction';
     static type = 'COLLAB_CLEAR';
     static create(): CollabClearHistoryAction { return new CollabClearHistoryAction(); }
     static new(): boolean { return CollabClearHistoryAction.create().fire(); }
 
     protected constructor() {
         super('', '', '', false);
-        this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
+        this.className = CollabClearHistoryAction.cname;
     }
 
     fire(forceRelaunch: boolean = false): boolean {
@@ -652,7 +679,7 @@ export class RedoAction extends Action {
     private constructor(amount: number = 1, forUser:Pointer<DUser>) {
         super('', amount);
         this.forUser = forUser;
-        this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
+        this.className = RedoAction.cname;
     }
 }
 
@@ -670,7 +697,7 @@ export class UndoAction extends Action {
     private constructor(amount: number = 1, forUser:Pointer<DUser>) {
         super('', amount);
         this.forUser = forUser;
-        this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
+        this.className = UndoAction.cname;
     }
 }
 
@@ -686,7 +713,7 @@ export class CombineHistoryAction extends Action {
     }
     private constructor() {
         super('', '');
-        this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
+        this.className = CombineHistoryAction.cname;
     }
 }
 
@@ -715,7 +742,7 @@ export class CreateElementAction extends Action {
     }
     private constructor(me: DPointerTargetable, fire: boolean = true) {
         super('idlookup.' + me.id, me);
-        this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
+        this.className = CreateElementAction.cname;
         this.value = me;
         if (fire) this.fire();
     }
@@ -731,29 +758,20 @@ export class CreateElementAction extends Action {
 
 @RuntimeAccessible('DeleteElementAction')
 export class DeleteElementAction extends SetFieldAction {
+    static cname: string = "DeleteElementAction";
     static type = 'DELETE_ELEMENT';
     public static create(me: Pack1<LPointerTargetable>): DeleteElementAction { return new DeleteElementAction(me as any); }
     public static new(me: Pack1<LPointerTargetable>): boolean { return new DeleteElementAction(me as any).fire(); }
 
     constructor(me: Pack1<LPointerTargetable>) {
         super(Pointers.from(me), '', undefined, undefined);
-        this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
+        this.className = DeleteElementAction.cname;
     }
 }
 
-
-/*
-
-@RuntimeAccessible
-export class IDLinkAction extends Action{
-    constructor() {
-        super(IDLinkAction.name,
-    }
-    nope, uso un proxy
-}*/
-
 @RuntimeAccessible('CompositeAction')
 export class CompositeAction extends Action {
+    static cname: string = 'CompositeAction';
     static type: string = 'COMPOSITE_ACTION';
     actions: Action[] = [];
     descriptor?: ActionDescriptor;
@@ -762,8 +780,9 @@ export class CompositeAction extends Action {
     public static new(actions: Action[], launch: boolean = true): CompositeAction { return new CompositeAction(actions, launch); }
     constructor(actions: Action[], launch: boolean = false) {
         super('', '');
+        // console.log('compositeact2', JSON.parse(JSON.stringify(actions || [])));
         this.actions = actions;
-        this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
+        this.className = CompositeAction.cname;
         this.fromCollaborative = false;
         if (launch) this.fire();
     }
@@ -774,7 +793,7 @@ export class CompositeAction extends Action {
 }
 
 @RuntimeAccessible('ParsedAction')
-export class ParsedAction extends SetRootFieldAction {
+export abstract class ParsedAction extends SetRootFieldAction {
     // NB: actually this is never created but "converted" from other actions by adding fields
     path!: string; // path to a property in the store "something.like.this"
     pathArray!: string[]; // path splitted "like.1.this"

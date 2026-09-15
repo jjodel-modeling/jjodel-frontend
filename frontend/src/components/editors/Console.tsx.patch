@@ -1,0 +1,4 @@
+import Convert from 'ansi-to-html';
+
+let ansiConvert = (window as any).ansiConvert;
+if (!ansiConvert) (window as any).ansiconvert = ansiConvert = new Convert();

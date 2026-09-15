@@ -1,8 +1,8 @@
 div.updates-container {
     position: absolute;
-    background-color: var(--bg-2);
+    background-color: var(--color-bg-tertiary);
     border: none;
-    border-radius: var(--radius);
+    border-radius: var(--radius-sm);
     left: 320px;
     bottom: 100px;
     width: 1100px;
@@ -12,7 +12,7 @@ div.updates-container {
 
     & h1 {
         font-size: 1.3em;
-        font-weight: 500;
+        font-weight: var(--font-medium);
     }
 
     & .updates-item {

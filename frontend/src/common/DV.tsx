@@ -1,23 +1,35 @@
+import type {
+    Pointer,
+    GObject,
+    Dictionary,
+} from '../joiner';
+
 import {
-    DGraphElement, Dictionary,
+    DGraphElement,
     DModelElement,
     DViewElement,
     DViewPoint,
     DVoidEdge,
     EdgeBendingMode,
-    EdgeHead,
-    GObject,
-    GraphPoint, LPointerTargetable, LViewElement,
-    Pointer,
+    GraphPoint,
+    LPointerTargetable,
+    LViewElement,
     RuntimeAccessible,
     ShortAttribETypes as SAType,
-    U, Draggable, Measurable,
-    Language
+    U,
+    Draggable, Measurable,
+    Language,
+    store,
+    SetRootFieldAction,
+    LanguageObject,
 } from '../joiner';
 import React, {ReactNode, useState} from "react";
 import {PaletteType} from "../view/viewElement/view";
 import "./error.scss";
-import {LanguageObject} from "../joiner/classes";
+import { ErrorDisplay } from "./ErrorPortal";
+import {Ohm} from "../DSL/ohm";
+import {ETA} from "../DSL/templates_t2m/ETA";
+import {CLASSIC_OBJECT_VIEW_JSX, CLASSIC_VALUE_VIEW_JSX, CLASSIC_SINGLETON_VIEW_JSX} from "../utils/defaultViewTemplate";
 
 const notificationType: 'classic'|'alert'|'notification' = 'classic';
 
@@ -27,17 +39,32 @@ let ShortAttribETypes: typeof SAType = (window as any).ShortAttribETypes;
 
 @RuntimeAccessible('DV')
 export class DV {
-    static defaultLanguages(): Dictionary<string, Language> {
+    // refreshes languages for rapid debug
+    public static refresh(){
+        let s = store.getState();
+        let newLanguages = DV.defaultLanguages();
+        s.languages = newLanguages;
+        SetRootFieldAction.new('clonedCounter', ((s as any).clonedCounter || 0) + 1);
+        return newLanguages;
+    }
 
-        let m2t = undefined; //  {javascript:{str:'function(model) {\n\treturn "Not implemented, this is a placeholder.";\n}'}};
+    static defaultLanguages(): Dictionary<string, Language> & {_selected: string}{
+        let m2t = undefined; //  {javascript:{__str:'function(model) {\n\treturn "Not implemented, this is a placeholder.";\n}'}};
         let t2m = undefined;
-        let ret: Dictionary<string, Language> = {};
-        ret.JSON = new Language(
-            {javascript:{allowPartials: true, str:'function(modelData) {\n\treturn JSON.stringify(modelData.json, null, 4);\n}'}},
-            {javascript:{allowPartials: true, str:"function(text) {\n\treturn JSON.parse(text);\n}"}}
+        let ret: Dictionary<string, Language> & {_selected: string} = { _selected: 'JSON' } as any;
+        ret.JSON = new Language("jom",
+            {javascript:{allowPartials: true, __str:'function(modelData) {' +
+                        '\n\tlet obj = modelData.deepJson;' +
+                        '\n\t// remove keys not often modified (instanceof) or that are references to other models (instanceof, instances).' +
+                        '\n\tlet ignoredKeys = ["instances", "father", "instanceof"];' +
+                        '\n\tlet ret = Uobj.deepEdit(obj, k => (ignoredKeys.includes(k) ? undefined : k), v=>v, false);' +
+                        '\n\treturn JSON.stringify(ret, null, 4);' +
+                        '\n}'}},
+            {javascript:{allowPartials: true, __str:"function(text) {\n\treturn JSON.parse(text);\n}"}}
         );
-        ret['Emfatic'] = new Language(
-            {javascript:{allowPartials: true, str: `function(model, node){
+        ret['Emfatic'] = new Language("emf",
+            {engine: 'handlebars' as any, javascript:
+                    {allowPartials: true, __str: `function(model, node){
     // finds and applies the appropriate serializer, empty string for missing ones.
     let serialize = (d, deep, indent) => map[d.className]?.(d, deep, indent) || '';
     
@@ -57,18 +84,78 @@ export class DV {
     
     return serialize(model);
 }`},
-        handlebars: {allowPartials: false, str:`@namespace(uri="{{uri}}") prefix="{{prefix}}")
+        handlebars: {allowPartials: true,
+'Model':`{{#with packages.[0]}}
+@namespace(uri="{{uri}}", prefix="{{prefix}}")
+{{>Annotations}}
+package {{name}};
+
+{{#each classes~}}
+    {{~>Class}}\n
+{{/each}}
+{{#each packages}}
+    {{>Package}}\n
+{{/each}}
+{{/with}}
+`,
+'Package':`{{>Annotations}}package {{name}} {
+{{#each subPackages}}
+    {{>Package}}\n
+{{/each}}
+{{#each classes~}}
+    {{~>Class}}\n
+{{/each}}
+}`,
+'Class':`{{>Annotations}}{{#if isAbstract}}abstract {{/if}}{{#if isInterface}}interface {{/if~}}
+class {{name}} {{#ifCond extends.length '||' implements.length~}}
+extends {{#js implements extends "(a, b)=> [...a, ...b].join(', ')"}}{{/js}}{{/ifCond}} {
+{{#each attributes}}
+    {{>Attribute}}\n
+{{/each}}
+{{#each references}}
+    {{>Reference}}\n
+{{/each}}
+{{#each operations}}
+    {{>Operation}}\n
+{{/each}}
+}`,
+'Modifiers': `{{>Annotations}}{{#unless changeable}}readonly {{/unless~}}
+{{#if volatile}}volatile {{/if~}}
+{{#if transient}}transient {{/if~}}
+{{#if unsettable}}unsettable {{/if~}}
+{{#if derived}}derived {{/if~}}
+{{#if unique}}unique {{/if~}}
+{{#if ordered}}ordered {{/if~}}
+{{#if resolveProxies}}resolve {{/if~}}
+{{#if isID}}id {{/if~}}
+`,
+'Operation': `{{>Modifiers}}op {{type.name}}{{>Multiplicity}} {{name~}}
+    ({{#each parameters}}{{>Parameter}}{{#unless @last}}, {{/unless}}{{/each}})\n`,
+'Parameter': `{{>Modifiers}}{{type.name}}{{>Multiplicity}} {{name}}`,
+'Multiplicity': `{{#js lowerBound upperBound "(l, u)=>{let s = l+''+u; switch(s){case '01': return ''; case '0-1': return'[*]'; case '1-1': return'[+]';} if (l==u) return '['+l+']'; if (u==-1) return '['+l+'...]'; return '['+l+'...'+u+']'}"}}{{/js}}`,
+'Attribute': '{{>Modifiers}}attr {{type.name}} {{name}}{{>Multiplicity}}{{#if defaultValue}}= {{defaultValue}}{{/if}};\n',
+'Reference': '{{>Modifiers}}{{#if isContainment}}val{{else}}ref{{/if}} {{type.name}} {{name}}{{>Multiplicity}};\n',
+'Annotations': `{{#each annotations}}@{{source}}({{#js entries "args => args.map(e => e.key + ' = ' + e.value).join(', ')"}}{{/js}})\n{{/each}}`,
+'Default': ``,
+// {{#each}}{{}}{{/each}}`
+'__str':`@namespace(uri="{{package.uri}}", prefix="{{prefix}}")
 package {{name}};
 
 {{#each classes}}
 class {{name}} {
-    {{#each attributes}}attr {{type.name}} {{name}};{{/each}}
-    {{#each references}}{{#if isContainment}}val{{else}}ref{{/if}} {{type.name}} {{name}};{{/each}}
-    {{#ifcond isReference '&&' isContainment}}val {{type.name}} {{name}};{{/ifcond}}
-    {{#ifcond isReference '&&' isContainment}}ref {{type.name}} {{name}};{{/ifcond}}
-}
+{{#each attributes}}
+    attr {{type.name}} {{name}};
 {{/each}}
-`}}, {engine:'nearley' as any, nearley:{allowPartials: false, str: `main -> header classdef:* {% (d) => ({uri: d[0].uri, prefix: d[0].prefix, classifiers:d[1]}) %}
+{{#each references}}
+    {{#if isContainment}}val{{else}}ref{{/if}} {{type.name}} {{name}};
+{{/each}}
+}
+
+{{/each}}
+`}},
+        {engine:'nearley' as any, nearley:{allowPartials: true, __str:
+`main -> header (classdef | package):* {% (d) => ({packages:[{globalold:true, uri: d[0].uri, prefix: d[0].prefix, classifiers:d[1]}]}) %}
+package -> ws "package" ws identifier ws "{" (classdef | package):* "}"
 
 # --------------------------------------------------------------------
 # HEADER
@@ -76,7 +163,7 @@ class {{name}} {
 header -> "@namespace(uri=\\"" namespace "\\"," ws
            "prefix=\\"" prefix:? "\\"" ")" eol
            "package" ws identifier ";" eol:*
-           {% function(d) {return {uri: d[1][0], prefix: d[5]||''};} %}
+           {% function(d) {return {globaloldheader:true, uri: d[1][0], prefix: d[5]||''};} %}
 
 namespace -> identifier ("." identifier):*
 prefix -> identifier
@@ -142,23 +229,181 @@ sstrchar -> [^\\\\'\\n] {% id %}
 
 strescape -> ["\\\\/bfnrt] {% id %}
     | "u" [a-fA-F0-9] [a-fA-F0-9] [a-fA-F0-9] [a-fA-F0-9] {%
-    function(d) {
-        return d.join("");
-    }
-%}`}},
-);
-        ret['flexmi/YAML'] = new Language(m2t, t2m);
-        ret['flexmi/XMI'] = new Language(m2t, t2m);
+    (d) => { return d.join(""); }
+%}`,
+Model:
+`main -> header import:* (classifier | package):* {% (d) => (log('mdl', d) || {packages:[{...d[0], className:'package', children:d[2].flat(3)}]}) %}
 
-        ret['eCore/JSON'] = new Language(
-            {javascript:{allowPartials: true, str: `function(modelData) {
-    let ecore = modelData.ecore;
-    let skipKeys = ['eStructuralFeatures', 'eParameters', 'eClassifiers', 'eOperations', 'eSubpackages', 'eLiterals'];
+header -> "@namespace(uri=\\"" namespace "\\"," ws
+           "prefix=\\"" prefix:? "\\")" eol
+           "package" ws identifier ";" eol:*
+           {% function(d) {log('mdl header', d); return {name: d[10], uri: d[1].flat(3).join(''), prefix: d[5]?.flat(3).join('')||''}} %}
+import -> "import" ws dqstring ";" eol
+namespace -> identifier ("." identifier):*
+prefix -> identifier`,
+Package:`
+main -> package
+package -> ws "package" ws identifier ws "{" (classifier | package):* "}"
+             {% (d) => log('pkg', d) || ({
+                className:"Package", 
+                name: d[4],
+                children: d[7][0]}) %}`,
+Class:`
+main -> class
+class -> ("abstract" ws):? ("class" | "interface") ws identifier ws extends (java_classname ws):? "{" eol
+            (annotation | attr | ref | operation | eol):*
+            "}" eol:*
+            {% function(d) {log('class', d); return {className: "Class", dc:true,
+               abstract:!!d[0]?.[0], interface: d[1]?.[0]==='interface', name: d[3],
+               extends:  d[5]?.[2]?.flat(3).join('').split(',').filter(e=>!!e),
+               features: d[9]?.flat(3)};} %}
+extends -> null | "extends" ws (identifier | (identifier ws "," ws):+)
+java_classname -> ":" ws namespace
+`,
+Attribute:`
+main -> attr
+attr -> modifiers "attr" ws att_type ws identifier ws ("=" ws value):? ";" eol
+            {% (d) => log('attr', d) || ({...d[0], className: 'attribute',
+                type: d[3]?.[0]?.[0],
+                ...(d[3]?.[1] || {}),
+                name: d[5]}) %}`,
+Reference:`
+main -> ref
+ref -> modifiers ("ref" | "val") ws ref_type ("#" identifier):? ws identifier ws ("=" ws value):? ";" eol
+            {% (d) => log('ref', d) || ({...d[0], className: 'reference',
+                type: d[3]?.[0]?.[0],
+                ...(d[3]?.[1] || {}),
+                name: d[6],
+                containment: d[1] === 'val'}) %}`,
+Operation:`
+main -> operation
+operation -> modifiers "op" ws return_type ws identifier ws "(" (parameter | (parameter "," ws):*) ")" ("throws" (identifier | (identifier "," ws):*)):? ";" eol:*
+            {% (d) => log('op todo', d) || ({
+                type: d[2]?.[0], upperbound: d[2]?.[1]?.[1] === '[*]' ? -1 : 1,
+                name: d[4],
+                parameters: d[7]}) %}
+
+# missing support for @before annotations
+`,
+Enumerator:`
+main -> enumerator
+enumerator -> "enum" ws identifier ws "{" literal:* "}" eol:*
+             {% (d) => log('enum', d) || ({
+                name: d[2],
+                literals: d[5]}) %}
+`,
+Literal:`
+main -> literal
+literal -> identifier ws ("=" ws number ws):? ";"
+            {% (d) => log('lit', d) || ({
+                name: d[0],
+                value: d[2]?.[2]}) %}
+`,
+Parameter:`
+# main -> parameter
+parameter -> modifiers type ws identifier
+            {% (d) => log('param', d) || ({
+                type: d[1],
+                name: d[4]}) %}
+`,/*
+todo:`
+main -> todo
+todo -> "enum" ws identifier ws "{" literal:* "}" eol:*
+`,*/
+'Default':`
+# syntax guide: https://eclipse.dev/emfatic/
+classifier -> class | enumerator | datatype | mapentry
+modifiers -> ("!":? modifier ws):* 
+            {% (d) => log('mod', d) || d[0].map(e=> e && {[e[1]]:e[0]!='!'}).reduce((e, acc)=>({...acc, ...e}), {}) %}
+modifier -> "readonly" | "volatile" | "transient" | "unsettable" | "derived" | "unique" | "ordered" | "resolve" | "id"
+datatype -> ("transient" ws):? "datatype" ws (identifier | dqstring) ws ":"
+mapentry -> "mapentry" ws identifier ws ":" ws att_type "->" ws att_type ws ";" 
+multiplicity_old -> ws ("[?]" | "[]" | "[*]" | "[+]" | "[" number "]" | "[" number ".." (number | "?" | "*") "]")
+multiplicity -> ws "[" ("*" | "+" | "n" | "m" | number):? (".." ("n" | "?" | "*" | number)):? "]"
+            {% (d) => {
+                let str = d.join('');
+                str = str.substring(1, str.length - 2);
+                let lb = d[2]?.[0] || '';
+                let ub = d[3]?.[1];
+                switch (lb) {
+                    case '': case '*': lb = 0; if (!ub) ub = -1; break;
+                    case '?': lb = 0; ub = 1; break;
+                    case '+': lb = 1; ub = -1; break;
+                    default: lb = +lb; if (!ub) ub = lb; break;
+                }
+                switch (ub) {
+                    case '*': ub = -1; break;
+                    case '?': ub = -2; break;
+                    default: if (ub) ub = +ub; break;
+                }
+                log('multiplicity', d, {lb, ub, str});
+                return {lowerBound: lb, upperBound: ub}}
+            %}
+value -> decimal | dqstring
+annotation -> "@" (identifier | dqstring) ("(" (identifier | dqstring) ws "=" ws dqstring ")"):? {% (d) => null %}
+type -> namespace multiplicity:?
+return_type -> namespace multiplicity:?
+ref_type -> namespace multiplicity:?
+att_type -> namespace multiplicity:?
+
+identifier -> "~":? [A-Za-z_] [A-Za-z0-9_\\$]:* {% (d) => d[1]+d[2].join("") %}
+
+ws -> ([ \\t\\v\\f]):* {% d => null %}
+eol -> annotation:? ws "\\r":? "\\n" ws {% d => null %}
+number -> decimal {% id %}
+decimal -> "-":? [0-9]:+ ("." [0-9]:+):? {%
+    function(d) {
+        return parseFloat(
+            (d[0] || "") +
+            d[1].join("") +
+            (d[2] ? "."+d[2][1].join("") : "")
+        );
+    }
+%}
+# Double-quoted string
+dqstring -> "\\"" dstrchar:* "\\"" {% function(d) { return d[1].join(""); } %}
+sqstring -> "'"  sstrchar:* "'"  {% function(d) { return d[1].join(""); } %}
+btstring -> "\`"  [^\`]:*    "\`"  {% function(d) { return d[1].join(""); } %}
+
+dstrchar -> [^\\\\"\\n] {% id %}
+    | "\\\\" strescape {%
+    function(d) {
+        return JSON.parse("\\""+d.join("")+"\\"");
+    }
+%}
+
+sstrchar -> [^\\\\'\\n] {% id %}
+    | "\\\\" strescape
+        {% function(d) { return JSON.parse("\\""+d.join("")+"\\""); } %}
+    | "\\\\'"
+        {% function(d) {return "'"; } %}
+
+strescape -> ["\\\\/bfnrt] {% id %}
+    | "u" [a-fA-F0-9] [a-fA-F0-9] [a-fA-F0-9] [a-fA-F0-9] {%
+    function(d) { return d.join(""); }
+%}
+`
+}},
+);
+        const flexmim2t =  {eta:{__str: 'Flexmi is usable only with partials so far.',
+                'Default': "Flexmi has no default, it uses Model, Object, Value fragments as entry points.",
+                'Model': ETA.flexmi_model,
+                'Object': ETA.flexmi_object,
+                'Value': ETA.flexmi_value,
+                'ObjectChild': ETA.flexmi_ObjectChild,
+                'ValueChild': ETA.flexmi_ValueChild,
+                'ValueInline': ETA.flexmi_ValueInline,
+                allowPartials: true}};
+        ret['flexmi/YAML'] = new Language("yaml", m2t, t2m);
+        ret['flexmi/XMI'] = new Language("flexmi", flexmim2t, {ohm: {__str: Ohm.flexmi_grammar+'╗' + Ohm.flexmi_semantic, allowPartials: true, test_text: Ohm.exampleM1}});
+
+        ret['eCore/JSON'] = new Language("json",
+            {javascript:{allowPartials: true, __str: `function(modelData) {
+    let ecore = modelData.ecore; // or: modelData.shallowEcore to exclude sub-elements.
     // remove sub-element collections to keep the scope limited to current element.
-    for (let key of skipKeys) { delete ecore[key]; }
     return JSON.stringify(ecore, null, 4);
 }`}},
-            {javascript:{allowPartials: true, str:`function(text) {
+            {javascript:{allowPartials: true, __str:`function(text) {
     let ecore = JSON.parse(text);
     // remove xmi inline prefixs (@)
     for (let key of Object.keys(ecore)) {
@@ -169,12 +414,12 @@ strescape -> ["\\\\/bfnrt] {% id %}
     // ecore is natively supported
     return ecore;
 }`}});
-        ret['eCore/XMI'] = new Language(
-            {javascript:{allowPartials: true, str: `function(modelData) { return XMI.fromJSON(M2T(modelData, 'eCore/JSON')) }`}},
-            {javascript:{allowPartials: true, str: `function(text) { return parseT2M('eCore/JSON', JSON.stringify(XMI.toJSON(text))); }`}});
+        ret['eCore/XMI'] = new Language("xmi",
+            {javascript:{allowPartials: true, __str: `function(modelData) { return XMI.fromJSON(M2T(modelData, 'eCore/JSON')) }`}},
+            {javascript:{allowPartials: true, __str: `function(text) { return parseT2M('eCore/JSON', JSON.stringify(XMI.toJSON(text))); }`}});
 
-        ret.testLanguage = new Language({
-                javascript:{allowPartials: false, str:`function (model, node){
+        ret.testLanguage = new Language("test", {
+                javascript:{allowPartials: false, __str:`function (model, node){
     let text: string = '' model.className + ':' + model.id;
     for (let child of model.attributes) text += '\\n\\t'+child.name+':'+JSON.stringify(child.values);
     for (let child of model.references) text += '\\n\\t'+child.name+':'+JSON.stringify(child.values.map(v=>v.id));
@@ -185,7 +430,7 @@ strescape -> ["\\\\/bfnrt] {% id %}
     {
         // NB: check nearley postprocessors for json to jom object
         // https://nearley.js.org/docs/grammar#postprocessors
-    nearley:{allowPartials: false, str:`
+    nearley:{allowPartials: false, __str:`
 main         -> classs:* "end:"               {% (d)=> { return {packages: [{name: "default", classes: d[0]}]}} %}
 comment      -> "#" [^\\n\\r]:* "\\r":? "\\n"     {% (d)=> { return d.flat().join("") }%}
 eol          -> (ws "\\r":? "\\n")              {% (d)=> { return null }%}
@@ -268,7 +513,7 @@ test_text:`# Q12136 - A disorder of structure or function in a living organism t
    performs -> Treatment [*]
 end:`
     },
-    javascript:{allowPartials: false, str:`function (text) {
+    javascript:{allowPartials: false, __str:`function (text) {
     let lines = text.split('\\n');
     lines = lines.map(line=>{ // uncomment
         let comment_index = line.indexOf('//'); return (comment_index==-1) ? line : line.substr(0,comment_index);
@@ -328,11 +573,11 @@ end:`
 
     public static errorView(publicmsg: ReactNode, debughiddenmsg:any, errortype: string, data?: DModelElement | undefined, node?: DGraphElement | undefined, v?: LViewElement|DViewElement): React.ReactNode {
         let visibleMessage = publicmsg && typeof publicmsg === "string" ? U.replaceAll(publicmsg, "Parse Error:", "").trim() : publicmsg;
-        console.error("error in view:", {publicmsg, debuginfo:debughiddenmsg});
+        console.debug("[View Error]", {publicmsg, debuginfo:debughiddenmsg});
         return DefaultView.error(visibleMessage, errortype, data, node, v); }
     public static errorView_string(publicmsg: string, debughiddenmsg:any, errortype: string, data?: DModelElement | undefined, node?: DGraphElement | undefined, v?: LViewElement|DViewElement): React.ReactNode {
         let visibleMessage = publicmsg && typeof publicmsg === "string" ? U.replaceAll(publicmsg, "Parse Error:", "").trim() : publicmsg;
-        console.error("error in view:", {publicmsg, debuginfo:debughiddenmsg});
+        console.debug("[View Error]", {publicmsg, debuginfo:debughiddenmsg});
         return DefaultView.error_string(visibleMessage, errortype, data, node, v); }
 
     // {ancors.map( a => <EdgePoint view={"aaaaa"} initialSize={{x: node.w * a.x, y: node.h * a.y}}/>)}
@@ -354,147 +599,89 @@ end:`
         //`<ellipse stroke={"black"} fill={"red"} cx={props.node.x} cy={props.node.y} rx={props.node.w} ry={props.node.h} />`
     )}
 
-    static svgHeadTail(head: "head" | "tail", type: EdgeHead): string | undefined {
+    static svgHeadTail(head: "head" | "tail", type: EdgeHead): string | null {
         let ret: string;
-        let headstr = head==="head" ? "segments.head" : "segments.tail";
-        let styleTranslateRotate = 'transform:"translate(" + ' + headstr + '.x + "px, " + ' + headstr + '.y + "px) rotate(" + (' + headstr + '.rad) + "rad)",' +
-            ' "transformOrigin":'+headstr+'.w/2+"px "+ '+headstr+'.h/2+"px"';
-        let attrs = `\n\t\t\t\tstyle={{`+styleTranslateRotate +`}}\n\t\t\t\tclassName={"` + head + ` ` + type +` preview"} />\n`;
-        let path: string;
-        let hoverAttrs = `\n\t\t\t\tstyle={{`+styleTranslateRotate +`}}\n\t\t\t\tclassName={"` + head + ` ` + type +` clickable content"} tabIndex="-1" />\n`;
-        let d: string;
-        switch (type) {
+        let headstr = head === "head" ? "segments.head" : "segments.tail";
+        let styleTranslateRotate = 'transform:`translate(${' + headstr + '.x}px, ${' + headstr + '.y}px) rotate(${' + headstr + '.rad}rad)`,' +
+            ' transformOrigin:`${'+headstr+'.w/2}px ${'+headstr+'.h/2}px`';
+        let attrs = `\n\t\t\t\tstyle={{`+styleTranslateRotate +`}}\n\t\t\t\tclassName={"` + head + ` ` + type +` preview"}`;
+        let hoverAttrs = `\n\t\t\t\tstyle={{`+styleTranslateRotate +`}}\n\t\t\t\tclassName={"` + head + ` ` + type +` clickable content"} tabIndex="-1"`;
+        /*switch (type) {
             default:
-                ret = "edge '" + head + "' with type: '" +type + "' not found";
-                break;
+                return "edge '" + head + "' with type: '" +type + "' not found";
             case EdgeHead.extend:
                 //if (head === "tail") return undefined;
                 d = `M 0 0   L x y/2   L 0 y   Z`;
-                path = `<path  `;
-                ret = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
                 break;
             case EdgeHead.reference:
                 //if (head === "tail") return undefined;
                 //d = `M 0 0   L x y/2   L 0 y`;
                 d = `M3.7198-.2722c.5684-.4437 1.4898-.4437 2.0582 0l6.3853 4.9847c.5684.4437.5684 1.162 0 1.605L5.7781 11.3022c-.5684.4437-1.4888.4437-2.0562 0L-2.6656 6.3182a1.4505 1.1322 0 010-1.605zss`;
-                path = `<path  `;
-                ret = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
                 break;
             case EdgeHead.aggregation:
                 //if (head === "head") return undefined;
                 d = `M 0 y/2   L x/2 0   L x y/2   L x/2 y   Z`;
-                path = `<path  `;
-                ret = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
                 break;
             case EdgeHead.composition:
                 //if (head === "head") return undefined;
                 d = `M 0 y/2   L x/2 0   L x y/2   L x/2 y   Z`;
-                path = `<path  `;
-                ret = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
                 break;
             case EdgeHead.zero:
                 //if (head === "head") return undefined;
                 d = `M 0 y/2   L x/2 0   L x y/2   L x/2 y   Z`;
-                path = `<path  `;
-                ret = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
                 break;
             case EdgeHead.one:
                 //if (head === "head") return undefined;
                 d = `M 0 y/2   L x/2 0   L x y/2   L x/2 y   Z`;
-                path = `<path  `;
-                ret = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
                 break;
             case EdgeHead.many:
                 //if (head === "head") return undefined;
                 d = `M 0 y/2   L x/2 0   L x y/2   L x/2 y   Z`;
-                path = `<path  `;
-                ret = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
                 break;
             case EdgeHead.zeroOrOne:
                 //if (head === "head") return undefined;
                 d = `M 0 y/2   L x/2 0   L x y/2   L x/2 y   Z`;
-                path = `<path  `;
-                ret = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
                 break;
             case EdgeHead.zeroOrMany:
                 //if (head === "head") return undefined;
                 d = `M 0 y/2   L x/2 0   L x y/2   L x/2 y   Z`;
-                path = `<path  `;
-                ret = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
                 break;
             case EdgeHead.oneOrMany:
                 //if (head === "head") return undefined;
                 d = `M 0 y/2   L x/2 0   L x y/2   L x/2 y   Z`;
-                path = `<path  `;
-                ret = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
                 break;
-        }
+        }*/
 
+        ret = `<path ${attrs} />\n\t\t\t<path ${hoverAttrs} />`;
+        // path = `<path `;
+        // ret = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
         return ret; // no wrap because of .hoverable > .preview  on root & subelements must be consecutive
 
     }
 
     static edgeView(modename: EdgeHead, headSize: GraphPoint, tailSize: GraphPoint, dashing: string | undefined, vp: DViewElement, name: string): DViewElement {
         let fill: string;
-        switch (modename){
-            case EdgeHead.reference:
-            default: fill = '#fff0'; break;
-            case EdgeHead.composition: fill = '#6A6A6A'; break;
+        switch (modename) {
+            case EdgeHead.reference: default: fill = '#fff0'; break;
+            case EdgeHead.composition: fill = '#fff0'; break;
             case EdgeHead.aggregation:
             case EdgeHead.extend: fill = '#fff'; break;
         }
 
-        const uml = "-- UML relationships";
-            const agglabel = "◇ Aggregation / Composition";
-            const extendlabel = "△ "+EdgeHead.extend;
-            const asslabel = "Λ "+EdgeHead.reference;
-        const e1 = "--- 1";
-
-        const cardinality = "-- Cardinality";
-
-            const zerolabel = "[0] " + EdgeHead.zero;
-            const onelabel = "[1] " + EdgeHead.one;
-            const manylabel = "[*] " + EdgeHead.many;
-            const zeroOrOneLabel = "[0..1] " + EdgeHead.zeroOrOne;
-            const zeroOrManyLabel = "[0..*] " + EdgeHead.zeroOrMany;
-            const oneOrManyLabel = "[1..*] " + EdgeHead.oneOrMany;
-
-        const e2 = "--- 2";
-
-        let headdict: Dictionary<string, string> = {
-            [uml]: 'UML Relationships',
-                [asslabel]: 'M11.354 5.646a.5.5 90 010 .708l-6.035 6.089a.5.5 90 01-.156-.116L11.375 5.999l-6.406-6.211a.5.5 90 01.208-.115z',
-                [extendlabel]: 'M 0 0   L x y/2   L 0 y   Z',
-                [agglabel]: 'M7.7198-.2722c.5684-.4437 1.4898-.4437 2.0582 0l6.3853 4.9847c.5684.4437.5684 1.162 0 1.605L9.7781 11.3022c-.5684.4437-1.4888.4437-2.0562 0L1.3344 6.3182a1.4505 1.1322 0 010-1.605z',
-            [e1]: '--',
-
-            [cardinality]: 'Cardinality',
-                [zerolabel]: 'M-11.985 5.981A1 1 0 000 6 1 1 0 00-12 6',
-                [onelabel]: 'M0 0V12',
-                [manylabel]: 'M12 1 0 6 12 11H12M12 6H0',
-                [zeroOrOneLabel]: 'M-11.985 5.981A1 1 0 000 6 1 1 0 00-12 6M6 0V12',
-                [zeroOrManyLabel]: 'M-11.985 5.981A1 1 0 000 6 1 1 0 00-12 6M6 0M12 1 0 6 12 11H12M12 6H0',
-                [oneOrManyLabel]: 'M0 0V12M12 1 0 6 12 11H12M12 6H0',
-            [e2]: '--'
-        };
-        let predefinedPaths: {k:string, v:string}[] = Object.entries(headdict).map((e)=>({k:e[0], v:e[1]}));
-
         let headPath: string = '', tailPath: string = '';
         switch (modename) {
             default: break;
-            case EdgeHead.extend: headPath = extendlabel; break;
-            case EdgeHead.reference: headPath = asslabel; break;
-            case EdgeHead.aggregation: tailPath = agglabel; break;
-            case EdgeHead.composition: tailPath = agglabel; break;
-            case EdgeHead.zero: headPath = zerolabel; break;
-            case EdgeHead.one: headPath = onelabel; break;
-            case EdgeHead.many: headPath = manylabel; break;
-            case EdgeHead.zeroOrOne: headPath = zeroOrOneLabel; break;
-            case EdgeHead.zeroOrMany: headPath = zeroOrManyLabel; break;
-            case EdgeHead.oneOrMany: headPath = oneOrManyLabel; break;
+            case EdgeHead.extend:      headPath = EdgeHead.Head_extend;      tailPath = EdgeHead.Tail_extend;      break;
+            case EdgeHead.reference:   headPath = EdgeHead.Head_reference;   tailPath = EdgeHead.Tail_reference;   break;
+            case EdgeHead.aggregation: headPath = EdgeHead.Head_reference;   tailPath = EdgeHead.Tail_aggregation; break;
+            case EdgeHead.composition: headPath = EdgeHead.Head_reference;   tailPath = '';                        break;
+            case EdgeHead.zero:        headPath = EdgeHead.Head_zero;        tailPath = EdgeHead.Tail_zero;        break;
+            case EdgeHead.one:         headPath = EdgeHead.Head_one;         tailPath = EdgeHead.Tail_one;         break;
+            case EdgeHead.many:        headPath = EdgeHead.Head_many;        tailPath = EdgeHead.Tail_many;        break;
+            case EdgeHead.zeroOrOne:   headPath = EdgeHead.Head_zeroOrOne;   tailPath = EdgeHead.Tail_zeroOrOne;   break;
+            case EdgeHead.zeroOrMany:  headPath = EdgeHead.Head_zeroOrMany;  tailPath = EdgeHead.Tail_zeroOrMany;  break;
+            case EdgeHead.oneOrMany:   headPath = EdgeHead.Head_oneOrMany;   tailPath = EdgeHead.Tail_oneOrMany;   break;
         }
-        headPath = headdict[headPath] || '';
-        tailPath = headdict[tailPath] || '';
 
         let palette: PaletteType = {
             'anchorSize': {type: 'number', value:15, unit:'px'},
@@ -503,8 +690,8 @@ end:`
             'stroke-width': {value:1, type: 'number', unit: 'px'},
             'stroke-color-hover': U.hexToPalette('#000'),
             'stroke-width-hover': {value:3, type: 'number', unit: 'px'},
-            'head': {type:'path', value:headPath, options: predefinedPaths, x:'edgeHeadSize.x', y:'edgeHeadSize.y'},
-            'tail': {type:'path', value:tailPath, options: predefinedPaths, x:'edgeTailSize.x', y:'edgeTailSize.y'},
+            'head': {type:'path', value:headPath, options: EdgeHead.predefinedPaths, x:'view.edgeHeadSize.x', y:'view.edgeHeadSize.y'},
+            'tail': {type:'path', value:tailPath, options: EdgeHead.predefinedPaths, x:'view.edgeTailSize.x', y:'view.edgeTailSize.y'},
             'fill': U.hexToPalette(fill),
         };
 
@@ -658,8 +845,6 @@ foreignObject.label{
 foreignObject.label-end, foreignObject.label-start {
 	overflow: visible;
 	color: var(--stroke-color);
-	width: 0;
-	height: 0;
 	white-space: pre;
 
 	> div{
@@ -671,12 +856,10 @@ foreignObject.label-end, foreignObject.label-start {
 	& .left {
 		display: flex;
 		justify-content: flex-start!important;
-		width: 0px;
 	}
 	& .right {
 		display: flex;
 		justify-content: flex-end!important;
-		width: 0px;
 	}
 }
 
@@ -863,8 +1046,8 @@ foreignObject.label-end, foreignObject.label-start {
             "ret.end = edge.end\n"+
             "ret.segments = edge.segments\n\n"+
             "ret.position = ret.getPosition()\n"+
-            "ret.sPos = ret.position.start\n"+
-            "ret.ePos = ret.position.end\n" + 
+            "ret.sPos = ret.position ? ret.position.start : { x: 0, y: 0, align: 'left' }\n"+
+            "ret.ePos = ret.position ? ret.position.end : { x: 0, y: 0, align: 'right' }\n" +
             "}";
 
         
@@ -872,7 +1055,7 @@ foreignObject.label-end, foreignObject.label-start {
             (v: DViewElement) => {
                 // v.appliableToClasses = [DVoidEdge.cname];
                 v.appliableTo = 'Edge';
-                v.bendingMode = EdgeBendingMode.Line;
+                v.bendingMode = EdgeBendingMode.Manhattan;
                 v.edgeHeadSize = headSize;
                 v.edgeTailSize = tailSize;
                 //v.constants = edgeConstants;
@@ -936,6 +1119,84 @@ valuecolormap[ShortAttribETypes.EVoid] = "gray";
 let valuecolormap_str = JSON.stringify(valuecolormap); // can this be declared inside view.constants ?
 
 
+export class EdgeHead{
+    static composition = "Composition";
+    static aggregation = "Aggregation";
+    static reference   = "Association";
+    static extend      = "Extension";
+    static zero = "exactly zero / not present";
+    static one = "exactly one, required";
+    static many = "zero or many, optional, unbounded";
+    static zeroOrOne = "zero or one, optional";
+    static zeroOrMany = "zero or many, optional, unbounded";
+    static oneOrMany = "one or many, at least one";
+
+    static Head_composition = "";
+    static Tail_composition = "M8.5776-.9085c.6316-.522 1.6553-.522 2.2869 0l7.0948 5.8644c.6316.522.6316 1.3671 0 1.8882L10.8645 12.7085c-.6316.522-1.6542.522-2.2847 0L1.4827 6.845a1.6117 1.332 0 010-1.8882z";
+
+    static Head_aggregation = "";
+    static Tail_aggregation = EdgeHead.Tail_composition;
+
+    static Head_reference   = "M11.354 5.646a.5.5 90 010 .708l-6.035 6.089a.5.5 90 01-.156-.116L11.375 5.999l-6.406-6.211a.5.5 90 01.208-.115z";
+    static Tail_reference   = "";
+
+    static Head_extend      = "M 0 0   L x y/2   L 0 y   Z";
+    static Tail_extend      = "";
+
+    static Head_zero        = "M-11.985 5.981A1 1 0 000 6 1 1 0 00-12 6";
+    static Tail_zero        = "";
+
+    static Head_one         = "M0 0V12";
+    static Tail_one         = "";
+
+    static Head_many        = "M12 1 0 6 12 11H12M12 6H0";
+    static Tail_many        = "";
+
+    static Head_zeroOrOne   = "M-11.985 5.981A1 1 0 000 6 1 1 0 00-12 6M6 0V12";
+    static Tail_zeroOrOne   = "";
+
+    static Head_zeroOrMany  = "M-11.985 5.981A1 1 0 000 6 1 1 0 00-12 6M6 0M12 1 0 6 12 11H12M12 6H0";
+    static Tail_zeroOrMany  = "";
+
+    static Head_oneOrMany   = "M0 0V12M12 1 0 6 12 11H12M12 6H0";
+    static Tail_oneOrMany   = "";
+
+
+    static uml            = "-- UML relationships";
+    static agglabel       = "◇ Aggregation / Composition";
+    static extendlabel    = "△ "+EdgeHead.extend;
+    static asslabel       = "Λ "+EdgeHead.reference;
+    static e1             = "--- 1";
+    static cardinality    = "-- Multiplicity";
+    static zerolabel      = "[0]    exactly zero / not present";
+    static onelabel       = "[1]    exactly one, required";
+    static manylabel      = "[0..*] zero or many, optional, unbounded";
+    static zeroOrOneLabel = "[0..1] zero or one, optional";
+    static zeroOrManyLabel= "[0..*] zero or many, optional, unbounded "; // was "[0..*] "
+    static oneOrManyLabel = "[1..*] one or many, at least one";
+    static e2             = "--- 2";
+
+
+    static headdict = {
+        [EdgeHead.uml]: 'UML Relationships',
+        [EdgeHead.asslabel]: EdgeHead.Head_reference,
+        [EdgeHead.extendlabel]: EdgeHead.Head_extend,
+        [EdgeHead.agglabel]: EdgeHead.Tail_aggregation,
+        [EdgeHead.e1]: '--- 1',
+        [EdgeHead.cardinality]: 'Multiplicity',
+        [EdgeHead.zerolabel]: EdgeHead.Tail_zero,
+        [EdgeHead.onelabel]: EdgeHead.Tail_one,
+        [EdgeHead.manylabel]: EdgeHead.Tail_many,
+        [EdgeHead.zeroOrOneLabel]: EdgeHead.Tail_zeroOrOne,
+        [EdgeHead.zeroOrManyLabel]: EdgeHead.Tail_zeroOrMany,
+        [EdgeHead.oneOrManyLabel]: EdgeHead.Tail_oneOrMany,
+        [EdgeHead.e2]: '--- 2'
+    } as const;
+    static predefinedPaths: {k:string, v:string}[] = Object.entries(EdgeHead.headdict).map((e)=>({k:e[0], v:e[1]}));
+
+}
+
+
 type ErrorProps = {
     dname: any,
     nodename: any,
@@ -956,23 +1217,39 @@ export class DefaultView {
     public static model(): string { return (
 `
 /* -- Jjodel Abstract Syntax Specification v2.0 -- */
-
-
-<View className={"root model" + (grid ? " grid-paper" : "")}> {/* alternatively use .grid-classic */}
+<View className={"root model"}>
+<Grid node={node}/>
 <Scrollable graph={node}>
     {!data && "Model data missing."}
+    <ContextMenu label={"snapTo (just a ctxmenu test)"} >
+        <ContextMenu label={"left"} />
+    </ContextMenu>
     <div className={'edges'}>
         {level > 1 && [
-            refEdges.map(se => <Edge 
-                data={se.start} 
-                start={se.startVertex} 
-                end={se.endVertex} 
-                anchorStart={0} 
-                anchorEnd={0} 
-                key={se.id + '_with_label'} 
-                id={se.id + '_with_label'} 
-                isReference={true} 
-                view={'Edge' + (se.start.composition ? 'Composition' : (se.start.aggregation ? 'Aggregation' : 'Association'))} 
+            data.isMetamodel && refEdges.map(se => <Edge
+                data={se.start}
+                start={se.startVertex}
+                end={se.endVertex}
+                anchorStart={0}
+                anchorEnd={0}
+                key={se.id + '_with_label'}
+                id={se.id + '_with_label'}
+                isReference={true}
+                view={'Edge' + (se.start.composition ? 'Composition' : (se.start.aggregation ? 'Aggregation' : 'Association'))}
+                label={se.start.name}
+                elabel={se.start.lowerBound === se.start.upperBound ? se.start.lowerBound : se.start.upperBound === -1 ? se.start.lowerBound + '..*' : se.start.lowerBound + '..' + se.start.upperBound}
+                slabel={''}
+            />),
+            !data.isMetamodel && refEdges.map(se => <DerivedReferenceEdge
+                data={se.start}
+                start={se.startVertex}
+                end={se.endVertex}
+                anchorStart={0}
+                anchorEnd={0}
+                key={se.id + '_with_label'}
+                id={se.id + '_with_label'}
+                isReference={true}
+                view={'Edge' + (se.start.composition ? 'Composition' : (se.start.aggregation ? 'Aggregation' : 'Association'))}
                 label={se.start.name}
                 elabel={se.start.lowerBound === se.start.upperBound ? se.start.lowerBound : se.start.upperBound === -1 ? se.start.lowerBound + '..*' : se.start.lowerBound + '..' + se.start.upperBound}
                 slabel={''}
@@ -987,17 +1264,31 @@ export class DefaultView {
             />)
         ]}
         {level === 1 && [
-            refEdges.map(se => <Edge 
-                data={se.start} 
-                start={se.startVertex} 
-                end={se.endVertex} 
-                anchorStart={0} 
-                anchorEnd={0} 
-                key={se.id + '_without_label'} 
-                id={se.id + '_without_label'} 
-                isReference={true} 
+            data.isMetamodel && refEdges.map(se => <Edge
+                data={se.start}
+                start={se.startVertex}
+                end={se.endVertex}
+                anchorStart={0}
+                anchorEnd={0}
+                key={se.id + '_without_label'}
+                id={se.id + '_without_label'}
+                isReference={true}
                 label={''}
-                view={'Edge' + (se.start.composition ? 'Composition' : (se.start.aggregation ? 'Aggregation' : 'Association'))} 
+                view={'Edge' + (se.start.composition ? 'Composition' : (se.start.aggregation ? 'Aggregation' : 'Association'))}
+                elabel={se.start.lowerBound === se.start.upperBound ? se.start.lowerBound : se.start.upperBound === -1 ? se.start.lowerBound + '..*' : se.start.lowerBound + '..' + se.start.upperBound}
+                slabel={''}
+            />),
+            !data.isMetamodel && refEdges.map(se => <DerivedReferenceEdge
+                data={se.start}
+                start={se.startVertex}
+                end={se.endVertex}
+                anchorStart={0}
+                anchorEnd={0}
+                key={se.id + '_without_label'}
+                id={se.id + '_without_label'}
+                isReference={true}
+                label={''}
+                view={'Edge' + (se.start.composition ? 'Composition' : (se.start.aggregation ? 'Aggregation' : 'Association'))}
                 elabel={se.start.lowerBound === se.start.upperBound ? se.start.lowerBound : se.start.upperBound === -1 ? se.start.lowerBound + '..*' : se.start.lowerBound + '..' + se.start.upperBound}
                 slabel={''}
             />),
@@ -1032,7 +1323,7 @@ export class DefaultView {
 
 {/* editor zoom controls */}
 
-<Zoom node={node}/>
+<ClassicZoomBridge node={node}/>
 </View>`
 );}
 
@@ -1055,6 +1346,7 @@ export class DefaultView {
 
 
 <View className={'root package'} version={'2.0'}>
+<Grid node={node} />
 <div className={'drag-handle'} />
 {
     upperLevel >= 1 &&
@@ -1098,62 +1390,147 @@ export class DefaultView {
 
 
 public static class(): string { return (`
-/* -- Jjodel Abstract Syntax Specification v2.1 -- */
+/* -- Jjodel Abstract Syntax Specification v2.2 -- */
 
-<View 
-    className={'root class highlight' + ' level-' + level} 
-    onDoubleClick={()=>{node.state = {colorIndex: ((node.state.colorIndex||0) + 1) % (view.palette['outline-'].value.length + 1)}}} 
-    style={{'--outlineColor': colorIndex !== 0 ? 'var(--outline-'+colorIndex+')': 'transparent', '--borderColor': colorIndex !== 0 ? 'var(--outline-'+colorIndex+')': 'gray'}}    
+<View
+    className={'root class highlight' + ' level-' + level}
+    onDoubleClick={()=>{node.state = {colorIndex: ((node.state.colorIndex||0) + 1) % (view.palette['outline-'].value.length + 1)}}}
+    style={{
+        '--outlineColor': colorIndex !== 0 ? 'var(--outline-'+colorIndex+')': 'transparent',
+        '--borderColor': colorIndex !== 0 ? 'var(--outline-'+colorIndex+')': 'gray',
+        fontFamily: "'IBM Plex Mono', Monaco, Consolas, monospace"
+    }}
+    onDragOver={(e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+        e.currentTarget.classList.add('drag-over');
+    }}
+    onDragLeave={(e) => {
+        e.currentTarget.classList.remove('drag-over');
+    }}
+    onDrop={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        e.currentTarget.classList.remove('drag-over');
+        try {
+            const dataStr = e.dataTransfer.getData('application/json');
+            if (!dataStr) return;
+            const dropData = JSON.parse(dataStr);
+            switch (dropData.type) {
+                case 'FEATURE_ATTRIBUTE':
+                    const a = data.addChild('attribute');
+                    try { (a)(); } catch(e) { }
+                    break;
+                case 'FEATURE_REFERENCE':
+                    const r = data.addChild('reference');
+                    try { (r)(); } catch(e) { }
+                    break;
+                case 'FEATURE_OPERATION':
+                    const o = data.addChild('operation');
+                    try { (o)(); } catch(e) { }
+                    break;
+            }
+        } catch (err) {
+            console.error('Drop on class failed:', err);
+        }
+    }}
 >
-   <div className={'header'}>
-    {data.isSingleton && <i className='bi bi-1-square'>&nbsp;</i>}
-    { level > 1 && <b className={'class-name'}>{interface ? 'Interface' : 'Class'}: </b>}    
+    {/* HEADER */}
+    <div className={'header'} style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'flex-start',
+        gap: '8px',
+        padding: '8px 12px',
+        backgroundColor: 'transparent',
+        borderBottom: '1px solid #e2e8f0'
+    }}>
+        {/* Singleton icon */}
+        {data.isSingleton && <i className='bi bi-1-square' style={{color: '#64748b'}}></i>}
 
+        {/* Class/Interface label */}
+        {level > 1 && <span style={{
+            fontSize: '12px',
+            fontWeight: 600,
+            color: '#64748b',
+            fontFamily: "'IBM Plex Mono', Monaco, Consolas, monospace"
+        }}>{interface ? 'Interface' : 'Class'}:</span>}
 
-    <span className={(data.abstract ? "abstract": "")}><Input data={data} field={'name'} hidden={true} autosize={true} /></span>
-    {data.extends.some(a => a.model.id !== data.model.id) && <i className="bi bi-arrow-up open"></i>}
-    {data.extendedBy.some(a => a.model.id !== data.model.id) && <i className="bi bi-arrow-down open"></i>}
-    {/* data.referencedBy.filter(a => typeof a !== 'undefined').some(a => a.model.id !== data.model.id) && <i className="bi bi-arrow-left open"></i>*/}
-        
-    {refs.some(b => b.model.id !== data.model.id) && <Tooltip inline position={'top'} offsetX={20} tooltip={refNames.join(',  ')}><i className="bi bi-arrow-left open"></i></Tooltip>}
+        {/* Class name - lighter weight */}
+        <span style={{
+            fontSize: '12px',
+            fontWeight: 400,
+            color: '#1e293b',
+            fontFamily: "'IBM Plex Mono', Monaco, Consolas, monospace",
+            fontStyle: data.abstract ? 'italic' : 'normal'
+        }}>
+            <Input data={data} field={'name'} hidden={true} autosize={true} />
+        </span>
 
-
+        {/* Inheritance icons */}
+        {data.extends.some(a => a.model.id !== data.model.id) &&
+            <i className="bi bi-arrow-up" style={{color: '#3b82f6', fontSize: '11px'}}></i>}
+        {data.extendedBy.some(a => a.model.id !== data.model.id) &&
+            <i className="bi bi-arrow-down" style={{color: '#10b981', fontSize: '11px'}}></i>}
+        {refs.some(b => b.model.id !== data.model.id) &&
+            <Tooltip inline position={'top'} offsetX={20} tooltip={refNames.join(', ')}>
+                <i className="bi bi-arrow-left" style={{color: '#f59e0b', fontSize: '11px'}}></i>
+            </Tooltip>}
     </div>
 
-    {level > 2 && <hr/>}
+    {/* BODY - Features */}
+    {level > 2 &&
+        <div className={'class-body'}>
 
-    {level > 2 && 
-        <div className={'class-children'}>
-            {level >= 2 && [
-                attributes.map(c => <DefaultNode key={c.id} data={c} />),
-                references.map(c => <DefaultNode key={c.id} data={c} />),
-                operations.map(c => <DefaultNode key={c.id} data={c} />)
-            ]
-            || [
-            <div className={"summary"}>{[
-                attributes.length ? attributes.length + " attributes" : '',
-                references.length ? references.length + " references" : '',
-                operations.length ? operations.length + " operations" : '',
-                !(attributes.length + references.length + operations.length) ? '- empty -' : ''
-                ].filter(v=>!!v).join(',')}</div>
-            ]
+            {/* ATTRIBUTES Section */}
+            {attributes.length > 0 &&
+                <div className={'features-section attributes-section'}>
+                    {attributes.map(c => <DefaultNode key={c.id} data={c} />)}
+                </div>
+            }
+
+            {/* Separator: attributes -> references */}
+            {attributes.length > 0 && references.length > 0 &&
+                <div className={'section-separator'}></div>
+            }
+
+            {/* REFERENCES Section */}
+            {references.length > 0 &&
+                <div className={'features-section references-section'}>
+                    {references.map(c => <DefaultNode key={c.id} data={c} />)}
+                </div>
+            }
+
+            {/* Separator: references -> operations */}
+            {(attributes.length > 0 || references.length > 0) && operations.length > 0 &&
+                <div className={'section-separator'}></div>
+            }
+
+            {/* OPERATIONS Section */}
+            {operations.length > 0 &&
+                <div className={'features-section operations-section'}>
+                    {operations.map(c => <DefaultNode key={c.id} data={c} />)}
+                </div>
+            }
+
+            {/* Empty state */}
+            {!(attributes.length + references.length + operations.length) &&
+                <div className={'empty-state'}>— empty —</div>
             }
         </div>
     }
 
     {decorators}
 
-    <ContextualEntry 
-        title={'Highlight Class'} 
-        icon={"bi-paint-bucket"} 
-        action={()=>{node.state = {colorIndex: ((node.state.colorIndex||0) + 1) % (view.palette['outline-'].value.length + 1)}}} 
-        node={node}
+    <ContextMenu
+        title={'Highlight Class'}
+        icon={"bi-paint-bucket"}
+        action={()=>{node.state = {colorIndex: ((node.state.colorIndex||0) + 1) % (view.palette['outline-'].value.length + 1)}}}
     />
-    <ContextualEntry 
-        title={'Reset Highlight'} 
-        icon={"bi-x"} 
-        action={() => {node.state = {colorIndex : 0}}} 
-        node={node}
+    <ContextMenu 
+        title={'Reset Highlight'}
+        icon={"bi-x"}
+        action={() => {node.state = {colorIndex : 0}}}
     />
 
 </View>`);}
@@ -1165,7 +1542,32 @@ public static enum(): string { return (
 /* -- Jjodel Abstract Syntax Specification v2.0 -- */
 
 
-<View className={'root enumerator'}>
+<View
+    className={'root enumerator'}
+    onDragOver={(e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+        e.currentTarget.classList.add('drag-over');
+    }}
+    onDragLeave={(e) => {
+        e.currentTarget.classList.remove('drag-over');
+    }}
+    onDrop={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        e.currentTarget.classList.remove('drag-over');
+        try {
+            const dataStr = e.dataTransfer.getData('application/json');
+            if (!dataStr) return;
+            const dropData = JSON.parse(dataStr);
+            if (dropData.type === 'FEATURE_LITERAL') {
+                data.addLiteral('newLiteral');
+            }
+        } catch (err) {
+            console.error('Drop on enum failed:', err);
+        }
+    }}
+>
     <div className={'header'}>
         {level > 1 && <b className={'enumerator-name'}>Enum: </b>}
         {level == 1 && <i className="bi bi-explicit-fill"></i>}<Input data={data} field={'name'} hidden={true} autosize={true} />
@@ -1178,15 +1580,37 @@ public static enum(): string { return (
 </View>`
 );}
 
-    /* FEATURE */
+    /* FEATURE (Attribute / Reference) */
 
     public static feature(): string { return (
 `
-/* -- Jjodel Abstract Syntax Specification v2.11 -- */
+/* -- Jjodel Abstract Syntax Specification v2.3 -- */
 
+<View className={'root feature ' + (data.className === 'DReference' ? 'reference-row' : 'attribute-row')} style={{
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '4px 10px',
+    fontSize: '12px',
+    fontFamily: "'IBM Plex Mono', Monaco, Consolas, monospace",
+    transition: 'background 0.15s ease'
+}}>
+    {/* Left side: Name with colon */}
+    <div className={"me-1"}>
+        {/* External indicator */}
+        {(data.type && data.type.model && data.type.model.id !== data.model.id) &&
+            <i className="bi bi-box-arrow-up-right" style={{
+                fontSize: '9px',
+                color: data.className === 'DReference' ? '#f59e0b' : '#3b82f6'
+            }}></i>
+        }
+        <span style={{
+            fontWeight: 500,
+            color: '#334155'
+        }}>{data.name}:</span>
+    </div>
 
-<View className={'root feature w-100'}>
-    {(data.type.model && data.type.model.id !== data.model.id) && <i style={{marginTop: '2.5px'}} className="bi bi-arrow-left"></i>}<span className={'feature-name'}>{data.name}:</span>    
+    {/* Right side: Type Select (smaller) */}
     <Select data={data} field={'type'} />
     {decorators}
 </View>`
@@ -1209,17 +1633,39 @@ public static enum(): string { return (
 
     public static operation(): string { return (
 `
-/* -- Jjodel Abstract Syntax Specification v2.0 -- */
+/* -- Jjodel Abstract Syntax Specification v2.3 -- */
 
+<View className={'root operation operation-row'} style={{
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '4px 10px',
+    fontSize: '12px',
+    fontFamily: "'IBM Plex Mono', Monaco, Consolas, monospace",
+    transition: 'background 0.15s ease'
+}}>
+    {/* Left side: Name with arrow */}
+    <span style={{
+        fontWeight: 500,
+        color: '#334155'
+    }}>{data.name} =&gt; </span>
 
-<View className={'root operation w-100 hoverable'}>
-        <span className={'feature-name'}>{data.name + ' =>'}</span>
+    {/* Right side: Return Type Select (smaller) */}
+    <div style={{maxWidth: '110px', minWidth: '80px'}}>
         <Select data={data} field={'type'} />
-    <div className={"parameters content"}>
-    {data.exceptions.length ? " throws " + data.exceptions.join(", ") : ''}
-    {
-        level >= 3 && data.parameters.map(p => <DefaultNode data={p} key={p.id} />)
-    }</div>
+    </div>
+
+    {/* Parameters (if level >= 3) */}
+    {level >= 3 && data.parameters.length > 0 &&
+        <div className={"parameters-section"} style={{
+            marginLeft: '4px',
+            fontSize: '10px',
+            color: '#64748b'
+        }}>
+            {data.parameters.map(p => <DefaultNode data={p} key={p.id} />)}
+        </div>
+    }
+
     {decorators}
 </View>`
 );}
@@ -1258,66 +1704,22 @@ public static parameter(): string { return (
 
 /* OBJECT */
 
-public static object(): string { return (
-`
-/* -- Jjodel Abstract Syntax Specification v2.0 -- */
-
-
-<View className={'root object'}>
-    <div className={'header'}>
-        <div>
-            <b className={'object-name'}>{data.instanceof ? data.instanceof.name : 'Object'}:</b>
-            {data.$name ?
-                <Input data={data.$name} field={'value'} hidden={true} autosize={true} placeholder={'name'} /> :
-                <Input data={data} field={'name'} hidden={true} autosize={true} placeholder={'name'} />
-            }
-        </div>
-    </div>
-    <hr/>
-    <div className={'object-children'}>
-        {level >= 2 && data.features.map(f => <DefaultNode key={f.id} data={f} />)}
-    </div>
-    {decorators}
-</View>`
-);}
+public static object(): string { return CLASSIC_OBJECT_VIEW_JSX; }
 
     /* VALUE */
 
-    public static value() { return (
-`
-/* -- Jjodel Abstract Syntax Specification v2.0 -- */
-
-
-<View className={'root value d-flex'}>
-    {instanceofname && <label className={'d-block ms-1 name'}>{instanceofname}</label>}
-    {!instanceofname && <Input className='name' data={data} field={'name'} hidden={true} autosize={true} />}
-    <label className={'d-block m-auto values_str'} style={{color: constants[typeString] || 'gray'}}>
-        : {valuesString}
-    </label>
-    {decorators}
-</View>`
-);}
+    public static value() { return CLASSIC_VALUE_VIEW_JSX; }
 
     /* SINGLETON OBJECT */
 
-    public static singleton(): string { return (
-    `
-/* -- Jjodel Abstract Syntax Specification v2.0 -- */
-
-
-
-<View className={'singleton'}>
-    <div className={'header'}>
-        {data.name}        
-    </div>
-</View>`);}
+    public static singleton(): string { return CLASSIC_SINGLETON_VIEW_JSX; }
 
     /* ERROR */
 
     
 
     public static error(msg: undefined | ReactNode, errortype: string | "SYNTAX" | "RUNTIME",
-                        data?: DModelElement | undefined, node?: DGraphElement | undefined, v?: LViewElement|DViewElement): React.ReactNode {
+                        data?: DModelElement | undefined, node?: DGraphElement | undefined, v?: LViewElement|DViewElement, clickRetry?: (e:any)=>any): React.ReactNode {
 
         let dname: string | undefined = data && ((data as any).name || data.className.substring(1));
         if (dname && dname.length >= 10) dname = dname.substring(0, 7) + '…';
@@ -1334,28 +1736,32 @@ public static object(): string { return (
 
         switch (notificationType) {
             case 'classic':
-                return (<Measurable draggable={true} resizable={false}><div className='hoverable error-root graph-centered' tabIndex={0}>
-                    <i className="bi bi-exclamation-diamond-fill" style={{color: "red"}} />
-                    <div className='content fixed error-notification' tabIndex={-1}>
-                        <h1>Something Went Wrong...</h1>
-                        {v && <h2>Error in "{v?.name}" syntax view
-                            definition{viewpointname ? ' in viewpoint ' + viewpointname : ''}.</h2>}
-                        <div className={'error-type'}>
-                            <b data-dname={dname} data-nodename={nodename} data-str={false}>
-                                {errortype} Error {on}
-                                {false && v && <div>While applying view "{v?.name}"</div>}
-                            </b>
-                        </div>
-                        <div className={'error-details'}>{msg}</div>
-                    </div>
-                    </div></Measurable>);
+                // Use ErrorDisplay which manages both badge and modal with state
+                return (
+                    <Measurable draggable={true} resizable={false}>
+                        <ErrorDisplay
+                            viewName={v?.name}
+                            viewpointName={viewpointname}
+                            errorType={errortype}
+                            errorContext={on}
+                            message={msg}
+                            dname={dname}
+                            nodename={nodename}
+                            onClick={clickRetry}
+                            dataClassName={data?.className}
+                        />
+                    </Measurable>
+                );
 
             case 'alert':
                 U.alert('e', 'Error in ' + v?.name + (viewpointname ? 'of '+viewpointname : ''), dname);
                 return null;
 
             case 'notification':
-                return (<div className='notification-icon' onClick={(e) => openNotification(e)}/>);
+                return (<div className='notification-icon' onClick={(e) => {
+                    openNotification(e);
+                    clickRetry?.(e);
+                }} />);
         }
     }
 

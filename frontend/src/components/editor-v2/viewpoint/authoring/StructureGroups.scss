@@ -1,0 +1,84 @@
+/* StructureGroups — quel che resta di specifico dei tre gruppi di livello 2.
+
+   Il sistema 7a — ritmo dei gruppi, eyebrow, riga campo, segmented, select, input,
+   color, help — è salito a `components/editors/railSystem.scss` in Fase 2
+   (`docs/discovery/discovery_2026-08-29_stile_7a_sistema_rail.md`) e vale ora per
+   tutti i tab del rail. Qui restano le tre cose che appartengono a questi gruppi e
+   a nessun altro: la riga label-sinistra/controllo-destra costruita a mano (queste
+   righe non sono `jj-field`), il chip del valore preservato, e la riga riassuntiva
+   di 7b.
+
+   Sono spariti da qui, perché il sistema li fa: il fondo bianco e il suo tiraggio
+   negativo 20/16 con il coupling all'inset della card, il gate
+   `:not(:has(> [role='alert']))` che quel tiraggio richiedeva, il padding di 14px,
+   il ritmo 16/10 dei gruppi, la eyebrow, e tutto il blocco dei controlli sotto
+   `__control`. Con essi sono spariti anche i tre `div` di gruppo e la classe
+   `__help` nel `.tsx`: esistevano solo per scopare, e lo scope ora è il rail. */
+
+.ir-structure-group {
+    /* La riga di 7a. Costruita qui e non su `jj-field` perché queste righe non ne
+       usano il markup: `Row` in `StructureGroups.tsx` rende label e controllo come
+       due `span`, senza label semantica. I valori sono gli stessi che il sistema dà
+       a un `jj-field` — 13px `--color-form-label` a sinistra, controllo a destra,
+       gap 12. */
+    &__row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-3);
+        min-height: 28px;
+    }
+
+    &__label {
+        flex: 0 1 auto;
+        font-size: var(--text-sm);
+        color: var(--color-form-label);
+        white-space: nowrap;
+    }
+
+    /* La colonna dei controlli non si allarga: un segmented da due segmenti e uno da
+       quattro sono entrambi allineati al bordo del rail, ed è quello che fa leggere
+       la colonna come colonna quando le opzioni cambiano per Symbol. */
+    &__control {
+        flex: 0 0 auto;
+        display: inline-flex;
+        align-items: center;
+        justify-content: flex-end;
+        min-width: 0;
+        max-width: 72%;
+    }
+
+    /* Il valore che l'IR conserva e questo Symbol non offre. Sta sotto la riga di
+       motivo, che ha già detto PERCHÉ l'opzione non c'è; questa dice che il valore
+       autorato è ancora lì e torna col Symbol. */
+    &__preserved {
+        margin-top: 0;
+    }
+
+    /* L'unica riga riassuntiva in coda al tab (7b). `bi-eye-slash`, una riga, con
+       entrambe le famiglie di causa. Non è una `section`, quindi la hairline che il
+       sistema dà a `section + section` non la raggiunge: se la posa da sé, con
+       l'inset a 12px che 7b le assegna invece dei 14 dei gruppi. */
+    &__hidden {
+        display: flex;
+        align-items: flex-start;
+        gap: 6px;
+        margin-top: var(--space-4);
+        padding-top: 12px;
+        border-top: 1px solid var(--color-slate-100);
+        font-size: var(--text-xs);
+        line-height: 1.6;
+        color: var(--color-form-muted);
+
+        > i { margin-top: 1px; }
+    }
+
+    &__hidden-fields {
+        color: var(--color-form-section);
+        font-weight: 500;
+    }
+}
+
+html[data-theme='dark'] .ir-structure-group__hidden {
+    border-top-color: var(--color-border-primary);
+}

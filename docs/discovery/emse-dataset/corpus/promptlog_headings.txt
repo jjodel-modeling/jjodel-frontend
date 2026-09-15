@@ -1,0 +1,458 @@
+## 2026-06-08 — docs: discovery EdgePoint(segment-handle) drag vs Manhattan router (read-only)
+## 2026-06-08 — chore: restore verification gate (npm scripts + asset d.ts + CLAUDE.md §17)
+## 2026-06-08 — feat(probe): IRView v0 + integrated runtime probe (Phase 2a)
+## 2026-06-08 — docs: discovery runtime IR interpreter + JS-predicate selection feasibility (read-only)
+## 2026-06-06 — docs: discovery v2-flow layout persistence (read-only)
+## 2026-06-06 — feat: lane separation Phase A — geometry reconstruction + sanity instrumentation
+## 2026-06-06 — docs: discovery edge routing anchor spacing & global segment lane separation (read-only)
+## 2026-06-05 — discovery: cross-MM containment ref assente dal context menu "Add child" M1 (read-only)
+## 2026-06-04 — discovery: Advanced Mode consolidation Phase A (read-only + Layer Impact Report)
+## 2026-06-03 — discovery: Advanced Mode flag audit (read-only)
+## 2026-06-05 — feat(megamodel): geometry-aware edge anchoring (level 1)
+## 2026-06-04 — feat(megamodel): add 'uses' edge between related metamodels
+## 2026-06-02 — discovery: inventario controlli di form Properties panel
+## 2026-06-02 — docs: discovery avatar settings redesign (read-only)
+## 2026-06-02 — docs: discovery ancoraggio lato sorgente edge cyan cross-metamodel
+## 2026-05-31 — docs: derive implementation prompts 2b'/2c from edge-label spec
+## 2026-05-31 — docs: discovery edge label anchoring (role + cardinality)
+## 2026-05-31 — fix(v2-flow): delete stale DVoidEdge on cross-metamodel reference retarget
+## 2026-05-30 — docs: discovery cross-reference ghost-target edge origin
+## 2026-05-30 — docs: discovery node menu add-reference affordance
+## 2026-05-30 — style(toolbar): tighten highlight swatch spacing
+## 2026-05-30 — refactor(toolbar): borderless circular highlight swatches with size+opacity selection
+## 2026-05-30 — docs: discovery cross-metamodel reference creation
+## 2026-05-29 — feat(editor-v2): ghost-parent stub for cross-metamodel extends (iter. 1)
+## 2026-05-29 — docs: discovery v3 ghost-parent stub (cross-metamodel extends, READ-ONLY)
+## 2026-05-25 — fix: cross-role global ordering with inheritance pinned at center
+## 2026-05-25 — chore: bonifica log [BUG-DIAG] residui da sessioni v2-flow debug
+## 2026-05-25 — feat: identity binding foundation (Prompt 1/3)
+## 2026-05-25 — docs: discovery identity binding nome istanza ↔ slot `name`
+## 2026-05-25 — fix(editor-v2): contextual handle positioning when only one role is on the side
+## 2026-05-25 — docs: discovery read-only on v2-flow edge anchoring regression
+## 2026-05-24 — chore: cleanup [diag1] instrumentation post-fix v2-flow reference delete
+## 2026-05-24 — fix: v2-flow reference/inheritance delete cleans graph-side DEdge
+## 2026-05-24 — docs: [diag1] discovery v2-flow reference delete pipeline
+## 2026-05-24 — chore: revert Phase B Cluster 1 + freeze cluster
+## 2026-05-22 — docs: audit per ricalibrazione CLAUDE.md
+## 2026-05-25 — fix(tree-view): remove all tooltips from tree editor (issue #88)
+## 2026-05-21 — fix: directional spread to separate paths and labels of mirrored edges
+## 2026-05-21 — fix: spread paths and labels for bundled edges between same node pair
+## 2026-05-21 — fix: role-aware physical positioning of handles in DynamicHandles
+## 2026-05-21 — chore: clean up [cache] logging in jjscript executor
+## 2026-05-21 — fix: union node handles across source/target buckets in STEP 4
+## 2026-05-21 — chore: remove all residual diagN instrumentation
+## 2026-05-21 — chore: remove diag14 from EditorV2.tsx
+## 2026-05-21 — fix: role-aware bucketing in computePortDistribution
+## 2026-05-20 — diag chiuso: edge quadruplication su import Ecore (NON era un bug)
+## 2026-05-19 — fix(v2-flow): dedup edges by refId, not by src→tgt pair
+## 2026-05-19 — fix(import): Accurate counters via __raw + Dashboard refresh trigger
+## 2026-05-19 — fix(import): Counter via idlookup filter on (className + father)
+## 2026-05-19 — feat(import): Import summary modal for .ecore and .xmi
+## 2026-05-18 — fix(ecore-io): W2 exporter eType name-collision (pre-commit completion)
+## 2026-05-18 — feat(ecore-io): W2 EDataType end-to-end (BL2 + SI9)
+## 2026-05-18 — docs(ecore-io): commit isolato del discovery report Ecore I/O completeness
+## 2026-05-17 — feat(ecore-io): W1 quick wins Ecore importer/exporter (10 fix + XPath 3-segment)
+## 2026-05-17 — feat(ecore-io): W1 quick wins (10 fix)
+## 2026-05-17 — discovery: Ecore I/O completeness matrix
+## 2026-05-16 — feat(xmi): M1 importer B.3 — polymorphism + intra-document refs + metadata side-table
+## 2026-05-15 — refactor: hide-not-grey on Edit/Tools/Analyze menus
+## 2026-05-15 — fix: Jjodel menu Logout duplicate + File menu New Project + Recent cap 7
+## 2026-05-15 — discovery: MenuBar structure (6 top-level menus)
+## 2026-05-15 — fix: Help > Support submenu opens left to stay in viewport
+## 2026-05-15 — fix: sidebar FILTERS no longer reload Dashboard
+## 2026-05-15 — fix: correct JjModal description in What's new overlay
+## 2026-05-15 — refactor: remove .jmm import/export menu entries (Project Dashboard)
+## 2026-05-15 — discovery: .jmm export broken (UML2 → 1KB)
+## 2026-05-15 — fix: Ecore exporter B.3.3 (nsURI suffix bug)
+## 2026-05-14 — feat: Ecore importer + exporter B.3.2 (7 feature flags)
+## 2026-05-14 — docs: discovery Fase A2 feature flags + nsURI bug
+## 2026-05-14 — fix: metamodel lookup fallback on EPackage.name
+## 2026-05-14 — feat: Ecore exporter B.3.1 (reflection types cross-doc emission)
+## 2026-05-14 — feat: XMI M1 importer B.2 — containment nested
+## 2026-05-14 — docs: XMI M1 importer Fase A discovery
+## 2026-05-14 — feat: Ecore exporter B.1 + B.3 (multi-package XMI + cross-package pointers)
+## 2026-05-14 — fix(xmi): B.1.1 accept both wrapper and single-root XMI patterns
+## 2026-05-14 — docs: discovery Ecore exporter Fase A.5 (mirata)
+## 2026-05-14 — feat: XMI M1 importer Phase B.1 (flat instances + attributes)
+## 2026-05-14 — docs: discovery Ecore exporter (Fase A)
+## 2026-05-14 — docs: discovery XMI M1 importer (Phase A read-only)
+## 2026-05-14 — fix: Bug H cross-document EDataType alias resolution (Fase B)
+## 2026-05-14 — docs: discovery Bug H cross-doc EDataType alias resolution (Fase A, read-only)
+## 2026-05-13 — docs: discovery Ecore Import Validator (Fase A, read-only)
+## 2026-05-13 — fix: Bug G Ecore importer extends=[''] parser + defensive get_superclasses filter
+## 2026-05-13 — docs: micro-discovery Bug G — childrenNames.indexOf is not a function su Families.ecore
+## 2026-05-13 — fix: Bug E + Bug F Ecore import (duplicate push + missing project link)
+## 2026-05-13 — docs: micro-discovery Bug E + Bug F — TreeView duplicate / Dashboard empty (NON regressione B.1)
+## 2026-05-13 — fix: Bug D Ecore importer DReference father undefined (asymmetric .new() pattern)
+## 2026-05-13 — docs: micro-discovery Bug D — DReference father warning (NON regressione B.1)
+## 2026-05-13 — fix: Bug C Ecore importer Pointer_ESTRING (parseDAttribute asymmetry)
+## 2026-05-13 — docs: micro-discovery Pointer_<UPPER> transform points (Bug C)
+## 2026-05-13 — feat: Ecore importer Phase B.1 — multi-package XMI-wrapped support (Persons.ecore)
+## 2026-05-13 — nota retroattiva su commit ad24c4a
+## 2026-05-13 — fix: align both attribute prefix constants in EcoreParser (Bug A)
+## 2026-05-13 — feat(editor): compact icon collapse + chevron inversion + flex expansion + dock shrink
+## 2026-05-13 — fix(editor): rail layout flex expansion + dock shrink signal
+## 2026-05-13 — refactor: rail-based collapse model + remove dock-collapse signal + soft tree auto-collapse
+## 2026-05-13 — discovery: Ecore importer multi-package
+## 2026-05-13 — feat: independent toggle for Properties and Tree panels in PropertiesWithTreeView
+## 2026-05-13 — no-op: PropertiesWithTreeView resize (feature già completa, verificata)
+## 2026-05-13 — feat: PropertiesWithTreeView resizable tree panel
+## 2026-05-12 — revert: TreeViewSidebar resize handle position (revert prompt 2020)
+## 2026-05-12 — fix: TreeViewSidebar resize handle position (left → right)
+## 2026-05-12 — feat: TreeViewSidebar active indicator pulsing dot
+## 2026-05-12 — fix: TreeViewSidebar resize handle wire-up
+## 2026-05-12 — feat: TreeViewSidebar resizable, default width bump, indentation reduction
+## 2026-05-12 — fix: TreeViewSidebar polish (tooltip removal, VP/V badge colors, view spacing, active VP highlight, vertical line removal)
+## 2026-05-12 — feat: Tree View refresh + azioni inline VP/v (Fase B)
+## 2026-05-12 — discovery: Tree View refresh visivo + azioni inline VP/v (Fase A)
+## 2026-05-10 — refactor: move view toggles from toolbar to View menu, add shortcuts, cleanup menu
+## 2026-05-10 — feat: flow editor view toggles (edge labels, screenshot mode)
+## 2026-05-10 — feat: edge view customization V1 (label, color, width, style)
+## 2026-05-09 — docs: discovery edge view customization (Fase A)
+## 2026-05-09 — fix(editor-v2): render M1 reference edges for post-mount slot population (Bug B Fase B)
+## 2026-05-09 — docs: discovery flow editor edge pipeline (Bug B Fase A)
+## 2026-05-09 — feat: PR1 layout fields + migration 2.216→2.217
+## 2026-05-09 — discovery: layout shell mapping
+## 2026-05-08 — feat(tree-view): redesign + persistent expand/collapse + indicators (abstract, edge, problems, tooltips)
+## 2026-05-07 — fix(pan): preserve inline transform across class change to avoid release flicker
+## 2026-05-07 — fix(pan): double rAF clear to wait for React commit, eliminates release flicker
+## 2026-05-07 — fix(pan): rollback ui.position reset, switch to sync DOM override on .panning-handle
+## 2026-05-07 — fix(pan): override childmode left/top mutations on .panning-content
+## 2026-05-07 — fix(pan): neutralize jQuery UI movement on .panning-handle to eliminate double translation
+## 2026-05-06 — fix: EdgeOverlay transform order (pre-existing alignment bug)
+## 2026-05-06 — feat: R-PanArchitecture (pan stutter definitive fix)
+## 2026-05-06 — discovery: R-PanArchitecture phase A (read-only)
+## 2026-05-06 — perf: extend pan-skip to jQuery UI Draggable (round 4)
+## 2026-05-06 — perf: skip periodic COMMIT during pan (round 3)
+## 2026-05-06 — perf: fast path for transient-only state changes in _reducer
+## 2026-05-06 — perf: remove dead debug call in _reducer history block
+## 2026-05-06 — perf: Navbar syncTabs skip setOpenTabs su lista invariata
+## 2026-05-06 — perf: getCoords riusa graph.offset.w/h durante pan
+## 2026-05-05 — chore(diagnostic): render counter graphElement gated
+## 2026-05-05 — perf: gate adaptSize warn dietro __adaptSizeDebug
+## 2026-05-05 — perf: adaptSize early-return prima di Size.of()
+## 2026-05-05 — chore(discovery): forced reflow external to EdgeOverlay
+## 2026-05-05 — docs(L2): clarify edgeSource/edgeTarget tooltips with $.value pattern
+## 2026-05-05 — chore(L2): remove EdgeOverlay diagnostic logs after memoization verification
+## 2026-05-04 — fix(pan): correct coords formula in whileDragging (oldPos + ui.position)
+## 2026-05-04 — fix(pan): bypass stale getCoords in whileDragging via ui.position
+## 2026-05-04 — fix(pan): TRANSACTION wrap for commitOffset
+## 2026-05-04 — fix(pan): SetFieldAction explicit dispatch in commitOffset
+## 2026-05-04 — feat(pan): drag-aware Redux update via whileDragging in Measurable
+## 2026-05-04 — chore: gate EdgeOverlay diagnostic logs on __edgeOverlayDebug
+## 2026-05-04 — fix: side-aware Manhattan routing (L2)
+## 2026-05-04 — refactor: L2 overlay come primo figlio di GraphContainer
+## 2026-05-04 — feat: L2 Fase 4 — template fallback per isEdge
+## 2026-05-04 — fix: L2 Fase 3a mount nel file giusto (EditorV2.tsx invece di ModelTab.tsx)
+## 2026-05-04 — feat: L2 Fase 3a — static SVG edge overlay (rendering only)
+## 2026-05-04 — feat: L2 Fase 2 — mini-evaluator edge endpoint expressions
+## 2026-05-04 — feat: L2 Fase 1 — DViewElement edge schema + migration 2.213
+## 2026-05-04 — feat: redesign default class view (Minimal clean + edge-like compact + smart preview)
+## 2026-05-03 — docs: discovery default class view template + interaction states
+## 2026-05-03 — feat: boolean field redesign con toggle switch
+## 2026-05-03 — docs: discovery keystroke metamodel editor
+## 2026-05-03 — refactor: estrazione modulo classic edge routing (Fase 1a)
+## 2026-05-03 — discovery: routing classic edge
+## 2026-05-02 — revert: Manhattan routing parked
+## 2026-05-02 — feat(classic): Manhattan routing for edges
+## 2026-05-02 — discovery: edge routing classic editor (Fase A)
+## 2026-05-02 — refactor(ui): scope active stripe to split mode only
+## 2026-05-02 — fix(ui): raise active editor stripe z-index above GraphContainer
+## 2026-05-02 — refactor(ui): thicker active editor stripe (2px→4px, no glow)
+## 2026-05-02 — fix(ui): de-nest active stripe rule so it applies to all editor wrappers
+## 2026-05-02 — refactor(ui): improve active editor indicator visibility
+## 2026-05-02 — fix: classic canvas right panel shows Property panel on instance selection
+## 2026-05-02 — refactor: remove PropertiesPanel dead code from editor-v2
+## 2026-05-02 — fix: palette context-aware reagisce alla selezione classic
+## 2026-05-02 — docs: discovery palette classic selection
+## 2026-05-02 — chore: remove legacy "Select a node." widget from classic editor
+## 2026-05-02 — fix: classic add-child must sync flow editor (Option 4)
+## 2026-05-01 — feat: unify M1 instance palette (flow + classic via shared dataTransfer)
+## 2026-05-01 — fix(editor-v2): sync flow graph for DObjects created by non-canvas paths
+## 2026-05-01 — feat: unify zoom controls across editors with active-editor pattern
+## 2026-05-01 — fix: JjScript M1 grammar require 'of' + Jodie prompt M1 section
+## 2026-04-30 — feat: inspector tre livelli + due colonne (v2)
+## 2026-04-30 — feat: JjEL object inspector inline con layout classe/istanza
+## 2026-04-30 — feat: project visibility menu (Collaborative + Copy link)
+## 2026-04-30 — fix: self/data structural properties aligned to Level 1 classes
+## 2026-04-30 — feat: comando /clear in Jodie Chat e Code mode
+## 2026-04-30 — feat: JjEL object inspector inline in Code mode console
+## 2026-04-30 — refactor: rename "Code" → "Console" in Jjodie mode switcher
+## 2026-04-29 — fix: duplicate React keys in Navbar Submenu
+## 2026-04-28 — fix(jjel-autocomplete): receiver kind inference (collection vs item)
+## 2026-04-28 — feat(jjel): meta-properties instanceOf + className (strict on classes) — v2 over v1
+## 2026-04-28 — fix: JjEL autocomplete less invasive in Jodie Code mode
+## 2026-04-28 — feat: Jodie clear-history button (context-aware)
+## 2026-04-27 — feat: instanceOf and className meta-properties in JjEL
+## 2026-04-27 — feat: expose class structural properties in JjEL
+## 2026-04-27 — feat: helpful error messages for OCL-isms in JjEL parser
+## 2026-04-27 — fix: complete missing self alias binding in buildJodieJjelVariables
+## 2026-04-26 — fix: tune Levenshtein and render JjelFunction values cleanly
+## 2026-04-26 — fix: surface undefined identifier warnings in Jodie Code mode
+## 2026-04-26 — feat: JjEL autocompletion in Jodie Code mode
+## 2026-04-26 — feat: Jodie promotion buttons (Chat ↔ Code)
+## 2026-04-27 — docs: JjEL evaluator discovery (error honesty)
+## 2026-04-26 — feat: Jodie input history navigation (↑/↓)
+## 2026-04-26 — feat: Jjodie console mode switcher (Chat / Code · JjEL)
+## 2026-04-26 — feat: quick tips queue with 14-day exclusion and Notion-id tracking
+## 2026-04-26 — docs: discovery localizzazione componente Quick Tips
+## 2026-04-26 — fix: default route redirect from / to /allProjects
+## 2026-04-26 — feat: Templates and Explore coming soon placeholders
+## 2026-04-26 — fix: dashboard default filter on login
+## 2026-04-26 — feat: Jodie window transitions (apertura/chiusura/resize programmatico)
+## 2026-04-26 — fix: Jodie send button icon color (selettore i invece di button)
+## 2026-04-26 — feat: Jodie composer redesign (input + send integrati, 4 stati)
+## 2026-04-26 — fix: Jodie input scrollbar nascosta
+## 2026-04-26 — feat: Jodie window 2× width, alive indicator, fullscreen toggle, reset
+## 2026-04-25 — refactor: rename .toast* CSS classes to .jj-toast* (Bootstrap collision fix)
+## 2026-04-25 — feat: Jodie hide-on-popover + Ask Jjodie shortcut
+## 2026-04-25 — style: notification entries restyle (stripe + icon + tint + dot)
+## 2026-04-25 — fix v2: NotificationCenter hooks order (verifica empirica)
+## 2026-04-25 — feat(v3): toast history + Bell icon popover + Jodie revert + react-hot-toast cleanup
+## 2026-04-25 — feat: notification system redesign + U.alert facade
+## 2026-04-24 — feat(editor-v2): NodeProblem registry + pulsing indicator + directional overlay; migrate uniqueness from inline badge
+## 2026-04-24 — fix(editor-v2): sibling uniqueness check per istanze nested (LValue father)
+## 2026-04-24 — docs: align grammar diagrams to canonical JjTL
+## 2026-04-24 — refactor(badge): add `warning` variant, migrate `dup` call site
+## 2026-04-23 — refactor: coerenza visiva pill abstract/inherited in MetamodelTreeView
+## 2026-04-23 — feat(editor-v2): sibling uniqueness validation (model)
+## 2026-04-23 — docs: diagnostic report sibling uniqueness
+## 2026-04-23 — feat(editor-v2): attribute co-evolution via ID-based OrphanFeatures
+## 2026-04-23 — feat: model creation submenu with metamodel choice
+## 2026-04-23 — fix(editor-v2): disable rename branch reconcileJjomAfterUndoRedo (undo/attr_0)
+## 2026-04-23 — feat: inherited features in transformation editor tree
+## 2026-04-23 — docs: diagnostic undo/attr_0 bug analysis
+## 2026-04-22 — build: strip `console.log/debug/info/trace` dal bundle di produzione
+## 2026-04-22 — fix: JjScript `create attribute type` — fix finale a 2 file (Pointer ID + early-return in DTypedElement)
+## 2026-04-22 — fix: JjScript `create attribute type` — reversal del fix precedente, short-name è la forma attesa
+## 2026-04-22 — fix: JjScript `create attribute type` — bug follow-up, conversione short-name → Pointer ID
+## 2026-04-22 — fix: JjScript `create attribute` ignores type parameter
+## 2026-04-22 — fix: WelcomeModal re-appears on every page navigation
+## 2026-04-22 — refactor: redesign project sidebar (artefact navigator + project actions)
+## 2026-04-22 — refactor: rimozione icone file actions dalla toolbar Transformation Editor
+## 2026-04-22 — refactor: rimozione sidebar nel Transformation Editor + ricollocazione azioni nei menu
+## 2026-04-22 — chore: bump version to 3.0.0 in about modal
+## 2026-04-22 — fix: WelcomeModal primary CTA opens `/whats-new/` instead of docs root
+## 2026-04-22 — feat: add WelcomeModal "What's new in Jjodel 3.0" (one-shot on login)
+## 2026-04-22 — feat: tab tooltip now includes artifact type (Navbar)
+## 2026-04-21 — fix: project-label icon → bi-collection, no slate box behind
+## 2026-04-21 — fix: "+" button uses bi-plus-lg icon + hover is bg-only (Navbar)
+## 2026-04-21 — feat: revert M badge to system lavender + add Viewpoint entry (documentTypes + navbar)
+## 2026-04-21 — fix: force active-tab metamodel badge to slate (navbar.scss)
+## 2026-04-21 — fix: NewDocumentButton placement + invisible project-icon (Navbar)
+## 2026-04-21 — fix: regressions from the project-label / dropdown refactor (Navbar)
+## 2026-04-21 — feat: project label + new-document dropdown in navbar
+## 2026-04-21 — fix: hide ghost tabs with no backing document from navbar
+## 2026-04-21 — refactor: recolor auto-* pill family to violet/indigo (slate was invisible on card-green bg)
+## 2026-04-21 — refactor: split "conversion needed" pill into auto-resolved + auto-converted (slate neutral family)
+## 2026-04-21 — feat: multi-step progress modal for "Analyze Metamodels" (AI pipeline)
+## 2026-04-21 — refactor: migrate SuggestedMappingsPanel to common/ProviderModelSelector (drop LocalOption UI)
+## 2026-04-21 — fix: remove horizontal slide animation on tab switch
+## 2026-04-21 — fix: restore match arrows rendering in Suggested Mappings (one-line uncomment)
+## 2026-04-20 — fix: common ProviderSelector — gate option disable by `isConfigured()` not `.enabled`
+## 2026-04-20 — fix: scope edge-crossing jump markers to the active canvas only
+## 2026-04-20 — docs: Jjodie system prompt — add "reserved keywords" rule
+## 2026-04-20 — feat: contextual recovery actions for JjScript execution error modal
+## 2026-04-20 — docs: Jjodie system prompt — add "enum vs attribute" disambiguation rule
+## 2026-04-20 — fix: AI picker popover — correct width overrides (compact mode specificity + stray flex:1)
+## 2026-04-20 — fix: AI picker popover — single-line model names with ellipsis overflow
+## 2026-04-20 — refactor: AI providers — single source of truth for models (Pattern B)
+## 2026-04-20 — refactor: Default Provider removal — Phase 3 (removal)
+## 2026-04-20 — refactor: Default Provider removal — Phase 2 (feature alignment)
+## 2026-04-20 — refactor: Default Provider removal — Phase 1 (foundation)
+## 2026-04-20 — docs: Default Provider removal diagnostic
+## 2026-04-20 — fix: transformation assistant error UX (explicit fallback + settings link)
+## 2026-04-20 — fix: transformation assistant provider threading + cancellation
+## 2026-04-20 — docs: Transformation assistant diagnostic
+## 2026-04-20 — docs: JjTL parser diagnostic
+## 2026-04-17 — fix: duplicate reference values in JjTL executor output
+## 2026-04-17 — feat: `parent` (eContainer) for JjTL transformations
+## 2026-04-17 — fix: reference edges not drawn for transformation-generated models
+## 2026-04-17 — fix: flow editor edge connect does not persist reference value
+## 2026-04-17 — fix: DObject delete leaves dangling Pointers + referenceFeatures crash
+## 2026-04-17 — fix: reference materialization via __sourceId map
+## 2026-04-17 — fix: reference lookup in transformation output
+## 2026-04-17 — fix: JjTL transformation output — reference writing
+## 2026-04-17 — fix: JjTL cross-type resolution — reference handling
+## 2026-04-16 — feat: JjTL cross-type resolution via trace model
+## 2026-04-16 — fix: transformation code preserved when user saves project without first clicking Save in JjTL editor
+## 2026-04-16 — fix: project save now includes transformations (data loss bug)
+## 2026-04-14 — fix: Dashboard CSS injection reactive + includes all views
+## 2026-04-14 — fix: view CSS not injected into DOM after project load
+## 2026-04-14 — fix: view CSS not applied to instances on canvas
+## 2026-04-14 — fix: Maximum Update Depth — reference-stabilizing guard on ReactFlow props
+## 2026-04-14 — fix: Maximum Update Depth Exceeded — debounced incremental sync
+## 2026-04-14 — fix: Maximum Update Depth Exceeded in EditorV2 (ReactFlow infinite loop)
+## 2026-04-14 — fix: context menu text color (dark on dark)
+## 2026-04-13 — fix: update documentation and GitHub links
+## 2026-04-12 — fix: RGB input values visible with proper width
+## 2026-04-12 — fix: number input padding-right for spinner arrows
+## 2026-04-12 — fix: restore number spinners, remove right padding
+## 2026-04-12 — style: remove native number input spinners globally
+## 2026-04-12 — fix: opacity slider track height + hide plus icon on hover
+## 2026-04-12 — style: opacity slider matches hue slider (both paths)
+## 2026-04-12 — fix: suggestion panel color swatches → perfect circles
+## 2026-04-12 — fix: color swatches perfect circles, 20% smaller
+## 2026-04-12 — fix: unified color picker panel definitive layout (createPortal)
+## 2026-04-12 — style: color picker refinements (oval border, scrollbar, circle shape)
+## 2026-04-12 — feat: unified color picker panel (custom HSV canvas + palette in single popup)
+## 2026-04-12 — fix: color palette panel closed by default
+## 2026-04-12 — fix: color picker hover→click, opacity slider styling
+## 2026-04-11 — fix: JSX editor header alignment + language label
+## 2026-04-11 — fix: Monaco editor invisible in JSX full-screen
+## 2026-04-11 — fix: disable split mode in JSX template full-screen editor
+## 2026-04-11 — style: reduce observed properties row spacing
+## 2026-04-11 — fix: reverse spacing direction in Apply to tab
+## 2026-04-11 — style: fix spacing + add tooltips to Apply to tab
+## 2026-04-11 — style: align view editor spacing to Properties baseline
+## 2026-04-11 — style: refactor InfoData.tsx to use jj-* classes from Info.tsx baseline
+## 2026-04-11 — style: restyle aggressivo Apply to tab
+## 2026-04-11 — style: uniformare sub-tab viewpoint editor alla baseline Properties
+## 2026-04-11 — fix: batch funzionalità viewpoint (6 fix)
+## 2026-04-11 — refactor: replace rc-dock DockLayout with simple React tabs in ViewData
+## 2026-04-10 — fix: constrain DockLayout parent overflow for proper tab behavior
+## 2026-04-10 — fix: DockLayout height via ResizeObserver (pixel measurement)
+## 2026-04-10 — fix: DockLayout explicit sizing via absolute positioning
+## 2026-04-10 — fix: ViewData full width + flex height for DockLayout
+## 2026-04-10 — fix: auto-collapse tree when view selected for full-width ViewData
+## 2026-04-10 — feat: view selection in tree shows editor sub-tabs in Properties
+## 2026-04-10 — feat: riportare viewpoint editing nel pannello destro
+## 2026-04-10 — feat: ripristino ViewpointEditor redesign da git
+## 2026-04-10 — fix: rimuovi struttura progetto duplicata dalla sidebar model editor
+## 2026-04-10 — fix: 5 bug release testing sezione B (tree select, conformsTo, context menu, File tab, slots)
+## 2026-04-10 — fix: 3 bug release testing (infinite loop, bottom drawer, enum icon)
+## 2026-04-09 — feat: JjScript test suite
+## 2026-04-09 — refactor: event registry — migrate post-migration stragglers
+## 2026-04-06 — fix: Pulizia header dashboard progetto
+## 2026-04-06 — fix: Nascondi sidebar navigazione progetto nell'editor metamodello (v2)
+## 2026-04-06 — fix: Header dashboard centrato e restyling
+## 2026-04-06 — fix: Centro orizzontale contenuto dashboard
+## 2026-04-06 — chore: Rimozione dipendenze inutilizzate
+## 2026-04-06 — refactor: Event registry centralizzato
+## 2026-04-06 — refactor: Rimozione editor V3 (viewpoint-editor panel)
+## 2026-04-05 — audit: Git history analysis (pre vs post Natale 2025)
+## 2026-04-05 — audit: Censimento completo codebase
+## 2026-04-04 — feat: AllProjects page redesign
+## 2026-03-26 — Fix: `do...end` block executes only the first command
+## 2026-03-26 — Fix: `abstract Person` still gives "Unknown command: abstract" after initial fix
+## 2026-03-26 — Fix: `abstract Person` command returns SUCCESS but has no effect (initial fix)
+## 2026-03-25 — Fix: let binding $variable empty in body (missing metamodel context)
+## 2026-03-25 — Fix: forallExistsDepth counter never fires (token type mismatch)
+## 2026-03-25 — Fix (ineffective): ambiguità keyword 'in' nel let binding con espressioni JjEL
+## 2026-03-25 — Fix: let binding delegates entire input to JjEL instead of body only
+## 2026-03-25 — Fix: Titolo progetto troncato nell'header della dashboard
+## 2026-03-25 — Fix: Documentation section padding/margin alignment
+## 2026-03-25 — Fix: Docs icon in Section Navigator → lettera "D" con sfondo
+## 2026-03-25 — Fix: Documentation icon for "not generated" state
+## 2026-03-25 — UI: Section group visual hierarchy in Project Dashboard
+## 2026-03-25 — UI: Standardize section headers and actions in Project Dashboard
+## 2026-03-25 — UI: Sidebar section navigator + compact header for Project Dashboard
+## 2026-03-25 — Fix: JjEL result rendering and error handling in JjScript Console
+## 2026-03-25 — Fix: JjScript parser no longer delegates JjEL expressions
+## 2026-03-25 — Feat: Add "Show Console" to View menu
+## 2026-03-25 — Audit: language documentation vs implementation
+## 2026-03-25 — Feat: implement `let` command in JjScript (Phase 3 of JjLet)
+## 2026-03-25 — Fix: `let` binding expression stops at COMMA and IN
+## 2026-03-24 — Feat: implement `let` statement in JjTL (Phase 2 of JjLet)
+## 2026-03-24 — Feat: add $identifier (DOLLAR_IDENT) token to JjEL lexer/parser
+## 2026-03-24 — Docs: add JjLet chapter to jjtl-jjel-paper.tex
+## 2026-03-24 — Feat: add confirm() to JjTL Monaco autocomplete
+## 2026-03-24 — Feat: show rule + instance context in prompt() and confirm() dialogs
+## 2026-03-24 — Feat: implement confirm() command — full stack
+## 2026-03-24 — Fix: prompt dialog passes typeRef, renders correct widget, validates by type
+## 2026-03-24 — Feat: trace shows rule name and userProvided flag per binding
+## 2026-03-24 — Fix: prompt() shows typeRef as default value in dialog
+## 2026-03-24 — Feat: wire JjTL interactive commands to executor
+## 2026-03-24 — Fix: context menu icon color inherits from text
+## 2026-03-24 — Style: unified dark slate floating surfaces
+## 2026-03-24 — Style: context menu visual polish
+## 2026-03-23 — Fix: white page — U.toHtml() undefined at module load (MyRcDock.tsx)
+## 2026-03-23 — Fix: white page regression (ansi-to-html require)
+## 2026-03-23 — Fix: `classes` scoped to active metamodel tab
+## 2026-03-23 — JjEL: object literals
+## 2026-03-23 — JjEL grammar update: `|` as alias, `:` reserved for projection
+## 2026-03-22 — JjEL integration in JjScript (forall, exists, with)
+## 2026-03-22 — JjEL delegation architecture exploration (JjTL → JjScript)
+## 2026-03-22 — Singleton instances rendering on M1 canvas (Phase 2)
+## 2026-03-22 — "Show singleton instances" toggle in View menu (Phase 1)
+## 2026-03-22 — Singleton class underline on canvas
+## 2026-03-21 — Surface hierarchy variables in editor-v2 _themes.scss
+## 2026-03-21 — Remove editor-v3
+## 2026-03-21 — Editor Surface Hierarchy (visual depth)
+## 2026-03-21 — Centralized Entity Icons & Colors (`entityMeta.ts`)
+## 2026-03-21 — Fix: Restore colored badges in Project Dashboard
+## 2026-03-21 — Fix: Context menu missing background/border in Project Dashboard
+## 2026-03-19 — Fix: Properties panel empty when metamodel is empty or nothing selected
+## 2026-03-19 — Rollback: revert "Properties panel shows model overview" (caused white page)
+## 2026-03-19 — UI polish: empty state scrollbar + minimal resize handle
+## 2026-03-19 — Refactor: remove duplicate editor-type-change dispatch from Dock.tsx
+## 2026-03-19 — Fix: click on active tab hides panels
+## 2026-03-19 — Fix: _detectActiveTabChange resolves metamodel/model correctly
+## 2026-03-19 — Fix: tab click now dispatches jjodel:editor-type-change
+## 2026-03-19 — Rollback: revert tab-switch fix that broke card flow
+## 2026-03-19 — Properties Panel & Navbar: duplicate key, visibility, persistence fixes
+## 2026-03-17 — Documentation Tab UI Fixes
+## 2026-03-17 — Fix toolbar buttons still compressed (CSS specificity)
+## 2026-04-22 — fix: generator mapping→JjTL, remove resolve() and fix helper body delimiters
+## 2026-04-22 — fix: mapping generation, prevent and skip malformed attribute mappings
+## 2026-04-22 — fix: helper return type separator `:` → `->`
+## 2026-04-25 — discovery: sistema notifiche/toast esistente
+## 2026-04-22 — docs: feature inventory completo della piattaforma (1484 righe)
+## 2026-04-30 — diagnostic: JjScript M1 context discovery
+## 2026-04-30 — feat: JjScript M1 context extension (Prompt 1/2)
+## 2026-04-30 — feat: JjScript M1 command handlers (Prompt 2/2)
+## 2026-04-30 — diagnostic: Jjodie context reactivity discovery
+## 2026-04-30 — feat: Jjodie context reactivity + artifact scoping
+## 2026-04-30 — fix: EDITOR_TYPE_CHANGE payload + getActiveModel cache
+## 2026-04-30 — fix: handleLayoutChange dispatcha EDITOR_TYPE_CHANGE su tab switch
+## 2026-04-30 — fix: handleLayoutChange tabType null fallback via store.idlookup
+## 2026-04-30 — fix: JodieHeader badge reattivo al cambio tab
+## 2026-04-30 — fix: JodieHeader badge mostra modello M1
+## 2026-04-30 — feat: badge artefatto Jjodie bordo cyan + prefisso M1/M2
+## 2026-05-01 22:05 — fix: ClassicZoomBridge hook-free via CustomEvent
+## 2026-05-01 22:32 — fix: M1 instances created by JjScript not visible in flow editor
+## 2026-05-02 — refactor: unify classic + flow context menu styling
+## 2026-05-05 — discovery: view properties editor for isEdge/edgeSource/edgeTarget exposure
+## 2026-05-05 — feat(L2): expose isEdge/edgeSource/edgeTarget in view properties editor
+## 2026-05-08 — discovery: L2 Pack B (appliableToClasses UI + edgeRouting)
+## 2026-05-08 — refactor: L2 typing cleanup LViewElement (B.0)
+## 2026-05-08 — feat: L2 classifier picker UI for appliableToClasses (B.1)
+## 2026-05-08 — feat(L2): edgeRouting field with 3-mode dropdown (B.2)
+## 2026-05-08 — chore: L2 Pack A — tooltip $<refName>.value + cleanup __panRenderDebug
+## 2026-05-08 — fix: L2 priority logic for findApplicableEdgeView (C.1)
+## 2026-05-08 — feat(L2): edge-candidate banner + apply suggestions (L2.x.1 + L2.x.2)
+## 2026-05-08 — refactor: edge-candidate banner polish (YAGNI refNames + readOnly disabled)
+## 2026-05-08 — discovery: predicate-based classifier extraction (L2.x.1 polish v2)
+## 2026-05-08 — feat: predicate-based edge-candidate heuristic (L2.x.1 polish v2 Fase B)
+## 2026-05-09 — fix: EdgeOverlay viewpoint filter (Bug A)
+## 2026-05-09 — discovery: EdgeOverlay viewpoint filter
+## 2026-05-20 — chore: log diagnostici v2-flow 4/8 edge
+## 2026-05-20 — chore: estensione log diagnostici v2-flow 4/8 edge (round 2)
+## 2026-05-20 — chore: minimal repro harness for RF 4/8 edge bug
+## 2026-05-20 — chore: reactive variant of v2-flow repro harness
+## 2026-05-22 — docs(coevolution): sanity check M2→M1 — discovery commit
+## 2026-05-25 — fix(dashboard): close orphan tabs and show toast on metamodel/model delete
+## 2026-05-25 — docs: discovery inheritance anchor distribution
+## 2026-05-25 — docs: discovery razionale c8910167a (role segregation)
+## 2026-05-25 — docs: discovery feasibility cross-role global ordering
+## 2026-05-26 — fix(v2-flow): default edge anchor to auto so import edges stay re-routable
+## 2026-05-27 — chore: drop local fix on portDistribution.ts (ordering inverted)
+## 2026-05-27 — discovery: anchor ordering inversion (post-merge step 2/3/5)
+## 2026-05-27 — docs: CLAUDE.md visual bugs methodology + §3.10 staleness note
+## 2026-05-28 — docs: discovery reference Type change orphan edges
+## 2026-05-29 — docs: discovery reference re-target via edge drag (v2-flow)
+## 2026-05-29 — feat: retarget reference type by dragging edge target endpoint
+## 2026-05-31 — docs: discovery ghost-target stub rendering (drag feasibility)
+## 2026-06-04 — discovery: Advanced Mode consolidation (Fase A, re-verifica)
+## 2026-06-04 — discovery: ghost-target chip offset persistence (D-layer)
+## 2026-06-04 — discovery: edge anchor point placement (read-only)
+## 2026-06-04 — LIR: edge anchor pair-alignment (Fix A + B2, read-only)
+## 2026-06-04 — fix: route bidirectional reference pairs to facing sides
+## 2026-06-04 — fix: align paired edge anchors via pair-stable tiebreak
+## 2026-06-06 — docs: discovery property panel form controls
+## 2026-06-06 — docs: discovery canvas color schemes / palette system
+## 2026-06-08 — feat: deduped error toast on view-template failure (Classic)
+## 2026-06-08 — docs: discovery for IR viewpoint generator (sez. 9)
+## 2026-06-08 — docs: discovery classic-editor draggable segment handles (read-only)
+## 2026-06-08 — docs: Fase A feasibility — classic legacy-edge segment handles (read-only)
+## 2026-06-08 — fix: boot-anchor dev IRView probe so window.__seedIRViewProbe registers

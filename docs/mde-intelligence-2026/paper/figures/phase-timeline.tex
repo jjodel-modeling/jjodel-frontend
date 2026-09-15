@@ -1,0 +1,30 @@
+% Harness evolution timeline: four phases with recalibration meta-transformations.
+% Embeddable via \input; needs tikz with positioning, arrows.meta, shapes.geometric (loaded in main.tex).
+% Namespaced styles (ph, rec, rarr) avoid clashes.
+\tikzset{
+  ph/.style={draw, rounded corners=2pt, align=center, font=\tiny, inner sep=3pt, minimum height=15mm, fill=blue!7, text width=20mm},
+  rec/.style={draw, circle, fill=orange!18, font=\tiny\bfseries, inner sep=1pt, minimum size=6mm},
+  flow/.style={-{Stealth[length=2mm]}, thick},
+  selfp/.style={-{Stealth[length=1.6mm]}, orange!70!black}
+}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[ph, fill=black!4] (p1) at (0,0)   {\textbf{1. Spontaneous}\\\textit{pre-2026-01}\\human + 1 chat\\(GPT, Gemini, Claude)\\\textbf{docs: none}};
+  \node[ph] (p2) at (30,0)  {\textbf{2. Three agents}\\\textit{2026-01-17}\\director, architect,\\implementer\\\textbf{constitution}};
+  \node[ph] (p3) at (60,0)  {\textbf{3. Intermediate+}\\\textit{2026-01-22 to 02}\\same triad\\\textbf{handover docs}};
+  \node[ph, fill=green!8] (p4) at (90,0) {\textbf{4. Codebase docs}\\\textit{2026-03 to 06}\\same triad\\\textbf{discovery, session,}\\\textbf{prompt, logs}};
+
+  \node[rec] (r1) at (15,0) {R};
+  \node[rec] (r2) at (45,0) {R};
+  \node[rec] (r3) at (75,0) {R};
+
+  \draw[flow] (p1) -- (r1); \draw[flow] (r1) -- (p2);
+  \draw[flow] (p2) -- (r2); \draw[flow] (r2) -- (p3);
+  \draw[flow] (p3) -- (r3); \draw[flow] (r3) -- (p4);
+
+  % self-reference: recalibration reads the codebase and rewrites the harness
+  \draw[selfp] (r2) to[out=110,in=70,looseness=6] (r2);
+  \node[font=\tiny, orange!60!black] at (45,11) {self-rewrite};
+
+  \node[font=\tiny, align=center] at (45,-13)
+    {\textbf{R} = recalibration: architect + implementer analyse the codebase, director gates the change to the harness};
+\end{tikzpicture}

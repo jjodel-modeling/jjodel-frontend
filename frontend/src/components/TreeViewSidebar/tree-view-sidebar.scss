@@ -1,0 +1,2012 @@
+// Tree View Sidebar Styles
+// Resolution-adaptive sidebar for metamodel hierarchy navigation
+
+// Design tokens (from CLAUDE.md)
+$color-brand: #374151;
+$color-accent: #475569;
+$color-accent-hover: #334155;
+$color-accent-light: rgba(71, 85, 105, 0.1);
+
+$color-text-primary: #111418;
+$color-text-secondary: #6B7280;
+$color-text-tertiary: #9CA3AF;
+$color-text-inverse: #ffffff;
+
+$color-bg-primary: #f8fafc;
+$color-bg-secondary: #f1f5f9;
+$color-bg-tertiary: #e2e8f0;
+
+$color-border: #e2e8f0;
+$color-border-light: #f0f1f2;
+$color-border-hover: #d0d3d8;
+
+$radius-sm: 4px;
+$radius-md: 6px;
+$radius-lg: 8px;
+
+$shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+$shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
+$shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.1);
+
+$transition-fast: 150ms ease;
+$transition-normal: 250ms ease;
+
+// ============================================
+// TREE CONTENT
+// ============================================
+
+.tree-view-content {
+    padding: 4px 8px;
+}
+
+// ─── Header search toggle (shared by sidebar + overlay headers) ──────────────
+// Borderless 24px icon button; theme-aware tokens so dark mode adapts on its own.
+// `.is-active` uses the design-system active-indicator cyan.
+.tree-view-search-toggle {
+    flex: none;
+    width: 24px;
+    height: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: none;
+    border-radius: $radius-sm;
+    background: transparent;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    i {
+        font-size: 13px;
+        color: inherit;
+    }
+
+    &:hover {
+        background-color: var(--color-bg-tertiary);
+        color: var(--color-text-primary);
+    }
+
+    &.is-active,
+    &.is-active:hover {
+        color: var(--accent-cyan, #0ea5e9);
+    }
+}
+
+// ─── Search bar (sticky, compact filter row) ─────────────────────────────────
+// Single 28px row — lens · input · match count · clear, all inline. No border or
+// radius on the input: the row is delimited only by its border-bottom. Sticks to
+// the top of the scroll container (.tree-view-panel-body, the rail) with a full
+// opaque background so rows scroll under it. Negative horizontal margin cancels the .tree-view-content 8px side padding
+// so the bar and its separator span the full panel width.
+.tree-search {
+    position: sticky;
+    top: -4px;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height:41px;
+    padding: 0 8px 0 12px;
+    margin: -10px -8px 0 -8px;
+    background-color: $color-bg-primary;
+    border-bottom: 1px solid var(--color-border-secondary);
+    border-left: 1px solid var(--color-border-secondary);
+
+
+    > i.bi-search {
+        flex: none;
+        font-size: 12px;
+        color: var(--color-text-placeholder);
+    }
+
+    &__input {
+        flex: 1;
+        min-width: 0;
+        padding: 0;
+        border: none;
+        outline: none;
+        background: transparent;
+        font-size: 11px!important;
+        color: var(--color-text-primary);
+        height: 28px!important;
+
+        &::placeholder {
+            color: var(--color-text-placeholder);
+        }
+    }
+
+    &__count {
+        flex: none;
+        font-size: 10px;
+        font-variant-numeric: tabular-nums;
+        color: var(--color-text-tertiary);
+    }
+
+    &__clear {
+        flex: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 16px;
+        height: 16px;
+        padding: 0;
+        border: none;
+        background: none;
+        color: var(--color-text-placeholder);
+        cursor: pointer;
+
+        i { font-size: 13px; }
+
+        &:hover { color: var(--color-text-primary); }
+    }
+}
+
+// Matched substring inside node names — subtle tint, no default browser yellow.
+.tree-row__name mark,
+.tree-feature__name mark {
+    background-color: var(--color-accent-subtle);
+    color: inherit;
+    font-weight: 600;
+    border-radius: 2px;
+    padding: 0 1px;
+}
+
+.tree-view-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 16px;
+    text-align: center;
+    color: $color-text-secondary;
+
+    i {
+        font-size: 28px;
+        color: $color-text-tertiary;
+        margin-bottom: 8px;
+    }
+
+    p {
+        font-size: 13px;
+        font-weight: 500;
+        color: $color-text-primary;
+        margin: 0 0 4px 0;
+    }
+
+    span {
+        font-size: 11px;
+        color: $color-text-tertiary;
+    }
+}
+
+// ============================================
+// METAMODEL TREE
+// ============================================
+
+.metamodel-tree {
+    margin-bottom: 4px;
+
+    &:last-child {
+        margin-bottom: 0;
+    }
+}
+
+.metamodel-tree__header {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 4px 6px;
+    padding-left: 16px;
+    border-radius: $radius-sm;
+    cursor: pointer;
+    transition: background-color $transition-fast;
+
+
+    &:hover {
+        background-color: $color-bg-secondary;
+    }
+}
+
+.metamodel-tree__title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    font-size: 12px;
+    font-weight: 600;
+    color: $color-text-primary;
+}
+
+.metamodel-tree__content {
+    // No extra padding — depth is managed by inline paddingLeft on tree nodes
+}
+
+.tree-empty-package {
+    padding: 6px 10px;
+    padding-left: 32px;
+    font-size: 11px;
+    color: $color-text-tertiary;
+    font-style: italic;
+}
+
+// ============================================
+// TREE NODE
+// ============================================
+
+.tree-node__header {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    padding-right: 12px;
+    border-radius: $radius-sm;
+    cursor: pointer;
+    transition: background-color $transition-fast;
+
+
+    &:hover {
+        background-color: $color-bg-secondary;
+    }
+
+    &--selected {
+        background-color: rgba(71, 85, 105, 0.12);
+
+        &:hover {
+            background-color: rgba(71, 85, 105, 0.15);
+        }
+    }
+}
+
+.tree-node__toggle {
+    width: 14px;
+    height: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #94a3b8;
+    padding: 0;
+    flex-shrink: 0;
+    transition: color $transition-fast;
+
+    &:hover:not(:disabled) {
+        color: $color-text-primary;
+    }
+
+    &:disabled {
+        cursor: default;
+    }
+
+    i {
+        font-size: 10px;
+        line-height: 1;
+    }
+}
+
+.tree-node__spacer {
+    width: 14px;
+    display: inline-block;
+}
+
+.tree-node__content {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    min-width: 0;
+    padding-left: 2px;
+}
+
+// ============================================
+// TREE NODE ICON - PASTEL STYLE
+// Matches existing tree.scss styling
+// ============================================
+
+.tree-node__icon {
+    width: 14px;
+    height: 14px;
+    min-width: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 600;
+    flex-shrink: 0;
+
+    // BADGE STYLE — colored letter with tinted background
+    // Matches viewpoint tree badge pattern (ViewTreeNode)
+    border: none;
+
+    // Palette per tipo rimossa il 2026-08-12, in esecuzione di R-RAIL-33: la scala
+    // entity non entra nel tree. Non rimetterla. Le regole coloravano questo <span>,
+    // mentre a dipingere e' l'<i class="bi"> interno, che prende il colore da
+    // styles/style.scss:790 (R-RAIL-36): la rimozione ha cambiato zero pixel, misurati.
+    // Restano fuori le righe viewpoint e view-leaf, che sono pastiglie e colorano il
+    // fondo (emendamento (2) a R-RAIL-33).
+    // Dopo la rimozione vince components/forEndUser/tree.scss, quarta palette entity
+    // globale e non scopata (voce a TECH-DEBT). Non dipinge nemmeno lei.
+    // Il corsivo del glifo M1 annidato non e' colore e resta.
+    &.tree-nested-model {
+        font-style: italic;
+    }
+}
+
+// ============================================
+// NESTED M1 MODEL + INSTANCE STYLES
+// ============================================
+
+.nested-model-tree {
+    // No border — indentation managed by inline paddingLeft
+}
+
+// M1 badge next to model name — very subtle slate hint
+.tree-nested-model__badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    font-size: 9px;
+    font-weight: 700;
+    color: #94a3b8;
+    background: rgba(100, 116, 139, 0.08);
+    border-radius: 3px;
+    margin-left: 6px;
+    letter-spacing: 0.3px;
+    flex-shrink: 0;
+    line-height: 16px;
+}
+
+// Instance icon (bi-app-fill square) — muted slate
+.tree-instance__icon {
+    font-size: 10px;
+    color: #94a3b8;
+    flex-shrink: 0;
+    margin-right: 4px;
+    line-height: 1;
+}
+
+// Instance name styling
+.tree-instance__name {
+    font-size: 11px;
+    color: $color-text-primary;
+}
+
+// Metaclass name after the colon
+.tree-instance__metaclass {
+    font-size: 11px;
+    color: $color-text-tertiary;
+    margin-left: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tree-node__name {
+    font-size: 12px;
+    color: $color-text-primary;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+}
+
+.tree-node__extends {
+    font-size: 9px;
+    color: $color-text-tertiary;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    opacity: 0.8;
+}
+
+// ============================================
+// ELEMENT HIGHLIGHTING (JjScript execution)
+// ============================================
+
+// Highlight colors by action type
+$color-highlight-create: #10b981; // Green - new elements
+$color-highlight-modify: #3b82f6; // Blue - modified elements
+$color-highlight-delete: #ef4444; // Red - deleted elements
+$color-highlight-unknown: #f59e0b; // Amber - unknown action
+
+// Highlight animations
+@keyframes highlightPulse {
+    0% {
+        box-shadow: inset 0 0 0 2px transparent;
+    }
+    15% {
+        box-shadow: inset 0 0 0 2px currentColor;
+    }
+    100% {
+        box-shadow: inset 0 0 0 2px transparent;
+    }
+}
+
+@keyframes highlightFlash {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}
+
+@keyframes badgeBounce {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+}
+
+// Base highlighted state
+.tree-node__header--highlighted,
+.metamodel-tree__header--highlighted {
+    animation: highlightFlash 400ms ease-out;
+    position: relative;
+
+    &::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        border-radius: $radius-sm;
+        pointer-events: none;
+        animation: highlightPulse 2000ms ease-out;
+    }
+}
+
+// Action-specific highlight colors
+.tree-node__header--action-create,
+.metamodel-tree__header--action-create {
+    background-color: rgba($color-highlight-create, 0.12) !important;
+
+    &::after {
+        color: $color-highlight-create;
+    }
+
+    .tree-node__name {
+        color: darken($color-highlight-create, 10%);
+        font-weight: 600;
+    }
+}
+
+.tree-node__header--action-modify,
+.metamodel-tree__header--action-modify {
+    background-color: rgba($color-highlight-modify, 0.1) !important;
+
+    &::after {
+        color: $color-highlight-modify;
+    }
+}
+
+.tree-node__header--action-delete,
+.metamodel-tree__header--action-delete {
+    background-color: rgba($color-highlight-delete, 0.1) !important;
+    text-decoration: line-through;
+    opacity: 0.7;
+
+    &::after {
+        color: $color-highlight-delete;
+    }
+
+    .tree-node__name {
+        color: $color-highlight-delete;
+    }
+}
+
+.tree-node__header--action-unknown,
+.metamodel-tree__header--action-unknown {
+    background-color: rgba($color-highlight-unknown, 0.1) !important;
+
+    &::after {
+        color: $color-highlight-unknown;
+    }
+}
+
+// NEW badge for created elements
+.tree-node__badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1px 6px;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-radius: 3px;
+    margin-left: 6px;
+    flex-shrink: 0;
+
+    &--new {
+        background: linear-gradient(135deg, $color-highlight-create 0%, darken($color-highlight-create, 10%) 100%);
+        color: #ffffff;
+        animation: badgeBounce 600ms ease-out;
+        box-shadow: 0 1px 3px rgba($color-highlight-create, 0.3);
+    }
+}
+
+// Tree node context menu (right-click → "Add View")
+.tree-node__context-menu {
+    background: #ffffff;
+    border: 1px solid $color-border;
+    border-radius: $radius-md;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    padding: 4px;
+    min-width: 180px;
+}
+
+.tree-node__context-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    font-size: 12px;
+    color: $color-text-primary;
+    border-radius: $radius-sm;
+    cursor: pointer;
+    white-space: nowrap;
+
+    i {
+        font-size: 13px;
+        color: $color-text-secondary;
+    }
+
+    &:hover {
+        background: $color-bg-secondary;
+    }
+
+    &--disabled {
+        color: $color-text-tertiary;
+        cursor: default;
+        pointer-events: none;
+
+        i {
+            color: $color-text-tertiary;
+        }
+
+        &:hover {
+            background: transparent;
+        }
+    }
+}
+
+// Script executing state indicator on tree nodes
+.tree-view-content--executing {
+    .tree-node__header,
+    .metamodel-tree__header {
+        transition: background-color 150ms ease;
+    }
+}
+
+// ============================================
+// DARK MODE SUPPORT
+// ============================================
+
+[data-theme="dark"] {
+    .tree-search {
+        // border-bottom uses the theme-aware --color-border-secondary token.
+        background-color: #1e1e1e;
+    }
+
+    .tree-node__header {
+        &:hover {
+            background-color: #2a2a2a;
+        }
+
+        &--selected {
+            background-color: rgba(71, 85, 105, 0.25);
+        }
+    }
+
+    .tree-node__name,
+    .metamodel-tree__title {
+        color: #e0e0e0;
+    }
+
+    .tree-view-empty {
+        p {
+            color: #e0e0e0;
+        }
+    }
+
+    // Dark mode highlight colors (slightly brighter for visibility)
+    .tree-node__header--action-create,
+    .metamodel-tree__header--action-create {
+        background-color: rgba(#34d399, 0.15) !important;
+
+        .tree-node__name {
+            color: #34d399;
+        }
+    }
+
+    .tree-node__header--action-modify,
+    .metamodel-tree__header--action-modify {
+        background-color: rgba(#60a5fa, 0.15) !important;
+    }
+
+    .tree-node__header--action-delete,
+    .metamodel-tree__header--action-delete {
+        background-color: rgba(#f87171, 0.15) !important;
+
+        .tree-node__name {
+            color: #f87171;
+        }
+    }
+
+    .tree-node__header--action-unknown,
+    .metamodel-tree__header--action-unknown {
+        background-color: rgba(#fbbf24, 0.15) !important;
+    }
+
+    .tree-node__badge--new {
+        background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+    }
+
+    .tree-node__icon {
+    }
+
+    .tree-nested-model__badge {
+        color: #64748b;
+        background: rgba(148, 163, 184, 0.10);
+    }
+
+    .tree-instance__icon {
+        color: #64748b;
+    }
+
+    .tree-instance__name {
+        color: #e0e0e0;
+    }
+
+    .tree-instance__metaclass {
+        color: #6b7280;
+    }
+
+    .metamodels-section {
+        border-color: #333;
+
+        &__header {
+            color: #888;
+        }
+
+        &__count {
+            color: #6b7280;
+        }
+    }
+
+    .viewpoint-section {
+        border-color: #333;
+
+        &__header {
+            color: #888;
+        }
+
+        &__count {
+            color: #6b7280;
+        }
+    }
+
+    .transformation-section {
+        border-color: #333;
+
+        &__header {
+            color: #888;
+        }
+
+        &__count {
+            color: #6b7280;
+        }
+    }
+
+    .tree-type-group {
+        &__header {
+            border-color: #333;
+
+            &:hover {
+                background-color: #2a2a2a;
+            }
+        }
+
+        &__label {
+            color: #94a3b8;
+        }
+
+        &__count {
+            color: #6b7280;
+        }
+    }
+
+    .tree-node__icon.tree-subview {
+        background: transparent;
+        color: #b0bec5;
+    }
+
+    .tree-node__icon.tree-rule {
+        background: transparent;
+        color: #34d399;
+    }
+
+    .tree-node__icon.tree-helper {
+        background: transparent;
+        color: #94a3b8;
+    }
+
+    // .tree-viewpoint: driven by --color-entity-viewpoint-* tokens (no override here)
+
+    .tree-transformation {
+        background: transparent;
+        color: #94a3b8;
+    }
+
+    .megamodel-entry {
+        &__header {
+            color: #888;
+        }
+
+        &:hover {
+            background-color: #2a2a2a;
+        }
+    }
+
+    .documentation-entry {
+        border-color: #333;
+
+        &__header {
+            color: #888;
+        }
+
+        &:hover {
+            background-color: #2a2a2a;
+        }
+    }
+}
+
+// Also support prefers-color-scheme for system dark mode
+html[data-theme="dark"] {
+    body:not([data-theme="light"]) {
+        .tree-node__header {
+            &:hover {
+                background-color: #2a2a2a;
+            }
+
+            &--selected {
+                background-color: rgba(71, 85, 105, 0.25);
+            }
+        }
+
+        .tree-node__name,
+        .metamodel-tree__title {
+            color: #e0e0e0;
+        }
+
+        .tree-view-empty {
+            p {
+                color: #e0e0e0;
+            }
+        }
+
+        .megamodel-entry {
+            &__header {
+                color: #888;
+            }
+
+            &:hover {
+                background-color: #2a2a2a;
+            }
+        }
+
+        .metamodels-section {
+            border-color: #333;
+
+            &__header {
+                color: #888;
+            }
+
+            &__count {
+                color: #6b7280;
+            }
+        }
+
+        .transformation-section {
+            border-color: #333;
+
+            &__header {
+                color: #888;
+            }
+
+            &__count {
+                color: #6b7280;
+            }
+        }
+
+        .tree-transformation {
+            background: transparent;
+            color: #94a3b8;
+        }
+
+        .viewpoint-section {
+            border-color: #333;
+
+            &__header {
+                color: #888;
+            }
+
+            &__count {
+                color: #6b7280;
+            }
+        }
+
+        .tree-type-group {
+            &__header {
+                border-color: #333;
+
+                &:hover {
+                    background-color: #2a2a2a;
+                }
+            }
+
+            &__label {
+                color: #94a3b8;
+            }
+
+            &__count {
+                color: #6b7280;
+            }
+        }
+
+        .tree-node__icon.tree-subview {
+            background: transparent;
+            color: #b0bec5;
+        }
+
+        .tree-node__icon.tree-rule {
+            background: transparent;
+            color: #34d399;
+        }
+
+        .tree-node__icon.tree-helper {
+            background: transparent;
+            color: #94a3b8;
+        }
+
+        // .tree-viewpoint: driven by --color-entity-viewpoint-* tokens (no override here)
+
+        .tree-transformation {
+            background: transparent;
+            color: #94a3b8;
+        }
+
+        .documentation-entry {
+            border-color: #333;
+
+            &__header {
+                color: #888;
+            }
+
+            &:hover {
+                background-color: #2a2a2a;
+            }
+        }
+    }
+}
+
+// ─── Megamodel Entry ──────────────────────────────────────
+
+.megamodel-entry {
+    cursor: pointer;
+
+    &__header {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        font-size: 11px;
+        font-weight: 600;
+        color: $color-text-secondary;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        transition: background-color 0.15s;
+    }
+
+    &:hover {
+        background-color: #f1f5f9;
+    }
+
+    &__label {
+        flex: 1;
+    }
+}
+
+// ─── Metamodels Section ───────────────────────────────────
+
+.metamodels-section {
+    border-top: 0.5px solid $color-border;
+    margin-top: 4px;
+
+    &__header {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        font-size: 11px;
+        font-weight: 600;
+        color: $color-text-secondary;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+    }
+
+    &__label {
+        flex: 1;
+    }
+
+    &__count {
+        font-size: 11px;
+        font-weight: 500;
+        color: #94a3b8;
+    }
+
+    &__content {
+        padding-bottom: 4px;
+    }
+}
+
+// ─── Transformation Section ───────────────────────────────
+
+.transformation-section {
+    border-top: 0.5px solid $color-border;
+    margin-top: 4px;
+
+    &__header {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        font-size: 11px;
+        font-weight: 600;
+        color: $color-text-secondary;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+    }
+
+    &__label {
+        flex: 1;
+    }
+
+    &__count {
+        font-size: 11px;
+        font-weight: 500;
+        color: #94a3b8;
+    }
+
+    &__content {
+        padding-bottom: 4px;
+    }
+}
+
+.tree-transformation {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    min-width: 16px;
+    border-radius: 3px;
+    background: transparent;
+    border: none;
+    color: #64748b;
+    font-size: 10px;
+    font-weight: 600;
+    margin-right: 4px;
+}
+
+// ─── Viewpoint Section ──────────────────────────────────────
+
+.viewpoint-section {
+    border-top: 0.5px solid $color-border;
+    margin-top: 4px;
+
+    &__header {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        font-size: 11px;
+        font-weight: 600;
+        color: $color-text-secondary;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+    }
+
+    &__label {
+        flex: 1;
+    }
+
+    &__count {
+        font-size: 11px;
+        font-weight: 500;
+        color: #94a3b8;
+    }
+
+    &__content {
+        padding-bottom: 4px;
+    }
+}
+
+// Viewpoint icon in tree node — uses entity viewpoint palette (pink).
+// Selettore promosso a `.tree-node__icon.tree-viewpoint` per allineare la
+// specificità (0,2,0) a quella degli altri badge nested (DModel, DPackage,
+// ecc.), evitando override silenziosi da regole concorrenti.
+.tree-node__icon.tree-viewpoint {
+    background-color: var(--color-entity-viewpoint-bg);
+    color: var(--color-entity-viewpoint-fg);
+    font-weight: 600;
+    font-size: 10px;
+    border: none;
+}
+
+// View leaf badge — same pink palette as Viewpoint (collision with .tree-view
+// tab selector → renamed to .tree-leaf-view to avoid clobbering existing tab styles).
+// Promosso a `.tree-node__icon.tree-leaf-view` per la stessa ragione di sopra.
+.tree-node__icon.tree-leaf-view {
+    background-color: var(--color-entity-viewpoint-bg);
+    color: var(--color-entity-viewpoint-fg);
+    font-weight: 600;
+    font-size: 10px;
+    border: none;
+}
+
+// ─── View leaf badges, by IR kind ────────────────────────────────────────────
+// The easel above says "a view" and nothing about what the view draws. These three
+// say it: a vertex view, a row view, an edge view. Same pastel-fill / saturated-glyph
+// pattern as the entity badges, one hue each.
+//
+// The glyph colour is declared TWICE on purpose, and the second declaration is the
+// one that paints. `styles/style.scss` carries a bare `i.bi { color: … }`, a DIRECT
+// declaration on the <i>: it beats any colour this <span> merely passes down by
+// inheritance, whatever the specificity of the span rule (measured 2026-08-12,
+// CLAUDE.md §5 — removing every entity colour rule from the span changed zero
+// pixels). The `> i.bi` child rule below is what actually reaches the glyph; the
+// `color` on the span is kept for consistency with the badges above and to cover
+// a badge rendered as a letter instead of an icon.
+.tree-node__icon.tree-view-vertex {
+    background-color: #fee2e2;
+    color: #dc2626;
+    font-weight: 600;
+    font-size: 10px;
+    border: none;
+
+    > i.bi { color: #dc2626; }
+}
+
+.tree-node__icon.tree-view-row {
+    background-color: #dcfce7;
+    color: #16a34a;
+    font-weight: 600;
+    font-size: 10px;
+    border: none;
+
+    > i.bi { color: #16a34a; }
+}
+
+.tree-node__icon.tree-view-edge {
+    background-color: #cffafe;
+    color: #0891b2;
+    font-weight: 600;
+    font-size: 10px;
+    border: none;
+
+    > i.bi { color: #0891b2; }
+}
+
+// Viewpoint type badge (inline next to name)
+.tree-node__type-badge {
+    font-size: 9px;
+    padding: 0px 4px;
+    border-radius: 3px;
+    margin-left: 4px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    line-height: 16px;
+    font-weight: 500;
+}
+
+// ─── Viewpoint Type Group (collapsible sub-sections) ─────────────────
+
+.tree-type-group {
+    &:first-child .tree-type-group__header {
+        border-top: none;
+    }
+
+    &__header {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 8px 4px 16px;
+        cursor: pointer;
+        user-select: none;
+        margin-top: 2px;
+        border-top: 0.5px solid $color-border;
+        transition: background-color $transition-fast;
+
+        &:hover {
+            background-color: $color-bg-secondary;
+        }
+
+        .tree-node__toggle {
+            flex-shrink: 0;
+        }
+    }
+
+    &__label {
+        font-size: 11px;
+        text-transform: uppercase;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        color: $color-text-tertiary;
+        flex: 1;
+    }
+
+    &__count {
+        font-size: 10px;
+        font-weight: 500;
+        color: $color-text-tertiary;
+        opacity: 0.6;
+    }
+
+    &__content {
+        // Children rendered inside
+    }
+}
+
+// Legacy .tree-group-header kept for backward compatibility
+.tree-group-header {
+    display: none;
+}
+
+// ─── Sub-view icon in tree ─────────────────────────────────────
+
+// View icon in tree node — matches viewpoint tree V badge (blue)
+.tree-node__icon.tree-subview {
+    border: none;
+    font-weight: 600;
+    font-size: 10px;
+}
+
+// ─── Transformation rule/helper icons ─────────────────────────
+
+.tree-node__icon.tree-rule {
+    background: rgba(29, 158, 117, 0.12);
+    color: #1D9E75;
+    border: none;
+    font-weight: 600;
+    font-size: 10px;
+}
+
+.tree-node__icon.tree-helper {
+    background: rgba(136, 135, 128, 0.12);
+    color: #888780;
+    border: none;
+    font-weight: 600;
+    font-size: 10px;
+}
+
+// ─── Documentation Entry ────────────────────────────────────
+
+.documentation-entry {
+    border-top: 0.5px solid $color-border;
+    margin-top: 4px;
+    cursor: pointer;
+
+    &__header {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        font-size: 11px;
+        font-weight: 600;
+        color: $color-text-secondary;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        transition: background-color 0.15s;
+    }
+
+    &:hover {
+        background-color: #f1f5f9;
+    }
+
+    &__label {
+        flex: 1;
+    }
+}
+
+// ============================================
+// REDESIGN 2026-05-08 — section nodes, entity rows, vertical guides
+// New classes coexist with the legacy ones above; do NOT rename existing.
+// All colors come from CSS tokens (var(--color-...)) per CLAUDE.md.
+// ============================================
+
+// ─── Tree section (collapsible synthetic node) ───────────────────────────────
+
+.tree-section {
+    &__header {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 8px 4px 0;
+        cursor: pointer;
+        user-select: none;
+        transition: background-color $transition-fast;
+
+        &:hover {
+            background-color: var(--color-accent-subtle);
+        }
+
+        .tree-node__toggle {
+            flex-shrink: 0;
+        }
+    }
+
+    &__label {
+        flex: 1;
+        font-size: 11px;
+        text-transform: uppercase;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        color: var(--color-text-tertiary);
+    }
+}
+
+// Counter shown on the right of section headers (and metamodel/package
+// when relevant). 10px tabular-nums, tertiary color.
+.tree-counter {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--color-text-tertiary);
+    font-variant-numeric: tabular-nums;
+    margin-left: auto;
+    padding-right: 4px;
+}
+
+// ─── Tree children container ───────────────────────────────────────────────
+// Nota: la guida verticale globale (.tree-children::before) è stata rimossa
+// nel polish 2026-05-12 — appariva come una linea grigia continua dal
+// MEGAMODEL fino in fondo alla sidebar, troppo invasiva visivamente.
+// Il `position: relative` è mantenuto perché eventuali decorazioni assolute
+// future (es. la barra cyan della selezione su .tree-row--selected) si
+// ancorano correttamente.
+
+.tree-children {
+    position: relative;
+
+    // Indentation guide (Fase 2 C4, 2026-07-28): a subtle 1px vertical hairline
+    // per entity container, stepped by nesting depth via the inline --tree-depth
+    // var set in TreeViewContent. Section containers ([data-section-content]) are
+    // excluded so the guide never runs as one full-height line from the root
+    // (the 2026-05-12 removal). Aligns just under the owner row's chevron.
+    &:not([data-section-content])::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: calc(var(--tree-depth, 0) * 12px + 7px);
+        width: 1px;
+        background-color: rgba(51, 65, 85, 0.12);
+        pointer-events: none;
+    }
+}
+
+// ─── Tree row (entity row replacement) ───────────────────────────────────────
+
+.tree-row {
+    display: flex;
+    align-items: center;
+    height: 26px; // literal by R-RAIL-9 — see the block at frontend/src/components/editors/properties-with-tree-view.scss:15
+    gap: 4px;
+    user-select: none;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    padding-right: 12px;
+    border-radius: $radius-sm;
+    cursor: pointer;
+    transition: background-color $transition-fast;
+    position: relative;
+
+    // Pill-shaped inset hover/selection (2026-07-28 round 3): the row's active
+    // background is an inset, rounded ::before so it floats inside the panel
+    // (never full-width) and the row content, section headers and indentation
+    // guide never shift. Hover is a neutral grey, selection the pale selection
+    // tint — same radius and inset, so the two states read as one family. No
+    // cyan on hover, no bar, no pulse.
+    &::before {
+        content: '';
+        position: absolute;
+        inset: 1px 4px;
+        border-radius: 9px;
+        pointer-events: none;
+        z-index: 0;
+        transition: background-color $transition-fast;
+    }
+
+    // Keep the real row content above the inset pill.
+    > .tree-node__toggle,
+    > .tree-row__content,
+    > .tree-row__actions {
+        position: relative;
+        z-index: 1;
+    }
+
+    &:hover::before {
+        background-color: #f1f5f9;
+    }
+
+    &--selected::before {
+        background-color: var(--color-selection-bg);
+    }
+
+    // Cyan left bar removed (Fase 2 C1, 2026-07-28): the selected state is the
+    // tinted pill only. This leaves --color-selection-bar orphaned.
+    // TODO: cleanup — retire --color-selection-bar in _colors-light/dark.scss.
+
+    &--selected:hover::before {
+        background-color: var(--color-selection-bg);
+    }
+
+    &--selected .tree-row__name {
+        font-weight: 600;
+    }
+
+    &--feature {
+        cursor: pointer;
+    }
+
+    &__content {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        flex: 1;
+        min-width: 0;
+        padding-left: 2px;
+    }
+
+    &__name {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--color-text-primary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+
+        &.is-abstract {
+            font-style: italic;
+        }
+    }
+
+    // ─── Inline actions (hover-reveal) ──────────────────────────────────
+    &__actions {
+        display: flex;
+        gap: 0;
+        margin-left: auto;
+        align-items: center;
+        flex: 0 0 auto;
+        opacity: 0;
+        transition: opacity 0.15s ease;
+        pointer-events: none;
+    }
+
+    // Reveal su hover E focus-within (accessibilità tastiera:
+    // i bottoni delle actions restano focusable e devono diventare
+    // visibili quando ricevono focus via Tab).
+    &:hover &__actions,
+    &:focus-within &__actions {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    &__action {
+        width: 20px;
+        height: 20px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--color-text-secondary);
+        cursor: pointer;
+        border-radius: 3px;
+        border: none;
+        background: transparent;
+        padding: 0;
+
+        i { font-size: 13px; }
+
+        &:hover,
+        &:focus-visible {
+            color: var(--color-text-primary);
+            background-color: var(--color-bg-tertiary);
+            outline: none;
+        }
+
+        &--danger {
+            &:hover,
+            &:focus-visible {
+                color: #991b1b;
+                background-color: #fee2e2;
+            }
+        }
+    }
+
+    // ─── Inline rename input ────────────────────────────────────────────
+    &__rename-input {
+        flex: 1;
+        border: 1px solid var(--color-info);
+        background: var(--color-bg-secondary);
+        color: var(--color-text-primary);
+        padding: 1px 4px;
+        border-radius: 3px;
+        font-size: 12px;
+        line-height: 1.3;
+        outline: none;
+        min-width: 0;
+
+        &:focus { border-color: var(--color-info); }
+    }
+
+    // Active-in-editor pulsing dot removed (2026-07-28 refinement). The shared
+    // @keyframes node-problem-pulse (NodeProblemIndicator.scss) is left intact.
+}
+
+// Leaf chevron slot — invisible but occupies the same width.
+.tree-node__toggle.is-leaf {
+    visibility: hidden;
+    flex-shrink: 0;
+    width: 14px;
+    height: 14px;
+}
+
+// ─── Pill (M1 marker) ────────────────────────────────────────────────────────
+
+.tree-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 6px;
+    height: 16px;
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+    background-color: var(--color-accent-subtle);
+    border-radius: 3px;
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+// ─── Edge view marker ────────────────────────────────────────────────────────
+
+.tree-edge-marker,
+.tree-stack-marker {
+    font-size: 12px;
+    color: var(--color-text-placeholder);
+    flex-shrink: 0;
+    margin-left: 2px;
+    line-height: 1;
+}
+
+// ─── Problem icon (warning / error) ──────────────────────────────────────────
+
+.tree-problem-icon {
+    font-size: 12px;
+    flex-shrink: 0;
+    margin-left: 2px;
+    line-height: 1;
+
+    &[data-severity="warning"] { color: var(--color-warning); }
+    &[data-severity="error"]   { color: var(--color-error); }
+}
+
+// ─── Feature row (M1 instance leaf) ──────────────────────────────────────────
+
+.tree-feature__name {
+    font-size: 11px;
+    color: var(--color-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tree-feature__type {
+    font-size: 11px;
+    font-family: var(--font-mono);
+    color: var(--color-text-tertiary);
+    margin-left: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-right: 4px;
+}
+
+// Multiplicity, split out of the type so a narrow rail can drop it (see the
+// `[data-density]` rules in properties-with-tree-view.scss). Same metrics as the
+// type: the pair must read as one column, and hiding this span must not change the
+// row height. The type's own `padding-right: 4px` is the gap between the two.
+.tree-feature__mult {
+    font-size: 11px;
+    font-family: var(--font-mono);
+    color: var(--color-text-tertiary);
+    white-space: nowrap;
+    padding-right: 4px;
+}
+
+// ─── Documentation empty state ───────────────────────────────────────────────
+
+.tree-empty-doc {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 6px 12px 6px 0;
+
+    &-label {
+        font-size: 12px;
+        font-style: italic;
+        color: var(--color-text-tertiary);
+        flex: 1;
+    }
+}
+
+.tree-generate-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    background-color: transparent;
+    border: 1px solid var(--color-border-primary);
+    border-radius: $radius-sm;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    i {
+        font-size: 11px;
+    }
+
+    &:hover {
+        background-color: var(--color-accent-subtle);
+        border-color: var(--color-border-hover);
+        color: var(--color-text-primary);
+    }
+}
+
+// ─── Data Manager empty state (R-DMV-5) ──────────────────────────────────────
+//
+// Its own rule and not a reuse of `.tree-empty-doc`: that block is laid out for a label
+// PLUS a Generate button (`justify-content: space-between`), and this row carries only the
+// sentence. Clickable, because it is also the way into the panel in the project where
+// nothing has been configured yet — which is every project until somebody configures one.
+
+.tree-empty-dmv {
+    display: flex;
+    align-items: center;
+    padding: 6px 12px 6px 0;
+    cursor: pointer;
+
+    &-label {
+        font-size: 12px;
+        font-style: italic;
+        color: var(--color-text-tertiary);
+    }
+
+    &:hover &-label {
+        color: var(--color-text-secondary);
+    }
+}
+
+// The label of a section that stands for ONE object, and therefore selects it
+// (`SectionNode.onLabelClick`, R-DMV-5). Only the Data Manager section passes that prop.
+.tree-section__label--clickable {
+    cursor: pointer;
+
+    &:hover {
+        color: var(--color-text-primary);
+    }
+}
+
+// ─── Highlight (JjScript execution) — reuse existing animations ──────────────
+
+.tree-row--highlighted {
+    animation: highlightFlash 400ms ease-out;
+
+    &::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        border-radius: $radius-sm;
+        pointer-events: none;
+        animation: highlightPulse 2000ms ease-out;
+    }
+}
+
+.tree-row--action-create {
+    background-color: rgba($color-highlight-create, 0.12) !important;
+
+    &::after { color: $color-highlight-create; }
+
+    .tree-row__name {
+        color: darken($color-highlight-create, 10%);
+        font-weight: 600;
+    }
+}
+
+.tree-row--action-modify {
+    background-color: rgba($color-highlight-modify, 0.1) !important;
+    &::after { color: $color-highlight-modify; }
+}
+
+.tree-row--action-delete {
+    background-color: rgba($color-highlight-delete, 0.1) !important;
+    text-decoration: line-through;
+    opacity: 0.7;
+    &::after { color: $color-highlight-delete; }
+    .tree-row__name { color: $color-highlight-delete; }
+}
+
+.tree-row--action-unknown {
+    background-color: rgba($color-highlight-unknown, 0.1) !important;
+    &::after { color: $color-highlight-unknown; }
+}
+
+[data-theme="dark"] {
+    .tree-row {
+        &:hover::before {
+            background-color: rgba(255, 255, 255, 0.04);
+        }
+
+        // &--selected::before: driven by --color-selection-* tokens (no override here)
+    }
+
+    .tree-children:not([data-section-content])::before {
+        background-color: rgba(148, 163, 184, 0.15);
+    }
+
+    .tree-section__label {
+        color: #888;
+    }
+
+    .tree-counter,
+    .tree-empty-doc-label,
+    .tree-empty-dmv-label,
+    .tree-feature__type,
+    .tree-feature__mult {
+        color: #6b7280;
+    }
+
+    .tree-pill {
+        background-color: rgba(255, 255, 255, 0.05);
+        color: #94a3b8;
+    }
+
+    .tree-row__name mark,
+    .tree-feature__name mark {
+        background-color: rgba(255, 255, 255, 0.14);
+    }
+
+    .tree-edge-marker,
+    .tree-stack-marker {
+        color: #94a3b8;
+    }
+
+    .tree-generate-btn {
+        border-color: #444;
+        color: #94a3b8;
+
+        &:hover {
+            background-color: rgba(255, 255, 255, 0.04);
+            border-color: #666;
+            color: #e0e0e0;
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Tree view — redesign additivo (rail).
+// Tutto additivo: nessuna regola esistente viene riscritta.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── 1. Il tipo diventa una colonna a destra ──────────────────────────────────
+// Il nome tronca prima del tipo: con 24+ classifier è il tipo la colonna che si
+// scansiona verticalmente, e deve restare leggibile.
+
+.tree-feature__type {
+    margin-left: auto;
+    padding-left: 12px;
+    flex-shrink: 0;
+    max-width: 55%;
+}
+
+// The multiplicity follows the type inside the same right-hand column: `margin-left:
+// auto` stays on the type, which is the one that pushes the pair right.
+.tree-feature__mult {
+    flex-shrink: 0;
+}
+
+.tree-feature__name {
+    flex-shrink: 1;
+    min-width: 0;
+}
+
+// Le view foglia riusano `tree-feature__type` come colonna del kind, ma il loro nome
+// resta `tree-row__name` (13px): e' il nome di una entita', non di una feature. Senza
+// `min-width: 0` un nome lungo non tronca e spinge la label fuori dalla riga, quindi
+// la regola si applica solo dove la coppia esiste davvero.
+.tree-row__name:has(+ .tree-feature__type) {
+    flex-shrink: 1;
+    min-width: 0;
+}
+
+// ── 2. Stato "non reso dal viewpoint attivo" ─────────────────────────────────
+// Dimmed al proprio posto nella gerarchia, feature collassate. NON usare per i
+// classifier di altri metamodelli: quelli sono fuori scopo, non "non resi".
+
+.tree-row--not-rendered {
+    .tree-row__name,
+    .tree-feature__name {
+        color: var(--color-text-disabled);
+    }
+
+    .tree-node__icon,
+    .tree-feature__type,
+    .tree-feature__mult {
+        opacity: 0.55;
+    }
+
+    .tree-row__not-rendered-hint {
+        margin-left: auto;
+        padding-left: 12px;
+        font-size: 10px;
+        font-family: var(--font-mono);
+        color: var(--color-text-disabled);
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+}
+
+// ── 3. Riga di scopo del filtro ──────────────────────────────────────────────
+
+.tree-scope-bar {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 12px;
+    background: #ecfeff;
+    border-bottom: 1px solid #cffafe;
+    font-size: 11px;
+    color: #155e75;
+    flex-shrink: 0;
+
+    &__icon {
+        font-size: 11px;
+        flex-shrink: 0;
+    }
+
+    &__label {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+
+        strong {
+            font-weight: 600;
+        }
+    }
+
+    &__action {
+        margin-left: auto;
+        flex-shrink: 0;
+        border: 0;
+        background: none;
+        padding: 0;
+        font: inherit;
+        color: var(--color-link);
+        cursor: pointer;
+
+        &:hover { text-decoration: underline; }
+        &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 2px; }
+    }
+
+    // Conteggio senza azione: stessa posizione di __action, ma non finge di
+    // essere un link. Il toggle "mostra tutto" non esiste ancora.
+    &__count {
+        margin-left: auto;
+        flex-shrink: 0;
+        opacity: 0.8;
+    }
+}
+
+// ── 4. Famiglia vuota: una riga silenziosa, non un'intestazione con 0 ─────────
+
+.tree-empty-family {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 12px;
+    font-size: 11px;
+    color: var(--color-text-disabled);
+
+    &__icon { font-size: 11px; opacity: 0.7; }
+
+    &__action {
+        margin-left: auto;
+        border: 0;
+        background: none;
+        padding: 0;
+        font: inherit;
+        color: var(--color-link);
+        cursor: pointer;
+
+        &:hover { text-decoration: underline; }
+    }
+}
+
+// ── 5. Indicatore di elemento documentato ────────────────────────────────────
+// Solo sui classifier: sulle feature diventerebbe rumore.
+
+.tree-doc-marker {
+    font-size: 10px;
+    margin-left: 4px;
+    color: var(--color-text-disabled);
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Sezione modello (M1): istanze annidate per containment
+// Additivo. Nessuna regola esistente viene riscritta: il badge e' un
+// `.tree-node__icon` con una classe in piu' (specificita' 0,2,0, come i badge
+// view foglia poco sopra), e nome e tipo restano `.tree-feature__name` /
+// `.tree-feature__type`, gia' la colonna destra del tree.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Il discriminante `.tree-row--feature` non e' decorativo: la rail dichiara una
+// sua `.tree-node__icon` a (0,2,0) (properties-with-tree-view.scss:1130) che
+// rimette 14px, raggio 3 e fondo trasparente. Alla pari la spunta chi viene
+// dopo nel bundle, cioe' l'ordine degli @import; a (0,3,0) la questione non si
+// pone. Le righe M1 sono le sole a portare `tree-m1-icon`, e sono per
+// costruzione dentro `.tree-row--feature`.
+//
+// Il badge dell'istanza e' piu' grande di quello dei classifier (20 contro 14):
+// la sezione M1 e' la lista che si scorre per prima, e il glifo e' il suo indice.
+// La riga NON cresce: `.tree-row` resta a 26px (R-RAIL-9) e i 20px stanno dentro
+// la pastiglia inset (24px) senza spostare nulla.
+.tree-row--feature .tree-node__icon.tree-m1-icon {
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    border-radius: 5px;
+    font-size: 11px;
+    font-weight: 600;
+    border: none;
+
+    > i.bi { font-size: 11px; }
+}
+
+// Palette entita'. Il colore del glifo e' dichiarato due volte di proposito:
+// `styles/style.scss` porta un `i.bi { color: … }` diretto sull'<i>, che batte
+// per cascata qualunque colore lo <span> passi per ereditarieta' (misurato
+// 2026-08-12, CLAUDE.md §5). E' la regola `> i.bi` a dipingere; il `color`
+// sullo span copre il caso del badge reso come lettera.
+.tree-row--feature .tree-node__icon.tree-m1-class {
+    background-color: #fee2e2;
+    color: #dc2626;
+
+    > i.bi { color: #dc2626; }
+}
+
+.tree-row--feature .tree-node__icon.tree-m1-attribute {
+    background-color: #dcfce7;
+    color: #16a34a;
+
+    > i.bi { color: #16a34a; }
+}
+
+.tree-row--feature .tree-node__icon.tree-m1-reference {
+    background-color: #cffafe;
+    color: #0891b2;
+
+    > i.bi { color: #0891b2; }
+}
+
+// Metaclassi non mappate: slate con l'iniziale del nome della metaclasse.
+.tree-row--feature .tree-node__icon.tree-m1-other {
+    background-color: #f1f5f9;
+    color: #64748b;
+
+    > i.bi { color: #64748b; }
+}
+
+// Istanze auto-generate da classi singleton: stesso slate, glifo `braces`.
+.tree-row--feature .tree-node__icon.tree-m1-singleton {
+    background-color: #f1f5f9;
+    color: #64748b;
+
+    > i.bi { color: #64748b; }
+}
+
+// Un contenitore porta un peso in piu' del suo contenuto: e' l'unico segnale
+// gerarchico oltre all'indentazione quando l'albero e' chiuso.
+.tree-feature__name.is-container {
+    font-weight: 600;
+}
+
+.tree-feature__name.is-singleton {
+    color: #64748b;
+}
+
+// Conteggio figli: precede il tipo dentro la stessa colonna destra. E' questo
+// span a portare `margin-left: auto` quando c'e', e il tipo che lo perde —
+// altrimenti i due auto si spartirebbero lo spazio libero e il conteggio
+// resterebbe attaccato al nome.
+.tree-feature__count {
+    font-size: 11px;
+    font-family: var(--font-mono);
+    color: #cbd5e1;
+    margin-left: auto;
+    padding-left: 12px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.tree-feature__count + .tree-feature__type {
+    margin-left: 0;
+    padding-left: 6px;
+}
+
+// Densita' dei metadati: il blocco gemello sta in
+// components/editors/properties-with-tree-view.scss (soglie e ragioni li').
+// Sotto i 400px la colonna destra tiene il tipo e lascia andare il conteggio,
+// che e' ridondante — l'albero aperto lo dice contando le righe.
+.properties-with-tree-view--rail[data-density="compact"] {
+    .tree-feature__count {
+        display: none;
+    }
+}
+
+[data-theme="dark"] {
+    .tree-feature__count {
+        color: #4b5563;
+    }
+
+    .tree-feature__name.is-singleton {
+        color: #94a3b8;
+    }
+
+    // ── Filter band in dark ──
+    //
+    // `.tree-scope-bar` declares three raw literals from the light cyan family
+    // (`#ecfeff` ground, `#cffafe` hairline, `#155e75` text). Raw palette does not
+    // follow the theme, so in dark the band rendered a near-white ground carrying
+    // near-black text, in a column that is otherwise dark. It got away with it while it
+    // sat under the rail's 44px header; from 2026-08-26 the header is gone and this
+    // band IS the top edge of the rail, which is what makes it worth repairing now.
+    //
+    // Same shape as the repair the Focus bar needed (properties-with-tree-view.scss,
+    // "Focus bar and posture button in dark"): the dark values are corrected here and
+    // the light rendering is left byte for byte as it was. The band keeps its cyan
+    // identity — it is the only tinted row of the column and the tint is what says
+    // "this is a filter, not content".
+    .tree-scope-bar {
+        background: rgba(6, 182, 212, 0.10);   // --color-cyan-500 at low alpha
+        border-bottom-color: rgba(6, 182, 212, 0.22);
+        color: var(--color-cyan-300);
+    }
+}

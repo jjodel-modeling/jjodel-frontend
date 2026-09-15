@@ -1,8 +1,16 @@
 
 img { -webkit-user-drag: none; }
+
+/* NUCLEAR: Disable ALL ligatures system-wide */
+*, *::before, *::after {
+    font-variant-ligatures: none !important;
+    -webkit-font-feature-settings: 'liga' 0, 'calt' 0, 'clig' 0, 'dlig' 0 !important;
+    font-feature-settings: 'liga' 0, 'calt' 0, 'clig' 0, 'dlig' 0 !important;
+}
+
 body {
 
-    color: var(--color);
+    color: var(--color-text-primary);
     &,#root{
         max-width: 100vw;
         max-height: 100vh;
@@ -12,10 +20,10 @@ body {
         overflow: hidden;
     }
     // font-family: , 'Helvetica Neue', Arial,Helvetica, sans-serif !important;
-    --default-font-family: 'Inter Variable', Lato, sans-serif;
+    --default-font-family: var(--font-sans);
     font-family: var(--default-font-family);
     font-optical-sizing: auto;
-    font-weight: 400;
+    font-weight: var(--font-normal);
     font-style: normal;
     font-size: small;
 
@@ -40,7 +48,7 @@ body {
 }
 
 .view-icons .bi.selected {
-    background-color: var(--bg-3);
+    background-color: var(--color-border-primary);
 }
 
 
@@ -62,4 +70,41 @@ body {
 
 .debug {
     border: 1px dashed red;
+}
+
+/* ============================================
+   GLOBAL: Disable ligatures for all code/mono
+   ============================================ */
+code,
+pre,
+kbd,
+samp,
+.inline-code,
+[class*="mono"],
+[class*="code"],
+[style*="monospace"] {
+    font-variant-ligatures: none !important;
+    -webkit-font-feature-settings: 'liga' 0, 'calt' 0, 'clig' 0, 'dlig' 0 !important;
+    font-feature-settings: 'liga' 0, 'calt' 0, 'clig' 0, 'dlig' 0 !important;
+}
+
+/* Extra aggressive: target JetBrains Mono specifically */
+*[style*="JetBrains"],
+.console-entry__code,
+.console-input__field,
+.json-viewer,
+.suggestion-item,
+.context-key,
+.help-output code,
+.help-output .inline-code {
+    font-variant-ligatures: none !important;
+    -webkit-font-feature-settings: 'liga' 0, 'calt' 0, 'clig' 0, 'dlig' 0 !important;
+    font-feature-settings: 'liga' 0, 'calt' 0, 'clig' 0, 'dlig' 0 !important;
+}
+.console-input__field {
+    padding-top: 0px!important;
+}
+
+.console-entry__result {
+    padding-bottom: 20px!important;
 }

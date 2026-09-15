@@ -1,550 +1,326 @@
-.viewpoint-tab{
+/* ============================================
+   VIEW DATA - PANNELLO DELLA VIEW SELEZIONATA
+   Caricato da ViewData.tsx: stila `.view-editor-root`,
+   la sua intestazione e il sistema di tab che ha
+   sostituito il DockLayout di rc-dock.
+   Redesigned following CLAUDE.md design tokens
+   ============================================ */
 
-  /* .expansion-line {
-    position: relative!important;
-    left: 0;
-    bottom: 0;
-    border-left: 2px solid gray;
-    border-bottom: 2px solid gray;
-    border-radius: 8px;
+// === DESIGN TOKENS ===
+// Typography
+$font-family: 'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+$font-size-base: 13px;
+
+// Colors - SLATE PALETTE
+$color-text-primary: #111418;
+$color-text-secondary: #6B7280;
+$color-text-tertiary: #9CA3AF;
+$color-bg-primary: #ffffff;
+$color-border: #e2e4e8;
+$color-border-hover: #d0d3d8;
+
+// Spacing
+$spacing-xs: 4px;
+$spacing-sm: 8px;
+$spacing-md: 12px;
+
+// ============================================
+// VIEW EDITOR ROOT CONTAINER
+// ============================================
+#root{
+  .controls{
+    overflow: hidden !important;
+  }
+}
+.view-editor-root {
+  --inner-page-padding: 16px;
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
+  padding-right: 4px;
+  background: $color-bg-primary;
+  display: flex;
+  flex-flow: column;
+  font-family: $font-family;
+
+  // Container queries support
+  container-type: inline-size;
+  container-name: view-editor;
+
+  .dock-content .dock-tabpane {
+    overflow: scroll;
     height: 100%;
-    position: absolute;
-    z-index: -1;
-  }*/
+    background-color: none !important;
+  }
+//.view-editor-root .dock-content .dock-tabpane
+  .dock  {
 
-  .inline-row>.hover-stuff{
-    .btn-component{
-      display: flex;
-      >.bi{
-        margin: auto;
-      }
+  }
+
+  .style-tab {
+
+  }
+
+}
+
+.view-editor-root {
+  .btn-back {
+    font-size: $font-size-base;
+    margin: auto;
+  }
+
+  .dock-layout {
+    // Fill the remaining vertical space below the header. Explicit `flex: 1 1 auto`
+    // + `min-height: 0` lets rc-dock's inner absolute-positioned wrappers compute
+    // a correct height. `position: relative` anchors those absolute children.
+    flex: 1 1 auto;
+    min-height: 0;
+    position: relative;
+
+    .dock-nav-wrap {
+      margin-left: $spacing-xs;
+    }
+
+    .dock-panel-max-btn {
+      display: none;
     }
   }
 
+  .page-root {
+    padding: var(--inner-page-padding);
+    padding-top: 0;
 
-  li.entry-root.DViewPoint.selected {
-    position: relative;
-    z-index: 0;
+    // FIX: Rimuovere background indesiderato
+    background: transparent;
+    border: none;
+  }
 
-    &>.inline-row{
-      background: #ddffdd!important;
-      // background: #00ff00;
-      border: 1px solid #ddffdd;
-    }
-    &>.inline-row:hover {
-      border: 1px solid var(--bg-4);
-    }
+  .view-editor-header {
+    // Fixed-height flex child so the DockLayout sibling can expand.
+    flex: 0 0 auto;
+    margin-top: $spacing-xs;
+    margin-left: var(--inner-page-padding);
+    margin-right: var(--inner-page-padding);
+    display: inline-flex;
+    margin-top: 24px !important;
+    margin-bottom: $spacing-sm;
+
+    // FIX: Rimuovere background/bordo sopra breadcrumb
+    background: transparent;
+    border: none;
 
     &::after {
-      content: "";
-      position:absolute;
-      left    : 4px;
-      bottom  : 4px;
-      display: block;
-      border-left: 1px dotted var(--color);
-      height: calc(100% - 2.8em);
-      width: 4px;
-    }
-  }
-
-
-
-
-  .inline-row{
-    display: flex;
-    border: 1px solid transparent;
-    padding-bottom: 1px;
-  }
-
-  .icon.type{
-    // border: none;
-    margin: auto;
-    margin-left: 0.25em;
-    margin-right: 0.25em;
-    width: 2ic;
-    height: 2ic;
-    align-content: center;
-    border-radius: 100%;
-  }
-  ul{
-    list-style-type: none;
-    padding-left: 1.5em;
-  }
-
-
-
-  .tree-Any {
-    background-color: #5F0F40;
-  }
-  .tree-DEdgePoint, .tree-EdgePoint{
-    background-color: #007700;
-  }
-  .tree-DEdge, .tree-Edge {
-    background-color: #00aa00;
-  }
-  .tree-DField, .tree-Field {
-    background-color: #aaa;
-  }
-  .tree-DVertex, .tree-Vertex {
-    background-color: #9F4F80;
-  }
-  .tree-DGraphVertex, .tree-GraphVertex {
-    background-color: #7F2F60;
-  }
-  .tree-DGraph, .tree-Graph {
-    background-color: #5F0F40;
-  }
-  /*
-  input[type="number"] {
-    -webkit-appearance: initial;
-    -moz-appearance: initial;
-    appearance: initial;
-  }
-  input[type='number']::-webkit-inner-spin-button,
-  input[type='number']::-webkit-outer-spin-button {
-    -webkit-appearance: initial;
-  }
-  */
-  /* input.change-boost{
-    width: 2.5em;
-    outline: 1px solid black;
-    // border-radius: 4px;
-    border: none;
-    text-align: center;
-    margin-left: 0.25rem;
-    &:hover, &:focus{
-      outline: 2px solid black;
-    }
-  }*/
-  .vertical-centering{
-    position: relative;
-    display: flex;
-    >*{
-      margin-top: auto;
-      margin-bottom: auto;
-    }
-  }
-
-  .right-icon{
-    display: inline-block;
-    border-radius: calc(var(--radius) - 1px);
-    padding-top: 2px;
-    margin-left: 2px;
-    height: 24px;
-    transition: background-color 0.3s;
-    &.hidden{
-      opacity: 0.33;
-      color: #333;
-      outline-color: #333;
-      text-shadow: none;
-    }
-  }
-
-  .viewpoint-tab .entry-root.DViewPoint .hover-stuff .bi{
-    &::before {
-      border: none;
-      color: inherit;
-      background-color: var(--btn-bg);
-      border-radius: 5px;
-    }
-    &:hover::before {
-      outline: 1px solid black;
-    }
-    &.disabled:hover::before, &:hover:disabled::before{
-      outline: none;
-    }
-  }
-
-  .right-icon:hover {
-    cursor: pointer;
-    color: white;
-  }
-
-  .ocl-icon {
-    transition: background-color 0.3s;
-    color: white;
-  }
-  .ocl-icon::before {
-    opacity: 0.7;
-    position: relative;
-    display: block;
-    width: 1.7rem;
-    height: 22px;
-    border: 1px solid var(--failure);
-    background-color: var(--failure);
-    color: var(--white)!important;
-    border-radius: var(--radius);
-    text-align: center;
-    margin: auto;
-    padding-left: auto;
-    padding-right: auto;
-    padding-top: 2px;
-    font-weight: 600;
-    font-size: 0.85em;
-
-    content: "OCL";
-
-  }
-  .ocl-icon:hover::before {
-    opacity: 1;
-  }
-
-  .js-icon {
-    transition: background-color 0.3s;
-    color: white;
-  }
-
-  .js-icon::before {
-    opacity: 0.7;
-    position: relative;
-    padding-top: 2px;
-    display: block;
-    min-width: 1.7rem;
-    height: 22px;
-    border: 1px solid var(--accent-secondary);
-    background-color: var(--accent-secondary);
-    color: var(--white)!important;
-    border-radius: var(--radius);
-    text-align: center;
-    padding-left: auto;
-    padding-right: auto;
-    margin: auto;
-    font-weight: 600;
-    font-size: 0.85em;
-
-    content: "JS";
-  }
-  .js-icon:hover::before {
-    opacity: 1;
-  }
-
-  .ex-icon {
-    transition: background-color 0.3s;
-    color: white;
-  }
-  .ex-icon::before {
-
-
-    opacity: 0.7;
-    position: relative;
-    display: block;
-    width: 1.7rem;
-    height: 22px;
-    border: 1px solid var(--accent);
-    background-color: var(--accent);
-    color: var(--white)!important;
-    border-radius: var(--radius);
-    text-align: center;
-    margin: auto;
-    padding-left: auto;
-    padding-right: auto;
-    padding-top: 2px;
-    font-weight: 600;
-    font-size: 0.85em;
-
-    content: "EX";
-    top: 0!important;
-
-  }
-  .ex-icon:hover::before {
-    opacity: 1;
-  }
-
-  .right-content, .hover-stuff{
-    cursor: pointer;
-    display: flex;
-    height: 26px;
-  }
-
-  .left-stuff{
-    padding-left: 0.125em;
-    .bi{
-      font-size: 0.7em;
-      color: gray;
-      cursor: pointer;
-    }
-    .bi-caret-right-fill{
-      // visibility: hidden;
-      cursor: not-allowed;
-    }
-    .bi:hover{
-      color: black;
-    }
-    .bi-chevron-down::before, .bi-chevron-right::before {
-      scale: 1.25;
-      font-weight: 900 !important;
-    }
-    width: 1.3ch;
-  }
-  .right-content{
-    cursor: default;
-
-    & .priority {
-      display: block;
-      min-width: 6rem;
-      height: 22px;
-      border: 1px solid var(--color);
-      border-radius: var(--radius);
-      margin: auto;
-      text-align: center;
-      padding-left: 10px;
-      padding-right: 10px;
-
-      width: 72px;
-      white-space: nowrap;
-
-    }
-    & .priority-booster {
-      display: block;
-      height: 24px;
-
-      margin: auto;
-      margin-right: 10px;
-      text-align: center;
-      padding-left: 10px;
-      padding-right: 10px;
-
-      width: 1.5em;
-      height: 22px;
-      border: 1px solid var(--color)!important;
-      border-radius: var(--radius);
-
-      text-align: center;
-      &:hover, &:focus{
-        outline: 2px solid black;
-      }
-    }
-  }
-  .right-stuff{
-    max-height: 26px;
-    height: 26px;
-    .spacer{
-      margin-left: auto;
-    }
-    width: fit-content;
-  }
-  .inline-row {
-    position: relative;
-    padding-right: 0.5em;
-    border-radius: 10px;
-    left: -10px;
-    padding-left: 10px;
-
-    &:hover{
-      background-color: var(--bg-3);
-      outline: none;
-      border-radius: var(--radius);
-      padding-left: 10px;
-
-    }
-    .right-stuff{
-      transform-origin:right;
-    }
-    .hover-stuff{
-      height: 26px;
-      &>*{ height: 26px; }
-      .bg, .bx, .jj{
-        height: 26px;
-      }
-
-      .bx, .jj{
-        display: flex;
-        font-size: 18px;
-        &:before{
-          line-height: 1;
-          margin: auto;
-        }
-      }
-      //transform: scaleX(0);
-      transition: var(--anim-out);
-      // position: absolute;
-      right: 0;
-      transform: scaleX(0);
-      transform-origin: right;
-
-      // float: right;
-      margin-right: 0.5em;
-    }
-    &:hover{
-      .hover-stuff{
-        transition: var(--anim-in);
-        transform: scaleX(1);
-      }
-      .right-content{/*
-      width: 0;
-      //transform: scaleX(0);
-      transition: var(--anim-out);
-      transform: scaleX(0);*/
-      }
-    }
-  }
-
-
-  .btn-delete.green:hover{
-    background: var(--palette-gg);
-  }
-  .mid-stuff{
-    flex-grow:1;
-    cursor: pointer;
-  }
-  .single-view-content{
-    position: absolute;
-    top:0;
-    bottom:0;
-    left:0;
-    right:0;
-    background-color: var(--bg-color);
-    z-index: 1;
-  }
-
-  .view-editor-root {
-    height: 100%;
-    max-height: 100%;
-    overflow: hidden;
-    padding-right: 0.25em;
-    background: white;
-
-    &:has(.single-view-content){
-      overflow: hidden;
-    }
-    .dock-content .dock-tabpane{
-      overflow: auto !important;
-    }
-
-    section.viewpoint-tab {
-
-      color: var(--color);
-      margin: 10px; // var(--tab-margin);
-      padding: 8px;
-      font-weight: 400;
-
-      border: 1px solid var(--bg-1-5);
-      border-radius: var(--radius);
-      background-color: var(--bg-1-5);
-      transition: opacity 0.3s;
-    }
-
-    section.viewpoint-tab .ps-2.pt-2 h1 {
-      width: 100%!important;
-      display: block;
-      clear: right!important;
-      font-size: 1.1em;
-      color: var(--accent);
-      border-bottom: 1px solid var(--bg-2-5);
-
-
-
-    }
-
-    section.viewpoint-tab h1::before {
-      position: relative;
-
-      font-size: 1.15em;
-      margin-right: var(--tab-sep);
-      font-family: bootstrap-icons;
-      content: "\F6D2";
-    }
-
-    .viewpoint {
-
-    }
-  }
-
-  .view-editor-root{
-    --inner-page-padding: 1rem;
-    display: flex;
-    flex-flow: column;
-
-    .btn-back{
-      font-size: 0.9em;
-      margin: auto;
-      &i::before{
-        transform: translate(0, 1px);
-      }
-    }
-    .dock-layout{
-      flex-grow: 1;
-      .dock-nav-wrap{
-        margin-left: 0.25rem;
-      }
-      .dock-panel-max-btn{
-        display: none;
-      }
-    }
-    .page-root{
-      padding: var(--inner-page-padding);
-      padding-top: 0;
-    }
-    .view-editor-header {
-      margin-top: 0.25em;
-      margin-left: var(--inner-page-padding);
-      margin-right: var(--inner-page-padding);
-      display: inline-flex;
-
-      .path-list{
-        display: inline-flex;
-        // border: 2px solid red;
-        // &>*{ border: 2px solid black; }
-        margin: auto;
-        margin-left: 0.5em;
-        padding: 0px 0px 4px 0px;
-        margin-bottom: 10px!important;
-
-        .path-separator{
-          height: min-content;
-          margin: auto;
-          margin-left: 0.125em;
-          margin-right: 0.125em;
-        }
-        .path-element {
-          cursor: pointer;
-          margin: auto;
-          &:hover{
-            //font-weight: 900;
-            text-decoration: underline;
-          }
-        }
-      }
-    }
-
-
-    .editor-label {
-      margin: auto;
-      margin-left: 0.5rem;
-      margin-top: 10px;
-      margin-bottom: 10px;
-      & input {
-
-      }
-    }
-
-    .chevron-holder {
-      margin-top: 10px;
-    }
-
-    .view-editor-header {
-      margin-top: 26px!important;
-      margin-bottom: 6px;
+      display: none;
     }
 
     .path-list {
-      float: right!important;
+      display: inline-flex;
+      margin: auto;
+      margin-left: $spacing-sm;
+      padding: 0px 0px 4px 0px;
+      margin-bottom: $spacing-md !important;
+      float: right !important;
+
+      .path-separator {
+        height: min-content;
+        margin: auto 2px;
+        color: $color-text-tertiary;
+      }
+
+      .path-element {
+        cursor: pointer;
+        margin: auto;
+        color: $color-text-secondary;
+        font-size: $font-size-base;
+
+        &:hover {
+          text-decoration: underline;
+          color: $color-text-primary;
+        }
+      }
     }
   }
 
+  .editor-label {
+    margin: auto;
+    margin-left: $spacing-sm;
+    margin-top: $spacing-md;
+    margin-bottom: $spacing-md;
+  }
+}
 
-  /*
+// ============================================
+// SCROLLBAR STYLING
+// ============================================
+.view-editor-root::-webkit-scrollbar {
+  width: 6px;
+}
 
+.view-editor-root::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.view-editor-root::-webkit-scrollbar-thumb {
+  background: $color-border;
+  border-radius: 3px;
+
+  &:hover {
+    background: $color-border-hover;
+  }
+}
+
+// ============================================
+// ENSURE LEFT ALIGNMENT THROUGHOUT
+// ============================================
+.view-editor-root {
+  // Reset any right alignment
+  text-align: left !important;
+
+  * {
+    text-align: inherit;
+  }
+}
+
+// ============================================
+// VIEW EDITOR TABS (replaces rc-dock DockLayout)
+// Pure React tab system: tab bar + single active panel.
+// Lives below .view-editor-header inside .view-editor-root.
+// ============================================
+.view-editor-tabs {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  background-color: rgb(248, 250, 252);
+  padding-left: 12px; // Compensate for 16px horizontal padding in .view-editor-root
+}
+
+.view-editor-tab-bar {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: nowrap;             // single row: tabs never reflow to a second line
+  overflow-x: auto;             // scroll horizontally when the tabs overflow
+  scrollbar-width: none;        // hide the horizontal scrollbar (Firefox)
+  border-bottom: 1px solid var(--color-border-primary);
+  padding: 0 8px;
+  gap: 0;
+  background: var(--color-bg-secondary);
+
+  &::-webkit-scrollbar { display: none; }   // hide the horizontal scrollbar (WebKit)
+}
+
+.view-editor-tab {
+  flex: 0 0 auto;               // keep natural width, never shrink → equal heights
+  white-space: nowrap;         // prevents "Apply to" wrapping to two rows
+  padding: 8px 16px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+
+  &:hover {
+    color: var(--color-text-primary);
+  }
+
+  &.active {
+    color: var(--color-text-primary);
+    border-bottom-color: #0ea5e9;   // active tab = cyan accent (design system A)
+    font-weight: 500;
+  }
+}
+
+.view-editor-tab-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  // Padding mirrors `.props-section__body` (info-improvements.scss:970-972)
+  // so fields in Apply to / Template / Style / Events / Options tabs inherit
+  // the exact horizontal gutter of the Properties panel sections. Without a
+  // CollapsibleSection wrapper, this is the outer container that has to
+  // provide the 14px side padding + 4px top / 12px bottom rhythm.
+  padding: 4px 0px 12px;
+  background-color: rgb(248, 250, 252);
+
+  // Match `.jj-field` spacing used inside `.props-section__body`: the last
+  // field in a section has `margin-bottom: 0` (form-system.scss:951) so the
+  // section's own padding-bottom supplies the trailing space. Since the
+  // view editor has no section wrapper, we rely on the baseline rule to kick
+  // in via `:last-child`. No override needed.
+  //
+  // Toggle rows keep their `.jj-toggle-row { padding: 5px 0 }` baseline.
+}
+
+// ============================================================================
+// Issue 6 (2026-06-12) — entity-style header for the View Properties panel,
+// homogeneous with the metaclass `.props-header`. `.view-entity-header` is a SECOND
+// class on the existing `.view-editor-header` wrapper (kept so the dock sibling
+// selector `.view-editor-header + .dock-layout` in DockManagerStyles.scss still
+// matches). Row 1 reuses the global `.props-header*` classes (info-improvements.scss,
+// loaded by the Info host); row 2 is a light-blue band hosting the existing `.path-list`.
+// Badge `--view/--viewpoint` modifiers are defined here (additive — the global
+// `_form-system.scss` badge file is NOT touched).
+// ============================================================================
+.view-editor-header.view-entity-header {
+  display: flex !important;
+  flex-direction: column;
+  align-items: stretch;
+  margin: 0 !important;        // override the base .view-editor-header inner-page margins
+  padding: 0;
+  width: 100%;
+}
+
+// Fase 2 — collapsed single-row view header. The `.props-header` row also hosts the
+// breadcrumb inline (the separate band above is no longer rendered). Additive
+// modifier: the shared base `.props-header*` (info-improvements.scss, also used by
+// the metaclass inspector) is NOT touched. Specificity (0,4,0) beats the base
+// `.view-editor-root .view-editor-header .path-list` (0,3,0); `!important` mirrors
+// the band's own overrides so the float/margins from the base rule are neutralized.
+.view-editor-header.view-entity-header .props-header--view {
   .path-list {
-    float: right!important;
+    display: inline-flex !important;
+    float: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    flex: 1 1 auto;
+    min-width: 0;
+    align-items: center;
+    overflow: hidden;
+  }
+}
+
+// VIEW / VIEWPOINT type badge — same visual language as `.jj-type-badge--*`.
+// 2026-07-29 (mockup alignment): the VIEW chip becomes a soft cyan pill, matching
+// the `--class` badge language (`_form-system.scss:1252`) — a tint, never a solid
+// accent fill (design system §7.1). VIEWPOINT keeps its violet.
+.jj-type-badge--view { background: var(--color-entity-view-bg); color: var(--color-entity-view-fg); }
+.jj-type-badge--viewpoint { background: var(--color-entity-viewpoint-bg); color: var(--color-entity-viewpoint-fg); }
+
+// 2026-07-29 (mockup alignment) — breadcrumb inside the single-row view header:
+// lighter separators and the trailing element (the view being edited) emphasized,
+// so "context › name" reads as one hierarchy instead of two equal links.
+// Specificity (0,5,0) beats the base `.view-editor-root .view-editor-header
+// .path-list .path-element` block earlier in this file (0,4,0).
+.view-editor-root .view-editor-header.view-entity-header .props-header--view {
+  .path-separator {
+    font-size: 10px;
+    color: #cbd5e1;                  // slate-300 — hairline chevron
+    margin: auto 4px;
   }
 
-  .path-element:hover {
-    font-weight: 200;
-    font-style: normal;
-    font-style: none!important;
+  .path-element {
+    font-size: 12px;
+    color: #64748b;                  // slate-500 — context segments
   }
 
-  */
-
+  // The view / viewpoint currently open: darker and medium weight. `last-of-type`
+  // (not `last-child`): the chevrons interleaved by `.separator()` are <i> elements,
+  // so the last `.path-element` div is the one being edited.
+  .path-element:last-of-type {
+    color: #334155;                  // slate-700
+    font-weight: 500;
+  }
 }

@@ -1,0 +1,85 @@
+// =============================================================================
+// BottomDrawer — resizable panel below canvas
+// =============================================================================
+
+.bottom-drawer {
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    border-top: 0.5px solid #e2e8f0;
+    background: #ffffff;
+    transition: height 0.05s ease;
+    overflow: hidden;
+
+    &__resize-handle {
+        height: 6px;
+        cursor: ns-resize;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+
+        &:hover {
+            background: rgba(14, 165, 233, 0.08);
+        }
+    }
+
+    &__resize-grip {
+        width: 32px;
+        height: 2px;
+        border-radius: 1px;
+        background: #cbd5e1;
+        transition: background 0.15s;
+
+        .bottom-drawer__resize-handle:hover & {
+            background: #94a3b8;
+        }
+    }
+
+    &__header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 12px;
+        height: 32px;
+        min-height: 32px;
+        flex-shrink: 0;
+        border-bottom: 0.5px solid #f1f5f9;
+    }
+
+    &__title {
+        font-size: 12px;
+        font-weight: 500;
+        color: #334155;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    &__close {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        background: none;
+        border: none;
+        color: #94a3b8;
+        cursor: pointer;
+        border-radius: 4px;
+        font-size: 16px;
+        padding: 0;
+
+        &:hover {
+            background: #f1f5f9;
+            color: #334155;
+        }
+    }
+
+    &__content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 8px 12px;
+        min-height: 0;
+    }
+}

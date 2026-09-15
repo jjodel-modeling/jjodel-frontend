@@ -1,0 +1,811 @@
+/**
+ * Ecore Service
+ * Handles import and export of Ecore (.ecore) files
+ * Works with XML format and integrates with existing EcoreParser
+ */
+
+import {
+    EcoreParser,
+    DModel,
+    LModel,
+    DPackage,
+    LPackage,
+    DClass,
+    LClass,
+    DAttribute,
+    LAttribute,
+    DReference,
+    LReference,
+    DEnumerator,
+    LEnumerator,
+    DDataType,
+    LDataType,
+    DEnumLiteral,
+    LEnumLiteral,
+    DOperation,
+    LOperation,
+    DParameter,
+    LParameter,
+    LPointerTargetable,
+    Pointer,
+    store,
+    Selectors
+} from '../../joiner';
+
+// ============================================
+// TYPES
+// ============================================
+
+export interface EcoreExportOptions {
+    nsURI?: string;
+    nsPrefix?: string;
+    includeAnnotations?: boolean;
+    prettyPrint?: boolean;
+}
+
+export interface EcoreImportResult {
+    success: boolean;
+    model?: LModel;
+    errors: string[];
+    warnings: string[];
+}
+
+// ============================================
+// ECORE SERVICE
+// ============================================
+
+export class EcoreService {
+
+    // ============================================
+    // CONSTANTS
+    // ============================================
+
+    private static readonly ECORE_NSURI = 'http://www.eclipse.org/emf/2002/Ecore';
+
+    /** RT2: Eclipse serializza i reflection EClass (EObject, ...) nella forma platform:/plugin,
+     *  non nella forma nsURI http (usata invece per gli EDataType primitivi). L'importer
+     *  (data.ts DefaultEClasses) risolve nativamente la forma platform. */
+    private static readonly ECORE_PLATFORM_URI = 'platform:/plugin/org.eclipse.emf.ecore/model/Ecore.ecore';
+
+    /** Ecore.ecore reflection EClass names — emitted as cross-doc `ecore:EClass <ECORE_NSURI>#//<Name>`. */
+    private static readonly ECORE_REFLECTION_CLASSES = new Set<string>([
+        'EObject', 'EClass', 'EClassifier', 'EPackage', 'ENamedElement',
+        'EAnnotation', 'ETypedElement', 'EModelElement', 'EStructuralFeature',
+        'EReference', 'EAttribute', 'EOperation', 'EParameter',
+        'EEnum', 'EEnumLiteral',
+    ]);
+
+    /** Ecore.ecore reflection EDataType names — emitted as cross-doc `ecore:EDataType <ECORE_NSURI>#//<Name>`. */
+    private static readonly ECORE_REFLECTION_DATATYPES = new Set<string>([
+        'EDiagnosticChain', 'EJavaObject', 'EJavaClass',
+        'EFeatureMapEntry', 'EFeatureMap', 'EInvocationTargetException',
+    ]);
+
+    // ============================================
+    // EXPORT
+    // ============================================
+
+    /**
+     * Export metamodel to Ecore XML string.
+     * - 1 package: root <ecore:EPackage> (single-package mode).
+     * - N>1 packages: <xmi:XMI> wrapper with N <ecore:EPackage> children (multi-package mode).
+     */
+    static exportToXML(metamodel: LModel, options: EcoreExportOptions = {}): string {
+        const packages = metamodel.packages || [];
+        if (packages.length === 0) {
+            throw new Error('Metamodel has no packages to export');
+        }
+
+        const indent = options.prettyPrint !== false ? '  ' : '';
+        const newline = options.prettyPrint !== false ? '\n' : '';
+
+        const xmlParts: string[] = [];
+        xmlParts.push('<?xml version="1.0" encoding="UTF-8"?>');
+
+        if (packages.length === 1) {
+            // Single-package: <ecore:EPackage> as document root.
+            // RT4: nsURI/nsPrefix vengono emessi SOLO se presenti nel modello (o forniti via
+            // options). Inventarli (`http://jjodel.org/...`) rompeva la round-trip fidelity;
+            // EMF accetta EPackage senza nsURI e l'import M1 risolve comunque il metamodello
+            // via fallback sul nome del package (getMetamodelByNsURI).
+            const pkg = packages[0];
+            const name = pkg.name || metamodel.name;
+            const nsURI = options.nsURI || pkg.__raw.uri || '';
+            const nsPrefix = options.nsPrefix || pkg.prefix || '';
+            xmlParts.push(this.renderEPackageBody(pkg, name, nsURI, nsPrefix, indent, newline, '', true));
+        } else {
+            // Multi-package: <xmi:XMI> root with N <ecore:EPackage> children.
+            // options.nsURI / options.nsPrefix are intentionally not applied here —
+            // they would be ambiguous across N packages; each package keeps its own metadata.
+            xmlParts.push(`<xmi:XMI xmi:version="2.0"`);
+            xmlParts.push(`${indent}xmlns:xmi="http://www.omg.org/XMI"`);
+            xmlParts.push(`${indent}xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"`);
+            xmlParts.push(`${indent}xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore">`);
+            for (const pkg of packages) {
+                const name = pkg.name || metamodel.name;
+                const nsURI = pkg.__raw.uri || ''; // RT4: no invented nsURI
+                const nsPrefix = pkg.prefix || '';
+                xmlParts.push(this.renderEPackageBody(pkg, name, nsURI, nsPrefix, indent, newline, indent, false));
+            }
+            xmlParts.push('</xmi:XMI>');
+        }
+
+        return xmlParts.join(newline);
+    }
+
+    /**
+     * Render the <ecore:EPackage>...</ecore:EPackage> body for a single package.
+     * @param pkgIndent indentation prefix of the <ecore:EPackage> tag itself
+     *                  (empty for single-package root, one `indent` for multi-package children).
+     * @param isRoot when true, emits xmlns:* + xmi:version on the EPackage tag (single-package mode).
+     *               When false, emits a bare EPackage tag (child of <xmi:XMI> in multi-package mode).
+     */
+    private static renderEPackageBody(
+        pkg: LPackage,
+        name: string,
+        nsURI: string,
+        nsPrefix: string,
+        indent: string,
+        newline: string,
+        pkgIndent: string,
+        isRoot: boolean
+    ): string {
+        const parts: string[] = [];
+        const innerIndent = pkgIndent + indent;
+
+        if (isRoot) {
+            parts.push(`${pkgIndent}<ecore:EPackage xmi:version="2.0"`);
+            parts.push(`${pkgIndent}${indent}xmlns:xmi="http://www.omg.org/XMI"`);
+            parts.push(`${pkgIndent}${indent}xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"`);
+            parts.push(`${pkgIndent}${indent}xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore"`);
+            // RT4: nsURI/nsPrefix condizionali — assenti nel modello ⇒ assenti nel file.
+            const rootTail: string[] = [`name="${this.escapeXml(name)}"`];
+            if (nsURI) rootTail.push(`nsURI="${this.escapeXml(nsURI)}"`);
+            if (nsPrefix) rootTail.push(`nsPrefix="${this.escapeXml(nsPrefix)}"`);
+            for (let ti = 0; ti < rootTail.length; ti++) {
+                parts.push(`${pkgIndent}${indent}${rootTail[ti]}${ti === rootTail.length - 1 ? '>' : ''}`);
+            }
+        } else {
+            const attrs = [`name="${this.escapeXml(name)}"`];
+            if (nsURI) attrs.push(`nsURI="${this.escapeXml(nsURI)}"`);
+            if (nsPrefix) attrs.push(`nsPrefix="${this.escapeXml(nsPrefix)}"`);
+            parts.push(`${pkgIndent}<ecore:EPackage ${attrs.join(' ')}>`);
+        }
+
+        const classes = pkg.classes || [];
+        for (const cls of classes) {
+            parts.push(this.exportClass(cls, classes, innerIndent, newline, pkg));
+        }
+
+        const enums = pkg.enumerators || [];
+        for (const enumType of enums) {
+            parts.push(this.exportEnumerator(enumType, innerIndent, newline));
+        }
+
+        // W2: user-defined EDataType — emessi dopo Class+Enum (append-non-interleave) per
+        // preservare byte-identità delle fixture W1 esistenti.
+        const dataTypes = pkg.datatypes || [];
+        for (const dt of dataTypes) {
+            parts.push(this.exportDataType(dt, innerIndent, newline));
+        }
+
+        // Sub-package nesting level: 1 under a root EPackage, 2 under <xmi:XMI> children.
+        const subpackages = pkg.subpackages || [];
+        const subPkgLevel = isRoot ? 1 : 2;
+        for (const subpkg of subpackages) {
+            parts.push(this.exportSubPackage(subpkg, indent, newline, subPkgLevel));
+        }
+
+        parts.push(`${pkgIndent}</ecore:EPackage>`);
+        return parts.join(newline);
+    }
+
+    /**
+     * Export to file and trigger browser download
+     */
+    static exportToFile(metamodel: LModel, options: EcoreExportOptions = {}): void {
+        const xml = this.exportToXML(metamodel, options);
+        const blob = new Blob([xml], { type: 'application/xml' });
+        const url = URL.createObjectURL(blob);
+
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${metamodel.name}.ecore`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }
+
+    /**
+     * Export EClass
+     */
+    private static exportClass(cls: LClass, allClasses: LClass[], indent: string, newline: string, currentPackage: LPackage): string {
+        const parts: string[] = [];
+        const i = indent;
+
+        // Class attributes
+        const classAttrs: string[] = [
+            `xsi:type="ecore:EClass"`,
+            `name="${this.escapeXml(cls.name)}"`,
+        ];
+
+        // SI7: instanceClassName (truthy emit), posizionato fra name e abstract per allineamento canonico EMF.
+        if (cls.instanceClassName) {
+            classAttrs.push(`instanceClassName="${this.escapeXml(cls.instanceClassName)}"`);
+        }
+
+        // Abstract?
+        if (cls.abstract) {
+            classAttrs.push(`abstract="true"`);
+        }
+
+        // Interface?
+        if (cls.interface) {
+            classAttrs.push(`interface="true"`);
+        }
+
+        // Superclasses (extends) — emitted with cross-package-aware pointer.
+        const superTypes = cls.extends || [];
+        if (superTypes.length > 0) {
+            const superRefs = superTypes.map(st => this.crossPackagePointer(st, currentPackage)).join(' ');
+            classAttrs.push(`eSuperTypes="${superRefs}"`);
+        }
+
+        // Check if class has children
+        const attributes = cls.attributes || [];
+        const references = cls.references || [];
+        const operations = cls.operations || [];
+        const hasChildren = attributes.length > 0 || references.length > 0 || operations.length > 0;
+
+        if (hasChildren) {
+            parts.push(`${i}<eClassifiers ${classAttrs.join(' ')}>`);
+
+            // Export attributes
+            for (const attr of attributes) {
+                parts.push(this.exportAttribute(attr, i + indent));
+            }
+
+            // Export references
+            for (const ref of references) {
+                parts.push(this.exportReference(ref, allClasses, i + indent, currentPackage));
+            }
+
+            // Export operations
+            for (const op of operations) {
+                parts.push(this.exportOperation(op, i + indent, newline, currentPackage));
+            }
+
+            parts.push(`${i}</eClassifiers>`);
+        } else {
+            parts.push(`${i}<eClassifiers ${classAttrs.join(' ')}/>`);
+        }
+
+        return parts.join(newline);
+    }
+
+    /**
+     * Export EAttribute
+     */
+    private static exportAttribute(attr: LAttribute, indent: string): string {
+        const parts: string[] = [
+            `xsi:type="ecore:EAttribute"`,
+            `name="${this.escapeXml(attr.name)}"`,
+        ];
+
+        // Type mapping
+        const ecoreType = this.mapToEcoreType(attr.type);
+        parts.push(`eType="${ecoreType}"`);
+
+        // Multiplicity
+        if (attr.lowerBound !== undefined && attr.lowerBound !== 0) {
+            parts.push(`lowerBound="${attr.lowerBound}"`);
+        }
+        if (attr.upperBound !== undefined && attr.upperBound !== 1) {
+            parts.push(`upperBound="${attr.upperBound}"`);
+        }
+
+        // ordered/unique — opt-only emission (EMF default true)
+        if (attr.ordered === false) parts.push(`ordered="false"`);
+        if (attr.unique === false) parts.push(`unique="false"`);
+
+        // Default value
+        /*if (attr.defaultValueLiteral) {
+            parts.push(`defaultValueLiteral="${this.escapeXml(attr.defaultValueLiteral)}"`);
+        }*/
+
+        // Other properties
+        if (attr.derived) parts.push(`derived="true"`);
+        if (attr.transient) parts.push(`transient="true"`);
+        if (attr.volatile) parts.push(`volatile="true"`);
+        if (attr.unsettable) parts.push(`unsettable="true"`);
+        if (!attr.changeable) parts.push(`changeable="false"`);
+
+        return `${indent}<eStructuralFeatures ${parts.join(' ')}/>`;
+    }
+
+    /**
+     * Export EReference
+     */
+    private static exportReference(ref: LReference, allClasses: LClass[], indent: string, currentPackage: LPackage): string {
+        const parts: string[] = [
+            `xsi:type="ecore:EReference"`,
+            `name="${this.escapeXml(ref.name)}"`,
+        ];
+
+        // Target type — emitted with reflection-aware, cross-package-aware pointer.
+        const targetType = ref.type;
+        if (targetType) {
+            parts.push(`eType="${this.targetTypePointer(targetType, currentPackage)}"`);
+        }
+
+        // Multiplicity — SI10: skip default 0 per allineamento EMF idiomatic.
+        if (ref.lowerBound !== undefined && ref.lowerBound !== 0) {
+            parts.push(`lowerBound="${ref.lowerBound}"`);
+        }
+        if (ref.upperBound !== undefined && ref.upperBound !== 1) {
+            parts.push(`upperBound="${ref.upperBound}"`);
+        }
+
+        // Feature flags — opt-only emission, strict === comparison (false-positive guard on undefined/missing).
+        if (ref.ordered === false) parts.push(`ordered="false"`);
+        if (ref.unique === false) parts.push(`unique="false"`);
+        if (ref.changeable === false) parts.push(`changeable="false"`);
+        if (ref.derived === true) parts.push(`derived="true"`);
+        if (ref.transient === true) parts.push(`transient="true"`);
+        if (ref.volatile === true) parts.push(`volatile="true"`);
+        if (ref.unsettable === true) parts.push(`unsettable="true"`);
+
+        // Containment (composition)
+        if (ref.composition || ref.containment) {
+            parts.push(`containment="true"`);
+        }
+
+        // Opposite reference — class-level pointer is cross-package-aware,
+        // then we append /featureName for the opposite's own name.
+        const opposite = ref.opposite;
+        if (opposite && targetType) {
+            parts.push(`eOpposite="${this.crossPackagePointer(targetType, currentPackage)}/${this.escapeXml(opposite.name)}"`);
+        }
+
+        return `${indent}<eStructuralFeatures ${parts.join(' ')}/>`;
+    }
+
+    /**
+     * Export EOperation
+     */
+    private static exportOperation(op: LOperation, indent: string, newline: string, currentPackage: LPackage): string {
+        const parts: string[] = [];
+
+        // Ordine canonico EMF: name → lowerBound → upperBound → ordered → unique → eType → eExceptions.
+        const opAttrs: string[] = [
+            `xsi:type="ecore:EOperation"`,
+            `name="${this.escapeXml(op.name)}"`,
+        ];
+
+        // BL6: bounds (skip default 0 / 1), flags (strict === false / true), return type, eExceptions.
+        if (op.lowerBound !== undefined && op.lowerBound !== 0) {
+            opAttrs.push(`lowerBound="${op.lowerBound}"`);
+        }
+        if (op.upperBound !== undefined && op.upperBound !== 1) {
+            opAttrs.push(`upperBound="${op.upperBound}"`);
+        }
+        if (op.ordered === false) opAttrs.push(`ordered="false"`);
+        if (op.unique === false) opAttrs.push(`unique="false"`);
+
+        // Return type — reflection-aware, cross-package-aware, primitive-aware pointer.
+        const returnType = op.type;
+        if (returnType) {
+            const ecoreType = this.targetTypePointer(returnType, currentPackage);
+            opAttrs.push(`eType="${ecoreType}"`);
+        }
+
+        // eExceptions: space-join di pointer ecore-formattati, emesso solo se non vuoto.
+        const exceptions = op.exceptions || [];
+        if (exceptions.length > 0) {
+            const excRefs = exceptions.map(e => this.targetTypePointer(e, currentPackage)).join(' ');
+            opAttrs.push(`eExceptions="${excRefs}"`);
+        }
+
+        const parameters = op.parameters || [];
+
+        if (parameters.length > 0) {
+            parts.push(`${indent}<eOperations ${opAttrs.join(' ')}>`);
+
+            for (const param of parameters) {
+                parts.push(this.exportParameter(param, indent + '  ', currentPackage));
+            }
+
+            parts.push(`${indent}</eOperations>`);
+        } else {
+            parts.push(`${indent}<eOperations ${opAttrs.join(' ')}/>`);
+        }
+
+        return parts.join(newline);
+    }
+
+    /**
+     * Export EParameter
+     */
+    private static exportParameter(param: LParameter, indent: string, currentPackage: LPackage): string {
+        // Ordine canonico EMF: name → lowerBound → upperBound → ordered → unique → eType.
+        const parts: string[] = [
+            `xsi:type="ecore:EParameter"`,
+            `name="${this.escapeXml(param.name)}"`,
+        ];
+
+        // BL7: bounds (skip default 0 / 1) e flags (strict === false), parallelo a exportOperation.
+        if (param.lowerBound !== undefined && param.lowerBound !== 0) {
+            parts.push(`lowerBound="${param.lowerBound}"`);
+        }
+        if (param.upperBound !== undefined && param.upperBound !== 1) {
+            parts.push(`upperBound="${param.upperBound}"`);
+        }
+        if (param.ordered === false) parts.push(`ordered="false"`);
+        if (param.unique === false) parts.push(`unique="false"`);
+
+        const paramType = param.type;
+        if (paramType) {
+            const ecoreType = this.targetTypePointer(paramType, currentPackage);
+            parts.push(`eType="${ecoreType}"`);
+        }
+
+        return `${indent}<eParameters ${parts.join(' ')}/>`;
+    }
+
+    /**
+     * Export EEnum
+     */
+    private static exportEnumerator(enumType: LEnumerator, indent: string, newline: string): string {
+        const parts: string[] = [];
+
+        // SI6: aggiunge instanceClassName (truthy) + serializable (strict === false, default EMF true).
+        const enumAttrs: string[] = [
+            `xsi:type="ecore:EEnum"`,
+            `name="${this.escapeXml(enumType.name)}"`,
+        ];
+        if (enumType.instanceClassName) {
+            enumAttrs.push(`instanceClassName="${this.escapeXml(enumType.instanceClassName)}"`);
+        }
+        if (enumType.serializable === false) {
+            enumAttrs.push(`serializable="false"`);
+        }
+        parts.push(`${indent}<eClassifiers ${enumAttrs.join(' ')}>`);
+
+        const literals = enumType.literals || [];
+        literals.forEach((literal) => {
+            // BL4: name = identifier (Java); literal = display label opzionale. EMF non emette
+            // literal quando coincide col name. Usa __raw.literal per evitare la derivazione
+            // del getter L (che ritorna name.replace('_',' ') quando literal è vuoto).
+            const litName = literal.name;
+            const litRaw = literal.__raw?.literal;
+            const litAttr = litRaw && litRaw !== litName ? ` literal="${this.escapeXml(litRaw)}"` : '';
+            // RT3: value = D-layer __raw.value (il getter L `ordinal` deriva la POSIZIONE, non
+            // il value EMF, e ritorna -1 fuori dall'app). L'importer usa -Infinity come
+            // sentinella per "value assente nel .ecore": in quel caso non emettere l'attributo,
+            // come fa Eclipse. Emesso anche quando è 0 (esplicito nel D-layer).
+            const litValue = literal.__raw?.value;
+            const valAttr = Number.isFinite(litValue) ? ` value="${litValue}"` : '';
+            parts.push(`${indent}${indent}<eLiterals name="${this.escapeXml(litName)}"${valAttr}${litAttr}/>`);
+        });
+
+        parts.push(`${indent}</eClassifiers>`);
+
+        return parts.join(newline);
+    }
+
+    /**
+     * Export EDataType (user-defined, self-closing).
+     * W2: emette name + instanceClassName (truthy) + serializable (skip se default true).
+     * Coverage parziale; split instanceTypeName (EMF 2.x) e eAnnotations rimandati a W5/W4.
+     */
+    private static exportDataType(dt: LDataType, indent: string, newline: string): string {
+        const attrs: string[] = [
+            `xsi:type="ecore:EDataType"`,
+            `name="${this.escapeXml(dt.name)}"`,
+        ];
+        if (dt.instanceClassName) {
+            attrs.push(`instanceClassName="${this.escapeXml(dt.instanceClassName)}"`);
+        }
+        if (dt.serializable === false) {
+            attrs.push(`serializable="false"`);
+        }
+        return `${indent}<eClassifiers ${attrs.join(' ')}/>`;
+    }
+
+    /**
+     * Export sub-package (recursive)
+     */
+    private static exportSubPackage(pkg: LPackage, indent: string, newline: string, level: number): string {
+        const i = indent.repeat(level);
+        const parts: string[] = [];
+
+        parts.push(`${i}<eSubpackages name="${this.escapeXml(pkg.name)}"${pkg.__raw.uri ? ` nsURI="${this.escapeXml(pkg.__raw.uri)}"` : ''}${pkg.prefix ? ` nsPrefix="${this.escapeXml(pkg.prefix)}"` : ''}>`);
+
+        // Classes
+        for (const cls of pkg.classes || []) {
+            parts.push(this.exportClass(cls, pkg.classes || [], i + indent, newline, pkg));
+        }
+
+        // Enums
+        for (const enumType of pkg.enumerators || []) {
+            parts.push(this.exportEnumerator(enumType, i + indent, newline));
+        }
+
+        // W2: user-defined EDataType
+        for (const dt of pkg.datatypes || []) {
+            parts.push(this.exportDataType(dt, i + indent, newline));
+        }
+
+        // Recursive sub-packages
+        for (const subpkg of pkg.subpackages || []) {
+            parts.push(this.exportSubPackage(subpkg, indent, newline, level + 1));
+        }
+
+        parts.push(`${i}</eSubpackages>`);
+
+        return parts.join(newline);
+    }
+
+    // ============================================
+    // IMPORT
+    // ============================================
+
+    /**
+     * Import Ecore XML string
+     */
+    static importFromXML(xmlString: string, filename?: string): EcoreImportResult {
+        const errors: string[] = [];
+        const warnings: string[] = [];
+
+        try {
+            // Parse XML to DOM
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(xmlString, 'application/xml');
+
+            // Check for parse errors
+            const parseError = doc.querySelector('parsererror');
+            if (parseError) {
+                return {
+                    success: false,
+                    errors: ['Invalid XML: ' + parseError.textContent],
+                    warnings: [],
+                };
+            }
+
+            // Convert XML DOM to JSON format expected by EcoreParser
+            const json = this.xmlToJson(doc.documentElement);
+
+            // console.log('Ecore XML to JSON:', json);
+
+            // Use existing EcoreParser
+            const parsedElements = EcoreParser.parse(json, true, filename || 'imported', true);
+
+            // Find the created model
+            const dmodel = parsedElements.find(e => e.className === DModel.cname) as DModel;
+            if (!dmodel) {
+                return {
+                    success: false,
+                    errors: ['No model was created from the import'],
+                    warnings,
+                };
+            }
+
+            const lmodel = LPointerTargetable.fromD(dmodel) as LModel;
+
+            return {
+                success: true,
+                model: lmodel,
+                errors,
+                warnings,
+            };
+
+        } catch (error) {
+            return {
+                success: false,
+                errors: [`Import failed: ${(error as Error).message}`],
+                warnings: [],
+            };
+        }
+    }
+
+    /**
+     * Import from File object
+     */
+    static async importFromFile(file: File): Promise<EcoreImportResult> {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+
+            reader.onload = (e) => {
+                const content = e.target?.result as string;
+                const filename = file.name.replace(/\.[^/.]+$/, ''); // Remove extension
+                resolve(this.importFromXML(content, filename));
+            };
+
+            reader.onerror = () => {
+                resolve({
+                    success: false,
+                    errors: ['Failed to read file'],
+                    warnings: [],
+                });
+            };
+
+            reader.readAsText(file);
+        });
+    }
+
+    // ============================================
+    // UTILITIES
+    // ============================================
+
+    /**
+     * Convert XML Element to JSON format for EcoreParser
+     * Uses '@' prefix for attributes (as expected by EcoreParser)
+     */
+    private static xmlToJson(element: Element): any {
+        const json: any = {};
+
+        // Handle attributes
+        for (let i = 0; i < element.attributes.length; i++) {
+            const attr = element.attributes[i];
+            // Use '-' prefix as EcoreParser expects
+            json['-' + attr.name] = attr.value;
+        }
+
+        // Handle child elements
+        for (let i = 0; i < element.children.length; i++) {
+            const child = element.children[i];
+            const tagName = child.tagName;
+            const childJson = this.xmlToJson(child);
+
+            // If key already exists, convert to array
+            if (json[tagName] !== undefined) {
+                if (!Array.isArray(json[tagName])) {
+                    json[tagName] = [json[tagName]];
+                }
+                json[tagName].push(childJson);
+            } else {
+                json[tagName] = childJson;
+            }
+        }
+
+        // Handle text content
+        const textContent = element.textContent?.trim();
+        if (textContent && element.children.length === 0) {
+            if (Object.keys(json).length === 0) {
+                return textContent;
+            }
+            json['#text'] = textContent;
+        }
+
+        return json;
+    }
+
+    /**
+     * Resolve a type reference to its Ecore XML attribute value.
+     *
+     * Canonical primitives (Pointer_E* convention, e.g. Pointer_ESTRING, Pointer_EDATE)
+     * are emitted as full Ecore URIs. User-defined EDataType/EClass with names that
+     * collide with canonical short aliases (e.g. 'Date', 'String') are emitted as
+     * local references (`#//Name`) to preserve their identity. The `Pointer_E` id
+     * prefix is the discriminator: only canonical primitives have it (see
+     * selectors.ts:149 for the lookup convention).
+     *
+     * Plain string inputs (e.g. from JjScript executor) are always treated as
+     * canonical, since user-defined references arrive as classifier objects.
+     */
+    private static mapToEcoreType(type: any): string {
+        if (!type) return 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString';
+
+        const isString = typeof type === 'string';
+        const typeName = isString ? type : (type.name || 'EString');
+        const isCanonical = isString || (typeof type.id === 'string' && type.id.startsWith('Pointer_E'));
+
+        const typeMap: Record<string, string> = {
+            'String': 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString',
+            'EString': 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString',
+            'string': 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString',
+            'Integer': 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt',
+            'EInt': 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt',
+            'int': 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt',
+            'Boolean': 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean',
+            'EBoolean': 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean',
+            'boolean': 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean',
+            'Float': 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EFloat',
+            'EFloat': 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EFloat',
+            'float': 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EFloat',
+            'Double': 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble',
+            'EDouble': 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble',
+            'double': 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble',
+            'Date': 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDate',
+            'EDate': 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDate',
+            'Long': 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//ELong',
+            'ELong': 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//ELong',
+            'Short': 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EShort',
+            'EShort': 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EShort',
+            'Byte': 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EByte',
+            'EByte': 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EByte',
+            'Char': 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EChar',
+            'EChar': 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EChar',
+        };
+
+        if (isCanonical && typeMap[typeName]) return typeMap[typeName];
+        return `#//${typeName}`;
+    }
+
+    /**
+     * Build an Ecore pointer for an eType reference.
+     *
+     * Resolution order:
+     *  1. Ecore.ecore reflection classes (EObject, EClass, ENamedElement, ...): emit
+     *     cross-doc `ecore:EClass <ECORE_NSURI>#//<Name>` form.
+     *  2. Ecore.ecore reflection datatypes (EDiagnosticChain, EJavaObject, ...): emit
+     *     cross-doc `ecore:EDataType <ECORE_NSURI>#//<Name>` form.
+     *  3. Primitive datatypes (EString, EInt, EBoolean, ...): delegate to
+     *     mapToEcoreType, which returns the canonical cross-doc EDataType form.
+     *  4. Anything else (user-defined class in the model): delegate to
+     *     crossPackagePointer for intra/cross-package XPath.
+     *
+     * Use this for the eType attribute of EReference, EOperation, and eParameters.
+     * Do NOT use this for the prefix of eOpposite (which is always intra-document).
+     */
+    private static targetTypePointer(target: any, fromPackage: LPackage | undefined | null): string {
+        if (!target) {
+            console.warn('[EcoreService] targetTypePointer: target is null/undefined');
+            return '';
+        }
+        const name = target.name || '';
+        if (this.ECORE_REFLECTION_CLASSES.has(name)) {
+            // RT2: forma platform (come Eclipse) — la forma http non è risolta da tutti gli
+            // importer (incluso il nostro prima di RT1) e rompeva il re-import.
+            return `ecore:EClass ${this.ECORE_PLATFORM_URI}#//${name}`;
+        }
+        if (this.ECORE_REFLECTION_DATATYPES.has(name)) {
+            return `ecore:EDataType ${this.ECORE_NSURI}#//${name}`;
+        }
+        // Primitive datatypes: mapToEcoreType returns the canonical cross-doc form
+        // ('ecore:EDataType http://.../#//EString'); only treat as primitive when the
+        // returned string carries the cross-doc prefix (otherwise it's the '#//X'
+        // fallback for non-primitive type names, which we handle below).
+        const primitiveAttempt = this.mapToEcoreType(target);
+        if (primitiveAttempt.startsWith('ecore:EDataType http://')) {
+            return primitiveAttempt;
+        }
+        return this.crossPackagePointer(target, fromPackage);
+    }
+
+    /**
+     * Build an Ecore XPath-style pointer to a classifier within the same document.
+     * Returns '#//ClassName' when the target is in the same package as the referrer,
+     * or '#//PackageName/ClassName' when the target lives in a sibling package
+     * within the same metamodel. Cross-document refs to Ecore-native primitives
+     * are handled separately by mapToEcoreType().
+     */
+    private static crossPackagePointer(target: any, fromPackage: LPackage | undefined | null): string {
+        if (!target) {
+            console.warn('[EcoreService] crossPackagePointer: target is null/undefined');
+            return '';
+        }
+        const targetName = this.escapeXml(target.name || '');
+        const targetPkg: LPackage | undefined | null = target.package;
+        if (!targetPkg || !fromPackage || targetPkg.id === fromPackage.id) {
+            return `#//${targetName}`;
+        }
+        return `#//${this.escapeXml(targetPkg.name || '')}/${targetName}`;
+    }
+
+    /**
+     * Escape XML special characters
+     */
+    private static escapeXml(str: string): string {
+        if (!str) return '';
+        return str
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&apos;');
+    }
+}
+
+export default EcoreService;

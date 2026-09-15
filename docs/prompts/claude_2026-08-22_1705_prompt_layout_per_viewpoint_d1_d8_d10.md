@@ -1,0 +1,207 @@
+# Prompt Claude Code, 2026-08-22 17:05: layout per viewpoint, D1..D8 e D10
+
+**Fase**: 1, **read only**. Nessuna riga di codice, nessuna proposta di progetto, nessuna scelta di sede.
+**Zona critica**: no (lettura sola). **Branch**: `alfonso-frontend-jjtl`. **Base**: `d0f4bf5fb` o successivo.
+**Protocollo**: `docs/PROTOCOL.md` P1..P10, **deroga dichiarata su P8** (fase read only, nessuna
+modifica, nessuno smoke).
+**Decisioni che governano**: `R-LAY-1..10` in `docs/decisions.md`, `R-E/E-1` (report già esistente:
+addendum in coda, non riscrivere), `R-RAIL-28` (ogni asserzione di assenza porta il controllo
+positivo nella stessa invocazione).
+
+**Nota sulla provenienza, da leggere prima del resto.** Questo file è stato **ricostruito il
+2026-08-23** dal registro e dalla discovery, perché il prompt originale del 22 alle 17:05 era stato
+consegnato in chat e mai messo a terra. È il file che
+`docs/claude-code-log.md` (entry «2026-08-22 — docs: D1..D8 non eseguite, arresto al passo zero») e
+`docs/discovery/discovery_2026-08-22_layout_per_viewpoint.md` §1114 citano come «prompt del
+2026-08-22 17:05». Il passo zero, i vincoli e le otto domande D1..D8 sono ricostruiti fedelmente
+dalle sezioni §5 e §B.7 della discovery, che le enumera. **D10 è invece perduta e riscritta da capo il
+2026-08-23**: la sua sezione dichiara la provenienza e non va letta come recupero dell'originale.
+
+
+## Riallineamento del 2026-08-23 (sera), da leggere prima del passo zero
+
+Questo prompt è stato scritto quando la serie era `R-LAY-1..10` e la slice 2 di `2.228` era aperta.
+Da allora il registro è cambiato. **Dove questa tabella e il corpo del prompt divergono, vale la
+tabella.** Il corpo non è stato riscritto per lasciare leggibile la provenienza.
+
+| Nel corpo del prompt | Stato reale a `3cb33eb3f` |
+|---|---|
+| Serie `R-LAY-1..10`, righe 1675-1693 | **`R-LAY-1..12`**, righe 1692-1714. `R-LAY-11`: la terza sorgente `lastEditedViewpointId` è morta per misura, fuori dalla condizione di `R-LAY-10`. `R-LAY-12`: `NestedView` non è montato da nessun sito, `activateViewpoint` è l'unico scrittore vivo e raggiungibile di `project.activeViewpoint` e `state.viewpoint`. **Leggi tutte e dodici.** |
+| `R-LAY-10` «da sciogliere nel perimetro di `2.228` slice 2» | **Sciolta.** La condizione «una sola sorgente» è soddisfatta (`R-LAY-11`, `R-LAY-12`, commit `052966df8`). |
+| `R-LAY-7`: prima slice di codice «dopo la slice 2 di `2.228`» | **Condizione soddisfatta.** La slice 2 è chiusa con 2a e 2b; il 2c è decaduto (`R-IRN-27`). Questo prompt resta read only per sua natura, non per dipendenza. |
+| Passo zero: `grep -c "R-LAY"` atteso **11**, `grep -c "R-IRN"` atteso **57** | Attesi **19** e **62** (misurati a `3cb33eb3f`). Controllo positivo aggiuntivo: `command grep -c "R-DEAD" docs/decisions.md` deve tornare **11**. Valori diversi: arresto, come nel corpo. |
+| `docs/prompts/claude_2026-08-18_1656_prompt_2228_fase2.md`, slice 2, come dipendenza | Riferimento storico, non più pendente. |
+| Qualunque riferimento a `NestedView.tsx` come writer di `activeViewpoint` nella discovery del 22 (§B.4, §B.6) | Codice **morto e irraggiungibile**, in rimozione nel fronte `R-DEAD-1..6`. Se una risposta a D1..D8 o D10 passa da `NestedView`, dichiaralo e non contarlo fra le superfici vive. Il tab «Viewpoints» del pannello classico è reso da `Info.tsx:1341-1356`, non da `NestedView`. |
+| D10.a: il vuoto «dopo la slice 2» | La slice 2 è a codice: misura il campo **com'è ora**, non come sarebbe. |
+
+Il resto del prompt (vincoli, D1..D8, D10, formato del report, hard stop) resta com'è. Il discovery
+report si salva in `docs/discovery/` come `discovery_2026-08-23_layout_d1_d8_d10.md` (o con data del
+giorno di esecuzione), naming standard.
+
+---
+
+## Passo zero, obbligatorio
+
+Prima di qualunque lettura di codice:
+
+```
+command grep -c "R-LAY" docs/decisions.md
+command grep -c "R-IRN" docs/decisions.md
+```
+
+La seconda è il **controllo positivo, nella stessa invocazione**: deve tornare 57. Se la prima torna
+**0**, fermati: la serie non è a registro e questo prompt non ha le sue premesse. Scrivi una riga nel
+report e restituisci il controllo.
+
+**Stato atteso al 2026-08-23**: la prima torna **11** (le dieci righe più una citazione), la serie è
+entrata con `d0f4bf5fb`. Il passo zero passa. Se non passa, qualcosa è stato riscritto e vale
+l'arresto.
+
+Poi **leggi le dieci righe `R-LAY-1..10` dal file**, non dal riassunto di questo prompt, e leggi
+`docs/ratifiche/claude_2026-08-22_memo_ratifica_layout_per_viewpoint.md`. Se l'addendum §8 del memo
+è ancora dichiarato lacunoso, **dillo nel report** e non trattare come noto ciò che quella sezione
+avrebbe dovuto contenere.
+
+---
+
+## Obiettivo
+
+Stabilire, **misurando**, dove sta oggi il layout dei model element, chi lo legge, chi lo scrive, e
+quanto costerebbe indicizzarlo per viewpoint. Le tre sessioni precedenti si sono fermate su D0, su
+Q0 e su D9: nessuna di esse ha eseguito D1..D8. Il gate D9 è ora **chiuso** da `R-LAY-6` (la chiave è
+l'id del viewpoint esclusivo attivo, non l'insieme di ciò che rende) e da `R-LAY-8` (solo i viewpoint
+esclusivi hanno un record). D1..D8 hanno finalmente un bersaglio.
+
+**Vietato in questa fase**: scegliere la sede del record. Le tre candidate (mappa sulla sede attuale,
+tabella a livello progetto, dizionario su `DViewPoint`) si decidono in chat sui dati che produci.
+Se un finding rende una delle tre impossibile, **dillo come finding**, non come raccomandazione.
+
+---
+
+## Le domande
+
+### D1 — La sede attuale
+
+Dove stanno oggi posizione e taglia sul D layer, e **stanno insieme o separate**? Path e righe
+esatte. Interessa in particolare se il campo sia sul vertice, sul view element o altrove, e se la
+persistenza passi dallo stesso campo per entrambe.
+
+### D2 — L'asse per view esiste già?
+
+**Misura, non citazione.** Tre documenti (2026-07-19 §3.6, 2026-08-03 §247, 2026-08-17 §502)
+concordano nel dire che il `DGraph` è per modello e che `DVertex.graph` è `Pointer<DGraph>`, quindi
+che il vertice non si forka per viewpoint. La discovery del 22 dichiara esplicitamente che **sono
+citazioni di documenti, non misure**, e chiede di non trattarle come risposta a D2.
+
+Misura la molteplicità reale dei graph element per view, con controllo positivo nella stessa forma di
+comando. Se l'asse non esiste, la domanda «quale campo indicizzare» diventa «quale asse creare», che
+è lavoro di un ordine di grandezza diverso: è il finding che cambia il fronte.
+
+### D3 — I lettori
+
+Censimento dei lettori di posizione e taglia. Path, riga, e per ciascuno se legga il D layer o un
+derivato di sessione.
+
+### D4 — Gli scrittori
+
+Censimento degli scrittori. **Punto di partenza obbligato**: `handleAutoLayout`
+(`frontend/src/components/editor-v2/EditorV2.tsx`), emerso incidentalmente nell'addendum di Fase
+1bis e non previsto dal prompt originale. **Attenzione al numero di riga**: la discovery lo cita a
+`:3262`, ma al 2026-08-23 la dichiarazione (`const handleAutoLayout = useCallback(...)`) è alla riga
+**3249**. Fidati del nome, non del numero. Interessa in particolare se esista **un percorso di
+scrittura fuori dai censiti**: la domanda non è rispondibile finché il censimento non esiste, quindi
+il censimento viene prima.
+
+Agli atti da §6 Q3: `syncIREdgeLayoutToJjom`
+(`frontend/src/components/editor-v2/sync/canvasToJjom.ts:122`) scrive dentro `TRANSACTION` (riga 130)
+ma riguarda il layout degli **edge sintetici**, non la posizione dei nodi. Verifica se la distinzione
+regge.
+
+### D5 — La metà persistita della taglia
+
+Taglia scelta dall'umano, flag `isResized`, e il filtro su `resizing !== undefined`. `R-LAY-4`
+dichiara che la taglia derivata dal contenuto non raggiunge il D layer
+(`frontend/src/components/editor-v2/viewpoint/ir/useContentSize.ts:82-89`, path verificato): **verificalo**, perché la ratifica ci poggia sopra.
+
+### D6 — Gli edge
+
+Che layout persistito esiste sugli edge oltre a `irEdgeLayout`, e qual è la natura di `Eroute`.
+Ricorda che `R-LAY-3` **non tocca** la decisione del 2026-07-19 su `irEdgeLayout` e `irCollapsed`:
+quelli restano condivisi fra viewpoint. Interessa sapere se questa asimmetria (nodi per viewpoint,
+edge condivisi) produca uno stato incoerente osservabile.
+
+### D7 — Versione e migrazione
+
+Versione corrente di `DState.version.n` e forma che prenderebbe la migrazione. Attenzione: `2.228` è
+in corso e non ancora spedita (`R-IRN-19`, `R-IRN-20`). Non proporre un numero di versione: misura
+quello corrente e descrivi la forma.
+
+### D8 — Il costo in stato
+
+Il fattore moltiplicativo sullo stato persistito, **misurato su un progetto reale**, non stimato. Non
+è un rischio teorico: la persistenza passa da `localStorage` con `compressToUTF16`. Se ti serve un
+progetto e non ce l'hai, dillo e fermati su questa sola domanda invece di stimare.
+
+### D10 — I due casi limite della chiave
+
+**Provenienza, da dichiarare.** L'enunciato originale di D10 è perduto: log e discovery la citano
+(«D1..D8 più D10») senza mai enunciarla, non compare in nessun file del repo, e la ricerca in chat
+del 2026-08-23 non l'ha trovata. Quella che segue è una **riformulazione scritta il 2026-08-23**, non
+un recupero. È stata costruita cercando che cosa la serie `R-LAY` presuppone e nessuna delle D1..D8
+misura. Se l'originale riemerge e chiedeva altro, questa va sostituita e non fusa.
+
+`R-LAY-6` dice che la chiave è l'id del viewpoint esclusivo attivo «con una sentinella per la
+sintassi astratta». Due casi limite di quella chiave non sono coperti da nessun'altra domanda, e
+tutti e due possono rendere impraticabile una delle tre sedi candidate.
+
+**D10.a — La sentinella.** Che valore rappresenta oggi «nessun viewpoint attivo, sintassi astratta»?
+Dopo la slice 2 di `2.228` è `null` (`R-IRN-11`, `R-IRN-18`), ma il campo persistito e la chiave di un
+dizionario sono cose diverse: `null` non è una chiave. Misura quali valori il campo può assumere oggi
+e quali forme del vuoto convivono (`''`, `null`, l'id di un viewpoint di sistema), e verifica se
+esista già una sentinella in uso altrove nel codebase da riusare invece di inventarne una. Se la sede
+scelta fosse un dizionario, una sentinella che collide con un id reale è un difetto silenzioso: cerca
+la collisione, con controllo positivo.
+
+**D10.b — La sopravvivenza del record.** `R-LAY-5` dice che il record di layout non si cancella
+quando l'elemento non è renderizzato nel viewpoint corrente, perché `NOT IN THIS VIEWPOINT` è
+reversibile. Che cosa succede **oggi** al layout persistito di un elemento che smette di rendere?
+Interessa il percorso completo: chi decide che l'elemento non rende, se qualcuno cancelli o azzeri il
+suo record, e se il ritorno lo ritrovi. Se oggi il record sopravvive per costruzione, `R-LAY-5` è
+gratis e va detto; se sopravvive per caso, è una riga da difendere con un test.
+
+**Fuori perimetro anche qui**: non proporre la sentinella, non proporre lo schema. Misura.
+
+---
+
+## Vincoli
+
+- **Read only.** Zero file di codice modificati. Nessuna sonda che scrive. Se una misura richiede di
+  eseguire qualcosa, eseguilo in uno scratchpad di sessione e dichiaralo, lasciando il repo intatto
+  (precedente: la sonda `node --experimental-strip-types` dell'entry del 2026-08-18).
+- **Nessuna scelta di sede, nessuno schema, nessun progetto.** L'output è misura.
+- **Ogni asserzione di assenza porta il controllo positivo nella stessa invocazione**, con glob
+  quotati (`R-RAIL-28`). Un `grep` che torna zero senza controllo positivo non è un finding: è un
+  comando non verificato.
+- **Gradi di certezza espliciti.** Distingui «misurato», «tracciato a codice non eseguito» e
+  «citazione di documento». La discovery precedente ha sbagliato proprio qui su D2 e lo dichiara.
+- **Discovery report obbligatorio.** Il file esiste già:
+  `docs/discovery/discovery_2026-08-22_layout_per_viewpoint.md`. Per `R-E/E-1` **non riscriverlo**:
+  leggilo per intero, confronta punto per punto, e aggiungi **in coda un addendum** con le sole cose
+  non coperte. L'hard stop non è completo finché l'addendum non è scritto.
+- **Entry di log** in `docs/claude-code-log.md` a fine task, con `Prompt document name`:
+  `2026-08-22 17:05`. Il log è a 44 entry attive contro soglia 40: la rotazione è dovuta ma **non si
+  fa in questo task**, si fa a repo fermo con prompt suo.
+- **Hard stop** al termine dell'addendum. L'analisi avviene in chat, a partire dal report salvato.
+
+---
+
+## Riferimenti
+
+- `docs/decisions.md`, righe 1675-1693 (`R-LAY-1..10`)
+- `docs/ratifiche/claude_2026-08-22_memo_ratifica_layout_per_viewpoint.md` (§8 dichiarato lacunoso)
+- `docs/discovery/discovery_2026-08-22_layout_per_viewpoint.md`, §5 e §B.7 (che cosa resta ignoto),
+  §B.4 e §B.6 (attivazione contro resa), §A.3 (l'asimmetria taglia/posizione)
+- `docs/ratifiche/claude_ratifiche_2026-08-03_state_actions_events.md`, R-2 (intatta; è la riga 28 a
+  essere ritirata da `R-LAY-3`)
+- `docs/prompts/claude_2026-08-18_1656_prompt_2228_fase2.md`, slice 2 (la dipendenza di `R-LAY-7` e
+  il perimetro in cui `R-LAY-10` va sciolta)

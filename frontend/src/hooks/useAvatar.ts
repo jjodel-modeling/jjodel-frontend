@@ -1,0 +1,70 @@
+import { useState, useEffect, useCallback } from 'react';
+import {
+    AvatarConfig,
+    DEFAULT_AVATAR_CONFIG,
+    AVATAR_STORAGE_KEY,
+    AVATAR_COLORS,
+    AVATAR_ICONS,
+} from '../constants/avatarConfig';
+import { AvatarEvents } from '../events/registry';
+
+function loadConfig(): AvatarConfig {
+    try {
+        const stored = localStorage.getItem(AVATAR_STORAGE_KEY);
+        if (stored) {
+            const parsed = JSON.parse(stored);
+            if (
+                parsed.colorIndex >= 0 && parsed.colorIndex < AVATAR_COLORS.length &&
+                parsed.iconIndex >= 0 && parsed.iconIndex < AVATAR_ICONS.length
+            ) {
+                // Strip legacy patternIndex if present.
+                // STYLE row removed: avatar is initials-only. Coerce iconIndex to 0
+                // (the null/initials default) to neutralize any previously-saved icon
+                // for every consumer in one place. Full icon removal deferred to
+                // pre-3.0.0 cleanup.
+                return { colorIndex: parsed.colorIndex, iconIndex: 0 };
+            }
+        }
+    } catch { /* ignore */ }
+
+    // Migrate from old avatar-color format
+    try {
+        const oldStored = localStorage.getItem('jjodel-avatar-color');
+        if (oldStored) {
+            const parsed = JSON.parse(oldStored);
+            const colorIdx = AVATAR_COLORS.findIndex(c => c.name === parsed.name);
+            if (colorIdx >= 0) {
+                const migrated: AvatarConfig = { ...DEFAULT_AVATAR_CONFIG, colorIndex: colorIdx };
+                localStorage.setItem(AVATAR_STORAGE_KEY, JSON.stringify(migrated));
+                localStorage.removeItem('jjodel-avatar-color');
+                return migrated;
+            }
+        }
+    } catch { /* ignore */ }
+
+    return DEFAULT_AVATAR_CONFIG;
+}
+
+export function useAvatar(): [AvatarConfig, (config: AvatarConfig) => void] {
+    const [config, setConfigState] = useState<AvatarConfig>(loadConfig);
+
+    const setConfig = useCallback((newConfig: AvatarConfig) => {
+        setConfigState(newConfig);
+        localStorage.setItem(AVATAR_STORAGE_KEY, JSON.stringify(newConfig));
+        window.dispatchEvent(new CustomEvent(AvatarEvents.CONFIG_CHANGE, { detail: newConfig }));
+    }, []);
+
+    useEffect(() => {
+        const handler = (e: Event) => {
+            setConfigState((e as CustomEvent<AvatarConfig>).detail);
+        };
+        window.addEventListener(AvatarEvents.CONFIG_CHANGE, handler);
+        return () => window.removeEventListener(AvatarEvents.CONFIG_CHANGE, handler);
+    }, []);
+
+    return [config, setConfig];
+}
+
+export function getStoredAvatarConfig(): AvatarConfig {
+    return loadConfig();
+}

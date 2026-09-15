@@ -7,13 +7,13 @@ div.jjodel-control-icon {
     padding-top: 10px!important;
     text-align: center;
     cursor: pointer;
-    background-color: var(--bg-2);
-    border-radius: var(--radius);
+    background-color: var(--color-bg-tertiary);
+    border-radius: var(--radius-sm);
 
 
     &>.bi {
         font-size: 1.2em;
-        color: var(--accent);
+        color: var(--color-accent);
         margin: 0;
     }
 }
@@ -35,7 +35,7 @@ div.jjodel-control {
     background-color: var(--control-background-light);
     padding: 10px 20px;
     color: var(color);
-    border-radius: var(--radius);
+    border-radius: var(--radius-sm);
     z-index: 1000;
     overflow: hidden;    
     vertical-align: middle;
@@ -51,16 +51,16 @@ div.jjodel-control {
         padding-left: 10px;
         padding-top: 10px;
         padding-bottom: 10px;
-        border-right: 1px dotted var(--bg-4);
+        border-right: 1px dotted var(--color-text-tertiary);
 
         & h1 {
-            font-weight: 600;
+            font-weight: var(--font-semibold);
             font-size: 1.1em;
             margin-bottom: 0px;
             white-space: pre;
         }
         & h2 {
-            font-weight: 300;
+            font-weight: var(--font-light);
             font-size: 1em;
             margin-bottom: 0px;
             white-space: pre;
@@ -72,7 +72,7 @@ div.jjodel-control {
         transition: all 0.2s;
     }
     & .control-widget:first-of-type {
-        border-left: 1px dotted var(--bg-4)!important;
+        border-left: 1px dotted var(--color-text-tertiary)!important;
     }
 
     & .control-slider {
@@ -120,8 +120,8 @@ div.jjodel-control .control-slider  {
        transition: all 300ms ease-in-out;
     }
     & ::-webkit-slider-thumb { // knob
-       border: 2px solid var(--bg-2-5);
-       background-color: var(--secondary);
+       border: 2px solid var(--color-text-tertiary);
+       background-color: var(--color-accent);
        transition: all 300ms ease-in-out!important;
     }
     & div.tip {
@@ -131,13 +131,14 @@ div.jjodel-control .control-slider  {
 
  div.jjodel-control .control-slider .track {
     position: relative;
+    pointer-events: none;
     top: 18px;
     left: 15px;
     width: 100%;
     border-radius: 2px;
     height: 4px;
     z-index: 1;
-    background-color: var(--secondary); //  var(--accent);
+    background-color: var(--color-accent); //  var(--color-accent);
  }
 
  div.jjodel-control .control-slider input[type="range"] {
@@ -145,15 +146,15 @@ div.jjodel-control .control-slider  {
     position: relative;
     overflow: visible;
     cursor: pointer;
-    background-color: var(--bg-2-5);
+    background-color: var(--color-text-tertiary);
     padding: 9px 10px 8px 10px;
     height: 31px;
-    border-radius: var(--radius);
+    border-radius: var(--radius-sm);
     transition: all 300ms ease-in-out;
  }
 
  div.jjodel-control .control-slider ::-webkit-slider-runnable-track {
-     background: var(--bg-3-1);
+     background: var(--color-border-hover);
      border-radius: 2px;
      height: 3px;
  }
@@ -167,7 +168,7 @@ div.jjodel-control .control-slider  {
     height: var(--knob);
     width: var(--knob);
     border-radius: 50%;
-    border: 5px solid var(--bg-2-5);
+    border: 5px solid var(--color-text-tertiary);
     background-color: var(--model-color);
     transition: all 300ms ease-in-out;
  }
@@ -182,7 +183,7 @@ div.jjodel-control .control-slider  {
     height: fit-content;
     border-radius: 3px;
     padding: 2px 20px 2px 20px;
-    font-weight: 400;
+    font-weight: var(--font-normal);
     text-align: center;
     bottom: 5px;
     transition: all 300ms;
@@ -192,15 +193,12 @@ div.jjodel-control .control-slider  {
 
     & label {
         padding-top: 1px;
-
-        margin-bottom: 2px;
         margin-left: 10px;
         width: 1.6em;
-        height: 1.6em;
         border-radius: 2px;
         color: white;
-        background-color: var(--accent);
-        font-weight: 800;
+        background-color: var(--color-accent);
+        font-weight: var(--font-extrabold);
         text-align: center;
         vertical-align: middle;
     }
@@ -210,7 +208,7 @@ div.jjodel-control .control-slider  {
 
  div.jjodel-control div.toggle {
    
-    background-color: var(--bg-2-5);
+    background-color: var(--color-text-tertiary);
     border-radius: 4px;
     height: 31px;
 
@@ -265,7 +263,7 @@ div.jjodel-control .control-slider  {
     background-color: var(--control-background-light);;
     padding: 10px;
     color: var(color);
-    border-radius: var(--radius);
+    border-radius: var(--radius-sm);
     z-index: 1000;
     overflow: hidden;
     vertical-align: middle;
@@ -279,16 +277,16 @@ div.jjodel-control .control-slider  {
         padding-left: 10px;
         padding-top: 10px;
         padding-bottom: 10px;
-        border-right: 1px dotted var(--bg-4);
+        border-right: 1px dotted var(--color-text-tertiary);
 
         & h1 {
-            font-weight: 600;
+            font-weight: var(--font-semibold);
             font-size: 1.1em;
             margin-bottom: 0px;
             white-space: pre;
         }
         & h2 {
-            font-weight: 300;
+            font-weight: var(--font-light);
             font-size: 1em;
             margin-bottom: 0px;
             white-space: pre;
@@ -313,7 +311,7 @@ div.jjodel-control .control-slider  {
     & > .zoom-in, .zoom-out, .zoom-reset {
         width: 30px;
         height:30px;
-        background-color: var(--bg-2-5);
+        background-color: var(--color-text-tertiary);
         border-radius: 2px;
         display: flex;
         align-items: center;
@@ -325,7 +323,7 @@ div.jjodel-control .control-slider  {
         margin-bottom: 5px;
     }
     & > .zoom-in:hover, .zoom-out:hover, .zoom-reset:hover {
-        background-color: var(--bg-3-1);
+        background-color: var(--color-border-hover);
     }
     & > .zoom-in:before{
         font-family: bootstrap-icons;
@@ -348,7 +346,7 @@ div.jjodel-control .control-slider  {
 
     right: 10px;
     position: absolute;
-    background-color: var(--bg-2-5);
+    background-color: var(--color-text-tertiary);
     border-radius: 2px;
     padding: 10px;
     overflow: hidden;
@@ -372,13 +370,13 @@ div.jjodel-control .control-slider  {
 
     & hr {
         margin-top: 8px;
-        color: var(--bg-3-1);
+        color: var(--color-border-hover);
         width: 103%
     }
 
     & h1, h2 {
         font-size: 1.1em;
-        font-weight: 600;
+        font-weight: var(--font-semibold);
         margin: 0;
         width: 100%;
     }
@@ -391,7 +389,7 @@ div.jjodel-control .control-slider  {
         font-size: 1.1em;
         margin-top: 24px;
         margin-bottom: 10px;
-        font-weight: 600;
+        font-weight: var(--font-semibold);
 
     }
     
@@ -423,7 +421,7 @@ div.jjodel-control .control-slider  {
             align-items: center; // center;
             justify-content: start;
             border: none;
-            background-color: var(--bg-2-5);
+            background-color: var(--color-text-tertiary);
             border-radius: 2px;
             width: fit-content;
             margin: 0;
@@ -433,7 +431,7 @@ div.jjodel-control .control-slider  {
         &.debug::before {
             font-family: bootstrap-icons;
             content: '\F3FE';
-            color: var(--bg-3-1)!important;
+            color: var(--color-border-hover)!important;
             font-size: 1.6em;
             margin-left: 3px;
         }
@@ -448,14 +446,14 @@ div.jjodel-control .control-slider  {
             padding: 0!important;
             width: 30px;
             height: 30px;
-            background-color: var(--bg-2-5);
+            background-color: var(--color-text-tertiary);
             cursor: pointer;
             margin: 0px;
             
         }
 
         & button:hover {
-            background-color: var(--bg-3);
+            background-color: var(--color-border-primary);
             color: white
         }
 
@@ -470,15 +468,15 @@ div.jjodel-control .control-slider  {
         }
 
         & .restart{
-            color: var(--bg-5); //green;
+            color: var(--color-text-secondary); //green;
         }
 
         & .stop {
-            color: var(--bg-5); //red;
+            color: var(--color-text-secondary); //red;
         }
 
         & .step {
-            color: var(--bg-5); //rgb(81, 180, 213);
+            color: var(--color-text-secondary); //rgb(81, 180, 213);
         }
     }
 
@@ -519,7 +517,7 @@ div.jjodel-control .control-slider  {
         padding: 8px!important;
         
         &:hover {
-            background-color: var(--bg-3-1);
+            background-color: var(--color-border-hover);
         }
     }
 }

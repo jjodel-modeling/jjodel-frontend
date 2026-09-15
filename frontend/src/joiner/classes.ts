@@ -1,4 +1,3 @@
-
 import {Mixin} from "ts-mixer";
 import type {
     DEdge,
@@ -90,27 +89,28 @@ import type {
     WTypedElement,
     WValue
 } from "../model/logicWrapper";
-import {
+import type {
     CClass,
     Constructor, Dependency,
     Dictionary,
     DocString,
-    GObject, type Info,
+    GObject,
     InitialVertexSize,
     InitialVertexSizeFunc,
     InitialVertexSizeObj,
     orArr,
-    Proxyfied,
+    Proxyfied, TLCoord,
     unArr
 } from "./types";
-import {EdgeBendingMode, EdgeGapMode, NodeTypes, PrimitiveType} from "./types";
 import type {
     DViewElement,
     LViewElement,
     WViewElement,
 } from "../view/viewElement/view";
+import {EdgeBendingMode, EdgeGapMode, NodeTypes, PrimitiveType} from "./types";
 import {LogicContext, LogicContext2, type TargetableProxyHandler as TypeTargetableProxyHandler} from "./proxy";
 import {
+    Info,
     Action,
     CreateElementAction,
     Defaults,
@@ -135,8 +135,10 @@ import {
     TRANSACTION,
     U
 } from "./index";
+import {graphComponentRegistry} from "../common/graphComponentRegistry";
 import type {Grammar, ParserOptions, Parser} from "nearley";
 import type nearley from "nearley";
+import type {CtxMenuAllProps} from "../components/forEndUser/ContextMenu";
 import {LayoutData} from "rc-dock";
 import {OclEngine} from "@stekoe/ocl.js";
 import React, {ReactNode} from "react";
@@ -147,6 +149,14 @@ import {PinnableDock} from "../components/dock/MyRcDock";
 import type {VersionFixer as TypeVersionFixer} from "../redux/VersionFixer";
 import type {ProjectsApi as TypeProjectsAPI, UsersApi} from "../api/persistance";
 import type {Collaborative as CollaborativeT} from "../components/collaborative/Collaborative";
+import {names} from "tinycolor2";
+import { toast } from "../components/Toast";
+import { checkM2NameUniqueness, m2KindOf, pendingChildrenOf } from "../model/logicWrapper/nameUniqueness";
+// Aliased: the static below has the same name, and a bare call inside it would
+// read as a recursion to anyone skimming. It is not — a bare identifier in a
+// static body resolves to module scope — but the alias says so without asking.
+import { uniqueModelName as uniqueModelNameImpl } from "../model/nameLookup";
+import { DEFAULT_VIEW_CSS } from "../view/viewElement/defaultViewCss";
 var windoww = window as any;
 
 // qui dichiarazioni di tipi che non sono importabili con "import type", ma che devono essere davvero importate a run-time (eg. per fare un "extend", chiamare un costruttore o usare un metodo statico)
@@ -377,14 +387,14 @@ export abstract class RuntimeAccessibleClass extends AbstractMixedClass {
             // @ts-ignore
             currentlevel = currentlevel.__proto__;
         }
-        console.log('constructor chain:', ret);
+        // console.log('constructor chain:', ret);
         return ret;
     }
     /*initBase(){
         let superclasses = this.getAllPrototypeSuperClasses();
         for (let sc of superclasses) {
             if (!sc.hasOwnProperty('init0')) continue;
-            console.log('initbase calling ', {thiss: this, sc, init0: sc.init0, args:sc.constructorArguments});
+            // console.log('initbase calling ', {thiss: this, sc, init0: sc.init0, args:sc.constructorArguments});
             sc.init0.apply(this, ...(sc.constructorArguments || []));
         }
     }*/
@@ -394,7 +404,7 @@ export abstract class RuntimeAccessibleClass extends AbstractMixedClass {
     /*protected init0(...constructorParameters: any): void {
         let a = this;
         let finalObject = this;
-        console.log('creation of___ ', {thiss: this, finalObject});
+        // console.log('creation of___ ', {thiss: this, finalObject});
         if (finalObject.constructor.name === "DVoidVertex" || finalObject.constructor.name === "DGraphElement") {
             let breakp = true; }
 
@@ -520,19 +530,6 @@ export enum CoordinateMode {
 }
 
 export type EPSize = GraphSize & {currentCoordType: CoordinateMode};
-export enum EdgeHead {
-    composition = "Composition",
-    aggregation = "Aggregation",
-    reference   = "Association",
-    extend      = "Extension",
-    zero = "exactly zero / not present",
-    one = "exactly one, required",
-    many = "zero or many, optional, unbounded",
-    zeroOrOne = "zero or one, optional",
-    zeroOrMany = "zero or many, optional, unbounded",
-    oneOrMany = "one or many, at least one"
-}
-
 
 @RuntimeAccessible('UserHistory')
 export class UserHistory{
@@ -543,6 +540,16 @@ export class UserHistory{
         this.undoable = undoable;
         this.redoable = redoable;
     }
+}
+
+@RuntimeAccessible('TLObject')
+export class TLObject{
+    static cname = 'TLObject';
+    l?: boolean;
+    r?: boolean;
+    b?: boolean;
+    t?: boolean;
+    c?: boolean;
 }
 
 let canFireActions: boolean = true;
@@ -595,15 +602,22 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
     private setPtr(property: string, value: any, checkPointerValidity?: DState) {
         (this.thiss as GObject)[property] = value;
         if (!value) return;
+        // RT5 (fix 2026-07-05): il pointedBy va registrato SOLO per valori che sono davvero
+        // Pointer. Prima, quando checkPointerValidity era undefined, il check era saltato del
+        // tutto: ogni valore primitivo truthy (es. DValue.values = ["42"] da import XMI M1)
+        // generava una SetFieldAction su idlookup.<primitiva>.pointedBy → "Invalid action
+        // path" nel reducer per OGNI attributo importato, con abort del batch headless.
         if (Array.isArray(value)) for (let v of value) {
-            if (!value) continue;
+            if (!v) continue;
             if (typeof v === "object") v = v.id;
-            if (!v || checkPointerValidity && !Pointers.isPointer(v, checkPointerValidity)) continue;
+            if (!v || !Pointers.isPointer(v, checkPointerValidity)) continue;
             this.thiss._persistCallbacks.push(SetFieldAction.create(v, "pointedBy", PointedBy.fromID(this.thiss.id, property as any), '+='));
         }
         else {
             if (typeof value === "object") value = value.id;
-            value && this.thiss._persistCallbacks.push(SetFieldAction.create(value, "pointedBy", PointedBy.fromID(this.thiss.id, property as any), '+='));
+            if (value && Pointers.isPointer(value, checkPointerValidity)) {
+                this.thiss._persistCallbacks.push(SetFieldAction.create(value, "pointedBy", PointedBy.fromID(this.thiss.id, property as any), '+='));
+            }
         }
         // todo: in delete if the element was not persistent, just do nothing.
     }
@@ -644,7 +658,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
             if (!Array.isArray(d)) d = [d];
             // first create "this"
             for (let e of d) {
-                console.log('check pending', {e, p:Constructors.pending[e.id], dict:{...Constructors.pending}});
+                // console.log('check pending', {e, p:Constructors.pending[e.id], dict:{...Constructors.pending}});
                 if (Constructors.pending[e.id]) {
                     let LOG: typeof Log['ee'] = Log.ee;
                     let inCollabNode = (windoww.Collaborative as typeof CollaborativeT).online; // && e.className.toLowerCase().includes('graph');
@@ -652,8 +666,8 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
                     LOG('Element attempted to be created twice with same id', {new:d, old: Constructors.pending[e.id]});
                     return;
                 }
-                let subElements = e._derivedSubElements;
-                let callbacks = e._persistCallbacks;
+                let subElements = e._derivedSubElements || [];
+                let callbacks = e._persistCallbacks || [];
                 delete (e as Partial<DPointerTargetable>)._derivedSubElements;
                 delete (e as Partial<DPointerTargetable>)._persistCallbacks;
                 // then create subelements (object -> values) and fire their actions.
@@ -728,11 +742,11 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         }
         //(thiss as DPointerTargetable)._persistCallbacks.push(()=>{
         // When a feature is added in m2, i loop instanced m1 objects to add that feature as a DValue.
-        console.log('adding feature to existing objects 0 ', {alreadyParsed})
+        // console.log('adding feature to existing objects 0 ', {alreadyParsed})
         let state = store.getState();
         for (let pointer in alreadyParsed) {
             for (let instanceObjPtr of alreadyParsed[pointer].instances) {
-                console.log('adding feature to existing objects 1 ', {alreadyParsed, instanceObjPtr, idl:state.idlookup[instanceObjPtr]})
+                // console.log('adding feature to existing objects 1 ', {alreadyParsed, instanceObjPtr, idl:state.idlookup[instanceObjPtr]})
 
                 // this._derivedSubElements.push(_DValue.new(thiss.name, thiss.id, undefined, instanceObjPtr));
                 thiss._derivedSubElements.push(_DValue.new3({name: undefined, instanceof: thiss.id, father: instanceObjPtr}, undefined, false));
@@ -756,7 +770,10 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         this.setExternalPtr(thiss.father, "attributes", "+=");
         return this; }
 
-    DDataType(): this { return this; }
+    DDataType(): this {
+        const thiss: DDataType = this.thiss as any;
+        this.setExternalPtr(thiss.father, "datatypes", "+=");
+        return this; }
 
     DObject(instanceoff?: DObject["instanceof"]): this {
         let thiss: DObject = this.thiss as any;
@@ -841,11 +858,51 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         thiss.name = (name !== undefined) ? name || '' : thiss.constructor.name.substring(1) + " 1";
         return this; }
 
+    /**
+     * The `type` a caller hands to `DTypedElement`, resolved to the classifier it names.
+     *
+     * Four shapes are accepted, in order of cost: an L-proxy, a D object, an id, a name.
+     * Before this existed the resolution was a bare `Selectors.getByName2(type)` — one
+     * argument, so `classname` stayed `undefined`, so the loop's `classname !== d.className`
+     * skipped every entry: a by-name lookup that could only ever return null. Only the two
+     * object shapes survived it, because `getByName2` returns an object untouched, and every
+     * id and every name fell through to the seed below — as EString for a DAttribute, as
+     * THE FATHER for a DReference. Silent, and asymmetric.
+     */
+    private static resolveClassifier(type: any): DClassifier | null {
+        if (!type) return null;
+        // A proxy reports the D-layer className (CLAUDE.md §3.13), so unwrapping to `__raw`
+        // is about identity, not about the switch: both shapes answer 'DClass' either way.
+        if (typeof type === 'object') return ((type as GObject).__raw || type) as DClassifier;
+        if (typeof type !== 'string') return null;
+        const s: DState = store.getState();
+        // An id — the shape a caller most often has at hand, and the one that used to be lost.
+        const byId = s.idlookup[type];
+        if (byId && typeof byId === 'object') return byId as DClassifier;
+        // A name, last resort: `getByName2` filters on className and matches nothing without
+        // it, so it has to be asked once per kind of classifier a type can be.
+        for (const cname of ['DClass', 'DEnumerator', 'DDataType']) {
+            const found = Selectors.getByName2(type, cname, false, s);
+            if (found) return found as DClassifier;
+        }
+        return null;
+    }
+
     DTypedElement(type?: DTypedElement["type"]): this {
         const thiss: DTypedElement = this.thiss as any;
         thiss.allowCrossReference = false;
 
-        let dtype = Selectors.getByName2(type) as DClassifier | null;
+        // Short-circuit: if `type` is already a primitive Pointer ID (e.g. 'Pointer_EINT'),
+        // trust it and assign directly. `getByName2` does by-name lookup and would fail
+        // for these Pointer IDs, falling through to the hardcoded ESTRING fallback below
+        // — silently downgrading every non-EString input.
+        if (typeof type === 'string' && /^Pointer_E[A-Z]+$/.test(type)) {
+            this.setPtr("type", type);
+            return this;
+        }
+
+        const requested = type; // what the caller asked for, so the fallback below can say so
+        let dtype = Constructors.resolveClassifier(type);
         switch (dtype?.className){
             default: type = undefined; break;
             case 'DClass':
@@ -859,6 +916,10 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
                     default: type = dtype.id; break;
                 }
                 break;
+            // A DDataType is as legal an attribute type as an enum (EMF's EDataType) and
+            // shares its rule: fine for the three that carry a value, refused for a
+            // reference, which must point at a class.
+            case 'DDataType':
             case 'DEnumerator':
                 switch (thiss.className) {
                     case 'DAttribute':
@@ -873,10 +934,39 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         }
 
         if (!type) {
+            // The fallback is a seed, not a resolution: say so whenever the caller asked
+            // for something and got something else. `type === undefined` is the seed being
+            // used as intended — the Ecore parser constructs with no type on purpose and
+            // field-writes `.type` right after — and stays quiet.
+            if (requested !== undefined) Log.ww('DTypedElement: cannot resolve the requested type, falling back',
+                {requested, resolved: dtype, on: thiss.className, name: (thiss as GObject).name});
             switch (thiss.className) {
                 default:
                 case 'DReference':
-                    type = this.fatherPtr as Pointer<DClass> || undefined;
+                    // Two different situations share this branch, and they must not share
+                    // the value. `requested === undefined` is the seed used as intended —
+                    // the Ecore parser constructs with no type and field-writes `.type`
+                    // right after — and keeps the father it has always kept.
+                    // A DECLARED REJECTION (the caller asked for an enum or a datatype, and
+                    // the switch above refused it because a reference must point at a class)
+                    // used to keep the father too, which made the reference point at its own
+                    // container: a target nobody asked for, wrong in the export as much as
+                    // on the canvas. It gets the weakest target instead — the m3 `EObject`,
+                    // which is what EMF itself writes for an unspecified reference target.
+                    // Measured, not assumed (docs/discovery/discovery_2026-08-30_dref_seed_rifiutata.md):
+                    // the absent values the D-graph does tolerate (undefined/null/'') are
+                    // undone one layer up by `LTypedElement.get_type`, which re-substitutes
+                    // the father for every falsy `data.type` — so every consumer that reads
+                    // through a proxy (Ecore export, JSON, canvas, validation) would go on
+                    // seeing the container. `Pointer_EOBJECT` is a real classifier, so it
+                    // survives `get_type` untouched, and its Ecore round-trip is stable.
+                    // Scoped to DReference on purpose: this branch is also the `default`
+                    // for any other className, and widening it there is not what was
+                    // measured. Same set the `Log.ww` above declares — a refused type and
+                    // an unresolvable one are both "the caller asked, and did not get it".
+                    type = (requested !== undefined && thiss.className === 'DReference')
+                        ? Defaults.Pointer_EOBJECT
+                        : (this.fatherPtr as Pointer<DClass> || undefined);
                     break;
                 case 'DOperation':
                     type = this.fatherPtr as Pointer<DClass>;
@@ -976,7 +1066,11 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
     DEdge(): this {
         let thiss: DVoidEdge = this.thiss as any;
         return this; }
-    DVertex(): this { return this; }
+    DVertex(): this {
+        let thiss: DVoidVertex & DVertex = this.thiss as any;
+        thiss.snap = undefined;
+        return this;
+    }
     DVoidEdge(start: DGraphElement["id"] | DGraphElement | LGraphElement | DModelElement["id"] | DModelElement | LModelElement,
               end: DGraphElement["id"] | DGraphElement | LGraphElement | DModelElement["id"] | DModelElement | LModelElement,
               longestLabel?: DEdge["longestLabel"], labels?: DEdge["labels"]): this {
@@ -1068,6 +1162,8 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         let VersionFixer: typeof TypeVersionFixer = windoww.VersionFixer;
 
         thiss.version = VersionFixer.get_highestversion();
+        thiss.snap = new GraphPoint(1, 1);
+        thiss.grid = {x: 0, y: 0, type: "cartesian", "center": "cc", visible: true};
         thiss.name = name;
         thiss.appliableToClasses = appliableToClasses;
         thiss.appliableTo = 'Any';
@@ -1096,53 +1192,10 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
             'color-': U.hexToPalette(), //['#ffffff', '#ff0000', '#00ff00', '#0000ff','#aaaaaa', '#ffaaaa', '#aaffaa', '#aaaaff'],
             'background-': U.hexToPalette() // ['#000000', '#33333', '#777777']};
         };
-        thiss.css = "\n/* placeholder justification, add .center, .left, .start, .right, or .end in the <Input /> container */\n\n";
-
-        thiss.css += "input:placeholder-shown {\n" +
-        "  width: 120px !important;\n" +
-        "  font-style: italic !important;\n" +
-        "  text-align: right;\n" +
-        "  left: -120px !important;\n" +
-        "}\n\n";
-
-        thiss.css += ".center {\n" +
-        "  & input:placeholder-shown {\n" +
-        "    width: 120px !important;\n" +
-        "    font-style: italic !important;\n" +
-        "    text-align: center;\n" +
-        "    left: -60px !important;\n" +
-        "  }\n" +
-        "}\n\n";
-
-        thiss.css += ".left, .start {\n" +
-        "  & input:placeholder-shown {\n" +
-        "    width: 120px !important;\n" +
-        "    font-style: italic !important;\n" +
-        "    text-align: left;\n" +
-        "    left: 0 !important;\n" +
-        "  }\n" +
-        "}\n\n";
-
-        thiss.css += ".right, .end {\n" +
-        "  & input:placeholder-shown {\n" +
-        "    width: 120px !important;\n" +
-        "    font-style: italic !important;\n" +
-        "    text-align: right;\n" +
-        "    left: -120px !important;\n" +
-        "  }\n" +
-        "}\n\n";
-
-        thiss.css += ".input-container {\n" +
-        "   & select {\n" +
-        "        border: none;\n" +
-        "        text-align: right;\n" +  
-        "     }\n" +
-        "}\n\n";
-
-        thiss.css += "&,[data-nodetype], [data-nodetype]>.visible{ /* corresponds to \"overflow: visible\" */   \n" +
-        "   overflow: visible;\n" +
-        "}\n\n";
-
+        // Moved verbatim into ../view/viewElement/defaultViewCss.ts: the audit of
+        // globalCssAudit.ts needs the same text to tell an authored css from an
+        // untouched one, and two copies would drift silently.
+        thiss.css = DEFAULT_VIEW_CSS;
 
         thiss.compiled_css = '';
         thiss.css_MUST_RECOMPILE = true;
@@ -1176,10 +1229,25 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
 
         thiss.edgeHeadSize = new GraphPoint(20, 20);
         thiss.edgeTailSize = new GraphPoint(20, 20);
+
+        // L2 — edge overlay schema defaults. See DViewElement field comments and design doc
+        // `design_2026-05-03_L2_edge_overlay.md` for full context.
+        thiss.isEdge = false;
+        thiss.edgeSource = '';
+        thiss.edgeTarget = '';
+        thiss.edgeRouting = 'manhattan-rounded';
+
+        // L2 — edge customization V1. Defaults match pre-V1 visual baseline (slate-700 stroke at 1.5px solid, no label).
+        // Pre-V1 instances with `undefined` values are normalized at runtime by EdgeOverlay's selector (narrowing).
+        thiss.edgeLabel = '';
+        thiss.edgeStrokeColor = 'default';
+        thiss.edgeStrokeWidth = 1.5;
+        thiss.edgeStrokeStyle = 'solid';
+
         if (thiss.className !== 'DViewElement') return this;
-        const user: LUser = LUser.fromPointer(DUser.current);
+        const user: LUser = LUser.getUser();;
         // const project = user?.project; if(!project) return this;
-        if (!vp) vp = user?.project?.activeViewpoint.id || Defaults.viewpoints[0];
+        if (!vp) vp = LProject.getProject()?.activeViewpoint?.id || Defaults.viewpoints[0];
         if (vp !== 'skip') {
             // let dvp = DPointerTargetable.fromPointer(vp);
             // let subviews = {...dvp.subViews}; subviews[thiss.id] = 1.5;
@@ -1206,8 +1274,8 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
 
     DViewPoint(): this {
         const thiss: DViewPoint = (this.thiss) as any;
-        const user: LUser = LUser.fromPointer(DUser.current);
-        const project = user?.project;
+        const user: LUser = LUser.getUser();
+        const project = LProject.getProject();
         if (!project) return this;
         this.setExternalPtr(project.id, 'viewpoints', '+=');
         // thiss.cssIsGlobal = true;
@@ -1223,10 +1291,18 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         _this.type = type;
         _this.name = name;
         _this.state = state || '';
-        _this.version = state ? -1 : VersionFixer.get_highestversion();
+        _this.tagNames = [];
+        _this.expandedTreeNodes = [];
+        _this.layoutPropertyPanelWidth = 400;
+        _this.layoutTreeWidth = 300;
+        _this.layoutPropertyPanelOpen = true;
+        _this.layoutTreeCollapsed = false;
+        _this.layoutFocusCanvas = false;
+        // Content version: new projects start at 1.0, loaded projects use -1 (to be extracted from state)
+        _this.version = state ? -1 : 1.0;
         if(id) _this.id = id;
         _this.favorite = {};
-        let user: DUser = (DPointerTargetable.from(DUser.current) as DUser)
+        let user: DUser = DUser.getUser();
         /*if (!user as any) {
             let str = localStorage.getItem('user');
             let state = store.getState();
@@ -1256,11 +1332,14 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         thiss.graph = thiss.id; // no setPtr because i want to avoid circular pointedby reference
         thiss.zoom = new GraphPoint(1, 1);
         thiss.offset = new GraphSize(0, 0);  // GraphSize.apply(this, [0, 0, 0 ,0]);
+        thiss.graphStyle = '';  // empty = classic/legacy, 'v2-flow' = Editor v2
         thiss._subMaps = {zoom: true, graphSize: true}
+        thiss.grid = undefined; // {x: 0, y: 0, type: 'cartesian', center: 'cc', visible: true};
 
-        const user: LUser = LUser.fromPointer(DUser.current);
+        const user: LUser = LUser.getUser();
+        const project = LProject.getProject();
         if (thiss.className === 'DGraph') { // to exclude GraphVertex
-            user.project && this.setExternalPtr(user.project.id, 'graphs', "+=");
+            project && this.setExternalPtr(project.id, 'graphs', "+=");
             thiss.x = 0;
             thiss.y = 0;
             thiss.w = 0;
@@ -1318,7 +1397,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
                 // it's already wrapped in a callback
                 // but needs a second one because after node is created, id is auto-appended to this collection
                 // and i need to rewrite that append by inserting my own customized index position
-                console.log("setting subelements 0", {updateEPindex});
+                // console.log("setting subelements 0", {updateEPindex});
                 setTimeout(updateEPindex, 0);
                 // NB: do not use this.callbacks.push because the body of this func is executed after Constructors.end() so end() can never find and execute it.
             }
@@ -1338,6 +1417,30 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     static pendingCreation: Dictionary<Pointer, DPointerTargetable> = {};
+    public static childKeys = [
+        'annotations',
+        '__childrenToSort',
+        'packages',
+        'subpackages',
+        'classes',
+        'enumerators',
+        'attributes',
+        'references',
+        'operations',
+        'parameters',
+        'literals',
+        'objects', // lmodel1 -> lobj
+        'features', // lobj -> lvalue
+        'values' // lvalue -> lobj or primitive
+    ];
+
+    public static pointerKeys = [
+        'exceptions',
+        'type',
+        'father',
+        'instanceof'
+    ]
+
     clonedCounter?: number;
     _storePath?: string[];
     _subMaps?: Dictionary<string, boolean>;
@@ -1364,7 +1467,18 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
                     let meta = LPointerTargetable.from(metaptr as Pointer);
                     startingPrefix = startingPrefix(meta as L);
                 }
-                const childrenNames: (string)[] = lfather.childNames; // lfather.children.map(c => (c as LNamedElement)?.name);
+                // `childNames` is built from `father.children`, a COLLECTION written by the
+                // persist callback's SetFieldAction — so it cannot report a sibling created
+                // earlier in THIS tick, and four unnamed creates in one tick used to take the
+                // same name four times. `pendingChildrenOf` is the same-tick half, read from
+                // `DPointerTargetable.pendingCreation` where `{className, name, father}` are
+                // already set. Named elements only: a pending DVertex/DValue is not a name
+                // this namespace holds. See nameUniqueness.ts, section «The current tick».
+                const pendingNames: string[] = pendingChildrenOf(lfather.id)
+                    .filter(e => !!(e as GObject).name &&
+                        (m2KindOf((e as GObject).className) !== null || (e as GObject).className === 'DObject'))
+                    .map(e => (e as GObject).name as string);
+                const childrenNames: (string)[] = lfather.childNames.concat(pendingNames); // lfather.children.map(c => (c as LNamedElement)?.name);
                 return U.increaseEndingNumber(startingPrefix + '0', false, false, (newname) => childrenNames.indexOf(newname) >= 0);
             }
             else if (typeof father === 'function') {
@@ -1373,6 +1487,31 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
             }
         }
         return startingPrefix + "1"; }
+
+    /**
+     * `requested` if no other model holds it, otherwise the first free `requested (n)`.
+     *
+     * The scheme is NOT new: it is the one `generateUniqueModelName` already applies to the
+     * target model of a transformation (`components/project/ProjectEditor.tsx`, «Generate
+     * unique model name by appending (N) suffix if needed»). `defaultname` above uses the
+     * other house style, a bare trailing counter (`model_0`, `model_1`), and keeps it: that
+     * one names an element nobody asked to name, this one preserves a name the caller chose.
+     *
+     * Exact-case, like `checkM2NameUniqueness` (`model/logicWrapper/nameUniqueness.ts`):
+     * `A` and `a` are different names and both are legal.
+     *
+     * Why suffix instead of refuse, where `LModel.set_name` refuses: a rename has a caller
+     * that can be told no, and it is told (a toast, and the write does not happen). A create
+     * returns a `DModel` and has no channel for a refusal short of throwing, and twelve call
+     * sites do not check one. Suffixing keeps every caller working and makes the name unique,
+     * which is what a qualified `Metamodel::Element` needs to mean one thing.
+     */
+    static uniqueModelName(requested: string, taken: string[]): string {
+        // Moved to `model/nameLookup.ts` in A4 so the bench can execute it; this stays as
+        // the call site the codebase already knows, with the same signature and the same
+        // answers. See that module for the scheme and why it is not `defaultname`'s.
+        return uniqueModelNameImpl(requested, taken);
+    }
 
     public static new(...a:any): DPointerTargetable { //father?: Pointer, persist: boolean = false, fatherType?: Constructor, ...a:any): DPointerTargetable {
         Log.exx("cannot instantiate abstract class DPointerTargetable");
@@ -1445,11 +1584,12 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
         INFERRED = {ret: RET, RETPTR:RETPTR, upp: UPP, low:LOW, ddd: DDD, dddARR: DDDARR, lowARR: LOWARR, uppARR: UPPARR, LX:LX, DX:DX}>(ptr: PTR | LX, s?: DState)
         : RET {
         if (!ptr) return ptr as any;
+        if (!s) s = store.getState();
         if (Array.isArray(ptr)) return DPointerTargetable.fromArr(ptr, true, s) as any;
         if ((ptr as LX).__isProxy) return (ptr as LX).__raw as any;
         if (typeof ptr === "string") {
             if (s && s.idlookup[ptr as string]) return s.idlookup[ptr as string] as any;
-            return (DPointerTargetable.pendingCreation[ptr as string] || store.getState().idlookup[ptr as string]) as any;
+            return (DPointerTargetable.pendingCreation[ptr as string] || s.idlookup[ptr as string]) as any;
         }
         else if ((ptr as any as GObject<DX>).className) return ptr as any;
         else return undefined as any;
@@ -1506,12 +1646,17 @@ export class Pointers{
         if (!pointerval) return null;
         return pointerval.id as P; }
 
-    static fromArr<D extends DPointerTargetable, L extends LPointerTargetable, P extends Pointer> (val: (P | D | L | null | undefined)[] |  (P | D | L | null | undefined)): P[] {
+    static fromArr<D extends DPointerTargetable, L extends LPointerTargetable, P extends Pointer> (
+        val: (P | D | L | null | undefined)[] |  (P | D | L | null | undefined),
+        unique: boolean = false): /*P[] |*/ Pointer<any, 1, 1, any>[] {
         if (!val) val = [];
         if (!Array.isArray(val)) { val = [val]; }
-        if (!val.length) { return []; }
-        if ((val[0] as any).id) { val = (val as any as (LModelElement | DModelElement)[]).filter(v => !!v).map( (v) => v.id) as any[]; }
-        return val.filter( v => !!v) as any[]; }
+        if (!val.length) { return val as any; }
+        val = val.map((lItem: any) => { return Pointers.from(lItem) }).filter(e=>!!e);
+        val = val.filter(v => !!v) as any[];
+        if (unique) val = [...new Set(val)];
+        return val as any;
+    }
 
     fromm<D extends DPointerTargetable, L extends LPointerTargetable, P extends Pointer> (val: (P | D | L)): P | null { return !val ? null : (val as any).id; }
 
@@ -1894,11 +2039,12 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
     public state!: any;
     public r!:any;
 
-    private test(){
-        let a: LPointerTargetable = null as any as LEnumLiteral;
-        let c: LPointerTargetable = null as any as LParameter;
-        let b: LPointerTargetable = null as any as LVertex;
+
+    static isL(val?: unknown): val is LPointerTargetable {
+        if (!val) return false;
+        return !!(val as any).__isProxy;
     }
+
     // public r!: this;
 
     private __info_of__id = {type:"Pointer&lt;this&gt;",
@@ -1908,7 +2054,7 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
     private __info_of____readonly = {type:"boolean", txt:"prevent any change to the current object."};
     project!: LProject|null;
     protected get_project(c: GObject<Context>): LProject | null {
-        return (LPointerTargetable.fromPointer(DUser.current) as LUser)?.project || null;
+        return LProject.getProject() || null;
     }
 
 
@@ -1928,8 +2074,23 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
             return curr.getByFullPath(arr);
         }
     }
+    __info_of__readonly: Info = {type: ShortAttribETypes.EBoolean, txt: "Set this element to become readOnly.\n" +
+            "All attempts for changes will result in a transactional abortion, which will undo other concurrent (or closely timed) changes on other elements as well.\n" +
+            "Indirect changes, such as editing or adding a subElement, are still allowed."}
+    protected get_readOnly(c: Context): boolean { return c.data.__readonly; }
+    protected get_readonly(c: Context): boolean { return this.get_readOnly(c); }
+    protected get___readOnly(c: Context): boolean { return this.get_readOnly(c); }
+    protected get___readonly(c: Context): boolean { return this.get_readOnly(c); }
+    protected get_isReadOnly(c: Context): boolean { return this.get_readOnly(c); }
+    protected get_isReadonly(c: Context): boolean { return this.get_readOnly(c); }
 
-    protected set___readonly(val: any, c: Context): boolean {
+    protected set_readonly(v: boolean, c: Context): boolean { return this.set_readOnly(v, c); }
+    protected set___readOnly(v: boolean, c: Context): boolean { return this.set_readOnly(v, c); }
+    protected set___readonly(v: boolean, c: Context): boolean { return this.set_readOnly(v, c); }
+    protected set_isReadOnly(v: boolean, c: Context): boolean { return this.set_readOnly(v, c); }
+    protected set_isReadonly(v: boolean, c: Context): boolean { return this.set_readOnly(v, c); }
+
+    protected set_readOnly(val: any, c: Context): boolean {
         val = !!val;
         let thiss: GObject = this;
         let childrens = (thiss.get_children && thiss.get_children(c)) || [];
@@ -2045,14 +2206,50 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
 
     protected set_name(val: this["name"], c: Context): boolean {
         let name = val;
+        if (c.data.name === name) return true;
         const father: LPointerTargetable = (c.proxyObject as LModelElement).father;
         if (father) {
-            const check = (father as LModelElement).children?.filter((child) => {
-                return (D.fromPointer(child.id) as DNamedElement).name === name;
-            });
-            if (check.length > 0) {
-                U.alert('e', 'Cannot rename the selected element since this name is already taken.');
-                return true;
+            // ── Uniqueness (S1-M2): the M2 rename is a CONSUMER of the one verdict ──
+            //
+            // This method is the single site every M2 rename crosses (`LClass` and
+            // `LAttribute` call `super` first; `LModel` and `LObject` have rules of
+            // their own and never reach here). Until S1-M2 it carried its own rule —
+            // `father.children`, which is the sibling list and therefore neither the
+            // metamodel-wide pool a classifier needs (R-M2U-2) nor the inherited
+            // features a feature needs (R-M2U-4).
+            //
+            // `m2KindOf` returns null for everything that is not an M2 named element
+            // (DVertex, DGraph, DValue, …). Those keep EXACTLY the check they had:
+            // this method is the base of every LPointerTargetable, and silently
+            // moving the scope of a committed check for them was not decided.
+            const m2kind = m2KindOf(c.data.className);
+            if (m2kind) {
+                const verdict = checkM2NameUniqueness({
+                    father: father as LModelElement,
+                    kind: m2kind,
+                    name,
+                    excludeId: c.data.id,
+                });
+                if (!verdict.ok) {
+                    toast.error(verdict.reason as string, {
+                        title: 'Validation failed',
+                        action: { label: 'View errors →', onClick: () => { /* TODO: wire to errors panel when available */ } },
+                    });
+                    return true;
+                }
+                // Case-sensitive by decision: the near-homonym is legal, and declared.
+                if (verdict.warning) toast.warning(verdict.warning, { title: 'Near-duplicate name' });
+            } else {
+                const check = (father as LModelElement).children?.filter((child) => {
+                    return child.id !== c.data.id && (D.fromPointer(child.id) as DNamedElement).name === name;
+                });
+                if (check.length > 0) {
+                    toast.error(`Element name "${name}" is already taken in this scope`, {
+                        title: 'Validation failed',
+                        action: { label: 'View errors →', onClick: () => { /* TODO: wire to errors panel when available */ } },
+                    });
+                    return true;
+                }
             }
         }
 
@@ -2124,7 +2321,7 @@ as such <code>this.state = {}</code> does nothing. to remove a single entry use<
 To remove a single entry, use <code>this.state = {varname: undefined}</code>.<br/>
 To empty the whole state, use <code>this.clearState()</code>.<br/>
 WARNING! do not set proxies in the state, set pointers instead.<br/>
-<a href='https://github.com/MDEGroup/jjodel/wiki/L%E2%80%90Object-state'>Learn more on the wiki</a></div>`};
+<a href='https://docs.jjodel.io/reference/jjom/'>Learn more in the docs</a></div>`};
 
     // get__state(c: Context): any { return this.wrongAccessMessage('_state',', use obj.state instead.'); }
     // set__state(val: this["_state"], c: Context): boolean { return this.cannotSet('_state', 'use obj.state instead.'); }
@@ -2274,7 +2471,7 @@ WARNING! do not set proxies in the state, set pointers instead.<br/>
                 if (v > max) v = max;
                 else if (v < min) v = min;
             }
-            console.log("default Setter["+k.toString()+"] = " + v , {type, v, v0, oldv:(c.data as any)[k], isPointer, c});
+            // console.log("default Setter["+k.toString()+"] = " + v , {type, v, v0, oldv:(c.data as any)[k], isPointer, c});
 
             let oldv = c.data[k as keyof DPointerTargetable];
             let newv = v;
@@ -2427,12 +2624,41 @@ WARNING! do not set proxies in the state, set pointers instead.<br/>
     protected get_delete(c: Context): () => void {
         return ()=>TRANSACTION('delete '+this.get_name(c), Dummy.get_delete(this, c));
     }
+
+    static getCollection(data: string | Pointer<any> | LPointerTargetable | DPointerTargetable, parent: string | Pointer<any> | LPointerTargetable | DPointerTargetable): string {
+        let cname: string, parentCname: string;
+        let d: GObject<DPointerTargetable> = null as any;
+        if (typeof data === 'string') cname = (Pointers.isPointer(data) ? (d = D.fromPointer(data))?.className : '') || '';
+        else cname = (typeof data === 'object' && (d = data as any)?.className) || '';
+        if (typeof parent === 'string') parentCname = (Pointers.isPointer(parent) ? (d = D.fromPointer(parent))?.className : '') || '';
+        else parentCname = (typeof parent === 'object' && (parent as GObject)?.className) || '';
+
+        switch (cname) {
+            case '': return '';
+            default: Log.ee('unexpected element in getCollection(): ' + cname, {data, parent, cname, parentCname}); return '';
+            case 'DAttribute': return 'attributes';
+            case 'DReference': return 'references';
+            case 'DOperation': return 'operations';
+            case 'DParameter': return 'parameters';
+            case 'DValue': return 'features';
+            case 'DEnumLiteral': return 'literals';
+            case 'DEnumerator': return 'enumerators';
+            case 'DClass': return 'classes';
+            case 'DObject': return parentCname === 'DModel' ? 'objects' : (parentCname === 'DValue' ? 'values' : '');
+            case 'DModel':
+                let isMM = (d as any as DModel)?.isMetamodel;
+                return isMM === true ? 'metamodels' : (isMM === false ? 'models' : '');
+            case 'DPackage': return parentCname === 'DModel' ? 'packages' : (parentCname === 'DPackage' ? 'subPackages' : '');
+            case 'DAnnotation': return 'annotations';
+            case 'DProject': return 'projects';
+        }
+    }
 }
 RuntimeAccessibleClass.set_extend(RuntimeAccessibleClass, LPointerTargetable);
 
 @RuntimeAccessible('D') export class D extends DPointerTargetable{}
+
 @RuntimeAccessible('L') export class L extends LPointerTargetable{
-    get_getByFullPath(c: any): this['getByFullPath'] { return this.wrongAccessMessage('L.getByFullPath'); }
 }
 @RuntimeAccessible('P') export class P extends Pointers{}
 
@@ -2574,7 +2800,7 @@ export class DUser extends DPointerTargetable {
             return true;
         }
 
-        let d: DUser = D.from(DUser.current);
+        let d: DUser = DUser.getUser();
         if (d && isValid(d)) return d;
         let state = store.getState();
         let timer: any = -1;
@@ -2610,6 +2836,9 @@ export class DUser extends DPointerTargetable {
         return null;
     }
 
+    static getUser(state?: DState): DUser {
+        return DPointerTargetable.from(DUser.current, state) || Storage.read('user');
+    }
     static load(): DUser | null {
         return DUser.offline(true, true);
     }
@@ -2642,7 +2871,12 @@ export class LUser<Context extends LogicContext<DUser> = any, D extends DUser = 
     autosaveLayout!: boolean;
     activeLayout!: string;
 
-    public static getUser(): LUser{ return LUser.wrap(DUser.current) as LUser; }
+    public static getUser(): LUser{ return LUser.wrap(DUser.getUser()) as LUser; }
+    public static replace(user: DUser) {
+        DUser.current = user.id;
+        let state = store.getState();
+        if (state) state.idlookup[user.id] = user;
+    }
 
     get_activeLayout(c: Context): this['activeLayout'] { return c.data.activeLayout; }
     set_activeLayout(val: this['activeLayout'], c: Context): true {
@@ -2689,6 +2923,7 @@ export class LUser<Context extends LogicContext<DUser> = any, D extends DUser = 
         return context.data.name;
     }
     protected set_name(val: this['name'], c: Context): boolean {
+        if (c.data.name === val) return true;
         TRANSACTION(this.get_name(c)+'.name', ()=>{
             SetFieldAction.new(c.data.id, 'name', val, '', false);
         }, undefined, val)
@@ -2755,13 +2990,14 @@ export class LUser<Context extends LogicContext<DUser> = any, D extends DUser = 
         return true;
     }
 
+    // Must not log on every call: the proxy's ownKeys trap exposes `token`, so
+    // any Object.keys / JSON.stringify walk of an LUser proxy invokes this
+    // getter per enumerated key, and Log.eDev's U.getCaller + new Error +
+    // LoggerComponent.setState path freezes the main thread in tight loops.
     protected get_token(context: Context): this['token'] {
         return context.data.token;
     }
     protected set_token(val: this['token'], c: Context): boolean {
-        TRANSACTION(this.get_name(c)+'.token', ()=>{
-            SetFieldAction.new(c.data.id, 'token', val, '', false);
-        }, c.data.token, val)
         return true;
     }
 
@@ -2776,18 +3012,12 @@ export class LUser<Context extends LogicContext<DUser> = any, D extends DUser = 
         return true;
     }
 
-    protected get_project(context: Context): this['project'] {
-        const project = context.data.project;
-        return project && LProject.fromPointer(project) || null;
+    protected get_project(c: Context): this['project'] {
+        return LProject.fromPointer(windoww.U.getProjectID_URL()) || null;
+        /*const project = context.data.project;
+        return project && LProject.fromPointer(project) || null;*/
     }
     protected set_project(val: Pack<Exclude<this['project'], null>>|null, c: Context): boolean {
-        let ptr: Pointer<DProject> = Pointers.from(val as any);
-        if (!ptr) ptr = '';
-        if (ptr === c.data.project) return true;
-
-        TRANSACTION(this.get_name(c)+'.project', ()=>{
-            SetFieldAction.new(c.data.id, 'project', ptr, '', true);
-        })
         return true;
     }
 }
@@ -2799,10 +3029,11 @@ export type WUser = getWParams<LUser, DUser>;
 export class ProjectPointers{
     id!: Pointer<DProject, 1, 1, LProject>;
     metamodels: Pointer<DModel, 0, 'N'> = [];
+    father!: Pointer<DUser>;
     models: Pointer<DModel, 0, 'N'> = [];
     graphs: Pointer<DGraph, 0, 'N'> = [];
     viewpoints: Pointer<DViewPoint, 0, 'N'> = [];
-    activeViewpoint: Pointer<DViewPoint, 1, 1> = Defaults.viewpoints[0];
+    activeViewpoint: Pointer<DViewPoint, 0, 1> = null;
     favorite!: Dictionary<Pointer<DUser>, true | undefined>;
     author!: Pointer<DUser>;
 }
@@ -2812,8 +3043,12 @@ export class DProject extends DPointerTargetable {
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
 
+    static getProject(state?: DState): DProject{
+        return DProject.from(U.getProjectID_URL() as string, state) as DProject;
+    }
     id!: Pointer<DProject, 1, 1, LProject>;
     _Id?: string // db GUID
+    father!: Pointer<DUser>;
     type: 'public'|'private'|'collaborative' = 'public';
     name!: string;
     author: Pointer<DUser> = DUser.current;
@@ -2823,7 +3058,7 @@ export class DProject extends DPointerTargetable {
     models: Pointer<DModel, 0, 'N'> = [];
     graphs: Pointer<DGraph, 0, 'N'> = [];
     viewpoints: Pointer<DViewPoint, 0, 'N'> = [];
-    activeViewpoint: Pointer<DViewPoint, 1, 1> = Defaults.viewpoints[0];
+    activeViewpoint: Pointer<DViewPoint, 0, 1> = null;
     /* come collaborators */favorite!: Dictionary<Pointer<DUser>, true | undefined>;
 
 
@@ -2839,12 +3074,32 @@ export class DProject extends DPointerTargetable {
     activeLayout?: string;
     state!: string;
     version!: number;
+    tagNames!: string[];
+    transformations: any[] = [];
+    expandedTreeNodes: string[] = [];
+
+    /** Width in px of the property panel column. Range [320, 640]. */
+    layoutPropertyPanelWidth: number = 400;
+
+    /** Width in px of the tree view column. Range [240, 500]. */
+    layoutTreeWidth: number = 300;
+
+    /** True if the property panel is allowed to render when a node is selected.
+     *  False after the user explicitly closes the panel (X button). Resets to
+     *  true automatically on the next selection event. */
+    layoutPropertyPanelOpen: boolean = true;
+
+    /** True if the tree view is collapsed to a thin handle (~22px). */
+    layoutTreeCollapsed: boolean = false;
+
+    /** True if focus-canvas mode is active (tree collapsed AND property closed). */
+    layoutFocusCanvas: boolean = false;
 
     public static new(type: DProject['type'], name?: string, state?: DProject['state'],
                       m2?: DProject['metamodels'], m1?: DProject['models'], id?: DProject['id'], otherProjects?:LProject[]): DProject {
 
         // fix name
-        if (!otherProjects) otherProjects = (LUser.fromPointer(DUser.current) as LUser).projects;
+        if (!otherProjects) otherProjects = LUser.getUser().projects;
         if (!name) {
             // autofix default name
             let regexp = /Project (\d+)/;
@@ -2861,19 +3116,16 @@ export class DProject extends DPointerTargetable {
         return new Constructors(new DProject('dwc'), undefined, true, undefined)
             .DPointerTargetable().DProject(type, name, state || '', m2 || [], m1 || [], id).end(); }
 
-    static new2(pointers: Partial<ProjectPointers>, callback: undefined | ((d: DProject, c: Constructors) => void), otherProjects?:LProject[], persist: boolean = true): DProject {
-        let name = '';
+    static new2(pointers: Partial<ProjectPointers> & {name?: string}, callback: undefined | ((d: DProject, c: Constructors) => void),
+                otherProjects?:LProject[], persist: boolean = true): DProject {
+        let name: string = (pointers as any).name || 'Project 1';
+        delete (pointers as any).name;
         // fix name
-        if (!otherProjects) otherProjects = (LUser.fromPointer(DUser.current) as LUser).projects;
-        if (!name) {
-            // autofix default name
-            let regexp = /Project (\d+)/;
-            const matches = otherProjects.map(p=>(+(regexp.exec(p.name)?.[1] as any) || 0));
-            let maxnum = Math.max(...matches, 0);
-            name = 'Project ' + (1 + maxnum);
-        }
+        if (!otherProjects) otherProjects = (pointers.father ? L.from(pointers.father) as LUser : LUser.getUser())?.projects || [];
+        let namesMap = U.objectFromArray(otherProjects, "name");
+        name = U.increaseEndingNumber(name, false, false, s => !!namesMap[s]);
 
-        return new Constructors(new DProject('dwc'), undefined, true, undefined)
+        return new Constructors(new DProject('dwc'), pointers.father, persist, undefined)
             .DPointerTargetable().DProject('private', name, '', [], [], pointers.id).end(callback); }
 }
 
@@ -2881,8 +3133,14 @@ export class DProject extends DPointerTargetable {
 export class LProject<Context extends LogicContext<DProject> = any, D extends DProject = DProject> extends LPointerTargetable {
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
+
+    static getProject(): LProject {
+        return LProject.wrap(U.getProjectID_URL()) as LProject;
+    }
+
     readonly id!: Pointer<DProject>;
     _Id?: string // db GUID
+    father!: LUser;
     type!: 'public'|'private'|'collaborative';
     author!: LUser;
     collaborators!: LUser[];
@@ -2893,7 +3151,7 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     graphs!: LGraph[];
     // stackViews!: LViewElement[];
     viewpoints!: LViewPoint[];
-    activeViewpoint!: LViewPoint;
+    activeViewpoint!: LViewPoint | null;
     favorite!: boolean;
 
     description!: string;
@@ -2907,6 +3165,14 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     // stringify state
     state!: string;
     version!: number;
+    tagNames!: string[];
+    transformations!: any[];
+    expandedTreeNodes!: string[];
+    layoutPropertyPanelWidth!: number;
+    layoutTreeWidth!: number;
+    layoutPropertyPanelOpen!: boolean;
+    layoutTreeCollapsed!: boolean;
+    layoutFocusCanvas!: boolean;
 
     /* DATA */
     readonly packages!: LPackage[];
@@ -3114,7 +3380,15 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     }
 
     protected get_metamodels(context: Context): this['metamodels'] {
-        return LModel.fromPointer(context.data.metamodels) || [];
+        let ret = context.data.metamodels || [];
+
+
+        let state = store.getState();
+        let ptrs: Pointer<any>[] = ret.map(r=> Pointers.from(r));
+        // add models saved in state but not in project.
+        ptrs.push(...(state.m2models || []));
+        // remove duplicates that were both in state and project.
+        return L.fromArr([...new Set(ptrs)]);
     }
     protected set_metamodels(val0: PackArr<this['metamodels']>, c: Context): boolean {
         let val = Pointers.from(val0);
@@ -3127,8 +3401,15 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     protected get_models(c: Context): this['models'] {
         let ret = (L.fromPointer(c.data.models) || []).filter(e=>!!e) as LModel[];
         if (ret.length !== c.data.models.length) this.set_models(ret.map(e=>e.id) as any, c); // fix for older projects
-        return ret;
+
+        let state = store.getState();
+        let ptrs: Pointer<any>[] = ret.map(r=> Pointers.from(r));
+        // add models saved in state but not in project.
+        ptrs.push(...(state.m1models || []));
+        // remove duplicates that were both in state and project.
+        return L.fromArr([...new Set(ptrs)]);
     }
+
     protected set_models(val0: PackArr<this['models']>, c: Context): boolean {
         let val = Pointers.from(val0);
         TRANSACTION(this.get_name(c)+'.models', () => {
@@ -3177,7 +3458,25 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
         }*/
 
     protected get_viewpoints(context: Context): this['viewpoints'] {
-        return LViewPoint.fromPointer([...Defaults.viewpoints, ...(context.data.viewpoints || [])]);
+        // The seeded `Default` is a system layer, not an authored viewpoint (R-IRN-9).
+        // It is dropped from the list, but only while it is empty of authored content:
+        // views parented to it would otherwise become unreachable.
+        const seeded = Defaults.viewpoints.filter(
+            id => !Defaults.holdsOnlySystemViews(DPointerTargetable.fromPointer(id) as any)
+        );
+        // NOT a belt: the seeded pointer really is in `data.viewpoints` on any project
+        // created through the UI. Measured on a fresh one — `data.viewpoints` reads
+        // ["Pointer_ViewPointDefault"] — so the old `[...Defaults.viewpoints, ...data]`
+        // returned that id TWICE, which is where the duplicate-React-key warnings in the
+        // smoke console baseline came from (18 and 20 occurrences, now 0).
+        // The two serialized projects in `examples/` do NOT have it, which is what the
+        // phase 1 discovery measured; that finding holds for those old saves only. The
+        // constructor guard at :1210 explains the store-init seed, not this path.
+        // `get_views` has had an explicit duplicateRemover all along; this getter never did.
+        const own = (context.data.viewpoints || []).filter(
+            (id: any) => !Defaults.isSystemViewpoint(id)
+        );
+        return LViewPoint.fromPointer([...seeded, ...own]);
     }
     protected set_viewpoints(val0: PackArr<this['viewpoints']>, c: Context): boolean {
         let val = Pointers.from(val0);
@@ -3188,10 +3487,18 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     }
 
     protected get_activeViewpoint(context: Context): this['activeViewpoint'] {
-        return LViewPoint.fromPointer(context.data.activeViewpoint || Defaults.viewpoints[0]);
+        // R-IRN-18: no fallback. An empty project has no active viewpoint, and `null` is the one
+        // shape of empty (R-IRN-11). The cast is needed because `fromPointer` infers `undefined`
+        // for a `null` argument (none of its `T extends Pointer<...>` arms unify), while at
+        // runtime `LPointerTargetable.wrap` returns the falsy value untouched: `null` in, `null`
+        // out. Type and runtime disagree on the name of the empty, not on its truthiness.
+        return LViewPoint.fromPointer(context.data.activeViewpoint as any) as any as this['activeViewpoint'];
     }
-    protected set_activeViewpoint(val0: Pack1<this['activeViewpoint']>, c: Context): boolean {
-        let val = Pointers.from(val0);
+    protected set_activeViewpoint(val0: Pack1<NonNullable<this['activeViewpoint']>> | null, c: Context): boolean {
+        // The cast is on the null arm only: `Pointers.from` declares an overload for null and one for
+        // Pack1, but overload resolution does not distribute over a union. Runtime is unaffected —
+        // `Pointers.from(null)` returns null (its implementation opens with `if (!data) return null`).
+        let val = Pointers.from(val0 as Pack1<NonNullable<this['activeViewpoint']>>);
         TRANSACTION(this.get_name(c)+'.activeViewpoint', ()=>{
             SetFieldAction.new(c.data.id, 'activeViewpoint', val, '', true);
         })
@@ -3606,7 +3913,7 @@ function buildWrapSignature(maxdepth = 100) {
     let dict0 = arr.reduce((a, v) => ({ ...a, [v.name]: v}), {});
     let dict = {}
     for (let name in dict0) { let n = name.substring(1); dict[n] = {"D":dict0["D"+n], "L":dict0["L"+n]}; dict["D"+n] = dict0["L"+n]; dict["L"+n] = dict0["D"+n]; }
-    console.log("dict", dict);
+    // console.log("dict", dict);
     console.table(dict);
     */
     function onlyUnique(value: any, index: number, self: any) { return self.indexOf(value) === index; }
@@ -3632,10 +3939,10 @@ function buildWrapSignature(maxdepth = 100) {
             loopdetecter.push(d.subclasses);
         }
     }
-    console.log("byLevels");
+    // console.log("byLevels");
     console.table(byLevels);
 
-    console.log("depsorted", depsorted);
+    // console.log("depsorted", depsorted);
 
     // console.log("map");
     // console.table(depsorted.map(dn => {let d = window[dn]; return !d ? "" :{name:d.name, scount: d.subclasses.length, subclasses:d.subclasses}}));
@@ -3773,12 +4080,22 @@ export enum EModelElements{
 }
 
 type ParserName = string;
+@RuntimeAccessible('ParserData')
 export class ParserData{
-    str!: DocString<'parser code'>;
+    static cname: string = 'ParserData';
+    __str!: DocString<'parser code'>; // joined fragments
     test_text?: string;
     allowPartials!: boolean;
+    [key: string]: any; // fragments
 }
-export type LanguageObject = Dictionary<ParserName, ParserData> & {engine: ParserName};
+
+// none of this works, they all treat engine as ParserDAta
+export type LanguageObject = {engine: ParserName} & Dictionary<ParserName, ParserData>;
+// export type LanguageObject = {engine: ParserName, [key: ParserName]: ParserData};
+// export type LanguageObject = { engine: ParserName; } & Omit<Record<ParserName, ParserData>, "engine">;
+
+export let notLanguageFragments: ParserData = {...new ParserData(), 'clonedCounter':0};
+windoww.notLanguageFragments = notLanguageFragments;
 
 @RuntimeAccessible('Language')
 export class Language {
@@ -3787,11 +4104,21 @@ export class Language {
     t2m: LanguageObject;
     edited: boolean;
     v: number;
-    constructor(m2t: Partial<Language['m2t']> = {}, t2m: Partial<Language['t2m']> = {}) {
-        this.t2m = t2m as any || {};// || m2t ? 'Not implemented, the m2t transformation will be unidirectional' : "Not implemented";
-        this.m2t = m2t as any || {};
-        if (!this.t2m.engine) this.t2m.engine = Object.keys(this.t2m)[0] || undefined as any;
-        if (!this.m2t.engine) this.m2t.engine = Object.keys(this.m2t)[0] || undefined as any;
+    extension: string;
+    constructor(extension: string, m2t: Partial<Language['m2t']> = {}, t2m: Partial<Language['t2m']> = {}) {
+        this.t2m = t2m = t2m as any || {};// || m2t ? 'Not implemented, the m2t transformation will be unidirectional' : "Not implemented";
+        this.m2t = m2t = m2t as any || {};
+        this.extension = extension;
+        if (!t2m.engine) t2m.engine = Object.keys(t2m)[0] || undefined as any;
+        if (!m2t.engine) m2t.engine = Object.keys(m2t)[0] || undefined as any;
+        for (let k in m2t) {
+            if (typeof m2t[k] !== 'object') continue;
+            if (m2t[k].allowPartials && m2t[k].__str && !m2t[k].Default) m2t[k].Default = m2t[k].__str;
+        }
+        for (let k in t2m) {
+            if (typeof t2m[k] !== 'object') continue;
+            if (t2m[k].allowPartials && t2m[k].__str && !t2m[k].Default) t2m[k].Default = t2m[k].__str;
+        }
         this.edited = false;
         this.v = windoww.VersionFixer.get_highestversion();
     }
@@ -3826,8 +4153,11 @@ export class ViewScore {
     shouldUpdate_reason!: GObject;
     nodeidcounter: Dictionary<number/*jsx char index*/, number/*counter:how many nodes generated by that jsx string line until now*/>
     jsxChanged!: boolean;
+    contextMenu: CtxMenuAllProps[];
+
     constructor() {
         this.nodeidcounter = {};
+        this.contextMenu = [];
     }
 
     // usageDeclarations!: DefaultUsageDeclarations;
@@ -3867,7 +4197,7 @@ export class NodeTransientProperties{
         for (let vid of Object.keys(tn.viewScores)) {
             let tnv = tn.viewScores[vid];
             const dview: DViewElement = DPointerTargetable.fromPointer(vid, state);
-            if (!dview) console.error('missing view, is it an old save with less default views?', {dview, vid, state});
+            if (!dview) console.debug('[NodeTransientProperties.sort] Missing view (old save?)', vid);
             if (!dview) continue;
 
             const score = tnv.finalScore = Selectors.getFinalScore(tnv, vid, pv, dview);
@@ -3876,8 +4206,10 @@ export class NodeTransientProperties{
         }
         decorativeViews.sort((s1, s2)=> s2.score - s1.score); // sorted from biggest to smallest
         mainViews.sort((s1, s2)=> s2.score - s1.score); // sorted from biggest to smallest
-
-        // Log.exDev(!mainViews[0], 'cannot find a matching main view', {mainViews, decorativeViews, data0, scores: tn.viewScores})
+        /*
+         NB: if no view is matched, it's gonna call the fallback view so no need to throw errors
+         Log.exDev(!mainViews[0], 'cannot find a matching main view', {mainViews, decorativeViews, data0, scores: tn.viewScores})
+        */
         tn.mainView = mainViews[0]?.view;
         tn.validMainViews = mainViews.map((s)=> s.view); // this have duplicates of newly created elements
         tn.stackViews = decorativeViews.map((s)=> s.view);
@@ -3942,15 +4274,48 @@ type TransientPropertiesByGraphTab = Dictionary<Pointer<DViewElement, number>> &
     other data or view properties?*/
 };
 
+@RuntimeAccessible('LanguageCache')
 export class LanguageCache{
-    grammar!: nearley.Grammar;
+    static cname: string = 'LanguageCache';
+    negrammar!: nearley.Grammar;
 }
+
 export const transientProperties = {
     node: {} as Dictionary<Pointer<DGraphElement>, NodeTransientProperties>,
     view: {} as Dictionary<Pointer<DViewElement>, ViewTransientProperties>,
     modelElement: {} as Dictionary<Pointer<DModelElement>, DataTransientProperties>,
     language: {} as Dictionary<DocString<'Language like ecore'>, Dictionary<DocString<'Engine like nearley, js'>, LanguageCache>>,
     livePatches: {} as DState, //Partial<DState>,
+
+    /*
+        updates all elements with a certain view..
+        @param: force_deleteCache:  if false, it just triggers react's .forceUpdate, which might refuse to update if UsageDeclaration did not change. if true it deletes JSX cache, forcing it to re-render.
+        guideline: use force_deleteCache = false in most cases to ignore UD update policy.
+        use true when the state changed manually (no actions/reducer) and the UD are already enough for it to update, but this SHOULD ONLY HAPPEN IN DEBUG
+     */
+    updateData(mid: Pointer<DModelElement>, force_deleteCache: boolean = true): void {
+        let nodes = transientProperties.modelElement[mid].nodes;
+        for (let nid in nodes) { transientProperties.updateNode(nid); }
+    },
+
+    updateView(vid: Pointer<DViewElement>, force_deleteCache: boolean = true): void {
+        let nodes = transientProperties.node;
+        for (let nid in nodes) { transientProperties.updateNodeViewCombinationOnly(nid, vid); }
+    },
+
+    updateNode(nid: Pointer<DGraphElement>, force_deleteCache: boolean = true): void {
+        let tn = transientProperties.node[nid];
+        if (force_deleteCache && tn) {
+            for (let vid in tn.viewScores) {
+                if (tn.viewScores[vid]?.jsxOutput) delete tn.viewScores[vid]?.jsxOutput;
+            }
+        }
+        graphComponentRegistry[nid]?.forceUpdate();
+    },
+    updateNodeViewCombinationOnly(nid: Pointer<DGraphElement>, vid: Pointer<DViewElement>, force_deleteCache: boolean = true): void {
+        if (force_deleteCache && transientProperties.node[nid]?.viewScores[vid]?.jsxOutput) delete transientProperties.node[nid]?.viewScores[vid]?.jsxOutput;
+        graphComponentRegistry[nid]?.forceUpdate();
+    }
 };
 (window as any).transient = (window as any).transientProperties = transientProperties;
 // transientProperties.nodes[nid].viewScores[vid]?.[pvid as string];

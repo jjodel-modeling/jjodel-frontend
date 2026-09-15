@@ -1,0 +1,28 @@
+{
+  "date": "2026-07-20T13:09:06.845Z",
+  "app": "http://localhost:3001/",
+  "model": "bench.xmi",
+  "project": "Bench_mrt8r5ap",
+  "t_import_ecore_ms": 93,
+  "t_import_xmi_ms": 624,
+  "commits_import_xmi": 7,
+  "t_mount_flow_nodes_ms": 6734,
+  "t_edges_settle_ms": 38148,
+  "t_responsive_after_open_ms": 38148,
+  "rf_nodes": 501,
+  "rf_edges": 986,
+  "commits_open_flow": 1599,
+  "edit_flow": {
+    "ms": 4616
+  },
+  "commits_edit_flow": 24,
+  "classic_toggle_found": 0,
+  "env": {
+    "machine": "MacBook Air M3, 24 GB RAM, macOS 26.2",
+    "node": "v23.3.0",
+    "branch": "alfonso-frontend-jjtl",
+    "head": "4670ab931 + working tree (EdgeLabelRenderer conditional-mount fix)",
+    "browser": "Chrome for Testing (playwright chromium-1228, headless)",
+    "note": "build di produzione servita da vite preview :3001; dev server vite idle su :3000 durante il run (~0% CPU). Stesso harness/fixtures (bench.ecore + bench.xmi seed 42) della baseline 2026-07-19. Fix sotto test: UnifiedEdge monta EdgeLabelRenderer solo per edge con label visibile (leva 1 del discovery 2026-07-20_edge_settle_trickle). Run gemello (aborted su path relativo prima della mutazione): mount 7191ms, settle 40024ms, commits_open_flow 1581 — coerente. Il conteggio 986 edge e' invariato (il clamp overflow degli handle e' un task separato sequenziato dopo). commits_open_flow ~1599 ~ invariato: la leva 1 abbatte il COSTO per iterazione, non il NUMERO di iterazioni (leve 2/3)."
+  }
+}

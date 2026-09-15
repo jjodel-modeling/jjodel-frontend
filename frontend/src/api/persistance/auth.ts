@@ -1,6 +1,6 @@
 import Api, {Response} from "../api";
 import Storage from "../../data/storage";
-import {DUser, GObject, Log, U} from "../../joiner";
+import {DUser, GObject, Log, R, U} from "../../joiner";
 import {jwtDecode} from "jwt-decode";
 import { RegisterRequest } from "../DTO/RegisterRequest";
 import { LoginRequest } from "../DTO/LoginRequest";
@@ -10,30 +10,29 @@ import {ResetPasswordRequest} from "../DTO/ResetPasswordRequest";
 import {ConfirmAccountRequest} from "../DTO/ConfirmAccountRequest"; //
 
 class AuthApi {
-
     static async login(loginRequest: LoginRequest): Promise<Response> {
         Storage.write('offline', false);
-        return await Api.post(`${Api.persistance}/account/login`, {...loginRequest}, true);
+        return await Api.post(`${U.env('JODEL_PERSISTANCE')}/account/login`, {...loginRequest}, true);
     }
   
     static async register(request: RegisterRequest): Promise<Response> {
         Storage.write('offline', false);
-        return await Api.post(`${Api.persistance}/account/register`, {...request}, true);
+        return await Api.post(`${U.env('JODEL_PERSISTANCE')}/account/register`, {...request}, true);
     }
 
     static async reset_password(request: ResetPasswordRequest): Promise<Response> {
-        return await Api.post(`${Api.persistance}/account/resetPasswordWithEmail`, {...request}, true);
+        return await Api.post(`${U.env('JODEL_PERSISTANCE')}/account/resetPasswordWithEmail`, {...request}, true);
     }
 
 
     static async logout(): Promise<void> {
-        Api.token = null;
-
-        U.resetState();
-        Storage.reset();
+        await Api.revokeToken();
+        Storage.resetLogin();
+        // U.resetState();
+        R.navigate('/auth');
     }
     static async confirmAccount(request: ConfirmAccountRequest): Promise<Response> {
-        return await Api.post(`${Api.persistance}/account/confirm`, {...request}, true);
+        return await Api.post(`${U.env('JODEL_PERSISTANCE')}/account/confirm`, {...request}, true);
     }
 
 
@@ -49,7 +48,7 @@ class AuthApi {
         try {
             const decoded = jwtDecode<any>(token);
             claims = new JwtClaims();
-            console.log('claims debug', {decoded, JwtPayloadKey, claims})
+            // console.log('claims debug', {decoded, JwtPayloadKey, claims})
 
             claims.id = decoded[JwtPayloadKey.Id];
             claims.nickname = decoded[JwtPayloadKey.Nickname];
@@ -65,16 +64,6 @@ class AuthApi {
             console.error("token decode error:", {error, claims, token, decoded});
             return null;
         }
-    }
-
-    // write storage
-    static storeSessionData(token: string, tokenExp: number, refreshT: string, RTExp: number, user?: DUser): void {
-        Storage.write('token', token);
-        Storage.write('tokenExp', tokenExp);
-        Storage.write('refreshToken', refreshT);
-        Storage.write('refreshTokenExp', RTExp);
-        if (user) Storage.write('user', user);
-        Storage.write('offline', false);
     }
 }
 

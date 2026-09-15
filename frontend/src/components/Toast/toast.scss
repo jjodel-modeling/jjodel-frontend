@@ -1,0 +1,226 @@
+/* ============================================
+   TOAST NOTIFICATION SYSTEM
+   Side-stripe variant — uses design tokens
+   ============================================ */
+
+.jj-toast-container {
+  position: fixed;
+  z-index: var(--z-toast);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  pointer-events: none;
+  width: 320px;
+  max-width: calc(100vw - 2 * var(--space-4));
+
+  &--top-right    { top: var(--space-4); right: var(--space-4); }
+  &--top-left     { top: var(--space-4); left:  var(--space-4); }
+  /* Clear the status bar (StatusBar.scss height 32px) instead of sitting on top
+     of it: at z-index 999998 a transient toast was hiding the persistent version
+     string. No token exists for that height yet, so the literal is composed the
+     same way properties-with-tree-view.scss composes it. */
+  &--bottom-right { bottom: calc(32px + var(--space-4)); right: var(--space-4); }
+  &--bottom-left  { bottom: calc(32px + var(--space-4)); left:  var(--space-4); }
+}
+
+/* ============================================
+   SINGLE TOAST — side-stripe
+   ============================================ */
+.jj-toast {
+  position: relative;
+  width: 320px;
+  max-width: 100%;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-secondary);
+  border-left-width: 4px;
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  box-shadow: var(--shadow-md);
+  pointer-events: auto;
+  overflow: hidden;
+  animation: toastSlideInRight 280ms cubic-bezier(0.16, 1, 0.3, 1);
+
+  .jj-toast-container--bottom-left &,
+  .jj-toast-container--top-left & {
+    border-left-width: 1px;
+    border-right-width: 4px;
+    border-radius: var(--radius-md) 0 0 var(--radius-md);
+    animation-name: toastSlideInLeft;
+  }
+
+  &--exiting {
+    animation: toastSlideOutRight 220ms ease-in forwards;
+
+    .jj-toast-container--bottom-left &,
+    .jj-toast-container--top-left & {
+      animation-name: toastSlideOutLeft;
+    }
+  }
+
+  &--info    { border-left-color: var(--color-info);    }
+  &--success { border-left-color: var(--color-success); }
+  &--warning { border-left-color: var(--color-warning); }
+  &--error   { border-left-color: var(--color-error);   }
+
+  .jj-toast-container--bottom-left &--info,
+  .jj-toast-container--top-left    &--info    { border-left-color: var(--color-border-secondary); border-right-color: var(--color-info); }
+  .jj-toast-container--bottom-left &--success,
+  .jj-toast-container--top-left    &--success { border-left-color: var(--color-border-secondary); border-right-color: var(--color-success); }
+  .jj-toast-container--bottom-left &--warning,
+  .jj-toast-container--top-left    &--warning { border-left-color: var(--color-border-secondary); border-right-color: var(--color-warning); }
+  .jj-toast-container--bottom-left &--error,
+  .jj-toast-container--top-left    &--error   { border-left-color: var(--color-border-secondary); border-right-color: var(--color-error); }
+}
+
+/* ============================================
+   ROW: icon + title + time + close
+   ============================================ */
+.jj-toast__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.jj-toast__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 16px;
+  line-height: 1;
+
+  .jj-toast--info    & { color: var(--color-info);    }
+  .jj-toast--success & { color: var(--color-success); }
+  .jj-toast--warning & { color: var(--color-warning); }
+  .jj-toast--error   & { color: var(--color-error);   }
+}
+
+.jj-toast__title {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.jj-toast__time {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--color-text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.jj-toast__close {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  margin: 0;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-placeholder);
+  cursor: pointer;
+  transition: color 120ms ease, background-color 120ms ease;
+
+  i { font-size: 14px; line-height: 1; }
+
+  &:hover {
+    color: var(--color-text-primary);
+    background: var(--color-bg-hover);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-border-focus);
+    outline-offset: 1px;
+  }
+}
+
+/* ============================================
+   BODY: message
+   ============================================ */
+.jj-toast__body {
+  margin-top: var(--space-1);
+  padding-left: calc(16px + var(--space-2)); /* align with title (icon width + gap) */
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.45;
+  color: var(--color-text-secondary);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* ============================================
+   ACTION button (optional)
+   ============================================ */
+.jj-toast__action {
+  display: inline-block;
+  margin-top: var(--space-2);
+  margin-left: calc(16px + var(--space-2));
+  padding: 0;
+  background: none;
+  border: none;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-info);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: color 120ms ease;
+
+  &:hover { color: var(--color-info-hover); text-decoration: underline; }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-border-focus);
+    outline-offset: 2px;
+  }
+}
+
+/* ============================================
+   ANIMATIONS
+   ============================================ */
+@keyframes toastSlideInRight {
+  from { opacity: 0; transform: translateX(100%); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes toastSlideOutRight {
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(100%); }
+}
+
+@keyframes toastSlideInLeft {
+  from { opacity: 0; transform: translateX(-100%); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes toastSlideOutLeft {
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(-100%); }
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 480px) {
+  .jj-toast-container {
+    width: auto;
+    left: var(--space-3);
+    right: var(--space-3);
+
+    &--top-right,
+    &--top-left  { top: var(--space-3); }
+    &--bottom-right,
+    &--bottom-left { bottom: calc(32px + var(--space-3)); }
+  }
+
+  .jj-toast { width: 100%; }
+}

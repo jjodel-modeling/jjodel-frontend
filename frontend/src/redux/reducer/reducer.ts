@@ -1,4 +1,4 @@
-import type {
+import {
     DViewPoint,
     orArr,
     bool,
@@ -7,7 +7,8 @@ import type {
     Pointer,
     MouseUpEvent,
     GObject,
-    U as UType,
+    U as UType, store,
+    LGraph, L, Constructors,
 } from '../../joiner';
 import {
     GraphDragManager,
@@ -16,9 +17,6 @@ import {
     DClass,
     DModel,
     UX,
-    EdgeOwnProps,
-    EdgeStateProps,
-    GraphElementComponent,
     ViewEClassMatch,
     NodeTransientProperties,
     ViewTransientProperties,
@@ -51,25 +49,33 @@ import {
 import React from "react";
 import {
     BEGIN,
-    CollabClearHistoryAction, CollabRefreshAction,
     COMMIT,
-    DO_AFTER_TRANSACTION,
     END,
+    AFTER_TRANSACTION,
+    DO_AFTER_TRANSACTION_NOT_FOR_USERS,
+    CollabClearHistoryAction, CollabRefreshAction,
     LoadAction,
     RedoAction,
-    UndoAction
+    UndoAction, AT_TRANSACTION
 } from "../action/action";
 import Collaborative from "../../components/collaborative/Collaborative";
 import {SimpleTree} from "../../common/SimpleTree";
 import {transientProperties, Selectors} from "../../joiner";
 import {OclEngine} from "@stekoe/ocl.js";
-import { contextFixedKeys } from '../../graph/graphElement/sharedTypes/sharedTypes';
+import { contextFixedKeys } from '../../common/sharedTypes';
+import { displayError } from '../../common/jsxErrorView';
 import Storage from "../../data/storage";
 import {AuthApi, ProjectsApi} from "../../api/persistance";
 import DSL from "../../DSL/DSL";
+import {SaveManager} from "../../components/topbar/SaveManager";
+import Api from "../../api/api";
+import {doM2T, parseT2M} from "../../components/forEndUser/MTM";
 
 let windoww = window as any;
 let U: typeof UType = windoww.U;
+
+// Cap on the undo/redo history length per stack, to bound memory growth.
+const MAX_HISTORY = 100;
 
 
 
@@ -178,7 +184,15 @@ function deepCopyButOnlyFollowingPath(oldStateDoNotModify: DState, action: Parse
                             if (Array.isArray(oldValue)) isArrayAppend = true;
                             else isObjectMerge = true;
                             break;
-                        default: newVal += oldValue; break;
+                        default:
+                            if (oldValue === undefined || oldValue === null) break; // keep newVal unchanged, act as '='
+                            // 0, '', {}, [] are fine with +=, null and undefined are not. and will generate different output if you do {}+undefined vs a={}; a+undefined (string or NaN both unwanted.)
+                            // this is still a problem if type changed and it tries to mix strings and objects or such.
+                            if (typeof newVal === 'object') {
+                                if (Array.isArray(newVal)) newVal.push(oldValue);
+                                else { newVal[oldValue] = true; }
+                            }
+                            else newVal += oldValue; break; // 2 primitives just get default operator merger
                     }
                     break;
                 case '-=':
@@ -217,16 +231,11 @@ function deepCopyButOnlyFollowingPath(oldStateDoNotModify: DState, action: Parse
             // let unpointedElement: DPointerTargetable | undefined;
             // perform final assignment
             if (action.type === CreateElementAction.type && current[key]) {
-                oldValue = current[key];
-                gotChanged = false;
-                let LOG: typeof Log['ee'] = Log.ee;
+                // Element already exists in state - silently skip (this is not an error, just a no-op)
+                // This can happen due to multiple render cycles or collaborative mode
                 let inCollabNode = Collaborative.online && action.value.className.toLowerCase().includes('graph');
-                if (inCollabNode) LOG = Log.ii;
-                let diff = Uobj.objdiff(current[key], action.value);
-                LOG("rejected CreateElementAction"+(inCollabNode ? " (collab node)" : ", rollback occurring:")+"", {action,
-                    preexistingValue: current[key], diff});
-                if (inCollabNode) return false; // warning: use return only when you want to abort and skip subsequent CompositeAction sub-actions like now.
-                else continue;
+                if (inCollabNode) return false; // abort for collab nodes
+                continue; // silently skip for local duplicates
             }
             if (isObjectMerge) {
                 if (typeof newVal === 'string') { let tmp: any = {}; tmp[newVal] = true; newVal = tmp; }
@@ -496,7 +505,7 @@ function CompositeActionReducer(oldState: DState, actionBatch: CompositeAction):
         const prevAction: ParsedAction = actions[i-1];
         const action: ParsedAction = actions[i];
         const actiontype = action.type.indexOf('@@') === 0 ? 'redux' : action.type;
-        if (U.debug) console.log('executing action:', {a:action, t:actiontype, field: action.field, v:action.value}); //, count: ++action.executionCount});
+        // if (U.debug) console.log('executing action:', {a:action, t:actiontype, field: action.field, v:action.value}); //, count: ++action.executionCount});
 
         switch (actiontype) {
             /*
@@ -508,7 +517,21 @@ function CompositeActionReducer(oldState: DState, actionBatch: CompositeAction):
             case CollabClearHistoryAction.type: break;
             case LoadAction.type:
                 newState = action.value;
+                let u = DUser.getUser(newState);
+                let p = DProject.getProject(newState);
+                if (u && !newState.idlookup[u.id]) {
+                    DUser.current = u.id;
+                    newState.idlookup[u.id] = u;
+                }
+                if (p && !newState.idlookup[p.id]) {
+                    newState.idlookup[p.id] = p;
+                }
                 U.debug = newState.debug;
+                // Force recompilation of all view CSS after project load.
+                // css_MUST_RECOMPILE and compiled_css are transient fields not
+                // in the serialized project data — without this, compiled_css
+                // returns '' and no view CSS is injected into the DOM.
+                newState.VIEWS_RECOMPILE_all = true;
                 break;
             case CreateElementAction.type:
             case SetRootFieldAction.type:
@@ -573,20 +596,31 @@ ret .b = 3
 // then add to it: content of props, constants, usageDeclarations
 
 export function reducer(oldState: DState = initialState, action: Action, liveChange: boolean = false): DState {
+    if (windoww.__scuStormDebug) {
+        try {
+            const a: any = action;
+            console.log('[scuStorm] action', {
+                type: a && a.type,
+                field: a && (a.field ?? a.key),
+                path: a && (a.path ?? (Array.isArray(a.pathArray) ? a.pathArray.join('.') : undefined)),
+                nested: a && Array.isArray(a.actions) ? a.actions.length : undefined,
+            });
+        } catch (e) {}
+    }
     if (U.navigating) return oldState;
     if (!windoww.jjactions) windoww.jjactions = [];
     windoww.jjactions.push(action);
     let safeMode = false;
-    console.log('execute action', action);
+    // console.log('execute action', action);
     if (!safeMode) {
         let ret = unsafereducer(oldState, action);
-        DO_AFTER_TRANSACTION();
+        DO_AFTER_TRANSACTION_NOT_FOR_USERS(ret);
         return ret;
     }
 
     try {
         let ret = unsafereducer(oldState, action);
-        DO_AFTER_TRANSACTION();
+        DO_AFTER_TRANSACTION_NOT_FOR_USERS(ret);
         return ret;
     }
     catch (e) {
@@ -713,9 +747,9 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
         for (let k of tv.constantsList) if (!allContextKeys[k]) allContextKeys[k] = true;
         for (let k of tv.UDList) if (!allContextKeys[k]) allContextKeys[k] = true;
         let paramStr = '{'+Object.keys(allContextKeys).join(',')+'}';
-        console.log('labels parse', { allContextKeys, ud:tv.UDList, c:tv.constantsList });
+        // console.log('labels parse', { allContextKeys, ud:tv.UDList, c:tv.constantsList });
         const body: string =  'return (' + val + ')';
-        console.log('labels parse', {vid: ptr, paramStr, body});
+        // console.log('labels parse', {vid: ptr, paramStr, body});
         try {
             if (isNode) {
                 // need to store the function in tnv instead of tn since if v changes, ud changes as well? in all of them?what if i make a new view?
@@ -950,7 +984,7 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
             tv.jsCondition = new Function(paramStr, body) as ((...a:any)=>any);
         } catch (e) {
             tv.jsCondition = undefined;
-            console.log('JS Condition parsed error', e);
+            // console.log('JS Condition parsed error', e);
         }
     }
     ret.VIEWS_RECOMPILE_jsCondition = [];
@@ -961,32 +995,34 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
         let dv: DViewElement = DPointerTargetable.fromPointer(vid, ret);
         let tv = transientProperties.view[vid];
         if (!tv) transientProperties.view[vid] = tv = {} as any;
-        if (!dv.jsxString) { transientProperties.view[vid].JSXFunction = undefined as any; continue; }
-        let allContextKeys = {...contextFixedKeys};
-        for (let k of transientProperties.view[vid].constantsList) if (!allContextKeys[k]) allContextKeys[k] = true;
-        for (let k of transientProperties.view[vid].UDList) if (!allContextKeys[k]) allContextKeys[k] = true;
-        let paramStr = '{'+Object.keys(allContextKeys).join(',')+'}';
+        if (!dv.jsxString) { transientProperties.view[vid].JSXFunction = undefined as any; }
+        if (dv.jsxString) {
+            let allContextKeys = {...contextFixedKeys};
+            for (let k of transientProperties.view[vid].constantsList) if (!allContextKeys[k]) allContextKeys[k] = true;
+            for (let k of transientProperties.view[vid].UDList) if (!allContextKeys[k]) allContextKeys[k] = true;
+            let paramStr = '{'+Object.keys(allContextKeys).join(',')+'}';
+            const tv = transientProperties.view[vid];
+            const body: string =  'return (' + UX.parseAndInject(DSL.parser(dv.jsxString), dv) + ')';
+            try {
+                tv.JSXFunction = new Function(paramStr, body) as ((...a: any) => any);
+            }
+            catch (e: any) {
+                /*try{
+                    let try_to_get_better_error = eval("let __f = function(" + paramStr+") {\n" + body + "}");
+                } catch(eeval){
+                    console.error("eval error same as func error", {e, eeval});
+                    e = eeval;
+                }*/
+                console.error('error jsxparse', {vid, e, paramStr, body});
+                tv.JSXFunction = (context) => displayError(e, 'JSX Syntax', dv);
+            }
+        }
 
-        const body: string =  'return (' + UX.parseAndInject(DSL.parser(dv.jsxString), dv) + ')';
-        try {
-            transientProperties.view[vid].JSXFunction = new Function(paramStr, body) as ((...a: any) => any);
-        }
-        catch (e: any) {
-            /*try{
-                let try_to_get_better_error = eval("let __f = function(" + paramStr+") {\n" + body + "}");
-            } catch(eeval){
-                console.error("eval error same as func error", {e, eeval});
-                e = eeval;
-            }*/
-            console.error('error jsxparse', {vid, e, paramStr, body});
-            transientProperties.view[vid].JSXFunction = (context) => GraphElementComponent.displayError(e, 'JSX Syntax', dv);
-        }
-        for (let nid of Object.keys(transientProperties.node)) { // forced rerender.
+        for (let nid in transientProperties.node) { // forced rerender.
             let tn = transientProperties.node[nid];
             if (!tn) continue;
-            let tnv = tn.viewScores[vid];
+            let tnv = tn.viewScores?.[vid];
             if (!tnv) continue; // if tn or tnv are missing, it is already a force-rerender + reevaluate of apply condition, UD and everything
-
             tnv.jsxChanged = true;
             // PS: not needed for UD because they are always checked after every reducer() in shouldupdate()
             // not sure if constants are checked anywhere.
@@ -995,7 +1031,27 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
     }
     ret.VIEWS_RECOMPILE_jsxString = [];
 
+    /* deprecated: i would not need to update graphs with this view, but nodes within that graph, so i used NODES_RECOMPILE instead
+    if (ret.VIEWS_RECOMPILE_grid?.length)
+        for (const id of filterSet(ret.VIEWS_RECOMPILE_grid)){ transientProperties.updateView(id, true); }
+    ret.VIEWS_RECOMPILE_grid = [];*/
+    if (ret.NODES_RECOMPILE_grid?.length)
+    for (const id of filterSet(ret.NODES_RECOMPILE_grid)){
+        try {/* problem: cannot use getState in reducer, i had to pass all subnodes directly instead of just passing graphs.
+            let graph = L.from(id) as LGraph;
+            let arr = graph?.allSubVertexes || [];
+            for (let e of arr) transientProperties.updateNode(e?.id, true);*/
+            transientProperties.updateNode(id, true);
+        } catch (e) { Log.exDevv('failed to update nodes after grid change', {NODES_RECOMPILE_grid: [...ret.NODES_RECOMPILE_grid], e}); }
+    }
+    ret.NODES_RECOMPILE_grid = [];
 
+    if (ret.VIEWS_RECOMPILE_snap?.length)
+        for (const id of filterSet(ret.VIEWS_RECOMPILE_snap)){ transientProperties.updateView(id, true); }
+    ret.VIEWS_RECOMPILE_snap = [];
+    if (ret.NODES_RECOMPILE_snap?.length)
+        for (const id of filterSet(ret.NODES_RECOMPILE_snap)){ transientProperties.updateNode(id, true); }
+    ret.NODES_RECOMPILE_snap = [];
 
     for (const key of DViewElement.MeasurableKeys) {
         if ((ret as any)['VIEWS_RECOMPILE_'+key]?.length)
@@ -1020,7 +1076,7 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
                 console.error('error measurable parse '+key, {vid, e, paramStr, body:str});
                 (transientProperties.view[vid] as any)[key] = undefined;
                 // display error in jsx
-                transientProperties.view[vid].JSXFunction = (context) => GraphElementComponent.displayError(e, 'Measurable ' + key + ' Syntax', dv);
+                transientProperties.view[vid].JSXFunction = (context) => displayError(e, 'Measurable ' + key + ' Syntax', dv);
                 break;
             }
         }
@@ -1065,7 +1121,7 @@ function doUndoRedo(oldState: DState, action: Action, isUndo:'undo'|'redo'): DSt
     let removedDeltas: (GObject | undefined)[] = [];
     let steps = times;
     Log.exDev(times<=0, isUndo+" must be positive", action);
-    console.log('redo debug 0', {oldState, action, isUndo, times, steps});
+    // console.log('redo debug 0', {oldState, action, isUndo, times, steps});
     let isUndoCheck = isUndo === 'undo';
     while (times--) {
         let forUser = (action as UndoAction | RedoAction).forUser;
@@ -1075,7 +1131,7 @@ function doUndoRedo(oldState: DState, action: Action, isUndo:'undo'|'redo'): DSt
         }
         if (!delta) continue;
         removedDeltas.push(delta);
-        console.log('redo debug 1', {delta, times: times});
+        // console.log('redo debug 1', {delta, times: times});
         state = undo(state, action as UndoAction | RedoAction, delta, isUndoCheck);
     }
 
@@ -1107,9 +1163,9 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
                 // console.log('redux init', {action, oldState, initialState});
                 return oldState;
             }
-            if (!(action?.className)) { Log.exDevv('unexpected action type:', action.type); return oldState; }
+            if (!(action?.className)) { Log.exDevv('unexpected action type:', action.type, action); return oldState; }
             let ret = doreducer(oldState, action);
-            if (ret === oldState) return ret;
+            if (ret === oldState) { return ret; }
             ret.timestamp = Date.now();
             ret.action_title = '';
             ret.action_description = '';
@@ -1131,10 +1187,17 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
             }
             if (!oldState/* || !Object.keys(delta).length*/) return ret;
 
+            // Fast path: skip history bookkeeping when the only meaningful change
+            // is a single transient top-level key (dragging / _lastSelected /
+            // contextMenu). isRelevantChangeCheck would discard the delta in this
+            // case anyway; computing it is pure waste during pan/drag operations.
+            if (isOnlyTransientTopLevelChange(ret, oldState)) {
+                return ret;
+            }
+
             // update state history
             let delta = Uobj.objectDelta(ret, oldState, true, false);
-            if (U.debug) console.log('reducer delta', {start:oldState, end: ret, delta});
-            let debug = Uobj.applyObjectDelta(ret, delta, false, oldState);
+            // if (U.debug) console.log('reducer delta', {start:oldState, end: ret, delta});
             delta.timestamp = ret.timestamp;
             delta.timestampdiff = ret.timestampdiff = ret.timestamp - (oldState?.timestamp || 0);
             if (!statehistory[action.sender]) statehistory[action.sender] = new UserHistory();
@@ -1178,8 +1241,8 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
                     // todo: this is troublesome because ['id1', 'empty'] + ['id2'] =  ['id1', 'empty', 'id2'] but should not have side effects? can the empty sparse arr make problems?
                     if (!Array.isArray((delta as GObject)[k] || [])) console.error('mergerecompilearr err',
                         {sm:shouldMerge, pd:!!pastDelta, delta, pastDelta, k, dk: (delta as any)?.[k], pdk: pastDelta?.[k]});
-                    if (!Array.isArray((delta as GObject)[k]||[])) console.log('err in delta merge', {arr:(delta as GObject)[k]||[], delta, k});
-                    if (!Array.isArray((pastDelta as GObject)[k]||[])) console.log('err in past delta merge', {arr:(pastDelta as GObject)[k]||[], pastDelta, k});
+                    // if (!Array.isArray((delta as GObject)[k]||[])) console.log('err in delta merge', {arr:(delta as GObject)[k]||[], delta, k});
+                    // if (!Array.isArray((pastDelta as GObject)[k]||[])) console.log('err in past delta merge', {arr:(pastDelta as GObject)[k]||[], pastDelta, k});
                     gdelta[k] = [...new Set(U.arrayMergeInPlace((delta as GObject)[k]||[], pastDelta[k]||[]))] as string[];
                 }
 
@@ -1196,6 +1259,8 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
                 let user = (action as Action).sender;
                 statehistory[user].undoable.push(delta);
                 statehistory.all.undoable.push(delta);
+                if (statehistory[user].undoable.length > MAX_HISTORY) statehistory[user].undoable.shift();
+                if (statehistory.all.undoable.length > MAX_HISTORY) statehistory.all.undoable.shift();
                 if (debugMerge) {
                     if (shouldMerge) (ret as any).notMergeCounter = (delta as any).notMergeCounter = 1+((ret as any).notMergeCounter || 0)
                     else (ret as any).notMergeCounter = 0;
@@ -1219,6 +1284,38 @@ function isRelevantChangeCheck(delta: GObject<DState>, pastDelta?: GObject<DStat
     }
     return true;
 }
+
+/**
+ * Fast path check for _reducer: returns true if the only semantic change
+ * between ret and oldState is a single transient top-level key (dragging,
+ * _lastSelected, contextMenu). When true, the caller can skip the
+ * expensive Uobj.objectDelta + history bookkeeping, since
+ * isRelevantChangeCheck would discard the delta anyway.
+ *
+ * Keep TRANSIENT_TOP_KEYS in sync with isRelevantChangeCheck.
+ * Keep IGNORED_TOP_KEYS in sync with the unconditional assignments
+ * performed by _reducer right after doreducer() (timestamp,
+ * action_title, action_description) plus timestampdiff which is
+ * written further down in the slow path.
+ */
+function isOnlyTransientTopLevelChange(ret: DState, oldState: DState): boolean {
+    const TRANSIENT_TOP_KEYS = new Set<string>(['dragging', '_lastSelected', 'contextMenu']);
+    const IGNORED_TOP_KEYS = new Set<string>(['timestamp', 'timestampdiff', 'action_title', 'action_description']);
+    let semanticChange: string | null = null;
+    for (const k in ret) {
+        if (ret[k as keyof DState] === oldState[k as keyof DState]) continue;
+        if (IGNORED_TOP_KEYS.has(k)) continue;
+        if (semanticChange !== null) return false;
+        semanticChange = k;
+    }
+    for (const k in oldState) {
+        if (k in ret) continue;
+        if (IGNORED_TOP_KEYS.has(k)) continue;
+        if (semanticChange !== null) return false;
+        semanticChange = k;
+    }
+    return semanticChange !== null && TRANSIENT_TOP_KEYS.has(semanticChange);
+}
 function undo(state: DState, action: UndoAction | RedoAction, delta: GObject | undefined, isundo = true): DState {
     if (!delta) return state;
     //let undonestate: DState = {...state} as DState;
@@ -1237,6 +1334,8 @@ function undo(state: DState, action: UndoAction | RedoAction, delta: GObject | u
     let key: 'redoable'|'undoable' = isundo ? 'redoable' : 'undoable';
     statehistory[user][key].push(delta2);
     statehistory.all[key].push(delta2);
+    if (statehistory[user][key].length > MAX_HISTORY) statehistory[user][key].shift();
+    if (statehistory.all[key].length > MAX_HISTORY) statehistory.all[key].shift();
     return undonestate as GObject<DState>;
 }
 /*
@@ -1244,7 +1343,7 @@ function undorecursive(deltalevel: GObject, statelevel: GObject): void {
     // statelevel = {...statelevel}; not working if i do it here, just a new var. first time copy id done in caller func undo(). recursive copies are done before recursive step
     for (let key in deltalevel) {
         let delta = deltalevel[key];
-        console.log("undoing", {delta, key, deltalevel, statelevel})
+        // console.log("undoing", {delta, key, deltalevel, statelevel})
         //if (key.indexOf("_-") === 0) { delete statelevel[key.substring(2)]; continue; }
         if (typeof delta === "object") {
         // if (U.isObject(delta, false, false, true)) {
@@ -1320,8 +1419,10 @@ function buildLSingletons(alld: Dictionary<string, typeof DPointerTargetable>, a
 }
 
 const originalFocus = HTMLElement.prototype.focus;
+let documentEventsIntervalId: ReturnType<typeof setInterval> | undefined;
 function setDocumentEvents(){
     // do not use types (imported as classes) here or it will change import order
+    if (documentEventsIntervalId !== undefined) clearInterval(documentEventsIntervalId);
 
     // https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement/focus
     HTMLElement.prototype.focus = function (options?: GObject) {
@@ -1332,14 +1433,14 @@ function setDocumentEvents(){
     };
 
     setTimeout(
-        ()=> $(document).on("mouseup",
+        ()=> $(document).off("mouseup.jjodelDocEvents").on("mouseup.jjodelDocEvents",
             (e: MouseUpEvent) => {
                 statehistory.globalcanundostate = true;
                 RuntimeAccessibleClass.get<typeof GraphDragManager>("GraphDragManager").stopPanning(e);
             })
         , 1);
     // document.body.addEventListener("mousedown", fixResizables, false);
-    setInterval(()=>{ COMMIT(undefined, false) }, windoww.U.UpdatingTimer);
+    documentEventsIntervalId = setInterval(()=>{ COMMIT(undefined, false) }, windoww.U.UpdatingTimer);
 }
 function fixResizables(e: MouseEvent){
     /*let parents = U.ancestorArray(e.target as HTMLElement);
@@ -1350,9 +1451,35 @@ function fixResizables(e: MouseEvent){
     }*/
 }
 
+function test(){
+    // console.clear();
+    let s = ''+
+    '@namespace(uri="org.jjodelreact.metamodel_1.default", prefix="")\n' +
+        'package metamodel_1;\n' +
+        '\n' +
+        'class Concept_0 {\n' +
+        '    unique ordered attr EString attr_0;\n' +
+        '    unique ordered ref Concept_0 ref_0;\n' +
+        '}';
+    // console.log('t2m test', parseT2M('Emfatic', s, true, undefined, undefined, 'DModel'));
+}
+
+function fixEnv(){
+    let windoww = window as any;
+    // console.log("fix env start", {meta: import.meta, menv:(import.meta as any).env, process:windoww.process, penv:windoww.env});
+    if (!windoww.process) windoww.process = {};
+    const process = windoww.process.env = (import.meta as any).env;
+    const prefix = "VITE_";
+    for (const k in process) {
+        if (k.indexOf(prefix) === 0) process['JODEL_' + k.substring(prefix.length)] = process[k];
+    }
+    // console.log("fix env end", {meta: import.meta, menv:(import.meta as any).env, process, penv:process.env});
+}
 export async function stateInitializer() {
     console.warn('stateinitializer');
     RuntimeAccessibleClass.fixStatics();
+    fixEnv();
+
     let dClassesMap: Dictionary<string, typeof DPointerTargetable> = {};
     let lClassesMap: Dictionary<string, typeof LPointerTargetable> = {};
     for (let name in RuntimeAccessibleClass.classes) {
@@ -1362,6 +1489,7 @@ export async function stateInitializer() {
             default: break;
         }
     }
+    AT_TRANSACTION(()=>setTimeout(test, 1500));
 
     buildLSingletons(dClassesMap, lClassesMap);
     setSubclasses(RuntimeAccessibleClass.get('DPointerTargetable'));
@@ -1369,22 +1497,91 @@ export async function stateInitializer() {
 
     DState.init();
     // let duser = DUser.offline(); // if it's online mode this is a no-op and user should be already loaded
-    let duser = DUser.load();
-    if (!duser?.id) {
-        DUser.current = '';
+    let duser = Storage.read('user') as DUser; // DUser.load();
+    DUser.current = duser?.id || '';
+    if (!DUser.current) {
         console.warn('user not logged, redirecting to #/auth');
         return;
     }
-    DUser.current = duser.id;
+    // do init for specific pages
+
+    setDocumentEvents();
+
+    let isProjectPage = windoww.location.hash.indexOf('#/project') === 0;
+    let isDashboardPage = windoww.location.hash.indexOf('#/allProjects') === 0;
+
+    if ((isProjectPage || isDashboardPage) && (!U.isOffline() && !Api.checkToken())) {
+        DUser.current = ''; // forces redirect routing to auth
+        console.error('invalid token, redirect to auth');
+        // R.navigate('/auth');
+        return;
+    }
     try {
-        let c = await ProjectsApi.getAll();
+        if (isProjectPage) {
+            let pid: Pointer<DProject> = U.getProjectID_URL() as string;
+            const project = await ProjectsApi.getOne(pid);
+            // console.log('11 project load api response', {project, isOff:U.isOffline(), userid:DUser.current, user:DUser.getUser()});
+            if (!project) {
+                // todo: maybe add a retry counter in hash params and reload?
+                console.error('failed to get project', {project});
+                return;
+            }
+            let checkLoaded = (state: DState): boolean => {
+                if (!state.idlookup[DUser.current]) {
+                    console.warn('init looping, user not found yet', DUser.current);
+                    return false;
+                }
+                if (!state.idlookup[pid]) {
+                    console.warn('init looping, project not found yet', {pid, temp: project});
+                    return false;
+                }
+                ProjectsApi.isLoading = false; // quits loading screen on project page
+                // console.log('init completed');
+                return true;
+                /*
+                clearTimeout(windoww.__tmp_init_timer);
+                if (ProjectsApi.isLoading) { windoww.__tmp_init_timer = setInterval(()=>checkLoaded, 100); }
+                */
+            }
+
+            let state: DState;
+            let recursiveCheck = ()=>{
+                AFTER_TRANSACTION((state)=>{
+                    if (checkLoaded(state)) return;
+                    recursiveCheck();
+                    // setTimeout(recursiveCheck, 0);
+                });
+            }
+            // console.log('12 project load api response', {project, isOff:U.isOffline(), userid:DUser.current, user:DUser.getUser()});
+
+            if (!project.state) {
+                // state = {...store.getState()} as DState; // NEEDS TO BE SHALLOW COPIED or the state won't update. new project just created, never saved.
+                // }
+                Constructors.persist(project);
+                recursiveCheck();
+                return; // empty new project, keep initializing actions.
+            }
+            else state = JSON.parse(await U.decompressState(project.state));
+            /*state['idlookup'][DUser.current] = user.__raw;
+            if (!state['users'].includes(DUser.current)) state['users'].push(DUser.current);*/
+            // console.log('project load', state);
+            recursiveCheck();
+            // needs to stay before load for some reason? seems like action firing can be done synchronously some times?
+            SaveManager.load(state, project);
+            // console.log('init (load) completed');
+            // user.project = LProject.fromPointer(project.id);
+        }
+        else if (isDashboardPage) {
+            await ProjectsApi.getAll();
+        }
     } catch (error) {
-        await AuthApi.logout();
-        console.error('Failed to fetch projects', {error});
-        DUser.current = '';
+        Log.eDevv('Failed to fetch projects', {error});
+        // await AuthApi.logout();
+        // DUser.current = ''; // forces redirect routing to auth
+        // console.error('init error, redirect to auth');
+
         // R.navigate('/auth');
     }
-    setDocumentEvents();
     /*type RecentEntry = {id: Pointer<DProject>[], name: string};
     let recent: RecentEntry[] = JSON.parse(localStorage.getItem('_jjRecent') || '[]') as any[];
     if (window.location.hash.indexOf('#/project') === 0) { use R.navigate

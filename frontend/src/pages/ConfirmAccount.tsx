@@ -25,7 +25,7 @@ function ConfirmAccount() {
 
             });
         } catch (e) {
-            console.log("Errore nella conferma account:", e);
+            // console.log("Errore nella conferma account:", e);
             setLoading(false);
         }
     };
@@ -47,7 +47,7 @@ function ConfirmAccount() {
                 </p>
 
                 {loading ? (
-                    <p style={styles.loadingText}>Conferma in corso... 🔄</p>
+                    <p style={styles.loadingText}>Confirming... 🔄</p>
                 ) : (
                     <button
                         onClick={confirmAccount}

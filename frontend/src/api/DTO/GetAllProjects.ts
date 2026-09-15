@@ -13,4 +13,5 @@ export class DTOProjectGetAll{
     metamodelsNumber!: number;
     modelsNumber!: number;
     isFavorite!: boolean;
+    tags?: string[];
 }

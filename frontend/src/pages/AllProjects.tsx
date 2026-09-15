@@ -1,6 +1,6 @@
 /* DASHBOARD */
 /* ALLPROJECTS */
-import React, {Component, Dispatch, ReactElement, ReactNode, useState} from 'react';
+import React, {Component, Dispatch, ReactElement, ReactNode, useState, useEffect, useCallback} from 'react';
 
 import {connect} from 'react-redux';
 import {DProject, DState, Log, LProject, R, SetRootFieldAction, Try, U} from '../joiner';
@@ -9,23 +9,55 @@ import {Dashboard, Project} from './components';
 
 import { Cards, Card } from './components/cards/Cards';
 import { Catalog } from './components/catalog/Catalog';
+import { Button } from '../components/common/Button';
 
 import {ProjectsApi} from "../api/persistance";
 import { LatestUpdates } from './components/LatestUpdates';
+import { CreateProjectDialog, ProjectFormData } from '../components/CreateProjectDialog/CreateProjectDialog';
+import { JjodelEvents } from '../events/registry';
 
 function AllProjectsComponent(props: AllProps): JSX.Element {
     const {projects} = props;
     const [isDropping, setDropping] = useState(false);
-  
-    const createProject = async(type: DProject['type']) => {
-        await ProjectsApi.create(type, undefined, undefined, undefined, projects);
-        R.navigate("/allProjects");
-    }
+    const [showCreateDialog, setShowCreateDialog] = useState(false);
+
+    // Centralized handler for opening create project dialog - used by ALL "New Project" buttons
+    // Wrapped in useCallback to maintain stable reference for event listeners
+    const handleOpenCreateDialog = useCallback(() => {
+        setShowCreateDialog(true);
+    }, []);
+
+    const handleCloseCreateDialog = () => {
+        setShowCreateDialog(false);
+    };
+
+    const handleSubmitCreateProject = async (formData: ProjectFormData) => {
+        try {
+            setShowCreateDialog(false);
+            const existingProjects = projects?.length > 0 ? projects : undefined;
+            await ProjectsApi.create(formData.type, formData.name, [], [], existingProjects);
+        } catch (error) {
+            console.error('Error creating project:', error);
+            throw error;
+        }
+    };
+
+    // Listen for keyboard shortcut event (CMD+N in dashboard context)
+    useEffect(() => {
+        const handleNewProjectShortcut = () => {
+            handleOpenCreateDialog();
+        };
+
+        window.addEventListener(JjodelEvents.NEW_PROJECT, handleNewProjectShortcut);
+        return () => {
+            window.removeEventListener(JjodelEvents.NEW_PROJECT, handleNewProjectShortcut);
+        };
+    }, [handleOpenCreateDialog]);
 
     function dropConfirm(e: React.DragEvent<HTMLElement>){
         e.preventDefault();
         e.stopPropagation();
-        console.log('dropevent', {e});
+        // console.log('dropevent', {e});
 
         const droppedFiles = Array.from(e.dataTransfer.files);
         if (droppedFiles.length > 0) {
@@ -34,7 +66,7 @@ function AllProjectsComponent(props: AllProps): JSX.Element {
             reader.onload = function(e) {
                 if (!e.target) { Log.ee('invalid file', e); return; }
                 var contents = e.target.result;
-                console.log('read file', {contents, e, file});
+                // console.log('read file', {contents, e, file});
                 let date: number = file.lastModified;
                 let name = file.name; // including extension
                 if (typeof contents === 'string') ProjectsApi.importFromText(contents, name, date);
@@ -81,41 +113,42 @@ function AllProjectsComponent(props: AllProps): JSX.Element {
             : null
         }
 
-        <Dashboard active={'All'} version={props.version}>
-            <div>
-                 
-                <div>
-                    <Cards className={'project-create-cards'}>
-                        <Cards.Item
-                            title={'New Jjodel'}
-                            subtitle={'Create a new Jjodel project.'}
-                            icon={'add'}
-                            style={'green'}
-                            action={() => createProject('private')}
-                        />
-                        {!(U.isOffline()) && <Cards.Item
-                            title={'New Jjodel (Collaborative)'}
-                            subtitle={'Create a new Jjodel project.'}
-                            icon={'add'}
-                            style={'yellow'}
-                            action={() => createProject('collaborative')}
-                        />}
-                        <Cards.Item
-                            title={'Import Jjodel'}
-                            subtitle={'Import an existing Jjodel project.'}
-                            icon={'import'}
-                            style={'dark'}
-                            action={() => setDropping(true)}
-                        />
-                        {<Cards.Item icon={'gettingstarted'} url={'https://www.jjodel.io/getting-started/'} style={'red-orange'} title={'Getting Started'} subtitle={'New to Jjodel? No worries'}/>}
-                    </Cards>
-                    <Catalog projects={projects} />
+        <Dashboard active={'All'} version={props.version} onNewProject={handleOpenCreateDialog}>
+            <div className="dashboard-main-content">
+                {/* CTA Buttons - Only 2: Import + New Project */}
+                <div className="dashboard-cta-row">
+                    <div className="dashboard-cta-left">
+                        <h1 className="dashboard-page-title">Projects</h1>
+                    </div>
+                    <div className="dashboard-cta-right">
+                        <Button
+                            variant="secondary"
+                            onClick={() => setDropping(true)}
+                        >
+                            <i className="bi bi-download" />
+                            Import
+                        </Button>
+                        <Button
+                            variant="primary"
+                            onClick={handleOpenCreateDialog}
+                        >
+                            <i className="bi bi-plus-lg" />
+                            New Project
+                        </Button>
+                    </div>
                 </div>
+                <Catalog projects={projects} onNewProject={handleOpenCreateDialog} />
             </div>
-            
         </Dashboard>
-        
+
         <LatestUpdates page={'AllProjects'}/>
+
+        {/* Create Project Dialog - Centralized for all "New Project" buttons */}
+        <CreateProjectDialog
+            isOpen={showCreateDialog}
+            onClose={handleCloseCreateDialog}
+            onSubmit={handleSubmitCreateProject}
+        />
         
         </>
 

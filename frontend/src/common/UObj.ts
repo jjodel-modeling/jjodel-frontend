@@ -1,12 +1,41 @@
 import {GObject, Log, PointedBy, RuntimeAccessible} from "../joiner";
 import {U, Uarr} from "../joiner";
-const stringify = require('json-stable-stringify');
+import stringify from 'json-stable-stringify';
 (window as any).stableStringify = stringify;
 
 @RuntimeAccessible('Uobj')
 export class Uobj {
     static cname: string = 'Uobj';
 
+    static deepEdit(
+        obj: any,
+        key: (k: string | number | symbol) => string | number | symbol | undefined,
+        value: (v: any) => any, inPlace = false
+    ): any {
+        if (obj === null || typeof obj !== 'object') return obj;
+
+        let modified = false;
+        const newObj: any = inPlace ? obj : (Array.isArray(obj) ? [] : {});
+        let isArr = Array.isArray(obj);
+        for (const k of Reflect.ownKeys(obj)) {
+            let newKey = key(k);
+            if (isArr && newKey !== undefined && typeof newKey !== "symbol" && !isNaN(+newKey) && +newKey >= 0) newKey = +newKey; // isNaN check to avoid transforming "length" into NaN or custom keys like ([]).a = "custom key"
+            if (newKey === undefined) {
+                modified = true;
+                if (inPlace) delete newObj[k];
+                continue;
+            }
+
+            const transformedVal = value(obj[k]);
+            const newVal = Uobj.deepEdit(transformedVal, key, value);
+
+            if (newKey !== k || newVal !== obj[k]) modified = true;
+            if (inPlace) delete newObj[k];
+            newObj[newKey] = newVal;
+        }
+
+        return modified ? newObj : obj;
+    }
     // difference react-style. lazy check by === equality field by field. parameters are readonly
     public static objdiff<T extends GObject>(old:T, neww: T, includeProto: boolean = true, emptyObjectsCheck: boolean = true): {removed: Partial<T>, added: Partial<T>, changed: Partial<T>, unchanged: Partial<T>} {
         // let ret: GObject = {removed:{}, added:{}, changed:{}};
@@ -32,13 +61,15 @@ export class Uobj {
         for (key in old) {
             if (!includeProto && !old.hasOwnProperty(key)) continue;
             // if (neww[key] === undefined){
-            // if neww have a key with undefined value, it counts (and should) as having that property key defined
+            // if neww have a key with undefined value, it counts (and should) as having that property key definedù
             if (!includeProto ? !neww.hasOwnProperty(key) : !(key in neww)){ (ret.removed as GObject)[key] = old[key]; }
-            else if (neww[key] === old[key] ||
-                (emptyObjectsCheck &&
-                    (typeof old[key] === 'object' && typeof neww[key] === 'object') &&
-                    (Object.keys(neww[key]).length === 0 && Object.keys(old[key]).length === 0)
-                )) { (ret.unchanged as GObject)[key] = old[key] }
+            else if (neww[key] === old[key]) { (ret.unchanged as GObject)[key] = old[key]; }
+            else if (emptyObjectsCheck &&
+                (old[key] && neww[key] && typeof old[key] === 'object' && typeof neww[key] === 'object') &&
+                (Object.keys(neww[key]).length === 0 && Object.keys(old[key]).length === 0)
+            ) {
+                (ret.unchanged as GObject)[key] = old[key];
+            }
             else (ret.changed as GObject)[key] = old[key];
         }
         for (let key in neww) {

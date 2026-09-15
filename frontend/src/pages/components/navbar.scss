@@ -14,8 +14,8 @@
   /* Navbar links styling */
   label {
     display: block;
-    color: var(--color);
-    font-weight: 500;
+    color: var(--color-text-primary);
+    font-weight: var(--font-medium);
     text-align: center;
     text-decoration: none;
     padding-left: 1em;
@@ -30,18 +30,18 @@
       border-radius: 4px;*/
       text-decoration: underline;
       text-decoration-thickness: 4px;
-      text-decoration-color: var(--accent);
+      text-decoration-color: var(--color-accent);
     }
   }
 
 
   .bi.list {
     display: block;
-    color: var(--color);
+    color: var(--color-text-primary);
     font-size: 1.3em;
     transition: color 0.2s;
     &:hover {
-      color: var(--accent);
+      color: var(--color-accent);
       transition: color 0.2s;
     }
   }
@@ -77,7 +77,7 @@
     transition: color 0.2s;
   }
   .debug-icon:hover {
-    color: var(--accent);
+    color: var(--color-accent);
   }
 }
 .bi.bi-step-circle{
@@ -105,7 +105,7 @@
     display: inline-block;
     font-family: bootstrap-icons !important;
     font-style: normal;
-    font-weight: normal !important;
+    font-weight: var(--font-normal) !important;
     font-variant: normal;
     text-transform: none;
     line-height: 1;
@@ -124,7 +124,7 @@
   margin-top: 0em;
   display: none;
   position:fixed;
-  background-color: var(--color);
+  background-color: var(--color-accent);
   min-width: 200px;
   list-style-type: none;
   box-shadow:0px 10px 20px rgba(000,000,000,0.3),inset 0px 0px 1px rgba(255,255,255,0.8);
@@ -137,14 +137,14 @@
     text-align: left;
     cursor: pointer;
     color: var(--fg-1);
-    font-weight: 200;
+    font-weight: var(--font-light);
     font-size: 12px;
     margin: 0 4px 0 4px;
     padding: 3px 8px 3px 8px;
     height: 25px;
     &:hover {
       text-decoration: none;
-      background-color: var(--accent);
+      background-color: var(--color-accent);
       border-radius: 4px;
     }
   }
@@ -156,28 +156,58 @@
 }
 
 
+/* ============================================
+   NAV CONTAINER - REDESIGNED WITH DESIGN TOKENS
+   Modern navbar using new token system
+   ============================================ */
+
 .nav-container {
   position: relative;
-  display: flex;
-  border-bottom: 1px solid var(--bg-3);
-  background-color: var(--bg-1);
-  height: 32px;
-  padding: 0px var(--side-padding);
-  font-weight: 200;
-  --palette-1-hover: var(--accent);
+  display: flex !important;
+  align-items: center !important;
+  flex-direction: row !important; // Ensure horizontal layout
+  /* Ensure navbar is above tree view sidebar (z-index: 50) */
+  z-index: 100;
+
+  /* Visual */
+  background-color: var(--color-bg-primary);
+  border-bottom: 1px solid var(--color-border-primary);
+  box-shadow: none;
+
+  /* Sizing - 60px as per design spec */
+  height: 60px;
+  padding: 0 var(--space-6) 0 20px; /* left 20px aligns logo with palette "Structure" label below */
+
+  /* Typography */
+  font-family: var(--font-sans);
+  font-weight: var(--font-normal);
+  font-size: var(--text-sm);
+
+  /* Z-index */
+  z-index: var(--z-navbar);
+
+  /* Global Search positioning */
+  .global-search {
+    margin-left: auto;
+    margin-right: var(--space-4);
+  }
+
+  /* Legacy compat */
+  --palette-1-hover: var(--color-accent);
 
   .context-menu>ul>li{
-    .bi:before{
-      width: 1lh;
+    .bi {
       display: inline-block;
+      width: 20px;
+      text-align: center;
+      margin-right: var(--space-2);
     }
     svg{
-      min-width: 14.39px !important;
-      min-height: 14.39px !important;
-      max-width: 14.39px !important;
-      max-height: 14.39px !important;
-      margin-right: 8px;
-      scale: 1.5 !important;
+      min-width: 20px !important;
+      min-height: 16px !important;
+      max-width: 20px !important;
+      max-height: 16px !important;
+      margin-right: var(--space-2);
     }
     svg.bi.bi-layout-sidebar{
       scale: 2.4 !important;
@@ -186,19 +216,46 @@
   }
 
 
+  /* Logo - positioned LEFT per new design */
   .nav-logo {
-    // margin: auto;
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 0;
-    bottom: 0;
-    pointer-events: none;
+    position: relative;
     display: flex;
+    align-items: center;
+    margin-right: var(--space-8);
+    order: -1; /* Ensure logo is first */
+    cursor: pointer;
+
+    .logo-text {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--color-text-primary); /* Brand color — slate-900 */
+      cursor: pointer;
+      text-decoration: none;
+      white-space: nowrap;
+
+      &:hover {
+        color: var(--color-accent);
+      }
+    }
+
+    // Logo Image
+    &__image {
+      height: 28px;
+      width: auto;
+      display: block;
+      transition: opacity 0.15s ease;
+    }
+
+    // Hover effect on the logo
+    &:hover {
+      .nav-logo__image {
+        opacity: 0.85;
+      }
+    }
 
     &> .aligner{
-      margin: auto;
-      pointer-events: all;
+      display: flex;
+      align-items: center;
     }
 
     &  div.logo{
@@ -206,7 +263,6 @@
       background-image: url(/static/img/jjodel-70.png);
       height: 28px;
       width: 70px;
-      top: 2px;
       background-repeat: no-repeat;
       background-size: 57px 25px;
       transition: all 0.3s ease-in-out;
@@ -221,53 +277,151 @@
     }
 
     &  div.logo-on {
-
       position: relative;
       background-image: url(/static/img/jjodel-hover-70.png);
       height: 28px;
       width: 70px;
-      top: 2px;
       background-repeat: no-repeat;
       background-size: 57px 25px;
       transition: all 0.3s ease-in-out;
       z-index:200;
     }
 
-
-
     & .bi {
       position: absolute;
-      color: var(--accent);
+      color: var(--color-accent);
       padding-left: 70px;
       top: 4px;
       font-size: 1.6em;
       margin: auto;
       z-index: 1;
     }
+  }
 
+  /* Nav Tabs - Projects, Templates, Explore */
+  .nav-tabs-container {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    margin-left: var(--space-4);
+    order: 0;
+  }
 
+  .nav-tab {
+    display: flex;
+    align-items: center;
+    padding: var(--space-2) var(--space-4);
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    color: var(--color-text-secondary);
+    background-color: transparent;
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: var(--transition-fast);
+    text-decoration: none;
+    white-space: nowrap;
+
+    &:hover {
+      color: var(--color-text-primary);
+      background-color: var(--color-bg-secondary);
+    }
+
+    &.active {
+      color: var(--color-text-primary);
+      background-color: var(--color-bg-secondary);
+    }
   }
 
   .nav-commands{
-    margin-right: 3rem;
-    margin-left: auto; 
+    margin-right: var(--space-4);
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+
+    /* Typography for mode labels */
+    label {
+      font-family: var(--font-sans);
+      font-size: var(--text-sm);
+      font-weight: var(--font-normal);
+      color: var(--color-text-secondary);
+    }
+
+    span {
+      font-family: var(--font-sans);
+      font-size: var(--text-sm);
+      color: var(--color-text-secondary);
+    }
   }
 
-  .nav-hamburger { 
+  /* Help Button */
+  .nav-help-btn {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    color: var(--color-text-secondary);
+    background-color: transparent;
+    border: 1px solid var(--color-border-primary);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: var(--transition-fast);
+
+    .bi {
+      font-size: var(--text-base);
+    }
+
+    &:hover {
+      color: var(--color-text-primary);
+      border-color: var(--color-accent);
+      background-color: var(--color-bg-secondary);
+    }
+  }
+
+  /* User Badge (Avatar) - Brand color, not cyan */
+  .user-badge {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background-color: var(--color-accent); // Brand color — slate-700
+    color: white;
+    font-size: var(--text-sm);
+    font-weight: var(--font-semibold);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: var(--transition-fast);
+
+    i { color: inherit; }
+
+    &:hover {
+      background-color: var(--color-accent-hover); // Darker brand — slate-800
+      transform: scale(1.05);
+    }
+  }
+
+  .nav-hamburger {
     margin-right: auto;
-    color: var(--color);
-    font-size: 1.5em;
+    color: var(--color-text-primary);
+    font-size: var(--text-xl);
     padding-right: 0;
-    display: block;
-    margin-top: auto;
-    margin-bottom: auto;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    transition: var(--transition-fast);
 
+    &:hover {
+      color: var(--color-accent);
+    }
 
-    
     >.bi::before{
       transform: rotate(0deg);
       transform-origin: center;
-      transition: 0.3s linear transform; // ease-in-out
+      transition: var(--duration-normal) linear transform;
     }
 
     >.bi:hover::before{
@@ -275,19 +429,25 @@
     }
 
     label div {
-      float: right; 
+      float: right;
     }
   }
 
   & span.menu-title {
     cursor: pointer;
-    font-size: 0.70em;
-    font-weight: 500;
-    margin-right: 0px;
-    padding: 4px 16px;
-    border-radius: 4px;;
-  }
+    font-size: var(--text-base);  /* Base font size for main menu items */
+    font-weight: var(--font-medium);
+    font-family: var(--font-sans);
+    margin-right: 0;
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-md);
+    transition: var(--transition-fast);
+    line-height: var(--line-normal);
 
+    &:hover {
+      background-color: var(--color-bg-hover);
+    }
+  }
 
 }
 
@@ -295,7 +455,7 @@
 .nav-container .nav-hamburger label div .bi {
   color: white;
   font-size: 0.75em;
-  font-weight: 800;
+  font-weight: var(--font-extrabold);
 }
 
 .nav-container .nav-hamburger.inline {
@@ -303,7 +463,7 @@
 }
 .nav-hamburger:hover {
   span.menu-title {
-    background-color: var(--bg-2-5);
+    background-color: var(--color-bg-hover);
   }
 }
 
@@ -315,28 +475,27 @@
 }
 
 .nav-container .content {
-  &>ul{
-    background-color: var(--color);
-    box-shadow: var(--smart-elevation-8);
-    border: inherit;
-    border-color: #233d4d;
-    border-radius: 6px;
+  // Ensure all navbar dropdowns are above tree view sidebar (z-index: 100)
+  z-index: 200 !important;
 
-    padding-right: 0;
-    padding-left: 0;
+  &>ul{
+    background-color: var(--color-bg-elevated);
+    box-shadow: var(--shadow-dropdown);
+    border: 1px solid var(--color-border-primary);
+    border-radius: var(--radius-lg);
+    padding: var(--space-2);
     list-style: none;
   }
+
   background-color: transparent;
   border-radius: 0;
   border: none;
-
   min-width: 200px;
   top: 100%;
-  font-size: 12px;
-  left: -20px;
+  font-size: var(--text-sm);
+  left: calc(-1 * var(--space-5));
   box-shadow: none !important;
   height: fit-content;
-
 
   & ul li {
     padding-left: 0;
@@ -344,47 +503,58 @@
   }
 
   ul li.divisor {
-    padding: 3px 0;
+    padding: var(--space-1) 0;
   }
 
   ul li hr {
     position: relative;
-    color: #8a8a8a;
-    width: calc(100% - 10px);
-    left: 5px;
+    border: none;
+    border-top: 1px solid var(--color-border-primary);
+    width: calc(100% - var(--space-3));
+    left: calc(var(--space-1) + var(--space-half));
+    margin: var(--space-1) 0;
   }
 
   & label {
-    color: var(--bg-1);
+    color: var(--color-text-primary);
     cursor: pointer;
     display: block;
-    font-size: 12px;
-    font-weight: 200;
-    width: calc(100% - 8px);
-    margin: 0 4px 0 4px;
-    padding: 3px 10px 3px 8px;
+    font-size: var(--text-sm);
+    font-weight: var(--font-normal);
+    width: calc(100% - var(--space-2));
+    margin: 0 var(--space-1);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-md);
+    transition: var(--transition-fast);
   }
 
   & label.disabled {
-    color: var(--bg-3-1)!important;
+    color: var(--color-text-secondary) !important;
+    opacity: 0.6;
   }
 
   & label.disabled .bi {
-    color: var(--bg-3-1)!important;
+    color: var(--color-text-disabled) !important;
   }
 
   & label.disabled:hover {
-    background-color: transparent!important;
+    background-color: transparent !important;
     cursor: not-allowed;
   }
 
-  & label:hover {
-    background-color: var(--accent);
-    border-radius: 4px;
+  & label:hover:not(.disabled) {
+    background-color: var(--color-accent);
+    color: white;
 
+    // Shortcut pill styling on hover
+    .keystrokes .keystroke-pill {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: rgba(255, 255, 255, 0.2);
+      color: rgba(255, 255, 255, 0.9);
+    }
   }
 
-  & .keystroke .bi {
+  & .keystroke-pill .bi {
     font-size: 0.9em;
     font-kerning: none;
   }
@@ -395,98 +565,166 @@
 
 
 .nav-container .content.context-menu {
-  width: auto; 
-  padding-left: 20px;
-  padding-top: 10px;
-
-  padding-right: 10px;
-  padding-bottom: 10px;
-
+  width: auto;
+  /* Remove custom padding - use same as other menus */
+  padding: 0;
 }
+
 .nav-container .content.context-menu ul {
   --palette-1-hover: white;
   width: max-content;
   min-width: 100%;
-  padding: 4px 0px;
+
+  /* Use consistent padding with design tokens */
+  padding: var(--space-2);
+
   --font-color-1: white;
+
   .highlight{
-    height: 30px;
+    /* Use consistent height */
+    min-height: 30px;
+    display: flex;
+    align-items: center;
+
     &>span {
-      margin-top: auto;
-      margin-bottom: auto;
-      // display: flex; makes problems in undoredo component
+      display: flex;
+      align-items: center;
+      width: 100%;
+
       >*{
-        margin-top:auto;
-        margin-bottom:auto;
+        margin: auto 0;
       }
       .menuitem{
         min-width: 1ric;
         max-width: 1ric;
+        margin-right: var(--space-2);
       }
       svg.menuitem{
         scale: 1.2;
       }
     }
   }
+
   .context-menu{
     margin-top: -5px; // undo the padding (4) and border (1) to align the nested submenu
   }
+
   >li{
     display: flex;
     width: 100%;
+
     &:hover, &:focus-within{
       >label{
-        border-radius: 4px;
-        background-color: var(--accent);
+        border-radius: var(--radius-md);
+        background-color: var(--color-accent);
+        color: white;
+
+        // Icon color on hover
+        .bi, svg {
+          color: white;
+        }
+
+        // Shortcut pill styling on hover
+        .keystrokes .keystroke-pill {
+          background: rgba(255, 255, 255, 0.15);
+          border-color: rgba(255, 255, 255, 0.2);
+          color: rgba(255, 255, 255, 0.9);
+        }
+
         &.disabled {
-          background-color: var(--color-lighter) !important;
-          color: var(--bg-1) !important;
+          background-color: transparent !important;
+          color: var(--color-text-disabled) !important;
+          cursor: not-allowed;
         }
       }
     }
+
     >label{
       display: flex;
-      padding: 3px 8px;
+      align-items: center;
+
+      /* Use consistent padding with design tokens */
+      padding: var(--space-2) var(--space-3);
       width: 100%;
+
+      /* Typography */
+      font-family: var(--font-sans);
+      font-size: var(--text-sm);
+      font-weight: var(--font-normal);
+      color: var(--color-text-primary);
+
+      /* Transition */
+      transition: var(--transition-fast);
+
+      /* Icon styling - uniform across all menus */
+      .bi, svg {
+        font-size: var(--text-lg);
+        width: 1.5em;
+        margin-right: var(--space-2);
+        color: inherit;
+      }
 
       >*:first-child{
         flex-grow: 1;
       }
+
       .keystrokes{
         height: 18px;
         display: flex;
-        justify-content: end;
+        justify-content: flex-end;
+        align-items: center;
         margin: auto;
-        margin-left: 1rem;
+        margin-left: 1.5rem;
+        gap: 3px; // Spacing between individual pill keys
 
-        >*{
+        // Individual pill styling for keyboard shortcuts
+        .keystroke-pill {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          font-family: 'IBM Plex Mono', Monaco, 'Cascadia Code', 'Consolas', monospace;
+          font-size: 11px;
+          font-weight: 500;
+          min-width: 20px;
+          padding: 2px 6px;
+          background: rgba(0, 0, 0, 0.06);
+          border: 1px solid rgba(0, 0, 0, 0.1);
+          border-radius: 4px;
+          color: #6b7280;
+          white-space: nowrap;
+          line-height: 1.2;
+          box-shadow: 0 1px 0 rgba(0, 0, 0, 0.05);
+        }
+
+        // Old keystroke format (backward compat)
+        >*:not(.keystroke-pill){
           font-size: 12px;
           width: 1.1ic;
-          // border: 1px solid red;
           text-align:center;
           order: 1;
-          //vertical-align: middle;
           margin-top: -0.5px;
           height: 100%;
+
           &::before{
-            // vertical-align: middle;
             height: 100%;
           }
         }
+
         i.bi{
           font-size: inherit;
           &:hover{
             color: var(--color-1);
           }
         }
+
         .bi-shift{
           order: -1;
         }
+
         >.text-icon{
           width: 2ic;
           order: 0;
         }
-
       }
     }
   }
@@ -501,50 +739,61 @@
   min-width: 150px;
   display: flex;
   align-items: center;
-  padding-right: 25px;
-  margin-left: 20px!important;
-  margin-top: auto;
-  margin-bottom: auto;
+  gap: var(--space-2);
+  padding-right: var(--space-6);
+  margin-left: var(--space-5);
+  cursor: pointer;
 
-    & .initials{
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      font-weight: 500;
-      font-size: inherit;
-      height: 26px;
-      width: 26px;
-      border-radius: 50%;
-      background-color: var(--bg);
-      // background: linear-gradient(45deg, #00c6ff, #0072ff);
-      color: white!important;
-      font-size: 0.8em;
+  & .initials{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: var(--font-medium);
+    font-size: var(--text-sm);
+    height: 32px;
+    width: 32px;
+    border-radius: 50%;
+    background-color: #374151; // Brand color, not cyan
+    color: white;
+    transition: var(--transition-fast);
 
+    &:hover {
+      background-color: #1f2937; // Darker brand
+      transform: scale(1.05);
     }
+  }
+
+  /* User name text */
+  & > span {
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    color: var(--color-text-primary);
+  }
+
   >*{
     margin: auto 0;
   }
 }
 
-
-
 .user-initials {
-  width: 28px;
-  height: 28px;
-  border-radius: 22px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
   color: white;
-  font-weight: 400;
+  font-weight: var(--font-medium);
+  font-size: var(--text-sm);
   text-align: center;
-  padding-right: 1px;
-  background-color: var(--secondary);
-  font-size: 1rem;
-  padding-top: 1px;
-  transition: 0.3s;
-}
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #374151; // Brand color, not cyan
+  transition: var(--transition-fast);
 
-.user-initials:hover {
-  background-color: var(--accent);
-  transition: 0.3s;
+  &:hover {
+    background-color: #1f2937; // Darker brand
+    transform: scale(1.05);
+  }
 }
 
 .nav-side {
@@ -560,21 +809,1544 @@
 
 
 
-/*.nav-container */.content.right {
-   min-height: 100%;
-   left: calc(100% - 20px);
-   padding-left: 30px;
-   background-color: transparent;
-   top: 0px;
-   box-shadow: none;
-   ul {
-     position: relative;
-   }
-   box-shadow: none;
 
-   & .keystroke {
-     float: right;
-     margin-right: 10px;
+/* ============================================
+   MENU BAR - NEW LIGHT THEME
+   Per jjodel-menu-spec.md
+   ============================================ */
 
-   }
+// Variables
+$menu-font: var(--font-sans);
+$menu-bg: #ffffff;
+$menu-border: #e2e4e8;
+$menu-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+$menu-radius: 8px;
+$menu-item-radius: 6px;
+
+$color-text-menu: #374151;
+$color-text-menu-hover: #111418;
+$color-text-menu-disabled: #9CA3AF;
+$color-bg-menu-hover: #f1f5f9;
+$color-icon-menu: #6B7280;
+$color-icon-menu-disabled: #D1D5DB;
+
+$transition-menu: 150ms ease;
+
+// Menu Bar Container
+.menu-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 100%;
+}
+
+// Menu Trigger (top-level menu items)
+.menu-trigger {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  font-family: $menu-font;
+  font-size: 14px;
+  font-weight: 500;
+  color: $color-text-menu;
+  background: transparent;
+  border: none;
+  border-radius: $menu-item-radius;
+  cursor: pointer;
+  transition: all $transition-menu;
+
+  &:hover,
+  &.open {
+    background: $color-bg-menu-hover;
+    color: $color-text-menu-hover;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #475569;
+    outline-offset: 2px;
+  }
+}
+
+.menu-trigger-icon {
+  font-size: 16px;
+  color: $color-icon-menu;
+}
+
+.menu-trigger-chevron {
+  font-size: 10px;
+  color: #6B7280;
+  transition: transform $transition-menu;
+
+  .menu-trigger.open & {
+    transform: rotate(180deg);
+  }
+}
+
+// Dropdown Container
+.menu-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 220px;
+  background: $menu-bg;
+  border: 1px solid $menu-border;
+  border-radius: $menu-radius;
+  box-shadow: $menu-shadow;
+  padding: 6px;
+  z-index: 1000;
+
+  // Animation
+  opacity: 0;
+  transform: translateY(-8px);
+  pointer-events: none;
+  transition: all $transition-menu;
+
+  &.open {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+}
+
+// Dropdown Item
+.menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  font-family: $menu-font;
+  font-size: 13px;
+  font-weight: 400;
+  color: $color-text-menu;
+  background: transparent;
+  border: none;
+  border-radius: $menu-item-radius;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition: all $transition-menu;
+
+  &:hover:not(.disabled) {
+    background: $color-bg-menu-hover;
+    color: $color-text-menu-hover;
+
+    .menu-item-icon {
+      color: $color-text-menu;
+    }
+  }
+
+  &.disabled {
+    color: $color-text-menu-disabled;
+    cursor: not-allowed;
+
+    .menu-item-icon {
+      color: $color-icon-menu-disabled;
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid #475569;
+    outline-offset: -2px;
+  }
+}
+
+.menu-item-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.menu-item-icon {
+  width: 16px;
+  font-size: 14px;
+  color: $color-icon-menu;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.menu-item-label {
+  flex: 1;
+}
+
+.menu-shortcut {
+  font-size: 12px;
+  color: #9CA3AF;
+  margin-left: 24px;
+
+  .menu-item.disabled & {
+    color: $color-icon-menu-disabled;
+  }
+}
+
+.menu-submenu-arrow {
+  font-size: 12px;
+  color: #9CA3AF;
+  margin-left: 8px;
+}
+
+// Separator
+.menu-separator {
+  height: 1px;
+  background: $menu-border;
+  margin: 6px 0;
+}
+
+// Submenu Container
+.menu-submenu-container {
+  position: relative;
+}
+
+.menu-submenu {
+  position: absolute;
+  left: calc(100% + 4px);
+  top: -6px;
+  min-width: 200px;
+  background: $menu-bg;
+  border: 1px solid $menu-border;
+  border-radius: $menu-radius;
+  box-shadow: $menu-shadow;
+  padding: 6px;
+  z-index: 1001;
+
+  // Animation
+  opacity: 0;
+  transform: translateX(-8px);
+  pointer-events: none;
+  transition: all $transition-menu;
+
+  &.open {
+    opacity: 1;
+    transform: translateX(0);
+    pointer-events: auto;
+  }
+}
+
+// Header Right Section
+// IMPORTANT: These styles ensure right-side items stay aligned right
+// Added !important to prevent any utility class overrides
+.main-header-right {
+  display: flex !important;
+  align-items: center !important;
+  margin-left: auto !important;
+  gap: 8px !important;
+  flex-shrink: 0 !important;
+}
+
+// ==============================================
+// NAVBAR TOGGLES CONTAINER
+// Vertical toggles for Debug and Mode
+// Styles are in VerticalToggle.scss, this adds navbar-specific overrides
+// ==============================================
+
+.navbar-toggles {
+  margin-right: 16px;
+  padding: 4px 0;
+}
+
+// Responsive - compact version
+@media (max-width: 1200px) {
+  .navbar-toggles {
+    margin-right: 12px;
+  }
+}
+
+// Help Button in Menu Bar
+.menu-help-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  font-family: $menu-font;
+  font-size: 14px;
+  font-weight: 500;
+  color: $color-text-menu;
+  background: transparent;
+  border: none;
+  border-radius: $menu-item-radius;
+  cursor: pointer;
+  transition: all $transition-menu;
+
+  .bi {
+    font-size: 16px;
+    color: $color-icon-menu;
+  }
+
+  &:hover {
+    background: $color-bg-menu-hover;
+    color: $color-text-menu-hover;
+
+    .bi {
+      color: $color-text-menu;
+    }
+  }
+}
+
+// ============================================
+// DEBUG TOGGLE - Toggle Button Style
+// OFF = slate outline, ON = amber outline
+// ============================================
+
+.debug-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 12px;
+  margin-right: 8px;
+  border-radius: 6px;
+
+  // Typography
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+
+  // Behavior
+  cursor: pointer;
+  user-select: none;
+  transition: all 150ms ease;
+
+  i {
+    font-size: 14px;
+  }
+
+  span {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+
+  // Default state (OFF) - slate outline like Basic mode
+  background: transparent;
+  border: 1.5px solid #cbd5e1; // slate-300
+  color: #64748b; // slate-500
+
+  i {
+    color: #94a3b8; // slate-400
+  }
+
+  &:hover {
+    background: #f8fafc; // slate-50
+    border-color: #94a3b8; // slate-400
+    color: #475569; // slate-600
+
+    i {
+      color: #64748b;
+    }
+  }
+
+  // Active state (ON) - amber outline
+  &--active {
+    background: transparent;
+    border: 1.5px solid #f59e0b; // amber-500
+    color: #f59e0b;
+
+    i {
+      color: #f59e0b;
+    }
+
+    &:hover {
+      background: rgba(245, 158, 11, 0.08);
+      border-color: #d97706; // amber-600
+      color: #d97706;
+
+      i {
+        color: #d97706;
+      }
+    }
+  }
+}
+
+// Dark mode support
+[data-theme="dark"] .debug-toggle,
+.dark .debug-toggle {
+  // OFF state in dark mode
+  background: transparent;
+  border-color: #475569; // slate-600
+  color: #94a3b8; // slate-400
+
+  i {
+    color: #64748b; // slate-500
+  }
+
+  &:hover {
+    background: rgba(148, 163, 184, 0.1);
+    border-color: #64748b; // slate-500
+    color: #cbd5e1; // slate-300
+
+    i {
+      color: #94a3b8;
+    }
+  }
+
+  // ON state in dark mode
+  &--active {
+    border-color: #fbbf24; // amber-400
+    color: #fbbf24;
+
+    i {
+      color: #fbbf24;
+    }
+
+    &:hover {
+      background: rgba(251, 191, 36, 0.1);
+      border-color: #fcd34d; // amber-300
+      color: #fcd34d;
+
+      i {
+        color: #fcd34d;
+      }
+    }
+  }
+}
+
+// ============================================
+// MODE TOGGLE - Basic/Advanced Mode Switch
+// Minimal outline style for professional look
+// ============================================
+
+.navbar__mode-toggle {
+  display: flex;
+  align-items: center;
+  margin-right: 12px;
+}
+
+.mode-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 6px;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms ease;
+
+  i {
+    font-size: 14px;
+  }
+
+  // Basic mode (default) - subtle outline
+  &--basic {
+    background: transparent;
+    border: 1.5px solid #cbd5e1; // slate-300
+    color: #64748b; // slate-500
+
+    i {
+      color: #94a3b8; // slate-400
+    }
+
+    &:hover {
+      background: #f8fafc; // slate-50
+      border-color: #94a3b8; // slate-400
+      color: #475569; // slate-600
+
+      i {
+        color: #64748b;
+      }
+    }
+  }
+
+  // Advanced mode - prominent outline
+  &--advanced {
+    background: #f1f5f9; // slate-100
+    border: 1.5px solid #475569; // slate-600
+    color: #1e293b; // slate-800
+
+    i {
+      color: #334155; // slate-700
+    }
+
+    &:hover {
+      background: #e2e8f0; // slate-200
+      border-color: #334155; // slate-700
+      color: #0f172a; // slate-900
+
+      i {
+        color: #1e293b;
+      }
+    }
+  }
+}
+
+// Dark mode support
+[data-theme="dark"] .mode-toggle-btn,
+.dark .mode-toggle-btn {
+  &--basic {
+    background: transparent;
+    border-color: #475569; // slate-600
+    color: #94a3b8; // slate-400
+
+    i {
+      color: #64748b; // slate-500
+    }
+
+    &:hover {
+      background: rgba(148, 163, 184, 0.1);
+      border-color: #64748b; // slate-500
+      color: #cbd5e1; // slate-300
+
+      i {
+        color: #94a3b8;
+      }
+    }
+  }
+
+  &--advanced {
+    background: rgba(100, 116, 139, 0.2); // slate-500 at 20%
+    border-color: #94a3b8; // slate-400
+    color: #f1f5f9; // slate-100
+
+    i {
+      color: #e2e8f0; // slate-200
+    }
+
+    &:hover {
+      background: rgba(100, 116, 139, 0.3);
+      border-color: #cbd5e1; // slate-300
+      color: #ffffff;
+
+      i {
+        color: #f1f5f9;
+      }
+    }
+  }
+}
+
+// Legacy support - keep advanced-mode-badge for any remaining usage
+// Updated to minimal outline style for consistency
+.advanced-mode-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 12px;
+  margin-right: 12px;
+
+  // Typography
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 500;
+
+  // Visual - Outline slate style
+  background: #f1f5f9; // slate-100
+  border: 1.5px solid #475569; // slate-600
+  border-radius: 6px;
+  color: #1e293b; // slate-800
+
+  // Behavior
+  cursor: default;
+  user-select: none;
+  transition: all 150ms ease;
+
+  i {
+    font-size: 14px;
+    color: #334155;
+  }
+}
+
+[data-theme="dark"] .advanced-mode-badge,
+.dark .advanced-mode-badge {
+  background: rgba(100, 116, 139, 0.2);
+  border-color: #94a3b8;
+  color: #f1f5f9;
+
+  i {
+    color: #e2e8f0;
+  }
+}
+
+// ============================================
+// JODIE AI ASSISTANT BUTTON
+// ============================================
+
+.jodie-trigger-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  background: linear-gradient(135deg, var(--color-accent-light) 0%, transparent 100%);
+  border: 1px solid var(--color-accent);
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  .bi {
+    font-size: 14px;
+    color: var(--color-accent);
+  }
+
+  &:hover {
+    background: var(--color-accent);
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(var(--color-accent-rgb), 0.3);
+
+    .bi {
+      color: white;
+    }
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+// ============================================
+// LAYOUT CONTROLS - Split/Sidebar/Canvas-Only Toggle
+// ============================================
+
+.navbar__layout-controls {
+  display: flex;
+  align-items: center;
+  gap: 2px; // Compact spacing
+  margin-right: 12px;
+  padding: 3px;
+  background: rgba(71, 85, 105, 0.06); // Subtle group background
+  border-radius: 8px;
+}
+
+.layout-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: #64748b; // slate-500
+  cursor: pointer;
+  transition: all 150ms ease;
+
+  i {
+    font-size: 15px;
+  }
+
+  &:hover {
+    background: rgba(71, 85, 105, 0.1);
+    color: #475569; // slate-600
+  }
+
+  // Active state (selected mode)
+  &--active {
+    background: #475569; // slate-600
+    color: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+
+    &:hover {
+      background: #334155; // slate-700
+      color: #ffffff;
+    }
+  }
+}
+
+/* Nel file navbar.scss o style.scss */
+
+
+.layout-btn--active {
+    background-color: #475569; /* slate-600 - sfondo scuro */
+    
+    i {
+        color: #ffffff; /* icona bianca quando attivo */
+    }
+}
+
+.layout-btn:not(.layout-btn--active) {
+    i {
+        color: #475569; /* icona scura quando non attivo */
+    }
+}
+
+// Dark mode support
+[data-theme="dark"] .navbar__layout-controls,
+.dark .navbar__layout-controls {
+  background: rgba(148, 163, 184, 0.1); // slate-400 with opacity
+}
+
+[data-theme="dark"] .layout-btn,
+.dark .layout-btn {
+  color: #94a3b8; // slate-400
+
+  &:hover {
+    background: rgba(148, 163, 184, 0.15);
+    color: #cbd5e1; // slate-300
+  }
+
+  &--active {
+    background: #64748b; // slate-500
+    color: #f8fafc;
+
+    &:hover {
+      background: #475569; // slate-600
+    }
+  }
+}
+
+// ============================================
+// NAVBAR DIVIDER
+// ============================================
+
+.navbar__divider {
+  width: 1px;
+  height: 24px;
+  background: #e2e8f0; // slate-200
+  margin: 0 8px;
+  flex-shrink: 0;
+}
+
+[data-theme="dark"] .navbar__divider,
+.dark .navbar__divider {
+  background: #334155; // slate-700
+}
+
+// ============================================
+// KEYBOARD SHORTCUTS - Dark Mode Support
+// ============================================
+
+[data-theme="dark"] .keystrokes .keystroke-pill,
+.dark .keystrokes .keystroke-pill {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #94a3b8; // slate-400
+}
+
+// ============================================
+// MENU ITEM UNIFORM STYLING
+// Ensures consistent spacing and alignment
+// ============================================
+
+.nav-container .content.context-menu ul > li > label {
+  // Uniform icon sizing
+  .bi {
+    font-size: 16px;
+    width: 20px;
+    min-width: 20px;
+    text-align: center;
+    margin-right: 10px;
+    flex-shrink: 0;
+  }
+
+  // Chevron for submenus - always aligned right
+  .icon-expand-submenu {
+    font-size: 12px;
+    opacity: 0.6;
+    margin-left: auto;
+  }
+}
+
+// ============================================
+// HELP MENU - POSITION FIX
+// Align dropdown to the right and ensure z-index above tree view sidebar
+// ============================================
+
+.help-menu {
+  position: relative;
+
+  .content.context-menu {
+    // Align to right edge of button (dropdown appears more to the left)
+    right: 0;
+    left: auto;
+    // Ensure menu is above tree view sidebar (z-index: 100)
+    z-index: 200;
+  }
+
+  // Second-level submenus (e.g., Support → Report/Request/Contact) must open
+  // leftward: the help dropdown is anchored to the screen's right edge, so
+  // the global rightward flyout (App.scss .hoverable > .content.right) would
+  // overflow the viewport.
+  .hoverable:hover > .content.right,
+  .hoverable:focus > .content.right,
+  .hoverable:focus-within > .content.right,
+  .hoverable:active > .content.right,
+  .hoverable.pinned > .content.right {
+    left: auto;
+    right: calc(100% - 20px);
+    padding-left: 0;
+    padding-right: 30px;
+  }
+
+  // Mirror the chevron indicator so it points toward the flyout direction.
+  .icon-expand-submenu {
+    transform: scaleX(-1);
+  }
+}
+
+// ============================================
+// APP BAR — 2-ROW HEADER REDESIGN
+// 50px app bar replacing old 60px navbar
+// ============================================
+
+.nav-container.appbar {
+  height: var(--jj-appbar-height) !important;
+  padding: 0 16px 0 20px !important;
+  border-bottom: 0.5px solid var(--color-border-tertiary, #e2e8f0);
+  box-shadow: none !important;
+
+  // Compact logo
+  .nav-logo {
+    margin-right: 0 !important;
+    padding: 6px 8px;
+
+    div.logo, div.logo-on {
+      background-size: 45px 20px;
+      width: 55px;
+      height: 22px;
+    }
+  }
+
+  // Compact menu items
+  .nav-hamburger.inline {
+    margin-right: 2px;
+  }
+
+  & span.menu-title {
+    font-size: 12px !important;
+    padding: 6px 8px !important;
+    color: var(--color-text-secondary, #64748b);
+    font-weight: 500;
+
+    &:hover {
+      color: var(--color-text-primary);
+      background-color: var(--color-bg-secondary);
+    }
+  }
+
+  // Compact user
+  .user-badge {
+    width: 28px;
+    height: 28px;
+    font-size: 11px;
+  }
+
+  .user {
+    min-width: auto;
+    padding-right: 0;
+    margin-left: 8px;
+  }
+
+  // Right section
+  .main-header-right {
+    gap: 4px !important;
+  }
+}
+
+// ============================================
+// APP BAR — LAST SAVED INDICATOR (DOC2)
+// Testo di stato, non un controllo: nessun bordo, nessuno sfondo, nessun colore
+// semantico. Stesso registro dell'etichetta che SAVE2 aveva in testata al Data
+// Manager, portata qui perche' l'autosave lo innesca il canvas e lo stato di
+// salvataggio e' del progetto, non di una vista.
+// `flex: none` piu' `white-space: nowrap`: la barra e' alta 60px e l'indicatore
+// ci sta dentro senza toccarne l'altezza. Sotto i 1200px la barra e' gia' stretta
+// (il gap scende a 4px), e li' l'indicatore si toglie di mezzo invece di
+// comprimere le tab: e' informazione, non un comando, e la sua assenza non
+// impedisce niente.
+// ============================================
+
+.appbar-last-saved {
+  flex: none;
+  font-size: 11px;
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--color-text-tertiary);
+}
+
+@media (max-width: 1200px) {
+  .appbar-last-saved { display: none; }
+}
+
+// ============================================
+// APP BAR SEPARATOR
+// ============================================
+
+.appbar__sep {
+  width: 0.5px;
+  height: 24px;
+  background: var(--color-border-tertiary, #e2e8f0);
+  margin: 0 8px;
+  flex-shrink: 0;
+}
+
+[data-theme="dark"] .appbar__sep {
+  background: #334155;
+}
+
+// ============================================
+// APP BAR — PROJECT LABEL (non-clickable)
+// ============================================
+
+.project-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+  height: 30px;
+
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  border-radius: var(--radius-md, 8px);
+
+
+  &:hover {
+    background: var(--color-bg-secondary, #f1f5f9);
+  }
+}
+
+.project-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-secondary);
+  font-size: 16px;
+}
+
+.project-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-primary, #111418);
+  white-space: nowrap;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// ============================================
+// APP BAR — CUSTOM TAB STRIP
+// ============================================
+
+.appbar-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  padding-left: 8px;
+}
+
+.appbar-tab {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 150ms ease;
+  flex-shrink: 1;
+  min-width: 60px;
+  max-width: 160px;
+  overflow: hidden;
+
+  &:hover {
+    background: var(--color-bg-secondary, #f1f5f9);
+
+    .appbar-tab__close {
+      opacity: 1;
+    }
+  }
+
+  &--active {
+    background: rgba(14, 165, 233, 0.08);
+    flex-shrink: 0.5;
+
+    .appbar-tab__name {
+      color: #0ea5e9;
+      font-weight: 500;
+    }
+
+    .appbar-tab__badge {
+      opacity: 1;
+    }
+
+    // Metamodel active: purple bg, enlarged badge
+    .appbar-tab__badge--metamodel {
+      width: 18px;
+      height: 18px;
+      min-width: 18px;
+      opacity: 1;
+    }
+  }
+
+  // Metamodel tab active — override tab background with purple
+  &--metamodel.appbar-tab--active {
+    background: #ede9fe;
+
+    .appbar-tab__name {
+      color: #6d28d9;
+    }
+  }
+
+  // Viewpoint tab active — teal background
+  &--viewpoint.appbar-tab--active {
+    background: rgba(13, 148, 136, 0.08);
+
+    .appbar-tab__name {
+      color: #0D9488;
+    }
+  }
+
+  &__badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    min-width: 16px;
+    border-radius: 3px;
+    font-size: 9px;
+    font-weight: 700;
+    flex-shrink: 0;
+    line-height: 1;
+    transition: width 0.15s ease, height 0.15s ease, min-width 0.15s ease, opacity 0.15s ease;
+
+    &--metamodel {
+      background-color: #E9D5FF;
+      color: #7C3AED;
+      // Unselected: 14px
+      width: 14px;
+      height: 14px;
+      min-width: 14px;
+      opacity: 0.55;
+    }
+
+    &--model {
+      background-color: #FEF3C7;
+      color: #D97706;
+      text-transform: none;
+    }
+
+    &--transformation {
+      background-color: #D1FAE5;
+      color: #059669;
+    }
+
+    &--documentation {
+      background-color: #bfdbfe;
+      color: #1e40af;
+    }
+
+    &--viewpoint {
+      background-color: #CCFBF1;  // Teal-100
+      color: #0D9488;             // Teal-600
+
+      .bi {
+        font-size: 9px;
+        line-height: 1;
+      }
+    }
+  }
+
+  &__name {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--color-text-secondary, #64748b);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    min-width: 14px;
+    font-size: 10px;
+    color: var(--color-text-placeholder, #94a3b8);
+    opacity: 0;
+    transition: opacity 150ms ease, color 150ms ease;
+    flex-shrink: 0;
+    line-height: 1;
+    border-radius: 2px;
+
+    &:hover {
+      color: #ef4444;
+      background: rgba(239, 68, 68, 0.08);
+    }
+  }
+}
+
+// Overflow button
+.appbar-tabs__overflow-btn {
+  display: flex;
+  align-items: center;
+  padding: 3px 8px;
+  background: var(--color-bg-secondary, #f1f5f9);
+  border: 0.5px solid var(--color-border-tertiary, #e2e8f0);
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-secondary, #64748b);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+
+  &:hover {
+    border-color: var(--color-text-tertiary, #94a3b8);
+    color: var(--color-text-primary, #475569);
+  }
+}
+
+.appbar-tabs__overflow-dropdown {
+  position: fixed;
+  min-width: 180px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  padding: 4px;
+  z-index: var(--z-dropdown);
+}
+
+.appbar-tabs__overflow-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 10px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #374151;
+  cursor: pointer;
+  text-align: left;
+
+  &:hover {
+    background: #f1f5f9;
+  }
+}
+
+// ============================================
+// APP BAR — NEW DOCUMENT DROPDOWN
+// ============================================
+
+.new-document {
+  position: relative;
+  flex-shrink: 0;
+  margin-left: 2px;
+
+  border-left: 0.5px solid var(--color-border-secondary, #e2e8f0);
+  padding-left: 8px;
+  margin-left: 8px;
+
+  &__btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    min-width: 26px;
+    padding: 0;
+    // background: var(--color-bg-secondary, #f1f5f9);
+    //border: 0.5px solid var(--color-border-secondary, #e2e8f0);
+    background-color: transparent;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    line-height: 1;
+    color: var(--color-text-secondary, #64748b);
+    cursor: pointer;
+    transition: all 150ms ease;
+
+    &:hover {
+      background: var(--color-bg-hover, #e9eff6);
+    }
+
+    /* &--open {
+      background: #1e293b;
+      color: #fff;
+      border-color: #1e293b;
+    }*/
+  }
+
+  &__menu {
+    // position: fixed — top/left are set inline from the trigger's getBoundingClientRect.
+    // Using fixed (instead of absolute) escapes .appbar-tabs { overflow: hidden } clipping.
+    position: fixed;
+    min-width: 240px;
+    padding: 6px;
+    background: var(--color-bg-secondary, #fff);
+    border: 0.5px solid var(--color-border-secondary, #e2e8f0);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  &__divider {
+    height: 0;
+    margin: 4px 0;
+    border-top: 0.5px solid var(--color-border-tertiary, #e2e8f0);
+  }
+
+  &__item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 10px;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    text-align: left;
+    transition: background 120ms ease;
+    color: var(--color-text-primary, #111418);
+
+    &:hover:not(:disabled) {
+      background: var(--color-bg-tertiary, #f1f5f9);
+    }
+
+    &--disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+  }
+
+  &__badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    flex-shrink: 0;
+    margin-top: 1px;
+
+    // The document-type badges carry a glyph (R-RAIL-32); the submenu ones, which list
+    // existing metamodels, still carry the initial of a name. The rule is on the `i`, so
+    // it reaches the first and leaves the second alone.
+    i { font-size: 12px; }
+  }
+
+  &__text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  &__label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-text-primary, #111418);
+    line-height: 1.2;
+  }
+
+  &__soon {
+    font-size: 10px;
+    font-weight: 400;
+    color: #94a3b8;
+  }
+
+  &__desc {
+    font-size: 11px;
+    color: var(--color-text-secondary, #64748b);
+    line-height: 1.3;
+  }
+
+  &__chevron {
+    margin-left: auto;
+    align-self: center;
+    font-size: 10px;
+    color: var(--color-text-placeholder, #94a3b8);
+    flex-shrink: 0;
+  }
+
+  &__submenu {
+    // Mirrors &__menu (position: fixed to escape clipping). z-index is +1 so the
+    // submenu paints above the main menu when their rects overlap at the edge.
+    position: fixed;
+    min-width: 200px;
+    max-width: 260px;
+    max-height: calc(100vh - 80px);
+    overflow-y: auto;
+    padding: 6px;
+    background: var(--color-bg-secondary, #fff);
+    border: 0.5px solid var(--color-border-secondary, #e2e8f0);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+    z-index: 1001;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  &__submenu-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    text-align: left;
+    transition: background 120ms ease;
+    color: var(--color-text-primary, #111418);
+    width: 100%;
+
+    &:hover {
+      background: var(--color-bg-tertiary, #f1f5f9);
+    }
+  }
+
+  &__submenu-label {
+    flex: 1;
+    min-width: 0;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-text-primary, #111418);
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+// ============================================
+// APP BAR — BASIC/ADVANCED MODE SWITCH
+// ============================================
+// Segmented pill carrying the global interface mode, in the slot the read-only
+// level badge used to occupy (2026-07-30). Geometry and colours are inherited from
+// the properties-card mockup skin this control was moved out of (B4, ca558c972), so
+// it still reads as the same control family; the label is 12px instead of 13px to
+// sit under the app bar's 12px menu titles rather than shout over them.
+
+.appbar-mode-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  padding: 3px;
+  border-radius: 10px;
+  background-color: #f1f5f9;
+  flex-shrink: 0;
+
+  &__opt {
+    appearance: none;
+    border: none;
+    background: transparent;
+    color: #94a3b8;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    line-height: 1;
+    padding: 4px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 150ms ease, color 150ms ease;
+
+    &:hover:not(.appbar-mode-switch__opt--active) {
+      color: #475569;
+    }
+
+    &--active {
+      background-color: #ffffff;
+      color: #1e293b;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.10);
+    }
+  }
+}
+
+// ============================================
+// HIDE RC-DOCK LEFT PANEL TAB BAR
+// Tabs are now rendered in the app bar
+// ============================================
+
+.not-strip .dock-panel.dock-style-models .dock-bar {
+  display: none !important;
+}
+
+// Ensure content fills the full height when models tab bar is hidden
+.not-strip .dock-panel.dock-style-models > .dock-content-holder {
+  height: 100% !important;
+}
+
+// ============================================
+// DARK MODE — App Bar
+// ============================================
+
+[data-theme="dark"] {
+  .nav-container.appbar {
+    border-bottom-color: #334155;
+  }
+
+  .project-label {
+    border-right-color: #334155;
+  }
+
+  .project-icon {
+    color: #94a3b8;
+  }
+
+  .project-name {
+    color: #e2e8f0;
+  }
+
+  .appbar-tab {
+    &:hover {
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    &--active {
+      background: rgba(14, 165, 233, 0.12);
+    }
+
+    &--metamodel.appbar-tab--active {
+      background: rgba(109, 40, 217, 0.15);
+    }
+
+    &__name {
+      color: #94a3b8;
+    }
+
+    &__close:hover {
+      background: rgba(239, 68, 68, 0.15);
+    }
+  }
+
+  .appbar-tabs__overflow-btn {
+    background: #334155;
+    border-color: #475569;
+    color: #94a3b8;
+  }
+
+  .appbar-tabs__overflow-dropdown {
+    background: #1e293b;
+    border-color: #334155;
+  }
+
+  .appbar-tabs__overflow-item {
+    color: #e2e8f0;
+
+    &:hover {
+      background: #334155;
+    }
+  }
+
+  .new-document {
+    &__btn {
+      background: rgba(255, 255, 255, 0.04);
+      border-color: #475569;
+      color: #94a3b8;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.08);
+      }
+
+      &--open {
+        background: #0f172a;
+        color: #fff;
+        border-color: #0f172a;
+      }
+    }
+
+    &__menu {
+      background: #1e293b;
+      border-color: #334155;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+
+    &__divider {
+      border-top-color: #334155;
+    }
+
+    &__item {
+      color: #e2e8f0;
+
+      &:hover:not(:disabled) {
+        background: #334155;
+      }
+    }
+
+    &__label {
+      color: #e2e8f0;
+    }
+
+    &__desc {
+      color: #94a3b8;
+    }
+
+    &__soon {
+      color: #64748b;
+    }
+  }
+
+  // Mode switch — dark: the white active pill would glare on the dark bar, so the
+  // raised segment is slate (mirrors the same control inside the properties card).
+  .appbar-mode-switch {
+    background-color: rgba(255, 255, 255, 0.05);
+
+    &__opt {
+      color: #94a3b8;
+
+      &:hover:not(.appbar-mode-switch__opt--active) {
+        color: #cbd5e1;
+      }
+
+      &--active {
+        background-color: #334155;
+        color: #f1f5f9;
+        box-shadow: none;
+      }
+    }
+  }
+}
+
+/* ============================================
+   DARK MODE — dropdown della navbar
+   (Jjodel / File / Edit / View / Tools / Analyze / Help)
+   Additive block: nessuna regola light viene toccata.
+
+   Stessi due difetti del menu utente, vedi il blocco gemello in
+   pages/components/menu/menu.scss:
+   - `.content > ul` usa `--color-bg-elevated`, che in dark e' un token
+     glass (rgba(255,255,255,0.04)) applicato senza `backdrop-filter`;
+   - l'hover della voce e' `--color-accent` (slate-400 in dark) con
+     `color: white`, ~2.7:1.
+   ============================================ */
+:root[data-theme="dark"] {
+
+  .nav-container .content > ul {
+    background-color: var(--color-ctx-menu-bg);
+    border-color: var(--color-ctx-menu-divider);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .nav-container .content.context-menu ul > li:hover > label,
+  .nav-container .content.context-menu ul > li:focus-within > label {
+    background-color: var(--color-ctx-menu-hover);
+    color: var(--color-ctx-menu-text);
+
+    .bi,
+    svg {
+      color: var(--color-ctx-menu-text);
+    }
+  }
 }

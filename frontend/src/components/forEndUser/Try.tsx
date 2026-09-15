@@ -107,8 +107,8 @@ class TryComponent extends React.Component<AllProps, State> {
     }
 
     private postGitIssue(content: string){
-        let owner = 'MDEGroup';
-        let repo = 'jjodel';
+        let owner = 'jjodel-modeling';
+        let repo = 'jjodel-frontend';
         let obj = {
             owner,
             repo,
@@ -175,7 +175,7 @@ class TryComponent extends React.Component<AllProps, State> {
             }
         }
         error.id = Constructors.makeID();
-        let user: DUser = D.from(DUser.current);
+        let user: DUser = DUser.getUser();
 
         let report: Report = new Report(error, info);
         (window as any).tryreport = report;
@@ -189,7 +189,7 @@ class TryComponent extends React.Component<AllProps, State> {
 
 
         let shortErrorBody = (error?.message || "\n").split("\n")[0];
-        let visibleMessage: ReactNode = <div onClick={(e)=> this.reset(e)}>
+        let visibleMessage: ReactNode = <div className={'try-message'}>
             <div>{info ? "has info": "###########"}</div>
             <div>ut:{this.state.stateUpdateTime}, { shortErrorBody }</div>
             <div>What you can try:</div>
@@ -197,12 +197,10 @@ class TryComponent extends React.Component<AllProps, State> {
                 <li>- Undo the last change(s)</li>
                 <li className='prevent'>- Attempt a <a className='prevent' style={{cursor: "pointer"}} onClick={() => VersionFixer.autocorrect(undefined, true, true)}>repair</a></li>
                 {!user?.autoReport && <li className='prevent' onClick={() => report.send()}>- Send us an automatic error report.</li>}
-                <li>- {mailto && [<a href={mailto}>Mail the developers</a>, " or"]} <a href={gitissue} target="_blank"
-                                                                                       rel="noreferrer">open an
-                    issue</a></li>
+                <li>- {mailto && [<a href={mailto}>Mail the developers</a>, " or"]} <a href={gitissue} target="_blank" rel="noreferrer">open an issue</a></li>
             </ul>
         </div>
-        return DefaultView.error(visibleMessage, "unhandled");
+        return DefaultView.error(visibleMessage, "unhandled", undefined, undefined, undefined, (e)=> this.reset(e));
     }
 
     decompress() {
@@ -222,12 +220,12 @@ class TryComponent extends React.Component<AllProps, State> {
                 try { o = JSON.parse(s2=v as any) } catch (e) { console.error("crashed decompress p", e, v); }
             }).finally(()=>{
                 let out = {s, uri:s1, lz:s2, o};
-                console.log('decompress final', out);
+                // console.log('decompress final', out);
                 $('#decompress')[0].innerText = JSON.stringify(o ||  out, null, 4);
 
             })} else {
                 let out = {s, uri:s1, lz:s2, o};
-                console.log('decompress else', out);
+                // console.log('decompress else', out);
                 $('#decompress')[0].innerText = JSON.stringify(o ||  out, null, 4);
             }
         }

@@ -1,0 +1,1243 @@
+/**
+ * irFormStyle, the form rendering of a view (Slice 1a: the `plain` theme).
+ *
+ * A static stylesheet, not runtime-injected CSS. `irStyle.ts` injects because it emits one
+ * class PER VIEW, whose content depends on the authored IR; nothing here does, the form's
+ * look varies by THEME, of which there are four known at build time. Injecting it would
+ * buy nothing and would put the form's appearance out of reach of the stylesheet tooling.
+ *
+ * Tokens: the semantic layer in styles/tokens/, plus the `--color-form-*` roles added with
+ * this slice. None of the 15 names declared by BOTH styles/tokens/ and styles/tokens.css
+ * is used here, with both files loaded at :root the winner depends on cascade order, so
+ * those names have no dependable value. See the discovery report, finding 7.
+ */
+
+/* ---------------------------------------------------------------------------
+   Bridging the shared ui/ controls into the form's scale.
+
+   TextWidget and SelectWidget wrap ui/Input, ui/Textarea and ui/Select, which are CSS
+   modules: their class names are hashed, so they cannot be restyled from here. What they
+   CAN take is custom properties, which they read for every dimension that matters. So the
+   form re-points those properties on its own root, and the controls render at the form's
+   scale without a single line of theirs being touched.
+
+   The overrides are scoped to `.ir-form`: they reach the controls inside the form and
+   nothing else in the app. Their own token file (styles/tokens.css) keeps its values.
+   --------------------------------------------------------------------------- */
+.ir-form {
+    /* --form-input-* is a FOURTH token system, declared in styles/components/_form-system.scss
+       on :root with hardcoded values, and it is the one that actually wins on a bare input.
+       That file's rule at :44 selects `input[type="text"]`, `input[type="number"]` and friends
+       at specificity (0,1,1), which beats the (0,1,0) class of ui/Input's CSS module: the
+       control takes 36px / 14px / 8px 12px from these variables and the --input-* overrides
+       below never get a say. Measured 2026-08-27 by walking document.styleSheets and testing
+       `input.matches(rule.selectorText)`, after the field rendered 36px tall on screen.
+       Re-pointing them here reaches that rule; _form-system.scss is left alone, it has
+       consumers across the whole app. */
+    --form-input-height: var(--control-height-lg);
+    --form-input-padding-y: 4px;
+    --form-input-padding-x: 8px;
+    --form-input-font-size: var(--text-sm);
+    --form-input-border-radius: var(--radius-sm);
+    --form-input-border-color: var(--color-form-border);
+    --form-input-border-color-hover: var(--color-form-border-strong);
+    --form-input-border-color-focus: var(--color-accent);
+    --form-input-focus-shadow: var(--focus-ring);
+    --form-input-bg: var(--color-form-surface);
+    --form-input-color: var(--color-text-primary);
+
+    --input-height-sm: var(--control-height-lg);       /* 32px -> 28px */
+    --input-height-base: var(--control-height-lg);
+    --input-padding-y-sm: 4px;
+    --input-padding-x-sm: 8px;
+    --input-border-width: 1px;                          /* 1.5px -> 1px */
+    --input-bg: var(--color-form-surface);
+    --input-bg-disabled: var(--color-bg-tertiary);
+    --input-border-color: var(--color-form-border);
+    --input-border-color-hover: var(--color-form-border-strong);
+    --input-border-color-focus: var(--color-accent);
+    --input-border-color-error: var(--color-error);
+    --radius-md: var(--radius-sm);                      /* 8px -> 4px, ui/Input */
+    --radius-base: var(--radius-sm);                    /* 6px -> 4px, ui/Select, ui/Textarea */
+    --font-size-md: var(--text-sm);                     /* 14px -> 13px, ui/Input sm */
+    --font-size-sm: var(--text-sm);                     /* 12px -> 13px, ui/Select sm */
+
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    font-family: var(--font-sans);
+    color: var(--color-text-primary);
+    background: var(--color-form-surface);
+}
+
+/* --- chrome ---------------------------------------------------------------- */
+
+.ir-form__header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    min-height: 32px;
+    box-sizing: border-box;
+}
+
+.ir-form__eyebrow {
+    font-size: var(--text-xs);
+    font-weight: var(--font-semibold);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-form-muted);
+}
+
+.ir-form__spacer { flex: 1 1 auto; min-width: 0; }
+
+.ir-form__identity {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: 0 var(--space-3) var(--space-2);
+    min-width: 0;
+}
+
+.ir-form__badge {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: var(--radius-xs);
+    /* The entity scale, not the handoff's amber: the same object badge is 300px away in
+       the tree, and two colours for one thing read as two things. The scale is generated
+       in OKLCH and has a single source (styles/tokens/, R-RAIL-30). */
+    background: var(--color-entity-object-bg);
+    color: var(--color-entity-object-fg);
+    font-size: var(--text-2xs);
+    font-weight: var(--font-semibold);
+    line-height: 1;
+}
+
+.ir-form__name {
+    font-size: var(--text-sm);
+    font-weight: var(--font-semibold);
+    color: var(--color-text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.ir-form__metaclass {
+    flex: 0 0 auto;
+    font-size: var(--text-xs);
+    color: var(--color-form-muted);
+}
+
+/* Reserved whether or not it has anything to report, the counterpart of the 16px field
+   slot, at the panel's scale. Its height is final now, so the counts that Slice 1b puts
+   here will not move the fields below. */
+.ir-form__summary {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 32px;
+    flex: 0 0 32px;
+    box-sizing: border-box;
+    padding: 0 var(--space-3);
+    background: var(--color-form-summary);
+    border-bottom: 1px solid var(--color-form-border);
+    font-size: var(--text-xs);
+    color: var(--color-form-muted);
+}
+
+.ir-form__summary-icon { font-size: 11px; line-height: 1; }
+
+/* Summary chips. Buttons, not spans: they move the focus to the offending field, so they
+   have to be reachable by keyboard like any other control. Their height is fixed and well
+   under the slot's 32px, so a summary that goes from "No issues" to two chips does not
+   change the height of anything. */
+.ir-form__chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 20px;
+    padding: 0 6px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    font-family: inherit;
+    font-size: var(--text-xs);
+    font-weight: var(--font-medium);
+    line-height: 1;
+    cursor: pointer;
+    transition: background var(--transition-fast);
+
+    > i { font-size: 10px; line-height: 1; }
+}
+
+.ir-form__chip--error { color: var(--color-error-text); }
+.ir-form__chip--error:hover { background: var(--color-error-subtle); }
+.ir-form__chip--warning { color: var(--color-warning-text); }
+.ir-form__chip--warning:hover { background: var(--color-warning-subtle); }
+
+.ir-form__chip:focus-visible {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow: var(--focus-ring);
+}
+
+.ir-form__body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: var(--space-3);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.ir-form__placeholder {
+    padding: var(--space-4) var(--space-3);
+    font-size: var(--text-md);
+    color: var(--color-form-muted);
+    text-align: center;
+}
+
+.ir-form--empty { padding: var(--space-3); }
+
+/* --- sections -------------------------------------------------------------- */
+
+/* `ir-form__group`, not `ir-form__section`: `FormSection` already exists in components/ui,
+   and two neighbouring names for two different things is how a codebase starts lying. */
+.ir-form__group {
+    display: flex;
+    flex-direction: column;
+    /* Since FL4 the children of a group are ROWS of the 12-column grid, not fields, and the
+       spacing between them is the theme's density (`DENSITY_SCALE[…].rowGap`). The fallback
+       is the value this rule carried before, so a host that renders a form without the
+       preset variables — there is none today — is spaced as it was. */
+    gap: var(--ir-form-row-gap, var(--space-3));
+}
+
+.ir-form__group + .ir-form__group {
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--color-bg-tertiary);
+}
+
+/* One heading markup for every theme (a button, so the inspector's collapse is reachable by
+   keyboard); the themes below decide how much of it shows. In plain, card and compact the
+   chevron and the count are hidden and the button reads as the plain title it was. */
+.ir-form__group-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 0;
+    border: none;
+    background: transparent;
+    font-family: inherit;
+    font-size: var(--text-md);
+    font-weight: var(--font-semibold);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-form-section);
+    text-align: left;
+    cursor: default;
+}
+
+.ir-form__group-label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ir-form__group-chevron,
+.ir-form__group-count { display: none; }
+
+/* The identity group's heading: same look, no interaction. A div rather than a button, so it
+   is not in the tab order, and the chevron stays pointing down because nothing folds. */
+.ir-form__group-title--static { cursor: default; }
+
+.ir-form__group-title:focus-visible {
+    outline: none;
+    border-radius: var(--radius-xs);
+    box-shadow: var(--focus-ring);
+}
+
+/* --- field ----------------------------------------------------------------- */
+
+.ir-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.ir-field__labelrow {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+}
+
+.ir-field__label {
+    font-size: var(--text-xs);
+    font-weight: var(--font-medium);
+    color: var(--color-form-label);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+/* A dot, not an asterisk, and cyan, not red: a mandatory field is not a field in error,
+   and the design reserves red for diagnostics. */
+.ir-field__required {
+    flex: 0 0 auto;
+    width: 4px;
+    height: 4px;
+    border-radius: var(--radius-full);
+    background: var(--color-marker-required);
+}
+
+.ir-field__lock {
+    flex: 0 0 auto;
+    font-size: 9px;
+    color: var(--color-form-muted);
+}
+
+/* Sits with the label, not with the multiplicity: it names WHAT the field holds, which is
+   the label's job, while the right edge of the row belongs to the cardinality. */
+.ir-field__hint {
+    flex: 0 0 auto;
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    color: var(--color-form-muted);
+    line-height: 1;
+}
+
+.ir-field__spacer { flex: 1 1 auto; min-width: 0; }
+
+.ir-field__mult {
+    flex: 0 0 auto;
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    color: var(--color-form-muted);
+}
+
+/* The fixed message slot. `height`, not `min-height`: the whole point is that it does not
+   grow, so a two-line message is clipped rather than allowed to shift the layout. */
+.ir-field__message {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    height: 16px;
+    flex: 0 0 16px;
+    overflow: hidden;
+    font-size: var(--text-xs);
+    line-height: 16px;
+}
+
+.ir-field__message-icon { font-size: 9px; line-height: 1; }
+
+.ir-field__message-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.ir-field--error .ir-field__message { color: var(--color-error-text); }
+.ir-field--warning .ir-field__message { color: var(--color-warning-text); }
+
+/* The border of whatever control the field is carrying. Listed rather than wildcarded so a
+   future control has to opt in deliberately; `--dirty` is last on purpose, see below. */
+.ir-field--error .ir-field__control,
+.ir-field--error .ir-field__stepper,
+.ir-field--error .ir-field__readonly { border-color: var(--color-error); }
+.ir-field--warning .ir-field__control,
+.ir-field--warning .ir-field__stepper,
+.ir-field--warning .ir-field__readonly { border-color: var(--color-warning); }
+
+/* --- dirty ------------------------------------------------------------------
+   A field can be dirty AND in error at once. The message slot resolves that in the
+   component (a diagnostic wins the one line available); the BORDER is resolved here, by
+   order: these rules come before the two blocks above in the cascade, so at equal
+   specificity the diagnostic colour wins. Being unsaved is not being wrong, and the
+   stronger signal should survive. */
+.ir-field--dirty .ir-field__control,
+.ir-field--dirty .ir-field__stepper { border-color: var(--color-form-dirty-border); }
+.ir-field--dirty .ir-field__message { color: var(--color-form-dirty-text); }
+
+/* 6px, with a 2px halo, so it reads as a state and not as the 4px required dot it sits
+   next to, the two can appear on the same label row. */
+.ir-field__dirty-dot {
+    flex: 0 0 auto;
+    width: 6px;
+    height: 6px;
+    border-radius: var(--radius-full);
+    background: var(--color-marker-required);
+    box-shadow: 0 0 0 2px var(--color-form-dirty-halo);
+}
+
+/* Focus. The ring is the same on every control of the form, including the ones drawn
+   here, so it is declared once against the token. */
+.ir-form :focus-visible {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow: var(--focus-ring);
+}
+
+.ir-form .ir-field__control:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow: var(--focus-ring);
+}
+
+.ir-form .ir-field__control,
+.ir-form .ir-field__control--mono { transition: box-shadow var(--transition-fast), border-color var(--transition-fast); }
+
+/* JjEL and other multiline text. */
+/* The bare `textarea` rule in _form-system.scss:123 hands out `min-height: 80px` and
+   `resize: vertical` at (0,0,1). The heights below win on specificity (a class beats an
+   element), but `resize` is not contested by anything here, so the handle would survive
+   and let the box be dragged past the 56px the design fixes. Declared off on purpose:
+   the JjEL area is a sized surface, not a resizable one. */
+.ir-field__control--mono {
+    font-family: var(--font-mono) !important;
+    font-size: var(--text-md) !important;
+    min-height: 44px;
+    max-height: 56px;
+    resize: none;
+}
+
+/* --- number stepper -------------------------------------------------------- */
+
+.ir-field__stepper {
+    display: flex;
+    align-items: stretch;
+    height: var(--control-height-lg);
+    box-sizing: border-box;
+    background: var(--color-form-surface);
+    border: 1px solid var(--color-form-border);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    transition: box-shadow var(--transition-fast), border-color var(--transition-fast);
+}
+
+.ir-field__stepper:focus-within {
+    border-color: var(--color-accent);
+    box-shadow: var(--focus-ring);
+}
+
+.ir-field__stepper--invalid { border-color: var(--color-error); }
+.ir-field__stepper--readonly { background: var(--color-bg-tertiary); }
+
+/* `input.` prefix, not a bare class: this input is a `type="text"`, so the (0,1,1) rule of
+   _form-system.scss:44 reaches it and would give it a border, a radius and a 36px height of
+   its own INSIDE the stepper's border, a box drawn twice. Element+class is (0,1,1) too, so
+   `.ir-form` in front takes it to (0,2,1) and the question stops depending on import order. */
+.ir-form input.ir-field__stepper-value {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 100%;
+    border: none;
+    outline: none;
+    background: transparent;
+    padding: 0 8px;
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    color: var(--color-text-primary);
+    box-shadow: none;
+}
+
+/* The two segments sit INSIDE the field's border, separated from the value and from each
+   other by hairlines, the border belongs to the field, not to the buttons. */
+.ir-field__stepper-btn {
+    flex: 0 0 24px;
+    width: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-left: 1px solid var(--color-form-border);
+    background: transparent;
+    color: var(--color-form-section);
+    font-size: 11px;
+    cursor: pointer;
+    transition: background var(--transition-fast);
+}
+
+.ir-field__stepper-btn:hover:not(:disabled) { background: var(--color-bg-tertiary); }
+.ir-field__stepper-btn:disabled { color: var(--color-form-border-strong); cursor: not-allowed; }
+
+/* --- checkbox -------------------------------------------------------------- */
+
+.ir-field__checkbox {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: var(--control-height-lg);
+    cursor: pointer;
+}
+
+.ir-field__checkbox--readonly { cursor: not-allowed; }
+
+/* Same specificity problem as the stepper, from a different file and with hardcoded values
+   rather than variables, so there is nothing to re-point: styles/style.scss:221 sets
+   `input[type="checkbox"] { width: 20px; height: 20px; accent-color: white; outline: 1.5px
+   solid gray }` at (0,1,1). A bare class at (0,1,0) loses to it, and the box would render
+   20px with a white tick on a grey outline instead of 14px with the slate accent. Measured
+   by the stylesheet walk, NOT on screen: V3c was never exercised in the visual pass, so this
+   one would have shipped unseen. */
+.ir-form input.ir-field__checkbox-box {
+    flex: 0 0 auto;
+    width: 14px;
+    height: 14px;
+    margin: 0;
+    accent-color: var(--color-accent);
+    border: 1px solid var(--color-form-border-strong);
+    border-radius: var(--radius-xs);
+    outline: none;
+    cursor: inherit;
+}
+
+.ir-field__checkbox-label {
+    font-size: var(--text-sm);
+    color: var(--color-text-primary);
+}
+
+/* --- read-only and value rows ---------------------------------------------- */
+
+.ir-field__readonly {
+    display: flex;
+    align-items: center;
+    min-height: var(--control-height-lg);
+    box-sizing: border-box;
+    padding: 0 8px;
+    background: var(--color-bg-tertiary);
+    border: 1px solid var(--color-form-border);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-mono);
+    font-size: var(--text-md);
+    color: var(--color-form-section);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ir-field__rows {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.ir-field__row {
+    display: flex;
+    align-items: center;
+    min-height: var(--control-height-lg);
+    box-sizing: border-box;
+    padding: 0 8px;
+    background: var(--color-form-surface);
+    border: 1px solid var(--color-form-border);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-sm);
+    color: var(--color-text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ir-field__empty {
+    color: var(--color-form-muted);
+    font-style: italic;
+}
+
+/* --- reference control ------------------------------------------------------ */
+
+/* Carries `.ir-field__control` too, so it inherits the field's border, radius and focus ring
+   from the rules above; only what a button needs beyond an input is set here. */
+.ir-ref {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    height: var(--control-height-lg);
+    box-sizing: border-box;
+    padding: 0 6px 0 8px;
+    background: var(--color-form-surface);
+    border: 1px solid var(--color-form-border);
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: var(--text-sm);
+    color: var(--color-text-primary);
+    text-align: left;
+    cursor: pointer;
+}
+
+.ir-ref:disabled { background: var(--color-bg-tertiary); cursor: not-allowed; }
+.ir-ref:hover:not(:disabled) { border-color: var(--color-form-border-strong); }
+
+.ir-ref__badge {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: var(--radius-xs);
+    background: var(--color-entity-object-bg);
+    color: var(--color-entity-object-fg);
+    font-size: var(--text-2xs);
+    font-weight: var(--font-semibold);
+    line-height: 1;
+}
+
+/* The colour of the alternative, on the badge of the chosen target. The letter stays
+   what it was — the metaclass initial — and the colour answers a different question:
+   WHICH of the offered targets this is. Base (no slot) keeps the entity tokens above,
+   which is what a pointer outside the option list wears. Seven blocks, and the same
+   reason as `formWidgets.scss`: the variables belong to `styles/tokens/`. */
+.ir-ref__badge--slot-1 {
+    background: var(--color-opt-1-bg);
+    color: var(--color-opt-1-fg);
+}
+.ir-ref__badge--slot-2 {
+    background: var(--color-opt-2-bg);
+    color: var(--color-opt-2-fg);
+}
+.ir-ref__badge--slot-3 {
+    background: var(--color-opt-3-bg);
+    color: var(--color-opt-3-fg);
+}
+.ir-ref__badge--slot-4 {
+    background: var(--color-opt-4-bg);
+    color: var(--color-opt-4-fg);
+}
+.ir-ref__badge--slot-5 {
+    background: var(--color-opt-5-bg);
+    color: var(--color-opt-5-fg);
+}
+.ir-ref__badge--slot-6 {
+    background: var(--color-opt-6-bg);
+    color: var(--color-opt-6-fg);
+}
+.ir-ref__badge--slot-7 {
+    background: var(--color-opt-7-bg);
+    color: var(--color-opt-7-fg);
+}
+
+.ir-ref__name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ir-ref__link { flex: 0 0 auto; font-size: 12px; color: var(--color-form-muted); }
+.ir-ref__placeholder { flex: 1 1 auto; min-width: 0; color: var(--color-form-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ir-ref__chevron { flex: 0 0 auto; font-size: 11px; color: var(--color-form-muted); }
+
+/* --- picker popover --------------------------------------------------------- */
+
+/* Positioned inline by computeListStyle (imported from InlineObjectSelect), which sets
+   position/left/top-or-bottom/maxHeight/zIndex. Everything else is here. The element is
+   portalled onto <body>, so it is NOT inside `.ir-form` and cannot inherit the token
+   re-pointing done there: every value below is a token read directly. */
+.ir-picker {
+    display: flex;
+    flex-direction: column;
+    min-width: 220px;
+    overflow: hidden;
+    background: var(--color-form-surface);
+    border: 1px solid var(--color-form-border);
+    border-radius: var(--radius-control);
+    box-shadow: var(--shadow-popover);
+    font-family: var(--font-sans);
+}
+
+.ir-picker__search {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: var(--control-height-lg);
+    flex: 0 0 auto;
+    padding: 0 8px;
+    border-bottom: 1px solid var(--color-form-border);
+}
+
+.ir-picker__search-icon { font-size: 11px; color: var(--color-form-muted); }
+
+/* `.ir-picker input.` and not the bare class: this input is a `type="text"`, so the (0,1,1)
+   rule of _form-system.scss reaches it and would give it a 36px height and a border of its own
+   inside the 28px search row. Worse here than anywhere else in the form, because the popover is
+   portalled onto <body> and therefore OUTSIDE `.ir-form`: the `--form-input-*` re-pointing done
+   there does not reach it, so the value that rule reads is the global 36px, not the form's 28. */
+.ir-picker input.ir-picker__search-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 100%;
+    padding: 0;
+    border: none;
+    outline: none;
+    box-shadow: none;
+    background: transparent;
+    font-family: inherit;
+    font-size: var(--text-sm);
+    color: var(--color-text-primary);
+}
+
+.ir-picker__list { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 4px; }
+
+.ir-picker__row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: var(--control-height-md);
+    box-sizing: border-box;
+    padding: 0 6px;
+    border-left: 2px solid transparent;
+    border-radius: var(--radius-sm);
+    font-size: var(--text-sm);
+    color: var(--color-text-primary);
+    cursor: pointer;
+}
+
+/* The canvas selection tokens, not a colour of the form's own: picking a target here and
+   selecting that same element on the canvas are the same act, and they should look it. */
+.ir-picker__row--active {
+    background: var(--color-selection-bg);
+    border-left-color: var(--color-selection-bar);
+}
+
+.ir-picker__badge {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: var(--radius-xs);
+    background: var(--color-entity-object-bg);
+    color: var(--color-entity-object-fg);
+    font-size: var(--text-2xs);
+    font-weight: var(--font-semibold);
+    line-height: 1;
+}
+
+/* The same seven slots in the open list, so the colour the row wears is the colour the
+   pill will wear once it is picked — the recognition is the whole point of colouring
+   the alternatives. The slot is read off the UNFILTERED option list (see the memo in
+   `ReferencePicker`), so typing in the search box never repaints the survivors. */
+.ir-picker__badge--slot-1 {
+    background: var(--color-opt-1-bg);
+    color: var(--color-opt-1-fg);
+}
+.ir-picker__badge--slot-2 {
+    background: var(--color-opt-2-bg);
+    color: var(--color-opt-2-fg);
+}
+.ir-picker__badge--slot-3 {
+    background: var(--color-opt-3-bg);
+    color: var(--color-opt-3-fg);
+}
+.ir-picker__badge--slot-4 {
+    background: var(--color-opt-4-bg);
+    color: var(--color-opt-4-fg);
+}
+.ir-picker__badge--slot-5 {
+    background: var(--color-opt-5-bg);
+    color: var(--color-opt-5-fg);
+}
+.ir-picker__badge--slot-6 {
+    background: var(--color-opt-6-bg);
+    color: var(--color-opt-6-fg);
+}
+.ir-picker__badge--slot-7 {
+    background: var(--color-opt-7-bg);
+    color: var(--color-opt-7-fg);
+}
+
+.ir-picker__name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ir-picker__group { flex: 0 0 auto; font-size: var(--text-2xs); color: var(--color-form-muted); }
+.ir-picker__none { flex: 1 1 auto; color: var(--color-form-muted); font-style: italic; }
+.ir-picker__empty { padding: 8px 6px; font-size: var(--text-md); color: var(--color-form-muted); text-align: center; }
+
+/* --- lists ------------------------------------------------------------------ */
+
+.ir-list { display: flex; flex-direction: column; gap: 2px; }
+
+.ir-list__row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: var(--control-height-lg);
+    box-sizing: border-box;
+    padding: 0 4px 0 8px;
+    background: var(--color-form-surface);
+    border: 1px solid var(--color-form-border);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-sm);
+}
+
+.ir-list__badge {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: var(--radius-xs);
+    background: var(--color-entity-object-bg);
+    color: var(--color-entity-object-fg);
+    font-size: var(--text-2xs);
+    font-weight: var(--font-semibold);
+    line-height: 1;
+}
+
+.ir-list__name { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ir-list__secondary { flex: 1 1 auto; min-width: 0; font-size: var(--text-xs); color: var(--color-form-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.ir-list__remove,
+.ir-chips__remove {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    margin-left: auto;
+    padding: 0;
+    border: none;
+    border-radius: var(--radius-xs);
+    background: transparent;
+    color: var(--color-form-muted);
+    font-size: 11px;
+    cursor: pointer;
+    transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.ir-list__remove:hover,
+.ir-chips__remove:hover { background: var(--color-bg-tertiary); color: var(--color-text-primary); }
+
+/* Dashed, so it reads as "there could be one more here" rather than as a filled row. */
+.ir-list__add,
+.ir-chips__add {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    height: var(--control-height-sm);
+    padding: 0 8px;
+    border: 1px dashed var(--color-form-border-strong);
+    border-radius: var(--radius-sm);
+    background: transparent;
+    font-family: inherit;
+    font-size: var(--text-xs);
+    color: var(--color-form-section);
+    cursor: pointer;
+    transition: background var(--transition-fast), border-color var(--transition-fast);
+
+    > i { font-size: 10px; }
+}
+
+.ir-list__add { align-self: flex-start; margin-top: 2px; }
+
+.ir-list__add:hover:not(:disabled),
+.ir-chips__add:hover:not(:disabled) { background: var(--color-bg-tertiary); border-color: var(--color-form-muted); }
+
+.ir-list__add--disabled,
+.ir-chips__add--disabled,
+.ir-list__add:disabled,
+.ir-chips__add:disabled {
+    border-color: var(--color-form-border);
+    color: var(--color-form-border-strong);
+    cursor: not-allowed;
+}
+
+/* --- chips ------------------------------------------------------------------ */
+
+.ir-chips {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    min-height: var(--control-height-lg);
+    box-sizing: border-box;
+    padding: 3px 4px;
+    background: var(--color-form-surface);
+    border: 1px solid var(--color-form-border);
+    border-radius: var(--radius-sm);
+}
+
+.ir-chips--readonly { background: var(--color-bg-tertiary); }
+
+.ir-chips__chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    height: 20px;
+    max-width: 100%;
+    padding: 0 2px 0 6px;
+    background: var(--color-bg-tertiary);
+    border: 1px solid var(--color-form-border);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-xs);
+    color: var(--color-text-primary);
+}
+
+.ir-chips__text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ir-chips__remove { width: 14px; height: 14px; margin-left: 0; font-size: 10px; }
+.ir-chips__empty { font-size: var(--text-xs); color: var(--color-form-muted); font-style: italic; padding-left: 4px; }
+
+/* Same height as a chip, so turning Add into a field does not change the container's height:
+   the zero-shift rule holds inside a control too, not only between fields.
+   `.ir-form input.` and not the bare class, for the third time in this file and for the same
+   reason: at (0,1,0) the 20px below loses to the 28px that `input[type="text"]` reads from
+   `--form-input-height`, the container grew to 36px on opening and everything under it dropped
+   by 8px. Measured on screen, not deduced. */
+.ir-form input.ir-chips__input {
+    height: 20px;
+    min-width: 80px;
+    flex: 0 1 120px;
+    padding: 0 4px;
+    border: 1px solid var(--color-accent);
+    border-radius: var(--radius-sm);
+    outline: none;
+    box-shadow: none;
+    background: var(--color-form-surface);
+    font-family: inherit;
+    font-size: var(--text-xs);
+    color: var(--color-text-primary);
+}
+
+.ir-chips__add { height: 20px; padding: 0 6px; }
+
+/* ============================================================================
+   THEMES
+
+   What changes between them is the FRAME and the height of the controls. What does not
+   change, in any of them, is the two reserved slots: 32px for the summary and 16px per field
+   message. Zero layout shift is a property of the form, not of one theme, so a reader
+   switching theme sees a different skin over the same geometry.
+
+   Control heights: plain 28, card 28, compact 24, inspector 26. Each theme re-points the same
+   two variables the plain theme set up, and the ui/ controls follow because they read them.
+   ============================================================================ */
+
+/* --- card ------------------------------------------------------------------- */
+
+.ir-form--card {
+    background: var(--color-form-panel);
+}
+
+.ir-form--card .ir-form__body { gap: var(--space-2); }
+
+.ir-form--card .ir-form__group {
+    gap: 0;
+    background: var(--color-form-surface);
+    border: 1px solid var(--color-form-border);
+    border-radius: var(--radius-control);
+    overflow: hidden;
+}
+
+/* The separator between groups belongs to the plain theme: here every group has its own
+   outline, and a rule between two cards would draw a line in the gutter. */
+.ir-form--card .ir-form__group + .ir-form__group { padding-top: 0; border-top: none; }
+
+.ir-form--card .ir-form__group-title {
+    box-sizing: border-box;
+    padding: 6px var(--space-3);
+    border-bottom: 1px solid var(--color-form-border);
+    font-size: var(--text-md);
+    font-weight: var(--font-semibold);
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--color-text-primary);
+}
+
+.ir-form--card .ir-field { padding: 0 var(--space-3); }
+.ir-form--card .ir-field:first-of-type { padding-top: var(--space-3); }
+.ir-form--card .ir-field:last-child { padding-bottom: var(--space-3); }
+
+/* --- compact ---------------------------------------------------------------- */
+
+.ir-form--compact {
+    --form-input-height: var(--control-height-sm);
+    --input-height-sm: var(--control-height-sm);
+    --input-height-base: var(--control-height-sm);
+    --form-input-font-size: var(--text-md);
+    --font-size-md: var(--text-md);
+    --font-size-sm: var(--text-md);
+}
+
+.ir-form--compact .ir-form__body { gap: var(--space-2); }
+.ir-form--compact .ir-form__group { gap: 5px; }
+
+.ir-form--compact .ir-form__group-title {
+    font-size: var(--text-xs);
+    color: var(--color-form-muted);
+}
+
+/* The label moves into a column of its own. The message slot spans both columns and keeps its
+   16px: the row gets shorter, the reserved space does not go away. */
+.ir-form--compact .ir-field {
+    display: grid;
+    grid-template-columns: 88px 1fr;
+    align-items: center;
+    gap: 0 var(--space-2);
+}
+
+.ir-form--compact .ir-field__labelrow { min-width: 0; }
+.ir-form--compact .ir-field__message { grid-column: 2; }
+
+/* Dropped from the row, kept in the label's tooltip: at 88px the multiplicity and an
+   ellipsized label compete for the same space, and the label wins. */
+.ir-form--compact .ir-field__mult,
+.ir-form--compact .ir-field__spacer { display: none; }
+
+.ir-form--compact .ir-field__control,
+.ir-form--compact .ir-field__stepper,
+.ir-form--compact .ir-field__readonly,
+.ir-form--compact .ir-list__row,
+.ir-form--compact .ir-ref { height: var(--control-height-sm); font-size: var(--text-md); }
+
+.ir-form--compact .ir-chips { min-height: var(--control-height-sm); }
+
+/* --- inspector -------------------------------------------------------------- */
+
+.ir-form--inspector {
+    --form-input-height: var(--control-height-md);
+    --input-height-sm: var(--control-height-md);
+    --input-height-base: var(--control-height-md);
+}
+
+/* Full bleed: the header runs edge to edge of the panel, so the negative margin undoes the
+   body's padding rather than the body losing it (which would move every field). */
+.ir-form--inspector .ir-form__body { padding: 0; gap: 0; }
+.ir-form--inspector .ir-form__group { gap: 0; }
+.ir-form--inspector .ir-form__group + .ir-form__group { padding-top: 0; border-top: none; }
+
+.ir-form--inspector .ir-form__group-title {
+    box-sizing: border-box;
+    height: 28px;
+    padding: 0 var(--space-3);
+    background: var(--color-form-panel);
+    border-top: 1px solid var(--color-form-border);
+    border-bottom: 1px solid var(--color-form-border);
+    font-size: var(--text-xs);
+    font-weight: var(--font-semibold);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-form-label);
+    cursor: pointer;
+}
+
+.ir-form--inspector .ir-form__group:first-child .ir-form__group-title { border-top: none; }
+
+.ir-form--inspector .ir-form__group-chevron {
+    display: inline-block;
+    flex: 0 0 auto;
+    font-size: 10px;
+    color: var(--color-form-muted);
+}
+
+.ir-form--inspector .ir-form__group-count {
+    display: inline-block;
+    flex: 0 0 auto;
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    font-weight: var(--font-normal);
+    letter-spacing: 0;
+    color: var(--color-form-muted);
+}
+
+.ir-form--inspector .ir-field { padding: 0 var(--space-3); }
+.ir-form--inspector .ir-field:first-of-type { padding-top: var(--space-3); }
+.ir-form--inspector .ir-field:last-child { padding-bottom: var(--space-3); }
+
+.ir-form--inspector .ir-field__control,
+.ir-form--inspector .ir-field__stepper,
+.ir-form--inspector .ir-field__readonly,
+.ir-form--inspector .ir-list__row,
+.ir-form--inspector .ir-ref { height: var(--control-height-md); }
+
+.ir-form--inspector .ir-chips { min-height: var(--control-height-md); }
+
+
+/* ══ FL4 — the 12-column auto-layout grid ═══════════════════════════════════════
+ *
+ * Specification: `docs/design/design_handoff_jjodel_form_views/form-autolayout-spec.md`.
+ * The geometry is decided in `jjform/layout.ts` and reaches here as ONE number per cell,
+ * `--ir-form-span`. There is deliberately no `.ir-form__cell--6` and no width class: a new
+ * width would then be a new rule here as well as a new row in the map, and rule 4 of the
+ * packing says the algorithm — and everything downstream of it — never changes.
+ *
+ * The four skin classes below this block are untouched. What the preset adds arrives as the
+ * custom properties `themeVars` emits and as three data attributes, so a form renders
+ * exactly as it did before unless the preset says otherwise.
+ */
+
+.ir-form__row {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: var(--ir-form-col-gap, 8px);
+    align-items: start;
+    min-width: 0;
+}
+
+.ir-form__cell {
+    /* `span var(--…)` substitutes at computed-value time, which is why the span can be a
+       property at all. The fallback is the whole row: a cell with no span is a cell whose
+       width nobody decided, and half a row would be a guess. */
+    grid-column: span var(--ir-form-span, 12);
+    min-width: 0;
+}
+
+/* The runtime half of rule 2. Nothing is drawn differently — the promotion IS the span —
+   but the state is on the element, so a screenshot of a wrong promotion can be read back
+   to the field that made it. */
+.ir-form__cell--promoted { --ir-form-span: 12; }
+
+/* --- the theme, as the preset resolves it ---------------------------------- */
+
+/* Label to the left. The two-column field is the same shape the `compact` skin has always
+   had; what the preset adds is the ability to ask for it under any skin. The column width
+   is a variable so the skin can keep its own — see `--ir-form-label-col` on `.ir-form--compact`
+   below, which preserves its committed 88px against the preset's 72.
+ *
+ * The label column is a CAP, not a width, and the control has priority on the space.
+ * FL1 packs at 3/12 as well as at 12/12, and the two had never been seen together because
+ * nobody had ever changed the theme: measured 2026-09-01 in the 400px rail, a span-3 cell
+ * is 87.8px, the fixed 72px column took its 72, and what was left for the control was
+ * 7.75px — the `tint` select rendered empty, `visible` read «isible», the steppers lost
+ * their numeric field (STYLE1 report §7, four controls under 40px per left-label preset).
+ *
+ * `minmax(0, cap)` on the label and a floor on the control invert the priority: the grid
+ * gives the control its floor first and the label takes what remains, up to the cap. Where
+ * the cell is wide enough — every span-6 and span-12 cell, the only ones that existed
+ * before the theme could ask for a left label under the auto-layout — the cap is reached
+ * and NOTHING changes: 72 (88 under the compact skin) exactly as committed. The floor bites
+ * only in the narrow cell that produced the defect.
+ *
+ * The floor is read off this sheet, not chosen: `.ir-field__stepper-btn` is `flex: 0 0 24px`
+ * twice, so 48px is the width of the stepper's own chrome. Below it a stepper is buttons
+ * with no field between them, which is the reported symptom. It is also above the 40px at
+ * which a `select` stops showing its value (STYLE1's acceptance threshold), so one number
+ * settles both. */
+.ir-form[data-label-placement="left"] .ir-field {
+    display: grid;
+    grid-template-columns:
+        minmax(0, var(--ir-form-label-col, 72px))
+        minmax(min(var(--ir-form-control-min, 48px), 100%), 1fr);
+    align-items: center;
+    gap: 0 var(--space-2);
+}
+
+.ir-form[data-label-placement="left"] .ir-field__labelrow { min-width: 0; }
+.ir-form[data-label-placement="left"] .ir-field__message { grid-column: 2; }
+.ir-form[data-label-placement="left"] .ir-field__label { text-align: var(--ir-form-label-align, left); }
+
+/* The multiplicity leaves the row for the label's tooltip, for the reason the compact skin
+   states: in a fixed label column it and an ellipsized label compete, and the label wins. */
+.ir-form[data-label-placement="left"] .ir-field__mult,
+.ir-form[data-label-placement="left"] .ir-field__spacer { display: none; }
+
+/* The floor above keeps every control readable by the acceptance measure — 48px is over the
+ * 40px at which a select stops showing its value — but at a span-3 cell it buys that with a
+ * 31.75px label column, and the screen says what the measure cannot: the select's value ends
+ * up under its own chevron and the stepper shows two buttons with no field between them.
+ * Both symptoms are the ones the slice was opened to remove, so the placement itself gives
+ * way: under a cell too narrow to hold a left label, the field stacks, exactly as the two
+ * `top` presets already do — the same fields, in the same order, in the same cell.
+ *
+ * The threshold is the sum of what the left placement needs and nothing else: the label cap
+ * (72px; 88 under the compact skin, which therefore just fails to reach its cap between 128
+ * and 144 rather than switching later) plus the `--space-2` gap plus the 48px floor = 128px.
+ * A container query and not a media query because the quantity that decides is the CELL, not
+ * the viewport: the same 400px rail holds span-12 cells that are fine and span-3 cells that
+ * are not. Measured in the 400px rail: span-3 = 87.8px stacks, span-6 = 183.5px does not.
+ *
+ * Containment is declared only under `[data-label-placement="left"]`, so the two `top`
+ * presets are untouched by construction and not merely by measurement. `contain: layout`
+ * comes with `container-type`, which makes the cell a containing block for absolutely
+ * positioned descendants: none exist inside a cell (the reference picker is portalled onto
+ * <body>, see `.ir-picker` above), so there is nothing to reparent. */
+.ir-form[data-label-placement="left"] .ir-form__cell { container-type: inline-size; }
+
+@container (max-width: 128px) {
+    .ir-form[data-label-placement="left"] .ir-field {
+        grid-template-columns: minmax(0, 1fr);
+        row-gap: 4px;
+    }
+    .ir-form[data-label-placement="left"] .ir-field__message { grid-column: 1; }
+    /* The stacked label takes the alignment of the placement it has fallen back to: `top`
+       declares `align: 'left'` in `themes.ts`, and a right-flushed label over a left-flushed
+       control would read as a third placement rather than as the degradation of one. */
+    .ir-form[data-label-placement="left"] .ir-field__label { text-align: left; }
+}
+
+/* Density. Only the two measures the scale actually states for a control — a third would be
+   a styling system, which is what the closed preset exists to prevent. */
+.ir-form[data-density] .ir-field__control,
+.ir-form[data-density] .ir-field__control--mono,
+.ir-form[data-density] .ir-field__readonly {
+    padding-top: var(--ir-form-pad-y);
+    padding-bottom: var(--ir-form-pad-y);
+    padding-left: var(--ir-form-pad-x);
+    padding-right: var(--ir-form-pad-x);
+}
+
+/* A control whose height is FIXED clips its text at the content box, so vertical padding
+ * there is not spacing: it is how much of the glyph gets cut. `--ir-form-pad-y` is right
+ * for the controls that grow with their content — the mono textarea, the readonly cell —
+ * and the rule above keeps giving it to them. On a `select` or an `input` the height is
+ * already set by `--input-height-sm`, and with `box-sizing: border-box` the same number
+ * only shrinks the box the text has to fit in: it never contributed a pixel of layout.
+ *
+ * Measured 2026-09-01 (`_tmp_fl9_recon2.ts`, a ladder on the shipped form, Inter Variable
+ * at 13px): the painted band of `Agjpqy` is 14px, the line box 19.5px, and the content
+ * box is the height minus the two 1.5px borders minus twice the padding. The band loses
+ * its first pixel at pad 5 (content 16) and is down to 10px of 14 at pad 7 (content 12) —
+ * pad 7 being exactly what the `comfortable` density ships, so Comfortable and Sectioned
+ * cut 4px off every descender and Compact does the same from a 24px box. Zeroing it
+ * leaves the whole height to the text: 25px of content against a 19.5px line box under
+ * plain and card, 21px under compact, so no density step can bring the clip back. */
+.ir-form[data-density] select.ir-field__control,
+.ir-form[data-density] input.ir-field__control {
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+/* The right side of a `select` is not padding either: it is the room the chevron sits in.
+ * `Select.module.css` reserves it twice — `.select` at :34 and `.selectSm` at :55, both
+ * `36px` — for a `.icon` it absolutes at `right: 12px` with a `font-size: 16px` glyph. The
+ * rule above hands that side to `--ir-form-pad-x` instead, which is 10 / 9 / 8, and the
+ * value ends up painted under its own chevron.
+ *
+ * Measured 2026-09-01 (`_tmp_fl10_recon.ts`, the four presets in one load): the content box
+ * runs PAST the chevron's left edge by 17 / 18 / 17 / 19px, and per contrasto a long option
+ * label takes the ink inside the chevron's own band from 40 to about 100 pixels. Restoring
+ * the module's reserve puts the content box 9px clear of the chevron in all four, and the
+ * band goes back to what the chevron alone paints.
+ *
+ * 36px is restated here, not invented: it is the module's own number, and
+ * `irFormControlPadding.test.ts` reads both files and fails if the two ever disagree. The
+ * `max(var(--ir-form-pad-x), 36px)` form measured identical (same 36, same 9px clearance)
+ * and was left out: at the declared densities its first argument can never win. The left
+ * side keeps the theme's padding — that side is FL8's, and nothing sits on it. */
+.ir-form[data-density] select.ir-field__control {
+    padding-right: 36px;
+}
+
+.ir-form[data-density] .ir-field__label {
+    font-size: var(--ir-form-label-size, var(--text-xs));
+    font-weight: var(--ir-form-label-weight, 500);
+}
+
+.ir-form[data-density] .ir-form__group + .ir-form__group { padding-top: var(--ir-form-section-gap); }
+
+/* Section chrome. Only the two the skins do not already draw: the rule between sections
+   (`divided`) and the absence of every boundary (`none`, whose eyebrow IRForm does not
+   render at all, so there is nothing here to hide). `flat` and `card` are the skins' own. */
+.ir-form[data-section-style="divided"] .ir-form__group + .ir-form__group {
+    border-top: 1px solid var(--color-form-border);
+}
+
+.ir-form[data-section-style="none"] .ir-form__group + .ir-form__group {
+    border-top: none;
+}
+
+/* The committed 88px of the compact skin, restated as the variable the preset reads. Without
+   it the rule above would win on specificity and silently retune a skin this slice did not
+   set out to change. */
+.ir-form--compact { --ir-form-label-col: 88px; }

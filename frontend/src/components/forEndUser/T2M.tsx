@@ -1,11 +1,57 @@
-import React, {Dispatch, JSX, PureComponent, ReactNode} from "react";
+export const movedToMTM = 'at least i suppose so, there are duplications';
+/*
+import React, {Dispatch, JSX, PureComponent, ReactNode, useRef} from "react";
 import { connect } from "react-redux";
 import './example.scss';
-import {GObject, LModelElement, Log, Overlap} from "../../joiner";
+import {GObject, LModelElement, Log, Overlap, GenericProps} from "../../joiner";
+import {doT2M} from "./MTM";
 
-function T2M(props: AllProps, children?: JSX.Element): ReactNode{
+function T2M(props: AllProps, children?: ReactNode): ReactNode{
     if (!children) children = props.children;
-    let content: string='';
+    let ref = useRef<HTMLElement>(null);
+    let content: string = '';
+    if (Array.isArray(children)) {
+        if (children.length > 1) {
+            children = undefined;
+            content = 'Error: T2M must have exactly 1 subNode in DOM';
+        }
+        children = (children as any)[0];
+    }
+    if (children === null) children = undefined;
+    if (!React.isValidElement(children)) switch (typeof children) {
+        case 'function': case 'object': case 'symbol':
+            children = undefined;
+            content = 'Error: M2T must have serializable subnodes, found ' + typeof children;
+            break;
+         default:
+             content = '' + children;
+             children = undefined;
+             break;
+    }
+    function onBlur(e: Event): void{
+        props.onBlur?.(e);
+        // @ts-ignore
+        if (children?.props?.onBlur) children.props.onBlur(e);
+        if (!ref.current) return;
+        let text = ref.current.innerText;
+        doT2M(props.data, props.language, text);
+    }
+
+    if (!children) children = <div className='M2T' ref={ref} contentEditable={true} onBlur={(e)=>{ doM2T(e as any, props); }}>{content+''}</div>
+    else {
+        let injectProps: GObject = {};
+        let child: JSX.Element = children;
+        Log.ex(!child.props, 'Unexpected subelement found in M2T', {child});
+        injectProps.className = child.props.className ? child.props.className + ' M2T' : child.props.className;
+        injectProps.onBlur = onBlur
+        injectProps.ref = ref;
+        children = React.cloneElement(child, injectProps);
+    }
+    return (<>{children}</>);
+}
+function M2T_old(props: AllProps, children?: JSX.Element): ReactNode{
+    if (!children) children = props.children;
+    let content: string = '';
     if (Array.isArray(children)) {
         if (children.length > 1) {
             children = undefined;
@@ -14,13 +60,13 @@ function T2M(props: AllProps, children?: JSX.Element): ReactNode{
         children = (children as any)[0];
     }
     if (children === null) children = undefined;
-    if (!React.isValidElement(children)) switch (typeof children){
+    if (!React.isValidElement(children)) switch (typeof children) {
         case 'function': case 'object': case 'symbol':
             children = undefined;
             content = 'Error: M2T must have serializable subnodes, found ' + typeof children;
             break;
          default:
-             content = ''+children;
+             content = '' + children;
              children = undefined;
              break;
     }
@@ -36,6 +82,7 @@ function T2M(props: AllProps, children?: JSX.Element): ReactNode{
     }
     return (<>{children}</>);
 }
+
 function doM2T(e: Event, props: AllProps): void {
     let html: HTMLDivElement | HTMLInputElement  | HTMLTextAreaElement = e.target as any;
     let txt: string;
@@ -51,9 +98,8 @@ function doM2T(e: Event, props: AllProps): void {
 }
 
 // private
-interface OwnProps {
+interface OwnProps extends GenericProps {
     // propsRequestedFromJSX_AsAttributes: string;
-    children?: JSX.Element;
     parser?: string;
     data: LModelElement;
 }
@@ -73,3 +119,4 @@ type AllProps = Overlap<Overlap<OwnProps, StateProps>, DispatchProps>;
 
 
 (T2M as any).cname = 'T2M';
+*/

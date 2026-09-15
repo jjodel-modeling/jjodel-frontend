@@ -1,7 +1,7 @@
 .metrics-row {
     display: block;
     width: 100%;
-    font-weight: 200;
+    font-weight: var(--font-light);
     padding-right: 5px!important;
     padding-left: 5px!important;
     border-radius: 2px;
@@ -16,8 +16,8 @@
     }
 }
 .metrics-row:hover {
-    background-color: var(--bg-3);
-    color: var(--color);
+    background-color: var(--color-border-primary);
+    color: var(--color-text-primary);
 }
 
 
@@ -26,7 +26,7 @@
     z-index: 1000;
     background-color: var(--bg);//var(--color);
     color: white;
-    border-radius: calc(var(--radius) * 2);
+    border-radius: var(--radius-md);
     box-shadow: var(--smart-elevation-8);
     position: absolute;
     right: 20px;
@@ -34,7 +34,7 @@
     bottom: 10px;
     width: 340px; 
     height: fit-content; 
-    font-weight: 200;
+    font-weight: var(--font-light);
     & p {
         text-align: center;
         font-size: 0.7em;
@@ -47,13 +47,13 @@
     }
     & p a:hover {
         background-color: white;
-        color: var(--color);
+        color: var(--color-text-primary);
         padding: 1px 6px;
         border-radius: 2px;
     }
 
     & .container {
-        font-weight: 100;
+        font-weight: var(--font-light);
         margin: 0;
         padding:0;
         padding-left: 5px;
@@ -64,7 +64,7 @@
         margin-top: 20px;
 
         & .hd {
-            font-weight: 300!important;
+            font-weight: var(--font-light)!important;
             margin-bottom: 5px;
 
 
@@ -79,8 +79,8 @@
     & h1 {
         width: 100%;
         font-size: 1.1em;
-        font-weight: 300;
-        border-bottom: 1px solid var(--bg-5);
+        font-weight: var(--font-light);
+        border-bottom: 1px solid var(--color-text-secondary);
         padding-bottom: 4px;
         margin-bottom: 6px;
         margin-left: 5px;
@@ -93,14 +93,14 @@
         margin-right: 8px;
     }
     & hr {
-        color: var(--bg-4)!important;
+        color: var(--color-text-tertiary)!important;
     }
 
 
     & #category {
-        background-color: var(--color);
+        background-color: var(--color-accent);
         font-size: 0.7;
-        font-weight: 200;
+        font-weight: var(--font-light);
         height: 16px;
         padding: 0;
         border-radius: 4px!important;
@@ -121,8 +121,8 @@
 
     .analytics-panel {
         width: calc(100% - 5px);
-        border: 1px dotted var(--bg-3);
-        border-radius: var(--radius);
+        border: 1px dotted var(--color-border-primary);
+        border-radius: var(--radius-sm);
         padding-right: 5px;
         margin-left: 5px;
 
@@ -169,9 +169,9 @@
         padding-right: 2px;
     }
 
-    .chart .small {background-color: var(--accent); }
+    .chart .small {background-color: var(--color-accent); }
     .chart .medium {background-color: var(--accent-secondary); }
-    .chart .large {background-color: var(--terziary);}
+    .chart .large {background-color: var(--color-error);}
 
     .chart.current {
 

@@ -1,0 +1,1 @@
+./docs/parked/sessione_2026-05-07_pan_architecture_notes.md

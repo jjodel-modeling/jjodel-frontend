@@ -23,47 +23,95 @@ input.undetermined{
   outline: 2px solid red;
 }
 input.switch[type="checkbox"]{
-  --active: var(--accent);
-  --neutral: var(--bg-2-5);
-
+  // Compact toggle: 32x18px, OFF=gray-300, ON=slate gradient
+  // RESET native styles
   -webkit-appearance: none;
   -moz-appearance: none;
   appearance: none;
-  width: 2ic;
-  height: 1ic;
-  background: var(--neutral); // #ddd;
-  border-radius: 3em;
+  display: flex;
+
+  // DIMENSIONS: 32x18px (compact)
+  width: 40px;
+  height: 20px;
+  min-width: 36px;
+  min-height: 18px;
+
+  // OFF state: gray-300
+  background-color: #e2e4e8;
+  background-image: none;
+  border: none;
+  border-radius: 11px;
   position: relative;
   cursor: pointer;
   outline: none;
-  -webkit-transition: all .2s ease-in-out;
-  transition: all .2s ease-in-out;
+  transition: all 150ms ease, background-color 250ms ease;
+  flex-shrink: 0;
+  box-sizing: border-box;;
+  padding: 2px;
 
-  &:after {
-    position: absolute;
+  --outlineshadow: #475569;
+  &:focus {
+    box-shadow: 0 0 5px 2px var(--outlineshadow) !important;
+  }
+
+
+  // Remove any ::before content (icons)
+  &::before {
+    display: none;
+    content: none;
+  }
+
+  // KNOB: 14px white circle
+  &::after {
     content: "";
-    width: 1ic;
-    height: 1ic;
+    position: initial !important;
+    width: 20px;
+    height: 20px;
+    margin-top: auto;
+    margin-bottom: auto;
     border-radius: 50%;
-    background: #fff;
-    box-shadow: 0 0 .25em rgba(0, 0, 0, .3);
-    transform: scale(.8);
-    left: 0;
-    -webkit-transition: all .2s ease-in-out;
-    transition: all .2s ease-in-out;
+    background-color: #fff;
+    background-image: none;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    transition: all 250ms ease;
+    font-size: 0;
+    text-indent: -9999px;
+    transform: translateX(0%) scale(90%) !important;
+    transform-origin: center;
   }
-  &:checked:after{
-    right: 0;
-    left: auto;
+
+  // ON state: slate gradient
+  &:checked {
+    background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+
+    // background-color: var(--color-accent, #475569) !important;
+
+    &::after {
+      transform: translateX(100%) scale(90%) !important;
+    }
   }
-  &:checked{
-    background: var(--active); // #0ebeff;
+
+  // Hover state
+  &:hover { // :not(:disabled) not needed because of pointer-events: none on disabled
+    // background-color: #d0d3d8 !important;
+
+    &:checked {
+      background: linear-gradient(135deg, #475569 0%, #334155 100%);
+      // background-color: var(--color-accent-hover, #334155) !important;
+    }
+  }
+
+  // Disabled state (readOnly)
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
   }
 }
 
 select.model-select {
   height: var(--input-height)!important;
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
 }
 
 
@@ -74,5 +122,218 @@ select.model-select {
 .input-container.center .css-1nmdiq5-menu{
   margin-left: 50%;
   transform: translateX(-50%);
+}
+
+// ============================================
+// REACT-SELECT MULTISELECT - Match single-select styling
+// Using jjodel-select__ prefix for reliable targeting
+// ============================================
+.input-container {
+  overflow: visible !important;
+
+  // 1. Main control container - auto height with max limit
+  .jjodel-select__control {
+    min-height: 38px !important;
+    height: auto !important;
+    max-height: 60px !important;
+    overflow: visible !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    border: 1px solid var(--color-border-primary, #e2e8f0) !important;
+    border-radius: var(--radius-md, 6px) !important;
+    background: var(--color-bg-primary, #ffffff) !important;
+
+    &:hover {
+      border-color: #cbd5e1 !important;
+    }
+  }
+
+  // Value container - Input LEFT, Tags RIGHT
+  .jjodel-select__value-container {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    gap: 0 !important;  // Gap managed by margin
+    padding: 4px 8px !important;
+    overflow: visible !important;
+    flex: 1 1 0% !important;
+  }
+
+  // 2. Filter input - grows to push tags right
+  .jjodel-select__input {
+    flex: 1 1 auto;
+    min-width: 50px;
+    margin: 0;
+    padding: 0;
+
+    input {
+      border: none;
+      outline: none;
+      box-shadow: none;
+      background: transparent;
+      padding: 0;
+      margin: 0;
+      font-size: 13px;
+      color: #334155;
+      width: 100%;
+    }
+  }
+
+  // FIRST tag - pushed to right with margin-left: auto
+  .jjodel-select__multi-value:first-of-type {
+    margin-left: auto !important;
+  }
+
+  // ALL tags - styling and spacing
+  .jjodel-select__multi-value {
+    background: #f1f5f9 !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 4px !important;
+    flex-shrink: 0 !important;
+    margin: 0 0 0 4px !important;
+    
+  }
+
+  // HIDE clear indicator (X button)
+  .jjodel-select__clear-indicator {
+    display: none !important;
+  }
+
+  .jjodel-select__multi-value__label {
+    color: #334155 !important;  // slate-700 — readable
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    padding: 2px 6px !important;
+    padding-right: 4px !important;
+  }
+
+  .jjodel-select__multi-value__remove {
+    color: #94a3b8 !important;  // slate-400
+    padding: 0 4px !important;
+    cursor: pointer !important;
+    border-radius: 0 4px 4px 0 !important;
+
+    &:hover {
+      background: #e2e8f0 !important;  // slate-200
+      color: #ef4444 !important;  // red on hover for "remove" affordance
+    }
+
+    svg {
+      width: 12px !important;
+      height: 12px !important;
+    }
+  }
+
+  // 3. Indicator icons - smaller, lighter to match single select chevron
+  .jjodel-select__indicators {
+    align-self: center !important;
+    padding: 0 4px !important;
+    flex-shrink: 0 !important;
+
+    svg {
+      width: 14px !important;
+      height: 14px !important;
+      color: #94a3b8 !important;  // slate-400, subtle
+    }
+
+    &:hover svg {
+      color: #64748b !important;  // slate-500 on hover
+    }
+  }
+
+  .jjodel-select__dropdown-indicator {
+    padding: 4px !important;
+
+    svg {
+      width: 14px !important;
+      height: 14px !important;
+      color: #94a3b8 !important;
+    }
+  }
+
+  .jjodel-select__clear-indicator {
+    padding: 4px !important;
+
+    svg {
+      width: 12px !important;
+      height: 12px !important;
+      color: #94a3b8 !important;
+    }
+
+    &:hover svg {
+      color: #ef4444 !important;
+    }
+  }
+
+  // Hide separator between X and chevron
+  .jjodel-select__indicator-separator {
+    display: none !important;
+  }
+
+  // 4. Dropdown menu - match Jjodel design system
+  .jjodel-select__menu {
+    z-index: 999 !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 6px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+    background: var(--color-bg-primary, #ffffff) !important;
+    margin-top: 4px !important;
+    overflow: hidden !important;
+
+  }
+
+  // Group header ("APPLY TO")
+  .jjodel-select__group {
+    padding: 0 !important;
+  }
+
+  .jjodel-select__group-heading {
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.05em !important;
+    color: #94a3b8 !important;
+    text-transform: uppercase !important;
+    padding: 8px 12px 4px !important;
+    margin: 0 !important;
+  }
+
+  // Option items
+  .jjodel-select__option {
+    font-size: 13px !important;
+    color: #334155 !important;
+    padding: 8px 12px !important;
+    cursor: pointer !important;
+    background: transparent !important;
+
+    // Hover state
+    &:hover {
+      background: #f1f5f9 !important;  // slate-100
+    }
+  }
+
+  .jjodel-select__option--is-focused {
+    background: #f1f5f9 !important;  // slate-100
+  }
+
+
+
+  // Selected/active state
+  .jjodel-select__option--is-selected {
+    background: rgba(14, 165, 233, 0.08) !important;  // very subtle cyan
+    color: #0ea5e9 !important;
+    font-weight: 500 !important;
+
+    &:hover {
+      background: rgba(14, 165, 233, 0.12) !important;
+    }
+  }
+
+  // Placeholder
+  .jjodel-select__placeholder {
+    color: #9ca3af !important;
+    font-size: 13px !important;
+  }
 }
 /******************************              Multiselect END              ******************************/

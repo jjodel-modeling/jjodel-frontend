@@ -1,4 +1,14 @@
-import React, {Dispatch, JSX, KeyboardEvent, LegacyRef, ReactElement, ReactNode, useRef} from 'react';
+import React, {
+    Dispatch,
+    JSX,
+    KeyboardEvent,
+    LegacyRef,
+    ReactElement,
+    ReactNode,
+    useEffect,
+    useLayoutEffect,
+    useRef
+} from 'react';
 import {connect} from 'react-redux';
 import {DState} from '../../redux/store';
 import {
@@ -7,19 +17,24 @@ import {
     DObject,
     DPointerTargetable,
     GObject,
-    Keystrokes, LAttribute,
-    LClass, LEnumerator, LEnumLiteral, LModel, LObject,
+    Keystrokes, L, LAttribute,
+    LClass, LEnumerator, LEnumLiteral, LModel, LObject, Log,
     LPointerTargetable, LReference, LStructuralFeature, LValue, MultiSelect, MultiSelectOptGroup,
     MultiSelectOption,
     Overlap,
-    Pointer, PrimitiveType, Selectors,
+    Pointer, Pointers, PrimitiveType, Selectors,
     store,
     U,
     UX
 } from '../../joiner';
 import {useStateIfMounted} from 'use-state-if-mounted';
+// TypeScript may complain about missing declarations for .scss imports in projects
+// without appropriate module typings. Ignore the check for this side-effect import.
+// @ts-ignore
 import './inputselect.scss';
 import { Tooltip } from './Tooltip';
+import { JjSelect } from '../ui';
+import {GenericProps} from "../../joiner";
 
 export function getSelectOptions_raw(data: LPointerTargetable, field: string): MultiSelectOptGroup[] {
     if (!data) return [];
@@ -36,11 +51,37 @@ function errorUpdate(msg: string, e: Error){
     return e;
 }
 
-export function getSelectOptions(data: LPointerTargetable, field: string, options: ReactNode, children?: ReactNode): ReactNode {
-    if (options) return options;
+export function getSelectOptions(data: LPointerTargetable, field: string, options: ReactNode, children?: ReactNode, id_debug?:string): ReactNode {
+    let asArr: any[] | null = Array.isArray(options) ? options : null;
+    if (options && (asArr || React.isValidElement(options)) && asArr?.length !== 0) {
+        if (asArr) {
+            return asArr.map(d => {
+                if (DPointerTargetable.isD(d)) return <option value={d.id}>d.name</option>;
+                if (Pointers.isPointer(d)) {
+                    let d2 = L.fromPointer(d) as DPointerTargetable;
+                    return d2 ? <option value={d2.id}>d2.name</option> : null;
+                }
+                return React.isValidElement(d) ? d : null;
+            });
+        }
+        return options;
+    }
+    asArr = Array.isArray(children) ? children : null;
+    if (children && (asArr || React.isValidElement(children)) && asArr?.length !== 0) {
+        if (asArr) {
+            return asArr.map(d => {
+                if (DPointerTargetable.isD(d)) return <option value={d.id}>d.name</option>;
+                if (Pointers.isPointer(d)) {
+                    let d2 = L.fromPointer(d) as DPointerTargetable;
+                    return d2 ? <option value={d2.id}>d2.name</option> : null;
+                }
+                return React.isValidElement(d) ? d : null;
+            });
+        }
+        return children;
+    }
     // children is auto-filled to empty array even if it is not set explicitly in jsx
-    if (Array.isArray(children) && children.length > 0) return children;
-    let ret: ReactNode | undefined;
+    let ret: ReactNode | null = null;
     switch (field) {
         default:
         case 'extends':
@@ -58,11 +99,38 @@ export function InputComponent(props: AllProps) {
     const field: string = props.field as string;
     const oldValue: PrimitiveType | PrimitiveType[] | LPointerTargetable = (getter) ? getter(data, field) : (data ? data[field] : undefined); // !== undefined); ? data[field] : 'undefined'
     let [value, setValue] = useStateIfMounted<PrimitiveType | PrimitiveType[] | LPointerTargetable>(oldValue);
-
+    let [visible, setVisible] = useStateIfMounted<boolean>(props.clickHidden ? false : true);
+    if (U.isError(data) || data && typeof data !== 'object') throw errorUpdate("Error on <" + (U.uppercaseFirstLetter(props.tag || "Input"))+"> data props invalid", data);
     if (U.isError(value)) throw errorUpdate("Error on <" + (U.uppercaseFirstLetter(props.tag || "Input"))+"> value getter", value);
     const [isTouched, setIsTouched] = useStateIfMounted(false);
     const inputRef = useRef<Element | null>(null);
     if (props.tag === 'select') value = oldValue; // select does not use state.
+    useLayoutEffect(() => {
+        if (visible && inputRef.current) {
+            let input = inputRef.current;
+            // Auto-focus + pre-select on mount is an OPT-IN inline-rename affordance
+            // (selectOnMount): it pre-selects the value so the user can type over it when a
+            // rename-in-place input is revealed. OFF by default so ordinary panels do not
+            // steal focus / show a caret on load. Never runs for <select> elements or
+            // read-only fields. See discovery 2026-06-11, Issue 2 (+ focus/caret follow-up).
+            if (props.selectOnMount && props.tag !== 'select' && !readOnly) {
+                // input.select() works on inputs, but this works for contenteditable too
+                (inputRef.current as any)?.focus();
+                if (input.tagName === 'INPUT') (input as HTMLInputElement).select();
+                else {
+                    const range = document.createRange();
+                    range.selectNodeContents(input);
+                    const selection = window.getSelection();
+                    if (selection) {
+                        selection.removeAllRanges();
+                        selection.addRange(range);
+                    }
+                }
+            }
+
+        }
+    }, [visible]);
+
     let serializeValue = (val: LPointerTargetable | PrimitiveType | PrimitiveType[], maxDepth=1, currDepth = 0): string | PrimitiveType | PrimitiveType[] => {
         if (Array.isArray(val)) {
             if (props.isMultiSelect && currDepth < maxDepth) {
@@ -76,13 +144,7 @@ export function InputComponent(props: AllProps) {
     };
 
     function valueDidChange(v1: any, v2: any): boolean {
-
         return serializeValue(v1) !== serializeValue(v2);
-        /*
-        let rawv1 = v1?.__raw || v1;
-        let rawv2 = v2?.__raw || v2;
-        if (rawv1 !== v1 || rawv2 !== v2) { return v1?.clonedCounter !== v2?.clonedCounter; }
-        return v1 !== v2;*/
     }
 
     // I check if the value that I have in my local state is being edited by other <Input />
@@ -109,22 +171,25 @@ export function InputComponent(props: AllProps) {
     let postlabel: ReactNode | undefined = props.postlabel;
     let tooltip: ReactNode|string|undefined = ((props.tooltip === true) ? data?.['__info_of__' + field]?.txt : props.tooltip) || '';
 
-    let css = '';//'my-auto input ';
-    //css += (jsxLabel) ? 'ms-1' : (label) ? 'ms-auto' : '';
-    css += (props.hidden) ? ' hidden-input' : '';
+    let classes = ' ';//'my-auto input ';
+    //classes += (jsxLabel) ? 'ms-1' : (label) ? 'ms-auto' : '';
+    classes += (props.hidden) ? ' hidden-input' : '';
+    classes += (props.clickHidden) ? ' click-hidden-input' : '';
     let autosize: boolean = props.autosize === undefined ? false : props.autosize; // props.type==='text'
-    css += autosize ? ' autosize-input' : '';
+    classes += autosize ? ' autosize-input' : '';
     const isBoolean = (['checkbox', 'radio'].includes(type));
-
+    const isTextual = !isBoolean && (props.tag !== 'select');
 
     const onDoubleClick = (evt: React.MouseEvent<HTMLInputElement>) => { // fully select the text
+        try { (props as any).onDoubleClick?.(evt); } catch (e) { Log.ee("error in user event Input.onDoubleClick", e); }
+        if (!isTextual) return;
         evt.preventDefault();
         evt.stopPropagation();
         console.warn('input dblclick', {t:evt.target, evt}); //, ets:(evt.target as HTMLInputElement).select()};
         (evt.target as HTMLInputElement).select?.();
     }
     const onChange = (evt: React.ChangeEvent<HTMLInputElement>) => {
-        (props as any).onChange?.(evt);
+        try { (props as any).onChange?.(evt); } catch (e) { Log.ee("error in user event Input.onChange", e); }
         if (readOnly) return;
 
         if (isBoolean) {
@@ -143,12 +208,10 @@ export function InputComponent(props: AllProps) {
             setIsTouched(true);     // I'm editing the element in my local state.
             // the actual set is done in onBlur
         }
-
-
     }
     const onKeyDown = (evt: React.KeyboardEvent<HTMLInputElement>) => {
-        (props as any).onKeyDown?.(evt);
-        if (props.tag === 'select') return;
+        try { (props as any).onKeyDown?.(evt); } catch (e) { Log.ee("error in user event Input.onKeyDown", e); }
+        if (!isTextual) return;
         if (evt.key === Keystrokes.enter) confirmValue(evt as any);
         if (evt.key === Keystrokes.escape) {
             const oldValue = getter ? getter(data, field) : data[field];
@@ -160,12 +223,19 @@ export function InputComponent(props: AllProps) {
             // optimize 2: memoize the whole component, so it won't update unless the displayed value changed. this would also fix cursor going to input end when pressing enter.
         }
     }
+    const onBlur = (evt: { target: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement }) => {
+        try { (props as any).onBlur?.(evt); } catch (e) { Log.ee("error in user event Input.onBlur", e); }
+        if (!isTextual) return;
+        confirmValue(evt);
+    }
+
     const getValueFromEvent = (evt: { target: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement }) => {
         switch (props.tag){
             case "textarea": case "input": case "select": case "": case null: case undefined: return evt.target.value;
             default: return evt.target.innerText;
         }
     }
+
     const writeHtmlValueFromEvent = (evt: { target: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement }, value: any) => {
         value = serializeValue(value);
         switch (props.tag){
@@ -174,16 +244,11 @@ export function InputComponent(props: AllProps) {
         }
     }
 
-    const onBlur = (evt: { target: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement }) => {
-        (props as any).onBlur?.(evt);
-        if (props.tag === 'select') return;
-        confirmValue(evt);
-    }
     const confirmValue = (evt: { target: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement }|undefined, val?: PrimitiveType|PrimitiveType[]) => {
         if (readOnly || isBoolean) return;
         const newValue = val || (evt && getValueFromEvent(evt));
         const oldValue = getter ? getter(data, field) : data[field];
-        console.log("onChange confirm", {evt, newValue, oldValue, data, field, changed: valueDidChange(newValue, oldValue), readOnly, isBoolean, setter, nnv:serializeValue(newValue)});
+        // console.log("onChange confirm", {evt, newValue, oldValue, data, field, changed: valueDidChange(newValue, oldValue), readOnly, isBoolean, setter, nnv:serializeValue(newValue)});
         if (valueDidChange(newValue, oldValue)){
             if (setter) setter(newValue as any, data, field);
             else data[field] = serializeValue(newValue);
@@ -205,9 +270,12 @@ export function InputComponent(props: AllProps) {
     delete otherprops.inputStyle;
     delete otherprops.children;
     delete otherprops.autosize; // because react complains is bool in dom attribute or unknown attrib name
+    delete otherprops.selectOnMount; // custom prop — must not leak onto the DOM element
+    delete otherprops.jjSelect; // custom prop — must not leak onto the DOM element
 
     let checked: boolean | undefined = undefined;
-    if (isBoolean) checked = typeof value === "boolean" ? value : (typeof value === "string" ? U.fromBoolString(value) : !!value);
+    if (isBoolean) checked = typeof value === "boolean" ? value :
+        (typeof value === "string" ? U.fromBoolString(value, false, subtype === "checkbox3" ? undefined : false, subtype === "checkbox3" ? undefined : false) : !!value);
 
     let cursor: string;
     if (tooltip) cursor = 'help';
@@ -215,19 +283,27 @@ export function InputComponent(props: AllProps) {
     else if (isBoolean) cursor = 'pointer';
     else cursor = 'auto';
 
+    // Add form design system classes based on input type
+    let formClass = '';
+    /*if (props.tag === 'textarea') formClass = 'form-textarea';
+    else if (props.tag === 'select') formClass = 'form-select';
+    else if (!isBoolean && type !== 'range') formClass = 'form-input';*/
+
     let inputProps: GObject = {...otherprops,
-        className: [props.inputClassName||'', css].join(' '),
+        className: [formClass, props.inputClassName||'', classes].join(' '),
         style: (props.inputStyle || {}),
-        spellCheck: (props as any).spellCkeck || false, readOnly, disabled: readOnly, type,
-        value: serializeValue(value),
+        spellCheck: (props as any).spellCkeck || false,
+        readOnly,
+        disabled: readOnly,
+        type,
+        // Never pass undefined — prevents React "uncontrolled to controlled" warning
+        // that causes extra re-renders and can contribute to the StoreUpdater loop.
+        value: serializeValue(value) ?? '',
         checked,
         onDoubleClick,
         onChange, onBlur, onKeyDown} // key:`${field}.${data?.id}`
     if (!inputProps.style.cursor) { inputProps.style.cursor = cursor; }
-    switch (subtype) {
-        case 'checkbox3': case 'switch': case 'slider': inputProps.className += ' ' + subtype + (oldValue===undefined?'undetermined':''); break;
-        default: break;
-    }
+    if (subtype) inputProps.className += ' ' + subtype + (oldValue === undefined ? ' undetermined' : '');
 
     let input: ReactNode;
     let rootprops: GObject = {className: otherprops.className||'', style: otherprops.style||{}};
@@ -244,8 +320,8 @@ export function InputComponent(props: AllProps) {
     }
     if (props.autosize) rootprops['data-value'] = inputProps.value;
 
-    if (tooltip) {
-        rootprops.onMouseEnter = () => Tooltip.show(tooltip, 'b', (rootprops.ref?.current) || rootprops.ref);
+    if (tooltip || props.clickHidden) {
+        rootprops.onMouseEnter = () => Tooltip.show(tooltip || 'Double click to edit', 'b', (rootprops.ref?.current) || rootprops.ref);
         rootprops.onMouseLeave = () => Tooltip.hide();
     }
     /*let rootkeys = new Set(...Object.keys(rootprops));
@@ -269,7 +345,7 @@ export function InputComponent(props: AllProps) {
 
     switch (props.tag){
         case "textarea": input = <textarea {...inputProps}>{inputProps.value}</textarea>; break;
-        case "select": /* test */
+        case "select":
             if (props.isMultiSelect){
                 let options = props.options as any || getSelectOptions_raw(data, field);
                 if (U.isError(options)) throw errorUpdate("Error on <Multiselect> options getter", options);
@@ -279,34 +355,120 @@ export function InputComponent(props: AllProps) {
                 delete valuesMap[undefined as any];
                 inputProps.value = [];
                 for (let optgrp of multiOptions) for (let opt of optgrp.options) if (valuesMap[opt.value]) inputProps.value.push(opt);
+                if (props.jjSelect) {
+                    // Opt-in design-system multiselect: same data-binding, JjSelect chrome.
+                    input = <JjSelect
+                        isMulti={true}
+                        isDisabled={readOnly}
+                        placeholder={props.placeholder || 'Select...'}
+                        options={options}
+                        value={inputProps.value as any}
+                        onChange={((v0: any) => confirmValue(undefined, ((v0 as any[]) || []).map((v: any) => v.value))) as any}
+                    />;
+                } else {
                 // rootprops.className = (rootprops.className || '') + ' clearfix';
                 let old = {...rootprops};
-                rootprops.onMouseMove = (e:any) => { UX.stopEvt(e); old.onMouseMove?.(); console.log('multiselect onmove'); };
+                rootprops.onMouseMove = (e:any) => { UX.stopEvt(e); old.onMouseMove?.(); /* console.log('multiselect onmove'); */ };
                 /*rootprops.onMouseDown = (e:any) => { UX.stopEvt(e); old.onMouseDown?.(); console.log('multiselect onMouseDown'); };
                 rootprops.onMouseUp = (e:any) => { UX.stopEvt(e); old.onMouseUp?.(); console.log('multiselect onMouseUp'); };
                 rootprops.onClick = (e:any) => { UX.stopEvt(e); old.onClick?.(); console.log('multiselect onClick'); };
                 rootprops.onMouseLeave = (e:any) => { UX.stopEvt(e); old.onMouseLeave?.(); console.log('multiselect onMouseLeave'); };*/
                 // @ts-ignore
                 input = <MultiSelect {...inputProps} isMulti={true} options={options}
+                    classNamePrefix="jjodel-select"
+                    isClearable={false}
+                    styles={{
+                        control: (base: any) => ({
+                            ...base,
+                            minHeight: '38px',
+                            height: 'auto',
+                            maxHeight: '60px',
+                            overflow: 'visible',
+                            borderColor: '#e2e8f0',
+                        }),
+                        valueContainer: (base: any) => ({
+                            ...base,
+                            padding: '4px 8px', 
+                            flexWrap: 'nowrap',
+                            gap: '4px',
+                            overflow: 'visible',
+                            display: 'flex',
+                            flexDirection: 'row',
+                        }),
+                        indicatorsContainer: (base: any) => ({
+                            ...base,
+                            alignSelf: 'center',
+                            padding: '0 4px',
+                        }),
+                        input: (base: any) => ({
+                            ...base,
+                            margin: 0,
+                            padding: 0,
+                            flex: '1 1 auto',
+                        }),
+                        multiValue: (base: any) => ({
+                            ...base,
+                            margin: '0 0 0 4px',
+                            flexShrink: 0,
+                        }),
+                        clearIndicator: () => ({
+                            display: 'none',
+                        }),
+                        placeholder: (base: any) => ({
+                            ...base,
+                            color: '#9ca3af',
+                            fontSize: '13px',
+                        }),
+                    }}
                     onChange={((v0: MultiSelectOption[]) => {
                         let v = v0.map(v => v.value);
                         confirmValue(undefined, v);
                     }) as any}
                 />;
+                }
             }
             else {
-                let options = getSelectOptions(data, field, props.options, props.children);
+                if (props.jjSelect) {
+                    // Opt-in design-system single select. props.options must be DATA arrays
+                    // (flat [{value,label}] or grouped [{label, options:[...]}]).
+                    const dataOptions = (props.options as any[]) || [];
+                    const flatOpts: any[] = [];
+                    for (const o of dataOptions) { if (o && Array.isArray((o as any).options)) flatOpts.push(...(o as any).options); else flatOpts.push(o); }
+                    const cur = inputProps.value;
+                    const selectedOpt = flatOpts.find((o: any) => `${o.value}` === `${cur}`) || null;
+                    input = <JjSelect
+                        isMulti={false}
+                        isDisabled={readOnly}
+                        placeholder={props.placeholder || 'Select your option'}
+                        options={dataOptions as any}
+                        value={selectedOpt as any}
+                        onChange={((opt: any) => confirmValue(undefined, opt ? opt.value : undefined)) as any}
+                    />;
+                } else {
+                let options = getSelectOptions(data, field, props.options, props.children, props.id);
                 if (U.isError(options)) throw errorUpdate("Error on <Select> options getter", options);
                 input = <select {...inputProps}>
-                    <option value="" disabled selected>{props.placeholder ? props.placeholder : 'Select your option'}</option>
+                    <option value="" disabled selected>{props.placeholder || 'Select your option'}</option>
                     {options}
                 </select>;
+                }
             }
             break;
         case null: case undefined: case "": case "input": input = <input {...inputProps} />; break;
         default:
             inputProps.contentEditable = inputProps.contentEditable !== false;
             input = React.createElement(props.tag, inputProps, props.children); break;
+    }
+    if (!visible) {
+        let valueStr: string = value as any;
+        switch (subtype) {
+            case 'checkbox': valueStr = value ? 'true' : 'false'; break;
+            case 'checkbox3': valueStr = value === false ? 'false' : (value ? 'true' : 'undetermined'); break;
+        }
+        // console.error('hidden input', {ref: rootprops.ref, rootprops});
+        let html: Element | null = !rootprops.ref ? null : typeof rootprops.ref === 'function' ? rootprops.ref() : rootprops.ref.current;
+        U.clickedOutside(html?.parentElement, ()=>setVisible(false));
+        return <span {...rootprops} onDoubleClick={(e)=>{ rootprops.onDoubleClick?.(e); setVisible(true)}}>{valueStr}</span>;
     }
     if (!wrap) return input;
 
@@ -321,11 +483,14 @@ export function InputComponent(props: AllProps) {
         if (props.tag !== "select") return;
         let t: HTMLElement = (e.target) as any;
         let select = (t.tagName === 'select') ? t : t.querySelector('select');
-        console.log("click select root", {t, select});
+        // console.log("click select root", {t, select});
         select?.click();
     }
     return <label className={'input-container'} {...rootprops} /*onClick={openSelect}*/>
-        {label || undefined}{input}{postlabel || undefined}</label>;
+        {label || undefined}
+        {input}
+        {postlabel || undefined}
+    </label>;
     /*
     return(<label className={'p-1'} {...otherprops}
                   style={rootStyle}>
@@ -351,7 +516,7 @@ export function InputComponent(props: AllProps) {
     */
 }
 
-export interface InputOwnProps {
+export interface InputOwnProps extends GenericProps {
     data?: LPointerTargetable | DPointerTargetable | Pointer<DPointerTargetable, 1, 1, LPointerTargetable>;
     field?: string;
     // DANGER: use the data provided in parameters instead of using js closure, as the proxy accessed from using closure won't be updated in rerenders.
@@ -363,18 +528,23 @@ export interface InputOwnProps {
     type?: 'checkbox'|'color'|'date'|'datetime-local'|'email'|'file'|'image'|'month'|'number'|'password'
         |'radio'|'range'|'tel'|'text'|'time'|'url'|'week'
         |'checkbox3'|'toggle'|'switch'|'slider';
-    className?: string;
-    style?: GObject;
     readOnly?: boolean;
     tooltip?: boolean | ReactNode;
     hidden?: boolean;
+    clickHidden?: boolean;
+    // Opt-in: focus + pre-select the value when this input mounts/reveals (inline-rename).
+    selectOnMount?: boolean;
+    // Opt-in: render the design-system JjSelect (react-select) instead of the native
+    // <select>/bare MultiSelect. Data-binding is unchanged; only the control differs.
+    jjSelect?: boolean;
     autosize?: boolean;
     inputClassName?: string;
     inputStyle?: GObject;
-    key?: React.Key | null;
     placeholder?: string;
     tag?: string;
-    children?: ReactNode;
+}
+export interface InputInjectProps{
+    dataid: Pointer<LPointerTargetable>;
 }
 
 export interface SelectOwnProps extends Omit<InputOwnProps, 'setter'> {
@@ -393,14 +563,13 @@ interface StateProps {
     // selected: Dictionary<Pointer<DUser>, LModelElement | null>;
 }
 interface DispatchProps { }
-type AllProps = Overlap<RealOwnProps, Overlap<StateProps, DispatchProps>>;
+type AllProps = Overlap<InputInjectProps, Overlap<RealOwnProps, Overlap<StateProps, DispatchProps>>>;
 
 
-export function InputMapStateToProps(state: DState, ownProps: RealOwnProps): StateProps {
+export function InputMapStateToProps(s: DState, ownProps: RealOwnProps): StateProps {
     const ret: StateProps = {} as any;
-    const pointer: Pointer | undefined = typeof ownProps.data === 'string' ? ownProps.data : ownProps.data?.id;
-    ret.debugmodee = state.debug ? 'true' : 'false';
-    if (pointer) ret.data = LPointerTargetable.fromPointer(pointer);
+    ret.debugmodee = s.debug ? 'true' : 'false';
+    ret.data = L.from(ownProps.data as any, s) || L.from((ownProps as  any as InputInjectProps).dataid, s);
     return ret;
 }
 

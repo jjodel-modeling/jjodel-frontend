@@ -1,9 +1,5 @@
 import { TbHexagonLetterJ as Logo1} from "react-icons/tb";
-
-import {
-    TbSquareRoundedLetterM,
-    TbSquareRoundedLetterMFilled
-} from "react-icons/tb";
+import { ElementBadge } from "./common/ElementBadge";
 
 
 type LogoProps = {
@@ -16,10 +12,10 @@ export const Logo = (props: LogoProps) => {
 }
 
 export const MetamodelIcon = (props: LogoProps) => {
-    return (<TbSquareRoundedLetterMFilled style={props.style && props.style} className={`logo ${props.className && props.className}`} />);
+    return (<ElementBadge type="metamodel" className={`logo ${props.className || ''}`} />);
 }
 
 export const ModelIcon = (props: LogoProps) => {
-    return (<TbSquareRoundedLetterM style={props.style && props.style} className={`logo ${props.className && props.className}`} />);
+    return (<ElementBadge type="model" className={`logo ${props.className || ''}`} />);
 }
 

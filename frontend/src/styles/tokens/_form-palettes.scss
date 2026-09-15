@@ -1,0 +1,128 @@
+/**
+ * FORM PALETTES — the appearance axis of the Data Manager (R-SKIN).
+ *
+ * A palette REMAPS NINE TOKENS the form and the manager table already read, and does
+ * nothing else: no new property, no new token, no colour chosen by the user. The closed
+ * list of names lives in `jjform/palettes.ts`, which carries no colours for the same
+ * reason this file carries no names logic — rule 28 puts colours here and nowhere else.
+ *
+ * ── Why the selector is `.instance-manager` and not `.ir-form` ────────────────
+ *
+ * The manager's TABLE reads the same nine tokens as the form: 143 lines of
+ * `instanceManagerTab.scss`, `--color-form-muted` alone 44 times (phase 1 discovery §7).
+ * `.instance-manager` (`InstanceManagerTab.tsx`) is the ancestor of the `.ir-form` the
+ * drawer mounts, so one attribute covers both. Keyed on `.ir-form` instead, a palette
+ * would repaint the drawer and leave the table above it untouched, on the same screen.
+ *
+ * ── Why every palette is written TWICE ────────────────────────────────────────
+ *
+ * Custom properties INHERIT. A value redeclared on a descendant replaces the one
+ * inherited from the root whatever the specificity of the rule that put it there — the
+ * two rules are on two different elements, so no specificity contest happens at all.
+ * That is what makes these rules work; it is also what makes them dangerous. A palette
+ * that stated only its light values would paint those light values IN DARK MODE TOO,
+ * because the `:root[data-theme="dark"]` block never gets to compete.
+ *
+ * So: one rule per palette for light, one more under the dark root. The dark condition is
+ * `:root[data-theme="dark"]`, read from `_colors-dark.scss` and not presumed — this app
+ * switches theme by attribute on the root element, never by `prefers-color-scheme`.
+ *
+ * ── Why `Slate` has no rule ───────────────────────────────────────────────────
+ *
+ * `Slate` IS the appearance committed before this axis existed, so it is the values of
+ * `:root` — reached by declaring nothing. Copying the defaults into a fifth block here
+ * would be a second source for the same nine values, free to drift from the first. The
+ * element still carries `data-palette="slate"` (`paletteAttr` never returns empty), and
+ * that attribute matches no rule below on purpose.
+ *
+ * The nine tokens, and the reason the list stops there: `--radius-sm` is OUT (R-SKIN-3-bis
+ * (c)) — it is a global alias, also worn by tooltips, tabs and `.rounded-sm`, and
+ * remapping it inside this scope would retune every control that happens to sit in the
+ * manager. Focus, error and warning roles are out too: a palette says what the surface is
+ * made of, never what is wrong or where the keyboard is.
+ */
+
+/* ─── Paper — warm ivory surface, soft sand borders ────────────────────────── */
+
+.instance-manager[data-palette="paper"] {
+  --color-form-surface: #fbf7ee;
+  --color-form-panel: #f3ecdb;
+  --color-form-border: #ddd2b8;
+  --color-form-border-strong: #c9bb98;
+  --color-form-muted: #a1937a;
+  --color-form-label: #6b5f4a;
+  --color-form-section: #8a7c63;
+  --color-form-summary: #fdfaf3;
+  --color-bg-tertiary: #efe6d2;
+}
+
+:root[data-theme="dark"] .instance-manager[data-palette="paper"] {
+  --color-form-surface: #201c16;
+  --color-form-panel: #17140f;
+  --color-form-border: rgba(232, 223, 204, 0.12);
+  --color-form-border-strong: rgba(232, 223, 204, 0.22);
+  --color-form-muted: #8a7f6a;
+  --color-form-label: #bdb29a;
+  --color-form-section: #8a7f6a;
+  --color-form-summary: #18150f;
+  --color-bg-tertiary: #28221a;
+}
+
+/* ─── Ink — high contrast, crisp borders, full-strength labels ─────────────── */
+
+.instance-manager[data-palette="ink"] {
+  --color-form-surface: #ffffff;
+  --color-form-panel: #f1f5f9;
+  --color-form-border: #334155;
+  --color-form-border-strong: #0f172a;
+  --color-form-muted: #475569;
+  --color-form-label: #0f172a;
+  --color-form-section: #1e293b;
+  --color-form-summary: #f8fafc;
+  --color-bg-tertiary: #e2e8f0;
+}
+
+:root[data-theme="dark"] .instance-manager[data-palette="ink"] {
+  --color-form-surface: #000000;
+  --color-form-panel: #0a0a0a;
+  /* NOT #ffffff: a pure-white hairline on black is the one value of this palette that
+     vibrates, and every field in the table carries one. The strong border keeps white —
+     it is drawn on far fewer elements and it is what «crisp» is for. */
+  --color-form-border: #c4c9ce;
+  --color-form-border-strong: #ffffff;
+  --color-form-muted: #c8c8c8;
+  --color-form-label: #ffffff;
+  --color-form-section: #e0e0e0;
+  --color-form-summary: #0d0d0d;
+  --color-bg-tertiary: #141414;
+}
+
+/* ─── Mist — almost borderless, fields told apart by surface tone ──────────── */
+
+.instance-manager[data-palette="mist"] {
+  --color-form-surface: #f7f9fb;
+  --color-form-panel: #ffffff;
+  /* Nearly, not fully, transparent. `transparent` would take the hairline off controls
+     that use it to read as controls at all — a text field on its own panel becomes a
+     rectangle of tone with no edge, and the checkbox loses its box. Five per cent keeps
+     an edge that is felt rather than seen. */
+  --color-form-border: rgba(15, 23, 42, 0.05);
+  --color-form-border-strong: #e2e8f0;
+  --color-form-muted: #9aa7b4;
+  --color-form-label: #64748b;
+  --color-form-section: #94a3b8;
+  --color-form-summary: #fbfcfd;
+  --color-bg-tertiary: #eef2f6;
+}
+
+:root[data-theme="dark"] .instance-manager[data-palette="mist"] {
+  --color-form-surface: #131517;
+  --color-form-panel: #0f1012;
+  --color-form-border: rgba(255, 255, 255, 0.04);
+  --color-form-border-strong: rgba(255, 255, 255, 0.10);
+  --color-form-muted: #6b7076;
+  --color-form-label: #93999f;
+  --color-form-section: #6b7076;
+  --color-form-summary: #111315;
+  --color-bg-tertiary: #1a1c1e;
+}

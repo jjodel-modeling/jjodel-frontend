@@ -1,0 +1,95 @@
+/**
+ * JjEL Method Provider
+ *
+ * Triggered after `.` or `?.`. Returns built-in methods filtered by the
+ * prefix that follows the dot, additionally narrowed by a static, conservative
+ * inference of the receiver kind (collection vs single item) — see
+ * `util/receiverKind.ts`. Receivers the inference cannot classify fall back
+ * to the original "show everything" behavior.
+ */
+
+import type { Suggestion } from '../../../jjscript/autocomplete/types';
+import type { JjelAutocompleteContext } from '../context';
+import {
+    ALL_BUILTIN_METHODS,
+    COMMON_METHOD_NAMES,
+    BuiltinMethod,
+} from '../../metadata/builtins';
+import { inferReceiverKind, ReceiverKind } from '../util/receiverKind';
+
+function matchesPrefix(name: string, filter: string): boolean {
+    if (!filter) return true;
+    return name.toLowerCase().startsWith(filter.toLowerCase());
+}
+
+function priorityFor(method: BuiltinMethod, filter: string): number {
+    const base = COMMON_METHOD_NAMES.has(method.name) ? 75 : 60;
+    if (!filter) return base;
+    if (method.name.toLowerCase() === filter.toLowerCase()) return base + 25;
+    if (method.name.toLowerCase().startsWith(filter.toLowerCase())) return base + 15;
+    return base;
+}
+
+export function getJjelMethodSuggestions(context: JjelAutocompleteContext): Suggestion[] {
+    if (context.parseContext !== 'after-dot') return [];
+
+    const filter = context.currentWord;
+    const out: Suggestion[] = [];
+
+    // Receiver kind inference: when we can classify the receiver as collection
+    // or item, prune the catalog to relevant categories. Otherwise leave the
+    // catalog as-is to preserve the legacy "show everything" behavior.
+    // The dot we anchor on lives at `wordStart - 1` (the parser already
+    // confirmed parseContext === 'after-dot').
+    const dotPos: number = context.wordStart - 1;
+    const receiverKind: ReceiverKind = inferReceiverKind(context.input, dotPos);
+
+    function isCategoryAllowed(cat: BuiltinMethod['category']): boolean {
+        if (receiverKind === 'collection') return cat === 'collection';
+        if (receiverKind === 'item') return cat !== 'collection';
+        return true;
+    }
+
+    // Deduplicate by name: some methods (e.g. `reverse`, `contains`, `indexOf`,
+    // `isEmpty`, `isNotEmpty`, `format`) appear in more than one category.
+    // We keep the first occurrence (string comes first in ALL_BUILTIN_METHODS)
+    // and surface the others' categories in the description until type
+    // inference lands.
+    const seen = new Map<string, BuiltinMethod[]>();
+    for (const m of ALL_BUILTIN_METHODS) {
+        if (!isCategoryAllowed(m.category)) continue;
+        if (!matchesPrefix(m.name, filter)) continue;
+        const existing = seen.get(m.name);
+        if (existing) existing.push(m);
+        else seen.set(m.name, [m]);
+    }
+
+    for (const [name, defs] of seen) {
+        const primary = defs[0];
+        const categories = defs.map(d => d.category).join(', ');
+        const description = defs.length > 1
+            ? `${primary.signature} — ${primary.description} [${categories}]`
+            : `${primary.signature} — ${primary.description}`;
+        const jjelKind = primary.category === 'class-structural'
+            ? 'class-property'
+            : primary.category === 'meta'
+                ? 'meta-property'
+                : 'method';
+        const icon = primary.category === 'class-structural'
+            ? 'bi-square-fill'
+            : primary.category === 'meta'
+                ? 'bi-diagram-3'
+                : 'bi-three-dots';
+        out.push({
+            text: name,
+            displayText: name,
+            type: 'attribute', // reuse SuggestionType; UI maps jjelKind to a category-specific badge
+            description,
+            priority: priorityFor(primary, filter),
+            icon,
+            metadata: { jjelKind, category: primary.category, signature: primary.signature },
+        });
+    }
+
+    return out;
+}

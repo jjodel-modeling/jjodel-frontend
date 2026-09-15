@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Library xmi:version="2.0"
+         xmlns:xmi="http://www.omg.org/XMI"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xmlns="Library"
+         name="Central">
+  <members xmi:id="m1" name="Alice"/>
+  <members xmi:id="m2" name="Bob"/>
+  <items xsi:type="Book" xmi:id="b1" title="Moby Dick" isbn="978-0-12-345678-9" borrowedBy="m1"/>
+  <items xsi:type="Book" xmi:id="b2" title="Dune" isbn="978-0-44-1013594-0"/>
+  <items xsi:type="Magazine" xmi:id="mg1" title="Nature" issue="42" borrowedBy="m2"/>
+</Library>

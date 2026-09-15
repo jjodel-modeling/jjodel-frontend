@@ -1,0 +1,248 @@
+import { useMemo, useEffect, useCallback } from 'react';
+import { useStore, useEdges, useStoreApi, type Node, type ReactFlowState } from '@xyflow/react';
+import {
+    computeTreeConnectorPath,
+    registerEdgePath,
+    unregisterEdgePath,
+    getEdgeCrossings,
+    buildFinalPath,
+    roundManhattanPath,
+    parsePathPoints,
+    parsePathSubPaths,
+    pointsToPath,
+    treeBusCornerRadius,
+    treeBranchAnchor,
+    treeChildBox,
+    type TreeBranch,
+} from '../utils/edgeUtils';
+
+// Stable empty array returned by the nodes selector for non-inheritance edges,
+// so their subscription never fires (Object.is-equal on every store notification).
+const EMPTY_NODES: Node[] = [];
+
+export interface TreeGeometry {
+    trunkPath: string;
+    barAndBranchesPath: string;
+    branchPaths: Map<string, string>;
+    /** Where the trunk meets the bar — null with no bar, and null when the trunk
+     *  lands on an end of the bar, where nothing else meets it */
+    junction?: { x: number; y: number } | null;
+    /** Radius of the trunk's own elbow, > 0 only when the trunk lands on a bar end */
+    trunkElbowRadius?: number;
+}
+
+export interface TreeLayoutResult {
+    /** Whether this edge is part of a multi-inheritance group */
+    isGrouped: boolean;
+    /** Whether this edge is the primary renderer in its group */
+    isPrimary: boolean;
+    /** Whether any edge in the group is selected */
+    anyInGroupSelected: boolean;
+    /** Tree geometry (trunk, bar, branches) — null if not grouped */
+    treeGeometry: TreeGeometry | null;
+    /** Final trunk path with bridge arcs at crossings */
+    trunkPathFinal: string;
+    /** Final bar+branches path with bridge arcs at crossings */
+    barBranchesPathFinal: string;
+    /** Group ID for crossing exclusion — shared by all edges and segments in the same tree.
+     *  Inheritance edges should pass this when registering their individual paths. */
+    treeGroupId: string | undefined;
+}
+
+/**
+ * Hook that handles inheritance tree grouping, geometry, path registration,
+ * and obstacle management for grouped inheritance edges.
+ *
+ * Extracted from InheritanceEdge to be used by UnifiedEdge.
+ */
+export function useTreeLayout(
+    edgeId: string,
+    source: string,
+    target: string,
+    sourceX: number,
+    sourceY: number,
+    targetX: number,
+    targetY: number,
+    sourceSide: string,
+    selected: boolean | undefined,
+    isInheritance: boolean,
+): TreeLayoutResult {
+    // Nodes subscription gated on isInheritance: tree geometry consumes allNodes
+    // only for grouped inheritance edges. Every other edge gets the stable
+    // EMPTY_NODES constant and never re-renders on node changes (leva 2,
+    // discovery 2026-07-20_trickle_leve_2_3). All consumers below are gated on
+    // isGrouped, which is always false when isInheritance is false.
+    const allNodes = useStore(
+        useCallback((s: ReactFlowState) => (isInheritance ? (s.nodes as Node[]) : EMPTY_NODES), [isInheritance])
+    );
+    const allEdges = useEdges();
+    const storeApi = useStoreApi();
+
+    // Tree group detection — find all inheritance edges targeting the same parent
+    const group = useMemo(() => {
+        if (!isInheritance) return [];
+        return allEdges
+            .filter(e => {
+                if (e.type !== 'inheritance' || e.target !== target) return false;
+                // Exclude edges with anchors pinned to non-standard sides from tree grouping
+                const srcAnchor = (e.data as any)?.sourceAnchor;
+                if (srcAnchor?.mode === 'pinned' && srcAnchor.side !== 'top') return false;
+                const tgtAnchor = (e.data as any)?.targetAnchor;
+                if (tgtAnchor?.mode === 'pinned' && tgtAnchor.side !== 'bottom') return false;
+                return true;
+            })
+            .sort((a, b) => a.id.localeCompare(b.id));
+    }, [allEdges, target, isInheritance]);
+
+    const isPrimary = group.length > 0 && group[0].id === edgeId;
+    const isGrouped = group.length > 1;
+
+    // Unified selection: highlight whole tree when any edge in the group is selected
+    const anyInGroupSelected = useMemo(() => {
+        if (!isGrouped) return !!selected;
+        return group.some(e => e.selected);
+    }, [isGrouped, group, selected]);
+
+    // Build set of node IDs to exclude from obstacle checks (parent + all children in tree)
+    const treeExcludeIds = useMemo(() => {
+        if (!isGrouped) return new Set<string>();
+        const ids = new Set<string>();
+        ids.add(target); // parent node
+        for (const edge of group) {
+            ids.add(edge.source); // child nodes
+        }
+        return ids;
+    }, [isGrouped, group, target]);
+
+    // Tree connector geometry
+    const treeGeometry = useMemo((): TreeGeometry | null => {
+        if (!isGrouped) return null;
+
+        const branches: TreeBranch[] = [];
+
+        // Sizes come from the subscribed `nodes` array, positions from nodeLookup:
+        //   - allNodes is what re-runs this memo, so reading the size there keeps the
+        //     value and the trigger on the same snapshot — a size read only from the
+        //     imperative lookup can be newer than the render that asked for it;
+        //   - positionAbsolute is the coordinate the paths are drawn in, while
+        //     node.position is relative to the parent and is wrong for every node
+        //     inside a package container.
+        const nodeMap = new Map(allNodes.map(n => [n.id, n]));
+        const lookup = storeApi.getState().nodeLookup;
+
+        for (const edge of group) {
+            const node = nodeMap.get(edge.source) ?? (lookup.get(edge.source) as any);
+            // Only a child that is not on this canvas at all has nothing to connect to.
+            if (!node) continue;
+
+            const internals = lookup.get(edge.source) as any;
+            const p = internals?.internals?.positionAbsolute ?? node.position ?? { x: 0, y: 0 };
+
+            // treeChildBox always answers: an unmeasured child still gets its branch,
+            // anchored on the fallback width and corrected as soon as the measure
+            // arrives. Dropping it here would take the branch away AND shrink the bus
+            // to the children that remain.
+            const box = treeChildBox({
+                x: p.x,
+                y: p.y,
+                measuredWidth: node.measured?.width,
+                measuredHeight: node.measured?.height,
+                declaredWidth: (node as any).width,
+                declaredHeight: (node as any).height,
+            });
+            const anchor = treeBranchAnchor(box, sourceSide);
+
+            branches.push({ childX: anchor.x, childY: anchor.y, edgeId: edge.id });
+        }
+
+        return computeTreeConnectorPath(targetX, targetY, branches, [], treeExcludeIds);
+        // allNodes is the reactivity source (moves and measures), not a value read here.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isGrouped, group, allNodes, storeApi, targetX, targetY, sourceSide, treeExcludeIds]);
+
+    // Register tree geometry paths for crossing detection.
+    // All segments use treeGroupId = target (parent node ID) so that
+    // crossings between the tree and its member inheritance edges are suppressed.
+    const treeGroupId = `tree_${target}`;
+
+    useEffect(() => {
+        if (!isPrimary || !isGrouped || !treeGeometry) return;
+
+        const treeIds: string[] = [];
+
+        const trunkPts = parsePathPoints(treeGeometry.trunkPath);
+        if (trunkPts.length >= 2) {
+            const tid = `${edgeId}__trunk`;
+            registerEdgePath(tid, trunkPts, source, target, treeGroupId);
+            treeIds.push(tid);
+        }
+
+        if (treeGeometry.barAndBranchesPath) {
+            const subPaths = parsePathSubPaths(treeGeometry.barAndBranchesPath);
+            subPaths.forEach((pts, idx) => {
+                if (pts.length >= 2) {
+                    const sid = `${edgeId}__tree_${idx}`;
+                    registerEdgePath(sid, pts, source, target, treeGroupId);
+                    treeIds.push(sid);
+                }
+            });
+        }
+
+        return () => { treeIds.forEach(tid => unregisterEdgePath(tid)); };
+    }, [edgeId, isPrimary, isGrouped, treeGeometry, source, target, treeGroupId]);
+
+    // Active-canvas filter for crossing detection (see getEdgeCrossings docs).
+    const activeNodeIds = useMemo(() => new Set(allNodes.map(n => n.id)), [allNodes]);
+
+    // Compute crossings for tree segments so they also get bridge arcs
+    const trunkPathFinal = useMemo(() => {
+        if (!isPrimary || !isGrouped || !treeGeometry) return '';
+        const trunkPts = parsePathPoints(treeGeometry.trunkPath);
+        if (trunkPts.length < 2) return treeGeometry.trunkPath;
+        // The radius comes from the geometry: it is 0 unless the trunk lands on an
+        // end of the bar, and there it is already clamped to the segments it joins.
+        // A straight trunk is two points, which both helpers leave alone.
+        const elbow = treeGeometry.trunkElbowRadius ?? 0;
+        const trunkCrossings = getEdgeCrossings(`${edgeId}__trunk`, trunkPts, activeNodeIds, []);
+        if (trunkCrossings.length > 0) {
+            return buildFinalPath(trunkPts, trunkCrossings, elbow, 6);
+        }
+        return roundManhattanPath(treeGeometry.trunkPath, elbow);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [edgeId, isPrimary, isGrouped, treeGeometry, activeNodeIds, allEdges]);
+
+    const barBranchesPathFinal = useMemo(() => {
+        if (!isPrimary || !isGrouped || !treeGeometry?.barAndBranchesPath) return treeGeometry?.barAndBranchesPath || '';
+        const subPaths = parsePathSubPaths(treeGeometry.barAndBranchesPath);
+        const finalParts: string[] = [];
+        for (let idx = 0; idx < subPaths.length; idx++) {
+            const pts = subPaths[idx];
+            if (pts.length < 2) {
+                finalParts.push(pointsToPath(pts));
+                continue;
+            }
+            // Per sub-path: the radius applies to the ONE corner an outer child's
+            // L carries, clamped to half its shortest segment. An interior child is
+            // a two-point vertical and gets 0 — its T-junction stays square.
+            const radius = treeBusCornerRadius(pts);
+            const segCrossings = getEdgeCrossings(`${edgeId}__tree_${idx}`, pts, activeNodeIds, []);
+            if (segCrossings.length > 0) {
+                finalParts.push(buildFinalPath(pts, segCrossings, radius, 6));
+            } else {
+                finalParts.push(roundManhattanPath(pointsToPath(pts), radius));
+            }
+        }
+        return finalParts.join(' ');
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [edgeId, isPrimary, isGrouped, treeGeometry, allNodes, allEdges]);
+
+    return {
+        isGrouped,
+        isPrimary,
+        anyInGroupSelected,
+        treeGeometry,
+        trunkPathFinal,
+        barBranchesPathFinal,
+        treeGroupId: isInheritance ? treeGroupId : undefined,
+    };
+}

@@ -1,0 +1,145 @@
+JJODEL - MENU STATE MATRIX
+===========================
+
+Last Updated: January 2026 (v3)
+
+
+STATI DEL SISTEMA
+-----------------
+
+| Stato | Descrizione                                      |
+|-------|--------------------------------------------------|
+| S0    | Logged out (pagina Auth - nessun menu)           |
+| S1    | Dashboard vuota (0 progetti)                     |
+| S2    | Dashboard con progetti (≥1 progetto)             |
+| S3    | Progetto aperto, vuoto (0 metamodels)            |
+| S4    | Progetto aperto, con metamodel(s), 0 models      |
+| S5    | Progetto aperto, con metamodel(s) e model(s)     |
+| S6    | Progetto aperto, con metamodel Editor aperto     |
+| S7    | Progetto aperto, con model aperto                |
+
+
+LEGENDA
+-------
+E = Enabled (abilitato)
+D = Disabled (disabilitato)
+DYN = Dinamico (contenuto varia in base al metamodello)
+— = Separatore nel menu
+
+
+MATRICE MENU PRINCIPALE
+-----------------------
+
+| Voce Menu                      | S1 | S2 | S3 | S4 | S5 | S6 | S7 |
+|--------------------------------|----|----|----|----|----|----|-----|
+| Jjodel                         | E  | E  | E  | E  | E  | E  | E  |
+| Jjodel > About Jjodel          | E  | E  | E  | E  | E  | E  | E  |
+| Jjodel > Road Map              | E  | E  | E  | E  | E  | E  | E  |
+|--------------------------------|----|----|----|----|----|----|-----|
+| File                           | E  | E  | E  | E  | E  | E  | E  |
+| File > New                     | E  | E  | E  | E  | E  | E  | E  |
+| File > New > Project           | E  | E  | D  | D  | D  | D  | D  |
+| File > New > Metamodel         | D  | D  | E  | E  | E  | E  | E  |
+| File > New > Model             | D  | D  | D  | E  | E  | E  | E  |
+| File > Import Project          | E  | E  | D  | D  | D  | D  | D  |
+| File > Add to favorites        | D  | D  | E  | E  | E  | E  | E  |
+| File > Recent Projects         | E  | D  | D  | D  | D  | D  | D  |
+| File > Recent Projects > <list>| E  | D  | D  | D  | D  | D  | D  |
+|--------------------------------|----|----|----|----|----|----|-----|
+| Edit                           | E  | E  | E  | E  | E  | E  | E  |
+| Edit > Undo                    | D  | D  | E  | E  | E  | E  | E  |
+| Edit > Redo                    | D  | D  | E  | E  | E  | E  | E  |
+|--------------------------------|----|----|----|----|----|----|-----|
+| View                           | E  | E  | E  | E  | E  | E  | E  |
+| View > Zoom in                 | D  | D  | D  | D  | D  | E  | E  |
+| View > Zoom out                | D  | D  | D  | D  | D  | E  | E  |
+| View > —                       | E  | E  | E  | E  | E  | E  | E  |
+| View > Save layout             | E  | E  | E  | E  | E  | E  | E  |
+| View > Load layout             | E  | E  | E  | E  | E  | E  | E  |
+| View > —                       | E  | E  | E  | E  | E  | E  | E  |
+| View > Show / hide sidebar     | D  | D  | D  | D  | D  | D  | D  |
+| View > Show / hide toolbar     | D  | D  | D  | D  | D  | D  | D  |
+| View > —                       | E  | E  | E  | E  | E  | E  | E  |
+| View > Fullscreen Mode         | E  | E  | E  | E  | E  | E  | E  |
+|--------------------------------|----|----|----|----|----|----|-----|
+| Tools                          | D  | D  | D  | E  | E  | E  | E  |
+| Tools > (contenuto)            | —  | —  | —  |DYN |DYN |DYN |DYN |
+|--------------------------------|----|----|----|----|----|----|-----|
+| Analyze                        | E  | E  | E  | E  | E  | E  | E  |
+| Analyze > Debug loops          | D  | D  | D  | E  | E  | E  | E  |
+| Analyze > Check & Repair       | D  | D  | D  | E  | E  | E  | E  |
+
+
+MENU AVATAR (cliccando sull'avatar)
+-----------------------------------
+
+| Voce                           | Sempre |
+|--------------------------------|--------|
+| [Nome Utente]                  | E      |
+| [Affiliazione]                 | E      |
+| ───────────                    | —      |
+| Dashboard                      | E      |
+| Profile                        | E      |
+| Account                        | D (future) |
+| ───────────                    | —      |
+| Theme >                        | E      |
+|   > Light                      | E (radio) |
+|   > Dark                       | E (radio) |
+| ───────────                    | —      |
+| Sign out                       | E      |
+
+
+MENU HELP (bottone separato a destra)
+-------------------------------------
+
+| Voce                           | Sempre |
+|--------------------------------|--------|
+| What's New in Jjodel           | E      |
+| Homepage                       | E      |
+| Learn Jjodel                   | E      |
+| Getting Started                | E      |
+| Video Tutorials                | E      |
+| User Guide                     | E      |
+| Glossary                       | E      |
+| FAQ                            | E      |
+| Support >                      | E      |
+|   > Report a Bug               | E      |
+|   > Request a Feature          | E      |
+|   > Contact                    | E      |
+
+
+BOTTOM TOOLBAR (sopra il footer)
+--------------------------------
+
+Visibile solo in S6 e S7 (editor aperto).
+
+| Sezione          | Contenuto                              | Note           |
+|------------------|----------------------------------------|----------------|
+| Tools Commands   | [Cmd1] [Cmd2] [Cmd3] ...              | DYN dal metamodello |
+| Canvas Toggles   | Grid [✓]  Snap [✓]                    | Toggle on/off  |
+| Zoom Controls    | [−] 100% [+]                          | Zoom level     |
+
+Layout:
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│ [Cmd1] [Cmd2] [Cmd3]  │  Grid [✓]  Snap [✓]  │  [−] 100% [+]         │
+│ ← Metamodel tools      │  ← Canvas toggles     │  ← Zoom controls     │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+La sezione "Metamodel tools" è dinamica:
+- Vuota se il metamodello non definisce comandi custom
+- Popolata con i comandi registrati dal designer del metamodello
+- Stessi comandi presenti nel menu Tools ▾
+
+
+NOTE
+----
+- S0 (Logged out) = pagina Auth, nessun menu visibile
+- Sign out è SOLO nel menu Avatar (rimosso da menu Jjodel)
+- Il menu Tools appare da S4+ ma può essere vuoto se nessun comando definito
+- I comandi metamodel-specific appaiono sia in Tools menu che in Bottom Toolbar
+- Il menu Help è sempre completamente abilitato
+- I separatori (—) sono sempre presenti
+- "Recent Projects" mostra lista dinamica dei progetti recenti
+- Theme è gestito nel menu Avatar (Light/Dark)

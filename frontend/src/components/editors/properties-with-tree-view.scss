@@ -1,0 +1,2500 @@
+// Properties with Tree View - Split Panel Styles
+// Combines Properties panel (left, FLUID) with Tree View (right, FIXED WIDTH)
+//
+// ============================================================================
+// LITERAL px IN THE RAIL'S NEW CODE (arc 1, 2026-08-10) — declared here once
+// instead of being justified again at each site. Nothing else in the rail's new
+// rules is a literal: every colour, radius, font size and duration is a token.
+//
+// (a) The three control heights of R-RAIL-9. The token scales have no step for
+//     them — `_spacing.scss:33-35` offers 32 / 40 / 48 px
+//     only — so a control between 26 and 44 has no near step to snap to, and
+//     adding height tokens for a single component was ruled out.
+//
+//       44px — rail header.                          declared below
+//       26px — tree row. Below the scale floor.       assigned by this arc to
+//              `TreeViewSidebar/tree-view-sidebar.scss` (R-RAIL-7)
+//       28px — multiplicity segmented control.        NOT used in arc 1: the
+//              inspector keeps its existing field components, so the design's
+//              multiplicity control does not ship yet.
+//
+// (b) Box sizes the Fase 0 mapping (table D3) never enumerated — it measured row
+//     and control HEIGHTS, not square boxes — so neither R-RAIL-9 nor R-RAIL-10
+//     governs them. Taken from the design verbatim, listed here to stay auditable:
+//
+//       18px — header entity badge (design §1)
+//       26px — header icon button (design §1); same number as the tree row above
+//       22px — Focus bar "Back" chip (design §6), and the Focus bar steppers
+//       22px / 34px — identity badge, Browse and Focus (design §7)
+//
+// (e) The identity block's two paddings, `11px 14px 10px` in Browse and
+//     `18px 14px 14px` in Focus (design §7). They are off the 4px grid on three
+//     sides out of four, and the design gives them verbatim as the geometry the
+//     250ms transition runs between, so they are taken as they are rather than
+//     snapped one side at a time into a shape the design never drew.
+//
+// (c) Border widths (1px) and the hand-composed shadow geometry (`0 4px 16px`,
+//     colour from `--color-node-shadow`), the latter required verbatim by the
+//     second exception of R-RAIL-10. The NODE eyebrow's hairline rule is the same
+//     1px, drawn as a box because it has to grow into the rest of the row.
+//
+// (d) `clamp(240px, calc(51vh - 160px), 640px)` — the tree pane height in Browse
+//     posture. It is not declared in this sheet: it comes inline from
+//     `PRESET_2A.treePaneHeight` (`PropertiesWithTreeView.tsx`), listed here so the
+//     block stays the single audit point for the rail's literals. It replaced a flat
+//     392px, which took more than half the rail on a 900px viewport and wasted half
+//     the column on a 1440px one. The three points that define the formula, and the
+//     reason it must not be rounded into an `Nvh`, are on the constant itself. In
+//     Focus the height is 0, also inline.
+//
+//     400px / 520px — the two rail widths at which the tree rows change metadata
+//     density (`[data-density]`, rules at the end of this sheet). They are widths of
+//     THIS column, which the user drags between 360 and 640, not viewport widths.
+//
+// 34px (Focus bar height) is deliberately NOT here: it HAS a near step, so it
+// snaps per R-RAIL-10 to `--input-height-sm` (32px, Δ2 — 32 in both token
+// systems). Same for the design's 9px and 10px icon glyphs, snapped to
+// `--font-size-xs`.
+// ============================================================================
+
+// Design tokens
+$color-border: #e2e4e8;
+$color-border-light: #f0f1f2;
+$color-bg-primary: #ffffff;
+$color-bg-secondary: #f8fafc;
+$color-bg-tertiary: #f1f5f9;
+$color-text-primary: #111418;
+$color-text-secondary: #6B7280;
+$color-text-tertiary: #9CA3AF;
+$color-accent: #475569;
+$color-accent-light: rgba(71, 85, 105, 0.1);
+$color-accent-blue: #3b82f6;
+$color-highlight: #0ea5e9;
+$color-executing: #10b981;
+
+$transition-fast: 150ms ease;
+$transition-normal: 250ms ease;
+$transition-smooth: 280ms cubic-bezier(0.4, 0, 0.2, 1);
+
+$radius-sm: 4px;
+$radius-md: 6px;
+
+// ============================================
+// MAIN CONTAINER
+// ============================================
+
+.properties-with-tree-view {
+    display: flex;
+    height: 100%;
+    width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+    // Card treatment (2026-07-28 Fase 2A): tinted backdrop behind the two panels.
+    // Only VERTICAL padding is added (the top/bottom gutter): a horizontal gutter
+    // would exceed the width-lock (--properties-tree-tab-width = sum of the panel
+    // widths) and get clipped by overflow:hidden, so the cards stay flush left/right.
+    background-color: #eef1f5; // slate-100 tint, sits behind the cards
+    padding: 10px 0;
+    position: relative;
+
+    &--empty {
+        display: block;
+    }
+}
+
+// ============================================
+// PROPERTIES PANEL (LEFT) - FLUID
+// ============================================
+
+.properties-panel-container {
+    // Fixed-widths model 2026-07-06: larghezza propria e fissa (400-700, default
+    // 440), settata inline dal componente via width/min/max-width. `flex:0 0 auto`
+    // impedisce sia grow che shrink → il pannello NON dipende più dallo stato del
+    // tree (R1). `position: relative` àncora il resize handle sul bordo sinistro.
+    flex: 0 0 auto;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+    min-width: 0;
+    // Card (2026-07-28 Fase 2A): white rounded panel on the tinted backdrop. Radius
+    // + overflow:hidden round the header/body corners. The shadow is kept small and
+    // contained (the wrapper's overflow:hidden clips wide shadows at the tab edges).
+    // B4 skin (2026-07-30): frame values from the approved mockup replica — sky-100
+    // hairline, 16px radius, two-layer soft shadow.
+    background: #fff;
+    border: 1px solid #dbeafe;
+    border-radius: 16px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06), 0 8px 24px rgba(15, 23, 42, 0.05);
+
+    // The Info component styles already handle scrolling
+    .properties-tab,
+    .properties-panel {
+        height: 100%;
+        overflow-y: auto;
+
+        // When Info.tsx's view-branch renders <ViewData> inside this section,
+        // rc-dock must own its own sizing and the section must NOT scroll.
+        // Force the section to behave as a flex item that fills (but does not
+        // exceed) the column remainder, with `overflow: hidden` so its child
+        // .view-editor-root can resolve height: 100% correctly — otherwise
+        // content-based sizing lets the whole tree grow to 1400+px, breaking
+        // the tab-bar behavior of rc-dock.
+        &:has(.view-editor-root) {
+            overflow: hidden;
+            min-height: 0;
+            flex: 1 1 0;
+            height: auto;
+            padding: 0;
+        }
+    }
+
+    // Empty state: no scrollbar needed
+    .properties-panel--empty {
+        overflow: hidden;
+    }
+}
+
+// Resize handle: bordo SINISTRO del Properties container (2026-07-06). Speculare
+// al tree handle ma con la hit-zone che si estende VERSO DESTRA (left:0, non -3px)
+// per non pescare l'`ew-resize` del `.dock-divider` rc-dock adiacente. z-index 11
+// (> tree handle 10, > divider) così cattura lui il drag nell'area di confine.
+// Trascinare a sinistra allarga Properties → il tab cresce, il canvas cede spazio.
+// Dal 2026-08-28 e' il `ResizeHandle` condiviso in verticale: linea, pill hover-reveal,
+// ciano del drag e chip `w NNN` stanno in `components/ResizeHandle/resize-handle.scss`.
+// Qui resta la geometria, che e' l'unica cosa che sa solo il rail. Selettore doppiato
+// (0,2,0) di proposito: deve battere `.resize-handle--vertical` senza dipendere
+// dall'ordine in cui i due fogli entrano nel bundle.
+.properties-panel-resize-handle.resize-handle {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;     // niente protrusione a sinistra: evita la hit-zone del divider
+    width: 6px;  // hit zone verso l'interno del pannello
+    z-index: 11;
+
+    // La hairline sta SUL bordo sinistro della colonna, non al centro della striscia:
+    // la striscia non puo' stare a cavallo della cucitura senza mangiarsi la hit-zone
+    // del `.dock-divider` rc-dock, quindi la linea si ancora alla cucitura e la
+    // striscia le sta dentro.
+    &::before {
+        left: 0;
+        transform: none;
+    }
+
+    // Misurato: `.properties-with-tree-view--rail` ha `overflow: hidden`, quindi un chip
+    // centrato su un divider a x=0 perde la meta' sinistra. Spostato dentro la colonna.
+    .resize-handle__readout {
+        left: var(--space-1);
+        transform: none;
+    }
+
+    @media (hover: none) {
+        display: none;
+    }
+}
+
+// ============================================
+// PROPERTIES PANEL HEADER (2026-05-13)
+// Header simmetrico al tree header. Toggle button speculare.
+//
+// TODO: cleanup — no longer rendered since rail arc 1 (2026-08-10): the shell has a
+// single `.rail-header`. The rules below, and the B4 rules nested on this selector
+// further down, are inert. Left in place rather than deleted along with the arc.
+// ============================================
+
+.properties-panel-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0px 12px;
+    border-bottom: 1px solid #f1f5f9;
+    background-color: $color-bg-primary;
+    font-size: 12px;
+    font-weight: 600;
+    color: $color-text-secondary;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+    height: 41px;
+    transition: background $transition-fast;
+
+    > i {
+        font-size: 14px;
+        color: $color-accent;
+    }
+
+    > span:first-of-type {
+        flex: 1;
+    }
+}
+
+.properties-panel-toggle-btn {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: $radius-sm;
+    cursor: pointer;
+    color: $color-text-tertiary;
+    transition: all $transition-fast;
+
+    &:hover {
+        background-color: $color-bg-tertiary;
+        color: $color-text-primary;
+    }
+
+    i {
+        font-size: 12px;
+    }
+}
+
+// Pin button (2026-07-05 fase 2): freezes Properties content on the captured selection.
+// Speculare al toggle button dell'header; `is-active` usa il cyan come active-indicator
+// (design system §7.1 — mai come background). $color-highlight = #0ea5e9 già nel file.
+.properties-panel-pin-btn {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: $radius-sm;
+    cursor: pointer;
+    color: $color-text-tertiary;
+    transition: all $transition-fast;
+
+    &:hover {
+        background-color: $color-bg-tertiary;
+        color: $color-text-primary;
+    }
+
+    &.is-active {
+        color: $color-highlight;
+
+        &:hover {
+            color: $color-highlight;
+        }
+    }
+
+    i {
+        font-size: 12px;
+    }
+}
+
+.properties-panel-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 0;
+}
+
+// ============================================
+// B4: mockup skin (valori dalla replica approvata) — 2026-07-30
+//
+// Everything is anchored on `.properties-panel-container`, the Properties card root
+// inside the floating overlay, so the shared design-system components keep their
+// global styling everywhere else in the app. Checkbox / HelpText / Button /
+// NumberInput are CSS-module based: their hashed classes cannot be reached from an
+// external sheet, so the hooks used here are stable ones — ARIA role + state, the
+// global `.jj-field*` classes, Bootstrap icon classes and DOM structure.
+//
+// `!important` appears only where the at-rest base rules already use it
+// (`viewapplyto.scss:815` on select, `info-improvements.scss:1174` on inputs);
+// specificity alone cannot win against those.
+// ============================================
+
+// palette
+$pc-slate-800: #1e293b;
+$pc-slate-700: #334155;
+$pc-slate-600: #475569;
+$pc-slate-500: #64748b;
+$pc-slate-400: #94a3b8;
+$pc-slate-300: #cbd5e1;
+$pc-slate-200: #e2e8f0;
+$pc-slate-100: #f1f5f9;
+$pc-slate-50:  #f8fafc;
+$pc-accent:        #0ea5e9;   // active tab underline, Add label
+$pc-accent-strong: #0284c7;   // VIEW chip text, active tab text
+$pc-accent-soft:   #e0f2fe;   // VIEW chip background
+// radii
+$pc-radius-input: 12px;
+$pc-radius-chip: 8px;
+$pc-radius-ghost: 10px;
+// spacing
+$pc-gap-section: 24px;
+$pc-gap-in-section: 12px;
+$pc-hint-indent: 26px;        // 18px checkbox + 8px gap (the design-system Checkbox)
+
+.properties-panel-container {
+
+    // ─── Header row 1: title ───
+    .properties-panel-header > span:first-of-type {
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: $pc-slate-600;
+    }
+
+    // ─── Header row 1 actions: the card's contextual help, rendered by the host ───
+    .properties-panel-header__actions {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    // ─── Element identity block (arco 2, passo 10 — design §7, R-RAIL-40) ───
+    // One row, three columns: letter badge, then name over kind, then the signature.
+    // It replaces the two-row arrangement of the passo 4, which was the same content
+    // laid out before the design's own geometry was in scope. D8 still holds: no total
+    // height is declared here, so what the block contains is what moves it.
+    //
+    // The posture arrives through the shell's own modifier, `--rail-focus`, and never
+    // as a prop: `Info` has no business knowing where the rail's height went, and a
+    // prop would be exactly the drilling the project's conventions forbid. That is why
+    // the block can stay in the element branch and still animate with the shell.
+    //
+    // `:not(.props-header--view)` is load-bearing, and corrects the addendum: the view
+    // editor header is mounted INSIDE this same container (its block sits right below),
+    // so anchoring on the container alone would reach it and break the collapsed single
+    // row it is designed as. The base `.props-header*` in `info-improvements.scss` and
+    // the global `.jj-context-bar` in `_form-system.scss` stay untouched (R-RAIL-25):
+    // everything here is additive and scoped to the rail.
+    .props-header:not(.props-header--view) {
+        height: auto;
+        flex-direction: row;
+        align-items: flex-start;
+        gap: 10px;
+        padding: 11px 14px 10px;   // design §7, Browse
+        margin-bottom: 16px;       // D7: the shell/form boundary is a step, not a rule
+        transition: padding var(--duration-normal) var(--ease-out);
+
+        // Letter badge. Colour comes from `jj-type-badge--<kind>`, i.e. from the entity
+        // tokens; only the geometry is declared here.
+        //
+        // The class is `__glyph` and not `__badge` because `.props-header__badge` is
+        // already taken: `info-improvements.scss:903` declares it with a transparent
+        // background, a tertiary colour and a hairline border. Reusing the name would
+        // have produced exactly the failure the conventions warn about — a rule that
+        // compiles, applies, and quietly wins on the two properties this block does not
+        // restate. Checked with a global search before choosing the name.
+        .props-header__glyph {
+            flex: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 22px;
+            height: 22px;
+            padding: 0;
+            border-radius: var(--radius-md);   // design 7px, snapped (R-RAIL-10)
+            font-size: var(--font-size-sm);
+            font-weight: var(--font-weight-bold);
+            line-height: 1;
+            transition: width var(--duration-normal) var(--ease-out),
+                        height var(--duration-normal) var(--ease-out),
+                        font-size var(--duration-normal) var(--ease-out);
+        }
+
+        .props-header__identity {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+            min-width: 0;
+            flex: 1 1 auto;
+        }
+
+        .props-header__name {
+            font-size: var(--font-size-md);
+            font-weight: var(--font-weight-semibold);
+            letter-spacing: -0.015em;
+            line-height: 1.2;
+            transition: font-size var(--duration-normal) var(--ease-out);
+        }
+
+        // D10: abstract metaclasses in italic, the same channel the tree uses on its own
+        // names (`.tree-row__name.is-abstract` in tree-view-sidebar.scss). The badge
+        // stays on the kind: modifiers do not get a badge of their own.
+        .props-header__name.is-abstract { font-style: italic; }
+
+        // The kind as text, in the entity foreground. It reuses the same modifier as the
+        // badge, so the pair reads as one colour and no second mapping is introduced;
+        // the background the modifier also sets is neutralised right here, at the same
+        // specificity as the colour it comes with.
+        .props-header__kind {
+            background: none;
+            padding: 0;
+            border-radius: 0;
+            font-size: var(--font-size-xs);
+            font-weight: var(--font-weight-semibold);
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            line-height: 1.2;
+        }
+
+        // D5: the line the tree gave you. Slate rather than `--color-text-secondary`,
+        // which is one of the 13 names R-RAIL-6 blacklists — three definitions with
+        // three values, so the winner would depend on `localStorage.theme`. The slate
+        // grades are theme-invariant: a declared choice, not an automatic dark.
+        .props-header__signature {
+            flex: 0 0 auto;
+            align-self: center;
+            font-family: var(--font-mono);
+            font-size: var(--font-size-xs);
+            color: var(--color-slate-500);
+        }
+
+        // ...and it becomes a chip only where a signature really exists, i.e. on the
+        // typed features. A class's "N features" is a count and keeps the plain form.
+        // The chip's ground is `--color-bg-hover` and not `--color-slate-100`, which is
+        // the design's literal (#f1f5f9) and matches it exactly in light. The slate
+        // grades are raw palette: they do not follow the theme, so in dark the chip
+        // would keep a near-white ground on a dark panel. That is the same defect the
+        // `--color-slate-400` caret already carries as a debt entry, and repeating it
+        // knowingly would be worse than the two shades of difference in light.
+        .props-header__signature--chip {
+            padding: 3px 7px;
+            border-radius: var(--radius-sm);   // design 5px, snapped (R-RAIL-10)
+            background: var(--color-bg-hover);
+        }
+
+        // R-RAIL-39: the positional breadcrumb does not render in the rail. In Browse the
+        // tree row already says where the element sits; in Focus the Focus bar does. It
+        // is kept in the DOM and hidden here, scoped to the rail, so the same block keeps
+        // rendering its breadcrumb everywhere else it is mounted.
+        .props-header__context { display: none; }
+    }
+
+    // Form body: of the design's `4px 14px 18px` (§7) only the bottom is applied, and
+    // the reason is a measure and not a preference. R-RAIL-26 had recorded the value as
+    // "not applicable yet"; measured on the product, the horizontal half is already
+    // there — the first field's box starts at exactly 14px from the rail's edge, carried
+    // by the fields themselves — so declaring it here would double it to 28. The top 4px
+    // is likewise already covered, by the identity block's own 16px bottom margin (D7).
+    // What is genuinely missing is the bottom air: without it the last control ends
+    // flush against the shell's edge.
+    //
+    // It is declared on the body and not on `.properties-tab`, where the design puts it,
+    // because that class carries `padding: 0px !important` from `_form-system.scss:678`,
+    // a global sheet this arc does not touch (R-RAIL-25). Landing it here reaches the
+    // same pixels without either an `!important` duel or an edit to that sheet — and it
+    // corrects the note in the passo 4 memo, which supposed the zero came from the rail's
+    // own sheet. It does not: it comes from the global one.
+    .properties-panel-body { padding-bottom: 18px; }
+
+    // ─── De-duplicated header ───
+    // When the inspector is showing the element the rail header already names, name,
+    // letter and kind go and a section eyebrow stays (`subjectShownInRailHeader`, see
+    // Info.tsx). The label reuses `.properties-node-section__label`, the rail's own
+    // eyebrow, on purpose: it is the class that MEANS "section label here", and the
+    // alternative with the right values out of the box (`.jj-flags__title`) is named
+    // for the Flags section — borrowing it would make the next edit to the flags
+    // redraw this eyebrow by accident, which is the inverse of the mistake D9 fixed.
+    //
+    // The one thing that class does not carry standalone is its colour: inside
+    // `.properties-node-section` it inherits slate-400 from the `__header` row. Stated
+    // here, and only here, so the NODE eyebrow keeps taking it by inheritance.
+    .props-header--deduped {
+        align-items: baseline;
+
+        .properties-node-section__label {
+            color: $pc-slate-400;
+        }
+    }
+
+    // ─── Header row 2: breadcrumb + VIEW chip ───
+    // No `.command-bar` rules here: inside the card the view panel is mounted with
+    // `showBack={false}` (the Tree above it is what navigates away), so this row hosts
+    // no CommandBar at all. The neutralisations that used to travel with the back
+    // button — its 10px bottom margin and the frame on `.tab-btn.back::before` — went
+    // with it, and would be dead rules here.
+    .props-header--view {
+        border-bottom: 1px solid $pc-slate-100;
+
+        .path-separator { font-size: 12px; color: $pc-slate-300; margin: auto 6px; }
+
+        .path-element {
+            font-size: 15px;
+            color: $pc-slate-500;
+
+            // Context segments in normal case. The data itself can be all-caps (the
+            // string is the viewpoint's own name via `U.cropStr(v.name)`), so the case
+            // is normalised visually: `lowercase` + capitalised first letter. CSS has
+            // no per-word Title Case for already-uppercase text — see the residual
+            // note in the log entry.
+            &:not(:last-of-type) {
+                text-transform: lowercase;
+
+                &::first-letter { text-transform: uppercase; }
+            }
+        }
+
+        // The view / viewpoint currently open.
+        .path-element:last-of-type {
+            font-size: 15px;
+            font-weight: 700;
+            color: $pc-slate-800;
+        }
+
+        .jj-type-badge {
+            margin-left: auto;              // pushed right, before the help button
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            padding: 4px 10px;
+            border-radius: $pc-radius-chip;
+        }
+
+        .jj-type-badge--view {
+            background: var(--color-entity-view-bg);
+            color: var(--color-entity-view-fg);
+        }
+    }
+
+    // ─── Tab bar (Apply to / Template / IR / …) ───
+    .view-editor-tab-bar { border-bottom: 1px solid $pc-slate-100; }
+
+    .view-editor-tab {
+        font-size: 14px;
+        padding: 12px 10px;
+        color: $pc-slate-500;
+        border-bottom: 2px solid transparent;
+
+        &.active {
+            color: $pc-accent-strong;
+            font-weight: 600;
+            border-bottom-color: $pc-accent;
+        }
+    }
+
+    // ─── Body: inset (base rule uses !important) ───
+    // 14px, il numero di 7a, promosso a inset di sistema del rail (Fase 2 di
+    // `docs/discovery/discovery_2026-08-29_stile_7a_sistema_rail.md`, punto 2 delle
+    // ratifiche). Era `16px 20px`. Sullo STESSO selettore esisteva una seconda
+    // dichiarazione, `12px 16px !important` in `views/data/viewapplyto.scss:28`, che
+    // perdeva per specificità da quando questa regola esiste: rimossa nello stesso
+    // commit, perché due `!important` sullo stesso bersaglio sono ciò che ha reso
+    // difficile leggere questo inset in Fase 1.
+    .view-editor-tab-content > section.properties-tab.properties-panel {
+        padding: 14px !important;
+    }
+
+    // ─── Field labels ───
+    .jj-field-label {
+        font-size: 14px;
+        color: $pc-slate-500;
+    }
+
+    // ─── Text inputs / selects ───
+    .jj-field input:not([type="color"]):not([type="checkbox"]),
+    .jj-field select {
+        font-size: 15px;
+        color: $pc-slate-800;
+        padding: 11px 14px;
+        border: 1px solid $pc-slate-200 !important;
+        border-radius: $pc-radius-input;
+        background-color: #ffffff;
+    }
+
+    // `Select` renders `appearance:none` + its own chevron, absolutely positioned in a
+    // 36px right gutter it reserves with `padding-right`. The shorthand above wipes
+    // that gutter, so the selected value ran underneath the chevron. Restored here —
+    // and the vertical padding drops to 8px because the component keeps the box at a
+    // fixed 40px: at 11px the content box (18px) was shorter than the 15px text line,
+    // squeezing the value. 8px leaves 24px, so it sits clear, and the select still
+    // matches the inputs' 40px height instead of growing past them.
+    .jj-field select {
+        padding: 8px 36px 8px 14px;
+    }
+
+    // ─── Stepper (− value +): the NumberInput wrapper, reached structurally. The
+    //     `[role=checkbox]` exclusion keeps the Checkbox out of this branch.
+    .jj-field > div:has(> button:not([role="checkbox"]) + input) {
+        border: 1px solid $pc-slate-200;
+        border-radius: $pc-radius-input;
+        overflow: hidden;
+
+        > button:not([role="checkbox"]) {
+            width: 38px;
+            color: $pc-slate-400;
+            border: none;
+            background: transparent;
+        }
+
+        > input {
+            font-size: 15px;
+            font-weight: 600;
+            color: $pc-slate-800;
+            min-width: 42px;
+            text-align: center;
+            border: none !important;
+            border-radius: 0;
+        }
+    }
+
+    // ─── Stepper, neutralizzazione della regola generica (U-5, 2026-08-08) ───
+    // The generic input rule above (`.jj-field input:not([type=color]):not([type=checkbox])`)
+    // also lands on the input INSIDE a stepper, and it outranks both the branch above and
+    // the component's own module: `(0,4,1)` beats the branch's `(0,3,4)` and the module's
+    // single class. Its `padding: 11px 14px` was the whole defect — with the wrapper fixed
+    // at 96px, two 38px buttons and `box-sizing: border-box` (tokens/index.scss + Bootstrap
+    // reboot), the input's content box resolves to `96 − 76 − 28 − 2 < 0`, clamps to zero and
+    // `overflow: hidden` on the wrapper paints an EMPTY box over a perfectly healthy value.
+    // Measured on `View for ActionNode` with `ir.priority = 0` and `ir.shape.border.width = 2`
+    // in the store; see the Slice B addendum in
+    // docs/discovery/discovery_2026-08-08_uniformazione_card_properties.md.
+    //
+    // Descendant (not child) on purpose: the perimeter must match the rule it neutralises.
+    // A stepper nested inside another editor — `Spessore` inside `ConditionalEditor`
+    // (EdgeAuthoringPanel.tsx) — is NOT a direct child of `.jj-field`, so the branch above
+    // never reached it while the generic always did.
+    //
+    // Specificity: `(0,4,4)` — one element more than the generic's `(0,4,1)`, same class
+    // count — so it wins on `padding`, `border-radius` and `background` without `!important`.
+    // `border` is the exception: the generic declares it `!important`, so only `!important`
+    // can answer it, and among two `!important`s specificity decides. Same convention this
+    // sheet already documents at :247-249. Font, weight and centring stay with the branch above.
+    //
+    // KNOWN LIMIT (same fragility the sheet declares at :242-249): the hook is structural,
+    // because the component is CSS-module based and its classes are unreachable from here.
+    // If `NumberInput`'s markup stops being `button + input + button`, this rule silently
+    // stops matching and the empty box comes back. There is no compile error for that.
+    .jj-field div:has(> button:not([role="checkbox"]) + input) > input[type="text"] {
+        padding: 0;
+        border: none !important;
+        border-radius: 0;
+        background: transparent;
+    }
+
+    // ─── Checkboxes: no card override (2026-07-30) ───
+    // The mockup's 20x20 / r6 / #3b82f6 box was a look of its own — a blue that is
+    // not a design-system colour — so the card now renders the shared `Checkbox`
+    // exactly as the rest of the app does (18x18, r4, checked slate #334155).
+    // `$pc-hint-indent` follows it back to 26px.
+
+    // ─── Hints (HelpText): indented onto the label column, wrapped measure ───
+    .jj-field > p {
+        margin-left: $pc-hint-indent;
+        max-width: 290px;
+        font-size: 13px;
+        line-height: 1.5;
+        color: $pc-slate-400;
+    }
+
+    // The (i) glyph is dropped inside the card: in the mockup a hint is a quiet
+    // line of text, not an annotated callout. Card-scoped because `HelpText` is
+    // app-wide (reached also through `Input`/`Field`), so its icon survives
+    // everywhere else. `p > i.bi-info-circle` is the component's own signature —
+    // grep: `bi-info-circle` has no other producer inside this card.
+    p > i.bi-info-circle {
+        display: none;
+    }
+
+    // ─── Secondary action in a field (e.g. Propagate size): ghost, same column ───
+    .jj-field > button {
+        margin-left: $pc-hint-indent;
+        padding: 8px 16px;
+        font-size: 14px;
+        color: $pc-slate-400;
+        background-color: #ffffff;
+        border: 1px solid $pc-slate-200;
+        border-radius: $pc-radius-ghost;
+
+        &:hover:not(:disabled) {
+            color: $pc-slate-600;
+            border-color: $pc-slate-300;
+        }
+
+        &:disabled {
+            color: $pc-slate-300;
+            border-color: $pc-slate-100;
+        }
+    }
+
+    // ─── Label sub-card: dashed divider between the fields and the visibility block
+    //     (the sub-card chrome itself lives in ListEditor.module.css) ───
+    .props-label-entry-split {
+        border-top: 1.5px dashed $pc-slate-300;
+        padding-top: $pc-gap-in-section;
+    }
+}
+
+// Collapsed indicator: speculare a .tree-view-collapsed ma sul lato
+// sinistro dello split. Click-to-expand. Border-RIGHT (verso il tree).
+.properties-panel-collapsed {
+    flex: 0 0 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: $color-bg-primary;
+    border-right: 1px solid $color-border;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+        background-color: $color-bg-secondary;
+
+        i {
+            color: $color-text-primary;
+            transform: translateX(2px);
+        }
+    }
+
+    i {
+        font-size: 14px;
+        color: $color-text-tertiary;
+        transition: color $transition-fast, transform 200ms ease;
+    }
+}
+
+// COLLAPSED PANEL TOGGLE — retired with the two-card layout (rail arc 1,
+// 2026-08-10, R-RAIL-11). The single shell has one header, so there is no
+// per-card collapsed toggle and no surface left for its attention pulse dot.
+// `.collapsed-panel-toggle`, its `--properties` / `--tree` modifiers and
+// `.collapsed-panel-toggle__pulse` are gone with the component that rendered them.
+
+// R2 both-collapsed (2026-07-06 addendum): NON si renderizzano più toggle in-panel
+// quando entrambi i pannelli sono chiusi. Il tab va a 0px (vedi abstract/style.scss,
+// body[data-properties-tree-both-collapsed]) e i due controlli diventano il cluster
+// flottante `.properties-tree-floating-cluster` (portal su <body>), a sua volta
+// ritirata il 2026-08-26: oggi la rail si riapre dal solo controllo in topbar. La
+// vecchia regola `:has()` di strip trasparente è comunque superflua (il pannello a 0
+// non è visibile) ed è stata rimossa.
+
+// ============================================
+// TREE VIEW PANEL (RIGHT) - FIXED WIDTH
+// ============================================
+
+.tree-view-panel-container {
+    flex: 0 0 auto; // Width controlled by JS inline style (resizable via drag handle)
+    min-width: 0;   // larghezza fissa via inline width/min/max (fixed-widths 2026-07-06)
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+    // Card (2026-07-28 Fase 2A): matches the properties card — white, rounded,
+    // hairline border, contained soft shadow — on the tinted backdrop.
+    background-color: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.10);
+    // Anchor for the absolute-positioned resize handle (vedi .tree-view-panel-resize-handle)
+    position: relative;
+    // Smooth transitions when toggling visibility. `width` rimossa dalla lista
+    // perché lo state width è ora drag-driven (interpolation transition causerebbe
+    // lag visibile durante il trascinamento); il toggle expand/collapse usa swap
+    // di elementi DOM diversi, non animazione di width.
+    transition: flex-basis $transition-smooth, border-color $transition-fast;
+
+    // Slide in animation when panel opens
+    animation: slideInFromRight $transition-smooth;
+
+    // Highlighted state (when auto-opened by script execution)
+    &--highlighted {
+        animation:
+            slideInFromRight $transition-smooth,
+            treeViewHighlight 1000ms ease-out 200ms;
+    }
+
+    // Executing state
+    &--executing {
+        border-left-color: $color-executing;
+
+        .tree-view-panel-header {
+            background: linear-gradient(135deg,
+                rgba($color-executing, 0.08) 0%,
+                rgba($color-executing, 0.04) 100%
+            );
+        }
+    }
+}
+
+// Resize handle: lato sinistro del tree panel (verso le properties).
+// 1px linea visibile + 6px hit zone, hover cyan, hidden on touch.
+// Token: usa SCSS local vars del file ($color-border, $color-highlight) per
+// consistency con il resto del file; #0ea5e9 (cyan) è il $color-highlight già
+// in uso per --highlighted / treeViewHighlight.
+.tree-view-panel-resize-handle {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: -3px;   // 3px sporgenti verso le properties per facilitare il grab
+    width: 6px;   // hit zone
+    cursor: col-resize;
+    z-index: 10;
+    background: transparent;
+
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 3px;   // linea 1px centrata nella hit zone, sovrapposta al border-left esistente
+        width: 1px;
+        background-color: $color-border;
+        transition: background-color $transition-fast;
+        pointer-events: none;
+    }
+
+    &:hover::before,
+    &:active::before {
+        background-color: $color-highlight;
+    }
+
+    @media (hover: none) {
+        display: none;
+    }
+}
+
+// Keyframe animations
+@keyframes slideInFromRight {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes treeViewHighlight {
+    0% {
+        box-shadow: inset 0 0 0 2px transparent;
+    }
+    20% {
+        box-shadow: inset 0 0 0 2px rgba($color-highlight, 0.6);
+    }
+    100% {
+        box-shadow: inset 0 0 0 2px transparent;
+    }
+}
+
+@keyframes pulseDot {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.5;
+        transform: scale(1.2);
+    }
+}
+
+@keyframes bounceLeft {
+    0%, 100% {
+        transform: translateX(0);
+    }
+    50% {
+        transform: translateX(-4px);
+    }
+}
+
+// TODO: cleanup — no longer rendered since rail arc 1 (2026-08-10): see the note on
+// `.properties-panel-header` above.
+.tree-view-panel-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0px 12px;
+    border-bottom: 1px solid #f1f5f9; // var(--color-border-primary);
+    background-color: $color-bg-primary;
+    font-size: 12px;
+    font-weight: 600;
+    color: $color-text-secondary;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+    height: 41px;
+    transition: background $transition-fast;
+
+
+
+    > i {
+        font-size: 14px;
+        color: $color-accent;
+    }
+
+    > span:first-of-type {
+        flex: 1;
+    }
+}
+
+// Executing badge
+.tree-view-executing-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 500;
+    color: $color-executing;
+    padding: 3px 10px;
+    background: rgba($color-executing, 0.1);
+    border-radius: 12px;
+    text-transform: none;
+    letter-spacing: normal;
+}
+
+.pulse-dot {
+    width: 6px;
+    height: 6px;
+    background: $color-executing;
+    border-radius: 50%;
+    animation: pulseDot 1.5s ease-in-out infinite;
+}
+
+.tree-view-toggle-btn {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: $radius-sm;
+    cursor: pointer;
+    color: $color-text-tertiary;
+    transition: all $transition-fast;
+
+    &:hover {
+        background-color: $color-bg-tertiary;
+        color: $color-text-primary;
+    }
+
+    i {
+        font-size: 12px;
+    }
+}
+
+// ============================================
+// COLLAPSED STATE
+// ============================================
+
+.tree-view-collapsed {
+    flex: 0 0 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: $color-bg-primary;
+    border-left: 1px solid $color-border;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+        background-color: $color-bg-secondary;
+
+        i {
+            color: $color-text-primary;
+            transform: translateX(-2px);
+        }
+    }
+
+    i {
+        font-size: 14px;
+        color: $color-text-tertiary;
+        transition: color $transition-fast, transform 200ms ease;
+    }
+
+    // Highlighted state when script wants to open it
+    &--highlighted {
+        background: rgba($color-highlight, 0.1);
+        border-left-color: $color-highlight;
+
+        i {
+            color: $color-highlight;
+            animation: bounceLeft 600ms ease infinite;
+        }
+    }
+}
+
+// ─── Tree pane scroll + overflow affordance ──────────────────────────────────
+// The pane is clamped to a fraction of the viewport, so its last visible row is
+// routinely cut mid-height. Two gradients say the list continues: they appear only
+// when there is content past that edge, and they never take a click — the rows they
+// dissolve stay fully interactive underneath.
+//
+// The wrapper exists only to be the positioning context of the fades: the scroll,
+// the class and the padding stay on `.tree-view-panel-body`, which is still what
+// `TreeViewContent` and the rail query as the scroll container.
+.tree-view-panel-scroll {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.tree-view-panel-fade {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 28px;
+    pointer-events: none;   // never intercepts a click or a wheel
+    opacity: 0;
+    transition: opacity var(--duration-fast, 120ms) var(--ease-out, ease);
+    z-index: 2;             // over the rows, under the sticky filter row's own stack
+
+    // `top` is overwritten inline by the component with the bottom edge of the sticky
+    // filter row, so the fade dissolves the rows sliding UNDER that row and never
+    // tints the row itself. 0 is the correct value when the row is absent.
+    &--top {
+        top: 0;
+        background: linear-gradient(to bottom, var(--color-panel-bg), transparent);
+    }
+
+    &--bottom {
+        bottom: 0;
+        background: linear-gradient(to top, var(--color-panel-bg), transparent);
+    }
+}
+
+.tree-view-panel-scroll[data-fade-top='1'] .tree-view-panel-fade--top,
+.tree-view-panel-scroll[data-fade-bottom='1'] .tree-view-panel-fade--bottom {
+    opacity: 1;
+}
+
+.tree-view-panel-body {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 4px 0;
+
+
+    top:0px;
+    z-index: 100;
+
+    // Smooth content appearance
+    animation: fadeInContent 300ms ease 100ms both;
+
+    @keyframes fadeInContent {
+        from {
+            opacity: 0;
+        }
+        to {
+            opacity: 1;
+        }
+    }
+
+    // Custom scrollbar
+    &::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    &::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background-color: $color-border;
+        border-radius: 3px;
+
+        &:hover {
+            background-color: darken($color-border, 10%);
+        }
+    }
+
+    // ============================================
+    // TREE NODE STYLES (scoped for specificity)
+    // ============================================
+
+    // Toggle button - reset browser defaults
+    .tree-node__toggle {
+        width: 14px;
+        height: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: none !important;
+        border: none !important;
+        box-shadow: none !important;
+        outline: none;
+        cursor: pointer;
+        color: $color-text-tertiary;
+        padding: 0;
+        padding-left: 0px!important; // Align with icon
+        flex-shrink: 0;
+        transition: color $transition-fast;
+
+        &:hover:not(:disabled) {
+            color: $color-text-primary;
+        }
+
+        &:disabled {
+            cursor: default;
+            opacity: 0.3;
+        }
+
+        i {
+            font-size: 10px;
+        }
+    }
+
+    // Tree node icon - TEXT-ONLY STYLE (colored letter, no background)
+    .tree-node__icon {
+        width: 14px;
+        height: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 3px;
+        font-size: 10px;
+        font-weight: 600;
+        flex-shrink: 0;
+        background: transparent;
+
+        // Palette per tipo rimossa il 2026-08-12, in esecuzione di R-RAIL-33. Questa era
+        // la copia che vinceva la cascata a (0,3,0); il colore non arrivava comunque al
+        // glifo, perche' a dipingere e' l'<i class="bi"> e non questo <span> (R-RAIL-36).
+        // Rimozione misurata: zero pixel di differenza. Non rimetterla.
+        // Dopo la rimozione la regola che vince su questi <span> e' quella di
+        // components/forEndUser/tree.scss, quarta palette entity globale e non scopata
+        // (voce a TECH-DEBT). Sul colore non cambia niente, perche' nessuna delle due
+        // dipinge il glifo. Sul FONDO invece cambia, ma solo in dark: quel foglio scopa
+        // la sua meta' scura come `html[data-theme="dark"] { .tree-DClass { ... } }`,
+        // cioe' (0,2,1), e batte il `background: transparent` di base qui sopra, che e'
+        // (0,2,0). Le undici dichiarazioni rimosse tenevano anche questo, oltre alla -bg
+        // del foglio del tree: era il loro secondo mestiere, e il commento precedente ne
+        // nominava uno solo. Misurato in dark senza la riga qui sotto: sei kind passano
+        // da trasparente a una pastiglia traslucida (DClass rgba(14,165,233,.2), DModel
+        // rgba(100,116,139,.2), DPackage rgba(245,158,11,.2), e cosi' via).
+        // Il :not() e' obbligatorio, ma non per specificita'. Senza, la riga sta a
+        // (0,3,0) e batte comunque tree-viewpoint e tree-leaf-view, che stanno a
+        // (0,2,0) e sono le due pastiglie ratificate dall'emendamento (2) a
+        // R-RAIL-33: ne spegnerebbe il fondo. Il :not() non abbassa la specificita',
+        // la alza a (0,5,0); quello che fa e' escludere le due classi dal match.
+        // I tre badge per kind delle view foglia (tree-view-vertex/-row/-edge) sono
+        // pastiglie della stessa famiglia delle due sopra: sostituiscono
+        // `tree-leaf-view` sulle stesse righe, e senza l'esclusione perderebbero il
+        // fondo solo in dark. Misurato: fondo rgba(0,0,0,0) contro il rgb(36,46,61)
+        // che tree-leaf-view conserva sulla riga accanto.
+        // Stessa ragione per i badge delle istanze M1 (`tree-m1-icon`, sezione
+        // in coda a tree-view-sidebar.scss): sono pastiglie, una per metaclasse,
+        // e senza l'esclusione perderebbero il fondo solo in dark. Misurato
+        // 2026-08-26: fondo rgba(0,0,0,0) contro il rgb(254,226,226) del chiaro.
+        // Basta la classe comune: le cinque varianti la portano tutte.
+        [data-theme="dark"] &:not(.tree-viewpoint):not(.tree-leaf-view):not(.tree-view-vertex):not(.tree-view-row):not(.tree-view-edge):not(.tree-m1-icon) {
+            background: transparent;
+        }
+
+        // Il corsivo della classe astratta non e' colore e resta.
+        &.tree-DClass {
+            &.abstract-class { font-style: italic; }
+        }
+    }
+
+    // Tree node name
+    .tree-node__name {
+        font-size: 12px;
+        color: $color-text-primary;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    // Tree node header
+    .tree-node__header {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        padding: 3px 6px;
+        border-radius: $radius-sm;
+        cursor: pointer;
+        transition: background-color $transition-fast;
+        bordr: 1px solid red;
+
+        &:hover {
+            background-color: $color-bg-secondary;
+        }
+
+        &--selected {
+            background-color: rgba(71, 85, 105, 0.12);
+
+            &:hover {
+                background-color: rgba(71, 85, 105, 0.15);
+            }
+        }
+    }
+
+    // Metamodel tree header
+    .metamodel-tree__header {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        padding: 4px 6px 0 4px!important;
+        border-radius: $radius-sm;
+        cursor: pointer;
+        transition: background-color $transition-fast;
+
+        &:hover {
+            background-color: $color-bg-secondary;
+        }
+    }
+
+    .metamodel-tree__title {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex: 1;
+        font-size: 12px;
+        font-weight: 600;
+        color: $color-text-primary;
+    }
+}
+
+// ============================================
+// DARK MODE SUPPORT
+// ============================================
+
+// ============================================
+// NODE SECTION (Expert mode — collapsible at bottom of Properties)
+// ============================================
+
+// NODE — disclosure row (rail arc 1, 2026-08-10). The design's eyebrow row replaces
+// the filled section header: caret, label, and a hairline rule that fills what is left
+// of the row. The rule IS the separator, so the old full-width `border-top` goes with
+// the fill. Values snapped per R-RAIL-10: row 30 → `--input-height-sm` (32, Δ2),
+// eyebrow margins 18/9 → `--space-4` / `--space-2`, caret 10 → `--font-size-xs`.
+// `letter-spacing: 0.08em` is the first exception of R-RAIL-10 and stays literal.
+.properties-node-section {
+    flex-shrink: 0;
+
+    &__header {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        width: 100%;
+        height: var(--input-height-sm);
+        margin: var(--space-4) 0 var(--space-2);
+        padding: 0 var(--space-3);
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        color: var(--color-slate-400);
+        transition: color var(--duration-fast) var(--ease-out);
+
+        &:hover {
+            color: var(--color-slate-600);
+        }
+
+        i {
+            flex: none;
+            font-size: var(--font-size-xs);   // design 10px, snapped (R-RAIL-10)
+        }
+    }
+
+    &__label {
+        flex: none;
+        font-size: var(--font-size-xs);
+        font-weight: var(--font-weight-semibold);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+    }
+
+    // The rule takes the rest of the row, which is what makes the eyebrow read as a
+    // section break instead of a button.
+    &__rule {
+        flex: 1;
+        min-width: var(--space-2);
+        height: 1px;
+        background: var(--color-panel-border);
+    }
+
+    &__content {
+        // Hide the redundant NodeEditor header (we have our own section header)
+        .node-header {
+            display: none;
+        }
+    }
+}
+
+// ============================================
+// DARK MODE SUPPORT
+// ============================================
+
+[data-theme="dark"] {
+    .properties-with-tree-view {
+        background-color: #14181d; // darker backdrop so the cards read as elevated (Fase 2A)
+    }
+
+    // Properties card in dark (Fase 2A): base bg is #fff (light) — override to the
+    // dark panel surface, matching the tree card, with a dark contained shadow.
+    .properties-panel-container {
+        background-color: #1e1e1e;
+        border-color: #333;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    }
+
+    // The disclosure row has no fill and no top border left to re-colour, and its
+    // hairline uses `--color-panel-border`, which does follow the theme. Only the hover
+    // needs flipping: `--color-slate-*` is a raw palette, so the light rule would
+    // darken the label against a dark surface instead of lifting it.
+    .properties-node-section__header:hover {
+        color: var(--color-slate-300);
+    }
+
+    .tree-view-panel-container {
+        background-color: #1e1e1e;
+        border-color: #333;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4); // dark contained card shadow (Fase 2A)
+    }
+
+    .tree-view-panel-header {
+        background-color: #1e1e1e;
+        border-color: #333;
+        color: #888;
+
+        > i {
+            color: #6b7280;
+        }
+    }
+
+    .tree-view-toggle-btn {
+        color: #888;
+
+        &:hover {
+            background-color: #333;
+            color: #e0e0e0;
+        }
+    }
+
+    // Pin button — dark mode (2026-07-05 fase 2). Active state keeps the cyan indicator.
+    .properties-panel-pin-btn {
+        color: #888;
+
+        &:hover {
+            background-color: #333;
+            color: #e0e0e0;
+        }
+
+        &.is-active {
+            color: $color-highlight;
+
+            &:hover {
+                color: $color-highlight;
+            }
+        }
+    }
+
+    // Mockup-alignment overrides — dark counterparts (2026-07-29, fase 2B/B4).
+    // The accent checkbox fill works on both themes; only the muted greys need it.
+    .properties-panel-container {
+        .jj-field > p {
+            color: #64748b;                 // slate-500 reads better on the dark card
+        }
+
+        .jj-field > button {
+            border-color: #334155;
+            color: #cbd5e1;
+        }
+
+        .jj-field > button:disabled {
+            border-color: #1e293b;
+            color: #475569;
+        }
+
+        .props-label-entry-split {
+            border-top-color: #334155;
+        }
+    }
+
+    .tree-view-collapsed {
+        background-color: #1e1e1e;
+        border-color: #333;
+
+        &:hover {
+            background-color: #252525;
+
+            i {
+                color: #e0e0e0;
+            }
+        }
+
+        i {
+            color: #6b7280;
+        }
+    }
+}
+
+// ============================================
+// FLOATING REOPEN CLUSTER (2026-07-06 addendum)
+// Reso via createPortal su <body> quando entrambi i pannelli sono chiusi e c'è un
+// editor model/metamodel attivo. Due icon button verticali (Properties/Tree) in
+// alto a destra, sotto la toolbar del canvas. z-index 900: sopra il canvas, sotto
+// la context-menu editor-v2 (1000) e sotto modal/context-menu app (9999+).
+// I valori top/right sono tarabili (clearance navbar+toolbar+canvas-toolbar).
+// ============================================
+// REOPEN PILL: RETIRED (2026-08-26)
+//
+// A floating cluster of two buttons (`.properties-tree-floating-cluster`) used to sit
+// on the right edge of the canvas while the rail was hidden, offering the inspector
+// and the tree back. It existed because the control that collapsed the rail lived
+// INSIDE the rail and went away with it; since the collapse moved to the canvas topbar
+// the same button is the way out and the way back, always in the same place, and the
+// cluster was a second door onto a room that already has one — sitting on the canvas,
+// which is the surface it was meant to free.
+//
+// Markup and rules removed together. What is left of it below is the half of the
+// kill-switch that also covers `.properties-tree-overlay`, which is still rendered.
+// ============================================
+
+// Kill-switch: mai in canvas-only né sulla tab Documentation (il gate JS su
+// activeEditorType model/metamodel non copre questi due stati, che non sono
+// editor-type). Vedi abstract/style.scss per data-layout-mode / data-active-tab.
+body[data-layout-mode="canvas-only"] .properties-tree-overlay,
+body[data-active-tab="documentation"] .properties-tree-overlay,
+// Instance manager (Q1(b), 2026-08-30): il tab porta la propria superficie di
+// dettaglio (IRForm nel terzo riquadro), quindi il rail sarebbe una seconda
+// porta sulla stessa stanza. Valore proprio, non 'documentation': nascondono la
+// stessa cosa per ragioni diverse.
+body[data-active-tab="manager"] .properties-tree-overlay {
+    display: none !important;
+}
+
+// ============================================
+// FLOATING OVERLAY (F2 2026-07-29)
+// Properties + Tree rendered as a floating, stacked overlay over the full-width
+// canvas (portaled to <body>, mode='floating'). Tree on top (fixed height),
+// Properties below (flex). All rules are scoped to the floating variant so the
+// tab/popup/inline modes stay byte-identical.
+// ============================================
+.properties-tree-overlay {
+    position: fixed;
+    // Start just below the canvas toolbar so it never covers the VIEW/Theme controls.
+    // Le altezze del chrome vengono da tokens/_layout.scss. L'1px in mezzo non e'
+    // nostro: e' il border-top di .dock-panel (rc-dock, CSS di libreria), fra app bar
+    // e toolbar. Misurato risalendo la catena degli antenati il 2026-08-20: tutti
+    // fino a .dock-panel stanno a top 50, da .dock-panel in giu' a 51. Resta un
+    // letterale apposta. Se rc-dock cambia quel bordo, questo calc va rimisurato:
+    // l'asserzione A5 dello smoke lo dice.
+    top: calc(var(--jj-appbar-height) + 1px + var(--jj-toolbar-height));
+    // Flush with the viewport edge (D-UI-1). This supersedes the 8px gutter of the
+    // F2 floating overlay, which the comment here used to call ratified: the rail is
+    // no longer a card floating on the canvas, it is a side of the window.
+    right: 0;
+    // Stop flush against the top edge of the status bar, with no gap. L'altezza
+    // arriva da tokens/_layout.scss, non ricopiata. top+bottom bound the column
+    // height; width stays inline.
+    bottom: var(--jj-statusbar-height);
+    z-index: 900; // above canvas + rc-dock, below canvas context-menu (1000) and modals
+    display: flex;
+    // Slide in and out (2026-08-26). `transform` only: the column is fixed-positioned,
+    // so this is a compositor move that reflows nothing — animating `width` or `right`
+    // here would relayout the rail's whole subtree, tree rows included, on every frame.
+    //
+    // The duration is `--duration-normal` and is ALSO written in
+    // `PropertiesWithTreeView.tsx` as RAIL_MOTION_MS, which times the unmount that
+    // follows this motion. Change one, change the other; the comment there says why
+    // neither can read the other.
+    transition: transform var(--duration-normal) var(--ease-out);
+    // NB: the wrapper stays pointer-events:auto (normal). An earlier experiment set it
+    // to `none` (+ auto on the cards) for canvas click-through in the gaps, but that
+    // subtly broke the resize handles' hit-testing. Reliable controls win; the MiniMap
+    // sits left of this column anyway, so it is unaffected.
+}
+
+// Off-screen position, and the only declaration that separates the two directions:
+// entering is this rule removed. `pointer-events` because a column on its way out must
+// not take the click that the canvas underneath it is about to receive.
+.properties-tree-overlay--collapsed {
+    transform: translateX(100%);
+    pointer-events: none;
+}
+
+// Chi chiede di non animare non viene animato (design, sezione Motion). The rail still
+// leaves and returns — only instantly, and the timed unmount in the component simply
+// finds it already gone.
+@media (prefers-reduced-motion: reduce) {
+    .properties-tree-overlay {
+        transition-duration: 0ms;
+    }
+}
+
+.properties-with-tree-view--floating {
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    max-height: 100%;
+    padding: 0;              // no tinted backdrop gutter — the cards float on the canvas
+    background: transparent;
+    overflow: visible;       // let the contained card shadows show
+
+    // Tree card (top) · in-flow splitter · Properties card (bottom).
+    .tree-view-panel-container {
+        order: 1;
+        width: 100%;
+        max-width: 100%;
+    }
+    .properties-panel-container {
+        order: 3;
+        width: 100%;
+        max-width: 100%;
+    }
+
+    // The in-flow vertical splitter (`.tree-view-panel-vsplit`) is retired with the
+    // two-card layout (rail arc 1, 2026-08-10, R-RAIL-11): one shell has nothing to
+    // split, and the tree pane's height is fixed by the preset (R-RAIL-14).
+
+    // F3-fix: keep the sticky Tree filter above the scrolling rows — their selection
+    // pills / hover actions reach z-index 1, tying with the filter's own z-index 1 and
+    // (being later in the DOM) painting over it. Lift the filter so rows are clipped
+    // cleanly below it instead of showing through/around/above it.
+    .tree-search {
+        z-index: 5;
+        // Il foglio della sidebar dichiara qui `--color-border-secondary` (#d1d9e3),
+        // il valore piu' scuro del rail. Ricolorata solo dentro il rail: la sidebar
+        // standalone tiene il suo.
+        border-bottom-color: var(--color-panel-border);
+        border-left-color: var(--color-panel-border);
+    }
+    // Properties handle stays on the LEFT edge → controls the overlay column width
+    // (cursor col-resize is already set on the base .properties-panel-resize-handle).
+
+    // The accordion maximize (`.card-header-only`) is retired with the two-card
+    // layout (rail arc 1, 2026-08-10, R-RAIL-11).
+}
+
+// Dark: keep the floating wrapper transparent (the [data-theme=dark]
+// .properties-with-tree-view backdrop rule would otherwise tint it). The rail
+// modifier below repaints it as one surface.
+[data-theme="dark"] .properties-with-tree-view--floating {
+    background: transparent;
+}
+
+// ============================================
+// RAIL SHELL — preset 2a (arc 1, 2026-08-10)
+//
+// One continuous shell replaces the two stacked cards: one header, one border, one
+// shadow. The zones keep their historic class names (`.tree-view-panel-container`,
+// `.properties-panel-container`, and the bodies inside them) so that TreeViewContent's
+// styling and the whole B4 inspector skin of 2026-07-30 keep matching — only their
+// per-card chrome is neutralised here.
+//
+// Values: every colour, radius, size and duration is a token, except the 44px header
+// (see the literal-heights block at the top of this file). Shadows are composed by
+// hand from a colour token (R-RAIL-10), never `var(--shadow-*)`.
+// ============================================
+.properties-with-tree-view--rail {
+    flex-direction: column;
+    background: var(--color-panel-bg);
+    // Flush rail (D-UI-1): no outer radius, no shadow, and a single hairline on the
+    // canvas-facing side. Same token as the left rail's border-right, which resolves
+    // here since D-UI-10 publishes the theme tokens on :root.
+    border-left: 1px solid var(--border-subtle);
+    overflow: hidden;   // the shell still clips its zones
+
+    // The two zones were `order: 1` / `order: 3` to stack the cards around the
+    // splitter. In the shell they follow DOM order, together with the header and the
+    // Focus bar that sit between them.
+    .tree-view-panel-container,
+    .properties-panel-container {
+        order: 0;
+    }
+
+    // Tree pane: a height, not a mount. Collapsing it in Focus posture animates, so the
+    // rows stay mounted and keep their scroll position at height 0. Height and opacity
+    // come inline from the component (0 in Focus, the preset height in Browse, or
+    // `flex: 1 1 auto` when the inspector is hidden and the tree is the survivor).
+    .tree-view-panel-container {
+        flex: none;
+        min-height: 0;
+        overflow: hidden;
+        background: transparent;
+        border: 0;
+        border-bottom: 1px solid var(--color-panel-border);
+        border-radius: 0;
+        box-shadow: none;
+        animation: none;   // no slide-in: the pane is part of the shell, not a card
+        transition:
+            height var(--duration-normal) var(--ease-out),
+            opacity var(--duration-fast) var(--ease-out);
+
+        // Inspector hidden → the tree is the last zone and its separator would double
+        // up with the shell's own bottom border.
+        &:last-child { border-bottom-width: 0; }
+    }
+
+    // A collapsed pane must not keep a visible hairline: in Focus posture the Focus
+    // bar right below it owns the separation.
+    &.properties-with-tree-view--rail-focus .tree-view-panel-container {
+        border-bottom-width: 0;
+    }
+
+    // The "Executing" badge used to sit in the tree card header, which the shell no
+    // longer has. It now leads the tree pane: transient, so it may take the space.
+    .tree-view-executing-badge {
+        flex: none;
+        align-self: flex-start;
+        margin: var(--space-1) var(--space-3) 0;
+    }
+
+    // Inspector: takes the remainder and owns the only other scroll area.
+    .properties-panel-container {
+        flex: 1 1 auto;
+        height: auto;
+        min-height: 0;
+        background: transparent;
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+    }
+}
+
+// ─── Rail header: RETIRED (2026-08-26) ───────────────────────────────────────
+//
+// The 44px bar that opened the rail is gone, markup and rules together. What it
+// carried went two ways: the model badge and name, and the control that collapses the
+// inspector, moved up into the canvas topbar (`editor-v2/Toolbar.tsx`, rules in
+// `EditorV2.scss`), where the identity is stated once for the tab instead of once per
+// column; the contextual help, the pin button and the Focus/Browse button were
+// retired outright — help lives in the app bar's Help menu, and the pin and the
+// posture keep their state machines without a button of their own (see the TODOs in
+// `PropertiesWithTreeView.tsx`).
+//
+// The rail therefore starts on `.tree-scope-bar`, the filter band, whose own rules and
+// dark counterpart live in `TreeViewSidebar/tree-view-sidebar.scss` — it is that
+// sheet's element, and it is now the rail's top edge.
+//
+// `.properties-panel-pin-btn` and `.properties-panel-toggle-btn` keep their base rules
+// further up this file (:231, :257) and their dark block at :1358: unrendered, like the
+// `.properties-panel-header` family above them, and left standing for the same reason.
+
+// ─── Identity block in Focus posture (design §7) ─────────────────────────────
+// Written as a full selector and not nested in the block above, because that block is
+// anchored on `.properties-panel-container` and `&` there would compose the posture
+// class onto the container, which never carries it: the modifier lives on the shell.
+// One step of specificity above the Browse rule, (0,4,0) against (0,3,0), which is the
+// least it can take and still win.
+//
+// Only the block's own padding and type change. The definition of done asks that
+// switching posture move nothing but the tree pane's height, and these are inside the
+// block, not around it.
+.properties-with-tree-view--rail-focus .properties-panel-container .props-header:not(.props-header--view) {
+    padding: 18px 14px 14px;   // design §7, Focus
+
+    // Arco 3, rifinitura del 2026-08-13: il blocco identita' NON cresce in Focus.
+    // Il design §7 vuole badge 34x34 e titolo 19px in postura Focus; a schermo la
+    // differenza di scala fra le due posture legge come due schermate diverse invece
+    // che come lo stesso pannello piu' alto, che e' l'opposto di quello che la
+    // definition of done chiede («switching posture moves nothing but the tree pane's
+    // height»). Restano i 18/14/14 di padding: la postura si sente nello spazio, non
+    // nel corpo del testo. Le transizioni su width/height/font-size restano dichiarate
+    // nel blocco base e diventano inerti: non si tolgono, perche' tornerebbero servendo
+    // se la scala rientrasse.
+}
+
+// ─── Structure bar: the way back to a hidden tree (2026-08-26) ───────────────
+//
+// Same height and the same hairline as the Focus bar right below, on purpose: they are
+// the two rows that stand in for the tree pane when it is not there, and two different
+// heights would read as two different mechanisms. It is a <button>, not a div with a
+// handler, so it is reachable by keyboard and announces itself as a control.
+.properties-with-tree-view--rail .rail-structurebar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex: none;
+    width: 100%;
+    // The Focus bar's own token, so the two rows that stand in for the tree pane are
+    // the same height by construction. It resolves to 32px, not the design's 34: that
+    // snapping is R-RAIL-10's and predates this row — measured, not assumed, because
+    // the Focus bar's comment still names 34 and naming it again here would have
+    // propagated a number the stylesheet does not produce.
+    height: var(--input-height-sm);
+    padding: 0 var(--space-3);
+    border: 0;
+    border-bottom: 1px solid var(--color-bg-hover);
+    background: var(--color-slate-50);
+    color: var(--color-slate-600);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-medium);
+    text-align: left;
+    cursor: pointer;
+    transition: background var(--duration-fast) var(--ease-out);
+
+    &:hover {
+        background: var(--color-bg-hover);
+        color: var(--color-text-primary);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--color-border-focus);
+        outline-offset: -2px;
+    }
+
+    // The two glyphs are painted by `style.scss`'s `i.bi` at (0,1,1), which beats a bare
+    // class on the same element — the trap of CLAUDE.md §5, already paid for once on the
+    // topbar chevron. `.bi` doubles the selector to (0,2,0) and wins.
+    &__caret.bi { font-size: 10px; color: var(--color-slate-400); }
+    &__icon.bi { font-size: 12px; color: var(--color-slate-500); }
+    &__label { letter-spacing: 0.02em; }
+}
+
+// ─── Horizontal splitter between the two zones (2026-08-26) ──────────────────
+//
+// The strip, the line and the grip pill are the shared `ResizeHandle` and live in
+// `components/ResizeHandle/resize-handle.scss` (restyled 2026-08-28): the divider is
+// that component with this class added, not a second implementation of it. What stays
+// here is the one thing only the rail knows — where the strip sits on the seam. The
+// zones' own separator is the handle's hairline, so the tree pane drops its bottom
+// border while the splitter is between them, otherwise the seam is two lines.
+.properties-with-tree-view--rail .tree-view-panel-vsplit {
+    margin-top: -1px;   // sits ON the seam rather than pushing the zones apart
+}
+
+// With the splitter present the pane's own bottom border would double the line above.
+.properties-with-tree-view--rail .tree-view-panel-container:has(+ .tree-view-panel-vsplit) {
+    border-bottom-width: 0;
+}
+
+// ─── Focus breadcrumb bar (only while the tree pane is collapsed) ────────────
+.properties-with-tree-view--rail .rail-focusbar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex: none;
+    height: var(--input-height-sm);   // design 34px, snapped (R-RAIL-10)
+    padding: 0 var(--space-3);
+    background: var(--color-slate-50);
+    border-bottom: 1px solid var(--color-bg-hover);
+
+    &__back {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-1);
+        flex: none;
+        max-width: 55%;
+        height: 22px;
+        padding: 0 var(--space-2);
+        border: 1px solid var(--color-panel-border);
+        border-radius: var(--radius-base);
+        background: var(--color-panel-bg);
+        font: inherit;
+        font-size: var(--font-size-xs);
+        color: var(--color-slate-600);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        cursor: pointer;
+        transition: border-color var(--duration-fast) var(--ease-out);
+
+        &:hover { border-color: var(--color-slate-400); }
+
+        i { font-size: var(--font-size-xs); }   // design 10px, snapped (R-RAIL-10)
+    }
+
+    &__sep {
+        flex: none;
+        font-size: var(--font-size-xs);   // design 9px, snapped (R-RAIL-10)
+        color: var(--color-slate-300);
+    }
+
+    &__current {
+        min-width: 0;
+        font-size: var(--font-size-xs);
+        font-weight: var(--font-weight-semibold);
+        color: var(--color-slate-700);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    &__spacer {
+        flex: 1;
+        min-width: var(--space-2);
+    }
+
+    // Sibling steppers (design §6): 22x22, same chip language as the Back button so the
+    // two ends of the bar read as one control surface.
+    &__step {
+        flex: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        padding: 0;
+        border: 1px solid var(--color-panel-border);
+        border-radius: var(--radius-base);
+        background: var(--color-panel-bg);
+        color: var(--color-slate-500);
+        cursor: pointer;
+        transition: border-color var(--duration-fast) var(--ease-out),
+                    color var(--duration-fast) var(--ease-out);
+
+        &:hover {
+            border-color: var(--color-slate-400);
+            color: var(--color-text-primary);
+        }
+
+        i { font-size: var(--font-size-xs); }
+    }
+}
+
+// ─── Focus bar and posture button in dark ────────────────────────────────────
+// The values above are the design's, and the design is drawn in light: `--color-slate-50`
+// and the slate text grades are raw palette and do not follow the theme, so in dark the
+// bar rendered a near-white ground under near-white text, and the Back chip dark text on
+// a dark ground. Measured, not supposed: the bar computed `rgb(248,250,252)` under
+// `rgb(240,240,240)`. This block corrects the three colours for dark only, leaving the
+// light rendering — the one already approved — byte for byte as it was.
+[data-theme="dark"] .properties-with-tree-view--rail {
+    .rail-focusbar {
+        background: var(--color-bg-hover);
+        border-bottom-color: var(--color-panel-border);
+    }
+
+    // `.rail-header__btn` dropped from this list with the header (2026-08-26).
+    .rail-focusbar__back,
+    .rail-focusbar__step {
+        color: var(--color-slate-300);
+    }
+
+    // Same correction for the Structure bar, and for the same reason: `--color-slate-50`
+    // and the slate text grades are raw palette and do not follow the theme.
+    .rail-structurebar {
+        background: var(--color-bg-hover);
+        border-bottom-color: var(--color-panel-border);
+        color: var(--color-slate-300);
+
+        &:hover { background: var(--color-bg-elevated); }
+        .rail-structurebar__caret.bi { color: var(--color-slate-500); }
+        .rail-structurebar__icon.bi { color: var(--color-slate-400); }
+    }
+
+    .rail-focusbar__current { color: var(--color-slate-100); }
+}
+
+// ─── Arco 3, passo A: la griglia dei campi (design §7) ───────────────────────
+// La mossa di densità del design: label a destra in una colonna da 84px, campo su una
+// riga sola invece di uno stack da tre.
+//
+// L'ancora è `.properties-fields`, non il rail. Dentro il rail rende anche la superficie
+// di authoring IR, per la via del ramo view (`ViewData.tsx:95,98,133,137`), e quella usa
+// `.jj-field` esattamente come questo form: scopare al solo rail avrebbe ristrutturato
+// un'area che `CLAUDE.md` §2.5 dichiara in sviluppo. `.properties-fields` esiste solo nel
+// ramo model element in modalità tab (`Info.tsx:1381`): non nel popup del menu contestuale
+// (`Info.tsx:1412`), non nel ramo view (`Info.tsx:1236`). Vedi
+// `docs/discovery/discovery_2026-08-13_form_inspector_griglia_84.md` §2.
+.properties-with-tree-view--rail .properties-fields {
+    padding-bottom: 18px;
+
+    .jj-field {
+        display: grid;
+        // `minmax(0, 1fr)` e non `1fr`: una traccia `1fr` ha `min-width: auto`, quindi non
+        // scende sotto il min-content del proprio contenuto. Misurato a rail stretto: la
+        // seconda colonna restava a 244px anche con il campo a 250px, e il pannello prendeva
+        // 74px di scroll orizzontale a 280px di rail. Il design chiede zero scrollbar da
+        // 360px in su, dove infatti non compariva: questa riga la toglie anche sotto.
+        grid-template-columns: 84px minmax(0, 1fr);
+        align-items: center;
+        gap: 8px 10px;
+        margin-bottom: 8px;
+
+        &:last-child { margin-bottom: 0; }
+    }
+
+    // La label smette di essere un blocco sopra il campo e diventa la colonna sinistra.
+    // Resta `display:flex` (da `_form-system.scss:951`) perché ospita l'asterisco e il
+    // tooltip; `justify-self: end` la porta a filo destro della colonna, che è ciò che il
+    // design chiede con «right-aligned».
+    .jj-field-label {
+        justify-self: end;
+        margin-bottom: 0;
+        font-size: 12px;
+        line-height: 1.2;
+        text-align: right;
+    }
+
+    // Terzo figlio, dove c'è: l'hint sta sotto il campo, non sotto la label. Senza questa
+    // riga cadrebbe nella colonna da 84px della riga successiva (`Info.tsx:369-378`).
+    .jj-field-hint {
+        grid-column: 2;
+        margin-top: 2px;
+    }
+
+    // Campo su riga da 30px. La regola battuta è
+    // `.properties-panel-container .jj-field input:not([type=color]):not([type=checkbox])`
+    // a `:559`, che vale (0,4,1) e mette `border` in `!important`: i due `:not()` sono
+    // ripetuti qui per pareggiare la specificità, e `!important` torna sul solo bordo,
+    // che è la convenzione dichiarata a `:299` per questo foglio.
+    .jj-field input:not([type="color"]):not([type="checkbox"]) {
+        height: 30px;
+        padding: 0 9px;
+        font-size: 13px;
+        border-radius: 6px;
+        border: 1px solid $pc-slate-300 !important;
+
+        &:focus {
+            border-color: $pc-slate-500 !important;
+            box-shadow: 0 0 0 3px rgba(51, 65, 85, 0.06);
+        }
+    }
+
+    // Il campo Type non è un `<select>`: è `JjSelect`, cioè react-select con gli stili
+    // inline co-locati in `ui/JjSelect/JjSelect.tsx:34-37` (`minHeight: 36, height: 36`).
+    // Gli stili inline si battono solo con `!important`, e il controllo è il primo div
+    // del contenitore, che è l'unico appiglio stabile: `classNamePrefix` non è impostato,
+    // quindi le classi BEM di react-select non esistono. Il componente condiviso non si
+    // tocca: il raggio d'azione sarebbe l'intero pannello.
+    .jj-field .jj-select > div:first-of-type {
+        min-height: 30px !important;
+        height: 30px !important;
+    }
+
+    // `_form-system.scss:1166-1169` mette 20px di `padding-bottom` su `.jj-select`, senza
+    // commento e senza consumatore dichiarato. Nello stack a tre righe faceva da spaziatore;
+    // nella griglia lo spazio lo dà `gap`, e quei 20px alzavano la riga Type a 56px contro i
+    // 30px delle altre. Misurato: `.jj-select` computava `padding: 0px 0px 20px`. Azzerato
+    // qui dentro, non nel foglio globale, che ha consumatori fuori dal rail.
+    .jj-field .jj-select { padding-bottom: 0; }
+}
+
+// ─── Arco 3, passo B: multiplicity segmentato (design §7) ────────────────────
+// Cinque preset mutuamente esclusivi al posto dei due stepper e della pastiglia
+// read-only. `flex: 1 1 0` più `min-width: 0` è prescritto dal design con la sua
+// motivazione: senza `min-width: 0` le label mono si rifiutano di stringersi e la riga
+// sfonda il rail. `role="radiogroup"` e `aria-checked` stanno nel TSX.
+.properties-with-tree-view--rail .properties-fields {
+
+    .jj-mult__segments {
+        display: flex;
+        gap: 4px;
+        width: 100%;
+    }
+
+    .jj-mult__seg {
+        flex: 1 1 0;
+        min-width: 0;
+        overflow: hidden;   // con `min-width: 0` da solo il testo mono spingeva comunque
+        height: 28px;
+        padding: 0 2px;
+        border: 1px solid $pc-slate-300;
+        border-radius: 6px;
+        background: #fff;
+        color: $pc-slate-600;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        line-height: 1;
+        cursor: pointer;
+        transition: background-color 150ms cubic-bezier(0, 0, 0.2, 1),
+                    border-color 150ms cubic-bezier(0, 0, 0.2, 1),
+                    color 150ms cubic-bezier(0, 0, 0.2, 1);
+
+        &:hover { border-color: $pc-slate-400; }
+
+        // Stesso trattamento del chip acceso, e per la stessa ragione: e' uno stato
+        // «selezionato», che nel progetto si dice con la pastiglia tinta cyan.
+        &.is-selected {
+            background: var(--color-selection-bg);
+            border-color: $pc-accent;
+            color: $pc-slate-800;
+            font-weight: 600;
+        }
+
+        &:focus-visible {
+            outline: 2px solid $pc-slate-600;
+            outline-offset: 2px;
+        }
+    }
+
+    // La riga Custom: gli stepper sopravvivono qui e solo qui (design §7).
+    .jj-mult__custom {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 6px;
+
+        .jj-mult__custom-label {
+            font-size: 11px;
+            color: $pc-slate-500;
+        }
+
+        .jj-mult__custom-value {
+            margin-left: auto;
+            font-family: var(--font-mono);
+            font-size: 12px;
+            color: $pc-slate-500;
+        }
+
+        // Lo stepper è il wrapper di `NumberInput`, raggiunto strutturalmente come già
+        // fa questo foglio a `:582`. Qui è più stretto: il valore sta in 30px, non in 42.
+        > div:has(> button:not([role="checkbox"]) + input) {
+            height: 28px;
+            border: 1px solid $pc-slate-300;
+            border-radius: 6px;
+            overflow: hidden;
+
+            > button:not([role="checkbox"]) { width: 24px; }
+
+            > input {
+                min-width: 30px;
+                width: 30px;
+                height: 26px;
+                font-family: var(--font-mono);
+                font-size: 12px;
+                padding: 0;
+                text-align: center;
+                border: none !important;
+            }
+        }
+    }
+}
+
+// Il segmentato in dark. Superficie nuova: R-RAIL-42 impone di guardarla nei due temi
+// prima di dichiararla finita, e i valori del design sono disegnati in light. Il fondo
+// bianco del non selezionato sarebbe una pastiglia chiara su pannello scuro, e lo slate-700
+// del selezionato sparirebbe dentro il fondo. Qui il rapporto si inverte: il selezionato
+// prende il grado chiaro e il testo scuro, che è la stessa mossa già fatta per la Focus bar.
+[data-theme="dark"] .properties-with-tree-view--rail .properties-fields {
+    .jj-mult__seg {
+        background: var(--color-bg-hover);
+        border-color: var(--color-panel-border);
+        color: var(--color-slate-300);
+
+        &:hover { border-color: var(--color-slate-500); }
+
+        // Lo stato selezionato VA ridichiarato, anche se `--color-selection-bg` ha gia'
+        // la sua meta' scura: la regola base di questo blocco porta `[data-theme]` in
+        // piu' e vale (0,5,0), quindi batte la `.is-selected` del blocco chiaro a
+        // (0,4,0) e le sovrascrive fondo e bordo. Misurato prima della correzione:
+        // acceso a `rgba(255,255,255,0.06)` con anello `rgb(51,65,85)`, cioe' lo stato
+        // spento. Il token porta il valore, la ridichiarazione porta la specificita'.
+        &.is-selected {
+            background: var(--color-selection-bg);
+            border-color: $pc-accent;
+            color: var(--color-slate-100);
+        }
+    }
+
+    .jj-mult__custom {
+        .jj-mult__custom-label,
+        .jj-mult__custom-value { color: var(--color-slate-400); }
+
+        > div:has(> button:not([role="checkbox"]) + input) {
+            border-color: var(--color-panel-border);
+        }
+    }
+}
+
+// ─── Arco 3, passo C: i flag, chip in Browse e switch in Focus (design §7) ───
+// Un solo DOM e due vestiti. La postura non viaggia in JavaScript: il guscio scrive
+// `--rail-focus` su di sé e la cascata fa il resto (R-RAIL-40), quindi `hint` e `track`
+// esistono sempre nel markup e in Browse sono spenti da qui. In Browse il chip è una
+// pastiglia da 26px; in Focus la stessa `<button>` diventa una riga da 36px dentro un
+// riquadro, con la traccia a destra.
+.properties-with-tree-view--rail .properties-fields {
+
+    // I 14px orizzontali pareggiano `.props-section__body`, che li dichiara a
+    // `info-improvements.scss` con `padding: 4px 14px 12px`: senza, l'eyebrow e i chip
+    // partivano dal bordo del pannello mentre i campi rientravano di 14px. Misurato:
+    // `.jj-flags` a x=1193 contro il campo Name a x=1207.
+    .jj-flags {
+        margin-top: 18px;
+        padding: 0 14px;
+    }
+
+    // Eyebrow: label, filetto che riempie il mezzo, riepilogo live a destra. È il
+    // riepilogo che permette di saltare la sezione senza aprirla.
+    .jj-flags__eyebrow {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 9px;
+    }
+
+    .jj-flags__title {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: $pc-slate-400;
+    }
+
+    .jj-flags__rule {
+        flex: 1 1 auto;
+        height: 1px;
+        background: var(--color-panel-border);
+    }
+
+    .jj-flags__summary {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: $pc-slate-400;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 55%;
+    }
+
+    .jj-flags__group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+    }
+
+    .jj-flag {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        height: 26px;
+        padding: 0 9px 0 7px;
+        border: 1px solid $pc-slate-200;
+        border-radius: 99px;
+        background: #fff;
+        color: $pc-slate-600;
+        font-size: 12px;
+        line-height: 1;
+        cursor: pointer;
+        transition: background-color 150ms cubic-bezier(0, 0, 0.2, 1),
+                    border-color 150ms cubic-bezier(0, 0, 0.2, 1),
+                    color 150ms cubic-bezier(0, 0, 0.2, 1);
+
+        // `color: inherit` e non un valore: `styles/style.scss:790` dichiara
+        // `i.bi { color: var(--font-color-1) }`, e una dichiarazione batte l'ereditarieta',
+        // quindi il colore del chip non raggiungeva il glifo e i chip accesi restavano con
+        // l'icona scura su fondo scuro. E' la stessa trappola di R-RAIL-36, dove a dipingere
+        // era l'`<i>` e non il contenitore che si stava misurando. Questa regola vale (0,4,1)
+        // contro (0,1,1), quindi vince anche sullo `:hover` di `i.bi` senza `!important`.
+        > i {
+            font-size: 10px;
+            line-height: 1;
+            color: inherit;
+        }
+
+        // Acceso = la stessa pastiglia tinta che la sintassi astratta usa per la
+        // selezione, con gli stessi due token: `--color-selection-bg` per il fondo e
+        // `--color-selection-bar` per l'anello. Non sono valori nuovi e non sono un
+        // cyan «simile»: sono i due token che `.tree-row--selected` usa oggi, e il
+        // commento che li dichiara (`_colors-light.scss:373-375`) rinviava proprio a
+        // questo — «estendere alle altre selezioni del progetto in un task futuro».
+        // Seguono il tema da soli, quindi il blocco dark non li ridichiara.
+        //
+        // Il testo resta scuro e diventa semibold, come fa la riga selezionata del
+        // tree: un riempimento cyan saturo con testo bianco costa 3.7:1 di contrasto
+        // contro i 10.3:1 dello slate di ieri, e a 12px non passa AA. Qui il contrasto
+        // misura 8.8:1 e il canale del colore resta cyan.
+        &.is-on {
+            background: var(--color-selection-bg);
+            border-color: $pc-accent;
+            color: $pc-slate-800;
+            font-weight: 600;
+        }
+
+        &:hover:not(.is-on) { border-color: $pc-slate-300; }
+
+        &:focus-visible {
+            outline: 2px solid $pc-slate-600;
+            outline-offset: 2px;
+        }
+    }
+
+    // In Browse l'hint e la traccia non esistono per l'utente: `display: none` li toglie
+    // anche dall'albero di accessibilità, che è il comportamento voluto (il chip porta già
+    // `role="switch"` e `aria-checked`).
+    .jj-flag__hint,
+    .jj-flag__track { display: none; }
+}
+
+// ─── Gli stessi flag in postura Focus: righe con switch ──────────────────────
+.properties-with-tree-view--rail-focus .properties-fields {
+
+    .jj-flags__group {
+        display: block;
+        border: 1px solid #eef2f7;
+        border-radius: 9px;
+        overflow: hidden;
+    }
+
+    .jj-flag {
+        display: flex;
+        width: 100%;
+        height: 36px;
+        padding: 0 10px;
+        gap: 8px;
+        border: none;
+        border-radius: 0;
+        border-top: 1px solid #f8fafc;
+        background: transparent;
+        color: $pc-slate-700;
+        font-size: 13px;
+
+        &:first-child { border-top: none; }
+
+        // La riga accesa si evidenzia con il fondo, non con una linea. Il
+        // `border-color: $pc-slate-700` che le righe accese mostravano non era voluto:
+        // arrivava dal blocco Browse per omissione, perche' questo blocco ridichiarava
+        // `background` e `color` ma non `border-color`, e a parita' di specificita' la
+        // proprieta' non ridichiarata resta quella di prima. Misurato: righe accese a
+        // `1px rgb(51,65,85)`, righe spente a `1px rgb(248,250,252)`.
+        &.is-on {
+            background: var(--color-selection-bg);
+            border-top-color: #f8fafc;
+            color: $pc-slate-800;
+            font-weight: 600;
+        }
+
+        &:hover:not(.is-on) { border-color: transparent; }
+
+        > i { font-size: 12px; color: $pc-slate-400; }
+    }
+
+    .jj-flag__hint {
+        display: inline;
+        font-size: 12px;
+        color: $pc-slate-400;
+    }
+
+    // I numeri non sono quelli del design §7 (30x18, pollice 14): sono quelli del
+    // componente `ui/Toggle` in taglia `xs`, misurati a schermo dentro questo stesso
+    // pannello (`24x14`, `padding: 2px`, pollice `10x10`, spento `#cbd5e1`, acceso
+    // `#0ea5e9`). La sezione INHERITANCE, che sta due blocchi sopra, monta quel
+    // componente: due interruttori di taglia e colore diversi nella stessa colonna
+    // sono la stessa forma per due significati, cioe' il difetto che il redesign
+    // toglie. Il design perde qui perche' il pannello ha gia' un interruttore.
+    .jj-flag__track {
+        display: inline-flex;
+        align-items: center;
+        margin-left: auto;
+        flex: none;
+        width: 24px;
+        height: 14px;
+        padding: 2px;
+        border-radius: 9999px;
+        background: $pc-slate-300;
+        transition: background-color 200ms ease;
+    }
+
+    .jj-flag__knob {
+        width: 10px;
+        height: 10px;
+        border-radius: 9999px;
+        background: #fff;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+        transform: translateX(0);
+        transition: transform 200ms ease;
+    }
+
+    // Sulla traccia non poggia testo, quindi il cyan pieno si usa per intero: e'
+    // l'indicatore attivo, ed e' lo stesso valore che `Toggle.module.css:90` da' al
+    // proprio stato acceso. Nessun override dark, perche' il componente non ne ha:
+    // due interruttori affiancati devono restare identici anche cambiando tema.
+    .jj-flag.is-on .jj-flag__track { background: $pc-accent; }
+    .jj-flag.is-on .jj-flag__knob { transform: translateX(10px); }   // 24 - 10 - 2*2
+}
+
+// Chi chiede di non animare non viene animato (design, sezione Motion).
+@media (prefers-reduced-motion: reduce) {
+    .properties-with-tree-view--rail .properties-fields {
+        .jj-flag, .jj-flag__track, .jj-flag__knob, .jj-mult__seg { transition-duration: 0ms; }
+    }
+}
+
+// I flag in dark. Superficie nuova, quindi misurata nei due temi prima di dichiararla
+// finita (R-RAIL-42): il chip spento a fondo bianco sarebbe una pastiglia chiara su
+// pannello scuro, e il chip acceso a slate-700 sparirebbe nel fondo. Stessa inversione
+// già adottata per il segmentato del passo B e per la Focus bar dell'arco 2.
+[data-theme="dark"] .properties-with-tree-view--rail .properties-fields {
+    .jj-flags__title,
+    .jj-flags__summary { color: var(--color-slate-400); }
+
+    .jj-flag {
+        background: var(--color-bg-hover);
+        border-color: var(--color-panel-border);
+        color: var(--color-slate-300);
+
+        // Stessa ragione del segmentato qui sopra: la specificita' di questo blocco
+        // impone di ridichiarare fondo e anello, non solo il testo.
+        &.is-on {
+            background: var(--color-selection-bg);
+            border-color: $pc-accent;
+            color: var(--color-slate-100);
+        }
+
+        &:hover:not(.is-on) { border-color: var(--color-slate-500); }
+    }
+}
+
+[data-theme="dark"] .properties-with-tree-view--rail-focus .properties-fields {
+    .jj-flags__group { border-color: var(--color-panel-border); }
+
+    .jj-flag {
+        background: transparent;
+        border-top-color: var(--color-panel-border);
+        color: var(--color-slate-200);
+
+        // Il fondo della riga accesa arriva da `--color-selection-bg`, che in dark e'
+        // gia' una velatura (`rgba(8,145,178,0.18)`) e non un colore pieno: si posa
+        // sul pannello scuro senza schiarirlo. Si corregge il bordo, che qui e' l'unico
+        // valore che il blocco light non puo' indovinare.
+        &.is-on {
+            background: var(--color-selection-bg);
+            border-top-color: var(--color-panel-border);
+            color: var(--color-slate-100);
+        }
+        > i { color: var(--color-slate-400); }
+    }
+
+    .jj-flag__hint { color: var(--color-slate-400); }
+    // La traccia non si ridichiara in dark: `ui/Toggle` non ha meta' scura, e i due
+    // interruttori che convivono nella stessa colonna devono restare identici.
+}
+
+// ─── Arco 3, passo D: la disclosure Advanced (design §7) ─────────────────────
+// Il design fonde `ADVANCED` e `ADVANCED STATE` in una sola voce «Advanced», resa come
+// riga da 30px: caret, eyebrow, filetto che riempie il mezzo, riepilogo a destra.
+// Dopo il passo C `ADVANCED` non esiste più (i suoi otto flag sono chip), quindi qui
+// resta la sola voce di stato, rinominata e restilata.
+//
+// `NODE` non entra: resta nel guscio, gated su `advanced`, per R-RAIL-12. L'inspector ha
+// due voci, Flags e Advanced, e nessuna «Appearance». È uno scostamento dichiarato dal
+// design §7 ultimo paragrafo, non una dimenticanza.
+//
+// Il riordino è di sola presentazione: il DOM di `CollapsibleSection` mette il titolo
+// prima del chevron, il design vuole il caret prima. `order` sui figli del flex lo
+// sistema senza toccare il componente, che ha altri undici chiamanti in questo file.
+.properties-with-tree-view--rail .jj-disclosure {
+    margin-top: 18px;
+    padding: 0 14px;   // stesso rientro dei corpi di sezione, vedi la nota sui flag
+
+    .props-section__header-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .props-section__header {
+        flex: 1 1 auto;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        height: 30px;
+        background: transparent;
+        border: none;
+
+        &::after {
+            content: '';
+            order: 1;
+            flex: 1 1 auto;
+            height: 1px;
+            background: var(--color-panel-border);
+        }
+    }
+
+    .props-section__chevron {
+        order: -1;
+        font-size: 10px;
+        color: $pc-slate-400;
+    }
+
+    .props-section__title {
+        order: 0;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: $pc-slate-400;
+    }
+
+    .jj-disclosure__summary {
+        font-size: 11px;
+        color: $pc-slate-400;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 160px;
+        display: inline-block;
+    }
+}
+
+[data-theme="dark"] .properties-with-tree-view--rail .jj-disclosure {
+    .props-section__title,
+    .props-section__chevron,
+    .jj-disclosure__summary { color: var(--color-slate-400); }
+}
+
+// ─── Le card delle view alla stessa scala dell'inspector (2026-08-13) ────────
+// L'ancora è `.view-editor-root` (`views/ViewData.tsx:202`), che esiste solo nel ramo
+// view: non tocca il form del ramo model element, non tocca il popup del menu
+// contestuale. Le regole battute stanno nella pelle B4 di questo stesso foglio, scopata
+// a `.properties-panel-container` (`:559` e `:576` per input e select, `:582` per lo
+// stepper): quella pelle vale per tutto il rail, quindi i controlli delle card sono
+// rimasti alla scala grande mentre l'inspector scendeva a 13px e 30px.
+.properties-with-tree-view--rail .view-editor-root {
+
+    // Il testo dei campi eredita 13px. Serve per le voci che non hanno una classe
+    // propria e vivono dentro uno `style` inline, come l'elenco delle metaclassi in
+    // `MatchingSection.tsx:90-94`, dove il nome è uno `<span style="flex:1">`.
+    // `.jj-field-label` dichiara la sua misura e non viene toccata.
+    .jj-field { font-size: 13px; }
+
+    // Il trigger del select scende alla misura del campo Type dell'inspector. Le voci
+    // del menu non si toccano: `Select` monta un `<select>` nativo, e le sue `<option>`
+    // le disegna il sistema operativo. Il rapporto «voci un filo più grandi del valore
+    // scelto» che ti piace in `JjSelect` viene da lì, non da una regola.
+    .jj-field select {
+        height: 30px;
+        padding: 0 30px 0 9px;
+        font-size: 13px;
+        border-radius: 6px;
+    }
+
+    // Lo stepper torna alla geometria del componente (`ui/NumberInput/NumberInput.module.css`:
+    // 32px di altezza, raggio 6, bottoni 28, valore 13px). La pelle del rail lo allargava
+    // a raggio 12 con bottoni da 38 e valore 15, che è la pastiglia che si vede oggi.
+    // Raggiunto strutturalmente, come già fa `:582`, perché `NumberInput` è CSS-module e
+    // le sue classi hashate non sono raggiungibili da un foglio esterno.
+    .jj-field > div:has(> button:not([role="checkbox"]) + input),
+    .jj-field div:has(> button:not([role="checkbox"]) + input) {
+        height: 32px;
+        border-radius: 6px;
+
+        > button:not([role="checkbox"]) {
+            width: 28px;
+            min-width: 28px;
+        }
+
+        > input {
+            font-size: 13px;
+            font-weight: 500;
+            border: 1px solid $pc-slate-300 !important;
+            font-family: var(--font-mono);
+            min-width: 30px;
+            width: 30px;
+        }
+    }
+}
+
+// ─── Metadata density of the tree rows ───────────────────────────────────────
+// Driven by the rail's own width, which the user owns via the drag handle
+// (360-640, persisted in `jjodel_property_overlay_width`) — not by the viewport.
+// `data-density` is written by `PropertiesWithTreeView` on this same element;
+// `densityForWidth` there holds the two thresholds and the reason this is an
+// attribute rather than a container query (`container-type` would make the shell a
+// containing block for the tree's fixed-positioned context menu).
+//
+// Semantics never change with density: the tree lists the same rows in the same
+// order at every width. Only what the right-hand column carries changes, and the
+// row height does not move — the hidden span is out of flow, and the type span next
+// to it keeps the same metrics and sets the line.
+//
+// No rule for `default` and `full`: they are the full row, which is what renders
+// when the attribute is missing. The degraded state is the behaviour of today.
+.properties-with-tree-view--rail[data-density="compact"] {
+    // Below 400px the rail cannot carry `Transition [0..1]` without eating the name.
+    // The type survives — it is the column that gets scanned vertically.
+    .tree-feature__mult {
+        display: none;
+    }
+}
+
+// Il sistema 7a del rail (Fase 2). In coda, e non in testa, perché fra regole di
+// pari specificità l'ordine sorgente decide: il sistema deve poter pareggiare le
+// dichiarazioni della skin B4 che sta sopra senza alzare la specificità.
+@import './railSystem';

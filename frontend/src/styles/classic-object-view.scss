@@ -1,0 +1,183 @@
+// Classic-editor M1 Default views — visual parity with the flow editor (editor-v2).
+//
+// Applied via BEM classes on the jsxString roots emitted by DefaultView.object /
+// .value / .singleton (see `frontend/src/utils/defaultViewTemplate.ts`):
+//   - `.jjodel-classic-object`     — M1 object node card
+//   - `.jjodel-classic-value`      — `name = value` attribute row
+//   - `.jjodel-classic-singleton`  — minimal singleton card
+//
+// Colors come from the SAME palette CSS variables the flow node consumes
+// (`EditorV2.scss` ~:1180-1742), with the same fallbacks. Those variables are
+// set on `.editor-v2.scheme-<id>.theme-<t>`; `.GraphContainer` (the classic
+// canvas) is nested under that root, so they inherit and resolve per-theme —
+// dark mode needs no extra rules. Palette colors are NEVER hardcoded here.
+//
+// Compound selectors (e.g. `.object.jjodel-classic-object`,
+// `.jjodel-classic-object .jjodel-classic-object__body`) are used where a rule
+// must win over the legacy per-view `css` that `views.ts` sets on `.object` /
+// `.object-children` / `.value` / `.singleton`. That css is NOT reliably gone on
+// migrated projects: VersionFixer 2.222->2.223 clears it, but updateDefaultView
+// then regenerates untouched default views FROM SOURCE (views.ts), re-applying it.
+// So same-specificity rules lose to it by source order — we raise specificity.
+//
+// Selection styling is OUT OF SCOPE (handled by `view.scss` `.selected-by-me`
+// and `--object-accent`); this file does not touch it.
+
+.jjodel-classic-object {
+    background: var(--node-bg);
+    border: 1px solid var(--border-default);
+    border-radius: 4px;
+    min-width: 140px;
+    overflow: hidden;
+    font-family: var(--font-sans);
+    font-size: 13px;
+    color: var(--text-primary);
+
+    // Header band — palette-driven, mirrors the flow `.mm-object__header`.
+    &__header {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 4px 8px;
+        min-height: 22px;
+        font-weight: 500;
+        font-size: 13px;
+        background: var(--object-header-bg, rgba(180, 130, 50, 0.35));
+        color: var(--node-header-text);
+        border-bottom: 1px solid var(--node-separator);
+        // Keep "name : Type" on one line. The Object view has adaptWidth=true
+        // (views.ts), so for non-resized vertices the card re-measures and grows
+        // to fit the now-unbreakable header (graphElement.tsx:1247-1259); body
+        // rows stay wrappable. User-resized vertices keep their stored width.
+        white-space: nowrap;
+    }
+
+    // The whole "name : Type" group: weight 600, palette-derived color, underlined
+    // as one unit — mirrors the flow `.mm-object__name` (= EditorV2.scss:1605-1613).
+    &__title {
+        font-weight: 600;               // delta 1 (was inheriting header 500)
+        color: var(--node-header-text); // delta 2 (palette-derived; was inheriting legacy .object color #1E293B, views.ts:577)
+        text-decoration: underline;     // delta 7 — whole group (= EditorV2.scss:1606)
+        white-space: nowrap;
+    }
+
+    // Underline each segment explicitly too: the autosize name renders as an
+    // atomic inline-flex ::after that the ancestor (__title) underline cannot
+    // span, so we underline the parts directly — one visual line, no seam (delta 7).
+    &__name { text-decoration: underline; color: inherit; }
+
+    // Neutralize the autosize hidden-Input. It renders as
+    // <span.autosize-input-container data-value=NAME>{name}</span> with
+    // ::after{content:attr(data-value) ' '} (style.scss:139-184). Delta sources:
+    // font-weight:var(--font-light)=300 (:168), padding:0 0.5em !important
+    // (:166 → delta 3 gap), and the trailing ' ' in the content (:150 → delta 7 gap).
+    // `font: inherit` also drops the legacy "Inter Variabile" family inherited from
+    // .object (delta 3). Specificity (0,3,1) beats style.scss without !important;
+    // padding needs !important to beat the legacy !important.
+    &__name .autosize-input-container,
+    &__name .autosize-input-container > input,
+    &__name .autosize-input-container::after {
+        font: inherit;
+        color: inherit;
+        text-decoration: underline;
+        padding: 0 !important;
+    }
+    &__name .autosize-input-container::after {
+        content: attr(data-value); // drop the trailing ' ' sizer char (override style.scss:150) — delta 7
+    }
+
+    &__separator {
+        font-weight: 400;            // = EditorV2.scss:1617 (.mm-object__separator)
+        opacity: 0.7;                // = EditorV2.scss:1618
+        text-decoration: underline;  // delta 7 — part of the group underline
+        color: inherit;
+    }
+
+    &__type {
+        font-weight: 500;            // = EditorV2.scss:1622 (.mm-object__class-name)
+        opacity: 0.85;               // = EditorV2.scss:1623
+        text-decoration: underline;  // delta 7 — part of the group underline
+        color: inherit;
+    }
+
+    // Reference-value anchors: reference DValues are rendered (so M1 reference
+    // edges can resolve their source endpoint — impl_get_suggestedEdgesM1 in
+    // LModelElement.tsx:5149-5150 skips a reference DValue whose notEdge node has
+    // no live `.html`) but visually clipped. The edge anchor uses the containing
+    // VERTEX's model coordinates, not the field's DOM rect, so height:0 suffices:
+    // the fields stay in the DOM with a live element and add no visual height.
+    &__ref-anchors {
+        height: 0;
+        overflow: hidden;
+    }
+}
+
+// Card chrome — compound (.object.jjodel-classic-object = 0,2,0) to beat the
+// legacy per-view css that views.ts sets on `.object` and re-injects via
+// updateDefaultView: `.object{ border-radius:3px; min-width:160px; color:#1E293B;
+// font-family:"Inter Variabile"(typo); background:transparent }` (views.ts:548-584).
+// Single-class rules lose to it by source order, so we raise specificity (no
+// !important needed — legacy `.object` is 0,1,0).
+.object.jjodel-classic-object {
+    border: 1px solid var(--border-default);   // delta 4 (= EditorV2.scss:1181 .mm-node)
+    border-radius: 4px;                          // delta 5 (= EditorV2.scss:1182; beats legacy 3px)
+    min-width: 140px;                            // delta 6 (= EditorV2.scss:1598 .mm-object; beats legacy 160px)
+    background: var(--node-bg);
+    color: var(--text-primary);                  // = EditorV2.scss:1189 (beats legacy #1E293B on the card)
+    font-family: var(--font-sans);               // delta 3 (beats legacy "Inter Variabile" typo; inherited by header/title/body)
+    box-shadow: 0 1px 3px var(--node-shadow), 0 4px 12px var(--node-shadow-deep, rgba(0, 0, 0, 0.08)); // delta 8 (= EditorV2.scss:1190)
+}
+
+// Body — compound specificity (0,2,0) to win over the legacy `.object-children`
+// rule (white bg + padding) re-injected by views.ts.
+.jjodel-classic-object .jjodel-classic-object__body {
+    background: var(--node-bg);
+    padding: 8px 10px 4px;
+}
+
+// Value row font — compound to beat the legacy `.value{ font-family:"Inter
+// Variabile" }` typo (views.ts:697), so value text uses the variable font too (delta 3).
+.value.jjodel-classic-value {
+    font-family: var(--font-sans);
+}
+
+.jjodel-classic-value {
+    font-size: 12px; // = EditorV2.scss:1710 (.mm-field)
+
+    &__name {
+        // theme-fixed, NOT palette-derived — same asymmetry as the flow node.
+        color: var(--field-name-color); // = EditorV2.scss:1720 (.mm-field__name)
+        font-weight: 500;               // = EditorV2.scss:1723
+    }
+
+    // The `=` separator: muted grey, NOT italic and NOT --field-type-color
+    // (= EditorV2.scss:1734-1737 .mm-field__separator). Delta 4.
+    &__sep {
+        color: var(--text-dim);
+        opacity: 0.6;
+        font-style: normal;
+    }
+
+    &__value {
+        color: var(--field-type-color, #0369a1); // = EditorV2.scss:1742 (.mm-field__type)
+        font-style: italic;                        // = EditorV2.scss:1631 (.mm-object__feature-value)
+    }
+
+    // Empty (mirage) attribute slot — visible but muted, like flow placeholders.
+    &--empty {
+        opacity: 0.55;
+    }
+}
+
+// Singleton — same header band (reuses `.jjodel-classic-object__header` in the
+// template), minimal card. Compound on the root to win over legacy `.singleton`
+// (which set `background: var(--accent)`, a deprecated token) on un-migrated
+// projects.
+.singleton.jjodel-classic-singleton {
+    background: var(--node-bg);
+    border: 1px solid var(--border-default);
+    border-radius: 4px;
+    overflow: hidden;
+    font-family: var(--font-sans);
+}

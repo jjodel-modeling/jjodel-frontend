@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <meta name="design_doc_mode" content="canvas">
+  <link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/tokens/fonts.css">
+  <link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/tokens/colors.css">
+  <link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/tokens/entities.css">
+  <link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/tokens/typography.css">
+  <link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/tokens/spacing.css">
+  <link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/tokens/radius.css">
+  <link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/tokens/shadows.css">
+  <link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/tokens/transitions.css">
+  <link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/styles.css">
+  <script src="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/_ds_bundle.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+  <style>
+    body { margin: 0; background: #f8fafc; font-family: 'Inter', system-ui, sans-serif; }
+    a { color: #0ea5e9; text-decoration: none; }
+    a:hover { color: #0284c7; text-decoration: underline; }
+  </style>
+</helmet>
+
+<section style="padding: 56px; display: flex; flex-direction: column; gap: 44px;">
+
+  <div style="max-width: 860px;">
+    <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8; margin-bottom: 8px;">View Designer · Casi d'uso</div>
+    <h1 style="font-size: 24px; font-weight: 700; color: #0f172a; margin: 0 0 10px;">Il modello di stile fuori dal rettangolo</h1>
+    <p style="font-size: 14px; color: #475569; margin: 0 0 16px; line-height: 1.6;">Quattro notazioni reali. Ogni caso mostra il default attuale e la proposta. Serve a verificare una cosa: quali campi di stile dipendono dalla <b style="color: #0f172a;">forma</b> e quali no.</p>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; max-width: 860px;">
+      <div style="background: #ffffff; border: 0.5px solid #e2e8f0; border-radius: 8px; padding: 12px 14px;">
+        <div style="font-size: 12px; font-weight: 600; color: #0f172a; margin-bottom: 4px;">1 · Symbol</div>
+        <div style="font-size: 12px; color: #64748b; line-height: 1.5;">Forma, fill, border, padding, sizing. <b style="color: #475569;">Esiste già.</b> Determina quali campi degli altri livelli sono disponibili.</div>
+      </div>
+      <div style="background: #ffffff; border: 0.5px solid #e2e8f0; border-radius: 8px; padding: 12px 14px;">
+        <div style="font-size: 12px; font-weight: 600; color: #0f172a; margin-bottom: 4px;">2 · Structure</div>
+        <div style="font-size: 12px; color: #64748b; line-height: 1.5;">Dove va il nome, dove i compartment, cosa fare degli slot vuoti. <b style="color: #475569;">Dipende dalla forma.</b></div>
+      </div>
+      <div style="background: #ffffff; border: 0.5px solid #e2e8f0; border-radius: 8px; padding: 12px 14px;">
+        <div style="font-size: 12px; font-weight: 600; color: #0f172a; margin-bottom: 4px;">3 · Row view</div>
+        <div style="font-size: 12px; color: #64748b; line-height: 1.5;">Come si rende un valore. <b style="color: #475569;">Indipendente dalla forma</b> — identico in tutti e quattro i casi.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================ CASO A ============================ -->
+  <div id="1a" style="display: flex; flex-direction: column; gap: 18px; border-top: 1px solid #e2e8f0; padding-top: 32px;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <span style="font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: #0f172a; color: #ffffff; letter-spacing: 0.04em;">1a</span>
+      <span style="font-size: 16px; font-weight: 600; color: #0f172a;">Shape / Config — il caso degli screenshot, portato a regime</span>
+      <span style="font-size: 12px; color: #94a3b8;">Rectangle · Vertex + Row</span>
+    </div>
+
+    <div style="display: flex; gap: 40px; flex-wrap: wrap; align-items: flex-start;">
+
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8;">Default attuale</div>
+        <div style="width: 700px; height: 380px; background: #ffffff; border: 0.5px solid #e2e8f0; border-radius: 12px; position: relative; overflow: hidden;">
+          <div style="position: absolute; left: 40px; top: 40px; width: 200px; background: #ffffff; border: 1px solid #334155; border-radius: 4px;">
+            <div style="padding: 7px 12px; border-bottom: 1px solid #cbd5e1; text-align: center; font-size: 13px; font-weight: 600; color: #0f172a;">Shape_0 : Shape</div>
+            <div style="padding: 8px 12px; font-size: 13px; color: #334155; line-height: 1.7;">color = Green<br>tags = Green<br>cfg = Config<br>owner =</div>
+          </div>
+          <div style="position: absolute; left: 380px; top: 40px; width: 200px; background: #ffffff; border: 1px solid #334155; border-radius: 4px;">
+            <div style="padding: 7px 12px; border-bottom: 1px solid #cbd5e1; text-align: center; font-size: 13px; font-weight: 600; color: #0f172a;">Shape_1 : Shape</div>
+            <div style="padding: 8px 12px; font-size: 13px; color: #334155; line-height: 1.7;">color =<br>tags =<br>cfg = Config<br>owner =</div>
+          </div>
+          <div style="position: absolute; left: 60px; top: 250px; padding: 8px 20px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 13px; color: #0f172a;"><span style="text-decoration: underline;">Green : Green</span></div>
+          <div style="position: absolute; left: 250px; top: 250px; padding: 8px 20px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 13px; color: #0f172a;"><span style="text-decoration: underline;">Config : Config</span></div>
+          <div style="position: absolute; left: 128px; top: 184px; width: 1px; height: 66px; background: #cbd5e1;"></div>
+          <div style="position: absolute; left: 165px; top: 184px; width: 155px; height: 1px; background: #cbd5e1;"></div>
+          <div style="position: absolute; left: 320px; top: 184px; width: 1px; height: 66px; background: #cbd5e1;"></div>
+          <div style="position: absolute; left: 133px; top: 206px; font-size: 10px; color: #94a3b8; background: #ffffff; padding: 0 3px;">tags</div>
+          <div style="position: absolute; left: 325px; top: 206px; font-size: 10px; color: #94a3b8; background: #ffffff; padding: 0 3px;">cfg</div>
+        </div>
+        <div style="font-size: 12px; color: #94a3b8; width: 700px; line-height: 1.5;">Le Row view <span style="font-family: 'IBM Plex Mono', monospace;">Green</span> e <span style="font-family: 'IBM Plex Mono', monospace;">Config</span> sono nodi a sé sul canvas, ma dentro <span style="font-family: 'IBM Plex Mono', monospace;">Shape_0</span> lo stesso valore è testo piatto: la stessa informazione ha due rappresentazioni non correlate.</div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #475569;">Proposta</div>
+        <div style="width: 700px; height: 380px; background: #ffffff; border: 0.5px solid #e2e8f0; border-radius: 12px; position: relative; overflow: hidden;">
+          <div style="position: absolute; left: 40px; top: 34px; width: 264px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); overflow: hidden;">
+            <div style="padding: 10px 14px; border-bottom: 1px solid #cbd5e1; text-align: center;"><span style="font-size: 14px; font-weight: 600; color: #0f172a; text-decoration: underline; text-underline-offset: 3px;">Shape_0 : Shape</span></div>
+            <div style="padding: 10px 14px; display: grid; grid-template-columns: 62px 1fr; row-gap: 8px; column-gap: 12px; font-size: 13px; align-items: center;">
+              <span style="color: #64748b;">color</span>
+              <span style="display: inline-flex; align-items: center; gap: 6px; color: #0f172a; font-weight: 500;"><span style="width: 10px; height: 10px; border-radius: 3px; background: #22c55e; flex: none;"></span>Green</span>
+              <span style="color: #64748b;">tags <span style="color: #cbd5e1; font-size: 11px;">[1]</span></span>
+              <span style="display: flex; align-items: center; gap: 5px;"><x-import component-from-global-scope="JjodelDesignSystem_cc51d0.Tag" hint-size="52px,18px">Green</x-import><i class="bi bi-arrow-up-right" style="font-size: 11px; color: #94a3b8;"></i></span>
+              <span style="color: #64748b;">cfg</span>
+              <span style="display: flex; align-items: center; gap: 5px;"><span style="display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; padding: 2px 8px; border-radius: 999px; background: #ecfeff; color: #0891b2; border: 1px solid #a5f3fc;"><i class="bi bi-link-45deg"></i>Config</span><i class="bi bi-arrow-up-right" style="font-size: 11px; color: #94a3b8;"></i></span>
+              <span style="color: #64748b;">owner</span>
+              <span style="color: #cbd5e1;">—</span>
+            </div>
+          </div>
+
+          <div style="position: absolute; left: 424px; top: 34px; width: 232px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); overflow: hidden;">
+            <div style="padding: 10px 14px; border-bottom: 1px solid #cbd5e1; text-align: center;"><span style="font-size: 14px; font-weight: 600; color: #0f172a; text-decoration: underline; text-underline-offset: 3px;">Shape_1 : Shape</span></div>
+            <div style="padding: 10px 14px; display: grid; grid-template-columns: 62px 1fr; row-gap: 8px; column-gap: 12px; font-size: 13px; align-items: center;">
+              <span style="color: #64748b;">cfg</span>
+              <span style="display: flex; align-items: center; gap: 5px;"><span style="display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; padding: 2px 8px; border-radius: 999px; background: #ecfeff; color: #0891b2; border: 1px solid #a5f3fc;"><i class="bi bi-link-45deg"></i>Config</span><i class="bi bi-arrow-up-right" style="font-size: 11px; color: #94a3b8;"></i></span>
+            </div>
+            <div style="padding: 8px 14px; border-top: 1px solid #f1f5f9; font-size: 11px; color: #94a3b8; display: flex; align-items: center; gap: 6px;"><i class="bi bi-chevron-down"></i>3 slot vuoti</div>
+          </div>
+
+          <div style="position: absolute; left: 62px; top: 268px; display: inline-flex; align-items: center; gap: 7px; padding: 7px 14px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 999px; box-shadow: 0 1px 2px rgba(0,0,0,0.04);">
+            <span style="width: 11px; height: 11px; border-radius: 3px; background: #22c55e;"></span>
+            <span style="font-size: 13px; font-weight: 500; color: #0f172a; text-decoration: underline; text-underline-offset: 3px;">Green</span>
+          </div>
+          <div style="position: absolute; left: 244px; top: 268px; display: inline-flex; align-items: center; gap: 7px; padding: 7px 14px; background: #ecfeff; border: 1px solid #a5f3fc; border-radius: 999px; box-shadow: 0 1px 2px rgba(0,0,0,0.04);">
+            <i class="bi bi-link-45deg" style="font-size: 13px; color: #0891b2;"></i>
+            <span style="font-size: 13px; font-weight: 500; color: #0e7490; text-decoration: underline; text-underline-offset: 3px;">Config</span>
+          </div>
+          <div style="position: absolute; left: 118px; top: 210px; width: 1px; height: 58px; background: #cbd5e1;"></div>
+          <div style="position: absolute; left: 160px; top: 210px; width: 130px; height: 1px; background: #cbd5e1;"></div>
+          <div style="position: absolute; left: 290px; top: 210px; width: 1px; height: 58px; background: #cbd5e1;"></div>
+          <div style="position: absolute; left: 123px; top: 228px; font-size: 10px; color: #94a3b8; background: #ffffff; padding: 0 3px;">tags</div>
+          <div style="position: absolute; left: 295px; top: 228px; font-size: 10px; color: #94a3b8; background: #ffffff; padding: 0 3px;">cfg</div>
+        </div>
+        <div style="font-size: 12px; color: #94a3b8; width: 700px; line-height: 1.5;">La Row view e la riga nel compartment usano <b style="color: #64748b;">lo stesso renderer</b>: swatch per il colore, pill cyan per il riferimento. Il nodo standalone è la stessa Row view scalata, non un secondo disegno. La freccia ↗ marca le righe che hanno anche un edge.</div>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 32px; flex-wrap: wrap; align-items: flex-start; background: #ffffff; border: 0.5px solid #e2e8f0; border-radius: 12px; padding: 24px; max-width: 1440px;">
+      <div style="width: 340px; display: flex; flex-direction: column; gap: 14px;">
+        <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8;">Pannello · View for Shape</div>
+        <div style="border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+          <div style="display: flex; gap: 18px; padding: 0 14px; border-bottom: 1px solid #e2e8f0; font-size: 13px;">
+            <span style="padding: 10px 0; color: #64748b;">Applies to</span>
+            <span style="padding: 10px 0; color: #0f172a; font-weight: 600; box-shadow: inset 0 -2px 0 #0ea5e9;">Structure</span>
+            <span style="padding: 10px 0; color: #64748b;">Symbol</span>
+            <span style="padding: 10px 0; color: #64748b;">Source</span>
+          </div>
+          <div style="padding: 14px; display: flex; flex-direction: column; gap: 16px;">
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8;">Nome</div>
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+                <span style="font-size: 13px; color: #475569;">Posizione</span>
+                <span style="font-size: 12px; padding: 5px 10px; border: 1px solid #cbd5e1; border-radius: 4px; color: #0f172a; display: inline-flex; align-items: center; gap: 7px;">Banda header <i class="bi bi-chevron-down" style="font-size: 10px; color: #94a3b8;"></i></span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px; font-size: 11px; color: #94a3b8;"><i class="bi bi-info-circle"></i>Disponibile perché il Symbol è <span style="color: #64748b; font-weight: 500;">Rectangle</span></div>
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+                <span style="font-size: 13px; color: #475569;">Tipo</span>
+                <div style="display: flex; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                  <span style="font-size: 12px; padding: 5px 10px; background: #f1f5f9; color: #0f172a; font-weight: 500;">Inline</span>
+                  <span style="font-size: 12px; padding: 5px 10px; color: #64748b; border-left: 1px solid #e2e8f0;">Chip</span>
+                  <span style="font-size: 12px; padding: 5px 10px; color: #64748b; border-left: 1px solid #e2e8f0;">Badge</span>
+                </div>
+              </div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 10px; border-top: 1px solid #f1f5f9; padding-top: 14px;">
+              <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8;">Compartment</div>
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+                <span style="font-size: 13px; color: #475569;">Slot vuoti</span>
+                <div style="display: flex; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                  <span style="font-size: 12px; padding: 5px 10px; background: #f1f5f9; color: #0f172a; font-weight: 500;">Dash</span>
+                  <span style="font-size: 12px; padding: 5px 10px; color: #64748b; border-left: 1px solid #e2e8f0;">Collassa</span>
+                  <span style="font-size: 12px; padding: 5px 10px; color: #64748b; border-left: 1px solid #e2e8f0;">Nascondi</span>
+                </div>
+              </div>
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+                <span style="font-size: 13px; color: #475569;">Marca gli edge</span>
+                <x-import component-from-global-scope="JjodelDesignSystem_cc51d0.Switch" checked="{{ true }}" hint-size="44px,24px"></x-import>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="width: 340px; display: flex; flex-direction: column; gap: 14px;">
+        <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8;">Symbol editor · campi rilevanti</div>
+        <div style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; display: flex; flex-direction: column; gap: 14px;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="width: 40px; height: 26px; border: 1px solid #334155; border-radius: 3px; background: #ffffff; flex: none;"></span>
+            <div style="min-width: 0;">
+              <div style="font-size: 13px; font-weight: 600; color: #0f172a;">Rectangle</div>
+              <div style="font-size: 11px; color: #94a3b8;">Base · Flowchart · ER</div>
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <span style="font-size: 12px; color: #64748b;">Fill</span>
+              <div style="display: flex; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden;">
+                <span style="font-size: 11px; padding: 4px 9px; color: #64748b;">Fixed</span>
+                <span style="font-size: 11px; padding: 4px 9px; background: #f1f5f9; color: #0f172a; font-weight: 600; border-left: 1px solid #e2e8f0;">Conditional</span>
+              </div>
+            </div>
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; display: flex; flex-direction: column; gap: 7px;">
+              <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #475569;">selected → #e0f7fa</div>
+              <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #475569;">else → #ffffff</div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px; font-size: 11px; color: #94a3b8; line-height: 1.5;"><i class="bi bi-lightbulb" style="margin-top: 1px;"></i>Il colore categoriale è un fill condizionale sulla metaclasse — non serve una cascata parallela.</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="width: 340px; display: flex; flex-direction: column; gap: 14px;">
+        <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8;">Libreria di Row view</div>
+        <div style="border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+          <div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-bottom: 1px solid #f1f5f9;">
+            <span style="width: 11px; height: 11px; border-radius: 3px; background: #22c55e; flex: none;"></span>
+            <span style="font-size: 12px; color: #0f172a;">Swatch</span>
+            <span style="margin-left: auto; font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #94a3b8;">Color</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-bottom: 1px solid #f1f5f9;">
+            <x-import component-from-global-scope="JjodelDesignSystem_cc51d0.Tag" hint-size="40px,18px">Tag</x-import>
+            <span style="font-size: 12px; color: #0f172a;">Chip</span>
+            <span style="margin-left: auto; font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #94a3b8;">Collection</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-bottom: 1px solid #f1f5f9;">
+            <span style="display: inline-flex; align-items: center; gap: 4px; font-size: 11px; padding: 2px 7px; border-radius: 999px; background: #ecfeff; color: #0891b2; border: 1px solid #a5f3fc;"><i class="bi bi-link-45deg"></i>ref</span>
+            <span style="font-size: 12px; color: #0f172a;">Pill</span>
+            <span style="margin-left: auto; font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #94a3b8;">Reference</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px;">
+            <span style="color: #cbd5e1; width: 11px; text-align: center;">—</span>
+            <span style="font-size: 12px; color: #0f172a;">Dash</span>
+            <span style="margin-left: auto; font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #94a3b8;">unset</span>
+          </div>
+        </div>
+        <div style="font-size: 12px; color: #94a3b8; line-height: 1.5;">Le quattro Row view valgono identiche in tutti i casi sotto. È il livello da implementare per primo proprio perché non dipende dalla geometria.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================ CASO B ============================ -->
+  <div id="1b" style="display: flex; flex-direction: column; gap: 18px; border-top: 1px solid #e2e8f0; padding-top: 32px;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <span style="font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: #0f172a; color: #ffffff; letter-spacing: 0.04em;">1b</span>
+      <span style="font-size: 16px; font-weight: 600; color: #0f172a;">State machine — nessun compartment, il nome è tutto</span>
+      <span style="font-size: 12px; color: #94a3b8;">Stadium · Circle</span>
+    </div>
+
+    <div style="display: flex; gap: 40px; flex-wrap: wrap; align-items: flex-start;">
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8;">Default attuale</div>
+        <div style="width: 560px; height: 260px; background: #ffffff; border: 0.5px solid #e2e8f0; border-radius: 12px; position: relative; overflow: hidden;">
+          <div style="position: absolute; left: 40px; top: 56px; width: 190px; background: #ffffff; border: 1px solid #334155; border-radius: 4px;">
+            <div style="padding: 7px 12px; border-bottom: 1px solid #cbd5e1; text-align: center; font-size: 13px; font-weight: 600; color: #0f172a;">Idle : State</div>
+            <div style="padding: 8px 12px; font-size: 13px; color: #334155; line-height: 1.7;">entry =<br>exit =<br>timeout = 30</div>
+          </div>
+          <div style="position: absolute; left: 320px; top: 56px; width: 190px; background: #ffffff; border: 1px solid #334155; border-radius: 4px;">
+            <div style="padding: 7px 12px; border-bottom: 1px solid #cbd5e1; text-align: center; font-size: 13px; font-weight: 600; color: #0f172a;">Running : State</div>
+            <div style="padding: 8px 12px; font-size: 13px; color: #334155; line-height: 1.7;">entry = start<br>exit =<br>timeout =</div>
+          </div>
+          <div style="position: absolute; left: 230px; top: 88px; width: 90px; height: 1px; background: #cbd5e1;"></div>
+        </div>
+        <div style="font-size: 12px; color: #94a3b8; width: 560px; line-height: 1.5;">Il rettangolo con compartment impone tre righe a ogni stato, due delle quali vuote. Una state machine di 20 stati diventa illeggibile — e il rettangolo nasconde che questi sono <i>stati</i>, non entità dati.</div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #475569;">Proposta</div>
+        <div style="width: 560px; height: 260px; background: #ffffff; border: 0.5px solid #e2e8f0; border-radius: 12px; position: relative; overflow: hidden;">
+          <div style="position: absolute; left: 32px; top: 100px; width: 16px; height: 16px; border-radius: 999px; background: #334155;"></div>
+          <div style="position: absolute; left: 48px; top: 108px; width: 40px; height: 1px; background: #cbd5e1;"></div>
+
+          <div style="position: absolute; left: 88px; top: 88px; padding: 11px 26px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 999px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); font-size: 14px; font-weight: 600; color: #0f172a;"><span style="text-decoration: underline; text-underline-offset: 3px;">Idle</span></div>
+
+          <div style="position: absolute; left: 169px; top: 108px; width: 132px; height: 1px; background: #cbd5e1;"></div>
+          <div style="position: absolute; left: 212px; top: 84px; font-size: 11px; color: #64748b; background: #ffffff; padding: 0 4px;">start</div>
+
+          <div style="position: absolute; left: 300px; top: 78px; display: flex; flex-direction: column; align-items: center; gap: 7px;">
+            <div style="padding: 11px 26px; background: #e0f7fa; border: 1px solid #0891b2; border-radius: 999px; box-shadow: 0 0 0 3px rgba(6,182,212,0.18); font-size: 14px; font-weight: 600; color: #0f172a;"><span style="text-decoration: underline; text-underline-offset: 3px;">Running</span></div>
+            <div style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); padding: 8px 12px; display: grid; grid-template-columns: auto 1fr; row-gap: 5px; column-gap: 10px; font-size: 12px;">
+              <span style="color: #64748b;">entry</span><span style="color: #0f172a; font-weight: 500;">start</span>
+              <span style="color: #64748b;">exit</span><span style="color: #cbd5e1;">—</span>
+              <span style="color: #64748b;">timeout</span><span style="color: #cbd5e1;">—</span>
+            </div>
+          </div>
+
+          <div style="position: absolute; left: 470px; top: 96px; width: 30px; height: 30px; border-radius: 999px; border: 2px solid #334155; display: flex; align-items: center; justify-content: center;"><span style="width: 16px; height: 16px; border-radius: 999px; background: #334155;"></span></div>
+          <div style="position: absolute; left: 412px; top: 110px; width: 59px; height: 1px; background: #cbd5e1;"></div>
+        </div>
+        <div style="font-size: 12px; color: #94a3b8; width: 560px; line-height: 1.5;">Symbol <b style="color: #64748b;">Stadium</b>, nome al centro, nessun compartment. Gli attributi appaiono <b style="color: #64748b;">solo sulla selezione</b>, in un popover ancorato sotto la forma — così il diagramma resta topologia e i dati sono a un clic. Initial e final node sono Symbol <b style="color: #64748b;">Circle</b> senza nome.</div>
+      </div>
+    </div>
+
+    <div style="background: #ffffff; border: 0.5px solid #e2e8f0; border-radius: 8px; padding: 14px 18px; max-width: 1160px; font-size: 13px; color: #475569; line-height: 1.6;">
+      <b style="color: #0f172a;">Campi che scompaiono con questa forma:</b> <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">name.position</span> perde le opzioni «banda header» (nessun bordo piatto su cui appoggiarsi) e resta su <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">center</span> / <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">below</span>; <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">accentPlacement</span> perde <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">top</span> e <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">left</span> e guadagna <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">ring</span>. <b style="color: #0f172a;">Campi che restano identici:</b> le Row view nel popover, <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">emptyBehavior</span>, la regola del cyan sulla selezione.
+    </div>
+  </div>
+
+  <!-- ============================ CASO C ============================ -->
+  <div id="1c" style="display: flex; flex-direction: column; gap: 18px; border-top: 1px solid #e2e8f0; padding-top: 32px;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <span style="font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: #0f172a; color: #ffffff; letter-spacing: 0.04em;">1c</span>
+      <span style="font-size: 16px; font-weight: 600; color: #0f172a;">BPMN — il nome non sta dentro la forma</span>
+      <span style="font-size: 12px; color: #94a3b8;">Diamond · Rounded rect</span>
+    </div>
+
+    <div style="display: flex; gap: 40px; flex-wrap: wrap; align-items: flex-start;">
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8;">Default attuale</div>
+        <div style="width: 560px; height: 300px; background: #ffffff; border: 0.5px solid #e2e8f0; border-radius: 12px; position: relative; overflow: hidden;">
+          <div style="position: absolute; left: 40px; top: 110px; width: 180px; background: #ffffff; border: 1px solid #334155; border-radius: 4px;">
+            <div style="padding: 7px 12px; border-bottom: 1px solid #cbd5e1; text-align: center; font-size: 13px; font-weight: 600; color: #0f172a;">g1 : Gateway</div>
+            <div style="padding: 8px 12px; font-size: 13px; color: #334155; line-height: 1.7;">condition = amount &gt; 1000<br>default =</div>
+          </div>
+          <div style="position: absolute; left: 320px; top: 110px; width: 180px; background: #ffffff; border: 1px solid #334155; border-radius: 4px;">
+            <div style="padding: 7px 12px; border-bottom: 1px solid #cbd5e1; text-align: center; font-size: 13px; font-weight: 600; color: #0f172a;">t2 : Task</div>
+            <div style="padding: 8px 12px; font-size: 13px; color: #334155; line-height: 1.7;">name = Approve<br>assignee =</div>
+          </div>
+        </div>
+        <div style="font-size: 12px; color: #94a3b8; width: 560px; line-height: 1.5;">Un gateway reso come rettangolo con compartment perde tutta la sua leggibilità BPMN: chi legge il diagramma non vede più che quello è un punto di decisione.</div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #475569;">Proposta</div>
+        <div style="width: 560px; height: 300px; background: #ffffff; border: 0.5px solid #e2e8f0; border-radius: 12px; position: relative; overflow: hidden;">
+          <div style="position: absolute; left: 40px; top: 116px; padding: 14px 22px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); font-size: 13px; font-weight: 600; color: #0f172a;"><span style="text-decoration: underline; text-underline-offset: 3px;">Submit</span></div>
+
+          <div style="position: absolute; left: 160px; top: 137px; width: 44px; height: 1px; background: #cbd5e1;"></div>
+
+          <div style="position: absolute; left: 204px; top: 100px; width: 76px; height: 76px; border: 1px solid #cbd5e1; background: #ffffff; transform: rotate(45deg); border-radius: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.04);"></div>
+          <div style="position: absolute; left: 228px; top: 124px; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;"><i class="bi bi-x-lg" style="font-size: 15px; color: #64748b;"></i></div>
+          <div style="position: absolute; left: 190px; top: 190px; width: 104px; text-align: center; font-size: 13px; font-weight: 600; color: #0f172a;"><span style="text-decoration: underline; text-underline-offset: 3px;">amount?</span></div>
+          <div style="position: absolute; left: 190px; top: 210px; width: 104px; text-align: center; font-size: 11px; color: #94a3b8;">Gateway</div>
+
+          <div style="position: absolute; left: 280px; top: 137px; width: 60px; height: 1px; background: #cbd5e1;"></div>
+          <div style="position: absolute; left: 288px; top: 114px; font-size: 11px; color: #64748b; background: #ffffff; padding: 0 4px;">&gt; 1000</div>
+
+          <div style="position: absolute; left: 340px; top: 116px; padding: 14px 22px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); font-size: 13px; font-weight: 600; color: #0f172a;"><span style="text-decoration: underline; text-underline-offset: 3px;">Approve</span></div>
+          <div style="position: absolute; left: 344px; top: 178px; font-size: 11px; color: #94a3b8;">assignee <span style="color: #cbd5e1;">—</span></div>
+        </div>
+        <div style="font-size: 12px; color: #94a3b8; width: 560px; line-height: 1.5;">Symbol <b style="color: #64748b;">Diamond</b> con <span style="font-family: 'IBM Plex Mono', monospace;">name.position = below</span>: la label è ancorata sotto la forma, con il tipo come seconda riga attenuata. La condizione non sta nel nodo — è l'<b style="color: #64748b;">etichetta dell'edge</b> uscente, che è dove BPMN la mette.</div>
+      </div>
+    </div>
+
+    <div style="background: #ffffff; border: 0.5px solid #e2e8f0; border-radius: 8px; padding: 14px 18px; max-width: 1160px; font-size: 13px; color: #475569; line-height: 1.6;">
+      <b style="color: #0f172a;">La lezione:</b> con forme non rettangolari alcuni attributi non vanno resi <i>nel nodo</i> ma <i>sull'edge</i>. Quindi <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">Structure</span> ha bisogno di un terzo valore oltre a «riga» e «edge»: <b style="color: #0f172a;">etichetta dell'edge</b> — la proprietà diventa il testo della connessione. Le stesse Row view si applicano lì senza modifiche.
+    </div>
+  </div>
+
+  <!-- ============================ CASO D ============================ -->
+  <div id="1d" style="display: flex; flex-direction: column; gap: 18px; border-top: 1px solid #e2e8f0; padding-top: 32px;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <span style="font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: #0f172a; color: #ffffff; letter-spacing: 0.04em;">1d</span>
+      <span style="font-size: 16px; font-weight: 600; color: #0f172a;">ER — il caso a massima densità informativa</span>
+      <span style="font-size: 12px; color: #94a3b8;">Rectangle · ER</span>
+    </div>
+
+    <div style="display: flex; gap: 40px; flex-wrap: wrap; align-items: flex-start;">
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8;">Default attuale</div>
+        <div style="width: 560px; height: 340px; background: #ffffff; border: 0.5px solid #e2e8f0; border-radius: 12px; position: relative; overflow: hidden;">
+          <div style="position: absolute; left: 40px; top: 40px; width: 220px; background: #ffffff; border: 1px solid #334155; border-radius: 4px;">
+            <div style="padding: 7px 12px; border-bottom: 1px solid #cbd5e1; text-align: center; font-size: 13px; font-weight: 600; color: #0f172a;">Order : Entity</div>
+            <div style="padding: 8px 12px; font-size: 13px; color: #334155; line-height: 1.7;">id = integer<br>customer_id = integer<br>total = decimal<br>status = enum<br>shipped_at =</div>
+          </div>
+        </div>
+        <div style="font-size: 12px; color: #94a3b8; width: 560px; line-height: 1.5;">Cinque righe indistinguibili: non si vede quale è la chiave, quale è una FK, quale ammette null. In un ER di 30 tabelle questa è la differenza tra uno schema leggibile e un muro.</div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #475569;">Proposta</div>
+        <div style="width: 560px; height: 340px; background: #ffffff; border: 0.5px solid #e2e8f0; border-radius: 12px; position: relative; overflow: hidden;">
+          <div style="position: absolute; left: 36px; top: 30px; width: 274px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); overflow: hidden;">
+            <div style="padding: 10px 14px; background: #f1f5f9; border-bottom: 1px solid #cbd5e1; display: flex; align-items: center; gap: 9px;">
+              <span style="font-size: 14px; font-weight: 600; color: #0f172a; text-decoration: underline; text-underline-offset: 3px;">Order</span>
+              <span style="margin-left: auto; font-size: 11px; color: #94a3b8;">5 colonne</span>
+            </div>
+            <div style="padding: 8px 0; display: flex; flex-direction: column;">
+              <div style="display: grid; grid-template-columns: 20px 1fr auto; column-gap: 8px; align-items: center; padding: 4px 14px; font-size: 13px;">
+                <i class="bi bi-key-fill" style="font-size: 11px; color: #b45309;"></i>
+                <span style="color: #0f172a; font-weight: 600;">id</span>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #94a3b8;">integer</span>
+              </div>
+              <div style="display: grid; grid-template-columns: 20px 1fr auto; column-gap: 8px; align-items: center; padding: 4px 14px; font-size: 13px;">
+                <i class="bi bi-link-45deg" style="font-size: 13px; color: #0891b2;"></i>
+                <span style="color: #0f172a;">customer_id</span>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #94a3b8;">integer</span>
+              </div>
+              <div style="display: grid; grid-template-columns: 20px 1fr auto; column-gap: 8px; align-items: center; padding: 4px 14px; font-size: 13px;">
+                <span></span>
+                <span style="color: #0f172a;">total</span>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #94a3b8;">decimal</span>
+              </div>
+              <div style="display: grid; grid-template-columns: 20px 1fr auto; column-gap: 8px; align-items: center; padding: 4px 14px; font-size: 13px;">
+                <span></span>
+                <span style="color: #0f172a; display: inline-flex; align-items: center; gap: 6px;">status <span style="width: 9px; height: 9px; border-radius: 3px; background: #22c55e;"></span></span>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #94a3b8;">enum</span>
+              </div>
+              <div style="display: grid; grid-template-columns: 20px 1fr auto; column-gap: 8px; align-items: center; padding: 4px 14px; font-size: 13px;">
+                <span></span>
+                <span style="color: #94a3b8;">shipped_at</span>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #cbd5e1;">timestamp?</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="position: absolute; left: 310px; top: 96px; width: 90px; height: 1px; background: #cbd5e1;"></div>
+          <div style="position: absolute; left: 314px; top: 74px; font-size: 11px; font-family: 'IBM Plex Mono', monospace; color: #64748b;">0..*</div>
+          <div style="position: absolute; left: 386px; top: 74px; font-size: 11px; font-family: 'IBM Plex Mono', monospace; color: #64748b;">1</div>
+
+          <div style="position: absolute; left: 400px; top: 62px; width: 148px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); overflow: hidden;">
+            <div style="padding: 9px 12px; background: #f1f5f9; border-bottom: 1px solid #cbd5e1;"><span style="font-size: 13px; font-weight: 600; color: #0f172a; text-decoration: underline; text-underline-offset: 3px;">Customer</span></div>
+            <div style="padding: 8px 0; display: flex; flex-direction: column;">
+              <div style="display: grid; grid-template-columns: 20px 1fr; column-gap: 8px; align-items: center; padding: 4px 12px; font-size: 13px;">
+                <i class="bi bi-key-fill" style="font-size: 11px; color: #b45309;"></i><span style="color: #0f172a; font-weight: 600;">id</span>
+              </div>
+              <div style="display: grid; grid-template-columns: 20px 1fr; column-gap: 8px; align-items: center; padding: 4px 12px; font-size: 13px;">
+                <span></span><span style="color: #0f172a;">email</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="font-size: 12px; color: #94a3b8; width: 560px; line-height: 1.5;">Il compartment passa a <b style="color: #64748b;">tre colonne</b>: marca · nome · tipo. La chiave è un glifo, non una parola; la FK usa la stessa icona link del riferimento; il nullable si legge dal <span style="font-family: 'IBM Plex Mono', monospace;">?</span> e dal nome attenuato. La cardinalità sta sull'edge, agli estremi.</div>
+      </div>
+    </div>
+
+    <div style="background: #ffffff; border: 0.5px solid #e2e8f0; border-radius: 8px; padding: 14px 18px; max-width: 1160px; font-size: 13px; color: #475569; line-height: 1.6;">
+      <b style="color: #0f172a;">Nuovo campo che emerge:</b> <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">compartment.columns</span> — <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">2</span> (nome · valore, il caso istanza) oppure <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">3</span> (marca · nome · tipo, il caso schema). Non è una variante estetica: sono due letture diverse dello stesso compartment, una orientata ai <i>valori</i> e una alla <i>struttura</i>.
+    </div>
+  </div>
+
+  <!-- ============================ SINTESI ============================ -->
+  <div style="border-top: 1px solid #e2e8f0; padding-top: 32px; display: flex; flex-direction: column; gap: 16px; max-width: 1160px;">
+    <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8;">Sintesi · cosa dipende dalla forma</div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+      <div style="background: #ffffff; border: 0.5px solid #e2e8f0; border-radius: 12px; padding: 18px 20px; display: flex; flex-direction: column; gap: 10px;">
+        <div style="font-size: 13px; font-weight: 600; color: #0f172a;">Contestuale al Symbol</div>
+        <div style="font-size: 13px; color: #475569; line-height: 1.7;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">name.position</span> — banda / centro / sotto / esterna<br>
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">accentPlacement</span> — top / left / ring / none<br>
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">compartment.mode</span> — dentro / popover / assente<br>
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">compartment.columns</span> — 2 / 3
+        </div>
+        <div style="font-size: 12px; color: #94a3b8; line-height: 1.5;">Il pannello mostra solo le opzioni che la forma scelta supporta, con la ragione in chiaro: «disponibile perché il Symbol è Rectangle».</div>
+      </div>
+      <div style="background: #ffffff; border: 0.5px solid #e2e8f0; border-radius: 12px; padding: 18px 20px; display: flex; flex-direction: column; gap: 10px;">
+        <div style="font-size: 13px; font-weight: 600; color: #0f172a;">Universale</div>
+        <div style="font-size: 13px; color: #475569; line-height: 1.7;">
+          Le quattro Row view — swatch, chip, pill, dash<br>
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">emptyBehavior</span> — dash / collassa / nascondi<br>
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">property.render</span> — riga / edge / etichetta d'edge<br>
+          Nome istanza sottolineato · la selezione possiede il cyan
+        </div>
+        <div style="font-size: 12px; color: #94a3b8; line-height: 1.5;">È il livello da implementare per primo: vale in tutti e quattro i casi e non richiede nessuna decisione sulla geometria.</div>
+      </div>
+    </div>
+  </div>
+</section>
+</x-dc>
+</body>
+</html>

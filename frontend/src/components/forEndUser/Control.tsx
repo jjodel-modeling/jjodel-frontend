@@ -15,7 +15,7 @@ import { JSXElementConstructor, MouseEventHandler, ReactElement, ReactNode, Reac
 import "./control.scss";
 import { useStateIfMounted } from "use-state-if-mounted";
 import { Tooltip } from "./Tooltip";
-import { VertexOwnProps } from "../../graph/graphElement/sharedTypes/sharedTypes";
+import { VertexOwnProps } from "../../common/sharedTypes";
 import { VscDebugRestart, VscDebugStepInto, VscDebugStop } from "react-icons/vsc";
 
 
@@ -412,7 +412,7 @@ const MetaElementPicker = (props: PickerProps) => {
         break;
     } 
 
-    return (<div className={'input-container'}>
+    return (<label className={'input-container'}>
         <label style={{marginLeft: props.indent ? props.indent*20 + 'px' : '0px' }}>{props.label || 'Select a ' + props.meta}</label>
        
         <Select
@@ -421,7 +421,7 @@ const MetaElementPicker = (props: PickerProps) => {
             placeholder={placeholder}
             options={<>{options}</>}>
         </Select>
-    </div>
+    </label>
     );
 }
 
@@ -439,7 +439,7 @@ const Section = (props: SectionProps) => {
 
 
 
-/* ContextualEntry */
+/* ContextualEntry * /
 
 type ContextualProps = {
     title: string;
@@ -457,7 +457,7 @@ const ContextualEntry = (props: ContextualProps) => {
     props.node.view.state.contextualEntries[props.title] = {title: props.title, action: props.action, icon: props.icon ? props.icon : ''};
 
     return (<></>);
-}
+}*/
 
 
 
@@ -519,7 +519,6 @@ const SliderComponent = (props: SliderProps) => {
 const Slider = (props: SliderProps, children: ReactNode = []): ReactElement => {
     return <SliderComponent {...props} />;
 }
-
 
 
 
@@ -649,6 +648,25 @@ const Zoom = (props: ZoomProps): ReactElement => {
     return ZoomComponent(props);
 }
 
+// required for some engine stuff, try to put a cname on all components that can be inside a view.
+Control.cname = 'Control';
+Slider.cname = 'Slider';
+Toggle_Obsolete.cname = 'Toggle';
+Zoom.cname = 'Zoom';
+Panel.cname = 'Panel';
+Panell.cname = 'Panell';
+MetaElementPicker.cname = 'MetaElementPicker';
+// ContextualEntry.cname = 'ContextualEntry';
+Slider.cname = 'Slider';
+ControlComponent.cname = 'ControlComponent';
+SliderComponent.cname = 'SliderComponent';
+ToggleComponent_Obsolete.cname = 'ToggleComponent_Obsolete';
+ZoomComponent.cname = 'ZoomComponent';
+PanelComponent.cname = 'PanelComponent';
+PanellComponent.cname = 'PanellComponent';
+//MetaElementPickerComponent.cname = 'MetaElementPickerComponent';
+//ContextualEntryComponent.cname = 'ContextualEntryComponent';
+SliderComponent.cname = 'SliderComponent';
 
-export {Control, Slider, Toggle_Obsolete, Zoom, Panel, Panell, MetaElementPicker, ContextualEntry};
+export {Control, Slider, Toggle_Obsolete, Zoom, Panel, Panell, MetaElementPicker, /*ContextualEntry*/};
 

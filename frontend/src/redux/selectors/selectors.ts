@@ -255,7 +255,7 @@ export class Selectors{
             Object.values(state.graphvertexs || {}),
             Object.values(state.edgepoints || {}));
 
-        console.log('selector getvertex: ', {ptrs, g: Object.values(state.graphs || {}), vv:Object.values(state.voidvertexs || {}), v:Object.values(state.vertexs || {}), gv:Object.values(state.graphvertexs || {}), ep:Object.values(state.edgepoints || {})});
+        // console.log('selector getvertex: ', {ptrs, g: Object.values(state.graphs || {}), vv:Object.values(state.voidvertexs || {}), v:Object.values(state.vertexs || {}), gv:Object.values(state.graphvertexs || {}), ep:Object.values(state.edgepoints || {})});
         if (wrap === undefined || wrap === true) return ptrs.map( p => DPointerTargetable.wrap(p)) as any[];
         if (resolvePointers === undefined || resolvePointers === true) return ptrs.map( r => state.idlookup[r]) as any[];
         return ptrs as any[];
@@ -357,8 +357,11 @@ export class Selectors{
         if (!v) return ViewEClassMatch.MISMATCH_PRECONDITIONS;
         if (!v.appliableToClasses || !v.appliableToClasses.length) return ViewEClassMatch.IMPLICIT_MATCH;
         if (!data) return ViewEClassMatch.MISMATCH_PRECONDITIONS;
-        let ThisClass: typeof DPointerTargetable = RuntimeAccessibleClass.get(data.className);
-        Log.exDev(!ThisClass, 'unable to find class type:', {v, data}); // todo: v = view appliable to DModel, data = proxy<LModel>
+
+        const dataClassName = data.className;
+        let ThisClass: typeof DPointerTargetable = RuntimeAccessibleClass.get(dataClassName);
+
+        Log.exDev(!ThisClass, 'unable to find class type:', {v, data});
         let gotSubclassMatch: boolean = false;
         for (let classtarget of v.appliableToClasses) {
             const ClassTarget: typeof DPointerTargetable = RuntimeAccessibleClass.get(classtarget);
@@ -521,9 +524,9 @@ export class Selectors{
         if (!state) state = store.getState();
         const allViews: DViewElement[] = Selectors.getAllViewElements(state);
 
-        const user = LUser.fromPointer(DUser.current) as LUser;
-        const project = user.project as LProject;
-        let activevpid: Pointer<DViewElement> = project.activeViewpoint.id;
+        //const user = LUser.getUser();
+        const project = LProject.getProject();
+        let activevpid: Pointer<DViewElement> | undefined = project.activeViewpoint?.id;
         // check if scores needs to be updated
         for (const dview of allViews) {
             let vid = dview.id;

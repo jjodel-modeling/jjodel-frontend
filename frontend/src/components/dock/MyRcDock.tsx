@@ -5,15 +5,17 @@ import {
     DocString,
     DUser,
     GObject, L,
-    Log,
+    Log, LProject,
     LUser,
     Point,
     RuntimeAccessible,
     Size,
+    store,
     Try,
     U,
     windoww
 } from "../../joiner";
+import { JjodelEvents } from '../../events/registry';
 import $ from "jquery";
 import {BoxData, LayoutData, DockLayout, LayoutProps, PanelData, TabData, TabGroup} from "rc-dock";
 import {MyPortal} from "./MyDock";
@@ -85,7 +87,7 @@ export class TabHeader extends React.Component<TabHeaderProps, TabHeaderState>{
         let tabh: HTMLElement = this.html;
         let tabsize = Size.of(tabh);
         //let tabcenter: Point = new Point(tabsize.x + tabsize.w/2, tabsize.y + tabsize.h/2);
-        console.log("setActiveTab", {strip, tabdata, tabcontent, csize, tabh, tabsize});
+        // console.log("setActiveTab", {strip, tabdata, tabcontent, csize, tabh, tabsize});
         let offset: Point = new Point(tabsize.x + tabsize.w/2 - csize.w/2, tabsize.y + tabsize.h/2 - csize.h/2);
         let s: string;
         let tabcontentholder: HTMLElement|null|undefined = tabcontent.parentElement?.parentElement;
@@ -109,13 +111,13 @@ export class TabHeader extends React.Component<TabHeaderProps, TabHeaderState>{
             case "t": case "b":
                 s = "clamp(0px, " + offset.x + "px, 100vw)";
                 //s = "clamp(0px, calc(" + tabcenter.x + "px ), 100vw)";
-                console.log("clamp: ", s);
+                // console.log("clamp: ", s);
                 tabcontentholder.style.left = s;
                 break;
             case "l": case "r":
                 s = "clamp(0px, " + offset.y + "px, 100vw)";
                 //s = "clamp(0px, calc(" + tabcenter.y + "px ), 100vw)";
-                console.log("clamp: ", s);
+                // console.log("clamp: ", s);
                 tabcontentholder.style.top = s;
                 break;
         }
@@ -125,7 +127,7 @@ export class TabHeader extends React.Component<TabHeaderProps, TabHeaderState>{
     render(): ReactNode {
         const props: TabHeaderProps = this.props;
         let pinned = this.state.pinned;
-        let content = <div onMouseDown={()=>{console.log("tab dragging start")}}>{props.children}
+        let content = <div onMouseDown={()=>{/* console.log("tab dragging start") */}}>{props.children}
             {/*<i className={"pin-button bi bi-pin-angle" + (this.state.fixed ? '-fill' : '')} onClick={()=>this.toggleFixed()}/>*/}
             <i className={"pin-button bi bi-arrow-down"} onClick={()=>this.unpin()}/>
         </div>;
@@ -263,7 +265,7 @@ export class PinnableStrip extends PureComponent<PinnableStripProps, PinnableStr
         if (this.tabs[tid]) Log.eDevv("docking tab already exist", this, t);
         this.tabs[tid] = t;
         // if (Object.keys(this.tabs).length === 1) this.forceUpdate(); // updates .empty class
-        console.log("addTab", {t, pp1:this.dockLayout!.getLayout().dockbox.children[0], pp0: this.panel});
+        // console.log("addTab", {t, pp1:this.dockLayout!.getLayout().dockbox.children[0], pp0: this.panel});
         (window as any ).pinnableStrip = this;
         //this.dockLayout!.dockMove(t, 'side_panel' + this.props.side, 'middle');
         (window as any).addTab = (t: any)=> this.addTab(t);
@@ -304,7 +306,11 @@ interface LayoutState {
 let currentDropRect!: LayoutState["dropRect"];
 let currentDropArea!: Element;
 let dockLayout!: Element;
-let dropIndicator: Element = U.toHtml('<div class="dock-drop-indicator" style="left: 0px; top: 0px; width: 0px; height: 60px; display: block;')
+let dropIndicator: Element | undefined;
+function getDropIndicator(): Element {
+    if (!dropIndicator) dropIndicator = U.toHtml('<div class="dock-drop-indicator" style="left: 0px; top: 0px; width: 0px; height: 60px; display: block;">');
+    return dropIndicator;
+}
 
 function getStrip(side: string): PinnableStrip {
     let s = side[0];
@@ -319,7 +325,7 @@ windoww.highlightAnchorArea = function(side: string){
     //if (!highlightdiv) return;
     //highlightdiv.style.background = '#ff000077';
     let strip = getStripHtml(side);
-    console.log("highlightpin", {strip, side, PinnableStrip});
+    // console.log("highlightpin", {strip, side, PinnableStrip});
     strip.classList.add('dock-drop-indicator');
 }
 windoww.hideAnchorArea = function(side: string){
@@ -348,7 +354,7 @@ windoww.confirmSetAnchor = function(side: AnchorTypes){
     };
     strip.setAfterUpdateCallback(()=>{
         content.setState({pinned: side}); title.setState({pinned: side});
-        console.log("confirm pin anchor", {content, title, strip, side, tabdata, newtabdata, currentDropRect});
+        // console.log("confirm pin anchor", {content, title, strip, side, tabdata, newtabdata, currentDropRect});
     });
     strip.addTab( newtabdata );
     PinnableDock.instance.hideTab(tabdata.id as string, side);
@@ -356,9 +362,9 @@ windoww.confirmSetAnchor = function(side: AnchorTypes){
     /*strip.setState({pinnedTabsid:{...strip.state.pinnedTabsid, [tabdata.id as string]:true}},
         ()=>{
         content.setState({pinned: side}); title.setState({pinned: side});
-        console.log("confirm pin anchor", {content, title, strip, side, tabdata, currentDropRect});
+        // console.log("confirm pin anchor", {content, title, strip, side, tabdata, currentDropRect});
     });*/
-    console.log("confirm pin anchor 0", {tid:tabdata.id, TabHeader, TabContent});
+    // console.log("confirm pin anchor 0", {tid:tabdata.id, TabHeader, TabContent});
 
 
     // how to? i create a new dockiing here for each strip?
@@ -413,12 +419,16 @@ function makeAnchorControl(side: string){
 </div>`;
     return U.toHtml(str);
 }
-const anchorControls = [
-    makeAnchorControl('top'),
-    makeAnchorControl('bottom'),
-    makeAnchorControl('left'),
-    makeAnchorControl('right'),
-];
+let anchorControls: Element[];
+function getAnchorControls(): Element[] {
+    if (!anchorControls) anchorControls = [
+        makeAnchorControl('top'),
+        makeAnchorControl('bottom'),
+        makeAnchorControl('left'),
+        makeAnchorControl('right'),
+    ];
+    return anchorControls;
+}
 
 // todo: how to drop pinned tabs in the main layout https://github.com/ticlo/rc-dock/issues/97there is also an official example with a different strat
 @RuntimeAccessible('PinnableDock')
@@ -432,14 +442,14 @@ export class PinnableDock extends DockLayout{
             "children": [
                 {
                     "id": "+24",
-                    "size": 200,
+                    "size": 1, // Left panel - flex behavior
                     "tabs": [ {"id": "DockComponent_rightbar_1"} ] as any,
                     "group": "models",
                     "activeId": "DockComponent_rightbar_1"
                 },
                 {
                     "id": "+25",
-                    "size": 200,
+                    "size": 500, // Right panel - 500px initial width (35% of 1440px)
                     "tabs": [
                         {"id": "DockComponent_rightbar_2"},
                         {"id": "DockComponent_rightbar_4"},
@@ -474,6 +484,8 @@ export class PinnableDock extends DockLayout{
         }
     }
 
+    private _lastActiveId: string | undefined = undefined;
+
     constructor(props: any) {
         super(props);
         //Log.exDevv(PinnableDock.instance, "current PinnableDock is a singleton, cannot make 2 instances", {thiss:this, oldnstance: PinnableDock.instance});
@@ -497,7 +509,7 @@ export class PinnableDock extends DockLayout{
         let siblings = this.getSiblings(tid);
         let i = siblings.findIndex((t)=> t.id === tid);
         let newActiveTab = this.getAdiacentTab(tid);
-        console.log("hideTab", {siblings, i, newActiveTab, tabdata});
+        // console.log("hideTab", {siblings, i, newActiveTab, tabdata});
         if (newActiveTab) this.updateTab(newActiveTab.id as string, newActiveTab, true);
         else this.hidePanel(this.getPanelFromTab(tabdata));
     }
@@ -549,13 +561,50 @@ export class PinnableDock extends DockLayout{
     public static getTabFromDropRect(dropRect: LayoutState['dropRect']): TabData{
         if (!dropRect.source) return undefined as any;
         const panel: PanelData = dropRect.source.props.panelData;
-        console.log("getTabFromDropRect", {dropRect, panel, active: panel.activeId});
+        // console.log("getTabFromDropRect", {dropRect, panel, active: panel.activeId});
         const tabdata: TabData = panel.tabs.filter(t=> t.id === panel.activeId)[0];
         return tabdata;
     }
 
+    /**
+     * Detect when the active tab in the left (models) panel changes,
+     * and dispatch jjodel:editor-type-change so panels update accordingly.
+     * This catches tab clicks that bypass DockManager entirely.
+     */
+    private _detectActiveTabChange(): void {
+    const layout = this.getLayout();
+    const firstPanel = layout?.dockbox?.children?.[0] as PanelData | undefined;
+    const activeId = (firstPanel as any)?.activeId as string | undefined;
+
+    // Ignore missing or transient rightbar IDs — do NOT update _lastActiveId
+    // so the real editor tab is still detected on the next call
+    if (!activeId || activeId.startsWith('DockComponent_rightbar_')) return;
+
+    if (activeId === this._lastActiveId) return;
+    this._lastActiveId = activeId;
+
+    let editorType: string;
+    if (activeId.startsWith('jjtl_')) {
+        editorType = 'transformation';
+    } else if (activeId.startsWith('doc_')) {
+        editorType = 'summary';
+    } else if (activeId.startsWith('vp_')) {
+        editorType = 'viewpoint';
+    } else {
+        const rawModel = store.getState().idlookup[activeId] as any;
+        editorType = rawModel?.className === 'DModel'
+            ? (rawModel.isMetamodel ? 'metamodel' : 'model')
+            : 'summary';
+    }
+
+    window.dispatchEvent(new CustomEvent(JjodelEvents.EDITOR_TYPE_CHANGE, {
+        detail: { editorType, modelId: activeId }
+    }));
+}
+
     componentDidUpdate(prevProps: Readonly<LayoutProps>, prevState: Readonly<LayoutState>, snapshot?: any) {
         super.componentDidUpdate(prevProps, prevState, snapshot);
+        this._detectActiveTabChange();
         if (this.state.dropRect) {
             let droparea = this.state.dropRect.element;
             if (!droparea || droparea.classList.contains('dock-style-models')) return;
@@ -565,9 +614,9 @@ export class PinnableDock extends DockLayout{
             dockLayout = windoww.htmldockLayout = this._ref;
             currentDropRect = this.state.dropRect;
             if (!droplayer) return;
-            droplayer.append(...anchorControls);
+            droplayer.append(...getAnchorControls());
             let tab = PinnableDock.getTabFromDropRect(droparea);
-            console.log('activating pin buttons', {tab, currentDropRect, dockLayout, droparea, prevProps, prevState, snapshot}, );
+            // console.log('activating pin buttons', {tab, currentDropRect, dockLayout, droparea, prevProps, prevState, snapshot}, );
             // todo: tabfocus but not the active one, the clicked one
             // droparea.style.backgroundColor = "red";
         }
@@ -620,12 +669,12 @@ export class PinnableDock extends DockLayout{
         switch (category) {
             default: layout = null as any; break;
             case 'user':
-                let duser = D.from(DUser.current) as DUser;
+                let duser = DUser.getUser();
                 layout = duser.layout[slot];
                 break;
             case 'project':
-                let luser = L.from(DUser.current) as LUser;
-                let project = luser?.project;
+                let luser = LUser.getUser();
+                let project = LProject.getProject();
                 layout = project ? project.layout[slot] : null as any;
                 break;
         }
@@ -641,25 +690,25 @@ export class PinnableDock extends DockLayout{
         switch (PinnableDock.saveSlotCategory) {
             default: return false;
             case 'user':
-                let duser = D.from(DUser.current) as DUser;
+                let duser = DUser.getUser();
                 return duser.autosaveLayout;
             case 'project':
-                let luser = L.from(DUser.current) as LUser;
-                let project = luser?.project;
+                let luser = LUser.getUser();
+                let project = LProject.getProject();
                 return project ? project.autosaveLayout : false;
         }
     }
 
     static toggleAutosave(b?: boolean) {
         let setAutosave = b === undefined ? !PinnableDock.isAutosave() : b;
-        let luser: LUser = L.from(DUser.current) as LUser;
+        let luser: LUser = LUser.getUser();
         switch (PinnableDock.saveSlotCategory) {
             default: return false;
             case 'user':
                 luser.autosaveLayout = setAutosave;
                 break;
             case 'project':
-                let project = luser?.project;
+                let project = LProject.getProject();
                 if (project) project.autosaveLayout = setAutosave;
                 break;
         }
@@ -668,14 +717,14 @@ export class PinnableDock extends DockLayout{
     static save() {
         let category = PinnableDock.saveSlotCategory;
         let name = PinnableDock.saveSlotName;
-        let luser = L.from(DUser.current) as LUser;
+        let luser = LUser.getUser();
         switch (category){
             default: break;
             case 'user':
                 luser.layout = {[name]: PinnableDock.instance.getLayout()};
                 break;
             case 'project':
-                let lproject = luser.project;
+                let lproject = LProject.getProject();
                 if (!lproject) return;
                 lproject.layout = {[name]: PinnableDock.instance.getLayout()};
                 break;

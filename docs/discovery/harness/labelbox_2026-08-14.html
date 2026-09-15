@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+:root {
+  --node-bg: #ffffff; --border-default: #cbd5e1; --color-accent: #0ea5e9;
+  --node-shadow: rgba(0,0,0,.06); --node-shadow-deep: rgba(0,0,0,.08);
+  --font-sans: system-ui, sans-serif; --font-mono: monospace;
+  --text-primary: #334155;
+}
+body { font-family: system-ui, sans-serif; background: #f1f5f9; margin: 0; padding: 24px; }
+h2 { font-size: 13px; color: #475569; margin: 24px 0 8px; font-weight: 600; }
+.stage { position: relative; display: flex; gap: 40px; align-items: flex-start; flex-wrap: wrap; }
+
+/* ── EditorV2.scss (estratto fedele) ───────────────────────────── */
+.mm-node {
+  background: var(--node-bg);
+  border: 1px solid var(--border-default);
+  border-radius: 4px;
+  min-width: 140px;
+  min-height: 40px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--text-primary);
+  box-shadow: 0 1px 3px var(--node-shadow), 0 4px 12px var(--node-shadow-deep);
+  cursor: default;
+}
+/* ghost-frame fix: .mm-object riceve solo height:100% */
+.mm-object { height: 100%; }
+/* il .react-flow__node: block, larghezza content-hug finche' RF non setta uno stile */
+.rf-node { position: relative; display: inline-block; }
+.rf-node.sized { display: block; }
+
+/* ── irStyle.ts BASE_CSS (verbatim, riordinato per leggibilita') ── */
+.ir-node-content { position: relative; display: flex; flex-direction: column; min-width: 0; width: 100%; height: 100%; }
+.ir-node-content .ir-label { font-size: 11px; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ir-node-content .ir-label--top { order: 0; text-align: center; font-weight: 600; }
+.ir-node-content .ir-label--center { order: 1; text-align: center; margin: auto 0; font-weight: 600; }
+.ir-node-content .ir-label--inside { order: 2; text-align: left; padding: 0 8px; }
+.ir-node-content .ir-label--bottom { order: 4; text-align: center; margin-top: auto; }
+.ir-node-content .ir-badge { position: absolute; font-size: 12px; line-height: 1; z-index: 2; }
+.ir-node-content .ir-badge--tr { top: 2px; right: 4px; }
+.ir-node-content .ir-compartment { order: 3; border-top: 1px solid rgba(51,65,85,0.15); padding: 4px 8px; }
+.ir-node-content .ir-compartment .ir-row { font-size: 11px; line-height: 1.4; display: flex; gap: 4px; min-width: 0; }
+.ir-node-content .ir-compartment .ir-row > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mm-node:has(> .ir-node-content) { background: transparent; border-color: transparent; box-shadow: none; }
+.ir-node-content { box-sizing: border-box; background: var(--node-bg); border: 1px solid var(--border-default); border-radius: 4px; box-shadow: 0 1px 3px var(--node-shadow), 0 4px 12px var(--node-shadow-deep); overflow: hidden; }
+.ir-node-content { min-width: 140px; min-height: 40px; }
+.ir-node-content.ir-shape--rounded { border-radius: 10px; }
+.ir-node-content.ir-shape--ellipse { border-radius: 50%; justify-content: center; min-width: 0; min-height: 0; }
+.mm-node:has(> .ir-node-content.ir-shape--ellipse) { min-width: 0; min-height: 0; width: 100%; height: 100%; }
+.ir-node-content.ir-shape--circle { border-radius: 50%; justify-content: center; aspect-ratio: 1 / 1; min-width: 0; min-height: 0; }
+.mm-node:has(> .ir-node-content.ir-shape--circle) { min-width: 0; min-height: 0; width: 100%; height: 100%; }
+.ir-node-content.ir-shape--diamond { background: transparent; border-color: transparent; box-shadow: none; overflow: visible; justify-content: center; align-items: center; min-width: 0; min-height: 0; }
+.ir-node-content.ir-shape--diamond > .ir-diamond-svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; z-index: 0; }
+.ir-node-content.ir-shape--diamond > :not(.ir-diamond-svg) { position: relative; z-index: 1; }
+.mm-node:has(> .ir-node-content.ir-shape--diamond) { min-width: 0; min-height: 0; width: 100%; height: 100%; }
+.mm-node.ir-sized { min-width: 0; min-height: 0; width: 100%; height: 100%; }
+.mm-node.ir-sized .ir-node-content { min-width: 0; min-height: 0; }
+
+/* ── CANDIDATO V1: padding percentuale su .ir-node-content ──────── */
+.v1 .ir-node-content .ir-label { max-width: 100%; }
+.v1 .ir-node-content.ir-shape--diamond { padding: 0 25%; }
+.v1 .ir-node-content.ir-shape--ellipse { padding: 0 14.64%; }
+
+/* ── CANDIDATO V2: wrapper posizionato, inset a due assi ────────── */
+.v2 .ir-node-content.ir-shape--diamond > .ir-shape-content, .v2 .ir-shape-content { position: absolute; inset: 25% 25%; display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+.v2 .ir-shape-content.for-ellipse { inset: 14.64% 14.64%; }
+
+/* ── CANDIDATO V3: wrapper in-flow, padding percentuale ─────────── */
+.v3 .ir-shape-content { flex: 1 1 auto; display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+.v3 .ir-shape-content.for-diamond { padding: 0 25%; }
+.v3 .ir-shape-content.for-ellipse { padding: 0 14.64%; }
+
+.probe { outline: 1px dashed #ef4444; }
+</style>
+</head>
+<body>
+
+<h2>V0 — baseline (stato attuale del branch)</h2>
+<div class="stage" id="v0">
+  <div class="rf-node sized" style="width:170px;height:80px" data-case="v0-diamond-sized">
+    <div class="mm-node mm-object ir-sized">
+      <div class="ir-node-content ir-shape--diamond">
+        <svg class="ir-diamond-svg" viewBox="0 0 100 100" preserveAspectRatio="none"><polygon points="50,0 100,50 50,100 0,50" vector-effect="non-scaling-stroke" fill="#fff" stroke="#cbd5e1" stroke-width="1"/></svg>
+        <span class="ir-label ir-label--center probe" data-probe="label">TrafficLightController</span>
+      </div>
+    </div>
+  </div>
+  <div class="rf-node sized" style="width:170px;height:80px" data-case="v0-ellipse-sized">
+    <div class="mm-node mm-object ir-sized">
+      <div class="ir-node-content ir-shape--ellipse">
+        <span class="ir-label ir-label--center probe" data-probe="label">TrafficLightController</span>
+      </div>
+    </div>
+  </div>
+  <div class="rf-node" data-case="v0-ellipse-hug">
+    <div class="mm-node mm-object">
+      <div class="ir-node-content ir-shape--ellipse">
+        <span class="ir-label ir-label--center probe" data-probe="label">TrafficLightController</span>
+      </div>
+    </div>
+  </div>
+  <div class="rf-node" data-case="v0-rect-hug">
+    <div class="mm-node mm-object">
+      <div class="ir-node-content ir-shape--rect">
+        <span class="ir-label ir-label--top probe" data-probe="label">TrafficLightController</span>
+        <div class="ir-compartment"><div class="ir-row"><span>speed</span><span>: int</span></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h2>V1 — padding percentuale su .ir-node-content</h2>
+<div class="stage v1" id="v1">
+  <div class="rf-node sized" style="width:170px;height:80px" data-case="v1-diamond-sized">
+    <div class="mm-node mm-object ir-sized">
+      <div class="ir-node-content ir-shape--diamond">
+        <svg class="ir-diamond-svg" viewBox="0 0 100 100" preserveAspectRatio="none" data-probe="svg"><polygon points="50,0 100,50 50,100 0,50" vector-effect="non-scaling-stroke" fill="#fff" stroke="#cbd5e1" stroke-width="1"/></svg>
+        <span class="ir-label ir-label--center probe" data-probe="label">TrafficLightController</span>
+      </div>
+    </div>
+  </div>
+  <div class="rf-node sized" style="width:170px;height:80px" data-case="v1-ellipse-sized">
+    <div class="mm-node mm-object ir-sized">
+      <div class="ir-node-content ir-shape--ellipse">
+        <span class="ir-label ir-label--center probe" data-probe="label">TrafficLightController</span>
+      </div>
+    </div>
+  </div>
+  <div class="rf-node" data-case="v1-ellipse-hug">
+    <div class="mm-node mm-object">
+      <div class="ir-node-content ir-shape--ellipse">
+        <span class="ir-label ir-label--center probe" data-probe="label">TrafficLightController</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h2>V2 — wrapper posizionato (inset a due assi)</h2>
+<div class="stage v2" id="v2">
+  <div class="rf-node sized" style="width:170px;height:80px" data-case="v2-diamond-sized">
+    <div class="mm-node mm-object ir-sized">
+      <div class="ir-node-content ir-shape--diamond">
+        <svg class="ir-diamond-svg" viewBox="0 0 100 100" preserveAspectRatio="none" data-probe="svg"><polygon points="50,0 100,50 50,100 0,50" vector-effect="non-scaling-stroke" fill="#fff" stroke="#cbd5e1" stroke-width="1"/></svg>
+        <div class="ir-shape-content"><span class="ir-label ir-label--center probe" data-probe="label">TrafficLightController</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="rf-node" data-case="v2-rect-hug">
+    <div class="mm-node mm-object">
+      <div class="ir-node-content ir-shape--rect">
+        <div class="ir-shape-content" style="position:absolute;inset:0"><span class="ir-label ir-label--top probe" data-probe="label">TrafficLightController</span>
+        <div class="ir-compartment"><div class="ir-row"><span>speed</span><span>: int</span></div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h2>V3 — wrapper in-flow, padding percentuale</h2>
+<div class="stage v3" id="v3">
+  <div class="rf-node sized" style="width:170px;height:80px" data-case="v3-diamond-sized">
+    <div class="mm-node mm-object ir-sized">
+      <div class="ir-node-content ir-shape--diamond">
+        <svg class="ir-diamond-svg" viewBox="0 0 100 100" preserveAspectRatio="none" data-probe="svg"><polygon points="50,0 100,50 50,100 0,50" vector-effect="non-scaling-stroke" fill="#fff" stroke="#cbd5e1" stroke-width="1"/></svg>
+        <div class="ir-shape-content for-diamond"><span class="ir-label ir-label--center probe" data-probe="label">TrafficLightController</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="rf-node" data-case="v3-ellipse-hug">
+    <div class="mm-node mm-object">
+      <div class="ir-node-content ir-shape--ellipse">
+        <div class="ir-shape-content for-ellipse"><span class="ir-label ir-label--center probe" data-probe="label">TrafficLightController</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="rf-node" data-case="v3-rect-hug">
+    <div class="mm-node mm-object">
+      <div class="ir-node-content ir-shape--rect">
+        <div class="ir-shape-content"><span class="ir-label ir-label--top probe" data-probe="label">TrafficLightController</span>
+        <div class="ir-compartment"><div class="ir-row"><span>speed</span><span>: int</span></div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

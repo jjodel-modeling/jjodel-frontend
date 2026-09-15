@@ -1,0 +1,306 @@
+/**
+ * Action Suggestion Styles
+ * Multi-step action suggestion cards with interactive buttons
+ */
+
+/* ========================================
+   Container
+   ======================================== */
+
+.action-suggestion {
+    margin: 16px 0;
+    padding: 18px;
+    background: #F0FDFA;
+    border: 2px solid #06B6D4;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(6, 182, 212, 0.12);
+}
+
+/* ========================================
+   Header
+   ======================================== */
+
+.suggestion-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.suggestion-icon {
+    font-size: 28px;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.suggestion-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.suggestion-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #0F172A;
+    margin: 0 0 4px;
+    line-height: 1.3;
+}
+
+.suggestion-description {
+    font-size: 13px;
+    color: #475569;
+    margin: 0;
+    line-height: 1.5;
+}
+
+/* ========================================
+   Action Steps
+   ======================================== */
+
+.suggestion-actions {
+    margin-bottom: 16px;
+}
+
+.action-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.action-step {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.action-step .step-number {
+    display: none;
+}
+
+.step-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: #ffffff;
+    border-radius: 8px;
+    border: 1px solid #CCFBF1;
+}
+
+.step-icon {
+    font-size: 16px;
+    color: #0891B2;
+    flex-shrink: 0;
+}
+
+.step-text {
+    font-size: 13px;
+    color: #0F172A;
+    font-weight: 500;
+    line-height: 1.4;
+}
+
+.step-connector {
+    display: flex;
+    justify-content: center;
+    padding: 2px 0;
+    color: #06B6D4;
+}
+
+.step-connector i {
+    font-size: 14px;
+}
+
+/* ========================================
+   Buttons
+   ======================================== */
+
+.suggestion-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.suggestion-btn {
+    padding: 10px 16px;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s ease;
+}
+
+.suggestion-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Accept button - Primary (cyan solid) */
+.suggestion-btn.accept {
+    background: #06B6D4;
+    color: #ffffff;
+}
+
+.suggestion-btn.accept:hover:not(:disabled) {
+    background: #0891B2;
+}
+
+.suggestion-btn.accept:active:not(:disabled) {
+    transform: scale(0.98);
+}
+
+/* Customize button - Secondary (outlined) */
+.suggestion-btn.customize {
+    background: #ffffff;
+    color: #06B6D4;
+    border: 1px solid #06B6D4;
+}
+
+.suggestion-btn.customize:hover:not(:disabled) {
+    background: #F0FDFA;
+}
+
+/* Cancel button - Ghost */
+.suggestion-btn.cancel {
+    background: transparent;
+    color: #64748B;
+    border: 1px solid #E2E8F0;
+}
+
+.suggestion-btn.cancel:hover:not(:disabled) {
+    background: #F8FAFC;
+    border-color: #CBD5E1;
+}
+
+/* ========================================
+   Compact Variant (for smaller spaces)
+   ======================================== */
+
+.action-suggestion.compact {
+    padding: 14px;
+}
+
+.action-suggestion.compact .suggestion-icon {
+    font-size: 24px;
+}
+
+.action-suggestion.compact .suggestion-title {
+    font-size: 14px;
+}
+
+.action-suggestion.compact .step-content {
+    padding: 8px 12px;
+}
+
+.action-suggestion.compact .step-text {
+    font-size: 12px;
+}
+
+.action-suggestion.compact .suggestion-btn {
+    padding: 8px 12px;
+    font-size: 12px;
+}
+
+/* ========================================
+   Multiple Suggestions
+   ======================================== */
+
+.action-suggestions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.action-suggestions-list .action-suggestion {
+    margin: 0;
+}
+
+/* Alternative suggestions have lighter styling */
+.action-suggestion.alternative {
+    background: #F8FAFC;
+    border-color: #CBD5E1;
+    box-shadow: none;
+}
+
+.action-suggestion.alternative .step-content {
+    border-color: #E2E8F0;
+}
+
+.action-suggestion.alternative .step-icon {
+    color: #64748B;
+}
+
+.action-suggestion.alternative .step-connector {
+    color: #94A3B8;
+}
+
+/* ========================================
+   Executing State
+   ======================================== */
+
+.action-suggestion.executing {
+    pointer-events: none;
+    opacity: 0.85;
+}
+
+.action-suggestion.executing .step-content {
+    position: relative;
+}
+
+.action-suggestion.executing .step-content::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(6, 182, 212, 0.1),
+        transparent
+    );
+    animation: suggestionShimmer 1.5s infinite;
+}
+
+@keyframes suggestionShimmer {
+    0% {
+        transform: translateX(-100%);
+    }
+    100% {
+        transform: translateX(100%);
+    }
+}
+
+/* Completed step */
+.action-step.completed .step-content {
+    background: #ECFDF5;
+    border-color: #A7F3D0;
+}
+
+.action-step.completed .step-icon {
+    color: #10B981;
+}
+
+.action-step.completed .step-text {
+    color: #065F46;
+}
+
+/* Failed step */
+.action-step.failed .step-content {
+    background: #FEF2F2;
+    border-color: #FECACA;
+}
+
+.action-step.failed .step-icon {
+    color: #EF4444;
+}
+
+.action-step.failed .step-text {
+    color: #991B1B;
+}

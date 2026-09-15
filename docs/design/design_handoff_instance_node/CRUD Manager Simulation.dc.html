@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/tokens/fonts.css">
+  <link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/tokens/colors.css">
+  <link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/tokens/typography.css">
+  <link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/styles.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+  <style>
+    body { margin: 0; background: #f8fafc; font-family: 'Inter', system-ui, sans-serif; }
+    a { color: #0ea5e9; text-decoration: none; }
+    a:hover { color: #0284c7; text-decoration: underline; }
+    input, select { font-family: 'Inter', system-ui, sans-serif; outline: none; }
+    input:focus, select:focus { border-color: #0891b2 !important; box-shadow: 0 0 0 3px rgba(8,145,178,0.12); }
+  </style>
+</helmet>
+<div style="height: 100vh; display: flex; flex-direction: column; overflow: hidden;">
+  <div style="background: #ffffff; border-bottom: 1px solid #e2e8f0; padding: 0 20px; height: 52px; display: flex; align-items: center; gap: 16px; flex: none;">
+    <span style="font-size: 15px; font-weight: 700; color: #0f172a;">jjodel</span>
+    <span style="font-size: 12px; color: #94a3b8; display: inline-flex; align-items: center; gap: 6px;"><i class="bi bi-table" style="color: #0891b2;"></i>Instance manager · <span style="color: #64748b; font-weight: 500;">Form 1b fixture</span> · <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px;">statemachine</span></span>
+    <span style="margin-left: auto;"></span>
+    <input placeholder="Search…" value="{{ search }}" onChange="{{ onSearch }}" style="font-size: 12px; color: #0f172a; border: 1px solid #e2e8f0; border-radius: 4px; padding: 6px 10px; width: 180px; background: #ffffff;">
+    <button onClick="{{ newRoot }}" style="font-size: 12px; font-weight: 500; color: #ffffff; background: linear-gradient(#64748b, #475569); border: none; border-radius: 8px; padding: 7px 14px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer;"><i class="bi bi-plus-lg" style="font-size: 11px;"></i>New StateMachine</button>
+  </div>
+  <div style="flex: 1; display: flex; min-height: 0;">
+    <div style="width: 200px; border-right: 1px solid #e2e8f0; background: #ffffff; display: flex; flex-direction: column; flex: none;">
+      <div style="padding: 14px 16px 8px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8;">Collections</div>
+      <sc-for list="{{ collections }}" as="col" hint-placeholder-count="3">
+        <div onClick="{{ col.click }}" style="display: flex; align-items: center; gap: 8px; padding: 8px 16px; font-size: 12px; cursor: {{ col.cursor }}; color: {{ col.color }}; background: {{ col.bg }}; box-shadow: {{ col.bar }};">
+          <span style="font-size: 9px; font-weight: 700; width: 14px; height: 14px; display: inline-flex; align-items: center; justify-content: center; border-radius: 3px; background: #fee2e2; color: #dc2626;">C</span>
+          <span style="font-weight: {{ col.weight }};">{{ col.name }}</span>
+          <span style="margin-left: auto; font-size: 11px; color: #94a3b8;">{{ col.count }}</span>
+        </div>
+        <sc-if value="{{ col.note }}" hint-placeholder-val="{{ false }}">
+          <div style="padding: 0 16px 6px 38px; font-size: 10px; color: #cbd5e1; line-height: 1.4;">{{ col.note }}</div>
+        </sc-if>
+      </sc-for>
+      <sc-if value="{{ showMetaHints }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-top: auto; padding: 12px 16px; border-top: 1px solid #f1f5f9; font-size: 11px; color: #94a3b8; line-height: 1.5;"><i class="bi bi-magic" style="color: #0891b2;"></i> Everything on this page is generated from the metamodel: collections, columns, forms, validation.</div>
+      </sc-if>
+    </div>
+    <div style="flex: 1; overflow: auto; padding: 20px 24px; min-width: 0;">
+      <sc-if value="{{ atList }}" hint-placeholder-val="{{ true }}">
+        <div style="display: flex; align-items: baseline; gap: 10px; margin-bottom: 14px;">
+          <span style="font-size: 18px; font-weight: 600; color: #0f172a;">StateMachine</span>
+          <span style="font-size: 12px; color: #94a3b8;">{{ machineCountLabel }}</span>
+        </div>
+        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+          <div style="display: grid; grid-template-columns: 1fr 110px 110px 90px; padding: 8px 16px; border-bottom: 1px solid #e2e8f0; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #94a3b8;"><span>name</span><span>states</span><span>transitions</span><span></span></div>
+          <sc-for list="{{ machineRows }}" as="row" hint-placeholder-count="2">
+            <div style="display: grid; grid-template-columns: 1fr 110px 110px 90px; align-items: center; padding: 9px 16px; border-bottom: 1px solid #f1f5f9; font-size: 12px; color: #475569;">
+              <span onClick="{{ row.open }}" style="font-weight: 500; color: #0284c7; cursor: pointer;">{{ row.name }}</span>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px;">{{ row.states }}</span>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px;">{{ row.transitions }}</span>
+              <span style="display: inline-flex; gap: 12px; justify-content: flex-end;">
+                <i onClick="{{ row.open }}" class="bi bi-box-arrow-in-right" title="Open" style="color: #0284c7; font-size: 13px; cursor: pointer;"></i>
+                <i onClick="{{ row.del }}" class="bi bi-trash" title="Delete" style="color: #cbd5e1; font-size: 13px; cursor: pointer;"></i>
+              </span>
+            </div>
+          </sc-for>
+          <sc-if value="{{ noMachines }}" hint-placeholder-val="{{ false }}">
+            <div style="padding: 24px 16px; font-size: 12px; color: #94a3b8; text-align: center;">No machines yet — «New StateMachine» creates the first root instance.</div>
+          </sc-if>
+        </div>
+      </sc-if>
+      <sc-if value="{{ atDetail }}" hint-placeholder-val="{{ false }}">
+        <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; margin-bottom: 14px;">
+          <span onClick="{{ backToList }}" style="color: #0284c7; cursor: pointer;">StateMachine</span>
+          <i class="bi bi-chevron-right" style="font-size: 9px; color: #cbd5e1;"></i>
+          <span style="color: #0f172a; font-weight: 600;">{{ detailName }}</span>
+          <span style="font-size: 11px; color: #94a3b8;">: StateMachine</span>
+        </div>
+        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px 16px; margin-bottom: 18px; display: flex; align-items: center; gap: 14px;">
+          <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #64748b;">Name</span>
+          <input value="{{ detailName }}" onChange="{{ onDetailName }}" style="font-size: 13px; color: #0f172a; border: 1px solid #cbd5e1; border-radius: 4px; padding: 6px 10px; width: 220px;">
+          <span style="font-size: 11px; color: #94a3b8; display: inline-flex; align-items: center; gap: 5px;"><i class="bi bi-info-circle"></i>Live write — attributes of the open instance edit in place</span>
+        </div>
+        <div style="display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start;">
+          <div style="flex: 1; min-width: 300px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+              <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8;">States <span style="letter-spacing: 0; text-transform: none; font-weight: 400;">· {{ statesCount }}</span></span>
+              <span onClick="{{ addState }}" style="font-size: 12px; font-weight: 500; color: #0284c7; cursor: pointer;"><i class="bi bi-plus"></i> Add State</span>
+            </div>
+            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+              <div style="display: grid; grid-template-columns: 1fr 90px 70px; padding: 7px 14px; border-bottom: 1px solid #e2e8f0; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #94a3b8;"><span>name</span><span>kind</span><span></span></div>
+              <sc-for list="{{ stateRows }}" as="row" hint-placeholder-count="3">
+                <div style="display: grid; grid-template-columns: 1fr 90px 70px; align-items: center; padding: 8px 14px; border-bottom: 1px solid #f1f5f9; font-size: 12px; color: #475569;">
+                  <span style="font-weight: 500; color: #0f172a;">{{ row.name }}</span>
+                  <span><span style="font-size: 11px; padding: 2px 9px; border-radius: 999px; background: #f1f5f9; color: #475569; font-weight: 500;">{{ row.kind }}</span></span>
+                  <span style="display: inline-flex; gap: 10px; justify-content: flex-end;">
+                    <i onClick="{{ row.edit }}" class="bi bi-pencil" style="color: #0284c7; font-size: 12px; cursor: pointer;"></i>
+                    <i onClick="{{ row.del }}" class="bi bi-trash" style="color: #cbd5e1; font-size: 12px; cursor: pointer;"></i>
+                  </span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <div style="flex: 1.3; min-width: 360px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+              <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8;">Transitions <span style="letter-spacing: 0; text-transform: none; font-weight: 400;">· {{ transCount }}</span></span>
+              <span onClick="{{ addTransition }}" style="font-size: 12px; font-weight: 500; color: {{ addTransColor }}; cursor: {{ addTransCursor }};" title="{{ addTransTitle }}"><i class="bi bi-plus"></i> Add Transition</span>
+            </div>
+            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+              <div style="display: grid; grid-template-columns: 1fr 1.4fr 70px; padding: 7px 14px; border-bottom: 1px solid #e2e8f0; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #94a3b8;"><span>name</span><span>source → target</span><span></span></div>
+              <sc-for list="{{ transRows }}" as="row" hint-placeholder-count="3">
+                <div style="display: grid; grid-template-columns: 1fr 1.4fr 70px; align-items: center; padding: 8px 14px; border-bottom: 1px solid #f1f5f9; font-size: 12px; color: #475569;">
+                  <span style="font-weight: 500; color: #0f172a;">{{ row.name }}</span>
+                  <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 11px;">
+                    <span style="padding: 2px 8px; border: 1px solid #e2e8f0; border-radius: 999px; color: {{ row.srcColor }};">{{ row.src }}</span>
+                    <i class="bi bi-arrow-right" style="font-size: 10px; color: #94a3b8;"></i>
+                    <span style="padding: 2px 8px; border: 1px solid #e2e8f0; border-radius: 999px; color: {{ row.tgtColor }};">{{ row.tgt }}</span>
+                  </span>
+                  <span style="display: inline-flex; gap: 10px; justify-content: flex-end;">
+                    <i onClick="{{ row.edit }}" class="bi bi-pencil" style="color: #0284c7; font-size: 12px; cursor: pointer;"></i>
+                    <i onClick="{{ row.del }}" class="bi bi-trash" style="color: #cbd5e1; font-size: 12px; cursor: pointer;"></i>
+                  </span>
+                </div>
+              </sc-for>
+            </div>
+            <sc-if value="{{ hasInvalid }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top: 8px; font-size: 11px; color: #dc2626; display: inline-flex; align-items: center; gap: 6px;"><i class="bi bi-exclamation-circle"></i>{{ invalidNote }}</div>
+            </sc-if>
+          </div>
+        </div>
+      </sc-if>
+    </div>
+  </div>
+  <sc-if value="{{ modalOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position: fixed; inset: 0; background: rgba(15,23,42,0.55); display: flex; align-items: center; justify-content: center; z-index: 10;">
+      <div style="width: min(760px, calc(100vw - 80px)); max-height: calc(100vh - 80px); background: #ffffff; border-radius: 16px; box-shadow: 0 32px 80px rgba(15,23,42,0.45); overflow: hidden; display: flex; flex-direction: column;">
+        <div style="background: linear-gradient(135deg, #334155, #0f172a); padding: 22px 32px; display: flex; align-items: center; gap: 16px; flex: none;">
+          <span style="font-size: 14px; font-weight: 700; width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; background: rgba(255,255,255,0.15); color: #ffffff;">C</span>
+          <div style="flex: 1;">
+            <div style="font-size: 20px; font-weight: 600; color: #ffffff;">{{ modalTitle }}</div>
+            <div style="font-size: 12px; color: rgba(255,255,255,0.65); margin-top: 2px;">{{ modalSubtitle }}</div>
+          </div>
+          <i onClick="{{ modalCancel }}" class="bi bi-x-lg" style="font-size: 16px; color: rgba(255,255,255,0.6); cursor: pointer;"></i>
+        </div>
+        <div style="padding: 28px 32px; display: grid; grid-template-columns: 1fr 1fr; gap: 22px 28px; overflow: auto;">
+          <sc-for list="{{ modalFields }}" as="f" hint-placeholder-count="2">
+            <div style="display: flex; flex-direction: column; gap: 8px; grid-column: {{ f.span }};">
+              <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #64748b;">{{ f.label }} <span style="color: #dc2626;">{{ f.star }}</span> <span style="font-weight: 400; text-transform: none; letter-spacing: 0; color: #94a3b8;">{{ f.cardinality }}</span></span>
+              <sc-if value="{{ f.isText }}" hint-placeholder-val="{{ true }}">
+                <input value="{{ f.value }}" onChange="{{ f.onInput }}" placeholder="{{ f.placeholder }}" style="font-size: 14px; color: #0f172a; border: 1px solid {{ f.borderColor }}; border-radius: 6px; padding: 11px 14px;">
+              </sc-if>
+              <sc-if value="{{ f.isEnum }}" hint-placeholder-val="{{ false }}">
+                <div style="display: flex; gap: 10px;">
+                  <sc-for list="{{ f.options }}" as="opt" hint-placeholder-count="3">
+                    <span onClick="{{ opt.pick }}" style="font-size: 13px; padding: 10px 18px; border: {{ opt.border }}; border-radius: 6px; background: {{ opt.bg }}; color: {{ opt.color }}; font-weight: {{ opt.weight }}; cursor: pointer;">{{ opt.label }}</span>
+                  </sc-for>
+                </div>
+              </sc-if>
+              <sc-if value="{{ f.isRef }}" hint-placeholder-val="{{ false }}">
+                <select value="{{ f.value }}" onChange="{{ f.onSelect }}" style="font-size: 14px; color: #0f172a; border: 1px solid {{ f.borderColor }}; border-radius: 6px; padding: 11px 12px; background: #ffffff;">
+                  <option value="">Select a {{ f.of }}…</option>
+                  <sc-for list="{{ f.options }}" as="opt" hint-placeholder-count="2">
+                    <option value="{{ opt.id }}">{{ opt.label }}</option>
+                  </sc-for>
+                </select>
+              </sc-if>
+              <sc-if value="{{ f.error }}" hint-placeholder-val="{{ false }}">
+                <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #dc2626;"><i class="bi bi-exclamation-circle"></i>{{ f.error }}</span>
+              </sc-if>
+            </div>
+          </sc-for>
+        </div>
+        <div style="padding: 18px 32px; border-top: 1px solid #e2e8f0; background: #f8fafc; display: flex; align-items: center; gap: 12px; flex: none;">
+          <span style="font-size: 12px; color: #94a3b8; flex: 1; display: inline-flex; align-items: center; gap: 6px;"><i class="bi bi-info-circle"></i>{{ modalHint }}</span>
+          <button onClick="{{ modalCancel }}" style="font-size: 14px; font-weight: 500; color: #475569; background: none; border: none; padding: 10px 18px; cursor: pointer;">Cancel</button>
+          <button onClick="{{ modalDone }}" disabled="{{ modalInvalid }}" style="font-size: 14px; font-weight: 500; color: #ffffff; background: linear-gradient(#64748b, #475569); border: none; border-radius: 8px; padding: 10px 26px; cursor: pointer; opacity: {{ modalDoneOpacity }}; box-shadow: 0 1px 3px rgba(0,0,0,0.15);">{{ modalDoneLabel }}</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+  <sc-if value="{{ delOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position: fixed; inset: 0; background: rgba(15,23,42,0.55); display: flex; align-items: center; justify-content: center; z-index: 11;">
+      <div style="width: 420px; background: #ffffff; border-radius: 16px; box-shadow: 0 32px 80px rgba(15,23,42,0.45); overflow: hidden;">
+        <div style="padding: 18px 20px 0; display: flex; gap: 12px;">
+          <span style="width: 34px; height: 34px; border-radius: 8px; background: #fef2f2; display: inline-flex; align-items: center; justify-content: center; flex: none;"><i class="bi bi-exclamation-triangle" style="color: #dc2626; font-size: 15px;"></i></span>
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <span style="font-size: 14px; font-weight: 600; color: #0f172a;">{{ delTitle }}</span>
+            <span style="font-size: 12px; color: #64748b; line-height: 1.5;">{{ delMessage }}</span>
+          </div>
+        </div>
+        <div style="margin: 12px 20px; border: 1px solid #f1f5f9; border-radius: 6px; font-size: 12px; max-height: 120px; overflow: auto;">
+          <sc-for list="{{ delRefs }}" as="r" hint-placeholder-count="2">
+            <div style="display: flex; align-items: center; gap: 8px; padding: 7px 12px; border-bottom: 1px solid #f1f5f9; color: #475569;">
+              <span style="font-size: 9px; font-weight: 700; width: 13px; height: 13px; display: inline-flex; align-items: center; justify-content: center; border-radius: 3px; background: #fee2e2; color: #dc2626;">C</span>
+              {{ r.label }} <span style="color: #94a3b8; font-family: 'IBM Plex Mono', monospace; font-size: 10px;">.{{ r.refName }}</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="margin: 0 20px 14px; display: flex; flex-direction: column; gap: 8px; font-size: 12px;">
+          <sc-if value="{{ delCanReassign }}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; align-items: center; gap: 8px; border: 1.5px solid #0891b2; background: #e0f7fa; border-radius: 6px; padding: 8px 12px; color: #0f172a; font-weight: 500;">
+              <i class="bi bi-arrow-repeat" style="color: #0891b2;"></i>Reassign all to
+              <select value="{{ delReassignTo }}" onChange="{{ delOnReassign }}" style="margin-left: auto; font-size: 11px; border: 1px solid #cbd5e1; background: #ffffff; border-radius: 4px; padding: 3px 8px;">
+                <sc-for list="{{ delReassignOptions }}" as="opt" hint-placeholder-count="2">
+                  <option value="{{ opt.id }}">{{ opt.label }}</option>
+                </sc-for>
+              </select>
+              <button onClick="{{ delConfirmReassign }}" style="font-size: 11px; font-weight: 500; color: #ffffff; background: #0891b2; border: none; border-radius: 4px; padding: 4px 10px; cursor: pointer;">Apply</button>
+            </div>
+          </sc-if>
+          <div onClick="{{ delConfirmClear }}" style="display: flex; align-items: center; gap: 8px; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 12px; color: #64748b; cursor: pointer;">
+            <i class="bi bi-slash-circle"></i>{{ delClearLabel }}
+          </div>
+        </div>
+        <div style="padding: 12px 20px; border-top: 1px solid #e2e8f0; background: #f8fafc; display: flex; justify-content: flex-end;">
+          <button onClick="{{ delCancel }}" style="font-size: 12px; font-weight: 500; color: #475569; background: none; border: none; padding: 7px 14px; cursor: pointer;">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;showMetaHints&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Manager&quot;}, &quot;startEmpty&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: false, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Manager&quot;}}">
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    const seed = () => {
+      const inst = {};
+      const mk = (id, cls, values, refs, children, owner) => { inst[id] = { id, cls, values: values || {}, refs: refs || {}, children: children || {}, owner: owner || null }; };
+      mk('m1', 'StateMachine', { name: 'traffic light' }, {}, { states: ['s1', 's2', 's3'], transitions: ['t1', 't2', 't3'] });
+      mk('s1', 'State', { name: 'red', kind: 'initial' }, {}, {}, 'm1');
+      mk('s2', 'State', { name: 'green', kind: 'normal' }, {}, {}, 'm1');
+      mk('s3', 'State', { name: 'yellow', kind: 'normal' }, {}, {}, 'm1');
+      mk('t1', 'Transition', { name: 'go' }, { source: 's1', target: 's2' }, {}, 'm1');
+      mk('t2', 'Transition', { name: 'caution' }, { source: 's2', target: 's3' }, {}, 'm1');
+      mk('t3', 'Transition', { name: 'stop' }, { source: 's3', target: 's1' }, {}, 'm1');
+      mk('m2', 'StateMachine', { name: 'turnstile' }, {}, { states: ['s4', 's5'], transitions: ['t4', 't5'] });
+      mk('s4', 'State', { name: 'locked', kind: 'initial' }, {}, {}, 'm2');
+      mk('s5', 'State', { name: 'unlocked', kind: 'normal' }, {}, {}, 'm2');
+      mk('t4', 'Transition', { name: 'coin' }, { source: 's4', target: 's5' }, {}, 'm2');
+      mk('t5', 'Transition', { name: 'push' }, { source: 's5', target: 's4' }, {}, 'm2');
+      return inst;
+    };
+    this.META = {
+      enums: { StateKind: ['initial', 'normal', 'final'] },
+      classes: {
+        StateMachine: { root: true, attrs: [{ key: 'name', label: 'Name', type: 'string', required: false }], refs: [], children: [{ key: 'states', of: 'State' }, { key: 'transitions', of: 'Transition' }] },
+        State: { root: false, containedIn: 'StateMachine', attrs: [{ key: 'name', label: 'Name', type: 'string', required: true, card: '1..1' }, { key: 'kind', label: 'Kind', type: 'enum', enum: 'StateKind' }], refs: [], children: [] },
+        Transition: { root: false, containedIn: 'StateMachine', attrs: [{ key: 'name', label: 'Name', type: 'string', required: false }], refs: [{ key: 'source', label: 'Source', of: 'State', required: true, card: '1..1' }, { key: 'target', label: 'Target', of: 'State', required: true, card: '1..1' }], children: [] }
+      }
+    };
+    this.state = { instances: (props.startEmpty ? {} : seed()), nextId: 100, view: null, search: '', modal: null, del: null };
+  }
+  fresh(prefix) { const id = prefix + this.state.nextId; return id; }
+  label(inst) { return (inst.values.name || '').trim() || '(unnamed)'; }
+  siblingsOf(cls, owner) {
+    const all = Object.values(this.state.instances);
+    return all.filter(i => i.cls === cls && i.owner === owner);
+  }
+  validate(cls, draft, owner, selfId) {
+    const meta = this.META.classes[cls]; const errors = {};
+    meta.attrs.forEach(a => {
+      const v = (draft.values[a.key] || '').trim();
+      if (a.required && !v) errors[a.key] = 'Required by cardinality ' + (a.card || '1..1');
+      else if (a.key === 'name' && v && this.siblingsOf(cls, owner).some(s => s.id !== selfId && (s.values.name || '').trim() === v)) errors[a.key] = 'A ' + cls + ' named \u00ab' + v + '\u00bb already exists here';
+    });
+    meta.refs.forEach(r => { if (r.required && !draft.refs[r.key]) errors[r.key] = 'Required by cardinality ' + (r.card || '1..1'); });
+    return errors;
+  }
+  referencedBy(id) {
+    const out = [];
+    Object.values(this.state.instances).forEach(i => {
+      const meta = this.META.classes[i.cls];
+      meta.refs.forEach(r => { if (i.refs[r.key] === id) out.push({ inst: i, refName: r.key }); });
+    });
+    return out;
+  }
+  deleteCascade(id, instances) {
+    const inst = instances[id]; if (!inst) return;
+    Object.values(inst.children).forEach(list => list.forEach(cid => this.deleteCascade(cid, instances)));
+    delete instances[id];
+  }
+  doDelete(id, reassignTo) {
+    this.setState(s => {
+      const instances = { ...s.instances };
+      Object.keys(instances).forEach(k => { instances[k] = { ...instances[k], values: { ...instances[k].values }, refs: { ...instances[k].refs }, children: Object.fromEntries(Object.entries(instances[k].children).map(([ck, cv]) => [ck, [...cv]])) }; });
+      const affected = this.referencedBy(id);
+      affected.forEach(({ inst, refName }) => { instances[inst.id].refs[refName] = reassignTo || ''; });
+      const target = instances[id];
+      if (target && target.owner && instances[target.owner]) {
+        const oc = instances[target.owner].children;
+        Object.keys(oc).forEach(ck => { oc[ck] = oc[ck].filter(x => x !== id); });
+      }
+      this.deleteCascade(id, instances);
+      const view = (s.view && !instances[s.view]) ? null : s.view;
+      return { instances, del: null, view };
+    });
+  }
+  openModal(mode, cls, id, owner, childKey) {
+    const src = id ? this.state.instances[id] : null;
+    const meta = this.META.classes[cls];
+    const values = {}; const refs = {};
+    meta.attrs.forEach(a => { values[a.key] = src ? (src.values[a.key] || '') : (a.type === 'enum' ? this.META.enums[a.enum][0] : ''); });
+    meta.refs.forEach(r => { refs[r.key] = src ? (src.refs[r.key] || '') : ''; });
+    this.setState({ modal: { mode, cls, id: id || null, owner, childKey, draft: { values, refs } } });
+  }
+  applyModal() {
+    const m = this.state.modal; if (!m) return;
+    const errors = this.validate(m.cls, m.draft, m.owner, m.id);
+    if (Object.keys(errors).length) return;
+    this.setState(s => {
+      const instances = { ...s.instances };
+      if (m.id) {
+        instances[m.id] = { ...instances[m.id], values: { ...m.draft.values }, refs: { ...m.draft.refs } };
+      } else {
+        const id = (m.cls === 'StateMachine' ? 'm' : m.cls === 'State' ? 's' : 't') + s.nextId;
+        const children = {}; this.META.classes[m.cls].children.forEach(c => { children[c.key] = []; });
+        instances[id] = { id, cls: m.cls, values: { ...m.draft.values }, refs: { ...m.draft.refs }, children, owner: m.owner || null };
+        if (m.owner && m.childKey) {
+          instances[m.owner] = { ...instances[m.owner], children: { ...instances[m.owner].children, [m.childKey]: [...instances[m.owner].children[m.childKey], id] } };
+        }
+      }
+      return { instances, nextId: s.nextId + 1, modal: null };
+    });
+  }
+  setDraft(kind, key, value) { this.setState(s => ({ modal: { ...s.modal, draft: { ...s.modal.draft, [kind]: { ...s.modal.draft[kind], [key]: value } } } })); }
+  renderVals() {
+    const S = this.state; const inst = S.instances;
+    const showMetaHints = this.props.showMetaHints ?? true;
+    const q = S.search.trim().toLowerCase();
+    const machines = Object.values(inst).filter(i => i.cls === 'StateMachine');
+    const collections = Object.entries(this.META.classes).map(([name, meta]) => {
+      const count = Object.values(inst).filter(i => i.cls === name).length;
+      const isRoot = meta.root; const active = isRoot;
+      return {
+        name, count,
+        click: isRoot ? (() => this.setState({ view: null })) : (() => {}),
+        cursor: isRoot ? 'pointer' : 'default',
+        color: active ? '#0f172a' : '#94a3b8',
+        bg: (active && !S.view) ? '#e0f7fa' : 'transparent',
+        bar: (active && !S.view) ? 'inset 2px 0 0 #0891b2' : 'none',
+        weight: active ? '500' : '400',
+        note: isRoot ? '' : 'contained in ' + meta.containedIn
+      };
+    });
+    const machineRows = machines.filter(m => !q || this.label(m).toLowerCase().includes(q)).map(m => ({
+      name: this.label(m),
+      states: String((m.children.states || []).length),
+      transitions: String((m.children.transitions || []).length),
+      open: () => this.setState({ view: m.id }),
+      del: () => this.setState({ del: { id: m.id, refs: [] } })
+    }));
+    const detail = S.view ? inst[S.view] : null;
+    let detailVals = {};
+    if (detail) {
+      const states = (detail.children.states || []).map(id => inst[id]).filter(Boolean);
+      const trans = (detail.children.transitions || []).map(id => inst[id]).filter(Boolean);
+      const invalidTrans = trans.filter(t => !t.refs.source || !t.refs.target || !inst[t.refs.source] || !inst[t.refs.target]);
+      detailVals = {
+        detailName: this.label(detail) === '(unnamed)' ? (detail.values.name || '') : detail.values.name,
+        onDetailName: (e) => { const v = e.target.value; this.setState(s => ({ instances: { ...s.instances, [detail.id]: { ...s.instances[detail.id], values: { ...s.instances[detail.id].values, name: v } } } })); },
+        statesCount: states.length + '', transCount: trans.length + '',
+        stateRows: states.filter(x => !q || this.label(x).toLowerCase().includes(q)).map(x => ({
+          name: this.label(x), kind: x.values.kind || 'normal',
+          edit: () => this.openModal('edit', 'State', x.id, detail.id, 'states'),
+          del: () => { const refs = this.referencedBy(x.id); if (!refs.length) this.doDelete(x.id, null); else this.setState({ del: { id: x.id, refs: refs.map(r => ({ label: this.label(r.inst), refName: r.refName })) } }); }
+        })),
+        transRows: trans.filter(x => !q || this.label(x).toLowerCase().includes(q)).map(x => {
+          const src = inst[x.refs.source]; const tgt = inst[x.refs.target];
+          return {
+            name: this.label(x),
+            src: src ? this.label(src) : 'missing', tgt: tgt ? this.label(tgt) : 'missing',
+            srcColor: src ? '#475569' : '#dc2626', tgtColor: tgt ? '#475569' : '#dc2626',
+            edit: () => this.openModal('edit', 'Transition', x.id, detail.id, 'transitions'),
+            del: () => this.doDelete(x.id, null)
+          };
+        }),
+        addState: () => this.openModal('create', 'State', null, detail.id, 'states'),
+        addTransition: () => { if (states.length) this.openModal('create', 'Transition', null, detail.id, 'transitions'); },
+        addTransColor: states.length ? '#0284c7' : '#cbd5e1',
+        addTransCursor: states.length ? 'pointer' : 'not-allowed',
+        addTransTitle: states.length ? '' : 'Not available: a Transition requires at least one State (source 1..1)',
+        hasInvalid: invalidTrans.length > 0,
+        invalidNote: invalidTrans.length + ' transition' + (invalidTrans.length > 1 ? 's' : '') + ' invalid: missing source or target (cardinality 1..1)'
+      };
+    }
+    let modalVals = { modalOpen: false };
+    if (S.modal) {
+      const m = S.modal; const meta = this.META.classes[m.cls];
+      const errors = this.validate(m.cls, m.draft, m.owner, m.id);
+      const touchedErrors = errors;
+      const fields = [];
+      meta.attrs.forEach(a => {
+        const err = touchedErrors[a.key] || '';
+        if (a.type === 'string') {
+          fields.push({ label: a.label, star: a.required ? '*' : '', cardinality: a.card || '', isText: true, isEnum: false, isRef: false, span: 'span 2', value: m.draft.values[a.key], placeholder: a.label.toLowerCase() + '\u2026', borderColor: err ? '#ef4444' : '#cbd5e1', error: err, onInput: (e) => this.setDraft('values', a.key, e.target.value) });
+        } else if (a.type === 'enum') {
+          fields.push({ label: a.label, star: '', cardinality: this.META.enums[a.enum].join(' \u00b7 ') === '' ? '' : '', isText: false, isEnum: true, isRef: false, span: 'span 2', error: '', options: this.META.enums[a.enum].map(v => ({ label: v, pick: () => this.setDraft('values', a.key, v), border: (m.draft.values[a.key] === v) ? '1.5px solid #0891b2' : '1px solid #cbd5e1', bg: (m.draft.values[a.key] === v) ? '#e0f7fa' : '#ffffff', color: (m.draft.values[a.key] === v) ? '#0f172a' : '#64748b', weight: (m.draft.values[a.key] === v) ? '500' : '400' })) });
+        }
+      });
+      meta.refs.forEach(r => {
+        const err = touchedErrors[r.key] || '';
+        const candidates = this.siblingsOf(r.of, m.owner);
+        fields.push({ label: r.label, star: r.required ? '*' : '', cardinality: r.card || '', isText: false, isEnum: false, isRef: true, span: 'auto', of: r.of, value: m.draft.refs[r.key], borderColor: err ? '#ef4444' : '#cbd5e1', error: err, options: candidates.map(c => ({ id: c.id, label: this.label(c) + ' : ' + c.cls })), onSelect: (e) => this.setDraft('refs', r.key, e.target.value) });
+      });
+      const invalid = Object.keys(errors).length > 0;
+      const ownerLabel = m.owner && inst[m.owner] ? this.label(inst[m.owner]) : 'model root';
+      modalVals = {
+        modalOpen: true,
+        modalTitle: m.mode === 'create' ? ('New ' + m.cls) : (this.label(inst[m.id]) ), 
+        modalSubtitle: m.cls + ' \u00b7 ' + ownerLabel + (m.mode === 'create' ? ' \u00b7 not created until \u00abCreate\u00bb' : ''),
+        modalFields: fields,
+        modalInvalid: invalid,
+        modalDoneOpacity: invalid ? '0.5' : '1',
+        modalDoneLabel: m.mode === 'create' ? 'Create' : 'Done',
+        modalHint: m.mode === 'create' ? 'Transactional: nothing exists until Create' : 'Done applies \u00b7 Cancel discards',
+        modalDone: () => this.applyModal(),
+        modalCancel: () => this.setState({ modal: null })
+      };
+    }
+    let delVals = { delOpen: false };
+    if (S.del) {
+      const d = S.del; const target = inst[d.id];
+      const others = target ? this.siblingsOf(target.cls, target.owner).filter(x => x.id !== d.id) : [];
+      const reassignTo = d.reassignTo || (others[0] ? others[0].id : '');
+      const isMachine = target && target.cls === 'StateMachine';
+      const childCount = target ? Object.values(target.children).reduce((n, l) => n + l.length, 0) : 0;
+      delVals = {
+        delOpen: true,
+        delTitle: 'Delete ' + (target ? this.label(target) : '') + '?',
+        delMessage: d.refs.length
+          ? (this.label(target) + ' : ' + target.cls + ' is referenced by ' + d.refs.length + ' Transition' + (d.refs.length > 1 ? 's' : '') + ' \u2014 cardinality 1..1 would break.')
+          : (isMachine && childCount ? ('Containment cascades: its ' + childCount + ' contained element' + (childCount > 1 ? 's' : '') + ' will be deleted too.') : 'This cannot be undone.'),
+        delRefs: d.refs.map(r => ({ label: r.label, refName: r.refName })),
+        delCanReassign: d.refs.length > 0 && others.length > 0,
+        delReassignTo: reassignTo,
+        delReassignOptions: others.map(o => ({ id: o.id, label: this.label(o) })),
+        delOnReassign: (e) => this.setState(s => ({ del: { ...s.del, reassignTo: e.target.value } })),
+        delConfirmReassign: () => this.doDelete(d.id, reassignTo),
+        delConfirmClear: () => this.doDelete(d.id, null),
+        delClearLabel: d.refs.length ? ('Delete anyway \u2014 ' + d.refs.length + ' Transition' + (d.refs.length > 1 ? 's' : '') + ' become invalid') : 'Delete',
+        delCancel: () => this.setState({ del: null })
+      };
+    }
+    return {
+      showMetaHints, collections,
+      search: S.search, onSearch: (e) => this.setState({ search: e.target.value }),
+      newRoot: () => this.openModal('create', 'StateMachine', null, null, null),
+      atList: !S.view, atDetail: !!S.view,
+      machineRows, noMachines: machineRows.length === 0,
+      machineCountLabel: machines.length + ' instance' + (machines.length === 1 ? '' : 's'),
+      backToList: () => this.setState({ view: null }),
+      ...detailVals, ...modalVals, ...delVals
+    };
+  }
+}
+</script>
+</body>
+</html>

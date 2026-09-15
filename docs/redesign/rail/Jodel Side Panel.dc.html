@@ -1,0 +1,1220 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/tokens/colors.css">
+<link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/tokens/entities.css">
+<link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/tokens/typography.css">
+<link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/tokens/spacing.css">
+<link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/tokens/radius.css">
+<link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/tokens/shadows.css">
+<link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/tokens/transitions.css">
+<link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+<script src="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/_ds_bundle.js"></script>
+<style>
+  body { margin: 0; background: #eef2f7; font-family: Inter, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  a { color: #0ea5e9; text-decoration: none; }
+  a:hover { color: #0284c7; text-decoration: underline; }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+</style>
+</helmet>
+
+<section style="padding: 56px 56px 40px; display: flex; flex-direction: column; gap: 28px;">
+  <div style="max-width: 1180px;">
+    <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #94a3b8;">Turn 4 · One panel, four layouts</div>
+    <h1 style="margin: 6px 0 8px; font-size: 32px; font-weight: 700; letter-spacing: -0.02em; color: #0f172a;">Layout as a setting</h1>
+    <p style="margin: 0; max-width: 640px; font-size: 15px; line-height: 1.55; color: #475569; text-wrap: pretty;">All four directions are the same panel with three switches — tabs on or off, tree pane collapsible or fixed, Recent present or not. The choice is gated by the editor's own mode: <strong>Basic gets 2a and nothing else</strong> — no gear, no decision — while <strong>Advanced</strong> reveals the gear and all four presets, remembered per user. Flip the Basic / Advanced toggle in the panel header below to see both.</p>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start;">
+    <div id="4a" style="display: flex; flex-direction: column; gap: 14px; width: 420px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 99px; background: #334155; color: #fff; font-size: 11px; font-weight: 600;">4a</span>
+        <span style="font-size: 15px; font-weight: 600; color: #0f172a;">Configurable rail</span>
+        <span style="font-size: 13px; color: #64748b;">{{ cfgModeNote }}</span>
+      </div>
+
+      <div style="position: relative; width: 420px; height: 1000px; display: flex; flex-direction: column; background: #ffffff; border: 0.5px solid #e2e8f0; border-radius: 12px; box-shadow: 0 4px 16px rgba(15,23,42,0.07); overflow: hidden;">
+
+        <div onDoubleClick="{{ toggleHybrid }}" style="display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 8px 0 12px; border-bottom: 1px solid #eef2f7; flex: none; user-select: none;">
+          <span style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 4px; background: #eeedfe; color: #534ab7; font-size: 11px; font-weight: 700;">M</span>
+          <span style="min-width: 0; font-size: 13px; font-weight: 600; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Class Diagram</span>
+          <div style="flex: 1; min-width: 8px;"></div>
+          <sc-if value="{{ cfgAdaptive }}" hint-placeholder-val="{{ true }}">
+            <button onClick="{{ toggleHybrid }}" title="{{ cfgActionLabel }}" style="flex: none; display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border: 1px solid #e2e8f0; border-radius: 6px; background: #fff; cursor: pointer; color: #475569;" style-hover="border-color: #94a3b8; color: #0f172a;">
+              <i class="bi {{ cfgActionIcon }}" style="font-size: 12px;"></i>
+            </button>
+          </sc-if>
+          <div style="flex: none; display: flex; padding: 2px; background: #f1f5f9; border-radius: 6px; gap: 2px;">
+            <button onClick="{{ setBasic }}" style="border: 0; cursor: pointer; height: 22px; padding: 0 8px; border-radius: 4px; font: inherit; font-size: 11px; font-weight: 600; background: {{ basicBg }}; color: {{ basicFg }}; box-shadow: {{ basicShadow }}; transition: all 150ms cubic-bezier(0,0,0.2,1);">Basic</button>
+            <button onClick="{{ setAdvanced }}" style="border: 0; cursor: pointer; height: 22px; padding: 0 8px; border-radius: 4px; font: inherit; font-size: 11px; font-weight: 600; background: {{ advBg }}; color: {{ advFg }}; box-shadow: {{ advShadow }}; transition: all 150ms cubic-bezier(0,0,0.2,1);">Advanced</button>
+          </div>
+          <sc-if value="{{ cfgAdvancedMode }}" hint-placeholder-val="{{ true }}">
+            <button onClick="{{ toggleSettings }}" title="Panel layout" style="flex: none; border: 0; cursor: pointer; width: 26px; height: 26px; border-radius: 6px; color: #475569; display: inline-flex; align-items: center; justify-content: center; background: {{ settingsBg }};" style-hover="background: #f1f5f9; color: #0f172a;"><i class="bi bi-gear" style="font-size: 13px;"></i></button>
+          </sc-if>
+          <button style="border: 0; background: transparent; cursor: pointer; width: 26px; height: 26px; border-radius: 6px; color: #94a3b8; display: inline-flex; align-items: center; justify-content: center;" style-hover="background: #f1f5f9; color: #334155;"><i class="bi bi-chevron-double-right" style="font-size: 13px;"></i></button>
+        </div>
+
+        <sc-if value="{{ settingsOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="position: absolute; top: 46px; right: 8px; z-index: 5; width: 268px; background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; box-shadow: 0 12px 32px rgba(15,23,42,0.16); padding: 8px;">
+            <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8; padding: 5px 8px 8px;">Panel layout</div>
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+              <sc-for list="{{ layoutOptions }}" as="o" hint-placeholder-count="4">
+                <button onClick="{{ o.pick }}" style="display: flex; align-items: flex-start; gap: 8px; width: 100%; text-align: left; padding: 8px 9px; border: 1px solid {{ o.bd }}; border-radius: 8px; background: {{ o.bg }}; cursor: pointer; font: inherit; transition: all 150ms cubic-bezier(0,0,0.2,1);" style-hover="border-color: #94a3b8;">
+                  <i class="bi {{ o.check }}" style="font-size: 13px; color: {{ o.checkFg }}; margin-top: 1px;"></i>
+                  <span style="display: block;">
+                    <span style="display: block; font-size: 13px; font-weight: 600; color: {{ o.fg }};">{{ o.name }}</span>
+                    <span style="display: block; font-size: 11px; line-height: 1.45; color: #64748b;">{{ o.hint }}</span>
+                  </span>
+                </button>
+              </sc-for>
+            </div>
+            <div style="padding: 9px 9px 4px; font-size: 11px; color: #94a3b8; line-height: 1.45;">Saved per user, per workspace.</div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ cfgTabs }}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; align-items: center; gap: 2px; height: 40px; padding: 0 8px; border-bottom: 1px solid #eef2f7; flex: none;">
+            <button onClick="{{ goInspect }}" style="display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px; border: 0; border-radius: 7px; cursor: pointer; font: inherit; font-size: 13px; font-weight: 600; background: {{ tabIBg }}; color: {{ tabIFg }};"><i class="bi bi-sliders2" style="font-size: 12px;"></i>Inspector</button>
+            <button onClick="{{ goTree }}" style="display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px; border: 0; border-radius: 7px; cursor: pointer; font: inherit; font-size: 13px; font-weight: 600; background: {{ tabTBg }}; color: {{ tabTFg }};"><i class="bi bi-diagram-3" style="font-size: 12px;"></i>Structure</button>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ cfgRecent }}" hint-placeholder-val="{{ false }}">
+          <div style="flex: none; border-bottom: 1px solid #e2e8f0; background: #fcfdfe;">
+            <div onClick="{{ toggleRecent }}" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 12px; cursor: pointer;">
+              <i class="bi {{ recentCaret }}" style="font-size: 10px; color: #94a3b8;"></i>
+              <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8;">Recent</span>
+              <div style="flex: 1;"></div>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #cbd5e1;">{{ recentCount }}</span>
+            </div>
+            <sc-if value="{{ recentOpen }}" hint-placeholder-val="{{ true }}">
+              <div style="padding-bottom: 6px;">
+                <sc-for list="{{ recent }}" as="r" hint-placeholder-count="4">
+                  <div onClick="{{ r.open }}" style="display: flex; align-items: center; gap: 8px; height: 28px; padding: 0 12px; cursor: pointer; background: {{ r.bg }}; box-shadow: {{ r.bar }};" style-hover="background: #f1f5f9;">
+                    <span style="flex: none; display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 4px; font-size: 10px; font-weight: 700; background: {{ r.badgeBg }}; color: {{ r.badgeFg }};">{{ r.letter }}</span>
+                    <span style="font-size: 13px; font-weight: 500; color: #0f172a; white-space: nowrap;">{{ r.name }}</span>
+                    <span style="font-size: 11px; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ r.ctx }}</span>
+                    <div style="flex: 1;"></div>
+                    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #cbd5e1;">{{ r.when }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <div style="flex: none; overflow: hidden; height: {{ cfgTreeH }}; opacity: {{ cfgTreeOpacity }}; transition: height 250ms cubic-bezier(0,0,0.2,1), opacity 150ms cubic-bezier(0,0,0.2,1); display: flex; flex-direction: column; border-bottom: 1px solid #e2e8f0;">
+          <div style="display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px; border-bottom: 1px solid #eef2f7; flex: none;">
+            <i class="bi bi-search" style="font-size: 12px; color: #94a3b8;"></i>
+            <input value="{{ filter }}" onChange="{{ onFilter }}" placeholder="Filter structure" style="flex: 1; border: 0; outline: none; background: transparent; font: inherit; font-size: 13px; color: #0f172a;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #94a3b8;">{{ matchLabel }}</span>
+          </div>
+          <div style="flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 6px 0 8px;">
+            <sc-for list="{{ rows }}" as="row" hint-placeholder-count="10">
+              <div onClick="{{ row.selectConfigured }}" style="display: flex; align-items: center; gap: 7px; height: 26px; padding-right: 10px; cursor: pointer; background: {{ row.bg }}; box-shadow: {{ row.bar }};" style-hover="background: #f1f5f9;">
+                <div style="flex: none; width: {{ row.indent }};"></div>
+                <i class="bi {{ row.caret }}" style="flex: none; width: 12px; font-size: 10px; color: #94a3b8;"></i>
+                <span style="flex: none; display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 4px; font-size: 10px; font-weight: 700; background: {{ row.badgeBg }}; color: {{ row.badgeFg }};">{{ row.letter }}</span>
+                <span style="font-size: 13px; font-weight: {{ row.weight }}; font-style: {{ row.italic }}; color: {{ row.fg }}; white-space: nowrap;">{{ row.name }}</span>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #94a3b8; white-space: nowrap;">{{ row.type }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <sc-if value="{{ cfgFocus }}" hint-placeholder-val="{{ false }}">
+          <div style="flex: none; display: flex; align-items: center; gap: 6px; height: 34px; padding: 0 10px; background: #f8fafc; border-bottom: 1px solid #eef2f7;">
+            <button onClick="{{ backToTree }}" style="display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 8px; border: 1px solid #e2e8f0; border-radius: 6px; background: #fff; cursor: pointer; font: inherit; font-size: 11px; color: #475569;" style-hover="border-color: #94a3b8;"><i class="bi bi-diagram-3" style="font-size: 10px;"></i>{{ sel.parent }}</button>
+            <i class="bi bi-chevron-right" style="font-size: 9px; color: #cbd5e1;"></i>
+            <span style="font-size: 11px; font-weight: 600; color: #334155;">{{ sel.name }}</span>
+            <div style="flex: 1;"></div>
+            <button onClick="{{ prevSibling }}" style="width: 22px; height: 22px; border: 1px solid #e2e8f0; border-radius: 6px; background: #fff; cursor: pointer; color: #64748b; display: inline-flex; align-items: center; justify-content: center;" style-hover="border-color: #94a3b8;"><i class="bi bi-chevron-up" style="font-size: 10px;"></i></button>
+            <button onClick="{{ nextSibling }}" style="width: 22px; height: 22px; border: 1px solid #e2e8f0; border-radius: 6px; background: #fff; cursor: pointer; color: #64748b; display: inline-flex; align-items: center; justify-content: center;" style-hover="border-color: #94a3b8;"><i class="bi bi-chevron-down" style="font-size: 10px;"></i></button>
+          </div>
+        </sc-if>
+
+        <div style="flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column;">
+          <div style="display: flex; align-items: center; gap: 8px; padding: {{ cfgIdPad }}; flex: none; transition: padding 250ms cubic-bezier(0,0,0.2,1);">
+            <span style="display: inline-flex; align-items: center; justify-content: center; width: {{ cfgBadgeSize }}; height: {{ cfgBadgeSize }}; border-radius: 7px; font-size: {{ cfgBadgeFont }}; font-weight: 700; background: {{ sel.badgeBg }}; color: {{ sel.badgeFg }}; transition: all 250ms cubic-bezier(0,0,0.2,1);">{{ sel.letter }}</span>
+            <div style="min-width: 0;">
+              <div style="font-size: {{ cfgTitleFont }}; font-weight: 600; color: #0f172a; letter-spacing: -0.015em; line-height: 1.2; transition: font-size 250ms cubic-bezier(0,0,0.2,1);">{{ sel.name }}</div>
+              <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: {{ sel.badgeFg }};">{{ sel.kind }}</div>
+            </div>
+            <div style="flex: 1;"></div>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #64748b; background: #f1f5f9; padding: 3px 7px; border-radius: 5px;">{{ sel.signature }}</span>
+          </div>
+          <div style="flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 4px 14px 18px;">
+            <div style="display: grid; grid-template-columns: 84px 1fr; align-items: center; gap: 8px 10px;">
+              <label style="font-size: 12px; color: #475569; text-align: right;">Name</label>
+              <input value="{{ sel.name }}" onChange="{{ onName }}" style="height: 30px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 0 9px; font: inherit; font-size: 13px; color: #0f172a; background: #fff; outline: none;" style-focus="border-color: #64748b; box-shadow: 0 0 0 3px rgba(51,65,85,0.06);">
+              <sc-if value="{{ sel.isTyped }}" hint-placeholder-val="{{ true }}">
+                <label style="font-size: 12px; color: #475569; text-align: right;">Type</label>
+                <div style="display: flex; align-items: center; height: 30px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 0 9px; background: #fff; gap: 7px; cursor: pointer;" style-hover="border-color: #94a3b8;">
+                  <span style="font-size: 13px; color: #0f172a;">{{ sel.type2 }}</span>
+                  <div style="flex: 1;"></div>
+                  <i class="bi bi-chevron-expand" style="font-size: 11px; color: #94a3b8;"></i>
+                </div>
+                <label style="font-size: 12px; color: #475569; text-align: right;">Multiplicity</label>
+                <div style="display: flex; gap: 4px;">
+                  <sc-for list="{{ mults }}" as="m" hint-placeholder-count="5">
+                    <button onClick="{{ m.pick }}" style="flex: 1 1 0; min-width: 0; padding: 0 2px; height: 28px; border: 1px solid {{ m.bd }}; border-radius: 6px; cursor: pointer; font-family: 'IBM Plex Mono', monospace; font-size: 11px; background: {{ m.bg }}; color: {{ m.fg }};">{{ m.label }}</button>
+                  </sc-for>
+                </div>
+              </sc-if>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px; margin: 18px 0 9px;">
+              <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8;">Flags</span>
+              <div style="flex: 1; height: 1px; background: #eef2f7;"></div>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #94a3b8;">{{ flagsOnLabel }}</span>
+            </div>
+            <sc-if value="{{ cfgChipFlags }}" hint-placeholder-val="{{ true }}">
+              <div style="display: flex; flex-wrap: wrap; gap: 5px;">
+                <sc-for list="{{ flags }}" as="f" hint-placeholder-count="6">
+                  <button onClick="{{ f.toggle }}" style="display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 9px 0 7px; border: 1px solid {{ f.bd }}; border-radius: 99px; cursor: pointer; font: inherit; font-size: 12px; background: {{ f.bg }}; color: {{ f.fg }};"><i class="bi {{ f.icon }}" style="font-size: 10px;"></i>{{ f.label }}</button>
+                </sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{ cfgSwitchFlags }}" hint-placeholder-val="{{ false }}">
+              <div style="display: flex; flex-direction: column; border: 1px solid #eef2f7; border-radius: 9px; overflow: hidden;">
+                <sc-for list="{{ flags }}" as="f" hint-placeholder-count="6">
+                  <div onClick="{{ f.toggle }}" style="display: flex; align-items: center; gap: 9px; height: 36px; padding: 0 11px; cursor: pointer; border-bottom: 1px solid #f8fafc;" style-hover="background: #f8fafc;">
+                    <i class="bi {{ f.icon }}" style="font-size: 12px; color: #94a3b8;"></i>
+                    <span style="font-size: 13px; color: #334155;">{{ f.label }}</span>
+                    <span style="font-size: 12px; color: #94a3b8;">{{ f.hint }}</span>
+                    <div style="flex: 1;"></div>
+                    <div style="width: 30px; height: 18px; border-radius: 99px; padding: 2px; box-sizing: border-box; background: {{ f.trackBg }}; transition: background 150ms;">
+                      <div style="width: 14px; height: 14px; border-radius: 99px; background: #fff; box-shadow: 0 1px 2px rgba(15,23,42,0.2); transform: translateX({{ f.knobX }}); transition: transform 150ms cubic-bezier(0,0,0.2,1);"></div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+            <div onClick="{{ toggleAdvanced }}" style="display: flex; align-items: center; gap: 8px; margin: 18px 0 0; height: 30px; cursor: pointer;">
+              <i class="bi {{ advCaret }}" style="font-size: 10px; color: #94a3b8;"></i>
+              <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8;">Advanced</span>
+              <div style="flex: 1; height: 1px; background: #eef2f7;"></div>
+              <span style="font-size: 11px; color: #94a3b8;">{{ advSummary }}</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px; margin: 16px 0 0; height: 30px; cursor: pointer;">
+              <i class="bi bi-chevron-right" style="font-size: 10px; color: #94a3b8;"></i>
+              <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8;">Appearance</span>
+              <div style="flex: 1; height: 1px; background: #eef2f7;"></div>
+              <span style="font-size: 11px; color: #94a3b8;">Node · default</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="flex: none; display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 12px; border-top: 1px solid #eef2f7; background: #f8fafc;">
+          <i class="bi bi-check-circle" style="font-size: 11px; color: #22c55e;"></i>
+          <span style="font-size: 11px; color: #64748b;">{{ savedLabel }}</span>
+          <div style="flex: 1;"></div>
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #94a3b8;">{{ cfgHint }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="width: 340px; display: flex; flex-direction: column; gap: 14px; padding-top: 42px;">
+      <div style="background: #fff; border: 0.5px solid #e2e8f0; border-radius: 12px; padding: 18px; box-shadow: 0 1px 3px rgba(15,23,42,0.04);">
+        <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #94a3b8; margin-bottom: 12px;">Four presets, three switches</div>
+        <div style="display: flex; flex-direction: column; gap: 11px;">
+          <div style="display: flex; gap: 9px;"><span style="flex: none; display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 20px; border-radius: 5px; background: #f1f5f9; color: #334155; font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600;">1a</span><div style="font-size: 12px; line-height: 1.5; color: #64748b;"><strong style="color: #0f172a;">Unified rail</strong> — tree fixed, no tabs, no Recent. The safe default for teachers and first sessions.</div></div>
+          <div style="display: flex; gap: 9px;"><span style="flex: none; display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 20px; border-radius: 5px; background: #f1f5f9; color: #334155; font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600;">1b</span><div style="font-size: 12px; line-height: 1.5; color: #64748b;"><strong style="color: #0f172a;">Inspector first</strong> — tabs on. Best on short screens and laptops.</div></div>
+          <div style="display: flex; gap: 9px;"><span style="flex: none; display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 20px; border-radius: 5px; background: #f1f5f9; color: #334155; font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600;">2a</span><div style="font-size: 12px; line-height: 1.5; color: #64748b;"><strong style="color: #0f172a;">Adaptive rail</strong> — collapsible tree. The recommended default.</div></div>
+          <div style="display: flex; gap: 9px;"><span style="flex: none; display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 20px; border-radius: 5px; background: #f1f5f9; color: #334155; font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600;">3a</span><div style="font-size: 12px; line-height: 1.5; color: #64748b;"><strong style="color: #0f172a;">Adaptive + Recent</strong> — adds the recency list. For tall monitors and long editing sessions.</div></div>
+        </div>
+      </div>
+      <div style="background: #fffbeb; border: 0.5px solid #fde68a; border-radius: 12px; padding: 16px 18px;">
+        <div style="font-size: 12px; font-weight: 600; color: #854f0b; margin-bottom: 5px;">The gate does the work</div>
+        <div style="font-size: 12px; line-height: 1.55; color: #7c5310;">In Basic the setting does not exist — no gear, no picker, one layout. A preference only helps people who already know what they want, and by definition that is the Advanced population. Switching back to Basic renders 2a but keeps the stored preset for their return.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="padding: 16px 56px 40px; display: flex; flex-direction: column; gap: 28px; border-top: 1px solid #dbe3ec;">
+  <div style="max-width: 1180px;">
+    <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #94a3b8;">Turn 3 · Tall screens</div>
+    <h1 style="margin: 6px 0 8px; font-size: 32px; font-weight: 700; letter-spacing: -0.02em; color: #0f172a;">Recent, only where there is room</h1>
+    <p style="margin: 0; max-width: 640px; font-size: 15px; line-height: 1.55; color: #475569; text-wrap: pretty;">Yes — with two conditions. It has to be <em>real</em> navigation history, not a second tree, and it must vanish the moment the rail is short, otherwise it steals the space the inspector needs. Here it is the top zone of <a href="#2a">2a</a>: collapsed to a 30px header below ~900px of rail height, capped at five entries, gone entirely in Focus posture. Click a row — the tree does not move, only the inspector does.</p>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start;">
+    <div id="3a" style="display: flex; flex-direction: column; gap: 14px; width: 420px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 99px; background: #334155; color: #fff; font-size: 11px; font-weight: 600;">3a</span>
+        <span style="font-size: 15px; font-weight: 600; color: #0f172a;">Adaptive rail + Recent</span>
+        <span style="font-size: 13px; color: #64748b;">420 × 1000</span>
+      </div>
+
+      <div style="width: 420px; height: 1000px; display: flex; flex-direction: column; background: #ffffff; border: 0.5px solid #e2e8f0; border-radius: 12px; box-shadow: 0 4px 16px rgba(15,23,42,0.07); overflow: hidden;">
+
+        <div onDoubleClick="{{ toggleHybrid }}" style="display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 8px 0 12px; border-bottom: 1px solid #eef2f7; flex: none; user-select: none;">
+          <span style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 4px; background: #eeedfe; color: #534ab7; font-size: 11px; font-weight: 700;">M</span>
+          <span style="font-size: 13px; font-weight: 600; color: #0f172a;">Class Diagram</span>
+          <div style="flex: 1;"></div>
+          <button onClick="{{ toggleHybrid }}" style="display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 9px; border: 1px solid #e2e8f0; border-radius: 6px; background: #fff; cursor: pointer; font: inherit; font-size: 11px; font-weight: 600; color: #475569;" style-hover="border-color: #94a3b8; color: #0f172a;">
+            <i class="bi {{ hybridIcon }}" style="font-size: 11px;"></i>{{ hybridActionLabel }}
+          </button>
+          <button style="border: 0; background: transparent; cursor: pointer; width: 26px; height: 26px; border-radius: 6px; color: #94a3b8; display: inline-flex; align-items: center; justify-content: center;" style-hover="background: #f1f5f9; color: #334155;"><i class="bi bi-chevron-double-right" style="font-size: 13px;"></i></button>
+        </div>
+
+        <sc-if value="{{ hybridSplit }}" hint-placeholder-val="{{ true }}">
+          <div style="flex: none; border-bottom: 1px solid #e2e8f0; background: #fcfdfe;">
+            <div onClick="{{ toggleRecent }}" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 12px; cursor: pointer;">
+              <i class="bi {{ recentCaret }}" style="font-size: 10px; color: #94a3b8;"></i>
+              <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8;">Recent</span>
+              <div style="flex: 1;"></div>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #cbd5e1;">{{ recentCount }}</span>
+            </div>
+            <sc-if value="{{ recentOpen }}" hint-placeholder-val="{{ true }}">
+              <div style="padding-bottom: 6px;">
+                <sc-for list="{{ recent }}" as="r" hint-placeholder-count="4">
+                  <div onClick="{{ r.open }}" style="display: flex; align-items: center; gap: 8px; height: 28px; padding: 0 12px; cursor: pointer; background: {{ r.bg }}; box-shadow: {{ r.bar }};" style-hover="background: #f1f5f9;">
+                    <span style="flex: none; display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 4px; font-size: 10px; font-weight: 700; background: {{ r.badgeBg }}; color: {{ r.badgeFg }};">{{ r.letter }}</span>
+                    <span style="font-size: 13px; font-weight: 500; color: #0f172a; white-space: nowrap;">{{ r.name }}</span>
+                    <span style="font-size: 11px; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ r.ctx }}</span>
+                    <div style="flex: 1;"></div>
+                    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #cbd5e1;">{{ r.when }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <div style="flex: none; overflow: hidden; height: {{ hybridTreeH }}; opacity: {{ hybridTreeOpacity }}; transition: height 250ms cubic-bezier(0,0,0.2,1), opacity 150ms cubic-bezier(0,0,0.2,1); display: flex; flex-direction: column; border-bottom: 1px solid #e2e8f0;">
+          <div style="display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px; border-bottom: 1px solid #eef2f7; flex: none;">
+            <i class="bi bi-search" style="font-size: 12px; color: #94a3b8;"></i>
+            <input value="{{ filter }}" onChange="{{ onFilter }}" placeholder="Filter structure" style="flex: 1; border: 0; outline: none; background: transparent; font: inherit; font-size: 13px; color: #0f172a;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #94a3b8;">{{ matchLabel }}</span>
+          </div>
+          <div style="flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 6px 0 8px;">
+            <sc-for list="{{ rows }}" as="row" hint-placeholder-count="10">
+              <div onClick="{{ row.select }}" style="display: flex; align-items: center; gap: 7px; height: 26px; padding-right: 10px; cursor: pointer; background: {{ row.bg }}; box-shadow: {{ row.bar }};" style-hover="background: #f1f5f9;">
+                <div style="flex: none; width: {{ row.indent }};"></div>
+                <i class="bi {{ row.caret }}" style="flex: none; width: 12px; font-size: 10px; color: #94a3b8;"></i>
+                <span style="flex: none; display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 4px; font-size: 10px; font-weight: 700; background: {{ row.badgeBg }}; color: {{ row.badgeFg }};">{{ row.letter }}</span>
+                <span style="font-size: 13px; font-weight: {{ row.weight }}; font-style: {{ row.italic }}; color: {{ row.fg }}; white-space: nowrap;">{{ row.name }}</span>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #94a3b8; white-space: nowrap;">{{ row.type }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column;">
+          <div style="display: flex; align-items: center; gap: 8px; padding: {{ hybridIdPad }}; flex: none;">
+            <span style="display: inline-flex; align-items: center; justify-content: center; width: {{ hybridBadgeSize }}; height: {{ hybridBadgeSize }}; border-radius: 7px; font-size: {{ hybridBadgeFont }}; font-weight: 700; background: {{ sel.badgeBg }}; color: {{ sel.badgeFg }}; transition: all 250ms cubic-bezier(0,0,0.2,1);">{{ sel.letter }}</span>
+            <div style="min-width: 0;">
+              <div style="font-size: {{ hybridTitleFont }}; font-weight: 600; color: #0f172a; letter-spacing: -0.015em; line-height: 1.2; transition: font-size 250ms cubic-bezier(0,0,0.2,1);">{{ sel.name }}</div>
+              <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: {{ sel.badgeFg }};">{{ sel.kind }}</div>
+            </div>
+            <div style="flex: 1;"></div>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #64748b; background: #f1f5f9; padding: 3px 7px; border-radius: 5px;">{{ sel.signature }}</span>
+          </div>
+          <div style="flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 4px 14px 18px;">
+            <div style="display: grid; grid-template-columns: 84px 1fr; align-items: center; gap: 8px 10px;">
+              <label style="font-size: 12px; color: #475569; text-align: right;">Name</label>
+              <input value="{{ sel.name }}" onChange="{{ onName }}" style="height: 30px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 0 9px; font: inherit; font-size: 13px; color: #0f172a; background: #fff; outline: none;" style-focus="border-color: #64748b; box-shadow: 0 0 0 3px rgba(51,65,85,0.06);">
+              <sc-if value="{{ sel.isTyped }}" hint-placeholder-val="{{ true }}">
+                <label style="font-size: 12px; color: #475569; text-align: right;">Type</label>
+                <div style="display: flex; align-items: center; height: 30px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 0 9px; background: #fff; gap: 7px; cursor: pointer;" style-hover="border-color: #94a3b8;">
+                  <span style="font-size: 13px; color: #0f172a;">{{ sel.type2 }}</span>
+                  <div style="flex: 1;"></div>
+                  <i class="bi bi-chevron-expand" style="font-size: 11px; color: #94a3b8;"></i>
+                </div>
+                <label style="font-size: 12px; color: #475569; text-align: right;">Multiplicity</label>
+                <div style="display: flex; gap: 4px;">
+                  <sc-for list="{{ mults }}" as="m" hint-placeholder-count="5">
+                    <button onClick="{{ m.pick }}" style="flex: 1 1 0; min-width: 0; padding: 0 2px; height: 28px; border: 1px solid {{ m.bd }}; border-radius: 6px; cursor: pointer; font-family: 'IBM Plex Mono', monospace; font-size: 11px; background: {{ m.bg }}; color: {{ m.fg }};">{{ m.label }}</button>
+                  </sc-for>
+                </div>
+              </sc-if>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px; margin: 18px 0 9px;">
+              <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8;">Flags</span>
+              <div style="flex: 1; height: 1px; background: #eef2f7;"></div>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #94a3b8;">{{ flagsOnLabel }}</span>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 5px;">
+              <sc-for list="{{ flags }}" as="f" hint-placeholder-count="6">
+                <button onClick="{{ f.toggle }}" style="display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 9px 0 7px; border: 1px solid {{ f.bd }}; border-radius: 99px; cursor: pointer; font: inherit; font-size: 12px; background: {{ f.bg }}; color: {{ f.fg }};">
+                  <i class="bi {{ f.icon }}" style="font-size: 10px;"></i>{{ f.label }}
+                </button>
+              </sc-for>
+            </div>
+            <div onClick="{{ toggleAdvanced }}" style="display: flex; align-items: center; gap: 8px; margin: 18px 0 0; height: 30px; cursor: pointer;">
+              <i class="bi {{ advCaret }}" style="font-size: 10px; color: #94a3b8;"></i>
+              <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8;">Advanced</span>
+              <div style="flex: 1; height: 1px; background: #eef2f7;"></div>
+              <span style="font-size: 11px; color: #94a3b8;">{{ advSummary }}</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px; margin: 16px 0 0; height: 30px; cursor: pointer;">
+              <i class="bi bi-chevron-right" style="font-size: 10px; color: #94a3b8;"></i>
+              <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8;">Appearance</span>
+              <div style="flex: 1; height: 1px; background: #eef2f7;"></div>
+              <span style="font-size: 11px; color: #94a3b8;">Node · default</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="flex: none; display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 12px; border-top: 1px solid #eef2f7; background: #f8fafc;">
+          <i class="bi bi-check-circle" style="font-size: 11px; color: #22c55e;"></i>
+          <span style="font-size: 11px; color: #64748b;">{{ savedLabel }}</span>
+          <div style="flex: 1;"></div>
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #94a3b8;">{{ hybridHint }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="width: 340px; display: flex; flex-direction: column; gap: 14px; padding-top: 42px;">
+      <div style="background: #fff; border: 0.5px solid #e2e8f0; border-radius: 12px; padding: 18px; box-shadow: 0 1px 3px rgba(15,23,42,0.04);">
+        <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #94a3b8; margin-bottom: 12px;">Rules that keep it useful</div>
+        <div style="display: flex; flex-direction: column; gap: 13px;">
+          <div><div style="font-size: 13px; font-weight: 600; color: #0f172a;">Five entries, never more</div><div style="font-size: 12px; line-height: 1.5; color: #64748b;">Recency lists stop being scannable past five. Older jumps belong to the filter, not to a list.</div></div>
+          <div><div style="font-size: 13px; font-weight: 600; color: #0f172a;">Visited, not favourite</div><div style="font-size: 12px; line-height: 1.5; color: #64748b;">Ordered by last visit and deduplicated, so it mirrors what the user just did instead of asking them to curate anything.</div></div>
+          <div><div style="font-size: 13px; font-weight: 600; color: #0f172a;">Every row carries its context</div><div style="font-size: 12px; line-height: 1.5; color: #64748b;">Letter badge, name, owning classifier, age. Without the owner, <code style="font-family: 'IBM Plex Mono', monospace; font-size: 11px;">name</code> appearing three times is noise.</div></div>
+          <div><div style="font-size: 13px; font-weight: 600; color: #0f172a;">First to go when space is tight</div><div style="font-size: 12px; line-height: 1.5; color: #64748b;">Below ~900px of rail height it renders collapsed; in Focus posture it is not rendered at all. It may never push the inspector below the fold.</div></div>
+          <div><div style="font-size: 13px; font-weight: 600; color: #0f172a;">Jumping is not scrolling</div><div style="font-size: 12px; line-height: 1.5; color: #64748b;">Clicking a recent item moves the inspector and the tree selection, but does not re-scroll the tree — the user's place in the structure survives the detour.</div></div>
+        </div>
+      </div>
+      <div style="background: #fffbeb; border: 0.5px solid #fde68a; border-radius: 12px; padding: 16px 18px;">
+        <div style="font-size: 12px; font-weight: 600; color: #854f0b; margin-bottom: 5px;">The one risk</div>
+        <div style="font-size: 12px; line-height: 1.55; color: #7c5310;">A third list in a 400px rail can read as "three trees". It works here only because Recent is flat, short, and typographically quieter than the tree. If it ever grows headers or nesting, cut it.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="padding: 16px 56px 40px; display: flex; flex-direction: column; gap: 28px; border-top: 1px solid #dbe3ec;">
+  <div style="max-width: 1180px;">
+    <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #94a3b8;">Turn 2 · Best of both</div>
+    <h1 style="margin: 6px 0 8px; font-size: 32px; font-weight: 700; letter-spacing: -0.02em; color: #0f172a;">One panel, two postures</h1>
+    <p style="margin: 0; max-width: 620px; font-size: 15px; line-height: 1.55; color: #475569; text-wrap: pretty;">Same rail as <a href="#1a">1a</a>, but the tree pane collapses and expands. Double-click the header to switch posture — or use the explicit control next to it, since a double-click alone is undiscoverable. Selecting a leaf in the tree drops into Focus automatically; ⎋ brings the tree back.</p>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start;">
+    <div id="2a" style="display: flex; flex-direction: column; gap: 14px; width: 400px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 99px; background: #334155; color: #fff; font-size: 11px; font-weight: 600;">2a</span>
+        <span style="font-size: 15px; font-weight: 600; color: #0f172a;">Adaptive rail</span>
+        <span style="font-size: 13px; color: #64748b;">{{ hybridModeLabel }}</span>
+      </div>
+
+      <div style="width: 400px; height: 880px; display: flex; flex-direction: column; background: #ffffff; border: 0.5px solid #e2e8f0; border-radius: 12px; box-shadow: 0 4px 16px rgba(15,23,42,0.07); overflow: hidden;">
+
+        <div onDoubleClick="{{ toggleHybrid }}" title="Double-click to switch posture" style="display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 8px 0 12px; border-bottom: 1px solid #eef2f7; flex: none; cursor: default; user-select: none;">
+          <span style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 4px; background: #eeedfe; color: #534ab7; font-size: 11px; font-weight: 700;">M</span>
+          <span style="font-size: 13px; font-weight: 600; color: #0f172a; letter-spacing: -0.01em;">Class Diagram</span>
+          <div style="flex: 1;"></div>
+          <button onClick="{{ toggleHybrid }}" style="display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 9px; border: 1px solid #e2e8f0; border-radius: 6px; background: #fff; cursor: pointer; font: inherit; font-size: 11px; font-weight: 600; color: #475569; transition: all 150ms cubic-bezier(0,0,0.2,1);" style-hover="border-color: #94a3b8; color: #0f172a;">
+            <i class="bi {{ hybridIcon }}" style="font-size: 11px;"></i>{{ hybridActionLabel }}
+          </button>
+          <button style="border: 0; background: transparent; cursor: pointer; width: 26px; height: 26px; border-radius: 6px; color: #94a3b8; display: inline-flex; align-items: center; justify-content: center;" style-hover="background: #f1f5f9; color: #334155;"><i class="bi bi-chevron-double-right" style="font-size: 13px;"></i></button>
+        </div>
+
+        <div style="flex: none; overflow: hidden; height: {{ hybridTreeH }}; opacity: {{ hybridTreeOpacity }}; transition: height 250ms cubic-bezier(0,0,0.2,1), opacity 150ms cubic-bezier(0,0,0.2,1); display: flex; flex-direction: column; border-bottom: 1px solid #e2e8f0;">
+          <div style="display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px; border-bottom: 1px solid #eef2f7; flex: none;">
+            <i class="bi bi-search" style="font-size: 12px; color: #94a3b8;"></i>
+            <input value="{{ filter }}" onChange="{{ onFilter }}" placeholder="Filter structure" style="flex: 1; border: 0; outline: none; background: transparent; font: inherit; font-size: 13px; color: #0f172a;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #94a3b8;">{{ matchLabel }}</span>
+          </div>
+          <div style="flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 6px 0 8px;">
+            <sc-for list="{{ rows }}" as="row" hint-placeholder-count="10">
+              <div onClick="{{ row.selectHybrid }}" style="display: flex; align-items: center; gap: 7px; height: 26px; padding-right: 10px; cursor: pointer; background: {{ row.bg }}; box-shadow: {{ row.bar }};" style-hover="background: #f1f5f9;">
+                <div style="flex: none; width: {{ row.indent }};"></div>
+                <i class="bi {{ row.caret }}" style="flex: none; width: 12px; font-size: 10px; color: #94a3b8;"></i>
+                <span style="flex: none; display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 4px; font-size: 10px; font-weight: 700; background: {{ row.badgeBg }}; color: {{ row.badgeFg }};">{{ row.letter }}</span>
+                <span style="font-size: 13px; font-weight: {{ row.weight }}; font-style: {{ row.italic }}; color: {{ row.fg }}; white-space: nowrap;">{{ row.name }}</span>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #94a3b8; white-space: nowrap;">{{ row.type }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <sc-if value="{{ hybridFocus }}" hint-placeholder-val="{{ false }}">
+          <div style="flex: none; display: flex; align-items: center; gap: 6px; height: 34px; padding: 0 10px; background: #f8fafc; border-bottom: 1px solid #eef2f7;">
+            <button onClick="{{ toggleHybrid }}" style="display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 8px; border: 1px solid #e2e8f0; border-radius: 6px; background: #fff; cursor: pointer; font: inherit; font-size: 11px; color: #475569;" style-hover="border-color: #94a3b8;">
+              <i class="bi bi-diagram-3" style="font-size: 10px;"></i>{{ sel.parent }}
+            </button>
+            <i class="bi bi-chevron-right" style="font-size: 9px; color: #cbd5e1;"></i>
+            <span style="font-size: 11px; font-weight: 600; color: #334155;">{{ sel.name }}</span>
+            <div style="flex: 1;"></div>
+            <button onClick="{{ prevSibling }}" style="width: 22px; height: 22px; border: 1px solid #e2e8f0; border-radius: 6px; background: #fff; cursor: pointer; color: #64748b; display: inline-flex; align-items: center; justify-content: center;" style-hover="border-color: #94a3b8;"><i class="bi bi-chevron-up" style="font-size: 10px;"></i></button>
+            <button onClick="{{ nextSibling }}" style="width: 22px; height: 22px; border: 1px solid #e2e8f0; border-radius: 6px; background: #fff; cursor: pointer; color: #64748b; display: inline-flex; align-items: center; justify-content: center;" style-hover="border-color: #94a3b8;"><i class="bi bi-chevron-down" style="font-size: 10px;"></i></button>
+          </div>
+        </sc-if>
+
+        <div style="flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column;">
+          <div style="display: flex; align-items: center; gap: 8px; padding: {{ hybridIdPad }}; flex: none; transition: padding 250ms cubic-bezier(0,0,0.2,1);">
+            <span style="display: inline-flex; align-items: center; justify-content: center; width: {{ hybridBadgeSize }}; height: {{ hybridBadgeSize }}; border-radius: 7px; font-size: {{ hybridBadgeFont }}; font-weight: 700; background: {{ sel.badgeBg }}; color: {{ sel.badgeFg }}; transition: all 250ms cubic-bezier(0,0,0.2,1);">{{ sel.letter }}</span>
+            <div style="min-width: 0;">
+              <div style="font-size: {{ hybridTitleFont }}; font-weight: 600; color: #0f172a; letter-spacing: -0.015em; line-height: 1.2; transition: font-size 250ms cubic-bezier(0,0,0.2,1);">{{ sel.name }}</div>
+              <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: {{ sel.badgeFg }};">{{ sel.kind }}</div>
+            </div>
+            <div style="flex: 1;"></div>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #64748b; background: #f1f5f9; padding: 3px 7px; border-radius: 5px;">{{ sel.signature }}</span>
+          </div>
+
+          <div style="flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 4px 14px 18px;">
+            <div style="display: grid; grid-template-columns: 84px 1fr; align-items: center; gap: 8px 10px;">
+              <label style="font-size: 12px; color: #475569; text-align: right;">Name</label>
+              <input value="{{ sel.name }}" onChange="{{ onName }}" style="height: 30px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 0 9px; font: inherit; font-size: 13px; color: #0f172a; background: #fff; outline: none;" style-focus="border-color: #64748b; box-shadow: 0 0 0 3px rgba(51,65,85,0.06);">
+              <sc-if value="{{ sel.isTyped }}" hint-placeholder-val="{{ true }}">
+                <label style="font-size: 12px; color: #475569; text-align: right;">Type</label>
+                <div style="display: flex; align-items: center; height: 30px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 0 9px; background: #fff; gap: 7px; cursor: pointer;" style-hover="border-color: #94a3b8;">
+                  <span style="font-size: 13px; color: #0f172a;">{{ sel.type2 }}</span>
+                  <div style="flex: 1;"></div>
+                  <i class="bi bi-chevron-expand" style="font-size: 11px; color: #94a3b8;"></i>
+                </div>
+                <label style="font-size: 12px; color: #475569; text-align: right;">Multiplicity</label>
+                <div style="display: flex; gap: 4px;">
+                  <sc-for list="{{ mults }}" as="m" hint-placeholder-count="5">
+                    <button onClick="{{ m.pick }}" style="flex: 1 1 0; min-width: 0; padding: 0 2px; height: 28px; border: 1px solid {{ m.bd }}; border-radius: 6px; cursor: pointer; font-family: 'IBM Plex Mono', monospace; font-size: 11px; background: {{ m.bg }}; color: {{ m.fg }}; transition: all 150ms cubic-bezier(0,0,0.2,1);">{{ m.label }}</button>
+                  </sc-for>
+                </div>
+              </sc-if>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 8px; margin: 18px 0 9px;">
+              <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8;">Flags</span>
+              <div style="flex: 1; height: 1px; background: #eef2f7;"></div>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #94a3b8;">{{ flagsOnLabel }}</span>
+            </div>
+            <sc-if value="{{ hybridSplit }}" hint-placeholder-val="{{ true }}">
+              <div style="display: flex; flex-wrap: wrap; gap: 5px;">
+                <sc-for list="{{ flags }}" as="f" hint-placeholder-count="6">
+                  <button onClick="{{ f.toggle }}" style="display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 9px 0 7px; border: 1px solid {{ f.bd }}; border-radius: 99px; cursor: pointer; font: inherit; font-size: 12px; background: {{ f.bg }}; color: {{ f.fg }}; transition: all 150ms cubic-bezier(0,0,0.2,1);">
+                    <i class="bi {{ f.icon }}" style="font-size: 10px;"></i>{{ f.label }}
+                  </button>
+                </sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{ hybridFocus }}" hint-placeholder-val="{{ false }}">
+              <div style="display: flex; flex-direction: column; border: 1px solid #eef2f7; border-radius: 9px; overflow: hidden;">
+                <sc-for list="{{ flags }}" as="f" hint-placeholder-count="6">
+                  <div onClick="{{ f.toggle }}" style="display: flex; align-items: center; gap: 9px; height: 36px; padding: 0 11px; cursor: pointer; border-bottom: 1px solid #f8fafc;" style-hover="background: #f8fafc;">
+                    <i class="bi {{ f.icon }}" style="font-size: 12px; color: #94a3b8;"></i>
+                    <span style="font-size: 13px; color: #334155;">{{ f.label }}</span>
+                    <span style="font-size: 12px; color: #94a3b8;">{{ f.hint }}</span>
+                    <div style="flex: 1;"></div>
+                    <div style="width: 30px; height: 18px; border-radius: 99px; padding: 2px; box-sizing: border-box; background: {{ f.trackBg }}; transition: background 150ms;">
+                      <div style="width: 14px; height: 14px; border-radius: 99px; background: #fff; box-shadow: 0 1px 2px rgba(15,23,42,0.2); transform: translateX({{ f.knobX }}); transition: transform 150ms cubic-bezier(0,0,0.2,1);"></div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+
+            <div onClick="{{ toggleAdvanced }}" style="display: flex; align-items: center; gap: 8px; margin: 18px 0 0; height: 30px; cursor: pointer;">
+              <i class="bi {{ advCaret }}" style="font-size: 10px; color: #94a3b8;"></i>
+              <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8;">Advanced</span>
+              <div style="flex: 1; height: 1px; background: #eef2f7;"></div>
+              <span style="font-size: 11px; color: #94a3b8;">{{ advSummary }}</span>
+            </div>
+            <sc-if value="{{ advancedOpen }}" hint-placeholder-val="{{ false }}">
+              <div style="display: grid; grid-template-columns: 84px 1fr; align-items: center; gap: 8px 10px; margin-top: 8px;">
+                <label style="font-size: 12px; color: #475569; text-align: right;">Default</label>
+                <input placeholder="—" style="height: 30px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 0 9px; font: inherit; font-size: 13px; color: #0f172a; background: #fff; outline: none;" style-focus="border-color: #64748b; box-shadow: 0 0 0 3px rgba(51,65,85,0.06);">
+                <label style="font-size: 12px; color: #475569; text-align: right;">Opposite</label>
+                <div style="display: flex; align-items: center; height: 30px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 0 9px; background: #fff; color: #94a3b8; font-size: 13px;">None</div>
+              </div>
+            </sc-if>
+
+            <div style="display: flex; align-items: center; gap: 8px; margin: 16px 0 0; height: 30px; cursor: pointer;">
+              <i class="bi bi-chevron-right" style="font-size: 10px; color: #94a3b8;"></i>
+              <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8;">Appearance</span>
+              <div style="flex: 1; height: 1px; background: #eef2f7;"></div>
+              <span style="font-size: 11px; color: #94a3b8;">Node · default</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="flex: none; display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 12px; border-top: 1px solid #eef2f7; background: #f8fafc;">
+          <i class="bi bi-check-circle" style="font-size: 11px; color: #22c55e;"></i>
+          <span style="font-size: 11px; color: #64748b;">{{ savedLabel }}</span>
+          <div style="flex: 1;"></div>
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #94a3b8;">{{ hybridHint }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="width: 340px; display: flex; flex-direction: column; gap: 14px; padding-top: 42px;">
+      <div style="background: #fff; border: 0.5px solid #e2e8f0; border-radius: 12px; padding: 18px; box-shadow: 0 1px 3px rgba(15,23,42,0.04);">
+        <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #94a3b8; margin-bottom: 12px;">How the two postures merge</div>
+        <div style="display: flex; flex-direction: column; gap: 13px;">
+          <div><div style="font-size: 13px; font-weight: 600; color: #0f172a;">One panel, not two modes to learn</div><div style="font-size: 12px; line-height: 1.5; color: #64748b;">Header, inspector and footer never move. Only the tree pane collapses, so the switch reads as a change of height — not a change of screen.</div></div>
+          <div><div style="font-size: 13px; font-weight: 600; color: #0f172a;">Three ways in, all reversible</div><div style="font-size: 12px; line-height: 1.5; color: #64748b;">Double-click the header (your idea, kept), the labelled Focus / Browse button beside it, or simply pick a leaf in the tree. ⎋ always returns to Browse.</div></div>
+          <div><div style="font-size: 13px; font-weight: 600; color: #0f172a;">The inspector earns the space it gets</div><div style="font-size: 12px; line-height: 1.5; color: #64748b;">In Browse the identity block is 22px and flags are compact chips; in Focus the badge and title scale up and flags become labelled switches with hints. Same data, density matched to the room available.</div></div>
+          <div><div style="font-size: 13px; font-weight: 600; color: #0f172a;">Caveat worth testing</div><div style="font-size: 12px; line-height: 1.5; color: #64748b;">Double-click on a header is invisible to a first-time user, so it stays a shortcut for experts — the explicit button carries discovery. Never make it the only way in.</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="padding: 16px 56px 80px; display: flex; flex-direction: column; gap: 28px; border-top: 1px solid #dbe3ec;">
+
+  <div style="display: flex; align-items: flex-end; gap: 20px; max-width: 1180px;">
+    <div style="flex: 1;">
+      <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #94a3b8;">Turn 1 · Editor side panel</div>
+      <h1 style="margin: 6px 0 8px; font-size: 32px; font-weight: 700; letter-spacing: -0.02em; color: #0f172a;">Structure &amp; Properties, rebuilt</h1>
+      <p style="margin: 0; max-width: 620px; font-size: 15px; line-height: 1.55; color: #475569; text-wrap: pretty;">Two directions on the same diagnosis: the panel today spends most of its pixels on chrome — two nested cards, six equal-weight section headers, one label per line — and asks the user to hold the tree, the breadcrumb and the form in mind at once. Click around: both panels are live.</p>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start;">
+
+    <div id="1a" style="display: flex; flex-direction: column; gap: 14px; width: 400px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 99px; background: #334155; color: #fff; font-size: 11px; font-weight: 600; letter-spacing: 0.04em;">1a</span>
+        <span style="font-size: 15px; font-weight: 600; color: #0f172a;">Unified rail</span>
+        <span style="font-size: 13px; color: #64748b;">tree and inspector share one surface</span>
+      </div>
+
+      <div style="width: 400px; height: 880px; display: flex; flex-direction: column; background: #ffffff; border: 0.5px solid #e2e8f0; border-radius: 12px; box-shadow: 0 4px 16px rgba(15,23,42,0.07); overflow: hidden;">
+
+        <div style="display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 8px 0 12px; border-bottom: 1px solid #eef2f7; flex: none;">
+          <span style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 4px; background: #eeedfe; color: #534ab7; font-size: 11px; font-weight: 700;">M</span>
+          <span style="font-size: 13px; font-weight: 600; color: #0f172a; letter-spacing: -0.01em;">Class Diagram</span>
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #94a3b8; background: #f1f5f9; padding: 2px 5px; border-radius: 4px;">Rev 2.2</span>
+          <div style="flex: 1;"></div>
+          <div style="display: flex; padding: 2px; background: #f1f5f9; border-radius: 6px; gap: 2px;">
+            <button onClick="{{ setBasic }}" style="border: 0; cursor: pointer; height: 22px; padding: 0 9px; border-radius: 4px; font: inherit; font-size: 11px; font-weight: 600; transition: all 150ms cubic-bezier(0,0,0.2,1); background: {{ basicBg }}; color: {{ basicFg }}; box-shadow: {{ basicShadow }};">Basic</button>
+            <button onClick="{{ setAdvanced }}" style="border: 0; cursor: pointer; height: 22px; padding: 0 9px; border-radius: 4px; font: inherit; font-size: 11px; font-weight: 600; transition: all 150ms cubic-bezier(0,0,0.2,1); background: {{ advBg }}; color: {{ advFg }}; box-shadow: {{ advShadow }};">Advanced</button>
+          </div>
+          <button style="border: 0; background: transparent; cursor: pointer; width: 26px; height: 26px; border-radius: 6px; color: #94a3b8; display: inline-flex; align-items: center; justify-content: center;" style-hover="background: #f1f5f9; color: #334155;"><i class="bi bi-chevron-double-right" style="font-size: 13px;"></i></button>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px; border-bottom: 1px solid #eef2f7; flex: none;">
+          <i class="bi bi-search" style="font-size: 12px; color: #94a3b8;"></i>
+          <input value="{{ filter }}" onChange="{{ onFilter }}" placeholder="Filter structure" style="flex: 1; border: 0; outline: none; background: transparent; font: inherit; font-size: 13px; color: #0f172a; padding: 0;">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #94a3b8;">{{ matchLabel }}</span>
+          <span style="display: inline-flex; align-items: center; height: 18px; padding: 0 5px; border: 1px solid #e2e8f0; border-radius: 4px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #94a3b8;">⌘K</span>
+        </div>
+
+        <div style="flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 6px 0 10px;">
+          <sc-for list="{{ rows }}" as="row" hint-placeholder-count="10">
+            <div onClick="{{ row.select }}" style="position: relative; display: flex; align-items: center; gap: 7px; height: {{ rowH }}; padding-right: 10px; cursor: pointer; background: {{ row.bg }}; box-shadow: {{ row.bar }};" style-hover="background: #f1f5f9;">
+              <div style="flex: none; width: {{ row.indent }};"></div>
+              <i class="bi {{ row.caret }}" style="flex: none; width: 12px; font-size: 10px; color: #94a3b8;"></i>
+              <span style="flex: none; display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 4px; font-size: 10px; font-weight: 700; line-height: 1; background: {{ row.badgeBg }}; color: {{ row.badgeFg }};">{{ row.letter }}</span>
+              <span style="font-size: 13px; font-weight: {{ row.weight }}; font-style: {{ row.italic }}; color: {{ row.fg }}; letter-spacing: -0.01em; white-space: nowrap;">{{ row.name }}</span>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ row.type }}</span>
+              <div style="flex: 1;"></div>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #cbd5e1;">{{ row.count }}</span>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="flex: none; height: 9px; display: flex; align-items: center; justify-content: center; background: #f8fafc; border-top: 1px solid #eef2f7; border-bottom: 1px solid #e2e8f0; cursor: ns-resize;">
+          <div style="width: 26px; height: 2px; border-radius: 99px; background: #cbd5e1;"></div>
+        </div>
+
+        <div style="flex: none; height: 420px; display: flex; flex-direction: column; background: #ffffff;">
+          <div style="display: flex; align-items: center; gap: 8px; padding: 11px 12px 10px; flex: none;">
+            <span style="display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 6px; font-size: 12px; font-weight: 700; background: {{ sel.badgeBg }}; color: {{ sel.badgeFg }};">{{ sel.letter }}</span>
+            <div style="min-width: 0;">
+              <div style="font-size: 14px; font-weight: 600; color: #0f172a; letter-spacing: -0.01em; line-height: 1.2;">{{ sel.name }}</div>
+              <div style="font-size: 11px; color: #94a3b8; line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ sel.path }}</div>
+            </div>
+            <div style="flex: 1;"></div>
+            <span style="display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 99px; font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; background: {{ sel.badgeBg }}; color: {{ sel.badgeFg }};">{{ sel.kind }}</span>
+            <button style="border: 0; background: transparent; cursor: pointer; width: 26px; height: 26px; border-radius: 6px; color: #94a3b8; display: inline-flex; align-items: center; justify-content: center;" style-hover="background: #f1f5f9; color: #334155;"><i class="bi bi-pin-angle" style="font-size: 13px;"></i></button>
+          </div>
+
+          <div style="flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 2px 12px 16px;">
+
+            <div style="display: grid; grid-template-columns: 84px 1fr; align-items: center; gap: 8px 10px;">
+              <label style="font-size: 12px; color: #475569; text-align: right;">Name</label>
+              <input value="{{ sel.name }}" onChange="{{ onName }}" style="height: 30px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 0 9px; font: inherit; font-size: 13px; color: #0f172a; background: #fff; outline: none; transition: box-shadow 150ms;" style-focus="border-color: #64748b; box-shadow: 0 0 0 3px rgba(51,65,85,0.06);">
+
+              <sc-if value="{{ sel.isTyped }}" hint-placeholder-val="{{ true }}">
+                <label style="font-size: 12px; color: #475569; text-align: right;">Type</label>
+                <div style="display: flex; align-items: center; height: 30px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 0 9px; background: #fff; gap: 7px; cursor: pointer;" style-hover="border-color: #94a3b8;">
+                  <span style="display: inline-flex; align-items: center; justify-content: center; width: 15px; height: 15px; border-radius: 3px; background: #f1f5f9; color: #475569; font-size: 9px; font-weight: 700;">D</span>
+                  <span style="font-size: 13px; color: #0f172a;">{{ sel.type2 }}</span>
+                  <div style="flex: 1;"></div>
+                  <i class="bi bi-chevron-expand" style="font-size: 11px; color: #94a3b8;"></i>
+                </div>
+              </sc-if>
+            </div>
+
+            <sc-if value="{{ sel.isTyped }}" hint-placeholder-val="{{ true }}">
+              <div style="display: grid; grid-template-columns: 84px 1fr; align-items: center; gap: 8px 10px; margin-top: 8px;">
+                <label style="font-size: 12px; color: #475569; text-align: right;">Multiplicity</label>
+                <div style="display: flex; gap: 4px;">
+                  <sc-for list="{{ mults }}" as="m" hint-placeholder-count="5">
+                    <button onClick="{{ m.pick }}" style="flex: 1 1 0; min-width: 0; padding: 0 2px; height: 28px; border: 1px solid {{ m.bd }}; border-radius: 6px; cursor: pointer; font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 500; background: {{ m.bg }}; color: {{ m.fg }}; transition: all 150ms cubic-bezier(0,0,0.2,1);">{{ m.label }}</button>
+                  </sc-for>
+                </div>
+              </div>
+              <sc-if value="{{ customMult }}" hint-placeholder-val="{{ false }}">
+                <div style="display: grid; grid-template-columns: 84px 1fr; align-items: center; gap: 8px 10px; margin-top: 8px;">
+                  <label style="font-size: 12px; color: #475569; text-align: right;">Bounds</label>
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <div style="display: flex; align-items: center; height: 28px; border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden;">
+                      <button onClick="{{ decLower }}" style="width: 26px; height: 26px; border: 0; background: transparent; cursor: pointer; color: #64748b; font-size: 14px;" style-hover="background: #f1f5f9;">−</button>
+                      <span style="width: 30px; text-align: center; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #0f172a;">{{ lower }}</span>
+                      <button onClick="{{ incLower }}" style="width: 26px; height: 26px; border: 0; background: transparent; cursor: pointer; color: #64748b; font-size: 14px;" style-hover="background: #f1f5f9;">+</button>
+                    </div>
+                    <span style="font-family: 'IBM Plex Mono', monospace; color: #cbd5e1;">..</span>
+                    <div style="display: flex; align-items: center; height: 28px; border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden;">
+                      <button onClick="{{ decUpper }}" style="width: 26px; height: 26px; border: 0; background: transparent; cursor: pointer; color: #64748b; font-size: 14px;" style-hover="background: #f1f5f9;">−</button>
+                      <span style="width: 30px; text-align: center; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #0f172a;">{{ upper }}</span>
+                      <button onClick="{{ incUpper }}" style="width: 26px; height: 26px; border: 0; background: transparent; cursor: pointer; color: #64748b; font-size: 14px;" style-hover="background: #f1f5f9;">+</button>
+                    </div>
+                  </div>
+                </div>
+              </sc-if>
+            </sc-if>
+
+            <div style="display: flex; align-items: center; gap: 8px; margin: 18px 0 9px;">
+              <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8;">Flags</span>
+              <div style="flex: 1; height: 1px; background: #eef2f7;"></div>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #94a3b8;">{{ flagsOnLabel }}</span>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 5px;">
+              <sc-for list="{{ flags }}" as="f" hint-placeholder-count="6">
+                <button onClick="{{ f.toggle }}" style="display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 9px 0 7px; border: 1px solid {{ f.bd }}; border-radius: 99px; cursor: pointer; font: inherit; font-size: 12px; background: {{ f.bg }}; color: {{ f.fg }}; transition: all 150ms cubic-bezier(0,0,0.2,1);">
+                  <i class="bi {{ f.icon }}" style="font-size: 10px;"></i>{{ f.label }}
+                </button>
+              </sc-for>
+            </div>
+
+            <div onClick="{{ toggleAdvanced }}" style="display: flex; align-items: center; gap: 8px; margin: 18px 0 0; height: 30px; cursor: pointer;">
+              <i class="bi {{ advCaret }}" style="font-size: 10px; color: #94a3b8;"></i>
+              <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8;">Advanced</span>
+              <div style="flex: 1; height: 1px; background: #eef2f7;"></div>
+              <span style="font-size: 11px; color: #94a3b8;">{{ advSummary }}</span>
+            </div>
+            <sc-if value="{{ advancedOpen }}" hint-placeholder-val="{{ false }}">
+              <div style="display: grid; grid-template-columns: 84px 1fr; align-items: center; gap: 8px 10px; margin-top: 8px;">
+                <label style="font-size: 12px; color: #475569; text-align: right;">Default</label>
+                <input placeholder="—" style="height: 30px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 0 9px; font: inherit; font-size: 13px; color: #0f172a; background: #fff; outline: none;" style-focus="border-color: #64748b; box-shadow: 0 0 0 3px rgba(51,65,85,0.06);">
+                <label style="font-size: 12px; color: #475569; text-align: right;">Opposite</label>
+                <div style="display: flex; align-items: center; height: 30px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 0 9px; background: #fff; color: #94a3b8; font-size: 13px;">None</div>
+                <label style="font-size: 12px; color: #475569; text-align: right;">Derivation</label>
+                <div style="height: 30px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 0 9px; background: #f8fafc; display: flex; align-items: center; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #64748b;">self.name</div>
+              </div>
+            </sc-if>
+
+            <div style="display: flex; align-items: center; gap: 8px; margin: 16px 0 0; height: 30px; cursor: pointer;">
+              <i class="bi bi-chevron-right" style="font-size: 10px; color: #94a3b8;"></i>
+              <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8;">Appearance</span>
+              <div style="flex: 1; height: 1px; background: #eef2f7;"></div>
+              <span style="font-size: 11px; color: #94a3b8;">Node · default</span>
+            </div>
+          </div>
+
+          <div style="flex: none; display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 12px; border-top: 1px solid #eef2f7; background: #f8fafc;">
+            <i class="bi bi-check-circle" style="font-size: 11px; color: #22c55e;"></i>
+            <span style="font-size: 11px; color: #64748b;">{{ savedLabel }}</span>
+            <div style="flex: 1;"></div>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #94a3b8;">⌘Z undo</span>
+          </div>
+        </div>
+      </div>
+
+      <ul style="margin: 4px 0 0; padding: 0 0 0 16px; display: flex; flex-direction: column; gap: 7px; font-size: 13px; line-height: 1.5; color: #475569;">
+        <li>One surface, hairline rules — the two floating cards and their duplicate headers are gone; ~90px of chrome returned to content.</li>
+        <li>Rows are 26px with a letter badge and a monospace type suffix, so the tree scans as a table, not as prose.</li>
+        <li>Labels sit in an 84px right-aligned column: each field is one 30px row instead of three stacked ones.</li>
+        <li>Multiplicity is a single decision — four presets, steppers only on <em>Custom</em>.</li>
+        <li>Six vague sections collapse to Flags (chips), Advanced, Appearance. Nothing else is ever more than one click away.</li>
+      </ul>
+    </div>
+
+    <div id="1b" style="display: flex; flex-direction: column; gap: 14px; width: 400px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 99px; background: #334155; color: #fff; font-size: 11px; font-weight: 600; letter-spacing: 0.04em;">1b</span>
+        <span style="font-size: 15px; font-weight: 600; color: #0f172a;">Inspector first</span>
+        <span style="font-size: 13px; color: #64748b;">one job on screen at a time</span>
+      </div>
+
+      <div style="width: 400px; height: 880px; display: flex; flex-direction: column; background: #ffffff; border: 0.5px solid #e2e8f0; border-radius: 12px; box-shadow: 0 4px 16px rgba(15,23,42,0.07); overflow: hidden;">
+
+        <div style="display: flex; align-items: center; gap: 2px; height: 42px; padding: 0 8px; border-bottom: 1px solid #eef2f7; flex: none;">
+          <button onClick="{{ goInspect }}" style="display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 11px; border: 0; border-radius: 7px; cursor: pointer; font: inherit; font-size: 13px; font-weight: 600; background: {{ tabIBg }}; color: {{ tabIFg }};">
+            <i class="bi bi-sliders2" style="font-size: 12px;"></i>Inspector
+          </button>
+          <button onClick="{{ goTree }}" style="display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 11px; border: 0; border-radius: 7px; cursor: pointer; font: inherit; font-size: 13px; font-weight: 600; background: {{ tabTBg }}; color: {{ tabTFg }};">
+            <i class="bi bi-diagram-3" style="font-size: 12px;"></i>Structure
+          </button>
+          <div style="flex: 1;"></div>
+          <button style="border: 0; background: transparent; cursor: pointer; width: 28px; height: 28px; border-radius: 6px; color: #94a3b8; display: inline-flex; align-items: center; justify-content: center;" style-hover="background: #f1f5f9; color: #334155;"><i class="bi bi-search" style="font-size: 13px;"></i></button>
+          <button style="border: 0; background: transparent; cursor: pointer; width: 28px; height: 28px; border-radius: 6px; color: #94a3b8; display: inline-flex; align-items: center; justify-content: center;" style-hover="background: #f1f5f9; color: #334155;"><i class="bi bi-chevron-double-right" style="font-size: 13px;"></i></button>
+        </div>
+
+        <sc-if value="{{ onInspector }}" hint-placeholder-val="{{ true }}">
+          <div style="flex: none; display: flex; align-items: center; gap: 6px; height: 34px; padding: 0 10px; background: #f8fafc; border-bottom: 1px solid #eef2f7;">
+            <button onClick="{{ goTree }}" style="display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 8px; border: 1px solid #e2e8f0; border-radius: 6px; background: #fff; cursor: pointer; font: inherit; font-size: 11px; color: #475569;" style-hover="border-color: #94a3b8;">
+              <i class="bi bi-diagram-3" style="font-size: 10px;"></i>{{ sel.parent }}
+            </button>
+            <i class="bi bi-chevron-right" style="font-size: 9px; color: #cbd5e1;"></i>
+            <span style="font-size: 11px; font-weight: 600; color: #334155;">{{ sel.name }}</span>
+            <div style="flex: 1;"></div>
+            <button onClick="{{ prevSibling }}" style="width: 22px; height: 22px; border: 1px solid #e2e8f0; border-radius: 6px; background: #fff; cursor: pointer; color: #64748b; display: inline-flex; align-items: center; justify-content: center;" style-hover="border-color: #94a3b8;"><i class="bi bi-chevron-up" style="font-size: 10px;"></i></button>
+            <button onClick="{{ nextSibling }}" style="width: 22px; height: 22px; border: 1px solid #e2e8f0; border-radius: 6px; background: #fff; cursor: pointer; color: #64748b; display: inline-flex; align-items: center; justify-content: center;" style-hover="border-color: #94a3b8;"><i class="bi bi-chevron-down" style="font-size: 10px;"></i></button>
+          </div>
+
+          <div style="flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 18px 16px 20px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span style="display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 9px; font-size: 15px; font-weight: 700; background: {{ sel.badgeBg }}; color: {{ sel.badgeFg }};">{{ sel.letter }}</span>
+              <div>
+                <div style="font-size: 19px; font-weight: 600; letter-spacing: -0.02em; color: #0f172a; line-height: 1.15;">{{ sel.name }}</div>
+                <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: {{ sel.badgeFg }};">{{ sel.kind }}</div>
+              </div>
+              <div style="flex: 1;"></div>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #64748b; background: #f1f5f9; padding: 4px 8px; border-radius: 6px;">{{ sel.signature }}</span>
+            </div>
+
+            <div style="margin: 22px 0 0; display: flex; flex-direction: column; gap: 14px;">
+              <div>
+                <label style="display: block; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px;">Name</label>
+                <input value="{{ sel.name }}" onChange="{{ onName }}" style="width: 100%; box-sizing: border-box; height: 34px; border: 1px solid #cbd5e1; border-radius: 7px; padding: 0 10px; font: inherit; font-size: 14px; color: #0f172a; background: #fff; outline: none;" style-focus="border-color: #64748b; box-shadow: 0 0 0 3px rgba(51,65,85,0.06);">
+              </div>
+              <sc-if value="{{ sel.isTyped }}" hint-placeholder-val="{{ true }}">
+                <div style="display: flex; flex-direction: column; gap: 14px;">
+                  <div>
+                    <label style="display: block; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px;">Type</label>
+                    <div style="display: flex; align-items: center; height: 34px; border: 1px solid #cbd5e1; border-radius: 7px; padding: 0 10px; gap: 7px; cursor: pointer;" style-hover="border-color: #94a3b8;">
+                      <span style="font-size: 14px; color: #0f172a;">{{ sel.type2 }}</span>
+                      <div style="flex: 1;"></div>
+                      <i class="bi bi-chevron-expand" style="font-size: 11px; color: #94a3b8;"></i>
+                    </div>
+                  </div>
+                  <div>
+                    <label style="display: block; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px;">Multiplicity</label>
+                    <div style="display: flex; gap: 4px;">
+                      <sc-for list="{{ mults }}" as="m" hint-placeholder-count="5">
+                        <button onClick="{{ m.pick }}" style="flex: 1 1 0; min-width: 0; padding: 0 2px; height: 34px; border: 1px solid {{ m.bd }}; border-radius: 7px; cursor: pointer; font-family: 'IBM Plex Mono', monospace; font-size: 11px; background: {{ m.bg }}; color: {{ m.fg }};">{{ m.label }}</button>
+                      </sc-for>
+                    </div>
+                  </div>
+                </div>
+              </sc-if>
+            </div>
+
+            <div style="margin: 24px 0 10px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8;">Flags</div>
+            <div style="display: flex; flex-direction: column; border: 1px solid #eef2f7; border-radius: 9px; overflow: hidden;">
+              <sc-for list="{{ flags }}" as="f" hint-placeholder-count="6">
+                <div onClick="{{ f.toggle }}" style="display: flex; align-items: center; gap: 9px; height: 38px; padding: 0 11px; cursor: pointer; border-bottom: 1px solid #f8fafc;" style-hover="background: #f8fafc;">
+                  <i class="bi {{ f.icon }}" style="font-size: 12px; color: #94a3b8;"></i>
+                  <span style="font-size: 13px; color: #334155;">{{ f.label }}</span>
+                  <span style="font-size: 12px; color: #94a3b8;">{{ f.hint }}</span>
+                  <div style="flex: 1;"></div>
+                  <div style="width: 30px; height: 18px; border-radius: 99px; padding: 2px; box-sizing: border-box; background: {{ f.trackBg }}; transition: background 150ms;">
+                    <div style="width: 14px; height: 14px; border-radius: 99px; background: #fff; box-shadow: 0 1px 2px rgba(15,23,42,0.2); transform: translateX({{ f.knobX }}); transition: transform 150ms cubic-bezier(0,0,0.2,1);"></div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+
+            <div style="margin: 22px 0 0; display: flex; flex-direction: column; gap: 2px;">
+              <div style="display: flex; align-items: center; gap: 9px; height: 36px; cursor: pointer; color: #334155;" style-hover="color: #0f172a;">
+                <i class="bi bi-gear" style="font-size: 12px; color: #94a3b8;"></i>
+                <span style="font-size: 13px;">Advanced</span>
+                <div style="flex: 1;"></div>
+                <span style="font-size: 12px; color: #94a3b8;">{{ advSummary }}</span>
+                <i class="bi bi-chevron-right" style="font-size: 11px; color: #cbd5e1;"></i>
+              </div>
+              <div style="display: flex; align-items: center; gap: 9px; height: 36px; cursor: pointer; color: #334155;" style-hover="color: #0f172a;">
+                <i class="bi bi-bounding-box" style="font-size: 12px; color: #94a3b8;"></i>
+                <span style="font-size: 13px;">Appearance</span>
+                <div style="flex: 1;"></div>
+                <span style="font-size: 12px; color: #94a3b8;">Node · default</span>
+                <i class="bi bi-chevron-right" style="font-size: 11px; color: #cbd5e1;"></i>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ onTree }}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px; border-bottom: 1px solid #eef2f7; flex: none;">
+            <i class="bi bi-search" style="font-size: 12px; color: #94a3b8;"></i>
+            <input value="{{ filter }}" onChange="{{ onFilter }}" placeholder="Filter structure" style="flex: 1; border: 0; outline: none; background: transparent; font: inherit; font-size: 13px; color: #0f172a;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #94a3b8;">{{ matchLabel }}</span>
+          </div>
+          <div style="flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 6px 0 12px;">
+            <sc-for list="{{ rows }}" as="row" hint-placeholder-count="10">
+              <div onClick="{{ row.selectAndInspect }}" style="position: relative; display: flex; align-items: center; gap: 7px; height: 28px; padding-right: 10px; cursor: pointer; background: {{ row.bg }}; box-shadow: {{ row.bar }};" style-hover="background: #f1f5f9;">
+                <div style="flex: none; width: {{ row.indent }};"></div>
+                <i class="bi {{ row.caret }}" style="flex: none; width: 12px; font-size: 10px; color: #94a3b8;"></i>
+                <span style="flex: none; display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 4px; font-size: 10px; font-weight: 700; background: {{ row.badgeBg }}; color: {{ row.badgeFg }};">{{ row.letter }}</span>
+                <span style="font-size: 13px; font-weight: {{ row.weight }}; font-style: {{ row.italic }}; color: {{ row.fg }}; white-space: nowrap;">{{ row.name }}</span>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #94a3b8; white-space: nowrap;">{{ row.type }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <div style="flex: none; display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 12px; border-top: 1px solid #eef2f7; background: #f8fafc;">
+          <i class="bi bi-check-circle" style="font-size: 11px; color: #22c55e;"></i>
+          <span style="font-size: 11px; color: #64748b;">{{ savedLabel }}</span>
+          <div style="flex: 1;"></div>
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #94a3b8;">J / K to step</span>
+        </div>
+      </div>
+
+      <ul style="margin: 4px 0 0; padding: 0 0 0 16px; display: flex; flex-direction: column; gap: 7px; font-size: 13px; line-height: 1.5; color: #475569;">
+        <li>Tree and inspector never compete: picking an element hands the whole panel to the inspector, and the breadcrumb chip walks back.</li>
+        <li>The selected element gets a real identity block — badge, name, kind, signature — so the user always knows what they are editing.</li>
+        <li>Flags become labelled switches with a one-word hint; nothing to decode.</li>
+        <li>J / K step through siblings without going back to the tree — the fastest path for bulk edits.</li>
+        <li>Costs a click when hopping between elements; wins when editing deeply.</li>
+      </ul>
+    </div>
+
+    <div style="width: 300px; display: flex; flex-direction: column; gap: 14px; padding-top: 42px;">
+      <div style="background: #fff; border: 0.5px solid #e2e8f0; border-radius: 12px; padding: 18px; box-shadow: 0 1px 3px rgba(15,23,42,0.04);">
+        <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #94a3b8; margin-bottom: 12px;">What the panel costs today</div>
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <div style="display: flex; gap: 10px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #cbd5e1; padding-top: 1px;">01</span>
+            <div><div style="font-size: 13px; font-weight: 600; color: #0f172a;">Two cards, four headers</div><div style="font-size: 12px; line-height: 1.5; color: #64748b;">Tree View and Properties each carry their own border, shadow, title bar and controls inside an already narrow rail.</div></div>
+          </div>
+          <div style="display: flex; gap: 10px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #cbd5e1; padding-top: 1px;">02</span>
+            <div><div style="font-size: 13px; font-weight: 600; color: #0f172a;">Six equal section headers</div><div style="font-size: 12px; line-height: 1.5; color: #64748b;">General, Type &amp; Bounds, Advanced, Flags, Advanced State, Node all shout the same. No hierarchy means every one has to be read.</div></div>
+          </div>
+          <div style="display: flex; gap: 10px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #cbd5e1; padding-top: 1px;">03</span>
+            <div><div style="font-size: 13px; font-weight: 600; color: #0f172a;">Stacked label-over-field</div><div style="font-size: 12px; line-height: 1.5; color: #64748b;">Two fields fill 300px. Only three properties fit above the fold; the rest is scroll.</div></div>
+          </div>
+          <div style="display: flex; gap: 10px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #cbd5e1; padding-top: 1px;">04</span>
+            <div><div style="font-size: 13px; font-weight: 600; color: #0f172a;">Multiplicity said three ways</div><div style="font-size: 12px; line-height: 1.5; color: #64748b;">Lower stepper, Upper stepper and a read-only [0..1] chip encode one decision.</div></div>
+          </div>
+          <div style="display: flex; gap: 10px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #cbd5e1; padding-top: 1px;">05</span>
+            <div><div style="font-size: 13px; font-weight: 600; color: #0f172a;">Selection stated three times</div><div style="font-size: 12px; line-height: 1.5; color: #64748b;">Highlighted tree row, title row and breadcrumb repeat each other 40px apart.</div></div>
+          </div>
+          <div style="display: flex; gap: 10px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #cbd5e1; padding-top: 1px;">06</span>
+            <div><div style="font-size: 13px; font-weight: 600; color: #0f172a;">Basic / Advanced lives elsewhere</div><div style="font-size: 12px; line-height: 1.5; color: #64748b;">The control that changes this panel sits in the top app bar, far from its effect.</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="background: #0f172a; border-radius: 12px; padding: 18px; color: #e2e8f0;">
+        <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #64748b; margin-bottom: 10px;">Density gained</div>
+        <div style="display: flex; align-items: baseline; gap: 8px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 34px; font-weight: 600; color: #fff; letter-spacing: -0.02em;">3 → 9</span><span style="font-size: 12px; color: #94a3b8;">properties above the fold</span></div>
+        <div style="margin-top: 12px; font-size: 12px; line-height: 1.55; color: #94a3b8;">Same 400px rail, same type sizes. The space comes from removed chrome and paired label/field rows — not from shrinking text.</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;layout&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;1a&quot;,&quot;1b&quot;,&quot;2a&quot;,&quot;3a&quot;],&quot;default&quot;:&quot;2a&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Panel&quot;,&quot;label&quot;:&quot;Panel layout preset&quot;},&quot;density&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;compact&quot;,&quot;comfortable&quot;],&quot;default&quot;:&quot;compact&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Panel&quot;},&quot;projectName&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Class Diagram&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Panel&quot;}}">
+const ENT = {
+  metamodel: ['#eeedfe', '#534ab7', 'M'],
+  package: ['#dbeafe', '#2563eb', 'P'],
+  class: ['#fee2e2', '#dc2626', 'C'],
+  attribute: ['#d1fae5', '#059669', 'A'],
+  reference: ['#cffafe', '#0891b2', 'R'],
+  operation: ['#e0e7ff', '#4f46e5', 'O'],
+  enum: ['#fef3c7', '#d97706', 'E'],
+  group: ['#f1f5f9', '#475569', ''],
+};
+
+const TREE = [
+  { id: 'mega', d: 0, kind: 'group', name: 'Megamodel', caret: 'bi-chevron-down', count: '' },
+  { id: 'mms', d: 1, kind: 'group', name: 'Metamodels', caret: 'bi-chevron-down', count: '1' },
+  { id: 'cd', d: 2, kind: 'metamodel', name: 'Class Diagram', caret: 'bi-chevron-down' },
+  { id: 'pkg', d: 3, kind: 'package', name: 'Class Diagram', caret: 'bi-chevron-down' },
+  { id: 'ne', d: 4, kind: 'class', name: 'namedElement', caret: 'bi-chevron-down', abstract: true },
+  { id: 'name', d: 5, kind: 'attribute', name: 'name', type: ': EString', mult: '[0..1]', parent: 'namedElement' },
+  { id: 'type', d: 4, kind: 'class', name: 'Type', caret: 'bi-chevron-right', abstract: true },
+  { id: 'prim', d: 4, kind: 'class', name: 'PrimitiveType', caret: 'bi-chevron-right' },
+  { id: 'class', d: 4, kind: 'class', name: 'Class', caret: 'bi-chevron-down' },
+  { id: 'owned', d: 5, kind: 'reference', name: 'ownedFeatures', type: ': Feature', mult: '[0..*]', parent: 'Class' },
+  { id: 'isAbs', d: 5, kind: 'attribute', name: 'isAbstract', type: ': EBoolean', mult: '[1..1]', parent: 'Class' },
+  { id: 'feat', d: 4, kind: 'class', name: 'Feature', caret: 'bi-chevron-right', abstract: true },
+  { id: 'sfeat', d: 4, kind: 'class', name: 'StructuralFeature', caret: 'bi-chevron-right', abstract: true },
+  { id: 'bfeat', d: 4, kind: 'class', name: 'BehavioralFeature', caret: 'bi-chevron-down', abstract: true },
+  { id: 'op', d: 5, kind: 'operation', name: 'invoke', type: ': EString', mult: '[0..1]', parent: 'BehavioralFeature' },
+  { id: 'vis', d: 4, kind: 'enum', name: 'Visibility', caret: 'bi-chevron-right' },
+];
+
+const MULTS = ['[0..1]', '[1..1]', '[0..*]', '[1..*]', 'Custom'];
+
+const FLAGS = [
+  { id: 'id', label: 'ID', icon: 'bi-key', hint: 'identifies instances' },
+  { id: 'unique', label: 'Unique', icon: 'bi-fingerprint', hint: 'no duplicates' },
+  { id: 'ordered', label: 'Ordered', icon: 'bi-sort-down', hint: 'position matters' },
+  { id: 'derived', label: 'Derived', icon: 'bi-calculator', hint: 'computed' },
+  { id: 'transient', label: 'Transient', icon: 'bi-cloud-slash', hint: 'not persisted' },
+  { id: 'readonly', label: 'Read-only', icon: 'bi-lock', hint: 'no edit' },
+];
+
+class Component extends DCLogic {
+  state = {
+    selected: 'name',
+    filter: '',
+    mode: 'advanced',
+    mult: '[0..1]',
+    lower: 0,
+    upper: 1,
+    flags: { unique: true, ordered: false, id: false, derived: false, transient: false, readonly: false },
+    advancedOpen: false,
+    tab: 'inspector',
+    names: {},
+    hybrid: 'split',
+    history: [{ id: 'owned', t: 4 }, { id: 'class', t: 11 }, { id: 'isAbs', t: 26 }, { id: 'vis', t: 64 }],
+    clock: 0,
+    recentOpen: true,
+    layoutOverride: null,
+    settingsOpen: false,
+  };
+
+  visit(id, extra) {
+    const h = [{ id, t: 0 }, ...this.state.history.filter(x => x.id !== id)].slice(0, 5);
+    this.setState({ selected: id, history: h, ...extra });
+  }
+
+  componentDidMount() {
+    this._esc = e => {
+      const t = e.target;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+      if (e.key === 'Escape') this.setState({ hybrid: 'split' });
+      else if (e.key === 'j' || e.key === 'J' || e.key === 'ArrowDown') { e.preventDefault(); this.step(1); }
+      else if (e.key === 'k' || e.key === 'K' || e.key === 'ArrowUp') { e.preventDefault(); this.step(-1); }
+    };
+    window.addEventListener('keydown', this._esc);
+  }
+  componentWillUnmount() { window.removeEventListener('keydown', this._esc); }
+
+  node(id) { return TREE.find(n => n.id === id) || TREE[0]; }
+
+  renderVals() {
+    const s = this.state;
+    const compact = (this.props.density ?? 'compact') === 'compact';
+    const q = s.filter.trim().toLowerCase();
+    const list = q ? TREE.filter(n => n.name.toLowerCase().includes(q)) : TREE;
+
+    const rows = list.map(n => {
+      const [bg, fg, letter] = ENT[n.kind];
+      const isSel = n.id === s.selected;
+      const isGroup = n.kind === 'group';
+      return {
+        id: n.id,
+        name: s.names[n.id] ?? n.name,
+        type: n.type ? n.type + ' ' + n.mult : '',
+        letter: letter,
+        badgeBg: isGroup ? 'transparent' : bg,
+        badgeFg: fg,
+        indent: (q ? 8 : 8 + n.d * 13) + 'px',
+        caret: n.caret || '',
+        italic: n.abstract ? 'italic' : 'normal',
+        weight: isGroup ? 600 : isSel ? 600 : 500,
+        fg: isGroup ? '#94a3b8' : '#0f172a',
+        bg: isSel ? '#e0f7fa' : 'transparent',
+        bar: isSel ? 'inset 2px 0 0 #0891b2' : 'none',
+        count: n.count || '',
+        select: () => this.visit(n.id, { mult: n.mult || '[0..1]' }),
+        selectAndInspect: () => this.visit(n.id, { mult: n.mult || '[0..1]', tab: 'inspector' }),
+        selectConfigured: () => {
+          const layout = s.layoutOverride ?? this.props.layout ?? '2a';
+          const leaf = !(n.kind === 'group' || n.caret);
+          const extra = { mult: n.mult || '[0..1]' };
+          if (leaf && (layout === '2a' || layout === '3a')) extra.hybrid = 'focus';
+          if (leaf && layout === '1b') extra.tab = 'inspector';
+          this.visit(n.id, extra);
+        },
+        selectHybrid: () => this.visit(n.id, { mult: n.mult || '[0..1]', hybrid: n.kind === 'group' || n.caret ? s.hybrid : 'focus' }),
+      };
+    });
+
+    const n = this.node(s.selected);
+    const [bg, fg, letter] = ENT[n.kind];
+    const kindLabel = { metamodel: 'Metamodel', package: 'Package', class: 'Class', attribute: 'Attribute', reference: 'Reference', operation: 'Operation', enum: 'Enumeration', group: 'Folder' }[n.kind];
+    const name = s.names[n.id] ?? n.name;
+
+    const sel = {
+      name, letter, badgeBg: bg, badgeFg: fg, kind: kindLabel,
+      isTyped: !!n.type,
+      type2: (n.type || '').replace(': ', ''),
+      path: 'Class Diagram › ' + (n.parent || 'Class Diagram'),
+      parent: n.parent || 'Class Diagram',
+      signature: n.type ? (n.type.replace(': ', '') + ' ' + s.mult) : kindLabel,
+    };
+
+    const onFlags = FLAGS.filter(f => s.flags[f.id]);
+
+    return {
+      rows, sel,
+      rowH: compact ? '26px' : '30px',
+      filter: s.filter,
+      onFilter: e => this.setState({ filter: e.target.value }),
+      matchLabel: q ? list.length + ' of ' + TREE.length : TREE.length + ' items',
+      onName: e => this.setState({ names: { ...s.names, [n.id]: e.target.value } }),
+
+      basicBg: s.mode === 'basic' ? '#ffffff' : 'transparent',
+      basicFg: s.mode === 'basic' ? '#0f172a' : '#64748b',
+      basicShadow: s.mode === 'basic' ? '0 1px 2px rgba(15,23,42,0.1)' : 'none',
+      advBg: s.mode === 'advanced' ? '#ffffff' : 'transparent',
+      advFg: s.mode === 'advanced' ? '#0f172a' : '#64748b',
+      advShadow: s.mode === 'advanced' ? '0 1px 2px rgba(15,23,42,0.1)' : 'none',
+      setBasic: () => this.setState({ mode: 'basic' }),
+      setAdvanced: () => this.setState({ mode: 'advanced' }),
+
+      mults: MULTS.map(m => ({
+        label: m,
+        bg: s.mult === m ? '#334155' : '#ffffff',
+        fg: s.mult === m ? '#ffffff' : '#475569',
+        bd: s.mult === m ? '#334155' : '#cbd5e1',
+        pick: () => this.setState({ mult: m }),
+      })),
+      customMult: s.mult === 'Custom',
+      lower: s.lower, upper: s.upper,
+      incLower: () => this.setState({ lower: s.lower + 1 }),
+      decLower: () => this.setState({ lower: Math.max(0, s.lower - 1) }),
+      incUpper: () => this.setState({ upper: s.upper + 1 }),
+      decUpper: () => this.setState({ upper: Math.max(1, s.upper - 1) }),
+
+      flags: FLAGS.map(f => {
+        const on = !!s.flags[f.id];
+        return {
+          label: f.label, icon: f.icon, hint: f.hint,
+          bg: on ? '#334155' : '#ffffff',
+          fg: on ? '#ffffff' : '#475569',
+          bd: on ? '#334155' : '#e2e8f0',
+          trackBg: on ? '#334155' : '#cbd5e1',
+          knobX: on ? '12px' : '0px',
+          toggle: () => this.setState({ flags: { ...s.flags, [f.id]: !on } }),
+        };
+      }),
+      flagsOnLabel: onFlags.length ? onFlags.map(f => f.label.toLowerCase()).join(' · ') : 'none set',
+
+      advancedOpen: s.advancedOpen,
+      advCaret: s.advancedOpen ? 'bi-chevron-down' : 'bi-chevron-right',
+      toggleAdvanced: () => this.setState({ advancedOpen: !s.advancedOpen }),
+      advSummary: 'default · opposite · derivation',
+      savedLabel: 'Saved to ' + (this.props.projectName ?? 'Class Diagram'),
+
+      onInspector: s.tab === 'inspector',
+      onTree: s.tab === 'tree',
+      goTree: () => this.setState({ tab: 'tree' }),
+      goInspect: () => this.setState({ tab: 'inspector' }),
+      tabIBg: s.tab === 'inspector' ? '#f1f5f9' : 'transparent',
+      tabIFg: s.tab === 'inspector' ? '#0f172a' : '#94a3b8',
+      tabTBg: s.tab === 'tree' ? '#f1f5f9' : 'transparent',
+      tabTFg: s.tab === 'tree' ? '#0f172a' : '#94a3b8',
+      ...this.cfgVals(),
+      recent: s.history.map(h => {
+        const r = this.node(h.id);
+        const [rbg, rfg, rletter] = ENT[r.kind];
+        const isSel = r.id === s.selected;
+        return {
+          name: s.names[r.id] ?? r.name,
+          letter: rletter,
+          badgeBg: rbg, badgeFg: rfg,
+          ctx: r.parent || 'Class Diagram',
+          when: h.t === 0 ? 'just now' : h.t < 60 ? h.t + 'm' : Math.round(h.t / 60) + 'h',
+          bg: isSel ? '#e0f7fa' : 'transparent',
+          bar: isSel ? 'inset 2px 0 0 #0891b2' : 'none',
+          open: () => this.visit(r.id, { mult: r.mult || '[0..1]' }),
+        };
+      }),
+      recentOpen: s.recentOpen,
+      recentCaret: s.recentOpen ? 'bi-chevron-down' : 'bi-chevron-right',
+      recentCount: s.history.length + ' items',
+      toggleRecent: () => this.setState({ recentOpen: !s.recentOpen }),
+      hybridSplit: s.hybrid === 'split',
+      hybridFocus: s.hybrid === 'focus',
+      hybridTreeH: s.hybrid === 'split' ? '392px' : '0px',
+      hybridTreeOpacity: s.hybrid === 'split' ? 1 : 0,
+      hybridIdPad: s.hybrid === 'split' ? '11px 14px 10px' : '18px 14px 14px',
+      hybridBadgeSize: s.hybrid === 'split' ? '22px' : '34px',
+      hybridBadgeFont: s.hybrid === 'split' ? '12px' : '15px',
+      hybridTitleFont: s.hybrid === 'split' ? '14px' : '19px',
+      hybridModeLabel: s.hybrid === 'split' ? 'browse posture' : 'focus posture',
+      hybridActionLabel: s.hybrid === 'split' ? 'Focus' : 'Browse',
+      hybridIcon: s.hybrid === 'split' ? 'bi-arrows-collapse' : 'bi-arrows-expand',
+      hybridHint: s.hybrid === 'split' ? 'dbl-click header to focus' : 'esc to browse',
+      toggleHybrid: () => this.setState({ hybrid: s.hybrid === 'split' ? 'focus' : 'split' }),
+      prevSibling: () => this.step(-1),
+      nextSibling: () => this.step(1),
+    };
+  }
+
+  cfgVals() {
+    const s = this.state;
+    const layout = s.mode === 'basic' ? '2a' : (s.layoutOverride ?? this.props.layout ?? '2a');
+    const adaptive = layout === '2a' || layout === '3a';
+    const tabs = layout === '1b';
+    const focus = adaptive ? s.hybrid === 'focus' : tabs ? s.tab === 'inspector' : false;
+    const treeH = layout === '1a' ? '392px' : tabs ? (s.tab === 'tree' ? '620px' : '0px') : (s.hybrid === 'focus' ? '0px' : '392px');
+    const opts = [
+      { id: '1a', name: 'Unified rail', hint: 'Tree and inspector always both visible' },
+      { id: '1b', name: 'Inspector first', hint: 'One at a time, switched by tabs' },
+      { id: '2a', name: 'Adaptive rail', hint: 'Tree collapses when you focus an element' },
+      { id: '3a', name: 'Adaptive + Recent', hint: 'Adds a five-item recency list on tall rails' },
+    ];
+    return {
+      cfgLayout: layout,
+      cfgLayoutName: (opts.find(o => o.id === layout) || opts[2]).name,
+      cfgTabs: tabs,
+      cfgAdaptive: adaptive,
+      cfgRecent: layout === '3a',
+      cfgFocus: focus,
+      cfgChipFlags: !focus,
+      cfgSwitchFlags: focus,
+      cfgTreeH: treeH,
+      cfgTreeOpacity: treeH === '0px' ? 0 : 1,
+      cfgIdPad: focus ? '18px 14px 14px' : '11px 14px 10px',
+      cfgBadgeSize: focus ? '34px' : '22px',
+      cfgBadgeFont: focus ? '15px' : '12px',
+      cfgTitleFont: focus ? '19px' : '14px',
+      cfgHint: layout === '1a' ? '⌘Z undo' : focus ? 'esc to browse' : 'dbl-click header to focus',
+      cfgActionLabel: s.hybrid === 'focus' ? 'Browse' : 'Focus',
+      cfgActionIcon: s.hybrid === 'focus' ? 'bi-arrows-expand' : 'bi-arrows-collapse',
+      backToTree: () => this.setState({ hybrid: 'split', tab: 'tree' }),
+      cfgAdvancedMode: s.mode === 'advanced',
+      cfgModeNote: s.mode === 'basic' ? 'Basic · Adaptive rail only' : 'Advanced · layout selectable',
+      settingsOpen: s.settingsOpen && s.mode === 'advanced',
+      toggleSettings: () => this.setState({ settingsOpen: !s.settingsOpen }),
+      settingsBg: s.settingsOpen ? '#f1f5f9' : 'transparent',
+      layoutOptions: opts.map(o => {
+        const on = o.id === layout;
+        return {
+          id: o.id, name: o.name, hint: o.hint,
+          bg: on ? '#f8fafc' : '#ffffff',
+          bd: on ? '#334155' : '#e2e8f0',
+          fg: on ? '#0f172a' : '#334155',
+          check: on ? 'bi-check-circle-fill' : 'bi-circle',
+          checkFg: on ? '#334155' : '#cbd5e1',
+          pick: () => this.setState({ layoutOverride: o.id, settingsOpen: false }),
+        };
+      }),
+    };
+  }
+
+  step(dir) {
+    const i = TREE.findIndex(n => n.id === this.state.selected);
+    let j = i;
+    for (let k = 1; k <= TREE.length; k++) {
+      const c = (i + dir * k + TREE.length * 2) % TREE.length;
+      if (TREE[c].kind !== 'group') { j = c; break; }
+    }
+    this.setState({ selected: TREE[j].id, mult: TREE[j].mult || '[0..1]' });
+  }
+}
+
+</script>
+</body>
+</html>

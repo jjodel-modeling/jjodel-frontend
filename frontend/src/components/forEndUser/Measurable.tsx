@@ -1,5 +1,19 @@
 import React, {Component, CSSProperties, PureComponent, ReactElement, ReactNode} from "react";
-import {DGraphElement, Dictionary, GObject, GraphSize, LGraph, Log, RuntimeAccessible, Size, TRANSACTION, U} from "../../joiner";
+import {
+    DGraph,
+    DGraphElement,
+    Dictionary,
+    GObject,
+    GraphSize, L,
+    LGraph,
+    Log,
+    Overlap,
+    Pointer,
+    RuntimeAccessible,
+    Size,
+    TRANSACTION,
+    U
+} from "../../joiner";
 import $ from "jquery";
 /// <reference path="../../common/libraries/jqui-types.ts" />
 import {JQueryUI} from "../../common/libraries/jqui-types"
@@ -91,21 +105,21 @@ export class MeasurableComponent extends Component<MeasurableAllProps, Measurabl
                     Log.ee('child not found', {child, evt, oc, e}); return;
                 }
                 let oldpos = this.oldPos; // positionMap.get(e);
-                console.log('measurable default event child ' + evtkind, {ui, e, oc, oldpos});
+                // console.log('measurable default event child ' + evtkind, {ui, e, oc, oldpos});
                 //if (evtkind === 'e') { positionMap.set(e, ui.position); }
 
                 /*if (evtkind === 's') {
                     ui.originalPosition.left = 300;
                     ui.offset.left = 300;
                     ui.position.left = 300;
-                    console.log('measurable sstart ', {type, e, oc, ui, el: e.style.left, cl: child.style.left});
+                    // console.log('measurable sstart ', {type, e, oc, ui, el: e.style.left, cl: child.style.left});
                 }* /
 
                 let key: any;
                 for (key of childmodekeys) {
                     let fixpos = () => {
                         if (oldpos && (oldpos as any)[key] !== undefined) {
-                            if (key ==='left') console.log('measurable fixpos ' + evtkind, (oldpos as any)[key] + ui.position[key] + 'px', (oldpos as any)[key]);
+                            // if (key ==='left') console.log('measurable fixpos ' + evtkind, (oldpos as any)[key] + ui.position[key] + 'px', (oldpos as any)[key]);
                             let newpos = (oldpos as any)[key] + ui.position[key];
                             child.style[key] = (newpos) + 'px';
                             if (evtkind === 'e') this.oldPos[key] = newpos;
@@ -135,7 +149,7 @@ export class MeasurableComponent extends Component<MeasurableAllProps, Measurabl
             };
 
             if (props[optionkey] === false || !props[optionkey]) {
-                console.log("measurable off " + type, {$measurable, type, datamap, optionkey, props});
+                // console.log("measurable off " + type, {$measurable, type, datamap, optionkey, props});
                 if ($measurable.data(datamap[type])) ($measurable as GObject)[type]('disable');
                 return;
             }
@@ -183,7 +197,7 @@ export class MeasurableComponent extends Component<MeasurableAllProps, Measurabl
             ui.originalPosition.left = 300;
             ui.offset.left = 300;
             ui.position.left = 300;
-            console.log('measurable sstart ', {type, e, oc, ui, el: e.style.left, cl: child.style.left});
+            // console.log('measurable sstart ', {type, e, oc, ui, el: e.style.left, cl: child.style.left});
         }*/
 
         let key: any;
@@ -425,29 +439,74 @@ export class MeasurableComponent extends Component<MeasurableAllProps, Measurabl
     }
 
     private getCoords(evt: JQueryEventObject, ui: JQueryUI.DraggableEventUIParams, isPanning?: LGraph): GraphSize {
+        if (isPanning) {
+            // Pan path: reuse cached graph.offset.w/h instead of measuring DOM on every move.
+            // Size.of(evt.target) triggers a layout-thrashing loop in Geom.ts that was the
+            // dominant forced reflow during pan (~37ms aggregate). Viewport dimensions don't
+            // change during a single pan session, so the cached values are correct.
+            // Fallback to Size.of() only if the cache is empty (first pan ever, before any
+            // initialization path has populated offset.w/h).
+            let position = this.props.onChildren ? this.oldPos : ui.position;
+            const offset = isPanning.offset as { w?: number; h?: number; x?: number; y?: number };
+            let w: number;
+            let h: number;
+            if (offset?.w !== undefined && offset?.h !== undefined) {
+                w = offset.w;
+                h = offset.h;
+            } else {
+                const size = Size.of(evt.target);
+                w = size.w;
+                h = size.h;
+            }
+            return new GraphSize(position.left, position.top, w, h);
+        }
         let size = Size.of(evt.target);
         let graph: LGraph = DGraphElement.graphLFromHtml(evt.target) as LGraph;
         let gsize: GraphSize = graph?.translateHtmlSize(size);
-        if (isPanning) {
-            let position = this.props.onChildren ? this.oldPos : ui.position;
-            gsize.x = position.left;
-            gsize.y = position.top;
-        }
         return gsize;
     }
 }
 
 @RuntimeAccessible('ScrollableComponent')
-export class ScrollableComponent extends Component<ScrollOwnProps, ScrollState>{
+export class ScrollableComponent extends Component<ScrollOwnProps & MeasurableInjectProps, ScrollState>{
     static cname: string = "ScrollableComponent";
+    private panningContentRef = React.createRef<HTMLDivElement>();
+    private panningHandleRef = React.createRef<HTMLDivElement>();
+    componentDidMount() {
+        // Clear residual jQuery UI left/top on .panning-handle from pre-fix pans
+        // (whileDragging now resets it per-tick, but a stale offset would still snap
+        // at the first dragstart of this session).
+        const handle = this.panningHandleRef.current;
+        if (handle) { handle.style.left = '0'; handle.style.top = '0'; }
+        // Same for .panning-content: childmode (MeasurableComponent line ~222)
+        // writes left/top during pan; clear residuals from prior browser sessions.
+        const content = this.panningContentRef.current;
+        if (content) { content.style.left = '0'; content.style.top = '0'; }
+    }
     render(){
-        let graph = this.props.graph;
+        let graph = (this.props.graph || L.fromPointer(this.props.graphid)) as any as LGraph;
+        if (!graph) return <div>&lt;Scrollable/&gt; requires a valid graph attribute</div>;
         let create = (e: JQueryEventObject) => {/*
             let target: HTMLElement = e.target.children[0] as HTMLElement;
             target.style.left = graph.offset.x+'px';
             target.style.top = graph.offset.y+'px';*/
             // $(target).data({uiDraggable:{offset:{left: graph.offset.x, top: graph.offset.y}}});
         }
+        // R-PanArchitecture: pan applies inline DOM mutations on the three layers
+        // that visually track offset (.panning-content for nodes, EdgeOverlay <g>
+        // for edges, Grid <pattern>s for background). Redux receives a single
+        // dispatch at onDragEnd — no per-frame React re-renders during pan.
+        const commitOffset = (coords: GraphSize) => {
+            let offset = graph.offset;
+            if (offset.equals(coords)) return;
+            // TRANSACTION wrap is what makes the dispatch flush during an active jQuery UI drag.
+            // Without the wrap, neither `graph.offset = coords` nor a bare `SetFieldAction.new`
+            // commits until mouseup. Pattern mirrors Vertex.tsx:185 (proxy assignment inside
+            // TRANSACTION) which is verified to update Redux at ~30fps during node drag.
+            TRANSACTION('pan ' + graph.name + ' offset', () => {
+                graph.offset = coords as any;
+            });
+        };
         return (
             <div {...this.props} className={(this.props.className || '' ) + " scrollable"} >
                 {/*(this.props as any).test ? works only apparently, it takes the event from root and not from handle, need to put hands on Measurable to make it work this way
@@ -455,7 +514,7 @@ export class ScrollableComponent extends Component<ScrollOwnProps, ScrollState>{
                                 isPanning={graph}
                                 onDragEnd={graph ? (coords, ...args: any) => {
                                     if (!graph) return; // just for ts-lint
-                                    console.log("drag odee", {coords, graph, args});
+                                    // console.log("drag odee", {coords, graph, args});
                                     let offset = graph.offset;
                                     if (!offset.equals(coords)) graph.offset = coords as any;
                                 } : undefined}
@@ -468,14 +527,107 @@ export class ScrollableComponent extends Component<ScrollOwnProps, ScrollState>{
                     :*/
                     <Measurable draggable={{create}}
                                 isPanning={graph}
-                                onDragEnd={graph ? (coords, ...args: any)=>{
-                                if (!graph) return; // just for ts-lint
-                                let offset = graph.offset;
-                                if (!offset.equals(coords)) graph.offset = coords as any;
-                            } : undefined}
-                            onChildren={true}>
-                        <div className="panning-handle">
-                            <div className="panning-content">{this.props.children}</div>
+                                whileDragging={(coords, evt, ui) => {
+                                    // coords from getCoords() = oldPos (drag start position) when onChildren=true.
+                                    // ui.position is the jQuery UI delta from drag start. Correct current
+                                    // position is the sum, mirroring Measurable.tsx:220 (newpos = oldpos + ui.position).
+                                    const fresh: GraphSize = ui?.position
+                                        ? ({ ...coords, x: coords.x + ui.position.left, y: coords.y + ui.position.top } as GraphSize)
+                                        : coords;
+
+                                    // Nodes layer: shift .panning-content via inline transform.
+                                    // Stylesheet's transform: translate(var(--offset-x), var(--offset-y)) is overridden
+                                    // by inline style for the duration of the drag.
+                                    const pcEl = this.panningContentRef.current;
+                                    if (pcEl) {
+                                        pcEl.style.transform = `translate(${fresh.x}px, ${fresh.y}px)`;
+                                        // childmode (MeasurableComponent line ~222) wrote left/top on
+                                        // .panning-content earlier in the [defaultevt, jquievt, propsevent]
+                                        // chain. Override here so pan motion rides on transform alone;
+                                        // otherwise left/top compose with transform → 2× delta on nodes.
+                                        pcEl.style.left = '0px';
+                                        pcEl.style.top = '0px';
+                                    }
+
+                                    // Edges + Grid layers live outside .panning-content; locate them
+                                    // scoped to the active .GraphContainer (correct in split mode).
+                                    const containerEl = (evt?.target as Element | null)?.closest('.GraphContainer');
+
+                                    // Replicate EdgeOverlay's zoom source (cumulativeZoom, fallback zoom)
+                                    // and transform format (translate FIRST, then scale on <g>).
+                                    const zoomSrc: any = (graph as any).cumulativeZoom || (graph as any).zoom || { x: 1, y: 1 };
+                                    const sx = typeof zoomSrc.x === 'number' && zoomSrc.x > 0 ? zoomSrc.x : 1;
+                                    const sy = typeof zoomSrc.y === 'number' && zoomSrc.y > 0 ? zoomSrc.y : 1;
+
+                                    const edgeG = containerEl?.querySelector('.jjodel-edge-overlay g') as SVGGElement | null;
+                                    if (edgeG) {
+                                        edgeG.setAttribute('transform', `scale(${sx},${sy}) translate(${fresh.x},${fresh.y})`);
+                                    }
+
+                                    // Grid layer: <pattern> elements use patternTransform with scale FIRST
+                                    // (opposite to EdgeOverlay — patternTransform operates in pattern-unit space).
+                                    // Selector mirrors grid.tsx mount: SVG sibling of .scrollable inside the
+                                    // template root (.root.model for models, generic > svg as fallback).
+                                    const gridSvg = containerEl?.querySelector(':scope > .root.model > svg, :scope > svg') as SVGSVGElement | null;
+                                    const gridPatterns = gridSvg?.querySelectorAll('pattern');
+                                    if (gridPatterns && gridPatterns.length > 0) {
+                                        const gridTransform = `scale(${sx},${sy}) translate(${fresh.x},${fresh.y})`;
+                                        gridPatterns.forEach(p => p.setAttribute('patternTransform', gridTransform));
+                                    }
+
+                                    // Neutralize jQuery UI movement on .panning-handle via direct DOM
+                                    // override. Round 1's reset of ui.position.left/top = 0 carried over
+                                    // to dragend (jQuery UI _mouseStop reuses last self.position from
+                                    // _mouseDrag), corrupting commitOffset: childmode-e (line 220-224)
+                                    // accumulates oldPos as `oldPos += ui.position`, with ui.position=0
+                                    // oldPos stayed pre-drag and the dispatched offset was wrong → cards
+                                    // reverted at rAF clear. Sync DOM override leaves ui.position intact.
+                                    const handleEl = this.panningHandleRef.current;
+                                    if (handleEl) {
+                                        handleEl.style.left = '0px';
+                                        handleEl.style.top = '0px';
+                                    }
+                                }}
+                                onDragEnd={(coords) => {
+                                    // Snapshot ref before dispatch — used to clear inline style after React settles.
+                                    const pcEl = this.panningContentRef.current;
+                                    // Sync override of childmode-e's left/top write (Measurable.tsx:222) before
+                                    // paint. childmode's removeProperty cleanup fires at ~1-2ms via setTimeout,
+                                    // leaving a window where a paint would show left/top + transform = 2× snap.
+                                    if (pcEl) { pcEl.style.left = '0px'; pcEl.style.top = '0px'; }
+                                    // Symmetric sync override on .panning-handle: jQuery UI applies its
+                                    // final position at mouseup. Override before commitOffset so the
+                                    // post-dispatch paint doesn't briefly show handle offset compositing
+                                    // with .panning-content's transform.
+                                    const handleEl = this.panningHandleRef.current;
+                                    if (handleEl) { handleEl.style.left = '0px'; handleEl.style.top = '0px'; }
+                                    // Final dispatch — triggers React re-render. EdgeOverlay <g> and Grid <pattern>s
+                                    // receive their transforms via JSX, overwriting our setAttribute. No clear needed.
+                                    commitOffset(coords);
+                                    // Do NOT clear pcEl.style.transform here. The base CSS rule
+                                    // .panning-content { transform: translate(var(--offset-x), var(--offset-y)) }
+                                    // reads CSS variables that are written by graphElement.tsx as part of the
+                                    // React-rendered style on the graph element. The commitOffset dispatch
+                                    // schedules a React re-render to update these variables, but React 18
+                                    // concurrent mode can defer the commit past our (double) rAF callback.
+                                    // Between the rAF clear and the React commit, the CSS rule reads stale
+                                    // --offset-x/y values and snaps nodes to a pre-pan-equivalent position.
+                                    // Preserving the inline transform = translate(fresh_finale) overrides the
+                                    // CSS rule unconditionally for this and any future cause (e.g. a class-based
+                                    // override, microtask scheduling changes). At the next pan, whileDragging
+                                    // overwrites the inline transform frame-by-frame.
+                                    requestAnimationFrame(() => {
+                                        requestAnimationFrame(() => {
+                                            if (pcEl) {
+                                                pcEl.style.left = '';
+                                                pcEl.style.top = '';
+                                            }
+                                        });
+                                    });
+                                }}
+                                onChildren={true}>
+                        <div className="panning-handle" ref={this.panningHandleRef}>
+                            <div className="panning-content" ref={this.panningContentRef}>{this.props.children}</div>
                         </div>
                 </Measurable>
                 }
@@ -487,9 +639,14 @@ export class ScrollableComponent extends Component<ScrollOwnProps, ScrollState>{
 interface ScrollOwnProps {
     children: ReactNode;
     className?: string;
-    graph: LGraph;
+    graph?: LGraph;
+    graphid?: Pointer<LGraph>;
 }
 
+interface MeasurableInjectProps {
+    nodeid: Pointer<DGraphElement>;
+    graphid: Pointer<DGraph>;
+}
 interface MeasurableOwnProps {
     isPanning?: LGraph;
     children: ReactNode[] | ReactNode;
@@ -497,7 +654,7 @@ interface MeasurableOwnProps {
     //drag?: Options;
     draggable?: JQueryUI.DraggableOptions | boolean;
     onDragStart?: DraggableEvent;
-    whileDragging?: DraggableEvent;
+    whileDragging?: (coords: GraphSize, ...args: Parameters<DraggableEvent>)=>void;
     onDragEnd?: (coords: GraphSize, ...args: Parameters<DraggableEvent>)=>void;
     onChildren?: boolean | ((e: HTMLElement)=>HTMLElement);
 
@@ -528,7 +685,7 @@ interface DispatchProps {
 
 
 // private
-type MeasurableAllProps = MeasurableOwnProps & MeasurableStateProps & DispatchProps;
+type MeasurableAllProps = Overlap<MeasurableOwnProps, Overlap</*MeasurableInjectProps*/ {}, Overlap<MeasurableStateProps, DispatchProps>>>;
 
 ////// mapper func
 /*
@@ -555,7 +712,7 @@ export function Measurable(props: MeasurableAllProps, children?: any): ReactElem
     let props2 = {...props};
     // @ts-ignore
     delete props2.key;
-    return <MeasurableComponent {...props2}>{props.children||children}</MeasurableComponent>;
+    return <MeasurableComponent {...props2}>{props?.children||children}</MeasurableComponent>;
 }
 // shortcuts for Draggable Resizable Rotatable with whileDragging onDragStart props simplified to start, while, end
 export function Draggable(props: GObject<MeasurableAllProps>, children?: any): ReactElement {
@@ -565,7 +722,7 @@ export function Draggable(props: GObject<MeasurableAllProps>, children?: any): R
         onDragStart={props.start || props.begin || props.onDragStart}
         onDragEnd={props.end || props.stop || props.onDragEnd}
         whileDragging={props.drag || props.while || props.ing || props.whileDragging}
-    >{props.children||children}</MeasurableComponent>;
+    >{props?.children||children}</MeasurableComponent>;
 }
 export function Resizable(props: GObject<MeasurableAllProps>, children?: any): ReactElement {
     return <MeasurableComponent
@@ -574,7 +731,7 @@ export function Resizable(props: GObject<MeasurableAllProps>, children?: any): R
         onResizeStart={props.start || props.begin || props.onResizeStart}
         onResizeEnd={props.end || props.stop || props.onResizeEnd}
         whileResizing={props.resize || props.while || props.ing || props.whileResizing}
-    >{props.children||children}</MeasurableComponent>;
+    >{props?.children||children}</MeasurableComponent>;
 }
 export function Rotatable(props: GObject<MeasurableAllProps>, children?: any): ReactElement {
     return <MeasurableComponent
@@ -583,7 +740,7 @@ export function Rotatable(props: GObject<MeasurableAllProps>, children?: any): R
         onRotationStart={props.start || props.begin || props.onRotateStart|| props.onRotationStart}
         onRotationEnd={props.end || props.stop || props.onRotateEnd|| props.onRotationEnd}
         whileRotating={props.rotate || props.while || props.ing || props.whileRotate || props.whileRotating}
-    >{props.children||children}</MeasurableComponent>;
+    >{props?.children||children}</MeasurableComponent>;
 }
 
 
@@ -592,8 +749,31 @@ export function Scrollable(props: MeasurableAllProps, children?: any): ReactElem
     // @ts-ignore
     delete props2.key;
     // @ts-ignore
-    return <ScrollableComponent {...props2}>{props.children||children}</ScrollableComponent>;
-}/*
+    return <ScrollableComponent {...props2}>{props?.children||children}</ScrollableComponent>;
+}
+// aliases
+export function Viewport(props: MeasurableAllProps, children?: any): ReactElement { return Scrollable(props, children); }
+export function ViewPort(props: MeasurableAllProps, children?: any): ReactElement { return Scrollable(props, children); }
+export function Pan(props: MeasurableAllProps, children?: any): ReactElement { return Scrollable(props, children); }
+export function Scalable(props: MeasurableAllProps, children?: any): ReactElement { return Resizable(props, children); }
+export function Transformable(props: MeasurableAllProps, children?: any): ReactElement { return Measurable(props, children); }
+export function Interactive(props: MeasurableAllProps, children?: any): ReactElement { return Measurable(props, children); }
+(MeasurableComponent as any).cname = 'MeasurableComponent';
+(ScrollableComponent as any).cname = 'ScrollableComponent';
+(Measurable as any).cname = 'Measurable';
+(Draggable as any).cname = 'Draggable';
+(Resizable as any).cname = 'Resizable';
+(Rotatable as any).cname = 'Rotatable';
+(Scrollable as any).cname = 'Scrollable';
+(Viewport as any).cname = 'Viewport';
+(ViewPort as any).cname = 'ViewPort';
+(Pan as any).cname = 'Pan';
+(Scalable as any).cname = 'Scalable';
+(Transformable as any).cname = 'Transformable';
+(Interactive as any).cname = 'Interactive';
+// other names: Camera, Pan, World, Scene, Layer
+
+/*
 export function InfiniteScroll(props: MeasurableAllProps, children: ReactNode = []): ReactElement {
     return <InfiniteScrollComponent {...{...props, children}}>{children}</InfiniteScrollComponent>;
 }*/

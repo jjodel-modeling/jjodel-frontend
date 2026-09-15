@@ -8,7 +8,9 @@ export class Debug {
     private static lightModeInput: HTMLInputElement;
 
     // manually activated: counts how many times each node is rendered in a component.
+    // note (de-entanglement stage 5): windoww.GraphElementComponent no longer exists; guarded to keep the console tool safe.
     static getComponentMap(){
+        if (!windoww.GraphElementComponent) { console.warn('[Debug] classic GraphElementComponent registry removed (de-entanglement stage 5)'); return {}; }
         let nodes = Object.values(windoww.GraphElementComponent.all).map((a:any)=>a.props.node).filter(a=>!!a);
         let nodeids = [...new Set(nodes.map(a=>a.id).filter(a=>!!a))];
         let allids: GObject = {};
@@ -46,10 +48,11 @@ export class Debug {
         Debug.lightModeInput.checked = b;
     }
     public static refresh(): void {
-        for (let key in windoww.GraphElementComponent.all) {
+        // guarded (de-entanglement stage 5): classic registry removed
+        for (let key in (windoww.GraphElementComponent?.all || {})) {
             windoww.GraphElementComponent.all[key].forceUpdate();
         }
-        console.log(windoww.GraphElementComponent.all);
+        // console.log(windoww.GraphElementComponent.all);
     }
 
     // 16s 50 classi vuote
@@ -72,7 +75,7 @@ export class Debug {
         return callbacks;
     }
     // 4s 10 istanze con 5 attributi
-    static benchmarkCreateInstance(metaclassName: string="Concept 1", times: number = 100, disableConsole: boolean = true): BenchmarkOptions{
+    static benchmarkCreateInstance(metaclassName: string="Concept_1", times: number = 100, disableConsole: boolean = true): BenchmarkOptions{
         let checkDelayMax = 300;
         let checkDelayMin = 50;
         let diff = checkDelayMax - checkDelayMin;
@@ -101,10 +104,10 @@ export class Debug {
         if (!callbacks.checkDelayMin) callbacks.checkDelayMin = 300;
         if (!callbacks.additionalDelayMax) callbacks.additionalDelayMax = 2000;
         if (!callbacks.onStuck) callbacks.onStuck = (time:number, start: Date, end:Date, $complete: number) => {
-            console.log("Benchmarked operation stuck at same completion% for: " + callbacks.maxStuckTime/1000+" s. \n" +
+             console.log("Benchmarked operation stuck at same completion% for: " + callbacks.maxStuckTime/1000+" s. \n" +
                 "After " + time/100 + "s total time passed and " + $complete*100 + "% of the task was completed. \nBenchmark aborted."); }
         if (!callbacks.onFinish) callbacks.onFinish = (time:number, start: Date, end:Date) => {
-            console.log("Benchmarked operation completed after: " + time/1000 + " s."); }
+             console.log("Benchmarked operation completed after: " + time/1000 + " s."); }
 
         windoww.Log.exDev(!callbacks.times, ".times is a mandatory option");
         windoww.Log.exDev(!callbacks.checkCompletionFunction, ".checkCompletionFunction is a mandatory option");

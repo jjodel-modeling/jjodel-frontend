@@ -1,0 +1,20 @@
+{
+  "date": "2026-07-18T00:11:11.010Z",
+  "app": "http://localhost:3001/",
+  "model": "bench.xmi",
+  "project": "Bench_mrpm38kz",
+  "t_import_ecore_ms": 136,
+  "t_import_xmi_ms": 1627,
+  "commits_import_xmi": 7,
+  "t_mount_flow_nodes_ms": 162981,
+  "t_edges_settle_ms": 162981,
+  "t_responsive_after_open_ms": 195279,
+  "rf_nodes": 501,
+  "rf_edges": 986,
+  "commits_open_flow": 582,
+  "edit_flow": {
+    "error": "task_0.weight not found"
+  },
+  "commits_edit_flow": 4,
+  "classic_toggle_found": 0
+}

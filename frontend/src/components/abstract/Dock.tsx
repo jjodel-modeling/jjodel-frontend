@@ -1,22 +1,129 @@
 import './style.scss';
-import {Dispatch, ReactElement, ReactNode} from 'react';
+import React, {Dispatch, ReactElement, ReactNode, useEffect, useState} from 'react';
+import { JjodelEvents } from '../../events/registry';
 import {connect} from 'react-redux';
-import {DState, DUser, LProject, LUser} from '../../joiner';
+import {DProject, DState, DUser, LProject, LUser, store} from '../../joiner';
 import {FakeStateProps, windoww} from '../../joiner/types';
 import {LayoutData} from 'rc-dock';
-import {Collaborative, Console, Info, Logger, Skeleton, MetaData, NestedView} from "../editors";
+import {Collaborative, Console, Logger, MetaData} from "../editors";
 import {NodeEditor} from "../editors/NodeEditor";
 import DockManager from './DockManager';
 import {PinnableDock, TabContent, TabHeader} from '../dock/MyRcDock';
+import { TabsOverflowMenu } from '../dock/TabsOverflowMenu';
 import ModelsSummaryTab from "./tabs/ModelsSummaryTab";
+import { MANAGER_TAB_PREFIX } from "./tabs/instanceManagerModel";
 import BrokerEditor from "../editors/Broker";
 import {PermissionModelTab} from "../editors/PermissionModelTab";
 import {MTM} from "../editors/MTM";
 import { isProjectModified } from '../../common/libraries/projectModified';
 import { Logo } from '../../components/logo';
+import { SimpleResizeHandle } from '../SimpleResizeHandle';
 //import MqttEditor from "../rightbar/mqtt/MqttEditor";
-//import NestedView from "../rightbar/nestedViewEditor/ViewEditorNestedVersion";
 //import CollaboratorsEditor from "../rightbar/collaboratorsEditor/CollaboratorsEditor";
+
+// ============================================
+// LAYOUT MODE TYPES
+// ============================================
+export type LayoutMode = 'split' | 'sidebar' | 'canvas-only' | 'vertical-console';
+
+/**
+ * Get saved layout mode from localStorage
+ */
+export function getSavedLayoutMode(): LayoutMode {
+    const saved = localStorage.getItem('jjodel_layout_mode');
+    return (saved as LayoutMode) || 'split';
+}
+
+/**
+ * Save layout mode to localStorage
+ */
+export function saveLayoutMode(mode: LayoutMode): void {
+    localStorage.setItem('jjodel_layout_mode', mode);
+}
+
+/**
+ * Get the default panel size ratio for a layout mode (as percentage)
+ */
+export function getDefaultPanelRatio(mode: LayoutMode): number {
+    switch (mode) {
+        case 'split': return 50;      // 50% canvas, 50% properties
+        case 'sidebar': return 30;    // 70% canvas, 30% properties
+        case 'canvas-only': return 0; // 100% canvas, 0% properties
+        case 'vertical-console': return 0; // Not used for vertical mode
+        default: return 50;
+    }
+}
+
+/**
+ * Activate vertical console mode programmatically (for testing)
+ * Usage: In browser console, run: window.setVerticalConsoleMode()
+ */
+export function activateVerticalConsoleMode(): void {
+    saveLayoutMode('vertical-console');
+    window.dispatchEvent(new CustomEvent(JjodelEvents.LAYOUT_MODE_CHANGE, {
+        detail: { mode: 'vertical-console' as LayoutMode }
+    }));
+    // console.log('✅ Vertical Console Mode activated. Refresh if needed.');
+}
+
+// Expose to window for easy testing
+if (typeof window !== 'undefined') {
+    (window as any).setVerticalConsoleMode = activateVerticalConsoleMode;
+    (window as any).setSplitMode = () => {
+        saveLayoutMode('split');
+        window.location.reload();
+    };
+}
+
+/**
+ * Save dock panel ratio to localStorage for a specific mode
+ */
+export function saveDockPanelRatio(mode: LayoutMode, ratio: number): void {
+    localStorage.setItem(`jjodel_dock_ratio_${mode}`, String(ratio));
+}
+
+/**
+ * Get saved dock panel ratio from localStorage, or default if not saved
+ */
+export function getSavedDockPanelRatio(mode: LayoutMode): number {
+    const saved = localStorage.getItem(`jjodel_dock_ratio_${mode}`);
+    if (saved !== null) {
+        const parsed = parseFloat(saved);
+        if (!isNaN(parsed) && parsed > 0 && parsed <= 100) {
+            return parsed;
+        }
+    }
+    return getDefaultPanelRatio(mode);
+}
+
+/**
+ * Get initial panel width for right panel (for backward compatibility)
+ * @deprecated Use calculatePanelSizes instead
+ */
+export function getInitialPanelWidth(mode: LayoutMode): number {
+    const { rightSize } = calculatePanelSizes(mode);
+    return rightSize;
+}
+
+/**
+ * Calculate panel sizes based on ratio
+ * Returns { leftSize, rightSize } in pixels
+ */
+export function calculatePanelSizes(mode: LayoutMode): { leftSize: number; rightSize: number } {
+    const screenWidth = window.innerWidth;
+
+    // Canvas-only mode: full canvas, no properties
+    if (mode === 'canvas-only') {
+        return { leftSize: screenWidth, rightSize: 0 };
+    }
+
+    // Get saved ratio or default
+    const rightRatio = getSavedDockPanelRatio(mode);
+    const rightSize = Math.max(300, Math.floor(screenWidth * (rightRatio / 100)));
+    const leftSize = screenWidth - rightSize;
+
+    return { leftSize, rightSize };
+}
 
 
 
@@ -36,28 +143,146 @@ function tid(){
 function DockComponent(props: AllProps) {
     const {user} = props;
     idcounter = 0;
-    const groups = {
-        'models': {floatable: true, maximizable: true},
-        'editors': {floatable: true, maximizable: true}
+
+    // State per il layout mode - si aggiorna quando cambia dalla navbar
+    const [layoutMode, setLayoutMode] = useState<LayoutMode>(() => getSavedLayoutMode());
+
+    // State for console height in vertical-console mode
+    const [consoleHeight, setConsoleHeight] = useState<number>(() => {
+        const stored = localStorage.getItem('jjodel_vertical_console_height');
+        return stored ? parseInt(stored, 10) : 400;
+    });
+
+    // Handler for console height change
+    const handleConsoleHeightChange = (height: number) => {
+        setConsoleHeight(height);
+        localStorage.setItem('jjodel_vertical_console_height', height.toString());
     };
 
-    /* Models */
-    // const ModelsSummary = {id: id(), title: <TabHeader tid={tid()}><JLogo style={{marginLeft: '-10px', fontSize: '1.5rem', paddingRight: '6px'}}/> Summary</TabHeader>, group: 'models', closable: false, content: <TabContent tid={tid()}><ModelsSummaryTab /></TabContent>};
+    // Listener per l'evento di cambio layout dalla navbar
+    useEffect(() => {
+        const handleLayoutChange = (event: CustomEvent<{ mode: LayoutMode; resetToDefault?: boolean }>) => {
+            const newMode = event.detail.mode;
+            const resetToDefault = event.detail.resetToDefault || false;
 
+            // Update panel sizes based on mode - do this BEFORE state update to avoid re-render issues
+            if (DockManager.dock) {
+                const currentLayout = DockManager.dock.getLayout();
+                if (currentLayout?.dockbox?.children?.length >= 2) {
+                    const screenWidth = window.innerWidth;
+                    let rightPanelRatio: number;
 
-    let advanced:boolean = props.advanced;
-    /* Editors */
+                    if (resetToDefault) {
+                        // Double-click: reset to default ratio
+                        rightPanelRatio = getDefaultPanelRatio(newMode);
+                        // Clear saved ratio so next single-click uses default
+                        localStorage.removeItem(`jjodel_dock_ratio_${newMode}`);
+                    } else {
+                        // Single-click: use saved ratio or default
+                        rightPanelRatio = getSavedDockPanelRatio(newMode);
+                    }
 
+                    // Calculate sizes based on ratio
+                    const rightPanelSize = Math.floor(screenWidth * (rightPanelRatio / 100));
+                    const leftPanelSize = screenWidth - rightPanelSize;
 
-    const ModelsSummary = {id: id(), title: <TabHeader tid={tid()}><Logo style={{marginLeft: '-10px', fontSize: '1.5rem', paddingRight: '6px'}}/> {user?.project?.name}</TabHeader>, group: 'models', closable: false, content: <TabContent tid={tid()}><ModelsSummaryTab /></TabContent>};
-    //const test = {id: id(), title: 'Test', group: 'editors', closable: false, content: <TestTab />};
-    const structure = {id: id(), title: <TabHeader tid={tid()}>Properties</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><Info mode={'tab'}/></TabContent>};
+                    // Create a deep copy to avoid mutating the original layout
+                    // This preserves all tabs and activeId without issues
+                    const updatedLayout = JSON.parse(JSON.stringify(currentLayout));
+
+                    // Update only the sizes - preserves tabs, activeId, and all other properties
+                    updatedLayout.dockbox.children[0].size = leftPanelSize;
+                    updatedLayout.dockbox.children[1].size = rightPanelSize;
+
+                    // Load updated layout - this preserves all open tabs and selection
+                    DockManager.dock.loadLayout(updatedLayout);
+
+                    // Trigger resize event to make rc-dock recalculate
+                    setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
+                }
+            }
+
+            // Update state AFTER layout is updated to avoid race conditions
+            setLayoutMode(newMode);
+        };
+
+        // Listen for dock panel resize to save the ratio
+        const handleDockResize = () => {
+            if (DockManager.dock) {
+                const layout = DockManager.dock.getLayout();
+                if (layout?.dockbox?.children?.length >= 2) {
+                    const leftSize = layout.dockbox.children[0].size || 1;
+                    const rightSize = layout.dockbox.children[1].size || 1;
+                    const total = leftSize + rightSize;
+                    const rightRatio = Math.round((rightSize / total) * 100);
+
+                    // Save the ratio for the current mode
+                    const currentMode = getSavedLayoutMode();
+                    if (currentMode !== 'canvas-only') {
+                        saveDockPanelRatio(currentMode, rightRatio);
+                    }
+                }
+            }
+        };
+
+        window.addEventListener(JjodelEvents.LAYOUT_MODE_CHANGE, handleLayoutChange as EventListener);
+
+        // Debounced resize save (save after user stops resizing)
+        let resizeTimeout: ReturnType<typeof setTimeout>;
+        const debouncedResize = () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(handleDockResize, 500);
+        };
+        window.addEventListener('mouseup', debouncedResize);
+
+        return () => {
+            window.removeEventListener(JjodelEvents.LAYOUT_MODE_CHANGE, handleLayoutChange as EventListener);
+            window.removeEventListener('mouseup', debouncedResize);
+            clearTimeout(resizeTimeout);
+        };
+    }, []);
+
+    // Listen for editor type changes — control panel visibility via CSS data attribute
+    useEffect(() => {
+        document.body.setAttribute('data-editor-type', 'summary');
+
+        const handleEditorTypeChange = (event: Event) => {
+            const { editorType } = (event as CustomEvent<{ editorType: string }>).detail;
+            document.body.setAttribute('data-editor-type', editorType || 'none');
+        };
+
+        window.addEventListener(JjodelEvents.EDITOR_TYPE_CHANGE, handleEditorTypeChange);
+
+        return () => {
+            window.removeEventListener(JjodelEvents.EDITOR_TYPE_CHANGE, handleEditorTypeChange);
+            document.body.removeAttribute('data-editor-type');
+        };
+    }, []);
+
+    // PropertiesWithTreeView width-lock: RETIRED (F5 2026-07-29). Properties + Tree
+    // float now (Dashboard mount, portal to <body>); there is no dock tab to width-lock,
+    // so nothing is written to document.body here and no listener is needed. (Earlier
+    // still, the rail-only listener PROPERTIES_TREE_RAIL_ONLY_ENTER/EXIT was removed.)
+
+    const groups = {
+        'models': {floatable: true, maximizable: false},
+        // editors group: tabLocked=true disables drag-and-drop reordering
+        // Tabs remain in fixed order: Properties, Tree View, Viewpoints, Node, Console
+        'editors': {floatable: true, maximizable: false, tabLocked: true}
+    };
+
+    const summaryTid = (id(), tid()); // advance counter for TabHeader/TabContent pairing
+    const ModelsSummary = {id: 'project_summary', title: <TabHeader tid={summaryTid}><Logo style={{marginLeft: '-10px', fontSize: '1.5rem', paddingRight: '6px'}}/> {DProject.getProject()?.name}</TabHeader>, group: 'models', closable: false, content: <TabContent tid={summaryTid}><ModelsSummaryTab /></TabContent>};
+    // F2 floating panels (2026-07-29): the Properties tab (`structure`) is gone from the
+    // dock — Properties + Tree now render as a floating overlay (mounted in Dashboard,
+    // `<PropertiesWithTreeView mode='floating'/>`). Removed here so it is never rendered
+    // twice. The other editors-group tab consts below are left in place (orphaned).
     const metadata = {id: id(), title: <TabHeader tid={tid()}>Metadata</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><MetaData /></TabContent>};
-    const tree = {id: id(), title: <TabHeader tid={tid()}>Tree View</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><Skeleton /></TabContent>};
-    // const views = {id: id(), title: <TabHeader tid={tid()}>Views</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><Views /></TabContent>};
+    // Tree View tab removed - the tree now renders inside PropertiesWithTreeView,
+    // mounted as the floating rail in Dashboard.tsx (see the F2 note above).
     const node = {id: id(), title: <TabHeader tid={tid()}>Node</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><NodeEditor /></TabContent>};
-    const views = {id: id(), title: <TabHeader tid={tid()}>Viewpoints</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><NestedView /></TabContent>};
-    //const validation = {id: id(), title: <TabHeader tid={tid()}>Validation</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><ViewpointEditor validation={true} /></TabContent>};
+    // Viewpoint/view editing is rendered inline by the Properties tab (Info.tsx)
+    // when a view or viewpoint is selected in the Tree View sidebar.
     const collaborative = {id: id(), title: <TabHeader tid={tid()}>Collaborative</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><Collaborative /></TabContent>};
     // const mqtt = {id: id(), title: <TabHeader tid={tid()}>Mqtt</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><MqttEditor /></TabContent>};
     // const broker = {id: id(), title: <TabHeader tid={tid()}>Broker</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><BrokerEditor /></TabContent>};
@@ -66,30 +291,123 @@ function DockComponent(props: AllProps) {
     const permissions = {id: id(), title: <TabHeader tid={tid()}>Permissions</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><PermissionModelTab/></TabContent>};
     const mtm = {id: id(), title: <TabHeader tid={tid()}>Languages</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><MTM/></TabContent>};
 
+    // Check if we're in vertical-console mode
+    if (layoutMode === 'vertical-console') {
+        // Vertical layout: Canvas on top, Console at bottom with resize handle
+        const canvasHeight = window.innerHeight - consoleHeight;
+
+        return (
+            <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
+                {/* Canvas area - takes remaining space */}
+                <div style={{ height: `${canvasHeight}px`, overflow: 'auto', position: 'relative' }}>
+                    <ModelsSummaryTab />
+                </div>
+
+                {/* Resize Handle */}
+                <SimpleResizeHandle
+                    onHeightChange={handleConsoleHeightChange}
+                    currentHeight={consoleHeight}
+                />
+
+                {/* Console area - fixed height */}
+                <div style={{ height: `${consoleHeight}px`, overflow: 'auto', background: '#ffffff', borderTop: '1px solid #e2e8f0' }}>
+                    <Console />
+                </div>
+            </div>
+        );
+    }
+
+    // Standard horizontal layout (existing behavior)
     const layout: LayoutData = {dockbox: {mode: 'horizontal', children: []}};
-    layout.dockbox.children.push({tabs: [ModelsSummary]});
 
-    const tabs = [];
-    tabs.push(structure);
-    tabs.push(tree);
-    tabs.push(views);
-    // if (advanced) tabs.push(metadata);
-    // if (advanced) tabs.push(broker);
-    tabs.push(node);
-    tabs.push(console);
-    if (advanced) tabs.push(mtm);
-    if (advanced) tabs.push(logger);
+    // Calculate panel sizes based on layout mode
+    // Note: When JjTL is active, CSS handles hiding the right panel
+    const { leftSize } = calculatePanelSizes(layoutMode);
 
-    // if (user?.project?.type === 'collaborative') tabs.push(collaborative);
-    if (false && user?.project?.type === 'collaborative') tabs.push(permissions);
-    layout.dockbox.children.push({tabs});
+    // Left panel (Models Summary / Canvas)
+    layout.dockbox.children.push({tabs: [ModelsSummary], size: leftSize});
 
-    return (<PinnableDock key={''+advanced} ref={dock => { DockManager.dock = dock }} defaultLayout={layout} groups={groups} />);
+    // F2 floating panels (2026-07-29): the right dock child (editors group — Properties,
+    // Node, Console, MTM, Logger) is no longer built. Properties + Tree now render as a
+    // floating overlay over the full-width canvas (Dashboard mount, portal to <body>).
+    // The dockbox is left single-child (canvas group); rc-dock normalises the sole child
+    // to 100% width — no CSS change needed. `groups.editors` and the editors tab consts
+    // above are still left in place (orphaned): Console → future bottom drawer. Retiring
+    // them is deferred past F5 — the consts still declare group:'editors', so a clean
+    // removal would have to drop them too (out of this commit's scope).
+
+    // Emit custom event when the active tab in the left panel changes
+    // so that StatusBar can switch between project stats and editor breadcrumb,
+    // and Dashboard can hide project sidebar when metamodel editor is active.
+    const handleLayoutChange = (newLayout: any) => {
+        const panel = newLayout?.dockbox?.children?.[0];
+        const activeId = panel?.activeId;
+        if (!activeId) return;
+
+        // Extract tab type from the title element's data-type attribute
+        const tabs = panel?.tabs || [];
+        const activeTab = tabs.find((t: any) => t.id === activeId);
+        const tabType: string | null = (activeTab?.title as any)?.props?.['data-type'] ?? null;
+
+        window.dispatchEvent(new CustomEvent(JjodelEvents.ACTIVE_TAB, { detail: { activeId, tabType } }));
+
+        // tabType is null when rc-dock switches between already-open tabs
+        // (it doesn't preserve React props on title elements). Fall back to
+        // the JjOM lookup to determine the editor type from the model itself.
+        let resolvedEditorType: string | null = tabType;
+        if (!resolvedEditorType && activeId) {
+            try {
+                const state = store.getState();
+                const model = (state as any).idlookup?.[activeId];
+                if (model) {
+                    resolvedEditorType = model.isMetamodel ? 'metamodel' : 'model';
+                }
+            } catch {
+                // silent fallback
+            }
+        }
+
+        if (resolvedEditorType === 'metamodel' || resolvedEditorType === 'model') {
+            window.dispatchEvent(new CustomEvent(JjodelEvents.EDITOR_TYPE_CHANGE, {
+                detail: { editorType: resolvedEditorType, modelId: activeId }
+            }));
+        }
+
+        // Hide the floating rail on the tabs that own their whole width.
+        //
+        // Two of them now. Documentation was the first; the instance manager is the
+        // second (ratified Q1(b)), and it needs its OWN attribute value rather than
+        // riding on 'documentation', because the two hide the same thing for
+        // different reasons and a shared value would make the next change to either
+        // one silently move the other.
+        //
+        // This branch is also what stands in for EDITOR_TYPE_CHANGE on the manager.
+        // The block above resolves the editor type from `idlookup[activeId]`, and a
+        // manager's id is PREFIXED, so the lookup misses and no event fires — which
+        // would leave body[data-editor-type] on the value the previous tab set. That
+        // is deliberate: the manager is not an editor type, it is a tab that hides
+        // the rail, and saying so here is the whole statement.
+        const isDocTab = activeId === 'documentation' || activeId.startsWith('doc_');
+        const isManagerTab = activeId.startsWith(MANAGER_TAB_PREFIX);
+        if (isDocTab) {
+            document.body.setAttribute('data-active-tab', 'documentation');
+        } else if (isManagerTab) {
+            document.body.setAttribute('data-active-tab', 'manager');
+        } else {
+            document.body.removeAttribute('data-active-tab');
+        }
+    };
+
+    return (
+        <>
+            <PinnableDock ref={dock => { DockManager.dock = dock }} defaultLayout={layout} groups={groups} onLayoutChange={handleLayoutChange} />
+            <TabsOverflowMenu />
+        </>
+    );
 }
 interface OwnProps {}
 interface StateProps {
     user: LUser|null
-    advanced: boolean;
 }
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
@@ -97,9 +415,7 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as FakeStateProps;
-    if(DUser.current) ret.user = LUser.fromPointer(DUser.current);
-    else ret.user = null;
-    ret.advanced = state.advanced;
+    ret.user = LUser.getUser();
     return ret;
 }
 

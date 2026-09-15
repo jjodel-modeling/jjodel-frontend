@@ -1,0 +1,155 @@
+// Additive styles for ProviderModelSelector (combined provider+model picker).
+// Uses the existing .provider-selector / .provider-btn / .provider-menu base from
+// ProviderSelector.scss and overlays model-list specifics.
+
+.provider-model-selector {
+    .pm-trigger-label {
+        max-width: 240px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    &.compact .pm-trigger-label {
+        max-width: 160px;
+        font-size: 12px;
+    }
+}
+
+// Chain on .provider-selector so specificity matches (and beats) the override in
+// ProviderSelector.scss: `.provider-selector.compact .provider-menu { min-width: 180px }`.
+// Without this the compact-mode rule (used by JodieHeader and DocumentationTab) was
+// resetting the popover back to 180px, forcing the labels to truncate.
+.provider-selector .pm-popover,
+.provider-selector.compact .pm-popover {
+    // Auto-size to the longest model name on a single line, within sensible bounds.
+    // No `text-overflow: ellipsis` on the label by default: the container grows up to
+    // max-width, so short names never truncate. Genuinely long names (>max-width) are
+    // clipped by the parent's `overflow: hidden` and the full text is available via
+    // the `title` tooltip on each item.
+    width: max-content;
+    min-width: 320px;
+    max-width: 480px;
+    padding: 4px 0;
+}
+
+.pm-provider-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-bottom: 1px solid #e2e8f0;
+
+    .pm-provider-label {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #94a3b8;
+    }
+
+    .pm-provider-select {
+        flex: 1;
+        padding: 4px 8px;
+        font-size: 13px;
+        border: 1px solid #e2e8f0;
+        border-radius: 4px;
+        background: white;
+        color: #334155;
+        cursor: pointer;
+
+        &:focus {
+            outline: none;
+            border-color: #0ea5e9;
+        }
+    }
+
+    .pm-provider-static {
+        font-size: 13px;
+        font-weight: 500;
+        color: #334155;
+    }
+}
+
+.pm-model-list {
+    padding: 4px 0;
+    max-height: 320px;
+    overflow-y: auto;
+}
+
+.pm-model-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+
+    // Override .provider-option span { flex: 1 } from ProviderSelector.scss — otherwise
+    // every span inside the button (label AND caps) would grow equally and split the row.
+    // The label takes natural width (no grow, no shrink); the popover's `width: max-content`
+    // widens the container to fit. If the label exceeds the popover max-width, the parent's
+    // `overflow: hidden` clips it and the `title` tooltip provides the full name.
+    .pm-model-label {
+        flex: 0 0 auto;
+        text-align: left;
+        font-size: 13px;
+        white-space: nowrap;
+    }
+
+    &.pm-legacy .pm-model-label {
+        color: #94a3b8;
+    }
+
+    // Caps icons sit on the right, don't grow, don't steal label space.
+    .pm-caps {
+        flex: 0 0 auto;
+        display: inline-flex;
+        gap: 4px;
+        color: #94a3b8;
+        font-size: 11px;
+        margin-left: auto; // push to right edge since label no longer flex-grows
+
+        i {
+            display: inline-block;
+        }
+    }
+}
+
+.pm-legacy-heading {
+    padding: 6px 12px 4px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #94a3b8;
+    border-top: 1px solid #e2e8f0;
+    margin-top: 4px;
+}
+
+.pm-legacy-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    font-size: 12px;
+    color: #64748b;
+    border-top: 1px solid #e2e8f0;
+    cursor: pointer;
+    user-select: none;
+
+    input {
+        margin: 0;
+        cursor: pointer;
+    }
+
+    &:hover {
+        color: #334155;
+    }
+}
+
+.pm-empty {
+    padding: 12px;
+    font-size: 12px;
+    color: #94a3b8;
+    text-align: center;
+    font-style: italic;
+}

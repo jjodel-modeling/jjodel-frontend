@@ -1,12 +1,22 @@
 import {
-    CreateElementAction, Dictionary,
+    Dictionary,
     DModel,
-    DProject, GObject, L, Log,
+    DProject,
+    GObject,
     LProject,
-    Pointer, R, RuntimeAccessible,
-    SetFieldAction, store,
+    Pointer,
+} from '../../joiner';
+import {
+    CreateElementAction,
+    L,
+    Log,
+    R,
+    RuntimeAccessible,
+    SetFieldAction,
+    store,
     TRANSACTION,
-    U
+    U,
+    ProjectPointers
 } from '../../joiner';
 import Storage from "../../data/storage";
 
@@ -14,24 +24,38 @@ import {UpdateProjectRequest} from "../DTO/UpdateProjectRequest";
 import Api from "../api";
 import {duplicateProject} from "../../pages/components/Project";
 import {CollabClearHistoryAction, CollabRefreshAction, COMMIT} from "../../redux/action/action";
-import {ProjectPointers} from "../../joiner/classes";
 import {DTOProjectGetAll} from "../DTO/GetAllProjects";
 import {ProjectResponseDTO} from "../DTO/ProjectResponseDTO";
+import { getNextVersionNumber, formatVersion } from '../../utils/versionUtils';
+import ActivityLogger from '../../services/ActivityLogger';
+import { ActivityType } from '../../types/activity';
+import {
+    extractMegamodelFromProjectJson,
+    registerSerializedMegamodel,
+} from '../../model/megamodelPersistence';
 import {VersionFixer} from "../../redux/VersionFixer";
+import { markProjectSaved } from "../../common/libraries/lastSaved";
 
 @RuntimeAccessible('ProjectsApi')
 class ProjectsApi {
+    static isLoading: boolean = true;
 
     static async create(type: DProject['type'], name?: DProject['name'], m2: Pointer<DModel>[] = [], m1: Pointer<DModel>[] = [], otherProjects?: LProject[]): Promise<void> {
         const project = DProject.new(type, name, undefined, m2, m1, undefined, otherProjects);
         if(U.isOffline()) {
             Offline.create(project);
-            // return project;
         }
         else {
             await Online.create(project);
             R.navigate('/allProjects');
         }
+
+        // Log activity
+        ActivityLogger.log({
+            type: ActivityType.PROJECT_CREATED,
+            projectId: project.id,
+            projectName: project.name || 'Unnamed Project',
+        });
     }
 
 
@@ -42,12 +66,22 @@ class ProjectsApi {
     }
 
     static async delete(project: LProject): Promise<void> {
+        const projectName = project.name || 'Unnamed Project';
+        const projectId = project.id;
+
         if(U.isOffline()) {
             Offline.delete(project.__raw as DProject);
         }
         else {
             await Online.delete((project as any)._Id || project.id);
         }
+
+        // Log activity
+        ActivityLogger.log({
+            type: ActivityType.PROJECT_DELETED,
+            projectId,
+            projectName,
+        });
     }
 
 
@@ -58,17 +92,119 @@ class ProjectsApi {
     }
 
 
-    static async save(project: LProject): Promise<DProject> {
+    /**
+     * Serialize and persist the project.
+     *
+     * `opts.silent` makes it a SILENT save: same serialization, same target, but the
+     * project version does not advance, nothing is written back into the store, and
+     * the project is NOT reported as clean. Everything else — `lastModified`, the
+     * counters, `compressedState`, the Offline/Online branch — is identical either way.
+     *
+     * WHY. The version bump is not only a number: it is a `SetFieldAction` into Redux,
+     * i.e. a state delta, i.e. a step of the D-layer undo history. The layout autosave
+     * fires 1000ms after a gesture (`useLayoutAutosave.ts`), well past the 450ms
+     * coalescing window of `isRelevantChangeCheck` (reducer.ts:1278), so each autosave
+     * became an undo step of its own: the first Cmd+Z undid an invisible version bump
+     * instead of the gesture. Ratified 2026-08-24: the project version advances only on
+     * an explicit save (Cmd+S, toolbar); a layout autosave is silent.
+     *
+     * Omitting `opts` keeps the pre-existing behavior byte for byte, so the explicit-save
+     * callers are unaffected and untouched.
+     */
+    static async save(project: LProject, opts?: { silent?: boolean }): Promise<DProject> {
         const dProject = {...project.__raw} as DProject;
         dProject.lastModified = Date.now();
         dProject.viewpointsNumber = project.viewpoints.length;
         dProject.metamodelsNumber = project.metamodels.length;
         dProject.modelsNumber = project.models.length;
+
+        // Auto-increment version on save (vX.Y format, stored as number e.g. 3.4).
+        // Skipped on a silent save: the version keeps its current value, in the
+        // serialized state too.
+        const silent = opts?.silent === true;
+        // VER2. Read from Redux, not from `project.__raw`: the proxy target is a mirror
+        // that goes stale the moment the reducer copies along the path, and this method
+        // no longer writes the advanced value back onto that mirror (see the block at
+        // the end of the method). `dProject.version` remains the fallback for a project
+        // that is not in `idlookup`.
+        const currentVersion = ((store.getState() as GObject).idlookup?.[dProject.id]?.version) ?? dProject.version;
+        const nextVersion = silent ? currentVersion : getNextVersionNumber(currentVersion);
+        dProject.version = nextVersion;
+        // console.log(`[Version] Project saved: ${formatVersion(currentVersion)} → ${formatVersion(nextVersion)}`);
+
         const state = await U.compressedState(dProject);
         dProject.state = state;
-        if(U.isOffline()) await Offline.save(dProject);
-        else await Online.save(dProject);
-        U.isProjectModified = false;
+        const persisted = U.isOffline() ? await Offline.save(dProject) : await Online.save(dProject);
+
+        // SAVE2. Il feedback di salvataggio riuscito sta QUI, non piu' in
+        // `Offline.save` / `Online.save`.
+        //
+        // WHY. I due `U.alert('i', 'Project Saved!', '')` stavano nel layer di
+        // persistenza, che non sa se il salvataggio l'ha chiesto un umano: l'autosave
+        // del layout passa dalla stessa `save`, quindi il toast compariva a ogni gesto.
+        // La correzione non e' un flag in piu' dentro `U.alert` — e' che la decisione
+        // torna a chi ha l'informazione. `Offline` e `Online` non sono esportate
+        // (`class Offline` :268, `class Online` :360, nessun `export`) e questa e' la
+        // loro UNICA chiamata in tutto il sorgente: il chiamante esplicito non le
+        // raggiunge, quindi la silenziosita' scende fin qui e la notifica sale fin qui.
+        // I due metodi ora dicono soltanto se hanno persistito.
+        //
+        // Il perimetro del cambiamento e' esattamente il ramo silenzioso: ogni altro
+        // chiamante (menu File, Ctrl/Cmd+S, il bottone del Data Manager, Download
+        // Project, Export Project) chiama `save` senza `opts` e vede lo stesso toast di
+        // prima, alla stessa condizione di prima — solo il salvataggio riuscito.
+        if (persisted) {
+            // Anche sul ramo silenzioso: l'autosave non notifica piu', e l'indicatore
+            // di «ultimo salvataggio» e' l'unico posto in cui il fatto resta leggibile.
+            // Non e' una scrittura in Redux (vedi `lastSaved.ts`), quindi non e' un
+            // delta di stato e non diventa un passo di undo.
+            markProjectSaved(dProject.lastModified);
+            if (!silent) U.alert('i', 'Project Saved!', '');
+        }
+
+        // Clear the dirty flag. NOT on a silent save: the layout autosave persists the
+        // current state but the user has not saved, so the project stays dirty and the
+        // "Unsaved changes" prompt on close keeps firing after a node drag.
+        if (!silent) U.isProjectModified = false;
+
+        // Update the version in Redux state. NOT on a silent save: this write is a
+        // state delta and would become a step of the D-layer undo history.
+        //
+        // VER1. The `SetFieldAction` reaches Redux, but NOT the object the caller is
+        // holding. The reducer copies along the path (`deepCopyButOnlyFollowingPath`,
+        // reducer.ts:540), so `idlookup[id]` becomes a NEW object while the proxy stays
+        // bound to the previous one — measured: `project.__raw === idlookup[id]` is true
+        // before the first save and false after it. Every field read on the proxy goes to
+        // that detached target (`proxy.ts:323` for `__raw`, `defaultGetter` for the rest),
+        // so `project.version` and `project.__raw.version` both keep the OLD number, and
+        // the next `save` on the same `LProject` recomputes `nextVersion` from it: two
+        // explicit saves produced 1.1 twice instead of 1.1 then 1.2.
+        //
+        // The realignment writes the advanced value back onto that detached target, so a
+        // second call reads the value the first one produced. It is deliberately NOT a
+        // write through the proxy (`project.version = ...` would fire a second
+        // `SetFieldAction`, i.e. a second undo step), and it is deliberately NOT on the
+        // silent branch: a silent save does not advance the version, so there is nothing
+        // to realign.
+        if (!silent) {
+            SetFieldAction.new(dProject.id, 'version', nextVersion, '', false);
+            // VER2. The realignment writes ONLY on a target that is no longer the store's.
+            // Measured 2026-09-02: the app sits permanently at
+            // `transactionStatus.transactionDepthLevel === 1` — `reducer.ts:1443` commits on
+            // a `U.UpdatingTimer` (300ms) interval and `COMMIT` re-opens the block with
+            // `BEGIN()` (`action.ts:137`) — so the action above is QUEUED, not dispatched.
+            // At this line the store is still untouched and `project.__raw` IS
+            // `idlookup[id]` for every production call site (they all take a fresh
+            // `LProject.getProject()`). The unguarded write therefore mutated the live
+            // store object outside the reducer, and poisoned the reducer's own `oldState`:
+            // when the queued action flushed it found nothing left to change. Measured over
+            // one explicit save: `clonedCounter` +0 and zero undo steps, against +1 and one
+            // step for the same `SetFieldAction` fired without the in-place write.
+            const raw = project.__raw as DProject | undefined;
+            const live = (store.getState() as GObject).idlookup?.[dProject.id];
+            if (raw && raw !== live) raw.version = nextVersion;
+        }
+
         return dProject;
     }
 
@@ -77,23 +213,41 @@ class ProjectsApi {
         else return await Online.favorite(project);
     }
 
+    static async updateTags(project: DProject, tags: string[]): Promise<void> {
+        // console.log('[DEBUG ProjectsApi.updateTags] Called with project:', project);
+        // console.log('[DEBUG ProjectsApi.updateTags] Tags to save:', tags);
+        // console.log('[DEBUG ProjectsApi.updateTags] Is offline:', U.isOffline());
+        if(U.isOffline()) return Offline.updateTags(project, tags);
+        else return await Online.updateTags(project, tags);
+    }
+
 
     static async importFromText(content: string, name: string = '', date: number = Date.now()) {
-        let project = JSON.parse(content) as DProject;
+        const json = JSON.parse(content) as Record<string, unknown>;
+
+        // Extract and register the megamodel (user-defined edges) for this project.
+        // The full megamodel (derived + user-defined) is computed later via loadMegamodel()
+        // once the project's Redux state is populated and artifacts are accessible.
+        const megamodelData = extractMegamodelFromProjectJson(json);
+        if (megamodelData && json.id && typeof json.id === 'string') {
+            registerSerializedMegamodel(json.id, megamodelData);
+        }
+
+        let project = json as unknown as DProject;
         project.isFavorite = false;
         let state = store.getState();
         let resp_replace = 'Replace';
         let resp_dup = 'Duplicate';
         let response: string = resp_dup;
         TRANSACTION('import project', async ()=>{
-            console.log('importing project:', {id:project.id, project, projects: state.projects, included: state.projects.includes(project.id)});
+            // console.log('importing project:', {id:project.id, project, projects: state.projects, included: state.projects.includes(project.id)});
             let dialogDuplicate: boolean = false;
             if (dialogDuplicate && state.projects.includes(project.id)) {
-                console.log('awaiting...')
+                // console.log('awaiting...')
                 let promise = U.dialog2('Project already imported', '', [{txt:resp_replace}, {txt:resp_dup}]);
                 COMMIT();
                 response = await promise;
-                console.log('awaiting... COMPLETED ', response)
+                // console.log('awaiting... COMPLETED ', response)
             }
             if (response === resp_dup) {
                 let ret = duplicateProject(project);
@@ -145,8 +299,10 @@ class Offline {
     }
     static getAll(): void {
         const projects = Storage.read<DProject[]>('projects') || [];
+        // console.log('[DEBUG Offline.getAll] Projects from localStorage:', projects);
         TRANSACTION('loading projects (offline)', () => {
             for (const project of projects) {
+                // console.log('[DEBUG Offline.getAll] Loading project:', project.name, 'tags:', project.tagNames);
                 /*if (!project._Id || !project.id && project.state) {
                    let decompressed = U.decompressState(project.state);
                    decompressed it is pointless, the db does not have the jid anyway and cannot single get it.
@@ -160,6 +316,9 @@ class Offline {
                 SetFieldAction.new(project.id, 'metamodelsNumber', project.metamodelsNumber, '', false);
                 SetFieldAction.new(project.id, 'modelsNumber', project.modelsNumber, '', false);
                 SetFieldAction.new(project.id, 'isFavorite', project.isFavorite, '', false);
+                SetFieldAction.new(project.id, 'tagNames', project.tagNames || [], '', false);
+                // Load version from saved project, default to 1.0 if not present
+                SetFieldAction.new(project.id, 'version', project.version || 1.0, '', false);
             }
         });
     }
@@ -177,11 +336,13 @@ class Offline {
         return filtered[0];
     }
 
-    static async save(project: DProject): Promise<void> {
+    /** SAVE2: ritorna se ha persistito; la notifica la decide `ProjectsApi.save`,
+     *  che e' l'unico chiamante e il solo a sapere se il save e' esplicito. */
+    static async save(project: DProject): Promise<boolean> {
         const projects = Storage.read<DProject[]>('projects') || [];
         const filtered = projects.filter(p => p.id !== project.id);
         Storage.write('projects', [...filtered, project]);
-        U.alert('i', 'Project Saved!', '');
+        return true;
     }
 
     static async favorite(project: DProject): Promise<void> {
@@ -189,6 +350,30 @@ class Offline {
         const filtered = projects.filter(p => p.id !== project.id);
         Storage.write('projects', [...filtered, {...project, isFavorite: !project.isFavorite}]);
         SetFieldAction.new(project.id, 'isFavorite', !project.isFavorite);
+    }
+
+    static async updateTags(project: DProject, tags: string[]): Promise<void> {
+        // console.log('[DEBUG Offline.updateTags] Called');
+        // console.log('[DEBUG Offline.updateTags] Project:', project);
+        // console.log('[DEBUG Offline.updateTags] Tags:', tags);
+
+        const projects = Storage.read<DProject[]>('projects') || [];
+        // console.log('[DEBUG Offline.updateTags] Projects from storage:', projects);
+
+        const filtered = projects.filter(p => p.id !== project.id);
+        // console.log('[DEBUG Offline.updateTags] Filtered projects (without current):', filtered);
+
+        const updatedProject = {...project, tags};
+        // console.log('[DEBUG Offline.updateTags] Updated project to save:', updatedProject);
+
+        const newProjectsList = [...filtered, updatedProject];
+        // console.log('[DEBUG Offline.updateTags] New projects list to write:', newProjectsList);
+
+        Storage.write('projects', newProjectsList);
+        // console.log('[DEBUG Offline.updateTags] Storage.write completed');
+
+        SetFieldAction.new(project.id, 'tagNames', tags, '', false);
+        // console.log('[DEBUG Offline.updateTags] SetFieldAction completed');
     }
 
     static import(project: DProject): void {
@@ -204,12 +389,12 @@ class Online {
 
     static async create (project: DProject): Promise<void> {
         const creationProjectRequest : UpdateProjectRequest = new UpdateProjectRequest(project);
-        await Api.post(`${Api.persistance}/project`, creationProjectRequest);
+        await Api.post(`${U.env('JODEL_PERSISTANCE')}/project`, creationProjectRequest);
     }
 
     static async getAll(): Promise<void> {
-        const response = await Api.get(`${Api.persistance}/project/`);
-        console.log('loading projects getall', {response, user: windoww.DUser.current, DUser:windoww});
+        const response = await Api.get(`${U.env('JODEL_PERSISTANCE')}/project/`);
+        // console.log('loading projects getall', {response, user: windoww.DUser.current, DUser:windoww});
         if (response.code !== 200) {
             Log.ee('Project.getAll() invalid token', {response});
             /* 401: Unauthorized -> Invalid Token (Local Storage)  */
@@ -247,7 +432,7 @@ class Online {
                 pointers.activeViewpoint = raw.activeViewpoint;
 
                 //const dproject = DProject.new(raw.type as 'public' |'private' | 'collaborative', raw.name , raw.state, [], [], raw.id);
-                const dproject = DProject.new2(pointers, (d: GObject<DProject>)=>{
+                DProject.new2(pointers, (d: GObject<DProject>)=>{
                     for (let k in raw) {
                         if (k in pointers) continue;
                         d[k] = raw[k];
@@ -259,39 +444,45 @@ class Online {
 
 
     static async delete(id :string): Promise<void> {
-        console.log(id);
-        await Api.delete(`${Api.persistance}/project/${id}`);
+        // console.log(id);
+        await Api.delete(`${U.env('JODEL_PERSISTANCE')}/project/${id}`);
     }
 
 
     static async getOne(id: string): Promise<DProject|null> {
-        const response = await Api.get(`${Api.persistance}/project/jjodel/${id}`);
+        const response = await Api.get(`${U.env('JODEL_PERSISTANCE')}/project/jjodel/${id}`);
         if (response.code !== 200 || !response.data) {
             return null;
         }
 
+        // console.log('api get one', {response});
         let ret = new ProjectResponseDTO(response.data).toJodelClass();
+        // console.log('api get one ret', {ret});
         return ret;
     }
 
-    static async save(project: DProject): Promise<void> {
+    /** SAVE2: ritorna se ha persistito. L'alert di ERRORE resta qui — descrive un
+     *  fallimento della rete, che e' informazione di questo layer e va mostrata
+     *  comunque; quello di successo e' salito a `ProjectsApi.save`. */
+    static async save(project: DProject): Promise<boolean> {
         project = {...project} as any;
         if (!project.version) project.version = store.getState().version.n;
         if (!('_Id' in project)) (project as any)._Id = undefined;
         const updateProjectRequest = new UpdateProjectRequest(project);
-        console.log('online save request: ', {updateProjectRequest});
-        const response = await Api.put(`${Api.persistance}/project/`, updateProjectRequest);
+        // console.log('online save request: ', {updateProjectRequest});
+        const response = await Api.put(`${U.env('JODEL_PERSISTANCE')}/project/`, updateProjectRequest);
 
         if (response.code !== 200) {
             U.alert('e', 'Cannot Save','Something went wrong ...');
             Log.ee('Failed to save', {response, updateProjectRequest, project});
+            return false;
         }
         else {
-            U.alert('i', 'Project Saved!', '');
             if ((windoww as any).Collaborative?.online) {
                 CollabClearHistoryAction.new();
                 // CollabRefreshAction.new();
             }
+            return true;
         }
     }
 
@@ -299,7 +490,7 @@ class Online {
 
     static async favorite(project: DProject): Promise<void> {
         const updateProjectRequest = new UpdateProjectRequest(project);
-        const response = await Api.put(`${Api.persistance}/project/`, updateProjectRequest);
+        const response = await Api.put(`${U.env('JODEL_PERSISTANCE')}/project/`, updateProjectRequest);
 
         if(response.code !== 200) {
             U.alert('e', 'Cannot set the project as favorite!', 'Something went wrong ...');
@@ -307,15 +498,23 @@ class Online {
         SetFieldAction.new(project.id, 'isFavorite', !project.isFavorite);
     }
 
+    static async updateTags(project: DProject, tags: string[]): Promise<void> {
+        const updatedProject = {...project, tags};
+        const updateProjectRequest = new UpdateProjectRequest(updatedProject);
+        const response = await Api.put(`${U.env('JODEL_PERSISTANCE')}/project/`, updateProjectRequest);
 
-
+        if(response.code !== 200) {
+            U.alert('e', 'Cannot update tags!', 'Something went wrong ...');
+        }
+        SetFieldAction.new(project.id, 'tagNames', tags, '', false);
+    }
 
     static async import(project: DProject): Promise<void> {
         const updateProjectRequest = new UpdateProjectRequest(project);
         delete (updateProjectRequest as GObject)._Id;
-        const response = await Api.post(`${Api.persistance}/project/`, updateProjectRequest);
+        const response = await Api.post(`${U.env('JODEL_PERSISTANCE')}/project/`, updateProjectRequest);
         if (response.code === 200) {
-            console.log('import', {project, updateProjectRequest, response});
+            // console.log('import', {project, updateProjectRequest, response});
         } else {
             U.alert('e', 'Cannot import project!', 'Something went wrong ...');
             Log.ee('failed to import project', {response, project});

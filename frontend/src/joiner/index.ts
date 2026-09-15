@@ -15,7 +15,6 @@ import type {U as UType} from "../common/U";
 import Handlebars from 'handlebars';
 
 import type {Log as LogType} from "../common/Log";
-
 var windoww = (window as any);
 windoww.windoww = windoww;
 windoww.Handlebars = Handlebars;
@@ -25,15 +24,37 @@ windoww.XML = XML;
 windoww.XMI = XMI;
 export const prxml2json = _pr_xml2json;
 windoww.prxml2json = prxml2json;
+import type * as Monaco from 'monaco-editor';
+//@ts-ignore
+import * as monaco_ from 'monaco-editor/esm/vs/editor/editor.main';
+windoww.monaco = monaco_;
+import { loader } from '@monaco-editor/react'
+export type {Monaco};
+export const monaco = monaco_ as any as typeof Monaco;
+// Tell @monaco-editor/react to use local monaco instead of CDN
+loader.config({ monaco });
 
+/*
+let m = monaco2.;
+let monaco;
+const _define = (window as any).define;
+(()=>{
+    (window as any).define = undefined;
+    // @ts-ignore
+    monaco = await import('monaco-editor/esm/vs/editor/editor.main');
+    windoww.monaco = monaco;
+    (window as any).define = _define;
+})();
+export monaco;*/
 
 var pathDataPolyfill = require("path-data-polyfill") // needs to be required (and automatically executed) before the creation of any svg element
+let useless = pathDataPolyfill; // just to force compiler to not ignore the import for not being used
 
 
 /*
 let oldRequire = pathDataPolyfill.prototype.require;
 function newRequire(...args: any): any {
-    console.log('require', {args, arguments});
+    // console.log('require', {args, arguments});
     if (args[0] === 'fs') return {'fake_fs': true};
     return oldRequire(...args);
 }
@@ -54,11 +75,15 @@ export type {GetPath} from './proxy';
 export type {Subtract, Class, Empty, Json, GObject, bool, Dictionary, Proxyfied, Temporary, RawObject, NotFoundv,
     NotFound, DocString, nbool, nnumber, nstring, Nullable, TODO, UnixTimestamp, UObject, IsActually,
     Function, Function2, InOutParam,
-    unArr, orArr, PrimitiveType, CClass, NonEmptyString, Overlap, Info,
-    Constructor, AbstractConstructor, ApiResponse, Any, MultiSelectOptGroup, MultiSelectOption
+    unArr, orArr, PrimitiveType, CClass, NonEmptyString, Overlap,
+    Constructor, AbstractConstructor, ApiResponse, Any, MultiSelectOptGroup, MultiSelectOption, NestedArray, TLCoord, TLCoordExtended,
+    ObjectWithoutPointers, FakeStateProps, DefaultProps, ubyte, byte, degree, double, float, radian, ratio, int, uint, Dependency,
+    NotBool, NodeTypes,
+
 } from "./types";
 
 export type {Pointer, PtrString, getWParams, WUser, WProject, WtoD, WtoL, DtoW, LtoW, LtoD, DtoL, PackArr, Pack, Pack1, EPSize,
+    TLObject, LanguageObject
 } from "./classes";
 export type { WAnnotation, WNamedElement, WFactory_useless_, WClass, WAttribute, WClassifier, WDataType, WMap, WModel,
     WModelElement, WEnumerator, WObject, WPackage, WOperation, WValue, WParameter, WReference, WTypedElement, WEnumLiteral, WStructuralFeature,
@@ -72,9 +97,9 @@ export type {PackagePointers, EdgePointers, AnnotationPointers, AttributePointer
 export type {LoggerCategoryState, LoggerType} from "../common/Log";
 
 
-export {windoww, EdgeBendingMode, EdgeGapMode, EMeasurableEvents} from './types';
+export {windoww, EdgeBendingMode, EdgeGapMode, EMeasurableEvents, GenericProps} from './types';
 export {GraphElementStatee, GraphElementDispatchProps, GraphElementReduxStateProps, GraphElementOwnProps,
-    EdgeStateProps, EdgeOwnProps, VertexOwnProps, BasicReactOwnProps} from "../graph/graphElement/sharedTypes/sharedTypes";
+    EdgeStateProps, EdgeOwnProps, VertexOwnProps, BasicReactOwnProps} from "../common/sharedTypes";
 
 export {Constructors, JsType, RuntimeAccessibleClass, DPointerTargetable,
     LPointerTargetable, WPointerTargetable, MyError, RuntimeAccessible,
@@ -84,7 +109,11 @@ export {Constructors, JsType, RuntimeAccessibleClass, DPointerTargetable,
     ViewScore,
     UserHistory,
     Language,
-    LUser, DUser, DProject, LProject, Pointers, PointedBy, PendingPointedByPaths, CoordinateMode, EdgeHead, EGraphElements, EModelElements, transientProperties, ViewEClassMatch} from "./classes";
+    LUser, DUser, DProject, LProject, Pointers, PointedBy, PendingPointedByPaths, CoordinateMode, EGraphElements, EModelElements, transientProperties,
+    ViewEClassMatch, notLanguageFragments, LanguageCache, ParserData, ProjectPointers, UserPointers,
+} from "./classes";
+
+export {Info} from '../model/Info';
 
 // export type {Pointer} from './typeconverter';
 export {getPath, TargetableProxyHandler, MyProxyHandler, MapProxyHandler, LogicContext, LogicContext2} from './proxy';
@@ -96,7 +125,7 @@ export {Uarr, DDate, ParseNumberOrBooleanOptions, myFileReader,
     } from "../common/U";
 export {Uobj} from "../common/UObj";
 export {Log} from "../common/Log";
-export {DV} from '../common/DV';
+export {DV, EdgeHead} from '../common/DV';
 export {Defaults} from '../common/Defaults';
 export { CSSRuleSorted, CSSParser, TagNames } from "../common/Uhtml";
 // export {Log as Logg, Size, GraphSize, GraphPoint, IPoint, ISize, Point} from "../common/Log";
@@ -105,6 +134,7 @@ export {UX} from "../common/UX";
 export var U = windoww.U as typeof UType;
 export {DLog} from "../model/classes/D";
 export {LLog} from "../model/classes/L";
+
 
 export {
     EcoreParser,
@@ -126,6 +156,7 @@ export {
     ECoreOperation,
     ECoreParameter,
     ECoreObject,
+    EcoreXmiTags,
 } from "../api/data";
 // import domain-specific classes
 
@@ -164,13 +195,14 @@ export {Size, GraphSize, GraphPoint, IPoint, ISize, Point, Geom} from "../common
 
 export type {WViewElement} from "../view/viewElement/view";
 export {LViewElement, DViewElement} from "../view/viewElement/view";
-export {DViewPoint, LViewPoint} from "../view/viewPoint/viewpoint";
+export {DViewPoint, LViewPoint, getViewpointType, isDataManagerViewpoint, isDataManagerViewpointId, ensureDataManagerViewpoint, findDataManagerViewpoint, DATA_MANAGER_VIEWPOINT_TYPE, DATA_MANAGER_VIEWPOINT_ID, DATA_MANAGER_VIEWPOINT_NAME} from "../view/viewPoint/viewpoint";
+export type {ViewpointType} from "../view/viewPoint/viewpoint";
 
 export {Action, CreateElementAction, DeleteElementAction, SetFieldAction, SetRootFieldAction, CompositeAction, ParsedAction, LoadAction, CombineHistoryAction, RedoAction, UndoAction,
     TRANSACTION, ABORT, /*BEGIN, END*/} from "../redux/action/action";
 
 export {DState, LState, ModelStore, ViewPointState, statehistory} from "../redux/store";
-export {GraphDragManager} from "../graph/graphElement/GraphDragHandler";
+export {GraphDragManager} from "../redux/GraphDragHandler";
 export {Selectors} from "../redux/selectors/selectors";
 // export var Selectors = windoww.Selectors as (GObjectt & typeof SelType);
 export {reducer, stateInitializer} from "../redux/reducer/reducer";
@@ -271,29 +303,16 @@ w.$s = $s;
 */
 export {} from './components';
 export {
-    TextArea, Select, Input, Edit, Edge, // Image,
-    GraphsContainerComponent,
+    TextArea, Select, Input, Edit, // Image,
     Overlap as OverlapComponent,
-    GraphsContainer,
-    GraphElement,
-    Vertex, VoidVertex, EdgePoint,
-    Graph, GraphVertex,
-    Field,
-    DefaultNode,
-    GraphElementComponent,
-    VertexComponent,
-    DefaultNodeComponent,
+    // classic components purged (de-entanglement stage 4): GraphElement(Component), Vertex(Component), VoidVertex,
+    // EdgePoint, Graph, GraphVertex, Field, DefaultNode(Component), Edge(Component), shapes
     // DockLayoutComponent,
     //ColorScheme,
-    EdgeComponent,
     DataOutputComponent, GenericInput,
-    Polygon, Circle, Cross, Decagon,
-    Asterisk, Ellipse, Enneagon, Hexagon, Nonagon,
-    Octagon, Heptagon, Pentagon, Rectangle, Septagon,
-    Square, Star, SimpleStar, DecoratedStar, Trapezoid, Triangle,
     View, Try, ControlPanel, CountryPicker,
     GraphElements, Graphs, Vertexes, Edges, Fields,
-    MeasurableComponent, Measurable, Draggable, Rotatable, Resizable
+    MeasurableComponent, Measurable, Draggable, Rotatable, Resizable, ContextMenu, ContextualEntry,
 } from './components'
 //export {createOrOpenModelTab} from "../components/abstract/DockLayoutComponent"; // needs to be after docklayoutcomponent or to split the file
 export {fakeExport} from './ExecuteOnRead';

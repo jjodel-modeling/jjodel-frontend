@@ -1,16 +1,54 @@
-import {FormEvent, JSX} from 'react';
+import {FormEvent, JSX, useEffect} from 'react';
 import {useStateIfMounted} from 'use-state-if-mounted';
-import type {Dictionary, GObject} from '../joiner';
-import { DUser, R, SetRootFieldAction, U} from '../joiner';
+import type {Dictionary, DocString, GObject, Pointer} from '../joiner';
+import {Log, DUser, R, SetRootFieldAction, U} from '../joiner';
 import Storage from '../data/storage';
 import {AuthApi, UsersApi} from "../api/persistance";
-import logo from '../static/img/jjodel-124.png';
+import logo from '../static/img/jjodel.png';
 import {Tooltip} from '../components/forEndUser/Tooltip';
 import { RegisterRequest } from '../api/DTO/RegisterRequest';
 import { LoginRequest } from '../api/DTO/LoginRequest';
 import { TokenResponse } from '../api/DTO/TokenResponse';
 import {ResetPasswordRequest} from "../api/DTO/ResetPasswordRequest";
+import { BrowserWarningModal } from '../components/BrowserWarningModal';
+import {
+    detectBrowser,
+    shouldShowBrowserWarning,
+    markBrowserWarningShown
+} from '../utils/browserDetection';
 import "./auth.scss"
+
+// Import partner logos
+import logoUnivaq from '../static/img/partners/univaq.png';
+import logoMdu from '../static/img/partners/mdu.svg';
+import logoFbk from '../static/img/partners/fbk.png';
+import Api from "../api/api";
+
+// Branding panel component for split-screen layout
+const BrandingPanel = () => (
+    <div className="auth-branding">
+        <div className="auth-branding-content">
+            <div className="auth-branding-logo">
+                <img src={logo} alt="Jjodel" />
+            </div>
+            <h1 className="auth-branding-title">Welcome to Jjodel</h1>
+            <p className="auth-branding-tagline">
+                Open-source modeling<br />for research and education
+            </p>
+        </div>
+        <div className="auth-branding-partners">
+            <span className="auth-partners-label">Research partners</span>
+            <div className="auth-partners-logos">
+                <img src={logoUnivaq} alt="Università degli Studi dell'Aquila" />
+                <img src={logoMdu} alt="Mälardalens universitet" />
+                <img src={logoFbk} alt="Fondazione Bruno Kessler" />
+            </div>
+        </div>
+        <div className="auth-branding-footer">
+            <a href="https://jjodel.io" target="_blank" rel="noopener noreferrer" className="auth-branding-url">jjodel.io</a>
+        </div>
+    </div>
+);
 
 const passPattern = '^.{8,}$'; //'^[^\\s].{10,}[^\\s]$';
 function AuthPage(): JSX.Element {
@@ -26,6 +64,26 @@ function AuthPage(): JSX.Element {
     const [newsletter, setNewsletter] = useStateIfMounted(false);
     const [isDirty, setDirty] = useStateIfMounted(false);
     const [dirtyStatuses, setDirtyStatuses] = useStateIfMounted<Dictionary<string, boolean>>({});
+
+    // Browser warning state
+    const [showBrowserWarning, setShowBrowserWarning] = useStateIfMounted(false);
+    const [browserName, setBrowserName] = useStateIfMounted('');
+
+    // Check browser on mount
+    useEffect(() => {
+        if (shouldShowBrowserWarning()) {
+            const browser = detectBrowser();
+            setBrowserName(browser.name);
+            setShowBrowserWarning(true);
+        }
+    }, []);
+
+    // Handler to close browser warning
+    const handleCloseBrowserWarning = () => {
+        markBrowserWarningShown();
+        setShowBrowserWarning(false);
+    };
+
     const dirty = (e: React.MouseEvent<HTMLInputElement | HTMLSelectElement>)=>{
         /* for real-time validation while you write the form, disabled for now
         let name = (e.target as HTMLElement)?.getAttribute?.('name')||'';
@@ -33,25 +91,30 @@ function AuthPage(): JSX.Element {
          */
     }
 
-    const onSubmit = async(e: FormEvent<HTMLFormElement>) => {
+    const onSubmit = (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        SetRootFieldAction.new('isLoading', true);
-        let success: boolean = false;
-        switch (action) {
-            case 'login':
-                success = await login();
-                SetRootFieldAction.new('isLoading', false);
-                break;
-            case 'register':
-                success = await register();
-                SetRootFieldAction.new('isLoading', false);
-                break;
-            case 'retrieve-password':
-                success = await reset_password();
-                SetRootFieldAction.new('isLoading', false);
-                break;
+        let dosubmit = async () => { // main function needs to stay not async or prevent default won't work (it doubles navigation and API calls triggered)
+            SetRootFieldAction.new('isLoading', true);
+            let success: boolean = false;
+            switch (action) {
+                case 'login':
+                    success = await login();
+                    SetRootFieldAction.new('isLoading', false);
+                    break;
+                case 'register':
+                    success = await register();
+                    SetRootFieldAction.new('isLoading', false);
+                    break;
+                case 'retrieve-password':
+                    success = await reset_password();
+                    SetRootFieldAction.new('isLoading', false);
+                    break;
+            }
+            setDirty(!success);
         }
-        setDirty(!success);
+        // try { dosubmit(); } catch (error) { Log.eDevv('Submit error', error) } should never catch an error on async
+        dosubmit();
+        return false;
     }
 
     const reset_password = async (): Promise<boolean> => {
@@ -90,7 +153,7 @@ function AuthPage(): JSX.Element {
             const response: GObject = await AuthApi.login(loginRequest);
             const raw: TokenResponse | null = response.data;
 
-            console.log('login debug', {loginRequest, response, raw});
+            // console.log('login debug', {loginRequest, response, raw, env: process.env, ue: U.env("")});
 
             if ((response.code+'')[0] !== '2') {
                 let title: string = response.data?.title;
@@ -102,31 +165,39 @@ function AuthPage(): JSX.Element {
                 // U.alert('i', <>Login successful</>, <>You are being redirected to your <a href={'//#/allProjects'}>dashboard</a></>);
             }
 
-            if (!raw?.token || typeof raw.token !== 'string') { U.alert('e', 'Login failed or invalid token.', ''); return false; }
+            if (!raw?.token || typeof raw.token !== 'string') {
+                console.error('login failed', {raw});
+                U.alert('e', 'Login failed or invalid token.', '');
+                return false; }
 
             const claims = AuthApi.readJwtToken(raw.token);
-            console.log('login claims', {response, raw, claims});
+            // console.log('login claims', {response, raw, claims});
             if (!claims) { U.alert('e', 'Invalid token.', ''); return false; }
-            AuthApi.storeSessionData(raw.token, claims.exp || 0, raw.refreshToken||'', raw.refreshTokenExpiryTime || 0, undefined);
+            let te = new Date(raw.expires as unknown as string).getTime();
+            let rte = new Date(raw.refreshTokenExpiryTime as unknown as string).getTime();
+
+            Api.storeSessionData(raw.token, te, raw.refreshToken||'', rte, undefined);
+            if (isNaN(new Date(raw.refreshTokenExpiryTime as any as string).getTime())) console.error('invalid refresh token expiry date:'+raw.refreshTokenExpiryTime, raw);
 
             // const user: DUser = DUser.new(claims.name, '', claims.nickname, '',  '', false, claims.email,  raw.token, claims._Id, claims.id, true);
-            const user: DUser|null = await UsersApi.getUserByGUID(claims.id, raw, claims);
+            const user: DUser|null = await UsersApi.getUserByGUID(claims.id);
             // name-surname error is on server-side get or set. not on client side.
             /*if ((window as any).debug1 && user && user.surname === user.name) {
-                console.log('error name debug', {user});
+                // console.log('error name debug', {user});
                 return;
             }*/
             if (!user) {
-                U.alert('e', 'Login failed or invalid token.', '');
+                Log.ee('Login failed, cannot load user data.', {user, raw});
+                U.alert('e', 'Login failed, cannot load user data.', '');
                 // todo: report error
                 return false;
             }
             Storage.write('user', user);
             //U.resetState();
-            if (window.location.hash.indexOf('#/auth') !== 0) window.location.reload()
+            if (window.location.hash.indexOf('#/auth') !== 0) R.refresh()
             else R.navigate('/allProjects');
         } catch (e) {
-            console.error("Login error:");
+            Log.ee('Unexpected error during login.', {e});
             U.alert('e', 'Unexpected error during login.', '');
             // todo: report error
             return false;
@@ -148,7 +219,7 @@ function AuthPage(): JSX.Element {
         registerRequest.Nickname = nickname;
         registerRequest.Email = email;
         registerRequest.Password = password;
-        console.log(registerRequest);
+        // console.log(registerRequest);
         const response: GObject = await AuthApi.register(registerRequest);
 
         if ((response.code+'')[0] !== '2') {
@@ -177,17 +248,19 @@ const offline = () => {
     // U.resetState();
 }
 
-return(<section className={`w-100 h-100 login bg ${action === 'register' ? 'register' : action === 'retrieve-password' ? 'retrieve' : ''} `+(isDirty?' dirty':'')}>
+return(<section className={`auth-split-screen ${action === 'register' ? 'register' : action === 'retrieve-password' ? 'retrieve' : ''} `+(isDirty?' dirty':'')}>
 
-    <form className={'d-block bg-white rounded border mx-auto w-fit px-5 py-4 mt-5'} onSubmit={onSubmit}>
-        <label className={'fs-1 d-block text-center text-primary login-header'}>
+    {/* Left: Branding Panel */}
+    <BrandingPanel />
 
-            {action === 'register' && 'Create an Account'}
-            {action === 'login' && 'Sign In'}
-            {action === 'retrieve-password' && 'Retrieve your Password'}
-
-
-        </label>
+    {/* Right: Form Panel */}
+    <div className="auth-form-panel">
+        <form className={'auth-form'} onSubmit={onSubmit}>
+            <label className={'auth-form-header'}>
+                {action === 'register' && 'Create an Account'}
+                {action === 'login' && 'Login'}
+                {action === 'retrieve-password' && 'Retrieve your Password'}
+            </label>
 
         {action === 'register' && <>
 
@@ -506,7 +579,7 @@ return(<section className={`w-100 h-100 login bg ${action === 'register' ? 'regi
                         />
                     </label>
                 </Tooltip>
-                <br /><br /><br />
+                <div className="auth-section-divider" />
                 <label>
                     Password
                     <input className={'w-100 input w-fit d-block mx-auto mt-2'}
@@ -517,6 +590,7 @@ return(<section className={`w-100 h-100 login bg ${action === 'register' ? 'regi
                         onChange={e => setPassword(e.target.value)}
                         type={'password'} required={true} title={'At least 8 characters'}
                     />
+                    <span className="auth-field-hint">At least 8 characters</span>
                 </label>
 
 
@@ -532,25 +606,22 @@ return(<section className={`w-100 h-100 login bg ${action === 'register' ? 'regi
                     />
                 </label>
 
-                <br /><br /><br />
+                <div className="auth-section-divider" />
                 <Tooltip tooltip={<div style={{padding: '10px', maxWidth: '600px'}}><h6>Newsletter</h6>Select this option for remaining updated about Jjodel new releases, updates, and initiatives.</div>} >
-                    <label>
-                        <input className={'checkbox'}
-                            placeholder={'newsletter'}
-                            checked={newsletter}
-                            onClick={dirty}
-                            onChange={e => setNewsletter(e.target.checked)}
-                            type={'checkbox'}
-                            style={{outline: 'none', marginTop: '10px', float: 'left'}}
-                        />
-                        <div style={{display: 'block', width: '90%', float: 'left', marginBottom: '10px', paddingLeft: '10px'}}>Newsletter. Subscribe to the newsletter to receive updates and news. You can manage your registration preferences at any time. </div>
-                    </label>
-
+                    <div className="auth-custom-checkbox-row" onClick={() => { setDirty(true); setNewsletter(!newsletter); }}>
+                        <div className={`auth-custom-checkbox ${newsletter ? 'checked' : ''}`}>
+                            {newsletter && (
+                                <svg viewBox="0 0 12 12" fill="none" stroke="white" strokeWidth="2">
+                                    <path d="M2 6l3 3 5-5" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                            )}
+                        </div>
+                        <span className="auth-custom-checkbox-label">Subscribe to the newsletter to receive updates and news about Jjodel.</span>
+                    </div>
                 </Tooltip>
-                <br />
-                <div style={{width: '100%', textAlign: 'center'}}>
-                    By proceeding you accept the terms and conditions.
-                </div>
+                <p className="auth-terms-text">
+                    By proceeding you accept the <a href="https://www.jjodel.io/terms-conditions-page/" target="_blank" rel="noopener noreferrer" className="auth-terms-link">terms and conditions</a>.
+                </p>
                 <button className={'d-block btn btn-primary p-1 mx-auto mt-3 login-button'} type={'submit'} onClick={()=>setDirty(true)}>
                     Create
                 </button>
@@ -581,12 +652,14 @@ return(<section className={`w-100 h-100 login bg ${action === 'register' ? 'regi
                         required={true} title={'At least 8 characters'}
                 />
                 </label>
-                <button className={'d-block btn btn-primary p-1 mx-auto mt-3 login-button'} type={'submit'} onClick={()=>setDirty(true)}>
-                    Login
-                </button>
-                {(window.location.host.includes('localhost')) &&
-                    <button className={'d-block btn btn-primary p-1 mx-auto mt-3 login-button'} type='button' onClick={(e) => offline()}>Offline mode</button>
-                }
+                <div className="login-buttons">
+                    <button className={'btn btn-primary login-button'} type={'submit'} onClick={()=>setDirty(true)}>
+                        Login
+                    </button>
+                    {(window.location.host.includes('localhost') || window.location.href.indexOf('http') !== 0) &&
+                        <button className={'btn login-button login-button--secondary'} type='button' onClick={(e) => offline()}>Offline mode</button>
+                    }
+                </div>
             </>}
 
             {action === 'retrieve-password' &&
@@ -609,28 +682,43 @@ return(<section className={`w-100 h-100 login bg ${action === 'register' ? 'regi
             </>}
 
 
-            <label className={'mt-3 d-block text-center'}>
-                {action === 'register' && <>Already have an account? <span tabIndex={-1} onClick={e => {setAction('login')}} className={'ms-1 text-primary text-decoration-none cursor-pointer login-link'}>Sign In</span></>}
-                {action === 'login' &&
+            <div className="auth-footer-links">
+                {action === 'register' && (
+                    <div className="auth-footer-row">
+                        Already have an account? <span tabIndex={-1} onClick={e => {setAction('login')}} className={'login-link'}>Login</span>
+                    </div>
+                )}
+                {action === 'login' && (
                     <>
-                        Don't have an account? <span tabIndex={-1} onClick={e => {setAction('register')}} className={'ms-1 text-primary text-decoration-none cursor-pointer login-link'}>Register</span><br/>
-                        <span tabIndex={-1} onClick={e => {setAction('retrieve-password')}} className={'ms-1 text-primary text-decoration-none cursor-pointer login-link'}>Forgot your password?</span>
-                        {/* <div className="alert alert-primary" role="alert" style={{marginTop: '12px'}}>
-                            <b>Action required</b><br/> Please reset your password to continue using Jjodel 2.0.
-                        </div>*/}
+                        <div className="auth-footer-row">
+                            Don't have an account? <span tabIndex={-1} onClick={e => {setAction('register')}} className={'login-link'}>Register</span>
+                        </div>
+                        <div className="auth-footer-row">
+                            <span tabIndex={-1} onClick={e => {setAction('retrieve-password')}} className={'login-link'}>Forgot your password?</span>
+                        </div>
                     </>
-                }
-                {action === 'retrieve-password' &&
+                )}
+                {action === 'retrieve-password' && (
                     <>
-                        Go back to the <span tabIndex={-1} onClick={e => {setAction('login')}} className={'ms-1 text-primary text-decoration-none cursor-pointer login-link'}>Sign In</span> page<br/>
-                        Don't have an account? <span tabIndex={-1} onClick={e => {setAction('register')}} className={'ms-1 text-primary text-decoration-none cursor-pointer login-link'}>Register</span><br/>
+                        <div className="auth-footer-row">
+                            Go back to the <span tabIndex={-1} onClick={e => {setAction('login')}} className={'login-link'}>Login</span> page
+                        </div>
+                        <div className="auth-footer-row">
+                            Don't have an account? <span tabIndex={-1} onClick={e => {setAction('register')}} className={'login-link'}>Register</span>
+                        </div>
                     </>
-                }
-
-            </label>
-            <div className='login-logo'><img src={logo}></img></div>
+                )}
+            </div>
         </form>
-    </section>);
+    </div>
+
+    {/* Browser Warning Modal */}
+    <BrowserWarningModal
+        isOpen={showBrowserWarning}
+        browserName={browserName}
+        onClose={handleCloseBrowserWarning}
+    />
+</section>);
 }
 
 export {AuthPage};

@@ -1,24 +1,37 @@
+/* ============================================
+   VIEW STYLES
+   Canvas selection states with design tokens
+   ============================================ */
+
 @import "./variables";
 
-.root {height: 100%; width: 100%;}
+.root {
+  height: 100%;
+  width: 100%;
+}
 
 .default.DPackage {
   position: absolute;
   height: inherit !important;
   width: inherit !important;
-  & > .root { border: none; }
+
+  & > .root {
+    border: none;
+  }
 }
 
-.resize-shadow{
-  outline: 1px dotted black;
+/* Selection states */
+.resize-shadow {
+  outline: 1px dotted var(--color-text-primary);
 }
+
 .selected-by-me {
-  outline: 1px dashed black;
+  outline: 2px dashed var(--color-accent);
 }
+
 .selected-by-others {
-  outline: 1px dashed black;
+  outline: 2px dashed var(--color-info);
 }
-.Edge.selected-by-me, .Edge.selected-by-others{
-  outline: none !important;
-}
+
+/* Edge selection states moved to diagram.scss */
 

@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <meta name="design_doc_mode" content="canvas">
+  <link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/tokens/fonts.css">
+  <link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/tokens/colors.css">
+  <link rel="stylesheet" href="_ds/jjodel-design-system-cc51d0d8-3501-495b-9bd7-a0c7309103e7/tokens/typography.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+  <style>
+    body { margin: 0; background: #f8fafc; font-family: 'Inter', sans-serif; }
+    a { color: #0ea5e9; } a:hover { color: #0284c7; }
+  </style>
+</helmet>
+<section style="padding: 32px 40px 48px; display: flex; flex-direction: column; gap: 20px;">
+  <div style="display: flex; flex-direction: column; gap: 6px; max-width: 980px;">
+    <span style="font-size: 22px; font-weight: 700; color: #0f172a;">13a — il diagramma dentro il manager</span>
+    <span style="font-size: 13px; color: #64748b; line-height: 1.6;">Ultimo pezzo del fronte. Vincolo di casa: il canvas VERO esiste già (v2-flow) — qualunque variante lo RIUSA, mai un secondo renderer. La domanda è solo quanta superficie gli diamo dentro il manager.</span>
+  </div>
+  <div style="display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap;">
+
+    <div id="1a" style="display: flex; flex-direction: column; gap: 12px; width: 640px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="background: #334155; color: #ffffff; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 4px;">1a</span>
+        <span style="font-size: 14px; font-weight: 600; color: #0f172a;">Riquadro di vicinato — accanto alla form</span>
+      </div>
+      <div style="background: #ffffff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); overflow: hidden; display: flex; height: 360px;">
+        <div style="width: 200px; border-right: 1px solid #e2e8f0; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: #334155;">
+          <span style="font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8;">Form — Running</span>
+          <div style="display: grid; grid-template-columns: 58px 1fr; gap: 6px; align-items: center;"><span style="color: #64748b;">name</span><span style="border: 1px solid #e2e8f0; border-radius: 4px; padding: 4px 6px;">Running</span></div>
+          <div style="display: grid; grid-template-columns: 58px 1fr; gap: 6px; align-items: center;"><span style="color: #64748b;">kind</span><span style="border: 1px solid #e2e8f0; border-radius: 4px; padding: 4px 6px;">normal</span></div>
+          <span style="font-size: 11px; color: #94a3b8; margin-top: auto; line-height: 1.5;">La form resta la superficie di scrittura. Il riquadro è lettura + navigazione.</span>
+        </div>
+        <div style="flex: 1; position: relative; background: #f8fafc;">
+          <span style="position: absolute; top: 10px; left: 12px; font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8;">Neighborhood</span>
+          <span style="position: absolute; top: 8px; right: 10px; font-size: 10px; color: #0891b2; cursor: pointer;">Open in canvas <i class="bi bi-box-arrow-up-right"></i></span>
+          <div style="position: absolute; top: 60px; left: 30px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 10px; font-size: 11px; color: #64748b;">Region_main<br><span style="font-size: 9px; color: #94a3b8;">owner</span></div>
+          <div style="position: absolute; top: 150px; left: 150px; background: #ffffff; border: 2px solid #0891b2; border-radius: 8px; padding: 8px 12px; font-size: 12px; font-weight: 600; color: #0f172a; box-shadow: 0 0 0 3px rgba(8,145,178,0.12);">Running<br><span style="font-size: 9px; font-weight: 400; color: #94a3b8;">State · selected</span></div>
+          <div style="position: absolute; top: 70px; left: 280px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 10px; font-size: 11px; color: #64748b;">Idle<br><span style="font-size: 9px; color: #94a3b8;">← t1</span></div>
+          <div style="position: absolute; top: 240px; left: 290px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 10px; font-size: 11px; color: #64748b;">Paused<br><span style="font-size: 9px; color: #94a3b8;">t2 →</span></div>
+          <svg style="position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none;" viewBox="0 0 440 360"><path d="M 75 95 L 175 150" stroke="#cbd5e1" fill="none"></path><path d="M 290 100 L 230 150" stroke="#94a3b8" fill="none" marker-end="url(#a1)"></path><path d="M 230 195 L 295 240" stroke="#94a3b8" fill="none" marker-end="url(#a1)"></path><defs><marker id="a1" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6" fill="none" stroke="#94a3b8"></path></marker></defs></svg>
+          <span style="position: absolute; bottom: 10px; left: 12px; font-size: 10px; color: #94a3b8;">owner + refs a 1 salto · click su un nodo = selezione (outline, tabella e form seguono)</span>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="display: flex; gap: 8px; align-items: baseline; font-size: 12px; color: #475569;"><i class="bi bi-check-circle" style="color: #22c55e;"></i><span><strong style="color: #0f172a;">Costo:</strong> piccolo — vista derivata dallo store (i nodi sono resi col motore della ladder, non col canvas intero); read-only + navigazione.</span></div>
+        <div style="display: flex; gap: 8px; align-items: baseline; font-size: 12px; color: #475569;"><i class="bi bi-check-circle" style="color: #22c55e;"></i><span><strong style="color: #0f172a;">Risponde alla domanda del manager:</strong> «chi tocca questa istanza?» — referenced-by e refs resi come grafo locale, non come colonne.</span></div>
+        <div style="display: flex; gap: 8px; align-items: baseline; font-size: 12px; color: #475569;"><i class="bi bi-x-circle" style="color: #ef4444;"></i><span><strong style="color: #0f172a;">Niente gesti canvas:</strong> né drag né edge-draw — per quelli c'è «Open in canvas».</span></div>
+      </div>
+    </div>
+
+    <div id="1b" style="display: flex; flex-direction: column; gap: 12px; width: 640px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="background: #0891b2; color: #ffffff; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 4px;">1b</span>
+        <span style="font-size: 14px; font-weight: 600; color: #0f172a;">Canvas pieno — terza vista del manager</span>
+      </div>
+      <div style="background: #ffffff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); overflow: hidden; display: flex; flex-direction: column; height: 360px;">
+        <div style="display: flex; align-items: center; gap: 4px; padding: 10px 14px; border-bottom: 1px solid #e2e8f0;">
+          <span style="font-size: 12px; color: #64748b; padding: 4px 10px; border-radius: 6px; cursor: pointer;">Table</span>
+          <span style="font-size: 12px; color: #64748b; padding: 4px 10px; border-radius: 6px; cursor: pointer;">Outline</span>
+          <span style="font-size: 12px; font-weight: 600; color: #0f172a; background: #f1f5f9; padding: 4px 10px; border-radius: 6px;">Diagram</span>
+          <span style="margin-left: auto; font-size: 10px; color: #94a3b8;">il canvas v2-flow, montato qui</span>
+        </div>
+        <div style="flex: 1; position: relative; background: #f8fafc;">
+          <div style="position: absolute; top: 40px; left: 60px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 10px; padding: 10px 14px; font-size: 12px; color: #0f172a; width: 130px;"><strong>Region_main</strong><div style="border-top: 1px solid #f1f5f9; margin-top: 6px; padding-top: 6px; font-size: 10px; color: #64748b;">Idle · Running · Paused</div></div>
+          <div style="position: absolute; top: 60px; left: 300px; background: #ffffff; border: 2px solid #0891b2; border-radius: 10px; padding: 10px 14px; font-size: 12px; color: #0f172a; box-shadow: 0 0 0 3px rgba(8,145,178,0.12);"><strong>Running</strong><div style="font-size: 10px; color: #64748b;">kind = normal</div></div>
+          <div style="position: absolute; top: 190px; left: 130px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 10px; padding: 10px 14px; font-size: 12px; color: #0f172a;"><strong>cfg_default</strong><div style="font-size: 10px; color: #64748b;">Config</div></div>
+          <span style="position: absolute; bottom: 10px; left: 12px; font-size: 10px; color: #94a3b8;">tutti i gesti del canvas: drag, edge-draw, delete col preflight, create dal palette</span>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="display: flex; gap: 8px; align-items: baseline; font-size: 12px; color: #475569;"><i class="bi bi-check-circle" style="color: #22c55e;"></i><span><strong style="color: #0f172a;">Zero limiti:</strong> tutto ciò che il canvas sa fare, dentro il manager.</span></div>
+        <div style="display: flex; gap: 8px; align-items: baseline; font-size: 12px; color: #475569;"><i class="bi bi-x-circle" style="color: #ef4444;"></i><span><strong style="color: #0f172a;">Costo alto e duplicazione di superficie:</strong> il canvas ESISTE già come tab del progetto — montarlo anche qui è due posti per lo stesso gesto (l'anti-pattern che Q8 ha appena evitato).</span></div>
+        <div style="display: flex; gap: 8px; align-items: baseline; font-size: 12px; color: #475569;"><i class="bi bi-x-circle" style="color: #ef4444;"></i><span><strong style="color: #0f172a;">Stato del canvas nel manager:</strong> zoom/pan/selezione da tenere in sync o da isolare — entrambe le vie costano; e la critical zone v2-flow entra tutta nel perimetro.</span></div>
+      </div>
+    </div>
+
+  </div>
+  <div style="max-width: 1304px; background: #ffffff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); padding: 16px 20px; display: flex; flex-direction: column; gap: 8px;">
+    <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8;">La mia raccomandazione</span>
+    <span style="font-size: 13px; color: #334155; line-height: 1.7;"><strong>13a = <a href="#1a">1a</a>, il riquadro di vicinato.</strong> Il manager risponde a «cosa c'è e chi tocca cosa» — il vicinato reso come grafo locale è quella risposta; i gesti da canvas restano al canvas, che è a un click («Open in canvas» seleziona lo stesso nodo lì). <a href="#1b">1b</a> duplicherebbe una superficie che esiste già ed è l'anti-pattern che Q8 ha appena smontato. Se il vicinato in campo si rivelerà insufficiente, 1b resta possibile dopo — il riquadro non lo preclude.</span>
+  </div>
+</section>
+</x-dc>
+</body>
+</html>

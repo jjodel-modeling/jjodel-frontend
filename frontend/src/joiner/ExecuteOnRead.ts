@@ -14,6 +14,7 @@ import {
 } from "../joiner";
 import * as Componentss from '../joiner/components';
 import React from "react";
+import { evalEdgeExpression } from '../utils/edgeExpressionEval';
 
 
 /*
@@ -113,17 +114,23 @@ windoww.Components = wComponents;
 for (let k in wComponents) {
     if (windoww[k] && windoww[k] !== wComponents[k]) {
         let str = "Component naming conflict with a preexisting variable \"" + k + "\"";
-        console.error(str, {inWindow:windoww[k], inComponents:wComponents[k]});
-        throw new Error(str);
+        console.warn(str, {inWindow:windoww[k], inComponents:wComponents[k]});
+        // throw new Error(str);
     }
-    windoww[k] = wComponents[k];
+    else windoww[k] = wComponents[k];
 }
 
 windoww.enumerators = {};
+
+// L2 — edge overlay endpoint expression evaluator. Exposed globally for runtime
+// inspection (browser console) and for use by the template engine / SVG overlay
+// in L2 Fase 3+. See `utils/edgeExpressionEval.ts` and design doc
+// `design_2026-05-03_L2_edge_overlay.md`.
+windoww.evalEdgeExpression = evalEdgeExpression;
 // @ts-ignore
-function handlebarsIfCond(v1, operator, v2, options) {
+function handlebarsIfCond_original(v1, operator, v2, options) {
     // @ts-ignore
-    console.log('handlebars helper ifCond', {thiss:this as any, arguments, v1, operator, v2, options});
+    // console.log('handlebars helper ifCond', {thiss:this as any, arguments, v1, operator, v2, options});
     switch (operator) {
         case '==': // @ts-ignore
             return (v1 == v2) ? options.fn(this) : options.inverse(this);
@@ -149,6 +156,99 @@ function handlebarsIfCond(v1, operator, v2, options) {
             return options.inverse(this);
     }
 }
+
+// @ts-ignore
+function handlebarsIfCond(useless: any) {
+    let rawArguments = [...arguments].slice(0, arguments.length-1);
+    // @ts-ignore
+    // console.log('handlebars helper ifCond', {thiss:this as any, arguments, rawArguments});
+    let arr = rawArguments.map((a, i) => {
+        if (a === null) return 'null';
+        if (a === undefined) return 'undefined';
+        switch (typeof a) {
+            default: case 'symbol': case 'object': case 'function':
+                (window as any).Log.exx("M2T/Handlebars #ifCond helper error, "+(typeof a)+" cannot be compared in an expression", {
+                    expressionRaw: [...rawArguments].join(''), wrongParameterIndex: i, a, ta:typeof a
+                });
+                return NaN; // because nan always fails every comparison
+            case 'string':
+                switch (a) {
+                    // operators are not quoted, everything else yes.
+                    // because a value evaluated from an {{expression}} returning a string,
+                    // is an unquoted string and indistinguishable from constant strings like the operators.
+                    case '==':
+                    case '===': case '>=': case '<=': case '>': case '<':
+                    case '%': case '/': case '*': case '**':
+                    case '+': case '-': case '!': case '!!':
+                    case '||': case '&&': case '^': case '&': case '|': return a;
+                }
+                return '"'+(window as any).U.replaceAll(a, '"', '\\"')+'"';
+            case 'number': case 'boolean': return a;
+        }
+    });
+    let str = arr.join('');
+    let ret: any;
+    try { ret = eval('('+str+')'); }
+    catch (e: any) {
+        (window as any).Log.exx("M2T/Handlebars #ifCond evaluation error, "+e?.message+" cannot be compared in an expression", {str, rawArguments, e});
+        ret = false;
+    }
+    let options = arguments[arguments.length-1];
+    // @ts-ignore this
+    return ret ? options.fn(this) : options.inverse(this);
+}
+
+function handlebarsJs(useless: any) {
+    let rawArguments = [...arguments].slice(0, arguments.length-1);
+    let str = rawArguments[rawArguments.length - 1];
+    let Log = (window as any).Log;
+    // @ts-ignore
+    // console.log('handlebars helper js', {thiss:this as any, arguments, rawArguments, str});
+    let msg: string = '';
+    if (rawArguments.length < 3) {
+        msg = "Error in {{#js}} tag, at least 2 parameters are required. an argument list followed by a string containing a js function to be applied to the arguments";
+        Log.ee(msg, rawArguments);
+        return msg;
+    }
+    let f: ((...a:any) => any) = null as any;
+    try {
+        f = eval('('+str+')');
+        if (typeof f !== 'function') {
+            msg = "Error in {{#js}} tag, the last argument must be a string containing a js function";
+            Log.ee(msg, {rawArguments, js:str});
+            return msg;
+        }
+    } catch (e: any) {
+        msg = "Syntax Error in {{#js}} tag: " + e.message;
+        Log.ee(msg, {e, rawArguments, js:str});
+        return msg;
+    }
+    let a: any;
+    try {
+        a = f(...rawArguments);
+    } catch (e: any) {
+        msg = "Runtime Error in {{#js}} tag: " + e.message;
+        Log.ee(msg, {e, rawArguments, js:str});
+        return msg;
+    }
+    return a;
+    /*if (a === null) return 'null';
+    if (a === undefined) return 'undefined';
+    switch (typeof a) {
+        default: case 'symbol': case 'object': case 'function':
+            (window as any).Log.exx("M2T/Handlebars #ifCond helper error, "+(typeof a)+" cannot be compared in an expression", {
+                expressionRaw: [...rawArguments].join(''), wrongParameterIndex: i
+            });
+            return NaN; // because nan always fails every comparison
+        case 'string': return '"'+(window as any).U.replaceAll(a, '"', '\\"')+'"';
+        case 'number': case 'boolean': return a;
+    }
+    */
+}
+windoww.log = console.log;
+Handlebars.registerHelper('js', handlebarsJs);
+Handlebars.registerHelper('JS', handlebarsJs);
+Handlebars.registerHelper('Js', handlebarsJs);
 Handlebars.registerHelper('ifCond', handlebarsIfCond);
 Handlebars.registerHelper('ifcond', handlebarsIfCond);
 Handlebars.registerHelper('ifc', handlebarsIfCond);

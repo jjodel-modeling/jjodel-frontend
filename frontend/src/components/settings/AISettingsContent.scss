@@ -1,0 +1,925 @@
+.ai-settings-content {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+// ============================================
+// HEADER
+// ============================================
+
+.settings-header {
+    margin-bottom: 24px;
+
+    h2 {
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--text-primary, #1e293b);
+        margin: 0 0 8px;
+    }
+
+    p {
+        font-size: 14px;
+        color: var(--text-secondary, #64748b);
+        margin: 0;
+    }
+}
+
+// ============================================
+// DEFAULT PROVIDER SECTION
+// ============================================
+
+.default-provider-section {
+    margin-bottom: 24px;
+    padding: 16px;
+    background: var(--bg-secondary, #f8fafc);
+    border: 1px solid var(--border-color, #e2e8f0);
+    border-radius: 8px;
+}
+
+.default-provider-header {
+    margin-bottom: 12px;
+}
+
+.default-provider-label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary, #334155);
+    margin-bottom: 4px;
+}
+
+.default-provider-hint {
+    font-size: 12px;
+    color: var(--text-tertiary, #94a3b8);
+    margin: 0;
+}
+
+.default-provider-select {
+    width: 100%;
+    max-width: 300px;
+    padding: 10px 12px;
+    font-size: 13px;
+    background: var(--bg-primary, #ffffff);
+    border: 1px solid var(--border-color, #e2e8f0);
+    border-radius: 6px;
+    color: var(--text-primary, #334155);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M2.5 4.5L6 8l3.5-3.5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 36px;
+
+    &:focus {
+        outline: none;
+        border-color: #334155;
+        box-shadow: 0 0 0 3px rgba(51, 65, 85, 0.15);
+    }
+
+    &:hover {
+        border-color: var(--border-color-hover, #cbd5e1);
+    }
+}
+
+.default-provider-empty {
+    font-size: 12px;
+    color: var(--text-tertiary, #94a3b8);
+    margin: 8px 0 0;
+    font-style: italic;
+}
+
+// ============================================
+// PROVIDERS LIST
+// ============================================
+
+.providers-list {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+// ============================================
+// PROVIDER CARD
+// ============================================
+
+.provider-card {
+    background: var(--bg-primary, #ffffff);
+    border: 1px solid var(--border-color, #e2e8f0);
+    border-radius: 10px;
+    overflow: hidden;
+    transition: all 0.15s ease;
+
+    &:hover {
+        border-color: var(--border-color-hover, #cbd5e1);
+    }
+
+    &.expanded {
+        border-color: #0ea5e9;
+        box-shadow: 0 2px 8px rgba(14, 165, 233, 0.1);
+    }
+
+    &.configured {
+        .provider-header {
+            background: linear-gradient(to right, rgba(16, 185, 129, 0.05), transparent);
+        }
+    }
+}
+
+.provider-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px;
+    cursor: pointer;
+    transition: background 0.1s ease;
+
+    &:hover {
+        background: var(--bg-hover, #f8fafc);
+    }
+}
+
+.provider-info {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+
+    > i {
+        font-size: 20px;
+        color: #8b5cf6;
+        width: 24px;
+        text-align: center;
+    }
+}
+
+.provider-icon-letter {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 700;
+    color: white;
+    flex-shrink: 0;
+
+    i {
+        font-size: 18px;
+    }
+}
+
+.provider-icon-logo {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+.providers-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 8px 0;
+
+    &::before,
+    &::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: var(--border-color, #e2e8f0);
+    }
+
+    span {
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--text-tertiary, #94a3b8);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+}
+
+.provider-details {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.provider-name {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text-primary, #1e293b);
+}
+
+.provider-description {
+    font-size: 12px;
+    color: var(--text-tertiary, #94a3b8);
+}
+
+.provider-status {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    .chevron {
+        font-size: 12px;
+        color: var(--text-tertiary, #94a3b8);
+        transition: transform 0.2s ease;
+    }
+}
+
+// Status badges now use unified jj-badge system (Badge component)
+
+// ============================================
+// PROVIDER CONTENT (Expanded)
+// ============================================
+
+.provider-content {
+    padding: 0 16px 16px;
+    border-top: 1px solid var(--border-color, #e2e8f0);
+    margin-top: 0;
+    animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.form-group {
+    margin-top: 16px;
+
+    label {
+        display: block;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--text-secondary, #475569);
+        margin-bottom: 6px;
+    }
+
+    input {
+        width: 100%;
+        padding: 10px 12px;
+        font-size: 13px;
+        background: var(--bg-secondary, #f8fafc);
+        border: 1px solid var(--border-color, #e2e8f0);
+        border-radius: 6px;
+        color: var(--text-primary, #1e293b);
+        transition: all 0.15s ease;
+
+        &:focus {
+            outline: none;
+            border-color: #0ea5e9;
+            background: var(--bg-primary, #ffffff);
+            box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+        }
+
+        &::placeholder {
+            color: var(--text-tertiary, #94a3b8);
+        }
+    }
+}
+
+.provider-actions {
+    margin-top: 16px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.test-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    border: 1px solid var(--border-color, #e2e8f0);
+    border-radius: 6px;
+    background: var(--bg-primary, #ffffff);
+    color: var(--text-secondary, #64748b);
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    &:hover:not(:disabled) {
+        background: var(--bg-hover, #f8fafc);
+        border-color: var(--border-color-hover, #cbd5e1);
+        color: var(--text-primary, #334155);
+    }
+
+    &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    &.success {
+        background: #dcfce7;
+        border-color: #86efac;
+        color: #15803d;
+    }
+
+    &.error {
+        background: #fee2e2;
+        border-color: #fca5a5;
+        color: #dc2626;
+    }
+
+    .spinning {
+        animation: spin 1s linear infinite;
+    }
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+// ============================================
+// FOOTER
+// ============================================
+
+.settings-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 20px;
+    margin-top: 20px;
+    border-top: 1px solid var(--border-color, #e2e8f0);
+}
+
+.footer-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--text-tertiary, #94a3b8);
+
+    i {
+        font-size: 14px;
+    }
+}
+
+.footer-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.btn-secondary {
+    padding: 10px 18px;
+    font-size: 13px;
+    font-weight: 500;
+    border: 1px solid var(--border-color, #e2e8f0);
+    border-radius: 6px;
+    background: var(--bg-primary, #ffffff);
+    color: var(--text-secondary, #64748b);
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    &:hover {
+        background: var(--bg-hover, #f8fafc);
+        color: var(--text-primary, #334155);
+    }
+}
+
+.btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 18px;
+    font-size: 13px;
+    font-weight: 500;
+    border: none;
+    border-radius: 6px;
+    background: #334155;
+    color: white;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    &:hover:not(:disabled) {
+        background: #1e293b;
+    }
+
+    &:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+    }
+
+    &.saved {
+        background: #10b981;
+    }
+
+    .spinning {
+        animation: spin 1s linear infinite;
+    }
+}
+
+// ============================================
+// DARK MODE
+// ============================================
+
+[data-theme="dark"] {
+    .settings-header {
+        h2 {
+            color: var(--text-primary, #f1f5f9);
+        }
+        p {
+            color: var(--text-secondary, #94a3b8);
+        }
+    }
+
+    .default-provider-section {
+        background: var(--bg-tertiary, #0f172a);
+        border-color: var(--border-color, #334155);
+    }
+
+    .default-provider-label {
+        color: var(--text-primary, #f1f5f9);
+    }
+
+    .default-provider-select {
+        background-color: var(--bg-secondary, #1e293b);
+        border-color: var(--border-color, #334155);
+        color: var(--text-primary, #f1f5f9);
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394a3b8' d='M2.5 4.5L6 8l3.5-3.5'/%3E%3C/svg%3E");
+
+        &:focus {
+            background-color: var(--bg-hover, #334155);
+            border-color: #64748b;
+            box-shadow: 0 0 0 3px rgba(100, 116, 139, 0.2);
+        }
+
+        option {
+            background: var(--bg-secondary, #1e293b);
+        }
+    }
+
+    .provider-card {
+        background: var(--bg-secondary, #1e293b);
+        border-color: var(--border-color, #334155);
+
+        &:hover {
+            border-color: var(--border-color-hover, #475569);
+        }
+
+        &.expanded {
+            border-color: #0ea5e9;
+        }
+
+        &.configured {
+            .provider-header {
+                background: linear-gradient(to right, rgba(16, 185, 129, 0.1), transparent);
+            }
+        }
+    }
+
+    .provider-header {
+        &:hover {
+            background: var(--bg-hover, #334155);
+        }
+    }
+
+    .provider-name {
+        color: var(--text-primary, #f1f5f9);
+    }
+
+    .provider-content {
+        border-color: var(--border-color, #334155);
+    }
+
+    .form-group {
+        label {
+            color: var(--text-secondary, #94a3b8);
+        }
+
+        input {
+            background: var(--bg-tertiary, #0f172a);
+            border-color: var(--border-color, #334155);
+            color: var(--text-primary, #f1f5f9);
+
+            &:focus {
+                background: var(--bg-secondary, #1e293b);
+            }
+        }
+    }
+
+    .status-badge.configured {
+        background: #064e3b;
+        color: #34d399;
+    }
+
+    .test-btn {
+        background: var(--bg-tertiary, #0f172a);
+        border-color: var(--border-color, #334155);
+        color: var(--text-secondary, #94a3b8);
+
+        &:hover:not(:disabled) {
+            background: var(--bg-hover, #334155);
+            color: var(--text-primary, #e2e8f0);
+        }
+
+        &.success {
+            background: #064e3b;
+            border-color: #059669;
+            color: #34d399;
+        }
+
+        &.error {
+            background: #450a0a;
+            border-color: #dc2626;
+            color: #f87171;
+        }
+    }
+
+    .settings-footer {
+        border-color: var(--border-color, #334155);
+    }
+
+    .btn-secondary {
+        background: var(--bg-tertiary, #0f172a);
+        border-color: var(--border-color, #334155);
+        color: var(--text-secondary, #94a3b8);
+
+        &:hover {
+            background: var(--bg-hover, #334155);
+            color: var(--text-primary, #e2e8f0);
+        }
+    }
+
+    .btn-primary {
+        background: #475569;
+
+        &:hover:not(:disabled) {
+            background: #334155;
+        }
+    }
+
+    .model-select {
+        background-color: var(--bg-tertiary, #0f172a);
+        border-color: var(--border-color, #334155);
+        color: var(--text-primary, #f1f5f9);
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394a3b8' d='M2.5 4.5L6 8l3.5-3.5'/%3E%3C/svg%3E");
+
+        &:focus {
+            background-color: var(--bg-secondary, #1e293b);
+        }
+
+        option {
+            background: var(--bg-secondary, #1e293b);
+        }
+    }
+
+    .capability-badge {
+        &.vision {
+            background: #1e3a5f;
+            color: #93c5fd;
+        }
+
+        &.pdf {
+            background: #4a1d34;
+            color: #f9a8d4;
+        }
+
+        &.text-only {
+            background: var(--bg-hover, #334155);
+            color: var(--text-tertiary, #64748b);
+        }
+    }
+
+    .providers-divider {
+        &::before,
+        &::after {
+            background: var(--border-color, #334155);
+        }
+
+        span {
+            color: var(--text-tertiary, #64748b);
+        }
+    }
+}
+
+// ============================================
+// MODEL SELECT
+// ============================================
+
+.model-select-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.model-select {
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 13px;
+    background: var(--bg-secondary, #f8fafc);
+    border: 1px solid var(--border-color, #e2e8f0);
+    border-radius: 6px;
+    color: var(--text-primary, #1e293b);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M2.5 4.5L6 8l3.5-3.5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 36px;
+
+    &:focus {
+        outline: none;
+        border-color: #0ea5e9;
+        background-color: var(--bg-primary, #ffffff);
+        box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+    }
+
+    &:hover {
+        border-color: var(--border-color-hover, #cbd5e1);
+    }
+
+    option {
+        padding: 8px;
+    }
+
+    option:disabled {
+        color: var(--text-tertiary, #94a3b8);
+        font-style: italic;
+    }
+}
+
+// ============================================
+// MODEL CAPABILITIES BADGES
+// ============================================
+
+.model-capabilities {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+// Capability badges now use unified jj-badge system (Badge component)
+
+// ============================================
+// PROVIDERS · DENSE ROWS (mockup 5a)
+// ============================================
+// Everything below is scoped to .ai-settings-content: the class names above
+// (.provider-card, .providers-list, .settings-footer, …) are shared with
+// pages/settings/AIAssistantSettings and components/Jodie/SettingsModal, which
+// keep the card layout.
+// Palette: literal, on purpose. The Settings modal shell is light-only —
+// UnifiedSettingsModal.scss carries no [data-theme] rule and paints #ffffff in
+// both themes — so a themed token would turn this text white on a white surface
+// in dark mode. `--border-color` is the sharpest case: variables.scss:4 resolves
+// it to rgba(255,255,255,0.08) under [data-theme=dark], invisible on white.
+// When the modal gets a real dark theme, this block moves onto tokens with it.
+
+.ai-settings-content {
+
+    .providers-list {
+        gap: 0;
+        padding-right: 0;
+        // Lets the list, and not the whole panel, take the scroll when the rows
+        // outgrow the modal: the footer stays anchored and the header stays put.
+        min-height: 0;
+    }
+
+    // Anchors the footer to the bottom of the panel: without a definite height on
+    // the section the flex column collapses to its content and the footer floats
+    // right under the last row.
+    .settings-footer {
+        margin-top: auto;
+        padding-top: 10px;
+    }
+
+    .footer-info i {
+        font-size: 13px;
+    }
+}
+
+// A definite height on the section is what anchors the footer: with height auto the
+// flex column collapses to its content and the footer follows the last row, ending
+// up below the fold of the modal.
+.unified-settings-content > .providers-section {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+
+    > .ai-settings-content {
+        flex: 1;
+        min-height: 0;
+    }
+
+    .settings-section-header {
+        margin-bottom: 12px;
+    }
+}
+
+.ai-provider-group {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+
+    & + & {
+        margin-top: 12px;
+    }
+}
+
+.ai-provider-group__label {
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.2;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #94a3b8;
+    padding: 0 10px 4px;
+}
+
+.ai-provider-row {
+    border-radius: 8px;
+
+    // The open row is outlined with an inset shadow and not with a border: a border
+    // would add 2px to every row's box and push the list past the modal.
+    &.expanded {
+        background: #ffffff;
+        box-shadow: inset 0 0 0 1px #e2e8f0;
+    }
+}
+
+.ai-provider-row__head {
+    width: 100%;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 10px;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.1s ease;
+
+    &:hover {
+        background: #f1f5f9;
+    }
+
+    &:focus-visible {
+        outline: 2px solid #0ea5e9;
+        outline-offset: -2px;
+    }
+}
+
+.ai-provider-row--configured .ai-provider-row__head {
+    height: 46px;
+}
+
+.ai-provider-row__logo {
+    flex: 0 0 28px;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    overflow: hidden;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #f1f5f9;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 700;
+
+    img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        display: block;
+    }
+
+    i {
+        font-size: 15px;
+    }
+}
+
+.ai-provider-row__name {
+    flex: 0 0 auto;
+    font-size: 14px;
+    font-weight: 600;
+    color: #1e293b;
+    white-space: nowrap;
+}
+
+.ai-provider-row__models {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 12px;
+    color: #94a3b8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ai-provider-row__state {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #94a3b8;
+    white-space: nowrap;
+
+    &--active {
+        color: #16a34a;
+    }
+
+    // A key that failed its last test keeps the same slot, in red: the row is
+    // configured, so "Set up" would be wrong and silence would hide the failure.
+    &--error {
+        color: #dc2626;
+    }
+}
+
+.ai-provider-row__dot {
+    flex: 0 0 7px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+.ai-provider-row__chevron {
+    flex: 0 0 auto;
+    font-size: 11px;
+    color: #94a3b8;
+    transition: transform 0.2s ease;
+}
+
+.ai-provider-row.expanded .ai-provider-row__chevron {
+    transform: rotate(180deg);
+}
+
+// The dark block higher up in this file was written when the panel was a stack of
+// dark cards: on the light modal surface it now leaves the expanded form as a dark
+// island — measured in dark, the "API Key" label computes to rgba(255,255,255,0.6),
+// i.e. white on white. Scoped back to the light palette, for this component only:
+// pages/settings/AIAssistantSettings and Jodie/SettingsModal keep those rules.
+[data-theme="dark"] .ai-settings-content {
+
+    .provider-content {
+        border-top-color: #e2e8f0;
+    }
+
+    .form-group {
+        label {
+            color: #475569;
+        }
+
+        input {
+            background: #f8fafc;
+            border-color: #e2e8f0;
+            color: #1e293b;
+
+            &:focus {
+                background: #ffffff;
+            }
+
+            &::placeholder {
+                color: #94a3b8;
+            }
+        }
+    }
+
+    .test-btn {
+        background: #ffffff;
+        border-color: #e2e8f0;
+        color: #64748b;
+
+        &:hover:not(:disabled) {
+            background: #f8fafc;
+            border-color: #cbd5e1;
+            color: #334155;
+        }
+
+        &.success {
+            background: #dcfce7;
+            border-color: #86efac;
+            color: #15803d;
+        }
+
+        &.error {
+            background: #fee2e2;
+            border-color: #fca5a5;
+            color: #dc2626;
+        }
+    }
+
+    .settings-footer {
+        border-color: #e2e8f0;
+    }
+}

@@ -1,0 +1,135 @@
+.wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-3);
+}
+
+/* U-7 (2026-08-12). With a label the wrapper has two children and `space-between`
+   puts the switch on the right edge. Q5 removed the redundant labels from five
+   sites, and there the switch became the only child: `space-between` then leaves it
+   on the LEFT, under its own field label, while the toggles that kept their label
+   stay against the right border. The defect is not left versus right — it is that
+   one panel holds both alignments, so the vertical column of switches, which is
+   what lets the eye scan the section, breaks halfway down.
+   One additive rule, no DOM change and no renaming: an only child is pushed to the
+   right edge, where every other switch already is. */
+.wrapper > .toggle:only-child {
+  margin-left: auto;
+}
+
+.labelWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+}
+
+.label {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.description {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-normal);
+}
+
+/* TOGGLE TRACK */
+.toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+
+  border: none;
+  border-radius: 9999px;
+  cursor: pointer;
+
+  transition: background-color 200ms ease;
+
+  /* Off state - slate-300 */
+  background-color: #cbd5e1;
+}
+
+.toggle:hover:not(:disabled):not(.toggleChecked) {
+  background-color: #94a3b8; /* slate-400 */
+}
+
+.toggle:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px rgba(51, 65, 85, 0.3);
+}
+
+.toggle:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* SIZES - Standard: 36x20px */
+.toggleMd {
+  width: 36px;
+  height: 20px;
+  padding: 2px;
+}
+
+.toggleXs {
+  width: 24px;
+  height: 14px;
+  padding: 2px;
+}
+
+.toggleSm {
+  width: 28px;
+  height: 16px;
+  padding: 2px;
+}
+
+/* CHECKED STATE - active = cyan accent #0ea5e9 (design system A) */
+.toggleChecked {
+  background: #0ea5e9;
+}
+
+.toggleChecked:hover:not(:disabled) {
+  background: #0284c7;
+}
+
+/* THUMB - white circle with shadow */
+.thumb {
+  display: block;
+  border-radius: 9999px;
+  background-color: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+
+  transition: transform 200ms ease;
+}
+
+.toggleXs .thumb {
+  width: 10px;
+  height: 10px;
+}
+
+.toggleMd .thumb {
+  width: 16px;
+  height: 16px;
+}
+
+.toggleSm .thumb {
+  width: 12px;
+  height: 12px;
+}
+
+/* CHECKED THUMB POSITION */
+.toggleXs.toggleChecked .thumb {
+  transform: translateX(10px); /* 24 - 10 - 2*2 = 10 */
+}
+
+.toggleMd.toggleChecked .thumb {
+  transform: translateX(16px);
+}
+
+.toggleSm.toggleChecked .thumb {
+  transform: translateX(12px);
+}

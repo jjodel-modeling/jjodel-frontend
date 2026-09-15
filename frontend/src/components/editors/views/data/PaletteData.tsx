@@ -1,12 +1,14 @@
 /* Viewpoints > Style */
-
 import React, {Dispatch, ReactElement, ReactNode, Ref, RefObject, SyntheticEvent, useState, useRef, useEffect} from 'react';
 import {connect} from "react-redux";
 import {useStateIfMounted} from "use-state-if-mounted";
 import tinycolor, {Instance} from "tinycolor2";
 import Editor from "@monaco-editor/react";
 import type {Dictionary, GObject, Pointer,} from '../../../../joiner';
-import {DState, DViewElement, EdgeHead, Input, Keystrokes, Log, LViewElement, U,} from '../../../../joiner';
+import {DState, DViewElement, EdgeHead, Input, Keystrokes, Log, LViewElement, Select, U,} from '../../../../joiner';
+import { cssMonacoOptions, withReadOnly } from '../../monacoConfig';
+import EditorToolbar from '../../EditorToolbar';
+import EditorFullscreenModal from '../../EditorFullscreenModal';
 import type {
     NumberControl,
     PaletteControl,
@@ -14,11 +16,15 @@ import type {
     PathControl,
     StringControl
 } from '../../../../view/viewElement/view';
+
 import {CSS_Units} from '../../../../view/viewElement/view';
 import {Color} from '../../../forEndUser/Color';
 
 import {Btn, CommandBar} from '../../../commandbar/CommandBar';
 import {HRule} from '../../../widgets/Widgets';
+import { EdgeMarkerEditorModal } from '../../EdgeMarkerEditorModal';
+import {Info} from "../../../forEndUser/Info";
+import './palette-data.scss';
 
 
 function makeNumericInput(prefix: string, number: NumberControl,
@@ -48,7 +54,7 @@ function makeNumericInput(prefix: string, number: NumberControl,
     let roundedValue0 = Math.round(((number.value || 0) - (typeof step === "number" ? number.value % step : number.value % 0.1))*10000)/10000; // % works on decimals right.
     let roundedValue = typeof step === "number" ? Math.round(((number.value || 0)  * (1/step))) * step : Math.round(number.value*100)/100; // % works on decimals right.
     return <>
-        <input className={"value"} placeholder={"value"} type={"range"} disabled={readOnly}
+        <input  placeholder={"value"} type={"range"} disabled={readOnly}
             key={"s"+number.value} defaultValue={number.value}
             min={min}
             max={max}
@@ -76,10 +82,18 @@ function PaletteDataComponent(props: AllProps) {
     const [css, setCss] = useStateIfMounted(view.css);
 
     const [expand, setExpand] = useStateIfMounted(false);
+    const [wrap, setWrap] = useStateIfMounted(false);
+    const [fullscreen, setFullscreen] = useStateIfMounted(false);
+    const [showEditor, setShowEditor] = useStateIfMounted(true);
+
+    // State for marker editor modal
+    const [markerEditorOpen, setMarkerEditorOpen] = useStateIfMounted(false);
+    const [editingPathPrefix, setEditingPathPrefix] = useStateIfMounted<string | null>(null);
 
     const change = (value: string|undefined) => { if(value !== undefined) setCss(value); } // save in local state for frequent changes.
     const blur = () => view.css = css; // confirm in redux state for final state
 
+    const closestyle = {height: '1lh'};
     /* *** alfonso *** */
 
 
@@ -104,50 +118,49 @@ function PaletteDataComponent(props: AllProps) {
     }
 
     const AddPalette = () => {
-        const [open,setOpen] = useState(false);
-        const menuRef = useRef(null);
+        const [isOpen, setIsOpen] = useState(false);
+        const menuRef = useRef<HTMLDivElement>(null);
 
         useClickOutside(menuRef, () => {
-            setOpen(false);
+            setIsOpen(false);
         });
 
+        const handleAdd = (type: 'palette' | 'number' | 'text' | 'path') => {
+            addControl(type);
+            setIsOpen(false);
+        };
 
-        return (<>
-            {/* open ?
-                <div className='palette-buttons'>
-                    <button onClick={()=>addControl('palette')} className='add-palette-item btn btn-success my-btn btn-color'>Add palette</button>
-                    <button onClick={()=> addControl('number')} className='btn btn-success my-btn btn-number'>Add number</button>
-                    <button onClick={()=>addControl('text')} className='btn btn-success my-btn btn-textual'>Add text</button>
-                    <button onClick={()=>addControl('path')}className='btn btn-success my-btn btn-path'>Add path</button>
+        return (
+            <div className="add-dropdown" ref={menuRef}>
+                <button
+                    className={`add-btn ${isOpen ? 'open' : ''}`}
+                    onClick={() => setIsOpen(!isOpen)}
+                    disabled={readOnly}
+                >
+                    <i className="bi bi-plus" />
+                    <span>Add</span>
+                    <i className="bi bi-chevron-down" />
+                </button>
+                <div className={`dropdown-menu ${isOpen ? 'open' : ''}`}>
+                    <button className="dropdown-item" onClick={() => handleAdd('palette')}>
+                        <span className="item-icon"><i className="bi bi-palette" /></span>
+                        <span>Palette</span>
+                    </button>
+                    <button className="dropdown-item" onClick={() => handleAdd('number')}>
+                        <span className="item-icon"><i className="bi bi-123" /></span>
+                        <span>Number</span>
+                    </button>
+                    <button className="dropdown-item" onClick={() => handleAdd('text')}>
+                        <span className="item-icon"><i className="bi bi-fonts" /></span>
+                        <span>Text</span>
+                    </button>
+                    <button className="dropdown-item" onClick={() => handleAdd('path')}>
+                        <span className="item-icon"><i className="bi bi-bezier2" /></span>
+                        <span>Path</span>
+                    </button>
                 </div>
-            :
-                <button onClick={() => setOpen(!open)} className='btn btn-success my-btn'>Add new</button>
-            */}
-
-            <div className={'add-palette-item active hoverable'} tabIndex={-1}>
-                <button onClick={() => addControl('palette')} className='btn btn-success my-btn btn-plus'>
-                    <i style={{color: 'white'}} className="bi bi-plus"/>
-                    <span className={'preview'}>Add new</span>
-                </button>
-                <button onClick={() => addControl('palette')} className='btn btn-success my-btn btn-color content inline'>
-                    <i className="bi bi-palette"></i>
-                    <span>Palette</span>
-                </button>
-                <button onClick={() => addControl('number')} className='btn btn-success my-btn btn-number content inline'>
-                    <i className="bi bi-123"></i>
-                    <span>Number</span>
-                </button>
-                <button onClick={() => addControl('text')} className='btn btn-success my-btn btn-textual content inline'>
-                    <i className="bi bi-type"></i>
-                    <span>Text</span>
-                </button>
-                <button onClick={() => addControl('path')} className='btn btn-success my-btn btn-path content inline'>
-                <i className="bi bi-bezier"></i>                    
-                <span>Path</span>
-                </button>
             </div>
-
-        </>);
+        );
     };
 
     /* *** */
@@ -185,40 +198,8 @@ function PaletteDataComponent(props: AllProps) {
         switch (type){
             default: Log.exDevv("unexpected case in addControl:" + type); return;
             case 'path':
-                const uml = "-- UML relationships";
-                    const agglabel = "◇ Aggregation / Composition";
-                    const extendlabel = "△ "+EdgeHead.extend;
-                    const asslabel = "Λ "+EdgeHead.reference;
-                const e1 = "--- 1";
-                const cardinality       = "-- Multiplicity";
-                    const zerolabel         = "[0]    exactly zero / not present";
-                    const onelabel          = "[1]    exactly one, required";
-                    const manylabel         = "[0..*] zero or many, optional, unbounded";
-                    const zeroOrOneLabel    = "[0..1] zero or one, optional";
-                    const zeroOrManyLabel   = "[0..*] zero or many, optional, unbounded "; // was "[0..*] "
-                    const oneOrManyLabel    = "[1..*] one or many, at least one";
-                const e2 = "--- 2";
-
-
-                let headdict: Dictionary<string, string> = {
-                    [uml]: 'UML Relationships',
-                        [asslabel]: 'M7.7198-.2722c.5684-.4437 1.4898-.4437 2.0582 0l6.3853 4.9847c.5684.4437.5684 1.162 0 1.605L9.7781 11.3022c-.5684.4437-1.4888.4437-2.0562 0L1.3344 6.3182a1.4505 1.1322 0 010-1.605z',
-                        [extendlabel]: 'M 0 0   L x y/2   L 0 y   Z',
-                        [agglabel]: 'M8.5776-.9085c.6316-.522 1.6553-.522 2.2869 0l7.0948 5.8644c.6316.522.6316 1.3671 0 1.8882L10.8645 12.7085c-.6316.522-1.6542.522-2.2847 0L1.4827 6.845a1.6117 1.332 0 010-1.8882z',
-                    [e1]: '--- 1',
-                    [cardinality]: 'Multiplicity',
-                        [zerolabel]: 'M-11.985 5.981A1 1 0 000 6 1 1 0 00-12 6',
-                        [onelabel]: 'M0 0V12',
-                        [manylabel]: 'M12 1 0 6 12 11H12M12 6H0',
-                        [zeroOrOneLabel]: 'M-11.985 5.981A1 1 0 000 6 1 1 0 00-12 6M6 0V12',
-                        [zeroOrManyLabel]: 'M-11.985 5.981A1 1 0 000 6 1 1 0 00-12 6M6 0M12 1 0 6 12 11H12M12 6H0',
-                        [oneOrManyLabel]: 'M0 0V12M12 1 0 6 12 11H12M12 6H0',
-                    [e2]: '--- 2'
-                };
-                let predefinedPaths: {k:string, v:string}[] = Object.entries(headdict).map((e)=>({k:e[0], v:e[1]}));
-
                 tmp = {...palette};
-                tmp[prefix] = {type: 'path', value: '', x:'edgeHeadSize.x', y:'edgeHeadSize.y', options: predefinedPaths};
+                tmp[prefix] = {type: 'path', value: '', x:'view.edgeHeadSize.x', y:'view.edgeHeadSize.y', options: EdgeHead.predefinedPaths};
                 break;
             case 'text':
                 tmp = {...palette};
@@ -290,7 +271,7 @@ function PaletteDataComponent(props: AllProps) {
         for (let i = colors.length-1; i >= (skipFirst ? 1 : 0); i--) {
             let color: Instance = colors[i];
             let rgba = color.toRgb();
-            console.log("addingColor:", {rgba, lastAdded, color});
+            // console.log("addingColor:", {rgba, lastAdded, color});
             if (rgba === lastAdded) continue;
             lastAdded = rgba;
             if (!tmp[prefix]) tmp[prefix] = {type:'color', value:[]};
@@ -326,14 +307,15 @@ function PaletteDataComponent(props: AllProps) {
         tmp[prefix].value[index] = {...tmp[prefix].value[index]};
         tmp[prefix].value[index].a = alpha;
         color.setAlpha(alpha);
-        console.log("set transparency", {color, tinycolor, oldcolor: tmp[prefix].value[index]});
+        // console.log("set transparency", {color, tinycolor, oldcolor: tmp[prefix].value[index]});
         view.palette = palette = tmp;
     }
-    const removeColor = (prefix: string, index: number) => {
+    const removeColor = (prefix: string, index?: number) => {
         if (readOnly || !palette[prefix]) return;
 
         let tmp: Dictionary<string, PaletteControl> = {...palette} as any;
         tmp[prefix].value = [...tmp[prefix].value];
+        if (index === undefined) index = tmp[prefix].value.length -1;
         tmp[prefix].value = tmp[prefix].value.filter((c, i) => i !== index);
         view.palette = palette = tmp;
     }
@@ -373,30 +355,96 @@ function PaletteDataComponent(props: AllProps) {
     let colors = Object.keys(palettes.color).sort();
     const lines = (Math.round(vcss.split(/\r|\r\n|\n/).length*1.8) < 5 ? 10 : Math.round(vcss.split(/\r|\r\n|\n/).length*1.8));
 
-    return(<section className={'p-3 style-tab'}>
-        <h1 className={'view'}>View: {props.view.name}</h1>
-        <div className={"controls"} style={{position:'relative', zIndex:2}}>
+    return(<section className={'p-3 style-tab style-tab-redesign' + (readOnly ? " disabled" : "")}>
+        {/* EDGE STYLE SECTION — V1: stroke color/width/style for L2 overlay edges. Only when this view drives an edge. */}
+        {view.isEdge && (
+            <section className="edge-style-section">
+                <div className="style-section-header">
+                    <span className="section-title">Edge Style</span>
+                </div>
+                <div className="jj-field">
+                    <label className="jj-field-label">
+                        Stroke Color
+                        <Info className={'jj-field-info'}>Color of the edge stroke. Semantic palette tokens that adapt to light and dark themes.</Info>
+                    </label>
+                    <Select
+                        data={view}
+                        field={'edgeStrokeColor'}
+                        readOnly={readOnly}
+                        getter={(d: LViewElement) => d.edgeStrokeColor || 'default'}
+                        setter={(v: string) => { view.edgeStrokeColor = v; }}
+                        options={<>
+                            <option value={'default'}>Default</option>
+                            <option value={'accent'}>Accent</option>
+                            <option value={'success'}>Success</option>
+                            <option value={'warning'}>Warning</option>
+                            <option value={'danger'}>Danger</option>
+                            <option value={'muted'}>Muted</option>
+                        </>}
+                    />
+                </div>
+                <div className="jj-field">
+                    <label className="jj-field-label">
+                        Stroke Width
+                        <Info className={'jj-field-info'}>Thickness of the edge line in pixels (0.5–10). Default 1.5.</Info>
+                    </label>
+                    <Input
+                        data={view}
+                        field={'edgeStrokeWidth'}
+                        readOnly={readOnly}
+                        type={'number'}
+                        {...({min: 0.5, max: 6, step: 0.25} as any)}
+                    />
+                </div>
+                <div className="jj-field">
+                    <label className="jj-field-label">
+                        Stroke Style
+                        <Info className={'jj-field-info'}>Pattern of the edge line: solid, dashed, or dotted.</Info>
+                    </label>
+                    <Select
+                        data={view}
+                        field={'edgeStrokeStyle'}
+                        readOnly={readOnly}
+                        getter={(d: LViewElement) => d.edgeStrokeStyle || 'solid'}
+                        setter={(v: string) => { view.edgeStrokeStyle = v as any; }}
+                        options={<>
+                            <option value={'solid'}>Solid</option>
+                            <option value={'dashed'}>Dashed</option>
+                            <option value={'dotted'}>Dotted</option>
+                        </>}
+                    />
+                </div>
+            </section>
+        )}
 
+        {/* STYLE VARIABLES SECTION */}
+        <div className="style-variables-section">
+            <div className="style-section-header">
+                <span className="section-title">Style Variables</span>
+                <AddPalette />
+            </div>
+        </div>
+
+        <div className={"controls"} style={{position:'relative', zIndex:2}}>
             {colors.map((entry, index, entries)=>{
                 let prefix = entry;
                 let paletteobj: PaletteControl = palettes.color[prefix] as PaletteControl;
                 let colors: Instance[] = paletteobj.value.map(v=> tinycolor(v));
                 let suggestions = [tinycolor('#ffaaaa')]; // todo: compute according to current row "colors"
                 return palettewrap(prefix, <>
-                    <div className="palette-row">
-
+                    <div className={"palette-row "}>
                         <div className="color-container" style={{maxHeight: 'var(--input-height)', borderRadius: 'var(--radius)'}}>{
                             colors.map((color, i) => <Color key={prefix+i} readOnly={readOnly}
                                                             data={view} field={'palette'} canDelete={!readOnly}
                                                             getter={()=>colors[i].toHexString()} setter={(newVal) => { setColor(prefix, i, newVal) }}
-                                                            style ={{background: 'white'}}
                                                             inputStyle ={{opacity: color.getAlpha()}}
                                                             childrenn={
                                                                 <div className={"content suggestions"} tabIndex={-1} style={{backgroundColor: "inherit"}} onClick={(e) => {e.preventDefault(); e.stopPropagation();}}>
-                                                                    {(()=>{ return <>
+                                                                    {(()=>{ return <section className={"suggestcontent"}>
                                                                         <h6 title={"Alter current color transparency"}>Opacity</h6>
 
                                                                         <input style={{width: "auto", marginLeft:"1em", marginRight:"1em"}}
+                                                                            className={"cpanel__hue"}
                                                                             type={"range"} min={0} max={1} step={"any"}
                                                                             value={color.getAlpha()}
                                                                             onChange={(e: any)=>{ transparencyColor(prefix, i, color, +e.target.value) }} />
@@ -404,7 +452,7 @@ function PaletteDataComponent(props: AllProps) {
                                                                         {/* Add all colors */}
                                                                         <h6 title={"Add all the colors"}>
                                                                             <CommandBar style={{float: 'left', paddingRight: '8px'}}>
-                                                                                <Btn icon={'add'} size={'x-small'}  action={()=>addColor(prefix, color.analogous(7, 30/1.5), i)} theme={'dark'} tip={'Add all the colors'}/>
+                                                                                <Btn icon={'add'} size={'x-small'} action={()=>addColor(prefix, color.analogous(7, 30/1.5), i)} theme={'dark'} tip={'Add all the colors'}/>
                                                                             </CommandBar>
                                                                             <span>Analogous</span>
                                                                         </h6>
@@ -540,7 +588,7 @@ function PaletteDataComponent(props: AllProps) {
                                                                             {color.tetrad().map ( (c) => <button style={{...style(c)}} className="btn color-suggestion"
                                                                                                                  onClick={(e)=>{addColor(prefix, c, i)}}><i style={style(c)} className="bi bi-plus-lg"></i></button>)}
                                                                         </div>
-                                                                    </>})()}
+                                                                    </section>})()}
 
 
                                                                     <button
@@ -561,9 +609,9 @@ function PaletteDataComponent(props: AllProps) {
                                 {/* Palette */}
                                 <CommandBar style={{float: 'right'}}>
                                     <Btn icon={'add'} tip={'Add color to palette'} action={() => addColor(prefix, c)} />
-                                    <Btn icon={'delete'} tip={'Remove color from palette'} action={() => {
+                                    <Btn icon={'delete'} tip={'Remove last color from palette'} action={() => {
                                         if (Array.isArray(palette[prefix].value) && (palette[prefix].value as any).length) {
-                                            removeColor(prefix, i)
+                                            removeColor(prefix)
                                         } else {
                                             removeControl(prefix);
                                         }
@@ -581,7 +629,7 @@ function PaletteDataComponent(props: AllProps) {
                     let prefix = entry[0];
                     let path: PathControl = entry[1] as any;
                     return palettewrap(prefix,
-                        <div className="palette-row path" title={"todo: proper tooltip.\nedgeHeadSize is in the \"Options\" tab and determines the position of the head.\nBasic math operators are allowed, but the minus and plus must have spaces around them or they will be traated as unary operators.\nx and y are variables local to this path used to scale his shape."}>
+                        <div className="palette-row path">
                             <div className={"value hoverable"} >
                                 <div className={"d-flex w-100"}>
                                     <input className={"value w-100 my-auto"} placeholder={"svg path [d]"} defaultValue={path.value} key={path.value} onBlur={e => {setText(e as any, prefix)}} disabled={readOnly}
@@ -590,10 +638,30 @@ function PaletteDataComponent(props: AllProps) {
                                                if (e.key === Keystrokes.escape) (e.target as any).value = path.value; }}
                                     />
                                 </div>
-                                <div className={"content d-flex w-100"} style={{position: 'relative', backgroundColor: 'whitesmoke'}}>
-                                    <input className={"spacer w-100"}/>
-                                    <label className={"mx-auto"}>x:&nbsp;<input className="x" placeholder={"x"} defaultValue={path.x} disabled={readOnly} onChange={(e)=>setGeneric(e, prefix, "x")}/></label>
-                                    <label className={"mx-auto"}>y:&nbsp;<input className="y" placeholder={"y"} defaultValue={path.y} disabled={readOnly} onChange={(e)=>setGeneric(e, prefix, "y")}/></label>
+                                <div className={"content d-flex w-100 px-2"} style={{position: 'relative', backgroundColor: 'whitesmoke'}}>
+                                    <div className={'d-flex w-100'} style={{flexFlow:'column'}}>
+                                        <Info className={'m-auto'}>{'edgeHeadSize determines the position of the head.' +
+                                            '\nBasic math operators, expressions and view constants are allowed (no dynamic variables),' +
+                                            '\nbut they must be wrapped in parenthesis.' +
+                                            '\nEG: (x * Math.sin(view.constants.pi / 3)).' +
+                                            '\nx and y are variables local to this path used to scale his shape.' +
+                                            '\nThe result of expressions must be a number or a string concatenated to the path.'
+                                        }</Info>
+                                    </div>
+                                    <div className={'d-flex w-100'} style={{position:'relative'}}>
+                                        <label className={"mx-auto d-flex"} style={{flexGrow: '1', minWidth:'0'}}>
+                                            <span className={'my-auto mx-1'}>X:</span>
+                                            <input className="x" placeholder={"x"} defaultValue={path.x}
+                                                   disabled={readOnly} onChange={e => setGeneric(e, prefix, "x")}
+                                                   style={{flexBasis: '0', flexGrow: '1', minWidth:'0'}}/>
+                                        </label>
+                                        <label className={"mx-auto d-flex"} style={{flexGrow: '1', minWidth:'0'}}>
+                                            <span className={'my-auto mx-1'}>Y:</span>
+                                            <input className="y" placeholder={"y"} defaultValue={path.y}
+                                                   disabled={readOnly} onChange={e => setGeneric(e, prefix, "y")}
+                                                   style={{flexBasis: '0', flexGrow: '1', minWidth:'0'}}/>
+                                        </label>
+                                    </div>
                                 </div>
                             </div>
                             {/* <select className={'d-flex'} style={{width: '100px!important'}} value={path.value} disabled={readOnly} onChange={(e)=>setText(e as any, prefix)}>
@@ -605,8 +673,9 @@ function PaletteDataComponent(props: AllProps) {
                             
                             })]}
                             </select>*/}
-                            <select className={'d-flex'} style={{width: '100px!important'}} value={path.value} disabled={readOnly} onChange={(e)=>setText(e as any, prefix)}>
-                                <option style={{fontStyle:'italic', color:'gray'}} value={""}>Custom</option>
+                            <select className={'d-flex'} style={{width: '100px!important'}} value={path.value}
+                                    disabled={readOnly} onChange={(e) => setText(e as any, prefix)}>
+                                <option style={{fontStyle: 'italic', color:'gray'}} value={""}>Custom</option>
                                 {(() => {
                                     const groups: {label: string, options: {k: string, v: string}[]}[] = [];
                                     let currentGroup: {label: string, options: {k: string, v: string}[]} | null = null;
@@ -645,11 +714,23 @@ function PaletteDataComponent(props: AllProps) {
                                 })()}
                             </select>
 
-                            {/* Path */}
-                            <CommandBar  style={{paddingRight: '4px', marginLeft: 'auto'}}>
-                                <Btn icon={'space'} />
-                                <Btn icon={"delete"} action={(e) => {removeControl(prefix)}} tip={'Remove path'}/>
-                            </CommandBar>
+                            {/* Path Actions */}
+                            <div className="path-actions" style={{display: 'flex', gap: '4px', marginLeft: 'auto', flexShrink: 0}}>
+                                <button
+                                    type="button"
+                                    className="marker-edit-btn"
+                                    onClick={() => {
+                                        setEditingPathPrefix(prefix);
+                                        setMarkerEditorOpen(true);
+                                    }}
+                                    disabled={readOnly}
+                                    aria-label={`Edit ${prefix} marker`}
+                                >
+                                    <i className="bi bi-pencil-square" />
+                                    <span>Edit</span>
+                                </button>
+                                <Btn icon={"delete"} style={closestyle} action={() => removeControl(prefix)} tip={'Remove path'} disabled={readOnly} />
+                            </div>
 
                         </div>)
                 }
@@ -661,13 +742,11 @@ function PaletteDataComponent(props: AllProps) {
                         <div className="palette-row numeric">
                             {makeNumericInput(prefix, number, setNumber, setText, readOnly)}
                             <input className={"unit"} placeholder={"unit"} value={number.unit} pattern={CSS_Units.pattern} disabled={readOnly}
+                                   spellCheck={false}
                                    list={"__jodel_CSS_units"} onChange={e => {setUnit(e as any, prefix)}} />
 
                             {/* Numeric */}
-                            <CommandBar  style={{paddingRight: '4px', marginLeft: 'auto'}}>
-                                <Btn icon={'space'} />
-                                <Btn icon={"delete"} action={(e) => {removeControl(prefix)}} tip={'Remove number'}/>
-                            </CommandBar>
+                            <Btn icon={"delete"} style={closestyle} action={() => removeControl(prefix)} tip={'Remove number'} disabled={readOnly} />
                         </div>)
                 }
             )}
@@ -682,79 +761,50 @@ function PaletteDataComponent(props: AllProps) {
                                        if (e.key === Keystrokes.escape) (e.target as any).value = string.value; }} />
 
                             {/* Text */}
-                            <CommandBar  style={{paddingRight: '4px', marginLeft: 'auto'}}>
-                                <Btn icon={'space'} />
-                                <Btn icon={"delete"} action={(e) => {removeControl(prefix)}} tip={'Remove text'}/>
-                            </CommandBar>
+                            <Btn icon={"delete"} style={closestyle} action={() => removeControl(prefix)} tip={'Remove text'} disabled={readOnly} />
                         </div>)
                 }
             )}
         </div>
 
+        {/* SEPARATOR */}
+        <div className="style-separator" />
 
-        <AddPalette />
-
-
-        {/* <div className={"w-100"} style={{display: 'grid', gridTemplateColumns: 'repeat(10, 1fr)', position: 'relative', zIndex:1}}
-             onMouseEnter={(e)=>{ dropDownButton.current?.open()}}
-             onMouseLeave={(e)=>{ dropDownButton.current?.close()}}
-        >
-            <button className="btn btn-success" style={{flexBasis:0, flexGrow:9, gridArea: '1 / 1 / 1 / 1', zIndex: 2, minWidth: 'calc(1000% - var(--smart-editor-addon-width))'}} onClick={()=>addControl('palette')}>+ Palette</button>
-            <DropDownButton ref={dropDownButton} style={{flexBasis:0, flexGrow:1, minWidth:0, gridArea: '1 / 1 / 1 / 11', zIndex:1, transform: 'scaleX(-1)'}}>
-                <div onClick={(e)=> dropDownButton.current?.close()} style={{transform: 'scaleX(-1)'}}>
-                    <button className={"w-100 btn btn-outline-success"} style={{height: 'var(--smart-editor-height)'}}
-                            onClick={()=>addControl('number')}>+ Number</button>
-                    <button className={"w-100 btn btn-outline-success"} style={{height: 'var(--smart-editor-height)'}}
-                            onClick={()=>addControl('text')}>+ Text</button>
-                    <button className={"w-100 btn btn-outline-success"} style={{height: 'var(--smart-editor-height)'}}
-                            onClick={()=>addControl('path')}>+ Path</button>
-                </div>
-            </DropDownButton>
-            </div>*/}
-
-        <HRule theme={'light'} style={{display: 'block', padding: '30px 0px!important'}}/>
-
-        <Input data={view} field={'cssIsGlobal'} type={"checkbox"}  jsxLabel={
-            <div style={{width:'100%', display:'block', float: 'left'}}>
-                {cssIsGlobal ? <b style={{color: 'inherit'}}>Global</b> : <b style={{color: 'inherit'}}>Local</b>}
-                {' CSS & LESS Editor '}
-                {cssIsGlobal ? '(Use with caution)' : ''}
+        {/* CSS EDITOR SECTION */}
+        <div className="css-editor-section">
+            <div className="css-scope-toggle">
+                <Input data={view} field={'cssIsGlobal'} type={"checkbox"} jsxLabel={
+                    <span className={`toggle-label ${cssIsGlobal ? 'active' : ''}`}>
+                        {cssIsGlobal ? 'Global' : 'Local'} CSS & LESS
+                        {cssIsGlobal && <span className="caution-badge" style={{color: '#e11d48', marginLeft: '6px', fontSize: '11px', fontWeight: 500}}>Use with caution</span>}
+                    </span>
+                } />
             </div>
-        } />
 
-        {/* <CommandBar style={{paddingTop: '10px', float: 'right'}}>
-            {expand ?
-                <Btn icon={'shrink'} action={(e) => {setExpand(false)}} tip={'Minimize editor'}/>
-                :
-                <Btn icon={'expand'} action={(e) => {setExpand(true)}} tip={'Enlarge editor'}/>
-            }
-        </CommandBar>*/}
-
-        {/* ****** */}
-
-        {/*<label className={'ms-1 mb-1'}>{view.cssIsGlobal ? 'Global' : 'Local'} CSS Editor</label>*/}
-        {vcss.indexOf('//') >= 0 && <b><span style={{color:'red'}}>Warning:</span> Inline comments // are not supported by our compiler.<br/>
+            <EditorToolbar
+            title={cssIsGlobal ? "Global CSS & LESS Editor" : "Local CSS & LESS Editor"}
+            icon="bi-filetype-css"
+            content={vcss}
+            collapsed={!showEditor}
+            onCollapseToggle={() => setShowEditor(!showEditor)}
+            onWrapChange={(newWrap) => setWrap(newWrap)}
+            onExpandChange={(newExpanded) => setExpand(newExpanded)}
+            onFullscreenOpen={() => setFullscreen(true)}
+            disableFullscreen={false}
+            initialExpanded={expand}
+            readOnly={readOnly}
+        />
+        {showEditor && vcss.indexOf('//') >= 0 && <b><span style={{color:'red'}}>Warning:</span> Inline comments // are not supported by our compiler.<br/>
             Please replace them with /* block comments */</b>}
-
-            {/* <div className={"monaco-editor-wrapper"} style={{
-                minHeight: '20px',
-                height:`${expand ? '30lvh' : '10lvh'}`,
-                transition: 'height 0.3s',
-                resize: 'vertical', overflow:'hidden',
-                display: 'flex',
-                flexDirection: 'column'
-            }}
-            onFocus={() => setExpand(true)}
-            onBlur={() => {setExpand(false);blur()}}> */}
-                
+        {showEditor && (
             <div
                 className="monaco-editor-wrapper"
                 style={{
-                    height: '40%',   // use dvh for dynamic viewport on mobile, better than lvh
-                    maxHeight: '40%',                   // cannot exceed the section’s height
+                    height: expand ? '60%' : '40%',
+                    maxHeight: expand ? '800px' : '500px',
                     transition: 'height 0.3s',
                     resize: 'vertical',
-                    overflow: 'auto',                     // scroll instead of overflowing past bottom
+                    overflow: 'auto',
                     display: 'flex',
                     flexDirection: 'column',
                     flex: '1 1 auto'
@@ -762,36 +812,56 @@ function PaletteDataComponent(props: AllProps) {
                 onFocus={() => setExpand(true)}
                 onBlur={() => { setExpand(false); blur(); }}
             >
+                <Editor className={'mx-1'}
+                        options={{
+                            ...withReadOnly(cssMonacoOptions, readOnly),
+                            wordWrap: wrap ? 'on' : 'off'
+                        }}
+                        defaultLanguage={'less'} value={vcss} onChange={change}/>
+            </div>
+        )}
 
-
-
-            <Editor className={'mx-1'}
-                    options={{
-                        theme: 'vs',
-                        fontSize: 12, 
-                        scrollbar: {
-                            vertical: 'hidden', 
-                            horizontalScrollbarSize: 5
-                        }, 
-                        minimap: {enabled: false}, 
-                        readOnly: readOnly
-                    }}
-                    defaultLanguage={'less'} value={vcss} onChange={change}/>
-        </div>
+        <EditorFullscreenModal
+            isOpen={fullscreen}
+            onClose={() => { blur(); setFullscreen(false); }}
+            title={cssIsGlobal ? "Global CSS & LESS Editor" : "Local CSS & LESS Editor"}
+            icon="bi-filetype-css"
+            value={vcss}
+            onChange={change}
+            onSave={(newValue) => {
+                console.log("fullscreen save", {newValue});
+                setCss(newValue);
+                view.css = newValue;
+                setFullscreen(false);
+            }}
+            language="less"
+            readOnly={readOnly}
+        />
         {false && <div className={"debug"}><div style={{whiteSpace:'pre'}}>{view.compiled_css}</div></div>}
-        {/*<textarea>
-            '[data-viewid="'+view.id+'"]{\n' +
-            Object.entries(palette).flatMap((entry, index, entries)=>{
-                let prefix = entry[0];
-                let colors = entry[1];
-                return colors.map((color, i)=> "\t--" + prefix + i + ": " + color + ";\n");
-            }).join('')+'\n' + (cssISGlobal ? '}\n' : '\n') +
-            '/ *** custom css area *** /\n' + view.css + (!cssISGlobal ? '}\n' : '\n')
-            view.css
-        </textarea>*/}
-        {
-            // todo: if row have only 1 color can be accessed both as palette prefix-1 or as palett prefix without number, so i can name colors.
-        }
+        </div>
+        {/* END CSS EDITOR SECTION */}
+
+        {/* Edge Marker Editor Modal */}
+        {editingPathPrefix && (
+            <EdgeMarkerEditorModal
+                isOpen={markerEditorOpen}
+                onClose={() => {
+                    setMarkerEditorOpen(false);
+                    setEditingPathPrefix(null);
+                }}
+                onApply={(newPath: string) => {
+                    if (editingPathPrefix && !readOnly) {
+                        let tmp: Dictionary<string, PathControl> = {...palette} as any;
+                        if (tmp[editingPathPrefix]) {
+                            tmp[editingPathPrefix] = {...tmp[editingPathPrefix], value: newPath};
+                            view.palette = tmp;
+                        }
+                    }
+                }}
+                initialPath={(palettes.path[editingPathPrefix] as PathControl)?.value || ''}
+                markerPosition={editingPathPrefix === 'head' || editingPathPrefix.includes('head') ? 'head' : 'tail'}
+            />
+        )}
 
     </section>);
 }
