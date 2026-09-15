@@ -1,6 +1,6 @@
 # Viewpoint properties: gate the Type options, drop the Form theme field
 
-Date: 2026-09-15 13:51
+Date: 2026-09-15 13:51 (revised 14:05: Decoration gated too)
 Type: feat (UI gating) + chore (dead control removal)
 Branch: `validation-skeleton` in `/Users/alfonso/jjodel` (the tree the line numbers below were measured in)
 Effort: high
@@ -9,24 +9,31 @@ Effort: high
 
 Two changes to the viewpoint properties panel of the rail, decided by Alfonso on 2026-09-15.
 
-1. **Only `syntax` and `decoration` remain selectable as viewpoint types.** `validation`,
-   `semantics` and `editor_behavior` stay VISIBLE and become DISABLED, in the rail segmented control
-   and in the New Viewpoint dialog. They are not removed from the list and not removed from the
-   `ViewpointType` union.
+1. **`syntax` is the only selectable viewpoint type.** `decoration`, `validation`, `semantics` and
+   `editor_behavior` stay VISIBLE and become DISABLED, in the rail segmented control and in the New
+   Viewpoint dialog. They are not removed from the list and not removed from the `ViewpointType`
+   union.
 
-   Why disabled and not removed: projects already hold viewpoints typed `validation` or `semantics`,
-   and the segmented control renders the current type by matching it against the options. Drop the
-   option and such a viewpoint shows a control with nothing selected, so its type becomes
-   unreadable on screen. Disabled keeps the legacy value legible and documents the design space.
+   Why disabled and not removed: projects already hold viewpoints of every one of those types, and
+   the segmented control renders the current type by matching it against the options. Drop the
+   option and such a viewpoint shows a control with nothing selected, so its type becomes unreadable
+   on screen. `decoration` is also what `getViewpointType` falls back to when a saved viewpoint has
+   no explicit type (`viewpoint.ts:17-22`), so it is the type most saved viewpoints report.
 
-   Why these three: `validation` viewpoints are a different species today (`DValidationViewpoint`,
+   Why these four: `validation` viewpoints are a different species today (`DValidationViewpoint`,
    which carries the rules and is authored in its own environment, R-VAL); a `DViewPoint` with
    `isValidation` set from this control is the second, competing species of the same concern, which
-   is a known defect. `semantics` and `editor_behavior` have no consumer: every read of the type
-   downstream tests `vpType === 'syntax'` and nothing else (`TreeViewContent.tsx:3090-3091`,
+   is a known defect. `semantics` and `editor_behavior` have no consumer at all: every read of the
+   type downstream tests `vpType === 'syntax'` and nothing else (`TreeViewContent.tsx:3090-3091`,
    `ProjectEditor.tsx:2894-2895`), and `handleCreateViewpoint` collapses decoration, semantics and
-   editor_behavior into one branch (`ProjectEditor.tsx:1216-1219`). They are labels without a
-   mechanism, so they must not look choosable.
+   editor_behavior into one branch (`ProjectEditor.tsx:1216-1219`). `decoration` is the one that IS
+   still consumed, indirectly: `redux/selectors/selectors.ts:558` marks as `VP_Decorative` the views of every viewpoint
+   that is neither active nor exclusive, which is exactly a decoration viewpoint. Existing
+   decoration viewpoints therefore keep working unchanged; what this slice removes is the ability to
+   create a new one from the UI. Do not touch anything in the decorative rendering path.
+
+   The control is now a segmented with ONE live option. Leave it a segmented in this slice: whether
+   it becomes a read-only type badge is a separate decision, not yours to take here.
 
 2. **The Form theme field leaves `ViewpointProperties`.** The theme belongs to the Data Manager
    viewpoint, whose own panel already carries it.
@@ -52,9 +59,11 @@ In scope, and nothing else:
 Explicitly OUT of scope, do not touch:
 
 - the `ViewpointType` union and `getViewpointType` in `frontend/src/view/viewPoint/viewpoint.ts`:
-  all six values stay, including `dataManager`;
+  all six values stay, including `dataManager` and the `decoration` fallback;
 - `handleCreateViewpoint` in `ProjectEditor.tsx` and its switch: types that can no longer be chosen
   can still arrive from saved projects, and the switch stays the one writer of the legacy booleans;
+- `redux/selectors/selectors.ts` (the `VP_Decorative` branch at `:558`) and the whole
+  decorative rendering path;
 - `DataManagerViewpointPanel.tsx`: its Form theme and palette selects stay exactly as they are;
 - the `formTheme` field on `DViewElement` (`view/viewElement/view.tsx:249`), rung 0 of the cascade
   in `formAutoLayout.ts`, `IRForm.tsx`, and the `VersionFixer`. No migration, no version bump.
@@ -66,16 +75,18 @@ Read each file in full before editing.
 ### ViewpointProperties.tsx
 
 - Extend `typeOptions` (`:24-30`) with two fields, keeping the `ViewpointType` typing of `value`:
-  `enabled: boolean` and, for the disabled ones, `reason: string`. Reasons, verbatim:
+  `enabled: boolean` and, for the disabled ones, `reason: string`. Only `syntax` has
+  `enabled: true`. Reasons, verbatim:
+  - decoration: `Overlay viewpoints are not created from this panel.`
   - validation: `Validation viewpoints are created in the validation authoring environment.`
   - semantics: `Not available yet.`
   - editor_behavior: `Not available yet.`
 - Each option button gets `disabled={readOnly || !opt.enabled}` and `title={opt.reason}` when it has
   one. `handleTypeChange` is unchanged: a disabled button cannot reach it.
 - Add ONE hint line under the segmented control, as a `<p className="wp-field__hint">` inside the
-  same `wp-field`, text verbatim: `Validation, Semantics and Editor are not selectable yet.` The
-  hint exists because a `title` on a disabled button does not open in every browser, so the reason
-  has to be readable without hovering.
+  same `wp-field`, text verbatim: `Only Syntax can be chosen here.` The hint exists because a
+  `title` on a disabled button does not open in every browser, so the reason has to be readable
+  without hovering.
 - Remove the whole Form theme `wp-field` block (`:125-140`) and everything that existed only for it:
   the `FORM_THEME_INHERIT` constant, `currentFormTheme`, `handleFormThemeChange`, the
   `activeViewpointId` / `isActiveViewpoint` selector and its hint, the `jjform` import of
@@ -92,11 +103,12 @@ option. `&:hover:not(&--selected)` becomes `&:hover:not(&--selected):not(:disabl
 
 ### NewViewpointDialog.tsx
 
-- Add `enabled: boolean` to `VIEWPOINT_TYPES` (`:6-12`) with the same three disabled entries, and
-  render `<option ... disabled={!t.enabled}>` in the select.
+- Add `enabled: boolean` to `VIEWPOINT_TYPES` (`:6-12`), true for `syntax` alone, and render
+  `<option ... disabled={!t.enabled}>` in the select.
 - Append the reason to the description of each disabled entry, so the hint under the select says why
   when somebody lands on it with the keyboard.
-- The default `vpType` stays `'syntax'`, and `handleSubmit` is unchanged.
+- The default `vpType` stays `'syntax'`, and `handleSubmit` is unchanged. Do not remove the Type
+  field from the dialog: that is the follow-up decision mentioned in COSA, not this slice.
 
 ### The test
 
@@ -114,9 +126,11 @@ the log entry rather than dressing the test up as behavioral.
 ## Criteri di accettazione (verificabili a schermo)
 
 1. A viewpoint of type `syntax` selected in the tree: five options visible, `Syntax` selected and
-   dark, `Decoration` clickable, the other three greyed and not clickable, one hint line below.
-2. A viewpoint saved with type `validation`: the `Validation` option renders selected (dark, at the
-   disabled opacity) and no other option appears selected. Its type is still readable.
+   dark, the other four greyed and not clickable, one hint line below. Clicking a greyed option
+   changes nothing.
+2. A viewpoint saved without an explicit type (so `getViewpointType` returns `decoration`): the
+   `Decoration` option renders selected (dark, at the disabled opacity) and no other option appears
+   selected. Its type is still readable. Same check on a viewpoint saved as `validation`.
 3. The `Form theme` select is gone from the viewpoint panel, and still present and working in the
    Data Manager panel: changing it there still restyles the manager form.
 4. `npm run typecheck` clean, the vitest suite green, `npm run build` clean (from `frontend/`).
