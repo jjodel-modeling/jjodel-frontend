@@ -13,7 +13,7 @@ interface ViewpointPropertiesProps {
 
 const typeOptions: { value: ViewpointType; label: string; enabled: boolean; reason?: string }[] = [
     { value: 'syntax', label: 'Syntax', enabled: true },
-    { value: 'decoration', label: 'Decoration', enabled: true },
+    { value: 'decoration', label: 'Decoration', enabled: false, reason: 'Overlay viewpoints are not created from this panel.' },
     { value: 'validation', label: 'Validation', enabled: false, reason: 'Validation viewpoints are created in the validation authoring environment.' },
     { value: 'semantics', label: 'Semantics', enabled: false, reason: 'Not available yet.' },
     { value: 'editor_behavior', label: 'Editor', enabled: false, reason: 'Not available yet.' },
@@ -68,7 +68,7 @@ const ViewpointProperties: React.FC<ViewpointPropertiesProps> = ({ viewpoint, re
                         </button>
                     ))}
                 </div>
-                <p className="wp-field__hint">Validation, Semantics and Editor are not selectable yet.</p>
+                <p className="wp-field__hint">Only Syntax can be chosen here.</p>
             </div>
         </div>
     );
