@@ -23,6 +23,27 @@ scritte nello stesso file prima di committare.
   Lezione: due corsie parallele committano il log una alla volta, ciascuna dopo aver riletto la
   testa; lo stesso file non si mette in due commit sovrapposti.
 
+## 2026-09-16 — fix: New Viewpoint dialog, gating reason moved into the hint
+**Prompt**: chat prompt, not a repo document: in `NewViewpointDialog.tsx` only, restore the four
+disabled types' descriptions and put `Only Syntax can be chosen here.` in the hint under the select,
+as ONE child span of the flex `.form-hint` (`create-project-dialog.scss:312`). Verify on screen.
+**Files touched**: `98e6fd6cb`: `frontend/src/components/project/NewViewpointDialog.tsx` (4
+descriptions restored, `enabled` and `disabled={!t.enabled}` kept; hint = one `<span>`: description,
+period, gating sentence). This entry in its own commit.
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-15 13:51
+**Causa**: (a)
+**Regressions**: no. The five descriptions compared byte for byte with `fe7a33073`, `diff` exit 0.
+`npm run typecheck` exit 2, **33** on full output, set identical to the previous run (`diff` exit
+0), **0** in the file, control `Measurable` → 6. `npm run build` exit 0, pre-existing warnings. No
+vitest suite covers the dialog.
+**Out-of-scope changes**: no.
+**Layer Impact Report**: not-required — no critical-zone file (§3.1).
+**Smoke visivo**: passato — Playwright probe `scripts/smoke/_tmp_vpdlg_verify.ts` (gitignored) on the
+live dev server, 8 PASS 0 FAIL, plus the dialog screenshot read by eye.
+**Notes**: Measured with Syntax selected: `.form-hint` is `display:flex` with exactly one child node, a SPAN; text `Exclusive view — defines the concrete syntax of a model. Only Syntax can be chosen here.`, one box wrapping to two lines. Keyboard (ArrowDown, End) on the closed select leaves the value on `syntax`: the disabled options are unreachable, which is the premise of this fix. Causa (a): the 13:51 prompt's keyboard premise for the appended reasons was wrong.
+**Prompt document name**: 2026-09-16 00:03
+
 ## 2026-09-15 — feat: Decoration viewpoint type gated too (prompt revision 14:05)
 **Prompt**: `claude_2026-09-15_1351_prompt_viewpoint_type_gating_form_theme.md` as revised in
 `1ed86ab0e`: `syntax` is the only selectable type; `decoration` disabled with its own reason, hint
