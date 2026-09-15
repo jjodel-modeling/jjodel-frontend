@@ -23,6 +23,36 @@ scritte nello stesso file prima di committare.
   Lezione: due corsie parallele committano il log una alla volta, ciascuna dopo aver riletto la
   testa; lo stesso file non si mette in due commit sovrapposti.
 
+## 2026-09-16 — feat: the viewpoint + asks what the view applies to and seeds its IR
+**Prompt**: `claude_2026-09-16_0027_prompt_plus_dialogo_nuova_view.md` — `+` opens «New view» with
+one question: a class (→ `createViewInWorkbench(…, 'DClass', vp.id)`) or «All classes (default view)»
+(→ `createBlankViewInViewpoint` seeded with the wildcard vertex IR and `appliableTo: 'Vertex'`). No new
+discovery: it stands on `discovery_2026-09-15_plus_view_ir_seed.md` (`b0b70bd54`), not contradicted.
+**Files touched**: `1731cbc66`: `components/project/NewViewDialog.tsx` (new, on `NewViewpointDialog`'s
+classes and radio cards), `utils/lastViewpoint.ts` (seed in `createBlankViewInViewpoint` only),
+`TreeViewSidebar/TreeViewContent.tsx` (`collectNewViewClasses`, dialog state and submit in
+`ViewpointNode`, `metamodels` passed at its 3 mount sites). This entry in its own commit.
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-16 00:11
+**Causa**: (f)
+**Regressions**: no. `npm run typecheck` exit 2, **33** on full output, set identical to the pre-edit
+run (`diff` exit 0), **0** in the touched files, control `Measurable` → 6; re-run after the focus
+experiment was reverted, same result. `npx vitest run` **3581 passed, 0 failed**, 9 files red at
+import, the pre-existing set. `npm run build` exit 0, pre-existing warnings (`bordr`, sass).
+**Out-of-scope changes**: yes — in `TreeViewContent.tsx`, beyond `handleAddView` and the dialog state:
+the `collectNewViewClasses` helper and the `metamodels` prop at the 3 `ViewpointNode` mount sites. The
+tree's class source lives in the parent's props, so the row had no other way to reach it.
+**Layer Impact Report**: not-required — no §3.1 file; `new2` is called bare, no outer TRANSACTION.
+**Smoke visivo**: passato — `scripts/smoke/_tmp_plusdlg_verify.ts` (gitignored), live dev server,
+**37 PASS 0 FAIL**, screenshots read. Criteria 1-6 each measured: Cancel/Escape leave `subViews`
+unchanged; the class view equals the one from the M2 canvas class menu on `ir`, `appliableTo`,
+`appliableToClasses`, `oclCondition`, jsx; IR tabs `Applies to · Structure · Symbol · Form · Source`;
+canvas rows 1 and 2 of the Fase 1 table as predicted; the CREATE payload already carries `ir`, with no
+later `ir` write (control: a view whose `ir` is written afterwards shows both). Survived the first run
+and replaced: a state-level spy whose control stayed green, since `TRANSACTION` is async.
+**Notes**: Class source: the tree's `metamodels` prop (`buildPackageData`). No portal: overlay 1440×900, Confirm on top by `elementFromPoint`. Pre-existing, untouched: `.dialog-header { display: none }` (`alert/style.scss:111`) hides every dialog header; `setLastEditedViewpoint` has no callers; the rename input is never focused, before (focus stays on `+`) and after (`BODY`), measured by `_tmp_plusdlg_focus.ts`. TODO: `MatchingSection` commits `metaclasses: []` 300 ms after the wildcard toggle-off.
+**Prompt document name**: 2026-09-16 00:27
+
 ## 2026-09-16 — fix: New Viewpoint dialog, gating reason moved into the hint
 **Prompt**: chat prompt, not a repo document: in `NewViewpointDialog.tsx` only, restore the four
 disabled types' descriptions and put `Only Syntax can be chosen here.` in the hint under the select,
