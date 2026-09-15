@@ -23,6 +23,45 @@ scritte nello stesso file prima di committare.
   Lezione: due corsie parallele committano il log una alla volta, ciascuna dopo aver riletto la
   testa; lo stesso file non si mette in due commit sovrapposti.
 
+## 2026-09-15 — chore(release): lanes C, G, B2 and D cherry-picked onto alfonso-frontend-jjtl
+**Prompt**: `claude_2026-09-15_1130_prompt_cherrypick_cgb2d_release_payload.md` — GO given after the
+visual verification. Pick the four code commits in the order C → G → B2 → D in the `~/jjodel-release`
+worktree (§6.5), gates on the destination branch, no push, no release lane.
+**Files touched**: no source touched in this run: the four commits are carried **as-is** with
+`git cherry-pick -x`, not rewritten. Two docs files, in separate commits: the prompt (`afecbb8f0`)
+and this entry. All four picks clean, no conflict:
+
+| lane | source (`validation-skeleton`) | destination (`alfonso-frontend-jjtl`) |
+|------|--------------------------------|---------------------------------------|
+| C — types resolved through admissible kinds | `3e3ab691a` | `adb9bfa3f` |
+| G — qualified type names parse in create/returnType | `2a1619653` | `b934d5124` |
+| B2 — Jjodie writes into the scope shown | `de77f22af` | `fccaeb0e0` |
+| D — `generateUniqueModelName` delegates | `284576f94` | `d6dbf7bfe` |
+
+Destination tip `d6dbf7bfe`, on top of the lane A tip `e82831264`. Each destination carries one
+`(cherry picked from commit …)` line and the same patch as its source: `--stat` file lists identical,
+`git patch-id --stable` identical for all four.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates in `/Users/alfonso/jjodel-release/frontend` with `node_modules` as a
+temporary symlink, removed at the end; `git status` empty in that worktree before and after.
+`npm run typecheck` exit 2, **14** `error TS` on full output = that branch's baseline, **measured in
+the same run** on a detached worktree at `e82831264` (removed with `git worktree remove` + `prune`):
+same set line-stripped, `diff` exit 0, with only `ChatMessages.tsx` 262 → 271 and `ProjectEditor.tsx`
+225 → 226 shifted by the diffs, exactly as the B2 and D entries recorded; **0** errors in the other
+18 files the picks touch, checked one by one. Positive controls with signal, same file same tool:
+`src/` → 14, `Measurable` → 6. `npm run build` exit 0, the chunk-size warning plus the pre-existing
+sass `@import` deprecations and the two `bordr` CSS lines. `npx vitest run src/jjscript
+src/services/__tests__`: **350 passed, 0 failed** over 11 files, against 309 over 9 on the base;
+one file red at import in both, `context-binding.test.ts`, `window is not defined`, pre-existing.
+New suites green: `resolvers` 65, `scopeGuard` 16, `JjodieRagService` 7.
+**Out-of-scope changes**: no.
+**Layer Impact Report**: not-required — no critical-zone file (§3.1).
+**Smoke visivo**: non applicabile in this run — the GO on C, G, B2 and D was given before it.
+**Notes**: D's source commit is mixed (code + `docs/discovery/discovery_2026-09-14_unique_model_name_delegation.md`), so the pick carries that report onto the release branch: the sha was picked as named, rather than split, which would have broken the «same files, same counts» check of step 5. Not pushed, release lane not run. The release prompt's `frontend/` commit counts are to be re-measured before it runs.
+**Prompt document name**: 2026-09-15 11:30
+
 ## 2026-09-15 — docs: two process rules in CLAUDE.md (static tests, scope of regenerated artifacts)
 **Prompt**: `claude_2026-09-15_1030_prompt_lane_h_claude_md_two_rules.md` — add the two rules
 learned on 2026-09-14: a source-text test needs a mutation bench to be allowed, and a prompt
