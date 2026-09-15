@@ -384,14 +384,17 @@ function RuleEditor({ ruleId, className, name, body, message, enabled, onDelete 
                     onBlur={() => updateValidationRule(ruleId, { name: draftName })}
                     onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
                 />
-                <label className="validation-rules__switch">
-                    <input
-                        type="checkbox"
-                        checked={enabled}
-                        onChange={e => updateValidationRule(ruleId, { enabled: e.target.checked })}
+                <div className="validation-rules__switch">
+                    <span id={`vr-active-${ruleId}`}>Active</span>
+                    <button
+                        type="button"
+                        role="switch"
+                        aria-checked={enabled}
+                        aria-labelledby={`vr-active-${ruleId}`}
+                        className={`jjodel-switch${enabled ? ' active' : ''}`}
+                        onClick={() => updateValidationRule(ruleId, { enabled: !enabled })}
                     />
-                    <span>Active</span>
-                </label>
+                </div>
                 <button className="validation-rules__delete" onClick={onDelete} title="Delete rule">
                     <i className="bi bi-trash" aria-hidden="true" />
                 </button>
