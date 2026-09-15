@@ -498,3 +498,18 @@ autorizzata a parte. La prima e' locale e sufficiente; la seconda e' piu' pulita
 - `frontend/src/model/validation/validationTypes.ts` (intestazione, «Che cosa NON c'e'»)
 - `docs/decisions.md` — R-VAL-9 (la cosa diversa con cui non va confusa)
 - `frontend/src/joiner/classes.ts` (`DPointerTargetable.childKeys`)
+
+---
+
+## I chip «Suggested:» dello stato vuoto del rules editor non esistono
+
+**Registrato:** 2026-09-16
+**Origine:** slice 1 del Symbol Editor 1b (`docs/prompts/2026-09-15_1830_slice-1_rules-editor.md`), Q7 dell'ACK (`docs/prompts/2026-09-16_ack-slice-1_rules-editor.md`): tenuti fuori perimetro e rinviati a un ticket, che e' questo.
+**Stato attuale:** lo stato vuoto del rules editor (mockup 2i) rende il titolo, il corpo e la CTA «Add first rule», e **non** la riga `or start from:` con i chip `state.isInitial`, `state.isFinal`, `state.isComposite`. Il mockup li disegna come scorciatoie che creano la prima regola gia' con il predicato dentro. Il testo dei chip esiste gia' come funzione — `formatPredicate` in `frontend/src/components/ui/ConditionalEditor/conditional.ts` e' dichiarata dalla D4 come sorgente unica del testo in riga, delle caption della preview e dei chip — quello che manca e' **quali predicati proporre**: serve filtrare `PathBuilderFeatures.attributes` sui tipi booleani (`attributeTypeToLiteralKind` in `ui/PredicateBuilder/predicateDefaults.ts` sa gia' rispondere) e decidere quanti proporne, in che ordine, e se includere `marked` e le sottoclassi via `isKind`. `ConditionalEditor` riceve gia' `features` e `classNames`: nessuna nuova prop e' necessaria per i soli attributi.
+**Fix strutturale raccomandato:** una funzione pura accanto a `formatPredicate`, per esempio `suggestedPredicates(features, classNames, max)`, che ritorna `Predicate[]`; i chip la rendono con `formatPredicate` e al click aggiungono la regola. Sta nello stesso modulo puro e resta testabile nel bench node. La decisione di design (quali fonti, quale cap) precede il codice: e' la ragione per cui la slice 1 non l'ha scritta.
+**Priorita':** bassa — lo stato vuoto e' completo e utilizzabile senza i chip; sono una scorciatoia, non una via unica.
+**Effort stimato:** mezza giornata, la meta' in decisione di design.
+**Riferimenti:**
+- `docs/handoff/mockup-copy-1b.md` — artboard 2i (`or start from:`) e 2b (`Suggested:`)
+- `docs/handoff/decisions-symbol-editor-1b.md` — D4
+- `docs/prompts/2026-09-16_ack-slice-1_rules-editor.md` — Q7
