@@ -23,6 +23,33 @@ scritte nello stesso file prima di committare.
   Lezione: due corsie parallele committano il log una alla volta, ciascuna dopo aver riletto la
   testa; lo stesso file non si mette in due commit sovrapposti.
 
+## 2026-09-15 — feat: viewpoint type gating, Form theme select dropped from ViewpointProperties
+**Prompt**: `claude_2026-09-15_1351_prompt_viewpoint_type_gating_form_theme.md` — only `syntax` and
+`decoration` selectable (validation, semantics, editor_behavior visible and disabled, in the rail
+segmented control and the New Viewpoint dialog); the dead Form theme field leaves the viewpoint panel.
+**Files touched**: `d039fc7e7`: `ViewpointProperties.tsx` (options gated with `enabled`/`reason`,
+one hint line; Form theme block, `FORM_THEME_INHERIT`, `useSelector`, `jjform` import and the STYLE2/UX1
+comments removed), `properties.scss` (1 line, hover skips `:disabled`), `NewViewpointDialog.tsx`
+(`enabled`, `disabled` options, reason appended to descriptions), `viewpointThemeHint.test.ts`
+(rewritten, 5 tests). This entry in its own commit.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown, until the visual check. Measurements of the prompt re-verified before the
+edit, none contradicted: `IRForm` mounted only with `host="manager"` (`InstanceManagerTab.tsx:3036`,
+`:3070`), `viewpointOfHost` at `IRForm.tsx:190-192`, rung 0 at `:232-236`, the `default:` branch at
+`ProjectEditor.tsx:1216-1219`, `vpType === 'syntax'` the only test at `TreeViewContent.tsx:3091` and
+`ProjectEditor.tsx:2895`. `npm run typecheck` exit 2, **33** `error TS` on full output before and
+after, the two sets line-stripped `diff` exit 0, **0** in the four touched files; control `Measurable`
+→ 6. `npx vitest run` **3581 passed, 0 failed**, 9 files red at import (`window is not defined`), the
+pre-existing set; 3592 − 16 old tests + 5 new = 3581. `npm run build` exit 0, chunk-size warning, sass
+deprecations and the `bordr` line, all pre-existing.
+**Out-of-scope changes**: no.
+**Layer Impact Report**: not-required — no critical-zone file (§3.1).
+**Smoke visivo**: non eseguito — spetta ad Alfonso: acceptance criteria 1-3 of the prompt.
+**Notes**: The test is SOURCE-TEXT, with no mutation bench: its subject is the presence of a control in a file, not a behavior; `>Form theme<` found in the DM panel is the signal of the absent one. Stale, out of scope: `DataManagerViewpointPanel.tsx:54` still says this test forbids `LProject.getProject`/`viewpoints`/`_lastSelected`. A native disabled `<option>` cannot become the select's value, so the appended reason likely never shows in the dialog hint.
+**Prompt document name**: 2026-09-15 13:51
+
 ## 2026-09-15 — chore(release): lanes C, G, B2 and D cherry-picked onto alfonso-frontend-jjtl
 **Prompt**: `claude_2026-09-15_1130_prompt_cherrypick_cgb2d_release_payload.md` — GO given after the
 visual verification. Pick the four code commits in the order C → G → B2 → D in the `~/jjodel-release`
