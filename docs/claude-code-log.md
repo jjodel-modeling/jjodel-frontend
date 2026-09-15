@@ -23,6 +23,28 @@ scritte nello stesso file prima di committare.
   Lezione: due corsie parallele committano il log una alla volta, ciascuna dopo aver riletto la
   testa; lo stesso file non si mette in due commit sovrapposti.
 
+## 2026-09-15 — feat: Decoration viewpoint type gated too (prompt revision 14:05)
+**Prompt**: `claude_2026-09-15_1351_prompt_viewpoint_type_gating_form_theme.md` as revised in
+`1ed86ab0e`: `syntax` is the only selectable type; `decoration` disabled with its own reason, hint
+text changed. Applied on top of `d039fc7e7`, which carried the rest of the prompt.
+**Files touched**: `9335f4417`: `ViewpointProperties.tsx` (decoration
+`enabled: false` + reason, hint `Only Syntax can be chosen here.`), `NewViewpointDialog.tsx`
+(decoration `enabled: false`, reason appended). `properties.scss` and the test unchanged since
+`d039fc7e7`. This entry in its own commit.
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-15 13:51
+**Causa**: (f)
+**Regressions**: unknown, until the visual check. New measurements re-verified: `getViewpointType`
+falls back to `decoration` at `viewpoint.ts:17-22`, `VP_Decorative` at `selectors.ts:558`; neither
+touched. `npm run typecheck` exit 2, **33** on full output, set identical to the post-`d039fc7e7`
+run (`diff` exit 0), **0** in the touched files, control `Measurable` → 6. `npx vitest run` **3581
+passed, 0 failed**, the same 9 files red at import. `npm run build` exit 0, pre-existing warnings only.
+**Out-of-scope changes**: no.
+**Layer Impact Report**: not-required — no critical-zone file (§3.1).
+**Smoke visivo**: non eseguito — spetta ad Alfonso: acceptance criteria 1-3 of the revised prompt.
+**Notes**: The dialog reuses the panel's verbatim decoration reason, so the New Viewpoint hint says «not created from this panel» inside a dialog. The test is untouched: it pins the Form theme removal, not the type list. The earlier finding stands: a disabled `<option>` cannot become the select's value, so the appended reasons likely never show in the dialog hint.
+**Prompt document name**: 2026-09-15 13:51
+
 ## 2026-09-15 — feat: viewpoint type gating, Form theme select dropped from ViewpointProperties
 **Prompt**: `claude_2026-09-15_1351_prompt_viewpoint_type_gating_form_theme.md` — only `syntax` and
 `decoration` selectable (validation, semantics, editor_behavior visible and disabled, in the rail
