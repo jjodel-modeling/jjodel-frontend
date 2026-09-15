@@ -206,11 +206,27 @@ export function createBlankViewInViewpoint(
         candidate = `${nameSeed}${i}`;
     }
 
+    // IR seed (R-IRN-4, A3): the view is born with a vertex ir, so its editor opens on the
+    // IR tabs. No metaclass is known here, so the seed is the wildcard: this is the «All
+    // classes (default view)» branch of NewViewDialog, while a view for one class goes
+    // through createViewInWorkbench. No oclCondition: with no metaclass there is no query
+    // to build (discovery_2026-09-15_plus_view_ir_seed.md §4).
+    const seed = computeCreationSeed({ kind: 'vertex', label: candidate });
+
     const newView = DViewElement.new2(
         candidate,
         '', // jsxString vuoto, l'utente personalizzerà dopo
         dVp,
-        undefined,
+        (d) => {
+            // Written inside the callback, which Constructors.end() runs BEFORE persist:
+            // the view is persisted with its ir already on it, in one action.
+            if (seed) {
+                (d as any).ir = seed;
+                // `appliableTo` follows ir.kind (ratifica 2026-08-16), as a literal like
+                // createViewInWorkbench writes it.
+                d.appliableTo = 'Vertex';
+            }
+        },
         true
     );
     return newView;

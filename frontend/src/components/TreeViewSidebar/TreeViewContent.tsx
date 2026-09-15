@@ -25,6 +25,7 @@ import type { Pointer } from '../../joiner';
 import type { ViewpointType } from '../../view/viewPoint/viewpoint';
 import { useTreeViewPanel, ElementAction } from '../../contexts/TreeViewPanelContext';
 import { getLastEditedViewpointId, createViewInWorkbench, createBlankViewInViewpoint } from '../../utils/lastViewpoint';
+import { NewViewDialog, type NewViewClassOption, type NewViewTarget } from '../project/NewViewDialog';
 import { isAdvancedMode } from '../../hooks/useInterfaceMode';
 import { JjodelEvents, SystemEvents } from '../../events/registry';
 import { useNodeProblems } from '../editor-v2/problems/useNodeProblems';
@@ -1861,6 +1862,25 @@ interface ViewpointRenameProps extends SubViewItemRenameProps {
     startRenameView: (viewId: string, currentName: string, isFirst?: boolean) => void;
 }
 
+/**
+ * The project's classes for NewViewDialog, read off the metamodel data the tree already
+ * built in mapStateToProps (`buildPackageData`): the same list the METAMODELS section
+ * shows, not a second derivation from the store.
+ */
+function collectNewViewClasses(metamodels: TreeMetamodelData[]): NewViewClassOption[] {
+    const out: NewViewClassOption[] = [];
+    const walk = (mm: TreeMetamodelData, pkgs: TreePackageData[]) => {
+        for (const pkg of pkgs) {
+            for (const c of pkg.classes) {
+                out.push({ id: c.id, name: c.name, metamodelId: mm.id, metamodelName: mm.name });
+            }
+            walk(mm, pkg.subPackages);
+        }
+    };
+    for (const mm of metamodels) walk(mm, mm.rootPackages);
+    return out;
+}
+
 const ViewpointNode = memo(function ViewpointNode({
     vp,
     depth,
@@ -1876,6 +1896,7 @@ const ViewpointNode = memo(function ViewpointNode({
     submitRenameView,
     handleRenameKeyDown,
     renameInputRef,
+    metamodels,
 }: {
     vp: TreeViewpointData;
     depth: number;
@@ -1884,6 +1905,7 @@ const ViewpointNode = memo(function ViewpointNode({
     onSelect?: () => void;
     selectedViewId?: string;
     highlightQuery?: string;
+    metamodels: TreeMetamodelData[];
 } & ViewpointRenameProps): ReactElement {
     const hasSubViews = vp.subViews.length > 0;
     const expanded = isExpandedFn(vp.id);
@@ -1908,7 +1930,32 @@ const ViewpointNode = memo(function ViewpointNode({
         onSelect?.();
     }, [vp.id, onSelect]);
 
+    // `+` creates nothing on the spot: a view born with an IR cannot be neutral on the
+    // canvas, so the dialog asks what it applies to first.
+    const [newViewOpen, setNewViewOpen] = useState(false);
+    const newViewClasses = useMemo(
+        () => (newViewOpen ? collectNewViewClasses(metamodels) : []),
+        [newViewOpen, metamodels]
+    );
+
     const handleAddView = useCallback(() => {
+        setNewViewOpen(true);
+    }, []);
+
+    const handleNewViewSubmit = useCallback((target: NewViewTarget) => {
+        setNewViewOpen(false);
+        if (target.kind === 'class') {
+            // The class's own context-menu creator, so the two views are the same modulo id
+            // and name; this row's viewpoint is passed, not the last edited one.
+            const newViewId = createViewInWorkbench(target.classId, target.className, 'DClass', vp.id);
+            // null: the creator already raised its own toast.
+            if (!newViewId) return;
+            // The name is read back from the D element, not recomposed: the creator does
+            // not uniquify it, and the rename shows what was really written.
+            const dView = DPointerTargetable.from(newViewId) as DViewElement | undefined;
+            if (dView) startRenameView(newViewId, dView.name, true);
+            return;
+        }
         const dVp = DPointerTargetable.from(vp.id) as DViewElement | undefined;
         if (!dVp) {
             console.warn('[TreeView] handleAddView: viewpoint D-element not found:', vp.id);
@@ -1971,6 +2018,12 @@ const ViewpointNode = memo(function ViewpointNode({
                     ))}
                 </div>
             )}
+            <NewViewDialog
+                isOpen={newViewOpen}
+                onClose={() => setNewViewOpen(false)}
+                onSubmit={handleNewViewSubmit}
+                classes={newViewClasses}
+            />
         </div>
     );
 });
@@ -2582,6 +2635,7 @@ function TreeViewContentComponent(props: AllProps) {
                                 <ViewpointNode
                                     key={vp.id}
                                     vp={vp}
+                                    metamodels={metamodels}
                                     depth={3}
                                     isExpandedFn={isExpandedFn}
                                     onToggleFn={onToggleFn}
@@ -2676,6 +2730,7 @@ function TreeViewContentComponent(props: AllProps) {
                                         <ViewpointNode
                                             key={vp.id}
                                             vp={vp}
+                                            metamodels={metamodels}
                                             depth={3}
                                             isExpandedFn={isExpandedFn}
                                             onToggleFn={onToggleFn}
@@ -2703,6 +2758,7 @@ function TreeViewContentComponent(props: AllProps) {
                         <ViewpointNode
                             key={vp.id}
                             vp={vp}
+                            metamodels={metamodels}
                             depth={2}
                             isExpandedFn={isExpandedFn}
                             onToggleFn={onToggleFn}
