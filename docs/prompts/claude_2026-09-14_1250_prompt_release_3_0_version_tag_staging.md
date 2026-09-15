@@ -23,16 +23,21 @@ in `~/jjodel`. `node_modules` non c'è nel worktree: prima del typecheck fare
 `ln -s ~/jjodel/frontend/node_modules ~/jjodel-release/frontend/node_modules`; se il build si
 lamenta del symlink, rimuoverlo e fare `npm ci` in `~/jjodel-release/frontend`.
 
-## Contesto misurato il 14/9 (non rifare l'analisi)
+## Contesto misurato il 14/9, conteggi rimisurati il 15/9 (non rifare l'analisi)
 
 - `beta.jjodel.io` è lo slot `staging` di Azure (`test-jjodel`), costruito dal branch `staging`
   dal workflow `.github/workflows/staging_test-jjodel(staging).yml` a ogni push. L'ultimo merge in
   `staging` è la PR #143 del 6/9 da `alfonso-frontend-jjtl`.
-- Rispetto a `origin/staging`, `alfonso-frontend-jjtl` ha **4 commit che toccano `frontend/`**:
-  `9b9730ed4`, `11f42aada`, `67032e14a` (i tre fix JjScript del 12/9) e `96f718450` (docs). Entrano
-  nella 3.0: è la decisione di Alfonso, non da rimettere in discussione qui.
-- Il locale `alfonso-frontend-jjtl` è avanti di 31 commit su `origin` e **indietro di 1**:
-  `27a0a436e` (README, «JJodel» → «Jjodel») fatto su GitHub il 10/9.
+- Rispetto a `origin/staging`, `alfonso-frontend-jjtl` ha **13 commit che toccano `frontend/`**
+  (rimisurati il 15/9 dopo l'atterraggio della corsia A e del cherry-pick C/G/B2/D; il numero di
+  questo elenco non si asserisce, si rimisura all'inizio del giro, vedi il gate d'ingresso):
+  `96f718450` (docs sotto `frontend/src/jjtl/`), poi i dodici di codice `9b9730ed4`, `11f42aada`,
+  `67032e14a` (i tre fix JjScript del 12/9), `df11ed769`, `1efe5c3ec`, `fa3139a37`, `ce9e78d64`,
+  `e82831264` (corsia A), `adb9bfa3f`, `b934d5124`, `fccaeb0e0`, `d6dbf7bfe` (corsie C, G, B2, D).
+  Entrano nella 3.0: è la decisione di Alfonso, non da rimettere in discussione qui.
+- Il locale `alfonso-frontend-jjtl` è avanti di **41** commit su `origin` e **indietro di 1**:
+  `27a0a436e` (README, «JJodel» → «Jjodel») fatto su GitHub il 10/9. Anche questi due numeri si
+  rimisurano: l'invariante è «indietro di 1, e quell'uno è `27a0a436e`», non il numero in avanti.
 - `frontend/package.json` dice `"version": "3.0.0-beta"`; `vite.config.ts` lo inietta come
   `__APP_VERSION__` e il footer lo mostra come `v3.0.0-beta (<build>)` (`frontend/src/version.ts`).
   `package-lock.json` ripete la stringa due volte (root e `packages[""]`).
@@ -46,12 +51,32 @@ deve dire `alfonso-frontend-jjtl`. Poi `git fetch origin`. Se `git rev-list --co
 alfonso-frontend-jjtl..origin/alfonso-frontend-jjtl` è diverso da `1`, o il commit in più non è
 `27a0a436e`, HARD STOP e riferisci: qualcuno ha pushato altro.
 
+Poi si **misurano**, e si riportano, i tre numeri su cui poggiano i passi seguenti, invece di
+riprendere quelli scritti qui:
+
+```
+AHEAD=$(git rev-list --count origin/alfonso-frontend-jjtl..HEAD)
+FRONTEND=$(git rev-list --count origin/staging..HEAD -- frontend/)
+git rev-list --reverse origin/staging..HEAD -- frontend/    # l'elenco per il body della PR
+```
+
+`AHEAD` e `FRONTEND` valgono per questo giro e servono al confronto prima/dopo del passo 1, non
+come soglie da confermare. Un valore diverso da quello del contesto non è un errore: significa che
+altre corsie hanno consegnato, ed è il numero misurato a fare fede.
+
 ## Passo 1, allineamento con origin
 
 `git rebase origin/alfonso-frontend-jjtl`. Il commit remoto tocca solo `README.md`: un conflitto è
-improbabile; se compare, HARD STOP senza risolverlo. Dopo il rebase: `git rev-list --count
-origin/alfonso-frontend-jjtl..HEAD` deve dire `31`, e `git log -1 --format=%s origin/alfonso-frontend-jjtl`
-deve essere il commit del README.
+improbabile; se compare, HARD STOP senza risolverlo. Dopo il rebase, il gate è un confronto con la
+misura presa al gate d'ingresso, non un letterale:
+
+- `git rev-list --count origin/alfonso-frontend-jjtl..HEAD` deve valere di nuovo `AHEAD`, lo stesso
+  numero di prima: il rebase riscrive i commit, non ne aggiunge né ne toglie;
+- `git merge-base --is-ancestor origin/alfonso-frontend-jjtl HEAD` deve uscire 0, cioè il commit del
+  README è ora in cronologia;
+- `git rev-list --count origin/staging..HEAD -- frontend/` deve valere di nuovo `FRONTEND`.
+
+Un solo numero fuori posto è un HARD STOP.
 
 ## Passo 2, commit `chore(release): version 3.0.0`
 
@@ -81,8 +106,9 @@ Da `frontend/`: `npm run typecheck` e `npm run build`, entrambi verdi. Poi
 
 `git push origin alfonso-frontend-jjtl`. Poi la PR verso `staging`: se `gh` è disponibile,
 `gh pr create --base staging --head alfonso-frontend-jjtl --title "Release 3.0.0" --body-file <file>`
-con un body breve che elenca i quattro commit di codice e il bump di versione; altrimenti stampa
-l'URL `https://github.com/jjodel-modeling/jjodel-frontend/compare/staging...alfonso-frontend-jjtl`
+con un body breve che elenca i commit di codice misurati al gate d'ingresso e il bump di versione;
+altrimenti stampa l'URL
+`https://github.com/jjodel-modeling/jjodel-frontend/compare/staging...alfonso-frontend-jjtl`
 e il body, e Alfonso apre la PR a mano.
 
 **HARD STOP qui.** Il merge della PR lo fa Alfonso: il push su `staging` fa partire la build Azure
