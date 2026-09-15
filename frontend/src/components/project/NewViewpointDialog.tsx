@@ -5,10 +5,10 @@ import '../CreateProjectDialog/create-project-dialog.scss';
 
 const VIEWPOINT_TYPES: { value: ViewpointType; label: string; description: string; enabled: boolean }[] = [
     { value: 'syntax', label: 'Syntax', description: 'Exclusive view — defines the concrete syntax of a model', enabled: true },
-    { value: 'decoration', label: 'Decoration', description: 'Overlay — adds visual decorations to existing views. Overlay viewpoints are not created from this panel.', enabled: false },
-    { value: 'validation', label: 'Validation', description: 'Overlay — highlights validation errors and warnings. Validation viewpoints are created in the validation authoring environment.', enabled: false },
-    { value: 'semantics', label: 'Semantics', description: 'Overlay — shows semantic information. Not available yet.', enabled: false },
-    { value: 'editor_behavior', label: 'Editor behavior', description: 'Overlay — customizes editor interactions. Not available yet.', enabled: false },
+    { value: 'decoration', label: 'Decoration', description: 'Overlay — adds visual decorations to existing views', enabled: false },
+    { value: 'validation', label: 'Validation', description: 'Overlay — highlights validation errors and warnings', enabled: false },
+    { value: 'semantics', label: 'Semantics', description: 'Overlay — shows semantic information', enabled: false },
+    { value: 'editor_behavior', label: 'Editor behavior', description: 'Overlay — customizes editor interactions', enabled: false },
 ];
 
 interface NewViewpointDialogProps {
@@ -134,7 +134,7 @@ export const NewViewpointDialog: React.FC<NewViewpointDialogProps> = ({
                                 ))}
                             </select>
                             <span className="form-hint">
-                                {VIEWPOINT_TYPES.find(t => t.value === vpType)?.description}
+                                <span>{VIEWPOINT_TYPES.find(t => t.value === vpType)?.description}. Only Syntax can be chosen here.</span>
                             </span>
                         </div>
                     </div>
