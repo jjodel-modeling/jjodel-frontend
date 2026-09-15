@@ -19,6 +19,12 @@ Shared engagement rules live in docs/PROTOCOL.md (P1..P9); see §1.
  1b. Critical-zone rules (§3.x) override Rule 1. If a §3 rule requires
      touching a file outside the listed scope, follow the §3 rule and
      report the scope expansion in the closing diff.
+ 1c. When the scope includes a file whose change triggers a
+     regeneration rule (CLAUDE.md → AGENTS.md, §17), the prompt names
+     the regenerated artifact in the scope too, so no lane has to
+     choose between the scope and the rule. If a prompt omits it,
+     regenerate anyway, never hand-edit, and report the expansion the
+     way 1b does.
  2. Never rename existing identifiers (CSS classes, vars, functions,
     props, components, exported names) unless the prompt asks.
  3. Committed behavior is verified. Never degrade it. In doubt: STOP.
@@ -447,6 +453,12 @@ In an interactive shell here, `grep` resolves to a wrapper around `ugrep --ignor
 `command grep` bypasses the wrapper and resolves to BSD grep 2.6.0-FreeBSD, which honours both flags. Use it when those flags carry the meaning of the search. Do not go looking for GNU grep: it is not installed here.
 
 A search scope written into a prompt is a claim about what the command does. If the command does something else, the scope was never enforced.
+
+**Sub-rule: a test that asserts on source text must prove itself on a mutation bench**
+
+A test that greps the source of a file instead of executing it pins the shape of the code, not what the code does. Write one only when a mutation bench has been run on the commented-out variant and shows that the test dies with it. Measured across lanes A2 to A4 (2026-09-12 and 2026-09-13): source-text tests survived an inverted tie-break, a dropped guard, and a lookup that mutated its input, all of them invisible to a regex over the body.
+
+When the behaviour cannot be executed because the file does not import in the bench (`window is not defined`, through the `joiner` barrel and monaco), state the gap in the log entry. Do not fill it with a source-text test. The fix is to move the pure logic into a module the bench can import; `frontend/src/model/nameLookup.ts` is the worked example.
 
 ---
 
