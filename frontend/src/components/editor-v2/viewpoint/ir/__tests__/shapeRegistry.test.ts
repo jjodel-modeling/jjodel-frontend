@@ -16,6 +16,7 @@ import {
     SHAPE_REGISTRY, SVG_BORDER_DASH, getShapeDescriptor,
     contentRect, boxForContent, boxForContentNumeric,
     boxFromIntrinsic, hasSizeSupplement, MEASURE_SLACK,
+    baseCornerRadius, clampCornerRadius, honorsCornerRadius, resolveCornerRadius, roundedPolygonPath,
 } from '../shapeRegistry';
 
 const ALL_FORMS: ShapeForm[] = [
@@ -463,5 +464,173 @@ describe('shapeRegistry: dalla misura del DOM al box', () => {
                 expect(box.h).toBeGreaterThanOrEqual(0);
             }
         }
+    });
+});
+
+/**
+ * Raggio degli spigoli (slice 3 di Symbol Editor 1b, decisione D5).
+ *
+ * Il painter del canvas (IRNodeContent) non si importa nel banco, perche' passa dal
+ * barrel del joiner: tutte le decisioni vivono quindi in `resolveCornerRadius` e
+ * `roundedPolygonPath`, ed e' li' che questi test le eseguono. Il percorso resta
+ * prima invarianti, poi un solo letterale.
+ */
+describe('shapeRegistry: raggio degli spigoli', () => {
+    type Pt = { x: number; y: number };
+    const HONORING: ShapeForm[] = ['rect', 'rounded', 'diamond', 'hexagon', 'parallelogram'];
+    const IGNORING: ShapeForm[] = ['ellipse', 'circle', 'stadium', 'cylinder'];
+    const POLYGONS: ShapeForm[] = ['diamond', 'hexagon', 'parallelogram'];
+    const EPS = 1e-3;
+
+    /** La grammatica che roundedPolygonPath emette: M, L, Q, Z con coppie x,y. */
+    const parse = (d: string): { c: string; pts: Pt[] }[] => {
+        const out: { c: string; pts: Pt[] }[] = [];
+        for (const m of d.matchAll(/([MLQZ])([^MLQZ]*)/g)) {
+            const body = m[2].trim();
+            const nums = body ? body.split(/[\s,]+/).map(Number) : [];
+            const pts: Pt[] = [];
+            for (let i = 0; i < nums.length; i += 2) pts.push({ x: nums[i], y: nums[i + 1] });
+            out.push({ c: m[1], pts });
+        }
+        return out;
+    };
+    /** I vertici del registry in pixel reali: l'oracolo, scritto qui e non importato. */
+    const pixels = (form: ShapeForm, w: number, h: number): Pt[] =>
+        (SHAPE_REGISTRY[form].painter as { points: string }).points.split(' ').map((s) => {
+            const [x, y] = s.split(',').map(Number);
+            return { x: (x * w) / 100, y: (y * h) / 100 };
+        });
+    const pointsOf = (form: ShapeForm) => (SHAPE_REGISTRY[form].painter as { points: string }).points;
+    const dist = (a: Pt, b: Pt) => Math.hypot(a.x - b.x, a.y - b.y);
+
+    /**
+     * Per ogni vertice: il punto di controllo e' il vertice, i due tagli stanno sui due
+     * lati adiacenti alla distanza attesa, dentro il box, e il taglio di un vertice non
+     * scavalca quello del vicino sullo stesso lato (niente spike).
+     */
+    const assertRounded = (form: ShapeForm, r: number, w: number, h: number) => {
+        const v = pixels(form, w, h);
+        const n = v.length;
+        const cmds = parse(roundedPolygonPath(pointsOf(form), r, w, h));
+        const label = `${form} r=${r} ${w}x${h}`;
+        expect(cmds.map(c => c.c).join(''), label).toBe(`M${'QL'.repeat(n - 1)}QZ`);
+        const a: Pt[] = [], b: Pt[] = [];
+        for (let i = 0; i < n; i++) {
+            const start = cmds[2 * i], q = cmds[2 * i + 1];
+            a.push(start.pts[0]);
+            expect(q.pts, label).toHaveLength(2);
+            expect(dist(q.pts[0], v[i]), `${label} control ${i}`).toBeLessThan(EPS);
+            b.push(q.pts[1]);
+        }
+        for (let i = 0; i < n; i++) {
+            const prev = v[(i + n - 1) % n], next = v[(i + 1) % n];
+            const expected = Math.min(r, Math.min(dist(prev, v[i]), dist(next, v[i])) / 2);
+            expect(Math.abs(dist(a[i], v[i]) - expected), `${label} a${i}`).toBeLessThan(EPS);
+            expect(Math.abs(dist(b[i], v[i]) - expected), `${label} b${i}`).toBeLessThan(EPS);
+            // sul lato: somma delle distanze dagli estremi = lunghezza del lato
+            expect(Math.abs(dist(prev, a[i]) + dist(a[i], v[i]) - dist(prev, v[i])), `${label} a${i} on edge`).toBeLessThan(EPS);
+            expect(Math.abs(dist(v[i], b[i]) + dist(b[i], next) - dist(v[i], next)), `${label} b${i} on edge`).toBeLessThan(EPS);
+            // niente incrocio sul lato prev -> v: il taglio uscente di prev viene prima
+            expect(dist(prev, b[(i + n - 1) % n]), `${label} spike at ${i}`).toBeLessThanOrEqual(dist(prev, a[i]) + EPS);
+            for (const p of [a[i], b[i]]) {
+                expect(p.x).toBeGreaterThanOrEqual(-EPS);
+                expect(p.y).toBeGreaterThanOrEqual(-EPS);
+                expect(p.x).toBeLessThanOrEqual(w + EPS);
+                expect(p.y).toBeLessThanOrEqual(h + EPS);
+            }
+        }
+    };
+
+    it('onorano l\'asse esattamente le cinque forme di D5', () => {
+        for (const form of ALL_FORMS) {
+            expect(honorsCornerRadius(form), form).toBe(HONORING.includes(form));
+        }
+        expect(honorsCornerRadius(undefined)).toBe(false);
+    });
+
+    it('assente o non valido non dipinge nulla: il rect salvato tiene i 4px e il rounded i 10px', () => {
+        const box = { w: 160, h: 64 };
+        for (const form of ALL_FORMS) {
+            for (const authored of [undefined, NaN, -1, Infinity, '6', null]) {
+                expect(resolveCornerRadius(form, authored, box), `${form} ${String(authored)}`).toEqual({ kind: 'none' });
+            }
+        }
+        expect(baseCornerRadius('rect')).toBe(4);
+        expect(baseCornerRadius('rounded')).toBe(10);
+        for (const form of [...POLYGONS, ...IGNORING]) expect(baseCornerRadius(form), form).toBe(0);
+    });
+
+    it('ellisse, cerchio, stadio e cilindro ignorano qualunque valore scritto', () => {
+        for (const form of IGNORING) {
+            for (const authored of [0, 6, 12, 400]) {
+                expect(resolveCornerRadius(form, authored, { w: 120, h: 120 }), `${form} ${authored}`).toEqual({ kind: 'none' });
+                expect(resolveCornerRadius(form, authored, null), `${form} ${authored} no box`).toEqual({ kind: 'none' });
+            }
+        }
+    });
+
+    it('uno 0 scritto sostituisce la base sulle forme CSS: non e\' assente', () => {
+        expect(resolveCornerRadius('rect', 0, { w: 160, h: 64 })).toEqual({ kind: 'css', px: 0 });
+        expect(resolveCornerRadius('rounded', 0, null)).toEqual({ kind: 'css', px: 0 });
+        // sui poligoni lo 0 e' il poligono di oggi
+        expect(resolveCornerRadius('diamond', 0, { w: 160, h: 64 })).toEqual({ kind: 'none' });
+    });
+
+    it('clamp di render a min(w, h) / 4 su entrambi i painter', () => {
+        expect(clampCornerRadius(30, 200, 40)).toBe(10);
+        expect(clampCornerRadius(6, 200, 40)).toBe(6);
+        expect(resolveCornerRadius('rect', 30, { w: 200, h: 40 })).toEqual({ kind: 'css', px: 10 });
+        expect(resolveCornerRadius('rounded', 6, { w: 200, h: 40 })).toEqual({ kind: 'css', px: 6 });
+        expect(resolveCornerRadius('diamond', 30, { w: 100, h: 60 })).toEqual({ kind: 'path', r: 15, w: 100, h: 60 });
+        expect(resolveCornerRadius('hexagon', 8, { w: 160, h: 64 })).toEqual({ kind: 'path', r: 8, w: 160, h: 64 });
+        // senza box la forma CSS tiene il numero scritto: non e' una taglia indovinata
+        expect(resolveCornerRadius('rect', 30, null)).toEqual({ kind: 'css', px: 30 });
+        for (const [r, w, h] of [[NaN, 10, 10], [6, 0, 10], [6, 10, -1], [-2, 10, 10]]) {
+            expect(clampCornerRadius(r, w, h), `${r} ${w} ${h}`).toBe(0);
+        }
+    });
+
+    it('un poligono senza box misurato resta spigoloso', () => {
+        for (const form of POLYGONS) {
+            expect(resolveCornerRadius(form, 6, null), form).toEqual({ kind: 'none' });
+            expect(resolveCornerRadius(form, 6, { w: 0, h: 0 }), form).toEqual({ kind: 'none' });
+        }
+    });
+
+    it('rombo 100x60 r=6: chiuso, un M, quattro Q, tre L, controlli sui vertici, tagli a 6', () => {
+        assertRounded('diamond', 6, 100, 60);
+    });
+
+    it('rombo 100x60 r=6: il d letterale, calcolato a mano', () => {
+        // Lato sqrt(50^2 + 30^2) = 58.3095; taglio 6 lungo il lato = (5.145, 3.087).
+        expect(roundedPolygonPath(pointsOf('diamond'), 6, 100, 60)).toBe(
+            'M44.855,3.087 Q50,0 55.145,3.087 L94.855,26.913 Q100,30 94.855,33.087 '
+            + 'L55.145,56.913 Q50,60 44.855,56.913 L5.145,33.087 Q0,30 5.145,26.913 Z',
+        );
+    });
+
+    it('esagono r=8: path chiuso, senza spike, ogni taglio sul proprio lato e dentro il box', () => {
+        assertRounded('hexagon', 8, 160, 64);
+        for (const form of POLYGONS) {
+            for (const [w, h] of [[160, 64], [64, 160], [40, 40], [300, 70]]) {
+                for (const r of [1, 8, 12]) assertRounded(form, r, w, h);
+            }
+        }
+    });
+
+    it('un raggio piu\' lungo del lato si ferma a meta\' del lato piu\' corto: i vicini si toccano, non si incrociano', () => {
+        for (const form of POLYGONS) assertRounded(form, 1000, 100, 60);
+        const cmds = parse(roundedPolygonPath(pointsOf('diamond'), 1000, 100, 60));
+        // il taglio uscente del vertice 0 e quello entrante del vertice 1 sono lo stesso punto medio
+        expect(dist(cmds[1].pts[1], cmds[2].pts[0])).toBeLessThan(EPS);
+        expect(dist(cmds[2].pts[0], { x: 75, y: 15 })).toBeLessThan(EPS);
+    });
+
+    it('r = 0 restituisce il poligono spigoloso, input degeneri un path vuoto', () => {
+        expect(roundedPolygonPath(pointsOf('diamond'), 0, 100, 60)).toBe('M50,0 L100,30 L50,60 L0,30 Z');
+        expect(roundedPolygonPath(pointsOf('diamond'), 6, 0, 60)).toBe('');
+        expect(roundedPolygonPath(pointsOf('diamond'), 6, 100, NaN)).toBe('');
+        expect(roundedPolygonPath('0,0 100,100', 6, 100, 100)).toBe('');
+        expect(roundedPolygonPath('0,0 x,1 100,100', 6, 100, 100)).toBe('');
     });
 });

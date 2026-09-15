@@ -22,6 +22,7 @@ import { useSelector } from 'react-redux';
 import { LPointerTargetable, U, type LViewElement } from '../../../../joiner';
 import { JjodelEvents } from '../../../../events/registry';
 import { recognizeSymbol } from '../ir/symbolRecognition';
+import { authoredCornerRadius } from '../ir/shapeRegistry';
 import {
     applyPresetToShape,
     CATALOG_FAMILIES,
@@ -186,6 +187,9 @@ export const SymbolEditorModal: React.FC = () => {
 
     const target = Array.isArray(ir.metaclasses) && ir.metaclasses.length > 0 ? ir.metaclasses[0] : null;
     const previewPreset = currentAxesPreset(ir.shape);
+    // Corner radius (slice 3): not a preset axis, so it travels beside the preset, and
+    // only when written. Absent (or invalid) leaves both previews on the base radius.
+    const cornerRadius = authoredCornerRadius(ir.shape.cornerRadius);
     const previewLabel = (typeof ir.label === 'string' && ir.label !== '') ? ir.label : (view.name as string);
 
     // Preview box (D8 wiring). Precedence mirrors the engine: the manual size
@@ -282,6 +286,7 @@ export const SymbolEditorModal: React.FC = () => {
                                             label={previewLabel}
                                             borderColor={typeof ir.shape.border?.color === 'string' && ir.shape.border.color !== ''
                                                 ? ir.shape.border.color : undefined}
+                                            cornerRadius={cornerRadius}
                                             maxW={PREVIEW_MAX_W}
                                             maxH={PREVIEW_MAX_H}
                                         />
@@ -292,7 +297,7 @@ export const SymbolEditorModal: React.FC = () => {
                                 ) : (
                                     <>
                                         <div className="symbol-editor-modal__preview-stage">
-                                            <SymbolPreview preset={previewPreset} width={168} />
+                                            <SymbolPreview preset={previewPreset} width={168} cornerRadius={cornerRadius} />
                                             {previewLabel ? (
                                                 <span className="symbol-editor-modal__preview-label">{previewLabel}</span>
                                             ) : null}

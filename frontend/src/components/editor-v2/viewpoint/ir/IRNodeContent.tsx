@@ -9,22 +9,29 @@
  * highlight classes stay in ObjectNode.
  */
 
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { useSelector } from 'react-redux';
 import { store, U } from '../../../../joiner';
 import { syncNodeLabel, syncSetReferenceValue, syncUpdateFeatureValue } from '../../sync/canvasToJjom';
 import { useEditorContextSafe } from '../../contexts/EditorContext';
 import InlineObjectSelect, { type InlineObjectOption } from '../../components/InlineObjectSelect';
-import type { CompiledView, CompiledTextStyle } from './irTypes';
+import type { CompiledView, CompiledTextStyle, NodeViewIR } from './irTypes';
 import type { ReadCtx } from './irReadCtx';
 import { makeReadCtx } from './irReadCtxLproxy';
 import { rowRenderedChildren } from './irContainment';
-import { getShapeDescriptor, SVG_BORDER_DASH, type ShapePainter } from './shapeRegistry';
+import {
+    authoredCornerRadius, getShapeDescriptor, honorsCornerRadius, resolveCornerRadius, roundedPolygonPath,
+    SVG_BORDER_DASH, type ShapePainter, type Size,
+} from './shapeRegistry';
 
 /**
  * Il contorno di una forma dipinta in SVG: `<polygon>` per i profili spezzati,
  * `<path>` per quelli con archi (il cilindro). Stessi attributi nei due casi,
  * cosi' l'overdraw del double resta una sola scrittura.
+ *
+ * `roundedD` (slice 3, corner radius): when the polygon is rounded, its path in the
+ * `0 0 w h` viewBox replaces the polygon. Every caller passes the same one, so the
+ * selection ring, the band and both strokes of the `double` stay concentric.
  */
 type SvgOutlinePainter = Extract<ShapePainter, { kind: 'svg' | 'svgPath' }>;
 /** Gli attributi che il contorno riceve: gli stessi per il poligono e per il path. */
@@ -35,10 +42,48 @@ interface SvgOutlineProps {
     strokeDasharray?: string;
     className?: string;
 }
-function svgOutline(painter: SvgOutlinePainter, props: SvgOutlineProps): React.ReactElement {
+function svgOutline(painter: SvgOutlinePainter, props: SvgOutlineProps, roundedD?: string): React.ReactElement {
+    if (roundedD) return <path d={roundedD} vectorEffect="non-scaling-stroke" {...props} />;
     return painter.kind === 'svg'
         ? <polygon points={painter.points} vectorEffect="non-scaling-stroke" {...props} />
         : <path d={painter.silhouette} vectorEffect="non-scaling-stroke" {...props} />;
+}
+
+/**
+ * Layout box of the element a rounded corner is drawn on (slice 3, D5): the `<svg>`
+ * layer for the polygon forms, whose viewBox then maps one to one onto it, and
+ * `.ir-node-content` for the CSS forms, whose `border-radius` applies to its border
+ * box. Layout sizes and not client rects: the canvas viewport carries a `scale()`,
+ * and a client rect would tie the radius to the zoom (measured in useContentSize.ts).
+ *
+ * Inert unless `enabled`: no observer exists on a node that does not need one.
+ * Writes are equality guarded, so a steady box converges after one read. Null until
+ * the element has been measured, and the painter then keeps the sharp polygon.
+ */
+function useCornerBox(
+    enabled: boolean, onSvg: boolean, svgEl: SVGSVGElement | null, contentRef: RefObject<HTMLDivElement>,
+): Size | null {
+    const [measured, setMeasured] = useState<{ el: Element; w: number; h: number } | null>(null);
+    useLayoutEffect(() => {
+        const el: Element | null = onSvg ? svgEl : contentRef.current;
+        if (!enabled || !el) return;
+        const write = (w: number, h: number) => setMeasured(prev =>
+            (prev && prev.el === el && prev.w === w && prev.h === h) ? prev : { el, w, h });
+        // The CSS box is read synchronously, before the first paint. The SVG element
+        // has no offset metrics, so it waits for the observer's first entry.
+        if (el instanceof HTMLElement) write(el.offsetWidth, el.offsetHeight);
+        if (typeof ResizeObserver === 'undefined') return;
+        const ro = new ResizeObserver((entries) => {
+            if (el instanceof HTMLElement) { write(el.offsetWidth, el.offsetHeight); return; }
+            const rect = entries[entries.length - 1]?.contentRect;
+            if (rect) write(rect.width, rect.height);
+        });
+        ro.observe(el);
+        return () => ro.disconnect();
+    }, [enabled, onSvg, svgEl, contentRef]);
+    if (!enabled || !measured) return null;
+    const current: Element | null = onSvg ? svgEl : contentRef.current;
+    return measured.el === current && measured.w > 0 && measured.h > 0 ? { w: measured.w, h: measured.h } : null;
 }
 
 /**
@@ -334,6 +379,22 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
     // covers demo/migrated views without an authored border.
     const b = compiled.border;
     if (b && !svgPainter) inlineStyle.border = `${b.width ?? 1}px ${b.style ?? 'solid'} ${b.color ?? 'var(--border-default)'}`;
+
+    // Corner radius (slice 3, D5). Read from the source ir and not from a compiled
+    // field: the compile cache is keyed on the hash of the whole ir, so `compiled.ir` is
+    // always the current one. Absent draws nothing here and the class rules keep 4px and
+    // 10px. The box is measured only for a written radius above 0 on a form that honors
+    // it; resolveCornerRadius owns every other branch.
+    const [svgEl, setSvgEl] = useState<SVGSVGElement | null>(null);
+    const authoredRadius = authoredCornerRadius((compiled.ir as NodeViewIR).shape?.cornerRadius);
+    const needsCornerBox = authoredRadius !== undefined && authoredRadius > 0 && honorsCornerRadius(form);
+    const cornerBox = useCornerBox(needsCornerBox, !!svgPainter, svgEl, contentRef);
+    const cornerPaint = resolveCornerRadius(form, authoredRadius, cornerBox);
+    if (cornerPaint.kind === 'css') inlineStyle.borderRadius = `${cornerPaint.px}px`;
+    const roundedD = cornerPaint.kind === 'path' && svgPainter?.kind === 'svg'
+        ? roundedPolygonPath(svgPainter.points, cornerPaint.r, cornerPaint.w, cornerPaint.h)
+        : '';
+    const svgViewBox = roundedD && cornerPaint.kind === 'path' ? `0 0 ${cornerPaint.w} ${cornerPaint.h}` : '0 0 100 100';
     // Node-level text style (ir-1.3 cascade root): inline on the root so every
     // text surface inherits it (irStyle.ts uses `inherit` on labels, rows and
     // inline editors). A label's own style, inline on its span, still wins.
@@ -381,31 +442,31 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
             style={inlineStyle}
         >
             {svgPainter && (
-                <svg className={svgPainter.svgClassName} viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                <svg ref={setSvgEl} className={svgPainter.svgClassName} viewBox={svgViewBox} preserveAspectRatio="none" aria-hidden="true">
                     {/* Selezione: prima l'anello, poi la banda che ne copre la
                         parte interna, poi la sagoma piena che copre entrambe
                         dentro il contorno. Senza colore finche' il nodo non e'
                         selezionato (irStyle). */}
                     {svgOutline(svgPainter, {
                         fill: 'none', strokeWidth: SEL_RING_STROKE_WIDTH, className: 'ir-sel-ring',
-                    })}
+                    }, roundedD)}
                     {svgOutline(svgPainter, {
                         fill: 'none', strokeWidth: SEL_BAND_STROKE_WIDTH, className: 'ir-sel-band',
-                    })}
+                    }, roundedD)}
                     {svgDouble ? (
                         <>
                             {svgOutline(svgPainter, {
                                 fill: svgFill, stroke: svgStroke, strokeWidth: svgStrokeWidth * 3,
-                            })}
+                            }, roundedD)}
                             {svgOutline(svgPainter, {
                                 fill: 'none', stroke: svgFill, strokeWidth: svgStrokeWidth,
-                            })}
+                            }, roundedD)}
                         </>
                     ) : (
                         svgOutline(svgPainter, {
                             fill: svgFill, stroke: svgStroke, strokeWidth: svgStrokeWidth,
                             strokeDasharray: svgDash,
-                        })
+                        }, roundedD)
                     )}
                     {/* Ornamenti (il coperchio del cilindro): sopra la silhouette,
                         solo tratto. Nel caso double restano a spessore normale. */}

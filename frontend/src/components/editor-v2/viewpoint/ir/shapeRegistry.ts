@@ -344,6 +344,141 @@ export const SHAPE_REGISTRY: Readonly<Record<ShapeForm, ShapeDescriptor>> = {
     },
 };
 
+/* ------------------------------------------------------------------------- */
+/* Corner radius (slice 3 of Symbol Editor 1b, D5)                            */
+/* ------------------------------------------------------------------------- */
+
+/**
+ * The forms that honor `ShapeSpec.cornerRadius`. Gated by FORM and not by painter
+ * kind: `ellipse`, `circle` and `stadium` are CSS-painted like `rect`, but their
+ * `border-radius` is the shape itself, and `cylinder` is a path with its own arcs.
+ * A form added later ignores the axis until it is listed here.
+ */
+const CORNER_RADIUS_FORMS: ReadonlySet<ShapeForm> = new Set<ShapeForm>([
+    'rect', 'rounded', 'diamond', 'hexagon', 'parallelogram',
+]);
+
+/** `undefined` (a conditional form, in authoring) has no single geometry: false. */
+export function honorsCornerRadius(form: ShapeForm | undefined): boolean {
+    return form !== undefined && CORNER_RADIUS_FORMS.has(form);
+}
+
+/**
+ * The authored radius when it is usable, `undefined` otherwise. Absent and invalid
+ * both read as "not written", so the render stays permissive towards a bad persisted
+ * value (it draws the base radius) while irValidate rejects the same value at
+ * authoring time, through this very function.
+ */
+export function authoredCornerRadius(value: unknown): number | undefined {
+    return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : undefined;
+}
+
+/**
+ * Radius the form draws while the axis is absent, px. Mirrors irStyle.ts: 4px on
+ * `.ir-node-content`, 10px on `.ir-shape--rounded`; the polygons are sharp. The
+ * forms that ignore the axis answer 0: they have no corner to speak of. `undefined`
+ * answers as `rect`, the same fallback as `getShapeDescriptor`.
+ */
+export function baseCornerRadius(form: ShapeForm | undefined): number {
+    if (form === 'rect' || form === undefined) return 4;
+    if (form === 'rounded') return 10;
+    return 0;
+}
+
+/**
+ * Render clamp: `min(w, h) / 4`. Up to 12px the anchors and the content rect are not
+ * recomputed (decision D5), and above that this clamp keeps the shape sane. The
+ * authored number is never rewritten. Degenerate input answers 0.
+ */
+export function clampCornerRadius(r: number, w: number, h: number): number {
+    if (!(r > 0) || !(w > 0) || !(h > 0)) return 0;
+    return Math.min(r, Math.min(w, h) / 4);
+}
+
+/** What the painter does with the radius of one node. */
+export type CornerRadiusPaint =
+    /** nothing emitted: the class rules of irStyle.ts, or the sharp polygon, apply */
+    | { readonly kind: 'none' }
+    /** inline `border-radius` on the CSS box, px */
+    | { readonly kind: 'css'; readonly px: number }
+    /** `roundedPolygonPath` at this clamped radius, in a `0 0 w h` viewBox */
+    | { readonly kind: 'path'; readonly r: number; readonly w: number; readonly h: number };
+
+/**
+ * The single decision the canvas painter and the Symbol replica share.
+ *
+ * - absent, or a form that ignores the axis: `none`, so every saved view keeps its
+ *   rendering;
+ * - CSS forms: `css`, clamped when the box is known, the authored number otherwise
+ *   (the browser clamps it too, and that number is not a guess of the size);
+ * - polygon forms: `path` only with a measured box and a clamped radius above 0.
+ *   Without a box the sharp polygon stays: a size is never guessed.
+ */
+export function resolveCornerRadius(form: ShapeForm | undefined, authored: unknown, box: Size | null): CornerRadiusPaint {
+    const r = authoredCornerRadius(authored);
+    if (r === undefined || !honorsCornerRadius(form)) return { kind: 'none' };
+    const painter = getShapeDescriptor(form).painter;
+    if (painter.kind === 'css') {
+        return { kind: 'css', px: box ? clampCornerRadius(r, box.w, box.h) : r };
+    }
+    if (painter.kind !== 'svg' || !box || !(box.w > 0) || !(box.h > 0)) return { kind: 'none' };
+    const clamped = clampCornerRadius(r, box.w, box.h);
+    return clamped > 0 ? { kind: 'path', r: clamped, w: box.w, h: box.h } : { kind: 'none' };
+}
+
+/** Three decimals, no trailing zeros, no `-0`: a stable `d` for tests and diffs. */
+function fmt(n: number): string {
+    const v = Number(n.toFixed(3));
+    return String(Object.is(v, -0) ? 0 : v);
+}
+
+/**
+ * A closed path through the vertices of a registry polygon, every vertex rounded.
+ *
+ * `points` are the registry's, in the `0 0 100 100` viewBox. They are converted to
+ * real `w x h` pixels FIRST: a radius applied in the unit viewBox would be stretched
+ * by `preserveAspectRatio="none"` and come out as an elliptical quadrant. The caller
+ * draws the result in a `0 0 w h` viewBox.
+ *
+ * For each vertex the two adjacent edges are shortened by `r`, clamped to half of the
+ * shorter of the two, and joined by a quadratic segment whose control point is the
+ * vertex. Half the shorter edge is what rules out spikes: two neighbouring vertices
+ * can at most meet at the midpoint of their shared edge, never cross it.
+ *
+ * Shape of the output: `M a0 Q v0 b0 L a1 Q v1 b1 ... L a(n-1) Q v(n-1) b(n-1) Z`.
+ * With `r <= 0` the polygon comes back sharp, as `M v0 L v1 ... Z`. Fewer than three
+ * vertices, or a degenerate box, answer ''.
+ */
+export function roundedPolygonPath(points: string, r: number, w: number, h: number): string {
+    if (!(w > 0) || !(h > 0)) return '';
+    const pts: { x: number; y: number }[] = [];
+    for (const pair of points.trim().split(/\s+/)) {
+        const [xs, ys] = pair.split(',');
+        const x = Number(xs), y = Number(ys);
+        if (!Number.isFinite(x) || !Number.isFinite(y)) return '';
+        pts.push({ x: (x * w) / 100, y: (y * h) / 100 });
+    }
+    const n = pts.length;
+    if (n < 3) return '';
+    const p = (q: { x: number; y: number }) => `${fmt(q.x)},${fmt(q.y)}`;
+    if (!(r > 0)) return `M${pts.map(p).join(' L')} Z`;
+
+    const parts: string[] = [];
+    for (let i = 0; i < n; i++) {
+        const v = pts[i];
+        const prev = pts[(i + n - 1) % n];
+        const next = pts[(i + 1) % n];
+        const lp = Math.hypot(prev.x - v.x, prev.y - v.y);
+        const ln = Math.hypot(next.x - v.x, next.y - v.y);
+        const d = Math.min(r, Math.min(lp, ln) / 2);
+        // A zero-length edge (coincident vertices) leaves the vertex sharp.
+        const a = lp > 0 ? { x: v.x + ((prev.x - v.x) * d) / lp, y: v.y + ((prev.y - v.y) * d) / lp } : v;
+        const b = ln > 0 ? { x: v.x + ((next.x - v.x) * d) / ln, y: v.y + ((next.y - v.y) * d) / ln } : v;
+        parts.push(`${i === 0 ? 'M' : 'L'}${p(a)} Q${p(v)} ${p(b)}`);
+    }
+    return `${parts.join(' ')} Z`;
+}
+
 /** Forma di ripiego: `rect` e' il default dell'IR (irDefaults.ts). */
 const FALLBACK: ShapeDescriptor = SHAPE_REGISTRY.rect;
 

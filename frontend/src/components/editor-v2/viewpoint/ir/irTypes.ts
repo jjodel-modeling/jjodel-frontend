@@ -173,6 +173,26 @@ export interface ShapeSpec {
      */
     padding?: PaddingToken;
     /**
+     * Corner radius in px, applied to every vertex of the shape (slice 3 of Symbol
+     * Editor 1b, decision D5). Scalar like `padding`, never Conditional.
+     *
+     * ABSENT IS NOT ZERO. Absent keeps the form's base radius, which is what every
+     * saved view renders today: 4px on `rect` (irStyle.ts, `.ir-node-content`), 10px on
+     * `rounded` (`.ir-shape--rounded`), sharp on the polygons. A written value, 0
+     * included, replaces that base and is persisted as typed.
+     *
+     * Honored by `rect`, `rounded` (inline `border-radius`) and by `diamond`, `hexagon`,
+     * `parallelogram` (a rounded path, `roundedPolygonPath` in shapeRegistry.ts).
+     * Ignored by `ellipse`, `circle` and `stadium`, whose `border-radius` (50%, 50%,
+     * 999px) is what constitutes the shape rather than a decoration of it, and by
+     * `cylinder`, which is a path with arcs of its own.
+     *
+     * Clamped to `min(w, h) / 4` at render only. Not a recognition axis: a preset stays
+     * recognized whatever the radius. Additive optional field: no irVersion bump, no
+     * migration (same precedent as `padding`).
+     */
+    cornerRadius?: number;
+    /**
      * Typographic style of the whole symbol (ir-1.3, node-level cascade root).
      * Applied inline on `.ir-node-content` and inherited by every text surface
      * (labels, compartment rows, inline editors). A label's own `style` wins over

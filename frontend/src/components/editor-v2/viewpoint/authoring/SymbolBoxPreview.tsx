@@ -28,8 +28,16 @@
 
 import React from 'react';
 import { MARKER_STROKE_WIDTH, MARKER_VIEWBOX, getMarkerDef } from '../ir/markerRegistry';
-import { SVG_BORDER_DASH, getShapeDescriptor } from '../ir/shapeRegistry';
+import { SVG_BORDER_DASH, getShapeDescriptor, resolveCornerRadius, roundedPolygonPath } from '../ir/shapeRegistry';
 import type { SymbolPreset } from '../ir/notationCatalog';
+
+/**
+ * Width of the box border `.ir-node-content` always carries (irStyle.ts, `border: 1px
+ * solid`; the svg-painted forms only make it transparent). The SVG layer sits inside
+ * it, so the rounded path is computed on the box minus this border on each side,
+ * which is the box the canvas painter measures on its own `<svg>`.
+ */
+const BOX_BORDER_PX = 1;
 
 /** Box dimensions in canvas pixels. */
 export interface PreviewBox {
@@ -68,12 +76,18 @@ export interface SymbolBoxPreviewProps {
      * default, exactly as IRNodeContent falls back.
      */
     borderColor?: string;
+    /**
+     * Authored `ShapeSpec.cornerRadius`, px (slice 3). Travels separately for the same
+     * reason as the border color: it is not a preset axis. Absent = the form's base
+     * radius, exactly as on the canvas.
+     */
+    cornerRadius?: number;
     /** Stage bounds the preview must fit in, px. */
     maxW: number;
     maxH: number;
 }
 
-export const SymbolBoxPreview: React.FC<SymbolBoxPreviewProps> = ({ preset, box, label, borderColor, maxW, maxH }) => {
+export const SymbolBoxPreview: React.FC<SymbolBoxPreviewProps> = ({ preset, box, label, borderColor, cornerRadius, maxW, maxH }) => {
     const v = preset.values;
     const desc = getShapeDescriptor(v.form);
     const svgPainter = desc.painter.kind === 'svg' ? desc.painter : null;
@@ -106,37 +120,38 @@ export const SymbolBoxPreview: React.FC<SymbolBoxPreviewProps> = ({ preset, box,
     const svgDouble = (b?.style ?? 'solid') === 'double';
     const markerColor = borderColor ?? 'var(--border-default)';
 
+    // Corner radius (slice 3): the same decision and the same painter as IRNodeContent,
+    // on a box that is known here instead of measured. CSS forms clamp on the border box,
+    // the polygons on the SVG layer inside the border (BOX_BORDER_PX).
+    const cornerPaint = resolveCornerRadius(
+        v.form,
+        cornerRadius,
+        svgPainter ? { w: box.w - 2 * BOX_BORDER_PX, h: box.h - 2 * BOX_BORDER_PX } : box,
+    );
+    if (cornerPaint.kind === 'css') replicaStyle.borderRadius = cornerPaint.px;
+    const roundedD = cornerPaint.kind === 'path' && svgPainter
+        ? roundedPolygonPath(svgPainter.points, cornerPaint.r, cornerPaint.w, cornerPaint.h)
+        : '';
+    const svgViewBox = roundedD && cornerPaint.kind === 'path' ? `0 0 ${cornerPaint.w} ${cornerPaint.h}` : '0 0 100 100';
+    /** The outline: the rounded path when there is one, the registry polygon otherwise. */
+    const outline = (props: { fill: string; stroke: string; strokeWidth: number; strokeDasharray?: string }) => (
+        roundedD
+            ? <path d={roundedD} vectorEffect="non-scaling-stroke" {...props} />
+            : <polygon points={svgPainter?.points} vectorEffect="non-scaling-stroke" {...props} />
+    );
+
     return (
         <div style={{ position: 'relative', width: dw, height: dh }} aria-hidden="true">
             <div className={`ir-node-content ir-shape--${v.form}`} style={replicaStyle}>
                 {svgPainter && (
-                    <svg className={svgPainter.svgClassName} viewBox="0 0 100 100" preserveAspectRatio="none">
+                    <svg className={svgPainter.svgClassName} viewBox={svgViewBox} preserveAspectRatio="none">
                         {svgDouble ? (
                             <>
-                                <polygon
-                                    points={svgPainter.points}
-                                    vectorEffect="non-scaling-stroke"
-                                    fill={svgFill}
-                                    stroke={svgStroke}
-                                    strokeWidth={svgStrokeWidth * 3}
-                                />
-                                <polygon
-                                    points={svgPainter.points}
-                                    vectorEffect="non-scaling-stroke"
-                                    fill="none"
-                                    stroke={svgFill}
-                                    strokeWidth={svgStrokeWidth}
-                                />
+                                {outline({ fill: svgFill, stroke: svgStroke, strokeWidth: svgStrokeWidth * 3 })}
+                                {outline({ fill: 'none', stroke: svgFill, strokeWidth: svgStrokeWidth })}
                             </>
                         ) : (
-                            <polygon
-                                points={svgPainter.points}
-                                vectorEffect="non-scaling-stroke"
-                                fill={svgFill}
-                                stroke={svgStroke}
-                                strokeWidth={svgStrokeWidth}
-                                strokeDasharray={svgDash}
-                            />
+                            outline({ fill: svgFill, stroke: svgStroke, strokeWidth: svgStrokeWidth, strokeDasharray: svgDash })
                         )}
                     </svg>
                 )}

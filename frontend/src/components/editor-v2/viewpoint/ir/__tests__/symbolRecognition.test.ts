@@ -38,6 +38,20 @@ describe('symbolRecognition: round-trip con applyPresetToShape', () => {
         const applied = applyPresetToShape({ ...BASE, fill: '#fde68a' }, entity);
         expect(ids(applied)).toContain('er-entity');
     });
+
+    // Slice 3 (D5): il raggio degli spigoli e' ortogonale allo spazio dei preset. Un
+    // preset lo conserva quando viene applicato, e cambiarlo dopo non toglie il match
+    // (un task BPMN con r = 6 resta un task BPMN).
+    it('il raggio degli spigoli non e\' un asse: sopravvive al preset e non ne cambia il riconoscimento', () => {
+        for (const preset of NOTATION_CATALOG) {
+            for (const cornerRadius of [0, 6, 40]) {
+                const applied = applyPresetToShape({ ...BASE, cornerRadius }, preset);
+                expect(applied.cornerRadius, `${preset.id} r=${cornerRadius}`).toBe(cornerRadius);
+                expect(ids(applied), `${preset.id} r=${cornerRadius}`).toContain(preset.id);
+                expect(ids({ ...applied, cornerRadius: cornerRadius + 3 }), `${preset.id} r changed`).toContain(preset.id);
+            }
+        }
+    });
 });
 
 describe('symbolRecognition: i gruppi di ambiguita\' sono noti e stabili', () => {

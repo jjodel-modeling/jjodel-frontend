@@ -14,6 +14,7 @@
 import React from 'react';
 import { MARKER_STROKE_WIDTH, getMarkerDef } from '../ir/markerRegistry';
 import type { SymbolPreset } from '../ir/notationCatalog';
+import { authoredCornerRadius, clampCornerRadius, roundedPolygonPath } from '../ir/shapeRegistry';
 
 const VB_W = 72;
 const VB_H = 48;
@@ -26,16 +27,37 @@ const MARKER_SCALE = 0.22;
 const STROKE = 'var(--color-text-primary, #334155)';
 const BG = 'var(--node-bg, #ffffff)';
 
-/** Il contorno del preset, come elemento SVG riusabile per l'overdraw del double. */
-function contourEl(form: SymbolPreset['values']['form'], props: React.SVGProps<any>): React.ReactElement {
+/**
+ * Canvas px to tile units for the corner radius. Not a new constant: the tile already
+ * draws `rounded` with `rx={7}` against the 10px of irStyle.ts, and this is that ratio.
+ */
+const TILE_RADIUS_RATIO = 0.7;
+
+/**
+ * Il contorno del preset, come elemento SVG riusabile per l'overdraw del double.
+ *
+ * `radius` (slice 3) is the authored corner radius already in tile units, or
+ * `undefined` when not written. It is clamped per contour to a quarter of that
+ * contour's shorter side, the canvas rule. The forms that ignore the axis do not read it.
+ */
+function contourEl(form: SymbolPreset['values']['form'], props: React.SVGProps<any>, radius?: number): React.ReactElement {
+    // The tile polygons are written in absolute tile coordinates, not in the registry's
+    // 0..100 space, so roundedPolygonPath gets w = h = 100: the identity scale.
+    const polygon = (points: string, boxW: number, boxH: number) => {
+        const r = radius !== undefined ? clampCornerRadius(radius, boxW, boxH) : 0;
+        return r > 0
+            ? <path d={roundedPolygonPath(points, r, 100, 100)} {...props} />
+            : <polygon points={points} {...props} />;
+    };
+    const rectRx = (fallback: number | undefined) => (radius !== undefined ? clampCornerRadius(radius, 52, 32) : fallback);
     switch (form) {
-        case 'rounded': return <rect x={10} y={8} width={52} height={32} rx={7} {...props} />;
+        case 'rounded': return <rect x={10} y={8} width={52} height={32} rx={rectRx(7)} {...props} />;
         case 'ellipse': return <ellipse cx={CX} cy={CY} rx={26} ry={16} {...props} />;
         case 'circle': return <circle cx={CX} cy={CY} r={16} {...props} />;
-        case 'diamond': return <polygon points={`${CX},4 ${VB_W - 6},${CY} ${CX},${VB_H - 4} 6,${CY}`} {...props} />;
+        case 'diamond': return polygon(`${CX},4 ${VB_W - 6},${CY} ${CX},${VB_H - 4} 6,${CY}`, 60, 40);
         case 'stadium': return <rect x={10} y={8} width={52} height={32} rx={16} {...props} />;
-        case 'hexagon': return <polygon points="23,8 49,8 62,24 49,40 23,40 10,24" {...props} />;
-        case 'parallelogram': return <polygon points="23,8 62,8 49,40 10,40" {...props} />;
+        case 'hexagon': return polygon('23,8 49,8 62,24 49,40 23,40 10,24', 52, 32);
+        case 'parallelogram': return polygon('23,8 62,8 49,40 10,40', 52, 32);
         // Il cilindro e' due elementi: la silhouette e il coperchio, che non va
         // mai riempito. Gli attributi di presentazione stanno sul gruppo e i
         // figli ereditano, cosi' l'overdraw del double resta una sola chiamata.
@@ -46,7 +68,7 @@ function contourEl(form: SymbolPreset['values']['form'], props: React.SVGProps<a
             </g>
         );
         case 'rect':
-        default: return <rect x={10} y={8} width={52} height={32} {...props} />;
+        default: return <rect x={10} y={8} width={52} height={32} rx={rectRx(undefined)} {...props} />;
     }
 }
 
@@ -54,10 +76,18 @@ export interface SymbolPreviewProps {
     preset: SymbolPreset;
     /** Larghezza in px; l'altezza segue il rapporto 72:48. */
     width?: number;
+    /**
+     * Authored `ShapeSpec.cornerRadius` in canvas px (slice 3). A prop and not a field of
+     * `SymbolPreset.values`: catalog presets carry no radius. Only the Symbol modal
+     * passes it; catalog tiles and the rail card render as before.
+     */
+    cornerRadius?: number;
 }
 
-export const SymbolPreview: React.FC<SymbolPreviewProps> = ({ preset, width = 56 }) => {
+export const SymbolPreview: React.FC<SymbolPreviewProps> = ({ preset, width = 56, cornerRadius }) => {
     const v = preset.values;
+    const authored = authoredCornerRadius(cornerRadius);
+    const tileRadius = authored !== undefined ? authored * TILE_RADIUS_RATIO : undefined;
     const style = v.border?.style ?? 'solid';
     const isDouble = style === 'double';
     // Legibilita' in miniatura: normale ~1.25, spesso ~2.5.
@@ -76,11 +106,11 @@ export const SymbolPreview: React.FC<SymbolPreviewProps> = ({ preset, width = 56
         >
             {isDouble ? (
                 <>
-                    {contourEl(v.form, { fill, stroke: STROKE, strokeWidth: 3.5 })}
-                    {contourEl(v.form, { fill: 'none', stroke: fill, strokeWidth: 1.25 })}
+                    {contourEl(v.form, { fill, stroke: STROKE, strokeWidth: 3.5 }, tileRadius)}
+                    {contourEl(v.form, { fill: 'none', stroke: fill, strokeWidth: 1.25 }, tileRadius)}
                 </>
             ) : (
-                contourEl(v.form, { fill, stroke: STROKE, strokeWidth: sw, strokeDasharray: dash })
+                contourEl(v.form, { fill, stroke: STROKE, strokeWidth: sw, strokeDasharray: dash }, tileRadius)
             )}
             {markerDef && (
                 <g transform={`translate(${CX - 50 * MARKER_SCALE}, ${CY - 50 * MARKER_SCALE}) scale(${MARKER_SCALE})`}>
