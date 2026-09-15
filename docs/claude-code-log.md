@@ -23,6 +23,28 @@ scritte nello stesso file prima di committare.
   Lezione: due corsie parallele committano il log una alla volta, ciascuna dopo aver riletto la
   testa; lo stesso file non si mette in due commit sovrapposti.
 
+## 2026-09-15 — docs: two process rules in CLAUDE.md (static tests, scope of regenerated artifacts)
+**Prompt**: `claude_2026-09-15_1030_prompt_lane_h_claude_md_two_rules.md` — add the two rules
+learned on 2026-09-14: a source-text test needs a mutation bench to be allowed, and a prompt
+scope that names a file with a regeneration rule names the regenerated artifact too.
+**Files touched**: `18d615cc2`: the prompt file. `74d0f81db`: `CLAUDE.md` (+12) and the
+regenerated `AGENTS.md` (+12). This entry in its own commit. `frontend/src/jjtl/AGENTS.md`
+regenerated identical, not staged.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — docs only, no code touched. `npm run check:agents` PASS (2 projected files
+aligned), `npm run check:docs` PASS 3/3 with the 2 pre-existing warnings. Both run from
+`frontend/` (there is no root `package.json`; from the repo root npm exits ENOENT).
+**Out-of-scope changes**: no.
+**Layer Impact Report**: not-required — no critical-zone file (§3.1).
+**Smoke visivo**: non applicabile — no runtime surface.
+**Notes**: Rule 1 landed as a new sub-rule at the end of §5, after «the interactive grep is not the
+system grep»; the §5 sub-rules already cover verification discipline in general. Rule 2 landed as
+rule 1c in the NON-NEGOTIABLE block, next to 1b, which already handles a §3 rule overriding the
+declared scope. No section was reorganized.
+**Prompt document name**: 2026-09-15 10:30
+
 ## 2026-09-14 — fix(B2): Jjodie writes into the scope shown to the model
 **Prompt**: `claude_2026-09-14_1730_prompt_lane_b2_jjodie_scope_fix.md` — option S (scope stamped on
 the reply, carried to Run), V1 as an explicit error, V3 refused out of scope, qualified RAG names.
