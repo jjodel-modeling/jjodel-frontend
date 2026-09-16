@@ -28,6 +28,33 @@ the Create View gate fix»: contenuto reale **due** entry, la sua e quella della
 rail/modale, gia' in albero e non in stage al momento del commit. Stesso schema del 2026-09-13.
 Nessun rewrite: la entry resta dov'e', il suo commit non la nomina.
 
+## 2026-09-16 — fix: Jjodie stamps the level of the editor on screen, not of the last selection
+**Prompt**: `claude_2026-09-16_2249_prompt_fix_jjodie_scope_level_m1_on_metamodel.md` — step 1 a
+read-only verification with a mandatory report, step 2 the fix. Run with the three conditions of
+Alfonso's ACK: no em dashes in the added comments and strings, a stale-cache investigation with the
+softening it implies, and a separate advice string for a scope-bound run.
+**Files touched**: `ccd867bda`, 5 files: `jjscript/executor/activeArtifact.ts` (new, pure: the cache
+rule), `jjscript/executor/__tests__/activeArtifact.test.ts` (new, 18 assertions),
+`jjscript/executor/utils.ts` (the three resolvers share the rule), `components/Jodie/Jodie.tsx`
+(level first, then one resolver), `jjscript/executor/commands/create.ts` (the WRONG_LEVEL message).
+Docs in their own commits: `73bf25fc6` the report, and this entry.
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-14 17:30
+**Causa**: (c)
+**Regressions**: unknown — `npm run typecheck` exit 2, **33** on full output, set identical to the
+pre-edit run (`diff` exit 0), **0** in the five touched files, control `Measurable` → 6.
+`npx vitest run` **3671 passed, 0 failed**, the same 9 files red at import. `npm run build` exit 0,
+pre-existing chunk-size warning only. `unknown` and not `no` because nothing was exercised in the
+running app: see **Smoke visivo**.
+**Out-of-scope changes**: no.
+**Layer Impact Report**: not-required — no §3.1 file, no D-layer or L-layer write path.
+**Smoke visivo**: non eseguito — the prompt's hard stop asked for a check on localhost:3001 (select
+in an M1 model, switch to the metamodel tab, ask for an enum, Run). The dev server was not running
+and the ACK authorised the commit without it. The behaviour is covered by the unit bench below, not
+by the app.
+**Notes**: Three things the prompt did not anticipate, all measured in `docs/discovery/discovery_2026-09-16_jjodie_scope_level_m1_on_metamodel.md`: `editorType` has six values not two (§5), `errors[0].message` cannot reach `ExecutionErrorDialog` (§7), and nothing ever clears the cache (§11). Bench in §12: 3 mutants, 4/4/1 red. `JodieHeader.tsx:70` still disagrees (§6); read-only per the prompt.
+**Prompt document name**: 2026-09-16 22:49
+
 ## 2026-09-16 — fix: the v2 Create View entry resolves its viewpoint once, never the system default
 **Prompt**: `claude_2026-09-16_0951_prompt_menu_v2_viewpoint_e_rotta_archi_righe.md`, **Fase A** —
 gate the v2 canvas entry on `hasCreatableViewpoint()` (the tree's own predicate) and pass the
