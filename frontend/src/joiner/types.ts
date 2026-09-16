@@ -1,5 +1,12 @@
 // export type Class = { new(...args: any[]): any; };
-import {PointedBy, Pointer, RuntimeAccessibleClass, ShortAttribETypes} from "../joiner";
+import {
+    LModelElement,
+    PointedBy,
+    Pointer,
+    RuntimeAccessibleClass,
+    ShortAttribETypes,
+    transientProperties
+} from "../joiner";
 import {
     DGraphElement,
     DPointerTargetable,
@@ -100,6 +107,10 @@ export type Json<T extends GObject = RawObject> =
 export type DeepReadonly<T> = {
     readonly [K in keyof T]: T[K] extends object ? DeepReadonly<T[K]> : T[K];
 };
+export type RecursiveArray<A> = A[] | RecursiveArray<A>[];
+export type NestedDictionary<K extends keyof GObject = any, V = any> =
+    | Dictionary<K, V>
+    | { [key: string]: NestedDictionary<K, V> };
 
 // export type Dictionary<K extends keyof any, T> = { [P in K]: T; };
 export type Dictionary<K extends keyof GObject = any, V = any> = { [P in K]: V; }; // & { _subMaps?: V};

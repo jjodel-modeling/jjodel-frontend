@@ -85,10 +85,7 @@ export function ShowContextMenu(nodeid: Pointer<DGraphElement>, x: number, y: nu
 let contextMenuMap: Dictionary<Pointer<DGraph>, (nodeid: Pointer<DGraphElement>, x: number, y: number)=>void> = {};
 windoww.ShowContextMenu = ShowContextMenu;
 windoww.contextMenuMap = contextMenuMap;
-type RecursiveArray<A> = A[] | RecursiveArray<A>[];
-export type NestedDictionary<K extends keyof GObject = any, V = any> =
-    | Dictionary<K, V>
-    | { [key: string]: NestedDictionary<K, V> };
+
 
 function addDynamicEntries(jsxList: ReactNode[], nodeid: Pointer<DGraphElement>, data: LModelElement | undefined, node: LGraphElement){
     let tn = transientProperties.node[nodeid];
