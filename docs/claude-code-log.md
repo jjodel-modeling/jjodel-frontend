@@ -117,16 +117,12 @@ radius (1), preset drops the radius (1). Unmutated baseline 86 green.
 the conflict was reported and the ACK settled it for CLAUDE.md.
 **Smoke visivo**: passato — probe `scripts/smoke/_tmp_s3radius_verify.ts` (gitignored) on the live
 dev server, **35/35 PASS, zero page errors**, plus four screenshots read by eye.
-**Notes**: Reset first left the KEY holding `undefined` (`patchShape` spreads it in); the probe
-caught it and it now goes through a rest/spread, the `omitForm` idiom — `'cornerRadius' in
-ir.shape` is false after a Reset. Measured on canvas: absent leaves no inline radius (rect 4px,
-rounded 10px), a persisted -5 draws as absent, circle stays 50%, rect r=20 on 198x40 clamps to
-10px; polygons emit one path in a `0 0 w h` viewBox with ring, band and both double strokes on the
-same `d`; the observer follows a resize and the viewBox is zoom-immune (scale 1→2). One run was
-VOID (probe started while a build ran: the fixture never painted, ten FAILs about nothing); the
-probe now waits longer and exits 2 instead of reporting them. Deviation from ACK 3: the observer
-also runs on rect/rounded with a written radius, because ACK 4 asks for the same clamp there and
-the clamp needs a box.
+**Notes**: Reset left the KEY `undefined` (`patchShape` spread); rest/spread (`omitForm`) fixed
+it: no key after Reset. Canvas: absent → no inline radius (rect 4px, rounded 10); -5 as absent;
+circle 50%; r=20 on 198x40 → 10px; polygons 1 path, viewBox `0 0 w h`, ring/band/2 strokes on one
+`d`; observer follows resize; viewBox zoom-immune 1→2. A run VOID (build running, nothing painted,
+10 FAILs); it now waits, exits 2. ACK 3 deviation: observer also on rect/rounded with a radius,
+ACK 4's clamp needs a box.
 **Prompt document name**: 2026-09-15 18:30
 
 ## 2026-09-16 — feat: edit conditional axes as a rules table, add formatPredicate
