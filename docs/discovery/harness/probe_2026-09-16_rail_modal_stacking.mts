@@ -20,31 +20,42 @@
  *     Marker: i primi tre elementi in ordine di pittura, con il selettore di ciascuno
  *     e l'appartenenza al sottoalbero del rail o della modale.
  *
- *  C. GLI ESPERIMENTI, che distinguono la diagnosi dalle alternative. Sono mutazioni
- *     a runtime sullo stile inline, nessun file toccato, ciascuna annullata:
- *       E1  z-index del rail portato a 0 -> se vince ancora, non e' una gara di
- *           z-index fra pari: e' contenimento.
- *       E2  #root con z-index 10000 -> se la modale torna sopra, il tetto e' #root.
- *       E3  un <div> sintetico dentro #root, position:fixed, z-index 999999 (il
- *           massimo del design system, --z-debug): se il rail lo copre lo stesso,
- *           NESSUN z-index scritto dentro #root puo' vincere, e la questione non e'
- *           il valore 9999 della modale.
+ *  C. GLI ESPERIMENTI, che distinguono il rimedio dalla fortuna. Mutazioni a runtime,
+ *     nessun file toccato, ciascuna annullata:
+ *       E3  un <div> sintetico dentro #root, position:fixed, z-index 999999 (il massimo
+ *           del design system, --z-debug): il rail lo copre lo stesso. E' la classe di
+ *           difetto, e sopravvive al rimedio: dice perche' il rimedio non poteva essere
+ *           un numero piu' grande.
+ *       E4  il fondale rimesso A MANO dentro #root: il rail torna a vincere; rimesso su
+ *           body, la modale rivince. E' il portale a portare il rimedio, non il livello
+ *           da solo.
  *
  *  D. LE LARGHEZZE. Sweep del viewport con il rail alla sua larghezza di prima
- *     apertura, rect di rail e modale e sovrapposizione in px a ogni passo, piu' la
- *     bisezione del confine. Secondo contesto aperto a 1440 per il bucket di larghezza
- *     rail inferiore (`firstOpenOverlayWidth`: <1600 -> 360, <2200 -> 400, poi 560).
+ *     apertura, rect di rail e modale, sovrapposizione in px e controlli bloccati a ogni
+ *     passo. Secondo contesto aperto a 1440 per il bucket di larghezza rail inferiore
+ *     (`firstOpenOverlayWidth`: <1600 -> 360, <2200 -> 400, poi 560).
+ *
+ *  E. I GESTI. La × della modale prende il click e chiude; Esc chiude.
+ *
+ * ── Fase 2 (2026-09-16) ──────────────────────────────────────────────────────────
+ * Il difetto e' stato corretto (portale su document.body + `--z-alert` nella modale,
+ * opzione A del referto §9). Le asserzioni qui sono quelle dello stato CORRETTO: la
+ * sovrapposizione geometrica resta identica — nessuno ha spostato il rail — e a cambiare
+ * e' solo chi vince il pixel. I numeri del difetto restano nel referto, §3 e §6.
  *
  * ── Controlli positivi (P12) ─────────────────────────────────────────────────────
- *  - un pixel della modale lontano dal rail deve restituire la modale: senza, un
- *    «vince il rail» non si distingue da un elementsFromPoint che non legge nulla;
- *  - un pixel del rail fuori dalla modale deve restituire il rail;
- *  - a viewport largo la stessa sezione Fill deve tornare cliccabile: senza, «bloccato»
- *    non si distingue da «sezione mai renderizzata».
+ *  - il rail dev'essere montato, aperto e largo 400px mentre la modale e' su: senza, un
+ *    «vince la modale» non si distingue da un rail mai renderizzato o gia' chiuso. Non
+ *    e' piu' un hit test: il fondale e' `inset: 0`, quindi una volta che vince copre
+ *    anche il rail — che e' cio' che `aria-modal` dichiara e prima non era vero;
+ *  - le due misure di sovrapposizione (rail/modale in px) devono restare > 0 sotto i
+ *    1840: senza, «nessun controllo bloccato» non si distingue da «non si toccano piu'»;
+ *  - E4 deve far ricomparire il difetto: senza, la verifica non distingue il rimedio da
+ *    un cambio di layout che ha semplicemente allontanato i due riquadri.
  *
  * Non coperto, dichiarato: le altre modali di pari struttura (ImportSummaryModal,
- * ValidationResultsModal, ValidationRulesModal) non vengono aperte; E3 misura la
- * classe di difetto che le riguarda tutte, il singolo caso no.
+ * ValidationResultsModal) non vengono aperte — ticket in docs/TECH-DEBT.md; E3 misura
+ * la classe di difetto che le riguarda tutte, il singolo caso no.
  *
  * Col dev server su (P8: porta 3000):
  *   cd frontend && npx tsx ../docs/discovery/harness/probe_2026-09-16_rail_modal_stacking.mts
@@ -360,13 +371,19 @@ const modalPart = await page.evaluate(() => (window as any).__participant('.symb
 note('A3 rail participant in the ROOT stacking context', railPart);
 note('A4 modal participant in the ROOT stacking context', modalPart);
 check('A5 the rail is portaled to <body>, sibling of #root', railChain?.[1]?.el === 'body', railChain?.[1]?.el);
-check('A6 the modal lives inside #root', (modalChain ?? []).some((r: any) => r.el.startsWith('div#root')), (modalChain ?? []).map((r: any) => r.el));
-check('A7 #root creates a stacking context', (modalChain ?? []).some((r: any) => r.el.startsWith('div#root') && r.createsSC), (modalChain ?? []).find((r: any) => r.el.startsWith('div#root')));
+check('A6 the modal is portaled to <body> too, no longer inside #root', modalChain?.[1]?.el === 'body' && !(modalChain ?? []).some((r: any) => r.el.startsWith('div#root')), (modalChain ?? []).map((r: any) => r.el));
+check('A7 #root still creates a stacking context (the mechanism did not go away)', !!(await page.evaluate(() => (window as any).__chain('div#root')))?.[0]?.createsSC, (await page.evaluate(() => (window as any).__chain('div#root')))?.[0]);
+check('A7b the modal is now its own participant in the ROOT context, above the rail', Number(modalPart?.zIndex) > Number(railPart?.zIndex), { modal: modalPart?.zIndex, rail: railPart?.zIndex });
 const bodyKids = await page.evaluate(() => (window as any).__bodyChildren());
 note('A8 the body-level scale: every child of <body> (D-UI-14 census, re-measured)', bodyKids);
+check('A8b nothing else changed level: rail still 900, sim-panel 850, #root auto',
+    bodyKids.find((k: any) => k.el.includes('properties-tree-overlay'))?.zIndex === '900'
+    && bodyKids.find((k: any) => k.el.includes('sim-panel'))?.zIndex === '850'
+    && bodyKids.find((k: any) => k.el === 'div#root')?.zIndex === 'auto',
+    bodyKids.map((k: any) => `${k.el}=${k.zIndex}`));
 const zTok = await page.evaluate(() => ({ modal: (window as any).__token('--z-modal'), alert: (window as any).__token('--z-alert'), dropdown: (window as any).__token('--z-dropdown-menu') }));
 note('A9 the tokens as the browser resolves them', zTok);
-check('A10 --z-modal resolves to 1050, not the 9999 the SCSS declares (two token files)', zTok.modal === '1050', zTok.modal);
+note('A10 --z-modal still resolves to 1050, not the 9999 the SCSS declares (two token files, ticket in TECH-DEBT). This modal no longer reads it.', zTok.modal);
 
 // ── B. who wins at the pixel ───────────────────────────────────────────────────
 console.log('\n== B. who wins at the pixel ==');
@@ -381,11 +398,21 @@ if (fill && marker) {
     const [fx, fy] = pt(fill);
     const hFill = await hitsAt(fx, fy);
     note(`B1 elementsFromPoint at the Fill section's right edge (${fx},${fy})`, hFill);
-    check('B2 the rail wins over the Fill section', hFill[0]?.inRail === true, hFill[0]);
+    check('B2 the modal wins over the Fill section, on the pixel the rail used to take', hFill[0]?.inModal === true, hFill[0]);
+    check('B2b CONTROL the two boxes DO still overlap there (the fix is not a layout change)',
+        fill.rect.right > railRect0.x, { fillRight: fill.rect.right, railX: railRect0.x, overlap: fill.rect.right - railRect0.x });
     const cIn = await hitsAt(Math.round(modalRect.x + 40), Math.round(modalRect.y + modalRect.h / 2));
     check('B3 CONTROL a modal pixel far from the rail returns the modal', cIn[0]?.inModal === true, cIn[0]);
+    // CONTROL that the rail is really there: not a hit test any more. The backdrop is
+    // `inset: 0`, so once it wins it covers the whole viewport, the rail included —
+    // which is what `aria-modal` claims and, before the fix, was not true.
+    const railAlive = await page.evaluate(() => {
+        const r = document.querySelector('.properties-tree-overlay');
+        return { present: !!r, collapsed: !!r?.classList.contains('properties-tree-overlay--collapsed'), w: Math.round(r?.getBoundingClientRect().width ?? 0) };
+    });
+    check('B4 CONTROL the rail is mounted, open and 400px wide while the modal is up', railAlive.present && !railAlive.collapsed && railAlive.w === 400, railAlive);
     const cRail = await hitsAt(Math.round(railRect0.x + railRect0.w / 2), Math.round(railRect0.y + railRect0.h - 40));
-    check('B4 CONTROL a rail pixel outside the modal returns the rail', cRail[0]?.inRail === true, cRail[0]);
+    check('B4b the backdrop now covers the rail too: the modality is real, not nominal', cRail[0]?.inModal === true, cRail[0]);
 
     // The rules table, which is what the slice 1 probe was driving: Fill -> Conditional,
     // then one rule, so the row actions of the mockup 2b table actually exist.
@@ -399,16 +426,17 @@ if (fill && marker) {
 
     const cen = await census();
     note('B6 census of the modal controls on screen', { visible: cen?.visible, reachable: cen?.reachable, blocked: cen?.blocked.length });
-    note('B7 the blocked controls, by name', cen?.blocked);
-    check('B8 at least one interactive control of the modal is blocked by the rail', (cen?.blocked.length ?? 0) > 0, cen?.blocked.length);
+    note('B7 the blocked controls, by name (empty is the point)', cen?.blocked);
+    check('B8 every interactive control of the modal takes the hit test', cen?.blocked.length === 0 && (cen?.visible ?? 0) > 40, { visible: cen?.visible, reachable: cen?.reachable, blocked: cen?.blocked });
     const closeRect = await page.evaluate(() => (window as any).__rect('.symbol-editor-modal__close-btn'));
     const closeTop = closeRect ? await hitsAt(Math.round(closeRect.x + closeRect.w / 2), Math.round(closeRect.y + closeRect.h / 2)) : null;
-    check('B8b the modal\'s own Close button is covered by the rail', closeTop?.[0]?.inRail === true, { closeRect, top: closeTop?.[0] });
+    check('B8b the modal\'s own Close button is reachable (it sits at x>=1281, under the rail\'s x)', closeTop?.[0]?.inModal === true, { closeRect, railX: railRect0.x, top: closeTop?.[0] });
 
-    // The real gesture: Playwright's own actionability check names the blocker.
-    const clickErr = await page.locator('[data-probe-blocked]').first().click({ timeout: 3000 }).then(() => null).catch((e) => String(e));
-    const named = !!clickErr && /properties-tree-overlay/.test(clickErr);
-    check('B9 clicking a blocked control fails, and Playwright names the rail as the blocker', named,
+    // The real gesture on a control that used to be blocked: `Clear default` sits at
+    // x 1282..1304, deep inside the strip the rail used to take.
+    const clickErr = await page.locator('[data-probe-section="Fill"]').getByRole('button', { name: /Clear default/ }).first()
+        .click({ timeout: 3000 }).then(() => null).catch((e) => String(e));
+    check('B9 clicking `Clear default` (x 1282..1304) succeeds', clickErr === null,
         clickErr ? (clickErr.split('\n').find((l) => /intercepts pointer events/.test(l)) ?? clickErr.split('\n').slice(0, 2).join(' | ')) : 'click succeeded');
 
     // Which named section is in the covered column, in THIS state.
@@ -436,27 +464,20 @@ if (fill && marker) {
 console.log('\n== C. experiments ==');
 if (fill) {
     const [fx, fy] = pt(fill);
-    const e1 = await page.evaluate(([px, py]: number[]) => {
+    // E4: put the backdrop back where it used to live. If the defect returns, the portal
+    // is what carries the fix; if it does not, the fix is something else and this probe
+    // would be certifying a coincidence.
+    const e4 = await page.evaluate(([px, py]: number[]) => {
         const w = window as any;
-        const rail = document.querySelector('.properties-tree-overlay') as HTMLElement;
-        const prev = rail.style.zIndex;
-        rail.style.zIndex = '0';
-        const hits = w.__hits(px, py);
-        rail.style.zIndex = prev;
-        return hits;
+        const back = document.querySelector('.symbol-editor-modal-backdrop') as HTMLElement;
+        document.getElementById('root')!.appendChild(back);
+        const inRoot = w.__hits(px, py);
+        document.body.appendChild(back);
+        const restored = w.__hits(px, py);
+        return { inRoot, restored };
     }, [fx, fy]);
-    check('C1 E1 rail forced to z-index 0: the rail STILL wins (not a peer contest)', e1[0]?.inRail === true, e1[0]);
-
-    const e2 = await page.evaluate(([px, py]: number[]) => {
-        const w = window as any;
-        const root = document.getElementById('root') as HTMLElement;
-        const prev = root.style.zIndex;
-        root.style.zIndex = '10000';
-        const hits = w.__hits(px, py);
-        root.style.zIndex = prev;
-        return hits;
-    }, [fx, fy]);
-    check('C2 E2 #root lifted to z-index 10000: the modal wins (the cap is #root)', e2[0]?.inModal === true, e2[0]);
+    check('C1 E4 backdrop moved back inside #root: the rail wins again', e4.inRoot[0]?.inRail === true, e4.inRoot[0]);
+    check('C2 E4 backdrop restored onto body: the modal wins again', e4.restored[0]?.inModal === true, e4.restored[0]);
 
     const e3 = await page.evaluate(([px, py]: number[]) => {
         const w = window as any;
@@ -469,7 +490,11 @@ if (fill) {
         probe.remove();
         return { hits, probeOnTop: top?.el === 'div#__sc_probe' };
     }, [fx, fy]);
-    check('C3 E3 a z-index 999999 fixed div INSIDE #root is still covered by the rail', e3.probeOnTop === false && e3.hits[0]?.inRail === true, e3);
+    // The class fact, unchanged by the fix and the reason the fix could not be a bigger
+    // number: --z-debug (999999) written inside #root still does not reach body level.
+    // The winner is now the modal rather than the rail, because the modal is a body
+    // child too; what matters is that it is never the probe.
+    check('C3 E3 a z-index 999999 fixed div INSIDE #root still never reaches the top', e3.probeOnTop === false, e3);
 }
 
 // ── D. widths (rail pinned at its first-open width) ────────────────────────────
@@ -498,15 +523,39 @@ const biten = rows.filter(r => (r.blockedControls ?? 0) > 0).map(r => r.vw);
 const clean = rows.filter(r => r.blockedControls === 0).map(r => r.vw);
 note('D2 widths with at least one blocked control', biten);
 note('D3 widths with none', clean);
-check('D4 CONTROL at a wide viewport every control of the modal is reachable', clean.length > 0, { clean });
+check('D4 no width blocks a control any more, 1280 to 2400', biten.length === 0, { biten, clean });
+// CONTROL: the geometry did not move. Below 1840 the rail and the modal still overlap;
+// without this, «zero blocked» would not be distinguishable from two boxes that stopped
+// touching. The pre-fix numbers for the same widths are in the report, §6.
+const stillOverlapping = rows.filter(r => r.vw < 1840 && (r.overlapModal ?? 0) > 0).map(r => `${r.vw}:${r.overlapModal}px`);
+check('D4b CONTROL the boxes still overlap below 1840, exactly as they did before', stillOverlapping.length >= 6, stillOverlapping);
 // Two boundaries, and they are not the same number: the rail stops overlapping the
 // modal's BOX at one width, and stops covering the last CONTROL at a smaller one.
 const fine = await sweep([1764, 1772, 1780, 1788, 1796, 1836, 1840, 1844]);
 for (const r of fine) note(`D5 bisection vw=${r.vw}`, r);
 const lastBlocked = fine.filter(r => (r.blockedControls ?? 0) > 0).map(r => r.vw);
 const firstOverlapFree = fine.filter(r => r.overlapModal === 0).map(r => r.vw);
-note('D6 widths of the bisection where a control is still blocked', lastBlocked);
+note('D6 widths of the bisection where a control is still blocked (empty is the point)', lastBlocked);
 note('D7 widths of the bisection with zero rail/modal box overlap', firstOverlapFree);
+check('D8 the old boundary band 1764..1796 blocks nothing now', lastBlocked.length === 0, lastBlocked);
+
+// ── E. the gestures ────────────────────────────────────────────────────────────
+console.log('\n== E. the gestures ==');
+await page.setViewportSize({ width: 1600, height: 1000 });
+await page.waitForTimeout(700);
+const escErr = await page.keyboard.press('Escape').then(() => null).catch((e) => String(e));
+await page.waitForTimeout(500);
+const afterEsc = await page.locator('.symbol-editor-modal-backdrop').count();
+check('E1 Escape still closes the modal', escErr === null && afterEsc === 0, { escErr, backdrops: afterEsc });
+
+await openModal(page);
+const reopened = await page.locator('.symbol-editor-modal-backdrop').count();
+check('E2 CONTROL the modal reopens (otherwise E3 would measure nothing)', reopened === 1, reopened);
+const xErr = await page.locator('.symbol-editor-modal__close-btn').first().click({ timeout: 3000 }).then(() => null).catch((e) => String(e));
+await page.waitForTimeout(500);
+const afterX = await page.locator('.symbol-editor-modal-backdrop').count();
+check('E3 the × takes the click and closes the modal', xErr === null && afterX === 0,
+    { err: xErr ? (xErr.split('\n').find((l) => /intercepts pointer events/.test(l)) ?? xErr.split('\n')[0]) : null, backdrops: afterX });
 
 note('A-run page errors', A.errors.slice(0, 5));
 await A.ctx.close();
@@ -525,7 +574,7 @@ if (B) {
     const cenB = await B.page.evaluate(() => (window as any).__census());
     note('B-run rail/modal/Fill at 1440', { rail: rb, modal: m, fill: s?.rect, top: top?.[0] });
     note('B-run census at 1440', { visible: cenB?.visible, blocked: cenB?.blocked.map((b: any) => b.name) });
-    check('E1 at 1440 with a 360px rail the rail still wins over Fill', top?.[0]?.inRail === true, top?.[0]);
+    check('F1 at 1440 with a 360px rail the modal wins over Fill, and nothing is blocked', top?.[0]?.inModal === true && cenB?.blocked.length === 0, { top: top?.[0], blocked: cenB?.blocked });
     await B.page.screenshot({ path: `${SHOT_DIR}/stacking_B_1440.png` });
     await B.ctx.close();
 }

@@ -353,3 +353,65 @@ cd frontend && npx tsx ../docs/discovery/harness/probe_2026-09-16_rail_modal_sta
 Dev server on `localhost:3000` (P8). Two browser contexts, ~4 minutes, 17 checks. The probe builds its
 own fixture (M2 `State` + 3 M1 objects + the IR demo viewpoint), opens the modal through
 `JjodelEvents.SYMBOL_EDITOR_OPEN`, and leaves no state in the repo.
+
+---
+
+## 13. Phase 2 — option A applied and verified (2026-09-16)
+
+Option A of §9, authorized in chat, landed in `bc42b259c`: `createPortal(…, document.body)` in
+`SymbolEditorModal.tsx` and `z-index: var(--z-alert, 10000)` on `.symbol-editor-modal-backdrop`. Two
+files, nothing else touched. `ValidationResultsModal` and `ImportSummaryModal` were **not** touched —
+they are unmeasured, and there is now a ticket for them in `docs/TECH-DEBT.md`, next to one for the
+`--z-modal` = 1050 duplication of §8.1.
+
+Same probe, assertions inverted to the corrected state: **25 PASS, 0 FAIL**, zero page errors.
+
+### 13.1 What changed, measured
+
+| | before | after |
+|---|---|---|
+| modal's participant in the root context | `div#root`, `auto` = **0** | `div.symbol-editor-modal-backdrop`, **10000** |
+| modal's ancestor chain | backdrop → `.router-wrapper` → `#root` → body → html | backdrop → **body** → html |
+| body-level scale | `#root` auto · rail 900 · sim-panel 850 | `#root` auto · rail 900 · sim-panel 850 · **backdrop 10000** |
+| controls on screen at 1600 | 50 visible, 44 reachable, **6 blocked** | 50 visible, **50 reachable, 0 blocked** |
+| the modal's × | covered by `input.tree-search__input` | takes the click and closes |
+| widths blocking a control | 1280 … 1780 | **none**, 1280 → 2400 |
+
+`#root` still creates a stacking context, the rail is still at 900, `--z-modal` still resolves to
+1050. Nothing was «unified»; the modal simply moved to where the comparison happens.
+
+### 13.2 The controls that make the result mean something
+
+- **The geometry did not move.** At 1600 the rail and the modal still overlap by **120px**, the Fill
+  section still reaches 104px into the rail's column. «Zero blocked» is therefore about who wins the
+  pixel, not about two boxes that stopped touching. Asserted at every width below 1840.
+- **The rail is still there.** Mounted, not collapsed, 400px, while the modal is up.
+- **E4, the falsifier.** The backdrop moved back inside `#root` at runtime: **the rail wins again**.
+  Restored onto body: the modal wins again. Without this, the verification could not tell the fix from
+  a coincidence.
+- **E3 survives and still matters.** A `position:fixed; z-index:999999` div injected inside `#root`
+  still never reaches the top. The class of defect is unchanged — which is exactly why the fix could
+  not be a bigger number.
+
+### 13.3 Two things that also changed, both wanted
+
+1. **The modality is now real.** The backdrop is `inset: 0`, so once it wins it covers the rail too: a
+   click over the rail no longer edits the model behind an `aria-modal="true"` dialog. This closes the
+   observation in §5.2, which was measured as a defect and is not one any more.
+2. **The stylesheet's header comment was false and is now true.** It claimed «same overlay pattern and
+   stacking as ImportSummaryModal … no portal»; it now names the ValidationRulesModal pattern and the
+   body scale, with the measurement cited.
+
+### 13.4 Gates
+
+`npm run typecheck`: exit 2, **33** errors on full output — the declared baseline — **0** in the two
+touched files; positive control `Measurable` → 6. `npm run build`: exit 0, only the pre-existing
+chunk-size warning. No vitest suite covers this modal. `npm run check:docs` was red on **another
+lane's** entry (cornerRadius slice 3, Notes 874 chars) and was trimmed to the cap in its own commit,
+no fact removed.
+
+Screenshot read by eye, 1600px with the rail open: the modal is whole, the × is where it belongs, and
+the rail behind it is dimmed by the backdrop.
+
+**Still open: the visual check on a real window.** The probe drives Chromium at a fixed viewport; the
+acceptance criterion was met there, not on your screen.
