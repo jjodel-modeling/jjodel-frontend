@@ -21,7 +21,7 @@ import {
 
 const ALL_FORMS: ShapeForm[] = [
     'rect', 'rounded', 'ellipse', 'circle', 'diamond',
-    'stadium', 'hexagon', 'parallelogram', 'cylinder',
+    'stadium', 'hexagon', 'parallelogram', 'cylinder', 'cloud',
 ];
 /**
  * Le cinque forme che esistevano prima del registry. I tre test di equivalenza
@@ -122,6 +122,36 @@ describe('shapeRegistry', () => {
             expect(desc.handleInsetAt).toBeUndefined();
             for (const t of [0, 0.25, 0.5, 0.75, 1]) expect(desc.insetFractionAt(t)).toBe(0);
         }
+    });
+
+    it('cloud: painter a path, nessun ornamento, e le ancore di default', () => {
+        const desc = SHAPE_REGISTRY.cloud;
+        const painter = desc.painter;
+        expect(painter.kind).toBe('svgPath');
+        if (painter.kind !== 'svgPath') return;
+        expect(painter.svgClassName).toBe('ir-cloud-svg');
+        expect(painter.silhouette.startsWith('M')).toBe(true);
+        // Chiusa, come quella del cilindro: e' riempita, non solo contornata.
+        expect(painter.silhouette.endsWith('Z')).toBe(true);
+        // Al contrario del cilindro NON ha ornamenti: la sagoma e' tutta la figura.
+        expect(painter.ornaments).toBeUndefined();
+        // Resize come l'ellisse (D6); il contorno e' simmetrico sui due assi con
+        // lo stesso profilo, quindi nessuna deroga sugli anchor.
+        expect(desc.defaultResizable).toBe(SHAPE_REGISTRY.ellipse.defaultResizable);
+        expect(desc.keepAspectRatio).toBe(false);
+        expect(desc.handleInsetAt).toBeUndefined();
+    });
+
+    it('cloud: il 18% per lato della spec vale su tutta la banda di contenuto', () => {
+        const f = SHAPE_REGISTRY.cloud.insetFractionAt;
+        // Rientro costante finche' la banda sta nel 64% centrale: 0.18 per lato.
+        for (const t of [0.5, 0.4, 0.6, 0.5 + 0.32, 0.5 - 0.32]) {
+            expect(f(t), `t=${t}`).toBeCloseTo(0.18, 9);
+        }
+        // Oltre quella banda il profilo si chiude fino al bordo del box.
+        expect(f(0.9)).toBeGreaterThan(0.18);
+        expect(f(1)).toBeCloseTo(0.5, 10);
+        expect(f(0)).toBeCloseTo(0.5, 10);
     });
 
     it('conserva la mappa dei tratteggi (ex DIAMOND_DASH)', () => {
@@ -306,6 +336,18 @@ describe('shapeRegistry: taglia da contenuto', () => {
         }
     });
 
+    it('cloud: il contenuto sta nel 64% centrale su ENTRAMBI gli assi', () => {
+        // Il 18% orizzontale viene dal profilo, il 18% verticale dal supplemento:
+        // heightFactor e' il reciproco della frazione, quindi un contenuto alto 64
+        // chiede un box alto 100 e ci si siede fra 18 e 82.
+        const desc = getShapeDescriptor('cloud');
+        const box = boxForContent(desc, 100, 64);
+        expect(box.h).toBe(100);
+        const r = contentRect(desc, box.w, box.h, 64);
+        expect(r.y).toBeCloseTo(18, 9);
+        expect(r.w / box.w).toBeCloseTo(0.64, 10);
+    });
+
     it('il cerchio resta quadrato', () => {
         const desc = getShapeDescriptor('circle');
         for (const [cw, ch] of CONTENT_GRID) {
@@ -385,9 +427,10 @@ describe('shapeRegistry: dalla misura del DOM al box', () => {
 
     it('quali forme portano un supplemento', () => {
         // Lo stadium riempie il proprio box come rect e rounded, quindi resta
-        // fuori; le tre forme geometriche nuove entrano per l'aspect floor.
+        // fuori; le tre forme geometriche del 2026-08-15 entrano per l'aspect
+        // floor, la nuvola per un supplemento verticale vero (heightFactor 1.5625).
         expect(ALL_FORMS.filter(f => hasSizeSupplement(getShapeDescriptor(f))))
-            .toEqual(['ellipse', 'circle', 'diamond', 'hexagon', 'parallelogram', 'cylinder']);
+            .toEqual(['ellipse', 'circle', 'diamond', 'hexagon', 'parallelogram', 'cylinder', 'cloud']);
     });
 
     it('il box non e\' mai piu\' piccolo del contenuto misurato', () => {
@@ -478,7 +521,7 @@ describe('shapeRegistry: dalla misura del DOM al box', () => {
 describe('shapeRegistry: raggio degli spigoli', () => {
     type Pt = { x: number; y: number };
     const HONORING: ShapeForm[] = ['rect', 'rounded', 'diamond', 'hexagon', 'parallelogram'];
-    const IGNORING: ShapeForm[] = ['ellipse', 'circle', 'stadium', 'cylinder'];
+    const IGNORING: ShapeForm[] = ['ellipse', 'circle', 'stadium', 'cylinder', 'cloud'];
     const POLYGONS: ShapeForm[] = ['diamond', 'hexagon', 'parallelogram'];
     const EPS = 1e-3;
 
@@ -560,7 +603,7 @@ describe('shapeRegistry: raggio degli spigoli', () => {
         for (const form of [...POLYGONS, ...IGNORING]) expect(baseCornerRadius(form), form).toBe(0);
     });
 
-    it('ellisse, cerchio, stadio e cilindro ignorano qualunque valore scritto', () => {
+    it('ellisse, cerchio, stadio, cilindro e nuvola ignorano qualunque valore scritto', () => {
         for (const form of IGNORING) {
             for (const authored of [0, 6, 12, 400]) {
                 expect(resolveCornerRadius(form, authored, { w: 120, h: 120 }), `${form} ${authored}`).toEqual({ kind: 'none' });

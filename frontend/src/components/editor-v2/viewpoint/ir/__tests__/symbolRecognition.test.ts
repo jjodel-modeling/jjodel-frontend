@@ -58,16 +58,28 @@ describe('symbolRecognition: i gruppi di ambiguita\' sono noti e stabili', () =>
     const plain = (form: ShapeSpec['form']): ShapeSpec => ({ form });
     // D24: le forme pure guadagnano il preset Base in testa (ordine di
     // tabella); fork/join e transizione Petri sono lo stesso punto degli assi.
+    // D6: la famiglia Goal e' in CODA al catalogo, quindi entra in coda a ogni
+    // insieme e non cambia mai `matches[0]`, cioe' il titolo della modale. Un
+    // Goal E' uno stadio e una Resource E' un rettangolo: la coincidenza e'
+    // dichiarata qui, come le precedenti, non evitata.
     const CASES: Array<[ShapeSpec, string[]]> = [
-        [plain('rect'), ['base-rect', 'flow-process', 'er-entity']],
+        [plain('rect'), ['base-rect', 'flow-process', 'er-entity', 'goal-resource']],
         [plain('rounded'), ['base-rounded', 'bpmn-task', 'uml-state']],
         [plain('diamond'), ['base-diamond', 'uml-choice', 'flow-decision', 'er-relationship']],
-        [plain('circle'), ['base-circle', 'bpmn-start-event', 'petri-place']],
+        [plain('circle'), ['base-circle', 'bpmn-start-event', 'petri-place', 'goal-actor']],
         [{ form: 'circle', marker: 'dot' }, ['uml-final-state', 'petri-marked-place']],
-        [plain('ellipse'), ['base-ellipse', 'uml-use-case', 'er-attribute']],
+        [plain('ellipse'), ['base-ellipse', 'uml-use-case', 'er-attribute', 'goal-belief']],
+        [plain('stadium'), ['base-stadium', 'goal-goal']],
+        [plain('hexagon'), ['base-hexagon', 'goal-task']],
+        [plain('parallelogram'), ['base-parallelogram', 'goal-obstacle']],
+        // La nuvola e' il solo punto che nessun'altra riga del catalogo occupa.
+        [plain('cloud'), ['goal-softgoal']],
+        // Agent e Role: la barra li separa dall'Actor, e fra loro.
+        [{ form: 'circle', marker: 'bar-top' }, ['goal-agent']],
+        [{ form: 'circle', marker: 'bar-bottom' }, ['goal-role']],
         // fill ignorato dove il preset non lo dichiara: il rect campito
         // matcha anche i rect senza fill (semantica gia' testata sotto).
-        [{ form: 'rect', fill: '#334155' }, ['base-rect', 'uml-fork-join', 'flow-process', 'petri-transition', 'er-entity']],
+        [{ form: 'rect', fill: '#334155' }, ['base-rect', 'uml-fork-join', 'flow-process', 'petri-transition', 'er-entity', 'goal-resource']],
     ];
     it('gli insiemi coincidono, nell\'ordine del catalogo', () => {
         for (const [shape, expected] of CASES) {
@@ -83,11 +95,14 @@ describe('symbolRecognition: i gruppi di ambiguita\' sono noti e stabili', () =>
         }
         const groups = [...seen.values()].filter(g => g.length > 1);
         expect(groups).toEqual([
-            ['base-rect', 'flow-process', 'er-entity'],
+            ['base-rect', 'flow-process', 'er-entity', 'goal-resource'],
             ['base-rounded', 'bpmn-task', 'uml-state'],
-            ['base-ellipse', 'uml-use-case', 'er-attribute'],
-            ['base-circle', 'bpmn-start-event', 'petri-place'],
+            ['base-stadium', 'goal-goal'],
+            ['base-ellipse', 'uml-use-case', 'er-attribute', 'goal-belief'],
+            ['base-circle', 'bpmn-start-event', 'petri-place', 'goal-actor'],
             ['base-diamond', 'uml-choice', 'flow-decision', 'er-relationship'],
+            ['base-parallelogram', 'goal-obstacle'],
+            ['base-hexagon', 'goal-task'],
             ['uml-final-state', 'petri-marked-place'],
             ['uml-fork-join', 'petri-transition'],
         ]);
@@ -107,7 +122,7 @@ describe('symbolRecognition: perturbazioni e condizionali', () => {
     });
     it('fill condizionale e\' ignorato dove il preset non lo dichiara, e fallisce dove lo dichiara', () => {
         const out = ids({ form: 'circle', fill: { when: { kind: 'always' } as any, then: '#334155' } });
-        expect(out).toEqual(['base-circle', 'bpmn-start-event', 'petri-place']);
+        expect(out).toEqual(['base-circle', 'bpmn-start-event', 'petri-place', 'goal-actor']);
         expect(out).not.toContain('uml-initial-state');
     });
     it('marker vuoto equivale ad assente', () => {

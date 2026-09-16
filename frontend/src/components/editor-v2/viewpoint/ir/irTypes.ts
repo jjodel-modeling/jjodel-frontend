@@ -53,7 +53,7 @@ export type Conditional<T> =
     | { rules: { when: Predicate; then: T }[]; default?: T };
 
 export type ShapeForm = 'rect' | 'rounded' | 'ellipse' | 'circle' | 'diamond'
-    | 'stadium' | 'hexagon' | 'parallelogram' | 'cylinder';
+    | 'stadium' | 'hexagon' | 'parallelogram' | 'cylinder' | 'cloud';
 export type LabelPosition = 'top' | 'center' | 'inside' | 'bottom';
 export type BadgePosition = 'tl' | 'tr' | 'bl' | 'br';
 
@@ -185,7 +185,7 @@ export interface ShapeSpec {
      * `parallelogram` (a rounded path, `roundedPolygonPath` in shapeRegistry.ts).
      * Ignored by `ellipse`, `circle` and `stadium`, whose `border-radius` (50%, 50%,
      * 999px) is what constitutes the shape rather than a decoration of it, and by
-     * `cylinder`, which is a path with arcs of its own.
+     * `cylinder` and `cloud`, which are paths with arcs of their own.
      *
      * Clamped to `min(w, h) / 4` at render only. Not a recognition axis: a preset stays
      * recognized whatever the radius. Additive optional field: no irVersion bump, no

@@ -49,8 +49,10 @@ describe('notationCatalog: integrita della tabella', () => {
         }
     });
 
-    it('le notazioni rappresentate: le cinque di P5 piu Base (D24)', () => {
-        expect([...CATALOG_NOTATIONS].sort()).toEqual(['BPMN', 'Base', 'ER', 'Flowchart', 'Petri net', 'UML'].sort());
+    it('le notazioni rappresentate: le cinque di P5, Base (D24) e le tre di Goal (D6)', () => {
+        expect([...CATALOG_NOTATIONS].sort()).toEqual(
+            ['BPMN', 'Base', 'ER', 'Flowchart', 'Petri net', 'UML', 'GRL', 'KAOS', 'i*'].sort(),
+        );
     });
 });
 
@@ -205,6 +207,29 @@ describe('notationCatalog: famiglie e catalogFamilySections (D24)', () => {
             'bpmn-exclusive-gateway', 'bpmn-parallel-gateway',
             'bpmn-inclusive-gateway', 'bpmn-complex-gateway',
         ]);
+    });
+
+    it('la famiglia Goal (D6): nove preset in coda, e il catalogo arriva a 56', () => {
+        expect(NOTATION_CATALOG).toHaveLength(56);
+        expect(CATALOG_FAMILIES).toHaveLength(5);
+        // In coda: l'ordine di CATALOG_FAMILIES e' l'ordine delle sezioni.
+        expect(CATALOG_FAMILIES[CATALOG_FAMILIES.length - 1]).toBe('Goal');
+        const goal = catalogFamilySections('', '').find(s => s.family === 'Goal');
+        expect(goal?.total).toBe(9);
+        expect(goal?.presets.map(p => p.id)).toEqual([
+            'goal-goal', 'goal-softgoal', 'goal-task', 'goal-resource', 'goal-actor',
+            'goal-agent', 'goal-role', 'goal-belief', 'goal-obstacle',
+        ]);
+    });
+
+    it('Goal: Agent e Role differiscono dall Actor per la sola barra, e l Obstacle non e un rombo', () => {
+        expect(getCatalogPreset('goal-actor')?.values).toEqual({ form: 'circle' });
+        expect(getCatalogPreset('goal-agent')?.values).toEqual({ form: 'circle', marker: 'bar-top' });
+        expect(getCatalogPreset('goal-role')?.values).toEqual({ form: 'circle', marker: 'bar-bottom' });
+        // Un rombo col bordo normale e' gia' la relationship ER, e la modale
+        // titola con matches[0]: l'Obstacle si presenterebbe come «Relationship».
+        expect(getCatalogPreset('goal-obstacle')?.values.form).toBe('parallelogram');
+        expect(getCatalogPreset('goal-softgoal')?.values.form).toBe('cloud');
     });
 
     it('i preset nuovi (D24/D26) risolvono per id e citano solo primitivi esistenti', () => {

@@ -30,10 +30,10 @@ import type { ShapeForm, ShapeSpec } from './irTypes';
  * Le famiglie semantiche delle sezioni del catalogo (D24): cosa si modella,
  * non lo standard di provenienza. L'ordine qui e' l'ordine delle sezioni.
  */
-export type CatalogFamily = 'Base' | 'Process' | 'Data (ER)' | 'Flowchart';
+export type CatalogFamily = 'Base' | 'Process' | 'Data (ER)' | 'Flowchart' | 'Goal';
 
 export const CATALOG_FAMILIES: readonly CatalogFamily[] =
-    ['Base', 'Process', 'Data (ER)', 'Flowchart'];
+    ['Base', 'Process', 'Data (ER)', 'Flowchart', 'Goal'];
 
 export interface SymbolPreset {
     readonly id: string;
@@ -114,6 +114,25 @@ export const NOTATION_CATALOG: readonly SymbolPreset[] = [
     { id: 'er-attribute', label: 'Attribute', notation: 'ER', family: 'Data (ER)', keywords: ['attributo'], values: { form: 'ellipse' } },
     { id: 'er-derived-attribute', label: 'Derived attribute', notation: 'ER', family: 'Data (ER)', keywords: ['attributo derivato'], values: { form: 'ellipse', border: { style: 'dashed', width: 1 } } },
     { id: 'er-multivalued-attribute', label: 'Multivalued attribute', notation: 'ER', family: 'Data (ER)', keywords: ['attributo multivalore'], values: { form: 'ellipse', border: { style: 'double', width: 3 } } },
+    // ---- Goal modeling: i*, GRL, KAOS (D6) ----
+    // Una notazione per riga, come gia' fanno BPMN e UML. i* copre i sette
+    // elementi del suo nucleo; Belief va a GRL perche' i* 2.0 non lo tiene piu'
+    // fra gli elementi standard mentre GRL si'; Obstacle e' di KAOS.
+    //
+    // Obstacle e' un PARALLELOGRAMMA e non un rombo: `diamond` con bordo semplice
+    // e' gia' il punto della relationship ER nello spazio degli assi, e la modale
+    // titola il simbolo con `matches[0]`, quindi un Obstacle a rombo si
+    // presenterebbe all'autore come «Relationship». Il parallelogramma e' insieme
+    // il disegno KAOS e un punto libero.
+    { id: 'goal-goal', label: 'Goal', notation: 'i*', family: 'Goal', keywords: ['obiettivo', 'hardgoal'], values: { form: 'stadium' } },
+    { id: 'goal-softgoal', label: 'Softgoal', notation: 'i*', family: 'Goal', keywords: ['soft goal', 'quality', 'qualita', 'nuvola'], values: { form: 'cloud' } },
+    { id: 'goal-task', label: 'Task', notation: 'i*', family: 'Goal', keywords: ['compito', 'operazionalizzazione'], values: { form: 'hexagon' } },
+    { id: 'goal-resource', label: 'Resource', notation: 'i*', family: 'Goal', keywords: ['risorsa'], values: { form: 'rect' } },
+    { id: 'goal-actor', label: 'Actor', notation: 'i*', family: 'Goal', keywords: ['attore'], values: { form: 'circle' } },
+    { id: 'goal-agent', label: 'Agent', notation: 'i*', family: 'Goal', keywords: ['agente'], values: { form: 'circle', marker: 'bar-top' } },
+    { id: 'goal-role', label: 'Role', notation: 'i*', family: 'Goal', keywords: ['ruolo'], values: { form: 'circle', marker: 'bar-bottom' } },
+    { id: 'goal-belief', label: 'Belief', notation: 'GRL', family: 'Goal', keywords: ['credenza', 'assunzione'], values: { form: 'ellipse' } },
+    { id: 'goal-obstacle', label: 'Obstacle', notation: 'KAOS', family: 'Goal', keywords: ['ostacolo'], values: { form: 'parallelogram' } },
 ];
 
 /** Le notazioni presenti, nell'ordine di prima apparizione nel catalogo. */

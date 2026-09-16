@@ -34,6 +34,18 @@ const BG = 'var(--node-bg, #ffffff)';
 const TILE_RADIUS_RATIO = 0.7;
 
 /**
+ * La nuvola dentro il riquadro della tile (x 10..62, y 8..40, come le altre
+ * forme). E' la silhouette del registry portata li': quella vive nel viewBox
+ * 0..100, quindi le otto gobbe circolari diventano archi ellittici, rx = 14.7 *
+ * 0.52 e ry = 14.7 * 0.32. Stessa figura del canvas, non un secondo disegno.
+ */
+const CLOUD_TILE_PATH =
+    'M54.26,28.65 A7.64,4.7 0 0 1 43.56,35.24 A7.64,4.7 0 0 1 28.44,35.24'
+    + ' A7.64,4.7 0 0 1 17.74,28.65 A7.64,4.7 0 0 1 17.74,19.35'
+    + ' A7.64,4.7 0 0 1 28.44,12.76 A7.64,4.7 0 0 1 43.56,12.76'
+    + ' A7.64,4.7 0 0 1 54.26,19.35 A7.64,4.7 0 0 1 54.26,28.65 Z';
+
+/**
  * Il contorno del preset, come elemento SVG riusabile per l'overdraw del double.
  *
  * `radius` (slice 3) is the authored corner radius already in tile units, or
@@ -67,6 +79,9 @@ function contourEl(form: SymbolPreset['values']['form'], props: React.SVGProps<a
                 <path d="M10,14 A26,6 0 0 0 62,14" fill="none" />
             </g>
         );
+        // La nuvola e' un path solo, chiuso e senza ornamenti: l'overdraw del
+        // double la ridisegna tale e quale, come per i poligoni.
+        case 'cloud': return <path d={CLOUD_TILE_PATH} {...props} />;
         case 'rect':
         default: return <rect x={10} y={8} width={52} height={32} rx={rectRx(undefined)} {...props} />;
     }

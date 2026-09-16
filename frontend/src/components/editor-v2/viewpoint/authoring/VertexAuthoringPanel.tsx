@@ -51,6 +51,7 @@ const FORM_OPTIONS = [
     { value: 'hexagon', label: 'Hexagon' },
     { value: 'parallelogram', label: 'Parallelogram' },
     { value: 'cylinder', label: 'Cylinder' },
+    { value: 'cloud', label: 'Cloud' },
 ];
 const BORDER_STYLE_OPTIONS = [
     { value: 'solid', label: 'Solid' },

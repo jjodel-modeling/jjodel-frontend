@@ -206,6 +206,53 @@ const HEXAGON_CROSS_INSET = (t: number): number => Math.max(0, Math.abs(normT(t)
 const PARALLELOGRAM_INSET = (t: number): number => 0.125 * (1 + Math.abs(normT(t) * 2 - 1));
 
 /**
+ * Nuvola (Softgoal, D6): otto gobbe uguali su una corona di raggio 38 centrata in
+ * (50,50), giunzioni a 22.5 + k*45 gradi e cuspidi sugli assi e sulle diagonali.
+ * Il raggio dell'arco (14.7) sta appena sopra la meta' della corda (14.54): la
+ * gobba e' quasi una semicirconferenza, e il margine impedisce che un
+ * arrotondamento porti la corda oltre il diametro. Le cuspidi arrivano a 47.6 dal
+ * centro, cioe' a ~2.4 dal bordo del box.
+ *
+ * Nessun ornamento, al contrario del cilindro: qui la sagoma e' tutta la figura.
+ */
+const CLOUD_SILHOUETTE =
+    'M85.11,64.54 A14.7,14.7 0 0 1 64.54,85.11 A14.7,14.7 0 0 1 35.46,85.11'
+    + ' A14.7,14.7 0 0 1 14.89,64.54 A14.7,14.7 0 0 1 14.89,35.46'
+    + ' A14.7,14.7 0 0 1 35.46,14.89 A14.7,14.7 0 0 1 64.54,14.89'
+    + ' A14.7,14.7 0 0 1 85.11,35.46 A14.7,14.7 0 0 1 85.11,64.54 Z';
+
+/**
+ * Frazione del box che la nuvola offre al contenuto: il 64% centrale, cioe' il
+ * rientro del 18% per lato che la spec chiede su TUTTI i lati.
+ *
+ * Il rettangolo sta davvero dentro la sagoma, e non e' un numero di comodo: il
+ * suo vertice (82,82) dista 45.3 dal centro, e a 45 gradi la cuspide della gobba
+ * arriva a 47.6; sull'asse orizzontale il rettangolo arriva a 32 contro i 47.6
+ * della cuspide, e alla giunzione a 22.5 gradi, il punto piu' stretto, a 34.6
+ * contro i 38 della corona.
+ */
+const CLOUD_CONTENT_FRACTION = 0.64;
+const CLOUD_INSET = (1 - CLOUD_CONTENT_FRACTION) / 2;
+
+/**
+ * Profilo di mezza larghezza della nuvola. Le otto gobbe non hanno una forma
+ * chiusa semplice, quindi quello dichiarato qui e' il CONTRATTO del rettangolo di
+ * contenuto e non il contorno punto per punto: rientro costante al 18% finche' la
+ * banda sta nel 64% centrale, poi discesa lineare a zero al bordo del box.
+ *
+ * La discesa non e' decorativa. Rende il rientro monotono come sulle altre forme,
+ * e fissa l'argmax di `v * avail(v)` esattamente a `CLOUD_CONTENT_FRACTION`, che
+ * e' l'invariante di cui `heightFactor` e' il reciproco: cosi' il 18% vale anche
+ * in verticale, dove a imporlo e' il supplemento e non questo profilo.
+ */
+const CLOUD_INSET_AT = (t: number): number => {
+    const v = Math.abs(normT(t) * 2 - 1);
+    if (v <= CLOUD_CONTENT_FRACTION) return CLOUD_INSET;
+    const avail = (CLOUD_CONTENT_FRACTION * (1 - v)) / (1 - CLOUD_CONTENT_FRACTION);
+    return (1 - avail) / 2;
+};
+
+/**
  * Height floor for the shapes that carry a supplement. Ratified at 64 on
  * 2026-08-15, out of a visual comparison: at 48 a diamond holding a single line
  * comes out 225x48 and reads as a ribbon, 64 gives 204x64, 80 gives 193x80 and
@@ -243,6 +290,17 @@ const DIAMOND_SIZING: ShapeSizing = {
  */
 const GEOMETRIC_BOX_SIZING: ShapeSizing = {
     heightFactor: 1, minBoxWidth: 0, minBoxHeight: GEOMETRIC_MIN_BOX_HEIGHT, minAspect: 0.8,
+};
+
+/**
+ * Nuvola: supplemento verticale vero, a differenza delle tre qui sopra. Il
+ * contenuto occupa la banda centrale al 64% dell'altezza, quindi un box che
+ * ospita `ch` deve essere alto `ch / 0.64` — che e' anche il reciproco
+ * dell'argmax, come l'invariante 1/argmax impone.
+ */
+const CLOUD_SIZING: ShapeSizing = {
+    heightFactor: 1 / CLOUD_CONTENT_FRACTION, minBoxWidth: 0,
+    minBoxHeight: GEOMETRIC_MIN_BOX_HEIGHT, minAspect: 0.8,
 };
 
 /**
@@ -342,6 +400,20 @@ export const SHAPE_REGISTRY: Readonly<Record<ShapeForm, ShapeDescriptor>> = {
         insetFractionAt: NO_INSET,
         sizing: GEOMETRIC_BOX_SIZING,
     },
+    // cloud (Softgoal, D6): gobbe, quindi painter a path come il cilindro, e
+    // nessun ornamento. Le ancore restano quelle di default: il contorno e'
+    // simmetrico su entrambi gli assi e le due meta' hanno lo stesso profilo,
+    // quindi non c'e' la deroga che l'esagono e il parallelogramma dichiarano.
+    // Resize come l'ellisse, e nessun lock d'aspetto: una nuvola larga e bassa e'
+    // una nuvola.
+    cloud: {
+        id: 'cloud',
+        painter: { kind: 'svgPath', svgClassName: 'ir-cloud-svg', silhouette: CLOUD_SILHOUETTE },
+        defaultResizable: true,
+        keepAspectRatio: false,
+        insetFractionAt: CLOUD_INSET_AT,
+        sizing: CLOUD_SIZING,
+    },
 };
 
 /* ------------------------------------------------------------------------- */
@@ -351,7 +423,8 @@ export const SHAPE_REGISTRY: Readonly<Record<ShapeForm, ShapeDescriptor>> = {
 /**
  * The forms that honor `ShapeSpec.cornerRadius`. Gated by FORM and not by painter
  * kind: `ellipse`, `circle` and `stadium` are CSS-painted like `rect`, but their
- * `border-radius` is the shape itself, and `cylinder` is a path with its own arcs.
+ * `border-radius` is the shape itself, and `cylinder` and `cloud` are paths with
+ * arcs of their own.
  * A form added later ignores the axis until it is listed here.
  */
 const CORNER_RADIUS_FORMS: ReadonlySet<ShapeForm> = new Set<ShapeForm>([

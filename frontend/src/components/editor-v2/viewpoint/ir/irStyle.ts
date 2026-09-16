@@ -114,20 +114,24 @@ const BASE_CSS = `
 /* stadium: rounded col raggio portato alla pillola. Resta dipinto dalla box CSS,
    quindi tiene il pavimento content-hug come rect e rounded. */
 .ir-node-content.ir-shape--stadium { border-radius: 999px; justify-content: center; }
-/* hexagon, parallelogram, cylinder: dipinte da un layer SVG come il rombo, con le
-   stesse quattro regole. Il selettore figlio ha bisogno della classe del layer,
-   percio' i selettori sono raggruppati e non condivisi con quelli del rombo. */
+/* hexagon, parallelogram, cylinder, cloud: dipinte da un layer SVG come il rombo,
+   con le stesse quattro regole. Il selettore figlio ha bisogno della classe del
+   layer, percio' i selettori sono raggruppati e non condivisi con quelli del rombo. */
 .ir-node-content.ir-shape--hexagon,
 .ir-node-content.ir-shape--parallelogram,
+.ir-node-content.ir-shape--cloud,
 .ir-node-content.ir-shape--cylinder { background: transparent; border-color: transparent; box-shadow: none; overflow: visible; justify-content: center; align-items: center; min-width: 0; min-height: 0; }
 .ir-node-content.ir-shape--hexagon > .ir-hexagon-svg,
 .ir-node-content.ir-shape--parallelogram > .ir-parallelogram-svg,
+.ir-node-content.ir-shape--cloud > .ir-cloud-svg,
 .ir-node-content.ir-shape--cylinder > .ir-cylinder-svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; z-index: 0; }
 .ir-node-content.ir-shape--hexagon > :not(.ir-hexagon-svg):not(.ir-marker-svg),
 .ir-node-content.ir-shape--parallelogram > :not(.ir-parallelogram-svg):not(.ir-marker-svg),
+.ir-node-content.ir-shape--cloud > :not(.ir-cloud-svg):not(.ir-marker-svg),
 .ir-node-content.ir-shape--cylinder > :not(.ir-cylinder-svg):not(.ir-marker-svg) { position: relative; z-index: 1; }
 .mm-node:has(> .ir-node-content.ir-shape--hexagon),
 .mm-node:has(> .ir-node-content.ir-shape--parallelogram),
+.mm-node:has(> .ir-node-content.ir-shape--cloud),
 .mm-node:has(> .ir-node-content.ir-shape--cylinder) { min-width: 0; min-height: 0; width: 100%; height: 100%; }
 /* Fase 2 (2026-07-28): gate the fill-neutralizer on an EXPLICIT size, not merely on the
    resizable flag. ObjectNode emits the ir-sized class on the .mm-node when the node carries
@@ -152,6 +156,7 @@ const BASE_CSS = `
 .mm-node.selected > .ir-node-content.ir-shape--diamond,
 .mm-node.selected > .ir-node-content.ir-shape--hexagon,
 .mm-node.selected > .ir-node-content.ir-shape--parallelogram,
+.mm-node.selected > .ir-node-content.ir-shape--cloud,
 .mm-node.selected > .ir-node-content.ir-shape--cylinder { outline: none; box-shadow: none; }
 .ir-sel-ring, .ir-sel-band { stroke: none; }
 .mm-node.selected > .ir-node-content .ir-sel-ring { stroke: var(--node-selection-stroke); }

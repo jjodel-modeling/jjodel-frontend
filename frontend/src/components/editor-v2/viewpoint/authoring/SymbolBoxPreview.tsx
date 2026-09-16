@@ -90,7 +90,12 @@ export interface SymbolBoxPreviewProps {
 export const SymbolBoxPreview: React.FC<SymbolBoxPreviewProps> = ({ preset, box, label, borderColor, cornerRadius, maxW, maxH }) => {
     const v = preset.values;
     const desc = getShapeDescriptor(v.form);
-    const svgPainter = desc.painter.kind === 'svg' ? desc.painter : null;
+    // Entrambi i painter SVG, con la stessa narrowing di IRNodeContent: una forma
+    // `svgPath` (il cilindro, la nuvola) porta il contorno in `silhouette` invece
+    // che in `points`. Senza questo ramo irStyle.ts spegne la box CSS e nessuno
+    // disegna la sagoma, cioe' la replica esce vuota.
+    const painter = desc.painter;
+    const svgPainter = painter.kind === 'svg' || painter.kind === 'svgPath' ? painter : null;
     const markerDef = getMarkerDef(v.marker);
 
     const s = fitScale(box, maxW, maxH);
@@ -129,16 +134,18 @@ export const SymbolBoxPreview: React.FC<SymbolBoxPreviewProps> = ({ preset, box,
         svgPainter ? { w: box.w - 2 * BOX_BORDER_PX, h: box.h - 2 * BOX_BORDER_PX } : box,
     );
     if (cornerPaint.kind === 'css') replicaStyle.borderRadius = cornerPaint.px;
-    const roundedD = cornerPaint.kind === 'path' && svgPainter
+    const roundedD = cornerPaint.kind === 'path' && svgPainter?.kind === 'svg'
         ? roundedPolygonPath(svgPainter.points, cornerPaint.r, cornerPaint.w, cornerPaint.h)
         : '';
     const svgViewBox = roundedD && cornerPaint.kind === 'path' ? `0 0 ${cornerPaint.w} ${cornerPaint.h}` : '0 0 100 100';
-    /** The outline: the rounded path when there is one, the registry polygon otherwise. */
-    const outline = (props: { fill: string; stroke: string; strokeWidth: number; strokeDasharray?: string }) => (
-        roundedD
-            ? <path d={roundedD} vectorEffect="non-scaling-stroke" {...props} />
-            : <polygon points={svgPainter?.points} vectorEffect="non-scaling-stroke" {...props} />
-    );
+    /** The outline: the rounded path when there is one, the registry contour otherwise. */
+    const outline = (props: { fill: string; stroke: string; strokeWidth: number; strokeDasharray?: string }) => {
+        if (roundedD) return <path d={roundedD} vectorEffect="non-scaling-stroke" {...props} />;
+        if (!svgPainter) return null;
+        return svgPainter.kind === 'svgPath'
+            ? <path d={svgPainter.silhouette} vectorEffect="non-scaling-stroke" {...props} />
+            : <polygon points={svgPainter.points} vectorEffect="non-scaling-stroke" {...props} />;
+    };
 
     return (
         <div style={{ position: 'relative', width: dw, height: dh }} aria-hidden="true">
@@ -153,6 +160,19 @@ export const SymbolBoxPreview: React.FC<SymbolBoxPreviewProps> = ({ preset, box,
                         ) : (
                             outline({ fill: svgFill, stroke: svgStroke, strokeWidth: svgStrokeWidth, strokeDasharray: svgDash })
                         )}
+                        {/* Ornamenti (il coperchio del cilindro): sopra la
+                            silhouette, solo tratto, come su IRNodeContent. */}
+                        {svgPainter.kind === 'svgPath' && (svgPainter.ornaments ?? []).map((d, i) => (
+                            <path
+                                key={`ir-ornament-${i}`}
+                                d={d}
+                                vectorEffect="non-scaling-stroke"
+                                fill="none"
+                                stroke={svgStroke}
+                                strokeWidth={svgStrokeWidth}
+                                strokeDasharray={svgDash}
+                            />
+                        ))}
                     </svg>
                 )}
                 {markerDef && (
