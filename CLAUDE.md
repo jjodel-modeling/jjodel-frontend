@@ -460,6 +460,14 @@ A test that greps the source of a file instead of executing it pins the shape of
 
 When the behaviour cannot be executed because the file does not import in the bench (`window is not defined`, through the `joiner` barrel and monaco), state the gap in the log entry. Do not fill it with a source-text test. The fix is to move the pure logic into a module the bench can import; `frontend/src/model/nameLookup.ts` is the worked example.
 
+**Sub-rule: a test is judged by the mutations it kills, not by the line it seems to be about**
+
+A test that survives a mutation has answered one question, not two. Before deleting it, measure which OTHER mutations die by its hand. A property that no mutation can distinguish through the output — a type sentinel, for example — is declared intent: it will never be covered, and no test can be written that covers it, so surviving its removal is not a verdict on the test. The same test can still be the only guard on a different mutation, and deleting it for failing the first question throws away the answer to the second.
+
+Measured 2026-09-16 on `symbolRecognition.ts`, on the two conditional border-axis tests. Dropping the `scalarOf` sentinel from `style` and `width`, back to the raw compare, leaves the file green at 14/14: a conditional object is unequal to a scalar preset value either way, so through `recognizeSymbol`'s output the sentinel is invisible and the tests cannot be about it. Those same two, and no other test in the file, are the only ones that kill reading the axis's `default` — the mutation that lets the modal title claim a preset an instance may not draw. Both forms of it, the shared one and the one scoped to the two axes, come back 2 red, and the 2 are them.
+
+The name of the test declares the mutation that kills it; the bench that establishes it goes in the commit message (§21.2).
+
 ---
 
 ## 6. Commit discipline
