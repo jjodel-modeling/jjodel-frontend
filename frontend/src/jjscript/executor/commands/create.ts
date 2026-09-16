@@ -232,13 +232,33 @@ export async function executeCreate(
 
         // M2 guard: every other elementType modifies the metamodel.
         if (context.level === 'M1') {
+            // A bound run cannot be retargeted by opening a tab: the scope travels with the reply,
+            // so the only way out is a new reply. An unbound run is the typed case, where opening
+            // the editor is exactly what fixes it.
+            const advice = context.scopeBound
+                ? 'Ask Jjodie again with the metamodel open.'
+                : `Open a metamodel editor (M2) to create a ${elementType}. To create an instance in M1, use 'create instance <ClassName>'.`;
+            // A scope-bound run is a Jjodie reply: it carries the model its context showed, and
+            // saying which one turns "wrong level" into something the user can act on. The name
+            // comes from the project already in hand, with no new field on ExecutionContext.
+            let boundModelName: string | undefined;
+            if (context.scopeBound && context.modelId) {
+                const models = (project as any).models || [];
+                boundModelName = models.find((m: any) => m?.id === context.modelId && !m.isMetamodel)?.name;
+            }
+            const writtenFor = boundModelName
+                ? ` This script was written for the model '${boundModelName}'.`
+                : '';
+            // `advice` is repeated in `message` on purpose: `errors` is dropped on the way to the
+            // error dialog (ScriptLineResult carries no such field), so `message` is the only text
+            // the user actually reads. See §7 of the discovery report.
             return {
                 success: false,
                 command: 'create',
-                message: `'create ${elementType}' modifies the metamodel`,
+                message: `'create ${elementType}' modifies the metamodel.${writtenFor} ${advice}`,
                 errors: [{
                     code: 'WRONG_LEVEL',
-                    message: `Open a metamodel editor (M2) to create a ${elementType}. To create an instance in M1, use 'create instance <ClassName>'.`
+                    message: advice
                 }]
             };
         }

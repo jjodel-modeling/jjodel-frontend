@@ -6,6 +6,8 @@
 import { ExecutionContext } from '../types';
 import { DUser, L, LUser, LProject, LModel, store, LPointerTargetable, LModelElement, DState, GObject } from '../../joiner';
 import DockManager from '../../components/abstract/DockManager';
+import { resolveActiveArtifact, resolveActiveLevel } from './activeArtifact';
+import type { ActiveArtifactCache } from './activeArtifact';
 
 // ============================================
 // ACTIVE ARTIFACT CACHE
@@ -21,7 +23,6 @@ import DockManager from '../../components/abstract/DockManager';
  * fallback to `DockManager.dock.getLayout()` works only when the dock instance
  * is reachable via the singleton — in many flows it is not.
  */
-type ActiveArtifactCache = { modelId: string; editorType: string };
 let _activeArtifactCache: ActiveArtifactCache | null = null;
 
 /**
@@ -53,35 +54,36 @@ function getCachedModel(expectMetamodel: boolean): LModel | null {
  * Get the active/selected metamodel from UI state.
  *
  * Resolution order:
- * 1. _activeArtifactCache — last EDITOR_TYPE_CHANGE event payload (most reliable)
+ * 1. _activeArtifactCache: last EDITOR_TYPE_CHANGE event payload. When it names an artefact
+ *    level it DECIDES: a cache reading 'model' returns null here, it does not fall through
+ *    (see `activeArtifact.ts` for why).
  * 2. DockManager active tab — the metamodel/model tab the user is currently viewing
  * 3. _lastSelected.modelElement — the last clicked element's metamodel
  * 4. null (caller decides fallback)
+ *
+ * 2 and 3 run only on a cold cache, or on a tab that is not an artefact ('summary',
+ * 'transformation', 'viewpoint').
  */
 export function getActiveMetamodel(): LModel | null {
     try {
-        // 0. Check the cache first — populated by EDITOR_TYPE_CHANGE listener.
-        const cached = getCachedModel(/* expectMetamodel */ true);
-        if (cached) return cached;
-
-        // 1. Use DockManager active tab ID (most reliable indicator of which metamodel is "active")
-        const activeTabModel = getActiveTabMetamodel();
-        if (activeTabModel) return activeTabModel;
-
-        // 2. Fall back to _lastSelected.modelElement
-        const state: DState & GObject = store.getState();
-        const selected = state._lastSelected?.modelElement;
-
-        if (selected) {
-            const me = LPointerTargetable.fromPointer(selected) as LModelElement;
-            if (me) {
-                const model = me.model;
-                if (model && model.isMetamodel) {
-                    return model;
-                }
-            }
-        }
-        return null;
+        return resolveActiveArtifact<LModel>(
+            /* expectMetamodel */ true,
+            _activeArtifactCache,
+            // 0. The cache names the metamodel on screen.
+            () => getCachedModel(/* expectMetamodel */ true),
+            [
+                // 1. DockManager active tab (most reliable indicator of which metamodel is "active")
+                () => getActiveTabMetamodel(),
+                // 2. Fall back to _lastSelected.modelElement
+                () => {
+                    const state: DState & GObject = store.getState();
+                    const selected = state._lastSelected?.modelElement;
+                    if (!selected) return null;
+                    const me = LPointerTargetable.fromPointer(selected) as LModelElement;
+                    return me ? (me.model ?? null) : null;
+                },
+            ]
+        );
     } catch {
         return null;
     }
@@ -118,44 +120,43 @@ function getActiveTabMetamodel(): LModel | null {
  * or no model tab is active.
  *
  * Resolution order (mirrors getActiveMetamodel):
- * 0. _activeArtifactCache — last EDITOR_TYPE_CHANGE event payload
+ * 0. _activeArtifactCache: last EDITOR_TYPE_CHANGE event payload. When it names an artefact
+ *    level it DECIDES: a cache reading 'metamodel' returns null here, it does not fall through.
+ *    That fall-through is what stamped a Jjodie reply M1 on a metamodel tab.
  * 1. DockManager active tab — if it's a non-metamodel DModel
  * 2. _lastSelected.modelElement — walk to its owning DModel if non-metamodel
  * 3. null
+ *
+ * 1 and 2 run only on a cold cache, or on a tab that is not an artefact.
  */
 export function getActiveModel(): LModel | null {
     try {
-        // 0. Check the cache first — populated by EDITOR_TYPE_CHANGE listener.
-        const cached = getCachedModel(/* expectMetamodel */ false);
-        if (cached) return cached;
-
-        // 1. DockManager active tab
-        if (DockManager.dock) {
-            const layout = DockManager.dock.getLayout();
-            const modelsPanel = layout?.dockbox?.children?.[0];
-            const tabs = (modelsPanel as any)?.tabs || [];
-            const activeId: string = (modelsPanel as any)?.activeId || tabs[0]?.id;
-            if (activeId) {
-                const model = LPointerTargetable.fromPointer(activeId) as LModel | null;
-                if (model && !model.isMetamodel) {
-                    return model;
-                }
-            }
-        }
-
-        // 2. Fall back to _lastSelected.modelElement
-        const state: DState & GObject = store.getState();
-        const selected = state._lastSelected?.modelElement;
-        if (selected) {
-            const me = LPointerTargetable.fromPointer(selected) as LModelElement;
-            if (me) {
-                const model = me.model;
-                if (model && !model.isMetamodel) {
-                    return model;
-                }
-            }
-        }
-        return null;
+        return resolveActiveArtifact<LModel>(
+            /* expectMetamodel */ false,
+            _activeArtifactCache,
+            // 0. The cache names the model on screen.
+            () => getCachedModel(/* expectMetamodel */ false),
+            [
+                // 1. DockManager active tab
+                () => {
+                    if (!DockManager.dock) return null;
+                    const layout = DockManager.dock.getLayout();
+                    const modelsPanel = layout?.dockbox?.children?.[0];
+                    const tabs = (modelsPanel as any)?.tabs || [];
+                    const activeId: string = (modelsPanel as any)?.activeId || tabs[0]?.id;
+                    if (!activeId) return null;
+                    return LPointerTargetable.fromPointer(activeId) as LModel | null;
+                },
+                // 2. Fall back to _lastSelected.modelElement
+                () => {
+                    const state: DState & GObject = store.getState();
+                    const selected = state._lastSelected?.modelElement;
+                    if (!selected) return null;
+                    const me = LPointerTargetable.fromPointer(selected) as LModelElement;
+                    return me ? (me.model ?? null) : null;
+                },
+            ]
+        );
     } catch {
         return null;
     }
@@ -166,13 +167,12 @@ export function getActiveModel(): LModel | null {
  * 'M2' if it contains a metamodel. Defaults to 'M2' on ambiguity.
  *
  * Cache-aware: reads `_activeArtifactCache.editorType` first to avoid the
- * round-trip through DockManager / _lastSelected when the cache is fresh.
+ * round-trip through DockManager / _lastSelected when the cache is fresh. Shares the cache rule
+ * with `getActiveModel` / `getActiveMetamodel` (`activeArtifact.ts`), so the three agree.
  */
 export function getActiveLevel(): 'M1' | 'M2' {
-    if (_activeArtifactCache?.editorType === 'model') return 'M1';
-    if (_activeArtifactCache?.editorType === 'metamodel') return 'M2';
     // Fallback for cold cache (e.g., before any EDITOR_TYPE_CHANGE has fired)
-    return getActiveModel() !== null ? 'M1' : 'M2';
+    return resolveActiveLevel(_activeArtifactCache, () => getActiveModel() !== null);
 }
 
 /**
