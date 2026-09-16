@@ -26,7 +26,7 @@ passed, 0 failed**, the same 9 files red at import. `npm run build` exit 0, pre-
 **8 PASS 0 FAIL**: disabled and `Create View: open a viewpoint first` with nothing active; enabled
 with «Gate VP» active; the view created in the ACTIVE viewpoint with a vertex `ir` pinned to the
 class; field-by-field identical to what the `+` dialog makes for the same class.
-**Notes**: Census asked by the prompt, measured after the fix: the live UI call sites of `createViewInWorkbench` all pass the 4th argument — `EditorV2.tsx:3274` and `:3323`, `TreeViewContent.tsx:664` and `:1957`. The only one without it is `ContextMenu.tsx:641`, inside the classic popup that cannot open (`ShowContextMenu` needs a `data-nodetype="Graph"` ancestor unmounted since Fase 5a). This is what makes «no view born from a user gesture lands in Default» true, with the four structural fallbacks untouched.
+**Notes**: Census asked by the prompt, after the fix: the live UI call sites of `createViewInWorkbench` all pass the 4th argument — `EditorV2.tsx:3274` and `:3323`, `TreeViewContent.tsx:664` and `:1957`. The only one without it is `ContextMenu.tsx:641`, inside the classic popup that cannot open (`ShowContextMenu` needs a `data-nodetype="Graph"` ancestor unmounted since Fase 5a). This is what makes «no view born from a user gesture lands in Default» true, with the four structural fallbacks untouched.
 **Prompt document name**: 2026-09-16 11:15
 
 ## 2026-09-16 — discovery: the lost route to edge and row views (Fase B)
