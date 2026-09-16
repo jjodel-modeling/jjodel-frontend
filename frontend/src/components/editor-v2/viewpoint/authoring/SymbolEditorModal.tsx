@@ -18,6 +18,7 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useSelector } from 'react-redux';
 import { LPointerTargetable, U, type LViewElement } from '../../../../joiner';
 import { JjodelEvents } from '../../../../events/registry';
@@ -223,7 +224,21 @@ export const SymbolEditorModal: React.FC = () => {
 
     const close = () => setViewId(null);
 
-    return (
+    /**
+     * PORTAL ONTO `document.body`, per D-UI-14. Not ceremony: `#root` is
+     * `position: fixed` (`index.scss:31`), so it creates a stacking context and enters
+     * the root one at level `auto` = 0, while the Properties rail is itself portaled
+     * onto `body` at 900. Rendered inside `#root`, this modal was therefore painted
+     * OVER by the rail whatever its own z-index — measured 2026-09-16, report
+     * `docs/discovery/discovery_2026-09-16_rail_modal_stacking.md`: at 1600px the rail
+     * covered the right 104px of the modal (Fill's row actions, Sizing, and the close
+     * button itself, blocked by the rail's tree filter box), and a `z-index: 999999`
+     * probe injected inside `#root` lost too. The portal is what moves the comparison
+     * to body level; the `--z-alert` in the stylesheet is what wins it there. The two
+     * go together, neither works alone. Same pattern and same reason as
+     * `ValidationRulesModal` (`a5ed5406d`) and `EdgeMarkerEditorModal`.
+     */
+    return createPortal((
         <div className="symbol-editor-modal-backdrop" onClick={close} role="presentation">
             <div
                 className="symbol-editor-modal"
@@ -343,7 +358,7 @@ export const SymbolEditorModal: React.FC = () => {
                 </div>
             </div>
         </div>
-    );
+    ), document.body);
 };
 
 export default SymbolEditorModal;

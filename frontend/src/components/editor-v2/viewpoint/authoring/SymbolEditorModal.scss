@@ -1,13 +1,19 @@
 /* SymbolEditorModal — modal surface of the symbol authoring (D15/D15b).
-   Same overlay pattern and stacking as ImportSummaryModal: fixed backdrop on
-   var(--z-modal, 9999), no new stacking context, no portal. Two panes per the
+   Overlay pattern of ValidationRulesModal: fixed backdrop portaled onto
+   document.body and levelled on the BODY scale (D-UI-14). Two panes per the
    approved mockup scene: persistent catalog column + preview and anatomy. */
 
 .symbol-editor-modal-backdrop {
     position: fixed;
     inset: 0;
     background: rgba(0, 0, 0, 0.45);
-    z-index: var(--z-modal, 9999);
+    /* Above the Properties rail, which is at 900 and is itself a child of body.
+     * `--z-modal` is not enough and never was: it resolves to 1050 (two token files
+     * declare it, styles/tokens.css wins over tokens/_z-index.scss), and even 999999
+     * lost, because inside `#root` — a stacking context, index.scss:31 — no number
+     * reaches the rail at all. The portal in the component and this level go together.
+     * Measured: docs/discovery/discovery_2026-09-16_rail_modal_stacking.md. */
+    z-index: var(--z-alert, 10000);
     display: flex;
     align-items: center;
     justify-content: center;
