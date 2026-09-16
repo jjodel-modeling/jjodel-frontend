@@ -377,8 +377,18 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
     // Fase B: authored border painted inline on .ir-node-content (per-field
     // fallback). When compiled.border is null the CSS box border applies —
     // covers demo/migrated views without an authored border.
-    const b = compiled.border;
-    if (b && !svgPainter) inlineStyle.border = `${b.width ?? 1}px ${b.style ?? 'solid'} ${b.color ?? 'var(--border-default)'}`;
+    // Slice 2 (D1): each axis is resolved PER INSTANCE and on its own. An accessor is
+    // null when the view does not declare that axis; all three null = no authored
+    // border, where the CSS box applies exactly as before. A conditional with no
+    // matching branch resolves to the compile fallback ('' / 1 / 'solid'), and the
+    // empty colour falls back to the box colour here, the same convention as fill.
+    const borderColorV = compiled.borderColor ? compiled.borderColor(readCtx, objectId) : undefined;
+    const borderWidthV = compiled.borderWidth ? compiled.borderWidth(readCtx, objectId) : undefined;
+    const borderStyleV = compiled.borderStyle ? compiled.borderStyle(readCtx, objectId) : undefined;
+    const hasAuthoredBorder = borderColorV !== undefined || borderWidthV !== undefined || borderStyleV !== undefined;
+    if (hasAuthoredBorder && !svgPainter) {
+        inlineStyle.border = `${borderWidthV ?? 1}px ${borderStyleV ?? 'solid'} ${borderColorV || 'var(--border-default)'}`;
+    }
 
     // Corner radius (slice 3, D5). Read from the source ir and not from a compiled
     // field: the compile cache is keyed on the hash of the whole ir, so `compiled.ir` is
@@ -410,9 +420,9 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
     // fallbacks (irStyle.ts:44) when nothing is authored. The polygon stretches
     // to any aspect ratio; non-scaling-stroke keeps the border a constant width.
     const svgFill = fill || 'var(--node-bg)';
-    const svgStroke = compiled.border?.color ?? 'var(--border-default)';
-    const svgStrokeWidth = compiled.border?.width ?? 1;
-    const svgDash = SVG_BORDER_DASH[compiled.border?.style ?? 'solid'];
+    const svgStroke = borderColorV || 'var(--border-default)';
+    const svgStrokeWidth = borderWidthV ?? 1;
+    const svgDash = SVG_BORDER_DASH[borderStyleV ?? 'solid'];
     // double (asse bordo, 2026-08-15). CSS shapes get it for free from the
     // inline `border` above (native `border-style: double`, two lines from
     // width >= 3). SVG shapes overdraw: the same polygon stroked at 3w in the
@@ -421,7 +431,7 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
     // (a polygon inset in the 0..100 viewBox would scale non-uniformly under
     // preserveAspectRatio="none"). Declared limit: a translucent fill makes
     // the gap translucent too.
-    const svgDouble = (compiled.border?.style ?? 'solid') === 'double';
+    const svgDouble = (borderStyleV ?? 'solid') === 'double';
 
     // Marker (asse marker, 2026-08-15): resolved per instance like form/fill.
     // Unknown or empty id => no layer (open vocabulary, badge-icon precedent).
@@ -429,7 +439,7 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
     // preserveAspectRatio="meet" (irStyle.ts positions the layer).
     const markerId = compiled.marker ? compiled.marker(readCtx, objectId) : '';
     const markerDef = getMarkerDef(markerId ? String(markerId) : undefined);
-    const markerColor = compiled.border?.color ?? 'var(--border-default)';
+    const markerColor = borderColorV || 'var(--border-default)';
 
     // Spacing preset (2026-08-25): 'normal' carries no class, so the tokens declared on
     // .ir-node-content itself apply and the markup of an unauthored view is unchanged.

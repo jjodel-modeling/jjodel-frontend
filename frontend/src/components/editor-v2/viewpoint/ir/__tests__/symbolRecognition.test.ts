@@ -129,3 +129,47 @@ describe('symbolRecognition: perturbazioni e condizionali', () => {
         expect(ids({ form: 'rounded', marker: '' })).toEqual(['base-rounded', 'bpmn-task', 'uml-state']);
     });
 });
+
+/**
+ * Assi del bordo condizionali (slice 2, D1). Il punto non e' che il match fallisce: e'
+ * che fallisce SENZA guardare il `default`. Un default identico al preset e' proprio il
+ * caso in cui riconoscere sarebbe una bugia — l'istanza che soddisfa la regola disegna
+ * altro — quindi ogni caso qui porta un default che, se ispezionato, darebbe match.
+ */
+describe('symbolRecognition: assi del bordo condizionali', () => {
+    const ALWAYS = { op: 'literal' as const, value: true };
+    // Gli assi veri del preset, presi dal catalogo e non riscritti a mano: il primo giro
+    // di questo test inventava una coppia width/style che nessun preset ha, e il
+    // controllo positivo falliva sul suo stesso fixture invece che sul soggetto.
+    const WEAK = NOTATION_CATALOG.find(p => p.id === 'er-weak-entity')!;
+    const weak = applyPresetToShape(BASE, WEAK);
+    const weakBorder = weak.border as { color: string; width: number; style: string };
+
+    it('controllo positivo: gli assi scalari del preset lo riconoscono (accettazione 1)', () => {
+        expect(ids(weak)).toContain('er-weak-entity');
+    });
+
+    it('width condizionale: nessun preset, benche\' il default sia quello del preset', () => {
+        expect(ids({
+            ...weak,
+            border: { ...weakBorder, width: { rules: [{ when: ALWAYS, then: weakBorder.width }], default: weakBorder.width } },
+        } as any)).toEqual([]);
+    });
+
+    it('style condizionale: nessun preset, benche\' il default sia quello del preset', () => {
+        expect(ids({
+            ...weak,
+            border: { ...weakBorder, style: { rules: [{ when: ALWAYS, then: weakBorder.style }], default: weakBorder.style } },
+        } as any)).toEqual([]);
+    });
+
+    it('il colore resta fuori dal riconoscimento anche da condizionale', () => {
+        // Il colore non e' un asse di riconoscimento (ne' scalare ne' condizionale):
+        // renderlo condizionale non deve cambiare l'insieme riconosciuto.
+        const conditional = ids({
+            ...weak,
+            border: { ...weakBorder, color: { rules: [{ when: ALWAYS, then: '#aa0000' }], default: weakBorder.color } },
+        } as any);
+        expect(conditional).toEqual(ids(weak));
+    });
+});

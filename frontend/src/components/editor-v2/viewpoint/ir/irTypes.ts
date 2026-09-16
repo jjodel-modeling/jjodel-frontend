@@ -152,9 +152,25 @@ export interface FieldCompartmentSpec {
 export interface ShapeSpec {
     form: Conditional<ShapeForm>;
     fill?: Conditional<string>;
-    /** `double` (asse bordo, 2026-08-15): CSS-native sulle forme CSS (due linee da
-     *  width >= 3), overdraw a due polygon sulle forme SVG (IRNodeContent). */
-    border?: { color: string; width: number; style: 'solid' | 'dashed' | 'dotted' | 'double' };
+    /**
+     * Border, conditional PER AXIS (D1, slice 2 2026-09-16): each of the three axes
+     * carries its own `Conditional`, the same shape as `EdgeViewIR.line` below plus
+     * `'double'`. A scalar `{color, width, style}` therefore stays a valid value and
+     * reads back identical — additive, no `irVersion` bump and no VersionFixer.
+     *
+     * Per axis and NOT `Conditional<BorderSpec>`: a single conditional on the whole
+     * border would force an author who varies the width to restate colour and style in
+     * every branch. An absent axis falls back to the CSS box, as an absent `border`
+     * always has.
+     *
+     * `double` (asse bordo, 2026-08-15): CSS-native sulle forme CSS (due linee da
+     * width >= 3), overdraw a due polygon sulle forme SVG (IRNodeContent).
+     */
+    border?: {
+        color?: Conditional<string>;
+        width?: Conditional<number>;
+        style?: Conditional<'solid' | 'dashed' | 'dotted' | 'double'>;
+    };
     /**
      * Notation marker drawn inside the shape (asse marker, 2026-08-15): id from
      * markerRegistry.ts (gateway x/plus, timer clock, history H, ...). Open
@@ -735,7 +751,15 @@ export interface CompiledView {
     formSpec: FormSpec | null;
     form: CompiledConditional<ShapeForm>;
     fill: CompiledConditional<string> | null;
-    border: { color: string; width: number; style: string } | null;
+    /**
+     * Border axes compiled one by one (slice 2), the same split `CompiledEdgeView`
+     * already has for `line`: each is null when the view declares that axis, and the
+     * renderer resolves it per instance. All three null = no authored border, where the
+     * CSS box applies.
+     */
+    borderColor: CompiledConditional<string> | null;
+    borderWidth: CompiledConditional<number> | null;
+    borderStyle: CompiledConditional<'solid' | 'dashed' | 'dotted' | 'double'> | null;
     /** Compiled marker id ('' = none); null when the view declares no marker. */
     marker: CompiledConditional<string> | null;
     /** shape.padding ?? 'normal' */

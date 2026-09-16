@@ -100,7 +100,12 @@ function currentAxesPreset(shape: VertexViewIR['shape']): SymbolPreset | null {
         notation: '',
         values: {
             form: shape.form,
-            border: shape.border ? { style: shape.border.style, width: shape.border.width } : undefined,
+            // Scalar or omitted (slice 2), like marker and fill above: a conditional axis
+            // has no single value the static strip could preview, and the preset shape
+            // wants both style and width together.
+            border: (typeof shape.border?.style === 'string' && typeof shape.border?.width === 'number')
+                ? { style: shape.border.style, width: shape.border.width }
+                : undefined,
             marker: typeof shape.marker === 'string' && shape.marker !== '' ? shape.marker : undefined,
             fill: typeof shape.fill === 'string' && shape.fill !== '' ? shape.fill : undefined,
         },

@@ -464,6 +464,15 @@
         align-items: start;
 
         > section:first-child { grid-column: 1 / -1; }
+
+        /* Border across both columns (slice 2, decisione 2026-09-16). The section now
+           carries three axis switches plus the OVERRIDES table: what it needs is vertical
+           room and horizontal space for the table, and widening the modal gives neither.
+           Same treatment as the identity section above, addressed through the stable
+           wrapper class the panel renders (FormSection's own classes are CSS modules).
+           Expect the pairing to shift — Shape beside Fill, Border alone, then Padding
+           beside Marker — which is the right weighting now that Border is the heaviest. */
+        > .ir-border-section { grid-column: 1 / -1; }
     }
 
     &__footer {

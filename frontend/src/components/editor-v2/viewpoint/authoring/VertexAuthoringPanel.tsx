@@ -6,6 +6,7 @@ import { getMetaclassInfo, type MetaclassInfo } from '../../hooks/useEditorMode'
 import { validateIR } from '../ir/irValidate';
 import { defaultObjectViewIR } from '../ir/irDefaults';
 import type { VertexViewIR, ShapeForm, PaddingToken, FormSpec, StructureSpec } from '../ir/irTypes';
+import { toRules, formatPredicate } from '../../../ui/ConditionalEditor/conditional';
 import { structureCapabilities } from '../ir/structureCapabilities';
 import { MARKER_REGISTRY } from '../ir/markerRegistry';
 import { recognizeSymbol } from '../ir/symbolRecognition';
@@ -74,6 +75,61 @@ const PADDING_OPTIONS = [
 ];
 
 const DEFAULT_BORDER = { color: '#334155', width: 1, style: 'solid' as const };
+
+/** The three border axes, in the order the OVERRIDES table lists them. */
+const BORDER_AXES = ['color', 'width', 'style'] as const;
+type BorderAxis = typeof BORDER_AXES[number];
+
+interface BorderOverrideRow {
+    /** Pretty-printed predicate — the WHEN cell. */
+    whenText: string;
+    /** The axes carrying a rule with this predicate — the OVERRIDES cell. */
+    axes: BorderAxis[];
+}
+
+/**
+ * The OVERRIDES table of the Border section (D1, slice 2).
+ *
+ * A row is a PREDICATE plus the subset of axes that override under it, because that is
+ * exactly how it is written: one rule in each of those axes. It is NOT a complete
+ * BorderSpec with a filter above it. Rules are grouped by structural equality of `when`
+ * — the predicate is plain data, so its JSON is the identity — in first-seen order
+ * across color, width, style.
+ *
+ * `divergent` is true when the axes that carry rules do not carry the SAME predicates.
+ * There the grouping cannot honestly present one row per condition, so every axis keeps
+ * its own row and the panel says why, instead of implying an alignment that is not in
+ * the IR.
+ */
+function borderOverrideRows(
+    border: VertexViewIR['shape']['border'],
+): { rows: BorderOverrideRow[]; divergent: boolean } {
+    const rows: BorderOverrideRow[] = [];
+    const byPredicate = new Map<string, BorderOverrideRow>();
+    const keysPerAxis: Set<string>[] = [];
+    for (const axis of BORDER_AXES) {
+        const rules = toRules(border?.[axis] as any).rules ?? [];
+        if (!rules.length) continue;
+        const keys = new Set<string>();
+        for (const r of rules) {
+            const key = JSON.stringify(r.when ?? null);
+            keys.add(key);
+            const existing = byPredicate.get(key);
+            if (existing) {
+                if (!existing.axes.includes(axis)) existing.axes.push(axis);
+                continue;
+            }
+            const row: BorderOverrideRow = { whenText: formatPredicate(r.when), axes: [axis] };
+            byPredicate.set(key, row);
+            rows.push(row);
+        }
+        keysPerAxis.push(keys);
+    }
+    const first = keysPerAxis[0];
+    const divergent = keysPerAxis.length > 1 && keysPerAxis.some((s, i) => i > 0
+        && (s.size !== first.size || [...s].some((k) => !first.has(k))));
+    return { rows, divergent };
+}
 const COMMIT_DEBOUNCE_MS = 300;
 // Cross-tab message (R-B): the metaclass that unlocks these paths is authored in
 // Applies to, while the paths themselves are edited in Text and Structure — so the
@@ -379,7 +435,13 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
     const labels = shape.labels ?? [];
     const badges = shape.badges ?? [];
     const fieldCompartments = draft.fieldCompartments ?? [];
-    const border = shape.border ?? DEFAULT_BORDER;
+    // Border, one axis at a time (slice 2, D1). Each axis is read as authored — scalar,
+    // Conditional or absent — and handed to its own ConditionalEditor, which materializes
+    // DEFAULT_BORDER only for display: nothing is written until the author touches a
+    // control, so an unauthored border still persists nothing (D2).
+    const borderStyleScalar = typeof shape.border?.style === 'string' ? shape.border.style : undefined;
+    const borderWidthScalar = typeof shape.border?.width === 'number' ? shape.border.width : undefined;
+    const borderOverrides = borderOverrideRows(shape.border);
     // Corner radius (slice 3, D5), read through the same guard the render uses: an
     // invalid persisted value reads as absent here too, so the stepper shows the base
     // radius instead of seeding itself with a number the canvas ignores.
@@ -391,9 +453,20 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
     // --- immutable patch helpers ---
     const patchShape = (partial: Partial<VertexViewIR['shape']>) =>
         patch({ ...draft, shape: { ...draft.shape, ...partial } });
-    const patchBorder = (partial: Partial<NonNullable<VertexViewIR['shape']['border']>>) => {
-        const base = draft.shape.border ?? DEFAULT_BORDER;
-        patchShape({ border: { ...base, ...partial } });
+    /**
+     * One axis of the border (slice 2). The other two are left exactly as they are,
+     * scalar or Conditional: this is what «per axis» means in D1, and it is why the
+     * old `patchBorder`, which spread the whole border as a scalar object, is gone.
+     * `undefined` removes the axis, so the CSS box fallback comes back.
+     */
+    const patchBorderAxis = (
+        axis: 'color' | 'width' | 'style',
+        next: NonNullable<VertexViewIR['shape']['border']>['color' | 'width' | 'style'],
+    ) => {
+        const nextBorder: any = { ...(draft.shape.border ?? {}) };
+        if (next === undefined) delete nextBorder[axis];
+        else nextBorder[axis] = next;
+        patchShape({ border: Object.keys(nextBorder).length ? nextBorder : undefined });
     };
 
     /**
@@ -642,22 +715,98 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                 </div>
             </FormSection>
 
-            {/* Border (always scalar in the schema) */}
+            {/* Border — conditional PER AXIS (D1, slice 2). Three switches, all visible:
+                a single switch on the border would claim the border has one conditional,
+                which is the shape D1 rejected. The wrapper carries a stable class so the
+                modal can span the section across both columns of its anatomy grid
+                (SymbolEditorModal.scss) — FormSection's own classes are CSS modules. */}
+            <div className="ir-border-section">
             <FormSection title="Border" divider={false}>
                 <div className="jj-field">
                     <label className="jj-field-label">Color</label>
-                    <ColorPicker value={border.color} onChange={(hex) => patchBorder({ color: hex })} />
-                    <label className="jj-field-label" style={{ marginTop: 'var(--space-2)' }}>Width</label>
-                    <NumberInput value={border.width} min={0} onChange={(w) => patchBorder({ width: w })} />
+                    <ConditionalEditor<string>
+                        value={shape.border?.color}
+                        onChange={(next) => patchBorderAxis('color', next)}
+                        renderValue={(v, onCh) => <ColorPicker value={v} onChange={(hex) => onCh(hex)} />}
+                        defaultValue={DEFAULT_BORDER.color}
+                        features={features}
+                        featuresHint={FEATURES_HINT}
+                        classNames={classNames}
+                        allowConditional={advanced}
+                        rulesTable={{ subjectName: featureInfo.targetName ?? undefined, valueNoun: 'border color' }}
+                    />
+                    <label className="jj-field-label" style={{ marginTop: 'var(--space-2)' }}>
+                        Width <span style={{ color: '#94a3b8' }}>· px</span>
+                    </label>
+                    <ConditionalEditor<number>
+                        value={shape.border?.width}
+                        onChange={(next) => patchBorderAxis('width', next)}
+                        renderValue={(v, onCh) => <NumberInput value={v} min={0} onChange={(w) => onCh(w)} />}
+                        defaultValue={DEFAULT_BORDER.width}
+                        features={features}
+                        featuresHint={FEATURES_HINT}
+                        classNames={classNames}
+                        allowConditional={advanced}
+                        rulesTable={{ subjectName: featureInfo.targetName ?? undefined, valueNoun: 'border width' }}
+                    />
                     <label className="jj-field-label" style={{ marginTop: 'var(--space-2)' }}>Style</label>
-                    <Select options={BORDER_STYLE_OPTIONS} value={border.style} onChange={(e) => patchBorder({ style: e.target.value as 'solid' | 'dashed' | 'dotted' | 'double' })} />
+                    <ConditionalEditor<'solid' | 'dashed' | 'dotted' | 'double'>
+                        value={shape.border?.style}
+                        onChange={(next) => patchBorderAxis('style', next)}
+                        renderValue={(v, onCh) => (
+                            <Select
+                                options={BORDER_STYLE_OPTIONS}
+                                value={v}
+                                onChange={(e) => onCh(e.target.value as 'solid' | 'dashed' | 'dotted' | 'double')}
+                            />
+                        )}
+                        defaultValue={DEFAULT_BORDER.style}
+                        features={features}
+                        featuresHint={FEATURES_HINT}
+                        classNames={classNames}
+                        allowConditional={advanced}
+                        rulesTable={{ subjectName: featureInfo.targetName ?? undefined, valueNoun: 'border style' }}
+                    />
                     {/* Nessuna riscrittura silenziosa della width: e' CSS nativo che sotto
-                        i 3px il double non mostra due linee, quindi lo si dice e basta. */}
-                    {border.style === 'double' && border.width < 3 && (
+                        i 3px il double non mostra due linee, quindi lo si dice e basta.
+                        Solo su assi scalari: con width o style condizionali non esiste UNA
+                        coppia da giudicare, e l'avviso mentirebbe su meta' delle istanze. */}
+                    {borderStyleScalar === 'double' && borderWidthScalar !== undefined && borderWidthScalar < 3 && (
                         <HelpText icon={false}>Double shows two lines from width 3 up.</HelpText>
                     )}
                 </div>
+
+                {/* OVERRIDES: the rules of the three axes read back, grouped by predicate. */}
+                {borderOverrides.rows.length > 0 && (
+                    <div className="jj-field" style={{ marginTop: 'var(--space-3)' }}>
+                        <label className="jj-field-label">Overrides</label>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                            <div style={{ display: 'flex', gap: 'var(--space-2)', fontSize: 'var(--text-xs)', color: '#94a3b8' }}>
+                                <span style={{ flex: '1 1 60%' }}>WHEN</span>
+                                <span style={{ flex: '1 1 40%' }}>OVERRIDES</span>
+                            </div>
+                            {borderOverrides.rows.map((row, i) => (
+                                <div key={`${row.whenText}-${i}`} style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'baseline' }}>
+                                    <span style={{ flex: '1 1 60%', fontFamily: "'IBM Plex Mono', Monaco, Consolas, monospace", fontSize: 'var(--text-xs)' }}>
+                                        {row.whenText}
+                                    </span>
+                                    <span style={{ flex: '1 1 40%', display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                                        {row.axes.map((a) => (
+                                            <span key={a} className="jj-chip" style={{ fontSize: 'var(--text-xs)' }}>{a}</span>
+                                        ))}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                        {borderOverrides.divergent && (
+                            <HelpText icon={false}>
+                                These axes override on different conditions, so each one is listed on its own row.
+                            </HelpText>
+                        )}
+                    </div>
+                )}
             </FormSection>
+            </div>
 
             {/* Padding (Advanced only): spacing preset for header, inside label and
                 compartments. Normal removes the key from the IR, like None for the marker.

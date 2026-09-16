@@ -304,7 +304,16 @@ export function compileView(viewId: string, ir: NodeViewIR): CompiledView {
     const predicate = compilePredicate(ir.predicate, deps);
     const form = compileConditional(ir.shape.form, 'rect' as const, deps);
     const fill = ir.shape.fill !== undefined ? compileConditional(ir.shape.fill, '', deps) : null;
-    const border = ir.shape.border ?? null;
+    // Border, one compile per axis (slice 2, D1): the same three lines compileEdgeView
+    // runs for `line`, with the same fallbacks — '' for the colour (the "no override"
+    // convention fill already uses), 1 for the width, 'solid' for the style — which is
+    // what a conditional with no matching branch resolves to.
+    const borderColor = ir.shape.border?.color !== undefined
+        ? compileConditional(ir.shape.border.color, '', deps) : null;
+    const borderWidth = ir.shape.border?.width !== undefined
+        ? compileConditional(ir.shape.border.width, 1, deps) : null;
+    const borderStyle = ir.shape.border?.style !== undefined
+        ? compileConditional(ir.shape.border.style, 'solid' as const, deps) : null;
     // Marker (asse marker, 2026-08-15): same compile shape as fill — '' means
     // "no marker" when a conditional has no matching branch. Predicates inside
     // the conditional extend `deps` through compileConditional as usual.
@@ -419,7 +428,9 @@ export function compileView(viewId: string, ir: NodeViewIR): CompiledView {
         formSpec,
         form,
         fill,
-        border,
+        borderColor,
+        borderWidth,
+        borderStyle,
         marker,
         padding,
         text,

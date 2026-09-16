@@ -104,6 +104,33 @@ describe('irCompile', () => {
         expect(cv.labels[2].text(ctx, 's1')).toBe('idle : State');
         expect(cv.dependencySet).toContain('name');
     });
+    it('compiles the three border axes one by one, per instance (slice 2, D1)', () => {
+        clearCompileCache();
+        const { ctx } = world();
+        // A scalar border: every accessor answers the authored value for every object,
+        // which is what a view saved before slice 2 has to keep doing.
+        const scalar = compileView('v_border_scalar', vertexIR({
+            shape: { form: 'rect', border: { color: '#334155', width: 2, style: 'dashed' } },
+        }));
+        expect(scalar.borderColor!(ctx, 's1')).toBe('#334155');
+        expect(scalar.borderWidth!(ctx, 's1')).toBe(2);
+        expect(scalar.borderStyle!(ctx, 's1')).toBe('dashed');
+
+        // One conditional axis: it resolves per instance, and the two axes the view does
+        // not declare stay null, so the renderer keeps the CSS box for those alone.
+        const perAxis = compileView('v_border_cond', vertexIR({
+            shape: {
+                form: 'rect',
+                border: {
+                    width: { rules: [{ when: { op: 'isKind', class: 'FinalState' }, then: 4 }], default: 1 },
+                },
+            },
+        }));
+        expect(perAxis.borderWidth!(ctx, 's2')).toBe(4);
+        expect(perAxis.borderWidth!(ctx, 's1')).toBe(1);
+        expect(perAxis.borderColor).toBeNull();
+        expect(perAxis.borderStyle).toBeNull();
+    });
     it('rejects forbidden PathExpr constructs by skipping compile (throw)', () => {
         expect(() => compileView('v_bad', vertexIR({
             shape: { form: 'rect', labels: [{ position: 'top', source: { from: 'path', expr: '$a?.value' } }] },
