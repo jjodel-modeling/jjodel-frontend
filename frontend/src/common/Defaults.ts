@@ -116,7 +116,7 @@ export class Defaults { /// TODO: this really needs to become dynamically genera
     }
 
     @Alias primitiveToPointer(s: AttribETypes | ShortAttribETypes | string): Pointer<DClass> {
-        return U.solveEcoreType(s, true, '', '');
+        return U.solveEcoreType(s, true, true, '', '');
     }
 
 }

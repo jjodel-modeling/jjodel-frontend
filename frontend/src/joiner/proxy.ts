@@ -250,6 +250,8 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
     constructor(d: ME, baseObjInLookup?: DPointerTargetable, additionalPath: string = '', l?: LE) {
         super();
         this.d = d;
+
+        if (!d) Log.eDevv("faulty proxy constructor", {d, thiss:this, arguments});
         if (!l) {
             l = RuntimeAccessibleClass.get(d.className)?.logic?.singleton as LE;
             Log.exDev(!l, 'Trying to wrap class without singleton or logic mapped: ' + d.className, { object: d, className: d.className })
@@ -284,6 +286,9 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
 
     public get(targetObj: ME, propKey: string | symbol, proxyitself: Proxyfied<ME>): any {
         let ret;
+
+        if (!targetObj || !proxyitself) Log.eDevv("faulty proxy get", {propKey, thiss:this, targetObj, proxyitself, arguments});
+
         if (!U.safeMode) return this.get0(targetObj, propKey, proxyitself);
         // console.error('_proxy get PRE:', {targetObj, propKey, proxyitself, arguments});
         try {
@@ -300,12 +305,18 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
     }
 
     public get0(targetObj: ME, propKey0: string | symbol, proxyitself: Proxyfied<ME>): any {
-        // console.log('proxy keysearch', {propKey, targetObj, l: this.l, proxyitself, d: this.d});
+        this.d = targetObj;
+        if (windoww.pxDebug) console.log('proxy keysearch', {propKey0, targetObj, l: this.l, proxyitself, d: this.d, t:this});
         let canThrowErrors = true;
 
         // refresh target object by default with most recent version if livechanges are on
         if (updateTargets) {
-            targetObj = this.d = DPointerTargetable.from(targetObj.id);
+            const d = DPointerTargetable.from(targetObj.id);
+            if (d) { targetObj = this.d = d as any; }
+            if (targetObj && !d) {
+                Log.eDevv("Proxy error: failed to update d-object", U.jsonCopy(
+                    {targetObj, d, id: targetObj?.id, slook: windoww.DState.getState().idlookup, pending: DPointerTargetable.pendingCreation}));
+            }
             proxyitself = LPointerTargetable.fromD(targetObj as any);
         }
 
@@ -418,20 +429,30 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
             case 'parent': propKey = 'father'; break;
         }
 
-        if (propKey[0] === "_" && propKey.indexOf("__info_of__")===0) {
-            return (this.l as GObject)[propKey];
-        }
+        if (propKey[0] === "_" && propKey.indexOf("__info_of__") === 0) { return (this.l as GObject)[propKey]; }
 
         let logicContext = this.additionalPath
             ? new LogicContext2(proxyitself, targetObj, this.baseObjInLookup, this.additionalPath)
             : new LogicContext(proxyitself as any, targetObj);
+
+        if (windoww.pxDebug) console.log('proxy keysearch 3', {propKey0, targetObj, l: this.l, proxyitself, d: this.d, t:this});
         // check if exist directly in D.key, L.key or through a get_key
         if (propKey in this.l || propKey in this.d || (this.l as GObject)[this.g + (propKey as string)]) {
 
             // normal getter method call
             if (typeof propKey !== 'symbol' && this.g + propKey in this.lg) {
+
+                // if (propKey === "name") Log.eDevv("faulty proxy get", {logicContext, propKey, thiss:this, targetObj, proxyitself, arguments});
                 let cache = ProxyCache.get(propKey, this.d as any, this.lg["__info_of__"+propKey]);
-                if ((window as any).debugp) console.warn("getter proxy cache " + propKey, {cache:{...cache}, i:this.lg["__info_of__"+propKey]});
+                if (propKey === "toString" && windoww.pxDebug) { let cc = {...cache, history: null} as any;
+                    let gcache = cache as any;
+                    if (!(gcache).history) gcache.history = [];
+                    gcache.history.push(cc);
+                    cc.f = cc.success; cc.d = U.jsonCopy(targetObj); cc.c = logicContext; cc.ret = cc.value();
+                    cc.cc = cc.d.clonedCounter; cc.n = targetObj.name; }
+
+                if (windoww.pxDebug) console.warn("getter proxy cache " + propKey, {ret: this.lg[this.g + propKey](logicContext), d: this.d, targetObj,
+                    cache:{...cache}, cs:cache?.success, propKey, logicContext, i:this.lg["__info_of__"+propKey], lg:this.lg, t:this});
                 if (cache?.success) return cache.value;
                 const ret = this.lg[this.g + propKey](logicContext);
                 if (cache) ProxyCache.set(ret, cache, propKey, this.d as any);

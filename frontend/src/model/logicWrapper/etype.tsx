@@ -250,18 +250,23 @@ class GenericTypeParser {
             if (!this.consume(">")) return null;
             // eg: Shape<Geom2D>, List<?>
             const ret = new GenericType("parameterized");
-            ret.classifier = this.resolveClassifierID(name)
+            console.log("resolve param for GT", {name, ret});
+            ret.classifier = this.resolveClassifierID(name);
             ret.typeArgs = args;
             return ret;
         }
         // eg: Shape, Map, T (target is LClass or LTypeParam)
         const ret = new GenericType("raw");
+        console.log("resolve classifier for GT", {name, ret});
         ret.classifier = this.resolveClassifierID(name);
         return ret;
     }
+
     resolveClassifierID(name: string): Pointer<DClass | DTypeDeclaration> {
         const ltarget = this.classes[name] || this.enums[name] || this.typeDeclarations[name];
-        return ltarget?.id || name;
+        if (ltarget) return ltarget?.id;
+        const ptr = U.solveEcoreType(name, true);
+        return ptr || name;
     }
 
     // Parse a & b & c  — used for wildcard bounds (no nested operator recursion)
@@ -628,7 +633,11 @@ export class GenericType {
             if (!obj) return null as any;
             return LPointerTargetable.fromD(DTypeDeclaration.new2({...obj, father:c.data.id} as any, (d) => {
                 if (!obj || typeof obj !== "object") return;
-                for (let k in obj) { (d as any)[k] = (obj as any)[k]; }
+                for (let k in obj) {
+                    const v = (obj as any)[k];
+                    if (v === undefined) continue;
+                    (d as any)[k] = (obj as any)[k];
+                }
             }, true));
             // or already serialized version
         }).filter(e=>!!e)
@@ -709,6 +718,7 @@ export class GenericType {
         let direction: string = l.direction; // thiss.get_direction(c);
         const m: LModel = l.model;
         let name = l.name; // (thiss as any).get_name(c);
+        console.error("input getter GT serialize", {l, d:U.jsonCopy(l.__raw), name});
         if (direction === "inout" || !direction) direction = "";
         else direction += " ";
         if (!name && !def && !upper.length && !lower.length) return "";
@@ -1524,8 +1534,7 @@ function resolveClassifier(s: string, m: LModel): LClassifier | null{
     let ptr = U.solveEcoreType(s, true);
     if (ptr) return L.from(ptr) || null;
     if (Pointers.isPointer(s)) return L.from(s) || null;
-    
-    const primitivePtr: Pointer<DClass> = U.solveEcoreType(s, true, '', '');
+    const primitivePtr: Pointer<DClass> = U.solveEcoreType(s, true, true, '', '');
     if (primitivePtr) { return L.from(primitivePtr) as LClass; }
 
     return LValue.resolveReference(s, m) as any || null;

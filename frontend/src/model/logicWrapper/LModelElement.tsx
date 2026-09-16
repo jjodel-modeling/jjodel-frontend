@@ -3923,7 +3923,11 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
             }// else return null as any;
             return LPointerTargetable.fromD(DTypeDeclaration.new2({...obj, name, father:c.data.id} as any, (d) => {
                 if (!obj || typeof obj !== "object") return;
-                for (let k in obj) { (d as any)[k] = (obj as any)[k]; }
+                for (let k in obj) {
+                    const v = (obj as any)[k];
+                    if (v === undefined) continue;
+                    (d as any)[k] = (obj as any)[k];
+                }
             }, true));
         }
     }
@@ -4618,7 +4622,7 @@ export class DTypeDeclaration extends DClassifier { // extends DClassifier
             name = this.defaultname("T", a.father, undefined, (l: L) => (l as LClass).typeParameterNames, '');
         }
 
-        console.log("add typedecl", {name});
+        console.log("add typedecl", {name, a});
         return new Constructors(new DTypeDeclaration('dwc'), a.father, persist, undefined, a.id)
             .DPointerTargetable().DModelElement().DNamedElement(name)
             .DTypeDeclaration().end(then);
@@ -4643,6 +4647,7 @@ export class LTypeDeclaration<D extends DTypeDeclaration = DTypeDeclaration, Con
     protected get_father(c: Context): LTypeDeclaration["father"] { return super.get_father(c) as any; }
     protected get_toString(c: Context): () => string { return () => this._toString(c); }
     protected _toString(c: Context): string {
+        console.error("input getter tostring", {c, d:U.jsonCopy(c.data), l:c.proxyObject});
         return GenericType.serializeTypeDeclarationJOM(c.proxyObject, true);
     }
 
@@ -4771,6 +4776,7 @@ export class LTypeDeclaration<D extends DTypeDeclaration = DTypeDeclaration, Con
         if (c.data.details) EcoreParser.write(json, ECoreAnnotation.details, c.data.details);
         return json;*/
     }
+    get_name(c: Context): string { return super.get_name(c); }
 
 }
 RuntimeAccessibleClass.set_extend(DClassifier, DTypeDeclaration);
@@ -7798,12 +7804,17 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         if (query[0] === "/") query = query.substring(1);
         let segments = query.split("/");
         if (segments[0] === "ecore:EDataType http:") {
-            return LModelElement.fromPointer(U.solveEcoreType(query, true)) as any || null;
+            return LModelElement.fromPointer(U.solveEcoreType(query, true, true)) as any || null;
         }
         let current: LObject | null = null;
         console.log("resolvereference 000", {segments, current});
         // is this even valid? i'm expecting #identifier instead of #//identifier
-        if (query.indexOf("#//") > 0) Log.ee("this kind of reference format is not supported");
+        if (query.indexOf("#//") > 0) {
+            let primitivePtr = U.solveEcoreType(query, true, true, '', '');
+            if (primitivePtr) return LPointerTargetable.fromPointer(primitivePtr);
+            Log.ee("this kind of reference format is not supported", query);
+            return null;
+        }
         outer:
         for (let i = 0; i < segments.length; i++) {
             let segment = segments[i];

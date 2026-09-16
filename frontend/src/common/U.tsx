@@ -384,11 +384,33 @@ export class U {
         return Object.values(map);
     }
 
-    static solveEcoreType(v: string, asPointer: boolean = false, voidReturn = '', emptyReturn = ''): string {
+    static solveEcoreType(v: string, asPointer: boolean = false, casePrefixTolerant = true, voidReturn = '', emptyReturn = ''): string {
         if (!v) return v;
         const prefix = "ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//"
         if (v.indexOf(prefix) === 0) v = v.substring(prefix.length);
+        if (casePrefixTolerant) {
+            let v0 = v;
+            v = v.trim().toLowerCase();
+            if (v[0] === "e") v = v.substring(1).trimStart();
+            switch (v) {
+                default: return asPointer ? "" : v0;
+                case "void":     v = 'Void';    break;
+                case "char":     v = 'Char';    break;
+                case "string":   v = 'String';  break;
+                case "date":     v = 'Date';    break;
+                case "boolean":  v = 'Boolean'; break;
+                case "byte":     v = 'Byte';    break;
+                case "short":    v = 'Short';   break;
+                case "int":      v = 'Int';     break;
+                case "long":     v = 'Long';    break;
+                case "float":    v = 'Float';   break;
+                case "double":   v = 'Double';  break;
+            }
+            if (!asPointer) return v;
+            return (window as any).Pointers.prefix + "_" + v.toUpperCase();
+        } else
         switch (v) {
+            default: return asPointer ? "" : v;
             case ShortAttribETypes.EVoid:     v = 'Void';    break;
             case ShortAttribETypes.EChar:     v = 'Char';    break;
             case ShortAttribETypes.EString:   v = 'String';  break;
@@ -400,13 +422,14 @@ export class U {
             case ShortAttribETypes.ELong:     v = 'Long';    break;
             case ShortAttribETypes.EFloat:    v = 'Float';   break;
             case ShortAttribETypes.EDouble:   v = 'Double';  break;
-            default: return asPointer ? "" : v;
         }
         if (!asPointer) return v;
         // return as pointer
         if (v === "Void") return voidReturn;
         if (!v) return emptyReturn;
-        return (window as any).Pointers.prefix + "_" + v;
+        const ptr = (window as any).Pointers.prefix + "_" + v.toUpperCase();
+        // if (!LPointerTargetable.from(ptr)) return '';
+        return ptr;
     }
     static alertSeparator: string = '£';
     static alert(type: 'i'|'w'|'e', title: React.ReactNode, message: React.ReactNode = ''): void {
@@ -3246,6 +3269,11 @@ static closerTo(o: GObject, ...keysSets: (GObject | string[])[]): Dictionary<str
             (window as any).Uobj.applyObjectDelta(s2, delta1, s);
         }
     }
+
+    // safer dictionary version, that can use __proto__ as key safely as it doesn't have any proto (not even to Object)
+    // overriding built-in symbols can still be dangerous.
+    // warning: obj+"" or obj.toString() will throw exception as it doesn't inherit toString method, same with other Object properties/funcs.
+    public static safeEmptyMap(): Dictionary { return Object.create(null); }
 }
 export type ThrottleState = {timerID: null|number, decay: number, initialDelay:number, currentDelay:number, minDelay: number,
     pending:Function[], cumulative: boolean};
@@ -3970,7 +3998,7 @@ export enum AttribETypes {
 }
 
 // alias
-export function isAttribEType(s: any): boolean { return !!U.solveEcoreType(s, false); }
+export function isAttribEType(s: any): boolean { return !!U.solveEcoreType(s, false, false); }
 
 // export type Json = object;
 

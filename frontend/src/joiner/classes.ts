@@ -601,6 +601,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         t._derivedSubElements = [];
         this.nonPersistentCallbacks = [];
         this.fatherPtr = father;
+        const e = this.thiss;
 
         if (this.thiss.hasOwnProperty("father")) {
             this.fatherType = fatherType as any;
@@ -614,6 +615,8 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
     }
     private setID(id?: string, isUser:boolean = false){
         this.thiss.id = id || Constructors.makeID(isUser);
+        if (!this.thiss.id) console.error("misisng id", this, id, isUser);
+        // console.log("add typedecl id", windoww.U.jsonCopy({id, tid: this.thiss.id, t:this, thiss:this.thiss, isUser}));
     }
 
     // cannot use Lobjects as they will set PointedBy in persistent state, also might access an incomplete version of the object crashing
@@ -689,18 +692,26 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
                 // console.log('x6 addchild pre firing act()', {callbacks, d:e});
                 for (let c of callbacks) (c as Action).fire ? (c as Action).fire() : (c as () => void)();
                 SetRootFieldAction.new('ELEMENT_CREATED', e.id, '+=', false); // here no need to IsPointer because it only affects Transient stuff
+
+
             }
         })
+
     }
     // start(thiss: any): this { this.thiss = thiss; return this; }
     end(simpledatacallback?: (d:T, c: this) => void): T {
+        const e = this.thiss;
         const deleteDState = false; // don't save DState in idlookup
         if (this.thiss.className === 'DState' && deleteDState) return this.thiss;
+
         if (simpledatacallback) simpledatacallback(this.thiss, this); // callback for setting primitive types, not pointers not context-dependant values (name being potentially invalid / chosen according to parent)
+
         if (this.nonPersistentCallbacks.length) {
             for (let cb of this.nonPersistentCallbacks) cb();
         }
+        if (e && !e.id) console.error("missing id ctor end", windoww.U.jsonCopy({thiss:this, e, id:e?.id}));
         if (!this.persist) return this.thiss;
+
         Constructors.persist(this.thiss);
         /// todo: warning: there is a transaction at .persist method, do not use BEGIN+END/TRANSACTION inside
 
@@ -1280,7 +1291,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         _this.tagNames = [];
         // Content version: new projects start at 1.0, loaded projects use -1 (to be extracted from state)
         _this.version = state ? -1 : 1.0;
-        if(id) _this.id = id;
+        if (id) _this.id = id;
         _this.favorite = {};
         let user: DUser = DUser.getUser();
         /*if (!user as any) {
@@ -1534,7 +1545,8 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
         if ((ptr as LX).__isProxy) return (ptr as LX).__raw as any;
         if (typeof ptr === "string") {
             if (s && s.idlookup[ptr as string]) return s.idlookup[ptr as string] as any;
-            return (DPointerTargetable.pendingCreation[ptr as string] || s.idlookup[ptr as string]) as any;
+            return (DPointerTargetable.pendingCreation[ptr as string]
+            ) as any;
         }
         else if ((ptr as any as GObject<DX>).className) return ptr as any;
         else return undefined as any;
@@ -2195,9 +2207,15 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
         throw new Error(msg); }
 
     public toString(): string { throw this.wrongAccessMessage("toString"); }
-    protected get_toString(context: Context): () => string {
-        const data = context.data as DNamedElement;
-        return () => ( data.name || data.className.substring(0));
+    protected get_toString(c: Context): () => string {
+        const data = c.data as DNamedElement;
+        const ret: any = () => {
+            console.error("px defualt tostring inner", U.jsonCopy({data, dn: data.name}));
+            return (data.name || data.className.substring(0))};
+        let printstuff = {...U.jsonCopy({d: U.jsonCopy(c.data), n:data.name, id: data.id}), c, ret};
+        ret.printstuff = printstuff;
+        console.error("px default tostring " + c.data.className, printstuff);
+        return ret;
         // return () => data.id;
     }
     public toPrimitive(): string { throw this.wrongAccessMessage("toPrimitive"); }

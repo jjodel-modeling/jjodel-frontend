@@ -24,10 +24,22 @@ import {
 } from "../joiner";
 
 class CacheEntry{
-    success: boolean = true;
+    success: boolean;
     value?: any;
-    dependencies!: number[];
+    dependencies: number[];
+    isCacheEntry: true;
+    static new(): CacheEntry {
+        let instance = new CacheEntry("never");
+        // trick to have __proto__ missing so i can use __proto__ as a normal key
+        return Object.assign(Object.create(null), instance);
+    }
+    private constructor(never: "never") {
+        this.success = false;
+        this.dependencies = [];
+        this.isCacheEntry = true;
+    }
 }
+
 function geteidFromValue(d: DValue): string | undefined {
     for (let s of d.values) {
         if (s === null || s === undefined) continue;
@@ -89,6 +101,8 @@ The system uses 2 different caches with shared entries.
 type ProxyKey = string;
 const debug: boolean = false;
 
+const windoww = window as any;
+
 @RuntimeAccessible("ProxyCache")
 export class ProxyCache {
     static clonedCounter: Dictionary<Pointer, number> = {};
@@ -147,8 +161,12 @@ export class ProxyCache {
             // eid set, abstracted to general purpose
             if (d) switch (d.className) {
                 default:
-                    let name = L.from(d).name;
-                    ProxyCache.eidMap[d.id] = name;
+                    try {
+                        let name = L.from(d).name;
+                        ProxyCache.eidMap[d.id] = name;
+                    } catch(e: any) {
+                        Log.eDevv("ProxyCache: incomplete d-object found?", {e, d, cn:d.className})
+                    }
                     break;
                     // only objects can have $target using eid instead of name
                 case "DObject": //case "DClass":
@@ -194,7 +212,7 @@ export class ProxyCache {
     // cache.dependencies stores the last saved clonedCounter for each info.dependencies eg: ["$eid", "$eid"] --> [12, 42]
     // nb: i don't use Cache.clear here because: if it's not cacheable, it should never have a cache value to delete.
     // if it is, it will return success = false and be updated with the new clonedCounters dependencies. replacement over deletion.
-    public static get(k: string, d: D, i?: Info): CacheEntry | null {
+    public static get(k: string | symbol, d: D, i?: Info): CacheEntry | null {
         try { return ProxyCache.get0(k, d, i); }
         catch (e: any) {
             Log.eDevv("error in cache get", {e, k, d, i, stack: [...e.stack.split("\n")]});
@@ -204,18 +222,25 @@ export class ProxyCache {
     // when the whole state didn't change since last call, i cache even stuff without dependencies, assuming they are deterministic or don't track stuff outside the state.
     private static globalMakeEntry(k: string, d: D, i?: Info): CacheEntry {
         let cc = DState.getState()?.clonedCounter || -1;
-        if (!ProxyCache.globalCache[cc]) ProxyCache.globalCache[cc] = {};
-        if (!ProxyCache.globalCache[cc][d.id]) ProxyCache.globalCache[cc][d.id] = {};
-        if (!ProxyCache.globalCache[cc][d.id][k]) ProxyCache.globalCache[cc][d.id][k] = {success: false, dependencies: []};
+        if (!ProxyCache.globalCache[cc]) ProxyCache.globalCache[cc] = U.safeEmptyMap();
+        if (!ProxyCache.globalCache[cc][d.id]) ProxyCache.globalCache[cc][d.id] = U.safeEmptyMap();
+        if (!ProxyCache.globalCache[cc][d.id][k]?.isCacheEntry) ProxyCache.globalCache[cc][d.id][k] = CacheEntry.new();
         return ProxyCache.globalCache[cc][d.id][k];
     }
-    private static globalGet(k: string, d: D, i?: Info): CacheEntry | null {
+    private static globalGet(k: string | symbol, d: D, i?: Info): CacheEntry | null {
         let cc = DState.getState()?.clonedCounter || -1;
+        // actually symbols are safe (mostly) except when you use built-in symbols combined with non-map behaviour
+        // like [Symbol.iterator] and {...entry}.  But better be safe.
+        // it is also pointless to cache those as they cannot have high computational cost and don't have proxy getters support.
+        if (typeof k === "symbol") return null;
+
 
         // new approach: global cache is only populated by local cache entries moved after computed dependencies.
         // if state is unchanged: either use global cache or recompute non-cached value with deps
         // if state is changed: globalCache is erased and it recomputes personal dependencies and stores a link in globalCache (retrieved here)
-        return ProxyCache.globalCache?.[cc]?.[d.id]?.[k];
+        const ret = ProxyCache.globalCache?.[cc]?.[d.id]?.[k];
+        if (ret?.isCacheEntry) return ret; // required to not mark "prototype", "toString" and other native object properties as incorrect matches to a cache entry.
+        return null;
 
         /*
         // if personal cache is available and recent to last global state change, use that one without computing dependencies
@@ -233,14 +258,15 @@ export class ProxyCache {
         return ProxyCache.globalCache[cc][d.id][k];*/
     }
 
-    private static globalReset(){
-        ProxyCache.globalCache = {};
-        ProxyCache.oldStateCC = DState.getState()?.clonedCounter || -1;
+    private static globalReset(cc?: number){
+        ProxyCache.globalCache = U.safeEmptyMap();
+        ProxyCache.oldStateCC = cc || DState.getState()?.clonedCounter || -1;
     }
 
-    private static get0(k: string, d: D, i?: Info): CacheEntry | null {
+    private static get0(k: string | symbol, d: D, i?: Info): CacheEntry | null {
         if (!ProxyCache.enabled) return null;
         if (ProxyCache.status === "preparing") return null;
+        if (typeof k === "symbol") return null; // check global get symbol comment.
 
         let dependencies = i?.dependencies;
         switch (dependencies?.[0]) {
@@ -251,22 +277,23 @@ export class ProxyCache {
         }
 
         let cc = d.clonedCounter || -1;
-        let newStateCC: number = DState.getState().clonedCounter as any;
+        let newStateCC: number = DState.getState().clonedCounter as any ?? -1;
         let didStateChange = ProxyCache.oldStateCC !== newStateCC;
-        if (didStateChange) ProxyCache.globalReset();
+        if (didStateChange) ProxyCache.globalReset(newStateCC);
         else {
             let globalCache: CacheEntry | null = ProxyCache.globalGet(k, d, i);
+            if (windoww.pxDebug && globalCache) console.log("cache global get ret", {globalCache, k, d, i});
             if (globalCache) return globalCache;
         }
         if (!dependencies?.length) return ProxyCache.globalMakeEntry(k, d, i);
 
-        // from here on, there are true dependencies listed and global cache failed
-        if (!ProxyCache.cache[d.id]) ProxyCache.cache[d.id] = {};
         let debug = ProxyCache.cache?.[d?.id]?.[cc]?.[k];
-        if (!ProxyCache.cache[d.id]?.[cc]) ProxyCache.cache[d.id][cc] = {};
-        if (!ProxyCache.cache[d.id]?.[cc][k]) ProxyCache.cache[d.id][cc][k] = {success: true, dependencies: []};
+        // from here on, there are true dependencies listed and global cache failed
+        if (!ProxyCache.cache[d.id]) ProxyCache.cache[d.id] = U.safeEmptyMap();
+        if (!ProxyCache.cache[d.id]?.[cc]) ProxyCache.cache[d.id][cc] = U.safeEmptyMap();
+        if (!ProxyCache.cache[d.id]?.[cc][k]?.isCacheEntry) ProxyCache.cache[d.id][cc][k] = CacheEntry.new();
         const ret = ProxyCache.cache[d.id][cc][k];
-        if (!("success" in ret)) console.error("wrong cache ret", {ret, debug});
+        if (!("success" in ret) || !ret.isCacheEntry) Log.eDevv("wrong cache ret", {ret, debug, k, d, i, newStateCC, old: ProxyCache.cache[d.id][cc][k]});
         ret.success = true; // start assuming true, and try to invalidate by checking dependencies
         // if (!ret.success) return ret; // nb: since the event orders are cache.get() proxy.get() cache.set()
         // false should be found only in case of loops like proxy.get("k") -> cache.get("k") -> proxy.get("k")
@@ -312,11 +339,11 @@ export class ProxyCache {
             }
         }
         // export the same cache entry in globalstate, so if the global state did not change i take the value faster without evaluating dependencies.
-        newStateCC ??= -1;
-        if (!ProxyCache.globalCache[newStateCC]) ProxyCache.globalCache[newStateCC] = {};
-        if (!ProxyCache.globalCache[newStateCC][d.id]) ProxyCache.globalCache[newStateCC][d.id] = {};
+        if (!ProxyCache.globalCache[newStateCC]) ProxyCache.globalCache[newStateCC] = U.safeEmptyMap();
+        if (!ProxyCache.globalCache[newStateCC][d.id]) ProxyCache.globalCache[newStateCC][d.id] = U.safeEmptyMap();
         if (!ProxyCache.globalCache[newStateCC][d.id][k]) ProxyCache.globalCache[newStateCC][d.id][k] = ret;
 
+        if (windoww.pxDebug && ret.success) console.log("cache dependency get end", {ret, k, d, i, newStateCC, old: ProxyCache.cache[d.id][cc][k]});
         return ret;
     }
 

@@ -714,9 +714,23 @@ class builder {
             {this.named(data, advanced, skipTitle)}
             <label className={'input-container'}>
                 <b className={'me-2'}>Type:</b>
+                {(()=> { console.error("input getter pre", {data, n:data.name, s: data+""}); return null })()}
                 <Input type={"text"}
                        data={data}
-                       getter={(l)=> l.toString()}
+                       getter={(l)=> {
+                           const ls0 = l.toString();
+                           //windoww.ProxyCache.disable = true;
+                           const ls = l.toString();
+                           // windoww.ProxyCache.disable = false;
+                           windoww.lll = l;
+                           windoww.ddd = data;
+                           console.error("input getter", {l, data, ls0,
+                               ls, ds: data.toString(), d: U.jsonCopy(l.__raw),
+                               dn: data.name, ln: l.name,
+                               lls: l + "", dds: data+""
+                           });
+                           return ls;
+                       }}
                        setter={(v: any, l: LTypeDeclaration) => {
                            console.error("parse setter");
                            l.parse(v)

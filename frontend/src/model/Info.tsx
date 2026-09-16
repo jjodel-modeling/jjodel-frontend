@@ -28,6 +28,8 @@ export class Info {
     // this | ""             --> cache valid if current clonedCounter is unchanged,
     // missing or []              --> global cache is used, valid only as long the whole DState is unchanged
     // "never" | "all"  --> global cache cannot be used either,
+
+    // IMPORTANT: dependencies cannot have __proto__ as dependency, "toString" and native functions are also risky, need to check the whole usage chain to be sure.
     dependencies?: (PathArray | "" | "this" | "all" | "never")[];
 
 
