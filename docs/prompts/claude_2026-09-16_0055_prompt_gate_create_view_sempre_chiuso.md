@@ -82,3 +82,31 @@ Other sessions may be working in this tree; their dirty files are expected and m
 Assert the branch before writing. Stage only the files listed in DOVE, one by one, never `git add
 .`. Two commits: `fix: gate Create View on the active viewpoint instead of a tracker nobody writes`,
 then the log entry.
+
+## Errata (2026-09-16, written after the execution)
+
+**Acceptance criterion 3 is unattainable and is withdrawn.** The census of «Il difetto» is exact —
+`setLastEditedViewpoint` has no caller, so the three gates are closed always — but two of the three
+entry points cannot open at all, which the gate has nothing to do with:
+
+- `ContextMenu.tsx:487` and `:531` live in `components/contextMenu/ContextMenu.tsx`, mounted only by
+  `MetamodelTab.tsx:184` and `ModelTab.tsx:42`, whose popup renders only when `display` is set. Its
+  sole writer, `ShowContextMenu` (`:77-88`), walks up the DOM for an ancestor carrying
+  `data-nodetype="Graph"`, emitted only by `common/UX.tsx:149` — part of the classic canvas that
+  Fase 5a stopped mounting. The archived log entry of 2026-08-13 (§8) already recorded this.
+  Measured on the live app: calling `windoww.ShowContextMenu(vertexId, 300, 300)` leaves the node at
+  `#ctxhidden`, `display: none`, and a right-click on the v2 canvas opens EditorV2's own menu
+  instead (`editor-v2/ContextMenu`, mounted at `EditorV2.tsx:4334`).
+- The keyboard escape hatch is dead too. `key_bindings.addView` (Ctrl+Alt+V, `:667`) is registered
+  by a jQuery DELEGATED handler on `document` with selector `#root` (`common/U.tsx:3535`), and it
+  fires only when the keydown target **is** `#root`. After any real gesture the focus sits on
+  `BODY`, and `#root` is a plain div that can never take focus, so the chord never reaches the
+  handler: measured, no view created, with an unbound chord as the control.
+
+So the capability the closed gate seemed to hide — `addViewInstances` seeding an EDGE view from a
+`DReference` and a ROW view from a `DAttribute` — **exists in the code and has no reachable gesture
+today**. Dispatching a `keydown` whose target is `#root` does run it, and it creates exactly those
+two kinds (`ir.kind` `edge` and `row`), then throws `closefunc is not a function`. Giving those two
+kinds a reachable entry point is a separate slice, not this one.
+
+Criteria 1, 2, 4 and 5 were met by the tree entry, the one reachable site: measured 8 PASS 0 FAIL.
