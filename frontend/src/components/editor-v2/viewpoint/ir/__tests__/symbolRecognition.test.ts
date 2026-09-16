@@ -135,6 +135,21 @@ describe('symbolRecognition: perturbazioni e condizionali', () => {
  * che fallisce SENZA guardare il `default`. Un default identico al preset e' proprio il
  * caso in cui riconoscere sarebbe una bugia — l'istanza che soddisfa la regola disegna
  * altro — quindi ogni caso qui porta un default che, se ispezionato, darebbe match.
+ *
+ * Banco di mutazione, rimisurato il 2026-09-16. Questi due test NON misurano la
+ * sentinella `scalarOf`: toglierla dai due assi e tornare alla forma pre-slice-2
+ * (`shape.border?.style ?? 'solid'`) li lascia VERDI, 14 su 14, perche' un oggetto
+ * conditional non e' comunque mai uguale a una stringa e il confronto fallisce lo
+ * stesso. Attraverso l'output di `recognizeSymbol` la sentinella e' indistinguibile dal
+ * confronto crudo, quindi NESSUN test puo' ucciderla: e' intento dichiarato, non
+ * comportamento osservabile, e va letta cosi'.
+ *
+ * Cio' che questi due misurano — ed e' l'unica copertura che ne esista — e' la
+ * mutazione che conta: leggere il `default`. Due forme provate, entrambe uccise da
+ * questi due soli test e da nessun altro del file: `scalarOf` che ritorna
+ * `v.default ?? CONDITIONAL` su tutti gli assi (2 rossi su 14) e la lettura del default
+ * ristretta ai soli style/width (2 rossi su 14, gli stessi due). I nomi dicono quella
+ * mutazione, non la sentinella, perche' e' quella che la loro morte sorveglia.
  */
 describe('symbolRecognition: assi del bordo condizionali', () => {
     const ALWAYS = { op: 'literal' as const, value: true };
@@ -149,14 +164,14 @@ describe('symbolRecognition: assi del bordo condizionali', () => {
         expect(ids(weak)).toContain('er-weak-entity');
     });
 
-    it('width condizionale: nessun preset, benche\' il default sia quello del preset', () => {
+    it('width condizionale: il `default` non viene ispezionato, benche\' sia quello del preset', () => {
         expect(ids({
             ...weak,
             border: { ...weakBorder, width: { rules: [{ when: ALWAYS, then: weakBorder.width }], default: weakBorder.width } },
         } as any)).toEqual([]);
     });
 
-    it('style condizionale: nessun preset, benche\' il default sia quello del preset', () => {
+    it('style condizionale: il `default` non viene ispezionato, benche\' sia quello del preset', () => {
         expect(ids({
             ...weak,
             border: { ...weakBorder, style: { rules: [{ when: ALWAYS, then: weakBorder.style }], default: weakBorder.style } },
