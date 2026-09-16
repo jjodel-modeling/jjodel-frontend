@@ -513,3 +513,19 @@ autorizzata a parte. La prima e' locale e sufficiente; la seconda e' piu' pulita
 - `docs/handoff/mockup-copy-1b.md` — artboard 2i (`or start from:`) e 2b (`Suggested:`)
 - `docs/handoff/decisions-symbol-editor-1b.md` — D4
 - `docs/prompts/2026-09-16_ack-slice-1_rules-editor.md` — Q7
+
+---
+
+## Due modali di pari struttura sotto il rail delle Properties, mai misurate
+
+**Registrato:** 2026-09-16
+**Origine:** fase 1 della discovery rail/modale (`docs/discovery/discovery_2026-09-16_rail_modal_stacking.md`, §8). Il perimetro della fase 2 era la sola `SymbolEditorModal`; queste due sono state escluse per non dichiarare corretto cio' che non era stato misurato.
+**Stato attuale:** `ValidationResultsModal` (`frontend/src/components/editor-v2/problems/ValidationResultsModal.scss:12`) e `ImportSummaryModal` (`frontend/src/components/import/ImportSummaryModal.scss:5`) hanno la stessa forma che aveva `SymbolEditorModal` prima del rimedio: fondale `position: fixed`, `z-index: var(--z-modal, 9999)`, reso dentro `#root` senza portale. Per **D-UI-14** (`docs/decisions.md:1760`) questo le mette sotto il rail (`.properties-tree-overlay`, figlio di `body`, 900) ovunque i due riquadri si sovrappongano, qualunque numero scrivano. Misurato sulla `SymbolEditorModal`, larga 1040px: sotto i ~1785px almeno un controllo non prendeva il click. **Nessuna delle due e' stata aperta ne' misurata**: quello che e' dimostrato e' la *classe* (un `div` `position: fixed; z-index: 999999` iniettato dentro `#root` resta coperto dal rail), non il singolo caso, e la geometria puo' salvarle. Indizio a favore, da verificare e non da ereditare: il commento di `ValidationRulesModal.scss` sostiene che il modale degli esiti «e' largo 620px e non arriva mai sotto il rail». Di `ImportSummaryModal` non risulta nessuna misura.
+**Fix strutturale raccomandato:** **prima la misura, poi il rimedio.** La sonda esiste ed e' riusabile cambiando selettore e apertura: `docs/discovery/harness/probe_2026-09-16_rail_modal_stacking.mts` (censimento dei controlli per hit test, sweep delle larghezze, controllo positivo che i due riquadri si sovrappongano davvero). Se il difetto c'e', il rimedio e' quello gia' applicato due volte in questo repo: `createPortal(..., document.body)` nel componente + `z-index: var(--z-alert, 10000)` nel foglio, come `ValidationRulesModal` (`a5ed5406d`) e `SymbolEditorModal`. Due file per modale, poche righe. Da non fare alla cieca: un portale sposta il sottoalbero fuori dall'albero React, e un modale che dipenda dal CSS degli antenati attuali cambierebbe aspetto.
+**Priorita':** media per `ImportSummaryModal` (compare dopo un import, con il rail tipicamente aperto); bassa per `ValidationResultsModal` se la larghezza di 620px regge alla misura.
+**Effort stimato:** mezza giornata, in gran parte sonda: due fixture di apertura, il rimedio e' meccanico.
+**Riferimenti:**
+- `docs/decisions.md` — D-UI-14 (la regola: chi deve stare sopra il rail e' figlio di `body`)
+- `docs/discovery/discovery_2026-09-16_rail_modal_stacking.md` — §8 (raggio), §4 (E3, la classe), §9 (opzioni)
+- `frontend/src/components/validation/ValidationRulesModal.tsx:209-222` — il precedente, con la misura del 2026-09-09 nel commento
+
