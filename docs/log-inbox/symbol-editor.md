@@ -25,10 +25,14 @@ this inbox, in its own commit.
 **Outcome**: ✅ completed
 **Corregge**: —
 **Causa**: —
-**Regressions**: unknown — until Alfonso's visual pass (see **Smoke visivo**). `npm run typecheck`
-exit 2, **33** on full output, set identical to the pre-edit run (`diff` exit 0), **0** in the
-touched files, control `Measurable` → 6. `npx vitest run` **3653 passed, 0 failed** (3648 before,
-plus the 5 new), the 9 pre-existing import failures unchanged. `npm run build` exit 0.
+**Regressions**: no — verified on screen by Alfonso (ACK 2026-09-16), all five points holding: a view
+saved with a scalar border draws exactly as before; the Border section shows the three switches
+(Color, Width · px, Style) and spans the full width, with the other sections re-pairing and no hole;
+the modal is not wider than before; Width set to Conditional draws per instance on the canvas and the
+title falls back to «Custom symbol»; the ER «Weak entity» stays recognized by name. Gates:
+`npm run typecheck` exit 2, **33** on full output, set identical to the pre-edit run (`diff` exit 0),
+**0** in the touched files, control `Measurable` → 6. `npx vitest run` **3653 passed, 0 failed**
+(3648 before, plus the 5 new), the 9 pre-existing import failures unchanged. `npm run build` exit 0.
 **Out-of-scope changes**: yes — 10 files, over regola 19's threshold, declared before the diff and
 proceeded with under **RC-11**. Each is named by the spec for this slice; the two test files carry
 the new cases and no others. `notationCatalog.ts` was NOT touched: `applyPresetToShape` already
@@ -37,14 +41,15 @@ writes scalars and still type-checks against the widened axes (`keepRules` is sl
 `viewpoint/ir` and `viewpoint/authoring`. No D-layer, no L-layer, no sync, no persistence: the
 schema change is additive, a scalar border reads back identical, so no `irVersion` bump and no
 VersionFixer.
-**Smoke visivo**: non eseguito — spetta ad Alfonso, in quest'ordine: (1) open a view saved with a
+**Smoke visivo**: passato — eseguito da Alfonso il 2026-09-16 (ACK visivo), tutti e cinque i punti
+reggono, nell'ordine in cui erano stati chiesti: (1) open a view saved with a
 scalar border and check it draws exactly as before; (2) the Border section in the Symbol modal shows
 three switches — Color, Width · px, Style — and spans the full width, with the other sections
 re-pairing (Shape beside Fill, Padding beside Marker) and no hole; (3) the modal is not wider than
 before; (4) set Width to Conditional with one rule and check the canvas draws it per instance and
 the modal title falls back to «Custom symbol»; (5) an ER «Weak entity» view is still recognized by
 name in the title.
-**Notes**: Mutation bench, both declared. Removing the `scalarOf` sentinel on `style` leaves the new tests GREEN: a raw conditional object never equals a string, so the sentinel is intent, not the thing under test. The mutation that matters — recognizing on `rules.default` — is KILLED (2 red). The OVERRIDES table is a read view: rules are edited in each axis's own table, and `borderOverrideRows` has no unit test because a pure module for it would be a file the spec does not name.
+**Notes**: Bench rimisurato, dettaglio in `7801d7a58`. Strada presa sui due test: **riscritti, non cancellati**. Togliere la sentinella `scalarOf` li lascia verdi (14/14): attraverso l'output di `recognizeSymbol` è indistinguibile dal confronto crudo, e nessun test può ucciderla. Ma leggere il `default` è ucciso da quei due e da nessun altro, su entrambe le forme: sono l'unico presidio sul titolo che mente. TODO: `borderOverrideRows` non ha test ed è lei a decidere una riga sola o una per asse.
 **Prompt document name**: 2026-09-16 16:03
 
 ## 2026-09-16 — feat: the Goal family, the cloud form and the two bar markers
