@@ -6,6 +6,39 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 
 ---
 
+## 2026-09-16 — feat: «Create edge view» and «Create row view» from the v2 canvas menus
+**Prompt**: `claude_2026-09-16_1238_prompt_voci_arco_riga.md` — after the host retake: the edge entry
+on the reference EDGE menu (the child menu's `ref` branch is fed by the cross-metamodel ghost chip
+alone), the row entry in the `attr` branch, and the two missing branches of `createViewInWorkbench`,
+mirroring `newDefault` and inventing nothing.
+**Files touched**: `f554aa5fb`: `utils/lastViewpoint.ts` (the `DReference` and `DAttribute` branches
+of the switch, +52) and `components/editor-v2/EditorV2.tsx` (the two entries, +33). This entry in
+this inbox, in its own commit.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. `npm run typecheck` exit 2, **33** on full output, set identical to the pre-edit
+run (`diff` exit 0), **0** in `lastViewpoint.ts`, and the single `EditorV2.tsx` hit is the
+pre-existing `:2886` of the §17 baseline; control `Measurable` → 6. `npm run build` exit 0.
+`npx vitest run`: **3645 passed, 3 failed** — the three reds are in
+`viewpoint/ir/__tests__/symbolRecognition.test.ts`, which imports only `irTypes`,
+`notationCatalog` and `symbolRecognition` (zero references to either file of this slice), and whose
+subjects `notationCatalog.ts` and `irTypes.ts` are dirty in the tree from the Symbol Editor lane.
+Not touched, not fixed: another lane's work in progress. The 9 pre-existing import failures are
+unchanged.
+**Out-of-scope changes**: no.
+**Layer Impact Report**: not-required — no §3.1 file; `new2` is called bare, no outer TRANSACTION.
+**Smoke visivo**: passato — `scripts/smoke/_tmp_edgerow_verify.ts` (gitignored), **15 PASS 0 FAIL**.
+Criteria 1-2: the edge view is `ir.kind 'edge'`, `appliableTo 'Edge'`, `metaclasses ["State"]` (the
+owner, with the pin) and the row view is `ir.kind 'row'`, `appliableTo 'Field'`, no metaclass, both
+in the active viewpoint. Criterion 4: with none active both entries read `… — no viewpoint
+available`, are disabled, and create nothing. Criterion 5: the `ir` travels in the CREATE payload
+with no later `ir` write, against a control that fails when the `ir` is written afterwards.
+Criterion 3, the strong one: **zero** keys differ from `DViewElement.newDefault(<that D element>)`,
+compared over the whole D object with generated identities masked.
+**Notes**: Two things the strong check forced, both measured. `appliableToForIRKind` is module-private in `view.tsx` (out of scope), so `'Edge'` and `'Field'` are literals with a comment naming the helper. And `newDefault` blanks `css` and `palette`, which the constructor seeds with a placeholder: without mirroring that the two creators differed on exactly those fields. The blanking is scoped to the two new branches. Declared limit: no row entry in `er` and `compact` notations, where the rows are not rendered.
+**Prompt document name**: 2026-09-16 12:38
+
 ## 2026-09-16 — discovery: Fase 2 preconditions, the reference row does not exist
 **Prompt**: `claude_2026-09-16_1115_prompt_rotta_archi_righe_decisioni.md`, **Fase 2** — the two
 preconditions before any code: whether a plain reference row dispatches `CHILD_CONTEXT_MENU`, and
