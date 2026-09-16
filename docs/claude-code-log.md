@@ -13,6 +13,32 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-16 — docs: trasporto di quattro regole normative da validation-skeleton
+**Prompt**: prompt di chat alla corsia del worktree del tronco, non un documento in repo: ora che
+la 3.0 e' uscita (tag `3.0.0` su `cb699ad58`, verificato su `origin` con `git ls-remote --tags`),
+portare qui le quattro regole nate su `validation-skeleton`, nell'ordine obbligato in cui ognuna
+cita la precedente. Tre condizioni: mettere a verbale il commit locale non pushato prima di
+toccare altro, non pushare in nessun caso, fermarsi al primo conflitto e rigenerare AGENTS.md con
+`gen:agents` invece di risolverlo a mano (1c).
+**Files touched**: quattro `git cherry-pick -x`, ciascuno con il proprio `CLAUDE.md` + `AGENTS.md`
+gia' dentro: `8f6122427` (da `686a13712`, §6.5 worktree e cherry-pick), `cccabe385` (da
+`74d0f81db`, test statici e file rigenerati in scope), `4db186124` (da `43e598404`, un test si
+giudica dalle mutazioni che uccide), `00b32f5e7` (da `e786d9d8a`, §6.6 la casa delle regole).
+Nessun file sorgente. Questa voce in un commit di soli docs.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — nessun sorgente toccato, solo `CLAUDE.md` e le sue proiezioni.
+`npm run check:agents` **PASS**, 2 file proiettati rigenerati in temp e allineati (`AGENTS.md`,
+`frontend/src/jjtl/AGENTS.md`). `npm run check:docs` **3/3**. I gate girati in questo clone
+attraverso un symlink temporaneo a `~/jjodel/frontend/node_modules` (§6.5), rimosso a fine
+sequenza; `git status` vuoto prima e dopo.
+**Out-of-scope changes**: no.
+**Layer Impact Report**: not-required — nessun file §3.1, nessun diff di codice.
+**Smoke visivo**: non applicabile — trasporto di sole regole, nessuna superficie.
+**Notes**: A verbale come chiesto, il commit locale non pushato preesistente: `96acb6ae9`, Alfonso Pierantonio, 2026-09-15, «docs: log-inbox entry for the 3.0.0 release lane», solo `docs/log-inbox/release-3-0.md`. **Non pushato nulla**: il ramo resta ahead=5, cosa sale lo decide Alfonso. Verifica per contenuto prima di toccare: 0/22, 0/8, 0/4, 0/19 righe gia' presenti, controllo positivo `c744b7660` 1/1 PRESENTE. Nessun conflitto, `gen:agents` non e' servito.
+**Prompt document name**: 2026-09-16 23:30
+
 ## 2026-09-08 — docs: micro-discovery, l'estensione del difetto keyword-dopo-il-punto
 **Prompt**: micro-discovery READ-ONLY, nessun fix. Misurare l'estensione del difetto nel lexer JjEL
 per decidere se la correzione sia prerequisito della validazione definita dall'utente o corsia
