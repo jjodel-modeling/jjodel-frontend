@@ -36,7 +36,7 @@ available`, are disabled, and create nothing. Criterion 5: the `ir` travels in t
 with no later `ir` write, against a control that fails when the `ir` is written afterwards.
 Criterion 3, the strong one: **zero** keys differ from `DViewElement.newDefault(<that D element>)`,
 compared over the whole D object with generated identities masked.
-**Notes**: Two things the strong check forced, both measured. `appliableToForIRKind` is module-private in `view.tsx` (out of scope), so `'Edge'` and `'Field'` are literals with a comment naming the helper. And `newDefault` blanks `css` and `palette`, which the constructor seeds with a placeholder: without mirroring that the two creators differed on exactly those fields. The blanking is scoped to the two new branches. Declared limit: no row entry in `er` and `compact` notations, where the rows are not rendered.
+**Notes**: Two things the strong check forced. `appliableToForIRKind` is module-private in `view.tsx` (out of scope), so `'Edge'` and `'Field'` are literals with a comment naming the helper. And `newDefault` blanks `css` and `palette`, which the constructor seeds with a placeholder: without mirroring that the two creators differed on exactly those fields. The blanking is scoped to the two new branches. Declared limit: no row entry in `er` and `compact` notations, where the rows are not rendered.
 **Prompt document name**: 2026-09-16 12:38
 
 ## 2026-09-16 — discovery: Fase 2 preconditions, the reference row does not exist
