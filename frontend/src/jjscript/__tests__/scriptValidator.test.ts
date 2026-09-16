@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validateScriptIntegrity } from '../executor/scriptValidator';
+import { collectClassifierNames, validateScriptIntegrity } from '../executor/scriptValidator';
 
 describe('validateScriptIntegrity', () => {
     it('rejects a script ending with an unterminated string, at the right line', () => {
@@ -74,5 +74,244 @@ describe('validateScriptIntegrity', () => {
         // A double-quoted value containing an apostrophe must not read as unterminated.
         const res = validateScriptIntegrity('set Person.note = "it\'s fine"');
         expect(res.valid).toBe(true);
+    });
+});
+
+// ============================================================================
+// FORWARD REFERENCES (second pass)
+// ============================================================================
+
+/** Nothing exists yet in the project: every name must come from the script itself. */
+const EMPTY = new Set<string>();
+
+/**
+ * The script Alfonso ran on `Micro MM v1` on 2026-09-16, with the containment on line 17
+ * and the class it needs on line 19. Filler lines keep the two line numbers authentic.
+ */
+const PIPELINE_SCRIPT = [
+    'create class Pipeline',                                          // 1
+    'create attribute a2 in Pipeline type String',                    // 2
+    'create attribute a3 in Pipeline type String',                    // 3
+    'create attribute a4 in Pipeline type String',                    // 4
+    'create attribute a5 in Pipeline type String',                    // 5
+    'create attribute a6 in Pipeline type String',                    // 6
+    'create attribute a7 in Pipeline type String',                    // 7
+    'create attribute a8 in Pipeline type String',                    // 8
+    'create attribute a9 in Pipeline type String',                    // 9
+    'create attribute a10 in Pipeline type String',                   // 10
+    'create attribute a11 in Pipeline type String',                   // 11
+    'create attribute a12 in Pipeline type String',                   // 12
+    'create attribute a13 in Pipeline type String',                   // 13
+    'create attribute a14 in Pipeline type String',                   // 14
+    'create attribute a15 in Pipeline type String',                   // 15
+    'create attribute a16 in Pipeline type String',                   // 16
+    'create containment stages in Pipeline type PipelineStage [1..*]', // 17
+    'create attribute label in Pipeline type String',                 // 18
+    'create class PipelineStage',                                     // 19
+].join('\n');
+
+describe('validateScriptIntegrity — forward references', () => {
+    it('refuses the Pipeline script, naming the reference line and the creation line', () => {
+        const res = validateScriptIntegrity(PIPELINE_SCRIPT, EMPTY);
+        expect(res.valid).toBe(false);
+        expect(res.issue?.line).toBe(17);
+        expect(res.issue?.kind).toBe('forward-reference');
+        expect(res.issue?.reason).toBe(
+            "line 17 references 'PipelineStage', which is created at line 19. Move the reference after it."
+        );
+    });
+
+    it('accepts the same script once the class is created first', () => {
+        const reordered = ['create class PipelineStage', ...PIPELINE_SCRIPT.split('\n')].join('\n');
+        expect(validateScriptIntegrity(reordered, EMPTY).valid).toBe(true);
+    });
+
+    it('runs no forward-reference pass at all when no name set is supplied', () => {
+        // Original behaviour: the truncation checks alone, exactly as before this pass existed.
+        expect(validateScriptIntegrity(PIPELINE_SCRIPT).valid).toBe(true);
+    });
+
+    it('accepts a reference to a name that already exists elsewhere in the project', () => {
+        // The name set spans EVERY metamodel, so a sibling metamodel's class makes the
+        // reference resolve and the later duplicate creation is not our business.
+        expect(validateScriptIntegrity(PIPELINE_SCRIPT, new Set(['PipelineStage'])).valid).toBe(true);
+    });
+
+    it('refuses a standalone `extends` that precedes the parent class', () => {
+        const script = [
+            'create class ALU',
+            'ALU extends FunctionalUnit',
+            'create class FunctionalUnit',
+        ].join('\n');
+        const res = validateScriptIntegrity(script, EMPTY);
+        expect(res.valid).toBe(false);
+        expect(res.issue?.line).toBe(2);
+        expect(res.issue?.reason).toContain("'FunctionalUnit'");
+    });
+
+    it('accepts a forward superclass in `create class A extends B`', () => {
+        // Measured: the executor drops an unresolved superclass silently and the class is
+        // still created, so the script does complete. Out of the pass by design.
+        const script = [
+            'create class ALU extends FunctionalUnit',
+            'create class FunctionalUnit',
+        ].join('\n');
+        expect(validateScriptIntegrity(script, EMPTY).valid).toBe(true);
+    });
+
+    it('accepts a name declared both before and after the reference', () => {
+        const script = [
+            'create class Stage',
+            'create containment stages in Pipeline type Stage',
+            'create class Stage',
+        ].join('\n');
+        const withParent = ['create class Pipeline', ...script.split('\n')].join('\n');
+        expect(validateScriptIntegrity(withParent, EMPTY).valid).toBe(true);
+    });
+
+    it('refuses a forward parent, not only a forward type', () => {
+        const script = [
+            'create attribute name in Person type String',
+            'create class Person',
+        ].join('\n');
+        const res = validateScriptIntegrity(script, EMPTY);
+        expect(res.valid).toBe(false);
+        expect(res.issue?.line).toBe(1);
+        expect(res.issue?.reason).toContain("'Person'");
+    });
+
+    // ---- exclusions -------------------------------------------------------
+
+    it('skips a name that a `delete` touches', () => {
+        const script = [
+            'create class Pipeline',
+            'create containment stages in Pipeline type PipelineStage',
+            'delete class PipelineStage',
+            'create class PipelineStage',
+        ].join('\n');
+        expect(validateScriptIntegrity(script, EMPTY).valid).toBe(true);
+    });
+
+    it('skips a name that a `rename` touches, on either side', () => {
+        const asSource = [
+            'create class Pipeline',
+            'create containment stages in Pipeline type PipelineStage',
+            'rename class PipelineStage to Stage',
+            'create class PipelineStage',
+        ].join('\n');
+        const asNewName = [
+            'create class Pipeline',
+            'create containment stages in Pipeline type PipelineStage',
+            'rename class Step to PipelineStage',
+            'create class PipelineStage',
+        ].join('\n');
+        expect(validateScriptIntegrity(asSource, EMPTY).valid).toBe(true);
+        expect(validateScriptIntegrity(asNewName, EMPTY).valid).toBe(true);
+    });
+
+    it('skips a name that a `copy` touches', () => {
+        const script = [
+            'create class Pipeline',
+            'create containment stages in Pipeline type PipelineStage',
+            'copy Stage to PipelineStage',
+            'create class PipelineStage',
+        ].join('\n');
+        expect(validateScriptIntegrity(script, EMPTY).valid).toBe(true);
+    });
+
+    it('skips qualified references, which may point at another metamodel', () => {
+        const script = [
+            'create class Pipeline',
+            'create containment stages in Pipeline type Other::PipelineStage',
+            'create class PipelineStage',
+        ].join('\n');
+        expect(validateScriptIntegrity(script, EMPTY).valid).toBe(true);
+    });
+
+    it('does not read M1 commands as classifier references or declarations', () => {
+        const script = [
+            'create instance of Pipeline "p1"',
+            'set p1.name = "first"',
+            'create class Pipeline',
+        ].join('\n');
+        expect(validateScriptIntegrity(script, EMPTY).valid).toBe(true);
+    });
+
+    it('stands down when the script contains an opaque command', () => {
+        const withForall = [
+            'create class Pipeline',
+            'forall c in classes do create attribute id in c',
+            'create containment stages in Pipeline type PipelineStage',
+            'create class PipelineStage',
+        ].join('\n');
+        const withEval = [
+            'create class Pipeline',
+            'this line is not a command and parses as eval',
+            'create containment stages in Pipeline type PipelineStage',
+            'create class PipelineStage',
+        ].join('\n');
+        expect(validateScriptIntegrity(withForall, EMPTY).valid).toBe(true);
+        expect(validateScriptIntegrity(withEval, EMPTY).valid).toBe(true);
+    });
+
+    it('stands down when the script switches target metamodel', () => {
+        const script = [
+            'target MM1',
+            'create class Pipeline',
+            'create containment stages in Pipeline type PipelineStage',
+            'target MM2',
+            'create class PipelineStage',
+        ].join('\n');
+        expect(validateScriptIntegrity(script, EMPTY).valid).toBe(true);
+    });
+
+    it('keeps the classifier and feature namespaces apart', () => {
+        // `create attribute Person in Order` declares a feature, not the class the first
+        // line needs, so it must not be read as the forward declaration of `Person`.
+        const script = [
+            'create class Order',
+            'create reference owner in Order type Person',
+            'create attribute Person in Order type String',
+        ].join('\n');
+        expect(validateScriptIntegrity(script, EMPTY).valid).toBe(true);
+    });
+
+    it('still refuses a malformed line before looking at forward references', () => {
+        const script = [
+            'create containment stages in Pipeline type PipelineStage',
+            'set Person.name =',
+            'create class PipelineStage',
+        ].join('\n');
+        const res = validateScriptIntegrity(script, EMPTY);
+        expect(res.valid).toBe(false);
+        expect(res.issue?.line).toBe(2);
+        expect(res.issue?.kind).toBe('malformed');
+    });
+});
+
+describe('collectClassifierNames', () => {
+    it('reads every metamodel of the project, not only the first', () => {
+        const names = collectClassifierNames([
+            { classes: [{ name: 'Pipeline' }] },
+            { classes: [{ name: 'PipelineStage' }] },
+        ]);
+        expect(names.has('Pipeline')).toBe(true);
+        expect(names.has('PipelineStage')).toBe(true);
+    });
+
+    it('sweeps enums, packages and the classes inside them', () => {
+        const names = collectClassifierNames([
+            {
+                classes: [{ name: 'Pipeline' }],
+                enumerators: [{ name: 'Phase' }],
+                packages: [{ name: 'core', classes: [{ name: 'Nested' }] }],
+            },
+        ]);
+        expect([...names].sort()).toEqual(['Nested', 'Phase', 'Pipeline', 'core']);
+    });
+
+    it('survives a metamodel whose collections are missing or not arrays', () => {
+        expect(collectClassifierNames([null, undefined, {}, { classes: 'nope' }]).size).toBe(0);
+        expect(collectClassifierNames([]).size).toBe(0);
     });
 });

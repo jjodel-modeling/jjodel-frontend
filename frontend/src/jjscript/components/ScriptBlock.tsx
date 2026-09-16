@@ -12,7 +12,7 @@ import { JjScriptEvents } from '../../events/registry';
 import './ScriptBlock.scss';
 import { ExecutionErrorDialog } from './ExecutionErrorDialog';
 import {parseError, ExecutionPauseInfo, ExecutionSummary, JjScriptError, ExecutionErrorInfo} from '../executor/errors';
-import { validateScriptIntegrity } from '../executor/scriptValidator';
+import { collectClassifierNames, validateScriptIntegrity } from '../executor/scriptValidator';
 import { AIDisclaimer } from '../../components/common/AIDisclaimer';
 import {TransformationAST} from "../../jjtl";
 import {ExecutionContext} from "../../jjtl/executor";
@@ -21,7 +21,7 @@ import {
     isCreateLiteralInTarget,
     type RecoveryAction,
 } from '../recovery';
-import { LPointerTargetable, LModel } from '../../joiner';
+import { DUser, L, LPointerTargetable, LModel, LProject, LUser } from '../../joiner';
 
 // ============================================
 // TYPES
@@ -84,7 +84,9 @@ interface LineState {
 type ScriptOutcome =
     | { kind: 'success'; count: number }
     | { kind: 'runtime-error'; line: number; message: string }
-    | { kind: 'syntax-error'; line: number; message: string };
+    | { kind: 'syntax-error'; line: number; message: string }
+    /** Refused before command 1 for a reason that is not a syntax problem. */
+    | { kind: 'refused'; line: number; message: string };
 
 export class ExecutionStats {
     totalCommands: number = 0;
@@ -94,6 +96,31 @@ export class ExecutionStats {
     duration: number = 0;
 }
 
+
+/**
+ * The classifier names already present in the project, for the forward-reference pass of
+ * `validateScriptIntegrity`. Returns undefined when the project cannot be read: the pass
+ * then stands down, which is the only safe reading of "we do not know what exists".
+ *
+ * Every metamodel is swept, not only the run's target, because an unbound reference also
+ * resolves project-wide, so a name living in a sibling metamodel makes the reference
+ * succeed and refusing the script would be a false positive.
+ */
+function projectClassifierNames(): Set<string> | undefined {
+    try {
+        const user: LUser = L.fromPointer(DUser.current);
+        const project = user?.project as LProject | undefined;
+        const metamodels = (project as any)?.metamodels;
+        if (Array.isArray(metamodels) && metamodels.length > 0) return collectClassifierNames(metamodels);
+    } catch (err) {
+        // A partial set would be worse than none: a name we failed to read looks absent,
+        // and an absent name is what the pass refuses on.
+        console.warn('[ScriptBlock] Forward-reference check stood down: reading the project classifier names threw, so a forward reference will not be refused before the run.', err);
+        return undefined;
+    }
+    console.warn('[ScriptBlock] Forward-reference check stood down: no metamodel could be read from the project, so a forward reference will not be refused before the run.');
+    return undefined;
+}
 
 // Utility function for delay between commands
 const sleep = (ms: number): Promise<void> => {
@@ -305,14 +332,20 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
         // cleanly; it only fails fast (0 commands executed) instead of leaving a half-built
         // model, e.g. when AI-generated output was cut off mid-script. No events are emitted
         // and no execution state is entered — the run simply never starts.
-        const integrity = validateScriptIntegrity(code);
+        // The second argument enables the forward-reference pass: a script whose line N uses
+        // a class created at line N+k cannot complete, and refusing it here keeps the model
+        // from being left half-built.
+        const integrity = validateScriptIntegrity(code, projectClassifierNames());
         if (!integrity.valid && integrity.issue) {
-            const { line, command, reason } = integrity.issue;
+            const { line, command, reason, kind } = integrity.issue;
+            const isForwardReference = kind === 'forward-reference';
             setShowErrorDialog(false);
             setExecutionErrorInfo({
                 lineNumber: line,
                 command,
-                error: `Script appears truncated or malformed at line ${line} (${reason}) — nothing was executed.`,
+                error: isForwardReference
+                    ? `Script refused before command 1: ${reason} Nothing was executed.`
+                    : `Script appears truncated or malformed at line ${line} (${reason}) — nothing was executed.`,
                 executedSoFar: 0,
                 totalCommands: commands.length,
                 elapsedMs: 0,
@@ -325,7 +358,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                 duration: 0,
             });
             setExecutionState('error');
-            setOutcome({ kind: 'syntax-error', line, message: reason });
+            setOutcome({ kind: isForwardReference ? 'refused' : 'syntax-error', line, message: reason });
             return;
         }
 
@@ -1446,13 +1479,15 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                     <span>{outcome.count} commands applied</span>
                 </div>
             )}
-            {(outcome?.kind === 'runtime-error' || outcome?.kind === 'syntax-error') && (
+            {(outcome?.kind === 'runtime-error' || outcome?.kind === 'syntax-error' || outcome?.kind === 'refused') && (
                 <div className="script-block__error">
                     <i className="bi bi-exclamation-triangle" />
                     <span>
                         {outcome.kind === 'syntax-error'
                             ? `Syntax error at line ${outcome.line}: ${outcome.message}`
-                            : `Error at line ${outcome.line}: ${outcome.message}`}
+                            : outcome.kind === 'refused'
+                                ? `Nothing was executed: ${outcome.message}`
+                                : `Error at line ${outcome.line}: ${outcome.message}`}
                     </span>
                 </div>
             )}
