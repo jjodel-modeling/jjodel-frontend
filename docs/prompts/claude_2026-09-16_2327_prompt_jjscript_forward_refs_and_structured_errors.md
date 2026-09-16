@@ -129,7 +129,7 @@ Minimal diffs, no renames, no opportunistic refactoring, no em dashes in anythin
 `TEMP-DISCOVERY` logs in `ScriptBlock.tsx` alone. `npm run typecheck` at baseline, `npx vitest run`,
 `npm run build`, `check:docs`. HARD STOP before each commit for Alfonso's visual check on
 http://localhost:3001/ (lane A: run the Pipeline script, expect zero commands and the two-line
-message; lane B: temporarily reorder nothing, run a script with `type NoSuchClass` on a reference,
+message; lane B: run a script with `type NoSuchClass` on a reference,
 expect the executor's sentence and suggestion). Commit with explicit paths; code and docs in
 separate commits; one log entry per lane. Do not touch `docs/mde-intelligence-2026/`.
 
