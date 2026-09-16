@@ -25,5 +25,5 @@ entry of `86f822d50`.
 **Smoke visivo**: non applicabile — no runtime surface changed. The runtime facts the report relies
 on were measured in the previous phases (`_tmp_gate_keybind.ts`, `_tmp_gate_reach.ts`,
 `_tmp_v2menu_verify.ts`, all gitignored).
-**Notes**: One prompt premise is contradicted and the report says so: `key_bindings` IS dispatched, by `Keystrokes.register('#root', …)` at `ContextMenu.tsx:711` through a jQuery delegated `keydown` (`U.tsx:3535`) — it is registered and unreachable, not undispatched, which changes what a later slice should do. Main finding: the two creators are each one piece short — `newDefault` knows the row/edge seeds but has no viewpoint parameter, `createViewInWorkbench` takes the viewpoint but has no branch for `DAttribute`/`DReference`.
+**Notes**: One prompt premise is contradicted, in the report: `key_bindings` IS dispatched, by `Keystrokes.register('#root', …)` (`ContextMenu.tsx:711`, delegated `keydown` at `U.tsx:3535`) — registered and unreachable, not undispatched. Main finding: each creator is one piece short — `newDefault` has the row/edge seeds but no viewpoint parameter, `createViewInWorkbench` takes the viewpoint but has no `DAttribute`/`DReference` branch.
 **Prompt document name**: 2026-09-16 09:51
