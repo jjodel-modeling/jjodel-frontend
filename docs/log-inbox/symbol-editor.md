@@ -6,6 +6,50 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 
 ---
 
+## 2026-09-17 — feat(editor-v2): the 1b shell of the Symbol Editor (slice 4b)
+**Prompt**: `claude_2026-09-16_2339_prompt_slice4b_guscio_2h.md` — slice **4b**, the SHELL half of
+spec slice 4 (4a, the Goal family, is already in): popover `variant='popover'`, 1b header with the
+preset chip, `nav sezioni (170px) | panel` with the count badges, 1b footer, and
+`applyPresetToShape(shape, preset, {keepRules})` under D7. The five things the 2h mockup shows and
+the plan does not have (metaclass dropdown, View name, Notations chips, «Also used for», «Show
+diff») stayed out; none of them was needed to make the shell work.
+**Files touched**: `b53d2f5dd`, 10 files, code only. `authoring/borderOverrides.ts` (**new**, pure:
+`borderOverrideRows` moved out of the panel), `authoring/SymbolEditorModal.tsx` (the 1b shell:
+chip + popover, section nav, footer, badges), `authoring/SymbolEditorModal.scss` (chip, popover,
+nav; the two-column grid, the Border span, the tab bar and the catalog column rules **removed**),
+`authoring/SymbolCatalogPicker.tsx` (`variant='popover'` reusing the `'column'` path, footer),
+`authoring/VertexAuthoringPanel.tsx` (`activeSection` prop, section wrappers, the moved function),
+`authoring/irTabs.tsx` (`IRSectionId`, labels, `irSectionStyle`), `ir/notationCatalog.ts`
+(`ApplyPresetOptions`, `keepRules`), plus three test files — `authoring/__tests__/borderOverrides.test.ts`
+(**new**, 11), `authoring/__tests__/symbolCatalogPopover.test.ts` (**new**, 9, rendered) and
+`ir/__tests__/notationCatalog.test.ts` (+7 on `keepRules`). This entry in this inbox, in its own commit.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown — `unknown` and not `no` because nothing was opened in the running app:
+the prompt assigns the visual check to Alfonso and says to hold this field until he answers. Gates
+all green: `npm run typecheck` exit 2, **33** on full output, set byte-identical to the pre-edit run
+(`diff` exit 0), **0** in the ten touched files. `npx vitest run` **3718 passed, 0 failed**, the same
+9 files red at import (`diff` of the FAIL lines, exit 0). Of the +47 against the pre-edit 3671,
+**27 are this slice** (11 + 9 + 23→30) and 20 belong to the jjscript lane, whose files were written
+at 23:54–23:56 between the two runs — measured, not assumed. `npm run build` exit 0, only the
+pre-existing chunk warning.
+**Out-of-scope changes**: yes — 10 files, over regola 19's threshold, declared in chat with the
+Layer Impact Report before the diff and proceeded with under **RC-11**. Each is named by the spec
+for this half or forced by it: `borderOverrides.ts` exists because the prompt requires tests on
+`borderOverrideRows` and `VertexAuthoringPanel` cannot be imported by the bench; `irTabs.tsx`
+carries the section vocabulary the panel and the modal must agree on. Second deviation, declared:
+the nav has **8 entries, not the spec's 7**.
+**Layer Impact Report**: produced — in chat before the diff, as §3.2 and P5 require for
+`viewpoint/ir` and `viewpoint/authoring`. No D-layer, no L-layer, no sync, no persistence: the IR
+schema is unchanged, `applyPresetToShape` gains an argument and under `keepRules` writes strictly
+fewer keys, so no `irVersion` bump and no VersionFixer. The write path is the same canonical
+whole-object `set_ir`.
+**Smoke visivo**: non eseguito — the app was not opened; the ordered list of what to look at was
+handed to Alfonso in chat. Covered instead by the unit bench below and by the rendered popover test.
+**Notes**: Ambiguità «scrolla/mostra» risolta in **mostra una sezione per volta**, come chiede la spec: perciò il grid a due colonne e lo span del Border sono **rimossi**, non lasciati — con una sezione sola il grid la impagina a sinistra. Banco: 3 mutanti su `borderOverrideRows`, 5/2/2 rossi, sorgente ripristinato. Nav a 8 voci: `irTabsForKind` non dà Appearance al rail, quindi Shape e Badges si raggiungono solo qui. Altra corsia: `6ae3e15eb` nel giro, nessun suo file nel mio commit.
+**Prompt document name**: 2026-09-16 23:39
+
 ## 2026-09-16 — docs: una sola casa per CLAUDE.md, e la coda di trasporto (§6.6)
 **Prompt**: `claude_2026-09-16_2301_prompt_casa_delle_regole.md` — scrivere la quarta regola di
 processo: dove vivono le regole e in quale ramo valgono. Rigenerare `AGENTS.md` (§17, in perimetro
