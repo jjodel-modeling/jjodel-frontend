@@ -28,6 +28,34 @@ the Create View gate fix»: contenuto reale **due** entry, la sua e quella della
 rail/modale, gia' in albero e non in stage al momento del commit. Stesso schema del 2026-09-13.
 Nessun rewrite: la entry resta dov'e', il suo commit non la nomina.
 
+## 2026-09-17 — fix: JjScript refuses a forward reference before command 1 (corsia A)
+**Prompt**: `claude_2026-09-16_2327_prompt_jjscript_forward_refs_and_structured_errors.md`, phase 1
+(read-only discovery with report, hard stop) then phase 2 lane A. Run with Alfonso's five answers to
+§10 of the report: option (b) corrected to the names of EVERY metamodel of the project, the three
+hard-failure roles only, the §5 exclusions each with a test, the mutation bench plus a
+target-only-names mutant, and a `console.warn` on stand-down added after the visual check.
+**Files touched**: `2b357af17`, 3 files: `jjscript/executor/scriptValidator.ts` (second pass,
+`collectClassifierNames`, the `kind` discriminant, header rewritten around the real soundness rule),
+`jjscript/__tests__/scriptValidator.test.ts` (+20 tests, 28 total),
+`jjscript/components/ScriptBlock.tsx` (the name set at the call site, the refusal wording, one new
+`ScriptOutcome` kind). Report `6ae3e15eb`. This entry in its own commit.
+**Outcome**: ✅ completed (lane A; lane B is the next commit of the same prompt)
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. `npm run typecheck` exit 2, **33** on full output, the declared baseline, **0**
+in the three touched files. `npx vitest run` **3691 passed, 0 failed** (3671 before, +20 new), the
+same 9 files red at import. `npm run build` exit 0, pre-existing chunk-size warning only.
+**Out-of-scope changes**: yes, declared under rule 1b. The prompt scoped `ScriptBlock.tsx` to the
+integrity refusal block; the text the user reads is the outcome strip at `:1478`, which said
+`Syntax error at line N`. One `ScriptOutcome` kind (`'refused'`) and one branch of that ternary were
+added so a forward reference is not called a syntax error. Nothing else in the file changed.
+**Layer Impact Report**: not-required — no §3.1 file. `projectClassifierNames()` reads L proxies and
+writes nothing.
+**Smoke visivo**: passato — Alfonso ran the Pipeline script on a clean metamodel at localhost:3001:
+zero commands executed and the two-line refusal naming lines 17 and 19.
+**Notes**: Two open defects measured and left untouched, both in the report §6: `create class|enum|package` has no duplicate check (`create.ts:439,1023,1059`), and `create class A extends B` with a missing `B` drops the inheritance silently (`create.ts:452-467`). The first is why the pass needs the name set at all. Bench: 9 mutants, 9 killed, one named test each; the harness reports a mutant that fails to apply instead of scoring it green.
+**Prompt document name**: 2026-09-16 23:27
+
 ## 2026-09-16 — fix: Jjodie stamps the level of the editor on screen, not of the last selection
 **Prompt**: `claude_2026-09-16_2249_prompt_fix_jjodie_scope_level_m1_on_metamodel.md` — step 1 a
 read-only verification with a mandatory report, step 2 the fix. Run with the three conditions of
