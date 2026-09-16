@@ -105,7 +105,7 @@ import { jjomVertexToRFNode } from './utils/jjomTransformers';
 import { useTheme } from '../../services/ThemeService';
 import { getDraggedMetaclassId } from './utils/dragState';
 import { PolymetricView } from '../polymetric';
-import { createViewInWorkbench, resolveParentViewpoint } from '../../utils/lastViewpoint';
+import { createViewInWorkbench, hasCreatableViewpoint, resolveParentViewpoint } from '../../utils/lastViewpoint';
 import DockManager from '../abstract/DockManager';
 import SimulationPanel from './sim/SimulationPanel';
 // BottomDrawer import removed — bottom property drawer disabled (duplicates right Properties panel)
@@ -3242,7 +3242,17 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             // "Create View" — only for classifiers (classNode, enumNode), not objectNode/packageNode.
             // View authoring is an Advanced-mode feature (hidden in Basic).
             if ((node?.type === 'classNode' || node?.type === 'enumNode') && isAdvancedMode()) {
-                const resolved = resolveParentViewpoint();
+                // ONE resolution for the label AND the destination (2026-09-16). This entry used
+                // to read `resolveParentViewpoint()` for the label and then let
+                // `createViewInWorkbench` resolve again on its own: two answers to the same
+                // question, so a viewpoint change between the render and the click could file the
+                // view somewhere other than the place the label promised.
+                //
+                // `hasCreatableViewpoint()` is the same gate the tree entry uses, so the two menus
+                // agree on what «creatable» means, and the entry can no longer offer priority 3 of
+                // the chain — the system `Default`, which the toolbar, the megamodel and the
+                // dashboard all refuse to show (R-IRN-9). The chain itself is untouched.
+                const resolved = hasCreatableViewpoint() ? resolveParentViewpoint() : null;
                 const vpName = resolved?.vpName;
                 const data = node.data as any;
                 items.push(
@@ -3259,7 +3269,9 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                             const classId = modelElement?.id ?? node.id;
                             const className = modelElement?.__raw?.className ?? 'DClass';
                             // console.log('[EditorV2] resolved classId:', classId, 'className:', className);
-                            createViewInWorkbench(classId, data?.label ?? 'unnamed', className);
+                            // Fourth argument: the viewpoint resolved for the label, so the
+                            // destination cannot drift from what the entry promised.
+                            createViewInWorkbench(classId, data?.label ?? 'unnamed', className, resolved?.dViewpoint?.id);
                         },
                     },
                 );
