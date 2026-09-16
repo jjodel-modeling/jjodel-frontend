@@ -6,6 +6,47 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 
 ---
 
+## 2026-09-16 — feat(ir): the border becomes conditional per axis (slice 2)
+**Prompt**: `claude_2026-09-16_1603_prompt_slice2_border_per_asse.md` on `docs/handoff/02-coder-spec.md`
+slice 2, plus the two decisions of the day: three Fixed/Conditional switches all visible (not one
+switch on the border, which is the shape D1 rejected), and the Border section spanning both columns
+of the anatomy grid instead of a wider modal.
+**Files touched**: `3e4f7536f`, 10 files. IR: `ir/irTypes.ts` (`ShapeSpec.border` per axis;
+`CompiledView.border` → `borderColor`/`borderWidth`/`borderStyle`), `ir/irCompile.ts` (three
+`compileConditional`, the same three lines `compileEdgeView` runs for `line`),
+`ir/IRNodeContent.tsx` (each axis resolved per instance; inline box, SVG stroke, dash, `double`
+overdraw and marker colour all read the resolved values), `ir/symbolRecognition.ts` (the two axes
+through `scalarOf`). Authoring: `authoring/VertexAuthoringPanel.tsx` (three `ConditionalEditor`
+axes, `patchBorderAxis` replacing `patchBorder`, the OVERRIDES table and its `borderOverrideRows`
+grouping), `authoring/SymbolEditorModal.tsx` (`currentAxesPreset` scalar-or-omitted),
+`authoring/SymbolCard.tsx` (scalar-or-default colour), `authoring/SymbolEditorModal.scss` (the span
+rule). Tests: `ir/__tests__/ir.test.ts`, `ir/__tests__/symbolRecognition.test.ts`. This entry in
+this inbox, in its own commit.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown — until Alfonso's visual pass (see **Smoke visivo**). `npm run typecheck`
+exit 2, **33** on full output, set identical to the pre-edit run (`diff` exit 0), **0** in the
+touched files, control `Measurable` → 6. `npx vitest run` **3653 passed, 0 failed** (3648 before,
+plus the 5 new), the 9 pre-existing import failures unchanged. `npm run build` exit 0.
+**Out-of-scope changes**: yes — 10 files, over regola 19's threshold, declared before the diff and
+proceeded with under **RC-11**. Each is named by the spec for this slice; the two test files carry
+the new cases and no others. `notationCatalog.ts` was NOT touched: `applyPresetToShape` already
+writes scalars and still type-checks against the widened axes (`keepRules` is slice 4).
+**Layer Impact Report**: produced — in chat before the diff, as §3.2 and P5 require for
+`viewpoint/ir` and `viewpoint/authoring`. No D-layer, no L-layer, no sync, no persistence: the
+schema change is additive, a scalar border reads back identical, so no `irVersion` bump and no
+VersionFixer.
+**Smoke visivo**: non eseguito — spetta ad Alfonso, in quest'ordine: (1) open a view saved with a
+scalar border and check it draws exactly as before; (2) the Border section in the Symbol modal shows
+three switches — Color, Width · px, Style — and spans the full width, with the other sections
+re-pairing (Shape beside Fill, Padding beside Marker) and no hole; (3) the modal is not wider than
+before; (4) set Width to Conditional with one rule and check the canvas draws it per instance and
+the modal title falls back to «Custom symbol»; (5) an ER «Weak entity» view is still recognized by
+name in the title.
+**Notes**: Mutation bench, both declared. Removing the `scalarOf` sentinel on `style` leaves the new tests GREEN: a raw conditional object never equals a string, so the sentinel is intent, not the thing under test. The mutation that matters — recognizing on `rules.default` — is KILLED (2 red). The OVERRIDES table is a read view: rules are edited in each axis's own table, and `borderOverrideRows` has no unit test because a pure module for it would be a file the spec does not name.
+**Prompt document name**: 2026-09-16 16:03
+
 ## 2026-09-16 — feat: the Goal family, the cloud form and the two bar markers
 **Prompt**: `claude_2026-09-16_1242_prompt_slice4a_famiglia_goal.md` — slice **4a**, the catalog half
 of slice 4 split off from the 2h shell so it lands in parallel with slice 2. The whole shell half
