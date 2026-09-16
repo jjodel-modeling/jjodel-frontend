@@ -28,6 +28,33 @@ the Create View gate fix»: contenuto reale **due** entry, la sua e quella della
 rail/modale, gia' in albero e non in stage al momento del commit. Stesso schema del 2026-09-13.
 Nessun rewrite: la entry resta dov'e', il suo commit non la nomina.
 
+## 2026-09-16 — fix: the v2 Create View entry resolves its viewpoint once, never the system default
+**Prompt**: `claude_2026-09-16_0951_prompt_menu_v2_viewpoint_e_rotta_archi_righe.md`, **Fase A** —
+gate the v2 canvas entry on `hasCreatableViewpoint()` (the tree's own predicate) and pass the
+resolved viewpoint id as the fourth argument of `createViewInWorkbench`, so the label and the
+destination come from ONE resolution and the entry can no longer file a view inside
+`Pointer_ViewPointDefault`. Hard stop after this commit: **Fase B not started**.
+**Files touched**: `86f822d50`: `components/editor-v2/EditorV2.tsx` only (the import, and the
+`Create View` entry at `:3244-3275`). This entry in its own commit.
+**Outcome**: ✅ completed (Fase A; Fase B is a separate, not-yet-started phase)
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. `npm run typecheck` exit 2, **33** on full output, set identical to the pre-edit
+run (`diff` exit 0); the single `EditorV2.tsx` error is the pre-existing `:2886` of the §17 baseline,
+not a new one; control `Measurable` → 6. `npx vitest run` **3643 passed, 0 failed**, the same 9 files
+red at import. `npm run build` exit 0, pre-existing warnings only.
+**Out-of-scope changes**: no.
+**Layer Impact Report**: not-required — `EditorV2.tsx` is not a §3.1 file and the change touches one
+menu entry, no D/L write path.
+**Smoke visivo**: passato — `scripts/smoke/_tmp_v2menu_verify.ts` (gitignored), **10 PASS 0 FAIL**:
+with no viewpoint active the entry reads `Create View — no viewpoint available`, is disabled, and a
+click creates nothing; with «Menu VP» active it reads `Create View in "Menu VP"` and creates exactly
+one view whose `father` is that viewpoint; no view is ever filed in `Pointer_ViewPointDefault`; and
+the created view is field-by-field identical (`ir`, `appliableTo`, `appliableToClasses`,
+`oclCondition`, jsx) to the one the `+` dialog makes for the same class.
+**Notes**: Born from the Errata of the 00:55 prompt, but not a correction of its result: the double resolution predates it, in another file. Residual and declared, chain out of scope: with the gate true, `resolveParentViewpoint` could still reach priority 3 if the active viewpoint's D object were unreadable — pathological, left as is. Probe note for whoever writes the next one: the v2 menu is dismissed by its own `.context-menu-backdrop`, not by Escape, which leaves it open and intercepting.
+**Prompt document name**: 2026-09-16 09:51
+
 ## 2026-09-16 — fix: the Symbol Editor modal portaled onto body, above the Properties rail
 **Prompt**: chat prompt, not a repo document: phase 2, option A of the phase 1 report — bring
 `SymbolEditorModal` into line with D-UI-14 the way `ValidationRulesModal` already is (`a5ed5406d`),
