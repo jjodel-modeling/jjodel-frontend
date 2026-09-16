@@ -6,6 +6,32 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 
 ---
 
+## 2026-09-16 — docs: una sola casa per CLAUDE.md, e la coda di trasporto (§6.6)
+**Prompt**: `claude_2026-09-16_2301_prompt_casa_delle_regole.md` — scrivere la quarta regola di
+processo: dove vivono le regole e in quale ramo valgono. Rigenerare `AGENTS.md` (§17, in perimetro
+per la 1c) e **registrare** la coda di trasporto verso il tronco senza eseguirla.
+**Files touched**: `e786d9d8a`: `CLAUDE.md` (+23, nuova **§6.6** subito dopo §6.5, che ne ha la
+meccanica — sottosezione e non sezione nuova, come la convenzione del file vuole) e `AGENTS.md`
+(+23, proiezione rigenerata con `gen:agents`, mai scritta a mano). `frontend/src/jjtl/AGENTS.md`
+riscritto identico dal generatore e lasciato fuori dallo stage. Questa entry in commit separato.
+Nota RC-13: al momento del commit un'altra corsia aveva **5 file suoi già in stage** (Jodie,
+jjscript); il commit per pathspec li ha esclusi, verificato con `git show --stat`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `npm run check:agents` PASS (2 file proiettati, entrambi allineati) e
+`npm run check:docs` PASS 3/3 con i 3 warning pre-esistenti, misurati **prima** dell'edit oltre che
+dopo, come il prompt chiede. Nessun file di prodotto toccato, nessun ramo diverso da
+`validation-skeleton`. L'assenza delle regole sul tronco è misurata due volte e in due modi
+indipendenti: per ancestry (controllo positivo passato — `6e9a31fe7` È antenato di
+`origin/alfonso-frontend-jjtl`) e per contenuto (i 4 marcatori a 0 con controlli positivi che hanno
+segnale, `NON-NEGOTIABLE` → 3 e `TRANSACTION` → 16). Anche `staging` non ha CLAUDE.md.
+**Out-of-scope changes**: no — `AGENTS.md` è in perimetro per la regola 1c, che il prompt cita.
+**Layer Impact Report**: not-required — sola documentazione, nessun file §3.1.
+**Smoke visivo**: non applicabile.
+**Notes**: Coda al tronco, in ordine: `686a13712` (F, §6.5), `74d0f81db` (H, 1c + sub-rule §5), `43e598404` (oggi). Oggi cita ieri e ieri cita F: portare solo l'ultimo metterebbe sul tronco una citazione che punta al nulla. NON trasportata qui, per istruzione del prompt. Ma la sua premessa è scaduta: il tag `3.0.0` **esiste** (`cb699ad58`) e la PR #144 è **MERGED** dal 2026-09-15, quindi la condizione «dopo il tag» è già soddisfatta e il GO resta di Alfonso. `master` senza CLAUDE.md: domanda aperta.
+**Prompt document name**: 2026-09-16 23:01
+
 ## 2026-09-16 — docs: a test is judged by the mutations it kills (§5, terza regola)
 **Prompt**: prompt di chat, corsia Symbol Editor, fetta di soli docs — aggiungere a `CLAUDE.md`,
 accanto alle due regole di processo del 2026-09-15, la terza imparata oggi sul banco di
