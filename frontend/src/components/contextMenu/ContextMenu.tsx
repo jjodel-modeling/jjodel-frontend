@@ -48,7 +48,7 @@ import { createPortal } from 'react-dom';
 import { Logo } from '../logo';
 import { forEach } from 'lodash';
 import './ContextMenu.scss';
-import { getLastEditedViewpointId, getLastEditedViewpointName, createViewInWorkbench } from '../../utils/lastViewpoint';
+import { hasCreatableViewpoint, getLastEditedViewpointName, createViewInWorkbench } from '../../utils/lastViewpoint';
 import { isAdvancedMode } from '../../hooks/useInterfaceMode';
 import { toast } from '../Toast/toastDispatch';
 import { JjodelEvents } from '../../events/registry';
@@ -484,9 +484,9 @@ function ContextMenuComponentInner(props: AllProps) {
 
         // Create View — only for M2 classifiers (classNode/enumNode equivalents). Advanced mode only.
         if (isAdvancedMode() && isM2 && (cname === 'DModel' || cname === 'DClass' || cname === 'DPackage')) {
-            const hasWorkbenchVP = !!getLastEditedViewpointId();
+            const hasWorkbenchVP = hasCreatableViewpoint();
             ContextEntry('createview', <i className="bi bi-eye" />,
-                hasWorkbenchVP ? 'Create View' : 'Create View — open a viewpoint first',
+                hasWorkbenchVP ? 'Create View' : 'Create View: open a viewpoint first',
                 hasWorkbenchVP ? addViewToWorkbench : null,
                 [], !hasWorkbenchVP);
         }
@@ -528,9 +528,9 @@ function ContextMenuComponentInner(props: AllProps) {
         }
 
         if (isAdvancedMode() && isM2 && (cname === 'DModel' || cname === 'DClass' || cname === 'DPackage' || cname === 'DAttribute' || cname === 'DReference')) {
-            const hasWorkbenchVP = !!getLastEditedViewpointId();
+            const hasWorkbenchVP = hasCreatableViewpoint();
             ContextEntry('view+m2', icon['add'],
-                hasWorkbenchVP ? 'Add view' : 'Add view — open a viewpoint first',
+                hasWorkbenchVP ? 'Add view' : 'Add view: open a viewpoint first',
                 hasWorkbenchVP ? addViewInstances : null,
                 [], !hasWorkbenchVP);
         } else if (isAdvancedMode() && !isM2) {

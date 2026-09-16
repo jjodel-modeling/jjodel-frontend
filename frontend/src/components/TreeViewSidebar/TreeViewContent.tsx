@@ -24,7 +24,7 @@ import {
 import type { Pointer } from '../../joiner';
 import type { ViewpointType } from '../../view/viewPoint/viewpoint';
 import { useTreeViewPanel, ElementAction } from '../../contexts/TreeViewPanelContext';
-import { getLastEditedViewpointId, createViewInWorkbench, createBlankViewInViewpoint } from '../../utils/lastViewpoint';
+import { hasCreatableViewpoint, createViewInWorkbench, createBlankViewInViewpoint } from '../../utils/lastViewpoint';
 import { NewViewDialog, type NewViewClassOption, type NewViewTarget } from '../project/NewViewDialog';
 import { isAdvancedMode } from '../../hooks/useInterfaceMode';
 import { JjodelEvents, SystemEvents } from '../../events/registry';
@@ -658,7 +658,7 @@ function useClassifierContextMenu(elementId: string, name: string, className: st
         setCtxMenu(null);
     }, [elementId, name, className]);
 
-    const hasWorkbenchVP = !!getLastEditedViewpointId();
+    const hasWorkbenchVP = hasCreatableViewpoint();
 
     const popup = ctxMenu ? (
         <div
@@ -671,7 +671,7 @@ function useClassifierContextMenu(elementId: string, name: string, className: st
                 onClick={hasWorkbenchVP ? handleAddView : undefined}
             >
                 <i className="bi bi-eye" />
-                <span>{hasWorkbenchVP ? 'Create View' : 'Create View — open a viewpoint first'}</span>
+                <span>{hasWorkbenchVP ? 'Create View' : 'Create View: open a viewpoint first'}</span>
             </div>
         </div>
     ) : null;

@@ -127,6 +127,28 @@ function warnOnGlobalCss(activeViewpointId: string | null): void {
 }
 
 /**
+ * Is there a viewpoint the «Create View» / «Add view» entries can create into?
+ *
+ * Mirrors priority 2 of `resolveParentViewpoint` below — the active project viewpoint,
+ * the system `Default` excluded — so the gate and the resolution cannot drift apart.
+ *
+ * It exists because those gates asked `getLastEditedViewpointId()`, and the only writer of
+ * that tracker, `setLastEditedViewpoint`, has NO caller in `frontend/src` (census
+ * 2026-09-16): the gate was therefore closed always, and edge and row views had no
+ * reachable entry point at all. Priority 1 is deliberately not tested here for that same
+ * reason, and priority 3 (the `Default` viewpoint) is a system layer, not a place the user
+ * authors into (R-IRN-9).
+ */
+export function hasCreatableViewpoint(): boolean {
+    try {
+        const activeVP: LViewPoint | null | undefined = LProject.getProject()?.activeViewpoint;
+        return !!activeVP && activeVP.id !== Defaults.Pointer_ViewPointDefault;
+    } catch {
+        return false; // project not available
+    }
+}
+
+/**
  * Resolves the viewpoint to use as parent for new views.
  * Priority: last edited workbench VP → active project VP → default VP.
  * Returns { dViewpoint, vpName } or null if nothing found.
