@@ -28,6 +28,38 @@ the Create View gate fix»: contenuto reale **due** entry, la sua e quella della
 rail/modale, gia' in albero e non in stage al momento del commit. Stesso schema del 2026-09-13.
 Nessun rewrite: la entry resta dov'e', il suo commit non la nomina.
 
+## 2026-09-16 — fix: the Symbol Editor modal portaled onto body, above the Properties rail
+**Prompt**: chat prompt, not a repo document: phase 2, option A of the phase 1 report — bring
+`SymbolEditorModal` into line with D-UI-14 the way `ValidationRulesModal` already is (`a5ed5406d`),
+local portal + `--z-alert`, landed before slice 2 starts writing since it lists the same file. Scope
+that one modal: `ValidationResultsModal` and `ImportSummaryModal` untouched (unmeasured), z tokens
+untouched. Plus three things, each its own commit: a ticket for those two modals, a ticket for
+`--z-modal` = 1050, and the `check:docs` trim of another lane's Notes.
+**Files touched**: `bc42b259c`, 2 files: `viewpoint/authoring/SymbolEditorModal.tsx` (`createPortal`
+import, `return createPortal((…), document.body)`, the reason in a doc comment),
+`SymbolEditorModal.scss` (backdrop `z-index: var(--z-alert, 10000)`, header comment corrected — it
+claimed «no portal»). Alongside: `37151aee4` (report §13 + the probe turned onto the corrected state),
+`56f803a8a` and `cf3566fc1` (the two TECH-DEBT tickets), `f475fc1cb` (the Notes trim). This entry in
+its own commit.
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-16 09:05
+**Causa**: (c)
+**Regressions**: no. `npm run typecheck` exit 2, **33** on full output, the declared baseline, **0**
+in the two touched files, control `Measurable` → 6. `npm run build` exit 0, only the pre-existing
+chunk-size warning. No vitest suite covers this modal. `npm run check:docs` **3/3** after the trim.
+**Out-of-scope changes**: no.
+**Layer Impact Report**: not-required — no §3.1 file, no D-layer write.
+**Smoke visivo**: passato — same probe as phase 1, assertions inverted onto the corrected state:
+**25 PASS 0 FAIL**, zero page errors, screenshot read by eye. At 1600 with the rail open: 50 controls
+visible, **50 reachable, 0 blocked** (was 44/6), the × takes the click and closes, Escape closes,
+no width from 1280 to 2400 blocks anything (was 1280–1780). Controls that make it mean something: the
+boxes STILL overlap by 120px, so it is not a layout change; the rail is still mounted, open and 400px;
+and E4 — the backdrop moved back inside `#root` at runtime — makes the rail win again, then restoring
+it onto body makes the modal win. Body scale unchanged elsewhere: `#root` auto, rail 900, sim-panel
+850, backdrop 10000.
+**Notes**: Modality became real as a side effect: the `inset: 0` backdrop now covers the rail too, so a click there no longer edits the model behind an `aria-modal` dialog — §5.2 of the report measured that as a defect. E3 survives the fix and is why it could not be a bigger number: 999999 inside `#root` still never reaches the top. Causa (c): the modal was written on the ImportSummaryModal pattern six days before D-UI-14 ratified the rule, and nobody went back.
+**Prompt document name**: 2026-09-16 09:40
+
 ## 2026-09-16 — fix: Create View gated on the active viewpoint, not on a tracker nobody writes
 **Prompt**: `claude_2026-09-16_0055_prompt_gate_create_view_sempre_chiuso.md` — replace
 `!!getLastEditedViewpointId()` at the three gate sites with a predicate mirroring priority 2 of
