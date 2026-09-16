@@ -24,7 +24,7 @@ import {
 import type { Pointer } from '../../joiner';
 import type { ViewpointType } from '../../view/viewPoint/viewpoint';
 import { useTreeViewPanel, ElementAction } from '../../contexts/TreeViewPanelContext';
-import { hasCreatableViewpoint, createViewInWorkbench, createBlankViewInViewpoint } from '../../utils/lastViewpoint';
+import { hasCreatableViewpoint, resolveParentViewpoint, createViewInWorkbench, createBlankViewInViewpoint } from '../../utils/lastViewpoint';
 import { NewViewDialog, type NewViewClassOption, type NewViewTarget } from '../project/NewViewDialog';
 import { isAdvancedMode } from '../../hooks/useInterfaceMode';
 import { JjodelEvents, SystemEvents } from '../../events/registry';
@@ -654,7 +654,14 @@ function useClassifierContextMenu(elementId: string, name: string, className: st
     }, []);
 
     const handleAddView = useCallback(() => {
-        createViewInWorkbench(elementId, name, className);
+        // Resolve ONCE and pass the id (2026-09-16). The gate below answers at render and the
+        // creator used to resolve again on its own at click, so a viewpoint deactivated in
+        // between could file the view in the system `Default` — priority 3 of the chain, which
+        // the toolbar, the megamodel and the dashboard refuse to show. Same fix as the v2
+        // entry (`86f822d50`); the chain itself is untouched.
+        const resolved = hasCreatableViewpoint() ? resolveParentViewpoint() : null;
+        if (!resolved) { setCtxMenu(null); return; }
+        createViewInWorkbench(elementId, name, className, resolved.dViewpoint.id);
         setCtxMenu(null);
     }, [elementId, name, className]);
 
