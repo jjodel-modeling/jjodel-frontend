@@ -23,6 +23,60 @@ scritte nello stesso file prima di committare.
   Lezione: due corsie parallele committano il log una alla volta, ciascuna dopo aver riletto la
   testa; lo stesso file non si mette in due commit sovrapposti.
 
+## 2026-09-16 — fix: Create View gated on the active viewpoint, not on a tracker nobody writes
+**Prompt**: `claude_2026-09-16_0055_prompt_gate_create_view_sempre_chiuso.md` — replace
+`!!getLastEditedViewpointId()` at the three gate sites with a predicate mirroring priority 2 of
+`resolveParentViewpoint`, em dash → colon in the three disabled labels, tracker untouched. Run under
+option 2 of the 01:20 chat instruction: measure the Ctrl+Alt+V path first, then commit unchanged,
+then an `## Errata` on the prompt itself.
+**Files touched**: `70bcbc5f8`: `utils/lastViewpoint.ts` (new `hasCreatableViewpoint`),
+`TreeViewContent.tsx` (`:661` + label), `contextMenu/ContextMenu.tsx` (`:487`, `:531` + labels).
+Docs in their own commits: this entry, and the Errata appended to the prompt.
+**Outcome**: ⚠️ partial — acceptance criterion 3 is unattainable, withdrawn in the Errata.
+**Corregge**: —
+**Causa**: (c)
+**Regressions**: no. `npm run typecheck` exit 2, **33** on full output, set identical to the pre-edit
+run (`diff` exit 0), **0** in the three touched files, control `Measurable` → 6. `npx vitest run`
+**3643 passed, 0 failed**, the same 9 files red at import as before the change (`diff` of the FAIL
+lines, exit 0). `npm run build` exit 0, pre-existing warnings only.
+**Out-of-scope changes**: no.
+**Layer Impact Report**: not-required — no §3.1 file; the predicate only reads the project proxy.
+**Smoke visivo**: passato on the one reachable site — `scripts/smoke/_tmp_gate_tree.ts` (gitignored),
+**8 PASS 0 FAIL**: with no viewpoint active the tree classifier entry is disabled and reads
+`Create View: open a viewpoint first`; with a non-system viewpoint active it is enabled, reads
+`Create View`, creates the view in the ACTIVE viewpoint with a vertex `ir` pinned to the class, and
+is field-by-field identical to what the `+` dialog makes for the same class (criterion 4: `ir`,
+`appliableTo`, `appliableToClasses`, `oclCondition`, jsx). The two dead sites and the chord were
+measured by `_tmp_gate_reach.ts` and `_tmp_gate_keybind.ts`; the latter carries an unbound chord as
+its control, and the creator wrapped to say whether the handler ran at all.
+**Notes**: (a) Census: `setLastEditedViewpoint` has NO caller, so the tracker reads null forever; kept as asked, for a later deliberate removal. (b) and (c) in full in the `## Errata` of the prompt: the two `ContextMenu.tsx` sites sit in a popup that cannot open (archive 2026-08-13 §8), and Ctrl+Alt+V never reaches its handler; forced on `#root` it does create edge and row views, then throws `closefunc is not a function`. No user gesture creates an edge or a row view today.
+**Prompt document name**: 2026-09-16 00:55
+
+## 2026-09-16 — discovery: the Properties rail paints over the Symbol Editor modal (phase 1)
+**Prompt**: chat prompt, not a repo document: diagnose at runtime on the DOM why at ~1600px the rail
+covers the modal's right column and eats the clicks on Fill and Marker; name the stacking chain, who
+wins and why, regression or not, at which widths; report in `docs/discovery/`, then hard stop with no
+fix, since slice 4 rewrites this modal shell. Found as a blocked click in the slice 1 probe.
+**Files touched**: `docs/discovery/discovery_2026-09-16_rail_modal_stacking.md` (new),
+`docs/discovery/harness/probe_2026-09-16_rail_modal_stacking.mts` (new). No source file touched.
+This entry in its own commit.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — read-only task, zero source files modified.
+**Out-of-scope changes**: no.
+**Layer Impact Report**: not-required — no §3.1 file, no diff at all.
+**Smoke visivo**: passato — probe `probe_2026-09-16_rail_modal_stacking.mts` on the live dev server,
+**17 PASS 0 FAIL**, zero page errors, two screenshots read by eye. Answer: `#root` is `position:fixed`
+(`index.scss:31`) so it creates a stacking context at level 0, the rail is `createPortal` onto `body`
+at 900, so the modal's 1050 never enters the comparison. Three runtime experiments separate the
+diagnosis from the alternatives, E3 being decisive: a `z-index: 999999` fixed div inside `#root` is
+still covered. Not a regression: inverted since the modal was born (`36a789a53`, 2026-08-15 16:58),
+visible at 1600 since it grew 640→1040 the same day (`70c33827d`, 17:51). Exactly D-UI-14, applied to
+`ValidationRulesModal` on 2026-09-09 and never to this one.
+**Notes**: Blocked below ~1785px with the default 400px rail (measured 1780 → 4 blocked, 1788 → 0; box overlap ends at 1840). Correction to the premise: Fill is blocked, **Marker is not** — it sits in the left column; the blocked set is Fill, Sizing and the modal's own ×. Same shape, unmeasured, in `ValidationResultsModal` and `ImportSummaryModal`. Side fact: `--z-modal` resolves to **1050**, not the 9999 the SCSS declares (`tokens.css:204` wins). Fix options in §9, none applied.
+**Prompt document name**: 2026-09-16 09:05
+
 ## 2026-09-16 — feat: cornerRadius axis, rounded polygon painter and the Shape control (slice 3)
 **Prompt**: `2026-09-15_1830_slice-3_corner-radius.md`, with the nine answers of
 `2026-09-16_ack-slice-3_corner-radius.md` (commit `1f93c6a7e`). Two-phase: phase 1 report
