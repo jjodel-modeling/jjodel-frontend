@@ -6,6 +6,28 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 
 ---
 
+## 2026-09-16 — discovery: Fase 2 preconditions, the reference row does not exist
+**Prompt**: `claude_2026-09-16_1115_prompt_rotta_archi_righe_decisioni.md`, **Fase 2** — the two
+preconditions before any code: whether a plain reference row dispatches `CHILD_CONTEXT_MENU`, and
+what `newDefault` writes as `appliableTo` for the `DReference` and `DAttribute` branches. One fails,
+so **no code was written** and the host decision goes back to Alfonso.
+**Files touched**: `dbfeb67ac`: `docs/discovery/discovery_2026-09-16_precondizioni_fase2_archi_righe.md`
+(new). No file under `frontend/src` touched. This entry in this inbox, in its own commit.
+**Outcome**: ⚠️ partial — Fase 2 stopped at its own precondition, as the prompt prescribes.
+**Corregge**: —
+**Causa**: (c)
+**Regressions**: no — read-only phase, nothing modified, no gate run.
+**Out-of-scope changes**: no.
+**Layer Impact Report**: not-required — nothing modified.
+**Smoke visivo**: passato as a measurement — `scripts/smoke/_tmp_refrow_dispatch.ts` (gitignored) on
+the live dev server, with the attribute row as the positive control: the attribute row dispatches
+`{childKind:'attr'}` and opens «Delete Attribute»; the cross-metamodel ghost chip dispatches
+`{childKind:'ref'}` and opens «Delete reference»; a same-metamodel reference (`next: State→State`)
+is **not a row at all** — it is the single canvas edge, and right-clicking it dispatches **zero**
+`CHILD_CONTEXT_MENU`, opening the edge menu instead.
+**Notes**: P2 passes: `newDefault` derives the field from the seed kind via `appliableToForIRKind` (`view.tsx:181-188`, applied `:514-517`) — edge → `'Edge'`, row → `'Field'`. P1 fails: `ClassNode` renders references only as cross-metamodel ghost chips (`:542`, `:608-612`), so a `ref` entry would be invisible for ordinary same-metamodel references. Recorded, not proposed: the edge menu (`EditorV2.tsx:3357-3374`) holds the DReference id as `edge.data.reference.id`.
+**Prompt document name**: 2026-09-16 11:15
+
 ## 2026-09-16 — fix: the tree Create View entry resolves its viewpoint once and passes it
 **Prompt**: `claude_2026-09-16_1115_prompt_rotta_archi_righe_decisioni.md`, **Fase 1** — the twin of
 the defect Fase A removed from the v2 menu: `TreeViewContent.tsx:657` called
