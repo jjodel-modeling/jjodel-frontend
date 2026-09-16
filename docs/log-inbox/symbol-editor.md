@@ -6,6 +6,30 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 
 ---
 
+## 2026-09-16 — docs: a test is judged by the mutations it kills (§5, terza regola)
+**Prompt**: prompt di chat, corsia Symbol Editor, fetta di soli docs — aggiungere a `CLAUDE.md`,
+accanto alle due regole di processo del 2026-09-15, la terza imparata oggi sul banco di
+`symbolRecognition`; rigenerare `AGENTS.md` (§17, in perimetro per la regola 1c) e lanciare
+`check:agents` e `check:docs`.
+**Files touched**: `43e598404`: `CLAUDE.md` (+8, nuova sub-rule di §5 subito dopo quella del
+2026-09-15 sui test che asseriscono sul testo sorgente — è lì che è di casa, mentre l'altra regola
+di ieri, la 1c, sta nel blocco NON-NEGOTIABLE) e `AGENTS.md` (+8, proiezione rigenerata con
+`npm run gen:agents`, mai scritta a mano). `frontend/src/jjtl/AGENTS.md` è stato riscritto identico
+dal generatore e resta fuori dallo stage. Questa entry in questo inbox, in commit separato.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `npm run check:agents` PASS (2 file proiettati, `AGENTS.md` e
+`frontend/src/jjtl/AGENTS.md` entrambi allineati) e `npm run check:docs` PASS 3/3 con 3 warning
+pre-esistenti. Misurati **anche prima dell'edit**, come controllo: erano già verdi, quindi il verde
+dopo non è un caso fortunato. Nessun file di prodotto toccato, nessun gate di build o test in gioco.
+**Out-of-scope changes**: no — `AGENTS.md` è dentro il perimetro per la regola 1c, che il prompt cita
+esplicitamente.
+**Layer Impact Report**: not-required — sola documentazione, nessun file §3.1.
+**Smoke visivo**: non applicabile.
+**Notes**: Nasce su `validation-skeleton` mentre CLAUDE.md diverge fra i rami: **assente su `master`**, 2/101 su `alfonso-frontend-jjtl` e `simulation-engine`, che non hanno né questa sub-rule né quella di ieri (controllo positivo: `NON-NEGOTIABLE` → 3, `TRANSACTION` → 16, quindi gli zeri sono assenze vere). Nessuna convenzione di merge nei docs — §6.5 copre i cherry-pick di codice, non le regole: chi fonde porti sul tronco `43e598404` e `74d0f81db`.
+**Prompt document name**: 2026-09-16 (prompt di chat, nessun documento)
+
 ## 2026-09-16 — feat(ir): the border becomes conditional per axis (slice 2)
 **Prompt**: `claude_2026-09-16_1603_prompt_slice2_border_per_asse.md` on `docs/handoff/02-coder-spec.md`
 slice 2, plus the two decisions of the day: three Fixed/Conditional switches all visible (not one
