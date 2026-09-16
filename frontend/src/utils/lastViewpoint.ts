@@ -294,6 +294,12 @@ export function createViewInWorkbench(elementId: string, elementName: string, cl
     // `appliableToClasses` — that field holds D-level type names here, which the pin and
     // the resolver cannot use.
     let seed: AnyViewIR | null = null;
+    // The two feature branches (2026-09-16) must be indistinguishable from what
+    // `newDefault` produces for the same element, which also blanks `css` and `palette`
+    // (view.tsx:503-505). Measured: without this the two creators differ on exactly those
+    // two fields, because the constructor seeds a placeholder css. Scoped to the new
+    // branches so the class-like ones keep the output they have always had.
+    let mirrorNewDefaultStyleDefaults = false;
     // Hoisted above the switch (it used to sit just below it): the seed reuses it as the
     // vertex `label`, and one expression is better than three copies of it.
     const viewName = 'View for ' + (elementName || 'unnamed');
@@ -323,6 +329,48 @@ export function createViewInWorkbench(elementId: string, elementName: string, cl
                 metaclassName: elementName,
                 label: viewName,
             });
+            break;
+        case 'DReference': {
+            // Mirrors newDefault's DReference branch (view.tsx:472-493). Same OCL as
+            // newDefault writes for this className — a condition on the reference's VALUES
+            // (view.tsx:415-418) — and the same edge seed. `appliableToClasses` is left
+            // empty because newDefault never writes it: the two creators must be
+            // indistinguishable in their output.
+            query = `context DValue inv: self.instanceof.id = '${elementId}'`;
+            // 'Edge' is what `appliableToForIRKind` maps `ir.kind: 'edge'` to
+            // (view.tsx:181-188). That helper is module-private and view.tsx is out of this
+            // slice's scope, so the value is repeated here rather than exported.
+            appliableTo = 'Edge';
+            // An edge view's `metaclasses` is the SOURCE metaclass, which for a reference is
+            // its owning class, read through `father`. The className test reads the D-layer
+            // name (CLAUDE.md §3.13); when the owner does not resolve the edge is seeded
+            // without metaclass and the author sets it, exactly as newDefault does.
+            let ownerName: string | undefined;
+            let ownerId: string | undefined;
+            try {
+                const owner: any = (LPointerTargetable.fromPointer(elementId) as any)?.father;
+                if (owner && owner.className === 'DClass') {
+                    ownerName = owner.name;
+                    ownerId = owner.id;
+                }
+            } catch { /* dangling or malformed father — fall through unseeded */ }
+            seed = computeCreationSeed({
+                kind: 'edge',
+                metaclassName: ownerName,
+                metaclassId: ownerId,
+            });
+            mirrorNewDefaultStyleDefaults = true;
+            break;
+        }
+        case 'DAttribute':
+            // Mirrors newDefault's DAttribute branch (view.tsx:467-471): a row carries no
+            // metaclass by construction — the author picks it in RowAuthoringPanel — and the
+            // OCL is the same DValue condition. 'Field' is `appliableToForIRKind`'s mapping
+            // of `ir.kind: 'row'`, repeated for the reason given in the branch above.
+            query = `context DValue inv: self.instanceof.id = '${elementId}'`;
+            appliableTo = 'Field';
+            seed = computeCreationSeed({ kind: 'row' });
+            mirrorNewDefaultStyleDefaults = true;
             break;
         case 'DModel':
             query = `context DModel inv: self.id = '${elementId}'`;
@@ -356,6 +404,10 @@ export function createViewInWorkbench(elementId: string, elementName: string, cl
                 d.appliableTo = appliableTo as any;
                 d.appliableToClasses = appliableToClasses;
                 d.css_MUST_RECOMPILE = true;
+                if (mirrorNewDefaultStyleDefaults) {
+                    d.css = '';
+                    d.palette = {};
+                }
                 // Written inside the callback, which Constructors.end() runs BEFORE
                 // persist (joiner/classes.ts:683,688): the view is persisted with its ir
                 // already on it, in one action. Same pattern as irDemoFixture.ts:106.

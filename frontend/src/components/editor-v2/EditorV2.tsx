@@ -2989,6 +2989,14 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
 
         if (contextMenu?.nodeId && contextMenu.childId) {
             const childLabel = contextMenu.childKind === 'attr' ? 'Attribute' : 'Operation';
+            // Resolved once, as in the edge branch. The row entry exists for attributes only:
+            // the rows themselves are rendered only when the body is shown and the notation is
+            // not `er` (ClassNode.tsx:442-446, :739-747), so in ER and compact notations there
+            // is no host for it — declared limit, not worked around (report `dbfeb67ac`).
+            const rowViewVp = hasCreatableViewpoint() ? resolveParentViewpoint() : null;
+            const rowViewName = contextMenu.childKind === 'attr'
+                ? ((store.getState() as any)?.idlookup?.[contextMenu.childId]?.name ?? 'unnamed')
+                : '';
             return [
                 {
                     label: `Delete ${childLabel}`,
@@ -3019,6 +3027,14 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                         }));
                     },
                 },
+                ...(contextMenu.childKind === 'attr' ? [{
+                    label: rowViewVp ? 'Create row view' : 'Create row view — no viewpoint available',
+                    icon: 'bi-eye',
+                    disabled: !rowViewVp,
+                    onClick: () => {
+                        createViewInWorkbench(contextMenu.childId!, rowViewName, 'DAttribute', rowViewVp!.dViewpoint.id);
+                    },
+                }] : []),
                 { divider: true },
                 {
                     label: 'Help',
@@ -3338,6 +3354,9 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             const isInheritance = edge?.type === 'inheritance';
             const edgeData = edge?.data as ReferenceEdgeData | InheritanceEdgeData | undefined;
             const hasWaypoints = edgeData?.waypoints && edgeData.waypoints.length > 0;
+            // Resolved ONCE for the «Create edge view» entry below: gate and destination from
+            // the same answer, so the view cannot land anywhere but where the entry promised.
+            const edgeViewVp = hasCreatableViewpoint() ? resolveParentViewpoint() : null;
 
             return [
                 {
@@ -3363,6 +3382,20 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                                     : ed
                             )
                         );
+                    },
+                }] : []),
+                // «Create edge view» (2026-09-16). The host is this menu and not the child
+                // menu's `ref` branch: that one is fed by the cross-metamodel ghost chip
+                // alone, so an ordinary reference — which lives on the canvas as its edge —
+                // would never have shown it (report `dbfeb67ac`). One resolution for the gate
+                // and the destination, as the other four entries do since `86f822d50`.
+                ...(!isInheritance && (edgeData as ReferenceEdgeData | undefined)?.reference?.id ? [{
+                    label: edgeViewVp ? 'Create edge view' : 'Create edge view — no viewpoint available',
+                    icon: 'bi-eye',
+                    disabled: !edgeViewVp,
+                    onClick: () => {
+                        const ref = (edgeData as ReferenceEdgeData).reference;
+                        createViewInWorkbench(ref.id, ref.name ?? 'unnamed', 'DReference', edgeViewVp!.dViewpoint.id);
                     },
                 }] : []),
                 {
