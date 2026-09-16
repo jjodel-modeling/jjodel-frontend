@@ -23,6 +23,95 @@ scritte nello stesso file prima di committare.
   Lezione: due corsie parallele committano il log una alla volta, ciascuna dopo aver riletto la
   testa; lo stesso file non si mette in due commit sovrapposti.
 
+## 2026-09-16 — feat: cornerRadius axis, rounded polygon painter and the Shape control (slice 3)
+**Prompt**: `2026-09-15_1830_slice-3_corner-radius.md`, with the nine answers of
+`2026-09-16_ack-slice-3_corner-radius.md` (commit `1f93c6a7e`). Two-phase: phase 1 report
+`docs/discovery/discovery_2026-09-16_corner_radius_axis.md` (`b87ace74c`), GO given in the ACK.
+**Files touched**: 12, in two commits, as the ACK ordered (slice 1 owned
+`VertexAuthoringPanel.tsx` this round; its commit `aeb0c9134` landed first).
+`8da572191`, 11 files: `irTypes.ts` (`ShapeSpec.cornerRadius?: number` + doc comment with the
+ignore list), `irValidate.ts` (numeric guard beside padding), `shapeRegistry.ts`
+(`honorsCornerRadius`, `authoredCornerRadius`, `baseCornerRadius`, `clampCornerRadius`,
+`resolveCornerRadius`, `roundedPolygonPath`), `IRNodeContent.tsx` (`useCornerBox` +
+`svgOutline(…, roundedD)` + inline radius), `SymbolPreview.tsx` (optional prop, tile ratio 0.7),
+`SymbolBoxPreview.tsx` (optional prop, same painter), `SymbolEditorModal.tsx` (the only caller that
+passes it), `DynamicHandles.tsx` (TODO only), plus `shapeRegistry.test.ts`, `irValidate.test.ts`,
+`symbolRecognition.test.ts`. `b1abdc6f1`: `VertexAuthoringPanel.tsx` (Shape section only —
+stepper, greyed base + Reset, three live glyphs, help text; `resetCornerRadius`). This entry in its
+own commit.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. `npm run typecheck` exit 2, **33** `error TS` on full output, set identical to
+the pre-change run (line-stripped `diff` exit 0), **0** in the 12 touched files, control
+`Measurable` → 6. `npx vitest run` on the touched areas: **247 passed, 0 failed** over 10 files.
+`npm run build` exit 0, only the pre-existing warnings (chunk size, sass deprecations, `bordr`).
+Mutation bench, 8 mutations one at a time on committed files, each restored with `git checkout
+HEAD --`: clamp /4→/2 (1 red), gate + circle (2), no half-edge clamp (2), `authoredCornerRadius`
+accepts negatives (3), CSS radius unclamped (1), validator guard off (2), recognition reads the
+radius (1), preset drops the radius (1). Unmutated baseline 86 green.
+**Out-of-scope changes**: yes, declared and authorized by the ACK: `SymbolEditorModal.tsx`,
+`irValidate.test.ts` and `symbolRecognition.test.ts` were not in the prompt's DOVE. 12 files: rule
+19 threshold passed, list confirmed in the ACK (RC-11).
+**Layer Impact Report**: produced — discovery report §5. CLAUDE.md §3.1 lists `viewpoint/ir/` and
+`viewpoint/authoring/` as critical zone while the prompt said no critical-zone file was in scope;
+the conflict was reported and the ACK settled it for CLAUDE.md.
+**Smoke visivo**: passato — probe `scripts/smoke/_tmp_s3radius_verify.ts` (gitignored) on the live
+dev server, **35/35 PASS, zero page errors**, plus four screenshots read by eye.
+**Notes**: Reset first left the KEY holding `undefined` (`patchShape` spreads it in); the probe
+caught it and it now goes through a rest/spread, the `omitForm` idiom — `'cornerRadius' in
+ir.shape` is false after a Reset. Measured on canvas: absent leaves no inline radius (rect 4px,
+rounded 10px), a persisted -5 draws as absent, circle stays 50%, rect r=20 on 198x40 clamps to
+10px; polygons emit one path in a `0 0 w h` viewBox with ring, band and both double strokes on the
+same `d`; the observer follows a resize and the viewBox is zoom-immune (scale 1→2). One run was
+VOID (probe started while a build ran: the fixture never painted, ten FAILs about nothing); the
+probe now waits longer and exits 2 instead of reporting them. Deviation from ACK 3: the observer
+also runs on rect/rounded with a written radius, because ACK 4 asks for the same clamp there and
+the clamp needs a box.
+**Prompt document name**: 2026-09-15 18:30
+
+## 2026-09-16 — feat: edit conditional axes as a rules table, add formatPredicate
+**Prompt**: `docs/prompts/2026-09-15_1830_slice-1_rules-editor.md`, with the answers of
+`docs/prompts/2026-09-16_ack-slice-1_rules-editor.md` (Q1 opt-in on Fill and Marker only, Q1b the
+`TextStyleEditor.flip` bug, Q2 up/down buttons, Q3 `{rules: [], default}`, Q4 explicit Otherwise,
+Q5 absence as the canonical none, Q6 per-axis middle label, Q7 `subjectName` and chips out of
+scope, Q8 what `formatPredicate` prints, Q10 the stale help text, Q11 panel ownership).
+**Files touched**: code, commit `aeb0c9134`: `ui/ConditionalEditor/conditional.ts` (`RulesForm`,
+`toRules`, `fromRules`, `formatPredicate`), `ui/ConditionalEditor/ConditionalEditor.tsx` (optional
+`rulesTable` prop + `RulesModeEditor`), `ui/ConditionalEditor/ConditionalEditor.module.css`, new
+`ui/ConditionalEditor/__tests__/conditional.test.ts` (46 tests), `authoring/VertexAuthoringPanel.tsx`
+(3 lines: Fill, Marker, the Basic-mode help text), `authoring/TextStyleEditor.tsx` (`flip` reads
+through `toRules`). Docs in their own commits: this entry and the TECH-DEBT ticket for the
+suggestion chips. Phase 1 report: `discovery_2026-09-16_rules_editor_format_predicate.md`
+(`b9ff7f36a`).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. `npm run typecheck` exit 2, **33** `error TS` on full output (the §17
+baseline), same set line-stripped as the pre-edit run (`diff` exit 0), **0** in the six touched
+files; positive control `Measurable` → 6. `npx vitest run src/components/ui
+src/components/editor-v2/viewpoint/ir src/components/editor-v2/viewpoint/authoring`: 34 files,
+**792 passed, 0 failed** (26 files / 586 before this slice, on ui + ir alone). `npm run build`
+exit 0, only the pre-existing chunk-size warning. Mutation bench on `conditional.ts`: **10/10
+killed**, source restored (`cmp` exit 0). The tenth needed a test that reaches the guard (a
+self-referencing predicate): the try/catch survived every malformed input already covered.
+**Out-of-scope changes**: yes, both granted by the ACK: `TextStyleEditor.flip` (Q1b — on a `rules`
+value `.then` is `undefined` and the ƒx button unset the axis) and the help text at
+`VertexAuthoringPanel.tsx:423` (Q10). Six files, over rule 19's threshold, every one named by the
+prompt or the ACK; declared here as RC-11 requires.
+**Layer Impact Report**: not-required — no critical-zone file (§3.1); no TRANSACTION, no D-layer
+write, no persistence change (the IR keeps the shapes `irCompile` already compiles).
+**Smoke visivo**: passato — Playwright probe `scripts/smoke/_tmp_rules_editor_verify.ts`
+(gitignored) on the live server: **30 PASS, 0 FAIL, 0 page errors**, over a real M2/M1 fixture with
+the IR demo viewpoint active. It measures the IR after each gesture, the canvas colour per instance
+(reorder flips Idle from green to red live), the popover on top at its own pixel
+(`elementFromPoint`), Esc closing the popover and not the modal, and the three write rules. Plus the
+2b and 2i screenshots read by eye. `npm run smoke` came back **VOID** twice, not failed: slice 3 was
+editing `irValidate.ts`, `notationCatalog.ts` and `shapeRegistry.ts` under the run (8 boots of
+`empty-project`). Reported with its cause as P8 asks.
+**Notes**: Reorder is up/down buttons (ACK Q2), not the mockup's ⋮⋮ handle: no drag library exists in the repo. Measured at 1600px the Properties rail paints over the modal's right column and intercepts every click on Fill and Marker — a pre-existing layer, not this slice; the probe runs at 2400. This entry sits in `docs/log-inbox/` and not in the log itself: parallel lanes (P9), as slice 3 did.
+**Prompt document name**: 2026-09-15 18:30
+
 ## 2026-09-16 — feat: the viewpoint + asks what the view applies to and seeds its IR
 **Prompt**: `claude_2026-09-16_0027_prompt_plus_dialogo_nuova_view.md` — `+` opens «New view» with
 one question: a class (→ `createViewInWorkbench(…, 'DClass', vp.id)`) or «All classes (default view)»
