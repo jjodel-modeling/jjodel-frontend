@@ -6,7 +6,6 @@ import { getMetaclassInfo, type MetaclassInfo } from '../../hooks/useEditorMode'
 import { validateIR } from '../ir/irValidate';
 import { defaultObjectViewIR } from '../ir/irDefaults';
 import type { VertexViewIR, ShapeForm, PaddingToken, FormSpec, StructureSpec } from '../ir/irTypes';
-import { toRules, formatPredicate } from '../../../ui/ConditionalEditor/conditional';
 import { structureCapabilities } from '../ir/structureCapabilities';
 import { MARKER_REGISTRY } from '../ir/markerRegistry';
 import { recognizeSymbol } from '../ir/symbolRecognition';
@@ -16,6 +15,7 @@ import {
 } from '../ir/shapeRegistry';
 import { resolveMetaclassId, withMetaclassPins, type MetaclassRef } from '../ir/metaclassPin';
 import { defaultResizableForForm } from '../../nodes/nodeSizing';
+import { borderOverrideRows } from './borderOverrides';
 import { LabelListEditor } from './LabelListEditor';
 import { TextStyleField } from './TextStyleField';
 import { FieldCompartmentListEditor } from './FieldCompartmentListEditor';
@@ -24,7 +24,10 @@ import { FormAuthoringBody } from './FormAuthoringBody';
 import { BadgeListEditor } from './BadgeListEditor';
 import { MatchingSection, type MetaclassChoice } from './MatchingSection';
 import { metaclassAmbiguityWarning } from './authoringMessages';
-import { IRIdentityFields, IRSourceBody, irTabBodyStyle, type IRIdentityProps, type IRTabId } from './irTabs';
+import {
+    IRIdentityFields, IRSourceBody, irSectionStyle, irTabBodyStyle,
+    type IRIdentityProps, type IRSectionId, type IRTabId,
+} from './irTabs';
 import { JjodelEvents } from '../../../../events/registry';
 
 export interface VertexAuthoringPanelProps {
@@ -34,6 +37,13 @@ export interface VertexAuthoringPanelProps {
      * rendered visible, which is the pre-partition layout (see `irTabBodyStyle`).
      */
     activeTab?: IRTabId;
+    /**
+     * Active section of the Appearance body (slice 4b). Optional exactly like
+     * `activeTab`, and the same mechanism one level down: absent, every section is
+     * visible, which is what the rail and any other host get. The symbol editor modal
+     * is the only host that drives it, from its 170px section nav.
+     */
+    activeSection?: IRSectionId;
     /**
      * What the relocated legacy identity fields need beyond the view (R-H). Absent
      * when no host drives the partition: the fields are then not rendered, exactly
@@ -76,60 +86,6 @@ const PADDING_OPTIONS = [
 
 const DEFAULT_BORDER = { color: '#334155', width: 1, style: 'solid' as const };
 
-/** The three border axes, in the order the OVERRIDES table lists them. */
-const BORDER_AXES = ['color', 'width', 'style'] as const;
-type BorderAxis = typeof BORDER_AXES[number];
-
-interface BorderOverrideRow {
-    /** Pretty-printed predicate — the WHEN cell. */
-    whenText: string;
-    /** The axes carrying a rule with this predicate — the OVERRIDES cell. */
-    axes: BorderAxis[];
-}
-
-/**
- * The OVERRIDES table of the Border section (D1, slice 2).
- *
- * A row is a PREDICATE plus the subset of axes that override under it, because that is
- * exactly how it is written: one rule in each of those axes. It is NOT a complete
- * BorderSpec with a filter above it. Rules are grouped by structural equality of `when`
- * — the predicate is plain data, so its JSON is the identity — in first-seen order
- * across color, width, style.
- *
- * `divergent` is true when the axes that carry rules do not carry the SAME predicates.
- * There the grouping cannot honestly present one row per condition, so every axis keeps
- * its own row and the panel says why, instead of implying an alignment that is not in
- * the IR.
- */
-function borderOverrideRows(
-    border: VertexViewIR['shape']['border'],
-): { rows: BorderOverrideRow[]; divergent: boolean } {
-    const rows: BorderOverrideRow[] = [];
-    const byPredicate = new Map<string, BorderOverrideRow>();
-    const keysPerAxis: Set<string>[] = [];
-    for (const axis of BORDER_AXES) {
-        const rules = toRules(border?.[axis] as any).rules ?? [];
-        if (!rules.length) continue;
-        const keys = new Set<string>();
-        for (const r of rules) {
-            const key = JSON.stringify(r.when ?? null);
-            keys.add(key);
-            const existing = byPredicate.get(key);
-            if (existing) {
-                if (!existing.axes.includes(axis)) existing.axes.push(axis);
-                continue;
-            }
-            const row: BorderOverrideRow = { whenText: formatPredicate(r.when), axes: [axis] };
-            byPredicate.set(key, row);
-            rows.push(row);
-        }
-        keysPerAxis.push(keys);
-    }
-    const first = keysPerAxis[0];
-    const divergent = keysPerAxis.length > 1 && keysPerAxis.some((s, i) => i > 0
-        && (s.size !== first.size || [...s].some((k) => !first.has(k))));
-    return { rows, divergent };
-}
 const COMMIT_DEBOUNCE_MS = 300;
 // Cross-tab message (R-B): the metaclass that unlocks these paths is authored in
 // Applies to, while the paths themselves are edited in Text and Structure — so the
@@ -185,7 +141,7 @@ const CornerRadiusGlyphs: React.FC<{ radius: number }> = ({ radius }) => {
  * edited here (extra labels, compartments, badges, any Conditional) round-trip
  * verbatim because the whole cloned ir is written back.
  */
-export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view, activeTab, identity }) => {
+export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view, activeTab, activeSection, identity }) => {
     const seed = (): VertexViewIR => clone((view as any).ir ?? defaultObjectViewIR());
 
     const [draft, setDraft] = useState<VertexViewIR>(seed);
@@ -516,6 +472,8 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
 
     /** Body visibility of the tab partition: `display: none` only (R-A). */
     const body = (id: IRTabId) => irTabBodyStyle(id, activeTab);
+    /** Section visibility inside the Appearance body (slice 4b), same mechanism. */
+    const sec = (id: IRSectionId) => irSectionStyle(id, activeSection);
 
     return (
         <section className="properties-tab properties-panel">
@@ -616,8 +574,12 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
             <div className="ir-tab-body ir-tab-body--appearance" style={body('ir-appearance')}>
 
             {/* Symbol identity (D14). The catalog picker and the «modified from X»
-                session state moved to SymbolEditorModal (D15b): the modal hosts the
-                persistent catalog column and owns the last-applied preset. */}
+                session state live in SymbolEditorModal (D15b); since slice 4b the modal
+                reaches the catalog through the header popover and owns the last-applied
+                preset. Symbol and Shape share ONE wrapper because they are one entry of
+                the modal's section nav — see IRSectionId in irTabs.tsx for why Shape is
+                not a nav entry of its own. */}
+            <div className="ir-symbol-section" style={sec('symbol')}>
             <FormSection title="Symbol" divider={false}>
                 {/* Structural recognition (D14): where the authored axes sit in the
                     catalog space. Derived on every render, never stored (a preset is
@@ -697,8 +659,10 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                     </HelpText>
                 </div>
             </FormSection>
+            </div>
 
             {/* Fill */}
+            <div className="ir-fill-section" style={sec('fill')}>
             <FormSection title="Fill" divider={false}>
                 <div className="jj-field">
                     <ConditionalEditor
@@ -715,12 +679,15 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                 </div>
             </FormSection>
 
+            </div>
+
             {/* Border — conditional PER AXIS (D1, slice 2). Three switches, all visible:
                 a single switch on the border would claim the border has one conditional,
-                which is the shape D1 rejected. The wrapper carries a stable class so the
-                modal can span the section across both columns of its anatomy grid
-                (SymbolEditorModal.scss) — FormSection's own classes are CSS modules. */}
-            <div className="ir-border-section">
+                which is the shape D1 rejected. The wrapper carries a stable class, which
+                since slice 4b is what the modal's section nav shows and hides; the
+                two-column anatomy grid that used to span it across both columns is gone,
+                because one visible section in a two-column grid sits in the left half. */}
+            <div className="ir-border-section" style={sec('border')}>
             <FormSection title="Border" divider={false}>
                 <div className="jj-field">
                     <label className="jj-field-label">Color</label>
@@ -813,6 +780,7 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                 The placeholder of the shared Select resolves to the default too (nota
                 Select condiviso, 2026-08-08): a closed vocabulary never persists ''. */}
             {advanced && (
+                <div className="ir-padding-section" style={sec('padding')}>
                 <FormSection title="Padding" divider={false}>
                     <div className="jj-field">
                         <Select
@@ -825,11 +793,13 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                         />
                     </div>
                 </FormSection>
+                </div>
             )}
 
             {/* Marker — notation symbol inside the shape (gateway x, timer clock,
                 history H). Conditional like Fill: the same view can switch marker
                 per instance in Advanced. None removes the key from the IR. */}
+            <div className="ir-marker-section" style={sec('marker')}>
             <FormSection title="Marker" divider={false}>
                 <div className="jj-field">
                     <ConditionalEditor
@@ -845,9 +815,11 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                     />
                 </div>
             </FormSection>
+            </div>
 
             {/* Resizable — top-level flag (like `label`, not a shape.* field). Mirrors
                 the runtime gate: shown state = explicit flag ?? per-form default. */}
+            <div className="ir-sizing-section" style={sec('sizing')}>
             <FormSection title="Sizing" divider={false}>
                 <div className="jj-field">
                     <Toggle
@@ -871,8 +843,10 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                     </Button>
                 </div>
             </FormSection>
+            </div>
 
             {/* Badges — same round-trip guarantee as the compartments. */}
+            <div className="ir-badges-section" style={sec('badges')}>
             <FormSection title="Badges" divider={false}>
                 <BadgeListEditor
                     badges={badges}
@@ -882,6 +856,7 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                     onChange={(next) => patchShape({ badges: next })}
                 />
             </FormSection>
+            </div>
 
             </div>
 

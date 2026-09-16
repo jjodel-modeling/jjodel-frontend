@@ -141,6 +141,32 @@ export const CATALOG_NOTATIONS: readonly string[] = NOTATION_CATALOG
     .filter((n, i, a) => a.indexOf(n) === i);
 
 /**
+ * Un asse condizionale e' l'unico oggetto che un asse puo' contenere: ogni asse
+ * confrontato qui e' un primitivo, quindi «object» significa `{when,then}` o
+ * `{rules}`. Stessa convenzione, e stessa riga, della sentinella `scalarOf` di
+ * `symbolRecognition.ts`: le due funzioni sono l'una lo specchio dell'altra e
+ * devono leggere la condizionalita' allo stesso modo.
+ */
+const isConditionalAxis = (v: unknown): boolean => v !== null && typeof v === 'object';
+
+export interface ApplyPresetOptions {
+    /**
+     * D7 — «un preset sovrascrive un asse scalare e mai uno condizionale».
+     *
+     * Con `keepRules`, un asse che l'autore ha reso `Conditional` (`fill`, `marker`,
+     * `border.width`, `border.style`) resta INTATTO, e nessun valore del preset
+     * finisce nel suo `default`. Quest'ultima meta' non e' un dettaglio: iniettare
+     * un `default` persisterebbe un default che l'utente non ha mai scelto (vietato
+     * da D2) e cambierebbe in silenzio cio' che disegna ogni istanza che non matcha
+     * nessuna regola — su un'azione la cui casella promette di conservare le regole
+     * dell'autore. Gli assi scalari seguono il preset come sempre.
+     *
+     * Assente o `false`: comportamento identico a oggi.
+     */
+    keepRules?: boolean;
+}
+
+/**
  * Applica un preset a una ShapeSpec esistente, immutabilmente.
  *
  * Un preset e' un punto COMPLETO nello spazio degli assi che governa, quindi:
@@ -152,21 +178,34 @@ export const CATALOG_NOTATIONS: readonly string[] = NOTATION_CATALOG
  * scritto solo se il preset lo dichiara (e' semantica del simbolo: stato
  * iniziale, transizione Petri), altrimenti resta quello dell'autore. Labels,
  * badges e tutto il resto della spec passano intatti.
+ *
+ * `form` non e' fra gli assi che `keepRules` protegge (D7 non lo elenca): scegliere
+ * una forma dal catalogo e' esattamente la richiesta di cambiare forma.
  */
-export function applyPresetToShape(shape: ShapeSpec, preset: SymbolPreset): ShapeSpec {
+export function applyPresetToShape(
+    shape: ShapeSpec,
+    preset: SymbolPreset,
+    opts: ApplyPresetOptions = {},
+): ShapeSpec {
     const prevBorder = shape.border;
+    /** L'asse va lasciato dov'e': l'autore l'ha reso condizionale e la casella e' accesa. */
+    const keep = (v: unknown): boolean => opts.keepRules === true && isConditionalAxis(v);
     const next: ShapeSpec = {
         ...shape,
         form: preset.values.form,
         border: {
             color: prevBorder?.color ?? INK,
-            width: preset.values.border?.width ?? 1,
-            style: preset.values.border?.style ?? 'solid',
+            width: keep(prevBorder?.width) ? prevBorder!.width : (preset.values.border?.width ?? 1),
+            style: keep(prevBorder?.style) ? prevBorder!.style : (preset.values.border?.style ?? 'solid'),
         },
     };
-    if (preset.values.marker) next.marker = preset.values.marker;
-    else delete next.marker;
-    if (preset.values.fill !== undefined) next.fill = preset.values.fill;
+    // Un marker condizionale sopravvive anche a un preset che non ne dichiara alcuno:
+    // e' la rimozione, non solo la sovrascrittura, che `keepRules` deve trattenere.
+    if (!keep(shape.marker)) {
+        if (preset.values.marker) next.marker = preset.values.marker;
+        else delete next.marker;
+    }
+    if (!keep(shape.fill) && preset.values.fill !== undefined) next.fill = preset.values.fill;
     return next;
 }
 

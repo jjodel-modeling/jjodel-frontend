@@ -109,6 +109,104 @@ describe('notationCatalog: applyPresetToShape', () => {
     });
 });
 
+describe('notationCatalog: applyPresetToShape con keepRules (D7, slice 4b)', () => {
+    const byId = (id: string) => {
+        const p = NOTATION_CATALOG.find(x => x.id === id);
+        if (!p) throw new Error(`preset ${id} non in tabella`);
+        return p;
+    };
+
+    /** `eq <path> true`: la forma che il PredicateBuilder scrive per un flag. */
+    const flag = (name: string) =>
+        ({ op: 'eq', left: `$${name}.value`, right: { kind: 'boolean', value: true } }) as any;
+
+    /** Un fill a due regole, senza `default`: e' il caso del criterio di accettazione. */
+    const twoRuleFill = () => ({
+        rules: [
+            { when: flag('isFinal'), then: '#ff0000' },
+            { when: flag('isInitial'), then: '#00ff00' },
+        ],
+    });
+
+    it('un fill a 2 regole resta intatto, e NESSUN default viene scritto', () => {
+        const fill = twoRuleFill();
+        const shape: ShapeSpec = { form: 'rect', fill: fill as any };
+        // uml-initial-state DICHIARA un fill (#334155): senza keepRules lo scriverebbe.
+        const next = applyPresetToShape(shape, byId('uml-initial-state'), { keepRules: true });
+        expect(next.fill).toBe(fill);
+        expect(next.fill).toEqual(twoRuleFill());
+        // D2, la meta' che la spec di slice 4 sbagliava: non si inietta un default che
+        // l'utente non ha mai scelto, perche' cambierebbe cio' che disegna ogni istanza
+        // che non matcha nessuna regola.
+        expect('default' in (next.fill as any)).toBe(false);
+        // e l'asse che il preset governa davvero segue il preset
+        expect(next.form).toBe('circle');
+    });
+
+    it('un marker condizionale sopravvive a un preset che non ne dichiara alcuno', () => {
+        const marker = { rules: [{ when: flag('isFinal'), then: 'clock' }] };
+        const shape: ShapeSpec = { form: 'rounded', marker: marker as any };
+        // bpmn-task non dichiara marker: senza keepRules lo RIMUOVEREBBE.
+        const next = applyPresetToShape(shape, byId('bpmn-task'), { keepRules: true });
+        expect(next.marker).toBe(marker);
+        const without = applyPresetToShape(shape, byId('bpmn-task'));
+        expect('marker' in without).toBe(false);
+    });
+
+    it('per asse: la width condizionale resta, lo style scalare segue il preset', () => {
+        const width = { rules: [{ when: flag('isFinal'), then: 5 }] };
+        const shape: ShapeSpec = {
+            form: 'rect',
+            border: { color: '#aa0000', width: width as any, style: 'dotted' },
+        };
+        const next = applyPresetToShape(shape, byId('er-weak-entity'), { keepRules: true });
+        expect(next.border?.width).toBe(width);
+        expect(next.border?.style).toBe('double');   // scalare: segue il preset
+        expect(next.border?.color).toBe('#aa0000');  // sempre dell'autore, come gia' oggi
+    });
+
+    it('keepRules spento: risultato identico a oggi, asse per asse', () => {
+        const shape: ShapeSpec = {
+            form: 'rect',
+            fill: twoRuleFill() as any,
+            marker: { rules: [{ when: flag('isFinal'), then: 'clock' }] } as any,
+            border: { color: '#aa0000', width: { rules: [] } as any, style: 'dotted' },
+        };
+        for (const id of ['uml-initial-state', 'bpmn-task', 'er-weak-entity']) {
+            expect(applyPresetToShape(shape, byId(id), { keepRules: false }))
+                .toEqual(applyPresetToShape(shape, byId(id)));
+        }
+    });
+
+    it('su assi tutti scalari keepRules non cambia nulla', () => {
+        const shape: ShapeSpec = {
+            form: 'rect',
+            fill: '#ffeeaa',
+            border: { color: '#aa0000', width: 2, style: 'dotted' },
+            marker: 'gear',
+        };
+        for (const id of ['uml-initial-state', 'bpmn-task', 'er-weak-entity', 'goal-softgoal']) {
+            expect(applyPresetToShape(shape, byId(id), { keepRules: true }))
+                .toEqual(applyPresetToShape(shape, byId(id)));
+        }
+    });
+
+    it('la form segue sempre il preset, anche condizionale (D7 non la elenca)', () => {
+        const shape: ShapeSpec = {
+            form: { rules: [{ when: flag('isFinal'), then: 'circle' }] } as any,
+        };
+        expect(applyPresetToShape(shape, byId('bpmn-task'), { keepRules: true }).form).toBe('rounded');
+    });
+
+    it('l input non muta e il risultato e un oggetto nuovo', () => {
+        const shape: ShapeSpec = { form: 'rect', fill: twoRuleFill() as any };
+        const snapshot = JSON.parse(JSON.stringify(shape));
+        const next = applyPresetToShape(shape, byId('uml-initial-state'), { keepRules: true });
+        expect(shape).toEqual(snapshot);
+        expect(next).not.toBe(shape);
+    });
+});
+
 describe('notationCatalog: filterCatalog', () => {
     it('filtra per notazione e cerca su label e keywords', () => {
         expect(filterCatalog('ER', '').every(p => p.notation === 'ER')).toBe(true);

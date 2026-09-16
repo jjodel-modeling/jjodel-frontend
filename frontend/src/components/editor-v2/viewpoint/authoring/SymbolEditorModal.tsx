@@ -1,16 +1,22 @@
 /**
- * SymbolEditorModal — the modal surface of the symbol authoring (D15/D15b).
+ * SymbolEditorModal — the modal surface of the symbol authoring (D15/D15b, 1b shell).
  *
  * Canonical cross-cutting pattern (CLAUDE.md 8.7, cf. ImportSummaryModal):
  * mounted once at the app root, CustomEvent dispatcher + local useState
- * listener, no Redux state. Two panes (approved mockup scene): the persistent
- * catalog column on the left (SymbolCatalogPicker in 'column' variant,
- * sectioned per D18, with per-project recents), and on the right the realistic
- * preview strip (D8 wiring: the box of the canvas node, derived or manual),
- * the Appearance/Text mini-bar and VertexAuthoringPanel re-hosted UNCHANGED
- * (same component, no editorial fork: the Editor V3 lesson).
+ * listener, no Redux state.
  *
- * Writing stays live: applying a preset and «Reset to preset» go through the
+ * Since slice 4b the scene is the 1b shell. The persistent catalog column is
+ * GONE: the catalog is reached through the preset chip in the header, which
+ * opens it as a popover (D7), and the 264px it freed go to the panel — that is
+ * the whole point of the change, not a side effect. The body is
+ * `section nav (170px) | main`, the nav showing ONE section of the re-hosted
+ * panel at a time with a count badge where an axis carries rules, and
+ * «Revert to preset» has moved out of the header into the footer beside «Done».
+ * The main pane keeps the realistic preview strip (D8 wiring) above
+ * VertexAuthoringPanel re-hosted UNCHANGED (same component, no editorial fork:
+ * the Editor V3 lesson), now driven by one more prop, `activeSection`.
+ *
+ * Writing stays live: applying a preset and «Revert to preset» go through the
  * same canonical whole-object set_ir the panel uses; the hosted panel realigns
  * through its own external-change reseed. «Modified from X» is session state
  * of this modal (memo D14), never persisted. Closing unmounts the panel,
@@ -24,25 +30,40 @@ import { LPointerTargetable, U, type LViewElement } from '../../../../joiner';
 import { JjodelEvents } from '../../../../events/registry';
 import { recognizeSymbol } from '../ir/symbolRecognition';
 import { authoredCornerRadius } from '../ir/shapeRegistry';
-import {
-    applyPresetToShape,
-    CATALOG_FAMILIES,
-    NOTATION_CATALOG,
-    type SymbolPreset,
-} from '../ir/notationCatalog';
+import { applyPresetToShape, type SymbolPreset } from '../ir/notationCatalog';
 import type { VertexViewIR } from '../ir/irTypes';
+import { toRules } from '../../../ui/ConditionalEditor/conditional';
 import { VertexAuthoringPanel } from './VertexAuthoringPanel';
 import { SymbolCatalogPicker } from './SymbolCatalogPicker';
+import { borderOverrideRows } from './borderOverrides';
 import SymbolPreview from './SymbolPreview';
 import { SymbolBoxPreview, captionForBox } from './SymbolBoxPreview';
 import { useCanvasNodeBox } from './useCanvasNodeBox';
 import { readVertexLayout, type VertexLayoutSource } from '../layout/vertexLayout';
 import { getLayoutKeyOf } from '../layout/vertexLayoutAdapter';
-import { IR_TAB_LABELS, type IRTabId } from './irTabs';
+import { IR_SECTION_LABELS, IR_TAB_LABELS, type IRSectionId, type IRTabId } from './irTabs';
 import './SymbolEditorModal.scss';
 
-/** The two anatomy bodies the modal re-hosts (memo D15). */
-const MODAL_TABS: readonly IRTabId[] = ['ir-appearance', 'ir-text'];
+/**
+ * One entry of the 170px section nav (1b). `section` absent means the entry shows a
+ * whole BODY instead of one section of it, which is what Text is: its three sections
+ * (General, Symbol text, Labels) are one subject and the spec lists them as one name.
+ */
+interface NavEntry {
+    key: string;
+    label: string;
+    tab: IRTabId;
+    section?: IRSectionId;
+}
+
+/**
+ * The sections of the Appearance body, in nav order. `padding` is Advanced-only in the
+ * panel, so the entry that would show an unrendered section is filtered out below
+ * rather than left to point at nothing.
+ */
+const NAV_SECTIONS: readonly IRSectionId[] = [
+    'symbol', 'fill', 'border', 'padding', 'marker', 'sizing', 'badges',
+];
 
 /**
  * Stage bounds of the preview strip (D8 wiring). The strip keeps its FIXED
@@ -114,12 +135,19 @@ function currentAxesPreset(shape: VertexViewIR['shape']): SymbolPreset | null {
 
 export const SymbolEditorModal: React.FC = () => {
     const [viewId, setViewId] = useState<string | null>(null);
-    const [tab, setTab] = useState<IRTabId>('ir-appearance');
+    // The nav entry in force. One piece of state for both the tab and the section:
+    // they are two projections of one choice, and keeping them apart would let them
+    // disagree (a section of Appearance selected while the Text body is showing).
+    const [navKey, setNavKey] = useState<string>('symbol');
     // «Modified from X» (memo D14): remembered only after an application in
     // THIS modal session; reset on every open.
     const [lastApplied, setLastApplied] = useState<SymbolPreset | null>(null);
     // Recents (D18): reloaded per project on open, NOT reset like lastApplied.
     const [recentIds, setRecentIds] = useState<readonly string[]>([]);
+    // Catalog popover (D7) and its preservation flag, both session state of one
+    // opening. `keepRules` is checked by default, as the mockup has it.
+    const [pickerOpen, setPickerOpen] = useState(false);
+    const [keepRules, setKeepRules] = useState(true);
     const closeBtnRef = useRef<HTMLButtonElement | null>(null);
 
     useEffect(() => {
@@ -127,8 +155,10 @@ export const SymbolEditorModal: React.FC = () => {
             const detail = (e as CustomEvent<{ viewId?: string }>).detail;
             if (detail?.viewId) {
                 setViewId(detail.viewId);
-                setTab('ir-appearance');
+                setNavKey('symbol');
                 setLastApplied(null);
+                setPickerOpen(false);
+                setKeepRules(true);
                 setRecentIds(readRecents(U.getProjectID_URL()));
             }
         };
@@ -141,11 +171,16 @@ export const SymbolEditorModal: React.FC = () => {
     useEffect(() => {
         if (!viewId) return;
         const onKey = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') setViewId(null);
+            if (e.key !== 'Escape') return;
+            // The popover is the inner layer: Escape dismisses IT first, and only a
+            // second Escape closes the modal. Closing both at once would throw away
+            // the author's place for one keystroke they meant for the catalog.
+            if (pickerOpen) setPickerOpen(false);
+            else setViewId(null);
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
-    }, [viewId]);
+    }, [viewId, pickerOpen]);
 
     useEffect(() => {
         if (viewId && closeBtnRef.current) closeBtnRef.current.focus();
@@ -153,9 +188,13 @@ export const SymbolEditorModal: React.FC = () => {
 
     // Read-only subscription on the raw ir: header, preview and recognition
     // follow the live edits the hosted panel commits. No write path here
-    // besides the canonical set_ir of apply/reset below.
+    // besides the canonical set_ir of apply/revert below.
     const ir = useSelector((s: any): VertexViewIR | undefined =>
         viewId ? s?.idlookup?.[viewId]?.ir : undefined);
+
+    // Disclosure mode, read-only, exactly as the hosted panel reads it: the nav must
+    // not offer Padding when the panel does not render it.
+    const advanced = useSelector((s: any) => !!s.advanced);
 
     // Realistic preview (D8 wiring): the box of the canvas node rendering this
     // view, read from the DOM (the canvas stays mounted under the modal).
@@ -188,7 +227,6 @@ export const SymbolEditorModal: React.FC = () => {
     const notations = [...new Set(matches.map((m) => m.notation))].join(' · ');
     const la = lastApplied;
     const modified = la !== null && !matches.some((m) => m.id === la.id);
-    const state: 'preset' | 'modified' | 'custom' = modified ? 'modified' : first ? 'preset' : 'custom';
     const titleLabel = modified && la ? la.label : first ? first.label : 'Custom symbol';
 
     const target = Array.isArray(ir.metaclasses) && ir.metaclasses.length > 0 ? ir.metaclasses[0] : null;
@@ -212,12 +250,45 @@ export const SymbolEditorModal: React.FC = () => {
         ? (isResized && manualValid ? { w: manualW, h: manualH } : { w: nodeBox.w, h: nodeBox.h })
         : null;
 
+    const navEntries: NavEntry[] = [
+        ...NAV_SECTIONS
+            .filter((id) => id !== 'padding' || advanced)
+            .map((id): NavEntry => ({
+                key: id, label: IR_SECTION_LABELS[id], tab: 'ir-appearance', section: id,
+            })),
+        { key: 'text', label: IR_TAB_LABELS['ir-text'], tab: 'ir-text' },
+    ];
+    // A nav key can survive a change that removes its entry (Advanced switched off
+    // while Padding was showing), so the entry in force is resolved, never assumed.
+    const active = navEntries.find((e) => e.key === navKey) ?? navEntries[0];
+
+    /**
+     * The count beside a nav entry. Fill and Marker report `rules.length` of the axis;
+     * Border reports the rows of `borderOverrideRows`, the SAME grouping the OVERRIDES
+     * table renders — deriving the number a second time here is how the badge and the
+     * table would come to disagree. A scalar or absent axis has no rules, so it
+     * reports 0 and no badge is drawn.
+     */
+    const badgeOf = (key: string): number => {
+        if (key === 'fill') return toRules(ir.shape.fill).rules.length;
+        if (key === 'marker') return toRules(ir.shape.marker).rules.length;
+        if (key === 'border') return borderOverrideRows(ir.shape.border).rows.length;
+        return 0;
+    };
+
     // Same canonical write path as the panel (set_ir, whole-object replace);
     // the hosted panel realigns via its external-change reseed.
     const applyPreset = (preset: SymbolPreset) => {
         const current = (view as any).ir as VertexViewIR;
-        (view as any).ir = { ...current, shape: applyPresetToShape(current.shape, preset) };
+        (view as any).ir = {
+            ...current,
+            shape: applyPresetToShape(current.shape, preset, { keepRules }),
+        };
         setLastApplied(preset);
+        // A popover is transient by construction: it sits over the panel it is about,
+        // so it closes on the click that did the thing it was opened for. The chip
+        // behind it already reads the new preset.
+        setPickerOpen(false);
         // Recents (D18): dedupe, most recent first, capped; applying from the
         // strip itself re-applies and moves the preset back to the front.
         setRecentIds((prev) => {
@@ -255,26 +326,58 @@ export const SymbolEditorModal: React.FC = () => {
                 <div className="symbol-editor-modal__header">
                     <div className="symbol-editor-modal__icon"><i className="bi bi-shapes" aria-hidden="true" /></div>
                     <div className="symbol-editor-modal__heading">
-                        <h2 id="symbol-editor-modal-title" className="symbol-editor-modal__title">
-                            Symbol · <span className="symbol-editor-modal__title-name">{titleLabel}</span>
-                            <span className={`symbol-editor-modal__state symbol-editor-modal__state--${state}`}>{state}</span>
-                        </h2>
+                        <h2 id="symbol-editor-modal-title" className="symbol-editor-modal__title">Symbol</h2>
                         <span className="symbol-editor-modal__subtitle">
-                            {view.name}
-                            {target ? <> · applies to <strong>{target}</strong></> : null}
-                            {!modified && first && notations ? ` · ${notations}` : null}
+                            View for <strong>{target ?? (view.name as string)}</strong>
                         </span>
                     </div>
-                    {modified && la && (
+
+                    {/* The preset chip (1b): the glyph, the recognized name, the modified
+                        marker, and the affordance that opens the catalog. One control and
+                        not two — the chip IS the «Change…» button, so there is a single
+                        place to click for a single job. */}
+                    <div className="symbol-editor-modal__preset">
                         <button
                             type="button"
-                            className="btn btn-secondary symbol-editor-modal__reset"
-                            title="Reapply the preset axes; the border color stays yours"
-                            onClick={() => applyPreset(la)}
+                            className="symbol-editor-modal__chip"
+                            aria-haspopup="dialog"
+                            aria-expanded={pickerOpen}
+                            title={notations ? `${titleLabel} · ${notations}` : titleLabel}
+                            onClick={() => setPickerOpen((o) => !o)}
                         >
-                            <i className="bi bi-arrow-counterclockwise" aria-hidden="true" /> Reset to preset
+                            {previewPreset
+                                ? <SymbolPreview preset={previewPreset} width={22} cornerRadius={cornerRadius} />
+                                : <i className="bi bi-shapes" aria-hidden="true" />}
+                            <span className="symbol-editor-modal__chip-name">{titleLabel}</span>
+                            {modified && (
+                                <span className="symbol-editor-modal__chip-modified">modified</span>
+                            )}
+                            <span className="symbol-editor-modal__chip-change">Change…</span>
                         </button>
-                    )}
+                        {pickerOpen && (
+                            <>
+                                <div
+                                    className="symbol-editor-modal__popover-backdrop"
+                                    onClick={() => setPickerOpen(false)}
+                                    role="presentation"
+                                />
+                                <div
+                                    className="symbol-editor-modal__popover"
+                                    role="dialog"
+                                    aria-label="Symbol catalog"
+                                >
+                                    <SymbolCatalogPicker
+                                        variant="popover"
+                                        onApply={applyPreset}
+                                        recentIds={recentIds}
+                                        keepRules={keepRules}
+                                        onKeepRulesChange={setKeepRules}
+                                    />
+                                </div>
+                            </>
+                        )}
+                    </div>
+
                     <button
                         type="button"
                         className="symbol-editor-modal__close-btn"
@@ -287,12 +390,26 @@ export const SymbolEditorModal: React.FC = () => {
                 </div>
 
                 <div className="symbol-editor-modal__body">
-                    <aside className="symbol-editor-modal__catalog">
-                        <SymbolCatalogPicker variant="column" onApply={applyPreset} recentIds={recentIds} />
-                        <div className="symbol-editor-modal__catalog-foot">
-                            {NOTATION_CATALOG.length} presets · {CATALOG_FAMILIES.length} families
-                        </div>
-                    </aside>
+                    <nav className="symbol-editor-modal__nav" aria-label="Symbol sections">
+                        {navEntries.map((e) => {
+                            const count = badgeOf(e.key);
+                            const isActive = e.key === active.key;
+                            return (
+                                <button
+                                    key={e.key}
+                                    type="button"
+                                    className={`symbol-editor-modal__nav-item${isActive ? ' is-active' : ''}`}
+                                    aria-current={isActive ? 'true' : undefined}
+                                    onClick={() => setNavKey(e.key)}
+                                >
+                                    <span className="symbol-editor-modal__nav-label">{e.label}</span>
+                                    {count > 0 && (
+                                        <span className="symbol-editor-modal__nav-count">{count}</span>
+                                    )}
+                                </button>
+                            );
+                        })}
+                    </nav>
 
                     <div className="symbol-editor-modal__main">
                         <div className="symbol-editor-modal__preview">
@@ -334,23 +451,12 @@ export const SymbolEditorModal: React.FC = () => {
                             )}
                         </div>
 
-                        <div className="symbol-editor-modal__tabs" role="tablist">
-                            {MODAL_TABS.map((id) => (
-                                <button
-                                    key={id}
-                                    type="button"
-                                    role="tab"
-                                    aria-selected={tab === id}
-                                    className={`symbol-editor-modal__tab${tab === id ? ' is-active' : ''}`}
-                                    onClick={() => setTab(id)}
-                                >
-                                    {IR_TAB_LABELS[id]}
-                                </button>
-                            ))}
-                        </div>
-
-                        <div className="symbol-editor-modal__panel" role="tabpanel">
-                            <VertexAuthoringPanel view={view} activeTab={tab} />
+                        <div className="symbol-editor-modal__panel">
+                            <VertexAuthoringPanel
+                                view={view}
+                                activeTab={active.tab}
+                                activeSection={active.section}
+                            />
                         </div>
                     </div>
                 </div>
@@ -359,7 +465,20 @@ export const SymbolEditorModal: React.FC = () => {
                     <span className="symbol-editor-modal__hint">
                         <i className="bi bi-info-circle" aria-hidden="true" /> Changes apply immediately to the canvas. Esc closes.
                     </span>
-                    <button type="button" className="btn btn-primary" onClick={close}>Close</button>
+                    {/* Moved down from the header (1b). Rendered at all times and disabled
+                        when there is nothing to revert to, rather than appearing and
+                        disappearing: a footer button that comes and goes moves the one
+                        beside it under the pointer. */}
+                    <button
+                        type="button"
+                        className="btn btn-secondary symbol-editor-modal__revert"
+                        disabled={!modified || !la}
+                        title="Reapply the preset axes; the border color stays yours"
+                        onClick={() => { if (la) applyPreset(la); }}
+                    >
+                        <i className="bi bi-arrow-counterclockwise" aria-hidden="true" /> Revert to preset
+                    </button>
+                    <button type="button" className="btn btn-primary" onClick={close}>Done</button>
                 </div>
             </div>
         </div>

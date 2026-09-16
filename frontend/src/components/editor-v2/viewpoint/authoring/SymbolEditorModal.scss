@@ -76,27 +76,90 @@
         gap: 6px;
     }
 
-    /* cyan as accent on the recognized name, per the mockup header */
-    &__title-name { color: #0ea5e9; }
+    /* ── header preset chip + catalog popover (1b, D7) ── */
 
-    &__state {
+    &__preset {
+        position: relative;
+        flex: none;
+    }
+
+    &__chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        max-width: 340px;
+        border: 1px solid var(--color-border-secondary, #e2e8f0);
+        border-radius: 16px;
+        background: var(--color-bg-primary, #f8fafc);
+        padding: 3px 10px 3px 6px;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--color-text-primary);
+        cursor: pointer;
+
+        svg { flex: none; }
+        i { color: var(--color-text-secondary, #64748b); }
+
+        &:hover { border-color: var(--color-text-secondary, #64748b); }
+        &:focus-visible { outline: 2px solid #334155; outline-offset: 1px; }
+    }
+
+    /* cyan as accent on the recognized name, per the mockup header */
+    &__chip-name {
+        color: #0ea5e9;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    &__chip-modified {
         font-size: 10px;
         font-weight: 600;
         letter-spacing: 0.03em;
         border-radius: 10px;
-        padding: 1px 8px;
-        border: 1px solid var(--color-border-secondary, #e2e8f0);
+        padding: 1px 6px;
+        border: 1px dashed var(--color-border-secondary, #e2e8f0);
         color: var(--color-text-secondary, #64748b);
-        background: var(--color-bg-primary, #f1f5f9);
+    }
 
-        &--preset {
-            background: rgba(14, 165, 233, 0.08);
-            border-color: rgba(14, 165, 233, 0.3);
-            color: var(--color-text-primary);
-        }
-        &--custom {
-            background: transparent;
-            border-style: dashed;
+    &__chip-change {
+        font-weight: 500;
+        color: var(--color-text-secondary, #64748b);
+    }
+
+    /* Catches the click that dismisses the popover. It sits INSIDE the modal, so the
+       modal's own stopPropagation still applies and the page backdrop never sees the
+       click: dismissing the catalog must not close the editor. */
+    &__popover-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 1;
+    }
+
+    &__popover {
+        position: absolute;
+        z-index: 2;
+        top: calc(100% + 6px);
+        right: 0;
+        width: 320px;
+        max-height: 440px;
+        display: flex;
+        flex-direction: column;
+        background: var(--color-bg-secondary, #fff);
+        border: 1px solid var(--color-border-secondary, #e2e8f0);
+        border-radius: 8px;
+        box-shadow: 0 16px 40px rgba(15, 23, 42, 0.22);
+        padding: var(--space-3, 12px);
+        overflow: hidden;
+
+        /* The picker's own root: the sections list is the scroller, search, chips,
+           recents and footer stay fixed — the D18 arrangement, unchanged. */
+        .jj-field {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-height: 0;
+            gap: var(--space-2, 8px);
         }
     }
 
@@ -106,11 +169,6 @@
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
-    }
-
-    &__reset {
-        flex: none;
-        font-size: 11px;
     }
 
     &__close-btn {
@@ -138,7 +196,7 @@
        tokens, so the override is a scoped token redefinition rather than a
        reach into hashed classes; rail and every other host keep the defaults.
        NumberInput carries a hardcoded 32px frame and is left as is. */
-    &__catalog,
+    &__popover,
     &__panel {
         --font-size-lg: 12px;      /* Input text; kit default 16px */
         --input-height-base: 30px; /* md control frame; kit default 40px */
@@ -146,28 +204,67 @@
         --input-height-lg: 34px;   /* lg control frame; kit default 48px */
     }
 
-    /* ── catalog column (sectioned per D18) ── */
+    /* ── section nav (1b) — 170px where the 264px catalog column used to be ── */
 
-    &__catalog {
-        width: 264px;
+    &__nav {
+        width: 170px;
         flex: none;
         display: flex;
         flex-direction: column;
+        gap: 1px;
         border-right: 1px solid var(--color-border-secondary);
         background: var(--color-bg-primary, #f8fafc);
-        padding: var(--space-3, 12px);
-        /* D18: the sections list is the scroller; frame, search, chips and
-           recents stay fixed. No layout shift of the modal frame on collapse
-           or filtering (fixed-height rule above). */
-        overflow: hidden;
+        padding: var(--space-2, 8px);
+        overflow-y: auto;
+    }
 
-        .jj-field {
-            display: flex;
-            flex-direction: column;
-            flex: 1;
-            min-height: 0;
-            gap: var(--space-2, 8px);
+    &__nav-item {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2, 8px);
+        width: 100%;
+        border: none;
+        background: transparent;
+        border-left: 2px solid transparent;
+        border-radius: 0 4px 4px 0;
+        padding: 6px var(--space-2, 8px);
+        font-size: 11px;
+        font-weight: 600;
+        text-align: left;
+        color: var(--color-text-secondary, #64748b);
+        cursor: pointer;
+
+        &:hover { background: var(--color-bg-secondary, #fff); }
+
+        /* cyan as the active indicator only, never as a background */
+        &.is-active {
+            color: var(--color-text-primary);
+            background: var(--color-bg-secondary, #fff);
+            border-left-color: #0ea5e9;
         }
+        &:focus-visible { outline: 2px solid #334155; outline-offset: -2px; }
+    }
+
+    &__nav-label {
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    /* Count of the rules authored on that section's axes. Drawn only when there is
+       something to count, so a plain symbol shows a clean list of names. */
+    &__nav-count {
+        flex: none;
+        font-size: 10px;
+        font-weight: 600;
+        min-width: 16px;
+        text-align: center;
+        border-radius: 8px;
+        padding: 0 5px;
+        color: var(--color-text-primary);
+        background: rgba(14, 165, 233, 0.12);
     }
 
     /* ── D18: sectioned catalog (column variant of the picker; modal context
@@ -329,17 +426,23 @@
             color: var(--color-text-secondary, #64748b);
             padding: var(--space-2, 8px) 0;
         }
+
+        /* Popover footer (D7): the preservation checkbox and the catalog's size,
+           pinned under the scroller so they never scroll out of reach. */
+        &__foot {
+            flex: none;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            padding-top: var(--space-2, 8px);
+            border-top: 1px solid var(--color-border-secondary, #e2e8f0);
+            font-size: 10px;
+        }
+
+        &__foot-count { color: var(--color-text-secondary, #64748b); }
     }
 
-    &__catalog-foot {
-        margin-top: auto;
-        padding-top: var(--space-2, 8px);
-        border-top: 1px solid var(--color-border-secondary);
-        font-size: 10px;
-        color: var(--color-text-secondary, #64748b);
-    }
-
-    /* ── main pane: preview strip + mini-bar + panel ── */
+    /* ── main pane: preview strip + panel ── */
 
     &__main {
         flex: 1;
@@ -412,31 +515,6 @@
         font-family: var(--font-mono, 'IBM Plex Mono', Monaco, Consolas, monospace);
     }
 
-    &__tabs {
-        display: flex;
-        gap: var(--space-1, 4px);
-        border-bottom: 1px solid var(--color-border-secondary);
-        flex: none;
-    }
-
-    &__tab {
-        border: none;
-        background: transparent;
-        font-size: 11px;
-        font-weight: 600;
-        color: var(--color-text-secondary, #64748b);
-        padding: var(--space-1, 4px) var(--space-2, 8px) var(--space-2, 8px);
-        border-bottom: 2px solid transparent;
-        cursor: pointer;
-
-        /* cyan as active indicator only, never as a background */
-        &.is-active {
-            color: var(--color-text-primary);
-            border-bottom-color: #0ea5e9;
-        }
-        &:focus-visible { outline: 2px solid #334155; outline-offset: -2px; }
-    }
-
     &__panel {
         flex: 1;
         min-height: 0;
@@ -451,29 +529,13 @@
         background-color: var(--color-bg-secondary, #fff) !important;
     }
 
-    /* Two-column anatomy (mockup scene): grid over the FormSections of the
-       Appearance body, Symbol identity spanning full width. Addressed through
-       the stable ir-tab-body classes (FormSection classes are CSS modules).
-       The inline display:none of an inactive body wins over this rule, so the
-       R-A visibility mechanism is untouched. Modal context only: the panel
-       stays single-column everywhere else. */
-    .ir-tab-body--appearance {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: var(--space-1, 4px) 28px;
-        align-items: start;
-
-        > section:first-child { grid-column: 1 / -1; }
-
-        /* Border across both columns (slice 2, decisione 2026-09-16). The section now
-           carries three axis switches plus the OVERRIDES table: what it needs is vertical
-           room and horizontal space for the table, and widening the modal gives neither.
-           Same treatment as the identity section above, addressed through the stable
-           wrapper class the panel renders (FormSection's own classes are CSS modules).
-           Expect the pairing to shift — Shape beside Fill, Border alone, then Padding
-           beside Marker — which is the right weighting now that Border is the heaviest. */
-        > .ir-border-section { grid-column: 1 / -1; }
-    }
+    /* The two-column anatomy grid of D15b, and the Border span slice 2 added to it,
+       were REMOVED in slice 4b and not merely left unused. With the section nav the
+       Appearance body shows ONE section at a time, and one visible child of a
+       two-column grid is laid out in the left column: Fill and Marker would have
+       rendered at half width against an empty right half. A dead rule here is not
+       inert, it is a layout bug waiting for the next reader. The panel is
+       single-column in the modal now, as it already is everywhere else. */
 
     &__footer {
         display: flex;
@@ -491,5 +553,8 @@
         gap: 6px;
     }
 
-    &__footer .btn { margin-left: auto; }
+    /* Hint on the left, the two actions on the right: only the FIRST button takes the
+       free space, so «Revert to preset» and «Done» stay a pair (the footer's own gap
+       spaces them) instead of drifting to opposite ends. */
+    &__revert { margin-left: auto; }
 }
