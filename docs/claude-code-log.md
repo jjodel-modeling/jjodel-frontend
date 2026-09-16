@@ -23,6 +23,11 @@ scritte nello stesso file prima di committare.
   Lezione: due corsie parallele committano il log una alla volta, ciascuna dopo aver riletto la
   testa; lo stesso file non si mette in due commit sovrapposti.
 
+**Incidente — log committato da un'altra corsia, 2026-09-16.** `9f0843325`, messaggio «log entry for
+the Create View gate fix»: contenuto reale **due** entry, la sua e quella della discovery
+rail/modale, gia' in albero e non in stage al momento del commit. Stesso schema del 2026-09-13.
+Nessun rewrite: la entry resta dov'e', il suo commit non la nomina.
+
 ## 2026-09-16 — fix: Create View gated on the active viewpoint, not on a tracker nobody writes
 **Prompt**: `claude_2026-09-16_0055_prompt_gate_create_view_sempre_chiuso.md` — replace
 `!!getLastEditedViewpointId()` at the three gate sites with a predicate mirroring priority 2 of
