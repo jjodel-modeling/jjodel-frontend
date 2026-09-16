@@ -25,7 +25,15 @@ dopo, come il prompt chiede. Nessun file di prodotto toccato, nessun ramo divers
 `validation-skeleton`. L'assenza delle regole sul tronco è misurata due volte e in due modi
 indipendenti: per ancestry (controllo positivo passato — `6e9a31fe7` È antenato di
 `origin/alfonso-frontend-jjtl`) e per contenuto (i 4 marcatori a 0 con controlli positivi che hanno
-segnale, `NON-NEGOTIABLE` → 3 e `TRANSACTION` → 16). Anche `staging` non ha CLAUDE.md.
+segnale, `NON-NEGOTIABLE` → 3 e `TRANSACTION` → 16). **Correzione del 2026-09-16, misurata**: la
+riga che qui diceva «anche `staging` non ha CLAUDE.md» era falsa, ed era un errore di metodo mio e
+non una misura. `staging` (`cb699ad58`) **ha** CLAUDE.md, 1035 righe, la stessa copia del tronco con
+gli stessi quattro marcatori a 0; il ramo **senza** è solo `master`. L'errore: `git cat-file -e
+cb699ad58:CLAUDE.md` falliva perché il commit non era nel database locale (`fatal: Not a valid object
+name`), e quel fallimento è indistinguibile dall'assenza del file — esattamente il silenzio che §5
+descrive, su cui non avevo messo il controllo positivo. Rimisurato dopo aver scaricato l'oggetto, con
+controllo positivo su ogni soggetto (`frontend/package.json` leggibile sia su `staging` sia su
+`master`, e `master` resta senza CLAUDE.md).
 **Out-of-scope changes**: no — `AGENTS.md` è in perimetro per la regola 1c, che il prompt cita.
 **Layer Impact Report**: not-required — sola documentazione, nessun file §3.1.
 **Smoke visivo**: non applicabile.
