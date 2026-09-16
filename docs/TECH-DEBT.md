@@ -529,3 +529,17 @@ autorizzata a parte. La prima e' locale e sufficiente; la seconda e' piu' pulita
 - `docs/discovery/discovery_2026-09-16_rail_modal_stacking.md` — §8 (raggio), §4 (E3, la classe), §9 (opzioni)
 - `frontend/src/components/validation/ValidationRulesModal.tsx:209-222` — il precedente, con la misura del 2026-09-09 nel commento
 
+---
+
+## `--z-modal` vale 1050 e non 9999: due file di token dichiarano lo stesso nome
+
+**Registrato:** 2026-09-16
+**Origine:** fase 1 della discovery rail/modale (`docs/discovery/discovery_2026-09-16_rail_modal_stacking.md`, §8.1), come fatto collaterale: letto sul `:root` vivo mentre si misurava altro.
+**Stato attuale:** `frontend/src/styles/tokens/_z-index.scss:31` dichiara `--z-modal: 9999`; `frontend/src/styles/tokens.css:204` dichiara `--z-modal: 1050`. `tokens.css` e' importato da `App.tsx:8` e **vince**: misurato sul browser, `getComputedStyle(document.documentElement).getPropertyValue('--z-modal')` ritorna **1050**. Ogni regola scritta `z-index: var(--z-modal, 9999)` vale quindi 1050, e il `9999` che si legge nel sorgente non e' mai stato il valore vivo. Stessa famiglia gia' documentata per le ombre e i colori (`tokens/_shadows.scss:60`, `tokens/_colors-light.scss:391`, `docs/discovery/discovery_2026-08-20_token_css_portalati.md`): quindici nomi dichiarati due volte con valori diversi. **Inerte per il difetto rail/modale**, e va detto perche' e' la tentazione ovvia: dentro `#root` nemmeno 999999 arriva al rail, quindi alzare quel numero non avrebbe corretto nulla. Le due scale divergono anche nell'ordine — `tokens.css` mette `--z-tooltip` (1070) **sopra** `--z-modal` (1050), `_z-index.scss` lo mette sotto — quindi un tooltip puo' finire sopra un modale fra fratelli dentro `#root`.
+**Fix strutturale raccomandato:** **non e' una modifica di passaggio.** Unificare significa scegliere una scala sola e riconciliare i due file su tutti i nomi duplicati, non solo su `--z-modal`: ogni consumatore di `var(--z-modal)` e `var(--z-tooltip)` cambia livello nello stesso commit, e il confronto che conta resta comunque quello di livello `body` (D-UI-14), che nessuna delle due scale descrive. Va fatto in un giro proprio, con una decisione che dica quale scala e' quella giusta, l'elenco dei nomi duplicati e una verifica a schermo per ogni consumatore toccato. La deroga di **D-UI-13** sugli z-index e' gia' aperta su questo, con il corollario di D-UI-14 che ne ridimensiona l'urgenza.
+**Priorita':** bassa. Nessun difetto noto oggi dipende dal valore; l'unico effetto misurato e' il tooltip sopra il modale fra fratelli, non segnalato da nessuno.
+**Effort stimato:** un giorno, quasi tutto in verifica dei consumatori; la modifica e' di due righe.
+**Riferimenti:**
+- `docs/decisions.md` — D-UI-13 (la deroga), D-UI-14 (il corollario: le due scale vivono entrambe dentro `#root`)
+- `docs/discovery/discovery_2026-08-20_token_css_portalati.md` — la famiglia dei nomi doppi
+- `frontend/src/styles/tokens/_z-index.scss:31`, `frontend/src/styles/tokens.css:204`
