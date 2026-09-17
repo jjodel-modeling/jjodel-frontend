@@ -11,7 +11,8 @@ import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { JjScriptEvents } from '../../events/registry';
 import './ScriptBlock.scss';
 import { ExecutionErrorDialog } from './ExecutionErrorDialog';
-import {parseError, ExecutionPauseInfo, ExecutionSummary, JjScriptError, ExecutionErrorInfo} from '../executor/errors';
+import {parseError, errorFromResult, ExecutionPauseInfo, ExecutionSummary, JjScriptError, ExecutionErrorInfo} from '../executor/errors';
+import type { ExecutionError } from '../types';
 import { collectClassifierNames, validateScriptIntegrity } from '../executor/scriptValidator';
 import { AIDisclaimer } from '../../components/common/AIDisclaimer';
 import {TransformationAST} from "../../jjtl";
@@ -61,6 +62,12 @@ export interface ScriptLineResult {
     success: boolean;
     message: string;
     warnings?: string[];
+    /**
+     * The executor's own structured errors, when the host passes them through. Present, the
+     * dialog shows the handler's sentence and suggestion; absent, it falls back to parsing
+     * `message` (see `errorFromResult`).
+     */
+    errors?: ExecutionError[];
 }
 
 /** @deprecated Use ScriptLineResult instead */
@@ -341,7 +348,11 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
             const isForwardReference = kind === 'forward-reference';
             setShowErrorDialog(false);
             setExecutionErrorInfo({
+                // Here `line` is already the editor line: the validator reads the raw script,
+                // not the command list. Stated as `scriptLine` too so the dialog does not have
+                // to know that this one path numbers differently from the run loops.
                 lineNumber: line,
+                scriptLine: line,
                 command,
                 error: isForwardReference
                     ? `Script refused before command 1: ${reason} Nothing was executed.`
@@ -440,12 +451,13 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                     executedCount++;
                 } else {
                     errorCount++;
-                    // Parse the error for better messaging
-                    const parsedError = parseError(result.message || 'Unknown error', commands[i]);
+                    // The executor's own error when it sent one, parsed from the text otherwise
+                    const parsedError = errorFromResult(result, commands[i]);
                     const currentElapsed = Date.now() - startTimeRef.current;
 
                     const info = {
                         lineNumber: i + 1,
+                        scriptLine: getScriptLine(i),
                         command: commands[i],
                         error: parsedError,
                         executedSoFar: executedCount,
@@ -457,7 +469,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                     setPauseInfo(info);
 
                     // Store error in list for final summary
-                    setErrorsList(prev => [...prev, { line: i + 1, command: commands[i], error: parsedError }]);
+                    setErrorsList(prev => [...prev, { line: getScriptLine(i), command: commands[i], error: parsedError }]);
 
                     // Persistent inline outcome strip (the Skip/recovery dialog below is preserved
                     // and owns the interactive flow; this strip is the passive summary that remains
@@ -511,6 +523,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                 const currentElapsed = Date.now() - startTimeRef.current;
                 const info = {
                     lineNumber: i + 1,
+                    scriptLine: getScriptLine(i),
                     command: commands[i],
                     error: errorMessage,
                     executedSoFar: executedCount,
@@ -522,7 +535,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                 setPauseInfo(info);
 
                 // Store error in list for final summary
-                setErrorsList(prev => [...prev, { line: i + 1, command: commands[i], error: parsedError }]);
+                setErrorsList(prev => [...prev, { line: getScriptLine(i), command: commands[i], error: parsedError }]);
 
                 // Persistent inline outcome strip (dialog preserved, see !success branch above).
                 setOutcome({ kind: 'runtime-error', line: getScriptLine(i), message: parsedError.message });
@@ -698,8 +711,9 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                 const elapsedMs = Date.now() - startTimeRef.current;
                 const info = {
                     lineNumber: nextIndex + 1,
+                    scriptLine: getScriptLine(nextIndex),
                     command: commands[nextIndex],
-                    error: result.message || 'Unknown error',
+                    error: errorFromResult(result, commands[nextIndex]),
                     executedSoFar: nextIndex - 1,
                     totalCommands: commands.length,
                     elapsedMs,
@@ -750,6 +764,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
             let info  = {
                 command: commands[nextIndex],
                 lineNumber: nextIndex + 1,
+                scriptLine: getScriptLine(nextIndex),
                 error: errorMessage,
                 executedSoFar: nextIndex - 1,
                 totalCommands: commands.length,
@@ -876,13 +891,14 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                     executedCount++;
                 } else {
                     errorCount++;
-                    const parsedError = parseError(result.message || 'Unknown error', commands[i]);
-                    setErrorsList(prev => [...prev, { line: i + 1, command: commands[i], error: parsedError }]);
+                    const parsedError = errorFromResult(result, commands[i]);
+                    setErrorsList(prev => [...prev, { line: getScriptLine(i), command: commands[i], error: parsedError }]);
 
                     // Set pause info for the error dialog
                     const currentElapsed = Date.now() - startTimeRef.current;
                     setPauseInfo({
                         lineNumber: i + 1,
+                        scriptLine: getScriptLine(i),
                         command: commands[i],
                         error: parsedError,
                         executedSoFar: executedCount,
@@ -903,7 +919,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                 errorCount++;
                 const errorMessage = err instanceof Error ? err.message : 'Unknown error';
                 const parsedError = parseError(errorMessage, commands[i]);
-                setErrorsList(prev => [...prev, { line: i + 1, command: commands[i], error: parsedError }]);
+                setErrorsList(prev => [...prev, { line: getScriptLine(i), command: commands[i], error: parsedError }]);
 
                 setLineStates(prev =>
                     prev.map((ls, idx) =>
@@ -916,6 +932,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                 const currentElapsed = Date.now() - startTimeRef.current;
                 setPauseInfo({
                     lineNumber: i + 1,
+                    scriptLine: getScriptLine(i),
                     command: commands[i],
                     error: parsedError,
                     executedSoFar: executedCount,
@@ -953,7 +970,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                 skippedCount: allSkippedLines.length,
             }
         }));
-    }, [pauseInfo, onExecute, commands, lineStates, skippedLinesSet, errorsList, resolvedTarget]);
+    }, [pauseInfo, onExecute, commands, lineStates, skippedLinesSet, errorsList, resolvedTarget, getScriptLine]);
 
     // ============================================
     // RECOVERY ACTIONS — contextual one-click fixes
@@ -1016,12 +1033,13 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                 if (success) {
                     executedCount++;
                 } else {
-                    const parsedError = parseError(result.message || 'Unknown error', commands[i]);
-                    localErrors.push({ line: i + 1, command: commands[i], error: parsedError });
+                    const parsedError = errorFromResult(result, commands[i]);
+                    localErrors.push({ line: getScriptLine(i), command: commands[i], error: parsedError });
                     setErrorsList(localErrors);
                     const currentElapsed = Date.now() - startTimeRef.current;
                     setPauseInfo({
                         lineNumber: i + 1,
+                        scriptLine: getScriptLine(i),
                         command: commands[i],
                         error: parsedError,
                         executedSoFar: executedCount,
@@ -1035,7 +1053,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
             } catch (err) {
                 const errorMessage = err instanceof Error ? err.message : 'Unknown error';
                 const parsedError = parseError(errorMessage, commands[i]);
-                localErrors.push({ line: i + 1, command: commands[i], error: parsedError });
+                localErrors.push({ line: getScriptLine(i), command: commands[i], error: parsedError });
                 setErrorsList(localErrors);
                 setLineStates(prev =>
                     prev.map((ls, idx) => idx === i
@@ -1046,6 +1064,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                 const currentElapsed = Date.now() - startTimeRef.current;
                 setPauseInfo({
                     lineNumber: i + 1,
+                    scriptLine: getScriptLine(i),
                     command: commands[i],
                     error: parsedError,
                     executedSoFar: executedCount,
@@ -1072,7 +1091,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
         });
         setExecutionState('completed');
         setShowErrorDialog(true);
-    }, [commands, lineStates, onExecute, resolvedTarget, errorsList]);
+    }, [commands, lineStates, onExecute, resolvedTarget, errorsList, getScriptLine]);
 
     /**
      * Dispatcher for recovery-action clicks. Handlers live here (not in the rule
@@ -1099,13 +1118,14 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                 if (!createResult?.success) {
                     // Surface the enum-creation failure as a fresh pause so the user can
                     // see what went wrong (e.g. name collision with an existing class).
-                    const parsedError = parseError(
-                        createResult?.message || 'Enum creation failed',
+                    const parsedError = errorFromResult(
+                        { message: createResult?.message || 'Enum creation failed', errors: createResult?.errors },
                         `create enum ${enumName}`
                     );
                     const currentElapsed = Date.now() - startTimeRef.current;
                     setPauseInfo({
                         lineNumber: pauseInfo.lineNumber,
+                        scriptLine: pauseInfo.scriptLine,
                         command: `create enum ${enumName}`,
                         error: parsedError,
                         executedSoFar: lineStates.filter(ls => ls.status === 'success').length,

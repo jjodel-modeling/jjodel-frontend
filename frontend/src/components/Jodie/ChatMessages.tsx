@@ -440,6 +440,9 @@ export function ChatMessages({ messages, isWaiting, onJjScriptExecuted, onTestIn
                     success: result.success,
                     message: result.message,
                     warnings: result.warnings,
+                    // The handler's own error, so the dialog shows its sentence and its
+                    // suggestion instead of one guessed from the message text.
+                    errors: result.errors,
                 });
             } catch (err) {
                 results.push({
