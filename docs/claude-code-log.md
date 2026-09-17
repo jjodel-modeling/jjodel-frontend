@@ -28,6 +28,36 @@ the Create View gate fix»: contenuto reale **due** entry, la sua e quella della
 rail/modale, gia' in albero e non in stage al momento del commit. Stesso schema del 2026-09-13.
 Nessun rewrite: la entry resta dov'e', il suo commit non la nomina.
 
+## 2026-09-17 — fix: the JjScript error dialog shows the executor's own error (corsia B)
+**Prompt**: `claude_2026-09-16_2327_prompt_jjscript_forward_refs_and_structured_errors.md`, phase 2
+lane B, with Alfonso's answers 3, 4 and 5 to §10 of the report (all four result-shaped sites,
+`handleStep` read and converted if result-shaped, the function in `errors.ts` confirmed) plus one
+addition made at the lane A hand-off: the dialog must number its line the way the validator refusal
+and the outcome strip do.
+**Files touched**: `fad85bae5`, 5 files: `jjscript/executor/errors.ts` (`errorFromResult`,
+`KNOWN_ERROR_CODES`, the `scriptLine` field on `ExecutionErrorInfo`),
+`jjscript/components/ScriptBlock.tsx` (five sites, the `errors` field on `ScriptLineResult`, the
+line numbers), `jjscript/components/ExecutionErrorDialog.tsx` (the title line only),
+`components/Jodie/ChatMessages.tsx` (`errors` passed through, the one place it was dropped),
+`jjscript/__tests__/errorFromResult.test.ts` (new, 9 tests). This entry in its own commit.
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-14 17:30
+**Causa**: (c)
+**Regressions**: no. `npm run typecheck` exit 2, **33** on full output, the declared baseline,
+control `Measurable` → 6; the one hit in a touched file is the pre-existing `ChatMessages.tsx` entry
+of the §17 baseline, 170 lines above the edit. `npx vitest run` **3727 passed, 0 failed**, the same
+9 files red at import. `npm run build` exit 0, pre-existing chunk-size warning only.
+**Out-of-scope changes**: yes, two, both declared. `ExecutionErrorDialog.tsx` was allowed only if
+the suggestion was not rendered (it was), and one line of it changed for the title's line number.
+`handleStep:674` is a fifth site, converted on Alfonso's answer 4: it was result-shaped but not even
+on `parseError`, it passed the raw string, so the dialog showed no suggestion at all there.
+**Layer Impact Report**: not-required — no §3.1 file, no D-layer or L-layer write path.
+**Smoke visivo**: passato — Alfonso on localhost:3001: the executor's sentence and its suggestion are
+shown, the dialog title sits on the editor line, Skip Line resumes correctly, and the summary reports
+the editor line for the error.
+**Notes**: `scriptLine` is a new optional field, not a renumbering: `lineNumber` still indexes the command list for Skip, the enum recovery and `skippedLinesSet` (`:1016`). Residual: the summary's skipped line and the `EXECUTION_PAUSED` detail stay on that index, so they match the editor line only when no comment or blank line precedes the failing command. Thrown paths `:459`, `:725`, `:872`, `:1004` keep `parseError`: an exception carries no `errors`. The two open defects of lane A stand, report §6.
+**Prompt document name**: 2026-09-16 23:27
+
 ## 2026-09-17 — fix: JjScript refuses a forward reference before command 1 (corsia A)
 **Prompt**: `claude_2026-09-16_2327_prompt_jjscript_forward_refs_and_structured_errors.md`, phase 1
 (read-only discovery with report, hard stop) then phase 2 lane A. Run with Alfonso's five answers to
