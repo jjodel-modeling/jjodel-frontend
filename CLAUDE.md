@@ -528,6 +528,18 @@ incidente misurato, non da una preferenza. Iscritta come **RC-13** in `docs/deci
   `Out-of-scope changes` della entry che lo ripete — e prosegue; sanare o rifiutare e' del
   reviewer, a valle (RC-11).
 
+- **Every prompt has an ID, and every message on it carries the ID.** A prompt in
+  `docs/prompts/` states in its header `Prompt-ID: P-YYYY-MM-DD-HHmm`, the date and time of its
+  file name. Every message pasted into a running session about that prompt (GO, ACK, answers to a
+  hard stop, corrections) opens with `[P-YYYY-MM-DD-HHmm]`. Every reply of Claude Code on it
+  (report, hard stop, question, closing summary) opens with `[P-YYYY-MM-DD-HHmm · session <id>]`,
+  where `<id>` is the identifier the harness shows for the session; a session that cannot see it
+  writes `session unknown` and never invents one. A session that receives a message with another
+  Prompt-ID, or with none, does not act on it: it replies with its own ID and the one it received,
+  and stops. A session does not relay messages to another session. Measured 2026-09-17: a Phase 2
+  GO for `P-2026-09-17-1024` was pasted into the session running `P-2026-09-16-2327`, and a relayed
+  message carried a scope change that nobody had written.
+
 ### 6.5 Worktrees and cherry-picks
 
 Code commits on `validation-skeleton` reach other branches (today `alfonso-frontend-jjtl`) by
