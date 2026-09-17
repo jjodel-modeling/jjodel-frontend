@@ -20,6 +20,7 @@ import { getProject, getDefaultParent, needsParent, getTargetMetamodel } from '.
 import { executeCreateInstance } from './instance';
 import { checkM2NameUniqueness } from '../../../model/logicWrapper/nameUniqueness';
 import { duplicateNameRefusal, m2KindForElementType, withNearHomonymWarning } from '../m2CreateGuard';
+import { resolveSuperclasses, superclassNames } from '../superclassResolution';
 
 // Import Jjodel model types and actions
 import {
@@ -478,6 +479,25 @@ async function createClass(
     project?: any,
     targetMetamodel?: any
 ): Promise<ExecutionResult> {
+    // Every superclass is settled BEFORE the class exists, for the reason the `type` clause of
+    // an attribute is: an unresolvable one must not leave a half-made element behind. This used
+    // to run AFTER `DClass.new`, and a name it could not find was dropped in silence -- the
+    // class was created without its generalization and the command reported success.
+    //
+    // The resolution ORDER is unchanged: scoped inside the target metamodel first, project-wide
+    // second. The bound-scope guard is unchanged too and sits upstream -- a scope-bound run
+    // makes `getTargetMetamodel` return null by design and `executor.ts` has already refused a
+    // bare name only another metamodel holds, so what reaches here is a name this run may use.
+    const superclasses = resolveSuperclasses(
+        superclassNames(options),
+        name,
+        (qn) => {
+            const scoped = targetMetamodel ? resolveElementInMetamodel(qn, targetMetamodel) : null;
+            return scoped ?? (project ? resolveElement(qn, project) : null);
+        }
+    );
+    if (!superclasses.ok) return superclasses.refusal;
+
     return new Promise((resolve) => {
         try {
             // Get the parent ID (package or model)
@@ -496,40 +516,12 @@ async function createClass(
                 true        // persist - automatically dispatches the action
             );
 
-            // Handle superclass (extends) - use scoped resolution when available
-            let superClassName: string | undefined;
-            if (options?.superClass && project) {
-                // Prefer scoped resolution within the target metamodel
-                let superClass = targetMetamodel
-                    ? resolveElementInMetamodel(options.superClass, targetMetamodel)
-                    : null;
-                // Fallback to project-wide search
-                if (!superClass) {
-                    superClass = resolveElement(options.superClass, project);
-                }
-                if (superClass) {
-                    // Set the extends property using SetFieldAction
-                    // The '=' operator sets the array, '+=' adds to it
-                    SetFieldAction.new(newClass, 'extends', superClass.id, '+=', true);
-                    superClassName = superClass.name;
-                }
+            // Apply the inheritance already resolved above. The '=' operator sets the array,
+            // '+=' adds to it, and multiple inheritance is legal in Ecore.
+            for (const superClass of superclasses.resolved) {
+                SetFieldAction.new(newClass, 'extends', superClass.id, '+=', true);
             }
-
-            // Handle multiple superclasses - use scoped resolution when available
-            if (options?.superClasses && options.superClasses.length > 1 && project) {
-                // Skip first one as it's already handled above
-                for (let i = 1; i < options.superClasses.length; i++) {
-                    let superClass = targetMetamodel
-                        ? resolveElementInMetamodel(options.superClasses[i], targetMetamodel)
-                        : null;
-                    if (!superClass) {
-                        superClass = resolveElement(options.superClasses[i], project);
-                    }
-                    if (superClass) {
-                        SetFieldAction.new(newClass, 'extends', superClass.id, '+=', true);
-                    }
-                }
-            }
+            const superClassName: string | undefined = superclasses.resolved[0]?.name;
 
             const typeLabel = isInterface ? 'interface' : isAbstract ? 'abstract class' : 'class';
 
