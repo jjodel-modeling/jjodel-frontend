@@ -62,9 +62,11 @@ nav; the two-column grid, the Border span, the tab bar and the catalog column ru
 **Outcome**: ✅ completed
 **Corregge**: —
 **Causa**: —
-**Regressions**: unknown — `unknown` and not `no` because nothing was opened in the running app:
-the prompt assigns the visual check to Alfonso and says to hold this field until he answers. Gates
-all green: `npm run typecheck` exit 2, **33** on full output, set byte-identical to the pre-edit run
+**Regressions**: no — verified on screen by Alfonso (ACK 2026-09-17), all eight points holding: the
+rail unchanged with every section; a view with a scalar border draws identical; the header shows the
+chip and no catalog column; the popover opens with Base expanded and its footer reads 56 presets and
+5 families; the nav shows one section at a time at full width; the badges are consistent; `keepRules`
+keeps the two rules without writing `default`; the footer behaves as expected. Gates all green: `npm run typecheck` exit 2, **33** on full output, set byte-identical to the pre-edit run
 (`diff` exit 0), **0** in the ten touched files. `npx vitest run` **3718 passed, 0 failed**, the same
 9 files red at import (`diff` of the FAIL lines, exit 0). Of the +47 against the pre-edit 3671,
 **27 are this slice** (11 + 9 + 23→30) and 20 belong to the jjscript lane, whose files were written
@@ -81,8 +83,9 @@ the nav has **8 entries, not the spec's 7**.
 schema is unchanged, `applyPresetToShape` gains an argument and under `keepRules` writes strictly
 fewer keys, so no `irVersion` bump and no VersionFixer. The write path is the same canonical
 whole-object `set_ir`.
-**Smoke visivo**: non eseguito — the app was not opened; the ordered list of what to look at was
-handed to Alfonso in chat. Covered instead by the unit bench below and by the rendered popover test.
+**Smoke visivo**: passato — eseguito da Alfonso il 2026-09-17 (ACK visivo) sulla lista ordinata
+consegnata in chat, tutti e otto i punti reggono (elencati sotto **Regressions**). The unit bench
+below and the rendered popover test cover the same ground on the non-visual side.
 **Notes**: Ambiguità «scrolla/mostra» risolta in **mostra una sezione per volta**, come chiede la spec: perciò il grid a due colonne e lo span del Border sono **rimossi**, non lasciati — con una sezione sola il grid la impagina a sinistra. Banco: 3 mutanti su `borderOverrideRows`, 5/2/2 rossi, sorgente ripristinato. Nav a 8 voci: `irTabsForKind` non dà Appearance al rail, quindi Shape e Badges si raggiungono solo qui. Altra corsia: `6ae3e15eb` nel giro, nessun suo file nel mio commit.
 **Prompt document name**: 2026-09-16 23:39
 
