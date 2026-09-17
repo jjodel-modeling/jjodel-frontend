@@ -28,6 +28,41 @@ the Create View gate fix»: contenuto reale **due** entry, la sua e quella della
 rail/modale, gia' in albero e non in stage al momento del commit. Stesso schema del 2026-09-13.
 Nessun rewrite: la entry resta dov'e', il suo commit non la nomina.
 
+## 2026-09-17 — fix: the JjScript create consults the M2 uniqueness verdict (corsia L1)
+**Prompt**: `claude_2026-09-17_1024_prompt_jjscript_silent_defects_duplicates_extends_skipped.md`,
+phase 2 lane L1, with Alfonso's GO answers 1-3 (all nine kinds of D1, through a pure function in
+`create.ts` before `D*.new`; the near-homonym warning belongs to L1 and is rendered per line; the
+message shape) plus his later addition: verify the guard is not one flat namespace, and stop before
+L2 if it is.
+**Files touched**: `09ce4b60c`, 5 files: `jjscript/executor/m2CreateGuard.ts` (new, pure),
+`jjscript/executor/__tests__/m2CreateGuard.test.ts` (new, 27 tests),
+`jjscript/executor/commands/create.ts` (two imports, the gate before the switch, the warning merge
+after it, `metamodelNameFor`), `jjscript/components/ScriptBlock.tsx` (`warningLines` + the strip),
+`jjscript/components/ScriptBlock.scss` (`.script-block__warning`). This entry in its own commit.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. `npm run typecheck` **33** on full output, the declared baseline, control
+`Measurable` → 6, zero hits in any touched file; `npx vitest run` **3755 passed, 0 failed**, the same
+9 files red at import; `npm run build` exit 0, pre-existing chunk-size warning only; `check:docs`
+3/3. Committed behaviour does change by decision: a duplicate M2 create used to succeed and now
+fails, skippable (R-M2U, already ratified 2026-08-30).
+**Out-of-scope changes**: no. `ScriptBlock.tsx`/`.scss` are the render half of answer 2.
+**Layer Impact Report**: not-required — no §3.1 file; `nameUniqueness.ts` and `D*.new` untouched, the
+gate only reads.
+**Smoke visivo**: passato — Alfonso on localhost:3001, checks 1-5: duplicate refused with Skip Line
+and no second class in the tree, the same name in another metamodel created, `Foo`/`foo` both created
+with the amber warning visible and no pause, two identical creates in a row (first applies, second
+refused), `create attribute Person in Person` accepted and the inherited-feature case refused naming
+the superclass. Plus his own two: a command that already emitted warnings shows them in the strip
+without layout breakage, and after Skip Line the tree holds no duplicate.
+**Notes**: Side effect: warnings from OTHER commands are now visible in script blocks — the field
+was carried and nothing rendered it. Declared gap: `executeCreate`'s wiring has no executing test
+(`create.ts` does not import under vitest) and no source-text substitute. Flattening excluded by
+mutation; full bench in `09ce4b60c`. TODO: L2's forward-`extends` refusal belongs in
+`scriptValidator.ts`'s forward-reference pass, same classifier set.
+**Prompt document name**: 2026-09-17 10:24
+
 ## 2026-09-17 — fix: the JjScript error dialog shows the executor's own error (corsia B)
 **Prompt**: `claude_2026-09-16_2327_prompt_jjscript_forward_refs_and_structured_errors.md`, phase 2
 lane B, with Alfonso's answers 3, 4 and 5 to §10 of the report (all four result-shaped sites,
