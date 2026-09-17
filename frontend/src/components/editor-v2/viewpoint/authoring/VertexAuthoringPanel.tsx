@@ -609,6 +609,15 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
             {/* Shape form */}
             <FormSection title="Shape" divider={false}>
                 <div className="jj-field">
+                    {/* Rules table on the shape axis (2026-09-17). A single when/then/else is
+                        not enough for the case the axis exists for — the circle for the initial
+                        state, the double circle for the final one, the rectangle for the rest.
+                        The criterion, so the remaining asymmetry reads as deliberate: the table
+                        goes to the axes with MORE THAN TWO values, and boolean axes keep the
+                        single predicate, since there a list of rules assigning true or false
+                        plus a default is the same condition written longer. Shaped like the
+                        border axes and not like fill: a form always has a value, so there is no
+                        `noneValue` and no `fixedLabel` to override. */}
                     <ConditionalEditor<ShapeForm>
                         value={form}
                         onChange={(next) => patchShape({ form: next })}
@@ -618,6 +627,7 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                         featuresHint={FEATURES_HINT}
                         classNames={classNames}
                         allowConditional={advanced}
+                        rulesTable={{ subjectName: featureInfo.targetName ?? undefined, valueNoun: 'shape' }}
                     />
                 </div>
 

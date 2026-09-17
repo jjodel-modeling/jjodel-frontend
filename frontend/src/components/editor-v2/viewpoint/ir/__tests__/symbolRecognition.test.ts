@@ -117,6 +117,21 @@ describe('symbolRecognition: perturbazioni e condizionali', () => {
     it('form condizionale non riconosce nulla', () => {
         expect(ids({ form: { when: { kind: 'always' } as any, then: 'diamond' } })).toEqual([]);
     });
+    // La tabella delle regole sull'asse shape (2026-09-17) rende scrivibile dal pannello
+    // anche la forma `{rules, default}`: fino a ieri quell'asse sapeva produrre solo il
+    // `{when, then, else}` del test sopra, quindi questa meta' non era coperta. Il default
+    // e' scelto per dare match SE ispezionato — `rect` e' il punto di base-rect e di altri
+    // tre preset — perche' e' esattamente li' che il titolo della modale mentirebbe:
+    // l'istanza che soddisfa la regola disegna un rombo mentre l'intestazione annuncia
+    // «Rectangle». Stesso presidio che la slice 2 ha messo su style e width.
+    it('form in forma rules non riconosce nulla, e non ripiega sul default', () => {
+        expect(ids({
+            form: { rules: [{ when: { kind: 'always' } as any, then: 'diamond' }], default: 'rect' } as any,
+        })).toEqual([]);
+        // Controllo positivo: lo stesso default, scritto come scalare, il match ce l'ha —
+        // quindi il vuoto sopra e' la condizionalita', non un fixture che non matcha mai.
+        expect(ids({ form: 'rect' })).toContain('base-rect');
+    });
     it('marker condizionale fallisce sia i preset che lo richiedono sia quelli che ne richiedono l\'assenza', () => {
         expect(ids({ form: 'diamond', marker: { when: { kind: 'always' } as any, then: 'x' } })).toEqual([]);
     });
