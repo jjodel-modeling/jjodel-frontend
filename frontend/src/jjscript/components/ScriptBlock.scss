@@ -512,6 +512,24 @@ $script-running: #3b82f6;
     font-size: 11px;
 }
 
+// Non-blocking warnings, one row per line that produced one. Amber, so it reads as neither
+// the red of a refusal nor the green of a clean run: the command DID apply.
+.script-block__warning {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    font-size: 11px;
+    border-top: 1px solid $script-border;
+    background: rgba(245, 158, 11, 0.08);
+    color: #b45309;
+
+    i {
+        font-size: 14px;
+        color: #f59e0b;
+    }
+}
+
 // AI Disclaimer removed from ScriptBlock — shown globally in JodieWindow
 
 // ============================================

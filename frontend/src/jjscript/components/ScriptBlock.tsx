@@ -287,6 +287,20 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
 
     const lineCount = displayCode.split('\n').length;
 
+    /**
+     * The warnings the run produced, one row per (line, warning), in EDITOR numbering.
+     *
+     * Derived from `lineStates` instead of accumulated in a state of its own: every branch that
+     * finishes a command already stores its `result` there, so there is no writer to keep in
+     * step and nothing to reset — the `useEffect` that rebuilds `lineStates` on a new script
+     * clears these with it.
+     */
+    const warningLines = useMemo(
+        () => lineStates.flatMap((ls, idx) =>
+            (ls.result?.warnings ?? []).map(text => ({ line: getScriptLine(idx), text }))),
+        [lineStates, getScriptLine]
+    );
+
     // Initialize line states
     useEffect(() => {
         setLineStates(
@@ -1509,6 +1523,23 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                                 ? `Nothing was executed: ${outcome.message}`
                                 : `Error at line ${outcome.line}: ${outcome.message}`}
                     </span>
+                </div>
+            )}
+
+            {/* Warnings strip — non-blocking, one row per line that produced one. A warning is
+                not an error: the command ran and its write happened, so this never pauses the
+                run and never enters the error dialog. It exists because R-M2U-1 makes a
+                near-homonym LEGAL on condition that the write announces it, and a warning that
+                nothing renders is not an announcement. Numbered like every other line the user
+                reads, in editor space. */}
+            {warningLines.length > 0 && (
+                <div className="script-block__warnings">
+                    {warningLines.map((w, i) => (
+                        <div className="script-block__warning" key={i}>
+                            <i className="bi bi-exclamation-triangle" />
+                            <span>Line {w.line}: {w.text}</span>
+                        </div>
+                    ))}
                 </div>
             )}
 

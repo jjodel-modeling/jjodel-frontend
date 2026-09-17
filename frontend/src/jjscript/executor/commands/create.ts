@@ -18,6 +18,8 @@ import {
 import { qualifiedNameToString } from '../../parser/grammar';
 import { getProject, getDefaultParent, needsParent, getTargetMetamodel } from '../utils';
 import { executeCreateInstance } from './instance';
+import { checkM2NameUniqueness } from '../../../model/logicWrapper/nameUniqueness';
+import { duplicateNameRefusal, m2KindForElementType, withNearHomonymWarning } from '../m2CreateGuard';
 
 // Import Jjodel model types and actions
 import {
@@ -349,6 +351,29 @@ export async function executeCreate(
             };
         }
 
+        // ── Uniqueness (S1-M2, R-M2U-1..6): the script is a CONSUMER of the one verdict ──
+        //
+        // Until now every creator below called `D*.new` unconditionally, so `create class X`
+        // on a metamodel that already holds `X` made a second one and reported success. From
+        // then on every script naming `X` stopped on the ambiguity message. R-M2U-4 already
+        // says where the gate belongs: `D*.new` is the loading door and stays ungated, and the
+        // rule applies where a user gesture arrives. A `create` typed or generated is one.
+        //
+        // Consulted here, once, rather than in each of the nine creators: `parentElement` is
+        // settled at this point (the parent-not-found and wrong-kind refusals above already
+        // returned), and it is the PROSPECTIVE father the verdict resolves the namespace from.
+        // A wrong-KIND parent that slipped through — `create attribute a in SomeEnum` — makes
+        // the namespace empty and the verdict accept, so the creator's own `isClass` refusal
+        // still surfaces unchanged.
+        const m2kind = m2KindForElementType(elementType);
+        let uniqueness: ReturnType<typeof checkM2NameUniqueness> | undefined;
+        if (m2kind) {
+            uniqueness = checkM2NameUniqueness({ father: parentElement, kind: m2kind, name });
+            const refusal = duplicateNameRefusal(
+                elementType, name, uniqueness, metamodelNameFor(parentElement, targetMetamodel));
+            if (refusal) return refusal;
+        }
+
         // Create the element based on type
         let result: ExecutionResult;
 
@@ -403,6 +428,13 @@ export async function executeCreate(
                 };
         }
 
+        // The other half of R-M2U-1: `Foo` next to `foo` is legal, and the write SAYS SO. On a
+        // failed create there is nothing to announce — the name was never taken.
+        if (result.success) {
+            const warnings = withNearHomonymWarning(result.warnings, uniqueness);
+            if (warnings !== result.warnings) result = { ...result, warnings };
+        }
+
         return result;
 
     } catch (error) {
@@ -413,6 +445,23 @@ export async function executeCreate(
             message: `Failed to create ${elementType}: ${err.message}`,
             errors: [{ code: 'CREATE_ERROR', message: err.message }]
         };
+    }
+}
+
+/**
+ * The metamodel a refusal names, for the sentence `duplicateNameRefusal` composes.
+ *
+ * `targetMetamodel` first because that is the scope the handler actually resolved against; the
+ * parent's own model is the fallback for a scope-bound run, where `getTargetMetamodel` returns
+ * null by design (`utils.ts`) and the parent came from the context instead. Guarded: this only
+ * decorates an error message, and a proxy read that throws must not replace a useful refusal
+ * with `CREATE_ERROR`.
+ */
+function metamodelNameFor(parent: any, targetMetamodel: any): string | undefined {
+    try {
+        return targetMetamodel?.name ?? parent?.model?.name ?? undefined;
+    } catch {
+        return undefined;
     }
 }
 
