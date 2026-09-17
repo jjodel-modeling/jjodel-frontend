@@ -20,16 +20,16 @@ in its own commit.
 **Outcome**: ✅ completed
 **Corregge**: —
 **Causa**: —
-**Regressions**: unknown — nothing was opened in the running app: acceptance criteria 1–3 are visual
-and belong to Alfonso, and the field stays `unknown` until he answers. Criterion 4 is covered by
-test and bench, criterion 5 by the gates: `npm run typecheck` exit 2, **33** on full output, set
-byte-identical to the pre-edit run (`diff` exit 0), **0** in the two touched files. `npx vitest run`
-**3728 passed, 0 failed**, the same 9 files red at import (`diff` exit 0; those 9 fail at import on
-`window is not defined` and are why vitest's own exit is non-zero, as before). Of the +10 against the
-4b run's 3718, **exactly 1 is this task** (symbolRecognition 14→15); the other 9 are the jjscript
-lane's `2b357af17` and `fad85bae5`, the second of which adds a test file (165→166) — measured from
-the commits, not assumed. `npm run build` exit 0, `✓ built in 1m 45s`, only the pre-existing chunk
-warning.
+**Regressions**: no — verified on screen by Alfonso (ACK 2026-09-17) on localhost:3001 in Advanced
+mode, acceptance criteria 1–3 answered and all five checks holding (listed under **Smoke visivo**).
+Criterion 4 is covered by test and bench, criterion 5 by the gates: `npm run typecheck` exit 2,
+**33** on full output, set byte-identical to the pre-edit run (`diff` exit 0), **0** in the two
+touched files. `npx vitest run` **3728 passed, 0 failed**, the same 9 files red at import (`diff`
+exit 0; those 9 fail at import on `window is not defined` and are why vitest's own exit is non-zero,
+as before). Of the +10 against the 4b run's 3718, **exactly 1 is this task** (symbolRecognition
+14→15); the other 9 are the jjscript lane's `2b357af17` and `fad85bae5`, the second of which adds a
+test file (165→166) — measured from the commits, not assumed. `npm run build` exit 0, `✓ built in 1m
+45s`, only the pre-existing chunk warning.
 **Out-of-scope changes**: no — 2 files, both inside «`VertexAuthoringPanel.tsx` and its tests». The
 test went into `symbolRecognition.test.ts` because that is the only place criterion 4 can be
 executed: the panel itself has no test file and cannot have one (see **Notes**).
@@ -37,8 +37,13 @@ executed: the panel itself has no test file and cannot have one (see **Notes**).
 change and no persistence. `Conditional<T>` already admitted all three shapes on every axis, so the
 IR the panel can now write was already a legal value that `compileConditional` already resolved;
 nothing to migrate, no `irVersion` bump. Same call as slice 4a on this same file.
-**Smoke visivo**: non eseguito — the app was not opened; the ordered list of what to look at,
-criterion 3 included, was handed to Alfonso in chat.
+**Smoke visivo**: passato — run by Alfonso on 2026-09-17 on localhost:3001 in Advanced, on the
+ordered list handed to him in chat: (1) the rules table appears on the form axis and starts empty,
+(2) per-instance rendering follows the rules with the default as fallback, (3) an existing
+`{when,then,else}` survives open/close without an edit and is rewritten to `{rules, default}` only
+after a real edit, (4) Basic mode shows the form rules without offering an overwrite, (5) preset
+application with `keepRules` behaves as observed in slice 4b. Deferred to slice 5 by Alfonso in the
+same ACK, not defects of this slice: the «Custom symbol» title and the absence of a static preview.
 **Notes**: Criterio (anche nel commit e nel codice): la tabella va agli assi con **più di due valori**, i booleani tengono il predicato singolo. Banco su `symbolRecognition`: leggere il `default` su tutti gli assi = **3 rossi** (questo più i due della slice 2), sul solo form = **1 rosso**, ed è questo test, nessun altro nel file lo prende. Il prop in sé NON è coperto: `VertexAuthoringPanel` non si importa nel banco (monaco via `joiner`) e §5 vieta il test sul sorgente — lacuna dichiarata.
 **Prompt document name**: 2026-09-17 10:48
 
