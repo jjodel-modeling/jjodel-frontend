@@ -4,11 +4,17 @@
 
 Loaded only when working under `frontend/src/jjtl/`. Moved verbatim out of the root
 `AGENTS.md` (§12.7, §12.8) on 2026-08-05: both only apply while editing JjTL, and the
-root file is always in context.
+root file is always in context. §12's remaining top-level lines (full reference, roadmap,
+former §12.7 pointer) moved here verbatim on 2026-09-19 (P-2026-09-18-1930 Phase 3); §12.6
+(the cross-language table) stays in root `AGENTS.md` — it governs JjEL and JjScript too,
+not only JjTL.
 
-**Full reference**: `frontend/src/jjtl/SPEC.md`. Cross-language symbol ownership
-(`do`, `->`, `:`, `=>`, `--`) stays in the root `AGENTS.md` §12.6 — it governs JjEL and
-JjScript too.
+**Full reference**: `frontend/src/jjtl/SPEC.md` — syntax and grammar, AST-bridge mappings, the execution model (incl. the 4-strategy property resolution), trace model, JjEL integration, and known bugs/gaps. Single source; not duplicated here. Only the subsections **not** in the SPEC are kept below.
+
+**Roadmap**: `docs/jjtl/JJTL-DEVELOPMENT-PLAN.md`
+
+Cross-language symbol ownership (`do`, `->`, `:`, `=>`, `--`) stays in the root `AGENTS.md`
+§12.6 — it governs JjEL and JjScript too.
 
 ---
 

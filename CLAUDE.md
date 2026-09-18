@@ -373,37 +373,9 @@ home is `alfonso-frontend-jjtl`; a rule binds where it is written, not where it 
 
 ## 7. Design system
 
-**Full spec**: `docs/DESIGN-SYSTEM.md`.
-
-### 7.1 Essentials
-
-- **Icons**: Bootstrap Icons only (`bi bi-*`). No other icon libraries.
-- **Code font**: `'IBM Plex Mono', Monaco, Consolas, monospace`.
-- **Grid**: 8px base. Standard padding: 8 / 12 / 16 / 24.
-- **Cyan (#0ea5e9)**: never as button background. Only focus states, active indicators, links.
-- **Primary buttons**: slate gradient `linear-gradient(135deg, #334155, #1e293b)`. White icons.
-- **Horizontal toggle switches**: 36×20 px. Active `#334155` (slate, not cyan). Inactive `#cbd5e1`. Label on the left, never inside. Impl: `styles/components/_switch.scss`.
-- **Vertical toggles**: only for debug/advanced mode in the navbar.
-- **Multi-select chips**: slate-100 (`#f1f5f9`), border slate-200, label slate-700. Selected option subtle cyan `rgba(14,165,233,0.08)`. Impl: `inputselect.scss`, `viewapplyto.scss`.
-
-### 7.2 Token system
-
-**Single source of truth**: `styles/tokens/_colors-light.scss` + `_colors-dark.scss` (both, always). Entry point: `styles/tokens/index.scss`. Active variables in `styles/variables.scss`.
-
-**Legacy tokens — do NOT reintroduce**:
-- `--accent` (use `--color-accent`)
-- `--bg-1` through `--bg-5`
-- `--secondary`
-- `--terziary` (typo intentional in the legacy name — also eliminated)
-- `--radius`
-- `--color` (ambiguous — use `--color-text-primary` or `--color-accent`)
-
-**Current state**: 4 residual `var(--accent)` in `frontend/src/components/editor-v2/EditorV2.scss` awaiting cleanup, measured 2026-08-18 with a regex that separates the bare token from `--accent-muted` / `--accent-subtle`, which are different tokens and not legacy. The count claimed here until then was 1; it was 5 before the `toolbar-syntax-pill` block was retired with R-IRN-10, which took one of them and did **not** close the ticket. Two more live occurrences sit outside that file, in `redux/defaults/views.ts` (249, 659). Do not add new occurrences; the open ticket is for removal, not propagation.
-
-**Rules for new tokens**:
-- `grep -r` before adding, to avoid collisions
-- Always add to both files (light + dark)
-- Never define CSS variables inside component files — everything in `tokens/`
+Moved to `frontend/src/styles/CLAUDE.md` on 2026-09-19 (P-2026-09-18-1930 Phase 3) — loads
+when work is already under that directory. Rules 26-28 in the non-negotiable block are the
+one-line versions that must be known before then.
 
 ---
 
@@ -495,17 +467,12 @@ Three `// TODO: sidebar` bookmarks remain in code for future sidebar approach.
 
 ## 11. JjEL — Expression Language
 
-Expression evaluation engine, used by both JjTL and JjScript. Standalone language with its own lexer/parser/evaluator/type system.
-
-**Full reference**: `frontend/src/jjel/SPEC.md` — core constructs, grammar and operator precedence, design decisions (incl. `forall`'s set-theoretic semantics), the 100+ built-in methods, evaluation rules, and contexts of use. Single source; not duplicated here.
+Moved to `frontend/src/jjel/CLAUDE.md` on 2026-09-19 (P-2026-09-18-1930 Phase 3) — loads when
+work is already under that directory.
 
 ---
 
 ## 12. JjTL — Transformation Language
-
-**Full reference**: `frontend/src/jjtl/SPEC.md` — syntax and grammar, AST-bridge mappings, the execution model (incl. the 4-strategy property resolution), trace model, JjEL integration, and known bugs/gaps. Single source; not duplicated here. Only the subsections **not** in the SPEC are kept below.
-
-**Roadmap**: `docs/jjtl/JJTL-DEVELOPMENT-PLAN.md`
 
 ### 12.6 Language boundaries — JjEL / JjTL / JjScript
 
@@ -540,54 +507,23 @@ The lexer fix is a lane of its own, not yet opened. This note records what is tr
 - `=>` — lambda in both JjEL and JjTL.
 - `--` — comments in both JjEL and JjTL.
 
-### 12.7 Editing the language
-
-The 5-file checklist for a syntax change and the current parser limitations live in
-`frontend/src/jjtl/CLAUDE.md`, which loads when working under that directory.
+Full reference, roadmap and the syntax-change checklist moved to
+`frontend/src/jjtl/CLAUDE.md` on 2026-09-19 (P-2026-09-18-1930 Phase 3) — loads when work is
+already under that directory.
 
 ---
 
 ## 13. JjScript — Scripting Language
 
-Imperative scripting for metamodel manipulation.
-
-### 13.1 Directory structure
-
-```
-frontend/src/jjscript/
-├── autocomplete/
-├── components/
-├── executor/         (with commands/)
-├── normalizer/
-├── parser/
-├── recovery/
-├── services/
-├── __tests__/
-├── index.ts
-└── types.ts
-```
-
-### 13.2 Tests
-
-Test files in `jjscript/__tests__/`: `lexer.test.ts`, `parser.test.ts`, `commands.test.ts`, `grammar.test.ts`, `context-binding.test.ts`.
+Moved to `frontend/src/jjscript/CLAUDE.md` on 2026-09-19 (P-2026-09-18-1930 Phase 3) — loads
+when work is already under that directory.
 
 ---
 
 ## 14. Ecore / XMI I/O
 
-Importers and exporters for Ecore (.ecore) and XMI (.xmi) formats.
-
-**Service files**:
-- `frontend/src/services/export/EcoreService.ts`
-- `frontend/src/services/export/XMIService.ts`
-
-**Tests**: `frontend/src/services/export/__tests__/ecore-io.test.ts` (36 tests).
-
-**Fixtures**: `frontend/src/__tests__/fixtures/xmi-m1/`.
-
-**Naming convention**: `Pointer_<UPPER>` for primitive type IDs (e.g., `Pointer_ESTRING`) distinguishes canonical from user-defined types.
-
-**Round-trip discipline**: Ecore export uses `pkg.__raw.uri` (D-layer) for byte-identical nsURI. See §3.7.
+Moved to `frontend/src/services/export/CLAUDE.md` on 2026-09-19 (P-2026-09-18-1930 Phase 3) —
+loads when work is already under that directory.
 
 ---
 
