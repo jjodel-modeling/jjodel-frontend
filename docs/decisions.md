@@ -55,7 +55,8 @@ citare l'id con la data. Le decisioni sostituite si spostano in "Superate", con 
   dell'archivio descrive un blocco invertito: è superata da questa clausola, e i batch già
   scritti non si toccano.
 - **RC-13** (2026-09-01) — **Una corsia per giro, e l'albero è condiviso.** Le regole operative
-  della concorrenza fra corsie stanno in `docs/PROTOCOL.md` P13, che questa clausola iscrive senza
+  della concorrenza fra corsie stanno in `docs/PROTOCOL.md` **P13** (spostato verbatim da
+  `CLAUDE.md` §6.4 il 2026-09-18, P-2026-09-18-1930 Fase 2), che questa clausola iscrive senza
   duplicare: una corsia per giro, docs e codice mai nello stesso commit, `git add` per pathspec,
   lo staged altrui intoccabile, **niente `git stash` su albero condiviso**, rotazione del log in
   corsia esclusiva. Nasce da un incidente misurato: uno `stash push -- <paths>` con dentro un
