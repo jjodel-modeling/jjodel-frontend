@@ -6,6 +6,61 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 
 ---
 
+## 2026-09-18 — docs: the ObjectNode comment states what the resolver does on a wildcard view (item E)
+**Prompt**: `claude_2026-09-18_1650_prompt_view_quattro_difetti_minori.md`, item E: the comment at
+`ObjectNode.tsx:108-110` lumped "no IR viewpoint" and "a wildcard IR view" together as both making
+the object "keep rendering in full", implying one code path. They are not the same path: a wildcard
+(`'*'`) view resolves non-null and renders through the IR default object view at minimal specificity
+(`irResolveCore.ts`); only "no IR viewpoint" is the native path. Comment-only, no code change.
+**Files touched**: `6001add8b`, 1 file: `components/editor-v2/nodes/ObjectNode.tsx` (comment above
+`irViewpointActive`, 5 lines replacing 3). This entry in its own commit.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — comment-only, no gate run.
+**Out-of-scope changes**: no.
+**Layer Impact Report**: not-required — comment only, no behaviour changed.
+**Smoke visivo**: non applicabile — no runtime surface changed.
+**Notes**: Anchor verified live before editing (rule 15): still `:108-110`, unchanged since the
+prompt was written. Text is the user's exact replacement, given verbatim in the ACK.
+**Prompt document name**: 2026-09-18 16:50
+
+## 2026-09-18 — fix: focus the inline rename input when it mounts (item D)
+**Prompt**: `claude_2026-09-18_1650_prompt_view_quattro_difetti_minori.md`, item D: the rename
+`<input>` shown right after a view is created never receives focus, on both creation paths.
+Fase 1 (read-only) measured the cause: the store write behind a new view is a macrotask
+(`action.ts:349`'s `setTimeout(…, 0)`), so the row mounts in a commit strictly later (98-297ms
+across two probe runs) than the parent's `useEffect([renamingViewId])`, which always reads a null
+ref and never calls `.focus()`/`.select()` at all — not "focus stolen", focus never applied. This
+also falsifies an existing comment claiming same-commit React 18 batching. Fase 2 moved the focus
+effect into `SubViewItem`, keyed on its own `isRenaming`, guaranteeing the effect and the ref
+attachment land in the same commit.
+**Files touched**: `faa893a77`, 1 file: `components/TreeViewSidebar/TreeViewContent.tsx` (new
+`useEffect([isRenaming])` inside `SubViewItem`; the dead parent effect on `[renamingViewId]`
+removed; the stale batching comment at the blank-view creation site rewritten to state the
+measured cause). Discovery report `docs/discovery/discovery_2026-09-18_rename_input_focus.md`
+(new) and this entry travel in the docs commit, per lane discipline (§6.4: docs and code never in
+the same commit).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no (Alfonso ACK, see Smoke visivo). `npm run typecheck` exit 2, **33** on full
+output, the declared baseline, **0** in the touched file; control `Measurable` → 6. `npx vitest
+run` from `frontend/`: **3821 passed, 0 failed**, the same 9 files red at import as before. `npm
+run build` exit 0.
+**Out-of-scope changes**: no.
+**Layer Impact Report**: not-required — no §3.1 file; local component state and a ref already in
+scope, no D/L or sync-layer surface touched.
+**Smoke visivo**: passato — Alfonso on localhost:3000, ACK of 2026-09-18: rename box editable at
+once on both paths, Enter commits, Escape on first rename deletes, the ~200ms row delay observed
+and pre-existing.
+**Notes**: Pass criterion renegotiated mid-task. Stated first as "activeElement === input at
++50ms after click": FAILed on both paths (mount itself lands at +206/+207ms, unrelated pre-existing
+store lag, out of this item's scope). Restated by Alfonso as "focused within 20ms of its own
+mount": measured 9ms and 1ms, PASS both paths — recorded as a measurement, not a defect of this
+lane. Probe deleted after the run (gitignored, never committed).
+**Prompt document name**: 2026-09-18 16:50
+
 ## 2026-09-18 — fix: an empty metaclass list is a draft, never a commit (item C)
 **Prompt**: `claude_2026-09-18_1650_prompt_view_quattro_difetti_minori.md`, item C: switching the
 wildcard off writes `metaclasses: []`, which passes `validateIR` (probe G1), so the debounced

@@ -2,7 +2,7 @@
 
 Prompt-ID: P-2026-09-18-1650
 Chat: C-2026-09-18-1650
-Status: da eseguire
+Status: eseguito 2026-09-18 · lane views · faa893a77
 Date: 2026-09-18 16:50 (Europe/Rome)
 Type: fix (four independent items, one code commit each)
 Branch: `validation-skeleton` in `/Users/alfonso/jjodel`
