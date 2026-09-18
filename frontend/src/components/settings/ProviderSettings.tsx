@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '../common/Button';
 import './ProviderSettings.css';
-import {AI, AIConfig, ALL_AI_PROVIDERS, JodieConfig, TAIProvider} from "../../types/jodie";
+import {AI, AIConfig, AIProvider, ALL_AI_PROVIDERS, JodieConfig, TAIProvider} from "../../types/jodie";
 import {GObject, U} from "../../joiner";
 
 
@@ -160,21 +160,41 @@ export const ProviderSettings: React.FC = () => {
                                     </div>
 
                                     <div className="form-group">
-                                        <label htmlFor={`${provider.name}-model`}>Model (optional)</label>
-                                        <select
-                                            id={`${provider.name}-model`}
-                                            value={formData.model}
-                                            onChange={e => {
-                                                setFormData({ ...formData, model: e.target.value });
-                                                config.model = e.target.value;
-                                            }}
-                                            className="form-select"
-                                        >
-                                            <option value="">Default model</option>
-                                            {Object.keys(provider.versions).map(name => (
-                                                <option key={name} value={name}>{provider.versions[name].label}</option>
-                                            ))}
-                                        </select>
+                                        <label htmlFor={`${provider.name}-model`}>Model{provider.name === AIProvider.Custom ? '' : ' (optional)'}</label>
+                                        {provider.name === AIProvider.Custom ? (
+                                            // Custom is an arbitrary OpenAI-compatible endpoint: its only registry
+                                            // "version" is a placeholder ('custom') that is not a real model ID and
+                                            // must never be sent. A free-text field lets the user supply the actual
+                                            // model the endpoint expects (e.g. 'anthropic/claude-sonnet-4', 'gpt-4o').
+                                            // This value feeds config.model, which AIProviderService.chat() uses.
+                                            <input
+                                                id={`${provider.name}-model`}
+                                                type="text"
+                                                value={formData.model === 'custom' ? '' : formData.model}
+                                                onChange={e => {
+                                                    setFormData({ ...formData, model: e.target.value });
+                                                    config.model = e.target.value;
+                                                }}
+                                                placeholder="Model ID your endpoint expects (e.g. anthropic/claude-sonnet-4)"
+                                                className="form-input"
+                                                autoComplete="off"
+                                            />
+                                        ) : (
+                                            <select
+                                                id={`${provider.name}-model`}
+                                                value={formData.model}
+                                                onChange={e => {
+                                                    setFormData({ ...formData, model: e.target.value });
+                                                    config.model = e.target.value;
+                                                }}
+                                                className="form-select"
+                                            >
+                                                <option value="">Default model</option>
+                                                {Object.keys(provider.versions).map(name => (
+                                                    <option key={name} value={name}>{provider.versions[name].label}</option>
+                                                ))}
+                                            </select>
+                                        )}
                                     </div>
 
                                     <div className="form-actions">
