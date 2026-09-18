@@ -6,6 +6,60 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 
 ---
 
+## 2026-09-18 — feat(editor-v2): multi-instance preview of the Symbol Editor (slice 5)
+**Prompt**: `claude_2026-09-17_1425_prompt_slice5_preview_multi_istanza.md` — slice **5**, the last
+of the 1b round: the preview strip draws up to three REAL instances of the view, each with the axes
+that instance resolves to and a caption saying which rule won on it. The prompt took the five
+decisions the handoff docs left open (D8-a caption per active section, D8-b fallback glyph for a
+conditional form, D8-c the title stays «Custom symbol», D8-d manual size per instance, D8-e fixed
+strip) and supplied six measured preconditions, re-checked one by one in Fase 1. Two-phase with a
+conditional stop; none of the three stop conditions held, so Fase 2 ran in the same session.
+**Files touched**: `5c4db90b1`, 8 files, code only (the prompt's own declared list, so rule 19's
+threshold is crossed with the list already written and confirmed). `ir/irCompile.ts` (+33:
+`matchIndexOf`, additive, on no render path), `authoring/useCanvasNodeBox.ts` (+80:
+`useCanvasNodeBoxes(viewId, max)`; `useCanvasNodeBox` keeps its signature and now delegates its scan
+to the shared `resolveCanvasNodes(viewId, 1)`), `authoring/previewInstances.ts` (**new**, pure: the
+per-instance resolution and the caption), `authoring/SymbolEditorModal.tsx` (the wiring: boxes,
+signature, ReadCtx, tiles; `currentAxesPreset` gains the D8-b fallback and stops returning null),
+`authoring/SymbolEditorModal.scss` (the tile row and the tile), `authoring/SymbolBoxPreview.tsx`
+(a `caption` prop and the narrowed «Declared limit» paragraph), plus the two test files
+`ir/__tests__/matchIndexOf.test.ts` and `authoring/__tests__/previewInstances.test.ts` (**new**, 30
+tests). `VertexAuthoringPanel.tsx` was not touched. Discovery report and this entry in a separate
+docs commit.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — verified on screen by Alfonso (ACK 2026-09-18), all six acceptance criteria
+holding: 1–4 on the ordered list under **Smoke visivo**, 5 by the two mutation benches in
+**Notes**, 6 by the gates: `npm run typecheck` exit 2, **33** on full output, the declared
+baseline, and **0** in the eight touched files. `npx vitest run` **3811 passed, 0 failed**, 171
+files with the same **9** red at import (`window is not defined`, all under `jjscript/`, `jjtl/`
+and `utils/`, none of them this lane's). Of the +83 tests against the 3728 of the shape-axis run,
+**exactly 30 are this task**, the two new files; the rest is the jjscript lane's. `npm run build`
+exit 0, `✓ built in 39.41s`, only the pre-existing chunk warning and the pre-existing `bordr` typo
+in `editors/properties-with-tree-view.scss:1210`.
+**Out-of-scope changes**: no — 8 files, all of them on the prompt's list.
+**Layer Impact Report**: not-required — no §3.2 file and no D-layer write path. Everything this
+slice adds is a READ: `matchIndexOf` compiles predicates and evaluates them, the modal reads
+`store.getState().idlookup` behind a primitive-signature subscription, and no action is dispatched
+on any new path. No schema change, no persistence, no `irVersion` bump. Same call as slices 4a, 4b
+and the shape-axis table on these same files.
+**Smoke visivo**: passato — run by Alfonso (ACK 2026-09-18) on the ordered list handed to him in
+chat, criteria 1–4 all holding: (1) a view with 3 instances satisfying different rules shows three
+tiles with three different, correct captions in the Symbol, Fill, Marker and Border sections, the
+winning row being the FIRST one that holds, not the last; (2) the same view in Padding or Text
+shows three size captions, and one resized instance reads `manual size` on its own tile only;
+(3) with 0 instances the strip is identical to today, except that a conditional form draws its
+fallback glyph; (4) switching between 1 and 3 instances, or between sections, moves nothing outside
+the strip: same strip height, same panel position, no layout shift.
+**Notes**: Banchi: `matchIndexOf` all'ULTIMA regola vera = **2 rossi**, entrambi in
+`matchIndexOf.test.ts`; caption Border all'ULTIMA riga = **1 rosso**, il test che porta quel nome.
+`BorderOverrideRow` porta `whenText` e non `when`: ri-derivata in `borderRowPredicates`, vincolata
+da un test di equivalenza su fixture divergente; l'alternativa migliore (campo `when` opzionale)
+esce dallo scope. `&__preview-empty` resta con `// TODO: cleanup`. Referto:
+`discovery_2026-09-17_slice5_preview_instances.md` §5.
+**Prompt document name**: 2026-09-17 14:25
+
 ## 2026-09-17 — feat(editor-v2): the rules table on the shape axis
 **Prompt**: `claude_2026-09-17_1048_prompt_regole_su_shape.md` — give `SHAPE` the rules table that
 `FILL`, `MARKER` and the three border axes already have, shaped like the border ones (no

@@ -2,7 +2,7 @@
 
 Prompt-ID: P-2026-09-17-1425
 Chat: C-2026-09-17-1425
-Status: da eseguire
+Status: eseguito 2026-09-18 · lane symbol-editor · 5c4db90b1
 Date: 2026-09-17 14:25 (Europe/Rome)
 Type: feat (authoring UI)
 Branch: `validation-skeleton` in `/Users/alfonso/jjodel`
