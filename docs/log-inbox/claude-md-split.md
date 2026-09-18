@@ -51,3 +51,35 @@ lane (not named in Phase 2's instructions). Flagged to Alfonso in the Step 4 har
 two new IR-related discovery/probe files was present in the shared tree throughout; left
 untouched per §6.4/P13 (RC-13).
 **Prompt document name**: 2026-09-18 19:30
+
+## 2026-09-19 — docs: CLAUDE.md split Phase 3 — design system + language sections to nested modules
+**Prompt**: `claude_2026-09-18_1930_prompt_claude_md_split_oltre_limite.md` Phase 3 — move §7
+(Design system), §11 (JjEL), §13 (JjScript), §14 (Ecore/XMI I/O) verbatim to new nested,
+directory-scoped CLAUDE.md files; merge root §12's non-table content (Full reference, Roadmap)
+into the pre-existing `frontend/src/jjtl/CLAUDE.md`, keeping §12.6 (cross-language symbol table)
+in root since it governs JjEL and JjScript too. Rules 26-28 stay in the non-negotiable block as
+the one-line design-system versions. Run on the trunk per §6.6/P15.
+**Files touched**: `AGENTS.md`, `CLAUDE.md`, `frontend/src/jjel/CLAUDE.md` + `AGENTS.md` (new),
+`frontend/src/jjscript/CLAUDE.md` + `AGENTS.md` (new), `frontend/src/services/export/CLAUDE.md` +
+`AGENTS.md` (new), `frontend/src/styles/CLAUDE.md` + `AGENTS.md` (new), `frontend/src/jjtl/CLAUDE.md`
++ `AGENTS.md` (merged in). Commit `62d139fa1`.
+**Outcome**: ⚠️ partial — every named block moved verbatim, all three gates green (`gen:agents`,
+`check:agents`, `check:docs`), `## 0.` heading intact. Root CLAUDE.md 44726 -> 41386 bytes:
+under the Phase 1/2 combined reduction trend but still above the prompt's stated "<40000,
+expected around 21000-25000" target. No further sections were moved to close the gap — none of
+§9, §16-21, the non-negotiable block, §2.5, §4, §6, §15 were named in Phase 3's scope, and closing
+the gap further would mean moving un-named sections, which Rule 1 does not authorize on this
+lane's own initiative.
+**Corregge**: —
+**Causa**: (a) — the prompt states the byte target as "expected around", not as one of its own
+four enumerated acceptance items (verbatim moves, gates green, `## 0.` heading, phase 0 measurement
+shown); the phase satisfies all four but undershoots the numeric expectation. Flagged for Alfonso
+in the Step 4 hard-stop report rather than resolved unilaterally.
+**Regressions**: no.
+**Out-of-scope changes**: no.
+**Layer Impact Report**: not-required — docs-only.
+**Smoke visivo**: non applicabile.
+**Notes**: other lane's concurrent WIP in `frontend/src/components/editor-v2/viewpoint/ir/*` and
+three IR-related discovery/probe files (one new since Phase 2) present in the shared tree
+throughout; left untouched per §6.4/P13 (RC-13).
+**Prompt document name**: 2026-09-18 19:30
