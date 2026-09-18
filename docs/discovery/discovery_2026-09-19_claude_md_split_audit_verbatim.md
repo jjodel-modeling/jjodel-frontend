@@ -138,9 +138,34 @@ in node on `e22ccfe5e` (fence-aware, newline included): §5 9,074; §3 with 3.1,
 4,900; the non-negotiable block and preamble 4,593; §21 4,479; §12 (the language table and stubs)
 2,209; §6 2,027; §19 1,956; §17 1,831; §8 1,795; §18 1,190.
 
-## 7. What this audit did not do
+## 7. The three gates in the trunk worktree (corrected 2026-09-19)
 
-The three gates were not run for this report: no gated file (`CLAUDE.md`, `AGENTS.md`,
-`docs/PROTOCOL.md`, `docs/claude-code-log.md`) was touched. The trunk worktree has no
-`frontend/node_modules`, and `npm run` resolves `package.json` under `frontend/`, not at the root.
-The previous run of the three gates is recorded in the Phase 3 inbox entry and was not re-measured.
+The first version of this section said the gates could not run in `/Users/alfonso/jjodel-release`
+because `frontend/node_modules` was missing. That conflated two facts, both of which were true and
+neither of which blocks the gates.
+
+1. `frontend/node_modules` was absent when this report was first written. It is now a symlink to
+   `/Users/alfonso/jjodel/frontend/node_modules` (`stat`: created 2026-09-19 00:52, owner `alfonso`),
+   and a `vite` dev server started at 00:11 runs through
+   `/Users/alfonso/jjodel-release/frontend/node_modules/.bin/vite`. It belongs to the lane that works
+   on the trunk in parallel, not to this one.
+2. `gen:agents`, `check:agents` and `check:docs` need no `node_modules` at all. Their sources import
+   only `node:` built-ins (`scripts/gates/check-docs.ts`, `scripts/gates/check-agents.ts`,
+   `scripts/generate-agents.mjs`) and run under `node --experimental-strip-types`. `typecheck` and
+   `build` do need it, and they are not among the three gates. The earlier "gates green" of the Phase
+   1 to 3 inbox entries is therefore credible without any install.
+
+`npm ci` was not run. With the symlink in place it would replace a directory another lane's live dev
+server is running through, and `npm ci` deletes an existing `node_modules` before installing. The
+install stays possible once that lane is done with the link. The gates do not wait for it.
+
+Measured at `f8ede528a`, in the trunk worktree, from `frontend/`, with the exit status of each:
+
+```
+npm run gen:agents     # exit 0, 9 written, 0 skipped; git status of every AGENTS.md and CLAUDE.md: empty
+npm run check:agents   # exit 0, PASS every generated document matches its source
+npm run check:docs     # exit 0, 3/3 checks passed, 2 non-blocking warnings (Corregge keys of 2026-09-02, pre-existing)
+```
+
+`npm run` resolves `package.json` under `frontend/`, not at the root of the repository: from the root
+it fails with ENOENT, which is what stopped the first attempt of this audit.
