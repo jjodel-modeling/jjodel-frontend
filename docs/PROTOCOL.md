@@ -1,7 +1,7 @@
 # PROTOCOL.md — protocollo di esecuzione per Claude Code
 
 Posizione: `docs/PROTOCOL.md` nel repo `jjodel-frontend`.
-Versione: 1.1 (2026-08-15)
+Versione: 1.2 (2026-09-18)
 
 Questo file contiene le clausole che prima venivano ricopiate per esteso in ogni prompt. I prompt ora le citano per numero. Se una clausola cambia, cambia qui e vale ovunque da subito.
 
@@ -55,6 +55,8 @@ Si committa a ogni passo compiuto, anche prima della verifica visiva di Alfonso.
 `git add` solo con path espliciti. Mai `git add .`. Se lo stato del working tree non corrisponde a quanto dichiara il prompt, fermati e segnalalo prima di toccare qualsiasi cosa.
 
 Commit message: tipo convenzionale (`feat:`, `fix:`, `refactor:`, `docs:`), in inglese, una riga. Il tipo è indicato nel prompt: se manca, chiedilo, non sceglierlo.
+
+Il corpo di ogni commit porta il trailer `Model: <vendor> <name> <version>` — per esempio `Model: Z.ai GLM 5.3` o `Model: Anthropic Claude Opus 5` — che nomina il modello che ha eseguito il task. Il valore è quello che il banner di sessione riporta, non quello che dichiarano `CLAUDE.md` §0 o `.claude/settings.json`: il trailer registra l'esecutore, non l'intenzione. Il trailer è additivo: la riga `Co-Authored-By`, dove il tooling la emette, resta, perché la serie storica è chiaviata su `Co-Authored-By` e rompere quella chiave costerebbe più della duplicazione.
 
 Per modifiche che toccano più di 5 file: elenca prima tutti i file e cosa cambia in ciascuno, poi procedi.
 

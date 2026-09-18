@@ -13,7 +13,7 @@
 NON-NEGOTIABLE RULES — re-read before every task
 ═══════════════════════════════════════════════════════════════════
 Canonical list — §20.1 points here; rules are not restated there.
-Shared engagement rules live in docs/PROTOCOL.md (P1..P9); see §1.
+Shared engagement rules live in docs/PROTOCOL.md (P1..P12); see §1.
 
 — Scope & preservation —
  1. Touch only files explicitly listed in the prompt. A broader
@@ -94,7 +94,7 @@ Shared engagement rules live in docs/PROTOCOL.md (P1..P9); see §1.
 
 Le regole di ingaggio condivise (scope, lettura preventiva, two-phase e discovery
 report, commit, build, smoke visivo, prompt log) stanno in `docs/PROTOCOL.md`
-come clausole P1..P9. I prompt le citano per numero. Questo file non le duplica.
+come clausole P1..P12. I prompt le citano per numero. Questo file non le duplica.
 
 Restano qui, perché specifiche di questo codebase e non del protocollo: le
 regole NON-NEGOTIABLE, la critical zone e il Layer Impact Report (§3), la
@@ -517,6 +517,18 @@ incidente misurato, non da una preferenza. Iscritta come **RC-13** in `docs/deci
   `Out-of-scope changes` della entry che lo ripete — e prosegue; sanare o rifiutare e' del
   reviewer, a valle (RC-11).
 
+- **Every prompt has an ID, and every message on it carries the ID.** A prompt in
+  `docs/prompts/` states in its header `Prompt-ID: P-YYYY-MM-DD-HHmm`, the date and time of its
+  file name. Every message pasted into a running session about that prompt (GO, ACK, answers to a
+  hard stop, corrections) opens with `[P-YYYY-MM-DD-HHmm]`. Every reply of Codex on it
+  (report, hard stop, question, closing summary) opens with `[P-YYYY-MM-DD-HHmm · session <id>]`,
+  where `<id>` is the identifier the harness shows for the session; a session that cannot see it
+  writes `session unknown` and never invents one. A session that receives a message with another
+  Prompt-ID, or with none, does not act on it: it replies with its own ID and the one it received,
+  and stops. A session does not relay messages to another session. Measured 2026-09-17: a Phase 2
+  GO for `P-2026-09-17-1024` was pasted into the session running `P-2026-09-16-2327`, and a relayed
+  message carried a scope change that nobody had written.
+
 ### 6.5 Worktrees and cherry-picks
 
 Code commits on `validation-skeleton` reach other branches (today `alfonso-frontend-jjtl`) by
@@ -712,6 +724,60 @@ setTimeout(() => {
 ```
 
 Accumulate by **name**, not by ID, inside the TRANSACTION.
+
+### 9.3 Attribute slots and reference slots are written differently — and the wrong way is silent
+
+`['$' + name].value = v` is the form §9.1 and §9.2 use, and it is right **for attributes**. On a
+**reference** slot the same assignment does nothing: it does not throw, does not warn, and leaves
+the slot at `values: []`. Measured 2026-09-09 by running the four candidate forms in sequence
+against a live slot:
+
+| form | reference slot |
+|---|---|
+| `slot.value = <L object>` | no error, `values` stays `[]` |
+| `slot.value = <id>` | no error, `values` stays `[]` |
+| `slot.values = [<id>]` | **writes** |
+| `slot.setValueAtPosition(<id>, 0)` | **writes** |
+
+```typescript
+// RIGHT — reference slot, single or multi valued alike
+(lObject as any)['$ownedTransitions'].values = [targetId];
+(lObject as any)['$nextState'].values = [targetId];
+
+// RIGHT — attribute slot
+(lObject as any)['$isInitial'].value = true;
+```
+
+**The aggravating part is the silence.** A caller that writes a reference the attribute way builds
+a model whose references are all empty and gets no signal at all. A probe written that way then
+measures a state it never created: it will report whatever an empty reference implies —
+a vacuously satisfied constraint, an empty fan-out, a missing edge — as if the model said so.
+Measured in that same round: a probe's own reader disagreed with the JjEL evaluator about whether
+the transitions had targets, and the evaluator was right.
+
+**Clearing is the same trap, one step further.** `slot.values = []` does **not** empty a reference
+slot that already holds a value, and it does not throw: the slot keeps what it had. Measured
+2026-09-09 while building a fixture for the book, where a transition whose `nextState` was
+"cleared" that way still pointed at its target, and the conformance check was right while the
+fixture was wrong. There is no measured form that clears an already-written reference slot from
+the L proxy; when a test or a probe needs an unset reference, **construct it unset** — a freshly
+created object has none — rather than writing one and taking it back.
+
+Corollary for reading, same family, and it bites in two ways:
+
+- `slot.values` **on the L proxy returns the wrapped L objects, not the ids** — the default getter
+  resolves every pointer (`__shallowSolver`). Compare with `t.id ?? t`, or read `__raw.values` when
+  ids are what you need (the `pkg.uri` / `pkg.__raw.uri` asymmetry of §3.7, in another place).
+- A **single-valued reference that was never set reads back as `[null]`**, not as `[]`. So
+  `slot.values.length` is **1** where there is no value at all, and a guard written as
+  `values.length === 0` never fires. Measured 2026-09-09: on a `Transition` whose `nextState [1]`
+  had never been written, the proxy reported length 1 while `__raw.values` was empty and the
+  conformance engine reported `multiplicity_below_min`. Count on `__raw.values`, filtering out the
+  falsy entries, whenever the question is «is there a value».
+
+Full measurement: `docs/discovery/discovery_2026-09-09_semaforo_end_to_end.md` §2.1 and §9 for the
+write forms; `docs/discovery/harness/probe_2026-09-09_book53_conformance.mts` for the two reading
+measurements and the failed clear.
 
 ---
 
