@@ -8,7 +8,7 @@ Questo file contiene le clausole che prima venivano ricopiate per esteso in ogni
 Riga da mettere in testa a ogni prompt Claude Code:
 
 ```
-Protocollo: docs/PROTOCOL.md — clausole P1..P12 applicabili (tutte salvo deroga esplicita nel prompt).
+Protocollo: docs/PROTOCOL.md — clausole P1..P15 applicabili (tutte salvo deroga esplicita nel prompt).
 ```
 
 Le deroghe si scrivono così: `Deroga: P4 non si applica (motivo: ...)`.
