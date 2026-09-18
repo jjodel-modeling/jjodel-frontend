@@ -83,3 +83,26 @@ in the Step 4 hard-stop report rather than resolved unilaterally.
 three IR-related discovery/probe files (one new since Phase 2) present in the shared tree
 throughout; left untouched per §6.4/P13 (RC-13).
 **Prompt document name**: 2026-09-18 19:30
+
+## 2026-09-19 — docs: verbatim audit of the CLAUDE.md split (Phases 1-3) and check of §5
+**Prompt**: `claude_2026-09-18_2110_prompt_claude_md_split_sul_tronco.md`, handover turn: (1) read-only
+verbatim audit of the moved blocks against `084d99b3b`, (2) complete Phase 2 §5. Lane taken over
+from the session that ran steps 1-3 and whose closing report never arrived.
+**Files touched**: `docs/discovery/discovery_2026-09-19_claude_md_split_audit_verbatim.md` and two
+probes under `docs/discovery/harness/`. Commit `c8cdc8efe`. No normative file touched.
+**Outcome**: ⚠️ partial — audit done: 850 of 856 baseline lines verbatim, the other 6 accounted
+for; three non-move findings (jjtl module reflow, §12.7 deleted while the note says moved, clause
+range P1..P12 stale against P1..P15). §5: no edit, the four examples were already compressed by
+`da07e3169` (-308 chars) with the accounts present in the cited files. Root is 40,551 chars: 551
+over the limit, and §5 has no further worked example to move without cutting a rule.
+**Corregge**: —
+**Causa**: (a) — the numeric target cannot be reached inside the scope the prompt names. Second: the
+handover premise "§5 compression not done" was wrong, because the previous report did not arrive.
+**Regressions**: no.
+**Out-of-scope changes**: no.
+**Layer Impact Report**: not-required — docs-only.
+**Smoke visivo**: non applicabile.
+**Notes**: the three gates were not run, no gated file was touched. Step 4 stays suspended. Trunk
+worktree carries another lane's WIP in `viewpoint/ir/*`, left untouched (RC-13). Entry is not
+part of the audit commit (docs and record travel apart).
+**Prompt document name**: 2026-09-18 21:10
