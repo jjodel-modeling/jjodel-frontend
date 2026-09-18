@@ -109,14 +109,7 @@ vertex view and an edge view: no neutral canvas, hint shown; metaclass picked: h
 narrows within the debounce; wildcard back on with empty list: nothing neutral). Extra check by
 Alfonso: closing and reopening the view tab with an empty list brings the wildcard back on
 (stored ir kept, draft dropped, as decided).
-**Notes**: Defect found, not caused, by the previous prompts — item C of a four-defect batch.
-The replaced hint (MatchingSection `:170-172`) said "With an empty list the view applies to
-nothing", the behaviour this fix removes. The predicate lives in a new pure module because the
-panels are not bench-importable (joiner → monaco → `window`) and MatchingSection pulls scss
-through the `ui` barrel (no sass preprocessor in vitest), both measured; same move as
-`model/nameLookup.ts`. An uncommitted empty list does NOT survive a tab change (the draft is
-dropped on reset, the stored ir keeps the wildcard) — a persisted draft would be a separate
-decision, not this lane's. Mutation bench in the commit message: 5 applied, 5 red, 0 survived.
+**Notes**: Defect found, not caused, by the previous prompts — item C of a four-defect batch (`claude_2026-09-18_1650_prompt_view_quattro_difetti_minori.md`). The replaced hint (MatchingSection `:170-172`) stated the behaviour this fix removes. An uncommitted empty list does not survive a tab change (draft dropped, stored ir keeps the wildcard) — a persisted draft is a separate decision, not this lane's. Rest: `docs/sessioni/sessione_2026-09-18.md`. Mutation bench: 5/5 red.
 **Prompt document name**: 2026-09-18 16:50
 
 ## 2026-09-18 — fix: focus the inline rename input when it mounts (item D)
