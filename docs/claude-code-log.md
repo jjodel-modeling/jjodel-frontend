@@ -28,6 +28,46 @@ the Create View gate fix»: contenuto reale **due** entry, la sua e quella della
 rail/modale, gia' in albero e non in stage al momento del commit. Stesso schema del 2026-09-13.
 Nessun rewrite: la entry resta dov'e', il suo commit non la nomina.
 
+## 2026-09-18 — fix: the waiter waits for a same-script superclass, the pass refuses a forward one (corsia L4)
+**Prompt**: `claude_2026-09-17_1024_prompt_jjscript_silent_defects_duplicates_extends_skipped.md`,
+phase 2 lane L4, the TODO L1 and L2 left open, with Alfonso's GO of 2026-09-18: the validator on
+the superclass role plus the same-script race, born from the read-only report committed with this
+entry (`discovery_2026-09-17_superclass_same_script_race.md`).
+**Files touched**: `9345a4046`, 6 files: `jjscript/executor/dependencies.ts` (the superclass of
+`create class|abstract class|interface` becomes a `required` dependency, so `waitForDependencies`
+polls for it; the `add` case passes its element type because `add` becomes a `create`;
+`EXTENDING_ELEMENT_TYPES`), `jjscript/executor/scriptValidator.ts` (the superclass role joins the
+forward-reference pass via `superclassNames`, the same three element types, header rewritten),
+`jjscript/executor/superclassResolution.ts` (`missingSuperclassRefusal` sets its own suggestion:
+the `PARENT_NOT_FOUND` table text told the user to repeat what already worked),
+`jjscript/__tests__/scriptValidator.test.ts` (+3 tests, the old acceptance inverted),
+`jjscript/executor/__tests__/superclassResolution.test.ts` (+1),
+`jjscript/__tests__/dependencies.test.ts` (new, 9 tests, the last added because the bench mutant
+on the `add` path had no killer). This entry in its own commit.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. `npm run typecheck` exit 2, **33** on full output, the declared baseline,
+control `Measurable` → 6, **0** in the touched files; `npx vitest run` **3812 passed, 0 failed**,
+the same 9 files red at import; `npm run build` exit 0, pre-existing warnings only. Committed
+behaviour changes by decision, both declared in the report §7: an absent superclass now takes up
+to `MAX_WAIT_MS = 500` ms to refuse, polled every 30 ms, and the same wait applies to `add`.
+**Out-of-scope changes**: no. The `add` elementType pass and the bench-added test are inside the
+GO's file list and declared in the commit message.
+**Layer Impact Report**: not-required — no §3.1 file, no D-layer write path, no TRANSACTION; the
+validator reads the name set the caller hands in, the wait happens before dispatch.
+**Smoke visivo**: passato — Alfonso on screen, five checks: a same-script superclass resolves (1);
+a forward one refused before command 1 with nothing created (2); an absent one refused within the
+declared 500 ms with nothing created (3); one of several missing leaves the class uncreated (4);
+the L1 duplicate refusal unchanged (5).
+**Notes**: Mutation bench 9/9 killed, each with an apply control; one ambiguous anchor was refused,
+re-run fixed, not scored. Two open tickets at the GO's instruction, not this lane's work, both
+report §8: the `type-reference` role is still `required: false` (enum before an attribute typed on
+it: probe not run) and the long refusal message overflows the dialog's red box (cosmetic). The GO's
+placeholders for both arrived unfilled. Same declared gap as L1/L2: `createClass` wiring has no
+executing test.
+**Prompt document name**: 2026-09-17 10:24
+
 ## 2026-09-17 — fix: a missing superclass creates nothing (corsia L2)
 **Prompt**: `claude_2026-09-17_1024_prompt_jjscript_silent_defects_duplicates_extends_skipped.md`,
 phase 2 lane L2, with Alfonso's GO answer 4: every superclass resolved before `DClass.new`, on any
