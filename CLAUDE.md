@@ -291,11 +291,11 @@ Before writing "X does not exist", "X is not used anywhere", or "X is not loaded
 - check the exit status of the command that produced the silence, or
 - run a **positive control** on the same command: search for something you know is present. If the control comes back empty, the search is broken, not the subject.
 
-A positive control is only a control if it has signal, and it must run through the same tool as the search it validates. In Claude Code's shell `grep` is a function wrapping `ugrep --ignore-files` (confirm with `type grep`), so a recursive search from the repo root silently skips every gitignored path — `node_modules` included — while an explicitly named path inside one is still searched. Measured 2026-08-11: `grep -rn "(a)" --include="*.md" .` returns 513 lines, none of them from `node_modules`, and adding `--exclude-dir=node_modules` changes nothing. A search that cannot reach its subject returns the same silence as a subject that is not there. The same applies to partial reads: a count taken over lines 1-62 of a 157-line file is a count over that window, and must be reported as such or not reported at all. Measured 2026-08-13: `npm run typecheck | tail -60` produced a count of 12; the same command read in full produced 33, the declared baseline. The window set the number, not the subject. The rule above was already written when this happened, which is the point: a rule that fires only when someone remembers it is not operational. Take counts on complete output, with the exit status recorded.
+A positive control is only a control if it has signal, and it must run through the same tool as the search it validates. In Claude Code's shell `grep` is a function wrapping `ugrep --ignore-files` (confirm with `type grep`), so a recursive search from the repo root silently skips every gitignored path — `node_modules` included — while an explicitly named path inside one is still searched. Measured 2026-08-11 that a repo-root markdown search returns hundreds of lines with none from `node_modules`, and that `--exclude-dir=node_modules` changes nothing — full account in `docs/discovery/discovery_2026-08-11_ugrep_wrapper_ignore_files.md`. A search that cannot reach its subject returns the same silence as a subject that is not there. The same applies to partial reads: a count taken over lines 1-62 of a 157-line file is a count over that window, and must be reported as such or not reported at all. Measured 2026-08-13 that a truncated typecheck read understated the error count against the declared baseline — full account in `docs/discovery/discovery_2026-08-13_arco3_fase1_griglia_84.md`. The window set the number, not the subject. The rule above was already written when this happened, which is the point: a rule that fires only when someone remembers it is not operational. Take counts on complete output, with the exit status recorded.
 
 The same discipline applies to visual verification, twice over. First, a screenshot is evidence only of the state it contains: before writing "X does not render", build the state where X would render if the claim were false. A colour rule that only distinguishes two kinds proves nothing on a screen showing one of them.
 
-Second, a computed style is a measure of the rendering only when the element you measured is the one that paints. Measured 2026-08-12: the tree glyph is `<span class="tree-node__icon tree-DClass"><i class="bi bi-…"></i></span>`; the entity rules set `color` on the span, `i.bi` in `styles/style.scss:790` sets it on the `<i>`, and a direct declaration always beats inheritance. Removing every entity rule moves the span's computed colour from `#7A4056` to `#0ea5e9` and changes zero pixels. When a style and a pixel disagree, the pixel is the measurement.
+Second, a computed style is a measure of the rendering only when the element you measured is the one that paints. Measured 2026-08-12 that the tree glyph's colour rule paints a `<span>` while a global rule paints the `<i>` inside it, so removing every entity rule changes the computed colour and zero pixels — full account in `docs/discovery/discovery_2026-08-12_harness_visivo_e_scala_entity_nel_tree.md`. When a style and a pixel disagree, the pixel is the measurement.
 
 **Sub-rule: the interactive `grep` is not the system `grep`**
 
@@ -318,7 +318,7 @@ When the behaviour cannot be executed because the file does not import in the be
 
 A test that survives a mutation has answered one question, not two. Before deleting it, measure which OTHER mutations die by its hand. A property that no mutation can distinguish through the output — a type sentinel, for example — is declared intent: it will never be covered, and no test can be written that covers it, so surviving its removal is not a verdict on the test. The same test can still be the only guard on a different mutation, and deleting it for failing the first question throws away the answer to the second.
 
-Measured 2026-09-16 on `symbolRecognition.ts`, on the two conditional border-axis tests. Dropping the `scalarOf` sentinel from `style` and `width`, back to the raw compare, leaves the file green at 14/14: a conditional object is unequal to a scalar preset value either way, so through `recognizeSymbol`'s output the sentinel is invisible and the tests cannot be about it. Those same two, and no other test in the file, are the only ones that kill reading the axis's `default` — the mutation that lets the modal title claim a preset an instance may not draw. Both forms of it, the shared one and the one scoped to the two axes, come back 2 red, and the 2 are them.
+Measured 2026-09-16 on `symbolRecognition.ts` that dropping the `scalarOf` sentinel leaves the file green while dropping the axis's `default` read is caught only by the two conditional border-axis tests — full account in `docs/discovery/discovery_2026-09-16_symbolrecognition_scalarof_mutation_bench.md`.
 
 The name of the test declares the mutation that kills it; the bench that establishes it goes in the commit message (§21.2).
 
@@ -352,95 +352,22 @@ The name of the test declares the mutation that kills it; the bench that establi
 
 ### 6.4 Concorrenza tra lane
 
-Piu' sessioni lavorano sullo **stesso working tree** nello stesso momento. Non e' un caso
-limite: e' la condizione normale di questo repo, e ogni regola qui sotto nasce da un
-incidente misurato, non da una preferenza. Iscritta come **RC-13** in `docs/decisions.md`.
-
-- **Una corsia per giro.** Un giro chiude il perimetro che il suo prompt dichiara e nient'altro.
-  Il lavoro di un'altra corsia che compare in albero a meta' sessione non e' un invito ad
-  assorbirlo: si constata e si lascia dov'e'.
-- **Docs e codice mai nello stesso commit.** La entry di log, il referto e le ratifiche
-  viaggiano separati dal diff che descrivono. Un commit misto non si puo' revertire per meta'.
-- **Lo staged e il WIP altrui sono intoccabili.** `git commit` committa **l'indice intero**,
-  incluso quello che un'altra sessione ha messo in stage: si passa sempre il pathspec al commit
-  stesso (`git commit -- <paths>`), o si confronta `git diff --cached --name-only` con la lista
-  dichiarata prima di committare. `git add` solo con path espliciti, mai `git add .` / `-A`
-  (regola 17).
-- **NIENTE `git stash` su albero condiviso.** Uno `stash push -- <paths>` che includa un file
-  **non tracciato** fallisce senza creare nulla, e il `pop` successivo apre lo stash sbagliato:
-  misurato il 2026-09-01, 7 file riversati in albero da uno stash del 2026-07-28
-  (`docs/discovery/discovery_2026-09-01_irf1_annotation_subscription.md` §14). E per la cosa che
-  lo stash veniva usato a dimostrare — «questi rossi sono pre-esistenti» — **lo stash non serve**:
-  si legge il diff non committato dei file rossi e si cerca l'implementazione che i loro nomi
-  invocano. Se un confronto prima/dopo e' davvero necessario, si ripristinano i file **nominati**
-  da `git show HEAD:<path>` e si rimettono a posto da una copia, senza toccare l'indice.
-- **La rotazione del log e' una corsia esclusiva.** Nessun altro giro tocca
-  `docs/claude-code-log.md` mentre e' in corso, e la rotazione non porta con se' altre modifiche.
-  Criterio di spostamento: verbatim, nell'ordine del file attivo (RC-12).
-- **Le deroghe a una regola numerata si flaggano nel giro, non si nascondono.** Chi supera una
-  soglia lo dichiara — i file elencati con cosa cambia in ciascuno, e il campo
-  `Out-of-scope changes` della entry che lo ripete — e prosegue; sanare o rifiutare e' del
-  reviewer, a valle (RC-11).
-
-- **Every prompt has an ID, and every message on it carries the ID.** A prompt in
-  `docs/prompts/` states in its header `Prompt-ID: P-YYYY-MM-DD-HHmm`, the date and time of its
-  file name. Every message pasted into a running session about that prompt (GO, ACK, answers to a
-  hard stop, corrections) opens with `[P-YYYY-MM-DD-HHmm]`. Every reply of Claude Code on it
-  (report, hard stop, question, closing summary) opens with `[P-YYYY-MM-DD-HHmm · session <id>]`,
-  where `<id>` is the identifier the harness shows for the session; a session that cannot see it
-  writes `session unknown` and never invents one. A session that receives a message with another
-  Prompt-ID, or with none, does not act on it: it replies with its own ID and the one it received,
-  and stops. A session does not relay messages to another session. Measured 2026-09-17: a Phase 2
-  GO for `P-2026-09-17-1024` was pasted into the session running `P-2026-09-16-2327`, and a relayed
-  message carried a scope change that nobody had written.
+Moved to `docs/PROTOCOL.md` (P13) on 2026-09-18 (P-2026-09-18-1930 Phase 2) — lane-concurrency
+rules: one lane per turn, docs/code never in the same commit, staged/WIP of others untouchable,
+no `git stash` on a shared tree, log rotation as an exclusive lane, prompt-ID discipline on
+messages (RC-13, `docs/decisions.md`).
 
 ### 6.5 Worktrees and cherry-picks
 
-Code commits on `validation-skeleton` reach other branches (today `alfonso-frontend-jjtl`) by
-`git cherry-pick -x` of explicit shas, never by range. A branch can be checked out in one worktree
-only, and more than one worktree exists (`git worktree list`). Measured 2026-09-14: `git worktree
-add` refused because `alfonso-frontend-jjtl` was already checked out in `/Users/alfonso/jjodel-release`,
-and the cherry-pick loop then started in the wrong tree. It was aborted, no damage.
-
-- Run `git worktree list` before any cherry-pick.
-- Target branch checked out in a clean tree: run the cherry-pick in that tree. If that tree is not
-  the current lane's, ask Alfonso for authorization first.
-- Target branch checked out in a dirty tree: hard stop. Report and wait.
-- Use a temporary worktree only when the target branch is not checked out anywhere. Remove it when
-  done (`git worktree remove`, then `git worktree prune`).
-- Never move a ref (`git update-ref`, `git branch -f`) while a worktree has it checked out.
-- Never chain a `cd` that can fail in front of a destructive loop. Assert the branch with
-  `git rev-parse --abbrev-ref HEAD` in the target tree before the first pick.
-- A tree without `node_modules` (such as `/Users/alfonso/jjodel-release`) can run the gates through a
-  temporary symlink to `~/jjodel/frontend/node_modules`, removed afterwards. `git status` in that
-  tree must be empty before and after.
-- Choose the positive control of a verify entry at the time of the entry, and measure its signal
-  with the same command (§5). A file that differed between the two branches in an earlier entry
-  may no longer differ, and a file an earlier entry called identical may differ. Do not inherit
-  either claim from the log.
+Moved to `docs/PROTOCOL.md` (P14) on 2026-09-18 (P-2026-09-18-1930 Phase 2) — cherry-pick and
+worktree mechanics: `git worktree list` first, clean-vs-dirty target tree handling, temporary
+worktrees, never moving a checked-out ref, the `node_modules` symlink for a release tree.
 
 ### 6.6 Where the rules live
 
-`CLAUDE.md` has ONE home, `alfonso-frontend-jjtl`. That a branch carrying its own copy carries its
-own rules is a fact about this repo and not a preference: measured 2026-09-16, `master` has no
-`CLAUDE.md` at all, `alfonso-frontend-jjtl` and `simulation-engine` have one of 1035 lines that
-diverges from this branch's, and none of the three normative commits of the last two days —
-`686a13712` (§6.5), `74d0f81db` (rule 1c and the source-text sub-rule of §5), `43e598404` (the
-mutation sub-rule of §5) — is an ancestor of the trunk. So whoever works on the trunk or on the
-simulator today is following a different set of rules from this branch's.
-
-- **A rule is in force where it is written, not where it was learned.** It may be authored on the
-  branch that learned it, and until it is on the trunk it binds that branch alone.
-- **A commit that changes `CLAUDE.md` is owed to the trunk, and its log entry says so.** The entry
-  names that commit as owed, and keeps naming it until the carry is recorded. The carry runs from
-  the trunk's own worktree, by the lane that holds it or by Alfonso, never from a lane that does not
-  have it; §6.5 has the mechanics.
-- **Check that a rule number exists on the target branch before citing it.** A prompt or a commit
-  written for work on another branch that cites a rule absent there is a false citation, and its
-  reader has no way to tell.
-- **`master` has no `CLAUDE.md`, and that is measured, not decided.** It is an open question for
-  Alfonso. Do not create one there, and do not treat `master` as inside the development flow on
-  your own authority.
+Moved to `docs/PROTOCOL.md` (P15) on 2026-09-18 (P-2026-09-18-1930 Phase 2) — `CLAUDE.md`'s one
+home is `alfonso-frontend-jjtl`; a rule binds where it is written, not where it was learned; a
+`CLAUDE.md`-changing commit is owed to the trunk until carried.
 
 ---
 

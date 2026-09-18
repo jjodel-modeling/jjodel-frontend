@@ -189,6 +189,98 @@ framework sarebbero finiti a referto come difetti dei tipi nuovi. Nella verifica
 stato la prima stesura leggeva prima del commit, otteneva lo stato vecchio con le chiavi al posto
 giusto, e dava la risposta **opposta** a quella vera.
 
+## P13 — Concorrenza tra lane
+
+Piu' sessioni lavorano sullo **stesso working tree** nello stesso momento. Non e' un caso
+limite: e' la condizione normale di questo repo, e ogni regola qui sotto nasce da un
+incidente misurato, non da una preferenza. Iscritta come **RC-13** in `docs/decisions.md`.
+
+- **Una corsia per giro.** Un giro chiude il perimetro che il suo prompt dichiara e nient'altro.
+  Il lavoro di un'altra corsia che compare in albero a meta' sessione non e' un invito ad
+  assorbirlo: si constata e si lascia dov'e'.
+- **Docs e codice mai nello stesso commit.** La entry di log, il referto e le ratifiche
+  viaggiano separati dal diff che descrivono. Un commit misto non si puo' revertire per meta'.
+- **Lo staged e il WIP altrui sono intoccabili.** `git commit` committa **l'indice intero**,
+  incluso quello che un'altra sessione ha messo in stage: si passa sempre il pathspec al commit
+  stesso (`git commit -- <paths>`), o si confronta `git diff --cached --name-only` con la lista
+  dichiarata prima di committare. `git add` solo con path espliciti, mai `git add .` / `-A`
+  (regola 17).
+- **NIENTE `git stash` su albero condiviso.** Uno `stash push -- <paths>` che includa un file
+  **non tracciato** fallisce senza creare nulla, e il `pop` successivo apre lo stash sbagliato:
+  misurato il 2026-09-01, 7 file riversati in albero da uno stash del 2026-07-28
+  (`docs/discovery/discovery_2026-09-01_irf1_annotation_subscription.md` §14). E per la cosa che
+  lo stash veniva usato a dimostrare — «questi rossi sono pre-esistenti» — **lo stash non serve**:
+  si legge il diff non committato dei file rossi e si cerca l'implementazione che i loro nomi
+  invocano. Se un confronto prima/dopo e' davvero necessario, si ripristinano i file **nominati**
+  da `git show HEAD:<path>` e si rimettono a posto da una copia, senza toccare l'indice.
+- **La rotazione del log e' una corsia esclusiva.** Nessun altro giro tocca
+  `docs/claude-code-log.md` mentre e' in corso, e la rotazione non porta con se' altre modifiche.
+  Criterio di spostamento: verbatim, nell'ordine del file attivo (RC-12).
+- **Le deroghe a una regola numerata si flaggano nel giro, non si nascondono.** Chi supera una
+  soglia lo dichiara — i file elencati con cosa cambia in ciascuno, e il campo
+  `Out-of-scope changes` della entry che lo ripete — e prosegue; sanare o rifiutare e' del
+  reviewer, a valle (RC-11).
+
+- **Every prompt has an ID, and every message on it carries the ID.** A prompt in
+  `docs/prompts/` states in its header `Prompt-ID: P-YYYY-MM-DD-HHmm`, the date and time of its
+  file name. Every message pasted into a running session about that prompt (GO, ACK, answers to a
+  hard stop, corrections) opens with `[P-YYYY-MM-DD-HHmm]`. Every reply of Claude Code on it
+  (report, hard stop, question, closing summary) opens with `[P-YYYY-MM-DD-HHmm · session <id>]`,
+  where `<id>` is the identifier the harness shows for the session; a session that cannot see it
+  writes `session unknown` and never invents one. A session that receives a message with another
+  Prompt-ID, or with none, does not act on it: it replies with its own ID and the one it received,
+  and stops. A session does not relay messages to another session. Measured 2026-09-17: a Phase 2
+  GO for `P-2026-09-17-1024` was pasted into the session running `P-2026-09-16-2327`, and a relayed
+  message carried a scope change that nobody had written.
+
+## P14 — Worktrees and cherry-picks
+
+Code commits on `validation-skeleton` reach other branches (today `alfonso-frontend-jjtl`) by
+`git cherry-pick -x` of explicit shas, never by range. A branch can be checked out in one worktree
+only, and more than one worktree exists (`git worktree list`). Measured 2026-09-14: `git worktree
+add` refused because `alfonso-frontend-jjtl` was already checked out in `/Users/alfonso/jjodel-release`,
+and the cherry-pick loop then started in the wrong tree. It was aborted, no damage.
+
+- Run `git worktree list` before any cherry-pick.
+- Target branch checked out in a clean tree: run the cherry-pick in that tree. If that tree is not
+  the current lane's, ask Alfonso for authorization first.
+- Target branch checked out in a dirty tree: hard stop. Report and wait.
+- Use a temporary worktree only when the target branch is not checked out anywhere. Remove it when
+  done (`git worktree remove`, then `git worktree prune`).
+- Never move a ref (`git update-ref`, `git branch -f`) while a worktree has it checked out.
+- Never chain a `cd` that can fail in front of a destructive loop. Assert the branch with
+  `git rev-parse --abbrev-ref HEAD` in the target tree before the first pick.
+- A tree without `node_modules` (such as `/Users/alfonso/jjodel-release`) can run the gates through a
+  temporary symlink to `~/jjodel/frontend/node_modules`, removed afterwards. `git status` in that
+  tree must be empty before and after.
+- Choose the positive control of a verify entry at the time of the entry, and measure its signal
+  with the same command (§5). A file that differed between the two branches in an earlier entry
+  may no longer differ, and a file an earlier entry called identical may differ. Do not inherit
+  either claim from the log.
+
+## P15 — Where the rules live
+
+`CLAUDE.md` has ONE home, `alfonso-frontend-jjtl`. That a branch carrying its own copy carries its
+own rules is a fact about this repo and not a preference: measured 2026-09-16, `master` has no
+`CLAUDE.md` at all, `alfonso-frontend-jjtl` and `simulation-engine` have one of 1035 lines that
+diverges from this branch's, and none of the three normative commits of the last two days —
+`686a13712` (§6.5), `74d0f81db` (rule 1c and the source-text sub-rule of §5), `43e598404` (the
+mutation sub-rule of §5) — is an ancestor of the trunk. So whoever works on the trunk or on the
+simulator today is following a different set of rules from this branch's.
+
+- **A rule is in force where it is written, not where it was learned.** It may be authored on the
+  branch that learned it, and until it is on the trunk it binds that branch alone.
+- **A commit that changes `CLAUDE.md` is owed to the trunk, and its log entry says so.** The entry
+  names that commit as owed, and keeps naming it until the carry is recorded. The carry runs from
+  the trunk's own worktree, by the lane that holds it or by Alfonso, never from a lane that does not
+  have it; §6.5 has the mechanics.
+- **Check that a rule number exists on the target branch before citing it.** A prompt or a commit
+  written for work on another branch that cites a rule absent there is a false citation, and its
+  reader has no way to tell.
+- **`master` has no `CLAUDE.md`, and that is measured, not decided.** It is an open question for
+  Alfonso. Do not create one there, and do not treat `master` as inside the development flow on
+  your own authority.
+
 ---
 
 ## Nota di implementazione per P8
