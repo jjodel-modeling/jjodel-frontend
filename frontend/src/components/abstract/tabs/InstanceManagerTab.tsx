@@ -52,6 +52,7 @@ import {
     preflightFor,
 } from '../../editor-v2/hooks/deleteAdapter';
 import IRForm from '../../editor-v2/viewpoint/ir/IRForm';
+import { appendValue } from '../../editor-v2/viewpoint/ir/formWrite';
 import { autoLayoutRows, inputFromDraftField } from '../../editor-v2/viewpoint/ir/formAutoLayout';
 import { computeIRSignature, getIRIndex } from '../../editor-v2/viewpoint/ir/irResolveCore';
 import { resolveTableSpec } from '../../editor-v2/viewpoint/ir/tableViews';
@@ -1337,6 +1338,13 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
      *  ONLY place a not-yet-created instance exists: nothing reaches the store
      *  until Create, so Cancel is `setDraft(null)` and nothing else. */
     const [draft, setDraft] = useState<Draft | null>(null);
+    /** Where a «New … & link» create must wire its result back once committed
+     *  (#142). Non-null only while a create-and-link draft is in flight: the target
+     *  is created at model root like any other, then a pointer to it is appended to
+     *  `sourceId.refKey`. Kept beside the draft, not on it, so the draft stays the
+     *  transactional object it already is — this is a post-commit side effect of the
+     *  HOST, not a field the create engine reads. Cleared on Cancel and on commit. */
+    const [linkBack, setLinkBack] = useState<{ sourceId: string; refKey: string } | null>(null);
     /** The delete preflight in flight (12d). Null when no delete is pending, and
      *  like the draft it is the only place the decision lives: nothing is written
      *  until a row of the dialogue is pressed, so Cancel is `setPending(null)`. */
@@ -1980,6 +1988,32 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
         setDraft(newDraft(shapeCtx.shape(), clsName, ownerId, childKey));
     };
 
+    /**
+     * «New <Target> & link» for a NON-containment reference (#142).
+     *
+     * The target is created at the MODEL ROOT — `(clsName, null, null)`, the same
+     * gesture the catalogue's own New uses — and only AFTER it exists is a pointer
+     * to it appended to `sourceId.refKey` (`commitDraft`, via `linkBack`). A
+     * reference does not own its target, so there is no `childKey` to parent it
+     * under: unlike «Add contained», this create makes a free-standing instance and
+     * then wires a link to it. The button that calls this is gated on
+     * `newInstanceReason` being null, so the root create is always legal when it
+     * runs. Linking an EXISTING target is not here — that is the form's own
+     * reference widget (`ReferenceWidget` / `ListWidget` picker), which this bar
+     * does not duplicate; what the form cannot do is CREATE the target, which is the
+     * navigation-away this feature removes.
+     *
+     * It goes THROUGH `openCreate`, never straight to the draft constructor:
+     * «openCreate is the one door of the draft» is an invariant the tab's tests
+     * assert by counting the draft-constructor call sites (`instanceManagerOutline`,
+     * `instanceManager10c`). The link-back is the only thing this route adds, and it
+     * is a HOST side effect kept beside the draft, not a fourth create engine.
+     */
+    const openCreateAndLink = (targetCls: string, sourceId: string, refKey: string) => {
+        setLinkBack({ sourceId, refKey });
+        openCreate(targetCls, null, null);
+    };
+
     // ── L'outline di containment (10b) ─────────────────────────────────────────
     // Terza superficie della create, e ZERO rami nuovi: `openCreate` e' chiamata
     // qui con (cls, node.id, childKey) da un nodo istanza e con (cls, null, null)
@@ -2008,6 +2042,45 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
         for (const cls of classes) out[cls.name] = counts[cls.id] ?? 0;
         return out;
     }, [classes, counts]);
+
+    /**
+     * The NON-containment reference slots of the form's CURRENT subject (#142).
+     *
+     * Sister of `inlineChildren`, and read the same way: keyed on `formSubjectId`
+     * (not `subjectId`), so after a drill-in the references shown are the ones of
+     * the element on screen, and the class comes from `pathTo(...).slice(-1)` for
+     * the identical reason `inlineChildren` reads it there. It scans `shape.refs`
+     * — the «reference selects» half of the shape — never `shape.children`, which
+     * `inlineChildren` and `childSlots` already own.
+     *
+     * `targets` are the pointer values the slot holds, read with the same
+     * `childrenIn` the containment side uses: it filters holes and dangling
+     * pointers, so a link is never mounted on a phantom. `createReason` gates the
+     * «New & link» button exactly as `childSlots`'s `reason` gates «Add»: a
+     * read-only or derived reference, a full slot, or a target that cannot be
+     * instantiated at root (`newInstanceReason`) leaves the reason and drops the
+     * button. A slot is shown when it has targets to navigate to OR a create is
+     * offered — an empty, uncreatable reference is noise, like an empty child slot.
+     */
+    const refSlots = useMemo(() => {
+        if (!formSubjectId || !shapeCtx) {
+            return [] as Array<{ ref: RefShape; targets: string[]; count: number; createReason: string | null }>;
+        }
+        const shapeAll = shapeCtx.shape();
+        const clsName = pathTo(idlookup, formSubjectId).slice(-1)[0]?.cls;
+        const shape = clsName ? shapeAll.classes[clsName] : null;
+        if (!shape) return [];
+        return shape.refs.map(ref => {
+            const targets = childrenIn(idlookup, formSubjectId, ref.key);
+            const count = targets.length;
+            const full = ref.upper !== -1 && count >= ref.upper;
+            let createReason: string | null;
+            if (ref.readOnly || ref.derived) createReason = 'Read-only reference';
+            else if (full) createReason = `Slot full [${count}/${ref.upper}]`;
+            else createReason = newInstanceReason(shapeAll.classes[ref.of], countsByName[ref.of] ?? 0);
+            return { ref, targets, count, createReason };
+        }).filter(s => s.targets.length > 0 || s.createReason === null);
+    }, [idlookup, formSubjectId, shapeCtx, countsByName]);
 
     /** Se il «+» va offerto affatto: la metaclasse ha almeno una feature di
      *  contenimento (il modello, almeno una rootable). Una lettura di shape, non
@@ -2183,8 +2256,21 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
     const commitDraft = () => {
         if (!draft || !draftView?.valid) return;
         const createdId = applyCreate(modelid, shapeCtx.shape(), draft);
+        const link = linkBack;
         setDraft(null);
+        setLinkBack(null);
         if (!createdId) return;
+        // «New <Target> & link» (#142): the target was created at root above; now
+        // wire the reference that this create existed to fill, with the same pointer
+        // append the form's own picker performs (`appendValue(..., isPtr=true)`) — no
+        // canvas edge, no TRANSACTION around a creator (CLAUDE.md §3.3/§3.4 stay out
+        // of reach). Selection is left ON THE SOURCE: the whole point is to manage
+        // the association from where the user is, so the new link appears in the form
+        // they are looking at rather than yanking them to the target's collection.
+        if (link) {
+            appendValue(link.sourceId, link.refKey, createdId, true);
+            return;
+        }
         // Show what was just made, whichever route made it: the created instance's
         // own collection becomes the visible one and the instance is selected, so
         // the round trip through the table of 2b is what the user sees next.
@@ -2958,7 +3044,7 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                             a drill-in has happened — a form sitting on its own subject
                             has a road of one step, and printing it would be noise. */}
                         {crumbs.length > 1 && (
-                            <nav className="instance-manager__crumbs" aria-label="Containment path">
+                            <nav className="instance-manager__crumbs" aria-label="Navigation path">
                                 {crumbs.map(c => (
                                     <span key={c.id + ':' + c.depth} className="instance-manager__crumb-wrap">
                                         {c.isCurrent ? (
@@ -3085,6 +3171,68 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                                 ))}
                             </div>
                         )}
+                        {/* Referenced elements (#142). The associations/compositions the
+                            subject POINTS AT — `shape.refs`, the «reference selects» half —
+                            each target openable in place and each slot able to create a new
+                            target and link it, WITHOUT the canvas edge workflow.
+
+                            Homogeneous with the containment drill-in above: the same
+                            `drillTo` / `NavState` / breadcrumb, targets rendered as drill-in
+                            LINKS (references fan out far more than containment, so the body
+                            swaps to the target rather than nesting a form per pointer). Drill
+                            replaces the body with the referenced element's OWN `IRForm`, which
+                            resolves the target metaclass's view — the customization is
+                            inherited by construction (`useIRFormView`), the same way it is for
+                            a contained child. A referenced target is SHARED: editing it edits
+                            the one instance everything points at, said in the link title.
+
+                            Not inside `IRForm`: the tab hosts `IRForm`/`IRFormField`/
+                            `ListWidget` unchanged (the canvas rail mounts them too), so the
+                            navigation and the create-and-link live at the tab, exactly where
+                            the containment inline level and «Add contained» already do. */}
+                        {refSlots.length > 0 && (
+                            <div className="instance-manager__inline instance-manager__refs">
+                                {refSlots.map(slot => (
+                                    <div className="instance-manager__inline-slot" key={slot.ref.key}>
+                                        <h3 className="instance-manager__eyebrow">
+                                            {slot.ref.key}
+                                            <span className="instance-manager__draft-card">
+                                                {slot.ref.of} [{slot.count}/{slot.ref.upper === -1 ? '*' : slot.ref.upper}]
+                                            </span>
+                                        </h3>
+                                        {slot.targets.map(targetId => (
+                                            <button
+                                                type="button"
+                                                className="instance-manager__inline-link"
+                                                key={targetId}
+                                                title="Open the referenced element — edits the shared instance"
+                                                onClick={() => drillTo(targetId, slot.ref.key)}
+                                            >
+                                                {crumbLabel(navStepOf(idlookup, targetId) ?? { id: targetId, name: '', cls: slot.ref.of, childKey: null })}
+                                                <i className="bi bi-box-arrow-in-right" aria-hidden="true" />
+                                            </button>
+                                        ))}
+                                        {slot.targets.length === 0 && (
+                                            <p className="instance-manager__note">No {slot.ref.of} linked yet.</p>
+                                        )}
+                                        {slot.createReason ? (
+                                            <span className="instance-manager__child-reason" title={slot.createReason}>
+                                                {slot.createReason}
+                                            </span>
+                                        ) : (
+                                            <button
+                                                type="button"
+                                                className="instance-manager__add"
+                                                onClick={() => { if (formSubjectId) openCreateAndLink(slot.ref.of, formSubjectId, slot.ref.key); }}
+                                            >
+                                                <i className="bi bi-plus" aria-hidden="true" />
+                                                New {slot.ref.of} &amp; link
+                                            </button>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                         {/* Route 2 of Turno 10: containment creates. One Add per child
                             slot of the shape, gated by `upper`; when the slot is full
                             the control is absent and the cardinality says why. The
@@ -3196,7 +3344,7 @@ export function InstanceManagerTab({ modelid }: InstanceManagerTabProps) {
                     model={draftView}
                     ownerLabel={draftOwnerLabel}
                     onChange={setDraft}
-                    onCancel={() => setDraft(null)}
+                    onCancel={() => { setDraft(null); setLinkBack(null); }}
                     onCommit={commitDraft}
                 />
             )}
