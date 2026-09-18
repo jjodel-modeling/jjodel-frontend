@@ -6,6 +6,30 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 
 ---
 
+## 2026-09-18 — fix: stop hiding every dialog header from the alert stylesheet (item B)
+**Prompt**: `claude_2026-09-18_1650_prompt_view_quattro_difetti_minori.md`, item B: the global
+`.alert-header, .dialog-header { display: none }` in `alert/style.scss:112-114` removed the header
+of every dialog in the app; `.alert-header` has zero tsx consumers (re-measured with
+`command grep`), `.dialog-header` five. Fix: drop `.dialog-header` from the selector only.
+**Files touched**: `0214f29d4`, 1 file: `components/alert/style.scss` (one line, the selector loses
+`, .dialog-header`). This entry in its own commit.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. `npm run typecheck` exit 2, **33** on full output, the declared baseline, **0**
+in the touched file; control `Measurable` → 6. `npx vitest run` from `frontend/`: **3816 passed,
+0 failed**, the same 9 files red at import as before the change. `npm run build` exit 0. A first
+vitest+build round ran from the repo root by mistake (no `package.json` there, vitest with a
+different root): discarded, both re-run from `frontend/`.
+**Out-of-scope changes**: no.
+**Layer Impact Report**: not-required — style only, no §3.1 file, no behaviour read by sync or D-L.
+**Smoke visivo**: passato — Alfonso on localhost:3000, ACK of 2026-09-18: the five dialogs (New
+View, New Viewpoint, New Transformation, Execute Transformation, Create Project) show their header
+once, titles not duplicated, alert toasts unchanged; no finding on any dialog's own scss.
+**Notes**: Defect found, not caused, by the previous prompts — item B of a four-defect batch left
+open by the 15-16 September round. No test: style only.
+**Prompt document name**: 2026-09-18 16:50
+
 ## 2026-09-18 — fix: guard the Escape close binding when no popup is open (item A)
 **Prompt**: `claude_2026-09-18_1650_prompt_view_quattro_difetti_minori.md`, item A: the Escape
 binding at `ContextMenu.tsx:669` calls the module-level `closefunc`, `null as any` until the
