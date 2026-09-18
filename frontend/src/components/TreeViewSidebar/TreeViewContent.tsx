@@ -1730,6 +1730,19 @@ const SubViewItem = memo(function SubViewItem({
     const hasChildren = view.children.length > 0;
     const expanded = isExpandedFn(view.id);
     const isRenaming = renamingViewId === view.id;
+    // The row that starts a rename is not necessarily mounted yet — a
+    // newly-created view's store write is a macrotask (action.ts:349), so it can
+    // land 100-300ms after the setState that flips isRenaming (measured,
+    // discovery_2026-09-18_rename_input_focus.md). Focusing from here, on this
+    // row's own mount/isRenaming transition, means the ref is always the one
+    // this render just attached, not a stale read from a parent effect that ran
+    // before this row existed.
+    useEffect(() => {
+        if (isRenaming && renameInputRef.current) {
+            renameInputRef.current.focus();
+            renameInputRef.current.select();
+        }
+    }, [isRenaming]);
     const isSelected = !!selectedViewId && view.id === selectedViewId;
 
     const lView = useMemo(
@@ -1969,9 +1982,12 @@ const ViewpointNode = memo(function ViewpointNode({
             return;
         }
         const newView = createBlankViewInViewpoint(dVp, 'New view');
-        // React 18 automatic batching: il dispatch Redux di new2 e la
-        // setState di startRenameView sono applicati nello stesso commit.
-        // Quando il nuovo <SubViewItem> monta, vede già renamingViewId === newView.id.
+        // The Redux dispatch behind createBlankViewInViewpoint is a macrotask
+        // (action.ts:349's setTimeout(…, 0)), not the same commit as this
+        // setState: the new <SubViewItem> mounts 100-300ms later, once the
+        // store write lands (measured, discovery_2026-09-18_rename_input_focus.md).
+        // startRenameView only sets renamingViewId here; the input focuses itself
+        // once it mounts and sees isRenaming true (see SubViewItem below).
         startRenameView(newView.id, newView.name, true);
     }, [vp.id, startRenameView]);
 
@@ -2261,13 +2277,6 @@ function TreeViewContentComponent(props: AllProps) {
         },
         [submitRenameView, cancelRenameView]
     );
-
-    useEffect(() => {
-        if (renamingViewId && renameInputRef.current) {
-            renameInputRef.current.focus();
-            renameInputRef.current.select();
-        }
-    }, [renamingViewId]);
 
     // Transformations received via CustomEvent from ProjectEditor
     const [transformations, setTransformations] = useState<TreeTransformationData[]>([]);
