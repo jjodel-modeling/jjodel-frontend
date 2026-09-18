@@ -11,6 +11,7 @@ import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { JjScriptEvents } from '../../events/registry';
 import './ScriptBlock.scss';
 import { ExecutionErrorDialog } from './ExecutionErrorDialog';
+import { skippedLinesAsEditorLines } from './summaryLines';
 import {parseError, errorFromResult, ExecutionPauseInfo, ExecutionSummary, JjScriptError, ExecutionErrorInfo} from '../executor/errors';
 import type { ExecutionError } from '../types';
 import { collectClassifierNames, validateScriptIntegrity } from '../executor/scriptValidator';
@@ -300,6 +301,21 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
             (ls.result?.warnings ?? []).map(text => ({ line: getScriptLine(idx), text }))),
         [lineStates, getScriptLine]
     );
+
+    /**
+     * The summary the dialog renders, with the skipped lines translated to editor numbering
+     * at the last moment. `ExecutionSummary.skippedLines` itself stays in command-index
+     * space: every writer stores `i + 1` there and the run's control state reads it back
+     * that way. Only this render-side copy is mapped, so the skipped rows finally agree
+     * with the errors rows beside them, which were already in editor numbering.
+     */
+    const summaryForDialog = useMemo(() => {
+        if (!executionSummary) return undefined;
+        return {
+            ...executionSummary,
+            skippedLines: skippedLinesAsEditorLines(executionSummary.skippedLines, lineToCommandIndex),
+        };
+    }, [executionSummary, lineToCommandIndex]);
 
     // Initialize line states
     useEffect(() => {
@@ -1548,7 +1564,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                 isOpen={showErrorDialog}
                 onClose={handleCloseErrorDialog}
                 pauseInfo={pauseInfo || undefined}
-                summary={executionSummary || undefined}
+                summary={summaryForDialog}
                 onSkip={(pauseInfo?.error as JjScriptError)?.skippable ? handleSkipAndContinue : undefined}
                 recoveryActions={recoveryActions}
                 onRecoveryAction={handleRecoveryAction}
