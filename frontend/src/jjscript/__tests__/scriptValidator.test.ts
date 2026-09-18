@@ -149,12 +149,56 @@ describe('validateScriptIntegrity — forward references', () => {
         expect(res.issue?.reason).toContain("'FunctionalUnit'");
     });
 
-    it('accepts a forward superclass in `create class A extends B`', () => {
-        // Measured: the executor drops an unresolved superclass silently and the class is
-        // still created, so the script does complete. Out of the pass by design.
+    it('refuses a forward superclass in `create class A extends B`', () => {
+        // Inverted on 2026-09-17. It used to assert acceptance, because the executor dropped
+        // an unresolved superclass in silence and created the class anyway, so the script ran
+        // to the end. Lane L2 (`4898aa60f`) made that a hard PARENT_NOT_FOUND, so this script
+        // now stops on line 1 with nothing created, which is what the pass exists to prevent.
         const script = [
             'create class ALU extends FunctionalUnit',
             'create class FunctionalUnit',
+        ].join('\n');
+        const res = validateScriptIntegrity(script, EMPTY);
+        expect(res.valid).toBe(false);
+        expect(res.issue?.line).toBe(1);
+        expect(res.issue?.kind).toBe('forward-reference');
+        expect(res.issue?.reason).toBe(
+            "line 1 references 'FunctionalUnit', which is created at line 2. Move the reference after it."
+        );
+    });
+
+    it('refuses a forward superclass among several, and an abstract class or interface too', () => {
+        // The forward name is deliberately NOT the last one. The parser fills `superClasses`
+        // with every name and leaves the LAST in `superClass`, so a check that reads only
+        // `superClass` would see `Register`, find it declared on line 1, and pass this script.
+        const script = [
+            'create class Register',
+            'create abstract class ALU extends Cache extends Register',
+            'create class Cache',
+        ].join('\n');
+        const res = validateScriptIntegrity(script, EMPTY);
+        expect(res.valid).toBe(false);
+        expect(res.issue?.line).toBe(2);
+        expect(res.issue?.reason).toContain("'Cache'");
+
+        const asInterface = script.replace('abstract class ALU', 'interface ALU');
+        expect(validateScriptIntegrity(asInterface, EMPTY).valid).toBe(false);
+    });
+
+    it('accepts a superclass that lives in another metamodel of the project', () => {
+        // The name set spans every metamodel, so the superclass resolves project-wide and the
+        // later creation of a homonym is not this pass's business.
+        const script = [
+            'create class ALU extends FunctionalUnit',
+            'create class FunctionalUnit',
+        ].join('\n');
+        expect(validateScriptIntegrity(script, new Set(['FunctionalUnit'])).valid).toBe(true);
+    });
+
+    it('accepts a superclass created earlier in the same script', () => {
+        const script = [
+            'create class FunctionalUnit',
+            'create class ALU extends FunctionalUnit',
         ].join('\n');
         expect(validateScriptIntegrity(script, EMPTY).valid).toBe(true);
     });

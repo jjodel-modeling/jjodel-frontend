@@ -38,19 +38,34 @@
  * project, so the reference cannot resolve and the line is certain to fail, and (2) a later
  * line declares `X`, which is what tells a forward reference apart from a plain typo. The
  * naive version of this rule ("if `X` did exist, the later declaration would fail as a
- * duplicate") is NOT available here: `create class|enum|package` performs no duplicate
- * check at all, so a second element with the same name is created happily. Measured in
+ * duplicate") was NOT available when this pass was written: `create class|enum|package`
+ * performed no duplicate check at all, so a second element with the same name was created
+ * happily. Measured in
  * `docs/discovery/discovery_2026-09-16_jjscript_forward_refs_structured_errors.md` §6, which
- * also records the two open defects behind it.
+ * also records the two open defects behind it. Lane L1 (`09ce4b60c`) has since closed one of
+ * them, so those creates now consult the M2 uniqueness verdict and the naive branch may hold
+ * for some kinds. The pass deliberately does not rely on it: it still refuses only on the
+ * name set, which is the condition it was proved sound under.
  *
  * Because the certainty in (1) comes from the name set, the pass runs ONLY when the caller
  * supplies one. Called without it, the validator behaves exactly as it did before.
  *
- * The pass is restricted to the three roles measured to fail hard when unresolved (report
- * §4.2): the parent of a nested element (`create attribute a in X`), a `type` / `returns`
- * clause, and the standalone `A extends B` command. It is NOT applied to
- * `create class A extends B`, whose missing superclass is dropped silently, nor to the
- * parent of a class, enum or package, which falls back instead of failing.
+ * The pass is restricted to the roles measured to fail hard when unresolved (report §4.2):
+ * the parent of a nested element (`create attribute a in X`), a `type` / `returns` clause,
+ * the standalone `A extends B` command, and the superclass of
+ * `create class|abstract class|interface A extends B`.
+ *
+ * That last role joined the list on 2026-09-17 and was deliberately out of it before. Until
+ * then the executor dropped an unresolved superclass in silence and created the class anyway,
+ * so the script ran to the end and there was nothing to refuse. Lane L2 (`4898aa60f`) made it
+ * all-or-nothing: a missing superclass now refuses the whole create with PARENT_NOT_FOUND, so
+ * `create class ALU extends FunctionalUnit` placed above `create class FunctionalUnit` stops
+ * the run mid-script with a half-built model, which is the failure this pass exists to
+ * prevent. Soundness is unchanged and comes from the same name set: a superclass absent from
+ * every metamodel of the project cannot resolve, and one that is present is never flagged.
+ *
+ * It is still NOT applied to the parent of a class, enum or package, which falls back instead
+ * of failing.
  *
  * Both sides of the comparison stay inside the CLASSIFIER namespace (class, abstract class,
  * interface, enum, enumeration, package). Features live in their own namespace, so
@@ -58,6 +73,7 @@
  */
 
 import { parse } from '../parser/parser';
+import { superclassNames } from './superclassResolution';
 import {
     AddArgs,
     CommandNode,
@@ -111,6 +127,16 @@ const NESTED_ELEMENT_TYPES: ReadonlySet<string> = new Set<ElementType>([
  */
 const TYPED_ELEMENT_TYPES: ReadonlySet<string> = new Set<ElementType>([
     'attribute', 'reference', 'containment', 'composition', 'parameter', 'operation',
+]);
+
+/**
+ * Element types whose `extends` clause is resolved strictly. Since lane L2 (`4898aa60f`) a
+ * superclass that does not resolve refuses the whole create with PARENT_NOT_FOUND, so a
+ * forward one stops the run. `enum` and `package` are absent because neither takes an
+ * `extends` clause.
+ */
+const EXTENDING_ELEMENT_TYPES: ReadonlySet<string> = new Set<ElementType>([
+    'class', 'abstract class', 'interface',
 ]);
 
 /**
@@ -269,6 +295,11 @@ function hardClassifierReferences(ast: CommandNode): string[] {
     if (TYPED_ELEMENT_TYPES.has(elementType)) {
         push(typeClauseName(options?.type));
         push(typeClauseName(options?.returnType));
+    }
+    if (EXTENDING_ELEMENT_TYPES.has(elementType)) {
+        // `superclassNames` rather than a fresh read of the options: the parser fills BOTH
+        // `superClass` and `superClasses` for one clause, and that one place already knows it.
+        for (const qn of superclassNames(options)) push(simpleName(qn));
     }
 
     return out;

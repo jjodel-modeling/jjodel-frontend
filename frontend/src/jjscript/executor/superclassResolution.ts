@@ -49,6 +49,14 @@ export function superclassNames(options: CreateArgs['options'] | undefined): Qua
  * `KNOWN_ERROR_CODES` and `skippable: true`, so Skip Line is offered. The sentence says
  * «nothing was created» because that is the part a user cannot otherwise tell: a failed create
  * that half-succeeded and a failed create that did nothing read the same in a run log.
+ *
+ * The suggestion is set here instead of falling back to the `PARENT_NOT_FOUND` table entry,
+ * whose text is «Make sure the parent was created earlier in the script.» That is right for a
+ * missing parent and wrong for this: since 2026-09-17 the waiter polls for the superclass
+ * (`dependencies.ts`), so one created earlier in the script IS found, and a user who reads that
+ * sentence after doing exactly what it asks has been told to repeat what already worked. If
+ * this refusal ever names a class the script does create, the race is back, and the sentence
+ * below asks for the one thing that helps.
  */
 export function missingSuperclassRefusal(className: string | undefined, superclass: string): ExecutionResult {
     const message = `Superclass '${superclass}' not found for class '${className}': nothing was created. `
@@ -57,7 +65,11 @@ export function missingSuperclassRefusal(className: string | undefined, supercla
         success: false,
         command: 'create',
         message,
-        errors: [{ code: 'PARENT_NOT_FOUND', message }],
+        errors: [{
+            code: 'PARENT_NOT_FOUND',
+            message,
+            suggestion: 'If the superclass is created earlier in this script, this is a timing issue: report it.',
+        }],
     };
 }
 

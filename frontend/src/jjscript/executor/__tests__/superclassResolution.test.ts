@@ -135,6 +135,18 @@ describe('what the user sees', () => {
         expect(shown.message).toBe(refusal.message);
     });
 
+    it('does not inherit the PARENT_NOT_FOUND advice, which is wrong for this failure', () => {
+        // The table entry says "Make sure the parent was created earlier in the script."
+        // Since the waiter polls for the superclass (`dependencies.ts`), one created earlier IS
+        // found, so that advice would tell the user to repeat what already worked.
+        const shown = errorFromResult(
+            missingSuperclassRefusal('ALU', 'FunctionalUnit'),
+            'create class ALU extends FunctionalUnit');
+        expect(shown.suggestion).toBe(
+            'If the superclass is created earlier in this script, this is a timing issue: report it.');
+        expect(shown.suggestion).not.toContain('created earlier in the script.');
+    });
+
     it('agrees with the standalone `A extends B` command on the code', () => {
         // `commands/extends.ts` returns PARENT_NOT_FOUND for the same situation. The sentences
         // differ because the commands differ; what must agree is what happened.
