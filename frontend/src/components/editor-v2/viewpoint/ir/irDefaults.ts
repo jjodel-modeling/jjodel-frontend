@@ -37,8 +37,14 @@ export function defaultObjectViewIR(): VertexViewIR {
         label: 'Object (IR default)',
         shape: {
             form: 'rect',
+            cornerRadius: 8,
+            border: { color: 'var(--color-inode-border)', width: 1, style: 'solid' },
             labels: [
-                { position: 'top', source: { from: 'intrinsic', prop: 'qualifiedName' } },
+                {
+                    position: 'top',
+                    source: { from: 'intrinsic', prop: 'qualifiedName' },
+                    style: { fontSize: 14, underline: true },
+                },
             ],
         },
         fieldCompartments: [

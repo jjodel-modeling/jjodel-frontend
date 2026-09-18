@@ -86,6 +86,7 @@ export function resolveTextStyle(cs: CompiledTextStyle | undefined, ctx: ReadCtx
     if (cs.fontWeight) { const v = cs.fontWeight(ctx, id); if (v) s.fontWeight = FONT_WEIGHT_NUM[v]; }
     if (cs.fontStyle) { const v = cs.fontStyle(ctx, id); if (v) s.fontStyle = v; }
     if (cs.color) { const v = cs.color(ctx, id); if (v) s.color = v; }
+    if (cs.underline) { const v = cs.underline(ctx, id); if (v) s.textDecoration = 'underline'; }
     return Object.keys(s).length ? s : undefined;
 }
 
@@ -334,6 +335,21 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
     // covers demo/migrated views without an authored border.
     const b = compiled.border;
     if (b && !svgPainter) inlineStyle.border = `${b.width ?? 1}px ${b.style ?? 'solid'} ${b.color ?? 'var(--border-default)'}`;
+    // Corner radius (asse raggio, ir-1.3 addendum): significant only on box shapes with
+    // straight corners. Explicitly NOT applied — not approximated, not converted — on
+    // ellipse/circle/stadium (already fully rounded via their own class rule) and on
+    // SVG-painted shapes (their polygon has no CSS border-radius to apply to; same
+    // !svgPainter guard as `border` above). Symbol Editor authoring-time warning for
+    // this case is owed, not implemented here (S5).
+    if (!svgPainter && form !== 'ellipse' && form !== 'circle' && form !== 'stadium') {
+        const cr = compiled.cornerRadius ? compiled.cornerRadius(readCtx, objectId) : undefined;
+        if (cr !== undefined) inlineStyle.borderRadius = `${cr}px`;
+    }
+    // Compartment separator color (S2 parity): reuses the box border's own color —
+    // no separate axis on FieldCompartmentSpec. `b` is null for demo/migrated views
+    // with no authored border, which keeps them on the CSS default (irStyle.ts) and
+    // leaves their separator unaffected, same fallback discipline as `border` above.
+    const separatorColorStyle: React.CSSProperties | undefined = b ? { borderTopColor: b.color } : undefined;
     // Node-level text style (ir-1.3 cascade root): inline on the root so every
     // text surface inherits it (irStyle.ts uses `inherit` on labels, rows and
     // inline editors). A label's own style, inline on its span, still wins.
@@ -502,7 +518,7 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
                             // the rows inherit it (irStyle.ts gives .ir-row font-size:
                             // inherit and declares no other text axis), and a dispatched
                             // row view can still override it inline on its own .ir-row.
-                            style={resolveTextStyle(fc.rowStyle, readCtx, objectId)}
+                            style={{ ...resolveTextStyle(fc.rowStyle, readCtx, objectId), ...(fc.separator ? separatorColorStyle : undefined) }}
                         >
                             {rowChildIds.map(childId => (
                                 <IRRow key={childId} childObjectId={childId} />
@@ -517,7 +533,7 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
                     <div
                         key={fc.id}
                         className={`ir-compartment${fc.separator ? '' : ' ir-compartment--no-separator'}`}
-                        style={resolveTextStyle(fc.rowStyle, readCtx, objectId)}
+                        style={{ ...resolveTextStyle(fc.rowStyle, readCtx, objectId), ...(fc.separator ? separatorColorStyle : undefined) }}
                     >
                         {source.map(row => (
                             <div
