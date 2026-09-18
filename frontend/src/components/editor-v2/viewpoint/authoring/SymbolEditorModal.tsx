@@ -12,9 +12,18 @@
  * `section nav (170px) | main`, the nav showing ONE section of the re-hosted
  * panel at a time with a count badge where an axis carries rules, and
  * «Revert to preset» has moved out of the header into the footer beside «Done».
- * The main pane keeps the realistic preview strip (D8 wiring) above
- * VertexAuthoringPanel re-hosted UNCHANGED (same component, no editorial fork:
- * the Editor V3 lesson), now driven by one more prop, `activeSection`.
+ * The main pane keeps the realistic preview strip above VertexAuthoringPanel
+ * re-hosted UNCHANGED (same component, no editorial fork: the Editor V3 lesson),
+ * now driven by one more prop, `activeSection`.
+ *
+ * Since slice 5 the strip is MULTI-INSTANCE (D8): up to three real canvas nodes of
+ * this view, in DOM order, active pane only, each tile drawn with the axes THAT
+ * instance resolves to and captioned with the rule that won on it — or with its own
+ * size, on a section where size is the point. The resolution and the caption live in
+ * `previewInstances.ts`, pure and tested; this file wires the boxes, the ReadCtx and
+ * the tiles. With no instance on canvas the strip is the symbolic replica it has
+ * always been, now drawing a conditional form's fallback glyph instead of refusing
+ * (D8-b).
  *
  * Writing stays live: applying a preset and «Revert to preset» go through the
  * same canonical whole-object set_ir the panel uses; the hosted panel realigns
@@ -23,10 +32,10 @@
  * which flushes its pending edit itself.
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useSelector } from 'react-redux';
-import { LPointerTargetable, U, type LViewElement } from '../../../../joiner';
+import { LPointerTargetable, store, U, type LViewElement } from '../../../../joiner';
 import { JjodelEvents } from '../../../../events/registry';
 import { recognizeSymbol } from '../ir/symbolRecognition';
 import { authoredCornerRadius } from '../ir/shapeRegistry';
@@ -38,7 +47,9 @@ import { SymbolCatalogPicker } from './SymbolCatalogPicker';
 import { borderOverrideRows } from './borderOverrides';
 import SymbolPreview from './SymbolPreview';
 import { SymbolBoxPreview, captionForBox } from './SymbolBoxPreview';
-import { useCanvasNodeBox } from './useCanvasNodeBox';
+import { resolvePreviewInstances, type ResolvedPreviewInstance } from './previewInstances';
+import { makeReadCtx } from '../ir/irReadCtxLproxy';
+import { useCanvasNodeBoxes } from './useCanvasNodeBox';
 import { readVertexLayout, type VertexLayoutSource } from '../layout/vertexLayout';
 import { getLayoutKeyOf } from '../layout/vertexLayoutAdapter';
 import { IR_SECTION_LABELS, IR_TAB_LABELS, type IRSectionId, type IRTabId } from './irTabs';
@@ -75,6 +86,16 @@ const PREVIEW_MAX_W = 560;
 const PREVIEW_MAX_H = 88;
 
 /**
+ * How many real instances the strip draws (D8) and the gap between two tiles, which
+ * must stay equal to the `gap` of `&__preview-strip` in SymbolEditorModal.scss: the
+ * width each tile gets is `(PREVIEW_MAX_W - gaps) / n`, so three tiles occupy exactly
+ * the width one tile occupied before. The strip's own bounds never change with the
+ * count (D8-e).
+ */
+const PREVIEW_MAX_INSTANCES = 3;
+const PREVIEW_TILE_GAP = 16;
+
+/**
  * Recents (D18): per-project preset ids, most recent first, persisted in
  * localStorage under the documented key idiom (cf. EditorSwitch,
  * `jjodel.editorPrefs.${modelid}`). Modal state is the source of truth while
@@ -109,18 +130,26 @@ function writeRecents(projectId: string | null, ids: readonly string[]): void {
 }
 
 /**
- * The current authored axes as a preset VALUE for SymbolPreview, or null when
- * the form is conditional (no honest static preview exists). Conditional
- * marker/fill are simply omitted: the strip previews the scalar baseline.
+ * The current authored axes as a preset VALUE for SymbolPreview.
+ *
+ * The form is the scalar when there is one, and the conditional's FALLBACK otherwise
+ * (D8-b): the `else` of a `{when, then, else}`, the `default` of a `{rules, default}`,
+ * `'rect'` when neither is written — the same fallback `compileConditional` receives
+ * at `irCompile.ts:305`. `toRules` normalizes all three shapes to that one field.
+ * Drawing that glyph is honest where refusing to draw was not: it is exactly what an
+ * instance matching no rule renders as on the canvas, so the symbolic strip now shows
+ * a symbol instead of «Conditional form: no static preview».
+ *
+ * Conditional marker/fill are still simply omitted: the strip previews the scalar
+ * baseline, and the per-instance values live on the tiles.
  */
-function currentAxesPreset(shape: VertexViewIR['shape']): SymbolPreset | null {
-    if (typeof shape.form !== 'string') return null;
+function currentAxesPreset(shape: VertexViewIR['shape']): SymbolPreset {
     return {
         id: '__current-axes',
         label: '',
         notation: '',
         values: {
-            form: shape.form,
+            form: toRules(shape.form).default ?? 'rect',
             // Scalar or omitted (slice 2), like marker and fill above: a conditional axis
             // has no single value the static strip could preview, and the preset shape
             // wants both style and width together.
@@ -129,6 +158,31 @@ function currentAxesPreset(shape: VertexViewIR['shape']): SymbolPreset | null {
                 : undefined,
             marker: typeof shape.marker === 'string' && shape.marker !== '' ? shape.marker : undefined,
             fill: typeof shape.fill === 'string' && shape.fill !== '' ? shape.fill : undefined,
+        },
+    };
+}
+
+/**
+ * One instance's RESOLVED axes as a preset VALUE, the shape SymbolBoxPreview draws.
+ * No conditional survives here: `previewInstances` has already evaluated every axis
+ * against this instance through the same `ReadCtx` the canvas uses.
+ *
+ * `border` travels as a pair because the preset shape wants both together, so an
+ * author who varied only the width still gets the width they wrote, with the style
+ * on the canvas default. Absent on BOTH axes leaves `border` out, which is what keeps
+ * the CSS box's own `1px solid` in force — the same fallback IRNodeContent leaves.
+ */
+function instanceAxesPreset(r: ResolvedPreviewInstance): SymbolPreset {
+    const hasBorder = r.borderWidth !== undefined || r.borderStyle !== undefined;
+    return {
+        id: '__instance-axes',
+        label: '',
+        notation: '',
+        values: {
+            form: r.form,
+            border: hasBorder ? { style: r.borderStyle ?? 'solid', width: r.borderWidth ?? 1 } : undefined,
+            marker: typeof r.marker === 'string' && r.marker !== '' ? r.marker : undefined,
+            fill: typeof r.fill === 'string' && r.fill !== '' ? r.fill : undefined,
         },
     };
 }
@@ -196,24 +250,75 @@ export const SymbolEditorModal: React.FC = () => {
     // not offer Padding when the panel does not render it.
     const advanced = useSelector((s: any) => !!s.advanced);
 
-    // Realistic preview (D8 wiring): the box of the canvas node rendering this
-    // view, read from the DOM (the canvas stays mounted under the modal).
-    const nodeBox = useCanvasNodeBox(viewId);
-    // Manual-size facts of the representative vertex, as a primitive signature
-    // so the subscription cannot re-render the modal on unrelated store
-    // updates. '' = not resized; 'WxH' with manualSizeOf's exact gate (both
-    // dimensions positive), '0x0'-shaped = resized but invalid D-layer size.
-    // Read PER LAYOUT (slice 1c): the manual size the preview must show is the one of the
-    // layout in force, not the seed. Reading the key inside the selector also makes the
-    // signature move at a layout change, with no extra dependency.
-    const manualSig = useSelector((s: any): string => {
-        const raw = nodeBox ? s?.idlookup?.[nodeBox.vertexId] : undefined;
-        const eff = readVertexLayout((raw ?? {}) as VertexLayoutSource, getLayoutKeyOf(s));
-        if (!eff.isResized) return '';
-        const w = typeof eff.w === 'number' && eff.w > 0 ? eff.w : 0;
-        const h = typeof eff.h === 'number' && eff.h > 0 ? eff.h : 0;
-        return `${w}x${h}`;
+    // Realistic preview (D8): the boxes of the canvas nodes rendering this view, in
+    // DOM order, active pane only, read from the DOM (the canvas stays mounted under
+    // the modal). Up to three — the strip draws one tile each.
+    const boxes = useCanvasNodeBoxes(viewId, PREVIEW_MAX_INSTANCES);
+    // Per-vertex facts, as ONE primitive signature (D8-d): the subscription must not
+    // re-render the modal on unrelated store updates, and an object is not a
+    // signature. Per vertex it joins the manual size of the layout in force (slice 1c:
+    // the size to show is the layout's, not the seed's, and reading the key here makes
+    // the signature move at a layout change with no extra dependency), the object id,
+    // and that object's feature-slot snapshot — the last one is what makes a caption
+    // follow an edit to the very attribute its predicate reads. Same shape and same
+    // reason as the selector of useIRView (irResolve.ts:49-72).
+    const instanceSig = useSelector((s: any): string => {
+        const lookup = s?.idlookup ?? {};
+        const layoutKey = getLayoutKeyOf(s);
+        const parts: string[] = [];
+        for (const b of boxes) {
+            const raw = lookup[b.vertexId];
+            const eff = readVertexLayout((raw ?? {}) as VertexLayoutSource, layoutKey);
+            const w = typeof eff.w === 'number' && eff.w > 0 ? eff.w : 0;
+            const h = typeof eff.h === 'number' && eff.h > 0 ? eff.h : 0;
+            const manual = eff.isResized ? `${w}x${h}` : '';
+            const objectId = typeof raw?.model === 'string' ? raw.model : '';
+            const dObject = objectId ? lookup[objectId] : undefined;
+            const feats: string[] = [];
+            if (Array.isArray(dObject?.features)) {
+                for (const fid of dObject.features) {
+                    const dv = lookup[fid];
+                    if (dv && Array.isArray(dv.values)) feats.push(`${fid}=${JSON.stringify(dv.values)}`);
+                }
+            }
+            parts.push(`${b.vertexId}|${manual}|${objectId}|${dObject?.name ?? ''}|${feats.join(',')}`);
+        }
+        return parts.join(';');
     });
+
+    // The DATA behind that signature, READ from the store rather than subscribed to.
+    // `makeReadCtx` needs the whole `idlookup`, and a selector returning `idlookup`
+    // would re-render this modal on every action in the app — the object is replaced
+    // by every write. So the signature above carries the subscription and
+    // `store.getState()` carries the read, which is exactly the split useIRView makes
+    // (irResolve.ts:103-110). Known v1 limit, inherited and not introduced here: a
+    // predicate navigating to ANOTHER object reads it correctly but is not subscribed
+    // to it, same as the canvas before cross-deps.
+    const instances = useMemo(() => {
+        const s: any = store.getState();
+        const lookup = s?.idlookup ?? {};
+        const layoutKey = getLayoutKeyOf(s);
+        const readCtx = makeReadCtx(lookup);
+        const inputs: { objectId: string; box: { w: number; h: number }; sizeCaption: string }[] = [];
+        for (const b of boxes) {
+            const raw = lookup[b.vertexId];
+            // Vertex -> object: one plain D-layer field, the same read useIRView makes
+            // at irResolve.ts:56 and :108. A vertex without it has no instance to show.
+            const objectId = typeof raw?.model === 'string' ? raw.model : '';
+            if (!objectId) continue;
+            // Per-instance precedence (D8-d), the same the single box applied: a valid
+            // manual size of the layout in force wins and switches the derivation off,
+            // the DOM box otherwise. A raised isResized with an invalid D-layer size
+            // keeps the manual WORD on the DOM numbers — the flag is the user's intent.
+            const eff = readVertexLayout((raw ?? {}) as VertexLayoutSource, layoutKey);
+            const manualValid = eff.isResized
+                && typeof eff.w === 'number' && eff.w > 0
+                && typeof eff.h === 'number' && eff.h > 0;
+            const box = manualValid ? { w: eff.w as number, h: eff.h as number } : { w: b.w, h: b.h };
+            inputs.push({ objectId, box, sizeCaption: captionForBox(box, eff.isResized ? 'manual' : 'derived') });
+        }
+        return { readCtx, inputs };
+    }, [instanceSig, boxes]);
 
     if (!viewId) return null;
 
@@ -235,20 +340,6 @@ export const SymbolEditorModal: React.FC = () => {
     // only when written. Absent (or invalid) leaves both previews on the base radius.
     const cornerRadius = authoredCornerRadius(ir.shape.cornerRadius);
     const previewLabel = (typeof ir.label === 'string' && ir.label !== '') ? ir.label : (view.name as string);
-
-    // Preview box (D8 wiring). Precedence mirrors the engine: the manual size
-    // wins and switches the derivation off (useContentSize gates on
-    // !isResized). Manual numbers come from the D-layer, per the acceptance
-    // criterion; a raised isResized with an invalid D-layer size keeps the
-    // manual caption on the DOM numbers (the flag is the user's intent).
-    // Without a canvas node there is no box: the strip degrades to the
-    // symbolic glyph and says so, no number is invented.
-    const isResized = manualSig !== '';
-    const [manualW, manualH] = isResized ? manualSig.split('x').map(Number) : [0, 0];
-    const manualValid = manualW > 0 && manualH > 0;
-    const previewBox = nodeBox
-        ? (isResized && manualValid ? { w: manualW, h: manualH } : { w: nodeBox.w, h: nodeBox.h })
-        : null;
 
     const navEntries: NavEntry[] = [
         ...NAV_SECTIONS
@@ -275,6 +366,18 @@ export const SymbolEditorModal: React.FC = () => {
         if (key === 'border') return borderOverrideRows(ir.shape.border).rows.length;
         return 0;
     };
+
+    // The strip, resolved per instance against the section in force (D8-a/D8-b). The
+    // caption of a tile is the rule that won on THAT instance where the active section
+    // has rules to report, and the size caption everywhere else; both come back
+    // composed from the pure helper, which is where they are tested.
+    const tiles = resolvePreviewInstances(ir.shape, active.section, instances.readCtx, instances.inputs);
+    // Each tile takes its share of the SAME total width (D8-e): three tiles occupy
+    // what one occupied, by reduction only, so the strip neither grows nor shifts when
+    // the instance count changes.
+    const tileMaxW = tiles.length > 0
+        ? (PREVIEW_MAX_W - PREVIEW_TILE_GAP * (tiles.length - 1)) / tiles.length
+        : PREVIEW_MAX_W;
 
     // Same canonical write path as the panel (set_ir, whole-object replace);
     // the hosted panel realigns via its external-change reseed.
@@ -345,9 +448,7 @@ export const SymbolEditorModal: React.FC = () => {
                             title={notations ? `${titleLabel} · ${notations}` : titleLabel}
                             onClick={() => setPickerOpen((o) => !o)}
                         >
-                            {previewPreset
-                                ? <SymbolPreview preset={previewPreset} width={22} cornerRadius={cornerRadius} />
-                                : <i className="bi bi-shapes" aria-hidden="true" />}
+                            <SymbolPreview preset={previewPreset} width={22} cornerRadius={cornerRadius} />
                             <span className="symbol-editor-modal__chip-name">{titleLabel}</span>
                             {modified && (
                                 <span className="symbol-editor-modal__chip-modified">modified</span>
@@ -414,40 +515,35 @@ export const SymbolEditorModal: React.FC = () => {
                     <div className="symbol-editor-modal__main">
                         <div className="symbol-editor-modal__preview">
                             <span className="symbol-editor-modal__preview-tag">Preview</span>
-                            {previewPreset ? (
-                                previewBox ? (
-                                    <>
+                            {tiles.length > 0 ? (
+                                <div className="symbol-editor-modal__preview-strip">
+                                    {tiles.map((t, i) => (
                                         <SymbolBoxPreview
-                                            preset={previewPreset}
-                                            box={previewBox}
+                                            key={`${t.objectId}:${i}`}
+                                            preset={instanceAxesPreset(t)}
+                                            box={instances.inputs[i].box}
                                             label={previewLabel}
-                                            borderColor={typeof ir.shape.border?.color === 'string' && ir.shape.border.color !== ''
-                                                ? ir.shape.border.color : undefined}
+                                            borderColor={typeof t.borderColor === 'string' && t.borderColor !== ''
+                                                ? t.borderColor : undefined}
                                             cornerRadius={cornerRadius}
-                                            maxW={PREVIEW_MAX_W}
+                                            maxW={tileMaxW}
                                             maxH={PREVIEW_MAX_H}
+                                            caption={t.caption}
                                         />
-                                        <span className="symbol-editor-modal__preview-caption">
-                                            {captionForBox(previewBox, isResized ? 'manual' : 'derived')}
-                                        </span>
-                                    </>
-                                ) : (
-                                    <>
-                                        <div className="symbol-editor-modal__preview-stage">
-                                            <SymbolPreview preset={previewPreset} width={168} cornerRadius={cornerRadius} />
-                                            {previewLabel ? (
-                                                <span className="symbol-editor-modal__preview-label">{previewLabel}</span>
-                                            ) : null}
-                                        </div>
-                                        <span className="symbol-editor-modal__preview-caption">
-                                            symbolic preview · no node on canvas
-                                        </span>
-                                    </>
-                                )
+                                    ))}
+                                </div>
                             ) : (
-                                <span className="symbol-editor-modal__preview-empty">
-                                    Conditional form: no static preview
-                                </span>
+                                <>
+                                    <div className="symbol-editor-modal__preview-stage">
+                                        <SymbolPreview preset={previewPreset} width={168} cornerRadius={cornerRadius} />
+                                        {previewLabel ? (
+                                            <span className="symbol-editor-modal__preview-label">{previewLabel}</span>
+                                        ) : null}
+                                    </div>
+                                    <span className="symbol-editor-modal__preview-caption">
+                                        symbolic preview · no node on canvas
+                                    </span>
+                                </>
                             )}
                         </div>
 

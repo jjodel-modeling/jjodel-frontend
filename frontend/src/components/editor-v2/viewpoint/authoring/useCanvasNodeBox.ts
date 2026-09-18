@@ -20,6 +20,11 @@
  * several instances of the same view the first match in DOM order is the
  * representative, a ratified choice.
  *
+ * Since slice 5 the same walk also serves useCanvasNodeBoxes(viewId, max), which
+ * keeps the first `max` matches instead of the first one (D8): one scan, so the
+ * single hook's "representative" and the multi hook's first tile are the same node
+ * by construction and not by coincidence.
+ *
  * Live update: a ResizeObserver on the resolved wrapper (fires only on real
  * size changes, after layout, whatever the cause: label edit, form change,
  * manual resize, reset size) plus a re-resolution on every render of the
@@ -46,16 +51,30 @@ function sameBox(a: CanvasNodeBox | null, b: CanvasNodeBox | null): boolean {
     return a.w === b.w && a.h === b.h && a.vertexId === b.vertexId;
 }
 
-/** First .react-flow__node wrapper rendering `viewId` inside an active dock pane. */
-function resolveCanvasNode(viewId: string): HTMLElement | null {
+/**
+ * The .react-flow__node wrappers rendering `viewId` inside an active dock pane, in
+ * DOM order, at most `max`. One scan for both hooks: the single-box one is this same
+ * walk stopped at the first hit, so "the representative" and "the first instance"
+ * cannot come to mean two different nodes.
+ */
+function resolveCanvasNodes(viewId: string, max: number): HTMLElement[] {
+    const out: HTMLElement[] = [];
+    if (!(max > 0)) return out;
     const marks = document.querySelectorAll<HTMLElement>(`.mm-node[data-viewid="${CSS.escape(viewId)}"]`);
     for (const mark of Array.from(marks)) {
         const pane = mark.closest('.dock-tabpane');
         if (pane && !pane.classList.contains('dock-tabpane-active')) continue;
         const wrapper = mark.closest<HTMLElement>('.react-flow__node');
-        if (wrapper) return wrapper;
+        if (!wrapper || out.includes(wrapper)) continue;
+        out.push(wrapper);
+        if (out.length >= max) break;
     }
-    return null;
+    return out;
+}
+
+/** First .react-flow__node wrapper rendering `viewId` inside an active dock pane. */
+function resolveCanvasNode(viewId: string): HTMLElement | null {
+    return resolveCanvasNodes(viewId, 1)[0] ?? null;
 }
 
 function readBox(wrapper: HTMLElement): CanvasNodeBox | null {
@@ -103,6 +122,77 @@ export function useCanvasNodeBox(viewId: string | null): CanvasNodeBox | null {
     }, []);
 
     return box;
+}
+
+function sameBoxes(a: readonly CanvasNodeBox[], b: readonly CanvasNodeBox[]): boolean {
+    if (a === b) return true;
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) if (!sameBox(a[i], b[i])) return false;
+    return true;
+}
+
+function sameElements(a: readonly HTMLElement[], b: readonly HTMLElement[]): boolean {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+    return true;
+}
+
+/** Stable identity for "no instance", so an idle render never swaps the array. */
+const NO_BOXES: readonly CanvasNodeBox[] = [];
+
+/**
+ * The boxes of every canvas node rendering `viewId`, in DOM order, at most `max`
+ * (slice 5, D8). Same discipline as useCanvasNodeBox, widened to a set: one
+ * ResizeObserver over ALL the resolved wrappers (one observer, several targets —
+ * the callback re-reads the whole set, which is what keeps the tiles consistent
+ * with each other), re-resolution on every render of the caller, and an equality
+ * guard element by element so an unchanged canvas returns the same array identity.
+ *
+ * A wrapper whose box does not read (zero-sized, mid-layout) is dropped rather than
+ * reported as a hole: a tile with no numbers has nothing honest to draw.
+ */
+export function useCanvasNodeBoxes(viewId: string | null, max: number): readonly CanvasNodeBox[] {
+    const [boxes, setBoxes] = useState<readonly CanvasNodeBox[]>(NO_BOXES);
+    const observed = useRef<HTMLElement[]>([]);
+    const observer = useRef<ResizeObserver | null>(null);
+
+    // No dependency array, same reason as above: the trigger is a render of the
+    // caller, and every state write is equality-guarded.
+    useEffect(() => {
+        const els = viewId ? resolveCanvasNodes(viewId, max) : [];
+        if (!sameElements(els, observed.current)) {
+            observer.current?.disconnect();
+            observer.current = null;
+            observed.current = els;
+            if (els.length > 0) {
+                const ro = new ResizeObserver(() => {
+                    const next = readBoxes(observed.current);
+                    setBoxes(prev => (sameBoxes(prev, next) ? prev : next));
+                });
+                for (const el of els) ro.observe(el);
+                observer.current = ro;
+            }
+        }
+        const next = readBoxes(els);
+        setBoxes(prev => (sameBoxes(prev, next) ? prev : next));
+    });
+
+    useEffect(() => () => {
+        observer.current?.disconnect();
+        observer.current = null;
+        observed.current = [];
+    }, []);
+
+    return boxes;
+}
+
+function readBoxes(els: readonly HTMLElement[]): readonly CanvasNodeBox[] {
+    const out: CanvasNodeBox[] = [];
+    for (const el of els) {
+        const b = readBox(el);
+        if (b) out.push(b);
+    }
+    return out.length > 0 ? out : NO_BOXES;
 }
 
 export default useCanvasNodeBox;

@@ -16,9 +16,14 @@
  * (irStyle.ts); without a .mm-node ancestor the inline zeros reproduce exactly
  * that lifted state.
  *
- * Declared limit: per-instance content (compartment rows, conditional axes,
- * badge visibility) needs an instance and stays out; the preview is the view
- * with its label, not the clone of one node. A large box scales DOWN to fit
+ * Declared limit, narrowed in slice 5: the CONDITIONAL AXES are now per instance,
+ * because the caller resolves them — `previewInstances.ts` evaluates form, fill,
+ * border and marker against one instance through the same `ReadCtx` the canvas uses,
+ * and hands the result down as the preset VALUE plus the caption below. This
+ * component still resolves nothing and reads no model; it draws what it is given, one
+ * instance per mount. What remains out is per-instance CONTENT — compartment rows,
+ * badge visibility, the label: the tile shows the view's label, not the clone of one
+ * node, and the strip is not a real IR render (D8). A large box scales DOWN to fit
  * the strip and never scales up.
  *
  * Pure presentation: no state, no model access. SymbolPreview (the 72x48 tile
@@ -85,9 +90,16 @@ export interface SymbolBoxPreviewProps {
     /** Stage bounds the preview must fit in, px. */
     maxW: number;
     maxH: number;
+    /**
+     * One line under the box (slice 5, D8-a): the size caption, or `<instance> ·
+     * <predicate>` on a section whose axis carries rules. Composed by the caller
+     * (`previewInstances.captionForInstance`), never derived here. Absent = no line,
+     * and the tile is exactly the scaled box, as before.
+     */
+    caption?: string;
 }
 
-export const SymbolBoxPreview: React.FC<SymbolBoxPreviewProps> = ({ preset, box, label, borderColor, cornerRadius, maxW, maxH }) => {
+export const SymbolBoxPreview: React.FC<SymbolBoxPreviewProps> = ({ preset, box, label, borderColor, cornerRadius, maxW, maxH, caption }) => {
     const v = preset.values;
     const desc = getShapeDescriptor(v.form);
     // Entrambi i painter SVG, con la stessa narrowing di IRNodeContent: una forma
@@ -148,50 +160,53 @@ export const SymbolBoxPreview: React.FC<SymbolBoxPreviewProps> = ({ preset, box,
     };
 
     return (
-        <div style={{ position: 'relative', width: dw, height: dh }} aria-hidden="true">
-            <div className={`ir-node-content ir-shape--${v.form}`} style={replicaStyle}>
-                {svgPainter && (
-                    <svg className={svgPainter.svgClassName} viewBox={svgViewBox} preserveAspectRatio="none">
-                        {svgDouble ? (
-                            <>
-                                {outline({ fill: svgFill, stroke: svgStroke, strokeWidth: svgStrokeWidth * 3 })}
-                                {outline({ fill: 'none', stroke: svgFill, strokeWidth: svgStrokeWidth })}
-                            </>
-                        ) : (
-                            outline({ fill: svgFill, stroke: svgStroke, strokeWidth: svgStrokeWidth, strokeDasharray: svgDash })
-                        )}
-                        {/* Ornamenti (il coperchio del cilindro): sopra la
-                            silhouette, solo tratto, come su IRNodeContent. */}
-                        {svgPainter.kind === 'svgPath' && (svgPainter.ornaments ?? []).map((d, i) => (
-                            <path
-                                key={`ir-ornament-${i}`}
-                                d={d}
-                                vectorEffect="non-scaling-stroke"
-                                fill="none"
-                                stroke={svgStroke}
-                                strokeWidth={svgStrokeWidth}
-                                strokeDasharray={svgDash}
-                            />
-                        ))}
-                    </svg>
-                )}
-                {markerDef && (
-                    <svg className="ir-marker-svg" viewBox={MARKER_VIEWBOX} preserveAspectRatio="xMidYMid meet">
-                        {markerDef.paths.map((p, i) => (
-                            <path
-                                key={i}
-                                d={p.d}
-                                fill={p.fill ? markerColor : 'none'}
-                                stroke={p.fill ? 'none' : markerColor}
-                                strokeWidth={MARKER_STROKE_WIDTH}
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                            />
-                        ))}
-                    </svg>
-                )}
-                {label ? <span className="ir-label ir-label--center">{label}</span> : null}
+        <div className="symbol-box-preview">
+            <div className="symbol-box-preview__stage" style={{ width: dw, height: dh }} aria-hidden="true">
+                <div className={`ir-node-content ir-shape--${v.form}`} style={replicaStyle}>
+                    {svgPainter && (
+                        <svg className={svgPainter.svgClassName} viewBox={svgViewBox} preserveAspectRatio="none">
+                            {svgDouble ? (
+                                <>
+                                    {outline({ fill: svgFill, stroke: svgStroke, strokeWidth: svgStrokeWidth * 3 })}
+                                    {outline({ fill: 'none', stroke: svgFill, strokeWidth: svgStrokeWidth })}
+                                </>
+                            ) : (
+                                outline({ fill: svgFill, stroke: svgStroke, strokeWidth: svgStrokeWidth, strokeDasharray: svgDash })
+                            )}
+                            {/* Ornamenti (il coperchio del cilindro): sopra la
+                                silhouette, solo tratto, come su IRNodeContent. */}
+                            {svgPainter.kind === 'svgPath' && (svgPainter.ornaments ?? []).map((d, i) => (
+                                <path
+                                    key={`ir-ornament-${i}`}
+                                    d={d}
+                                    vectorEffect="non-scaling-stroke"
+                                    fill="none"
+                                    stroke={svgStroke}
+                                    strokeWidth={svgStrokeWidth}
+                                    strokeDasharray={svgDash}
+                                />
+                            ))}
+                        </svg>
+                    )}
+                    {markerDef && (
+                        <svg className="ir-marker-svg" viewBox={MARKER_VIEWBOX} preserveAspectRatio="xMidYMid meet">
+                            {markerDef.paths.map((p, i) => (
+                                <path
+                                    key={i}
+                                    d={p.d}
+                                    fill={p.fill ? markerColor : 'none'}
+                                    stroke={p.fill ? 'none' : markerColor}
+                                    strokeWidth={MARKER_STROKE_WIDTH}
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                />
+                            ))}
+                        </svg>
+                    )}
+                    {label ? <span className="ir-label ir-label--center">{label}</span> : null}
+                </div>
             </div>
+            {caption ? <span className="symbol-box-preview__caption">{caption}</span> : null}
         </div>
     );
 };

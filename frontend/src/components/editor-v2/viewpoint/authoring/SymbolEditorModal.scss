@@ -499,9 +499,24 @@
         overflow: hidden;
     }
 
+    /* TODO: cleanup — orphaned by slice 5. Its only markup was the «Conditional form:
+       no static preview» branch, which D8-b replaced with the fallback glyph: a
+       conditional form is previewable now. Left in place rather than removed with the
+       branch, and flagged, so the removal is a decision and not a side effect. */
     &__preview-empty {
         font-size: 11px;
         color: var(--color-text-secondary, #64748b);
+    }
+
+    /* Slice 5 (D8-e): the tiles of the real instances, up to three. The row is
+       centered inside the SAME fixed strip — the gap here is PREVIEW_TILE_GAP in
+       SymbolEditorModal.tsx, which is what the per-tile width is computed from, so
+       going from one instance to three changes no bound and shifts nothing below. */
+    &__preview-strip {
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        gap: 16px;
     }
 
     /* D8 wiring: caption of the realistic preview, bottom-right corner of the
@@ -557,4 +572,32 @@
        free space, so «Revert to preset» and «Done» stay a pair (the footer's own gap
        spaces them) instead of drifting to opposite ends. */
     &__revert { margin-left: auto; }
+}
+
+/* SymbolBoxPreview — one tile of the strip (slice 5). The rules live here because
+   this modal is its only consumer and the tile has no meaning outside the strip; the
+   component keeps the class names so the stage's `position: relative`, which the
+   absolutely-placed label and marker depend on, is not an inline style that a reader
+   has to find in the JSX. */
+.symbol-box-preview {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+
+    &__stage { position: relative; }
+
+    /* Same 10px mono as the strip caption it replaces per tile (D8-a), centered under
+       its own box and clipped rather than wrapped: a caption that wraps would push the
+       tiles up and break the fixed strip height. */
+    &__caption {
+        max-width: 100%;
+        font-size: 10px;
+        color: var(--color-text-secondary, #64748b);
+        font-family: var(--font-mono, 'IBM Plex Mono', Monaco, Consolas, monospace);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
 }
