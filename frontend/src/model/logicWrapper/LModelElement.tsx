@@ -7807,7 +7807,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
             return LModelElement.fromPointer(U.solveEcoreType(query, true, true)) as any || null;
         }
         let current: LObject | null = null;
-        console.log("resolvereference 000", {segments, current});
+        // console.log("resolvereference 000", {segments, current});
         // is this even valid? i'm expecting #identifier instead of #//identifier
         if (query.indexOf("#//") > 0) {
             let primitivePtr = U.solveEcoreType(query, true, true, '', '');
@@ -7818,7 +7818,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         outer:
         for (let i = 0; i < segments.length; i++) {
             let segment = segments[i];
-            console.log("resolvereference 0."+i, {segment, i, segments, current});
+            // console.log("resolvereference 0."+i, {segment, i, segments, current});
 
             if (i === 0 && segment === "") segment = "0"; // "//" has implicit index, it means "/0/" which is first root element
             if (i === 0 && U.isNumericString(segment)) {
@@ -7849,7 +7849,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                 if (U.isNumericString(sindex)) index = +sindex;
                 else index = 0;
             } else { name = segment; index = 0; }
-            console.log("resolvereference 1."+i, {segment, index, name, current});
+            // console.log("resolvereference 1."+i, {segment, index, name, current});
             let feature: LValue = (current as any)["$"+name];
             if (!feature) return null;
             let values = feature.values;

@@ -110,6 +110,7 @@ export class DState extends DPointerTargetable{
     version:{n:number, date:string, conversionList: number[]} = {n:VersionFixer.get_highestversion(), date: new Date().toString(), conversionList: []};
     timestamp!: number;
     timestampdiff!: number;
+    forceRefresh!: number; // timestamp
 
     advanced!: boolean;
     debug!: boolean;
@@ -218,6 +219,7 @@ export class DState extends DPointerTargetable{
     ClassNameChanged: Dictionary<Pointer<DModelElement>, DocString<"name">> = {}; // for ocl matchings by m2 class name: "context inv Human: ..."
 
     tooltip: string = '';
+    showConfig: boolean = false; // opens config popup
 
     /* IoT: Topic Table */
     topics: Dictionary<string, unknown> = {};

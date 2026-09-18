@@ -45,6 +45,7 @@ import { TreeViewPanelProvider } from './contexts/TreeViewPanelContext';
 import { GlobalDrawer } from './components/GlobalDrawer';
 import { JjtlDialogManager } from './jjtl/components';
 import { SettingsModalProvider } from './contexts/SettingsModalContext';
+import {Config} from "./components/config/config";
 
 let firstLoading = true;
 let browserData = U.getOSBrowserData();
@@ -105,6 +106,7 @@ function App(props: AllProps): JSX.Element {
         <DevModeProvider>
         <GlobalDrawerProvider>
         <FeaturesPanelProvider>
+        <Config />
         <TreeViewPanelProvider>
             <div className={"router-wrapper"}>
                 {isLoading && <Loader/>}

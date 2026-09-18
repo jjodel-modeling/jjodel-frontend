@@ -103,6 +103,13 @@ const debug: boolean = false;
 
 const windoww = window as any;
 
+/*
+Other minor configurations skipped here:
+
+U.safeMode
+U.uniqueNames
+
+*/
 @RuntimeAccessible("ProxyCache")
 export class ProxyCache {
     static clonedCounter: Dictionary<Pointer, number> = {};
@@ -111,7 +118,10 @@ export class ProxyCache {
     static oldStateCC: number = -1;
     static subelementMap: Dictionary<Pointer, Pointer[]> = {};
     static eidMap: Dictionary<Pointer, string> = {};
-    static enabled: boolean = true;
+    static enabled: boolean = true; // if off disables both. if on but both dep and global are off it behaves as if it's off. just a shortcut.
+    static dependencyEnabled: boolean = true;
+    static globalEnabled: boolean = true;
+
     static status: "preparing" | "ready" = "ready";
 
     static disable(): boolean {
@@ -144,9 +154,9 @@ export class ProxyCache {
         }
     }
     static update0(ret: DeepReadonly<DState>, old: DeepReadonly<DState>): void {
-        console.log("cache update", U.jsonCopy({ret, old}));
+        if (U.debug) console.log("cache update", U.jsonCopy({ret, old}));
         let allObjectKeys = new Set(U.arrayMergeInPlace(Object.keys(ret.idlookup), Object.keys(old.idlookup)));
-        if (!ProxyCache.enabled) { return; }
+        if (!ProxyCache.enabled || !ProxyCache.dependencyEnabled) { return; }
         ProxyCache.subelementMap = {};
         // ProxyCache.disable();
         ProxyCache.status = "preparing";
@@ -264,7 +274,7 @@ export class ProxyCache {
     }
 
     private static get0(k: string | symbol, d: D, i?: Info): CacheEntry | null {
-        if (!ProxyCache.enabled) return null;
+        if (!ProxyCache.enabled || (!ProxyCache.globalEnabled && !ProxyCache.dependencyEnabled)) return null;
         if (ProxyCache.status === "preparing") return null;
         if (typeof k === "symbol") return null; // check global get symbol comment.
 
@@ -280,12 +290,17 @@ export class ProxyCache {
         let newStateCC: number = DState.getState().clonedCounter as any ?? -1;
         let didStateChange = ProxyCache.oldStateCC !== newStateCC;
         if (didStateChange) ProxyCache.globalReset(newStateCC);
-        else {
+        else if (ProxyCache.globalEnabled) {
             let globalCache: CacheEntry | null = ProxyCache.globalGet(k, d, i);
             if (windoww.pxDebug && globalCache) console.log("cache global get ret", {globalCache, k, d, i});
             if (globalCache) return globalCache;
         }
-        if (!dependencies?.length) return ProxyCache.globalMakeEntry(k, d, i);
+        if (!dependencies?.length) {
+            if (!ProxyCache.globalEnabled) return null;
+            return ProxyCache.globalMakeEntry(k, d, i);
+        }
+        // end of global cache attempts, start dependency-based
+        if (!ProxyCache.dependencyEnabled) return null;
 
         let debug = ProxyCache.cache?.[d?.id]?.[cc]?.[k];
         // from here on, there are true dependencies listed and global cache failed

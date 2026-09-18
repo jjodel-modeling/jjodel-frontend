@@ -606,16 +606,16 @@ ret .b = 3
 
 // then add to it: content of props, constants, usageDeclarations
 export function reducer(oldState: DState = initialState, action: Action, isLiveChange: boolean = false): DState {
-    console.warn("reducer", {action, isLiveChange});
+    if (U.debug) console.warn("reducer", {action, isLiveChange});
     if (!oldState) {
         DState.current = initialState = oldState = DState.new();
-        console.error("############## state initialized", DState.current, DState.current?.idlookup);
+        if (U.debug) console.error("############## state initialized", DState.current, DState.current?.idlookup);
     }
     if (U.navigating) return oldState;
     if (!windoww.jjactions) windoww.jjactions = [];
     windoww.jjactions.push(action);
 
-    if (U.debug) console.log('execute action', action);
+    if (U.debug) console.log('execute action', {action, isLiveChange});
     if (!U.safeMode) {
         let ret = unsafereducer(oldState, action, isLiveChange);
         DO_AFTER_TRANSACTION_NOT_FOR_USERS(ret);
@@ -656,7 +656,7 @@ function unsafereducer(oldState: DState = initialState, action: Action, isLiveCh
         (ret as any).fromLP = ((ret as any).fromLP || 0) +0.0001;
     }
 // action line 173 if (U.liveStateChanges) t.pendingActions = [];  caused not update of reaxt
-    console.warn("reducher didchange: ", {outcome, b:ret === oldState, ret, oldState, action, isLiveChange})
+    // console.warn("reducer didchange: ", {outcome, b:ret === oldState, ret, oldState, action, isLiveChange})
     if (ret === oldState) return oldState;
     // client synchronization stuff
     if (Collaborative.online) Collaborative.send(action);

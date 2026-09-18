@@ -1,3 +1,204 @@
-.config-popup{
+#config-popup{
+  position: fixed;
+  left: 50vw;
+  top: 50vh;
+  width: 50vw;
+  height: 75vh;
+  transform: translate(-50%, -50%);
+  background-color: white;
+  z-index: 1000;
+  padding: 3em 2em;
+  border-radius: 1em;
+  box-shadow: var(--shadow-dropdown);
+  outline: 1px solid gray;
+  overflow-y: auto;
+  .config-popup-close{
+    float: right;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    background: none;
+    border: none;
+    border-radius: 6px;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 20px;
+    outline: 1px solid gray;
 
+
+    &:active, &:hover {
+      background: #fee2e2;
+      //outline-color: red;
+    }
+    &:active{
+      outline-color: red;
+      i.bi{
+        color: #dc2626;
+        font-weight: bolder !important;
+      }
+
+    }
+  }
+
+  h3{
+    text-align: center;
+    margin-bottom: 1.5em;
+    margin-top: 0;
+  }
+  .config-entry {
+    display: flex;
+    width: 100%;
+    margin: .5em 0;
+    gap: 1em;
+
+
+    .config-entry-inner {
+      display: flex;
+      gap: 1em;
+      flex-grow: 1;
+      >* {
+        flex-basis: 0;
+        flex-grow: 1;
+        // background: wheat;
+        margin: auto 0;
+        input:not([type="checkbox"]) {
+          width: 100%;
+        }
+        .config-input-wrap{ display: flex; }
+        input[type="checkbox"]{
+          margin: auto;
+        }
+      }
+    }
+
+    .label{
+      flex-basis: 30px;
+      &.header{ flex-basis: 0; }
+      display: flex;
+      >*{ margin: auto 0; }
+    }
+    /*span.switch-mode{
+      flex-grow: 0;
+      flex-basis: unset;
+    }*/
+    .header{
+      margin-bottom: .5em;
+      font-weight: bold;
+      font-size: 1.1em;
+      justify-content: center;
+      text-align: center;
+    }
+
+  }
+
+
+
+
+  .config-entry .switch-mode {
+    max-width: 105px;
+    min-width: 105px;
+    // max-width: min-content;
+
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    // gap: 8px;
+    padding: 4px;
+    border: none;
+    border-radius: 999px;
+    background: #e5e7eb;
+    cursor: pointer;
+    transition: background-color 0.25s ease;
+
+    &.header {
+      background-color: inherit;
+    }
+    &:focus-visible {
+      outline: 2px solid #6366f1;
+      outline-offset: 2px;
+    }
+
+    &:hover .switch-mode__icon {
+      transform: rotate(180deg);
+      color: #374151;
+    }
+
+    // &:active .switch-mode__thumb { width: calc(50% - 4px); }
+
+    &.data-user {
+      .switch-mode__thumb {
+        transform: translateX(0);
+      }
+      .switch-mode__option--user {
+        color: #111827;
+      }
+    }
+
+    --text-length: 66px;
+    &.data-project {
+      .switch-mode__thumb {
+        transform: translateX(100%);
+        width: 30px;
+        height: 30px;
+        left: calc(100% - 60px + 0px);
+      }
+      .switch-mode__option--project {
+        color: #111827;
+      }
+    }
+
+    .switch-mode__track {
+      position: relative;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      width: 160px;
+      height: 34px;
+      border-radius: 999px;
+      overflow: hidden;
+      max-width: calc(var(--text-length) + 16px + 1em)
+    }
+
+    .switch-mode__option {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      color: #6b7280;
+      transition: color 0.25s ease;
+      user-select: none;
+      width: var(--text-length);
+      padding: 0 0.75em;
+    }
+
+    .switch-mode__thumb {
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      // width: calc(50% - 6px);
+      height: calc(100% - 6px);
+      width: calc(var(--text-length) - 3px);
+      border-radius: 999px;
+      background: #ffffff;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+      transition: all 0.25s ease;
+    }
+
+    .switch-mode__icon {
+      color: #6b7280;
+      flex-shrink: 0;
+      transition: transform 0.25s ease, color 0.25s ease;
+      z-index: 1;
+      margin: auto;
+    }
+  }
+
+  // fix for external css going out of bounds and messing with thi
+  .number{ color: black !important }
 }

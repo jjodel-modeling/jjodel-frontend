@@ -498,7 +498,7 @@ export interface InputInjectProps{
 }
 
 export interface SelectOwnProps extends Omit<InputOwnProps, 'setter'> {
-    options?: JSX.Element | JSX.Element[];
+    options?: ReactNode | ReactNode[] | JSX.Element | JSX.Element[];
     setter?: (value: string/*|PrimitiveType[]*/, data: any, field: string) => void; // parent select has value: string | boolean
     isMultiSelect?: boolean;
     placeholder?: string;

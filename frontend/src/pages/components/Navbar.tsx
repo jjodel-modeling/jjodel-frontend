@@ -1119,6 +1119,12 @@ function NavbarComponent(props: AllProps) {
                         U.debug = !props.debug;
                     },
                     icon: <i className={`bi ${props.debug ? 'bi-bug-fill' : 'bi-bug'}`} />
+                },
+                {name: 'Config',
+                    function: () => {
+                        TRANSACTION('showConfig', ()=>SetRootFieldAction.new('showConfig', true));
+                    },
+                    icon: <i className={`bi bi-gear`} />
                 }
             ]
         },
