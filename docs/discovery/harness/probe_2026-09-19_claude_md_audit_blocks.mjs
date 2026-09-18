@@ -3,7 +3,7 @@ const REPO='/Users/alfonso/jjodel-release';
 const show=(rev,p)=>execSync(`git -C ${REPO} show ${rev}:${p}`,{encoding:'utf8',maxBuffer:1<<26});
 const MODS=['frontend/src/components/editor-v2/CLAUDE.md','frontend/src/model/CLAUDE.md','frontend/src/redux/CLAUDE.md','frontend/src/styles/CLAUDE.md','frontend/src/jjel/CLAUDE.md','frontend/src/jjscript/CLAUDE.md','frontend/src/jjtl/CLAUDE.md','frontend/src/services/export/CLAUDE.md'];
 const norm=s=>s.replace(/\s+/g,' ').trim();
-const files={'CLAUDE.md':show('HEAD','CLAUDE.md'),'docs/PROTOCOL.md':show('HEAD','docs/PROTOCOL.md')};
+const files={'CLAUDE.md':show('HEAD','CLAUDE.md'),'docs/PROTOCOL.md':show('HEAD','docs/PROTOCOL.md'),'docs/CODEBASE-MAP.md':show('HEAD','docs/CODEBASE-MAP.md')};
 for(const m of MODS)files[m]=show('HEAD',m);
 const fn=Object.fromEntries(Object.entries(files).map(([k,v])=>[k,norm(v)]));
 const lines=show('084d99b3b','CLAUDE.md').split('\n');

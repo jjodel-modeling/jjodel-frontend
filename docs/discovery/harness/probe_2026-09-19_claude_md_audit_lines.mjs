@@ -9,7 +9,7 @@ const norm = s => s.replace(/\s+/g,' ').trim();
 const baseCore = show(BASE,'CLAUDE.md');
 const baseJjtl = show(BASE,'frontend/src/jjtl/CLAUDE.md');
 const baseProto = show(BASE,'docs/PROTOCOL.md');
-const files = {'CLAUDE.md': show(HEAD,'CLAUDE.md'), 'docs/PROTOCOL.md': show(HEAD,'docs/PROTOCOL.md')};
+const files = {'CLAUDE.md': show(HEAD,'CLAUDE.md'), 'docs/PROTOCOL.md': show(HEAD,'docs/PROTOCOL.md'), 'docs/CODEBASE-MAP.md': show(HEAD,'docs/CODEBASE-MAP.md') ?? ''};
 for (const m of MODS) files[m] = show(HEAD,m);
 const corpusNorm = Object.entries(files).map(([k,v]) => norm(v)).join(' ');
 const corpusExactLines = new Set(Object.values(files).flatMap(v => v.split('\n').map(l=>l.trimEnd())));
