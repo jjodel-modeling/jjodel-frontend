@@ -13,7 +13,7 @@
 NON-NEGOTIABLE RULES — re-read before every task
 ═══════════════════════════════════════════════════════════════════
 Canonical list — §20.1 points here; rules are not restated there.
-Shared engagement rules live in docs/PROTOCOL.md (P1..P12); see §1.
+Shared engagement rules live in docs/PROTOCOL.md (P1..P15); see §1.
 
 — Scope & preservation —
  1. Touch only files explicitly listed in the prompt. A broader
@@ -94,7 +94,7 @@ Shared engagement rules live in docs/PROTOCOL.md (P1..P12); see §1.
 
 Le regole di ingaggio condivise (scope, lettura preventiva, two-phase e discovery
 report, commit, build, smoke visivo, prompt log) stanno in `docs/PROTOCOL.md`
-come clausole P1..P12. I prompt le citano per numero. Questo file non le duplica.
+come clausole P1..P15. I prompt le citano per numero. Questo file non le duplica.
 
 Restano qui, perché specifiche di questo codebase e non del protocollo: le
 regole NON-NEGOTIABLE, la critical zone e il Layer Impact Report (§3), la
@@ -190,202 +190,56 @@ The report goes in chat before the diff. Not in a commit.
 
 ### 3.3 TRANSACTION rules near the sync layer
 
-`DVertex.new`, `DVoidEdge.new2`, and `DVoidEdge.new3` each open an internal
-TRANSACTION. Wrapping them in an outer TRANSACTION causes coordinate loss and
-dropped `SetFieldAction`s (nested writes are merged out).
-
-**WRONG — coordinate loss**
-```typescript
-TRANSACTION('create vertices', () => {
-    for (const node of nodes) {
-        DVertex.new(node.id, modelId);   // ← nested TRANSACTION dropped
-    }
-});
-```
-
-**RIGHT — bare loop mirroring useJjomSync**
-```typescript
-for (const node of nodes) {
-    DVertex.new(node.id, modelId);
-}
-```
-
-**SAFE — pure-action TRANSACTION (no creators)**
-TRANSACTIONs that contain only `SetFieldAction`, `SetRootFieldAction`, or
-`DeleteElementAction` (no `.new()` / `.new2()` / `.new3()` calls) are safe
-even in sync-adjacent code. This pattern is used for:
-- Tagging a newly created graph (`SetFieldAction` + `SetRootFieldAction`)
-- Deleting stale edges after a D-first `extends` removal (`DeleteElementAction`)
-- Reconciling reference endpoints (`SetFieldAction` + `DeleteElementAction`)
-
-The hazard is specifically the nesting of creator calls, not the presence of
-a TRANSACTION per se.
+Moved to `frontend/src/components/editor-v2/AGENTS.md` (§3.3) on 2026-09-18
+(P-2026-09-18-1930 Phase 1) — loads when work is already under that directory. Rule 12 in the
+non-negotiable block is the one-line version that must be known before then.
 
 ### 3.4 DVoidEdge race-window guard
 
-The guard strategy depends on the edge type (M1 instance vs M2 reference).
-
-**M1 reference edges** (populated by `useM1ReferenceEdges.ts`)
-- Key: pair-based `${srcVId}→${tgtVId}`
-- Guard: `hasCanvasEdgePair(ek)` + `existingKeys.has(ek)`
-- Semantics: one edge per vertex pair for a given M1 reference value
-
-**M2 reference edges** (populated by `useJjomSync.ts` Step 3)
-- Key: composite `${refId}:${srcVertex}→${tgtVertex}`
-- Guard: `existingEdgeKeys.has(ek)` after an `idlookup` scan of the graph's
-  subElements and the RF edge cache
-- Semantics: multiple sibling references between the same vertex pair are
-  preserved (e.g. Family→Member: father, mother, sons, daughters)
-- `hasCanvasEdgePair` is NOT used here — it would incorrectly block siblings
-
-**Inheritance edges**
-- Key: pair-based `${src}→${tgt}`
-- Guard: `existingEdgeKeys.has(ek) || hasCanvasEdgePair(ek)`
-- Semantics: a class extends another at most once
-
-Key format uses directional arrow `→` (U+2192). It is **not symmetric** —
-`A→B` and `B→A` are distinct.
+Moved to `frontend/src/components/editor-v2/AGENTS.md` (§3.4) on 2026-09-18
+(P-2026-09-18-1930 Phase 1). Rule 13 in the non-negotiable block is the one-line version.
 
 ### 3.5 Step 4 dependency limitation + useM1ReferenceEdges
 
-`useJjomSync.ts` Step 4 has these deps:
-```typescript
-[modelid, hasGraph, subElementIds.length, modelClassCount,
- modelRefCount, modelRefTypeSig, modelExtendsSig, modelObjectCount]
-```
-
-`modelRefCount` counts **M2 DReferences only**. Step 4 does **not** re-fire on `SetFieldAction` over `DValue.values` (M1 slot population). This means: when M1 reference values arrive after the initial mount (post-load, post-transformation), Step 4 misses them.
-
-**Do not "fix" Step 4 deps to include M1 value counters**. That breaks other invariants.
-
-**Workaround**: use `useM1ReferenceEdges` — a separate hook downstream that listens to M1 value changes and creates the missing edges with the same guards.
-
-Path: `frontend/src/components/editor-v2/hooks/useM1ReferenceEdges.ts`.
+Moved to `frontend/src/components/editor-v2/AGENTS.md` (§3.5) on 2026-09-18
+(P-2026-09-18-1930 Phase 1).
 
 ### 3.6 entity.father vs forward-link collections
 
-`entity.father` (backward link) is eagerly set by the parser before reducers finish merging.
-
-Forward-link collections (e.g., `pkg.classes`, `pkg.attributes`) may be **stale immediately after parse** due to Redux reducer batching lag.
-
-**WRONG — race condition on counters and post-parse logic**
-```typescript
-const classCount = pkg.classes.length;  // may be 0 even after parse completes
-```
-
-**RIGHT — backward-link iteration via idlookup**
-```typescript
-function countDescendantsByFather(
-    idlookup: GObject,
-    className: string,
-    fatherIds: Set<string>
-): number {
-    let count = 0;
-    for (const id in idlookup) {
-        const e = idlookup[id];
-        if (e?.className === className && fatherIds.has(e.father)) count++;
-    }
-    return count;
-}
-```
-
-Canonical implementation: `frontend/src/components/import/buildImportSummary.ts`.
+Moved to `frontend/src/model/AGENTS.md` (§3.6) on 2026-09-18 (P-2026-09-18-1930 Phase 1).
 
 ### 3.7 pkg.__raw.uri vs pkg.uri
 
-L-layer `pkg.uri` is computed as `data.uri + "." + data.name` (concatenation).
-D-layer `pkg.__raw.uri` is the direct field as parsed.
-
-For byte-identical nsURI, use `pkg.__raw.uri` — the Ecore round-trip discipline lives in §14. For user-facing display or JjScript queries, `pkg.uri` is fine.
-
-Both patterns coexist by design. Do not "unify" them.
+Moved to `frontend/src/model/AGENTS.md` (§3.7) on 2026-09-18 (P-2026-09-18-1930 Phase 1).
 
 ### 3.8 composition vs containment
 
-`composition` is the canonical D-layer field. `containment` is supported for
-backward compatibility — it is read by Ecore/XMI I/O services, written by
-JjScript `copy` commands, and parsed as a first-class option by the JjScript
-parser — but do not introduce `containment` in new code. Prefer `composition`
-for all new writes.
+Moved to `frontend/src/model/AGENTS.md` (§3.8) on 2026-09-18 (P-2026-09-18-1930 Phase 1).
 
 ### 3.9 VersionFixer & jsxString persistence
 
-View templates are persisted as `jsxString` strings in Redux project state. Changes to default-view source files (`DV.tsx`, `defaultViewTemplate.ts`) **do not propagate to existing saved projects automatically**.
-
-Whenever you modify a default-view source file, you must:
-
-1. Add a migration method in `VersionFixer.tsx`. Naming pattern:
-   ```typescript
-   private ['2.216 -> 2.217'](s: DState): DState { ... }
-   ```
-   `highestVersion` is computed automatically from method names — no separate constant to bump.
-
-2. Inside the migration, iterate over `DViewElement` entries and rewrite `e.jsxString` for views matching the detection marker. Existing migrations (`2.211 -> 2.212`, `2.213 -> 2.214`) are reference templates.
-
-3. If a new detection marker is needed, add it to `defaultViewTemplate.ts` (e.g., `V2_X_TO_V2_Y_DETECT_MARKER`).
-
-**Skipping the migration leaves every existing project on the old `jsxString`. The "fix" appears to work in dev (new projects look right) but breaks on every saved file.**
+Moved to `frontend/src/redux/AGENTS.md` (§3.9) on 2026-09-18 (P-2026-09-18-1930 Phase 1) — loads
+when work is already under that directory. Rule 14 in the non-negotiable block is the one-line
+version that must be known before then; it also covers `frontend/src/common/DV.tsx`, which sits
+under neither this module nor either of the other two (known gap, not solved here).
 
 ### 3.10 Role-aware bucket keys in portDistribution
 
-> **Note (2026-05-27)**: the role-keyed bucketing described in this section governs `portDistribution.ts`'s `edgeHandles` output, which assigns handleIds. The actual positioning of anchors on the screen is currently driven by `handlePosition.ts:computeSidePositions` and `DynamicHandles.tsx`, **not** by `portDistribution.ts`'s `nodeHandles` field (discarded by `EditorV2.tsx`). The overflow-protection trade-off described below is still relevant for handleId assignment, but its visual implications depend on `computeSidePositions`. Re-evaluate this section after the anchor ordering fix (tracked in `docs/discovery/2026-05-27_anchor_ordering_inversion.md`) is merged.
-
-When a pair of nodes can have fan-in and fan-out simultaneously (e.g., bidirectional references between two classes), bucket keys for port distribution must include the role:
-
-```typescript
-const sourceKey = `${edge.source}:${sourceSide}:source`;
-const targetKey = `${edge.target}:${targetSide}:target`;
-```
-
-Without the role suffix, source and target collide on the same slot, leading to handle index overflow beyond `MAX_HANDLES_PER_SIDE` and missing edges.
-
-STEP 4 of `portDistribution.ts` unions source/target buckets per `(nodeId, side)` and dedups by handleId. STEP 5 recomputes uniform positions on the merged total. Do not bypass these steps.
+Moved to `frontend/src/components/editor-v2/AGENTS.md` (§3.10) on 2026-09-18
+(P-2026-09-18-1930 Phase 1).
 
 ### 3.11 Runtime store access
 
-See §15.4 for the `windoww.store` (double-`w`) global — exposed for console/DevTools debugging; application code imports the store directly. Console: `windoww.store.getState().idlookup`.
+Moved to `frontend/src/components/editor-v2/AGENTS.md` (§3.11) on 2026-09-18
+(P-2026-09-18-1930 Phase 1).
 
-### 3.12 Identity slot ↔ instance name — slot→name is always a direct SetFieldAction
+### 3.12 Identity slot ↔ instance name
 
-The M1 identity binding links an instance's display name (`DObject.name`) to its
-`name : EString` slot. The two directions are wired asymmetrically, and that asymmetry
-is load-bearing:
-
-- **name → slot**: `set_name` (`joiner/classes.ts` `LPointerTargetable.set_name`, override
-  `LModelElement.tsx` `LObject.set_name`) writes both sides — `data.name` via
-  `SetFieldAction`, and the slot via the proxy assignment `nameattribute.value = val`
-  (which routes through `LValue.set_value` → `setValueAtPosition`).
-- **slot → name**: `LValue.setValueAtPosition` (in `LModelElement.tsx`,
-  look for the method handling slot propagation) propagates
-  the slot value onto `data.name` with a **direct `SetFieldAction` on `'name'`** — it does
-  **not** call `set_name`.
-
-**Invariant — never violate**: slot → name propagation must always be a direct
-`SetFieldAction` on `'name'`. It must **never** be routed through `set_name`. This is
-exactly why no sync loop exists: the name-side write is terminal, so the cycle
-`set_name → slot write → name write → set_name → …` cannot form. Any change that makes
-slot → name go through `set_name` (instead of the direct field write) reintroduces the
-loop. See `docs/discovery/2026-06-17_name_slot_sync.md` §10 for the full trace.
+Moved to `frontend/src/model/AGENTS.md` (§3.12) on 2026-09-18 (P-2026-09-18-1930 Phase 1).
 
 ### 3.13 L-layer proxies report the D-layer className
 
-An L-proxy's `.className` returns the **D-layer** class name (`'DValue'`, `'DObject'`,
-`'DClass'`, …) — **never** the L-name (`'LValue'`, `'LObject'`). A guard like
-`lproxy.className === 'LValue'` is therefore **always false** and silently disables whatever
-it protects, with no compile error and no type warning.
-
-```typescript
-if (slot.className === 'DValue') { ... }   // correct
-// NOT: slot.className === 'LValue'         // always false — silently dead
-```
-
-The convention is consistent across the codebase (e.g. `setValueAtPosition`'s
-`oldTarget?.className === "DObject"` on an `LObject.fromPointer(...)` result;
-`proxy.ts` returns the D-name). This typo cost the entire Direction-A identity-sync effort:
-the name → slot write was gated on `=== 'LValue'` and never ran. Residual dead occurrences of
-the same typo remain in the base `LPointerTargetable.set_name`/`get_name`
-(`joiner/classes.ts`) — dead for instances (`LObject` overrides them), pending a
-consistency cleanup.
+Moved to `frontend/src/model/AGENTS.md` (§3.13) on 2026-09-18 (P-2026-09-18-1930 Phase 1).
 
 ---
 
@@ -426,11 +280,11 @@ Before writing "X does not exist", "X is not used anywhere", or "X is not loaded
 - check the exit status of the command that produced the silence, or
 - run a **positive control** on the same command: search for something you know is present. If the control comes back empty, the search is broken, not the subject.
 
-A positive control is only a control if it has signal, and it must run through the same tool as the search it validates. In Codex's shell `grep` is a function wrapping `ugrep --ignore-files` (confirm with `type grep`), so a recursive search from the repo root silently skips every gitignored path — `node_modules` included — while an explicitly named path inside one is still searched. Measured 2026-08-11: `grep -rn "(a)" --include="*.md" .` returns 513 lines, none of them from `node_modules`, and adding `--exclude-dir=node_modules` changes nothing. A search that cannot reach its subject returns the same silence as a subject that is not there. The same applies to partial reads: a count taken over lines 1-62 of a 157-line file is a count over that window, and must be reported as such or not reported at all. Measured 2026-08-13: `npm run typecheck | tail -60` produced a count of 12; the same command read in full produced 33, the declared baseline. The window set the number, not the subject. The rule above was already written when this happened, which is the point: a rule that fires only when someone remembers it is not operational. Take counts on complete output, with the exit status recorded.
+A positive control is only a control if it has signal, and it must run through the same tool as the search it validates. In Codex's shell `grep` is a function wrapping `ugrep --ignore-files` (confirm with `type grep`), so a recursive search from the repo root silently skips every gitignored path — `node_modules` included — while an explicitly named path inside one is still searched. Measured 2026-08-11 that a repo-root markdown search returns hundreds of lines with none from `node_modules`, and that `--exclude-dir=node_modules` changes nothing — full account in `docs/discovery/discovery_2026-08-11_ugrep_wrapper_ignore_files.md`. A search that cannot reach its subject returns the same silence as a subject that is not there. The same applies to partial reads: a count taken over lines 1-62 of a 157-line file is a count over that window, and must be reported as such or not reported at all. Measured 2026-08-13 that a truncated typecheck read understated the error count against the declared baseline — full account in `docs/discovery/discovery_2026-08-13_arco3_fase1_griglia_84.md`. The window set the number, not the subject. The rule above was already written when this happened, which is the point: a rule that fires only when someone remembers it is not operational. Take counts on complete output, with the exit status recorded.
 
 The same discipline applies to visual verification, twice over. First, a screenshot is evidence only of the state it contains: before writing "X does not render", build the state where X would render if the claim were false. A colour rule that only distinguishes two kinds proves nothing on a screen showing one of them.
 
-Second, a computed style is a measure of the rendering only when the element you measured is the one that paints. Measured 2026-08-12: the tree glyph is `<span class="tree-node__icon tree-DClass"><i class="bi bi-…"></i></span>`; the entity rules set `color` on the span, `i.bi` in `styles/style.scss:790` sets it on the `<i>`, and a direct declaration always beats inheritance. Removing every entity rule moves the span's computed colour from `#7A4056` to `#0ea5e9` and changes zero pixels. When a style and a pixel disagree, the pixel is the measurement.
+Second, a computed style is a measure of the rendering only when the element you measured is the one that paints. Measured 2026-08-12 that the tree glyph's colour rule paints a `<span>` while a global rule paints the `<i>` inside it, so removing every entity rule changes the computed colour and zero pixels — full account in `docs/discovery/discovery_2026-08-12_harness_visivo_e_scala_entity_nel_tree.md`. When a style and a pixel disagree, the pixel is the measurement.
 
 **Sub-rule: the interactive `grep` is not the system `grep`**
 
@@ -453,7 +307,7 @@ When the behaviour cannot be executed because the file does not import in the be
 
 A test that survives a mutation has answered one question, not two. Before deleting it, measure which OTHER mutations die by its hand. A property that no mutation can distinguish through the output — a type sentinel, for example — is declared intent: it will never be covered, and no test can be written that covers it, so surviving its removal is not a verdict on the test. The same test can still be the only guard on a different mutation, and deleting it for failing the first question throws away the answer to the second.
 
-Measured 2026-09-16 on `symbolRecognition.ts`, on the two conditional border-axis tests. Dropping the `scalarOf` sentinel from `style` and `width`, back to the raw compare, leaves the file green at 14/14: a conditional object is unequal to a scalar preset value either way, so through `recognizeSymbol`'s output the sentinel is invisible and the tests cannot be about it. Those same two, and no other test in the file, are the only ones that kill reading the axis's `default` — the mutation that lets the modal title claim a preset an instance may not draw. Both forms of it, the shared one and the one scoped to the two axes, come back 2 red, and the 2 are them.
+Measured 2026-09-16 on `symbolRecognition.ts` that dropping the `scalarOf` sentinel leaves the file green while dropping the axis's `default` read is caught only by the two conditional border-axis tests — full account in `docs/discovery/discovery_2026-09-16_symbolrecognition_scalarof_mutation_bench.md`.
 
 The name of the test declares the mutation that kills it; the bench that establishes it goes in the commit message (§21.2).
 
@@ -487,131 +341,30 @@ The name of the test declares the mutation that kills it; the bench that establi
 
 ### 6.4 Concorrenza tra lane
 
-Piu' sessioni lavorano sullo **stesso working tree** nello stesso momento. Non e' un caso
-limite: e' la condizione normale di questo repo, e ogni regola qui sotto nasce da un
-incidente misurato, non da una preferenza. Iscritta come **RC-13** in `docs/decisions.md`.
-
-- **Una corsia per giro.** Un giro chiude il perimetro che il suo prompt dichiara e nient'altro.
-  Il lavoro di un'altra corsia che compare in albero a meta' sessione non e' un invito ad
-  assorbirlo: si constata e si lascia dov'e'.
-- **Docs e codice mai nello stesso commit.** La entry di log, il referto e le ratifiche
-  viaggiano separati dal diff che descrivono. Un commit misto non si puo' revertire per meta'.
-- **Lo staged e il WIP altrui sono intoccabili.** `git commit` committa **l'indice intero**,
-  incluso quello che un'altra sessione ha messo in stage: si passa sempre il pathspec al commit
-  stesso (`git commit -- <paths>`), o si confronta `git diff --cached --name-only` con la lista
-  dichiarata prima di committare. `git add` solo con path espliciti, mai `git add .` / `-A`
-  (regola 17).
-- **NIENTE `git stash` su albero condiviso.** Uno `stash push -- <paths>` che includa un file
-  **non tracciato** fallisce senza creare nulla, e il `pop` successivo apre lo stash sbagliato:
-  misurato il 2026-09-01, 7 file riversati in albero da uno stash del 2026-07-28
-  (`docs/discovery/discovery_2026-09-01_irf1_annotation_subscription.md` §14). E per la cosa che
-  lo stash veniva usato a dimostrare — «questi rossi sono pre-esistenti» — **lo stash non serve**:
-  si legge il diff non committato dei file rossi e si cerca l'implementazione che i loro nomi
-  invocano. Se un confronto prima/dopo e' davvero necessario, si ripristinano i file **nominati**
-  da `git show HEAD:<path>` e si rimettono a posto da una copia, senza toccare l'indice.
-- **La rotazione del log e' una corsia esclusiva.** Nessun altro giro tocca
-  `docs/claude-code-log.md` mentre e' in corso, e la rotazione non porta con se' altre modifiche.
-  Criterio di spostamento: verbatim, nell'ordine del file attivo (RC-12).
-- **Le deroghe a una regola numerata si flaggano nel giro, non si nascondono.** Chi supera una
-  soglia lo dichiara — i file elencati con cosa cambia in ciascuno, e il campo
-  `Out-of-scope changes` della entry che lo ripete — e prosegue; sanare o rifiutare e' del
-  reviewer, a valle (RC-11).
-
-- **Every prompt has an ID, and every message on it carries the ID.** A prompt in
-  `docs/prompts/` states in its header `Prompt-ID: P-YYYY-MM-DD-HHmm`, the date and time of its
-  file name. Every message pasted into a running session about that prompt (GO, ACK, answers to a
-  hard stop, corrections) opens with `[P-YYYY-MM-DD-HHmm]`. Every reply of Codex on it
-  (report, hard stop, question, closing summary) opens with `[P-YYYY-MM-DD-HHmm · session <id>]`,
-  where `<id>` is the identifier the harness shows for the session; a session that cannot see it
-  writes `session unknown` and never invents one. A session that receives a message with another
-  Prompt-ID, or with none, does not act on it: it replies with its own ID and the one it received,
-  and stops. A session does not relay messages to another session. Measured 2026-09-17: a Phase 2
-  GO for `P-2026-09-17-1024` was pasted into the session running `P-2026-09-16-2327`, and a relayed
-  message carried a scope change that nobody had written.
+Moved to `docs/PROTOCOL.md` (P13) on 2026-09-18 (P-2026-09-18-1930 Phase 2) — lane-concurrency
+rules: one lane per turn, docs/code never in the same commit, staged/WIP of others untouchable,
+no `git stash` on a shared tree, log rotation as an exclusive lane, prompt-ID discipline on
+messages (RC-13, `docs/decisions.md`).
 
 ### 6.5 Worktrees and cherry-picks
 
-Code commits on `validation-skeleton` reach other branches (today `alfonso-frontend-jjtl`) by
-`git cherry-pick -x` of explicit shas, never by range. A branch can be checked out in one worktree
-only, and more than one worktree exists (`git worktree list`). Measured 2026-09-14: `git worktree
-add` refused because `alfonso-frontend-jjtl` was already checked out in `/Users/alfonso/jjodel-release`,
-and the cherry-pick loop then started in the wrong tree. It was aborted, no damage.
-
-- Run `git worktree list` before any cherry-pick.
-- Target branch checked out in a clean tree: run the cherry-pick in that tree. If that tree is not
-  the current lane's, ask Alfonso for authorization first.
-- Target branch checked out in a dirty tree: hard stop. Report and wait.
-- Use a temporary worktree only when the target branch is not checked out anywhere. Remove it when
-  done (`git worktree remove`, then `git worktree prune`).
-- Never move a ref (`git update-ref`, `git branch -f`) while a worktree has it checked out.
-- Never chain a `cd` that can fail in front of a destructive loop. Assert the branch with
-  `git rev-parse --abbrev-ref HEAD` in the target tree before the first pick.
-- A tree without `node_modules` (such as `/Users/alfonso/jjodel-release`) can run the gates through a
-  temporary symlink to `~/jjodel/frontend/node_modules`, removed afterwards. `git status` in that
-  tree must be empty before and after.
-- Choose the positive control of a verify entry at the time of the entry, and measure its signal
-  with the same command (§5). A file that differed between the two branches in an earlier entry
-  may no longer differ, and a file an earlier entry called identical may differ. Do not inherit
-  either claim from the log.
+Moved to `docs/PROTOCOL.md` (P14) on 2026-09-18 (P-2026-09-18-1930 Phase 2) — cherry-pick and
+worktree mechanics: `git worktree list` first, clean-vs-dirty target tree handling, temporary
+worktrees, never moving a checked-out ref, the `node_modules` symlink for a release tree.
 
 ### 6.6 Where the rules live
 
-`AGENTS.md` has ONE home, `alfonso-frontend-jjtl`. That a branch carrying its own copy carries its
-own rules is a fact about this repo and not a preference: measured 2026-09-16, `master` has no
-`AGENTS.md` at all, `alfonso-frontend-jjtl` and `simulation-engine` have one of 1035 lines that
-diverges from this branch's, and none of the three normative commits of the last two days —
-`686a13712` (§6.5), `74d0f81db` (rule 1c and the source-text sub-rule of §5), `43e598404` (the
-mutation sub-rule of §5) — is an ancestor of the trunk. So whoever works on the trunk or on the
-simulator today is following a different set of rules from this branch's.
-
-- **A rule is in force where it is written, not where it was learned.** It may be authored on the
-  branch that learned it, and until it is on the trunk it binds that branch alone.
-- **A commit that changes `AGENTS.md` is owed to the trunk, and its log entry says so.** The entry
-  names that commit as owed, and keeps naming it until the carry is recorded. The carry runs from
-  the trunk's own worktree, by the lane that holds it or by Alfonso, never from a lane that does not
-  have it; §6.5 has the mechanics.
-- **Check that a rule number exists on the target branch before citing it.** A prompt or a commit
-  written for work on another branch that cites a rule absent there is a false citation, and its
-  reader has no way to tell.
-- **`master` has no `AGENTS.md`, and that is measured, not decided.** It is an open question for
-  Alfonso. Do not create one there, and do not treat `master` as inside the development flow on
-  your own authority.
+Moved to `docs/PROTOCOL.md` (P15) on 2026-09-18 (P-2026-09-18-1930 Phase 2) — `AGENTS.md`'s one
+home is `alfonso-frontend-jjtl`; a rule binds where it is written, not where it was learned; a
+`AGENTS.md`-changing commit is owed to the trunk until carried.
 
 ---
 
 ## 7. Design system
 
-**Full spec**: `docs/DESIGN-SYSTEM.md`.
-
-### 7.1 Essentials
-
-- **Icons**: Bootstrap Icons only (`bi bi-*`). No other icon libraries.
-- **Code font**: `'IBM Plex Mono', Monaco, Consolas, monospace`.
-- **Grid**: 8px base. Standard padding: 8 / 12 / 16 / 24.
-- **Cyan (#0ea5e9)**: never as button background. Only focus states, active indicators, links.
-- **Primary buttons**: slate gradient `linear-gradient(135deg, #334155, #1e293b)`. White icons.
-- **Horizontal toggle switches**: 36×20 px. Active `#334155` (slate, not cyan). Inactive `#cbd5e1`. Label on the left, never inside. Impl: `styles/components/_switch.scss`.
-- **Vertical toggles**: only for debug/advanced mode in the navbar.
-- **Multi-select chips**: slate-100 (`#f1f5f9`), border slate-200, label slate-700. Selected option subtle cyan `rgba(14,165,233,0.08)`. Impl: `inputselect.scss`, `viewapplyto.scss`.
-
-### 7.2 Token system
-
-**Single source of truth**: `styles/tokens/_colors-light.scss` + `_colors-dark.scss` (both, always). Entry point: `styles/tokens/index.scss`. Active variables in `styles/variables.scss`.
-
-**Legacy tokens — do NOT reintroduce**:
-- `--accent` (use `--color-accent`)
-- `--bg-1` through `--bg-5`
-- `--secondary`
-- `--terziary` (typo intentional in the legacy name — also eliminated)
-- `--radius`
-- `--color` (ambiguous — use `--color-text-primary` or `--color-accent`)
-
-**Current state**: 4 residual `var(--accent)` in `frontend/src/components/editor-v2/EditorV2.scss` awaiting cleanup, measured 2026-08-18 with a regex that separates the bare token from `--accent-muted` / `--accent-subtle`, which are different tokens and not legacy. The count claimed here until then was 1; it was 5 before the `toolbar-syntax-pill` block was retired with R-IRN-10, which took one of them and did **not** close the ticket. Two more live occurrences sit outside that file, in `redux/defaults/views.ts` (249, 659). Do not add new occurrences; the open ticket is for removal, not propagation.
-
-**Rules for new tokens**:
-- `grep -r` before adding, to avoid collisions
-- Always add to both files (light + dark)
-- Never define CSS variables inside component files — everything in `tokens/`
+Moved to `frontend/src/styles/AGENTS.md` on 2026-09-19 (P-2026-09-18-1930 Phase 3) — loads
+when work is already under that directory. Rules 26-28 in the non-negotiable block are the
+one-line versions that must be known before then.
 
 ---
 
@@ -676,108 +429,9 @@ Basic mode is the default. Hide complexity until needed.
 
 ## 9. Object persistence patterns
 
-These behaviors are counter-intuitive and have already cost days of debugging. Do not infer them from reading the code.
-
-### 9.1 DObject.new() returns temporary IDs
-
-The returned ID does not correspond to the real ID in the framework. Objects are **not** accessible via `store.getState()[dObject.id]`.
-
-**WRONG — temporary ID, lookup fails**
-```typescript
-const dObject = DObject.new(classId, modelId, DModel, name, true);
-store.getState()[dObject.id]; // undefined
-
-// Also wrong: SetFieldAction does not write proxy-readable values
-SetFieldAction.new(featurePointer, 'values', [value], '', true);
-```
-
-**RIGHT — find by name via LModel proxy**
-```typescript
-const lModel = LPointerTargetable.fromD(modelId) as LModel;
-const lObject = lModel.objects.find(o => o.name === objectName);
-
-(lObject as any)['$' + attrName].value = attrValue;
-```
-
-### 9.2 Deferred attribute setting
-
-After a TRANSACTION that creates objects, the proxies are not immediately available. Use `setTimeout` to let Redux propagation finish:
-
-```typescript
-const pending: Array<{ objectName: string; attributes: Record<string, any> }> = [];
-
-TRANSACTION('Create Objects', () => {
-    const dObject = DObject.new(classId, modelId, DModel, name, true);
-    pending.push({ objectName: name, attributes: { label: 'value' } });
-});
-
-setTimeout(() => {
-    const lModel = LPointerTargetable.fromD(modelId) as LModel;
-    for (const { objectName, attributes } of pending) {
-        const lObj = lModel.objects.find(o => o.name === objectName);
-        if (!lObj) continue;
-        for (const [attr, val] of Object.entries(attributes)) {
-            (lObj as any)['$' + attr].value = val;
-        }
-    }
-}, 1000);
-```
-
-Accumulate by **name**, not by ID, inside the TRANSACTION.
-
-### 9.3 Attribute slots and reference slots are written differently — and the wrong way is silent
-
-`['$' + name].value = v` is the form §9.1 and §9.2 use, and it is right **for attributes**. On a
-**reference** slot the same assignment does nothing: it does not throw, does not warn, and leaves
-the slot at `values: []`. Measured 2026-09-09 by running the four candidate forms in sequence
-against a live slot:
-
-| form | reference slot |
-|---|---|
-| `slot.value = <L object>` | no error, `values` stays `[]` |
-| `slot.value = <id>` | no error, `values` stays `[]` |
-| `slot.values = [<id>]` | **writes** |
-| `slot.setValueAtPosition(<id>, 0)` | **writes** |
-
-```typescript
-// RIGHT — reference slot, single or multi valued alike
-(lObject as any)['$ownedTransitions'].values = [targetId];
-(lObject as any)['$nextState'].values = [targetId];
-
-// RIGHT — attribute slot
-(lObject as any)['$isInitial'].value = true;
-```
-
-**The aggravating part is the silence.** A caller that writes a reference the attribute way builds
-a model whose references are all empty and gets no signal at all. A probe written that way then
-measures a state it never created: it will report whatever an empty reference implies —
-a vacuously satisfied constraint, an empty fan-out, a missing edge — as if the model said so.
-Measured in that same round: a probe's own reader disagreed with the JjEL evaluator about whether
-the transitions had targets, and the evaluator was right.
-
-**Clearing is the same trap, one step further.** `slot.values = []` does **not** empty a reference
-slot that already holds a value, and it does not throw: the slot keeps what it had. Measured
-2026-09-09 while building a fixture for the book, where a transition whose `nextState` was
-"cleared" that way still pointed at its target, and the conformance check was right while the
-fixture was wrong. There is no measured form that clears an already-written reference slot from
-the L proxy; when a test or a probe needs an unset reference, **construct it unset** — a freshly
-created object has none — rather than writing one and taking it back.
-
-Corollary for reading, same family, and it bites in two ways:
-
-- `slot.values` **on the L proxy returns the wrapped L objects, not the ids** — the default getter
-  resolves every pointer (`__shallowSolver`). Compare with `t.id ?? t`, or read `__raw.values` when
-  ids are what you need (the `pkg.uri` / `pkg.__raw.uri` asymmetry of §3.7, in another place).
-- A **single-valued reference that was never set reads back as `[null]`**, not as `[]`. So
-  `slot.values.length` is **1** where there is no value at all, and a guard written as
-  `values.length === 0` never fires. Measured 2026-09-09: on a `Transition` whose `nextState [1]`
-  had never been written, the proxy reported length 1 while `__raw.values` was empty and the
-  conformance engine reported `multiplicity_below_min`. Count on `__raw.values`, filtering out the
-  falsy entries, whenever the question is «is there a value».
-
-Full measurement: `docs/discovery/discovery_2026-09-09_semaforo_end_to_end.md` §2.1 and §9 for the
-write forms; `docs/discovery/harness/probe_2026-09-09_book53_conformance.mts` for the two reading
-measurements and the failed clear.
+Moved verbatim to `frontend/src/model/AGENTS.md` (§9, subsections 9.1-9.3) on 2026-09-18
+(P-2026-09-18-1930 Phase 1) — L-proxy write semantics that only matter once work is already under
+`frontend/src/model/`.
 
 ---
 
@@ -802,17 +456,12 @@ Three `// TODO: sidebar` bookmarks remain in code for future sidebar approach.
 
 ## 11. JjEL — Expression Language
 
-Expression evaluation engine, used by both JjTL and JjScript. Standalone language with its own lexer/parser/evaluator/type system.
-
-**Full reference**: `frontend/src/jjel/SPEC.md` — core constructs, grammar and operator precedence, design decisions (incl. `forall`'s set-theoretic semantics), the 100+ built-in methods, evaluation rules, and contexts of use. Single source; not duplicated here.
+Moved to `frontend/src/jjel/AGENTS.md` on 2026-09-19 (P-2026-09-18-1930 Phase 3) — loads when
+work is already under that directory.
 
 ---
 
 ## 12. JjTL — Transformation Language
-
-**Full reference**: `frontend/src/jjtl/SPEC.md` — syntax and grammar, AST-bridge mappings, the execution model (incl. the 4-strategy property resolution), trace model, JjEL integration, and known bugs/gaps. Single source; not duplicated here. Only the subsections **not** in the SPEC are kept below.
-
-**Roadmap**: `docs/jjtl/JJTL-DEVELOPMENT-PLAN.md`
 
 ### 12.6 Language boundaries — JjEL / JjTL / JjScript
 
@@ -847,54 +496,23 @@ The lexer fix is a lane of its own, not yet opened. This note records what is tr
 - `=>` — lambda in both JjEL and JjTL.
 - `--` — comments in both JjEL and JjTL.
 
-### 12.7 Editing the language
-
-The 5-file checklist for a syntax change and the current parser limitations live in
-`frontend/src/jjtl/AGENTS.md`, which loads when working under that directory.
+Full reference, roadmap and the syntax-change checklist moved to
+`frontend/src/jjtl/AGENTS.md` on 2026-09-19 (P-2026-09-18-1930 Phase 3) — loads when work is
+already under that directory.
 
 ---
 
 ## 13. JjScript — Scripting Language
 
-Imperative scripting for metamodel manipulation.
-
-### 13.1 Directory structure
-
-```
-frontend/src/jjscript/
-├── autocomplete/
-├── components/
-├── executor/         (with commands/)
-├── normalizer/
-├── parser/
-├── recovery/
-├── services/
-├── __tests__/
-├── index.ts
-└── types.ts
-```
-
-### 13.2 Tests
-
-Test files in `jjscript/__tests__/`: `lexer.test.ts`, `parser.test.ts`, `commands.test.ts`, `grammar.test.ts`, `context-binding.test.ts`.
+Moved to `frontend/src/jjscript/AGENTS.md` on 2026-09-19 (P-2026-09-18-1930 Phase 3) — loads
+when work is already under that directory.
 
 ---
 
 ## 14. Ecore / XMI I/O
 
-Importers and exporters for Ecore (.ecore) and XMI (.xmi) formats.
-
-**Service files**:
-- `frontend/src/services/export/EcoreService.ts`
-- `frontend/src/services/export/XMIService.ts`
-
-**Tests**: `frontend/src/services/export/__tests__/ecore-io.test.ts` (36 tests).
-
-**Fixtures**: `frontend/src/__tests__/fixtures/xmi-m1/`.
-
-**Naming convention**: `Pointer_<UPPER>` for primitive type IDs (e.g., `Pointer_ESTRING`) distinguishes canonical from user-defined types.
-
-**Round-trip discipline**: Ecore export uses `pkg.__raw.uri` (D-layer) for byte-identical nsURI. See §3.7.
+Moved to `frontend/src/services/export/AGENTS.md` on 2026-09-19 (P-2026-09-18-1930 Phase 3) —
+loads when work is already under that directory.
 
 ---
 
@@ -976,83 +594,13 @@ Verification gates before commit:
 
 ## 18. Project structure (top level) — mappa parziale
 
-> This map lists the normated modules, not the complete tree. The repo
-> contains additional directories; when in doubt, explore.
-
-```
-frontend/src/
-├── components/
-│   ├── abstract/           # Tabs, DockManager
-│   ├── editor-v2/          # React Flow editor (hooks, sync, panels, problems)
-│   ├── import/             # Importers + ImportSummaryModal
-│   ├── project/            # ProjectEditor, Dashboard
-│   ├── Jodie/              # Jodie assistant UI
-│   └── shared/             # JsonViewer (vestigial)
-├── common/                 # DV.tsx (default view runtime)
-├── events/                 # registry.ts
-├── jjel/                   # Expression Language
-├── jjscript/               # Scripting Language
-├── jjtl/                   # Transformation Language
-├── joiner/                 # Core utilities, Redux, data layer
-├── model/                  # LModelElement, logic wrappers
-├── redux/                  # VersionFixer, store, actions
-├── services/export/        # Ecore + XMI I/O
-├── styles/                 # tokens/, variables.scss
-├── utils/                  # defaultViewTemplate, lastViewpoint
-└── pages/
-```
+Moved verbatim to `docs/CODEBASE-MAP.md` (§18) on 2026-09-19 (P-2026-09-18-2110): a map of the tree, not a rule.
 
 ---
 
 ## 19. Key files reference
 
-### 19.1 Sync / D-L layer (critical)
-
-| File | Role |
-|------|------|
-| `components/editor-v2/hooks/useJjomSync.ts` | Main sync hook. TRANSACTION rules in §3.3. |
-| `components/editor-v2/hooks/useM1ReferenceEdges.ts` | Supplements Step 4 for M1 refs post-mount (§3.5). |
-| `components/editor-v2/sync/syncState.ts` | `hasCanvasEdgePair`, `markCanvasEdgePair` (§3.4). |
-| `components/editor-v2/sync/canvasToJjom.ts` | Canvas → JjOM write-back. |
-| `components/editor-v2/utils/portDistribution.ts` | Role-aware bucket keys (§3.10). |
-| `redux/VersionFixer.tsx` | jsxString migrations (§3.9). |
-| `utils/defaultViewTemplate.ts` | `DEFAULT_VIEW_JSX_STRING` + markers. |
-| `common/DV.tsx` | Default view runtime. |
-| `components/import/buildImportSummary.ts` | Backward-link counters (§3.6). |
-| `components/import/ImportSummaryModal.tsx` | Reference CustomEvent+useState pattern (§8.7). |
-
-### 19.2 Editors
-
-| File | Role |
-|------|------|
-| `components/editor-v2/EditorV2.tsx` | Main v2-flow editor (3000+ lines). |
-| `components/project/ProjectEditor.tsx` | Project dashboard. |
-| `components/abstract/DockManager.tsx` | Tabs and panels. |
-
-### 19.3 Language engines
-
-| File | Role |
-|------|------|
-| `jjtl/executor/executor.ts` | `JjtlExecutor` — transformation execution. |
-| `jjtl/executor/astBridge.ts` | `toJjelAst()` — JjTL → JjEL expressions. |
-| `jjel/evaluator/evaluator.ts` | `JjelEvaluator` — expression evaluation. |
-| `jjel/evaluator/context.ts` | `EvaluationContext` — scope and bindings. |
-
-### 19.4 Services
-
-| File | Role |
-|------|------|
-| `services/export/EcoreService.ts` | Ecore I/O. |
-| `services/export/XMIService.ts` | XMI I/O. |
-| `events/registry.ts` | Custom events typed constants (§8.6). |
-
-### 19.5 UI shell
-
-| File | Role |
-|------|------|
-| `Navbar.tsx` + `navbar.scss` | App bar (header row 1). |
-| `Toolbar.tsx` | Toolbar (header row 2). |
-| `Info.tsx` + `info.scss` | Properties panel. |
+Moved verbatim to `docs/CODEBASE-MAP.md` (§19, subsections 19.1 to 19.5) on 2026-09-19 (P-2026-09-18-2110): an index of key files, not a rule.
 
 ---
 

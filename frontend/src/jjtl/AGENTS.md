@@ -10,6 +10,15 @@ root file is always in context.
 (`do`, `->`, `:`, `=>`, `--`) stays in the root `AGENTS.md` §12.6 — it governs JjEL and
 JjScript too.
 
+Moved here out of the root `AGENTS.md` §12 on 2026-09-19 (P-2026-09-18-1930 Phase 3): the two
+lines below, verbatim. The former §12.7 pointer ("the 5-file checklist ... live in
+`frontend/src/jjtl/AGENTS.md`") was dropped, not moved: it named this file, which now holds the
+checklist itself.
+
+**Full reference**: `frontend/src/jjtl/SPEC.md` — syntax and grammar, AST-bridge mappings, the execution model (incl. the 4-strategy property resolution), trace model, JjEL integration, and known bugs/gaps. Single source; not duplicated here. Only the subsections **not** in the SPEC are kept below.
+
+**Roadmap**: `docs/jjtl/JJTL-DEVELOPMENT-PLAN.md`
+
 ---
 
 ## MANDATORY checklist when modifying JjTL syntax
