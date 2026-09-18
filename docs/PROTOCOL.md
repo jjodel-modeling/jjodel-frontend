@@ -1,7 +1,7 @@
 # PROTOCOL.md — protocollo di esecuzione per Claude Code
 
 Posizione: `docs/PROTOCOL.md` nel repo `jjodel-frontend`.
-Versione: 1.2 (2026-09-09)
+Versione: 1.3 (2026-09-19) — traccia l'insieme delle clausole (quali P<n> esistono), non le differenze di frase.
 
 Questo file contiene le clausole che prima venivano ricopiate per esteso in ogni prompt. I prompt ora le citano per numero. Se una clausola cambia, cambia qui e vale ovunque da subito.
 
@@ -127,6 +127,8 @@ Tutto il resto si salva in `docs/`: prompt in `docs/prompts/`, memo di ratifica 
 `docs/ratifiche/`, checkpoint in `docs/sessioni/`, discovery in `docs/discovery/`, materiale di
 lavoro in `docs/archivio/`, allegati non testuali in `docs/archivio/artefatti/`. Il prefisso e'
 `claude_` ovunque tranne che per i discovery report, che seguono il naming di P4.
+
+L'indice del codice (struttura e file chiave) sta in `docs/CODEBASE-MAP.md`, spostato da `CLAUDE.md` §18 e §19: non e' una norma e nessun gate lo verifica.
 
 Archiviare non e' ripulire: la copia nel repo e la cancellazione dal KB sono due passi distinti, e
 un documento lasciato in entrambi i posti continua a competere in retrieval con la propria versione
