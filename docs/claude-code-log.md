@@ -28,6 +28,40 @@ the Create View gate fix»: contenuto reale **due** entry, la sua e quella della
 rail/modale, gia' in albero e non in stage al momento del commit. Stesso schema del 2026-09-13.
 Nessun rewrite: la entry resta dov'e', il suo commit non la nomina.
 
+## 2026-09-18 — fix: the summary numbers skipped lines in editor space (corsia L3)
+**Prompt**: `claude_2026-09-17_1024_prompt_jjscript_silent_defects_duplicates_extends_skipped.md`,
+phase 2 lane L3, with Alfonso's GO of 2026-09-18 (the D6 mapping, render time only, the named
+mutant, hard stop) and his ACK: the three visual checks passed and the third file is sanctioned.
+**Files touched**: `139350eea`, 3 files: `jjscript/components/ScriptBlock.tsx` (one import, the
+`summaryForDialog` memo mapping `executionSummary.skippedLines` through the `lineToCommandIndex`
+the component already builds, the dialog's `summary` prop takes the mapped copy),
+`jjscript/components/summaryLines.ts` (new, pure: `skippedLinesAsEditorLines`, the same lookup
+`getScriptLine` performs with the same fallback), `jjscript/__tests__/summaryLines.test.ts` (new,
+4 tests: the prompt's comment-and-blank case, the identity control, order preservation, the
+fallback). `ExecutionErrorDialog.tsx` untouched; `skippedLinesSet`, `runCommandsFromIndex` and
+the `EXECUTION_PAUSED` detail keep command-index space, as the prompt's decision requires. This
+entry in its own commit.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no, set on Alfonso's ACK. `npm run typecheck` **33** on full output, the declared
+baseline, control `Measurable` → 6, **0** in the touched files; `npx vitest run` **3816 passed,
+0 failed**, the same 9 files red at import; `npm run build` exit 0.
+**Out-of-scope changes**: yes, one, sanctioned at the GO's ACK: `summaryLines.ts` is a third file
+beyond «ScriptBlock.tsx and its test», because the component imports the `joiner` barrel and does
+not load under vitest; a pure module beats a source-text test.
+**Layer Impact Report**: not-required — no §3.1 file; display only, nothing in the executor, no
+D-layer write path.
+**Smoke visivo**: passato — Alfonso on screen: the summary reads «Skipped lines: 3» with the
+comment and the blank line before the skipped command, 1 without them, and Skip Line resumes from
+the right command.
+**Notes**: Bench 3/3 killed with apply controls; the GO's wiring mutant (the unmapped summary
+reaching the dialog) cannot be executed in the bench, declared, no source-text substitute. The two
+§8 tickets stay open: the probe result and the overflow status were announced three times with
+unfilled placeholders and never reached the lane; the type-reference ticket is a candidate L5, fix
+shape of `9345a4046`, if the probe reproduces the race.
+**Prompt document name**: 2026-09-17 10:24
+
 ## 2026-09-18 — fix: the waiter waits for a same-script superclass, the pass refuses a forward one (corsia L4)
 **Prompt**: `claude_2026-09-17_1024_prompt_jjscript_silent_defects_duplicates_extends_skipped.md`,
 phase 2 lane L4, the TODO L1 and L2 left open, with Alfonso's GO of 2026-09-18: the validator on
