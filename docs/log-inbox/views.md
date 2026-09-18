@@ -6,6 +6,45 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 
 ---
 
+## 2026-09-18 — fix: an empty metaclass list is a draft, never a commit (item C)
+**Prompt**: `claude_2026-09-18_1650_prompt_view_quattro_difetti_minori.md`, item C: switching the
+wildcard off writes `metaclasses: []`, which passes `validateIR` (probe G1), so the debounced
+commit stored it and the view matched nothing, blanking a viewpoint whose only IR view is this one
+(probe G2). Decision (chat, do not reopen): an empty list is an unfinished edit — never committed,
+the stored ir keeps its previous `metaclasses`; the section says so.
+**Files touched**: `3f5fe347b`, 6 files: `viewpoint/authoring/committableMatching.ts` (new, pure,
+no imports: `isCommittableMatching`), `viewpoint/authoring/__tests__/committableMatching.test.ts`
+(new, 5 tests), `viewpoint/authoring/MatchingSection.tsx` (the empty-list hint line, one text),
+`viewpoint/authoring/VertexAuthoringPanel.tsx` (commit gate after `dirtyRef` before `validateIR`,
+same gate on the unmount flush, import), `viewpoint/authoring/EdgeAuthoringPanel.tsx` (commit
+gate + import, no flush exists), `viewpoint/authoring/RowAuthoringPanel.tsx` (same). Rule-19
+listing shown and approved in chat before writing. This entry in its own commit.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. `npm run typecheck` exit 2, **33** on full output, the declared baseline, **0**
+in the six touched files; control `Measurable` → 6. `npx vitest run` from `frontend/`: **3821
+passed, 0 failed** (+5 = the new test file), the same 9 files red at import as before. `npm run
+build` exit 0.
+**Out-of-scope changes**: no.
+**Layer Impact Report**: not-required — no §3.1 file; the gate only skips the panel's own
+`set_ir` write on a draft shape, no sync or D-layer path touched.
+**Smoke visivo**: passato — Alfonso on localhost:3000, ACK of 2026-09-18: neutral canvas
+reproduced on the stale tab first; after hard refresh the four checks hold (wildcard off on a
+vertex view and an edge view: no neutral canvas, hint shown; metaclass picked: hint gone, canvas
+narrows within the debounce; wildcard back on with empty list: nothing neutral). Extra check by
+Alfonso: closing and reopening the view tab with an empty list brings the wildcard back on
+(stored ir kept, draft dropped, as decided).
+**Notes**: Defect found, not caused, by the previous prompts — item C of a four-defect batch.
+The replaced hint (MatchingSection `:170-172`) said "With an empty list the view applies to
+nothing", the behaviour this fix removes. The predicate lives in a new pure module because the
+panels are not bench-importable (joiner → monaco → `window`) and MatchingSection pulls scss
+through the `ui` barrel (no sass preprocessor in vitest), both measured; same move as
+`model/nameLookup.ts`. An uncommitted empty list does NOT survive a tab change (the draft is
+dropped on reset, the stored ir keeps the wildcard) — a persisted draft would be a separate
+decision, not this lane's. Mutation bench in the commit message: 5 applied, 5 red, 0 survived.
+**Prompt document name**: 2026-09-18 16:50
+
 ## 2026-09-18 — fix: stop hiding every dialog header from the alert stylesheet (item B)
 **Prompt**: `claude_2026-09-18_1650_prompt_view_quattro_difetti_minori.md`, item B: the global
 `.alert-header, .dialog-header { display: none }` in `alert/style.scss:112-114` removed the header
