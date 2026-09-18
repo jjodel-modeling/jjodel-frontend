@@ -3225,6 +3225,66 @@ l'albero con «No metamodels» in un progetto vuoto, e nessuno dei tre concern s
 la scoperta servirebbe.
 
 
+
+## Serie R-NV — nascita delle view e proprietà del viewpoint (ratifiche 2026-09-15/18)
+
+Sessioni `sessione_2026-09-16.md` e `sessione_CORRENTE.md`. Cinque fette committate e verificate a
+schermo; qui il vincolo operativo, le misure restano nei file di sessione.
+
+**R-NV-1** (2026-09-15) — **Il tipo del viewpoint non è una scelta dell'utente.** Nel dialogo New
+Viewpoint solo `syntax` resta selezionabile. `decoration`, `validation`, `semantics`,
+`editor_behavior` restano visibili e disabilitati, perché un viewpoint salvato con quel tipo deve
+continuare a mostrare il proprio (e `decoration` è il valore di ricaduta di `getViewpointType`). Le
+ragioni sono distinte e non si fondono: la validazione ha una specie propria
+(`DValidationViewpoint`) e un ambiente di authoring suo (serie R-VAL); `semantics` ed
+`editor_behavior` non hanno consumatori, perché ogni lettura a valle confronta `vpType === 'syntax'`;
+`decoration` è consumato da `selectors.ts:558` (`VP_Decorative`), quindi i decorativi esistenti
+continuano a rendersi e si congela solo la creazione dall'interfaccia. `dataManager` resta fuori dai
+selettori per costruzione (R-DMV-4). Corollario misurato: la ragione non si appende alla descrizione
+dell'opzione disabilitata, perché un `<option disabled>` non diventa mai il valore del select e quel
+testo è irraggiungibile (`98e6fd6cb`).
+
+**R-NV-2** (2026-09-15) — **Il tema della form è proprietà del Data Manager Viewpoint**, non del
+viewpoint di sintassi. Il select in `ViewpointProperties` era UI morta: unico lettore il rung 0 in
+`IRForm.tsx:232-237`, che passa da `viewpointOfHost`, e `IRForm` è montato solo con `host="manager"`.
+Rimosso (`d039fc7e7`). Il campo `formTheme` su `DViewElement` resta: nessuna migrazione, nessun bump
+del VersionFixer. Iscrive nel repo la conseguenza di R-DMV-1 e R-DMV-4, che fin qui era solo nel
+codice.
+
+**R-NV-3** (2026-09-16) — **Il `+` sul viewpoint chiede a cosa si applica la view**, invece di
+crearne una vuota. Una view IR vuota non esiste: col wildcard matcha tutto a specificità minima e
+ridisegna il canvas del viewpoint attivo, con `metaclasses: []` il viewpoint passa comunque in resa
+IR e i nodi diventano neutri. Il difetto non era il seme, era il gesto che creava senza sapere per
+cosa. Invariante di creazione: una view creata dal `+` per la classe X è identica campo per campo a
+una creata dal menu contestuale di X, garantita per costruzione riusando `createViewInWorkbench` e
+non riseminando. Etichetta e destinazione vengono da una sola risoluzione, con l'id del viewpoint
+risolto passato come quarto argomento; i cancelli si agganciano a `hasCreatableViewpoint()`, la
+stessa condizione della priorità 2 di `resolveParentViewpoint`, così cancello e risoluzione non
+possono divergere. I quattro fallback su `Pointer_ViewPointDefault` non si rimuovono e non si fanno
+convergere: servono alla creazione programmatica, e l'invariante da difendere («nessun gesto
+dell'utente crea una view in Default») si difende ai chiamanti.
+
+**R-NV-4** (2026-09-18) — **Una lista di metaclassi vuota è una modifica incompleta, non un
+matching.** `metaclasses: []` non si committa: resta nel draft, il gate di commit dei tre pannelli lo
+salta (predicato puro `isCommittableMatching` in `authoring/committableMatching.ts`) e il flush
+all'unmount lo scarta, quindi non sopravvive al cambio di tab (`3f5fe347b`). Che un draft incompleto
+debba invece sopravvivere al cambio di tab è una decisione a parte, non presa qui.
+
+
+## Serie R-JS — JjScript, esecuzione degli script M2 (ratifiche 2026-09-17)
+
+**R-JS-1** (2026-09-17) — **Un `create` è all-or-nothing sulle superclassi.** Tutte si risolvono
+prima di creare la classe e una sola mancante rifiuta l'intero create, invece di creare la classe e
+attaccarle le superclassi risolte (`4898aa60f`): una classe a metà è peggio di una classe non creata,
+perché il rifiuto si vede e la generalizzazione mancante no. Due conseguenze accettate e misurate: le
+dipendenze `superclass` di `class`, `abstract class` e `interface` diventano `required: true`, così
+`waitForDependencies` aspetta una superclasse creata dalla riga precedente dello stesso script invece
+di risolverla prima che Redux l'abbia propagata (`9345a4046`, report
+`discovery_2026-09-17_superclass_same_script_race.md`); e una superclasse davvero assente impiega
+fino a 500 ms a essere rifiutata. La gara non è del ruolo `superclass`: `waitForDependencies` in
+`jjscript/executor/dependencies.ts` aspetta solo le dipendenze `required: true`, quindi ogni ruolo
+lasciato `required: false` la corre, a partire da `type-reference` (`dependencies.ts:205-235`).
+
 ## Superate
 
 - **D3** (2026-07-26, routing congelato in v1) — superata da E-route il 2026-08-06.
