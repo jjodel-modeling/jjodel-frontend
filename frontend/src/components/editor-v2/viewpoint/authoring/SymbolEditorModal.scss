@@ -1,7 +1,10 @@
 /* SymbolEditorModal — modal surface of the symbol authoring (D15/D15b).
-   Same overlay pattern and stacking as ImportSummaryModal: fixed backdrop on
-   var(--z-modal, 9999), no new stacking context, no portal. Two panes per the
-   approved mockup scene: persistent catalog column + preview and anatomy. */
+   Fixed backdrop on var(--z-modal, 9999). The component portals to document.body
+   (issue #139, bug 2), so the backdrop is a body-level sibling of the Properties rail
+   overlay (also portaled to body, z-index 900) and its z-index wins outright — rendered
+   inline in #root it was trapped in #root's stacking context and painted beneath the
+   rail. Two panes per the approved mockup scene: persistent catalog column + preview
+   and anatomy. */
 
 .symbol-editor-modal-backdrop {
     position: fixed;
