@@ -13,6 +13,19 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-18 — fix(export): oggetti referenziati da altri modelli nell'export JSON M1 (#128)
+**Prompt**: risolvere jjodel-modeling/jjodel-frontend#128; usare e tenere aggiornata la documentazione degli export JSON in `docs/`.
+**Files touched**: `frontend/src/services/export/JsonModelService.ts`, `frontend/src/services/export/__tests__/JsonModelService.test.ts` (nuovo), `docs/json-export-schema.md`, `docs/discovery/discovery_2026-09-18_json_external_objects.md` (nuovo). Questa entry e la rotazione a parte.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `npm run test -- src/services/export/__tests__` **63/63** (14 nuovi); `npm run typecheck` su output COMPLETO **14** errori pre-esistenti, 0 nei file toccati, exit 2 identico; `npm run build` exit **0** col solo avviso di chunk-size noto.
+**Out-of-scope changes**: no — fix, test e documentazione richiesta dal prompt e dal protocollo.
+**Layer Impact Report**: not-required — `JsonModelService.ts` e' un servizio di export, nessun file di §3.1, nessuna scrittura D, nessuna TRANSACTION.
+**Smoke visivo**: non applicabile — nessun pixel cambia. Il payload scaricato e' coperto dal test Node su Blob (self-contained, tutti i `$ref` risolti). `npm run smoke` non avviato: `@playwright/test` non risolvibile in locale, come nel giro #147.
+**Notes**: `buildModelObjects` percorre la chiusura raggiungibile (worklist su Map) dai root; root locali in `objects`, esterni in `externalObjects` (additivo, nessun bump di formatVersion). Containment preservato; cicli/duplicati → `$ref` via serializedObjects. Metaclassi esterne → `externalMetamodels`. Id stale/non-DObject restano `$ref`. Deroga RC-11 nel referto (6 file). Commit 7c4e763bf (codice), d0a51de50 (docs).
+**Prompt document name**: 2026-09-18 12:50
+
 ## 2026-09-18 — fix(ai): ripresa autorizzata della PR per #147
 **Prompt**: "chiaro procedi pr", dopo il chiarimento sul fallback del modello Custom.
 **Files touched**: `docs/discovery/discovery_2026-09-18_custom_provider_model.md`, `docs/claude-code-log.md`, `docs/claude-code-log-archive.md`; commit dei due file di codice gia' verificati nel giro precedente.
