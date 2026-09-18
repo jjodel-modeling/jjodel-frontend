@@ -138,3 +138,13 @@ not by a gate.
 **Notes for whoever picks it up**: three citation sites today (`CLAUDE.md:14`, `CLAUDE.md:108`,
 `docs/PROTOCOL.md:11`); the check must fail on a mismatch in either direction. It touches a gate script and
 `CLAUDE.md` §17, so it is a lane of its own.
+
+## 2026-09-19 — ticket extension: the clause-range check also covers docs/HARNESS-DOCS.md
+**Extends** the ticket "check:docs should assert the clause range against PROTOCOL.md" above (add-only: the
+original text stands). The check D proposed there compares the highest `## P<n>` of `docs/PROTOCOL.md` with the
+range cited in three places. `docs/HARNESS-DOCS.md` cites the range too, and all three of its citations are stale:
+`P1..P10` at lines 122, 344 and 358, against P1..P15 in force. The gate should cover it, which makes six citation
+sites instead of three.
+**Not done here**: no edit to `docs/HARNESS-DOCS.md` (its own rule asks for a version bump, and it already
+differs between the trunk and `validation-skeleton`). Line 122 is inside an example prompt header and may be
+meant as a historical example: whoever implements the gate decides whether it is in scope.
