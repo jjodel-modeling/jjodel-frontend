@@ -2,12 +2,15 @@
 
 **Data**: 2026-09-18
 **Branch**: `feat/142-inherited-customization-views`
-**Stato**: Fase A **implementata** (2026-09-18). Fase B (canvas/Views) non avviata — resta un
-branch/prompt separato (§6). Gate: `npx vitest` area toccata 519/519, `typecheck` 14 pre-esistenti
-(0 nei file toccati), `build` exit 0. Smoke: rendering della sezione References confermato
-dall'utente via screenshot (A1 link+cardinalità+gating, A2 bottone crea-e-collega); interazioni
-drill-in/create-and-link non ri-verificate a runtime in sessione. File toccati (2):
-`InstanceManagerTab.tsx`, `instanceManagerTab.scss`.
+**Stato**: Fase A **implementata** (Data Manager) e Fase B/B1 **implementata** (canvas rail),
+entrambe 2026-09-18. La Fase B è risultata **diversa dal piano iniziale** (§6, riscritto):
+NON nella critical zone/sync, ma nel pannello classico `Info.tsx`. Aperto: la creazione di figli
+**containment** dal rail del canvas (es. «New Assessment») — è la «create-and-link»/«Add contained»
+di Fase A portata sul rail, tocca il percorso di create, step separato (§6). Gate (entrambe le fasi):
+`typecheck` 14 pre-esistenti (0 nei file toccati), `build` exit 0; Fase A `npx vitest` area toccata
+519/519. Smoke confermato dall'utente via screenshot: Fase A (Data Manager) e Fase B/B1 (canvas rail,
+sezione unica REFERENCES con select+drill-in+delete). File toccati: Fase A `InstanceManagerTab.tsx`,
+`instanceManagerTab.scss`; Fase B `components/editors/Info.tsx`, `components/editors/info-improvements.scss`.
 **Issue**: [FEATURE] Inherited customization for "Views" and "Data Manager" (#142, autore @tmaog).
 
 ---
@@ -173,15 +176,44 @@ aggiunta di un campo **opzionale** a `NavStep` (§11 delle regole: consentito).
 
 ---
 
-## 6. Fase B — "Views" / canvas (separata, NON accorpare)
-Editing inline di un elemento referenziato **da un nodo sul canvas**, riusando la customization
-del nodo/form del target, e creazione dell'associazione senza disegnare l'edge a mano.
+## 6. Fase B — "Views" / canvas (IMPLEMENTATA come B1; l'ipotesi iniziale era errata)
 
-Tocca la **critical zone**: `useJjomSync.ts`, `useM1ReferenceEdges.ts` (§3.5), `portDistribution.ts`
-(§3.10), `canvasToJjom.ts`, guardie `DVoidEdge` (§3.4). Se cambia la default-view, serve un
-VersionFixer (§3.9). Richiede **corsia completa (RC-3)** + **Layer Impact Report (§3.2)**.
+**Ipotesi iniziale (superata):** si pensava toccasse la critical zone (`useJjomSync.ts`,
+`useM1ReferenceEdges.ts`, `portDistribution.ts`, `canvasToJjom.ts`, guardie `DVoidEdge`).
+La discovery l'ha **smentita**:
 
-Raccomandazione: branch/prompt dedicato, dopo la Fase A, con discovery propria.
+- Il rail Properties del canvas rende `Info.tsx` (**pannello classico**, `Info.object`), **non**
+  `IRForm` — `IRForm` è montato solo nel Data Manager (host `manager`). Quindi il meccanismo di
+  Fase A non si trapianta.
+- **Creare una reference via slot-write RENDE GIÀ l'edge** sul canvas: `useM1ReferenceEdges`
+  (§3.5) crea reattivamente il `DVoidEdge` per un `SetFieldAction` su `DValue.values`, add-only,
+  guardia pair-key (§3.4). Quindi «associazione senza workflow edge» è **già supportata a livello
+  dati** — il sync **non va toccato**.
+
+**Scelta utente (2026-09-18):** perimetro **B1** (drill-in), UX «sezione References nel pannello
+classico». Poi, su feedback («learners due volte» + «× non funziona»), pivot all'**opzione Y**:
+
+- Le reference non-containment vivono in **una sola sezione REFERENCES** (`Info.references`),
+  tolte dagli SLOTS (niente doppione).
+- Ogni reference: **select** (cambia/aggiungi target, riusa `LValue.validTargetsJSX`),
+  **drill-in** (scrive `_lastSelected` → il rail segue e rende il target con la sua customization,
+  idioma di `MetamodelContents.handleSelect`), **×** (clear). La sezione **filtra i buchi**, quindi
+  la × fa **sparire la riga** invece di lasciare «-----» (il renderer classico tiene i buchi).
+- Tutte le scritture via `setValueAtPosition` esistente — **nessun cambio core/sync**.
+
+**Diagnosi del «× non funziona» (pre-esistente, non regressione):** il clear scrive
+`values[i]=undefined` (buco), convenzione di tutta l'app; il Data Manager nasconde i buchi, il
+renderer classico degli SLOTS (`keepempties`) li mostra come «-----». L'opzione Y li nasconde
+nella sezione REFERENCES. Il fix «alla radice» (buco che sparisce dall'array) resterebbe un cambio
+core L-layer (Rule 5), non fatto.
+
+**File Fase B (2):** `frontend/src/components/editors/Info.tsx`,
+`frontend/src/components/editors/info-improvements.scss`. Commit `9625d1372`.
+
+**Aperto (step separato):** creazione di figli **containment** dal rail del canvas (es. «New
+Assessment»): il pannello classico lega solo oggetti esistenti (select su `validTargets`), non crea.
+È la «Add contained»/«create-and-link» di Fase A portata sul rail — tocca il percorso di create
+(D-layer), fuori da B1.
 
 ---
 

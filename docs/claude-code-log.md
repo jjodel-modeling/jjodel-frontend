@@ -13,6 +13,19 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-18 — feat(views): editor reference in una sezione + drill-in nel rail canvas (#142)
+**Prompt**: Fase B della #142 (Views/canvas). La discovery ha smentito l'ipotesi critical-zone: il rail è il pannello classico `Info.tsx`, e `useM1ReferenceEdges` rende già l'edge per uno slot-write. Scelto B1 (drill-in), poi pivot a «opzione Y» (una sola sezione reference) su feedback utente («learners due volte», «× non funziona»).
+**Files touched**: `frontend/src/components/editors/Info.tsx`, `frontend/src/components/editors/info-improvements.scss`. Aggiornamento discovery report e questa entry a parte (commit docs separato, §6.4).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `npm run typecheck` output COMPLETO **14** errori pre-esistenti, 0 nei file toccati; `npm run build` exit **0** col solo avviso chunk-size. Smoke confermato dall'utente via screenshot.
+**Out-of-scope changes**: no — 2 file, entrambi del rail toccato per B1/opzione Y.
+**Layer Impact Report**: produced — in chat prima del diff (rail/view; sync NON toccato: l'edge lo rende `useM1ReferenceEdges` add-only, §3.5).
+**Smoke visivo**: passato — canvas rail: sezione unica REFERENCES con select (cambia/aggiungi), drill-in (il rail segue il target con la sua customization), × che fa sparire la riga (filtro buchi). Confermato dall'utente.
+**Notes**: Rail = `Info.object` (classico), non `IRForm` (solo Data Manager). Opzione Y: reference non-containment fuori dagli SLOTS, in `Info.references`; scritture via `setValueAtPosition` (no core). «× non funziona» era pre-esistente (clear→buco «-----», `keepempties`); la sezione filtra i buchi. Aperto: create containment dal rail (New Assessment). Referto: discovery_2026-09-18_142_inherited_customization.md §6.
+**Prompt document name**: 2026-09-18 18:20
+
 ## 2026-09-18 — feat(data-manager): editing inline + crea-e-collega per le reference (#142)
 **Prompt**: creare un branch per la #142, poi pianificare e implementare (inherited customization per Views e Data Manager). Scelto perimetro **Fase A** (solo Data Manager); UX drill-in omogenea col containment. La Fase B (canvas) resta separata.
 **Files touched**: `frontend/src/components/abstract/tabs/InstanceManagerTab.tsx`, `frontend/src/components/abstract/tabs/instanceManagerTab.scss`. Discovery report e questa entry di log a parte (commit docs separato, §6.4).
