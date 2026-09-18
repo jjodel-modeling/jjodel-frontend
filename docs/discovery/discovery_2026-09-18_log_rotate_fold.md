@@ -26,6 +26,11 @@ at the moment it was written — it undercounts the four "item A–E" entries (2
 entries already there, minus one: 9 total, not 5. Expected total after fold in step 4 is
 therefore **101 + 7 + 9 = 117** (assuming no duplicate), not the prompt's stated 113.
 
+**Amendment (step 6)**: this table and the "117" above miss a third inbox, `docs/log-inbox/harness.md`
+(1 entry) — it already existed at this discovery's time (`9a9f7952b`, 20:04:22, before this report's
+own commit `5c9e88d16` at 20:22:02) but this step's scan checked only the two inboxes the prompt
+named, not a dynamic listing; the real fold total, confirmed at step 4, was **118**.
+
 ## 2. Duplicate check (inbox entries already in the active log, verbatim)
 
 Every heading line (16 total: 7 symbol-editor + 9 views) checked with an exact-substring `grep -F`

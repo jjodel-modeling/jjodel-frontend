@@ -2,7 +2,7 @@
 
 Prompt-ID: P-2026-09-18-2015
 Chat: C-2026-09-18-2015
-Status: da eseguire
+Status: eseguito 2026-09-18 · lane harness · 920b84895
 Date: 2026-09-18 20:15 (Europe/Rome)
 Type: chore (harness tooling) + docs (the first fold and rotation)
 Branch: `validation-skeleton` in `/Users/alfonso/jjodel`

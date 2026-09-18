@@ -28,6 +28,27 @@ the Create View gate fix»: contenuto reale **due** entry, la sua e quella della
 rail/modale, gia' in albero e non in stage al momento del commit. Stesso schema del 2026-09-13.
 Nessun rewrite: la entry resta dov'e', il suo commit non la nomina.
 
+## 2026-09-18 — chore: fold and rotate the prompt log by script, gate red above 40 (P-2026-09-18-2015)
+**Prompt**: `claude_2026-09-18_2015_prompt_log_rotate_fold_gate.md`. Replace hand-folding of
+`docs/log-inbox/*.md` and hand-rotation into `docs/claude-code-log-archive.md` with `log-tools.ts`
++ `rotate-log.ts` (`--fold`, `--rotate`, `--keep=40`, `--write`); `check:docs` gains Check D
+(active entries > 40 fails, non-empty inbox warns). Ran the tool for real: fold (101 → 118, three
+inboxes emptied), then rotate (118 → 40, 78 moved verbatim to the archive).
+**Files touched**: code — `frontend/scripts/gates/log-tools.ts`, `rotate-log.ts`,
+`__tests__/log-tools.test.ts`, `check-docs.ts`, `frontend/package.json`, `vitest.config.ts`
+(`920b84895`). Docs — `docs/PROTOCOL.md` (`3de7bef90`); `docs/claude-code-log.md` +
+`docs/log-inbox/{harness,symbol-editor,views}.md` (`095f27cd1`); `docs/claude-code-log.md` +
+`docs/claude-code-log-archive.md` (`9378e405e`); `docs/claude-code-log.md` (`eab6eb23f`).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no
+**Out-of-scope changes**: yes
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: docs/log-inbox/harness.md predates this lane's discovery (9a9f7952b, before 5c9e88d16); the report's sentence missed it, amended not rewritten. 5642a7d80, 5c9e88d16, 920b84895 predate the Model trailer in this lane (RC-11). 3de7bef90's P9 sentence is owed to the trunk (§6.6). Ticket: fold should lint inbox entries against the Notes cap in dry-run. This entry makes the log 41; Check D red by design until the next batch.
+**Prompt document name**: 2026-09-18 20:15
+
 ## 2026-09-18 — fix: guard the Escape close binding when no popup is open (item A)
 **Prompt**: `claude_2026-09-18_1650_prompt_view_quattro_difetti_minori.md`, item A: the Escape
 binding at `ContextMenu.tsx:669` calls the module-level `closefunc`, `null as any` until the
