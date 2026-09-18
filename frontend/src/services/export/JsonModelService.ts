@@ -131,7 +131,8 @@ export class JsonModelService {
      * Build the semantic model document (`jjodel-model`) as a plain object.
      * The model's metamodel is embedded in full (self-contained, like the XMI
      * exporter). Additional metamodels whose classes are instantiated /
-     * referenced are embedded under `externalMetamodels`.
+     * referenced are embedded under `externalMetamodels`. Reachable objects
+     * from other models are embedded under `externalObjects`.
      */
     static buildModelDocument(model: LModel): Record<string, unknown> {
         const metamodel = model.instanceof as LModel;
@@ -141,7 +142,7 @@ export class JsonModelService {
 
         const ctx: BuildContext = { visited: new Set([metamodel.id]), queue: [] };
         const primaryPackages = this.buildPackages(metamodel, metamodel.id, ctx);
-        const objects = this.buildModelObjects(model, metamodel.id, ctx);
+        const { objects, externalObjects } = this.buildModelObjects(model, metamodel.id, ctx);
         const externalMetamodels = this.drainExternals(ctx);
 
         const doc: any = {
@@ -156,6 +157,7 @@ export class JsonModelService {
             },
             objects,
         };
+        if (externalObjects.length > 0) doc.externalObjects = externalObjects;
         if (externalMetamodels.length > 0) doc.externalMetamodels = externalMetamodels;
         return doc;
     }
@@ -352,31 +354,48 @@ export class JsonModelService {
     // ============================================
 
     /**
-     * Build the root objects of a model. Contained (composition) children are
-     * NOT emitted at top level — they are nested under their container's
-     * `children` map (mirrors XMIService's root-only export).
+     * Collect all reachable objects before rendering, so a referenced child
+     * is nested even when discovered before its container. Keep model roots
+     * separate from external roots; containment children remain inline.
      */
-    private static buildModelObjects(model: LModel, currentModelId: string, ctx: BuildContext): any[] {
+    private static buildModelObjects(model: LModel, currentModelId: string, ctx: BuildContext): { objects: any[]; externalObjects: any[] } {
         const objects = (model.objects || []).filter((o: LObject | null) => !!o) as LObject[];
+        const localIds = new Set(objects.map(obj => obj.id));
+        const reachableObjects = new Map(objects.map(obj => [obj.id, obj]));
 
         const contained = new Set<string>();
-        for (const obj of objects) {
+        // Map iteration also visits newly discovered targets. Each id is added once.
+        for (const obj of reachableObjects.values()) {
             for (const feature of obj.features || []) {
                 const metaFeature: any = feature?.instanceof;
                 if (!metaFeature || metaFeature.className !== 'DReference') continue;
-                if (!(metaFeature.composition || metaFeature.containment)) continue;
                 for (const v of (feature.__raw?.values || [])) {
-                    if (typeof v === 'string') contained.add(v);
+                    const target = this.resolveObject(v);
+                    if (!target) continue;
+                    if (!reachableObjects.has(target.id)) reachableObjects.set(target.id, target);
+                    if (metaFeature.composition || metaFeature.containment) contained.add(target.id);
                 }
             }
         }
 
-        return objects
-            .filter(obj => !contained.has(obj.id))
-            .map(obj => this.buildObject(obj, currentModelId, ctx));
+        const out: { objects: any[]; externalObjects: any[] } = { objects: [], externalObjects: [] };
+        const serializedObjects = new Set<string>();
+        const append = (obj: LObject) => {
+            if (serializedObjects.has(obj.id)) return;
+            const roots = localIds.has(obj.id) ? out.objects : out.externalObjects;
+            roots.push(this.buildObject(obj, currentModelId, ctx, serializedObjects));
+        };
+        for (const obj of reachableObjects.values()) {
+            if (!contained.has(obj.id)) append(obj);
+        }
+        // A malformed containment cycle has no root; still provide one definition per id.
+        for (const obj of reachableObjects.values()) append(obj);
+        return out;
     }
 
-    private static buildObject(obj: LObject, currentModelId: string, ctx: BuildContext): any {
+    private static buildObject(obj: LObject, currentModelId: string, ctx: BuildContext, serializedObjects: Set<string>): any {
+        if (serializedObjects.has(obj.id)) return { $ref: obj.id };
+        serializedObjects.add(obj.id);
         const metaclass: any = obj.instanceof;
         const out: any = {
             id: obj.id,
@@ -418,7 +437,7 @@ export class JsonModelService {
                     .map((v) => this.resolveObject(v))
                     .filter((o): o is LObject => o !== null);
                 if (childObjs.length > 0) {
-                    children[featureName] = childObjs.map(c => this.buildObject(c, currentModelId, ctx));
+                    children[featureName] = childObjs.map(c => this.buildObject(c, currentModelId, ctx, serializedObjects));
                 }
             } else {
                 // Cross-reference: emit id pointers as { $ref: objectId }.
