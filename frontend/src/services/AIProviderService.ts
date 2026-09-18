@@ -54,6 +54,10 @@ export class AIProviderService {
         const keyError = this.validateKeyCoherence(provider, config);
         if (keyError) throw new Error(keyError);
 
+        // The Custom registry entry is a selector placeholder, not an endpoint model ID.
+        // Resolve it against the current configuration, including already-persisted preferences.
+        if (provider === AIProvider.Custom && model === 'custom') model = undefined;
+
         // Resolve effective model: explicit param > per-provider config. Run through legacy ID map
         // so stale identifiers (e.g. persisted before a rename) reach the current canonical form.
         let effectiveModel = resolveLegacyModelId(provider, model ?? config.model) ?? config.model ?? '';
