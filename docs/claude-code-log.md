@@ -13,6 +13,19 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-18 — fix(views): view da albero nasce con IR + modale symbol in primo piano (#139)
+**Prompt**: analizzare e risolvere i bug della issue #139 (3 bug UI sulle view); branch dedicato e PR su staging; per il Bug 3 scelto dall'utente di NON toccarlo e commentare l'issue chiedendo ad Alfonso e Tommaso come rivedere la parte grafica.
+**Files touched**: `frontend/src/utils/lastViewpoint.ts`, `frontend/src/components/editor-v2/viewpoint/authoring/SymbolEditorModal.tsx`, `frontend/src/components/editor-v2/viewpoint/authoring/SymbolEditorModal.scss`. Questa entry di log a parte (commit separato, §6.4).
+**Outcome**: ✅ completed — Bug 1+2 risolti (commit 7b5f4fd3a, PR #151 su staging); Bug 3 deferito per decisione dell'utente ai maintainer via commento issue (#issuecomment-5731734971, @apierantonio @tmaog).
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown — `npm run typecheck` output completo **14** errori pre-esistenti (baseline file noti), 0 nei file toccati; `npm run build` exit **0** col solo avviso di chunk-size. Nessuno smoke visivo a runtime (app non avviata), quindi il comportamento UI non è stato esercitato a mano.
+**Out-of-scope changes**: no — i 3 file mappano sui due bug; il commento SCSS della modale fa parte della stessa modifica (Bug 2), il "no portal" era diventato falso.
+**Layer Impact Report**: not-required — nessun file di §3.1. `lastViewpoint.ts` scrive `d.ir` DENTRO la callback di `DViewElement.new2` (nessun TRANSACTION esterno, §3.3), come già fa `createViewInWorkbench`.
+**Smoke visivo**: non eseguito — `@playwright/test` non risolvibile in locale, come nei giri #147/#128. Le due fix sono minimali e type-safe ma non provate in app.
+**Notes**: Bug 1 = `createBlankViewInViewpoint` semina un vertex IR (`computeCreationSeed`, `metaclasses:'*'` senza classe target), identico a `EnableIRPanel.enable(vertex)` anticipato alla creazione: nessuna nuova semantica di match. Bug 2 = `SymbolEditorModal` ora `createPortal(..., document.body)`: inline in `#root` era intrappolata sotto il rail Properties (anch'esso portato al body, z-index 900) nonostante z-index 9999. Bug 3 (layout rail Properties) deferito: richiede decisione UX su `R-RAIL-*`.
+**Prompt document name**: 2026-09-18 16:49
+
 ## 2026-09-18 — fix(export): oggetti referenziati da altri modelli nell'export JSON M1 (#128)
 **Prompt**: risolvere jjodel-modeling/jjodel-frontend#128; usare e tenere aggiornata la documentazione degli export JSON in `docs/`.
 **Files touched**: `frontend/src/services/export/JsonModelService.ts`, `frontend/src/services/export/__tests__/JsonModelService.test.ts` (nuovo), `docs/json-export-schema.md`, `docs/discovery/discovery_2026-09-18_json_external_objects.md` (nuovo). Questa entry e la rotazione a parte.
@@ -678,28 +691,3 @@ una lettera ma `YYYY-MM-DD HH:mm`, già vincolato da `TIMESTAMP_PREFIX`: la rest
 per la sola `Causa`. Forme in archivio: **118 `(x)`, 8 nude, 3 di prosa**. Controllo positivo
 `Causa: e` → ERROR. Il gate non ha test: dichiarato, non creato.
 **Prompt document name**: PROMPT_CODA_batch_L1-L4.md — 2026-09-02
-
-## 2026-09-02 — docs(log): chiusura batch L1–L4 (sanatoria, log-inbox, rotazione)
-**Prompt**: §6.1 di chiusura del batch L1–L4 a repo fermo, seriale: bonificare l'indice
-condiviso, verificare le tre sonde temporanee, scrivere la nota di sanatoria dei commit
-mal-messaggiati, correggere la `Causa` di SAVE1-bis, iscrivere in P9 la regola log-inbox
-per le corsie parallele, ruotare il log se oltre soglia. Nessun file applicativo.
-**Files touched**: `docs/claude-code-log.md` (nota di sanatoria, `ff74cee8e`),
-`docs/PROTOCOL.md` + `docs/log-inbox/.gitkeep` (regola log-inbox, `061453e65`),
-`docs/claude-code-log.md` + `docs/claude-code-log-archive.md` (rotazione P9, `0838a303f`).
-**Outcome**: ✅ completed
-**Corregge**: —
-**Causa**: (e)
-**Regressions**: no — nessun file di codice toccato, nessun gate di build coinvolto.
-`npm run check:docs` (da `frontend/`) **3/3, exit 0** prima e dopo ciascuno dei tre commit,
-con i 2 warning non bloccanti preesistenti su `Corregge` di SAVE1-bis e DIRTY1.
-**Out-of-scope changes**: no — tre commit tematici, ciascuno per pathspec esplicito.
-L'indice conteneva staged della corsia EGO1: lasciato intatto, mai `git add .`.
-**Layer Impact Report**: not-required — solo documentazione.
-**Smoke visivo**: non applicabile — nessun pixel cambia.
-**Notes**: `Corregge` resta `—`: la sessione non rifà il lavoro di una corsia, ne sana il
-registro; `Causa` `(e)` è la concorrenza su albero condiviso. La `Causa` di SAVE1-bis non
-andava corretta: portava già `(a)` dal commit che ha scritto l'entry (`f278cf4fb`). Le tre
-sonde `frontend/scripts/smoke/_tmp_*` cadono in `.gitignore:66`, nessuna promossa.
-Rotazione: attivo 49 -> 5, archivio 1025 -> 1069, verbatim per data. Nessun rewrite.
-**Prompt document name**: PROMPT_CHIUSURA_batch_L1-L4.md — 2026-09-02

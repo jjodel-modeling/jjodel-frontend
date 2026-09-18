@@ -18,6 +18,7 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useSelector } from 'react-redux';
 import { LPointerTargetable, U, type LViewElement } from '../../../../joiner';
 import { JjodelEvents } from '../../../../events/registry';
@@ -219,7 +220,13 @@ export const SymbolEditorModal: React.FC = () => {
 
     const close = () => setViewId(null);
 
-    return (
+    // Portal to document.body (issue #139, bug 2). The Properties rail is itself portaled
+    // to body (`PropertiesWithTreeView`, `.properties-tree-overlay`, z-index 900); rendered
+    // inline inside `#root` the modal's backdrop was trapped in `#root`'s stacking context
+    // and painted BENEATH that body-level rail despite its higher z-index (9999). As a
+    // sibling of the rail on body, the modal wins by z-index alone and covers the whole
+    // viewport, editable flag included.
+    return createPortal(
         <div className="symbol-editor-modal-backdrop" onClick={close} role="presentation">
             <div
                 className="symbol-editor-modal"
@@ -337,7 +344,8 @@ export const SymbolEditorModal: React.FC = () => {
                     <button type="button" className="btn btn-primary" onClick={close}>Close</button>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
 

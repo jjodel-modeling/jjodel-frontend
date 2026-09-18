@@ -206,11 +206,22 @@ export function createBlankViewInViewpoint(
         candidate = `${nameSeed}${i}`;
     }
 
+    // IR seed (issue #139, bug 1): a blank view created from the viewpoint tree is born
+    // with a vertex ir, so it opens the current authoring modal (Applies to · Structure ·
+    // Symbol · Source) instead of the legacy tab bar ViewData shows to a view without `ir`.
+    // This reproduces exactly what the user got by opening the created view and clicking
+    // IR → Enable with the default kind (EnableIRPanel.enable, vertex branch): the seed is
+    // the same `computeCreationSeed({ kind: 'vertex' })` with `metaclasses: '*'` when no
+    // target class is known — no new matching semantics, only anticipated by one gesture.
+    // Written inside the new2 callback (persisted in one action, no outer TRANSACTION,
+    // CLAUDE.md §3.3), mirroring createViewInWorkbench's seeded branch.
+    const seed = computeCreationSeed({ kind: 'vertex', label: candidate });
+
     const newView = DViewElement.new2(
         candidate,
-        '', // jsxString vuoto, l'utente personalizzerà dopo
+        '', // jsxString vuoto: una view con ir rende dall'interprete, il template sarebbe testo morto
         dVp,
-        undefined,
+        seed ? (d) => { (d as any).ir = seed; } : undefined,
         true
     );
     return newView;
