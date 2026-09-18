@@ -190,202 +190,56 @@ The report goes in chat before the diff. Not in a commit.
 
 ### 3.3 TRANSACTION rules near the sync layer
 
-`DVertex.new`, `DVoidEdge.new2`, and `DVoidEdge.new3` each open an internal
-TRANSACTION. Wrapping them in an outer TRANSACTION causes coordinate loss and
-dropped `SetFieldAction`s (nested writes are merged out).
-
-**WRONG — coordinate loss**
-```typescript
-TRANSACTION('create vertices', () => {
-    for (const node of nodes) {
-        DVertex.new(node.id, modelId);   // ← nested TRANSACTION dropped
-    }
-});
-```
-
-**RIGHT — bare loop mirroring useJjomSync**
-```typescript
-for (const node of nodes) {
-    DVertex.new(node.id, modelId);
-}
-```
-
-**SAFE — pure-action TRANSACTION (no creators)**
-TRANSACTIONs that contain only `SetFieldAction`, `SetRootFieldAction`, or
-`DeleteElementAction` (no `.new()` / `.new2()` / `.new3()` calls) are safe
-even in sync-adjacent code. This pattern is used for:
-- Tagging a newly created graph (`SetFieldAction` + `SetRootFieldAction`)
-- Deleting stale edges after a D-first `extends` removal (`DeleteElementAction`)
-- Reconciling reference endpoints (`SetFieldAction` + `DeleteElementAction`)
-
-The hazard is specifically the nesting of creator calls, not the presence of
-a TRANSACTION per se.
+Moved to `frontend/src/components/editor-v2/AGENTS.md` (§3.3) on 2026-09-18
+(P-2026-09-18-1930 Phase 1) — loads when work is already under that directory. Rule 12 in the
+non-negotiable block is the one-line version that must be known before then.
 
 ### 3.4 DVoidEdge race-window guard
 
-The guard strategy depends on the edge type (M1 instance vs M2 reference).
-
-**M1 reference edges** (populated by `useM1ReferenceEdges.ts`)
-- Key: pair-based `${srcVId}→${tgtVId}`
-- Guard: `hasCanvasEdgePair(ek)` + `existingKeys.has(ek)`
-- Semantics: one edge per vertex pair for a given M1 reference value
-
-**M2 reference edges** (populated by `useJjomSync.ts` Step 3)
-- Key: composite `${refId}:${srcVertex}→${tgtVertex}`
-- Guard: `existingEdgeKeys.has(ek)` after an `idlookup` scan of the graph's
-  subElements and the RF edge cache
-- Semantics: multiple sibling references between the same vertex pair are
-  preserved (e.g. Family→Member: father, mother, sons, daughters)
-- `hasCanvasEdgePair` is NOT used here — it would incorrectly block siblings
-
-**Inheritance edges**
-- Key: pair-based `${src}→${tgt}`
-- Guard: `existingEdgeKeys.has(ek) || hasCanvasEdgePair(ek)`
-- Semantics: a class extends another at most once
-
-Key format uses directional arrow `→` (U+2192). It is **not symmetric** —
-`A→B` and `B→A` are distinct.
+Moved to `frontend/src/components/editor-v2/AGENTS.md` (§3.4) on 2026-09-18
+(P-2026-09-18-1930 Phase 1). Rule 13 in the non-negotiable block is the one-line version.
 
 ### 3.5 Step 4 dependency limitation + useM1ReferenceEdges
 
-`useJjomSync.ts` Step 4 has these deps:
-```typescript
-[modelid, hasGraph, subElementIds.length, modelClassCount,
- modelRefCount, modelRefTypeSig, modelExtendsSig, modelObjectCount]
-```
-
-`modelRefCount` counts **M2 DReferences only**. Step 4 does **not** re-fire on `SetFieldAction` over `DValue.values` (M1 slot population). This means: when M1 reference values arrive after the initial mount (post-load, post-transformation), Step 4 misses them.
-
-**Do not "fix" Step 4 deps to include M1 value counters**. That breaks other invariants.
-
-**Workaround**: use `useM1ReferenceEdges` — a separate hook downstream that listens to M1 value changes and creates the missing edges with the same guards.
-
-Path: `frontend/src/components/editor-v2/hooks/useM1ReferenceEdges.ts`.
+Moved to `frontend/src/components/editor-v2/AGENTS.md` (§3.5) on 2026-09-18
+(P-2026-09-18-1930 Phase 1).
 
 ### 3.6 entity.father vs forward-link collections
 
-`entity.father` (backward link) is eagerly set by the parser before reducers finish merging.
-
-Forward-link collections (e.g., `pkg.classes`, `pkg.attributes`) may be **stale immediately after parse** due to Redux reducer batching lag.
-
-**WRONG — race condition on counters and post-parse logic**
-```typescript
-const classCount = pkg.classes.length;  // may be 0 even after parse completes
-```
-
-**RIGHT — backward-link iteration via idlookup**
-```typescript
-function countDescendantsByFather(
-    idlookup: GObject,
-    className: string,
-    fatherIds: Set<string>
-): number {
-    let count = 0;
-    for (const id in idlookup) {
-        const e = idlookup[id];
-        if (e?.className === className && fatherIds.has(e.father)) count++;
-    }
-    return count;
-}
-```
-
-Canonical implementation: `frontend/src/components/import/buildImportSummary.ts`.
+Moved to `frontend/src/model/AGENTS.md` (§3.6) on 2026-09-18 (P-2026-09-18-1930 Phase 1).
 
 ### 3.7 pkg.__raw.uri vs pkg.uri
 
-L-layer `pkg.uri` is computed as `data.uri + "." + data.name` (concatenation).
-D-layer `pkg.__raw.uri` is the direct field as parsed.
-
-For byte-identical nsURI, use `pkg.__raw.uri` — the Ecore round-trip discipline lives in §14. For user-facing display or JjScript queries, `pkg.uri` is fine.
-
-Both patterns coexist by design. Do not "unify" them.
+Moved to `frontend/src/model/AGENTS.md` (§3.7) on 2026-09-18 (P-2026-09-18-1930 Phase 1).
 
 ### 3.8 composition vs containment
 
-`composition` is the canonical D-layer field. `containment` is supported for
-backward compatibility — it is read by Ecore/XMI I/O services, written by
-JjScript `copy` commands, and parsed as a first-class option by the JjScript
-parser — but do not introduce `containment` in new code. Prefer `composition`
-for all new writes.
+Moved to `frontend/src/model/AGENTS.md` (§3.8) on 2026-09-18 (P-2026-09-18-1930 Phase 1).
 
 ### 3.9 VersionFixer & jsxString persistence
 
-View templates are persisted as `jsxString` strings in Redux project state. Changes to default-view source files (`DV.tsx`, `defaultViewTemplate.ts`) **do not propagate to existing saved projects automatically**.
-
-Whenever you modify a default-view source file, you must:
-
-1. Add a migration method in `VersionFixer.tsx`. Naming pattern:
-   ```typescript
-   private ['2.216 -> 2.217'](s: DState): DState { ... }
-   ```
-   `highestVersion` is computed automatically from method names — no separate constant to bump.
-
-2. Inside the migration, iterate over `DViewElement` entries and rewrite `e.jsxString` for views matching the detection marker. Existing migrations (`2.211 -> 2.212`, `2.213 -> 2.214`) are reference templates.
-
-3. If a new detection marker is needed, add it to `defaultViewTemplate.ts` (e.g., `V2_X_TO_V2_Y_DETECT_MARKER`).
-
-**Skipping the migration leaves every existing project on the old `jsxString`. The "fix" appears to work in dev (new projects look right) but breaks on every saved file.**
+Moved to `frontend/src/redux/AGENTS.md` (§3.9) on 2026-09-18 (P-2026-09-18-1930 Phase 1) — loads
+when work is already under that directory. Rule 14 in the non-negotiable block is the one-line
+version that must be known before then; it also covers `frontend/src/common/DV.tsx`, which sits
+under neither this module nor either of the other two (known gap, not solved here).
 
 ### 3.10 Role-aware bucket keys in portDistribution
 
-> **Note (2026-05-27)**: the role-keyed bucketing described in this section governs `portDistribution.ts`'s `edgeHandles` output, which assigns handleIds. The actual positioning of anchors on the screen is currently driven by `handlePosition.ts:computeSidePositions` and `DynamicHandles.tsx`, **not** by `portDistribution.ts`'s `nodeHandles` field (discarded by `EditorV2.tsx`). The overflow-protection trade-off described below is still relevant for handleId assignment, but its visual implications depend on `computeSidePositions`. Re-evaluate this section after the anchor ordering fix (tracked in `docs/discovery/2026-05-27_anchor_ordering_inversion.md`) is merged.
-
-When a pair of nodes can have fan-in and fan-out simultaneously (e.g., bidirectional references between two classes), bucket keys for port distribution must include the role:
-
-```typescript
-const sourceKey = `${edge.source}:${sourceSide}:source`;
-const targetKey = `${edge.target}:${targetSide}:target`;
-```
-
-Without the role suffix, source and target collide on the same slot, leading to handle index overflow beyond `MAX_HANDLES_PER_SIDE` and missing edges.
-
-STEP 4 of `portDistribution.ts` unions source/target buckets per `(nodeId, side)` and dedups by handleId. STEP 5 recomputes uniform positions on the merged total. Do not bypass these steps.
+Moved to `frontend/src/components/editor-v2/AGENTS.md` (§3.10) on 2026-09-18
+(P-2026-09-18-1930 Phase 1).
 
 ### 3.11 Runtime store access
 
-See §15.4 for the `windoww.store` (double-`w`) global — exposed for console/DevTools debugging; application code imports the store directly. Console: `windoww.store.getState().idlookup`.
+Moved to `frontend/src/components/editor-v2/AGENTS.md` (§3.11) on 2026-09-18
+(P-2026-09-18-1930 Phase 1).
 
-### 3.12 Identity slot ↔ instance name — slot→name is always a direct SetFieldAction
+### 3.12 Identity slot ↔ instance name
 
-The M1 identity binding links an instance's display name (`DObject.name`) to its
-`name : EString` slot. The two directions are wired asymmetrically, and that asymmetry
-is load-bearing:
-
-- **name → slot**: `set_name` (`joiner/classes.ts` `LPointerTargetable.set_name`, override
-  `LModelElement.tsx` `LObject.set_name`) writes both sides — `data.name` via
-  `SetFieldAction`, and the slot via the proxy assignment `nameattribute.value = val`
-  (which routes through `LValue.set_value` → `setValueAtPosition`).
-- **slot → name**: `LValue.setValueAtPosition` (in `LModelElement.tsx`,
-  look for the method handling slot propagation) propagates
-  the slot value onto `data.name` with a **direct `SetFieldAction` on `'name'`** — it does
-  **not** call `set_name`.
-
-**Invariant — never violate**: slot → name propagation must always be a direct
-`SetFieldAction` on `'name'`. It must **never** be routed through `set_name`. This is
-exactly why no sync loop exists: the name-side write is terminal, so the cycle
-`set_name → slot write → name write → set_name → …` cannot form. Any change that makes
-slot → name go through `set_name` (instead of the direct field write) reintroduces the
-loop. See `docs/discovery/2026-06-17_name_slot_sync.md` §10 for the full trace.
+Moved to `frontend/src/model/AGENTS.md` (§3.12) on 2026-09-18 (P-2026-09-18-1930 Phase 1).
 
 ### 3.13 L-layer proxies report the D-layer className
 
-An L-proxy's `.className` returns the **D-layer** class name (`'DValue'`, `'DObject'`,
-`'DClass'`, …) — **never** the L-name (`'LValue'`, `'LObject'`). A guard like
-`lproxy.className === 'LValue'` is therefore **always false** and silently disables whatever
-it protects, with no compile error and no type warning.
-
-```typescript
-if (slot.className === 'DValue') { ... }   // correct
-// NOT: slot.className === 'LValue'         // always false — silently dead
-```
-
-The convention is consistent across the codebase (e.g. `setValueAtPosition`'s
-`oldTarget?.className === "DObject"` on an `LObject.fromPointer(...)` result;
-`proxy.ts` returns the D-name). This typo cost the entire Direction-A identity-sync effort:
-the name → slot write was gated on `=== 'LValue'` and never ran. Residual dead occurrences of
-the same typo remain in the base `LPointerTargetable.set_name`/`get_name`
-(`joiner/classes.ts`) — dead for instances (`LObject` overrides them), pending a
-consistency cleanup.
+Moved to `frontend/src/model/AGENTS.md` (§3.13) on 2026-09-18 (P-2026-09-18-1930 Phase 1).
 
 ---
 
@@ -676,108 +530,9 @@ Basic mode is the default. Hide complexity until needed.
 
 ## 9. Object persistence patterns
 
-These behaviors are counter-intuitive and have already cost days of debugging. Do not infer them from reading the code.
-
-### 9.1 DObject.new() returns temporary IDs
-
-The returned ID does not correspond to the real ID in the framework. Objects are **not** accessible via `store.getState()[dObject.id]`.
-
-**WRONG — temporary ID, lookup fails**
-```typescript
-const dObject = DObject.new(classId, modelId, DModel, name, true);
-store.getState()[dObject.id]; // undefined
-
-// Also wrong: SetFieldAction does not write proxy-readable values
-SetFieldAction.new(featurePointer, 'values', [value], '', true);
-```
-
-**RIGHT — find by name via LModel proxy**
-```typescript
-const lModel = LPointerTargetable.fromD(modelId) as LModel;
-const lObject = lModel.objects.find(o => o.name === objectName);
-
-(lObject as any)['$' + attrName].value = attrValue;
-```
-
-### 9.2 Deferred attribute setting
-
-After a TRANSACTION that creates objects, the proxies are not immediately available. Use `setTimeout` to let Redux propagation finish:
-
-```typescript
-const pending: Array<{ objectName: string; attributes: Record<string, any> }> = [];
-
-TRANSACTION('Create Objects', () => {
-    const dObject = DObject.new(classId, modelId, DModel, name, true);
-    pending.push({ objectName: name, attributes: { label: 'value' } });
-});
-
-setTimeout(() => {
-    const lModel = LPointerTargetable.fromD(modelId) as LModel;
-    for (const { objectName, attributes } of pending) {
-        const lObj = lModel.objects.find(o => o.name === objectName);
-        if (!lObj) continue;
-        for (const [attr, val] of Object.entries(attributes)) {
-            (lObj as any)['$' + attr].value = val;
-        }
-    }
-}, 1000);
-```
-
-Accumulate by **name**, not by ID, inside the TRANSACTION.
-
-### 9.3 Attribute slots and reference slots are written differently — and the wrong way is silent
-
-`['$' + name].value = v` is the form §9.1 and §9.2 use, and it is right **for attributes**. On a
-**reference** slot the same assignment does nothing: it does not throw, does not warn, and leaves
-the slot at `values: []`. Measured 2026-09-09 by running the four candidate forms in sequence
-against a live slot:
-
-| form | reference slot |
-|---|---|
-| `slot.value = <L object>` | no error, `values` stays `[]` |
-| `slot.value = <id>` | no error, `values` stays `[]` |
-| `slot.values = [<id>]` | **writes** |
-| `slot.setValueAtPosition(<id>, 0)` | **writes** |
-
-```typescript
-// RIGHT — reference slot, single or multi valued alike
-(lObject as any)['$ownedTransitions'].values = [targetId];
-(lObject as any)['$nextState'].values = [targetId];
-
-// RIGHT — attribute slot
-(lObject as any)['$isInitial'].value = true;
-```
-
-**The aggravating part is the silence.** A caller that writes a reference the attribute way builds
-a model whose references are all empty and gets no signal at all. A probe written that way then
-measures a state it never created: it will report whatever an empty reference implies —
-a vacuously satisfied constraint, an empty fan-out, a missing edge — as if the model said so.
-Measured in that same round: a probe's own reader disagreed with the JjEL evaluator about whether
-the transitions had targets, and the evaluator was right.
-
-**Clearing is the same trap, one step further.** `slot.values = []` does **not** empty a reference
-slot that already holds a value, and it does not throw: the slot keeps what it had. Measured
-2026-09-09 while building a fixture for the book, where a transition whose `nextState` was
-"cleared" that way still pointed at its target, and the conformance check was right while the
-fixture was wrong. There is no measured form that clears an already-written reference slot from
-the L proxy; when a test or a probe needs an unset reference, **construct it unset** — a freshly
-created object has none — rather than writing one and taking it back.
-
-Corollary for reading, same family, and it bites in two ways:
-
-- `slot.values` **on the L proxy returns the wrapped L objects, not the ids** — the default getter
-  resolves every pointer (`__shallowSolver`). Compare with `t.id ?? t`, or read `__raw.values` when
-  ids are what you need (the `pkg.uri` / `pkg.__raw.uri` asymmetry of §3.7, in another place).
-- A **single-valued reference that was never set reads back as `[null]`**, not as `[]`. So
-  `slot.values.length` is **1** where there is no value at all, and a guard written as
-  `values.length === 0` never fires. Measured 2026-09-09: on a `Transition` whose `nextState [1]`
-  had never been written, the proxy reported length 1 while `__raw.values` was empty and the
-  conformance engine reported `multiplicity_below_min`. Count on `__raw.values`, filtering out the
-  falsy entries, whenever the question is «is there a value».
-
-Full measurement: `docs/discovery/discovery_2026-09-09_semaforo_end_to_end.md` §2.1 and §9 for the
-write forms; `docs/discovery/harness/probe_2026-09-09_book53_conformance.mts` for the two reading
-measurements and the failed clear.
+Moved verbatim to `frontend/src/model/AGENTS.md` (§9, subsections 9.1-9.3) on 2026-09-18
+(P-2026-09-18-1930 Phase 1) — L-proxy write semantics that only matter once work is already under
+`frontend/src/model/`.
 
 ---
 
