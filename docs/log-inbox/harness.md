@@ -47,3 +47,21 @@ re-added verbatim (it describes a script that exists here and not on the trunk).
 **Smoke visivo**: non applicabile.
 **Notes**: declared delta: the P9 rotation sentence exists on the branch only, and does not take a version number. Open: two `docs/discovery/` files cited by root §5 exist on the trunk only; `docs/decisions.md` RC-13 cites P13 on the trunk only.
 **Prompt document name**: 2026-09-18 21:10
+
+## 2026-09-19 — docs: two discovery accounts carried, RC-13 cites P13 (P-2026-09-18-2110, last commit)
+**Prompt**: `claude_2026-09-18_2110_prompt_claude_md_split_sul_tronco.md`, closing commit of the lane: carry the two
+discovery files cited by root §5, retarget one citation in `docs/decisions.md`, extend the clause-range ticket.
+**Files touched**: commit `7f5d8edbc` (`discovery_2026-08-11_ugrep_wrapper_ignore_files.md` and
+`discovery_2026-09-16_symbolrecognition_scalarof_mutation_bench.md`, byte-identical to the trunk at `aae7401c1`,
+and `docs/decisions.md`). The ticket extension is on the trunk, in `docs/log-inbox/claude-md-split.md` (`2b1cc6d05`),
+because that is where the ticket lives.
+**Outcome**: ✅ completed — every path cited by §5 resolves (5 of 5, positive and negative control run), and so do
+all 85 backticked paths of the 11 carried files. `decisions.md` RC-13 says `docs/PROTOCOL.md` P13, only that citation.
+**Corregge**: —
+**Causa**: —
+**Regressions**: no.
+**Out-of-scope changes**: no.
+**Layer Impact Report**: not-required — docs-only.
+**Smoke visivo**: non applicabile.
+**Notes**: measured with `git merge-file` on decisions.md (base = merge-base, ours = branch, theirs = trunk): 1 conflict already without this edit, 2 with the literal edit, 1 if the branch carried the trunk's exact RC-13 wording. Follow-up if wanted: use the trunk's wording.
+**Prompt document name**: 2026-09-18 21:10
