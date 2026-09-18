@@ -86,7 +86,10 @@ export function resolveTextStyle(cs: CompiledTextStyle | undefined, ctx: ReadCtx
     if (cs.fontWeight) { const v = cs.fontWeight(ctx, id); if (v) s.fontWeight = FONT_WEIGHT_NUM[v]; }
     if (cs.fontStyle) { const v = cs.fontStyle(ctx, id); if (v) s.fontStyle = v; }
     if (cs.color) { const v = cs.color(ctx, id); if (v) s.color = v; }
-    if (cs.underline) { const v = cs.underline(ctx, id); if (v) s.textDecoration = 'underline'; }
+    // Underline means the native instance-name underline (UML convention), offset
+    // included: the 3px is baked into the axis, not a separate field. Same value as the
+    // bare literal in instanceNode.scss (.mm-object__name). Offset authoring: owed to S5.
+    if (cs.underline) { const v = cs.underline(ctx, id); if (v) { s.textDecoration = 'underline'; s.textUnderlineOffset = '3px'; } }
     return Object.keys(s).length ? s : undefined;
 }
 
