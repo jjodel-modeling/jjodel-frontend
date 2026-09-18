@@ -647,6 +647,17 @@ class builder {
             conform = (value.length >= lowerBound && value.length <= upperBound);
         }
         let instanceoff = object.instanceof;
+
+        // #142 Fase B (opzione Y): non-containment references are edited in ONE place —
+        // the REFERENCES section below (`Info.references`), NOT in SLOTS. SLOTS keeps
+        // attributes and containment. Splitting them removes the double listing the user
+        // saw, and lets the REFERENCES editor hide cleared holes so a delete makes the row
+        // disappear instead of leaving an empty "-----" (the classic slot renderer keeps
+        // holes on purpose, for its inline add; this section filters them). Only in the
+        // rail (`tab`); popup/inline keep the full slot list exactly as before.
+        const slotFeatures = tab
+            ? object.features.filter(f => !this.isNonContainmentRef(f))
+            : object.features;
         return(<>
             {popup && <>
                     <h1>Edit {data.name}: {instanceoff && conform && instanceoff.name}</h1>
@@ -679,21 +690,168 @@ class builder {
                 {this.forceConform(object)}
             </CollapsibleSection>}
 
-            {/* Slots section */}
-            {object.features.length > 0 && (
+            {/* Slots section — attributes and containment. Non-containment references
+                moved to REFERENCES below (opzione Y), so they are listed once. */}
+            {slotFeatures.length > 0 && (
                 <CollapsibleSection title="SLOTS">
-                    {object.features.map(f => <div id={`Object-${f.id}`} key={f.id}>
+                    {slotFeatures.map(f => <div id={`Object-${f.id}`} key={f.id}>
                         {this.value(f, topics, advanced, mode)}
                     </div>)}
                 </CollapsibleSection>
             )}
 
-            {object.features.length === 0 && tab && (
+            {slotFeatures.length === 0 && object.features.length === 0 && tab && (
                 <CollapsibleSection title="SLOTS">
                     <div className="jj-slot-empty" style={{padding: '10px 16px'}}>No slots defined</div>
                 </CollapsibleSection>
             )}
+
+            {/* REFERENCES (#142 Fase B, opzione Y). The single place non-containment
+                references are edited AND navigated. See `Info.references`. */}
+            {tab && this.references(object)}
         </>);
+    }
+
+    /** #142: a slot whose metafeature is a non-containment `DReference`. These are the
+     *  ones `object()` moves out of SLOTS into the REFERENCES editor, so they appear
+     *  once. Containment (`composition`) stays a slot: it is edited in place there and
+     *  the canvas draws it. Mirrors the `value()` detection at DReference.cname. */
+    static isNonContainmentRef(f: LModelElement): boolean {
+        const meta: any = (f as any).instanceof;
+        return !!meta && meta.className === DReference.cname && (meta as LReference).composition !== true;
+    }
+
+    /**
+     * #142 Fase B (opzione Y) — the ONE section for an object's non-containment
+     * references, on the canvas rail. It replaces both the reference rows the classic
+     * SLOTS renderer used to show and the read-only drill-in list of B1:
+     *
+     *  - each target is a SELECT (change the target, reusing `LValue.validTargetsJSX`,
+     *    the same options `value()` uses) plus a drill-in button that SELECTS the target
+     *    so the rail follows and renders it with its own customization (the
+     *    `_lastSelected` write `MetamodelContents.handleSelect` uses), plus a «×» that
+     *    CLEARS that position;
+     *  - cleared positions become HOLES in the raw array (the app-wide convention —
+     *    `setValueAtPosition(i, undefined)`), and this section simply does not render
+     *    them, so «×» makes the row disappear instead of leaving a "-----" the way the
+     *    classic renderer does (`keepempties`);
+     *  - a multivalued slot below its upper bound gets an «add» select that APPENDS the
+     *    chosen target; a single slot with no value gets a select to set it.
+     *
+     * All writes go through the existing `LValue.setValueAtPosition` primitive (which
+     * opens its own TRANSACTION and does the pointer side effects) — no core change, no
+     * new action. Returns null when the object has no non-containment reference.
+     */
+    static references(object: LObject): JSX.Element | null {
+        type Tgt = { rawIndex: number; id: string; name: string; cls: string };
+        type Slot = { key: string; name: string; lv: LValue; upper: number; lower: number; multi: boolean; targets: Tgt[] };
+        const slots: Slot[] = [];
+        for (const f of object.features) {
+            if (!this.isNonContainmentRef(f)) continue;
+            const meta: any = (f as any).instanceof;
+            const lv = LValue.fromPointer(f.id);
+            if (!lv) continue;
+            const rawIds: any[] = Array.isArray((lv as any).__raw?.values) ? (lv as any).__raw.values : [];
+            const targets: Tgt[] = [];
+            rawIds.forEach((raw: any, rawIndex: number) => {
+                if (typeof raw !== 'string' || raw.trim() === '') return;
+                const el: any = LModelElement.fromPointer(raw);
+                if (!el) return;
+                targets.push({ rawIndex, id: raw, name: el.name ?? '', cls: el.instanceof?.name ?? '' });
+            });
+            let upper = meta.upperBound; if (typeof upper !== 'number') upper = -1;
+            let lower = meta.lowerBound; if (typeof lower !== 'number') lower = 0;
+            slots.push({ key: f.id, name: meta.name ?? (f as any).name, lv, upper, lower, multi: upper !== 1, targets });
+        }
+        if (slots.length === 0) return null;
+
+        const openTarget = (id: string) =>
+            SetRootFieldAction.new('_lastSelected' as any, { node: '', view: '', modelElement: id });
+        const writeAt = (lv: LValue, index: number, raw: string) => {
+            const v = (raw === 'undefined' || raw === '') ? undefined : raw;
+            lv.setValueAtPosition(index, v as any, { isPtr: true });
+        };
+        const appendTarget = (lv: LValue, raw: string) => {
+            if (!raw || raw === 'undefined') return;
+            const len = Array.isArray((lv as any).__raw?.values) ? (lv as any).__raw.values.length : 0;
+            lv.setValueAtPosition(len, raw as any, { isPtr: true });
+        };
+
+        return (
+            <CollapsibleSection title="REFERENCES" defaultOpen={false}>
+                {slots.map(slot => {
+                    const isRequiredSingle = slot.upper === 1 && slot.lower >= 1;
+                    const belowUpper = slot.upper === -1 || slot.targets.length < slot.upper;
+                    return (
+                        <div className="jj-ref-slot" key={slot.key}>
+                            <div className="jj-ref-slot-head">
+                                <span className="jj-ref-slot-name">{slot.name}</span>
+                                <span className="jj-ref-slot-mult">[{slot.lower}..{slot.upper === -1 ? '*' : slot.upper}]</span>
+                            </div>
+
+                            {slot.targets.map(t => (
+                                <div className="jj-slot-value-row jj-ref-row" key={t.rawIndex + ':' + t.id}>
+                                    <select
+                                        className="jj-slot-value-select"
+                                        value={t.id}
+                                        onChange={e => writeAt(slot.lv, t.rawIndex, e.target.value)}
+                                    >
+                                        {/* A single optional ref clears via "-----"; a multivalued
+                                            one clears via the «×», so no empty option there. */}
+                                        {!slot.multi && !isRequiredSingle && <option value="undefined">-----</option>}
+                                        {slot.lv.validTargetsJSX}
+                                    </select>
+                                    <button
+                                        type="button"
+                                        className="jj-ref-open"
+                                        title="Open the referenced element — edits the shared instance"
+                                        onClick={() => openTarget(t.id)}
+                                    >
+                                        <i className="bi bi-box-arrow-in-right" aria-hidden="true" />
+                                    </button>
+                                    {!isRequiredSingle && (
+                                        <button
+                                            type="button"
+                                            className="jj-slot-value-delete"
+                                            title="Remove this reference"
+                                            onClick={() => writeAt(slot.lv, t.rawIndex, 'undefined')}
+                                        >×</button>
+                                    )}
+                                </div>
+                            ))}
+
+                            {/* Empty single ref: a select to set it. */}
+                            {!slot.multi && slot.targets.length === 0 && (
+                                <div className="jj-slot-value-row jj-ref-row">
+                                    <select
+                                        className="jj-slot-value-select"
+                                        value="undefined"
+                                        onChange={e => writeAt(slot.lv, 0, e.target.value)}
+                                    >
+                                        <option value="undefined">-----</option>
+                                        {slot.lv.validTargetsJSX}
+                                    </select>
+                                </div>
+                            )}
+
+                            {/* Multivalued add: append the chosen target. */}
+                            {slot.multi && belowUpper && (
+                                <div className="jj-slot-value-row jj-ref-row jj-ref-row--add">
+                                    <select
+                                        className="jj-slot-value-select"
+                                        value="undefined"
+                                        onChange={e => appendTarget(slot.lv, e.target.value)}
+                                    >
+                                        <option value="undefined">+ add {slot.name}…</option>
+                                        {slot.lv.validTargetsJSX}
+                                    </select>
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
+            </CollapsibleSection>
+        );
     }
 
     static forceConform(me: LObject) {
