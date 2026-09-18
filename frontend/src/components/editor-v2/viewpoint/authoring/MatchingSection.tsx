@@ -168,7 +168,7 @@ export const MatchingSection: React.FC<MatchingSectionProps> = ({
                             </div>
                         ))}
                         {list.length === 0 && (
-                            <HelpText>With an empty list the view applies to nothing.</HelpText>
+                            <HelpText>Pick at least one metaclass. Until then the view keeps its previous matching.</HelpText>
                         )}
                         <div style={{ marginTop: 4 }}>
                             <Select

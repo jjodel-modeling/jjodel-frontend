@@ -23,6 +23,7 @@ import { StructureGroups, StructureHiddenSummary } from './StructureGroups';
 import { FormAuthoringBody } from './FormAuthoringBody';
 import { BadgeListEditor } from './BadgeListEditor';
 import { MatchingSection, type MetaclassChoice } from './MatchingSection';
+import { isCommittableMatching } from './committableMatching';
 import { metaclassAmbiguityWarning } from './authoringMessages';
 import {
     IRIdentityFields, IRSourceBody, irSectionStyle, irTabBodyStyle,
@@ -200,6 +201,11 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
     // Eager validate + debounced immutable commit — only on genuine user edits.
     useEffect(() => {
         if (!dirtyRef.current) return;
+        // An empty metaclass list is an unfinished edit, not a matching (item C of
+        // P-2026-09-18-1650): the draft keeps it, the stored ir keeps its previous
+        // metaclasses, and no timer is armed — the error line stays empty because
+        // this is not a validation error.
+        if (!isCommittableMatching(draft)) return;
         const v = validateIR(view.id, draft);
         setError(v.ok ? null : v.error);
         if (!v.ok) return;
@@ -230,6 +236,9 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
         // montati (selettore di kind, slice B) e questo flush la riporterebbe indietro.
         // Non è roba nostra: si scarta.
         if ((v as any).ir?.kind !== d.kind) return;
+        // An unfinished matching is never written, not even by the unmount flush
+        // (item C of P-2026-09-18-1650).
+        if (!isCommittableMatching(d)) return;
         const res = validateIR(v.id, d);
         if (!res.ok) return;
         try { (v as any).ir = d; } catch { /* view already gone: nothing to flush onto */ }

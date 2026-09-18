@@ -22,6 +22,7 @@ import { CONTAINER_ENDPOINT } from '../ir/irTypes';
 import type { EdgeViewIR, TextSource, EdgeTermination } from '../ir/irTypes';
 import { resolveMetaclassId, withMetaclassPins, type MetaclassRef } from '../ir/metaclassPin';
 import { metaclassChipLabel, metaclassGroups, type MetaclassChoice } from './MatchingSection';
+import { isCommittableMatching } from './committableMatching';
 import {
     natureOf,
     isUsableEndpointExpr,
@@ -185,6 +186,11 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
     // Eager validate + debounced immutable commit — only on genuine user edits.
     useEffect(() => {
         if (!dirtyRef.current) return;
+        // An empty metaclass list is an unfinished edit, not a matching (item C of
+        // P-2026-09-18-1650): the draft keeps it, the stored ir keeps its previous
+        // metaclasses, and no timer is armed — the error line stays empty because
+        // this is not a validation error.
+        if (!isCommittableMatching(draft)) return;
         const v = validateIR(view.id, draft);
         setError(v.ok ? null : v.error);
         if (!v.ok) return;
