@@ -56,6 +56,8 @@ Si committa a ogni passo compiuto, anche prima della verifica visiva di Alfonso.
 
 Commit message: tipo convenzionale (`feat:`, `fix:`, `refactor:`, `docs:`), in inglese, una riga. Il tipo è indicato nel prompt: se manca, chiedilo, non sceglierlo.
 
+Il corpo di ogni commit porta il trailer `Model: <vendor> <name> <version>` — per esempio `Model: Z.ai GLM 5.3` o `Model: Anthropic Claude Opus 5` — che nomina il modello che ha eseguito il task. Il valore è quello che il banner di sessione riporta, non quello che dichiarano `CLAUDE.md` §0 o `.claude/settings.json`: il trailer registra l'esecutore, non l'intenzione. Il trailer è additivo: la riga `Co-Authored-By`, dove il tooling la emette, resta, perché la serie storica è chiaviata su `Co-Authored-By` e rompere quella chiave costerebbe più della duplicazione.
+
 Per modifiche che toccano più di 5 file: elenca prima tutti i file e cosa cambia in ciascuno, poi procedi.
 
 Nel report di chiusura mostra sempre il diff dei file toccati. L'esposizione del diff non trattiene il commit.
