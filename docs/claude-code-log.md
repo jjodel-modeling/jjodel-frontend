@@ -13,6 +13,19 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-18 — fix(export): oggetti referenziati da altri modelli nell'export JSON M1 (#128)
+**Prompt**: risolvere jjodel-modeling/jjodel-frontend#128; usare e tenere aggiornata la documentazione degli export JSON in `docs/`.
+**Files touched**: `frontend/src/services/export/JsonModelService.ts`, `frontend/src/services/export/__tests__/JsonModelService.test.ts` (nuovo), `docs/json-export-schema.md`, `docs/discovery/discovery_2026-09-18_json_external_objects.md` (nuovo). Questa entry e la rotazione a parte.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `npm run test -- src/services/export/__tests__` **63/63** (14 nuovi); `npm run typecheck` su output COMPLETO **14** errori pre-esistenti, 0 nei file toccati, exit 2 identico; `npm run build` exit **0** col solo avviso di chunk-size noto.
+**Out-of-scope changes**: no — fix, test e documentazione richiesta dal prompt e dal protocollo.
+**Layer Impact Report**: not-required — `JsonModelService.ts` e' un servizio di export, nessun file di §3.1, nessuna scrittura D, nessuna TRANSACTION.
+**Smoke visivo**: non applicabile — nessun pixel cambia. Il payload scaricato e' coperto dal test Node su Blob (self-contained, tutti i `$ref` risolti). `npm run smoke` non avviato: `@playwright/test` non risolvibile in locale, come nel giro #147.
+**Notes**: `buildModelObjects` percorre la chiusura raggiungibile (worklist su Map) dai root; root locali in `objects`, esterni in `externalObjects` (additivo, nessun bump di formatVersion). Containment preservato; cicli/duplicati → `$ref` via serializedObjects. Metaclassi esterne → `externalMetamodels`. Id stale/non-DObject restano `$ref`. Deroga RC-11 nel referto (6 file). Commit 7c4e763bf (codice), d0a51de50 (docs).
+**Prompt document name**: 2026-09-18 12:50
+
 ## 2026-09-18 — fix(ai): ripresa autorizzata della PR per #147
 **Prompt**: "chiaro procedi pr", dopo il chiarimento sul fallback del modello Custom.
 **Files touched**: `docs/discovery/discovery_2026-09-18_custom_provider_model.md`, `docs/claude-code-log.md`, `docs/claude-code-log-archive.md`; commit dei due file di codice gia' verificati nel giro precedente.
@@ -690,41 +703,3 @@ andava corretta: portava già `(a)` dal commit che ha scritto l'entry (`f278cf4f
 sonde `frontend/scripts/smoke/_tmp_*` cadono in `.gitignore:66`, nessuna promossa.
 Rotazione: attivo 49 -> 5, archivio 1025 -> 1069, verbatim per data. Nessun rewrite.
 **Prompt document name**: PROMPT_CHIUSURA_batch_L1-L4.md — 2026-09-02
-
-## 2026-09-02 — fix: UNQ1 C5, la revoca duplicate-name resta nel modello scandito
-**Prompt**: UNQ1 C5 — la revoca tocca solo le entry il cui owner appartiene al modello che
-l'effetto sta scansionando (referto §A.4: revoca globale, produttore per modello, `:160-164`
-— aprire M2 cancella le entry M1, e non tornano). Nessuna modifica alla firma, nessun rescan
-aggiunto. Perimetro: `UniquenessProblemSync.tsx` + test, NON `LModelElement.tsx` (corsia L1).
-Verifica con due collisioni vere insieme, per nome ESPLICITO, before/after.
-**Files touched**: `frontend/src/components/editor-v2/problems/UniquenessProblemSync.tsx`,
-`frontend/src/components/editor-v2/problems/__tests__/UniquenessProblemSync.test.ts` (nuovo),
-`docs/discovery/discovery_2026-09-01_unq1_duplicate_name.md` (referto C5, commit a parte).
-La sonda `scripts/smoke/_tmp_unq1_c5.ts` non e' committata (`.gitignore:66`).
-**Outcome**: ✅ completed
-**Corregge**: —
-**Causa**: —
-**Regressions**: no — `npm run typecheck` su output COMPLETO **33**, la baseline esatta, **0**
-nei file toccati; `npm run build` exit **0** col solo avviso di chunk-size noto; `npm run
-test` intera **3118/3118** passati, 0 falliti. I 9 file che non si raccolgono sono i `window
-is not defined` pre-esistenti, fuori da questo perimetro. Due mutazioni: revoca su tutti gli
-owned set (il globale di prima) **3 rossi**, ciclo di revoca rimosso **4 rossi**.
-**Out-of-scope changes**: no — due file di codice, entrambi nel perimetro. Commit per
-pathspec: l'indice conteneva staged di altre corsie (`api/persistance/projects.ts`,
-`egoDiagram.*`), non toccati.
-**Layer Impact Report**: not-required — nessun file della lista di §3.2 e nessuna scrittura D:
-il registro e' una `Map` di modulo, UI-only, immune a undo/redo e non persistita. La
-directory `problems/` compare in §3.1, ma il diff non tocca canvas, JjOM ne' D-layer.
-**Smoke visivo**: non applicabile — nessun pixel cambia. Misura sul registro con
-`_tmp_unq1_c5.ts`, stesso strumento sui due lati, zero `pageerror` in entrambi: **before 9
-PASS / 3 FAIL, after 12 PASS / 0 FAIL**. Entry M1 attive dopo l'apertura della tab M2 da **0
-a 3**, al ritorno su M1 da **0 a 3**, dopo il rename di uno dei tre da **0 a 2**; le 2 entry
-M2 restano 2 in ogni passo di entrambe le corse (controllo). Il before ottenuto ripristinando
-il solo file da `git show HEAD:` e rimettendolo a posto da una copia, senza `stash` (RC-13).
-**Notes**: `ownedIdsByModel`, `Map` di modulo per-modello: nessun campo su `NodeProblem`,
-quindi `registry.ts` e il produttore della conformance restano fermi. Cade
-`getRegistryState()`, che leggeva `window._jjNodeProblems` e in env `node` tornava vuota —
-per cui la revoca era intestabile. Il corpo dell'effetto e' spostato in
-`reconcileDuplicateProblems`, esportata per il test. Aritmetica: per una coppia il rename ne
-revoca **due** (2 -> 0); il decremento chiede tre omonimi. Dettaglio nel referto C5.
-**Prompt document name**: 2026-09-02 09:20
