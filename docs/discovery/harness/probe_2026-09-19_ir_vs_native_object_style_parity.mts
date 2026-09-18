@@ -292,7 +292,7 @@ const viewResult = await page.evaluate(async () => {
                 labels: [{
                     position: 'top',
                     source: { from: 'intrinsic', prop: 'qualifiedName' },
-                    style: { fontSize: 14, underline: true },
+                    style: { fontSize: 14, color: 'var(--color-inode-name)', underline: true },
                 }],
             },
             fieldCompartments: [{

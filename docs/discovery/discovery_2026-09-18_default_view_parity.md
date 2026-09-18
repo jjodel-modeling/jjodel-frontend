@@ -214,3 +214,91 @@ propone nomi concreti.
    confermata come bug da correggere, non come scelta intenzionale.
 
 **Fine Fase 1 — hard stop. In attesa dell'analisi/go-ahead di Alfonso in chat prima di qualunque scrittura di codice.**
+
+---
+
+## Appendice — S1 + S2 batch 1-3: misura di verifica (2026-09-19)
+
+Prompt-ID: P-2026-09-18-2219. Codice misurato: `alfonso-frontend-jjtl` @ `400095370` (S1, cornerRadius,
+seed dell'oggetto: border, label 14px + underline, separatore col colore del bordo). Batch 4 di S2 non
+ancora applicato.
+
+Probe: `docs/discovery/harness/probe_2026-09-19_ir_vs_native_object_style_parity.mts`, lanciato con
+`node` 26 (type stripping nativo, nessun `tsx` installato) contro il dev server di `jjodel-release`
+su `:3001`. Exit 0, 14 righe MISURA, nessun BLOCCO, `page errors: []`. Due metaclassi
+(`Widget` con un attributo, `Empty` senza attributi), un'istanza ciascuna, due temi. Caso A = nodo
+nativo (`.mm-node.mm-object`), Caso B = view IR seminata come `defaultObjectViewIR()` corrente
+(`.ir-node-content`). Tema commutato replicando `ThemeService.apply()` (attributo + evento
+`jjodel:theme-changed`).
+
+### Widget (un attributo)
+
+| proprieta' | A light | B light | A dark | B dark | esito |
+|---|---|---|---|---|---|
+| container border-width (4 lati) | 1px | 1px | 1px | 1px | = |
+| container border-color | `rgb(203, 213, 225)` | `rgb(203, 213, 225)` | `rgba(255, 255, 255, 0.16)` | `rgba(255, 255, 255, 0.16)` | = |
+| container border-radius | 8px | 8px | 8px | 8px | = |
+| container background-color | `rgb(255, 255, 255)` | `rgb(255, 255, 255)` | `rgb(51, 65, 85)` | `rgb(51, 65, 85)` | = |
+| container padding | 0 | 0 | 0 | 0 | = |
+| name font-size / font-weight | 14px / 600 | 14px / 600 | 14px / 600 | 14px / 600 | = |
+| name text-decoration-line / style / thickness | underline / solid / auto | underline / solid / auto | underline / solid / auto | underline / solid / auto | = |
+| name text-decoration-color | `rgb(15, 23, 42)` | `rgb(30, 41, 59)` | `rgba(255, 255, 255, 0.92)` | `rgba(255, 255, 255, 0.9)` | **differisce** (colore del testo dell'etichetta) |
+| name text-underline-offset | 3px | auto | 3px | auto | **differisce** |
+| separatore (spessore, colore) | header border-bottom 1px `rgb(203, 213, 225)` | compartment border-top 1px `rgb(203, 213, 225)` | 1px `rgba(255, 255, 255, 0.16)` | 1px `rgba(255, 255, 255, 0.16)` | = (lato e elemento diversi, vedi Empty) |
+| compartment min-height | auto | auto | auto | auto | = |
+| compartment altezza effettiva | 36px | 27.1875px | 36px | 27.1875px | **differisce** |
+| compartment padding | 10px 14px | 4px 8px | 10px 14px | 4px 8px | **differisce** |
+| compartment background | trasparente | trasparente | trasparente | trasparente | = |
+
+Delta rispetto alla Fase 1: da sette differenze a quattro. Restano il colore del testo
+dell'etichetta, l'offset della sottolineatura, l'altezza e il padding del compartimento: sono
+esattamente i quattro item del batch 4.
+
+### Empty (zero attributi)
+
+| proprieta' | A light | B light | A dark | B dark | esito |
+|---|---|---|---|---|---|
+| compartimento presente | no | no | no | no | = |
+| container: border, radius, background, name font e underline | come Widget | come Widget | come Widget | come Widget | = |
+| header/separatore sotto il nome | border-bottom 1px `rgb(203, 213, 225)` presente | assente | 1px `rgba(255, 255, 255, 0.16)` presente | assente | **differisce (nuovo)** |
+
+### Domanda aperta 4 — chiusa
+
+`var(--color-inode-border)` risolve nella cascata del nodo IR in entrambi i temi: il bordo del
+container B misura `rgb(203, 213, 225)` in light e `rgba(255, 255, 255, 0.16)` in dark, identico ad A.
+
+### Finding nuovo — separatore su istanza senza attributi
+
+Il nativo disegna la riga di separazione anche quando il compartimento e' soppresso: la regola
+`.mm-object__header { border-bottom: 1px solid var(--color-inode-border) }`
+(`frontend/src/components/editor-v2/nodes/instanceNode.scss:76`) e' incondizionata, e sull'istanza di
+`Empty` la misura da' `borderBottomWidth: 1px` sull'header. Il nodo IR ha il separatore come
+`border-top` del compartimento, che sull'istanza di `Empty` non esiste, quindi non disegna nulla.
+Il Finding 2 corretto ("i due renderer erano gia' d'accordo") vale per il div del compartimento, non
+per la riga di separazione. Non e' nei quattro item del batch 4: da decidere.
+
+### Non misurato da questo probe
+
+Il padding dell'header nativo (`padding: 11px 14px`, `instanceNode.scss:74`) contro il padding
+dell'etichetta IR, e l'altezza totale del nodo. Il padding del container e' 0 in entrambi, ma
+questo non copre il box dell'etichetta.
+
+### Dopo il batch 4 (2026-09-19, working tree, non ancora committato)
+
+Seed: `style.color: 'var(--color-inode-name)'` sull'etichetta (`irDefaults.ts`). Renderer: `underline`
+imposta anche `textUnderlineOffset: '3px'` (`IRNodeContent.tsx`, `resolveTextStyle`). Il probe e' stato
+rilanciato (exit 0, 14 MISURA, 0 BLOCCO; il letterale `ir` del probe aggiornato al seed). Confronto A/B
+su Widget e Empty, light e dark:
+
+- name text-decoration-color: uguale (`rgb(15, 23, 42)` light, `rgba(255, 255, 255, 0.92)` dark).
+- name text-underline-offset: uguale (3px).
+- Restano: compartment altezza (A 36px, B 27.1875px) e padding (A `10px 14px`, B `4px 8px`) su
+  Widget; separatore assente su Empty (A 1px, B nessuno). Nessun'altra differenza sulle proprieta'
+  misurate.
+
+Altezza e padding del compartimento non si chiudono con il seme. Il padding del compartimento IR viene da
+`--ir-pad-x/-y` (`irStyle.ts:23-25,52`), impostato dal token `shape.padding` (small 4/2, normal 8/4, large
+16/8 per x/y) e condiviso con l'etichetta: nessun valore e' 14/10. `rowFormat.style` (`TextStyle`) non ha
+assi di padding ne' di line-height, e `.ir-row { line-height: 1.4 }` e' globale (`irStyle.ts:54`).
+Le uniche vie sono una regola globale in `irStyle.ts` (ridipinge le view salvate) o un campo nuovo
+opzionale sullo schema: nessuna delle due e' stata eseguita.
