@@ -106,3 +106,35 @@ handover premise "§5 compression not done" was wrong, because the previous repo
 worktree carries another lane's WIP in `viewpoint/ir/*`, left untouched (RC-13). Entry is not
 part of the audit commit (docs and record travel apart).
 **Prompt document name**: 2026-09-18 21:10
+
+## 2026-09-19 — docs: split audit findings closed, gates measured in the trunk worktree, §18/§19 moved
+**Prompt**: `claude_2026-09-18_2110_prompt_claude_md_split_sul_tronco.md`, second handover turn:
+(1) gates in the trunk worktree, (2) findings A and B in `jjtl/CLAUDE.md`, (3) clause range,
+(4) close the 551-character gap by moving §18 and §19. Step 4 (bring the split back into the branch) not run.
+**Files touched**: commits `34ddaf0c7` (audit report §7), `19112458f` (`frontend/src/jjtl/CLAUDE.md` + `AGENTS.md`),
+`717b29a64` (`CLAUDE.md`, `AGENTS.md`, `docs/PROTOCOL.md`), `068d59367` (`CLAUDE.md`, `AGENTS.md`, new `docs/CODEBASE-MAP.md`).
+**Outcome**: ✅ completed — root `CLAUDE.md` 40551 -> 37756 characters (2244 of headroom). Gates
+`gen:agents`, `check:agents`, `check:docs` all exit 0 after each commit, run in the trunk worktree.
+A restored verbatim (9 lines added, 0 removed against the baseline); B resolved by correcting the
+note; range now P1..P15.
+**Corregge**: `claude_2026-09-18_1930_prompt_claude_md_split_oltre_limite.md`
+**Causa**: (a) — the 21-25k estimate of that prompt is falsified and stands declared as such; the
+acceptance is "under 40,000 with headroom", not the estimate.
+**Regressions**: no.
+**Out-of-scope changes**: no.
+**Layer Impact Report**: not-required — docs-only.
+**Smoke visivo**: non applicabile.
+**Notes**: second cause (c): Phase 3 merged two pre-existing jjtl lines and wrote "moved verbatim" over a deletion. Gates import only `node:` built-ins, so they need no `node_modules`; the symlink in the release tree is another lane's under a live vite, hence no `npm ci`. Supersedes the "gates not run" note of the entry above.
+**Prompt document name**: 2026-09-18 21:10
+
+## 2026-09-19 — ticket: check:docs should assert the clause range against PROTOCOL.md
+**Ticket** (opened, not implemented here). `frontend/scripts/gates/check-docs.ts` should add a check D:
+the highest `## P<n>` heading of `docs/PROTOCOL.md` equals the `<n>` cited as `P1..P<n>` in the three
+places that state the range: `CLAUDE.md` (the pointer under the non-negotiable block and the one in §1)
+and the `Protocollo:` line of `docs/PROTOCOL.md`.
+**Why**: the range was wrong twice in one day. It said P1..P11 while P12 existed (corrected 2026-09-18),
+then P1..P12 while Phase 2 had added P13 to P15 (corrected 2026-09-19, `717b29a64`). Both were found by reading,
+not by a gate.
+**Notes for whoever picks it up**: three citation sites today (`CLAUDE.md:14`, `CLAUDE.md:108`,
+`docs/PROTOCOL.md:11`); the check must fail on a mismatch in either direction. It touches a gate script and
+`CLAUDE.md` §17, so it is a lane of its own.
