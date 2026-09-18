@@ -13,6 +13,19 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-18 — feat(data-manager): editing inline + crea-e-collega per le reference (#142)
+**Prompt**: creare un branch per la #142, poi pianificare e implementare (inherited customization per Views e Data Manager). Scelto perimetro **Fase A** (solo Data Manager); UX drill-in omogenea col containment. La Fase B (canvas) resta separata.
+**Files touched**: `frontend/src/components/abstract/tabs/InstanceManagerTab.tsx`, `frontend/src/components/abstract/tabs/instanceManagerTab.scss`. Discovery report e questa entry di log a parte (commit docs separato, §6.4).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `npx vitest run` area toccata (instanceManager*, createAdapter/multiDraw, jjform nav/create) **519/519**; `npm run typecheck` output COMPLETO **14** errori pre-esistenti, 0 nei file toccati; `npm run build` exit **0** col solo avviso chunk-size.
+**Out-of-scope changes**: no — 2 soli file, entrambi previsti dal piano (Fase A).
+**Layer Impact Report**: not-required — nessun file di §3.1; scrittura via `formWrite.appendValue`/`applyCreate` esistenti, nessun edge di canvas, nessun TRANSACTION attorno ai creator (§3.3/§3.4 fuori portata).
+**Smoke visivo**: passato (rendering) — sezione References confermata dall'utente via screenshot: A1 link+cardinalità+gating «Slot full [1/1]», A2 bottone «New … & link». Interazioni drill-in e create-and-link non ri-verificate a runtime in questa sessione.
+**Notes**: Estende il drill-in del containment da `shape.children` a `shape.refs`: nuovo `refSlots` (memo su `formSubjectId`), sezione «Referenced elements» (link via `drillTo`/`NavState`) e crea-e-collega `openCreateAndLink`→`openCreate(...,null,null)` + `appendValue(...,isPtr)` post-commit (stato `linkBack`). Customization ereditata da `useIRFormView`. I test del tab hanno colto l'invariante «una sola porta del draft». Referto: discovery_2026-09-18_142_inherited_customization.md.
+**Prompt document name**: 2026-09-18 17:35
+
 ## 2026-09-18 — fix(views): view da albero nasce con IR + modale symbol in primo piano (#139)
 **Prompt**: analizzare e risolvere i bug della issue #139 (3 bug UI sulle view); branch dedicato e PR su staging; per il Bug 3 scelto dall'utente di NON toccarlo e commentare l'issue chiedendo ad Alfonso e Tommaso come rivedere la parte grafica.
 **Files touched**: `frontend/src/utils/lastViewpoint.ts`, `frontend/src/components/editor-v2/viewpoint/authoring/SymbolEditorModal.tsx`, `frontend/src/components/editor-v2/viewpoint/authoring/SymbolEditorModal.scss`. Questa entry di log a parte (commit separato, §6.4).
