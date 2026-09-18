@@ -666,7 +666,7 @@ class KeyBind {
 }
 key_bindings.addView = new KeyBind(addViewKeybind, [Keystrokes.ctrl, Keystrokes.alt, 'V']);
 key_bindings.metrics = new KeyBind(toggleMetrics as any, [Keystrokes.ctrl, Keystrokes.alt, 'B']);
-key_bindings.close = new KeyBind(()=>closefunc(), [Keystrokes.escape]);
+key_bindings.close = new KeyBind(()=>closefunc?.(), [Keystrokes.escape]);
 
 key_bindings.asize = new KeyBind(
     () => {
