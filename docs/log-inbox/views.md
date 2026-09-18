@@ -6,6 +6,34 @@ Whoever closes the batch moves them into `docs/claude-code-log.md` **verbatim an
 
 ---
 
+## 2026-09-18 — fix: guard the Escape close binding when no popup is open (item A)
+**Prompt**: `claude_2026-09-18_1650_prompt_view_quattro_difetti_minori.md`, item A: the Escape
+binding at `ContextMenu.tsx:669` calls the module-level `closefunc`, `null as any` until the
+classic popup renders, so Escape with no popup throws `closefunc is not a function` (measured,
+discovery_2026-09-16_rotta_archi_righe.md §3). Fix: guard the call with `closefunc?.()`, nothing
+else.
+**Files touched**: `1f3caab09`, 1 file: `components/contextMenu/ContextMenu.tsx` (line 669 only,
+`()=>closefunc()` → `()=>closefunc?.()`). This entry in its own commit.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. `npm run typecheck` exit 2, **33** on full output, the declared baseline, **0**
+in the touched file; control `Measurable` → 6. `npx vitest run`: **3816 passed, 0 failed**, the same
+9 files red at import as before the change (the +4 tests vs the last active-log entry are lane L3's
+untracked `summaryLines.test.ts`, not this lane's). `npm run build` exit 0, pre-existing
+chunk-size warning only.
+**Out-of-scope changes**: no.
+**Layer Impact Report**: not-required — no §3.1 file, no D-layer write, the binding only calls a
+popup-close callback.
+**Smoke visivo**: passato — Alfonso on localhost:3000, ACK of 2026-09-18: Escape on the open v2
+canvas with no popup, console clean after a hard refresh (the error had been reproduced on the
+stale tab first). The classic popup path is not reachable today (same discovery §1), so the console
+is the whole check.
+**Notes**: Defect found, not caused, by the previous prompts — item A of a four-defect batch left
+open by the 15-16 September round. No test executable for this module under vitest (imports
+through `joiner`, `window is not defined`); stated here, no source-text test per the §5 sub-rule.
+**Prompt document name**: 2026-09-18 16:50
+
 ## 2026-09-16 — feat: «Create edge view» and «Create row view» from the v2 canvas menus
 **Prompt**: `claude_2026-09-16_1238_prompt_voci_arco_riga.md` — after the host retake: the edge entry
 on the reference EDGE menu (the child menu's `ref` branch is fed by the cross-metamodel ghost chip
