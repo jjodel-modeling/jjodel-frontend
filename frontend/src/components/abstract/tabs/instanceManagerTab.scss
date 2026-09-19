@@ -1941,6 +1941,14 @@
 
     &__inline-open { margin-bottom: 4px; }
 
+    /* Referenced elements (#142). NO rules of its own — the `instance-manager__refs`
+       class on the section is a semantic hook only. The reference drill-in reuses the
+       containment inline layout verbatim (`&__inline`, `&__inline-slot`,
+       `&__inline-link`), the create button keeps `&__add`'s look (right-aligned by its
+       `margin-left: auto`, the same place «Add contained» sits) and the reason keeps
+       `&__child-reason`'s. Homogeneity is the design decision, so there is nothing to
+       override — verified on the running app (#142 smoke). */
+
     /* ── The containment outline (10b) ─────────────────────────────────────────
        Mock 1b of `Q8 Catalogo vs Outline.dc.html`: 12px rows, a 12px genre icon,
        the metaclass in mono at the right, «+» in accent. The 14px inset and the
