@@ -82,6 +82,23 @@ creazione: chiamato solo da `VersionFixer.tsx:149` (bump di versione) e da `Nest
 nessuno dei file di questa traccia — nessun import, nessuna chiamata. Nessuna violazione del
 perimetro dichiarato off-limits dal prompt.
 
+> **Correzione al Finding 1 (2026-09-19) — il testo sopra resta com'e' scritto.** L'affermazione che
+> `EnableIRPanel` costruisca `vertexSeed`/`edgeSeed`/`rowSeed` inline, "duplicando a mano la stessa forma"
+> di `irDefaults.ts`, e' **falsa per vertex ed edge**. E' stata dedotta dai nomi delle variabili, non
+> dai corpi: `vertexSeed` fa `...defaultObjectViewIR()` dal commit `62cda0d631` (2026-07-23) e
+> `edgeSeed` fa `...defaultEdgeViewIR()` dal commit `9bd8cad9a9` (2026-07-28), ed e' cosi' anche a
+> `HEAD`. Solo `rowSeed` e' un letterale (`d1e6f9992`, 2026-07-26), e resta tale per scelta: il suo
+> `metaclasses: []` e' semantica voluta (il testo di aiuto del pannello dice "start with no metaclass") e
+> la row view non ha chrome. Il Rischio 1 di questo report, che ne discendeva, cade con la stessa
+> correzione.
+>
+> Conseguenza: la decisione 1 del giro non ha richiesto modifiche a `EnableIRPanel.tsx`, perche' il
+> pannello delegava gia'. Verificato a runtime il 2026-09-19 sul percorso reale ("+" sulla viewpoint,
+> tab IR, "Enable IR authoring"): la view nasce con `cornerRadius: 8`, bordo
+> `var(--color-inode-border)` 1px solid ed etichetta `{ fontSize: 14, color: 'var(--color-inode-name)',
+> underline: true }`, uguale a `defaultObjectViewIR()` a parte `metaclasses` e `label`. Non misurata in
+> quella prova la resa sul canvas: la viewpoint appena creata risultava "not active".
+
 ## Finding 2 — perché la resa di oggi è povera (causa nel seed IR + nel compilatore)
 
 Seed vivo per una view vertex (`defaultObjectViewIR()`, `irDefaults.ts:30-53`):
