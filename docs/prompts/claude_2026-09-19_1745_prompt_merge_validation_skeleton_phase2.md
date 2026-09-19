@@ -1,3 +1,8 @@
+> **Superseded on 2026-09-19 by P-2026-09-19-1740.** Not to be executed. It resolved the IR trio by hand
+> inside the merge and wrote RC-14 as a one-off derogation; the executed sequence is P-2026-09-19-1735
+> (ratifications on the trunk), P-2026-09-19-1730 (corner radius as a conditional axis on the branch),
+> P-2026-09-19-1740 (merge). Kept for the record.
+
 # Prompt: merge `validation-skeleton` into `alfonso-frontend-jjtl` (Phase 2, execution)
 
 Prompt-ID: P-2026-09-19-1745
