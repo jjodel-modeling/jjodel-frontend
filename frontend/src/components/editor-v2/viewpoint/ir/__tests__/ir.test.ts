@@ -561,6 +561,105 @@ describe('irResolveCore metaclass identity (pin-aware matching, 2026-08-13)', ()
 });
 
 /**
+ * R-MCID-1 (2026-09-19): a view may list two metaclasses that share a name and
+ * come from different metamodels. The resolver index stays keyed by name; the
+ * identity is the pin, a class id or an array of class ids. Fixture: the
+ * two-metamodel `homonymWorld()` above (`A_State` with its subclass `A_Sub`, and
+ * `B_State`), plus a third homonym `C_State` where a case needs one the view
+ * does NOT list.
+ */
+describe('irResolveCore metaclass identity — several identities under one name (R-MCID-1, 2026-09-19)', () => {
+    function threeMetamodelWorld() {
+        const w = homonymWorld();
+        w.idlookup.C_State = { id: 'C_State', name: 'State', extends: [] };
+        w.idlookup.c1 = { id: 'c1', name: 'obj_c1', instanceof: 'C_State', features: [] };
+        return w;
+    }
+
+    it('pinned to both: the view matches the instances of both metamodels', () => {
+        const { idlookup, ctx } = homonymWorld();
+        const state = stateWith([
+            { id: 'V_both', ir: vertexIR({ metaclasses: ['State'], authoringMetaclassPins: { State: ['A_State', 'B_State'] } }) },
+        ], idlookup);
+        const index = getIRIndex(state, 'sig_mcid_1')!;
+        expect(resolveIRView('a1', 'A_State', index, ctx, state.idlookup)!.viewId).toBe('V_both');
+        expect(resolveIRView('b1', 'B_State', index, ctx, state.idlookup)!.viewId).toBe('V_both');
+    });
+
+    it('pinned to both: a class the array does not list is refused, and lands on the wildcard', () => {
+        const { idlookup, ctx } = threeMetamodelWorld();
+        const state = stateWith([
+            { id: 'V_both', ir: vertexIR({ metaclasses: ['State'], authoringMetaclassPins: { State: ['A_State', 'B_State'] } }) },
+            { id: 'V_wild', ir: vertexIR({ metaclasses: '*' }) },
+        ], idlookup);
+        const index = getIRIndex(state, 'sig_mcid_2')!;
+        expect(resolveIRView('c1', 'C_State', index, ctx, state.idlookup)!.viewId).toBe('V_wild');
+        expect(resolveIRView('b1', 'B_State', index, ctx, state.idlookup)!.viewId).toBe('V_both');
+    });
+
+    it('pinned to both: inheritance is untouched, the subclass of one listed class still matches', () => {
+        const { idlookup, ctx } = homonymWorld();
+        const state = stateWith([
+            { id: 'V_both', ir: vertexIR({ metaclasses: ['State'], authoringMetaclassPins: { State: ['A_State', 'B_State'] } }) },
+        ], idlookup);
+        const index = getIRIndex(state, 'sig_mcid_3')!;
+        expect(resolveIRView('asub', 'A_Sub', index, ctx, state.idlookup)!.viewId).toBe('V_both');
+    });
+
+    it('pinned to one (the plain string): only that metamodel matches', () => {
+        const { idlookup, ctx } = homonymWorld();
+        const state = stateWith([
+            { id: 'V_b', ir: vertexIR({ metaclasses: ['State'], authoringMetaclassPins: { State: 'B_State' } }) },
+        ], idlookup);
+        const index = getIRIndex(state, 'sig_mcid_4')!;
+        expect(resolveIRView('b1', 'B_State', index, ctx, state.idlookup)!.viewId).toBe('V_b');
+        expect(resolveIRView('a1', 'A_State', index, ctx, state.idlookup)).toBeNull();
+    });
+
+    it('pinned to one through a one-element array (hand-written): same answer as the string', () => {
+        const { idlookup, ctx } = homonymWorld();
+        const state = stateWith([
+            { id: 'V_b', ir: vertexIR({ metaclasses: ['State'], authoringMetaclassPins: { State: ['B_State'] } }) },
+        ], idlookup);
+        const index = getIRIndex(state, 'sig_mcid_5')!;
+        expect(resolveIRView('b1', 'B_State', index, ctx, state.idlookup)!.viewId).toBe('V_b');
+        expect(resolveIRView('a1', 'A_State', index, ctx, state.idlookup)).toBeNull();
+    });
+
+    it('unpinned (legacy): matches both metamodels by name', () => {
+        const { idlookup, ctx } = homonymWorld();
+        const state = stateWith([
+            { id: 'V_any', ir: vertexIR({ metaclasses: ['State'] }) },
+        ], idlookup);
+        const index = getIRIndex(state, 'sig_mcid_6')!;
+        expect(resolveIRView('a1', 'A_State', index, ctx, state.idlookup)!.viewId).toBe('V_any');
+        expect(resolveIRView('b1', 'B_State', index, ctx, state.idlookup)!.viewId).toBe('V_any');
+    });
+
+    it('a both-pinned view and a one-pinned view coexist: priority decides where they overlap', () => {
+        const { idlookup, ctx } = homonymWorld();
+        const state = stateWith([
+            { id: 'V_both', ir: vertexIR({ metaclasses: ['State'], authoringMetaclassPins: { State: ['A_State', 'B_State'] }, priority: 0 }) },
+            { id: 'V_b_hi', ir: vertexIR({ metaclasses: ['State'], authoringMetaclassPins: { State: 'B_State' }, priority: 5 }) },
+        ], idlookup);
+        const index = getIRIndex(state, 'sig_mcid_7')!;
+        expect(resolveIRView('a1', 'A_State', index, ctx, state.idlookup)!.viewId).toBe('V_both');
+        expect(resolveIRView('b1', 'B_State', index, ctx, state.idlookup)!.viewId).toBe('V_b_hi');
+    });
+
+    it('row views obey the array pin too', () => {
+        const { idlookup, ctx } = threeMetamodelWorld();
+        const state = stateWith([
+            { id: 'V_row_both', ir: rowIR({ metaclasses: ['State'], authoringMetaclassPins: { State: ['A_State', 'B_State'] } }) as any },
+        ], idlookup);
+        const index = getIRIndex(state, 'sig_mcid_8')!;
+        expect(resolveRowView('a1', 'A_State', index, ctx, state.idlookup)!.viewId).toBe('V_row_both');
+        expect(resolveRowView('b1', 'B_State', index, ctx, state.idlookup)!.viewId).toBe('V_row_both');
+        expect(resolveRowView('c1', 'C_State', index, ctx, state.idlookup)).toBeNull();
+    });
+});
+
+/**
  * Containment world: Region contains States (composition ref), transitions
  * between states as edges.
  *   r1 (Region) ⊃ { s_a, s_b }   r2 (Region) ⊃ { s_c }
