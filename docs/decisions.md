@@ -1173,6 +1173,8 @@ verifica e la correzione al Finding 1 del 2026-09-19). Prompt: `claude_2026-09-1
   visibile rispetto a prima del giro), oltre a una view nuova che deve avere la parità di R-IRN-29.
   Verificato per R-IRN-33 solo a livello di `isMigratedDefaultView` (unità), non ancora con uno
   smoke visivo end-to-end su un progetto salvato reale — aperto per la conferma di Alfonso.
+  Chiusa il 2026-09-19: verifica visiva di Alfonso su un progetto salvato prima di `400095370`, le
+  view di default migrate rendono ancora via nativo. Nessuna differenza visibile.
 
 ## Serie R-SIM — Pannello di simulazione e attributi di stato (ratifiche 2026-08-17)
 
