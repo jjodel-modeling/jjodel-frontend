@@ -116,7 +116,46 @@ function canonicalize(x: unknown): unknown {
     return x;
 }
 
-let factoryHash: string | null = null;
+/**
+ * Snapshot of `defaultObjectViewIR()` as it stood from `637a5e238` (2026-07-18, the
+ * inverse migration that first persisted it via `VersionFixer` 2.225 -> 2.226) through
+ * `400095370^` (2026-09-19, immediately before the parity batch of P-2026-09-18-2219
+ * added `cornerRadius`, `border` and the label's `color`/`underline`). Every project
+ * migrated in that window has this exact object, verbatim, sitting in `ir` on its
+ * default M1 views — never re-read from the live factory, never touched by a
+ * migration (decision 3 of that prompt: no `VersionFixer` change, seed-only).
+ *
+ * R-IRN-33 (2026-09-19): the parity batch changed the live factory without this
+ * constant, which silently flipped `isMigratedDefaultView` to `false` for every one of
+ * those views — they stopped delegating to the native renderer and fell back to the
+ * IR interpreter on their old, now-stale `ir`, rendering with the pre-parity chrome
+ * (4px radius, grey border, no underline) instead of native's. `isMigratedDefaultView`
+ * below must keep recognizing this frozen shape, not just the live one, or the same
+ * class of regression returns on the next factory edit. See "Debito" in R-IRN-33 for
+ * why this is a stopgap, not the real fix.
+ */
+const LEGACY_OBJECT_VIEW_SNAPSHOT: Omit<VertexViewIR, 'metaclasses' | 'label'> = {
+    irVersion: 'ir-1.2',
+    kind: 'vertex',
+    priority: 0,
+    exclusive: true,
+    shape: {
+        form: 'rect',
+        labels: [
+            { position: 'top', source: { from: 'intrinsic', prop: 'qualifiedName' } },
+        ],
+    },
+    fieldCompartments: [
+        {
+            id: 'attributes',
+            source: { from: 'attributes' },
+            rowFormat: { segments: [{ kind: 'name' }, { kind: 'literal', text: ' = ' }, { kind: 'value' }] },
+            separator: true,
+        },
+    ],
+};
+
+let factoryHashes: Set<string> | null = null;
 
 /** Per-ir memo — the D-layer replaces the ir ref on edit (same assumption as irResolveCore's refToken). */
 const delegationCache = new WeakMap<object, boolean>();
@@ -126,9 +165,10 @@ const delegationCache = new WeakMap<object, boolean>();
  * ObjectNode instead of the IR interpreter (delegation, spec v1.2 sez. 11):
  * - the view carries `migratedFrom: 'classic-default'` AND its structure,
  *   normalized (key order canonicalized, `migratedFrom` and
- *   `authoringMetaclassPins` excluded), equals defaultObjectViewIR(). An edited
- *   view diverges from the factory and returns to the interpreter as a custom
- *   view;
+ *   `authoringMetaclassPins` excluded), equals defaultObjectViewIR() OR the frozen
+ *   `LEGACY_OBJECT_VIEW_SNAPSHOT` (R-IRN-33) — a migrated view persisted either shape
+ *   depending on when the migration ran, and both count as "unedited". An edited
+ *   view diverges from both and returns to the interpreter as a custom view;
  * - or the view id is IR_DEFAULT_OBJECT_VIEW_ID (built-in default wildcard).
  *
  * Both exclusions answer the same question — what counts as the SEMANTIC identity
@@ -150,8 +190,13 @@ export function isMigratedDefaultView(compiled: Pick<CompiledView, 'viewId' | 'i
         const structural: Record<string, unknown> = { ...ir };
         delete structural.migratedFrom;
         delete structural.authoringMetaclassPins;
-        if (factoryHash === null) factoryHash = irHash(canonicalize(defaultObjectViewIR()) as VertexViewIR);
-        delegated = irHash(canonicalize(structural) as VertexViewIR) === factoryHash;
+        if (factoryHashes === null) {
+            factoryHashes = new Set([
+                irHash(canonicalize(defaultObjectViewIR()) as VertexViewIR),
+                irHash(canonicalize({ ...LEGACY_OBJECT_VIEW_SNAPSHOT, metaclasses: '*', label: 'Object (IR default)' }) as VertexViewIR),
+            ]);
+        }
+        delegated = factoryHashes.has(irHash(canonicalize(structural) as VertexViewIR));
     }
     delegationCache.set(ir, delegated);
     return delegated;
