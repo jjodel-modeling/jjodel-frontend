@@ -65,6 +65,21 @@ citare l'id con la data. Le decisioni sostituite si spostano in "Superate", con 
   (`discovery_2026-09-01_irf1_annotation_subscription.md` §14).
   Generalizza la clausola §8 del memo del 2026-08-22 a ogni documento; confermata a voce il
   2026-08-24.
+- **RC-14** (2026-09-19) — **Reintegration of a long-lived branch goes by merge commit.** P14
+  governs the transport of single fixes between live branches: `cherry-pick -x` of explicit shas.
+  The reintegration of a branch that diverged on more than one front (`validation-skeleton` on
+  2026-09-19: 261 commits, 8 code fronts, 10 conflicting files) goes by one merge commit,
+  `--no-ff`, on these conditions: a gate report in `docs/discovery/` exists and is cited in the
+  merge body; semantic conflicts are resolved on the branch before the merge, so that the merge
+  itself resolves text only; the merge commit is the one admitted exception to RC-13 (docs and code
+  in one commit) and declares it in its body; the log conflict is resolved by union and the log is
+  rotated by the exclusive lane of P13 in the next commit, with Check D red in between and declared
+  (RC-11); the branch is pushed before the trunk, so both parents of the merge are public. A squash
+  is never used: it erases the `Model:` and `Co-Authored-By` trailers and the shas the log cites.
+  Rationale: P14 (2026-09-14) was written for the single-fix case; a rule that needs a derogation
+  the first time it meets a real case has a gap, so the rule is amended, not derogated. Written
+  into `docs/PROTOCOL.md` P14 ("Reintegration of a branch"). Ratified on question 4 of section 10
+  of the gate report cited above.
 
 ## Arco A — barra a tab e capi degli edge
 
@@ -1175,6 +1190,25 @@ verifica e la correzione al Finding 1 del 2026-09-19). Prompt: `claude_2026-09-1
   smoke visivo end-to-end su un progetto salvato reale — aperto per la conferma di Alfonso.
   Chiusa il 2026-09-19: verifica visiva di Alfonso su un progetto salvato prima di `400095370`, le
   view di default migrate rendono ancora via nativo. Nessuna differenza visibile.
+- **R-IRN-35** (2026-09-19) — **Corner radius: one contract, type from the trunk, rendering from
+  the branch.** `ShapeSpec.cornerRadius?: Conditional<number>` (px), sibling of `border`, as
+  R-IRN-31 says: after D1 every border axis is a conditional, and S6 must put the radius in the
+  rules table like any other axis, so a scalar would be the one axis outside the mechanism.
+  Compiled as `CompiledView.cornerRadius: CompiledConditional<number | undefined> | null` with the
+  fallback not emitted and never 0. Absent is not zero: an absent radius keeps the shape's base
+  rendering (D5 kept). Rendering follows the branch (Symbol Editor 1b, D5): honoured by box shapes
+  as an inline `border-radius` and by `diamond`, `hexagon` and `parallelogram` through
+  `roundedPolygonPath`, clamped at render; ignored only by shapes without corners (`ellipse`,
+  `circle`, `stadium`). The renderer reads the resolved compiled value, never the source IR. This
+  supersedes the "not Conditional in v1" clause of D5 (`docs/handoff/decisions-symbol-editor-1b.md`)
+  and narrows the "ignored on SVG-painted shapes" clause of R-IRN-31 to shapes without corners. The
+  object seed value `8` is unchanged. Ratified on question 1 of section 10 of
+  `docs/discovery/discovery_2026-09-19_merge_gate_validation_skeleton.md`.
+- **R-IRN-36** (2026-09-19) — **The separator colour follows the per-axis border colour.** The
+  parity rule of S2 (the compartment separator reuses the box border colour) is kept and re-based
+  on D1: it reads the resolved `borderColor` axis, not the compiled `border` object, which D1
+  removes. Same behaviour, one source of truth for the border colour. Ratified on question 2 of
+  section 10 of the same gate report.
 
 ## Serie R-SIM — Pannello di simulazione e attributi di stato (ratifiche 2026-08-17)
 

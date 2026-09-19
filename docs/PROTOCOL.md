@@ -1,7 +1,7 @@
 # PROTOCOL.md — protocollo di esecuzione per Claude Code
 
 Posizione: `docs/PROTOCOL.md` nel repo `jjodel-frontend`.
-Versione: 1.3 (2026-09-19) — traccia l'insieme delle clausole (quali P<n> esistono), non le differenze di frase.
+Versione: 1.4 (2026-09-19) — traccia l'insieme delle clausole (quali P<n> esistono), non le differenze di frase.
 
 Questo file contiene le clausole che prima venivano ricopiate per esteso in ogni prompt. I prompt ora le citano per numero. Se una clausola cambia, cambia qui e vale ovunque da subito.
 
@@ -259,6 +259,25 @@ and the cherry-pick loop then started in the wrong tree. It was aborted, no dama
   with the same command (§5). A file that differed between the two branches in an earlier entry
   may no longer differ, and a file an earlier entry called identical may differ. Do not inherit
   either claim from the log.
+
+**Reintegration of a branch.** The rules above are for the single fix. A branch that diverged on
+more than one front (`validation-skeleton` on 2026-09-19: 261 commits, 8 code fronts, 10
+conflicting files) is reintegrated by one merge commit, `--no-ff`, on these conditions (RC-14,
+`docs/decisions.md`):
+
+- A gate report in `docs/discovery/` exists and is cited in the merge body.
+- Semantic conflicts are resolved on the branch before the merge, so that the merge itself
+  resolves text only.
+- The merge commit is the one admitted exception to RC-13 (docs and code in one commit) and
+  declares it in its body.
+- The log conflict is resolved by union, and the log is rotated by the exclusive lane of P13 in
+  the next commit, with Check D red in between and declared (RC-11).
+- The branch is pushed before the trunk, so both parents of the merge are public.
+- A squash is never used: it erases the `Model:` and `Co-Authored-By` trailers and the shas the
+  log cites.
+
+P14 was written for the single-fix case (2026-09-14). A rule that needs a derogation the first
+time it meets a real case has a gap, so the rule is amended, not derogated.
 
 ## P15 — Where the rules live
 
