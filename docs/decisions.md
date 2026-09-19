@@ -3286,6 +3286,14 @@ fino a 500 ms a essere rifiutata. La gara non è del ruolo `superclass`: `waitFo
 `jjscript/executor/dependencies.ts` aspetta solo le dipendenze `required: true`, quindi ogni ruolo
 lasciato `required: false` la corre, a partire da `type-reference` (`dependencies.ts:205-235`).
 
+## R-MCID — identità della metaclasse tra metamodelli (ratifiche 2026-09-19)
+
+Base di evidenza: `docs/discovery/discovery_2026-09-19_metaclass_identity_homonyms.md`.
+
+**R-MCID-1** (2026-09-19) — **Due metaclassi dichiarate da metamodelli diversi sono metaclassi diverse anche quando hanno lo stesso nome.** Una view può elencarle entrambe o una sola, e il resolver onora esattamente la scelta. `ir.metaclasses` resta una lista di nomi e l'indice del resolver resta per nome; l'identità sta in `authoringMetaclassPins`, che da oggi ammette per nome un id o un array di id (`string | string[]`, additivo, nessun bump di `irVersion`, array di lunghezza 1 scritto come stringa). Un nome senza pin continua a significare «ogni classe con quel nome» (view autorate prima del pin). Il picker esclude per id, non per nome. Le feature del PathBuilder si risolvono dalla prima metaclasse in lista e, se ha più pin, dal primo. Chiude il difetto del 2026-09-19 (dropdown "Add metaclass…" che nascondeva `metamodel_2.State` dopo l'aggiunta di `metamodel_1.State`).
+
+**R-MCID-2** (2026-09-19) — **Un array vuoto non è un pin: `pinAccepts` e `withMetaclassPins` lo leggono in modo diverso, di proposito.** `pinAccepts` applica `includes` come scritto, quindi un `[]` scritto a mano non accetta nessuna classe (la view non matcha nulla); `withMetaclassPins` e `metaclassEntries` lo leggono come «nessun pin» (ricade sulla catena, la riga resta visibile e rimovibile). L'authoring non scrive mai `[]`: un array che si svuota toglie la chiave e il nome dalla lista. La differenza è dichiarata nel commento di `AuthoringMetaclassPins` in `irTypes.ts`.
+
 ## Superate
 
 - **D3** (2026-07-26, routing congelato in v1) — superata da E-route il 2026-08-06.
