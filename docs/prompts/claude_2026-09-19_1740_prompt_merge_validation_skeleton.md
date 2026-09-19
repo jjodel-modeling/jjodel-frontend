@@ -96,3 +96,11 @@ that the text above does not have. Everything above stands as written.
 
 4. **`P-2026-09-19-1745`** (`docs/prompts/claude_2026-09-19_1745_prompt_merge_validation_skeleton_phase2.md`)
    is superseded by this prompt and carries a header saying so. It is not executed.
+
+5. **Step A, an eleventh conflicting file is expected: `docs/PROTOCOL.md`, two hunks, both trunk side.** The
+   1735 lane (`ca23ae72a`) measured that P12 to P15 were added identically on both sides after the
+   merge-base, so any trunk edit inside P14 conflicts wherever it sits: the version line (`1.4` on the
+   trunk, `1.3` on the branch) and the reintegration paragraph at the end of P14. In both hunks the
+   trunk side is the branch text plus the addition: resolve each hunk trunk side, not the whole file
+   (branch line 91 differs only on the branch and merges clean). This file is not in the gate
+   report's ten; it is not a hard stop.
