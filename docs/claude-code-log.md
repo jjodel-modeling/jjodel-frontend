@@ -28,6 +28,19 @@ the Create View gate fix»: contenuto reale **due** entry, la sua e quella della
 rail/modale, gia' in albero e non in stage al momento del commit. Stesso schema del 2026-09-13.
 Nessun rewrite: la entry resta dov'e', il suo commit non la nomina.
 
+## 2026-09-19 — feat: two metaclasses of different metamodels are different metaclasses (P-2026-09-19-1610)
+**Prompt**: `P-2026-09-19-1610`, metaclass identity across metamodels. A view lists `metamodel_1.State` and `metamodel_2.State` together or one of them, and the resolver honours the choice. `authoringMetaclassPins` admits `string | string[]` per name (additive, no `irVersion` bump), the picker excludes by id, the list shows one row per identity. Two-phase: discovery report, GO with five answers (pure module in DOVE, homonymous metamodels left as is, series R-MCID, `[]` in `pinAccepts` as written, log at the top), four steps with a visual stop after step 2.
+**Files touched**: discovery `941a94da9` (`docs/discovery/discovery_2026-09-19_metaclass_identity_homonyms.md`). Step 1 `f98e67cb5`, 5 files: `ir/irTypes.ts`, `ir/irResolveCore.ts` (`pinAccepts`), `ir/metaclassPin.ts`, `ir/__tests__/metaclassPin.test.ts`, `ir/__tests__/ir.test.ts`. Step 2 `70ac9055f`, 5 files: `authoring/metaclassEntries.ts` (new, pure), `authoring/__tests__/metaclassEntries.test.ts` (new), `authoring/MatchingSection.tsx` (re-exports the pure module), `authoring/EdgeAuthoringPanel.tsx`, `authoring/RowAuthoringPanel.tsx`. Step 3 `366300c03`: `ir/__tests__/ir.test.ts` (resolver-level, `homonymWorld()`). Step 4: `docs/decisions.md` (`603546085`, R-MCID-1, R-MCID-2); this entry in its own commit.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. `npm run typecheck` exit 2, **33** on full output, the declared baseline, **0** in the touched files; control `Measurable` → 6. `npx vitest run` from `frontend/`: **3900 passed, 0 failed**, the same 9 files red at import as before. `npm run build` exit 0 after step 2 (step 3 is test-only). Mutation bench: 15 mutants of `metaclassEntries.ts`, 8 of the pin resolution and 4 of `pinAccepts` at resolver level, each killed by a named test; the one survivor (`samePin` order-insensitive) is unreachable through `withMetaclassPins` and is declared intent (commit message of `f98e67cb5`).
+**Out-of-scope changes**: no.
+**Layer Impact Report**: not-required — `viewpoint/authoring/` and `viewpoint/ir/` are §3.1 rows, but no §3.2 file (`useJjomSync`, `syncState`, `canvasToJjom`, `portDistribution`, `useM1ReferenceEdges`, `VersionFixer`) and no D-layer creator was touched; `pinAccepts` only reads the ir.
+**Smoke visivo**: passato — Alfonso on localhost:3000, ACK of 2026-09-19 ("Verifica visiva OK") on the step-2 checklist: two metamodels each with `State`, add both, remove one, ir shows the array then the plain string. Which of the five listed items were exercised is not itemized in the ACK.
+**Notes**: Tickets. (1) Same-named metamodels: metaclassChoices labels by mm.name, so two metamodels called alike merge into one picker group and read identically (the USER_185 case, discovery 2026-07-23); fix = optional metamodelId on MetaclassChoice; left as is by decision. (2) UI: a legacy view listing an unpinned name cannot be narrowed to one class except by remove + re-add, since the picker hides the homonyms of an unpinned name. Log is now 42 entries, Check D red until the next rotation.
+**Prompt document name**: 2026-09-19 16:10
+
 ## 2026-09-18 — chore: fold and rotate the prompt log by script, gate red above 40 (P-2026-09-18-2015)
 **Prompt**: `claude_2026-09-18_2015_prompt_log_rotate_fold_gate.md`. Replace hand-folding of
 `docs/log-inbox/*.md` and hand-rotation into `docs/claude-code-log-archive.md` with `log-tools.ts`
