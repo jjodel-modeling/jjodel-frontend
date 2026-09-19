@@ -20,7 +20,15 @@ import { validateIR } from '../ir/irValidate';
 import { defaultRowViewIR } from '../ir/irDefaults';
 import type { RowViewIR, TextSource, TextStyle } from '../ir/irTypes';
 import { resolveMetaclassId, withMetaclassPins, type MetaclassRef } from '../ir/metaclassPin';
-import { metaclassChipLabel, metaclassGroups, type MetaclassChoice } from './MatchingSection';
+import {
+    metaclassChipLabel,
+    metaclassEntries,
+    metaclassGroups,
+    withMetaclassChoice,
+    withoutMetaclassEntry,
+    type MetaclassChoice,
+    type MetaclassEntry,
+} from './MatchingSection';
 import { isCommittableMatching } from './committableMatching';
 import { TextSourceEditor } from './TextSourceEditor';
 import { TextStyleField } from './TextStyleField';
@@ -233,19 +241,16 @@ export const RowAuthoringPanel: React.FC<RowAuthoringPanelProps> = ({ view, acti
     const mcs = draft.metaclasses;
     const isWildcard = mcs === '*';
     const list = Array.isArray(mcs) ? mcs : [];
-    const available = metaclassGroups(metaclassChoices, list);
+    const entries = metaclassEntries(list, draft.authoringMetaclassPins);
+    const available = metaclassGroups(metaclassChoices, entries);
     const setWildcard = (checked: boolean) => patch({ ...draft, metaclasses: checked ? '*' : [] });
-    const removeMetaclass = (idx: number) => patch({ ...draft, metaclasses: list.filter((_, i) => i !== idx) });
+    const removeMetaclass = (entry: MetaclassEntry) => patch(withoutMetaclassEntry(draft, entry));
     // The picker yields a class ID: the name goes into `metaclasses` as always, the
-    // id into the pin map, so the choice between two homonyms survives the patch.
+    // id into the pin map (appended when the name already holds another identity), so
+    // the choice between two homonyms survives the patch.
     const addMetaclass = (classId: string) => {
-        const hit = metaclassChoices.find((c) => c.id === classId);
-        if (!hit || list.includes(hit.name)) return;
-        patch({
-            ...draft,
-            metaclasses: [...list, hit.name],
-            authoringMetaclassPins: { ...(draft.authoringMetaclassPins ?? {}), [hit.name]: hit.id },
-        });
+        const next = withMetaclassChoice(draft, metaclassChoices.find((c) => c.id === classId));
+        if (next) patch(next);
     };
 
     // --- matching (predicate) ---
@@ -327,15 +332,15 @@ export const RowAuthoringPanel: React.FC<RowAuthoringPanelProps> = ({ view, acti
                 />
                 {!isWildcard && (
                     <>
-                        {list.map((name, idx) => (
+                        {entries.map((entry) => (
                             <div
-                                key={name}
+                                key={`${entry.name}:${entry.id ?? ''}`}
                                 style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-1)', marginTop: 4 }}
                             >
                                 <span style={{ flex: 1 }}>
-                                    {metaclassChipLabel(name, draft.authoringMetaclassPins, metaclassChoices)}
+                                    {metaclassChipLabel(entry, metaclassChoices)}
                                 </span>
-                                <Button variant="ghost" size="sm" onClick={() => removeMetaclass(idx)} title="Remove">
+                                <Button variant="ghost" size="sm" onClick={() => removeMetaclass(entry)} title="Remove">
                                     <i className="bi bi-x" aria-hidden="true" />
                                 </Button>
                             </div>
@@ -353,7 +358,7 @@ export const RowAuthoringPanel: React.FC<RowAuthoringPanelProps> = ({ view, acti
                         </div>
                     </>
                 )}
-                <HelpText>PathBuilder features are resolved from the first metaclass in the list.</HelpText>
+                <HelpText>PathBuilder features are resolved from the first metaclass in the list (its first pinned class when several are pinned).</HelpText>
             </div>
 
             {/* Matching — predicate */}
