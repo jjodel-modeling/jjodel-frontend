@@ -55,7 +55,8 @@ citare l'id con la data. Le decisioni sostituite si spostano in "Superate", con 
   dell'archivio descrive un blocco invertito: è superata da questa clausola, e i batch già
   scritti non si toccano.
 - **RC-13** (2026-09-01) — **Una corsia per giro, e l'albero è condiviso.** Le regole operative
-  della concorrenza fra corsie stanno in `CLAUDE.md` §6.4, che questa clausola iscrive senza
+  della concorrenza fra corsie stanno in `docs/PROTOCOL.md` **P13** (spostato verbatim da
+  `CLAUDE.md` §6.4 il 2026-09-18, P-2026-09-18-1930 Fase 2), che questa clausola iscrive senza
   duplicare: una corsia per giro, docs e codice mai nello stesso commit, `git add` per pathspec,
   lo staged altrui intoccabile, **niente `git stash` su albero condiviso**, rotazione del log in
   corsia esclusiva. Nasce da un incidente misurato: uno `stash push -- <paths>` con dentro un
@@ -1099,6 +1100,81 @@ Base di evidenza: `docs/discovery/discovery_2026-08-13_view_creation_sites_ir_na
   merge collaborativo): quel giorno la corsia sulla transazione sempre aperta (`reducer.ts:1443`)
   riparte da questa misura. Ratificata da Alfonso il 2026-09-03 su proposta della chat, dopo la
   domanda posta da Claude Design.
+
+## Serie R-IRN (seguito) — Parità della object view di default con la sintassi astratta (ratifiche 2026-09-19)
+
+Base di evidenza: `docs/discovery/discovery_2026-09-18_default_view_parity.md` (con l'appendice di
+verifica e la correzione al Finding 1 del 2026-09-19). Prompt: `claude_2026-09-18_2219_prompt_default_view_parity.md`
+(P-2026-09-18-2219). Commit: `400095370`, `12ae8c41c`, `6ee6efcd5`, `971234d94`, `516afd310`.
+
+- **R-IRN-29** (2026-09-19) — **Criterio del giro: parità del chrome, non della geometria.** Il
+  criterio di accettazione copre bordo, raggio, sfondo, nome (font-size/colore/underline/offset) e
+  separatore themed della object view IR contro il renderer nativo — misurato a zero delta dopo il
+  batch (appendice del 2026-09-19 al discovery report). Restano fuori, come differenze note che
+  aprono un giro separato sui default di layout dell'IR: padding e altezza del compartimento (IR
+  4px/8px e 27.19px contro 10px/14px e 36px nativi, radice in `--ir-pad-x/-y` e `.ir-row { line-height:
+  1.4 }` di `irStyle.ts`, condivisi con l'etichetta — nessun valore del preset `shape.padding` copre
+  14/10), il separatore assente su un'istanza a zero attributi (nativo lo disegna comunque via
+  `.mm-object__header { border-bottom }` incondizionato, IR lo lega alla presenza del compartimento),
+  il padding dell'header nativo (`11px 14px`) contro quello dell'etichetta IR, e l'allineamento del
+  testo (nativo a sinistra, IR centrato).
+- **R-IRN-30** (2026-09-19) — **`TextStyle.underline` e `LabelSpec.style.color`, opzionali su
+  ir-1.3, nessun bump.** Lettura del §7 dell'addendum TextStyle
+  (`claude_spec_2026-07-27_ir_textstyle_addendum.md`): additivo sul campo `ir`, nessuna migrazione
+  necessaria per un opzionale `undefined`. L'offset di 3px della sottolineatura nativa
+  (`instanceNode.scss:108`) è cablato dentro il meccanismo dell'asse `underline`
+  (`resolveTextStyle`, `IRNodeContent.tsx`) invece di diventare un campo separato: per scelta,
+  `underline` significa "la sottolineatura nativa", non un asse tipografico generico.
+- **R-IRN-31** (2026-09-19) — **`ShapeSpec.cornerRadius`, sibling di `border` e non suo campo.**
+  Opzionale su `ShapeSpec` (non dentro `border`, che sarebbe irraggiungibile senza un bordo
+  dichiarato — la radice appartiene al box, non al tratto). Fallback di compile non-emesso
+  (`undefined`), esplicitamente non `0`: `0` è un valore autorato legittimo (angolo vivo) e va
+  distinto da "nessun ramo ha risolto". Ignorato — mai approssimato, mai convertito — sulle forme
+  senza angoli retti (ellipse, circle, stadium) e sulle forme disegnate via SVG; l'avviso in
+  authoring per questo caso resta dovuto (S5, non implementato in questo giro). L'8px del seed
+  (`irDefaults.ts`) è accoppiato a mano al letterale nativo di `instanceNode.scss:28`, non
+  tokenizzato su nessuno dei due lati.
+- **R-IRN-32** (2026-09-19) — **Nessuna migrazione: solo le view create da qui in avanti.**
+  Decisione 3 del prompt confermata: `VersionFixer.tsx` non tocco, nessun nuovo metodo di
+  migrazione. La row view resta fuori scope (decisione 2 del prompt): `EnableIRPanel.tsx`'s
+  `rowSeed` resta un letterale invece di delegare a `defaultRowViewIR()`, perché il suo
+  `metaclasses: []` è semantica voluta (il testo d'aiuto del pannello dice "start with no
+  metaclass") e la row view non ha chrome da misurare.
+- **R-IRN-33** (2026-09-19) — **Il criterio di parità ha un debito: l'identità della view migrata è
+  per uguaglianza strutturale con un bersaglio mobile, e questo giro l'ha rotta una volta.**
+  `isMigratedDefaultView` (`irDefaults.ts`) decide se una view migrata rende nativo confrontando la
+  sua struttura, per hash, con `defaultObjectViewIR()` **live**. Il batch di questo giro
+  (`400095370`, `6ee6efcd5`) ha cambiato quella factory senza toccare il confronto: ogni progetto
+  migrato da `VersionFixer` 2.225→2.226 (`637a5e238`, 2026-07-18 in poi) porta la vecchia forma
+  verbatim nel proprio `ir`, smesso di combaciare, e le sue object view di default sono silenziosamente
+  ricadute dal renderer nativo all'interprete IR sul loro `ir` non aggiornato — rendendo con la
+  resa pre-parità (raggio 4px, bordo grigio, nessuna sottolineatura) invece di quella nativa. Misurato
+  eseguendo `isMigratedDefaultView` su uno snapshot della forma pre-batch: `delegated = false` prima
+  del fix, `true` dopo. **Fix** (`516afd310`): forma pre-batch congelata in
+  `LEGACY_OBJECT_VIEW_SNAPSHOT` (`irDefaults.ts`), `isMigratedDefaultView` riconosce entrambe le
+  forme per hash. Nessun `VersionFixer`, nessuna migrazione — coerente con R-IRN-32. Tre nuovi test
+  in `ir.test.ts` (forma vecchia → `true`, forma corrente → `true`, forma vecchia modificata → `false`),
+  verificati su mutation bench (§5): la sola forma pre-fix di `irDefaults.ts`, ripristinata da `git
+  show HEAD:<path>` — non da uno stash — fa fallire esattamente il primo test e nessun altro.
+  **DEBITO, non chiuso qui**: questa e' una toppa per-modifica, non la causa. Ogni futura modifica
+  alla factory richiede una nuova forma congelata riconosciuta a mano, o il prossimo cambiamento
+  rompe di nuovo in silenzio la stessa classe di progetti. La soluzione strutturale — marcare
+  l'identità al momento della migrazione (un flag "non toccato dall'utente" tracciato sulla view,
+  invece di un confronto per uguaglianza con un bersaglio che cambia) — resta da decidere in un giro
+  proprio, non aperto da questo prompt. **Nota di processo**: durante la verifica di questo fix è
+  stato usato `git stash push -- irDefaults.ts` su un albero condiviso, in violazione di RC-13/§6.4;
+  rilevato subito, il pop ha ripristinato lo stato esatto senza toccare lo stash di altre corsie
+  (`git stash list` invariato a parte l'entry propria), e la verifica è stata rifatta nel modo
+  conforme (`git show HEAD:<path>`, ripristino da copia in scratchpad, indice mai toccato).
+- **R-IRN-34** (2026-09-19) — **Il criterio di questo giro copriva solo le view nuove; esteso a un
+  progetto migrato pre-batch.** La verifica visiva originale e la misura del probe coprivano solo
+  una object view creata da zero dopo il batch. Il criterio va esteso: una object view migrata da un
+  progetto salvato **prima** di `400095370` deve continuare a rendere nativo (nessuna differenza
+  visibile rispetto a prima del giro), oltre a una view nuova che deve avere la parità di R-IRN-29.
+  Verificato per R-IRN-33 solo a livello di `isMigratedDefaultView` (unità), non ancora con uno
+  smoke visivo end-to-end su un progetto salvato reale — aperto per la conferma di Alfonso.
+  Chiusa il 2026-09-19: verifica visiva di Alfonso su un progetto salvato prima di `400095370`, le
+  view di default migrate rendono ancora via nativo. Nessuna differenza visibile.
 
 ## Serie R-SIM — Pannello di simulazione e attributi di stato (ratifiche 2026-08-17)
 
