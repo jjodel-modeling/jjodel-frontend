@@ -104,3 +104,12 @@ that the text above does not have. Everything above stands as written.
    trunk side is the branch text plus the addition: resolve each hunk trunk side, not the whole file
    (branch line 91 differs only on the branch and merges clean). This file is not in the gate
    report's ten; it is not a hard stop.
+
+6. **Step B, `irTypes.ts`: a silent duplicate, not a conflict.** The 1730 Phase 1 report
+   (`83229edbd` on the branch) measured that the auto-merge leaves two `cornerRadius` declarations in
+   `ShapeSpec` with no conflict marker: the branch rewrites the `border` line directly above the
+   point where the trunk inserted its declaration, so git applies both. Only `npm run typecheck`
+   catches it. After taking the branch on the conflicting hunks, delete the trunk-side block (the one
+   that followed the old `border` line) and keep the branch one, which after 1730 carries the trunk
+   type, position and doc comment. Assert exactly one `cornerRadius?:` in `ShapeSpec` before running
+   the gates. Same check on `CompiledView.cornerRadius`.
