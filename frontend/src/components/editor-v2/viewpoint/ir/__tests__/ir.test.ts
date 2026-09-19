@@ -13,7 +13,7 @@ import { compileView, compileEdgeView, compileRowView, clearCompileCache, irHash
 import { getIREdgeAnchorOverride, hydrateIREdgeAnchorOverrides, irEdgeLayoutFromOverride, setIREdgeAnchorOverride } from '../irEdgeInteraction';
 import { getCollapsedSet, hydrateCollapsed } from '../irCollapseState';
 import { makeDrawReadCtx, classAncestryNames, navigateRefHop } from '../irReadCtx';
-import { getIRIndex, resolveIRView, resolveRowView } from '../irResolveCore';
+import { getIRIndex, pinAccepts, resolveIRView, resolveRowView } from '../irResolveCore';
 import { defaultObjectViewIR, defaultRowViewIR, isMigratedDefaultView, IR_DEFAULT_OBJECT_VIEW_ID } from '../irDefaults';
 import {
     buildContainmentModel,
@@ -467,6 +467,34 @@ function homonymWorld() {
     };
     return { idlookup, ctx: makeDrawReadCtx(idlookup) };
 }
+
+describe('pinAccepts — string pin, array pin (R-MCID-1, 2026-09-19)', () => {
+    it('no pin map, or no pin for that name: accepts any class (legacy, by name)', () => {
+        expect(pinAccepts({}, 'State', 'A_State')).toBe(true);
+        expect(pinAccepts({ pins: {} }, 'State', 'A_State')).toBe(true);
+        expect(pinAccepts({ pins: { Machine: 'A_Machine' } }, 'State', 'A_State')).toBe(true);
+    });
+
+    it('a string pin accepts its own id only', () => {
+        expect(pinAccepts({ pins: { State: 'A_State' } }, 'State', 'A_State')).toBe(true);
+        expect(pinAccepts({ pins: { State: 'A_State' } }, 'State', 'B_State')).toBe(false);
+    });
+
+    it('an array pin accepts every id it holds and nothing else', () => {
+        const entry = { pins: { State: ['A_State', 'B_State'] } };
+        expect(pinAccepts(entry, 'State', 'A_State')).toBe(true);
+        expect(pinAccepts(entry, 'State', 'B_State')).toBe(true);
+        expect(pinAccepts(entry, 'State', 'C_State')).toBe(false);
+    });
+
+    it('an array pin is read per name: another name is not constrained by it', () => {
+        expect(pinAccepts({ pins: { State: ['A_State', 'B_State'] } }, 'Machine', 'X')).toBe(true);
+    });
+
+    it('an empty array pin accepts nothing (hand-written ir; the UI never writes one)', () => {
+        expect(pinAccepts({ pins: { State: [] } }, 'State', 'A_State')).toBe(false);
+    });
+});
 
 describe('irResolveCore metaclass identity (pin-aware matching, 2026-08-13)', () => {
     it('a pinned view applies to its own metamodel only', () => {

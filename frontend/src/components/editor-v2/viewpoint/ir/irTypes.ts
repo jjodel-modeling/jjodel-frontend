@@ -238,8 +238,21 @@ export interface ShapeSpec {
  * Optional and additive: an IR without it matches by name exactly as before, and
  * on a project with a single metamodel the pin can only agree with the name. No
  * irVersion bump, no migration, no backfill.
+ *
+ * SINCE 2026-09-19 (R-MCID-1) A NAME MAY HOLD SEVERAL IDENTITIES. Two metaclasses
+ * declared by different metamodels are different metaclasses even when they share
+ * a name, and one view may list both: the value is a class id (the single pin, as
+ * always) or an ARRAY of class ids, the set of classes pinned under that name.
+ * `metaclasses` stays a deduplicated list of names and the resolver index stays
+ * keyed by name. Normalization on write: an array of length 1 is written as the
+ * plain string, an empty array is never written (the key is dropped), so an ir
+ * with one identity per name is byte-identical to what it was before.
+ *
+ * An empty array is not written by the authoring layer; if a hand-written ir holds
+ * one, `pinAccepts` matches nothing (`[].includes(id)`), whereas `withMetaclassPins`
+ * reads it as unpinned and falls through to the chain. The two differ on purpose.
  */
-export type AuthoringMetaclassPins = { [metaclassName: string]: string };
+export type AuthoringMetaclassPins = { [metaclassName: string]: string | string[] };
 
 /** Panel skin of a form rendering. Absent = the host decides ('plain' in the rail,
  *  'card' in the form document): the default belongs to the host, not to the view,

@@ -44,9 +44,14 @@ export interface RowIndexEntry {
  * The comparison is per ancestor, so inheritance is untouched — a view pinned to
  * `A.Person` still matches an instance of `A.Employee`, which reaches the bucket
  * through the `A.Person` ancestor.
+ *
+ * A pin may also be an ARRAY of ids (R-MCID-1, 2026-09-19): the view lists several
+ * homonymous classes under one name, and the ancestor is accepted when its id is
+ * among them.
  */
 export function pinAccepts(entry: { pins?: AuthoringMetaclassPins }, name: string, classId: string): boolean {
     const pinned = entry.pins?.[name];
+    if (Array.isArray(pinned)) return pinned.includes(classId);
     return !pinned || pinned === classId;
 }
 

@@ -3,7 +3,10 @@
  * identity instead of by name.
  *
  * `ir.metaclasses` is a list of NAMES and stays one: the resolver matches by name
- * and this module does not touch it. But the authoring layer needs more than a
+ * and this module does not touch it. Since 2026-09-19 (R-MCID-1) the identity under
+ * a name may be a set: two metaclasses of different metamodels are different
+ * metaclasses even when they share a name, and a view can list both, so a pin is a
+ * class id or an array of class ids. But the authoring layer needs more than a
  * name — it has to read the feature set of one specific class, and a project can
  * hold two metamodels that both declare `State` (discovery 2026-07-23 §9). Until
  * now that disambiguation came from `view.appliableToClasses`, a list of class
@@ -79,8 +82,11 @@ export function resolveMetaclassId(
     const candidates = ctx.candidates ?? [];
     const declared = (id: string) => candidates.some((c) => c.id === id);
 
+    // An array pin (several homonymous classes under one name, R-MCID-1) answers with
+    // its first declared id: PathBuilder features are read from one class only.
     const pinned = ctx.pins?.[name];
-    if (pinned && declared(pinned)) return { id: pinned, source: 'pin' };
+    const pinnedId = Array.isArray(pinned) ? pinned.find(declared) : pinned;
+    if (pinnedId && declared(pinnedId)) return { id: pinnedId, source: 'pin' };
 
     for (const entry of ctx.appliesTo ?? []) {
         if (entry.name === name && declared(entry.id)) return { id: entry.id, source: 'appliesTo' };
@@ -96,11 +102,19 @@ export interface PinnableIR {
     authoringMetaclassPins?: AuthoringMetaclassPins;
 }
 
+/** Structural: a string equals a string, an array equals an array of the same ids in the same order. */
+function samePin(a: string | string[] | undefined, b: string | string[]): boolean {
+    if (Array.isArray(a) || Array.isArray(b)) {
+        return Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((id, i) => id === b[i]);
+    }
+    return a === b;
+}
+
 function samePins(a: AuthoringMetaclassPins | undefined, b: AuthoringMetaclassPins): boolean {
     if (!a) return false;
     const ka = Object.keys(a);
     const kb = Object.keys(b);
-    return ka.length === kb.length && kb.every((k) => a[k] === b[k]);
+    return ka.length === kb.length && kb.every((k) => samePin(a[k], b[k]));
 }
 
 /**
@@ -128,6 +142,12 @@ function samePins(a: AuthoringMetaclassPins | undefined, b: AuthoringMetaclassPi
  *
  * An empty result drops the KEY instead of writing `{}` or `undefined`, keeping
  * the ir byte-identical to one authored without any pin.
+ *
+ * A name may hold several identities (R-MCID-1, 2026-09-19): its pin is then an
+ * array of ids, and the rules above apply id by id. This function reconciles only
+ * when `metaclasses` moved. Removing ONE identity of a name that keeps others does
+ * not move it, so `next` comes back untouched — correct, because the caller
+ * (`removeMetaclass`) writes the shrunk pin itself in the same patch.
  */
 export function withMetaclassPins<T extends PinnableIR>(
     prev: T,
@@ -147,9 +167,20 @@ export function withMetaclassPins<T extends PinnableIR>(
     };
 
     const list = Array.isArray(next.metaclasses) ? next.metaclasses : [];
+    const declared = (id: string) => (ctx.candidates ?? []).some((c) => c.id === id);
     const pins: AuthoringMetaclassPins = {};
     for (const name of list) {
-        const hit = resolveMetaclassId(name, { ...ctx, pins: declaredPins });
+        // A declared pin is validated against `candidates`: a string that no metamodel
+        // declares any more is dropped, an array is filtered id by id. What survives
+        // is normalized (one id -> the plain string; several -> the array, in order);
+        // nothing surviving falls through to the chain as if the name were unpinned.
+        const declaredPin = declaredPins[name];
+        const kept = Array.isArray(declaredPin)
+            ? declaredPin.filter(declared)
+            : declaredPin && declared(declaredPin) ? [declaredPin] : [];
+        if (kept.length > 1) { pins[name] = kept; continue; }
+        if (kept.length === 1) { pins[name] = kept[0]; continue; }
+        const hit = resolveMetaclassId(name, ctx);
         if (hit) pins[name] = hit.id;
     }
 
