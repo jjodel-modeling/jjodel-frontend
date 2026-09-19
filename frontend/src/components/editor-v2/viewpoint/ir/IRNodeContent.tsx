@@ -15,12 +15,12 @@ import { store, U } from '../../../../joiner';
 import { syncNodeLabel, syncSetReferenceValue, syncUpdateFeatureValue } from '../../sync/canvasToJjom';
 import { useEditorContextSafe } from '../../contexts/EditorContext';
 import InlineObjectSelect, { type InlineObjectOption } from '../../components/InlineObjectSelect';
-import type { CompiledView, CompiledTextStyle, NodeViewIR } from './irTypes';
+import type { CompiledView, CompiledTextStyle } from './irTypes';
 import type { ReadCtx } from './irReadCtx';
 import { makeReadCtx } from './irReadCtxLproxy';
 import { rowRenderedChildren } from './irContainment';
 import {
-    authoredCornerRadius, getShapeDescriptor, honorsCornerRadius, resolveCornerRadius, roundedPolygonPath,
+    getShapeDescriptor, honorsCornerRadius, resolveCompiledCornerRadius, resolveCornerRadius, roundedPolygonPath,
     SVG_BORDER_DASH, type ShapePainter, type Size,
 } from './shapeRegistry';
 
@@ -390,13 +390,13 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx, onInspectFeature
         inlineStyle.border = `${borderWidthV ?? 1}px ${borderStyleV ?? 'solid'} ${borderColorV || 'var(--border-default)'}`;
     }
 
-    // Corner radius (slice 3, D5). Read from the source ir and not from a compiled
-    // field: the compile cache is keyed on the hash of the whole ir, so `compiled.ir` is
-    // always the current one. Absent draws nothing here and the class rules keep 4px and
-    // 10px. The box is measured only for a written radius above 0 on a form that honors
-    // it; resolveCornerRadius owns every other branch.
+    // Corner radius (slice 3, D5; Conditional by R-IRN-35). Resolved per instance from
+    // the compiled axis on the read context, like the border axes above, and never from
+    // the source ir. Absent, or a conditional with no matching branch, draws nothing here
+    // and the class rules keep 4px and 10px. The box is measured only for a written
+    // radius above 0 on a form that honors it; resolveCornerRadius owns every other branch.
     const [svgEl, setSvgEl] = useState<SVGSVGElement | null>(null);
-    const authoredRadius = authoredCornerRadius((compiled.ir as NodeViewIR).shape?.cornerRadius);
+    const authoredRadius = resolveCompiledCornerRadius(compiled, readCtx, objectId);
     const needsCornerBox = authoredRadius !== undefined && authoredRadius > 0 && honorsCornerRadius(form);
     const cornerBox = useCornerBox(needsCornerBox, !!svgPainter, svgEl, contentRef);
     const cornerPaint = resolveCornerRadius(form, authoredRadius, cornerBox);

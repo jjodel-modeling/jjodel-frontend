@@ -16,7 +16,8 @@
  * Modulo puro: nessun React, nessun Redux, nessun import a runtime da editor-v2.
  */
 
-import type { ShapeForm } from './irTypes';
+import type { CompiledView, ShapeForm } from './irTypes';
+import type { ReadCtx } from './irReadCtx';
 
 /**
  * Chi dipinge la forma.
@@ -497,6 +498,24 @@ export function resolveCornerRadius(form: ShapeForm | undefined, authored: unkno
     if (painter.kind !== 'svg' || !box || !(box.w > 0) || !(box.h > 0)) return { kind: 'none' };
     const clamped = clampCornerRadius(r, box.w, box.h);
     return clamped > 0 ? { kind: 'path', r: clamped, w: box.w, h: box.h } : { kind: 'none' };
+}
+
+/**
+ * The radius one node paints (R-IRN-35): `compiled.cornerRadius` resolved for `elementId`
+ * on the read context, `undefined` when there is nothing to write. The renderer calls this
+ * and feeds the result to `resolveCornerRadius`; it lives here and not in IRNodeContent
+ * because the painter cannot be imported in the test bench.
+ *
+ * `undefined` for an axis the view does not declare (`null`), for a conditional with no
+ * matching branch (the compile fallback is `undefined`, never 0), and for a value that is
+ * not usable (`authoredCornerRadius`). A written 0 is a value and comes back as 0.
+ */
+export function resolveCompiledCornerRadius(
+    compiled: Pick<CompiledView, 'cornerRadius'>,
+    ctx: ReadCtx,
+    elementId: string,
+): number | undefined {
+    return compiled.cornerRadius ? authoredCornerRadius(compiled.cornerRadius(ctx, elementId)) : undefined;
 }
 
 /** Three decimals, no trailing zeros, no `-0`: a stable `d` for tests and diffs. */

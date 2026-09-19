@@ -255,6 +255,28 @@ describe('validateIR: shape.cornerRadius numeric guard (slice 3, D5)', () => {
         }
     });
 
+    it('accepts the conditional forms as it does the border axes: no value guard on the branches (R-IRN-35)', () => {
+        const rules = { rules: [{ when: { op: 'isKind', class: 'FinalState' }, then: 12 }], default: 4 };
+        const whenElse = { when: { op: 'isKind', class: 'FinalState' }, then: 12, else: 4 };
+        const emptyRules = { rules: [] };
+        for (const [name, value] of [['rules', rules], ['when/else', whenElse], ['empty rules', emptyRules]] as const) {
+            clearCompileCache();
+            expect(validateIR(`v-radius-cond-${name}`, vertexWithRadius(value)), name).toEqual({ ok: true });
+        }
+        // The predicate is still checked, by the walk that already covers the border axes.
+        clearCompileCache();
+        const badOp = { rules: [{ when: { op: 'nope', class: 'FinalState' }, then: 12 }] };
+        const r = validateIR('v-radius-cond-bad-op', vertexWithRadius(badOp));
+        expect(r.ok).toBe(false);
+        if (!r.ok) expect(r.error).toContain('unknown predicate operator "nope"');
+    });
+
+    it('a conditional radius is not held to the literal numeric guard on its branches', () => {
+        clearCompileCache();
+        // Same permissiveness as the border axes, whose branch values are never checked.
+        expect(validateIR('v-radius-cond-nan-branch', vertexWithRadius({ rules: [], default: -3 })), 'negative default, read as absent by the render').toEqual({ ok: true });
+    });
+
     it('applies to graphVertex too, not only to vertex', () => {
         clearCompileCache();
         const negative: unknown = -4;

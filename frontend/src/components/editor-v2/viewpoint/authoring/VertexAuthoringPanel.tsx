@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { LProject, LPointerTargetable, DClass, type LViewElement } from '../../../../joiner';
-import { Input, Select, NumberInput, ColorPicker, ErrorText, Button, HelpText, ConditionalEditor, Toggle, FormSection, type PathBuilderFeatures } from '../../../ui';
+import { Input, Select, NumberInput, ColorPicker, ErrorText, Button, HelpText, ConditionalEditor, isConditionalValue, Toggle, FormSection, type PathBuilderFeatures } from '../../../ui';
 import { getMetaclassInfo, type MetaclassInfo } from '../../hooks/useEditorMode';
 import { validateIR } from '../ir/irValidate';
 import { defaultObjectViewIR } from '../ir/irDefaults';
@@ -411,6 +411,10 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
     // invalid persisted value reads as absent here too, so the stepper shows the base
     // radius instead of seeding itself with a number the canvas ignores.
     const cornerRadius = authoredCornerRadius(shape.cornerRadius);
+    // A rule-driven radius (R-IRN-35) has no single number for the stepper to show, and
+    // the stepper writes a scalar: touching it would drop the rules. The control for the
+    // rules is owed to S6; until then the stepper is off and says why.
+    const cornerRuleDriven = isConditionalValue(shape.cornerRadius);
     // Resolved resizable state (mirrors the checkbox default): explicit flag ?? per-form default.
     // Gates the "Propagate size" button — propagating a size to a non-resizable view has no effect.
     const canResize = draft.resizable ?? defaultResizableForForm(typeof form === 'string' ? form : undefined);
@@ -658,18 +662,20 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                             <NumberInput
                                 value={cornerRadius ?? baseCornerRadius(scalarForm)}
                                 min={0}
-                                disabled={radiusIgnored}
+                                disabled={radiusIgnored || cornerRuleDriven}
                                 onChange={(r) => patchShape({ cornerRadius: r })}
                             />
                         </span>
-                        {cornerRadius === undefined ? (
+                        {cornerRuleDriven ? (
+                            <span style={{ fontSize: 11, color: '#94a3b8' }}>rule-driven</span>
+                        ) : cornerRadius === undefined ? (
                             <span style={{ fontSize: 11, color: '#94a3b8' }}>default</span>
                         ) : (
                             <Button variant="ghost" size="sm" onClick={resetCornerRadius}>
                                 Reset
                             </Button>
                         )}
-                        {!radiusIgnored && <CornerRadiusGlyphs radius={cornerRadius ?? baseCornerRadius(scalarForm)} />}
+                        {!radiusIgnored && !cornerRuleDriven && <CornerRadiusGlyphs radius={cornerRadius ?? baseCornerRadius(scalarForm)} />}
                     </div>
                     <HelpText icon={false}>
                         {radiusIgnored

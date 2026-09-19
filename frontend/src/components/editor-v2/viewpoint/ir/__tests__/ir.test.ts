@@ -28,6 +28,7 @@ import { assignGeometricHandles, decorateReferenceEdges, synthesizeObjectAsEdges
 import { applyIRPaletteFilter, deriveDroppableChildMetaclasses, deriveIRInteraction, matchConnectRules } from '../irInteraction';
 import type { EdgeViewIR, GraphVertexViewIR, RowViewIR, VertexViewIR } from '../irTypes';
 import { CONTAINER_ENDPOINT } from '../irTypes';
+import { resolveCompiledCornerRadius, resolveCornerRadius } from '../shapeRegistry';
 
 /** Build a minimal D-layer world: metamodel classes + objects with slots. */
 function world() {
@@ -130,6 +131,87 @@ describe('irCompile', () => {
         expect(perAxis.borderWidth!(ctx, 's1')).toBe(1);
         expect(perAxis.borderColor).toBeNull();
         expect(perAxis.borderStyle).toBeNull();
+    });
+    // Corner radius as a Conditional (R-IRN-35). The renderer (IRNodeContent) is not
+    // importable in this bench, so what is executed is the chain it runs: compileView,
+    // resolveCompiledCornerRadius on the read context, resolveCornerRadius on the form.
+    describe('cornerRadius as a Conditional (R-IRN-35)', () => {
+        const BOX = { w: 160, h: 64 };
+        const DIAMOND_BOX = { w: 100, h: 60 };
+        const radiusView = (id: string, shape: Partial<VertexViewIR['shape']>) => {
+            clearCompileCache();
+            return compileView(id, vertexIR({ shape: { form: 'rect', ...shape } }));
+        };
+
+        it('a literal 8 compiles to a resolved 8, painted on a box and on a diamond', () => {
+            const { ctx } = world();
+            const box = radiusView('v_cr_literal_rect', { cornerRadius: 8 });
+            expect(box.cornerRadius).not.toBeNull();
+            expect(box.cornerRadius!(ctx, 's1')).toBe(8);
+            const r = resolveCompiledCornerRadius(box, ctx, 's1');
+            expect(r).toBe(8);
+            expect(resolveCornerRadius('rect', r, BOX)).toEqual({ kind: 'css', px: 8 });
+            const diamond = radiusView('v_cr_literal_diamond', { form: 'diamond', cornerRadius: 8 });
+            const rd = resolveCompiledCornerRadius(diamond, ctx, 's1');
+            expect(rd).toBe(8);
+            expect(resolveCornerRadius('diamond', rd, DIAMOND_BOX)).toEqual({ kind: 'path', r: 8, ...DIAMOND_BOX });
+        });
+
+        it('absent compiles to null and renders the base radius, never a written one', () => {
+            const { ctx } = world();
+            const cv = radiusView('v_cr_absent', {});
+            expect(cv.cornerRadius).toBeNull();
+            const r = resolveCompiledCornerRadius(cv, ctx, 's1');
+            expect(r).toBeUndefined();
+            for (const form of ['rect', 'rounded', 'diamond'] as const) {
+                expect(resolveCornerRadius(form, r, BOX), form).toEqual({ kind: 'none' });
+            }
+        });
+
+        it('one rule resolves per instance, and no matching branch leaves the base radius', () => {
+            const { ctx } = world();
+            const withDefault = radiusView('v_cr_rule_default', {
+                cornerRadius: { rules: [{ when: { op: 'isKind', class: 'FinalState' }, then: 12 }], default: 4 },
+            });
+            expect(resolveCompiledCornerRadius(withDefault, ctx, 's2')).toBe(12);
+            expect(resolveCompiledCornerRadius(withDefault, ctx, 's1')).toBe(4);
+            // No default and no else: the fallback is NOT emitted, so an unmatched
+            // instance keeps the form's own radius instead of a sharp corner.
+            const noDefault = radiusView('v_cr_rule_nodefault', {
+                cornerRadius: { rules: [{ when: { op: 'isKind', class: 'FinalState' }, then: 12 }] },
+            });
+            expect(resolveCompiledCornerRadius(noDefault, ctx, 's2')).toBe(12);
+            expect(resolveCompiledCornerRadius(noDefault, ctx, 's1')).toBeUndefined();
+            expect(resolveCornerRadius('rect', resolveCompiledCornerRadius(noDefault, ctx, 's1'), BOX)).toEqual({ kind: 'none' });
+            const oneRule = radiusView('v_cr_when_else', {
+                cornerRadius: { when: { op: 'isKind', class: 'FinalState' }, then: 12 },
+            });
+            expect(resolveCompiledCornerRadius(oneRule, ctx, 's2')).toBe(12);
+            expect(resolveCompiledCornerRadius(oneRule, ctx, 's1')).toBeUndefined();
+        });
+
+        it('a conditional radius extends the dependency set with the predicate of its rules', () => {
+            const cv = radiusView('v_cr_deps', {
+                cornerRadius: { rules: [{ when: { op: 'eq', left: '$isInitial.value', right: { kind: 'boolean', value: true } }, then: 12 }], default: 4 },
+            });
+            expect(cv.dependencySet).toContain('isInitial');
+        });
+
+        it('0 is honoured, not treated as absent', () => {
+            const { ctx } = world();
+            const literal = radiusView('v_cr_zero', { cornerRadius: 0 });
+            expect(literal.cornerRadius).not.toBeNull();
+            expect(literal.cornerRadius!(ctx, 's1')).toBe(0);
+            const r = resolveCompiledCornerRadius(literal, ctx, 's1');
+            expect(r).toBe(0);
+            expect(resolveCornerRadius('rect', r, BOX)).toEqual({ kind: 'css', px: 0 });
+            const ruled = radiusView('v_cr_zero_rule', {
+                cornerRadius: { rules: [{ when: { op: 'isKind', class: 'FinalState' }, then: 0 }], default: 8 },
+            });
+            expect(resolveCompiledCornerRadius(ruled, ctx, 's2')).toBe(0);
+            expect(resolveCornerRadius('rounded', resolveCompiledCornerRadius(ruled, ctx, 's2'), BOX)).toEqual({ kind: 'css', px: 0 });
+            expect(resolveCompiledCornerRadius(ruled, ctx, 's1')).toBe(8);
+        });
     });
     it('rejects forbidden PathExpr constructs by skipping compile (throw)', () => {
         expect(() => compileView('v_bad', vertexIR({

@@ -172,6 +172,30 @@ export interface ShapeSpec {
         style?: Conditional<'solid' | 'dashed' | 'dotted' | 'double'>;
     };
     /**
+     * Corner radius in px, applied to every vertex of the shape (ir-1.3 addendum, asse
+     * raggio; slice 3 of Symbol Editor 1b, decision D5; Conditional by R-IRN-35).
+     * Sibling of `border`, not a field on it: the radius belongs to the box, not the
+     * stroke, and would be unreachable with no border declared if it lived inside
+     * `border`. Conditional like every border axis, so a rule can vary it per instance.
+     *
+     * ABSENT IS NOT ZERO. Absent keeps the form's base radius, which is what every
+     * saved view renders today: 4px on `rect` (irStyle.ts, `.ir-node-content`), 10px on
+     * `rounded` (`.ir-shape--rounded`), sharp on the polygons. A written value, 0
+     * included, replaces that base and is persisted as typed. The same holds after
+     * compile: a conditional with no matching branch resolves to `undefined`, never 0.
+     *
+     * Honored by `rect`, `rounded` (inline `border-radius`) and by `diamond`, `hexagon`,
+     * `parallelogram` (a rounded path, `roundedPolygonPath` in shapeRegistry.ts).
+     * Ignored by `ellipse`, `circle` and `stadium`, whose `border-radius` (50%, 50%,
+     * 999px) is what constitutes the shape rather than a decoration of it, and by
+     * `cylinder` and `cloud`, which are paths with arcs of their own.
+     *
+     * Clamped to `min(w, h) / 4` at render only. Not a recognition axis: a preset stays
+     * recognized whatever the radius. Additive optional field: no irVersion bump, no
+     * migration.
+     */
+    cornerRadius?: Conditional<number>;
+    /**
      * Notation marker drawn inside the shape (asse marker, 2026-08-15): id from
      * markerRegistry.ts (gateway x/plus, timer clock, history H, ...). Open
      * vocabulary like BadgeSpec.icon — an id outside the registry renders
@@ -188,26 +212,6 @@ export interface ShapeSpec {
      * (same precedent as `marker`).
      */
     padding?: PaddingToken;
-    /**
-     * Corner radius in px, applied to every vertex of the shape (slice 3 of Symbol
-     * Editor 1b, decision D5). Scalar like `padding`, never Conditional.
-     *
-     * ABSENT IS NOT ZERO. Absent keeps the form's base radius, which is what every
-     * saved view renders today: 4px on `rect` (irStyle.ts, `.ir-node-content`), 10px on
-     * `rounded` (`.ir-shape--rounded`), sharp on the polygons. A written value, 0
-     * included, replaces that base and is persisted as typed.
-     *
-     * Honored by `rect`, `rounded` (inline `border-radius`) and by `diamond`, `hexagon`,
-     * `parallelogram` (a rounded path, `roundedPolygonPath` in shapeRegistry.ts).
-     * Ignored by `ellipse`, `circle` and `stadium`, whose `border-radius` (50%, 50%,
-     * 999px) is what constitutes the shape rather than a decoration of it, and by
-     * `cylinder` and `cloud`, which are paths with arcs of their own.
-     *
-     * Clamped to `min(w, h) / 4` at render only. Not a recognition axis: a preset stays
-     * recognized whatever the radius. Additive optional field: no irVersion bump, no
-     * migration (same precedent as `padding`).
-     */
-    cornerRadius?: number;
     /**
      * Typographic style of the whole symbol (ir-1.3, node-level cascade root).
      * Applied inline on `.ir-node-content` and inherited by every text surface
@@ -773,6 +777,10 @@ export interface CompiledView {
     borderColor: CompiledConditional<string> | null;
     borderWidth: CompiledConditional<number> | null;
     borderStyle: CompiledConditional<'solid' | 'dashed' | 'dotted' | 'double'> | null;
+    /** Compiled corner radius in px; undefined-returning function or null mean "no
+     *  override" (see ShapeSpec.cornerRadius) — kept distinct from 0, a legitimate
+     *  authored value (square corner). */
+    cornerRadius: CompiledConditional<number | undefined> | null;
     /** Compiled marker id ('' = none); null when the view declares no marker. */
     marker: CompiledConditional<string> | null;
     /** shape.padding ?? 'normal' */

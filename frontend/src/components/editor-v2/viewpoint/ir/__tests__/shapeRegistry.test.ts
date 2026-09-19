@@ -16,7 +16,7 @@ import {
     SHAPE_REGISTRY, SVG_BORDER_DASH, getShapeDescriptor,
     contentRect, boxForContent, boxForContentNumeric,
     boxFromIntrinsic, hasSizeSupplement, MEASURE_SLACK,
-    baseCornerRadius, clampCornerRadius, honorsCornerRadius, resolveCornerRadius, roundedPolygonPath,
+    baseCornerRadius, clampCornerRadius, honorsCornerRadius, resolveCompiledCornerRadius, resolveCornerRadius, roundedPolygonPath,
 } from '../shapeRegistry';
 
 const ALL_FORMS: ShapeForm[] = [
@@ -675,5 +675,36 @@ describe('shapeRegistry: raggio degli spigoli', () => {
         expect(roundedPolygonPath(pointsOf('diamond'), 6, 100, NaN)).toBe('');
         expect(roundedPolygonPath('0,0 100,100', 6, 100, 100)).toBe('');
         expect(roundedPolygonPath('0,0 x,1 100,100', 6, 100, 100)).toBe('');
+    });
+});
+
+/**
+ * Il raggio compilato (R-IRN-35): `resolveCompiledCornerRadius` e' la lettura che
+ * IRNodeContent fa di `compiled.cornerRadius`, tenuta qui perche' il painter non si
+ * importa nel banco. Un compilato finto basta: la funzione non conosce la vista.
+ */
+describe('shapeRegistry: raggio compilato', () => {
+    const CTX = { tag: 'ctx' } as never;
+    const compiled = (fn: ((ctx: never, id: string) => unknown) | null) => ({ cornerRadius: fn as never });
+
+    it('un asse non dichiarato (null) non scrive nulla: la base resta', () => {
+        expect(resolveCompiledCornerRadius(compiled(null), CTX, 'o1')).toBeUndefined();
+    });
+
+    it('legge il valore nel contesto di lettura e per l\'elemento che gli si passa', () => {
+        const seen: unknown[] = [];
+        const out = resolveCompiledCornerRadius(compiled((ctx, id) => { seen.push(ctx, id); return 9; }), CTX, 'o7');
+        expect(out).toBe(9);
+        expect(seen).toEqual([CTX, 'o7']);
+    });
+
+    it('uno 0 e\' un valore scritto, non assente', () => {
+        expect(resolveCompiledCornerRadius(compiled(() => 0), CTX, 'o1')).toBe(0);
+    });
+
+    it('nessun ramo (undefined) e un valore non valido leggono come assente, come authoredCornerRadius', () => {
+        for (const bad of [undefined, NaN, -1, Infinity, '6', null]) {
+            expect(resolveCompiledCornerRadius(compiled(() => bad), CTX, 'o1'), String(bad)).toBeUndefined();
+        }
     });
 });
