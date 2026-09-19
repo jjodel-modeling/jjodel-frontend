@@ -247,7 +247,7 @@ function ConfigComponent(props: AllProps) {
     const descriptions: Desc[] = [
         new Desc("synchDelay", "number", <span>Synchronization delay</span>, <div>Interval between collaborative
             synchronization emission (reception has no delay).
-            <br/>Also used to compact multiple temporally close actions in a single undo-able step, similar to a TRANSACTION, to avoid cluttering the history.
+            <br/>Also used to compact multiple temporally close actions in a single undo-able step, similar to a transaction, to avoid cluttering the history.
             <br/>User-defined event chains or simulation loops can trigger multiple actions at once and easily clutter the history with low values of synchDelay.</div>),
         new Desc("advancedMode", "switch", <span>Advanced mode</span>, <div>Whether to show or hide some advanced features. Disabling it keeps the interface cleaner.</div>),
         new Desc("liveStateChanges", "switch", <span>Live state changes</span>, <span>The actual state is always updated only after an interval of "synchDelay",

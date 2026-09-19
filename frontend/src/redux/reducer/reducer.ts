@@ -1459,14 +1459,14 @@ function test(){
 
 function fixEnv(){
     let windoww = window as any;
-    console.log("fix env start", {meta: import.meta, menv:(import.meta as any).env, process:windoww.process, penv:windoww.env});
+    // console.log("fix env start", {meta: import.meta, menv:(import.meta as any).env, process:windoww.process, penv:windoww.env});
     if (!windoww.process) windoww.process = {};
     const process = windoww.process.env = (import.meta as any).env;
     const prefix = "VITE_";
     for (const k in process) {
         if (k.indexOf(prefix) === 0) process['JODEL_' + k.substring(prefix.length)] = process[k];
     }
-    console.log("fix env end", {meta: import.meta, menv:(import.meta as any).env, process, penv:process.env});
+    // console.log("fix env end", {meta: import.meta, menv:(import.meta as any).env, process, penv:process.env});
 }
 export async function stateInitializer() {
     console.warn('stateinitializer');

@@ -382,6 +382,249 @@ export class GenericType {
     operandsArray: GenericType | undefined = undefined;
     // annotations?: LAnnotation; // removed because i cannot have GenericType contain L-elements
 
+    static diff() {
+        const original = {
+            "eAnnotations": {
+                "@source": "http://www.example.org/documentation",
+                "@references": "#//",
+                "details": {
+                    "@key": "description",
+                    "@value": "This package contains exactly one of each major Ecore structural model element with all properties populated."
+                }
+            },
+            "eClassifiers": [
+                {
+                    "@xsi:type": "ecore:EDataType",
+                    "@name": "CustomString",
+                    "@instanceClassName": "java.lang.String",
+                    "@serializable": "true"
+                },
+                {
+                    "@xsi:type": "ecore:EEnum",
+                    "@name": "AccessLevel",
+                    "eLiterals": {
+                        "@name": "ADMIN",
+                        "@value": "1",
+                        "@literal": "ADMINISTRATOR"
+                    }
+                },
+                {
+                    "@xsi:type": "ecore:EClass",
+                    "@name": "IdentifiableElement",
+                    "@abstract": "true",
+                    "@interface": "false",
+                    "eStructuralFeatures": {
+                        "@xsi:type": "ecore:EAttribute",
+                        "@name": "id",
+                        "@eType": "ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//ELong",
+                        "@changeable": "true",
+                        "@volatile": "false",
+                        "@transient": "false",
+                        "@unsettable": "false",
+                        "@derived": "false",
+                        "@iD": "true"
+                    }
+                },
+                {
+                    "@xsi:type": "ecore:EClass",
+                    "@name": "UserAccount",
+                    "@abstract": "false",
+                    "@interface": "false",
+                    "@eSuperTypes": "#//IdentifiableElement",
+                    "eStructuralFeatures": [
+                        {
+                            "@xsi:type": "ecore:EAttribute",
+                            "@name": "username",
+                            "@eType": "ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString",
+                            "@ordered": "true",
+                            "@unique": "true",
+                            "@lowerBound": "1",
+                            "@upperBound": "1",
+                            "@changeable": "true",
+                            "@volatile": "false",
+                            "@transient": "false",
+                            "@defaultValueLiteral": "anonymous_user",
+                            "@unsettable": "false",
+                            "@derived": "false",
+                            "@iD": "false"
+                        },
+                        {
+                            "@xsi:type": "ecore:EReference",
+                            "@name": "profile",
+                            "@eType": "#//SecurityProfile",
+                            "@ordered": "true",
+                            "@unique": "true",
+                            "@lowerBound": "0",
+                            "@upperBound": "1",
+                            "@changeable": "true",
+                            "@volatile": "false",
+                            "@transient": "false",
+                            "@unsettable": "false",
+                            "@derived": "false",
+                            "@containment": "true",
+                            "@resolveProxies": "true"
+                        }
+                    ],
+                    "eOperations": {
+                        "@name": "changePassword",
+                        "@eType": "ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean",
+                        "@ordered": "true",
+                        "@unique": "true",
+                        "@lowerBound": "1",
+                        "@upperBound": "1",
+                        "eParameters": {
+                            "@name": "newPassword",
+                            "@eType": "ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString",
+                            "@ordered": "true",
+                            "@unique": "true",
+                            "@lowerBound": "1",
+                            "@upperBound": "1"
+                        }
+                    }
+                },
+                {
+                    "@xsi:type": "ecore:EClass",
+                    "@name": "SecurityProfile"
+                },
+                {
+                    "@xsi:type": "ecore:EClass",
+                    "@name": "DataRepository",
+                    "@abstract": "false",
+                    "@interface": "false",
+                    "eTypeParameters": {
+                        "@name": "T"
+                    },
+                    "eStructuralFeatures": {
+                        "@xsi:type": "ecore:EAttribute",
+                        "@name": "storedData",
+                        "#text": "can structuralfeature have nested stuff inside??",
+                        "eGenericType": {
+                            "@eTypeParameter": "#//DataRepository/T"
+                        }
+                    }
+                }
+            ],
+            "xmlns:xmi": "http://www.omg.org/XMI",
+            "xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance",
+            "xmlns:ecore": "http://www.eclipse.org/emf/2002/Ecore",
+            "xmi:version": "2.0",
+            "name": "comprehensiveUniverse",
+            "nsURI": "http://www.example.org/comprehensiveUniverse",
+            "nsPrefix": "universe"
+        };
+
+        const roundtrip = {
+            "annotations": [],
+            "ecore:EPackage": [
+                {
+                    "annotations": [],
+                    "@xmi:version": "2.0",
+                    "@xmlns:xmi": "http://www.omg.org/XMI",
+                    "@xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance",
+                    "@xmlns:ecore": "http://www.eclipse.org/emf/2002/Ecore",
+                    "@name": "default",
+                    "@nsURI": "",
+                    "@nsPrefix": "universe",
+                    "eClassifiers": [
+                        {
+                            "annotations": [],
+                            "@xsi:type": "ecore:EClass",
+                            "@name": "IdentifiableElement",
+                            "@interface": "false",
+                            "@abstract": "true",
+                            "eStructuralFeatures": [
+                                {
+                                    "annotations": [],
+                                    "@xsi:type": "ecore:EAttribute",
+                                    "@eType": "#//EString",
+                                    "@name": "id"
+                                }
+                            ]
+                        },
+                        {
+                            "annotations": [],
+                            "@xsi:type": "ecore:EClass",
+                            "@name": "UserAccount",
+                            "@interface": "false",
+                            "@abstract": "false",
+                            "eStructuralFeatures": [
+                                {
+                                    "annotations": [],
+                                    "@xsi:type": "ecore:EAttribute",
+                                    "@eType": "#//EString",
+                                    "@name": "username",
+                                    "@lowerBound": "1"
+                                },
+                                {
+                                    "annotations": [],
+                                    "@xsi:type": "ecore:EReference",
+                                    "@eType": "#//UserAccount",
+                                    "@name": "profile",
+                                    "@containment": true,
+                                    "@container": false
+                                }
+                            ],
+                            "eOperations": [
+                                {
+                                    "annotations": [],
+                                    "@name": "changePassword",
+                                    "@eType": "#//EString",
+                                    "@lowerBound": "1",
+                                    "@upperBound": "1",
+                                    "@eExceptions": "",
+                                    "@ordered": "true",
+                                    "@unique": "true"
+                                }
+                            ]
+                        },
+                        {
+                            "annotations": [],
+                            "@xsi:type": "ecore:EClass",
+                            "@name": "SecurityProfile",
+                            "@interface": "false",
+                            "@abstract": "false"
+                        },
+                        {
+                            "annotations": [],
+                            "@xsi:type": "ecore:EClass",
+                            "@name": "DataRepository",
+                            "@interface": "false",
+                            "@abstract": "false",
+                            "eStructuralFeatures": [
+                                {
+                                    "annotations": [
+                                        {
+                                            "@source": "Comment_1",
+                                            "details": {
+                                                "comment": "can structuralfeature have nested stuff inside??"
+                                            }
+                                        }
+                                    ],
+                                    "@xsi:type": "ecore:EAttribute",
+                                    "@eType": "#//EString",
+                                    "@name": "storedData"
+                                }
+                            ]
+                        },
+                        {
+                            "annotations": [],
+                            "@xsi:type": "ecore:EEnum",
+                            "@name": "AccessLevel",
+                            "@serializable": "true",
+                            "eLiterals": [
+                                {
+                                    "annotations": [],
+                                    "value": 1,
+                                    "@literal": "ADMINISTRATOR",
+                                    "@name": "ADMIN"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    }
     static test() {
         T2M(L.from(DState.getState().models[0]), "eCore/XMI", `
 <?xml version="1.0" ?>

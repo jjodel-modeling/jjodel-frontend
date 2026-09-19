@@ -128,24 +128,24 @@
 
     // &:active .switch-mode__thumb { width: calc(50% - 4px); }
 
-    &.data-user {
+    &.data-project {
       .switch-mode__thumb {
         transform: translateX(0);
       }
-      .switch-mode__option--user {
+      .switch-mode__option--project {
         color: #111827;
       }
     }
 
     --text-length: 66px;
-    &.data-project {
+    &.data-user {
       .switch-mode__thumb {
         transform: translateX(100%);
         width: 30px;
         height: 30px;
         left: calc(100% - 60px + 0px);
       }
-      .switch-mode__option--project {
+      .switch-mode__option--user {
         color: #111827;
       }
     }

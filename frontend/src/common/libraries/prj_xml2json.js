@@ -196,7 +196,7 @@ export function xml2json(xml/*document|string*/, tab = '    '/*XML_DOM, string*/
    // document node
    if (xml.nodeType == 9) xml = xml.documentElement;
    let obj = X.toObj(X.removeWhite(xml));
-   console.log('xml2json xsi', {obj, xml});
+   // console.log('xml2json xsi', {obj, xml});
    for (let k in obj) if (k === 'xsitype' || k === window.ECoreParser.prefix+'xsitype') { obj[window.ECoreClass.xsitype] = obj[k]; delete obj[k];}
    if (!asString) return obj;
    var json = X.toJson(obj, xml.nodeName, "\t");

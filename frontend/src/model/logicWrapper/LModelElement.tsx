@@ -383,13 +383,20 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         let k0: string;
         let v0: any;
         let transformV: (v: any) => any;
-        function collectionsFix(v: any, skipEmpty = false){
+        function collectionsFix(v: any, skipEmpty = false): null | any[] {
             if (!v) return v;
             if (Array.isArray(v)) return (skipEmpty && !v.length) ? null : v;
             return [v];
         }
 
-        let bool = (k2: string, trilogic = false): boolean => {
+        type Literal<T extends string> = T extends string
+            ? string extends T
+                ? never // T got widened to `string` → reject
+                : T
+            : never;
+        // typed the function so it can only accept literals, not string variables to reduce mistakes
+        // and guarantee i'm passing a manually fixed key.
+        let bool = <T extends string>(k2: Literal<T>, trilogic = false): boolean => {
             delete ecore[k0];
             if (v0 === 0) v0 = false;
             else if (v0 === 1) v0 = true;
@@ -399,7 +406,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
             ecore[k2] = v0;
             return true;
         }
-        let string = (k2: string, trilogic = false, cast = true): string | false => {
+        let string = <T extends string>(k2: Literal<T>, trilogic = false, cast = true): string | false => {
             delete ecore[k0];
             if (!trilogic && !v0 && v0 !== "") return false;
             v0 = transformV(v0);
@@ -408,7 +415,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
             ecore[k2] = v0;
             return v0;
         }
-        let number = (k2: string, allowNaN = false, cast = true): number | false => {
+        let number = <T extends string>(k2: Literal<T>, allowNaN = false, cast = true): number | false => {
             delete ecore[k0];
             if (!allowNaN && isNaN(v0)) return false;
             v0 = transformV(v0);
@@ -417,7 +424,8 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
             ecore[k2] = v0;
             return v0;
         }
-        let exist = (k2: string, allowNull = false): true | false => {
+
+        let exist = <T extends string>(k2: Literal<T>, allowNull = false): true | false => {
             delete ecore[k0];
             if (v0 === undefined || !allowNull && v0 === null) return false;
             v0 = transformV(v0);
@@ -438,8 +446,18 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
 
             // fix casing inconsistencies and matches ecore names to jom names
             switch (lk) {
-                default: break;
-                case "#comment":
+                default:
+                    console.error("default setter unexpected m2 key", {lk, k0, ecore});
+                    if (!windoww.missingecckeys) windoww.missingecckeys = [];
+                    windoww.missingecckeys.push(lk);
+                    break;
+                case "isprimitive":
+                case "classname":
+                case "__childrentosort":
+                case "isid":
+                case "generictype": break;
+
+                case "#comment": case "#text": // comment is xmi-style comment. text is a basic text node in-between xmi tags
                     const comments = fixComments(v, "Comment_");
                     delete ecore[k];
                     if (comments.length) ecore.annotations = U.arrayMergeInPlace(fixComments(ecore.annotations), comments);
@@ -457,9 +475,9 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
                 case "name": string("name"); break;
 
                 case "values": if (!Array.isArray(v)) { delete ecore[k]; ecore.value = v; } break;
-                //  eliteral.value === "@value". same as "@value" for m1 features, ambiguous
+                //  eliteral.value === "@value". same as "@value" for m1 features, ambiguous, but this handler is for m2 only.
                 case "value":
-                    delete ecore[k]; ecore.value = number(v);
+                     delete ecore[k]; number("value");
                     // if (Array.isArray(v)) { delete ecore[k]; if (v.length) ecore.values = v; }
                     break;
 
@@ -482,19 +500,45 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
                 // classifier
                 case "references":              delete ecore[k]; v = collectionsFix(v); if (v.length) ecore.references = v; break; // class instead have eStructuralFeatures
 
-                // common to all features
-                case "egenerictype":
-                case "egenericsupertypes":
+                case "typeparameters":
+                case "etypeparameters": {
+                    if ((v as any)?.alreadyFixed) break;
                     delete ecore[k];
                     if (!v) break;
+                    const arr = collectionsFix(v) || [];
                     const model = thiss.get_model(c);
-                    const serialized = GenericType.serializeGenericType(v, model, true);
-                    if (!serialized) break;
                     const classes = model.classes;
                     const enums = model.enums;
                     const typedecls = model.allTypeDeclarations;
-                    ecore.genericType = GenericType.parse(serialized, classes, enums, typedecls);
-                    break;
+                    const tdArr = arr.map(e=> {
+                        const serialized = GenericType.serializeTypeDeclaration(e, model, true);
+                        if (!serialized) return null;
+                        return GenericType.parseDeclaration(serialized, classes, enums, typedecls);
+                    }).filter(e=> !!e);
+                    if (tdArr.length) ecore.typeParameters = tdArr;
+                    (tdArr as any).alreadyFixed = true;
+                } break;
+
+                // common to all features
+                case "generictype": case "genericsupertypes":
+                case "egenerictype":
+                case "egenericsupertypes": {
+                    if ((v as any)?.alreadyFixed) break;
+                    delete ecore[k];
+                    if (!v) break;
+                    const arr = collectionsFix(v) || [];
+                    const model = thiss.get_model(c);
+                    const classes = model.classes;
+                    const enums = model.enums;
+                    const typedecls = model.allTypeDeclarations;
+                    const genericTypesArr = arr.map(e=> {
+                        const serialized = GenericType.serializeGenericType(e, model, true);
+                        if (!serialized) return null;
+                        return GenericType.parse(serialized, classes, enums, typedecls);
+                    }).filter(e=> !!e);
+                    if (genericTypesArr.length) ecore.genericType = genericTypesArr;
+                    (genericTypesArr as any).alreadyFixed = true;
+                    } break;
 /* eg: {
     "@eClassifier": "#//Repository",
     "eTypeArguments": {
@@ -558,7 +602,13 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
                     delete ecore[k]; v = collectionsFix(v, false); if (v.length) ecore.extends = v; break;
                 case "instanceclassname": exist("instanceClassName", v); break;
                 case "instancetypename":  exist("instanceTypeName", v); break;
-                case "eliterals": case "literals":     delete ecore[k]; v = collectionsFix(v); if (v.length) ecore.literals = v; break;
+                case "eliterals": case "literals":
+                    console.log("ecore eliterals", U.jsonCopy({ecore, vv:ecore[lk], v, k, v2:collectionsFix({...v})}));
+
+                    delete ecore[k]; v = collectionsFix(v); if (v.length) ecore.literals = v;
+                    console.log("ecore eliterals post", U.jsonCopy({ecore, vv:ecore[lk], v, k}));
+
+                    break;
                 case "eoperations": case "operations": delete ecore[k]; v = collectionsFix(v); if (v.length) ecore.operations = v; break;
 
                 case "literal":                        delete ecore[k]; ecore.literal = v; break;
@@ -567,6 +617,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
 
 
             }
+            if ("1" in ecore) { console.error("found array index in xmi post", U.jsonCopy({lk, k, v, ogKeys, ecore})); }
             // if (k[0] !== '@') continue;
             // ecore[k.substring(1)] = ecore[k];
             // delete ecore[k];
