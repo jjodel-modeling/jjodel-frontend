@@ -1,0 +1,3 @@
+runs/*/result.json
+runs/*/stderr.log
+runs/*/pid

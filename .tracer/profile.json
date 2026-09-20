@@ -1,0 +1,14 @@
+{
+  "disallowedTools": [
+    "Bash(npm run pushmde*)",
+    "Bash(npm run deploy*)",
+    "Bash(npm run predeploy*)",
+    "Bash(npm run eject*)",
+    "Bash(npx gh-pages*)",
+    "Bash(gh-pages*)",
+    "Bash(git add .)",
+    "Bash(git add -A*)",
+    "Read(./.env)",
+    "Read(./.env.*)"
+  ]
+}
