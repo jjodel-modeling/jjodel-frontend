@@ -1,7 +1,7 @@
 # Prompt: Symbol Editor slice S6, authoring of `underline` and of a rule-driven `cornerRadius`
 
 Prompt-ID: P-2026-09-21-1455
-Status: eseguito 2026-09-21 · lane symbol-editor · 94eb92a21
+Status: eseguito 2026-09-21 · lane symbol-editor · 94eb92a21 · verifica visiva passata 2026-09-21
 Repo: `~/jjodel-release` (worktree of `alfonso-frontend-jjtl`, the trunk, HEAD `1387967a0` or later).
 Not `~/jjodel`, not `~/jjodel-sim`: a session whose last commit is dated 2026-09-20 and that sees an
 untracked copy of the 2219 prompt is in the wrong tree; stop and say so.
