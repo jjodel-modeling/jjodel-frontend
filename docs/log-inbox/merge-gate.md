@@ -28,3 +28,16 @@ parallel lanes are running (P9). To be merged into the active log by whoever rot
 **Smoke visivo**: passato — Alfonso, ACK of 2026-09-21, seven of seven on `localhost:3002`; which sub-checks of each item were exercised is not itemized in the ACK.
 **Notes**: RC-11 derogation, declared: `npm run check:docs` Check B is red on the trunk after the rotation (10 field errors in 7 entries folded verbatim from the trunk inboxes: Causa with an annotation, Corregge or Causa absent). Accepted by Alfonso on 2026-09-21; the entries stay verbatim and the repair is a docs lane of its own after the push.
 **Prompt document name**: 2026-09-19 17:40
+
+## 2026-09-21 — chore: simulation-engine slice 0 onto the trunk, the archive tag and the pushes, step F (P-2026-09-19-1740)
+**Prompt**: `P-2026-09-19-1740` addendum item 2, step F, P14 literal. Of the 38 commits of `simulation-engine` six were not on the trunk (`git cherry`, re-measured 2026-09-21: the same six). Tag `archive/simulation-engine-2026-09-14` on `baf7b2b8a`; the three code commits picked with `-x` one at a time, `merge-tree` before each against the moving HEAD; the three log commits not picked, their entries moved verbatim into `docs/log-inbox/simulation.md`; `~/jjodel-sim` reset to the trunk. Hard stop before the pushes, then Alfonso's GO.
+**Files touched**: code `135ab7a24` (from `2f53c876a`), `25cd6149a` (from `c70c9f7b5`), `857cb9335` (from `c09cf4353`); docs `577cc52b5` (`docs/log-inbox/simulation.md`, three entries verified verbatim by substring). This entry in its own commit.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. After the third pick, from `frontend/` through the temporary symlink: vitest **3962 passed, 0 failed** (3935 + 27 from `step.test.ts`, which ran alone as 27 of 27), the same 9 files red at import as the trunk; typecheck **14**, the same set as the trunk. Build not re-run (the picks add no new dependency and the build was measured at the merge).
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Pushed on Alfonso's GO of 2026-09-21: `alfonso-frontend-jjtl` 67290d8f5..577cc52b5 (the trunk was at 1b36576fb before the merge) and the tag. `simulation-engine` does not exist on origin (`ls-remote --heads` empty), so nothing was left alone there: the branch was only ever local. `~/jjodel` holds `4d8a93124` (tracer) on the branch, after the merge, outside this lane.
+**Prompt document name**: 2026-09-19 17:40
