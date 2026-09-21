@@ -2,7 +2,7 @@
 
 Prompt-ID: P-2026-09-21-1620
 Chat: C-2026-09-21-1620
-Status: eseguito 2026-09-21 · lane harness · ff5e5a84f
+Status: eseguito 2026-09-21 · lane harness · 335e6221f
 Repo: `~/jjodel-release` (worktree of `alfonso-frontend-jjtl`, the trunk, HEAD `2183dc66b` or later,
 origin at `2183dc66b`). Not `~/jjodel`, not `~/jjodel-sim`: a session whose last commit is dated
 2026-09-20 is in the wrong tree; stop and say so.
