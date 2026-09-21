@@ -2,7 +2,7 @@
 
 Prompt-ID: P-2026-09-21-1620 (Phase 2 of `claude_2026-09-21_1620_prompt_harness_mechanization_phase1.md`)
 Chat: C-2026-09-21-1620
-Status: da eseguire
+Status: eseguito 2026-09-21 · lane harness · ff5e5a84f
 Repo: `~/jjodel-release` (trunk `alfonso-frontend-jjtl`, HEAD `63757d5f3` or later).
 Report this phase answers: `docs/discovery/discovery_2026-09-21_harness_mechanization.md` (`63757d5f3`).
 Protocollo: docs/PROTOCOL.md, clausole P1..P15 applicabili (tutte salvo deroga esplicita nel prompt).
