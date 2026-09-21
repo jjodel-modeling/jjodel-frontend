@@ -90,7 +90,7 @@ Lo smoke non sostituisce la verifica di Alfonso, che riguarda proporzioni, gerar
 
 ## P9 — Prompt log
 
-Al termine di ogni task, aggiungi un'entry in testa a `docs/claude-code-log.md` (newest-first per giorno, R-RAIL-45). Leggi il log a inizio sessione per il contesto sulle modifiche recenti. Oltre le 40 entry, sposta le più vecchie in `docs/claude-code-log-archive.md`.
+Al termine di ogni task, aggiungi un'entry in testa a `docs/claude-code-log.md` (newest-first per giorno, R-RAIL-45). Leggi il log a inizio sessione per il contesto sulle modifiche recenti. Oltre le 40 entry, sposta le più vecchie in `docs/claude-code-log-archive.md`. Il ripiegamento delle inbox e la rotazione si eseguono con `npm run log:rotate -- --fold --rotate --write` da `frontend/`, in corsia esclusiva (RC-12); sopra le 40 entry `check:docs` è rosso.
 
 Formato:
 

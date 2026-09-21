@@ -58,8 +58,12 @@ function absent(v: unknown): boolean {
  */
 export function recognizeSymbol(shape: ShapeSpec): readonly SymbolPreset[] {
     const form = scalarOf(shape.form);
-    const style = shape.border?.style ?? 'solid';
-    const width = shape.border?.width ?? 1;
+    // Slice 2 (D1): the two border axes pass through the same sentinel as form, fill and
+    // marker. A conditional axis must match NO preset, and the `default` is never
+    // inspected: recognizing on it would let the modal title claim a preset that an
+    // instance may not draw — the title would lie instead of falling back to «Custom».
+    const style = scalarOf(shape.border?.style) ?? 'solid';
+    const width = scalarOf(shape.border?.width) ?? 1;
     const marker = scalarOf(shape.marker);
     const fill = scalarOf(shape.fill);
 

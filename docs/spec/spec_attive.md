@@ -1,6 +1,6 @@
 # Spec attive — indice consolidato
 
-Aggiornato: 2026-09-08. Questo file sostituisce nel Project Knowledge le spec integrali, che vivono in `docs/spec/` nel repo (`alfonso-frontend-jjtl`). Qui: stato, catena di supersessione, invarianti essenziali, puntatore al file integrale. In caso di dubbio fa fede il file integrale nel repo.
+Aggiornato: 2026-09-14. Questo file sostituisce nel Project Knowledge le spec integrali, che vivono in `docs/spec/` nel repo (`alfonso-frontend-jjtl`). Qui: stato, catena di supersessione, invarianti essenziali, puntatore al file integrale. In caso di dubbio fa fede il file integrale nel repo.
 
 ## Catena di supersessione IR
 
@@ -83,6 +83,11 @@ Invarianti da tenere a mente in chat: il tri-stato si costruisce al confine dell
 Due prerequisiti, entrambi dopo il rilascio della 3.0: il triage di `ValidationPill` (non montata dal 2026-08-26) e delle violazioni di modello scartate in `conformanceToProblems.ts:43`; la consolidazione dei nomi riservati in un elenco unico importato da entrambi i lexer, con la diagnostica sui tre letterali `true`/`false`/`null`, unico caso in cui il sistema sbaglia in silenzio. La riparazione del lexer è corsia separata, non prerequisito.
 
 Ciclo di vita e portabilità sono chiusi da R-VAL-9 e R-VAL-10 (modale alla cancellazione della classe con default conservativo; i viewpoint di validazione seguono il metamodello e arrivano attivi). Le regole di superclasse e sottoclasse si accumulano e non si sovrascrivono (R-VAL-12), con la congiunzione nell'aggregato e non nelle regole. Il verdetto pretende un booleano e il valutatore non converte nulla (R-VAL-13, dopo la misura dello Step 0: un array con un falso dentro risulta vero per tutte le vie, l'array vuoto risulta falso); un risultato non booleano è un difetto della regola, non un verdetto. Nessuna domanda aperta: niente cartello nel rail (R-VAL-11) e regola come tipo parallelo senza supertipo comune (R-VAL-6-bis, la view seleziona e la regola predica).
+
+## Modello computazionale del simulatore
+**File**: `docs/spec/claude_spec_2026-09-13_computational_model.md` · **Stato**: vigente, ratificata il 2026-09-14 (R-SIM-7..R-SIM-15); nessuna implementazione ancora, slice 0 in `docs/prompts/claude_2026-09-14_0140_prompt_sim_slice0_foundations.md` da eseguire dopo la 3.0 su worktree e ramo `simulation-engine`
+
+Configurazione (M fisso, stato σ del motore, evento e); marking come componente di stato per elemento con dominio dichiarato nella STC; passo con due ingressi (evento, selettore) e vincolo di progresso (nessun firing solo se nulla è abilitato); scarto e quiescenza come passi a stato invariato; azioni come assegnamenti paralleli letti sullo stato precedente, atomici nel passo; guardie JjEL read-only nel sottoinsieme traducibile; vocabolario nuXmv (FROZENVAR/VAR/IVAR/DEFINE/TRANS/ASSIGN) adottato dal primo giorno, esportatore .smv tra il passo 4 e il 5, esecuzione al passo 6. Esclusi per costruzione: tempo e do-activity, struttura dinamica, concorrenza vera, deferral. Piano in sei passi in §9.
 
 ## Design parcheggiati
 **Dove**: `docs/spec/parcheggiate/` (templates featured projects, templates explore) e `docs/spec/design_2026-05-03_L2_edge_overlay.md`. Nessuno vigente; si riattivano per decisione esplicita.

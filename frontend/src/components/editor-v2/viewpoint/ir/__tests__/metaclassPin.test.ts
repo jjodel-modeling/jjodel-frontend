@@ -89,11 +89,35 @@ describe('resolveMetaclassId — the three-step chain', () => {
         expect(resolveMetaclassId('', { candidates: CANDIDATES })).toBeNull();
         expect(resolveMetaclassId(null, { candidates: CANDIDATES })).toBeNull();
     });
+
+    it('an array pin answers with its FIRST id (features come from one class)', () => {
+        expect(resolveMetaclassId('State', {
+            pins: { State: [B_STATE.id, A_STATE.id] },
+            appliesTo: [],
+            candidates: CANDIDATES,
+        })).toEqual({ id: B_STATE.id, source: 'pin' });
+    });
+
+    it('an array pin skips ids no metamodel declares any more, keeping the first that survives', () => {
+        expect(resolveMetaclassId('State', {
+            pins: { State: ['ptr_gone', A_STATE.id] },
+            appliesTo: [],
+            candidates: CANDIDATES,
+        })).toEqual({ id: A_STATE.id, source: 'pin' });
+    });
+
+    it('an array pin with no declared id falls through to the rest of the chain', () => {
+        expect(resolveMetaclassId('State', {
+            pins: { State: ['ptr_gone', 'ptr_gone_too'] },
+            appliesTo: [B_STATE],
+            candidates: CANDIDATES,
+        })).toEqual({ id: B_STATE.id, source: 'appliesTo' });
+    });
 });
 
 const CTX = { appliesTo: [B_STATE], candidates: CANDIDATES };
 
-const irWith = (metaclasses: string[] | '*', pins?: Record<string, string>): PinnableIR =>
+const irWith = (metaclasses: string[] | '*', pins?: Record<string, string | string[]>): PinnableIR =>
     pins ? { metaclasses, authoringMetaclassPins: pins } : { metaclasses };
 
 describe('withMetaclassPins — written by the same patch as metaclasses', () => {
@@ -190,5 +214,84 @@ describe('withMetaclassPins — written by the same patch as metaclasses', () =>
         const prev = irWith([]);
         const next = withMetaclassPins(prev, irWith(['State'], { State: 'ptr_gone' }), CTX);
         expect(next.authoringMetaclassPins).toEqual({ State: B_STATE.id });
+    });
+});
+
+describe('withMetaclassPins — a name that holds several identities (R-MCID-1)', () => {
+    it('keeps an array pin, in order, when another name is added', () => {
+        const prev = irWith(['State'], { State: [B_STATE.id, A_STATE.id] });
+        const next = withMetaclassPins(prev, irWith(['State', 'Machine'], prev.authoringMetaclassPins), CTX);
+        expect(next.authoringMetaclassPins).toEqual({
+            State: [B_STATE.id, A_STATE.id],
+            Machine: A_MACHINE.id,
+        });
+    });
+
+    it('honours an array declared on next when the name is added by the same patch', () => {
+        const prev = irWith([]);
+        const next = withMetaclassPins(prev, irWith(['State'], { State: [A_STATE.id, B_STATE.id] }), CTX);
+        expect(next.authoringMetaclassPins).toEqual({ State: [A_STATE.id, B_STATE.id] });
+    });
+
+    it('filters an array by declared id and writes a lone survivor as the plain string', () => {
+        const prev = irWith([]);
+        const next = withMetaclassPins(prev, irWith(['State'], { State: ['ptr_gone', A_STATE.id] }), CTX);
+        expect(next.authoringMetaclassPins).toEqual({ State: A_STATE.id });
+    });
+
+    it('an array that loses a dead id but keeps two is rewritten, still an array', () => {
+        // The reconciled map differs from the one on next: samePins must see it.
+        const prev = irWith([]);
+        const next = withMetaclassPins(prev, irWith(['State'], { State: [A_STATE.id, 'ptr_gone', B_STATE.id] }), CTX);
+        expect(next.authoringMetaclassPins).toEqual({ State: [A_STATE.id, B_STATE.id] });
+    });
+
+    it('an array of length 1 is written as the plain string', () => {
+        const prev = irWith([]);
+        const next = withMetaclassPins(prev, irWith(['State'], { State: [A_STATE.id] }), CTX);
+        expect(next.authoringMetaclassPins).toEqual({ State: A_STATE.id });
+    });
+
+    it('an array with no declared id falls through to the chain, as if unpinned', () => {
+        const prev = irWith([]);
+        const next = withMetaclassPins(prev, irWith(['State'], { State: ['ptr_gone'] }), CTX);
+        // CTX.appliesTo says metamodel B.
+        expect(next.authoringMetaclassPins).toEqual({ State: B_STATE.id });
+    });
+
+    it('an empty array is read as unpinned, never written back', () => {
+        const prev = irWith([]);
+        const next = withMetaclassPins(prev, irWith(['State'], { State: [] }), CTX);
+        expect(next.authoringMetaclassPins).toEqual({ State: B_STATE.id });
+    });
+
+    it('does not rewrite an array map that is already correct (structural, not by reference)', () => {
+        const prev = irWith(['State', 'Machine'], { State: [A_STATE.id, B_STATE.id], Machine: A_MACHINE.id });
+        const next = irWith(['Machine', 'State'], { State: [A_STATE.id, B_STATE.id], Machine: A_MACHINE.id });
+        expect(withMetaclassPins(prev, next, CTX)).toBe(next);
+    });
+
+    it('array order is preserved as declared: the first id is the one PathBuilder features come from', () => {
+        const prev = irWith(['State'], { State: [A_STATE.id, B_STATE.id] });
+        // `metaclasses` moves (Machine appears); State's array is carried as declared on next.
+        const next = withMetaclassPins(prev, irWith(['State', 'Machine'], { State: [B_STATE.id, A_STATE.id] }), CTX);
+        expect(next.authoringMetaclassPins).toEqual({ State: [B_STATE.id, A_STATE.id], Machine: A_MACHINE.id });
+    });
+
+    it('drops the pin of a name with several identities when the name leaves the list', () => {
+        const prev = irWith(['State', 'Machine'], { State: [A_STATE.id, B_STATE.id], Machine: A_MACHINE.id });
+        const next = withMetaclassPins(prev, irWith(['Machine'], prev.authoringMetaclassPins), CTX);
+        expect(next.authoringMetaclassPins).toEqual({ Machine: A_MACHINE.id });
+    });
+
+    it('removing ONE identity of a name that stays in the list: metaclasses does not move, next comes back untouched', () => {
+        // The case the caller (removeMetaclass) owns: it writes the shrunk pin
+        // itself, so skipping reconciliation here is correct — and it must not be
+        // "helped" into a rewrite, which would undo the author's edit.
+        const prev = irWith(['State'], { State: [A_STATE.id, B_STATE.id] });
+        const next = irWith(['State'], { State: B_STATE.id });
+        const out = withMetaclassPins(prev, next, CTX);
+        expect(out).toBe(next);
+        expect(out.authoringMetaclassPins).toEqual({ State: B_STATE.id });
     });
 });

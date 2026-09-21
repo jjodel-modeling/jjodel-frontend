@@ -127,6 +127,28 @@ function warnOnGlobalCss(activeViewpointId: string | null): void {
 }
 
 /**
+ * Is there a viewpoint the «Create View» / «Add view» entries can create into?
+ *
+ * Mirrors priority 2 of `resolveParentViewpoint` below — the active project viewpoint,
+ * the system `Default` excluded — so the gate and the resolution cannot drift apart.
+ *
+ * It exists because those gates asked `getLastEditedViewpointId()`, and the only writer of
+ * that tracker, `setLastEditedViewpoint`, has NO caller in `frontend/src` (census
+ * 2026-09-16): the gate was therefore closed always, and edge and row views had no
+ * reachable entry point at all. Priority 1 is deliberately not tested here for that same
+ * reason, and priority 3 (the `Default` viewpoint) is a system layer, not a place the user
+ * authors into (R-IRN-9).
+ */
+export function hasCreatableViewpoint(): boolean {
+    try {
+        const activeVP: LViewPoint | null | undefined = LProject.getProject()?.activeViewpoint;
+        return !!activeVP && activeVP.id !== Defaults.Pointer_ViewPointDefault;
+    } catch {
+        return false; // project not available
+    }
+}
+
+/**
  * Resolves the viewpoint to use as parent for new views.
  * Priority: last edited workbench VP → active project VP → default VP.
  * Returns { dViewpoint, vpName } or null if nothing found.
@@ -206,22 +228,27 @@ export function createBlankViewInViewpoint(
         candidate = `${nameSeed}${i}`;
     }
 
-    // IR seed (issue #139, bug 1): a blank view created from the viewpoint tree is born
-    // with a vertex ir, so it opens the current authoring modal (Applies to · Structure ·
-    // Symbol · Source) instead of the legacy tab bar ViewData shows to a view without `ir`.
-    // This reproduces exactly what the user got by opening the created view and clicking
-    // IR → Enable with the default kind (EnableIRPanel.enable, vertex branch): the seed is
-    // the same `computeCreationSeed({ kind: 'vertex' })` with `metaclasses: '*'` when no
-    // target class is known — no new matching semantics, only anticipated by one gesture.
-    // Written inside the new2 callback (persisted in one action, no outer TRANSACTION,
-    // CLAUDE.md §3.3), mirroring createViewInWorkbench's seeded branch.
+    // IR seed (R-IRN-4, A3): the view is born with a vertex ir, so its editor opens on the
+    // IR tabs. No metaclass is known here, so the seed is the wildcard: this is the «All
+    // classes (default view)» branch of NewViewDialog, while a view for one class goes
+    // through createViewInWorkbench. No oclCondition: with no metaclass there is no query
+    // to build (discovery_2026-09-15_plus_view_ir_seed.md §4).
     const seed = computeCreationSeed({ kind: 'vertex', label: candidate });
 
     const newView = DViewElement.new2(
         candidate,
         '', // jsxString vuoto: una view con ir rende dall'interprete, il template sarebbe testo morto
         dVp,
-        seed ? (d) => { (d as any).ir = seed; } : undefined,
+        (d) => {
+            // Written inside the callback, which Constructors.end() runs BEFORE persist:
+            // the view is persisted with its ir already on it, in one action.
+            if (seed) {
+                (d as any).ir = seed;
+                // `appliableTo` follows ir.kind (ratifica 2026-08-16), as a literal like
+                // createViewInWorkbench writes it.
+                d.appliableTo = 'Vertex';
+            }
+        },
         true
     );
     return newView;
@@ -267,6 +294,12 @@ export function createViewInWorkbench(elementId: string, elementName: string, cl
     // `appliableToClasses` — that field holds D-level type names here, which the pin and
     // the resolver cannot use.
     let seed: AnyViewIR | null = null;
+    // The two feature branches (2026-09-16) must be indistinguishable from what
+    // `newDefault` produces for the same element, which also blanks `css` and `palette`
+    // (view.tsx:503-505). Measured: without this the two creators differ on exactly those
+    // two fields, because the constructor seeds a placeholder css. Scoped to the new
+    // branches so the class-like ones keep the output they have always had.
+    let mirrorNewDefaultStyleDefaults = false;
     // Hoisted above the switch (it used to sit just below it): the seed reuses it as the
     // vertex `label`, and one expression is better than three copies of it.
     const viewName = 'View for ' + (elementName || 'unnamed');
@@ -296,6 +329,48 @@ export function createViewInWorkbench(elementId: string, elementName: string, cl
                 metaclassName: elementName,
                 label: viewName,
             });
+            break;
+        case 'DReference': {
+            // Mirrors newDefault's DReference branch (view.tsx:472-493). Same OCL as
+            // newDefault writes for this className — a condition on the reference's VALUES
+            // (view.tsx:415-418) — and the same edge seed. `appliableToClasses` is left
+            // empty because newDefault never writes it: the two creators must be
+            // indistinguishable in their output.
+            query = `context DValue inv: self.instanceof.id = '${elementId}'`;
+            // 'Edge' is what `appliableToForIRKind` maps `ir.kind: 'edge'` to
+            // (view.tsx:181-188). That helper is module-private and view.tsx is out of this
+            // slice's scope, so the value is repeated here rather than exported.
+            appliableTo = 'Edge';
+            // An edge view's `metaclasses` is the SOURCE metaclass, which for a reference is
+            // its owning class, read through `father`. The className test reads the D-layer
+            // name (CLAUDE.md §3.13); when the owner does not resolve the edge is seeded
+            // without metaclass and the author sets it, exactly as newDefault does.
+            let ownerName: string | undefined;
+            let ownerId: string | undefined;
+            try {
+                const owner: any = (LPointerTargetable.fromPointer(elementId) as any)?.father;
+                if (owner && owner.className === 'DClass') {
+                    ownerName = owner.name;
+                    ownerId = owner.id;
+                }
+            } catch { /* dangling or malformed father — fall through unseeded */ }
+            seed = computeCreationSeed({
+                kind: 'edge',
+                metaclassName: ownerName,
+                metaclassId: ownerId,
+            });
+            mirrorNewDefaultStyleDefaults = true;
+            break;
+        }
+        case 'DAttribute':
+            // Mirrors newDefault's DAttribute branch (view.tsx:467-471): a row carries no
+            // metaclass by construction — the author picks it in RowAuthoringPanel — and the
+            // OCL is the same DValue condition. 'Field' is `appliableToForIRKind`'s mapping
+            // of `ir.kind: 'row'`, repeated for the reason given in the branch above.
+            query = `context DValue inv: self.instanceof.id = '${elementId}'`;
+            appliableTo = 'Field';
+            seed = computeCreationSeed({ kind: 'row' });
+            mirrorNewDefaultStyleDefaults = true;
             break;
         case 'DModel':
             query = `context DModel inv: self.id = '${elementId}'`;
@@ -329,6 +404,10 @@ export function createViewInWorkbench(elementId: string, elementName: string, cl
                 d.appliableTo = appliableTo as any;
                 d.appliableToClasses = appliableToClasses;
                 d.css_MUST_RECOMPILE = true;
+                if (mirrorNewDefaultStyleDefaults) {
+                    d.css = '';
+                    d.palette = {};
+                }
                 // Written inside the callback, which Constructors.end() runs BEFORE
                 // persist (joiner/classes.ts:683,688): the view is persisted with its ir
                 // already on it, in one action. Same pattern as irDemoFixture.ts:106.

@@ -275,7 +275,7 @@
       color: white;
     }
 
-    &:hover:not(&--selected) {
+    &:hover:not(&--selected):not(:disabled) {
       background: #f1f5f9;
     }
 

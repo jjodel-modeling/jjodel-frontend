@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { LProject, LPointerTargetable, DClass, type LViewElement } from '../../../../joiner';
-import { Input, Select, NumberInput, ColorPicker, ErrorText, Button, HelpText, ConditionalEditor, Toggle, FormSection, type PathBuilderFeatures } from '../../../ui';
+import { Input, Select, NumberInput, ColorPicker, ErrorText, Button, HelpText, ConditionalEditor, isConditionalValue, Toggle, FormSection, type PathBuilderFeatures } from '../../../ui';
 import { getMetaclassInfo, type MetaclassInfo } from '../../hooks/useEditorMode';
 import { validateIR } from '../ir/irValidate';
 import { defaultObjectViewIR } from '../ir/irDefaults';
@@ -9,8 +9,13 @@ import type { VertexViewIR, ShapeForm, PaddingToken, FormSpec, StructureSpec } f
 import { structureCapabilities } from '../ir/structureCapabilities';
 import { MARKER_REGISTRY } from '../ir/markerRegistry';
 import { recognizeSymbol } from '../ir/symbolRecognition';
+import {
+    authoredCornerRadius, baseCornerRadius, clampCornerRadius, honorsCornerRadius,
+    roundedPolygonPath, SHAPE_REGISTRY,
+} from '../ir/shapeRegistry';
 import { resolveMetaclassId, withMetaclassPins, type MetaclassRef } from '../ir/metaclassPin';
 import { defaultResizableForForm } from '../../nodes/nodeSizing';
+import { borderOverrideRows } from './borderOverrides';
 import { LabelListEditor } from './LabelListEditor';
 import { TextStyleField } from './TextStyleField';
 import { FieldCompartmentListEditor } from './FieldCompartmentListEditor';
@@ -18,8 +23,12 @@ import { StructureGroups, StructureHiddenSummary } from './StructureGroups';
 import { FormAuthoringBody } from './FormAuthoringBody';
 import { BadgeListEditor } from './BadgeListEditor';
 import { MatchingSection, type MetaclassChoice } from './MatchingSection';
+import { isCommittableMatching } from './committableMatching';
 import { metaclassAmbiguityWarning } from './authoringMessages';
-import { IRIdentityFields, IRSourceBody, irTabBodyStyle, type IRIdentityProps, type IRTabId } from './irTabs';
+import {
+    IRIdentityFields, IRSourceBody, irSectionStyle, irTabBodyStyle,
+    type IRIdentityProps, type IRSectionId, type IRTabId,
+} from './irTabs';
 import { JjodelEvents } from '../../../../events/registry';
 
 export interface VertexAuthoringPanelProps {
@@ -29,6 +38,13 @@ export interface VertexAuthoringPanelProps {
      * rendered visible, which is the pre-partition layout (see `irTabBodyStyle`).
      */
     activeTab?: IRTabId;
+    /**
+     * Active section of the Appearance body (slice 4b). Optional exactly like
+     * `activeTab`, and the same mechanism one level down: absent, every section is
+     * visible, which is what the rail and any other host get. The symbol editor modal
+     * is the only host that drives it, from its 170px section nav.
+     */
+    activeSection?: IRSectionId;
     /**
      * What the relocated legacy identity fields need beyond the view (R-H). Absent
      * when no host drives the partition: the fields are then not rendered, exactly
@@ -47,6 +63,7 @@ const FORM_OPTIONS = [
     { value: 'hexagon', label: 'Hexagon' },
     { value: 'parallelogram', label: 'Parallelogram' },
     { value: 'cylinder', label: 'Cylinder' },
+    { value: 'cloud', label: 'Cloud' },
 ];
 const BORDER_STYLE_OPTIONS = [
     { value: 'solid', label: 'Solid' },
@@ -69,6 +86,7 @@ const PADDING_OPTIONS = [
 ];
 
 const DEFAULT_BORDER = { color: '#334155', width: 1, style: 'solid' as const };
+
 const COMMIT_DEBOUNCE_MS = 300;
 // Cross-tab message (R-B): the metaclass that unlocks these paths is authored in
 // Applies to, while the paths themselves are edited in Text and Structure — so the
@@ -77,6 +95,42 @@ const FEATURES_HINT = 'Set a metaclass in the Applies to tab to enable feature p
 
 /** Lossless deep clone for plain IR objects (pure JSON: no functions/dates). */
 const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x));
+
+/**
+ * The three glyphs of the mockup (rect, diamond, hexagon) inside a 44x28 viewBox,
+ * REDRAWN at the current radius instead of being fixed pictures: they run the same
+ * painter the canvas runs, so a regression shows up in the panel before it shows up
+ * on a node.
+ *
+ * The glyph box is 41x25 against a node of a couple of hundred px, so the authored
+ * number is scaled by the ratio `SymbolPreview` already uses for its 72x48 tile
+ * (`rounded` drawn with rx 7 against the 10px of irStyle.ts) and then clamped by the
+ * canvas rule, `min(w, h) / 4`.
+ */
+const GLYPH_W = 41;
+const GLYPH_H = 25;
+const GLYPH_RADIUS_RATIO = 0.7;
+
+const glyphPointsOf = (form: 'diamond' | 'hexagon'): string => {
+    const painter = SHAPE_REGISTRY[form].painter;
+    return painter.kind === 'svg' ? painter.points : '';
+};
+
+const CornerRadiusGlyphs: React.FC<{ radius: number }> = ({ radius }) => {
+    const r = clampCornerRadius(radius * GLYPH_RADIUS_RATIO, GLYPH_W, GLYPH_H);
+    const frame = (key: string, child: React.ReactNode) => (
+        <svg key={key} width={30} height={20} viewBox="0 0 44 28" aria-hidden="true">
+            <g transform="translate(1.5,1.5)" fill="none" stroke="currentColor" strokeWidth={1.5}>{child}</g>
+        </svg>
+    );
+    return (
+        <span className="jj-corner-radius-glyphs" style={{ display: 'inline-flex', gap: 6, alignItems: 'center', color: '#0f172a' }}>
+            {frame('rect', <rect x={0} y={0} width={GLYPH_W} height={GLYPH_H} rx={r > 0 ? r : undefined} />)}
+            {frame('diamond', <path d={roundedPolygonPath(glyphPointsOf('diamond'), r, GLYPH_W, GLYPH_H)} />)}
+            {frame('hexagon', <path d={roundedPolygonPath(glyphPointsOf('hexagon'), r, GLYPH_W, GLYPH_H)} />)}
+        </span>
+    );
+};
 
 /**
  * VertexAuthoringPanel — authors the IR of a selected vertex view.
@@ -88,7 +142,7 @@ const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x));
  * edited here (extra labels, compartments, badges, any Conditional) round-trip
  * verbatim because the whole cloned ir is written back.
  */
-export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view, activeTab, identity }) => {
+export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view, activeTab, activeSection, identity }) => {
     const seed = (): VertexViewIR => clone((view as any).ir ?? defaultObjectViewIR());
 
     const [draft, setDraft] = useState<VertexViewIR>(seed);
@@ -147,6 +201,11 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
     // Eager validate + debounced immutable commit — only on genuine user edits.
     useEffect(() => {
         if (!dirtyRef.current) return;
+        // An empty metaclass list is an unfinished edit, not a matching (item C of
+        // P-2026-09-18-1650): the draft keeps it, the stored ir keeps its previous
+        // metaclasses, and no timer is armed — the error line stays empty because
+        // this is not a validation error.
+        if (!isCommittableMatching(draft)) return;
         const v = validateIR(view.id, draft);
         setError(v.ok ? null : v.error);
         if (!v.ok) return;
@@ -177,6 +236,9 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
         // montati (selettore di kind, slice B) e questo flush la riporterebbe indietro.
         // Non è roba nostra: si scarta.
         if ((v as any).ir?.kind !== d.kind) return;
+        // An unfinished matching is never written, not even by the unmount flush
+        // (item C of P-2026-09-18-1650).
+        if (!isCommittableMatching(d)) return;
         const res = validateIR(v.id, d);
         if (!res.ok) return;
         try { (v as any).ir = d; } catch { /* view already gone: nothing to flush onto */ }
@@ -338,7 +400,21 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
     const labels = shape.labels ?? [];
     const badges = shape.badges ?? [];
     const fieldCompartments = draft.fieldCompartments ?? [];
-    const border = shape.border ?? DEFAULT_BORDER;
+    // Border, one axis at a time (slice 2, D1). Each axis is read as authored — scalar,
+    // Conditional or absent — and handed to its own ConditionalEditor, which materializes
+    // DEFAULT_BORDER only for display: nothing is written until the author touches a
+    // control, so an unauthored border still persists nothing (D2).
+    const borderStyleScalar = typeof shape.border?.style === 'string' ? shape.border.style : undefined;
+    const borderWidthScalar = typeof shape.border?.width === 'number' ? shape.border.width : undefined;
+    const borderOverrides = borderOverrideRows(shape.border);
+    // Corner radius (slice 3, D5), read through the same guard the render uses: an
+    // invalid persisted value reads as absent here too, so the stepper shows the base
+    // radius instead of seeding itself with a number the canvas ignores.
+    const cornerRadius = authoredCornerRadius(shape.cornerRadius);
+    // A rule-driven radius (R-IRN-35) has no single number for the stepper to show, and
+    // the stepper writes a scalar: touching it would drop the rules. The control for the
+    // rules is owed to S6; until then the stepper is off and says why.
+    const cornerRuleDriven = isConditionalValue(shape.cornerRadius);
     // Resolved resizable state (mirrors the checkbox default): explicit flag ?? per-form default.
     // Gates the "Propagate size" button — propagating a size to a non-resizable view has no effect.
     const canResize = draft.resizable ?? defaultResizableForForm(typeof form === 'string' ? form : undefined);
@@ -346,9 +422,32 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
     // --- immutable patch helpers ---
     const patchShape = (partial: Partial<VertexViewIR['shape']>) =>
         patch({ ...draft, shape: { ...draft.shape, ...partial } });
-    const patchBorder = (partial: Partial<NonNullable<VertexViewIR['shape']['border']>>) => {
-        const base = draft.shape.border ?? DEFAULT_BORDER;
-        patchShape({ border: { ...base, ...partial } });
+    /**
+     * One axis of the border (slice 2). The other two are left exactly as they are,
+     * scalar or Conditional: this is what «per axis» means in D1, and it is why the
+     * old `patchBorder`, which spread the whole border as a scalar object, is gone.
+     * `undefined` removes the axis, so the CSS box fallback comes back.
+     */
+    const patchBorderAxis = (
+        axis: 'color' | 'width' | 'style',
+        next: NonNullable<VertexViewIR['shape']['border']>['color' | 'width' | 'style'],
+    ) => {
+        const nextBorder: any = { ...(draft.shape.border ?? {}) };
+        if (next === undefined) delete nextBorder[axis];
+        else nextBorder[axis] = next;
+        patchShape({ border: Object.keys(nextBorder).length ? nextBorder : undefined });
+    };
+
+    /**
+     * Drop `cornerRadius` from the shape. Rest/spread and not `cornerRadius: undefined`,
+     * for the reason `omitForm` gives just below: a view whose radius was written and
+     * then reset must round-trip byte-identical to one that never carried it. Measured
+     * on the running app before this helper existed: the reset drew the base radius
+     * again, and left the KEY in the ir holding `undefined`.
+     */
+    const resetCornerRadius = () => {
+        const { cornerRadius: _dropped, ...rest } = draft.shape;
+        patch({ ...draft, shape: rest });
     };
 
     /**
@@ -373,6 +472,10 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
        offers the rectangle's superset — narrowing on one branch would hide a field the
        other branch supports. */
     const scalarForm = typeof form === 'string' ? (form as ShapeForm) : undefined;
+    /* The forms whose roundness IS the shape (ellipse, circle, stadium) and the cylinder
+       ignore the axis. A Conditional form is NOT ignored: its branches may honor it, and
+       the help text already names the set that does. */
+    const radiusIgnored = scalarForm !== undefined && !honorsCornerRadius(scalarForm);
     const structureCaps = structureCapabilities(scalarForm);
     /* The contextual note of 7b under Type: with exactly one metaclass in the whole
        viewpoint the type on the node repeats what the diagram already says. */
@@ -382,6 +485,8 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
 
     /** Body visibility of the tab partition: `display: none` only (R-A). */
     const body = (id: IRTabId) => irTabBodyStyle(id, activeTab);
+    /** Section visibility inside the Appearance body (slice 4b), same mechanism. */
+    const sec = (id: IRSectionId) => irSectionStyle(id, activeSection);
 
     return (
         <section className="properties-tab properties-panel">
@@ -420,7 +525,7 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                     metaclassChoices={metaclassChoices}
                 />
                 <div className="jj-field" style={{ marginTop: 'var(--space-2)' }}>
-                    <HelpText>Multiple rules are not yet editable here. Single conditional fields (when/then/else) are edited now directly in Basic, next to each field.</HelpText>
+                    <HelpText>In Basic mode, Shape, Fill, Marker and label visibility show a fixed value; a value that is already conditional appears as a read-only chip.</HelpText>
                 </div>
             </div>
 
@@ -482,8 +587,12 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
             <div className="ir-tab-body ir-tab-body--appearance" style={body('ir-appearance')}>
 
             {/* Symbol identity (D14). The catalog picker and the «modified from X»
-                session state moved to SymbolEditorModal (D15b): the modal hosts the
-                persistent catalog column and owns the last-applied preset. */}
+                session state live in SymbolEditorModal (D15b); since slice 4b the modal
+                reaches the catalog through the header popover and owns the last-applied
+                preset. Symbol and Shape share ONE wrapper because they are one entry of
+                the modal's section nav — see IRSectionId in irTabs.tsx for why Shape is
+                not a nav entry of its own. */}
+            <div className="ir-symbol-section" style={sec('symbol')}>
             <FormSection title="Symbol" divider={false}>
                 {/* Structural recognition (D14): where the authored axes sit in the
                     catalog space. Derived on every render, never stored (a preset is
@@ -513,6 +622,15 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
             {/* Shape form */}
             <FormSection title="Shape" divider={false}>
                 <div className="jj-field">
+                    {/* Rules table on the shape axis (2026-09-17). A single when/then/else is
+                        not enough for the case the axis exists for — the circle for the initial
+                        state, the double circle for the final one, the rectangle for the rest.
+                        The criterion, so the remaining asymmetry reads as deliberate: the table
+                        goes to the axes with MORE THAN TWO values, and boolean axes keep the
+                        single predicate, since there a list of rules assigning true or false
+                        plus a default is the same condition written longer. Shaped like the
+                        border axes and not like fill: a form always has a value, so there is no
+                        `noneValue` and no `fixedLabel` to override. */}
                     <ConditionalEditor<ShapeForm>
                         value={form}
                         onChange={(next) => patchShape({ form: next })}
@@ -522,11 +640,54 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                         featuresHint={FEATURES_HINT}
                         classNames={classNames}
                         allowConditional={advanced}
+                        rulesTable={{ subjectName: featureInfo.targetName ?? undefined, valueNoun: 'shape' }}
                     />
                 </div>
+
+                {/* Corner radius (slice 3, D5). ABSENT IS NOT ZERO: it keeps the form's
+                    base radius (4px rect, 10px rounded, sharp polygons), which is what
+                    every saved view draws today, so the stepper shows that base greyed
+                    until a value is written and Reset removes the key again — the D2
+                    discipline, no default ever persisted. A written 0 is a value, and it
+                    is what squares the corners. */}
+                <div className="jj-field" style={{ marginTop: 'var(--space-2)' }}>
+                    <label className="jj-field-label">
+                        Corner radius <span style={{ color: '#94a3b8' }}>· all vertices</span>
+                    </label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+                        {/* NumberInput carries no placeholder and needs a number, so the
+                            absent state is the base radius shown at reduced opacity with
+                            the word `default` beside it, never an empty field. */}
+                        <span style={{ opacity: cornerRadius === undefined ? 0.6 : 1 }}>
+                            <NumberInput
+                                value={cornerRadius ?? baseCornerRadius(scalarForm)}
+                                min={0}
+                                disabled={radiusIgnored || cornerRuleDriven}
+                                onChange={(r) => patchShape({ cornerRadius: r })}
+                            />
+                        </span>
+                        {cornerRuleDriven ? (
+                            <span style={{ fontSize: 11, color: '#94a3b8' }}>rule-driven</span>
+                        ) : cornerRadius === undefined ? (
+                            <span style={{ fontSize: 11, color: '#94a3b8' }}>default</span>
+                        ) : (
+                            <Button variant="ghost" size="sm" onClick={resetCornerRadius}>
+                                Reset
+                            </Button>
+                        )}
+                        {!radiusIgnored && !cornerRuleDriven && <CornerRadiusGlyphs radius={cornerRadius ?? baseCornerRadius(scalarForm)} />}
+                    </div>
+                    <HelpText icon={false}>
+                        {radiusIgnored
+                            ? `${FORM_OPTIONS.find(o => o.value === scalarForm)?.label ?? scalarForm} ignores the corner radius: its roundness is the shape itself.`
+                            : 'Rounds every vertex of the shape — rectangles, diamonds, hexagons, parallelograms alike. 0 keeps sharp corners.'}
+                    </HelpText>
+                </div>
             </FormSection>
+            </div>
 
             {/* Fill */}
+            <div className="ir-fill-section" style={sec('fill')}>
             <FormSection title="Fill" divider={false}>
                 <div className="jj-field">
                     <ConditionalEditor
@@ -538,32 +699,113 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                         featuresHint={FEATURES_HINT}
                         classNames={classNames}
                         allowConditional={advanced}
+                        rulesTable={{ noneValue: '', fixedLabel: 'Solid', subjectName: featureInfo.targetName ?? undefined, valueNoun: 'fill' }}
                     />
                 </div>
             </FormSection>
 
-            {/* Border (always scalar in the schema) */}
+            </div>
+
+            {/* Border — conditional PER AXIS (D1, slice 2). Three switches, all visible:
+                a single switch on the border would claim the border has one conditional,
+                which is the shape D1 rejected. The wrapper carries a stable class, which
+                since slice 4b is what the modal's section nav shows and hides; the
+                two-column anatomy grid that used to span it across both columns is gone,
+                because one visible section in a two-column grid sits in the left half. */}
+            <div className="ir-border-section" style={sec('border')}>
             <FormSection title="Border" divider={false}>
                 <div className="jj-field">
                     <label className="jj-field-label">Color</label>
-                    <ColorPicker value={border.color} onChange={(hex) => patchBorder({ color: hex })} />
-                    <label className="jj-field-label" style={{ marginTop: 'var(--space-2)' }}>Width</label>
-                    <NumberInput value={border.width} min={0} onChange={(w) => patchBorder({ width: w })} />
+                    <ConditionalEditor<string>
+                        value={shape.border?.color}
+                        onChange={(next) => patchBorderAxis('color', next)}
+                        renderValue={(v, onCh) => <ColorPicker value={v} onChange={(hex) => onCh(hex)} />}
+                        defaultValue={DEFAULT_BORDER.color}
+                        features={features}
+                        featuresHint={FEATURES_HINT}
+                        classNames={classNames}
+                        allowConditional={advanced}
+                        rulesTable={{ subjectName: featureInfo.targetName ?? undefined, valueNoun: 'border color' }}
+                    />
+                    <label className="jj-field-label" style={{ marginTop: 'var(--space-2)' }}>
+                        Width <span style={{ color: '#94a3b8' }}>· px</span>
+                    </label>
+                    <ConditionalEditor<number>
+                        value={shape.border?.width}
+                        onChange={(next) => patchBorderAxis('width', next)}
+                        renderValue={(v, onCh) => <NumberInput value={v} min={0} onChange={(w) => onCh(w)} />}
+                        defaultValue={DEFAULT_BORDER.width}
+                        features={features}
+                        featuresHint={FEATURES_HINT}
+                        classNames={classNames}
+                        allowConditional={advanced}
+                        rulesTable={{ subjectName: featureInfo.targetName ?? undefined, valueNoun: 'border width' }}
+                    />
                     <label className="jj-field-label" style={{ marginTop: 'var(--space-2)' }}>Style</label>
-                    <Select options={BORDER_STYLE_OPTIONS} value={border.style} onChange={(e) => patchBorder({ style: e.target.value as 'solid' | 'dashed' | 'dotted' | 'double' })} />
+                    <ConditionalEditor<'solid' | 'dashed' | 'dotted' | 'double'>
+                        value={shape.border?.style}
+                        onChange={(next) => patchBorderAxis('style', next)}
+                        renderValue={(v, onCh) => (
+                            <Select
+                                options={BORDER_STYLE_OPTIONS}
+                                value={v}
+                                onChange={(e) => onCh(e.target.value as 'solid' | 'dashed' | 'dotted' | 'double')}
+                            />
+                        )}
+                        defaultValue={DEFAULT_BORDER.style}
+                        features={features}
+                        featuresHint={FEATURES_HINT}
+                        classNames={classNames}
+                        allowConditional={advanced}
+                        rulesTable={{ subjectName: featureInfo.targetName ?? undefined, valueNoun: 'border style' }}
+                    />
                     {/* Nessuna riscrittura silenziosa della width: e' CSS nativo che sotto
-                        i 3px il double non mostra due linee, quindi lo si dice e basta. */}
-                    {border.style === 'double' && border.width < 3 && (
+                        i 3px il double non mostra due linee, quindi lo si dice e basta.
+                        Solo su assi scalari: con width o style condizionali non esiste UNA
+                        coppia da giudicare, e l'avviso mentirebbe su meta' delle istanze. */}
+                    {borderStyleScalar === 'double' && borderWidthScalar !== undefined && borderWidthScalar < 3 && (
                         <HelpText icon={false}>Double shows two lines from width 3 up.</HelpText>
                     )}
                 </div>
+
+                {/* OVERRIDES: the rules of the three axes read back, grouped by predicate. */}
+                {borderOverrides.rows.length > 0 && (
+                    <div className="jj-field" style={{ marginTop: 'var(--space-3)' }}>
+                        <label className="jj-field-label">Overrides</label>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                            <div style={{ display: 'flex', gap: 'var(--space-2)', fontSize: 'var(--text-xs)', color: '#94a3b8' }}>
+                                <span style={{ flex: '1 1 60%' }}>WHEN</span>
+                                <span style={{ flex: '1 1 40%' }}>OVERRIDES</span>
+                            </div>
+                            {borderOverrides.rows.map((row, i) => (
+                                <div key={`${row.whenText}-${i}`} style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'baseline' }}>
+                                    <span style={{ flex: '1 1 60%', fontFamily: "'IBM Plex Mono', Monaco, Consolas, monospace", fontSize: 'var(--text-xs)' }}>
+                                        {row.whenText}
+                                    </span>
+                                    <span style={{ flex: '1 1 40%', display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                                        {row.axes.map((a) => (
+                                            <span key={a} className="jj-chip" style={{ fontSize: 'var(--text-xs)' }}>{a}</span>
+                                        ))}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                        {borderOverrides.divergent && (
+                            <HelpText icon={false}>
+                                These axes override on different conditions, so each one is listed on its own row.
+                            </HelpText>
+                        )}
+                    </div>
+                )}
             </FormSection>
+            </div>
 
             {/* Padding (Advanced only): spacing preset for header, inside label and
                 compartments. Normal removes the key from the IR, like None for the marker.
                 The placeholder of the shared Select resolves to the default too (nota
                 Select condiviso, 2026-08-08): a closed vocabulary never persists ''. */}
             {advanced && (
+                <div className="ir-padding-section" style={sec('padding')}>
                 <FormSection title="Padding" divider={false}>
                     <div className="jj-field">
                         <Select
@@ -576,11 +818,13 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                         />
                     </div>
                 </FormSection>
+                </div>
             )}
 
             {/* Marker — notation symbol inside the shape (gateway x, timer clock,
                 history H). Conditional like Fill: the same view can switch marker
                 per instance in Advanced. None removes the key from the IR. */}
+            <div className="ir-marker-section" style={sec('marker')}>
             <FormSection title="Marker" divider={false}>
                 <div className="jj-field">
                     <ConditionalEditor
@@ -592,12 +836,15 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                         featuresHint={FEATURES_HINT}
                         classNames={classNames}
                         allowConditional={advanced}
+                        rulesTable={{ noneValue: '', subjectName: featureInfo.targetName ?? undefined, valueNoun: 'marker' }}
                     />
                 </div>
             </FormSection>
+            </div>
 
             {/* Resizable — top-level flag (like `label`, not a shape.* field). Mirrors
                 the runtime gate: shown state = explicit flag ?? per-form default. */}
+            <div className="ir-sizing-section" style={sec('sizing')}>
             <FormSection title="Sizing" divider={false}>
                 <div className="jj-field">
                     <Toggle
@@ -621,8 +868,10 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                     </Button>
                 </div>
             </FormSection>
+            </div>
 
             {/* Badges — same round-trip guarantee as the compartments. */}
+            <div className="ir-badges-section" style={sec('badges')}>
             <FormSection title="Badges" divider={false}>
                 <BadgeListEditor
                     badges={badges}
@@ -632,6 +881,7 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                     onChange={(next) => patchShape({ badges: next })}
                 />
             </FormSection>
+            </div>
 
             </div>
 

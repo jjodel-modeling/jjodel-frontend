@@ -13,7 +13,7 @@ import { compileView, compileEdgeView, compileRowView, clearCompileCache, irHash
 import { getIREdgeAnchorOverride, hydrateIREdgeAnchorOverrides, irEdgeLayoutFromOverride, setIREdgeAnchorOverride } from '../irEdgeInteraction';
 import { getCollapsedSet, hydrateCollapsed } from '../irCollapseState';
 import { makeDrawReadCtx, classAncestryNames, navigateRefHop } from '../irReadCtx';
-import { getIRIndex, resolveIRView, resolveRowView } from '../irResolveCore';
+import { getIRIndex, pinAccepts, resolveIRView, resolveRowView } from '../irResolveCore';
 import { defaultObjectViewIR, defaultRowViewIR, isMigratedDefaultView, IR_DEFAULT_OBJECT_VIEW_ID } from '../irDefaults';
 import {
     buildContainmentModel,
@@ -28,6 +28,7 @@ import { assignGeometricHandles, decorateReferenceEdges, synthesizeObjectAsEdges
 import { applyIRPaletteFilter, deriveDroppableChildMetaclasses, deriveIRInteraction, matchConnectRules } from '../irInteraction';
 import type { EdgeViewIR, GraphVertexViewIR, RowViewIR, VertexViewIR } from '../irTypes';
 import { CONTAINER_ENDPOINT } from '../irTypes';
+import { resolveCompiledCornerRadius, resolveCornerRadius } from '../shapeRegistry';
 
 /** Build a minimal D-layer world: metamodel classes + objects with slots. */
 function world() {
@@ -103,6 +104,114 @@ describe('irCompile', () => {
         expect(cv.labels[1].text(ctx, 's1')).toBe('fixed');
         expect(cv.labels[2].text(ctx, 's1')).toBe('idle : State');
         expect(cv.dependencySet).toContain('name');
+    });
+    it('compiles the three border axes one by one, per instance (slice 2, D1)', () => {
+        clearCompileCache();
+        const { ctx } = world();
+        // A scalar border: every accessor answers the authored value for every object,
+        // which is what a view saved before slice 2 has to keep doing.
+        const scalar = compileView('v_border_scalar', vertexIR({
+            shape: { form: 'rect', border: { color: '#334155', width: 2, style: 'dashed' } },
+        }));
+        expect(scalar.borderColor!(ctx, 's1')).toBe('#334155');
+        expect(scalar.borderWidth!(ctx, 's1')).toBe(2);
+        expect(scalar.borderStyle!(ctx, 's1')).toBe('dashed');
+
+        // One conditional axis: it resolves per instance, and the two axes the view does
+        // not declare stay null, so the renderer keeps the CSS box for those alone.
+        const perAxis = compileView('v_border_cond', vertexIR({
+            shape: {
+                form: 'rect',
+                border: {
+                    width: { rules: [{ when: { op: 'isKind', class: 'FinalState' }, then: 4 }], default: 1 },
+                },
+            },
+        }));
+        expect(perAxis.borderWidth!(ctx, 's2')).toBe(4);
+        expect(perAxis.borderWidth!(ctx, 's1')).toBe(1);
+        expect(perAxis.borderColor).toBeNull();
+        expect(perAxis.borderStyle).toBeNull();
+    });
+    // Corner radius as a Conditional (R-IRN-35). The renderer (IRNodeContent) is not
+    // importable in this bench, so what is executed is the chain it runs: compileView,
+    // resolveCompiledCornerRadius on the read context, resolveCornerRadius on the form.
+    describe('cornerRadius as a Conditional (R-IRN-35)', () => {
+        const BOX = { w: 160, h: 64 };
+        const DIAMOND_BOX = { w: 100, h: 60 };
+        const radiusView = (id: string, shape: Partial<VertexViewIR['shape']>) => {
+            clearCompileCache();
+            return compileView(id, vertexIR({ shape: { form: 'rect', ...shape } }));
+        };
+
+        it('a literal 8 compiles to a resolved 8, painted on a box and on a diamond', () => {
+            const { ctx } = world();
+            const box = radiusView('v_cr_literal_rect', { cornerRadius: 8 });
+            expect(box.cornerRadius).not.toBeNull();
+            expect(box.cornerRadius!(ctx, 's1')).toBe(8);
+            const r = resolveCompiledCornerRadius(box, ctx, 's1');
+            expect(r).toBe(8);
+            expect(resolveCornerRadius('rect', r, BOX)).toEqual({ kind: 'css', px: 8 });
+            const diamond = radiusView('v_cr_literal_diamond', { form: 'diamond', cornerRadius: 8 });
+            const rd = resolveCompiledCornerRadius(diamond, ctx, 's1');
+            expect(rd).toBe(8);
+            expect(resolveCornerRadius('diamond', rd, DIAMOND_BOX)).toEqual({ kind: 'path', r: 8, ...DIAMOND_BOX });
+        });
+
+        it('absent compiles to null and renders the base radius, never a written one', () => {
+            const { ctx } = world();
+            const cv = radiusView('v_cr_absent', {});
+            expect(cv.cornerRadius).toBeNull();
+            const r = resolveCompiledCornerRadius(cv, ctx, 's1');
+            expect(r).toBeUndefined();
+            for (const form of ['rect', 'rounded', 'diamond'] as const) {
+                expect(resolveCornerRadius(form, r, BOX), form).toEqual({ kind: 'none' });
+            }
+        });
+
+        it('one rule resolves per instance, and no matching branch leaves the base radius', () => {
+            const { ctx } = world();
+            const withDefault = radiusView('v_cr_rule_default', {
+                cornerRadius: { rules: [{ when: { op: 'isKind', class: 'FinalState' }, then: 12 }], default: 4 },
+            });
+            expect(resolveCompiledCornerRadius(withDefault, ctx, 's2')).toBe(12);
+            expect(resolveCompiledCornerRadius(withDefault, ctx, 's1')).toBe(4);
+            // No default and no else: the fallback is NOT emitted, so an unmatched
+            // instance keeps the form's own radius instead of a sharp corner.
+            const noDefault = radiusView('v_cr_rule_nodefault', {
+                cornerRadius: { rules: [{ when: { op: 'isKind', class: 'FinalState' }, then: 12 }] },
+            });
+            expect(resolveCompiledCornerRadius(noDefault, ctx, 's2')).toBe(12);
+            expect(resolveCompiledCornerRadius(noDefault, ctx, 's1')).toBeUndefined();
+            expect(resolveCornerRadius('rect', resolveCompiledCornerRadius(noDefault, ctx, 's1'), BOX)).toEqual({ kind: 'none' });
+            const oneRule = radiusView('v_cr_when_else', {
+                cornerRadius: { when: { op: 'isKind', class: 'FinalState' }, then: 12 },
+            });
+            expect(resolveCompiledCornerRadius(oneRule, ctx, 's2')).toBe(12);
+            expect(resolveCompiledCornerRadius(oneRule, ctx, 's1')).toBeUndefined();
+        });
+
+        it('a conditional radius extends the dependency set with the predicate of its rules', () => {
+            const cv = radiusView('v_cr_deps', {
+                cornerRadius: { rules: [{ when: { op: 'eq', left: '$isInitial.value', right: { kind: 'boolean', value: true } }, then: 12 }], default: 4 },
+            });
+            expect(cv.dependencySet).toContain('isInitial');
+        });
+
+        it('0 is honoured, not treated as absent', () => {
+            const { ctx } = world();
+            const literal = radiusView('v_cr_zero', { cornerRadius: 0 });
+            expect(literal.cornerRadius).not.toBeNull();
+            expect(literal.cornerRadius!(ctx, 's1')).toBe(0);
+            const r = resolveCompiledCornerRadius(literal, ctx, 's1');
+            expect(r).toBe(0);
+            expect(resolveCornerRadius('rect', r, BOX)).toEqual({ kind: 'css', px: 0 });
+            const ruled = radiusView('v_cr_zero_rule', {
+                cornerRadius: { rules: [{ when: { op: 'isKind', class: 'FinalState' }, then: 0 }], default: 8 },
+            });
+            expect(resolveCompiledCornerRadius(ruled, ctx, 's2')).toBe(0);
+            expect(resolveCornerRadius('rounded', resolveCompiledCornerRadius(ruled, ctx, 's2'), BOX)).toEqual({ kind: 'css', px: 0 });
+            expect(resolveCompiledCornerRadius(ruled, ctx, 's1')).toBe(8);
+        });
     });
     it('rejects forbidden PathExpr constructs by skipping compile (throw)', () => {
         expect(() => compileView('v_bad', vertexIR({
@@ -441,6 +550,34 @@ function homonymWorld() {
     return { idlookup, ctx: makeDrawReadCtx(idlookup) };
 }
 
+describe('pinAccepts — string pin, array pin (R-MCID-1, 2026-09-19)', () => {
+    it('no pin map, or no pin for that name: accepts any class (legacy, by name)', () => {
+        expect(pinAccepts({}, 'State', 'A_State')).toBe(true);
+        expect(pinAccepts({ pins: {} }, 'State', 'A_State')).toBe(true);
+        expect(pinAccepts({ pins: { Machine: 'A_Machine' } }, 'State', 'A_State')).toBe(true);
+    });
+
+    it('a string pin accepts its own id only', () => {
+        expect(pinAccepts({ pins: { State: 'A_State' } }, 'State', 'A_State')).toBe(true);
+        expect(pinAccepts({ pins: { State: 'A_State' } }, 'State', 'B_State')).toBe(false);
+    });
+
+    it('an array pin accepts every id it holds and nothing else', () => {
+        const entry = { pins: { State: ['A_State', 'B_State'] } };
+        expect(pinAccepts(entry, 'State', 'A_State')).toBe(true);
+        expect(pinAccepts(entry, 'State', 'B_State')).toBe(true);
+        expect(pinAccepts(entry, 'State', 'C_State')).toBe(false);
+    });
+
+    it('an array pin is read per name: another name is not constrained by it', () => {
+        expect(pinAccepts({ pins: { State: ['A_State', 'B_State'] } }, 'Machine', 'X')).toBe(true);
+    });
+
+    it('an empty array pin accepts nothing (hand-written ir; the UI never writes one)', () => {
+        expect(pinAccepts({ pins: { State: [] } }, 'State', 'A_State')).toBe(false);
+    });
+});
+
 describe('irResolveCore metaclass identity (pin-aware matching, 2026-08-13)', () => {
     it('a pinned view applies to its own metamodel only', () => {
         const { idlookup, ctx } = homonymWorld();
@@ -502,6 +639,105 @@ describe('irResolveCore metaclass identity (pin-aware matching, 2026-08-13)', ()
         const index = getIRIndex(state, 'sig_pin_6')!;
         expect(resolveRowView('a1', 'A_State', index, ctx, state.idlookup)!.viewId).toBe('V_row_a');
         expect(resolveRowView('b1', 'B_State', index, ctx, state.idlookup)).toBeNull();
+    });
+});
+
+/**
+ * R-MCID-1 (2026-09-19): a view may list two metaclasses that share a name and
+ * come from different metamodels. The resolver index stays keyed by name; the
+ * identity is the pin, a class id or an array of class ids. Fixture: the
+ * two-metamodel `homonymWorld()` above (`A_State` with its subclass `A_Sub`, and
+ * `B_State`), plus a third homonym `C_State` where a case needs one the view
+ * does NOT list.
+ */
+describe('irResolveCore metaclass identity — several identities under one name (R-MCID-1, 2026-09-19)', () => {
+    function threeMetamodelWorld() {
+        const w = homonymWorld();
+        w.idlookup.C_State = { id: 'C_State', name: 'State', extends: [] };
+        w.idlookup.c1 = { id: 'c1', name: 'obj_c1', instanceof: 'C_State', features: [] };
+        return w;
+    }
+
+    it('pinned to both: the view matches the instances of both metamodels', () => {
+        const { idlookup, ctx } = homonymWorld();
+        const state = stateWith([
+            { id: 'V_both', ir: vertexIR({ metaclasses: ['State'], authoringMetaclassPins: { State: ['A_State', 'B_State'] } }) },
+        ], idlookup);
+        const index = getIRIndex(state, 'sig_mcid_1')!;
+        expect(resolveIRView('a1', 'A_State', index, ctx, state.idlookup)!.viewId).toBe('V_both');
+        expect(resolveIRView('b1', 'B_State', index, ctx, state.idlookup)!.viewId).toBe('V_both');
+    });
+
+    it('pinned to both: a class the array does not list is refused, and lands on the wildcard', () => {
+        const { idlookup, ctx } = threeMetamodelWorld();
+        const state = stateWith([
+            { id: 'V_both', ir: vertexIR({ metaclasses: ['State'], authoringMetaclassPins: { State: ['A_State', 'B_State'] } }) },
+            { id: 'V_wild', ir: vertexIR({ metaclasses: '*' }) },
+        ], idlookup);
+        const index = getIRIndex(state, 'sig_mcid_2')!;
+        expect(resolveIRView('c1', 'C_State', index, ctx, state.idlookup)!.viewId).toBe('V_wild');
+        expect(resolveIRView('b1', 'B_State', index, ctx, state.idlookup)!.viewId).toBe('V_both');
+    });
+
+    it('pinned to both: inheritance is untouched, the subclass of one listed class still matches', () => {
+        const { idlookup, ctx } = homonymWorld();
+        const state = stateWith([
+            { id: 'V_both', ir: vertexIR({ metaclasses: ['State'], authoringMetaclassPins: { State: ['A_State', 'B_State'] } }) },
+        ], idlookup);
+        const index = getIRIndex(state, 'sig_mcid_3')!;
+        expect(resolveIRView('asub', 'A_Sub', index, ctx, state.idlookup)!.viewId).toBe('V_both');
+    });
+
+    it('pinned to one (the plain string): only that metamodel matches', () => {
+        const { idlookup, ctx } = homonymWorld();
+        const state = stateWith([
+            { id: 'V_b', ir: vertexIR({ metaclasses: ['State'], authoringMetaclassPins: { State: 'B_State' } }) },
+        ], idlookup);
+        const index = getIRIndex(state, 'sig_mcid_4')!;
+        expect(resolveIRView('b1', 'B_State', index, ctx, state.idlookup)!.viewId).toBe('V_b');
+        expect(resolveIRView('a1', 'A_State', index, ctx, state.idlookup)).toBeNull();
+    });
+
+    it('pinned to one through a one-element array (hand-written): same answer as the string', () => {
+        const { idlookup, ctx } = homonymWorld();
+        const state = stateWith([
+            { id: 'V_b', ir: vertexIR({ metaclasses: ['State'], authoringMetaclassPins: { State: ['B_State'] } }) },
+        ], idlookup);
+        const index = getIRIndex(state, 'sig_mcid_5')!;
+        expect(resolveIRView('b1', 'B_State', index, ctx, state.idlookup)!.viewId).toBe('V_b');
+        expect(resolveIRView('a1', 'A_State', index, ctx, state.idlookup)).toBeNull();
+    });
+
+    it('unpinned (legacy): matches both metamodels by name', () => {
+        const { idlookup, ctx } = homonymWorld();
+        const state = stateWith([
+            { id: 'V_any', ir: vertexIR({ metaclasses: ['State'] }) },
+        ], idlookup);
+        const index = getIRIndex(state, 'sig_mcid_6')!;
+        expect(resolveIRView('a1', 'A_State', index, ctx, state.idlookup)!.viewId).toBe('V_any');
+        expect(resolveIRView('b1', 'B_State', index, ctx, state.idlookup)!.viewId).toBe('V_any');
+    });
+
+    it('a both-pinned view and a one-pinned view coexist: priority decides where they overlap', () => {
+        const { idlookup, ctx } = homonymWorld();
+        const state = stateWith([
+            { id: 'V_both', ir: vertexIR({ metaclasses: ['State'], authoringMetaclassPins: { State: ['A_State', 'B_State'] }, priority: 0 }) },
+            { id: 'V_b_hi', ir: vertexIR({ metaclasses: ['State'], authoringMetaclassPins: { State: 'B_State' }, priority: 5 }) },
+        ], idlookup);
+        const index = getIRIndex(state, 'sig_mcid_7')!;
+        expect(resolveIRView('a1', 'A_State', index, ctx, state.idlookup)!.viewId).toBe('V_both');
+        expect(resolveIRView('b1', 'B_State', index, ctx, state.idlookup)!.viewId).toBe('V_b_hi');
+    });
+
+    it('row views obey the array pin too', () => {
+        const { idlookup, ctx } = threeMetamodelWorld();
+        const state = stateWith([
+            { id: 'V_row_both', ir: rowIR({ metaclasses: ['State'], authoringMetaclassPins: { State: ['A_State', 'B_State'] } }) as any },
+        ], idlookup);
+        const index = getIRIndex(state, 'sig_mcid_8')!;
+        expect(resolveRowView('a1', 'A_State', index, ctx, state.idlookup)!.viewId).toBe('V_row_both');
+        expect(resolveRowView('b1', 'B_State', index, ctx, state.idlookup)!.viewId).toBe('V_row_both');
+        expect(resolveRowView('c1', 'C_State', index, ctx, state.idlookup)).toBeNull();
     });
 });
 

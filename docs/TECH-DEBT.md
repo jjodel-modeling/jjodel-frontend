@@ -374,3 +374,172 @@ pubblica e il nome promette quello che non fa.
 suo blocco `excess`), `components/editor-v2/viewpoint/ir/formWrite.ts` (`clearSlotValue`, che
 documenta la misura), `components/editors/Info.tsx:736-741`.
 
+
+---
+
+## Due truthiness in circolo, e la SPEC JjEL non ne nomina nessuna
+
+**Registrato:** 2026-09-08
+**Origine:** Step 0 della validazione definita dall'utente (R-VAL-13). Trovato mentre si misurava
+tutt'altro — che verdetto dare a una regola il cui corpo non restituisce un booleano — e iscritto
+qui perche' **non e' un difetto della validazione**: e' preesistente, e riguarda JjEL, JjTL e
+JjScript.
+**Stato attuale:** un valore JjEL viene convertito in booleano in due modi diversi, e nessuno dei
+due e' esportato o documentato.
+- `JjelEvaluator.isTruthy` (`frontend/src/jjel/evaluator/evaluator.ts:1003`), dichiarata `private`,
+  usata da `and`, `or`, `not`, `if`, `implies`, dal filtro di `forall` e dal predicato di `exists`.
+  Regola: `null`->false, boolean->se stesso, number->`!= 0`, string->non vuota, **array->non vuoto**,
+  qualunque altro oggetto->true.
+- Il `Boolean()` di JavaScript, applicato direttamente ai risultati JjEL da JjTL
+  (`jjtl/executor/executor.ts:1273, 2898, 2914, 2922, 2930, 3119, 3122, 3138, 3152`) e da JjScript
+  (`jjscript/executor/commands/forall.ts:57-58`).
+
+Sulla tabella dei valori misurata allo Step 0 le due regole divergono su **un solo valore**, `[]`:
+falso per `isTruthy`, **vero** per `Boolean`. Conseguenza concreta: una guardia su collezione vuota
+vale il contrario a seconda di chi la valuta. `frontend/src/jjel/SPEC.md` non contiene ne'
+«truthy» ne' «truthiness» (controllo positivo sullo stesso comando: `isNotEmpty` nello stesso file
+risponde alla riga 259), quindi non c'e' un documento che dica quale delle due sia quella giusta.
+**Perche' non e' stato corretto qui:** R-VAL-13 decide che il validatore **non converte nulla** e
+pretende un booleano, cosi' che la validazione non aggiunga una terza semantica. La scelta chiude
+il problema per la validazione e lo lascia intatto per gli altri due sottosistemi. Correggerlo
+adesso avrebbe voluto dire toccare il linguaggio dentro una corsia che ha per oggetto un'altra cosa.
+**Fix strutturale raccomandato:** esportare un unico convertitore da `jjel`, farlo usare a JjTL e a
+JjScript al posto di `Boolean()`, e scriverne la regola nella SPEC — inclusa la risposta esplicita
+su `[]`, che e' la sola cella in cui la scelta si vede. La parte cara non e' la funzione: e'
+verificare i 10 siti chiamanti, perche' su ognuno il cambio di verdetto sull'array vuoto e' un
+cambio di comportamento.
+**Priorita':** media. Nessun difetto segnalato oggi da un utente, ma e' esattamente la forma di
+divergenza che produce un risultato sbagliato senza errore.
+**Effort stimato:** una giornata, quasi tutta di verifica sui chiamanti.
+**Riferimenti:**
+- `docs/decisions.md` — R-VAL-13, paragrafo «Todo separato, non della validazione»
+- `docs/discovery/discovery_2026-09-08_verdetto_booleano.md` §6 (la tabella delle due regole)
+- `docs/discovery/harness/probe_2026-09-08_jjel_verdetto_booleano.mts` blocco E (la misura)
+
+---
+
+## Venti classi D su 44 non hanno una cartella di stato dichiarata su DState
+
+**Registrato:** 2026-09-08
+**Origine:** Step 1 della validazione definita dall'utente. La sonda ha misurato che
+`state.validationviewpoints` e' una **stringa** dove `state.viewpoints` e' un array; la verifica
+richiesta prima di sanarla ha scoperto che il fenomeno non e' dei tipi nuovi.
+**Stato attuale:** alla creazione di un elemento il reducer deriva dal className una cartella di
+stato — `elem.className.substring(1).toLowerCase() + 's'` (`redux/reducer/reducer.ts:466`) — e ci
+scrive con il modificatore `'[]'`. Su una chiave **assente** `'[]'` si comporta come `'='`
+(`reducer.ts:186-188`, ramo `oldValue === undefined`, commentato «keep newVal unchanged, act as
+'='»): il campo diventa la stringa dell'ultimo id creato invece di un array che cresce.
+
+Misurato eseguendo, su 44 classi D registrate a runtime: **24 hanno la cartella dichiarata su
+`DState`, 20 no.** Fra queste ultime ci sono tipi che ogni progetto crea a decine —
+`DAnnotation` -> `annotations`, `DVoidEdge` -> `voidedges`, `DExtEdge` -> `extedges`,
+`DRefEdge` -> `refedges`, `DMap` -> `maps` — piu' le due della validazione, che si sono limitate a
+entrare in un insieme che esisteva da prima. Le altre della lista sono astratte o di servizio
+(`DPointerTargetable`, `DModelElement`, `DState`, …) e non vengono istanziate.
+
+Nessuno legge quelle cartelle oggi. Ma le cartelle **dichiarate** sono lette come array in siti
+reali (`state.viewelements ?? []` compare in 8 punti fra `Toolbar.tsx`, `irResolveCore.ts`,
+`TreeViewContent.tsx`, `DataManagerViewpointPanel.tsx`, `viewParentingOptions.ts`), quindi la forma
+attesa e' l'array e chi scrivera' il primo lettore di una cartella non dichiarata trovera' una
+stringa.
+**Perche' non e' stato corretto:** la correzione ovvia — dichiarare le chiavi mancanti su `DState`
+con `= []` — **non raggiunge i progetti gia' salvati**. Misurato con un segnavia piantato nello
+snapshot per provare che il caricamento fosse davvero avvenuto: `edgepoints`, dichiarata su
+`DState`, tolta dallo snapshot e fatta passare dal percorso di caricamento vero
+(`SaveManager.load` -> `VersionFixer.update` -> `LoadAction`), torna **`undefined`**. Il ripristino
+e' in blocco (`reducer.ts`, `case LoadAction.type: newState = action.value`), quindi i default
+della classe valgono solo per uno stato appena costruito. Su un progetto caricato la cartella
+tornerebbe stringa lo stesso.
+
+Farla completa vuol dire normalizzare le chiavi al caricamento, cioe' una migrazione: fuori dal
+perimetro della corsia in cui e' stata trovata, e fermata li' su indicazione esplicita.
+**Fix strutturale raccomandato:** una migrazione `VersionFixer` che normalizzi a array ogni
+cartella derivata, piu' la dichiarazione delle 20 chiavi mancanti su `DState`, piu' — la parte che
+vale davvero — una difesa nel reducer: `'[]'` su una chiave assente dovrebbe creare `[valore]`, non
+il valore nudo. Quest'ultima chiude la famiglia invece di elencarla, ma cambia il comportamento di
+un ramo che ogni creazione attraversa e vuole il suo giro con i suoi test.
+**Priorita':** bassa oggi, media appena qualcuno scrive un lettore. Nessun difetto visibile
+all'utente: e' una struttura dati derivata che nessuno consuma.
+**Effort stimato:** mezza giornata per la dichiarazione piu' la migrazione; una giornata se si
+tocca il ramo del reducer, quasi tutta di verifica.
+**Riferimenti:**
+- `docs/discovery/harness/probe_2026-09-08_cartelle_di_stato_al_reload.mts` (la misura, 9/9)
+- `redux/reducer/reducer.ts:466` (la derivazione), `:186-188` (il ramo `'[]'` su chiave assente),
+  `case LoadAction.type` (il ripristino in blocco)
+- `redux/store.tsx` (le 24 cartelle dichiarate)
+
+---
+
+## Cancellare un viewpoint di validazione lascia le sue regole orfane
+
+**Registrato:** 2026-09-08
+**Origine:** Step 1 della validazione definita dall'utente. Conseguenza **nota e accettata** della
+scelta di non toccare `DPointerTargetable.childKeys`, non un difetto scoperto dopo.
+**Stato attuale:** `DValidationRule` e' contenuta in `DValidationViewpoint` tramite la collezione
+`rules` e il legame all'indietro `father`. `childKeys` — la lista statica che `__json`, `Dummy.ts` e
+la navigazione `$`-prefissata leggono per ogni tipo del sistema — **non elenca `rules`**, e non e'
+stata toccata perche' e' materia del cuore. Ne discende che cancellare un viewpoint non cancella le
+sue regole: restano in `idlookup` con un `father` che punta a un oggetto che non c'e' piu', e
+nessuna superficie le mostra.
+
+Oggi non si manifesta, perche' lo scheletro non ha ancora una cancellazione di viewpoint.
+
+**Da non confondere con R-VAL-9**, che e' un'altra cosa e va nella direzione opposta: li' si parla
+della cancellazione della **classe di contesto**, e la regola orfana e' uno stato **voluto**, con
+una modale che chiede se conservarla come documentazione disabilitata e un default conservativo sui
+percorsi non interattivi. Qui invece l'orfanezza e' un residuo, e non la vuole nessuno.
+**Fix strutturale raccomandato:** chi scrive la cancellazione del viewpoint cancella anche le
+regole (un `DeleteElementAction` per ciascuna, in una TRANSACTION di sole azioni — schema sicuro
+per CLAUDE.md §3.3), oppure iscrive `rules` fra le `childKeys`, che e' una modifica al cuore e va
+autorizzata a parte. La prima e' locale e sufficiente; la seconda e' piu' pulita e piu' cara.
+**Priorita':** bassa finche' la cancellazione non esiste; **bloccante nel giro che la introduce.**
+**Effort stimato:** un'ora dentro il giro che scrive la cancellazione.
+**Riferimenti:**
+- `frontend/src/model/validation/validationTypes.ts` (intestazione, «Che cosa NON c'e'»)
+- `docs/decisions.md` — R-VAL-9 (la cosa diversa con cui non va confusa)
+- `frontend/src/joiner/classes.ts` (`DPointerTargetable.childKeys`)
+
+---
+
+## I chip «Suggested:» dello stato vuoto del rules editor non esistono
+
+**Registrato:** 2026-09-16
+**Origine:** slice 1 del Symbol Editor 1b (`docs/prompts/2026-09-15_1830_slice-1_rules-editor.md`), Q7 dell'ACK (`docs/prompts/2026-09-16_ack-slice-1_rules-editor.md`): tenuti fuori perimetro e rinviati a un ticket, che e' questo.
+**Stato attuale:** lo stato vuoto del rules editor (mockup 2i) rende il titolo, il corpo e la CTA «Add first rule», e **non** la riga `or start from:` con i chip `state.isInitial`, `state.isFinal`, `state.isComposite`. Il mockup li disegna come scorciatoie che creano la prima regola gia' con il predicato dentro. Il testo dei chip esiste gia' come funzione — `formatPredicate` in `frontend/src/components/ui/ConditionalEditor/conditional.ts` e' dichiarata dalla D4 come sorgente unica del testo in riga, delle caption della preview e dei chip — quello che manca e' **quali predicati proporre**: serve filtrare `PathBuilderFeatures.attributes` sui tipi booleani (`attributeTypeToLiteralKind` in `ui/PredicateBuilder/predicateDefaults.ts` sa gia' rispondere) e decidere quanti proporne, in che ordine, e se includere `marked` e le sottoclassi via `isKind`. `ConditionalEditor` riceve gia' `features` e `classNames`: nessuna nuova prop e' necessaria per i soli attributi.
+**Fix strutturale raccomandato:** una funzione pura accanto a `formatPredicate`, per esempio `suggestedPredicates(features, classNames, max)`, che ritorna `Predicate[]`; i chip la rendono con `formatPredicate` e al click aggiungono la regola. Sta nello stesso modulo puro e resta testabile nel bench node. La decisione di design (quali fonti, quale cap) precede il codice: e' la ragione per cui la slice 1 non l'ha scritta.
+**Priorita':** bassa — lo stato vuoto e' completo e utilizzabile senza i chip; sono una scorciatoia, non una via unica.
+**Effort stimato:** mezza giornata, la meta' in decisione di design.
+**Riferimenti:**
+- `docs/handoff/mockup-copy-1b.md` — artboard 2i (`or start from:`) e 2b (`Suggested:`)
+- `docs/handoff/decisions-symbol-editor-1b.md` — D4
+- `docs/prompts/2026-09-16_ack-slice-1_rules-editor.md` — Q7
+
+---
+
+## Due modali di pari struttura sotto il rail delle Properties, mai misurate
+
+**Registrato:** 2026-09-16
+**Origine:** fase 1 della discovery rail/modale (`docs/discovery/discovery_2026-09-16_rail_modal_stacking.md`, §8). Il perimetro della fase 2 era la sola `SymbolEditorModal`; queste due sono state escluse per non dichiarare corretto cio' che non era stato misurato.
+**Stato attuale:** `ValidationResultsModal` (`frontend/src/components/editor-v2/problems/ValidationResultsModal.scss:12`) e `ImportSummaryModal` (`frontend/src/components/import/ImportSummaryModal.scss:5`) hanno la stessa forma che aveva `SymbolEditorModal` prima del rimedio: fondale `position: fixed`, `z-index: var(--z-modal, 9999)`, reso dentro `#root` senza portale. Per **D-UI-14** (`docs/decisions.md:1760`) questo le mette sotto il rail (`.properties-tree-overlay`, figlio di `body`, 900) ovunque i due riquadri si sovrappongano, qualunque numero scrivano. Misurato sulla `SymbolEditorModal`, larga 1040px: sotto i ~1785px almeno un controllo non prendeva il click. **Nessuna delle due e' stata aperta ne' misurata**: quello che e' dimostrato e' la *classe* (un `div` `position: fixed; z-index: 999999` iniettato dentro `#root` resta coperto dal rail), non il singolo caso, e la geometria puo' salvarle. Indizio a favore, da verificare e non da ereditare: il commento di `ValidationRulesModal.scss` sostiene che il modale degli esiti «e' largo 620px e non arriva mai sotto il rail». Di `ImportSummaryModal` non risulta nessuna misura.
+**Fix strutturale raccomandato:** **prima la misura, poi il rimedio.** La sonda esiste ed e' riusabile cambiando selettore e apertura: `docs/discovery/harness/probe_2026-09-16_rail_modal_stacking.mts` (censimento dei controlli per hit test, sweep delle larghezze, controllo positivo che i due riquadri si sovrappongano davvero). Se il difetto c'e', il rimedio e' quello gia' applicato due volte in questo repo: `createPortal(..., document.body)` nel componente + `z-index: var(--z-alert, 10000)` nel foglio, come `ValidationRulesModal` (`a5ed5406d`) e `SymbolEditorModal`. Due file per modale, poche righe. Da non fare alla cieca: un portale sposta il sottoalbero fuori dall'albero React, e un modale che dipenda dal CSS degli antenati attuali cambierebbe aspetto.
+**Priorita':** media per `ImportSummaryModal` (compare dopo un import, con il rail tipicamente aperto); bassa per `ValidationResultsModal` se la larghezza di 620px regge alla misura.
+**Effort stimato:** mezza giornata, in gran parte sonda: due fixture di apertura, il rimedio e' meccanico.
+**Riferimenti:**
+- `docs/decisions.md` — D-UI-14 (la regola: chi deve stare sopra il rail e' figlio di `body`)
+- `docs/discovery/discovery_2026-09-16_rail_modal_stacking.md` — §8 (raggio), §4 (E3, la classe), §9 (opzioni)
+- `frontend/src/components/validation/ValidationRulesModal.tsx:209-222` — il precedente, con la misura del 2026-09-09 nel commento
+
+---
+
+## `--z-modal` vale 1050 e non 9999: due file di token dichiarano lo stesso nome
+
+**Registrato:** 2026-09-16
+**Origine:** fase 1 della discovery rail/modale (`docs/discovery/discovery_2026-09-16_rail_modal_stacking.md`, §8.1), come fatto collaterale: letto sul `:root` vivo mentre si misurava altro.
+**Stato attuale:** `frontend/src/styles/tokens/_z-index.scss:31` dichiara `--z-modal: 9999`; `frontend/src/styles/tokens.css:204` dichiara `--z-modal: 1050`. `tokens.css` e' importato da `App.tsx:8` e **vince**: misurato sul browser, `getComputedStyle(document.documentElement).getPropertyValue('--z-modal')` ritorna **1050**. Ogni regola scritta `z-index: var(--z-modal, 9999)` vale quindi 1050, e il `9999` che si legge nel sorgente non e' mai stato il valore vivo. Stessa famiglia gia' documentata per le ombre e i colori (`tokens/_shadows.scss:60`, `tokens/_colors-light.scss:391`, `docs/discovery/discovery_2026-08-20_token_css_portalati.md`): quindici nomi dichiarati due volte con valori diversi. **Inerte per il difetto rail/modale**, e va detto perche' e' la tentazione ovvia: dentro `#root` nemmeno 999999 arriva al rail, quindi alzare quel numero non avrebbe corretto nulla. Le due scale divergono anche nell'ordine — `tokens.css` mette `--z-tooltip` (1070) **sopra** `--z-modal` (1050), `_z-index.scss` lo mette sotto — quindi un tooltip puo' finire sopra un modale fra fratelli dentro `#root`.
+**Fix strutturale raccomandato:** **non e' una modifica di passaggio.** Unificare significa scegliere una scala sola e riconciliare i due file su tutti i nomi duplicati, non solo su `--z-modal`: ogni consumatore di `var(--z-modal)` e `var(--z-tooltip)` cambia livello nello stesso commit, e il confronto che conta resta comunque quello di livello `body` (D-UI-14), che nessuna delle due scale descrive. Va fatto in un giro proprio, con una decisione che dica quale scala e' quella giusta, l'elenco dei nomi duplicati e una verifica a schermo per ogni consumatore toccato. La deroga di **D-UI-13** sugli z-index e' gia' aperta su questo, con il corollario di D-UI-14 che ne ridimensiona l'urgenza.
+**Priorita':** bassa. Nessun difetto noto oggi dipende dal valore; l'unico effetto misurato e' il tooltip sopra il modale fra fratelli, non segnalato da nessuno.
+**Effort stimato:** un giorno, quasi tutto in verifica dei consumatori; la modifica e' di due righe.
+**Riferimenti:**
+- `docs/decisions.md` — D-UI-13 (la deroga), D-UI-14 (il corollario: le due scale vivono entrambe dentro `#root`)
+- `docs/discovery/discovery_2026-08-20_token_css_portalati.md` — la famiglia dei nomi doppi
+- `frontend/src/styles/tokens/_z-index.scss:31`, `frontend/src/styles/tokens.css:204`

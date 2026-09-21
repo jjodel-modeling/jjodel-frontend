@@ -1,7 +1,7 @@
 # HARNESS-DOCS — organizzazione documentale dell'harness Jjodel
 
 Posizione: `docs/HARNESS-DOCS.md` nel repo `jjodel-frontend`.
-Versione: 1.1 (2026-08-18).
+Versione: 1.2 (2026-09-09).
 Copia nel Project Knowledge: sì, integrale. Sostituisce `INDICE_ARCHIVIO.md`.
 
 Questo file dice, per ogni tipo di documento che l'harness produce, chi lo scrive, chi lo legge, dove
@@ -119,7 +119,7 @@ RIFERIMENTI. Le clausole condivise si citano per numero, non si ricopiano.
 
 > **Nome del documento prompt**: YYYY-MM-DD HH:mm
 
-Protocollo: docs/PROTOCOL.md — clausole P1..P10 applicabili (tutte salvo deroga esplicita nel prompt).
+Protocollo: docs/PROTOCOL.md — clausole P1..P12 applicabili (tutte salvo deroga esplicita nel prompt).
 Deroga: P<n> non si applica (motivo: ...).
 
 Leggi `CLAUDE.md`. Branch: `alfonso-frontend-jjtl`.
@@ -341,7 +341,7 @@ Vedi §5.
 |---|---|---|---|
 | `CLAUDE.md` (root) | fonte di verità delle convenzioni del codebase: regole non negoziabili, critical zone e Layer Impact Report (§3), diagnosi dei bug visivi (§5), comandi (§17), semantica dell'autovalutazione (§21.3) | Claude Code a inizio di ogni sessione | a mano, poi `npm run gen:agents` e `npm run check:agents` |
 | `AGENTS.md` (root) | **generato** da `CLAUDE.md` per gli agenti non-Claude | altri agenti | **mai a mano**: si rigenera |
-| `docs/PROTOCOL.md` | regole di ingaggio condivise, clausole P1..P10, citate per numero dai prompt | tutti e tre gli attori | a mano, con bump di versione |
+| `docs/PROTOCOL.md` | regole di ingaggio condivise, clausole P1..P12, citate per numero dai prompt | tutti e tre gli attori | a mano, con bump di versione |
 | `docs/decisions.md` | vincoli operativi attivi, una riga per decisione | Claude Code a inizio sessione | si aggiunge in coda alla serie; le superate si spostano |
 | `docs/TECH-DEBT.md` | debiti tecnici aperti con priorità, 31 KB | architetto in planning | si aggiunge o si chiude una voce |
 | `docs/claude-code-log.md` | registro operativo | Claude Code a inizio sessione | append in testa, formato validato |
@@ -355,7 +355,7 @@ Vedi §5.
    di §3 impone di toccare un file fuori dallo scope dichiarato, si segue §3 e si riporta
    l'allargamento nel diff di chiusura.
 3. `docs/decisions.md`, vincoli ratificati.
-4. `docs/PROTOCOL.md`, clausole P1..P10, salvo deroga esplicita e motivata nel prompt.
+4. `docs/PROTOCOL.md`, clausole P1..P12, salvo deroga esplicita e motivata nel prompt.
 5. Il prompt.
 
 **Duplicazione controllata**: il blocco di formato delle entry di log esiste in due posti,

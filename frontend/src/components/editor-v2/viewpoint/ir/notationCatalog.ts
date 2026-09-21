@@ -30,10 +30,10 @@ import type { ShapeForm, ShapeSpec } from './irTypes';
  * Le famiglie semantiche delle sezioni del catalogo (D24): cosa si modella,
  * non lo standard di provenienza. L'ordine qui e' l'ordine delle sezioni.
  */
-export type CatalogFamily = 'Base' | 'Process' | 'Data (ER)' | 'Flowchart';
+export type CatalogFamily = 'Base' | 'Process' | 'Data (ER)' | 'Flowchart' | 'Goal';
 
 export const CATALOG_FAMILIES: readonly CatalogFamily[] =
-    ['Base', 'Process', 'Data (ER)', 'Flowchart'];
+    ['Base', 'Process', 'Data (ER)', 'Flowchart', 'Goal'];
 
 export interface SymbolPreset {
     readonly id: string;
@@ -114,12 +114,57 @@ export const NOTATION_CATALOG: readonly SymbolPreset[] = [
     { id: 'er-attribute', label: 'Attribute', notation: 'ER', family: 'Data (ER)', keywords: ['attributo'], values: { form: 'ellipse' } },
     { id: 'er-derived-attribute', label: 'Derived attribute', notation: 'ER', family: 'Data (ER)', keywords: ['attributo derivato'], values: { form: 'ellipse', border: { style: 'dashed', width: 1 } } },
     { id: 'er-multivalued-attribute', label: 'Multivalued attribute', notation: 'ER', family: 'Data (ER)', keywords: ['attributo multivalore'], values: { form: 'ellipse', border: { style: 'double', width: 3 } } },
+    // ---- Goal modeling: i*, GRL, KAOS (D6) ----
+    // Una notazione per riga, come gia' fanno BPMN e UML. i* copre i sette
+    // elementi del suo nucleo; Belief va a GRL perche' i* 2.0 non lo tiene piu'
+    // fra gli elementi standard mentre GRL si'; Obstacle e' di KAOS.
+    //
+    // Obstacle e' un PARALLELOGRAMMA e non un rombo: `diamond` con bordo semplice
+    // e' gia' il punto della relationship ER nello spazio degli assi, e la modale
+    // titola il simbolo con `matches[0]`, quindi un Obstacle a rombo si
+    // presenterebbe all'autore come «Relationship». Il parallelogramma e' insieme
+    // il disegno KAOS e un punto libero.
+    { id: 'goal-goal', label: 'Goal', notation: 'i*', family: 'Goal', keywords: ['obiettivo', 'hardgoal'], values: { form: 'stadium' } },
+    { id: 'goal-softgoal', label: 'Softgoal', notation: 'i*', family: 'Goal', keywords: ['soft goal', 'quality', 'qualita', 'nuvola'], values: { form: 'cloud' } },
+    { id: 'goal-task', label: 'Task', notation: 'i*', family: 'Goal', keywords: ['compito', 'operazionalizzazione'], values: { form: 'hexagon' } },
+    { id: 'goal-resource', label: 'Resource', notation: 'i*', family: 'Goal', keywords: ['risorsa'], values: { form: 'rect' } },
+    { id: 'goal-actor', label: 'Actor', notation: 'i*', family: 'Goal', keywords: ['attore'], values: { form: 'circle' } },
+    { id: 'goal-agent', label: 'Agent', notation: 'i*', family: 'Goal', keywords: ['agente'], values: { form: 'circle', marker: 'bar-top' } },
+    { id: 'goal-role', label: 'Role', notation: 'i*', family: 'Goal', keywords: ['ruolo'], values: { form: 'circle', marker: 'bar-bottom' } },
+    { id: 'goal-belief', label: 'Belief', notation: 'GRL', family: 'Goal', keywords: ['credenza', 'assunzione'], values: { form: 'ellipse' } },
+    { id: 'goal-obstacle', label: 'Obstacle', notation: 'KAOS', family: 'Goal', keywords: ['ostacolo'], values: { form: 'parallelogram' } },
 ];
 
 /** Le notazioni presenti, nell'ordine di prima apparizione nel catalogo. */
 export const CATALOG_NOTATIONS: readonly string[] = NOTATION_CATALOG
     .map(p => p.notation)
     .filter((n, i, a) => a.indexOf(n) === i);
+
+/**
+ * Un asse condizionale e' l'unico oggetto che un asse puo' contenere: ogni asse
+ * confrontato qui e' un primitivo, quindi «object» significa `{when,then}` o
+ * `{rules}`. Stessa convenzione, e stessa riga, della sentinella `scalarOf` di
+ * `symbolRecognition.ts`: le due funzioni sono l'una lo specchio dell'altra e
+ * devono leggere la condizionalita' allo stesso modo.
+ */
+const isConditionalAxis = (v: unknown): boolean => v !== null && typeof v === 'object';
+
+export interface ApplyPresetOptions {
+    /**
+     * D7 — «un preset sovrascrive un asse scalare e mai uno condizionale».
+     *
+     * Con `keepRules`, un asse che l'autore ha reso `Conditional` (`fill`, `marker`,
+     * `border.width`, `border.style`) resta INTATTO, e nessun valore del preset
+     * finisce nel suo `default`. Quest'ultima meta' non e' un dettaglio: iniettare
+     * un `default` persisterebbe un default che l'utente non ha mai scelto (vietato
+     * da D2) e cambierebbe in silenzio cio' che disegna ogni istanza che non matcha
+     * nessuna regola — su un'azione la cui casella promette di conservare le regole
+     * dell'autore. Gli assi scalari seguono il preset come sempre.
+     *
+     * Assente o `false`: comportamento identico a oggi.
+     */
+    keepRules?: boolean;
+}
 
 /**
  * Applica un preset a una ShapeSpec esistente, immutabilmente.
@@ -133,21 +178,34 @@ export const CATALOG_NOTATIONS: readonly string[] = NOTATION_CATALOG
  * scritto solo se il preset lo dichiara (e' semantica del simbolo: stato
  * iniziale, transizione Petri), altrimenti resta quello dell'autore. Labels,
  * badges e tutto il resto della spec passano intatti.
+ *
+ * `form` non e' fra gli assi che `keepRules` protegge (D7 non lo elenca): scegliere
+ * una forma dal catalogo e' esattamente la richiesta di cambiare forma.
  */
-export function applyPresetToShape(shape: ShapeSpec, preset: SymbolPreset): ShapeSpec {
+export function applyPresetToShape(
+    shape: ShapeSpec,
+    preset: SymbolPreset,
+    opts: ApplyPresetOptions = {},
+): ShapeSpec {
     const prevBorder = shape.border;
+    /** L'asse va lasciato dov'e': l'autore l'ha reso condizionale e la casella e' accesa. */
+    const keep = (v: unknown): boolean => opts.keepRules === true && isConditionalAxis(v);
     const next: ShapeSpec = {
         ...shape,
         form: preset.values.form,
         border: {
             color: prevBorder?.color ?? INK,
-            width: preset.values.border?.width ?? 1,
-            style: preset.values.border?.style ?? 'solid',
+            width: keep(prevBorder?.width) ? prevBorder!.width : (preset.values.border?.width ?? 1),
+            style: keep(prevBorder?.style) ? prevBorder!.style : (preset.values.border?.style ?? 'solid'),
         },
     };
-    if (preset.values.marker) next.marker = preset.values.marker;
-    else delete next.marker;
-    if (preset.values.fill !== undefined) next.fill = preset.values.fill;
+    // Un marker condizionale sopravvive anche a un preset che non ne dichiara alcuno:
+    // e' la rimozione, non solo la sovrascrittura, che `keepRules` deve trattenere.
+    if (!keep(shape.marker)) {
+        if (preset.values.marker) next.marker = preset.values.marker;
+        else delete next.marker;
+    }
+    if (!keep(shape.fill) && preset.values.fill !== undefined) next.fill = preset.values.fill;
     return next;
 }
 

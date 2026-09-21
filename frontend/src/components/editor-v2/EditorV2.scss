@@ -450,6 +450,65 @@
     font-variant-numeric: tabular-nums;
 }
 
+// ── Dichiarazione di freschezza della validazione (R-VAL-18) ──
+// UNA riga, accanto al comando che la produce, mai sul nodo. Geometria stabile a
+// tutti e tre gli stati — stessa altezza, stesso padding — cosi' che il passaggio
+// fra uno stato e l'altro non faccia respirare la barra.
+//
+// I colori sono i token semantici (`--color-error`, `--color-warning`,
+// `--color-success`), definiti in `tokens/_colors-light.scss` e `_colors-dark.scss`:
+// nessun token nuovo, nessuna variabile dichiarata qui dentro (CLAUDE.md §7.2).
+// Il ciano non compare: non e' uno stato semantico.
+.validation-freshness {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 20px;
+    padding: 3px 9px;
+    margin-left: 6px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+    user-select: none;
+    font-variant-numeric: tabular-nums;
+
+    i {
+        font-size: 11px;
+        line-height: 1;
+    }
+
+    // Mai validato: neutro. Non e' «pulito», e non deve somigliarci.
+    //
+    // Il neutro non ha un token semantico — misurato: `--text-dim` e `--surface-1`
+    // non sono definiti in `tokens/`, e ogni loro uso in questo foglio cade sul
+    // fallback letterale. Si usa quindi la stessa coppia dello stato «unknown» di
+    // `ValidationPill.scss`, che e' il precedente per un indicatore neutro, invece di
+    // inventare un token qui (CLAUDE.md §7.2: le variabili si dichiarano in `tokens/`).
+    &--never {
+        color: var(--text-dim, #94a3b8);
+        background: rgba(148, 163, 184, 0.14);
+    }
+
+    &--clean {
+        color: var(--color-success);
+        background: var(--color-success-muted);
+    }
+
+    &--violated {
+        color: var(--color-error);
+        background: var(--color-error-muted);
+    }
+
+    // Non validato dall'ultima modifica: i pallini sono stati ritirati, e questo e'
+    // l'unico posto che lo dice.
+    &--stale {
+        color: var(--color-warning);
+        background: var(--color-warning-muted);
+    }
+}
+
 // ── Standard icon button (28×28) ──
 .toolbar-btn {
     display: flex;

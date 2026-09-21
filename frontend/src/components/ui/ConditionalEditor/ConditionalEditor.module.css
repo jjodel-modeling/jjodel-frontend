@@ -48,3 +48,208 @@ html[data-theme="dark"] .chip {
   background-color: #1e293b;
   color: #cbd5e1;
 }
+
+/* ---- Rules editor (rulesTable, Symbol Editor 1b slice 1: mockup 2b / 2i) ---- */
+
+.rules {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.rulesCaption {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+/* One grid for the header, every rule and the Otherwise row, so the columns line
+   up: move | WHEN | arrow | THEN | remove. */
+.ruleRow {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) 12px minmax(0, 1.2fr) 22px;
+  align-items: center;
+  gap: var(--spacing-1);
+}
+
+.ruleHeader {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+}
+
+.ruleMove {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ruleMove .ruleIconBtn {
+  height: 15px;
+}
+
+.ruleIconBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background-color: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 10px;
+  line-height: 1;
+}
+
+.ruleIconBtn:hover:not(:disabled) {
+  background-color: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #475569;
+}
+
+.ruleIconBtn:disabled {
+  cursor: var(--disabled-cursor);
+  opacity: var(--disabled-opacity);
+}
+
+/* Read-only predicate text; the click opens the PredicateBuilder popover. */
+.ruleWhen {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+  padding: 5px 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background-color: #f8fafc;
+  color: #1e293b;
+  font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.ruleWhen:hover,
+.ruleWhenOpen {
+  border-color: #0ea5e9;
+}
+
+.ruleWhen:focus-visible {
+  outline: 2px solid #0ea5e9;
+  outline-offset: 1px;
+}
+
+.ruleArrow {
+  color: #94a3b8;
+  font-size: 11px;
+  text-align: center;
+}
+
+.ruleThen {
+  min-width: 0;
+}
+
+.otherwiseLabel {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+}
+
+.defaultNone {
+  padding: 5px 8px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 6px;
+  background-color: transparent;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.defaultNone:hover {
+  border-color: #94a3b8;
+  color: var(--color-text-secondary);
+}
+
+.rulesEmpty {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+}
+
+.rulesEmptyTitle {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.rulesEmptyBody {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  line-height: 1.45;
+}
+
+.addRuleBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-1);
+  align-self: stretch;
+  padding: 7px;
+  border: 1.5px dashed #cbd5e1;
+  border-radius: 8px;
+  background-color: transparent;
+  color: #0ea5e9;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.addRuleBtn:hover {
+  border-color: #0ea5e9;
+  background-color: #e0f2fe;
+  color: #0284c7;
+}
+
+/* Portal to body: above the Symbol Editor modal (z-index 9999), like the
+   typography popover (_form-system.scss .jj-textstyle-popover). */
+.whenPopover {
+  position: fixed;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  overflow-y: auto;
+  padding: 12px;
+  background: var(--form-input-bg, #ffffff);
+  border: 1px solid var(--form-input-border-color, #e2e8f0);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.16);
+}
+
+html[data-theme="dark"] .ruleIconBtn,
+html[data-theme="dark"] .ruleWhen {
+  border-color: #334155;
+}
+
+html[data-theme="dark"] .ruleIconBtn:hover:not(:disabled) {
+  background-color: #1e293b;
+}
+
+html[data-theme="dark"] .ruleWhen {
+  background-color: #0f1012;
+  color: #cbd5e1;
+}
+
+html[data-theme="dark"] .defaultNone,
+html[data-theme="dark"] .addRuleBtn {
+  border-color: #334155;
+}
+
+html[data-theme="dark"] .addRuleBtn {
+  color: #38bdf8;
+}

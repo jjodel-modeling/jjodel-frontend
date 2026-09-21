@@ -9,6 +9,7 @@ import {
     CreateArgs,
     AddArgs,
     DeleteArgs,
+    ElementType,
     RenameArgs,
     SetArgs,
     ExtendsArgs,
@@ -57,8 +58,9 @@ export function extractDependencies(ast: CommandNode): ElementDependency[] {
             const args = ast.args as AddArgs;
             // "to" target is always required
             deps.push({ name: args.to, role: 'destination', required: true });
-            // Same options as create for superclass/type
-            extractOptionsDependencies(args.options, deps);
+            // Same options as create for superclass/type, and the same element type: `add` is
+            // converted to a `create` before execution, so it runs the same resolution.
+            extractOptionsDependencies(args.options, deps, args.elementType);
             break;
         }
 
@@ -156,22 +158,47 @@ function extractCreateDependencies(args: CreateArgs, deps: ElementDependency[]):
     }
 
     // Extract dependencies from options (superclass, type references)
-    extractOptionsDependencies(args.options, deps);
+    extractOptionsDependencies(args.options, deps, elementType);
 }
+
+/**
+ * Element types that take an `extends` clause, and whose superclass therefore has to be
+ * resolvable before the command runs. `enum` and `package` take none.
+ */
+const EXTENDING_ELEMENT_TYPES: ReadonlySet<string> = new Set<ElementType>([
+    'class', 'abstract class', 'interface',
+]);
 
 /**
  * Extract dependencies from create options (superclass, type references, etc.)
  */
-function extractOptionsDependencies(options: CreateArgs['options'], deps: ElementDependency[]): void {
+function extractOptionsDependencies(
+    options: CreateArgs['options'],
+    deps: ElementDependency[],
+    elementType?: ElementType
+): void {
     if (!options) return;
 
-    // Superclass dependencies
+    // Superclass dependencies.
+    //
+    // Required since 2026-09-17, for the reason the parent of a nested element is and the
+    // standalone `A extends B` already was (:89-90, same role): `waitForDependencies` polls
+    // only the required ones and returns at once when there are none, so a superclass created
+    // by the PREVIOUS line of the same script was resolved before Redux had propagated it.
+    // Until lane L2 that lookup failed silently and the class was created without its
+    // generalization; L2 made it a refusal, and the refusal made the race visible.
+    // Measured in `docs/discovery/discovery_2026-09-17_superclass_same_script_race.md`.
+    //
+    // Only the element types that take an `extends` clause, which is also the set
+    // `scriptValidator.ts` uses for the same role. Worth unifying the two lists once the
+    // validator lane lands.
+    const extendsClause = elementType !== undefined && EXTENDING_ELEMENT_TYPES.has(elementType);
     if (options.superClass) {
-        deps.push({ name: options.superClass, role: 'superclass', required: false });
+        deps.push({ name: options.superClass, role: 'superclass', required: extendsClause });
     }
     if (options.superClasses) {
         for (const sc of options.superClasses) {
-            deps.push({ name: sc, role: 'superclass', required: false });
+            deps.push({ name: sc, role: 'superclass', required: extendsClause });
         }
     }
 

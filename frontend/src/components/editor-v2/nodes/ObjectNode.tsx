@@ -106,8 +106,10 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
     // viewpoint declares an applicable IR view for this object's metaclass.
     const irResolution = useIRView(id, data.instanceOfClassId);
     // Is an IR viewpoint active at all? Only then does a null resolution mean "this
-    // metaclass is not rendered by the viewpoint" (neutral node below); with no IR
-    // viewpoint, or a wildcard one, the object keeps rendering in full.
+    // metaclass is not rendered by the viewpoint" (neutral node below). With no IR
+    // viewpoint the object renders natively; with a wildcard IR view ('*') the
+    // resolution is non-null and the object renders through the IR default object
+    // view at minimal specificity (irResolveCore.ts), never as a neutral node.
     const irViewpointActive = useIRViewpointActive();
     // Delegation (spec v1.2 sez. 11 amendment): migrated classic-default views
     // render through the native branch below — parity with "no viewpoint" by

@@ -53,7 +53,7 @@ export type Conditional<T> =
     | { rules: { when: Predicate; then: T }[]; default?: T };
 
 export type ShapeForm = 'rect' | 'rounded' | 'ellipse' | 'circle' | 'diamond'
-    | 'stadium' | 'hexagon' | 'parallelogram' | 'cylinder';
+    | 'stadium' | 'hexagon' | 'parallelogram' | 'cylinder' | 'cloud';
 export type LabelPosition = 'top' | 'center' | 'inside' | 'bottom';
 export type BadgePosition = 'tl' | 'tr' | 'bl' | 'br';
 
@@ -153,17 +153,47 @@ export interface FieldCompartmentSpec {
 export interface ShapeSpec {
     form: Conditional<ShapeForm>;
     fill?: Conditional<string>;
-    /** `double` (asse bordo, 2026-08-15): CSS-native sulle forme CSS (due linee da
-     *  width >= 3), overdraw a due polygon sulle forme SVG (IRNodeContent). */
-    border?: { color: string; width: number; style: 'solid' | 'dashed' | 'dotted' | 'double' };
     /**
-     * Corner radius in px (ir-1.3 addendum, asse raggio). Sibling of `border`, not a
-     * field on it: the radius belongs to the box, not the stroke, and would be
-     * unreachable with no border declared if it lived inside `border`. Significant
-     * only on box shapes with straight corners (rect, rounded); ignored explicitly —
-     * never approximated or converted — on shapes with no straight corner (ellipse,
-     * circle, stadium) and on SVG-painted shapes (diamond, hexagon, parallelogram,
-     * cylinder). Additive optional field: no irVersion bump, no migration.
+     * Border, conditional PER AXIS (D1, slice 2 2026-09-16): each of the three axes
+     * carries its own `Conditional`, the same shape as `EdgeViewIR.line` below plus
+     * `'double'`. A scalar `{color, width, style}` therefore stays a valid value and
+     * reads back identical — additive, no `irVersion` bump and no VersionFixer.
+     *
+     * Per axis and NOT `Conditional<BorderSpec>`: a single conditional on the whole
+     * border would force an author who varies the width to restate colour and style in
+     * every branch. An absent axis falls back to the CSS box, as an absent `border`
+     * always has.
+     *
+     * `double` (asse bordo, 2026-08-15): CSS-native sulle forme CSS (due linee da
+     * width >= 3), overdraw a due polygon sulle forme SVG (IRNodeContent).
+     */
+    border?: {
+        color?: Conditional<string>;
+        width?: Conditional<number>;
+        style?: Conditional<'solid' | 'dashed' | 'dotted' | 'double'>;
+    };
+    /**
+     * Corner radius in px, applied to every vertex of the shape (ir-1.3 addendum, asse
+     * raggio; slice 3 of Symbol Editor 1b, decision D5; Conditional by R-IRN-35).
+     * Sibling of `border`, not a field on it: the radius belongs to the box, not the
+     * stroke, and would be unreachable with no border declared if it lived inside
+     * `border`. Conditional like every border axis, so a rule can vary it per instance.
+     *
+     * ABSENT IS NOT ZERO. Absent keeps the form's base radius, which is what every
+     * saved view renders today: 4px on `rect` (irStyle.ts, `.ir-node-content`), 10px on
+     * `rounded` (`.ir-shape--rounded`), sharp on the polygons. A written value, 0
+     * included, replaces that base and is persisted as typed. The same holds after
+     * compile: a conditional with no matching branch resolves to `undefined`, never 0.
+     *
+     * Honored by `rect`, `rounded` (inline `border-radius`) and by `diamond`, `hexagon`,
+     * `parallelogram` (a rounded path, `roundedPolygonPath` in shapeRegistry.ts).
+     * Ignored by `ellipse`, `circle` and `stadium`, whose `border-radius` (50%, 50%,
+     * 999px) is what constitutes the shape rather than a decoration of it, and by
+     * `cylinder` and `cloud`, which are paths with arcs of their own.
+     *
+     * Clamped to `min(w, h) / 4` at render only. Not a recognition axis: a preset stays
+     * recognized whatever the radius. Additive optional field: no irVersion bump, no
+     * migration.
      */
     cornerRadius?: Conditional<number>;
     /**
@@ -213,8 +243,21 @@ export interface ShapeSpec {
  * Optional and additive: an IR without it matches by name exactly as before, and
  * on a project with a single metamodel the pin can only agree with the name. No
  * irVersion bump, no migration, no backfill.
+ *
+ * SINCE 2026-09-19 (R-MCID-1) A NAME MAY HOLD SEVERAL IDENTITIES. Two metaclasses
+ * declared by different metamodels are different metaclasses even when they share
+ * a name, and one view may list both: the value is a class id (the single pin, as
+ * always) or an ARRAY of class ids, the set of classes pinned under that name.
+ * `metaclasses` stays a deduplicated list of names and the resolver index stays
+ * keyed by name. Normalization on write: an array of length 1 is written as the
+ * plain string, an empty array is never written (the key is dropped), so an ir
+ * with one identity per name is byte-identical to what it was before.
+ *
+ * An empty array is not written by the authoring layer; if a hand-written ir holds
+ * one, `pinAccepts` matches nothing (`[].includes(id)`), whereas `withMetaclassPins`
+ * reads it as unpinned and falls through to the chain. The two differ on purpose.
  */
-export type AuthoringMetaclassPins = { [metaclassName: string]: string };
+export type AuthoringMetaclassPins = { [metaclassName: string]: string | string[] };
 
 /** Panel skin of a form rendering. Absent = the host decides ('plain' in the rail,
  *  'card' in the form document): the default belongs to the host, not to the view,
@@ -726,7 +769,15 @@ export interface CompiledView {
     formSpec: FormSpec | null;
     form: CompiledConditional<ShapeForm>;
     fill: CompiledConditional<string> | null;
-    border: { color: string; width: number; style: string } | null;
+    /**
+     * Border axes compiled one by one (slice 2), the same split `CompiledEdgeView`
+     * already has for `line`: each is null when the view declares that axis, and the
+     * renderer resolves it per instance. All three null = no authored border, where the
+     * CSS box applies.
+     */
+    borderColor: CompiledConditional<string> | null;
+    borderWidth: CompiledConditional<number> | null;
+    borderStyle: CompiledConditional<'solid' | 'dashed' | 'dotted' | 'double'> | null;
     /** Compiled corner radius in px; undefined-returning function or null mean "no
      *  override" (see ShapeSpec.cornerRadius) — kept distinct from 0, a legitimate
      *  authored value (square corner). */

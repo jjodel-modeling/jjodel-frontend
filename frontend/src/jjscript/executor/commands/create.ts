@@ -18,6 +18,9 @@ import {
 import { qualifiedNameToString } from '../../parser/grammar';
 import { getProject, getDefaultParent, needsParent, getTargetMetamodel } from '../utils';
 import { executeCreateInstance } from './instance';
+import { checkM2NameUniqueness } from '../../../model/logicWrapper/nameUniqueness';
+import { duplicateNameRefusal, m2KindForElementType, withNearHomonymWarning } from '../m2CreateGuard';
+import { resolveSuperclasses, superclassNames } from '../superclassResolution';
 
 // Import Jjodel model types and actions
 import {
@@ -232,13 +235,33 @@ export async function executeCreate(
 
         // M2 guard: every other elementType modifies the metamodel.
         if (context.level === 'M1') {
+            // A bound run cannot be retargeted by opening a tab: the scope travels with the reply,
+            // so the only way out is a new reply. An unbound run is the typed case, where opening
+            // the editor is exactly what fixes it.
+            const advice = context.scopeBound
+                ? 'Ask Jjodie again with the metamodel open.'
+                : `Open a metamodel editor (M2) to create a ${elementType}. To create an instance in M1, use 'create instance <ClassName>'.`;
+            // A scope-bound run is a Jjodie reply: it carries the model its context showed, and
+            // saying which one turns "wrong level" into something the user can act on. The name
+            // comes from the project already in hand, with no new field on ExecutionContext.
+            let boundModelName: string | undefined;
+            if (context.scopeBound && context.modelId) {
+                const models = (project as any).models || [];
+                boundModelName = models.find((m: any) => m?.id === context.modelId && !m.isMetamodel)?.name;
+            }
+            const writtenFor = boundModelName
+                ? ` This script was written for the model '${boundModelName}'.`
+                : '';
+            // `advice` is repeated in `message` on purpose: `errors` is dropped on the way to the
+            // error dialog (ScriptLineResult carries no such field), so `message` is the only text
+            // the user actually reads. See §7 of the discovery report.
             return {
                 success: false,
                 command: 'create',
-                message: `'create ${elementType}' modifies the metamodel`,
+                message: `'create ${elementType}' modifies the metamodel.${writtenFor} ${advice}`,
                 errors: [{
                     code: 'WRONG_LEVEL',
-                    message: `Open a metamodel editor (M2) to create a ${elementType}. To create an instance in M1, use 'create instance <ClassName>'.`
+                    message: advice
                 }]
             };
         }
@@ -329,6 +352,29 @@ export async function executeCreate(
             };
         }
 
+        // ── Uniqueness (S1-M2, R-M2U-1..6): the script is a CONSUMER of the one verdict ──
+        //
+        // Until now every creator below called `D*.new` unconditionally, so `create class X`
+        // on a metamodel that already holds `X` made a second one and reported success. From
+        // then on every script naming `X` stopped on the ambiguity message. R-M2U-4 already
+        // says where the gate belongs: `D*.new` is the loading door and stays ungated, and the
+        // rule applies where a user gesture arrives. A `create` typed or generated is one.
+        //
+        // Consulted here, once, rather than in each of the nine creators: `parentElement` is
+        // settled at this point (the parent-not-found and wrong-kind refusals above already
+        // returned), and it is the PROSPECTIVE father the verdict resolves the namespace from.
+        // A wrong-KIND parent that slipped through — `create attribute a in SomeEnum` — makes
+        // the namespace empty and the verdict accept, so the creator's own `isClass` refusal
+        // still surfaces unchanged.
+        const m2kind = m2KindForElementType(elementType);
+        let uniqueness: ReturnType<typeof checkM2NameUniqueness> | undefined;
+        if (m2kind) {
+            uniqueness = checkM2NameUniqueness({ father: parentElement, kind: m2kind, name });
+            const refusal = duplicateNameRefusal(
+                elementType, name, uniqueness, metamodelNameFor(parentElement, targetMetamodel));
+            if (refusal) return refusal;
+        }
+
         // Create the element based on type
         let result: ExecutionResult;
 
@@ -383,6 +429,13 @@ export async function executeCreate(
                 };
         }
 
+        // The other half of R-M2U-1: `Foo` next to `foo` is legal, and the write SAYS SO. On a
+        // failed create there is nothing to announce — the name was never taken.
+        if (result.success) {
+            const warnings = withNearHomonymWarning(result.warnings, uniqueness);
+            if (warnings !== result.warnings) result = { ...result, warnings };
+        }
+
         return result;
 
     } catch (error) {
@@ -393,6 +446,23 @@ export async function executeCreate(
             message: `Failed to create ${elementType}: ${err.message}`,
             errors: [{ code: 'CREATE_ERROR', message: err.message }]
         };
+    }
+}
+
+/**
+ * The metamodel a refusal names, for the sentence `duplicateNameRefusal` composes.
+ *
+ * `targetMetamodel` first because that is the scope the handler actually resolved against; the
+ * parent's own model is the fallback for a scope-bound run, where `getTargetMetamodel` returns
+ * null by design (`utils.ts`) and the parent came from the context instead. Guarded: this only
+ * decorates an error message, and a proxy read that throws must not replace a useful refusal
+ * with `CREATE_ERROR`.
+ */
+function metamodelNameFor(parent: any, targetMetamodel: any): string | undefined {
+    try {
+        return targetMetamodel?.name ?? parent?.model?.name ?? undefined;
+    } catch {
+        return undefined;
     }
 }
 
@@ -409,6 +479,25 @@ async function createClass(
     project?: any,
     targetMetamodel?: any
 ): Promise<ExecutionResult> {
+    // Every superclass is settled BEFORE the class exists, for the reason the `type` clause of
+    // an attribute is: an unresolvable one must not leave a half-made element behind. This used
+    // to run AFTER `DClass.new`, and a name it could not find was dropped in silence -- the
+    // class was created without its generalization and the command reported success.
+    //
+    // The resolution ORDER is unchanged: scoped inside the target metamodel first, project-wide
+    // second. The bound-scope guard is unchanged too and sits upstream -- a scope-bound run
+    // makes `getTargetMetamodel` return null by design and `executor.ts` has already refused a
+    // bare name only another metamodel holds, so what reaches here is a name this run may use.
+    const superclasses = resolveSuperclasses(
+        superclassNames(options),
+        name,
+        (qn) => {
+            const scoped = targetMetamodel ? resolveElementInMetamodel(qn, targetMetamodel) : null;
+            return scoped ?? (project ? resolveElement(qn, project) : null);
+        }
+    );
+    if (!superclasses.ok) return superclasses.refusal;
+
     return new Promise((resolve) => {
         try {
             // Get the parent ID (package or model)
@@ -427,40 +516,12 @@ async function createClass(
                 true        // persist - automatically dispatches the action
             );
 
-            // Handle superclass (extends) - use scoped resolution when available
-            let superClassName: string | undefined;
-            if (options?.superClass && project) {
-                // Prefer scoped resolution within the target metamodel
-                let superClass = targetMetamodel
-                    ? resolveElementInMetamodel(options.superClass, targetMetamodel)
-                    : null;
-                // Fallback to project-wide search
-                if (!superClass) {
-                    superClass = resolveElement(options.superClass, project);
-                }
-                if (superClass) {
-                    // Set the extends property using SetFieldAction
-                    // The '=' operator sets the array, '+=' adds to it
-                    SetFieldAction.new(newClass, 'extends', superClass.id, '+=', true);
-                    superClassName = superClass.name;
-                }
+            // Apply the inheritance already resolved above. The '=' operator sets the array,
+            // '+=' adds to it, and multiple inheritance is legal in Ecore.
+            for (const superClass of superclasses.resolved) {
+                SetFieldAction.new(newClass, 'extends', superClass.id, '+=', true);
             }
-
-            // Handle multiple superclasses - use scoped resolution when available
-            if (options?.superClasses && options.superClasses.length > 1 && project) {
-                // Skip first one as it's already handled above
-                for (let i = 1; i < options.superClasses.length; i++) {
-                    let superClass = targetMetamodel
-                        ? resolveElementInMetamodel(options.superClasses[i], targetMetamodel)
-                        : null;
-                    if (!superClass) {
-                        superClass = resolveElement(options.superClasses[i], project);
-                    }
-                    if (superClass) {
-                        SetFieldAction.new(newClass, 'extends', superClass.id, '+=', true);
-                    }
-                }
-            }
+            const superClassName: string | undefined = superclasses.resolved[0]?.name;
 
             const typeLabel = isInterface ? 'interface' : isAbstract ? 'abstract class' : 'class';
 

@@ -198,6 +198,9 @@ export {LViewElement, DViewElement} from "../view/viewElement/view";
 export {DViewPoint, LViewPoint, getViewpointType, isDataManagerViewpoint, isDataManagerViewpointId, ensureDataManagerViewpoint, findDataManagerViewpoint, DATA_MANAGER_VIEWPOINT_TYPE, DATA_MANAGER_VIEWPOINT_ID, DATA_MANAGER_VIEWPOINT_NAME} from "../view/viewPoint/viewpoint";
 export type {ViewpointType} from "../view/viewPoint/viewpoint";
 
+export {DValidationViewpoint, LValidationViewpoint, DValidationRule, LValidationRule,
+    findValidationViewpoint, ensureValidationViewpoint, VALIDATION_VIEWPOINT_ID, VALIDATION_VIEWPOINT_NAME} from "../model/validation/validationTypes";
+
 export {Action, CreateElementAction, DeleteElementAction, SetFieldAction, SetRootFieldAction, CompositeAction, ParsedAction, LoadAction, CombineHistoryAction, RedoAction, UndoAction,
     TRANSACTION, ABORT, /*BEGIN, END*/} from "../redux/action/action";
 

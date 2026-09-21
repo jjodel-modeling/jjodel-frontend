@@ -3,6 +3,8 @@
  * Provides specific, actionable error messages
  */
 
+import type { ExecutionError } from '../types';
+
 // ============================================
 // ERROR CODES
 // ============================================
@@ -402,11 +404,73 @@ export function parseError(rawMessage: string, command?: string): JjScriptError 
 }
 
 // ============================================
+// EXECUTOR RESULT TO STRUCTURED ERROR
+// ============================================
+
+/**
+ * The codes `JjScriptErrorCode` actually knows. Command handlers emit 82 distinct codes, of
+ * which only 5 are in the union; the rest travel as OPERATION_FAILED, whose message is
+ * whatever we hand it. Nothing user-visible depends on the narrowing: the dialog renders the
+ * message and the suggestion, never the code. Measured in
+ * `docs/discovery/discovery_2026-09-16_jjscript_forward_refs_structured_errors.md` §8.
+ */
+const KNOWN_ERROR_CODES: ReadonlySet<string> = new Set<JjScriptErrorCode>([
+    'PARSE_ERROR', 'INVALID_SYNTAX', 'UNEXPECTED_TOKEN', 'UNTERMINATED_STRING', 'UNTERMINATED_BLOCK',
+    'UNKNOWN_ELEMENT_TYPE', 'UNKNOWN_COMMAND', 'ELEMENT_NOT_FOUND', 'PARENT_NOT_FOUND',
+    'DUPLICATE_NAME', 'INVALID_NAME',
+    'TYPE_MISMATCH', 'INVALID_MULTIPLICITY', 'INVALID_VALUE',
+    'TARGET_NOT_FOUND', 'CIRCULAR_REFERENCE', 'INVALID_REFERENCE',
+    'MISSING_REQUIRED_PARAM', 'INVALID_PARAM', 'OPERATION_FAILED',
+    'INTERNAL_ERROR', 'TIMEOUT',
+]);
+
+/**
+ * Build the error the dialog shows from an executor result.
+ *
+ * When the result carries `errors`, the handler has already written a sentence about what it
+ * refused and usually a suggestion: both are used verbatim. `parseError` stays the fallback
+ * for results that carry none (thrown exceptions, hosts that drop the field), where guessing
+ * from the text is all there is.
+ *
+ * This is the fix for the reported case: the executor said "Unknown type 'PipelineStage' for
+ * reference 'stages'. Expected a class." and `parseError`'s keyword match ("unknown" + "type")
+ * turned it into "'PipelineStage' is not a supported element type", which is about a different
+ * problem entirely.
+ */
+export function errorFromResult(
+    result: { message?: string; errors?: ExecutionError[] } | null | undefined,
+    command?: string
+): JjScriptError {
+    const first = result?.errors?.[0];
+    const message = result?.message || first?.message || 'Unknown error';
+
+    if (!first) return parseError(message, command);
+
+    const code: JjScriptErrorCode = KNOWN_ERROR_CODES.has(first.code)
+        ? (first.code as JjScriptErrorCode)
+        : 'OPERATION_FAILED';
+    const base = createError(code, { command, details: message });
+
+    return {
+        ...base,
+        message,
+        suggestion: first.suggestion || base.suggestion,
+    };
+}
+
+// ============================================
 // EXECUTION TYPES (co-located for convenience)
 // ============================================
 export interface ExecutionErrorInfo {
     command: string;
     lineNumber: number;
+    /**
+     * The line as numbered in the editor, which is what the user reads. `lineNumber` counts
+     * executable commands (blank lines, comments and `target` directives are not commands)
+     * and is used as an index by the Skip and recovery paths, so the two cannot be merged.
+     * Absent means the two coincide.
+     */
+    scriptLine?: number;
     executedSoFar: number,
     totalCommands: number,
     elapsedMs: number,

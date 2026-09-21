@@ -11,8 +11,10 @@ import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { JjScriptEvents } from '../../events/registry';
 import './ScriptBlock.scss';
 import { ExecutionErrorDialog } from './ExecutionErrorDialog';
-import {parseError, ExecutionPauseInfo, ExecutionSummary, JjScriptError, ExecutionErrorInfo} from '../executor/errors';
-import { validateScriptIntegrity } from '../executor/scriptValidator';
+import { skippedLinesAsEditorLines } from './summaryLines';
+import {parseError, errorFromResult, ExecutionPauseInfo, ExecutionSummary, JjScriptError, ExecutionErrorInfo} from '../executor/errors';
+import type { ExecutionError } from '../types';
+import { collectClassifierNames, validateScriptIntegrity } from '../executor/scriptValidator';
 import { AIDisclaimer } from '../../components/common/AIDisclaimer';
 import {TransformationAST} from "../../jjtl";
 import {ExecutionContext} from "../../jjtl/executor";
@@ -21,7 +23,7 @@ import {
     isCreateLiteralInTarget,
     type RecoveryAction,
 } from '../recovery';
-import { LPointerTargetable, LModel } from '../../joiner';
+import { DUser, L, LPointerTargetable, LModel, LProject, LUser } from '../../joiner';
 
 // ============================================
 // TYPES
@@ -61,6 +63,12 @@ export interface ScriptLineResult {
     success: boolean;
     message: string;
     warnings?: string[];
+    /**
+     * The executor's own structured errors, when the host passes them through. Present, the
+     * dialog shows the handler's sentence and suggestion; absent, it falls back to parsing
+     * `message` (see `errorFromResult`).
+     */
+    errors?: ExecutionError[];
 }
 
 /** @deprecated Use ScriptLineResult instead */
@@ -84,7 +92,9 @@ interface LineState {
 type ScriptOutcome =
     | { kind: 'success'; count: number }
     | { kind: 'runtime-error'; line: number; message: string }
-    | { kind: 'syntax-error'; line: number; message: string };
+    | { kind: 'syntax-error'; line: number; message: string }
+    /** Refused before command 1 for a reason that is not a syntax problem. */
+    | { kind: 'refused'; line: number; message: string };
 
 export class ExecutionStats {
     totalCommands: number = 0;
@@ -94,6 +104,31 @@ export class ExecutionStats {
     duration: number = 0;
 }
 
+
+/**
+ * The classifier names already present in the project, for the forward-reference pass of
+ * `validateScriptIntegrity`. Returns undefined when the project cannot be read: the pass
+ * then stands down, which is the only safe reading of "we do not know what exists".
+ *
+ * Every metamodel is swept, not only the run's target, because an unbound reference also
+ * resolves project-wide, so a name living in a sibling metamodel makes the reference
+ * succeed and refusing the script would be a false positive.
+ */
+function projectClassifierNames(): Set<string> | undefined {
+    try {
+        const user: LUser = L.fromPointer(DUser.current);
+        const project = user?.project as LProject | undefined;
+        const metamodels = (project as any)?.metamodels;
+        if (Array.isArray(metamodels) && metamodels.length > 0) return collectClassifierNames(metamodels);
+    } catch (err) {
+        // A partial set would be worse than none: a name we failed to read looks absent,
+        // and an absent name is what the pass refuses on.
+        console.warn('[ScriptBlock] Forward-reference check stood down: reading the project classifier names threw, so a forward reference will not be refused before the run.', err);
+        return undefined;
+    }
+    console.warn('[ScriptBlock] Forward-reference check stood down: no metamodel could be read from the project, so a forward reference will not be refused before the run.');
+    return undefined;
+}
 
 // Utility function for delay between commands
 const sleep = (ms: number): Promise<void> => {
@@ -253,6 +288,35 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
 
     const lineCount = displayCode.split('\n').length;
 
+    /**
+     * The warnings the run produced, one row per (line, warning), in EDITOR numbering.
+     *
+     * Derived from `lineStates` instead of accumulated in a state of its own: every branch that
+     * finishes a command already stores its `result` there, so there is no writer to keep in
+     * step and nothing to reset — the `useEffect` that rebuilds `lineStates` on a new script
+     * clears these with it.
+     */
+    const warningLines = useMemo(
+        () => lineStates.flatMap((ls, idx) =>
+            (ls.result?.warnings ?? []).map(text => ({ line: getScriptLine(idx), text }))),
+        [lineStates, getScriptLine]
+    );
+
+    /**
+     * The summary the dialog renders, with the skipped lines translated to editor numbering
+     * at the last moment. `ExecutionSummary.skippedLines` itself stays in command-index
+     * space: every writer stores `i + 1` there and the run's control state reads it back
+     * that way. Only this render-side copy is mapped, so the skipped rows finally agree
+     * with the errors rows beside them, which were already in editor numbering.
+     */
+    const summaryForDialog = useMemo(() => {
+        if (!executionSummary) return undefined;
+        return {
+            ...executionSummary,
+            skippedLines: skippedLinesAsEditorLines(executionSummary.skippedLines, lineToCommandIndex),
+        };
+    }, [executionSummary, lineToCommandIndex]);
+
     // Initialize line states
     useEffect(() => {
         setLineStates(
@@ -305,14 +369,24 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
         // cleanly; it only fails fast (0 commands executed) instead of leaving a half-built
         // model, e.g. when AI-generated output was cut off mid-script. No events are emitted
         // and no execution state is entered — the run simply never starts.
-        const integrity = validateScriptIntegrity(code);
+        // The second argument enables the forward-reference pass: a script whose line N uses
+        // a class created at line N+k cannot complete, and refusing it here keeps the model
+        // from being left half-built.
+        const integrity = validateScriptIntegrity(code, projectClassifierNames());
         if (!integrity.valid && integrity.issue) {
-            const { line, command, reason } = integrity.issue;
+            const { line, command, reason, kind } = integrity.issue;
+            const isForwardReference = kind === 'forward-reference';
             setShowErrorDialog(false);
             setExecutionErrorInfo({
+                // Here `line` is already the editor line: the validator reads the raw script,
+                // not the command list. Stated as `scriptLine` too so the dialog does not have
+                // to know that this one path numbers differently from the run loops.
                 lineNumber: line,
+                scriptLine: line,
                 command,
-                error: `Script appears truncated or malformed at line ${line} (${reason}) — nothing was executed.`,
+                error: isForwardReference
+                    ? `Script refused before command 1: ${reason} Nothing was executed.`
+                    : `Script appears truncated or malformed at line ${line} (${reason}) — nothing was executed.`,
                 executedSoFar: 0,
                 totalCommands: commands.length,
                 elapsedMs: 0,
@@ -325,7 +399,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                 duration: 0,
             });
             setExecutionState('error');
-            setOutcome({ kind: 'syntax-error', line, message: reason });
+            setOutcome({ kind: isForwardReference ? 'refused' : 'syntax-error', line, message: reason });
             return;
         }
 
@@ -407,12 +481,13 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                     executedCount++;
                 } else {
                     errorCount++;
-                    // Parse the error for better messaging
-                    const parsedError = parseError(result.message || 'Unknown error', commands[i]);
+                    // The executor's own error when it sent one, parsed from the text otherwise
+                    const parsedError = errorFromResult(result, commands[i]);
                     const currentElapsed = Date.now() - startTimeRef.current;
 
                     const info = {
                         lineNumber: i + 1,
+                        scriptLine: getScriptLine(i),
                         command: commands[i],
                         error: parsedError,
                         executedSoFar: executedCount,
@@ -424,7 +499,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                     setPauseInfo(info);
 
                     // Store error in list for final summary
-                    setErrorsList(prev => [...prev, { line: i + 1, command: commands[i], error: parsedError }]);
+                    setErrorsList(prev => [...prev, { line: getScriptLine(i), command: commands[i], error: parsedError }]);
 
                     // Persistent inline outcome strip (the Skip/recovery dialog below is preserved
                     // and owns the interactive flow; this strip is the passive summary that remains
@@ -478,6 +553,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                 const currentElapsed = Date.now() - startTimeRef.current;
                 const info = {
                     lineNumber: i + 1,
+                    scriptLine: getScriptLine(i),
                     command: commands[i],
                     error: errorMessage,
                     executedSoFar: executedCount,
@@ -489,7 +565,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                 setPauseInfo(info);
 
                 // Store error in list for final summary
-                setErrorsList(prev => [...prev, { line: i + 1, command: commands[i], error: parsedError }]);
+                setErrorsList(prev => [...prev, { line: getScriptLine(i), command: commands[i], error: parsedError }]);
 
                 // Persistent inline outcome strip (dialog preserved, see !success branch above).
                 setOutcome({ kind: 'runtime-error', line: getScriptLine(i), message: parsedError.message });
@@ -665,8 +741,9 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                 const elapsedMs = Date.now() - startTimeRef.current;
                 const info = {
                     lineNumber: nextIndex + 1,
+                    scriptLine: getScriptLine(nextIndex),
                     command: commands[nextIndex],
-                    error: result.message || 'Unknown error',
+                    error: errorFromResult(result, commands[nextIndex]),
                     executedSoFar: nextIndex - 1,
                     totalCommands: commands.length,
                     elapsedMs,
@@ -717,6 +794,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
             let info  = {
                 command: commands[nextIndex],
                 lineNumber: nextIndex + 1,
+                scriptLine: getScriptLine(nextIndex),
                 error: errorMessage,
                 executedSoFar: nextIndex - 1,
                 totalCommands: commands.length,
@@ -843,13 +921,14 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                     executedCount++;
                 } else {
                     errorCount++;
-                    const parsedError = parseError(result.message || 'Unknown error', commands[i]);
-                    setErrorsList(prev => [...prev, { line: i + 1, command: commands[i], error: parsedError }]);
+                    const parsedError = errorFromResult(result, commands[i]);
+                    setErrorsList(prev => [...prev, { line: getScriptLine(i), command: commands[i], error: parsedError }]);
 
                     // Set pause info for the error dialog
                     const currentElapsed = Date.now() - startTimeRef.current;
                     setPauseInfo({
                         lineNumber: i + 1,
+                        scriptLine: getScriptLine(i),
                         command: commands[i],
                         error: parsedError,
                         executedSoFar: executedCount,
@@ -870,7 +949,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                 errorCount++;
                 const errorMessage = err instanceof Error ? err.message : 'Unknown error';
                 const parsedError = parseError(errorMessage, commands[i]);
-                setErrorsList(prev => [...prev, { line: i + 1, command: commands[i], error: parsedError }]);
+                setErrorsList(prev => [...prev, { line: getScriptLine(i), command: commands[i], error: parsedError }]);
 
                 setLineStates(prev =>
                     prev.map((ls, idx) =>
@@ -883,6 +962,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                 const currentElapsed = Date.now() - startTimeRef.current;
                 setPauseInfo({
                     lineNumber: i + 1,
+                    scriptLine: getScriptLine(i),
                     command: commands[i],
                     error: parsedError,
                     executedSoFar: executedCount,
@@ -920,7 +1000,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                 skippedCount: allSkippedLines.length,
             }
         }));
-    }, [pauseInfo, onExecute, commands, lineStates, skippedLinesSet, errorsList, resolvedTarget]);
+    }, [pauseInfo, onExecute, commands, lineStates, skippedLinesSet, errorsList, resolvedTarget, getScriptLine]);
 
     // ============================================
     // RECOVERY ACTIONS — contextual one-click fixes
@@ -983,12 +1063,13 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                 if (success) {
                     executedCount++;
                 } else {
-                    const parsedError = parseError(result.message || 'Unknown error', commands[i]);
-                    localErrors.push({ line: i + 1, command: commands[i], error: parsedError });
+                    const parsedError = errorFromResult(result, commands[i]);
+                    localErrors.push({ line: getScriptLine(i), command: commands[i], error: parsedError });
                     setErrorsList(localErrors);
                     const currentElapsed = Date.now() - startTimeRef.current;
                     setPauseInfo({
                         lineNumber: i + 1,
+                        scriptLine: getScriptLine(i),
                         command: commands[i],
                         error: parsedError,
                         executedSoFar: executedCount,
@@ -1002,7 +1083,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
             } catch (err) {
                 const errorMessage = err instanceof Error ? err.message : 'Unknown error';
                 const parsedError = parseError(errorMessage, commands[i]);
-                localErrors.push({ line: i + 1, command: commands[i], error: parsedError });
+                localErrors.push({ line: getScriptLine(i), command: commands[i], error: parsedError });
                 setErrorsList(localErrors);
                 setLineStates(prev =>
                     prev.map((ls, idx) => idx === i
@@ -1013,6 +1094,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                 const currentElapsed = Date.now() - startTimeRef.current;
                 setPauseInfo({
                     lineNumber: i + 1,
+                    scriptLine: getScriptLine(i),
                     command: commands[i],
                     error: parsedError,
                     executedSoFar: executedCount,
@@ -1039,7 +1121,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
         });
         setExecutionState('completed');
         setShowErrorDialog(true);
-    }, [commands, lineStates, onExecute, resolvedTarget, errorsList]);
+    }, [commands, lineStates, onExecute, resolvedTarget, errorsList, getScriptLine]);
 
     /**
      * Dispatcher for recovery-action clicks. Handlers live here (not in the rule
@@ -1066,13 +1148,14 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                 if (!createResult?.success) {
                     // Surface the enum-creation failure as a fresh pause so the user can
                     // see what went wrong (e.g. name collision with an existing class).
-                    const parsedError = parseError(
-                        createResult?.message || 'Enum creation failed',
+                    const parsedError = errorFromResult(
+                        { message: createResult?.message || 'Enum creation failed', errors: createResult?.errors },
                         `create enum ${enumName}`
                     );
                     const currentElapsed = Date.now() - startTimeRef.current;
                     setPauseInfo({
                         lineNumber: pauseInfo.lineNumber,
+                        scriptLine: pauseInfo.scriptLine,
                         command: `create enum ${enumName}`,
                         error: parsedError,
                         executedSoFar: lineStates.filter(ls => ls.status === 'success').length,
@@ -1446,14 +1529,33 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                     <span>{outcome.count} commands applied</span>
                 </div>
             )}
-            {(outcome?.kind === 'runtime-error' || outcome?.kind === 'syntax-error') && (
+            {(outcome?.kind === 'runtime-error' || outcome?.kind === 'syntax-error' || outcome?.kind === 'refused') && (
                 <div className="script-block__error">
                     <i className="bi bi-exclamation-triangle" />
                     <span>
                         {outcome.kind === 'syntax-error'
                             ? `Syntax error at line ${outcome.line}: ${outcome.message}`
-                            : `Error at line ${outcome.line}: ${outcome.message}`}
+                            : outcome.kind === 'refused'
+                                ? `Nothing was executed: ${outcome.message}`
+                                : `Error at line ${outcome.line}: ${outcome.message}`}
                     </span>
+                </div>
+            )}
+
+            {/* Warnings strip — non-blocking, one row per line that produced one. A warning is
+                not an error: the command ran and its write happened, so this never pauses the
+                run and never enters the error dialog. It exists because R-M2U-1 makes a
+                near-homonym LEGAL on condition that the write announces it, and a warning that
+                nothing renders is not an announcement. Numbered like every other line the user
+                reads, in editor space. */}
+            {warningLines.length > 0 && (
+                <div className="script-block__warnings">
+                    {warningLines.map((w, i) => (
+                        <div className="script-block__warning" key={i}>
+                            <i className="bi bi-exclamation-triangle" />
+                            <span>Line {w.line}: {w.text}</span>
+                        </div>
+                    ))}
                 </div>
             )}
 
@@ -1462,7 +1564,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                 isOpen={showErrorDialog}
                 onClose={handleCloseErrorDialog}
                 pauseInfo={pauseInfo || undefined}
-                summary={executionSummary || undefined}
+                summary={summaryForDialog}
                 onSkip={(pauseInfo?.error as JjScriptError)?.skippable ? handleSkipAndContinue : undefined}
                 recoveryActions={recoveryActions}
                 onRecoveryAction={handleRecoveryAction}
