@@ -28,6 +28,34 @@ the Create View gate fix»: contenuto reale **due** entry, la sua e quella della
 rail/modale, gia' in albero e non in stage al momento del commit. Stesso schema del 2026-09-13.
 Nessun rewrite: la entry resta dov'e', il suo commit non la nomina.
 
+## 2026-09-21 — feat: Symbol Editor S6, underline row and corner radius rules table (P-2026-09-21-1455)
+**Prompt**: `P-2026-09-21-1455`, two-phase. Phase 1 report `660b61042` (`docs/discovery/discovery_2026-09-21_symbol_editor_s6_underline_corner_rules.md`), GO with three answers: hide the Underline row at the Symbol-text mount through an optional prop; add an Underline segment to the trigger summary; radius as option Y. D-S6-1, D-S6-3 and D-S6-4 as written. One code commit, then this docs commit.
+**Files touched**: code `94eb92a21`, 7 files: `authoring/TextStyleEditor.tsx`, `TextStyleField.tsx`, `VertexAuthoringPanel.tsx`, `previewInstances.ts`, `SymbolEditorModal.tsx`, `authoring/__tests__/textStyleEditor.test.ts` (new), `previewInstances.test.ts`. Docs, this commit: this entry, `docs/decisions.md` (closure line under R-IRN-35), the prompt file (Status), the Phase 2 addendum of the discovery report.
+**Outcome**: ✅ completed — the visual check (a) to (d) is Alfonso's, not run here.
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown. Gates on the code commit: `npm run typecheck` exit 2, **14** errors, the baseline set, **0** in the touched files; `npx vitest run` **3981 passed, 0 failed** (3962 + 19 new), the same 9 files red at import; `npm run build` exit 0. The panel change (scalar stepper inside `ConditionalEditor`, Reset, glyphs), the modal wiring and the summary segment have no executable test, so "scalar case unchanged" rests on the visual check.
+**Out-of-scope changes**: yes — `TextStyleField.tsx` was outside the prompt's DOVE and joined it by the GO (answers 1 and 2); 7 code files, above the P6 five, all named by the GO and by the report §9b. Nothing else outside the list.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — hard stop before Alfonso's visual check: (a) scalar radius edits and Reset as before, key removed on Reset; (b) one radius rule makes the thumbnails differ; (c) label underline On/Off and the trigger reads `Underline`, not `Custom`; (d) no Underline row on Symbol text.
+**Notes**: D-S6-2 as written is superseded: the radius is a peer rules axis (ConditionalEditor + rulesTable in Shape, like form, fill, marker), not a fourth entry of the Border OVERRIDES read-back; borderOverrides.ts untouched. Test gap: VertexAuthoringPanel, SymbolEditorModal and the trigger summary have no executable test (window at import, or outside the GO). The prompt's R-IRN-3, addendum §7 and formAuthoring.test.ts references were dropped; the ignored-axis warning is R-IRN-31.
+**Prompt document name**: 2026-09-21 14:55
+**Ticket** (opened, not implemented here). The renderer applies a text style on the box root (`IRNodeContent.tsx:427`, `Object.assign(inlineStyle, resolveTextStyle(compiled.text, ...))`), so a Symbol-level `underline` is a `text-decoration` that reaches every in-flow text of the symbol and no label can override it (measured on pixels, discovery report §4.2: a child `text-decoration: none` still paints the ancestor's line; absolutely positioned badges are not reached). Fixing it means applying the underline on the text nodes instead of the root. When that is done, remove `hideUnderline` from the Symbol-text mount (`VertexAuthoringPanel.tsx`) so the row shows there. Mutation bench of the new tests (12 of 12 killed) is in the commit message of `94eb92a21`.
+Verifica visiva umana: passata 2026-09-21, controlli (a)-(f) del GO più i due effetti collaterali, nessun difetto catturato oltre i gate.
+Rettifica: il GO elencava i controlli (a)-(d); (e) larghezza della modale invariata e (f) chip del raggio condizionale in Basic sono i due effetti collaterali, aggiunti in chat, non nel GO. Nessun controllo in più oltre questi.
+## 2026-09-21 — feat: harness mechanization, Phase 2 batches A and B (P-2026-09-21-1620)
+**Prompt**: `P-2026-09-21-1620` Phase 2, `claude_2026-09-21_1620_fase2_harness_mechanization.md`: sixteen decisions ratified in chat on the Phase 1 report (`63757d5f3`), two batches. Batch A (rules, settings, hooks, wiring) closed at a hard stop and ACKed with two additions (A5). Batch B (skills, pointers, registers, this entry). Executed on Sonnet 5, as the banner shows, although `.claude/settings.json` now pins `claude-opus-5`; every trailer says Sonnet 5.
+**Files touched**: A1 `a6f1bc0cd` (`docs/PROTOCOL.md`, `CLAUDE.md`, `AGENTS.md`); A2 `084ffc604` (`.claude/settings.json`); A3 `1172230c9` (`frontend/scripts/hooks/lib.mjs`, `bash-guard.mjs`, `critical-zone.mjs`, `__tests__/hookRunner.ts`, `bashGuard.test.ts`, `criticalZone.test.ts`, `lib.test.ts`, `frontend/vitest.config.ts`); A4 `c01a73389` (`.claude/settings.json`, the hooks block); A5 `ff5e5a84f` (`bash-guard.mjs`, `bashGuard.test.ts`); B1 `335e6221f` (three `SKILL.md` under `.claude/skills/`); B2 `adb3cf6d3` (`CLAUDE.md`, `AGENTS.md`, `docs/HARNESS-DOCS.md`, `docs/decisions.md`, the R5 probe file, the addendum of the Phase 1 report); B3, this commit (this entry, the Status line of the two prompt files). 22 distinct files.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. At `ff5e5a84f`: `npx vitest run` **4184 passed, 0 failed** (3981 + 203), the same 9 files red at import as the baseline; `npm run typecheck` **14**, the baseline set, 0 in the touched files; `npm run build` exit 0; `check:docs` 4/4 and `check:agents` green at each docs commit. The 203 hook tests pass with the hook interpreter on node v16, v18, v23 and v26, and with the suite launched by v23. Mutation bench: 84 mutants on copies of the scripts, control 0 red, one survivor (N22) killed by the test added for it. Live checks in the session: a commit without pathspec refused with the P13 reason; an edit on a file named like a 3.2 file answered `ask` (recorded in the transcript), and a nested `claude -p` refused it while a control edit ran; the three skills inject text byte-identical to `CLAUDE.md` 21.2, P4 and the P13 bullet, and a renamed heading aborts the skill. The silent pass of a guarded commit leaves no transcript record: it is inferred from the lane's own commits going through the live hook.
+**Out-of-scope changes**: yes, all declared here (RC-11). Additions beyond the prompt: A5, asked for by the ACK of batch A (`-n` on `git commit`, the whole-tree forms behind a wrapper); the exemption of `bash-guard` while a merge, cherry-pick or revert is in progress (git refuses a pathspec there), accepted at the ACK; the reading of the 3.2 "D-layer write paths" as a creator (`DVertex.new`, `DVoidEdge.new2`, `DVoidEdge.new3`) in a non-test source file under `frontend/src` and `SetFieldAction` in `sync/`, accepted at the ACK. Deviations: the A3 subject drops the word "ask" (75 characters without the suffix against the 72 of 6.2); the Status flip cites `ff5e5a84f` (A5) by the ACK, while the clause says the last code commit, which is B1 `335e6221f`. Above five files: A3 (8), B2 (6), and 22 in the lane; `frontend/vitest.config.ts` gains one `include` entry (decision 16).
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Tickets: a Stop hook for this entry, reopened when a session-to-prompt key exists (decision 4); `rm -rf*` is in the deny list with no clause behind it. Residual gaps: combined short flags are read only on `git commit`; the n flag of other commands is not read. More in the Ticket block.
+**Prompt document name**: 2026-09-21 16:20
+**Ticket** (opened, not implemented here). Gaps measured or found in this lane, none of them a regression. (1) The deny pattern for the no-verify flag matches any command text that contains it, so it also refuses a commit message or a grep that only quotes the flag (hit twice by this lane). (2) The wrapper check covers stash, commit and the whole-tree forms of RC-13-bis; `git rebase`, `git branch -D` and a forced push are outside any clause and any check. (3) The R5 probe waits for Alfonso's interactive run: how a pasted message reaches `UserPromptSubmit` is still unmeasured. (4) The Project Knowledge copy of `docs/HARNESS-DOCS.md` is 1.3 until Alfonso replaces it with 1.4. (5) `allowed-tools: Bash(awk *)` on the three skills pre-approves any awk for the turn of the invocation. (6) A hook that passes silently leaves no record in the session transcript, so a passing guard is not directly observable. (7) `~/.local/bin/node`, first on this Mac's PATH, is a symlink into another tool's install; the hooks run on node 16 to 26, so it does not matter to them.
 ## 2026-09-21 — chore: simulation-engine slice 0 onto the trunk, the archive tag and the pushes, step F (P-2026-09-19-1740)
 **Prompt**: `P-2026-09-19-1740` addendum item 2, step F, P14 literal. Of the 38 commits of `simulation-engine` six were not on the trunk (`git cherry`, re-measured 2026-09-21: the same six). Tag `archive/simulation-engine-2026-09-14` on `baf7b2b8a`; the three code commits picked with `-x` one at a time, `merge-tree` before each against the moving HEAD; the three log commits not picked, their entries moved verbatim into `docs/log-inbox/simulation.md`; `~/jjodel-sim` reset to the trunk. Hard stop before the pushes, then Alfonso's GO.
 **Files touched**: code `135ab7a24` (from `2f53c876a`), `25cd6149a` (from `c70c9f7b5`), `857cb9335` (from `c09cf4353`); docs `577cc52b5` (`docs/log-inbox/simulation.md`, three entries verified verbatim by substring). This entry in its own commit.
@@ -884,80 +912,4 @@ application with `keepRules` behaves as observed in slice 4b. Deferred to slice 
 same ACK, not defects of this slice: the «Custom symbol» title and the absence of a static preview.
 **Notes**: Criterio (anche nel commit e nel codice): la tabella va agli assi con **più di due valori**, i booleani tengono il predicato singolo. Banco su `symbolRecognition`: leggere il `default` su tutti gli assi = **3 rossi** (questo più i due della slice 2), sul solo form = **1 rosso**, ed è questo test, nessun altro nel file lo prende. Il prop in sé NON è coperto: `VertexAuthoringPanel` non si importa nel banco (monaco via `joiner`) e §5 vieta il test sul sorgente — lacuna dichiarata.
 **Prompt document name**: 2026-09-17 10:48
-
-## 2026-09-17 — fix: a missing superclass creates nothing (corsia L2)
-**Prompt**: `claude_2026-09-17_1024_prompt_jjscript_silent_defects_duplicates_extends_skipped.md`,
-phase 2 lane L2, with Alfonso's GO answer 4: every superclass resolved before `DClass.new`, on any
-miss create nothing and fail with `PARENT_NOT_FOUND` skippable, same resolution order and
-bound-scope guard, standalone `extends` command untouched.
-**Files touched**: `4898aa60f`, 3 files: `jjscript/executor/superclassResolution.ts` (new, pure:
-`superclassNames`, `missingSuperclassRefusal`, `resolveSuperclasses`),
-`jjscript/executor/__tests__/superclassResolution.test.ts` (new, 15 tests),
-`jjscript/executor/commands/create.ts` (resolution moved ahead of `DClass.new`, the two old
-superclass blocks replaced by one loop over the resolved list). The code was written by background
-session 818585 (`claude agents` id 08604181), which was then renamed onto the Symbol Editor prompt
-P-2026-09-17-1048 and left L2 uncommitted in the tree; session 00207c verified it, re-ran the gates
-and the mutation bench on the current tree, and took the lane over. This entry in its own commit.
-**Outcome**: ✅ completed
-**Corregge**: —
-**Causa**: —
-**Regressions**: no. `npm run typecheck` exit 2, **33** on full output, the declared baseline,
-control `Measurable` → 6, **0** in either touched file; `npx vitest run` **3770 passed, 0 failed**
-(3755 before, +15), the same 9 files red at import; `npm run build` exit 0, pre-existing chunk-size
-warning only. Committed behaviour does change by decision: a `create class` whose superclass is
-missing used to succeed without the generalization and now creates nothing, skippable.
-**Out-of-scope changes**: yes. `parser.ts:359-366` pushes each `extends` name onto `superClasses`
-and overwrites `superClass` with the same token, so `superClass` is always the LAST name. The old
-code read the two as disjoint sources (`superClass` first, then `superClasses` from index 1), so
-`A extends B extends C` produced `extends = [C, B, C]`: the first superclass dropped, the last
-applied twice. `superclassNames` now takes the list in order. No file outside the three was touched.
-**Layer Impact Report**: not-required — no §3.1 file, no TRANSACTION introduced, the
-`SetFieldAction`s on `extends` still run after `DClass.new` as before.
-**Smoke visivo**: passato — Alfonso on localhost:3001, five checks: a missing superclass refused
-with no `ALU` left in the tree after Skip Line; several superclasses with one missing, nothing
-created; `A extends B extends C` with both present giving exactly two generalizations, `B` and `C`,
-each once; plain `create class` unchanged; standalone `A extends B` with a missing `B` unchanged.
-Recorded here too, the log being add-only: the L1 smoke of `09ce4b60c`, run by Alfonso on
-2026-09-17, six checks all passed, check 1 from the JjScript console (typed-command path).
-**Notes**: Mutation bench 7 applied, 7 killed, 0 survived, each with an apply control asserting the
-edit landed; a first harness silently failed to apply 4 of 6 and was fixed rather than counted as
-survivors. Declared gap: the `createClass` wiring has no executing test (`create.ts` does not import
-under vitest) and no source-text substitute. The L1 TODO stays open: the forward-`extends` refusal
-belongs in `scriptValidator.ts`, which is lane L4.
-**Prompt document name**: 2026-09-17 10:24
-
-## 2026-09-17 — fix: the JjScript create consults the M2 uniqueness verdict (corsia L1)
-**Prompt**: `claude_2026-09-17_1024_prompt_jjscript_silent_defects_duplicates_extends_skipped.md`,
-phase 2 lane L1, with Alfonso's GO answers 1-3 (all nine kinds of D1, through a pure function in
-`create.ts` before `D*.new`; the near-homonym warning belongs to L1 and is rendered per line; the
-message shape) plus his later addition: verify the guard is not one flat namespace, and stop before
-L2 if it is.
-**Files touched**: `09ce4b60c`, 5 files: `jjscript/executor/m2CreateGuard.ts` (new, pure),
-`jjscript/executor/__tests__/m2CreateGuard.test.ts` (new, 27 tests),
-`jjscript/executor/commands/create.ts` (two imports, the gate before the switch, the warning merge
-after it, `metamodelNameFor`), `jjscript/components/ScriptBlock.tsx` (`warningLines` + the strip),
-`jjscript/components/ScriptBlock.scss` (`.script-block__warning`). This entry in its own commit.
-**Outcome**: ✅ completed
-**Corregge**: —
-**Causa**: —
-**Regressions**: no. `npm run typecheck` **33** on full output, the declared baseline, control
-`Measurable` → 6, zero hits in any touched file; `npx vitest run` **3755 passed, 0 failed**, the same
-9 files red at import; `npm run build` exit 0, pre-existing chunk-size warning only; `check:docs`
-3/3. Committed behaviour does change by decision: a duplicate M2 create used to succeed and now
-fails, skippable (R-M2U, already ratified 2026-08-30).
-**Out-of-scope changes**: no. `ScriptBlock.tsx`/`.scss` are the render half of answer 2.
-**Layer Impact Report**: not-required — no §3.1 file; `nameUniqueness.ts` and `D*.new` untouched, the
-gate only reads.
-**Smoke visivo**: passato — Alfonso on localhost:3001, checks 1-5: duplicate refused with Skip Line
-and no second class in the tree, the same name in another metamodel created, `Foo`/`foo` both created
-with the amber warning visible and no pause, two identical creates in a row (first applies, second
-refused), `create attribute Person in Person` accepted and the inherited-feature case refused naming
-the superclass. Plus his own two: a command that already emitted warnings shows them in the strip
-without layout breakage, and after Skip Line the tree holds no duplicate.
-**Notes**: Side effect: warnings from OTHER commands are now visible in script blocks — the field
-was carried and nothing rendered it. Declared gap: `executeCreate`'s wiring has no executing test
-(`create.ts` does not import under vitest) and no source-text substitute. Flattening excluded by
-mutation; full bench in `09ce4b60c`. TODO: L2's forward-`extends` refusal belongs in
-`scriptValidator.ts`'s forward-reference pass, same classifier set.
-**Prompt document name**: 2026-09-17 10:24
 
