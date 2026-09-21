@@ -104,7 +104,8 @@ re-added verbatim (it describes a script that exists here and not on the trunk).
 `check:docs` exit 1, and it was exit 1 before any change: Check D, 41 active entries against the threshold of
 40; A, B and C pass. Not fixed here: rotation is an exclusive lane (RC-12).
 **Corregge**: —
-**Causa**: (g) — the red gate is the active-log threshold, not the split.
+**Causa**: (g)
+— the red gate is the active-log threshold, not the split.
 **Regressions**: no.
 **Out-of-scope changes**: no.
 **Layer Impact Report**: not-required — docs-only.
@@ -128,7 +129,8 @@ Commit: `400095370`, `12ae8c41c`, `6ee6efcd5`, `971234d94`, `516afd310`.
 view nuova; regressione sulle view migrate trovata durante la stessa sessione e corretta prima
 della chiusura (`516afd310`).
 **Corregge**: —
-**Causa**: c — la modifica alla factory (`400095370`) non ha considerato la dipendenza di
+**Causa**: (c)
+— la modifica alla factory (`400095370`) non ha considerato la dipendenza di
 `isMigratedDefaultView` sulla sua forma esatta; scoperta e corretta nello stesso task, non in un
 task successivo.
 **Regressions**: yes — vedi R-IRN-33. Ogni progetto migrato da `VersionFixer` 2.225→2.226
@@ -159,6 +161,8 @@ sites instead of three.
 **Not done here**: no edit to `docs/HARNESS-DOCS.md` (its own rule asks for a version bump, and it already
 differs between the trunk and `validation-skeleton`). Line 122 is inside an example prompt header and may be
 meant as a historical example: whoever implements the gate decides whether it is in scope.
+**Corregge**: —
+**Causa**: —
 ## 2026-09-19 — ticket: check:docs should assert the clause range against PROTOCOL.md
 **Ticket** (opened, not implemented here). `frontend/scripts/gates/check-docs.ts` should add a check D:
 the highest `## P<n>` heading of `docs/PROTOCOL.md` equals the `<n>` cited as `P1..P<n>` in the three
@@ -170,6 +174,8 @@ not by a gate.
 **Notes for whoever picks it up**: three citation sites today (`CLAUDE.md:14`, `CLAUDE.md:108`,
 `docs/PROTOCOL.md:11`); the check must fail on a mismatch in either direction. It touches a gate script and
 `CLAUDE.md` §17, so it is a lane of its own.
+**Corregge**: —
+**Causa**: —
 
 ## 2026-09-19 — docs: split audit findings closed, gates measured in the trunk worktree, §18/§19 moved
 **Prompt**: `claude_2026-09-18_2110_prompt_claude_md_split_sul_tronco.md`, second handover turn:
@@ -181,8 +187,9 @@ not by a gate.
 `gen:agents`, `check:agents`, `check:docs` all exit 0 after each commit, run in the trunk worktree.
 A restored verbatim (9 lines added, 0 removed against the baseline); B resolved by correcting the
 note; range now P1..P15.
-**Corregge**: `claude_2026-09-18_1930_prompt_claude_md_split_oltre_limite.md`
-**Causa**: (a) — the 21-25k estimate of that prompt is falsified and stands declared as such; the
+**Corregge**: 2026-09-18 19:30 (`claude_2026-09-18_1930_prompt_claude_md_split_oltre_limite.md`)
+**Causa**: (a)
+— the 21-25k estimate of that prompt is falsified and stands declared as such; the
 acceptance is "under 40,000 with headroom", not the estimate.
 **Regressions**: no.
 **Out-of-scope changes**: no.
@@ -203,7 +210,8 @@ range P1..P12 stale against P1..P15). §5: no edit, the four examples were alrea
 `da07e3169` (-308 chars) with the accounts present in the cited files. Root is 40,551 chars: 551
 over the limit, and §5 has no further worked example to move without cutting a rule.
 **Corregge**: —
-**Causa**: (a) — the numeric target cannot be reached inside the scope the prompt names. Second: the
+**Causa**: (a)
+— the numeric target cannot be reached inside the scope the prompt names. Second: the
 handover premise "§5 compression not done" was wrong, because the previous report did not arrive.
 **Regressions**: no.
 **Out-of-scope changes**: no.
@@ -233,7 +241,8 @@ expected around 21000-25000" target. No further sections were moved to close the
 the gap further would mean moving un-named sections, which Rule 1 does not authorize on this
 lane's own initiative.
 **Corregge**: —
-**Causa**: (a) — the prompt states the byte target as "expected around", not as one of its own
+**Causa**: (a)
+— the prompt states the byte target as "expected around", not as one of its own
 four enumerated acceptance items (verbatim moves, gates green, `## 0.` heading, phase 0 measurement
 shown); the phase satisfies all four but undershoots the numeric expectation. Flagged for Alfonso
 in the Step 4 hard-stop report rather than resolved unilaterally.
