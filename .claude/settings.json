@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
-  "model": "claude-opus-4-8",
+  "model": "claude-opus-5",
   "effortLevel": "xhigh",
   "cleanupPeriodDays": 3650,
   "permissions": {
@@ -21,6 +21,17 @@
       "Bash(git add .)",
       "Bash(git add -A*)",
       "Bash(rm -rf*)",
+      "Bash(git stash *)",
+      "Bash(git stash)",
+      "Bash(git add --all*)",
+      "Bash(git add -u*)",
+      "Bash(* --no-verify*)",
+      "Bash(git checkout HEAD -- .)",
+      "Bash(git checkout -- .)",
+      "Bash(git restore .)",
+      "Bash(git restore --staged .)",
+      "Bash(git reset --hard*)",
+      "Bash(git clean*)",
       "Read(./.env)",
       "Read(./.env.*)"
     ]
