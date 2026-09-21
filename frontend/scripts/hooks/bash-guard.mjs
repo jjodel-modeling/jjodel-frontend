@@ -13,16 +13,20 @@
  *                file, has a `Model:` trailer (P6) and a subject within 72
  *                characters once a trailing " (P-YYYY-MM-DD-HHmm)" is dropped
  *                (CLAUDE.md 6.2); the pathspec does not mix docs and code (P13).
- *                Skipped while a merge, cherry-pick or revert is in progress:
- *                git refuses a pathspec there (RC-14, P14).
- *   git stash    ask, in any form found after quotes and heredocs are read:
+ *                Those checks are skipped while a merge, cherry-pick or revert is
+ *                in progress: git refuses a pathspec there (RC-14, P14).
+ *                Always denied: a short-flag token holding `n` (-n, -qn, -nq; for
+ *                git commit that letter is --no-verify only, CLAUDE.md 6.3).
+ *   git stash, and the whole-tree forms of RC-13-bis (reset --hard, clean,
+ *   restore and checkout of `.` or a directory)
+ *                ask, in any form found after quotes and heredocs are read:
  *                the wrappers (`sh -c`, `git -C`, `/usr/bin/git`, `env`, `eval`)
  *                are outside a Bash deny pattern (RC-13-bis, P13).
  *
  * Run by: node "$CLAUDE_PROJECT_DIR/frontend/scripts/hooks/bash-guard.mjs"
  */
 
-import { readFileSync, existsSync, realpathSync } from 'node:fs';
+import { readFileSync, existsSync, realpathSync, statSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { basename, resolve, relative, isAbsolute } from 'node:path';
 import { readInput, decide, runHook, parseShell, stripPromptIdSuffix } from './lib.mjs';
@@ -87,7 +91,7 @@ function gitCall(args) {
 // ── git commit ───────────────────────────────────────────────────────────────
 
 function parseCommitArgs(args) {
-    const r = { paths: null, messages: [], files: [] };
+    const r = { paths: null, messages: [], files: [], noVerify: false };
     for (let i = 0; i < args.length; i++) {
         const a = args[i];
         const t = a.text;
@@ -120,6 +124,7 @@ function parseCommitArgs(args) {
                     break;
                 }
                 if (ch === 'u' || ch === 'S') break;
+                if (ch === 'n') r.noVerify = true;
             }
         }
     }
@@ -182,8 +187,16 @@ function repoRelative(p, cwd, top) {
 }
 
 function checkCommit(args, heredocs, ctx, findings) {
-    if (ctx.inProgress()) return;
     const parsed = parseCommitArgs(args);
+    if (parsed.noVerify) {
+        findings.push({
+            kind: 'deny',
+            reason:
+                'CLAUDE.md 6.3: never skip the pre-commit hooks. On git commit the short flag n is --no-verify, ' +
+                'alone or in a cluster (-n, -qn, -nq).',
+        });
+    }
+    if (ctx.inProgress()) return;
     const violations = [];
 
     if (!parsed.paths || parsed.paths.length === 0) {
@@ -224,6 +237,58 @@ function checkCommit(args, heredocs, ctx, findings) {
     for (const reason of violations) findings.push({ kind: 'deny', reason });
 }
 
+// ── The whole-tree forms of RC-13-bis ────────────────────────────────────────
+
+/** `.`, a trailing slash, the top-level magic, or an existing directory. */
+function isTreePath(p, cwd, allowStat) {
+    if (p === '.' || p === './' || p === ':/' || p.endsWith('/')) return true;
+    if (!allowStat) return false;
+    try {
+        return statSync(resolve(cwd, p)).isDirectory();
+    } catch {
+        return false; // a path that does not exist is not a directory
+    }
+}
+
+/** Pathspecs of `git restore`: every argument that is not an option or the value of -s/--source. */
+function restorePaths(args) {
+    const paths = [];
+    let afterDD = false;
+    for (let i = 0; i < args.length; i++) {
+        const a = args[i];
+        if (afterDD) paths.push(a);
+        else if (a.text === '--' && !a.opaque) afterDD = true;
+        else if (a.text === '-s' || a.text === '--source') i++;
+        else if (!a.text.startsWith('-')) paths.push(a);
+    }
+    return paths;
+}
+
+/** Pathspecs of `git checkout`: after `--` any tree path counts, before it only `.` and a trailing slash (a bare name may be a branch). */
+function checkoutPaths(args) {
+    const dd = args.findIndex((a) => a.text === '--' && !a.opaque);
+    if (dd !== -1) return { paths: args.slice(dd + 1), allowStat: true };
+    return { paths: args.filter((a) => !a.text.startsWith('-')), allowStat: false };
+}
+
+/** What the command is, when it discards the work of every lane on the tree; else null. */
+function wholeTreeForm(g, cwd) {
+    if (g.sub === 'reset') return g.args.some((a) => !a.opaque && a.text === '--hard') ? 'git reset --hard' : null;
+    if (g.sub === 'clean') return 'git clean';
+    if (g.sub === 'restore') {
+        return restorePaths(g.args).some((p) => !p.opaque && isTreePath(p.text, cwd, true))
+            ? 'git restore of the tree or a directory'
+            : null;
+    }
+    if (g.sub === 'checkout') {
+        const { paths, allowStat } = checkoutPaths(g.args);
+        return paths.some((p) => !p.opaque && isTreePath(p.text, cwd, allowStat))
+            ? 'git checkout of the tree or a directory'
+            : null;
+    }
+    return null;
+}
+
 // ── The walk ─────────────────────────────────────────────────────────────────
 
 function analyze(commands, ctx, depth, findings) {
@@ -246,6 +311,17 @@ function analyze(commands, ctx, depth, findings) {
                         'of .claude/settings.json; confirm only if this tree is yours alone.',
                 });
             } else if (g.sub === 'commit') checkCommit(g.args, c.heredocs, ctx, findings);
+            else {
+                const form = wholeTreeForm(g, ctx.cwd);
+                if (form) {
+                    findings.push({
+                        kind: 'ask',
+                        reason:
+                            'docs/PROTOCOL.md P9 (RC-13-bis) and P13: ' + form + ' discards the work of every lane on this tree. ' +
+                            'This form is outside the deny patterns of .claude/settings.json; confirm only if this tree is yours alone.',
+                    });
+                }
+            }
         }
     }
 }

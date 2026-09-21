@@ -297,6 +297,141 @@ describe('bash-guard: a merge, cherry-pick or revert in progress (RC-14, P14)', 
     });
 });
 
+describe('bash-guard: git commit -n is --no-verify (CLAUDE.md 6.3)', () => {
+    const msg = `${subjectOf(40)}\n\n${TRAILER}`;
+
+    test.each([['-n'], ['-qn'], ['-nq'], ['-sn'], ['-vnq']])(
+        'kills "n not seen in a cluster / not seen at all": %s is denied and 6.3 is cited',
+        (flag) => {
+            const r = guard(`git commit ${flag} -m "${msg}" -- docs/a.md`);
+            expect(r.decision).toBe('deny');
+            expect(r.reason).toContain('6.3');
+        },
+    );
+
+    test('kills "the value flag ends the scan too early": -nm reads n before the message flag', () => {
+        expect(guard(`git commit -nm "${msg}" -- docs/a.md`).decision).toBe('deny');
+    });
+
+    test.each([
+        ['an n inside an attached message', `git commit -m"Model: no" -- docs/a.md`],
+        ['-uno, the untracked-files mode', `git commit -uno -m "${msg}" -- docs/a.md`],
+        ['an n in a message value', `git commit -m "${msg}" -m "n" -- docs/a.md`],
+        ['a long option holding n', `git commit --amend --no-edit -- docs/a.md`],
+        ['a pathspec named -n, after the double dash', `git commit -m "${msg}" -- -n`],
+        ['git log -n', 'git log -n 5'],
+    ])('kills "n taken from a value or another command": %s passes', (_name, command) => {
+        expect(guard(command).decision).toBeNull();
+    });
+
+    test.each([
+        ['sh -c', `sh -c 'git commit -n -m "${msg}" -- docs/a.md'`],
+        ['git -C', `git -C . commit -n -m "${msg}" -- docs/a.md`],
+        ['an absolute git path', `/usr/bin/git commit -n -m "${msg}" -- docs/a.md`],
+    ])('kills "wrapper not resolved": %s is denied', (_name, command) => {
+        expect(guard(command).decision).toBe('deny');
+    });
+
+    test('kills "the in-progress exemption covers -n": the flag is refused mid-merge, the plain commit is not', () => {
+        const dir = realpathSync(mkdtempSync(join(tmpdir(), 'bash-guard-n-')));
+        try {
+            execFileSync('git', ['init', '-q', dir]);
+            writeFileSync(join(dir, '.git', 'MERGE_HEAD'), '0000000000000000000000000000000000000000\n');
+            expect(guard('git commit --no-edit', dir).decision).toBeNull();
+            const r = guard('git commit -n --no-edit', dir);
+            expect(r.decision).toBe('deny');
+            expect(r.reason).toContain('6.3');
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+});
+
+describe('bash-guard: the whole-tree forms of RC-13-bis, behind any wrapper', () => {
+    const wrapped = (cmd: string) => [
+        ['plain', cmd],
+        ['sh -c', `sh -c '${cmd}'`],
+        ['git -C', cmd.replace(/^git/, 'git -C .')],
+        ['an absolute git path', cmd.replace(/^git/, '/usr/bin/git')],
+        ['env', `env ${cmd}`],
+    ];
+
+    test.each(
+        ['git reset --hard', 'git clean -fd', 'git restore .', 'git checkout -- .'].flatMap((cmd) =>
+            wrapped(cmd).map(([how, command]) => [cmd, how, command]),
+        ),
+    )('kills "wrapper not resolved": %s through %s is an ask that cites RC-13-bis', (_cmd, _how, command) => {
+        const r = guard(command);
+        expect(r.decision).toBe('ask');
+        expect(r.reason).toContain('RC-13-bis');
+    });
+
+    test.each([
+        'git reset --hard HEAD~1',
+        'git clean -n',
+        'git restore --staged .',
+        'git restore -s HEAD~1 .',
+        'git restore src/',
+        'git restore docs',
+        'git checkout HEAD -- .',
+        'git checkout HEAD -- docs',
+        'git checkout .',
+        'git checkout HEAD .',
+        'git checkout src/',
+    ])('kills "form not found": %s asks', (command) => {
+        expect(guard(command).decision).toBe('ask');
+    });
+
+    test.each([
+        'git reset --soft HEAD~1',
+        'git reset HEAD CLAUDE.md',
+        'git reset',
+        'git restore CLAUDE.md',
+        'git restore --staged CLAUDE.md',
+        'git restore -s HEAD~1 CLAUDE.md',
+        'git restore nowhere-at-all',
+        'git checkout main',
+        'git checkout -b topic',
+        'git checkout HEAD -- CLAUDE.md',
+        'git checkout HEAD -- nowhere-at-all',
+        'git checkout docs',
+        'git status',
+        'git log --grep=clean -1',
+        'echo "git clean -fd"',
+        "echo 'git reset --hard'",
+    ])('kills "file or branch taken for the tree": %s passes', (command) => {
+        expect(guard(command).decision).toBeNull();
+    });
+
+    test('kills "the value of -s is a path": a source named like a directory is not counted', () => {
+        expect(guard('git restore -s docs CLAUDE.md').decision).toBeNull();
+    });
+
+    test('kills "options of restore read as paths": an option that ends like a directory is not a path', () => {
+        expect(guard('git restore --source=docs/ CLAUDE.md').decision).toBeNull();
+        expect(guard('git restore --source=docs/ docs/').decision).toBe('ask'); // control: the real path still counts
+    });
+
+    test('kills "a directory is read from the wrong place": docs is a directory from the repository root, not from an empty one', () => {
+        expect(guard('git restore docs').decision).toBe('ask');
+        const empty = realpathSync(mkdtempSync(join(tmpdir(), 'bash-guard-empty-')));
+        try {
+            expect(guard('git restore docs', empty).decision).toBeNull();
+        } finally {
+            rmSync(empty, { recursive: true, force: true });
+        }
+    });
+
+    test('kills "an unknown path is judged": a path with a variable is not classified', () => {
+        expect(guard('git restore "$DIR/"').decision).toBeNull();
+        expect(guard('git checkout HEAD -- "$DIR/"').decision).toBeNull();
+    });
+
+    test('a deny wins over the ask of a whole-tree form', () => {
+        expect(guard('git reset --hard && git commit -m "x"').decision).toBe('deny');
+    });
+});
+
 describe('bash-guard: git stash (RC-13-bis, P13)', () => {
     test.each([
         ['sh -c', "sh -c 'git stash list'"],
