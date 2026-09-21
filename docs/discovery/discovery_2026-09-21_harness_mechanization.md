@@ -457,3 +457,7 @@ Model: probe
 XEOF
 )" -- x.txt
 ~~~~
+
+## Addendum 2026-09-21 (Phase 2, P-2026-09-21-1620): running the R5 probe
+
+Question 5 of this report left open how a pasted message reaches `UserPromptSubmit`: `prompt` was measured only for a message passed on the command line. The settings file `docs/discovery/harness/probe_2026-09-21_userpromptsubmit.json` logs the stdin JSON of that event and of `Stop`, and nothing else. Run it by hand, interactively, outside the repo: `rm -f /tmp/userpromptsubmit-probe.log; mkdir -p /tmp/r5-probe && cd /tmp/r5-probe && claude --settings <absolute path of the file>`; paste a multi-line message that opens with `[P-2026-09-21-1620]`, the way a GO from the chat does; then, from another terminal, `jq -r '.prompt' /tmp/userpromptsubmit-probe.log`. Read three things: whether `prompt` starts with the `[P-...]` line, whether the paste arrives wrapped or altered, and whether the newlines survive. The `Stop` line of the same log shows `last_assistant_message`, which is what a reply-opening check would read. Delete the log when done; nothing in the repo changes.

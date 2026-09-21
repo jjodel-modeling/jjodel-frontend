@@ -81,6 +81,31 @@ citare l'id con la data. Le decisioni sostituite si spostano in "Superate", con 
   una deroga la prima volta che incontra un caso reale ha una lacuna, quindi la regola si
   emenda, non si deroga. Scritta in `docs/PROTOCOL.md` P14 ("Reintegration of a branch").
   (Ratified on question 4 of section 10 of the gate report cited above.)
+- **RC-15** (2026-09-21) — **Le norme passano all'enforcement dove una macchina le regge onestamente.**
+  Direzione del 2026-09-19, ratificata il 2026-09-21 sul report
+  `docs/discovery/discovery_2026-09-21_harness_mechanization.md` (P-2026-09-21-1620). Tre strati, tre
+  modi di fallire, e ciascuno lo dichiara: la deny list di `.claude/settings.json` fallisce chiusa e vede
+  solo la forma letterale; gli hook `PreToolUse` di `frontend/scripts/hooks/` falliscono aperti (un errore,
+  un timeout o un node mancante lasciano passare) e dicono solo ciò che un pattern non sa dire; le skill di
+  `.claude/skills/` danno la forma dell'artefatto leggendo la clausola dal vivo, senza copie. Il resto
+  resta prosa. Le sedici decisioni: (1) modello `claude-opus-5`, ID intero, nominato solo in
+  `.claude/settings.json`, e `CLAUDE.md` §0 vi rimanda; (2) il gate della critical zone segue il trigger di
+  §3.2, sei file e percorsi di scrittura del D-layer, non la tabella di §3.1; (3) prova del Layer Impact
+  Report: `ask` senza stato; (4) nessun hook `Stop` per la entry di log, ticket riaperto quando la
+  decisione 5 dà una chiave sessione-prompt; (5) il Prompt-ID sui messaggi resta prosa, con il probe pronto in
+  `docs/discovery/harness/probe_2026-09-21_userpromptsubmit.json`; (6) le 72 battute di §6.2 non contano il
+  suffisso ` (P-YYYY-MM-DD-HHmm)`; (7) l'`ask` su `git commit*` resta, gli hook aggiungono solo rifiuti;
+  (8) la riga Status è una clausola di P13, due flip a mano; (9) il checkpoint resta all'architetto;
+  (10) hook in `.mjs` senza sintassi TypeScript, `node "$CLAUDE_PROJECT_DIR/frontend/scripts/hooks/<nome>.mjs"`,
+  nessun interprete assoluto; (11) le skill leggono §21.2, P4 e la clausola Status dal vivo, con una
+  guardia che abortisce se l'estrazione è vuota; (12) la deny list si estende alle sole forme dell'albero
+  intero, dopo l'emendamento di RC-13-bis (`rm -rf*` resta com'è, senza clausola); (13) nessun carry su
+  altri branch; (14) l'`effortLevel` utente non si cita; (15) i transcript dei probe restano; (16) l'`include`
+  di `frontend/vitest.config.ts` per i test degli hook è in scope. Aggiunte dell'ACK del batch A
+  (2026-09-21): `bash-guard` nega su `git commit` ogni token di flag corto con `n` (lì è solo no-verify) e
+  chiede sulle forme dell'albero intero dietro un wrapper, come per lo stash; sono accettate l'esenzione
+  durante un merge, un cherry-pick o un revert e la lettura dei percorsi di scrittura del D-layer di §3.2
+  (un creator in un sorgente non di test sotto `frontend/src`, `SetFieldAction` in `sync/`).
 
 ## Arco A — barra a tab e capi degli edge
 

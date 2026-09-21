@@ -1,7 +1,7 @@
 # HARNESS-DOCS — organizzazione documentale dell'harness Jjodel
 
 Posizione: `docs/HARNESS-DOCS.md` nel repo `jjodel-frontend`.
-Versione: 1.3 (2026-09-21).
+Versione: 1.4 (2026-09-21).
 Copia nel Project Knowledge: sì, integrale. Sostituisce `INDICE_ARCHIVIO.md`.
 
 Questo file dice, per ogni tipo di documento che l'harness produce, chi lo scrive, chi lo legge, dove
@@ -377,6 +377,10 @@ I documenti generati sono verificati da un gate, non dalla disciplina (ratifica 
 | `npx vitest run` | test unitari | 1315 passed; nove suite non collezionano per `window is not defined`, note |
 | `npm run build` | build di produzione | verde |
 | `npm run smoke` | cinque asserzioni su stati noti: console pulita, larghezza del canvas sopra soglia, nodi renderizzati sopra zero, nessun `position: fixed` che interseca la status bar, nessun figlio clippato oltre tolleranza | implementato; i prompt che non lo usano dichiarano la deroga |
+| deny list (`permissions.deny` in `.claude/settings.json`) | le forme fisse vietate da P6, P13 e RC-13-bis: stash, `git add` con `--all`, `-u`, `-A` e `.`, ogni comando che porta il flag no-verify, i ripristini dell'albero intero (checkout, restore, reset `--hard`) e `git clean`. **Fallisce chiusa**, ma vede solo la forma letterale: `sh -c`, `git -C` e un path assoluto di git la aggirano (discovery report H6). Il pattern del flag no-verify blocca anche un comando che lo cita soltanto. `rm -rf*` vi sta senza una clausola | attiva dal 2026-09-21 |
+| hook `bash-guard` (`frontend/scripts/hooks/bash-guard.mjs`, `PreToolUse` su `Bash`) | su `git commit`: pathspec dopo `--` (§6.1, P13), trailer `Model:` (P6), soggetto entro 72 senza il suffisso `(P-...)` (§6.2), pathspec che non mescola docs e codice (P13), nessun token di flag corto con `n` (§6.3, sempre, anche durante un merge). `ask` su stash e sulle forme dell'albero intero (RC-13-bis) dietro un wrapper. **Fallisce aperto**: un errore, un timeout o un node mancante lasciano passare la chiamata. Solo rifiuti in più: l'`ask` su `git commit*` di `.claude/settings.json` resta il cancello umano | attivo dal 2026-09-21 |
+| hook `critical-zone` (`frontend/scripts/hooks/critical-zone.mjs`, `PreToolUse` su `Edit\|Write\|NotebookEdit`) | `ask` con il motivo di §3.2 sui sei file di §3.2 e sui percorsi di scrittura del D-layer (un creator in un sorgente non di test sotto `frontend/src`, `SetFieldAction` in `sync/`). Non prova che il Layer Impact Report esista: lo chiede all'umano. **Fallisce aperto**. Un test confronta le sue costanti con §3.2 | attivo dal 2026-09-21 |
+| skill `log-entry`, `discovery-report`, `status-flip` (`.claude/skills/`) | la forma dell'artefatto: il blocco di §21.2 (P9), la clausola P4 e la clausola Status di P13 sono lette dal vivo dal file che le tiene, senza copie e quindi senza un gate da estendere; un'estrazione vuota aborta la skill. Non sono un controllo, e `status-flip` la invoca solo l'utente | disponibili dal 2026-09-21 |
 
 **Cosa nessun gate verifica, e resta disciplina**: che un memo abbia la sua riga in `decisions.md`;
 che un prompt abbia l'orario nel nome; che il Project Knowledge stia a sei file; che un discovery

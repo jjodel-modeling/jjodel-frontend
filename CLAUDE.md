@@ -112,6 +112,13 @@ regole NON-NEGOTIABLE, la critical zone e il Layer Impact Report (§3), la
 diagnosi dei bug visivi (§5), i comandi di sviluppo (§17), e la semantica di
 autovalutazione del prompt log (§21.3).
 
+Una parte di queste regole non poggia sulla sola disciplina: la tiene una macchina,
+in `.claude/settings.json` (la deny list, che fallisce chiusa, e gli hook
+`PreToolUse`, che falliscono aperti e lo dichiarano), con gli script in
+`frontend/scripts/hooks/` e le skill di progetto in `.claude/skills/`
+(`log-entry`, `discovery-report`, `status-flip`). Cosa tiene ciascuna, con quale
+clausola: `docs/HARNESS-DOCS.md` §6.
+
 ---
 
 ## 2. Preservation first — committed code is verified
