@@ -196,3 +196,20 @@ Visual check as in the prompt, plus two items this report adds: the Symbol-text 
 - Method note for §5 of CLAUDE.md: the pixel probe measures painted pixels (longest dark run per pixel row), not computed style, because computed `text-decoration` on the child reads `none` while the ancestor's line is painted across it.
 
 Phase 2 gates therefore start from: typecheck 14, vitest 3962 passed and 0 failed with nine files red at import, and every new test adds to 3962.
+
+## 11. Addendum, Phase 2 (P-2026-09-21-1455)
+
+GO of 2026-09-21 on this report: answers Q1 A (hide at the Symbol-text mount), Q2 yes (summary segment), Q3 Y (radius as a peer rules axis), Q4 none (no badge on the Symbol entry, unchanged). Deviations from section 9b: **one** code commit `94eb92a21` (subject `feat(ir): S6 underline row and corner radius rules table`) instead of three, by the GO; the Symbol-text prop is named `hideUnderline` (grep before: 0 hits), optional, default shows the row, on `TextStyleEditorProps` and forwarded by `TextStyleFieldProps`.
+
+What the code does, against the findings:
+- 4.1: `UNDERLINE_OPTIONS` (`true`/`false`, `Default` as the empty option), the row after Style and before Color, `axisDefault` `true`, `setAxis` exported. The branch handler maps the empty option to `On` (`e.target.value !== 'false'`), as 4.1 required.
+- 4.2/4.3: the Symbol-text mount passes `hideUnderline`; the trigger summary lists `Underline` (conditional: with the lightning glyph; fixed `false` omitted, like fixed italic `normal`, so an `Off`-only style still reads `Custom`).
+- 5.3 Y: `ConditionalEditor<number>` with `rulesTable` in the Shape block; Fixed mode renders the former stepper block unchanged (opacity, `default`, `Reset` = `resetCornerRadius`, glyphs), rule rows render a plain `NumberInput`; `allowConditional={advanced}`, so Basic shows the chip `conditional (edit in Advanced mode)` in place of the old `rule-driven` label. `borderOverrides.ts`, `BORDER_AXES`, the OVERRIDES table, the Border badge, `previewInstances` border logic: untouched.
+- 6: `ResolvedPreviewInstance.cornerRadius?: number` (guarded), `thumbnailCornerRadius` in `previewInstances.ts`, `SymbolEditorModal.tsx` reads it for the chip and the symbolic preview and passes `t.cornerRadius` to each tile; `SymbolBoxPreview.tsx` untouched.
+
+Gates: typecheck 14 (baseline set), vitest 3981 passed and 0 failed (3962 + 19: 9 in `textStyleEditor.test.ts`, 10 in `previewInstances.test.ts`), the same 9 files red at import, build exit 0. Mutation bench, 12 mutants, all killed (list in the commit message).
+
+**Declared gaps.** `VertexAuthoringPanel.tsx` and `SymbolEditorModal.tsx` do not load under vitest (section 8), so the radius editor wiring and the modal wiring have no executable test; `TextStyleField.summarizeTextStyle` is not exported and was outside the GO's test list. No source-text test fills these. They are covered only by the visual check: (a) scalar radius edits and Reset behave as before, key removed on Reset in the IR read-back; (b) one radius rule makes the three preview thumbnails differ; (c) on a label, underline On underlines, Off does not, the trigger reads `Underline` and not `Custom`; (d) the Symbol-text mount shows no Underline row.
+
+Ticket (also in the log entry): the renderer applies text style on the box root instead of the text nodes, so a Symbol-level underline cannot be overridden by a label; when fixed, `hideUnderline` comes off the Symbol-text mount.
+

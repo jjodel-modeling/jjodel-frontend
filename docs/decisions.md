@@ -1207,6 +1207,12 @@ verifica e la correzione al Finding 1 del 2026-09-19). Prompt: `claude_2026-09-1
   shapes" di R-IRN-31 alle forme senza spigoli. Il valore `8` del seed dell'oggetto è invariato.
   (Ratified on question 1 of section 10 of
   `docs/discovery/discovery_2026-09-19_merge_gate_validation_skeleton.md`.)
+  **Chiusura S6** (2026-09-21, P-2026-09-21-1455, `94eb92a21`): il raggio è entrato nel pannello
+  come asse a regole del blocco Shape, `ConditionalEditor` con `rulesTable` come `form`, `fill` e
+  `marker`; l'anteprima lo risolve per istanza nella striscia e con l'`otherwise` nelle miniature.
+  La lettura OVERRIDES del Border (`borderOverrideRows`) non lo contiene e non è stata toccata: la
+  formulazione «quarto asse accanto a color, width e style» del prompt è superata da questa lettura
+  della frase «come ogni altro asse».
 - **R-IRN-36** (2026-09-19) — **Il colore del separatore segue il colore del bordo per asse.**
   La regola di parità di S2 (il separatore dei compartimenti riusa il colore del bordo del box)
   è mantenuta e riancorata a D1: legge l'asse `borderColor` risolto, non l'oggetto `border`
