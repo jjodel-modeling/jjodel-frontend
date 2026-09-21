@@ -38,7 +38,6 @@ import { useSelector } from 'react-redux';
 import { LPointerTargetable, store, U, type LViewElement } from '../../../../joiner';
 import { JjodelEvents } from '../../../../events/registry';
 import { recognizeSymbol } from '../ir/symbolRecognition';
-import { authoredCornerRadius } from '../ir/shapeRegistry';
 import { applyPresetToShape, type SymbolPreset } from '../ir/notationCatalog';
 import type { VertexViewIR } from '../ir/irTypes';
 import { toRules } from '../../../ui/ConditionalEditor/conditional';
@@ -47,7 +46,7 @@ import { SymbolCatalogPicker } from './SymbolCatalogPicker';
 import { borderOverrideRows } from './borderOverrides';
 import SymbolPreview from './SymbolPreview';
 import { SymbolBoxPreview, captionForBox } from './SymbolBoxPreview';
-import { resolvePreviewInstances, type ResolvedPreviewInstance } from './previewInstances';
+import { resolvePreviewInstances, thumbnailCornerRadius, type ResolvedPreviewInstance } from './previewInstances';
 import { makeReadCtx } from '../ir/irReadCtxLproxy';
 import { useCanvasNodeBoxes } from './useCanvasNodeBox';
 import { readVertexLayout, type VertexLayoutSource } from '../layout/vertexLayout';
@@ -337,8 +336,10 @@ export const SymbolEditorModal: React.FC = () => {
     const target = Array.isArray(ir.metaclasses) && ir.metaclasses.length > 0 ? ir.metaclasses[0] : null;
     const previewPreset = currentAxesPreset(ir.shape);
     // Corner radius (slice 3): not a preset axis, so it travels beside the preset, and
-    // only when written. Absent (or invalid) leaves both previews on the base radius.
-    const cornerRadius = authoredCornerRadius(ir.shape.cornerRadius);
+    // only when written. For the two thumbnails (the chip, the symbolic preview) a rule-driven
+    // radius draws its `otherwise` (S6); absent or invalid leaves them on the base radius.
+    // The strip resolves the radius per instance instead, through `tiles` below.
+    const cornerRadius = thumbnailCornerRadius(ir.shape.cornerRadius);
     const previewLabel = (typeof ir.label === 'string' && ir.label !== '') ? ir.label : (view.name as string);
 
     const navEntries: NavEntry[] = [
@@ -525,7 +526,7 @@ export const SymbolEditorModal: React.FC = () => {
                                             label={previewLabel}
                                             borderColor={typeof t.borderColor === 'string' && t.borderColor !== ''
                                                 ? t.borderColor : undefined}
-                                            cornerRadius={cornerRadius}
+                                            cornerRadius={t.cornerRadius}
                                             maxW={tileMaxW}
                                             maxH={PREVIEW_MAX_H}
                                             caption={t.caption}

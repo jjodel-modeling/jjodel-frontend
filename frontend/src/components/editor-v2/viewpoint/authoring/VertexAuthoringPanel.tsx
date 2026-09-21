@@ -412,8 +412,9 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
     // radius instead of seeding itself with a number the canvas ignores.
     const cornerRadius = authoredCornerRadius(shape.cornerRadius);
     // A rule-driven radius (R-IRN-35) has no single number for the stepper to show, and
-    // the stepper writes a scalar: touching it would drop the rules. The control for the
-    // rules is owed to S6; until then the stepper is off and says why.
+    // the stepper writes a scalar: touching it would drop the rules. The rules editor
+    // (S6) takes its place, so the stepper below renders only while the axis is scalar
+    // or absent.
     const cornerRuleDriven = isConditionalValue(shape.cornerRadius);
     // Resolved resizable state (mirrors the checkbox default): explicit flag ?? per-form default.
     // Gates the "Propagate size" button — propagating a size to a non-resizable view has no effect.
@@ -654,29 +655,46 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                     <label className="jj-field-label">
                         Corner radius <span style={{ color: '#94a3b8' }}>· all vertices</span>
                     </label>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
-                        {/* NumberInput carries no placeholder and needs a number, so the
-                            absent state is the base radius shown at reduced opacity with
-                            the word `default` beside it, never an empty field. */}
-                        <span style={{ opacity: cornerRadius === undefined ? 0.6 : 1 }}>
-                            <NumberInput
-                                value={cornerRadius ?? baseCornerRadius(scalarForm)}
-                                min={0}
-                                disabled={radiusIgnored || cornerRuleDriven}
-                                onChange={(r) => patchShape({ cornerRadius: r })}
-                            />
-                        </span>
-                        {cornerRuleDriven ? (
-                            <span style={{ fontSize: 11, color: '#94a3b8' }}>rule-driven</span>
-                        ) : cornerRadius === undefined ? (
-                            <span style={{ fontSize: 11, color: '#94a3b8' }}>default</span>
+                    {/* Rules table on the radius (S6, R-IRN-35): the same editor as the shape
+                        axis and the border axes. Fixed mode renders the scalar stepper below,
+                        so an unauthored or scalar radius looks and behaves as before; the
+                        editor writes nothing until a control changes (D2), and Reset stays
+                        the rest/spread drop of `resetCornerRadius`. */}
+                    <ConditionalEditor<number>
+                        value={shape.cornerRadius}
+                        onChange={(next) => (next === undefined ? resetCornerRadius() : patchShape({ cornerRadius: next }))}
+                        renderValue={(v, onCh) => cornerRuleDriven ? (
+                            <NumberInput value={v} min={0} onChange={(r) => onCh(r)} />
                         ) : (
-                            <Button variant="ghost" size="sm" onClick={resetCornerRadius}>
-                                Reset
-                            </Button>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+                                {/* NumberInput carries no placeholder and needs a number, so the
+                                    absent state is the base radius shown at reduced opacity with
+                                    the word `default` beside it, never an empty field. */}
+                                <span style={{ opacity: cornerRadius === undefined ? 0.6 : 1 }}>
+                                    <NumberInput
+                                        value={cornerRadius ?? baseCornerRadius(scalarForm)}
+                                        min={0}
+                                        disabled={radiusIgnored}
+                                        onChange={(r) => onCh(r)}
+                                    />
+                                </span>
+                                {cornerRadius === undefined ? (
+                                    <span style={{ fontSize: 11, color: '#94a3b8' }}>default</span>
+                                ) : (
+                                    <Button variant="ghost" size="sm" onClick={resetCornerRadius}>
+                                        Reset
+                                    </Button>
+                                )}
+                                {!radiusIgnored && <CornerRadiusGlyphs radius={cornerRadius ?? baseCornerRadius(scalarForm)} />}
+                            </div>
                         )}
-                        {!radiusIgnored && !cornerRuleDriven && <CornerRadiusGlyphs radius={cornerRadius ?? baseCornerRadius(scalarForm)} />}
-                    </div>
+                        defaultValue={baseCornerRadius(scalarForm)}
+                        features={features}
+                        featuresHint={FEATURES_HINT}
+                        classNames={classNames}
+                        allowConditional={advanced}
+                        rulesTable={{ subjectName: featureInfo.targetName ?? undefined, valueNoun: 'corner radius' }}
+                    />
                     <HelpText icon={false}>
                         {radiusIgnored
                             ? `${FORM_OPTIONS.find(o => o.value === scalarForm)?.label ?? scalarForm} ignores the corner radius: its roundness is the shape itself.`
@@ -906,6 +924,7 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                         features={features}
                         featuresHint={FEATURES_HINT}
                         classNames={classNames}
+                        hideUnderline
                     />
                     <HelpText icon={false}>Applies to every text of the symbol. A label's own style overrides it.</HelpText>
                 </FormSection>

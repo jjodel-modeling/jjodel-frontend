@@ -24,6 +24,7 @@
 import type { Conditional, Predicate, ShapeForm, VertexViewIR } from '../ir/irTypes';
 import type { ReadCtx } from '../ir/irReadCtx';
 import { matchIndexOf } from '../ir/irCompile';
+import { authoredCornerRadius } from '../ir/shapeRegistry';
 import { formatPredicate, isConditionalValue, toRules } from '../../../ui/ConditionalEditor/conditional';
 import { BORDER_AXES } from './borderOverrides';
 import type { IRSectionId } from './irTabs';
@@ -54,6 +55,12 @@ export interface ResolvedPreviewInstance {
     readonly borderWidth?: number;
     readonly borderStyle?: 'solid' | 'dashed' | 'dotted' | 'double';
     readonly marker?: string;
+    /**
+     * The radius this instance draws, px: guarded like the canvas (`authoredCornerRadius`),
+     * `undefined` when the axis is absent or resolves to nothing, so the tile keeps the
+     * form's base radius. Not a preset axis, so it travels beside the preset.
+     */
+    readonly cornerRadius?: number;
     readonly caption: string;
 }
 
@@ -98,6 +105,18 @@ export function borderRowPredicates(border: VertexViewIR['shape']['border']): Pr
         }
     }
     return out;
+}
+
+/**
+ * The radius a thumbnail draws when the strip's per-instance resolution is not
+ * available (the chip and the symbolic preview): the scalar when it is a number, the
+ * `otherwise` of the rules when it is conditional, `undefined` (the form's base radius)
+ * when the axis is absent or the value is not usable. One expression because `toRules`
+ * moves a scalar into `default`, the same idiom the modal uses for the form's fallback.
+ * It lives here and not in the modal, which does not load in the node test bench.
+ */
+export function thumbnailCornerRadius(c: Conditional<number> | undefined): number | undefined {
+    return authoredCornerRadius(toRules(c).default);
 }
 
 /** True when `when` holds for this element. One rule, so the rule order plays no part. */
@@ -187,6 +206,7 @@ export function resolvePreviewInstances(
             borderWidth: resolveConditional<number>(shape.border?.width, ctx, id),
             borderStyle: resolveConditional<'solid' | 'dashed' | 'dotted' | 'double'>(shape.border?.style, ctx, id),
             marker: resolveConditional<string>(shape.marker, ctx, id),
+            cornerRadius: authoredCornerRadius(resolveConditional<number>(shape.cornerRadius, ctx, id)),
             caption: captionForInstance(shape, section, ctx, input, index),
         };
     });

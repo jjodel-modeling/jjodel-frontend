@@ -18,6 +18,7 @@ import {
     instanceLabel,
     resolveConditional,
     resolvePreviewInstances,
+    thumbnailCornerRadius,
 } from '../previewInstances';
 import { borderOverrideRows } from '../borderOverrides';
 import { formatPredicate } from '../../../../ui/ConditionalEditor/conditional';
@@ -251,5 +252,67 @@ describe('resolvePreviewInstances', () => {
 
     it('is empty for no instance: the strip has nothing to draw', () => {
         expect(resolvePreviewInstances(conditionalForm, 'symbol', world(), [])).toEqual([]);
+    });
+});
+
+describe('resolvePreviewInstances: the corner radius (S6, D-S6-3)', () => {
+    it('resolves a rule-driven radius PER INSTANCE: the rule holds on one tile and not on the other', () => {
+        const shape: VertexViewIR['shape'] = {
+            form: 'rect',
+            cornerRadius: { rules: [{ when: isInitial, then: 16 }], default: 4 },
+        };
+        const out = resolvePreviewInstances(shape, 'symbol', world(), [input('s1'), input('s2')]);
+        expect(out[0].cornerRadius).toBe(16);
+        expect(out[1].cornerRadius).toBe(4);
+    });
+
+    it('gives a scalar radius to every instance', () => {
+        const out = resolvePreviewInstances({ form: 'rect', cornerRadius: 8 }, 'symbol', world(), [input('s1'), input('s2')]);
+        expect(out.map((t) => t.cornerRadius)).toEqual([8, 8]);
+    });
+
+    it('keeps an absent radius undefined, so the tile draws the form base radius', () => {
+        const out = resolvePreviewInstances({ form: 'rect' }, 'symbol', world(), [input('s1')]);
+        expect(out[0].cornerRadius).toBeUndefined();
+    });
+
+    it('keeps `undefined` when no rule wins and there is no default (the compile fallback, never 0)', () => {
+        const shape: VertexViewIR['shape'] = { form: 'rect', cornerRadius: { rules: [{ when: isInitial, then: 16 }] } };
+        const out = resolvePreviewInstances(shape, 'symbol', world(), [input('s2')]);
+        expect(out[0].cornerRadius).toBeUndefined();
+    });
+
+    it('keeps a written 0 (sharp corners are a value, not an absence)', () => {
+        const out = resolvePreviewInstances({ form: 'rect', cornerRadius: 0 }, 'symbol', world(), [input('s1')]);
+        expect(out[0].cornerRadius).toBe(0);
+    });
+
+    it('reads an unusable radius as absent, like the canvas (authoredCornerRadius)', () => {
+        const shape = { form: 'rect', cornerRadius: { rules: [{ when: isInitial, then: -3 }], default: 4 } } as VertexViewIR['shape'];
+        const out = resolvePreviewInstances(shape, 'symbol', world(), [input('s1')]);
+        expect(out[0].cornerRadius).toBeUndefined();
+    });
+});
+
+describe('thumbnailCornerRadius (S6, D-S6-3)', () => {
+    it('gives the scalar when the radius is a number, 0 included', () => {
+        expect(thumbnailCornerRadius(12)).toBe(12);
+        expect(thumbnailCornerRadius(0)).toBe(0);
+    });
+
+    it('gives the `otherwise` when the radius is rule-driven, whatever the rules say', () => {
+        expect(thumbnailCornerRadius({ rules: [{ when: isInitial, then: 16 }], default: 6 })).toBe(6);
+        expect(thumbnailCornerRadius({ when: isInitial, then: 16, else: 6 } as any)).toBe(6);
+    });
+
+    it('gives undefined when the radius is absent or has no otherwise, so the thumbnail draws the base radius', () => {
+        expect(thumbnailCornerRadius(undefined)).toBeUndefined();
+        expect(thumbnailCornerRadius({ rules: [{ when: isInitial, then: 16 }] })).toBeUndefined();
+    });
+
+    it('reads an unusable value as absent', () => {
+        expect(thumbnailCornerRadius(-1)).toBeUndefined();
+        expect(thumbnailCornerRadius(Number.NaN)).toBeUndefined();
+        expect(thumbnailCornerRadius({ rules: [], default: -2 })).toBeUndefined();
     });
 });
