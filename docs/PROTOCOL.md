@@ -1,7 +1,7 @@
 # PROTOCOL.md — protocollo di esecuzione per Claude Code
 
 Posizione: `docs/PROTOCOL.md` nel repo `jjodel-frontend`.
-Versione: 1.4 (2026-09-19) — traccia l'insieme delle clausole (quali P<n> esistono), non le differenze di frase.
+Versione: 1.5 (2026-09-21) — traccia l'insieme delle clausole (quali P<n> esistono), non le differenze di frase.
 
 Questo file contiene le clausole che prima venivano ricopiate per esteso in ogni prompt. I prompt ora le citano per numero. Se una clausola cambia, cambia qui e vale ovunque da subito.
 
@@ -116,6 +116,8 @@ Il log non sostituisce i commit message, e il discovery report non sostituisce i
 A corsie parallele, `docs/claude-code-log.md` si tocca solo nella §6.1 di chiusura batch, da una sessione sola a repo fermo. Ogni corsia scrive la propria entry in `docs/log-inbox/<lane>.md`; chi chiude il batch le sposta nel log verbatim e cancella l'inbox.
 
 RC-13-bis. Il ripristino di un file tracciato si fa **solo** con `git checkout HEAD -- <path>`. Nessun backup del working tree su disco, nessun file di appoggio in `/tmp` riusato fra sessioni, nessun `git stash`: sono i tre modi in cui il lavoro di un'altra corsia e' stato perso o sovrascritto, tre incidenti della stessa classe in due batch (uno `stash` incrociato, un `log-backup.md` stale, un `cp` da `/tmp` di job che ha sovrascritto il log con una copia pre-rotazione).
+
+Emendamento del 2026-09-21. `<path>` nomina file, mai `.` e mai una directory: ripristinare l'albero intero cancella il lavoro non committato di tutte le corsie che lo condividono. Sono la stessa classe di incidente, e quindi vietati su albero condiviso, `git reset --hard`, `git restore` con `.` o con una directory (anche con `--staged`, che scarta lo staged altrui), `git checkout -- .` e `git clean`.
 
 ## P10 — Dove vivono i documenti
 
@@ -234,6 +236,16 @@ incidente misurato, non da una preferenza. Iscritta come **RC-13** in `docs/deci
   and stops. A session does not relay messages to another session. Measured 2026-09-17: a Phase 2
   GO for `P-2026-09-17-1024` was pasted into the session running `P-2026-09-16-2327`, and a relayed
   message carried a scope change that nobody had written.
+
+- **Every prompt file carries a Status line, flipped twice, never automatically.** The header of a
+  prompt in `docs/prompts/` holds `Status: da eseguire`. The closing docs commit of the lane flips it
+  to `Status: eseguito <YYYY-MM-DD> · lane <name> · <sha>`, the sha being the last code commit of the
+  lane (the report commit for a docs-only lane). After the human visual check, Alfonso in the chat, or
+  the session on an ACK from the chat, appends ` · verifica visiva passata <YYYY-MM-DD>` or
+  ` · verifica visiva fallita <YYYY-MM-DD>`. Both flips are edits to the prompt file, recorded in a
+  commit of their own or in the closing docs commit; no hook and no skill performs either unasked.
+  Measured 2026-09-21: 9 of 66 September prompts carry the line, in two forms, and no normative file
+  stated the practice.
 
 ## P14 — Worktrees and cherry-picks
 

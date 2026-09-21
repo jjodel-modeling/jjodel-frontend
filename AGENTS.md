@@ -331,7 +331,7 @@ The name of the test declares the mutation that kills it; the bench that establi
 
 ### 6.2 Commit messages
 
-- Subject line ≤ 72 chars. Scope where useful: `fix(editor-v2): role-aware bucket keys`.
+- Subject line ≤ 72 chars, measured without a trailing ` (P-YYYY-MM-DD-HHmm)` prompt-ID suffix; the suffix stays, because it lets the log chains resolve from `git log --oneline`. Scope where useful: `fix(editor-v2): role-aware bucket keys`.
 - Split commits thematically. Do not bundle unrelated changes.
 
 ### 6.3 Around the commit

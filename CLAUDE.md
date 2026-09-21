@@ -90,14 +90,14 @@ Shared engagement rules live in docs/PROTOCOL.md (P1..P15); see §1.
 
 ## 0. Runtime — model & effort
 
-This agent runs as **Claude Opus 5** (requires Claude Code v2.1.154+; run `claude update` if older).
+The model is named in one place only: `model` in `.claude/settings.json`. Run `claude update` if a session opens on another model, or if the installed Claude Code does not know the pinned ID. The `Model:` trailer of a commit records the model the session banner shows, not this file (`docs/PROTOCOL.md` P6).
 
 Effort is set with `/effort` and persists across sessions:
 - **Default: xhigh** — the working level for all real tasks, including the critical zone (§3) and visual-bug diagnosis (§5).
 - Step down to **high / medium** only for trivial, out-of-critical-zone work (a CSS tweak, a doc fix, a single `str_replace`).
 - **Never max** unless the prompt explicitly asks for it.
 
-Note: switching to Opus 5 resets effort to its model default (high). If a session opens at high, set `/effort xhigh` before working.
+Note: switching model can reset effort to the model's default (high). If a session opens at high, set `/effort xhigh` before working.
 
 ---
 
@@ -342,7 +342,7 @@ The name of the test declares the mutation that kills it; the bench that establi
 
 ### 6.2 Commit messages
 
-- Subject line ≤ 72 chars. Scope where useful: `fix(editor-v2): role-aware bucket keys`.
+- Subject line ≤ 72 chars, measured without a trailing ` (P-YYYY-MM-DD-HHmm)` prompt-ID suffix; the suffix stays, because it lets the log chains resolve from `git log --oneline`. Scope where useful: `fix(editor-v2): role-aware bucket keys`.
 - Split commits thematically. Do not bundle unrelated changes.
 
 ### 6.3 Around the commit
