@@ -306,6 +306,188 @@ imprecise. It is recorded here and the paragraph is left as written.
 Rotazione del 2026-09-01 (P9, oltre le 40 entry): le 4 entry qui sotto, tutte del
 2026-08-30, sono state spostate dall'attivo senza modifiche. L'attivo torna a 40.
 
+## 2026-09-17 — fix: the JjScript error dialog shows the executor's own error (corsia B)
+**Prompt**: `claude_2026-09-16_2327_prompt_jjscript_forward_refs_and_structured_errors.md`, phase 2
+lane B, with Alfonso's answers 3, 4 and 5 to §10 of the report (all four result-shaped sites,
+`handleStep` read and converted if result-shaped, the function in `errors.ts` confirmed) plus one
+addition made at the lane A hand-off: the dialog must number its line the way the validator refusal
+and the outcome strip do.
+**Files touched**: `fad85bae5`, 5 files: `jjscript/executor/errors.ts` (`errorFromResult`,
+`KNOWN_ERROR_CODES`, the `scriptLine` field on `ExecutionErrorInfo`),
+`jjscript/components/ScriptBlock.tsx` (five sites, the `errors` field on `ScriptLineResult`, the
+line numbers), `jjscript/components/ExecutionErrorDialog.tsx` (the title line only),
+`components/Jodie/ChatMessages.tsx` (`errors` passed through, the one place it was dropped),
+`jjscript/__tests__/errorFromResult.test.ts` (new, 9 tests). This entry in its own commit.
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-14 17:30
+**Causa**: (c)
+**Regressions**: no. `npm run typecheck` exit 2, **33** on full output, the declared baseline,
+control `Measurable` → 6; the one hit in a touched file is the pre-existing `ChatMessages.tsx` entry
+of the §17 baseline, 170 lines above the edit. `npx vitest run` **3727 passed, 0 failed**, the same
+9 files red at import. `npm run build` exit 0, pre-existing chunk-size warning only.
+**Out-of-scope changes**: yes, two, both declared. `ExecutionErrorDialog.tsx` was allowed only if
+the suggestion was not rendered (it was), and one line of it changed for the title's line number.
+`handleStep:674` is a fifth site, converted on Alfonso's answer 4: it was result-shaped but not even
+on `parseError`, it passed the raw string, so the dialog showed no suggestion at all there.
+**Layer Impact Report**: not-required — no §3.1 file, no D-layer or L-layer write path.
+**Smoke visivo**: passato — Alfonso on localhost:3001: the executor's sentence and its suggestion are
+shown, the dialog title sits on the editor line, Skip Line resumes correctly, and the summary reports
+the editor line for the error.
+**Notes**: `scriptLine` is a new optional field, not a renumbering: `lineNumber` still indexes the command list for Skip, the enum recovery and `skippedLinesSet` (`:1016`). Residual: the summary's skipped line and the `EXECUTION_PAUSED` detail stay on that index, so they match the editor line only when no comment or blank line precedes the failing command. Thrown paths `:459`, `:725`, `:872`, `:1004` keep `parseError`: an exception carries no `errors`. The two open defects of lane A stand, report §6.
+**Prompt document name**: 2026-09-16 23:27
+
+## 2026-09-17 — fix: JjScript refuses a forward reference before command 1 (corsia A)
+**Prompt**: `claude_2026-09-16_2327_prompt_jjscript_forward_refs_and_structured_errors.md`, phase 1
+(read-only discovery with report, hard stop) then phase 2 lane A. Run with Alfonso's five answers to
+§10 of the report: option (b) corrected to the names of EVERY metamodel of the project, the three
+hard-failure roles only, the §5 exclusions each with a test, the mutation bench plus a
+target-only-names mutant, and a `console.warn` on stand-down added after the visual check.
+**Files touched**: `2b357af17`, 3 files: `jjscript/executor/scriptValidator.ts` (second pass,
+`collectClassifierNames`, the `kind` discriminant, header rewritten around the real soundness rule),
+`jjscript/__tests__/scriptValidator.test.ts` (+20 tests, 28 total),
+`jjscript/components/ScriptBlock.tsx` (the name set at the call site, the refusal wording, one new
+`ScriptOutcome` kind). Report `6ae3e15eb`. This entry in its own commit.
+**Outcome**: ✅ completed (lane A; lane B is the next commit of the same prompt)
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. `npm run typecheck` exit 2, **33** on full output, the declared baseline, **0**
+in the three touched files. `npx vitest run` **3691 passed, 0 failed** (3671 before, +20 new), the
+same 9 files red at import. `npm run build` exit 0, pre-existing chunk-size warning only.
+**Out-of-scope changes**: yes, declared under rule 1b. The prompt scoped `ScriptBlock.tsx` to the
+integrity refusal block; the text the user reads is the outcome strip at `:1478`, which said
+`Syntax error at line N`. One `ScriptOutcome` kind (`'refused'`) and one branch of that ternary were
+added so a forward reference is not called a syntax error. Nothing else in the file changed.
+**Layer Impact Report**: not-required — no §3.1 file. `projectClassifierNames()` reads L proxies and
+writes nothing.
+**Smoke visivo**: passato — Alfonso ran the Pipeline script on a clean metamodel at localhost:3001:
+zero commands executed and the two-line refusal naming lines 17 and 19.
+**Notes**: Two open defects measured and left untouched, both in the report §6: `create class|enum|package` has no duplicate check (`create.ts:439,1023,1059`), and `create class A extends B` with a missing `B` drops the inheritance silently (`create.ts:452-467`). The first is why the pass needs the name set at all. Bench: 9 mutants, 9 killed, one named test each; the harness reports a mutant that fails to apply instead of scoring it green.
+**Prompt document name**: 2026-09-16 23:27
+
+## 2026-09-16 — docs: trasporto di quattro regole normative da validation-skeleton
+**Prompt**: prompt di chat alla corsia del worktree del tronco, non un documento in repo: ora che
+la 3.0 e' uscita (tag `3.0.0` su `cb699ad58`, verificato su `origin` con `git ls-remote --tags`),
+portare qui le quattro regole nate su `validation-skeleton`, nell'ordine obbligato in cui ognuna
+cita la precedente. Tre condizioni: mettere a verbale il commit locale non pushato prima di
+toccare altro, non pushare in nessun caso, fermarsi al primo conflitto e rigenerare AGENTS.md con
+`gen:agents` invece di risolverlo a mano (1c).
+**Files touched**: quattro `git cherry-pick -x`, ciascuno con il proprio `CLAUDE.md` + `AGENTS.md`
+gia' dentro: `8f6122427` (da `686a13712`, §6.5 worktree e cherry-pick), `cccabe385` (da
+`74d0f81db`, test statici e file rigenerati in scope), `4db186124` (da `43e598404`, un test si
+giudica dalle mutazioni che uccide), `00b32f5e7` (da `e786d9d8a`, §6.6 la casa delle regole).
+Nessun file sorgente. Questa voce in un commit di soli docs.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — nessun sorgente toccato, solo `CLAUDE.md` e le sue proiezioni.
+`npm run check:agents` **PASS**, 2 file proiettati rigenerati in temp e allineati (`AGENTS.md`,
+`frontend/src/jjtl/AGENTS.md`). `npm run check:docs` **3/3**. I gate girati in questo clone
+attraverso un symlink temporaneo a `~/jjodel/frontend/node_modules` (§6.5), rimosso a fine
+sequenza; `git status` vuoto prima e dopo.
+**Out-of-scope changes**: no.
+**Layer Impact Report**: not-required — nessun file §3.1, nessun diff di codice.
+**Smoke visivo**: non applicabile — trasporto di sole regole, nessuna superficie.
+**Notes**: A verbale come chiesto, il commit locale non pushato preesistente: `96acb6ae9`, Alfonso Pierantonio, 2026-09-15, «docs: log-inbox entry for the 3.0.0 release lane», solo `docs/log-inbox/release-3-0.md`. **Non pushato nulla**: il ramo resta ahead=5, cosa sale lo decide Alfonso. Verifica per contenuto prima di toccare: 0/22, 0/8, 0/4, 0/19 righe gia' presenti, controllo positivo `c744b7660` 1/1 PRESENTE. Nessun conflitto, `gen:agents` non e' servito.
+**Prompt document name**: 2026-09-16 23:30
+
+## 2026-09-16 — discovery: the lost route to edge and row views (Fase B)
+**Prompt**: `claude_2026-09-16_0951_prompt_menu_v2_viewpoint_e_rotta_archi_righe.md`, **Fase B**,
+read-only: what the edge/row seeding needs from a caller, where the two entries could live (tree rows
+vs v2 child menu), what depends on `key_bindings` and `closefunc`, plus the fourth question added in
+chat — who else depends on priority 3 of `resolveParentViewpoint`. Fase A was committed earlier as
+`86f822d50`.
+**Files touched**: `a4ec9313d`: `docs/discovery/discovery_2026-09-16_rotta_archi_righe.md` (new, 173
+lines). No file under `frontend/src` touched. This entry in `docs/log-inbox/views.md`, not in the
+active log (P9, three lanes open).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — read-only phase, no code and no gate run; the Fase A gates are recorded in the
+entry of `86f822d50`.
+**Out-of-scope changes**: no.
+**Layer Impact Report**: not-required — nothing modified.
+**Smoke visivo**: non applicabile — no runtime surface changed. The runtime facts the report relies
+on were measured in the previous phases (`_tmp_gate_keybind.ts`, `_tmp_gate_reach.ts`,
+`_tmp_v2menu_verify.ts`, all gitignored).
+**Notes**: One prompt premise is contradicted, in the report: `key_bindings` IS dispatched, by `Keystrokes.register('#root', …)` (`ContextMenu.tsx:711`, delegated `keydown` at `U.tsx:3535`) — registered and unreachable, not undispatched. Main finding: each creator is one piece short — `newDefault` has the row/edge seeds but no viewpoint parameter, `createViewInWorkbench` takes the viewpoint but has no `DAttribute`/`DReference` branch.
+**Prompt document name**: 2026-09-16 09:51
+
+## 2026-09-14 — feat(sim slice 0, commit 1): pure simulation core, committed step locked by tests
+**Prompt**: `claude_2026-09-14_0140_prompt_sim_slice0_foundations.md`, commit 1 of 3 — `model/simulation/`
+with types, `stcFromRoles`, the step moved out of the panel unchanged, tests on the quirks.
+**Files touched**: code in `2f53c876a`, all new — `frontend/src/model/simulation/{types.ts,
+stcFromRoles.ts,step.ts,__tests__/step.test.ts}`. Docs: this entry. Worktree `../jjodel-sim`, branch
+`simulation-engine` from `alfonso-frontend-jjtl` `2241dd056`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — no existing file changed. `npx tsc --noEmit` 14 errors, the same set as before
+(diffed line by line), 0 in `model/simulation`; control `--listFilesOnly` lists the 4 new files.
+`npx vitest run src/model/simulation` 21/21. Mutation bench 7/7 red (activation order, terminal
+freeze, stuck skip, dangling deactivation, target existence, Deadlock `some`, `nextState` required).
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — no critical-zone file touched.
+**Smoke visivo**: non applicabile — no UI change in this commit.
+**Notes**: Baseline in a fresh worktree is 14, not 33: the 19 casing errors do not exist on a clean
+checkout. Prompt facts: `../jjodel-release` is not marked prunable in `git worktree list`; left
+alone. Addition: `applyStepLabel`, the one place of the activation-wins rule, for the store to reuse.
+Role names in `StcRoles` are the prompt's (`initial`…); the bag keys stay `sim*`.
+**Prompt document name**: 2026-09-14 01:40
+## 2026-09-14 — feat(sim slice 0, commit 2): the panel delegates to the core, run-state per model
+**Prompt**: `claude_2026-09-14_0140_prompt_sim_slice0_foundations.md`, commit 2 of 3 — Reset, Step and
+status through `model/simulation/`; `Map<modelId, SimConfiguration>` (R-SIM-13).
+**Files touched**: code in `c70c9f7b5` — `frontend/src/components/editor-v2/sim/simRunState.ts`,
+`frontend/src/components/editor-v2/sim/SimulationPanel.tsx`. Docs: this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `npx tsc --noEmit` 14, same set as the baseline; `npx vitest run` 3410 passed
+(3389 + 21), 9 files red at import for `window`, the same set as before the slice. `isSimActive` keeps
+its boolean contract (union over models), so `ObjectNode.tsx` and `irReadCtxLproxy.ts` are untouched.
+`simApplyStep` bumps exactly when the in-place version did.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — no critical-zone file touched.
+**Smoke visivo**: passato. Dev server started from the worktree on 3002 (3000 serves the main tree),
+own `cacheDir`; gitignored probe `scripts/smoke/_tmp_sim0_verify.ts`. The prompt's «flowchart example
+of the 2026-08-17 memo» does not exist (0 hits in the memo; that M1 run stayed open), so the probe
+builds one on RowViewSmoke: I→A, A→B|C, B→F, C stuck. Same trace before and after, DOM and store:
+Reset {I} Running; Step {A} Running; {B,C} Deadlock; {C,F} Terminated, Step disabled; Stop {} Not
+started. R-SIM-13 per contrasto: Stop empties its own model (2→0), leaves a marking injected on another
+model, and `isSimActive` still paints it until that one is cleared. 0 page errors.
+**Notes**: Two after-runs failed on the probe, not the app: after HMR the app loads `simRunState.ts?t=…`
+and a bare `import()` got a second, empty instance. Restarted the server; green. Status now reads its
+own model (`getSimActiveIds(modelid)`); with one editor it is the same set.
+**Prompt document name**: 2026-09-14 01:40
+
+## 2026-09-14 — feat(sim slice 0, commit 3): one notion of «is a» for the simulation roles (R-SIM-8)
+**Prompt**: `claude_2026-09-14_0140_prompt_sim_slice0_foundations.md`, commit 3 of 3 — ancestry-aware
+matching for `simInitial`/`simTerminal` in the adapter's `isInstanceOf`, test on a subclass.
+**Files touched**: code in `c09cf4353` — `frontend/src/model/simulation/isKindOf.ts` (new),
+`frontend/src/model/simulation/__tests__/step.test.ts` (+6 tests), `frontend/src/components/editor-v2/
+sim/SimulationPanel.tsx` (import + one line of the adapter). Docs: this entry.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `npx tsc --noEmit` 14, same set; `npx vitest run` 3416 passed (3410 + 6), the
+same 9 files red at import; `src/model/simulation` 27/27. Mutation bench 3/3 red (exact id only,
+direct parents only, missing class not matched). Probe `after` on the exact-id fixture: 17 PASS, trace
+identical to the pre-slice run.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — no critical-zone file modified. The test imports
+`classAncestry` from `editor-v2/viewpoint/ir/irReadCtx.ts`: exported, and the module has zero imports
+(no React, no store). Test-only, for the parity check with the IR walk.
+**Smoke visivo**: passato. Probe `after3`: J, instance of `SInitSub extends SInit`, no outgoing
+transition. Reset {I,J} Deadlock; Step {A,J}; {B,C,J}; {C,F,J} Terminated; Stop {}. DOM and store
+agree, 0 page errors. Under exact-id matching Reset would give {I} Running, so the expectation itself
+discriminates. A first `after` run timed out on `page.goto` with two probes on a cold server (g); re-run
+alone, green.
+**Notes**: No pure helper outside `viewpoint/ir/` (ConformanceValidator on L types, singletonShape
+direct `extends` only, metamodelConverter on L chains). `classAncestry` qualified but was not imported:
+the core does not import `components/`, and an adapter-only import would leave the match untested
+(the panel does not load under node). Walk duplicated, parity-tested. One difference: an exact id still
+matches a deleted DClass, as before.
+**Prompt document name**: 2026-09-14 01:40
+
 ## 2026-09-16 — fix: the tree Create View entry resolves its viewpoint once and passes it
 **Prompt**: `claude_2026-09-16_1115_prompt_rotta_archi_righe_decisioni.md`, **Fase 1** — the twin of
 the defect Fase A removed from the v2 menu: `TreeViewContent.tsx:657` called
