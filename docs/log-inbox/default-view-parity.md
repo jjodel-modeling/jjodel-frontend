@@ -74,3 +74,8 @@ blocco Ticket sotto.
 - (c) Il trailer `Model:` di `fb876efaa` legge `claude-sonnet-5` (l'id del modello) invece della
   forma `<vendor> <name> <version>` che P6 chiede (es. `Anthropic Claude Sonnet 5`) — da scrivere
   corretto dal prossimo commit in poi.
+
+Verifica visiva umana: passata 2026-09-23, controlli 1 (parità del default accanto al nodo astratto,
+chiaro e scuro), 2 (box opaco in notation-wireframe e scheme-print scuro, conseguenza voluta della
+scelta di parità) e 4 (Enable IR, fill via interprete); il controllo 3 resta quello misurato dal DOM
+in chat.
