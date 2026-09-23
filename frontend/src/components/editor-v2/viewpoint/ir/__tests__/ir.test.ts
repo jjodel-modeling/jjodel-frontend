@@ -1150,6 +1150,58 @@ describe('isMigratedDefaultView (delegation, spec v1.2 sez. 11)', () => {
     });
 });
 
+describe('isMigratedDefaultView — legacy factory snapshot (R-IRN-33 regression)', () => {
+    // Frozen shape of defaultObjectViewIR() as it stood from 637a5e238 (2026-07-18,
+    // the migration that first persisted it) through 400095370^ (2026-09-19,
+    // immediately before the parity batch added cornerRadius/border/label
+    // color+underline). Duplicated here on purpose, NOT imported from irDefaults.ts's
+    // own LEGACY_OBJECT_VIEW_SNAPSHOT: if that constant were ever edited to match a
+    // NEW live factory (defeating its own point), a test that imports it would still
+    // pass. Pinning the literal here is what makes the test fail in that case.
+    const LEGACY_SNAPSHOT = {
+        irVersion: 'ir-1.2' as const,
+        kind: 'vertex' as const,
+        metaclasses: '*' as const,
+        priority: 0,
+        exclusive: true,
+        label: 'Object (IR default)',
+        shape: {
+            form: 'rect' as const,
+            labels: [
+                { position: 'top' as const, source: { from: 'intrinsic' as const, prop: 'qualifiedName' } },
+            ],
+        },
+        fieldCompartments: [
+            {
+                id: 'attributes',
+                source: { from: 'attributes' as const },
+                rowFormat: { segments: [{ kind: 'name' as const }, { kind: 'literal' as const, text: ' = ' }, { kind: 'value' as const }] },
+                separator: true,
+            },
+        ],
+    };
+
+    it('a project migrated before the parity batch still delegates to native rendering', () => {
+        const ir = { ...LEGACY_SNAPSHOT, migratedFrom: 'classic-default' } as unknown as VertexViewIR;
+        const cv = compileView('V_legacy_untouched', ir);
+        expect(isMigratedDefaultView(cv)).toBe(true);
+    });
+    it('a freshly migrated view (current factory shape) still delegates to native rendering', () => {
+        const ir = { ...defaultObjectViewIR(), migratedFrom: 'classic-default' } as VertexViewIR;
+        const cv = compileView('V_current_untouched', ir);
+        expect(isMigratedDefaultView(cv)).toBe(true);
+    });
+    it('a legacy-shaped view the user then edited is NOT mistaken for untouched', () => {
+        const edited = { ...LEGACY_SNAPSHOT, migratedFrom: 'classic-default' } as unknown as VertexViewIR;
+        edited.shape = {
+            ...edited.shape,
+            labels: [{ position: 'center', source: { from: 'intrinsic', prop: 'qualifiedName' } }],
+        };
+        const cv = compileView('V_legacy_edited', edited);
+        expect(isMigratedDefaultView(cv)).toBe(false);
+    });
+});
+
 describe('layout persistence (discovery 2026-07-19)', () => {
     const edgeIR = (over: Partial<EdgeViewIR['edge']>): EdgeViewIR => ({
         irVersion: 'ir-1.2', kind: 'edge', metaclasses: ['Transition'],

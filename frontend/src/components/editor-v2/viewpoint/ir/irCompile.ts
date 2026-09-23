@@ -277,6 +277,7 @@ function compileTextStyle(style: TextStyle | undefined, deps: Set<string>): Comp
     if (style.fontWeight !== undefined) out.fontWeight = compileConditional<FontWeightToken | ''>(style.fontWeight, '', deps);
     if (style.fontStyle !== undefined) out.fontStyle = compileConditional<'normal' | 'italic' | ''>(style.fontStyle, '', deps);
     if (style.color !== undefined) out.color = compileConditional<string>(style.color, '', deps);
+    if (style.underline !== undefined) out.underline = compileConditional<boolean>(style.underline, false, deps);
     return out;
 }
 
@@ -305,6 +306,13 @@ export function compileView(viewId: string, ir: NodeViewIR): CompiledView {
     const form = compileConditional(ir.shape.form, 'rect' as const, deps);
     const fill = ir.shape.fill !== undefined ? compileConditional(ir.shape.fill, '', deps) : null;
     const border = ir.shape.border ?? null;
+    // Corner radius (asse raggio, ir-1.3 addendum): fallback is `undefined`, not 0 —
+    // 0 is a legitimate authored value (square corner) and must stay distinguishable
+    // from "no branch matched", or an unresolved conditional would silently render as
+    // a sharp corner instead of leaving the shape's own default in place.
+    const cornerRadius = ir.shape.cornerRadius !== undefined
+        ? compileConditional<number | undefined>(ir.shape.cornerRadius, undefined, deps)
+        : null;
     // Marker (asse marker, 2026-08-15): same compile shape as fill — '' means
     // "no marker" when a conditional has no matching branch. Predicates inside
     // the conditional extend `deps` through compileConditional as usual.
@@ -420,6 +428,7 @@ export function compileView(viewId: string, ir: NodeViewIR): CompiledView {
         form,
         fill,
         border,
+        cornerRadius,
         marker,
         padding,
         text,

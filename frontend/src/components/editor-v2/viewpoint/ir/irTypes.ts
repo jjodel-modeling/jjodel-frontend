@@ -92,6 +92,7 @@ export interface TextStyle {
     fontWeight?: Conditional<FontWeightToken>;
     fontStyle?: Conditional<'normal' | 'italic'>;
     color?: Conditional<string>;                 // same shape as ShapeSpec.fill
+    underline?: Conditional<boolean>;            // ir-1.3 addendum sez. 7 — additive, no migration
 }
 
 export interface LabelSpec {
@@ -155,6 +156,16 @@ export interface ShapeSpec {
     /** `double` (asse bordo, 2026-08-15): CSS-native sulle forme CSS (due linee da
      *  width >= 3), overdraw a due polygon sulle forme SVG (IRNodeContent). */
     border?: { color: string; width: number; style: 'solid' | 'dashed' | 'dotted' | 'double' };
+    /**
+     * Corner radius in px (ir-1.3 addendum, asse raggio). Sibling of `border`, not a
+     * field on it: the radius belongs to the box, not the stroke, and would be
+     * unreachable with no border declared if it lived inside `border`. Significant
+     * only on box shapes with straight corners (rect, rounded); ignored explicitly —
+     * never approximated or converted — on shapes with no straight corner (ellipse,
+     * circle, stadium) and on SVG-painted shapes (diamond, hexagon, parallelogram,
+     * cylinder). Additive optional field: no irVersion bump, no migration.
+     */
+    cornerRadius?: Conditional<number>;
     /**
      * Notation marker drawn inside the shape (asse marker, 2026-08-15): id from
      * markerRegistry.ts (gateway x/plus, timer clock, history H, ...). Open
@@ -716,6 +727,10 @@ export interface CompiledView {
     form: CompiledConditional<ShapeForm>;
     fill: CompiledConditional<string> | null;
     border: { color: string; width: number; style: string } | null;
+    /** Compiled corner radius in px; undefined-returning function or null mean "no
+     *  override" (see ShapeSpec.cornerRadius) — kept distinct from 0, a legitimate
+     *  authored value (square corner). */
+    cornerRadius: CompiledConditional<number | undefined> | null;
     /** Compiled marker id ('' = none); null when the view declares no marker. */
     marker: CompiledConditional<string> | null;
     /** shape.padding ?? 'normal' */
@@ -743,6 +758,7 @@ export interface CompiledTextStyle {
     fontWeight?: CompiledConditional<FontWeightToken | ''>;
     fontStyle?: CompiledConditional<'normal' | 'italic' | ''>;
     color?: CompiledConditional<string>;
+    underline?: CompiledConditional<boolean>;
 }
 
 export interface CompiledLabel {

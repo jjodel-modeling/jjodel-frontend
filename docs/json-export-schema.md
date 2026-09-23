@@ -10,7 +10,7 @@ field:
 | `format`            | Produced from                               | Contents |
 |---------------------|---------------------------------------------|----------|
 | `jjodel-metamodel`  | Metamodel context menu → *Export JSON*      | One metamodel (M2), with any referenced foreign metamodels embedded. |
-| `jjodel-model`      | Model context menu → *Export JSON*          | One model (M1), with its metamodel(s) embedded. |
+| `jjodel-model`      | Model context menu → *Export JSON*          | One model (M1), with its metamodel(s) and reachable externally referenced objects embedded. |
 | `jjodel-megamodel`  | Megamodel view → *Export JSON*              | The project megamodel graph: artifact inventory + relationships. |
 | `jjodel-megamodel` + `definitions` | Megamodel view → *Export Full JSON* | The megamodel graph **plus** the full JSON document of every artifact. |
 
@@ -239,6 +239,7 @@ A full metamodel definition embedded because it is referenced from another one.
     "packages": [ /* Package[] */ ]
   },
   "objects": [ /* Object[] */ ],
+  "externalObjects": [ /* Object[] — optional, reachable external roots */ ],
   "externalMetamodels": [ /* ExternalMetamodel[] — optional */ ]
 }
 ```
@@ -264,11 +265,67 @@ A full metamodel definition embedded because it is referenced from another one.
 ```
 
 **`$ref` resolution.** A `{ "$ref": "<id>" }` points to another object's `id`
-**within the same document** (top-level `objects` or any nested `children`).
+**within the same document**: index `objects`, `externalObjects` (when present),
+and all nested `children` under either array. Resolve by `id`, not by `name`.
 
-> **Limitation.** A reference to an object living in a *different* model produces
-> a `$ref` that is not resolvable inside a single-model file. (Same limitation as
-> the XMI single-model exporter.)
+### Cross-model objects — `externalObjects`
+
+References to objects in other models keep the same `{ "$ref": "<id>" }`
+shape. Their definitions are embedded under the optional `externalObjects`
+array, using the same `Object` structure above. `objects` continues to hold the
+exported model's roots. `externalObjects` is omitted when no additional roots
+are needed.
+
+- The exporter follows both reference and containment values transitively,
+  starting from the selected model's objects. It includes only reachable objects,
+  not every object of a referenced model.
+- Each reachable object is defined once by `id`, including when references form
+  cycles or multiple references share a target.
+- Contained objects remain nested under `children` when their container is
+  also reachable. A reference to a contained object alone embeds that object
+  without pulling in its otherwise unreachable container or siblings.
+- Repeated containment visits (including malformed containment cycles) use
+  `{ "$ref": "<id>" }` in `children` instead of duplicating definitions or
+  recursing indefinitely. Consumers should accept both objects and `$ref`
+  entries in a `children` array.
+- Metamodels discovered through the classes of external objects are embedded
+  under `externalMetamodels`, including their transitive dependencies.
+
+For example, `book` in `myLibrary` references `author` in another model using
+the same metamodel. The model export includes:
+
+```jsonc
+{
+  "format": "jjodel-model",
+  "formatVersion": "1.0",
+  "metadata": { "name": "myLibrary", "id": "library-model", "exportedAt": "…", "jjodelVersion": "v3.0" },
+  "metamodel": { /* full metamodel definition, including Book and Person */ },
+  "objects": [
+    {
+      "id": "book",
+      "class": { "name": "Book", "package": "library" },
+      "references": { "author": [ { "$ref": "author" } ] }
+    }
+  ],
+  "externalObjects": [
+    {
+      "id": "author",
+      "class": { "name": "Person", "package": "library" },
+      "attributes": { "fullName": "J. R. R. Tolkien" },
+      "references": { "books": [ { "$ref": "book" } ] }
+    }
+  ]
+}
+```
+
+Both references resolve inside this file. The same behavior applies to each
+model document inside a full megamodel export. The light model document used
+for AI context also retains `externalObjects`, object ids and `$ref` values.
+
+> **Missing targets.** A stale/deleted id, or an id that does not resolve to a
+> `DObject` in the current project state, remains an unresolved `$ref`; no
+> definition is fabricated. This differs from a valid cross-model reference,
+> whose target is now embedded. The XMI exporter is unchanged.
 
 ---
 
@@ -392,3 +449,5 @@ Correlate a definition with its inventory entry / graph node by matching `id`:
 
 `formatVersion` (and `megamodelVersion` for megamodel documents) is `"1.0"`.
 Consumers should treat unknown optional fields leniently and branch on `format`.
+`externalObjects` is an additive optional field in model documents; consumers
+resolving `$ref` must search it and its nested `children` as well as `objects`.

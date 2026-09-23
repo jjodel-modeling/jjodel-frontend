@@ -1462,6 +1462,66 @@ section .property-panel {
   color: #475569;
 }
 
+/* REFERENCES editor (#142 Fase B, opzione Y). ONE place for non-containment
+   references: a select to change/add the target (reuses `.jj-slot-value-select`),
+   a drill-in button to open it, a `×` to clear it (reuses `.jj-slot-value-delete`).
+   Hardcoded hex to read like its `.jj-slot-*` neighbours in this file. The drill-in
+   button uses a cyan hover to mark the link affordance (never a background, DS §7.1). */
+.jj-ref-slot {
+  border-bottom: 1px solid #f1f5f9;
+  padding: 10px 16px;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.jj-ref-slot-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.jj-ref-slot-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: #475569;
+}
+
+.jj-ref-slot-mult {
+  font-size: 10px;
+  color: #94a3b8;
+  font-family: monospace;
+}
+
+.jj-ref-row {
+  margin-bottom: 4px;
+
+  &:last-child { margin-bottom: 0; }
+}
+
+.jj-ref-row--add .jj-slot-value-select { color: #64748b; }
+
+.jj-ref-open {
+  width: 28px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  border-radius: 5px;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.1s;
+
+  &:hover { border-color: #0ea5e9; color: #0ea5e9; }
+  &:focus-visible { outline: 2px solid #0ea5e9; outline-offset: 1px; }
+}
+
 .jj-slot-multiplicity {
   font-size: 10px;
   color: #94a3b8;
