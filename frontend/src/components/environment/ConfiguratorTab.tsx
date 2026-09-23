@@ -124,9 +124,21 @@ export function ConfiguratorTab({ open, onClose }: ConfiguratorTabProps) {
             <div className="configurator">
                 <div className="configurator__header">
                     <div className="configurator__title"><i className="bi bi-grid-1x2" /> Configurator</div>
-                    <button className="configurator__close" onClick={onClose} aria-label="Close">
-                        <i className="bi bi-x-lg" />
-                    </button>
+                    <div className="configurator__header-right">
+                        <span
+                            className={`configurator__profile-chip${profile ? '' : ' configurator__profile-chip--none'}`}
+                            title={profile ? 'Active profile from the ?profile= URL parameter' : 'No ?profile= in the URL — full access (developer)'}
+                        >
+                            {profile ? (
+                                <><i className="bi bi-person-badge" /> {profile.name || 'profile'}</>
+                            ) : (
+                                <><i className="bi bi-unlock" /> No profile — full access</>
+                            )}
+                        </span>
+                        <button className="configurator__close" onClick={onClose} aria-label="Close">
+                            <i className="bi bi-x-lg" />
+                        </button>
+                    </div>
                 </div>
 
                 {!hasTypes ? (
@@ -154,7 +166,10 @@ export function ConfiguratorTab({ open, onClose }: ConfiguratorTabProps) {
                         <div className="configurator__body">
                             <div className="configurator__list">
                                 <div className="configurator__list-head">
-                                    <span>{selectedTypeId ? classNameById[selectedTypeId] : ''} instances</span>
+                                    <span>
+                                        {selectedTypeId ? classNameById[selectedTypeId] : ''} instances
+                                        {readOnly && <span className="configurator__perm-badge">Read only</span>}
+                                    </span>
                                     <button
                                         className="configurator__new"
                                         onClick={createNew}
