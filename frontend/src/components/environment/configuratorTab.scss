@@ -158,4 +158,25 @@
         text-align: center;
         line-height: 1.6;
     }
+
+    // F2 — read-only gate for a profile that may view but not edit a type.
+    &__ro-banner {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: var(--color-text-secondary, #64748b);
+        background: var(--color-bg-primary, #f1f5f9);
+        border: 1px solid var(--color-border-secondary, #e2e8f0);
+        border-radius: 6px;
+        padding: 6px 10px;
+        margin-bottom: 12px;
+    }
+
+    // Soft frontend gate (D1): the form renders but ignores input. Scrolling stays on the
+    // detail column, which owns overflow.
+    &__ro-body {
+        pointer-events: none;
+        opacity: 0.75;
+    }
 }

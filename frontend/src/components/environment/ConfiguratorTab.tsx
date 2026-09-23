@@ -23,6 +23,7 @@ import {
     findEnvironmentConfig,
     findProfile,
     visibleTopLevelTypes,
+    resolveTypePermission,
 } from '../../joiner';
 import { newDraft } from '../../jjform';
 import { instancesOfClass } from '../abstract/tabs/instanceManagerModel';
@@ -101,6 +102,12 @@ export function ConfiguratorTab({ open, onClose }: ConfiguratorTabProps) {
     };
 
     const hasTypes = topTypeIds.length > 0;
+    // F2: the profile's permission on the selected type. Absent profile (developer, no ?profile)
+    // is unrestricted. 'read' → no create, IRForm gated read-only; 'hidden' types never reach here
+    // (filtered out of the top bar by visibleTopLevelTypes).
+    const selectedPerm = selectedTypeId ? resolveTypePermission(profile, selectedTypeId) : 'edit';
+    const canCreate = selectedPerm === 'edit';
+    const readOnly = selectedPerm === 'read';
 
     return createPortal(
         <div className="configurator-overlay" role="dialog" aria-modal="true" aria-label="Configurator">
@@ -141,8 +148,12 @@ export function ConfiguratorTab({ open, onClose }: ConfiguratorTabProps) {
                                     <button
                                         className="configurator__new"
                                         onClick={createNew}
-                                        disabled={!modelId || !selectedTypeId}
-                                        title={!modelId ? 'This project has no model yet' : undefined}
+                                        disabled={!modelId || !selectedTypeId || !canCreate}
+                                        title={
+                                            !modelId ? 'This project has no model yet'
+                                            : !canCreate ? 'This profile cannot create instances of this type'
+                                            : undefined
+                                        }
                                     >
                                         <i className="bi bi-plus-lg" /> New
                                     </button>
@@ -168,7 +179,21 @@ export function ConfiguratorTab({ open, onClose }: ConfiguratorTabProps) {
 
                             <div className="configurator__detail">
                                 {selectedInstanceId ? (
-                                    <IRForm objectId={selectedInstanceId} host="rail" />
+                                    readOnly ? (
+                                        <>
+                                            <div className="configurator__ro-banner">
+                                                <i className="bi bi-eye" /> Read only
+                                                {profile?.name ? ` — the "${profile.name}" profile cannot edit ${selectedTypeId ? classNameById[selectedTypeId] : 'this type'}` : ''}
+                                            </div>
+                                            {/* Soft gate (frontend enforcement, D1): the form still renders but takes no
+                                                input. The detail column keeps its own scroll. */}
+                                            <div className="configurator__ro-body" aria-disabled="true">
+                                                <IRForm objectId={selectedInstanceId} host="rail" />
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <IRForm objectId={selectedInstanceId} host="rail" />
+                                    )
                                 ) : (
                                     <p className="configurator__hint">Select an instance, or create a new one.</p>
                                 )}
