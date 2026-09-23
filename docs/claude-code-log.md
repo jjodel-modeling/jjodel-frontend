@@ -13,6 +13,19 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-23 — fix(#157): lettura del profilo dall'URL robusta e reattiva (F2)
+**Prompt**: diagnosi utente in console: `profileIdFromUrl: null` mentre il profilo esiste; F2 non applica i permessi.
+**Files touched**: `frontend/src/components/environment/ConfiguratorTab.tsx`. Questa entry in commit docs separato (§6.4).
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-23 12:00
+**Causa**: (c)
+**Regressions**: unknown — `npm run typecheck` output COMPLETO **14** pre-esistenti (0 nei file toccati); `npm run build` `✓ built`. Non riverificato a runtime in questa sessione.
+**Out-of-scope changes**: no — 1 file.
+**Layer Impact Report**: not-required — nessun file §3.1.
+**Smoke visivo**: non eseguito — in attesa del test utente sull'edit live dell'URL.
+**Notes**: `profileIdFromUrl` ora usa `U.getHashParam('profile')` (il parser canonico dell'app, lo stesso di `getProjectID_URL`) invece del parse manuale; il profileId è tenuto in `useState` e aggiornato su `hashchange` e all'apertura del pannello, così l'edit live di `?profile=` aggiorna il gate senza reload. Sospetto residuo (da confermare): la navigazione al progetto (`R.navigate('/project?id=..')`) potrebbe rimuovere `&profile=` dall'hash — se il test conferma, è un fix di preservazione a parte.
+**Prompt document name**: 2026-09-23 12:00
+
 ## 2026-09-23 — feat(#157): applicazione permessi del profilo nel Configurator (Fase 2)
 **Prompt**: passa alla fase successiva (F2). + tracciare il cleanup di metamodelId/metamodelInfo e ricordarlo a fine feature.
 **Files touched**: `frontend/src/components/environment/ConfiguratorTab.tsx`, `frontend/src/components/environment/configuratorTab.scss`. Referto (addendum F2 + nota cleanup §7.1) e questa entry in commit docs separato (§6.4).
