@@ -14,6 +14,7 @@ import DockManager from '../../components/abstract/DockManager';
 import { createM2 } from './Navbar';
 import { JjodelEvents } from '../../events/registry';
 import EnvironmentConfigModal from '../../components/environment/EnvironmentConfigModal';
+import ConfiguratorTab from '../../components/environment/ConfiguratorTab';
 
 const SHARE_DISABLED_HINT = 'Only public projects can be shared';
 
@@ -251,6 +252,7 @@ function LeftBar(props: LeftBarProps): JSX.Element {
     // Collapsed state for project-sidebar sections (local-only)
     const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
     const [showEnvConfig, setShowEnvConfig] = useState(false);
+    const [showConfigurator, setShowConfigurator] = useState(false);
     const toggleSection = (key: string) =>
         setCollapsedSections(prev => ({ ...prev, [key]: !prev[key] }));
 
@@ -427,6 +429,10 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                             <i className="bi bi-share" />
                             <span>Share</span>
                         </div>
+                        <div className="psb-action" onClick={() => setShowConfigurator(true)}>
+                            <i className="bi bi-grid-1x2" />
+                            <span>Open Configurator</span>
+                        </div>
                         <div className="psb-action" onClick={() => setShowEnvConfig(true)}>
                             <i className="bi bi-shield-lock" />
                             <span>Environment config</span>
@@ -438,6 +444,7 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                     </div>
                 </div>
                 <EnvironmentConfigModal open={showEnvConfig} onClose={() => setShowEnvConfig(false)} />
+                <ConfiguratorTab open={showConfigurator} onClose={() => setShowConfigurator(false)} />
             </div>
             :
             <div className={'leftbar'}>
