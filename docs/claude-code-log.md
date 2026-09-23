@@ -13,6 +13,19 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-23 — docs: piano #157 (Configurator + ambienti jjodel per ruolo)
+**Prompt**: pianificare la feature della #157 in modalità "standalone"/ambienti per ruolo; analisi del sistema (sintassi concreta + data manager) e piano incrementale a fasi; scrivere il documento di planning, rispondere alla issue #157 linkando il doc e chiedendo approvazione a Tommaso, preparare il prompt di corsia della Fase 0, approfondire il punto entità/VersionFixer prima di scrivere.
+**Files touched**: `docs/discovery/discovery_2026-09-23_157_standalone_configurator.md` (nuovo), `docs/prompts/claude_2026-09-23_1200_prompt_157_fase0a_environment_config.md` (nuovo), `docs/claude-code-log.md` (questa entry). Commento su issue #157 (jjodel-modeling/jjodel-frontend).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — solo documentazione, nessun sorgente toccato.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — task di pianificazione, nessun file di §3.1.
+**Smoke visivo**: non applicabile
+**Notes**: Decisioni prese: D1 enforcement solo-frontend (soft), D2 stesso progetto + ruolo in URL, D3 entità dedicata (non campi su DProject). Piano a 6 fasi (F0..F5). Approfondimento: entità persistite in `joiner/classes.ts` (non `megamodel.ts`), aggancio via `father` + scan idlookup, VersionFixer NON necessario in F0 (create lazy). Doc su branch `docs/157-standalone-configurator-plan`. Prompt F0a pronto.
+**Prompt document name**: 2026-09-23 12:00
+
 ## 2026-09-18 — docs: trasporto normativo, passo 2 di P-2026-09-18-2110
 **Prompt**: passo 2 di P-2026-09-18-2110 (emenda P-2026-09-18-1930): portare sul tronco tre dei
 quattro delta normativi misurati a `fbcbcb820` contro questo tronco (`7bc6c7365`) — §9.3 di
