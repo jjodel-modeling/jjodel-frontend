@@ -1422,6 +1422,49 @@ describe('isMigratedDefaultView — legacy factory snapshot (R-IRN-33 regression
         const cv = compileView('V_legacy_untouched', ir);
         expect(isMigratedDefaultView(cv)).toBe(true);
     });
+    // Frozen shape of defaultObjectViewIR() as it stood from 400095370 (2026-09-19,
+    // the parity batch that added cornerRadius/border/label color+underline) through
+    // immediately before P-2026-09-22-2105 added shape.fill. Duplicated here for the
+    // SAME reason LEGACY_SNAPSHOT above is: not imported from irDefaults.ts's own
+    // LEGACY_OBJECT_VIEW_SNAPSHOT_2026_09_18, so an edit to that constant to match a
+    // NEW live factory cannot silently defeat this test. This is a THIRD copy of the
+    // default object-view shape (LEGACY_SNAPSHOT above, LEGACY_OBJECT_VIEW_SNAPSHOT_
+    // 2026_09_18 in irDefaults.ts, and this one) — the measured cost of the
+    // isMigratedDefaultView identity-by-structural-equality debt (R-IRN-33's "Debito",
+    // still open) surfacing a second time in one prompt.
+    const SNAPSHOT_2026_09_18 = {
+        irVersion: 'ir-1.2' as const,
+        kind: 'vertex' as const,
+        metaclasses: '*' as const,
+        priority: 0,
+        exclusive: true,
+        label: 'Object (IR default)',
+        shape: {
+            form: 'rect' as const,
+            cornerRadius: 8,
+            border: { color: 'var(--color-inode-border)', width: 1, style: 'solid' as const },
+            labels: [
+                {
+                    position: 'top' as const,
+                    source: { from: 'intrinsic' as const, prop: 'qualifiedName' },
+                    style: { fontSize: 14, color: 'var(--color-inode-name)', underline: true },
+                },
+            ],
+        },
+        fieldCompartments: [
+            {
+                id: 'attributes',
+                source: { from: 'attributes' as const },
+                rowFormat: { segments: [{ kind: 'name' as const }, { kind: 'literal' as const, text: ' = ' }, { kind: 'value' as const }] },
+                separator: true,
+            },
+        ],
+    };
+    it('a view migrated between the parity batch and the fill (09-18 shape) still delegates to native rendering', () => {
+        const ir = { ...SNAPSHOT_2026_09_18, migratedFrom: 'classic-default' } as unknown as VertexViewIR;
+        const cv = compileView('V_09_18_untouched', ir);
+        expect(isMigratedDefaultView(cv)).toBe(true);
+    });
     it('a freshly migrated view (current factory shape) still delegates to native rendering', () => {
         const ir = { ...defaultObjectViewIR(), migratedFrom: 'classic-default' } as VertexViewIR;
         const cv = compileView('V_current_untouched', ir);
