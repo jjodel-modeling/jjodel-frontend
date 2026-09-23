@@ -13,6 +13,19 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-23 — refactor(#157): merge del configuratore nel wizard EnvGen + rename role→profile
+**Prompt**: esiste una bozza (wizard EnvGen); farne UN solo configuratore fondendo F0/F1, rinominare role→profile, tenere gestione profili + metaclassi editabili, rimuovere gli step concrete-syntax/tech-stack/output, riquadrare come modalità stand-alone (non generazione). Consolidare le prime 2 fasi.
+**Files touched**: envgen (`EnvGenWizardModal.tsx`/`.scss`, `hooks/useEnvGenWizard.ts`, `types.ts`, nuovi `steps/MetaclassesStep.tsx`+`steps/ProfilesStep.tsx`), `joiner/{classes.ts,environmentConfig.ts,index.ts,__tests__/environmentConfig.test.ts}`, `components/environment/ConfiguratorTab.tsx`, `pages/components/{LeftBar.tsx,Navbar.tsx}`; rimossi `components/environment/EnvironmentConfigModal.tsx`+`.scss`. Referto e log in commit docs separato (§6.4).
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-23 12:00
+**Causa**: (f)
+**Regressions**: unknown — `npx vitest` env config **21/21**; `npm run typecheck` output COMPLETO **14** pre-esistenti (0 nei file toccati); `npm run build` `✓ built`. UI del wizard non esercitata a runtime in questa sessione (le parti metaclassi/profili sono le stesse di F0b, già confermate dall'utente).
+**Out-of-scope changes**: no — 15 file, tutti conseguenza diretta del merge richiesto (deroga RC-11 dichiarata; piano e stima file confermati prima di procedere).
+**Layer Impact Report**: not-required — nessun file di §3.1; scritture via SetFieldAction/`.new()` (self-transaction), nessun canvas/sync.
+**Smoke visivo**: non eseguito — app non avviata; type-safe e compilante.
+**Notes**: Persistenza: metaclassi+profili sullo stato di progetto (DEnvironmentConfig/DProfile, live), general/design/features restano su localStorage (EnvGenPersistence) immutati. Rename role→profile con back-compat (findProfile accetta legacy 'DRole'; profileIdsOf legge legacy 'roles'). Modale F0b assorbito in due step del wizard e rimosso; azione LeftBar e Navbar aprono il wizard (EnvGenEvents.OPEN_WIZARD). Footer "Generate"→"Done". Referto: discovery_2026-09-23_157_consolidation_envgen_merge.md.
+**Prompt document name**: 2026-09-23 12:00
+
 ## 2026-09-23 — feat(#157): Configurator screen, primo taglio overlay (Fase 1)
 **Prompt**: passare a F1 (Configurator screen) dopo lo smoke ok di F0b. Scelta UX confermata dall'utente: overlay dal LeftBar (non tab del Dock).
 **Files touched**: `frontend/src/components/environment/ConfiguratorTab.tsx` (nuovo), `frontend/src/components/environment/configuratorTab.scss` (nuovo), `frontend/src/pages/components/LeftBar.tsx`. Referto e questa entry in commit docs separato (§6.4).
