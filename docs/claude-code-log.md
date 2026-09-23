@@ -13,6 +13,19 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-23 — feat(#157): indicatore del profilo attivo nel Configurator (diagnostica)
+**Prompt**: l'utente riporta «New non disabilitato, posso modificare» ma non è chiaro se il profilo dell'URL arriva; serviva rendere visibile lo stato.
+**Files touched**: `frontend/src/components/environment/ConfiguratorTab.tsx`, `frontend/src/components/environment/configuratorTab.scss`. Questa entry in commit docs separato (§6.4).
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-23 12:00
+**Causa**: (d)
+**Regressions**: unknown — `npm run typecheck` output COMPLETO **14** pre-esistenti (0 nei file toccati); `npm run build` `✓ built`. Non riverificato a runtime in questa sessione.
+**Out-of-scope changes**: no — 2 file del ConfiguratorTab.
+**Layer Impact Report**: not-required — nessun file §3.1.
+**Smoke visivo**: non eseguito — l'indicatore serve proprio all'utente per lo smoke.
+**Notes**: Header del Configurator: chip «Profile: <nome>» quando `?profile=` risolve un profilo, altrimenti «No profile — full access» (grigio). List-head: badge «Read only» quando il tipo selezionato è `read` per il profilo. Rende visibile perché New è/non è disabilitato: se il chip dice «No profile» il parametro URL non arriva (stripping o profilo di altro progetto); se mostra il nome ma New resta attivo è mismatch di chiavi. Nessuna modifica alla logica del gate.
+**Prompt document name**: 2026-09-23 12:00
+
 ## 2026-09-23 — fix(#157): permessi profilo come SegmentedControl (discoverability)
 **Prompt**: l'utente non trovava i controlli Editable/Read only/Hidden (erano dropdown poco evidenti); console conferma profilo con `perms: {}` (mai impostati).
 **Files touched**: `frontend/src/components/envgen/steps/ProfilesStep.tsx`. Questa entry in commit docs separato (§6.4).
