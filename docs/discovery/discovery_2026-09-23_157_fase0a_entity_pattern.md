@@ -75,3 +75,30 @@ incorrectly extends») + cascata su `set_extend`. Causa: `RuntimeAccessibleClass
   `SetFieldAction(configId, 'topLevelTypes'|'roles', ptr, '+=', true)` — isPointer true per il pointedBy).
 - Permessi per-campo (v1 è solo per-tipo).
 - F1 (Configurator), F2 (applicazione permessi), F3 (shell ristretta).
+
+---
+
+## Addendum — Fase 0b (mini-UI developer) implementata (2026-09-23)
+
+Mini-UI per il language developer, sullo stesso branch `feat/157-environment-config`.
+
+**Cosa fa**: un modale `EnvironmentConfigModal` (portallato a `document.body`, come SymbolEditorModal)
+aperto da un'azione «Environment config» nel project sidebar del `LeftBar`. Due sezioni:
+1. **Top-level types** — checkbox per ogni metaclasse del progetto (`LProject.getProject().classes`);
+   il toggle scrive `SetFieldAction.new(config.id, 'topLevelTypes', next, '', true)`.
+2. **Ruoli** — crea (`DRole.new(configId, name)` + append a `config.roles`), rinomina
+   (`SetFieldAction name`), elimina (unreference da `config.roles`); per il ruolo selezionato, un
+   `Select` per ogni top-level type con `Editable`/`Read only`/`Hidden` che scrive
+   `DRole.typePermissions` (solo gli override; `edit` = chiave assente).
+
+**Scelte**: la config si crea **lazy** all'apertura (`DEnvironmentConfig.getOrCreate`); la lettura è
+su `idlookup` via `findEnvironmentConfig` (reattiva con `useSelector`); le scritture usano la
+semantica **replace** (op `''`), calcolando il nuovo array/dict in JS. L'eliminazione ruolo è un
+**soft-delete** (unreference): l'entità `DRole` orfana resta in `idlookup` — `// TODO: cleanup` per il
+`DeleteElementAction` (che cascata sui sub-elementi, non testato qui).
+
+**File**: `components/environment/EnvironmentConfigModal.tsx` (+ `.scss`), `pages/components/LeftBar.tsx`.
+
+**Verifica**: `typecheck` 14 pre-esistenti / 0 nei file toccati; `build` ✓. **Smoke visivo NON
+eseguito** (app non avviata): la UI compila ed è type-safe ma il criterio d'accettazione «marca 4
+tipi + crea 2 ruoli persistenti» va provato a runtime.
