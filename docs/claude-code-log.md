@@ -13,6 +13,19 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-23 — fix(#157): etichetta «metamodello:metaclasse» negli step del wizard
+**Prompt**: nello step «Editable metaclasses» le metaclassi omonime di metamodelli diversi (es. due `iSQD_Profile`) sono indistinguibili; etichettare `metamodello:metaclasse`.
+**Files touched**: `frontend/src/components/envgen/steps/MetaclassesStep.tsx`, `frontend/src/components/envgen/steps/ProfilesStep.tsx`. Questa entry in commit docs separato (§6.4).
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-23 12:00
+**Causa**: (a)
+**Regressions**: unknown — `npm run typecheck` output COMPLETO **14** pre-esistenti (0 nei file toccati); `npm run build` `✓ built`. Non riverificato a runtime in questa sessione (segnalato da screenshot utente).
+**Out-of-scope changes**: no — 2 step del wizard.
+**Layer Impact Report**: not-required — nessun file §3.1.
+**Smoke visivo**: non eseguito — screenshot fornito dall'utente mostra il problema; il fix compila.
+**Notes**: Entrambi gli step ora iterano `LProject.getProject().metamodels` (LModel `.name`+`.classes`) e mostrano `${metamodel.name}:${class.name}`. Il ConfiguratorTab runtime resta con nomi brevi (leggibilità fruitore). I pointer salvati (topLevelTypes/typePermissions) restano id di classe: cambia solo l'etichetta.
+**Prompt document name**: 2026-09-23 12:00
+
 ## 2026-09-23 — refactor(#157): merge del configuratore nel wizard EnvGen + rename role→profile
 **Prompt**: esiste una bozza (wizard EnvGen); farne UN solo configuratore fondendo F0/F1, rinominare role→profile, tenere gestione profili + metaclassi editabili, rimuovere gli step concrete-syntax/tech-stack/output, riquadrare come modalità stand-alone (non generazione). Consolidare le prime 2 fasi.
 **Files touched**: envgen (`EnvGenWizardModal.tsx`/`.scss`, `hooks/useEnvGenWizard.ts`, `types.ts`, nuovi `steps/MetaclassesStep.tsx`+`steps/ProfilesStep.tsx`), `joiner/{classes.ts,environmentConfig.ts,index.ts,__tests__/environmentConfig.test.ts}`, `components/environment/ConfiguratorTab.tsx`, `pages/components/{LeftBar.tsx,Navbar.tsx}`; rimossi `components/environment/EnvironmentConfigModal.tsx`+`.scss`. Referto e log in commit docs separato (§6.4).
