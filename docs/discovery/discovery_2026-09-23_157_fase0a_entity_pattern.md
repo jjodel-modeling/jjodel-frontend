@@ -99,6 +99,9 @@ semantica **replace** (op `''`), calcolando il nuovo array/dict in JS. L'elimina
 
 **File**: `components/environment/EnvironmentConfigModal.tsx` (+ `.scss`), `pages/components/LeftBar.tsx`.
 
-**Verifica**: `typecheck` 14 pre-esistenti / 0 nei file toccati; `build` ✓. **Smoke visivo NON
-eseguito** (app non avviata): la UI compila ed è type-safe ma il criterio d'accettazione «marca 4
-tipi + crea 2 ruoli persistenti» va provato a runtime.
+**Verifica**: `typecheck` 14 pre-esistenti / 0 nei file toccati; `build` ✓. **Smoke visivo
+CONFERMATO dall'utente il 2026-09-23**: passi 1-6 ok — modale aperto dal project sidebar, tipi
+top-level marcati, ruoli creati con permessi, e stato **persistito** dopo save→reload→reopen. Ciò
+esercita anche il create-path runtime (`getOrCreate`→`.new`→reducer col nuovo `className`), che era
+il punto non ancora provato in F0a. (La entry di log della F0b resta `unknown`/`non eseguito`: è
+add-only, §21.3; questa riga è la conferma a referto.)
