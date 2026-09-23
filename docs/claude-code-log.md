@@ -13,6 +13,19 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-23 — feat(#157): entità DEnvironmentConfig/DRole (Fase 0a, schema + read/write)
+**Prompt**: eseguire il prompt di corsia della Fase 0a (docs/prompts/claude_2026-09-23_1200_prompt_157_fase0a_environment_config.md): entità di configurazione ruoli/ambienti, solo schema dati e read/write, nessuna UI. Hard-stop di approvazione sciolto dal committente.
+**Files touched**: `frontend/src/joiner/classes.ts`, `frontend/src/joiner/index.ts`, `frontend/src/joiner/environmentConfig.ts` (nuovo), `frontend/src/joiner/__tests__/environmentConfig.test.ts` (nuovo). Referto e questa entry in commit docs separato (§6.4).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `npx vitest run` sul file nuovo **17/17**; `npm run typecheck` output COMPLETO **14** errori pre-esistenti (baseline file noti), **0** nei file toccati; `npm run build` `✓ built` col solo warning chunk-size.
+**Out-of-scope changes**: no — 4 file, tutti previsti dal prompt F0a.
+**Layer Impact Report**: not-required — nessun file di §3.1; nuova entità D/L, nessuna scrittura sync/portDistribution, `.new()` self-gestisce la sua TRANSACTION (nessun creator dentro TRANSACTION esterna, §3.3/§3.4 fuori portata).
+**Smoke visivo**: non applicabile — F0a non ha UI.
+**Notes**: Entità agganciata al progetto via `father` + scan idlookup (nessun campo su DProject/DState); create lazy (`getOrCreate`), nessun VersionFixer. Logica pura (scan/permessi) in `joiner/environmentConfig.ts`, testabile senza `window`. Gotcha: `static get` collide con `RuntimeAccessibleClass.get` (TS2417) → rinominato `getForProject`. Referto: discovery_2026-09-23_157_fase0a_entity_pattern.md.
+**Prompt document name**: 2026-09-23 12:00
+
 ## 2026-09-18 — docs: trasporto normativo, passo 2 di P-2026-09-18-2110
 **Prompt**: passo 2 di P-2026-09-18-2110 (emenda P-2026-09-18-1930): portare sul tronco tre dei
 quattro delta normativi misurati a `fbcbcb820` contro questo tronco (`7bc6c7365`) — §9.3 di
