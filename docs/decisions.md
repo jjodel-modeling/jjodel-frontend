@@ -1328,6 +1328,79 @@ proposta della chat.
   come file, stesso formato dei controesempi; la persistenza nel progetto si decide dopo il
   formato. I candidati sul canvas entrano nel terzo passo come secondo canale, non nel primo.
 
+### Ratifiche 2026-09-23: eventi, guardie, azioni, stato
+
+Base: discussione in chat del 2026-09-23 sulla spec
+`docs/spec/claude_spec_2026-09-13_computational_model.md` (§3.1, §5). Ratificate da Alfonso il
+2026-09-23 su proposta della chat. R-SIM-16 si implementa al passo 1 del piano
+(`P-2026-09-23-1850`); R-SIM-17..19 al passo 3, dopo la corsia sui tipi `Expression` e `Action`.
+
+- **R-SIM-16** (2026-09-23). **Eventi: un pulsante per istanza, abilitazione strutturale, motore
+  totale.** Le istanze evento vivono nello stesso modello M1 della macchina (precisa R-SIM-12). Il
+  trigger di un arco si confronta per identità con l'evento corrente, non con `isKindOf`: gli
+  eventi sono istanze, non tipi. Il pannello mostra un pulsante `>` per ogni istanza evento, con la
+  feature identificatore come etichetta, e un pulsante ε per gli archi senza trigger. Il pulsante di
+  un evento è abilitato se e solo se l'evento è il trigger di almeno un arco uscente da un nodo
+  marcato; le guardie non si valutano (regola strutturale, l'effetto di una guardia falsa resta
+  visibile nella traccia). Un arco senza trigger è abilitato solo nel passo ε. La restrizione è
+  dell'interfaccia, non del motore: il passo resta definito per ogni evento in ogni
+  configurazione, e un evento che non abilita nessun arco produce uno scarto a stato invariato
+  (R-SIM-7). Serve a rigiocare gli scenari e all'IVAR dell'esportatore, dove la restrizione
+  dell'interfaccia diventa un'ipotesi d'ambiente opzionale nella `TRANS` (ambiente cooperativo o
+  aperto). Senza il ruolo evento nella STC l'alfabeto è {ε} e il comportamento è quello di oggi:
+  la parità delle tracce sui modelli esistenti è l'oracolo di non regressione. I ruoli della STC
+  sono disgiunti rispetto a `isKindOf` (un'istanza evento non può essere anche nodo o arco), con
+  controllo al salvataggio della STC. I parametri di un evento sono attributi congelati della sua
+  istanza; gli eventi con parametri liberi sono fuori scope.
+- **R-SIM-17** (2026-09-23). **Guardie e azioni come tipi del core, con caso degenere.** Due tipi
+  primitivi nuovi: `Expression` (stringa JjEL la cui validità sintattica è controllata dal tipo) e
+  `Action` (`<bersaglio> := <Expression>`). Il controllo contestuale (risultato booleano della
+  guardia, radici disponibili, bersaglio ammesso) spetta al ruolo che consuma il valore, cioè alla
+  STC. Una guardia assente, per ruolo non dichiarato o feature vuota, vale `true`; una guardia
+  malformata o non booleana non vale `true`: è un difetto e l'arco esce dai candidati (spec §5.2,
+  R-VAL-13). Il valore malformato si salva comunque ed è una violazione di conformità del modello,
+  quindi entra nel registro dei problemi, a differenza dei difetti delle regole di validazione. Le
+  azioni sono una feature `[0..*]` di tipo `Action` sugli archi e, dove il linguaggio li ha, su
+  entry, exit e nodo di azione; ruolo assente o lista vuota significa che il passo sposta solo il
+  marking. Tutte le azioni di un passo (exit della sorgente, arco, entry della destinazione)
+  formano un unico assegnamento parallelo letto sullo stato precedente; due azioni sullo stesso
+  bersaglio nello stesso passo sono un difetto segnalato in authoring, e l'ordine di scrittura non
+  conta (va detto nella documentazione). In esportazione Ecore i due tipi diventano `EString` con
+  un'`EAnnotation` che li marca, e l'importazione li ripristina. È una modifica del core: corsia
+  dedicata con discovery e Layer Impact Report prima del passo 3. Il controllo sintattico eredita
+  il difetto noto del lexer su `true`/`false`/`null`, da coprire con test.
+- **R-SIM-18** (2026-09-23). **Accesso allo stato con `.[x]`, presentazione locale con `node`.**
+  Lo stato si legge e si scrive solo con l'operatore `.[x]`, che non è JavaScript valido e quindi
+  non collide con nessuna feature: `e.f` è sempre navigazione su M, `e.[x]` è sempre stato. Niente
+  zucchero e niente divieto di omonimia tra feature e attributi. Il percorso localizza l'elemento e
+  l'ultimo segmento è l'attributo (`self.target.[visits] := self.target.[visits] + 1`); un
+  percorso che dà un primitivo o una collezione è un errore in authoring, un riferimento vuoto su
+  M congelato è un difetto all'avvio del run. Radici: `self`, `event`, `model` (l'elemento radice,
+  per lo stato globale: `model.[i]`) e `node`. `node.[x]` è lo stato di presentazione
+  dell'elemento a cui l'espressione è attaccata, unico per elemento e condiviso da tutti i suoi
+  nodi grafici e viewpoint; la presentazione di un altro elemento non si raggiunge (località: la
+  scrivono solo le azioni attaccate a quell'elemento). Nelle view `data.[x]` e `node.[x]` leggono
+  lo stato dell'elemento disegnato. Una guardia che contiene `node` è un difetto, perché la
+  semantica non dipende dalla presentazione; per la stessa ragione gli attributi di presentazione
+  restano fuori dall'esportazione `.smv` e non richiedono un dominio finito. Entrambi gli spazi
+  vivono in σ, di proprietà del motore, coperti da snapshot e step indietro; mai nel `DObject`, in
+  `data.state` o in `node.state` (R-SIM-1, R-SIM-13). Emenda R-SIM-14: la radice `state` è
+  sostituita da `.[x]`, e il marking resta leggibile con `marked` (R-SIM-11). Il lexer rifiuta
+  `?.[`, che in JavaScript è un accesso calcolato; `.[`, `node` e `model` entrano nell'elenco unico
+  dei nomi riservati. Da verificare in discovery: che nel contesto delle regole IR dell'editor v2
+  `node` non indichi già altro (se collide, il nome ripiega su `look`). L'estensione alle view tocca
+  i file elencati in R-SIM-4.
+- **R-SIM-19** (2026-09-23). **Attributi di stato dichiarati, come in una grammatica ad
+  attributi.** Ogni attributo si dichiara nella STC per metaclasse, con spazio (semantico o di
+  presentazione), valore iniziale e, se semantico, dominio finito. Accanto agli attributi
+  memorizzati (scritti dalle azioni, `VAR` in nuXmv) la STC ammette attributi derivati: definiti da
+  un'equazione JjEL, di sola lettura, mai assegnati (`DEFINE`), con controllo di circolarità sulle
+  dipendenze. Il divieto di doppio assegnamento nello stesso passo è il requisito di una sola
+  equazione per attributo. Un attributo che nessuna azione assegna in un passo conserva il suo
+  valore: l'esportatore genera la frame condition esplicita (ultimo ramo `TRUE : x` del `case`),
+  altrimenti nuXmv lo lascerebbe non deterministico. Rinviati: attributi indicizzati e
+  assegnamenti quantificati su collezioni.
+
 ## Serie R-J — JjEL come linguaggio delle espressioni dell'IR (ratifiche 2026-08-18)
 
 Base di evidenza: `docs/discovery/discovery_2026-08-14_jjel_come_linguaggio_espressioni_ir.md`
