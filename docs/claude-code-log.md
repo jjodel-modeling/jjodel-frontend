@@ -13,6 +13,19 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-23 — fix(#157): permessi profilo come SegmentedControl (discoverability)
+**Prompt**: l'utente non trovava i controlli Editable/Read only/Hidden (erano dropdown poco evidenti); console conferma profilo con `perms: {}` (mai impostati).
+**Files touched**: `frontend/src/components/envgen/steps/ProfilesStep.tsx`. Questa entry in commit docs separato (§6.4).
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-23 12:00
+**Causa**: (d)
+**Regressions**: unknown — `npm run typecheck` output COMPLETO **14** pre-esistenti (0 nei file toccati); `npm run build` `✓ built`. Non riverificato a runtime in questa sessione.
+**Out-of-scope changes**: no — 1 file.
+**Layer Impact Report**: not-required — nessun file §3.1.
+**Smoke visivo**: non eseguito — in attesa del test utente.
+**Notes**: Nello step Profiles la scelta del permesso per-tipo passa da `<Select>` (tendina, default «Editable», poco scopribile) a `SegmentedControl` con i tre stati sempre visibili «Editable | Read only | Hidden» (controllo canonico D1). Write path invariato (`setPermission`→SetFieldAction su typePermissions). Nessun effetto sui pointer salvati.
+**Prompt document name**: 2026-09-23 12:00
+
 ## 2026-09-23 — fix(#157): lettura del profilo dall'URL robusta e reattiva (F2)
 **Prompt**: diagnosi utente in console: `profileIdFromUrl: null` mentre il profilo esiste; F2 non applica i permessi.
 **Files touched**: `frontend/src/components/environment/ConfiguratorTab.tsx`. Questa entry in commit docs separato (§6.4).
