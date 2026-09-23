@@ -28,6 +28,19 @@ the Create View gate fix»: contenuto reale **due** entry, la sua e quella della
 rail/modale, gia' in albero e non in stage al momento del commit. Stesso schema del 2026-09-13.
 Nessun rewrite: la entry resta dov'e', il suo commit non la nomina.
 
+## 2026-09-23 — docs: discovery on JjScript class name resolution (P-2026-09-23-1600)
+**Prompt**: `claude_2026-09-23_1600_jjscript_name_resolution_discovery.md`, Phase 1 read-only: how JjScript resolves class names (Q1-Q7), after four defects Alfonso reported on a Book/BookCopy script run into metamodel_2 while metamodel_1 holds Book. Static reading plus a live probe on :3000 (session scratchpad, not committed).
+**Files touched**: `docs/discovery/discovery_2026-09-23_jjscript_name_resolution.md` (new, `9ae6d942b`). This entry and the prompt's `Status` line in their own commit.
+**Outcome**: ⚠️ partial
+**Corregge**: —
+**Causa**: (a)
+**Regressions**: no — no source file touched.
+**Out-of-scope changes**: no.
+**Layer Impact Report**: not-required — read-only, no §3.2 file touched.
+**Smoke visivo**: non applicabile — no UI change.
+**Notes**: Observations 1-3 do not reproduce on the current code in a fresh project (report §0, §9). Two live defects measured instead: unbound runs write attributes into the other metamodel's homonym with success (F-A), bound runs refuse command 2 (F-B), both from a 65-268 ms visibility lag. Q6/Q7 static only, no Jjodie reply mountable without a provider: second cause (g). Two commits, not one, so the Status sha is the report's.
+**Prompt document name**: 2026-09-23 16:00
+
 ## 2026-09-19 — feat: two metaclasses of different metamodels are different metaclasses (P-2026-09-19-1610)
 **Prompt**: `P-2026-09-19-1610`, metaclass identity across metamodels. A view lists `metamodel_1.State` and `metamodel_2.State` together or one of them, and the resolver honours the choice. `authoringMetaclassPins` admits `string | string[]` per name (additive, no `irVersion` bump), the picker excludes by id, the list shows one row per identity. Two-phase: discovery report, GO with five answers (pure module in DOVE, homonymous metamodels left as is, series R-MCID, `[]` in `pinAccepts` as written, log at the top), four steps with a visual stop after step 2.
 **Files touched**: discovery `941a94da9` (`docs/discovery/discovery_2026-09-19_metaclass_identity_homonyms.md`). Step 1 `f98e67cb5`, 5 files: `ir/irTypes.ts`, `ir/irResolveCore.ts` (`pinAccepts`), `ir/metaclassPin.ts`, `ir/__tests__/metaclassPin.test.ts`, `ir/__tests__/ir.test.ts`. Step 2 `70ac9055f`, 5 files: `authoring/metaclassEntries.ts` (new, pure), `authoring/__tests__/metaclassEntries.test.ts` (new), `authoring/MatchingSection.tsx` (re-exports the pure module), `authoring/EdgeAuthoringPanel.tsx`, `authoring/RowAuthoringPanel.tsx`. Step 3 `366300c03`: `ir/__tests__/ir.test.ts` (resolver-level, `homonymWorld()`). Step 4: `docs/decisions.md` (`603546085`, R-MCID-1, R-MCID-2); this entry in its own commit.

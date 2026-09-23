@@ -2,7 +2,7 @@
 
 Prompt-ID: P-2026-09-23-1600
 Chat: C-2026-09-23-1600
-Status: da eseguire
+Status: eseguito 2026-09-23 · session 2a2c8148-b9bb-4734-8afe-a505da854491 · 9ae6d942b
 
 ## COSA
 
