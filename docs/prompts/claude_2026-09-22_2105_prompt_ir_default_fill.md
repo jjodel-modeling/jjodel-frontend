@@ -1,6 +1,7 @@
 # Prompt: the default object view paints the abstract node's fill
 
 Prompt-ID: P-2026-09-22-2105
+Status: da eseguire (Fase 1 eseguita, report `2da84a40e`, in attesa di GO per la Fase 2)
 Worktree: `~/jjodel-release`, branch `alfonso-frontend-jjtl` (the trunk). Not `~/jjodel`: `validation-skeleton` was reintegrated on 2026-09-21 (`4d397ac02`) and takes no more work.
 Two-phase. Phase 1 is read-only and ends with a saved report and a hard stop. Phase 2 starts only on a GO that opens with this ID.
 
