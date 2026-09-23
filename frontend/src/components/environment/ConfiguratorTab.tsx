@@ -37,10 +37,10 @@ export interface ConfiguratorTabProps {
     onClose: () => void;
 }
 
+/** The `profile` hash param, read via the app's canonical parser (same one `getProjectID_URL` uses). */
 function profileIdFromUrl(): string | null {
     try {
-        const q = (window.location.hash.split('?')[1]) || '';
-        return new URLSearchParams(q).get('profile');
+        return U.getHashParam('profile');
     } catch {
         return null;
     }
@@ -50,10 +50,20 @@ export function ConfiguratorTab({ open, onClose }: ConfiguratorTabProps) {
     const idlookup = useSelector((s: DState) => s.idlookup);
     const [selectedTypeId, setSelectedTypeId] = useState<string | null>(null);
     const [selectedInstanceId, setSelectedInstanceId] = useState<string | null>(null);
+    // The active profile comes from `?profile=` in the hash. Kept in state and refreshed on
+    // `hashchange` and when the panel opens, so editing the URL live updates the gate without a
+    // reload (the app's project navigation can drop extra params, so we re-read defensively).
+    const [profileId, setProfileId] = useState<string | null>(() => profileIdFromUrl());
+    useEffect(() => {
+        const onHash = () => setProfileId(profileIdFromUrl());
+        window.addEventListener('hashchange', onHash);
+        onHash();
+        return () => window.removeEventListener('hashchange', onHash);
+    }, [open]);
 
     const projectId = (U.getProjectID_URL() || '') as string;
     const config: any = findEnvironmentConfig(idlookup, projectId);
-    const profile: any = findProfile(idlookup, profileIdFromUrl());
+    const profile: any = findProfile(idlookup, profileId);
 
     const project = LProject.getProject();
     // First cut: the Configurator targets the project's primary model. A model picker for
