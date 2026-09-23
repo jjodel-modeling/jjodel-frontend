@@ -82,9 +82,13 @@ export type {Subtract, Class, Empty, Json, GObject, bool, Dictionary, Proxyfied,
 
 } from "./types";
 
-export type {Pointer, PtrString, getWParams, WUser, WProject, WtoD, WtoL, DtoW, LtoW, LtoD, DtoL, PackArr, Pack, Pack1, EPSize,
+export type {Pointer, PtrString, getWParams, WUser, WProject, WEnvironmentConfig, WRole, WtoD, WtoL, DtoW, LtoW, LtoD, DtoL, PackArr, Pack, Pack1, EPSize,
     TLObject, LanguageObject
 } from "./classes";
+export {findEnvironmentConfig, findRole, resolveTypePermission, isTypeVisible, isTypeEditable,
+    visibleTopLevelTypes, DEFAULT_TYPE_PERMISSION, ENVIRONMENT_CONFIG_CLASSNAME, ROLE_CLASSNAME
+} from "./environmentConfig";
+export type {EnvPermission} from "./environmentConfig";
 export type { WAnnotation, WNamedElement, WFactory_useless_, WClass, WAttribute, WClassifier, WDataType, WMap, WModel,
     WModelElement, WEnumerator, WObject, WPackage, WOperation, WValue, WParameter, WReference, WTypedElement, WEnumLiteral, WStructuralFeature,
     ValueDetail, SetValueAtPositionInfoType
@@ -109,7 +113,7 @@ export {Constructors, JsType, RuntimeAccessibleClass, DPointerTargetable,
     ViewScore,
     UserHistory,
     Language,
-    LUser, DUser, DProject, LProject, Pointers, PointedBy, PendingPointedByPaths, CoordinateMode, EGraphElements, EModelElements, transientProperties,
+    LUser, DUser, DProject, LProject, DEnvironmentConfig, LEnvironmentConfig, DRole, LRole, Pointers, PointedBy, PendingPointedByPaths, CoordinateMode, EGraphElements, EModelElements, transientProperties,
     ViewEClassMatch, notLanguageFragments, LanguageCache, ParserData, ProjectPointers, UserPointers,
 } from "./classes";
 
