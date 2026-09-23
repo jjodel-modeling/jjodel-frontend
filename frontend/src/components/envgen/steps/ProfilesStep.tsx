@@ -22,7 +22,7 @@ import {
     resolveTypePermission,
     type EnvPermission,
 } from '../../../joiner';
-import { Select } from '../../ui/Select/Select';
+import { SegmentedControl } from '../../ui/SegmentedControl/SegmentedControl';
 import { Input } from '../../ui/Input/Input';
 
 const PERMISSION_OPTIONS = [
@@ -139,10 +139,11 @@ export const ProfilesStep: React.FC = () => {
                                 topLevel.map((cid) => (
                                     <div key={cid} className="envgen-perm-row">
                                         <span className="envgen-perm-row__name">{classNameById[cid] || cid}</span>
-                                        <Select
+                                        <SegmentedControl
                                             options={PERMISSION_OPTIONS}
                                             value={resolveTypePermission(selectedProfile, cid)}
-                                            onChange={(e) => setPermission(selectedProfile, cid, (e.target as HTMLSelectElement).value as EnvPermission)}
+                                            onChange={(v) => setPermission(selectedProfile, cid, v as EnvPermission)}
+                                            ariaLabel={`Permission for ${classNameById[cid] || cid}`}
                                         />
                                     </div>
                                 ))
