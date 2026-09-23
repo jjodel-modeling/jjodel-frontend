@@ -13,6 +13,19 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-23 — feat(#157): applicazione permessi del profilo nel Configurator (Fase 2)
+**Prompt**: passa alla fase successiva (F2). + tracciare il cleanup di metamodelId/metamodelInfo e ricordarlo a fine feature.
+**Files touched**: `frontend/src/components/environment/ConfiguratorTab.tsx`, `frontend/src/components/environment/configuratorTab.scss`. Referto (addendum F2 + nota cleanup §7.1) e questa entry in commit docs separato (§6.4).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown — `npm run typecheck` output COMPLETO **14** pre-esistenti (0 nei file toccati); `npm run build` `✓ built`. UI non esercitata a runtime in questa sessione.
+**Out-of-scope changes**: no — 2 file del ConfiguratorTab.
+**Layer Impact Report**: not-required — nessun file di §3.1 toccato; il gate read-only è ESTERNO a IRForm (che è §3.1): wrapper `pointer-events:none`, non modifiche al form.
+**Smoke visivo**: non eseguito — app non avviata; il fix compila.
+**Notes**: Runtime: `resolveTypePermission(profile, typeId)` — `hidden` già filtrato dalla top-bar (F1 `visibleTopLevelTypes`); `read` → New disabilitato + IRForm in gate read-only (banner + `.configurator__ro-body{pointer-events:none}`, scroll sulla colonna detail); `edit` → pieno. Soft-frontend (D1): UX non sicurezza (nascondere dati a un profilo = backend, fuori scope). Per-campo rinviato. Cleanup metamodelId/metamodelInfo tracciato in §7.1 del referto di consolidamento, da rimuovere a feature completa.
+**Prompt document name**: 2026-09-23 12:00
+
 ## 2026-09-23 — fix(#157): rimossa la selezione del metamodello dallo step General
 **Prompt**: in General rimuovere la selezione del metamodello (l'ambiente copre tutto il progetto, non un singolo metamodello).
 **Files touched**: `frontend/src/components/envgen/steps/GeneralStep.tsx`, `frontend/src/components/envgen/EnvGenWizardModal.tsx`, `frontend/src/components/envgen/hooks/useEnvGenWizard.ts`. Questa entry in commit docs separato (§6.4).

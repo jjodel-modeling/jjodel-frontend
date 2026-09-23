@@ -63,3 +63,23 @@ estrarre nulla dalle 3355 righe (rischiose) di `InstanceManagerTab`:
 - **F1b**: promozione a tab del Dock (o rotta) invece dell'overlay; picker del modello.
 - **F2**: applicazione dei permessi (tipi `read` → form sola-lettura; campi hidden/read).
 - **F3**: shell ristretta (modalità consumer da `?role=`).
+
+---
+
+## Addendum — Fase 2 (applicazione permessi del profilo) — 2026-09-23
+
+Applicati i permessi del profilo (dal `?profile=` URL) nel ConfiguratorTab runtime, **soft-frontend**
+(D1). Solo per-tipo (v1); il per-campo resta rinviato.
+
+- `resolveTypePermission(profile, typeId)` decide: `hidden` (già filtrato dalla top-bar via
+  `visibleTopLevelTypes` in F1), `read`, `edit` (default).
+- **read** → il bottone **New** è disabilitato (con tooltip) e l'`IRForm` è avvolto in un gate
+  read-only: banner «Read only — the "<profile>" profile cannot edit <Type>» + wrapper
+  `.configurator__ro-body { pointer-events: none; opacity: .75 }`. Lo scroll resta sulla colonna
+  detail (che possiede l'overflow). **Non** si è toccato `IRForm` (zona critica §3.1): il gate è
+  esterno, coerente con l'enforcement soft.
+- **edit** → comportamento pieno (F1).
+
+File: `components/environment/ConfiguratorTab.tsx` (+ `.scss`). Gate: typecheck 14/0, build ✓.
+Nota D1: `pointer-events:none` è UX, non sicurezza — un profilo che non deve *vedere* dati non è
+coperto (serve backend, fuori scope). Smoke non eseguito in sessione.

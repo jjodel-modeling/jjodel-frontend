@@ -95,3 +95,12 @@ sottosistemi richiesto dall'utente, con piano e stima file confermati prima di p
 - General/Design/Features: se servono a runtime, migrarle dallo `localStorage` allo stato di progetto.
 - Delete profilo: oggi soft-delete (unreference), `// TODO: cleanup` per `DeleteElementAction`.
 - F3: shell ristretta (modalità consumer da `?profile=`).
+
+### 7.1 Cleanup tracciato (da rimuovere a feature completata)
+
+Rimozione della selezione del metamodello dallo step General (2026-09-23) ha lasciato due residui,
+tenuti per non fare rimozioni azzardate (Rule 9). **Rimuovere quando la feature #157 è completa**:
+
+- `EnvGenGeneral.metamodelId` in `components/envgen/types.ts` (default `''`, non più letto dalla UI).
+- il memo `metamodelInfo` in `components/envgen/hooks/useEnvGenWizard.ts` (calcolato ma non più
+  consumato da alcuno step), e l'uso del prop `metamodels` se rimane solo a servirlo.
