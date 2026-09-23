@@ -21,7 +21,15 @@ export const MetaclassesStep: React.FC = () => {
 
     const config: any = findEnvironmentConfig(idlookup, projectId);
     const project = LProject.getProject();
-    const classes = (((project as any)?.classes ?? []) as Array<{ id: string; name: string }>);
+    // One entry per metaclass, qualified as `metamodel:metaclass` so homonymous classes from
+    // different metamodels (e.g. two `iSQD_Profile`) are distinguishable.
+    const items: Array<{ id: string; label: string }> = [];
+    for (const mm of (((project as any)?.metamodels ?? []) as any[])) {
+        const mmName: string = mm?.name || 'metamodel';
+        for (const c of ((mm?.classes ?? []) as Array<{ id: string; name: string }>)) {
+            if (c && c.id) items.push({ id: c.id, label: `${mmName}:${c.name || c.id}` });
+        }
+    }
     const topLevel: string[] = config && Array.isArray(config.topLevelTypes) ? config.topLevelTypes : [];
 
     const toggle = (classId: string, on: boolean) => {
@@ -40,18 +48,18 @@ export const MetaclassesStep: React.FC = () => {
                 </p>
             </div>
 
-            {classes.length === 0 ? (
+            {items.length === 0 ? (
                 <p className="envgen-empty-hint">
                     This project has no metaclasses yet. Define a metamodel first.
                 </p>
             ) : (
                 <ul className="envgen-checklist">
-                    {classes.map((c) => (
-                        <li key={c.id}>
+                    {items.map((it) => (
+                        <li key={it.id}>
                             <Checkbox
-                                checked={topLevel.includes(c.id)}
-                                onChange={(on) => toggle(c.id, on)}
-                                label={c.name || c.id}
+                                checked={topLevel.includes(it.id)}
+                                onChange={(on) => toggle(it.id, on)}
+                                label={it.label}
                             />
                         </li>
                     ))}

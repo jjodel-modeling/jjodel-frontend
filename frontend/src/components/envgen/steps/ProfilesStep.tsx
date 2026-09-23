@@ -12,6 +12,7 @@ import { useSelector } from 'react-redux';
 import {
     DState,
     U,
+    LProject,
     DEnvironmentConfig,
     DProfile,
     SetFieldAction,
@@ -43,9 +44,14 @@ export const ProfilesStep: React.FC = () => {
 
     const config: any = findEnvironmentConfig(idlookup, projectId);
     const topLevel: string[] = config && Array.isArray(config.topLevelTypes) ? config.topLevelTypes : [];
+    // classId → `metamodel:metaclass`, so the permission rows read like the metaclasses step.
+    const project = LProject.getProject();
     const classNameById: Record<string, string> = {};
-    for (const c of (((idlookup && config) ? topLevel : []) as string[])) {
-        classNameById[c] = idlookup[c]?.name || c;
+    for (const mm of (((project as any)?.metamodels ?? []) as any[])) {
+        const mmName: string = mm?.name || 'metamodel';
+        for (const c of ((mm?.classes ?? []) as Array<{ id: string; name: string }>)) {
+            if (c && c.id) classNameById[c.id] = `${mmName}:${c.name || c.id}`;
+        }
     }
     const profiles = profilesOfConfig(idlookup, config);
     const selectedProfile: any = selectedProfileId ? idlookup[selectedProfileId] : null;
