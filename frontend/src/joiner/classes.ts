@@ -1330,11 +1330,11 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         const _this: DEnvironmentConfig = this.thiss as any;
         this.setPtr('father', projectId);
         _this.topLevelTypes = [];
-        _this.roles = [];
+        _this.profiles = [];
         return this; }
 
-    DRole(configId: Pointer<DEnvironmentConfig>, name?: string): this {
-        const _this: DRole = this.thiss as any;
+    DProfile(configId: Pointer<DEnvironmentConfig>, name?: string): this {
+        const _this: DProfile = this.thiss as any;
         this.setPtr('father', configId);
         _this.name = name || '';
         _this.typePermissions = {};
@@ -3720,7 +3720,7 @@ export class DEnvironmentConfig extends DPointerTargetable {
     father!: Pointer<DProject>;
     /** Metaclasses the developer promotes as top-level entry points of the Configurator, ordered. */
     topLevelTypes: Pointer<DClass, 0, 'N'> = [];
-    roles: Pointer<DRole, 0, 'N'> = [];
+    profiles: Pointer<DProfile, 0, 'N'> = [];
 
     public static new(projectId: Pointer<DProject>,
                       callback?: ((d: DEnvironmentConfig, c: Constructors) => void)): DEnvironmentConfig {
@@ -3748,15 +3748,18 @@ export class LEnvironmentConfig<Context extends LogicContext<DEnvironmentConfig>
     readonly id!: Pointer<DEnvironmentConfig>;
     father!: LProject;
     topLevelTypes!: LClass[];
-    roles!: LRole[];
+    profiles!: LProfile[];
 }
 
-@RuntimeAccessible('DRole')
-export class DRole extends DPointerTargetable {
+// A "profile" (role) restricts which top-level types a stand-alone viewer sees/edits.
+// Renamed from the Fase 0b draft's "DRole"; the pure helpers still read the legacy
+// className so profiles authored before the rename survive (environmentConfig.ts).
+@RuntimeAccessible('DProfile')
+export class DProfile extends DPointerTargetable {
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
 
-    id!: Pointer<DRole, 1, 1, LRole>;
+    id!: Pointer<DProfile, 1, 1, LProfile>;
     father!: Pointer<DEnvironmentConfig>;
     name: string = '';
     /** Per-metaclass permission overrides (metaclass pointer → 'hidden'|'read'|'edit').
@@ -3764,17 +3767,17 @@ export class DRole extends DPointerTargetable {
     typePermissions: Dictionary<Pointer<DClass>, 'hidden' | 'read' | 'edit'> = {};
 
     public static new(configId: Pointer<DEnvironmentConfig>, name?: string,
-                      callback?: ((d: DRole, c: Constructors) => void)): DRole {
-        return new Constructors(new DRole('dwc'), undefined, true, undefined)
-            .DPointerTargetable().DRole(configId, name).end(callback); }
+                      callback?: ((d: DProfile, c: Constructors) => void)): DProfile {
+        return new Constructors(new DProfile('dwc'), undefined, true, undefined)
+            .DPointerTargetable().DProfile(configId, name).end(callback); }
 }
 
-@RuntimeAccessible('LRole')
-export class LRole<Context extends LogicContext<DRole> = any, D extends DRole = DRole> extends LPointerTargetable {
+@RuntimeAccessible('LProfile')
+export class LProfile<Context extends LogicContext<DProfile> = any, D extends DProfile = DProfile> extends LPointerTargetable {
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
 
-    readonly id!: Pointer<DRole>;
+    readonly id!: Pointer<DProfile>;
     father!: LEnvironmentConfig;
     name!: string;
     typePermissions!: Dictionary<Pointer<DClass>, 'hidden' | 'read' | 'edit'>;
@@ -3783,9 +3786,9 @@ export class LRole<Context extends LogicContext<DRole> = any, D extends DRole = 
 RuntimeAccessibleClass.set_extend(DPointerTargetable, DEnvironmentConfig);
 RuntimeAccessibleClass.set_extend(LPointerTargetable, LEnvironmentConfig);
 export type WEnvironmentConfig = getWParams<LEnvironmentConfig, DEnvironmentConfig>;
-RuntimeAccessibleClass.set_extend(DPointerTargetable, DRole);
-RuntimeAccessibleClass.set_extend(LPointerTargetable, LRole);
-export type WRole = getWParams<LRole, DRole>;
+RuntimeAccessibleClass.set_extend(DPointerTargetable, DProfile);
+RuntimeAccessibleClass.set_extend(LPointerTargetable, LProfile);
+export type WProfile = getWParams<LProfile, DProfile>;
 
 
 @RuntimeAccessible('MyError')

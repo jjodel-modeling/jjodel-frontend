@@ -12,8 +12,7 @@ import { buildProjectExportJson } from '../../model/megamodelPersistence';
 import { getRuntimeMegamodel } from '../../model/megamodelRuntime';
 import DockManager from '../../components/abstract/DockManager';
 import { createM2 } from './Navbar';
-import { JjodelEvents } from '../../events/registry';
-import EnvironmentConfigModal from '../../components/environment/EnvironmentConfigModal';
+import { JjodelEvents, EnvGenEvents } from '../../events/registry';
 import ConfiguratorTab from '../../components/environment/ConfiguratorTab';
 
 const SHARE_DISABLED_HINT = 'Only public projects can be shared';
@@ -251,7 +250,6 @@ function LeftBar(props: LeftBarProps): JSX.Element {
 
     // Collapsed state for project-sidebar sections (local-only)
     const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
-    const [showEnvConfig, setShowEnvConfig] = useState(false);
     const [showConfigurator, setShowConfigurator] = useState(false);
     const toggleSection = (key: string) =>
         setCollapsedSections(prev => ({ ...prev, [key]: !prev[key] }));
@@ -433,9 +431,9 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                             <i className="bi bi-grid-1x2" />
                             <span>Open Configurator</span>
                         </div>
-                        <div className="psb-action" onClick={() => setShowEnvConfig(true)}>
+                        <div className="psb-action" onClick={() => window.dispatchEvent(new CustomEvent(EnvGenEvents.OPEN_WIZARD))}>
                             <i className="bi bi-shield-lock" />
-                            <span>Environment config</span>
+                            <span>Configure environment</span>
                         </div>
                         <div className="psb-action psb-action--danger" onClick={closeProject}>
                             <i className="bi bi-x-circle" />
@@ -443,7 +441,6 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                         </div>
                     </div>
                 </div>
-                <EnvironmentConfigModal open={showEnvConfig} onClose={() => setShowEnvConfig(false)} />
                 <ConfiguratorTab open={showConfigurator} onClose={() => setShowConfigurator(false)} />
             </div>
             :

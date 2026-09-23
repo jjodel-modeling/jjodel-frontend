@@ -3,11 +3,10 @@ import ReactDOM from 'react-dom';
 import { ENVGEN_NAV_GROUPS, STEP_ORDER, EnvGenStepId, EnvGenConfig } from './types';
 import { useEnvGenWizard, MetamodelOption } from './hooks/useEnvGenWizard';
 import { GeneralStep } from './steps/GeneralStep';
-import { TechStackStep } from './steps/TechStackStep';
 import { DesignStep } from './steps/DesignStep';
 import { FeaturesStep } from './steps/FeaturesStep';
-import { ConcreteSyntaxStep } from './steps/ConcreteSyntaxStep';
-import { OutputStep } from './steps/OutputStep';
+import { MetaclassesStep } from './steps/MetaclassesStep';
+import { ProfilesStep } from './steps/ProfilesStep';
 import './EnvGenWizardModal.scss';
 
 export interface EnvGenWizardModalProps {
@@ -62,24 +61,6 @@ export const EnvGenWizardModal: React.FC<EnvGenWizardModalProps> = ({
         if (e.target === e.currentTarget) onClose();
     }, [onClose]);
 
-    const handleExportPrompt = useCallback(() => {
-        wizard.exportPromptFile();
-        if (onConfigSaved) {
-            const config = wizard.saveConfig();
-            onConfigSaved(config);
-        }
-    }, [wizard, onConfigSaved]);
-
-    const handleGenerate = useCallback(() => {
-        if (wizard.output.provider === 'manual') {
-            handleExportPrompt();
-            return;
-        }
-        // For API providers, show placeholder and export
-        alert('Direct generation via API will be available in a future release. For now, export the prompt and use it with Claude Code in VS Code.');
-        handleExportPrompt();
-    }, [wizard.output.provider, handleExportPrompt]);
-
     const handleSaveAndClose = useCallback(() => {
         wizard.saveConfig();
         if (onConfigSaved) {
@@ -102,13 +83,6 @@ export const EnvGenWizardModal: React.FC<EnvGenWizardModalProps> = ({
                         metamodelInfo={wizard.metamodelInfo}
                     />
                 );
-            case 'tech-stack':
-                return (
-                    <TechStackStep
-                        techStack={wizard.techStack}
-                        setTechStack={wizard.setTechStack}
-                    />
-                );
             case 'design':
                 return (
                     <DesignStep
@@ -123,22 +97,10 @@ export const EnvGenWizardModal: React.FC<EnvGenWizardModalProps> = ({
                         setFeatures={wizard.setFeatures}
                     />
                 );
-            case 'concrete-syntax':
-                return (
-                    <ConcreteSyntaxStep
-                        concreteSyntax={wizard.concreteSyntax}
-                        setConcreteSyntax={wizard.setConcreteSyntax}
-                        metamodelId={wizard.general.metamodelId}
-                    />
-                );
-            case 'output':
-                return (
-                    <OutputStep
-                        output={wizard.output}
-                        setOutput={wizard.setOutput}
-                        promptPreview={wizard.promptPreview}
-                    />
-                );
+            case 'metaclasses':
+                return <MetaclassesStep />;
+            case 'profiles':
+                return <ProfilesStep />;
             default:
                 return null;
         }
@@ -168,9 +130,9 @@ export const EnvGenWizardModal: React.FC<EnvGenWizardModalProps> = ({
                     <div className="envgen-header__left">
                         <i className="bi bi-box-seam envgen-header__icon" />
                         <div>
-                            <h2 id="envgen-modal-title" className="envgen-header__title">Generate Environment</h2>
+                            <h2 id="envgen-modal-title" className="envgen-header__title">Configure environment</h2>
                             <p className="envgen-header__subtitle">
-                                Configure and generate a standalone modeling environment from your metamodel
+                                Set up the stand-alone environment: which elements can be edited, and by which profile
                             </p>
                         </div>
                     </div>
@@ -239,14 +201,9 @@ export const EnvGenWizardModal: React.FC<EnvGenWizardModalProps> = ({
 
                     <div className="envgen-footer__right">
                         {wizard.isLastStep ? (
-                            <>
-                                <button className="envgen-btn envgen-btn--secondary" onClick={handleExportPrompt}>
-                                    Export Prompt
-                                </button>
-                                <button className="envgen-btn envgen-btn--primary" onClick={handleGenerate}>
-                                    <i className="bi bi-rocket-takeoff" /> Generate
-                                </button>
-                            </>
+                            <button className="envgen-btn envgen-btn--primary" onClick={handleSaveAndClose}>
+                                <i className="bi bi-check-lg" /> Done
+                            </button>
                         ) : (
                             <button className="envgen-btn envgen-btn--primary" onClick={wizard.goNext}>
                                 Next <i className="bi bi-arrow-right" />

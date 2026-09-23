@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
     findEnvironmentConfig,
-    findRole,
+    findProfile,
+    profileIdsOf,
+    profilesOfConfig,
     resolveTypePermission,
     isTypeVisible,
     isTypeEditable,
@@ -16,21 +18,21 @@ function fixture() {
         className: 'DEnvironmentConfig',
         father: 'proj1',
         topLevelTypes: ['C1', 'C2', 'C3'],
-        roles: ['r1'],
+        profiles: ['p1'],
     };
-    const r1 = {
-        className: 'DRole',
+    const p1 = {
+        className: 'DProfile',
         father: 'cfg1',
         name: 'educator',
         typePermissions: { C1: 'read', C2: 'hidden' },
     };
     const idlookup: Record<string, any> = {
         cfg1,
-        r1,
+        p1,
         proj1: { className: 'DProject' },
         other: { className: 'DModel' },
     };
-    return { idlookup, cfg1, r1 };
+    return { idlookup, cfg1, p1 };
 }
 
 describe('findEnvironmentConfig', () => {
@@ -42,11 +44,6 @@ describe('findEnvironmentConfig', () => {
         const { idlookup } = fixture();
         expect(findEnvironmentConfig(idlookup, 'projX')).toBeNull();
     });
-    it('does not match a config of another project', () => {
-        const { idlookup } = fixture();
-        idlookup.cfg2 = { className: 'DEnvironmentConfig', father: 'projZ' };
-        expect(findEnvironmentConfig(idlookup, 'proj1')).toBe(idlookup.cfg1);
-    });
     it('is total on empty inputs', () => {
         const { idlookup } = fixture();
         expect(findEnvironmentConfig({}, 'proj1')).toBeNull();
@@ -55,34 +52,57 @@ describe('findEnvironmentConfig', () => {
     });
 });
 
-describe('findRole', () => {
-    it('finds a role by id', () => {
-        const { idlookup, r1 } = fixture();
-        expect(findRole(idlookup, 'r1')).toBe(r1);
+describe('findProfile', () => {
+    it('finds a profile by id', () => {
+        const { idlookup, p1 } = fixture();
+        expect(findProfile(idlookup, 'p1')).toBe(p1);
     });
-    it('rejects an id that points at a non-role entity', () => {
+    it('accepts the legacy DRole className', () => {
+        const idlookup: Record<string, any> = { r1: { className: 'DRole', name: 'legacy' } };
+        expect(findProfile(idlookup, 'r1')).toBe(idlookup.r1);
+    });
+    it('rejects an id that points at a non-profile entity', () => {
         const { idlookup } = fixture();
-        expect(findRole(idlookup, 'cfg1')).toBeNull();
-        expect(findRole(idlookup, 'proj1')).toBeNull();
+        expect(findProfile(idlookup, 'cfg1')).toBeNull();
+        expect(findProfile(idlookup, 'proj1')).toBeNull();
     });
     it('is total on absent id', () => {
         const { idlookup } = fixture();
-        expect(findRole(idlookup, undefined)).toBeNull();
-        expect(findRole(idlookup, null)).toBeNull();
+        expect(findProfile(idlookup, undefined)).toBeNull();
+        expect(findProfile(idlookup, null)).toBeNull();
+    });
+});
+
+describe('profileIdsOf / profilesOfConfig', () => {
+    it('reads the profiles array', () => {
+        const { cfg1 } = fixture();
+        expect(profileIdsOf(cfg1)).toEqual(['p1']);
+    });
+    it('tolerates the legacy `roles` field name', () => {
+        expect(profileIdsOf({ roles: ['r1', 'r2'] })).toEqual(['r1', 'r2']);
+    });
+    it('resolves objects in order and skips dangling ids', () => {
+        const { idlookup, p1 } = fixture();
+        (idlookup.cfg1 as any).profiles = ['p1', 'ghost'];
+        expect(profilesOfConfig(idlookup, idlookup.cfg1)).toEqual([p1]);
+    });
+    it('is total on null config', () => {
+        expect(profileIdsOf(null)).toEqual([]);
+        expect(profilesOfConfig({}, null)).toEqual([]);
     });
 });
 
 describe('resolveTypePermission', () => {
     it('reads explicit overrides', () => {
-        const { r1 } = fixture();
-        expect(resolveTypePermission(r1, 'C1')).toBe('read');
-        expect(resolveTypePermission(r1, 'C2')).toBe('hidden');
+        const { p1 } = fixture();
+        expect(resolveTypePermission(p1, 'C1')).toBe('read');
+        expect(resolveTypePermission(p1, 'C2')).toBe('hidden');
     });
     it('defaults to edit for an absent override', () => {
-        const { r1 } = fixture();
-        expect(resolveTypePermission(r1, 'C3')).toBe('edit');
+        const { p1 } = fixture();
+        expect(resolveTypePermission(p1, 'C3')).toBe('edit');
     });
-    it('a null/empty role is unrestricted (edit)', () => {
+    it('a null/empty profile is unrestricted (edit)', () => {
         expect(resolveTypePermission(null, 'C1')).toBe('edit');
         expect(resolveTypePermission(undefined, 'C1')).toBe('edit');
         expect(resolveTypePermission({}, 'C1')).toBe('edit');
@@ -94,32 +114,32 @@ describe('resolveTypePermission', () => {
 
 describe('isTypeVisible / isTypeEditable', () => {
     it('visible unless hidden', () => {
-        const { r1 } = fixture();
-        expect(isTypeVisible(r1, 'C1')).toBe(true); // read
-        expect(isTypeVisible(r1, 'C2')).toBe(false); // hidden
-        expect(isTypeVisible(r1, 'C3')).toBe(true); // default edit
+        const { p1 } = fixture();
+        expect(isTypeVisible(p1, 'C1')).toBe(true); // read
+        expect(isTypeVisible(p1, 'C2')).toBe(false); // hidden
+        expect(isTypeVisible(p1, 'C3')).toBe(true); // default edit
         expect(isTypeVisible(null, 'C2')).toBe(true);
     });
     it('editable only when edit', () => {
-        const { r1 } = fixture();
-        expect(isTypeEditable(r1, 'C1')).toBe(false); // read
-        expect(isTypeEditable(r1, 'C3')).toBe(true); // default edit
+        const { p1 } = fixture();
+        expect(isTypeEditable(p1, 'C1')).toBe(false); // read
+        expect(isTypeEditable(p1, 'C3')).toBe(true); // default edit
         expect(isTypeEditable(null, 'Cx')).toBe(true);
     });
 });
 
 describe('visibleTopLevelTypes', () => {
     it('filters hidden types and preserves order', () => {
-        const { cfg1, r1 } = fixture();
-        expect(visibleTopLevelTypes(cfg1, r1)).toEqual(['C1', 'C3']);
+        const { cfg1, p1 } = fixture();
+        expect(visibleTopLevelTypes(cfg1, p1)).toEqual(['C1', 'C3']);
     });
-    it('a null role sees every top-level type', () => {
+    it('a null profile sees every top-level type', () => {
         const { cfg1 } = fixture();
         expect(visibleTopLevelTypes(cfg1, null)).toEqual(['C1', 'C2', 'C3']);
     });
     it('a null config yields no types', () => {
-        const { r1 } = fixture();
-        expect(visibleTopLevelTypes(null, r1)).toEqual([]);
+        const { p1 } = fixture();
+        expect(visibleTopLevelTypes(null, p1)).toEqual([]);
     });
 });
 

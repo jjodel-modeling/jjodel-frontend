@@ -100,11 +100,10 @@ export function useEnvGenWizard(
     const stepErrors = useMemo((): Record<EnvGenStepId, string[]> => {
         const errors: Record<EnvGenStepId, string[]> = {
             'general': [],
-            'tech-stack': [],
             'design': [],
             'features': [],
-            'concrete-syntax': [],
-            'output': [],
+            'metaclasses': [],
+            'profiles': [],
         };
         if (!general.name.trim()) errors['general'].push('Environment name is required');
         if (!general.metamodelId) errors['general'].push('Source metamodel is required');

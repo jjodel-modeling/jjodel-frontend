@@ -21,7 +21,7 @@ import {
     U,
     LProject,
     findEnvironmentConfig,
-    findRole,
+    findProfile,
     visibleTopLevelTypes,
 } from '../../joiner';
 import { newDraft } from '../../jjform';
@@ -36,10 +36,10 @@ export interface ConfiguratorTabProps {
     onClose: () => void;
 }
 
-function roleIdFromUrl(): string | null {
+function profileIdFromUrl(): string | null {
     try {
         const q = (window.location.hash.split('?')[1]) || '';
-        return new URLSearchParams(q).get('role');
+        return new URLSearchParams(q).get('profile');
     } catch {
         return null;
     }
@@ -52,7 +52,7 @@ export function ConfiguratorTab({ open, onClose }: ConfiguratorTabProps) {
 
     const projectId = (U.getProjectID_URL() || '') as string;
     const config: any = findEnvironmentConfig(idlookup, projectId);
-    const role: any = findRole(idlookup, roleIdFromUrl());
+    const profile: any = findProfile(idlookup, profileIdFromUrl());
 
     const project = LProject.getProject();
     // First cut: the Configurator targets the project's primary model. A model picker for
@@ -70,7 +70,7 @@ export function ConfiguratorTab({ open, onClose }: ConfiguratorTabProps) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [idlookup, projectId]);
 
-    const topTypeIds: string[] = visibleTopLevelTypes(config, role);
+    const topTypeIds: string[] = visibleTopLevelTypes(config, profile);
 
     // Default the selected type to the first available one.
     useEffect(() => {

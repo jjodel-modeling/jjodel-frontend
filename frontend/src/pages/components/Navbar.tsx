@@ -1521,7 +1521,7 @@ function NavbarComponent(props: AllProps) {
                 // Environment Generation - hidden when no metamodels
                 ...(metamodels.length === 0 ? [] : [
                     {name: 'divisor'},
-                    {name: 'Generate Environment...',
+                    {name: 'Configure Environment...',
                         function: () => {
                             window.dispatchEvent(new CustomEvent(EnvGenEvents.OPEN_WIZARD));
                         },
