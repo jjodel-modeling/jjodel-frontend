@@ -79,8 +79,6 @@ export const EnvGenWizardModal: React.FC<EnvGenWizardModalProps> = ({
                     <GeneralStep
                         general={wizard.general}
                         setGeneral={wizard.setGeneral}
-                        metamodels={metamodels}
-                        metamodelInfo={wizard.metamodelInfo}
                     />
                 );
             case 'design':

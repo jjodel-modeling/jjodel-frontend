@@ -106,7 +106,6 @@ export function useEnvGenWizard(
             'profiles': [],
         };
         if (!general.name.trim()) errors['general'].push('Environment name is required');
-        if (!general.metamodelId) errors['general'].push('Source metamodel is required');
         return errors;
     }, [general]);
 
