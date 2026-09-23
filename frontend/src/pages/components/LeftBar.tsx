@@ -13,6 +13,7 @@ import { getRuntimeMegamodel } from '../../model/megamodelRuntime';
 import DockManager from '../../components/abstract/DockManager';
 import { createM2 } from './Navbar';
 import { JjodelEvents } from '../../events/registry';
+import EnvironmentConfigModal from '../../components/environment/EnvironmentConfigModal';
 
 const SHARE_DISABLED_HINT = 'Only public projects can be shared';
 
@@ -249,6 +250,7 @@ function LeftBar(props: LeftBarProps): JSX.Element {
 
     // Collapsed state for project-sidebar sections (local-only)
     const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+    const [showEnvConfig, setShowEnvConfig] = useState(false);
     const toggleSection = (key: string) =>
         setCollapsedSections(prev => ({ ...prev, [key]: !prev[key] }));
 
@@ -425,12 +427,17 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                             <i className="bi bi-share" />
                             <span>Share</span>
                         </div>
+                        <div className="psb-action" onClick={() => setShowEnvConfig(true)}>
+                            <i className="bi bi-shield-lock" />
+                            <span>Environment config</span>
+                        </div>
                         <div className="psb-action psb-action--danger" onClick={closeProject}>
                             <i className="bi bi-x-circle" />
                             <span>Close project</span>
                         </div>
                     </div>
                 </div>
+                <EnvironmentConfigModal open={showEnvConfig} onClose={() => setShowEnvConfig(false)} />
             </div>
             :
             <div className={'leftbar'}>
