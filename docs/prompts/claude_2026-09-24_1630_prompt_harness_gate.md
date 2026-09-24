@@ -2,7 +2,7 @@
 
 Prompt-ID: P-2026-09-24-1630
 Chat: C-2026-09-24-1005
-Status: da eseguire
+Status: eseguito 2026-09-24 · lane harness · 78ce6c780
 
 Worktree: `~/jjodel-gate`, branch `harness-gate`, created from the trunk at `94a72edba`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-gate` on `harness-gate`, stop and say so; never work by absolute path on another worktree. Do not touch `~/jjodel-harness`: it is a folder of private notes, not a worktree.
 

@@ -454,3 +454,104 @@ reaches the UI. The pin is not touched.
   so it was not needed; no retry with the same form.
 - Scratch files (`proto-scan.mjs`, `lost-update.mjs`, `fold-old.mts`, `fold-real.mts`, the scratch tree, the outputs of
   the gates) are in the session scratchpad, outside the worktree.
+
+## 11. Phase 2 addendum, 2026-09-24
+
+Prompt-ID `P-2026-09-24-1630`, Phase 2 on the GO with Q1 to Q7 answered. Session `b2e4eec2-e53a-4d24-896e-a7b6a6f8dcb0`
+(the Phase 1 report names `43250cb2-...`: the harness shows another identifier; noted, not explained). Executor: Anthropic
+Claude Sonnet 5 (`claude-sonnet-5`) as the banner shows it. Correction rounds, Phase 1 and Phase 2: **0**.
+Code commit `80581e1c7`; skill commit `78ce6c780`; the docs commit is the one that carries this addendum.
+
+### 11.1 What the GO ratified, and where it landed
+
+| Q | Decision | Landed in |
+|---|---|---|
+| Q1 | Lint every inbox entry before the fold, wherever it lands, archive-bound ones included; name the entries `rotate` sends straight to the archive | `rotate-log.ts` (`LINT` lines, refusal, `STRAIGHT-TO-ARCHIVE`), `log-tools.ts` (`foldedIntoArchive`) |
+| Q2 | Ticket = one slot, no status field, four fields | `log-tools.ts` (`entryType`, `lintTicketFields`), `CLAUDE.md` 21.2, `PROTOCOL.md` P9 |
+| Q3 | Disk scan including `_tmp_*`, `node_modules` and `dist` excluded; the gate depends on the local state | `check-scripts.ts` header, its first output lines, `CLAUDE.md` 17 |
+| Q4 | New `check:scripts`, one script line, no dependency | `frontend/package.json` (one line); `typescript` was already a dependency |
+| Q5 | The three sites of "33" | `CLAUDE.md` 17 (and the generated `AGENTS.md`), `frontend/scripts/tsconfig.json:6`, `docs/HARNESS-DOCS.md:376`. The last two were outside the list and are declared in their commit bodies |
+| Q6 | Declared deviation, not a ratification | the entry in `docs/log-inbox/harness.md` (34 trunk commits name Opus 5.5 from 2026-09-22 21:07 against the pin `claude-opus-5`; the launch channel is not recoverable from git). The pin is untouched |
+| Q7 | No HARNESS-DOCS refresh beyond the "33" row; the nine red-at-import names in `CLAUDE.md` 17 | `CLAUDE.md` 17 |
+
+One reading made without asking: `PROTOCOL.md` moves from 1.5 to 1.6. Its version line says it tracks the set of clauses, not
+the phrasing, and no clause was added; the precedent (1.3 for a register line in P10) bumped it for a normative paragraph, so
+P9 gaining the ticket type and the inbox lint bumped it too. Reversible in one line if it should not.
+
+Three commits, not two: `bash-guard` reads `.claude/skills/log-entry/SKILL.md` as code and refused a docs commit that carried it
+(P13, docs and code apart), so the skill went in a commit of its own, `78ce6c780`, before the docs commit, and the Status flip
+cites it as the last code commit.
+
+### 11.2 Negative controls, run on a scratch tree outside the worktree
+
+`check:docs` on a copy of the real log and the real documents, with `docs/log-inbox/probe.md` holding a task entry with
+Corregge absent and `Causa: (c) with an annotation`, and a ticket entry with `Priority: urgent` (controls 1 and 2):
+
+```
+FAIL  Check B — prompt log fields (entries dated >= 2026-08-02)
+    2 entries in 1 lane inbox file(s) under docs/log-inbox, 2 in scope
+    ERROR  required field missing
+      file    : docs/log-inbox/probe.md
+      entry   : ## 2026-09-25 — fix: probe entry  (docs/log-inbox/probe.md:5)
+      field   : **Corregge**
+      found   : (field absent)
+    ERROR  value outside the CLAUDE.md §21.3 taxonomy
+      field   : **Causa**
+      found   : (c) with an annotation
+    ERROR  value outside the ticket priorities
+      entry   : ## 2026-09-25 — ticket: probe ticket  (docs/log-inbox/probe.md:10)
+      field   : **Priority**
+      found   : urgent
+      allowed : high | medium | low
+exit=1
+```
+
+The same tree through `rotate-log --fold --rotate --write` (control 3): three `LINT` lines, `refusing to fold: 3 problem(s) ...
+nothing was written.`, exit 1; the log on disk has the same checksum as the source it was copied from. `check-scripts` on a
+`_tmp_` file holding `failures += await e2e.run()`: exit 1, `_tmp_x.ts:3:3`, the statement and the fix; on the real tree
+exit 0, 23 files, 0 `_tmp_*` probes. The same four controls run inside the test suite on throwaway trees.
+
+`check:docs` on the real tree, before and after the change: identical output but for two added telemetry lines (the inbox
+entries in scope for B, the inbox Notes fields in scope for C). Measured green on the four real waiting entries, as §1.4 said.
+
+### 11.3 Mutation benches, 78 mutants, 78 killed
+
+Each mutant is the committed source with ONE line changed, transpiled (or copied next to a throwaway tree) and answered by
+the same probe that the real code answers right; the bench opens with a control that the unmutated loader answers like the
+real module, and each gate mutant must also run without a syntax or reference error. Groups: scanner 37 (each of the 15
+compound and 15 binary operators dropped; nested functions descended; the `x = x` branch; the leftmost check; parenthesis
+unwrap; left spine; await recognition; the reported line), `check-scripts` 4 (`_tmp_` skipped, `.mjs` dropped, `node_modules`
+scanned, exit code), lint 26 (ticket type and its from-date, each ticket field, Corregge, Causa, both date scopes, the Notes
+cap both ways, multi-line Notes, line offset, first occurrence wins, the inert `**Ticket** (` paragraph, `promptNameKeys`,
+`entryStartLines`, `foldedIntoArchive`), `check-docs` and `rotate-log` 11 (inbox not read, B and C skipping the inbox,
+sibling resolution, ticket type, ticket Priority, fold refusal, fold lints nothing, straight-to-archive listing, ticket mark).
+0 survivors. Fixtures that no mutation of the present source can violate, kept as declared intent: `for await`, the pattern in
+a string, in a comment.
+
+### 11.4 Known limits of the guard
+
+Not caught, by design of a per-statement rule: `x = 1 + x + await f()` (x is not the leftmost operand), `x = await f(x)`, and
+the second failure mode of the ticket, a module that returns 0 whatever it counted. The gate runs only when someone runs it and
+reads the disk of the worktree it runs in: it has not been run in `~/jjodel-sim`, where the known offender lives (ticket in the
+harness entry).
+
+### 11.5 Gates, on the code commit and again on the docs tree
+
+`npm run typecheck` exit 2, 14 errors, the Phase 1 set; `typecheck:scripts` exit 0; `npx vitest run` 4424 passed, 0 failed,
+9 files red at import (the nine of section 2); `npm run build` exit 0; `check:docs` 4/4 (now reading the inboxes, the new entry
+included); `check:agents` green; `check:scripts` exit 0. No visual check: nothing reaches the UI.
+
+### 11.6 Process notes
+
+- Two messages for `P-2026-09-24-1610` were pasted into this session. The operator counts two; this session's context holds
+  one, the conditional ACK on a Layer Impact Report this session had not produced. It read the 1610 prompt file and 60 lines of
+  `VersionFixer.tsx`, ran `git worktree list` and a `git ls-tree` of the 1610 report path (names only, the report was not read),
+  and stopped without writing. Its reply did not open with the P13 header (own ID, received ID). Recorded as an operator routing
+  error, not as a correction round.
+- The `log-entry` skill loaded in this session injected the rules 2, 4 and 7 as they were before this lane, while the file on
+  disk was already edited (ticket in the harness entry).
+- Not done, on purpose: the HARNESS-DOCS refresh (Q7), the one-line addition to `README-probes.md` (never approved), the `ls` of the
+  `Settings`/`settings` casing in `~/jjodel` (Q5 asked whether to; the answer did not say, so the casing hypothesis of section 2
+  stays a hypothesis and the clause stays out of `CLAUDE.md`).
+- `CLAUDE.md`, `AGENTS.md` and `PROTOCOL.md` changed here are owed to the trunk (P15): they live on `harness-gate` until the
+  merge after 1610 closes.

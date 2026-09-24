@@ -373,7 +373,7 @@ I documenti generati sono verificati da un gate, non dalla disciplina (ratifica 
 |---|---|---|
 | `npm run check:docs` | **A**: identità byte a byte del blocco di formato fra `CLAUDE.md` §21.2 e `PROTOCOL.md` P9. **B**: campi delle entry di log dal 2026-08-02 in poi, con tassonomia e forma dei valori. **C**: tetto di 500 caratteri su `Notes`, entry dal 2026-08-19 in poi, più la telemetria di dimensione del log | 3/3, 0 warning |
 | `npm run check:agents` | rigenera in una temp di sistema e confronta con **tutti** i file prodotti dal generatore (`AGENTS.md` e `frontend/src/jjtl/AGENTS.md`), mai il solo root | da eseguire dopo ogni tocco a un `CLAUDE.md` |
-| `npm run typecheck` | `tsc --noEmit`. Baseline: 33 su macOS, 14 su Linux, ed è lo stesso numero (19 errori di casing non esistono su filesystem case-sensitive) | verde rispetto alla baseline |
+| `npm run typecheck` | `tsc --noEmit`. Baseline: 14, elencati per file e codice in `CLAUDE.md` §17 (misurata il 2026-09-24) | verde rispetto alla baseline |
 | `npx vitest run` | test unitari | 1315 passed; nove suite non collezionano per `window is not defined`, note |
 | `npm run build` | build di produzione | verde |
 | `npm run smoke` | cinque asserzioni su stati noti: console pulita, larghezza del canvas sopra soglia, nodi renderizzati sopra zero, nessun `position: fixed` che interseca la status bar, nessun figlio clippato oltre tolleranza | implementato; i prompt che non lo usano dichiarano la deroga |

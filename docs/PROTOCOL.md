@@ -1,7 +1,7 @@
 # PROTOCOL.md — protocollo di esecuzione per Claude Code
 
 Posizione: `docs/PROTOCOL.md` nel repo `jjodel-frontend`.
-Versione: 1.5 (2026-09-21) — traccia l'insieme delle clausole (quali P<n> esistono), non le differenze di frase.
+Versione: 1.6 (2026-09-24) — traccia l'insieme delle clausole (quali P<n> esistono), non le differenze di frase.
 
 Questo file contiene le clausole che prima venivano ricopiate per esteso in ogni prompt. I prompt ora le citano per numero. Se una clausola cambia, cambia qui e vale ovunque da subito.
 
@@ -90,7 +90,7 @@ Lo smoke non sostituisce la verifica di Alfonso, che riguarda proporzioni, gerar
 
 ## P9 — Prompt log
 
-Al termine di ogni task, aggiungi un'entry in testa a `docs/claude-code-log.md` (newest-first per giorno, R-RAIL-45). Leggi il log a inizio sessione per il contesto sulle modifiche recenti. Oltre le 40 entry, sposta le più vecchie in `docs/claude-code-log-archive.md`. Il ripiegamento delle inbox e la rotazione si eseguono con `npm run log:rotate -- --fold --rotate --write` da `frontend/`, in corsia esclusiva (RC-12); sopra le 40 entry `check:docs` è rosso.
+Al termine di ogni task, aggiungi un'entry in testa a `docs/claude-code-log.md` (newest-first per giorno, R-RAIL-45). Leggi il log a inizio sessione per il contesto sulle modifiche recenti. Oltre le 40 entry, sposta le più vecchie in `docs/claude-code-log-archive.md`. Il ripiegamento delle inbox e la rotazione si eseguono con `npm run log:rotate -- --fold --rotate --write` da `frontend/`, in corsia esclusiva (RC-12); sopra le 40 entry `check:docs` è rosso. Le entry che aspettano in `docs/log-inbox/*.md` sono verificate da `check:docs` con le regole del log attivo, e il ripiegamento si rifiuta (exit 1, niente scritto) di spostare una entry che non le passa: nessuna entry arriva al log o all'archivio senza lint.
 
 Formato:
 
@@ -110,6 +110,18 @@ Formato:
 ```
 
 La semantica dei campi di autovalutazione, incluse le regole di compilazione di `Corregge` e `Causa` e la tassonomia dei valori ammessi, è definita in `CLAUDE.md` §21.3. Questo file non la duplica. Il blocco di formato qui sopra è verificato byte a byte contro `CLAUDE.md` §21.2 da `npm run check:docs`.
+
+A **ticket** is an entry of its own type, for a finding that has to be found on its own and outlives the lane that made it. The heading is `## YYYY-MM-DD — ticket: short description` (the colon form, from 2026-09-24) and the fields are four, not twelve:
+
+```
+## YYYY-MM-DD — ticket: short description
+**Ticket**: the finding, in one or more lines
+**Priority**: high | medium | low
+**Found in**: P-YYYY-MM-DD-HHmm | C-YYYY-MM-DD-HHmm
+**Detail**: <path of the document that holds the evidence>   (optional)
+```
+
+A ticket carries no `Corregge`, `Causa`, `Regressions`, `Out-of-scope changes`, `Layer Impact Report`, `Smoke visivo` or `Prompt document name`: they measure a task. It has no status either: the log is add-only, so closure is read from the entry of the lane that closes it. It counts toward the 40 entries and rotates by position, verbatim, like any other. The paragraph `**Ticket** (` after the last field of a task entry stays legal and is not linted. `npm run check:docs` lints the entries waiting in `docs/log-inbox/*.md` by the same rules as the active log, and `npm run log:rotate -- --fold` refuses to fold an inbox entry that would fail them.
 
 Il log non sostituisce i commit message, e il discovery report non sostituisce il log: sono tre artefatti distinti.
 
