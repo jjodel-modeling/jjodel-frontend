@@ -13,6 +13,19 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-24 — feat(#157): trim della Navbar in consumer mode (Fase 3b)
+**Prompt**: «continua con la fase successiva» → F3b, trim della Navbar in consumer mode. Due decisioni comportamentali confermate dall'utente prima di scrivere (New Model tenuto, New Project nascosto).
+**Files touched**: `frontend/src/pages/components/Navbar.tsx`. Referto discovery + questa entry in commit docs separato (§6.4/P13).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown — `npx tsc --noEmit` output COMPLETO **14** pre-esistenti (0 nei file toccati); `npm run build` `✓ built`. UI non esercitata a runtime in questa sessione (smoke consegnato all'utente).
+**Out-of-scope changes**: no — 1 file.
+**Layer Impact Report**: not-required — nessun file di §3.1; solo view/shell (Navbar).
+**Smoke visivo**: non eseguito — passi di verifica consegnati all'utente.
+**Notes**: In consumer mode (`?profile=`, D2) la Navbar nasconde: File→New Project e File→New→Metamodel (New Model **tenuto**, decisione utente); menu Tools (Configure Environment/Metamodel Tools/Polymetric); menu Analyze (validazione/analytics/debug); e le tab developer (metamodel/viewpoint/transformation) dalla strip (difesa a valle dei guard DockManager di F3). Reattività via listener hashchange (come F3-A). Soft (D1). Referto: discovery_2026-09-24_157_fase3b_navbar_trim.md.
+**Prompt document name**: 2026-09-24 14:00
+
 ## 2026-09-24 — fix(#157): shell reattiva a ?profile= all'uscita dal consumer mode
 **Prompt**: «mi sembra sia scomparso un menù»; tornando all'URL senza profilo la UI restava ristretta. Diagnosi (§5) + fix minore, esteso alla LeftBar su conferma esplicita dell'utente.
 **Files touched**: `frontend/src/pages/components/LeftBar.tsx`, `frontend/src/components/dock/MyRcDock.tsx`, `frontend/src/components/abstract/Dock.tsx`. Codice in commit separato (§6.4/RC-13); questa entry in commit docs.
