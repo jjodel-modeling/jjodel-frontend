@@ -83,3 +83,10 @@ in chat.
 Rettifica 2026-09-24: la riga precedente è errata, i controlli 1, 2 e 4 non erano stati eseguiti;
 vale solo il controllo 3, misurato dal DOM. L'esito reale dei tre controlli segue in una riga
 successiva.
+
+Esito reale 2026-09-24: controlli 1, 2 e 4 passati da Alfonso su localhost:3001, progetto
+TEST 2105 con la toolbar su VP 2105, quindi sul worktree del tronco (identificazione per origine:
+quel progetto esiste solo nello storage di quella porta, e il symlink ricreato alle 09:31 rendeva
+servibile il bundle corrente). Non è registrato se la scheda fosse stata ricaricata dopo il
+ripristino del fill, quindi l'identificazione è per origine e non per bundle; il controllo 3
+resta l'unico misurato.
