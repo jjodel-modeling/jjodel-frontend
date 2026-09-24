@@ -2,13 +2,19 @@
  * rotate-log.ts — fold lane inboxes into the active prompt log, and rotate
  * old entries from the active log into the archive.
  *
- * --fold           fold docs/log-inbox/*.md into docs/claude-code-log.md
+ * --fold           fold docs/log-inbox/*.md into docs/claude-code-log.md. Refuses
+ *                  (exit 1, nothing written, dry run included) when an inbox entry
+ *                  would fail Check B or C of check:docs: every entry is linted
+ *                  first, wherever the fold would place it, so that none reaches
+ *                  the log or the archive unlinted.
  * --rotate         move entries past --keep from the active log into the archive
  * --keep=N         entries kept in the active log by --rotate (default 40)
  * --write          apply changes to disk (default: dry run, print only)
  *
  * --fold and --rotate may be combined: fold runs first, in memory, then
- * rotate operates on the folded active content.
+ * rotate operates on the folded active content. A folded entry dated older than
+ * the fortieth is moved to the archive in the same run: it is listed, because
+ * Check B reads the active log only. A ticket is marked in the MOVE line.
  *
  * --write refuses unless `git status --porcelain` is clean for the four log
  * files (RC-13: shared tree, exclusive lane only). After writing it re-reads
@@ -24,7 +30,7 @@ import { readFileSync, writeFileSync, readdirSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
-import { fold, rotate, splitLog, LOG_MAX_ENTRIES } from './log-tools.ts';
+import { fold, foldedIntoArchive, entryStartLines, entryType, lintEntry, promptNameKeys, rotate, splitLog, LOG_MAX_ENTRIES } from './log-tools.ts';
 import type { InboxInput } from './log-tools.ts';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -121,8 +127,40 @@ function main(): void {
     console.log('');
 
     let duplicates: string[] = [];
+    let inboxes: InboxInput[] = [];
     if (args.fold) {
-        const inboxes: InboxInput[] = inboxPaths.map((i) => ({ lane: i.lane, text: originals.get(i.path) as string }));
+        inboxes = inboxPaths.map((i) => ({ lane: i.lane, text: originals.get(i.path) as string }));
+
+        // Lint every inbox entry before anything is placed, whatever position the
+        // fold would give it. The rules are the gate's (log-tools.ts lintEntry).
+        const known = new Set(promptNameKeys([
+            ...splitLog(active).entries,
+            ...splitLog(archive).entries,
+            ...inboxes.flatMap((i) => splitLog(i.text).entries),
+        ]));
+        let failures = 0;
+        for (const i of inboxPaths) {
+            const log = splitLog(originals.get(i.path) as string);
+            const starts = entryStartLines(log);
+            log.entries.forEach((entry, k) => {
+                const lint = lintEntry(entry, known);
+                for (const f of lint.findings) {
+                    failures++;
+                    console.log(`  LINT  ${rel(i.path)}:${starts[k] + f.lineOffset}  ${entry.heading}`);
+                    console.log(`        Check ${f.check}: ${f.message} — ${f.field}, found ${f.found}; allowed ${f.allowed}`);
+                }
+                for (const v of lint.unresolved) {
+                    console.log(`  WARNING  ${rel(i.path)}:${starts[k]}  Corregge ${v} matches no known prompt-document name (non-blocking)`);
+                }
+            });
+        }
+        if (failures > 0) {
+            console.error('');
+            console.error(`refusing to fold: ${failures} problem(s) in the lane inboxes would fail Check B or C of check:docs (LINT lines above).`);
+            console.error('fix them in the inbox files; nothing was written.');
+            process.exit(1);
+        }
+
         const result = fold(active, inboxes);
         active = result.active;
         duplicates = result.duplicates;
@@ -143,8 +181,13 @@ function main(): void {
         const result = rotate(active, archive, args.keep);
         const movedCount = result.movedEntries.length;
         console.log(`rotate: keep=${args.keep} — ${movedCount} entr${movedCount === 1 ? 'y' : 'ies'} moved to ${rel(LOG_ARCHIVE_MD)}`);
-        for (const e of result.movedEntries) console.log(`  MOVE  ${e.heading}`);
+        for (const e of result.movedEntries) console.log(`  MOVE  ${entryType(e) === 'ticket' ? '[ticket] ' : ''}${e.heading}`);
         for (const w of result.warnings) console.log(`  WARNING  ${w}`);
+        const straight = args.fold ? foldedIntoArchive(inboxes, result.movedEntries) : [];
+        if (straight.length > 0) {
+            console.log(`rotate: ${straight.length} entr${straight.length === 1 ? 'y' : 'ies'} folded in this run went straight to the archive, never in the active log:`);
+            for (const e of straight) console.log(`  STRAIGHT-TO-ARCHIVE  lane "${e.lane}"  ${e.heading}`);
+        }
         active = result.active;
         archive = result.archive;
         console.log('');

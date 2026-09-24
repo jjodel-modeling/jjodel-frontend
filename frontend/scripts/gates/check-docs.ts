@@ -9,16 +9,21 @@
  *           is byte-identical. That identity was declared a critical constraint
  *           but was until now guaranteed only by a hand-run diff.
  *
- * Check B — entries in docs/claude-code-log.md dated on or after the threshold
- *           carry Corregge and Causa, with values inside the vocabulary.
+ * Check B — entries in docs/claude-code-log.md AND in the lane inboxes under
+ *           docs/log-inbox/ dated on or after the threshold carry the fields of
+ *           their type: Corregge and Causa, with values inside the vocabulary,
+ *           for a task; Ticket, Priority and Found in for a ticket (a heading
+ *           `ticket:`, from TICKET_LINT_FROM_DATE). The rules live in
+ *           log-tools.ts (lintEntry), shared with the fold in rotate-log.ts.
  *
  * Check C — the Notes field of an entry stays within its character cap. The log
  *           is an index, not a fourth copy of the reasoning: past the cap the
- *           text belongs in the document Notes cites. Active log only, never
- *           the archive.
+ *           text belongs in the document Notes cites. Active log and inboxes,
+ *           never the archive.
  *
  * Check D — the active log has at most LOG_MAX_ENTRIES entries. A non-empty
- *           lane inbox under docs/log-inbox/ is a warning, not a failure.
+ *           lane inbox under docs/log-inbox/ is a warning, not a failure (its
+ *           entries are linted by B and C all the same).
  *
  * This script only reads. It never rewrites, reorders or normalizes the log.
  *
@@ -28,7 +33,19 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
-import { ENTRY_HEADING, LOG_MAX_ENTRIES, splitLog } from './log-tools.ts';
+import {
+    ENTRY_HEADING,
+    LINT_FROM_DATE,
+    LOG_MAX_ENTRIES,
+    NOTES_LINT_FROM_DATE,
+    NOTES_MAX_CHARS,
+    collectNotesSpans,
+    entryStartLines,
+    lintEntry,
+    promptNameKeys,
+    splitLog,
+} from './log-tools.ts';
+import type { EntryFinding, RawEntry } from './log-tools.ts';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 // frontend/scripts/gates -> frontend/scripts -> frontend -> repo root
@@ -46,36 +63,6 @@ const LOG_INBOX_DIR = resolve(REPO, 'docs/log-inbox');
  */
 const BLOCK_START = '## YYYY-MM-DD — type: short description';
 const BLOCK_END = '**Prompt document name**: YYYY-MM-DD HH:mm';
-
-/** Entries dated before this are ignored without warning: no back-filling. */
-const LINT_FROM_DATE = '2026-08-02';
-
-/** Notes cap applies from here forward: the log is append-only, no back-filling. */
-const NOTES_LINT_FROM_DATE = '2026-08-19';
-
-/** CLAUDE.md §21.2: Notes is capped, longer reasoning goes in the cited document. */
-const NOTES_MAX_CHARS = 500;
-
-/** The sentinel is an em dash U+2014, not '-' and not an en dash. */
-const SENTINEL = '—';
-
-/**
- * CLAUDE.md §21.3 taxonomy. The canonical form is parenthesized, and it is the
- * only one accepted: measured on the archive, 118 entries carry `(x)` against 8
- * with the bare letter, so the bare form is a slip the gate used to wave through
- * rather than a second convention. The archive is never linted (see checkLog),
- * so narrowing this touches no past entry.
- */
-const CAUSA_LETTERS = ['a', 'b', 'c', 'd', 'e', 'f', 'g'];
-const CAUSA_FORM = /^\(([a-g])\)$/;
-
-/**
- * Corregge holds the name of a prompt document, whose format is fixed by the
- * template's own last field: YYYY-MM-DD HH:mm. The timestamp must be the
- * prefix; a trailing annotation is allowed, as in
- *   2026-08-01 13:31 (prompt `jjodie_window_default_bottom_left`)
- */
-const TIMESTAMP_PREFIX = /^(\d{4}-\d{2}-\d{2} \d{2}:\d{2})(\s|$)/;
 
 interface Problem {
     file: string;
@@ -224,40 +211,38 @@ function checkBlockIdentity(): CheckOutcome {
 
 // ── Check B — log linter ────────────────────────────────────────────────────
 
-interface LogEntry {
-    heading: string;
-    date: string;
+// ENTRY_HEADING, the field grammar and every rule of an entry live in
+// log-tools.ts, shared with the fold CLI. The optional time in the heading is a
+// historical variant: two archive entries are headed `## 2026-05-01 22:05 — fix: ...`.
+// Without it their field lines would be attributed to the preceding entry and
+// dropped, leaving their prompt-document name out of the Corregge resolution set.
+
+interface InboxFile {
+    lane: string;
+    path: string;
+    text: string;
+}
+
+/** One entry of a file the gate lints, with the verdict of the shared rules. */
+interface LintedEntry {
+    path: string;
+    entry: RawEntry;
     startLine: number;
-    fields: Map<string, string>;
+    findings: EntryFinding[];
+    unresolved: string[];
 }
 
-// ENTRY_HEADING now lives in log-tools.ts (imported above), shared with the
-// fold/rotate CLI. The optional time is a historical variant: two archive
-// entries are headed `## 2026-05-01 22:05 — fix: ...`. Without it their field
-// lines would be attributed to the preceding entry and dropped, leaving their
-// prompt-document name out of the Corregge resolution set.
-const FIELD_LINE = /^\*\*([^*]+)\*\*:\s?(.*)$/;
-
-function parseEntries(text: string): LogEntry[] {
-    const lines = text.split('\n');
-    const entries: LogEntry[] = [];
-    let current: LogEntry | null = null;
-
-    for (let i = 0; i < lines.length; i++) {
-        const m = ENTRY_HEADING.exec(lines[i]);
-        if (m) {
-            current = { heading: lines[i], date: m[1], startLine: i + 1, fields: new Map() };
-            entries.push(current);
-            continue;
-        }
-        if (!current) continue;
-        const f = FIELD_LINE.exec(lines[i]);
-        // First occurrence wins: a field name repeated inside prose must not
-        // overwrite the real one.
-        if (f && !current.fields.has(f[1])) current.fields.set(f[1], f[2].trim());
-    }
-    return entries;
+function readInboxes(): InboxFile[] {
+    return listInboxes().map((i) => ({ ...i, text: read(i.path) }));
 }
+
+function lintFile(path: string, text: string, known: ReadonlySet<string>): LintedEntry[] {
+    const log = splitLog(text);
+    const starts = entryStartLines(log);
+    return log.entries.map((entry, i) => ({ path, entry, startLine: starts[i], ...lintEntry(entry, known) }));
+}
+
+const entryLabel = (e: LintedEntry): string => `${e.entry.heading}  (${rel(e.path)}:${e.startLine})`;
 
 function checkLog(): CheckOutcome {
     const out: CheckOutcome = {
@@ -269,28 +254,24 @@ function checkLog(): CheckOutcome {
     };
 
     const activeText = read(LOG_MD);
-    const active = parseEntries(activeText);
+    const active = splitLog(activeText).entries;
 
     // Every prompt-document name known, active log plus archive: the resolution
     // target for Corregge.
     const known = new Set<string>();
-    let archived: LogEntry[] = [];
+    let archived: RawEntry[] = [];
     try {
-        archived = parseEntries(read(LOG_ARCHIVE_MD));
+        archived = splitLog(read(LOG_ARCHIVE_MD)).entries;
     } catch {
         out.warnings.push(`    archive not readable at ${rel(LOG_ARCHIVE_MD)} — resolution checked against the active log only`);
     }
-    for (const e of [...active, ...archived]) {
-        const n = e.fields.get('Prompt document name');
-        if (!n) continue;
-        // Keyed on the timestamp prefix, which is the only part §21.2 fixes as a
-        // format. BOTH sides carry an optional trailing annotation — sometimes the
-        // reference, sometimes the target — so comparing whole names misses the
-        // match in either direction. A name without a well-formed prefix is kept
-        // verbatim rather than dropped from the set.
-        const m = TIMESTAMP_PREFIX.exec(n.trim());
-        known.add(m ? m[1] : n.trim());
-    }
+    for (const k of promptNameKeys([...active, ...archived])) known.add(k);
+
+    // An entry waiting in an inbox may correct another one waiting in a sibling
+    // inbox: both resolve at the fold, so both resolve here.
+    const inboxes = readInboxes();
+    const resolvable = new Set(known);
+    for (const i of inboxes) for (const k of promptNameKeys(splitLog(i.text).entries)) resolvable.add(k);
 
     // The log is NOT in chronological order: filter every entry on its own
     // date, never stop early.
@@ -305,72 +286,28 @@ function checkLog(): CheckOutcome {
         `${active.length - inScope.length} older than ${LINT_FROM_DATE}, ignored without warning`,
     );
 
-    for (const e of inScope) {
-        const label = `${e.heading}  (${rel(LOG_MD)}:${e.startLine})`;
+    const linted = [
+        ...lintFile(LOG_MD, activeText, resolvable),
+        ...inboxes.flatMap((i) => lintFile(i.path, i.text, resolvable)),
+    ];
+    const inboxEntries = linted.filter((e) => e.path !== LOG_MD);
+    out.lines.push(
+        `    ${inboxEntries.length} entr${inboxEntries.length === 1 ? 'y' : 'ies'} in ${inboxes.length} lane inbox file(s) ` +
+        `under ${rel(LOG_INBOX_DIR)}, ${inboxEntries.filter((e) => e.entry.date >= LINT_FROM_DATE).length} in scope`,
+    );
 
-        // Corregge
-        if (!e.fields.has('Corregge')) {
+    for (const e of linted) {
+        for (const f of e.findings) {
+            if (f.check !== 'B') continue;
             out.ok = false;
-            out.problems.push({
-                file: rel(LOG_MD),
-                entry: label,
-                field: '**Corregge**',
-                found: '(field absent)',
-                allowed: `${SENTINEL}  |  a prompt-document name in the form YYYY-MM-DD HH:mm, optionally followed by an annotation`,
-                message: 'required field missing',
-            });
-        } else {
-            const v = e.fields.get('Corregge')!;
-            if (v === SENTINEL) {
-                // nothing to correct — fine
-            } else {
-                const m = TIMESTAMP_PREFIX.exec(v);
-                if (!m) {
-                    out.ok = false;
-                    out.problems.push({
-                        file: rel(LOG_MD),
-                        entry: label,
-                        field: '**Corregge**',
-                        found: v === '' ? '(empty)' : v,
-                        allowed: `${SENTINEL}  |  a prompt-document name in the form YYYY-MM-DD HH:mm, optionally followed by an annotation`,
-                        message: 'value is neither the sentinel nor a prompt-document name in the prescribed form',
-                    });
-                } else if (!known.has(m[1])) {
-                    // Well-formed but unresolved: the target entry may legitimately
-                    // never have been logged. Warning, not an error.
-                    out.warnings.push(
-                        `    ${label}\n` +
-                        `      **Corregge**: ${m[1]} is well-formed but matches no "**Prompt document name**"\n` +
-                        `      in the active log or the archive. Fine if that task was never logged; check the value otherwise.`,
-                    );
-                }
-            }
+            out.problems.push({ file: rel(e.path), entry: entryLabel(e), field: f.field, found: f.found, allowed: f.allowed, message: f.message });
         }
-
-        // Causa
-        if (!e.fields.has('Causa')) {
-            out.ok = false;
-            out.problems.push({
-                file: rel(LOG_MD),
-                entry: label,
-                field: '**Causa**',
-                found: '(field absent)',
-                allowed: `${SENTINEL}  |  one of ${CAUSA_LETTERS.map((l) => `(${l})`).join(' ')}`,
-                message: 'required field missing',
-            });
-        } else {
-            const v = e.fields.get('Causa')!;
-            if (v !== SENTINEL && !CAUSA_FORM.test(v)) {
-                out.ok = false;
-                out.problems.push({
-                    file: rel(LOG_MD),
-                    entry: label,
-                    field: '**Causa**',
-                    found: v === '' ? '(empty)' : v,
-                    allowed: `${SENTINEL}  |  one of ${CAUSA_LETTERS.map((l) => `(${l})`).join(' ')}  (parentheses required)`,
-                    message: 'value outside the CLAUDE.md §21.3 taxonomy',
-                });
-            }
+        for (const v of e.unresolved) {
+            out.warnings.push(
+                `    ${entryLabel(e)}\n` +
+                `      **Corregge**: ${v} is well-formed but matches no "**Prompt document name**"\n` +
+                `      in the active log, the archive or a lane inbox. Fine if that task was never logged; check the value otherwise.`,
+            );
         }
     }
 
@@ -379,60 +316,8 @@ function checkLog(): CheckOutcome {
 
 // ── Check C — Notes length ──────────────────────────────────────────────────
 
-interface NotesSpan {
-    heading: string;
-    date: string;
-    entryLine: number;
-    notesLine: number;
-    text: string;
-}
-
 interface EntrySpan {
     bytes: number;
-}
-
-/**
- * Notes spans, read straight off the lines rather than off parseEntries: the
- * field map keeps only the first line of a field, so a note written across
- * several lines would be measured at a fraction of its real length. The span
- * runs from the `**Notes**:` line to the last line before the next field line,
- * the next entry heading, or the end of file. parseEntries and LogEntry stay
- * untouched — Check B rests on them.
- */
-function collectNotesSpans(text: string): NotesSpan[] {
-    const lines = text.split('\n');
-    const spans: NotesSpan[] = [];
-    let heading = '';
-    let date = '';
-    let entryLine = 0;
-    let seenInEntry = false;
-
-    for (let i = 0; i < lines.length; i++) {
-        const h = ENTRY_HEADING.exec(lines[i]);
-        if (h) {
-            heading = lines[i];
-            date = h[1];
-            entryLine = i + 1;
-            seenInEntry = false;
-            continue;
-        }
-        if (!heading || seenInEntry) continue;
-
-        const f = FIELD_LINE.exec(lines[i]);
-        if (!f || f[1] !== 'Notes') continue;
-
-        // First Notes of the entry wins, mirroring parseEntries.
-        seenInEntry = true;
-        const body: string[] = [f[2]];
-        for (let j = i + 1; j < lines.length; j++) {
-            if (ENTRY_HEADING.test(lines[j]) || FIELD_LINE.test(lines[j])) break;
-            body.push(lines[j]);
-        }
-        while (body.length > 0 && body[body.length - 1].trim() === '') body.pop();
-
-        spans.push({ heading, date, entryLine, notesLine: i + 1, text: body.join('\n').trim() });
-    }
-    return spans;
 }
 
 /** Byte size of every entry, heading included, for the telemetry lines. */
@@ -464,11 +349,14 @@ function checkNotesLength(): CheckOutcome {
         warnings: [],
     };
 
-    // The active log only. The archive is never linted and never emended.
+    // The active log and the lane inboxes. The archive is never linted and never emended.
     const text = read(LOG_MD);
     const entries = entrySpans(text);
     const spans = collectNotesSpans(text);
     const inScope = spans.filter((s) => s.date >= NOTES_LINT_FROM_DATE);
+    const inboxes = readInboxes();
+    const inboxSpans = inboxes.flatMap((i) => collectNotesSpans(i.text));
+    const inboxInScope = inboxSpans.filter((s) => s.date >= NOTES_LINT_FROM_DATE);
 
     // Telemetry, printed whether the check passes or fails: the cap is a budget,
     // and a budget nobody measures goes back to being a memory.
@@ -481,18 +369,29 @@ function checkNotesLength(): CheckOutcome {
         `    ${inScope.length} Notes field(s) in scope; ` +
         `${spans.length - inScope.length} older than ${NOTES_LINT_FROM_DATE}, ignored without warning`,
     );
+    out.lines.push(
+        `    ${inboxInScope.length} Notes field(s) in scope in ${inboxes.length} lane inbox file(s) under ${rel(LOG_INBOX_DIR)}`,
+    );
 
-    for (const s of inScope) {
-        if (s.text.length <= NOTES_MAX_CHARS) continue;
-        out.ok = false;
-        out.problems.push({
-            file: `${rel(LOG_MD)}:${s.notesLine}`,
-            entry: `${s.heading}  (${rel(LOG_MD)}:${s.entryLine})`,
-            field: '**Notes**',
-            found: `${s.text.length} characters`,
-            allowed: `at most ${NOTES_MAX_CHARS} characters — longer reasoning goes in the discovery report, the ratification memo or the session file, cited here by name`,
-            message: 'Notes exceeds the cap set by CLAUDE.md §21.2',
-        });
+    // The rules are the shared ones (log-tools.ts lintEntry); Corregge is not
+    // this check's business, so nothing is resolved here.
+    const linted = [
+        ...lintFile(LOG_MD, text, new Set()),
+        ...inboxes.flatMap((i) => lintFile(i.path, i.text, new Set())),
+    ];
+    for (const e of linted) {
+        for (const f of e.findings) {
+            if (f.check !== 'C') continue;
+            out.ok = false;
+            out.problems.push({
+                file: `${rel(e.path)}:${e.startLine + f.lineOffset}`,
+                entry: entryLabel(e),
+                field: f.field,
+                found: f.found,
+                allowed: f.allowed,
+                message: f.message,
+            });
+        }
     }
 
     return out;

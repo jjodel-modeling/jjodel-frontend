@@ -99,6 +99,7 @@
     "typecheck:scripts": "tsc --noEmit -p scripts/tsconfig.json",
     "check:docs": "node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/gates/check-docs.ts",
     "check:agents": "node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/gates/check-agents.ts",
+    "check:scripts": "node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/gates/check-scripts.ts",
     "log:rotate": "node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/gates/rotate-log.ts",
     "smoke": "node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/smoke/run.ts",
     "smoke:calibrate": "node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/smoke/calibrate.ts",
