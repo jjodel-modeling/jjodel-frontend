@@ -1,7 +1,7 @@
 # PROTOCOL.md — protocollo di esecuzione per Claude Code
 
 Posizione: `docs/PROTOCOL.md` nel repo `jjodel-frontend`.
-Versione: 1.6 (2026-09-24) — traccia l'insieme delle clausole (quali P<n> esistono), non le differenze di frase.
+Versione: 1.5 (2026-09-21) — traccia l'insieme delle clausole (quali P<n> esistono), non le differenze di frase.
 
 Questo file contiene le clausole che prima venivano ricopiate per esteso in ogni prompt. I prompt ora le citano per numero. Se una clausola cambia, cambia qui e vale ovunque da subito.
 
