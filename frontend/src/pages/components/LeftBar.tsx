@@ -1,4 +1,4 @@
-import {useState, MouseEventHandler, JSX} from 'react';
+import {useState, useEffect, MouseEventHandler, JSX} from 'react';
 import {useSelector} from 'react-redux';
 import {DProject, LProject, LUser, R, U} from '../../joiner';
 
@@ -272,6 +272,17 @@ function LeftBar(props: LeftBarProps): JSX.Element {
     // badge would otherwise leave this entry greyed out until a tab opens or closes.
     const canShare = useSelector((state: any) =>
         (project?.id ? state?.idlookup?.[project.id]?.type : undefined) === 'public');
+
+    // #157 Fase 3 (A): isConsumerMode() reads the hash live, but this component only re-renders
+    // on prop/Redux changes — so adding or removing ?profile= would not toggle the developer
+    // surfaces until an unrelated re-render (leaving the rail stuck in the restricted state after
+    // the profile is removed). Subscribe to hashchange to re-evaluate on profile add/remove.
+    const [, forceHashTick] = useState(0);
+    useEffect(() => {
+        const onHash = () => forceHashTick((t) => t + 1);
+        window.addEventListener('hashchange', onHash);
+        return () => window.removeEventListener('hashchange', onHash);
+    }, []);
 
     // #157 Fase 3: consumer (stand-alone) mode when a ?profile= is in the URL — hide the
     // developer surfaces (metamodels, transformations, viewpoints, megamodel, env authoring).
