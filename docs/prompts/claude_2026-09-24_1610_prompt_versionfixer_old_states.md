@@ -2,7 +2,7 @@
 
 Prompt-ID: P-2026-09-24-1610
 Chat: C-2026-09-24-1005
-Status: da eseguire
+Status: eseguito 2026-09-24 · lane versionfixer · d1db82011 · verifica visiva passata 2026-09-24
 
 Worktree: `~/jjodel-release`, branch `alfonso-frontend-jjtl`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop and say so; never work by absolute path on another worktree. Start only after `P-2026-09-24-1605` (merge) has closed: `git status` empty and the merge commit on HEAD.
 

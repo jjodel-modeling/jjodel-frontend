@@ -401,3 +401,23 @@ state (via the probe path, since no UI path exists).
   red files fail at import with `ReferenceError: window is not defined` (8 through monaco:
   `context-binding` and 7 under `jjtl/__tests__/`; `UDComparator` through `PerformanceMetrics.ts:220`).
 - `npm run build`: exit 0, only the chunk-size warning.
+
+## Addendum 2026-09-24 (Phase 2) — `Log.exDev` throws
+
+§1, third bullet, is wrong. It says `Log.exDev` "logs and does **not** throw" and that a missing
+adapter surfaces as the destructuring TypeError at `:131`. Read in Phase 2, `Log.ts:146-152`:
+
+```
+    public static exDev(b: boolean, ...restArgs: any[]): null | never | any {
+        if (!b) return null;
+        ...
+        Log.log('Dev Error','eDev', console.error, b, true, ...restArgs);
+```
+
+The fifth argument is `canthrow`; `Log.log` builds the error at `:113`
+(`let exception: Error | undefined = (canthrow ? new MyError(prefixedstr, ...restArgs) : undefined);`)
+and throws it at `:119` (`if (exception) throw exception;`). So a missing adapter throws its own
+message at `VersionFixer.tsx:128` before `:131` runs, and the loop check at `:137` throws too. The
+Phase 1 read had stopped at `:146-152` without following `Log.log`. The two defects and every
+measurement of this report are unaffected: both failures were TypeErrors thrown before any
+`Log.exDev` condition held. The Phase 2 test mocks `Log.exDev` as throwing, like the real one.
