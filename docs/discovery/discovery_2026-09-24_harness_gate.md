@@ -474,9 +474,9 @@ Code commit `80581e1c7`; skill commit `78ce6c780`; the docs commit is the one th
 | Q6 | Declared deviation, not a ratification | the entry in `docs/log-inbox/harness.md` (34 trunk commits name Opus 5.5 from 2026-09-22 21:07 against the pin `claude-opus-5`; the launch channel is not recoverable from git). The pin is untouched |
 | Q7 | No HARNESS-DOCS refresh beyond the "33" row; the nine red-at-import names in `CLAUDE.md` 17 | `CLAUDE.md` 17 |
 
-One reading made without asking: `PROTOCOL.md` moves from 1.5 to 1.6. Its version line says it tracks the set of clauses, not
-the phrasing, and no clause was added; the precedent (1.3 for a register line in P10) bumped it for a normative paragraph, so
-P9 gaining the ticket type and the inbox lint bumped it too. Reversible in one line if it should not.
+`PROTOCOL.md` stays at version 1.5. Phase 2 first raised the line to 1.6, a reading made without asking (the precedent of 1.3, a
+register line in P10, had bumped it for a normative paragraph); the operator's ACK put it back in `d9af59d8b`: the line tracks the
+set of clauses, and none was added or removed. The P9 paragraph on the ticket type and the inbox lint stays.
 
 Three commits, not two: `bash-guard` reads `.claude/skills/log-entry/SKILL.md` as code and refused a docs commit that carried it
 (P13, docs and code apart), so the skill went in a commit of its own, `78ce6c780`, before the docs commit, and the Status flip
@@ -543,11 +543,13 @@ included); `check:agents` green; `check:scripts` exit 0. No visual check: nothin
 
 ### 11.6 Process notes
 
-- Two messages for `P-2026-09-24-1610` were pasted into this session. The operator counts two; this session's context holds
-  one, the conditional ACK on a Layer Impact Report this session had not produced. It read the 1610 prompt file and 60 lines of
-  `VersionFixer.tsx`, ran `git worktree list` and a `git ls-tree` of the 1610 report path (names only, the report was not read),
-  and stopped without writing. Its reply did not open with the P13 header (own ID, received ID). Recorded as an operator routing
-  error, not as a correction round.
+- Two messages were misrouted in total, one per session, an operator routing error and not a correction round. The 1610 ACK (a
+  conditional ACK on a Layer Impact Report this session had not produced) reached this session; the GO 1630 reached the 1610
+  session. Here the 1610 prompt file and 60 lines of `VersionFixer.tsx` were read, `git worktree list` and a `git ls-tree` of the
+  1610 report path ran (names only, the report was not read), nothing was written, and the reply did not open with the P13 header
+  (own ID, received ID). The authoritative record, with the sessions and the count of correction rounds, is the entry in
+  `docs/log-inbox/harness.md`: it counts 1 round, the PROTOCOL.md version revert, and the header of this section, written before
+  it, says 0.
 - The `log-entry` skill loaded in this session injected the rules 2, 4 and 7 as they were before this lane, while the file on
   disk was already edited (ticket in the harness entry).
 - Not done, on purpose: the HARNESS-DOCS refresh (Q7), the one-line addition to `README-probes.md` (never approved), the `ls` of the
