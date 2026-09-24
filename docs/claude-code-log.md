@@ -13,6 +13,19 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-24 — feat(#157): «Copy stand-alone link» per profilo (Fase 4a)
+**Prompt**: «procede con la prossima fase» → F4, diviso in F4a (link, procedo ora) e F4b (assegnazione profilo→utente, tocca D/L → semantica da confermare).
+**Files touched**: `frontend/src/utils/shareUtils.ts`, `frontend/src/components/envgen/steps/ProfilesStep.tsx`. Referto discovery + questa entry in commit docs separato (§6.4/P13).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown — `npx tsc --noEmit` output COMPLETO **14** pre-esistenti (0 nei file toccati); `npm run build` `✓ built`. UI non esercitata a runtime in questa sessione.
+**Out-of-scope changes**: no — 2 file.
+**Layer Impact Report**: not-required — nessun file di §3.1; util pura + view (ProfilesStep). F4b (assegnazione) tocca D/L → fase separata.
+**Smoke visivo**: non eseguito — passi di verifica consegnati all'utente.
+**Notes**: Nuova `getStandaloneEnvironmentUrl(projectId, profileId)` in shareUtils (usa `window.location.origin`, link valido anche in locale; `getPublicProjectUrl` invariata). ProfilesStep: bottone «Copy stand-alone link» nel detail del profilo (riusa `copyToClipboard`), feedback «Copied!» 1.5s. F4b (profilo→utente) rinviata: tocca DProfile/LProfile (Rule 20 + LIR), semantica da decidere (metadata vs auto-risoluzione da email, §5). Referto nel discovery.
+**Prompt document name**: 2026-09-24 14:00
+
 ## 2026-09-24 — feat(#157): trim della Navbar in consumer mode (Fase 3b)
 **Prompt**: «continua con la fase successiva» → F3b, trim della Navbar in consumer mode. Due decisioni comportamentali confermate dall'utente prima di scrivere (New Model tenuto, New Project nascosto).
 **Files touched**: `frontend/src/pages/components/Navbar.tsx`. Referto discovery + questa entry in commit docs separato (§6.4/P13).
