@@ -405,13 +405,14 @@ everytime you put hands into a D-Object shape or valid values, you should docume
         s.version = {n: 2.1, date:"_reconverted", conversionList:[0]};
         return s;
     }
-    private ['2.1 -> 2.2'](s: DState): void {
-
+    private ['2.1 -> 2.2'](s: DState): DState {
+        return s;
     }
 
     private ['2.2 -> 2.201'](s: DState): DState {
         // let ls: LState = LPointerTargetable.from(s); nope, avoid L-objects. actions would fire in present state instead of in parameter state
-        for (let c of (s.classs).map(p=> this.d(p, s))) {
+        for (let c of (s.classs || []).map(p=> this.d(p, s))) {
+            if (!c) continue;
             c.isSingleton = !!c.isSingleton; // booleanize the undefined
             c.sealed = [];
             c.final = false;
@@ -421,12 +422,13 @@ everytime you put hands into a D-Object shape or valid values, you should docume
             if (!c || typeof c !== 'object' || !c.className || !c.id) continue;
             if (c.isCrossReference === undefined) c.isCrossReference = false;
         }
-        for (let c of (s.viewelements).map(p=> this.d(p, s))) { c.father = c.viewpoint; }
-        for (let c of (s.viewpoints).map(p=> this.d(p, s))) { c.cssIsGlobal = true; }
-        for (let c of (s.projects).map(p=> this.d(p, s))) { c.favorite = {}; c.description = ''; }
-        for (let c of (s.references).map(p=> this.d(p, s))) { if (c.composition === undefined) c.aggregation = !(c.composition = !!(c as any).containment); }
-        for (let c of (s.models).map(p=> this.d(p, s))) { if (c.dependencies === undefined) c.dependencies = []; }
-        for (let c of (s.attributes).map(p => this.d(p, s))) {
+        for (let c of (s.viewelements || []).map(p=> this.d(p, s))) { if (!c) continue; c.father = c.viewpoint; }
+        for (let c of (s.viewpoints || []).map(p=> this.d(p, s))) { if (!c) continue; c.cssIsGlobal = true; }
+        for (let c of (s.projects || []).map(p=> this.d(p, s))) { if (!c) continue; c.favorite = {}; c.description = ''; }
+        for (let c of (s.references || []).map(p=> this.d(p, s))) { if (!c) continue; if (c.composition === undefined) c.aggregation = !(c.composition = !!(c as any).containment); }
+        for (let c of (s.models || []).map(p=> this.d(p, s))) { if (!c) continue; if (c.dependencies === undefined) c.dependencies = []; }
+        for (let c of (s.attributes || []).map(p => this.d(p, s))) {
+            if (!c) continue;
             c.derived = !!c.derived;
             c.derived_write = undefined; // c.derived ? '' : undefined;
             c.derived_read = undefined; // c.derived ? '' : undefined;
