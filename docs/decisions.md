@@ -1207,6 +1207,13 @@ verifica e la correzione al Finding 1 del 2026-09-19). Prompt: `claude_2026-09-1
   rilevato subito, il pop ha ripristinato lo stato esatto senza toccare lo stash di altre corsie
   (`git stash list` invariato a parte l'entry propria), e la verifica è stata rifatta nel modo
   conforme (`git show HEAD:<path>`, ripristino da copia in scratchpad, indice mai toccato).
+  **Chiusura del debito** (2026-09-24, P-2026-09-24-1455, `e7e47a7f0`): la migrazione 2.225→2.226
+  timbra l'`ir` che scrive con `migratedHash`, l'hash strutturale di sé al momento della migrazione
+  (dentro `ir`, accanto a `migratedFrom`, perché `updateDefaultView` porta con sé il solo `ir`), e
+  una view timbrata delega finché il suo hash coincide col timbro, a qualunque factory. Le view non
+  timbrate restano su una lista chiusa di quattro forme congelate (07-18, `400095370`, 09-18, 09-22),
+  che non legge più la factory viva e a cui non si aggiunge più nulla. Nessun bump, nessuno step
+  nuovo, nessun timbro retroattivo. Referto: `docs/discovery/discovery_2026-09-24_migrated_view_identity.md`.
 - **R-IRN-34** (2026-09-19) — **Il criterio di questo giro copriva solo le view nuove; esteso a un
   progetto migrato pre-batch.** La verifica visiva originale e la misura del probe coprivano solo
   una object view creata da zero dopo il batch. Il criterio va esteso: una object view migrata da un

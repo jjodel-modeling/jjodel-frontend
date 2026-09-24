@@ -90,3 +90,42 @@ quel progetto esiste solo nello storage di quella porta, e il symlink ricreato a
 servibile il bundle corrente). Non è registrato se la scheda fosse stata ricaricata dopo il
 ripristino del fill, quindi l'identificazione è per origine e non per bundle; il controllo 3
 resta l'unico misurato.
+
+## 2026-09-24 — fix(ir): migrated default view identity, stamp and closed legacy list (P-2026-09-24-1455)
+**Prompt**: `claude_2026-09-24_1455_prompt_migrated_view_identity.md`, two-phase. Phase 1 report `3cded3668` (`docs/discovery/discovery_2026-09-24_migrated_view_identity.md`). GO with six rulings: no stamping of existing views and no bump; default views created from the UI stay on the IR interpreter (R-IRN-1); the closed list holds every shape of the trunk (07-18, 400095370, 09-18, 09-22 frozen as a literal) and no longer reads the live factory; the stamp is `migratedHash` inside `ir`; `VersionFixer.tsx:1039` only after a Layer Impact Report and an ACK; a view reverted by hand delegates again. The ACK added three items: the unstamped delegation tests rebuilt on the 09-22 literal, the migration call site verified at runtime, the process deviation recorded here.
+**Files touched**: code `e7e47a7f0`: `frontend/src/components/editor-v2/viewpoint/ir/irDefaults.ts`, `frontend/src/components/editor-v2/viewpoint/ir/__tests__/ir.test.ts`, `frontend/src/redux/VersionFixer.tsx` (the import and line 1039). Docs: the Phase 1 report `3cded3668`; this commit: this entry, the closing line under R-IRN-33 in `docs/decisions.md`, the Status line of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-18 22:19 (`claude_2026-09-18_2219_prompt_default_view_parity.md`: its batch changed the factory that the delegation identity was compared against, R-IRN-33; the stopgap was repeated by P-2026-09-22-2105)
+**Causa**: (c)
+**Regressions**: no. Gates on `e7e47a7f0`: `npm run typecheck` exit 2, 14 errors, the baseline set (diff of the two runs empty); `npx vitest run` 4236 passed (4228 + 8), the same 9 files red at import; `npm run build` exit 0; `check:docs` 4/4 and `check:agents` green. Mutation bench in the commit message: 13 mutants, M7 equivalent while the factory returns the 09-22 shape, M7b kills it. Visual items 2 and 3 rest on unit tests and on the runtime probe, not on a real project (below).
+**Out-of-scope changes**: no — three files, all in the proposed diff of the report; `VersionFixer.tsx` by the explicit go-ahead after the Layer Impact Report. Inside those files and beyond the six rulings: an additive correction note on the window of `LEGACY_OBJECT_VIEW_SNAPSHOT_2026_09_18` (report F1), and all eight unstamped tests of the first delegation block rebuilt on the literal, not only the four red under M12, by the first sentence of item 1 of the ACK.
+**Layer Impact Report**: produced
+**Smoke visivo**: fallito (A4 in all three states, 3 new console errors: 403 on three font files served through `/@fs/` from the target of the P14 `node_modules` symlink, outside the `~/jjodel-release` root; environmental, no asset in the diff. Run from a scratchpad copy of `scripts/smoke` with `BASE_URL` on 3001, because `states.ts` hardcodes 3000, which serves `~/jjodel`.) The visual check of Alfonso follows the fields.
+**Notes**: Process deviation: the lane ran in a session opened in `~/jjodel-sim`, reading, editing and committing the trunk by absolute path and `git -C`, so the project hooks of `~/jjodel-release` did not cover it. The commits were made as those hooks require: pathspec, subject within 72 characters, P6 trailer. No hook output was seen in the session. The `frontend/node_modules` symlink, absent at lane start, was removed at lane end.
+**Prompt document name**: 2026-09-24 14:55
+
+**Verifica visiva** (Alfonso, 2026-09-24, 3001), recorded as given:
+1. Pre-400095370 project: passed on a real project (Alfonso's ERD, last saved 2026-09-02); objects rendered natively.
+2. Project saved between 516afd310 and fb876efaa: not verified on a real project (none exists); covered by unit tests only (the _2026_09_18 literal test, mutant M4).
+3. Pre-2.226 project stamped on load: not verified on a user project (none exists); covered by your runtime probe on 3001 with the 3000 control, output verbatim.
+4. New default view from the UI goes through the IR interpreter: passed, on a copy of the ERD.
+5. Border edit on the migrated view switches to IR and survives save and reload: passed, on a copy of the ERD (unstamped view, closed-list path).
+
+Rettifica al punto 2: nel banco di `e7e47a7f0` il test del letterale `_2026_09_18` muore con M5; M4 è la rimozione del letterale `400095370`, ucciso dal suo test.
+
+**Runtime check of the migration call site** (item 2 of the ACK). Throwaway Playwright probe, not committed. A classic object view (`CLASSIC_OBJECT_VIEW_JSX`, no `ir`) created through `DViewElement.new2` in a fresh project, the state saved at 2.225 and passed to `SaveManager.load` (`VersionFixer.update`, tail loop, `LoadAction`); the structural hash recomputed in the console with the app's `irHash`. The "save + reload" step is a JSON round trip through `SaveManager.load`, not the `ProjectsApi` save. Output on 3001, verbatim:
+
+```
+[probe-1455] [saved at 2.225] view Pointer1790256547991_USER_10 | has ir: false | jsx is CLASSIC_OBJECT_VIEW_JSX: true
+[VersionFixer 2.225 -> 2.226] IR inverse migration: 1 default view(s) -> IR, 0 marked legacy-classic.
+[probe-1455] [after load] state version: 2.228 | conversionList includes 2.225: true
+[probe-1455] [after load] view Pointer1790256547991_USER_10 "Classic object (probe 1455)" | ir keys: irVersion,kind,metaclasses,priority,exclusive,label,shape,fieldCompartments,migratedFrom,migratedHash
+[probe-1455] [after load]   migratedFrom: classic-default | migratedHash: 213162375 | structural hash: 213162375 | equal: true | isMigratedDefaultView: true
+[probe-1455] [after JSON save + reload] state version: 2.228 | conversionList includes 2.225: true
+[probe-1455] [after JSON save + reload] view Pointer1790256547991_USER_10 "Classic object (probe 1455)" | ir keys: irVersion,kind,metaclasses,priority,exclusive,label,shape,fieldCompartments,migratedFrom,migratedHash
+[probe-1455] [after JSON save + reload]   migratedFrom: classic-default | migratedHash: 213162375 | structural hash: 213162375 | equal: true | isMigratedDefaultView: true
+```
+
+Control, the same probe on 3000 (`~/jjodel`, `validation-skeleton` at `31a0a0038`, without this change): the `ir` keys end at `migratedFrom`, `migratedHash` absent, `structural hash: 1769909992 | equal: false`.
+
+**Ticket** (opened, not implemented here). (1) `'2.1 -> 2.2'` (`VersionFixer.tsx:408`) has an empty body and returns `void`: any saved state without `version` crashes `VersionFixer.update` with a TypeError on `s.version`. (2) Past that step the 2023 blobs of `frontend/src/examples/` fail at `'2.2 -> 2.201'`, which reads `s.classs`: none of them loads on today's chain, so they are not a fixture for anything after 2.2. (3) The fonts of the trunk tree return 403 on 3001 while `node_modules` is the P14 symlink, so every visual check there runs without icons and Inter. (4) `scripts/smoke/states.ts` hardcodes 3000, so the smoke cannot target the trunk server without a copy. (5) The comment at `VersionFixer.tsx:1003` says `updateDefaultView` carries `irLegacyClassic`; `view.tsx:1990` says, correctly, that it does not.
