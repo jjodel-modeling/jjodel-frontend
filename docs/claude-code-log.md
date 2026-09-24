@@ -13,6 +13,19 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-24 — fix(#157): shell reattiva a ?profile= all'uscita dal consumer mode
+**Prompt**: «mi sembra sia scomparso un menù»; tornando all'URL senza profilo la UI restava ristretta. Diagnosi (§5) + fix minore, esteso alla LeftBar su conferma esplicita dell'utente.
+**Files touched**: `frontend/src/pages/components/LeftBar.tsx`, `frontend/src/components/dock/MyRcDock.tsx`, `frontend/src/components/abstract/Dock.tsx`. Codice in commit separato (§6.4/RC-13); questa entry in commit docs.
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-23 12:00
+**Causa**: (d)
+**Regressions**: unknown — `npx tsc --noEmit` output COMPLETO **14** pre-esistenti (0 nei file toccati); `npm run build` `✓ built`. UI non esercitata a runtime in questa sessione (smoke consegnato all'utente).
+**Out-of-scope changes**: no — 3 file; l'estensione alla LeftBar (oltre al solo pannello) è stata approvata dall'utente prima di procedere (deroga dichiarata, RC-11).
+**Layer Impact Report**: not-required — nessun file di §3.1; solo view/shell (LeftBar/Dock/MyRcDock), nessun D-layer/sync/persistenza.
+**Smoke visivo**: non eseguito — app non avviata; passi di verifica consegnati all'utente.
+**Notes**: Causa (A) reattività: `isConsumerMode()` legge l'hash live ma LeftBar/DockManager valutavano solo al render (F3 dichiarava il follow-up). LeftBar: listener hashchange → re-render, sezioni developer tornano. Dock: su transizione consumer→developer chiama il nuovo `PinnableDock.forceEditorTypeBroadcast()` (resetta `_lastActiveId`+`_detectActiveTabChange`) → `body[data-editor-type]` si risincronizza, pannello Properties torna se un editor è aperto (no-op su dashboard).
+**Prompt document name**: 2026-09-24 11:47
+
 ## 2026-09-23 — feat(#157): shell consumer ristretta da ?profile= (Fase 3, primo taglio)
 **Prompt**: procedi al prossimo step (F3). Perimetro confermato dall'utente: LeftBar + guardie DockManager (Navbar = F3b).
 **Files touched**: `frontend/src/components/environment/consumerMode.ts` (nuovo), `frontend/src/pages/components/LeftBar.tsx`, `frontend/src/components/abstract/DockManager.tsx`. Referto e questa entry in commit docs separato (§6.4).
