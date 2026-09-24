@@ -592,10 +592,11 @@ No `lint` script: ESLint is not installed, so do not run it. No coverage script.
 
 Verification gates before commit:
 - `npm run build` must pass (exit 0, only the pre-existing chunk-size warning).
-- `npm run typecheck` must pass without introducing new errors. Baseline: **33** pre-existing errors — 19 of casing (`Settings/` vs `settings/`, TS1261 ×12 + TS1149 ×7) and 14 scattered (`api/data.ts` ×3, `Measurable.tsx` ×6, `Dummy.ts`, `EditorV2.tsx:2886`, `ChatMessages.tsx:246`, `ProjectEditor.tsx:220`, `Dashboard.tsx:570`). Verify your change does not increase the count.
-- `npm run test` where the touched area has tests. The suite has known failures; do not treat a red suite as caused by your change without checking.
+- `npm run typecheck` must pass without introducing new errors. Baseline: **14** pre-existing errors, listed by file and code because line numbers drift: `src/api/data.ts` TS2304 ×2 and TS2322; `src/common/Dummy.ts` TS2307; `src/components/editor-v2/EditorV2.tsx` TS2339; `src/components/forEndUser/Measurable.tsx` TS2552, TS7053 ×4 and TS2345; `src/components/Jodie/ChatMessages.tsx` TS2322; `src/components/project/ProjectEditor.tsx` TS2769; `src/pages/components/Dashboard.tsx` TS2339. Verify your change does not increase the count.
+- `npm run test` where the touched area has tests. The suite has known failures: nine files fail at import with `ReferenceError: window is not defined` (through the `monaco-editor` import) and collect no test: `src/jjscript/__tests__/context-binding.test.ts`; `src/jjtl/__tests__/abstract-target.test.ts`, `ai-prompt-sanitization.test.ts`, `circular-refs.test.ts`, `executor-bridge.test.ts`, `executor-llayer.test.ts`, `forall-mapping.test.ts`, `source-alias.test.ts`; `src/utils/__tests__/UDComparator.test.ts`. Do not treat any other red as pre-existing without checking.
 - `npm run check:agents` must pass when you touch any `AGENTS.md`. It regenerates every `AGENTS.md` into a temp directory and compares it byte for byte with the committed one. When red, run `npm run gen:agents` and include the regenerated files in the same commit — never hand-edit them.
-- `npm run check:docs` must pass when you touch `AGENTS.md`, `docs/PROTOCOL.md` or `docs/claude-code-log.md`. It verifies that the §21.2 entry-format block is byte-identical to `docs/PROTOCOL.md` P9, and that recent log entries carry `Corregge` and `Causa`. If a recent entry uses prose instead of the strict format, note it in `**Notes**` rather than failing the gate.
+- `npm run check:docs` must pass when you touch `AGENTS.md`, `docs/PROTOCOL.md`, `docs/claude-code-log.md` or a lane inbox `docs/log-inbox/*.md`. It verifies that the §21.2 entry-format block is byte-identical to `docs/PROTOCOL.md` P9, and that recent entries, in the active log and in the inboxes alike, carry the fields of their type (`Corregge` and `Causa` for a task; `Ticket`, `Priority` and `Found in` for a ticket). If a recent entry uses prose instead of the strict format, note it in `**Notes**` rather than failing the gate.
+- `npm run check:scripts` must pass when you add or edit any file under `frontend/scripts/`. It rejects a compound assignment, or `x = x <op> ...`, whose right side awaits: `failures += await run()` reads the counter before the await and overwrites the increments made during it, and printed ALL GREEN over failures on 2026-09-24. Fix: `const r = await run(); failures += r;`. It reads the disk, gitignored `_tmp_*` probes included, so its verdict depends on the untracked files of the worktree it runs in, and it runs only when someone runs it.
 
 ---
 
@@ -653,6 +654,18 @@ Codex maintains `docs/claude-code-log.md` as an add-only operational log: entrie
 ```
 
 This block is the canonical format, mirrored verbatim in `docs/PROTOCOL.md` P9.
+
+A **ticket** is an entry of its own type, for a finding that has to be found on its own and outlives the lane that made it. The heading is `## YYYY-MM-DD — ticket: short description` (the colon form, from 2026-09-24) and the fields are four, not twelve:
+
+```
+## YYYY-MM-DD — ticket: short description
+**Ticket**: the finding, in one or more lines
+**Priority**: high | medium | low
+**Found in**: P-YYYY-MM-DD-HHmm | C-YYYY-MM-DD-HHmm
+**Detail**: <path of the document that holds the evidence>   (optional)
+```
+
+A ticket carries no `Corregge`, `Causa`, `Regressions`, `Out-of-scope changes`, `Layer Impact Report`, `Smoke visivo` or `Prompt document name`: they measure a task. It has no status either: the log is add-only, so closure is read from the entry of the lane that closes it. It counts toward the 40 entries and rotates by position, verbatim, like any other. The paragraph `**Ticket** (` after the last field of a task entry stays legal and is not linted. `npm run check:docs` lints the entries waiting in `docs/log-inbox/*.md` by the same rules as the active log, and `npm run log:rotate -- --fold` refuses to fold an inbox entry that would fail them.
 
 The cap on `Notes` is a budget, not a style rule. Measured 2026-08-18: 26 active entries, 136518
 bytes or roughly 33k tokens, median entry 4050 bytes, three `Notes` above 6000 characters. Beyond
