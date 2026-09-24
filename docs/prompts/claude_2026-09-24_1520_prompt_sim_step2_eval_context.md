@@ -2,7 +2,7 @@
 
 Prompt-ID: P-2026-09-24-1520
 Chat: C-2026-09-24-1005
-Status: da eseguire
+Status: eseguito 2026-09-24 · lane simulation · e993d1b1a
 
 Worktree: `~/jjodel-sim`, branch `simulation-engine`, at `7cb1a716b` plus the commit that adds this file. Do not merge the trunk. Do not work in `~/jjodel-release` or `~/jjodel`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-sim` on `simulation-engine`, stop and say so; never work by absolute path on another worktree.
 
