@@ -79,3 +79,7 @@ Verifica visiva umana: passata 2026-09-23, controlli 1 (parità del default acca
 chiaro e scuro), 2 (box opaco in notation-wireframe e scheme-print scuro, conseguenza voluta della
 scelta di parità) e 4 (Enable IR, fill via interprete); il controllo 3 resta quello misurato dal DOM
 in chat.
+
+Rettifica 2026-09-24: la riga precedente è errata, i controlli 1, 2 e 4 non erano stati eseguiti;
+vale solo il controllo 3, misurato dal DOM. L'esito reale dei tre controlli segue in una riga
+successiva.
