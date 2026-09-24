@@ -1400,6 +1400,18 @@ Base: discussione in chat del 2026-09-23 sulla spec
   valore: l'esportatore genera la frame condition esplicita (ultimo ramo `TRUE : x` del `case`),
   altrimenti nuXmv lo lascerebbe non deterministico. Rinviati: attributi indicizzati e
   assegnamenti quantificati su collezioni.
+- **R-SIM-20** (2026-09-24). **Emenda la spec §7: nessuna stabilità prima di un evento.** Il
+  passo ε e il passo con evento sono ingressi indipendenti scelti dall'ambiente; il motore non
+  richiede che gli archi senza trigger siano esauriti prima di accettare un evento
+  (run-to-completion). La stabilità diventa un'ipotesi d'ambiente opzionale dell'esportatore,
+  come l'ambiente cooperativo di R-SIM-16: senza di essa la verifica copre un sovrainsieme dei
+  comportamenti UML. Coerente con l'esclusione delle priorità dal nucleo.
+- **Esecuzione** (2026-09-24). R-SIM-16 è implementata da `P-2026-09-23-1850` sul ramo
+  `simulation-engine` (`e6cb005a4`, log `f486bc777`), non ancora nel tronco. Letture del GO: il
+  passo con evento restringe il fire-all agli archi il cui trigger contiene l'evento (any-of,
+  per identità); la divisione del token su un evento non deterministico è provvisoria fino
+  all'interleaving del passo 3 (R-SIM-7). La sovrapposizione dei ruoli nodo/arco senza ruolo
+  evento è un avviso, al salvataggio e all'avvio; con il ruolo evento è un rifiuto.
 
 ## Serie R-J — JjEL come linguaggio delle espressioni dell'IR (ratifiche 2026-08-18)
 
