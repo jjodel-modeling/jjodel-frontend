@@ -1,7 +1,7 @@
 # Prompt: simulation step 1, events as M1 instances
 
 Prompt-ID: P-2026-09-23-1850
-Status: da eseguire
+Status: eseguito 2026-09-24 · lane simulation · e6cb005a4 · verifica visiva passata 2026-09-24
 Worktree: `~/jjodel-sim`, branch `simulation-engine`. Before anything else, fast-forward it to the trunk: `git merge --ff-only alfonso-frontend-jjtl`. If the fast-forward is refused, stop and report. Do not work in `~/jjodel-release`: another lane (`P-2026-09-22-2105`) is open there with uncommitted changes. Do not work in `~/jjodel`.
 Two-phase. Phase 1 is read-only and ends with a saved report and a hard stop. Phase 2 starts only on a GO that opens with this ID.
 
