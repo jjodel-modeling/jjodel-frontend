@@ -4396,10 +4396,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     document.body,
                 )}
 
-                {modelid && createPortal(
-                    <SimulationPanel modelid={modelid} isModelMode={isModelMode} />,
-                    document.body,
-                )}
+                {/* Inside the editor, not portaled: a hidden dock tab hides it with its editor (P-2026-09-24-1005). */}
+                {modelid && <SimulationPanel modelid={modelid} isModelMode={isModelMode} />}
 
             </div>
         </EditorContext.Provider>
