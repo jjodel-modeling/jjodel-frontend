@@ -2,7 +2,7 @@
 
 Prompt-ID: P-2026-09-24-1005
 Chat: C-2026-09-24-1005
-Status: da eseguire
+Status: eseguito 2026-09-24 · lane simulation · a8071f907 · verifica visiva passata 2026-09-24
 Follows: P-2026-09-23-1850 (executed, `e6cb005a4`, `f486bc777`). This is a new lane, not a reopening of 1850.
 
 Worktree: `~/jjodel-sim`, branch `simulation-engine`, at `f486bc777` plus the commit that adds this file. Do NOT merge the trunk: `simulation-engine` and `alfonso-frontend-jjtl` have diverged since `293e7fec6` (the trunk carries docs only), and the merge is a separate decision. Do not work in `~/jjodel-release` or `~/jjodel`. Dev server for this worktree: port 3002.

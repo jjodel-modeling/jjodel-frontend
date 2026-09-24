@@ -384,3 +384,45 @@ of the chip against the palette, dark mode, and Alfonso's checks (i)-(iv) of Pha
    bench run on copies and reported in the commit message; R5 run as a gitignored probe on 3002 before the hard stop.
 
 Then the gates of Phase 2 item 3, and the hard stop for the visual check on 3002.
+
+## Addendum 2026-09-24 (Phase 2) — §5.1 corrected
+
+§5.1 states that no ancestor of the editor up to `<body>` creates a stacking context, so that a
+`z-index: 850` inside the editor "competes in the root context exactly as the portaled panel does
+today". **That is false.** The Phase 1 check flagged `position` only together with a non-`auto`
+`z-index`, plus `transform`, `filter`, `contain`, `will-change` and `opacity`; it missed two
+things, both measured in Phase 2 on the working tree over `bd7a2e6b0`:
+
+1. **`.pinnable-dock-root { transform-style: preserve-3d; }`** (`components/dock/DockManagerStyles.scss:133`).
+   `preserve-3d` makes the dock root a stacking context and a containing block for fixed
+   descendants, and every editor lives inside it. Bisection [M]: a probe `position: fixed;
+   z-index: 10001` appended at each ancestor level of the panel loses to the Jodie button at every
+   level from `.editor-v2` up to `.pinnable-dock-root`, and wins from `.project-dock-wrapper` up;
+   below that level the fixed probe is also offset 50px down, the dock root's top. Controls: turning
+   off the `tabFadeIn` animation of `.dock-tabpane-active` and the `container-type: inline-size` of
+   `.dashboard-container` in the page changes nothing.
+2. **`#root` is `position: fixed`** (`z-index: auto`), a stacking context of its own. The Phase 1
+   chain listed it (`"position":"fixed","zIndex":"auto"`) and read it as none.
+
+Consequence [M]: the minimized Jodie button (`.jodie-minimized`, fixed, `z-index: 10000`, left
+`200px + 30px`, bottom 100px; `components/Jodie/JodieWindow.css:871-878`, `:918-923`) sits outside
+the dock, right above the chip. With the panel mounted in the editor at `left: 216px` it covered
+the Reset button of the open panel (`elementFromPoint` on Reset returned `button.jodie-minimized`;
+the 1850 turnstile e2e timed out on the Reset click, "jodie-minimized … intercepts pointer events"),
+and `z-index: 10001` on the panel changed nothing. The portaled panel had painted above the whole of
+`#root`, Jodie included. The general constraint: anything outside the dock with a positive z-index
+paints over the panel, whatever its z-index.
+
+Resolution (GO of 2026-09-24, option 1): the panel moves right of the button,
+`left: calc(200px + 30px + 58px + 16px)`. Scan [M] at 1600x1000, 1280x800 and 1024x768, chip closed
+and panel open on both faces (with and without the event warning line): no element outside
+`.pinnable-dock-root` with `position` fixed or absolute and `z-index > 0` intersects the panel
+(15 candidates each time); control, the same scan with the panel forced back to `left: 216px`, lists
+`button.jodie-minimized` (58x58 overlap) in every open face.
+
+Other Phase 2 findings:
+- The standalone route `/editor-v2` (`App.tsx:151`) renders no editor on the unchanged code:
+  `useActiveEditor must be used within an ActiveEditorProvider` (`EditorV2.tsx:634`, thrown by
+  `ActiveEditorContext.tsx:64`), a blank page. The panel, gated on `modelid`, never mounts there.
+- The 1850 e2e harness (`scripts/smoke/_tmp_sim1_verify.ts`, gitignored) prints `ALL GREEN` with
+  failures inside the e2e module: `failures += await e2e.run(...)` reads `failures` before the await.
