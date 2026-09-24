@@ -65,6 +65,7 @@ import { useAvatar } from '../../hooks/useAvatar';
 import { isAdvancedMode } from '../../hooks/useInterfaceMode';
 import { AVATAR_COLORS, AVATAR_ICONS } from '../../constants/avatarConfig';
 import { JjodelEvents, EnvGenEvents } from '../../events/registry';
+import { isConsumerMode } from '../../components/environment/consumerMode';
 import { DOCUMENT_TYPES, DocumentTypeEntry } from '../../constants/documentTypes';
 
 
@@ -570,6 +571,18 @@ function NavbarComponent(props: AllProps) {
     const recentProjects: MenuEntry[] = [];
     const [isFullscreen, setFullscreen] = useState(false);
     const toggleFullScreen = () => setFullscreen(U.toggleFullscreen(document.body));
+
+    // #157 Fase 3b: consumer (stand-alone) mode when a ?profile= is in the URL — trim the
+    // developer surfaces from the Navbar (New Project, New Metamodel, Tools, Analyze, and the
+    // developer-artifact tabs). isConsumerMode() reads the hash live; subscribe to hashchange so
+    // adding/removing ?profile= re-evaluates without a reload, consistent with LeftBar (F3-A).
+    const [, forceHashTick] = useState(0);
+    useEffect(() => {
+        const onHash = () => forceHashTick((t) => t + 1);
+        window.addEventListener('hashchange', onHash);
+        return () => window.removeEventListener('hashchange', onHash);
+    }, []);
+    const consumer = isConsumerMode();
 
     // Advanced Mode Tutorial state
     const [showAdvancedTutorial, setShowAdvancedTutorial] = useState(false);
@@ -1346,7 +1359,7 @@ function NavbarComponent(props: AllProps) {
 
         {name: 'File',
             subItems: [
-                {name: 'New Project',
+                consumer ? null : {name: 'New Project',
                     function: () => window.dispatchEvent(new CustomEvent(JjodelEvents.NEW_PROJECT)),
                     icon: <i className="bi bi-file-earmark-plus" />,
                     shortcutPills: formatShortcutPills(SHORTCUTS.NEW),
@@ -1354,7 +1367,7 @@ function NavbarComponent(props: AllProps) {
                 isDashboard ? null :
                 {name: 'New', icon: <i className="bi bi-plus-circle" />,
                     subItems: [
-                        {name: 'Metamodel', icon: <i className="bi bi-diagram-3" />, function: ()=> { project && createM2(project); }, shortcutPills: formatShortcutPills(SHORTCUTS.NEW_METAMODEL)},
+                        consumer ? null : {name: 'Metamodel', icon: <i className="bi bi-diagram-3" />, function: ()=> { project && createM2(project); }, shortcutPills: formatShortcutPills(SHORTCUTS.NEW_METAMODEL)},
                         newModel
                     ]
                 },
@@ -1503,8 +1516,9 @@ function NavbarComponent(props: AllProps) {
             ]
         },
 
-        /* Tools - hidden entirely on dashboard and in Basic mode; in editor with no metamodels shows only empty-state hint */
-        (isDashboard || !props.advanced) ? null : {name: 'Tools',
+        /* Tools - hidden entirely on dashboard, in Basic mode, and in consumer mode (#157 F3b);
+           in editor with no metamodels shows only empty-state hint */
+        (isDashboard || !props.advanced || consumer) ? null : {name: 'Tools',
             subItems: [
                 ...(metamodels.length === 0 ? [
                     {name: 'No metamodel tools', disabled: true, icon: <i className="bi bi-tools" />}
@@ -1521,7 +1535,7 @@ function NavbarComponent(props: AllProps) {
                 // Environment Generation - hidden when no metamodels
                 ...(metamodels.length === 0 ? [] : [
                     {name: 'divisor'},
-                    {name: 'Generate Environment...',
+                    {name: 'Configure Environment...',
                         function: () => {
                             window.dispatchEvent(new CustomEvent(EnvGenEvents.OPEN_WIZARD));
                         },
@@ -1539,8 +1553,9 @@ function NavbarComponent(props: AllProps) {
             ]
         },
 
-        /* Analyze - Live Validation/Validate are permanent stubs; advanced items hidden on dashboard */
-        {name: 'Analyze',
+        /* Analyze - Live Validation/Validate are permanent stubs; advanced items hidden on dashboard;
+           hidden entirely in consumer mode (#157 F3b: validation is a developer concern) */
+        consumer ? null : {name: 'Analyze',
             subItems: [
                 {name: 'Live Validation', function: placeholder, icon: <i className="bi bi-check-circle" />, disabled: true},
                 {name: 'Validate', function: placeholder, icon: <i className="bi bi-clipboard-check" />, disabled: true},
@@ -1790,7 +1805,11 @@ function NavbarComponent(props: AllProps) {
 
     // Overflow logic
     const MAX_VISIBLE_TABS = 6;
-    const visibleTabs = openTabs.filter(t => t.type !== 'project'); // Don't show project summary in navbar
+    // #157 Fase 3b: in consumer mode hide developer-artifact tabs (metamodel, viewpoint,
+    // transformation) from the strip — defense-in-depth behind the DockManager open guards (F3).
+    const developerTabTypes = new Set(['metamodel', 'viewpoint', 'transformation']);
+    const visibleTabs = openTabs.filter(t => t.type !== 'project' // Don't show project summary in navbar
+        && !(consumer && developerTabTypes.has(t.type)));
     const tabsToShow = visibleTabs.length > MAX_VISIBLE_TABS
         ? [...visibleTabs.slice(0, MAX_VISIBLE_TABS)]
         : visibleTabs;

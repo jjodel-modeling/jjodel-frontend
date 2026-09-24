@@ -1,4 +1,5 @@
 import {Mixin} from "ts-mixer";
+import {findEnvironmentConfig} from "./environmentConfig";
 import type {
     DEdge,
     DEdgePoint,
@@ -1321,6 +1322,23 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         this.setExternalPtr(DUser.current, 'projects', '+=');
         return this;
     }
+
+    // #157 Fase 0a — role-environment config. Created empty (lazy): topLevelTypes and roles are
+    // populated later via SetFieldAction. `father` is a back-pointer to the owning project, so
+    // DProject gains no field (docs/discovery/discovery_2026-09-23_157_standalone_configurator.md).
+    DEnvironmentConfig(projectId: Pointer<DProject>): this {
+        const _this: DEnvironmentConfig = this.thiss as any;
+        this.setPtr('father', projectId);
+        _this.topLevelTypes = [];
+        _this.profiles = [];
+        return this; }
+
+    DProfile(configId: Pointer<DEnvironmentConfig>, name?: string): this {
+        const _this: DProfile = this.thiss as any;
+        this.setPtr('father', configId);
+        _this.name = name || '';
+        _this.typePermissions = {};
+        return this; }
 
     static DGraph_maxID: number = 0;
     public static DGraph_makeID(modelid: DGraph["model"]): Pointer<DGraph, 1, 1, LGraph> {
@@ -3683,6 +3701,94 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
 RuntimeAccessibleClass.set_extend(DPointerTargetable, DProject);
 RuntimeAccessibleClass.set_extend(LPointerTargetable, LProject);
 export type WProject = getWParams<LProject, DProject>;
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// #157 Fase 0a — role-environment configuration (see
+// docs/discovery/discovery_2026-09-23_157_standalone_configurator.md).
+// `DEnvironmentConfig` is owned by a project via `father` (a back-pointer: DProject
+// gains no field). It persists on its own in `idlookup`; no VersionFixer migration is
+// needed because it is created lazily. Pure read/permission helpers live in
+// `joiner/environmentConfig.ts` (testable without a window).
+// ─────────────────────────────────────────────────────────────────────────────
+@RuntimeAccessible('DEnvironmentConfig')
+export class DEnvironmentConfig extends DPointerTargetable {
+    static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
+    static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
+
+    id!: Pointer<DEnvironmentConfig, 1, 1, LEnvironmentConfig>;
+    father!: Pointer<DProject>;
+    /** Metaclasses the developer promotes as top-level entry points of the Configurator, ordered. */
+    topLevelTypes: Pointer<DClass, 0, 'N'> = [];
+    profiles: Pointer<DProfile, 0, 'N'> = [];
+
+    public static new(projectId: Pointer<DProject>,
+                      callback?: ((d: DEnvironmentConfig, c: Constructors) => void)): DEnvironmentConfig {
+        return new Constructors(new DEnvironmentConfig('dwc'), undefined, true, undefined)
+            .DPointerTargetable().DEnvironmentConfig(projectId).end(callback); }
+
+    /** The config owned by a project, or null. Defaults to the URL project when omitted.
+     *  Named `getForProject` (not `get`) to avoid clashing with the static `RuntimeAccessibleClass.get`. */
+    static getForProject(projectId?: Pointer<DProject>, state?: DState): DEnvironmentConfig | null {
+        const s = state || store.getState();
+        const pid = (projectId || U.getProjectID_URL()) as string;
+        return findEnvironmentConfig(s.idlookup, pid) as (DEnvironmentConfig | null); }
+
+    /** Lazy read-or-create: returns the existing config or creates an empty one for the project. */
+    static getOrCreate(projectId?: Pointer<DProject>): DEnvironmentConfig {
+        const pid = (projectId || U.getProjectID_URL()) as Pointer<DProject>;
+        return DEnvironmentConfig.getForProject(pid) || DEnvironmentConfig.new(pid); }
+}
+
+@RuntimeAccessible('LEnvironmentConfig')
+export class LEnvironmentConfig<Context extends LogicContext<DEnvironmentConfig> = any, D extends DEnvironmentConfig = DEnvironmentConfig> extends LPointerTargetable {
+    static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
+    static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
+
+    readonly id!: Pointer<DEnvironmentConfig>;
+    father!: LProject;
+    topLevelTypes!: LClass[];
+    profiles!: LProfile[];
+}
+
+// A "profile" (role) restricts which top-level types a stand-alone viewer sees/edits.
+// Renamed from the Fase 0b draft's "DRole"; the pure helpers still read the legacy
+// className so profiles authored before the rename survive (environmentConfig.ts).
+@RuntimeAccessible('DProfile')
+export class DProfile extends DPointerTargetable {
+    static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
+    static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
+
+    id!: Pointer<DProfile, 1, 1, LProfile>;
+    father!: Pointer<DEnvironmentConfig>;
+    name: string = '';
+    /** Per-metaclass permission overrides (metaclass pointer → 'hidden'|'read'|'edit').
+     *  An absent key means the default: 'edit'. */
+    typePermissions: Dictionary<Pointer<DClass>, 'hidden' | 'read' | 'edit'> = {};
+
+    public static new(configId: Pointer<DEnvironmentConfig>, name?: string,
+                      callback?: ((d: DProfile, c: Constructors) => void)): DProfile {
+        return new Constructors(new DProfile('dwc'), undefined, true, undefined)
+            .DPointerTargetable().DProfile(configId, name).end(callback); }
+}
+
+@RuntimeAccessible('LProfile')
+export class LProfile<Context extends LogicContext<DProfile> = any, D extends DProfile = DProfile> extends LPointerTargetable {
+    static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
+    static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
+
+    readonly id!: Pointer<DProfile>;
+    father!: LEnvironmentConfig;
+    name!: string;
+    typePermissions!: Dictionary<Pointer<DClass>, 'hidden' | 'read' | 'edit'>;
+}
+
+RuntimeAccessibleClass.set_extend(DPointerTargetable, DEnvironmentConfig);
+RuntimeAccessibleClass.set_extend(LPointerTargetable, LEnvironmentConfig);
+export type WEnvironmentConfig = getWParams<LEnvironmentConfig, DEnvironmentConfig>;
+RuntimeAccessibleClass.set_extend(DPointerTargetable, DProfile);
+RuntimeAccessibleClass.set_extend(LPointerTargetable, LProfile);
+export type WProfile = getWParams<LProfile, DProfile>;
 
 
 @RuntimeAccessible('MyError')

@@ -13,6 +13,188 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-24 — feat(#157): «Copy stand-alone link» per profilo (Fase 4a)
+**Prompt**: «procede con la prossima fase» → F4, diviso in F4a (link, procedo ora) e F4b (assegnazione profilo→utente, tocca D/L → semantica da confermare).
+**Files touched**: `frontend/src/utils/shareUtils.ts`, `frontend/src/components/envgen/steps/ProfilesStep.tsx`. Referto discovery + questa entry in commit docs separato (§6.4/P13).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown — `npx tsc --noEmit` output COMPLETO **14** pre-esistenti (0 nei file toccati); `npm run build` `✓ built`. UI non esercitata a runtime in questa sessione.
+**Out-of-scope changes**: no — 2 file.
+**Layer Impact Report**: not-required — nessun file di §3.1; util pura + view (ProfilesStep). F4b (assegnazione) tocca D/L → fase separata.
+**Smoke visivo**: non eseguito — passi di verifica consegnati all'utente.
+**Notes**: Nuova `getStandaloneEnvironmentUrl(projectId, profileId)` in shareUtils (usa `window.location.origin`, link valido anche in locale; `getPublicProjectUrl` invariata). ProfilesStep: bottone «Copy stand-alone link» nel detail del profilo (riusa `copyToClipboard`), feedback «Copied!» 1.5s. F4b (profilo→utente) rinviata: tocca DProfile/LProfile (Rule 20 + LIR), semantica da decidere (metadata vs auto-risoluzione da email, §5). Referto nel discovery.
+**Prompt document name**: 2026-09-24 14:00
+
+## 2026-09-24 — feat(#157): trim della Navbar in consumer mode (Fase 3b)
+**Prompt**: «continua con la fase successiva» → F3b, trim della Navbar in consumer mode. Due decisioni comportamentali confermate dall'utente prima di scrivere (New Model tenuto, New Project nascosto).
+**Files touched**: `frontend/src/pages/components/Navbar.tsx`. Referto discovery + questa entry in commit docs separato (§6.4/P13).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown — `npx tsc --noEmit` output COMPLETO **14** pre-esistenti (0 nei file toccati); `npm run build` `✓ built`. UI non esercitata a runtime in questa sessione (smoke consegnato all'utente).
+**Out-of-scope changes**: no — 1 file.
+**Layer Impact Report**: not-required — nessun file di §3.1; solo view/shell (Navbar).
+**Smoke visivo**: non eseguito — passi di verifica consegnati all'utente.
+**Notes**: In consumer mode (`?profile=`, D2) la Navbar nasconde: File→New Project e File→New→Metamodel (New Model **tenuto**, decisione utente); menu Tools (Configure Environment/Metamodel Tools/Polymetric); menu Analyze (validazione/analytics/debug); e le tab developer (metamodel/viewpoint/transformation) dalla strip (difesa a valle dei guard DockManager di F3). Reattività via listener hashchange (come F3-A). Soft (D1). Referto: discovery_2026-09-24_157_fase3b_navbar_trim.md.
+**Prompt document name**: 2026-09-24 14:00
+
+## 2026-09-24 — fix(#157): shell reattiva a ?profile= all'uscita dal consumer mode
+**Prompt**: «mi sembra sia scomparso un menù»; tornando all'URL senza profilo la UI restava ristretta. Diagnosi (§5) + fix minore, esteso alla LeftBar su conferma esplicita dell'utente.
+**Files touched**: `frontend/src/pages/components/LeftBar.tsx`, `frontend/src/components/dock/MyRcDock.tsx`, `frontend/src/components/abstract/Dock.tsx`. Codice in commit separato (§6.4/RC-13); questa entry in commit docs.
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-23 12:00
+**Causa**: (d)
+**Regressions**: unknown — `npx tsc --noEmit` output COMPLETO **14** pre-esistenti (0 nei file toccati); `npm run build` `✓ built`. UI non esercitata a runtime in questa sessione (smoke consegnato all'utente).
+**Out-of-scope changes**: no — 3 file; l'estensione alla LeftBar (oltre al solo pannello) è stata approvata dall'utente prima di procedere (deroga dichiarata, RC-11).
+**Layer Impact Report**: not-required — nessun file di §3.1; solo view/shell (LeftBar/Dock/MyRcDock), nessun D-layer/sync/persistenza.
+**Smoke visivo**: non eseguito — app non avviata; passi di verifica consegnati all'utente.
+**Notes**: Causa (A) reattività: `isConsumerMode()` legge l'hash live ma LeftBar/DockManager valutavano solo al render (F3 dichiarava il follow-up). LeftBar: listener hashchange → re-render, sezioni developer tornano. Dock: su transizione consumer→developer chiama il nuovo `PinnableDock.forceEditorTypeBroadcast()` (resetta `_lastActiveId`+`_detectActiveTabChange`) → `body[data-editor-type]` si risincronizza, pannello Properties torna se un editor è aperto (no-op su dashboard).
+**Prompt document name**: 2026-09-24 11:47
+
+## 2026-09-23 — feat(#157): shell consumer ristretta da ?profile= (Fase 3, primo taglio)
+**Prompt**: procedi al prossimo step (F3). Perimetro confermato dall'utente: LeftBar + guardie DockManager (Navbar = F3b).
+**Files touched**: `frontend/src/components/environment/consumerMode.ts` (nuovo), `frontend/src/pages/components/LeftBar.tsx`, `frontend/src/components/abstract/DockManager.tsx`. Referto e questa entry in commit docs separato (§6.4).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown — `npm run typecheck` output COMPLETO **14** pre-esistenti (0 nei file toccati); `npm run build` `✓ built`. UI non esercitata a runtime in questa sessione.
+**Out-of-scope changes**: no — 3 file, perimetro concordato (Navbar rinviata a F3b).
+**Layer Impact Report**: produced — nel referto (view/shell + guard DockManager; nessun file §3.1, nessun D/sync/persistenza).
+**Smoke visivo**: non eseguito — app non avviata.
+**Notes**: `isConsumerMode()`=`!!U.getHashParam('profile')` (helper condiviso, letto live). In consumer: LeftBar nasconde sezioni Metamodels/Transforms/Viewpoints, item Megamodel e azione «Configure environment»; restano Models + «Open Configurator». DockManager: `open2` rifiuta i metamodelli in consumer (modelli ok), `openViewpoint` rifiuta del tutto. Soft (D1). Reattività: letto al render; toggle live via hashchange = follow-up. Referto: discovery_2026-09-23_157_fase3_consumer_shell.md.
+**Prompt document name**: 2026-09-23 12:00
+
+## 2026-09-23 — feat(#157): indicatore del profilo attivo nel Configurator (diagnostica)
+**Prompt**: l'utente riporta «New non disabilitato, posso modificare» ma non è chiaro se il profilo dell'URL arriva; serviva rendere visibile lo stato.
+**Files touched**: `frontend/src/components/environment/ConfiguratorTab.tsx`, `frontend/src/components/environment/configuratorTab.scss`. Questa entry in commit docs separato (§6.4).
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-23 12:00
+**Causa**: (d)
+**Regressions**: unknown — `npm run typecheck` output COMPLETO **14** pre-esistenti (0 nei file toccati); `npm run build` `✓ built`. Non riverificato a runtime in questa sessione.
+**Out-of-scope changes**: no — 2 file del ConfiguratorTab.
+**Layer Impact Report**: not-required — nessun file §3.1.
+**Smoke visivo**: non eseguito — l'indicatore serve proprio all'utente per lo smoke.
+**Notes**: Header del Configurator: chip «Profile: <nome>» quando `?profile=` risolve un profilo, altrimenti «No profile — full access» (grigio). List-head: badge «Read only» quando il tipo selezionato è `read` per il profilo. Rende visibile perché New è/non è disabilitato: se il chip dice «No profile» il parametro URL non arriva (stripping o profilo di altro progetto); se mostra il nome ma New resta attivo è mismatch di chiavi. Nessuna modifica alla logica del gate.
+**Prompt document name**: 2026-09-23 12:00
+
+## 2026-09-23 — fix(#157): permessi profilo come SegmentedControl (discoverability)
+**Prompt**: l'utente non trovava i controlli Editable/Read only/Hidden (erano dropdown poco evidenti); console conferma profilo con `perms: {}` (mai impostati).
+**Files touched**: `frontend/src/components/envgen/steps/ProfilesStep.tsx`. Questa entry in commit docs separato (§6.4).
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-23 12:00
+**Causa**: (d)
+**Regressions**: unknown — `npm run typecheck` output COMPLETO **14** pre-esistenti (0 nei file toccati); `npm run build` `✓ built`. Non riverificato a runtime in questa sessione.
+**Out-of-scope changes**: no — 1 file.
+**Layer Impact Report**: not-required — nessun file §3.1.
+**Smoke visivo**: non eseguito — in attesa del test utente.
+**Notes**: Nello step Profiles la scelta del permesso per-tipo passa da `<Select>` (tendina, default «Editable», poco scopribile) a `SegmentedControl` con i tre stati sempre visibili «Editable | Read only | Hidden» (controllo canonico D1). Write path invariato (`setPermission`→SetFieldAction su typePermissions). Nessun effetto sui pointer salvati.
+**Prompt document name**: 2026-09-23 12:00
+
+## 2026-09-23 — fix(#157): lettura del profilo dall'URL robusta e reattiva (F2)
+**Prompt**: diagnosi utente in console: `profileIdFromUrl: null` mentre il profilo esiste; F2 non applica i permessi.
+**Files touched**: `frontend/src/components/environment/ConfiguratorTab.tsx`. Questa entry in commit docs separato (§6.4).
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-23 12:00
+**Causa**: (c)
+**Regressions**: unknown — `npm run typecheck` output COMPLETO **14** pre-esistenti (0 nei file toccati); `npm run build` `✓ built`. Non riverificato a runtime in questa sessione.
+**Out-of-scope changes**: no — 1 file.
+**Layer Impact Report**: not-required — nessun file §3.1.
+**Smoke visivo**: non eseguito — in attesa del test utente sull'edit live dell'URL.
+**Notes**: `profileIdFromUrl` ora usa `U.getHashParam('profile')` (il parser canonico dell'app, lo stesso di `getProjectID_URL`) invece del parse manuale; il profileId è tenuto in `useState` e aggiornato su `hashchange` e all'apertura del pannello, così l'edit live di `?profile=` aggiorna il gate senza reload. Sospetto residuo (da confermare): la navigazione al progetto (`R.navigate('/project?id=..')`) potrebbe rimuovere `&profile=` dall'hash — se il test conferma, è un fix di preservazione a parte.
+**Prompt document name**: 2026-09-23 12:00
+
+## 2026-09-23 — feat(#157): applicazione permessi del profilo nel Configurator (Fase 2)
+**Prompt**: passa alla fase successiva (F2). + tracciare il cleanup di metamodelId/metamodelInfo e ricordarlo a fine feature.
+**Files touched**: `frontend/src/components/environment/ConfiguratorTab.tsx`, `frontend/src/components/environment/configuratorTab.scss`. Referto (addendum F2 + nota cleanup §7.1) e questa entry in commit docs separato (§6.4).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown — `npm run typecheck` output COMPLETO **14** pre-esistenti (0 nei file toccati); `npm run build` `✓ built`. UI non esercitata a runtime in questa sessione.
+**Out-of-scope changes**: no — 2 file del ConfiguratorTab.
+**Layer Impact Report**: not-required — nessun file di §3.1 toccato; il gate read-only è ESTERNO a IRForm (che è §3.1): wrapper `pointer-events:none`, non modifiche al form.
+**Smoke visivo**: non eseguito — app non avviata; il fix compila.
+**Notes**: Runtime: `resolveTypePermission(profile, typeId)` — `hidden` già filtrato dalla top-bar (F1 `visibleTopLevelTypes`); `read` → New disabilitato + IRForm in gate read-only (banner + `.configurator__ro-body{pointer-events:none}`, scroll sulla colonna detail); `edit` → pieno. Soft-frontend (D1): UX non sicurezza (nascondere dati a un profilo = backend, fuori scope). Per-campo rinviato. Cleanup metamodelId/metamodelInfo tracciato in §7.1 del referto di consolidamento, da rimuovere a feature completa.
+**Prompt document name**: 2026-09-23 12:00
+
+## 2026-09-23 — fix(#157): rimossa la selezione del metamodello dallo step General
+**Prompt**: in General rimuovere la selezione del metamodello (l'ambiente copre tutto il progetto, non un singolo metamodello).
+**Files touched**: `frontend/src/components/envgen/steps/GeneralStep.tsx`, `frontend/src/components/envgen/EnvGenWizardModal.tsx`, `frontend/src/components/envgen/hooks/useEnvGenWizard.ts`. Questa entry in commit docs separato (§6.4).
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-23 12:00
+**Causa**: (a)
+**Regressions**: unknown — `npm run typecheck` output COMPLETO **14** pre-esistenti (0 nei file toccati); `npm run build` `✓ built`. Non riverificato a runtime in questa sessione.
+**Out-of-scope changes**: no — 3 file dello stesso step/hook.
+**Layer Impact Report**: not-required — nessun file §3.1.
+**Smoke visivo**: non eseguito — screenshot utente; il fix compila.
+**Notes**: Tolti la select «Source Metamodel», l'info box del metamodello (props `metamodels`/`metamodelInfo` di GeneralStep e loro passaggio nel modale) e la validazione «Source metamodel is required» nell'hook (General passa col solo nome). Il campo `EnvGenGeneral.metamodelId` resta nel tipo (default '', innocuo); il metamodelInfo memo dell'hook resta ma inutilizzato (Rule 9).
+**Prompt document name**: 2026-09-23 12:00
+
+## 2026-09-23 — fix(#157): etichetta «metamodello:metaclasse» negli step del wizard
+**Prompt**: nello step «Editable metaclasses» le metaclassi omonime di metamodelli diversi (es. due `iSQD_Profile`) sono indistinguibili; etichettare `metamodello:metaclasse`.
+**Files touched**: `frontend/src/components/envgen/steps/MetaclassesStep.tsx`, `frontend/src/components/envgen/steps/ProfilesStep.tsx`. Questa entry in commit docs separato (§6.4).
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-23 12:00
+**Causa**: (a)
+**Regressions**: unknown — `npm run typecheck` output COMPLETO **14** pre-esistenti (0 nei file toccati); `npm run build` `✓ built`. Non riverificato a runtime in questa sessione (segnalato da screenshot utente).
+**Out-of-scope changes**: no — 2 step del wizard.
+**Layer Impact Report**: not-required — nessun file §3.1.
+**Smoke visivo**: non eseguito — screenshot fornito dall'utente mostra il problema; il fix compila.
+**Notes**: Entrambi gli step ora iterano `LProject.getProject().metamodels` (LModel `.name`+`.classes`) e mostrano `${metamodel.name}:${class.name}`. Il ConfiguratorTab runtime resta con nomi brevi (leggibilità fruitore). I pointer salvati (topLevelTypes/typePermissions) restano id di classe: cambia solo l'etichetta.
+**Prompt document name**: 2026-09-23 12:00
+
+## 2026-09-23 — refactor(#157): merge del configuratore nel wizard EnvGen + rename role→profile
+**Prompt**: esiste una bozza (wizard EnvGen); farne UN solo configuratore fondendo F0/F1, rinominare role→profile, tenere gestione profili + metaclassi editabili, rimuovere gli step concrete-syntax/tech-stack/output, riquadrare come modalità stand-alone (non generazione). Consolidare le prime 2 fasi.
+**Files touched**: envgen (`EnvGenWizardModal.tsx`/`.scss`, `hooks/useEnvGenWizard.ts`, `types.ts`, nuovi `steps/MetaclassesStep.tsx`+`steps/ProfilesStep.tsx`), `joiner/{classes.ts,environmentConfig.ts,index.ts,__tests__/environmentConfig.test.ts}`, `components/environment/ConfiguratorTab.tsx`, `pages/components/{LeftBar.tsx,Navbar.tsx}`; rimossi `components/environment/EnvironmentConfigModal.tsx`+`.scss`. Referto e log in commit docs separato (§6.4).
+**Outcome**: ✅ completed
+**Corregge**: 2026-09-23 12:00
+**Causa**: (f)
+**Regressions**: unknown — `npx vitest` env config **21/21**; `npm run typecheck` output COMPLETO **14** pre-esistenti (0 nei file toccati); `npm run build` `✓ built`. UI del wizard non esercitata a runtime in questa sessione (le parti metaclassi/profili sono le stesse di F0b, già confermate dall'utente).
+**Out-of-scope changes**: no — 15 file, tutti conseguenza diretta del merge richiesto (deroga RC-11 dichiarata; piano e stima file confermati prima di procedere).
+**Layer Impact Report**: not-required — nessun file di §3.1; scritture via SetFieldAction/`.new()` (self-transaction), nessun canvas/sync.
+**Smoke visivo**: non eseguito — app non avviata; type-safe e compilante.
+**Notes**: Persistenza: metaclassi+profili sullo stato di progetto (DEnvironmentConfig/DProfile, live), general/design/features restano su localStorage (EnvGenPersistence) immutati. Rename role→profile con back-compat (findProfile accetta legacy 'DRole'; profileIdsOf legge legacy 'roles'). Modale F0b assorbito in due step del wizard e rimosso; azione LeftBar e Navbar aprono il wizard (EnvGenEvents.OPEN_WIZARD). Footer "Generate"→"Done". Referto: discovery_2026-09-23_157_consolidation_envgen_merge.md.
+**Prompt document name**: 2026-09-23 12:00
+
+## 2026-09-23 — feat(#157): Configurator screen, primo taglio overlay (Fase 1)
+**Prompt**: passare a F1 (Configurator screen) dopo lo smoke ok di F0b. Scelta UX confermata dall'utente: overlay dal LeftBar (non tab del Dock).
+**Files touched**: `frontend/src/components/environment/ConfiguratorTab.tsx` (nuovo), `frontend/src/components/environment/configuratorTab.scss` (nuovo), `frontend/src/pages/components/LeftBar.tsx`. Referto e questa entry in commit docs separato (§6.4).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown — `npm run typecheck` output COMPLETO **14** pre-esistenti (0 nei file toccati); `npm run build` `✓ built`. UI non esercitata a runtime in questa sessione.
+**Out-of-scope changes**: no — 3 file (coppia componente+scss + aggancio LeftBar); nessun tocco a InstanceManagerTab/DockManager.
+**Layer Impact Report**: not-required — nessun file di §3.1; riuso di helper/adapter esistenti (`instancesOfClass`, `IRForm`, `applyCreate`), `applyCreate` chiamata bare (editor-v2 §3.3, nessuna TRANSACTION esterna).
+**Smoke visivo**: non eseguito — app non avviata; UI type-safe e compilante ma non provata a mano. Criterio (tipo→istanze→New crea e apre) da verificare a runtime.
+**Notes**: Overlay full-screen (createPortal→body) da azione «Open Configurator» nel project sidebar. Top-bar = visibleTopLevelTypes(config F0, ruolo da ?role); lista via instancesOfClass sul primo modello del progetto; dettaglio via IRForm; New = makeShapeCtx→newDraft→applyCreate (bare). Sola lettura della config; gating read/edit rinviato a F2; picker modello e tab-vero rinviati a F1b. Referto: discovery_2026-09-23_157_fase1_configurator.md.
+**Prompt document name**: 2026-09-23 12:00
+
+## 2026-09-23 — feat(#157): mini-UI Environment config (Fase 0b)
+**Prompt**: passare alla Fase 0b — mini-UI per il language developer per marcare i tipi top-level e creare/editare i ruoli con permessi per-tipo. Niente PR.
+**Files touched**: `frontend/src/components/environment/EnvironmentConfigModal.tsx` (nuovo), `frontend/src/components/environment/environmentConfigModal.scss` (nuovo), `frontend/src/pages/components/LeftBar.tsx`. Referto (addendum) e questa entry in commit docs separato (§6.4).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown — `npm run typecheck` output COMPLETO **14** pre-esistenti (0 nei file toccati); `npm run build` `✓ built`. UI non esercitata a runtime in questa sessione (app non avviata).
+**Out-of-scope changes**: no — 3 file (coppia componente+scss come unità logica + l'aggancio nel LeftBar).
+**Layer Impact Report**: not-required — nessun file §3.1; UI classica, scritture via SetFieldAction/DRole.new (self-transaction), nessun edge di canvas.
+**Smoke visivo**: non eseguito — app non avviata; la UI compila ed è type-safe ma non provata a mano. Criterio (marca 4 tipi + crea 2 ruoli persistenti) da verificare a runtime.
+**Notes**: Modale portallato (createPortal→body) aperto da un'azione del project sidebar (LeftBar). Config letta via findEnvironmentConfig su idlookup (lazy getOrCreate all'apertura), scritture SetFieldAction replace; topLevelTypes da LProject.classes; permessi hidden/read/edit su DRole.typePermissions (solo override, default edit). Delete ruolo = unreference (TODO cleanup entità). Referto: discovery_2026-09-23_157_fase0a_entity_pattern.md addendum F0b.
+**Prompt document name**: 2026-09-23 12:00
+
+## 2026-09-23 — feat(#157): entità DEnvironmentConfig/DRole (Fase 0a, schema + read/write)
+**Prompt**: eseguire il prompt di corsia della Fase 0a (docs/prompts/claude_2026-09-23_1200_prompt_157_fase0a_environment_config.md): entità di configurazione ruoli/ambienti, solo schema dati e read/write, nessuna UI. Hard-stop di approvazione sciolto dal committente.
+**Files touched**: `frontend/src/joiner/classes.ts`, `frontend/src/joiner/index.ts`, `frontend/src/joiner/environmentConfig.ts` (nuovo), `frontend/src/joiner/__tests__/environmentConfig.test.ts` (nuovo). Referto e questa entry in commit docs separato (§6.4).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `npx vitest run` sul file nuovo **17/17**; `npm run typecheck` output COMPLETO **14** errori pre-esistenti (baseline file noti), **0** nei file toccati; `npm run build` `✓ built` col solo warning chunk-size.
+**Out-of-scope changes**: no — 4 file, tutti previsti dal prompt F0a.
+**Layer Impact Report**: not-required — nessun file di §3.1; nuova entità D/L, nessuna scrittura sync/portDistribution, `.new()` self-gestisce la sua TRANSACTION (nessun creator dentro TRANSACTION esterna, §3.3/§3.4 fuori portata).
+**Smoke visivo**: non applicabile — F0a non ha UI.
+**Notes**: Entità agganciata al progetto via `father` + scan idlookup (nessun campo su DProject/DState); create lazy (`getOrCreate`), nessun VersionFixer. Logica pura (scan/permessi) in `joiner/environmentConfig.ts`, testabile senza `window`. Gotcha: `static get` collide con `RuntimeAccessibleClass.get` (TS2417) → rinominato `getForProject`. Referto: discovery_2026-09-23_157_fase0a_entity_pattern.md.
+**Prompt document name**: 2026-09-23 12:00
+
 ## 2026-09-18 — docs: trasporto normativo, passo 2 di P-2026-09-18-2110
 **Prompt**: passo 2 di P-2026-09-18-2110 (emenda P-2026-09-18-1930): portare sul tronco tre dei
 quattro delta normativi misurati a `fbcbcb820` contro questo tronco (`7bc6c7365`) — §9.3 di

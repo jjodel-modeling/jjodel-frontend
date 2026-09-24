@@ -1,4 +1,4 @@
-import {useState, MouseEventHandler, JSX} from 'react';
+import {useState, useEffect, MouseEventHandler, JSX} from 'react';
 import {useSelector} from 'react-redux';
 import {DProject, LProject, LUser, R, U} from '../../joiner';
 
@@ -12,7 +12,9 @@ import { buildProjectExportJson } from '../../model/megamodelPersistence';
 import { getRuntimeMegamodel } from '../../model/megamodelRuntime';
 import DockManager from '../../components/abstract/DockManager';
 import { createM2 } from './Navbar';
-import { JjodelEvents } from '../../events/registry';
+import { JjodelEvents, EnvGenEvents } from '../../events/registry';
+import ConfiguratorTab from '../../components/environment/ConfiguratorTab';
+import { isConsumerMode } from '../../components/environment/consumerMode';
 
 const SHARE_DISABLED_HINT = 'Only public projects can be shared';
 
@@ -249,6 +251,7 @@ function LeftBar(props: LeftBarProps): JSX.Element {
 
     // Collapsed state for project-sidebar sections (local-only)
     const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+    const [showConfigurator, setShowConfigurator] = useState(false);
     const toggleSection = (key: string) =>
         setCollapsedSections(prev => ({ ...prev, [key]: !prev[key] }));
 
@@ -270,6 +273,20 @@ function LeftBar(props: LeftBarProps): JSX.Element {
     const canShare = useSelector((state: any) =>
         (project?.id ? state?.idlookup?.[project.id]?.type : undefined) === 'public');
 
+    // #157 Fase 3 (A): isConsumerMode() reads the hash live, but this component only re-renders
+    // on prop/Redux changes — so adding or removing ?profile= would not toggle the developer
+    // surfaces until an unrelated re-render (leaving the rail stuck in the restricted state after
+    // the profile is removed). Subscribe to hashchange to re-evaluate on profile add/remove.
+    const [, forceHashTick] = useState(0);
+    useEffect(() => {
+        const onHash = () => forceHashTick((t) => t + 1);
+        window.addEventListener('hashchange', onHash);
+        return () => window.removeEventListener('hashchange', onHash);
+    }, []);
+
+    // #157 Fase 3: consumer (stand-alone) mode when a ?profile= is in the URL — hide the
+    // developer surfaces (metamodels, transformations, viewpoints, megamodel, env authoring).
+    const consumer = isConsumerMode();
     const pMetamodels = project?.metamodels || [];
     const pModels = project?.models || [];
     const pViewpoints = project?.viewpoints || [];
@@ -349,13 +366,13 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                 </div>
 
                 {/* Project Megamodel — single entry (listener in ProjectEditor.tsx:360) */}
-                <div className="psb-megamodel" onClick={openMegamodel} title="Project Megamodel">
+                {!consumer && <div className="psb-megamodel" onClick={openMegamodel} title="Project Megamodel">
                     <i className="bi bi-diagram-3" />
                     <span className="psb-item-name">{project?.name || 'Project Megamodel'}</span>
                     <i className="bi bi-arrow-right psb-item-arrow" />
-                </div>
+                </div>}
 
-                {renderSection(
+                {!consumer && renderSection(
                     'metamodels', 'Metamodels', 'M',
                     pMetamodels.map(m => ({ id: m.id, name: m.name })),
                     (m) => { const lm = pMetamodels.find(x => x.id === m.id); if (lm) DockManager.open2(lm); },
@@ -381,7 +398,7 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                     },
                 )}
 
-                {renderSection(
+                {!consumer && renderSection(
                     'transformations', 'Transforms', 'T',
                     pTransformations.map(t => ({ id: t.id, name: t.name })),
                     // Opening a transformation needs source/target metamodels + the execute
@@ -394,7 +411,7 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                     'New transform',
                 )}
 
-                {renderSection(
+                {!consumer && renderSection(
                     'viewpoints', 'Viewpoints', 'V',
                     pViewpoints.map(v => ({ id: v.id, name: v.name })),
                     (v) => { const lv = pViewpoints.find(x => x.id === v.id); if (lv) DockManager.openViewpoint(lv); },
@@ -425,12 +442,21 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                             <i className="bi bi-share" />
                             <span>Share</span>
                         </div>
+                        <div className="psb-action" onClick={() => setShowConfigurator(true)}>
+                            <i className="bi bi-grid-1x2" />
+                            <span>Open Configurator</span>
+                        </div>
+                        {!consumer && <div className="psb-action" onClick={() => window.dispatchEvent(new CustomEvent(EnvGenEvents.OPEN_WIZARD))}>
+                            <i className="bi bi-shield-lock" />
+                            <span>Configure environment</span>
+                        </div>}
                         <div className="psb-action psb-action--danger" onClick={closeProject}>
                             <i className="bi bi-x-circle" />
                             <span>Close project</span>
                         </div>
                     </div>
                 </div>
+                <ConfiguratorTab open={showConfigurator} onClose={() => setShowConfigurator(false)} />
             </div>
             :
             <div className={'leftbar'}>

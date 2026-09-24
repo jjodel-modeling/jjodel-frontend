@@ -950,3 +950,95 @@ html[data-theme="dark"] {
         }
     }
 }
+
+// ============================================
+// #157 STAND-ALONE STEPS (metaclasses + profiles)
+// ============================================
+
+.envgen-empty-hint {
+    color: $color-text-secondary;
+    font-size: 13px;
+    margin: 8px 0;
+}
+
+.envgen-checklist {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 4px 16px;
+
+    li { padding: 2px 0; }
+}
+
+.envgen-profile-add {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.envgen-profiles {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: 16px;
+    align-items: start;
+}
+
+.envgen-profile-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border: 1px solid $color-border;
+    border-radius: $radius-lg;
+    overflow: hidden;
+
+    li {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 6px 10px;
+        cursor: pointer;
+        border-bottom: 1px solid $color-border;
+
+        &:last-child { border-bottom: none; }
+        &:hover { background: $color-bg-tertiary; }
+        &.selected { background: $color-bg-tertiary; font-weight: 600; }
+
+        span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    }
+}
+
+.envgen-profile-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.envgen-perm-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 4px 0;
+
+    &__name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        flex: 1 1 auto;
+    }
+}
+
+.envgen-icon-btn {
+    border: none;
+    background: transparent;
+    color: $color-danger;
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: $radius-sm;
+
+    &:hover { background: $color-bg-tertiary; }
+}
