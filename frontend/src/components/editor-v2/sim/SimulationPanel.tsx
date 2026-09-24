@@ -1,7 +1,8 @@
 /**
  * SimulationPanel — control panel of the state-machine simulation, v1
  * (R-SIM-1..R-SIM-6). Floating panel, closed to a chip (progressive
- * disclosure), mounted in editor-v2 and portaled to <body> by EditorV2.
+ * disclosure), mounted by EditorV2 inside the editor, not portaled: a hidden
+ * dock tab hides it with its editor (P-2026-09-24-1005).
  *
  * Two faces, one component:
  *
@@ -27,67 +28,18 @@ import { Dispatch, ReactElement, useCallback, useEffect, useMemo, useState } fro
 import { connect } from 'react-redux';
 import { DState, LPointerTargetable, store } from '../../../joiner';
 import { getSimActiveIds, simApplyStep, simClear, simReset, useSimVersion } from './simRunState';
+import { ROLE_SPECS, eventRoleWarning, incompleteConfigurationMessage, missingEngineRoles, missingEventRoles } from './simRoleStatus';
 import { enabledEvents, epsilonEnabled, eventAlphabet, initialConfiguration, runStatus as computeRunStatus, stepFlowchartBoolean } from '../../../model/simulation/step';
 import { overlapVerdict, roleWriteVerdict, stcFromRoles } from '../../../model/simulation/stcFromRoles';
 import type { RoleOverlap } from '../../../model/simulation/stcFromRoles';
 import { isKindOf } from '../../../model/simulation/isKindOf';
 import { objectLabel, objectReferences } from '../../../model/simulation/objectSlots';
 import type { SimConfiguration, SimEventInfo, SimModelView } from '../../../model/simulation/types';
+import type { RoleKey, RoleKind, Roles } from './simRoleStatus';
 import './simulation-panel.scss';
 
-// ---------------------------------------------------------------------------
-// Roles — flat keys in the M2 bag (R-SIM-2). No nested `sim: {...}` object: the
-// bag copy is shallow, a nested mutation would escape actions/undo/re-render.
-// ---------------------------------------------------------------------------
-
-type RoleKey =
-    | 'simNode'
-    | 'simInitial'
-    | 'simTerminal'
-    | 'simTransition'
-    | 'simOwnedTransitions'
-    | 'simNextState'
-    | 'simEvent'
-    | 'simTrigger'
-    | 'simEventIdentifier';
-
-type RoleKind = 'class' | 'composition' | 'reference' | 'attribute';
-
-interface RoleSpec {
-    key: RoleKey;
-    label: string;
-    kind: RoleKind;
-    placeholder: string;
-}
-
-const ROLE_SPECS: RoleSpec[] = [
-    { key: 'simNode', label: 'Node', kind: 'class', placeholder: 'Select a metaclass' },
-    { key: 'simInitial', label: 'Initial', kind: 'class', placeholder: 'Select a metaclass' },
-    { key: 'simTerminal', label: 'Terminal', kind: 'class', placeholder: 'Select a metaclass' },
-    { key: 'simTransition', label: 'Transition', kind: 'class', placeholder: 'Select a metaclass' },
-    { key: 'simOwnedTransitions', label: 'Owned transitions', kind: 'composition', placeholder: 'Select a composition' },
-    { key: 'simNextState', label: 'Next state', kind: 'reference', placeholder: 'Select a reference' },
-    // The event role (step 1, R-SIM-16): optional, and it exists only when Event
-    // and Trigger are both set (stcFromRoles). The identifier only labels the buttons.
-    { key: 'simEvent', label: 'Event', kind: 'class', placeholder: 'Select a metaclass' },
-    { key: 'simTrigger', label: 'Trigger', kind: 'reference', placeholder: 'Select a reference' },
-    { key: 'simEventIdentifier', label: 'Event identifier', kind: 'attribute', placeholder: 'Select an attribute' },
-];
-
+// Roles: ROLE_SPECS, ENGINE_ROLE_KEYS and the role types live in simRoleStatus.ts.
 const ROLE_KEYS: RoleKey[] = ROLE_SPECS.map(r => r.key);
-
-/**
- * Roles the ENGINE reads: initial (reset), terminal (termination), the
- * composition of the outgoing transitions and the reference to the next state
- * (step). `simNode` and `simTransition` are declarative in v1 — `simTransition`
- * is configurable but unread in the prototype too (discovery Q2), and the
- * run-state no longer needs `simNode` to know which instances to clear (the
- * singleton is emptied wholesale). Gating the buttons on exactly what the engine
- * reads avoids a panel disabled for a role nothing consumes.
- */
-const ENGINE_ROLE_KEYS: RoleKey[] = ['simInitial', 'simTerminal', 'simOwnedTransitions', 'simNextState'];
-
-type Roles = Partial<Record<RoleKey, string>>;
 
 interface MetaOption { id: string; name: string }
 interface MetaOptions { classes: MetaOption[]; compositions: MetaOption[]; references: MetaOption[]; attributes: MetaOption[] }
@@ -271,7 +223,7 @@ type RunStatus = 'Not started' | 'Running' | 'Terminated' | 'Deadlock';
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 function SimulationPanelComponent(props: AllProps): ReactElement | null {
-    const { modelid, isModelMode, configModelId, roleSig, optionSig, ownedTransitionsName, nextStateName, eventSig } = props;
+    const { modelid, isModelMode, configModelId, configModelName, roleSig, optionSig, ownedTransitionsName, nextStateName, eventSig } = props;
     const [open, setOpen] = useState(false);
     // Reasons shown when a role write (M2 face) or a run start (M1 face) is refused,
     // and the warning of a run started despite an overlap (no event role, R-SIM-16 parity).
@@ -302,7 +254,11 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
     // that model's run only.
     useEffect(() => () => { simClear(modelid); }, [modelid]);
 
-    const rolesComplete = ENGINE_ROLE_KEYS.every(k => !!roles[k]);
+    /** Labels of the unset engine roles (simRoleStatus.ts): the run controls need none. */
+    const missingRoles = missingEngineRoles(roles);
+    const rolesComplete = missingRoles.length === 0;
+    /** The missing half of a half-set event role: the run starts without events (R-SIM-16). */
+    const eventGap = missingEventRoles(roles);
     /** The event role is declared: the rule of stcFromRoles, both keys set. */
     const eventRole = !!(roles.simEvent && roles.simTrigger);
 
@@ -464,11 +420,16 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                                 </select>
                             </label>
                         ))}
+                        {eventGap.length > 0 && (
+                            <div className="sim-panel__hint sim-panel__hint--warning">{eventRoleWarning(eventGap, null)}</div>
+                        )}
                         {roleError && <div className="sim-panel__hint sim-panel__hint--error">{roleError}</div>}
                         {roleWarning && <div className="sim-panel__hint sim-panel__hint--warning">{roleWarning}</div>}
                     </>
                 ) : !rolesComplete ? (
-                    <div className="sim-panel__hint">Configure simulation roles on the metamodel</div>
+                    <div className="sim-panel__hint">
+                        {configModelId ? incompleteConfigurationMessage(configModelName, missingRoles) : 'No metamodel to configure.'}
+                    </div>
                 ) : (
                     <>
                         <div className="sim-panel__actions">
@@ -488,6 +449,9 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                                 <i className="bi bi-stop-fill" />
                             </button>
                         </div>
+                        {eventGap.length > 0 && (
+                            <div className="sim-panel__hint sim-panel__hint--warning">{eventRoleWarning(eventGap, configModelName)}</div>
+                        )}
                         {eventRole && (
                             <>
                                 <div className="sim-panel__section">Events</div>
@@ -537,6 +501,8 @@ export interface OwnProps {
 interface StateProps {
     /** Model whose bag holds the roles: the M2 itself, or the M1's metamodel. */
     configModelId: string | null;
+    /** Name of that model, for the messages that say where a role is missing; '' when unknown. */
+    configModelName: string;
     /** JSON of the role pointers (six, plus the event role's three) — a primitive, so shallow compare works. */
     roleSig: string;
     /** JSON of the option lists; empty on the M1 face, which does not need them. */
@@ -569,6 +535,7 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
 
     return {
         configModelId,
+        configModelName: (configModelId && lookup[configModelId]?.name) || '',
         roleSig: JSON.stringify(roles),
         optionSig: !ownProps.isModelMode && configModelId
             ? JSON.stringify(collectMetaOptions(lookup, configModelId))
