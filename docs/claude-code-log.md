@@ -13,6 +13,19 @@ rewrite su albero condiviso a causare il secondo incidente. Formato «SHA -> con
 - `ed5c80daa` — referto UNQ1 C5 che cita l'hash del codice sbagliato (`46a38022`, tolto dal
   ramo dal `reset` di un'altra corsia). Corretto in `ca0adaf95`, che lo riporta a `4bde4359`.
 
+## 2026-09-23 — feat(#157): shell consumer ristretta da ?profile= (Fase 3, primo taglio)
+**Prompt**: procedi al prossimo step (F3). Perimetro confermato dall'utente: LeftBar + guardie DockManager (Navbar = F3b).
+**Files touched**: `frontend/src/components/environment/consumerMode.ts` (nuovo), `frontend/src/pages/components/LeftBar.tsx`, `frontend/src/components/abstract/DockManager.tsx`. Referto e questa entry in commit docs separato (§6.4).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown — `npm run typecheck` output COMPLETO **14** pre-esistenti (0 nei file toccati); `npm run build` `✓ built`. UI non esercitata a runtime in questa sessione.
+**Out-of-scope changes**: no — 3 file, perimetro concordato (Navbar rinviata a F3b).
+**Layer Impact Report**: produced — nel referto (view/shell + guard DockManager; nessun file §3.1, nessun D/sync/persistenza).
+**Smoke visivo**: non eseguito — app non avviata.
+**Notes**: `isConsumerMode()`=`!!U.getHashParam('profile')` (helper condiviso, letto live). In consumer: LeftBar nasconde sezioni Metamodels/Transforms/Viewpoints, item Megamodel e azione «Configure environment»; restano Models + «Open Configurator». DockManager: `open2` rifiuta i metamodelli in consumer (modelli ok), `openViewpoint` rifiuta del tutto. Soft (D1). Reattività: letto al render; toggle live via hashchange = follow-up. Referto: discovery_2026-09-23_157_fase3_consumer_shell.md.
+**Prompt document name**: 2026-09-23 12:00
+
 ## 2026-09-23 — feat(#157): indicatore del profilo attivo nel Configurator (diagnostica)
 **Prompt**: l'utente riporta «New non disabilitato, posso modificare» ma non è chiaro se il profilo dell'URL arriva; serviva rendere visibile lo stato.
 **Files touched**: `frontend/src/components/environment/ConfiguratorTab.tsx`, `frontend/src/components/environment/configuratorTab.scss`. Questa entry in commit docs separato (§6.4).
