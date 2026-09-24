@@ -2,7 +2,7 @@
 
 Prompt-ID: P-2026-09-25-0016
 Chat: C-2026-09-25-0016
-Status: da eseguire
+Status: eseguito 2026-09-25 · lane merge · 2dd17270b
 
 Worktree: `~/jjodel-release`, branch `alfonso-frontend-jjtl`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop and say so; never work by absolute path on another worktree, except for the read-only probe of step 3, which runs in `~/jjodel-gate` and leaves it as found. Do not touch `~/jjodel`, `~/jjodel-sim`, or `~/jjodel-harness` (private notes, not a worktree).
 
