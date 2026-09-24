@@ -1420,6 +1420,48 @@ Base: discussione in chat del 2026-09-23 sulla spec
   all'interleaving del passo 3 (R-SIM-7). La sovrapposizione dei ruoli nodo/arco senza ruolo
   evento è un avviso, al salvataggio e all'avvio; con il ruolo evento è un rifiuto.
 
+### Ratifiche 2026-09-25: nucleo di Petri (R-SIM-21..26)
+
+Memo: `docs/ratifiche/claude_ratifiche_2026-09-25_rsim21_nucleo_petri.md`. Semantica discussa il
+2026-09-24 (`docs/sessioni/sessione_2026-09-24.md`, paragrafo «Semantica, discussa e non ancora
+ratificata») e ratificata da Alfonso il 2026-09-25. Ratificare non è schedulare: l'implementazione
+entra dal passo 3, dopo la sua discovery.
+
+- **R-SIM-21** (2026-09-25). **Il nucleo del motore è la transizione di Petri.** Una transizione ha
+  un preset e un postset di posti; flowchart e statechart ne sono casi particolari (uno stato o un
+  blocco è un posto, un arco è una transizione con un posto nel preset e uno nel postset). Una
+  transizione è abilitata quando ogni posto del preset porta almeno il peso del suo arco, la guardia
+  è vera e nessun inibitore la blocca (R-SIM-24). Lo scatto toglie i pesi dal preset, li aggiunge al
+  postset ed esegue le azioni della transizione come assegnamenti paralleli letti sullo stato
+  precedente. Interleaving invariato (R-SIM-7): uno scatto per passo, che coincide con la semantica
+  a sequenze di firing.
+- **R-SIM-22** (2026-09-25). **Fork e join sono istruzioni di compilazione, non costrutti del
+  nucleo.** Ruoli facoltativi `simFork` e `simJoin` nella STC. Un fork parallelo compila in una
+  transizione con più posti nel postset; un fork non deterministico è un conflitto fra transizioni
+  che condividono un posto del preset. Un join con sincronizzazione compila in una transizione con
+  più posti nel preset (AND-join), senza token sugli archi; un join di merge è fatto di più
+  transizioni verso lo stesso posto. Una STC senza questi ruoli si comporta come oggi.
+- **R-SIM-23** (2026-09-25). **Marking a naturali limitati, con pesi.** Ogni posto porta un naturale
+  da 0 a k; k si dichiara nella STC, default 1 (reti safe). Uno scatto che porterebbe un posto oltre
+  k è l'errore «unsafe»: il run si ferma e lo segnala, non satura. Ogni arco porta un peso naturale,
+  default 1. Il dominio finito del marking è quello che l'esportatore `.smv` dichiara (R-SIM-19).
+- **R-SIM-24** (2026-09-25). **Archi inibitori come guardia.** L'inibitore non è un tipo di arco del
+  nucleo: è una guardia che legge il marking attraverso un accessore di sola lettura. Nessuna radice
+  nuova oltre le quattro riservate (`self`, `event`, `model`, `node`); la forma dell'accessore la
+  propone la discovery del passo 3, a partire da `marked` (R-SIM-11).
+- **R-SIM-25** (2026-09-25). **Riduzione dei costrutti di flowchart a tre concetti:** guardia con
+  arco `else` esplicito, scelta esterna, fork/join (R-SIM-22). Un decision block con esito booleano
+  è una coppia di transizioni con guardia ed `else`. La scelta esterna (modale all'utente, random,
+  scenario) è una politica del selettore (R-SIM-7), mai un'espressione con effetti nella guardia:
+  la guardia resta pura e l'esportatore vede la scelta come non determinismo.
+- **R-SIM-26** (2026-09-25). **La terminazione è una proprietà del marking**, non del raggiungimento
+  di un elemento con ruolo `Terminal`. Restano aperti, da chiudere nella discovery del passo 3 e da
+  ratificare a parte: la forma del predicato di terminazione, il destino del ruolo `Terminal` oggi
+  obbligatorio (fonte del predicato di default o ruolo facoltativo), e se il motore distingue la
+  terminazione dal deadlock.
+- **Esclusi** (2026-09-25): OR-join alla BPMN, reti non limitate, reti colorate, reti temporizzate.
+  Il tipo `Expression` nel core resta una proposta separata, non ratificata qui.
+
 ## Serie R-J — JjEL come linguaggio delle espressioni dell'IR (ratifiche 2026-08-18)
 
 Base di evidenza: `docs/discovery/discovery_2026-08-14_jjel_come_linguaggio_espressioni_ir.md`
