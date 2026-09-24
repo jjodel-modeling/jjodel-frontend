@@ -26,11 +26,20 @@
 export function isKindOf(lookup: Record<string, any>, objectId: string, classId: string): boolean {
     const start = lookup[objectId]?.instanceof;
     if (typeof start !== 'string') return false;
+    return classIsKindOf(lookup, start, classId);
+}
+
+/**
+ * The same walk from a class instead of an object: true when `classId` is
+ * `ancestorId` or inherits from it. The disjointness check of the STC roles
+ * compares classes, not instances (R-SIM-16).
+ */
+export function classIsKindOf(lookup: Record<string, any>, classId: string, ancestorId: string): boolean {
     const seen = new Set<string>();
-    const queue: string[] = [start];
+    const queue: string[] = [classId];
     while (queue.length > 0) {
         const cid = queue.shift() as string;
-        if (cid === classId) return true;
+        if (cid === ancestorId) return true;
         if (seen.has(cid)) continue;
         seen.add(cid);
         const ext = lookup[cid]?.extends;

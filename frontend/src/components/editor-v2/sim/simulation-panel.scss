@@ -258,6 +258,76 @@
         }
     }
 
+    // -- open: events (M1, step 1, R-SIM-16) --------------------------------
+    // One button per event instance. Enablement changes only the opacity: the
+    // buttons keep their box, so the section does not shift when the marking moves.
+    &__events {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 0 0 8px;
+    }
+
+    &__event {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        max-width: 100%;
+        height: 24px;
+        padding: 0 8px;
+        border: 1px solid var(--color-border-primary);
+        border-radius: 4px;
+        background: var(--color-bg-primary);
+        color: var(--color-text-secondary);
+        font-family: inherit;
+        font-size: 11px;
+        line-height: 1;
+        cursor: pointer;
+
+        span {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .bi {
+            font-size: 11px;
+            line-height: 1;
+        }
+
+        // Follows the button's own colour, hover included.
+        .bi,
+        .bi:hover {
+            color: inherit;
+        }
+
+        &:hover:not(:disabled) {
+            border-color: var(--color-border-hover);
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid #0ea5e9;
+            outline-offset: 2px;
+        }
+
+        &:disabled {
+            opacity: 0.45;
+            cursor: default;
+        }
+    }
+
+    // A refused role write or run start: the reason, in the error text token.
+    &__hint--error {
+        color: var(--color-error-text);
+    }
+
+    // A run started, or a role saved, despite a role overlap (no event role): the warning text token.
+    &__hint--warning {
+        color: var(--color-warning-text);
+    }
+
     &__status {
         display: flex;
         align-items: center;
