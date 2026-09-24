@@ -20,7 +20,7 @@ import {DEFAULT_VIEW_JSX_STRING, LEGACY_PLACEHOLDER_MARKER, V2_2_TO_V2_3_DETECT_
     CLASSIC_OBJECT_VIEW_MARKER, CLASSIC_VALUE_VIEW_MARKER, CLASSIC_SINGLETON_VIEW_MARKER,
     CLASSIC_EDGE_RELATION_MARKER, JJODEL_ABSTRACT_SYNTAX_MARKER, CLASSIC_EDGEPOINT_VIEW_MARKER,
     CLASSIC_ANCHOR_OVERLAY_MARKER, CLASSIC_VOID_VIEW_MARKER} from "../utils/defaultViewTemplate";
-import {defaultObjectViewIR} from "../components/editor-v2/viewpoint/ir/irDefaults";
+import {defaultObjectViewIR, withMigratedHash} from "../components/editor-v2/viewpoint/ir/irDefaults";
 
 /*
                                     TODO for every update: check the VersionFixer.help() function
@@ -1036,7 +1036,7 @@ everytime you put hands into a D-Object shape or valid values, you should docume
 
             const jsx: string = e.jsxString;
             if (jsx.includes(CLASSIC_OBJECT_VIEW_MARKER) || jsx.includes(CLASSIC_SINGLETON_VIEW_MARKER)) {
-                e.ir = { ...defaultObjectViewIR(), migratedFrom: 'classic-default' };
+                e.ir = withMigratedHash({ ...defaultObjectViewIR(), migratedFrom: 'classic-default' });
                 migratedToIR++;
             } else if (jsx.includes(CLASSIC_VALUE_VIEW_MARKER)) {
                 e.irLegacyClassic = true;

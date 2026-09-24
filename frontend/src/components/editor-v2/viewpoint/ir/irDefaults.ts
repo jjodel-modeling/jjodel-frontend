@@ -171,6 +171,10 @@ const LEGACY_OBJECT_VIEW_SNAPSHOT: Omit<VertexViewIR, 'metaclasses' | 'label'> =
  * it. `isMigratedDefaultView` below must keep recognizing this frozen shape too, not
  * just `LEGACY_OBJECT_VIEW_SNAPSHOT` and the live one — same debt, same stopgap, one
  * more instance of it (R-IRN-33's "Debito" is still not closed by this).
+ *
+ * Correction (P-2026-09-24-1455, discovery_2026-09-24_migrated_view_identity.md F1):
+ * the window above held two shapes, not one. This one starts at `6ee6efcd5`; at
+ * `400095370` alone the label had no `color` (LEGACY_OBJECT_VIEW_SNAPSHOT_400095370).
  */
 const LEGACY_OBJECT_VIEW_SNAPSHOT_2026_09_18: Omit<VertexViewIR, 'metaclasses' | 'label'> = {
     irVersion: 'ir-1.2',
@@ -199,51 +203,158 @@ const LEGACY_OBJECT_VIEW_SNAPSHOT_2026_09_18: Omit<VertexViewIR, 'metaclasses' |
     ],
 };
 
+/**
+ * Snapshot of `defaultObjectViewIR()` at `400095370` alone (2026-09-19 00:51 to 01:02,
+ * the first commit of the parity batch of P-2026-09-18-2219): `cornerRadius`, `border`
+ * and the underlined 14px name, but no label `color` yet — `6ee6efcd5` added it eleven
+ * minutes later. A project migrated and saved while the trunk sat on that commit has
+ * this shape, which neither neighbouring snapshot matches (measured,
+ * discovery_2026-09-24_migrated_view_identity.md §2).
+ */
+const LEGACY_OBJECT_VIEW_SNAPSHOT_400095370: Omit<VertexViewIR, 'metaclasses' | 'label'> = {
+    irVersion: 'ir-1.2',
+    kind: 'vertex',
+    priority: 0,
+    exclusive: true,
+    shape: {
+        form: 'rect',
+        cornerRadius: 8,
+        border: { color: 'var(--color-inode-border)', width: 1, style: 'solid' },
+        labels: [
+            {
+                position: 'top',
+                source: { from: 'intrinsic', prop: 'qualifiedName' },
+                style: { fontSize: 14, underline: true },
+            },
+        ],
+    },
+    fieldCompartments: [
+        {
+            id: 'attributes',
+            source: { from: 'attributes' },
+            rowFormat: { segments: [{ kind: 'name' }, { kind: 'literal', text: ' = ' }, { kind: 'value' }] },
+            separator: true,
+        },
+    ],
+};
+
+/**
+ * Snapshot of `defaultObjectViewIR()` as it stood from `fb876efaa` (P-2026-09-22-2105,
+ * which added `shape.fill`) until P-2026-09-24-1455 closed the list below. Every
+ * project migrated in that window carries this shape with no `migratedHash`. It is
+ * the last shape the migration ever wrote unstamped.
+ */
+const LEGACY_OBJECT_VIEW_SNAPSHOT_2026_09_22: Omit<VertexViewIR, 'metaclasses' | 'label'> = {
+    irVersion: 'ir-1.2',
+    kind: 'vertex',
+    priority: 0,
+    exclusive: true,
+    shape: {
+        form: 'rect',
+        fill: 'var(--color-inode-surface)',
+        cornerRadius: 8,
+        border: { color: 'var(--color-inode-border)', width: 1, style: 'solid' },
+        labels: [
+            {
+                position: 'top',
+                source: { from: 'intrinsic', prop: 'qualifiedName' },
+                style: { fontSize: 14, color: 'var(--color-inode-name)', underline: true },
+            },
+        ],
+    },
+    fieldCompartments: [
+        {
+            id: 'attributes',
+            source: { from: 'attributes' },
+            rowFormat: { segments: [{ kind: 'name' }, { kind: 'literal', text: ' = ' }, { kind: 'value' }] },
+            separator: true,
+        },
+    ],
+};
+
 let factoryHashes: Set<string> | null = null;
 
 /** Per-ir memo — the D-layer replaces the ir ref on edit (same assumption as irResolveCore's refToken). */
 const delegationCache = new WeakMap<object, boolean>();
 
 /**
+ * Hash of the SEMANTIC identity of an ir: key order canonicalized, and the three
+ * keys that describe the ir instead of being part of it removed — `migratedFrom`
+ * (where it came from), `authoringMetaclassPins` (see isMigratedDefaultView below)
+ * and `migratedHash` (the stamp itself: a stamp that entered the hash it is compared
+ * against could never match).
+ */
+function structuralHash(ir: object): string {
+    const structural: Record<string, unknown> = { ...ir };
+    delete structural.migratedFrom;
+    delete structural.authoringMetaclassPins;
+    delete structural.migratedHash;
+    return irHash(canonicalize(structural) as VertexViewIR);
+}
+
+/**
+ * Stamp a migrated default view with the structural hash of its own ir at migration
+ * time (`migratedHash`, P-2026-09-24-1455, closing R-IRN-33's debt). Called by
+ * `VersionFixer` 2.225 -> 2.226 on the ir it writes. The stamp lives INSIDE `ir`, next
+ * to `migratedFrom`, because `LViewElement.updateDefaultView` rebuilds a
+ * never-edited view on the same load and carries `ir` alone (view.tsx), so a
+ * sibling field would be dropped on the very load that wrote it.
+ */
+export function withMigratedHash<T extends object>(ir: T): T & { migratedHash: string } {
+    return { ...ir, migratedHash: structuralHash(ir) };
+}
+
+/**
  * True when the resolved view must render through the native abstract branch of
  * ObjectNode instead of the IR interpreter (delegation, spec v1.2 sez. 11):
- * - the view carries `migratedFrom: 'classic-default'` AND its structure,
- *   normalized (key order canonicalized, `migratedFrom` and
- *   `authoringMetaclassPins` excluded), equals defaultObjectViewIR() OR one of the
- *   frozen `LEGACY_OBJECT_VIEW_SNAPSHOT` / `LEGACY_OBJECT_VIEW_SNAPSHOT_2026_09_18`
- *   shapes (R-IRN-33, P-2026-09-22-2105) — a migrated view persisted one of three
- *   shapes depending on when the migration ran, and all three count as "unedited".
- *   An edited view diverges from all three and returns to the interpreter as a
- *   custom view;
+ * - the view carries `migratedFrom: 'classic-default'` AND is untouched since the
+ *   migration. A stamped view (`migratedHash`, P-2026-09-24-1455) is untouched when
+ *   its structural hash equals its stamp: robust to any change of the factory, with
+ *   no hook on the edit paths, since every edit changes the hash; a view reverted by
+ *   hand to its migrated shape delegates again. An unstamped view (migrated before
+ *   the stamp existed) is untouched when its structural hash equals one of the
+ *   frozen shapes below;
  * - or the view id is IR_DEFAULT_OBJECT_VIEW_ID (built-in default wildcard).
  *
- * Both exclusions answer the same question — what counts as the SEMANTIC identity
- * of an ir — and neither field is part of it. `migratedFrom` records where the ir
- * came from; `authoringMetaclassPins` records which concrete class each name in
- * `metaclasses` stands for, and the resolver never reads it (see irTypes). Letting
- * the pin into the comparison would flip every migrated default view off native
- * delegation the moment its metaclass is edited — a diffuse rendering change with
- * no visible cause, on nearly the whole view stock of a migrated project.
+ * THE LIST OF FROZEN SHAPES IS CLOSED. It holds every shape `defaultObjectViewIR()`
+ * ever had on the trunk while the migration wrote it unstamped: 07-18
+ * (LEGACY_OBJECT_VIEW_SNAPSHOT), 400095370, 09-18 and 09-22. It does NOT call the live
+ * factory: had it done so, the next factory change would have silently flipped every
+ * view saved with the 09-22 shape off native rendering, the regression of R-IRN-33,
+ * twice already. Every view migrated from now on carries its stamp, so a factory
+ * change never needs a new entry here, and none is ever added.
+ *
+ * `migratedFrom`, `authoringMetaclassPins` and `migratedHash` are excluded from the
+ * comparison (structuralHash). They answer the same question — what counts as the
+ * SEMANTIC identity of an ir — and none of them is part of it. `migratedFrom` records
+ * where the ir came from; `authoringMetaclassPins` records which concrete class each
+ * name in `metaclasses` stands for, and the resolver never reads it (see irTypes).
+ * Letting the pin into the comparison would flip every migrated default view off
+ * native delegation the moment its metaclass is edited — a diffuse rendering change
+ * with no visible cause, on nearly the whole view stock of a migrated project.
  */
 export function isMigratedDefaultView(compiled: Pick<CompiledView, 'viewId' | 'ir'>): boolean {
     if (compiled.viewId === IR_DEFAULT_OBJECT_VIEW_ID) return true;
-    const ir = compiled.ir as { migratedFrom?: string } | null;
+    const ir = compiled.ir as { migratedFrom?: string; migratedHash?: unknown } | null;
     if (!ir || typeof ir !== 'object') return false;
     const cached = delegationCache.get(ir);
     if (cached !== undefined) return cached;
     let delegated = false;
     if (ir.migratedFrom === 'classic-default') {
-        const structural: Record<string, unknown> = { ...ir };
-        delete structural.migratedFrom;
-        delete structural.authoringMetaclassPins;
-        if (factoryHashes === null) {
-            factoryHashes = new Set([
-                irHash(canonicalize(defaultObjectViewIR()) as VertexViewIR),
-                irHash(canonicalize({ ...LEGACY_OBJECT_VIEW_SNAPSHOT, metaclasses: '*', label: 'Object (IR default)' }) as VertexViewIR),
-                irHash(canonicalize({ ...LEGACY_OBJECT_VIEW_SNAPSHOT_2026_09_18, metaclasses: '*', label: 'Object (IR default)' }) as VertexViewIR),
-            ]);
+        const hash = structuralHash(ir);
+        if (typeof ir.migratedHash === 'string') {
+            delegated = hash === ir.migratedHash;
+        } else {
+            if (factoryHashes === null) {
+                factoryHashes = new Set([
+                    irHash(canonicalize({ ...LEGACY_OBJECT_VIEW_SNAPSHOT, metaclasses: '*', label: 'Object (IR default)' }) as VertexViewIR),
+                    irHash(canonicalize({ ...LEGACY_OBJECT_VIEW_SNAPSHOT_400095370, metaclasses: '*', label: 'Object (IR default)' }) as VertexViewIR),
+                    irHash(canonicalize({ ...LEGACY_OBJECT_VIEW_SNAPSHOT_2026_09_18, metaclasses: '*', label: 'Object (IR default)' }) as VertexViewIR),
+                    irHash(canonicalize({ ...LEGACY_OBJECT_VIEW_SNAPSHOT_2026_09_22, metaclasses: '*', label: 'Object (IR default)' }) as VertexViewIR),
+                ]);
+            }
+            delegated = factoryHashes.has(hash);
         }
-        delegated = factoryHashes.has(irHash(canonicalize(structural) as VertexViewIR));
     }
     delegationCache.set(ir, delegated);
     return delegated;
