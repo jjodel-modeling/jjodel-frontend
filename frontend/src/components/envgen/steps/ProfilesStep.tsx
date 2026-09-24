@@ -24,6 +24,7 @@ import {
 } from '../../../joiner';
 import { SegmentedControl } from '../../ui/SegmentedControl/SegmentedControl';
 import { Input } from '../../ui/Input/Input';
+import { getStandaloneEnvironmentUrl, copyToClipboard } from '../../../utils/shareUtils';
 
 const PERMISSION_OPTIONS = [
     { value: 'edit', label: 'Editable' },
@@ -35,6 +36,7 @@ export const ProfilesStep: React.FC = () => {
     const idlookup = useSelector((s: DState) => s.idlookup);
     const [newProfileName, setNewProfileName] = useState('');
     const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
+    const [linkCopied, setLinkCopied] = useState(false);
 
     const projectId = (U.getProjectID_URL() || '') as string;
 
@@ -78,6 +80,14 @@ export const ProfilesStep: React.FC = () => {
         if (perm === 'edit') delete cur[classId];
         else cur[classId] = perm;
         SetFieldAction.new(profileD.id, 'typePermissions', cur, '', false);
+    };
+    const copyStandaloneLink = async (profileId: string) => {
+        if (!projectId) return;
+        const ok = await copyToClipboard(getStandaloneEnvironmentUrl(projectId, profileId));
+        if (ok) {
+            setLinkCopied(true);
+            setTimeout(() => setLinkCopied(false), 1500);
+        }
     };
 
     return (
@@ -131,6 +141,17 @@ export const ProfilesStep: React.FC = () => {
                                     value={selectedProfile.name || ''}
                                     onChange={(e) => renameProfile(selectedProfile.id, (e.target as HTMLInputElement).value)}
                                 />
+                            </div>
+                            <div className="envgen-field" style={{ marginTop: 12 }}>
+                                <label className="envgen-field-label">Stand-alone link</label>
+                                <button
+                                    className="envgen-btn envgen-btn--secondary"
+                                    onClick={() => copyStandaloneLink(selectedProfile.id)}
+                                    disabled={!projectId}
+                                    title="Copy the URL that opens this environment restricted to this profile"
+                                >
+                                    <i className="bi bi-link-45deg" /> {linkCopied ? 'Copied!' : 'Copy stand-alone link'}
+                                </button>
                             </div>
                             <div className="envgen-field-label" style={{ marginTop: 12 }}>Permissions per top-level type</div>
                             {topLevel.length === 0 ? (
