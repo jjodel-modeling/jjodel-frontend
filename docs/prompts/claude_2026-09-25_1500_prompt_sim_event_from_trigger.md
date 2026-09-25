@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-25-1500
 Chat: C-2026-09-25-1500
 Lane: fast (M2 panel and one pure helper; no exported interface changes, one export added)
-Status: da eseguire
+Status: eseguito 2026-09-25 · lane sim-event-trigger · 470149a51 · verifica visiva passata 2026-09-25
 
 Worktree: a new one, `~/jjodel-events`, on a new branch `sim-event-trigger` from the trunk. Setup, in this order, each a hard stop if it fails: from `~/jjodel`, `git worktree list` shows no `jjodel-events` and no branch `sim-event-trigger`; `git -C ~/jjodel worktree add ~/jjodel-events -b sim-event-trigger alfonso-frontend-jjtl`; `cd ~/jjodel-events`; `pwd` is `/Users/alfonso/jjodel-events`; `git log -1` reads `docs: ratify R-SIM-38 and add prompt P-2026-09-25-1500` (if the trunk has moved past it, stop and say so). Every commit of this lane goes on `sim-event-trigger`. The merge into the trunk is a separate step, not this lane's.
 
