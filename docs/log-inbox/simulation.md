@@ -35,3 +35,16 @@ into `docs/claude-code-log.md` **verbatim and in this order** (RC-12) and emptie
 **Smoke visivo**: passato — Alfonso, 2026-09-25 on 3002, items 1-5: both type selects, CHECK 3 on `a +`, `self.x > 0` and `else`, an old project, the .ecore round trip, the smoke.
 **Notes**: Deviation: A1's non-VersionFixer code preceded its tests; with those nine files at HEAD, 13 new tests failed. The step writes the seeded record (captured on 3002), not an EDouble copy (6 fields differed on the 7 examples). CHECK 3 moved from type names to ids after the OK. Held only by this visual check, because their files do not load under vitest (window): get_values and the set_type aliases (LModelElement.tsx), Dummy.ts, the data.ts import.
 **Prompt document name**: 2026-09-25 14:45
+## 2026-09-25 — feat: role catalog and simulation profiles (P-2026-09-25-1805)
+**Prompt**: `claude_2026-09-25_1805_prompt_sim_role_catalog_profiles.md`, full lane (more than 3 files) on `simulation-engine` in `~/jjodel-sim`, bound by R-SIM-47..55 and R-SIM-38 read from the trunk (`b5e977907`). A pure module, only new files under `frontend/src/model/simulation/`: role catalog, eight system profiles, required set and checkability, `simProfile` codec and the «Custom» profile. Nothing wired or persisted.
+**Files touched**: code `0834329e4`: `frontend/src/model/simulation/roleCatalog.ts`, `simProfiles.ts`, `profileCodec.ts` (new), tests `__tests__/roleCatalog.test.ts`, `__tests__/simProfiles.test.ts`, `__tests__/profileCodec.test.ts` (new). Docs, this commit: this entry, the Status of the prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. On `0834329e4`: `npm run typecheck` exit 2, 14 errors, the §17 set (diff with the baseline empty); `npx vitest run` 4758 passed (4694 + 64, stated before the run), the same 9 files red at import; `npm run build` exit 0, 51 warning lines as the baseline; `check:docs` 4/4; `check:scripts` the known `_tmp_sim1_verify.ts:186`. Red first: the 3 test files failed at collection. Name check empty (exit 1), positive control 5 lines.
+**Out-of-scope changes**: no — 6 files, above the Rule 19 five, all new and all named by the prompt's DOVE list; `git diff --stat` of every other path empty.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile
+**Notes**: Hard stop answered by Alfonso: the prompt table wins over the memo on singleToken (six profiles) and eventIdentifier (edit wherever trigger is). Interpretations, under test: active = not off; the either-item is met by one side; an off role never binds; Custom follows its shape's system profile (event from trigger, Petri initial off, unread keys in ignoredKeys). One closure commit with Status, per RC-17, not the inbox alone. Mutation bench 32/32, in `0834329e4`.
+**Prompt document name**: 2026-09-25 18:05
+**Ticket** (for the wiring lane, docs only). Today `netStcFromRoles` runs a control-flow bag with `simInitialMarking` and no `simInitial`, and reads `simBound` in control flow. R-SIM-48 and R-SIM-54 require Initial and derive k = 1 there, so `inferCustomProfile` of such a bag lists both keys as ignored and reports Initial missing. The lane that wires the profiles decides whether such bags become not checkable.

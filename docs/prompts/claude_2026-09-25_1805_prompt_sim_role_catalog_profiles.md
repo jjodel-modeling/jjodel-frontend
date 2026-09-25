@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-25-1805
 Chat: C-2026-09-25-1759
 Lane: full (more than 3 files)
-Status: da eseguire
+Status: eseguito 2026-09-25 · lane simulation · 0834329e4
 
 Worktree: `~/jjodel-sim`, branch `simulation-engine`. Before anything else: `pwd` is
 `/Users/alfonso/jjodel-sim`, branch `simulation-engine`, `git log -1` is the commit that adds this file
