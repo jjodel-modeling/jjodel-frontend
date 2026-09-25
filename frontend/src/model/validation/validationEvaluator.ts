@@ -15,7 +15,7 @@
  *
  * ── IL VERDETTO PRETENDE UN BOOLEANO (R-VAL-13) ──────────────────────────────
  *
- * `verdict()` qui sotto e' l'UNICA funzione che decide, e non converte niente. `true` e'
+ * `verdict()` (in `model/jjelTriState.ts`, R-SIM-15) e' l'UNICA funzione che decide, e non converte niente. `true` e'
  * soddisfatta, `false` e' violata, **qualunque altra cosa non e' un verdetto**: e' un
  * difetto della regola, e va sul canale di authoring insieme agli errori di
  * compilazione (R-VAL-7).
@@ -96,8 +96,10 @@
 
 import { parseExpression } from '../../jjel/parser';
 import { EvaluationContext, JjelEvaluator } from '../../jjel/evaluator';
-import type { JjelValue, JjelWarning } from '../../jjel/evaluator';
+import type { JjelValue } from '../../jjel/evaluator';
 import type { JjelExpression } from '../../jjel/types/ast';
+import { describeType, evaluateTriState } from '../jjelTriState';
+import type { NotEvaluableReason } from '../jjelTriState';
 
 // ============================================
 // INGRESSO
@@ -145,9 +147,9 @@ export interface ValidationInput {
 // USCITA
 // ============================================
 
-/** Perche' una regola non e' stata valutabile su un'istanza. Tre valori, i tre ingressi
- *  di R-VAL-13. */
-export type NotEvaluableReason = 'exception' | 'non-boolean' | 'absent-identifier';
+/** Perche' una regola non e' stata valutabile su un'istanza: definito in
+ *  `model/jjelTriState.ts` (R-SIM-15), riesportato qui per chi lo importava da qui. */
+export type { NotEvaluableReason } from '../jjelTriState';
 
 export interface Violation {
     instanceId: string;
@@ -207,41 +209,11 @@ export interface ValidationReport {
 // IL VERDETTO — funzione unica, nessuna conversione
 // ============================================
 
-/** Il verdetto di una regola su un'istanza. */
-export type Verdict = 'satisfied' | 'violated' | 'not-boolean';
-
-/**
- * L'UNICA funzione che trasforma un valore JjEL in un verdetto, e non converte niente.
- *
- * `true` -> soddisfatta. `false` -> violata. Tutto il resto -> **non e' un verdetto**:
- * `'not-boolean'`, che il chiamante mappa su non valutabile e sul canale di authoring.
- *
- * Non si aggiunga qui una regola di conversione, per quanto ragionevole sembri. Vedi
- * l'intestazione del modulo: il sistema ne ha gia' due e divergono; questa sarebbe la
- * terza, nel posto peggiore. R-VAL-13.
- */
-export function verdict(value: JjelValue): Verdict {
-    if (value === true) return 'satisfied';
-    if (value === false) return 'violated';
-    return 'not-boolean';
-}
-
-/** Il tipo del valore, come lo si scrive in una diagnostica. `null` e gli array non
- *  sono `'object'`: chi legge il referto deve vedere la differenza che conta. */
-function describeType(value: JjelValue): string {
-    if (value === null) return 'null';
-    if (Array.isArray(value)) return `array(${value.length})`;
-    return typeof value;
-}
-
-/** Il primo warning che segnala un'assenza, o `null`. `ambiguous-instance` NON e'
- *  un'assenza — il nome c'e', ce n'e' troppo — e non apre il terzo ingresso. */
-function firstAbsence(warnings: JjelWarning[]): JjelWarning | null {
-    for (const w of warnings) {
-        if (w.kind === 'undefined-identifier' || w.kind === 'property-not-found') return w;
-    }
-    return null;
-}
+// `verdict`, i tre ingressi e il loro ordine stanno in `model/jjelTriState.ts`, condivisi
+// con la simulazione e non copiati (R-SIM-15). Riesportati qui: `verdict` e `Verdict`
+// si importavano da questo modulo.
+export { verdict } from '../jjelTriState';
+export type { Verdict } from '../jjelTriState';
 
 // ============================================
 // LA VALUTAZIONE
@@ -313,16 +285,14 @@ export function evaluateValidation(input: ValidationInput): ValidationReport {
             // istanze.
             const ctx = new EvaluationContext(variables);
 
-            let value: JjelValue;
-            let warnings: JjelWarning[];
-            try {
-                const out = evaluator.evaluateWithDiagnostics(c.expr, ctx);
-                value = out.value;
-                warnings = out.warnings;
-            } catch (e: any) {
+            // L'ordine dei tre ingressi (eccezione, assenza, tipo) e' quello di
+            // `evaluateTriState`; qui si scrivono soltanto i messaggi.
+            const out = evaluateTriState(evaluator, c.expr, ctx);
+            if (out.kind === 'exception') {
                 // INGRESSO 1. Si cattura ogni eccezione, non la sola
                 // `JjelEvaluationError`: quello che conta e' che il valutatore non si
                 // fermi, e la classe dell'errore non cambia il verdetto — che non c'e'.
+                const e: any = out.error;
                 c.notEvaluable++;
                 notEvaluable.push({
                     instanceId: instance.id, ruleId: c.rule.id, ruleName: c.rule.name,
@@ -334,8 +304,8 @@ export function evaluateValidation(input: ValidationInput): ValidationReport {
 
             // INGRESSO 3, controllato PRIMA del tipo: fra le due diagnosi, quella che
             // dice dove intervenire e' l'assenza del nome.
-            const absent = firstAbsence(warnings);
-            if (absent) {
+            if (out.kind === 'absent') {
+                const absent = out.warning;
                 c.notEvaluable++;
                 notEvaluable.push({
                     instanceId: instance.id, ruleId: c.rule.id, ruleName: c.rule.name,
@@ -347,9 +317,8 @@ export function evaluateValidation(input: ValidationInput): ValidationReport {
                 continue;
             }
 
-            const v = verdict(value);
-            if (v === 'satisfied') continue;
-            if (v === 'violated') {
+            if (out.kind === 'verdict') {
+                if (out.value) continue;
                 violations.push({
                     instanceId: instance.id, ruleId: c.rule.id, ruleName: c.rule.name,
                     message: c.rule.message,
@@ -361,7 +330,7 @@ export function evaluateValidation(input: ValidationInput): ValidationReport {
             notEvaluable.push({
                 instanceId: instance.id, ruleId: c.rule.id, ruleName: c.rule.name,
                 reason: 'non-boolean',
-                detail: `il corpo ha restituito ${describeType(value)}, non un booleano`,
+                detail: `il corpo ha restituito ${describeType(out.value)}, non un booleano`,
             });
         }
     }
