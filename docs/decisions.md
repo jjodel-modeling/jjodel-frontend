@@ -1756,6 +1756,23 @@ reversibili: vedi «Punti aperti chiusi» in fondo. Ratificare non è schedulare
   informazione, senza ereditarietà: modificare un profilo di sistema non cambia le copie.
 - **Esclusi** (2026-09-25): stati gerarchici, regioni ortogonali, history, composizione di macchine,
   object flow, tempo.
+- **R-SIM-56** (2026-09-25). **Forma e genere sono indipendenti anche nei profili. Emenda R-SIM-48,
+  R-SIM-54 e R-SIM-55.** R-SIM-28 ha reso il genere (booleano o a naturali) indipendente dalla forma
+  (controllo di flusso o Petri); la chiusura di R-SIM-48 li aveva confusi. Nella chiusura del
+  controllo di flusso Initial diventa un requisito «uno dei due» fra Initial e Initial marking, come
+  Source e Owned transitions. Un ruolo `derived` con sorgente (`from`) conta come legato solo quando
+  la sua sorgente è legata; Initial marking nei profili di sistema a controllo di flusso diventa
+  `derived` da Initial («1 on Initial»), non un valore fisso. Il profilo «Custom» di un bag a
+  controllo di flusso mette `simBound` e `simInitialMarking` in `edit` quando sono valorizzati, invece
+  di ignorarli: un controllo di flusso a naturali (k > 1, marking iniziale da `simInitialMarking`,
+  anche senza `simInitial`) è una configurazione ratificata e il Custom la riconosce completa. I
+  profili di sistema restano a k = 1. Chiude il ticket di `P-2026-09-25-1805` (`a14c7dfa8`).
+- **Correzione della tabella di R-SIM-54** (2026-09-25). La tabella dei profili di sistema del memo
+  `claude_2026-09-25_1759_memo_simulation_roles_profiles.md` era incompleta; vale quella del prompt
+  `P-2026-09-25-1805`, confermata da Alfonso all'hard stop di quella corsia: il vincolo
+  `singleToken` vale per State machine, Extended state machine, DFA, NFA, Moore e Mealy, e
+  `eventIdentifier` è `edit` dovunque Trigger è attivo (serve a R-SIM-38, che lo presenta come
+  override).
 
 ## Serie R-J — JjEL come linguaggio delle espressioni dell'IR (ratifiche 2026-08-18)
 
