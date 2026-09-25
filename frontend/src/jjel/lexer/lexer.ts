@@ -24,7 +24,7 @@ const OCL_METHOD_MESSAGES: Record<string, string> = {
 const OCL_COLLECTION_CONSTRUCTORS = new Set<string>(['Set', 'Sequence', 'Bag', 'OrderedSet']);
 
 /**
- * `actionMode` lexes `:=` as `ASSIGN`, for `parseAction` (R-SIM-39). Off by
+ * `actionMode` lexes `:=` as `ASSIGN`, for `parseAction` (R-SIM-40). Off by
  * default: in an expression `:=` stays an error.
  */
 export interface JjelLexerOptions {
@@ -124,7 +124,7 @@ export class JjelLexer {
                     this.column--;
                     this.number();
                 } else if (this.peek() === '[') {
-                    // `.[` is one token, state access (R-SIM-18, R-SIM-39); `. [` is not.
+                    // `.[` is one token, state access (R-SIM-18, R-SIM-40); `. [` is not.
                     this.advance();
                     this.addToken(JjelTokenType.DOT_LBRACKET);
                 } else {

@@ -235,7 +235,7 @@ export function formatAmbiguousCandidates(
 }
 
 /**
- * What `x.[a]` reads (R-SIM-18, R-SIM-42). Set only by the simulator, over its
+ * What `x.[a]` reads (R-SIM-18, R-SIM-43). Set only by the simulator, over its
  * state; everywhere else `.[a]` is an error. JjEL knows elements by `id` and
  * nothing of the attributes: `marked` and `tokens` are the adapter's business.
  */
@@ -272,7 +272,7 @@ export class EvaluationContext {
      */
     ambiguousInstances?: Map<string, AmbiguousInstanceInfo>;
     /**
-     * The state `x.[a]` reads (R-SIM-42). `undefined`: no state here, and
+     * The state `x.[a]` reads (R-SIM-43). `undefined`: no state here, and
      * `.[a]` throws. Inherited by children, like `diagnostics`.
      */
     stateAccess?: JjelStateAccess;

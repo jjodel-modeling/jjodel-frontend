@@ -80,7 +80,7 @@ export class JjelParser {
     }
 
     /**
-     * `parse`, and the input must end with the expression (R-SIM-40): `a b` is
+     * `parse`, and the input must end with the expression (R-SIM-41): `a b` is
      * an error here, where `parse` returns `a` and drops `b`.
      */
     parseStrict(): JjelParserResult {
@@ -93,7 +93,7 @@ export class JjelParser {
     }
 
     /**
-     * An action, `<target> := <expression>` (R-SIM-17, R-SIM-39): the target
+     * An action, `<target> := <expression>` (R-SIM-17, R-SIM-40): the target
      * ends in `.[attribute]`, never a read-only one, and the input ends with
      * the expression. Expects the tokens of an action-mode lexer (`ASSIGN`).
      */
@@ -922,9 +922,9 @@ export function parseExpression(source: string): JjelParserResult {
 }
 
 /**
- * `parseExpression` that requires the end of the input (R-SIM-40): the parse
+ * `parseExpression` that requires the end of the input (R-SIM-41): the parse
  * of the `Expression` type, guards and actions. `parseExpression` itself keeps
- * dropping trailing tokens for its other callers (ticket of R-SIM-40).
+ * dropping trailing tokens for its other callers (ticket of R-SIM-41).
  */
 export function parseExpressionStrict(source: string): JjelParserResult {
     const lexer = new JjelLexer(source);
@@ -946,7 +946,7 @@ export function parseExpressionStrict(source: string): JjelParserResult {
 }
 
 /**
- * Parse an action, `<target>.[attribute] := <expression>` (R-SIM-17, R-SIM-39).
+ * Parse an action, `<target>.[attribute] := <expression>` (R-SIM-17, R-SIM-40).
  */
 export function parseAction(source: string): JjelActionParserResult {
     const lexer = new JjelLexer(source, { actionMode: true });

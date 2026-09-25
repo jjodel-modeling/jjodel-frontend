@@ -78,7 +78,7 @@ export enum JjelTokenType {
     // PUNCTUATION
     // ============================================
     COLON = 'COLON',             // :
-    ASSIGN = 'ASSIGN',           // := (action mode only, R-SIM-39)
+    ASSIGN = 'ASSIGN',           // := (action mode only, R-SIM-40)
     PIPE = 'PIPE',               // | (alias for 'such that')
     COMMA = 'COMMA',             // ,
     LPAREN = 'LPAREN',           // (

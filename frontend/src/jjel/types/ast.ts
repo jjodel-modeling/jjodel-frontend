@@ -316,9 +316,9 @@ export interface IndexAccessExpr extends JjelASTNode {
 // ============================================
 
 /**
- * State access: expr.[attr] (R-SIM-18, R-SIM-39). The path locates the element,
+ * State access: expr.[attr] (R-SIM-18, R-SIM-40). The path locates the element,
  * the last segment is the attribute; `node.[attr]` is the presentation of the
- * element the expression is attached to, recognized by syntax (R-SIM-41).
+ * element the expression is attached to, recognized by syntax (R-SIM-42).
  * Examples: self.[visits], self.target.[visits], model.[i], p.[tokens]
  */
 export interface StateAccessExpr extends JjelASTNode {
@@ -392,7 +392,7 @@ export interface JjelParserResult {
 }
 
 /**
- * An action: `<target> := <expression>` (R-SIM-17, R-SIM-39). Not an
+ * An action: `<target> := <expression>` (R-SIM-17, R-SIM-40). Not an
  * expression, so no evaluator ever meets an assignment: the target is a
  * state access whose attribute is never `marked` or `tokens` (R-SIM-30).
  */

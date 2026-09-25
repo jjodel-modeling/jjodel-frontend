@@ -35,7 +35,7 @@ const LEVEL_1_COLLECTIONS: BuiltinIdentDef[] = [
 
 const LEVEL_2_CONTEXT: BuiltinIdentDef[] = [
     { name: 'data', description: 'Currently selected model element', kind: 'context' },
-    // Two meanings, documented side by side (R-SIM-41): the variable here, and the
+    // Two meanings, documented side by side (R-SIM-42): the variable here, and the
     // presentation root of `node.[a]` in the simulator, which is syntax, not this variable.
     { name: 'node',
       description: `Currently selected graph node (in the simulator, ${STATE_RESERVED.presentationRoot}${STATE_RESERVED.operator}a] is the presentation state of the element)`,

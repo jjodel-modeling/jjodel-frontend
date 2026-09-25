@@ -622,7 +622,7 @@ describe('FunctionCall (standalone)', () => {
 });
 
 // ============================================================
-// STATE ACCESS `.[x]` AND ACTIONS (R-SIM-18, R-SIM-39, R-SIM-40), P-2026-09-25-1445
+// STATE ACCESS `.[x]` AND ACTIONS (R-SIM-18, R-SIM-40, R-SIM-41), P-2026-09-25-1445
 // Each test names the mutant of report §7.1 (discovery_2026-09-25_state_operator_core_types.md)
 // that it kills.
 // ============================================================
@@ -692,7 +692,7 @@ describe('`?.[` is a lexer error (M2)', () => {
     });
 });
 
-describe('strict parse (M4, R-SIM-40)', () => {
+describe('strict parse (M4, R-SIM-41)', () => {
     test('M4: trailing tokens are an error in the strict entry', () => {
         const result = parseExpressionStrict('a b');
         expect(result.expression).toBeNull();
@@ -711,7 +711,7 @@ describe('strict parse (M4, R-SIM-40)', () => {
         expect(parseExpressionStrict('   ')).toEqual(parseExpression('   '));
     });
 
-    test('parseExpression is unchanged: it still drops trailing tokens (ticket of R-SIM-40)', () => {
+    test('parseExpression is unchanged: it still drops trailing tokens (ticket of R-SIM-41)', () => {
         expect(parse('a b')).toMatchObject({ type: 'Identifier', name: 'a' });
     });
 });

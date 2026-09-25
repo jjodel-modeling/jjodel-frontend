@@ -1,6 +1,6 @@
 /**
  * stateReserved — the one list of the names the state operator `.[x]` reserves
- * (R-SIM-18, R-SIM-30, R-SIM-41).
+ * (R-SIM-18, R-SIM-30, R-SIM-42).
  *
  * Read by the parser (an action never assigns a read-only attribute), the
  * evaluator (`node.[x]` is recognized by syntax), the guard checker of the

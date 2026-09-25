@@ -53,7 +53,7 @@ export interface SubsetDiagnostic {
     readonly location?: ASTLocation;
 }
 
-/** The four roots of R-SIM-18, from the single list (R-SIM-41). Reserved: no local binding may take their names (ruling 5). */
+/** The four roots of R-SIM-18, from the single list (R-SIM-42). Reserved: no local binding may take their names (ruling 5). */
 export const GUARD_ROOTS: readonly string[] = STATE_RESERVED.roots;
 
 /**

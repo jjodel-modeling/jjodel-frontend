@@ -370,7 +370,7 @@ describe('FunctionCall', () => {
 });
 
 // ============================================================
-// STATE ACCESS `.[x]` (R-SIM-18, R-SIM-42), P-2026-09-25-1445
+// STATE ACCESS `.[x]` (R-SIM-18, R-SIM-43), P-2026-09-25-1445
 // The hook is JjEL's own reader; `marked` and `tokens` are the simulator's
 // business (its adapter), so here they are ordinary attributes. Each test
 // names the mutant of report §7.1 that it kills.

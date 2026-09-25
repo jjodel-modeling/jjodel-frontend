@@ -187,7 +187,7 @@ describe('severity and location', () => {
     });
 });
 
-describe('state access .[x] (R-SIM-18, R-SIM-30, R-SIM-41), P-2026-09-25-1445', () => {
+describe('state access .[x] (R-SIM-18, R-SIM-30, R-SIM-42), P-2026-09-25-1445', () => {
     it('reading state is exportable: no diagnostic on self, model, event or a path', () => {
         for (const src of ['self.[visits] < 3', 'model.[i] == 0', 'event.[n] > 1', 'self.target.[visits] + 1 < 3',
             'p.[tokens] < 2 and q.[marked]', 'Place.instances.all(p => p.[tokens] <= 1)']) {

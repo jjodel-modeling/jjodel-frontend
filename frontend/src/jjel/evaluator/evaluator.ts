@@ -986,10 +986,10 @@ export class JjelEvaluator {
     // ============================================
 
     /**
-     * `x.[a]` (R-SIM-18, R-SIM-42): the attribute `a` of the element `x`
+     * `x.[a]` (R-SIM-18, R-SIM-43): the attribute `a` of the element `x`
      * evaluates to, read through the context's state hook by the element's
      * `id`. `node.[a]` is recognized by syntax and reads the presentation of
-     * the site: `node` is never evaluated as a variable (R-SIM-41). Without a
+     * the site: `node` is never evaluated as a variable (R-SIM-42). Without a
      * hook, or on anything but an element, or on an attribute the hook does
      * not know, it throws: never a silent null.
      */
