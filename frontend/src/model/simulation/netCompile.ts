@@ -27,7 +27,7 @@ import type {
 } from './netTypes';
 import type { SimEventInfo, SimModelView } from './types';
 
-/** A role value: a non-empty string, as `stcFromRoles` reads it. */
+/** A role value: a non-empty string, as the M2 face writes it (R-SIM-2). */
 function pointer(bag: Record<string, unknown>, key: string): string | undefined {
     const value = bag[key];
     return typeof value === 'string' && value ? value : undefined;
@@ -310,9 +310,9 @@ function compilePetri(
 }
 
 /**
- * The net of one M1 model. `ids` are the model's DObject ids, as for
- * `initialConfiguration`; which ids belong to the model is the caller's
- * reading of the store. `decls` are the declared state attributes (R-SIM-19):
+ * The net of one M1 model. `ids` are the model's DObject ids; which ids
+ * belong to the model is the caller's reading of the store
+ * (`collectModelObjectIds` in the bridge). `decls` are the declared state attributes (R-SIM-19):
  * in 3a they come from the caller, the STC authoring of them is later.
  *
  * The initial σ: one token on each place that is a kind of `simInitial`, or,

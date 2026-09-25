@@ -1,49 +1,18 @@
 /**
- * stcFromRoles — the STC descriptor from the role bag of the M2 model.
+ * stcFromRoles — the disjointness of the STC roles of the M2 bag (R-SIM-16).
  *
- * Reads the six flat `sim*` keys (R-SIM-2) and keeps a value only when it is a
- * non-empty string, the same filter `mapStateToProps` applies in
- * SimulationPanel.tsx. Returns `null` unless the four keys the engine reads are
- * all set: the rule of `rolesComplete` (`ENGINE_ROLE_KEYS.every(...)`).
- *
- * Step 1 adds three optional keys for the event role (R-SIM-16): `simEvent`,
- * `simTrigger`, `simEventIdentifier`. The role exists only when `simEvent` and
- * `simTrigger` are both set; one of them alone is no event role at all.
+ * Step 3b moved the STC itself to `netStcFromRoles` (netCompile.ts) and deleted
+ * the boolean descriptor this module was named after; what stays here are the
+ * overlap rules, which read the flat `sim*` keys (R-SIM-2) of the bag directly.
+ * A role value counts only when it is a non-empty string, the same filter
+ * `mapStateToProps` applies in SimulationPanel.tsx.
  */
 
 import { classIsKindOf } from './isKindOf';
-import type { StcDescriptor } from './types';
 
 function pointer(state: Record<string, unknown>, key: string): string | undefined {
     const value = state[key];
     return typeof value === 'string' && value ? value : undefined;
-}
-
-export function stcFromRoles(state: Record<string, unknown> | undefined): StcDescriptor | null {
-    if (!state) return null;
-    const initial = pointer(state, 'simInitial');
-    const terminal = pointer(state, 'simTerminal');
-    const ownedTransitions = pointer(state, 'simOwnedTransitions');
-    const nextState = pointer(state, 'simNextState');
-    if (!initial || !terminal || !ownedTransitions || !nextState) return null;
-
-    const descriptor: StcDescriptor = {
-        kind: 'boolean',
-        roles: { initial, terminal, ownedTransitions, nextState },
-    };
-    const node = pointer(state, 'simNode');
-    const transition = pointer(state, 'simTransition');
-    if (node) descriptor.roles.node = node;
-    if (transition) descriptor.roles.transition = transition;
-    const event = pointer(state, 'simEvent');
-    const trigger = pointer(state, 'simTrigger');
-    if (event && trigger) {
-        descriptor.roles.event = event;
-        descriptor.roles.trigger = trigger;
-        const eventIdentifier = pointer(state, 'simEventIdentifier');
-        if (eventIdentifier) descriptor.roles.eventIdentifier = eventIdentifier;
-    }
-    return descriptor;
 }
 
 /**

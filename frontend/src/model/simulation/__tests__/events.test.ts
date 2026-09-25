@@ -1,32 +1,34 @@
 /**
- * events — step 1 of the plan (R-SIM-16), P-2026-09-23-1850.
+ * events — the event role and the M2 roles around the Petri core: step 1 of the
+ * plan (R-SIM-16, P-2026-09-23-1850), rewritten when step 3b deleted the boolean
+ * step (P-2026-09-25-1103).
  *
- * Executes the core (P11): `stepFlowchartBoolean`, `eventAlphabet`,
- * `enabledEvents`, `epsilonEnabled`, `runStatus`, `stcFromRoles`,
- * `roleOverlaps`, `classIsKindOf` and the raw slot readers, against fake views
- * and raw lookups. `step.test.ts` is not touched: it is the parity oracle of the
- * slice 0 step, and it still runs with no event role.
- *
- * The tests named `provisional:` pin the fire-all restricted by the event
- * (option (a) of discovery_2026-09-23_sim_step1_events.md §3.2). They are
- * expected to be reversed by interleaving in step 3 (R-SIM-7), and that change
- * must be a decision, not an accident.
+ * Executes the core (P11): `eventAlphabet`, `compileNet`, `structuralInputs`,
+ * `step`, `roleOverlaps`, `isKindOf`, `classIsKindOf` and the raw slot readers,
+ * against fake views and raw lookups. The tests of the boolean step went with it:
+ * its deterministic traces are the golden traces of netParity.test.ts, its
+ * quirks the decisions pinned there. The `isKindOf` tests moved here from the
+ * deleted step.test.ts, with its parity against the IR walk (R-SIM-8).
  *
  * Every "nothing happens" is paired with the same call where something does (P12).
  */
 
 import { describe, it, expect } from 'vitest';
-import { enabledEvents, epsilonEnabled, eventAlphabet, runStatus, stepFlowchartBoolean } from '../step';
-import { overlapVerdict, roleOverlaps, roleWriteVerdict, stcFromRoles } from '../stcFromRoles';
+import { overlapVerdict, roleOverlaps, roleWriteVerdict } from '../stcFromRoles';
 import { classIsKindOf, isKindOf } from '../isKindOf';
 import { objectLabel, objectReferences, objectSlotValues } from '../objectSlots';
-import type { SimConfiguration, SimModelView, StcDescriptor } from '../types';
+import { compileNet, eventAlphabet, netStcFromRoles } from '../netCompile';
+import { step, structuralInputs, terminated } from '../netStep';
+import type { SimModelView } from '../types';
+import type { NetModelView, NetStc, SimState } from '../netTypes';
+// Test-only import from the IR (import-free module): the parity check of R-SIM-8.
+import { classAncestry } from '../../../components/editor-v2/viewpoint/ir/irReadCtx';
 
-const ENGINE = { initial: 'C_Initial', terminal: 'C_Final', ownedTransitions: 'R_out', nextState: 'R_next' };
+const BAG = { simInitial: 'C_Initial', simTerminal: 'C_Final', simOwnedTransitions: 'R_out', simNextState: 'R_next' };
 /** No event role: the alphabet is {ε}. */
-const STC: StcDescriptor = { kind: 'boolean', roles: { ...ENGINE } };
+const STC: NetStc = netStcFromRoles(BAG)!;
 /** The event role declared. */
-const STC_EV: StcDescriptor = { kind: 'boolean', roles: { ...ENGINE, event: 'C_Event', trigger: 'R_trigger' } };
+const STC_EV: NetStc = netStcFromRoles({ ...BAG, simEvent: 'C_Event', simTrigger: 'R_trigger' })!;
 
 interface Fixture {
     /** instance id -> metaclass id and owned transition ids */
@@ -36,27 +38,32 @@ interface Fixture {
     labels?: Record<string, string>;
 }
 
-function makeView(f: Fixture, calls?: { trigger: number }): SimModelView {
+function makeView(f: Fixture): SimModelView {
     return {
         exists: id => id in f.instances || id in f.transitions,
         isInstanceOf: (id, classId) => f.instances[id]?.cls === classId,
         outgoingTransitions: id => [...(f.instances[id]?.out ?? [])],
         transitionTarget: t => f.transitions[t]?.to ?? null,
-        transitionTriggers: t => {
-            if (calls) calls.trigger++;
-            const on = f.transitions[t]?.on;
-            return on === undefined ? [] : Array.isArray(on) ? [...on] : [on];
-        },
         label: id => f.labels?.[id] ?? id,
     };
 }
 
-function config(event: string | null, ...ids: string[]): SimConfiguration {
-    return { marking: new Set(ids), event };
+/** The same fixture read by pointer, as the compiler reads it. */
+function netView(f: Fixture): NetModelView {
+    return {
+        ...makeView(f),
+        references: (o, feature) => {
+            if (feature === 'R_out') return [...(f.instances[o]?.out ?? [])];
+            if (feature === 'R_next') { const to = f.transitions[o]?.to; return to ? [to] : []; }
+            if (feature === 'R_trigger') { const on = f.transitions[o]?.on; return on === undefined ? [] : Array.isArray(on) ? [...on] : [on]; }
+            return [];
+        },
+        values: () => [],
+    };
 }
 
-function marked(c: SimConfiguration): string[] {
-    return [...c.marking].sort();
+function marking(...ids: string[]): SimState {
+    return { marking: new Map(ids.map(id => [id, 1])), attrs: new Map(), presentation: new Map() };
 }
 
 /**
@@ -79,252 +86,17 @@ const TURNSTILE: Fixture = {
     },
     labels: { coin: 'coin', push: 'push' },
 };
+const TURNSTILE_IDS = [...Object.keys(TURNSTILE.instances), ...Object.keys(TURNSTILE.transitions)];
 
-describe('parity: without the event role the step is the slice 0 step', () => {
-    // The fixture HAS triggers: a core that reads them without checking the role changes these results.
-    const fork: Fixture = {
-        instances: { A: { cls: 'C_State', out: ['t1', 't2', 't3'] }, B: { cls: 'C_State' }, C: { cls: 'C_State' } },
-        transitions: { t1: { to: 'B', on: 'coin' }, t2: { to: 'C', on: 'push' }, t3: { to: null } },
-    };
-
-    it('ε fires every transition, triggered or not, and never asks the view for a trigger', () => {
-        const calls = { trigger: 0 };
-        const s = stepFlowchartBoolean(config(null, 'A'), STC, makeView(fork, calls));
-        expect(marked(s.next)).toEqual(['B', 'C']);
-        expect(s.label).toEqual({ fired: ['t1', 't2', 't3'], deactivated: ['A'], activated: ['B', 'C'] });
-        expect(calls.trigger).toBe(0);
-        // control: the same fixture with the role fires the untriggered t3 only, and asks
-        const withRole = stepFlowchartBoolean(config(null, 'A'), STC_EV, makeView(fork, calls));
-        expect(withRole.label.fired).toEqual(['t3']);
-        expect(calls.trigger).toBeGreaterThan(0);
-    });
-
-    it('an ε step label keeps the slice 0 shape: no event, no discarded', () => {
-        const s = stepFlowchartBoolean(config(null, 'A'), STC_EV, makeView(fork));
-        expect('event' in s.label).toBe(false);
-        expect('discarded' in s.label).toBe(false);
-        const quiet = stepFlowchartBoolean(config(null), STC_EV, makeView(fork));
-        expect(quiet.label).toEqual({ fired: [], deactivated: [], activated: [] });
-        expect('discarded' in quiet.label).toBe(false);
-    });
-
-    it('the Step button follows the slice 0 rule: disabled only when a marked instance is terminal', () => {
-        const view = makeView({
-            instances: { A: { cls: 'C_State', out: ['t1'] }, B: { cls: 'C_State' }, Stuck: { cls: 'C_State' }, F: { cls: 'C_Final' } },
-            transitions: { t1: { to: 'B', on: 'coin' } },
-        });
-        const cases = [config(null), config(null, 'A'), config(null, 'Stuck'), config(null, 'A', 'Stuck'), config(null, 'F'), config(null, 'F', 'A')];
-        for (const c of cases) {
-            expect(epsilonEnabled(c, STC, view)).toBe(runStatus(c, STC, view) !== 'Terminated');
-        }
-        expect(epsilonEnabled(config(null, 'Stuck'), STC, view)).toBe(true);
-        expect(epsilonEnabled(config(null, 'F', 'A'), STC, view)).toBe(false);
-    });
-
-    it('no event buttons and an empty alphabet without the role', () => {
-        const view = makeView(TURNSTILE);
-        expect([...enabledEvents(config(null, 'Locked'), STC, view)]).toEqual([]);
+describe('the event role: all or nothing, and the alphabet (R-SIM-16)', () => {
+    it('no event buttons and an empty alphabet without the role, nor with half of it', () => {
+        const view = netView(TURNSTILE);
+        expect([...structuralInputs(compileNet(STC, view, 'M', TURNSTILE_IDS), marking('Locked')).events]).toEqual([]);
         expect(eventAlphabet(STC, view, ['Locked', 'coin', 'push'])).toEqual([]);
+        expect(eventAlphabet({ ...STC_EV, trigger: undefined }, view, ['Locked', 'coin', 'push'])).toEqual([]);
         // control
-        expect([...enabledEvents(config(null, 'Locked'), STC_EV, view)].sort()).toEqual(['coin', 'push']);
+        expect([...structuralInputs(compileNet(STC_EV, view, 'M', TURNSTILE_IDS), marking('Locked')).events].sort()).toEqual(['coin', 'push']);
         expect(eventAlphabet(STC_EV, view, ['Locked', 'coin', 'push']).map(e => e.id)).toEqual(['coin', 'push']);
-    });
-
-    it('a descriptor with the event metaclass and no trigger has no event role', () => {
-        const half: StcDescriptor = { kind: 'boolean', roles: { ...ENGINE, event: 'C_Event' } };
-        const view = makeView(TURNSTILE);
-        expect(eventAlphabet(half, view, ['coin', 'push'])).toEqual([]);
-        expect([...enabledEvents(config(null, 'Locked'), half, view)]).toEqual([]);
-        expect(stepFlowchartBoolean(config(null, 'Locked'), half, view).label.fired).toEqual(['tCoin', 'tPushL']);
-    });
-
-    it('an event without the role accepts nothing: it is discarded, the engine stays total', () => {
-        const s = stepFlowchartBoolean(config('coin', 'A'), STC, makeView(fork));
-        expect(marked(s.next)).toEqual(['A']);
-        expect(s.label).toEqual({ fired: [], deactivated: [], activated: [], event: 'coin', discarded: true });
-    });
-});
-
-describe('the trigger matches the event by identity (R-SIM-16)', () => {
-    // coin1 and coin2: two instances of the same event metaclass, with the same label.
-    const view = makeView({
-        instances: {
-            A: { cls: 'C_State', out: ['t'] }, B: { cls: 'C_State' },
-            coin1: { cls: 'C_Event' }, coin2: { cls: 'C_Event' },
-        },
-        transitions: { t: { to: 'B', on: 'coin1' } },
-        labels: { coin1: 'coin', coin2: 'coin' },
-    });
-
-    it('the trigger instance fires the transition', () => {
-        const s = stepFlowchartBoolean(config('coin1', 'A'), STC_EV, view);
-        expect(marked(s.next)).toEqual(['B']);
-        expect(s.label).toEqual({ fired: ['t'], deactivated: ['A'], activated: ['B'], event: 'coin1', discarded: false });
-    });
-
-    it('another instance of the same metaclass, with the same label, does not', () => {
-        const s = stepFlowchartBoolean(config('coin2', 'A'), STC_EV, view);
-        expect(marked(s.next)).toEqual(['A']);
-        expect(s.label.discarded).toBe(true);
-        expect([...enabledEvents(config(null, 'A'), STC_EV, view)]).toEqual(['coin1']);
-    });
-});
-
-describe('the input restricts the fire-all (option (a))', () => {
-    const view = makeView({
-        instances: { A: { cls: 'C_State', out: ['tE', 'tC'] }, B: { cls: 'C_State' }, C: { cls: 'C_State' }, coin: { cls: 'C_Event' } },
-        transitions: { tE: { to: 'B' }, tC: { to: 'C', on: 'coin' } },
-    });
-
-    it('ε fires only the transitions without a trigger', () => {
-        const s = stepFlowchartBoolean(config(null, 'A'), STC_EV, view);
-        expect(marked(s.next)).toEqual(['B']);
-        expect(s.label.fired).toEqual(['tE']);
-    });
-
-    it('an event fires only the transitions it triggers', () => {
-        const s = stepFlowchartBoolean(config('coin', 'A'), STC_EV, view);
-        expect(marked(s.next)).toEqual(['C']);
-        expect(s.label.fired).toEqual(['tC']);
-    });
-
-    it('a multi-valued trigger accepts any of its values, and enables each of them', () => {
-        const v = makeView({
-            instances: {
-                A: { cls: 'C_State', out: ['t'] }, B: { cls: 'C_State' },
-                coin: { cls: 'C_Event' }, push: { cls: 'C_Event' }, kick: { cls: 'C_Event' },
-            },
-            transitions: { t: { to: 'B', on: ['coin', 'push'] } },
-        });
-        expect(marked(stepFlowchartBoolean(config('coin', 'A'), STC_EV, v).next)).toEqual(['B']);
-        expect(marked(stepFlowchartBoolean(config('push', 'A'), STC_EV, v).next)).toEqual(['B']);
-        expect(stepFlowchartBoolean(config('kick', 'A'), STC_EV, v).label.discarded).toBe(true);
-        expect([...enabledEvents(config(null, 'A'), STC_EV, v)].sort()).toEqual(['coin', 'push']);
-        // a triggered transition, however many values, is not an ε transition
-        expect(epsilonEnabled(config(null, 'A'), STC_EV, v)).toBe(false);
-    });
-
-    it('a marked instance with nothing accepted stays marked while another fires', () => {
-        const v = makeView({
-            instances: {
-                A: { cls: 'C_State', out: ['tP'] }, B: { cls: 'C_State' },
-                X: { cls: 'C_State', out: ['tX'] }, Y: { cls: 'C_State' },
-                coin: { cls: 'C_Event' }, push: { cls: 'C_Event' },
-            },
-            transitions: { tP: { to: 'B', on: 'push' }, tX: { to: 'Y', on: 'coin' } },
-        });
-        const s = stepFlowchartBoolean(config('coin', 'A', 'X'), STC_EV, v);
-        expect(marked(s.next)).toEqual(['A', 'Y']);
-        expect(s.label).toEqual({ fired: ['tX'], deactivated: ['X'], activated: ['Y'], event: 'coin', discarded: false });
-    });
-
-    // PROVISIONAL, reversed by step 3 (R-SIM-7): interleaving fires ONE of the two
-    // transitions, chosen by the selector. Until then one event marks both targets.
-    it('provisional (reversed by interleaving in step 3, R-SIM-7): an event accepted by two transitions of one node fires both and splits the token', () => {
-        const v = makeView({
-            instances: { A: { cls: 'C_State', out: ['t1', 't2'] }, B: { cls: 'C_State' }, C: { cls: 'C_State' }, coin: { cls: 'C_Event' } },
-            transitions: { t1: { to: 'B', on: 'coin' }, t2: { to: 'C', on: 'coin' } },
-        });
-        const s = stepFlowchartBoolean(config('coin', 'A'), STC_EV, v);
-        expect(marked(s.next)).toEqual(['B', 'C']);
-        expect(s.label.fired).toEqual(['t1', 't2']);
-    });
-
-    // PROVISIONAL, reversed by step 3 (R-SIM-7): interleaving moves one token per step.
-    it('provisional (reversed by interleaving in step 3, R-SIM-7): one event moves every marked instance that accepts it', () => {
-        const v = makeView({
-            instances: {
-                A: { cls: 'C_State', out: ['t1'] }, B: { cls: 'C_State' },
-                X: { cls: 'C_State', out: ['t2'] }, Y: { cls: 'C_State' }, coin: { cls: 'C_Event' },
-            },
-            transitions: { t1: { to: 'B', on: 'coin' }, t2: { to: 'Y', on: 'coin' } },
-        });
-        const s = stepFlowchartBoolean(config('coin', 'A', 'X'), STC_EV, v);
-        expect(marked(s.next)).toEqual(['B', 'Y']);
-    });
-});
-
-describe('discard: an event that fires nothing is a step at unchanged marking', () => {
-    const view = makeView(TURNSTILE);
-
-    it('coin on Unlocked is discarded and consumed; push moves the token', () => {
-        const input = config('coin', 'Unlocked');
-        const s = stepFlowchartBoolean(input, STC_EV, view);
-        expect(marked(s.next)).toEqual(['Unlocked']);
-        expect(s.next.event).toBeNull();
-        expect(s.label).toEqual({ fired: [], deactivated: [], activated: [], event: 'coin', discarded: true });
-        // control
-        const p = stepFlowchartBoolean(config('push', 'Unlocked'), STC_EV, view);
-        expect(marked(p.next)).toEqual(['Locked']);
-        expect(p.next.event).toBeNull();
-        expect(p.label).toEqual({ fired: ['tPushU'], deactivated: ['Unlocked'], activated: ['Locked'], event: 'push', discarded: false });
-    });
-
-    it('an event on a frozen run is consumed and discarded; ε on a frozen run returns the input itself', () => {
-        const frozen = config('coin', 'F', 'Locked');
-        const s = stepFlowchartBoolean(frozen, STC_EV, view);
-        expect(marked(s.next)).toEqual(['F', 'Locked']);
-        expect(s.next.event).toBeNull();
-        expect(s.label).toEqual({ fired: [], deactivated: [], activated: [], event: 'coin', discarded: true });
-        const eps = config(null, 'F', 'Locked');
-        expect(stepFlowchartBoolean(eps, STC_EV, view).next).toBe(eps);
-        // control: without F, coin fires
-        expect(stepFlowchartBoolean(config('coin', 'Locked'), STC_EV, view).label.fired).toEqual(['tCoin']);
-    });
-
-    it('the whole turnstile trace', () => {
-        let c = config(null, 'Locked');
-        const trace: string[] = [];
-        for (const e of ['coin', 'coin', 'push', 'push', 'coin']) {
-            const s = stepFlowchartBoolean({ marking: c.marking, event: e }, STC_EV, view);
-            c = s.next;
-            trace.push(`${e}:${marked(c).join()}${s.label.discarded ? '(discarded)' : ''}`);
-        }
-        expect(trace).toEqual(['coin:Unlocked', 'coin:Unlocked(discarded)', 'push:Locked', 'push:Locked', 'coin:Unlocked']);
-    });
-});
-
-describe('enabling (R-SIM-16): structural, on the marked instances', () => {
-    const view = makeView(TURNSTILE);
-
-    it('event buttons: Locked enables coin and push, Unlocked enables push only', () => {
-        expect([...enabledEvents(config(null, 'Locked'), STC_EV, view)].sort()).toEqual(['coin', 'push']);
-        expect([...enabledEvents(config(null, 'Unlocked'), STC_EV, view)]).toEqual(['push']);
-        expect([...enabledEvents(config(null), STC_EV, view)]).toEqual([]);
-    });
-
-    it('event buttons are disabled on Terminated', () => {
-        expect([...enabledEvents(config(null, 'F', 'Locked'), STC_EV, view)]).toEqual([]);
-        expect(runStatus(config(null, 'F', 'Locked'), STC_EV, view)).toBe('Terminated');
-    });
-
-    it('the Step button (ε) with the role: enabled iff a transition without a trigger leaves a marked instance', () => {
-        const v = makeView({
-            instances: {
-                Locked: { cls: 'C_Initial', out: ['tCoin'] },
-                Unlocked: { cls: 'C_State', out: ['tAuto'] },
-                F: { cls: 'C_Final' }, coin: { cls: 'C_Event' },
-            },
-            transitions: { tCoin: { to: 'Unlocked', on: 'coin' }, tAuto: { to: 'Locked' } },
-        });
-        expect(epsilonEnabled(config(null, 'Locked'), STC_EV, v)).toBe(false);
-        expect(epsilonEnabled(config(null, 'Unlocked'), STC_EV, v)).toBe(true);
-        expect(epsilonEnabled(config(null), STC_EV, v)).toBe(false);
-        // an untriggered transition enables ε, never an event button
-        expect([...enabledEvents(config(null, 'Unlocked'), STC_EV, v)]).toEqual([]);
-        expect([...enabledEvents(config(null, 'Locked'), STC_EV, v)]).toEqual(['coin']);
-        // disabled on Terminated even when an untriggered transition leaves a marked instance
-        expect(epsilonEnabled(config(null, 'F', 'Unlocked'), STC_EV, v)).toBe(false);
-        // control: without the role, Locked alone keeps the Step button enabled (slice 0 rule)
-        expect(epsilonEnabled(config(null, 'Locked'), STC, v)).toBe(true);
-    });
-
-    it('runStatus: with the role, a marked instance whose transitions all have a trigger is waiting, not Deadlock', () => {
-        expect(runStatus(config(null, 'Locked'), STC_EV, view)).toBe('Running');
-        expect(epsilonEnabled(config(null, 'Locked'), STC_EV, view)).toBe(false);
-        // control: an instance with no outgoing transition at all is still Deadlock
-        const v = makeView({ ...TURNSTILE, instances: { ...TURNSTILE.instances, Stuck: { cls: 'C_State' } } });
-        expect(runStatus(config(null, 'Locked', 'Stuck'), STC_EV, v)).toBe('Deadlock');
     });
 });
 
@@ -349,34 +121,6 @@ describe('eventAlphabet', () => {
         expect(eventAlphabet(STC_EV, base, ['e1'])).toEqual([{ id: 'e1', label: 'coin' }]);
         const { label: _unused, ...noLabel } = base;
         expect(eventAlphabet(STC_EV, noLabel, ['e1'])).toEqual([{ id: 'e1', label: 'e1' }]);
-    });
-});
-
-describe('stcFromRoles: the event role is optional, and all or nothing', () => {
-    const engine = { simInitial: 'C_Initial', simTerminal: 'C_Final', simOwnedTransitions: 'R_out', simNextState: 'R_next' };
-
-    it('reads the three keys', () => {
-        expect(stcFromRoles({ ...engine, simEvent: 'C_Event', simTrigger: 'R_trigger', simEventIdentifier: 'A_label' })?.roles).toEqual({
-            ...ENGINE, event: 'C_Event', trigger: 'R_trigger', eventIdentifier: 'A_label',
-        });
-    });
-
-    it('the identifier is optional', () => {
-        expect(stcFromRoles({ ...engine, simEvent: 'C_Event', simTrigger: 'R_trigger' })?.roles).toEqual({
-            ...ENGINE, event: 'C_Event', trigger: 'R_trigger',
-        });
-    });
-
-    it('one of simEvent and simTrigger alone is no event role; the identifier alone neither', () => {
-        expect(stcFromRoles({ ...engine, simEvent: 'C_Event', simEventIdentifier: 'A_label' })?.roles).toEqual(ENGINE);
-        expect(stcFromRoles({ ...engine, simTrigger: 'R_trigger', simEventIdentifier: 'A_label' })?.roles).toEqual(ENGINE);
-        expect(stcFromRoles({ ...engine, simEventIdentifier: 'A_label' })?.roles).toEqual(ENGINE);
-        expect(stcFromRoles({ ...engine, simEvent: '', simTrigger: 'R_trigger' })?.roles).toEqual(ENGINE);
-    });
-
-    it('the event keys do not make the run controls appear without the four engine keys', () => {
-        const { simNextState, ...partial } = engine;
-        expect(stcFromRoles({ ...partial, simEvent: 'C_Event', simTrigger: 'R_trigger' })).toBeNull();
     });
 });
 
@@ -552,22 +296,110 @@ describe('raw slot readers, by the feature pointer', () => {
             C_State: { className: 'DClass', extends: [] },
             ev1: { className: 'DObject', instanceof: 'C_SubEvent', features: ['v_ev1_label'] },
             v_ev1_label: { className: 'DValue', instanceof: 'A_label', values: ['go'] },
-            S: { className: 'DObject', instanceof: 'C_State', out: ['tr'] },
-            T: { className: 'DObject', instanceof: 'C_State', out: [] },
-            tr: { className: 'DObject', next: 'T', features: ['v_tr_trigger'] },
+            S: { className: 'DObject', instanceof: 'C_State', features: ['v_S_out'] },
+            v_S_out: { className: 'DValue', instanceof: 'R_out', values: ['tr'] },
+            T: { className: 'DObject', instanceof: 'C_State', features: [] },
+            tr: { className: 'DObject', instanceof: 'C_Trans', features: ['v_tr_next', 'v_tr_trigger'] },
+            v_tr_next: { className: 'DValue', instanceof: 'R_next', values: ['T'] },
             v_tr_trigger: { className: 'DValue', instanceof: 'R_trigger', values: ['ev1'] },
         };
-        const stc: StcDescriptor = { kind: 'boolean', roles: { ...ENGINE, event: 'C_Event', trigger: 'R_trigger', eventIdentifier: 'A_label' } };
-        const view: SimModelView = {
+        const stc = netStcFromRoles({ simInitial: 'C_State', simOwnedTransitions: 'R_out', simNextState: 'R_next', simEvent: 'C_Event', simTrigger: 'R_trigger', simEventIdentifier: 'A_label' })!;
+        const view: NetModelView = {
             exists: id => !!raw[id],
             isInstanceOf: (id, classId) => isKindOf(raw, id, classId),
-            outgoingTransitions: id => [...(raw[id]?.out ?? [])],
-            transitionTarget: t => raw[t]?.next ?? null,
-            transitionTriggers: t => objectReferences(raw, t, 'R_trigger'),
-            label: id => objectLabel(raw, id, stc.roles.eventIdentifier),
+            outgoingTransitions: () => [],
+            transitionTarget: () => null,
+            references: (o, f) => objectReferences(raw, o, f),
+            values: (o, f) => objectSlotValues(raw, o, f),
+            label: id => objectLabel(raw, id, stc.eventIdentifier),
         };
-        expect(eventAlphabet(stc, view, ['S', 'T', 'ev1'])).toEqual([{ id: 'ev1', label: 'go' }]);
-        expect([...enabledEvents(config(null, 'S'), stc, view)]).toEqual(['ev1']);
-        expect(marked(stepFlowchartBoolean(config('ev1', 'S'), stc, view).next)).toEqual(['T']);
+        const ids = ['S', 'T', 'ev1', 'tr'];
+        expect(eventAlphabet(stc, view, ids)).toEqual([{ id: 'ev1', label: 'go' }]);
+        const net = compileNet(stc, view, 'M', ids);
+        expect([...structuralInputs(net, marking('S')).events]).toEqual(['ev1']);
+        const out = step(net, { state: marking('S'), event: 'ev1' }, 'tr', () => ({ kind: 'true' }), () => ({ kind: 'ok', assignments: [] }));
+        expect(out.kind === 'fired' && [...out.next.state.marking.keys()]).toEqual(['T']);
+    });
+});
+
+describe('isKindOf — one notion of "is a" (R-SIM-8)', () => {
+    // Raw D-layer shape: DObject.instanceof -> DClass id, DClass.extends -> DClass ids.
+    const lookup: Record<string, any> = {
+        C_Node: { className: 'DClass', name: 'Node', extends: [] },
+        C_Initial: { className: 'DClass', name: 'Initial', extends: ['C_Node'] },
+        C_SubInitial: { className: 'DClass', name: 'SubInitial', extends: ['C_Initial'] },
+        C_Final: { className: 'DClass', name: 'Final', extends: ['C_Node'] },
+        C_SubFinal: { className: 'DClass', name: 'SubFinal', extends: ['C_Final'] },
+        C_LoopA: { className: 'DClass', name: 'LoopA', extends: ['C_LoopB'] },
+        C_LoopB: { className: 'DClass', name: 'LoopB', extends: ['C_LoopA'] },
+        I: { className: 'DObject', instanceof: 'C_Initial', out: [] },
+        SubI: { className: 'DObject', instanceof: 'C_SubInitial', out: ['t1'] },
+        N: { className: 'DObject', instanceof: 'C_Node', out: [] },
+        SubF: { className: 'DObject', instanceof: 'C_SubFinal', out: [] },
+        A: { className: 'DObject', instanceof: 'C_Node', out: ['t2'] },
+        Loop: { className: 'DObject', instanceof: 'C_LoopA' },
+        Orphan: { className: 'DObject', instanceof: 'C_Deleted' },
+        t1: { className: 'DObject', instanceof: 'C_T', next: 'A' },
+        t2: { className: 'DObject', instanceof: 'C_T', next: 'SubF' },
+    };
+    // Built exactly as the panel's adapter builds `isInstanceOf`.
+    const view: SimModelView = {
+        exists: id => !!lookup[id],
+        isInstanceOf: (id, classId) => isKindOf(lookup, id, classId),
+        outgoingTransitions: id => [...(lookup[id]?.out ?? [])],
+        transitionTarget: t => lookup[t]?.next ?? null,
+    };
+    /** The same lookup read by pointer, as the compiler reads it: `out` is R_out, `next` is R_next. */
+    const netOver = (v: SimModelView): NetModelView => ({
+        ...v,
+        references: (o, f) => (f === 'R_out' ? [...(lookup[o]?.out ?? [])] : f === 'R_next' && lookup[o]?.next ? [lookup[o].next] : []),
+        values: () => [],
+    });
+
+    it('a subclass of the initial metaclass is initial: one token on it at Reset (compileNet)', () => {
+        expect([...compileNet(STC, netOver(view), 'M', ['N', 'SubI', 'A']).initial.marking.keys()]).toEqual(['SubI']);
+        // control: the superclass is not initial
+        expect([...compileNet(STC, netOver(view), 'M', ['N', 'A']).initial.marking.keys()]).toEqual([]);
+    });
+
+    it('a subclass of the terminal metaclass is final, and a marking of it alone is terminated (R-SIM-27)', () => {
+        const net = compileNet(STC, netOver(view), 'M', ['SubF', 'A']);
+        expect([...(net.final ?? [])]).toEqual(['SubF']);
+        expect(terminated(net, marking('SubF'))).toBe(true);
+        // controls: another token besides, or no terminal role
+        expect(terminated(net, marking('SubF', 'A'))).toBe(false);
+        expect(terminated(compileNet({ ...STC, terminal: undefined }, netOver(view), 'M', ['SubF', 'A']), marking('SubF'))).toBe(false);
+    });
+
+    it('matches the class itself, walks transitively, never downwards', () => {
+        expect(isKindOf(lookup, 'I', 'C_Initial')).toBe(true);
+        expect(isKindOf(lookup, 'SubI', 'C_Node')).toBe(true);
+        expect(isKindOf(lookup, 'I', 'C_SubInitial')).toBe(false);
+        expect(isKindOf(lookup, 'N', 'C_Initial')).toBe(false);
+    });
+
+    it('terminates on a cycle in extends, and answers false for unknown objects', () => {
+        expect(isKindOf(lookup, 'Loop', 'C_LoopB')).toBe(true);
+        expect(isKindOf(lookup, 'Loop', 'C_Node')).toBe(false);
+        expect(isKindOf(lookup, 'Nobody', 'C_Node')).toBe(false);
+    });
+
+    it('keeps the exact-id match of a metaclass no longer in the lookup', () => {
+        expect(isKindOf(lookup, 'Orphan', 'C_Deleted')).toBe(true);
+        expect(isKindOf(lookup, 'Orphan', 'C_Node')).toBe(false);
+    });
+
+    it('agrees with the IR ancestry walk (classAncestry) on every existing class', () => {
+        const classes = Object.keys(lookup).filter(id => lookup[id].className === 'DClass');
+        const objects = Object.keys(lookup).filter(id => lookup[id].className === 'DObject' && lookup[lookup[id].instanceof]);
+        let compared = 0;
+        for (const o of objects) {
+            const ancestors = classAncestry(lookup, lookup[o].instanceof).map(a => a.id);
+            for (const c of classes) {
+                expect(isKindOf(lookup, o, c)).toBe(ancestors.includes(c));
+                compared++;
+            }
+        }
+        expect(compared).toBeGreaterThan(20);
     });
 });

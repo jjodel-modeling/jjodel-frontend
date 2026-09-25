@@ -64,7 +64,7 @@ export const ROLE_SPECS: RoleSpec[] = [
     { key: 'simArcWeight', label: 'Arc weight', kind: 'attribute', placeholder: 'Select an attribute' },
     { key: 'simInhibitorArc', label: 'Inhibitor arc', kind: 'class', placeholder: 'Select a metaclass' },
     // The event role (step 1, R-SIM-16): optional, and it exists only when Event
-    // and Trigger are both set (stcFromRoles). The identifier only labels the buttons.
+    // and Trigger are both set (netStcFromRoles). The identifier only labels the buttons.
     { key: 'simEvent', label: 'Event', kind: 'class', placeholder: 'Select a metaclass' },
     { key: 'simTrigger', label: 'Trigger', kind: 'reference', placeholder: 'Select a reference' },
     { key: 'simEventIdentifier', label: 'Event identifier', kind: 'attribute', placeholder: 'Select an attribute' },
