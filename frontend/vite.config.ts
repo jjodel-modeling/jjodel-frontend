@@ -42,6 +42,8 @@ export default defineConfig(({ mode }) => ({
   server: {
     port: 3000
   },
+  // One Vite cache per worktree: node_modules is a symlink shared by every tree.
+  cacheDir: path.resolve(__dirname, '.vite-cache'),
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

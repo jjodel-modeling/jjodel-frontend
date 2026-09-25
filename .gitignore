@@ -43,6 +43,7 @@ sandbox.tsx
 /frontend/dist
 /frontend/dist/
 /frontend/dist/*
+/frontend/.vite-cache/
 
 /frontend/node_modules/.cache
 /database
