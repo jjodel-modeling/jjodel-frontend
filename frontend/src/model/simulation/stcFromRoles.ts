@@ -1,59 +1,29 @@
 /**
- * stcFromRoles — the STC descriptor from the role bag of the M2 model.
+ * stcFromRoles — the disjointness of the STC roles of the M2 bag (R-SIM-16).
  *
- * Reads the six flat `sim*` keys (R-SIM-2) and keeps a value only when it is a
- * non-empty string, the same filter `mapStateToProps` applies in
- * SimulationPanel.tsx. Returns `null` unless the four keys the engine reads are
- * all set: the rule of `rolesComplete` (`ENGINE_ROLE_KEYS.every(...)`).
- *
- * Step 1 adds three optional keys for the event role (R-SIM-16): `simEvent`,
- * `simTrigger`, `simEventIdentifier`. The role exists only when `simEvent` and
- * `simTrigger` are both set; one of them alone is no event role at all.
+ * Step 3b moved the STC itself to `netStcFromRoles` (netCompile.ts) and deleted
+ * the boolean descriptor this module was named after; what stays here are the
+ * overlap rules, which read the flat `sim*` keys (R-SIM-2) of the bag directly.
+ * A role value counts only when it is a non-empty string, the same filter
+ * `mapStateToProps` applies in SimulationPanel.tsx.
  */
 
 import { classIsKindOf } from './isKindOf';
-import type { StcDescriptor } from './types';
 
 function pointer(state: Record<string, unknown>, key: string): string | undefined {
     const value = state[key];
     return typeof value === 'string' && value ? value : undefined;
 }
 
-export function stcFromRoles(state: Record<string, unknown> | undefined): StcDescriptor | null {
-    if (!state) return null;
-    const initial = pointer(state, 'simInitial');
-    const terminal = pointer(state, 'simTerminal');
-    const ownedTransitions = pointer(state, 'simOwnedTransitions');
-    const nextState = pointer(state, 'simNextState');
-    if (!initial || !terminal || !ownedTransitions || !nextState) return null;
-
-    const descriptor: StcDescriptor = {
-        kind: 'boolean',
-        roles: { initial, terminal, ownedTransitions, nextState },
-    };
-    const node = pointer(state, 'simNode');
-    const transition = pointer(state, 'simTransition');
-    if (node) descriptor.roles.node = node;
-    if (transition) descriptor.roles.transition = transition;
-    const event = pointer(state, 'simEvent');
-    const trigger = pointer(state, 'simTrigger');
-    if (event && trigger) {
-        descriptor.roles.event = event;
-        descriptor.roles.trigger = trigger;
-        const eventIdentifier = pointer(state, 'simEventIdentifier');
-        if (eventIdentifier) descriptor.roles.eventIdentifier = eventIdentifier;
-    }
-    return descriptor;
-}
-
 /**
- * The three sorts of elements the metaclass roles select. Initial and terminal
- * are nodes: a subclass of the node metaclass playing them is the norm, not an
- * overlap.
+ * The four sorts of elements the metaclass roles select. Initial, terminal,
+ * fork and join are nodes: a subclass of the node metaclass playing them is the
+ * norm, not an overlap. An inhibitor arc is an arc (step 3b, R-SIM-37).
  */
 const ROLE_SORTS: ReadonlyArray<{ sort: string; keys: readonly string[] }> = [
-    { sort: 'node', keys: ['simNode', 'simInitial', 'simTerminal'] },
+    { sort: 'node', keys: ['simNode', 'simInitial', 'simTerminal', 'simFork', 'simJoin'] },
     { sort: 'transition', keys: ['simTransition'] },
+    { sort: 'arc', keys: ['simArc', 'simInhibitorArc'] },
     { sort: 'event', keys: ['simEvent'] },
 ];
 
@@ -97,10 +67,11 @@ export function roleOverlaps(
 
 /**
  * What a run start or a role save does with the role overlaps (R-SIM-16). With
- * the event role declared (`simEvent` and `simTrigger` both set) any overlap
- * refuses. Without it an overlap is a warning and the run starts, or the role
- * is saved, as in slice 0: the parity of R-SIM-16 covers the metamodels
- * configured before step 1. `null` when the roles are disjoint.
+ * the event role declared (`simEvent` and `simTrigger` both set), or the Petri
+ * shape (`simArc` set, R-SIM-37), any overlap refuses. Otherwise an overlap is a
+ * warning and the run starts, or the role is saved, as in slice 0: the parity of
+ * R-SIM-16 covers the control-flow metamodels configured before step 1. `null`
+ * when the roles are disjoint.
  */
 export function overlapVerdict(
     lookup: Record<string, any>,
@@ -109,7 +80,7 @@ export function overlapVerdict(
 ): { overlap: RoleOverlap; refuse: boolean } | null {
     const overlap = roleOverlaps(lookup, roles, classIds);
     if (!overlap) return null;
-    return { overlap, refuse: !!(pointer(roles, 'simEvent') && pointer(roles, 'simTrigger')) };
+    return { overlap, refuse: !!((pointer(roles, 'simEvent') && pointer(roles, 'simTrigger')) || pointer(roles, 'simArc')) };
 }
 
 /**

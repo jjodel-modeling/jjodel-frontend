@@ -1,12 +1,13 @@
 /**
- * simRoleStatus — what the simulation panel says is missing (P-2026-09-24-1005).
+ * simRoleStatus — what the simulation panel says is missing (P-2026-09-24-1005,
+ * per shape since step 3b, P-2026-09-25-1103).
  *
  * Executes the pure module the panel reads (P11); the panel itself imports the
  * joiner and does not load under this bench. Each test name says which break
  * of the rule kills it; the mutation bench is in the commit message.
  *
- * `stcFromRoles` is the engine's own completeness rule: the parity tests run it
- * on the same bags, so the panel's gate and the engine cannot drift apart.
+ * `netStcFromRoles` is the engine's own completeness rule: the parity test runs
+ * it on the same bags, so the panel's gate and the engine cannot drift apart.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -14,88 +15,160 @@ import {
     ENGINE_ROLE_KEYS,
     eventRoleWarning,
     incompleteConfigurationMessage,
+    invalidEngineRoles,
     missingEngineRoles,
     missingEventRoles,
 } from '../simRoleStatus';
 import type { Roles } from '../simRoleStatus';
-import { stcFromRoles } from '../../../../model/simulation/stcFromRoles';
+import { netStcFromRoles } from '../../../../model/simulation/netCompile';
 
-const ENGINE: Roles = { simInitial: 'C_Initial', simTerminal: 'C_Final', simOwnedTransitions: 'R_out', simNextState: 'R_next' };
-const DECLARATIVE: Roles = { simNode: 'C_Node', simTransition: 'C_Trans', simEvent: 'C_Event', simTrigger: 'R_trigger', simEventIdentifier: 'A_name' };
+/** A runnable control-flow bag: an initial rule, a source rule, the next state. */
+const CF: Roles = { simInitial: 'C_Initial', simOwnedTransitions: 'R_out', simNextState: 'R_next' };
+/** A runnable Petri bag: the arc role selects the shape (R-SIM-31). */
+const PETRI: Roles = {
+    simArc: 'C_Arc', simNode: 'C_Place', simTransition: 'C_Trans', simArcSource: 'R_src', simArcTarget: 'R_tgt', simInitialMarking: 'A_m',
+};
+const DECLARATIVE: Roles = { simTerminal: 'C_Final', simEvent: 'C_Event', simTrigger: 'R_trigger', simEventIdentifier: 'A_name', simGuard: 'A_g' };
 
-describe('missingEngineRoles', () => {
-    it('lists only the four engine roles, in ROLE_SPECS order, whatever else is set (engine filter, order)', () => {
-        const all = ['Initial', 'Terminal', 'Owned transitions', 'Next state'];
+describe('missingEngineRoles, per shape (R-SIM-28, R-SIM-31)', () => {
+    it('control flow: the three requirements, a pair as one entry, in ROLE_SPECS order, whatever else is set', () => {
+        const all = ['Initial or Initial marking', 'Owned transitions or Source', 'Next state'];
         expect(missingEngineRoles({})).toEqual(all);
         expect(missingEngineRoles(DECLARATIVE)).toEqual(all);
+        expect(missingEngineRoles({ ...CF, ...DECLARATIVE })).toEqual([]);
     });
 
-    it('names exactly the one engine role left unset, Terminal included (the four keys)', () => {
+    it('control flow: either member of a pair will do (Source for Owned transitions, Initial marking for Initial)', () => {
+        expect(missingEngineRoles({ ...CF, simOwnedTransitions: undefined, simSource: 'R_src' })).toEqual([]);
+        expect(missingEngineRoles({ ...CF, simInitial: undefined, simInitialMarking: 'A_m' })).toEqual([]);
+        // control: neither member of the pair
+        expect(missingEngineRoles({ ...CF, simOwnedTransitions: undefined })).toEqual(['Owned transitions or Source']);
+        expect(missingEngineRoles({ ...CF, simInitial: undefined })).toEqual(['Initial or Initial marking']);
+    });
+
+    it('Petri: names exactly the one required key left unset (the five keys)', () => {
         const labels: Record<string, string> = {
-            simInitial: 'Initial', simTerminal: 'Terminal', simOwnedTransitions: 'Owned transitions', simNextState: 'Next state',
+            simNode: 'Node', simInitialMarking: 'Initial marking', simTransition: 'Transition', simArcSource: 'Arc source', simArcTarget: 'Arc target',
         };
-        for (const key of ENGINE_ROLE_KEYS) {
-            expect(missingEngineRoles({ ...ENGINE, ...DECLARATIVE, [key]: undefined })).toEqual([labels[key]]);
+        for (const key of Object.keys(labels)) {
+            expect(missingEngineRoles({ ...PETRI, [key]: undefined })).toEqual([labels[key]]);
         }
-        // control: the same bag with every engine role set misses nothing
-        expect(missingEngineRoles({ ...ENGINE, ...DECLARATIVE })).toEqual([]);
+        expect(missingEngineRoles({ simArc: 'C_Arc' })).toEqual(['Node', 'Initial marking', 'Transition', 'Arc source', 'Arc target']);
+        // control: complete, and the control-flow keys are not asked of a Petri bag
+        expect(missingEngineRoles(PETRI)).toEqual([]);
+    });
+
+    it('Terminal is never required (R-SIM-28): a bag without it runs on both shapes', () => {
+        expect(missingEngineRoles(CF)).toEqual([]);
+        expect(missingEngineRoles(PETRI)).toEqual([]);
+        expect(netStcFromRoles(CF)).not.toBeNull();
+        expect(netStcFromRoles(PETRI)).not.toBeNull();
     });
 
     it('counts an empty string as unset (non-empty rule, not "defined")', () => {
-        expect(missingEngineRoles({ ...ENGINE, simNextState: '' })).toEqual(['Next state']);
+        expect(missingEngineRoles({ ...CF, simNextState: '' })).toEqual(['Next state']);
+        expect(missingEngineRoles({ ...PETRI, simNode: '' })).toEqual(['Node']);
+    });
+});
+
+describe('invalidEngineRoles: the bound (R-SIM-23, R-SIM-37)', () => {
+    it('a whole number >= 1 in digits is valid; unset is valid (default 1)', () => {
+        for (const ok of ['1', '2', ' 3 ', '10']) expect(invalidEngineRoles({ ...CF, simBound: ok })).toEqual([]);
+        expect(invalidEngineRoles(CF)).toEqual([]);
     });
 
-    it('is empty exactly when stcFromRoles builds a descriptor, over the 16 subsets of the engine keys (parity)', () => {
-        for (let mask = 0; mask < 16; mask++) {
-            const bag: Roles = { ...DECLARATIVE };
-            ENGINE_ROLE_KEYS.forEach((key, i) => { if (mask & (1 << i)) bag[key] = ENGINE[key]; });
-            expect(missingEngineRoles(bag).length === 0).toBe(stcFromRoles(bag) !== null);
+    it('zero, a sign, a fraction or a word is invalid, and says why', () => {
+        for (const bad of ['0', '-1', '1.5', 'x', '2e1']) {
+            expect(invalidEngineRoles({ ...CF, simBound: bad })).toEqual(['Bound (a whole number ≥ 1)']);
+        }
+    });
+});
+
+describe('parity with the engine (replaces the 16-subset parity of step 1)', () => {
+    const BOUNDS: Array<string | undefined> = [undefined, '2', '0', 'x'];
+    const VALUES: Record<string, string> = {
+        simNextState: 'R_next', simOwnedTransitions: 'R_out', simSource: 'R_src', simInitial: 'C_Initial', simInitialMarking: 'A_m',
+        simNode: 'C_Place', simTransition: 'C_Trans', simArc: 'C_Arc', simArcSource: 'R_src2', simArcTarget: 'R_tgt',
+    };
+
+    const bags = (): Roles[] => {
+        const out: Roles[] = [];
+        for (let mask = 0; mask < 1 << ENGINE_ROLE_KEYS.length; mask++) {
+            for (const bound of BOUNDS) {
+                const bag: Roles = { ...DECLARATIVE };
+                ENGINE_ROLE_KEYS.forEach((key, i) => { if (mask & (1 << i)) bag[key] = VALUES[key]; });
+                if (bound !== undefined) bag.simBound = bound;
+                out.push(bag);
+            }
+        }
+        return out;
+    };
+
+    it('nothing missing and nothing invalid exactly when netStcFromRoles builds an STC, over 4096 bags (both shapes, four bounds)', () => {
+        let runnable = 0;
+        const all = bags();
+        expect(all).toHaveLength(4096);
+        for (const bag of all) {
+            const gate = missingEngineRoles(bag).length === 0 && invalidEngineRoles(bag).length === 0;
+            expect(gate).toBe(netStcFromRoles(bag) !== null);
+            if (gate) runnable++;
+        }
+        // control: the parity is not vacuous, some bags run and some do not
+        expect(runnable).toBeGreaterThan(0);
+        expect(runnable).toBeLessThan(all.length);
+    });
+
+    it('Terminal changes neither side on any bag (R-SIM-28)', () => {
+        for (const bag of bags()) {
+            const without: Roles = { ...bag, simTerminal: undefined };
+            expect(missingEngineRoles(without)).toEqual(missingEngineRoles(bag));
+            expect(netStcFromRoles(without) !== null).toBe(netStcFromRoles(bag) !== null);
         }
     });
 });
 
 describe('missingEventRoles', () => {
     it('Event without Trigger misses Trigger, Trigger without Event misses Event (labels not swapped)', () => {
-        expect(missingEventRoles({ ...ENGINE, simEvent: 'C_Event' })).toEqual(['Trigger']);
-        expect(missingEventRoles({ ...ENGINE, simTrigger: 'R_trigger' })).toEqual(['Event']);
+        expect(missingEventRoles({ ...CF, simEvent: 'C_Event' })).toEqual(['Trigger']);
+        expect(missingEventRoles({ ...CF, simTrigger: 'R_trigger' })).toEqual(['Event']);
     });
 
     it('both set or neither set: nothing missing (exclusive or, not "any one set")', () => {
-        expect(missingEventRoles({ ...ENGINE, simEvent: 'C_Event', simTrigger: 'R_trigger' })).toEqual([]);
-        expect(missingEventRoles(ENGINE)).toEqual([]);
+        expect(missingEventRoles({ ...CF, simEvent: 'C_Event', simTrigger: 'R_trigger' })).toEqual([]);
+        expect(missingEventRoles(CF)).toEqual([]);
         // control: one of the two makes it non-empty
-        expect(missingEventRoles({ ...ENGINE, simEvent: 'C_Event' })).not.toEqual([]);
+        expect(missingEventRoles({ ...CF, simEvent: 'C_Event' })).not.toEqual([]);
     });
 
     it('the identifier alone is not a half-set role (only Event and Trigger count)', () => {
-        expect(missingEventRoles({ ...ENGINE, simEventIdentifier: 'A_name' })).toEqual([]);
-        expect(missingEventRoles({ ...ENGINE, simEvent: 'C_Event', simEventIdentifier: 'A_name' })).toEqual(['Trigger']);
+        expect(missingEventRoles({ ...CF, simEventIdentifier: 'A_name' })).toEqual([]);
+        expect(missingEventRoles({ ...CF, simEvent: 'C_Event', simEventIdentifier: 'A_name' })).toEqual(['Trigger']);
     });
 
     it('an empty string counts as unset', () => {
-        expect(missingEventRoles({ ...ENGINE, simEvent: '', simTrigger: 'R_trigger' })).toEqual(['Event']);
+        expect(missingEventRoles({ ...CF, simEvent: '', simTrigger: 'R_trigger' })).toEqual(['Event']);
     });
 
-    it('a half-set role still runs, without events: stcFromRoles builds the descriptor and drops the event role (R-SIM-16)', () => {
+    it('a half-set role still runs, without events: netStcFromRoles builds the STC and drops the event role (R-SIM-16)', () => {
         for (const half of [{ simEvent: 'C_Event' }, { simTrigger: 'R_trigger' }]) {
-            const bag: Roles = { ...ENGINE, ...half, simEventIdentifier: 'A_name' };
+            const bag: Roles = { ...CF, ...half, simEventIdentifier: 'A_name' };
             expect(missingEventRoles(bag)).toHaveLength(1);
-            const stc = stcFromRoles(bag);
+            const stc = netStcFromRoles(bag);
             expect(stc).not.toBeNull();
-            expect(stc?.roles.event).toBeUndefined();
-            expect(stc?.roles.trigger).toBeUndefined();
+            expect(stc?.event).toBeUndefined();
+            expect(stc?.trigger).toBeUndefined();
         }
-        // control: both set, the descriptor carries the event role
-        expect(stcFromRoles({ ...ENGINE, simEvent: 'C_Event', simTrigger: 'R_trigger' })?.roles.event).toBe('C_Event');
+        // control: both set, the STC carries the event role
+        expect(netStcFromRoles({ ...CF, simEvent: 'C_Event', simTrigger: 'R_trigger' })?.event).toBe('C_Event');
     });
 });
 
 describe('messages', () => {
     it('incomplete configuration names the metamodel and the labels, comma-separated (GO wording)', () => {
-        expect(incompleteConfigurationMessage('Smoke', ['Terminal']))
-            .toBe('Simulation not configured. Missing on Smoke: Terminal.');
+        expect(incompleteConfigurationMessage('Smoke', ['Next state']))
+            .toBe('Simulation not configured. Missing on Smoke: Next state.');
         expect(incompleteConfigurationMessage('Smoke', missingEngineRoles({})))
-            .toBe('Simulation not configured. Missing on Smoke: Initial, Terminal, Owned transitions, Next state.');
+            .toBe('Simulation not configured. Missing on Smoke: Initial or Initial marking, Owned transitions or Source, Next state.');
     });
 
     it('incomplete configuration falls back to "the metamodel" when the name is empty', () => {

@@ -205,6 +205,69 @@
         color: var(--color-text-tertiary);
     }
 
+    // M2 face: a collapsible group of roles (step 3b, R-SIM-37), styled as a section title.
+    &__group {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        width: 100%;
+        margin: 8px 0;
+        padding: 0;
+        border: none;
+        background: transparent;
+        color: var(--color-text-tertiary);
+        font-family: inherit;
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        cursor: pointer;
+
+        &:hover {
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid #0ea5e9;
+            outline-offset: 2px;
+        }
+
+        .bi {
+            font-size: 10px;
+            line-height: 1;
+        }
+
+        // Follows the button's own colour, hover included.
+        .bi,
+        .bi:hover {
+            color: inherit;
+        }
+    }
+
+    // The bound (k): the one role that is a value, not a pointer. Same box as the select.
+    &__input {
+        flex: 1 1 auto;
+        min-width: 0;
+        height: 24px;
+        padding: 0 4px;
+        border: 1px solid var(--color-border-primary);
+        border-radius: 4px;
+        background: var(--color-bg-primary);
+        color: var(--color-text-primary);
+        font-family: inherit;
+        font-size: 11px;
+
+        &:hover {
+            border-color: var(--color-border-hover);
+        }
+
+        &:focus {
+            outline: none;
+            border-color: #0ea5e9;
+            box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.18);
+        }
+    }
+
     &__select {
         flex: 1 1 auto;
         min-width: 0;
@@ -337,6 +400,72 @@
         }
     }
 
+    // -- open: the choice among candidates (M1, step 3b, R-SIM-35) ----------
+    // One button per candidate, full width, in the event buttons' vocabulary.
+    &__choices {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding: 0 0 8px;
+    }
+
+    &__choice {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        min-height: 24px;
+        padding: 4px 8px;
+        border: 1px solid var(--color-border-primary);
+        border-radius: 4px;
+        background: var(--color-bg-primary);
+        color: var(--color-text-secondary);
+        font-family: inherit;
+        font-size: 11px;
+        line-height: 1.3;
+        text-align: left;
+        cursor: pointer;
+        overflow-wrap: anywhere;
+
+        &:hover {
+            border-color: var(--color-border-hover);
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid #0ea5e9;
+            outline-offset: 2px;
+        }
+    }
+
+    // Choosing this candidate halts the run (R-SIM-23): said before the click.
+    &__choice-note {
+        flex: 0 0 auto;
+        color: var(--color-warning-text);
+    }
+
+    &__cancel {
+        align-self: flex-start;
+        padding: 0;
+        border: none;
+        background: transparent;
+        color: var(--color-text-tertiary);
+        font-family: inherit;
+        font-size: 11px;
+        text-decoration: underline;
+        cursor: pointer;
+
+        &:hover {
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid #0ea5e9;
+            outline-offset: 2px;
+        }
+    }
+
     // A refused role write or run start: the reason, in the error text token.
     &__hint--error {
         color: var(--color-error-text);
@@ -371,6 +500,7 @@
         &--running { background: #0ea5e9; }
         &--terminated { background: #22c55e; }
         &--deadlock { background: #f59e0b; }
+        &--halted { background: var(--color-error); }
     }
 }
 

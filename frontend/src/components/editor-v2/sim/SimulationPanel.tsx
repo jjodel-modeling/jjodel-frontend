@@ -6,13 +6,15 @@
  *
  * Two faces, one component:
  *
- * - M2 face (metamodel): the six simulation ROLES, plus the three optional keys
- *   of the event role (step 1, R-SIM-16), written into the `data.state`
- *   bag of the M2 model with flat `sim*` keys and pointer values (R-SIM-2).
- *   Persisted, undoable, shared in collaborative — it is authoring.
- * - M1 face (model): Reset / Step / Stop over the run-state, which lives in the
- *   `simRunState` singleton, outside Redux (R-SIM-1). The simulation NEVER
- *   writes to the model nor to any bag (R-SIM-6, prototype invariant).
+ * - M2 face (metamodel): the simulation ROLES in four groups (step 3b, R-SIM-37),
+ *   written into the `data.state` bag of the M2 model with flat `sim*` keys and
+ *   pointer values (R-SIM-2), the bound as a digit string. Persisted, undoable,
+ *   shared in collaborative — it is authoring.
+ * - M1 face (model): Reset / Step / Stop and the event buttons over a run of the
+ *   Petri core (model/simulation/net*.ts), built and stepped by the bridge
+ *   (simBridge.ts) and kept in the `simRunState` singleton, outside Redux
+ *   (R-SIM-1). The simulation NEVER writes to the model nor to any bag (R-SIM-6,
+ *   prototype invariant).
  *
  * The roles are read from `lmodel.instanceof.state` on the M1 face (the pattern
  * of the prototype, forEndUser/Control.tsx:244-248) and from the model's own bag
@@ -25,17 +27,23 @@
  */
 
 import { Dispatch, ReactElement, useCallback, useEffect, useMemo, useState } from 'react';
-import { connect } from 'react-redux';
-import { DState, LPointerTargetable, store } from '../../../joiner';
-import { getSimActiveIds, simApplyStep, simClear, simReset, useSimVersion } from './simRunState';
-import { ROLE_SPECS, eventRoleWarning, incompleteConfigurationMessage, missingEngineRoles, missingEventRoles } from './simRoleStatus';
-import { enabledEvents, epsilonEnabled, eventAlphabet, initialConfiguration, runStatus as computeRunStatus, stepFlowchartBoolean } from '../../../model/simulation/step';
-import { overlapVerdict, roleWriteVerdict, stcFromRoles } from '../../../model/simulation/stcFromRoles';
+import { connect, useSelector } from 'react-redux';
+import { DState, DUser, LPointerTargetable, store } from '../../../joiner';
+import { buildEvalContext } from '../../../jjscript';
+import { getSimRun, simClear, simReset } from './simRunState';
+import {
+    ROLE_SPECS, eventRoleWarning, incompleteConfigurationMessage, invalidEngineRoles, missingEngineRoles, missingEventRoles,
+} from './simRoleStatus';
+import {
+    candidateLabel, collectModelObjectIds, defectsLine, haltMessage, makeNetModelView, panelInputs, pressInput, runSignature, startRun,
+} from './simBridge';
+import { eventAlphabet, netStcFromRoles } from '../../../model/simulation/netCompile';
+import { netRunStatus, structuralInputs } from '../../../model/simulation/netStep';
+import { overlapVerdict, roleWriteVerdict } from '../../../model/simulation/stcFromRoles';
 import type { RoleOverlap } from '../../../model/simulation/stcFromRoles';
-import { isKindOf } from '../../../model/simulation/isKindOf';
-import { objectLabel, objectReferences } from '../../../model/simulation/objectSlots';
-import type { SimConfiguration, SimEventInfo, SimModelView } from '../../../model/simulation/types';
-import type { RoleKey, RoleKind, Roles } from './simRoleStatus';
+import type { Candidate, NetRunStatus } from '../../../model/simulation/netTypes';
+import type { SimEventInfo } from '../../../model/simulation/types';
+import type { RoleKey, RoleKind, RoleSpec, Roles } from './simRoleStatus';
 import './simulation-panel.scss';
 
 // Roles: ROLE_SPECS, ENGINE_ROLE_KEYS and the role types live in simRoleStatus.ts.
@@ -121,93 +129,6 @@ function collectMetaOptions(lookup: any, modelId: string): MetaOptions {
     };
 }
 
-/**
- * DObject ids belonging to an M1 model — the equivalent of `allSubObjects` on
- * raw data. Nested objects hang off a DValue slot, so the owner is found by
- * walking `father` up to the DModel (the idiom of joiner/classes.ts:415).
- */
-function collectModelObjectIds(lookup: any, modelId: string): string[] {
-    const ids: string[] = [];
-    for (const id in lookup) {
-        const d = lookup[id];
-        if (!d || d.className !== 'DObject') continue;
-        let owner: any = d;
-        let depth = 0;
-        while (owner && owner.className !== 'DModel' && depth++ < 40) {
-            const fatherId = typeof owner.father === 'string' ? owner.father : null;
-            owner = fatherId ? lookup[fatherId] : null;
-        }
-        if (owner?.id === modelId) ids.push(id);
-    }
-    return ids;
-}
-
-/**
- * Outgoing transitions of an active instance: the values of its composition slot
- * named after the `simOwnedTransitions` role. Same navigation as the prototype
- * (`o['$' + role].values`), through the L proxy — the slot is matched by feature
- * name, which is resolved here from the role POINTER, never compared by name.
- */
-function outgoingTransitions(objectId: string, ownedTransitionsName: string): any[] {
-    if (!ownedTransitionsName) return [];
-    try {
-        const lobj: any = LPointerTargetable.fromPointer(objectId);
-        const slot = lobj?.['$' + ownedTransitionsName];
-        const values = slot?.values;
-        return Array.isArray(values) ? values.filter(Boolean) : [];
-    } catch {
-        // A proxy getter can throw on a half-resolved slot. The status line calls
-        // this during render: an exception here would take the editor tree down.
-        return [];
-    }
-}
-
-/** Target of a transition: `t['$' + nextState].value`, as the prototype does. */
-function transitionTargetId(transition: any, nextStateName: string): string | null {
-    if (!nextStateName) return null;
-    try {
-        const target = transition?.['$' + nextStateName]?.value;
-        if (typeof target === 'string') return target;
-        return typeof target?.id === 'string' ? target.id : null;
-    } catch {
-        return null;
-    }
-}
-
-/**
- * The impure side of the simulation core (model/simulation/): the read interface
- * the step runs against, built over `idlookup` and the L proxy with the readers
- * above. Metaclasses match with ancestry (R-SIM-8): an instance of a subclass
- * of the initial or terminal metaclass plays that role too.
- *
- * Step 1: the trigger and the label are read on the raw D-layer by the role
- * POINTER (model/simulation/objectSlots.ts), not on the proxy by name.
- */
-function makeSimModelView(
-    lookup: any,
-    ownedTransitionsName: string,
-    nextStateName: string,
-    triggerId?: string,
-    eventIdentifierId?: string,
-): SimModelView {
-    return {
-        exists: id => !!lookup[id],
-        isInstanceOf: (id, classId) => isKindOf(lookup, id, classId),
-        outgoingTransitions: id => outgoingTransitions(id, ownedTransitionsName)
-            .map((t: any) => (typeof t === 'string' ? t : t?.id))
-            .filter((t: unknown): t is string => typeof t === 'string'),
-        transitionTarget: transitionId => {
-            try {
-                return transitionTargetId(LPointerTargetable.fromPointer(transitionId as any), nextStateName);
-            } catch {
-                return null;
-            }
-        },
-        transitionTriggers: transitionId => (triggerId ? objectReferences(lookup, transitionId, triggerId) : []),
-        label: id => objectLabel(lookup, id, eventIdentifierId),
-    };
-}
-
 /** The reason shown when the roles overlap (R-SIM-16), on either face. */
 function overlapMessage(lookup: any, overlap: RoleOverlap): string {
     const name: string = lookup[overlap.classId]?.name ?? overlap.classId;
@@ -218,12 +139,34 @@ function overlapMessage(lookup: any, overlap: RoleOverlap): string {
 // Component
 // ---------------------------------------------------------------------------
 
-type RunStatus = 'Not started' | 'Running' | 'Terminated' | 'Deadlock';
+/** The groups of the M2 face (R-SIM-37), in ROLE_SPECS order within each. */
+const ROLE_GROUPS: ReadonlyArray<{ id: string; title: string; keys: readonly RoleKey[] }> = [
+    { id: 'general', title: 'General', keys: ['simNode', 'simInitial', 'simInitialMarking', 'simTerminal', 'simBound', 'simTransition', 'simGuard'] },
+    { id: 'control-flow', title: 'Control flow', keys: ['simOwnedTransitions', 'simSource', 'simNextState', 'simFork', 'simJoin'] },
+    { id: 'petri', title: 'Petri net', keys: ['simArc', 'simArcSource', 'simArcTarget', 'simArcWeight', 'simInhibitorArc'] },
+    { id: 'events', title: 'Events', keys: ['simEvent', 'simTrigger', 'simEventIdentifier'] },
+];
+
+/** The project of the current user, as validation reads it (validationContext.ts); '' when none. */
+function projectIdOfUser(): string {
+    try {
+        return (LPointerTargetable.fromPointer(DUser.current as any) as any)?.project?.id ?? '';
+    } catch {
+        return '';
+    }
+}
+
+/** A choice waiting for the user (R-SIM-35): the input and its candidates. */
+interface PendingChoice {
+    event: string | null;
+    input: string;
+    candidates: readonly Candidate[];
+}
 
 type AllProps = OwnProps & StateProps & DispatchProps;
 
 function SimulationPanelComponent(props: AllProps): ReactElement | null {
-    const { modelid, isModelMode, configModelId, configModelName, roleSig, optionSig, ownedTransitionsName, nextStateName, eventSig } = props;
+    const { modelid, isModelMode, configModelId, configModelName, roleSig, optionSig, eventSig } = props;
     const [open, setOpen] = useState(false);
     // Reasons shown when a role write (M2 face) or a run start (M1 face) is refused,
     // and the warning of a run started despite an overlap (no event role, R-SIM-16 parity).
@@ -231,8 +174,16 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
     const [roleWarning, setRoleWarning] = useState<string | null>(null);
     const [runError, setRunError] = useState<string | null>(null);
     const [runWarning, setRunWarning] = useState<string | null>(null);
-    // Subscribes the panel to the run-state singleton (status line + highlight).
-    const simVersion = useSimVersion();
+    // The panel's own state (R-SIM-36): its status, halt line, choice and «Last step»
+    // line change after every input, a discard or a quiescence included, which the
+    // version of the 'mark' channel does not follow. `tick` re-reads the run.
+    const [tick, setTick] = useState(0);
+    const [pending, setPending] = useState<PendingChoice | null>(null);
+    const [lastStep, setLastStep] = useState<string | null>(null);
+    const [defects, setDefects] = useState<string | null>(null);
+    const [interrupted, setInterrupted] = useState(false);
+    // M2 face: the groups the user opened or closed; the others follow their default.
+    const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
 
     const roles: Roles = useMemo(() => {
         try { return JSON.parse(roleSig) as Roles; } catch { return {}; }
@@ -254,21 +205,24 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
     // that model's run only.
     useEffect(() => () => { simClear(modelid); }, [modelid]);
 
-    /** Labels of the unset engine roles (simRoleStatus.ts): the run controls need none. */
+    /** Labels of the engine roles the shape lacks, and of the invalid ones (simRoleStatus.ts). */
     const missingRoles = missingEngineRoles(roles);
-    const rolesComplete = missingRoles.length === 0;
+    const invalidRoles = invalidEngineRoles(roles);
+    const rolesComplete = missingRoles.length === 0 && invalidRoles.length === 0;
     /** The missing half of a half-set event role: the run starts without events (R-SIM-16). */
     const eventGap = missingEventRoles(roles);
-    /** The event role is declared: the rule of stcFromRoles, both keys set. */
+    /** The event role is declared: the rule of netStcFromRoles, both keys set. */
     const eventRole = !!(roles.simEvent && roles.simTrigger);
+    /** The Petri shape, recognised by the arc role (R-SIM-31). */
+    const petriShape = !!roles.simArc;
 
     const writeRole = useCallback((key: RoleKey, value: string): void => {
         if (!configModelId) return;
         const lmm: any = LPointerTargetable.fromPointer(configModelId);
         if (!lmm) return;
         // R-SIM-16, the same verdict as the run start, on the roles as they will
-        // stand after this save: with the event role an overlap refuses the
-        // save; without it the save goes through with a warning.
+        // stand after this save: with the event role or the Petri shape an overlap
+        // refuses the save; otherwise the save goes through with a warning.
         const lookup: any = (store.getState() as any).idlookup ?? {};
         const verdict = roleWriteVerdict(lookup, roles, key, value, options.classes.map(c => c.id));
         if (verdict?.refuse) {
@@ -280,46 +234,57 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         setRoleWarning(verdict ? overlapMessage(lookup, verdict.overlap) : null);
         // Shallow patch of the bag: the empty option writes `undefined`, which
         // set_state turns into the removal of the key (joiner/classes.ts:2222).
-        // The value is a pointer (the option id), never a proxy.
+        // The value is a pointer (the option id), never a proxy; the bound, a digit string.
         lmm.state = { [key]: value === '' ? undefined : value };
     }, [configModelId, roles, options]);
 
-    // Status, Reset and Step delegate to the core (model/simulation/step.ts), which
-    // holds the semantics and its tests; the rules are unchanged (slice 0).
-    const runStatus: RunStatus | null = useMemo(() => {
-        if (!isModelMode || !rolesComplete) return null;
-        const stc = stcFromRoles(roles);
-        if (!stc) return null;
-        const lookup: any = (store.getState() as any).idlookup ?? {};
-        const config: SimConfiguration = { marking: new Set(getSimActiveIds(modelid)), event: null };
-        return computeRunStatus(config, stc, makeSimModelView(lookup, ownedTransitionsName, nextStateName));
-        // simVersion is the subscription to the active set — the real input of
-        // this memo, and the reason the D-layer read above can go through
-        // store.getState() (same idiom as irResolve.ts:78).
-    }, [isModelMode, rolesComplete, roles, modelid, ownedTransitionsName, nextStateName, simVersion]);
+    // The run of this model, read on the panel's renders: the ones its own state
+    // triggers (tick) and the ones connect triggers; never on the version.
+    const run = isModelMode ? getSimRun(modelid) : undefined;
 
-    // Which inputs can fire (R-SIM-16), from the core: the Step button is ε, and
-    // without the event role it keeps the slice 0 rule (disabled on Terminated).
-    // Same inputs as the status line, plus eventSig: a change to the event
-    // instances re-evaluates the buttons.
-    const enablement = useMemo(() => {
+    // R-SIM-34: while a run exists its signature is read on every dispatch, and a
+    // model edit that changes it withdraws the run with one line of declaration.
+    // The baseline is the one startRun took on the lookup the net was compiled from.
+    const liveSignature = useSelector((state: DState) =>
+        (run ? runSignature((state as any)?.idlookup ?? {}, modelid, configModelId) : ''));
+    useEffect(() => {
+        const current = getSimRun(modelid);
+        if (!current || liveSignature === '' || liveSignature === current.signature) return;
+        simClear(modelid);
+        setPending(null);
+        setLastStep(null);
+        setDefects(null);
+        setRunError(null);
+        setRunWarning(null);
+        setInterrupted(true);
+        setTick(t => t + 1);
+    }, [liveSignature, modelid]);
+
+    // Status, enabled inputs and halt line from the Petri core (R-SIM-29).
+    const view = useMemo(() => {
         if (!isModelMode || !rolesComplete) return null;
-        const stc = stcFromRoles(roles);
-        if (!stc) return null;
+        const r = getSimRun(modelid);
+        if (!r) return { status: 'Not started' as NetRunStatus, inputs: panelInputs('Not started', null), halt: null as string | null };
+        const status = netRunStatus(r.net, r.config, r.alphabet, r.guards, r.halt);
         const lookup: any = (store.getState() as any).idlookup ?? {};
-        const config: SimConfiguration = { marking: new Set(getSimActiveIds(modelid)), event: null };
-        const view = makeSimModelView(lookup, ownedTransitionsName, nextStateName, roles.simTrigger, roles.simEventIdentifier);
-        return { epsilon: epsilonEnabled(config, stc, view), events: enabledEvents(config, stc, view) };
-    }, [isModelMode, rolesComplete, roles, modelid, ownedTransitionsName, nextStateName, simVersion, eventSig]);
+        return {
+            status,
+            inputs: panelInputs(status, structuralInputs(r.net, r.config.state)),
+            halt: r.halt ? haltMessage(r.halt, lookup) : null,
+        };
+        // tick is the real input of this memo: the run changes only through this panel.
+    }, [isModelMode, rolesComplete, modelid, tick]);
 
     const onReset = useCallback((): void => {
-        const stc = stcFromRoles(roles);
-        if (!stc) return;
         const lookup: any = (store.getState() as any).idlookup ?? {};
+        setPending(null);
+        setLastStep(null);
+        setDefects(null);
+        setInterrupted(false);
         // R-SIM-16: the roles are checked again at run start, since the
         // metamodel can have changed after they were saved. With the event role
-        // an overlap refuses the run, and a run already under way is stopped;
-        // without it the run starts as in slice 0 and the overlap is a warning.
+        // or the Petri shape an overlap refuses the run, and a run already under
+        // way is stopped; otherwise the run starts and the overlap is a warning.
         const verdict = configModelId
             ? overlapVerdict(lookup, roles, collectMetaOptions(lookup, configModelId).classes.map(c => c.id))
             : null;
@@ -327,34 +292,51 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
             simClear(modelid);
             setRunWarning(null);
             setRunError(`Run not started. ${overlapMessage(lookup, verdict.overlap)}`);
+            setTick(t => t + 1);
+            return;
+        }
+        // The bridge (simBridge.ts): the net, and the model frozen once with the
+        // model's own metamodel as the context's target (R-SIM-37).
+        const started = startRun(lookup, modelid, configModelId, projectIdOfUser(), buildEvalContext);
+        if (started.kind === 'refused') {
+            simClear(modelid);
+            setRunWarning(null);
+            setRunError(`Run not started. ${started.reason}`);
+            setTick(t => t + 1);
             return;
         }
         setRunError(null);
         setRunWarning(verdict ? overlapMessage(lookup, verdict.overlap) : null);
-        const view = makeSimModelView(lookup, ownedTransitionsName, nextStateName);
-        const config = initialConfiguration(stc, view, collectModelObjectIds(lookup, modelid));
-        simReset(modelid, [...config.marking]);
-    }, [modelid, roles, ownedTransitionsName, nextStateName, configModelId]);
+        simReset(modelid, started.run);
+        setDefects(defectsLine(started.run.net, lookup));
+        setLastStep('Reset');
+        setTick(t => t + 1);
+    }, [modelid, roles, configModelId]);
 
     const onStop = useCallback((): void => {
         setRunError(null);
         setRunWarning(null);
+        setPending(null);
+        setLastStep(null);
+        setDefects(null);
+        setInterrupted(false);
         simClear(modelid);
+        setTick(t => t + 1);
     }, [modelid]);
 
     /**
-     * One step, one `simApplyStep`: the core computes the label, the store
-     * applies it. `event` is an event instance id, or `null` for the ε step.
+     * One input: `event` an event instance id, `null` for ε; `selector` the
+     * transition the user chose from the list. The bridge commits the step and
+     * gives back the lines to show (R-SIM-35, R-SIM-36).
      */
-    const fire = useCallback((event: string | null): void => {
-        const stc = stcFromRoles(roles);
-        if (!stc) return;
+    const fire = useCallback((event: string | null, selector?: string): void => {
         const lookup: any = (store.getState() as any).idlookup ?? {};
-        const config: SimConfiguration = { marking: new Set(getSimActiveIds(modelid)), event };
-        const view = makeSimModelView(lookup, ownedTransitionsName, nextStateName, roles.simTrigger, roles.simEventIdentifier);
-        const { label } = stepFlowchartBoolean(config, stc, view);
-        simApplyStep(modelid, label.deactivated, label.activated);
-    }, [modelid, roles, ownedTransitionsName, nextStateName]);
+        const input = event === null ? 'ε' : (events.find(e => e.id === event)?.label ?? event);
+        const pressed = pressInput(modelid, event, selector, lookup, input);
+        setPending(pressed.pending ? { event, input, candidates: pressed.pending } : null);
+        if (pressed.lastStep !== null) setLastStep(pressed.lastStep);
+        setTick(t => t + 1);
+    }, [modelid, events]);
 
     const onStep = useCallback((): void => { fire(null); }, [fire]);
 
@@ -364,6 +346,45 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
         if (kind === 'attribute') return options.attributes;
         return options.references;
     };
+
+    /** Groups open by default: the ones the shape uses, and Events when any of its keys is set. */
+    const groupOpen = (id: string): boolean => {
+        if (openGroups[id] !== undefined) return openGroups[id];
+        if (id === 'control-flow') return !petriShape;
+        if (id === 'petri') return petriShape;
+        if (id === 'events') return eventRole || eventGap.length > 0 || !!roles.simEventIdentifier;
+        return true;
+    };
+
+    const renderRole = (spec: RoleSpec): ReactElement => (
+        <label className="sim-panel__row" key={spec.key}>
+            <span className="sim-panel__label">{spec.label}</span>
+            {spec.kind === 'number' ? (
+                <input
+                    type="number"
+                    className="sim-panel__input"
+                    min={1}
+                    step={1}
+                    placeholder={spec.placeholder}
+                    value={roles[spec.key] ?? ''}
+                    onChange={e => writeRole(spec.key, e.target.value)}
+                />
+            ) : (
+                <select
+                    className="sim-panel__select"
+                    value={roles[spec.key] ?? ''}
+                    onChange={e => writeRole(spec.key, e.target.value)}
+                >
+                    <option value="">{spec.placeholder}</option>
+                    {optionsFor(spec.kind).map(o => (
+                        <option value={o.id} key={o.id}>{o.name}</option>
+                    ))}
+                </select>
+            )}
+        </label>
+    );
+
+    const status: NetRunStatus | null = view?.status ?? null;
 
     if (!open) {
         return (
@@ -376,13 +397,15 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                 >
                     <i className="bi bi-play-circle" />
                     <span>Simulation</span>
-                    {isModelMode && runStatus && runStatus !== 'Not started' && (
-                        <span className={`sim-panel__dot sim-panel__dot--${runStatus.toLowerCase().replace(' ', '-')}`} />
+                    {isModelMode && status && status !== 'Not started' && (
+                        <span className={`sim-panel__dot sim-panel__dot--${status.toLowerCase().replace(' ', '-')}`} />
                     )}
                 </button>
             </div>
         );
     }
+
+    const lookupNow: any = (store.getState() as any).idlookup ?? {};
 
     return (
         <div className="sim-panel sim-panel--open">
@@ -405,21 +428,33 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                         <div className="sim-panel__section">Simulation roles</div>
                         {!configModelId ? (
                             <div className="sim-panel__hint">No metamodel to configure.</div>
-                        ) : ROLE_SPECS.map(spec => (
-                            <label className="sim-panel__row" key={spec.key}>
-                                <span className="sim-panel__label">{spec.label}</span>
-                                <select
-                                    className="sim-panel__select"
-                                    value={roles[spec.key] ?? ''}
-                                    onChange={e => writeRole(spec.key, e.target.value)}
-                                >
-                                    <option value="">{spec.placeholder}</option>
-                                    {optionsFor(spec.kind).map(o => (
-                                        <option value={o.id} key={o.id}>{o.name}</option>
-                                    ))}
-                                </select>
-                            </label>
-                        ))}
+                        ) : (
+                            <>
+                                <div className="sim-panel__hint">
+                                    {petriShape ? 'Shape: Petri net.' : 'Shape: control flow. Set Arc for a Petri net.'}
+                                </div>
+                                {ROLE_GROUPS.map(group => {
+                                    const isOpen = groupOpen(group.id);
+                                    return (
+                                        <div key={group.id}>
+                                            <button
+                                                type="button"
+                                                className="sim-panel__group"
+                                                aria-expanded={isOpen}
+                                                onClick={() => setOpenGroups(g => ({ ...g, [group.id]: !isOpen }))}
+                                            >
+                                                <i className={`bi bi-chevron-${isOpen ? 'down' : 'right'}`} />
+                                                <span>{group.title}</span>
+                                            </button>
+                                            {isOpen && ROLE_SPECS.filter(spec => group.keys.includes(spec.key)).map(renderRole)}
+                                        </div>
+                                    );
+                                })}
+                            </>
+                        )}
+                        {invalidRoles.length > 0 && (
+                            <div className="sim-panel__hint sim-panel__hint--error">{`Invalid: ${invalidRoles.join(', ')}.`}</div>
+                        )}
                         {eventGap.length > 0 && (
                             <div className="sim-panel__hint sim-panel__hint--warning">{eventRoleWarning(eventGap, null)}</div>
                         )}
@@ -428,7 +463,9 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                     </>
                 ) : !rolesComplete ? (
                     <div className="sim-panel__hint">
-                        {configModelId ? incompleteConfigurationMessage(configModelName, missingRoles) : 'No metamodel to configure.'}
+                        {configModelId
+                            ? incompleteConfigurationMessage(configModelName, [...missingRoles, ...invalidRoles])
+                            : 'No metamodel to configure.'}
                     </div>
                 ) : (
                     <>
@@ -439,9 +476,9 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                             <button
                                 type="button"
                                 className="sim-panel__btn"
-                                title={eventRole ? 'Step (\u03b5)' : 'Step'}
+                                title={eventRole ? 'Step (ε)' : 'Step'}
                                 onClick={onStep}
-                                disabled={!enablement?.epsilon}
+                                disabled={!view?.inputs.epsilon}
                             >
                                 <i className="bi bi-play-fill" />
                             </button>
@@ -466,7 +503,7 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                                                 key={e.id}
                                                 title={`Fire ${e.label}`}
                                                 onClick={() => fire(e.id)}
-                                                disabled={!enablement?.events.has(e.id)}
+                                                disabled={!view?.inputs.events.has(e.id)}
                                             >
                                                 <i className="bi bi-chevron-right" />
                                                 <span>{e.label}</span>
@@ -476,11 +513,42 @@ function SimulationPanelComponent(props: AllProps): ReactElement | null {
                                 )}
                             </>
                         )}
+                        {pending && run && (
+                            <>
+                                <div className="sim-panel__section">{`Choose a transition (${pending.input})`}</div>
+                                <div className="sim-panel__choices">
+                                    {pending.candidates.map(c => (
+                                        <button
+                                            type="button"
+                                            className="sim-panel__choice"
+                                            key={c.transition}
+                                            onClick={() => fire(pending.event, c.transition)}
+                                        >
+                                            <span>{candidateLabel(run.net, c.transition, lookupNow)}</span>
+                                            {c.unsafe && (
+                                                <span className="sim-panel__choice-note">{`exceeds bound ${run.net.bound}`}</span>
+                                            )}
+                                        </button>
+                                    ))}
+                                    <button type="button" className="sim-panel__cancel" onClick={() => setPending(null)}>
+                                        Cancel
+                                    </button>
+                                </div>
+                            </>
+                        )}
                         {runError && <div className="sim-panel__hint sim-panel__hint--error">{runError}</div>}
                         {runWarning && <div className="sim-panel__hint sim-panel__hint--warning">{runWarning}</div>}
+                        {interrupted && (
+                            <div className="sim-panel__hint sim-panel__hint--warning">
+                                Run interrupted: the model changed. Reset to run again.
+                            </div>
+                        )}
+                        {defects && <div className="sim-panel__hint sim-panel__hint--warning">{defects}</div>}
+                        {lastStep && <div className="sim-panel__hint">{`Last step: ${lastStep}`}</div>}
+                        {view?.halt && <div className="sim-panel__hint sim-panel__hint--error">{view.halt}</div>}
                         <div className="sim-panel__status">
-                            <span className={`sim-panel__dot sim-panel__dot--${(runStatus ?? 'not started').toLowerCase().replace(' ', '-')}`} />
-                            <span className="sim-panel__status-text">{runStatus}</span>
+                            <span className={`sim-panel__dot sim-panel__dot--${(status ?? 'not started').toLowerCase().replace(' ', '-')}`} />
+                            <span className="sim-panel__status-text">{status}</span>
                         </div>
                     </>
                 )}
@@ -503,13 +571,10 @@ interface StateProps {
     configModelId: string | null;
     /** Name of that model, for the messages that say where a role is missing; '' when unknown. */
     configModelName: string;
-    /** JSON of the role pointers (six, plus the event role's three) — a primitive, so shallow compare works. */
+    /** JSON of the role values (the twenty `sim*` keys of ROLE_SPECS) — a primitive, so shallow compare works. */
     roleSig: string;
     /** JSON of the option lists; empty on the M1 face, which does not need them. */
     optionSig: string;
-    /** Feature names of the two navigated roles, resolved from their pointers. */
-    ownedTransitionsName: string;
-    nextStateName: string;
     /**
      * JSON of the event instances of the M1 model with their labels (step 1),
      * sorted; empty on the M2 face and without the event role.
@@ -540,8 +605,6 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
         optionSig: !ownProps.isModelMode && configModelId
             ? JSON.stringify(collectMetaOptions(lookup, configModelId))
             : '',
-        ownedTransitionsName: (roles.simOwnedTransitions && lookup[roles.simOwnedTransitions]?.name) || '',
-        nextStateName: (roles.simNextState && lookup[roles.simNextState]?.name) || '',
         eventSig: ownProps.isModelMode ? eventSigOf(lookup, ownProps.modelid, roles) : '',
     };
 }
@@ -553,11 +616,10 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
  */
 function eventSigOf(lookup: any, modelId: string, roles: Roles): string {
     if (!roles.simEvent || !roles.simTrigger) return '';
-    const stc = stcFromRoles(roles);
+    const stc = netStcFromRoles(roles);
     if (!stc) return '';
     // eventAlphabet reads only isInstanceOf and label from the view.
-    const view = makeSimModelView(lookup, '', '', roles.simTrigger, roles.simEventIdentifier);
-    return JSON.stringify(eventAlphabet(stc, view, collectModelObjectIds(lookup, modelId)));
+    return JSON.stringify(eventAlphabet(stc, makeNetModelView(lookup, stc.eventIdentifier), collectModelObjectIds(lookup, modelId)));
 }
 
 function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
