@@ -536,3 +536,58 @@ Smoke-test scenarios potentially affected:
 - `npm run build`: exit 0, the chunk-size warning plus a pre-existing esbuild CSS warning
   (`"bordr" is not a known CSS property`, `properties-with-tree-view.scss:1210`, since `217743fbc`, 2026-03-24).
 - `npm run check:docs`: exit 0, 4/4, 4 non-blocking warnings (inbox entries waiting to be folded).
+
+## Addendum 2026-09-25 (Phase 2) — what changed from §8, and what the probes found
+
+Code commit `0609e9793` (mutation bench in its body). Measured on 3003, this tree. Three additions beyond
+§8, each ruled in chat and each held by a mutant, plus the `openRun` counter accepted with the LIR.
+
+**A1. Drain before the synchronous LOAD** (`reducer.ts`, project branch, after `decompressState`, before
+`recursiveCheck()`): `COMMIT(undefined, false)` then one macrotask. §6.1 risk 1 happened: without it (M10)
+the LOAD overtook the `init jodel state` batch on deep link and list (40 leaves vs the old store:
+duplicated `Pointer_E*` in `classs`, `primitiveTypes`, `ecoreClasses`), and in-page the reset's own empty
+LOAD (`U.tsx:447`) landed after the project's LOAD; the project survived only because that batch rolled
+back (`reducer.ts:540`). Ordering, read: `DState.init()` (`reducer.ts:1498` → `store.tsx:236` →
+`TRANSACTION('init jodel state')`, `store.tsx:245-355`, synchronous body) queues its `END` in the microtask
+after `await func()` (`action.ts:220`), before `stateInitializer` resumes from `await ProjectsApi.getOne`;
+at the drain point the init actions are in a 0 ms timer (deep link) or pending in the open transaction
+(in-page) until the drain's `COMMIT` fires them; the drain's own 0 ms timer is scheduled later and runs
+after. Caveat, read and not measured: this assumes the init timer is not clamped to 4 ms (timer nesting
+level of 5 or more) while the drain's is not; in the call chains found (render, effect, click, interval
+tasks) nesting stays below 5. P5 ×5 per entry point: order `INIT → LOAD` every run; deep link and list
+equal to the old store modulo `timestamp`/`timestampdiff`.
+
+**A2. `JjodelEvents.PROJECT_OPEN_CHANGED`.** §8 assumed that the `SetRootFieldAction('isLoading', false)`
+of `U.resetState` re-runs `mapStateToProps`: it does not when `state.isLoading` is already `false`
+(unchanged state, react-redux skips the selector). Without the event (M12) an in-page failure stayed a
+spinner, and after a healthy open (P4) the editor stayed mounted over the dashboard stub. The page now
+reads `ProjectsApi.isLoading` and `loadError` live and re-renders on the event (§8's `loadError` prop
+mapping was dropped).
+
+**A3. Save guard** (`ProjectsApi.save`): no write, a warning, for a project whose open failed in this
+page. M11: a save from the failed in-page state overwrote the stored project, 19 → 7 `idlookup`.
+
+**A4. P4b and the counter.** P4b as first written (A → B by hash inside `/project`) tested nothing: no
+second open starts, because `PathChecker` fires on pathname changes only (`PathChecker.tsx:7-14`); A
+then shows under B's URL and `Project.tsx` throws on `project.type` (ticket, high). The rewritten P4b
+(A slow, `#/allProjects`, B, all in-page) kills M9: A's leftover callback clears B's loading at 3.06 s.
+The example "failed A, healthy B" passes with or without the counter: A's leftover callback is consumed
+by the dashboard's dispatches while `loadError` is still set. Residual, harmless: a superseded open's
+LOAD lands in the store while the newer one loads; the loading screen holds and the newer LOAD replaces
+it (6.88 s).
+
+**A5. The in-page store after the fix.** In-page opens no longer apply `init jodel state` on top of the
+loaded project, so the old duplicates of `classs` and of the project's `viewpoints` are gone. What
+remains is not in the stored blob (the deep-link store equals the blob): the reset's
+`[emptyLOAD + init]` batch applies to the empty state and leaves pending `pointedBy` paths, resolved at
+the next dispatch onto the loaded project (`Pointer_EBOOLEAN.pointedBy` 3 after the LOAD, 4 after the
+next dispatch, `PendingPointedByPaths`, `reducer.ts:433`). Stored state after cycles 1-3 of open +
+`SaveManager.save()` (original blob: 11 / 3 / 3 / 1):
+
+| Path | `classs` | `EBOOLEAN.pointedBy` | `EOBJECT.pointedBy` | project `viewpoints` |
+|---|---|---|---|---|
+| deep link, new code | 11 / 11 / 11 | 3 / 3 / 3 | 3 / 3 / 3 | 1 / 1 / 1 |
+| in-page, new code | 11 / 11 / 11 | 4 / 5 / 6 | 5 / 7 / 9 | 1 / 1 / 1 |
+| in-page, old code | 22 / 33 / 44 | 5 / 7 / 9 | 5 / 7 / 9 | 2 / 3 / 4 |
+
+Ticket, medium, in `docs/log-inbox/versionfixer.md`.
