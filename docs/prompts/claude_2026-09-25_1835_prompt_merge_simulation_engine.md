@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-25-1835
 Chat: C-2026-09-25-1353
 Lane: full (more than 3 files, migration)
-Status: da eseguire
+Status: eseguito 2026-09-25 · lane merge · 2537f9e85 · verifica visiva passata 2026-09-25
 
 Worktree: `~/jjodel-release`, branch `alfonso-frontend-jjtl`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop. The only other tree this lane may touch is `~/jjodel-sim`, in step 9, for a fast-forward, and only after Alfonso's explicit OK. Do not touch `~/jjodel`, `~/jjodel-open`, `~/jjodel-events`, `~/jjodel-vite`, `~/jjodel-gate`, `~/jjodel-harness`.
 
