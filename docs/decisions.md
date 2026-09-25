@@ -1462,6 +1462,78 @@ entra dal passo 3, dopo la sua discovery.
 - **Esclusi** (2026-09-25): OR-join alla BPMN, reti non limitate, reti colorate, reti temporizzate.
   Il tipo `Expression` nel core resta una proposta separata, non ratificata qui.
 
+### Ratifiche 2026-09-25: passo 3, punti aperti e compilazione (R-SIM-27..33)
+
+Base di evidenza: `docs/discovery/discovery_2026-09-25_sim_step3_petri_core.md` (`de21a2c93`), risposte
+alle tredici domande del suo §1, ratificate da Alfonso il 2026-09-25 nella chat di progetto
+`C-2026-09-25-1030` come raccomandate dal report. Chiudono i punti lasciati aperti da R-SIM-24 e
+R-SIM-26.
+
+- **R-SIM-27** (2026-09-25). **Terminazione: tutti i token in F.** F è l'insieme dei posti che sono
+  istanze (per `isKindOf`, R-SIM-8) del ruolo `simTerminal`. Una configurazione è terminata quando il
+  marking non è vuoto e ogni posto marcato sta in F; una configurazione terminata non ha candidati.
+  Con un solo token coincide con la regola di oggi; dopo un fork parallelo aspetta tutti i rami. Un
+  predicato JjEL nella STC (marking finale esatto, combinazioni) è l'estensione naturale, rinviata
+  alla corsia `Expression` e all'operatore `.[x]`. nuXmv: `DEFINE terminated` come disgiunzione dei
+  posti finali marcati in congiunzione con l'azzeramento dei posti non finali.
+- **R-SIM-28** (2026-09-25). **Il ruolo `simTerminal` è facoltativo.** Se presente è la fonte di F;
+  se assente nessuna configurazione termina e il run finisce in `Deadlock` o non finisce. Ribalta la
+  decisione di `P-2026-09-24-1005` (ruolo obbligatorio) e chiude il ticket del passo 1 sulla
+  metaclasse `TFinal` senza istanze. Emenda R-SIM-9: il ruolo finale è ammesso anche nel genere a
+  naturali, e i due generi si riducono a k e alla regola iniziale (genere booleano: k = 1 e regola
+  iniziale per metaclasse; genere a naturali: la feature intera `simInitialMarking`).
+- **R-SIM-29** (2026-09-25). **Terminazione e deadlock sono distinti; il run ha cinque stati.**
+  `Not started` (nessun run del modello nello store; un marking vuoto non lo è), `Halted` (dopo uno
+  scatto «unsafe», una violazione di dominio, un doppio assegnamento o un difetto d'azione; resta
+  fino a Reset e mostra il motivo), `Terminated` (R-SIM-27), `Running` (qualche ingresso fra ε e
+  l'alfabeto ha un candidato, con guardie e inibitori valutati), `Deadlock` (nessuno dei precedenti).
+  I pulsanti restano strutturali (R-SIM-16: preset abilitato e trigger, guardie non valutate); il
+  pannello li disabilita tutti in `Terminated`, `Deadlock` e `Halted`, così un run bloccato dalle
+  sole guardie non mostra pulsanti attivi.
+- **R-SIM-30** (2026-09-25). **Accessore del marking.** Nel nucleo: `SimStateAccess`, cioè
+  `SimStateReader` (`guardContext.ts`) più `tokens(id)`. Nella superficie JjEL: `x.[marked]`
+  (booleano, la vista derivata di R-SIM-11) e `x.[tokens]` (0..k), di sola lettura, raggiungibili da
+  qualunque cammino dalle quattro radici, mai assegnabili; `marked` e `tokens` sono nomi riservati
+  fra gli attributi di stato. Il subset checker li accetta come esportabili quando arriva l'operatore
+  `.[x]`. Fino ad allora un arco con ruolo `simInhibitorArc` dal posto p alla transizione t, di peso
+  w, compila nel congiunto di guardia `tokens(p) < w` (R-SIM-24: il nucleo vede una guardia, non un
+  tipo d'arco).
+- **R-SIM-31** (2026-09-25). **Regole di compilazione.** (1) L'arco `else` si scrive con il testo
+  letterale `else` nella feature di guardia, come `[else]` in UML, senza chiavi nuove; la sua guardia
+  è la negazione della disgiunzione delle guardie dei fratelli (stesso preset, stessi trigger); un
+  fratello difettoso rende difettoso l'`else`; due `else` fra fratelli sono un difetto. La corsia
+  `Expression` accetterà `else` come parola riservata solo in posizione di guardia. (2) Un arco senza
+  target, con target cancellato o con un target che non è un posto è un difetto di compilazione, mai
+  un candidato né un pozzo che consuma il token. (3) I nodi con ruolo `simFork` o `simJoin` non sono
+  posti: i loro archi si fondono in una transizione (preset: le sorgenti degli archi entranti;
+  postset: i target degli uscenti; origini registrate); un arco fra due pseudo-nodi è un difetto; un
+  nodo di fork o join non è mai evidenziato. (4) La forma Petri si riconosce dal ruolo `simArc`;
+  altrimenti la STC è controllo di flusso.
+- **R-SIM-32** (2026-09-25). **Chiavi nuove, provvisorie fino alla 3b.** `simBound` (k, default 1),
+  `simInitialMarking`, `simFork`, `simJoin`, `simGuard`, `simArc`, `simArcSource`, `simArcTarget`,
+  `simArcWeight`, `simInhibitorArc`, accanto a `simSource` (R-SIM-10). Nella 3a nulla è cablato né
+  persistito, quindi i nomi si possono rivedere nella 3b senza migrazione; diventano definitivi con
+  il commit di codice della 3b. Il compilatore della 3a copre sia il controllo di flusso sia la forma
+  Petri: è la prova che flowchart e statechart sono casi particolari del nucleo (R-SIM-21).
+- **R-SIM-33** (2026-09-25). **Il passo 3 in tre ondate.** 3a: nucleo puro in
+  `frontend/src/model/simulation/`, soltanto file nuovi, niente cablaggio. 3b: pannello e run-state
+  sul nuovo nucleo, con Layer Impact Report; cancella il vecchio step (`stepFlowchartBoolean`,
+  `applyStepLabel`, `simApplyStep`) nella stessa corsia. 3c: candidati sul canvas come secondo canale
+  accanto a `'mark'`, critical zone, discovery propria. La convivenza dei due step dalla 3a alla 3b è
+  compatibile con R-SIM-7 perché uno solo è cablato. Le leggi della spec §3.3 restano fuori dal passo
+  3; la legge «un solo nodo marcato» dei flowchart cade con i fork paralleli, e la spec §3.3 e §3.4
+  sono emendate di conseguenza.
+- **Conseguenze accettate** (2026-09-25). Due token concorrenti che confluiscono nello stesso posto
+  con k = 1 sono «unsafe», dove oggi collassano in silenzio (report §9, R1). Con gli assegnamenti
+  paralleli di R-SIM-17 le azioni exit(sorgente), arco ed entry(target) formano un solo assegnamento:
+  exit(A) ed entry(A) che scrivono lo stesso attributo in un self-loop sono un doppio assegnamento e
+  portano il run in `Halted`, dove la lettura sequenziale di UML li accetterebbe.
+- **Ticket** (2026-09-25). Da una scheda M1 `getActiveMetamodel()` è `null` e `getTargetMetamodel`
+  (`utils.ts:299-317`) ripiega sul primo metamodello del progetto: la validazione di un modello di un
+  altro metamodello costruisce un pool vuoto e non riporta violazioni (misurato nel report §8.1: pool
+  0 senza `targetMetamodelId`, 1 con). Corsia propria, fuori dalla simulazione; il bridge della 3b
+  passa `targetMetamodelId` fin dall'inizio.
+
 ## Serie R-J — JjEL come linguaggio delle espressioni dell'IR (ratifiche 2026-08-18)
 
 Base di evidenza: `docs/discovery/discovery_2026-08-14_jjel_come_linguaggio_espressioni_ir.md`

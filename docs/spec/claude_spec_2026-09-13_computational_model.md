@@ -4,6 +4,9 @@
 (R-SIM-7..R-SIM-15 in `docs/decisions.md`), on the evidence of
 `docs/discovery/discovery_2026-09-13_simulation_engine_state.md` and
 `docs/discovery/discovery_2026-09-13_jjel_eval_context.md`.
+**Amended**: 2026-09-25 by R-SIM-21..33 (Petri core, termination, five run statuses);
+see sections 3.3 and 3.4.
+
 **Supersedes**: nothing; the current engine in `frontend/src/components/editor-v2/sim/` is the
 implementation this spec reshapes.
 **Vocabulary**: nuXmv's, on purpose (§8). Verification is the last step of the plan; the
@@ -75,12 +78,19 @@ node marked) for flowcharts; exclusivity among sibling states for state machines
 additional law for Petri nets. In verification they are checked first, as invariants: a
 violated law means the language is ill-defined, before any model property is asked.
 
+Amended 2026-09-25 (R-SIM-22, R-SIM-33): token conservation holds for flowcharts only while
+no fork role is set; with `simFork`/`simJoin` a flowchart marks several places at once and the law
+neither holds nor is checked. Laws stay out of step 3.
+
 ### 3.4 Initial rule and final rule, by kind
 
-Boolean kind: the initial role and the final role are **metaclasses** (every instance of the
-initial metaclass is marked at start; a marked instance of the final metaclass is a terminal
-configuration), as the engine does today. Bounded-natural kind: the initial rule is an
-**integer feature** on the node (the initial marking); there is no final role (R-SIM-9).
+Amended 2026-09-25 (R-SIM-23, R-SIM-27, R-SIM-28). The two kinds reduce to the bound k and
+the initial rule. Boolean kind: k = 1 and the initial role is a metaclass (one token on each of its
+instances). Bounded-natural kind: the initial marking is the integer feature `simInitialMarking` on
+the node; an initial marking above k is a compile defect. In both kinds the final role
+`simTerminal` is optional. When set, its instances among the places form F, and a configuration is
+terminated when its marking is non-empty and every marked place is in F; a terminated
+configuration has no candidates. When unset, no configuration terminates.
 
 ## 4. Step
 
