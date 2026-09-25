@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-25-1440
 Chat: C-2026-09-25-1353
 Lane: fast
-Status: da eseguire
+Status: eseguito 2026-09-25 · lane open-hash · 5c47e40ec · verifica visiva passata 2026-09-25
 
 Worktree: `~/jjodel-open`. Its branch `open-path` is merged into the trunk (`74ca160e7`) and closed. Setup, in this order, each a hard stop if it fails: `pwd` is `/Users/alfonso/jjodel-open`; `git status` empty; `git switch -c open-hash alfonso-frontend-jjtl` (confirm with `git log -1` that it reads `docs: add prompts P-2026-09-25-1440 and P-2026-09-25-1445`; if the trunk has moved past it, stop and say so). Every commit of this lane goes on `open-hash`. Never work by absolute path on another worktree.
 
