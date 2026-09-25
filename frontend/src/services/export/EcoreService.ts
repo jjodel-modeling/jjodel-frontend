@@ -294,8 +294,9 @@ export class EcoreService {
             `name="${this.escapeXml(attr.name)}"`,
         ];
 
-        // Type mapping
-        const ecoreType = this.mapToEcoreType(attr.type);
+        // Type mapping. Jjodel's own primitives are an EString to Ecore, named by an annotation (R-SIM-45).
+        const jjodelType = this.jjodelTypeName(attr.type);
+        const ecoreType = this.mapToEcoreType(jjodelType ? 'EString' : attr.type);
         parts.push(`eType="${ecoreType}"`);
 
         // Multiplicity
@@ -322,7 +323,19 @@ export class EcoreService {
         if (attr.unsettable) parts.push(`unsettable="true"`);
         if (!attr.changeable) parts.push(`changeable="false"`);
 
+        if (jjodelType) {
+            return `${indent}<eStructuralFeatures ${parts.join(' ')}><eAnnotations source="jjodel">`
+                + `<details key="type" value="${jjodelType}"/></eAnnotations></eStructuralFeatures>`;
+        }
         return `${indent}<eStructuralFeatures ${parts.join(' ')}/>`;
+    }
+
+    /** 'Expression' or 'Action' when `type` is one of Jjodel's own primitives (R-SIM-44, R-SIM-45), else null. */
+    private static jjodelTypeName(type: any): string | null {
+        const id = typeof type?.id === 'string' ? type.id : null;
+        if (id === Defaults.Pointer_EXPRESSION) return 'Expression';
+        if (id === Defaults.Pointer_ACTION) return 'Action';
+        return null;
     }
 
     /**

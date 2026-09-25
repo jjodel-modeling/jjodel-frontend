@@ -1,6 +1,18 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import fs from 'fs';
 import path from 'path';
+
+// EcoreService loads under a stub joiner (measured 2026-09-25, P-2026-09-25-1445), so the export of
+// the Jjodel primitives (R-SIM-45) runs as written. The stub's `Defaults` carries the real ids.
+vi.mock('../../../joiner', () => new Proxy({}, {
+    get: (_t, k) => (k === 'then' ? undefined
+        : k === 'Defaults' ? {
+            Pointer_EXPRESSION: 'Pointer_EXPRESSION', Pointer_ACTION: 'Pointer_ACTION',
+            primitiveTypeIds: new Set(['Pointer_ESTRING', 'Pointer_EINT', 'Pointer_EXPRESSION', 'Pointer_ACTION']),
+        }
+        : class Stub { static cname = String(k); }),
+    has: () => true,
+}));
 
 // W2 (BL2 + SI9): EDataType end-to-end. Round-trip via Redux/DOMParser non testabile in vitest
 // node environment senza jsdom (non installato). EcoreService import scatena Monaco → window not
@@ -435,5 +447,95 @@ describe('XMI M1 import — enum literal names resolved to pointers (R-FRM-3)', 
         expect(serialize).toMatch(/const rawValues: any\[\] = \(feature\.__raw\?\.values \|\| \[\]\) as any\[\]/);
         expect(serialize).toMatch(/target\.className === 'DEnumLiteral'\) return this\.escapeXml\(target\.name \|\| ''\)/);
         expect(serialize).toMatch(/return this\.escapeXml\(String\(v\)\)/);
+    });
+});
+
+// ==================================================================
+// The Jjodel primitives at the Ecore border (R-SIM-44, R-SIM-45), P-2026-09-25-1445. Each test names
+// the mutant of report §7.2 (discovery_2026-09-25_state_operator_core_types.md) it kills.
+// Export runs (EcoreService loads under the stub). Import is read as text: `api/data.ts` does not load
+// under vitest (window, measured with a stub joiner on 2026-09-25); the round trip is item 4 of the
+// visual check.
+// ==================================================================
+
+const ESTRING = 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString';
+
+describe('Ecore export: Expression and Action are an EString with the jjodel/type annotation', () => {
+    async function exportOf(type: Record<string, unknown>): Promise<string> {
+        const { EcoreService } = await import('../EcoreService');
+        return (EcoreService as any).exportAttribute({ name: 'guard', type, lowerBound: 0, upperBound: 1, changeable: true }, '  ');
+    }
+
+    it('M7: an Expression attribute exports as EString, annotated', async () => {
+        const xml = await exportOf({ id: 'Pointer_EXPRESSION', name: 'Expression' });
+        expect(xml).toBe(`  <eStructuralFeatures xsi:type="ecore:EAttribute" name="guard" eType="${ESTRING}">`
+            + '<eAnnotations source="jjodel"><details key="type" value="Expression"/></eAnnotations></eStructuralFeatures>');
+    });
+
+    it('M7: an Action attribute exports as EString, annotated', async () => {
+        const xml = await exportOf({ id: 'Pointer_ACTION', name: 'Action' });
+        expect(xml).toContain(`eType="${ESTRING}"`);
+        expect(xml).toContain('<details key="type" value="Action"/>');
+        expect(xml).not.toContain('#//Action');
+    });
+
+    it('control: EString and a user classifier named Expression export as before, with no annotation', async () => {
+        expect(await exportOf({ id: 'Pointer_ESTRING', name: 'EString' }))
+            .toBe(`  <eStructuralFeatures xsi:type="ecore:EAttribute" name="guard" eType="${ESTRING}"/>`);
+        const user = await exportOf({ id: 'Pointer_Enum1', name: 'Expression' });
+        expect(user).toContain('eType="#//Expression"');
+        expect(user).not.toContain('eAnnotations');
+    });
+});
+
+describe('Ecore import: the annotation gives the type back, and the two names stay out of the #// map', () => {
+    const data = fs.readFileSync(DATA_TS, 'utf8');
+    const method = (signature: string): string => {
+        const start = data.indexOf(signature);
+        expect(start, `${signature} moved: update the test`).toBeGreaterThan(-1);
+        return data.slice(start, data.indexOf('\n    }\n', start) + 6);
+    };
+
+    it('M9: the primitive loop skips Expression and Action before filling the #//<name> map', () => {
+        const loop = data.indexOf('for (let shortkey in ShortAttribETypes) {');
+        const skip = data.indexOf('if (shortkey === ShortAttribETypes.Expression || shortkey === ShortAttribETypes.Action) continue;', loop);
+        const fill = data.indexOf('replacePrimitiveMap[typeprefix + shortkey] = dClassType;', loop);
+        expect(loop).toBeGreaterThan(-1);
+        expect(skip).toBeGreaterThan(loop);
+        expect(skip, 'the skip must come before the map is filled').toBeLessThan(fill);
+    });
+
+    it('M8: parse restores the types after the names are linked, before anything is persisted', () => {
+        const link = data.indexOf('this.LinkAllNamesToIDs(parsedElements);');
+        const restore = data.indexOf('this.restoreJjodelTypes(parsedElements);');
+        const persist = data.indexOf('Constructors.persist(parsedElements);');
+        expect(link).toBeGreaterThan(-1);
+        expect(restore).toBeGreaterThan(link);
+        expect(restore).toBeLessThan(persist);
+    });
+
+    it('M8: the restore turns an EString back into the named primitive, and only an EString', () => {
+        const body = method('private static restoreJjodelTypes(parsedElements: DModelElement[]): void {');
+        expect(body).toMatch(/Selectors\.getPrimitiveType\(ShortAttribETypes\.EString, state\)\?\.id/);
+        expect(body).toMatch(/if \(primitive && estring && \(d as GObject\)\.type === estring\) \(d as GObject\)\.type = primitive\.id;/);
+        expect(body).toMatch(/delete \(d as GObject\)\.__jjodelType;/);
+    });
+
+    it('M8: the annotation is consumed on the attribute, never kept as a DAnnotation', () => {
+        const attr = data.slice(data.indexOf('let dObject: DAttribute = DAttribute.new('), data.indexOf('static parseDReference('));
+        expect(attr).toMatch(/const jjodelType = this\.jjodelTypeOf\(child\);\s*\n\s*if \(jjodelType\) \{ \(dObject as GObject\)\.__jjodelType = jjodelType; continue; \}\s*\n\s*EcoreParser\.parseDAnnotation\(/);
+        const reader = method('private static jjodelTypeOf(json: Json): string | null {');
+        expect(reader).toContain(`!== 'jjodel') return null;`);
+        expect(reader).toContain(`!== 'type') return null;`);
+        expect(reader).toMatch(/value === ShortAttribETypes\.Expression \|\| value === ShortAttribETypes\.Action \? value : null/);
+    });
+});
+
+describe('editor v2 type labels (R-SIM-44)', () => {
+    it('the dropdown lists Expression and Action after EDouble, and labels them by their names', async () => {
+        const { E_DATA_TYPES, displayTypeLabel } = await import('../../../components/editor-v2/types');
+        expect(E_DATA_TYPES.slice(-3)).toEqual(['EDouble', 'Expression', 'Action']);
+        expect(displayTypeLabel('Expression')).toBe('Expression');
+        expect(displayTypeLabel('Action')).toBe('Action');
     });
 });
