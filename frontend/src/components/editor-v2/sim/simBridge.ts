@@ -26,7 +26,7 @@
 
 import type { ExecutionContext } from '../../../jjscript/types';
 import type { JjelValue } from '../../../jjel/evaluator';
-import { compileNet, eventAlphabet, netStcFromRoles } from '../../../model/simulation/netCompile';
+import { compileNet, eventAlphabet, netStcFromRoles, withDerivedEventRole } from '../../../model/simulation/netCompile';
 import { candidates, step } from '../../../model/simulation/netStep';
 import { buildGuardContext, freezeSnapshot, SimSnapshotError } from '../../../model/simulation/guardContext';
 import type { SimSnapshot } from '../../../model/simulation/guardContext';
@@ -162,7 +162,8 @@ export function startRun(
     lookup: Lookup, modelId: string, configModelId: string | null, projectId: string, build: ContextBuilder,
 ): RunStart {
     const bag = configModelId ? lookup[configModelId]?._state : undefined;
-    const stc = netStcFromRoles(bag);
+    // The event class is the Trigger's type, derived here and never read from the bag (R-SIM-38).
+    const stc = netStcFromRoles(bag ? withDerivedEventRole(bag, lookup) : undefined);
     if (!stc) return { kind: 'refused', reason: 'The simulation roles are incomplete.' };
     const ids = collectModelObjectIds(lookup, modelId);
     const view = makeNetModelView(lookup, stc.eventIdentifier);
@@ -208,8 +209,10 @@ function ptrs(v: unknown): string {
 export function runSignature(lookup: Lookup, modelId: string, configModelId: string | null): string {
     const model = lookup[modelId];
     let sig = `m${modelId}=${model?.name ?? ''},${model?.instanceof ?? ''};`;
-    const bag = configModelId ? lookup[configModelId]?._state : undefined;
-    if (bag && typeof bag === 'object') {
+    const raw = configModelId ? lookup[configModelId]?._state : undefined;
+    if (raw && typeof raw === 'object') {
+        // The bag the run reads: `simEvent` derived from the Trigger, a stale one ignored (R-SIM-38).
+        const bag = withDerivedEventRole(raw, lookup);
         for (const key of Object.keys(bag).filter(k => k.startsWith('sim')).sort()) sig += `${key}=${JSON.stringify(bag[key])};`;
     }
     for (const id of collectModelObjectIds(lookup, modelId)) {

@@ -10,7 +10,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { compileNet, netStcFromRoles } from '../netCompile';
+import { compileNet, eventAlphabet, netStcFromRoles, withDerivedEventRole } from '../netCompile';
 import { isKindOf } from '../isKindOf';
 import { objectReferences, objectSlotValues } from '../objectSlots';
 import type { NetModelView, NetStc, NetTransition, StateAttributeDecl } from '../netTypes';
@@ -411,5 +411,71 @@ describe('the initial state, F and the attributes (R-SIM-19, R-SIM-27, R-SIM-28)
         expect(net.initial.presentation.get('N')?.get('glow')).toBe(false);
         expect(net.initial.attrs.get('N')?.has('glow')).toBe(false);
         expect(net.declared.get('A')?.get('visits')).toBe(decls[0]);
+    });
+});
+
+describe('withDerivedEventRole: the event class is the Trigger\'s declared type (R-SIM-38)', () => {
+    /** The metamodel side: the classes, the Trigger candidates and the types they point at. */
+    const META: Record<string, any> = {
+        C_Ev: { className: 'DClass', name: 'Event', abstract: false, extends: [] },
+        C_AbsEv: { className: 'DClass', name: 'AbstractEvent', abstract: true, extends: [] },
+        C_Coin: { className: 'DClass', name: 'Coin', abstract: false, extends: ['C_AbsEv'] },
+        C_Other: { className: 'DClass', name: 'Other', abstract: false, extends: [] },
+        Pointer_ESTRING: { className: 'DClass', name: 'EString', isPrimitive: true, extends: [] },
+        E_Kind: { className: 'DEnumerator', name: 'Kind' },
+        R_trig: { className: 'DReference', name: 'trigger', type: 'C_Ev' },
+        R_abs: { className: 'DReference', name: 'trigger', type: 'C_AbsEv' },
+        R_prim: { className: 'DReference', name: 'trigger', type: 'Pointer_ESTRING' },
+        R_enum: { className: 'DReference', name: 'trigger', type: 'E_Kind' },
+        R_gone: { className: 'DReference', name: 'trigger', type: 'C_Deleted' },
+        R_name: { className: 'DReference', name: 'trigger', type: 'Event' },
+        R_none: { className: 'DReference', name: 'trigger' },
+        A_cls: { className: 'DAttribute', name: 'trigger', type: 'C_Ev' },
+    };
+    const cf = { simInitial: 'C_Init', simOwnedTransitions: 'R_out', simNextState: 'R_next' };
+
+    it('Trigger unset: no simEvent, and a stale one in the bag is removed (not kept)', () => {
+        expect(withDerivedEventRole({ ...cf }, META)).toEqual(cf);
+        expect(withDerivedEventRole({ ...cf, simEvent: 'C_Other' }, META)).toEqual(cf);
+        expect(withDerivedEventRole({ ...cf, simEvent: 'C_Other', simTrigger: '' }, META)).not.toHaveProperty('simEvent');
+        // control: with a Trigger the key is there
+        expect(withDerivedEventRole({ ...cf, simTrigger: 'R_trig' }, META)).toHaveProperty('simEvent', 'C_Ev');
+    });
+
+    it('Trigger typed to a concrete class: simEvent is that class, over a stale value, the other keys untouched', () => {
+        const bag = { ...cf, simTrigger: 'R_trig', simEventIdentifier: 'A_id', simEvent: 'C_Other', layoutHint: 'x' };
+        expect(withDerivedEventRole(bag, META)).toEqual({ ...cf, simTrigger: 'R_trig', simEventIdentifier: 'A_id', simEvent: 'C_Ev', layoutHint: 'x' });
+        expect(netStcFromRoles(withDerivedEventRole(bag, META))).toMatchObject({ event: 'C_Ev', trigger: 'R_trig', eventIdentifier: 'A_id' });
+    });
+
+    it('Trigger typed to an abstract class: the abstract id is returned, and isKindOf reaches the concrete subclass instances', () => {
+        const derived = withDerivedEventRole({ ...cf, simTrigger: 'R_abs' }, META);
+        expect(derived.simEvent).toBe('C_AbsEv');
+        const lookup = { ...META, ...buildLookup({ classes: {}, objects: { coin: { cls: 'C_Coin' }, other: { cls: 'C_Other' } } }) };
+        const stc = netStcFromRoles(derived)!;
+        expect(eventAlphabet(stc, rawView(lookup), ['coin', 'other']).map(e => e.id)).toEqual(['coin']);
+    });
+
+    it('no event role when the Trigger does not resolve: id not in the lookup, not a reference, no type, or a type that is no class', () => {
+        for (const trigger of ['R_missing', 'A_cls', 'R_none', 'R_gone', 'R_name', 'R_prim', 'R_enum']) {
+            const derived = withDerivedEventRole({ ...cf, simTrigger: trigger, simEvent: 'C_Ev' }, META);
+            expect([trigger, derived.simEvent]).toEqual([trigger, undefined]);
+            expect([trigger, derived.simTrigger]).toEqual([trigger, trigger]);
+            expect(netStcFromRoles(derived)?.event).toBeUndefined();
+        }
+    });
+
+    it('the input bag is not mutated, with or without a derived class', () => {
+        const stale = { ...cf, simEvent: 'C_Other' };
+        const typed = { ...cf, simTrigger: 'R_trig', simEvent: 'C_Other' };
+        const staleCopy = { ...stale };
+        const typedCopy = { ...typed };
+        const outStale = withDerivedEventRole(stale, META);
+        const outTyped = withDerivedEventRole(typed, META);
+        expect(stale).toEqual(staleCopy);
+        expect(typed).toEqual(typedCopy);
+        // control: the outputs did change, so an unmutated input is not a no-op
+        expect(outStale).not.toEqual(stale);
+        expect(outTyped).not.toEqual(typed);
     });
 });

@@ -17,7 +17,7 @@ import {
     incompleteConfigurationMessage,
     invalidEngineRoles,
     missingEngineRoles,
-    missingEventRoles,
+    ROLE_SPECS,
 } from '../simRoleStatus';
 import type { Roles } from '../simRoleStatus';
 import { netStcFromRoles } from '../../../../model/simulation/netCompile';
@@ -127,39 +127,15 @@ describe('parity with the engine (replaces the 16-subset parity of step 1)', () 
     });
 });
 
-describe('missingEventRoles', () => {
-    it('Event without Trigger misses Trigger, Trigger without Event misses Event (labels not swapped)', () => {
-        expect(missingEventRoles({ ...CF, simEvent: 'C_Event' })).toEqual(['Trigger']);
-        expect(missingEventRoles({ ...CF, simTrigger: 'R_trigger' })).toEqual(['Event']);
+describe('the event role specs (R-SIM-38)', () => {
+    it('simEvent stays a readable key, so the panel copies the derived value into its roles', () => {
+        expect(ROLE_SPECS.map(spec => spec.key)).toContain('simEvent');
+        // control: its partners are there too
+        expect(ROLE_SPECS.map(spec => spec.key)).toEqual(expect.arrayContaining(['simTrigger', 'simEventIdentifier']));
     });
 
-    it('both set or neither set: nothing missing (exclusive or, not "any one set")', () => {
-        expect(missingEventRoles({ ...CF, simEvent: 'C_Event', simTrigger: 'R_trigger' })).toEqual([]);
-        expect(missingEventRoles(CF)).toEqual([]);
-        // control: one of the two makes it non-empty
-        expect(missingEventRoles({ ...CF, simEvent: 'C_Event' })).not.toEqual([]);
-    });
-
-    it('the identifier alone is not a half-set role (only Event and Trigger count)', () => {
-        expect(missingEventRoles({ ...CF, simEventIdentifier: 'A_name' })).toEqual([]);
-        expect(missingEventRoles({ ...CF, simEvent: 'C_Event', simEventIdentifier: 'A_name' })).toEqual(['Trigger']);
-    });
-
-    it('an empty string counts as unset', () => {
-        expect(missingEventRoles({ ...CF, simEvent: '', simTrigger: 'R_trigger' })).toEqual(['Event']);
-    });
-
-    it('a half-set role still runs, without events: netStcFromRoles builds the STC and drops the event role (R-SIM-16)', () => {
-        for (const half of [{ simEvent: 'C_Event' }, { simTrigger: 'R_trigger' }]) {
-            const bag: Roles = { ...CF, ...half, simEventIdentifier: 'A_name' };
-            expect(missingEventRoles(bag)).toHaveLength(1);
-            const stc = netStcFromRoles(bag);
-            expect(stc).not.toBeNull();
-            expect(stc?.event).toBeUndefined();
-            expect(stc?.trigger).toBeUndefined();
-        }
-        // control: both set, the STC carries the event role
-        expect(netStcFromRoles({ ...CF, simEvent: 'C_Event', simTrigger: 'R_trigger' })?.event).toBe('C_Event');
+    it('the identifier is an override of name: its empty option reads "name (default)"', () => {
+        expect(ROLE_SPECS.find(spec => spec.key === 'simEventIdentifier')?.placeholder).toBe('name (default)');
     });
 });
 

@@ -96,6 +96,8 @@ function rawLookup(f: Fixture, events: boolean): Record<string, any> {
         M: { className: 'DModel', id: 'M', name: 'm', instanceof: 'MM' },
     };
     for (const c of ['C_Initial', 'C_State', 'C_Final', 'C_Event', 'C_Trans']) lookup[c] = { className: 'DClass', id: c, name: c, extends: [] };
+    // The Trigger typed to the event class: the bridge derives the event role from it (R-SIM-38).
+    lookup.R_trigger = { className: 'DReference', id: 'R_trigger', name: 'trigger', type: 'C_Event' };
     const object = (id: string, cls: string, slots: Record<string, string[]>) => {
         const features: string[] = [];
         for (const [f, values] of Object.entries(slots)) {

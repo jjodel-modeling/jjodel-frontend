@@ -56,7 +56,8 @@ const ROLE_KEYS: ReadonlyArray<[Exclude<keyof NetStc, 'shape' | 'bound'>, string
  * initial rule (`simInitial` or `simInitialMarking`); Petri needs `simNode`,
  * `simTransition`, `simArc`, `simArcSource`, `simArcTarget` and
  * `simInitialMarking`. A malformed `simBound` makes it `null` too. The event
- * role exists only when `simEvent` and `simTrigger` are both set.
+ * role exists only when `simEvent` and `simTrigger` are both set; the callers
+ * derive `simEvent` from the Trigger first (`withDerivedEventRole`, R-SIM-38).
  */
 export function netStcFromRoles(bag: Record<string, unknown> | undefined): NetStc | null {
     if (!bag) return null;
@@ -79,6 +80,28 @@ export function netStcFromRoles(bag: Record<string, unknown> | undefined): NetSt
         ? !!(stc.node && stc.transition && stc.arc && stc.arcSource && stc.arcTarget && stc.initialMarking)
         : !!(stc.nextState && (stc.ownedTransitions || stc.source) && (stc.initial || stc.initialMarking));
     return ok ? stc : null;
+}
+
+/**
+ * The bag with the event class derived from the Trigger (R-SIM-38): `simEvent`
+ * becomes the declared type of the `simTrigger` reference, read from the raw
+ * `lookup` at every call and never stored. A `simEvent` already in the bag is
+ * ignored, without migration. With no Trigger, or one that is not a
+ * `DReference`, or whose type is not a non-primitive `DClass` of the lookup,
+ * the bag comes back without `simEvent`: no event role. An abstract type is
+ * returned as is, and the engine's `isKindOf` reaches the instances of its
+ * concrete subclasses (R-SIM-8). The input is not mutated. Every reader of the
+ * bag passes it through here before `netStcFromRoles`.
+ */
+export function withDerivedEventRole(bag: Record<string, unknown>, lookup: Record<string, any>): Record<string, unknown> {
+    const derived: Record<string, unknown> = { ...bag };
+    delete derived.simEvent;
+    const trigger = pointer(bag, 'simTrigger');
+    const reference = trigger ? lookup[trigger] : undefined;
+    const type = reference?.className === 'DReference' ? reference.type : undefined;
+    const cls = typeof type === 'string' && type ? lookup[type] : undefined;
+    if (cls?.className === 'DClass' && !cls.isPrimitive) derived.simEvent = type;
+    return derived;
 }
 
 /** Arcs of weight 1 on each place, one arc per place with the weights summed. */

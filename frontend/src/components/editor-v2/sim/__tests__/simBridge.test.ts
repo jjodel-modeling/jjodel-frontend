@@ -36,14 +36,16 @@ const CLASSES: Lookup = {
     C_Trans: { className: 'DClass', name: 'Trans', extends: [] },
     R_out: { className: 'DReference', name: 'out' },
     R_next: { className: 'DReference', name: 'next' },
-    R_trigger: { className: 'DReference', name: 'trigger' },
+    // Typed to the event class: the event role is derived from it (R-SIM-38).
+    R_trigger: { className: 'DReference', name: 'trigger', type: 'C_Event' },
     A_label: { className: 'DAttribute', name: 'label' },
     A_guard: { className: 'DAttribute', name: 'guard' },
 };
 
+/** No `simEvent`: the panel no longer writes it, the bridge derives it from the Trigger (R-SIM-38). */
 const ROLES = {
     simInitial: 'C_Init', simOwnedTransitions: 'R_out', simNextState: 'R_next',
-    simEvent: 'C_Event', simTrigger: 'R_trigger', simEventIdentifier: 'A_label',
+    simTrigger: 'R_trigger', simEventIdentifier: 'A_label',
 };
 
 /** The metamodel MM with the role bag, the model M of it, and the objects (father M unless given). */
@@ -145,6 +147,29 @@ describe('startRun (R-SIM-37): the context of the model\'s own metamodel, frozen
         expect(proxied.kind === 'refused' && proxied.reason).toMatch(/cannot be frozen/);
         // control: the same roles and a plain record start
         expect(startRun(buildLookup(ROLES, TURNSTILE), 'M', 'MM', 'P', spy.build).kind).toBe('started');
+    });
+
+    it('the event class is the Trigger\'s type (R-SIM-38): a stale simEvent of another class yields the Trigger\'s events, not its instances', () => {
+        const run = started(buildLookup({ ...ROLES, simEvent: 'C_State' }, TURNSTILE));
+        expect(run.alphabet).toEqual(['coin', 'push']);
+        expect(run.net.hasEventRole).toBe(true);
+        expect([...run.net.places].sort()).toEqual(['Locked', 'Unlocked']);
+        // the Trigger retyped in the metamodel: the event class follows, with no role rewritten
+        const retyped = buildLookup(ROLES, TURNSTILE);
+        retyped.R_trigger.type = 'C_State';
+        expect(started(retyped).alphabet).toEqual(['Locked', 'Unlocked']);
+    });
+
+    it('no Trigger, or a Trigger with no class type: no event role, ε only, whatever simEvent the bag still holds', () => {
+        const { simTrigger, ...noTrigger } = ROLES;
+        const cleared = started(buildLookup({ ...noTrigger, simEvent: 'C_Event' }, TURNSTILE));
+        expect([cleared.alphabet, cleared.net.hasEventRole]).toEqual([[], false]);
+        const untyped = buildLookup({ ...ROLES, simEvent: 'C_Event' }, TURNSTILE);
+        delete untyped.R_trigger.type;
+        const run = started(untyped);
+        expect([run.alphabet, run.net.hasEventRole]).toEqual([[], false]);
+        // control: the same bag with the typed Trigger has events
+        expect(started(buildLookup({ ...ROLES, simEvent: 'C_Event' }, TURNSTILE)).alphabet).toEqual(['coin', 'push']);
     });
 
     it('collectModelObjectIds walks father up to the model: objects of another model are not in', () => {
@@ -262,6 +287,7 @@ describe('runSignature (R-SIM-34): what a run reads, and only that', () => {
         expect(after(l => { l.MM._state.simBound = '2'; })).not.toBe(s0);
         expect(after(l => { l.C_State.name = 'StateX'; })).not.toBe(s0);
         expect(after(l => { l.M.name = 'fast'; })).not.toBe(s0);
+        expect(after(l => { l.R_trigger.type = 'C_State'; })).not.toBe(s0);
     });
 
     it('a vertex moved, an object of another model renamed, a non-sim bag key written: unchanged', () => {
@@ -273,6 +299,10 @@ describe('runSignature (R-SIM-34): what a run reads, and only that', () => {
         const other = base(); other.Elsewhere.name = 'Renamed';
         expect(sig(other)).toBe(s0);
         expect(after(l => { l.MM._state.layoutHint = 'x'; })).toBe(s0);
+        // a stale simEvent is not read by the run (R-SIM-38): writing one changes nothing
+        const stale = base(); stale.MM._state.simEvent = 'C_State';
+        expect(stale.MM._state.simEvent).toBe('C_State');
+        expect(sig(stale)).toBe(s0);
     });
 
     it('a new object in the run\'s model changes it', () => {
