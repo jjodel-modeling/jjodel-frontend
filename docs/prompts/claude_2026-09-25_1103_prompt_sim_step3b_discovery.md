@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-25-1103
 Chat: C-2026-09-25-1030
 Lane: full (a changed exported interface; more than 3 files)
-Status: da eseguire
+Status: eseguito 2026-09-25 · lane sim-step3b-discovery · b9fd3a1f7
 Worktree: `~/jjodel-sim`, branch `simulation-engine`, HEAD `2b8475d24` or later (wave 3a closed: `79ee9fba3` code, `0fc65866a` closure). Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-sim` on `simulation-engine`, stop and say so; never work by absolute path on another worktree. Do not touch `~/jjodel`, `~/jjodel-release`, `~/jjodel-open` (the open-path lane `P-2026-09-25-0030` may be closing there, its dev server on 3003), `~/jjodel-gate`, `~/jjodel-harness`. The untracked `frontend/scripts/smoke/_tmp_sim1_verify.ts` is Alfonso's: leave it.
 
 Two-phase. **This prompt covers Phase 1 only**: read-only, it ends with a saved and committed report and a hard stop. Phase 2 is written in chat from the report and reaches this session as a GO that opens with this ID. This lane changes the source of `ReadCtx.isMarked` (through `isSimActive`), so the report carries the **definitive Layer Impact Report** for Phase 2, starting from the draft in §11 of the step 3 report.
