@@ -2,7 +2,7 @@
 
 Prompt-ID: P-2026-09-25-0030
 Chat: C-2026-09-25-0016
-Status: da eseguire
+Status: eseguito 2026-09-25 · lane open-path · 0609e9793 · verifica visiva passata 2026-09-25
 
 Worktree: `~/jjodel-open`, branch `open-path`, created from the trunk at `2dd17270b` (the harness gate merge). Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-open` on `open-path`, stop and say so; never work by absolute path on another worktree.
 
