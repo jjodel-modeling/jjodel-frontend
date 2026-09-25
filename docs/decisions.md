@@ -1534,6 +1534,43 @@ R-SIM-26.
   0 senza `targetMetamodelId`, 1 con). Corsia propria, fuori dalla simulazione; il bridge della 3b
   passa `targetMetamodelId` fin dall'inizio.
 
+### Ratifiche 2026-09-25: passo 3b, pannello e run-state (R-SIM-34..37)
+
+Base di evidenza: `docs/discovery/discovery_2026-09-25_sim_step3b_panel.md` (`b9fd3a1f7`), risposte
+alle sedici domande del suo §1, ratificate da Alfonso il 2026-09-25 nella chat `C-2026-09-25-1030`
+come raccomandate, con due precisazioni (R-SIM-36, ultima frase; ticket in fondo).
+
+- **R-SIM-34** (2026-09-25). **Interruzione del run (R-SIM-13) con firma limitata al run.** Una
+  modifica del modello che la firma del run rileva ritira il run: evidenziazione tolta, stato
+  `Not started`, una riga nel pannello «Run interrupted: the model changed. Reset to run again.».
+  Nessun sesto stato e nessun `Halted` che lasci un'evidenziazione vecchia. La firma è nuova,
+  limitata al run, nel modulo del bridge: misurata sei casi su sei, dove `buildValidationSignature`
+  ne sbaglia due (non vede un cambio di ruolo nel metamodello, scatta su un altro modello). Spostare
+  un nodo non interrompe.
+- **R-SIM-35** (2026-09-25). **Scelta fra candidati come lista.** Quando un ingresso ha più di un
+  candidato, il pannello mostra la lista dopo il clic e l'utente sceglie; annullare lascia il run
+  com'è. Nessuna politica random nella 3b: un run casuale si riproduce solo con un seme registrato, e
+  la traccia arriva con il passo 5 (R-SIM-25).
+- **R-SIM-36** (2026-09-25). **Store e versione.** Lo store tiene per modello il record del run
+  (`SimRun`: configurazione, rete compilata, motivo di arresto); `simReset` conserva il nome e prende
+  il record, `simApplyStep` è sostituito da `simCommit`, nuovo `getSimRun`. Un run resta nello store
+  anche a marking vuoto. La versione (canale `'mark'`) sale su Reset, su ogni commit `fired` o
+  `halted`, su Stop o interruzione di un run esistente; non sale su scarto, quiescenza e selettore
+  rifiutato, che non cambiano il marking. Lo stato del pannello e la riga «Last step» non dipendono
+  dalla versione: si aggiornano anche quando la versione non sale.
+- **R-SIM-37** (2026-09-25). **Pannello e lato M2.** Il bridge sta in un modulo proprio con il
+  costruttore del contesto iniettato e passa sempre `targetMetamodelId`. Con ruolo evento o forma
+  Petri ogni sovrapposizione di ruoli è un rifiuto; il percorso di avviso resta per il controllo di
+  flusso senza eventi. Il lato M2 ha quattro gruppi (General, Control flow, Petri net, Events), la
+  forma si deduce da `simArc`, `simBound` è un campo numerico che scrive una stringa di cifre. Dopo
+  Reset i difetti di compilazione compaiono in una riga di avviso e il run parte comunque; una riga
+  «Last step» riporta l'ultimo passo (scatto, scarto, quiescenza). Le chiavi di R-SIM-32 diventano
+  definitive senza rinomine con il commit di codice della 3b.
+- **Ticket** (2026-09-25). `SimModelView` conserva membri usati solo dal vecchio step: si snellisce in
+  una corsia propria, senza marcatori `TODO` nel codice. `stcFromRoles.ts` dopo la 3b contiene solo le
+  funzioni di sovrapposizione e il nome non lo dice più: rinomina in una corsia propria (la regola 2
+  la vieta nella 3b).
+
 ## Serie R-J — JjEL come linguaggio delle espressioni dell'IR (ratifiche 2026-08-18)
 
 Base di evidenza: `docs/discovery/discovery_2026-08-14_jjel_come_linguaggio_espressioni_ir.md`
