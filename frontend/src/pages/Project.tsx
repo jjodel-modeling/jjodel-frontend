@@ -33,8 +33,17 @@ import Loader from '../components/loader/Loader';
 import {Navbar} from "./components";
 import {CSS_Units} from "../view/viewElement/view";
 import { ProjectLoadingScreen } from '../components/LoadingScreen';
+import { JjodelEvents } from '../events/registry';
 
 function ProjectComponent(props: AllProps): JSX.Element {
+    // stateInitializer sets ProjectsApi.isLoading and loadError outside the store and announces it with
+    // PROJECT_OPEN_CHANGED: re-render on it, and read both live below (P-2026-09-25-0030).
+    const [, setOpenTick] = useState(0);
+    useEffect(() => {
+        const onOpenChanged = () => setOpenTick(n => n + 1);
+        window.addEventListener(JjodelEvents.PROJECT_OPEN_CHANGED, onOpenChanged);
+        return () => window.removeEventListener(JjodelEvents.PROJECT_OPEN_CHANGED, onOpenChanged);
+    }, []);
 /*
     useEffect(() => { moved in stateinitializer
         (async function() {
@@ -57,8 +66,8 @@ function ProjectComponent(props: AllProps): JSX.Element {
     }, [id]);*/
 
 
-    if (props.isLoading) {
-        return <ProjectLoadingScreen />;
+    if (ProjectsApi.isLoading) {
+        return <ProjectLoadingScreen error={ProjectsApi.loadError} />;
         /*return (
             <div className={'w-100 h-100 d-flex'}>
                 <div className={'m-auto d-flex p-5'} style={{flexFlow: 'column', cursor:'pointer'}}onClick={(e) => R.navigate('/allProjects')}>
