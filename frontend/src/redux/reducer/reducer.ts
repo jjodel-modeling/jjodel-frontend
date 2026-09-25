@@ -70,6 +70,7 @@ import DSL from "../../DSL/DSL";
 import {SaveManager} from "../../components/topbar/SaveManager";
 import Api from "../../api/api";
 import {doM2T, parseT2M} from "../../components/forEndUser/MTM";
+import {JjodelEvents} from "../../events/registry";
 
 let windoww = window as any;
 let U: typeof UType = windoww.U;
@@ -1475,6 +1476,11 @@ function fixEnv(){
     }
     // console.log("fix env end", {meta: import.meta, menv:(import.meta as any).env, process, penv:process.env});
 }
+// Incremented by every project open in stateInitializer: a checkLoaded left over from an earlier open
+// is stale when it runs, and must not clear the loading flag of the current one (P-2026-09-25-0030).
+let openRun: number = 0;
+// ProjectsApi.isLoading and loadError live outside the store: the project page re-renders on this event.
+function announceProjectOpen(): void { window.dispatchEvent(new CustomEvent(JjodelEvents.PROJECT_OPEN_CHANGED)); }
 export async function stateInitializer() {
     console.warn('stateinitializer');
     RuntimeAccessibleClass.fixStatics();
@@ -1516,17 +1522,29 @@ export async function stateInitializer() {
         // R.navigate('/auth');
         return;
     }
+    let run: number | undefined, openPid: Pointer<DProject> = '';
     try {
         if (isProjectPage) {
             let pid: Pointer<DProject> = U.getProjectID_URL() as string;
+            // Every project open starts loading, an in-page one after an earlier successful open included
+            // (P-2026-09-25-0030).
+            run = ++openRun;
+            openPid = pid;
+            ProjectsApi.isLoading = true;
+            ProjectsApi.loadError = undefined;
+            announceProjectOpen();
             const project = await ProjectsApi.getOne(pid);
             // console.log('11 project load api response', {project, isOff:U.isOffline(), userid:DUser.current, user:DUser.getUser()});
             if (!project) {
                 // todo: maybe add a retry counter in hash params and reload?
                 console.error('failed to get project', {project});
+                if (run === openRun) { ProjectsApi.loadError = {kind: 'not-found', details: String(pid), projectId: pid}; announceProjectOpen(); }
                 return;
             }
             let checkLoaded = (state: DState): boolean => {
+                // A failed or superseded open never clears the flag: the store may hold the dashboard's stub
+                // of this project, and the editor must not mount on it (P-2026-09-25-0030).
+                if (run !== openRun || ProjectsApi.loadError) return true;
                 if (!state.idlookup[DUser.current]) {
                     console.warn('init looping, user not found yet', DUser.current);
                     return false;
@@ -1536,6 +1554,7 @@ export async function stateInitializer() {
                     return false;
                 }
                 ProjectsApi.isLoading = false; // quits loading screen on project page
+                announceProjectOpen();
                 // console.log('init completed');
                 return true;
                 /*
@@ -1565,6 +1584,10 @@ export async function stateInitializer() {
             /*state['idlookup'][DUser.current] = user.__raw;
             if (!state['users'].includes(DUser.current)) state['users'].push(DUser.current);*/
             // console.log('project load', state);
+            // The LOAD in SaveManager.load is synchronous: first let what is already queued or fired reach the
+            // store, as the deferred dispatch did (the reset's empty LOAD, "init jodel state") (P-2026-09-25-0030).
+            COMMIT(undefined, false);
+            await new Promise(resolve => setTimeout(resolve, 0));
             recursiveCheck();
             // needs to stay before load for some reason? seems like action firing can be done synchronously some times?
             SaveManager.load(state, project);
@@ -1575,7 +1598,16 @@ export async function stateInitializer() {
             await ProjectsApi.getAll();
         }
     } catch (error) {
-        Log.eDevv('Failed to fetch projects', {error});
+        if (isProjectPage) {
+            // The one catch of the open path: decompress, the migration and the LOAD dispatch, which
+            // SaveManager.load runs synchronously so that a reducer throw lands here (P-2026-09-25-0030).
+            if (run === openRun) {
+                ProjectsApi.loadError = {kind: 'unreadable', details: (error as any)?.message || String(error), projectId: openPid};
+                announceProjectOpen();
+            }
+            Log.eDevv('Failed to open project', {error, pid: openPid});
+        }
+        else Log.eDevv('Failed to fetch projects', {error});
         // await AuthApi.logout();
         // DUser.current = ''; // forces redirect routing to auth
         // console.error('init error, redirect to auth');

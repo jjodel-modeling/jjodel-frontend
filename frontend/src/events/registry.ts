@@ -63,6 +63,9 @@ export const JjodelEvents = {
   // quello silenzioso: l'autosave non notifica piu' l'utente, quindi l'indicatore
   // di «ultimo salvataggio» e' l'unico posto in cui resta leggibile.
   PROJECT_SAVED: 'jjodel:project-saved',
+  // stateInitializer changed ProjectsApi.isLoading or ProjectsApi.loadError, which live outside
+  // the store; the project page re-renders on it (P-2026-09-25-0030). No detail.
+  PROJECT_OPEN_CHANGED: 'jjodel:project-open-changed',
   OPEN_TRANSFORMATION: 'jjodel:openTransformation',
   TRANSFORMATIONS: 'jjodel:transformations',
   OPEN_NEW_TRANSFORMATION_DIALOG: 'jjodel:open-new-transformation-dialog',

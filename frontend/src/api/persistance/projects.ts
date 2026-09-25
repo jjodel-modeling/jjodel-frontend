@@ -39,6 +39,8 @@ import { markProjectSaved } from "../../common/libraries/lastSaved";
 @RuntimeAccessible('ProjectsApi')
 class ProjectsApi {
     static isLoading: boolean = true;
+    /** Why the current open failed; the loading screen shows it in place of the spinner (P-2026-09-25-0030). */
+    static loadError?: {kind: 'unreadable' | 'not-found', details?: string, projectId: Pointer<DProject>};
 
     static async create(type: DProject['type'], name?: DProject['name'], m2: Pointer<DModel>[] = [], m1: Pointer<DModel>[] = [], otherProjects?: LProject[]): Promise<void> {
         const project = DProject.new(type, name, undefined, m2, m1, undefined, otherProjects);
@@ -112,6 +114,14 @@ class ProjectsApi {
      * callers are unaffected and untouched.
      */
     static async save(project: LProject, opts?: { silent?: boolean }): Promise<DProject> {
+        // A project whose open failed is not in the store: what is there (the dashboard's stub, or nothing
+        // of it) must not overwrite its saved state. loadError is reset by every project open, so it
+        // speaks for the current one (P-2026-09-25-0030).
+        const failed = ProjectsApi.loadError;
+        if (failed && failed.projectId === project.id) {
+            Log.ww('ProjectsApi.save: not saving a project whose open failed', {id: project.id, loadError: failed});
+            return {...project.__raw} as DProject;
+        }
         const dProject = {...project.__raw} as DProject;
         dProject.lastModified = Date.now();
         dProject.viewpointsNumber = project.viewpoints.length;
