@@ -1601,6 +1601,26 @@ come raccomandate, con due precisazioni (R-SIM-36, ultima frase; ticket in fondo
   funzioni di sovrapposizione e il nome non lo dice più: rinomina in una corsia propria (la regola 2
   la vieta nella 3b).
 
+### Ratifica 2026-09-25: la classe evento si deriva dal trigger (R-SIM-38)
+
+Discussa e ratificata da Alfonso il 2026-09-25 nella chat `C-2026-09-25-1500`, a partire dal gruppo
+Events del lato M2 (tre campi: Event, Trigger, Event identifier). Implementazione:
+`P-2026-09-25-1500`.
+
+- **R-SIM-38** (2026-09-25). **Il ruolo evento si configura dal solo Trigger.** Il campo primario è
+  Trigger, un riferimento della classe che porta gli archi. La metaclasse evento è il tipo
+  dichiarato di quel riferimento: si deriva a ogni lettura del bag e non si copia mai, così un
+  cambio di tipo nel metamodello si riflette senza riconfigurare. Tre precisazioni. (1) Tipo
+  astratto: gli eventi sono le istanze delle sottoclassi concrete, con lo stesso `isKindOf` del
+  motore (R-SIM-8); nessun override per restringere a una sottoclasse. (2) Il trigger è solo un
+  riferimento: un attributo stringa sull'arco non definisce eventi (conferma R-SIM-12, eventi come
+  istanze M1). (3) Con molteplicità maggiore di uno l'arco è abilitato da uno qualsiasi degli
+  eventi referenziati: la lettura any-of registrata all'esecuzione di R-SIM-16 diventa ratificata.
+  L'identificatore resta facoltativo con default `name` (`objectLabel`, `objectSlots.ts`) e il
+  pannello lo presenta come override. La chiave `simEvent` non si scrive più; un valore già
+  presente in un bag si ignora, senza migrazione. Lo stato «ruolo evento a metà» scompare. Emenda
+  R-SIM-12 e R-SIM-16 sul lato M2; il motore e il lato M1 non cambiano.
+
 ## Serie R-J — JjEL come linguaggio delle espressioni dell'IR (ratifiche 2026-08-18)
 
 Base di evidenza: `docs/discovery/discovery_2026-08-14_jjel_come_linguaggio_espressioni_ir.md`
