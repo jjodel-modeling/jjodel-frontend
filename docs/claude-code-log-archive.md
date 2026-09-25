@@ -306,6 +306,207 @@ imprecise. It is recorded here and the paragraph is left as written.
 Rotazione del 2026-09-01 (P9, oltre le 40 entry): le 4 entry qui sotto, tutte del
 2026-08-30, sono state spostate dall'attivo senza modifiche. L'attivo torna a 40.
 
+## 2026-09-18 — fix(export): oggetti referenziati da altri modelli nell'export JSON M1 (#128)
+**Prompt**: risolvere jjodel-modeling/jjodel-frontend#128; usare e tenere aggiornata la documentazione degli export JSON in `docs/`.
+**Files touched**: `frontend/src/services/export/JsonModelService.ts`, `frontend/src/services/export/__tests__/JsonModelService.test.ts` (nuovo), `docs/json-export-schema.md`, `docs/discovery/discovery_2026-09-18_json_external_objects.md` (nuovo). Questa entry e la rotazione a parte.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `npm run test -- src/services/export/__tests__` **63/63** (14 nuovi); `npm run typecheck` su output COMPLETO **14** errori pre-esistenti, 0 nei file toccati, exit 2 identico; `npm run build` exit **0** col solo avviso di chunk-size noto.
+**Out-of-scope changes**: no — fix, test e documentazione richiesta dal prompt e dal protocollo.
+**Layer Impact Report**: not-required — `JsonModelService.ts` e' un servizio di export, nessun file di §3.1, nessuna scrittura D, nessuna TRANSACTION.
+**Smoke visivo**: non applicabile — nessun pixel cambia. Il payload scaricato e' coperto dal test Node su Blob (self-contained, tutti i `$ref` risolti). `npm run smoke` non avviato: `@playwright/test` non risolvibile in locale, come nel giro #147.
+**Notes**: `buildModelObjects` percorre la chiusura raggiungibile (worklist su Map) dai root; root locali in `objects`, esterni in `externalObjects` (additivo, nessun bump di formatVersion). Containment preservato; cicli/duplicati → `$ref` via serializedObjects. Metaclassi esterne → `externalMetamodels`. Id stale/non-DObject restano `$ref`. Deroga RC-11 nel referto (6 file). Commit 7c4e763bf (codice), d0a51de50 (docs).
+**Prompt document name**: 2026-09-18 12:50
+
+## 2026-09-18 — fix(ai): ripresa autorizzata della PR per #147
+**Prompt**: "chiaro procedi pr", dopo il chiarimento sul fallback del modello Custom.
+**Files touched**: `docs/discovery/discovery_2026-09-18_custom_provider_model.md`, `docs/claude-code-log.md`, `docs/claude-code-log-archive.md`; commit dei due file di codice gia' verificati nel giro precedente.
+**Outcome**: ✅ completed — commit codice c6e735b01; consegna su branch fix/147-custom-provider-model verso staging.
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — codice invariato dal giro precedente: 7 test verdi, build riuscita, 14 errori TypeScript preesistenti e output identico.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: fallito nell'avvio nel giro precedente — @playwright/test mancante; nessuna verifica visiva dichiarata.
+**Notes**: Autorizzazione ricevuta alla ripresa. Nessuna nuova modifica di codice; documentazione separata dal commit funzionale. La rotazione sposta un'altra entry verbatim mantenendo 40 entry attive. Limiti di verifica riportati nella PR.
+**Prompt document name**: 2026-09-18 12:03
+
+## 2026-09-18 — fix(ai): Custom provider uses its configured model (#147)
+**Prompt**: risolvere jjodel-modeling/jjodel-frontend#147 su branch dedicato e creare PR verso staging.
+**Files touched**: `frontend/src/services/AIProviderService.ts`, `frontend/src/services/__tests__/AIProviderService.test.ts`, `docs/discovery/discovery_2026-09-18_custom_provider_model.md`, `docs/claude-code-log.md`, `docs/claude-code-log-archive.md`.
+**Outcome**: ⚠️ partial — fix verificato nel working tree; richiesta di autorizzazione a git add/commit rifiutata, nessun push o PR.
+**Corregge**: —
+**Causa**: (g)
+**Regressions**: no — 7 test verdi (3 rossi prima del fix); typecheck 14 errori prima/dopo, output completo identico; build exit 0.
+**Out-of-scope changes**: no — fix, test e documentazione richiesta dal protocollo; archiviate verbatim le tre entry piu' vecchie per mantenere 40 entry.
+**Layer Impact Report**: not-required
+**Smoke visivo**: fallito nell'avvio — manca @playwright/test nell'installazione locale; nessun esito visivo misurato.
+**Notes**: Branch fix/147-custom-provider-model da staging cb699ad58. Quattro righe risolvono il placeholder custom contro config.model. Override reali preservati. Test su API pubblica e payload HTTP, senza chiamate reali a OpenRouter. Dettagli nel referto; modifiche non committate a seguito del rifiuto dell'autorizzazione.
+**Prompt document name**: 2026-09-18 11:55
+
+## 2026-09-18 — fix: the summary numbers skipped lines in editor space (corsia L3)
+**Prompt**: `claude_2026-09-17_1024_prompt_jjscript_silent_defects_duplicates_extends_skipped.md`,
+phase 2 lane L3, with Alfonso's GO of 2026-09-18 (the D6 mapping, render time only, the named
+mutant, hard stop) and his ACK: the three visual checks passed and the third file is sanctioned.
+**Files touched**: `139350eea`, 3 files: `jjscript/components/ScriptBlock.tsx` (one import, the
+`summaryForDialog` memo mapping `executionSummary.skippedLines` through the `lineToCommandIndex`
+the component already builds, the dialog's `summary` prop takes the mapped copy),
+`jjscript/components/summaryLines.ts` (new, pure: `skippedLinesAsEditorLines`, the same lookup
+`getScriptLine` performs with the same fallback), `jjscript/__tests__/summaryLines.test.ts` (new,
+4 tests: the prompt's comment-and-blank case, the identity control, order preservation, the
+fallback). `ExecutionErrorDialog.tsx` untouched; `skippedLinesSet`, `runCommandsFromIndex` and
+the `EXECUTION_PAUSED` detail keep command-index space, as the prompt's decision requires. This
+entry in its own commit.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no, set on Alfonso's ACK. `npm run typecheck` **33** on full output, the declared
+baseline, control `Measurable` → 6, **0** in the touched files; `npx vitest run` **3816 passed,
+0 failed**, the same 9 files red at import; `npm run build` exit 0.
+**Out-of-scope changes**: yes, one, sanctioned at the GO's ACK: `summaryLines.ts` is a third file
+beyond «ScriptBlock.tsx and its test», because the component imports the `joiner` barrel and does
+not load under vitest; a pure module beats a source-text test.
+**Layer Impact Report**: not-required — no §3.1 file; display only, nothing in the executor, no
+D-layer write path.
+**Smoke visivo**: passato — Alfonso on screen: the summary reads «Skipped lines: 3» with the
+comment and the blank line before the skipped command, 1 without them, and Skip Line resumes from
+the right command.
+**Notes**: Bench 3/3 killed with apply controls; the GO's wiring mutant (the unmapped summary
+reaching the dialog) cannot be executed in the bench, declared, no source-text substitute. The two
+§8 tickets stay open: the probe result and the overflow status were announced three times with
+unfilled placeholders and never reached the lane; the type-reference ticket is a candidate L5, fix
+shape of `9345a4046`, if the probe reproduces the race.
+**Prompt document name**: 2026-09-17 10:24
+
+## 2026-09-18 — fix: the waiter waits for a same-script superclass, the pass refuses a forward one (corsia L4)
+**Prompt**: `claude_2026-09-17_1024_prompt_jjscript_silent_defects_duplicates_extends_skipped.md`,
+phase 2 lane L4, the TODO L1 and L2 left open, with Alfonso's GO of 2026-09-18: the validator on
+the superclass role plus the same-script race, born from the read-only report committed with this
+entry (`discovery_2026-09-17_superclass_same_script_race.md`).
+**Files touched**: `9345a4046`, 6 files: `jjscript/executor/dependencies.ts` (the superclass of
+`create class|abstract class|interface` becomes a `required` dependency, so `waitForDependencies`
+polls for it; the `add` case passes its element type because `add` becomes a `create`;
+`EXTENDING_ELEMENT_TYPES`), `jjscript/executor/scriptValidator.ts` (the superclass role joins the
+forward-reference pass via `superclassNames`, the same three element types, header rewritten),
+`jjscript/executor/superclassResolution.ts` (`missingSuperclassRefusal` sets its own suggestion:
+the `PARENT_NOT_FOUND` table text told the user to repeat what already worked),
+`jjscript/__tests__/scriptValidator.test.ts` (+3 tests, the old acceptance inverted),
+`jjscript/executor/__tests__/superclassResolution.test.ts` (+1),
+`jjscript/__tests__/dependencies.test.ts` (new, 9 tests, the last added because the bench mutant
+on the `add` path had no killer). This entry in its own commit.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. `npm run typecheck` exit 2, **33** on full output, the declared baseline,
+control `Measurable` → 6, **0** in the touched files; `npx vitest run` **3812 passed, 0 failed**,
+the same 9 files red at import; `npm run build` exit 0, pre-existing warnings only. Committed
+behaviour changes by decision, both declared in the report §7: an absent superclass now takes up
+to `MAX_WAIT_MS = 500` ms to refuse, polled every 30 ms, and the same wait applies to `add`.
+**Out-of-scope changes**: no. The `add` elementType pass and the bench-added test are inside the
+GO's file list and declared in the commit message.
+**Layer Impact Report**: not-required — no §3.1 file, no D-layer write path, no TRANSACTION; the
+validator reads the name set the caller hands in, the wait happens before dispatch.
+**Smoke visivo**: passato — Alfonso on screen, five checks: a same-script superclass resolves (1);
+a forward one refused before command 1 with nothing created (2); an absent one refused within the
+declared 500 ms with nothing created (3); one of several missing leaves the class uncreated (4);
+the L1 duplicate refusal unchanged (5).
+**Notes**: Mutation bench 9/9 killed, each with an apply control; one ambiguous anchor was refused,
+re-run fixed, not scored. Two open tickets at the GO's instruction, not this lane's work, both
+report §8: the `type-reference` role is still `required: false` (enum before an attribute typed on
+it: probe not run) and the long refusal message overflows the dialog's red box (cosmetic). The GO's
+placeholders for both arrived unfilled. Same declared gap as L1/L2: `createClass` wiring has no
+executing test.
+**Prompt document name**: 2026-09-17 10:24
+
+## 2026-09-17 — feat(editor-v2): the 1b shell of the Symbol Editor (slice 4b)
+**Prompt**: `claude_2026-09-16_2339_prompt_slice4b_guscio_2h.md` — slice **4b**, the SHELL half of
+spec slice 4 (4a, the Goal family, is already in): popover `variant='popover'`, 1b header with the
+preset chip, `nav sezioni (170px) | panel` with the count badges, 1b footer, and
+`applyPresetToShape(shape, preset, {keepRules})` under D7. The five things the 2h mockup shows and
+the plan does not have (metaclass dropdown, View name, Notations chips, «Also used for», «Show
+diff») stayed out; none of them was needed to make the shell work.
+**Files touched**: `b53d2f5dd`, 10 files, code only. `authoring/borderOverrides.ts` (**new**, pure:
+`borderOverrideRows` moved out of the panel), `authoring/SymbolEditorModal.tsx` (the 1b shell:
+chip + popover, section nav, footer, badges), `authoring/SymbolEditorModal.scss` (chip, popover,
+nav; the two-column grid, the Border span, the tab bar and the catalog column rules **removed**),
+`authoring/SymbolCatalogPicker.tsx` (`variant='popover'` reusing the `'column'` path, footer),
+`authoring/VertexAuthoringPanel.tsx` (`activeSection` prop, section wrappers, the moved function),
+`authoring/irTabs.tsx` (`IRSectionId`, labels, `irSectionStyle`), `ir/notationCatalog.ts`
+(`ApplyPresetOptions`, `keepRules`), plus three test files — `authoring/__tests__/borderOverrides.test.ts`
+(**new**, 11), `authoring/__tests__/symbolCatalogPopover.test.ts` (**new**, 9, rendered) and
+`ir/__tests__/notationCatalog.test.ts` (+7 on `keepRules`). This entry in this inbox, in its own commit.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — verified on screen by Alfonso (ACK 2026-09-17), all eight points holding: the
+rail unchanged with every section; a view with a scalar border draws identical; the header shows the
+chip and no catalog column; the popover opens with Base expanded and its footer reads 56 presets and
+5 families; the nav shows one section at a time at full width; the badges are consistent; `keepRules`
+keeps the two rules without writing `default`; the footer behaves as expected. Gates all green: `npm run typecheck` exit 2, **33** on full output, set byte-identical to the pre-edit run
+(`diff` exit 0), **0** in the ten touched files. `npx vitest run` **3718 passed, 0 failed**, the same
+9 files red at import (`diff` of the FAIL lines, exit 0). Of the +47 against the pre-edit 3671,
+**27 are this slice** (11 + 9 + 23→30) and 20 belong to the jjscript lane, whose files were written
+at 23:54–23:56 between the two runs — measured, not assumed. `npm run build` exit 0, only the
+pre-existing chunk warning.
+**Out-of-scope changes**: yes — 10 files, over regola 19's threshold, declared in chat with the
+Layer Impact Report before the diff and proceeded with under **RC-11**. Each is named by the spec
+for this half or forced by it: `borderOverrides.ts` exists because the prompt requires tests on
+`borderOverrideRows` and `VertexAuthoringPanel` cannot be imported by the bench; `irTabs.tsx`
+carries the section vocabulary the panel and the modal must agree on. Second deviation, declared:
+the nav has **8 entries, not the spec's 7**.
+**Layer Impact Report**: produced — in chat before the diff, as §3.2 and P5 require for
+`viewpoint/ir` and `viewpoint/authoring`. No D-layer, no L-layer, no sync, no persistence: the IR
+schema is unchanged, `applyPresetToShape` gains an argument and under `keepRules` writes strictly
+fewer keys, so no `irVersion` bump and no VersionFixer. The write path is the same canonical
+whole-object `set_ir`.
+**Smoke visivo**: passato — eseguito da Alfonso il 2026-09-17 (ACK visivo) sulla lista ordinata
+consegnata in chat, tutti e otto i punti reggono (elencati sotto **Regressions**). The unit bench
+below and the rendered popover test cover the same ground on the non-visual side.
+**Notes**: Ambiguità «scrolla/mostra» risolta in **mostra una sezione per volta**, come chiede la spec: perciò il grid a due colonne e lo span del Border sono **rimossi**, non lasciati — con una sezione sola il grid la impagina a sinistra. Banco: 3 mutanti su `borderOverrideRows`, 5/2/2 rossi, sorgente ripristinato. Nav a 8 voci: `irTabsForKind` non dà Appearance al rail, quindi Shape e Badges si raggiungono solo qui. Altra corsia: `6ae3e15eb` nel giro, nessun suo file nel mio commit.
+**Prompt document name**: 2026-09-16 23:39
+
+## 2026-09-17 — feat(editor-v2): the rules table on the shape axis
+**Prompt**: `claude_2026-09-17_1048_prompt_regole_su_shape.md` — give `SHAPE` the rules table that
+`FILL`, `MARKER` and the three border axes already have, shaped like the border ones (no
+`noneValue`, no `fixedLabel`: a form always has a value). The prompt supplied the preconditions as
+already measured and asked only that they be re-checked, which they were, one by one.
+**Files touched**: `e343242bd`, 2 files. `authoring/VertexAuthoringPanel.tsx` (+10: the `rulesTable`
+prop on the form's `ConditionalEditor`, plus the comment that records the criterion at the site that
+raises the question), `ir/__tests__/symbolRecognition.test.ts` (+15: a form in `{rules, default}`
+form matches no preset and does not fall back to the default, with a positive control on the same
+default written as a scalar). The corner radius stepper was not touched. This entry in this inbox,
+in its own commit.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — verified on screen by Alfonso (ACK 2026-09-17) on localhost:3001 in Advanced
+mode, acceptance criteria 1–3 answered and all five checks holding (listed under **Smoke visivo**).
+Criterion 4 is covered by test and bench, criterion 5 by the gates: `npm run typecheck` exit 2,
+**33** on full output, set byte-identical to the pre-edit run (`diff` exit 0), **0** in the two
+touched files. `npx vitest run` **3728 passed, 0 failed**, the same 9 files red at import (`diff`
+exit 0; those 9 fail at import on `window is not defined` and are why vitest's own exit is non-zero,
+as before). Of the +10 against the 4b run's 3718, **exactly 1 is this task** (symbolRecognition
+14→15); the other 9 are the jjscript lane's `2b357af17` and `fad85bae5`, the second of which adds a
+test file (165→166) — measured from the commits, not assumed. `npm run build` exit 0, `✓ built in 1m
+45s`, only the pre-existing chunk warning.
+**Out-of-scope changes**: no — 2 files, both inside «`VertexAuthoringPanel.tsx` and its tests». The
+test went into `symbolRecognition.test.ts` because that is the only place criterion 4 can be
+executed: the panel itself has no test file and cannot have one (see **Notes**).
+**Layer Impact Report**: not-required — no §3.2 file, no D-layer or L-layer write path, no schema
+change and no persistence. `Conditional<T>` already admitted all three shapes on every axis, so the
+IR the panel can now write was already a legal value that `compileConditional` already resolved;
+nothing to migrate, no `irVersion` bump. Same call as slice 4a on this same file.
+**Smoke visivo**: passato — run by Alfonso on 2026-09-17 on localhost:3001 in Advanced, on the
+ordered list handed to him in chat: (1) the rules table appears on the form axis and starts empty,
+(2) per-instance rendering follows the rules with the default as fallback, (3) an existing
+`{when,then,else}` survives open/close without an edit and is rewritten to `{rules, default}` only
+after a real edit, (4) Basic mode shows the form rules without offering an overwrite, (5) preset
+application with `keepRules` behaves as observed in slice 4b. Deferred to slice 5 by Alfonso in the
+same ACK, not defects of this slice: the «Custom symbol» title and the absence of a static preview.
+**Notes**: Criterio (anche nel commit e nel codice): la tabella va agli assi con **più di due valori**, i booleani tengono il predicato singolo. Banco su `symbolRecognition`: leggere il `default` su tutti gli assi = **3 rossi** (questo più i due della slice 2), sul solo form = **1 rosso**, ed è questo test, nessun altro nel file lo prende. Il prop in sé NON è coperto: `VertexAuthoringPanel` non si importa nel banco (monaco via `joiner`) e §5 vieta il test sul sorgente — lacuna dichiarata.
+**Prompt document name**: 2026-09-17 10:48
+
 ## 2026-09-17 — fix: a missing superclass creates nothing (corsia L2)
 **Prompt**: `claude_2026-09-17_1024_prompt_jjscript_silent_defects_duplicates_extends_skipped.md`,
 phase 2 lane L2, with Alfonso's GO answer 4: every superclass resolved before `DClass.new`, on any
