@@ -285,9 +285,17 @@ and the cherry-pick loop then started in the wrong tree. It was aborted, no dama
 - Never move a ref (`git update-ref`, `git branch -f`) while a worktree has it checked out.
 - Never chain a `cd` that can fail in front of a destructive loop. Assert the branch with
   `git rev-parse --abbrev-ref HEAD` in the target tree before the first pick.
-- A tree without `node_modules` (such as `/Users/alfonso/jjodel-release`) can run the gates through a
-  temporary symlink to `~/jjodel/frontend/node_modules`, removed afterwards. `git status` in that
-  tree must be empty before and after.
+- `~/jjodel-release/frontend/node_modules` and `~/jjodel-sim/frontend/node_modules` are permanent
+  symlinks to `~/jjodel/frontend/node_modules`, part of the setup, and a lane never removes them. A
+  tree that has none (today `~/jjodel-open`, `~/jjodel-gate`) can run the gates through a temporary
+  symlink that the lane creates, names in its report and removes when done. Before removing a
+  symlink, the lane checks that it did not exist when the lane started. `git status` in that tree
+  must be empty before and after.
+- Each tree keeps its own Vite cache in `frontend/.vite-cache` (`cacheDir` in `vite.config.ts`). A
+  lane never writes, deletes or rebuilds another tree's cache, and starts a dev server only from its
+  own tree, on a port no other tree is using (`lsof -nP -iTCP -sTCP:LISTEN`). Measured 2026-09-25: a
+  lane removed the permanent symlink of `~/jjodel-release`, and a discovery rewrote the shared
+  cache; 3001 served a blank page.
 - Choose the positive control of a verify entry at the time of the entry, and measure its signal
   with the same command (§5). A file that differed between the two branches in an earlier entry
   may no longer differ, and a file an earlier entry called identical may differ. Do not inherit

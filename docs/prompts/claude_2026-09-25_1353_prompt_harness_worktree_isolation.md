@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-25-1353
 Chat: C-2026-09-25-1353
 Lane: fast
-Status: da eseguire
+Status: eseguito 2026-09-25 · lane harness · 465605cd7 · verifica visiva passata 2026-09-25
 
 Worktree: `~/jjodel-release`, branch `alfonso-frontend-jjtl` (the trunk). Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop and say so. Do not touch `~/jjodel`, `~/jjodel-sim`, `~/jjodel-open`, `~/jjodel-gate`, `~/jjodel-harness`: not their files, not their `node_modules` symlinks, not their caches, not their dev servers.
 
