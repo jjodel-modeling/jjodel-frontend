@@ -2,7 +2,7 @@
 
 Prompt-ID: P-2026-09-25-0935
 Chat: C-2026-09-25-0016
-Status: da eseguire
+Status: eseguito 2026-09-25 · lane sim-step3-discovery · de21a2c93
 
 Worktree: `~/jjodel-sim`, branch `simulation-engine`, at `dee18d69b` (a fast-forward of the trunk: it holds the harness gate, step 2, R-SIM-21..26 and the log rotation). Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-sim` on `simulation-engine`, stop and say so; never work by absolute path on another worktree. Do not touch `~/jjodel-release`, `~/jjodel-open` (a discovery lane may be running there), `~/jjodel-gate`, `~/jjodel`, `~/jjodel-harness`. The untracked `frontend/scripts/smoke/_tmp_sim1_verify.ts` is Alfonso's: leave it.
 
