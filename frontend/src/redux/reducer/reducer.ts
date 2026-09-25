@@ -1534,6 +1534,8 @@ export async function stateInitializer() {
             ProjectsApi.loadError = undefined;
             announceProjectOpen();
             const project = await ProjectsApi.getOne(pid);
+            // A newer open started while this one waited: the store and the flags are its own (P-2026-09-25-1440).
+            if (run !== openRun) return;
             // console.log('11 project load api response', {project, isOff:U.isOffline(), userid:DUser.current, user:DUser.getUser()});
             if (!project) {
                 // todo: maybe add a retry counter in hash params and reload?
@@ -1588,6 +1590,8 @@ export async function stateInitializer() {
             // store, as the deferred dispatch did (the reset's empty LOAD, "init jodel state") (P-2026-09-25-0030).
             COMMIT(undefined, false);
             await new Promise(resolve => setTimeout(resolve, 0));
+            // Superseded while decompressing or draining: its LOAD would replace the newer project (P-2026-09-25-1440).
+            if (run !== openRun) return;
             recursiveCheck();
             // needs to stay before load for some reason? seems like action firing can be done synchronously some times?
             SaveManager.load(state, project);
