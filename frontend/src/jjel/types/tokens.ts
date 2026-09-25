@@ -72,11 +72,13 @@ export enum JjelTokenType {
     DOT = 'DOT',                 // .
     QUESTION_DOT = 'QUESTION_DOT',   // ?.
     NULL_COALESCE = 'NULL_COALESCE', // ??
+    DOT_LBRACKET = 'DOT_LBRACKET',   // .[ (state access, R-SIM-18)
 
     // ============================================
     // PUNCTUATION
     // ============================================
     COLON = 'COLON',             // :
+    ASSIGN = 'ASSIGN',           // := (action mode only, R-SIM-39)
     PIPE = 'PIPE',               // | (alias for 'such that')
     COMMA = 'COMMA',             // ,
     LPAREN = 'LPAREN',           // (

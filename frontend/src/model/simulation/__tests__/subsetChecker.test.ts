@@ -11,6 +11,7 @@ import { parseExpression } from '../../../jjel/parser';
 import { getCollectionMethod, getDateMethod, getNumberMethod, getStringMethod } from '../../../jjel/evaluator';
 import { checkGuardSubset, GUARD_ROOTS, NOT_VERIFIABLE_METHODS } from '../subsetChecker';
 import type { SubsetDiagnostic } from '../subsetChecker';
+import { STATE_RESERVED } from '../../../jjel/stateReserved';
 
 function check(src: string): SubsetDiagnostic[] {
     const parsed = parseExpression(src);
@@ -183,5 +184,29 @@ describe('severity and location', () => {
         expect(bySeverity).toEqual({ warning: 'W-IS', error: 'E-NODE', 'not-verifiable': 'T-DECIMAL' });
         const node = d.find(x => x.code === 'E-NODE')!;
         expect(node.location?.start.offset).toBe('self is T and '.length);
+    });
+});
+
+describe('state access .[x] (R-SIM-18, R-SIM-30, R-SIM-41), P-2026-09-25-1445', () => {
+    it('reading state is exportable: no diagnostic on self, model, event or a path', () => {
+        for (const src of ['self.[visits] < 3', 'model.[i] == 0', 'event.[n] > 1', 'self.target.[visits] + 1 < 3',
+            'p.[tokens] < 2 and q.[marked]', 'Place.instances.all(p => p.[tokens] <= 1)']) {
+            expect(codes(src), src).toEqual([]);
+        }
+    });
+
+    it('M11: node.[x] in a guard is E-NODE, anywhere in it', () => {
+        expect(codes('node.[level] > 0')).toEqual(['E-NODE']);
+        expect(codes('self.[a] == 1 and node.[b] == 2')).toEqual(['E-NODE']);
+        expect(codes('xs.all(x => node.[b] == x)')).toEqual(['E-NODE']);
+        expect(codes('self.node.[b] == 2')).toEqual([]);
+    });
+
+    it('the roots are read from the single list of jjel/stateReserved.ts', () => {
+        expect(GUARD_ROOTS).toBe(STATE_RESERVED.roots);
+        expect([...STATE_RESERVED.roots]).toEqual(['self', 'event', 'model', 'node']);
+        expect(STATE_RESERVED.presentationRoot).toBe('node');
+        expect([...STATE_RESERVED.readOnlyAttributes]).toEqual(['marked', 'tokens']);
+        expect(STATE_RESERVED.operator).toBe('.[');
     });
 });

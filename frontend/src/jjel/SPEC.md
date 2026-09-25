@@ -89,11 +89,12 @@ The `is` operator checks type membership including supertypes:
 |----------|---------|
 | Arithmetic | `+`, `-`, `*`, `/`, `%` |
 | Comparison | `==`, `!=`, `<`, `>`, `<=`, `>=` |
-| Navigation | `.` (member access), `?.` (null-safe) |
+| Navigation | `.` (member access), `?.` (null-safe), `.[` (state access, §5.10) |
 | Null handling | `??` (null coalesce) |
 | Lambda | `=>` |
 | Grouping | `(`, `)`, `[`, `]`, `{`, `}` |
 | Separator | `:`, `,` |
+| Assignment | `:=` (actions only, §5.10; an error in an expression) |
 
 ### Operator Semantics
 
@@ -121,7 +122,7 @@ The `is` operator checks type membership including supertypes:
 | 9 | `+`, `-` | left |
 | 10 | `*`, `/`, `%` | left |
 | 11 | `not`, `-` (unary) | right |
-| 12 | `.`, `?.` (postfix), `[index]` | left |
+| 12 | `.`, `?.` (postfix), `.[attr]`, `[index]` | left |
 
 ### Productions
 
@@ -166,6 +167,7 @@ unary          = 'not' unary
 postfix        = primary (
                    '.' IDENT ('(' argList ')')?
                  | '?.' IDENT ('(' argList ')')?
+                 | '.[' IDENT ']'
                  | '[' expression ']'
                  )*
 
@@ -187,6 +189,8 @@ objectEntry    = (IDENT | STRING) ':' expression
 argList        = (expression (',' expression)*)?
 
 literal        = STRING | NUMBER | 'true' | 'false' | 'null'
+
+action         = postfix ':=' expression      -- parseAction only (§5.10)
 ```
 
 ---
@@ -381,6 +385,47 @@ Equivalent to `.at(index)`.
 ```
 attributes[0]                    -- first attribute
 attributes[attributes.size - 1]  -- last attribute
+```
+
+### 5.10 State Access `.[x]` and Actions
+
+Ratified in `docs/decisions.md` R-SIM-18, R-SIM-30 and R-SIM-38..42.
+
+**Syntax:**
+```
+<path>.[<attribute>]                     -- read
+<path>.[<attribute>] := <expression>     -- an action (parseAction only)
+```
+
+`e.f` is always navigation on the model, `e.[x]` is always state: the two never collide.
+`.[` is one token (`. [` is not state access); the attribute is an identifier, never a
+keyword; `?.[` is a lexer error (in JavaScript it is a computed access).
+
+**Reading.** The path locates an element, the last segment is the attribute. The value
+comes from the state hook of the evaluation context, which only the simulator sets:
+anywhere else (Console, Jodie, validation) `.[x]` throws, never a silent `null`. A left
+side that is not an element, and an attribute the hook does not know, throw as well.
+`node.[x]` is the presentation state of the element the expression is attached to:
+`node` is recognized by syntax there and never evaluated as a variable (elsewhere `node`
+is the selected graph vertex). `x.[marked]` and `x.[tokens]` are read-only.
+
+**Actions.** An action is not an expression: `parseAction` returns a separate type
+(`JjelAction`), so no evaluator meets an assignment. Its target ends in `.[attribute]`
+and is never `marked` or `tokens`. `:=` is lexed only by `parseAction`; in an expression
+it stays an error.
+
+**Strict parse.** `parseExpressionStrict` and `parseAction` require the end of the input;
+`parseExpression` still drops trailing tokens (`a b` is `a`), a known defect with a ticket.
+
+**Reserved names** (one list, `stateReserved.ts`, no lexer keyword): the roots `self`,
+`event`, `model`, `node`; the attributes `marked`, `tokens`.
+
+**Examples:**
+```
+self.target.[visits] + 1 < 3                           -- a guard
+p.[tokens] < 2 and q.[marked]                          -- a guard over the marking
+self.target.[visits] := self.target.[visits] + 1       -- an action
+model.[i] := 0                                         -- a global attribute
 ```
 
 ---

@@ -26,6 +26,7 @@ import {
     WithDoExpr,
     IndexAccessExpr,
     ObjectLiteralExpr,
+    StateAccessExpr,
     BinaryOperator,
     UnaryOperator
 } from '../types/ast';
@@ -41,6 +42,7 @@ import {
     isJjelObject
 } from './context';
 import { closestName } from '../util/levenshtein';
+import { STATE_RESERVED } from '../stateReserved';
 
 import {
     getCollectionMethod,
@@ -191,6 +193,8 @@ export class JjelEvaluator {
                 return this.evaluateIndexAccess(expr, evalCtx);
             case 'ObjectLiteral':
                 return this.evaluateObjectLiteral(expr, evalCtx);
+            case 'StateAccess':
+                return this.evaluateStateAccess(expr, evalCtx);
             default:
                 throw new JjelEvaluationError(`Unknown expression type: ${(expr as any).type}`, expr);
         }
@@ -975,6 +979,45 @@ export class JjelEvaluator {
             return (obj as any)[String(index)] ?? null;
         }
         return null;
+    }
+
+    // ============================================
+    // STATE ACCESS
+    // ============================================
+
+    /**
+     * `x.[a]` (R-SIM-18, R-SIM-42): the attribute `a` of the element `x`
+     * evaluates to, read through the context's state hook by the element's
+     * `id`. `node.[a]` is recognized by syntax and reads the presentation of
+     * the site: `node` is never evaluated as a variable (R-SIM-41). Without a
+     * hook, or on anything but an element, or on an attribute the hook does
+     * not know, it throws: never a silent null.
+     */
+    private evaluateStateAccess(expr: StateAccessExpr, ctx: EvaluationContext): JjelValue {
+        const access = ctx.stateAccess;
+        if (!access) {
+            throw new JjelEvaluationError(`State is readable only in the simulator: '.[${expr.attribute}]' has no state here`, expr);
+        }
+
+        if (expr.object.type === 'Identifier' && expr.object.name === STATE_RESERVED.presentationRoot) {
+            const value = access.readPresentation(expr.attribute);
+            if (value === undefined) {
+                throw new JjelEvaluationError(`'${expr.attribute}' is not a presentation attribute of this element`, expr);
+            }
+            return value;
+        }
+
+        const target = this.evaluate(expr.object, ctx);
+        const id = isJjelObject(target) ? (target as any).id : undefined;
+        if (typeof id !== 'string' || id === '') {
+            const got = target === null ? 'null' : Array.isArray(target) ? 'a collection' : typeof target;
+            throw new JjelEvaluationError(`'.[${expr.attribute}]' needs a model element on its left, got ${got}`, expr);
+        }
+        const value = access.read(id, expr.attribute);
+        if (value === undefined) {
+            throw new JjelEvaluationError(`'${expr.attribute}' is not a state attribute of ${(target as any).name ?? id}`, expr);
+        }
+        return value;
     }
 
     // ============================================

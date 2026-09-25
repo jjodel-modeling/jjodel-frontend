@@ -15,6 +15,7 @@
 import type { Suggestion } from '../../../jjscript/autocomplete/types';
 import type { JjelAutocompleteContext } from '../context';
 import { buildJodieJjelVariables } from '../../../components/Jodie/jodieJjelContext';
+import { STATE_RESERVED } from '../../stateReserved';
 
 interface BuiltinIdentDef {
     name: string;
@@ -34,7 +35,11 @@ const LEVEL_1_COLLECTIONS: BuiltinIdentDef[] = [
 
 const LEVEL_2_CONTEXT: BuiltinIdentDef[] = [
     { name: 'data', description: 'Currently selected model element', kind: 'context' },
-    { name: 'node', description: 'Currently selected graph node',    kind: 'context' },
+    // Two meanings, documented side by side (R-SIM-41): the variable here, and the
+    // presentation root of `node.[a]` in the simulator, which is syntax, not this variable.
+    { name: 'node',
+      description: `Currently selected graph node (in the simulator, ${STATE_RESERVED.presentationRoot}${STATE_RESERVED.operator}a] is the presentation state of the element)`,
+      kind: 'context' },
 ];
 
 const RESERVED_FOR_BUILTINS = new Set<string>([
