@@ -15,15 +15,27 @@
 export type RoleKey =
     | 'simNode'
     | 'simInitial'
+    | 'simInitialMarking'
     | 'simTerminal'
+    | 'simBound'
     | 'simTransition'
+    | 'simGuard'
     | 'simOwnedTransitions'
+    | 'simSource'
     | 'simNextState'
+    | 'simFork'
+    | 'simJoin'
+    | 'simArc'
+    | 'simArcSource'
+    | 'simArcTarget'
+    | 'simArcWeight'
+    | 'simInhibitorArc'
     | 'simEvent'
     | 'simTrigger'
     | 'simEventIdentifier';
 
-export type RoleKind = 'class' | 'composition' | 'reference' | 'attribute';
+/** `number`: a value, not a pointer; written as a digit string (`simBound`, R-SIM-37). */
+export type RoleKind = 'class' | 'composition' | 'reference' | 'attribute' | 'number';
 
 export interface RoleSpec {
     key: RoleKey;
@@ -35,10 +47,22 @@ export interface RoleSpec {
 export const ROLE_SPECS: RoleSpec[] = [
     { key: 'simNode', label: 'Node', kind: 'class', placeholder: 'Select a metaclass' },
     { key: 'simInitial', label: 'Initial', kind: 'class', placeholder: 'Select a metaclass' },
+    // The keys of the Petri core (R-SIM-32, definitive with step 3b, R-SIM-37), and simSource (R-SIM-10).
+    { key: 'simInitialMarking', label: 'Initial marking', kind: 'attribute', placeholder: 'Select an attribute' },
     { key: 'simTerminal', label: 'Terminal', kind: 'class', placeholder: 'Select a metaclass' },
+    { key: 'simBound', label: 'Bound', kind: 'number', placeholder: '1' },
     { key: 'simTransition', label: 'Transition', kind: 'class', placeholder: 'Select a metaclass' },
+    { key: 'simGuard', label: 'Guard', kind: 'attribute', placeholder: 'Select an attribute' },
     { key: 'simOwnedTransitions', label: 'Owned transitions', kind: 'composition', placeholder: 'Select a composition' },
+    { key: 'simSource', label: 'Source', kind: 'reference', placeholder: 'Select a reference' },
     { key: 'simNextState', label: 'Next state', kind: 'reference', placeholder: 'Select a reference' },
+    { key: 'simFork', label: 'Fork', kind: 'class', placeholder: 'Select a metaclass' },
+    { key: 'simJoin', label: 'Join', kind: 'class', placeholder: 'Select a metaclass' },
+    { key: 'simArc', label: 'Arc', kind: 'class', placeholder: 'Select a metaclass' },
+    { key: 'simArcSource', label: 'Arc source', kind: 'reference', placeholder: 'Select a reference' },
+    { key: 'simArcTarget', label: 'Arc target', kind: 'reference', placeholder: 'Select a reference' },
+    { key: 'simArcWeight', label: 'Arc weight', kind: 'attribute', placeholder: 'Select an attribute' },
+    { key: 'simInhibitorArc', label: 'Inhibitor arc', kind: 'class', placeholder: 'Select a metaclass' },
     // The event role (step 1, R-SIM-16): optional, and it exists only when Event
     // and Trigger are both set (stcFromRoles). The identifier only labels the buttons.
     { key: 'simEvent', label: 'Event', kind: 'class', placeholder: 'Select a metaclass' },
@@ -47,15 +71,21 @@ export const ROLE_SPECS: RoleSpec[] = [
 ];
 
 /**
- * Roles the ENGINE reads: initial (reset), terminal (termination), the
- * composition of the outgoing transitions and the reference to the next state
- * (step). `simNode` and `simTransition` are declarative in v1 — `simTransition`
- * is configurable but unread in the prototype too (discovery Q2), and the
- * run-state no longer needs `simNode` to know which instances to clear (the
- * singleton is emptied wholesale). Gating the buttons on exactly what the engine
- * reads avoids a panel disabled for a role nothing consumes.
+ * The keys whose presence decides whether the Petri core can run
+ * (`netStcFromRoles`, model/simulation/netCompile.ts), `simBound` aside: that
+ * one is a value, checked by `invalidEngineRoles`. Terminal is not among them:
+ * the role is optional (R-SIM-28), and without it the run ends in Deadlock or
+ * never. Which of these a bag needs depends on its shape, Petri exactly when
+ * `simArc` is set (R-SIM-31):
+ *
+ * - control flow: Next state, one of Owned transitions and Source, one of
+ *   Initial and Initial marking;
+ * - Petri: Node, Transition, Arc source, Arc target, Initial marking.
  */
-export const ENGINE_ROLE_KEYS: RoleKey[] = ['simInitial', 'simTerminal', 'simOwnedTransitions', 'simNextState'];
+export const ENGINE_ROLE_KEYS: RoleKey[] = [
+    'simNextState', 'simOwnedTransitions', 'simSource', 'simInitial', 'simInitialMarking',
+    'simNode', 'simTransition', 'simArc', 'simArcSource', 'simArcTarget',
+];
 
 export type Roles = Partial<Record<RoleKey, string>>;
 
@@ -68,20 +98,39 @@ function labelOf(key: RoleKey): string {
 }
 
 /**
- * The labels of the engine roles the bag leaves unset, in ROLE_SPECS order.
- * Empty exactly when `stcFromRoles` builds a descriptor (same four keys, an
- * empty string counts as unset): the run controls show only then.
+ * What the bag lacks for its shape, in ROLE_SPECS order; a pair either of which
+ * will do is one entry, "Owned transitions or Source". An empty string counts as
+ * unset. Together with `invalidEngineRoles` empty exactly when `netStcFromRoles`
+ * builds an STC (the parity of simRoleStatus.test.ts): the run controls show
+ * only then.
  */
 export function missingEngineRoles(roles: Roles): string[] {
-    return ROLE_SPECS
-        .filter(spec => ENGINE_ROLE_KEYS.includes(spec.key) && !roles[spec.key])
-        .map(spec => spec.label);
+    if (roles.simArc) {
+        const petri: RoleKey[] = ['simNode', 'simInitialMarking', 'simTransition', 'simArcSource', 'simArcTarget'];
+        return ROLE_SPECS.filter(spec => petri.includes(spec.key) && !roles[spec.key]).map(spec => spec.label);
+    }
+    const missing: string[] = [];
+    if (!roles.simInitial && !roles.simInitialMarking) missing.push(`${labelOf('simInitial')} or ${labelOf('simInitialMarking')}`);
+    if (!roles.simOwnedTransitions && !roles.simSource) missing.push(`${labelOf('simOwnedTransitions')} or ${labelOf('simSource')}`);
+    if (!roles.simNextState) missing.push(labelOf('simNextState'));
+    return missing;
+}
+
+/**
+ * The keys set to a value the engine refuses: today `simBound`, which must be a
+ * whole number >= 1 written in digits (the rule of `readBound` in netCompile.ts).
+ */
+export function invalidEngineRoles(roles: Roles): string[] {
+    const bound = roles.simBound;
+    if (!bound) return [];
+    const ok = /^\s*\d+\s*$/.test(bound) && Number(bound) >= 1;
+    return ok ? [] : [`${labelOf('simBound')} (a whole number ≥ 1)`];
 }
 
 /**
  * The missing half of a half-set event role: `['Trigger']` when only Event is
  * set, `['Event']` when only Trigger is set, `[]` when both or neither are. A
- * half-set role is no event role at all (`stcFromRoles`): the run starts with
+ * half-set role is no event role at all (`netStcFromRoles`): the run starts with
  * the ε step only (R-SIM-16), and the panel says why there are no events.
  */
 export function missingEventRoles(roles: Roles): string[] {
@@ -96,7 +145,7 @@ function onMetamodel(metamodelName: string): string {
     return ` on ${metamodelName || 'the metamodel'}`;
 }
 
-/** The model face's message, in place of the run controls, when an engine role is missing. */
+/** The model face's message, in place of the run controls, when an engine role is missing or invalid. */
 export function incompleteConfigurationMessage(metamodelName: string, missing: readonly string[]): string {
     return `Simulation not configured. Missing${onMetamodel(metamodelName)}: ${missing.join(', ')}.`;
 }

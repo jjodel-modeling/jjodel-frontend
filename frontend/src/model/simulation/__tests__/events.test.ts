@@ -465,6 +465,30 @@ describe('roleOverlaps: the STC roles are disjoint under "is a" (R-SIM-16)', () 
         expect(roleOverlaps(lookup, { ...disjoint, simEvent: '', simTransition: undefined }, [...concrete, 'C_Both'])).toBeNull();
     });
 
+    it('fork and join are nodes: fork and join classes extending the node class are no overlap (step 3b)', () => {
+        const withFork = { ...lookup, C_Fork: { className: 'DClass', extends: ['C_Node'] }, C_Join: { className: 'DClass', extends: ['C_Node'] } };
+        expect(roleOverlaps(withFork, { ...disjoint, simFork: 'C_Fork', simJoin: 'C_Join' }, [...concrete, 'C_Fork', 'C_Join'])).toBeNull();
+        // control: a fork class that is the transition class overlaps
+        expect(roleOverlaps(withFork, { ...disjoint, simFork: 'C_Trans' }, concrete)).toEqual({ classId: 'C_Trans', sorts: ['node', 'transition'] });
+    });
+
+    it('arcs are a sort of their own; an inhibitor arc class extending the arc class is no overlap (step 3b)', () => {
+        const withArcs = { ...lookup, C_Arc: { className: 'DClass', extends: [] }, C_Inh: { className: 'DClass', extends: ['C_Arc'] } };
+        expect(roleOverlaps(withArcs, { ...disjoint, simArc: 'C_Arc', simInhibitorArc: 'C_Inh' }, [...concrete, 'C_Arc', 'C_Inh'])).toBeNull();
+        // control: an arc class that is the transition class overlaps
+        expect(roleOverlaps(withArcs, { ...disjoint, simArc: 'C_Trans' }, concrete)).toEqual({ classId: 'C_Trans', sorts: ['transition', 'arc'] });
+    });
+
+    it('the Petri shape refuses any overlap, as the event role does; control flow without events still warns (R-SIM-37)', () => {
+        const { simEvent, ...noEvent } = disjoint;
+        const overlapping = { ...noEvent, simTransition: 'C_NodeSub' };
+        expect(overlapVerdict(lookup, overlapping, concrete)?.refuse).toBe(false);
+        expect(overlapVerdict(lookup, { ...overlapping, simArc: 'C_Arc' }, concrete)?.refuse).toBe(true);
+        expect(roleWriteVerdict(lookup, overlapping, 'simArc', 'C_Arc', concrete)?.refuse).toBe(true);
+        // control: clearing the arc role turns the refusal back into a warning
+        expect(roleWriteVerdict(lookup, { ...overlapping, simArc: 'C_Arc' }, 'simArc', '', concrete)?.refuse).toBe(false);
+    });
+
     it('classIsKindOf walks from a class, transitively, never downwards; isKindOf agrees through the instance', () => {
         expect(classIsKindOf(lookup, 'C_Deep', 'C_Node')).toBe(true);
         expect(classIsKindOf(lookup, 'C_Node', 'C_Deep')).toBe(false);

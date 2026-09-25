@@ -47,13 +47,14 @@ export function stcFromRoles(state: Record<string, unknown> | undefined): StcDes
 }
 
 /**
- * The three sorts of elements the metaclass roles select. Initial and terminal
- * are nodes: a subclass of the node metaclass playing them is the norm, not an
- * overlap.
+ * The four sorts of elements the metaclass roles select. Initial, terminal,
+ * fork and join are nodes: a subclass of the node metaclass playing them is the
+ * norm, not an overlap. An inhibitor arc is an arc (step 3b, R-SIM-37).
  */
 const ROLE_SORTS: ReadonlyArray<{ sort: string; keys: readonly string[] }> = [
-    { sort: 'node', keys: ['simNode', 'simInitial', 'simTerminal'] },
+    { sort: 'node', keys: ['simNode', 'simInitial', 'simTerminal', 'simFork', 'simJoin'] },
     { sort: 'transition', keys: ['simTransition'] },
+    { sort: 'arc', keys: ['simArc', 'simInhibitorArc'] },
     { sort: 'event', keys: ['simEvent'] },
 ];
 
@@ -97,10 +98,11 @@ export function roleOverlaps(
 
 /**
  * What a run start or a role save does with the role overlaps (R-SIM-16). With
- * the event role declared (`simEvent` and `simTrigger` both set) any overlap
- * refuses. Without it an overlap is a warning and the run starts, or the role
- * is saved, as in slice 0: the parity of R-SIM-16 covers the metamodels
- * configured before step 1. `null` when the roles are disjoint.
+ * the event role declared (`simEvent` and `simTrigger` both set), or the Petri
+ * shape (`simArc` set, R-SIM-37), any overlap refuses. Otherwise an overlap is a
+ * warning and the run starts, or the role is saved, as in slice 0: the parity of
+ * R-SIM-16 covers the control-flow metamodels configured before step 1. `null`
+ * when the roles are disjoint.
  */
 export function overlapVerdict(
     lookup: Record<string, any>,
@@ -109,7 +111,7 @@ export function overlapVerdict(
 ): { overlap: RoleOverlap; refuse: boolean } | null {
     const overlap = roleOverlaps(lookup, roles, classIds);
     if (!overlap) return null;
-    return { overlap, refuse: !!(pointer(roles, 'simEvent') && pointer(roles, 'simTrigger')) };
+    return { overlap, refuse: !!((pointer(roles, 'simEvent') && pointer(roles, 'simTrigger')) || pointer(roles, 'simArc')) };
 }
 
 /**

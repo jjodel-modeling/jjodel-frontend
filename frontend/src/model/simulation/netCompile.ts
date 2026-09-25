@@ -18,13 +18,14 @@
  * kept in `defects` with the reason (R-SIM-31). The table the rules implement:
  * docs/discovery/discovery_2026-09-25_sim_step3_petri_core.md §5.3.
  *
- * Pure: reads the model only through `NetModelView`, by feature pointer. Not
- * wired yet (R-SIM-33): nothing under `components/` imports this module.
+ * Pure: reads the model only through `NetModelView`, by feature pointer. Wired
+ * in step 3b by the bridge of the panel (`components/editor-v2/sim/simBridge.ts`).
  */
 
 import type {
     ActionSite, Arc, CompiledNet, NetDefect, NetModelView, NetStc, NetTransition, SimValue, StateAttributeDecl,
 } from './netTypes';
+import type { SimEventInfo, SimModelView } from './types';
 
 /** A role value: a non-empty string, as `stcFromRoles` reads it. */
 function pointer(bag: Record<string, unknown>, key: string): string | undefined {
@@ -381,4 +382,19 @@ export function compileNet(
         initial: { marking, attrs, presentation },
         defects,
     };
+}
+
+/**
+ * The event alphabet: the instances of the event metaclass among `ids`, with
+ * their labels, sorted by label and then by id. `[]` without the event role.
+ * `ids` are the DObject ids of the model, as for `compileNet`. Moved here from
+ * the old step (step 3b), unchanged but for the STC it reads.
+ */
+export function eventAlphabet(stc: NetStc, view: SimModelView, ids: readonly string[]): SimEventInfo[] {
+    const eventClass = stc.event;
+    if (!(stc.event && stc.trigger) || !eventClass) return [];
+    return ids
+        .filter(id => view.isInstanceOf(id, eventClass))
+        .map(id => ({ id, label: view.label ? view.label(id) : id }))
+        .sort((a, b) => a.label.localeCompare(b.label) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
 }

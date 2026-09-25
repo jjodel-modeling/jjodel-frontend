@@ -204,6 +204,73 @@ describe('parity: the derived isMarked equals today\'s Set on every deterministi
     });
 });
 
+// ── the golden traces (step 3b, report §9.4) ───────────────────────────────
+
+/**
+ * The marked sets of every deterministic trace above, as literals: the oracle
+ * that survives the old step. Proven here against the old step while it still
+ * exists; after its deletion the same table runs through the bridge and the store.
+ */
+const GOLDEN: Array<{ name: string; f: Fixture; events: boolean; start: string[]; inputs: Array<string | null>; trace: string[] }> = [
+    { name: 'linear chain (step.test.ts:75)', f: CHAIN, events: false, start: ['A'], inputs: [null, null, null], trace: ['B', 'C', 'C'] },
+    { name: 'self-loop (step.test.ts:142)', f: LOOP, events: false, start: ['A'], inputs: [null, null], trace: ['A', 'A'] },
+    { name: 'empty configuration (step.test.ts:158)', f: CHAIN, events: false, start: [], inputs: [null], trace: [''] },
+    {
+        name: 'control without the terminal mark (step.test.ts:129)', events: false, start: ['A'], inputs: [null], trace: ['B'],
+        f: { instances: { F: { cls: 'C_Final' }, A: { cls: 'C_State', out: ['t1'] }, B: { cls: 'C_State' } }, transitions: { t1: { to: 'B' } } },
+    },
+    { name: 'an event without the role is discarded (events.test.ts:141)', f: FORK3, events: false, start: ['A'], inputs: ['coin'], trace: ['A'] },
+    {
+        name: 'the whole turnstile trace (events.test.ts:275)', f: TURNSTILE, events: true, start: ['Locked'],
+        inputs: ['coin', 'coin', 'push', 'push', 'coin'], trace: ['Unlocked', 'Unlocked', 'Locked', 'Locked', 'Unlocked'],
+    },
+    {
+        name: 'identity match of the trigger (events.test.ts:159, :165)', events: true, start: ['A'], inputs: ['coin2', 'coin1'], trace: ['A', 'B'],
+        f: {
+            instances: { A: { cls: 'C_State', out: ['t'] }, B: { cls: 'C_State' }, coin1: { cls: 'C_Event' }, coin2: { cls: 'C_Event' } },
+            transitions: { t: { to: 'B', on: 'coin1' } },
+        },
+    },
+    ...([[null, 'B'], ['coin', 'C']] as Array<[string | null, string]>).map(([input, to]) => ({
+        name: `ε and an event restrict the transitions (events.test.ts:179, :185): ${input ?? 'ε'}`, events: true, start: ['A'], inputs: [input], trace: [to],
+        f: {
+            instances: { A: { cls: 'C_State', out: ['tE', 'tC'] }, B: { cls: 'C_State' }, C: { cls: 'C_State' }, coin: { cls: 'C_Event' } },
+            transitions: { tE: { to: 'B' }, tC: { to: 'C', on: 'coin' } },
+        } as Fixture,
+    })),
+    ...([[['kick', 'push'], ['A', 'B']], [['coin'], ['B']]] as Array<[string[], string[]]>).map(([inputs, trace]) => ({
+        name: `a multi-valued trigger accepts any of its values (events.test.ts:191): ${inputs.join(' ')}`, events: true, start: ['A'], inputs, trace,
+        f: {
+            instances: { A: { cls: 'C_State', out: ['t'] }, B: { cls: 'C_State' }, coin: { cls: 'C_Event' }, push: { cls: 'C_Event' }, kick: { cls: 'C_Event' } },
+            transitions: { t: { to: 'B', on: ['coin', 'push'] } },
+        } as Fixture,
+    })),
+    {
+        name: 'a marked instance with nothing accepted stays while another fires (events.test.ts:207)', events: true, start: ['A', 'X'], inputs: ['coin'], trace: ['A,Y'],
+        f: {
+            instances: {
+                A: { cls: 'C_State', out: ['tP'] }, B: { cls: 'C_State' }, X: { cls: 'C_State', out: ['tX'] }, Y: { cls: 'C_State' },
+                coin: { cls: 'C_Event' }, push: { cls: 'C_Event' },
+            },
+            transitions: { tP: { to: 'B', on: 'push' }, tX: { to: 'Y', on: 'coin' } },
+        },
+    },
+];
+
+describe('golden traces: the literals are the old step\'s output, step by step (step 3b)', () => {
+    for (const g of GOLDEN) {
+        it(g.name, () => {
+            let old: SimConfiguration = oldCfg(null, ...g.start);
+            const seen: string[] = [];
+            for (const e of g.inputs) {
+                old = stepFlowchartBoolean({ marking: old.marking, event: e }, g.events ? OLD_EV : OLD, oldView(g.f)).next;
+                seen.push([...old.marking].sort().join());
+            }
+            expect(seen).toEqual(g.trace);
+        });
+    }
+});
+
 // ── the 20 decisions of report §7 ───────────────────────────────────────────
 
 describe('decisions: what R-SIM-21..33 change, each beside today\'s answer', () => {
