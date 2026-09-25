@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-25-1615
 Chat: C-2026-09-25-1500
 Lane: full (more than 3 files)
-Status: da eseguire
+Status: eseguito 2026-09-25 · lane merge · 7562d23bd · verifica visiva passata 2026-09-25
 
 Worktree: `~/jjodel-release`, branch `alfonso-frontend-jjtl`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop. Do not touch `~/jjodel`, `~/jjodel-open`, `~/jjodel-sim`, `~/jjodel-gate`, `~/jjodel-harness`. `~/jjodel-events` is read-only here.
 
