@@ -28,6 +28,60 @@ the Create View gate fix»: contenuto reale **due** entry, la sua e quella della
 rail/modale, gia' in albero e non in stage al momento del commit. Stesso schema del 2026-09-13.
 Nessun rewrite: la entry resta dov'e', il suo commit non la nomina.
 
+## 2026-09-25 — ticket: pointedBy entries grow with each in-page reopen and save
+**Ticket**: On an in-page open (history, hash edit) the reset's `[emptyLOAD + init]` batch applies to the empty state and leaves pending `pointedBy` paths, resolved at the next dispatch onto the loaded project: one more `{"source":"classs"}` on each primitive (two more on `Pointer_EOBJECT`) per in-page reopen + save, saved with the project. Deep link and list do not. Down from the old code, which also duplicated `classs` and the project's `viewpoints` each cycle; those are gone since `0609e9793`.
+**Priority**: medium
+**Found in**: P-2026-09-25-0030
+**Detail**: docs/discovery/discovery_2026-09-25_project_open_path.md (addendum A5, the table)
+## 2026-09-25 — ticket: an in-page hash change between two projects starts no open
+**Ticket**: In an open tab, changing the hash from one project to another (`#/project?id=A` → `#/project?id=B`: address bar, history between two projects) starts no open: `PathChecker` calls `U.resetState` on pathname changes only (`PathChecker.tsx:7-14`), and both are `/project`. The store keeps A (or A's open completes) under B's URL; `LProject.getProject()` reads B from the URL, finds nothing, and `Project.tsx` throws on `project.type`, caught by `Try` with cascading page errors (measured on 3003, P4b first form). Pre-existing, not changed by P-2026-09-25-0030.
+**Priority**: high
+**Found in**: P-2026-09-25-0030
+**Detail**: docs/discovery/discovery_2026-09-25_project_open_path.md (addendum A4)
+
+## 2026-09-25 — fix(redux): a project that cannot be opened shows an error screen (P-2026-09-25-0030)
+**Prompt**: `claude_2026-09-25_0030_prompt_project_open_path.md`, two-phase, from the first Ticket of P-2026-09-24-1610. Phase 1 report `d6918f467`. GO with Q1-Q7 ruled (error in the loading screen, no toast; stay on it; not-found included; in-page data-loss fix included), then two stops ruled in chat: the drain and P5 ×5 (P5 failed as ACKed), the re-render event and the save guard. Closing GO: entry in this inbox, visual check passed.
+**Files touched**: code `0609e9793`: `frontend/src/redux/reducer/reducer.ts`, `frontend/src/components/topbar/SaveManager.ts`, `frontend/src/api/persistance/projects.ts`, `frontend/src/pages/Project.tsx`, `frontend/src/components/LoadingScreen/ProjectLoadingScreen.tsx`, `frontend/src/events/registry.ts`, `frontend/src/components/topbar/__tests__/saveManager_load.test.ts` (new). Docs, this commit: addendum A1-A5 to `docs/discovery/discovery_2026-09-25_project_open_path.md`, this entry, two tickets. The prompt's Status line is left to `/status-flip`.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. Gates on `0609e9793`: `npm run typecheck` exit 2, 14 errors, the baseline set; `npx vitest run` 4452 passed (4449 + 3), the same 9 files red at import; `npm run build` exit 0 (chunk size, pre-existing `bordr`); `check:docs`, `check:agents`, `check:scripts` green. T2, T3 red before the fix. P5 ×5 per entry point: deep link and list equal to the old store modulo timestamp. 12 mutants, 12 killed (commit body).
+**Out-of-scope changes**: yes — 7 code files, over the Rule 19 threshold, declared per RC-11: the five of report §8 plus `frontend/src/events/registry.ts` (`PROJECT_OPEN_CHANGED`) and the save guard in `projects.ts`, both ruled in chat; the drain and the `openRun` counter are beyond §8 as well, ruled.
+**Layer Impact Report**: produced
+**Smoke visivo**: passato (verifica visiva di Alfonso su 3003: R3A per deep link e per hash in-page, un progetto sano, not-found)
+**Notes**: Beyond report §8, each held by a mutant (code commit body): a drain (COMMIT + one macrotask) before the now-synchronous LOAD keeps init before LOAD; PROJECT_OPEN_CHANGED re-renders the page; a save guard. Read, not measured: the drain's order assumes no 4 ms nesting clamp on the init timer alone. Literal P4b (failed A, healthy B) cannot kill M9; the rewritten one does. Residual, harmless: a superseded open's LOAD lands while the newer one loads. Mid-lane stops: (c). Detail: addendum A1-A5.
+**Prompt document name**: 2026-09-25 00:30
+
+## 2026-09-25 — feat: simulation step 3b, the panel and the run-state on the Petri core (P-2026-09-25-1103)
+**Prompt**: `P-2026-09-25-1103`, two-phase, on `simulation-engine` in `~/jjodel-sim`. Phase 1 report `b9fd3a1f7` (`docs/discovery/discovery_2026-09-25_sim_step3b_panel.md`); the sixteen answers ratified as recommended with two precisions, R-SIM-34..37 (`7a93968c5`); Phase 2 prompt `claude_2026-09-25_1103_fase2_sim_step3b_panel.md` (`3a2c76b83`). Precision A: the panel's lines never depend on the mark version. Precision B: `SimModelView` untouched, no TODO marker; its slimming and the `stcFromRoles.ts` rename as tickets.
+**Files touched**: code `c400a5163` (feat): `components/editor-v2/sim/SimulationPanel.tsx`, `simRunState.ts`, `simRoleStatus.ts`, `simulation-panel.scss`, `simBridge.ts` (new), `__tests__/simRoleStatus.test.ts`, `__tests__/simBridge.test.ts` (new), `__tests__/simRunState.test.ts` (new); `model/simulation/netCompile.ts`, `stcFromRoles.ts`, `__tests__/events.test.ts`, `__tests__/netParity.test.ts`. Code `11de5af03` (refactor): `model/simulation/step.ts` and `__tests__/step.test.ts` deleted; `types.ts`, `stcFromRoles.ts`, `netCompile.ts`, `__tests__/events.test.ts`, `__tests__/netParity.test.ts`, `sim/simRoleStatus.ts`. Docs, this commit: this entry, the Status line of the Phase 2 prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. On each code commit: `npm run typecheck` exit 2, 14 errors, the §17 set (diff with the Phase 1 run empty); `npx vitest run` 4670 passed after `c400a5163` and 4617 after `11de5af03`, each total stated before the run, the same 9 files red at import; `npm run build` exit 0, the same 5 warnings; `check:docs` 4/4; `check:scripts` 1 hit, the known `_tmp_sim1_verify.ts:186`. The not-touched files of report §11.1 byte-identical to `3a2c76b83`. Mutation bench 38/38 and 10/10 killed, tables in the commit bodies.
+**Out-of-scope changes**: no — 15 files, the list of report §11.1 authorized by the GO (rule 19): 10 modified, 2 deleted, 3 new, all named above; the exported interfaces changed are those of report §11.2. Nothing else.
+**Layer Impact Report**: produced
+**Smoke visivo**: passato — Alfonso, 2026-09-25 on 3002, items 1-6 of report §11.5, light and dark. P8 smoke (item 7) GREEN, 12 passed and 3 skipped, from a scratchpad copy of `scripts/smoke` pointed at 3002 (`states.ts` hardcodes 3000), so its RUN VALIDITY block watched 0 files.
+**Notes**: Deviations: the sort/refusal change of stcFromRoles.ts and its 3 tests in events.test.ts went in the feat commit, not the refactor one; the panel no longer calls useSimVersion (precision A, LIR corrected before the store edit); candidate and halt labels use DObject.name before objectLabel (the probe showed short ids otherwise); the Last step line reads "Reset" after a Reset. Evidence: the Phase 1 report and the two commit bodies.
+**Prompt document name**: 2026-09-25 11:03
+**Ticket** (precision B, R-SIM-37 ticket; opened, not implemented here). `SimModelView` (`model/simulation/types.ts`) keeps `outgoingTransitions`, `transitionTarget` and `transitionTriggers`, read only by the deleted boolean step; every `NetModelView` adapter stubs the first two (`sim/simBridge.ts` `makeNetModelView`, and the test views of `netCompile.test.ts`, `netStep.test.ts`, `events.test.ts`, `netParity.test.ts`). Slimming it is a lane of its own: a changed exported interface (rule 11) and those test files.
+**Ticket** (precision B, R-SIM-37 ticket; opened, not implemented here). `model/simulation/stcFromRoles.ts` now holds only the overlap rules (`roleOverlaps`, `overlapVerdict`, `roleWriteVerdict`, `RoleOverlap`); the name no longer says what it holds. Rename in a lane of its own (rule 2 forbade it here); importers: `sim/SimulationPanel.tsx`, `__tests__/events.test.ts`.
+**Ticket** (opened, not fixed here). Comments in files this lane had to leave byte-identical now describe the old state: `netStep.ts:22` and `netTypes.ts:5` ("not wired yet", `step.ts`), `netTypes.ts:72` (`stcFromRoles`), `isKindOf.ts:17` (the `classAncestry` parity lives in `events.test.ts` now, not `step.test.ts`), `guardEvaluator.ts:21` ("The step does not call this module yet"). A comment-only lane.
+**Ticket** (opened, not fixed here). The gitignored step 1 probes assume the old store and statuses and will break or lie if rerun: `scripts/smoke/_tmp_sim0_verify.ts` (`simReset` with an array of ids), `_tmp_sim1_e2e.ts` and `_tmp_sim1005_e2e.ts` (old enablement and status rules), the first imported by Alfonso's `_tmp_sim1_verify.ts`, left untouched. The 3b probes live in this session's scratchpad. The Phase 1 prompt file `claude_2026-09-25_1103_prompt_sim_step3b_discovery.md` still reads `Status: da eseguire`.
+## 2026-09-25 — feat: simulation step 3a, the Petri core, unwired (P-2026-09-25-0935)
+**Prompt**: `P-2026-09-25-0935`, two-phase, on `simulation-engine` in `~/jjodel-sim`. Phase 1 report `de21a2c93` (`docs/discovery/discovery_2026-09-25_sim_step3_petri_core.md`); the thirteen answers ratified as recommended, R-SIM-27..33 (`e4506e78f`); Phase 2 prompt `claude_2026-09-25_0935_fase2_sim_step3a_core.md` (`f36fe1c2e`), wave 3a only: the pure core beside the old step, six new files, no modified file.
+**Files touched**: code `79ee9fba3`, 6 new files under `frontend/src/model/simulation/`: `netTypes.ts`, `netCompile.ts`, `netStep.ts`, `__tests__/netCompile.test.ts`, `__tests__/netStep.test.ts`, `__tests__/netParity.test.ts`. Docs, this commit: this entry, the Status line of the Phase 2 prompt file.
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no. On `79ee9fba3`: `npm run typecheck` exit 2, 14 errors, the §17 set (diff with the Phase 1 run empty); `npx vitest run` 4623 passed (4530 + 93), the same 9 files red at import; `npm run build` exit 0; `check:docs` 4/4; `check:scripts` 1 hit, the known `_tmp_sim1_verify.ts:186`. `git diff` on every existing file empty; `step.test.ts` and `events.test.ts` green unchanged. Mutation bench 36 of 36 killed, table in the commit body.
+**Out-of-scope changes**: no — six files, all named by the prompt's DOVE, above the P6 five by the GO's rule 19 exception: `netTypes.ts`, `netCompile.ts`, `netStep.ts` and their three tests. No existing file modified.
+**Layer Impact Report**: not-required
+**Smoke visivo**: non applicabile — nothing imports the new core outside its tests; the panel still runs the old step.
+**Notes**: Deviations from report §5.2: `StateAttributeDecl.metaclass` is `string | null` (globals, `model.[x]`); action sites are `ActionSite { element, role }`, since a plain string cannot tell exit(A) from entry(A); `CompiledNet` gains `declared` (element → attribute → declaration) for the domain check. `step.test.ts:167` is not a difference in the core (the §7 shim dropped unknown ids, the core keeps them): pinned for 3b under R-SIM-13.
+**Prompt document name**: 2026-09-25 09:35
+**Ticket** (for 3b, not a slot of its own). What 3b wires: a `GuardOracle` from `compileGuard` + `buildGuardContext` over a snapshot built with `targetMetamodelId` (R-SIM-33 ticket); an `ActionOracle` returning `[]` until the Action lane; the store holding `NetConfiguration`, the net and a `HaltReason` per started run; `stcFromRoles`/`ENGINE_ROLE_KEYS` made optional on Terminal together (R-SIM-28; `simRoleStatus.test.ts:48` pins their agreement); the old step, `applyStepLabel`, `simApplyStep` and their tests deleted, with `netParity.test.ts` rewritten against the new store. The Phase 1 prompt file still reads `Status: da eseguire`.
+
 ## 2026-09-24 — fix(redux): unversioned saves pass the 2.1 and 2.2 VersionFixer steps (P-2026-09-24-1610)
 **Prompt**: `claude_2026-09-24_1610_prompt_versionfixer_old_states.md`, two-phase. Phase 1 report `5f17cf4e3` (`docs/discovery/discovery_2026-09-24_versionfixer_old_states.md`). GO with seven rulings: no toast in this lane; the examples stay in place as test data; guards on all seven loops of `'2.2 -> 2.201'`; fix 1 is `return s` only, no guard in the runner; one ticket joining Q1 and Q5, one on the examples; this new inbox; the console snippet reported here, not in code. The GO added a vitest test running the chain on the 7 distinct examples, red before the fix and green after. Conditional ACK on the Layer Impact Report, four conditions, all met.
 **Files touched**: code `d1db82011`: `frontend/src/redux/VersionFixer.tsx`, `frontend/src/redux/__tests__/versionfixer_old_states.test.ts` (new). Docs: the Phase 1 report `5f17cf4e3`; this commit: this inbox (new), a dated addendum to the Phase 1 report, the Status line of the prompt file.
@@ -797,147 +851,4 @@ Alfonso: closing and reopening the view tab with an empty list brings the wildca
 (stored ir kept, draft dropped, as decided).
 **Notes**: Defect found, not caused, by the previous prompts — item C of a four-defect batch (`claude_2026-09-18_1650_prompt_view_quattro_difetti_minori.md`). The replaced hint (MatchingSection `:170-172`) stated the behaviour this fix removes. An uncommitted empty list does not survive a tab change (draft dropped, stored ir keeps the wildcard) — a persisted draft is a separate decision, not this lane's. Rest: `docs/sessioni/sessione_2026-09-18.md`. Mutation bench: 5/5 red.
 **Prompt document name**: 2026-09-18 16:50
-
-## 2026-09-18 — fix: focus the inline rename input when it mounts (item D)
-**Prompt**: `claude_2026-09-18_1650_prompt_view_quattro_difetti_minori.md`, item D: the rename
-`<input>` shown right after a view is created never receives focus, on both creation paths.
-Fase 1 (read-only) measured the cause: the store write behind a new view is a macrotask
-(`action.ts:349`'s `setTimeout(…, 0)`), so the row mounts in a commit strictly later (98-297ms
-across two probe runs) than the parent's `useEffect([renamingViewId])`, which always reads a null
-ref and never calls `.focus()`/`.select()` at all — not "focus stolen", focus never applied. This
-also falsifies an existing comment claiming same-commit React 18 batching. Fase 2 moved the focus
-effect into `SubViewItem`, keyed on its own `isRenaming`, guaranteeing the effect and the ref
-attachment land in the same commit.
-**Files touched**: `faa893a77`, 1 file: `components/TreeViewSidebar/TreeViewContent.tsx` (new
-`useEffect([isRenaming])` inside `SubViewItem`; the dead parent effect on `[renamingViewId]`
-removed; the stale batching comment at the blank-view creation site rewritten to state the
-measured cause). Discovery report `docs/discovery/discovery_2026-09-18_rename_input_focus.md`
-(new) and this entry travel in the docs commit, per lane discipline (§6.4: docs and code never in
-the same commit).
-**Outcome**: ✅ completed
-**Corregge**: —
-**Causa**: —
-**Regressions**: no (Alfonso ACK, see Smoke visivo). `npm run typecheck` exit 2, **33** on full
-output, the declared baseline, **0** in the touched file; control `Measurable` → 6. `npx vitest
-run` from `frontend/`: **3821 passed, 0 failed**, the same 9 files red at import as before. `npm
-run build` exit 0.
-**Out-of-scope changes**: no.
-**Layer Impact Report**: not-required — no §3.1 file; local component state and a ref already in
-scope, no D/L or sync-layer surface touched.
-**Smoke visivo**: passato — Alfonso on localhost:3000, ACK of 2026-09-18: rename box editable at
-once on both paths, Enter commits, Escape on first rename deletes, the ~200ms row delay observed
-and pre-existing.
-**Notes**: Pass criterion renegotiated mid-task. Stated first as "activeElement === input at
-+50ms after click": FAILed on both paths (mount itself lands at +206/+207ms, unrelated pre-existing
-store lag, out of this item's scope). Restated by Alfonso as "focused within 20ms of its own
-mount": measured 9ms and 1ms, PASS both paths — recorded as a measurement, not a defect of this
-lane. Probe deleted after the run (gitignored, never committed).
-**Prompt document name**: 2026-09-18 16:50
-
-## 2026-09-18 — docs: the ObjectNode comment states what the resolver does on a wildcard view (item E)
-**Prompt**: `claude_2026-09-18_1650_prompt_view_quattro_difetti_minori.md`, item E: the comment at
-`ObjectNode.tsx:108-110` lumped "no IR viewpoint" and "a wildcard IR view" together as both making
-the object "keep rendering in full", implying one code path. They are not the same path: a wildcard
-(`'*'`) view resolves non-null and renders through the IR default object view at minimal specificity
-(`irResolveCore.ts`); only "no IR viewpoint" is the native path. Comment-only, no code change.
-**Files touched**: `6001add8b`, 1 file: `components/editor-v2/nodes/ObjectNode.tsx` (comment above
-`irViewpointActive`, 5 lines replacing 3). This entry in its own commit.
-**Outcome**: ✅ completed
-**Corregge**: —
-**Causa**: —
-**Regressions**: no — comment-only, no gate run.
-**Out-of-scope changes**: no.
-**Layer Impact Report**: not-required — comment only, no behaviour changed.
-**Smoke visivo**: non applicabile — no runtime surface changed.
-**Notes**: Anchor verified live before editing (rule 15): still `:108-110`, unchanged since the
-prompt was written. Text is the user's exact replacement, given verbatim in the ACK.
-**Prompt document name**: 2026-09-18 16:50
-
-## 2026-09-18 — fix(views): view da albero nasce con IR + modale symbol in primo piano (#139)
-**Prompt**: analizzare e risolvere i bug della issue #139 (3 bug UI sulle view); branch dedicato e PR su staging; per il Bug 3 scelto dall'utente di NON toccarlo e commentare l'issue chiedendo ad Alfonso e Tommaso come rivedere la parte grafica.
-**Files touched**: `frontend/src/utils/lastViewpoint.ts`, `frontend/src/components/editor-v2/viewpoint/authoring/SymbolEditorModal.tsx`, `frontend/src/components/editor-v2/viewpoint/authoring/SymbolEditorModal.scss`. Questa entry di log a parte (commit separato, §6.4).
-**Outcome**: ✅ completed — Bug 1+2 risolti (commit 7b5f4fd3a, PR #151 su staging); Bug 3 deferito per decisione dell'utente ai maintainer via commento issue (#issuecomment-5731734971, @apierantonio @tmaog).
-**Corregge**: —
-**Causa**: —
-**Regressions**: unknown — `npm run typecheck` output completo **14** errori pre-esistenti (baseline file noti), 0 nei file toccati; `npm run build` exit **0** col solo avviso di chunk-size. Nessuno smoke visivo a runtime (app non avviata), quindi il comportamento UI non è stato esercitato a mano.
-**Out-of-scope changes**: no — i 3 file mappano sui due bug; il commento SCSS della modale fa parte della stessa modifica (Bug 2), il "no portal" era diventato falso.
-**Layer Impact Report**: not-required — nessun file di §3.1. `lastViewpoint.ts` scrive `d.ir` DENTRO la callback di `DViewElement.new2` (nessun TRANSACTION esterno, §3.3), come già fa `createViewInWorkbench`.
-**Smoke visivo**: non eseguito — `@playwright/test` non risolvibile in locale, come nei giri #147/#128. Le due fix sono minimali e type-safe ma non provate in app.
-**Notes**: Bug 1 = `createBlankViewInViewpoint` semina un vertex IR (`computeCreationSeed`, `metaclasses:'*'` senza classe target), identico a `EnableIRPanel.enable(vertex)` anticipato alla creazione: nessuna nuova semantica di match. Bug 2 = `SymbolEditorModal` ora `createPortal(..., document.body)`: inline in `#root` era intrappolata sotto il rail Properties (anch'esso portato al body, z-index 900) nonostante z-index 9999. Bug 3 (layout rail Properties) deferito: richiede decisione UX su `R-RAIL-*`.
-**Prompt document name**: 2026-09-18 16:49
-
-## 2026-09-18 — feat(editor-v2): multi-instance preview of the Symbol Editor (slice 5)
-**Prompt**: `claude_2026-09-17_1425_prompt_slice5_preview_multi_istanza.md` — slice **5**, the last
-of the 1b round: the preview strip draws up to three REAL instances of the view, each with the axes
-that instance resolves to and a caption saying which rule won on it. The prompt took the five
-decisions the handoff docs left open (D8-a caption per active section, D8-b fallback glyph for a
-conditional form, D8-c the title stays «Custom symbol», D8-d manual size per instance, D8-e fixed
-strip) and supplied six measured preconditions, re-checked one by one in Fase 1. Two-phase with a
-conditional stop; none of the three stop conditions held, so Fase 2 ran in the same session.
-**Files touched**: `5c4db90b1`, 8 files, code only (the prompt's own declared list, so rule 19's
-threshold is crossed with the list already written and confirmed). `ir/irCompile.ts` (+33:
-`matchIndexOf`, additive, on no render path), `authoring/useCanvasNodeBox.ts` (+80:
-`useCanvasNodeBoxes(viewId, max)`; `useCanvasNodeBox` keeps its signature and now delegates its scan
-to the shared `resolveCanvasNodes(viewId, 1)`), `authoring/previewInstances.ts` (**new**, pure: the
-per-instance resolution and the caption), `authoring/SymbolEditorModal.tsx` (the wiring: boxes,
-signature, ReadCtx, tiles; `currentAxesPreset` gains the D8-b fallback and stops returning null),
-`authoring/SymbolEditorModal.scss` (the tile row and the tile), `authoring/SymbolBoxPreview.tsx`
-(a `caption` prop and the narrowed «Declared limit» paragraph), plus the two test files
-`ir/__tests__/matchIndexOf.test.ts` and `authoring/__tests__/previewInstances.test.ts` (**new**, 30
-tests). `VertexAuthoringPanel.tsx` was not touched. Discovery report and this entry in a separate
-docs commit.
-**Outcome**: ✅ completed
-**Corregge**: —
-**Causa**: —
-**Regressions**: no — verified on screen by Alfonso (ACK 2026-09-18), all six acceptance criteria
-holding: 1–4 on the ordered list under **Smoke visivo**, 5 by the two mutation benches in
-**Notes**, 6 by the gates: `npm run typecheck` exit 2, **33** on full output, the declared
-baseline, and **0** in the eight touched files. `npx vitest run` **3811 passed, 0 failed**, 171
-files with the same **9** red at import (`window is not defined`, all under `jjscript/`, `jjtl/`
-and `utils/`, none of them this lane's). Of the +83 tests against the 3728 of the shape-axis run,
-**exactly 30 are this task**, the two new files; the rest is the jjscript lane's. `npm run build`
-exit 0, `✓ built in 39.41s`, only the pre-existing chunk warning and the pre-existing `bordr` typo
-in `editors/properties-with-tree-view.scss:1210`.
-**Out-of-scope changes**: no — 8 files, all of them on the prompt's list.
-**Layer Impact Report**: not-required — no §3.2 file and no D-layer write path. Everything this
-slice adds is a READ: `matchIndexOf` compiles predicates and evaluates them, the modal reads
-`store.getState().idlookup` behind a primitive-signature subscription, and no action is dispatched
-on any new path. No schema change, no persistence, no `irVersion` bump. Same call as slices 4a, 4b
-and the shape-axis table on these same files.
-**Smoke visivo**: passato — run by Alfonso (ACK 2026-09-18) on the ordered list handed to him in
-chat, criteria 1–4 all holding: (1) a view with 3 instances satisfying different rules shows three
-tiles with three different, correct captions in the Symbol, Fill, Marker and Border sections, the
-winning row being the FIRST one that holds, not the last; (2) the same view in Padding or Text
-shows three size captions, and one resized instance reads `manual size` on its own tile only;
-(3) with 0 instances the strip is identical to today, except that a conditional form draws its
-fallback glyph; (4) switching between 1 and 3 instances, or between sections, moves nothing outside
-the strip: same strip height, same panel position, no layout shift.
-**Notes**: Banchi: `matchIndexOf` all'ULTIMA regola vera = **2 rossi**, entrambi in
-`matchIndexOf.test.ts`; caption Border all'ULTIMA riga = **1 rosso**, il test che porta quel nome.
-`BorderOverrideRow` porta `whenText` e non `when`: ri-derivata in `borderRowPredicates`, vincolata
-da un test di equivalenza su fixture divergente; l'alternativa migliore (campo `when` opzionale)
-esce dallo scope. `&__preview-empty` resta con `// TODO: cleanup`. Referto:
-`discovery_2026-09-17_slice5_preview_instances.md` §5.
-**Prompt document name**: 2026-09-17 14:25
-
-## 2026-09-18 — chore: P6 requires a Model trailer on every commit body
-**Prompt**: `claude_2026-09-18_1940_prompt_model_trailer_obbligatorio.md` (P-2026-09-18-1940):
-add to `docs/PROTOCOL.md` P6 the requirement that every commit body carry a
-`Model: <vendor> <name> <version>` trailer naming the executing model, additive to
-`Co-Authored-By`. One commit, PROTOCOL.md only; `CLAUDE.md` deliberately untouched (over its
-40k limit, split is P-2026-09-18-1930).
-**Files touched**: `97a41475e`, 1 file: `docs/PROTOCOL.md` (one paragraph added to P6 after the
-commit-message paragraph; no existing line reflowed).
-**Outcome**: ✅ completed
-**Corregge**: —
-**Causa**: —
-**Regressions**: no
-**Out-of-scope changes**: no
-**Layer Impact Report**: not-required — docs only, no §3.1 file.
-**Smoke visivo**: non applicabile
-**Notes**: `npm run check:docs` 3/3 green after the edit (Check A: P9 byte-identical to §21.2).
-The rule held at first application: `97a41475e` carries `Model: Z.ai GLM 5.3`. Follow-up
-measurement: the next three commits. A gate refusing commits without the trailer is the natural
-follow-up (`frontend/scripts/gates/`), stated in the closing report, not implemented today.
-**Prompt document name**: 2026-09-18 19:40
 
