@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-25-1115
 Chat: C-2026-09-25-1030
 Lane: full (more than 3 files)
-Status: da eseguire
+Status: eseguito 2026-09-25 · lane merge · 74ca160e7 · verifica visiva passata 2026-09-25
 Worktree: `~/jjodel-release`, branch `alfonso-frontend-jjtl`. Before anything else run `pwd` and `git branch --show-current`: if the answer is not `/Users/alfonso/jjodel-release` on `alfonso-frontend-jjtl`, stop and say so. This lane reads `~/jjodel-open` (branch `open-path`) and does not write there. Do not touch `~/jjodel`, `~/jjodel-sim` (a step 3b discovery may be running there), `~/jjodel-gate` (the `harness-bypass` lane of `P-2026-09-25-1022` lives there, closed and not merged), or `~/jjodel-harness`.
 
 Single phase, with hard stops. This is a merge, not a feature: no source file is edited by hand. The one hand resolution allowed is the inbox file named in COME step 3.
