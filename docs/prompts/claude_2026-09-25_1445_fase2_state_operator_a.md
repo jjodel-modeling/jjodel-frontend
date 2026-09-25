@@ -3,7 +3,7 @@
 Prompt-ID: P-2026-09-25-1445
 Chat: C-2026-09-25-1353
 Lane: full (critical zone, migration, changed exported interface)
-Status: da eseguire
+Status: eseguito 2026-09-25 · lane simulation · 066383e24 · verifica visiva passata 2026-09-25
 
 Worktree: `~/jjodel-sim`, branch `simulation-engine`, the session that ran Phase 1 and wave B1. Before anything else: `pwd` is `/Users/alfonso/jjodel-sim`, branch `simulation-engine`, `git log -1` is the commit that adds this file (subject `docs: wave A prompt of the state operator lane (P-2026-09-25-1445)`), `git status` empty. Otherwise stop.
 
