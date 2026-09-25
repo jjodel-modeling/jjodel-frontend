@@ -1027,6 +1027,8 @@ Base di evidenza: `docs/discovery/discovery_2026-08-13_view_creation_sites_ir_na
   file, oltre la soglia di cinque della Rule 19. `2.228` porta quindi il fronte B e il ritiro
   effettivo; `2.229` portera' la purga dei record e la decisione sui puntatori, su un corpus
   misurato invece che su uno.
+  **Emendata il 2026-09-25 da R-SIM-45**: `2.229` va ai tipi `Expression`/`Action`; la purga
+  passa al primo numero libero quando sarà calendarizzata.
 
 - **R-IRN-20** (2026-08-18) — **Il test dell'adapter entra nel perimetro di `2.228`.** Il LIR dice che
   nessun gate si accorge di nessuna delle tre modifiche, e che l'area non ha copertura ne' rossa ne'
@@ -1600,6 +1602,69 @@ come raccomandate, con due precisazioni (R-SIM-36, ultima frase; ticket in fondo
   una corsia propria, senza marcatori `TODO` nel codice. `stcFromRoles.ts` dopo la 3b contiene solo le
   funzioni di sovrapposizione e il nome non lo dice più: rinomina in una corsia propria (la regola 2
   la vieta nella 3b).
+
+### Ratifiche 2026-09-25: operatore `.[x]` e tipi `Expression`/`Action` (R-SIM-38..45)
+
+Base di evidenza: `docs/discovery/discovery_2026-09-25_state_operator_core_types.md` (`ec68ddb9b`),
+risposte alle diciotto domande del suo §10, ratificate da Alfonso il 2026-09-25 nella chat
+`C-2026-09-25-1353` come raccomandate, con due precisazioni (R-SIM-40 e R-SIM-41, ultima frase).
+Mappano R-SIM-17, R-SIM-18, R-SIM-19 e R-SIM-30 sul codice senza riaprirle.
+
+- **R-SIM-38** (2026-09-25). **Tre ondate, C fuori.** B1 (grammatica, AST, gancio del valutatore,
+  checker; puro, nessuna critical zone), poi A (i due tipi primitivi con la migrazione, critical
+  zone `VersionFixer.tsx`, verifica visiva), poi B2 (le guardie leggono lo stato, valutatore delle
+  azioni testato e non cablato al pannello, verifica visiva). Le dichiarazioni degli attributi di
+  stato (R-SIM-19) sono una corsia propria con discovery propria: toccano R-SIM-2, un gruppo M2 nuovo
+  e le chiavi di ruolo delle azioni. Il nucleo accetta già le dichiarazioni, quindi B2 si prova senza C.
+- **R-SIM-39** (2026-09-25). **Grammatica.** `.[` è un solo token contiguo (`. [` non lo è);
+  l'attributo è un `IDENTIFIER`, parole chiave escluse; `?.[` è un errore del lexer con un messaggio
+  che rimanda a `x.[a]`. `:=` è un token solo in modalità azione; nelle espressioni resta l'errore di
+  oggi, con un messaggio che nomina le azioni. Un nodo AST `StateAccess`; l'azione non è
+  un'espressione ma un tipo esportato a parte (`JjelAction`), quindi nessun valutatore vede un
+  assegnamento. Il bersaglio di un'azione finisce in `.[a]` e non è mai `marked` o `tokens`.
+- **R-SIM-40** (2026-09-25). **Parse stretto.** Una entrata di parse che richiede la fine
+  dell'input serve i due tipi, le guardie e le azioni: `a b` è un difetto. `parseExpression` resta
+  com'è per Console, Jodie, validazione e JjTL, dove oggi scarta in silenzio i token finali: la
+  correzione globale è un ticket, non una clausola di questa corsia. Il controllo di `Expression`
+  accetta esattamente `else` (senza spazi attorno) come ben formato; il rifiuto fuori dalle feature
+  di guardia spetta al controllo contestuale della STC (C, R-SIM-31).
+- **R-SIM-41** (2026-09-25). **Nomi riservati e `node`.** Una sola lista esportata in `jjel/`
+  (l'operatore, le radici `self`, `event`, `model`, `node`, gli attributi `marked` e `tokens`), letta
+  da checker e autocompletamento; nessuna parola chiave nuova nel lexer. `node` resta: nelle regole
+  IR dell'editor v2 non collide, il ripiego su `look` non serve. Il significato che `node` ha già in
+  Console, Jodie e validazione (il vertice selezionato) si documenta accanto; in `node.[x]` `node` si
+  riconosce per sintassi e non si valuta mai come variabile.
+- **R-SIM-42** (2026-09-25). **Gancio del valutatore.** Campo facoltativo di `EvaluationContext`,
+  ereditato da `child()`. Senza gancio `.[x]` lancia un errore («state is readable only in the
+  simulator»), mai un `null` silenzioso. `marked` e `tokens` li risolve l'adattatore del simulatore,
+  non JjEL. Un percorso che dà una collezione o `null` è un difetto a tempo di run in B2, risolto una
+  volta per sito ed evento su M congelato; il controllo statico arriva con il checker tipato di C.
+  Il valutatore delle azioni rifiuta un bersaglio non-`node` su un attributo di presentazione e un
+  bersaglio `node` su uno semantico (località, R-SIM-18).
+- **R-SIM-43** (2026-09-25). **I due tipi nel core.** Due DClass primitive con migrazione, come
+  ratificato in R-SIM-17: l'annotazione resta solo la forma Ecore. Nomi `Expression` e `Action`, id
+  `Pointer_EXPRESSION` e `Pointer_ACTION`. I tre controlli sul prefisso `Pointer_E`
+  (`classes.ts:899`, `EcoreService.ts:702`, `JsonModelService.ts:321`) si sostituiscono con **un solo
+  insieme esportato degli id primitivi**, letto da tutti e tre e tenuto da mutanti; non tre
+  riscritture indipendenti. Un valore malformato è il `type_mismatch` esistente a severità `warning`,
+  come int e boolean oggi. `simGuard` continua ad accettare attributi di tipo EString accanto a quelli
+  di tipo `Expression`, senza ritipare i metamodelli esistenti.
+- **R-SIM-44** (2026-09-25). **Ecore.** Forma
+  `<eAnnotations source="jjodel"><details key="type" value="Expression"/></eAnnotations>` su un
+  `EString`, consumata all'import (la DAnnotation non si conserva). I due tipi restano fuori dalla
+  mappa `#//<name>` dell'import: una classe utente chiamata `Action` o `Expression` vince, e i tipi
+  tornano solo tramite l'annotazione.
+- **R-SIM-45** (2026-09-25). **Numero di VersionFixer. Emenda R-IRN-19.** L'ondata A prende `2.229`;
+  la purga di R-IRN-19 passa al primo numero libero quando sarà calendarizzata. Motivo: gli step si
+  applicano in ordine di numero, e un `2.230` spedito prima di un `2.229` lascerebbe senza purga i
+  progetti già migrati. La purga oggi è un commento e un piano, non codice. L'ondata A aggiorna il
+  commento di `VersionFixer.tsx:1193` nello stesso commit dello step. È la prima migrazione che
+  aggiunge un tipo built-in.
+- **Ticket** (2026-09-25). `parseExpression` scarta in silenzio i token finali (`a b` vale `a`) in
+  Console, Jodie, validazione e JjTL (report §4.2). Corsia propria.
+- **Ticket** (2026-09-25). Progetti salvati più vecchi sembrano privi di `Pointer_EOBJECT`, e
+  l'import `.ecore` lancerebbe (report §3.2, R10): letto, non riprodotto. Si riproduce prima di
+  aprire una corsia.
 
 ## Serie R-J — JjEL come linguaggio delle espressioni dell'IR (ratifiche 2026-08-18)
 
