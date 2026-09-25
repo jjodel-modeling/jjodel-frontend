@@ -2,7 +2,7 @@
 
 **Data**: 2026-09-25. **Chat**: `C-2026-09-25-1759`. **Ramo di riferimento**: `alfonso-frontend-jjtl`
 per `docs/decisions.md` (R-SIM-38), `simulation-engine` (`e6e2e8fab`) per R-SIM-21..46.
-**Stato**: proposta, da ratificare. **Input di design**:
+**Stato**: ratificato il 2026-09-25 (R-SIM-47..55 in `docs/decisions.md`); i punti aperti sono chiusi lì. **Input di design**:
 `docs/design/claude_2026-09-25_simulation_roles_modal_design.md` (testo prodotto con Claude Design,
 conservato come riferimento per la sola parte UI; il suo modello semantico era un segnaposto).
 

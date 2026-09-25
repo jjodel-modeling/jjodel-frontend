@@ -1621,6 +1621,74 @@ Events del lato M2 (tre campi: Event, Trigger, Event identifier). Implementazion
   presente in un bag si ignora, senza migrazione. Lo stato «ruolo evento a metà» scompare. Emenda
   R-SIM-12 e R-SIM-16 sul lato M2; il motore e il lato M1 non cambiano.
 
+### Ratifiche 2026-09-25: catalogo dei ruoli e profili (R-SIM-47..55)
+
+Memo: `docs/ratifiche/claude_2026-09-25_1759_memo_simulation_roles_profiles.md` (`f827970bb`), con
+input di design `docs/design/claude_2026-09-25_simulation_roles_modal_design.md` (Claude Design, sola
+parte UI). Ratificate da Alfonso il 2026-09-25 nella chat `C-2026-09-25-1759` come proposte. I tre
+punti aperti del memo sono chiusi dalla chat secondo la direzione già data da Alfonso e restano
+reversibili: vedi «Punti aperti chiusi» in fondo. Ratificare non è schedulare.
+
+- **R-SIM-47** (2026-09-25). **Catalogo unico, profili senza semantica.** Il catalogo dei ruoli della
+  STC è uno solo ed è il superset. Un profilo è un nome più, per ogni ruolo, un modo (`edit`,
+  `derived` con valore fisso o sorgente dichiarata, `off` con motivo), più parametri e vincoli
+  (R-SIM-49). Motore ed esportatore leggono i ruoli risolti, mai il profilo. Profili di sistema nel
+  codice, in sola lettura; un profilo utente nasce vuoto o come copia di uno di sistema («Save as…»);
+  un profilo di sistema modificato è «modified» finché non lo si salva con un nome.
+- **R-SIM-48** (2026-09-25). **L'obbligatorietà si calcola.** `required(profilo)` è la chiusura di
+  eseguibilità della forma (controllo di flusso: Node, Transition, Next state, una sorgente fra Source
+  e Owned transitions, Initial; Petri: Node, Transition, Arc, Arc source, Arc target, Initial marking)
+  unita ai requisiti aggiunti dal profilo, che possono solo restringere. La chiusura segue la tabella
+  delle dipendenze del memo; i gruppi Control flow e Petri net si escludono (forma da `simArc`,
+  R-SIM-31(4)). Checkable: ogni ruolo richiesto legato e nessun legame incompatibile; «with warnings»
+  se qualche legame è un avviso.
+- **R-SIM-49** (2026-09-25). **Parametri e vincoli del profilo.** Parametri: k (`simBound`), politica
+  del selettore (lista, R-SIM-35), ipotesi d'ambiente dell'esportatore (R-SIM-16, R-SIM-20). Vincoli:
+  proprietà strutturali di M1 («nessun arco ε», «deterministico», «un solo token») che non entrano nel
+  motore e diventano regole di un validation viewpoint generato dal profilo, con il tri-stato di
+  R-SIM-15. Il determinismo non è un controllo di tipo su M2. Fork e join non hanno parametri di modo
+  (li esprime la presenza del ruolo, R-SIM-22); il decision block resta R-SIM-25.
+- **R-SIM-50** (2026-09-25). **Accettazione distinta dalla terminazione.** Ruolo facoltativo
+  `simAccepting` (metaclasse): una configurazione accetta quando un posto marcato è istanza di
+  Accepting. Non ferma il run. Pannello: «accepting» accanto allo stato del run; esportatore:
+  `DEFINE accepting`.
+- **R-SIM-51** (2026-09-25). **Output di Moore e di Mealy.** Ruoli facoltativi `simStateOutput`
+  (attributo della metaclasse nodo) e `simTransitionOutput` (attributo della classe degli archi),
+  letti dal modello congelato del run. Il pannello mostra l'output dello stato marcato e quello
+  dell'ultimo scatto in «Last step»; esportatore: `DEFINE out`. Gli output calcolati sono attributi
+  derivati (R-SIM-19).
+- **R-SIM-52** (2026-09-25). **Gruppo Data.** `simGuard` più `simAction` (`Action [0..*]` sulla
+  classe degli archi), `simEntry` e `simExit` (sulla metaclasse nodo), come da R-SIM-17; il nodo di
+  azione è un nodo con `simEntry`. Le dichiarazioni degli attributi di stato (R-SIM-19) sono una
+  sezione del gruppo e arrivano con la corsia C di R-SIM-39. Chiavi nuove provvisorie fino al commit
+  di codice che le cabla (come R-SIM-32).
+- **R-SIM-53** (2026-09-25). **Activity final. Emenda R-SIM-27.** Ruolo facoltativo
+  `simActivityFinal` (metaclasse): un suo posto marcato porta il run in `Terminated` anche con altri
+  token vivi; `simTerminal` resta il flow final. Terminata vale «marking non vuoto e ogni posto marcato
+  in F, oppure un posto di activity final marcato»; in nuXmv una disgiunzione in più in
+  `DEFINE terminated`.
+- **R-SIM-54** (2026-09-25). **Profili di sistema.** Otto, secondo la tabella del memo con la fusione
+  di Flowchart e Activity: Petri net (P/T), Flowchart / Activity, State machine, Extended state
+  machine, DFA, NFA, Moore, Mealy. Nei profili a controllo di flusso il gruppo Petri net è `off`
+  («compiled from control flow»), non `derived`; `derived` solo per Bound = 1 e Initial marking
+  «1 on Initial» (R-SIM-28).
+- **R-SIM-55** (2026-09-25). **Persistenza additiva.** Il profilo attivo si salva nel bag M2 con la
+  chiave additiva `simProfile` (id del profilo di sistema o definizione serializzata del profilo
+  utente). Chiavi dei ruoli di R-SIM-37 invariate. Senza `simProfile` il modale ricostruisce un
+  profilo «Custom» dalle chiavi presenti: nessuna migrazione, nessun salto di VersionFixer. Cambiare
+  profilo non cancella legami; il profilo si scrive solo con Apply. Libreria personale di profili
+  rinviata. Sul metamodello il pannello mostra il riassunto e «Configure…», che apre il modale; i
+  quattro gruppi di R-SIM-37 passano nel modale. Il pannello SMV resta un segnaposto inerte fino
+  all'esportatore.
+- **Punti aperti chiusi** (2026-09-25). (1) Flowchart e Activity sono un profilo solo, perché i
+  requisiti del 2026-09-24 mettono fork e join nei flowchart; differiscono solo per l'uso di
+  Activity final, che nel profilo è facoltativo. (2) R-SIM-53 è ratificata insieme alle altre;
+  l'implementazione entra con la corsia di Accepting e degli output. (3) Il nome di un profilo utente
+  è unico nel metamodello; il profilo conserva `basedOn` (id del profilo di sistema di partenza) come
+  informazione, senza ereditarietà: modificare un profilo di sistema non cambia le copie.
+- **Esclusi** (2026-09-25): stati gerarchici, regioni ortogonali, history, composizione di macchine,
+  object flow, tempo.
+
 ## Serie R-J — JjEL come linguaggio delle espressioni dell'IR (ratifiche 2026-08-18)
 
 Base di evidenza: `docs/discovery/discovery_2026-08-14_jjel_come_linguaggio_espressioni_ir.md`
