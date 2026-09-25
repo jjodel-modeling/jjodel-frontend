@@ -140,7 +140,6 @@ export function incompleteConfigurationMessage(metamodelName: string, missing: r
     return `Simulation not configured. Missing${onMetamodel(metamodelName)}: ${missing.join(', ')}.`;
 }
 
-// TODO: cleanup -- no caller since R-SIM-38 (P-2026-09-25-1500): the half-set event role is gone.
 /**
  * The warning line of a half-set event role. The model face names the
  * metamodel; the metamodel face (`metamodelName` null) is the metamodel itself.
