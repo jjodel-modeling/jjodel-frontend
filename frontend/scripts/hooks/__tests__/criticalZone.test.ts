@@ -158,6 +158,74 @@ describe('critical-zone: the shape of the answer and the failure mode', () => {
     });
 });
 
+// ── permission_mode (RC-19) ──────────────────────────────────────────────────
+
+/** The event of file() with permission_mode set to `mode`, or removed when `mode` is undefined. */
+function inMode(mode: unknown, tool: 'Edit' | 'Write', toolInput: Record<string, unknown>) {
+    const event: Record<string, unknown> = { ...file(tool, toolInput) };
+    if (mode === undefined) delete event.permission_mode;
+    else event.permission_mode = mode;
+    return runScript('critical-zone.mjs', event);
+}
+
+const RELAUNCH = 'critical-zone lane: relaunch this session without --dangerously-skip-permissions (RC-19)';
+const TODAY_REASON =
+    'critical-zone: VersionFixer.tsx is a Layer Impact Report trigger (CLAUDE.md 3.2, docs/PROTOCOL.md P5). ' +
+    'The report goes in chat before the diff. Approve only if it was written for this edit.';
+
+describe('critical-zone: permission_mode (RC-19)', () => {
+    const six = ROOTS[0] + SIX[5];
+    const editSix = { file_path: six, old_string: 'a', new_string: 'b', replace_all: false };
+
+    test.each([
+        ['Edit', editSix],
+        ['Write', { file_path: six, content: 'x' }],
+    ] as const)('kills "bypass not read": bypassPermissions and a %s of one of the six is a deny that names it and says to relaunch', (tool, input) => {
+        const r = inMode('bypassPermissions', tool, input);
+        expect(r.decision).toBe('deny');
+        expect(r.status).toBe(0);
+        expect(r.reason).toContain('VersionFixer.tsx');
+        expect(r.reason).toContain(RELAUNCH);
+    });
+
+    test('kills "deny limited to the six files": bypass and a D-layer creator outside the six is a deny', () => {
+        const other = ROOTS[0] + 'frontend/src/components/editor-v2/hooks/createAdapter.ts';
+        const r = inMode('bypassPermissions', 'Edit', { file_path: other, old_string: 'a', new_string: 'DVertex.new(a)' });
+        expect(r.decision).toBe('deny');
+        expect(r.reason).toContain('DVertex.new');
+        expect(r.reason).toContain(RELAUNCH);
+    });
+
+    test('kills "deny limited to the six files": bypass and SetFieldAction in the sync directory is a deny', () => {
+        const sync = ROOTS[0] + 'frontend/src/components/editor-v2/sync/m1EdgeSweep.ts';
+        const r = inMode('bypassPermissions', 'Edit', { file_path: sync, old_string: 'a', new_string: 'SetFieldAction.new(id, "f", 1)' });
+        expect(r.decision).toBe('deny');
+        expect(r.reason).toContain('SetFieldAction');
+        expect(r.reason).toContain(RELAUNCH);
+    });
+
+    test('kills "bypass denies every edit": bypass and an edit outside the trigger gives no output', () => {
+        const r = inMode('bypassPermissions', 'Edit', { file_path: ROOTS[0] + 'frontend/src/common/x.tsx', old_string: 'a', new_string: 'b' });
+        expect(r.status).toBe(0);
+        expect(r.stdout).toBe('');
+    });
+
+    test.each([
+        ['default', 'default'],
+        ['acceptEdits', 'acceptEdits'],
+        ['bubble (a subagent mode, not bypass)', 'bubble'],
+        ['another case of the name', 'BypassPermissions'],
+        ['absent', undefined],
+        ['a number', 7],
+        ['an array holding the name', ['bypassPermissions']],
+    ])('kills "deny outside bypass": %s and one of the six asks with the reason of before RC-19', (_name, mode) => {
+        const r = inMode(mode, 'Edit', editSix);
+        expect(r.decision).toBe('ask');
+        expect(r.status).toBe(0);
+        expect(r.reason).toBe(TODAY_REASON);
+    });
+});
+
 // ── The list against CLAUDE.md 3.2 ───────────────────────────────────────────
 
 /** The differences between the constants of the script and the 3.2 sentence. */

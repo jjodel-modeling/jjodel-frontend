@@ -5,8 +5,10 @@
  * (tool_input.command, heredocs and compound commands included). The fixed
  * forms live in permissions.deny of .claude/settings.json; this hook is the
  * layer above it and it FAILS OPEN: a crash, a timeout or a missing node lets
- * the call through (hooks.md, Exit code output). It only ever adds refusals:
- * the `ask` on `git commit*` in settings stays the human gate.
+ * the call through (hooks.md, Exit code output). It only ever adds refusals and
+ * asks; the `ask` rules on `git commit*` and `git push*` in settings stay. The
+ * commit is not a human gate (RC-19): the push is, and under bypassPermissions,
+ * which may not honor an `ask`, this hook denies it.
  *
  *   git commit   deny unless: a pathspec follows `--` (CLAUDE.md 6.1, P13);
  *                the message, when it is in the string or in a readable -F
@@ -22,6 +24,8 @@
  *                ask, in any form found after quotes and heredocs are read:
  *                the wrappers (`sh -c`, `git -C`, `/usr/bin/git`, `env`, `eval`)
  *                are outside a Bash deny pattern (RC-13-bis, P13).
+ *   git push     deny when permission_mode is bypassPermissions, in any form the
+ *                walk finds, wrappers included (RC-19). Other modes: nothing.
  *
  * Run by: node "$CLAUDE_PROJECT_DIR/frontend/scripts/hooks/bash-guard.mjs"
  */
@@ -311,7 +315,9 @@ function analyze(commands, ctx, depth, findings) {
                         'of .claude/settings.json; confirm only if this tree is yours alone.',
                 });
             } else if (g.sub === 'commit') checkCommit(g.args, c.heredocs, ctx, findings);
-            else {
+            else if (g.sub === 'push') {
+                if (ctx.bypass) findings.push({ kind: 'deny', reason: "git push is Alfonso's act under bypassPermissions (RC-19)." });
+            } else {
                 const form = wholeTreeForm(g, ctx.cwd);
                 if (form) {
                     findings.push({
@@ -326,12 +332,13 @@ function analyze(commands, ctx, depth, findings) {
     }
 }
 
-function makeContext(cwdInput) {
+function makeContext(cwdInput, permissionMode) {
     const cwd = typeof cwdInput === 'string' && cwdInput ? cwdInput : process.cwd();
     let progress;
     let top;
     return {
         cwd,
+        bypass: permissionMode === 'bypassPermissions',
         inProgress: () => (progress === undefined ? (progress = operationInProgress(cwd)) : progress),
         top: () => (top === undefined ? (top = gitOutput(['rev-parse', '--show-toplevel'], cwd)) : top),
     };
@@ -343,7 +350,7 @@ function main() {
     if (typeof command !== 'string' || command.length === 0 || command.length > COMMAND_MAX_CHARS) return;
 
     const findings = [];
-    analyze(parseShell(command), makeContext(input.cwd), 0, findings);
+    analyze(parseShell(command), makeContext(input.cwd, input.permission_mode), 0, findings);
 
     const denies = findings.filter((f) => f.kind === 'deny');
     const asks = findings.filter((f) => f.kind === 'ask');
