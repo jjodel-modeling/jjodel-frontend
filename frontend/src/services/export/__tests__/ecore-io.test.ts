@@ -200,9 +200,11 @@ describe('Ecore I/O — DataType_collision_test.ecore (W2 fix)', () => {
 describe('Ecore I/O — mapToEcoreType canonical guard (W2 collision fix)', () => {
     const source = fs.readFileSync(ECORE_SERVICE, 'utf8');
 
-    it('mapToEcoreType emette guard isCanonical basato su id Pointer_E', () => {
+    it('mapToEcoreType emette guard isCanonical basato sull\'insieme degli id primitivi', () => {
+        // Dal 2026-09-25 (R-SIM-44) il discriminante e' `Defaults.primitiveTypeIds`, non il
+        // prefisso `Pointer_E`; il comportamento e' eseguito in joiner/__tests__/dTypedElement.test.ts.
         expect(source).toContain('isCanonical');
-        expect(source).toMatch(/type\.id\.startsWith\(['"]Pointer_E['"]\)/);
+        expect(source).toMatch(/Defaults\.primitiveTypeIds\.has\(type\.id\)/);
     });
 
     it('mapToEcoreType conserva il path canonical per input stringa (isString)', () => {

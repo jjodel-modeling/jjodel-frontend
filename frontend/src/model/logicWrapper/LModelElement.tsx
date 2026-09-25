@@ -1500,6 +1500,8 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
                     case 'dfloat':   case 'efloat':   case 'float':   ptr = Defaults.Pointer_EFLOAT; break;
                     case 'number':   case 'real':
                     case 'ddouble':  case 'edouble':  case 'double':  ptr = Defaults.Pointer_EDOUBLE; break;
+                    case 'expression':                                ptr = Defaults.Pointer_EXPRESSION; break;
+                    case 'action':                                    ptr = Defaults.Pointer_ACTION; break;
                     case 'dvoid':    case 'evoid':    case 'void':    if (c.data.className !== 'DAttribute') ptr = Defaults.Pointer_EVOID; break;
                     default:
                     // if not primitive, check enumerators
@@ -7697,6 +7699,8 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                 break;
             case ShortAttribETypes.EString:
             case ShortAttribETypes.EDate:
+            case ShortAttribETypes.Expression: // stored as text, like EString (R-SIM-44)
+            case ShortAttribETypes.Action:
                 mapperfunc = v => v ? v + '' : ''
                 if (withmetainfo) ret.forEach((struct: ValueDetail)=>{ struct.value = mapperfunc(struct.value); });
                 else ret = ret.map(mapperfunc);

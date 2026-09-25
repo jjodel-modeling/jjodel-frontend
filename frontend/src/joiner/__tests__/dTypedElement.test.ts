@@ -1,6 +1,17 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import fs from 'fs';
 import path from 'path';
+
+// The two export services load under a stub joiner (measured, P-2026-09-25-1445), so their
+// primitive-id check runs as written. The stub's `Defaults.primitiveTypeIds` holds one id
+// without the old `Pointer_E` prefix: a check that reads the shared set accepts it, one that
+// reads its own literal does not.
+vi.mock('../index', () => new Proxy({}, {
+    get: (_t, k) => (k === 'then' ? undefined
+        : k === 'Defaults' ? { primitiveTypeIds: new Set(['Pointer_ZZ']) }
+        : class Stub { static cname = String(k); }),
+    has: () => true,
+}));
 
 /**
  * Il contratto di `Constructors.DTypedElement` (joiner/classes.ts).
@@ -135,8 +146,9 @@ describe('DTypedElement — il seed di una DReference rifiutata', () => {
 describe('DTypedElement — i contratti che i chiamanti si aspettano', () => {
     it('il corto circuito sul pointer primitivo canonico sopravvive', () => {
         // `jjscript/.../create.ts:414` costruisce un `Pointer_E*` e lo passa: il suo
-        // stesso commento dichiara di dipendere da questo ramo.
-        expect(typedElementBody()).toMatch(/\/\^Pointer_E\[A-Z\]\+\$\/\.test\(type\)/);
+        // stesso commento dichiara di dipendere da questo ramo. Dal 2026-09-25 il ramo legge
+        // l'insieme condiviso degli id primitivi (R-SIM-44), non il prefisso `Pointer_E`.
+        expect(typedElementBody()).toMatch(/typeof type === 'string' && Defaults\.primitiveTypeIds\.has\(type\)/);
         expect(fs.readFileSync(CREATE_TS, 'utf8')).toMatch(/Defaults as any\)\['Pointer_' \+ shortType\.toUpperCase\(\)\]/);
     });
 
@@ -152,5 +164,76 @@ describe('DTypedElement — i contratti che i chiamanti si aspettano', () => {
         const data = fs.readFileSync(DATA_TS, 'utf8');
         expect(data).toMatch(/DAttribute\.new\(\s*\n\s*this\.read\(json, ECoreNamed\.namee, 'attr_1'\),\s*\n\s*undefined,/);
         expect(data).toMatch(/DReference\.new\(undefined, undefined, parent\.id\)/);
+    });
+});
+
+// ==================================================================
+// The one set of primitive ids (R-SIM-44), P-2026-09-25-1445. Each test names the mutant of
+// report §7.2 (discovery_2026-09-25_state_operator_core_types.md) it kills. `Defaults.ts`,
+// `classes.ts` and `create.ts` do not load under vitest (`window is not defined`, through the
+// joiner barrel; for `create.ts` re-measured with a stub joiner on 2026-09-25), so they are read
+// as text; the two export services load and are executed.
+// ==================================================================
+
+const ECORE_TS = path.resolve(__dirname, '../../services/export/EcoreService.ts');
+const JSON_TS = path.resolve(__dirname, '../../services/export/JsonModelService.ts');
+
+describe('the shared set of primitive ids (R-SIM-44)', () => {
+    it('is Defaults.types as a Set, and the list holds Expression and Action after EDouble', () => {
+        const defaults = fs.readFileSync(DEFAULTS_TS, 'utf8');
+        expect(defaults).toMatch(/static primitiveTypeIds: ReadonlySet<string> = new Set<string>\(Defaults\.types\);/);
+        const types = defaults.slice(defaults.indexOf('static types:'), defaults.indexOf('];', defaults.indexOf('static types:')));
+        const ids = [...types.matchAll(/"(Pointer_[A-Z]+)"/g)].map(m => m[1]);
+        expect(ids.indexOf('Pointer_EXPRESSION')).toBe(ids.indexOf('Pointer_EDOUBLE') + 1);
+        expect(ids.indexOf('Pointer_ACTION')).toBe(ids.indexOf('Pointer_EDOUBLE') + 2);
+        expect(ids).toContain('Pointer_EVOID');
+        expect(ids).toContain('Pointer_EOBJECT');
+        expect(defaults).toMatch(/static Pointer_EXPRESSION: Pointer<DClass> = 'Pointer_EXPRESSION';/);
+        expect(defaults).toMatch(/static Pointer_ACTION: Pointer<DClass> = 'Pointer_ACTION';/);
+    });
+
+    it('M11: EcoreService.mapToEcoreType reads the shared set, not the prefix', async () => {
+        const { EcoreService } = await import('../../services/export/EcoreService');
+        const map = (t: unknown) => (EcoreService as any).mapToEcoreType(t);
+        expect(map({ id: 'Pointer_ZZ', name: 'EInt' })).toBe('ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt');
+        expect(map({ id: 'Pointer_EINT', name: 'EInt' })).toBe('#//EInt');
+    });
+
+    it('M11: JsonModelService.buildTypeRef reads the shared set, not the prefix', async () => {
+        const { JsonModelService } = await import('../../services/export/JsonModelService');
+        expect((JsonModelService as any).buildTypeRef({ id: 'Pointer_ZZ', name: 'Custom' }, 'm1', {})).toBe('Custom');
+    });
+
+    it('M11: no file keeps a `Pointer_E` prefix check of its own', () => {
+        expect(typedElementBody()).not.toMatch(/Pointer_E\[A-Z\]/);
+        expect(fs.readFileSync(ECORE_TS, 'utf8')).not.toMatch(/startsWith\(['"]Pointer_E['"]\)/);
+        expect(fs.readFileSync(JSON_TS, 'utf8')).not.toMatch(/startsWith\(['"]Pointer_E['"]\)/);
+    });
+});
+
+describe('JjScript `type Expression` / `type Action` (R-SIM-44)', () => {
+    /** The alias table of `create.ts`, evaluated from its source: `set.ts` reads the same table. */
+    function aliasTable(): Record<string, string> {
+        const src = fs.readFileSync(CREATE_TS, 'utf8');
+        const m = src.match(/const PRIMITIVE_ATTRIBUTE_TYPES: Record<string, string> = (\{[\s\S]*?\});/);
+        expect(m, 'the alias table of create.ts moved: update the test').not.toBeNull();
+        return new Function(`return ${m![1]}`)();
+    }
+
+    it('M10: the two names map to the primitives, whose pointers exist in Defaults', () => {
+        const table = aliasTable();
+        expect(table.expression).toBe('Expression');
+        expect(table.action).toBe('Action');
+        const defaults = fs.readFileSync(DEFAULTS_TS, 'utf8');
+        for (const short of [table.expression, table.action]) {
+            expect(defaults).toContain(`static Pointer_${short.toUpperCase()}: Pointer<DClass>`);
+        }
+    });
+
+    it('control: the existing aliases are unchanged', () => {
+        const table = aliasTable();
+        expect(table.string).toBe('EString');
+        expect(table.int).toBe('EInt');
+        expect(Object.keys(table)).toHaveLength(27);
     });
 });

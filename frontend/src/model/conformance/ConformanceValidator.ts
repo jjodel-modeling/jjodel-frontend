@@ -11,6 +11,14 @@ import type {
     ConformanceStatus,
 } from './ConformanceTypes';
 import { checkNameShape, nameShapeMessage } from './nameShape';
+// The syntax checks of the Expression and Action types (R-SIM-44). JjEL's parser is pure (its
+// lexer, AST types and reserved list), so this stays a module without the joiner.
+import { parseExpressionStrict, parseAction } from '../../jjel/parser';
+
+/** `Defaults.Pointer_EXPRESSION` and `Defaults.Pointer_ACTION` (R-SIM-44), as literals: `Defaults` is
+ *  reached through the joiner, which this module does not import. */
+const EXPRESSION_TYPE_ID = 'Pointer_EXPRESSION';
+const ACTION_TYPE_ID = 'Pointer_ACTION';
 
 /**
  * Pure function: validates whether a model conforms to its metamodel.
@@ -218,6 +226,7 @@ export function validateConformance(
                         // strings verbatim (Input.tsx serializeValue), so numeric strings are
                         // valid numbers; real numbers/booleans can arrive from imports/scripts.
                         let typeOk = true;
+                        let syntaxError = '';
                         if (typeName === 'eint' || typeName === 'int' || typeName === 'integer') {
                             typeOk = (typeof val === 'number' && Number.isInteger(val))
                                 || (typeof val === 'string' && val.trim() !== '' && Number.isInteger(Number(val)));
@@ -226,6 +235,28 @@ export function validateConformance(
                         } else if (typeName === 'efloat' || typeName === 'edouble' || typeName === 'float' || typeName === 'double') {
                             typeOk = (typeof val === 'number' && !isNaN(val))
                                 || (typeof val === 'string' && val.trim() !== '' && !isNaN(Number(val)));
+                        } else if (attr.type?.id === EXPRESSION_TYPE_ID || attr.type?.id === ACTION_TYPE_ID) {
+                            // R-SIM-17, R-SIM-41, R-SIM-44: a malformed value is saved and reported
+                            // here. Keyed on the primitive's id, not on its name: a user enum,
+                            // datatype or class called Action or Expression is not JjEL. Blank is
+                            // absent, like '' above (an absent guard is `true`); the literal `else` is
+                            // a well-formed Expression, and whether it is allowed where it stands is
+                            // the STC's contextual check (R-SIM-31).
+                            const isExpression = attr.type?.id === EXPRESSION_TYPE_ID;
+                            const text = String(val);
+                            if (text.trim() !== '' && !(isExpression && text === 'else')) {
+                                let parsed: boolean;
+                                let errors: { line: number; column: number; message: string }[];
+                                if (isExpression) {
+                                    const r = parseExpressionStrict(text);
+                                    parsed = r.expression !== null; errors = r.errors;
+                                } else {
+                                    const r = parseAction(text);
+                                    parsed = r.action !== null; errors = r.errors;
+                                }
+                                typeOk = parsed && errors.length === 0;
+                                if (!typeOk && errors[0]) syntaxError = `: ${errors[0].line}:${errors[0].column} ${errors[0].message}`;
+                            }
                         }
                         // EString is always compatible
 
@@ -235,7 +266,7 @@ export function validateConformance(
                                 objectName: objName,
                                 violationType: 'type_mismatch',
                                 severity: 'warning',
-                                message: `Object "${objName || objId}": attribute "${attr.name}" expects ${attr.type?.name} but got "${String(val)}"`,
+                                message: `Object "${objName || objId}": attribute "${attr.name}" expects ${attr.type?.name} but got "${String(val)}"${syntaxError}`,
                                 metamodelElementName: attr.name,
                             });
                         }

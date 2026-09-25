@@ -29,7 +29,8 @@ import {
     LPointerTargetable,
     Pointer,
     store,
-    Selectors
+    Selectors,
+    Defaults
 } from '../../joiner';
 
 // ============================================
@@ -687,8 +688,8 @@ export class EcoreService {
      * Canonical primitives (Pointer_E* convention, e.g. Pointer_ESTRING, Pointer_EDATE)
      * are emitted as full Ecore URIs. User-defined EDataType/EClass with names that
      * collide with canonical short aliases (e.g. 'Date', 'String') are emitted as
-     * local references (`#//Name`) to preserve their identity. The `Pointer_E` id
-     * prefix is the discriminator: only canonical primitives have it (see
+     * local references (`#//Name`) to preserve their identity. The discriminator is
+     * `Defaults.primitiveTypeIds`, the one set of built-in type ids (R-SIM-44; see
      * selectors.ts:149 for the lookup convention).
      *
      * Plain string inputs (e.g. from JjScript executor) are always treated as
@@ -699,7 +700,7 @@ export class EcoreService {
 
         const isString = typeof type === 'string';
         const typeName = isString ? type : (type.name || 'EString');
-        const isCanonical = isString || (typeof type.id === 'string' && type.id.startsWith('Pointer_E'));
+        const isCanonical = isString || (typeof type.id === 'string' && Defaults.primitiveTypeIds.has(type.id));
 
         const typeMap: Record<string, string> = {
             'String': 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString',

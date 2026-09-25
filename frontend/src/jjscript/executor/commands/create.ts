@@ -72,6 +72,8 @@ const PRIMITIVE_ATTRIBUTE_TYPES: Record<string, string> = {
         'float':    'EFloat',
         'evoid':    'EVoid',
         'void':     'EVoid',
+        'expression': 'Expression',
+        'action':   'Action',
 };
 
 /**
